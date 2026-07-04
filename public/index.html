@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<title>Of Oil and Iron — Rig Control Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/css/tokens.css" />
+<link rel="stylesheet" href="/css/app.css" />
+<link rel="stylesheet" href="/css/rig-sheet.css" />
+<link rel="stylesheet" href="/css/join.css" />
+</head>
+<body>
+
+<div id="joinGate" class="join-gate">
+  <div class="join-card">
+    <h1 class="join-title">OIL <i>&amp;</i> IRON</h1>
+    <p class="join-sub">Enter a battle room</p>
+    <input id="joinRoom" class="join-input" placeholder="Room code (e.g. IRON42)" autocomplete="off" />
+    <input id="joinName" class="join-input" placeholder="Your name" autocomplete="off" />
+    <div class="join-sides">
+      <button class="join-side" data-side="a" type="button">You (Side A)</button>
+      <button class="join-side" data-side="b" type="button">Enemy (Side B)</button>
+    </div>
+    <button id="joinBtn" class="join-btn" type="button">Enter room</button>
+    <p id="joinErr" class="join-err"></p>
+  </div>
+</div>
+
+<div class="term">
+  <header class="topbar">
+    <span class="brand-mark">⚙</span>
+    <span class="brand-name">OIL <i>&amp;</i> IRON</span>
+    <span class="brand-sub">RIG CONTROL TERMINAL</span>
+  </header>
+
+  <main id="messages" aria-live="polite"></main>
+
+  <footer class="dock">
+    <div class="status-row" id="statusRow"></div>
+    <div class="cmdbar" role="toolbar" aria-label="Terminal controls">
+      <button id="rigToggle" class="cmd" aria-pressed="false" title="Squadron status — the in-game Rig condition tracker"><span class="ic">🛠</span>Rigs</button>
+      <button id="thinkToggle" class="cmd active" aria-pressed="true" title="Show the model's reasoning before it answers (slower). Turn off for faster replies."><span class="ic">🧠</span>Reason</button>
+      <button id="ttsToggle" class="cmd" aria-pressed="false" title="Read answers aloud"><span class="ic">🔊</span>TTS</button>
+      <button id="clearBtn" class="cmd" title="Clear the conversation to free up context. Your tracked Rigs are kept."><span class="ic">🧹</span>Clear</button>
+      <select id="langSelect" class="lang-select" aria-label="Speech recognition language">
+        <option value="pt-BR">PT</option>
+        <option value="en-US">EN</option>
+      </select>
+    </div>
+    <div class="input-row">
+      <button id="micBtn" class="icon-btn" aria-label="Toggle voice input" title="Voice input">🎤</button>
+      <textarea id="textInput" rows="1" placeholder="Ask a rule or narrate a hit…" aria-label="Message"></textarea>
+      <button id="sendBtn" class="icon-btn" aria-label="Send message" title="Send">➤</button>
+    </div>
+  </footer>
+</div>
+
+<div id="sheetScrim" class="scrim" hidden></div>
+
+<section id="rigPanel" class="sheet" aria-label="Rig condition tracker" aria-hidden="true">
+  <div class="sheet-grip"></div>
+  <div class="sheet-head">
+    <h2 id="rigDeckTitle">Squadron Status</h2>
+    <button id="rigClose" class="sheet-close" type="button" aria-label="Close tracker">✕</button>
+  </div>
+
+  <div id="rigList" class="rig-deck">
+    <!-- one .rig-screen per rig is injected here before the add screen -->
+    <div id="rigAddScreen" class="rig-screen rig-screen-add">
+      <div class="rig-add">
+        <div class="rig-add-title">◈ Commission a Rig</div>
+        <div class="rig-add-hint">Name it and pick a weight class — or just tell the rules master “add a heavy rig called Stalker”.</div>
+        <input id="rigName" type="text" placeholder="Rig name" aria-label="New rig name" />
+        <div class="rig-add-row">
+          <select id="rigClass" aria-label="New rig weight class">
+            <option value="light">Light</option>
+            <option value="medium">Medium</option>
+            <option value="heavy" selected>Heavy</option>
+            <option value="colossal">Colossal</option>
+          </select>
+          <button id="rigAddBtn" class="rig-add-btn" type="button">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="deck-bar">
+    <button id="rigPrev" class="deck-nav" type="button" aria-label="Previous rig">‹</button>
+    <div id="rigDots" class="deck-dots"></div>
+    <button id="rigNext" class="deck-nav" type="button" aria-label="Next rig">›</button>
+  </div>
+</section>
+
+<script type="module" src="/js/main.js"></script>
+
+</body>
+</html>
