@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { createRoom } from "./game-state.js";
+import { createRoom } from "../shared/game-state.js";
 
 export function createStore(filePath) {
   const rooms = new Map();

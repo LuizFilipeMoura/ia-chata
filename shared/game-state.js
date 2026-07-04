@@ -57,12 +57,18 @@ export function normalizeSide(room, ref) {
 }
 
 export function claimSide(room, { name, side } = {}) {
-  let target = side ? room.game.sides.find((s) => s.id === side && !s.claimed) : null;
+  // An explicitly requested side is always granted — this makes auto-rejoin
+  // idempotent (a returning player reclaims their own side) and lets players
+  // deliberately pick a side. Only auto-assign the first free side when none
+  // was requested; return null only if the room is genuinely full.
+  let target = side ? room.game.sides.find((s) => s.id === side) : null;
   if (!target) target = room.game.sides.find((s) => !s.claimed);
   if (!target) return null;
+  const newName = name ? (String(name).trim() || target.name) : target.name;
+  const changed = !target.claimed || target.name !== newName;
   target.claimed = true;
-  if (name) target.name = String(name).trim() || target.name;
-  room.version++;
+  target.name = newName;
+  if (changed) room.version++;
   return target.id;
 }
 

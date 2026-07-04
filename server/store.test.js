@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createStore } from "./store.js";
-import { applyCommand } from "./game-state.js";
+import { applyCommand } from "../shared/game-state.js";
 
 function tmpFile() {
   return path.join(fs.mkdtempSync(path.join(os.tmpdir(), "ooi-")), "rooms.json");

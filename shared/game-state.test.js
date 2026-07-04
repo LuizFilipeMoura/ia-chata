@@ -27,6 +27,18 @@ test("claimSide takes the first free side and bumps version", () => {
   assert.equal(third, null); // room full
 });
 
+test("claimSide reclaims a requested side without consuming the other slot", () => {
+  const r = createRoom("X");
+  assert.equal(claimSide(r, { name: "Ana", side: "a" }), "a");
+  const v = r.version;
+  // Auto-rejoin as side a: same side back, no version churn, side b still free.
+  assert.equal(claimSide(r, { name: "Ana", side: "a" }), "a");
+  assert.equal(r.version, v);                    // idempotent — no bump
+  assert.equal(r.game.sides[1].claimed, false);  // side b untouched
+  // Someone deliberately takes side b.
+  assert.equal(claimSide(r, { name: "Bo", side: "b" }), "b");
+});
+
 test("add assigns owner and default SP; damage respects the floor", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "heavy", owner: "b" } });
