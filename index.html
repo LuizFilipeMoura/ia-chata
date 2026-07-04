@@ -658,9 +658,19 @@
     pollTimer = setInterval(pollOnce, 3000);
   }
 
-  // Keep a harmless stub so existing local mutation call sites don't throw;
-  // server owns persistence now. Rewired in Task 8.
-  function saveRigs() {}
+  // POST one mutation to the server, then adopt the authoritative result.
+  async function sendCommand(verb, attrs) {
+    if (!session?.room) return;
+    try {
+      const resp = await fetch(`/api/game/${encodeURIComponent(session.room)}/command`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cmd: { verb, attrs } }),
+      });
+      if (!resp.ok) return;
+      const { version, state } = await resp.json();
+      if (version !== stateVersion) applyServerState(state);
+    } catch { /* next poll will reconcile */ }
+  }
 
   function findRig(name) {
     if (!name) return null;
@@ -679,33 +689,16 @@
     return attrs;
   }
 
-  // Apply every [[RIG ...]] command found in `text`, once. Returns true if state changed.
+  // Parse every [[RIG ...]] command out of `text` and POST each to the server.
   function applyRigCommands(text) {
-    let changed = false;
-    let match;
     RIG_TAG_RE.lastIndex = 0;
+    let match;
     while ((match = RIG_TAG_RE.exec(text))) {
       const body = match[1].trim();
       const verb = (body.split(/\s+/)[0] || "").toLowerCase();
-      const a = parseAttrs(body);
-      const rig = findRig(a.name);
-
-      if (verb === "add") {
-        if (!findRig(a.name)) { rigs.push(makeRig(a.name, (a.class || "").toLowerCase())); changed = true; }
-      } else if (verb === "remove") {
-        if (rig) { rigs = rigs.filter((r) => r !== rig); changed = true; }
-      } else if (rig && verb === "damage") {
-        damageRig(rig, (a.loc || "").toLowerCase(), a.amount); changed = true;
-      } else if (rig && verb === "repair") {
-        repairRig(rig, (a.loc || "").toLowerCase(), a.amount); changed = true;
-      } else if (rig && verb === "set") {
-        setRigSp(rig, (a.loc || "").toLowerCase(), a.sp); changed = true;
-      } else if (rig && verb === "heat") {
-        heatRig(rig, a.amount); changed = true;
-      }
+      const a = parseAttrs(body);   // { name, loc, amount, ... } — verb word is not an attr
+      sendCommand(verb, a);
     }
-    if (changed) { saveRigs(); renderRigs(); }
-    return changed;
   }
 
   // Remove command tags (and any trailing half-streamed tag) for display + speech.
@@ -741,7 +734,7 @@
     minus.type = "button";
     minus.textContent = "−";
     minus.setAttribute("aria-label", `Damage ${loc}`);
-    minus.addEventListener("click", () => { damageRig(rig, loc, 1); saveRigs(); renderRigs(); });
+    minus.addEventListener("click", () => sendCommand("damage", { name: rig.name, loc, amount: "1" }));
 
     const bar = document.createElement("div");
     bar.className = "rig-bar";
@@ -759,7 +752,7 @@
     plus.type = "button";
     plus.textContent = "＋";
     plus.setAttribute("aria-label", `Repair ${loc}`);
-    plus.addEventListener("click", () => { repairRig(rig, loc, 1); saveRigs(); renderRigs(); });
+    plus.addEventListener("click", () => sendCommand("repair", { name: rig.name, loc, amount: "1" }));
 
     row.appendChild(label);
     row.appendChild(minus);
@@ -773,7 +766,7 @@
       hMinus.textContent = "🔥−";
       hMinus.style.fontSize = "0.6rem";
       hMinus.setAttribute("aria-label", "Decrease heat");
-      hMinus.addEventListener("click", () => { heatRig(rig, "-1"); saveRigs(); renderRigs(); });
+      hMinus.addEventListener("click", () => sendCommand("heat", { name: rig.name, amount: "-1" }));
 
       const heat = document.createElement("span");
       heat.className = "rig-heat-val";
@@ -785,7 +778,7 @@
       hPlus.textContent = "🔥＋";
       hPlus.style.fontSize = "0.6rem";
       hPlus.setAttribute("aria-label", "Increase heat");
-      hPlus.addEventListener("click", () => { heatRig(rig, "+1"); saveRigs(); renderRigs(); });
+      hPlus.addEventListener("click", () => sendCommand("heat", { name: rig.name, amount: "+1" }));
 
       row.appendChild(hMinus);
       row.appendChild(heat);
@@ -825,13 +818,7 @@
     rm.type = "button";
     rm.textContent = "✕";
     rm.setAttribute("aria-label", `Remove ${rig.name}`);
-    rm.addEventListener("click", () => {
-      const wasIndex = rigs.indexOf(rig);
-      rigs = rigs.filter((r) => r !== rig);
-      saveRigs();
-      renderRigs();
-      scrollToIndex(Math.min(wasIndex, rigs.length));
-    });
+    rm.addEventListener("click", () => sendCommand("remove", { name: rig.name }));
     head.appendChild(title);
     head.appendChild(badge);
     head.appendChild(rm);
@@ -903,11 +890,8 @@
     const name = rigNameInput.value.trim();
     if (!name) { rigNameInput.focus(); return; }
     if (findRig(name)) { setStatus(`A rig named “${name}” already exists.`); return; }
-    rigs.push(makeRig(name, rigClassSelect.value));
+    sendCommand("add", { name, class: rigClassSelect.value, owner: session?.side || "a" });
     rigNameInput.value = "";
-    saveRigs();
-    renderRigs();
-    scrollToIndex(rigs.length - 1); // swipe to the freshly added rig
   }
 
   rigAddBtn.addEventListener("click", addRigFromForm);
