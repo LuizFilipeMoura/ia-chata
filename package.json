@@ -1,0 +1,20 @@
+{
+  "name": "oil-iron-master",
+  "version": "1.0.0",
+  "description": "Local voice-driven rules master for Of Oil and Iron, powered by Ollama + Gemma",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "preview": "set PORT=8123&& node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pdf-parse": "^1.1.1"
+  }
+}
