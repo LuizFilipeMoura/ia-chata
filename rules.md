@@ -26,7 +26,8 @@
 12. [Weapon Profiles](#12-weapon-profiles)
 13. [Weapon Perks](#13-weapon-perks)
 14. [Factions](#14-factions)
-15. [Design Notes & Open Items](#15-design-notes--open-items)
+15. [Equipment](#15-equipment)
+16. [Design Notes & Open Items](#16-design-notes--open-items)
 
 ---
 
@@ -408,7 +409,23 @@ Factions are **narrative flavour** — every weapon in §12 is available to ever
 
 ---
 
-## 15. Design Notes & Open Items
+## 15. Equipment
+
+Every Rig has **one** equipment slot, chosen at commission. Each piece is a **passive** (always on) plus a **1-slot active** — the active costs one of the Rig's 5 action-slots per activation (−2 if Hull is at 0) plus the listed heat, with no charges or cooldowns; the action budget and the overheat table are the only limiters.
+
+| Family | Equipment | Passive (always on) | Active — *costs 1 slot* |
+|---|---|---|---|
+| **Armor** | **Ablative Plating** | +1 max SP to Hull | **Harden** (+1 heat): until this Rig's next activation, all impact rolls against it are at −1 |
+| **Cooling** | **Radiator Array** | Cools **3** heat in Recovery instead of 2 | **Purge** (−2 heat): vent on demand |
+| **Mobility** | **Servo Actuators** | Sprint costs 1 heat instead of 2 | **Jump Jets** (+2 heat): move up to **base Speed**, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties |
+| **Power** | **Overclock Core** | The first time this Rig's Engine reaches 0 SP, it does **not** skip its next activation | **Overclock** (+3 heat): +2 actions this activation (net +1 after the slot) |
+| **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 2 SP to one location, no D12 roll |
+
+> Weapon customization (fixed signature upgrades per weapon) is documented in `docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md` Part 2. The upgrade catalogue is authored there; combat-engine wiring for its five new mechanics (Reach, Scatter, Systems Overload, Sunder, Reroll-a-miss) is future work.
+
+---
+
+## 16. Design Notes & Open Items
 
 **Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, all Equipment, and **engine types** (Crude Oil / Diesel / Arc). Squadrons balance by matching composition (§3); heat tolerance is set by weight class (§6).
 
