@@ -25,8 +25,9 @@ export function RigAddScreen({ onCommission }: Props) {
   const cardCls =
     "rig-add-card" + (isEmpty ? " is-empty" : "") + (!canAdd ? " rig-add-locked" : "");
 
-  // Locked (lineup full) keeps the card a clickable affordance — the click
-  // routes into "ready up" rather than a dead disabled button.
+  // Locked (lineup full) keeps the card a visible affordance rather than a
+  // dimmed disabled button, but its click is inert: the "↑" is a signpost to
+  // the real Ready control in the battle-setup bar, not a second entry point.
   const hint = !canAdd
     ? "Full lineup of 3 committed — mark ready to deploy."
     : isEmpty
@@ -44,7 +45,7 @@ export function RigAddScreen({ onCommission }: Props) {
             className="rig-add-btn btn btn--primary"
             type="button"
             title={canAdd ? undefined : message}
-            onClick={() => (onCommission ?? openCommission)()}
+            onClick={canAdd ? () => (onCommission ?? openCommission)() : () => {}}
           >
             {canAdd ? "+ Commission" : "Ready up ↑"}
           </button>
