@@ -16,7 +16,10 @@ test("getOrCreateRoom creates, persists, and reloads", () => {
   assert.equal(store.getRoom("IRON42"), null);
 
   const room = store.getOrCreateRoom("IRON42");
-  applyCommand(room, { verb: "add", attrs: { name: "Warden", class: "heavy" } });
+  applyCommand(room, {
+    verb: "add",
+    attrs: { name: "Warden", class: "medium", lr: "Mini Gun", melee: "Sword" },
+  });
   store.persist();
 
   const reloaded = createStore(file);

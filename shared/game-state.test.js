@@ -2,7 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createRoom, makeRig, claimSide, applyCommand, findRig,
+  normalizeWeapon, WEAPONS, formatBattleState, publicState,
 } from "./game-state.js";
+
+// Every Rig must be commissioned with one Long Range and one Melee weapon,
+// so the add-command attrs used across these tests carry both.
+const W = { lr: "Mini Gun", melee: "Sword" };
 
 test("createRoom has two unclaimed sides and empty rigs", () => {
   const r = createRoom("IRON42");
@@ -39,21 +44,75 @@ test("claimSide reclaims a requested side without consuming the other slot", () 
   assert.equal(claimSide(r, { name: "Bo", side: "b" }), "b");
 });
 
-test("add assigns owner and default SP; damage respects the floor", () => {
+test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
+  assert.equal(normalizeWeapon("longRange", "mini gun"), "Mini Gun");
+  assert.equal(normalizeWeapon("melee", "  SWORD "), "Sword");
+  assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
+  assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
+  assert.equal(normalizeWeapon("longRange", ""), null);
+  assert.equal(WEAPONS.longRange.length, 6);
+  assert.equal(WEAPONS.melee.length, 6);
+});
+
+test("makeRig requires a supported class, one valid long-range and one valid melee weapon", () => {
+  const ok = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  assert.equal(ok.weapons.longRange, "Autocannon");
+  assert.equal(ok.weapons.melee, "Claw");
+  assert.equal(makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon" }), null); // no melee
+  assert.equal(makeRig(1, "Warden", "medium", "a", {}), null);                          // neither
+  assert.equal(makeRig(1, "Warden", "medium", "a", { longRange: "Nope", melee: "Claw" }), null);
+  assert.equal(makeRig(1, "Warden", "heavy", "a", { longRange: "Autocannon", melee: "Claw" }), null);
+  assert.equal(makeRig(1, "Warden", "colossal", "a", { longRange: "Autocannon", melee: "Claw" }), null);
+});
+
+test("add assigns owner, weapons and default SP; damage respects the floor", () => {
   const r = createRoom("X");
-  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "heavy", owner: "b" } });
+  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", owner: "b", ...W } });
   const rig = findRig(r, "warden");
   assert.equal(rig.owner, "b");
-  assert.equal(rig.hull.max, 8);
+  assert.equal(rig.hull.max, 7);
+  assert.equal(rig.weapons.longRange, "Mini Gun");
+  assert.equal(rig.weapons.melee, "Sword");
   assert.equal(r.version, 1);
   applyCommand(r, { verb: "damage", attrs: { name: "Warden", loc: "hull", amount: "3" } });
-  assert.equal(rig.hull.sp, 5);
+  assert.equal(rig.hull.sp, 4);
   assert.equal(r.version, 2);
+});
+
+test("add without weapons is a no-op — no rig, no version bump, no id burn", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium" } });          // missing both
+  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", lr: "Mini Gun" } }); // missing melee
+  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", lr: "X", melee: "Y" } }); // invalid
+  assert.equal(r.rigs.length, 0);
+  assert.equal(r.version, 0);
+  // The next valid add still gets id 1 — a rejected add must not consume an id.
+  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", ...W } });
+  assert.equal(findRig(r, "Warden").id, 1);
+  assert.equal(r.version, 1);
+});
+
+test("add blocks heavy and colossal for now without version bump or id burn", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Breaker", class: "heavy", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "Atlas", class: "colossal", ...W } });
+  assert.equal(r.rigs.length, 0);
+  assert.equal(r.version, 0);
+  applyCommand(r, { verb: "add", attrs: { name: "Vela", class: "light", ...W } });
+  assert.equal(findRig(r, "Vela").id, 1);
+  assert.equal(r.version, 1);
+});
+
+test("add without owner uses the requesting side", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Reaver", class: "medium", ...W } }, { side: "b" });
+  const rig = findRig(r, "Reaver");
+  assert.equal(rig.owner, "b");
 });
 
 test("engine heat cannot cool below 3 once catastrophic; recovery-less heat math", () => {
   const r = createRoom("X");
-  applyCommand(r, { verb: "add", attrs: { name: "S", class: "light" } });
+  applyCommand(r, { verb: "add", attrs: { name: "S", class: "light", ...W } });
   applyCommand(r, { verb: "set", attrs: { name: "S", loc: "engine", sp: "0" } });
   const rig = findRig(r, "S");
   assert.equal(rig.engine.heat >= 3, true);
@@ -68,17 +127,17 @@ test("unknown verb and unknown rig are no-ops (no version bump)", () => {
   assert.equal(r.version, 0);
 });
 
-import { formatBattleState, publicState } from "./game-state.js";
-
-test("formatBattleState reports round, sides and owned rigs", () => {
+test("formatBattleState reports round, sides and owned rigs with weapons", () => {
   const r = createRoom("X");
   claimSide(r, { name: "Ana" });
-  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "heavy", owner: "a" } });
+  applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", owner: "a", ...W } });
   const out = formatBattleState(r);
   assert.match(out, /CURRENT BATTLE STATE/);
   assert.match(out, /Round 1\/5/);
   assert.match(out, /Ana \(a\) VP 0/);
-  assert.match(out, /Warden \(heavy, owner a\).*hull 8\/8/);
+  assert.match(out, /Warden \(medium, owner a\).*hull 7\/7/);
+  assert.match(out, /Mini Gun/);
+  assert.match(out, /Sword/);
 });
 
 test("publicState omits nextRigId bookkeeping", () => {

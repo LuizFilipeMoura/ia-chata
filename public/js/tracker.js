@@ -1,10 +1,14 @@
 import { S, LOCS, findRig } from "./state.js";
 import { sendCommand } from "./api.js";
 import { setStatus } from "./status.js";
+import { WEAPONS } from "/shared/game-state.js";
 
 const rigList = document.getElementById("rigList");
 const rigNameInput = document.getElementById("rigName");
 const rigClassSelect = document.getElementById("rigClass");
+const rigOwnerSelect = document.getElementById("rigOwner");
+const rigLongRangeSelect = document.getElementById("rigLongRange");
+const rigMeleeSelect = document.getElementById("rigMelee");
 const rigAddBtn = document.getElementById("rigAddBtn");
 const rigAddScreen = document.getElementById("rigAddScreen");
 const rigDeckTitle = document.getElementById("rigDeckTitle");
@@ -23,6 +27,42 @@ function barClass(c) {
   if (ratio <= 0.34) return "rig-fill-low";
   if (ratio <= 0.67) return "rig-fill-warn";
   return "rig-fill-ok";
+}
+
+function populateWeaponSelect(select, weapons) {
+  select.innerHTML = "";
+  for (const weapon of weapons) {
+    const option = document.createElement("option");
+    option.value = weapon;
+    option.textContent = weapon;
+    select.appendChild(option);
+  }
+}
+
+populateWeaponSelect(rigLongRangeSelect, WEAPONS.longRange);
+populateWeaponSelect(rigMeleeSelect, WEAPONS.melee);
+
+function ownerLabel(owner) {
+  return (owner || "a") === (S.session?.side || "a") ? "Your Squadron" : "Enemy";
+}
+
+function syncOwnerOptions() {
+  const mySide = S.session?.side || "a";
+  const enemySide = mySide === "a" ? "b" : "a";
+  const myOption = rigOwnerSelect.querySelector(`option[value="${mySide}"]`);
+  const enemyOption = rigOwnerSelect.querySelector(`option[value="${enemySide}"]`);
+  if (myOption) myOption.textContent = "You";
+  if (enemyOption) enemyOption.textContent = "Enemy";
+  rigOwnerSelect.value = mySide;
+}
+
+function orderedRigs() {
+  const mySide = S.session?.side || "a";
+  const enemySide = mySide === "a" ? "b" : "a";
+  return [
+    ...S.rigs.filter((rig) => (rig.owner || "a") === mySide),
+    ...S.rigs.filter((rig) => (rig.owner || "a") === enemySide),
+  ];
 }
 
 function compRow(rig, loc) {
@@ -107,6 +147,11 @@ function buildRigScreen(rig) {
   const screen = document.createElement("div");
   screen.className = "rig-screen";
 
+  const groupHead = document.createElement("div");
+  groupHead.className = "rig-group-head";
+  groupHead.textContent = ownerLabel(rig.owner);
+  screen.appendChild(groupHead);
+
   const term = document.createElement("div");
   term.className = "rig-term" + (rig.destroyed ? " destroyed" : "");
 
@@ -118,6 +163,9 @@ function buildRigScreen(rig) {
   const badge = document.createElement("span");
   badge.className = "rig-badge";
   badge.textContent = rig.weightClass;
+  const ownerBadge = document.createElement("span");
+  ownerBadge.className = "rig-badge rig-owner-badge";
+  ownerBadge.textContent = ownerLabel(rig.owner) === "Your Squadron" ? "You" : "Enemy";
   const rm = document.createElement("button");
   rm.className = "rig-remove";
   rm.type = "button";
@@ -126,6 +174,7 @@ function buildRigScreen(rig) {
   rm.addEventListener("click", () => sendCommand("remove", { name: rig.name }));
   head.appendChild(title);
   head.appendChild(badge);
+  head.appendChild(ownerBadge);
   head.appendChild(rm);
   term.appendChild(head);
 
@@ -135,6 +184,13 @@ function buildRigScreen(rig) {
   status.textContent = st.text;
   term.appendChild(status);
 
+  if (rig.weapons) {
+    const weapons = document.createElement("div");
+    weapons.className = "rig-weapons";
+    weapons.textContent = `${rig.weapons.longRange || "Long Range ?"} / ${rig.weapons.melee || "Melee ?"}`;
+    term.appendChild(weapons);
+  }
+
   for (const loc of LOCS) term.appendChild(compRow(rig, loc));
 
   screen.appendChild(term);
@@ -142,47 +198,50 @@ function buildRigScreen(rig) {
 }
 
 export function renderRigs() {
+  syncOwnerOptions();
   // Rebuild the rig screens but keep the persistent add-rig screen (its inputs
   // hold live event listeners bound once at startup).
   [...rigList.querySelectorAll(".rig-screen:not(.rig-screen-add)")].forEach((n) => n.remove());
-  for (const rig of S.rigs) rigList.insertBefore(buildRigScreen(rig), rigAddScreen);
+  for (const rig of orderedRigs()) rigList.insertBefore(buildRigScreen(rig), rigAddScreen);
   buildDots();
   updateDeck();
 }
 
 // ---- Swipe deck pager ----
 function screenW() { return rigList.clientWidth || 1; }
-function deckIndex() { return Math.max(0, Math.min(S.rigs.length, Math.round(rigList.scrollLeft / screenW()))); }
+function deckIndex() { return Math.max(0, Math.min(orderedRigs().length, Math.round(rigList.scrollLeft / screenW()))); }
 
 function buildDots() {
   rigDots.innerHTML = "";
-  const n = S.rigs.length + 1; // +1 for the add screen
+  const rigs = orderedRigs();
+  const n = rigs.length + 1; // +1 for the add screen
   for (let i = 0; i < n; i++) {
     const dot = document.createElement("button");
     dot.type = "button";
-    dot.className = "deck-dot" + (i === S.rigs.length ? " add-dot" : "");
-    dot.setAttribute("aria-label", i < S.rigs.length ? `Go to rig ${i + 1}` : "Go to add-rig screen");
+    dot.className = "deck-dot" + (i === rigs.length ? " add-dot" : "");
+    dot.setAttribute("aria-label", i < rigs.length ? `Go to rig ${i + 1}` : "Go to add-rig screen");
     dot.addEventListener("click", () => scrollToIndex(i));
     rigDots.appendChild(dot);
   }
 }
 
 function setActive(i) {
+  const rigs = orderedRigs();
   [...rigDots.children].forEach((d, idx) => d.classList.toggle("active", idx === i));
-  if (i >= S.rigs.length) {
+  if (i >= rigs.length) {
     rigDeckTitle.textContent = "New Rig";
   } else {
-    const rig = S.rigs[i];
-    rigDeckTitle.textContent = rig ? `${rig.name} · ${i + 1}/${S.rigs.length}` : "Squadron Status";
+    const rig = rigs[i];
+    rigDeckTitle.textContent = rig ? `${ownerLabel(rig.owner)} · ${rig.name} · ${i + 1}/${rigs.length}` : "Squadron Status";
   }
   rigPrev.disabled = i <= 0;
-  rigNext.disabled = i >= S.rigs.length;
+  rigNext.disabled = i >= rigs.length;
 }
 
 function updateDeck() { setActive(deckIndex()); }
 
 function scrollToIndex(i) {
-  const idx = Math.max(0, Math.min(S.rigs.length, i));
+  const idx = Math.max(0, Math.min(orderedRigs().length, i));
   rigList.scrollLeft = idx * screenW(); // scroll-behavior:smooth animates this on-device
   setActive(idx);
 }
@@ -195,7 +254,13 @@ function addRigFromForm() {
   const name = rigNameInput.value.trim();
   if (!name) { rigNameInput.focus(); return; }
   if (findRig(name)) { setStatus(`A rig named “${name}” already exists.`); return; }
-  sendCommand("add", { name, class: rigClassSelect.value, owner: S.session?.side || "a" });
+  sendCommand("add", {
+    name,
+    class: rigClassSelect.value,
+    owner: rigOwnerSelect.value,
+    lr: rigLongRangeSelect.value,
+    melee: rigMeleeSelect.value,
+  });
   rigNameInput.value = "";
 }
 

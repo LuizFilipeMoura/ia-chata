@@ -5,6 +5,11 @@ export const RIG_DEFAULTS = {
   colossal: { hull: 9, arms: 8, legs: 8, engine: 7 },
 };
 export const LOCS = ["hull", "arms", "legs", "engine"];
+export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
+export const WEAPONS = {
+  longRange: ["Mini Gun", "Double MG", "Autocannon", "Arc Gun", "Mortar", "Sniper Cannon"],
+  melee: ["Sword", "Circular Saw", "Chainsaw", "Claw", "Lance", "Wrecking Ball"],
+};
 
 export function createRoom(code) {
   return {
@@ -23,8 +28,21 @@ export function createRoom(code) {
   };
 }
 
-export function makeRig(id, name, cls, owner) {
-  const weightClass = RIG_DEFAULTS[cls] ? cls : "medium";
+export function normalizeWeapon(category, name) {
+  const list = WEAPONS[category];
+  if (!list || !name) return null;
+  const ref = String(name).trim().toLowerCase();
+  return list.find((weapon) => weapon.toLowerCase() === ref) || null;
+}
+
+export function makeRig(id, name, cls, owner, weapons = {}) {
+  const normalizedClass = String(cls || "").trim().toLowerCase();
+  if (!SUPPORTED_RIG_CLASSES.includes(normalizedClass)) return null;
+  const longRange = normalizeWeapon("longRange", weapons.longRange || weapons.lr);
+  const melee = normalizeWeapon("melee", weapons.melee);
+  if (!longRange || !melee) return null;
+
+  const weightClass = normalizedClass;
   const d = RIG_DEFAULTS[weightClass];
   return {
     id,
@@ -35,7 +53,7 @@ export function makeRig(id, name, cls, owner) {
     arms:   { sp: d.arms, max: d.arms, destroyed: false },
     legs:   { sp: d.legs, max: d.legs, destroyed: false },
     engine: { sp: d.engine, max: d.engine, destroyed: false, heat: 0 },
-    weapons: [],   // Phase 2
+    weapons: { longRange, melee },
     prepare: 0,    // Phase 4
     destroyed: false,
   };
@@ -125,16 +143,20 @@ function heatRig(rig, spec) {
 
 // Apply a single normalized command { verb, attrs } to the room in place.
 // Returns the room. Bumps room.version only when something actually changed.
-export function applyCommand(room, cmd) {
+export function applyCommand(room, cmd, context = {}) {
   const verb = (cmd?.verb || "").toLowerCase();
   const a = cmd?.attrs || {};
   let changed = false;
 
   if (verb === "add") {
     if (a.name && !findRig(room, a.name)) {
-      const owner = normalizeSide(room, a.owner) || "a";
-      room.rigs.push(makeRig(room.nextRigId++, a.name, (a.class || "").toLowerCase(), owner));
-      changed = true;
+      const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
+      const rig = makeRig(room.nextRigId, a.name, (a.class || "").toLowerCase(), owner, a);
+      if (rig) {
+        room.nextRigId++;
+        room.rigs.push(rig);
+        changed = true;
+      }
     }
   } else if (verb === "remove") {
     const rig = findRig(room, a.name);
@@ -177,7 +199,10 @@ export function formatBattleState(room) {
         return tag;
       });
       const status = rig.destroyed ? " [RIG DESTROYED]" : "";
-      lines.push(`- ${rig.name} (${rig.weightClass}, owner ${rig.owner})${status}: ${parts.join(", ")}`);
+      const weapons = rig.weapons
+        ? `; weapons ${rig.weapons.longRange || "?"} / ${rig.weapons.melee || "?"}`
+        : "";
+      lines.push(`- ${rig.name} (${rig.weightClass}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
     }
   }
   return lines.join("\n");

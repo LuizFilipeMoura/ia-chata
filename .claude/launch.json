@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "oil-iron-server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 8000
+    },
+    {
+      "name": "oil-iron-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 8123
+    },
+    {
+      "name": "oil-iron-verify",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 8231,
+      "autoPort": true
+    }
+  ]
+}

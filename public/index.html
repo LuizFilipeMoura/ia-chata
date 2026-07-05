@@ -72,15 +72,23 @@
     <div id="rigAddScreen" class="rig-screen rig-screen-add">
       <div class="rig-add">
         <div class="rig-add-title">◈ Commission a Rig</div>
-        <div class="rig-add-hint">Name it and pick a weight class — or just tell the rules master “add a heavy rig called Stalker”.</div>
+        <div class="rig-add-hint">Name it, pick Light or Medium, and choose one long-range and one melee weapon.</div>
         <input id="rigName" type="text" placeholder="Rig name" aria-label="New rig name" />
         <div class="rig-add-row">
           <select id="rigClass" aria-label="New rig weight class">
             <option value="light">Light</option>
-            <option value="medium">Medium</option>
-            <option value="heavy" selected>Heavy</option>
-            <option value="colossal">Colossal</option>
+            <option value="medium" selected>Medium</option>
           </select>
+          <select id="rigOwner" aria-label="New rig side">
+            <option value="a">You</option>
+            <option value="b">Enemy</option>
+          </select>
+        </div>
+        <div class="rig-add-row">
+          <select id="rigLongRange" aria-label="New rig long range weapon"></select>
+          <select id="rigMelee" aria-label="New rig melee weapon"></select>
+        </div>
+        <div class="rig-add-row">
           <button id="rigAddBtn" class="rig-add-btn" type="button">+ Add</button>
         </div>
       </div>

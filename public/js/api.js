@@ -6,7 +6,7 @@ export async function sendCommand(verb, attrs) {
   try {
     const resp = await fetch(`/api/game/${encodeURIComponent(S.session.room)}/command`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cmd: { verb, attrs } }),
+      body: JSON.stringify({ cmd: { verb, attrs }, side: S.session?.side }),
     });
     if (!resp.ok) return;
     const { version, state } = await resp.json();

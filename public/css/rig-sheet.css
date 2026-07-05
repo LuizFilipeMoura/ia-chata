@@ -50,6 +50,10 @@
   overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
   padding: .25rem .35rem .4rem; display: flex; flex-direction: column;
 }
+.rig-group-head {
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--txt-faint); margin: .05rem .1rem .35rem;
+}
 
 .rig-term {
   position: relative; flex: 1 0 auto;
@@ -82,6 +86,7 @@
   border: 1px solid rgba(231,154,61,.4); border-radius: 5px;
   padding: .14rem .42rem; background: rgba(231,154,61,.08); flex: 0 0 auto;
 }
+.rig-owner-badge { color: var(--txt-dim); border-color: var(--line); background: rgba(255,255,255,.03); }
 .rig-remove {
   width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
   background: transparent; color: var(--txt-faint); font-size: .9rem;
@@ -95,6 +100,10 @@
 }
 .rig-status.warn { color: var(--oil-hi); }
 .rig-status.crit { color: var(--ember-hi); }
+.rig-weapons {
+  font-family: var(--font-mono); font-size: .66rem; color: var(--txt-dim);
+  margin: -.35rem 0 .75rem; line-height: 1.35;
+}
 
 .rig-comp { display: flex; align-items: center; gap: .5rem; margin: .45rem 0; }
 .rig-comp-label {
@@ -153,13 +162,16 @@
 }
 #rigName:focus { outline: none; border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil); }
 .rig-add-row { display: flex; gap: .5rem; }
-#rigClass {
+#rigClass,
+#rigOwner,
+#rigLongRange,
+#rigMelee {
   flex: 1; background: var(--iron-800); color: var(--txt);
   border: 1px solid var(--line); border-radius: 10px; padding: .55rem .5rem;
   font-family: var(--font-display); font-size: .9rem;
 }
 .rig-add-btn {
-  flex: 0 0 auto; background: linear-gradient(180deg, var(--oil-hi), var(--oil));
+  flex: 1; background: linear-gradient(180deg, var(--oil-hi), var(--oil));
   color: #241606; border-radius: 10px; padding: .55rem 1.1rem;
   font-weight: 700; font-family: var(--font-display); letter-spacing: .06em; font-size: .9rem;
 }

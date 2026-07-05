@@ -22,7 +22,7 @@ export function createGameRouter(store) {
   router.post("/:room/command", (req, res) => {
     const room = store.getRoom(req.params.room);
     if (!room) return res.status(404).json({ error: "no such room" });
-    applyCommand(room, req.body?.cmd || {});
+    applyCommand(room, req.body?.cmd || {}, { side: req.body?.side });
     store.persist();
     res.json({ version: room.version, state: publicState(room) });
   });

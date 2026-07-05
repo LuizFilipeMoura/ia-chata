@@ -1,0 +1,437 @@
+# Of Oil and Iron — Rules (Working Edition)
+
+**Version:** wr-0.10 · **Base:** standalone working ruleset
+**Scale:** distances are written for the models this ruleset uses — **Light on 60 mm bases, Medium on 75 mm bases**. Measure in inches, base-to-base (closest points).
+**Dice:** six-sided (**D6**) and twelve-sided (**D12**).
+
+> This is the single source of truth. It does **not** reference the old PDF — everything needed to play is here.
+> Changes marked **⚙ TUNING** are house decisions or invented baselines that will change during playtesting. See **Design Notes** at the end for the full list.
+> Version history is tracked in [`CHANGELOG.md`](CHANGELOG.md).
+
+---
+
+## Contents
+
+1. [Overview](#1-overview)
+2. [Rig Statistics](#2-rig-statistics)
+3. [Building a Squadron](#3-building-a-squadron)
+4. [The Round](#4-the-round)
+5. [Actions](#5-actions)
+6. [Heat & Overheating](#6-heat--overheating)
+7. [Attacking & Damage](#7-attacking--damage)
+8. [Catastrophic Damage](#8-catastrophic-damage)
+9. [Rig Destruction](#9-rig-destruction)
+10. [Deployment](#10-deployment)
+11. [Victory — Salvage](#11-victory--salvage)
+12. [Weapon Profiles](#12-weapon-profiles)
+13. [Weapon Perks](#13-weapon-perks)
+14. [Factions](#14-factions)
+15. [Design Notes & Open Items](#15-design-notes--open-items)
+
+---
+
+## 1. Overview
+
+A skirmish wargame of dieselpunk war machines (**Rigs**) piloted by **Ironclads**. Each player commands a **Squadron** of 3–5 Rigs on a **54"×36"** table. Players alternate activating Rigs; each Rig manages **heat** as it moves and fights, risking overheating. The game is won by controlling **salvage objectives** (§11).
+
+Each Rig has four components — **Hull, Arms, Legs, Engine** — each with its own **Structure Points (SP)**. Reduce a component to 0 SP and it suffers **catastrophic damage**; destroy the key components and the Rig dies.
+
+**You need:** 3–5 Rig models per side, D6 and D12 dice, a tape measure (inches), terrain, 3 objective markers, and tokens for preparations and catastrophic damage.
+
+> Only **Light** and **Medium** Rigs are currently playable — Heavy and Colossal weapon profiles are not yet written (§12).
+
+---
+
+## 2. Rig Statistics
+
+Every Rig starts from a **weight class**, which sets its base profile.
+
+| Stat | Light | Medium | Heavy | Colossal |
+|---|:--:|:--:|:--:|:--:|
+| Base size | 60mm | 75mm | 90mm | 120mm |
+| Hull SP | 6 | 7 | 8 | 9 |
+| Arms SP | 5 | 6 | 7 | 8 |
+| Legs SP | 5 | 6 | 7 | 8 |
+| Engine SP | 4 | 5 | 6 | 7 |
+| Aim | 4+ | 4+ | 3+ | 3+ |
+| Speed | 9" | 8" | 6" | 5" |
+| Weapon slots | 2 | 2 | 2 | 2 (+1 Hull) |
+
+- **Speed** — max move distance in inches.
+- **Aim** — base D6 target number to hit (modified by weapon ACC and cover).
+- **Weapon slots** — how many weapons the Rig may carry. Colossal Rigs get an extra **Hull-mounted** slot.
+- **Structure Points (SP)** — durability per component. At 0 SP → catastrophic damage (§8).
+
+### Impact Tables (armour)
+
+After a hit, the **Impact Roll** total (D6 + STR + arc modifiers) is compared to the target location's row. The total determines the severity:
+
+**Light Rig**
+
+| Location | Direct (−1 SP) | Severe (−2 SP) | Critical (−3 SP) |
+|---|:--:|:--:|:--:|
+| Hull | 10–13 | 14–15 | 16+ |
+| Arms | 10–11 | 12–13 | 14+ |
+| Legs | 10–12 | 13–14 | 15+ |
+| Engine | 7–9 | 10–11 | 12+ |
+
+**Medium Rig**
+
+| Location | Direct | Severe | Critical |
+|---|:--:|:--:|:--:|
+| Hull | 11–13 | 14–16 | 17+ |
+| Arms | 10–12 | 13–14 | 15+ |
+| Legs | 11–12 | 13–14 | 15+ |
+| Engine | 8–9 | 10–11 | 12+ |
+
+**Heavy Rig**
+
+| Location | Direct | Severe | Critical |
+|---|:--:|:--:|:--:|
+| Hull | 13–14 | 15–16 | 17+ |
+| Arms | 12–13 | 14–15 | 16+ |
+| Legs | 14–15 | 16 | 17+ |
+| Engine | 8–10 | 11–12 | 13+ |
+
+**Colossal Rig**
+
+| Location | Direct | Severe | Critical |
+|---|:--:|:--:|:--:|
+| Hull | 13–15 | 16 | 17+ |
+| Arms | 13 | 14–15 | 16+ |
+| Legs | 13–15 | 16 | 17+ |
+| Engine | 9–10 | 11–13 | 14+ |
+
+An Impact Roll total **below** a location's Direct threshold does nothing (it glances off).
+
+---
+
+## 3. Building a Squadron
+
+> **No Oil, no Iron, no Equipment, no engine types.** Squadrons are built purely from chassis + weapons. Loadout is limited only by **weapon slots**.
+
+1. **Squadron size** — agree on **3–5 Rigs** per side. Max **1 Colossal** per Squadron.
+2. **Choose each Rig's weight class** (§2).
+3. **Equip weapons** up to the Rig's slots. Weapons come in **two types — Long Range and Melee** (§12), and every Rig **must carry exactly one of each**:
+   - Light / Medium / Heavy: **2 weapons — one Long Range and one Melee.**
+   - Colossal: **one Long Range + one Melee, plus 1 Hull-mounted weapon** of either type (3 weapons total).
+   - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **STR then scales with the chassis** (Light −2 / Medium +0 / Heavy +2 / Colossal +4, §12).
+
+### Balancing without points
+- **Balanced game (recommended):** both sides field the **same number of Rigs in each weight class** (mirror the composition).
+- **Cinematic game:** bring whatever you like.
+
+---
+
+## 4. The Round
+
+A game lasts **5 rounds** (§11). Each round has three phases.
+
+**Initiative Phase.** Both players roll 1 D12; highest activates first this round (reroll ties). The player who activates **second** this round gains free **Answer tokens** (§5). *(Round 1 is the exception — initiative there is set by deployment order, not rolled: §10.)*
+
+**Activation Phase.** Players alternate activating **one Rig at a time**, following initiative order. A Rig completes all its actions before the next Rig activates. If one player has no Rigs left to activate, the other player activates their remaining Rigs back-to-back.
+
+**Recovery Phase.** In this order:
+1. Each Rig reduces its heat by **2** (unless an effect forbids cooling). *⚙ TUNING: source gave both "2" and "3"; using 2 for tension.*
+2. Remove all unspent preparation and Answer tokens.
+3. **Score objectives** (§11).
+4. Resolve any other end-of-round effects.
+
+The game then returns to the Initiative Phase of the next round, unless a player has already won.
+
+---
+
+## 5. Actions
+
+Each Rig may take **up to 5 actions** per activation. The number in **[brackets]** is the base heat it generates (see §6 for **Sprint** and **Hot** modifiers). You need not use all 5 — pushing hard risks overheating (§6).
+
+- **Move [1]** — reposition up to the Rig's full Speed.
+  - *Forward:* up to full Speed, straight ahead.
+  - *Backpedal:* straight back at **half** Speed.
+  - *Side-step:* directly left or right without changing facing, at **half** Speed.
+  - *Pivot:* up to **90° free** at any point(s) during the Move. A pivot of **more than 90°** consumes the Rig's entire movement for that action.
+  - *Sprint:* you may extend a Move to up to **1½ × Speed**; a Sprinting Move generates **2 heat** instead of 1 (§6).
+
+- **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon must be **reloaded** before firing again in the same activation. **Melee** weapons never need reloading.
+
+- **Aimed Shot [1]** — a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
+
+- **Ram [1]** — if an enemy is within **1.5"**, move into base contact. **Both** Rigs suffer one hit. For each, roll a hit location (D12, §7) and one Impact Roll of **D6 + the ramming STR** below (each Rig uses **its own** weight class value):
+
+  | Weight class | Ram STR |
+  |---|:--:|
+  | Light | 8 |
+  | Medium | 9 |
+  | Heavy | 10 |
+  | Colossal | 11 |
+
+- **Reload [1]** — reloads **all** weapons.
+
+- **Repair [0]** — roll 1 D12: on **7+** repair 1 SP to any one location; on **10+** repair 2 SP.
+
+- **Shut Down [0]** — declared **before any other action**: forfeit all actions this activation to set heat to **0**.
+
+- **Prepare [1]** — generate 1 heat and place a facedown preparation token by the Rig, choosing one reaction below. It lasts until this Rig's next activation; reveal it when its trigger occurs. A Rig may hold **only one** preparation at a time.
+  - *Evasive Manoeuvre* — when targeted by an attack on an enemy's turn, **before** the attack resolves, move up to **half Speed** in any direction. If this puts the Rig out of range or line of sight, the attack fails.
+  - *Return Fire* — after an enemy Rig attacks this Rig, choose 1 weapon and make an attack against that enemy.
+  - *Brace for Incoming Fire* — attacks against this Rig's **front arc** suffer **−2 to their Impact Rolls** until the next round.
+
+- **Answer Tokens (for the player going second).** At the start of each round, the player who activates **second** gains **2 Answer tokens**. An Answer token may be spent at any time to place one of the preparations above on one of their Rigs **for free** — no action, no heat — otherwise following all normal preparation rules (facedown, revealed on trigger, one per Rig). Unspent Answer tokens are removed in the Recovery Phase. *⚙ TUNING: 2 per round.*
+
+---
+
+## 6. Heat & Overheating
+
+Actions and some weapon perks generate **heat**, tracked upward on the Rig. At the **end of the Rig's activation**, if heat has climbed past the Rig's **Heat Capacity**, the engine may misfire — and the hotter it runs, the worse the misfire. (The Engine is still a body component; Rigs no longer choose an engine *type*.)
+
+### Heat generation
+
+| Action | Heat |
+|---|:--:|
+| Move (up to Speed) | 1 |
+| Move — **Sprint** (up to 1½× Speed) | 2 |
+| Fire Weapon | 1 (**2** if the weapon is **Hot**) |
+| Aimed Shot / Ram / Prepare | 1 |
+| Reload / Repair / Shut Down | 0 |
+
+- **Full Auto** and **Charged Shot** fire-modes: each attack **die** that rolls a **1** adds 1 heat.
+
+### Heat Capacity (by weight class)
+
+Heavier Rigs run hotter — their mass works the engine harder. A Rig is safe up to its Heat Capacity; beyond it, it risks a misfire. (Heat Capacity is a heat value, not a distance — it is **not** affected by the distance scale.)
+
+| Weight class | Heat Capacity |
+|---|:--:|
+| Light | 6 |
+| Medium | 5 |
+| Heavy | 4 |
+| Colossal | 3 |
+
+### Overheat check
+
+At the end of an activation, compare the Rig's current heat to its Heat Capacity:
+- **Heat ≤ Capacity** → safe, no roll.
+- **Heat > Capacity** → roll **1 D12 + [2 × (heat − Capacity)]** (this bonus is capped at **+10**) and consult the **Heat Threshold Table**.
+
+*Example: a Colossal (Capacity 3) ending its activation on heat 6 rolls D12 + 6.*
+
+Heat is reduced by **2** each Recovery Phase (§4); the **Shut Down** action (§5) sets it to 0.
+
+**Heat Threshold Table** (D12 + overheat bonus)
+
+| Result | Effect |
+|:--:|---|
+| 1–5 | Nothing happens. |
+| 6–7 | **System Stall** — 1 damage to the Engine. |
+| 8–9 | **Ammunition Detonation** — 2 damage to the Arms. |
+| 10–11 | **Hydraulic Blowout** — 2 damage to the Legs; halve Speed next turn (round down). |
+| 12–13 | **Structural Buckling** — 1 damage to each component (Hull, Engine, Arms, Legs). |
+| 14–16 | **Engine Failure** — 2 damage to the Engine; heat can no longer be decreased for the rest of the game. |
+| 17+ | **Catastrophic Failure** — catastrophic damage to all components (§8); heat can no longer be decreased. |
+
+---
+
+## 7. Attacking & Damage
+
+1. **Declare attacker & target.** The target must be in the attacker's **front 90° arc**. Declare before measuring.
+2. **Check range.** Measure base-to-base; must be within the weapon's range band. Out of range → the attack fails. (Do not pre-measure before declaring.)
+3. **Verify line of sight.** At least **50%** of the target must be visible.
+   - Up to **25% obscured** → **−1 ACC**.
+   - Up to **50% obscured** → **−2 ACC**.
+4. **Roll to hit.** Roll **ROF** D6. Apply ACC modifiers (weapon + cover) to the Rig's **Aim**; each die that **meets or beats** the modified Aim is a hit. A natural **6 always hits**.
+5. **Apply weapon perks** (§13).
+6. **Determine impact location.** Unless it was an **Aimed Shot**, the *defender* rolls 1 D12:
+
+   | D12 | Location |
+   |:--:|---|
+   | 1–4 | Hull |
+   | 5–7 | Arms |
+   | 8–10 | Legs |
+   | 11–12 | Engine |
+
+7. **Impact Roll.** For **each hit**, roll 1 D6 and add the weapon's **STR** (adjusted for the firing Rig's weight class, §12). For a **ranged** attack, add **+2 STR** into the target's **side arc** or **+4 STR** into its **rear arc**. **Melee attacks gain no arc bonus** — a melee weapon strikes just as hard from any facing, and being in contact is deadly enough. *(Raking Fire machine guns override the ranged side/rear values — §13.)* Compare each total to the location's row in the Impact Table (§2).
+8. **Apply damage.** Direct = **−1 SP**, Severe = **−2 SP**, Critical = **−3 SP**.
+
+**Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage.
+
+A Rig is **destroyed** when all four components are at 0 SP, or by the Hull/Engine rules in §8.
+
+---
+
+## 8. Catastrophic Damage
+
+When a location hits **0 SP**, apply its effect. Further damage to that same location applies the "additional damage" clause.
+
+| Location | At 0 SP | Additional damage |
+|---|---|---|
+| **Legs** | Move −3"; pivots cost double movement; cannot backpedal. | Rig is **immobilised** for the game (may still pivot). |
+| **Hull** | −2 to maximum actions per activation; −1 Aim. | Rig suffers **total system failure — destroyed**. |
+| **Arms** | Roll D12 for which weapon is destroyed (see below); its munitions explode: **1 damage to Hull and 1 to Engine**. | Same weapon: **3 damage to Hull**; weapon gone for the game. |
+| **Engine** | Rig **loses its next activation**; heat cannot drop below 3 (raise to 3 if lower). | Rig suffers **total system failure — destroyed**. |
+
+**Arms — which weapon?**
+
+- Light / Medium / Heavy: **1–6 Left**, **7–12 Right**.
+- Colossal: **1–4 Left**, **5–8 Hull**, **9–12 Right**.
+
+---
+
+## 9. Rig Destruction
+
+When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **12"** suffer a **D6 + STR 10** hit — the destroyed Rig's controller rolls the damage; each affected Rig's controller rolls its own hit location.
+
+---
+
+## 10. Deployment
+
+**Table:** 54"×36" (137×91 cm). The armies set up in **opposite corners** and advance across the diagonal — an angled clash that keeps flanks exposed and rewards the facing/melee game.
+
+1. **Terrain.** Roll off (1 D12 each, highest wins). Starting with the winner, alternate placing **one terrain piece at a time** — aim for **4–6 pieces**. Leave line-of-sight blockers and lanes in the middle; the flanking game needs cover to move around.
+
+2. **Sides.** A **dividing line runs from one corner to the opposite corner**, splitting the table into two triangular halves. The **terrain roll-off winner** chooses which of the two diagonals is used and which half is theirs; the opponent takes the opposite corner.
+
+3. **Objectives.** Place **3 markers**: one at the **table centre** (**2 VP**), and one **18" from centre toward each of the two empty corners** (the corners no one deploys in) — **1 VP** each. All three sit in the contested ground between the armies. If a marker lands on impassable terrain, shift it the shortest distance to clear ground.
+
+4. **Order.** The player who took the **opposite corner** (the roll-off loser) chooses **who deploys first**. Players then alternate placing **one Rig at a time**, starting with the first-deployer.
+   - Each Rig must be **fully within its own half** and **no closer than 4"** to the dividing line — leaving an **8" gap** between the front lines, so a turn-1 melee charge is reliable, not just possible.
+   - **Declare facing** as each Rig is placed.
+
+5. **Round 1 initiative (unified with deployment).** There is **no initiative roll in Round 1**: the player who **deployed first activates second** — and so gains Round 1's **Answer tokens** (§5), the payoff for committing first. From **Round 2** on, roll initiative normally (§4).
+
+### Optional variants
+- **Pitched (opposite edges)** — the classic head-on clash: 9"-deep zones on the two opposite long edges, 18" apart. Slower, more of a straight firefight.
+- **Ambush** — the first-deployer may hold **up to 1 Rig in reserve**, bringing it on from any edge of their own half on a later round by spending its activation to enter (move up to half Speed from that edge).
+
+---
+
+## 11. Victory — Salvage
+
+The battle is fought over scrap scattered across the wastes. Tuned for small games (**3 Rigs a side**); scales fine up to 5.
+
+### Objectives
+- **3 markers**, placed during deployment (§10): the **table centre** (**2 VP**) and one toward each **empty corner** (**1 VP** each).
+- The valuable centre pulls both squadrons together instead of camping their own corner.
+
+### Control
+- A Rig **controls** a marker if it is **within 4½"** and **no enemy Rig** is also within 4½".
+- If both sides have a Rig within 4½", the marker is **contested** — nobody scores it.
+- A destroyed Rig's wreck does **not** hold objectives (remove it from control).
+
+### Scoring & winning
+- During each **Recovery Phase**, each player scores the VP value of every marker they control.
+- **Annihilation:** if a player has **no Rigs left** at any point, their opponent **wins immediately**.
+- **On points:** after **5 rounds** (use **4** for a quicker 3-Rig game), **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
+
+### Optional — Ironclad Bounty
+Each player secretly notes one enemy Rig as their **Priority Target**. Destroying it is worth **+2 VP** — a light combat incentive that fits a 3-Rig brawl, where every machine matters.
+
+---
+
+## 12. Weapon Profiles
+
+Every weapon is one of **two types**, and every Rig equips **one of each** (§3):
+
+- **Long Range** — any weapon **without** the Melee perk. Fires at range and must be **reloaded** between shots in the same activation.
+- **Melee** — any weapon with the **Melee** perk (RNG 1.5"). Usable only within 1.5" and never needs reloading.
+
+There are **six weapons of each type**. Any weapon may be fitted to a Rig of **any weight class** and **any faction**. **ACC** shows **near / far** values matching the weapon's two range bands (**RNG** = near / far, in inches); a single value applies at all ranges.
+
+**Weight-class STR.** The **STR** listed below is the **Medium** baseline. A weapon's STR shifts with the chassis carrying it — heavier Rigs drive it harder, lighter Rigs can't. Everything else (ROF, ACC, RNG, perks) is unchanged:
+
+| Chassis | Light | Medium | Heavy | Colossal |
+|---|:--:|:--:|:--:|:--:|
+| **STR modifier** | −2 | +0 | +2 | +4 |
+
+Apply this modifier to the weapon's STR every time you make an Impact Roll (§7). *Example: a Sniper Cannon (STR 12) reads STR 10 on a Light Rig, 12 on a Medium, 14 on a Heavy, 16 on a Colossal.*
+
+### Long Range Weapons
+
+**Machine Guns** — the flanking specialists. Their **Raking Fire** means they do **no damage to a target's front arc**, but tear through the exposed **side (+4 STR)** and **rear (+8 STR)**. Fast-firing and low-STR head-on: manoeuvre onto a flank to make them count.
+
+| Weapon | ROF | STR | ACC | RNG | Perks |
+|---|:--:|:--:|:--:|:--:|---|
+| Mini Gun | 8 | 4 | +1 / −1 | 9 / 18 | Full Auto, Hot, Raking Fire |
+| Double MG | 8 | 6 | +1 / – | 9 / 18 | Full Auto, Raking Fire |
+
+**Cannons & Artillery** — front-capable firepower; damage every arc normally.
+
+| Weapon | ROF | STR | ACC | RNG | Perks |
+|---|:--:|:--:|:--:|:--:|---|
+| Autocannon | 4 | 8 | – / −1 | 12 / 24 | Full Auto |
+| Arc Gun | 2 | 10 | – / +1 | 15 / 30 | Charged Shot, Precision |
+| Mortar | 3 | 9 | −1 / – | 15 / 30 | Charged Shot, Incendiary |
+| Sniper Cannon | 1 | 12 | – / −1 | 12 / 24 | Precision |
+
+### Melee Weapons
+
+| Weapon | ROF | STR | ACC | RNG | Perks |
+|---|:--:|:--:|:--:|:--:|---|
+| Sword | 2 | 6 | – | 1.5 | Melee, Shock |
+| Circular Saw | 3 | 6 | – | 1.5 | Melee, Cleave |
+| Chainsaw | 3 | 8 | – | 1.5 | Melee, Rend |
+| Claw | 2 | 8 | +1 | 1.5 | Melee, Armour Piercing |
+| Lance | 1 | 11 | +1 | 1.5 | Melee, Impale |
+| Wrecking Ball | 1 | 12 | – | 1.5 | Melee, Staggering |
+
+---
+
+## 13. Weapon Perks
+
+- **Armour Piercing** — for each Impact Roll of 6, add a D3 to the result.
+- **Charged Shot** — optional fire-mode: **+2 STR**, but each attack die that rolls a 1 adds 1 heat.
+- **Cleave** — the spinning blade carries through: on a successful hit, one other enemy Rig within **1.5"** of the target also suffers 1 hit (roll its hit location and Impact Roll normally).
+- **Full Auto** — optional fire-mode: **+2 ROF**, but each attack die that rolls a 1 adds 1 heat.
+- **Hot** — firing generates **2 heat** instead of 1. If written as **(Hot)** before a perk, the weapon is not Hot by default, but the Ironclad may push the engine to gain that perk for the attack at the cost of being Hot.
+- **Hull** — a Hull-mounted weapon (Colossal only, in this edition). May be equipped only once per Rig.
+- **Impale** — on a successful hit, roll 1 D12; on **8+** the target is impaled — immobilised until this Rig's next activation (it may still pivot).
+- **Incendiary** — a successful hit increases the target's heat by 1 (needs only to hit).
+- **Melee** — usable only within **1.5"**; never needs reloading.
+- **Precision** — may make an Aimed Shot **without** the −2 ACC penalty.
+- **Raking Fire** — this weapon **cannot damage a target's front arc**: resolve the attack normally, but every Impact Roll against a front-arc target automatically fails. Against the **side arc** the weapon gains **+4 STR**, and against the **rear arc +8 STR** — these **replace** the standard +2 / +4 side/rear bonuses (§7). Machine guns rip apart exposed flanks but glance off frontal armour.
+- **Rend** — the chain grinds deeper: for each Impact Roll of **5 or 6**, add a **D3** to the result.
+- **Shock** — on a successful hit, the target's movement is halved (round down) during its next activation.
+- **Staggering** — on a successful hit, roll 1 D6: **1–2** target pivots 90° left; **3–4** target is pushed back 3"; **5–6** target pivots 90° right.
+
+---
+
+## 14. Factions
+
+Factions are **narrative flavour** — every weapon in §12 is available to every faction. A Squadron typically comes from one faction, but mixed/mercenary forces are allowed for narrative play.
+
+- **The Krim Corporation** — ruthless militarists; overwhelming firepower and endurance.
+- **Nox Industries** — industrial giants; durable, brute-force machines.
+- **Arcus Technologies** — arc-tech pioneers; fast, precise, advanced Rigs.
+- **Triton Engineering** — maritime survivors; sturdy, utilitarian, harpoon-and-anchor tools of war.
+- **Freegear Coalition** — scrap-built rebels; adaptable, resourceful machines.
+
+> **Faction perks are TBD** — the concept exists (spend a resource to pick corporation perks) but no perks were ever listed. Deferred until the economy is redesigned.
+
+---
+
+## 15. Design Notes & Open Items
+
+**Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, all Equipment, and **engine types** (Crude Oil / Diesel / Arc). Squadrons balance by matching composition (§3); heat tolerance is set by weight class (§6).
+
+**Distance scale:** distances suit the models this ruleset uses on a **54"×36"** table — **Light 60 mm**, **Medium 75 mm** bases (Heavy 90, Colossal 120).
+
+**Contradictions resolved (from the source):**
+- Recovery Phase heat cooldown → **2**.
+- Repair → **7+ / 10+**.
+- Brace for Incoming Fire → **−2 to Impact Rolls** on front-arc attacks.
+- Initiative → **roll every round**.
+- Heavy Legs Impact Table → **14–15 / 16 / 17+** (removed overlap).
+- Ram → one Impact Roll each of **D6 + ram STR**.
+
+**House rules added:**
+- **Sprint** (§5/§6) — normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot.
+- **Raking Fire** (§13) — machine guns do no frontal damage but hit far harder (+4 side / +8 rear).
+- **Answer tokens** (§5) — the player going second each round gets 2 free preparations.
+- **Weight-based heat** (§6) — Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
+- **Victory — Salvage** (§11) — weighted centre objective (2 VP), annihilation auto-win.
+
+**Open questions / TBD:**
+- Weapon profiles are **universal** (one shared list of 6 Long Range + 6 Melee) with a **weight-class STR modifier** (Light −2 / Heavy +2 / Colossal +4 vs the Medium baseline, §12); all four classes are playable. Playtest the ±2-per-step spread — it may need widening/narrowing per weapon later.
+- Faction perks — not yet written (§14).
+- Machine-gun STR/arc values under Raking Fire — watch that they're "strong not silly" on the flanks.
+- Alpha-strike swing at 3v3 — high-STR crits can gut a Rig in one activation; see if crits need softening.
+- Whether composition-matching is enough balance, or a lightweight cost system is needed.

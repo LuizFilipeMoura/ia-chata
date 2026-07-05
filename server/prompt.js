@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RULEBOOK_MD } from "./config.js";
+import { WEAPONS } from "../shared/game-state.js";
 
 // Instructions that teach Gemma the rig-tracker command protocol. The browser
 // parses these [[RIG ...]] tags out of the reply, applies them to the tracker,
@@ -15,7 +16,7 @@ export const TRACKER_PROTOCOL = [
   "emit the matching command AND speak a short natural confirmation. Reply in the",
   "same language the player used. Put commands on their own, exactly in this form:",
   "",
-  '[[RIG add name="<name>" class="light|medium|heavy|colossal" owner="a|b"]]',
+  '[[RIG add name="<name>" class="<class: light|medium>" owner="a|b" lr="<long-range weapon>" melee="<melee weapon>"]]',
   '[[RIG damage name="<name>" loc="hull|arms|legs|engine" amount="<n>"]]',
   '[[RIG repair name="<name>" loc="hull|arms|legs|engine" amount="<n>"]]',
   '[[RIG heat name="<name>" amount="+<n>" | "-<n>" | "0" | "<n>"]]',
@@ -24,13 +25,26 @@ export const TRACKER_PROTOCOL = [
   "",
   "Rules for the tags:",
   "- Emit one tag per change; the app applies each exactly once.",
+  "- A Rig is only complete with a name, a supported class, one Long Range",
+  "  weapon, and one Melee weapon. Supported creation classes are Light and",
+  "  Medium only.",
+  "- If the player asks to add a Rig without all required details, ask for every",
+  "  missing field in one response and emit no `[[RIG add]]` tag.",
+  "- Valid Long Range weapons: " + WEAPONS.longRange.join(", ") + ".",
+  "- Valid Melee weapons: " + WEAPONS.melee.join(", ") + ".",
+  "- Use those weapon names exactly in tags. You may map imperfect player wording",
+  "  to the closest valid weapon when the intent is clear; if it is not clear,",
+  "  ask again and include the valid options.",
+  "- Heavy and Colossal Rigs are not available in the tracker yet. If the player",
+  "  asks to create one, explain that and ask them to choose Light or Medium.",
   "- On `add`, `owner` picks the side; if you omit it, the requesting player's",
   "  side is used. Never invent Rigs for the enemy unless the player says so.",
-  "- Use the Rig name exactly as it appears in CURRENT RIG STATE when it exists.",
+  "- Use the Rig name exactly as it appears in CURRENT BATTLE STATE when it exists.",
   "- `damage`/`repair` are relative; `set` and `heat` (bare number) are absolute,",
   "  `heat amount=\"+2\"`/`\"-1\"` are relative, `heat amount=\"0\"` vents to zero.",
-  "- Default Structure Points by class: Hull 6/7/8/9, Arms 5/6/7/8, Legs 5/6/7/8,",
-  "  Engine 4/5/6/7 (light/medium/heavy/colossal). A component at 0 SP is",
+  "- Default Structure Points by supported class: Light has Hull 6, Arms 5,",
+  "  Legs 5, Engine 4. Medium has Hull 7, Arms 6, Legs 6, Engine 5.",
+  "  A component at 0 SP is",
   "  catastrophically damaged; further damage destroys it. The Rig is destroyed",
   "  when its Hull or Engine is destroyed, or all four components reach 0.",
   "- Do NOT explain the tags or read them aloud; the app hides them. Just narrate",
