@@ -16,6 +16,8 @@ export function openRigWizard() {
     name: "", cls: "medium", owner: mySide,
     longRange: Object.keys(WEAPONS.longRange)[0],
     melee: Object.keys(WEAPONS.melee)[0],
+    longRangeUpgrade: firstUpgradeId(Object.keys(WEAPONS.longRange)[0]),
+    meleeUpgrade: firstUpgradeId(Object.keys(WEAPONS.melee)[0]),
     equipment: Object.keys(EQUIPMENT)[0],
   };
 
@@ -105,15 +107,21 @@ function stepIdentity(state, card) {
   return body;
 }
 
-function upgradeTags(name) {
+function firstUpgradeId(name) {
+  return (WEAPON_UPGRADES[name] || [])[0]?.id || null;
+}
+
+function upgradeChoices(name, selected, onSelect) {
   const wrap = document.createElement("div");
-  wrap.className = "rw-upgrades";
+  wrap.className = "rw-upgrade-choices";
   for (const u of WEAPON_UPGRADES[name] || []) {
-    const tag = document.createElement("span");
-    tag.className = "rw-upgrade-tag";
-    tag.title = u.tag;
-    tag.textContent = u.name;
-    wrap.appendChild(tag);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "rw-upgrade-choice" + (u.id === selected ? " sel" : "");
+    btn.title = u.tag;
+    btn.innerHTML = `<span>${u.name}</span><small>${u.tag}</small>`;
+    btn.addEventListener("click", () => onSelect(u.id));
+    wrap.appendChild(btn);
   }
   return wrap;
 }
@@ -122,14 +130,28 @@ function stepWeapons(state, card) {
   const body = document.createElement("div");
   body.className = "rw-body";
   body.appendChild(field("Long range weapon",
-    select(Object.keys(WEAPONS.longRange), state.longRange, (v) => { state.longRange = v; render(card, state); })));
-  body.appendChild(upgradeTags(state.longRange));
+    select(Object.keys(WEAPONS.longRange), state.longRange, (v) => {
+      state.longRange = v;
+      state.longRangeUpgrade = firstUpgradeId(v);
+      render(card, state);
+    })));
+  body.appendChild(upgradeChoices(state.longRange, state.longRangeUpgrade, (id) => {
+    state.longRangeUpgrade = id;
+    render(card, state);
+  }));
   body.appendChild(field("Melee weapon",
-    select(Object.keys(WEAPONS.melee), state.melee, (v) => { state.melee = v; render(card, state); })));
-  body.appendChild(upgradeTags(state.melee));
+    select(Object.keys(WEAPONS.melee), state.melee, (v) => {
+      state.melee = v;
+      state.meleeUpgrade = firstUpgradeId(v);
+      render(card, state);
+    })));
+  body.appendChild(upgradeChoices(state.melee, state.meleeUpgrade, (id) => {
+    state.meleeUpgrade = id;
+    render(card, state);
+  }));
   const hint = document.createElement("div");
   hint.className = "rw-hint";
-  hint.textContent = "Every weapon carries two fixed signature upgrades — they are its identity, not a choice.";
+  hint.textContent = "Choose one upgrade for each weapon. The selected upgrade changes how that weapon works.";
   body.appendChild(hint);
   return body;
 }
@@ -164,9 +186,12 @@ function stepConfirm(state) {
   nameLine.className = "rw-confirm-name";
   nameLine.textContent = `${state.name || "(unnamed)"} — ${state.cls}`;
   body.appendChild(nameLine);
+  const lrUpgrade = (WEAPON_UPGRADES[state.longRange] || []).find((u) => u.id === state.longRangeUpgrade);
+  const meleeUpgrade = (WEAPON_UPGRADES[state.melee] || []).find((u) => u.id === state.meleeUpgrade);
   body.insertAdjacentHTML("beforeend", `
-    <div class="rw-confirm-row">${state.longRange} / ${state.melee}</div>
-    <div class="rw-confirm-row">${e.label} — ${e.passive}</div>
+    <div class="rw-confirm-row">${state.longRange} - ${lrUpgrade?.name || "Upgrade ?"}</div>
+    <div class="rw-confirm-row">${state.melee} - ${meleeUpgrade?.name || "Upgrade ?"}</div>
+    <div class="rw-confirm-row">${e.label} - ${e.passive}</div>
   `);
   return body;
 }
@@ -205,6 +230,8 @@ function submit(state) {
     owner: state.owner,
     lr: state.longRange,
     melee: state.melee,
+    longRangeUpgrade: state.longRangeUpgrade,
+    meleeUpgrade: state.meleeUpgrade,
     equipment: state.equipment,
   });
   onDone();

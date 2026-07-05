@@ -10,10 +10,6 @@ const rigList = document.getElementById("rigList");
 const rigAddBtn = document.getElementById("rigAddBtn");
 const rigAddScreen = document.getElementById("rigAddScreen");
 const rigDeckTitle = document.getElementById("rigDeckTitle");
-const rigPanel = document.getElementById("rigPanel");
-const rigToggle = document.getElementById("rigToggle");
-const rigClose = document.getElementById("rigClose");
-const sheetScrim = document.getElementById("sheetScrim");
 const battleSetup = document.getElementById("battleSetup");
 const battleReadyStatus = document.getElementById("battleReadyStatus");
 const battleBounty = document.getElementById("battleBounty");
@@ -316,24 +312,41 @@ function buildRigItem(rig) {
 
   // During battle, activation is server-authoritative: only the side whose turn
   // it is may activate one of its own un-activated Rigs, one at a time.
+  const isMine = (rig.owner || "a") === mySide;
   const canActivate = started && S.game?.phase === "activation" &&
-    S.game?.turn?.side === mySide && (rig.owner || "a") === mySide &&
+    S.game?.turn?.side === mySide && isMine &&
     S.game?.turn?.activeRigId == null && !rig.activated && !rig.destroyed;
-  const activate = document.createElement("button");
-  activate.type = "button";
-  activate.className = "rig-activate" + (isActive ? " on" : "");
-  activate.setAttribute("aria-pressed", String(isActive));
-  activate.textContent = isActive ? "● Active" : (started && rig.activated ? "Done" : "Activate");
-  activate.title = isActive ? "This Rig is taking its activation" : "Make this the acting Rig";
-  if (started) activate.disabled = !canActivate;
-  activate.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (started) {
-      if (canActivate) sendCommand("activate", { name: rig.name });
-    } else {
-      setActiveRig(isActive ? null : rig.id);
-    }
-  });
+
+  // Enemy Rigs, in battle, expose no activation control — you can't drive them.
+  // Show a read-only status token instead ("● Active" / "Done" / "Inactive").
+  let activate;
+  if (started && !isMine) {
+    activate = document.createElement("span");
+    activate.className = "rig-activate rig-activate--readonly" + (isActive ? " on" : "");
+    activate.textContent = isActive ? "● Active" : (rig.activated ? "Done" : "Inactive");
+    activate.title = isActive ? "This enemy Rig is taking its activation"
+      : rig.activated ? "This enemy Rig has already acted this round" : "This enemy Rig is idle";
+  } else {
+    activate = document.createElement("button");
+    activate.type = "button";
+    activate.className = "rig-activate" + (isActive ? " on" : "");
+    activate.setAttribute("aria-pressed", String(isActive));
+    activate.textContent = isActive ? "● Active" : (started && rig.activated ? "Done" : "Activate");
+    // In battle the button is live only on your own turn; before battle it's the
+    // local heat-gauge preview toggle for your Rigs.
+    activate.title = isActive ? "This Rig is taking its activation"
+      : started ? (canActivate ? "Activate this Rig" : "Wait for your turn to activate")
+      : isMine ? "Preview this Rig's heat gauge" : "You can only preview your own Rig's heat gauge";
+    activate.disabled = started ? !canActivate : !isMine;
+    activate.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (started) {
+        if (canActivate) sendCommand("activate", { name: rig.name });
+      } else if (isMine) {
+        setActiveRig(isActive ? null : rig.id);
+      }
+    });
+  }
 
   const chev = document.createElement("span");
   chev.className = "rig-chev";
@@ -380,9 +393,9 @@ function buildRigItem(rig) {
   if (rig.weapons) {
     const weapons = document.createElement("div");
     weapons.className = "rig-weapons";
-    const lrUpgrades = (WEAPON_UPGRADES[rig.weapons.longRange] || []).map((u) => u.name).join(", ");
-    const meleeUpgrades = (WEAPON_UPGRADES[rig.weapons.melee] || []).map((u) => u.name).join(", ");
-    weapons.textContent = `${rig.weapons.longRange || "Long Range ?"} (${lrUpgrades}) / ${rig.weapons.melee || "Melee ?"} (${meleeUpgrades})`;
+    const lrUpgrade = (WEAPON_UPGRADES[rig.weapons.longRange] || []).find((u) => u.id === rig.weaponUpgrades?.longRange);
+    const meleeUpgrade = (WEAPON_UPGRADES[rig.weapons.melee] || []).find((u) => u.id === rig.weaponUpgrades?.melee);
+    weapons.textContent = `${rig.weapons.longRange || "Long Range ?"} (${lrUpgrade?.name || "Upgrade ?"}) / ${rig.weapons.melee || "Melee ?"} (${meleeUpgrade?.name || "Upgrade ?"})`;
     inner.appendChild(weapons);
     if (rig.equipment && EQUIPMENT[rig.equipment]) {
       const eq = EQUIPMENT[rig.equipment];
@@ -430,7 +443,6 @@ export function renderRigs() {
   for (const id of [...expanded]) if (!ids.has(id)) expanded.delete(id);
   for (const id of [...prevHeat.keys()]) if (!ids.has(id)) prevHeat.delete(id);
 
-  const scrollTop = rigList.scrollTop;
   // Rebuild the list but keep the persistent add card (its inputs hold live
   // listeners bound once at startup).
   [...rigList.querySelectorAll(".rig-item, .rig-group-head")].forEach((n) => n.remove());
@@ -447,7 +459,6 @@ export function renderRigs() {
 
   const active = rigs.find((r) => r.id === activeRigId);
   rigDeckTitle.textContent = active ? `Active · ${active.name}` : "Squadron Status";
-  rigList.scrollTop = scrollTop;
 }
 
 function toggleExpanded(id) {
@@ -475,38 +486,4 @@ readyBattle?.addEventListener("click", () => {
 diceMode?.addEventListener("click", () => {
   const auto = S.game?.autoResolve !== false;
   sendCommand("setdice", { value: auto ? "manual" : "auto" });
-});
-
-// ---- Rig sheet open/close ----
-function openRigSheet() {
-  sheetScrim.hidden = false;
-  // Force a reflow so the scrim's display change is committed before we flip
-  // the classes — this lets the opacity/transform transitions animate without
-  // depending on requestAnimationFrame scheduling.
-  void sheetScrim.offsetWidth;
-  sheetScrim.classList.add("show");
-  rigPanel.classList.add("open");
-  rigPanel.setAttribute("aria-hidden", "false");
-  rigToggle.classList.add("active");
-  rigToggle.setAttribute("aria-pressed", "true");
-  rigList.scrollTop = 0;
-}
-function closeRigSheet() {
-  rigPanel.classList.remove("open");
-  sheetScrim.classList.remove("show");
-  rigPanel.setAttribute("aria-hidden", "true");
-  rigToggle.classList.remove("active");
-  rigToggle.setAttribute("aria-pressed", "false");
-  setTimeout(() => {
-    if (!rigPanel.classList.contains("open")) sheetScrim.hidden = true;
-  }, 300);
-}
-rigToggle.addEventListener("click", () => {
-  rigPanel.classList.contains("open") ? closeRigSheet() : openRigSheet();
-});
-rigClose.addEventListener("click", closeRigSheet);
-sheetScrim.addEventListener("click", closeRigSheet);
-document.addEventListener("keydown", (e) => {
-  if (!rigPanel.classList.contains("open")) return;
-  if (e.key === "Escape") closeRigSheet();
 });

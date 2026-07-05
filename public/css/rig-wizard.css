@@ -43,11 +43,22 @@
 }
 .rw-name:focus, .rw-field select:focus { outline: none; border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil); }
 
-.rw-upgrades { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: -.3rem; }
-.rw-upgrade-tag {
-  font-family: var(--font-mono); font-size: .58rem; letter-spacing: .04em;
-  color: var(--oil-hi); border: 1px solid rgba(231,154,61,.35); background: rgba(231,154,61,.08);
-  border-radius: 999px; padding: .2rem .55rem; cursor: help;
+.rw-upgrade-choices { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin-top: -.25rem; }
+.rw-upgrade-choice {
+  text-align: left; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--iron-800); color: var(--txt); padding: .5rem .55rem;
+  cursor: pointer; min-height: 4.1rem;
+}
+.rw-upgrade-choice:hover { border-color: var(--rivet); }
+.rw-upgrade-choice.sel {
+  border-color: var(--oil); background: rgba(231,154,61,.08);
+  box-shadow: 0 0 0 1px rgba(231,154,61,.35);
+}
+.rw-upgrade-choice span {
+  display: block; font-family: var(--font-display); font-weight: 700; font-size: .86rem;
+}
+.rw-upgrade-choice small {
+  display: block; margin-top: .22rem; font-size: .68rem; line-height: 1.25; color: var(--txt-dim);
 }
 .rw-hint { font-size: .74rem; color: var(--txt-faint); line-height: 1.4; }
 
