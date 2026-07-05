@@ -4,6 +4,7 @@ import { rigModifiers } from "/shared/battle-view.js";
 import { rigStatus } from "../../lib/rigView";
 import { CompRow } from "./CompRow";
 import { HeatGauge } from "./HeatGauge";
+import { ActionConsole } from "../battle/ActionConsole";
 import type { Rig, Loc } from "../../state/types";
 
 const LOCS: Loc[] = ["hull", "arms", "legs", "engine"];
@@ -149,7 +150,7 @@ export const RigItem = React.memo(function RigItem({
 
           <HeatGauge rig={rig} isActive={isActive} started={started} onCommand={onCommand} />
 
-          {/* ActionConsole mounts here (Task 29) */}
+          {started && <ActionConsole rig={rig} />}
 
           <button
             className="rig-remove-row"
