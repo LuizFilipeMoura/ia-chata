@@ -731,7 +731,7 @@ with:
 
 - [ ] **Step 4: Manual browser verification**
 
-Run: `npm run dev`
+Run: `& 'C:\Users\breke\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' server/index.js`
 
 Expected: server starts and prints the local URL.
 
@@ -818,13 +818,13 @@ git -c safe.directory=C:/Users/breke/WebstormProjects/ia-regrinha commit -m "doc
 
 - [ ] **Step 1: Run the full automated test suite**
 
-Run: `npm test`
+Run: `& 'C:\Users\breke\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' --test`
 
 Expected: PASS with all `node:test` suites passing.
 
 - [ ] **Step 2: Run targeted tests one more time if full suite fails**
 
-If `npm test` fails, run:
+If the full suite fails, run:
 
 ```powershell
 node --test shared/game-state.test.js shared/combat.test.js
