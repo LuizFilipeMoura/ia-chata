@@ -869,3 +869,106 @@ test("Field Repair Suite does not add +1 SP when the Repair roll whiffs", () => 
   applyCommand(r, { verb: "action", attrs: { name: "Medic", action: "repair", loc: "hull", dice: { repair: 6 } } }); // <7 = whiff, amt=0
   assert.equal(medic.hull.sp, 3); // unchanged: whiff must not be bumped to 1 by Field Repair Suite
 });
+
+function readyThreeAndThree(r, equipmentByName = {}) {
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 3; i++) {
+      const name = `${owner}${i}`;
+      applyCommand(r, { verb: "add", attrs: { name, class: "medium", owner, lr: "Autocannon", melee: "Claw", equipment: equipmentByName[name] } });
+    }
+  }
+  for (const side of ["a", "b"]) applyCommand(r, { verb: "ready", attrs: { side } });
+  applyCommand(r, { verb: "initiative", attrs: {} });
+}
+
+function activate(r, name) {
+  while (r.game.phase === "activation" && r.game.turn.activeRigId == null) {
+    const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
+    if (active.name.toLowerCase() === name.toLowerCase()) { applyCommand(r, { verb: "activate", attrs: { name } }); return; }
+    applyCommand(r, { verb: "activate", attrs: { name: active.name } });
+    applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
+  }
+}
+
+test("harden requires Ablative Plating, costs 1 slot + 1 heat, and sets rig.hardened", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "ablative-plating" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "harden" } });
+  assert.equal(rig.hardened, true);
+  assert.equal(rig.engine.heat, 1);
+  assert.equal(r.game.turn.actionsUsed, usedBefore + 1);
+});
+
+test("harden is refused without Ablative Plating", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r);
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  const before = r.version;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "harden" } });
+  assert.equal(rig.hardened, false);
+  assert.equal(r.version, before); // no-op, no version bump
+});
+
+test("purge vents 2 heat on demand for Radiator Array", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "radiator-array" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.engine.heat = 5;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "purge" } });
+  assert.equal(rig.engine.heat, 3);
+});
+
+test("overclock grants +2 actions this activation for Overclock Core", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  activate(r, "a1");
+  const maxBefore = r.game.turn.actionsMax;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax, maxBefore + 2);
+  assert.equal(findRig(r, "a1").engine.heat, 3);
+});
+
+test("emergencypatch guarantees 2 SP with no roll for Field Repair Suite", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "field-repair-suite" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.arms.sp = 2;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
+  assert.equal(rig.arms.sp, 4);
+  assert.equal(rig.engine.heat, 2);
+});
+
+test("jumpjets costs 1 slot + 2 heat for Servo Actuators", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(findRig(r, "a1").engine.heat, 2);
+});
+
+test("a rig's next activation clears its own Harden", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "ablative-plating" });
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "harden" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  // cycle everyone else, then come back to a1's next activation
+  while (findRig(r, "a1").hardened && r.game.phase !== "finished") {
+    if (r.game.phase === "recovery") applyCommand(r, { verb: "vp", attrs: { side: "a", points: "0" } }), applyCommand(r, { verb: "vp", attrs: { side: "b", points: "0" } });
+    if (r.game.phase === "initiative") applyCommand(r, { verb: "initiative", attrs: {} });
+    if (r.game.phase === "activation") {
+      const active = r.rigs.find((x) => !x.activated && !x.destroyed && (x.owner || "a") === r.game.turn.side);
+      if (!active) break;
+      applyCommand(r, { verb: "activate", attrs: { name: active.name } });
+      if (active.name === "a1") break;
+      applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
+    }
+  }
+  assert.equal(findRig(r, "a1").hardened, false);
+});

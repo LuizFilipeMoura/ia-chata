@@ -552,6 +552,25 @@ function performAction(room, rig, act, a, random) {
     endActivation(room, rig, null, random);
     return true;
   }
+  const equipId = EQUIPMENT_ACTIVE_BY_KEY[act];
+  if (equipId) {
+    if (rig.equipment !== equipId || t.actionsUsed >= t.actionsMax) return false;
+    const active = EQUIPMENT[equipId].active;
+    t.actionsUsed += 1;
+    if (act === "harden") rig.hardened = true;
+    else if (act === "overclock") t.actionsMax += 2;
+    else if (act === "emergencypatch") {
+      const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
+      repairRig(rig, loc, 2);
+    }
+    // purge / jumpjets need no extra state beyond the heat cost below.
+    bumpHeat(rig, active.heat);
+    pushResolution(room, {
+      kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} uses ${active.label}.`, effects: [active.text],
+    });
+    return true;
+  }
   const def = ACTIONS[act];
   if (!def || t.actionsUsed >= t.actionsMax) return false;
   if (act === "fire" || act === "aimed") {
@@ -709,6 +728,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const t = room.game.turn;
     if (rig && t && room.game.phase === "activation" && t.activeRigId == null &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
+      rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
       if (rig.skipNextActivation) {
         rig.skipNextActivation = false;
         rig.activated = true;
