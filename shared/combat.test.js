@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, rollToHit } from "./combat.js";
+import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts } from "./combat.js";
 import { WEAPONS } from "./game-state.js";
 
 const attacker = { weightClass: "medium", hull: { sp: 7 } };
@@ -23,4 +23,39 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
   assert.equal(res.rof, 10);
   assert.equal(res.hits, 5);          // dice >=3 or ==6: 3,4,5,6,6
   assert.equal(res.fireModeHeat, 3);  // three 1s under Full Auto
+});
+
+test("computeStr applies weight and Charged Shot", () => {
+  assert.equal(computeStr({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 10); // 12-2
+  assert.equal(computeStr({ weightClass: "medium" }, WEAPONS.longRange["Arc Gun"], { charged: true }), 12); // 10+0+2
+});
+
+test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
+  const auto = WEAPONS.longRange["Autocannon"];
+  assert.equal(arcBonus(auto, "front"), 0);
+  assert.equal(arcBonus(auto, "side"), 2);
+  assert.equal(arcBonus(auto, "rear"), 4);
+  assert.equal(arcBonus(WEAPONS.melee["Sword"], "rear"), 0); // melee
+  const mini = WEAPONS.longRange["Mini Gun"]; // Raking Fire
+  assert.equal(arcBonus(mini, "front"), null); // front auto-fails
+  assert.equal(arcBonus(mini, "side"), 4);
+  assert.equal(arcBonus(mini, "rear"), 8);
+});
+
+test("rollImpacts computes per-hit severity and honours Brace on the front arc", () => {
+  const target = { weightClass: "medium", preparation: { type: "brace" } };
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  // 2 hits, both d6=5 -> 5 + 8 + 0(front) - 2(brace) = 11 vs medium hull (11/14/17) -> direct(1).
+  const out = rollImpacts({ weightClass: "medium" }, target, auto, "hull",
+    { arc: "front", hits: 2 }, { impacts: [5, 5] }, () => 0);
+  assert.equal(out.length, 2);
+  assert.equal(out[0].total, 11);
+  assert.equal(out[0].sp, 1);
+});
+
+test("Raking Fire against the front arc deals no damage", () => {
+  const mini = WEAPONS.longRange["Mini Gun"];
+  const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",
+    { arc: "front", hits: 3 }, { impacts: [6, 6, 6] }, () => 0);
+  assert.equal(out.every((h) => h.sp === 0), true);
 });
