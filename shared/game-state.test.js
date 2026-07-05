@@ -646,3 +646,18 @@ test("firing an unloaded ranged weapon is rejected (no budget spent)", () => {
   } });
   assert.equal(r.game.turn.actionsUsed, used); // no-op, weapon not loaded
 });
+
+test("ram deals a D6 + ram-STR hit to both rigs", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1"); // Light ram STR 8
+  const a1 = findRig(r, "a1"); // Light ram STR 8
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "ram", target: "a1",
+    dice: { self: { location: 1, impact: 6 }, target: { location: 1, impact: 6 } },
+  } });
+  // Each: D6 6 + STR 8 = 14 vs light hull (10/14/16) -> severe (2 SP).
+  assert.equal(a1.hull.sp, 4);
+  assert.equal(b1.hull.sp, 4);
+  assert.equal(r.game.turn.actionsUsed, 1);
+});

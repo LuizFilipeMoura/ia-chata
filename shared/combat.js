@@ -123,3 +123,21 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
 
 // Replaced with real perks in Task 8; a no-op keeps this task green.
 function applyOnHitPerks() {}
+
+// §5 Ram — both Rigs take one D6 + their own weight-class ram STR hit.
+export function resolveRam(room, attacker, target, opts, random, ctx) {
+  for (const [rig, who] of [[attacker, "self"], [target, "target"]]) {
+    const d = opts.dice?.[who] || {};
+    const loc = hitLocation(rollD(12, d.location, random));
+    const die = rollD(6, d.impact, random);
+    const total = die + (RAM_STR[rig.weightClass] || 9);
+    const sev = impactSeverity(total, IMPACT[rig.weightClass][loc]);
+    if (sev.sp > 0) ctx.applyDamage(room, rig, loc, sev.sp, { random });
+    ctx.pushResolution(room, {
+      kind: "ram", actor: attacker.owner, rigId: rig.id,
+      rolls: [{ sides: 6, value: die, label: "D6" }],
+      summary: `Ram hits ${rig.name}: ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`, effects: [],
+    });
+  }
+  return { ok: true };
+}

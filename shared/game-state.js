@@ -1,5 +1,5 @@
 import { ACTIONS, heatThreshold, hitLocation, impactSeverity, IMPACT } from "./rules.js";
-import { resolveAttack } from "./combat.js";
+import { resolveAttack, resolveRam } from "./combat.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -487,6 +487,14 @@ function performAction(room, rig, act, a, random) {
     if (!res.ok) return false;      // invalid shot — no budget spent
     t.actionsUsed += 1;
     bumpHeat(rig, def.heat);        // base 1 (Hot / fire-mode heat added inside resolveAttack)
+    return true;
+  }
+  if (act === "ram") {
+    const target = findRig(room, a.target);
+    if (!target) return false;
+    resolveRam(room, rig, target, { dice: a.dice }, random, combatCtx());
+    t.actionsUsed += 1;
+    bumpHeat(rig, def.heat);
     return true;
   }
   if (act === "reload") {
