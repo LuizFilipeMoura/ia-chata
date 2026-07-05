@@ -147,6 +147,30 @@ export function upgradeForWeapon(weaponName, upgradeId) {
   return (WEAPON_UPGRADES[weaponName] || []).find((u) => u.id === normalized) || null;
 }
 
+function uniquePerks(base, added = []) {
+  return [...new Set([...(base || []), ...(added || [])])];
+}
+
+export function effectiveWeaponProfile(slot, weaponName, rig) {
+  const base = WEAPONS[slot]?.[weaponName];
+  if (!base) return null;
+  const upgrade = upgradeForWeapon(weaponName, rig?.weaponUpgrades?.[slot]);
+  const effect = upgrade?.effect || {};
+  const profile = {
+    ...base,
+    rof: base.rof + (effect.rof || 0),
+    str: base.str + (effect.str || 0),
+    acc: [...base.acc],
+    rng: [...base.rng],
+    perks: uniquePerks(base.perks, effect.perks),
+    upgrade: upgrade || null,
+    upgradeEffect: effect,
+  };
+  if (effect.noFarPenalty) profile.acc[1] = Math.max(profile.acc[1] || 0, profile.acc[0] || 0);
+  if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
+  return profile;
+}
+
 export function createRoom(code) {
   return {
     code,
@@ -596,7 +620,7 @@ function combatCtx() {
     applyDamage,
     bumpHeat,
     pushResolution,
-    profileFor: (slot, name) => WEAPONS[slot]?.[name],
+    profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
   };
 }
 

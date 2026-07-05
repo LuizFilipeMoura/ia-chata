@@ -17,7 +17,7 @@ function rollD(sides, provided, random) {
 export function computeModifiedAim(attacker, profile, opts) {
   const base = AIM[attacker.weightClass] ?? 4;
   const weaponAcc = profile.acc[opts.range === "far" ? 1 : 0] || 0;
-  const cover = Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
+  const cover = profile.upgradeEffect?.ignoreCover ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
   const aimedPenalty = opts.aimed && !profile.perks.includes("Precision") ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
   const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty;
@@ -31,14 +31,23 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   const fullAuto = opts.fullAuto && profile.perks.includes("Full Auto");
   const rof = profile.rof + (fullAuto ? 2 : 0);
   const charged = opts.charged && profile.perks.includes("Charged Shot");
+  const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
+  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
   const dice = [];
   let hits = 0;
   let fireModeHeat = 0;
+  let rerollsUsed = 0;
   for (let i = 0; i < rof; i++) {
-    const d = rollD(6, providedDice?.[i], random);
+    let d = rollD(6, providedDice?.[i], random);
+    let hit = d >= modAim || d === 6;
+    if (!hit && rerollsUsed < rerolls) {
+      rerollsUsed += 1;
+      d = rollD(6, providedDice?.rerolls?.[rerollsUsed - 1], random);
+      hit = d >= modAim || d === 6;
+    }
     dice.push(d);
-    if (d >= modAim || d === 6) hits += 1;
-    if ((fullAuto || charged) && d === 1) fireModeHeat += 1;
+    if (hit) hits += 1;
+    if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
   return { modAim, rof, hits, fireModeHeat, dice };
 }
@@ -91,7 +100,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
 export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const slot = opts.weapon === "melee" ? "melee" : "longRange";
   const weaponName = attacker.weapons?.[slot];
-  const profile = ctx.profileFor(slot, weaponName);
+  const profile = ctx.profileFor(slot, weaponName, attacker);
   if (!profile) return { ok: false, reason: "no-weapon" };
   if (attacker.weaponsDestroyed.includes(weaponName)) return { ok: false, reason: "weapon-destroyed" };
   if (opts.range === "out") return { ok: false, reason: "range" };

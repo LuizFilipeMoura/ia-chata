@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts } from "./combat.js";
-import { WEAPONS } from "./game-state.js";
+import { WEAPONS, makeRig, effectiveWeaponProfile } from "./game-state.js";
 
 const attacker = { weightClass: "medium", hull: { sp: 7 } };
 
@@ -72,4 +72,40 @@ test("Raking Fire against the front arc deals no damage", () => {
   const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",
     { arc: "front", hits: 3 }, { impacts: [6, 6, 6] }, () => 0);
   assert.equal(out.every((h) => h.sp === 0), true);
+});
+
+test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-penalty upgrades", () => {
+  const mini = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
+  assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
+
+  const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
+  assert.equal(computeStr(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 10);
+
+  const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "keen-edge" });
+  assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Rend"), true);
+
+  const lance = makeRig(4, "Reach", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "couched-reach" });
+  assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [2.5, 2.5]);
+
+  const sniper = makeRig(5, "Barrel", "medium", "a", { longRange: "Sniper Cannon", melee: "Sword", longRangeUpgrade: "match-barrel" });
+  assert.deepEqual(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).acc, [0, 0]);
+});
+
+test("rollToHit uses selected upgrade heat-on-ones and one missed-die reroll", () => {
+  const beltRig = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
+  const belt = effectiveWeaponProfile("longRange", "Mini Gun", beltRig);
+  const beltRoll = rollToHit(beltRig, belt, { range: "near", cover: 0 }, [1, 1, 2, 2, 3, 3, 4, 4, 5, 6], () => 0);
+  assert.equal(beltRoll.rof, 10);
+  assert.equal(beltRoll.fireModeHeat, 2);
+
+  const gyroRig = makeRig(2, "Gyro", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "gyro-mount" });
+  const gyro = effectiveWeaponProfile("longRange", "Double MG", gyroRig);
+  const gyroRoll = rollToHit(gyroRig, gyro, { range: "near", cover: 0 }, [1, 1, 1, 1, 1, 1, 1, 1], () => 1);
+  assert.equal(gyroRoll.hits, 1);
+});
+
+test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
+  const mortarRig = makeRig(1, "Airburst", "medium", "a", { longRange: "Mortar", melee: "Sword", longRangeUpgrade: "airburst-fuze" });
+  const mortar = effectiveWeaponProfile("longRange", "Mortar", mortarRig);
+  assert.equal(computeModifiedAim(mortarRig, mortar, { range: "near", cover: 2 }), 5);
 });
