@@ -11,3 +11,14 @@ test("renders the three reactions and reports the picked type", async () => {
   await userEvent.click(screen.getByText("Evasive Manoeuvre"));
   expect(onChange).toHaveBeenCalledWith("evasive");
 });
+
+test("Raise Shield only appears when allowShield is set", async () => {
+  const onChange = vi.fn();
+  const { rerender } = render(<ReactionPicker value="brace" onChange={onChange} />);
+  expect(screen.queryByText("Raise Shield")).toBeNull();
+
+  rerender(<ReactionPicker value="brace" onChange={onChange} allowShield />);
+  expect(screen.getByText("Raise Shield")).toBeInTheDocument();
+  await userEvent.click(screen.getByText("Raise Shield"));
+  expect(onChange).toHaveBeenCalledWith("raise-shield");
+});

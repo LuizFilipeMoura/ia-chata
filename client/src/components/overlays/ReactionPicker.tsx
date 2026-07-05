@@ -1,6 +1,6 @@
 import type { PrepType } from "../../state/types";
 
-export const REACTIONS: { value: PrepType; icon: string; label: string; rule: string }[] = [
+const BASE_REACTIONS: { value: PrepType; icon: string; label: string; rule: string }[] = [
   { value: "brace", icon: "🛡️", label: "Brace for Incoming Fire",
     rule: "Front-arc attacks against this Rig take −2 to their Impact Rolls until next round." },
   { value: "evasive", icon: "💨", label: "Evasive Manoeuvre",
@@ -9,17 +9,27 @@ export const REACTIONS: { value: PrepType; icon: string; label: string; rule: st
     rule: "After the enemy attacks, answer with one weapon against that enemy." },
 ];
 
+const SHIELD_REACTION: { value: PrepType; icon: string; label: string; rule: string } = {
+  value: "raise-shield", icon: "🛡", label: "Raise Shield",
+  rule: "Negates the next front-arc attack; side/rear impacts take −4 (Tower Shield also negates the side).",
+};
+
+// Exported for call sites / tests that need the base list.
+export const REACTIONS = BASE_REACTIONS;
+
 interface Props {
   value: PrepType;
   onChange: (v: PrepType) => void;
+  allowShield?: boolean; // true when the acting Rig carries a Bulwark Shield
 }
 
 // The shared reaction chooser used by both the Answer-token gate and the
 // Prepare action. Presentational only — parents own the send.
-export default function ReactionPicker({ value, onChange }: Props) {
+export default function ReactionPicker({ value, onChange, allowShield = false }: Props) {
+  const options = allowShield ? [...BASE_REACTIONS, SHIELD_REACTION] : BASE_REACTIONS;
   return (
     <div className="rx-picker">
-      {REACTIONS.map((r) => (
+      {options.map((r) => (
         <button
           key={r.value}
           type="button"

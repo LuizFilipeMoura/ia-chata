@@ -9,7 +9,7 @@ export interface Engine extends Component {
   heat: number;
 }
 
-export type PrepType = "brace" | "evasive" | "return";
+export type PrepType = "brace" | "evasive" | "return" | "raise-shield";
 
 export interface Preparation {
   type?: PrepType;
@@ -75,7 +75,26 @@ export interface Resolution {
 
 export type Diagonal = "tlbr" | "trbl";
 export interface Objective { x: number; y: number; vp: number; }
-export interface TerrainPiece { x: number; y: number; size: "sm" | "md"; }
+export type TerrainKind =
+  | "wood" | "building" | "crater" | "ruin" | "barricade" | "rock" | "crate";
+export interface TerrainPiece {
+  x: number;
+  y: number;
+  kind?: TerrainKind;
+  shape?: "rect" | "ellipse" | "poly";
+  /** rect: footprint in inches */
+  w?: number;
+  h?: number;
+  /** ellipse: radii in inches */
+  rx?: number;
+  ry?: number;
+  /** rotation in degrees (rect + ellipse) */
+  rot?: number;
+  /** poly: vertices in inches, relative to (x, y) */
+  points?: Array<[number, number]>;
+  /** @deprecated legacy square size, still rendered as a fallback */
+  size?: "sm" | "md";
+}
 export interface FieldState {
   width: number;
   height: number;

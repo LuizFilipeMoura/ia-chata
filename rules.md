@@ -296,7 +296,7 @@ When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All
 3. **Objectives.** Place **3 markers**: one at the **table centre** (**2 VP**), and one **18" from centre toward each of the two empty corners** (the corners no one deploys in) — **1 VP** each. All three sit in the contested ground between the armies. If a marker lands on impassable terrain, shift it the shortest distance to clear ground.
 
 4. **Order.** The player who took the **opposite corner** (the roll-off loser) chooses **who deploys first**. Players then alternate placing **one Rig at a time**, starting with the first-deployer.
-   - Each Rig must be **fully within its own half** and **no closer than 4"** to the dividing line — leaving an **8" gap** between the front lines, so a turn-1 melee charge is reliable, not just possible.
+   - Each Rig must be deployed **fully within 8"** of your **deployment corner** — a quarter-circle staging zone, measured from the corner to the nearest edge of the base. Squadrons start clustered in their corner and advance across the diagonal into the contested centre.
    - **Declare facing** as each Rig is placed.
 
 5. **Round 1 initiative (unified with deployment).** There is **no initiative roll in Round 1**: the player who **deployed first activates second** — and so gains Round 1's **Answer tokens** (§5), the payoff for committing first. From **Round 2** on, roll initiative normally (§4).
@@ -316,8 +316,8 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 - The valuable centre pulls both squadrons together instead of camping their own corner.
 
 ### Control
-- A Rig **controls** a marker if it is **within 4½"** and **no enemy Rig** is also within 4½".
-- If both sides have a Rig within 4½", the marker is **contested** — nobody scores it.
+- A Rig **controls** a marker if it is **within 2"** and **no enemy Rig** is also within 2".
+- If both sides have a Rig within 2", the marker is **contested** — nobody scores it.
 - A destroyed Rig's wreck does **not** hold objectives (remove it from control).
 
 ### Scoring & winning
@@ -337,7 +337,7 @@ Every weapon is one of **two types**, and every Rig equips **one of each** (§3)
 - **Long Range** — any weapon **without** the Melee perk. Fires at range; once spent it must be **reloaded** between shots in the same activation (or fired as a 2-action **rushed shot**, §5).
 - **Melee** — any weapon with the **Melee** perk (RNG 1.5"). Usable only within 1.5" and never needs reloading.
 
-There are **six weapons of each type**. Any weapon may be fitted to a Rig of **any weight class** and **any faction**. **ACC** shows **near / far** values matching the weapon's two range bands (**RNG** = near / far, in inches); a single value applies at all ranges.
+There are **seven weapons of each type**. Any weapon may be fitted to a Rig of **any weight class** and **any faction**. **ACC** shows **near / far** values matching the weapon's two range bands (**RNG** = near / far, in inches); a single value applies at all ranges.
 
 **Weight-class STR.** The **STR** listed below is the **Medium** baseline. A weapon's STR shifts with the chassis carrying it — heavier Rigs drive it harder, lighter Rigs can't. Everything else (ROF, ACC, RNG, perks) is unchanged:
 
@@ -364,6 +364,9 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Arc Gun | 2 | 10 | – / +1 | 15 / 30 | Charged Shot, Precision |
 | Mortar | 3 | 9 | −1 / – | 15 / 30 | Charged Shot, Incendiary |
 | Sniper Cannon | 1 | 12 | – / −1 | 12 / 24 | Precision |
+| Siege Maul | 1 | 13 | – / −1 | 8 / 16 | Armour Piercing, Hot |
+
+> The **Siege Maul** is a close-in demolition gun: the highest STR on the board and Armour Piercing, but the shortest range of any ranged weapon and it runs Hot — you must get dangerously close to fire it.
 
 ### Melee Weapons
 
@@ -375,6 +378,7 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Claw | 2 | 8 | +1 | 1.5 | Melee, Armour Piercing |
 | Lance | 1 | 11 | +1 | 1.5 | Melee, Impale |
 | Wrecking Ball | 1 | 12 | – | 1.5 | Melee, Staggering |
+| Bulwark Shield | 1 | 6 | – | 1.5 | Melee, Bulwark |
 
 ### Weapon Upgrades
 
@@ -394,12 +398,15 @@ Each weapon has **two upgrade options**. When a Rig is commissioned, choose **on
 | Claw | **Vice Grip:** gains Impale | **Rending Talons:** gains Rend |
 | Lance | **Couched Reach:** melee range increases by 1" | **Spearpoint:** gains Impale |
 | Wrecking Ball | **Haymaker:** +3 STR | **Wrecking Momentum:** gains Staggering |
+| Siege Maul | **Breaching Round:** Hull SP this weapon strips cannot be repaired until the end of the next round | **Extended Barrel:** +4" to both range bands (12 / 20) |
+| Bulwark Shield | **Tower Shield:** while Raise Shield is active, front *and side* attacks are negated (rear at −4) | **Boss Spike:** gains Staggering |
 
 ---
 
 ## 13. Weapon Perks
 
 - **Armour Piercing** — for each Impact Roll of 6, add a D3 to the result.
+- **Bulwark** — the Rig may arm a fourth preparation, **Raise Shield** (Prepare [1 heat], §5), placed facedown like any preparation. When this Rig is attacked while Raise Shield is active, reveal it: a **front-arc** attack is **negated** (every Impact Roll automatically fails); a **side- or rear-arc** attack has every Impact Roll at **−4**. It protects regardless of the attacker's range (it is not the 1.5" bash). An Answer token (§5) may place Raise Shield only on a Rig carrying a Bulwark Shield.
 - **Charged Shot** — optional fire-mode: **+2 STR**, but each attack die that rolls a 1 adds 1 heat.
 - **Cleave** — the spinning blade carries through: on a successful hit, one other enemy Rig within **1.5"** of the target also suffers 1 hit (roll its hit location and Impact Roll normally).
 - **Full Auto** — optional fire-mode: **+2 ROF**, but each attack die that rolls a 1 adds 1 heat.
@@ -466,7 +473,7 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 - **Victory — Salvage** (§11) — weighted centre objective (2 VP), annihilation auto-win.
 
 **Open questions / TBD:**
-- Weapon profiles are **universal** (one shared list of 6 Long Range + 6 Melee) with a **weight-class STR modifier** (Light −2 / Heavy +2 / Colossal +4 vs the Medium baseline, §12); all four classes are playable. Playtest the ±2-per-step spread — it may need widening/narrowing per weapon later.
+- Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class STR modifier** (Light −2 / Heavy +2 / Colossal +4 vs the Medium baseline, §12); all four classes are playable. Playtest the ±2-per-step spread — it may need widening/narrowing per weapon later.
 - Faction perks — not yet written (§14).
 - Machine-gun STR/arc values under Raking Fire — watch that they're "strong not silly" on the flanks.
 - Alpha-strike swing at 3v3 — high-STR crits can gut a Rig in one activation; see if crits need softening.

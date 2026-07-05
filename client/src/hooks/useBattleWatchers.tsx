@@ -84,20 +84,27 @@ export function useBattleWatchers(): void {
     if (!eligible.length) return; // server clears the gate on its own
 
     const pick = { rigName: eligible[0].name, prep: "brace" as PrepType };
-    const build = () => (
-      <div className="dwr-recap">
-        <p className="dwr-hint">
-          Answer token — {gate.remaining} left. Choose a Rig, then a facedown reaction.
-        </p>
-        <ChoiceField
-          label="Rig"
-          options={eligible.map((r) => ({ value: r.name, label: r.name }))}
-          value={pick.rigName}
-          onChange={(v) => (pick.rigName = v)}
-        />
-        <ReactionPicker value={pick.prep} onChange={(v) => (pick.prep = v)} />
-      </div>
-    );
+    const build = () => {
+      const sel = eligible.find((r) => r.name === pick.rigName) || eligible[0];
+      return (
+        <div className="dwr-recap">
+          <p className="dwr-hint">
+            Answer token — {gate.remaining} left. Choose a Rig, then a facedown reaction.
+          </p>
+          <ChoiceField
+            label="Rig"
+            options={eligible.map((r) => ({ value: r.name, label: r.name }))}
+            value={pick.rigName}
+            onChange={(v) => (pick.rigName = v)}
+          />
+          <ReactionPicker
+            value={pick.prep}
+            allowShield={sel?.weapons?.melee === "Bulwark Shield"}
+            onChange={(v) => (pick.prep = v)}
+          />
+        </div>
+      );
+    };
     openDrawer({
       title: "⟡ Answer Tokens — prepare a reaction",
       tone: "oil",

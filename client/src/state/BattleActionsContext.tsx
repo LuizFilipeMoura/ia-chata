@@ -230,12 +230,11 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     (rig: Rig) => {
       const state: { prep: PrepType } = { prep: "brace" };
       const build = () => (
-        <>
-          <p className="dwr-hint">
-            Place a facedown reaction on {rig.name}. It stays secret until an enemy fires on this Rig.
-          </p>
-          <ReactionPicker value={state.prep} onChange={(v) => (state.prep = v)} />
-        </>
+        <PrepareBody
+          rigName={rig.name}
+          allowShield={rig.weapons?.melee === "Bulwark Shield"}
+          onChange={(v) => (state.prep = v)}
+        />
       );
       openDrawer({
         title: `🛡️ Prepare — ${rig.name}`,
@@ -305,6 +304,34 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     >
       {children}
     </Ctx.Provider>
+  );
+}
+
+// Reaction picker for the Prepare action. Owns the selection in local state so
+// the ReactionPicker re-renders on each pick; onChange mirrors it to the drawer's
+// ref-backed state for the Confirm handler (matches RepairBody's pattern).
+function PrepareBody({
+  rigName, allowShield, onChange,
+}: {
+  rigName: string;
+  allowShield: boolean;
+  onChange: (v: PrepType) => void;
+}) {
+  const [prep, setPrep] = useState<PrepType>("brace");
+  return (
+    <>
+      <p className="dwr-hint">
+        Place a facedown reaction on {rigName}. It stays secret until an enemy fires on this Rig.
+      </p>
+      <ReactionPicker
+        value={prep}
+        allowShield={allowShield}
+        onChange={(v) => {
+          setPrep(v);
+          onChange(v);
+        }}
+      />
+    </>
   );
 }
 
