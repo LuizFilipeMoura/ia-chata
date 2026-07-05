@@ -91,3 +91,14 @@ export function impactSeverity(total, row) {
   if (n >= row.direct) return { sp: 1, tier: "direct" };
   return { sp: 0, tier: "none" };
 }
+
+// §13 Bulwark / Raise Shield — which arcs a raised shield covers. Base: negate
+// the front, blunt (−4) side/rear. Tower Shield upgrade: negation extends to the
+// side arc; only the rear is blunted. Lives here so combat.js can use it without
+// importing game-state.js (which would create a cycle).
+export function shieldCoverage(rig) {
+  const tower = rig?.weaponUpgrades?.melee === "tower-shield";
+  return tower
+    ? { negate: ["front", "side"], blunt: ["rear"] }
+    : { negate: ["front"], blunt: ["side", "rear"] };
+}

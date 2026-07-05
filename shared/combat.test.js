@@ -89,6 +89,44 @@ test("Raking Fire against the front arc deals no damage", () => {
   assert.equal(out.every((h) => h.sp === 0), true);
 });
 
+test("Raise Shield negates the front arc and blunts side/rear by 4", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const base = {
+    weightClass: "medium",
+    weapons: { melee: "Bulwark Shield" },
+    weaponUpgrades: { melee: "boss-spike" }, // base coverage (no Tower Shield)
+    preparation: { type: "raise-shield" },
+  };
+
+  // Front: fully negated regardless of the roll.
+  const front = rollImpacts({ weightClass: "medium" }, base, auto, "hull",
+    { arc: "front", hits: 2 }, { impacts: [6, 6] }, () => 0);
+  assert.equal(front.every((h) => h.sp === 0), true);
+
+  // Side: 5 + 8 + 2(side) - 4(shield) = 11 vs medium hull (11/14/17) -> direct(1).
+  const side = rollImpacts({ weightClass: "medium" }, base, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(side[0].total, 11);
+  assert.equal(side[0].sp, 1);
+});
+
+test("Tower Shield extends Raise Shield negation to the side arc", () => {
+  const auto = WEAPONS.longRange["Autocannon"];
+  const tower = {
+    weightClass: "medium",
+    weapons: { melee: "Bulwark Shield" },
+    weaponUpgrades: { melee: "tower-shield" },
+    preparation: { type: "raise-shield" },
+  };
+  // Side negated; rear only blunted: 5 + 8 + 4(rear) - 4 = 13 -> direct on medium hull.
+  const side = rollImpacts({ weightClass: "medium" }, tower, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(side[0].sp, 0);
+  const rear = rollImpacts({ weightClass: "medium" }, tower, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(rear[0].total, 13);
+});
+
 test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-penalty upgrades", () => {
   const mini = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);

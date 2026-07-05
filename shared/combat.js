@@ -2,7 +2,7 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  IMPACT, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity,
+  IMPACT, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity, shieldCoverage,
 } from "./rules.js";
 
 function rollD(sides, provided, random) {
@@ -74,20 +74,24 @@ export function arcBonus(profile, arc) {
 
 // §7.7-8 — one Impact Roll per hit. Adds AP (+D3 per raw 6) and Rend (+D3 per
 // raw 5-6). Brace subtracts 2 on the target's front arc (§5 preparation).
+// Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 4.
 export function rollImpacts(attacker, target, profile, location, opts, providedDice, random) {
   const str = computeStr(attacker, profile, opts);
   const bonus = arcBonus(profile, opts.arc);
   const braced = target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
   const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
+  const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
+  const shieldNegates = !!shield && shield.negate.includes(opts.arc);
+  const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
   const row = IMPACT[target.weightClass][location];
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
     const die = rollD(6, providedDice?.impacts?.[i], random);
-    if (bonus == null) { out.push({ die, total: 0, tier: "none", sp: 0 }); continue; }
+    if (bonus == null || shieldNegates) { out.push({ die, total: 0, tier: "none", sp: 0 }); continue; }
     let extra = 0;
     if (profile.perks.includes("Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
     if (profile.perks.includes("Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
-    const total = die + str + bonus + braced + hardened + extra;
+    const total = die + str + bonus + braced + hardened + shieldBlunt + extra;
     const sev = impactSeverity(total, row);
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
   }

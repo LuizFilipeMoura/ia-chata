@@ -83,14 +83,9 @@ export function hasBulwarkShield(rig) {
   return rig?.weapons?.melee === "Bulwark Shield";
 }
 
-// Which arcs a Raise Shield covers. Base: negate the front, blunt (−4) side/rear.
-// Tower Shield upgrade: negation extends to the side arc; only the rear is blunted.
-export function shieldCoverage(rig) {
-  const tower = rig?.weaponUpgrades?.melee === "tower-shield";
-  return tower
-    ? { negate: ["front", "side"], blunt: ["rear"] }
-    : { negate: ["front"], blunt: ["side", "rear"] };
-}
+// shieldCoverage lives in rules.js (shared with combat.js without an import
+// cycle); re-exported here so callers/tests can reach it via game-state.
+export { shieldCoverage } from "./rules.js";
 
 // "raise-shield" is a fourth, gated §5 preparation available only to Rigs
 // carrying a Bulwark Shield (§13 Bulwark); everything else falls back to brace.
