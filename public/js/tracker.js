@@ -22,6 +22,7 @@ const battleSetup = document.getElementById("battleSetup");
 const battleReadyStatus = document.getElementById("battleReadyStatus");
 const battleBounty = document.getElementById("battleBounty");
 const readyBattle = document.getElementById("readyBattle");
+const diceMode = document.getElementById("diceMode");
 
 // ---- Local view state (never leaves the client) ----
 // The "active" Rig is the one currently taking its activation; only it may
@@ -123,6 +124,12 @@ function renderBattleSetup() {
     battleBounty.textContent = bounty ? `Ironclad Bounty: ${bounty.name}` : "Ironclad Bounty: awaiting target";
     readyBattle.disabled = true;
     readyBattle.textContent = "Started";
+    if (diceMode) {
+      const auto = S.game?.autoResolve !== false;
+      diceMode.textContent = auto ? "🎲 Auto" : "🎲 Manual";
+      diceMode.setAttribute("aria-pressed", String(auto));
+      diceMode.disabled = started;
+    }
     return;
   }
 
@@ -134,6 +141,13 @@ function renderBattleSetup() {
     : `Choose ${3 - myCount} more Rig${3 - myCount === 1 ? "" : "s"} to ready up.`;
   readyBattle.disabled = myReady || myCount < 3;
   readyBattle.textContent = myReady ? "Ready" : "Ready";
+
+  if (diceMode) {
+    const auto = S.game?.autoResolve !== false;
+    diceMode.textContent = auto ? "🎲 Auto" : "🎲 Manual";
+    diceMode.setAttribute("aria-pressed", String(auto));
+    diceMode.disabled = started;
+  }
 }
 
 // One structure-point component row (hull / arms / legs / engine): damage,
@@ -483,6 +497,10 @@ rigNameInput.addEventListener("keydown", (e) => {
 readyBattle?.addEventListener("click", () => {
   const side = S.session?.side || "a";
   sendCommand("ready", { side });
+});
+diceMode?.addEventListener("click", () => {
+  const auto = S.game?.autoResolve !== false;
+  sendCommand("setdice", { value: auto ? "manual" : "auto" });
 });
 
 // ---- Rig sheet open/close ----
