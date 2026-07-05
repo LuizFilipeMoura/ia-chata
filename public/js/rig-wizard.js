@@ -81,13 +81,19 @@ function select(options, selected, onChange) {
   return sel;
 }
 
-function stepIdentity(state) {
+function stepIdentity(state, card) {
   const body = document.createElement("div");
   body.className = "rw-body";
   const nameInput = document.createElement("input");
   nameInput.type = "text"; nameInput.placeholder = "Rig name"; nameInput.value = state.name;
   nameInput.className = "rw-name";
-  nameInput.addEventListener("input", () => (state.name = nameInput.value));
+  nameInput.addEventListener("input", () => {
+    state.name = nameInput.value;
+    // Toggle Next's disabled state directly (no full re-render) so typing
+    // doesn't rebuild this input and lose focus/cursor position.
+    const next = card.querySelector(".rw-nav .rw-btn:not(.ghost)");
+    if (next) next.disabled = !state.name.trim();
+  });
   body.appendChild(field("Name", nameInput));
   body.appendChild(field("Weight class", select(["light", "medium"], state.cls, (v) => (state.cls = v))));
   const mySide = S.session?.side || "a";
