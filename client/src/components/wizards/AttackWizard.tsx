@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { WEAPONS } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
+import { useBattleActions } from "../../state/BattleActionsContext";
 import { useRoll } from "../../state/RollContext";
 import { useUi } from "../../state/UiStateContext";
 import type { Rig } from "../../state/types";
@@ -96,14 +97,19 @@ const ROF_BY_NAME: Record<string, number> = {
 };
 
 export function AttackWizard({
-  rig, mode, onClose,
+  rig, mode, onClose, target, react,
 }: {
   rig: Rig;
   mode: AttackMode;
   onClose: () => void;
+  // Return-Fire counter-attack: pin the target to the original attacker and send
+  // the shot as a `react` command instead of a normal `action fire`.
+  target?: string;
+  react?: boolean;
 }) {
   const { rigs, game } = useRoomState();
   const sendCommand = useCommands();
+  const { sendReact } = useBattleActions();
   const { promptDice } = useRoll();
   const { setGlossaryOpen } = useUi();
 
@@ -112,7 +118,7 @@ export function AttackWizard({
   );
 
   const [state, setState] = useState<AwState>(() => ({
-    target: enemies[0]?.name ?? "",
+    target: target ?? enemies[0]?.name ?? "",
     weapon: "longRange",
     arc: "front",
     range: "near",
@@ -176,6 +182,31 @@ export function AttackWizard({
   }, [isMelee]);
 
   const submit = async () => {
+    // Return-Fire counter: send a `react` with an `attack` payload rather than a
+    // normal `action`. The server resolves it as a plain fire on the attacker, so
+    // ram/aimed don't apply here — collect weapon/arc/range/cover (+ manual dice).
+    if (react) {
+      const attack: Record<string, unknown> = {
+        weapon: state.weapon, arc: state.arc, range: state.range, cover: state.cover,
+      };
+      if (game?.autoResolve === false) {
+        const profile = weapons[state.weapon === "melee" ? "melee" : "longRange"];
+        const rof = ROF_BY_NAME[profile] || 1;
+        const specs: { key: string; label: string; sides: number }[] = [];
+        for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
+        specs.push({ key: "loc", label: "Location", sides: 12 });
+        const d = await promptDice(specs, `${profile} dice`);
+        const toHit: number[] = [];
+        for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
+        const dice: Record<string, unknown> = { toHit, impacts: toHit.map(() => undefined) };
+        if (d.loc) dice.location = d.loc;
+        attack.dice = dice;
+      }
+      sendReact({ attack });
+      close();
+      return;
+    }
+
     const attrs: Record<string, unknown> = { name: rig.name, action: mode, target: state.target };
     if (mode !== "ram") {
       Object.assign(attrs, {
@@ -306,6 +337,7 @@ export function AttackWizard({
           optIcon={() => "🤖"}
           desc={FIELD_DESC.target}
           optDesc={targetDesc}
+          hidden={react}
         />
 
         {mode !== "ram" && (

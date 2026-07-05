@@ -44,6 +44,7 @@ interface BattleActionsApi {
   openPrepare: (rig: Rig) => void;
   scoreVp: () => void;
   resolveBlast: () => void;
+  sendReact: (attrs: Record<string, unknown>) => void;
   endActivation: (rig: Rig) => void;
   rollInitiative: () => void;
   resetBattle: () => void;
@@ -264,6 +265,11 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     sendCommand("vp", { side: mySide(), points: String(parseInt(pts, 10) || 0) });
   }, [sendCommand, mySide]);
 
+  const sendReact = useCallback(
+    (attrs: Record<string, unknown>) => sendCommand("react", { ...attrs, side: mySide() }),
+    [sendCommand, mySide],
+  );
+
   const resolveBlast = useCallback(() => {
     const names = window.prompt('Names of rigs within 12" (comma-separated):', "");
     if (names == null) return;
@@ -301,7 +307,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider
       value={{
-        openMove, openRepair, openPrepare, scoreVp, resolveBlast, endActivation, rollInitiative, resetBattle,
+        openMove, openRepair, openPrepare, scoreVp, resolveBlast, sendReact, endActivation, rollInitiative, resetBattle,
       }}
     >
       {children}

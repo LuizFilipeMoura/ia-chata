@@ -2,6 +2,8 @@ import { useEffect, useRef, createElement, type ReactNode } from "react";
 import { useRoomState } from "../state/RoomStateContext";
 import { useRoll } from "../state/RollContext";
 import { useDrawer } from "../state/DrawerContext";
+import { useBattleActions } from "../state/BattleActionsContext";
+import { useWizard } from "../state/WizardContext";
 import { useCommands } from "./useCommands";
 import ChoiceField from "../components/overlays/ChoiceField";
 import ReactionPicker from "../components/overlays/ReactionPicker";
@@ -51,6 +53,8 @@ export function useBattleWatchers(): void {
   const { rigs, game, session } = useRoomState();
   const { playResolution } = useRoll();
   const { openDrawer, closeDrawer } = useDrawer();
+  const { sendReact } = useBattleActions();
+  const { openAttack } = useWizard();
 
   // ---- Resolution log watcher (battle.js:47-56) ----
   const lastSeenResolution = useRef(0);
@@ -113,6 +117,86 @@ export function useBattleWatchers(): void {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side]);
+
+  // ---- Reaction watcher: defender resolves a triggered facedown reaction ----
+  // When an incoming attack reveals an Evasive/Return-Fire prep, the server parks
+  // a `pendingReaction` keyed to the defender. Only that side gets a decision
+  // drawer; everyone else waits (see BattleHud's "Opponent is reacting…" line).
+  const reactionShown = useRef(false);
+  useEffect(() => {
+    const g = gameRef.current;
+    const mine = sessionRef.current?.side || "a";
+    const pr = g?.pendingReaction;
+    if (!pr || pr.defender !== mine) { reactionShown.current = false; return; }
+    if (reactionShown.current) return;
+    reactionShown.current = true;
+
+    const rigsNow = rigsRef.current || [];
+    const reactor = rigsNow.find((r) => r.id === pr.targetId); // the prepared rig
+    const attacker = rigsNow.find((r) => r.id === pr.attackerId);
+    if (!reactor) return;
+
+    if (pr.kind === "evasive") {
+      openDrawer({
+        title: `💨 Evasive — ${reactor.name}`,
+        tone: "oil",
+        dismissable: false,
+        render: () =>
+          createElement(
+            "p",
+            { className: "dwr-hint" },
+            `Move ${reactor.name} up to ½ Speed on the table. Did it break ${attacker?.name || "the attacker"}'s line of sight or range?`,
+          ),
+        actions: [
+          {
+            label: "No — resolve the shot",
+            ghost: true,
+            onClick: () => { closeDrawer(); sendReact({ evaded: false }); },
+          },
+          {
+            label: "Evaded — attack fails",
+            primary: true,
+            icon: "💨",
+            onClick: () => { closeDrawer(); sendReact({ evaded: true }); },
+          },
+        ],
+      });
+    } else if (pr.kind === "return" && attacker) {
+      openDrawer({
+        title: `↩️ Return Fire — ${reactor.name}`,
+        tone: "ember",
+        dismissable: false,
+        render: () =>
+          createElement(
+            "p",
+            { className: "dwr-hint" },
+            `Answer ${attacker.name} with one weapon, or skip if you can't bear on it.`,
+          ),
+        actions: [
+          {
+            label: "Skip",
+            ghost: true,
+            onClick: () => { closeDrawer(); sendReact({ decline: true }); },
+          },
+          {
+            label: "Return fire",
+            primary: true,
+            icon: "↩️",
+            onClick: () => {
+              closeDrawer();
+              // Reuse the AttackWizard: pin the target to the attacker and send
+              // the shot as a `react { attack }` instead of a normal `action`.
+              openAttack(reactor, "fire", { target: attacker.name, react: true });
+            },
+          },
+        ],
+      });
+    } else {
+      // Return-Fire but the attacker is gone (destroyed) — nothing to answer.
+      sendReact({ decline: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.pendingReaction?.targetId, game?.pendingReaction?.kind]);
 
   // ---- Activation summary watcher (battle.js:58-120) ----
   const watchedActiveRig = useRef<number | null>(null); // rig active on previous render

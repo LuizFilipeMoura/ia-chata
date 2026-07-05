@@ -5,15 +5,20 @@ import { AttackWizard, type AttackMode } from "../components/wizards/AttackWizar
 import { useRoomState } from "./RoomStateContext";
 import type { Rig } from "./types";
 
+export interface AttackOpts {
+  target?: string;
+  react?: boolean;
+}
+
 interface WizardApi {
   openCommission: () => void;
-  openAttack: (rig: Rig, mode: AttackMode) => void;
+  openAttack: (rig: Rig, mode: AttackMode, opts?: AttackOpts) => void;
   close: () => void;
 }
 
 type Open =
   | { kind: "commission" }
-  | { kind: "attack"; rig: Rig; mode: AttackMode }
+  | { kind: "attack"; rig: Rig; mode: AttackMode; opts?: AttackOpts }
   | null;
 
 const Ctx = createContext<WizardApi | null>(null);
@@ -27,13 +32,13 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   rigsRef.current = rigs;
 
   const openCommission = useCallback(() => setOpen({ kind: "commission" }), []);
-  const openAttack = useCallback((rig: Rig, mode: AttackMode) => {
+  const openAttack = useCallback((rig: Rig, mode: AttackMode, opts?: AttackOpts) => {
     // enemies = opposing, non-destroyed rigs; if none, don't open (attack-wizard.js:44-45).
     const enemies = rigsRef.current.filter(
       (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
     );
     if (!enemies.length) return;
-    setOpen({ kind: "attack", rig, mode });
+    setOpen({ kind: "attack", rig, mode, opts });
   }, []);
   const close = useCallback(() => setOpen(null), []);
 
@@ -44,7 +49,13 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         createPortal(<RigWizard onClose={close} />, document.body)}
       {open?.kind === "attack" &&
         createPortal(
-          <AttackWizard rig={open.rig} mode={open.mode} onClose={close} />,
+          <AttackWizard
+            rig={open.rig}
+            mode={open.mode}
+            target={open.opts?.target}
+            react={open.opts?.react}
+            onClose={close}
+          />,
           document.body,
         )}
     </Ctx.Provider>
