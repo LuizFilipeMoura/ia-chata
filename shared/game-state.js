@@ -206,7 +206,8 @@ export function createRoom(code) {
       turn: null,
       resolutions: [],
       nextResolutionId: 1,
-      recoveryVp: {},
+      recoveryClaims: {},
+      recoveryConflict: null,
       suddenDeath: false,
       outcome: null,
       pendingBlast: null,
@@ -268,7 +269,8 @@ function ensureGameShape(room) {
   if (room.game.turn === undefined) room.game.turn = null;
   room.game.resolutions ||= [];
   room.game.nextResolutionId ||= 1;
-  room.game.recoveryVp ||= {};
+  room.game.recoveryClaims ||= {};
+  if (room.game.recoveryConflict === undefined) room.game.recoveryConflict = null;
   if (typeof room.game.suddenDeath !== "boolean") room.game.suddenDeath = false;
   if (room.game.outcome === undefined) room.game.outcome = null;
   if (room.game.pendingBlast === undefined) room.game.pendingBlast = null;
@@ -636,7 +638,8 @@ function runRecovery(room) {
   room.game.answerTokens = { a: 0, b: 0 };
   room.game.turn = null;
   room.game.phase = "recovery";
-  room.game.recoveryVp = {};
+  room.game.recoveryClaims = {};
+  room.game.recoveryConflict = null;
 }
 
 function bumpHeat(rig, n) {
@@ -914,7 +917,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     room.game.turn = null;
     room.game.resolutions = [];
     room.game.nextResolutionId = 1;
-    room.game.recoveryVp = {};
+    room.game.recoveryClaims = {};
+    room.game.recoveryConflict = null;
     room.game.outcome = null;
     room.game.pendingBlast = null;
     room.game.pendingAnswer = null;
@@ -1014,12 +1018,37 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "vp") {
     if (room.game.phase === "recovery") {
       const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
-      if (sideId && !room.game.recoveryVp[sideId]) {
-        const side = room.game.sides.find((s) => s.id === sideId);
-        side.vp += Math.max(0, Math.floor(Number(a.points) || 0));
-        room.game.recoveryVp[sideId] = true;
-        if (room.game.sides.every((s) => room.game.recoveryVp[s.id])) advanceRound(room);
+      if (sideId) {
+        const objs = room.game.objectives || [];
+        // Sanitize the claimed marker indices: integers in range, de-duplicated.
+        const claims = Array.isArray(a.claims)
+          ? [...new Set(
+              a.claims
+                .map((i) => Math.floor(Number(i)))
+                .filter((i) => Number.isInteger(i) && i >= 0 && i < objs.length),
+            )]
+          : [];
+        // Overwrite so a side can resubmit to resolve a conflict.
+        room.game.recoveryClaims[sideId] = claims;
         changed = true;
+        // Resolve only once BOTH sides have submitted their claims.
+        if (room.game.sides.every((s) => Array.isArray(room.game.recoveryClaims[s.id]))) {
+          const [sa, sb] = room.game.sides;
+          const ca = room.game.recoveryClaims[sa.id];
+          const cb = room.game.recoveryClaims[sb.id];
+          const conflict = ca.filter((i) => cb.includes(i));
+          if (conflict.length) {
+            // Both claimed the same marker — block and flag for re-check (§11).
+            room.game.recoveryConflict = conflict;
+          } else {
+            room.game.recoveryConflict = null;
+            for (const s of room.game.sides) {
+              s.vp += room.game.recoveryClaims[s.id]
+                .reduce((sum, i) => sum + (objs[i]?.vp || 0), 0);
+            }
+            advanceRound(room);
+          }
+        }
       }
     }
   } else if (verb === "blast") {

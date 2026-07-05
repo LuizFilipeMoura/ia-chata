@@ -578,12 +578,42 @@ test("both sides scoring VP advances to the next round's initiative", () => {
   const r = startedRoom();
   runFullRound(r);
   assert.equal(r.game.phase, "recovery");
-  applyCommand(r, { verb: "vp", attrs: { side: "a", points: "2" } });
+  applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [0] } });
   assert.equal(r.game.phase, "recovery");         // still waiting on b
-  applyCommand(r, { verb: "vp", attrs: { side: "b", points: "1" } });
+  applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [1] } });
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
   assert.equal(r.game.sides.find((s) => s.id === "b").vp, 1);
   assert.equal(r.game.round, 2);
+  assert.equal(r.game.phase, "initiative");
+});
+
+test("VP claims score per-objective and block on a both-claimed marker", () => {
+  const r = startedRoom();
+  runFullRound(r);
+  assert.equal(r.game.phase, "recovery");
+  // Objectives: index 0 = centre (2 VP), indices 1 & 2 = corners (1 VP each).
+  // Both claim the centre — conflict, no advance, no VP awarded.
+  applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [0] } });
+  applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [0] } });
+  assert.equal(r.game.phase, "recovery");
+  assert.deepEqual(r.game.recoveryConflict, [0]);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 0);
+  assert.equal(r.game.round, 1);
+  // A backs off the centre and resubmits — conflict clears, round advances.
+  applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [1] } });
+  assert.equal(r.game.phase, "initiative");
+  assert.equal(r.game.round, 2);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 1); // corner
+  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 2); // centre
+  assert.equal(r.game.recoveryConflict, null);
+});
+
+test("VP claims ignore out-of-range and duplicate indices", () => {
+  const r = startedRoom();
+  runFullRound(r);
+  applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [0, 0, 9, -1] } });
+  applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2); // just the centre, once
   assert.equal(r.game.phase, "initiative");
 });
 
@@ -592,8 +622,8 @@ test("after round 5 the higher VP wins", () => {
   for (let round = 1; round <= 5; round++) {
     if (round >= 2) applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
     runFullRound(r);
-    applyCommand(r, { verb: "vp", attrs: { side: "a", points: round === 1 ? "3" : "0" } });
-    applyCommand(r, { verb: "vp", attrs: { side: "b", points: "0" } });
+    applyCommand(r, { verb: "vp", attrs: { side: "a", claims: round === 1 ? [0, 1] : [] } });
+    applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
   }
   assert.equal(r.game.phase, "finished");
   assert.deepEqual(r.game.outcome, { winner: "a", reason: "points" });
@@ -1133,7 +1163,7 @@ test("a rig's next activation clears its own Harden", () => {
   applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
   // cycle everyone else, then come back to a1's next activation
   while (findRig(r, "a1").hardened && r.game.phase !== "finished") {
-    if (r.game.phase === "recovery") applyCommand(r, { verb: "vp", attrs: { side: "a", points: "0" } }), applyCommand(r, { verb: "vp", attrs: { side: "b", points: "0" } });
+    if (r.game.phase === "recovery") applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [] } }), applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
     if (r.game.phase === "initiative") applyCommand(r, { verb: "initiative", attrs: {} });
     if (r.game.phase === "activation") {
       clearPendingAnswer(r);
@@ -1385,7 +1415,7 @@ test("reset returns a mid/finished battle to a fresh pre-start state, keeping th
   assert.equal(r.game.round, 1);
   assert.equal(r.game.turn, null);
   assert.equal(r.game.resolutions.length, 0);
-  assert.deepEqual(r.game.recoveryVp, {});
+  assert.deepEqual(r.game.recoveryClaims, {});
   assert.equal(r.game.outcome, null);
   assert.equal(r.game.pendingBlast, null);
   assert.equal(r.game.pendingAnswer, null);
