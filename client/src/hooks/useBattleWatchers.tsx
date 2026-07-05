@@ -2,7 +2,10 @@ import { useEffect, useRef, createElement, type ReactNode } from "react";
 import { useRoomState } from "../state/RoomStateContext";
 import { useRoll } from "../state/RollContext";
 import { useDrawer } from "../state/DrawerContext";
-import type { Rig, Resolution } from "../state/types";
+import { useCommands } from "./useCommands";
+import ChoiceField from "../components/overlays/ChoiceField";
+import ReactionPicker from "../components/overlays/ReactionPicker";
+import type { Rig, Resolution, PrepType } from "../state/types";
 
 interface RecapLine {
   text: string;
@@ -59,6 +62,57 @@ export function useBattleWatchers(): void {
     // Play only the newest to avoid a backlog stampede.
     void playResolution(fresh[fresh.length - 1]);
   }, [game?.resolutions, playResolution]);
+
+  // ---- Answer-token gate: mandatory immediate placement ----
+  const sendCommand = useCommands();
+  const answerShownFor = useRef<number>(-1); // remaining count last shown
+  useEffect(() => {
+    const g = gameRef.current;
+    const mine = sessionRef.current?.side || "a";
+    const gate = g?.pendingAnswer;
+    if (!gate || gate.side !== mine) { answerShownFor.current = -1; return; }
+    if (answerShownFor.current === gate.remaining) return; // already prompting this step
+    answerShownFor.current = gate.remaining;
+
+    const eligible = (rigsRef.current || []).filter(
+      (r) => (r.owner || "a") === mine && !r.destroyed && r.preparation == null,
+    );
+    if (!eligible.length) return; // server clears the gate on its own
+
+    const pick = { rigName: eligible[0].name, prep: "brace" as PrepType };
+    const build = () => (
+      <div className="dwr-recap">
+        <p className="dwr-hint">
+          Answer token — {gate.remaining} left. Choose a Rig, then a facedown reaction.
+        </p>
+        <ChoiceField
+          label="Rig"
+          options={eligible.map((r) => ({ value: r.name, label: r.name }))}
+          value={pick.rigName}
+          onChange={(v) => (pick.rigName = v)}
+        />
+        <ReactionPicker value={pick.prep} onChange={(v) => (pick.prep = v)} />
+      </div>
+    );
+    openDrawer({
+      title: "⟡ Answer Tokens — prepare a reaction",
+      tone: "oil",
+      dismissable: false,
+      render: build,
+      actions: [
+        {
+          label: "Set reaction",
+          primary: true,
+          icon: "⟡",
+          onClick: () => {
+            closeDrawer();
+            sendCommand("answer", { name: pick.rigName, prep: pick.prep, side: mine });
+          },
+        },
+      ],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side]);
 
   // ---- Activation summary watcher (battle.js:58-120) ----
   const watchedActiveRig = useRef<number | null>(null); // rig active on previous render
