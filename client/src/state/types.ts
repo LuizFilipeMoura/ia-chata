@@ -49,12 +49,24 @@ export interface Resolution {
   rolls?: Array<{ sides: number; value: number; label?: string }>;
 }
 
+export type Diagonal = "tlbr" | "trbl";
+export interface Objective { x: number; y: number; vp: number; }
+export interface TerrainPiece { x: number; y: number; size: "sm" | "md"; }
+export interface FieldState {
+  width: number;
+  height: number;
+  diagonal: Diagonal;
+  terrain: TerrainPiece[];
+  locked: boolean;
+}
+
 export interface GameState {
   round: number;
   phase: string;
   started: boolean;
   autoResolve?: boolean;
   sides: Side[];
+  objectives?: Objective[];
   turn?: Turn | null;
   bounties?: Record<string, number>;
   outcome?: unknown;
@@ -75,4 +87,6 @@ export interface ServerState {
   version: number;
   rigs: Rig[];
   game: GameState | null;
+  ownerSide?: string | null;
+  field?: FieldState | null;
 }

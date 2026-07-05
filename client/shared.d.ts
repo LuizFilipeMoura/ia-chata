@@ -42,3 +42,19 @@ declare module "/shared/battle-view.js" {
 declare module "/shared/glossary.js" {
   export const GLOSSARY: Array<{ id: string; term: string; def: string; match: string[] }>;
 }
+
+declare module "/shared/field.js" {
+  export interface FieldLike { width: number; height: number; diagonal: "tlbr" | "trbl"; }
+  export const FIELD_MIN: { width: number; height: number };
+  export const FIELD_MAX: { width: number; height: number };
+  export const FIELD_DEFAULT: { width: number; height: number };
+  export const OBJ_FRACTION: number;
+  export function halfDiag(w: number, h: number): number;
+  export function clampDimensions(w: number, h: number): { width: number; height: number };
+  export function emptyCorners(field: FieldLike): Array<{ x: number; y: number }>;
+  export function deploymentCorners(field: FieldLike): Array<{ x: number; y: number }>;
+  export function fieldCenter(field: FieldLike): { x: number; y: number };
+  export function computeObjectives(field: FieldLike): Array<{ x: number; y: number; vp: number }>;
+  export function setback(field: FieldLike): number;
+  export function scatterTerrain(field: FieldLike, random?: () => number): Array<{ x: number; y: number; size: "sm" | "md" }>;
+}
