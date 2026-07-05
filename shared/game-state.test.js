@@ -1362,3 +1362,62 @@ test("react is ignored from the wrong side", () => {
   applyCommand(r, { verb: "react", attrs: { evaded: true, side: "b" } }); // attacker can't answer
   assert.equal(r.game.pendingReaction.kind, "evasive");      // still parked
 });
+
+test("reset returns a mid/finished battle to a fresh pre-start state, keeping the same rigs", () => {
+  const r = startedRoom(); // phase "activation", turn.side === "b"
+  // Bang up a rig and drive some in-battle state before resetting.
+  applyCommand(r, { verb: "damage", attrs: { name: "a1", loc: "hull", amount: "3" } });
+  applyCommand(r, { verb: "damage", attrs: { name: "a1", loc: "arms", amount: "5" } }); // destroy arms -> cascade
+  applyCommand(r, { verb: "heat", attrs: { name: "a1", amount: "3" } });
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "prepare", prep: "brace" } }); // no-op (not a1's turn) but exercise answer path
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "evasive", side: "a" } });
+  const rig = findRig(r, "a1");
+  assert.ok(rig.hull.sp < rig.hull.max || rig.arms.destroyed); // sanity: battle actually mutated
+  const rigCountBefore = r.rigs.length;
+
+  const versionBefore = r.version;
+  applyCommand(r, { verb: "reset" }, { side: "a" });
+
+  assert.ok(r.version > versionBefore); // version bumped per convention
+
+  assert.equal(r.game.started, false);
+  assert.equal(r.game.phase, "setup");
+  assert.equal(r.game.round, 1);
+  assert.equal(r.game.turn, null);
+  assert.equal(r.game.resolutions.length, 0);
+  assert.deepEqual(r.game.recoveryVp, {});
+  assert.equal(r.game.outcome, null);
+  assert.equal(r.game.pendingBlast, null);
+  assert.equal(r.game.pendingAnswer, null);
+  assert.equal(r.game.pendingReaction, null);
+  assert.deepEqual(r.game.answerTokens, { a: 0, b: 0 });
+
+  assert.equal(r.rigs.length, rigCountBefore);
+  assert.ok(r.rigs.length > 0);
+
+  for (const rg of r.rigs) {
+    for (const loc of ["hull", "arms", "legs", "engine"]) {
+      assert.equal(rg[loc].sp, rg[loc].max, `${rg.name} ${loc} sp restored`);
+      assert.equal(rg[loc].destroyed, false, `${rg.name} ${loc} not destroyed`);
+    }
+    assert.equal(rg.engine.heat, 0);
+    assert.equal(rg.activated, false);
+    assert.equal(rg.destroyed, false);
+    assert.equal(rg.skipNextActivation, false);
+    assert.equal(rg.immobilised, false);
+    assert.equal(rg.hardened, false);
+    assert.equal(rg.overclockCoreUsed, false);
+    assert.equal(rg.actionPenaltyNextActivation, 0);
+    assert.equal(rg.preparation, null);
+    assert.deepEqual(rg.weaponsDestroyed, []);
+    if (rg.loaded) {
+      assert.equal(rg.loaded.longRange, true);
+      assert.equal(rg.loaded.melee, true);
+    }
+  }
+
+  for (const side of r.game.sides) {
+    assert.equal(side.ready, false);
+    assert.equal(side.vp, 0);
+  }
+});

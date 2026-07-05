@@ -46,6 +46,7 @@ interface BattleActionsApi {
   resolveBlast: () => void;
   endActivation: (rig: Rig) => void;
   rollInitiative: () => void;
+  resetBattle: () => void;
 }
 
 const Ctx = createContext<BattleActionsApi | null>(null);
@@ -293,9 +294,15 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     }
   }, [sendCommand, promptTwoDice]);
 
+  const resetBattle = useCallback(() => {
+    sendCommand("reset", {});
+  }, [sendCommand]);
+
   return (
     <Ctx.Provider
-      value={{ openMove, openRepair, openPrepare, scoreVp, resolveBlast, endActivation, rollInitiative }}
+      value={{
+        openMove, openRepair, openPrepare, scoreVp, resolveBlast, endActivation, rollInitiative, resetBattle,
+      }}
     >
       {children}
     </Ctx.Provider>

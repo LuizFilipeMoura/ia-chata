@@ -890,6 +890,42 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       maybeStartGame(room, options.random);
       changed = true;
     }
+  } else if (verb === "reset") {
+    for (const rig of room.rigs) {
+      for (const loc of LOCS) { rig[loc].sp = rig[loc].max; rig[loc].destroyed = false; }
+      rig.engine.heat = 0;
+      rig.activated = false;
+      rig.destroyed = false;
+      rig.skipNextActivation = false;
+      rig.noCool = false;
+      rig.speedHalvedNextRound = false;
+      if (rig.loaded) { rig.loaded.longRange = true; rig.loaded.melee = true; }
+      rig.preparation = null;
+      rig.weaponsDestroyed = [];
+      rig.immobilised = false;
+      rig.hardened = false;
+      rig.overclockCoreUsed = false;
+      rig.actionPenaltyNextActivation = 0;
+      delete rig._blastRolled;
+    }
+    room.game.started = false;
+    room.game.phase = "setup";
+    room.game.round = 1;
+    room.game.turn = null;
+    room.game.resolutions = [];
+    room.game.nextResolutionId = 1;
+    room.game.recoveryVp = {};
+    room.game.outcome = null;
+    room.game.pendingBlast = null;
+    room.game.pendingAnswer = null;
+    room.game.pendingReaction = null;
+    room.game.answerTokens = { a: 0, b: 0 };
+    room.game.suddenDeath = false;
+    room.game.deployOrder = [];
+    room.game.initiative = null;
+    room.game.bounties = {};
+    for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
+    changed = true;
   } else if (verb === "setdice") {
     if (!room.game.started) {
       const want = String(a.value || "").toLowerCase() !== "manual";
