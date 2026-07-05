@@ -78,24 +78,74 @@ export function normalizeEquipment(id) {
 }
 
 // Weapon upgrades (Part 2 of the design) — every weapon's two fixed signature
-// upgrades, authored as flavor + a toolkit-effect tag. Combat-engine wiring for
-// the brand-new mechanics (Reach, Scatter, Systems Overload, Sunder,
-// Reroll-a-miss) is deferred per the design's "Readiness / phasing" section;
-// this catalogue lets the wizard preview a weapon's identity today.
+// upgrades, authored as flavor + a toolkit-effect tag.
 export const WEAPON_UPGRADES = {
-  "Mini Gun":      [{ name: "Extended Belt", tag: "+2 ROF (dice showing 1 add heat)" }, { name: "Suppressive Fire", tag: "Shock — Speed halved" }],
-  "Double MG":     [{ name: "Tracer Rounds", tag: "Incendiary — +1 target heat/hit" }, { name: "Gyro Mount", tag: "Reroll one missed die" }],
-  "Autocannon":    [{ name: "AP Shells", tag: "Armour Piercing" }, { name: "Depleted Core", tag: "+STR" }],
-  "Arc Gun":       [{ name: "Systems Overload", tag: "Target loses 1 action next activation" }, { name: "Ion Burn", tag: "Incendiary — +1 target heat/hit" }],
-  "Mortar":        [{ name: "Airburst Fuze", tag: "Ignores cover" }, { name: "Cluster Shells", tag: "Also chips a 2nd random location" }],
-  "Sniper Cannon": [{ name: "Match Barrel", tag: "No far-range penalty" }, { name: "Marksman Optics", tag: "Precision — Aimed Shot loses −2" }],
-  "Sword":         [{ name: "Duelist's Balance", tag: "Precision" }, { name: "Keen Edge", tag: "Rend" }],
-  "Circular Saw":  [{ name: "Tempered Teeth", tag: "Armour Piercing" }, { name: "Sunder", tag: "−1 max SP to the struck location" }],
-  "Chainsaw":      [{ name: "High-Rev Motor", tag: "+STR, but +1 heat per strike" }, { name: "Ripper Teeth", tag: "Rend" }],
-  "Claw":          [{ name: "Vice Grip", tag: "Impale — strong hit immobilises" }, { name: "Rending Talons", tag: "Rend" }],
-  "Lance":         [{ name: "Couched Reach", tag: "Reach — strike 1\" further / charge bonus" }, { name: "Spearpoint", tag: "Impale" }],
-  "Wrecking Ball": [{ name: "Haymaker", tag: "+STR, big" }, { name: "Wrecking Momentum", tag: "Staggering — knock back / pivot" }],
+  "Mini Gun": [
+    { id: "extended-belt", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
+    { id: "suppressive-fire", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
+  ],
+  "Double MG": [
+    { id: "tracer-rounds", name: "Tracer Rounds", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
+    { id: "gyro-mount", name: "Gyro Mount", tag: "Reroll one missed to-hit die", effect: { rerollMisses: 1 } },
+  ],
+  "Autocannon": [
+    { id: "ap-shells", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "depleted-core", name: "Depleted Core", tag: "+2 STR", effect: { str: 2 } },
+  ],
+  "Arc Gun": [
+    { id: "systems-overload", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
+    { id: "ion-burn", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
+  ],
+  "Mortar": [
+    { id: "airburst-fuze", name: "Airburst Fuze", tag: "Ignores cover", effect: { ignoreCover: true } },
+    { id: "cluster-shells", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
+  ],
+  "Sniper Cannon": [
+    { id: "match-barrel", name: "Match Barrel", tag: "No far-range penalty", effect: { noFarPenalty: true } },
+    { id: "marksman-optics", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
+  ],
+  "Sword": [
+    { id: "duelist-balance", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
+    { id: "keen-edge", name: "Keen Edge", tag: "Gains Rend", effect: { perks: ["Rend"] } },
+  ],
+  "Circular Saw": [
+    { id: "tempered-teeth", name: "Tempered Teeth", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "sunder", name: "Sunder", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
+  ],
+  "Chainsaw": [
+    { id: "high-rev-motor", name: "High-Rev Motor", tag: "+2 STR; +1 heat per attack", effect: { str: 2, heat: 1 } },
+    { id: "ripper-teeth", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
+  ],
+  "Claw": [
+    { id: "vice-grip", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
+    { id: "rending-talons", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
+  ],
+  "Lance": [
+    { id: "couched-reach", name: "Couched Reach", tag: "+1 inch melee reach", effect: { range: 1 } },
+    { id: "spearpoint", name: "Spearpoint", tag: "Gains Impale", effect: { perks: ["Impale"] } },
+  ],
+  "Wrecking Ball": [
+    { id: "haymaker", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
+    { id: "wrecking-momentum", name: "Wrecking Momentum", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
+  ],
 };
+
+export function defaultWeaponUpgrade(weaponName) {
+  const upgrades = WEAPON_UPGRADES[weaponName];
+  return Array.isArray(upgrades) && upgrades.length ? upgrades[0].id : null;
+}
+
+export function normalizeWeaponUpgrade(weaponName, upgradeId) {
+  const upgrades = WEAPON_UPGRADES[weaponName];
+  if (!Array.isArray(upgrades) || upgrades.length === 0) return null;
+  const ref = String(upgradeId || "").trim().toLowerCase();
+  return upgrades.find((u) => u.id.toLowerCase() === ref)?.id || upgrades[0].id;
+}
+
+export function upgradeForWeapon(weaponName, upgradeId) {
+  const normalized = normalizeWeaponUpgrade(weaponName, upgradeId);
+  return (WEAPON_UPGRADES[weaponName] || []).find((u) => u.id === normalized) || null;
+}
 
 export function createRoom(code) {
   return {
@@ -140,6 +190,9 @@ function ensureRigShape(rig) {
   if (rig.equipment === undefined) rig.equipment = null;
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
+  if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
+  rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
+  rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
   return rig;
 }
 
@@ -186,6 +239,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   const longRange = normalizeWeapon("longRange", weapons.longRange || weapons.lr);
   const melee = normalizeWeapon("melee", weapons.melee);
   if (!longRange || !melee) return null;
+  const weaponUpgrades = {
+    longRange: normalizeWeaponUpgrade(longRange, weapons.longRangeUpgrade || weapons.lrUpgrade),
+    melee: normalizeWeaponUpgrade(melee, weapons.meleeUpgrade),
+  };
 
   const weightClass = normalizedClass;
   const d = RIG_DEFAULTS[weightClass];
@@ -202,6 +259,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     legs:   { sp: d.legs, max: d.legs, destroyed: false },
     engine: { sp: d.engine, max: d.engine, destroyed: false, heat: 0 },
     weapons: { longRange, melee },
+    weaponUpgrades,
     equipment: equipmentId,
     prepare: 0,    // Phase 4
     activated: false,

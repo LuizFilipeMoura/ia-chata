@@ -4,6 +4,7 @@ import {
   createRoom, makeRig, claimSide, applyCommand, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
+  normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -722,6 +723,67 @@ test("WEAPON_UPGRADES has exactly 2 upgrades for all 12 weapons", () => {
       assert.equal(typeof u.tag, "string");
     }
   }
+});
+
+test("WEAPON_UPGRADES has stable ids and effect objects for every option", () => {
+  const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
+  for (const name of all) {
+    const ups = WEAPON_UPGRADES[name];
+    assert.equal(ups.length, 2, `${name} must have exactly 2 upgrades`);
+    const ids = new Set();
+    for (const u of ups) {
+      assert.equal(typeof u.id, "string", `${name} upgrade missing id`);
+      assert.equal(u.id.length > 0, true, `${name} upgrade id empty`);
+      assert.equal(ids.has(u.id), false, `${name} duplicate upgrade id ${u.id}`);
+      ids.add(u.id);
+      assert.equal(typeof u.effect, "object", `${name} ${u.id} missing effect`);
+      assert.equal(u.effect != null, true, `${name} ${u.id} missing effect`);
+    }
+  }
+});
+
+test("normalizeWeaponUpgrade resolves valid ids and defaults missing/invalid selections", () => {
+  assert.equal(defaultWeaponUpgrade("Mini Gun"), "extended-belt");
+  assert.equal(normalizeWeaponUpgrade("Mini Gun", "suppressive-fire"), "suppressive-fire");
+  assert.equal(normalizeWeaponUpgrade("Mini Gun", ""), "extended-belt");
+  assert.equal(normalizeWeaponUpgrade("Mini Gun", "not-real"), "extended-belt");
+  assert.equal(normalizeWeaponUpgrade("Not A Weapon", "extended-belt"), null);
+  assert.equal(upgradeForWeapon("Mini Gun", "suppressive-fire").name, "Suppressive Fire");
+});
+
+test("makeRig stores default and explicit selected weapon upgrades", () => {
+  const fallback = makeRig(1, "Warden", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  assert.deepEqual(fallback.weaponUpgrades, { longRange: "extended-belt", melee: "duelist-balance" });
+
+  const explicit = makeRig(2, "Reaver", "medium", "a", {
+    longRange: "Mini Gun",
+    melee: "Sword",
+    longRangeUpgrade: "suppressive-fire",
+    meleeUpgrade: "keen-edge",
+  });
+  assert.deepEqual(explicit.weaponUpgrades, { longRange: "suppressive-fire", melee: "keen-edge" });
+});
+
+test("add command passes selected weapon upgrades through to the created rig", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: {
+    name: "Chooser", class: "medium", owner: "a",
+    lr: "Autocannon", melee: "Claw",
+    longRangeUpgrade: "depleted-core",
+    meleeUpgrade: "rending-talons",
+  } });
+  const rig = findRig(r, "Chooser");
+  assert.deepEqual(rig.weaponUpgrades, { longRange: "depleted-core", melee: "rending-talons" });
+});
+
+test("ensureRigShape backfills selected weapon upgrades on legacy rig objects", () => {
+  const legacy = { code: "L", version: 0, nextRigId: 2, game: { round: 1, started: false },
+    rigs: [{ id: 1, name: "Old", weightClass: "light", owner: "a",
+      hull:{sp:6,max:6,destroyed:false}, arms:{sp:5,max:5,destroyed:false},
+      legs:{sp:5,max:5,destroyed:false}, engine:{sp:4,max:4,destroyed:false,heat:0},
+      weapons:{longRange:"Double MG",melee:"Chainsaw"}, destroyed:false }] };
+  applyCommand(legacy, { verb: "nonsense", attrs: {} });
+  assert.deepEqual(legacy.rigs[0].weaponUpgrades, { longRange: "tracer-rounds", melee: "high-rev-motor" });
 });
 
 test("makeRig accepts an equipment id and Ablative Plating grants +1 max/current Hull SP", () => {
