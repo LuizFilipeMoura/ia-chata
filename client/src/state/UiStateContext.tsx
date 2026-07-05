@@ -3,6 +3,8 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 interface UiState {
   chatOpen: boolean;
   setChatOpen: (v: boolean) => void;
+  glossaryOpen: boolean;
+  setGlossaryOpen: (v: boolean) => void;
   expandedRigs: Set<number>;
   toggleExpanded: (id: number) => void;
   activeRigId: number | null;
@@ -13,6 +15,7 @@ const Ctx = createContext<UiState | null>(null);
 
 export function UiProvider({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [expandedRigs, setExpanded] = useState<Set<number>>(new Set());
   const [activeRigId, setActiveRigId] = useState<number | null>(null);
 
@@ -30,8 +33,11 @@ export function UiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ chatOpen, setChatOpen, expandedRigs, toggleExpanded, activeRigId, setActiveRig }),
-    [chatOpen, expandedRigs, activeRigId, setChatOpen, toggleExpanded, setActiveRig],
+    () => ({
+      chatOpen, setChatOpen, glossaryOpen, setGlossaryOpen,
+      expandedRigs, toggleExpanded, activeRigId, setActiveRig,
+    }),
+    [chatOpen, glossaryOpen, expandedRigs, activeRigId, setChatOpen, setGlossaryOpen, toggleExpanded, setActiveRig],
   );
 
   return (

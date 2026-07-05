@@ -6,6 +6,7 @@ import { TurnBanner } from "./TurnBanner";
 import { ChatProvider } from "./chat/ChatContext";
 import { ChatFab } from "./chat/ChatFab";
 import { ChatPanel } from "./chat/ChatPanel";
+import { GlossaryDialog } from "./overlays/GlossaryDialog";
 import { useUi } from "../state/UiStateContext";
 import { useBattleWatchers } from "../hooks/useBattleWatchers";
 
@@ -29,6 +30,7 @@ function ChatMount() {
 
 export function Terminal() {
   useBattleWatchers();
+  const { glossaryOpen, setGlossaryOpen } = useUi();
   return (
     <>
       <TurnBanner />
@@ -36,6 +38,7 @@ export function Terminal() {
         <Topbar />
         <Stage />
         <OutcomeBanner />
+        <GlossaryDialog open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
         <ChatMount />
       </div>
     </>
