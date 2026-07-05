@@ -254,6 +254,7 @@ function ensureRigShape(rig) {
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
+  if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -349,6 +350,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     hardened: false,
     overclockCoreUsed: false,
     actionPenaltyNextActivation: 0,
+    hullRepairLock: 0,
     destroyed: false,
   };
 }
@@ -591,10 +593,21 @@ function onRigDamaged(room, rig, opts) {
 function repairRig(rig, loc, amount) {
   const c = rig[loc];
   if (!c) return;
+  // Breaching Round (§12) — a breached Hull can't be repaired until the lock clears.
+  if (loc === "hull" && (rig.hullRepairLock || 0) > 0) return;
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   c.sp = Math.min(c.max, c.sp + n);
   if (c.sp > 0) c.destroyed = false;
   recompute(rig);
+}
+
+// Breaching Round — deny Hull repair for this round and the next (two Recovery
+// ticks). Set from combat when a Siege Maul with the upgrade damages the Hull.
+function breachHull(rig) {
+  if (rig) rig.hullRepairLock = 2;
+}
+function tickBreach(rig) {
+  if (rig && rig.hullRepairLock > 0) rig.hullRepairLock -= 1;
 }
 
 function sunderLocation(target, loc) {
@@ -657,6 +670,7 @@ function runRecovery(room) {
     rig.activated = false;
     rig.speedHalvedNextRound = false;
     rig.preparation = null;
+    tickBreach(rig);
     recompute(rig);
   }
   room.game.answerTokens = { a: 0, b: 0 };
@@ -713,6 +727,7 @@ function combatCtx() {
     bumpHeat,
     pushResolution,
     sunderLocation,
+    breachHull,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
   };
 }
@@ -933,6 +948,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.hardened = false;
       rig.overclockCoreUsed = false;
       rig.actionPenaltyNextActivation = 0;
+      rig.hullRepairLock = 0;
       delete rig._blastRolled;
     }
     room.game.started = false;
@@ -1247,4 +1263,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig };

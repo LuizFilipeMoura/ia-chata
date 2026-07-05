@@ -132,6 +132,9 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
       ctx.sunderLocation?.(target, location);
     }
+    if (profile.upgradeEffect?.onDamage === "breaching-round" && location === "hull" && impacts.some((h) => h.sp > 0)) {
+      ctx.breachHull?.(target);
+    }
     applyOnHitPerks(room, attacker, target, profile, opts, random, ctx);
   }
   if (heat > 0) ctx.bumpHeat(attacker, heat);

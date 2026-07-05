@@ -127,6 +127,28 @@ test("Tower Shield extends Raise Shield negation to the side arc", () => {
   assert.equal(rear[0].total, 13);
 });
 
+test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () => {
+  const attacker = makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "breaching-round" });
+  const target = makeRig(2, "Fort", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  const room = { rigs: [attacker, target] };
+  let hullBreached = null;
+  const ctx = {
+    applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+    bumpHeat: () => {},
+    pushResolution: () => {},
+    sunderLocation: () => {},
+    breachHull: (t) => { hullBreached = t; t.hullRepairLock = 2; },
+    profileFor: (slot, name, rig) => effectiveWeaponProfile(slot, name, rig),
+  };
+  // Force: to-hit die 6 (hits), location die 1 (hull), impact die 6.
+  const res = resolveAttack(room, attacker, target,
+    { weapon: "longRange", arc: "front", range: "near",
+      dice: { toHit: [6], location: 1, impacts: [6], ap: [1] } }, () => 0, ctx);
+  assert.equal(res.location, "hull");
+  assert.equal(hullBreached, target);
+  assert.equal(target.hullRepairLock, 2);
+});
+
 test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-penalty upgrades", () => {
   const mini = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);

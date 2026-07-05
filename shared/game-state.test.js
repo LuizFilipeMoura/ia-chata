@@ -139,6 +139,30 @@ test("a Bulwark Shield rig can arm Raise Shield; others fall back to brace", () 
   assert.equal(findRig(r, "Grunt").preparation.type, "brace"); // gated -> fallback
 });
 
+test("Breaching Round locks Hull repair for two Recovery Phases", () => {
+  const rig = makeRig(1, "Fort", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  rig.hull.sp = 3;
+
+  // Simulate a breach: the countdown is set to 2 (this round + next).
+  __test.breachHull(rig);
+  assert.equal(rig.hullRepairLock, 2);
+
+  // Repair action / Emergency Patch cannot restore the Hull while locked.
+  __test.repairRig(rig, "hull", 2);
+  assert.equal(rig.hull.sp, 3); // unchanged
+
+  // Non-hull repairs still work while the Hull is locked.
+  rig.legs.sp = 2;
+  __test.repairRig(rig, "legs", 1);
+  assert.equal(rig.legs.sp, 3);
+
+  // Each Recovery Phase ticks the lock down; after two it clears.
+  __test.tickBreach(rig); assert.equal(rig.hullRepairLock, 1);
+  __test.repairRig(rig, "hull", 2); assert.equal(rig.hull.sp, 3); // still locked at 1
+  __test.tickBreach(rig); assert.equal(rig.hullRepairLock, 0);
+  __test.repairRig(rig, "hull", 2); assert.equal(rig.hull.sp, 5); // now repairs
+});
+
 test("makeRig requires a supported class, one valid long-range and one valid melee weapon", () => {
   const ok = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
   assert.equal(ok.weapons.longRange, "Autocannon");
