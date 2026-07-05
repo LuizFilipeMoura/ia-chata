@@ -598,3 +598,23 @@ test("applyOverheat still routes through the cascade (engine failure sets noCool
   assert.equal(b1.engine.sp, Math.max(0, before - 2));
   assert.equal(b1.noCool, true);
 });
+
+test("destruction rolls a D12; 4+ records a pending blast", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  b1.hull.sp = 1;
+  __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 9 } }); // hull past 0 -> destroyed
+  assert.equal(b1.destroyed, true);
+  assert.equal(r.game.pendingBlast.sourceId, b1.id);
+  assert.equal(r.game.pendingBlast.exploded, true);
+});
+
+test("blast applies D6 + STR 10 to each named rig and clears the pending blast", () => {
+  const r = startedRoom();
+  r.game.pendingBlast = { sourceId: findRig(r, "b1").id, exploded: true };
+  const a1 = findRig(r, "a1"); // light hull 6
+  applyCommand(r, { verb: "blast", attrs: { targets: ["a1"], dice: { impacts: { a1: 6 }, location: { a1: 1 } } } });
+  // D6 6 + STR 10 = 16 vs light hull (10/14/16) -> critical (3 SP).
+  assert.equal(a1.hull.sp, 3);
+  assert.equal(r.game.pendingBlast, null);
+});

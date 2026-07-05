@@ -1,4 +1,4 @@
-import { ACTIONS, heatThreshold } from "./rules.js";
+import { ACTIONS, heatThreshold, hitLocation, impactSeverity, IMPACT } from "./rules.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -58,6 +58,7 @@ export function createRoom(code) {
       recoveryVp: {},
       suddenDeath: false,
       outcome: null,
+      pendingBlast: null,
     },
     rigs: [],
   };
@@ -100,6 +101,7 @@ function ensureGameShape(room) {
   room.game.recoveryVp ||= {};
   if (typeof room.game.suddenDeath !== "boolean") room.game.suddenDeath = false;
   if (room.game.outcome === undefined) room.game.outcome = null;
+  if (room.game.pendingBlast === undefined) room.game.pendingBlast = null;
   for (const rig of room.rigs) ensureRigShape(rig);
   return room;
 }
@@ -342,8 +344,23 @@ function applyDamage(room, rig, loc, amount, opts) {
   onRigDamaged(room, rig, opts);
 }
 
-// Replaced with §9 destruction in Task 5.
-function onRigDamaged(room, rig, opts) { checkAnnihilation(room); }
+// §9 — on the transition to destroyed, roll a D12; 4+ erupts. Record a pending
+// blast the controller resolves by naming rigs within 12" (see the `blast` verb).
+function onRigDamaged(room, rig, opts) {
+  if (rig.destroyed && !rig._blastRolled) {
+    rig._blastRolled = true;
+    const roll = rollD(12, opts?.dice?.destruction, opts?.random);
+    const exploded = roll >= 4;
+    pushResolution(room, {
+      kind: "destruction", actor: rig.owner, rigId: rig.id,
+      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 12")' : "no secondary blast"}`,
+      effects: [],
+    });
+    if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
+  }
+  checkAnnihilation(room);
+}
 
 function repairRig(rig, loc, amount) {
   const c = rig[loc];
@@ -618,6 +635,31 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         if (room.game.sides.every((s) => room.game.recoveryVp[s.id])) advanceRound(room);
         changed = true;
       }
+    }
+  } else if (verb === "blast") {
+    if (room.game.pendingBlast) {
+      const pending = room.game.pendingBlast;
+      const source = room.rigs.find((x) => x.id === pending.sourceId);
+      const actor = source ? (source.owner || "a") : null;
+      const names = Array.isArray(a.targets) ? a.targets : [];
+      for (const name of names) {
+        const t = findRig(room, name);
+        if (!t || t.destroyed) continue;
+        const loc = hitLocation(rollD(12, a.dice?.location?.[name], options.random));
+        const die = rollD(6, a.dice?.impacts?.[name], options.random);
+        const total = die + 10; // D6 + STR 10 (§9)
+        const sev = impactSeverity(total, IMPACT[t.weightClass][loc]);
+        if (sev.sp > 0) applyDamage(room, t, loc, sev.sp, { random: options.random });
+        pushResolution(room, {
+          kind: "blast", actor, rigId: t.id,
+          rolls: [{ sides: 6, value: die, label: "D6" }],
+          summary: `Blast hits ${t.name}: ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`, effects: [],
+        });
+      }
+      // A target destroyed by this blast may itself chain into a new pending
+      // blast (set by onRigDamaged during applyDamage above) — don't clobber it.
+      if (room.game.pendingBlast === pending) room.game.pendingBlast = null;
+      changed = true;
     }
   } else if (verb === "answer") {
     const rig = findRig(room, a.name);
