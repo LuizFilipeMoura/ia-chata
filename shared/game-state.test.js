@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createRoom, makeRig, claimSide, applyCommand, findRig,
-  normalizeWeapon, WEAPONS, formatBattleState, publicState,
+  normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -566,4 +566,35 @@ test("formatBattleState reports phase and whose turn it is", () => {
   const out = formatBattleState(r, "a");
   assert.match(out, /Phase: activation/i);
   assert.match(out, /Turn: b/);
+});
+
+test("applyDamage arms-to-0 destroys a weapon and spills to hull and engine", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1"); // Light: arms 5, hull 6, engine 4
+  __test.applyDamage(r, b1, "arms", 5, { random: () => 0, dice: { armsWeapon: 4 } });
+  assert.equal(b1.arms.sp, 0);
+  assert.equal(b1.weaponsDestroyed.length, 1);   // D12 4 -> longRange slot destroyed
+  assert.equal(b1.hull.sp, 5);                    // 6 - 1 spill
+  assert.equal(b1.engine.sp, 3);                  // 4 - 1 spill
+  assert.equal(b1.skipNextActivation, false);     // engine at 3, not 0
+});
+
+test("applyDamage: first hit to 0 SP hull does not destroy; additional damage destroys the rig", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  __test.applyDamage(r, b1, "hull", 6, { random: () => 0 }); // 6 -> 0 (first-time, no destroy)
+  assert.equal(b1.hull.sp, 0);
+  assert.equal(b1.hull.destroyed, false);
+  __test.applyDamage(r, b1, "hull", 1, { random: () => 0 }); // additional -> destroyed
+  assert.equal(b1.hull.destroyed, true);
+  assert.equal(b1.destroyed, true);
+});
+
+test("applyOverheat still routes through the cascade (engine failure sets noCool)", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  const before = b1.engine.sp;
+  __test.applyOverheat(r, b1, 14, { random: () => 0 }); // 14 -> engine-failure: 2 dmg engine + noCool
+  assert.equal(b1.engine.sp, Math.max(0, before - 2));
+  assert.equal(b1.noCool, true);
 });

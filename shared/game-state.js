@@ -302,6 +302,49 @@ function damageRig(rig, loc, amount) {
   recompute(rig);
 }
 
+// §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
+function catastrophicOnZero(room, rig, loc, opts) {
+  if (loc === "engine") { rig.skipNextActivation = true; rig.engine.heat = Math.max(rig.engine.heat, 3); }
+  else if (loc === "arms") {
+    const roll = rollD(12, opts?.dice?.armsWeapon, opts?.random);
+    const slot = roll <= 6 ? "longRange" : "melee";
+    const name = rig.weapons?.[slot];
+    if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
+    applyDamage(room, rig, "hull", 1, opts);
+    applyDamage(room, rig, "engine", 1, opts);
+  }
+  // Legs at 0 (move penalties) and Hull at 0 (−2 actions / −1 Aim) are enforced
+  // where they apply (activation budget, combat modAim) — no state to set here.
+}
+
+// §8 — additional damage to an already 0-SP location.
+function catastrophicAdditional(room, rig, loc, opts) {
+  if (loc === "hull" || loc === "engine") rig[loc].destroyed = true;
+  else if (loc === "legs") rig.immobilised = true;
+  else if (loc === "arms") applyDamage(room, rig, "hull", 3, opts);
+}
+
+// Cascade-aware damage entry point. Applies `amount` SP one point at a time,
+// firing §8 clauses, then recomputes destruction (§9 handled in onRigDamaged).
+function applyDamage(room, rig, loc, amount, opts) {
+  const c = rig[loc];
+  if (!c) return;
+  let n = Math.max(0, Math.floor(Number(amount) || 0));
+  while (n-- > 0) {
+    if (c.sp > 0) {
+      c.sp -= 1;
+      if (c.sp === 0) { recompute(rig); catastrophicOnZero(room, rig, loc, opts); }
+    } else {
+      catastrophicAdditional(room, rig, loc, opts);
+    }
+  }
+  recompute(rig);
+  onRigDamaged(room, rig, opts);
+}
+
+// Replaced with §9 destruction in Task 5.
+function onRigDamaged(room, rig, opts) { checkAnnihilation(room); }
+
 function repairRig(rig, loc, amount) {
   const c = rig[loc];
   if (!c) return;
@@ -375,7 +418,7 @@ function endActivation(room, rig, dice, random) {
   if (m.over > 0) {
     const roll = rollD(12, dice?.overheat, random);
     const total = roll + m.bonus;
-    const row = applyOverheat(rig, total);
+    const row = applyOverheat(room, rig, total, { random });
     pushResolution(room, {
       kind: "overheat", actor: rig.owner, rigId: rig.id,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
@@ -389,14 +432,15 @@ function endActivation(room, rig, dice, random) {
   handoff(room);
 }
 
-// Apply one Heat Threshold Table row's effect to a rig (§6). Returns the row.
-function applyOverheat(rig, total) {
+// Apply one Heat Threshold Table row's effect to a rig (§6), routed through
+// the §8 cascade-aware applyDamage. Returns the row.
+function applyOverheat(room, rig, total, opts) {
   const row = heatThreshold(total);
-  if (row.key === "stall") damageRig(rig, "engine", 1);
-  else if (row.key === "detonation") damageRig(rig, "arms", 2);
-  else if (row.key === "blowout") { damageRig(rig, "legs", 2); rig.speedHalvedNextRound = true; }
-  else if (row.key === "buckling") for (const l of LOCS) damageRig(rig, l, 1);
-  else if (row.key === "engine-failure") { damageRig(rig, "engine", 2); rig.noCool = true; }
+  if (row.key === "stall") applyDamage(room, rig, "engine", 1, opts);
+  else if (row.key === "detonation") applyDamage(room, rig, "arms", 2, opts);
+  else if (row.key === "blowout") { applyDamage(room, rig, "legs", 2, opts); rig.speedHalvedNextRound = true; }
+  else if (row.key === "buckling") for (const l of LOCS) applyDamage(room, rig, l, 1, opts);
+  else if (row.key === "engine-failure") { applyDamage(room, rig, "engine", 2, opts); rig.noCool = true; }
   else if (row.key === "catastrophic") { for (const l of LOCS) setRigSp(rig, l, 0); rig.noCool = true; }
   return row;
 }
@@ -656,3 +700,5 @@ export function formatBattleState(room, side) {
   if (bounty) lines.push(`Your Ironclad Bounty: ${bounty.name}`);
   return lines.join("\n");
 }
+
+export const __test = { applyDamage, applyOverheat };
