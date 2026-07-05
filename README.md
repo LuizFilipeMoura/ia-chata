@@ -10,12 +10,27 @@ A local web app that turns your PC's Gemma model into a voice-driven rules maste
 
 ## Setup
 
+The UI is a React app built with Vite (`client/`); the server is Express (`server/`). For production, build the client once and start the server — Express serves the built assets from `client/dist`:
+
 ```bash
 npm install
-npm start
+npm run build   # emits client/dist
+npm start       # Express serves client/dist on :8000
 ```
 
 The server listens on `0.0.0.0:8000` by default and loads the ruleset (`rules.md`) into memory at startup.
+
+### Development
+
+For hot-reloading UI work, run both dev servers together:
+
+```bash
+npm run dev     # Express (API/WS) on :8000 + Vite (UI, HMR) on :5173
+```
+
+Open `http://localhost:5173` — Vite proxies `/api`, `/ws`, and `/shared` to Express. Rebuild (`npm run build`) before using `npm start` to serve the latest UI in production.
+
+Tests: `npm test` runs the client suite (Vitest) and the server/shared suite (`node --test`).
 
 ## Usage
 
