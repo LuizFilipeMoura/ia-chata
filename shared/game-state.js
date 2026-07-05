@@ -587,7 +587,9 @@ function performAction(room, rig, act, a, random) {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
     const roll = rollD(12, a.dice?.repair, random);
-    const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    let amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    // Field Repair Suite (Utility) — the Repair action restores +1 additional SP.
+    if (amt > 0 && rig.equipment === "field-repair-suite") amt += 1;
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
     if (amt > 0) repairRig(rig, loc, amt);
     pushResolution(room, {

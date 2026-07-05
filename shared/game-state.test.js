@@ -821,3 +821,27 @@ test("Overclock Core skips the skip-next-activation penalty the first time Engin
   __test.applyDamage({ game: { nextResolutionId: 1, resolutions: [] } }, rig, "engine", 1, {});
   assert.equal(rig.skipNextActivation, true);    // second time: normal rule applies
 });
+
+test("Field Repair Suite adds +1 SP to the Repair action only", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Medic", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw", equipment: "field-repair-suite" } });
+  applyCommand(r, { verb: "add", attrs: { name: "A2", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
+  applyCommand(r, { verb: "add", attrs: { name: "A3", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
+  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "medium", owner: "b", lr: "Autocannon", melee: "Claw" } });
+  applyCommand(r, { verb: "add", attrs: { name: "B2", class: "medium", owner: "b", lr: "Autocannon", melee: "Claw" } });
+  applyCommand(r, { verb: "add", attrs: { name: "B3", class: "medium", owner: "b", lr: "Autocannon", melee: "Claw" } });
+  for (const side of ["a", "b"]) applyCommand(r, { verb: "ready", attrs: { side } });
+  applyCommand(r, { verb: "initiative", attrs: {} });
+
+  const medic = findRig(r, "Medic");
+  medic.hull.sp = 3;
+  while (r.game.turn.side !== "a" || r.game.turn.activeRigId != null) {
+    const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
+    if (!active || active === medic) break;
+    applyCommand(r, { verb: "activate", attrs: { name: active.name } });
+    applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
+  }
+  applyCommand(r, { verb: "activate", attrs: { name: "Medic" } });
+  applyCommand(r, { verb: "action", attrs: { name: "Medic", action: "repair", loc: "hull", dice: { repair: 10 } } }); // 10+ = 2 SP roll
+  assert.equal(medic.hull.sp, 6); // 3 + 2 (roll) + 1 (Field Repair Suite)
+});
