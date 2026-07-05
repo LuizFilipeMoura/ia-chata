@@ -1,7 +1,7 @@
 import { S, LOCS, findRig } from "./state.js";
 import { sendCommand } from "./api.js";
 import { setStatus } from "./status.js";
-import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS, canAddRigForSide } from "/shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS, canAddRigForSide, heatMeter } from "/shared/game-state.js";
 
 const rigList = document.getElementById("rigList");
 const rigNameInput = document.getElementById("rigName");
@@ -12,9 +12,6 @@ const rigMeleeSelect = document.getElementById("rigMelee");
 const rigAddBtn = document.getElementById("rigAddBtn");
 const rigAddScreen = document.getElementById("rigAddScreen");
 const rigDeckTitle = document.getElementById("rigDeckTitle");
-const rigDots = document.getElementById("rigDots");
-const rigPrev = document.getElementById("rigPrev");
-const rigNext = document.getElementById("rigNext");
 const rigPanel = document.getElementById("rigPanel");
 const rigToggle = document.getElementById("rigToggle");
 const rigClose = document.getElementById("rigClose");
@@ -23,6 +20,13 @@ const battleSetup = document.getElementById("battleSetup");
 const battleReadyStatus = document.getElementById("battleReadyStatus");
 const battleBounty = document.getElementById("battleBounty");
 const readyBattle = document.getElementById("readyBattle");
+
+// ---- Local view state (never leaves the client) ----
+// The "active" Rig is the one currently taking its activation; only it may
+// manage heat, mirroring the tabletop rule that heat accrues on the acting Rig.
+let activeRigId = null;
+const expanded = new Set();       // rig ids whose accordion body is open
+const prevHeat = new Map();       // rig id -> last rendered heat, to flash on change
 
 function barClass(c) {
   if (c.destroyed) return "rig-fill-dead";
@@ -130,6 +134,8 @@ function renderBattleSetup() {
   readyBattle.textContent = myReady ? "Ready" : "Ready";
 }
 
+// One structure-point component row (hull / arms / legs / engine): damage,
+// bar, repair. Heat lives in its own gauge, not here.
 function compRow(rig, loc) {
   const c = rig[loc];
   const row = document.createElement("div");
@@ -168,37 +174,110 @@ function compRow(rig, loc) {
   row.appendChild(minus);
   row.appendChild(bar);
   row.appendChild(plus);
-
-  if (loc === "engine") {
-    const hMinus = document.createElement("button");
-    hMinus.className = "rig-step";
-    hMinus.type = "button";
-    hMinus.textContent = "🔥−";
-    hMinus.style.fontSize = "0.6rem";
-    hMinus.setAttribute("aria-label", "Decrease heat");
-    hMinus.addEventListener("click", () => sendCommand("heat", { name: rig.name, amount: "-1" }));
-
-    const heat = document.createElement("span");
-    heat.className = "rig-heat-val";
-    heat.textContent = "🔥" + c.heat;
-
-    const hPlus = document.createElement("button");
-    hPlus.className = "rig-step";
-    hPlus.type = "button";
-    hPlus.textContent = "🔥＋";
-    hPlus.style.fontSize = "0.6rem";
-    hPlus.setAttribute("aria-label", "Increase heat");
-    hPlus.addEventListener("click", () => sendCommand("heat", { name: rig.name, amount: "+1" }));
-
-    row.appendChild(hMinus);
-    row.appendChild(heat);
-    row.appendChild(hPlus);
-  }
-
   return row;
 }
 
-// Overall condition summary shown at the top of a rig's terminal screen.
+// The heat gauge — the centrepiece control. A segmented thermometer that reads
+// left-to-right up to the Rig's Heat Capacity (the redline), then into a red
+// overheat zone. When hot, it spells out the exact misfire roll (§6) so the
+// player knows precisely what's at stake. Controls are live only for the
+// active Rig.
+function buildHeatGauge(rig, isActive) {
+  const m = heatMeter(rig);
+  const displayMax = m.cap + 4;
+  const shownHeat = Math.min(m.heat, displayMax);
+
+  const gauge = document.createElement("div");
+  gauge.className = "heat-gauge";
+  gauge.dataset.zone = m.zone;
+  if (!isActive) gauge.classList.add("heat-gauge--idle");
+  const prior = prevHeat.get(rig.id);
+  if (prior != null && m.heat !== prior) {
+    gauge.classList.add(m.heat > prior ? "heat-gauge--up" : "heat-gauge--down");
+  }
+
+  const head = document.createElement("div");
+  head.className = "heat-gauge-head";
+  const label = document.createElement("span");
+  label.className = "heat-gauge-label";
+  label.textContent = "Engine Heat";
+  const read = document.createElement("span");
+  read.className = "heat-gauge-read";
+  read.innerHTML = `<b>${m.heat}</b><span class="heat-gauge-cap">/${m.cap}</span>`;
+  head.appendChild(label);
+  head.appendChild(read);
+  gauge.appendChild(head);
+
+  const track = document.createElement("div");
+  track.className = "heat-track";
+  for (let i = 0; i < displayMax; i++) {
+    const seg = document.createElement("span");
+    seg.className = "heat-seg";
+    if (i >= m.cap) seg.classList.add("heat-seg--danger");
+    if (i === m.cap) seg.classList.add("heat-seg--redline"); // first overheat cell = the redline
+    if (i < shownHeat) {
+      seg.classList.add("heat-seg--on");
+      // Warmth ramp across the safe zone: cool at the left, amber near the redline.
+      seg.style.setProperty("--warm", (m.cap > 1 ? Math.min(1, i / (m.cap - 1)) : 1).toFixed(3));
+    }
+    track.appendChild(seg);
+  }
+  gauge.appendChild(track);
+
+  const status = document.createElement("div");
+  status.className = "heat-status";
+  if (m.zone === "over") {
+    status.innerHTML = `<span class="heat-status-tag">▲ Overheating</span>` +
+      `<span class="heat-status-roll">misfire roll = D12 + ${m.bonus}</span>`;
+  } else if (m.zone === "redline") {
+    status.innerHTML = `<span class="heat-status-tag">At redline</span>` +
+      `<span class="heat-status-sub">one more point triggers a misfire check</span>`;
+  } else if (m.zone === "cold") {
+    status.innerHTML = `<span class="heat-status-tag">Engine idle</span>` +
+      `<span class="heat-status-sub">cold — full ${m.cap} of headroom</span>`;
+  } else {
+    const room = m.cap - m.heat;
+    status.innerHTML = `<span class="heat-status-tag">${m.zone === "warm" ? "Running hot" : "Nominal"}</span>` +
+      `<span class="heat-status-sub">${room} heat to redline</span>`;
+  }
+  if (m.floor > 0) {
+    const lock = document.createElement("span");
+    lock.className = "heat-status-lock";
+    lock.textContent = `Engine wrecked · heat locked ≥ ${m.floor}`;
+    status.appendChild(lock);
+  }
+  gauge.appendChild(status);
+
+  const controls = document.createElement("div");
+  controls.className = "heat-controls";
+  const mkBtn = (cls, text, aria, spec) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "heat-btn " + cls;
+    b.textContent = text;
+    b.setAttribute("aria-label", aria);
+    b.disabled = !isActive;
+    b.addEventListener("click", () => sendCommand("heat", { name: rig.name, amount: spec }));
+    return b;
+  };
+  controls.appendChild(mkBtn("heat-btn-cool", "Shut Down", "Shut down — set heat to 0", "0"));
+  controls.appendChild(mkBtn("heat-btn-vent", "Vent −2", "Vent — cool 2 heat", "-2"));
+  controls.appendChild(mkBtn("heat-btn-minus", "−1", "Cool 1 heat", "-1"));
+  controls.appendChild(mkBtn("heat-btn-plus", "＋1", "Add 1 heat", "+1"));
+  gauge.appendChild(controls);
+
+  if (!isActive) {
+    const hint = document.createElement("div");
+    hint.className = "heat-locked-hint";
+    hint.textContent = "Set this Rig active to run its engine";
+    gauge.appendChild(hint);
+  }
+
+  prevHeat.set(rig.id, m.heat);
+  return gauge;
+}
+
+// Overall condition summary shown on a Rig's accordion header/body.
 function rigStatus(rig) {
   if (rig.destroyed) return { text: "⛔ System failure — destroyed", cls: "crit" };
   if (LOCS.some((l) => rig[l].sp === 0)) return { text: "⚠ Catastrophic damage", cls: "crit" };
@@ -207,115 +286,157 @@ function rigStatus(rig) {
   return { text: "● All systems nominal", cls: "" };
 }
 
-// Build one full "Rig Control Terminal" screen for the swipe deck.
-function buildRigScreen(rig) {
-  const screen = document.createElement("div");
-  screen.className = "rig-screen";
+// Build one accordion entry: a header that is always visible (name, class,
+// heat chip, active toggle) and a collapsible body with the full terminal.
+function buildRigItem(rig) {
+  const isActive = rig.id === activeRigId;
+  const isOpen = expanded.has(rig.id);
+  const m = heatMeter(rig);
 
-  const groupHead = document.createElement("div");
-  groupHead.className = "rig-group-head";
-  groupHead.textContent = ownerLabel(rig.owner);
-  screen.appendChild(groupHead);
+  const item = document.createElement("div");
+  item.className = "rig-item";
+  if (rig.destroyed) item.classList.add("is-destroyed");
+  if (isActive) item.classList.add("is-active");
+  if (isOpen) item.classList.add("is-open");
 
-  const term = document.createElement("div");
-  term.className = "rig-term" + (rig.destroyed ? " destroyed" : "");
-
-  const head = document.createElement("div");
-  head.className = "rig-term-head";
-  const title = document.createElement("span");
-  title.className = "rig-title";
-  title.textContent = rig.name;
-  const badge = document.createElement("span");
-  badge.className = "rig-badge";
-  badge.textContent = rig.weightClass;
-  const ownerBadge = document.createElement("span");
-  ownerBadge.className = "rig-badge rig-owner-badge";
-  ownerBadge.textContent = ownerLabel(rig.owner) === "Your Squadron" ? "You" : "Enemy";
-  const rm = document.createElement("button");
-  rm.className = "rig-remove";
-  rm.type = "button";
-  rm.textContent = "✕";
-  rm.setAttribute("aria-label", `Remove ${rig.name}`);
-  rm.addEventListener("click", () => sendCommand("remove", { name: rig.name }));
-  head.appendChild(title);
-  head.appendChild(badge);
-  head.appendChild(ownerBadge);
-  head.appendChild(rm);
-  term.appendChild(head);
+  // ---- Header (click to expand) ----
+  const header = document.createElement("div");
+  header.className = "rig-head";
+  header.setAttribute("role", "button");
+  header.setAttribute("tabindex", "0");
+  header.setAttribute("aria-expanded", String(isOpen));
 
   const st = rigStatus(rig);
+  const dot = document.createElement("span");
+  dot.className = "rig-dot " + (st.cls || "ok");
+
+  const name = document.createElement("span");
+  name.className = "rig-head-name";
+  name.textContent = rig.name;
+
+  const cls = document.createElement("span");
+  cls.className = "rig-badge";
+  cls.textContent = rig.weightClass;
+
+  const heatChip = document.createElement("span");
+  heatChip.className = "rig-heat-chip";
+  heatChip.dataset.zone = m.zone;
+  heatChip.innerHTML = `<span class="rig-heat-chip-ic">🔥</span>${m.heat}`;
+  heatChip.title = m.over > 0 ? `Overheating: misfire roll D12 + ${m.bonus}` : `Heat ${m.heat} of ${m.cap}`;
+
+  const activate = document.createElement("button");
+  activate.type = "button";
+  activate.className = "rig-activate" + (isActive ? " on" : "");
+  activate.setAttribute("aria-pressed", String(isActive));
+  activate.textContent = isActive ? "● Active" : "Activate";
+  activate.title = isActive ? "This Rig is taking its activation" : "Make this the acting Rig";
+  activate.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setActiveRig(isActive ? null : rig.id);
+  });
+
+  const chev = document.createElement("span");
+  chev.className = "rig-chev";
+  chev.textContent = "▾";
+
+  header.appendChild(dot);
+  header.appendChild(name);
+  header.appendChild(cls);
+  header.appendChild(heatChip);
+  header.appendChild(activate);
+  header.appendChild(chev);
+  header.addEventListener("click", () => toggleExpanded(rig.id));
+  header.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpanded(rig.id); }
+  });
+  item.appendChild(header);
+
+  // ---- Body (collapsible) ----
+  const body = document.createElement("div");
+  body.className = "rig-body";
+
+  const inner = document.createElement("div");
+  inner.className = "rig-body-inner";
+
   const status = document.createElement("div");
   status.className = "rig-status " + st.cls;
   status.textContent = st.text;
-  term.appendChild(status);
+  inner.appendChild(status);
 
   if (rig.weapons) {
     const weapons = document.createElement("div");
     weapons.className = "rig-weapons";
     weapons.textContent = `${rig.weapons.longRange || "Long Range ?"} / ${rig.weapons.melee || "Melee ?"}`;
-    term.appendChild(weapons);
+    inner.appendChild(weapons);
   }
 
-  for (const loc of LOCS) term.appendChild(compRow(rig, loc));
+  for (const loc of LOCS) inner.appendChild(compRow(rig, loc));
 
-  screen.appendChild(term);
-  return screen;
+  inner.appendChild(buildHeatGauge(rig, isActive));
+
+  const rm = document.createElement("button");
+  rm.className = "rig-remove-row";
+  rm.type = "button";
+  rm.textContent = "✕ Remove Rig";
+  rm.setAttribute("aria-label", `Remove ${rig.name}`);
+  rm.addEventListener("click", () => sendCommand("remove", { name: rig.name }));
+  inner.appendChild(rm);
+
+  body.appendChild(inner);
+  item.appendChild(body);
+  return item;
+}
+
+function groupHead(text) {
+  const el = document.createElement("div");
+  el.className = "rig-group-head";
+  el.textContent = text;
+  return el;
 }
 
 export function renderRigs() {
   syncOwnerOptions();
   renderBattleSetup();
   updateAddRigAvailability();
-  // Rebuild the rig screens but keep the persistent add-rig screen (its inputs
-  // hold live event listeners bound once at startup).
-  [...rigList.querySelectorAll(".rig-screen:not(.rig-screen-add)")].forEach((n) => n.remove());
-  for (const rig of orderedRigs()) rigList.insertBefore(buildRigScreen(rig), rigAddScreen);
-  buildDots();
-  updateDeck();
-}
 
-// ---- Swipe deck pager ----
-function screenW() { return rigList.clientWidth || 1; }
-function deckIndex() { return Math.max(0, Math.min(orderedRigs().length, Math.round(rigList.scrollLeft / screenW()))); }
-
-function buildDots() {
-  rigDots.innerHTML = "";
   const rigs = orderedRigs();
-  const n = rigs.length + 1; // +1 for the add screen
-  for (let i = 0; i < n; i++) {
-    const dot = document.createElement("button");
-    dot.type = "button";
-    dot.className = "deck-dot" + (i === rigs.length ? " add-dot" : "");
-    dot.setAttribute("aria-label", i < rigs.length ? `Go to rig ${i + 1}` : "Go to add-rig screen");
-    dot.addEventListener("click", () => scrollToIndex(i));
-    rigDots.appendChild(dot);
+  // Drop local view state that points at Rigs which no longer exist.
+  const ids = new Set(rigs.map((r) => r.id));
+  if (activeRigId != null && !ids.has(activeRigId)) activeRigId = null;
+  for (const id of [...expanded]) if (!ids.has(id)) expanded.delete(id);
+  for (const id of [...prevHeat.keys()]) if (!ids.has(id)) prevHeat.delete(id);
+
+  const scrollTop = rigList.scrollTop;
+  // Rebuild the list but keep the persistent add card (its inputs hold live
+  // listeners bound once at startup).
+  [...rigList.querySelectorAll(".rig-item, .rig-group-head")].forEach((n) => n.remove());
+
+  let lastGroup = null;
+  for (const rig of rigs) {
+    const group = ownerLabel(rig.owner);
+    if (group !== lastGroup) {
+      rigList.insertBefore(groupHead(group === "Your Squadron" ? "Your Squadron" : "Enemy"), rigAddScreen);
+      lastGroup = group;
+    }
+    rigList.insertBefore(buildRigItem(rig), rigAddScreen);
   }
+
+  const active = rigs.find((r) => r.id === activeRigId);
+  rigDeckTitle.textContent = active ? `Active · ${active.name}` : "Squadron Status";
+  rigList.scrollTop = scrollTop;
 }
 
-function setActive(i) {
-  const rigs = orderedRigs();
-  [...rigDots.children].forEach((d, idx) => d.classList.toggle("active", idx === i));
-  if (i >= rigs.length) {
-    rigDeckTitle.textContent = "New Rig";
-  } else {
-    const rig = rigs[i];
-    rigDeckTitle.textContent = rig ? `${ownerLabel(rig.owner)} · ${rig.name} · ${i + 1}/${rigs.length}` : "Squadron Status";
-  }
-  rigPrev.disabled = i <= 0;
-  rigNext.disabled = i >= rigs.length;
+function toggleExpanded(id) {
+  if (expanded.has(id)) expanded.delete(id);
+  else expanded.add(id);
+  renderRigs();
 }
 
-function updateDeck() { setActive(deckIndex()); }
-
-function scrollToIndex(i) {
-  const idx = Math.max(0, Math.min(orderedRigs().length, i));
-  rigList.scrollLeft = idx * screenW(); // scroll-behavior:smooth animates this on-device
-  setActive(idx);
+function setActiveRig(id) {
+  activeRigId = id;
+  if (id != null) expanded.add(id); // reveal the controls you just unlocked
+  renderRigs();
 }
-
-rigList.addEventListener("scroll", updateDeck);
-rigPrev.addEventListener("click", () => scrollToIndex(deckIndex() - 1));
-rigNext.addEventListener("click", () => scrollToIndex(deckIndex() + 1));
 
 function addRigFromForm() {
   if (!canAddRigForSide(S, rigOwnerSelect.value)) {
@@ -358,8 +479,7 @@ function openRigSheet() {
   rigPanel.setAttribute("aria-hidden", "false");
   rigToggle.classList.add("active");
   rigToggle.setAttribute("aria-pressed", "true");
-  // Deck width is now measurable — snap to the first screen and sync the pager.
-  scrollToIndex(0);
+  rigList.scrollTop = 0;
 }
 function closeRigSheet() {
   rigPanel.classList.remove("open");
@@ -378,10 +498,5 @@ rigClose.addEventListener("click", closeRigSheet);
 sheetScrim.addEventListener("click", closeRigSheet);
 document.addEventListener("keydown", (e) => {
   if (!rigPanel.classList.contains("open")) return;
-  if (e.key === "Escape") { closeRigSheet(); return; }
-  // Arrow keys page the deck, unless the user is typing in the add-rig form.
-  const tag = document.activeElement && document.activeElement.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-  if (e.key === "ArrowRight") { e.preventDefault(); scrollToIndex(deckIndex() + 1); }
-  else if (e.key === "ArrowLeft") { e.preventDefault(); scrollToIndex(deckIndex() - 1); }
+  if (e.key === "Escape") closeRigSheet();
 });

@@ -36,81 +36,126 @@
 }
 .sheet-close:hover { color: var(--ember-hi); border-color: rgba(229,83,58,.4); }
 
-/* ---- Swipe deck: one full Rig Control Terminal per screen ---- */
-.rig-deck {
+/* ---- Accordion list of Rigs ---- */
+.rig-list {
   flex: 1 1 auto; min-height: 0;
-  display: flex; overflow-x: auto; overflow-y: hidden;
-  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; scroll-behavior: smooth;
-}
-.rig-deck::-webkit-scrollbar { display: none; }
-
-.rig-screen {
-  flex: 0 0 100%; width: 100%; scroll-snap-align: center; scroll-snap-stop: always;
+  display: flex; flex-direction: column; gap: .45rem;
   overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
-  padding: .25rem .35rem .4rem; display: flex; flex-direction: column;
+  padding: .15rem .1rem .4rem;
 }
 .rig-group-head {
-  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--txt-faint); margin: .05rem .1rem .35rem;
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--txt-faint);
+  margin: .35rem .15rem -.05rem; display: flex; align-items: center; gap: .5rem;
 }
+.rig-group-head::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--line), transparent);
+}
+.rig-group-head:first-child { margin-top: .1rem; }
 
-.rig-term {
-  position: relative; flex: 1 0 auto;
-  background:
-    radial-gradient(circle at 11px 11px, rgba(255,255,255,.06) 0 1.5px, transparent 2px),
-    radial-gradient(circle at calc(100% - 11px) 11px, rgba(255,255,255,.06) 0 1.5px, transparent 2px),
-    radial-gradient(circle at 11px calc(100% - 11px), rgba(255,255,255,.05) 0 1.5px, transparent 2px),
-    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), rgba(255,255,255,.05) 0 1.5px, transparent 2px),
-    linear-gradient(180deg, var(--iron-800), var(--iron-780));
-  border: 1px solid var(--line); border-radius: 14px;
-  padding: .85rem .9rem 1rem;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 8px 26px rgba(0,0,0,.35);
-  display: flex; flex-direction: column;
+.rig-item {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: linear-gradient(180deg, var(--iron-800), var(--iron-850));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  transition: border-color .2s, box-shadow .2s;
 }
-.rig-term.destroyed { border-color: var(--ember); }
-.rig-term.destroyed::after {
-  content: "DESTROYED"; position: absolute; inset: 8px;
-  display: flex; align-items: center; justify-content: center; text-align: center;
-  font-family: var(--font-display); font-weight: 700; font-size: 1.7rem;
-  letter-spacing: .18em; color: rgba(229,83,58,.55);
-  border: 3px solid rgba(229,83,58,.32); border-radius: 12px;
-  transform: rotate(-9deg); pointer-events: none; text-shadow: 0 2px 12px rgba(0,0,0,.6);
+.rig-item.is-active {
+  border-color: rgba(231,154,61,.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 0 1px rgba(231,154,61,.25), 0 6px 22px rgba(231,154,61,.12);
 }
+.rig-item.is-destroyed { opacity: .82; border-color: rgba(229,83,58,.4); }
+.rig-item.is-destroyed .rig-head-name { text-decoration: line-through; text-decoration-color: rgba(229,83,58,.7); }
 
-.rig-term-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .2rem; }
-.rig-title { flex: 1; font-weight: 700; font-size: 1.4rem; letter-spacing: .01em; word-break: break-word; line-height: 1.05; }
+/* ---- Accordion header ---- */
+.rig-head {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .6rem .65rem; cursor: pointer; user-select: none;
+  border-radius: 12px;
+}
+.rig-head:focus-visible { outline: 2px solid var(--oil); outline-offset: -2px; }
+.rig-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; background: var(--hp-ok-a); box-shadow: 0 0 7px rgba(108,196,127,.7); }
+.rig-dot.warn { background: var(--oil); box-shadow: 0 0 7px rgba(231,154,61,.7); }
+.rig-dot.crit { background: var(--ember); box-shadow: 0 0 7px rgba(229,83,58,.8); }
+.rig-head-name {
+  flex: 1 1 auto; min-width: 0; font-family: var(--font-display); font-weight: 700;
+  font-size: 1.02rem; letter-spacing: .01em; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rig-badge {
-  font-family: var(--font-mono); font-size: .6rem; letter-spacing: .12em;
+  font-family: var(--font-mono); font-size: .56rem; letter-spacing: .12em;
   text-transform: uppercase; color: var(--oil);
   border: 1px solid rgba(231,154,61,.4); border-radius: 5px;
-  padding: .14rem .42rem; background: rgba(231,154,61,.08); flex: 0 0 auto;
+  padding: .12rem .38rem; background: rgba(231,154,61,.08); flex: 0 0 auto;
 }
-.rig-owner-badge { color: var(--txt-dim); border-color: var(--line); background: rgba(255,255,255,.03); }
-.rig-remove {
-  width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
-  background: transparent; color: var(--txt-faint); font-size: .9rem;
-  border: 1px solid transparent;
+
+/* Heat glance chip — legible without expanding, reacts to the danger zone */
+.rig-heat-chip {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: .18rem;
+  font-family: var(--font-mono); font-size: .72rem; font-weight: 700;
+  padding: .16rem .42rem; border-radius: 999px; letter-spacing: .02em;
+  border: 1px solid var(--line); background: var(--iron-950); color: var(--txt-dim);
+  transition: color .2s, border-color .2s, background .2s;
 }
-.rig-remove:hover { color: var(--ember-hi); border-color: rgba(229,83,58,.4); }
+.rig-heat-chip-ic { font-size: .68rem; filter: grayscale(.5); opacity: .7; }
+.rig-heat-chip[data-zone="cool"]    { color: #7fd0c4; border-color: rgba(127,208,196,.4); }
+.rig-heat-chip[data-zone="warm"]    { color: var(--oil-hi); border-color: rgba(231,154,61,.5); }
+.rig-heat-chip[data-zone="warm"] .rig-heat-chip-ic,
+.rig-heat-chip[data-zone="redline"] .rig-heat-chip-ic,
+.rig-heat-chip[data-zone="over"] .rig-heat-chip-ic { filter: none; opacity: 1; }
+.rig-heat-chip[data-zone="redline"] { color: var(--ember-hi); border-color: rgba(229,83,58,.55); background: rgba(229,83,58,.1); }
+.rig-heat-chip[data-zone="over"] {
+  color: #fff; border-color: var(--ember); background: rgba(229,83,58,.28);
+  animation: heat-chip-pulse 1s ease-in-out infinite;
+}
+@keyframes heat-chip-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(229,83,58,.55); }
+  50%      { box-shadow: 0 0 0 4px rgba(229,83,58,0); }
+}
+
+.rig-activate {
+  flex: 0 0 auto; font-family: var(--font-mono); font-size: .58rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: .3rem .5rem; border-radius: 7px;
+  background: var(--iron-750); color: var(--txt-dim); border: 1px solid var(--line);
+  transition: background .18s, color .18s, border-color .18s;
+}
+.rig-activate:hover { color: var(--oil-hi); border-color: var(--oil); }
+.rig-activate.on {
+  background: linear-gradient(180deg, var(--oil-hi), var(--oil)); color: #241606;
+  border-color: rgba(231,154,61,.7); box-shadow: 0 0 12px rgba(231,154,61,.35);
+}
+.rig-chev {
+  flex: 0 0 auto; color: var(--txt-faint); font-size: .8rem; width: 1rem; text-align: center;
+  transition: transform .28s cubic-bezier(.2,.85,.25,1);
+}
+.rig-item.is-open .rig-chev { transform: rotate(180deg); color: var(--oil); }
+
+/* ---- Accordion body (grid-rows collapse for smooth height animation) ---- */
+.rig-body {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .3s cubic-bezier(.2,.85,.25,1);
+}
+.rig-item.is-open .rig-body { grid-template-rows: 1fr; }
+.rig-body-inner { overflow: hidden; min-height: 0; padding: 0 .7rem; }
+.rig-item.is-open .rig-body-inner { padding: .1rem .7rem .75rem; }
 
 .rig-status {
-  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .16em;
-  text-transform: uppercase; color: var(--hp-ok-a); margin: 0 0 .9rem;
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--hp-ok-a); margin: .1rem 0 .5rem;
 }
 .rig-status.warn { color: var(--oil-hi); }
 .rig-status.crit { color: var(--ember-hi); }
 .rig-weapons {
-  font-family: var(--font-mono); font-size: .66rem; color: var(--txt-dim);
-  margin: -.35rem 0 .75rem; line-height: 1.35;
+  font-family: var(--font-mono); font-size: .64rem; color: var(--txt-dim);
+  margin: 0 0 .65rem; line-height: 1.35;
 }
 
-.rig-comp { display: flex; align-items: center; gap: .5rem; margin: .45rem 0; }
+.rig-comp { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; }
 .rig-comp-label {
-  width: 3.8rem; flex: 0 0 auto; font-family: var(--font-mono);
-  font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--txt-dim);
+  width: 3.4rem; flex: 0 0 auto; font-family: var(--font-mono);
+  font-size: .64rem; letter-spacing: .06em; text-transform: uppercase; color: var(--txt-dim);
 }
-
 .rig-bar {
   position: relative; flex: 1; height: 1.4rem; border-radius: 6px;
   overflow: hidden; background: #080a0d; border: 1px solid var(--line);
@@ -126,7 +171,6 @@
   font-family: var(--font-mono); font-size: .72rem; font-weight: 500; letter-spacing: .05em;
   color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.85);
 }
-
 .rig-fill-ok   { background: linear-gradient(180deg, var(--hp-ok-a), var(--hp-ok-b)); }
 .rig-fill-warn { background: linear-gradient(180deg, var(--hp-warn-a), var(--hp-warn-b)); }
 .rig-fill-low  { background: linear-gradient(180deg, var(--hp-low-a), var(--hp-low-b)); }
@@ -141,24 +185,139 @@
 }
 .rig-step:hover { border-color: var(--oil); color: var(--oil-hi); }
 .rig-step:active { transform: translateY(1px); }
-.rig-heat-val {
-  min-width: 2.6rem; text-align: center; font-family: var(--font-mono);
-  font-size: .82rem; color: var(--oil-hi);
+
+.rig-remove-row {
+  margin-top: .7rem; width: 100%; padding: .45rem; border-radius: 8px;
+  background: transparent; border: 1px solid var(--line); color: var(--txt-faint);
+  font-family: var(--font-mono); font-size: .6rem; letter-spacing: .16em; text-transform: uppercase;
+}
+.rig-remove-row:hover { color: var(--ember-hi); border-color: rgba(229,83,58,.45); }
+
+/* ---- Heat gauge: the boiler-pressure centrepiece ---- */
+.heat-gauge {
+  --accent: var(--oil);
+  margin-top: .85rem; padding: .65rem .7rem .7rem;
+  border: 1px solid var(--line); border-radius: 11px;
+  background:
+    radial-gradient(120% 140% at 50% -20%, rgba(231,154,61,.06), transparent 60%),
+    linear-gradient(180deg, var(--iron-950), #0c0f14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), inset 0 0 24px rgba(0,0,0,.4);
+  transition: border-color .25s, box-shadow .25s;
+}
+.heat-gauge--idle { opacity: .72; }
+.heat-gauge[data-zone="redline"] { border-color: rgba(229,83,58,.4); }
+.heat-gauge[data-zone="over"] {
+  --accent: var(--ember-hi);
+  border-color: rgba(229,83,58,.7);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 0 22px rgba(229,83,58,.22);
+  animation: heat-gauge-alarm 1.15s ease-in-out infinite;
+}
+@keyframes heat-gauge-alarm {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 0 14px rgba(229,83,58,.14); }
+  50%      { box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 0 30px rgba(229,83,58,.4); }
+}
+/* One-shot reaction when heat changes */
+.heat-gauge--up  { animation: heat-bump .45s ease; }
+.heat-gauge[data-zone="over"].heat-gauge--up { animation: heat-gauge-alarm 1.15s ease-in-out infinite, heat-bump .45s ease; }
+@keyframes heat-bump {
+  0%   { transform: none; }
+  30%  { transform: translateY(-2px) scale(1.012); }
+  100% { transform: none; }
+}
+.heat-gauge--down .heat-track { animation: heat-cool .5s ease; }
+@keyframes heat-cool {
+  0%   { box-shadow: 0 0 0 0 rgba(127,208,196,0); }
+  35%  { box-shadow: 0 0 12px 1px rgba(127,208,196,.5); }
+  100% { box-shadow: 0 0 0 0 rgba(127,208,196,0); }
 }
 
-/* ---- Add-rig screen ---- */
-.rig-screen-add { align-items: stretch; justify-content: center; }
+.heat-gauge-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .45rem; }
+.heat-gauge-label {
+  font-family: var(--font-mono); font-size: .6rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--txt-dim);
+}
+.heat-gauge-read { font-family: var(--font-mono); font-size: .78rem; color: var(--txt-dim); }
+.heat-gauge-read b { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+.heat-gauge[data-zone="over"] .heat-gauge-read b { color: #fff; text-shadow: 0 0 12px rgba(229,83,58,.8); }
+.heat-gauge-cap { opacity: .7; }
+
+/* Segmented thermometer */
+.heat-track {
+  display: flex; gap: 3px; height: 1.35rem; padding: 3px;
+  border-radius: 7px; background: #05070a; border: 1px solid var(--line-soft);
+}
+.heat-seg {
+  flex: 1 1 0; border-radius: 3px; background: rgba(255,255,255,.04);
+  transition: background .25s ease, box-shadow .25s ease;
+}
+.heat-seg--danger { background: rgba(229,83,58,.12); }
+.heat-seg--redline { box-shadow: inset 2px 0 0 rgba(255,111,82,.9); }
+.heat-seg--on {
+  /* Cool teal at the left of the safe zone → hot amber at the redline */
+  background: hsl(calc(182 - 152 * var(--warm, 0)) 68% 52%);
+  box-shadow: 0 0 6px hsla(calc(182 - 152 * var(--warm, 0)) 68% 52% / .55);
+}
+.heat-seg--danger.heat-seg--on {
+  background: linear-gradient(180deg, var(--ember-hi), var(--ember));
+  box-shadow: 0 0 9px rgba(229,83,58,.75);
+}
+.heat-gauge[data-zone="over"] .heat-seg--danger.heat-seg--on { animation: heat-seg-flare 1.15s ease-in-out infinite; }
+@keyframes heat-seg-flare {
+  0%, 100% { box-shadow: 0 0 6px rgba(229,83,58,.55); }
+  50%      { box-shadow: 0 0 14px rgba(229,83,58,1); }
+}
+
+.heat-status {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .5rem;
+  margin: .5rem 0 .1rem; font-family: var(--font-mono); font-size: .64rem; line-height: 1.3;
+}
+.heat-status-tag { font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.heat-gauge[data-zone="cool"] { --accent: #7fd0c4; }
+.heat-status-sub { color: var(--txt-faint); }
+.heat-status-roll {
+  color: #fff; font-weight: 700; letter-spacing: .04em;
+  padding: .06rem .4rem; border-radius: 5px;
+  background: rgba(229,83,58,.28); border: 1px solid rgba(229,83,58,.6);
+}
+.heat-status-lock {
+  flex-basis: 100%; color: var(--ember-hi); font-size: .6rem;
+  letter-spacing: .04em; margin-top: .1rem;
+}
+
+/* Heat controls — enabled only for the active Rig */
+.heat-controls { display: grid; grid-template-columns: 1.5fr 1fr .8fr .8fr; gap: .35rem; margin-top: .55rem; }
+.heat-btn {
+  padding: .5rem .2rem; border-radius: 8px; border: 1px solid var(--line);
+  font-family: var(--font-display); font-weight: 700; font-size: .82rem; letter-spacing: .02em;
+  background: var(--iron-750); color: var(--txt);
+  transition: border-color .14s, color .14s, background .14s, transform .1s;
+}
+.heat-btn:not(:disabled):active { transform: translateY(1px); }
+.heat-btn-plus:not(:disabled)  { border-color: rgba(229,83,58,.45); color: var(--ember-hi); }
+.heat-btn-plus:not(:disabled):hover  { background: rgba(229,83,58,.16); border-color: var(--ember); }
+.heat-btn-minus:not(:disabled):hover { border-color: #7fd0c4; color: #a6e2d9; }
+.heat-btn-vent:not(:disabled):hover  { border-color: #7fd0c4; color: #a6e2d9; }
+.heat-btn-cool:not(:disabled):hover  { border-color: var(--oil); color: var(--oil-hi); }
+.heat-btn:disabled { opacity: .38; cursor: not-allowed; }
+
+.heat-locked-hint {
+  margin-top: .5rem; text-align: center; font-family: var(--font-mono);
+  font-size: .58rem; letter-spacing: .08em; text-transform: uppercase; color: var(--txt-faint);
+}
+
+/* ---- Commission-a-Rig card (bottom of list) ---- */
+.rig-add-card { flex: 0 0 auto; margin-top: .3rem; }
 .rig-add {
-  display: flex; flex-direction: column; gap: .75rem; margin: auto 0; text-align: center;
+  display: flex; flex-direction: column; gap: .7rem; text-align: center;
   background: linear-gradient(180deg, var(--iron-800), var(--iron-850));
-  border: 1px dashed var(--rivet); border-radius: 14px; padding: 1.6rem 1.2rem;
+  border: 1px dashed var(--rivet); border-radius: 12px; padding: 1.1rem 1rem;
 }
 .rig-add-locked { border-style: solid; opacity: .82; }
-.rig-add-title { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; color: var(--oil); }
-.rig-add-hint { font-size: .82rem; color: var(--txt-dim); line-height: 1.55; margin-bottom: .2rem; }
+.rig-add-title { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .2em; text-transform: uppercase; color: var(--oil); }
+.rig-add-hint { font-size: .78rem; color: var(--txt-dim); line-height: 1.5; }
 #rigName {
   background: var(--iron-950); color: var(--txt); text-align: center;
-  border: 1px solid var(--line); border-radius: 10px; padding: .7rem .6rem;
+  border: 1px solid var(--line); border-radius: 10px; padding: .65rem .6rem;
   font-family: var(--font-display); font-size: 1rem;
 }
 #rigName:focus { outline: none; border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil); }
@@ -168,7 +327,7 @@
 #rigLongRange,
 #rigMelee {
   flex: 1; background: var(--iron-800); color: var(--txt);
-  border: 1px solid var(--line); border-radius: 10px; padding: .55rem .5rem;
+  border: 1px solid var(--line); border-radius: 10px; padding: .5rem .5rem;
   font-family: var(--font-display); font-size: .9rem;
 }
 .rig-add-btn {
@@ -180,20 +339,6 @@
   background: var(--iron-800); color: var(--txt-faint); border: 1px solid var(--line);
 }
 .rig-add-btn:active { transform: translateY(1px); }
-
-/* ---- Deck pager ---- */
-.deck-bar { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: .7rem; padding: .5rem 0 .15rem; }
-.deck-nav {
-  width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
-  background: var(--iron-800); border: 1px solid var(--line); color: var(--txt-dim);
-  font-size: 1.05rem; line-height: 1;
-}
-.deck-nav:disabled { opacity: .28; }
-.deck-nav:not(:disabled):hover { color: var(--oil-hi); border-color: var(--oil); }
-.deck-dots { display: flex; gap: .42rem; align-items: center; flex-wrap: wrap; justify-content: center; max-width: 70%; }
-.deck-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rivet); border: none; padding: 0; cursor: pointer; transition: transform .2s, background .2s, box-shadow .2s; }
-.deck-dot.add-dot { border-radius: 2px; }
-.deck-dot.active { background: var(--oil); box-shadow: 0 0 9px rgba(231,154,61,.6); transform: scale(1.3); }
 
 /* ---- Battle setup ---- */
 .battle-setup {
@@ -220,4 +365,11 @@
 }
 .ready-battle:disabled {
   background: var(--iron-800); color: var(--txt-faint); border-color: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heat-gauge, .heat-gauge--up, .heat-gauge--down .heat-track, .rig-heat-chip[data-zone="over"],
+  .heat-gauge[data-zone="over"], .heat-gauge[data-zone="over"] .heat-seg--danger.heat-seg--on {
+    animation: none !important;
+  }
 }

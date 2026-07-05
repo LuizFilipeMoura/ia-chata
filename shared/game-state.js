@@ -5,6 +5,10 @@ export const RIG_DEFAULTS = {
   colossal: { hull: 9, arms: 8, legs: 8, engine: 7 },
 };
 export const LOCS = ["hull", "arms", "legs", "engine"];
+// Heat Capacity by weight class (rules §6). A Rig is safe at or below this
+// value; each point beyond it adds +2 (capped +10) to the misfire roll.
+export const HEAT_CAPACITY = { light: 6, medium: 5, heavy: 4, colossal: 3 };
+export const MAX_OVERHEAT_BONUS = 10;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
@@ -78,6 +82,25 @@ export function makeRig(id, name, cls, owner, weapons = {}) {
     prepare: 0,    // Phase 4
     destroyed: false,
   };
+}
+
+// Derive the full heat picture for a Rig's engine: current heat, its Heat
+// Capacity (the redline), the floor heat can't drop below, and — when running
+// hot — the misfire bonus that would be added to the D12 overheat roll right
+// now. `zone` is a coarse severity band for UI colouring.
+export function heatMeter(rig) {
+  const heat = rig?.engine?.heat || 0;
+  const cap = HEAT_CAPACITY[rig?.weightClass] ?? 5;
+  const floor = rig?.engine?.sp === 0 ? 3 : 0;
+  const over = Math.max(0, heat - cap);
+  const bonus = over > 0 ? Math.min(MAX_OVERHEAT_BONUS, 2 * over) : 0;
+  let zone;
+  if (over > 0) zone = "over";
+  else if (heat >= cap) zone = "redline";
+  else if (heat > cap * 0.6) zone = "warm";
+  else if (heat > 0) zone = "cool";
+  else zone = "cold";
+  return { heat, cap, floor, over, bonus, zone };
 }
 
 export function findRig(room, name) {

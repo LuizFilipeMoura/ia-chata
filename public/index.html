@@ -67,9 +67,9 @@
     <button id="rigClose" class="sheet-close" type="button" aria-label="Close tracker">✕</button>
   </div>
 
-  <div id="rigList" class="rig-deck">
-    <!-- one .rig-screen per rig is injected here before the add screen -->
-    <div id="rigAddScreen" class="rig-screen rig-screen-add">
+  <div id="rigList" class="rig-list">
+    <!-- accordion .rig-item entries (grouped by side) are injected here before the add card -->
+    <div id="rigAddScreen" class="rig-add-card">
       <div class="rig-add">
         <div class="rig-add-title">◈ Commission a Rig</div>
         <div class="rig-add-hint">Name it, pick Light or Medium, and choose one long-range and one melee weapon.</div>
@@ -93,12 +93,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="deck-bar">
-    <button id="rigPrev" class="deck-nav" type="button" aria-label="Previous rig">‹</button>
-    <div id="rigDots" class="deck-dots"></div>
-    <button id="rigNext" class="deck-nav" type="button" aria-label="Next rig">›</button>
   </div>
 
   <div id="battleSetup" class="battle-setup" aria-live="polite">
