@@ -110,6 +110,67 @@ test("add without owner uses the requesting side", () => {
   assert.equal(rig.owner, "b");
 });
 
+test("ready requires at least three rigs for that side", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, false);
+
+  applyCommand(r, { verb: "add", attrs: { name: "A2", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "A3", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
+});
+
+test("adding or removing rigs before start resets ready flags", () => {
+  const r = createRoom("X");
+  for (let i = 1; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `A${i}`, class: "light", owner: "a", ...W } });
+  }
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
+
+  applyCommand(r, { verb: "add", attrs: { name: "A4", class: "light", owner: "a", ...W } });
+  assert.equal(r.game.sides.every((s) => s.ready === false), true);
+
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  applyCommand(r, { verb: "remove", attrs: { name: "A4" } });
+  assert.equal(r.game.sides.every((s) => s.ready === false), true);
+});
+
+test("both ready starts game and assigns private random bounties", () => {
+  const r = createRoom("X");
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 3; i++) {
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+    }
+  }
+
+  const rolls = [0.99, 0];
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => rolls.shift() });
+
+  assert.equal(r.game.started, true);
+  assert.equal(r.game.bounties.a, findRig(r, "b3").id);
+  assert.equal(r.game.bounties.b, findRig(r, "a1").id);
+});
+
+test("public state only exposes the requesting side bounty", () => {
+  const r = createRoom("X");
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 3; i++) {
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+    }
+  }
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+
+  assert.deepEqual(Object.keys(publicState(r, "a").game.bounties), ["a"]);
+  assert.deepEqual(Object.keys(publicState(r, "b").game.bounties), ["b"]);
+  assert.equal(publicState(r, "a").game.bounties.b, undefined);
+  assert.equal(publicState(r, "b").game.bounties.a, undefined);
+});
+
 test("engine heat cannot cool below 3 once catastrophic; recovery-less heat math", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "S", class: "light", ...W } });
