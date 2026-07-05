@@ -618,3 +618,31 @@ test("blast applies D6 + STR 10 to each named rig and clears the pending blast",
   assert.equal(a1.hull.sp, 3);
   assert.equal(r.game.pendingBlast, null);
 });
+
+test("fire action resolves an attack, applies damage and logs it", () => {
+  const r = startedRoom(); // b acts first
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1"); // Light target, hull 6
+  // Fire the melee Sword: STR 6-2(light)=4. 2 dice both 6 -> impacts 6+4+0(front)=10
+  // vs light hull (10/14/16) -> direct 1 each = 2 SP.
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+  } });
+  assert.equal(a1.hull.sp, 4); // 6 - 2
+  assert.equal(r.game.turn.actionsUsed, 1);
+  assert.equal(r.game.resolutions.at(-1).kind, "attack");
+});
+
+test("firing an unloaded ranged weapon is rejected (no budget spent)", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.loaded.longRange = false;
+  const used = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "side", range: "near",
+    dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, impacts: [1,1,1,1,1,1,1,1] },
+  } });
+  assert.equal(r.game.turn.actionsUsed, used); // no-op, weapon not loaded
+});

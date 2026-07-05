@@ -1,4 +1,5 @@
 import { ACTIONS, heatThreshold, hitLocation, impactSeverity, IMPACT } from "./rules.js";
+import { resolveAttack } from "./combat.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -292,18 +293,6 @@ function recompute(rig) {
   if (rig.engine.heat < floor) rig.engine.heat = floor;
 }
 
-function damageRig(rig, loc, amount) {
-  const c = rig[loc];
-  if (!c) return;
-  let n = Math.max(0, Math.floor(Number(amount) || 0));
-  while (n-- > 0) {
-    if (c.sp > 0) c.sp -= 1;
-    else c.destroyed = true;
-  }
-  if (loc === "engine" && c.sp === 0) { c.heat = Math.max(c.heat, 3); rig.skipNextActivation = true; }
-  recompute(rig);
-}
-
 // §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
 function catastrophicOnZero(room, rig, loc, opts) {
   if (loc === "engine") { rig.skipNextActivation = true; rig.engine.heat = Math.max(rig.engine.heat, 3); }
@@ -462,6 +451,17 @@ function applyOverheat(room, rig, total, opts) {
   return row;
 }
 
+// Mutation primitives + weapon-profile lookup injected into the pure combat
+// module so it never imports game-state.js (avoids an import cycle).
+function combatCtx() {
+  return {
+    applyDamage,
+    bumpHeat,
+    pushResolution,
+    profileFor: (slot, name) => WEAPONS[slot]?.[name],
+  };
+}
+
 // One action during an activation. Returns whether anything changed.
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
@@ -474,6 +474,21 @@ function performAction(room, rig, act, a, random) {
   }
   const def = ACTIONS[act];
   if (!def || t.actionsUsed >= t.actionsMax) return false;
+  if (act === "fire" || act === "aimed") {
+    const target = findRig(room, a.target);
+    if (!target) return false;
+    const res = resolveAttack(room, rig, target, {
+      weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
+      aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
+      fullAuto: a.fullAuto === true || a.fullAuto === "true",
+      charged: a.charged === true || a.charged === "true",
+      dice: a.dice,
+    }, random, combatCtx());
+    if (!res.ok) return false;      // invalid shot — no budget spent
+    t.actionsUsed += 1;
+    bumpHeat(rig, def.heat);        // base 1 (Hot / fire-mode heat added inside resolveAttack)
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
@@ -673,7 +688,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else {
     const rig = findRig(room, a.name);
     if (rig) {
-      if (verb === "damage") { damageRig(rig, (a.loc || "").toLowerCase(), a.amount); checkAnnihilation(room); changed = true; }
+      if (verb === "damage") { applyDamage(room, rig, (a.loc || "").toLowerCase(), a.amount, { random: options.random }); changed = true; }
       else if (verb === "repair") { repairRig(rig, (a.loc || "").toLowerCase(), a.amount); changed = true; }
       else if (verb === "set") { setRigSp(rig, (a.loc || "").toLowerCase(), a.sp); changed = true; }
       else if (verb === "heat") { heatRig(rig, a.amount); changed = true; }

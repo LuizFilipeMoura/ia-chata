@@ -83,3 +83,43 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   }
   return out;
 }
+
+// §7 — full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
+// a resolution descriptor (or { ok:false, reason } when the shot can't be made).
+// The weapon profile is resolved by the caller via ctx.profileFor(slot, name).
+export function resolveAttack(room, attacker, target, opts, random, ctx) {
+  const slot = opts.weapon === "melee" ? "melee" : "longRange";
+  const weaponName = attacker.weapons?.[slot];
+  const profile = ctx.profileFor(slot, weaponName);
+  if (!profile) return { ok: false, reason: "no-weapon" };
+  if (attacker.weaponsDestroyed.includes(weaponName)) return { ok: false, reason: "weapon-destroyed" };
+  if (opts.range === "out") return { ok: false, reason: "range" };
+  if (slot === "longRange" && !attacker.loaded.longRange) return { ok: false, reason: "reload" };
+
+  const th = rollToHit(attacker, profile, opts, opts.dice?.toHit, random);
+  const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat;
+  if (slot === "longRange") attacker.loaded.longRange = false;
+
+  const rolls = [{ sides: 6, value: th.hits, label: `hits (${th.hits}/${th.rof})` }];
+  let impacts = [];
+  let location = null;
+  if (th.hits > 0) {
+    location = opts.aimed ? opts.aimedLoc : hitLocation(rollD(12, opts.dice?.location, random));
+    impacts = rollImpacts(attacker, target, profile, location,
+      { arc: opts.arc, hits: th.hits, charged: opts.charged }, opts.dice, random);
+    for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
+    applyOnHitPerks(room, attacker, target, profile, opts, random, ctx);
+  }
+  if (heat > 0) ctx.bumpHeat(attacker, heat);
+
+  const total = impacts.reduce((s, h) => s + h.sp, 0);
+  ctx.pushResolution(room, {
+    kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
+    summary: `${attacker.name} → ${target.name} with ${weaponName}: ${th.hits} hit(s), ${total} SP${location ? ` to ${location}` : ""}`,
+    effects: [],
+  });
+  return { ok: true, hits: th.hits, location, impacts, heat };
+}
+
+// Replaced with real perks in Task 8; a no-op keeps this task green.
+function applyOnHitPerks() {}
