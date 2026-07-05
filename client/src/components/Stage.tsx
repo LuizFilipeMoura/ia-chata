@@ -1,6 +1,7 @@
 import { useRoomState } from "../state/RoomStateContext";
 import { useUi } from "../state/UiStateContext";
 import { RigDeck } from "./RigDeck";
+import { BattleSetup } from "./BattleSetup";
 
 export function Stage() {
   const { rigs } = useRoomState();
@@ -14,7 +15,7 @@ export function Stage() {
       </div>
       {/* BattleHud mounts here (Task 24) */}
       <RigDeck />
-      {/* BattleSetup mounts here (Task 23) */}
+      <BattleSetup />
     </main>
   );
 }
