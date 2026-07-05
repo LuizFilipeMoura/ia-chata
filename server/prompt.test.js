@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TRACKER_PROTOCOL, PLAYER_START_GUIDE } from "./prompt.js";
-import { WEAPONS } from "../shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS } from "../shared/game-state.js";
 
 test("tracker protocol documents structured strict weapon add flow", () => {
   assert.match(TRACKER_PROTOCOL, /class="<class: light\|medium>"/);
@@ -14,6 +14,12 @@ test("tracker protocol documents structured strict weapon add flow", () => {
   assert.match(TRACKER_PROTOCOL, /Heavy and Colossal Rigs are not available/i);
   assert.match(TRACKER_PROTOCOL, new RegExp(WEAPONS.longRange.join(".*"), "s"));
   assert.match(TRACKER_PROTOCOL, new RegExp(WEAPONS.melee.join(".*"), "s"));
+});
+
+test("tracker protocol documents hard rig add limits", () => {
+  assert.match(TRACKER_PROTOCOL, new RegExp(`${MAX_RIGS_PER_SIDE} Rigs per side`, "i"));
+  assert.match(TRACKER_PROTOCOL, new RegExp(`${MAX_RIGS_TOTAL} Rigs total`, "i"));
+  assert.match(TRACKER_PROTOCOL, /emit no `\[\[RIG add\]\]` tag/i);
 });
 
 test("player start guide documents one-player guided rig registration", () => {

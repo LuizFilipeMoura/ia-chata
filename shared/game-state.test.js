@@ -110,6 +110,39 @@ test("add without owner uses the requesting side", () => {
   assert.equal(rig.owner, "b");
 });
 
+test("add blocks a fourth rig for the same side without version bump or id burn", () => {
+  const r = createRoom("X");
+  for (let i = 1; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `A${i}`, class: "light", owner: "a", ...W } });
+  }
+  const version = r.version;
+  applyCommand(r, { verb: "add", attrs: { name: "A4", class: "light", owner: "a", ...W } });
+
+  assert.equal(r.rigs.length, 3);
+  assert.equal(findRig(r, "A4"), null);
+  assert.equal(r.version, version);
+
+  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "light", owner: "b", ...W } });
+  assert.equal(findRig(r, "B1").id, 4);
+  assert.equal(r.version, version + 1);
+});
+
+test("add blocks all new rigs once six rigs are in place", () => {
+  const r = createRoom("X");
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 3; i++) {
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+    }
+  }
+  const version = r.version;
+
+  applyCommand(r, { verb: "add", attrs: { name: "Overflow", class: "light", owner: "b", ...W } });
+
+  assert.equal(r.rigs.length, 6);
+  assert.equal(findRig(r, "Overflow"), null);
+  assert.equal(r.version, version);
+});
+
 test("ready requires at least three rigs for that side", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", ...W } });
@@ -130,11 +163,11 @@ test("adding or removing rigs before start resets ready flags", () => {
   applyCommand(r, { verb: "ready", attrs: { side: "a" } });
   assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
 
-  applyCommand(r, { verb: "add", attrs: { name: "A4", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "light", owner: "b", ...W } });
   assert.equal(r.game.sides.every((s) => s.ready === false), true);
 
   applyCommand(r, { verb: "ready", attrs: { side: "a" } });
-  applyCommand(r, { verb: "remove", attrs: { name: "A4" } });
+  applyCommand(r, { verb: "remove", attrs: { name: "B1" } });
   assert.equal(r.game.sides.every((s) => s.ready === false), true);
 });
 

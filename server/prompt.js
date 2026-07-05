@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RULEBOOK_MD } from "./config.js";
-import { WEAPONS } from "../shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS } from "../shared/game-state.js";
 
 // Instructions that teach Gemma the rig-tracker command protocol. The browser
 // parses these [[RIG ...]] tags out of the reply, applies them to the tracker,
@@ -30,6 +30,8 @@ export const TRACKER_PROTOCOL = [
   "  Medium only.",
   "- If the player asks to add a Rig without all required details, ask for every",
   "  missing field in one response and emit no `[[RIG add]]` tag.",
+  `- The tracker allows at most ${MAX_RIGS_PER_SIDE} Rigs per side and ${MAX_RIGS_TOTAL} Rigs total.`,
+  "  If that limit is already reached, explain that the roster is full and emit no `[[RIG add]]` tag.",
   "- Valid Long Range weapons: " + WEAPONS.longRange.join(", ") + ".",
   "- Valid Melee weapons: " + WEAPONS.melee.join(", ") + ".",
   "- Use those weapon names exactly in tags. You may map imperfect player wording",

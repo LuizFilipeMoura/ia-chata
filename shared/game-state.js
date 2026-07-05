@@ -6,6 +6,8 @@ export const RIG_DEFAULTS = {
 };
 export const LOCS = ["hull", "arms", "legs", "engine"];
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
+export const MAX_RIGS_PER_SIDE = 3;
+export const MAX_RIGS_TOTAL = 6;
 export const WEAPONS = {
   longRange: ["Mini Gun", "Double MG", "Autocannon", "Arc Gun", "Mortar", "Sniper Cannon"],
   melee: ["Sword", "Circular Saw", "Chainsaw", "Claw", "Lance", "Wrecking Ball"],
@@ -116,6 +118,13 @@ function sideRigCount(room, sideId) {
   return room.rigs.filter((rig) => (rig.owner || "a") === sideId).length;
 }
 
+export function canAddRigForSide(room, sideId) {
+  const rigs = Array.isArray(room?.rigs) ? room.rigs : [];
+  const owner = sideId === "b" ? "b" : "a";
+  return rigs.length < MAX_RIGS_TOTAL &&
+    rigs.filter((rig) => (rig.owner || "a") === owner).length < MAX_RIGS_PER_SIDE;
+}
+
 function resetReadyBeforeStart(room) {
   if (room.game.started) return;
   for (const side of room.game.sides) side.ready = false;
@@ -206,8 +215,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   if (verb === "add") {
     if (a.name && !findRig(room, a.name)) {
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
-      const rig = makeRig(room.nextRigId, a.name, (a.class || "").toLowerCase(), owner, a);
-      if (rig) {
+      if (canAddRigForSide(room, owner)) {
+        const rig = makeRig(room.nextRigId, a.name, (a.class || "").toLowerCase(), owner, a);
+        if (!rig) return room;
         room.nextRigId++;
         room.rigs.push(rig);
         resetReadyBeforeStart(room);

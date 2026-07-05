@@ -1,7 +1,7 @@
 import { S, LOCS, findRig } from "./state.js";
 import { sendCommand } from "./api.js";
 import { setStatus } from "./status.js";
-import { WEAPONS } from "/shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS, canAddRigForSide } from "/shared/game-state.js";
 
 const rigList = document.getElementById("rigList");
 const rigNameInput = document.getElementById("rigName");
@@ -79,6 +79,28 @@ function sideReady(sideId) {
 
 function sideRigCount(sideId) {
   return S.rigs.filter((rig) => (rig.owner || "a") === sideId).length;
+}
+
+function addLimitMessage(owner) {
+  if (S.rigs.length >= MAX_RIGS_TOTAL) return `Roster full: ${MAX_RIGS_TOTAL} rigs are already in place.`;
+  if (sideRigCount(owner) >= MAX_RIGS_PER_SIDE) return `Side full: ${MAX_RIGS_PER_SIDE} rigs are already assigned.`;
+  return "";
+}
+
+function updateAddRigAvailability() {
+  const owner = rigOwnerSelect.value || S.session?.side || "a";
+  const canAdd = canAddRigForSide(S, owner);
+  const message = addLimitMessage(owner);
+  rigNameInput.disabled = !canAdd;
+  rigClassSelect.disabled = !canAdd;
+  rigLongRangeSelect.disabled = !canAdd;
+  rigMeleeSelect.disabled = !canAdd;
+  rigAddBtn.disabled = !canAdd;
+  rigAddBtn.textContent = canAdd ? "+ Add" : "Full";
+  rigAddBtn.title = message;
+  rigAddScreen.classList.toggle("rig-add-locked", !canAdd);
+  const hint = rigAddScreen.querySelector(".rig-add-hint");
+  if (hint) hint.textContent = message || "Name it, pick Light or Medium, and choose one long-range and one melee weapon.";
 }
 
 function renderBattleSetup() {
@@ -243,6 +265,7 @@ function buildRigScreen(rig) {
 export function renderRigs() {
   syncOwnerOptions();
   renderBattleSetup();
+  updateAddRigAvailability();
   // Rebuild the rig screens but keep the persistent add-rig screen (its inputs
   // hold live event listeners bound once at startup).
   [...rigList.querySelectorAll(".rig-screen:not(.rig-screen-add)")].forEach((n) => n.remove());
@@ -295,6 +318,11 @@ rigPrev.addEventListener("click", () => scrollToIndex(deckIndex() - 1));
 rigNext.addEventListener("click", () => scrollToIndex(deckIndex() + 1));
 
 function addRigFromForm() {
+  if (!canAddRigForSide(S, rigOwnerSelect.value)) {
+    setStatus(addLimitMessage(rigOwnerSelect.value));
+    updateAddRigAvailability();
+    return;
+  }
   const name = rigNameInput.value.trim();
   if (!name) { rigNameInput.focus(); return; }
   if (findRig(name)) { setStatus(`A rig named “${name}” already exists.`); return; }
@@ -309,6 +337,7 @@ function addRigFromForm() {
 }
 
 rigAddBtn.addEventListener("click", addRigFromForm);
+rigOwnerSelect.addEventListener("change", updateAddRigAvailability);
 rigNameInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); addRigFromForm(); }
 });

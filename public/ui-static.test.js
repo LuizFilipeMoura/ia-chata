@@ -49,3 +49,10 @@ test("rig panel exposes ready controls and private bounty display", () => {
   assert.match(tracker, /Ironclad Bounty/);
   assert.match(css, /\.battle-setup/);
 });
+
+test("manual add form is gated by the shared rig limits", () => {
+  assert.match(tracker, /canAddRigForSide/);
+  assert.match(tracker, /updateAddRigAvailability/);
+  assert.match(tracker, /rigAddBtn\.disabled\s*=\s*!canAdd/);
+  assert.match(tracker, /change", updateAddRigAvailability/);
+});
