@@ -808,3 +808,16 @@ test("Servo Actuators makes Sprint cost 1 heat instead of 2", () => {
   applyCommand(r, { verb: "action", attrs: { name: "A1", action: "sprint" } });
   assert.equal(servo.engine.heat, 1);
 });
+
+test("Overclock Core skips the skip-next-activation penalty the first time Engine hits 0, not after", () => {
+  const rig = makeRig(1, "Reactor", "medium", "a", { longRange: "Autocannon", melee: "Claw" }, "overclock-core");
+  rig.engine.sp = 1;
+  __test.applyDamage({ game: { nextResolutionId: 1, resolutions: [] } }, rig, "engine", 1, {});
+  assert.equal(rig.engine.sp, 0);
+  assert.equal(rig.skipNextActivation, false);   // first time: bypassed
+  assert.equal(rig.overclockCoreUsed, true);
+
+  rig.engine.sp = 1; // repaired, then hit again
+  __test.applyDamage({ game: { nextResolutionId: 1, resolutions: [] } }, rig, "engine", 1, {});
+  assert.equal(rig.skipNextActivation, true);    // second time: normal rule applies
+});

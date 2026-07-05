@@ -367,7 +367,13 @@ function recompute(rig) {
 
 // §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
 function catastrophicOnZero(room, rig, loc, opts) {
-  if (loc === "engine") { rig.skipNextActivation = true; rig.engine.heat = Math.max(rig.engine.heat, 3); }
+  if (loc === "engine") {
+    // Overclock Core (Power) — the first time the Engine hits 0 SP, the Rig
+    // does not skip its next activation. Every time after that, normal rules apply.
+    if (rig.equipment === "overclock-core" && !rig.overclockCoreUsed) rig.overclockCoreUsed = true;
+    else rig.skipNextActivation = true;
+    rig.engine.heat = Math.max(rig.engine.heat, 3);
+  }
   else if (loc === "arms") {
     const roll = rollD(12, opts?.dice?.armsWeapon, opts?.random);
     const slot = roll <= 6 ? "longRange" : "melee";
