@@ -241,3 +241,42 @@ test("publicState omits nextRigId bookkeeping", () => {
   assert.equal(view.code, "X");
   assert.ok(Array.isArray(view.rigs));
 });
+
+test("new rigs carry activation/heat-effect defaults", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "S", class: "light", ...W } });
+  const rig = findRig(r, "S");
+  assert.equal(rig.activated, false);
+  assert.equal(rig.skipNextActivation, false);
+  assert.equal(rig.noCool, false);
+  assert.equal(rig.speedHalvedNextRound, false);
+  assert.deepEqual(rig.loaded, { longRange: true, melee: true });
+  assert.equal(rig.preparation, null);
+  assert.deepEqual(rig.weaponsDestroyed, []);
+  assert.equal(rig.immobilised, false);
+});
+
+test("createRoom game carries round-loop defaults", () => {
+  const r = createRoom("X");
+  assert.equal(r.game.autoResolve, true);
+  assert.equal(r.game.phase, "setup");
+  assert.deepEqual(r.game.deployOrder, []);
+  assert.equal(r.game.initiative, null);
+  assert.deepEqual(r.game.answerTokens, { a: 0, b: 0 });
+  assert.equal(r.game.turn, null);
+  assert.deepEqual(r.game.resolutions, []);
+  assert.equal(r.game.outcome, null);
+});
+
+test("ensureGameShape backfills fields on a legacy room", () => {
+  const legacy = { code: "L", version: 0, nextRigId: 2, game: { round: 1, started: false },
+    rigs: [{ id: 1, name: "Old", weightClass: "light", owner: "a",
+      hull:{sp:6,max:6,destroyed:false}, arms:{sp:5,max:5,destroyed:false},
+      legs:{sp:5,max:5,destroyed:false}, engine:{sp:4,max:4,destroyed:false,heat:0},
+      weapons:{longRange:"Mini Gun",melee:"Sword"}, destroyed:false }] };
+  applyCommand(legacy, { verb: "nonsense", attrs: {} });
+  assert.equal(legacy.game.autoResolve, true);
+  assert.equal(legacy.game.phase, "setup");
+  assert.equal(legacy.rigs[0].activated, false);
+  assert.deepEqual(legacy.rigs[0].loaded, { longRange: true, melee: true });
+});

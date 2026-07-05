@@ -31,9 +31,32 @@ export function createRoom(code) {
       objectives: [],
       started: false,
       bounties: {},
+      autoResolve: true,
+      phase: "setup",
+      deployOrder: [],
+      initiative: null,
+      answerTokens: { a: 0, b: 0 },
+      turn: null,
+      resolutions: [],
+      nextResolutionId: 1,
+      recoveryVp: {},
+      suddenDeath: false,
+      outcome: null,
     },
     rigs: [],
   };
+}
+
+function ensureRigShape(rig) {
+  if (typeof rig.activated !== "boolean") rig.activated = false;
+  if (typeof rig.skipNextActivation !== "boolean") rig.skipNextActivation = false;
+  if (typeof rig.noCool !== "boolean") rig.noCool = false;
+  if (typeof rig.speedHalvedNextRound !== "boolean") rig.speedHalvedNextRound = false;
+  if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
+  if (rig.preparation === undefined) rig.preparation = null;
+  if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
+  if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
+  return rig;
 }
 
 function ensureGameShape(room) {
@@ -50,6 +73,18 @@ function ensureGameShape(room) {
   if (typeof room.game.started !== "boolean") room.game.started = false;
   room.game.bounties ||= {};
   room.rigs ||= [];
+  if (typeof room.game.autoResolve !== "boolean") room.game.autoResolve = true;
+  room.game.phase ||= "setup";
+  room.game.deployOrder ||= [];
+  if (room.game.initiative === undefined) room.game.initiative = null;
+  room.game.answerTokens ||= { a: 0, b: 0 };
+  if (room.game.turn === undefined) room.game.turn = null;
+  room.game.resolutions ||= [];
+  room.game.nextResolutionId ||= 1;
+  room.game.recoveryVp ||= {};
+  if (typeof room.game.suddenDeath !== "boolean") room.game.suddenDeath = false;
+  if (room.game.outcome === undefined) room.game.outcome = null;
+  for (const rig of room.rigs) ensureRigShape(rig);
   return room;
 }
 
@@ -80,6 +115,14 @@ export function makeRig(id, name, cls, owner, weapons = {}) {
     engine: { sp: d.engine, max: d.engine, destroyed: false, heat: 0 },
     weapons: { longRange, melee },
     prepare: 0,    // Phase 4
+    activated: false,
+    skipNextActivation: false,
+    noCool: false,
+    speedHalvedNextRound: false,
+    loaded: { longRange: true, melee: true },
+    preparation: null,
+    weaponsDestroyed: [],
+    immobilised: false,
     destroyed: false,
   };
 }
