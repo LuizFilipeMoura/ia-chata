@@ -78,8 +78,25 @@ export const EQUIPMENT_ACTIVE_BY_KEY = Object.fromEntries(
 
 // The three §5 preparation reactions. Unknown/missing input falls back to brace.
 export const PREP_TYPES = ["brace", "evasive", "return"];
-export function normalizePrep(type) {
+
+export function hasBulwarkShield(rig) {
+  return rig?.weapons?.melee === "Bulwark Shield";
+}
+
+// Which arcs a Raise Shield covers. Base: negate the front, blunt (−4) side/rear.
+// Tower Shield upgrade: negation extends to the side arc; only the rear is blunted.
+export function shieldCoverage(rig) {
+  const tower = rig?.weaponUpgrades?.melee === "tower-shield";
+  return tower
+    ? { negate: ["front", "side"], blunt: ["rear"] }
+    : { negate: ["front"], blunt: ["side", "rear"] };
+}
+
+// "raise-shield" is a fourth, gated §5 preparation available only to Rigs
+// carrying a Bulwark Shield (§13 Bulwark); everything else falls back to brace.
+export function normalizePrep(type, rig) {
   const ref = String(type || "").trim().toLowerCase();
+  if (ref === "raise-shield") return hasBulwarkShield(rig) ? "raise-shield" : "brace";
   return PREP_TYPES.includes(ref) ? ref : "brace";
 }
 
@@ -433,11 +450,13 @@ function pushResolution(room, entry) {
 function prepName(type) {
   if (type === "evasive") return "Evasive Manoeuvre";
   if (type === "return") return "Return Fire";
+  if (type === "raise-shield") return "Raise Shield";
   return "Brace for Incoming Fire";
 }
 function prepEffectLine(type) {
   if (type === "evasive") return "Defender may move ½ Speed — the attack can miss entirely.";
   if (type === "return") return "Defender answers with a counter-attack.";
+  if (type === "raise-shield") return "Front-arc attack negated; side/rear impacts suffer −4.";
   return "Front-arc impacts suffer −2.";
 }
 function reactionRevealEntry(rig, type) {
@@ -819,7 +838,7 @@ function performAction(room, rig, act, a, random) {
       summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
   } else if (act === "prepare") {
-    rig.preparation = { type: normalizePrep(a.prep), source: "action", faceUp: false };
+    rig.preparation = { type: normalizePrep(a.prep, rig), source: "action", faceUp: false };
   }
   bumpHeat(rig, def.heat);
   t.actionsUsed += 1;
@@ -1091,7 +1110,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     if (rig && sideId && (rig.owner || "a") === sideId &&
         room.game.answerTokens[sideId] > 0 && rig.preparation == null) {
-      rig.preparation = { type: normalizePrep(a.prep), source: "answer", faceUp: false };
+      rig.preparation = { type: normalizePrep(a.prep, rig), source: "answer", faceUp: false };
       room.game.answerTokens[sideId] -= 1;
       if (room.game.pendingAnswer && room.game.pendingAnswer.side === sideId) {
         room.game.pendingAnswer.remaining -= 1;

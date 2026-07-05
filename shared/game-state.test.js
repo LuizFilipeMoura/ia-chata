@@ -5,7 +5,7 @@ import {
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
-  effectiveWeaponProfile,
+  effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -102,6 +102,41 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   assert.equal(effectiveWeaponProfile("melee", "Bulwark Shield", spike).perks.includes("Staggering"), true);
   assert.equal(makeRig(4, "Guard2", "medium", "a",
     { longRange: "Autocannon", melee: "Bulwark Shield" }).weaponUpgrades.melee, "tower-shield");
+});
+
+test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
+  const shieldRig = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "tower-shield" } };
+  const swordRig = { weapons: { melee: "Sword" } };
+
+  assert.equal(normalizePrep("raise-shield", shieldRig), "raise-shield");
+  assert.equal(normalizePrep("raise-shield", swordRig), "brace"); // not allowed -> fallback
+  assert.equal(normalizePrep("raise-shield"), "brace");           // no rig -> fallback
+  assert.equal(normalizePrep("brace", shieldRig), "brace");       // existing preps unaffected
+  assert.equal(normalizePrep("bogus", shieldRig), "brace");
+});
+
+test("shieldCoverage depends on the Tower Shield upgrade", () => {
+  const base = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "boss-spike" } };
+  const tower = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "tower-shield" } };
+
+  assert.deepEqual(shieldCoverage(base), { negate: ["front"], blunt: ["side", "rear"] });
+  assert.deepEqual(shieldCoverage(tower), { negate: ["front", "side"], blunt: ["rear"] });
+  assert.equal(hasBulwarkShield(base), true);
+  assert.equal(hasBulwarkShield({ weapons: { melee: "Sword" } }), false);
+});
+
+test("a Bulwark Shield rig can arm Raise Shield; others fall back to brace", () => {
+  const r = createRoom("SHLD");
+  applyCommand(r, { verb: "add", attrs: { name: "Guard", class: "medium", owner: "a", longRange: "Autocannon", melee: "Bulwark Shield" } });
+  applyCommand(r, { verb: "add", attrs: { name: "Grunt", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+
+  // Answer-token arming path (poke a token in; no full activation needed).
+  r.game.answerTokens.a = 2;
+  applyCommand(r, { verb: "answer", attrs: { name: "Guard", prep: "raise-shield", side: "a" } });
+  assert.equal(findRig(r, "Guard").preparation.type, "raise-shield");
+
+  applyCommand(r, { verb: "answer", attrs: { name: "Grunt", prep: "raise-shield", side: "a" } });
+  assert.equal(findRig(r, "Grunt").preparation.type, "brace"); // gated -> fallback
 });
 
 test("makeRig requires a supported class, one valid long-range and one valid melee weapon", () => {
