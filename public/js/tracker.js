@@ -305,8 +305,13 @@ function rigStatus(rig) {
 // Build one accordion entry: a header that is always visible (name, class,
 // heat chip, active toggle) and a collapsible body with the full terminal.
 function buildRigItem(rig) {
-  const isActive = rig.id === activeRigId;
-  const isOpen = expanded.has(rig.id);
+  const started = Boolean(S.game?.started);
+  const mySide = S.session?.side || "a";
+  // In battle, "active" and open follow the server's turn so the acting Rig
+  // reveals its action console; before battle it's the local heat-gauge toggle.
+  const serverActive = started && S.game?.turn?.activeRigId === rig.id;
+  const isActive = started ? serverActive : rig.id === activeRigId;
+  const isOpen = expanded.has(rig.id) || serverActive;
   const m = heatMeter(rig);
 
   const item = document.createElement("div");
@@ -340,15 +345,25 @@ function buildRigItem(rig) {
   heatChip.innerHTML = `<span class="rig-heat-chip-ic">🔥</span>${m.heat}`;
   heatChip.title = m.over > 0 ? `Overheating: misfire roll D12 + ${m.bonus}` : `Heat ${m.heat} of ${m.cap}`;
 
+  // During battle, activation is server-authoritative: only the side whose turn
+  // it is may activate one of its own un-activated Rigs, one at a time.
+  const canActivate = started && S.game?.phase === "activation" &&
+    S.game?.turn?.side === mySide && (rig.owner || "a") === mySide &&
+    S.game?.turn?.activeRigId == null && !rig.activated && !rig.destroyed;
   const activate = document.createElement("button");
   activate.type = "button";
   activate.className = "rig-activate" + (isActive ? " on" : "");
   activate.setAttribute("aria-pressed", String(isActive));
-  activate.textContent = isActive ? "● Active" : "Activate";
+  activate.textContent = isActive ? "● Active" : (started && rig.activated ? "Done" : "Activate");
   activate.title = isActive ? "This Rig is taking its activation" : "Make this the acting Rig";
+  if (started) activate.disabled = !canActivate;
   activate.addEventListener("click", (e) => {
     e.stopPropagation();
-    setActiveRig(isActive ? null : rig.id);
+    if (started) {
+      if (canActivate) sendCommand("activate", { name: rig.name });
+    } else {
+      setActiveRig(isActive ? null : rig.id);
+    }
   });
 
   const chev = document.createElement("span");
