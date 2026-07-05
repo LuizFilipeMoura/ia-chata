@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/css/tokens.css" />
 <link rel="stylesheet" href="/css/app.css" />
 <link rel="stylesheet" href="/css/rig-sheet.css" />
+<link rel="stylesheet" href="/css/battle.css" />
 <link rel="stylesheet" href="/css/join.css" />
 </head>
 <body>
@@ -103,6 +104,17 @@
     <button id="readyBattle" class="ready-battle" type="button">Ready</button>
   </div>
 </section>
+
+<div id="rollScrim" class="roll-scrim" hidden>
+  <div id="rollConsole" class="roll-console" role="dialog" aria-modal="true" aria-label="Dice resolution">
+    <div class="roll-head"><span class="roll-kind" id="rollKind">Resolution</span><button id="rollClose" class="roll-close" type="button" aria-label="Dismiss">✕</button></div>
+    <div id="rollDice" class="roll-dice"></div>
+    <div id="rollSummary" class="roll-summary"></div>
+    <div id="rollEffects" class="roll-effects"></div>
+    <div id="rollForm" class="roll-form" hidden></div>
+  </div>
+</div>
+<div id="outcomeBanner" class="outcome-banner" hidden></div>
 
 <script type="module" src="/js/main.js"></script>
 

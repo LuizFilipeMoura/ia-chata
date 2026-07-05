@@ -1,0 +1,78 @@
+/* ===== Dice-resolution overlay — the "resolution readout" ===== */
+.roll-scrim {
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; place-items: center;
+  background: rgba(5, 7, 10, .72); backdrop-filter: blur(3px);
+  opacity: 0; transition: opacity .2s ease;
+}
+.roll-scrim.show { opacity: 1; }
+.roll-console {
+  width: min(420px, 92vw);
+  background: linear-gradient(180deg, var(--iron-800), var(--iron-900));
+  border: 1px solid var(--rivet); border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.04);
+  padding: .2rem .2rem .9rem;
+  transform: translateY(10px) scale(.98); opacity: 0;
+  transition: transform .28s cubic-bezier(.2,.85,.25,1), opacity .28s ease;
+}
+.roll-scrim.show .roll-console { transform: none; opacity: 1; }
+.roll-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .5rem .7rem; margin-bottom: .5rem;
+  background: var(--stripe); border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid rgba(0,0,0,.5);
+}
+.roll-kind {
+  font-family: var(--font-mono); font-size: .64rem; font-weight: 700;
+  letter-spacing: .22em; text-transform: uppercase; color: #120c04;
+  text-shadow: 0 1px 0 rgba(255,255,255,.15);
+}
+.roll-close { width: 26px; height: 26px; border-radius: 7px; background: rgba(10,12,15,.7); color: var(--txt); border: 1px solid rgba(0,0,0,.5); }
+
+.roll-dice { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; padding: .8rem .7rem; min-height: 4.2rem; }
+.die {
+  --face: var(--oil);
+  width: 3rem; height: 3rem; flex: 0 0 auto;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-weight: 700; font-size: 1.3rem; color: #10130c;
+  background: linear-gradient(160deg, #d9dee6, #9aa3b1);
+  border: 1px solid #6b7480; box-shadow: inset 0 2px 3px rgba(255,255,255,.6), 0 4px 10px rgba(0,0,0,.5);
+}
+.die.d6  { border-radius: 10px; }
+.die.d12 { border-radius: 50%; }        /* round token stands in for the D12 */
+.die.rolling { animation: die-shake .12s linear infinite; }
+@keyframes die-shake {
+  0% { transform: translate(0,0) rotate(-6deg); }
+  25% { transform: translate(1px,-2px) rotate(4deg); }
+  50% { transform: translate(-2px,1px) rotate(-3deg); }
+  75% { transform: translate(2px,1px) rotate(5deg); }
+  100% { transform: translate(0,-1px) rotate(-6deg); }
+}
+.die.settled {
+  color: #fff; background: linear-gradient(160deg, #2a3038, #171b22);
+  border-color: var(--face); box-shadow: 0 0 14px 1px color-mix(in srgb, var(--face) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.08);
+  animation: die-land .32s cubic-bezier(.2,.85,.25,1);
+}
+.die.settled[data-tone="crit"] { --face: var(--ember-hi); }
+.die.settled[data-tone="cool"] { --face: #7fd0c4; }
+@keyframes die-land { 0% { transform: scale(1.28) translateY(-6px); } 60% { transform: scale(.94); } 100% { transform: none; } }
+.die-label { display: block; margin-top: .25rem; font-family: var(--font-mono); font-size: .5rem; letter-spacing: .1em; text-transform: uppercase; color: var(--txt-faint); text-align: center; }
+.die-wrap { display: flex; flex-direction: column; align-items: center; }
+
+.roll-summary {
+  margin: .2rem .8rem .2rem; text-align: center;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--txt);
+  opacity: 0; transform: translateY(4px); animation: line-in .35s ease .45s forwards;
+}
+.roll-effects { display: flex; flex-direction: column; gap: .3rem; padding: .3rem .9rem 0; }
+.roll-effect {
+  font-family: var(--font-mono); font-size: .68rem; color: var(--ember-hi);
+  border-left: 2px solid rgba(229,83,58,.5); padding-left: .5rem;
+  opacity: 0; transform: translateY(4px); animation: line-in .3s ease forwards;
+}
+@keyframes line-in { to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .die.rolling { animation: none; }
+  .die.settled, .roll-summary, .roll-effect, .roll-console { animation: none; opacity: 1; transform: none; }
+}
