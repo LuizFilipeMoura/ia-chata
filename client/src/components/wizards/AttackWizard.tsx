@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { WEAPONS } from "/shared/game-state.js";
+import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useBattleActions } from "../../state/BattleActionsContext";
@@ -95,6 +95,23 @@ const ROF_BY_NAME: Record<string, number> = {
   "Sniper Cannon": 1, Sword: 2, "Circular Saw": 3, Chainsaw: 3, Claw: 2,
   Lance: 1, "Wrecking Ball": 1,
 };
+
+interface WeaponUpgradeNotice {
+  id: string;
+  name: string;
+  tag?: string;
+}
+
+function selectedUpgrade(
+  rig: Rig,
+  slot: "longRange" | "melee",
+  weaponName: string,
+): WeaponUpgradeNotice | null {
+  const upgrades = (WEAPON_UPGRADES[weaponName] || []) as WeaponUpgradeNotice[];
+  if (!upgrades.length) return null;
+  const selected = rig.weaponUpgrades?.[slot];
+  return upgrades.find((u) => u.id === selected) || upgrades[0];
+}
 
 export function AttackWizard({
   rig, mode, onClose, target, react,
@@ -310,6 +327,26 @@ export function AttackWizard({
   const title =
     mode === "ram" ? "💥 Ram" : mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";
 
+  const attackNotice = (() => {
+    const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;
+    const equipmentLine = equipment ? `${equipment.label} passive remains active.` : "";
+    if (mode === "ram") {
+      return {
+        main: "Ram uses no weapon, so weapon upgrades do not trigger.",
+        equipment: equipmentLine,
+      };
+    }
+    const slot = state.weapon;
+    const weaponName = weapons[slot];
+    const upgrade = selectedUpgrade(rig, slot, weaponName);
+    return {
+      main: upgrade
+        ? `${upgrade.name} activates on ${weaponName}: ${upgrade.tag || "selected upgrade effect applies"}.`
+        : `${weaponName} has no selected weapon upgrade.`,
+      equipment: equipmentLine,
+    };
+  })();
+
   if (noEnemies) return null;
 
   return (
@@ -401,6 +438,12 @@ export function AttackWizard({
         )}
 
         <div className="aw-dice-preview">{dicePreview}</div>
+
+        <div className="aw-attack-notice" aria-live="polite">
+          <span className="aw-attack-notice-kicker">Before you attack</span>
+          <span>{attackNotice.main}</span>
+          {attackNotice.equipment ? <span>{attackNotice.equipment}</span> : null}
+        </div>
 
         <button className="aw-go" disabled={goDisabled} onClick={submit}>
           {goText}

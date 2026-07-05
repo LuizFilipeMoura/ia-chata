@@ -227,6 +227,18 @@ body.my-turn-glow::after {
   font-family: var(--font-mono); font-size: .62rem; letter-spacing: .03em;
   color: var(--oil-hi); line-height: 1.4;
 }
+.aw-attack-notice {
+  margin-top: .5rem; display: flex; flex-direction: column; gap: .2rem;
+  padding: .55rem .65rem; border-radius: 9px;
+  background: rgba(229,83,58,.08); border: 1px solid rgba(229,83,58,.28);
+  border-left: 3px solid var(--ember);
+  font-family: var(--font-display); font-size: .68rem; line-height: 1.35;
+  color: var(--txt-dim);
+}
+.aw-attack-notice-kicker {
+  font-family: var(--font-mono); font-size: .55rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ember-hi);
+}
 
 /* Effective-range readout under the fire drawer's controls */
 .aw-range {
