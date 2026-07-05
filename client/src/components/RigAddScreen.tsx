@@ -1,5 +1,6 @@
 import { canAddRigForSide, MAX_RIGS_TOTAL, MAX_RIGS_PER_SIDE } from "/shared/game-state.js";
 import { useRoomState } from "../state/RoomStateContext";
+import { useWizard } from "../state/WizardContext";
 
 interface Props {
   onCommission?: () => void;
@@ -7,6 +8,7 @@ interface Props {
 
 export function RigAddScreen({ onCommission }: Props) {
   const { rigs, game, session } = useRoomState();
+  const { openCommission } = useWizard();
   const owner = session?.side || "a";
   const canAdd = canAddRigForSide({ rigs, game }, owner);
 
@@ -41,7 +43,7 @@ export function RigAddScreen({ onCommission }: Props) {
             type="button"
             disabled={!canAdd}
             title={message}
-            onClick={() => onCommission?.()}
+            onClick={() => (onCommission ?? openCommission)()}
           >
             {canAdd ? "+ Commission" : "Full"}
           </button>

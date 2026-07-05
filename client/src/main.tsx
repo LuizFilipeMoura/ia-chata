@@ -12,6 +12,7 @@ import { RoomProvider } from "./state/RoomStateContext";
 import { UiProvider } from "./state/UiStateContext";
 import { DrawerProvider } from "./state/DrawerContext";
 import { RollProvider } from "./state/RollContext";
+import { WizardProvider } from "./state/WizardContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -19,7 +20,9 @@ createRoot(document.getElementById("root")!).render(
       <UiProvider>
         <DrawerProvider>
           <RollProvider>
-            <App />
+            <WizardProvider>
+              <App />
+            </WizardProvider>
           </RollProvider>
         </DrawerProvider>
       </UiProvider>

@@ -5,8 +5,13 @@ declare module "/shared/game-state.js" {
   export const MAX_RIGS_TOTAL: number;
   export const SUPPORTED_RIG_CLASSES: string[];
   export const WEAPONS: Record<string, string[]>;
-  export const EQUIPMENT: Record<string, { label: string; passive: string; active?: string }>;
-  export const WEAPON_UPGRADES: Record<string, Array<{ id: string; name: string; [k: string]: unknown }>>;
+  export const EQUIPMENT: Record<string, {
+    family: string;
+    label: string;
+    passive: string;
+    active: { key: string; label: string; heat: number; text: string };
+  }>;
+  export const WEAPON_UPGRADES: Record<string, Array<{ id: string; name: string; tag: string; [k: string]: unknown }>>;
   export const RIG_DEFAULTS: Record<string, { hull: number; arms: number; legs: number; engine: number }>;
   export function canAddRigForSide(room: { rigs: Rig[]; game?: GameState | null }, sideId: string): boolean;
   export function heatMeter(rig: Rig): {
