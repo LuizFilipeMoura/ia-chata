@@ -471,7 +471,9 @@ function runRecovery(room) {
   for (const rig of room.rigs) {
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
-      rig.engine.heat = Math.max(floor, rig.engine.heat - 2);
+      // Radiator Array (Cooling) — cools 3 heat instead of the usual 2.
+      const cooling = rig.equipment === "radiator-array" ? 3 : 2;
+      rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
     rig.activated = false;
     rig.speedHalvedNextRound = false;

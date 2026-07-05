@@ -758,3 +758,30 @@ test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy ri
   assert.equal(rig.hardened, false);
   assert.equal(rig.overclockCoreUsed, false);
 });
+
+test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
+  const r = createRoom("X");
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 3; i++) {
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, lr: "Mini Gun", melee: "Sword",
+        equipment: owner === "a" && i === 1 ? "radiator-array" : undefined } });
+    }
+  }
+  for (const side of ["a", "b"]) applyCommand(r, { verb: "ready", attrs: { side } });
+  applyCommand(r, { verb: "initiative", attrs: {} });
+
+  const cooled = findRig(r, "a1");   // has Radiator Array
+  const plain = findRig(r, "a2");    // no equipment
+  cooled.engine.heat = 5;
+  plain.engine.heat = 5;
+
+  // Drive every rig to its activation and immediately end it so Recovery fires.
+  while (r.game.phase === "activation") {
+    const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
+    applyCommand(r, { verb: "activate", attrs: { name: active.name } });
+    if (r.game.turn?.activeRigId) applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
+  }
+
+  assert.equal(cooled.engine.heat, 2); // 5 - 3
+  assert.equal(plain.engine.heat, 3);  // 5 - 2
+});
