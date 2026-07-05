@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RigItem } from "./RigItem";
+import { GlossaryTipProvider } from "../../state/GlossaryTipContext";
 import type { Rig } from "../../state/types";
 
 const rig: Rig = {
@@ -13,8 +14,25 @@ const rig: Rig = {
 
 test("damage button issues a damage command", async () => {
   const onCommand = vi.fn();
-  render(<RigItem rig={rig} isActive={false} isOpen started={false}
-    canActivateNow={false} onCommand={onCommand} onToggle={() => {}} onActivateLocal={() => {}} />);
+  render(
+    <GlossaryTipProvider>
+      <RigItem rig={rig} isActive={false} isOpen started={false}
+        canActivateNow={false} onCommand={onCommand} onToggle={() => {}} onActivateLocal={() => {}} />
+    </GlossaryTipProvider>,
+  );
   await userEvent.click(screen.getByRole("button", { name: /Damage hull/i }));
   expect(onCommand).toHaveBeenCalledWith("damage", { name: "Stalker", loc: "hull", amount: "1" });
+});
+
+test("renders the Loadout panel with weapon names", () => {
+  const onCommand = vi.fn();
+  render(
+    <GlossaryTipProvider>
+      <RigItem rig={rig} isActive={false} isOpen started={false}
+        canActivateNow={false} onCommand={onCommand} onToggle={() => {}} onActivateLocal={() => {}} />
+    </GlossaryTipProvider>,
+  );
+  expect(screen.getByText("Loadout")).toBeInTheDocument();
+  expect(screen.getByText("Autocannon")).toBeInTheDocument();
+  expect(screen.getByText("Fist")).toBeInTheDocument();
 });
