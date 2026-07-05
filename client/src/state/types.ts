@@ -9,6 +9,28 @@ export interface Engine extends Component {
   heat: number;
 }
 
+export type PrepType = "brace" | "evasive" | "return";
+
+export interface Preparation {
+  type?: PrepType;
+  source?: "answer" | "action";
+  faceUp?: boolean;
+  hidden?: boolean; // set by publicState redaction for the opponent
+}
+
+export interface PendingAnswer {
+  side: string;
+  remaining: number;
+}
+
+export interface PendingReaction {
+  kind: "evasive" | "return";
+  attackerId: number;
+  targetId: number;
+  defender: string;
+  attack?: Record<string, unknown>;
+}
+
 export interface Rig {
   id: number;
   name: string;
@@ -22,6 +44,7 @@ export interface Rig {
   weaponUpgrades?: { longRange: string; melee: string };
   equipment: string | null;
   loaded?: { longRange: boolean; melee: boolean };
+  preparation?: Preparation | null;
   activated: boolean;
   destroyed: boolean;
 }
@@ -44,6 +67,7 @@ export interface Resolution {
   id: number;
   kind?: string;
   rigId?: number;
+  prep?: string;
   summary?: string;
   effects?: string[];
   rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
@@ -73,6 +97,9 @@ export interface GameState {
   resolutions?: Resolution[];
   recoveryVp?: Record<string, unknown>;
   pendingBlast?: unknown;
+  answerTokens?: Record<string, number>;
+  pendingAnswer?: PendingAnswer | null;
+  pendingReaction?: PendingReaction | null;
 }
 
 export interface Session {
