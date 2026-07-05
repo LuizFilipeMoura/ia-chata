@@ -27,6 +27,15 @@ export function FieldMap({ field, objectives, mySide, ownerSide }: Props) {
   const tri = (c: { x: number; y: number }) =>
     `${sx(e0.x)},${sy(e0.y)} ${sx(c.x)},${sy(c.y)} ${sx(e1.x)},${sy(e1.y)}`;
 
+  // Pull a corner point toward the field centre so a corner-anchored label sits
+  // inside its deployment triangle instead of clipping the SVG edge.
+  const towardCenter = (c: { x: number; y: number }, t = 0.26) => ({
+    x: c.x + (field.width / 2 - c.x) * t,
+    y: c.y + (field.height / 2 - c.y) * t,
+  });
+  const mineLabel = towardCenter(mineC);
+  const foeLabel = towardCenter(foeC);
+
   return (
     <svg
       className="field-map"
@@ -67,10 +76,10 @@ export function FieldMap({ field, objectives, mySide, ownerSide }: Props) {
         </g>
       ))}
 
-      <text className="fm-zone-label" x={sx(mineC.x)} y={sy(mineC.y)} textAnchor="middle">
+      <text className="fm-zone-label" x={sx(mineLabel.x)} y={sy(mineLabel.y)} textAnchor="middle">
         You deploy
       </text>
-      <text className="fm-zone-label" x={sx(foeC.x)} y={sy(foeC.y)} textAnchor="middle">
+      <text className="fm-zone-label" x={sx(foeLabel.x)} y={sy(foeLabel.y)} textAnchor="middle">
         Enemy deploys
       </text>
     </svg>
