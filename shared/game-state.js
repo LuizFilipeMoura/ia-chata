@@ -625,6 +625,12 @@ export function formatBattleState(room, side) {
   lines.push(`Round ${g.round}/5`);
   lines.push(`Sides: ${g.sides.map((s) => `${s.name} (${s.id}) VP ${s.vp}${s.ready ? " READY" : ""}`).join(" | ")}`);
   lines.push(`Battle started: ${g.started ? "yes" : "no"}`);
+  lines.push(`Phase: ${g.phase}${g.outcome ? ` (winner: ${g.outcome.winner || "draw"})` : ""}`);
+  if (g.turn) {
+    const active = g.turn.activeRigId ? room.rigs.find((x) => x.id === g.turn.activeRigId) : null;
+    const acting = active ? ` — ${active.name} (${g.turn.actionsUsed}/${g.turn.actionsMax} actions)` : "";
+    lines.push(`Turn: ${g.turn.side}${acting}`);
+  }
   if (room.rigs.length === 0) {
     lines.push("(No Rigs are being tracked yet.)");
   } else {

@@ -551,3 +551,19 @@ test("answer token is rejected without tokens, off-side, or when already prepare
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "evasive", side: "a" } }); // already prepared
   assert.equal(r.version, v);
 });
+
+test("publicState carries the new round-loop fields", () => {
+  const r = startedRoom();
+  const view = publicState(r, "a");
+  assert.equal(view.game.phase, "activation");
+  assert.equal(view.game.turn.side, "b");
+  assert.equal(view.game.autoResolve, true);
+  assert.ok(Array.isArray(view.game.resolutions));
+});
+
+test("formatBattleState reports phase and whose turn it is", () => {
+  const r = startedRoom();
+  const out = formatBattleState(r, "a");
+  assert.match(out, /Phase: activation/i);
+  assert.match(out, /Turn: b/);
+});
