@@ -10,11 +10,18 @@
 
 **Rules note — §7/§8 contradiction:** The rulebook gives both a generic "overflow to another location" (§7) and specific "additional damage" clauses per component (§8). This plan enforces the **§8 additional-damage clauses** (Hull/Engine → destroyed, Arms → +3 Hull & weapon gone, Legs → immobilised) as the more specific rule; generic §7 overflow is not implemented.
 
+**REVISION (weapon data source):** Since this plan was written, `WEAPONS` in `shared/game-state.js` was restructured into a keyed lookup carrying full combat profiles (`WEAPONS.longRange["Mini Gun"] = { rof, str, acc:[near,far], rng:[near,far], perks }`, with `0` as the single "–" ACC sentinel). This **supersedes the separate `WEAPON_PROFILES`** originally planned for `rules.js`. Concretely, everywhere below that says `WEAPON_PROFILES[name]`:
+> - `rules.js` (Task 1) adds ONLY the non-weapon tables (`IMPACT`, `AIM`, `WEIGHT_STR_MOD`, `RAM_STR`, `hitLocation`, `impactSeverity`) — NOT `WEAPON_PROFILES`.
+> - `combat.js` imports only those from `rules.js` (never `game-state.js`, preserving the no-cycle rule). Its pure functions still take a `profile` object param whose shape (`{rof,str,acc,rng,perks}`) matches a `WEAPONS` entry exactly.
+> - `resolveAttack` resolves its profile via an injected `ctx.profileFor(slot, name)` (game-state's `combatCtx` provides `profileFor: (slot, name) => WEAPONS[slot]?.[name]`), NOT a direct `WEAPON_PROFILES` lookup.
+> - Test files (`combat.test.js`) import `WEAPONS` from `./game-state.js` and use `WEAPONS.melee["Claw"]` etc. as profile fixtures.
+> - The 12-weapon profile-shape test already lives in `game-state.test.js` (added with the restructure), so Task 1 does NOT re-add it.
+
 ---
 
 ## File Structure
 
-- **Modify** `shared/rules.js` — add `WEAPON_PROFILES`, `IMPACT`, `AIM`, `WEIGHT_STR_MOD`, `RAM_STR`, `hitLocation`, `impactSeverity`.
+- **Modify** `shared/rules.js` — add `IMPACT`, `AIM`, `WEIGHT_STR_MOD`, `RAM_STR`, `hitLocation`, `impactSeverity` (weapon profiles already live in `game-state.js`'s `WEAPONS`; see REVISION above).
 - **Create** `shared/combat.js` — `resolveAttack`, `resolveRam`, `computeModifiedAim`, all pure except through the injected `ctx`.
 - **Modify** `shared/game-state.js` — `applyDamage` (cascade + destruction), a `combatCtx`, wire `action` verb `fire`/`aimed`/`ram`, add `blast` verb, replace raw `damageRig` calls in `applyOverheat` with `applyDamage`.
 - **Modify** `shared/game-state.test.js`, **create** `shared/combat.test.js` — tests.
