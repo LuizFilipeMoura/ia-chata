@@ -975,6 +975,14 @@ export function publicState(room, side) {
   const sideId = normalizeSide(room, side);
   const bounties = {};
   if (sideId && room.game.bounties[sideId]) bounties[sideId] = room.game.bounties[sideId];
+  const viewer = sideId;
+  const rigs = room.rigs.map((rig) => {
+    const prep = rig.preparation;
+    if (prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {
+      return { ...rig, preparation: { hidden: true } };
+    }
+    return rig;
+  });
   return {
     code: room.code,
     version: room.version,
@@ -988,7 +996,7 @@ export function publicState(room, side) {
       objectives: room.game.objectives.map((objective) => ({ ...objective })),
       bounties,
     },
-    rigs: room.rigs,
+    rigs,
   };
 }
 

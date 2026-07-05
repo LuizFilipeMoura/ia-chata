@@ -1216,3 +1216,20 @@ test("answer token places a facedown reaction and spends a token", () => {
   assert.deepEqual(rig.preparation, { type: "brace", source: "answer", faceUp: false });
   assert.equal(r.game.answerTokens.a, 1);
 });
+
+test("publicState hides an opponent's facedown reaction but not the owner's", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "return", side: "a" } });
+  const asOwner = publicState(r, "a").rigs.find((x) => x.name === "a1");
+  const asFoe = publicState(r, "b").rigs.find((x) => x.name === "a1");
+  assert.equal(asOwner.preparation.type, "return");           // owner sees the type
+  assert.deepEqual(asFoe.preparation, { hidden: true });      // foe sees only "set"
+});
+
+test("publicState reveals a face-up reaction to everyone", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
+  findRig(r, "a1").preparation.faceUp = true;
+  const asFoe = publicState(r, "b").rigs.find((x) => x.name === "a1");
+  assert.equal(asFoe.preparation.type, "brace");
+});
