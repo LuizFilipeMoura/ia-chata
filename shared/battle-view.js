@@ -1,6 +1,7 @@
 // Pure, DOM-free view-model derived from room state. Shared so it can be unit
 // tested in node and imported by the browser (via the /shared static mount).
 import { ACTIONS } from "./rules.js";
+import { EQUIPMENT } from "./game-state.js";
 
 const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repair", "prepare", "shutdown"];
 
@@ -8,12 +9,17 @@ const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repai
 // whether the current budget/state allows it.
 export function availableActions(rig, turn) {
   const left = turn.actionsMax - turn.actionsUsed;
-  return ACTION_ORDER.map((key) => {
+  const list = ACTION_ORDER.map((key) => {
     const def = ACTIONS[key];
     let enabled = left > 0;
     if (key === "shutdown") enabled = turn.actionsUsed === 0; // declared before any action
     return { key, label: def.label, heat: def.heat, enabled };
   });
+  if (rig.equipment && EQUIPMENT[rig.equipment]) {
+    const active = EQUIPMENT[rig.equipment].active;
+    list.push({ key: active.key, label: active.label, heat: active.heat, enabled: left > 0 });
+  }
+  return list;
 }
 
 export function actionBudget(rig, turn) {

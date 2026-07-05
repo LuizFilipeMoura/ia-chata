@@ -66,3 +66,18 @@ test("outcomeText names the winner or a draw", () => {
   assert.match(outcomeText({ winner: null, reason: "draw" }, sides), /Draw/);
   assert.equal(outcomeText(null, sides), "");
 });
+
+test("availableActions appends the Rig's equipment active, gated by budget", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const plain = availableActions(rig(), turn);
+  assert.equal(plain.some((a) => a.key === "harden"), false);
+
+  const armored = availableActions(rig({ equipment: "ablative-plating" }), turn);
+  const harden = armored.find((a) => a.key === "harden");
+  assert.equal(harden.label, "Harden");
+  assert.equal(harden.heat, 1);
+  assert.equal(harden.enabled, true);
+
+  const capped = availableActions(rig({ equipment: "ablative-plating" }), { activeRigId: 1, actionsUsed: 5, actionsMax: 5 });
+  assert.equal(capped.find((a) => a.key === "harden").enabled, false);
+});
