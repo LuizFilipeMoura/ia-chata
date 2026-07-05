@@ -1,3 +1,5 @@
+import { ACTIONS, heatThreshold } from "./rules.js";
+
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
   medium:   { hull: 7, arms: 6, legs: 6, engine: 5 },
@@ -333,6 +335,79 @@ function handoff(room) {
 // TEMPORARY stub — replaced with the full cooldown/reset logic in Task 7.
 function runRecovery(room) { room.game.phase = "recovery"; }
 
+function bumpHeat(rig, n) {
+  rig.engine.heat = Math.max(engineHeatFloor(rig), rig.engine.heat + n);
+  recompute(rig);
+}
+
+// End the acting rig's activation: run the overheat check (§6), mark it done,
+// close the turn, then hand off (which may trigger Recovery).
+function endActivation(room, rig, dice, random) {
+  const m = heatMeter(rig);
+  if (m.over > 0) {
+    const roll = rollD(12, dice?.overheat, random);
+    const total = roll + m.bonus;
+    const row = applyOverheat(rig, total);
+    pushResolution(room, {
+      kind: "overheat", actor: rig.owner, rigId: rig.id,
+      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      summary: `${rig.name}: ${row.label} (D12 ${roll}+${m.bonus}=${total})`,
+      effects: [row.text],
+    });
+    checkAnnihilation(room);
+  }
+  rig.activated = true;
+  room.game.turn.activeRigId = null;
+  handoff(room);
+}
+
+// Apply one Heat Threshold Table row's effect to a rig (§6). Returns the row.
+function applyOverheat(rig, total) {
+  const row = heatThreshold(total);
+  if (row.key === "stall") damageRig(rig, "engine", 1);
+  else if (row.key === "detonation") damageRig(rig, "arms", 2);
+  else if (row.key === "blowout") { damageRig(rig, "legs", 2); rig.speedHalvedNextRound = true; }
+  else if (row.key === "buckling") for (const l of LOCS) damageRig(rig, l, 1);
+  else if (row.key === "engine-failure") { damageRig(rig, "engine", 2); rig.noCool = true; }
+  else if (row.key === "catastrophic") { for (const l of LOCS) setRigSp(rig, l, 0); rig.noCool = true; }
+  return row;
+}
+
+// One action during an activation. Returns whether anything changed.
+function performAction(room, rig, act, a, random) {
+  const t = room.game.turn;
+  if (act === "shutdown") {
+    if (t.actionsUsed !== 0) return false;
+    rig.engine.heat = engineHeatFloor(rig);
+    recompute(rig);
+    endActivation(room, rig, null, random);
+    return true;
+  }
+  const def = ACTIONS[act];
+  if (!def || t.actionsUsed >= t.actionsMax) return false;
+  if (act === "reload") {
+    rig.loaded = { longRange: true, melee: true };
+  } else if (act === "repair") {
+    const roll = rollD(12, a.dice?.repair, random);
+    const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
+    if (amt > 0) repairRig(rig, loc, amt);
+    pushResolution(room, {
+      kind: "repair", actor: rig.owner, rigId: rig.id,
+      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
+    });
+  } else if (act === "prepare") {
+    rig.preparation = { type: String(a.prep || "brace"), source: "action" };
+  }
+  bumpHeat(rig, def.heat);
+  t.actionsUsed += 1;
+  return true;
+}
+
+// Replaced with the real annihilation check in Task 8.
+function checkAnnihilation(room) { /* replaced in Task 8 */ }
+
 // Apply a single normalized command { verb, attrs } to the room in place.
 // Returns the room. Bumps room.version only when something actually changed.
 export function applyCommand(room, cmd, context = {}, options = {}) {
@@ -410,6 +485,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         rig.loaded = { longRange: true, melee: true };
       }
       changed = true;
+    }
+  } else if (verb === "action") {
+    const rig = findRig(room, a.name);
+    const t = room.game.turn;
+    if (rig && t && room.game.phase === "activation" && t.activeRigId === rig.id) {
+      changed = performAction(room, rig, String(a.action || "").toLowerCase(), a, options.random);
     }
   } else {
     const rig = findRig(room, a.name);

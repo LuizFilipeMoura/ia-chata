@@ -393,3 +393,44 @@ test("activating a skip-flagged rig burns the activation and hands off", () => {
   assert.equal(r.game.turn.activeRigId, null);
   assert.equal(r.game.turn.side, "a"); // handed off
 });
+
+test("actions add their heat and spend the budget", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
+  const b1 = findRig(r, "b1");
+  assert.equal(b1.engine.heat, 3);            // 1 + 2
+  assert.equal(r.game.turn.actionsUsed, 2);
+});
+
+test("actions beyond the budget are rejected", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  for (let i = 0; i < 6; i++) applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  assert.equal(r.game.turn.actionsUsed, 5);   // capped at actionsMax
+});
+
+test("reload reloads all weapons; repair rolls a D12 and heals", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.loaded.longRange = false;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "reload" } });
+  assert.equal(b1.loaded.longRange, true);
+  applyCommand(r, { verb: "damage", attrs: { name: "b1", loc: "arms", amount: "3" } }); // 5 -> 2
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "repair", loc: "arms", dice: { repair: 10 } } });
+  assert.equal(b1.arms.sp, 4);                // 10+ repairs 2
+  assert.equal(r.game.resolutions.at(-1).kind, "repair");
+});
+
+test("shut down before any action cools to the floor and ends the activation", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.engine.heat = 5;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
+  assert.equal(b1.engine.heat, 0);
+  assert.equal(b1.activated, true);
+  assert.equal(r.game.turn.activeRigId, null);
+});
