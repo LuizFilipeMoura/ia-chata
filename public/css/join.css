@@ -31,4 +31,14 @@
   background: linear-gradient(180deg, var(--oil-hi), var(--oil)); color: #241606;
   font-weight: 700; border-radius: 10px; padding: .7rem; font-size: .95rem; letter-spacing: .06em;
 }
+.join-btn:disabled {
+  background: var(--iron-800); color: var(--txt-faint);
+  border: 1px solid var(--line); cursor: default; box-shadow: none;
+}
+.join-hint {
+  min-height: 1rem; margin: -.2rem 0 0; text-align: center;
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .04em;
+  color: var(--txt-faint);
+}
+.join-hint--go { color: var(--act); }
 .join-err { min-height: 1rem; margin: 0; color: var(--ember-hi); font-size: .78rem; text-align: center; }

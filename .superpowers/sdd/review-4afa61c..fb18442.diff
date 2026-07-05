@@ -1,0 +1,234 @@
+﻿# Review package: 4afa61c..fb18442
+
+## Commits
+fb18442 feat: apply weapon upgrade profile effects
+
+## Files changed
+ shared/combat.js      | 19 ++++++++++++++-----
+ shared/combat.test.js | 38 +++++++++++++++++++++++++++++++++++++-
+ shared/game-state.js  | 26 +++++++++++++++++++++++++-
+ 3 files changed, 76 insertions(+), 7 deletions(-)
+
+## Diff
+diff --git a/shared/combat.js b/shared/combat.js
+index d8539da..79ff50f 100644
+--- a/shared/combat.js
++++ b/shared/combat.js
+@@ -10,42 +10,51 @@ function rollD(sides, provided, random) {
+     const v = Math.floor(Number(provided));
+     if (Number.isFinite(v) && v >= 1 && v <= sides) return v;
+   }
+   return Math.floor((random || Math.random)() * sides) + 1;
+ }
+ 
+ // §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
+ export function computeModifiedAim(attacker, profile, opts) {
+   const base = AIM[attacker.weightClass] ?? 4;
+   const weaponAcc = profile.acc[opts.range === "far" ? 1 : 0] || 0;
+-  const cover = Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
++  const cover = profile.upgradeEffect?.ignoreCover ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
+   const aimedPenalty = opts.aimed && !profile.perks.includes("Precision") ? -2 : 0;
+   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
+   const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty;
+   return base - accTotal;
+ }
+ 
+ // §7.4 — roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
+ // (each 1 rolled under Full Auto / Charged Shot adds 1 heat, §6).
+ export function rollToHit(attacker, profile, opts, providedDice, random) {
+   const modAim = computeModifiedAim(attacker, profile, opts);
+   const fullAuto = opts.fullAuto && profile.perks.includes("Full Auto");
+   const rof = profile.rof + (fullAuto ? 2 : 0);
+   const charged = opts.charged && profile.perks.includes("Charged Shot");
++  const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
++  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
+   const dice = [];
+   let hits = 0;
+   let fireModeHeat = 0;
++  let rerollsUsed = 0;
+   for (let i = 0; i < rof; i++) {
+-    const d = rollD(6, providedDice?.[i], random);
++    let d = rollD(6, providedDice?.[i], random);
++    let hit = d >= modAim || d === 6;
++    if (!hit && rerollsUsed < rerolls) {
++      rerollsUsed += 1;
++      d = rollD(6, providedDice?.rerolls?.[rerollsUsed - 1], random);
++      hit = d >= modAim || d === 6;
++    }
+     dice.push(d);
+-    if (d >= modAim || d === 6) hits += 1;
+-    if ((fullAuto || charged) && d === 1) fireModeHeat += 1;
++    if (hit) hits += 1;
++    if (heatOnOnes && d === 1) fireModeHeat += 1;
+   }
+   return { modAim, rof, hits, fireModeHeat, dice };
+ }
+ 
+ // §12/§7 — STR = weapon STR + weight modifier + Charged Shot.
+ export function computeStr(attacker, profile, opts) {
+   const charged = opts.charged && profile.perks.includes("Charged Shot") ? 2 : 0;
+   return profile.str + (WEIGHT_STR_MOD[attacker.weightClass] || 0) + charged;
+ }
+ 
+@@ -84,21 +93,21 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
+   }
+   return out;
+ }
+ 
+ // §7 — full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
+ // a resolution descriptor (or { ok:false, reason } when the shot can't be made).
+ // The weapon profile is resolved by the caller via ctx.profileFor(slot, name).
+ export function resolveAttack(room, attacker, target, opts, random, ctx) {
+   const slot = opts.weapon === "melee" ? "melee" : "longRange";
+   const weaponName = attacker.weapons?.[slot];
+-  const profile = ctx.profileFor(slot, weaponName);
++  const profile = ctx.profileFor(slot, weaponName, attacker);
+   if (!profile) return { ok: false, reason: "no-weapon" };
+   if (attacker.weaponsDestroyed.includes(weaponName)) return { ok: false, reason: "weapon-destroyed" };
+   if (opts.range === "out") return { ok: false, reason: "range" };
+   if (slot === "longRange" && !attacker.loaded.longRange) return { ok: false, reason: "reload" };
+ 
+   const th = rollToHit(attacker, profile, opts, opts.dice?.toHit, random);
+   const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat;
+   if (slot === "longRange") attacker.loaded.longRange = false;
+ 
+   const rolls = [{ sides: 6, value: th.hits, label: `hits (${th.hits}/${th.rof})` }];
+diff --git a/shared/combat.test.js b/shared/combat.test.js
+index f5e1363..d705fc2 100644
+--- a/shared/combat.test.js
++++ b/shared/combat.test.js
+@@ -1,14 +1,14 @@
+ import { test } from "node:test";
+ import assert from "node:assert/strict";
+ import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts } from "./combat.js";
+-import { WEAPONS } from "./game-state.js";
++import { WEAPONS, makeRig, effectiveWeaponProfile } from "./game-state.js";
+ 
+ const attacker = { weightClass: "medium", hull: { sp: 7 } };
+ 
+ test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () => {
+   const claw = WEAPONS.melee["Claw"]; // acc [1,1]
+   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 0 }), 3); // 4 - 1
+   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 2 }), 5); // 4 - 1 + 2
+   const sniper = WEAPONS.longRange["Sniper Cannon"]; // Precision
+   assert.equal(computeModifiedAim(attacker, sniper, { range: "near", cover: 0, aimed: true }), 4); // waived
+   const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
+@@ -66,10 +66,46 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
+     { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+   assert.equal(out2[0].total, 10); // 5 + 8 - 2(brace) - 1(harden)
+ });
+ 
+ test("Raking Fire against the front arc deals no damage", () => {
+   const mini = WEAPONS.longRange["Mini Gun"];
+   const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",
+     { arc: "front", hits: 3 }, { impacts: [6, 6, 6] }, () => 0);
+   assert.equal(out.every((h) => h.sp === 0), true);
+ });
++
++test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-penalty upgrades", () => {
++  const mini = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
++  assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
++
++  const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
++  assert.equal(computeStr(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 10);
++
++  const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "keen-edge" });
++  assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Rend"), true);
++
++  const lance = makeRig(4, "Reach", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "couched-reach" });
++  assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [2.5, 2.5]);
++
++  const sniper = makeRig(5, "Barrel", "medium", "a", { longRange: "Sniper Cannon", melee: "Sword", longRangeUpgrade: "match-barrel" });
++  assert.deepEqual(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).acc, [0, 0]);
++});
++
++test("rollToHit uses selected upgrade heat-on-ones and one missed-die reroll", () => {
++  const beltRig = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
++  const belt = effectiveWeaponProfile("longRange", "Mini Gun", beltRig);
++  const beltRoll = rollToHit(beltRig, belt, { range: "near", cover: 0 }, [1, 1, 2, 2, 3, 3, 4, 4, 5, 6], () => 0);
++  assert.equal(beltRoll.rof, 10);
++  assert.equal(beltRoll.fireModeHeat, 2);
++
++  const gyroRig = makeRig(2, "Gyro", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "gyro-mount" });
++  const gyro = effectiveWeaponProfile("longRange", "Double MG", gyroRig);
++  const gyroRoll = rollToHit(gyroRig, gyro, { range: "near", cover: 0 }, [1, 1, 1, 1, 1, 1, 1, 1], () => 1);
++  assert.equal(gyroRoll.hits, 1);
++});
++
++test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
++  const mortarRig = makeRig(1, "Airburst", "medium", "a", { longRange: "Mortar", melee: "Sword", longRangeUpgrade: "airburst-fuze" });
++  const mortar = effectiveWeaponProfile("longRange", "Mortar", mortarRig);
++  assert.equal(computeModifiedAim(mortarRig, mortar, { range: "near", cover: 2 }), 5);
++});
+diff --git a/shared/game-state.js b/shared/game-state.js
+index be71aeb..ec7d4d8 100644
+--- a/shared/game-state.js
++++ b/shared/game-state.js
+@@ -140,20 +140,44 @@ export function normalizeWeaponUpgrade(weaponName, upgradeId) {
+   if (!Array.isArray(upgrades) || upgrades.length === 0) return null;
+   const ref = String(upgradeId || "").trim().toLowerCase();
+   return upgrades.find((u) => u.id.toLowerCase() === ref)?.id || upgrades[0].id;
+ }
+ 
+ export function upgradeForWeapon(weaponName, upgradeId) {
+   const normalized = normalizeWeaponUpgrade(weaponName, upgradeId);
+   return (WEAPON_UPGRADES[weaponName] || []).find((u) => u.id === normalized) || null;
+ }
+ 
++function uniquePerks(base, added = []) {
++  return [...new Set([...(base || []), ...(added || [])])];
++}
++
++export function effectiveWeaponProfile(slot, weaponName, rig) {
++  const base = WEAPONS[slot]?.[weaponName];
++  if (!base) return null;
++  const upgrade = upgradeForWeapon(weaponName, rig?.weaponUpgrades?.[slot]);
++  const effect = upgrade?.effect || {};
++  const profile = {
++    ...base,
++    rof: base.rof + (effect.rof || 0),
++    str: base.str + (effect.str || 0),
++    acc: [...base.acc],
++    rng: [...base.rng],
++    perks: uniquePerks(base.perks, effect.perks),
++    upgrade: upgrade || null,
++    upgradeEffect: effect,
++  };
++  if (effect.noFarPenalty) profile.acc[1] = Math.max(profile.acc[1] || 0, profile.acc[0] || 0);
++  if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
++  return profile;
++}
++
+ export function createRoom(code) {
+   return {
+     code,
+     version: 0,
+     nextRigId: 1,
+     game: {
+       round: 1,
+       sides: [
+         { id: "a", name: "You",   vp: 0, claimed: false, ready: false },
+         { id: "b", name: "Enemy", vp: 0, claimed: false, ready: false },
+@@ -589,21 +613,21 @@ function applyOverheat(room, rig, total, opts) {
+   return row;
+ }
+ 
+ // Mutation primitives + weapon-profile lookup injected into the pure combat
+ // module so it never imports game-state.js (avoids an import cycle).
+ function combatCtx() {
+   return {
+     applyDamage,
+     bumpHeat,
+     pushResolution,
+-    profileFor: (slot, name) => WEAPONS[slot]?.[name],
++    profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
+   };
+ }
+ 
+ // One action during an activation. Returns whether anything changed.
+ function performAction(room, rig, act, a, random) {
+   const t = room.game.turn;
+   if (act === "shutdown") {
+     if (t.actionsUsed !== 0) return false;
+     rig.engine.heat = engineHeatFloor(rig);
+     recompute(rig);

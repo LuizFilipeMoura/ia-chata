@@ -10,23 +10,41 @@ const summaryEl = document.getElementById("rollSummary");
 const effectsEl = document.getElementById("rollEffects");
 const closeBtn = document.getElementById("rollClose");
 const formEl = document.getElementById("rollForm");
+const okBtn = document.getElementById("rollOk");
 
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let hideTimer = null;
+let revealTimer = null;
+
+const OK_REVEAL_MS = 900;
 
 const KIND_TONE = { overheat: "crit", attack: "crit", ram: "crit", destruction: "crit", blast: "crit", repair: "cool", initiative: "oil", perk: "crit", skip: "warn" };
 
 function open() {
   clearTimeout(hideTimer);
+  hideOk();
   scrim.hidden = false;
   void scrim.offsetWidth;
   scrim.classList.add("show");
 }
 export function closeRoll() {
+  hideOk();
   scrim.classList.remove("show");
   hideTimer = setTimeout(() => { scrim.hidden = true; }, 220);
 }
+function hideOk() {
+  clearTimeout(revealTimer);
+  okBtn.hidden = true;
+}
+// Revealed a beat after a resolution settles, so it doesn't compete with the
+// dice/summary/effects animations. It never auto-dismisses — the user always
+// has to click it.
+function showOkAfterDelay() {
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(() => { okBtn.hidden = false; }, reduced ? 0 : OK_REVEAL_MS);
+}
 closeBtn.addEventListener("click", closeRoll);
+okBtn.addEventListener("click", closeRoll);
 scrim.addEventListener("click", (e) => { if (e.target === scrim) closeRoll(); });
 
 // Animate one resolution entry. Returns a promise that resolves when it settles.
@@ -69,6 +87,7 @@ export function playResolution(entry) {
       el.textContent = text;
       effectsEl.appendChild(el);
     });
+    showOkAfterDelay();
   };
 
   if (reduced || dice.length === 0) { finish(); return Promise.resolve(); }

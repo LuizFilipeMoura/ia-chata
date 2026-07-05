@@ -12,9 +12,19 @@
 <link rel="stylesheet" href="/css/rig-sheet.css" />
 <link rel="stylesheet" href="/css/battle.css" />
 <link rel="stylesheet" href="/css/join.css" />
+<link rel="stylesheet" href="/css/glossary.css" />
 <link rel="stylesheet" href="/css/rig-wizard.css" />
 </head>
 <body>
+
+<div id="turnBanner" class="turn-banner" hidden>
+  <span id="tbIcon" class="tb-icon">◈</span>
+  <div class="tb-text">
+    <span id="tbPrimary" class="tb-primary"></span>
+    <span id="tbSecondary" class="tb-secondary"></span>
+  </div>
+  <div id="tbCta" class="tb-cta"></div>
+</div>
 
 <div id="joinGate" class="join-gate">
   <div class="join-card">
@@ -26,7 +36,8 @@
       <button class="join-side" data-side="a" type="button">You (Side A)</button>
       <button class="join-side" data-side="b" type="button">Enemy (Side B)</button>
     </div>
-    <button id="joinBtn" class="join-btn" type="button">Enter room</button>
+    <button id="joinBtn" class="join-btn btn btn--primary" type="button">Enter room</button>
+    <p id="joinHint" class="join-hint">Enter a room code, your name, and pick a side.</p>
     <p id="joinErr" class="join-err"></p>
   </div>
 </div>
@@ -38,66 +49,69 @@
     <span class="brand-sub">RIG CONTROL TERMINAL</span>
   </header>
 
-  <main id="messages" aria-live="polite"></main>
-
-  <footer class="dock">
-    <div class="status-row" id="statusRow"></div>
-    <div class="cmdbar" role="toolbar" aria-label="Terminal controls">
-      <button id="rigToggle" class="cmd" aria-pressed="false" title="Squadron status — the in-game Rig condition tracker"><span class="ic">🛠</span>Rigs</button>
-      <button id="thinkToggle" class="cmd active" aria-pressed="true" title="Show the model's reasoning before it answers (slower). Turn off for faster replies."><span class="ic">🧠</span>Reason</button>
-      <button id="ttsToggle" class="cmd" aria-pressed="false" title="Read answers aloud"><span class="ic">🔊</span>TTS</button>
-      <button id="clearBtn" class="cmd" title="Clear the conversation to free up context. Your tracked Rigs are kept."><span class="ic">🧹</span>Clear</button>
-      <select id="langSelect" class="lang-select" aria-label="Speech recognition language">
-        <option value="pt-BR">PT</option>
-        <option value="en-US">EN</option>
-      </select>
+  <main id="stage" class="stage">
+    <div class="stage-head">
+      <h1 id="rigDeckTitle">Squadron Status</h1>
     </div>
+
+    <div id="battleHud" class="battle-hud" hidden>
+      <div class="bh-phase"><span id="bhPhase" class="bh-phase-label">Setup</span><span id="bhRound" class="bh-round">R1</span></div>
+      <div id="bhTurn" class="bh-turn"></div>
+      <div id="bhTokens" class="bh-tokens"></div>
+      <div id="bhPrompt" class="bh-prompt"></div>
+    </div>
+
+    <div id="rigList" class="rig-list">
+      <!-- accordion .rig-item entries (grouped by side) are injected here before the add card -->
+      <div id="rigAddScreen" class="rig-add-card">
+        <div class="rig-add">
+          <div class="rig-add-title">◈ Commission a Rig</div>
+          <div class="rig-add-hint">Name it, pick a weight class and weapons, then choose its equipment.</div>
+          <div class="rig-add-row">
+            <button id="rigAddBtn" class="rig-add-btn btn btn--primary" type="button">+ Commission</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="battleSetup" class="battle-setup" aria-live="polite">
+      <div>
+        <div id="battleReadyStatus" class="battle-ready-status">Ready check offline</div>
+        <div id="battleBounty" class="battle-bounty"></div>
+      </div>
+      <button id="diceMode" class="dice-mode" type="button" aria-pressed="false" title="Auto rolls with animation; Manual lets you enter physical dice">🎲 Auto</button>
+      <button id="readyBattle" class="ready-battle btn btn--primary" type="button">Ready</button>
+    </div>
+  </main>
+
+  <button id="chatFab" class="chat-fab" type="button" aria-label="Open rulebook assistant" aria-expanded="false">
+    <span class="chat-fab-ic">💬</span>
+  </button>
+
+  <section id="chatPanel" class="chat-panel" aria-hidden="true" aria-label="Rulebook assistant">
+    <div class="chat-grip"></div>
+    <div class="chat-head">
+      <span class="chat-title">◈ Rulebook Assistant</span>
+      <div class="chat-tools" role="toolbar" aria-label="Assistant controls">
+        <button id="thinkToggle" class="chat-chip active" aria-pressed="true" title="Show the model's reasoning before it answers (slower). Turn off for faster replies.">🧠</button>
+        <button id="ttsToggle" class="chat-chip" aria-pressed="false" title="Read answers aloud">🔊</button>
+        <select id="langSelect" class="lang-select" aria-label="Speech recognition language">
+          <option value="pt-BR">PT</option>
+          <option value="en-US">EN</option>
+        </select>
+        <button id="clearBtn" class="chat-chip" title="Clear the conversation to free up context. Your tracked Rigs are kept.">🧹</button>
+        <button id="chatClose" class="chat-chip chat-close" type="button" aria-label="Close assistant">✕</button>
+      </div>
+    </div>
+    <div class="status-row" id="statusRow"></div>
+    <main id="messages" aria-live="polite"></main>
     <div class="input-row">
       <button id="micBtn" class="icon-btn" aria-label="Toggle voice input" title="Voice input">🎤</button>
       <textarea id="textInput" rows="1" placeholder="Ask a rule or narrate a hit…" aria-label="Message"></textarea>
       <button id="sendBtn" class="icon-btn" aria-label="Send message" title="Send">➤</button>
     </div>
-  </footer>
+  </section>
 </div>
-
-<div id="sheetScrim" class="scrim" hidden></div>
-
-<section id="rigPanel" class="sheet" aria-label="Rig condition tracker" aria-hidden="true">
-  <div class="sheet-grip"></div>
-  <div class="sheet-head">
-    <h2 id="rigDeckTitle">Squadron Status</h2>
-    <button id="rigClose" class="sheet-close" type="button" aria-label="Close tracker">✕</button>
-  </div>
-
-  <div id="battleHud" class="battle-hud" hidden>
-    <div class="bh-phase"><span id="bhPhase" class="bh-phase-label">Setup</span><span id="bhRound" class="bh-round">R1</span></div>
-    <div id="bhTurn" class="bh-turn"></div>
-    <div id="bhTokens" class="bh-tokens"></div>
-    <div id="bhPrompt" class="bh-prompt"></div>
-  </div>
-
-  <div id="rigList" class="rig-list">
-    <!-- accordion .rig-item entries (grouped by side) are injected here before the add card -->
-    <div id="rigAddScreen" class="rig-add-card">
-      <div class="rig-add">
-        <div class="rig-add-title">◈ Commission a Rig</div>
-        <div class="rig-add-hint">Name it, pick a weight class and weapons, then choose its equipment.</div>
-        <div class="rig-add-row">
-          <button id="rigAddBtn" class="rig-add-btn" type="button">+ Commission</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="battleSetup" class="battle-setup" aria-live="polite">
-    <div>
-      <div id="battleReadyStatus" class="battle-ready-status">Ready check offline</div>
-      <div id="battleBounty" class="battle-bounty"></div>
-    </div>
-    <button id="diceMode" class="dice-mode" type="button" aria-pressed="false" title="Auto rolls with animation; Manual lets you enter physical dice">🎲 Auto</button>
-    <button id="readyBattle" class="ready-battle" type="button">Ready</button>
-  </div>
-</section>
 
 <div id="rollScrim" class="roll-scrim" hidden>
   <div id="rollConsole" class="roll-console" role="dialog" aria-modal="true" aria-label="Dice resolution">
@@ -106,9 +120,16 @@
     <div id="rollSummary" class="roll-summary"></div>
     <div id="rollEffects" class="roll-effects"></div>
     <div id="rollForm" class="roll-form" hidden></div>
+    <button id="rollOk" class="roll-ok" type="button" hidden>OK</button>
   </div>
 </div>
 <div id="outcomeBanner" class="outcome-banner" hidden></div>
+
+<div id="glossaryTip" class="glossary-tip" role="tooltip" hidden>
+  <div class="glossary-tip-term"></div>
+  <div class="glossary-tip-def"></div>
+  <button class="glossary-tip-close" type="button" aria-label="Close definition">✕</button>
+</div>
 
 <script type="module" src="/js/main.js"></script>
 

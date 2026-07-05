@@ -9,15 +9,30 @@ const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repai
 // whether the current budget/state allows it.
 export function availableActions(rig, turn) {
   const left = turn.actionsMax - turn.actionsUsed;
+  const rangedSpent = rig.loaded?.longRange === false; // fired, not yet reloaded
   const list = ACTION_ORDER.map((key) => {
     const def = ACTIONS[key];
     let enabled = left > 0;
+    let cost = def.slot;
+    let note = "";
     if (key === "shutdown") enabled = turn.actionsUsed === 0; // declared before any action
-    return { key, label: def.label, heat: def.heat, enabled };
+    if (key === "reload") {
+      // A reload only makes sense once a weapon has actually been fired.
+      enabled = left > 0 && rangedSpent;
+      if (!rangedSpent) note = "Weapons already loaded";
+    }
+    if ((key === "fire" || key === "aimed") && rangedSpent) {
+      // The ranged weapon is spent — firing it again folds in a rushed reload
+      // (§7): 2 action-slots. Melee stays 1, so the button opens the drawer where
+      // the real per-weapon cost and affordability are resolved.
+      cost = 2;
+      note = "Ranged weapon spent — rushed reload costs 2 actions";
+    }
+    return { key, label: def.label, heat: def.heat, enabled, cost, note };
   });
   if (rig.equipment && EQUIPMENT[rig.equipment]) {
     const active = EQUIPMENT[rig.equipment].active;
-    list.push({ key: active.key, label: active.label, heat: active.heat, enabled: left > 0 });
+    list.push({ key: active.key, label: active.label, heat: active.heat, enabled: left > 0, cost: 1, note: "" });
   }
   return list;
 }

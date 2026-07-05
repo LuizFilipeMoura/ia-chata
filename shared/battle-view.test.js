@@ -32,6 +32,25 @@ test("availableActions disables everything at the budget cap", () => {
   assert.equal(capped.find((a) => a.key === "reload").enabled, false);
 });
 
+test("reload is disabled until a ranged weapon has actually been fired", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const loaded = availableActions(rig(), turn).find((a) => a.key === "reload");
+  assert.equal(loaded.enabled, false); // nothing to reload yet
+  const spent = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn)
+    .find((a) => a.key === "reload");
+  assert.equal(spent.enabled, true);   // fired — reload now makes sense
+});
+
+test("a spent ranged weapon flags Fire/Aimed as a 2-slot rushed shot", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const ready = availableActions(rig(), turn).find((a) => a.key === "fire");
+  assert.equal(ready.cost, 1);
+  const spent = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn)
+    .find((a) => a.key === "fire");
+  assert.equal(spent.cost, 2);
+  assert.match(spent.note, /rushed reload/i);
+});
+
 test("actionBudget reports remaining and the Hull-0 reduction", () => {
   assert.deepEqual(actionBudget(rig(), { activeRigId: 1, actionsUsed: 1, actionsMax: 5 }),
     { used: 1, max: 5, left: 4, reduced: false });

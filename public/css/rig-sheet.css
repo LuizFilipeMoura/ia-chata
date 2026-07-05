@@ -1,47 +1,6 @@
-/* ---- Scrim + Rig sheet ---- */
-.scrim {
-  position: fixed; inset: 0; z-index: 40;
-  background: rgba(6,8,11,.62); backdrop-filter: blur(2px);
-  opacity: 0; transition: opacity .25s ease;
-}
-.scrim.show { opacity: 1; }
-
-.sheet {
-  position: fixed; z-index: 50; left: 50%; bottom: 0;
-  width: min(468px, 100%);
-  transform: translateX(-50%) translateY(101%);
-  height: min(90vh, var(--app-h, 100dvh));
-  display: flex; flex-direction: column; overflow: hidden;
-  background: linear-gradient(180deg, var(--iron-850), var(--iron-900));
-  border-top: 1px solid var(--oil);
-  border-radius: 18px 18px 0 0;
-  box-shadow: 0 -18px 55px rgba(0,0,0,.62);
-  padding: .35rem .7rem calc(.6rem + env(safe-area-inset-bottom));
-  transition: transform .32s cubic-bezier(.2,.85,.25,1);
-}
-.sheet.open { transform: translateX(-50%) translateY(0); }
-.sheet-grip { width: 42px; height: 4px; border-radius: 4px; background: var(--rivet); margin: .35rem auto .5rem; }
-.sheet-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding-bottom: .5rem; margin-bottom: .55rem; border-bottom: 1px solid var(--line);
-}
-.sheet-head h2 {
-  margin: 0; font-size: .88rem; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--oil); font-weight: 700;
-}
-.sheet-close {
-  width: 32px; height: 32px; border-radius: 8px; flex: 0 0 auto;
-  background: var(--iron-800); border: 1px solid var(--line); color: var(--txt-dim);
-  font-size: .9rem;
-}
-.sheet-close:hover { color: var(--ember-hi); border-color: rgba(229,83,58,.4); }
-
-/* ---- Accordion list of Rigs ---- */
+/* ---- Accordion list of Rigs — the main event, laid out inline in the stage ---- */
 .rig-list {
-  flex: 1 1 auto; min-height: 0;
-  display: flex; flex-direction: column; gap: .45rem;
-  overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
-  padding: .15rem .1rem .4rem;
+  display: flex; flex-direction: column; gap: .5rem;
 }
 .rig-group-head {
   font-family: var(--font-mono); font-size: .62rem; letter-spacing: .16em;
@@ -63,6 +22,14 @@
 .rig-item.is-active {
   border-color: rgba(231,154,61,.6);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 0 1px rgba(231,154,61,.25), 0 6px 22px rgba(231,154,61,.12);
+  animation: rig-active-pulse 2.4s ease-in-out infinite;
+}
+@keyframes rig-active-pulse {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 0 1px rgba(231,154,61,.25), 0 6px 22px rgba(231,154,61,.12); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(231,154,61,.5), 0 8px 28px rgba(231,154,61,.22); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rig-item.is-active { animation: none; }
 }
 .rig-item.is-destroyed { opacity: .82; border-color: rgba(229,83,58,.4); }
 .rig-item.is-destroyed .rig-head-name { text-decoration: line-through; text-decoration-color: rgba(229,83,58,.7); }
@@ -124,6 +91,17 @@
 .rig-activate.on {
   background: linear-gradient(180deg, var(--oil-hi), var(--oil)); color: #241606;
   border-color: rgba(231,154,61,.7); box-shadow: 0 0 12px rgba(231,154,61,.35);
+}
+.rig-activate:disabled { opacity: .45; cursor: not-allowed; }
+.rig-activate:disabled:hover { color: var(--txt-dim); border-color: var(--line); }
+/* Enemy Rigs: a status token, not a control — no hover affordance. */
+.rig-activate--readonly, .rig-activate--readonly:hover {
+  cursor: default; background: transparent; border-style: dashed;
+  color: var(--txt-faint); border-color: var(--line-soft);
+}
+.rig-activate--readonly.on, .rig-activate--readonly.on:hover {
+  background: rgba(229,83,58,.12); color: var(--ember-hi);
+  border-color: rgba(229,83,58,.5); border-style: solid; box-shadow: none;
 }
 .rig-chev {
   flex: 0 0 auto; color: var(--txt-faint); font-size: .8rem; width: 1rem; text-align: center;
@@ -317,6 +295,19 @@
   border: 1px dashed var(--rivet); border-radius: 12px; padding: 1.1rem 1rem;
 }
 .rig-add-locked { border-style: solid; opacity: .82; }
+/* First-run empty state: the commission card becomes the hero of the screen. */
+.rig-add-card.is-empty { margin-top: 1rem; }
+.rig-add-card.is-empty .rig-add {
+  padding: 1.8rem 1.2rem; gap: .9rem;
+  border-color: var(--oil); border-style: solid;
+  background:
+    radial-gradient(120% 120% at 50% -20%, rgba(231,154,61,.12), transparent 60%),
+    linear-gradient(180deg, var(--iron-800), var(--iron-850));
+  box-shadow: 0 8px 30px rgba(231,154,61,.1);
+}
+.rig-add-card.is-empty .rig-add-title { font-size: .8rem; color: var(--oil-hi); }
+.rig-add-card.is-empty .rig-add-hint { font-size: .84rem; }
+.rig-add-card.is-empty .rig-add-btn { font-size: 1rem; padding: .7rem 1.1rem; }
 .rig-add-title { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .2em; text-transform: uppercase; color: var(--oil); }
 .rig-add-hint { font-size: .78rem; color: var(--txt-dim); line-height: 1.5; }
 .rig-add-row { display: flex; gap: .5rem; }

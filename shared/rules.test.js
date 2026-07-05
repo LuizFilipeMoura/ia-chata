@@ -10,7 +10,7 @@ test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.aimed.heat, 1);
   assert.equal(ACTIONS.ram.heat, 1);
   assert.equal(ACTIONS.prepare.heat, 1);
-  assert.equal(ACTIONS.reload.heat, 0);
+  assert.equal(ACTIONS.reload.heat, 1);
   assert.equal(ACTIONS.repair.heat, 0);
   assert.equal(ACTIONS.shutdown.heat, 0);
   assert.equal(ACTIONS.shutdown.slot, 0);

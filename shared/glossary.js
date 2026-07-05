@@ -1,0 +1,212 @@
+// Global glossary of reserved rules terms (Of Oil and Iron). Shared between
+// the server (future use) and the client, which highlights every `match`
+// string it finds in assistant answers and pops the `def` up on tap/click.
+// `match` entries are matched case-sensitively and longest-first, so a
+// multi-word phrase (e.g. "Heat Capacity") always wins over a shorter one
+// that it contains (e.g. "Heat").
+export const GLOSSARY = [
+  {
+    id: "rig", term: "Rig", match: ["Rig", "Rigs"],
+    def: "A dieselpunk war machine piloted by an Ironclad. Every Rig has four components — Hull, Arms, Legs, Engine — each with its own Structure Points (§2).",
+  },
+  {
+    id: "ironclad", term: "Ironclad", match: ["Ironclad", "Ironclads"],
+    def: "The pilot commanding a Rig.",
+  },
+  {
+    id: "squadron", term: "Squadron", match: ["Squadron"],
+    def: "A player's force of 3–5 Rigs (max 1 Colossal), built purely from chassis and weapons (§3).",
+  },
+  {
+    id: "weight-class", term: "Weight class", match: ["Weight class", "Weight classes"],
+    def: "A Rig's chassis size — Light, Medium, Heavy, or Colossal — which sets its base Structure Points, Aim, Speed, and Heat Capacity (§2).",
+  },
+  {
+    id: "sp", term: "Structure Points", match: ["Structure Points", "SP"],
+    def: "Durability tracked per component (Hull, Arms, Legs, Engine). A component at 0 SP suffers catastrophic damage (§2, §8).",
+  },
+  {
+    id: "hull", term: "Hull", match: ["Hull"],
+    def: "One of a Rig's four components. At 0 SP: −2 max actions and −1 Aim; further damage destroys the Rig (§8).",
+  },
+  {
+    id: "arms", term: "Arms", match: ["Arms"],
+    def: "One of a Rig's four components. At 0 SP a random weapon is destroyed and its munitions explode (§8).",
+  },
+  {
+    id: "legs", term: "Legs", match: ["Legs"],
+    def: "One of a Rig's four components. At 0 SP: Move −3\", pivots cost double, no backpedal; further damage immobilises the Rig (§8).",
+  },
+  {
+    id: "engine", term: "Engine", match: ["Engine"],
+    def: "One of a Rig's four components; also where heat is tracked. At 0 SP the Rig loses its next activation and heat can't drop below 3 (§8).",
+  },
+  {
+    id: "aim", term: "Aim", match: ["Aim"],
+    def: "A Rig's base D6 target number to hit, modified by weapon ACC and cover (§2, §7).",
+  },
+  {
+    id: "speed", term: "Speed", match: ["Speed"],
+    def: "A Rig's maximum Move distance in inches (§2).",
+  },
+  {
+    id: "heat", term: "Heat", match: ["Heat"],
+    def: "A resource that climbs as a Rig acts. Past its Heat Capacity at the end of an activation, the Rig risks an overheat misfire (§6).",
+  },
+  {
+    id: "heat-capacity", term: "Heat Capacity", match: ["Heat Capacity"],
+    def: "The heat a Rig can carry safely before an overheat check is required — 6/5/4/3 for Light/Medium/Heavy/Colossal (§6).",
+  },
+  {
+    id: "acc", term: "ACC", match: ["ACC"],
+    def: "A weapon's accuracy modifier, applied to the Rig's Aim when rolling to hit (§7, §12).",
+  },
+  {
+    id: "rof", term: "ROF", match: ["ROF"],
+    def: "Rate of Fire — the number of D6 a weapon rolls when firing (§12).",
+  },
+  {
+    id: "str", term: "STR", match: ["STR"],
+    def: "A weapon's strength, added to a D6 on the Impact Roll to determine damage severity (§7, §12).",
+  },
+  {
+    id: "rng", term: "RNG", match: ["RNG"],
+    def: "A weapon's range bands (near / far, in inches) — the attack fails outside them (§12).",
+  },
+  {
+    id: "impact-roll", term: "Impact Roll", match: ["Impact Roll", "Impact Rolls"],
+    def: "D6 + STR (plus arc bonus for ranged attacks), compared against the target location's Impact Table to find damage severity (§2, §7).",
+  },
+  {
+    id: "catastrophic-damage", term: "catastrophic damage", match: ["catastrophic damage"],
+    def: "The special effect a component suffers when reduced to 0 Structure Points (§8).",
+  },
+  {
+    id: "move", term: "Move", match: ["Move"],
+    def: "Action [1 heat]: reposition up to the Rig's full Speed — forward, backpedal, side-step, or pivot (§5).",
+  },
+  {
+    id: "sprint", term: "Sprint", match: ["Sprint", "Sprinting"],
+    def: "Extending a Move up to 1½× Speed, for 2 heat instead of 1 (§5, §6).",
+  },
+  {
+    id: "fire-weapon", term: "Fire Weapon", match: ["Fire Weapon"],
+    def: "Action [1 heat, 2 if Hot]: attack with one equipped weapon. Ranged weapons need Reload before firing again (§5, §7).",
+  },
+  {
+    id: "aimed-shot", term: "Aimed Shot", match: ["Aimed Shot"],
+    def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −2 ACC (Precision removes the penalty) (§5, §13).",
+  },
+  {
+    id: "ram", term: "Ram", match: ["Ram"],
+    def: "Action [1 heat]: move into base contact with an enemy within 1.5\". Both Rigs suffer one hit, each rolling D6 + its own weight class's Ram STR (§5).",
+  },
+  {
+    id: "reload", term: "Reload", match: ["Reload"],
+    def: "Action: reloads all of the Rig's weapons (§5).",
+  },
+  {
+    id: "repair", term: "Repair", match: ["Repair"],
+    def: "Action [0 heat]: roll 1 D12 — on 7+ repair 1 SP to one location, on 10+ repair 2 SP (§5).",
+  },
+  {
+    id: "shut-down", term: "Shut Down", match: ["Shut Down"],
+    def: "Action [0 heat], declared before any other action: forfeit the rest of the activation to set heat to 0 (§5).",
+  },
+  {
+    id: "prepare", term: "Prepare", match: ["Prepare"],
+    def: "Action [1 heat]: place a facedown preparation (Evasive Manoeuvre, Return Fire, or Brace for Incoming Fire) that triggers before this Rig's next activation (§5).",
+  },
+  {
+    id: "answer-tokens", term: "Answer tokens", match: ["Answer tokens", "Answer token"],
+    def: "Free preparations granted each round to the player who activates second — no action or heat cost (§4, §5).",
+  },
+  {
+    id: "activation", term: "activation", match: ["activation", "activations"],
+    def: "A Rig's full turn: it takes up to 5 actions before the next Rig activates (§4).",
+  },
+  {
+    id: "initiative", term: "Initiative", match: ["Initiative"],
+    def: "A D12 roll each round (except round 1) that decides who activates first (§4, §10).",
+  },
+  {
+    id: "long-range", term: "Long Range", match: ["Long Range"],
+    def: "One of the two weapon types — fires at range and must be reloaded between shots in the same activation (§12).",
+  },
+  {
+    id: "melee", term: "Melee", match: ["Melee"],
+    def: "The other weapon type — usable only within 1.5\", and never needs reloading (§12).",
+  },
+  {
+    id: "full-auto", term: "Full Auto", match: ["Full Auto"],
+    def: "Weapon perk / optional fire-mode: +2 ROF, but each attack die that rolls a 1 adds 1 heat (§13).",
+  },
+  {
+    id: "charged-shot", term: "Charged Shot", match: ["Charged Shot"],
+    def: "Weapon perk / optional fire-mode: +2 STR, but each attack die that rolls a 1 adds 1 heat (§13).",
+  },
+  {
+    id: "hot", term: "Hot", match: ["Hot"],
+    def: "Weapon perk: firing generates 2 heat instead of 1 (§13).",
+  },
+  {
+    id: "raking-fire", term: "Raking Fire", match: ["Raking Fire"],
+    def: "Machine-gun perk: deals no damage to a target's front arc, but gains +4 STR on the side arc and +8 STR on the rear arc (§13).",
+  },
+  {
+    id: "armour-piercing", term: "Armour Piercing", match: ["Armour Piercing"],
+    def: "Weapon perk: for each Impact Roll of 6, add a D3 to the result (§13).",
+  },
+  {
+    id: "precision", term: "Precision", match: ["Precision"],
+    def: "Weapon perk: may make an Aimed Shot without the usual −2 ACC penalty (§13).",
+  },
+  {
+    id: "cleave", term: "Cleave", match: ["Cleave"],
+    def: "Weapon perk: on a successful hit, one other enemy Rig within 1.5\" of the target also suffers a hit (§13).",
+  },
+  {
+    id: "rend", term: "Rend", match: ["Rend"],
+    def: "Weapon perk: for each Impact Roll of 5 or 6, add a D3 to the result (§13).",
+  },
+  {
+    id: "shock", term: "Shock", match: ["Shock"],
+    def: "Weapon perk: on a successful hit, the target's movement is halved (round down) during its next activation (§13).",
+  },
+  {
+    id: "impale", term: "Impale", match: ["Impale"],
+    def: "Weapon perk: on a successful hit, roll 1 D12 — on 8+ the target is immobilised until this Rig's next activation (§13).",
+  },
+  {
+    id: "incendiary", term: "Incendiary", match: ["Incendiary"],
+    def: "Weapon perk: a successful hit increases the target's heat by 1, needing only to hit (§13).",
+  },
+  {
+    id: "staggering", term: "Staggering", match: ["Staggering"],
+    def: "Weapon perk: on a successful hit, roll 1 D6 to pivot the target 90° either way or push it back 3\" (§13).",
+  },
+  {
+    id: "front-arc", term: "front arc", match: ["front arc"],
+    def: "The 90° zone a Rig faces; attacks must be declared against a target inside it (§7).",
+  },
+  {
+    id: "side-arc", term: "side arc", match: ["side arc"],
+    def: "A facing zone to a Rig's flank — ranged attacks gain +2 STR here (+4 with Raking Fire) (§7, §13).",
+  },
+  {
+    id: "rear-arc", term: "rear arc", match: ["rear arc"],
+    def: "The facing zone behind a Rig — ranged attacks gain +4 STR here (+8 with Raking Fire); melee gains no arc bonus at all (§7, §13).",
+  },
+  {
+    id: "salvage", term: "Salvage", match: ["Salvage"],
+    def: "The victory system: control objective markers to score Victory Points over 5 rounds (§11).",
+  },
+  {
+    id: "vp", term: "Victory Points", match: ["Victory Points", "VP"],
+    def: "Points scored each Recovery Phase for controlling objective markers; most VP after 5 rounds wins (§11).",
+  },
+  {
+    id: "ironclad-bounty", term: "Ironclad Bounty", match: ["Ironclad Bounty"],
+    def: "Optional rule: each player secretly names one enemy Rig as their Priority Target — destroying it is worth +2 VP (§11).",
+  },
+];

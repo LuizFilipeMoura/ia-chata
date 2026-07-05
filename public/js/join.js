@@ -6,18 +6,39 @@ const joinRoom = document.getElementById("joinRoom");
 const joinName = document.getElementById("joinName");
 const joinBtn = document.getElementById("joinBtn");
 const joinErr = document.getElementById("joinErr");
+const joinHint = document.getElementById("joinHint");
 let chosenSide = null;
 
 export function showGate() {
   joinGate.classList.remove("hidden");
 }
 
+// Reactive gate: the Enter button stays disabled until the player has a room
+// code and a side, and the hint always names the one thing still missing.
+function updateJoinReady() {
+  const room = joinRoom.value.trim();
+  const missing = !room ? "Enter a room code."
+    : !joinName.value.trim() ? "Enter your name."
+    : !chosenSide ? "Pick a side to continue."
+    : "";
+  joinBtn.disabled = Boolean(!room || !chosenSide);
+  if (joinHint) {
+    joinHint.textContent = missing || "Ready — tap Enter room.";
+    joinHint.classList.toggle("join-hint--go", !missing);
+  }
+}
+
 document.querySelectorAll(".join-side").forEach((b) => {
   b.addEventListener("click", () => {
     chosenSide = b.dataset.side;
     document.querySelectorAll(".join-side").forEach((x) => x.classList.toggle("active", x === b));
+    updateJoinReady();
   });
 });
+
+joinRoom.addEventListener("input", updateJoinReady);
+joinName.addEventListener("input", updateJoinReady);
+updateJoinReady();
 
 export async function joinRoomFlow(room, name, side) {
   const resp = await fetch(`/api/game/${encodeURIComponent(room)}/join`, {

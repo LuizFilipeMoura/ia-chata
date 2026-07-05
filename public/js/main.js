@@ -4,6 +4,7 @@ import { renderBattle } from "./battle.js";
 import { initSpeech } from "./speech.js";
 import { sendMessage, addBubble } from "./chat.js";
 import { joinRoomFlow, showGate } from "./join.js";
+import "./glossary-tip.js";
 
 // Re-render the tracker whenever the client adopts new server state.
 onServerStateChange(() => { renderRigs(); renderBattle(); });
@@ -12,7 +13,7 @@ onServerStateChange(() => { renderRigs(); renderBattle(); });
 initSpeech({ onTranscript: sendMessage });
 
 // ===== Keyboard-safe viewport height =====
-// Track the visual viewport so the dock (and its controls) always sits above
+// Track the visual viewport so the floating assistant panel always sits above
 // the on-screen keyboard instead of being pushed off the top of the screen.
 const vv = window.visualViewport;
 function syncViewport() {
@@ -27,7 +28,7 @@ if (vv) {
   syncViewport();
 }
 
-addBubble("bot", "Ask me anything about the Of Oil and Iron rulebook — by text or by tapping the mic. Tap 🛠 Rigs to see your squadron and the enemy's.");
+addBubble("bot", "Ask me anything about the Of Oil and Iron rulebook — by text or by tapping the mic.");
 
 if (S.session?.room) {
   joinRoomFlow(S.session.room, S.session.name, S.session.side)

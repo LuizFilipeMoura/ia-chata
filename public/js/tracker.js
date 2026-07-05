@@ -71,8 +71,19 @@ function updateAddRigAvailability() {
   rigAddBtn.textContent = canAdd ? "+ Commission" : "Full";
   rigAddBtn.title = message;
   rigAddScreen.classList.toggle("rig-add-locked", !canAdd);
+  // First-run empty state: when this side has no Rigs yet, the commission card
+  // grows into a centered "start here" call rather than a quiet footer button.
+  const isEmpty = sideRigCount(owner) === 0 && !Boolean(S.game?.started);
+  rigAddScreen.classList.toggle("is-empty", isEmpty);
+  const title = rigAddScreen.querySelector(".rig-add-title");
+  if (title) title.textContent = isEmpty ? "◈ Your squadron is empty" : "◈ Commission a Rig";
   const hint = rigAddScreen.querySelector(".rig-add-hint");
-  if (hint) hint.textContent = message || "Name it, pick a weight class and weapons, then choose its equipment.";
+  if (hint) {
+    hint.textContent = message
+      || (isEmpty
+        ? "Commission your first Rig to begin — name it, pick a weight class and weapons."
+        : "Name it, pick a weight class and weapons, then choose its equipment.");
+  }
 }
 
 function renderBattleSetup() {

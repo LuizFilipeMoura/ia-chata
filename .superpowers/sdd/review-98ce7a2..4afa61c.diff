@@ -1,0 +1,291 @@
+﻿# Review package: 98ce7a2..4afa61c
+
+## Commits
+4afa61c feat: store selected weapon upgrades
+
+## Files changed
+ shared/game-state.js      | 90 ++++++++++++++++++++++++++++++++++++++---------
+ shared/game-state.test.js | 62 ++++++++++++++++++++++++++++++++
+ 2 files changed, 136 insertions(+), 16 deletions(-)
+
+## Diff
+diff --git a/shared/game-state.js b/shared/game-state.js
+index 7b0a1d0..be71aeb 100644
+--- a/shared/game-state.js
++++ b/shared/game-state.js
+@@ -71,39 +71,89 @@ export const EQUIPMENT_ACTIVE_BY_KEY = Object.fromEntries(
+   Object.entries(EQUIPMENT).map(([id, e]) => [e.active.key, id])
+ );
+ 
+ export function normalizeEquipment(id) {
+   if (!id) return null;
+   const ref = String(id).trim().toLowerCase();
+   return Object.keys(EQUIPMENT).includes(ref) ? ref : null;
+ }
+ 
+ // Weapon upgrades (Part 2 of the design) — every weapon's two fixed signature
+-// upgrades, authored as flavor + a toolkit-effect tag. Combat-engine wiring for
+-// the brand-new mechanics (Reach, Scatter, Systems Overload, Sunder,
+-// Reroll-a-miss) is deferred per the design's "Readiness / phasing" section;
+-// this catalogue lets the wizard preview a weapon's identity today.
++// upgrades, authored as flavor + a toolkit-effect tag.
+ export const WEAPON_UPGRADES = {
+-  "Mini Gun":      [{ name: "Extended Belt", tag: "+2 ROF (dice showing 1 add heat)" }, { name: "Suppressive Fire", tag: "Shock — Speed halved" }],
+-  "Double MG":     [{ name: "Tracer Rounds", tag: "Incendiary — +1 target heat/hit" }, { name: "Gyro Mount", tag: "Reroll one missed die" }],
+-  "Autocannon":    [{ name: "AP Shells", tag: "Armour Piercing" }, { name: "Depleted Core", tag: "+STR" }],
+-  "Arc Gun":       [{ name: "Systems Overload", tag: "Target loses 1 action next activation" }, { name: "Ion Burn", tag: "Incendiary — +1 target heat/hit" }],
+-  "Mortar":        [{ name: "Airburst Fuze", tag: "Ignores cover" }, { name: "Cluster Shells", tag: "Also chips a 2nd random location" }],
+-  "Sniper Cannon": [{ name: "Match Barrel", tag: "No far-range penalty" }, { name: "Marksman Optics", tag: "Precision — Aimed Shot loses −2" }],
+-  "Sword":         [{ name: "Duelist's Balance", tag: "Precision" }, { name: "Keen Edge", tag: "Rend" }],
+-  "Circular Saw":  [{ name: "Tempered Teeth", tag: "Armour Piercing" }, { name: "Sunder", tag: "−1 max SP to the struck location" }],
+-  "Chainsaw":      [{ name: "High-Rev Motor", tag: "+STR, but +1 heat per strike" }, { name: "Ripper Teeth", tag: "Rend" }],
+-  "Claw":          [{ name: "Vice Grip", tag: "Impale — strong hit immobilises" }, { name: "Rending Talons", tag: "Rend" }],
+-  "Lance":         [{ name: "Couched Reach", tag: "Reach — strike 1\" further / charge bonus" }, { name: "Spearpoint", tag: "Impale" }],
+-  "Wrecking Ball": [{ name: "Haymaker", tag: "+STR, big" }, { name: "Wrecking Momentum", tag: "Staggering — knock back / pivot" }],
++  "Mini Gun": [
++    { id: "extended-belt", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
++    { id: "suppressive-fire", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
++  ],
++  "Double MG": [
++    { id: "tracer-rounds", name: "Tracer Rounds", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
++    { id: "gyro-mount", name: "Gyro Mount", tag: "Reroll one missed to-hit die", effect: { rerollMisses: 1 } },
++  ],
++  "Autocannon": [
++    { id: "ap-shells", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
++    { id: "depleted-core", name: "Depleted Core", tag: "+2 STR", effect: { str: 2 } },
++  ],
++  "Arc Gun": [
++    { id: "systems-overload", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
++    { id: "ion-burn", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
++  ],
++  "Mortar": [
++    { id: "airburst-fuze", name: "Airburst Fuze", tag: "Ignores cover", effect: { ignoreCover: true } },
++    { id: "cluster-shells", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
++  ],
++  "Sniper Cannon": [
++    { id: "match-barrel", name: "Match Barrel", tag: "No far-range penalty", effect: { noFarPenalty: true } },
++    { id: "marksman-optics", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
++  ],
++  "Sword": [
++    { id: "duelist-balance", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
++    { id: "keen-edge", name: "Keen Edge", tag: "Gains Rend", effect: { perks: ["Rend"] } },
++  ],
++  "Circular Saw": [
++    { id: "tempered-teeth", name: "Tempered Teeth", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
++    { id: "sunder", name: "Sunder", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
++  ],
++  "Chainsaw": [
++    { id: "high-rev-motor", name: "High-Rev Motor", tag: "+2 STR; +1 heat per attack", effect: { str: 2, heat: 1 } },
++    { id: "ripper-teeth", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
++  ],
++  "Claw": [
++    { id: "vice-grip", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
++    { id: "rending-talons", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
++  ],
++  "Lance": [
++    { id: "couched-reach", name: "Couched Reach", tag: "+1 inch melee reach", effect: { range: 1 } },
++    { id: "spearpoint", name: "Spearpoint", tag: "Gains Impale", effect: { perks: ["Impale"] } },
++  ],
++  "Wrecking Ball": [
++    { id: "haymaker", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
++    { id: "wrecking-momentum", name: "Wrecking Momentum", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
++  ],
+ };
+ 
++export function defaultWeaponUpgrade(weaponName) {
++  const upgrades = WEAPON_UPGRADES[weaponName];
++  return Array.isArray(upgrades) && upgrades.length ? upgrades[0].id : null;
++}
++
++export function normalizeWeaponUpgrade(weaponName, upgradeId) {
++  const upgrades = WEAPON_UPGRADES[weaponName];
++  if (!Array.isArray(upgrades) || upgrades.length === 0) return null;
++  const ref = String(upgradeId || "").trim().toLowerCase();
++  return upgrades.find((u) => u.id.toLowerCase() === ref)?.id || upgrades[0].id;
++}
++
++export function upgradeForWeapon(weaponName, upgradeId) {
++  const normalized = normalizeWeaponUpgrade(weaponName, upgradeId);
++  return (WEAPON_UPGRADES[weaponName] || []).find((u) => u.id === normalized) || null;
++}
++
+ export function createRoom(code) {
+   return {
+     code,
+     version: 0,
+     nextRigId: 1,
+     game: {
+       round: 1,
+       sides: [
+         { id: "a", name: "You",   vp: 0, claimed: false, ready: false },
+         { id: "b", name: "Enemy", vp: 0, claimed: false, ready: false },
+@@ -133,20 +183,23 @@ function ensureRigShape(rig) {
+   if (typeof rig.skipNextActivation !== "boolean") rig.skipNextActivation = false;
+   if (typeof rig.noCool !== "boolean") rig.noCool = false;
+   if (typeof rig.speedHalvedNextRound !== "boolean") rig.speedHalvedNextRound = false;
+   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
+   if (rig.preparation === undefined) rig.preparation = null;
+   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
+   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
+   if (rig.equipment === undefined) rig.equipment = null;
+   if (typeof rig.hardened !== "boolean") rig.hardened = false;
+   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
++  if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
++  rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
++  rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
+   return rig;
+ }
+ 
+ function ensureGameShape(room) {
+   room.game ||= {};
+   room.game.round ||= 1;
+   room.game.sides ||= [
+     { id: "a", name: "You",   vp: 0, claimed: false },
+     { id: "b", name: "Enemy", vp: 0, claimed: false },
+   ];
+@@ -179,36 +232,41 @@ export function normalizeWeapon(category, name) {
+   const ref = String(name).trim().toLowerCase();
+   return Object.keys(table).find((weapon) => weapon.toLowerCase() === ref) || null;
+ }
+ 
+ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
+   const normalizedClass = String(cls || "").trim().toLowerCase();
+   if (!SUPPORTED_RIG_CLASSES.includes(normalizedClass)) return null;
+   const longRange = normalizeWeapon("longRange", weapons.longRange || weapons.lr);
+   const melee = normalizeWeapon("melee", weapons.melee);
+   if (!longRange || !melee) return null;
++  const weaponUpgrades = {
++    longRange: normalizeWeaponUpgrade(longRange, weapons.longRangeUpgrade || weapons.lrUpgrade),
++    melee: normalizeWeaponUpgrade(melee, weapons.meleeUpgrade),
++  };
+ 
+   const weightClass = normalizedClass;
+   const d = RIG_DEFAULTS[weightClass];
+   const equipmentId = normalizeEquipment(equipment);
+   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
+   const hullMax = d.hull + (equipmentId === "ablative-plating" ? 1 : 0);
+   return {
+     id,
+     name: String(name || "Rig").trim() || "Rig",
+     weightClass,
+     owner: owner === "b" ? "b" : "a",
+     hull:   { sp: hullMax, max: hullMax, destroyed: false },
+     arms:   { sp: d.arms, max: d.arms, destroyed: false },
+     legs:   { sp: d.legs, max: d.legs, destroyed: false },
+     engine: { sp: d.engine, max: d.engine, destroyed: false, heat: 0 },
+     weapons: { longRange, melee },
++    weaponUpgrades,
+     equipment: equipmentId,
+     prepare: 0,    // Phase 4
+     activated: false,
+     skipNextActivation: false,
+     noCool: false,
+     speedHalvedNextRound: false,
+     loaded: { longRange: true, melee: true },
+     preparation: null,
+     weaponsDestroyed: [],
+     immobilised: false,
+diff --git a/shared/game-state.test.js b/shared/game-state.test.js
+index e565255..1db6055 100644
+--- a/shared/game-state.test.js
++++ b/shared/game-state.test.js
+@@ -1,16 +1,17 @@
+ import { test } from "node:test";
+ import assert from "node:assert/strict";
+ import {
+   createRoom, makeRig, claimSide, applyCommand, findRig,
+   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
+   EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
++  normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
+ } from "./game-state.js";
+ 
+ // Every Rig must be commissioned with one Long Range and one Melee weapon,
+ // so the add-command attrs used across these tests carry both.
+ const W = { lr: "Mini Gun", melee: "Sword" };
+ 
+ test("createRoom has two unclaimed sides and empty rigs", () => {
+   const r = createRoom("IRON42");
+   assert.equal(r.code, "IRON42");
+   assert.equal(r.version, 0);
+@@ -717,20 +718,81 @@ test("WEAPON_UPGRADES has exactly 2 upgrades for all 12 weapons", () => {
+     const ups = WEAPON_UPGRADES[name];
+     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
+     assert.equal(ups.length, 2, `${name} must have exactly 2 upgrades`);
+     for (const u of ups) {
+       assert.equal(typeof u.name, "string");
+       assert.equal(typeof u.tag, "string");
+     }
+   }
+ });
+ 
++test("WEAPON_UPGRADES has stable ids and effect objects for every option", () => {
++  const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
++  for (const name of all) {
++    const ups = WEAPON_UPGRADES[name];
++    assert.equal(ups.length, 2, `${name} must have exactly 2 upgrades`);
++    const ids = new Set();
++    for (const u of ups) {
++      assert.equal(typeof u.id, "string", `${name} upgrade missing id`);
++      assert.equal(u.id.length > 0, true, `${name} upgrade id empty`);
++      assert.equal(ids.has(u.id), false, `${name} duplicate upgrade id ${u.id}`);
++      ids.add(u.id);
++      assert.equal(typeof u.effect, "object", `${name} ${u.id} missing effect`);
++      assert.equal(u.effect != null, true, `${name} ${u.id} missing effect`);
++    }
++  }
++});
++
++test("normalizeWeaponUpgrade resolves valid ids and defaults missing/invalid selections", () => {
++  assert.equal(defaultWeaponUpgrade("Mini Gun"), "extended-belt");
++  assert.equal(normalizeWeaponUpgrade("Mini Gun", "suppressive-fire"), "suppressive-fire");
++  assert.equal(normalizeWeaponUpgrade("Mini Gun", ""), "extended-belt");
++  assert.equal(normalizeWeaponUpgrade("Mini Gun", "not-real"), "extended-belt");
++  assert.equal(normalizeWeaponUpgrade("Not A Weapon", "extended-belt"), null);
++  assert.equal(upgradeForWeapon("Mini Gun", "suppressive-fire").name, "Suppressive Fire");
++});
++
++test("makeRig stores default and explicit selected weapon upgrades", () => {
++  const fallback = makeRig(1, "Warden", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
++  assert.deepEqual(fallback.weaponUpgrades, { longRange: "extended-belt", melee: "duelist-balance" });
++
++  const explicit = makeRig(2, "Reaver", "medium", "a", {
++    longRange: "Mini Gun",
++    melee: "Sword",
++    longRangeUpgrade: "suppressive-fire",
++    meleeUpgrade: "keen-edge",
++  });
++  assert.deepEqual(explicit.weaponUpgrades, { longRange: "suppressive-fire", melee: "keen-edge" });
++});
++
++test("add command passes selected weapon upgrades through to the created rig", () => {
++  const r = createRoom("X");
++  applyCommand(r, { verb: "add", attrs: {
++    name: "Chooser", class: "medium", owner: "a",
++    lr: "Autocannon", melee: "Claw",
++    longRangeUpgrade: "depleted-core",
++    meleeUpgrade: "rending-talons",
++  } });
++  const rig = findRig(r, "Chooser");
++  assert.deepEqual(rig.weaponUpgrades, { longRange: "depleted-core", melee: "rending-talons" });
++});
++
++test("ensureRigShape backfills selected weapon upgrades on legacy rig objects", () => {
++  const legacy = { code: "L", version: 0, nextRigId: 2, game: { round: 1, started: false },
++    rigs: [{ id: 1, name: "Old", weightClass: "light", owner: "a",
++      hull:{sp:6,max:6,destroyed:false}, arms:{sp:5,max:5,destroyed:false},
++      legs:{sp:5,max:5,destroyed:false}, engine:{sp:4,max:4,destroyed:false,heat:0},
++      weapons:{longRange:"Double MG",melee:"Chainsaw"}, destroyed:false }] };
++  applyCommand(legacy, { verb: "nonsense", attrs: {} });
++  assert.deepEqual(legacy.rigs[0].weaponUpgrades, { longRange: "tracer-rounds", melee: "high-rev-motor" });
++});
++
+ test("makeRig accepts an equipment id and Ablative Plating grants +1 max/current Hull SP", () => {
+   const plain = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+   assert.equal(plain.equipment, null);
+   assert.equal(plain.hull.max, 7);
+ 
+   const armored = makeRig(2, "Bastion", "medium", "a", { longRange: "Autocannon", melee: "Claw" }, "ablative-plating");
+   assert.equal(armored.equipment, "ablative-plating");
+   assert.equal(armored.hull.max, 8);
+   assert.equal(armored.hull.sp, 8);
+ });

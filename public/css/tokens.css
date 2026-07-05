@@ -12,6 +12,28 @@
   --font-display:"Chakra Petch","Oswald",system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,"Cascadia Code","Courier New",monospace;
   --stripe:repeating-linear-gradient(45deg,rgba(231,154,61,.9) 0 8px,rgba(20,24,31,.9) 8px 16px);
+
+  /* --- Semantic aliases (roles, not raw colors) --- */
+  --guide:var(--oil);            /* "do this next" accent */
+  --guide-hi:var(--oil-hi);
+  --guide-glow:rgba(231,154,61,.32);
+  --act:var(--hp-ok-a);          /* "your move / go" green */
+  --act-hi:#baf7c9;
+  --act-bg:#142a1c;
+  --danger:var(--ember);
+  --danger-hi:var(--ember-hi);
+  --wait:var(--txt-dim);         /* "waiting on opponent" neutral */
+
+  /* --- Spacing scale --- */
+  --space-1:.25rem; --space-2:.4rem; --space-3:.55rem;
+  --space-4:.8rem;  --space-5:1.05rem; --space-6:1.4rem;
+
+  /* --- Radius --- */
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-pill:999px;
+
+  /* --- Motion --- */
+  --ease-out:cubic-bezier(.2,.85,.25,1);
+  --dur-fast:.14s; --dur-med:.22s; --dur-slow:.3s;
 }
 
 * { box-sizing: border-box; }

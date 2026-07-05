@@ -3,16 +3,49 @@ import { setStatus } from "./status.js";
 import { applyRigCommands, stripRigTags } from "./rig-tags.js";
 import { renderMarkdown } from "./markdown.js";
 import { speak, isTtsEnabled } from "./speech.js";
+import { highlightGlossary } from "./glossary.js";
 
 const messagesEl = document.getElementById("messages");
 const textInput = document.getElementById("textInput");
 const sendBtn = document.getElementById("sendBtn");
 const thinkToggle = document.getElementById("thinkToggle");
 const clearBtn = document.getElementById("clearBtn");
+const chatFab = document.getElementById("chatFab");
+const chatPanel = document.getElementById("chatPanel");
+const chatClose = document.getElementById("chatClose");
 
 let history = [];
 let thinkEnabled = true;
 let isStreaming = false;
+
+// ---- Floating assistant: launcher button <-> panel ----
+function isChatOpen() {
+  return chatPanel.classList.contains("open");
+}
+function openChat() {
+  chatPanel.classList.add("open");
+  chatPanel.setAttribute("aria-hidden", "false");
+  chatFab.classList.add("active");
+  chatFab.classList.remove("has-unread");
+  chatFab.setAttribute("aria-expanded", "true");
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  textInput.focus();
+}
+function closeChat() {
+  chatPanel.classList.remove("open");
+  chatPanel.setAttribute("aria-hidden", "true");
+  chatFab.classList.remove("active");
+  chatFab.setAttribute("aria-expanded", "false");
+}
+chatFab.addEventListener("click", () => (isChatOpen() ? closeChat() : openChat()));
+chatClose.addEventListener("click", closeChat);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && isChatOpen()) closeChat();
+});
+
+function flagUnread() {
+  if (!isChatOpen()) chatFab.classList.add("has-unread");
+}
 
 export function addBubble(role, text) {
   const div = document.createElement("div");
@@ -20,6 +53,10 @@ export function addBubble(role, text) {
   div.textContent = text;
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+  if (role !== "user") {
+    highlightGlossary(div);
+    flagUnread();
+  }
   return div;
 }
 
@@ -123,18 +160,21 @@ export async function sendMessage(text) {
     }
   } catch (err) {
     renderMarkdown(answerText, `${stripRigTags(answer)}\n\n[Error: ${err.message}]`);
+    highlightGlossary(answerText);
     setStatus("Error contacting the server.");
   } finally {
     bubble.classList.remove("pending");
     isStreaming = false;
     sendBtn.disabled = false;
     setStatus("");
+    flagUnread();
   }
 
   if (answer) {
     applyRigCommands(answer);
     const spoken = stripRigTags(answer);
     renderMarkdown(answerText, spoken);
+    highlightGlossary(answerText);
     history.push({ role: "assistant", content: spoken });
     if (isTtsEnabled()) speak(spoken);
   }

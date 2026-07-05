@@ -10,7 +10,7 @@ export const ACTIONS = {
   fire:     { label: "Fire Weapon", heat: 1, slot: 1 },
   aimed:    { label: "Aimed Shot",  heat: 1, slot: 1 },
   ram:      { label: "Ram",         heat: 1, slot: 1 },
-  reload:   { label: "Reload",      heat: 0, slot: 1 },
+  reload:   { label: "Reload",      heat: 1, slot: 1 },
   repair:   { label: "Repair",      heat: 0, slot: 1 },
   shutdown: { label: "Shut Down",   heat: 0, slot: 0 },
   prepare:  { label: "Prepare",     heat: 1, slot: 1 },
