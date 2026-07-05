@@ -74,6 +74,13 @@ export const EQUIPMENT_ACTIVE_BY_KEY = Object.fromEntries(
   Object.entries(EQUIPMENT).map(([id, e]) => [e.active.key, id])
 );
 
+// The three §5 preparation reactions. Unknown/missing input falls back to brace.
+export const PREP_TYPES = ["brace", "evasive", "return"];
+export function normalizePrep(type) {
+  const ref = String(type || "").trim().toLowerCase();
+  return PREP_TYPES.includes(ref) ? ref : "brace";
+}
+
 export function normalizeEquipment(id) {
   if (!id) return null;
   const ref = String(id).trim().toLowerCase();
@@ -215,6 +222,7 @@ function ensureRigShape(rig) {
   if (typeof rig.speedHalvedNextRound !== "boolean") rig.speedHalvedNextRound = false;
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
+  if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
   if (rig.equipment === undefined) rig.equipment = null;
@@ -736,7 +744,7 @@ function performAction(room, rig, act, a, random) {
       summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
   } else if (act === "prepare") {
-    rig.preparation = { type: String(a.prep || "brace"), source: "action" };
+    rig.preparation = { type: normalizePrep(a.prep), source: "action", faceUp: false };
   }
   bumpHeat(rig, def.heat);
   t.actionsUsed += 1;
@@ -943,7 +951,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     if (rig && sideId && (rig.owner || "a") === sideId &&
         room.game.answerTokens[sideId] > 0 && rig.preparation == null) {
-      rig.preparation = { type: String(a.prep || "brace"), source: "answer" };
+      rig.preparation = { type: normalizePrep(a.prep), source: "answer", faceUp: false };
       room.game.answerTokens[sideId] -= 1;
       changed = true;
     }

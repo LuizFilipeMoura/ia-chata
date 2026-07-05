@@ -550,7 +550,7 @@ test("answer token places a free preparation and decrements the pool", () => {
   const r = startedRoom(); // side a holds 2 Answer tokens
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
   const a1 = findRig(r, "a1");
-  assert.deepEqual(a1.preparation, { type: "brace", source: "answer" });
+  assert.deepEqual(a1.preparation, { type: "brace", source: "answer", faceUp: false });
   assert.equal(r.game.answerTokens.a, 1);
 });
 
@@ -1199,4 +1199,20 @@ test("Ready is blocked until the owner locks the field", () => {
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, { side: "a" });
   assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
+});
+
+test("prepare action places a facedown reaction of the chosen type", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "evasive" } });
+  const rig = findRig(r, "b1");
+  assert.deepEqual(rig.preparation, { type: "evasive", source: "action", faceUp: false });
+});
+
+test("answer token places a facedown reaction and spends a token", () => {
+  const r = startedRoom(); // side "a" holds 2 answer tokens
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
+  const rig = findRig(r, "a1");
+  assert.deepEqual(rig.preparation, { type: "brace", source: "answer", faceUp: false });
+  assert.equal(r.game.answerTokens.a, 1);
 });
