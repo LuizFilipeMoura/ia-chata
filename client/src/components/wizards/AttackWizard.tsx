@@ -223,6 +223,10 @@ export function AttackWizard({
   let goText = "Ram";
   let goDisabled = false;
 
+  const modeLabel = mode === "ram" ? "Ram" : mode === "aimed" ? "Aimed Shot" : "Fire";
+  let dicePreview: string =
+    mode === "ram" ? "🎲 Rolls 2 impact dice (d6)" : "";
+
   if (mode !== "ram") {
     const slot = state.weapon;
     const profile = profileOf(slot);
@@ -230,6 +234,12 @@ export function AttackWizard({
     const cost = spent ? 2 : 1;
     const left = actionsLeft();
     const outOfRange = state.range === "out";
+    const rof = ROF_BY_NAME[weapons[slot]] || profile?.rof || 1;
+
+    dicePreview =
+      `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
+      (mode === "fire" ? " + 1 location die (d12)" : "") +
+      (mode === "aimed" ? " · +1 to hit" : "");
 
     if (isMelee) {
       const reach = profile?.rng?.[0] ?? 1.5;
@@ -260,8 +270,8 @@ export function AttackWizard({
     goText = outOfRange
       ? "Out of range"
       : unaffordable
-        ? `Need ${cost} actions (${left} left)`
-        : `Fire${costTag}`;
+        ? `Need ${cost} action${cost === 1 ? "" : "s"} · ${left} left`
+        : `${modeLabel}${costTag}`;
   }
 
   const title =
@@ -277,6 +287,7 @@ export function AttackWizard({
       }}
     >
       <div className="aw-card">
+        <div className="aw-handle" />
         <div className="aw-title">{title} — {rig.name}</div>
 
         <Field
@@ -349,6 +360,8 @@ export function AttackWizard({
             <div className="aw-range" data-state={rangeState}>{rangeHtml}</div>
           </>
         )}
+
+        <div className="aw-dice-preview">{dicePreview}</div>
 
         <button className="aw-go" disabled={goDisabled} onClick={submit}>
           {goText}
