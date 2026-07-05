@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createWsHub } from "./ws.js";
-import { createRoom, applyCommand } from "../shared/game-state.js";
+import { createRoom, applyCommand, claimSide } from "../shared/game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon.
 const W = { lr: "Mini Gun", melee: "Sword" };
@@ -42,6 +42,10 @@ test("broadcast scopes bounties per socket's side", () => {
   hub.attach(a, "IRON42", "a");
   hub.attach(b, "IRON42", "b");
 
+  // Reaching the started state (which assigns bounties) requires an owner and a
+  // locked field before either side can ready up (§10 field setup).
+  claimSide(room, { name: "Owner", side: "a" });
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   for (const owner of ["a", "b"]) {
     for (let i = 1; i <= 3; i++) {
       applyCommand(room, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
