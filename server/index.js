@@ -1,15 +1,19 @@
 import express from "express";
+import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { WebSocketServer } from "ws";
 import { PORT, MODEL, NUM_CTX, OLLAMA_URL } from "./config.js";
 import { createStore } from "./store.js";
 import { loadRulebook } from "./prompt.js";
 import { createChatRouter } from "./routes/chat.js";
 import { createGameRouter } from "./routes/game.js";
+import { createWsHub } from "./ws.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, "..");
 const store = createStore(path.join(rootDir, "data", "rooms.json"));
+const hub = createWsHub();
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -24,11 +28,25 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api", createChatRouter(store));
-app.use("/api/game", createGameRouter(store));
+app.use("/api/game", createGameRouter(store, hub));
+
+const httpServer = http.createServer(app);
+
+// Push channel for room-state updates: a client connects to /ws?room=X&side=Y
+// once (right after join, and on every reconnect); server/routes/game.js
+// broadcasts the new state to every attached socket after each mutation.
+const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+wss.on("connection", (ws, req) => {
+  const url = new URL(req.url, "http://localhost");
+  const room = url.searchParams.get("room");
+  const side = url.searchParams.get("side");
+  if (!room) { ws.close(); return; }
+  hub.attach(ws, room, side);
+});
 
 async function start() {
   await loadRulebook(rootDir);
-  app.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Oil & Iron rules master listening on http://0.0.0.0:${PORT}`);
     console.log(`Model: ${MODEL} | num_ctx: ${NUM_CTX} | Ollama: ${OLLAMA_URL}`);
   });
