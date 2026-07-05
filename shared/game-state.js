@@ -575,6 +575,15 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         changed = true;
       }
     }
+  } else if (verb === "answer") {
+    const rig = findRig(room, a.name);
+    const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    if (rig && sideId && (rig.owner || "a") === sideId &&
+        room.game.answerTokens[sideId] > 0 && rig.preparation == null) {
+      rig.preparation = { type: String(a.prep || "brace"), source: "answer" };
+      room.game.answerTokens[sideId] -= 1;
+      changed = true;
+    }
   } else {
     const rig = findRig(room, a.name);
     if (rig) {

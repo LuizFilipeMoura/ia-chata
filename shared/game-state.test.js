@@ -533,3 +533,21 @@ test("annihilation ends the game immediately", () => {
   assert.equal(r.game.outcome.reason, "annihilation");
   assert.equal(r.game.phase, "finished");
 });
+
+test("answer token places a free preparation and decrements the pool", () => {
+  const r = startedRoom(); // side a holds 2 Answer tokens
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
+  const a1 = findRig(r, "a1");
+  assert.deepEqual(a1.preparation, { type: "brace", source: "answer" });
+  assert.equal(r.game.answerTokens.a, 1);
+});
+
+test("answer token is rejected without tokens, off-side, or when already prepared", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "b1", prep: "brace", side: "b" } }); // b has 0
+  assert.equal(findRig(r, "b1").preparation, null);
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
+  const v = r.version;
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "evasive", side: "a" } }); // already prepared
+  assert.equal(r.version, v);
+});
