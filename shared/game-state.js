@@ -813,7 +813,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "ready") {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     const side = room.game.sides.find((s) => s.id === sideId);
-    if (side && !room.game.started && sideRigCount(room, side.id) >= 3 && !side.ready) {
+    if (side && !room.game.started && room.field.locked &&
+        sideRigCount(room, side.id) >= 3 && !side.ready) {
       side.ready = true;
       if (!room.game.deployOrder.includes(side.id)) room.game.deployOrder.push(side.id);
       maybeStartGame(room, options.random);
@@ -823,6 +824,30 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     if (!room.game.started) {
       const want = String(a.value || "").toLowerCase() !== "manual";
       if (room.game.autoResolve !== want) { room.game.autoResolve = want; changed = true; }
+    }
+  } else if (verb === "field") {
+    const sideId = normalizeSide(room, context.side);
+    const action = String(a.action || "set").toLowerCase();
+    if (sideId && sideId === room.ownerSide && !room.game.started) {
+      if (action === "lock") {
+        if (!room.field.locked) { room.field.locked = true; changed = true; }
+      } else if (!room.field.locked) {
+        if (action === "reroll") {
+          room.field.terrain = scatterTerrain(room.field, options.random);
+          changed = true;
+        } else if (action === "set") {
+          const dims = clampDimensions(
+            a.width != null ? a.width : room.field.width,
+            a.height != null ? a.height : room.field.height,
+          );
+          room.field.width = dims.width;
+          room.field.height = dims.height;
+          if (a.diagonal === "trbl" || a.diagonal === "tlbr") room.field.diagonal = a.diagonal;
+          room.game.objectives = computeObjectives(room.field);
+          room.field.terrain = scatterTerrain(room.field, options.random);
+          changed = true;
+        }
+      }
     }
   } else if (verb === "initiative") {
     if (room.game.phase === "initiative") {

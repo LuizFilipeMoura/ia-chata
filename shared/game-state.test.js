@@ -159,6 +159,8 @@ test("add blocks all new rigs once six rigs are in place", () => {
 
 test("ready requires at least three rigs for that side", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", ...W } });
   applyCommand(r, { verb: "ready", attrs: { side: "a" } });
   assert.equal(r.game.sides.find((s) => s.id === "a").ready, false);
@@ -171,6 +173,8 @@ test("ready requires at least three rigs for that side", () => {
 
 test("adding or removing rigs before start resets ready flags", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   for (let i = 1; i <= 3; i++) {
     applyCommand(r, { verb: "add", attrs: { name: `A${i}`, class: "light", owner: "a", ...W } });
   }
@@ -187,6 +191,8 @@ test("adding or removing rigs before start resets ready flags", () => {
 
 test("both ready starts game and assigns private random bounties", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   for (const owner of ["a", "b"]) {
     for (let i = 1; i <= 3; i++) {
       applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
@@ -204,6 +210,8 @@ test("both ready starts game and assigns private random bounties", () => {
 
 test("public state only exposes the requesting side bounty", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   for (const owner of ["a", "b"]) {
     for (let i = 1; i <= 3; i++) {
       applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
@@ -299,11 +307,13 @@ test("ensureGameShape backfills fields on a legacy room", () => {
 // so "a" activates SECOND in round 1 and "b" activates first.
 function startedRoom() {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
   for (const owner of ["a", "b"]) {
     for (let i = 1; i <= 3; i++) {
       applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
     }
   }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
   applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
   return r;
@@ -837,6 +847,8 @@ test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy ri
 
 test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   for (const owner of ["a", "b"]) {
     for (let i = 1; i <= 3; i++) {
       applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, lr: "Mini Gun", melee: "Sword",
@@ -864,6 +876,8 @@ test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
 
 test("Servo Actuators makes Sprint cost 1 heat instead of 2", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", lr: "Mini Gun", melee: "Sword", equipment: "servo-actuators" } });
   applyCommand(r, { verb: "add", attrs: { name: "A2", class: "light", owner: "a", lr: "Mini Gun", melee: "Sword" } });
   applyCommand(r, { verb: "add", attrs: { name: "A3", class: "light", owner: "a", lr: "Mini Gun", melee: "Sword" } });
@@ -900,6 +914,8 @@ test("Overclock Core skips the skip-next-activation penalty the first time Engin
 
 test("Field Repair Suite adds +1 SP to the Repair action only", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "add", attrs: { name: "Medic", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw", equipment: "field-repair-suite" } });
   applyCommand(r, { verb: "add", attrs: { name: "A2", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
   applyCommand(r, { verb: "add", attrs: { name: "A3", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
@@ -924,6 +940,8 @@ test("Field Repair Suite adds +1 SP to the Repair action only", () => {
 
 test("Field Repair Suite does not add +1 SP when the Repair roll whiffs", () => {
   const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "add", attrs: { name: "Medic", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw", equipment: "field-repair-suite" } });
   applyCommand(r, { verb: "add", attrs: { name: "A2", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
   applyCommand(r, { verb: "add", attrs: { name: "A3", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
@@ -947,6 +965,8 @@ test("Field Repair Suite does not add +1 SP when the Repair roll whiffs", () => 
 });
 
 function readyThreeAndThree(r, equipmentByName = {}) {
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   for (const owner of ["a", "b"]) {
     for (let i = 1; i <= 3; i++) {
       const name = `${owner}${i}`;
@@ -1120,4 +1140,63 @@ test("publicState exposes field and ownerSide", () => {
   const view = publicState(r, "a");
   assert.equal(view.ownerSide, "a");
   assert.equal(view.field.width, 54);
+});
+
+// Deterministic RNG so terrain is reproducible in command tests.
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+test("field set clamps dims, recomputes objectives, scatters terrain (owner only)", () => {
+  const r = createRoom("C1");
+  claimSide(r, { name: "Ana", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "set", width: 48, height: 32 } },
+    { side: "a" }, { random: seededRandom(7) });
+  assert.equal(r.field.width, 48);
+  assert.equal(r.field.height, 32);
+  assert.equal(r.game.objectives[0].x, 24); // new centre
+  assert.ok(r.field.terrain.length >= 4 && r.field.terrain.length <= 6);
+});
+
+test("field command is ignored for non-owner and after start", () => {
+  const r = createRoom("C2");
+  claimSide(r, { name: "Ana", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "set", width: 40, height: 30 } },
+    { side: "b" }); // side b is not the owner
+  assert.equal(r.field.width, 54);
+  r.game.started = true;
+  applyCommand(r, { verb: "field", attrs: { action: "set", width: 40, height: 30 } },
+    { side: "a" });
+  assert.equal(r.field.width, 54);
+});
+
+test("field reroll changes terrain but not objectives", () => {
+  const r = createRoom("C3");
+  claimSide(r, { name: "Ana", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "set", width: 60, height: 40 } },
+    { side: "a" }, { random: seededRandom(3) });
+  const objs = JSON.stringify(r.game.objectives);
+  applyCommand(r, { verb: "field", attrs: { action: "reroll" } },
+    { side: "a" }, { random: seededRandom(99) });
+  assert.equal(JSON.stringify(r.game.objectives), objs); // unchanged
+});
+
+test("Ready is blocked until the owner locks the field", () => {
+  const r = createRoom("C4");
+  claimSide(r, { name: "Ana", side: "a" });
+  const W2 = { lr: "Mini Gun", melee: "Sword", class: "light" };
+  for (const name of ["r1", "r2", "r3"]) {
+    applyCommand(r, { verb: "add", attrs: { name, owner: "a", ...W2 } }, { side: "a" });
+  }
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, { side: "a" });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, false); // field not locked
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, { side: "a" });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
 });
