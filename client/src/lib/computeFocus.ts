@@ -79,13 +79,23 @@ export function computeFocus(
   }
 
   if (g.phase === "recovery") {
-    return g.recoveryVp?.[mine]
-      ? { tone: "wait", icon: "⏳", primary: "Waiting for opponent to score…" }
-      : {
-          tone: "act", icon: "⟡", primary: "Score your objectives",
-          secondary: "Tally VP for this round.",
-          cta: { label: "Score VP", kind: "score" },
-        };
+    const conflict = g.recoveryConflict && g.recoveryConflict.length ? g.recoveryConflict : null;
+    const submitted = Array.isArray(g.recoveryClaims?.[mine]);
+    if (conflict) {
+      return {
+        tone: "act", icon: "⚠️", primary: "Objectives disputed",
+        secondary: "You both claimed the same marker — re-check who holds it.",
+        cta: { label: "Re-check", kind: "score" },
+      };
+    }
+    if (submitted) {
+      return { tone: "wait", icon: "⏳", primary: "Waiting for opponent to score…" };
+    }
+    return {
+      tone: "act", icon: "⟡", primary: "Score your objectives",
+      secondary: "Mark which markers you control.",
+      cta: { label: "Score VP", kind: "score" },
+    };
   }
 
   if (g.phase === "activation") {

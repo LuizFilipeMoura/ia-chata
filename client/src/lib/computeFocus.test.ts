@@ -55,3 +55,28 @@ test("gives Roll initiative a secondary round line", () => {
   const f = computeFocus(g, [], "a");
   expect(f?.secondary).toBe("Round 2 — decide who moves first.");
 });
+
+test("recovery prompts scoring when I haven't submitted", () => {
+  const g = base({ started: true, phase: "recovery", recoveryClaims: {} });
+  const f = computeFocus(g, [], "a");
+  expect(f?.tone).toBe("act");
+  expect(f?.primary).toBe("Score your objectives");
+  expect(f?.cta).toEqual({ label: "Score VP", kind: "score" });
+});
+
+test("recovery waits after I submit with no conflict", () => {
+  const g = base({ started: true, phase: "recovery", recoveryClaims: { a: [0] } });
+  const f = computeFocus(g, [], "a");
+  expect(f?.tone).toBe("wait");
+  expect(f?.primary).toMatch(/Waiting for opponent/);
+});
+
+test("recovery flags a disputed marker to both sides", () => {
+  const g = base({
+    started: true, phase: "recovery",
+    recoveryClaims: { a: [0], b: [0] }, recoveryConflict: [0],
+  });
+  const f = computeFocus(g, [], "a");
+  expect(f?.primary).toBe("Objectives disputed");
+  expect(f?.cta).toEqual({ label: "Re-check", kind: "score" });
+});

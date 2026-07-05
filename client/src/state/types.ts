@@ -95,7 +95,8 @@ export interface GameState {
   bounties?: Record<string, number>;
   outcome?: unknown;
   resolutions?: Resolution[];
-  recoveryVp?: Record<string, unknown>;
+  recoveryClaims?: Record<string, number[]>;
+  recoveryConflict?: number[] | null;
   pendingBlast?: unknown;
   answerTokens?: Record<string, number>;
   pendingAnswer?: PendingAnswer | null;
