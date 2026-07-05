@@ -11,6 +11,7 @@ export function Topbar() {
         type="button"
         className="topbar-gloss"
         title="Glossary — what do SP, ROF, ACC mean?"
+        aria-label="Open glossary"
         onClick={() => setGlossaryOpen(true)}
       >
         ⓘ

@@ -17,7 +17,6 @@ export function TurnBanner() {
   const { rollInitiative, resolveBlast, scoreVp, endActivation } = useBattleActions();
   const sendCommand = useCommands();
 
-  const bannerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const lastPrimary = useRef<string | null>(null);
   const [changed, setChanged] = useState(false);
@@ -79,7 +78,7 @@ export function TurnBanner() {
   };
 
   return (
-    <div id="turnBanner" ref={bannerRef} className="turn-banner" data-tone={focus.tone}>
+    <div id="turnBanner" className="turn-banner" data-tone={focus.tone}>
       <div ref={cardRef} className={"tb-card" + (changed ? " changed" : "")}>
         <span id="tbIcon" className="tb-icon">{focus.icon || "◈"}</span>
         <div className="tb-text">

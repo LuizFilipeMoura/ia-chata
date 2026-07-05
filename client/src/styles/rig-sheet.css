@@ -67,9 +67,6 @@
 .rig-heat-chip-ic { font-size: .68rem; }
 .rig-heat-chip[data-zone="cool"]    { color: #7fd0c4; border-color: rgba(127,208,196,.4); }
 .rig-heat-chip[data-zone="warm"]    { color: var(--oil-hi); border-color: rgba(231,154,61,.5); }
-.rig-heat-chip[data-zone="warm"] .rig-heat-chip-ic,
-.rig-heat-chip[data-zone="redline"] .rig-heat-chip-ic,
-.rig-heat-chip[data-zone="over"] .rig-heat-chip-ic { filter: none; opacity: 1; }
 .rig-heat-chip[data-zone="redline"] { color: var(--ember-hi); border-color: rgba(229,83,58,.55); background: rgba(229,83,58,.1); }
 .rig-heat-chip[data-zone="over"] {
   color: #fff; border-color: var(--ember); background: rgba(229,83,58,.28);
@@ -124,15 +121,6 @@
 }
 .rig-status.warn { color: var(--oil-hi); }
 .rig-status.crit { color: var(--ember-hi); }
-.rig-weapons {
-  font-family: var(--font-mono); font-size: .64rem; color: var(--txt-dim);
-  margin: 0 0 .65rem; line-height: 1.35;
-}
-.rig-equipment {
-  font-family: var(--font-mono); font-size: .64rem; color: var(--oil-hi);
-  margin: -.4rem 0 .65rem; line-height: 1.35;
-}
-
 .rig-comp { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; }
 .rig-comp-label {
   width: 3.4rem; flex: 0 0 auto; font-family: var(--font-mono);
