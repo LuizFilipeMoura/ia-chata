@@ -16,7 +16,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "types": ["vitest/globals", "@testing-library/jest-dom"],
-    "paths": { "/shared/*": ["./shared/*"] }
+    "paths": {
+      "/shared/game-state.js": ["./client/shared.d.ts"],
+      "/shared/battle-view.js": ["./client/shared.d.ts"],
+      "/shared/glossary.js": ["./client/shared.d.ts"]
+    }
   },
   "include": ["client/src", "client/shared.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
