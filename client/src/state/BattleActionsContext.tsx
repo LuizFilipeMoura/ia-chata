@@ -13,7 +13,8 @@ import { useRoll } from "./RollContext";
 import { useRoomState } from "./RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
 import ChoiceField from "../components/overlays/ChoiceField";
-import type { Rig } from "./types";
+import ReactionPicker from "../components/overlays/ReactionPicker";
+import type { Rig, PrepType } from "./types";
 
 // A glyph per action so the console reads at a glance instead of as a wall of
 // text (battle.js:11-16).
@@ -40,6 +41,7 @@ const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOL
 interface BattleActionsApi {
   openMove: (rig: Rig, key: string) => void;
   openRepair: (rig: Rig, action: string) => void;
+  openPrepare: (rig: Rig) => void;
   scoreVp: () => void;
   resolveBlast: () => void;
   endActivation: (rig: Rig) => void;
@@ -223,6 +225,38 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     [openDrawer, closeDrawer, sendCommand, promptOneDie],
   );
 
+  const openPrepare = useCallback(
+    (rig: Rig) => {
+      const state: { prep: PrepType } = { prep: "brace" };
+      const build = () => (
+        <>
+          <p className="dwr-hint">
+            Place a facedown reaction on {rig.name}. It stays secret until an enemy fires on this Rig.
+          </p>
+          <ReactionPicker value={state.prep} onChange={(v) => (state.prep = v)} />
+        </>
+      );
+      openDrawer({
+        title: `🛡️ Prepare — ${rig.name}`,
+        tone: "oil",
+        render: build,
+        actions: [
+          { label: "Cancel", ghost: true, onClick: () => closeDrawer() },
+          {
+            label: "Set reaction",
+            primary: true,
+            icon: "🛡️",
+            onClick: () => {
+              closeDrawer();
+              sendCommand("action", { name: rig.name, action: "prepare", prep: state.prep });
+            },
+          },
+        ],
+      });
+    },
+    [openDrawer, closeDrawer, sendCommand],
+  );
+
   const scoreVp = useCallback(() => {
     const pts = window.prompt("Victory points scored this Recovery (centre 2, each corner 1):", "0");
     if (pts == null) return;
@@ -261,7 +295,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ openMove, openRepair, scoreVp, resolveBlast, endActivation, rollInitiative }}
+      value={{ openMove, openRepair, openPrepare, scoreVp, resolveBlast, endActivation, rollInitiative }}
     >
       {children}
     </Ctx.Provider>

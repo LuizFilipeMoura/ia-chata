@@ -14,7 +14,7 @@ interface Props {
 export function ActionConsole({ rig }: Props) {
   const { game } = useRoomState();
   const sendCommand = useCommands();
-  const { openMove, openRepair, endActivation } = useBattleActions();
+  const { openMove, openRepair, endActivation, openPrepare } = useBattleActions();
   const { openAttack } = useWizard();
 
   const t = game?.turn;
@@ -39,6 +39,10 @@ export function ActionConsole({ rig }: Props) {
     }
     if (key === "emergencypatch") {
       openRepair(r, "emergencypatch");
+      return;
+    }
+    if (key === "prepare") {
+      openPrepare(r);
       return;
     }
     sendCommand("action", { name: r.name, action: key });
