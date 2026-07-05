@@ -1,0 +1,87 @@
+/* ---- Commission-a-Rig wizard: full-screen scrim + centered card ---- */
+.rw-scrim {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(6, 8, 11, 0);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  transition: background .25s ease;
+}
+.rw-scrim.show { background: rgba(6, 8, 11, .72); }
+.rw-card {
+  width: min(420px, 100%); max-height: 88vh; overflow-y: auto;
+  background: linear-gradient(180deg, var(--iron-850), var(--iron-900));
+  border: 1px solid var(--rivet); border-radius: 14px;
+  padding: 1.1rem 1.1rem 1rem; box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  transform: translateY(10px) scale(.98); opacity: 0;
+  transition: transform .25s cubic-bezier(.2,.85,.25,1), opacity .2s ease;
+}
+.rw-scrim.show .rw-card { transform: none; opacity: 1; }
+
+.rw-head { margin-bottom: .9rem; }
+.rw-title {
+  font-family: var(--font-mono); font-size: .68rem; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--oil); margin-bottom: .55rem;
+}
+.rw-dots { display: flex; gap: .35rem; }
+.rw-dot {
+  flex: 1; text-align: center; font-family: var(--font-mono); font-size: .52rem;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--txt-faint);
+  padding: .3rem .2rem; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--iron-950); white-space: nowrap; overflow: hidden;
+}
+.rw-dot.on { color: #241606; background: linear-gradient(180deg, var(--oil-hi), var(--oil)); border-color: var(--oil-deep); }
+.rw-dot.done { color: var(--oil-hi); border-color: rgba(231,154,61,.5); }
+
+.rw-body { display: flex; flex-direction: column; gap: .7rem; min-height: 12rem; }
+.rw-field { display: flex; flex-direction: column; gap: .3rem; }
+.rw-field label {
+  font-family: var(--font-mono); font-size: .6rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--txt-dim);
+}
+.rw-field select, .rw-name {
+  background: var(--iron-800); color: var(--txt); border: 1px solid var(--line);
+  border-radius: 10px; padding: .55rem .6rem; font-family: var(--font-display); font-size: .92rem;
+}
+.rw-name:focus, .rw-field select:focus { outline: none; border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil); }
+
+.rw-upgrades { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: -.3rem; }
+.rw-upgrade-tag {
+  font-family: var(--font-mono); font-size: .58rem; letter-spacing: .04em;
+  color: var(--oil-hi); border: 1px solid rgba(231,154,61,.35); background: rgba(231,154,61,.08);
+  border-radius: 999px; padding: .2rem .55rem; cursor: help;
+}
+.rw-hint { font-size: .74rem; color: var(--txt-faint); line-height: 1.4; }
+
+.rw-equip-grid { display: flex; flex-direction: column; gap: .5rem; }
+.rw-equip-card {
+  text-align: left; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--iron-800); padding: .6rem .7rem; cursor: pointer;
+  transition: border-color .16s, box-shadow .16s, background .16s;
+}
+.rw-equip-card:hover { border-color: var(--rivet); }
+.rw-equip-card.sel {
+  border-color: var(--oil); background: rgba(231,154,61,.08);
+  box-shadow: 0 0 0 1px rgba(231,154,61,.35);
+}
+.rw-equip-family {
+  font-family: var(--font-mono); font-size: .56rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--txt-faint);
+}
+.rw-equip-label { font-family: var(--font-display); font-weight: 700; font-size: 1rem; margin: .1rem 0 .25rem; }
+.rw-equip-passive { font-size: .78rem; color: var(--txt-dim); line-height: 1.35; }
+.rw-equip-active {
+  margin-top: .35rem; font-size: .74rem; color: var(--oil-hi); line-height: 1.4;
+  border-top: 1px dashed var(--line); padding-top: .35rem;
+}
+
+.rw-confirm { justify-content: center; text-align: center; }
+.rw-confirm-name { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+.rw-confirm-row { font-family: var(--font-mono); font-size: .78rem; color: var(--txt-dim); }
+
+.rw-nav { display: flex; gap: .5rem; margin-top: 1rem; }
+.rw-btn {
+  flex: 1; background: linear-gradient(180deg, var(--oil-hi), var(--oil));
+  color: #241606; border-radius: 10px; padding: .6rem 1rem;
+  font-weight: 700; font-family: var(--font-display); letter-spacing: .04em; font-size: .9rem;
+}
+.rw-btn:disabled { background: var(--iron-800); color: var(--txt-faint); border: 1px solid var(--line); }
+.rw-btn.ghost { background: var(--iron-750); color: var(--txt); flex: 0 0 auto; padding-left: 1.2rem; padding-right: 1.2rem; }
