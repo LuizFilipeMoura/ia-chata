@@ -1,0 +1,14 @@
+.field-map { width: 100%; display: block; }
+.field-map .fm-field { fill: var(--surface-1, #0a0c0f); stroke: #232a34; stroke-width: 1; }
+.field-map .fm-half-mine { fill: #1d9e75; fill-opacity: 0.22; }
+.field-map .fm-half-foe { fill: #d85a30; fill-opacity: 0.22; }
+.field-map .fm-diag { stroke: #6b7280; stroke-width: 1.25; stroke-dasharray: 6 5; }
+.field-map .fm-obj { fill: #ef9f27; stroke: #854f0b; }
+.field-map .fm-obj-label, .field-map .fm-zone-label {
+  fill: #c2c0b6; font-size: 11px; font-family: var(--font-mono, monospace);
+}
+.field-map .fm-terrain { fill: #5f5e5a; stroke: #2c2c2a; stroke-width: 0.5; }
+.field-controls { margin: 0.75rem 0; }
+.field-controls .fc-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.field-controls label { font-size: 0.8rem; color: var(--text-secondary, #9c9a92); }
+.field-controls input[type="number"] { width: 4.5rem; }
