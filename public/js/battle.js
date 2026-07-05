@@ -2,7 +2,7 @@ import { S } from "./state.js";
 import { sendCommand } from "./api.js";
 import { availableActions, actionBudget, phaseSummary, outcomeText } from "/shared/battle-view.js";
 import { openAttackWizard } from "./attack-wizard.js";
-import { playResolution } from "./roll-dialog.js";
+import { playResolution, promptDice } from "./roll-dialog.js";
 
 const hud = document.getElementById("battleHud");
 const bhPhase = document.getElementById("bhPhase");
@@ -151,14 +151,13 @@ function openBlastPrompt() {
   const targets = names.split(",").map((s) => s.trim()).filter(Boolean);
   sendCommand("blast", { targets });
 }
-function promptOneDie(label, cb) {
-  const v = parseInt(window.prompt(`${label} — enter your roll:`, ""), 10);
-  if (Number.isFinite(v)) cb(v);
+async function promptOneDie(label, cb) {
+  const out = await promptDice([{ key: "d", label, sides: 12 }], label);
+  cb(out.d);
 }
-function promptTwoDice(label, cb) {
-  const a = parseInt(window.prompt(`${label} — Side A roll:`, ""), 10);
-  const b = parseInt(window.prompt(`${label} — Side B roll:`, ""), 10);
-  if (Number.isFinite(a) && Number.isFinite(b)) cb(a, b);
+async function promptTwoDice(label, cb) {
+  const out = await promptDice([{ key: "a", label: "Side A", sides: 12 }, { key: "b", label: "Side B", sides: 12 }], label);
+  cb(out.a, out.b);
 }
 function mkBtn(text, onClick) {
   const btn = document.createElement("button");

@@ -9,6 +9,7 @@ const diceEl = document.getElementById("rollDice");
 const summaryEl = document.getElementById("rollSummary");
 const effectsEl = document.getElementById("rollEffects");
 const closeBtn = document.getElementById("rollClose");
+const formEl = document.getElementById("rollForm");
 
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let hideTimer = null;
@@ -78,5 +79,47 @@ export function playResolution(entry) {
       for (const { die, roll } of settled) die.textContent = String(Math.floor(Math.random() * roll.sides) + 1);
       if (performance.now() - started > 650) { clearInterval(flicker); finish(); resolve(); }
     }, 60);
+  });
+}
+
+// Manual dice entry. `specs` is [{ key, label, sides }]. Resolves to a map of
+// key -> entered value. Reuses the overlay chrome so manual mode feels first-class.
+export function promptDice(specs, title = "Enter dice") {
+  kindEl.textContent = title.toUpperCase();
+  diceEl.innerHTML = "";
+  summaryEl.textContent = "";
+  effectsEl.innerHTML = "";
+  formEl.hidden = false;
+  formEl.innerHTML = "";
+  open();
+
+  return new Promise((resolve) => {
+    const inputs = specs.map((spec) => {
+      const row = document.createElement("div");
+      row.className = "roll-form-row";
+      const label = document.createElement("label");
+      label.textContent = `${spec.label} (D${spec.sides})`;
+      const input = document.createElement("input");
+      input.type = "number"; input.min = "1"; input.max = String(spec.sides); input.inputMode = "numeric";
+      row.appendChild(label); row.appendChild(input);
+      formEl.appendChild(row);
+      return { spec, input };
+    });
+    const go = document.createElement("button");
+    go.className = "roll-form-go";
+    go.textContent = "Confirm roll";
+    go.addEventListener("click", () => {
+      const out = {};
+      for (const { spec, input } of inputs) {
+        const v = parseInt(input.value, 10);
+        if (!Number.isFinite(v) || v < 1 || v > spec.sides) { input.focus(); return; }
+        out[spec.key] = v;
+      }
+      formEl.hidden = true;
+      closeRoll();
+      resolve(out);
+    });
+    formEl.appendChild(go);
+    inputs[0]?.input.focus();
   });
 }

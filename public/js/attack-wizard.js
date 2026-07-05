@@ -44,13 +44,36 @@ export function openAttackWizard(rig, mode) {
   scrim.classList.add("show");
 }
 
-function submit(rig, s) {
+async function submit(rig, s) {
   const attrs = { name: rig.name, action: s.mode, target: s.target };
   if (s.mode !== "ram") {
     Object.assign(attrs, { weapon: s.weapon, arc: s.arc, range: s.range, cover: s.cover });
     if (s.mode === "aimed") attrs.loc = s.loc;
   }
-  // Manual dice for combat rolls are collected in Task 7; auto mode posts directly.
+  if (S.game.autoResolve === false) {
+    const { promptDice } = await import("./roll-dialog.js");
+    const target = S.rigs.find((r) => r.name === s.target);
+    if (s.mode === "ram") {
+      const d = await promptDice([
+        { key: "sl", label: "Self location", sides: 12 }, { key: "si", label: "Self impact", sides: 6 },
+        { key: "tl", label: "Target location", sides: 12 }, { key: "ti", label: "Target impact", sides: 6 },
+      ], "Ram dice");
+      attrs.dice = { self: { location: d.sl, impact: d.si }, target: { location: d.tl, impact: d.ti } };
+    } else {
+      const profile = rig.weapons[s.weapon === "melee" ? "melee" : "longRange"];
+      const rof = ({ "Mini Gun": 8, "Double MG": 8, "Autocannon": 4, "Arc Gun": 2, "Mortar": 3, "Sniper Cannon": 1, Sword: 2, "Circular Saw": 3, Chainsaw: 3, Claw: 2, Lance: 1, "Wrecking Ball": 1 })[profile] || 1;
+      const specs = [];
+      for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
+      if (s.mode !== "aimed") specs.push({ key: "loc", label: "Location", sides: 12 });
+      const d = await promptDice(specs, `${profile} dice`);
+      const toHit = []; for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
+      attrs.dice = { toHit };
+      if (d.loc) attrs.dice.location = d.loc;
+      // Impact dice are entered on demand only when hits land; for manual play we
+      // supply a generous impacts array using the same hit dice count as an upper bound.
+      attrs.dice.impacts = toHit.map(() => undefined);
+    }
+  }
   sendCommand("action", attrs);
   close();
 }
