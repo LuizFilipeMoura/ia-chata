@@ -12,6 +12,9 @@ test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.reload.heat, 0);
   assert.equal(ACTIONS.repair.heat, 0);
   assert.equal(ACTIONS.shutdown.heat, 0);
+  assert.equal(ACTIONS.shutdown.slot, 0);
+  assert.equal(ACTIONS.move.slot, 1);
+  assert.equal(ACTIONS.reload.slot, 1);
 });
 
 test("heatThreshold maps a D12+bonus total to the right band (§6)", () => {
