@@ -117,6 +117,7 @@ An Impact Roll total **below** a location's Direct threshold does nothing (it gl
    - Light / Medium / Heavy: **2 weapons — one Long Range and one Melee.**
    - Colossal: **one Long Range + one Melee, plus 1 Hull-mounted weapon** of either type (3 weapons total).
    - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **STR then scales with the chassis** (Light −2 / Medium +0 / Heavy +2 / Colossal +4, §12).
+   - Each equipped weapon has **two upgrade options**. Choose **one** upgrade for the Long Range weapon and **one** upgrade for the Melee weapon when the Rig is commissioned. A selected upgrade modifies only that weapon.
 
 ### Balancing without points
 - **Balanced game (recommended):** both sides field the **same number of Rigs in each weight class** (mirror the composition).
@@ -153,7 +154,7 @@ Each Rig may take **up to 5 actions** per activation. The number in **[brackets]
   - *Pivot:* up to **90° free** at any point(s) during the Move. A pivot of **more than 90°** consumes the Rig's entire movement for that action.
   - *Sprint:* you may extend a Move to up to **1½ × Speed**; a Sprinting Move generates **2 heat** instead of 1 (§6).
 
-- **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon must be **reloaded** before firing again in the same activation. **Melee** weapons never need reloading.
+- **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation, either **Reload** first (a separate 1-action step) or take a **rushed shot** — fire the spent weapon for **2 actions** instead of 1, folding an immediate reload into the trigger pull (this also costs the Reload's heat). **Melee** weapons never need reloading.
 
 - **Aimed Shot [1]** — a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
 
@@ -193,7 +194,8 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 | Move — **Sprint** (up to 1½× Speed) | 2 |
 | Fire Weapon | 1 (**2** if the weapon is **Hot**) |
 | Aimed Shot / Ram / Prepare | 1 |
-| Reload / Repair / Shut Down | 0 |
+| Reload | 1 |
+| Repair / Shut Down | 0 |
 
 - **Full Auto** and **Charged Shot** fire-modes: each attack **die** that rolls a **1** adds 1 heat.
 
@@ -332,7 +334,7 @@ Each player secretly notes one enemy Rig as their **Priority Target**. Destroyin
 
 Every weapon is one of **two types**, and every Rig equips **one of each** (§3):
 
-- **Long Range** — any weapon **without** the Melee perk. Fires at range and must be **reloaded** between shots in the same activation.
+- **Long Range** — any weapon **without** the Melee perk. Fires at range; once spent it must be **reloaded** between shots in the same activation (or fired as a 2-action **rushed shot**, §5).
 - **Melee** — any weapon with the **Melee** perk (RNG 1.5"). Usable only within 1.5" and never needs reloading.
 
 There are **six weapons of each type**. Any weapon may be fitted to a Rig of **any weight class** and **any faction**. **ACC** shows **near / far** values matching the weapon's two range bands (**RNG** = near / far, in inches); a single value applies at all ranges.
@@ -373,6 +375,25 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Claw | 2 | 8 | +1 | 1.5 | Melee, Armour Piercing |
 | Lance | 1 | 11 | +1 | 1.5 | Melee, Impale |
 | Wrecking Ball | 1 | 12 | – | 1.5 | Melee, Staggering |
+
+### Weapon Upgrades
+
+Each weapon has **two upgrade options**. When a Rig is commissioned, choose **one** upgrade for each equipped weapon. The selected upgrade changes only that weapon.
+
+| Weapon | Upgrade Option A | Upgrade Option B |
+|---|---|---|
+| Mini Gun | **Extended Belt:** +2 ROF; attack dice showing 1 add 1 heat | **Suppressive Fire:** gains Shock |
+| Double MG | **Tracer Rounds:** gains Incendiary | **Gyro Mount:** reroll one missed to-hit die |
+| Autocannon | **AP Shells:** gains Armour Piercing | **Depleted Core:** +2 STR |
+| Arc Gun | **Systems Overload:** on hit, target loses 1 action on its next activation | **Ion Burn:** gains Incendiary |
+| Mortar | **Airburst Fuze:** ignores cover | **Cluster Shells:** on hit, deal 1 SP to a second random location on the target |
+| Sniper Cannon | **Match Barrel:** no far-range ACC penalty | **Marksman Optics:** gains Precision |
+| Sword | **Duelist's Balance:** gains Precision | **Keen Edge:** gains Rend |
+| Circular Saw | **Tempered Teeth:** gains Armour Piercing | **Sunder:** once per damaging attack, the struck location's max SP is reduced by 1, to a minimum of 1 |
+| Chainsaw | **High-Rev Motor:** +2 STR; attacking adds +1 heat | **Ripper Teeth:** gains Rend |
+| Claw | **Vice Grip:** gains Impale | **Rending Talons:** gains Rend |
+| Lance | **Couched Reach:** melee range increases by 1" | **Spearpoint:** gains Impale |
+| Wrecking Ball | **Haymaker:** +3 STR | **Wrecking Momentum:** gains Staggering |
 
 ---
 
@@ -420,8 +441,6 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 | **Mobility** | **Servo Actuators** | Sprint costs 1 heat instead of 2 | **Jump Jets** (+2 heat): move up to **base Speed**, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties |
 | **Power** | **Overclock Core** | The first time this Rig's Engine reaches 0 SP, it does **not** skip its next activation | **Overclock** (+3 heat): +2 actions this activation (net +1 after the slot) |
 | **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 2 SP to one location, no D12 roll |
-
-> Weapon customization (fixed signature upgrades per weapon) is documented in `docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md` Part 2. The upgrade catalogue is authored there; combat-engine wiring for its five new mechanics (Reach, Scatter, Systems Overload, Sunder, Reroll-a-miss) is future work.
 
 ---
 
