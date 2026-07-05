@@ -1,0 +1,30 @@
+/* ---- Score-Objectives wizard: marker list inside the shared aw-* shell ---- */
+.vpw-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+
+.vpw-opt {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #3a3a3a);
+  border-radius: 10px;
+  background: var(--panel, #1c1c1c);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.vpw-opt.sel { border-color: var(--oil, #8ecae6); background: rgba(142, 202, 230, 0.12); }
+.vpw-opt.disputed { border-color: var(--warn, #e0a458); background: rgba(224, 164, 88, 0.12); }
+
+.vpw-vp {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 28px; padding: 0 6px;
+  border-radius: 999px; font-weight: 700;
+  background: var(--oil, #8ecae6); color: #08202b;
+}
+.vpw-name { font-weight: 600; }
+.vpw-state { font-size: 0.8rem; opacity: 0.75; }
+.vpw-warn { grid-column: 1 / -1; font-size: 0.8rem; color: var(--warn, #e0a458); }
+
+.vpw-total { text-align: center; margin-bottom: 10px; opacity: 0.9; }
