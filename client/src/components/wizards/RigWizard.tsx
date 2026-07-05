@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES } from "/shared/game-state.js";
+import {
+  WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY,
+} from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
+import { GlossaryText } from "../chat/GlossaryText";
 
 const STEPS = ["Identity", "Weapons", "Equipment", "Confirm"];
 
@@ -90,7 +93,7 @@ export function RigWizard({ onClose }: { onClose: () => void }) {
           onClick={() => onSelect(u.id)}
         >
           <span>{u.name}</span>
-          <small>{u.tag}</small>
+          <small>Upgrade · <GlossaryText text={u.tag} /></small>
         </button>
       ))}
     </div>
@@ -117,6 +120,9 @@ export function RigWizard({ onClose }: { onClose: () => void }) {
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
+          <div className="rw-sp-preview">
+            Hull {RIG_DEFAULTS[state.cls].hull} · Arms/Legs {RIG_DEFAULTS[state.cls].arms} · Engine {RIG_DEFAULTS[state.cls].engine} (heat cap {HEAT_CAPACITY[state.cls]})
+          </div>
         </div>
         <div className="rw-field">
           <label>Side</label>
@@ -182,9 +188,9 @@ export function RigWizard({ onClose }: { onClose: () => void }) {
             >
               <div className="rw-equip-family">{e.family}</div>
               <div className="rw-equip-label">{e.label}</div>
-              <div className="rw-equip-passive">{e.passive}</div>
+              <div className="rw-equip-passive">Passive · <GlossaryText text={e.passive} /></div>
               <div className="rw-equip-active">
-                <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
+                Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — <GlossaryText text={e.active.text} />
               </div>
             </button>
           ))}
@@ -202,9 +208,9 @@ export function RigWizard({ onClose }: { onClose: () => void }) {
     body = (
       <div className="rw-body rw-confirm">
         <div className="rw-confirm-name">{(state.name || "(unnamed)")} — {state.cls}</div>
-        <div className="rw-confirm-row">{state.longRange} - {lrUpgrade?.name || "Upgrade ?"}</div>
-        <div className="rw-confirm-row">{state.melee} - {meleeUpgrade?.name || "Upgrade ?"}</div>
-        <div className="rw-confirm-row">{e.label} - {e.passive}</div>
+        <div className="rw-confirm-row">🎯 {state.longRange} · {lrUpgrade?.name || "Upgrade ?"}</div>
+        <div className="rw-confirm-row">🗡️ {state.melee} · {meleeUpgrade?.name || "Upgrade ?"}</div>
+        <div className="rw-confirm-row">🛠 {e.label} · {e.passive}</div>
       </div>
     );
   }
@@ -220,8 +226,11 @@ export function RigWizard({ onClose }: { onClose: () => void }) {
       }}
     >
       <div className="rw-card">
+        <div className="rw-handle" />
         <div className="rw-head">
-          <div className="rw-title">◈ Commission a Rig</div>
+          <div className="rw-title-row">
+            <div className="rw-title">◈ Commission a Rig</div>
+          </div>
           <div className="rw-dots">
             {STEPS.map((label, i) => (
               <span
