@@ -10,12 +10,15 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { RoomProvider } from "./state/RoomStateContext";
 import { UiProvider } from "./state/UiStateContext";
+import { DrawerProvider } from "./state/DrawerContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RoomProvider>
       <UiProvider>
-        <App />
+        <DrawerProvider>
+          <App />
+        </DrawerProvider>
       </UiProvider>
     </RoomProvider>
   </StrictMode>,
