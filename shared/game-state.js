@@ -571,6 +571,12 @@ function performAction(room, rig, act, a, random) {
     bumpHeat(rig, def.heat);
     return true;
   }
+  if (act === "sprint" && rig.equipment === "servo-actuators") {
+    // Servo Actuators (Mobility) — Sprint costs 1 heat instead of 2.
+    t.actionsUsed += 1;
+    bumpHeat(rig, 1);
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {

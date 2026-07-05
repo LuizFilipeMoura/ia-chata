@@ -785,3 +785,26 @@ test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
   assert.equal(cooled.engine.heat, 2); // 5 - 3
   assert.equal(plain.engine.heat, 3);  // 5 - 2
 });
+
+test("Servo Actuators makes Sprint cost 1 heat instead of 2", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", lr: "Mini Gun", melee: "Sword", equipment: "servo-actuators" } });
+  applyCommand(r, { verb: "add", attrs: { name: "A2", class: "light", owner: "a", lr: "Mini Gun", melee: "Sword" } });
+  applyCommand(r, { verb: "add", attrs: { name: "A3", class: "light", owner: "a", lr: "Mini Gun", melee: "Sword" } });
+  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "light", owner: "b", lr: "Mini Gun", melee: "Sword" } });
+  applyCommand(r, { verb: "add", attrs: { name: "B2", class: "light", owner: "b", lr: "Mini Gun", melee: "Sword" } });
+  applyCommand(r, { verb: "add", attrs: { name: "B3", class: "light", owner: "b", lr: "Mini Gun", melee: "Sword" } });
+  for (const side of ["a", "b"]) applyCommand(r, { verb: "ready", attrs: { side } });
+  applyCommand(r, { verb: "initiative", attrs: {} });
+
+  const servo = findRig(r, "A1");
+  while (r.game.turn.side !== servo.owner || r.game.activated) {
+    const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
+    if (active === servo) break;
+    applyCommand(r, { verb: "activate", attrs: { name: active.name } });
+    applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
+  }
+  applyCommand(r, { verb: "activate", attrs: { name: "A1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "A1", action: "sprint" } });
+  assert.equal(servo.engine.heat, 1);
+});
