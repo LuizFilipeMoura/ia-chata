@@ -19,6 +19,10 @@ const rigPanel = document.getElementById("rigPanel");
 const rigToggle = document.getElementById("rigToggle");
 const rigClose = document.getElementById("rigClose");
 const sheetScrim = document.getElementById("sheetScrim");
+const battleSetup = document.getElementById("battleSetup");
+const battleReadyStatus = document.getElementById("battleReadyStatus");
+const battleBounty = document.getElementById("battleBounty");
+const readyBattle = document.getElementById("readyBattle");
 
 function barClass(c) {
   if (c.destroyed) return "rig-fill-dead";
@@ -63,6 +67,45 @@ function orderedRigs() {
     ...S.rigs.filter((rig) => (rig.owner || "a") === mySide),
     ...S.rigs.filter((rig) => (rig.owner || "a") === enemySide),
   ];
+}
+
+function sideName(sideId) {
+  return S.game?.sides?.find((side) => side.id === sideId)?.name || (sideId === "a" ? "Side A" : "Side B");
+}
+
+function sideReady(sideId) {
+  return Boolean(S.game?.sides?.find((side) => side.id === sideId)?.ready);
+}
+
+function sideRigCount(sideId) {
+  return S.rigs.filter((rig) => (rig.owner || "a") === sideId).length;
+}
+
+function renderBattleSetup() {
+  if (!battleSetup || !readyBattle) return;
+  const mySide = S.session?.side || "a";
+  const enemySide = mySide === "a" ? "b" : "a";
+  const myCount = sideRigCount(mySide);
+  const started = Boolean(S.game?.started);
+
+  if (started) {
+    const bountyId = S.game?.bounties?.[mySide];
+    const bounty = S.rigs.find((rig) => rig.id === bountyId);
+    battleReadyStatus.textContent = "Battle started";
+    battleBounty.textContent = bounty ? `Ironclad Bounty: ${bounty.name}` : "Ironclad Bounty: awaiting target";
+    readyBattle.disabled = true;
+    readyBattle.textContent = "Started";
+    return;
+  }
+
+  const myReady = sideReady(mySide);
+  const enemyReady = sideReady(enemySide);
+  battleReadyStatus.textContent = `${sideName(mySide)} ${myReady ? "Ready" : "Not ready"} · ${sideName(enemySide)} ${enemyReady ? "Ready" : "Not ready"}`;
+  battleBounty.textContent = myCount >= 3
+    ? "Mark Ready after your final lineup is set."
+    : `Choose ${3 - myCount} more Rig${3 - myCount === 1 ? "" : "s"} to ready up.`;
+  readyBattle.disabled = myReady || myCount < 3;
+  readyBattle.textContent = myReady ? "Ready" : "Ready";
 }
 
 function compRow(rig, loc) {
@@ -199,6 +242,7 @@ function buildRigScreen(rig) {
 
 export function renderRigs() {
   syncOwnerOptions();
+  renderBattleSetup();
   // Rebuild the rig screens but keep the persistent add-rig screen (its inputs
   // hold live event listeners bound once at startup).
   [...rigList.querySelectorAll(".rig-screen:not(.rig-screen-add)")].forEach((n) => n.remove());
@@ -267,6 +311,10 @@ function addRigFromForm() {
 rigAddBtn.addEventListener("click", addRigFromForm);
 rigNameInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); addRigFromForm(); }
+});
+readyBattle?.addEventListener("click", () => {
+  const side = S.session?.side || "a";
+  sendCommand("ready", { side });
 });
 
 // ---- Rig sheet open/close ----

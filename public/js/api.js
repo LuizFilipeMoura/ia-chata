@@ -19,7 +19,10 @@ let pollTimer = null;
 async function pollOnce() {
   if (!S.session?.room) return;
   try {
-    const resp = await fetch(`/api/game/${encodeURIComponent(S.session.room)}`);
+    const params = new URLSearchParams();
+    if (S.session?.side) params.set("side", S.session.side);
+    const qs = params.toString();
+    const resp = await fetch(`/api/game/${encodeURIComponent(S.session.room)}${qs ? `?${qs}` : ""}`);
     if (!resp.ok) return;
     const { version, state } = await resp.json();
     if (version !== S.stateVersion) applyServerState(state);   // re-render only on change

@@ -75,7 +75,7 @@ export async function sendMessage(text) {
     const resp = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: history, think: thinkEnabled, room: S.session?.room }),
+      body: JSON.stringify({ messages: history, think: thinkEnabled, room: S.session?.room, side: S.session?.side }),
     });
 
     if (!resp.ok || !resp.body) {

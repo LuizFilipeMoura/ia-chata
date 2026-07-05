@@ -27,9 +27,25 @@ test("command posts include the viewer side for owner defaults", () => {
   assert.match(api, /side:\s*S\.session\?\.side/);
 });
 
+test("polling and chat send the viewer side for private state", () => {
+  const api = fs.readFileSync(new URL("./js/api.js", import.meta.url), "utf8");
+  const chat = fs.readFileSync(new URL("./js/chat.js", import.meta.url), "utf8");
+  assert.match(api, /URLSearchParams/);
+  assert.match(api, /side.*S\.session\?\.side/s);
+  assert.match(chat, /side:\s*S\.session\?\.side/);
+});
+
 test("tracker renders ownership groups relative to the current side", () => {
   assert.match(tracker, /Your Squadron/);
   assert.match(tracker, /Enemy/);
   assert.match(tracker, /rig-group-head/);
   assert.match(css, /\.rig-group-head/);
+});
+
+test("rig panel exposes ready controls and private bounty display", () => {
+  assert.match(html, /id="readyBattle"/);
+  assert.match(html, /id="battleSetup"/);
+  assert.match(tracker, /sendCommand\("ready"/);
+  assert.match(tracker, /Ironclad Bounty/);
+  assert.match(css, /\.battle-setup/);
 });

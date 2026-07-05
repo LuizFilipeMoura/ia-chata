@@ -13,7 +13,7 @@ export function createChatRouter(store) {
     const clientMessages = Array.isArray(req.body?.messages) ? req.body.messages : [];
     const think = req.body?.think !== false;
     const room = req.body?.room ? store.getRoom(req.body.room) : null;
-    const battle = room ? formatBattleState(room) : "";
+    const battle = room ? formatBattleState(room, req.body?.side) : "";
     const system = getSystemPrompt() + "\n" + TRACKER_PROTOCOL + "\n" + PLAYER_START_GUIDE + "\n" + battle;
     const messages = [{ role: "system", content: system }, ...clientMessages];
 
