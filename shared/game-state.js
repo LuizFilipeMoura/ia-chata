@@ -282,7 +282,7 @@ function damageRig(rig, loc, amount) {
     if (c.sp > 0) c.sp -= 1;
     else c.destroyed = true;
   }
-  if (loc === "engine" && c.sp === 0) c.heat = Math.max(c.heat, 3);
+  if (loc === "engine" && c.sp === 0) { c.heat = Math.max(c.heat, 3); rig.skipNextActivation = true; }
   recompute(rig);
 }
 
@@ -302,6 +302,7 @@ function setRigSp(rig, loc, sp) {
   c.sp = v;
   if (v > 0) c.destroyed = false;
   recompute(rig);
+  if (loc === "engine" && c.sp === 0) rig.skipNextActivation = true;
 }
 
 function heatRig(rig, spec) {
@@ -313,6 +314,24 @@ function heatRig(rig, spec) {
   if (!Number.isFinite(v)) return;
   c.heat = Math.max(engineHeatFloor(rig), Math.floor(v));
 }
+
+function sideHasActivatable(room, sideId) {
+  return room.rigs.some((r) => (r.owner || "a") === sideId && !r.destroyed && !r.activated);
+}
+
+// After a rig finishes, pass to the other side if it can still act; otherwise
+// the same side continues back-to-back; if neither can act, run Recovery (§4).
+function handoff(room) {
+  if (room.game.outcome) return;
+  const cur = room.game.turn.side;
+  const other = cur === "a" ? "b" : "a";
+  if (sideHasActivatable(room, other)) room.game.turn.side = other;
+  else if (sideHasActivatable(room, cur)) room.game.turn.side = cur;
+  else runRecovery(room);
+}
+
+// TEMPORARY stub — replaced with the full cooldown/reset logic in Task 7.
+function runRecovery(room) { room.game.phase = "recovery"; }
 
 // Apply a single normalized command { verb, attrs } to the room in place.
 // Returns the room. Bumps room.version only when something actually changed.
@@ -372,6 +391,25 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         });
         changed = true;
       }
+    }
+  } else if (verb === "activate") {
+    const rig = findRig(room, a.name);
+    const t = room.game.turn;
+    if (rig && t && room.game.phase === "activation" && t.activeRigId == null &&
+        (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
+      if (rig.skipNextActivation) {
+        rig.skipNextActivation = false;
+        rig.activated = true;
+        pushResolution(room, { kind: "skip", actor: rig.owner, rigId: rig.id, rolls: [],
+          summary: `${rig.name} loses this activation (engine offline).`, effects: [] });
+        handoff(room);
+      } else {
+        t.activeRigId = rig.id;
+        t.actionsUsed = 0;
+        t.actionsMax = 5 - (rig.hull.sp === 0 ? 2 : 0);
+        rig.loaded = { longRange: true, melee: true };
+      }
+      changed = true;
     }
   } else {
     const rig = findRig(room, a.name);

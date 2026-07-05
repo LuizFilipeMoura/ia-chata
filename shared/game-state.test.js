@@ -351,3 +351,45 @@ test("initiative verb only runs during the initiative phase", () => {
   applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
   assert.equal(r.version, v);
 });
+
+test("activate opens the acting rig with a 5-action budget", () => {
+  const r = startedRoom(); // turn.side === "b"
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
+  assert.equal(r.game.turn.actionsUsed, 0);
+  assert.equal(r.game.turn.actionsMax, 5);
+});
+
+test("activate rejects the wrong side, a second rig mid-activation, and destroyed rigs", () => {
+  const r = startedRoom(); // b's turn
+  applyCommand(r, { verb: "activate", attrs: { name: "a1" } });   // not b's rig
+  assert.equal(r.game.turn.activeRigId, null);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const first = r.game.turn.activeRigId;
+  applyCommand(r, { verb: "activate", attrs: { name: "b2" } });   // one at a time
+  assert.equal(r.game.turn.activeRigId, first);
+});
+
+test("Hull at 0 SP drops the action budget by 2", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "set", attrs: { name: "b1", loc: "hull", sp: "0" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(r.game.turn.actionsMax, 3);
+});
+
+test("engine reaching 0 SP flags the next activation as skipped", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "set", attrs: { name: "b1", loc: "engine", sp: "0" } });
+  assert.equal(findRig(r, "b1").skipNextActivation, true);
+});
+
+test("activating a skip-flagged rig burns the activation and hands off", () => {
+  const r = startedRoom(); // b's turn
+  applyCommand(r, { verb: "set", attrs: { name: "b1", loc: "engine", sp: "0" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  assert.equal(b1.activated, true);
+  assert.equal(b1.skipNextActivation, false);
+  assert.equal(r.game.turn.activeRigId, null);
+  assert.equal(r.game.turn.side, "a"); // handed off
+});
