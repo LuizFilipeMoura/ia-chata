@@ -69,6 +69,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   const str = computeStr(attacker, profile, opts);
   const bonus = arcBonus(profile, opts.arc);
   const braced = target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
+  const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
   const row = IMPACT[target.weightClass][location];
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
@@ -77,7 +78,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     let extra = 0;
     if (profile.perks.includes("Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
     if (profile.perks.includes("Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
-    const total = die + str + bonus + braced + extra;
+    const total = die + str + bonus + braced + hardened + extra;
     const sev = impactSeverity(total, row);
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
   }

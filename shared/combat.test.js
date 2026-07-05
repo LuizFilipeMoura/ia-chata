@@ -53,6 +53,20 @@ test("rollImpacts computes per-hit severity and honours Brace on the front arc",
   assert.equal(out[0].sp, 1);
 });
 
+test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const hardened = { weightClass: "medium", hardened: true, preparation: null };
+  // 1 hit, d6=5 -> 5 + 8 + 0(front) - 1(harden) = 12 vs medium hull (11/14/17) -> direct(1), not the 11 it'd be unhardened.
+  const out = rollImpacts({ weightClass: "medium" }, hardened, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out[0].total, 12);
+
+  const both = { weightClass: "medium", hardened: true, preparation: { type: "brace" } };
+  const out2 = rollImpacts({ weightClass: "medium" }, both, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out2[0].total, 10); // 5 + 8 - 2(brace) - 1(harden)
+});
+
 test("Raking Fire against the front arc deals no damage", () => {
   const mini = WEAPONS.longRange["Mini Gun"];
   const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",
