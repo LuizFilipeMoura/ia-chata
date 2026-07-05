@@ -104,10 +104,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (!profile) return { ok: false, reason: "no-weapon" };
   if (attacker.weaponsDestroyed.includes(weaponName)) return { ok: false, reason: "weapon-destroyed" };
   if (opts.range === "out") return { ok: false, reason: "range" };
-  if (slot === "longRange" && !attacker.loaded.longRange) return { ok: false, reason: "reload" };
+  // A spent ranged weapon normally can't fire — unless the caller folds in a
+  // rushed reload (§7), paid for with an extra action-slot upstream.
+  if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };
 
   const th = rollToHit(attacker, profile, opts, opts.dice?.toHit, random);
-  const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat;
+  const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
 
   const rolls = [{ sides: 6, value: th.hits, label: `hits (${th.hits}/${th.rof})` }];
@@ -118,6 +120,9 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     impacts = rollImpacts(attacker, target, profile, location,
       { arc: opts.arc, hits: th.hits, charged: opts.charged }, opts.dice, random);
     for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
+    if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
+      ctx.sunderLocation?.(target, location);
+    }
     applyOnHitPerks(room, attacker, target, profile, opts, random, ctx);
   }
   if (heat > 0) ctx.bumpHeat(attacker, heat);
@@ -154,6 +159,19 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
       if (hit.sp > 0) ctx.applyDamage(room, extra, loc, hit.sp, { random });
       effects.push(`Cleave → ${extra.name}`);
     }
+  }
+  const onHit = profile.upgradeEffect?.onHit;
+  if (onHit === "systems-overload") {
+    target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);
+    effects.push("Systems Overload - target loses 1 action next activation");
+  }
+  if (onHit === "cluster-shells") {
+    const primary = opts.aimed ? opts.aimedLoc : null;
+    const locs = ["hull", "arms", "legs", "engine"];
+    let loc = hitLocation(rollD(12, opts.dice?.clusterLocation, random));
+    if (primary && loc === primary) loc = locs[(locs.indexOf(loc) + 1) % locs.length];
+    ctx.applyDamage(room, target, loc, 1, { random, dice: opts.dice });
+    effects.push(`Cluster Shells - 1 SP to ${loc}`);
   }
   if (effects.length) ctx.pushResolution(room, {
     kind: "perk", actor: attacker.owner, rigId: target.id, rolls: [], summary: effects.join("; "), effects,

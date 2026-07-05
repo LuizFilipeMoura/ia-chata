@@ -214,6 +214,7 @@ function ensureRigShape(rig) {
   if (rig.equipment === undefined) rig.equipment = null;
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
+  if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -296,6 +297,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     immobilised: false,
     hardened: false,
     overclockCoreUsed: false,
+    actionPenaltyNextActivation: 0,
     destroyed: false,
   };
 }
@@ -520,6 +522,15 @@ function repairRig(rig, loc, amount) {
   recompute(rig);
 }
 
+function sunderLocation(target, loc) {
+  const c = target?.[loc];
+  if (!c || c.max <= 1) return false;
+  c.max = Math.max(1, c.max - 1);
+  c.sp = Math.min(c.sp, c.max);
+  recompute(target);
+  return true;
+}
+
 function setRigSp(rig, loc, sp) {
   const c = rig[loc];
   if (!c) return;
@@ -620,6 +631,7 @@ function combatCtx() {
     applyDamage,
     bumpHeat,
     pushResolution,
+    sunderLocation,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
   };
 }
@@ -658,15 +670,24 @@ function performAction(room, rig, act, a, random) {
   if (act === "fire" || act === "aimed") {
     const target = findRig(room, a.target);
     if (!target) return false;
+    const slot = a.weapon === "melee" ? "melee" : "longRange";
+    // §7 Rushed reload: a spent ranged weapon may fire again without a separate
+    // Reload, but the shot costs 2 action-slots and the reload's heat — an
+    // implicit reload folded into the trigger pull. Melee never reloads.
+    const rushed = slot === "longRange" && rig.loaded.longRange === false;
+    const cost = rushed ? 2 : 1;
+    if (t.actionsUsed + cost > t.actionsMax) return false; // can't afford the rushed shot
     const res = resolveAttack(room, rig, target, {
       weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
       aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
       fullAuto: a.fullAuto === true || a.fullAuto === "true",
       charged: a.charged === true || a.charged === "true",
+      autoReload: rushed,
       dice: a.dice,
     }, random, combatCtx());
     if (!res.ok) return false;      // invalid shot — no budget spent
-    t.actionsUsed += 1;
+    if (rushed) bumpHeat(rig, ACTIONS.reload.heat); // the folded-in reload's heat
+    t.actionsUsed += cost;
     bumpHeat(rig, def.heat);        // base 1 (Hot / fire-mode heat added inside resolveAttack)
     return true;
   }
@@ -820,7 +841,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       } else {
         t.activeRigId = rig.id;
         t.actionsUsed = 0;
-        t.actionsMax = 5 - (rig.hull.sp === 0 ? 2 : 0);
+        const penalty = Math.max(0, Math.floor(rig.actionPenaltyNextActivation || 0));
+        t.actionsMax = Math.max(0, 5 - (rig.hull.sp === 0 ? 2 : 0) - penalty);
+        rig.actionPenaltyNextActivation = 0;
         rig.loaded = { longRange: true, melee: true };
       }
       changed = true;

@@ -636,17 +636,31 @@ test("fire action resolves an attack, applies damage and logs it", () => {
   assert.equal(r.game.resolutions.at(-1).kind, "attack");
 });
 
-test("firing an unloaded ranged weapon is rejected (no budget spent)", () => {
+test("firing a spent ranged weapon again folds in a rushed reload for 2 action-slots", () => {
   const r = startedRoom();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
-  b1.loaded.longRange = false;
-  const used = r.game.turn.actionsUsed;
+  b1.loaded.longRange = false; // already fired once this activation
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "side", range: "near",
     dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, impacts: [1,1,1,1,1,1,1,1] },
   } });
-  assert.equal(r.game.turn.actionsUsed, used); // no-op, weapon not loaded
+  assert.equal(r.game.turn.actionsUsed, 2);       // rushed shot costs 2 slots
+  assert.equal(b1.loaded.longRange, false);        // weapon spent again after firing
+  assert.equal(r.game.resolutions.at(-1).kind, "attack");
+});
+
+test("a rushed ranged shot is rejected when only one action-slot remains", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.loaded.longRange = false;
+  r.game.turn.actionsUsed = 4; // only 1 slot left, rushed shot needs 2
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "side", range: "near",
+    dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, impacts: [1,1,1,1,1,1,1,1] },
+  } });
+  assert.equal(r.game.turn.actionsUsed, 4); // no-op, can't afford the rushed shot
 });
 
 test("ram deals a D6 + ram-STR hit to both rigs", () => {
@@ -1033,4 +1047,49 @@ test("a rig's next activation clears its own Harden", () => {
     }
   }
   assert.equal(findRig(r, "a1").hardened, false);
+});
+
+test("Systems Overload reduces the target's next activation budget by 1 and then clears", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Arc Gun";
+  b1.weaponUpgrades.longRange = "systems-overload";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 1], impacts: [1], location: 1 },
+  } });
+  assert.equal(findRig(r, "a1").actionPenaltyNextActivation, 1);
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "a1" } });
+  assert.equal(r.game.turn.actionsMax, 4);
+  assert.equal(findRig(r, "a1").actionPenaltyNextActivation, 0);
+});
+
+test("Sunder reduces the struck location max SP once when the selected upgrade deals damage", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Circular Saw";
+  b1.weaponUpgrades.melee = "sunder";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6, 6], impacts: [6, 6, 6], location: 1 },
+  } });
+  assert.equal(a1.hull.max, 5);
+  assert.equal(a1.hull.sp <= a1.hull.max, true);
+});
+
+test("High-Rev Motor adds attack heat in addition to base fire heat", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Chainsaw";
+  b1.weaponUpgrades.melee = "high-rev-motor";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1, 1] },
+  } });
+  assert.equal(b1.engine.heat, 2);
 });
