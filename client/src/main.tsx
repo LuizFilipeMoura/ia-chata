@@ -8,9 +8,15 @@ import "./styles/rig-wizard.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { RoomProvider } from "./state/RoomStateContext";
+import { UiProvider } from "./state/UiStateContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <RoomProvider>
+      <UiProvider>
+        <App />
+      </UiProvider>
+    </RoomProvider>
   </StrictMode>,
 );
