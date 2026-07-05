@@ -14,7 +14,7 @@ export function TurnBanner() {
   const focus = computeFocus(game, rigs, mySide);
 
   const { openCommission } = useWizard();
-  const { rollInitiative, resolveBlast, scoreVp } = useBattleActions();
+  const { rollInitiative, resolveBlast, scoreVp, endActivation } = useBattleActions();
   const sendCommand = useCommands();
 
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -66,6 +66,11 @@ export function TurnBanner() {
       case "initiative": rollInitiative(); break;
       case "blast": resolveBlast(); break;
       case "score": scoreVp(); break;
+      case "endTurn": {
+        const rig = rigs.find((r) => r.id === game?.turn?.activeRigId);
+        if (rig) endActivation(rig);
+        break;
+      }
     }
   };
 

@@ -1,7 +1,7 @@
 import { actionBudget } from "/shared/battle-view.js";
 import type { GameState, Rig } from "../state/types";
 
-export type FocusCtaKind = "commission" | "ready" | "initiative" | "blast" | "score";
+export type FocusCtaKind = "commission" | "ready" | "initiative" | "blast" | "score" | "endTurn";
 
 export interface Focus {
   tone: string;
@@ -65,6 +65,7 @@ export function computeFocus(
   if (g.phase === "initiative" && g.round >= 2) {
     return {
       tone: "act", icon: "🎲", primary: "Roll initiative",
+      secondary: `Round ${g.round} — decide who moves first.`,
       cta: { label: "Roll", kind: "initiative" },
     };
   }
@@ -95,9 +96,16 @@ export function computeFocus(
     if (turn.activeRigId) {
       const rig = rigs.find((r) => r.id === turn.activeRigId);
       const b = rig ? actionBudget(rig, turn) : null;
+      if (rig && b && b.left === 0) {
+        return {
+          tone: "act", icon: "✔", primary: `End ${rig.name}'s turn`,
+          secondary: "No actions left — pass to the next Rig.",
+          cta: { label: "End turn", kind: "endTurn" },
+        };
+      }
       return {
         tone: "act", icon: "▶", primary: "Choose your next action",
-        secondary: b ? `${b.left} action${b.left === 1 ? "" : "s"} left` : "",
+        secondary: b ? `${b.left} action${b.left === 1 ? "" : "s"} left · Fire, Move or Reload` : "",
       };
     }
     return {

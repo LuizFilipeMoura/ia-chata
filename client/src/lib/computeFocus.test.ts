@@ -1,8 +1,20 @@
 import { computeFocus } from "./computeFocus";
-import type { GameState } from "../state/types";
+import type { GameState, Rig } from "../state/types";
 
 const base = (over: Partial<GameState>): GameState => ({
   round: 1, phase: "setup", started: false, sides: [], ...over,
+});
+
+const rig = (over: Partial<Rig>): Rig => ({
+  id: 1, name: "Warden", weightClass: "medium", owner: "a",
+  hull: { sp: 4, max: 4, destroyed: false },
+  arms: { sp: 4, max: 4, destroyed: false },
+  legs: { sp: 4, max: 4, destroyed: false },
+  engine: { sp: 4, max: 4, destroyed: false, heat: 0 },
+  equipment: null,
+  activated: false,
+  destroyed: false,
+  ...over,
 });
 
 test("pre-battle with no rigs prompts commissioning", () => {
@@ -13,4 +25,33 @@ test("pre-battle with no rigs prompts commissioning", () => {
 
 test("finished phase yields no focus", () => {
   expect(computeFocus(base({ started: true, phase: "finished" }), [], "a")).toBeNull();
+});
+
+test("prompts End turn when the active rig has no actions left", () => {
+  const activeRig = rig({ id: 1, name: "Warden" });
+  const g = base({
+    started: true, phase: "activation",
+    turn: { side: "a", activeRigId: 1, actionsUsed: 2, actionsMax: 2 },
+  });
+  const f = computeFocus(g, [activeRig], "a");
+  expect(f?.tone).toBe("act");
+  expect(f?.primary).toBe(`End ${activeRig.name}'s turn`);
+  expect(f?.secondary).toBe("No actions left — pass to the next Rig.");
+  expect(f?.cta).toEqual({ label: "End turn", kind: "endTurn" });
+});
+
+test("keeps the Fire/Move/Reload hint", () => {
+  const activeRig = rig({ id: 1, name: "Warden" });
+  const g = base({
+    started: true, phase: "activation",
+    turn: { side: "a", activeRigId: 1, actionsUsed: 0, actionsMax: 2 },
+  });
+  const f = computeFocus(g, [activeRig], "a");
+  expect(f?.secondary).toContain("· Fire, Move or Reload");
+});
+
+test("gives Roll initiative a secondary round line", () => {
+  const g = base({ started: true, phase: "initiative", round: 2 });
+  const f = computeFocus(g, [], "a");
+  expect(f?.secondary).toBe("Round 2 — decide who moves first.");
 });
