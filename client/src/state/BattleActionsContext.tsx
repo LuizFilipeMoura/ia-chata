@@ -34,6 +34,8 @@ const LOC_CHOICES = [
 // §5 base Speed (inches) per weight class — the physical reach of a Move.
 const SPEED: Record<string, number> = { light: 9, medium: 8, heavy: 6, colossal: 5 };
 const MOVE_HOLD_MS = 5000;
+const SPRINT_HOLD_MS = 8000;
+const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOLD_MS);
 
 interface BattleActionsApi {
   openMove: (rig: Rig, key: string) => void;
@@ -63,25 +65,27 @@ function MoveBody({
   const base = SPEED[rig.weightClass] ?? 8;
   const dist = sprint ? base * 1.5 : base;
   const heat = sprint ? (rig.equipment === "servo-actuators" ? 1 : 2) : 1;
-  const holdSec = Math.round(MOVE_HOLD_MS / 1000);
+  const holdMs = holdMsFor(actionKey);
+  const holdSec = Math.round(holdMs / 1000);
 
   const [remaining, setRemaining] = useState(holdSec);
   const [pct, setPct] = useState(0);
   const done = remaining <= 0;
+  const costNote = sprint ? `Costs 2 actions · +${heat} heat` : "Costs 1 action · no heat";
 
   useEffect(() => {
     const start = performance.now();
     const timer = window.setInterval(() => {
       const elapsed = performance.now() - start;
-      setPct(Math.min(1, elapsed / MOVE_HOLD_MS) * 100);
-      if (elapsed >= MOVE_HOLD_MS) {
+      setPct(Math.min(1, elapsed / holdMs) * 100);
+      if (elapsed >= holdMs) {
         setRemaining(0);
       } else {
-        setRemaining(Math.ceil((MOVE_HOLD_MS - elapsed) / 1000));
+        setRemaining(Math.ceil((holdMs - elapsed) / 1000));
       }
     }, 100);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [holdMs]);
 
   return (
     <>
@@ -93,10 +97,16 @@ function MoveBody({
             : `Reposition up to <b>${dist}"</b> (full Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`,
         }}
       />
-      <p className="dwr-hint dwr-move-call">Move the Rig on the table now, then confirm.</p>
-      <div className="dwr-hold-track">
-        <div className="dwr-hold-fill" style={{ width: `${pct}%` }} />
+      <div className="dwr-cost">{costNote}</div>
+      <div className="dwr-big-wrap">
+        <div className={"dwr-big" + (done ? " is-ready" : "")}>{done ? "READY" : `${remaining}s`}</div>
       </div>
+      <div className="dwr-hold-track">
+        <div className={"dwr-hold-fill" + (done ? " is-ready" : "")} style={{ width: `${pct}%` }} />
+      </div>
+      <p className={"dwr-hint dwr-move-call" + (done ? " is-ready" : "")}>
+        {done ? "✔ Model placed? Confirm to lock in the move." : "Move the Rig on the table now, then confirm."}
+      </p>
       <div className="dwr-actions">
         <button type="button" className="dwr-btn ghost" onClick={onCancel}>
           <span>Cancel</span>

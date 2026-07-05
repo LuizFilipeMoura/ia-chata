@@ -368,8 +368,14 @@ body.my-turn-glow::after {
 
 /* Timed Move / Sprint hold — the Confirm button unlocks only once this bar fills */
 .dwr-move-call { color: var(--oil-hi); font-weight: 600; }
-.dwr-hold-track { height: 6px; border-radius: 999px; background: var(--iron-800); border: 1px solid var(--line); overflow: hidden; margin: .1rem 0 .3rem; }
-.dwr-hold-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--oil), var(--oil-hi)); }
+.dwr-move-call.is-ready { color: #6cc47f; }
+.dwr-cost { font-family: var(--font-mono); font-size: .62rem; letter-spacing: .04em; color: var(--txt-faint); margin-top: .15rem; text-align: center; }
+.dwr-big-wrap { display: flex; justify-content: center; margin-top: 1rem; }
+.dwr-big { font-family: var(--font-mono); font-size: 2.1rem; font-weight: 700; line-height: 1; letter-spacing: .02em; color: var(--oil-hi); text-shadow: 0 0 16px rgba(231,154,61,.35); }
+.dwr-big.is-ready { color: #6cc47f; text-shadow: 0 0 16px rgba(108,196,127,.5); }
+.dwr-hold-track { height: 8px; border-radius: 999px; background: var(--iron-800); border: 1px solid var(--line); overflow: hidden; margin: .1rem 0 .3rem; }
+.dwr-hold-fill { height: 100%; width: 0; background: linear-gradient(90deg,#c47a26,#ffbf6a); }
+.dwr-hold-fill.is-ready { background: linear-gradient(90deg,#4c9a5f,#6cc47f); }
 
 /* Activation recap list */
 .dwr-recap { display: flex; flex-direction: column; gap: .45rem; margin: .2rem 0 .1rem; }
