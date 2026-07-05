@@ -12,8 +12,8 @@ test("tracker protocol documents structured strict weapon add flow", () => {
   assert.match(TRACKER_PROTOCOL, /ask for every\s+missing field/i);
   assert.match(TRACKER_PROTOCOL, /emit no `\[\[RIG add\]\]` tag/i);
   assert.match(TRACKER_PROTOCOL, /Heavy and Colossal Rigs are not available/i);
-  assert.match(TRACKER_PROTOCOL, new RegExp(WEAPONS.longRange.join(".*"), "s"));
-  assert.match(TRACKER_PROTOCOL, new RegExp(WEAPONS.melee.join(".*"), "s"));
+  assert.match(TRACKER_PROTOCOL, new RegExp(Object.keys(WEAPONS.longRange).join(".*"), "s"));
+  assert.match(TRACKER_PROTOCOL, new RegExp(Object.keys(WEAPONS.melee).join(".*"), "s"));
 });
 
 test("tracker protocol documents hard rig add limits", () => {
@@ -33,8 +33,8 @@ test("player start guide requires strict weapon disambiguation before creating r
   assert.match(PLAYER_START_GUIDE, /2-3 likely legal matches/i);
   assert.match(PLAYER_START_GUIDE, /glued/i);
   assert.match(PLAYER_START_GUIDE, /Do not emit.*\[\[RIG add/s);
-  assert.match(PLAYER_START_GUIDE, new RegExp(WEAPONS.longRange.join(".*"), "s"));
-  assert.match(PLAYER_START_GUIDE, new RegExp(WEAPONS.melee.join(".*"), "s"));
+  assert.match(PLAYER_START_GUIDE, new RegExp(Object.keys(WEAPONS.longRange).join(".*"), "s"));
+  assert.match(PLAYER_START_GUIDE, new RegExp(Object.keys(WEAPONS.melee).join(".*"), "s"));
 });
 
 test("player start guide hands off to deployment after registration", () => {

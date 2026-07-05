@@ -50,8 +50,20 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(WEAPONS.longRange.length, 6);
-  assert.equal(WEAPONS.melee.length, 6);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 6);
+  assert.equal(Object.keys(WEAPONS.melee).length, 6);
+});
+
+test("WEAPONS carries full combat profiles keyed by canonical name", () => {
+  assert.equal(Object.keys(WEAPONS.longRange).length, 6);
+  assert.equal(Object.keys(WEAPONS.melee).length, 6);
+  assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
+  assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
+  assert.deepEqual(WEAPONS.longRange["Mini Gun"].acc, [1, -1]);
+  assert.deepEqual(WEAPONS.longRange["Mini Gun"].rng, [9, 18]);
+  assert.ok(WEAPONS.longRange["Mini Gun"].perks.includes("Raking Fire"));
+  assert.equal(WEAPONS.melee["Lance"].str, 11);
+  assert.ok(WEAPONS.melee["Sword"].perks.includes("Melee"));
 });
 
 test("makeRig requires a supported class, one valid long-range and one valid melee weapon", () => {

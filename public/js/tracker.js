@@ -47,8 +47,8 @@ function populateWeaponSelect(select, weapons) {
   }
 }
 
-populateWeaponSelect(rigLongRangeSelect, WEAPONS.longRange);
-populateWeaponSelect(rigMeleeSelect, WEAPONS.melee);
+populateWeaponSelect(rigLongRangeSelect, Object.keys(WEAPONS.longRange));
+populateWeaponSelect(rigMeleeSelect, Object.keys(WEAPONS.melee));
 
 function ownerLabel(owner) {
   return (owner || "a") === (S.session?.side || "a") ? "Your Squadron" : "Enemy";

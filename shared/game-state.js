@@ -15,8 +15,22 @@ export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
 export const WEAPONS = {
-  longRange: ["Mini Gun", "Double MG", "Autocannon", "Arc Gun", "Mortar", "Sniper Cannon"],
-  melee: ["Sword", "Circular Saw", "Chainsaw", "Claw", "Lance", "Wrecking Ball"],
+  longRange: {
+    "Mini Gun":      { rof: 8, str: 4,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Hot", "Raking Fire"] },
+    "Double MG":     { rof: 8, str: 6,  acc: [1, 0],  rng: [9, 18],  perks: ["Full Auto", "Raking Fire"] },
+    "Autocannon":    { rof: 4, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"] },
+    "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30], perks: ["Charged Shot", "Precision"] },
+    "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Charged Shot", "Incendiary"] },
+    "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: ["Precision"] },
+  },
+  melee: {
+    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Shock"] },
+    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Cleave"] },
+    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Rend"] },
+    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Armour Piercing"] },
+    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Impale"] },
+    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Staggering"] },
+  },
 };
 
 export function createRoom(code) {
@@ -91,10 +105,10 @@ function ensureGameShape(room) {
 }
 
 export function normalizeWeapon(category, name) {
-  const list = WEAPONS[category];
-  if (!list || !name) return null;
+  const table = WEAPONS[category];
+  if (!table || !name) return null;
   const ref = String(name).trim().toLowerCase();
-  return list.find((weapon) => weapon.toLowerCase() === ref) || null;
+  return Object.keys(table).find((weapon) => weapon.toLowerCase() === ref) || null;
 }
 
 export function makeRig(id, name, cls, owner, weapons = {}) {
