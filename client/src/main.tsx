@@ -11,13 +11,16 @@ import App from "./App";
 import { RoomProvider } from "./state/RoomStateContext";
 import { UiProvider } from "./state/UiStateContext";
 import { DrawerProvider } from "./state/DrawerContext";
+import { RollProvider } from "./state/RollContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RoomProvider>
       <UiProvider>
         <DrawerProvider>
-          <App />
+          <RollProvider>
+            <App />
+          </RollProvider>
         </DrawerProvider>
       </UiProvider>
     </RoomProvider>
