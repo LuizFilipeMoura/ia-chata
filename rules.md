@@ -109,7 +109,7 @@ An Impact Roll total **below** a location's Direct threshold does nothing (it gl
 
 ## 3. Building a Squadron
 
-> **No Oil, no Iron, no Equipment, no engine types.** Squadrons are built purely from chassis + weapons. Loadout is limited only by **weapon slots**.
+> **No Oil, no Iron, no engine types.** Squadrons are built from chassis, weapons, and one equipment slot per Rig (§15). Loadout is limited only by **weapon slots**.
 
 1. **Squadron size** — agree on **3–5 Rigs** per side. Max **1 Colossal** per Squadron.
 2. **Choose each Rig's weight class** (§2).
@@ -427,7 +427,7 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 
 ## 16. Design Notes & Open Items
 
-**Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, all Equipment, and **engine types** (Crude Oil / Diesel / Arc). Squadrons balance by matching composition (§3); heat tolerance is set by weight class (§6).
+**Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, and **engine types** (Crude Oil / Diesel / Arc). Equipment returned in a redesigned form as the single-slot system in §15. Squadrons balance by matching composition (§3); heat tolerance is set by weight class (§6).
 
 **Distance scale:** distances suit the models this ruleset uses on a **54"×36"** table — **Light 60 mm**, **Medium 75 mm** bases (Heavy 90, Colossal 120).
 
