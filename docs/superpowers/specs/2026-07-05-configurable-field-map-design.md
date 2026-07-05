@@ -186,12 +186,21 @@ Ready gate: in the `ready` verb, additionally require `room.field.locked === tru
   diagonal, the setback band, three objective markers (centre = 2 VP emphasized), and the
   terrain pieces. Inch→pixel scaling from `field.width/height`. Dark-mode safe, matches the
   terminal design tokens.
-- **Owner controls** (owner + not started): width/height number inputs, *flip diagonal*,
-  *re-roll terrain*, *Lock field* — each dispatches the `field` command.
-- **Enemy / post-lock view:** read-only map; before the owner has locked, a
-  "waiting for the owner to set the field" state.
-- **Placement in the shell:** render in `Stage` during setup (near `BattleSetup`). After
-  lock/start it remains viewable as a read-only reference.
+- **Placement in the shell:** the read-only `FieldMap` renders in `Stage` during setup
+  (near `BattleSetup`) and stays viewable as a reference after lock/start. Both players
+  see it.
+- **Owner controls live in a dedicated Field Setup drawer**, not inline in `Stage`
+  (follows the existing `DrawerContext` / `overlays/Drawer.tsx` pattern). The owner opens
+  it from a "Set field" trigger in the setup area (owner + not started only). The drawer
+  contains: width/height number inputs, *flip diagonal*, *re-roll terrain* (with a live
+  preview `FieldMap`), and *Lock field* — each dispatches the `field` command. Locking
+  closes the drawer.
+- **Enemy view:** read-only `FieldMap` only; no controls and no drawer trigger. Before the
+  owner locks, it shows the defaulted map with a "waiting for the owner to set the field"
+  note.
+- **Default when unset:** a freshly created room already carries the 54×36 default field
+  (see Data model), so the map always renders something sensible before the owner touches
+  it — there is no empty "not set" state.
 - **`BattleSetup`:** reflect the gate — when `!field.locked`, the Ready button shows a
   hint ("Owner must lock the field first") and stays disabled.
 
@@ -223,11 +232,10 @@ New pure `shared/field.js` (no imports from `game-state.js`), unit-tested:
 - **Regression:** existing `npm test` (Vitest + `node --test`) stays green.
 - **Visual:** verify the rendered map against the mock in the preview server.
 
-## Open decisions for review
+## Resolved decisions
 
-1. **Owner controls placement** — inline in `Stage` under `BattleSetup` (this spec), or a
-   dedicated setup overlay/drawer? Inline is simpler and keeps the map always visible.
-2. **Default field for an unconfigured room** — render the 54×36 default immediately
-   (this spec), or show an empty "not set yet" state until the owner sets it?
-3. **Diagonal flip** — keep as an owner toggle (this spec), or drop it for v1 and always
-   use `"tlbr"`?
+1. **Owner controls placement** — a **dedicated Field Setup drawer** (not inline). The
+   read-only map still renders in `Stage`; only the editing controls live in the drawer.
+2. **Default field for an unconfigured room** — **render the 54×36 default immediately**.
+   No empty "not set yet" state.
+3. **Diagonal flip** — **kept as an owner toggle.**
