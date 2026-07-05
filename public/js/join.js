@@ -1,5 +1,5 @@
 import { S, setSession, applyServerState } from "./state.js";
-import { startPolling } from "./api.js";
+import { startSocket } from "./api.js";
 
 const joinGate = document.getElementById("joinGate");
 const joinRoom = document.getElementById("joinRoom");
@@ -30,7 +30,7 @@ export async function joinRoomFlow(room, name, side) {
   setSession({ room, side: data.side, name });
   applyServerState(data.state);
   joinGate.classList.add("hidden");
-  startPolling();
+  startSocket();
 }
 
 joinBtn.addEventListener("click", async () => {
