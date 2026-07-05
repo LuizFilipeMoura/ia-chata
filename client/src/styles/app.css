@@ -80,6 +80,10 @@
   margin: 0; font-size: .92rem; letter-spacing: .18em; text-transform: uppercase;
   color: var(--oil); font-weight: 700;
 }
+.stage-room {
+  font-family: var(--font-mono); font-size: .56rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--txt-faint);
+}
 
 button { border: none; cursor: pointer; font-family: inherit; }
 button:focus-visible, select:focus-visible, textarea:focus-visible {
@@ -136,7 +140,7 @@ button:focus-visible, select:focus-visible, textarea:focus-visible {
 /* ---- Floating assistant launcher ---- */
 .chat-fab {
   position: absolute; z-index: 55; right: 1.05rem; bottom: 1.05rem;
-  width: 58px; height: 58px; border-radius: 50%;
+  width: 54px; height: 54px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(160deg, var(--oil-hi), var(--oil-deep));
   border: 1px solid rgba(231,154,61,.7);
@@ -144,7 +148,7 @@ button:focus-visible, select:focus-visible, textarea:focus-visible {
   transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
   animation: fadeIn .4s ease .2s both;
 }
-.chat-fab-ic { font-size: 1.45rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.chat-fab-ic { font-size: 1.4rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
 .chat-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(231,154,61,.4), 0 6px 16px rgba(0,0,0,.55); }
 .chat-fab:active { transform: translateY(0); }
 .chat-fab.active {

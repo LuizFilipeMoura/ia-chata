@@ -25,11 +25,13 @@ export function RigAddScreen({ onCommission }: Props) {
   const cardCls =
     "rig-add-card" + (isEmpty ? " is-empty" : "") + (!canAdd ? " rig-add-locked" : "");
 
-  const hint =
-    message ||
-    (isEmpty
+  // Locked (lineup full) keeps the card a clickable affordance — the click
+  // routes into "ready up" rather than a dead disabled button.
+  const hint = !canAdd
+    ? "Full lineup of 3 committed — mark ready to deploy."
+    : isEmpty
       ? "Commission your first Rig to begin — name it, pick a weight class and weapons."
-      : "Name it, pick a weight class and weapons, then choose its equipment.");
+      : "Name it, pick a weight class and weapons, then choose its equipment.";
 
   return (
     <div id="rigAddScreen" className={cardCls}>
@@ -41,11 +43,10 @@ export function RigAddScreen({ onCommission }: Props) {
             id="rigAddBtn"
             className="rig-add-btn btn btn--primary"
             type="button"
-            disabled={!canAdd}
-            title={message}
+            title={canAdd ? undefined : message}
             onClick={() => (onCommission ?? openCommission)()}
           >
-            {canAdd ? "+ Commission" : "Full"}
+            {canAdd ? "+ Commission" : "Ready up ↑"}
           </button>
         </div>
       </div>

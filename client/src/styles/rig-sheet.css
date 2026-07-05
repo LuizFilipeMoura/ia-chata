@@ -64,7 +64,7 @@
   border: 1px solid var(--line); background: var(--iron-950); color: var(--txt-dim);
   transition: color .2s, border-color .2s, background .2s;
 }
-.rig-heat-chip-ic { font-size: .68rem; filter: grayscale(.5); opacity: .7; }
+.rig-heat-chip-ic { font-size: .68rem; }
 .rig-heat-chip[data-zone="cool"]    { color: #7fd0c4; border-color: rgba(127,208,196,.4); }
 .rig-heat-chip[data-zone="warm"]    { color: var(--oil-hi); border-color: rgba(231,154,61,.5); }
 .rig-heat-chip[data-zone="warm"] .rig-heat-chip-ic,
@@ -294,7 +294,7 @@
   background: linear-gradient(180deg, var(--iron-800), var(--iron-850));
   border: 1px dashed var(--rivet); border-radius: 12px; padding: 1.1rem 1rem;
 }
-.rig-add-locked { border-style: solid; opacity: .82; }
+.rig-add-locked { border-style: solid; }
 /* First-run empty state: the commission card becomes the hero of the screen. */
 .rig-add-card.is-empty { margin-top: 1rem; }
 .rig-add-card.is-empty .rig-add {

@@ -19,7 +19,7 @@ import type { Rig, PrepType } from "./types";
 // A glyph per action so the console reads at a glance instead of as a wall of
 // text (battle.js:11-16).
 const ACTION_ICONS: Record<string, string> = {
-  move: "🦿", sprint: "💨", fire: "🎯", aimed: "◎", ram: "💥",
+  move: "👣", sprint: "🏃", fire: "🎯", aimed: "🔭", ram: "💢",
   reload: "🔄", repair: "🔧", prepare: "🛡️", shutdown: "⏻",
   harden: "🧱", purge: "❄️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹",
 };
