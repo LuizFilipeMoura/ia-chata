@@ -14,6 +14,7 @@ import { DrawerProvider } from "./state/DrawerContext";
 import { RollProvider } from "./state/RollContext";
 import { WizardProvider } from "./state/WizardContext";
 import { BattleActionsProvider } from "./state/BattleActionsContext";
+import { GlossaryTipProvider } from "./state/GlossaryTipContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -23,7 +24,9 @@ createRoot(document.getElementById("root")!).render(
           <RollProvider>
             <WizardProvider>
               <BattleActionsProvider>
-                <App />
+                <GlossaryTipProvider>
+                  <App />
+                </GlossaryTipProvider>
               </BattleActionsProvider>
             </WizardProvider>
           </RollProvider>
