@@ -528,14 +528,10 @@ test("a full round of activations triggers Recovery cooldown and reset", () => {
 // spends its Answer tokens. Test helpers that just want to drive activation
 // forward (not exercise the gate itself) call this to clear it immediately.
 function clearPendingAnswer(r) {
-  while (r.game.pendingAnswer) {
-    const { side } = r.game.pendingAnswer;
-    const rig = r.rigs.find((x) => (x.owner || "a") === side && !x.destroyed && x.preparation == null);
-    if (!rig) break;
-    // "evasive" has no combat-resolution side effect (unlike "brace", which
-    // subtracts 2 from front-arc impact rolls) so it won't skew unrelated tests.
-    applyCommand(r, { verb: "answer", attrs: { name: rig.name, prep: "evasive", side } });
-  }
+  // Just lift the gate — do NOT place real preparations here. Placing facedown
+  // reactions on rigs would trigger the reveal/interpose when those rigs are
+  // fired on in unrelated attack tests (see Tasks 4/5). Test-only state poke.
+  r.game.pendingAnswer = null;
 }
 
 // Drives one full round of activations by following whichever side actually
