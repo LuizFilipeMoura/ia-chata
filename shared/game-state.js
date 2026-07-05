@@ -355,6 +355,24 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       const want = String(a.value || "").toLowerCase() !== "manual";
       if (room.game.autoResolve !== want) { room.game.autoResolve = want; changed = true; }
     }
+  } else if (verb === "initiative") {
+    if (room.game.phase === "initiative") {
+      const auto = a.dice == null;
+      let ra = rollD(12, a.dice?.a, options.random);
+      let rb = rollD(12, a.dice?.b, options.random);
+      if (auto) { while (ra === rb) { ra = rollD(12, null, options.random); rb = rollD(12, null, options.random); } }
+      if (ra !== rb) {
+        const order = ra > rb ? ["a", "b"] : ["b", "a"];
+        applyInitiative(room, order, { a: ra, b: rb });
+        pushResolution(room, {
+          kind: "initiative", actor: order[0], rigId: null,
+          rolls: [{ sides: 12, value: ra, label: "Side A" }, { sides: 12, value: rb, label: "Side B" }],
+          summary: `Round ${room.game.round} initiative — ${order[0]} first (${ra} vs ${rb})`,
+          effects: [],
+        });
+        changed = true;
+      }
+    }
   } else {
     const rig = findRig(room, a.name);
     if (rig) {

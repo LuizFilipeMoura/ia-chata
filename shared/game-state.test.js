@@ -322,3 +322,32 @@ test("starting the game seeds round 1 initiative from deploy order", () => {
   assert.equal(r.game.turn.side, "b");
   assert.equal(r.game.turn.activeRigId, null);
 });
+
+test("initiative verb rolls D12 for both sides and higher goes first", () => {
+  const r = startedRoom();
+  r.game.phase = "initiative";
+  r.game.round = 2;
+  r.game.initiative = null;
+  applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
+  assert.deepEqual(r.game.initiative.order, ["a", "b"]);
+  assert.equal(r.game.initiative.second, "b");
+  assert.equal(r.game.answerTokens.b, 2);
+  assert.equal(r.game.phase, "activation");
+  assert.equal(r.game.turn.side, "a");
+});
+
+test("initiative rerolls ties when rolling automatically", () => {
+  const r = startedRoom();
+  r.game.phase = "initiative"; r.game.round = 2; r.game.initiative = null;
+  // random() sequence: a=6,b=6 (tie) -> reroll a=1,b=12 -> b first.
+  const seq = [5 / 12, 5 / 12, 0 / 12, 11 / 12];
+  applyCommand(r, { verb: "initiative", attrs: {} }, {}, { random: () => seq.shift() });
+  assert.deepEqual(r.game.initiative.order, ["b", "a"]);
+});
+
+test("initiative verb only runs during the initiative phase", () => {
+  const r = startedRoom(); // phase is "activation"
+  const v = r.version;
+  applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
+  assert.equal(r.version, v);
+});
