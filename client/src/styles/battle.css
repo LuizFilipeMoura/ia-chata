@@ -92,10 +92,17 @@
    Three tones via data-tone: act (your move, green) / guide (setup, oil) / wait. */
 .turn-banner {
   position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  display: flex; justify-content: center;
+  padding: 52px 12px 0; box-sizing: border-box;
+  pointer-events: none;
+}
+.tb-card {
+  width: min(448px, 100%); box-sizing: border-box;
   display: flex; align-items: center; gap: .6rem;
-  padding: .5rem .9rem;
+  padding: .62rem .85rem; border-radius: 14px;
+  border: 1px solid var(--line); border-bottom-width: 2px;
   background: var(--iron-900);
-  border-bottom: 1px solid var(--line);
+  pointer-events: auto;
   transition: background var(--dur-med), border-color var(--dur-med);
 }
 .tb-icon {
@@ -118,30 +125,36 @@
 .tb-cta .btn { padding: .4rem .7rem; font-size: .68rem; }
 
 /* tone: your move — go */
-.turn-banner[data-tone="act"] {
-  background: linear-gradient(180deg, #1e4029, var(--act-bg));
-  border-bottom-color: var(--act);
+.turn-banner[data-tone="act"] .tb-card {
+  background: linear-gradient(180deg, #1e4029, #142a1c);
+  border-color: #6cc47f;
+  box-shadow: 0 10px 30px rgba(108,196,127,.28), 0 8px 22px rgba(0,0,0,.5);
 }
-.turn-banner[data-tone="act"] .tb-icon { color: var(--act-hi); filter: drop-shadow(0 0 6px rgba(108,196,127,.6)); }
+.turn-banner[data-tone="act"] .tb-icon { color: var(--act-hi); filter: drop-shadow(0 0 5px #6cc47f); }
 .turn-banner[data-tone="act"] .tb-primary { color: var(--act-hi); }
 
 /* tone: setup / optional — guide (oil) */
-.turn-banner[data-tone="guide"] {
+.turn-banner[data-tone="guide"] .tb-card {
   background: linear-gradient(180deg, #2a2113, #1a1408);
-  border-bottom-color: var(--guide);
+  border-color: var(--oil);
+  box-shadow: 0 10px 30px rgba(231,154,61,.26), 0 8px 22px rgba(0,0,0,.5);
 }
-.turn-banner[data-tone="guide"] .tb-icon { color: var(--guide-hi); filter: drop-shadow(0 0 6px var(--guide-glow)); }
+.turn-banner[data-tone="guide"] .tb-icon { color: var(--guide-hi); filter: drop-shadow(0 0 5px var(--oil)); }
 .turn-banner[data-tone="guide"] .tb-primary { color: var(--guide-hi); }
 
 /* tone: waiting on opponent — muted */
-.turn-banner[data-tone="wait"] { background: var(--iron-900); border-bottom-color: var(--line); }
+.turn-banner[data-tone="wait"] .tb-card {
+  background: var(--iron-900);
+  border-color: var(--line);
+  box-shadow: 0 12px 30px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.5);
+}
 .turn-banner[data-tone="wait"] .tb-primary { color: var(--wait); }
 
 /* one-shot pulse when the duty changes */
-.turn-banner.changed { animation: tb-flash var(--dur-slow) var(--ease-out); }
+.tb-card.changed { animation: tb-flash .32s var(--ease-out); }
 @keyframes tb-flash {
   0% { transform: scale(1); filter: brightness(1); }
-  40% { transform: scale(1.015); filter: brightness(1.35); }
+  40% { transform: scale(1.015); filter: brightness(1.4); }
   100% { transform: scale(1); filter: brightness(1); }
 }
 
@@ -150,10 +163,16 @@ body.my-turn-glow::after {
   position: fixed; inset: 0; z-index: 190; pointer-events: none;
   border: 5px solid var(--act);
   box-shadow: inset 0 0 26px rgba(108, 196, 127, .55);
+  animation: oi-glowpulse 2.2s ease-in-out infinite;
+}
+@keyframes oi-glowpulse {
+  0%, 100% { opacity: .85; }
+  50% { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .turn-banner.changed { animation: none; }
+  .tb-card.changed { animation: none; }
+  body.my-turn-glow::after { animation: none; }
 }
 
 /* ===== Attack wizard ===== */
