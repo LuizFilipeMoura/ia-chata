@@ -121,8 +121,34 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   return { ok: true, hits: th.hits, location, impacts, heat };
 }
 
-// Replaced with real perks in Task 8; a no-op keeps this task green.
-function applyOnHitPerks() {}
+// §13 — post-hit perk effects (only reached when at least one hit landed).
+function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
+  const perks = profile.perks;
+  const effects = [];
+  if (perks.includes("Incendiary")) { ctx.bumpHeat(target, 1); effects.push("Incendiary +1 heat"); }
+  if (perks.includes("Shock")) { target.speedHalvedNextRound = true; effects.push("Shock — speed halved"); }
+  if (perks.includes("Impale")) {
+    const roll = rollD(12, opts.dice?.impale, random);
+    if (roll >= 8) { target.immobilised = true; effects.push(`Impale ${roll} — immobilised`); }
+  }
+  if (perks.includes("Staggering")) {
+    const roll = rollD(6, opts.dice?.stagger, random);
+    const note = roll <= 2 ? "pivot left" : roll <= 4 ? 'pushed 3"' : "pivot right";
+    effects.push(`Staggering ${roll} — ${note} (positional)`);
+  }
+  if (perks.includes("Cleave") && opts.cleaveTarget) {
+    const extra = room.rigs.find((x) => x.name.toLowerCase() === String(opts.cleaveTarget).toLowerCase());
+    if (extra && !extra.destroyed) {
+      const loc = hitLocation(rollD(12, opts.dice?.cleaveLocation, random));
+      const [hit] = rollImpacts(attacker, extra, profile, loc, { arc: "front", hits: 1, charged: opts.charged }, { impacts: [opts.dice?.cleaveImpact] }, random);
+      if (hit.sp > 0) ctx.applyDamage(room, extra, loc, hit.sp, { random });
+      effects.push(`Cleave → ${extra.name}`);
+    }
+  }
+  if (effects.length) ctx.pushResolution(room, {
+    kind: "perk", actor: attacker.owner, rigId: target.id, rolls: [], summary: effects.join("; "), effects,
+  });
+}
 
 // §5 Ram — both Rigs take one D6 + their own weight-class ram STR hit.
 export function resolveRam(room, attacker, target, opts, random, ctx) {

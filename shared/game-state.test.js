@@ -661,3 +661,30 @@ test("ram deals a D6 + ram-STR hit to both rigs", () => {
   assert.equal(b1.hull.sp, 4);
   assert.equal(r.game.turn.actionsUsed, 1);
 });
+
+test("Incendiary adds target heat; Shock halves target speed next round", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  const heatBefore = a1.engine.heat;
+  // Fire the Sword (Shock) — melee, 2 hits guaranteed.
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+  } });
+  assert.equal(a1.speedHalvedNextRound, true);
+  assert.equal(a1.engine.heat, heatBefore); // Sword is not Incendiary
+});
+
+test("Impale immobilises on a D12 of 8+", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Lance";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6], impacts: [6], location: 1, impale: 9 },
+  } });
+  assert.equal(a1.immobilised, true);
+});
