@@ -5,6 +5,7 @@ import {
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
+  effectiveWeaponProfile,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -52,13 +53,13 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 6);
-  assert.equal(Object.keys(WEAPONS.melee).length, 6);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
+  assert.equal(Object.keys(WEAPONS.melee).length, 7);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 6);
-  assert.equal(Object.keys(WEAPONS.melee).length, 6);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
+  assert.equal(Object.keys(WEAPONS.melee).length, 7);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].acc, [1, -1]);
@@ -66,6 +67,41 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.ok(WEAPONS.longRange["Mini Gun"].perks.includes("Raking Fire"));
   assert.equal(WEAPONS.melee["Lance"].str, 11);
   assert.ok(WEAPONS.melee["Sword"].perks.includes("Melee"));
+});
+
+test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
+  const maul = WEAPONS.longRange["Siege Maul"];
+  assert.deepEqual(maul, { rof: 1, str: 13, acc: [0, -1], rng: [8, 16], perks: ["Armour Piercing", "Hot"] });
+
+  const shield = WEAPONS.melee["Bulwark Shield"];
+  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Bulwark"] });
+
+  // The list is now 7 + 7.
+  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
+  assert.equal(Object.keys(WEAPONS.melee).length, 7);
+});
+
+test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
+  assert.equal(WEAPON_UPGRADES["Siege Maul"].length, 2);
+  assert.equal(WEAPON_UPGRADES["Bulwark Shield"].length, 2);
+
+  // Extended Barrel shifts both range bands by +4 (8/16 -> 12/20), reusing effect.range.
+  const barrel = makeRig(1, "Breaker", "medium", "a",
+    { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "extended-barrel" });
+  assert.deepEqual(effectiveWeaponProfile("longRange", "Siege Maul", barrel).rng, [12, 20]);
+
+  // Breaching Round is the default (first) Siege Maul upgrade and marks onDamage.
+  const breach = makeRig(2, "Breaker2", "medium", "a",
+    { longRange: "Siege Maul", melee: "Sword" });
+  assert.equal(breach.weaponUpgrades.longRange, "breaching-round");
+  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", breach).upgradeEffect.onDamage, "breaching-round");
+
+  // Boss Spike grants Staggering; Tower Shield is the default shield upgrade.
+  const spike = makeRig(3, "Guard", "medium", "a",
+    { longRange: "Autocannon", melee: "Bulwark Shield", meleeUpgrade: "boss-spike" });
+  assert.equal(effectiveWeaponProfile("melee", "Bulwark Shield", spike).perks.includes("Staggering"), true);
+  assert.equal(makeRig(4, "Guard2", "medium", "a",
+    { longRange: "Autocannon", melee: "Bulwark Shield" }).weaponUpgrades.melee, "tower-shield");
 });
 
 test("makeRig requires a supported class, one valid long-range and one valid melee weapon", () => {
@@ -837,9 +873,9 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment(null), null);
 });
 
-test("WEAPON_UPGRADES has exactly 2 upgrades for all 12 weapons", () => {
+test("WEAPON_UPGRADES has exactly 2 upgrades for all 14 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 12);
+  assert.equal(all.length, 14);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
@@ -1272,7 +1308,13 @@ test("field set clamps dims, recomputes objectives, scatters terrain (owner only
   assert.equal(r.field.width, 48);
   assert.equal(r.field.height, 32);
   assert.equal(r.game.objectives[0].x, 24); // new centre
-  assert.ok(r.field.terrain.length >= 4 && r.field.terrain.length <= 6);
+  // The `set` command scatters terrain; the generator's count/variety/shape
+  // contract is owned by field.test.js. Here we only confirm the command
+  // produced an in-bounds scatter (robust to the generator implementation).
+  assert.ok(r.field.terrain.length > 0, `expected a terrain scatter, got ${r.field.terrain.length}`);
+  for (const t of r.field.terrain) {
+    assert.ok(t.x > 0 && t.x < r.field.width && t.y > 0 && t.y < r.field.height);
+  }
 });
 
 test("field command is ignored for non-owner and after start", () => {

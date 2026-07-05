@@ -26,6 +26,7 @@ export const WEAPONS = {
     "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30], perks: ["Charged Shot", "Precision"] },
     "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Charged Shot", "Incendiary"] },
     "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: ["Precision"] },
+    "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16],  perks: ["Armour Piercing", "Hot"] },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Shock"] },
@@ -34,6 +35,7 @@ export const WEAPONS = {
     "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Armour Piercing"] },
     "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Impale"] },
     "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Staggering"] },
+    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Bulwark"] },
   },
 };
 
@@ -137,6 +139,14 @@ export const WEAPON_UPGRADES = {
   "Wrecking Ball": [
     { id: "haymaker", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
     { id: "wrecking-momentum", name: "Wrecking Momentum", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
+  ],
+  "Siege Maul": [
+    { id: "breaching-round", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
+    { id: "extended-barrel", name: "Extended Barrel", tag: "+4\" to both range bands (12 / 20)", effect: { range: 4 } },
+  ],
+  "Bulwark Shield": [
+    { id: "tower-shield", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
+    { id: "boss-spike", name: "Boss Spike", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
   ],
 };
 
