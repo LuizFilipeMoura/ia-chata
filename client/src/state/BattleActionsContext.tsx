@@ -42,7 +42,6 @@ interface BattleActionsApi {
   openMove: (rig: Rig, key: string) => void;
   openRepair: (rig: Rig, action: string) => void;
   openPrepare: (rig: Rig) => void;
-  scoreVp: () => void;
   resolveBlast: () => void;
   sendReact: (attrs: Record<string, unknown>) => void;
   endActivation: (rig: Rig) => void;
@@ -259,12 +258,6 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     [openDrawer, closeDrawer, sendCommand],
   );
 
-  const scoreVp = useCallback(() => {
-    const pts = window.prompt("Victory points scored this Recovery (centre 2, each corner 1):", "0");
-    if (pts == null) return;
-    sendCommand("vp", { side: mySide(), points: String(parseInt(pts, 10) || 0) });
-  }, [sendCommand, mySide]);
-
   const sendReact = useCallback(
     (attrs: Record<string, unknown>) => sendCommand("react", { ...attrs, side: mySide() }),
     [sendCommand, mySide],
@@ -307,7 +300,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider
       value={{
-        openMove, openRepair, openPrepare, scoreVp, resolveBlast, sendReact, endActivation, rollInitiative, resetBattle,
+        openMove, openRepair, openPrepare, resolveBlast, sendReact, endActivation, rollInitiative, resetBattle,
       }}
     >
       {children}
