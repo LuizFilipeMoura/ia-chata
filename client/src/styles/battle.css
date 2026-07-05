@@ -386,3 +386,16 @@ body.my-turn-glow::after {
 .dwr-recap-row { border-left: 2px solid var(--rivet); padding-left: .55rem; }
 .dwr-recap-line { font-family: var(--font-display); font-size: .82rem; color: var(--txt); line-height: 1.35; }
 .dwr-recap-eff { margin-top: .15rem; font-family: var(--font-mono); font-size: .62rem; color: var(--ember-hi); }
+
+/* ===== Reaction picker (Answer token / Prepare) ===== */
+.rx-picker { display: flex; flex-direction: column; gap: .4rem; }
+.rx-choice {
+  display: flex; gap: .55rem; align-items: flex-start; text-align: left;
+  padding: .55rem .6rem; border-radius: var(--radius-md);
+  background: var(--iron-800); border: 1px solid var(--line); color: var(--txt);
+}
+.rx-choice.sel { border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil) inset; }
+.rx-choice-ic { font-size: 1.1rem; line-height: 1.2; }
+.rx-choice-body { display: flex; flex-direction: column; gap: .15rem; }
+.rx-choice-label { font-family: var(--font-display); font-weight: 700; font-size: .82rem; }
+.rx-choice-rule { font-family: var(--font-mono); font-size: .58rem; color: var(--txt-dim); line-height: 1.3; }
