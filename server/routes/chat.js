@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { MODEL, OLLAMA_URL, NUM_CTX } from "../config.js";
-import { getSystemPrompt, TRACKER_PROTOCOL } from "../prompt.js";
+import { getSystemPrompt, TRACKER_PROTOCOL, PLAYER_START_GUIDE } from "../prompt.js";
 import { formatBattleState } from "../../shared/game-state.js";
 
 // POST /api/chat — proxy the conversation to Ollama and stream the reply back
@@ -14,7 +14,7 @@ export function createChatRouter(store) {
     const think = req.body?.think !== false;
     const room = req.body?.room ? store.getRoom(req.body.room) : null;
     const battle = room ? formatBattleState(room) : "";
-    const system = getSystemPrompt() + "\n" + TRACKER_PROTOCOL + "\n" + battle;
+    const system = getSystemPrompt() + "\n" + TRACKER_PROTOCOL + "\n" + PLAYER_START_GUIDE + "\n" + battle;
     const messages = [{ role: "system", content: system }, ...clientMessages];
 
     const ollamaBody = {
