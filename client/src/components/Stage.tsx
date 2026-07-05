@@ -1,6 +1,7 @@
 import { useRoomState } from "../state/RoomStateContext";
 import { useUi } from "../state/UiStateContext";
 import { RigDeck } from "./RigDeck";
+import { FieldControls } from "./FieldControls";
 import { BattleSetup } from "./BattleSetup";
 import { BattleHud } from "./BattleHud";
 
@@ -16,6 +17,7 @@ export function Stage() {
       </div>
       <BattleHud />
       <RigDeck />
+      <FieldControls />
       <BattleSetup />
     </main>
   );

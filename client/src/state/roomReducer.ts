@@ -1,14 +1,16 @@
-import type { Rig, GameState, Session, ServerState } from "./types";
+import type { Rig, GameState, Session, ServerState, FieldState } from "./types";
 
 export interface RoomState {
   rigs: Rig[];
   game: GameState | null;
+  field: FieldState | null;
+  ownerSide: string | null;
   stateVersion: number;
   session: Session | null;
 }
 
 export const initialRoomState: RoomState = {
-  rigs: [], game: null, stateVersion: -1, session: null,
+  rigs: [], game: null, field: null, ownerSide: null, stateVersion: -1, session: null,
 };
 
 export type RoomAction =
@@ -25,6 +27,8 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
         ...state,
         rigs: Array.isArray(s.rigs) ? s.rigs : [],
         game: s.game ?? null,
+        field: s.field ?? null,
+        ownerSide: s.ownerSide ?? null,
         stateVersion: s.version ?? state.stateVersion,
       };
     }
