@@ -280,3 +280,45 @@ test("ensureGameShape backfills fields on a legacy room", () => {
   assert.equal(legacy.rigs[0].activated, false);
   assert.deepEqual(legacy.rigs[0].loaded, { longRange: true, melee: true });
 });
+
+// Helper: stand up a started 3v3 battle. Side "a" readies first (deploys first),
+// so "a" activates SECOND in round 1 and "b" activates first.
+function startedRoom() {
+  const r = createRoom("X");
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 3; i++) {
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+    }
+  }
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  return r;
+}
+
+test("setdice toggles autoResolve only before the game starts", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "setdice", attrs: { value: "manual" } });
+  assert.equal(r.game.autoResolve, false);
+  applyCommand(r, { verb: "setdice", attrs: { value: "auto" } });
+  assert.equal(r.game.autoResolve, true);
+});
+
+test("setdice is a no-op once started", () => {
+  const r = startedRoom();
+  const v = r.version;
+  applyCommand(r, { verb: "setdice", attrs: { value: "manual" } });
+  assert.equal(r.game.autoResolve, true);
+  assert.equal(r.version, v);
+});
+
+test("starting the game seeds round 1 initiative from deploy order", () => {
+  const r = startedRoom();
+  assert.equal(r.game.phase, "activation");
+  assert.equal(r.game.round, 1);
+  assert.deepEqual(r.game.initiative.order, ["b", "a"]);
+  assert.equal(r.game.initiative.second, "a");
+  assert.equal(r.game.answerTokens.a, 2);
+  assert.equal(r.game.answerTokens.b, 0);
+  assert.equal(r.game.turn.side, "b");
+  assert.equal(r.game.turn.activeRigId, null);
+});

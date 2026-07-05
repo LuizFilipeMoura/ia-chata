@@ -195,6 +195,43 @@ function resetReadyBeforeStart(room) {
   if (room.game.started) return;
   for (const side of room.game.sides) side.ready = false;
   room.game.bounties = {};
+  room.game.deployOrder = [];
+}
+
+// Roll an N-sided die. A valid caller-supplied value (manual dice entry) is used
+// as-is; otherwise roll with the injectable random (auto mode / tests).
+function rollD(sides, provided, random = Math.random) {
+  if (provided != null) {
+    const v = Math.floor(Number(provided));
+    if (Number.isFinite(v) && v >= 1 && v <= sides) return v;
+  }
+  return Math.floor((random || Math.random)() * sides) + 1;
+}
+
+// Append a dice/effect entry to the capped shared log the client animates.
+function pushResolution(room, entry) {
+  entry.id = room.game.nextResolutionId++;
+  room.game.resolutions.push(entry);
+  while (room.game.resolutions.length > 12) room.game.resolutions.shift();
+}
+
+// Round-1 initiative comes from deployment, not dice: the first side to Ready
+// (deployOrder[0]) is the first-deployer and therefore activates SECOND (§10.5).
+function deploymentOrder(room) {
+  const second = room.game.deployOrder[0] || "a";
+  const first = second === "a" ? "b" : "a";
+  return [first, second];
+}
+
+// Record an initiative result: set activation order, grant the second activator
+// 2 Answer tokens, open the turn, and enter the activation phase.
+function applyInitiative(room, order, rolls) {
+  const [first, second] = order;
+  room.game.initiative = { rolls: rolls || null, order: [first, second], second };
+  room.game.answerTokens = { a: 0, b: 0 };
+  room.game.answerTokens[second] = 2;
+  room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
+  room.game.phase = "activation";
 }
 
 function randomPick(items, random = Math.random) {
@@ -216,6 +253,13 @@ function maybeStartGame(room, random = Math.random) {
   }
   room.game.bounties = bounties;
   room.game.started = true;
+  room.game.phase = "initiative";
+  room.game.round = 1;
+  applyInitiative(room, deploymentOrder(room), null);
+  pushResolution(room, {
+    kind: "initiative", actor: room.game.turn.side, rigId: null, rolls: [],
+    summary: `Round 1 — ${room.game.initiative.order[0]} activates first`, effects: [],
+  });
   return true;
 }
 
@@ -302,8 +346,14 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const side = room.game.sides.find((s) => s.id === sideId);
     if (side && !room.game.started && sideRigCount(room, side.id) >= 3 && !side.ready) {
       side.ready = true;
+      if (!room.game.deployOrder.includes(side.id)) room.game.deployOrder.push(side.id);
       maybeStartGame(room, options.random);
       changed = true;
+    }
+  } else if (verb === "setdice") {
+    if (!room.game.started) {
+      const want = String(a.value || "").toLowerCase() !== "manual";
+      if (room.game.autoResolve !== want) { room.game.autoResolve = want; changed = true; }
     }
   } else {
     const rig = findRig(room, a.name);
