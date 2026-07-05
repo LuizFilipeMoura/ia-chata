@@ -723,3 +723,20 @@ test("WEAPON_UPGRADES has exactly 2 upgrades for all 12 weapons", () => {
     }
   }
 });
+
+test("makeRig accepts an equipment id and Ablative Plating grants +1 max/current Hull SP", () => {
+  const plain = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  assert.equal(plain.equipment, null);
+  assert.equal(plain.hull.max, 7);
+
+  const armored = makeRig(2, "Bastion", "medium", "a", { longRange: "Autocannon", melee: "Claw" }, "ablative-plating");
+  assert.equal(armored.equipment, "ablative-plating");
+  assert.equal(armored.hull.max, 8);
+  assert.equal(armored.hull.sp, 8);
+});
+
+test("makeRig rejects an invalid equipment id by falling back to no equipment", () => {
+  const rig = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" }, "not-a-real-slot");
+  assert.equal(rig.equipment, null);
+  assert.equal(rig.hull.max, 7);
+});

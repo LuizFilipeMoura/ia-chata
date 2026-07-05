@@ -177,7 +177,7 @@ export function normalizeWeapon(category, name) {
   return Object.keys(table).find((weapon) => weapon.toLowerCase() === ref) || null;
 }
 
-export function makeRig(id, name, cls, owner, weapons = {}) {
+export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   const normalizedClass = String(cls || "").trim().toLowerCase();
   if (!SUPPORTED_RIG_CLASSES.includes(normalizedClass)) return null;
   const longRange = normalizeWeapon("longRange", weapons.longRange || weapons.lr);
@@ -186,16 +186,20 @@ export function makeRig(id, name, cls, owner, weapons = {}) {
 
   const weightClass = normalizedClass;
   const d = RIG_DEFAULTS[weightClass];
+  const equipmentId = normalizeEquipment(equipment);
+  // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
+  const hullMax = d.hull + (equipmentId === "ablative-plating" ? 1 : 0);
   return {
     id,
     name: String(name || "Rig").trim() || "Rig",
     weightClass,
     owner: owner === "b" ? "b" : "a",
-    hull:   { sp: d.hull, max: d.hull, destroyed: false },
+    hull:   { sp: hullMax, max: hullMax, destroyed: false },
     arms:   { sp: d.arms, max: d.arms, destroyed: false },
     legs:   { sp: d.legs, max: d.legs, destroyed: false },
     engine: { sp: d.engine, max: d.engine, destroyed: false, heat: 0 },
     weapons: { longRange, melee },
+    equipment: equipmentId,
     prepare: 0,    // Phase 4
     activated: false,
     skipNextActivation: false,
@@ -205,6 +209,8 @@ export function makeRig(id, name, cls, owner, weapons = {}) {
     preparation: null,
     weaponsDestroyed: [],
     immobilised: false,
+    hardened: false,
+    overclockCoreUsed: false,
     destroyed: false,
   };
 }
