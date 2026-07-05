@@ -112,11 +112,16 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
 
-  const rolls = [{ sides: 6, value: th.hits, label: `hits (${th.hits}/${th.rof})` }];
+  const rolls = th.dice.map((d, i) => ({
+    sides: 6, value: d, label: `hit ${i + 1}`,
+    tone: d === 6 ? "crit" : d >= th.modAim ? "ok" : "miss",
+  }));
   let impacts = [];
   let location = null;
   if (th.hits > 0) {
-    location = opts.aimed ? opts.aimedLoc : hitLocation(rollD(12, opts.dice?.location, random));
+    const locDie = rollD(12, opts.dice?.location, random);
+    location = opts.aimed ? opts.aimedLoc : hitLocation(locDie);
+    if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     impacts = rollImpacts(attacker, target, profile, location,
       { arc: opts.arc, hits: th.hits, charged: opts.charged }, opts.dice, random);
     for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
@@ -189,7 +194,7 @@ export function resolveRam(room, attacker, target, opts, random, ctx) {
     if (sev.sp > 0) ctx.applyDamage(room, rig, loc, sev.sp, { random });
     ctx.pushResolution(room, {
       kind: "ram", actor: attacker.owner, rigId: rig.id,
-      rolls: [{ sides: 6, value: die, label: "D6" }],
+      rolls: [{ sides: 6, value: die, label: "D6", tone: sev.sp > 0 ? "ok" : "miss" }],
       summary: `Ram hits ${rig.name}: ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`, effects: [],
     });
   }

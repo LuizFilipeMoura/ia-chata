@@ -1,7 +1,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts } from "./combat.js";
+import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, resolveRam } from "./combat.js";
 import { WEAPONS, makeRig, effectiveWeaponProfile } from "./game-state.js";
+
+// Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
+// game-state.js's combatCtx() injects (§"Mutation primitives" in combat.js),
+// but only records calls instead of mutating real Rig state.
+function makeCtx() {
+  const resolutions = [];
+  return {
+    resolutions,
+    pushResolution(room, entry) { resolutions.push(entry); },
+    applyDamage() {},
+    bumpHeat() {},
+    sunderLocation() {},
+    profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
+  };
+}
 
 const attacker = { weightClass: "medium", hull: { sp: 7 } };
 
@@ -108,4 +123,69 @@ test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
   const mortarRig = makeRig(1, "Airburst", "medium", "a", { longRange: "Mortar", melee: "Sword", longRangeUpgrade: "airburst-fuze" });
   const mortar = effectiveWeaponProfile("longRange", "Mortar", mortarRig);
   assert.equal(computeModifiedAim(mortarRig, mortar, { range: "near", cover: 2 }), 5);
+});
+
+test("resolveAttack emits a per-die roll for each hit-die plus a location d12, each with a tone", () => {
+  // Autocannon: rof 4, acc [0,-1], no Full Auto requested here. Medium attacker,
+  // full hull, near range, front arc, cover 0, fire (not aimed) -> modAim =
+  // AIM.medium(4) - (acc[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
+  const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = makeCtx();
+
+  // modAim is 4: die 6 -> crit; die 4 or 5 -> ok; die < 4 -> miss.
+  const toHit = [6, 4, 2, 5]; // crit, ok, miss, ok (3 hits out of 4 dice)
+  const result = resolveAttack(room, attacker, target, {
+    weapon: "longRange", target: target.name, arc: "front", range: "near", cover: 0,
+    dice: { toHit, location: 3 }, // location d12 = 3 -> hitLocation(3) = "hull"
+  }, () => 0, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.hits, 3);
+
+  const attackRes = ctx.resolutions.find((r) => r.kind === "attack");
+  assert.ok(attackRes, "expected a pushed attack resolution");
+
+  const d6Rolls = attackRes.rolls.filter((r) => r.sides === 6);
+  const d12Rolls = attackRes.rolls.filter((r) => r.sides === 12);
+
+  // rof entries for the d6 hit dice, plus exactly one d12 location die.
+  assert.equal(d6Rolls.length, 4);
+  assert.equal(d12Rolls.length, 1);
+  assert.equal(d12Rolls[0].value, 3);
+  assert.equal(d12Rolls[0].tone, "cool");
+
+  // The face-6 die is a crit; every d6 tone is one of crit/ok/miss.
+  const critDie = d6Rolls.find((r) => r.value === 6);
+  assert.equal(critDie.tone, "crit");
+  assert.ok(d6Rolls.every((r) => ["crit", "ok", "miss"].includes(r.tone)));
+
+  // Damage/summary/heat are untouched by this change: summary still reports
+  // hits and location, and hits/location math is unaffected.
+  assert.equal(result.location, "hull");
+  assert.match(attackRes.summary, /3 hit\(s\)/);
+  assert.match(attackRes.summary, /to hull/);
+});
+
+test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage", () => {
+  const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = makeCtx();
+
+  // Ram STR (medium) = 9. A high impact die should deal damage (sp > 0, tone "ok");
+  // location doesn't matter for the assertion, force both to something valid.
+  resolveRam(room, attacker, target, {
+    dice: {
+      self: { location: 1, impact: 6 },   // 6 + 9 = 15 -> medium hull severe (>=14) -> sp>0
+      target: { location: 1, impact: 1 }, // 1 + 9 = 10 -> medium hull (<11 direct) -> sp=0
+    },
+  }, () => 0, ctx);
+
+  const ramResults = ctx.resolutions.filter((r) => r.kind === "ram");
+  assert.equal(ramResults.length, 2);
+  const [selfRes, targetRes] = ramResults;
+  assert.equal(selfRes.rolls[0].tone, "ok");
+  assert.equal(targetRes.rolls[0].tone, "miss");
 });

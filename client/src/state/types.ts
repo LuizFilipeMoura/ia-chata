@@ -46,7 +46,7 @@ export interface Resolution {
   rigId?: number;
   summary?: string;
   effects?: string[];
-  rolls?: Array<{ sides: number; value: number; label?: string }>;
+  rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
 }
 
 export type Diagonal = "tlbr" | "trbl";
