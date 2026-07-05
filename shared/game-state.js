@@ -34,6 +34,69 @@ export const WEAPONS = {
   },
 };
 
+// Rig equipment loadout (docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md,
+// Part 1). One slot per Rig. Passives hook into existing systems (see makeRig /
+// runRecovery / catastrophicOnZero / performAction below); actives are ordinary
+// actions gated to the Rig carrying the matching equipment — unlimited use,
+// leashed only by the 5-slot action budget and the heat they generate.
+export const EQUIPMENT = {
+  "ablative-plating": {
+    family: "Armor", label: "Ablative Plating", passive: "+1 max SP to Hull",
+    active: { key: "harden", label: "Harden", heat: 1,
+      text: "Until this Rig's next activation, all impact rolls against it are at −1." },
+  },
+  "radiator-array": {
+    family: "Cooling", label: "Radiator Array", passive: "Cools 3 heat in Recovery instead of 2",
+    active: { key: "purge", label: "Purge", heat: -2, text: "Vent heat on demand." },
+  },
+  "servo-actuators": {
+    family: "Mobility", label: "Servo Actuators", passive: "Sprint costs 1 heat instead of 2",
+    active: { key: "jumpjets", label: "Jump Jets", heat: 2,
+      text: "Move up to base Speed, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties." },
+  },
+  "overclock-core": {
+    family: "Power", label: "Overclock Core",
+    passive: "The first time this Rig's Engine reaches 0 SP, it does not skip its next activation",
+    active: { key: "overclock", label: "Overclock", heat: 3, text: "+2 actions this activation (net +1 after the slot)." },
+  },
+  "field-repair-suite": {
+    family: "Utility", label: "Field Repair Suite", passive: "The Repair action restores +1 additional SP",
+    active: { key: "emergencypatch", label: "Emergency Patch", heat: 2,
+      text: "Guaranteed repair 2 SP to one location, no D12 roll." },
+  },
+};
+
+// Reverse lookup: active-ability key -> the equipment id that grants it.
+export const EQUIPMENT_ACTIVE_BY_KEY = Object.fromEntries(
+  Object.entries(EQUIPMENT).map(([id, e]) => [e.active.key, id])
+);
+
+export function normalizeEquipment(id) {
+  if (!id) return null;
+  const ref = String(id).trim().toLowerCase();
+  return Object.keys(EQUIPMENT).includes(ref) ? ref : null;
+}
+
+// Weapon upgrades (Part 2 of the design) — every weapon's two fixed signature
+// upgrades, authored as flavor + a toolkit-effect tag. Combat-engine wiring for
+// the brand-new mechanics (Reach, Scatter, Systems Overload, Sunder,
+// Reroll-a-miss) is deferred per the design's "Readiness / phasing" section;
+// this catalogue lets the wizard preview a weapon's identity today.
+export const WEAPON_UPGRADES = {
+  "Mini Gun":      [{ name: "Extended Belt", tag: "+2 ROF (dice showing 1 add heat)" }, { name: "Suppressive Fire", tag: "Shock — Speed halved" }],
+  "Double MG":     [{ name: "Tracer Rounds", tag: "Incendiary — +1 target heat/hit" }, { name: "Gyro Mount", tag: "Reroll one missed die" }],
+  "Autocannon":    [{ name: "AP Shells", tag: "Armour Piercing" }, { name: "Depleted Core", tag: "+STR" }],
+  "Arc Gun":       [{ name: "Systems Overload", tag: "Target loses 1 action next activation" }, { name: "Ion Burn", tag: "Incendiary — +1 target heat/hit" }],
+  "Mortar":        [{ name: "Airburst Fuze", tag: "Ignores cover" }, { name: "Cluster Shells", tag: "Also chips a 2nd random location" }],
+  "Sniper Cannon": [{ name: "Match Barrel", tag: "No far-range penalty" }, { name: "Marksman Optics", tag: "Precision — Aimed Shot loses −2" }],
+  "Sword":         [{ name: "Duelist's Balance", tag: "Precision" }, { name: "Keen Edge", tag: "Rend" }],
+  "Circular Saw":  [{ name: "Tempered Teeth", tag: "Armour Piercing" }, { name: "Sunder", tag: "−1 max SP to the struck location" }],
+  "Chainsaw":      [{ name: "High-Rev Motor", tag: "+STR, but +1 heat per strike" }, { name: "Ripper Teeth", tag: "Rend" }],
+  "Claw":          [{ name: "Vice Grip", tag: "Impale — strong hit immobilises" }, { name: "Rending Talons", tag: "Rend" }],
+  "Lance":         [{ name: "Couched Reach", tag: "Reach — strike 1\" further / charge bonus" }, { name: "Spearpoint", tag: "Impale" }],
+  "Wrecking Ball": [{ name: "Haymaker", tag: "+STR, big" }, { name: "Wrecking Momentum", tag: "Staggering — knock back / pivot" }],
+};
+
 export function createRoom(code) {
   return {
     code,

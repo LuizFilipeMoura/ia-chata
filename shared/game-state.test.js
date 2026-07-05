@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   createRoom, makeRig, claimSide, applyCommand, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
+  EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -687,4 +688,38 @@ test("Impale immobilises on a D12 of 8+", () => {
     dice: { toHit: [6], impacts: [6], location: 1, impale: 9 },
   } });
   assert.equal(a1.immobilised, true);
+});
+
+test("EQUIPMENT has the 5 catalogue pieces with passive + active shape", () => {
+  const ids = Object.keys(EQUIPMENT).sort();
+  assert.deepEqual(ids, ["ablative-plating", "field-repair-suite", "overclock-core", "radiator-array", "servo-actuators"]);
+  for (const id of ids) {
+    const e = EQUIPMENT[id];
+    assert.equal(typeof e.family, "string");
+    assert.equal(typeof e.label, "string");
+    assert.equal(typeof e.passive, "string");
+    assert.equal(typeof e.active.key, "string");
+    assert.equal(typeof e.active.heat, "number");
+    assert.equal(typeof e.active.text, "string");
+  }
+});
+
+test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
+  assert.equal(normalizeEquipment("Ablative-Plating"), "ablative-plating");
+  assert.equal(normalizeEquipment("nonsense"), null);
+  assert.equal(normalizeEquipment(null), null);
+});
+
+test("WEAPON_UPGRADES has exactly 2 upgrades for all 12 weapons", () => {
+  const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
+  assert.equal(all.length, 12);
+  for (const name of all) {
+    const ups = WEAPON_UPGRADES[name];
+    assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
+    assert.equal(ups.length, 2, `${name} must have exactly 2 upgrades`);
+    for (const u of ups) {
+      assert.equal(typeof u.name, "string");
+      assert.equal(typeof u.tag, "string");
+    }
+  }
 });
