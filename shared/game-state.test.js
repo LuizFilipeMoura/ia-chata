@@ -740,3 +740,21 @@ test("makeRig rejects an invalid equipment id by falling back to no equipment", 
   assert.equal(rig.equipment, null);
   assert.equal(rig.hull.max, 7);
 });
+
+test("add passes equipment through to the created rig", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw", equipment: "servo-actuators" } });
+  const rig = findRig(r, "Bastion");
+  assert.equal(rig.equipment, "servo-actuators");
+});
+
+test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy rig objects", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
+  const rig = findRig(r, "Bastion");
+  delete rig.equipment; delete rig.hardened; delete rig.overclockCoreUsed;
+  findRig(r, "Bastion"); // findRig calls ensureGameShape -> ensureRigShape internally
+  assert.equal(rig.equipment, null);
+  assert.equal(rig.hardened, false);
+  assert.equal(rig.overclockCoreUsed, false);
+});

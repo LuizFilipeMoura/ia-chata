@@ -137,6 +137,9 @@ function ensureRigShape(rig) {
   if (rig.preparation === undefined) rig.preparation = null;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
+  if (rig.equipment === undefined) rig.equipment = null;
+  if (typeof rig.hardened !== "boolean") rig.hardened = false;
+  if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   return rig;
 }
 
@@ -638,7 +641,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     if (a.name && !findRig(room, a.name)) {
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
       if (canAddRigForSide(room, owner)) {
-        const rig = makeRig(room.nextRigId, a.name, (a.class || "").toLowerCase(), owner, a);
+        const rig = makeRig(room.nextRigId, a.name, (a.class || "").toLowerCase(), owner, a, a.equipment);
         if (!rig) return room;
         room.nextRigId++;
         room.rigs.push(rig);
