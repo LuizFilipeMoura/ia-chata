@@ -319,21 +319,7 @@
 .rig-add-locked { border-style: solid; opacity: .82; }
 .rig-add-title { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .2em; text-transform: uppercase; color: var(--oil); }
 .rig-add-hint { font-size: .78rem; color: var(--txt-dim); line-height: 1.5; }
-#rigName {
-  background: var(--iron-950); color: var(--txt); text-align: center;
-  border: 1px solid var(--line); border-radius: 10px; padding: .65rem .6rem;
-  font-family: var(--font-display); font-size: 1rem;
-}
-#rigName:focus { outline: none; border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil); }
 .rig-add-row { display: flex; gap: .5rem; }
-#rigClass,
-#rigOwner,
-#rigLongRange,
-#rigMelee {
-  flex: 1; background: var(--iron-800); color: var(--txt);
-  border: 1px solid var(--line); border-radius: 10px; padding: .5rem .5rem;
-  font-family: var(--font-display); font-size: .9rem;
-}
 .rig-add-btn {
   flex: 1; background: linear-gradient(180deg, var(--oil-hi), var(--oil));
   color: #241606; border-radius: 10px; padding: .55rem 1.1rem;

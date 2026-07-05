@@ -6,20 +6,18 @@ const html = fs.readFileSync(new URL("./index.html", import.meta.url), "utf8");
 const tracker = fs.readFileSync(new URL("./js/tracker.js", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("./css/rig-sheet.css", import.meta.url), "utf8");
 
-test("manual add form exposes an owner selector", () => {
-  assert.match(html, /id="rigOwner"/);
-  assert.match(tracker, /getElementById\("rigOwner"\)/);
-  assert.match(tracker, /owner:\s*rigOwnerSelect\.value/);
-  assert.match(tracker, /syncOwnerOptions/);
+test("the rig wizard exposes an owner selector labeled You/Enemy", () => {
+  const wizard = fs.readFileSync(new URL("./js/rig-wizard.js", import.meta.url), "utf8");
+  assert.match(wizard, /textContent = "You"/);
+  assert.match(wizard, /textContent = "Enemy"/);
+  assert.match(wizard, /owner:\s*state\.owner/);
 });
 
-test("manual add form only exposes supported rig classes", () => {
-  const classSelect = html.match(/<select id="rigClass"[\s\S]*?<\/select>/)?.[0] || "";
-  assert.match(classSelect, /<option value="light">Light<\/option>/);
-  assert.match(classSelect, /<option value="medium"[^>]*>Medium<\/option>/);
-  assert.doesNotMatch(classSelect, /value="heavy"/);
-  assert.doesNotMatch(classSelect, /value="colossal"/);
-  assert.doesNotMatch(html, /add a heavy rig/i);
+test("the rig wizard only offers supported rig classes", () => {
+  const wizard = fs.readFileSync(new URL("./js/rig-wizard.js", import.meta.url), "utf8");
+  assert.match(wizard, /\["light", "medium"\]/);
+  assert.doesNotMatch(wizard, /"heavy"/);
+  assert.doesNotMatch(wizard, /"colossal"/);
 });
 
 test("command posts include the viewer side for owner defaults", () => {
@@ -54,5 +52,4 @@ test("manual add form is gated by the shared rig limits", () => {
   assert.match(tracker, /canAddRigForSide/);
   assert.match(tracker, /updateAddRigAvailability/);
   assert.match(tracker, /rigAddBtn\.disabled\s*=\s*!canAdd/);
-  assert.match(tracker, /change", updateAddRigAvailability/);
 });
