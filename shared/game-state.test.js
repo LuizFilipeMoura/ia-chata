@@ -524,6 +524,32 @@ test("a full round of activations triggers Recovery cooldown and reset", () => {
   assert.deepEqual(r.game.answerTokens, { a: 0, b: 0 });
 });
 
+test("firing on a braced rig reveals it and logs a reaction entry", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "brace", side: "a" } }); // clear gate
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+  } });
+  const a1 = findRig(r, "a1");
+  assert.equal(a1.preparation.faceUp, true);                 // revealed
+  assert.equal(r.game.resolutions.some((e) => e.kind === "reaction"), true);
+});
+
+test("firing on a return-fire rig resolves the shot then parks a counter", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "return", side: "a" } });
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "brace", side: "a" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+  } });
+  assert.equal(findRig(r, "a1").preparation.faceUp, true);
+  assert.equal(r.game.pendingReaction.kind, "return");
+  assert.equal(r.game.pendingReaction.defender, "a");
+});
+
 // Round-start Answer gate blocks the first activator until the second side
 // spends its Answer tokens. Test helpers that just want to drive activation
 // forward (not exercise the gate itself) call this to clear it immediately.

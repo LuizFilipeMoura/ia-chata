@@ -416,6 +416,23 @@ function pushResolution(room, entry) {
   while (room.game.resolutions.length > 12) room.game.resolutions.shift();
 }
 
+function prepName(type) {
+  if (type === "evasive") return "Evasive Manoeuvre";
+  if (type === "return") return "Return Fire";
+  return "Brace for Incoming Fire";
+}
+function prepEffectLine(type) {
+  if (type === "evasive") return "Defender may move ½ Speed — the attack can miss entirely.";
+  if (type === "return") return "Defender answers with a counter-attack.";
+  return "Front-arc impacts suffer −2.";
+}
+function reactionRevealEntry(rig, type) {
+  return {
+    kind: "reaction", actor: rig.owner, rigId: rig.id, rolls: [], prep: type,
+    summary: `${rig.name} reveals ${prepName(type)}!`, effects: [prepEffectLine(type)],
+  };
+}
+
 // Round-1 initiative comes from deployment, not dice: the first side to Ready
 // (deployOrder[0]) is the first-deployer and therefore activates SECOND (§10.5).
 function deploymentOrder(room) {
@@ -671,6 +688,28 @@ function combatCtx() {
   };
 }
 
+// Resolve one Fire/Aimed shot end-to-end (to-hit, heat, budget). Returns whether
+// the shot was made. Shared by the direct path and the deferred Evasive path.
+function resolveFire(room, rig, target, a, act, random) {
+  const t = room.game.turn;
+  const slot = a.weapon === "melee" ? "melee" : "longRange";
+  const rushed = slot === "longRange" && rig.loaded.longRange === false;
+  const cost = rushed ? 2 : 1;
+  if (t.actionsUsed + cost > t.actionsMax) return false;
+  const res = resolveAttack(room, rig, target, {
+    weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
+    aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
+    fullAuto: a.fullAuto === true || a.fullAuto === "true",
+    charged: a.charged === true || a.charged === "true",
+    autoReload: rushed, dice: a.dice,
+  }, random, combatCtx());
+  if (!res.ok) return false;
+  if (rushed) bumpHeat(rig, ACTIONS.reload.heat);
+  t.actionsUsed += cost;
+  bumpHeat(rig, ACTIONS[act].heat);
+  return true;
+}
+
 // One action during an activation. Returns whether anything changed.
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
@@ -705,26 +744,36 @@ function performAction(room, rig, act, a, random) {
   if (act === "fire" || act === "aimed") {
     const target = findRig(room, a.target);
     if (!target) return false;
-    const slot = a.weapon === "melee" ? "melee" : "longRange";
-    // §7 Rushed reload: a spent ranged weapon may fire again without a separate
-    // Reload, but the shot costs 2 action-slots and the reload's heat — an
-    // implicit reload folded into the trigger pull. Melee never reloads.
-    const rushed = slot === "longRange" && rig.loaded.longRange === false;
-    const cost = rushed ? 2 : 1;
-    if (t.actionsUsed + cost > t.actionsMax) return false; // can't afford the rushed shot
-    const res = resolveAttack(room, rig, target, {
-      weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
-      aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
-      fullAuto: a.fullAuto === true || a.fullAuto === "true",
-      charged: a.charged === true || a.charged === "true",
-      autoReload: rushed,
-      dice: a.dice,
-    }, random, combatCtx());
-    if (!res.ok) return false;      // invalid shot — no budget spent
-    if (rushed) bumpHeat(rig, ACTIONS.reload.heat); // the folded-in reload's heat
-    t.actionsUsed += cost;
-    bumpHeat(rig, def.heat);        // base 1 (Hot / fire-mode heat added inside resolveAttack)
-    return true;
+    const facedown = target.preparation && target.preparation.faceUp === false;
+    if (facedown) {
+      const prep = target.preparation;
+      // Affordability pre-check so an unaffordable shot never reveals the token.
+      const slot = a.weapon === "melee" ? "melee" : "longRange";
+      const rushed = slot === "longRange" && rig.loaded.longRange === false;
+      const cost = rushed ? 2 : 1;
+      if (t.actionsUsed + cost > t.actionsMax) return false;
+
+      if (prep.type === "evasive") {
+        prep.faceUp = true;
+        pushResolution(room, reactionRevealEntry(target, "evasive"));
+        room.game.pendingReaction = {
+          kind: "evasive", attackerId: rig.id, targetId: target.id, defender: target.owner,
+          attack: { ...a, act },
+        };
+        return true; // whole attack deferred to the `react` verb
+      }
+      const ok = resolveFire(room, rig, target, a, act, random);
+      if (!ok) return false;
+      prep.faceUp = true;
+      pushResolution(room, reactionRevealEntry(target, prep.type));
+      if (prep.type === "return" && !target.destroyed) {
+        room.game.pendingReaction = {
+          kind: "return", attackerId: rig.id, targetId: target.id, defender: target.owner,
+        };
+      }
+      return true;
+    }
+    return resolveFire(room, rig, target, a, act, random);
   }
   if (act === "ram") {
     const target = findRig(room, a.target);
