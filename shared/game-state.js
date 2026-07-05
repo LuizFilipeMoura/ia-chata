@@ -210,6 +210,7 @@ export function createRoom(code) {
       suddenDeath: false,
       outcome: null,
       pendingBlast: null,
+      pendingAnswer: null,
     },
     rigs: [],
   };
@@ -270,6 +271,7 @@ function ensureGameShape(room) {
   if (typeof room.game.suddenDeath !== "boolean") room.game.suddenDeath = false;
   if (room.game.outcome === undefined) room.game.outcome = null;
   if (room.game.pendingBlast === undefined) room.game.pendingBlast = null;
+  if (room.game.pendingAnswer === undefined) room.game.pendingAnswer = null;
   for (const rig of room.rigs) ensureRigShape(rig);
   return room;
 }
@@ -429,6 +431,10 @@ function applyInitiative(room, order, rolls) {
   room.game.initiative = { rolls: rolls || null, order: [first, second], second };
   room.game.answerTokens = { a: 0, b: 0 };
   room.game.answerTokens[second] = 2;
+  room.game.pendingAnswer =
+    room.game.answerTokens[second] > 0 && eligibleForPrep(room, second).length > 0
+      ? { side: second, remaining: room.game.answerTokens[second] }
+      : null;
   room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
   room.game.phase = "activation";
 }
@@ -577,6 +583,11 @@ function heatRig(rig, spec) {
 
 function sideHasActivatable(room, sideId) {
   return room.rigs.some((r) => (r.owner || "a") === sideId && !r.destroyed && !r.activated);
+}
+
+// Rigs a side may still place a preparation on: alive and not already prepared.
+function eligibleForPrep(room, sideId) {
+  return room.rigs.filter((r) => (r.owner || "a") === sideId && !r.destroyed && r.preparation == null);
 }
 
 // After a rig finishes, pass to the other side if it can still act; otherwise
@@ -879,6 +890,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
     if (rig && t && room.game.phase === "activation" && t.activeRigId == null &&
+        !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
       if (rig.skipNextActivation) {
@@ -953,6 +965,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         room.game.answerTokens[sideId] > 0 && rig.preparation == null) {
       rig.preparation = { type: normalizePrep(a.prep), source: "answer", faceUp: false };
       room.game.answerTokens[sideId] -= 1;
+      if (room.game.pendingAnswer && room.game.pendingAnswer.side === sideId) {
+        room.game.pendingAnswer.remaining -= 1;
+        if (room.game.pendingAnswer.remaining <= 0 || eligibleForPrep(room, sideId).length === 0) {
+          room.game.pendingAnswer = null;
+        }
+      }
       changed = true;
     }
   } else {

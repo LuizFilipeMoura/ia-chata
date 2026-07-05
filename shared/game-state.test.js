@@ -347,6 +347,24 @@ test("starting the game seeds round 1 initiative from deploy order", () => {
   assert.equal(r.game.turn.activeRigId, null);
 });
 
+test("second player gets a blocking answer gate that clears when both tokens are spent", () => {
+  const r = startedRoom(); // "a" is second and holds 2 tokens; turn.side === "b"
+  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 2 });
+
+  // First player cannot start activating while the gate is up.
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(r.game.turn.activeRigId, null);
+
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
+  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1 });
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "evasive", side: "a" } });
+  assert.equal(r.game.pendingAnswer, null);
+
+  // Gate cleared — activation works again.
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
+});
+
 test("initiative verb rolls D12 for both sides and higher goes first", () => {
   const r = startedRoom();
   r.game.phase = "initiative";
@@ -378,6 +396,7 @@ test("initiative verb only runs during the initiative phase", () => {
 
 test("activate opens the acting rig with a 5-action budget", () => {
   const r = startedRoom(); // turn.side === "b"
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
   assert.equal(r.game.turn.actionsUsed, 0);
@@ -386,6 +405,7 @@ test("activate opens the acting rig with a 5-action budget", () => {
 
 test("activate rejects the wrong side, a second rig mid-activation, and destroyed rigs", () => {
   const r = startedRoom(); // b's turn
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "a1" } });   // not b's rig
   assert.equal(r.game.turn.activeRigId, null);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -396,6 +416,7 @@ test("activate rejects the wrong side, a second rig mid-activation, and destroye
 
 test("Hull at 0 SP drops the action budget by 2", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "set", attrs: { name: "b1", loc: "hull", sp: "0" } });
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   assert.equal(r.game.turn.actionsMax, 3);
@@ -409,6 +430,7 @@ test("engine reaching 0 SP flags the next activation as skipped", () => {
 
 test("activating a skip-flagged rig burns the activation and hands off", () => {
   const r = startedRoom(); // b's turn
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "set", attrs: { name: "b1", loc: "engine", sp: "0" } });
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
@@ -420,6 +442,7 @@ test("activating a skip-flagged rig burns the activation and hands off", () => {
 
 test("actions add their heat and spend the budget", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
@@ -430,6 +453,7 @@ test("actions add their heat and spend the budget", () => {
 
 test("actions beyond the budget are rejected", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   for (let i = 0; i < 6; i++) applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
   assert.equal(r.game.turn.actionsUsed, 5);   // capped at actionsMax
@@ -437,6 +461,7 @@ test("actions beyond the budget are rejected", () => {
 
 test("reload reloads all weapons; repair rolls a D12 and heals", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.loaded.longRange = false;
@@ -450,6 +475,7 @@ test("reload reloads all weapons; repair rolls a D12 and heals", () => {
 
 test("shut down before any action cools to the floor and ends the activation", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.engine.heat = 5;
@@ -461,6 +487,7 @@ test("shut down before any action cools to the floor and ends the activation", (
 
 test("end activation with safe heat just hands off", () => {
   const r = startedRoom(); // b first
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
   applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
@@ -471,6 +498,7 @@ test("end activation with safe heat just hands off", () => {
 
 test("overheating at end of activation resolves the Heat Threshold Table", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");               // Light, capacity 6
   b1.engine.heat = 8;                         // 2 over -> bonus +4
@@ -483,6 +511,7 @@ test("overheating at end of activation resolves the Heat Threshold Table", () =>
 
 test("a full round of activations triggers Recovery cooldown and reset", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   const order = ["b1", "a1", "b2", "a2", "b3", "a3"];
   for (const name of order) {
     applyCommand(r, { verb: "activate", attrs: { name } });
@@ -495,10 +524,25 @@ test("a full round of activations triggers Recovery cooldown and reset", () => {
   assert.deepEqual(r.game.answerTokens, { a: 0, b: 0 });
 });
 
+// Round-start Answer gate blocks the first activator until the second side
+// spends its Answer tokens. Test helpers that just want to drive activation
+// forward (not exercise the gate itself) call this to clear it immediately.
+function clearPendingAnswer(r) {
+  while (r.game.pendingAnswer) {
+    const { side } = r.game.pendingAnswer;
+    const rig = r.rigs.find((x) => (x.owner || "a") === side && !x.destroyed && x.preparation == null);
+    if (!rig) break;
+    // "evasive" has no combat-resolution side effect (unlike "brace", which
+    // subtracts 2 from front-arc impact rolls) so it won't skew unrelated tests.
+    applyCommand(r, { verb: "answer", attrs: { name: rig.name, prep: "evasive", side } });
+  }
+}
+
 // Drives one full round of activations by following whichever side actually
 // holds the turn (rather than a hardcoded name order) so it stays correct
 // after initiative flips in round 2+. No heat is added, so no overheat.
 function runFullRound(r) {
+  clearPendingAnswer(r);
   const counts = { a: 0, b: 0 };
   while (r.game.phase === "activation") {
     const side = r.game.turn.side;
@@ -633,6 +677,7 @@ test("blast applies D6 + STR 10 to each named rig and clears the pending blast",
 
 test("fire action resolves an attack, applies damage and logs it", () => {
   const r = startedRoom(); // b acts first
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1"); // Light target, hull 6
   // Fire the melee Sword: STR 6-2(light)=4. 2 dice both 6 -> impacts 6+4+0(front)=10
@@ -648,6 +693,7 @@ test("fire action resolves an attack, applies damage and logs it", () => {
 
 test("firing a spent ranged weapon again folds in a rushed reload for 2 action-slots", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.loaded.longRange = false; // already fired once this activation
@@ -662,6 +708,7 @@ test("firing a spent ranged weapon again folds in a rushed reload for 2 action-s
 
 test("a rushed ranged shot is rejected when only one action-slot remains", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.loaded.longRange = false;
@@ -675,6 +722,7 @@ test("a rushed ranged shot is rejected when only one action-slot remains", () =>
 
 test("ram deals a D6 + ram-STR hit to both rigs", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1"); // Light ram STR 8
   const a1 = findRig(r, "a1"); // Light ram STR 8
@@ -690,6 +738,7 @@ test("ram deals a D6 + ram-STR hit to both rigs", () => {
 
 test("Incendiary adds target heat; Shock halves target speed next round", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   const heatBefore = a1.engine.heat;
@@ -704,6 +753,7 @@ test("Incendiary adds target heat; Shock halves target speed next round", () => 
 
 test("Impale immobilises on a D12 of 8+", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
   b1.weapons.melee = "Lance";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -864,6 +914,7 @@ test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
   plain.engine.heat = 5;
 
   // Drive every rig to its activation and immediately end it so Recovery fires.
+  clearPendingAnswer(r);
   while (r.game.phase === "activation") {
     const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
     applyCommand(r, { verb: "activate", attrs: { name: active.name } });
@@ -888,6 +939,7 @@ test("Servo Actuators makes Sprint cost 1 heat instead of 2", () => {
   applyCommand(r, { verb: "initiative", attrs: {} });
 
   const servo = findRig(r, "A1");
+  clearPendingAnswer(r);
   while (r.game.turn.side !== servo.owner || r.game.activated) {
     const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
     if (active === servo) break;
@@ -927,6 +979,7 @@ test("Field Repair Suite adds +1 SP to the Repair action only", () => {
 
   const medic = findRig(r, "Medic");
   medic.hull.sp = 3;
+  clearPendingAnswer(r);
   while (r.game.turn.side !== "a" || r.game.turn.activeRigId != null) {
     const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
     if (!active || active === medic) break;
@@ -953,6 +1006,7 @@ test("Field Repair Suite does not add +1 SP when the Repair roll whiffs", () => 
 
   const medic = findRig(r, "Medic");
   medic.hull.sp = 3;
+  clearPendingAnswer(r);
   while (r.game.turn.side !== "a" || r.game.turn.activeRigId != null) {
     const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
     if (!active || active === medic) break;
@@ -978,6 +1032,7 @@ function readyThreeAndThree(r, equipmentByName = {}) {
 }
 
 function activate(r, name) {
+  clearPendingAnswer(r);
   while (r.game.phase === "activation" && r.game.turn.activeRigId == null) {
     const active = r.rigs.find((x) => (x.owner || "a") === r.game.turn.side && !x.activated && !x.destroyed);
     if (active.name.toLowerCase() === name.toLowerCase()) { applyCommand(r, { verb: "activate", attrs: { name } }); return; }
@@ -1059,6 +1114,7 @@ test("a rig's next activation clears its own Harden", () => {
     if (r.game.phase === "recovery") applyCommand(r, { verb: "vp", attrs: { side: "a", points: "0" } }), applyCommand(r, { verb: "vp", attrs: { side: "b", points: "0" } });
     if (r.game.phase === "initiative") applyCommand(r, { verb: "initiative", attrs: {} });
     if (r.game.phase === "activation") {
+      clearPendingAnswer(r);
       const active = r.rigs.find((x) => !x.activated && !x.destroyed && (x.owner || "a") === r.game.turn.side);
       if (!active) break;
       applyCommand(r, { verb: "activate", attrs: { name: active.name } });
@@ -1071,6 +1127,7 @@ test("a rig's next activation clears its own Harden", () => {
 
 test("Systems Overload reduces the target's next activation budget by 1 and then clears", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
   b1.weapons.longRange = "Arc Gun";
   b1.weaponUpgrades.longRange = "systems-overload";
@@ -1088,6 +1145,7 @@ test("Systems Overload reduces the target's next activation budget by 1 and then
 
 test("Sunder reduces the struck location max SP once when the selected upgrade deals damage", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
   b1.weapons.melee = "Circular Saw";
   b1.weaponUpgrades.melee = "sunder";
@@ -1103,6 +1161,7 @@ test("Sunder reduces the struck location max SP once when the selected upgrade d
 
 test("High-Rev Motor adds attack heat in addition to base fire heat", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
   b1.weapons.melee = "Chainsaw";
   b1.weaponUpgrades.melee = "high-rev-motor";
@@ -1203,6 +1262,7 @@ test("Ready is blocked until the owner locks the field", () => {
 
 test("prepare action places a facedown reaction of the chosen type", () => {
   const r = startedRoom();
+  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "evasive" } });
   const rig = findRig(r, "b1");
