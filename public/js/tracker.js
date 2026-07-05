@@ -2,6 +2,8 @@ import { S, LOCS, findRig } from "./state.js";
 import { sendCommand } from "./api.js";
 import { setStatus } from "./status.js";
 import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS, canAddRigForSide, heatMeter } from "/shared/game-state.js";
+import { rigModifiers } from "/shared/battle-view.js";
+import { buildActionConsole } from "./battle.js";
 
 const rigList = document.getElementById("rigList");
 const rigNameInput = document.getElementById("rigName");
@@ -256,7 +258,7 @@ function buildHeatGauge(rig, isActive) {
     b.className = "heat-btn " + cls;
     b.textContent = text;
     b.setAttribute("aria-label", aria);
-    b.disabled = !isActive;
+    b.disabled = !isActive || Boolean(S.game?.started);
     b.addEventListener("click", () => sendCommand("heat", { name: rig.name, amount: spec }));
     return b;
   };
@@ -363,6 +365,20 @@ function buildRigItem(rig) {
   status.textContent = st.text;
   inner.appendChild(status);
 
+  const mods = rigModifiers(rig);
+  if (mods.length) {
+    const modRow = document.createElement("div");
+    modRow.className = "rig-mods";
+    for (const m of mods) {
+      const chip = document.createElement("span");
+      chip.className = "rig-mod";
+      chip.dataset.tone = m.tone;
+      chip.textContent = m.tag;
+      modRow.appendChild(chip);
+    }
+    inner.appendChild(modRow);
+  }
+
   if (rig.weapons) {
     const weapons = document.createElement("div");
     weapons.className = "rig-weapons";
@@ -373,6 +389,8 @@ function buildRigItem(rig) {
   for (const loc of LOCS) inner.appendChild(compRow(rig, loc));
 
   inner.appendChild(buildHeatGauge(rig, isActive));
+
+  if (S.game?.started) inner.appendChild(buildActionConsole(rig));
 
   const rm = document.createElement("button");
   rm.className = "rig-remove-row";

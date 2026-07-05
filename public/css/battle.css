@@ -141,3 +141,16 @@
 .ac-heat { display: block; margin-top: .2rem; font-family: var(--font-mono); font-size: .5rem; letter-spacing: .05em; color: var(--ember-hi); }
 .ac-heat[data-heat="0"] { color: var(--txt-faint); }
 .ac-end { margin-top: .5rem; }
+
+/* ===== Modifier chips ===== */
+.rig-mods { display: flex; flex-wrap: wrap; gap: .3rem; margin: .1rem 0 .5rem; }
+.rig-mod {
+  font-family: var(--font-mono); font-size: .54rem; letter-spacing: .04em; text-transform: uppercase;
+  padding: .16rem .4rem; border-radius: 5px; border: 1px solid var(--line);
+  background: var(--iron-950); color: var(--txt-dim);
+}
+.rig-mod[data-tone="warn"] { color: var(--oil-hi); border-color: rgba(231,154,61,.5); background: rgba(231,154,61,.08); }
+.rig-mod[data-tone="crit"] { color: var(--ember-hi); border-color: rgba(229,83,58,.5); background: rgba(229,83,58,.1); }
+.rig-mod[data-tone="prep"] { color: #7fd0c4; border-color: rgba(127,208,196,.5); background: rgba(127,208,196,.08); }
+.rig-head-mods { display: inline-flex; gap: .2rem; margin-left: .2rem; }
+.rig-head-mods .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 5px rgba(229,83,58,.7); }
