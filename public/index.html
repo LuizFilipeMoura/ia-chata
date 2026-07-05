@@ -68,6 +68,13 @@
     <button id="rigClose" class="sheet-close" type="button" aria-label="Close tracker">✕</button>
   </div>
 
+  <div id="battleHud" class="battle-hud" hidden>
+    <div class="bh-phase"><span id="bhPhase" class="bh-phase-label">Setup</span><span id="bhRound" class="bh-round">R1</span></div>
+    <div id="bhTurn" class="bh-turn"></div>
+    <div id="bhTokens" class="bh-tokens"></div>
+    <div id="bhPrompt" class="bh-prompt"></div>
+  </div>
+
   <div id="rigList" class="rig-list">
     <!-- accordion .rig-item entries (grouped by side) are injected here before the add card -->
     <div id="rigAddScreen" class="rig-add-card">

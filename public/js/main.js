@@ -1,11 +1,12 @@
 import { S, onServerStateChange } from "./state.js";
 import { renderRigs } from "./tracker.js";
+import { renderBattle } from "./battle.js";
 import { initSpeech } from "./speech.js";
 import { sendMessage, addBubble } from "./chat.js";
 import { joinRoomFlow, showGate } from "./join.js";
 
 // Re-render the tracker whenever the client adopts new server state.
-onServerStateChange(renderRigs);
+onServerStateChange(() => { renderRigs(); renderBattle(); });
 
 // Voice transcripts are sent as chat messages.
 initSpeech({ onTranscript: sendMessage });
