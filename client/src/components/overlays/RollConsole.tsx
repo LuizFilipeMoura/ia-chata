@@ -21,18 +21,6 @@ export interface RollConsoleHandle {
 
 const OK_REVEAL_MS = 900;
 
-const KIND_TONE: Record<string, string> = {
-  overheat: "crit",
-  attack: "crit",
-  ram: "crit",
-  destruction: "crit",
-  blast: "crit",
-  repair: "cool",
-  initiative: "oil",
-  perk: "crit",
-  skip: "warn",
-};
-
 interface DieState {
   sides: number;
   value: number;
@@ -40,6 +28,9 @@ interface DieState {
   settled: boolean;
   tone: string;
 }
+
+const rollTone = (roll: { sides: number; tone?: string }): string =>
+  roll.tone || (roll.sides === 12 ? "cool" : "");
 
 interface EffectState {
   text: string;
@@ -120,7 +111,6 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     setEffects([]);
     setFormHidden(true);
     setFormSpecs([]);
-    const tone = KIND_TONE[entry.kind ?? ""] || "oil";
 
     const rolls = (entry.rolls || []).filter((r) => r.sides);
     dieEls.current = [];
@@ -134,21 +124,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     setDice(initial);
     open();
 
-    const finish = () => {
-      setDice(
-        rolls.map((roll) => ({
-          sides: roll.sides,
-          value: roll.value,
-          label: roll.label || `D${roll.sides}`,
-          settled: true,
-          tone:
-            tone === "cool"
-              ? "cool"
-              : roll.sides === 12 || tone === "crit"
-                ? "crit"
-                : "",
-        })),
-      );
+    const finishEffects = () => {
       setSummary(entry.summary || "");
       setEffects(
         (entry.effects || []).map((text, i) => ({ text, delay: 0.5 + i * 0.12 })),
@@ -156,22 +132,56 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
       showOkAfterDelay();
     };
 
+    const settleAll = () => {
+      setDice(
+        rolls.map((roll) => ({
+          sides: roll.sides,
+          value: roll.value,
+          label: roll.label || `D${roll.sides}`,
+          settled: true,
+          tone: rollTone(roll),
+        })),
+      );
+      finishEffects();
+    };
+
     if (reduced || rolls.length === 0) {
-      finish();
+      settleAll();
       return Promise.resolve();
     }
 
     return new Promise((resolve) => {
       const started = performance.now();
+      const settleAt = rolls.map((_, i) => 550 + i * 240);
+      const settledFlags = rolls.map(() => false);
       clearFlicker();
       flickerTimer.current = window.setInterval(() => {
+        const elapsed = performance.now() - started;
+        let allSettled = true;
         rolls.forEach((roll, i) => {
+          if (settledFlags[i]) return;
+          if (elapsed >= settleAt[i]) {
+            settledFlags[i] = true;
+            setDice((prev) => {
+              const next = prev.slice();
+              next[i] = {
+                sides: roll.sides,
+                value: roll.value,
+                label: roll.label || `D${roll.sides}`,
+                settled: true,
+                tone: rollTone(roll),
+              };
+              return next;
+            });
+            return;
+          }
+          allSettled = false;
           const el = dieEls.current[i];
-          if (el) el.textContent = String(Math.floor(Math.random() * roll.sides) + 1);
+          if (el) el.textContent = String(1 + Math.floor(Math.random() * roll.sides));
         });
-        if (performance.now() - started > 650) {
+        if (allSettled) {
           clearFlicker();
-          finish();
+          finishEffects();
           resolve();
         }
       }, 60);
@@ -232,6 +242,8 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
 
   useImperativeHandle(ref, () => ({ playResolution, promptDice, closeRoll }));
 
+  const rolling = dice.length > 0 && dice.some((d) => !d.settled);
+
   return (
     <div
       id="rollScrim"
@@ -276,12 +288,13 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                   dieEls.current[i] = el;
                 }}
               >
-                {d.settled ? String(d.value) : "?"}
+                {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
               </div>
               <span className="die-label">{d.label}</span>
             </div>
           ))}
         </div>
+        {rolling && <div className="roll-rolling">Rolling…</div>}
         <div id="rollSummary" className="roll-summary">
           {summary}
         </div>
