@@ -55,7 +55,11 @@ export function rigModifiers(rig) {
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });
   if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn" });
   if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn" });
-  if (rig.preparation) mods.push({ key: "braced", tag: prepLabel(rig.preparation.type), tone: "prep" });
+  if (rig.preparation) {
+    const p = rig.preparation;
+    const tag = p.hidden || p.faceUp === false ? "Reaction set" : prepLabel(p.type);
+    mods.push({ key: "prep", tag, tone: "prep" });
+  }
   for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn" });
   if (rig.loaded && rig.loaded.longRange === false) mods.push({ key: "unloaded", tag: "Ranged unloaded", tone: "warn" });
   return mods;

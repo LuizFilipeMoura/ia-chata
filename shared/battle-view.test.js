@@ -65,9 +65,22 @@ test("rigModifiers surfaces every value-changing effect in play", () => {
     weaponsDestroyed: ["Sword"], preparation: { type: "brace" },
   }));
   const keys = mods.map((m) => m.key);
-  for (const k of ["hull0", "engine0", "nocool", "speed", "immobile", "weapon", "braced"]) {
+  for (const k of ["hull0", "engine0", "nocool", "speed", "immobile", "weapon", "prep"]) {
     assert.ok(keys.includes(k), `missing ${k}`);
   }
+});
+
+test("rigModifiers shows a generic chip for a hidden reaction", () => {
+  const r = rig({ preparation: { hidden: true } });
+  const mod = rigModifiers(r).find((m) => m.key === "prep");
+  assert.equal(mod.tag, "Reaction set");
+  assert.equal(mod.tone, "prep");
+});
+
+test("rigModifiers names a revealed reaction", () => {
+  const r = rig({ preparation: { type: "return", source: "answer", faceUp: true } });
+  const mod = rigModifiers(r).find((m) => m.key === "prep");
+  assert.equal(mod.tag, "Return fire ready");
 });
 
 test("phaseSummary describes the phase and turn", () => {
