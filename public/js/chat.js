@@ -1,6 +1,7 @@
 import { S } from "./state.js";
 import { setStatus } from "./status.js";
 import { applyRigCommands, stripRigTags } from "./rig-tags.js";
+import { renderMarkdown } from "./markdown.js";
 import { speak, isTtsEnabled } from "./speech.js";
 
 const messagesEl = document.getElementById("messages");
@@ -115,13 +116,13 @@ export async function sendMessage(text) {
             setStatus("Answering…");
           }
           answer += evt.text;
-          answerText.textContent = stripRigTags(answer);
+          renderMarkdown(answerText, stripRigTags(answer));
         }
         messagesEl.scrollTop = messagesEl.scrollHeight;
       }
     }
   } catch (err) {
-    answerText.textContent = answer + `\n\n[Error: ${err.message}]`;
+    renderMarkdown(answerText, `${stripRigTags(answer)}\n\n[Error: ${err.message}]`);
     setStatus("Error contacting the server.");
   } finally {
     bubble.classList.remove("pending");
@@ -133,7 +134,7 @@ export async function sendMessage(text) {
   if (answer) {
     applyRigCommands(answer);
     const spoken = stripRigTags(answer);
-    answerText.textContent = spoken;
+    renderMarkdown(answerText, spoken);
     history.push({ role: "assistant", content: spoken });
     if (isTtsEnabled()) speak(spoken);
   }

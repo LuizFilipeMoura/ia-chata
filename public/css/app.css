@@ -92,7 +92,58 @@
   margin-top: .35rem; color: var(--txt-dim); font-size: .82rem;
   font-style: italic; line-height: 1.45; white-space: pre-wrap;
 }
-.answer-text { white-space: pre-wrap; word-wrap: break-word; }
+.answer-text { white-space: normal; word-wrap: break-word; }
+.answer-text > :first-child { margin-top: 0; }
+.answer-text > :last-child { margin-bottom: 0; }
+.answer-text p,
+.answer-text ul,
+.answer-text ol,
+.answer-text blockquote,
+.answer-text pre {
+  margin: .42rem 0;
+}
+.answer-text ul,
+.answer-text ol {
+  padding-left: 1.25rem;
+}
+.answer-text li + li { margin-top: .18rem; }
+.answer-text h1,
+.answer-text h2,
+.answer-text h3,
+.answer-text h4,
+.answer-text h5,
+.answer-text h6 {
+  margin: .12rem 0 .4rem;
+  font-size: 1rem;
+  line-height: 1.25;
+  color: var(--oil-hi);
+}
+.answer-text code {
+  font-family: var(--font-mono);
+  font-size: .9em;
+  background: rgba(0, 0, 0, .22);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 4px;
+  padding: .05rem .22rem;
+}
+.answer-text pre {
+  overflow-x: auto;
+  white-space: pre;
+}
+.answer-text pre code {
+  display: block;
+  padding: .55rem .65rem;
+}
+.answer-text blockquote {
+  border-left: 2px solid var(--oil);
+  color: var(--txt-dim);
+  padding-left: .65rem;
+}
+.answer-text a {
+  color: var(--oil-hi);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
 
 /* ---- Bottom dock (all controls live here) ---- */
 .dock {
