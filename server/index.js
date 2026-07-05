@@ -18,13 +18,14 @@ const hub = createWsHub();
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
-// Only the client bundle is web-served. `/shared` exposes the pure game-logic
-// module so the browser can import it (weapon lists, defaults) without a copy.
-app.use(express.static(path.join(rootDir, "public")));
+// The built React client (Vite → client/dist) is web-served. `/shared` exposes
+// the pure game-logic module so the browser can import it (weapon lists,
+// defaults) without a copy. In dev, Vite serves the UI and proxies here instead.
+app.use(express.static(path.join(rootDir, "client", "dist")));
 app.use("/shared", express.static(path.join(rootDir, "shared")));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(rootDir, "public", "index.html"));
+  res.sendFile(path.join(rootDir, "client", "dist", "index.html"));
 });
 
 app.use("/api", createChatRouter(store));
