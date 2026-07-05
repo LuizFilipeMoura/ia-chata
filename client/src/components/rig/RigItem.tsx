@@ -14,14 +14,12 @@ interface Props {
   isActive: boolean;
   isOpen: boolean;
   started: boolean;
-  phase: string;
-  myTurnSide: string | null;
   canActivateNow: boolean;
   /** The viewer's side; used to tell own Rigs from enemy Rigs. */
   mySide?: string;
   onCommand: (verb: string, attrs: Record<string, unknown>) => void;
   onToggle: (id: number) => void;
-  onActivateLocal: (id: number) => void;
+  onActivateLocal: (id: number | null) => void;
 }
 
 // Build one accordion entry: a header that is always visible (name, class,
@@ -51,7 +49,7 @@ export const RigItem = React.memo(function RigItem({
     if (started) {
       if (canActivateNow) onCommand("activate", { name: rig.name });
     } else if (isMine) {
-      onActivateLocal(rig.id);
+      onActivateLocal(isActive ? null : rig.id);
     }
   };
 

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { HEAT_CAPACITY } from "/shared/game-state.js";
 import { useDrawer } from "./DrawerContext";
 import { useRoll } from "./RollContext";
 import { useRoomState } from "./RoomStateContext";
@@ -33,9 +34,6 @@ const LOC_CHOICES = [
 // §5 base Speed (inches) per weight class — the physical reach of a Move.
 const SPEED: Record<string, number> = { light: 9, medium: 8, heavy: 6, colossal: 5 };
 const MOVE_HOLD_MS = 5000;
-
-const heatCap = (rig: Rig): number =>
-  ({ light: 6, medium: 5, heavy: 4, colossal: 3 } as Record<string, number>)[rig.weightClass] ?? 5;
 
 interface BattleActionsApi {
   openMove: (rig: Rig, key: string) => void;
@@ -231,7 +229,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   const endActivation = useCallback(
     (rig: Rig) => {
       const auto = gameRef.current?.autoResolve;
-      const meterOver = rig.engine.heat > heatCap(rig);
+      const meterOver = rig.engine.heat > (HEAT_CAPACITY[rig.weightClass] ?? 5);
       if (auto || !meterOver) {
         sendCommand("endactivation", { name: rig.name });
       } else {

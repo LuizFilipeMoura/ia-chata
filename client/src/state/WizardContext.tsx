@@ -1,7 +1,8 @@
-import { createContext, useContext, useCallback, useState, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { RigWizard } from "../components/wizards/RigWizard";
 import { AttackWizard, type AttackMode } from "../components/wizards/AttackWizard";
+import { useRoomState } from "./RoomStateContext";
 import type { Rig } from "./types";
 
 interface WizardApi {
@@ -19,10 +20,19 @@ const Ctx = createContext<WizardApi | null>(null);
 
 export function WizardProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<Open>(null);
+  const { rigs } = useRoomState();
+
+  // Keep the rig list current inside the stable openAttack callback.
+  const rigsRef = useRef(rigs);
+  rigsRef.current = rigs;
 
   const openCommission = useCallback(() => setOpen({ kind: "commission" }), []);
   const openAttack = useCallback((rig: Rig, mode: AttackMode) => {
     // enemies = opposing, non-destroyed rigs; if none, don't open (attack-wizard.js:44-45).
+    const enemies = rigsRef.current.filter(
+      (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
+    );
+    if (!enemies.length) return;
     setOpen({ kind: "attack", rig, mode });
   }, []);
   const close = useCallback(() => setOpen(null), []);

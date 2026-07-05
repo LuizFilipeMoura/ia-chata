@@ -13,6 +13,7 @@ declare module "/shared/game-state.js" {
   }>;
   export const WEAPON_UPGRADES: Record<string, Array<{ id: string; name: string; tag: string; [k: string]: unknown }>>;
   export const RIG_DEFAULTS: Record<string, { hull: number; arms: number; legs: number; engine: number }>;
+  export const HEAT_CAPACITY: Record<string, number>;
   export function canAddRigForSide(room: { rigs: Rig[]; game?: GameState | null }, sideId: string): boolean;
   export function heatMeter(rig: Rig): {
     heat: number; cap: number; floor: number; over: number; bonus: number;

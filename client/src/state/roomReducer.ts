@@ -20,6 +20,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
     case "applyServerState": {
       const s = action.state;
       if (!s) return state;
+      if (s.version != null && s.version <= state.stateVersion) return state;
       return {
         ...state,
         rigs: Array.isArray(s.rigs) ? s.rigs : [],

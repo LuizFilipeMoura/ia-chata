@@ -40,13 +40,11 @@ export function RigDeck() {
               isActive={Boolean(isActive)}
               isOpen={isOpen}
               started={started}
-              phase={game?.phase ?? ""}
-              myTurnSide={game?.turn?.side ?? null}
               mySide={mySide}
               canActivateNow={canActivateNow}
               onCommand={sendCommand}
               onToggle={toggleExpanded}
-              onActivateLocal={(id) => setActiveRig(isActive ? null : id)}
+              onActivateLocal={setActiveRig}
             />
           </Fragment>
         );

@@ -226,7 +226,7 @@ export function AttackWizard({
   if (mode !== "ram") {
     const slot = state.weapon;
     const profile = profileOf(slot);
-    const spent = slot === "longRange" && (rig as any).loaded?.longRange === false;
+    const spent = slot === "longRange" && rig.loaded?.longRange === false;
     const cost = spent ? 2 : 1;
     const left = actionsLeft();
     const outOfRange = state.range === "out";

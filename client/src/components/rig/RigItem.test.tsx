@@ -13,7 +13,7 @@ const rig: Rig = {
 
 test("damage button issues a damage command", async () => {
   const onCommand = vi.fn();
-  render(<RigItem rig={rig} isActive={false} isOpen started={false} phase="" myTurnSide={null}
+  render(<RigItem rig={rig} isActive={false} isOpen started={false}
     canActivateNow={false} onCommand={onCommand} onToggle={() => {}} onActivateLocal={() => {}} />);
   await userEvent.click(screen.getByRole("button", { name: /Damage hull/i }));
   expect(onCommand).toHaveBeenCalledWith("damage", { name: "Stalker", loc: "hull", amount: "1" });

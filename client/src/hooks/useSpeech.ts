@@ -6,6 +6,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface SpeechRecognitionEvent extends Event {
   readonly results: SpeechRecognitionResultList;
 }
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+}
 interface SpeechRecognition {
   lang: string;
   continuous: boolean;
@@ -13,7 +16,7 @@ interface SpeechRecognition {
   maxAlternatives: number;
   onstart: (() => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   start(): void;
   stop(): void;
@@ -23,9 +26,10 @@ interface SpeechRecognition {
 interface UseSpeechOpts {
   lang: string;
   onTranscript: (text: string) => void;
+  onStatus?: (msg: string) => void;
 }
 
-export function useSpeech({ lang, onTranscript }: UseSpeechOpts) {
+export function useSpeech({ lang, onTranscript, onStatus }: UseSpeechOpts) {
   const Impl = (window as unknown as {
     SpeechRecognition?: new () => SpeechRecognition;
     webkitSpeechRecognition?: new () => SpeechRecognition;
@@ -39,6 +43,8 @@ export function useSpeech({ lang, onTranscript }: UseSpeechOpts) {
   const recRef = useRef<SpeechRecognition | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
   const langRef = useRef(lang);
   langRef.current = lang;
 
@@ -48,9 +54,12 @@ export function useSpeech({ lang, onTranscript }: UseSpeechOpts) {
     rec.continuous = false;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
-    rec.onstart = () => setRecording(true);
-    rec.onend = () => setRecording(false);
-    rec.onerror = () => setRecording(false);
+    rec.onstart = () => { setRecording(true); onStatusRef.current?.("Listening…"); };
+    rec.onend = () => { setRecording(false); onStatusRef.current?.(""); };
+    rec.onerror = (e: SpeechRecognitionErrorEvent) => {
+      setRecording(false);
+      onStatusRef.current?.(`Mic error: ${e.error}`);
+    };
     rec.onresult = (e: SpeechRecognitionEvent) =>
       onTranscriptRef.current(e.results[0][0].transcript);
     recRef.current = rec;

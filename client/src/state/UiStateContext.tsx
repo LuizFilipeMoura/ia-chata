@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
 
 interface UiState {
   chatOpen: boolean;
@@ -29,8 +29,13 @@ export function UiProvider({ children }: { children: ReactNode }) {
     if (id != null) setExpanded((prev) => new Set(prev).add(id));
   }, []);
 
+  const value = useMemo(
+    () => ({ chatOpen, setChatOpen, expandedRigs, toggleExpanded, activeRigId, setActiveRig }),
+    [chatOpen, expandedRigs, activeRigId, setChatOpen, toggleExpanded, setActiveRig],
+  );
+
   return (
-    <Ctx.Provider value={{ chatOpen, setChatOpen, expandedRigs, toggleExpanded, activeRigId, setActiveRig }}>
+    <Ctx.Provider value={value}>
       {children}
     </Ctx.Provider>
   );

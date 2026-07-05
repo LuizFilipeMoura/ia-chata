@@ -21,6 +21,7 @@ export interface Rig {
   weapons?: { longRange: string; melee: string };
   weaponUpgrades?: { longRange: string; melee: string };
   equipment: string | null;
+  loaded?: { longRange: boolean; melee: boolean };
   activated: boolean;
   destroyed: boolean;
 }

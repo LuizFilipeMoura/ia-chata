@@ -20,7 +20,7 @@ export function ChatPanel({ onBotMessage }: { onBotMessage: () => void }) {
   const [lang, setLang] = useState("pt-BR");
   const inputRef = useRef<ChatInputHandle>(null);
 
-  const speech = useSpeech({ lang, onTranscript: (t) => send(t) });
+  const speech = useSpeech({ lang, onTranscript: (t) => send(t), onStatus: (m) => chat.setStatus(m) });
   const { send: rawSend } = useChatStream({ speak: speech.speak, tts: speech.tts });
 
   const send = useCallback((text: string) => { void rawSend(text); }, [rawSend]);

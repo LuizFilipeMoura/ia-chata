@@ -4,6 +4,7 @@ import {
   useState,
   useRef,
   useCallback,
+  useMemo,
   type ReactNode,
   type MutableRefObject,
 } from "react";
@@ -71,23 +72,39 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setMessages([]);
   }, []);
 
+  const value = useMemo(
+    () => ({
+      messages,
+      history,
+      isStreaming,
+      status,
+      think,
+      addMessage,
+      updateMessage,
+      setStreaming,
+      setStatus,
+      pushHistory,
+      clear,
+      setThink,
+    }),
+    [
+      messages,
+      history,
+      isStreaming,
+      status,
+      think,
+      addMessage,
+      updateMessage,
+      setStreaming,
+      setStatus,
+      pushHistory,
+      clear,
+      setThink,
+    ],
+  );
+
   return (
-    <Ctx.Provider
-      value={{
-        messages,
-        history,
-        isStreaming,
-        status,
-        think,
-        addMessage,
-        updateMessage,
-        setStreaming,
-        setStatus,
-        pushHistory,
-        clear,
-        setThink,
-      }}
-    >
+    <Ctx.Provider value={value}>
       {children}
     </Ctx.Provider>
   );
