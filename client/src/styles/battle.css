@@ -190,7 +190,16 @@ body.my-turn-glow::after {
 }
 .aw-scrim.show .aw-card { transform: none; }
 .aw-handle { width: 34px; height: 4px; border-radius: 4px; background: var(--rivet); margin: 0 auto .7rem; }
-.aw-title { font-family: var(--font-mono); font-size: .64rem; letter-spacing: .2em; text-transform: uppercase; color: var(--oil); margin-bottom: .6rem; }
+.aw-title-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .6rem; }
+.aw-title { font-family: var(--font-mono); font-size: .64rem; letter-spacing: .2em; text-transform: uppercase; color: var(--oil); margin-bottom: 0; }
+
+/* ===== Shared glossary trigger chip (RigWizard + AttackWizard sheets) ===== */
+.sheet-gloss-chip {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: .3rem;
+  font-family: var(--font-mono); font-size: .56rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--txt-dim); background: var(--iron-800);
+  border: 1px solid var(--line); border-radius: 999px; padding: .3rem .55rem; cursor: pointer;
+}
 .aw-field { margin: .5rem 0; }
 .aw-field > label { display: block; font-family: var(--font-mono); font-size: .56rem; letter-spacing: .12em; text-transform: uppercase; color: var(--txt-dim); margin-bottom: .3rem; }
 .aw-seg { display: flex; gap: .3rem; flex-wrap: wrap; }

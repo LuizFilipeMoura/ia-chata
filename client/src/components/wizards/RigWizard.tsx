@@ -4,6 +4,7 @@ import {
 } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
+import { useUi } from "../../state/UiStateContext";
 import { GlossaryText } from "../chat/GlossaryText";
 
 const STEPS = ["Identity", "Weapons", "Equipment", "Confirm"];
@@ -27,6 +28,7 @@ interface WizardState {
 export function RigWizard({ onClose }: { onClose: () => void }) {
   const { rigs, game, session } = useRoomState();
   const sendCommand = useCommands();
+  const { setGlossaryOpen } = useUi();
   const mySide = session?.side || "a";
   const enemySide = mySide === "a" ? "b" : "a";
 
@@ -230,6 +232,9 @@ export function RigWizard({ onClose }: { onClose: () => void }) {
         <div className="rw-head">
           <div className="rw-title-row">
             <div className="rw-title">◈ Commission a Rig</div>
+            <button type="button" className="sheet-gloss-chip" onClick={() => setGlossaryOpen(true)}>
+              ⓘ Glossary
+            </button>
           </div>
           <div className="rw-dots">
             {STEPS.map((label, i) => (

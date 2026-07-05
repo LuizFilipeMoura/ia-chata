@@ -57,6 +57,13 @@
   letter-spacing: .24em; color: var(--txt-faint); text-transform: uppercase;
   align-self: center;
 }
+.topbar-gloss {
+  margin-left: .5rem; align-self: center; flex: 0 0 auto;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; color: var(--txt-dim);
+  background: var(--iron-800); border: 1px solid var(--line); cursor: pointer;
+}
 
 /* ---- Main stage: the rigs and battle controls are the whole show now ---- */
 .stage {

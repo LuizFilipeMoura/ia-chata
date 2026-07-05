@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
 import { RigWizard } from "./RigWizard";
 import { GlossaryTipProvider } from "../../state/GlossaryTipContext";
+import { UiProvider } from "../../state/UiStateContext";
 
 // Replaces the old public/ui-static.test.js source-string assertions with a real
 // render test of the commission wizard's invariants.
@@ -16,9 +17,11 @@ beforeEach(() => sendCommand.mockClear());
 
 test("owner selector offers You and Enemy", () => {
   render(
-    <GlossaryTipProvider>
-      <RigWizard onClose={() => {}} />
-    </GlossaryTipProvider>,
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
   );
   expect(screen.getByRole("option", { name: "You" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "Enemy" })).toBeInTheDocument();
@@ -26,9 +29,11 @@ test("owner selector offers You and Enemy", () => {
 
 test("only light and medium rig classes are offered", () => {
   render(
-    <GlossaryTipProvider>
-      <RigWizard onClose={() => {}} />
-    </GlossaryTipProvider>,
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
   );
   expect(screen.getByRole("option", { name: "light" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "medium" })).toBeInTheDocument();
@@ -38,9 +43,11 @@ test("only light and medium rig classes are offered", () => {
 
 test("Identity step shows an SP preview for the selected weight class", () => {
   render(
-    <GlossaryTipProvider>
-      <RigWizard onClose={() => {}} />
-    </GlossaryTipProvider>,
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
   );
   expect(screen.getByText(/heat cap/i)).toBeInTheDocument();
 });
@@ -48,9 +55,11 @@ test("Identity step shows an SP preview for the selected weight class", () => {
 test("commissioning posts an add command carrying the chosen owner", async () => {
   const user = userEvent.setup();
   render(
-    <GlossaryTipProvider>
-      <RigWizard onClose={() => {}} />
-    </GlossaryTipProvider>,
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
   );
   await user.type(screen.getByPlaceholderText("Rig name"), "Vulcan");
   // Identity -> Weapons -> Equipment -> Confirm

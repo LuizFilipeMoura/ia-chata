@@ -3,6 +3,7 @@ import { WEAPONS } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useRoll } from "../../state/RollContext";
+import { useUi } from "../../state/UiStateContext";
 import type { Rig } from "../../state/types";
 
 export type AttackMode = "fire" | "aimed" | "ram";
@@ -104,6 +105,7 @@ export function AttackWizard({
   const { rigs, game } = useRoomState();
   const sendCommand = useCommands();
   const { promptDice } = useRoll();
+  const { setGlossaryOpen } = useUi();
 
   const enemies = rigs.filter(
     (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
@@ -288,7 +290,12 @@ export function AttackWizard({
     >
       <div className="aw-card">
         <div className="aw-handle" />
-        <div className="aw-title">{title} — {rig.name}</div>
+        <div className="aw-title-row">
+          <div className="aw-title">{title} — {rig.name}</div>
+          <button type="button" className="sheet-gloss-chip" onClick={() => setGlossaryOpen(true)}>
+            ⓘ Glossary
+          </button>
+        </div>
 
         <Field
           label="Target"
