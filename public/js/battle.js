@@ -103,7 +103,8 @@ export function buildActionConsole(rig) {
     btn.type = "button";
     btn.className = "ac-btn";
     btn.disabled = !act.enabled;
-    btn.innerHTML = `${act.label}<span class="ac-heat" data-heat="${act.heat}">${act.heat ? `+${act.heat} heat` : "0 heat"}</span>`;
+    const heatLabel = act.heat > 0 ? `+${act.heat} heat` : act.heat < 0 ? `${act.heat} heat` : "0 heat";
+    btn.innerHTML = `${act.label}<span class="ac-heat" data-heat="${act.heat}">${heatLabel}</span>`;
     btn.addEventListener("click", () => onAction(rig, act.key));
     grid.appendChild(btn);
   }
@@ -123,6 +124,12 @@ function onAction(rig, key) {
     if (!loc) return;
     if (auto) sendCommand("action", { name: rig.name, action: "repair", loc });
     else promptOneDie("Repair D12", (d) => sendCommand("action", { name: rig.name, action: "repair", loc, dice: { repair: d } }));
+    return;
+  }
+  if (key === "emergencypatch") {
+    const loc = window.prompt("Emergency Patch which location? (hull/arms/legs/engine)", "hull");
+    if (!loc) return;
+    sendCommand("action", { name: rig.name, action: "emergencypatch", loc });
     return;
   }
   sendCommand("action", { name: rig.name, action: key });
