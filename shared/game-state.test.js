@@ -1093,3 +1093,31 @@ test("High-Rev Motor adds attack heat in addition to base fire heat", () => {
   } });
   assert.equal(b1.engine.heat, 2);
 });
+
+test("createRoom seeds owner=null and a default 54x36 field with objectives", () => {
+  const r = createRoom("F1");
+  assert.equal(r.ownerSide, null);
+  assert.equal(r.field.width, 54);
+  assert.equal(r.field.height, 36);
+  assert.equal(r.field.diagonal, "tlbr");
+  assert.equal(r.field.locked, false);
+  assert.deepEqual(r.field.terrain, []);
+  assert.equal(r.game.objectives.length, 3);
+  assert.deepEqual(r.game.objectives[0], { x: 27, y: 18, vp: 2 });
+});
+
+test("claimSide assigns ownerSide to the first claimant only", () => {
+  const r = createRoom("F2");
+  claimSide(r, { name: "Ana", side: "b" }); // owner can be side b
+  assert.equal(r.ownerSide, "b");
+  claimSide(r, { name: "Bo", side: "a" });
+  assert.equal(r.ownerSide, "b"); // unchanged by later claims
+});
+
+test("publicState exposes field and ownerSide", () => {
+  const r = createRoom("F3");
+  claimSide(r, { name: "Ana", side: "a" });
+  const view = publicState(r, "a");
+  assert.equal(view.ownerSide, "a");
+  assert.equal(view.field.width, 54);
+});

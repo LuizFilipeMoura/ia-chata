@@ -1,5 +1,8 @@
 import { ACTIONS, heatThreshold, hitLocation, impactSeverity, IMPACT } from "./rules.js";
 import { resolveAttack, resolveRam } from "./combat.js";
+import {
+  FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
+} from "./field.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -172,17 +175,20 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
 }
 
 export function createRoom(code) {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr", terrain: [], locked: false };
   return {
     code,
     version: 0,
     nextRigId: 1,
+    ownerSide: null,
+    field,
     game: {
       round: 1,
       sides: [
         { id: "a", name: "You",   vp: 0, claimed: false, ready: false },
         { id: "b", name: "Enemy", vp: 0, claimed: false, ready: false },
       ],
-      objectives: [],
+      objectives: computeObjectives(field),
       started: false,
       bounties: {},
       autoResolve: true,
@@ -223,6 +229,13 @@ function ensureRigShape(rig) {
 
 function ensureGameShape(room) {
   room.game ||= {};
+  if (room.ownerSide === undefined) room.ownerSide = null;
+  if (!room.field || typeof room.field !== "object") {
+    room.field = { ...FIELD_DEFAULT, diagonal: "tlbr", terrain: [], locked: false };
+  }
+  room.field.diagonal = room.field.diagonal === "trbl" ? "trbl" : "tlbr";
+  if (!Array.isArray(room.field.terrain)) room.field.terrain = [];
+  if (typeof room.field.locked !== "boolean") room.field.locked = false;
   room.game.round ||= 1;
   room.game.sides ||= [
     { id: "a", name: "You",   vp: 0, claimed: false },
@@ -231,7 +244,9 @@ function ensureGameShape(room) {
   for (const side of room.game.sides) {
     if (typeof side.ready !== "boolean") side.ready = false;
   }
-  room.game.objectives ||= [];
+  if (!Array.isArray(room.game.objectives) || room.game.objectives.length === 0) {
+    room.game.objectives = computeObjectives(room.field);
+  }
   if (typeof room.game.started !== "boolean") room.game.started = false;
   room.game.bounties ||= {};
   room.rigs ||= [];
@@ -350,6 +365,7 @@ export function claimSide(room, { name, side } = {}) {
   const newName = name ? (String(name).trim() || target.name) : target.name;
   const changed = !target.claimed || target.name !== newName;
   target.claimed = true;
+  if (room.ownerSide == null) room.ownerSide = target.id;
   target.name = newName;
   if (changed) room.version++;
   return target.id;
@@ -929,6 +945,10 @@ export function publicState(room, side) {
   return {
     code: room.code,
     version: room.version,
+    ownerSide: room.ownerSide ?? null,
+    field: room.field
+      ? { ...room.field, terrain: room.field.terrain.map((t) => ({ ...t })) }
+      : null,
     game: {
       ...room.game,
       sides: room.game.sides.map((s) => ({ ...s })),
