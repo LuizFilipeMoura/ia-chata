@@ -138,19 +138,35 @@ button:focus-visible, select:focus-visible, textarea:focus-visible {
 .hint--warn::before { content: "⚠ "; }
 
 /* ---- Floating assistant launcher ---- */
-.chat-fab {
-  position: absolute; z-index: 55; right: 1.05rem; bottom: 1.05rem;
+.chat-fab,
+.leave-fab {
+  position: absolute; z-index: 55; bottom: 1.05rem;
   width: 54px; height: 54px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(160deg, var(--oil-hi), var(--oil-deep));
-  border: 1px solid rgba(231,154,61,.7);
-  box-shadow: 0 10px 26px rgba(231,154,61,.32), 0 4px 14px rgba(0,0,0,.55);
   transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
   animation: fadeIn .4s ease .2s both;
 }
-.chat-fab-ic { font-size: 1.4rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
-.chat-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(231,154,61,.4), 0 6px 16px rgba(0,0,0,.55); }
-.chat-fab:active { transform: translateY(0); }
+.chat-fab {
+  right: 1.05rem;
+  background: linear-gradient(160deg, var(--oil-hi), var(--oil-deep));
+  border: 1px solid rgba(231,154,61,.7);
+  box-shadow: 0 10px 26px rgba(231,154,61,.32), 0 4px 14px rgba(0,0,0,.55);
+}
+.leave-fab {
+  left: 1.05rem;
+  background: linear-gradient(160deg, var(--iron-780), var(--iron-900));
+  border: 1px solid rgba(229,83,58,.58);
+  box-shadow: 0 10px 26px rgba(229,83,58,.18), 0 4px 14px rgba(0,0,0,.55);
+}
+.chat-fab-ic,
+.leave-fab-ic { font-size: 1.4rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.leave-fab-ic { color: var(--ember-hi); transform: translateX(-1px); }
+.chat-fab:hover { box-shadow: 0 14px 30px rgba(231,154,61,.4), 0 6px 16px rgba(0,0,0,.55); }
+.leave-fab:hover { box-shadow: 0 14px 30px rgba(229,83,58,.25), 0 6px 16px rgba(0,0,0,.55); }
+.chat-fab:hover,
+.leave-fab:hover { transform: translateY(-2px); }
+.chat-fab:active,
+.leave-fab:active { transform: translateY(0); }
 .chat-fab.active {
   background: linear-gradient(160deg, var(--iron-780), var(--iron-850));
   border-color: var(--rivet);
