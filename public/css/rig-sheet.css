@@ -150,6 +150,10 @@
   font-family: var(--font-mono); font-size: .64rem; color: var(--txt-dim);
   margin: 0 0 .65rem; line-height: 1.35;
 }
+.rig-equipment {
+  font-family: var(--font-mono); font-size: .64rem; color: var(--oil-hi);
+  margin: -.4rem 0 .65rem; line-height: 1.35;
+}
 
 .rig-comp { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; }
 .rig-comp-label {

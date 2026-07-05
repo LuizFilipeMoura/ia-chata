@@ -1,16 +1,12 @@
-import { S, LOCS, findRig } from "./state.js";
+import { S, LOCS } from "./state.js";
 import { sendCommand } from "./api.js";
 import { setStatus } from "./status.js";
-import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS, canAddRigForSide, heatMeter } from "/shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, EQUIPMENT, WEAPON_UPGRADES, canAddRigForSide, heatMeter } from "/shared/game-state.js";
 import { rigModifiers } from "/shared/battle-view.js";
 import { buildActionConsole } from "./battle.js";
+import { openRigWizard, onRigWizardDone } from "./rig-wizard.js";
 
 const rigList = document.getElementById("rigList");
-const rigNameInput = document.getElementById("rigName");
-const rigClassSelect = document.getElementById("rigClass");
-const rigOwnerSelect = document.getElementById("rigOwner");
-const rigLongRangeSelect = document.getElementById("rigLongRange");
-const rigMeleeSelect = document.getElementById("rigMelee");
 const rigAddBtn = document.getElementById("rigAddBtn");
 const rigAddScreen = document.getElementById("rigAddScreen");
 const rigDeckTitle = document.getElementById("rigDeckTitle");
@@ -40,31 +36,8 @@ function barClass(c) {
   return "rig-fill-ok";
 }
 
-function populateWeaponSelect(select, weapons) {
-  select.innerHTML = "";
-  for (const weapon of weapons) {
-    const option = document.createElement("option");
-    option.value = weapon;
-    option.textContent = weapon;
-    select.appendChild(option);
-  }
-}
-
-populateWeaponSelect(rigLongRangeSelect, Object.keys(WEAPONS.longRange));
-populateWeaponSelect(rigMeleeSelect, Object.keys(WEAPONS.melee));
-
 function ownerLabel(owner) {
   return (owner || "a") === (S.session?.side || "a") ? "Your Squadron" : "Enemy";
-}
-
-function syncOwnerOptions() {
-  const mySide = S.session?.side || "a";
-  const enemySide = mySide === "a" ? "b" : "a";
-  const myOption = rigOwnerSelect.querySelector(`option[value="${mySide}"]`);
-  const enemyOption = rigOwnerSelect.querySelector(`option[value="${enemySide}"]`);
-  if (myOption) myOption.textContent = "You";
-  if (enemyOption) enemyOption.textContent = "Enemy";
-  rigOwnerSelect.value = mySide;
 }
 
 function orderedRigs() {
@@ -95,19 +68,15 @@ function addLimitMessage(owner) {
 }
 
 function updateAddRigAvailability() {
-  const owner = rigOwnerSelect.value || S.session?.side || "a";
+  const owner = S.session?.side || "a";
   const canAdd = canAddRigForSide(S, owner);
   const message = addLimitMessage(owner);
-  rigNameInput.disabled = !canAdd;
-  rigClassSelect.disabled = !canAdd;
-  rigLongRangeSelect.disabled = !canAdd;
-  rigMeleeSelect.disabled = !canAdd;
   rigAddBtn.disabled = !canAdd;
-  rigAddBtn.textContent = canAdd ? "+ Add" : "Full";
+  rigAddBtn.textContent = canAdd ? "+ Commission" : "Full";
   rigAddBtn.title = message;
   rigAddScreen.classList.toggle("rig-add-locked", !canAdd);
   const hint = rigAddScreen.querySelector(".rig-add-hint");
-  if (hint) hint.textContent = message || "Name it, pick Light or Medium, and choose one long-range and one melee weapon.";
+  if (hint) hint.textContent = message || "Name it, pick a weight class and weapons, then choose its equipment.";
 }
 
 function renderBattleSetup() {
@@ -411,8 +380,17 @@ function buildRigItem(rig) {
   if (rig.weapons) {
     const weapons = document.createElement("div");
     weapons.className = "rig-weapons";
-    weapons.textContent = `${rig.weapons.longRange || "Long Range ?"} / ${rig.weapons.melee || "Melee ?"}`;
+    const lrUpgrades = (WEAPON_UPGRADES[rig.weapons.longRange] || []).map((u) => u.name).join(", ");
+    const meleeUpgrades = (WEAPON_UPGRADES[rig.weapons.melee] || []).map((u) => u.name).join(", ");
+    weapons.textContent = `${rig.weapons.longRange || "Long Range ?"} (${lrUpgrades}) / ${rig.weapons.melee || "Melee ?"} (${meleeUpgrades})`;
     inner.appendChild(weapons);
+    if (rig.equipment && EQUIPMENT[rig.equipment]) {
+      const eq = EQUIPMENT[rig.equipment];
+      const equipEl = document.createElement("div");
+      equipEl.className = "rig-equipment";
+      equipEl.innerHTML = `<b>${eq.label}</b> — ${eq.passive}`;
+      inner.appendChild(equipEl);
+    }
   }
 
   for (const loc of LOCS) inner.appendChild(compRow(rig, loc));
@@ -442,7 +420,6 @@ function groupHead(text) {
 }
 
 export function renderRigs() {
-  syncOwnerOptions();
   renderBattleSetup();
   updateAddRigAvailability();
 
@@ -485,30 +462,12 @@ function setActiveRig(id) {
   renderRigs();
 }
 
-function addRigFromForm() {
-  if (!canAddRigForSide(S, rigOwnerSelect.value)) {
-    setStatus(addLimitMessage(rigOwnerSelect.value));
-    updateAddRigAvailability();
-    return;
-  }
-  const name = rigNameInput.value.trim();
-  if (!name) { rigNameInput.focus(); return; }
-  if (findRig(name)) { setStatus(`A rig named “${name}” already exists.`); return; }
-  sendCommand("add", {
-    name,
-    class: rigClassSelect.value,
-    owner: rigOwnerSelect.value,
-    lr: rigLongRangeSelect.value,
-    melee: rigMeleeSelect.value,
-  });
-  rigNameInput.value = "";
-}
-
-rigAddBtn.addEventListener("click", addRigFromForm);
-rigOwnerSelect.addEventListener("change", updateAddRigAvailability);
-rigNameInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); addRigFromForm(); }
+rigAddBtn.addEventListener("click", () => {
+  const owner = S.session?.side || "a";
+  if (!canAddRigForSide(S, owner)) { setStatus(addLimitMessage(owner)); updateAddRigAvailability(); return; }
+  openRigWizard();
 });
+onRigWizardDone(() => setStatus(""));
 readyBattle?.addEventListener("click", () => {
   const side = S.session?.side || "a";
   sendCommand("ready", { side });
