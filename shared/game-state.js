@@ -211,6 +211,7 @@ export function createRoom(code) {
       outcome: null,
       pendingBlast: null,
       pendingAnswer: null,
+      pendingReaction: null,
     },
     rigs: [],
   };
@@ -272,6 +273,7 @@ function ensureGameShape(room) {
   if (room.game.outcome === undefined) room.game.outcome = null;
   if (room.game.pendingBlast === undefined) room.game.pendingBlast = null;
   if (room.game.pendingAnswer === undefined) room.game.pendingAnswer = null;
+  if (room.game.pendingReaction === undefined) room.game.pendingReaction = null;
   for (const rig of room.rigs) ensureRigShape(rig);
   return room;
 }
@@ -961,13 +963,15 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "action") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
-    if (rig && t && room.game.phase === "activation" && t.activeRigId === rig.id) {
+    if (rig && t && !room.game.pendingReaction &&
+        room.game.phase === "activation" && t.activeRigId === rig.id) {
       changed = performAction(room, rig, String(a.action || "").toLowerCase(), a, options.random);
     }
   } else if (verb === "endactivation") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
-    if (rig && t && room.game.phase === "activation" && t.activeRigId === rig.id) {
+    if (rig && t && !room.game.pendingReaction &&
+        room.game.phase === "activation" && t.activeRigId === rig.id) {
       endActivation(room, rig, a.dice, options.random);
       changed = true;
     }
@@ -1021,6 +1025,53 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         }
       }
       changed = true;
+    }
+  } else if (verb === "react") {
+    const pr = room.game.pendingReaction;
+    const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    if (pr && sideId === pr.defender) {
+      const reactor = room.rigs.find((x) => x.id === pr.targetId);   // the prepared rig
+      const attacker = room.rigs.find((x) => x.id === pr.attackerId);
+      if (pr.kind === "evasive" && reactor && attacker) {
+        const evaded = a.evaded === true || a.evaded === "true";
+        if (evaded) {
+          // The shot was fired but dodged: weapon discharged, attacker still runs
+          // hot and spends the action, but no to-hit / no damage.
+          const slot = pr.attack.weapon === "melee" ? "melee" : "longRange";
+          const rushed = slot === "longRange" && attacker.loaded.longRange === false;
+          const cost = rushed ? 2 : 1;
+          if (slot === "longRange") attacker.loaded.longRange = false;
+          const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
+          const hot = profile?.perks.includes("Hot") ? 1 : 0;
+          if (rushed) bumpHeat(attacker, ACTIONS.reload.heat);
+          bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot);
+          room.game.turn.actionsUsed += cost;
+          pushResolution(room, {
+            kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
+            summary: `${reactor.name} evades — ${attacker.name}'s attack fails.`, effects: [],
+          });
+        } else {
+          resolveFire(room, attacker, reactor, pr.attack, pr.attack.act, options.random);
+        }
+        reactor.preparation = null;
+        room.game.pendingReaction = null;
+        changed = true;
+      } else if (pr.kind === "return" && reactor && attacker) {
+        const declined = a.decline === true || a.decline === "true";
+        if (!declined && a.attack && !reactor.destroyed) {
+          resolveAttack(room, reactor, attacker, {
+            weapon: a.attack.weapon, target: attacker.name,
+            arc: a.attack.arc, range: a.attack.range, cover: a.attack.cover,
+            aimed: false, aimedLoc: "hull",
+            fullAuto: a.attack.fullAuto === true || a.attack.fullAuto === "true",
+            charged: a.attack.charged === true || a.attack.charged === "true",
+            autoReload: false, dice: a.attack.dice,
+          }, options.random, combatCtx());
+        }
+        reactor.preparation = null;
+        room.game.pendingReaction = null;
+        changed = true;
+      }
     }
   } else {
     const rig = findRig(room, a.name);

@@ -1315,3 +1315,50 @@ test("publicState reveals a face-up reaction to everyone", () => {
   const asFoe = publicState(r, "b").rigs.find((x) => x.name === "a1");
   assert.equal(asFoe.preparation.type, "brace");
 });
+
+test("evasive react with evaded=true fails the attack and deals no damage", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "evasive", side: "a" } });
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "brace", side: "a" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+  } });
+  assert.equal(r.game.pendingReaction.kind, "evasive");
+  const before = { ...findRig(r, "a1").hull };
+  applyCommand(r, { verb: "react", attrs: { evaded: true, side: "a" } });
+  assert.equal(r.game.pendingReaction, null);
+  assert.equal(findRig(r, "a1").preparation, null);          // consumed
+  assert.deepEqual(findRig(r, "a1").hull, before);            // undamaged
+  assert.ok(findRig(r, "b1").engine.heat >= 1);              // attacker still ran hot
+});
+
+test("return-fire react lets the defender counter the attacker", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "return", side: "a" } });
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "brace", side: "a" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+  } });
+  assert.equal(r.game.pendingReaction.kind, "return");
+  const n = r.game.resolutions.length;
+  applyCommand(r, { verb: "react", attrs: {
+    side: "a", attack: { weapon: "longRange", arc: "front", range: "near" },
+  } });
+  assert.equal(r.game.pendingReaction, null);
+  assert.equal(findRig(r, "a1").preparation, null);          // consumed
+  assert.ok(r.game.resolutions.length > n);                  // a counter-attack was logged
+});
+
+test("react is ignored from the wrong side", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "evasive", side: "a" } });
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "brace", side: "a" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+  } });
+  applyCommand(r, { verb: "react", attrs: { evaded: true, side: "b" } }); // attacker can't answer
+  assert.equal(r.game.pendingReaction.kind, "evasive");      // still parked
+});
