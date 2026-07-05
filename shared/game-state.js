@@ -419,8 +419,45 @@ function performAction(room, rig, act, a, random) {
   return true;
 }
 
-// Replaced with the real annihilation check in Task 8.
-function checkAnnihilation(room) { /* replaced in Task 8 */ }
+// A side that owns rigs but has none left standing loses immediately (§4).
+function checkAnnihilation(room) {
+  if (!room.game.started || room.game.outcome) return;
+  for (const side of room.game.sides) {
+    const owns = room.rigs.some((r) => (r.owner || "a") === side.id);
+    const alive = room.rigs.some((r) => (r.owner || "a") === side.id && !r.destroyed);
+    if (owns && !alive) {
+      room.game.outcome = { winner: side.id === "a" ? "b" : "a", reason: "annihilation" };
+      room.game.phase = "finished";
+      return;
+    }
+  }
+}
+
+// After both sides score Recovery VP: advance to the next round's initiative,
+// or — at round 5 (or beyond, in Sudden Death) — resolve victory by points,
+// enter one Sudden Death round on a tie, or declare a draw if still tied.
+function advanceRound(room) {
+  const [sa, sb] = room.game.sides;
+  const lastRound = room.game.suddenDeath || room.game.round >= 5;
+  if (lastRound) {
+    if (sa.vp !== sb.vp) {
+      room.game.outcome = { winner: sa.vp > sb.vp ? sa.id : sb.id, reason: "points" };
+      room.game.phase = "finished";
+    } else if (!room.game.suddenDeath) {
+      room.game.suddenDeath = true;
+      room.game.round += 1;
+      room.game.phase = "initiative";
+      room.game.initiative = null;
+    } else {
+      room.game.outcome = { winner: null, reason: "draw" };
+      room.game.phase = "finished";
+    }
+  } else {
+    room.game.round += 1;
+    room.game.phase = "initiative";
+    room.game.initiative = null;
+  }
+}
 
 // Apply a single normalized command { verb, attrs } to the room in place.
 // Returns the room. Bumps room.version only when something actually changed.
@@ -513,10 +550,21 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       endActivation(room, rig, a.dice, options.random);
       changed = true;
     }
+  } else if (verb === "vp") {
+    if (room.game.phase === "recovery") {
+      const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+      if (sideId && !room.game.recoveryVp[sideId]) {
+        const side = room.game.sides.find((s) => s.id === sideId);
+        side.vp += Math.max(0, Math.floor(Number(a.points) || 0));
+        room.game.recoveryVp[sideId] = true;
+        if (room.game.sides.every((s) => room.game.recoveryVp[s.id])) advanceRound(room);
+        changed = true;
+      }
+    }
   } else {
     const rig = findRig(room, a.name);
     if (rig) {
-      if (verb === "damage") { damageRig(rig, (a.loc || "").toLowerCase(), a.amount); changed = true; }
+      if (verb === "damage") { damageRig(rig, (a.loc || "").toLowerCase(), a.amount); checkAnnihilation(room); changed = true; }
       else if (verb === "repair") { repairRig(rig, (a.loc || "").toLowerCase(), a.amount); changed = true; }
       else if (verb === "set") { setRigSp(rig, (a.loc || "").toLowerCase(), a.sp); changed = true; }
       else if (verb === "heat") { heatRig(rig, a.amount); changed = true; }

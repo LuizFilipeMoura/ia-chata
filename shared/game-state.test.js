@@ -470,3 +470,54 @@ test("a full round of activations triggers Recovery cooldown and reset", () => {
   assert.equal(findRig(r, "b1").activated, false);
   assert.deepEqual(r.game.answerTokens, { a: 0, b: 0 });
 });
+
+// Drives one full round of activations by following whichever side actually
+// holds the turn (rather than a hardcoded name order) so it stays correct
+// after initiative flips in round 2+. No heat is added, so no overheat.
+function runFullRound(r) {
+  const counts = { a: 0, b: 0 };
+  while (r.game.phase === "activation") {
+    const side = r.game.turn.side;
+    const name = `${side}${++counts[side]}`;
+    applyCommand(r, { verb: "activate", attrs: { name } });
+    applyCommand(r, { verb: "endactivation", attrs: { name } });
+  }
+}
+
+test("both sides scoring VP advances to the next round's initiative", () => {
+  const r = startedRoom();
+  runFullRound(r);
+  assert.equal(r.game.phase, "recovery");
+  applyCommand(r, { verb: "vp", attrs: { side: "a", points: "2" } });
+  assert.equal(r.game.phase, "recovery");         // still waiting on b
+  applyCommand(r, { verb: "vp", attrs: { side: "b", points: "1" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
+  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 1);
+  assert.equal(r.game.round, 2);
+  assert.equal(r.game.phase, "initiative");
+});
+
+test("after round 5 the higher VP wins", () => {
+  const r = startedRoom();
+  for (let round = 1; round <= 5; round++) {
+    if (round >= 2) applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
+    runFullRound(r);
+    applyCommand(r, { verb: "vp", attrs: { side: "a", points: round === 1 ? "3" : "0" } });
+    applyCommand(r, { verb: "vp", attrs: { side: "b", points: "0" } });
+  }
+  assert.equal(r.game.phase, "finished");
+  assert.deepEqual(r.game.outcome, { winner: "a", reason: "points" });
+});
+
+test("annihilation ends the game immediately", () => {
+  const r = startedRoom();
+  for (const name of ["b1", "b2", "b3"]) {
+    for (const loc of ["hull", "engine"]) {
+      applyCommand(r, { verb: "set", attrs: { name, loc, sp: "0" } });
+      applyCommand(r, { verb: "damage", attrs: { name, loc, amount: "1" } }); // destroy
+    }
+  }
+  assert.equal(r.game.outcome.winner, "a");
+  assert.equal(r.game.outcome.reason, "annihilation");
+  assert.equal(r.game.phase, "finished");
+});
