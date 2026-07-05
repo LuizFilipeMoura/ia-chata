@@ -332,8 +332,22 @@ function handoff(room) {
   else runRecovery(room);
 }
 
-// TEMPORARY stub — replaced with the full cooldown/reset logic in Task 7.
-function runRecovery(room) { room.game.phase = "recovery"; }
+function runRecovery(room) {
+  for (const rig of room.rigs) {
+    if (!rig.noCool) {
+      const floor = engineHeatFloor(rig);
+      rig.engine.heat = Math.max(floor, rig.engine.heat - 2);
+    }
+    rig.activated = false;
+    rig.speedHalvedNextRound = false;
+    rig.preparation = null;
+    recompute(rig);
+  }
+  room.game.answerTokens = { a: 0, b: 0 };
+  room.game.turn = null;
+  room.game.phase = "recovery";
+  room.game.recoveryVp = {};
+}
 
 function bumpHeat(rig, n) {
   rig.engine.heat = Math.max(engineHeatFloor(rig), rig.engine.heat + n);
@@ -491,6 +505,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const t = room.game.turn;
     if (rig && t && room.game.phase === "activation" && t.activeRigId === rig.id) {
       changed = performAction(room, rig, String(a.action || "").toLowerCase(), a, options.random);
+    }
+  } else if (verb === "endactivation") {
+    const rig = findRig(room, a.name);
+    const t = room.game.turn;
+    if (rig && t && room.game.phase === "activation" && t.activeRigId === rig.id) {
+      endActivation(room, rig, a.dice, options.random);
+      changed = true;
     }
   } else {
     const rig = findRig(room, a.name);

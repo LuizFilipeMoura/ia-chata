@@ -434,3 +434,39 @@ test("shut down before any action cools to the floor and ends the activation", (
   assert.equal(b1.activated, true);
   assert.equal(r.game.turn.activeRigId, null);
 });
+
+test("end activation with safe heat just hands off", () => {
+  const r = startedRoom(); // b first
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(findRig(r, "b1").activated, true);
+  assert.equal(r.game.turn.side, "a");        // alternated
+  assert.equal(r.game.turn.activeRigId, null);
+});
+
+test("overheating at end of activation resolves the Heat Threshold Table", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");               // Light, capacity 6
+  b1.engine.heat = 8;                         // 2 over -> bonus +4
+  // D12 roll 6 -> total 10 -> Hydraulic Blowout: legs -2, speed halved.
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1", dice: { overheat: 6 } } });
+  assert.equal(b1.legs.sp, 3);                // 5 - 2
+  assert.equal(b1.speedHalvedNextRound, true);
+  assert.equal(r.game.resolutions.at(-1).kind, "overheat");
+});
+
+test("a full round of activations triggers Recovery cooldown and reset", () => {
+  const r = startedRoom();
+  const order = ["b1", "a1", "b2", "a2", "b3", "a3"];
+  for (const name of order) {
+    applyCommand(r, { verb: "activate", attrs: { name } });
+    applyCommand(r, { verb: "action", attrs: { name, action: "move" } }); // +1 heat
+    applyCommand(r, { verb: "endactivation", attrs: { name } });
+  }
+  assert.equal(r.game.phase, "recovery");
+  assert.equal(findRig(r, "b1").engine.heat, 0);   // 1 -> floor 0 after -2
+  assert.equal(findRig(r, "b1").activated, false);
+  assert.deepEqual(r.game.answerTokens, { a: 0, b: 0 });
+});
