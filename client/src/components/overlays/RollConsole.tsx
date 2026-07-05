@@ -48,6 +48,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   const [dice, setDice] = useState<DieState[]>([]);
   const [summary, setSummary] = useState("");
   const [effects, setEffects] = useState<EffectState[]>([]);
+  const [reveal, setReveal] = useState<{ prep: string; icon: string; label: string } | null>(null);
   const [formHidden, setFormHidden] = useState(true);
   const [formSpecs, setFormSpecs] = useState<DiceSpec[]>([]);
   const [okHidden, setOkHidden] = useState(true);
@@ -107,6 +108,26 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
 
   const playResolution = (entry: Resolution): Promise<void> => {
     setKind((entry.kind || "resolution").toUpperCase());
+    if (entry.kind === "reaction") {
+      const prep = (entry as { prep?: string }).prep || "brace";
+      const face = prep === "evasive"
+        ? { icon: "💨", label: "Evasive", tone: "evasive" }
+        : prep === "return"
+          ? { icon: "↩️", label: "Return Fire", tone: "return" }
+          : { icon: "🛡️", label: "Brace", tone: "brace" };
+      setDice([]);
+      setReveal({ prep: face.tone, icon: face.icon, label: face.label });
+      setSummary("");
+      setEffects([]);
+      open();
+      window.setTimeout(() => {
+        setSummary(entry.summary || "");
+        setEffects((entry.effects || []).map((text, i) => ({ text, delay: 0.4 + i * 0.12 })));
+        showOkAfterDelay();
+      }, reduced ? 0 : 480);
+      return Promise.resolve();
+    }
+    setReveal(null);
     setSummary("");
     setEffects([]);
     setFormHidden(true);
@@ -274,6 +295,15 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
             ✕
           </button>
         </div>
+        {reveal ? (
+          <div className="rx-reveal">
+            <div className="rx-token flip" data-tone={reveal.prep} aria-label={reveal.label}>
+              <span className="rx-token-face rx-token-back" aria-hidden="true">⟡</span>
+              <span className="rx-token-face rx-token-front" aria-hidden="true">{reveal.icon}</span>
+            </div>
+            <span className="die-label">{reveal.label}</span>
+          </div>
+        ) : null}
         <div id="rollDice" className="roll-dice">
           {dice.map((d, i) => (
             <div className="die-wrap" key={i}>
