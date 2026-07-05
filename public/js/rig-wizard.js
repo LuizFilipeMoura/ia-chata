@@ -1,7 +1,6 @@
 import { S } from "./state.js";
 import { sendCommand } from "./api.js";
-import { WEAPONS, EQUIPMENT, canAddRigForSide } from "/shared/game-state.js";
-import { WEAPON_UPGRADES } from "/shared/game-state.js";
+import { WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES } from "/shared/game-state.js";
 
 // Multi-step "Commission a Rig" wizard: identity -> weapons (+ fixed upgrade
 // preview) -> equipment (the one build decision, §15) -> confirm. Mirrors the
@@ -155,11 +154,14 @@ function stepConfirm(state) {
   const body = document.createElement("div");
   body.className = "rw-body rw-confirm";
   const e = EQUIPMENT[state.equipment];
-  body.innerHTML = `
-    <div class="rw-confirm-name">${state.name || "(unnamed)"} — ${state.cls}</div>
+  const nameLine = document.createElement("div");
+  nameLine.className = "rw-confirm-name";
+  nameLine.textContent = `${state.name || "(unnamed)"} — ${state.cls}`;
+  body.appendChild(nameLine);
+  body.insertAdjacentHTML("beforeend", `
     <div class="rw-confirm-row">${state.longRange} / ${state.melee}</div>
     <div class="rw-confirm-row">${e.label} — ${e.passive}</div>
-  `;
+  `);
   return body;
 }
 
