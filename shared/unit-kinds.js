@@ -90,6 +90,8 @@ export function hitPart(kindId, d12) {
   return picked;
 }
 
+// Rig armour is nested by weight class; cold kinds (Tank, Walker) hold a flat
+// map keyed by part name and ignore weightClass.
 export function impactRow(kindId, partName, weightClass) {
   const armour = UNIT_KINDS[kindId]?.armour;
   if (!armour) return null;
