@@ -65,3 +65,44 @@ test("kindOf(unit) returns the registry id, defaulting to 'rig' on legacy shape"
   assert.equal(kindOf({ weightClass: "medium" }), "rig");
   assert.equal(kindOf(null), "rig");
 });
+
+test("Tank entry — parts, roles, flags, strawman armour", () => {
+  const t = UNIT_KINDS.tank;
+  assert.ok(t);
+  assert.deepEqual(t.parts.map((p) => p.name), ["hull", "tracks", "turret", "engine"]);
+  assert.equal(roleOf("tank", "hull"), "structural");
+  assert.equal(roleOf("tank", "tracks"), "mobility");
+  assert.equal(roleOf("tank", "turret"), "weapon");
+  assert.equal(roleOf("tank", "engine"), "power");
+  assert.equal(t.hasHeat, false);
+  assert.equal(t.hasArcs, true);
+  assert.equal(t.actionBudget, 2);
+  assert.equal(t.weaponMode, "flat-pick");
+  assert.equal(t.reloads, true);
+  assert.equal(t.hasEquipment, false);
+  assert.equal(t.reactions, false);
+  assert.equal(t.ramStr, 9);
+  assert.equal(t.destruction, "single-model");
+  assert.equal(t.speed, 3);
+  assert.equal(hitPart("tank", 3), "hull");
+  assert.equal(hitPart("tank", 6), "tracks");
+  assert.equal(hitPart("tank", 9), "turret");
+  assert.equal(hitPart("tank", 12), "engine");
+  const row = impactRow("tank", "hull");
+  assert.equal(row.direct, 13);
+  assert.equal(row.severe, 15);
+  assert.equal(row.critical, 17);
+});
+
+test("Walker entry — parts, roles, flags, Sentinel strawman", () => {
+  const w = UNIT_KINDS.walker;
+  assert.ok(w);
+  assert.deepEqual(w.parts.map((p) => p.name), ["hull", "legs", "mount", "engine"]);
+  assert.equal(roleOf("walker", "mount"), "weapon");
+  assert.equal(w.hasHeat, false);
+  assert.equal(w.actionBudget, 3);
+  assert.equal(w.ramStr, 8);
+  assert.equal(w.speed, 4);
+  assert.equal(hitPart("walker", 6), "legs");
+  assert.equal(hitPart("walker", 9), "mount");
+});
