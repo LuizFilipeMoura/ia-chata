@@ -11,7 +11,7 @@ export const ACTIONS = {
   aimed:    { label: "Aimed Shot",  heat: 1, slot: 1 },
   ram:      { label: "Ram",         heat: 1, slot: 1 },
   reload:   { label: "Reload",      heat: 1, slot: 1 },
-  repair:   { label: "Repair",      heat: 0, slot: 1 },
+  repair:   { label: "Repair",      heat: 1, slot: 1 },
   shutdown: { label: "Shut Down",   heat: 0, slot: 0 },
   prepare:  { label: "Prepare",     heat: 1, slot: 1 },
 };
@@ -44,7 +44,7 @@ export function heatThreshold(total) {
 // number (§2, roll >= to hit); Ram STR by weight class (§5).
 export const WEIGHT_STR_MOD = { light: -2, medium: 0, heavy: 2, colossal: 4 };
 export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
-export const RAM_STR = { light: 8, medium: 9, heavy: 10, colossal: 11 };
+export const RAM_STR = { light: 7, medium: 8, heavy: 9, colossal: 10 };
 
 // Hit-location table (§7): defender's D12 → component.
 export function hitLocation(d12) {

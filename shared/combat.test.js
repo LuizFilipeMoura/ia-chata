@@ -226,6 +226,16 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   assert.equal(result.location, "hull");
   assert.match(attackRes.summary, /3 hit\(s\)/);
   assert.match(attackRes.summary, /to hull/);
+
+  // Structured breakdown mirrors the summary: hits + weapon STR -> SP to location.
+  const b = attackRes.breakdown;
+  assert.ok(b, "expected a breakdown on the attack resolution");
+  assert.equal(b.weapon, "Autocannon");
+  assert.equal(b.location, "hull");
+  assert.equal(b.terms[0].value, 3);
+  assert.equal(b.terms[0].label, "hits");
+  assert.equal(b.terms[1].label, "weapon STR");
+  assert.equal(b.terms[1].value, computeStr(attacker, WEAPONS.longRange.Autocannon, {}));
 });
 
 test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage", () => {
@@ -234,12 +244,12 @@ test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage",
   const room = { rigs: [attacker, target] };
   const ctx = makeCtx();
 
-  // Ram STR (medium) = 9. A high impact die should deal damage (sp > 0, tone "ok");
+  // Ram STR (medium) = 8. A high impact die should deal damage (sp > 0, tone "ok");
   // location doesn't matter for the assertion, force both to something valid.
   resolveRam(room, attacker, target, {
     dice: {
-      self: { location: 1, impact: 6 },   // 6 + 9 = 15 -> medium hull severe (>=14) -> sp>0
-      target: { location: 1, impact: 1 }, // 1 + 9 = 10 -> medium hull (<11 direct) -> sp=0
+      self: { location: 1, impact: 6 },   // 6 + 8 = 14 -> medium hull severe (>=14) -> sp>0
+      target: { location: 1, impact: 1 }, // 1 + 8 = 9  -> medium hull (<11 direct) -> sp=0
     },
   }, () => 0, ctx);
 
@@ -248,4 +258,17 @@ test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage",
   const [selfRes, targetRes] = ramResults;
   assert.equal(selfRes.rolls[0].tone, "ok");
   assert.equal(targetRes.rolls[0].tone, "miss");
+
+  // Breakdown spells out the equation and where the ram STR bonus comes from.
+  assert.deepEqual(selfRes.breakdown.terms, [
+    { value: 6, label: "D6", tone: "die" },
+    { value: 8, label: "Ram STR · Medium", op: "+", tone: "mod" },
+  ]);
+  assert.equal(selfRes.breakdown.total, 14);
+  assert.equal(selfRes.breakdown.tier, "severe");
+  assert.equal(selfRes.breakdown.location, "hull");
+  assert.ok(selfRes.breakdown.sp > 0);
+  assert.equal(targetRes.breakdown.total, 9);
+  assert.equal(targetRes.breakdown.tier, "none");
+  assert.equal(targetRes.breakdown.sp, 0);
 });

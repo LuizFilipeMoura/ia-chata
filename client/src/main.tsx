@@ -9,30 +9,12 @@ import "./styles/vp-wizard.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { RoomProvider } from "./state/RoomStateContext";
-import { UiProvider } from "./state/UiStateContext";
-import { DrawerProvider } from "./state/DrawerContext";
-import { RollProvider } from "./state/RollContext";
-import { WizardProvider } from "./state/WizardContext";
-import { BattleActionsProvider } from "./state/BattleActionsContext";
-import { GlossaryTipProvider } from "./state/GlossaryTipContext";
+import { AppProviders } from "./AppProviders";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RoomProvider>
-      <UiProvider>
-        <DrawerProvider>
-          <RollProvider>
-            <WizardProvider>
-              <BattleActionsProvider>
-                <GlossaryTipProvider>
-                  <App />
-                </GlossaryTipProvider>
-              </BattleActionsProvider>
-            </WizardProvider>
-          </RollProvider>
-        </DrawerProvider>
-      </UiProvider>
-    </RoomProvider>
+    <AppProviders>
+      <App />
+    </AppProviders>
   </StrictMode>,
 );

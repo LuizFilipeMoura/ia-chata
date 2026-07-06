@@ -51,7 +51,7 @@ export function RigDeck() {
           </Fragment>
         );
       })}
-      <RigAddScreen />
+      {!started && <RigAddScreen />}
     </div>
   );
 }

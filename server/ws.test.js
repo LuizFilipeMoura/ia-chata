@@ -34,6 +34,23 @@ test("broadcast sends the current version to every socket in the room", () => {
   assert.equal(b.sent[0].version, room.version);
 });
 
+test("sendState pushes the current room snapshot to a single socket on connect", () => {
+  // A reconnecting client (page refresh, dropped socket) attaches without any
+  // mutation happening — it must still receive the current state immediately,
+  // not wait for the next broadcast.
+  const hub = createWsHub();
+  const room = createRoom("IRON42");
+  applyCommand(room, { verb: "add", attrs: { name: "Warden", class: "medium", owner: "a", ...W } });
+
+  const a = fakeSocket();
+  hub.attach(a, "IRON42", "a");
+  hub.sendState(a, room, "a");
+
+  assert.equal(a.sent.length, 1);
+  assert.equal(a.sent[0].version, room.version);
+  assert.equal(a.sent[0].state.rigs[0].name, "Warden");
+});
+
 test("broadcast scopes bounties per socket's side", () => {
   const hub = createWsHub();
   const room = createRoom("IRON42");

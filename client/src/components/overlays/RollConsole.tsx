@@ -5,7 +5,7 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import type { Resolution } from "../../state/types";
+import type { Resolution, ResolutionBreakdown } from "../../state/types";
 
 export interface DiceSpec {
   key: string;
@@ -47,6 +47,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   const [kind, setKind] = useState("Resolution");
   const [dice, setDice] = useState<DieState[]>([]);
   const [summary, setSummary] = useState("");
+  const [breakdown, setBreakdown] = useState<ResolutionBreakdown | null>(null);
   const [effects, setEffects] = useState<EffectState[]>([]);
   const [reveal, setReveal] = useState<{ prep: string; icon: string; label: string } | null>(null);
   const [formHidden, setFormHidden] = useState(true);
@@ -118,6 +119,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
       setDice([]);
       setReveal({ prep: face.tone, icon: face.icon, label: face.label });
       setSummary("");
+      setBreakdown(null);
       setEffects([]);
       open();
       window.setTimeout(() => {
@@ -129,6 +131,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     }
     setReveal(null);
     setSummary("");
+    setBreakdown(null);
     setEffects([]);
     setFormHidden(true);
     setFormSpecs([]);
@@ -147,6 +150,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
 
     const finishEffects = () => {
       setSummary(entry.summary || "");
+      setBreakdown(entry.breakdown || null);
       setEffects(
         (entry.effects || []).map((text, i) => ({ text, delay: 0.5 + i * 0.12 })),
       );
@@ -216,6 +220,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     setKind(title.toUpperCase());
     setDice([]);
     setSummary("");
+    setBreakdown(null);
     setEffects([]);
     inputEls.current = [];
     setFormSpecs(specs);
@@ -325,9 +330,49 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
           ))}
         </div>
         {rolling && <div className="roll-rolling">Rolling…</div>}
-        <div id="rollSummary" className="roll-summary">
-          {summary}
-        </div>
+        {breakdown ? (
+          <div id="rollSummary" className="rx-break" aria-label={summary}>
+            {(breakdown.actor || breakdown.weapon || breakdown.target) && (
+              <div className="rx-break-head">
+                {breakdown.actor && <span className="rx-actor">{breakdown.actor}</span>}
+                {breakdown.weapon && <span className="rx-weapon">{breakdown.weapon}</span>}
+                {breakdown.target && <span className="rx-target">→ {breakdown.target}</span>}
+              </div>
+            )}
+            <div className="rx-break-eq">
+              {(breakdown.terms || []).map((t, i) => (
+                <span className="rx-term-group" key={i}>
+                  {t.op ? <span className="rx-op">{t.op}</span> : null}
+                  <span className="rx-term" data-tone={t.tone}>
+                    <b>{t.value}</b>
+                    <em>{t.label}</em>
+                  </span>
+                </span>
+              ))}
+            </div>
+            <div className="rx-break-out">
+              {breakdown.total != null && (
+                <span className="rx-total">
+                  <span className="rx-op">=</span>
+                  {breakdown.total}
+                </span>
+              )}
+              {breakdown.tier && (
+                <span className="rx-tier" data-tier={breakdown.tier}>
+                  {breakdown.tier}
+                </span>
+              )}
+              <span className="rx-sp">
+                <b>{breakdown.sp}</b>
+                <em>{breakdown.location ? `SP → ${breakdown.location}` : "SP"}</em>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div id="rollSummary" className="roll-summary">
+            {summary}
+          </div>
+        )}
         <div id="rollEffects" className="roll-effects">
           {effects.map((e, i) => (
             <div

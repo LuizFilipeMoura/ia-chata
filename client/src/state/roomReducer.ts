@@ -15,7 +15,8 @@ export const initialRoomState: RoomState = {
 
 export type RoomAction =
   | { type: "applyServerState"; state: ServerState | null | undefined }
-  | { type: "setSession"; session: Session };
+  | { type: "setSession"; session: Session }
+  | { type: "clearSession" };
 
 export function roomReducer(state: RoomState, action: RoomAction): RoomState {
   switch (action.type) {
@@ -34,6 +35,10 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
     }
     case "setSession":
       return { ...state, session: action.session };
+    case "clearSession":
+      // Full reset (not just session: null) so the stale version guard in
+      // applyServerState doesn't drop the fresh state from a later re-join.
+      return initialRoomState;
     default:
       return state;
   }

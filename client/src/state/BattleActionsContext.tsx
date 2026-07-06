@@ -33,7 +33,10 @@ const LOC_CHOICES = [
 ];
 
 // §5 base Speed (inches) per weight class — the physical reach of a Move.
-const SPEED: Record<string, number> = { light: 9, medium: 8, heavy: 6, colossal: 5 };
+// House-rule tuning: movement halved across the board so Rigs commit rather than
+// swim across the table, with Mediums pulled down harder (~70% off their old 8")
+// so they play as the slow, punchy bruisers they're meant to be.
+const SPEED: Record<string, number> = { light: 4.5, medium: 2.5, heavy: 3, colossal: 2.5 };
 const MOVE_HOLD_MS = 5000;
 const SPRINT_HOLD_MS = 8000;
 const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOLD_MS);

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   halfDiag, OBJ_FRACTION, clampDimensions, computeObjectives,
-  emptyCorners, deploymentCorners, scatterTerrain, FIELD_DEFAULT,
+  emptyCorners, deploymentCorners, scatterTerrain, deployRadius, FIELD_DEFAULT,
 } from "./field.js";
 
 // Deterministic RNG for terrain tests (mulberry32).
@@ -41,6 +41,12 @@ test("computeObjectives: centre 2VP plus two 1VP markers", () => {
   }
 });
 
+test("deployRadius is 8in on the reference table and scales with size", () => {
+  assert.ok(Math.abs(deployRadius({ width: 54, height: 36 }) - 8) < 1e-9);
+  assert.ok(deployRadius({ width: 96, height: 72 }) > 8); // bigger table, wider zone
+  assert.ok(deployRadius({ width: 24, height: 18 }) < 8);
+});
+
 test("empty and deployment corners swap with the diagonal", () => {
   const f = (d) => ({ width: 54, height: 36, diagonal: d });
   assert.deepEqual(emptyCorners(f("tlbr")), [{ x: 0, y: 0 }, { x: 54, y: 36 }]);
@@ -48,17 +54,29 @@ test("empty and deployment corners swap with the diagonal", () => {
   assert.deepEqual(emptyCorners(f("trbl")), [{ x: 54, y: 0 }, { x: 0, y: 36 }]);
 });
 
-test("scatterTerrain places 4-6 pieces, deterministic and clear", () => {
+const KINDS = ["wood", "building", "crater", "ruin", "barricade", "rock", "crate"];
+const SHAPES = ["rect", "ellipse", "poly"];
+
+test("scatterTerrain places a varied, deterministic, clear scatter", () => {
   const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
   const a = scatterTerrain(field, seeded(1));
   const b = scatterTerrain(field, seeded(1));
   assert.deepEqual(a, b);                       // deterministic under same seed
-  assert.ok(a.length >= 4 && a.length <= 6);
+  assert.ok(a.length >= 6, `expected a dense scatter, got ${a.length}`);
+  assert.ok(new Set(a.map((t) => t.kind)).size >= 3); // genuinely varied
   const objs = computeObjectives(field);
-  const objClear = 0.12 * halfDiag(54, 36);
+  const objClear = 0.10 * halfDiag(54, 36) - 0.05; // centres cleared (fp adds more)
   for (const t of a) {
     assert.ok(t.x > 0 && t.x < field.width && t.y > 0 && t.y < field.height);
-    assert.ok(["sm", "md"].includes(t.size));
+    assert.ok(KINDS.includes(t.kind), `bad kind ${t.kind}`);
+    assert.ok(SHAPES.includes(t.shape), `bad shape ${t.shape}`);
+    if (t.shape === "poly") assert.ok(Array.isArray(t.points) && t.points.length >= 3);
     for (const o of objs) assert.ok(dist(o, t) >= objClear);
   }
+});
+
+test("scatterTerrain scales piece count with field area", () => {
+  const small = scatterTerrain({ width: 24, height: 18, diagonal: "tlbr" }, seeded(2));
+  const big = scatterTerrain({ width: 96, height: 72, diagonal: "tlbr" }, seeded(2));
+  assert.ok(big.length > small.length);
 });

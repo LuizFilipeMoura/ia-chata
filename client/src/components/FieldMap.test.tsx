@@ -5,10 +5,10 @@ import type { FieldState, Objective } from "../state/types";
 const field: FieldState = {
   width: 48, height: 32, diagonal: "tlbr",
   terrain: [
-    { x: 20, y: 12, size: "sm" },
-    { x: 30, y: 20, size: "md" },
-    { x: 12, y: 22, size: "sm" },
-    { x: 36, y: 10, size: "md" },
+    { x: 20, y: 12, kind: "wood", shape: "poly", points: [[-3, 0], [0, -3], [3, 0], [0, 3]] },
+    { x: 30, y: 20, kind: "building", shape: "rect", w: 5, h: 4, rot: 10 },
+    { x: 12, y: 22, kind: "crater", shape: "ellipse", rx: 3, ry: 2, rot: 20 },
+    { x: 36, y: 10, kind: "crate", shape: "rect", w: 2, h: 2, rot: -12 },
   ],
   locked: false,
 };

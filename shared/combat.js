@@ -140,9 +140,18 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
+  const str = computeStr(attacker, profile, opts);
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
-    summary: `${attacker.name} → ${target.name} with ${weaponName}: ${th.hits} hit(s), ${total} SP${location ? ` to ${location}` : ""}`,
+    summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s) = ${total} SP${location ? ` to ${location}` : ""}`,
+    breakdown: {
+      actor: attacker.name, weapon: weaponName, target: target.name,
+      terms: [
+        { value: th.hits, label: "hits", tone: "die" },
+        { value: str, label: "weapon STR", op: "·", tone: "mod" },
+      ],
+      sp: total, location,
+    },
     effects: [],
   });
   return { ok: true, hits: th.hits, location, impacts, heat };
@@ -196,13 +205,24 @@ export function resolveRam(room, attacker, target, opts, random, ctx) {
     const d = opts.dice?.[who] || {};
     const loc = hitLocation(rollD(12, d.location, random));
     const die = rollD(6, d.impact, random);
-    const total = die + (RAM_STR[rig.weightClass] || 9);
+    const ramStr = RAM_STR[rig.weightClass] || 8;
+    const total = die + ramStr;
     const sev = impactSeverity(total, IMPACT[rig.weightClass][loc]);
     if (sev.sp > 0) ctx.applyDamage(room, rig, loc, sev.sp, { random });
+    const cls = rig.weightClass ? rig.weightClass[0].toUpperCase() + rig.weightClass.slice(1) : "";
     ctx.pushResolution(room, {
       kind: "ram", actor: attacker.owner, rigId: rig.id,
       rolls: [{ sides: 6, value: die, label: "D6", tone: sev.sp > 0 ? "ok" : "miss" }],
-      summary: `Ram hits ${rig.name}: ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`, effects: [],
+      summary: `Ram hits ${rig.name}: D6 ${die} + Ram STR ${ramStr} = ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`,
+      breakdown: {
+        weapon: "Ram", target: rig.name,
+        terms: [
+          { value: die, label: "D6", tone: "die" },
+          { value: ramStr, label: `Ram STR · ${cls}`, op: "+", tone: "mod" },
+        ],
+        total, tier: sev.tier, sp: sev.sp, location: loc,
+      },
+      effects: [],
     });
   }
   return { ok: true };

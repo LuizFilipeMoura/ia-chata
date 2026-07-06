@@ -67,7 +67,7 @@ export function ActionConsole({ rig }: Props) {
           ) : null}
         </span>
         <div className="ac-pips">
-          {Array.from({ length: 5 }, (_, i) => (
+          {Array.from({ length: Math.max(3, b.max) }, (_, i) => (
             <span
               key={i}
               className={"ac-pip" + (i < b.used ? " spent" : i >= b.max ? " locked" : "")}
@@ -80,7 +80,6 @@ export function ActionConsole({ rig }: Props) {
         {actions.map((act) => {
           const heatLabel =
             act.heat > 0 ? `+${act.heat} heat` : act.heat < 0 ? `${act.heat} heat` : "0 heat";
-          const cost2 = (act.cost ?? 1) === 2;
           return (
             <button
               key={act.key}
@@ -93,9 +92,6 @@ export function ActionConsole({ rig }: Props) {
             >
               <span className="ac-ic" aria-hidden="true">{iconFor(act.key)}</span>
               <span className="ac-label">{act.label}</span>
-              {cost2 ? (
-                <span className="ac-cost" title="Costs 2 actions">2×</span>
-              ) : null}
               <span className="ac-heat" data-heat={act.heat}>{heatLabel}</span>
             </button>
           );

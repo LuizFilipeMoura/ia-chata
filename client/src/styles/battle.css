@@ -69,6 +69,102 @@
   font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--txt);
   opacity: 0; transform: translateY(4px); animation: line-in .35s ease .45s forwards;
 }
+/* Structured damage readout — the equation form of the summary line.
+   Makes the inputs (hits, weapon/ram STR) and where each modifier comes from
+   explicit, instead of a flat sentence. */
+.rx-break {
+  margin: .3rem .7rem .1rem;
+  padding: .55rem .55rem .5rem;
+  background:
+    radial-gradient(120% 140% at 50% -20%, rgba(231,154,61,.10), transparent 60%),
+    linear-gradient(180deg, var(--iron-850), var(--iron-900));
+  border: 1px solid var(--rivet); border-radius: 11px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 6px 18px rgba(0,0,0,.4);
+  opacity: 0; transform: translateY(4px);
+  animation: line-in .35s ease .45s forwards;
+}
+.rx-break-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center;
+  gap: .3rem .45rem; margin-bottom: .5rem;
+  font-family: var(--font-mono); font-size: .54rem; letter-spacing: .12em; text-transform: uppercase;
+}
+.rx-break-head .rx-actor { color: var(--txt-dim); }
+.rx-break-head .rx-weapon {
+  color: var(--oil-hi); font-weight: 700;
+  padding: .08rem .34rem; border-radius: 5px;
+  background: rgba(231,154,61,.12); border: 1px solid rgba(231,154,61,.28);
+}
+.rx-break-head .rx-target { color: var(--txt-dim); }
+
+.rx-break-eq {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .15rem .35rem;
+}
+.rx-term-group { display: inline-flex; align-items: center; gap: .35rem; }
+.rx-op {
+  font-family: var(--font-mono); font-size: .95rem; font-weight: 700; color: var(--txt-faint);
+  line-height: 1;
+}
+.rx-term {
+  display: flex; flex-direction: column; align-items: center; gap: .05rem;
+  min-width: 3rem; padding: .28rem .5rem .22rem;
+  background: linear-gradient(160deg, var(--iron-780), var(--iron-850));
+  border: 1px solid var(--line); border-top-color: var(--rivet);
+  border-radius: 8px;
+}
+.rx-term b {
+  font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; line-height: 1;
+  color: var(--txt);
+}
+.rx-term em {
+  font-family: var(--font-mono); font-style: normal;
+  font-size: .48rem; letter-spacing: .08em; text-transform: uppercase; color: var(--txt-faint);
+  white-space: nowrap;
+}
+/* The STR / modifier term is where the "+9" comes from — light it amber so the
+   player's eye lands on the source of the bonus. */
+.rx-term[data-tone="mod"] {
+  border-color: rgba(231,154,61,.5);
+  box-shadow: 0 0 12px -2px rgba(231,154,61,.4), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.rx-term[data-tone="mod"] b { color: var(--oil-hi); }
+.rx-term[data-tone="mod"] em { color: var(--oil); }
+.rx-term[data-tone="die"] b { color: #cdd5e0; }
+
+.rx-break-out {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem;
+  margin-top: .55rem; padding-top: .5rem;
+  border-top: 1px dashed rgba(255,255,255,.08);
+}
+.rx-total {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--txt-dim);
+}
+.rx-total .rx-op { font-size: .8rem; }
+.rx-tier {
+  font-family: var(--font-mono); font-size: .56rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase;
+  padding: .18rem .45rem; border-radius: 5px;
+  color: var(--txt-dim); border: 1px solid var(--line); background: rgba(0,0,0,.25);
+}
+.rx-tier[data-tier="direct"]   { color: #cdd5e0; border-color: var(--rivet); }
+.rx-tier[data-tier="severe"]   { color: var(--oil-hi); border-color: rgba(231,154,61,.55); background: rgba(231,154,61,.12); }
+.rx-tier[data-tier="critical"] {
+  color: #fff; border-color: var(--ember); background: rgba(229,83,58,.22);
+  box-shadow: 0 0 12px -1px rgba(229,83,58,.6);
+}
+.rx-tier[data-tier="none"] { color: var(--txt-faint); }
+.rx-sp {
+  display: inline-flex; align-items: baseline; gap: .3rem;
+}
+.rx-sp b {
+  font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; line-height: 1;
+  color: var(--oil-hi); text-shadow: 0 0 16px rgba(231,154,61,.45);
+}
+.rx-sp em {
+  font-family: var(--font-mono); font-style: normal;
+  font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--txt-dim);
+}
+
 .roll-effects { display: flex; flex-direction: column; gap: .3rem; padding: .3rem .9rem 0; }
 .roll-effect {
   font-family: var(--font-mono); font-size: .68rem; color: var(--ember-hi);
@@ -88,7 +184,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .die.rolling { animation: none; }
-  .die.settled, .roll-summary, .roll-effect, .roll-console, .roll-ok { animation: none; opacity: 1; transform: none; }
+  .die.settled, .roll-summary, .rx-break, .roll-effect, .roll-console, .roll-ok { animation: none; opacity: 1; transform: none; }
 }
 
 /* ===== Turn focus: the next-action coach banner + whole-screen turn border =====

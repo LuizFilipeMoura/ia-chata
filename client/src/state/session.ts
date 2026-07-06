@@ -9,3 +9,6 @@ export function loadSession(): Session | null {
 export function saveSession(session: Session): void {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
+export function clearSession(): void {
+  localStorage.removeItem(SESSION_KEY);
+}

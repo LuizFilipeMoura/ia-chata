@@ -436,23 +436,21 @@ test("starting the game seeds round 1 initiative from deploy order", () => {
   assert.equal(r.game.round, 1);
   assert.deepEqual(r.game.initiative.order, ["b", "a"]);
   assert.equal(r.game.initiative.second, "a");
-  assert.equal(r.game.answerTokens.a, 2);
+  assert.equal(r.game.answerTokens.a, 1);
   assert.equal(r.game.answerTokens.b, 0);
   assert.equal(r.game.turn.side, "b");
   assert.equal(r.game.turn.activeRigId, null);
 });
 
-test("second player gets a blocking answer gate that clears when both tokens are spent", () => {
-  const r = startedRoom(); // "a" is second and holds 2 tokens; turn.side === "b"
-  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 2 });
+test("second player gets a blocking answer gate that clears when the token is spent", () => {
+  const r = startedRoom(); // "a" is second and holds 1 token; turn.side === "b"
+  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1 });
 
   // First player cannot start activating while the gate is up.
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   assert.equal(r.game.turn.activeRigId, null);
 
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
-  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1 });
-  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "evasive", side: "a" } });
   assert.equal(r.game.pendingAnswer, null);
 
   // Gate cleared — activation works again.
@@ -468,7 +466,7 @@ test("initiative verb rolls D12 for both sides and higher goes first", () => {
   applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
   assert.deepEqual(r.game.initiative.order, ["a", "b"]);
   assert.equal(r.game.initiative.second, "b");
-  assert.equal(r.game.answerTokens.b, 2);
+  assert.equal(r.game.answerTokens.b, 1);
   assert.equal(r.game.phase, "activation");
   assert.equal(r.game.turn.side, "a");
 });
@@ -489,13 +487,13 @@ test("initiative verb only runs during the initiative phase", () => {
   assert.equal(r.version, v);
 });
 
-test("activate opens the acting rig with a 5-action budget", () => {
+test("activate opens the acting rig with a 3-action budget", () => {
   const r = startedRoom(); // turn.side === "b"
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
   assert.equal(r.game.turn.actionsUsed, 0);
-  assert.equal(r.game.turn.actionsMax, 5);
+  assert.equal(r.game.turn.actionsMax, 3);
 });
 
 test("activate rejects the wrong side, a second rig mid-activation, and destroyed rigs", () => {
@@ -514,7 +512,7 @@ test("Hull at 0 SP drops the action budget by 2", () => {
   clearPendingAnswer(r);
   applyCommand(r, { verb: "set", attrs: { name: "b1", loc: "hull", sp: "0" } });
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  assert.equal(r.game.turn.actionsMax, 3);
+  assert.equal(r.game.turn.actionsMax, 1); // base 3 − 2
 });
 
 test("engine reaching 0 SP flags the next activation as skipped", () => {
@@ -540,18 +538,30 @@ test("actions add their heat and spend the budget", () => {
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
-  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare" } });
   const b1 = findRig(r, "b1");
-  assert.equal(b1.engine.heat, 3);            // 1 + 2
+  assert.equal(b1.engine.heat, 2);            // move 1 + prepare 1
   assert.equal(r.game.turn.actionsUsed, 2);
+});
+
+test("only one Move (or Sprint) is allowed per activation", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } }); // rejected — already moved
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });   // rejected — already moved
+  const b1 = findRig(r, "b1");
+  assert.equal(r.game.turn.actionsUsed, 1);
+  assert.equal(b1.engine.heat, 1);            // just the one Move
 });
 
 test("actions beyond the budget are rejected", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  for (let i = 0; i < 6; i++) applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
-  assert.equal(r.game.turn.actionsUsed, 5);   // capped at actionsMax
+  for (let i = 0; i < 6; i++) applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare" } });
+  assert.equal(r.game.turn.actionsUsed, 3);   // capped at actionsMax
 });
 
 test("reload reloads all weapons; repair rolls a D12 and heals", () => {
@@ -614,7 +624,7 @@ test("a full round of activations triggers Recovery cooldown and reset", () => {
     applyCommand(r, { verb: "endactivation", attrs: { name } });
   }
   assert.equal(r.game.phase, "recovery");
-  assert.equal(findRig(r, "b1").engine.heat, 0);   // 1 -> floor 0 after -2
+  assert.equal(findRig(r, "b1").engine.heat, 0);   // 1 -> floor 0 after -1
   assert.equal(findRig(r, "b1").activated, false);
   assert.deepEqual(r.game.answerTokens, { a: 0, b: 0 });
 });
@@ -738,11 +748,11 @@ test("annihilation ends the game immediately", () => {
 });
 
 test("answer token places a free preparation and decrements the pool", () => {
-  const r = startedRoom(); // side a holds 2 Answer tokens
+  const r = startedRoom(); // side a holds 1 Answer token
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
   const a1 = findRig(r, "a1");
   assert.deepEqual(a1.preparation, { type: "brace", source: "answer", faceUp: false });
-  assert.equal(r.game.answerTokens.a, 1);
+  assert.equal(r.game.answerTokens.a, 0);
 });
 
 test("answer token is rejected without tokens, off-side, or when already prepared", () => {
@@ -838,48 +848,57 @@ test("fire action resolves an attack, applies damage and logs it", () => {
   assert.equal(r.game.resolutions.at(-1).kind, "attack");
 });
 
-test("firing a spent ranged weapon again folds in a rushed reload for 2 action-slots", () => {
+test("firing a spent ranged weapon is rejected — you must reload first", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
-  b1.loaded.longRange = false; // already fired once this activation
+  b1.loaded.longRange = false; // already fired once this activation, not yet reloaded
+  const before = r.game.turn.actionsUsed;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "side", range: "near",
     dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, impacts: [1,1,1,1,1,1,1,1] },
   } });
-  assert.equal(r.game.turn.actionsUsed, 2);       // rushed shot costs 2 slots
-  assert.equal(b1.loaded.longRange, false);        // weapon spent again after firing
-  assert.equal(r.game.resolutions.at(-1).kind, "attack");
+  assert.equal(r.game.turn.actionsUsed, before); // no-op: the shot needs a reload first
+  assert.equal(b1.loaded.longRange, false);
 });
 
-test("a rushed ranged shot is rejected when only one action-slot remains", () => {
+test("a second ranged shot costs 1 slot but runs the barrel hot: +1 heat", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
-  b1.loaded.longRange = false;
-  r.game.turn.actionsUsed = 4; // only 1 slot left, rushed shot needs 2
-  applyCommand(r, { verb: "action", attrs: {
+  const fire = {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "side", range: "near",
     dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, impacts: [1,1,1,1,1,1,1,1] },
-  } });
-  assert.equal(r.game.turn.actionsUsed, 4); // no-op, can't afford the rushed shot
+  };
+  const rand = { random: () => 0 };                        // keep the shots deterministic
+  const h0 = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: fire }, {}, rand); // shot 1
+  const firstDelta = b1.engine.heat - h0;
+  assert.equal(b1.loaded.longRange, false);                // weapon spent
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "reload" } }, {}, rand);
+  assert.equal(b1.loaded.longRange, true);
+  const h1 = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: fire }, {}, rand); // shot 2
+  const secondDelta = b1.engine.heat - h1;
+  assert.equal(secondDelta, firstDelta + 1);               // second shot: +1 heat
+  assert.equal(r.game.turn.actionsUsed, 3);                // fire + reload + fire = 3 slots
 });
 
 test("ram deals a D6 + ram-STR hit to both rigs", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const b1 = findRig(r, "b1"); // Light ram STR 8
-  const a1 = findRig(r, "a1"); // Light ram STR 8
+  const b1 = findRig(r, "b1"); // Light ram STR 7
+  const a1 = findRig(r, "a1"); // Light ram STR 7
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "ram", target: "a1",
     dice: { self: { location: 1, impact: 6 }, target: { location: 1, impact: 6 } },
   } });
-  // Each: D6 6 + STR 8 = 14 vs light hull (10/14/16) -> severe (2 SP).
-  assert.equal(a1.hull.sp, 4);
-  assert.equal(b1.hull.sp, 4);
+  // Each: D6 6 + STR 7 = 13 vs light hull (10/14/16) -> direct (1 SP).
+  assert.equal(a1.hull.sp, 5);
+  assert.equal(b1.hull.sp, 5);
   assert.equal(r.game.turn.actionsUsed, 1);
 });
 
@@ -1042,7 +1061,7 @@ test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy ri
   assert.equal(rig.overclockCoreUsed, false);
 });
 
-test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
+test("Radiator Array cools 2 heat in Recovery instead of the usual 1", () => {
   const r = createRoom("X");
   claimSide(r, { name: "Owner", side: "a" });
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -1068,8 +1087,8 @@ test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
     if (r.game.turn?.activeRigId) applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
   }
 
-  assert.equal(cooled.engine.heat, 2); // 5 - 3
-  assert.equal(plain.engine.heat, 3);  // 5 - 2
+  assert.equal(cooled.engine.heat, 3); // 5 - 2
+  assert.equal(plain.engine.heat, 4);  // 5 - 1
 });
 
 test("Servo Actuators makes Sprint cost 1 heat instead of 2", () => {
@@ -1286,7 +1305,7 @@ test("Systems Overload reduces the target's next activation budget by 1 and then
   assert.equal(findRig(r, "a1").actionPenaltyNextActivation, 1);
   applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
   applyCommand(r, { verb: "activate", attrs: { name: "a1" } });
-  assert.equal(r.game.turn.actionsMax, 4);
+  assert.equal(r.game.turn.actionsMax, 2); // base 3 − 1
   assert.equal(findRig(r, "a1").actionPenaltyNextActivation, 0);
 });
 
@@ -1423,11 +1442,11 @@ test("prepare action places a facedown reaction of the chosen type", () => {
 });
 
 test("answer token places a facedown reaction and spends a token", () => {
-  const r = startedRoom(); // side "a" holds 2 answer tokens
+  const r = startedRoom(); // side "a" holds 1 answer token
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
   const rig = findRig(r, "a1");
   assert.deepEqual(rig.preparation, { type: "brace", source: "answer", faceUp: false });
-  assert.equal(r.game.answerTokens.a, 1);
+  assert.equal(r.game.answerTokens.a, 0);
 });
 
 test("publicState hides an opponent's facedown reaction but not the owner's", () => {

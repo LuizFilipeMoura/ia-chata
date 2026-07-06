@@ -21,14 +21,18 @@ export function createWsHub() {
     });
   }
 
+  // Push the current snapshot to one socket. Used both to hydrate a socket the
+  // moment it connects (reconnect / page refresh) and, per-client, by broadcast.
+  function sendState(ws, room, side) {
+    if (ws.readyState !== OPEN) return;
+    ws.send(JSON.stringify({ version: room.version, state: publicState(room, side) }));
+  }
+
   function broadcast(room) {
     const set = clientsByRoom.get(room.code);
     if (!set) return;
-    for (const client of set) {
-      if (client.ws.readyState !== OPEN) continue;
-      client.ws.send(JSON.stringify({ version: room.version, state: publicState(room, client.side) }));
-    }
+    for (const client of set) sendState(client.ws, room, client.side);
   }
 
-  return { attach, broadcast };
+  return { attach, broadcast, sendState };
 }

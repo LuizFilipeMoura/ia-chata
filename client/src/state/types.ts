@@ -63,12 +63,35 @@ export interface Turn {
   actionsMax: number;
 }
 
+export interface ResolutionTerm {
+  value: number | string;
+  label: string;
+  /** Operator glyph shown before this term (e.g. "+", "·"). Omitted on the first term. */
+  op?: string;
+  tone?: string;
+}
+export interface ResolutionBreakdown {
+  actor?: string;
+  weapon?: string;
+  target?: string;
+  /** Input terms of the damage equation (die + STR, or hits · weapon STR). */
+  terms?: ResolutionTerm[];
+  /** Impact-roll total, when the equation resolves to one (ram). */
+  total?: number;
+  /** Severity tier badge (ram: direct/severe/critical). */
+  tier?: string;
+  /** Structure points dealt. */
+  sp?: number;
+  location?: string;
+}
+
 export interface Resolution {
   id: number;
   kind?: string;
   rigId?: number;
   prep?: string;
   summary?: string;
+  breakdown?: ResolutionBreakdown;
   effects?: string[];
   rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
 }

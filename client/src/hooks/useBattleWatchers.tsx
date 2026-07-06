@@ -1,4 +1,4 @@
-import { useEffect, useRef, createElement, type ReactNode } from "react";
+import { useEffect, useRef, useState, createElement, type ReactNode } from "react";
 import { useRoomState } from "../state/RoomStateContext";
 import { useRoll } from "../state/RollContext";
 import { useDrawer } from "../state/DrawerContext";
@@ -43,6 +43,39 @@ function RecapBody({ lines }: { lines: RecapLine[] }): ReactNode {
   );
 }
 
+// Answer-token gate body. Owns the Rig + reaction selection in local state so the
+// ChoiceField/ReactionPicker actually re-render on each pick; mirrors both into the
+// caller's `pick` ref for the "Set reaction" handler (matches PrepareBody's pattern).
+export function AnswerGateBody({
+  remaining, eligible, pick,
+}: {
+  remaining: number;
+  eligible: Rig[];
+  pick: { rigName: string; prep: PrepType };
+}) {
+  const [rigName, setRigName] = useState(pick.rigName);
+  const [prep, setPrep] = useState<PrepType>(pick.prep);
+  const sel = eligible.find((r) => r.name === rigName) || eligible[0];
+  return (
+    <div className="dwr-recap">
+      <p className="dwr-hint">
+        Answer token — {remaining} left. Choose a Rig, then a facedown reaction.
+      </p>
+      <ChoiceField
+        label="Rig"
+        options={eligible.map((r) => ({ value: r.name, label: r.name }))}
+        value={rigName}
+        onChange={(v) => { setRigName(v); pick.rigName = v; }}
+      />
+      <ReactionPicker
+        value={prep}
+        allowShield={sel?.weapons?.melee === "Bulwark Shield"}
+        onChange={(v) => { setPrep(v); pick.prep = v; }}
+      />
+    </div>
+  );
+}
+
 /**
  * Runs the two battle overlay watchers as effects (battle.js:47-120):
  *   1. Resolution watcher — plays the newest fresh resolution log entry.
@@ -84,32 +117,13 @@ export function useBattleWatchers(): void {
     if (!eligible.length) return; // server clears the gate on its own
 
     const pick = { rigName: eligible[0].name, prep: "brace" as PrepType };
-    const build = () => {
-      const sel = eligible.find((r) => r.name === pick.rigName) || eligible[0];
-      return (
-        <div className="dwr-recap">
-          <p className="dwr-hint">
-            Answer token — {gate.remaining} left. Choose a Rig, then a facedown reaction.
-          </p>
-          <ChoiceField
-            label="Rig"
-            options={eligible.map((r) => ({ value: r.name, label: r.name }))}
-            value={pick.rigName}
-            onChange={(v) => (pick.rigName = v)}
-          />
-          <ReactionPicker
-            value={pick.prep}
-            allowShield={sel?.weapons?.melee === "Bulwark Shield"}
-            onChange={(v) => (pick.prep = v)}
-          />
-        </div>
-      );
-    };
     openDrawer({
       title: "⟡ Answer Tokens — prepare a reaction",
       tone: "oil",
       dismissable: false,
-      render: build,
+      render: () => (
+        <AnswerGateBody remaining={gate.remaining} eligible={eligible} pick={pick} />
+      ),
       actions: [
         {
           label: "Set reaction",

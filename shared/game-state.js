@@ -51,7 +51,7 @@ export const EQUIPMENT = {
       text: "Until this Rig's next activation, all impact rolls against it are at −1." },
   },
   "radiator-array": {
-    family: "Cooling", label: "Radiator Array", passive: "Cools 3 heat in Recovery instead of 2",
+    family: "Cooling", label: "Radiator Array", passive: "Cools 2 heat in Recovery instead of 1",
     active: { key: "purge", label: "Purge", heat: -2, text: "Vent heat on demand." },
   },
   "servo-actuators": {
@@ -472,17 +472,17 @@ function deploymentOrder(room) {
 }
 
 // Record an initiative result: set activation order, grant the second activator
-// 2 Answer tokens, open the turn, and enter the activation phase.
+// 1 Answer token, open the turn, and enter the activation phase.
 function applyInitiative(room, order, rolls) {
   const [first, second] = order;
   room.game.initiative = { rolls: rolls || null, order: [first, second], second };
   room.game.answerTokens = { a: 0, b: 0 };
-  room.game.answerTokens[second] = 2;
+  room.game.answerTokens[second] = 1;
   room.game.pendingAnswer =
     room.game.answerTokens[second] > 0 && eligibleForPrep(room, second).length > 0
       ? { side: second, remaining: room.game.answerTokens[second] }
       : null;
-  room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
+  room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0, movedThisActivation: false };
   room.game.phase = "activation";
 }
 
@@ -663,8 +663,8 @@ function runRecovery(room) {
   for (const rig of room.rigs) {
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
-      // Radiator Array (Cooling) — cools 3 heat instead of the usual 2.
-      const cooling = rig.equipment === "radiator-array" ? 3 : 2;
+      // Radiator Array (Cooling) — cools 2 heat instead of the usual 1.
+      const cooling = rig.equipment === "radiator-array" ? 2 : 1;
       rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
     rig.activated = false;
@@ -737,20 +737,25 @@ function combatCtx() {
 function resolveFire(room, rig, target, a, act, random) {
   const t = room.game.turn;
   const slot = a.weapon === "melee" ? "melee" : "longRange";
-  const rushed = slot === "longRange" && rig.loaded.longRange === false;
-  const cost = rushed ? 2 : 1;
+  // The ranged weapon must be reloaded before it can fire again (§7): no rushed
+  // shot. Firing a spent weapon is a no-op until the player spends a Reload.
+  if (slot === "longRange" && rig.loaded.longRange === false) return false;
+  const cost = 1;
   if (t.actionsUsed + cost > t.actionsMax) return false;
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
-    autoReload: rushed, dice: a.dice,
+    dice: a.dice,
   }, random, combatCtx());
   if (!res.ok) return false;
-  if (rushed) bumpHeat(rig, ACTIONS.reload.heat);
   t.actionsUsed += cost;
-  bumpHeat(rig, ACTIONS[act].heat);
+  // A second (or later) ranged shot in the same activation runs the barrel hot:
+  // +1 heat over the base Fire/Aimed cost.
+  const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
+  bumpHeat(rig, ACTIONS[act].heat + (secondShot ? 1 : 0));
+  if (slot === "longRange") t.longRangeShots = (t.longRangeShots || 0) + 1;
   return true;
 }
 
@@ -791,10 +796,11 @@ function performAction(room, rig, act, a, random) {
     const facedown = target.preparation && target.preparation.faceUp === false;
     if (facedown) {
       const prep = target.preparation;
-      // Affordability pre-check so an unaffordable shot never reveals the token.
+      // Affordability pre-check so an unaffordable (or unloaded) shot never
+      // reveals the token: a spent ranged weapon must be reloaded first.
       const slot = a.weapon === "melee" ? "melee" : "longRange";
-      const rushed = slot === "longRange" && rig.loaded.longRange === false;
-      const cost = rushed ? 2 : 1;
+      if (slot === "longRange" && rig.loaded.longRange === false) return false;
+      const cost = 1;
       if (t.actionsUsed + cost > t.actionsMax) return false;
 
       if (prep.type === "evasive") {
@@ -827,10 +833,14 @@ function performAction(room, rig, act, a, random) {
     bumpHeat(rig, def.heat);
     return true;
   }
-  if (act === "sprint" && rig.equipment === "servo-actuators") {
-    // Servo Actuators (Mobility) — Sprint costs 1 heat instead of 2.
+  if (act === "move" || act === "sprint") {
+    // House rule: only one Move (or Sprint) per activation. Sprint costs 2 heat
+    // — 1 with Servo Actuators (Mobility) — and, like Move, spends one slot.
+    if (t.movedThisActivation) return false;
+    const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
     t.actionsUsed += 1;
-    bumpHeat(rig, 1);
+    bumpHeat(rig, heat);
+    t.movedThisActivation = true;
     return true;
   }
   if (act === "reload") {
@@ -1033,8 +1043,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       } else {
         t.activeRigId = rig.id;
         t.actionsUsed = 0;
+        t.movedThisActivation = false;
+        t.longRangeShots = 0; // ranged shots fired this activation (2nd+ runs hot)
         const penalty = Math.max(0, Math.floor(rig.actionPenaltyNextActivation || 0));
-        t.actionsMax = Math.max(0, 5 - (rig.hull.sp === 0 ? 2 : 0) - penalty);
+        t.actionsMax = Math.max(0, 3 - (rig.hull.sp === 0 ? 2 : 0) - penalty);
         rig.actionPenaltyNextActivation = 0;
         rig.loaded = { longRange: true, melee: true };
       }
@@ -1143,14 +1155,15 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           // The shot was fired but dodged: weapon discharged, attacker still runs
           // hot and spends the action, but no to-hit / no damage.
           const slot = pr.attack.weapon === "melee" ? "melee" : "longRange";
-          const rushed = slot === "longRange" && attacker.loaded.longRange === false;
-          const cost = rushed ? 2 : 1;
+          const cost = 1;
+          const rt = room.game.turn;
+          const secondShot = slot === "longRange" && (rt.longRangeShots || 0) >= 1;
           if (slot === "longRange") attacker.loaded.longRange = false;
           const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
           const hot = profile?.perks.includes("Hot") ? 1 : 0;
-          if (rushed) bumpHeat(attacker, ACTIONS.reload.heat);
-          bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot);
-          room.game.turn.actionsUsed += cost;
+          bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot + (secondShot ? 1 : 0));
+          rt.actionsUsed += cost;
+          if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;
           pushResolution(room, {
             kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
             summary: `${reactor.name} evades — ${attacker.name}'s attack fails.`, effects: [],

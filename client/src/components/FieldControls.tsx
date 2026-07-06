@@ -28,29 +28,48 @@ function FieldSetupBody({ onLocked }: { onLocked: () => void }) {
   const lock = async () => { await sendCommand("field", { action: "lock" }); onLocked(); };
 
   return (
-    <div className="field-controls">
+    <div className="field-setup">
       <FieldMap
         field={f}
         objectives={(game?.objectives as Objective[]) ?? []}
         mySide={session?.side ?? "a"}
         ownerSide={ownerSide ?? null}
       />
-      <div className="fc-row">
-        <label>Width (in)
-          <input type="number" min={FIELD_MIN.width} max={FIELD_MAX.width}
-            value={w} onChange={(e) => setW(Number(e.target.value))} />
-        </label>
-        <label>Height (in)
-          <input type="number" min={FIELD_MIN.height} max={FIELD_MAX.height}
-            value={h} onChange={(e) => setH(Number(e.target.value))} />
-        </label>
+
+      <div className="fs-legend">
+        <span className="fs-leg fs-leg--mine">You deploy</span>
+        <span className="fs-leg fs-leg--foe">Enemy deploys</span>
+        <span className="fs-leg fs-leg--obj">Objective</span>
       </div>
-      <div className="fc-row">
-        <button type="button" className="dwr-btn" onClick={apply}>Apply size</button>
-        <button type="button" className="dwr-btn" onClick={flip}>Flip diagonal</button>
-        <button type="button" className="dwr-btn" onClick={reroll}>Re-roll terrain</button>
-        <button type="button" className="dwr-btn primary" onClick={lock}>Lock field</button>
+
+      <div className="fs-group">
+        <span className="fs-label">Field dimensions</span>
+        <div className="fs-dims">
+          <div className="fs-num">
+            <span className="fs-cap">Width</span>
+            <input type="number" min={FIELD_MIN.width} max={FIELD_MAX.width}
+              value={w} onChange={(e) => setW(Number(e.target.value))} />
+            <span className="fs-unit">in</span>
+          </div>
+          <div className="fs-num">
+            <span className="fs-cap">Height</span>
+            <input type="number" min={FIELD_MIN.height} max={FIELD_MAX.height}
+              value={h} onChange={(e) => setH(Number(e.target.value))} />
+            <span className="fs-unit">in</span>
+          </div>
+          <button type="button" className="fs-apply" onClick={apply}>Apply</button>
+        </div>
       </div>
+
+      <div className="fs-group">
+        <span className="fs-label">Terrain &amp; orientation</span>
+        <div className="fs-actions">
+          <button type="button" className="dwr-btn ghost" onClick={flip}>Flip diagonal</button>
+          <button type="button" className="dwr-btn ghost" onClick={reroll}>Re-roll terrain</button>
+        </div>
+      </div>
+
+      <button type="button" className="fs-lock" onClick={lock}>Lock field</button>
     </div>
   );
 }

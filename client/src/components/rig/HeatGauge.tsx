@@ -27,11 +27,17 @@ export function HeatGauge({ rig, isActive, started, onCommand }: Props) {
     prevHeat.current = m.heat;
   });
 
+  const increased = prior != null && m.heat > prior;
+  const decreased = prior != null && m.heat < prior;
+  const cooled = decreased ? (prior as number) - m.heat : 0;
+  // The blue "refresh" cool-down plays on ANY heat drop: the end-of-round
+  // Recovery cools every rig at once, and a manual vent / shutdown / purge cools
+  // the active one — both deserve the same clear feedback. UI-only; reads state.
+
   const cls = ["heat-gauge"];
   if (!isActive) cls.push("heat-gauge--idle");
-  if (prior != null && m.heat !== prior) {
-    cls.push(m.heat > prior ? "heat-gauge--up" : "heat-gauge--down");
-  }
+  if (increased) cls.push("heat-gauge--up");
+  else if (decreased) cls.push("heat-gauge--refresh");
 
   const segs = [];
   for (let i = 0; i < displayMax; i++) {
@@ -94,6 +100,9 @@ export function HeatGauge({ rig, isActive, started, onCommand }: Props) {
 
   return (
     <div className={cls.join(" ")} data-zone={m.zone}>
+      {decreased && (
+        <span className="heat-refresh-tag" aria-hidden="true">❄ −{cooled}</span>
+      )}
       <div className="heat-gauge-head">
         <span className="heat-gauge-label">Engine Heat</span>
         <span className="heat-gauge-read">

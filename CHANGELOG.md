@@ -5,6 +5,16 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.11 — Ram STR trimmed
+
+### Changed
+- **Ram STR lowered by 1 across every weight class (§5):** Light **8 → 7**, Medium **9 → 8**, Heavy **10 → 9**, Colossal **11 → 10**. A ram was reaching critical (3 SP) too easily — e.g. a Medium ram (old STR 9) hit the Engine's crit threshold (12) on a D6 of 3+, a 4-in-6 chance. At STR 8 that now needs a 4+, pulling ram back toward "reliable chip damage" rather than "reliable crit."
+
+### Notes
+- Playtest baseline: if rams now feel toothless, restore +1 to Heavy/Colossal first (the heavies are where the ram-as-finisher fantasy lives).
+
+---
+
 ## wr-0.10 — Melee loses arc bonus; tighter deployment gap
 
 ### Changed

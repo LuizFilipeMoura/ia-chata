@@ -41,14 +41,25 @@ test("reload is disabled until a ranged weapon has actually been fired", () => {
   assert.equal(spent.enabled, true);   // fired — reload now makes sense
 });
 
-test("a spent ranged weapon flags Fire/Aimed as a 2-slot rushed shot", () => {
+test("a spent ranged weapon disables Fire/Aimed until it is reloaded", () => {
   const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
   const ready = availableActions(rig(), turn).find((a) => a.key === "fire");
   assert.equal(ready.cost, 1);
+  assert.equal(ready.enabled, true);
   const spent = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn)
     .find((a) => a.key === "fire");
-  assert.equal(spent.cost, 2);
-  assert.match(spent.note, /rushed reload/i);
+  assert.equal(spent.cost, 1);           // no more 2-slot rushed shot
+  assert.equal(spent.enabled, false);    // must reload first
+  assert.match(spent.note, /reload/i);
+});
+
+test("Fire/Aimed shows 2 heat once a ranged shot has already been fired this activation", () => {
+  const first = availableActions(rig(), { activeRigId: 1, actionsUsed: 1, actionsMax: 5, longRangeShots: 0 })
+    .find((a) => a.key === "fire");
+  assert.equal(first.heat, 1);
+  const second = availableActions(rig(), { activeRigId: 1, actionsUsed: 2, actionsMax: 5, longRangeShots: 1 })
+    .find((a) => a.key === "fire");
+  assert.equal(second.heat, 2);          // second shot runs the barrel hot
 });
 
 test("actionBudget reports remaining and the Hull-0 reduction", () => {

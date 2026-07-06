@@ -56,5 +56,10 @@ declare module "/shared/field.js" {
   export function fieldCenter(field: FieldLike): { x: number; y: number };
   export function computeObjectives(field: FieldLike): Array<{ x: number; y: number; vp: number }>;
   export function setback(field: FieldLike): number;
-  export function scatterTerrain(field: FieldLike, random?: () => number): Array<{ x: number; y: number; size: "sm" | "md" }>;
+  export function deployRadius(field: FieldLike): number;
+  export function scatterTerrain(field: FieldLike, random?: () => number): Array<{
+    x: number; y: number; kind: string; shape: "rect" | "ellipse" | "poly";
+    w?: number; h?: number; rx?: number; ry?: number; rot?: number;
+    points?: Array<[number, number]>;
+  }>;
 }

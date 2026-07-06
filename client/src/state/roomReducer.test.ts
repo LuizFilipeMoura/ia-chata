@@ -14,3 +14,17 @@ test("setSession stores the session", () => {
   const next = roomReducer(initialRoomState, { type: "setSession", session: s });
   expect(next.session).toEqual(s);
 });
+
+test("clearSession drops the session and resets room state", () => {
+  const joined = roomReducer(
+    roomReducer(initialRoomState, {
+      type: "setSession",
+      session: { room: "IRON42", side: "a", name: "Lu" },
+    }),
+    { type: "applyServerState", state: { version: 7, rigs: [{ name: "X" } as never], game: null } },
+  );
+  const next = roomReducer(joined, { type: "clearSession" });
+  expect(next.session).toBeNull();
+  // Room state must reset so a later re-join isn't ignored by the version guard.
+  expect(next).toEqual(initialRoomState);
+});
