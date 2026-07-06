@@ -3,7 +3,7 @@ import { resolveAttack, resolveRam } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
 } from "./field.js";
-import { kindOf, roleOf, partsByRole } from "./unit-kinds.js";
+import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -361,6 +361,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
 // hot — the misfire bonus that would be added to the D12 overheat roll right
 // now. `zone` is a coarse severity band for UI colouring.
 export function heatMeter(rig) {
+  const kind = kindOf(rig);
+  if (!UNIT_KINDS[kind].hasHeat) return { heat: 0, cap: 0, floor: 0, over: 0, bonus: 0, zone: "none" };
   const heat = rig?.engine?.heat || 0;
   const cap = HEAT_CAPACITY[rig?.weightClass] ?? 5;
   const floor = rig?.engine?.sp === 0 ? 3 : 0;
@@ -517,14 +519,19 @@ function maybeStartGame(room, random = Math.random) {
 }
 
 function engineHeatFloor(rig) {
-  return rig.engine.sp === 0 ? 3 : 0;
+  const kind = kindOf(rig);
+  if (!UNIT_KINDS[kind].hasHeat) return 0;
+  const [powerPart] = partsByRole(kind, "power");
+  return rig[powerPart]?.sp === 0 ? 3 : 0;
 }
 
 function recompute(rig) {
-  rig.destroyed = rig.hull.destroyed || rig.engine.destroyed ||
-    LOCS.every((l) => rig[l].sp === 0);
+  const kind = kindOf(rig);
+  const names = partNamesOf(kind);
+  rig.destroyed = names.some((n) => rig[n]?.destroyed) ||
+    names.every((n) => rig[n]?.sp === 0);
   const floor = engineHeatFloor(rig);
-  if (rig.engine.heat < floor) rig.engine.heat = floor;
+  if (rig.engine && rig.engine.heat < floor) rig.engine.heat = floor;
 }
 
 // §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
@@ -727,12 +734,18 @@ function endActivation(room, rig, dice, random) {
 // the §8 cascade-aware applyDamage. Returns the row.
 function applyOverheat(room, rig, total, opts) {
   const row = heatThreshold(total);
-  if (row.key === "stall") applyDamage(room, rig, "engine", 1, opts);
-  else if (row.key === "detonation") applyDamage(room, rig, "arms", 2, opts);
-  else if (row.key === "blowout") { applyDamage(room, rig, "legs", 2, opts); rig.speedHalvedNextRound = true; }
-  else if (row.key === "buckling") for (const l of LOCS) applyDamage(room, rig, l, 1, opts);
-  else if (row.key === "engine-failure") { applyDamage(room, rig, "engine", 2, opts); rig.noCool = true; }
-  else if (row.key === "catastrophic") { for (const l of LOCS) setRigSp(rig, l, 0); rig.noCool = true; }
+  const kind = kindOf(rig);
+  if (!UNIT_KINDS[kind].hasHeat) return row;
+  const [powerPart] = partsByRole(kind, "power");
+  const [mobPart]   = partsByRole(kind, "mobility");
+  const [weapPart]  = partsByRole(kind, "weapon");
+  const all = partNamesOf(kind);
+  if (row.key === "stall") applyDamage(room, rig, powerPart, 1, opts);
+  else if (row.key === "detonation") applyDamage(room, rig, weapPart, 2, opts);
+  else if (row.key === "blowout") { applyDamage(room, rig, mobPart, 2, opts); rig.speedHalvedNextRound = true; }
+  else if (row.key === "buckling") for (const l of all) applyDamage(room, rig, l, 1, opts);
+  else if (row.key === "engine-failure") { applyDamage(room, rig, powerPart, 2, opts); rig.noCool = true; }
+  else if (row.key === "catastrophic") { for (const l of all) setRigSp(rig, l, 0); rig.noCool = true; }
   return row;
 }
 

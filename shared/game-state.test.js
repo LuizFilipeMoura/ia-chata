@@ -834,6 +834,24 @@ test("applyOverheat still routes through the cascade (engine failure sets noCool
   assert.equal(b1.noCool, true);
 });
 
+test("recompute destroys the unit when every registered part hits 0 (regression)", () => {
+  const room = createRoom("R"); claimSide(room, { name: "u", side: "a" });
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  for (const p of ["hull", "arms", "legs", "engine"]) __test.setRigSp(rig, p, 0);
+  assert.equal(rig.destroyed, true);
+});
+
+test("recompute leaves the unit alive while any part has SP (regression)", () => {
+  const room = createRoom("R"); claimSide(room, { name: "u", side: "a" });
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  __test.setRigSp(rig, "hull", 0);
+  __test.setRigSp(rig, "arms", 0);
+  __test.setRigSp(rig, "legs", 0);
+  assert.equal(rig.destroyed, false);
+});
+
 test("destruction rolls a D12; 4+ records a pending blast", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");
