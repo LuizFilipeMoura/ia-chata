@@ -361,6 +361,21 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   return rig;
 }
 
+// Registry-driven unit factory. Rigs still go through makeRig (which handles
+// weight-class stats, weapon slots, equipment). Cold kinds (Tank, Walker) land
+// in Task 11.
+export function makeUnit(kindId, id, name, owner, opts = {}) {
+  const kind = UNIT_KINDS[kindId];
+  if (!kind) return null;
+  if (kindId === "rig") {
+    return makeRig(id, name, opts.weightClass, owner, {
+      longRange: opts.longRange, melee: opts.melee,
+      longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
+    }, opts.equipment ?? null);
+  }
+  return null;
+}
+
 // Derive the full heat picture for a Rig's engine: current heat, its Heat
 // Capacity (the redline), the floor heat can't drop below, and — when running
 // hot — the misfire bonus that would be added to the D12 overheat roll right

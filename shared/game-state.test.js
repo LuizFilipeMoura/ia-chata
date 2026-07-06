@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  createRoom, makeRig, claimSide, applyCommand, findRig,
+  createRoom, makeRig, makeUnit, claimSide, applyCommand, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
@@ -1636,4 +1636,28 @@ test("ensureRigShape backfills parts alias + kind on legacy rig objects", () => 
   assert.equal(legacy.kind, "rig");
   assert.equal(legacy.parts.hull, legacy.hull);
   assert.equal(legacy.parts.engine, legacy.engine);
+});
+
+test("makeUnit('rig', ...) returns a rig identical to makeRig", () => {
+  const a = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  const b = makeUnit("rig", 1, "Alpha", "a", {
+    weightClass: "medium", longRange: "Autocannon", melee: "Sword",
+  });
+  assert.ok(b, "makeUnit returned a rig");
+  assert.equal(b.kind, "rig");
+  assert.equal(b.weightClass, "medium");
+  assert.equal(b.name, "Alpha");
+  // Every top-level scalar / component matches.
+  assert.deepEqual({ ...a, parts: undefined }, { ...b, parts: undefined });
+  // parts alias is fresh but points at the correct new component objects.
+  assert.equal(b.parts.hull, b.hull);
+  assert.equal(b.parts.engine, b.engine);
+});
+
+test("makeUnit rejects unknown kinds", () => {
+  assert.equal(makeUnit("banana", 1, "X", "a", {}), null);
+});
+
+test("makeUnit('tank', ...) returns null until Task 11 wires cold kinds", () => {
+  assert.equal(makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" }), null);
 });
