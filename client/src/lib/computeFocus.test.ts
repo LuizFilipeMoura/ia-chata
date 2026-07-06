@@ -50,6 +50,22 @@ test("keeps the Fire/Move/Reload hint", () => {
   expect(f?.secondary).toContain("· Fire, Move or Reload");
 });
 
+test("waits when opponent must spend answer tokens before activation", () => {
+  const g = base({
+    started: true,
+    phase: "activation",
+    sides: [
+      { id: "a", name: "Codex", vp: 0, ready: true },
+      { id: "b", name: "Rival", vp: 0, ready: true },
+    ],
+    turn: { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 0 },
+    pendingAnswer: { side: "b", remaining: 2 },
+  });
+  const f = computeFocus(g, [rig({ owner: "a" })], "a");
+  expect(f?.tone).toBe("wait");
+  expect(f?.primary).toBe("Waiting for Rival to set answer tokens...");
+});
+
 test("gives Roll initiative a secondary round line", () => {
   const g = base({ started: true, phase: "initiative", round: 2 });
   const f = computeFocus(g, [], "a");

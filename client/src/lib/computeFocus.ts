@@ -99,6 +99,22 @@ export function computeFocus(
   }
 
   if (g.phase === "activation") {
+    if (g.pendingAnswer) {
+      if (g.pendingAnswer.side !== mine) {
+        return {
+          tone: "wait",
+          icon: "â³",
+          primary: `Waiting for ${sideNameOf(g.pendingAnswer.side)} to set answer tokens...`,
+        };
+      }
+      return {
+        tone: "act",
+        icon: "â—ˆ",
+        primary: "Set answer tokens",
+        secondary: `${g.pendingAnswer.remaining} reaction${g.pendingAnswer.remaining === 1 ? "" : "s"} to prepare.`,
+      };
+    }
+
     const turn = g.turn;
     if (turn?.side !== mine) {
       return { tone: "wait", icon: "⏳", primary: `Waiting on ${sideNameOf(turn?.side)}…` };

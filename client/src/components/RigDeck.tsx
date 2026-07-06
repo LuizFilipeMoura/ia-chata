@@ -24,9 +24,11 @@ export function RigDeck() {
         const isActive = started ? serverActive : rig.id === activeRigId;
         const isOpen = expandedRigs.has(rig.id) || Boolean(serverActive);
         const isMine = (rig.owner || "a") === mySide;
+        const pendingGate = Boolean(game?.pendingAnswer || game?.pendingReaction || game?.pendingBlast);
         const canActivateNow = Boolean(
           started && game?.phase === "activation" && game?.turn?.side === mySide &&
-          isMine && game?.turn?.activeRigId == null && !rig.activated && !rig.destroyed,
+          isMine && game?.turn?.activeRigId == null && !pendingGate &&
+          !rig.activated && !rig.destroyed,
         );
         return (
           <Fragment key={rig.id}>
