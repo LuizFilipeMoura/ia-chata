@@ -792,6 +792,28 @@ test("applyDamage arms-to-0 destroys a weapon and spills to hull and engine", ()
   assert.equal(b1.skipNextActivation, false);     // engine at 3, not 0
 });
 
+test("engine-role zero fires the 'lose next activation' clause (regression)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.engine.sp = 1;
+  __test.applyDamage(room, rig, "engine", 1, {});
+  assert.equal(rig.skipNextActivation, true);
+});
+
+test("weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1 (regression)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  const hullBefore = rig.hull.sp;
+  const engineBefore = rig.engine.sp;
+  rig.arms.sp = 1;
+  __test.applyDamage(room, rig, "arms", 1, { dice: { armsWeapon: 3 } });
+  assert.ok(rig.weaponsDestroyed.includes(rig.weapons.longRange));
+  assert.equal(rig.hull.sp, hullBefore - 1);
+  assert.equal(rig.engine.sp, engineBefore - 1);
+});
+
 test("applyDamage: first hit to 0 SP hull does not destroy; additional damage destroys the rig", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");

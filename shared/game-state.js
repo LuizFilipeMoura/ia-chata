@@ -3,6 +3,7 @@ import { resolveAttack, resolveRam } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
 } from "./field.js";
+import { kindOf, roleOf, partsByRole } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -528,30 +529,46 @@ function recompute(rig) {
 
 // §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
 function catastrophicOnZero(room, rig, loc, opts) {
-  if (loc === "engine") {
-    // Overclock Core (Power) — the first time the Engine hits 0 SP, the Rig
-    // does not skip its next activation. Every time after that, normal rules apply.
+  const kind = kindOf(rig);
+  const role = roleOf(kind, loc);
+  if (role === "power") {
+    // Overclock Core (Rig only) — the first time the power part hits 0 SP,
+    // the unit does not skip its next activation. After that, normal rules apply.
     if (rig.equipment === "overclock-core" && !rig.overclockCoreUsed) rig.overclockCoreUsed = true;
     else rig.skipNextActivation = true;
-    rig.engine.heat = Math.max(rig.engine.heat, 3);
+    if (rig.engine) rig.engine.heat = Math.max(rig.engine.heat, 3);
+  } else if (role === "weapon") {
+    if (kind === "rig") {
+      // Rig two-slot weapon-destroy roll (D12 ≤6 → long-range, >6 → melee).
+      const roll = rollD(12, opts?.dice?.armsWeapon, opts?.random);
+      const slot = roll <= 6 ? "longRange" : "melee";
+      const name = rig.weapons?.[slot];
+      if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
+    } else {
+      // Flat-pick kinds carry exactly one gun on the weapon part.
+      const name = rig.weapons?.unit;
+      if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
+    }
+    // Munition cook-off: 1 to a structural + 1 to a power part.
+    const [structPart] = partsByRole(kind, "structural");
+    const [powerPart] = partsByRole(kind, "power");
+    if (structPart) applyDamage(room, rig, structPart, 1, opts);
+    if (powerPart) applyDamage(room, rig, powerPart, 1, opts);
   }
-  else if (loc === "arms") {
-    const roll = rollD(12, opts?.dice?.armsWeapon, opts?.random);
-    const slot = roll <= 6 ? "longRange" : "melee";
-    const name = rig.weapons?.[slot];
-    if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
-    applyDamage(room, rig, "hull", 1, opts);
-    applyDamage(room, rig, "engine", 1, opts);
-  }
-  // Legs at 0 (move penalties) and Hull at 0 (−2 actions / −1 Aim) are enforced
-  // where they apply (activation budget, combat modAim) — no state to set here.
+  // structural and mobility 0-SP effects are enforced where they apply
+  // (activation budget, combat modAim, movement) — no state to set here.
 }
 
 // §8 — additional damage to an already 0-SP location.
 function catastrophicAdditional(room, rig, loc, opts) {
-  if (loc === "hull" || loc === "engine") rig[loc].destroyed = true;
-  else if (loc === "legs") rig.immobilised = true;
-  else if (loc === "arms") applyDamage(room, rig, "hull", 3, opts);
+  const kind = kindOf(rig);
+  const role = roleOf(kind, loc);
+  if (role === "structural" || role === "power") rig[loc].destroyed = true;
+  else if (role === "mobility") rig.immobilised = true;
+  else if (role === "weapon") {
+    const [structPart] = partsByRole(kind, "structural");
+    if (structPart) applyDamage(room, rig, structPart, 3, opts);
+  }
 }
 
 // Cascade-aware damage entry point. Applies `amount` SP one point at a time,
