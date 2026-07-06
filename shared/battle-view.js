@@ -46,10 +46,11 @@ export function availableActions(rig, turn) {
 }
 
 export function actionBudget(rig, turn) {
+  const [structPart] = partsByRole(kindOf(rig), "structural");
   return {
     used: turn.actionsUsed, max: turn.actionsMax,
     left: Math.max(0, turn.actionsMax - turn.actionsUsed),
-    reduced: rig.hull.sp === 0,
+    reduced: !!structPart && rig[structPart]?.sp === 0,
   };
 }
 
