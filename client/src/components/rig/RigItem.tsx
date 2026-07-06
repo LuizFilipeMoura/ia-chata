@@ -1,15 +1,14 @@
 import React from "react";
 import { heatMeter } from "/shared/game-state.js";
 import { rigModifiers } from "/shared/battle-view.js";
+import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
 import { rigStatus } from "../../lib/rigView";
 import { buildLoadout } from "../../lib/loadout";
 import { CompRow } from "./CompRow";
 import { HeatGauge } from "./HeatGauge";
 import { ActionConsole } from "../battle/ActionConsole";
 import { GlossaryText } from "../chat/GlossaryText";
-import type { Rig, Loc } from "../../state/types";
-
-const LOCS: Loc[] = ["hull", "arms", "legs", "engine"];
+import type { Rig } from "../../state/types";
 
 interface Props {
   rig: Rig;
@@ -33,6 +32,7 @@ export const RigItem = React.memo(function RigItem({
   const m = heatMeter(rig);
   const st = rigStatus(rig);
   const isMine = (rig.owner || "a") === mySide;
+  const LOCS: string[] = partNamesOf(kindOf(rig));
 
   const itemCls = ["rig-item"];
   if (rig.destroyed) itemCls.push("is-destroyed");

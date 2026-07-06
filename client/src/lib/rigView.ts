@@ -1,6 +1,6 @@
-import type { Rig, Component, Loc } from "../state/types";
-
-const LOCS: Loc[] = ["hull", "arms", "legs", "engine"];
+import type { Rig, Component } from "../state/types";
+// The client imports shared modules via the /shared static mount configured in vite.
+import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
 
 export function barClass(c: Component): string {
   if (c.destroyed) return "rig-fill-dead";
@@ -12,10 +12,14 @@ export function barClass(c: Component): string {
 }
 
 export function rigStatus(rig: Rig): { text: string; cls: string } {
+  const parts = partNamesOf(kindOf(rig));
   if (rig.destroyed) return { text: "⛔ System failure — destroyed", cls: "crit" };
-  if (LOCS.some((l) => rig[l].sp === 0)) return { text: "⚠ Catastrophic damage", cls: "crit" };
-  if (LOCS.some((l) => rig[l].sp / rig[l].max <= 0.34)) return { text: "▲ Heavy damage — operational", cls: "warn" };
-  if (LOCS.some((l) => rig[l].sp < rig[l].max)) return { text: "◆ Damaged — operational", cls: "warn" };
+  if (parts.some((l: string) => (rig as any)[l]?.sp === 0))
+    return { text: "⚠ Catastrophic damage", cls: "crit" };
+  if (parts.some((l: string) => (rig as any)[l]?.sp / (rig as any)[l]?.max <= 0.34))
+    return { text: "▲ Heavy damage — operational", cls: "warn" };
+  if (parts.some((l: string) => (rig as any)[l]?.sp < (rig as any)[l]?.max))
+    return { text: "◆ Damaged — operational", cls: "warn" };
   return { text: "● All systems nominal", cls: "" };
 }
 
