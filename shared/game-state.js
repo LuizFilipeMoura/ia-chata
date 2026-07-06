@@ -259,6 +259,8 @@ function ensureRigShape(rig) {
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
+  if (!rig.kind) rig.kind = "rig";
+  if (!rig.parts) rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
   return rig;
 }
 
@@ -327,9 +329,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   const equipmentId = normalizeEquipment(equipment);
   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
   const hullMax = d.hull + (equipmentId === "ablative-plating" ? 1 : 0);
-  return {
+  const rig = {
     id,
     name: String(name || "Rig").trim() || "Rig",
+    kind: "rig",
     weightClass,
     owner: owner === "b" ? "b" : "a",
     hull:   { sp: hullMax, max: hullMax, destroyed: false },
@@ -354,6 +357,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     hullRepairLock: 0,
     destroyed: false,
   };
+  rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
+  return rig;
 }
 
 // Derive the full heat picture for a Rig's engine: current heat, its Heat
@@ -1306,4 +1311,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape };

@@ -1611,3 +1611,29 @@ test("reset returns a mid/finished battle to a fresh pre-start state, keeping th
     assert.equal(side.vp, 0);
   }
 });
+
+test("makeRig exposes a parts map aliasing the four fixed component fields", () => {
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  assert.equal(rig.kind, "rig");
+  assert.equal(rig.parts.hull, rig.hull);
+  assert.equal(rig.parts.arms, rig.arms);
+  assert.equal(rig.parts.legs, rig.legs);
+  assert.equal(rig.parts.engine, rig.engine);
+});
+
+test("ensureRigShape backfills parts alias + kind on legacy rig objects", () => {
+  const legacy = {
+    id: 9, name: "Legacy", weightClass: "medium", owner: "a",
+    hull: { sp: 7, max: 7, destroyed: false },
+    arms: { sp: 6, max: 6, destroyed: false },
+    legs: { sp: 6, max: 6, destroyed: false },
+    engine: { sp: 5, max: 5, destroyed: false, heat: 0 },
+    weapons: { longRange: "Autocannon", melee: "Sword" },
+  };
+  const room = createRoom("R"); claimSide(room, { name: "u", side: "a" });
+  room.rigs = [legacy];
+  __test.ensureRigShape(legacy);
+  assert.equal(legacy.kind, "rig");
+  assert.equal(legacy.parts.hull, legacy.hull);
+  assert.equal(legacy.parts.engine, legacy.engine);
+});
