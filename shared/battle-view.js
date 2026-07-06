@@ -2,7 +2,7 @@
 // tested in node and imported by the browser (via the /shared static mount).
 import { ACTIONS } from "./rules.js";
 import { EQUIPMENT } from "./game-state.js";
-import { kindOf, partsByRole } from "./unit-kinds.js";
+import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
 
 const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repair", "prepare", "shutdown"];
 
@@ -56,15 +56,24 @@ export function actionBudget(rig, turn) {
 
 // Every active value-changing modifier, as { key, tag, tone } for chip rendering.
 export function rigModifiers(rig) {
+  const kind = kindOf(rig);
+  const cfg = UNIT_KINDS[kind];
+  const [structPart] = partsByRole(kind, "structural");
+  const [powerPart]  = partsByRole(kind, "power");
+  const [mobPart]    = partsByRole(kind, "mobility");
+  const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
   const mods = [];
-  if (rig.hull.sp === 0 && !rig.hull.destroyed) mods.push({ key: "hull0", tag: "Hull 0 · −2 actions −1 Aim", tone: "crit" });
-  if (rig.engine.sp === 0 && !rig.engine.destroyed) mods.push({ key: "engine0", tag: "Engine 0 · heat ≥3", tone: "crit" });
-  if (rig.legs.sp === 0 && !rig.immobilised) mods.push({ key: "legs0", tag: "Legs 0 · −3\" move", tone: "warn" });
+  if (structPart && rig[structPart].sp === 0 && !rig[structPart].destroyed)
+    mods.push({ key: `${structPart}0`, tag: `${cap(structPart)} 0 · −2 actions −1 Aim`, tone: "crit" });
+  if (cfg.hasHeat && powerPart && rig[powerPart].sp === 0 && !rig[powerPart].destroyed)
+    mods.push({ key: `${powerPart}0`, tag: `${cap(powerPart)} 0 · heat ≥3`, tone: "crit" });
+  if (mobPart && rig[mobPart].sp === 0 && !rig.immobilised)
+    mods.push({ key: `${mobPart}0`, tag: `${cap(mobPart)} 0 · −3\" move`, tone: "warn" });
   if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit" });
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });
   if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn" });
   if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn" });
-  if (rig.preparation) {
+  if (cfg.reactions && rig.preparation) {
     const p = rig.preparation;
     const tag = p.hidden || p.faceUp === false ? "Reaction set" : prepLabel(p.type);
     mods.push({ key: "prep", tag, tone: "prep" });

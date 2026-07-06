@@ -138,3 +138,24 @@ test("actionBudget.reduced stays false when the structural part is unhurt", () =
   const budget = actionBudget(rig, { actionsUsed: 0, actionsMax: 3 });
   assert.equal(budget.reduced, false);
 });
+
+test("rigModifiers labels the structural chip 'Hull 0' for a Rig", () => {
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  rig.hull.sp = 0;
+  const mods = rigModifiers(rig);
+  assert.ok(mods.find((m) => m.tag.startsWith("Hull 0")));
+});
+
+test("rigModifiers labels the power chip 'Engine 0' for a Rig", () => {
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  rig.engine.sp = 0;
+  const mods = rigModifiers(rig);
+  assert.ok(mods.find((m) => m.tag.startsWith("Engine 0")));
+});
+
+test("rigModifiers labels the mobility chip 'Legs 0' for a Rig", () => {
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  rig.legs.sp = 0;
+  const mods = rigModifiers(rig);
+  assert.ok(mods.find((m) => m.tag.startsWith("Legs 0")));
+});
