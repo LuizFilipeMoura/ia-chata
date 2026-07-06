@@ -1276,4 +1276,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp };
