@@ -1,6 +1,8 @@
 // Static rulebook data shared by the resolution engine (server) and the
 // battle UI (client). Pure data + tiny lookups — no state, no randomness.
 
+import { hitPart, impactRow as _impactRow } from "./unit-kinds.js";
+
 // Action catalogue (§5). `heat` is the base heat generated; `slot` is the
 // action-budget cost. Shut Down is special-cased by the engine (declared before
 // any other action; forfeits the activation and cools to the heat floor).
@@ -46,42 +48,15 @@ export const WEIGHT_STR_MOD = { light: -2, medium: 0, heavy: 2, colossal: 4 };
 export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
 export const RAM_STR = { light: 7, medium: 8, heavy: 9, colossal: 10 };
 
-// Hit-location table (§7): defender's D12 → component.
-export function hitLocation(d12) {
-  const n = Math.floor(Number(d12) || 0);
-  if (n <= 4) return "hull";
-  if (n <= 7) return "arms";
-  if (n <= 10) return "legs";
-  return "engine";
+// Hit-location table (§7): defender's D12 → part-name, keyed by unit kind.
+export function hitLocation(kindId, d12) {
+  return hitPart(kindId, d12);
 }
 
-// Impact Tables (§2): minimum totals for each severity, per class per location.
-export const IMPACT = {
-  light: {
-    hull:   { direct: 10, severe: 14, critical: 16 },
-    arms:   { direct: 10, severe: 12, critical: 14 },
-    legs:   { direct: 10, severe: 13, critical: 15 },
-    engine: { direct: 7,  severe: 10, critical: 12 },
-  },
-  medium: {
-    hull:   { direct: 11, severe: 14, critical: 17 },
-    arms:   { direct: 10, severe: 13, critical: 15 },
-    legs:   { direct: 11, severe: 13, critical: 15 },
-    engine: { direct: 8,  severe: 10, critical: 12 },
-  },
-  heavy: {
-    hull:   { direct: 13, severe: 15, critical: 17 },
-    arms:   { direct: 12, severe: 14, critical: 16 },
-    legs:   { direct: 14, severe: 16, critical: 17 },
-    engine: { direct: 8,  severe: 11, critical: 13 },
-  },
-  colossal: {
-    hull:   { direct: 13, severe: 16, critical: 17 },
-    arms:   { direct: 13, severe: 14, critical: 16 },
-    legs:   { direct: 13, severe: 16, critical: 17 },
-    engine: { direct: 9,  severe: 11, critical: 14 },
-  },
-};
+// Impact Tables (§2): minimum totals for each severity, per kind × part × class.
+export function impactRow(kindId, partName, weightClass) {
+  return _impactRow(kindId, partName, weightClass);
+}
 
 // Impact Roll total vs a location row → SP lost and severity tier.
 export function impactSeverity(total, row) {

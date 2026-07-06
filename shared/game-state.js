@@ -1,4 +1,4 @@
-import { ACTIONS, heatThreshold, hitLocation, impactSeverity, IMPACT } from "./rules.js";
+import { ACTIONS, heatThreshold, hitLocation, impactSeverity, impactRow } from "./rules.js";
 import { resolveAttack, resolveRam } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
@@ -1112,10 +1112,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       for (const name of names) {
         const t = findRig(room, name);
         if (!t || t.destroyed) continue;
-        const loc = hitLocation(rollD(12, a.dice?.location?.[name], options.random));
+        const loc = hitLocation(t.kind || "rig", rollD(12, a.dice?.location?.[name], options.random));
         const die = rollD(6, a.dice?.impacts?.[name], options.random);
         const total = die + 10; // D6 + STR 10 (§9)
-        const sev = impactSeverity(total, IMPACT[t.weightClass][loc]);
+        const sev = impactSeverity(total, impactRow(t.kind || "rig", loc, t.weightClass));
         if (sev.sp > 0) applyDamage(room, t, loc, sev.sp, { random: options.random });
         pushResolution(room, {
           kind: "blast", actor, rigId: t.id,

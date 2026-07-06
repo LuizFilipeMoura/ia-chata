@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { IMPACT, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity } from "./rules.js";
+import { impactRow, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity } from "./rules.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.move.heat, 1);
@@ -37,18 +37,18 @@ test("heatThreshold maps a D12+bonus total to the right band (§6)", () => {
 });
 
 test("hitLocation maps the D12 bands (§7)", () => {
-  assert.equal(hitLocation(1), "hull");
-  assert.equal(hitLocation(4), "hull");
-  assert.equal(hitLocation(5), "arms");
-  assert.equal(hitLocation(7), "arms");
-  assert.equal(hitLocation(8), "legs");
-  assert.equal(hitLocation(10), "legs");
-  assert.equal(hitLocation(11), "engine");
-  assert.equal(hitLocation(12), "engine");
+  assert.equal(hitLocation("rig", 1), "hull");
+  assert.equal(hitLocation("rig", 4), "hull");
+  assert.equal(hitLocation("rig", 5), "arms");
+  assert.equal(hitLocation("rig", 7), "arms");
+  assert.equal(hitLocation("rig", 8), "legs");
+  assert.equal(hitLocation("rig", 10), "legs");
+  assert.equal(hitLocation("rig", 11), "engine");
+  assert.equal(hitLocation("rig", 12), "engine");
 });
 
 test("impactSeverity reads a class/location row (§2) and scalars are correct", () => {
-  const row = IMPACT.light.engine; // 7-9 / 10-11 / 12+
+  const row = impactRow("rig", "engine", "light"); // 7-9 / 10-11 / 12+
   assert.equal(impactSeverity(6, row).tier, "none");
   assert.equal(impactSeverity(7, row).sp, 1);
   assert.equal(impactSeverity(10, row).sp, 2);
