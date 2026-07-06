@@ -13,11 +13,11 @@ export function TurnBanner() {
   const mySide = session?.side || "a";
   const focus = computeFocus(game, rigs, mySide);
 
-  const { openCommission } = useWizard();
-  const { rollInitiative, resolveBlast, scoreVp } = useBattleActions();
+  const { openCommission, openScore } = useWizard();
+  const { rollInitiative, resolveBlast, endActivation } = useBattleActions();
   const sendCommand = useCommands();
 
-  const bannerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const lastPrimary = useRef<string | null>(null);
   const [changed, setChanged] = useState(false);
 
@@ -47,12 +47,15 @@ export function TurnBanner() {
     }
   }, [focus, focus?.primary]);
 
-  // Publish the banner's height so the layout can offset for it (battle.js:195).
+  // Publish the floating card's height so the layout can offset for it
+  // (battle.js:195). The outer .turn-banner is just a centering wrapper with
+  // top padding for the floating offset, so we measure the card itself —
+  // otherwise the stage would be pushed down by the offset twice over.
   useLayoutEffect(() => {
-    if (focus && bannerRef.current) {
+    if (focus && cardRef.current) {
       document.documentElement.style.setProperty(
         "--turn-banner-h",
-        `${bannerRef.current.offsetHeight}px`,
+        `${cardRef.current.offsetHeight}px`,
       );
     }
   });
@@ -65,32 +68,32 @@ export function TurnBanner() {
       case "ready": sendCommand("ready", { side: mySide }); break;
       case "initiative": rollInitiative(); break;
       case "blast": resolveBlast(); break;
-      case "score": scoreVp(); break;
+      case "score": openScore(); break;
+      case "endTurn": {
+        const rig = rigs.find((r) => r.id === game?.turn?.activeRigId);
+        if (rig) endActivation(rig);
+        break;
+      }
     }
   };
 
   return (
-    <div
-      id="turnBanner"
-      ref={bannerRef}
-      className={"turn-banner" + (changed ? " changed" : "")}
-      data-tone={focus.tone}
-    >
-      <span id="tbIcon" className="tb-icon">{focus.icon || "◈"}</span>
-      <div className="tb-text">
-        <span id="tbPrimary" className="tb-primary">{focus.primary}</span>
-        <span id="tbSecondary" className="tb-secondary">{focus.secondary || ""}</span>
-      </div>
-      <div id="tbCta" className="tb-cta">
-        {focus.cta ? (
-          <button
-            type="button"
-            className={"btn " + (focus.tone === "act" ? "btn--primary" : "btn--ghost")}
-            onClick={() => onCta(focus.cta!.kind)}
-          >
-            {focus.cta.label}
-          </button>
-        ) : null}
+    <div id="turnBanner" className="turn-banner" data-tone={focus.tone}>
+      <div ref={cardRef} className={"tb-card" + (changed ? " changed" : "")}>
+        <span id="tbIcon" className="tb-icon">{focus.icon || "◈"}</span>
+        <div className="tb-text">
+          <span id="tbPrimary" className="tb-primary">{focus.primary}</span>
+          <span id="tbSecondary" className="tb-secondary">{focus.secondary || ""}</span>
+        </div>
+        <div id="tbCta" className="tb-cta">
+          {focus.cta ? (
+            <button type="button"
+              className={"btn " + (focus.tone === "act" ? "btn--primary" : "btn--ghost")}
+              onClick={() => onCta(focus.cta!.kind)}>
+              {focus.cta.label}
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createWsHub } from "./ws.js";
-import { createRoom, applyCommand } from "../shared/game-state.js";
+import { createRoom, applyCommand, claimSide } from "../shared/game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon.
 const W = { lr: "Mini Gun", melee: "Sword" };
@@ -34,6 +34,23 @@ test("broadcast sends the current version to every socket in the room", () => {
   assert.equal(b.sent[0].version, room.version);
 });
 
+test("sendState pushes the current room snapshot to a single socket on connect", () => {
+  // A reconnecting client (page refresh, dropped socket) attaches without any
+  // mutation happening — it must still receive the current state immediately,
+  // not wait for the next broadcast.
+  const hub = createWsHub();
+  const room = createRoom("IRON42");
+  applyCommand(room, { verb: "add", attrs: { name: "Warden", class: "medium", owner: "a", ...W } });
+
+  const a = fakeSocket();
+  hub.attach(a, "IRON42", "a");
+  hub.sendState(a, room, "a");
+
+  assert.equal(a.sent.length, 1);
+  assert.equal(a.sent[0].version, room.version);
+  assert.equal(a.sent[0].state.rigs[0].name, "Warden");
+});
+
 test("broadcast scopes bounties per socket's side", () => {
   const hub = createWsHub();
   const room = createRoom("IRON42");
@@ -42,6 +59,10 @@ test("broadcast scopes bounties per socket's side", () => {
   hub.attach(a, "IRON42", "a");
   hub.attach(b, "IRON42", "b");
 
+  // Reaching the started state (which assigns bounties) requires an owner and a
+  // locked field before either side can ready up (§10 field setup).
+  claimSide(room, { name: "Owner", side: "a" });
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   for (const owner of ["a", "b"]) {
     for (let i = 1; i <= 3; i++) {
       applyCommand(room, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });

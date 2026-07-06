@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { WEAPONS } from "/shared/game-state.js";
+import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
+import { useBattleActions } from "../../state/BattleActionsContext";
 import { useRoll } from "../../state/RollContext";
+import { useUi } from "../../state/UiStateContext";
 import type { Rig } from "../../state/types";
 
 export type AttackMode = "fire" | "aimed" | "ram";
@@ -94,23 +96,46 @@ const ROF_BY_NAME: Record<string, number> = {
   Lance: 1, "Wrecking Ball": 1,
 };
 
+interface WeaponUpgradeNotice {
+  id: string;
+  name: string;
+  tag?: string;
+}
+
+function selectedUpgrade(
+  rig: Rig,
+  slot: "longRange" | "melee",
+  weaponName: string,
+): WeaponUpgradeNotice | null {
+  const upgrades = (WEAPON_UPGRADES[weaponName] || []) as WeaponUpgradeNotice[];
+  if (!upgrades.length) return null;
+  const selected = rig.weaponUpgrades?.[slot];
+  return upgrades.find((u) => u.id === selected) || upgrades[0];
+}
+
 export function AttackWizard({
-  rig, mode, onClose,
+  rig, mode, onClose, target, react,
 }: {
   rig: Rig;
   mode: AttackMode;
   onClose: () => void;
+  // Return-Fire counter-attack: pin the target to the original attacker and send
+  // the shot as a `react` command instead of a normal `action fire`.
+  target?: string;
+  react?: boolean;
 }) {
   const { rigs, game } = useRoomState();
   const sendCommand = useCommands();
+  const { sendReact } = useBattleActions();
   const { promptDice } = useRoll();
+  const { setGlossaryOpen } = useUi();
 
   const enemies = rigs.filter(
     (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
   );
 
   const [state, setState] = useState<AwState>(() => ({
-    target: enemies[0]?.name ?? "",
+    target: target ?? enemies[0]?.name ?? "",
     weapon: "longRange",
     arc: "front",
     range: "near",
@@ -174,6 +199,31 @@ export function AttackWizard({
   }, [isMelee]);
 
   const submit = async () => {
+    // Return-Fire counter: send a `react` with an `attack` payload rather than a
+    // normal `action`. The server resolves it as a plain fire on the attacker, so
+    // ram/aimed don't apply here — collect weapon/arc/range/cover (+ manual dice).
+    if (react) {
+      const attack: Record<string, unknown> = {
+        weapon: state.weapon, arc: state.arc, range: state.range, cover: state.cover,
+      };
+      if (game?.autoResolve === false) {
+        const profile = weapons[state.weapon === "melee" ? "melee" : "longRange"];
+        const rof = ROF_BY_NAME[profile] || 1;
+        const specs: { key: string; label: string; sides: number }[] = [];
+        for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
+        specs.push({ key: "loc", label: "Location", sides: 12 });
+        const d = await promptDice(specs, `${profile} dice`);
+        const toHit: number[] = [];
+        for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
+        const dice: Record<string, unknown> = { toHit, impacts: toHit.map(() => undefined) };
+        if (d.loc) dice.location = d.loc;
+        attack.dice = dice;
+      }
+      sendReact({ attack });
+      close();
+      return;
+    }
+
     const attrs: Record<string, unknown> = { name: rig.name, action: mode, target: state.target };
     if (mode !== "ram") {
       Object.assign(attrs, {
@@ -223,6 +273,10 @@ export function AttackWizard({
   let goText = "Ram";
   let goDisabled = false;
 
+  const modeLabel = mode === "ram" ? "Ram" : mode === "aimed" ? "Aimed Shot" : "Fire";
+  let dicePreview: string =
+    mode === "ram" ? "🎲 Rolls 2 impact dice (d6)" : "";
+
   if (mode !== "ram") {
     const slot = state.weapon;
     const profile = profileOf(slot);
@@ -230,6 +284,12 @@ export function AttackWizard({
     const cost = spent ? 2 : 1;
     const left = actionsLeft();
     const outOfRange = state.range === "out";
+    const rof = ROF_BY_NAME[weapons[slot]] || profile?.rof || 1;
+
+    dicePreview =
+      `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
+      (mode === "fire" ? " + 1 location die (d12)" : "") +
+      (mode === "aimed" ? " · +1 to hit" : "");
 
     if (isMelee) {
       const reach = profile?.rng?.[0] ?? 1.5;
@@ -260,12 +320,32 @@ export function AttackWizard({
     goText = outOfRange
       ? "Out of range"
       : unaffordable
-        ? `Need ${cost} actions (${left} left)`
-        : `Fire${costTag}`;
+        ? `Need ${cost} action${cost === 1 ? "" : "s"} · ${left} left`
+        : `${modeLabel}${costTag}`;
   }
 
   const title =
     mode === "ram" ? "💥 Ram" : mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";
+
+  const attackNotice = (() => {
+    const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;
+    const equipmentLine = equipment ? `${equipment.label} passive remains active.` : "";
+    if (mode === "ram") {
+      return {
+        main: "Ram uses no weapon, so weapon upgrades do not trigger.",
+        equipment: equipmentLine,
+      };
+    }
+    const slot = state.weapon;
+    const weaponName = weapons[slot];
+    const upgrade = selectedUpgrade(rig, slot, weaponName);
+    return {
+      main: upgrade
+        ? `${upgrade.name} activates on ${weaponName}: ${upgrade.tag || "selected upgrade effect applies"}.`
+        : `${weaponName} has no selected weapon upgrade.`,
+      equipment: equipmentLine,
+    };
+  })();
 
   if (noEnemies) return null;
 
@@ -277,7 +357,13 @@ export function AttackWizard({
       }}
     >
       <div className="aw-card">
-        <div className="aw-title">{title} — {rig.name}</div>
+        <div className="aw-handle" />
+        <div className="aw-title-row">
+          <div className="aw-title">{title} — {rig.name}</div>
+          <button type="button" className="sheet-gloss-chip" onClick={() => setGlossaryOpen(true)}>
+            ⓘ Glossary
+          </button>
+        </div>
 
         <Field
           label="Target"
@@ -288,6 +374,7 @@ export function AttackWizard({
           optIcon={() => "🤖"}
           desc={FIELD_DESC.target}
           optDesc={targetDesc}
+          hidden={react}
         />
 
         {mode !== "ram" && (
@@ -349,6 +436,14 @@ export function AttackWizard({
             <div className="aw-range" data-state={rangeState}>{rangeHtml}</div>
           </>
         )}
+
+        <div className="aw-dice-preview">{dicePreview}</div>
+
+        <div className="aw-attack-notice" aria-live="polite">
+          <span className="aw-attack-notice-kicker">Before you attack</span>
+          <span>{attackNotice.main}</span>
+          {attackNotice.equipment ? <span>{attackNotice.equipment}</span> : null}
+        </div>
 
         <button className="aw-go" disabled={goDisabled} onClick={submit}>
           {goText}

@@ -1,10 +1,12 @@
 import React from "react";
-import { heatMeter, EQUIPMENT, WEAPON_UPGRADES } from "/shared/game-state.js";
+import { heatMeter } from "/shared/game-state.js";
 import { rigModifiers } from "/shared/battle-view.js";
 import { rigStatus } from "../../lib/rigView";
+import { buildLoadout } from "../../lib/loadout";
 import { CompRow } from "./CompRow";
 import { HeatGauge } from "./HeatGauge";
 import { ActionConsole } from "../battle/ActionConsole";
+import { GlossaryText } from "../chat/GlossaryText";
 import type { Rig, Loc } from "../../state/types";
 
 const LOCS: Loc[] = ["hull", "arms", "legs", "engine"];
@@ -85,14 +87,6 @@ export const RigItem = React.memo(function RigItem({
 
   const mods = rigModifiers(rig);
 
-  let lrUpgrade;
-  let meleeUpgrade;
-  if (rig.weapons) {
-    lrUpgrade = (WEAPON_UPGRADES[rig.weapons.longRange] || []).find((u) => u.id === rig.weaponUpgrades?.longRange);
-    meleeUpgrade = (WEAPON_UPGRADES[rig.weapons.melee] || []).find((u) => u.id === rig.weaponUpgrades?.melee);
-  }
-  const eq = rig.equipment ? EQUIPMENT[rig.equipment] : undefined;
-
   return (
     <div className={itemCls.join(" ")}>
       {/* ---- Header (click to expand) ---- */}
@@ -131,16 +125,51 @@ export const RigItem = React.memo(function RigItem({
             </div>
           )}
 
-          {rig.weapons && (
-            <>
-              <div className="rig-weapons">
-                {`${rig.weapons.longRange || "Long Range ?"} (${lrUpgrade?.name || "Upgrade ?"}) / ${rig.weapons.melee || "Melee ?"} (${meleeUpgrade?.name || "Upgrade ?"})`}
+          {(() => {
+            const lo = buildLoadout(rig);
+            if (!lo) return null;
+            return (
+              <div className="rig-loadout">
+                <div className="rig-loadout-hd">Loadout</div>
+                <div className="rig-loadout-row">
+                  <span className="rig-loadout-ic">🎯</span>
+                  <div className="rig-loadout-main">
+                    <div className="rig-loadout-slot">Long Range</div>
+                    <div className="rig-loadout-name">{lo.lr.name}</div>
+                    <div className="rig-loadout-up">
+                      Upgrade · {lo.lr.upName} — <GlossaryText text={lo.lr.upTag} />
+                    </div>
+                  </div>
+                </div>
+                <div className="rig-loadout-row">
+                  <span className="rig-loadout-ic">🗡️</span>
+                  <div className="rig-loadout-main">
+                    <div className="rig-loadout-slot">Melee</div>
+                    <div className="rig-loadout-name">{lo.melee.name}</div>
+                    <div className="rig-loadout-up">
+                      Upgrade · {lo.melee.upName} — <GlossaryText text={lo.melee.upTag} />
+                    </div>
+                  </div>
+                </div>
+                {lo.equipment && (
+                  <div className="rig-loadout-row rig-loadout-row--eq">
+                    <span className="rig-loadout-ic">🛠</span>
+                    <div className="rig-loadout-main">
+                      <div className="rig-loadout-slot">Equipment · {lo.equipment.family}</div>
+                      <div className="rig-loadout-name">{lo.equipment.label}</div>
+                      <div className="rig-loadout-passive">
+                        Passive · <GlossaryText text={lo.equipment.passive} />
+                      </div>
+                      <div className="rig-loadout-active">
+                        Active · {lo.equipment.activeLabel} ({lo.equipment.activeHeat >= 0 ? "+" : ""}
+                        {lo.equipment.activeHeat} heat) — <GlossaryText text={lo.equipment.activeText} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              {eq && (
-                <div className="rig-equipment"><b>{eq.label}</b> — {eq.passive}</div>
-              )}
-            </>
-          )}
+            );
+          })()}
 
           {LOCS.map((loc) => (
             <CompRow key={loc} rig={rig} loc={loc} onCommand={onCommand} />

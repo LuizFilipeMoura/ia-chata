@@ -40,16 +40,15 @@ export function GlossaryTip({ termId, anchorEl, onClose }: Props) {
     tip.style.setProperty("--arrow-x", `${arrowX}px`);
   };
 
-  // Open: reveal, mark the anchor, position, then animate in with `show`.
+  // Open/close lifecycle. Opening only makes the tip renderable (clears
+  // `hidden`) and marks the anchor; the actual measuring/positioning waits for
+  // the placement effect below, once the element is in layout. Closing fades
+  // out, then drops it from layout after the transition.
   useLayoutEffect(() => {
     if (open) {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setHidden(false);
       anchorEl?.classList.add("is-open");
-      // commit hidden->visible before animating in
-      void tipRef.current?.offsetWidth;
-      place();
-      setShow(true);
     } else {
       setShow(false);
       if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -60,6 +59,18 @@ export function GlossaryTip({ termId, anchorEl, onClose }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, termId, anchorEl]);
+
+  // Position only once the tip is in layout (`hidden` cleared) so offsetWidth/
+  // offsetHeight are real. Measuring while `hidden` (display:none) sized it as a
+  // zero box, dropping its top-left onto the anchor instead of centring it
+  // above. Reveal on the next frame so the fade-in still plays.
+  useLayoutEffect(() => {
+    if (!open || hidden) return;
+    place();
+    const raf = requestAnimationFrame(() => setShow(true));
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, hidden, termId, anchorEl]);
 
   // Global handlers: outside-click closes, Escape closes, any scroll closes,
   // resize repositions.

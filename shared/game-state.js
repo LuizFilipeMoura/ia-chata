@@ -1,5 +1,8 @@
 import { ACTIONS, heatThreshold, hitLocation, impactSeverity, IMPACT } from "./rules.js";
 import { resolveAttack, resolveRam } from "./combat.js";
+import {
+  FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
+} from "./field.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -23,6 +26,7 @@ export const WEAPONS = {
     "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30], perks: ["Charged Shot", "Precision"] },
     "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Charged Shot", "Incendiary"] },
     "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: ["Precision"] },
+    "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16],  perks: ["Armour Piercing", "Hot"] },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Shock"] },
@@ -31,6 +35,7 @@ export const WEAPONS = {
     "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Armour Piercing"] },
     "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Impale"] },
     "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Staggering"] },
+    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Bulwark"] },
   },
 };
 
@@ -46,7 +51,7 @@ export const EQUIPMENT = {
       text: "Until this Rig's next activation, all impact rolls against it are at −1." },
   },
   "radiator-array": {
-    family: "Cooling", label: "Radiator Array", passive: "Cools 3 heat in Recovery instead of 2",
+    family: "Cooling", label: "Radiator Array", passive: "Cools 2 heat in Recovery instead of 1",
     active: { key: "purge", label: "Purge", heat: -2, text: "Vent heat on demand." },
   },
   "servo-actuators": {
@@ -70,6 +75,25 @@ export const EQUIPMENT = {
 export const EQUIPMENT_ACTIVE_BY_KEY = Object.fromEntries(
   Object.entries(EQUIPMENT).map(([id, e]) => [e.active.key, id])
 );
+
+// The three §5 preparation reactions. Unknown/missing input falls back to brace.
+export const PREP_TYPES = ["brace", "evasive", "return"];
+
+export function hasBulwarkShield(rig) {
+  return rig?.weapons?.melee === "Bulwark Shield";
+}
+
+// shieldCoverage lives in rules.js (shared with combat.js without an import
+// cycle); re-exported here so callers/tests can reach it via game-state.
+export { shieldCoverage } from "./rules.js";
+
+// "raise-shield" is a fourth, gated §5 preparation available only to Rigs
+// carrying a Bulwark Shield (§13 Bulwark); everything else falls back to brace.
+export function normalizePrep(type, rig) {
+  const ref = String(type || "").trim().toLowerCase();
+  if (ref === "raise-shield") return hasBulwarkShield(rig) ? "raise-shield" : "brace";
+  return PREP_TYPES.includes(ref) ? ref : "brace";
+}
 
 export function normalizeEquipment(id) {
   if (!id) return null;
@@ -128,6 +152,14 @@ export const WEAPON_UPGRADES = {
     { id: "haymaker", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
     { id: "wrecking-momentum", name: "Wrecking Momentum", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
   ],
+  "Siege Maul": [
+    { id: "breaching-round", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
+    { id: "extended-barrel", name: "Extended Barrel", tag: "+4\" to both range bands (12 / 20)", effect: { range: 4 } },
+  ],
+  "Bulwark Shield": [
+    { id: "tower-shield", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
+    { id: "boss-spike", name: "Boss Spike", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
+  ],
 };
 
 export function defaultWeaponUpgrade(weaponName) {
@@ -172,17 +204,20 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
 }
 
 export function createRoom(code) {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr", terrain: [], locked: false };
   return {
     code,
     version: 0,
     nextRigId: 1,
+    ownerSide: null,
+    field,
     game: {
       round: 1,
       sides: [
         { id: "a", name: "You",   vp: 0, claimed: false, ready: false },
         { id: "b", name: "Enemy", vp: 0, claimed: false, ready: false },
       ],
-      objectives: [],
+      objectives: computeObjectives(field),
       started: false,
       bounties: {},
       autoResolve: true,
@@ -193,10 +228,13 @@ export function createRoom(code) {
       turn: null,
       resolutions: [],
       nextResolutionId: 1,
-      recoveryVp: {},
+      recoveryClaims: {},
+      recoveryConflict: null,
       suddenDeath: false,
       outcome: null,
       pendingBlast: null,
+      pendingAnswer: null,
+      pendingReaction: null,
     },
     rigs: [],
   };
@@ -209,12 +247,14 @@ function ensureRigShape(rig) {
   if (typeof rig.speedHalvedNextRound !== "boolean") rig.speedHalvedNextRound = false;
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
+  if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
   if (rig.equipment === undefined) rig.equipment = null;
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
+  if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -223,6 +263,13 @@ function ensureRigShape(rig) {
 
 function ensureGameShape(room) {
   room.game ||= {};
+  if (room.ownerSide === undefined) room.ownerSide = null;
+  if (!room.field || typeof room.field !== "object") {
+    room.field = { ...FIELD_DEFAULT, diagonal: "tlbr", terrain: [], locked: false };
+  }
+  room.field.diagonal = room.field.diagonal === "trbl" ? "trbl" : "tlbr";
+  if (!Array.isArray(room.field.terrain)) room.field.terrain = [];
+  if (typeof room.field.locked !== "boolean") room.field.locked = false;
   room.game.round ||= 1;
   room.game.sides ||= [
     { id: "a", name: "You",   vp: 0, claimed: false },
@@ -231,7 +278,9 @@ function ensureGameShape(room) {
   for (const side of room.game.sides) {
     if (typeof side.ready !== "boolean") side.ready = false;
   }
-  room.game.objectives ||= [];
+  if (!Array.isArray(room.game.objectives) || room.game.objectives.length === 0) {
+    room.game.objectives = computeObjectives(room.field);
+  }
   if (typeof room.game.started !== "boolean") room.game.started = false;
   room.game.bounties ||= {};
   room.rigs ||= [];
@@ -243,10 +292,13 @@ function ensureGameShape(room) {
   if (room.game.turn === undefined) room.game.turn = null;
   room.game.resolutions ||= [];
   room.game.nextResolutionId ||= 1;
-  room.game.recoveryVp ||= {};
+  room.game.recoveryClaims ||= {};
+  if (room.game.recoveryConflict === undefined) room.game.recoveryConflict = null;
   if (typeof room.game.suddenDeath !== "boolean") room.game.suddenDeath = false;
   if (room.game.outcome === undefined) room.game.outcome = null;
   if (room.game.pendingBlast === undefined) room.game.pendingBlast = null;
+  if (room.game.pendingAnswer === undefined) room.game.pendingAnswer = null;
+  if (room.game.pendingReaction === undefined) room.game.pendingReaction = null;
   for (const rig of room.rigs) ensureRigShape(rig);
   return room;
 }
@@ -298,6 +350,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     hardened: false,
     overclockCoreUsed: false,
     actionPenaltyNextActivation: 0,
+    hullRepairLock: 0,
     destroyed: false,
   };
 }
@@ -350,6 +403,7 @@ export function claimSide(room, { name, side } = {}) {
   const newName = name ? (String(name).trim() || target.name) : target.name;
   const changed = !target.claimed || target.name !== newName;
   target.claimed = true;
+  if (room.ownerSide == null) room.ownerSide = target.id;
   target.name = newName;
   if (changed) room.version++;
   return target.id;
@@ -390,6 +444,25 @@ function pushResolution(room, entry) {
   while (room.game.resolutions.length > 12) room.game.resolutions.shift();
 }
 
+function prepName(type) {
+  if (type === "evasive") return "Evasive Manoeuvre";
+  if (type === "return") return "Return Fire";
+  if (type === "raise-shield") return "Raise Shield";
+  return "Brace for Incoming Fire";
+}
+function prepEffectLine(type) {
+  if (type === "evasive") return "Defender may move ½ Speed — the attack can miss entirely.";
+  if (type === "return") return "Defender answers with a counter-attack.";
+  if (type === "raise-shield") return "Front-arc attack negated; side/rear impacts suffer −4.";
+  return "Front-arc impacts suffer −2.";
+}
+function reactionRevealEntry(rig, type) {
+  return {
+    kind: "reaction", actor: rig.owner, rigId: rig.id, rolls: [], prep: type,
+    summary: `${rig.name} reveals ${prepName(type)}!`, effects: [prepEffectLine(type)],
+  };
+}
+
 // Round-1 initiative comes from deployment, not dice: the first side to Ready
 // (deployOrder[0]) is the first-deployer and therefore activates SECOND (§10.5).
 function deploymentOrder(room) {
@@ -399,13 +472,17 @@ function deploymentOrder(room) {
 }
 
 // Record an initiative result: set activation order, grant the second activator
-// 2 Answer tokens, open the turn, and enter the activation phase.
+// 1 Answer token, open the turn, and enter the activation phase.
 function applyInitiative(room, order, rolls) {
   const [first, second] = order;
   room.game.initiative = { rolls: rolls || null, order: [first, second], second };
   room.game.answerTokens = { a: 0, b: 0 };
-  room.game.answerTokens[second] = 2;
-  room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
+  room.game.answerTokens[second] = 1;
+  room.game.pendingAnswer =
+    room.game.answerTokens[second] > 0 && eligibleForPrep(room, second).length > 0
+      ? { side: second, remaining: room.game.answerTokens[second] }
+      : null;
+  room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0, movedThisActivation: false };
   room.game.phase = "activation";
 }
 
@@ -516,10 +593,21 @@ function onRigDamaged(room, rig, opts) {
 function repairRig(rig, loc, amount) {
   const c = rig[loc];
   if (!c) return;
+  // Breaching Round (§12) — a breached Hull can't be repaired until the lock clears.
+  if (loc === "hull" && (rig.hullRepairLock || 0) > 0) return;
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   c.sp = Math.min(c.max, c.sp + n);
   if (c.sp > 0) c.destroyed = false;
   recompute(rig);
+}
+
+// Breaching Round — deny Hull repair for this round and the next (two Recovery
+// ticks). Set from combat when a Siege Maul with the upgrade damages the Hull.
+function breachHull(rig) {
+  if (rig) rig.hullRepairLock = 2;
+}
+function tickBreach(rig) {
+  if (rig && rig.hullRepairLock > 0) rig.hullRepairLock -= 1;
 }
 
 function sunderLocation(target, loc) {
@@ -555,6 +643,11 @@ function sideHasActivatable(room, sideId) {
   return room.rigs.some((r) => (r.owner || "a") === sideId && !r.destroyed && !r.activated);
 }
 
+// Rigs a side may still place a preparation on: alive and not already prepared.
+function eligibleForPrep(room, sideId) {
+  return room.rigs.filter((r) => (r.owner || "a") === sideId && !r.destroyed && r.preparation == null);
+}
+
 // After a rig finishes, pass to the other side if it can still act; otherwise
 // the same side continues back-to-back; if neither can act, run Recovery (§4).
 function handoff(room) {
@@ -570,19 +663,21 @@ function runRecovery(room) {
   for (const rig of room.rigs) {
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
-      // Radiator Array (Cooling) — cools 3 heat instead of the usual 2.
-      const cooling = rig.equipment === "radiator-array" ? 3 : 2;
+      // Radiator Array (Cooling) — cools 2 heat instead of the usual 1.
+      const cooling = rig.equipment === "radiator-array" ? 2 : 1;
       rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
     rig.activated = false;
     rig.speedHalvedNextRound = false;
     rig.preparation = null;
+    tickBreach(rig);
     recompute(rig);
   }
   room.game.answerTokens = { a: 0, b: 0 };
   room.game.turn = null;
   room.game.phase = "recovery";
-  room.game.recoveryVp = {};
+  room.game.recoveryClaims = {};
+  room.game.recoveryConflict = null;
 }
 
 function bumpHeat(rig, n) {
@@ -632,8 +727,36 @@ function combatCtx() {
     bumpHeat,
     pushResolution,
     sunderLocation,
+    breachHull,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
   };
+}
+
+// Resolve one Fire/Aimed shot end-to-end (to-hit, heat, budget). Returns whether
+// the shot was made. Shared by the direct path and the deferred Evasive path.
+function resolveFire(room, rig, target, a, act, random) {
+  const t = room.game.turn;
+  const slot = a.weapon === "melee" ? "melee" : "longRange";
+  // The ranged weapon must be reloaded before it can fire again (§7): no rushed
+  // shot. Firing a spent weapon is a no-op until the player spends a Reload.
+  if (slot === "longRange" && rig.loaded.longRange === false) return false;
+  const cost = 1;
+  if (t.actionsUsed + cost > t.actionsMax) return false;
+  const res = resolveAttack(room, rig, target, {
+    weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
+    aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
+    fullAuto: a.fullAuto === true || a.fullAuto === "true",
+    charged: a.charged === true || a.charged === "true",
+    dice: a.dice,
+  }, random, combatCtx());
+  if (!res.ok) return false;
+  t.actionsUsed += cost;
+  // A second (or later) ranged shot in the same activation runs the barrel hot:
+  // +1 heat over the base Fire/Aimed cost.
+  const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
+  bumpHeat(rig, ACTIONS[act].heat + (secondShot ? 1 : 0));
+  if (slot === "longRange") t.longRangeShots = (t.longRangeShots || 0) + 1;
+  return true;
 }
 
 // One action during an activation. Returns whether anything changed.
@@ -670,26 +793,37 @@ function performAction(room, rig, act, a, random) {
   if (act === "fire" || act === "aimed") {
     const target = findRig(room, a.target);
     if (!target) return false;
-    const slot = a.weapon === "melee" ? "melee" : "longRange";
-    // §7 Rushed reload: a spent ranged weapon may fire again without a separate
-    // Reload, but the shot costs 2 action-slots and the reload's heat — an
-    // implicit reload folded into the trigger pull. Melee never reloads.
-    const rushed = slot === "longRange" && rig.loaded.longRange === false;
-    const cost = rushed ? 2 : 1;
-    if (t.actionsUsed + cost > t.actionsMax) return false; // can't afford the rushed shot
-    const res = resolveAttack(room, rig, target, {
-      weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
-      aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
-      fullAuto: a.fullAuto === true || a.fullAuto === "true",
-      charged: a.charged === true || a.charged === "true",
-      autoReload: rushed,
-      dice: a.dice,
-    }, random, combatCtx());
-    if (!res.ok) return false;      // invalid shot — no budget spent
-    if (rushed) bumpHeat(rig, ACTIONS.reload.heat); // the folded-in reload's heat
-    t.actionsUsed += cost;
-    bumpHeat(rig, def.heat);        // base 1 (Hot / fire-mode heat added inside resolveAttack)
-    return true;
+    const facedown = target.preparation && target.preparation.faceUp === false;
+    if (facedown) {
+      const prep = target.preparation;
+      // Affordability pre-check so an unaffordable (or unloaded) shot never
+      // reveals the token: a spent ranged weapon must be reloaded first.
+      const slot = a.weapon === "melee" ? "melee" : "longRange";
+      if (slot === "longRange" && rig.loaded.longRange === false) return false;
+      const cost = 1;
+      if (t.actionsUsed + cost > t.actionsMax) return false;
+
+      if (prep.type === "evasive") {
+        prep.faceUp = true;
+        pushResolution(room, reactionRevealEntry(target, "evasive"));
+        room.game.pendingReaction = {
+          kind: "evasive", attackerId: rig.id, targetId: target.id, defender: target.owner,
+          attack: { ...a, act },
+        };
+        return true; // whole attack deferred to the `react` verb
+      }
+      const ok = resolveFire(room, rig, target, a, act, random);
+      if (!ok) return false;
+      prep.faceUp = true;
+      pushResolution(room, reactionRevealEntry(target, prep.type));
+      if (prep.type === "return" && !target.destroyed) {
+        room.game.pendingReaction = {
+          kind: "return", attackerId: rig.id, targetId: target.id, defender: target.owner,
+        };
+      }
+      return true;
+    }
+    return resolveFire(room, rig, target, a, act, random);
   }
   if (act === "ram") {
     const target = findRig(room, a.target);
@@ -699,10 +833,14 @@ function performAction(room, rig, act, a, random) {
     bumpHeat(rig, def.heat);
     return true;
   }
-  if (act === "sprint" && rig.equipment === "servo-actuators") {
-    // Servo Actuators (Mobility) — Sprint costs 1 heat instead of 2.
+  if (act === "move" || act === "sprint") {
+    // House rule: only one Move (or Sprint) per activation. Sprint costs 2 heat
+    // — 1 with Servo Actuators (Mobility) — and, like Move, spends one slot.
+    if (t.movedThisActivation) return false;
+    const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
     t.actionsUsed += 1;
-    bumpHeat(rig, 1);
+    bumpHeat(rig, heat);
+    t.movedThisActivation = true;
     return true;
   }
   if (act === "reload") {
@@ -720,7 +858,7 @@ function performAction(room, rig, act, a, random) {
       summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
   } else if (act === "prepare") {
-    rig.preparation = { type: String(a.prep || "brace"), source: "action" };
+    rig.preparation = { type: normalizePrep(a.prep, rig), source: "action", faceUp: false };
   }
   bumpHeat(rig, def.heat);
   t.actionsUsed += 1;
@@ -797,16 +935,79 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "ready") {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     const side = room.game.sides.find((s) => s.id === sideId);
-    if (side && !room.game.started && sideRigCount(room, side.id) >= 3 && !side.ready) {
+    if (side && !room.game.started && room.field.locked &&
+        sideRigCount(room, side.id) >= 3 && !side.ready) {
       side.ready = true;
       if (!room.game.deployOrder.includes(side.id)) room.game.deployOrder.push(side.id);
       maybeStartGame(room, options.random);
       changed = true;
     }
+  } else if (verb === "reset") {
+    for (const rig of room.rigs) {
+      for (const loc of LOCS) { rig[loc].sp = rig[loc].max; rig[loc].destroyed = false; }
+      rig.engine.heat = 0;
+      rig.activated = false;
+      rig.destroyed = false;
+      rig.skipNextActivation = false;
+      rig.noCool = false;
+      rig.speedHalvedNextRound = false;
+      if (rig.loaded) { rig.loaded.longRange = true; rig.loaded.melee = true; }
+      rig.preparation = null;
+      rig.weaponsDestroyed = [];
+      rig.immobilised = false;
+      rig.hardened = false;
+      rig.overclockCoreUsed = false;
+      rig.actionPenaltyNextActivation = 0;
+      rig.hullRepairLock = 0;
+      delete rig._blastRolled;
+    }
+    room.game.started = false;
+    room.game.phase = "setup";
+    room.game.round = 1;
+    room.game.turn = null;
+    room.game.resolutions = [];
+    room.game.nextResolutionId = 1;
+    room.game.recoveryClaims = {};
+    room.game.recoveryConflict = null;
+    room.game.outcome = null;
+    room.game.pendingBlast = null;
+    room.game.pendingAnswer = null;
+    room.game.pendingReaction = null;
+    room.game.answerTokens = { a: 0, b: 0 };
+    room.game.suddenDeath = false;
+    room.game.deployOrder = [];
+    room.game.initiative = null;
+    room.game.bounties = {};
+    for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
+    changed = true;
   } else if (verb === "setdice") {
     if (!room.game.started) {
       const want = String(a.value || "").toLowerCase() !== "manual";
       if (room.game.autoResolve !== want) { room.game.autoResolve = want; changed = true; }
+    }
+  } else if (verb === "field") {
+    const sideId = normalizeSide(room, context.side);
+    const action = String(a.action || "set").toLowerCase();
+    if (sideId && sideId === room.ownerSide && !room.game.started) {
+      if (action === "lock") {
+        if (!room.field.locked) { room.field.locked = true; changed = true; }
+      } else if (!room.field.locked) {
+        if (action === "reroll") {
+          room.field.terrain = scatterTerrain(room.field, options.random);
+          changed = true;
+        } else if (action === "set") {
+          const dims = clampDimensions(
+            a.width != null ? a.width : room.field.width,
+            a.height != null ? a.height : room.field.height,
+          );
+          room.field.width = dims.width;
+          room.field.height = dims.height;
+          if (a.diagonal === "trbl" || a.diagonal === "tlbr") room.field.diagonal = a.diagonal;
+          room.game.objectives = computeObjectives(room.field);
+          room.field.terrain = scatterTerrain(room.field, options.random);
+          changed = true;
+        }
+      }
     }
   } else if (verb === "initiative") {
     if (room.game.phase === "initiative") {
@@ -830,6 +1031,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
     if (rig && t && room.game.phase === "activation" && t.activeRigId == null &&
+        !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
       if (rig.skipNextActivation) {
@@ -841,8 +1043,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       } else {
         t.activeRigId = rig.id;
         t.actionsUsed = 0;
+        t.movedThisActivation = false;
+        t.longRangeShots = 0; // ranged shots fired this activation (2nd+ runs hot)
         const penalty = Math.max(0, Math.floor(rig.actionPenaltyNextActivation || 0));
-        t.actionsMax = Math.max(0, 5 - (rig.hull.sp === 0 ? 2 : 0) - penalty);
+        t.actionsMax = Math.max(0, 3 - (rig.hull.sp === 0 ? 2 : 0) - penalty);
         rig.actionPenaltyNextActivation = 0;
         rig.loaded = { longRange: true, melee: true };
       }
@@ -851,25 +1055,52 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "action") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
-    if (rig && t && room.game.phase === "activation" && t.activeRigId === rig.id) {
+    if (rig && t && !room.game.pendingReaction &&
+        room.game.phase === "activation" && t.activeRigId === rig.id) {
       changed = performAction(room, rig, String(a.action || "").toLowerCase(), a, options.random);
     }
   } else if (verb === "endactivation") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
-    if (rig && t && room.game.phase === "activation" && t.activeRigId === rig.id) {
+    if (rig && t && !room.game.pendingReaction &&
+        room.game.phase === "activation" && t.activeRigId === rig.id) {
       endActivation(room, rig, a.dice, options.random);
       changed = true;
     }
   } else if (verb === "vp") {
     if (room.game.phase === "recovery") {
       const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
-      if (sideId && !room.game.recoveryVp[sideId]) {
-        const side = room.game.sides.find((s) => s.id === sideId);
-        side.vp += Math.max(0, Math.floor(Number(a.points) || 0));
-        room.game.recoveryVp[sideId] = true;
-        if (room.game.sides.every((s) => room.game.recoveryVp[s.id])) advanceRound(room);
+      if (sideId) {
+        const objs = room.game.objectives || [];
+        // Sanitize the claimed marker indices: integers in range, de-duplicated.
+        const claims = Array.isArray(a.claims)
+          ? [...new Set(
+              a.claims
+                .map((i) => Math.floor(Number(i)))
+                .filter((i) => Number.isInteger(i) && i >= 0 && i < objs.length),
+            )]
+          : [];
+        // Overwrite so a side can resubmit to resolve a conflict.
+        room.game.recoveryClaims[sideId] = claims;
         changed = true;
+        // Resolve only once BOTH sides have submitted their claims.
+        if (room.game.sides.every((s) => Array.isArray(room.game.recoveryClaims[s.id]))) {
+          const [sa, sb] = room.game.sides;
+          const ca = room.game.recoveryClaims[sa.id];
+          const cb = room.game.recoveryClaims[sb.id];
+          const conflict = ca.filter((i) => cb.includes(i));
+          if (conflict.length) {
+            // Both claimed the same marker — block and flag for re-check (§11).
+            room.game.recoveryConflict = conflict;
+          } else {
+            room.game.recoveryConflict = null;
+            for (const s of room.game.sides) {
+              s.vp += room.game.recoveryClaims[s.id]
+                .reduce((sum, i) => sum + (objs[i]?.vp || 0), 0);
+            }
+            advanceRound(room);
+          }
+        }
       }
     }
   } else if (verb === "blast") {
@@ -902,9 +1133,63 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     if (rig && sideId && (rig.owner || "a") === sideId &&
         room.game.answerTokens[sideId] > 0 && rig.preparation == null) {
-      rig.preparation = { type: String(a.prep || "brace"), source: "answer" };
+      rig.preparation = { type: normalizePrep(a.prep, rig), source: "answer", faceUp: false };
       room.game.answerTokens[sideId] -= 1;
+      if (room.game.pendingAnswer && room.game.pendingAnswer.side === sideId) {
+        room.game.pendingAnswer.remaining -= 1;
+        if (room.game.pendingAnswer.remaining <= 0 || eligibleForPrep(room, sideId).length === 0) {
+          room.game.pendingAnswer = null;
+        }
+      }
       changed = true;
+    }
+  } else if (verb === "react") {
+    const pr = room.game.pendingReaction;
+    const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    if (pr && sideId === pr.defender) {
+      const reactor = room.rigs.find((x) => x.id === pr.targetId);   // the prepared rig
+      const attacker = room.rigs.find((x) => x.id === pr.attackerId);
+      if (pr.kind === "evasive" && reactor && attacker) {
+        const evaded = a.evaded === true || a.evaded === "true";
+        if (evaded) {
+          // The shot was fired but dodged: weapon discharged, attacker still runs
+          // hot and spends the action, but no to-hit / no damage.
+          const slot = pr.attack.weapon === "melee" ? "melee" : "longRange";
+          const cost = 1;
+          const rt = room.game.turn;
+          const secondShot = slot === "longRange" && (rt.longRangeShots || 0) >= 1;
+          if (slot === "longRange") attacker.loaded.longRange = false;
+          const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
+          const hot = profile?.perks.includes("Hot") ? 1 : 0;
+          bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot + (secondShot ? 1 : 0));
+          rt.actionsUsed += cost;
+          if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;
+          pushResolution(room, {
+            kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
+            summary: `${reactor.name} evades — ${attacker.name}'s attack fails.`, effects: [],
+          });
+        } else {
+          resolveFire(room, attacker, reactor, pr.attack, pr.attack.act, options.random);
+        }
+        reactor.preparation = null;
+        room.game.pendingReaction = null;
+        changed = true;
+      } else if (pr.kind === "return" && reactor && attacker) {
+        const declined = a.decline === true || a.decline === "true";
+        if (!declined && a.attack && !reactor.destroyed) {
+          resolveAttack(room, reactor, attacker, {
+            weapon: a.attack.weapon, target: attacker.name,
+            arc: a.attack.arc, range: a.attack.range, cover: a.attack.cover,
+            aimed: false, aimedLoc: "hull",
+            fullAuto: a.attack.fullAuto === true || a.attack.fullAuto === "true",
+            charged: a.attack.charged === true || a.attack.charged === "true",
+            autoReload: false, dice: a.attack.dice,
+          }, options.random, combatCtx());
+        }
+        reactor.preparation = null;
+        room.game.pendingReaction = null;
+        changed = true;
+      }
     }
   } else {
     const rig = findRig(room, a.name);
@@ -926,16 +1211,28 @@ export function publicState(room, side) {
   const sideId = normalizeSide(room, side);
   const bounties = {};
   if (sideId && room.game.bounties[sideId]) bounties[sideId] = room.game.bounties[sideId];
+  const viewer = sideId;
+  const rigs = room.rigs.map((rig) => {
+    const prep = rig.preparation;
+    if (prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {
+      return { ...rig, preparation: { hidden: true } };
+    }
+    return rig;
+  });
   return {
     code: room.code,
     version: room.version,
+    ownerSide: room.ownerSide ?? null,
+    field: room.field
+      ? { ...room.field, terrain: room.field.terrain.map((t) => ({ ...t })) }
+      : null,
     game: {
       ...room.game,
       sides: room.game.sides.map((s) => ({ ...s })),
       objectives: room.game.objectives.map((objective) => ({ ...objective })),
       bounties,
     },
-    rigs: room.rigs,
+    rigs,
   };
 }
 
@@ -979,4 +1276,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig };

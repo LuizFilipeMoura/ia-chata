@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
 import { RigWizard } from "./RigWizard";
+import { GlossaryTipProvider } from "../../state/GlossaryTipContext";
+import { UiProvider } from "../../state/UiStateContext";
 
 // Replaces the old public/ui-static.test.js source-string assertions with a real
 // render test of the commission wizard's invariants.
@@ -14,22 +16,51 @@ vi.mock("../../state/RoomStateContext", () => ({
 beforeEach(() => sendCommand.mockClear());
 
 test("owner selector offers You and Enemy", () => {
-  render(<RigWizard onClose={() => {}} />);
+  render(
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
+  );
   expect(screen.getByRole("option", { name: "You" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "Enemy" })).toBeInTheDocument();
 });
 
 test("only light and medium rig classes are offered", () => {
-  render(<RigWizard onClose={() => {}} />);
+  render(
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
+  );
   expect(screen.getByRole("option", { name: "light" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "medium" })).toBeInTheDocument();
   expect(screen.queryByRole("option", { name: "heavy" })).toBeNull();
   expect(screen.queryByRole("option", { name: "colossal" })).toBeNull();
 });
 
+test("Identity step shows an SP preview for the selected weight class", () => {
+  render(
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
+  );
+  expect(screen.getByText(/heat cap/i)).toBeInTheDocument();
+});
+
 test("commissioning posts an add command carrying the chosen owner", async () => {
   const user = userEvent.setup();
-  render(<RigWizard onClose={() => {}} />);
+  render(
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
+  );
   await user.type(screen.getByPlaceholderText("Rig name"), "Vulcan");
   // Identity -> Weapons -> Equipment -> Confirm
   await user.click(screen.getByRole("button", { name: "Next" }));

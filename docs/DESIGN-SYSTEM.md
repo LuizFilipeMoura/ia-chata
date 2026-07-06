@@ -194,7 +194,7 @@ Hints answer *how* and sit next to the control, in dim mono, one clause. The cod
 Standardize one class, `.hint` (`--txt-dim`, `.66rem` display, `line-height 1.4`), plus `.hint--warn` (ember) for blocking notes. Apply at the decision points:
 
 - **Commission wizard** — one hint per step: name it → pick weight class ("sets starting SP for each component") → choose weapons ("one Long Range, one Melee") → pick equipment. The wizard should feel like a guided form, each step's hint already partly present (`rig-wizard.js`).
-- **Action console** — each action already carries a `note` from `availableActions()` (e.g. "Ranged weapon spent — rushed reload costs 2 actions", "Weapons already loaded"). Surface every `note` as a `.hint` under its button, and render disabled actions as visibly disabled with the reason, rather than just inert.
+- **Action console** — each action already carries a `note` from `availableActions()` (e.g. "Ranged weapon spent — reload before firing again", "Second shot — +1 heat", "Weapons already loaded"). Surface every `note` as a `.hint` under its button, and render disabled actions as visibly disabled with the reason, rather than just inert.
 - **Attack wizard** — keep the `.aw-range` readout (already state-colored ok/warn/bad); ensure the confirm button is disabled with a hint when out of range or unaffordable.
 - **Heat controls** — keep "Set this Rig active to run its engine" as the canonical locked-hint.
 

@@ -1,0 +1,133 @@
+.field-map { width: 100%; display: block; }
+.field-map .fm-field { fill: var(--surface-1, #0a0c0f); stroke: var(--rivet, #3a424e); stroke-width: 1; }
+.field-map .fm-grid { stroke: #ffffff; stroke-opacity: .045; stroke-width: 1; }
+.field-map .fm-tick { stroke: var(--oil, #e79a3d); stroke-opacity: .55; stroke-width: 1.5; }
+.field-map .fm-half-mine { fill: #1d9e75; fill-opacity: 0.2; }
+.field-map .fm-half-foe { fill: #d85a30; fill-opacity: 0.2; }
+/* Legal deployment zone — an 8" quarter-circle at each corner (§10). */
+.field-map .fm-deploy { fill-opacity: 0.32; stroke-width: 1; stroke-dasharray: 4 3; }
+.field-map .fm-deploy--mine { fill: #1d9e75; stroke: #46e3ad; }
+.field-map .fm-deploy--foe { fill: #d85a30; stroke: #ff9366; }
+.field-map .fm-diag { stroke: #8b93a0; stroke-width: 1.25; stroke-dasharray: 6 5; stroke-opacity: .8; }
+.field-map .fm-obj { fill: #ef9f27; stroke: #854f0b; }
+.field-map .fm-obj-label, .field-map .fm-zone-label {
+  fill: #c2c0b6; font-size: 11px; font-family: var(--font-mono, monospace);
+}
+.field-map .fm-zone-label { letter-spacing: .06em; text-transform: uppercase; fill-opacity: .78; }
+.field-map .fm-dim {
+  fill: var(--txt-faint, #616a76); font-size: 9px; font-weight: 600;
+  font-family: var(--font-mono, monospace); letter-spacing: .06em;
+}
+.field-map .fm-terrain { fill: #5f5e5a; stroke: #2c2c2a; stroke-width: 0.6; }
+.field-map .fm-terrain--wood      { fill: #3c5a3a; stroke: #223421; }
+.field-map .fm-terrain--crater    { fill: #47423a; stroke: #29241d; }
+.field-map .fm-terrain--building  { fill: #6a6862; stroke: #34332f; }
+.field-map .fm-terrain--barricade { fill: #7a5a37; stroke: #3e2f1d; }
+.field-map .fm-terrain--ruin      { fill: #565049; stroke: #2c2823; }
+.field-map .fm-terrain--rock      { fill: #514f4a; stroke: #2a2926; }
+.field-map .fm-terrain--crate     { fill: #6f5a3e; stroke: #382d1f; }
+
+/* ===== Field-setup console (drawer body) =====================================
+   A tactical "field briefing": recon map on top, dimension console + a single
+   commit action below. Everything speaks the shared iron/oil/ember system. */
+.field-setup { display: flex; flex-direction: column; gap: var(--space-4, .8rem); }
+
+.field-setup .field-map {
+  border: 1px solid var(--line, #2b323d); border-radius: var(--radius-md, 10px);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(231,154,61,.05), transparent 60%),
+    var(--iron-950, #0a0c0f);
+}
+
+/* Legend — decodes the two deploy-zone tints + the objective marker. */
+.fs-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; }
+.fs-leg {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-family: var(--font-mono); font-size: .55rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--txt-dim);
+}
+.fs-leg::before {
+  content: ""; width: 10px; height: 10px; border-radius: 3px;
+  background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0,0,0,.45);
+}
+.fs-leg--mine { --sw: #1d9e75; }
+.fs-leg--foe  { --sw: #d85a30; }
+.fs-leg--obj  { --sw: var(--oil); }
+.fs-leg--obj::before { border-radius: 999px; }
+
+/* Grouped sections with a mono micro-header + hairline rule. */
+.fs-group { display: flex; flex-direction: column; gap: .45rem; }
+.fs-label {
+  display: flex; align-items: center; gap: .55rem;
+  font-family: var(--font-mono); font-size: .55rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--txt-dim);
+}
+.fs-label::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--line), transparent);
+}
+
+/* Dimension inputs: themed number fields with an "in" suffix + inline Apply. */
+.fs-dims { display: flex; gap: .5rem; align-items: flex-end; }
+.fs-num { position: relative; flex: 1 1 0; }
+.fs-cap {
+  display: block; margin-bottom: .3rem;
+  font-family: var(--font-mono); font-size: .5rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--txt-faint);
+}
+.fs-num input {
+  width: 100%; height: 2.5rem; padding: 0 1.9rem 0 .65rem;
+  background: var(--iron-950); color: var(--txt);
+  border: 1px solid var(--line); border-radius: 9px;
+  font-family: var(--font-mono); font-size: 1rem; font-weight: 600;
+  transition: border-color var(--dur-fast, .14s), box-shadow var(--dur-fast, .14s);
+}
+.fs-num input:focus { outline: none; border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil); }
+.fs-num input::-webkit-inner-spin-button,
+.fs-num input::-webkit-outer-spin-button { opacity: .3; height: 1.6rem; }
+.fs-unit {
+  position: absolute; right: .6rem; bottom: .78rem;
+  font-family: var(--font-mono); font-size: .62rem; color: var(--txt-faint);
+  pointer-events: none;
+}
+.fs-apply {
+  flex: 0 0 auto; height: 2.5rem; padding: 0 1rem;
+  border: 1px solid var(--rivet); border-radius: 9px;
+  background: var(--iron-780); color: var(--txt);
+  font-family: var(--font-display); font-weight: 700; font-size: .74rem;
+  letter-spacing: .07em; text-transform: uppercase; cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+}
+.fs-apply:hover { background: var(--iron-750); border-color: var(--oil); color: var(--oil-hi); }
+.fs-apply:active { transform: translateY(1px); }
+
+/* Secondary "tweak" actions — equal, quiet ghost buttons. */
+.fs-actions { display: flex; gap: .5rem; }
+.fs-actions .dwr-btn { flex: 1 1 0; }
+
+/* The single commit action — the hero of the screen. */
+.fs-lock {
+  position: relative; width: 100%; padding: .8rem; margin-top: .1rem;
+  border: 1px solid rgba(231,154,61,.7); border-radius: 12px;
+  background: linear-gradient(180deg, var(--oil-hi), var(--oil-deep));
+  color: #201203; font-family: var(--font-display); font-weight: 800;
+  font-size: .9rem; letter-spacing: .16em; text-transform: uppercase;
+  cursor: pointer; overflow: hidden;
+  box-shadow: 0 8px 22px var(--guide-glow);
+  transition: transform var(--dur-fast, .14s), box-shadow var(--dur-fast, .14s);
+}
+.fs-lock::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: var(--stripe); opacity: .8;
+}
+.fs-lock:hover { transform: translateY(-1px); box-shadow: 0 11px 26px var(--guide-glow); }
+.fs-lock:active { transform: translateY(1px); box-shadow: 0 5px 14px var(--guide-glow); }
+
+/* Non-owner / pre-lock waiting note in the inline section. */
+.fc-wait {
+  margin: .6rem 0 0; padding: .55rem .7rem;
+  border: 1px dashed var(--line); border-radius: var(--radius-md, 10px);
+  background: var(--iron-850);
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .04em;
+  color: var(--wait, #9aa3b1); text-align: center;
+}

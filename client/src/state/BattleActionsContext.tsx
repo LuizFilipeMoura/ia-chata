@@ -13,12 +13,13 @@ import { useRoll } from "./RollContext";
 import { useRoomState } from "./RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
 import ChoiceField from "../components/overlays/ChoiceField";
-import type { Rig } from "./types";
+import ReactionPicker from "../components/overlays/ReactionPicker";
+import type { Rig, PrepType } from "./types";
 
 // A glyph per action so the console reads at a glance instead of as a wall of
 // text (battle.js:11-16).
 const ACTION_ICONS: Record<string, string> = {
-  move: "🦿", sprint: "💨", fire: "🎯", aimed: "◎", ram: "💥",
+  move: "👣", sprint: "🏃", fire: "🎯", aimed: "🔭", ram: "💢",
   reload: "🔄", repair: "🔧", prepare: "🛡️", shutdown: "⏻",
   harden: "🧱", purge: "❄️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹",
 };
@@ -32,16 +33,23 @@ const LOC_CHOICES = [
 ];
 
 // §5 base Speed (inches) per weight class — the physical reach of a Move.
-const SPEED: Record<string, number> = { light: 9, medium: 8, heavy: 6, colossal: 5 };
+// House-rule tuning: movement halved across the board so Rigs commit rather than
+// swim across the table, with Mediums pulled down harder (~70% off their old 8")
+// so they play as the slow, punchy bruisers they're meant to be.
+const SPEED: Record<string, number> = { light: 4.5, medium: 2.5, heavy: 3, colossal: 2.5 };
 const MOVE_HOLD_MS = 5000;
+const SPRINT_HOLD_MS = 8000;
+const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOLD_MS);
 
 interface BattleActionsApi {
   openMove: (rig: Rig, key: string) => void;
   openRepair: (rig: Rig, action: string) => void;
-  scoreVp: () => void;
+  openPrepare: (rig: Rig) => void;
   resolveBlast: () => void;
+  sendReact: (attrs: Record<string, unknown>) => void;
   endActivation: (rig: Rig) => void;
   rollInitiative: () => void;
+  resetBattle: () => void;
 }
 
 const Ctx = createContext<BattleActionsApi | null>(null);
@@ -63,25 +71,27 @@ function MoveBody({
   const base = SPEED[rig.weightClass] ?? 8;
   const dist = sprint ? base * 1.5 : base;
   const heat = sprint ? (rig.equipment === "servo-actuators" ? 1 : 2) : 1;
-  const holdSec = Math.round(MOVE_HOLD_MS / 1000);
+  const holdMs = holdMsFor(actionKey);
+  const holdSec = Math.round(holdMs / 1000);
 
   const [remaining, setRemaining] = useState(holdSec);
   const [pct, setPct] = useState(0);
   const done = remaining <= 0;
+  const costNote = sprint ? `Costs 2 actions · +${heat} heat` : "Costs 1 action · no heat";
 
   useEffect(() => {
     const start = performance.now();
     const timer = window.setInterval(() => {
       const elapsed = performance.now() - start;
-      setPct(Math.min(1, elapsed / MOVE_HOLD_MS) * 100);
-      if (elapsed >= MOVE_HOLD_MS) {
+      setPct(Math.min(1, elapsed / holdMs) * 100);
+      if (elapsed >= holdMs) {
         setRemaining(0);
       } else {
-        setRemaining(Math.ceil((MOVE_HOLD_MS - elapsed) / 1000));
+        setRemaining(Math.ceil((holdMs - elapsed) / 1000));
       }
     }, 100);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [holdMs]);
 
   return (
     <>
@@ -93,10 +103,16 @@ function MoveBody({
             : `Reposition up to <b>${dist}"</b> (full Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`,
         }}
       />
-      <p className="dwr-hint dwr-move-call">Move the Rig on the table now, then confirm.</p>
-      <div className="dwr-hold-track">
-        <div className="dwr-hold-fill" style={{ width: `${pct}%` }} />
+      <div className="dwr-cost">{costNote}</div>
+      <div className="dwr-big-wrap">
+        <div className={"dwr-big" + (done ? " is-ready" : "")}>{done ? "READY" : `${remaining}s`}</div>
       </div>
+      <div className="dwr-hold-track">
+        <div className={"dwr-hold-fill" + (done ? " is-ready" : "")} style={{ width: `${pct}%` }} />
+      </div>
+      <p className={"dwr-hint dwr-move-call" + (done ? " is-ready" : "")}>
+        {done ? "✔ Model placed? Confirm to lock in the move." : "Move the Rig on the table now, then confirm."}
+      </p>
       <div className="dwr-actions">
         <button type="button" className="dwr-btn ghost" onClick={onCancel}>
           <span>Cancel</span>
@@ -213,11 +229,41 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     [openDrawer, closeDrawer, sendCommand, promptOneDie],
   );
 
-  const scoreVp = useCallback(() => {
-    const pts = window.prompt("Victory points scored this Recovery (centre 2, each corner 1):", "0");
-    if (pts == null) return;
-    sendCommand("vp", { side: mySide(), points: String(parseInt(pts, 10) || 0) });
-  }, [sendCommand, mySide]);
+  const openPrepare = useCallback(
+    (rig: Rig) => {
+      const state: { prep: PrepType } = { prep: "brace" };
+      const build = () => (
+        <PrepareBody
+          rigName={rig.name}
+          allowShield={rig.weapons?.melee === "Bulwark Shield"}
+          onChange={(v) => (state.prep = v)}
+        />
+      );
+      openDrawer({
+        title: `🛡️ Prepare — ${rig.name}`,
+        tone: "oil",
+        render: build,
+        actions: [
+          { label: "Cancel", ghost: true, onClick: () => closeDrawer() },
+          {
+            label: "Set reaction",
+            primary: true,
+            icon: "🛡️",
+            onClick: () => {
+              closeDrawer();
+              sendCommand("action", { name: rig.name, action: "prepare", prep: state.prep });
+            },
+          },
+        ],
+      });
+    },
+    [openDrawer, closeDrawer, sendCommand],
+  );
+
+  const sendReact = useCallback(
+    (attrs: Record<string, unknown>) => sendCommand("react", { ...attrs, side: mySide() }),
+    [sendCommand, mySide],
+  );
 
   const resolveBlast = useCallback(() => {
     const names = window.prompt('Names of rigs within 12" (comma-separated):', "");
@@ -249,12 +295,46 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     }
   }, [sendCommand, promptTwoDice]);
 
+  const resetBattle = useCallback(() => {
+    sendCommand("reset", {});
+  }, [sendCommand]);
+
   return (
     <Ctx.Provider
-      value={{ openMove, openRepair, scoreVp, resolveBlast, endActivation, rollInitiative }}
+      value={{
+        openMove, openRepair, openPrepare, resolveBlast, sendReact, endActivation, rollInitiative, resetBattle,
+      }}
     >
       {children}
     </Ctx.Provider>
+  );
+}
+
+// Reaction picker for the Prepare action. Owns the selection in local state so
+// the ReactionPicker re-renders on each pick; onChange mirrors it to the drawer's
+// ref-backed state for the Confirm handler (matches RepairBody's pattern).
+function PrepareBody({
+  rigName, allowShield, onChange,
+}: {
+  rigName: string;
+  allowShield: boolean;
+  onChange: (v: PrepType) => void;
+}) {
+  const [prep, setPrep] = useState<PrepType>("brace");
+  return (
+    <>
+      <p className="dwr-hint">
+        Place a facedown reaction on {rigName}. It stays secret until an enemy fires on this Rig.
+      </p>
+      <ReactionPicker
+        value={prep}
+        allowShield={allowShield}
+        onChange={(v) => {
+          setPrep(v);
+          onChange(v);
+        }}
+      />
+    </>
   );
 }
 

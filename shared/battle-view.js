@@ -10,10 +10,12 @@ const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repai
 export function availableActions(rig, turn) {
   const left = turn.actionsMax - turn.actionsUsed;
   const rangedSpent = rig.loaded?.longRange === false; // fired, not yet reloaded
+  const firedRanged = (turn.longRangeShots || 0) >= 1; // a ranged shot already went off
   const list = ACTION_ORDER.map((key) => {
     const def = ACTIONS[key];
     let enabled = left > 0;
     let cost = def.slot;
+    let heat = def.heat;
     let note = "";
     if (key === "shutdown") enabled = turn.actionsUsed === 0; // declared before any action
     if (key === "reload") {
@@ -21,14 +23,19 @@ export function availableActions(rig, turn) {
       enabled = left > 0 && rangedSpent;
       if (!rangedSpent) note = "Weapons already loaded";
     }
-    if ((key === "fire" || key === "aimed") && rangedSpent) {
-      // The ranged weapon is spent — firing it again folds in a rushed reload
-      // (§7): 2 action-slots. Melee stays 1, so the button opens the drawer where
-      // the real per-weapon cost and affordability are resolved.
-      cost = 2;
-      note = "Ranged weapon spent — rushed reload costs 2 actions";
+    if (key === "fire" || key === "aimed") {
+      if (rangedSpent) {
+        // The ranged weapon is spent — it must be reloaded before it can fire
+        // again (§7). The button still opens the drawer for a melee attack.
+        enabled = false;
+        note = "Ranged weapon spent — reload before firing again";
+      } else if (firedRanged) {
+        // A second ranged shot this activation runs the barrel hot: +1 heat.
+        heat = def.heat + 1;
+        note = "Second shot — +1 heat";
+      }
     }
-    return { key, label: def.label, heat: def.heat, enabled, cost, note };
+    return { key, label: def.label, heat, enabled, cost, note };
   });
   if (rig.equipment && EQUIPMENT[rig.equipment]) {
     const active = EQUIPMENT[rig.equipment].active;
@@ -55,7 +62,11 @@ export function rigModifiers(rig) {
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });
   if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn" });
   if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn" });
-  if (rig.preparation) mods.push({ key: "braced", tag: prepLabel(rig.preparation.type), tone: "prep" });
+  if (rig.preparation) {
+    const p = rig.preparation;
+    const tag = p.hidden || p.faceUp === false ? "Reaction set" : prepLabel(p.type);
+    mods.push({ key: "prep", tag, tone: "prep" });
+  }
   for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn" });
   if (rig.loaded && rig.loaded.longRange === false) mods.push({ key: "unloaded", tag: "Ranged unloaded", tone: "warn" });
   return mods;

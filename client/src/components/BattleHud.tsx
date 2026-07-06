@@ -9,6 +9,8 @@ export function BattleHud() {
 
   const sum = phaseSummary(game, rigs);
   const tok = sum.answerTokens[mySide] || 0;
+  const pr = game.pendingReaction;
+  const opponentReacting = Boolean(pr && pr.defender !== mySide);
 
   return (
     <div id="battleHud" className="battle-hud">
@@ -28,6 +30,9 @@ export function BattleHud() {
         )}
       </div>
       <div id="bhTokens" className="bh-tokens">{tok ? `⟡ ${tok} Answer` : ""}</div>
+      {opponentReacting ? (
+        <div className="bh-reacting">↩️ Opponent is reacting…</div>
+      ) : null}
       <div id="bhPrompt" className="bh-prompt" />
     </div>
   );

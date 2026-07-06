@@ -1,7 +1,7 @@
 import { actionBudget } from "/shared/battle-view.js";
 import type { GameState, Rig } from "../state/types";
 
-export type FocusCtaKind = "commission" | "ready" | "initiative" | "blast" | "score";
+export type FocusCtaKind = "commission" | "ready" | "initiative" | "blast" | "score" | "endTurn";
 
 export interface Focus {
   tone: string;
@@ -65,6 +65,7 @@ export function computeFocus(
   if (g.phase === "initiative" && g.round >= 2) {
     return {
       tone: "act", icon: "🎲", primary: "Roll initiative",
+      secondary: `Round ${g.round} — decide who moves first.`,
       cta: { label: "Roll", kind: "initiative" },
     };
   }
@@ -78,16 +79,42 @@ export function computeFocus(
   }
 
   if (g.phase === "recovery") {
-    return g.recoveryVp?.[mine]
-      ? { tone: "wait", icon: "⏳", primary: "Waiting for opponent to score…" }
-      : {
-          tone: "act", icon: "⟡", primary: "Score your objectives",
-          secondary: "Tally VP for this round.",
-          cta: { label: "Score VP", kind: "score" },
-        };
+    const conflict = g.recoveryConflict && g.recoveryConflict.length ? g.recoveryConflict : null;
+    const submitted = Array.isArray(g.recoveryClaims?.[mine]);
+    if (conflict) {
+      return {
+        tone: "act", icon: "⚠️", primary: "Objectives disputed",
+        secondary: "You both claimed the same marker — re-check who holds it.",
+        cta: { label: "Re-check", kind: "score" },
+      };
+    }
+    if (submitted) {
+      return { tone: "wait", icon: "⏳", primary: "Waiting for opponent to score…" };
+    }
+    return {
+      tone: "act", icon: "⟡", primary: "Score your objectives",
+      secondary: "Mark which markers you control.",
+      cta: { label: "Score VP", kind: "score" },
+    };
   }
 
   if (g.phase === "activation") {
+    if (g.pendingAnswer) {
+      if (g.pendingAnswer.side !== mine) {
+        return {
+          tone: "wait",
+          icon: "â³",
+          primary: `Waiting for ${sideNameOf(g.pendingAnswer.side)} to set answer tokens...`,
+        };
+      }
+      return {
+        tone: "act",
+        icon: "â—ˆ",
+        primary: "Set answer tokens",
+        secondary: `${g.pendingAnswer.remaining} reaction${g.pendingAnswer.remaining === 1 ? "" : "s"} to prepare.`,
+      };
+    }
+
     const turn = g.turn;
     if (turn?.side !== mine) {
       return { tone: "wait", icon: "⏳", primary: `Waiting on ${sideNameOf(turn?.side)}…` };
@@ -95,9 +122,16 @@ export function computeFocus(
     if (turn.activeRigId) {
       const rig = rigs.find((r) => r.id === turn.activeRigId);
       const b = rig ? actionBudget(rig, turn) : null;
+      if (rig && b && b.left === 0) {
+        return {
+          tone: "act", icon: "✔", primary: `End ${rig.name}'s turn`,
+          secondary: "No actions left — pass to the next Rig.",
+          cta: { label: "End turn", kind: "endTurn" },
+        };
+      }
       return {
         tone: "act", icon: "▶", primary: "Choose your next action",
-        secondary: b ? `${b.left} action${b.left === 1 ? "" : "s"} left` : "",
+        secondary: b ? `${b.left} action${b.left === 1 ? "" : "s"} left · Fire, Move or Reload` : "",
       };
     }
     return {

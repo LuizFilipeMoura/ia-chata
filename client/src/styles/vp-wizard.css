@@ -1,0 +1,32 @@
+/* ---- Score-Objectives wizard: marker list inside the shared aw-* shell ---- */
+.vpw-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+
+.vpw-opt {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--iron-800);
+  color: var(--txt-dim);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .14s, background .14s, color .14s;
+}
+/* Selected mirrors .aw-opt.sel so the picker reads as part of the same wizard. */
+.vpw-opt.sel { border-color: var(--oil); color: var(--oil-hi); background: rgba(231, 154, 61, .1); }
+.vpw-opt.disputed { border-color: var(--danger-hi); background: rgba(229, 83, 58, .12); }
+
+.vpw-vp {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 28px; padding: 0 6px;
+  border-radius: 999px; font-weight: 700;
+  background: var(--oil); color: var(--iron-950);
+}
+.vpw-name { font-weight: 600; }
+.vpw-state { font-family: var(--font-mono); font-size: .62rem; letter-spacing: .04em; color: var(--txt-faint); }
+.vpw-warn { grid-column: 1 / -1; font-family: var(--font-mono); font-size: .62rem; color: var(--danger-hi); }
+
+.vpw-total { text-align: center; margin-bottom: 10px; color: var(--txt-dim); }

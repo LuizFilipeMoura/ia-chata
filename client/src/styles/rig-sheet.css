@@ -64,12 +64,9 @@
   border: 1px solid var(--line); background: var(--iron-950); color: var(--txt-dim);
   transition: color .2s, border-color .2s, background .2s;
 }
-.rig-heat-chip-ic { font-size: .68rem; filter: grayscale(.5); opacity: .7; }
+.rig-heat-chip-ic { font-size: .68rem; }
 .rig-heat-chip[data-zone="cool"]    { color: #7fd0c4; border-color: rgba(127,208,196,.4); }
 .rig-heat-chip[data-zone="warm"]    { color: var(--oil-hi); border-color: rgba(231,154,61,.5); }
-.rig-heat-chip[data-zone="warm"] .rig-heat-chip-ic,
-.rig-heat-chip[data-zone="redline"] .rig-heat-chip-ic,
-.rig-heat-chip[data-zone="over"] .rig-heat-chip-ic { filter: none; opacity: 1; }
 .rig-heat-chip[data-zone="redline"] { color: var(--ember-hi); border-color: rgba(229,83,58,.55); background: rgba(229,83,58,.1); }
 .rig-heat-chip[data-zone="over"] {
   color: #fff; border-color: var(--ember); background: rgba(229,83,58,.28);
@@ -124,16 +121,7 @@
 }
 .rig-status.warn { color: var(--oil-hi); }
 .rig-status.crit { color: var(--ember-hi); }
-.rig-weapons {
-  font-family: var(--font-mono); font-size: .64rem; color: var(--txt-dim);
-  margin: 0 0 .65rem; line-height: 1.35;
-}
-.rig-equipment {
-  font-family: var(--font-mono); font-size: .64rem; color: var(--oil-hi);
-  margin: -.4rem 0 .65rem; line-height: 1.35;
-}
-
-.rig-comp { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; }
+.rig-comp { position: relative; display: flex; align-items: center; gap: .5rem; margin: .4rem 0; }
 .rig-comp-label {
   width: 3.4rem; flex: 0 0 auto; font-family: var(--font-mono);
   font-size: .64rem; letter-spacing: .06em; text-transform: uppercase; color: var(--txt-dim);
@@ -159,6 +147,49 @@
 .rig-fill-crit { background: linear-gradient(180deg, var(--hp-crit-a), var(--hp-crit-b)); box-shadow: 0 0 10px rgba(229,83,58,.5) inset; }
 .rig-fill-dead { background: repeating-linear-gradient(45deg, #3a4048 0 6px, #2c313a 6px 12px); }
 
+/* ---- Damage & repair feedback: fires when a location's structure changes ----
+   Hit → the row shakes and the bar flares red; Repair → the bar glows green.
+   A floating ∓N drifts up so a change is easy to catch. Purely presentational. */
+.rig-comp--hit { animation: rig-hit-shake .4s ease both; }
+.rig-comp--hit .rig-bar {
+  border-color: rgba(229,83,58,.7);
+  animation: rig-hit-flash .55s ease both;
+}
+@keyframes rig-hit-shake {
+  0%, 100% { transform: translateX(0); }
+  12% { transform: translateX(-3px); }
+  28% { transform: translateX(3px); }
+  44% { transform: translateX(-2px); }
+  60% { transform: translateX(2px); }
+  76% { transform: translateX(-1px); }
+}
+@keyframes rig-hit-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(229,83,58,0); }
+  25%  { box-shadow: 0 0 16px 2px rgba(229,83,58,.75); }
+  100% { box-shadow: 0 0 0 0 rgba(229,83,58,0); }
+}
+.rig-comp--heal .rig-bar {
+  border-color: rgba(108,196,127,.6);
+  animation: rig-heal-glow .85s ease both;
+}
+@keyframes rig-heal-glow {
+  0%   { box-shadow: 0 0 0 0 rgba(108,196,127,0); }
+  30%  { box-shadow: 0 0 16px 2px rgba(108,196,127,.7); }
+  100% { box-shadow: 0 0 0 0 rgba(108,196,127,0); }
+}
+.rig-comp-delta {
+  position: absolute; right: 2.6rem; top: 50%; z-index: 3; pointer-events: none;
+  font-family: var(--font-mono); font-size: .72rem; font-weight: 700; letter-spacing: .02em;
+  animation: rig-delta-rise 1s var(--ease-out, ease) both;
+}
+.rig-comp-delta.is-hit  { color: #ff8a72; text-shadow: 0 0 8px rgba(229,83,58,.7); }
+.rig-comp-delta.is-heal { color: #9be8ab; text-shadow: 0 0 8px rgba(108,196,127,.7); }
+@keyframes rig-delta-rise {
+  0%   { opacity: 0; transform: translateY(2px); }
+  22%  { opacity: 1; transform: translateY(-7px); }
+  100% { opacity: 0; transform: translateY(-19px); }
+}
+
 .rig-step {
   width: 1.95rem; height: 1.95rem; flex: 0 0 auto; border-radius: 8px;
   background: var(--iron-750); color: var(--txt); border: 1px solid var(--line);
@@ -178,6 +209,8 @@
 /* ---- Heat gauge: the boiler-pressure centrepiece ---- */
 .heat-gauge {
   --accent: var(--oil);
+  --frost: #5ab8ff;
+  position: relative;
   margin-top: .85rem; padding: .65rem .7rem .7rem;
   border: 1px solid var(--line); border-radius: 11px;
   background:
@@ -213,6 +246,57 @@
   100% { box-shadow: 0 0 0 0 rgba(127,208,196,0); }
 }
 
+/* ---- Cool-down: the blue "refresh" ----
+   Fires whenever heat actually drops — end-of-round Recovery (every rig at once)
+   or a manual vent / shutdown / purge. A frost bloom on the shell, a light sweep
+   across the thermometer, and a blue flash on the read-out. Purely presentational. */
+.heat-gauge--refresh {
+  --accent: var(--frost);
+  animation: heat-refresh-bloom 1.15s var(--ease-out, ease) both;
+}
+@keyframes heat-refresh-bloom {
+  0%   { border-color: var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.03), inset 0 0 24px rgba(0,0,0,.4); }
+  22%  { border-color: rgba(90,184,255,.8); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 0 28px rgba(90,184,255,.5); }
+  100% { border-color: var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.03), inset 0 0 24px rgba(0,0,0,.4); }
+}
+.heat-gauge--refresh .heat-track { position: relative; overflow: hidden; }
+.heat-gauge--refresh .heat-track::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg,
+    transparent 30%, rgba(150,214,255,.75) 50%, transparent 70%);
+  transform: translateX(-130%);
+  animation: heat-refresh-sweep 1.05s var(--ease-out, ease) both;
+}
+@keyframes heat-refresh-sweep {
+  0%   { transform: translateX(-130%); }
+  100% { transform: translateX(130%); }
+}
+.heat-gauge--refresh .heat-gauge-read b {
+  animation: heat-refresh-read 1.15s var(--ease-out, ease) both;
+}
+@keyframes heat-refresh-read {
+  0%   { color: var(--accent); text-shadow: none; }
+  22%  { color: #d5ecff; text-shadow: 0 0 14px rgba(90,184,255,.9); }
+  100% { color: var(--accent); text-shadow: none; }
+}
+
+/* Floating "❄ −N" tag: how much this rig just shed, so it's easy to track. */
+.heat-refresh-tag {
+  position: absolute; top: .5rem; right: .6rem; z-index: 2;
+  font-family: var(--font-mono); font-size: .64rem; font-weight: 700;
+  letter-spacing: .04em; color: #eaf6ff;
+  padding: .1rem .42rem; border-radius: 999px;
+  background: rgba(48,120,190,.32); border: 1px solid rgba(90,184,255,.7);
+  box-shadow: 0 0 14px rgba(90,184,255,.35);
+  animation: heat-refresh-drift 1.4s var(--ease-out, ease) both;
+}
+@keyframes heat-refresh-drift {
+  0%   { opacity: 0; transform: translateY(4px) scale(.9); }
+  18%  { opacity: 1; transform: translateY(0) scale(1); }
+  70%  { opacity: 1; transform: translateY(-2px); }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
 .heat-gauge-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .45rem; }
 .heat-gauge-label {
   font-family: var(--font-mono); font-size: .6rem; letter-spacing: .18em;
@@ -233,7 +317,7 @@
   transition: background .25s ease, box-shadow .25s ease;
 }
 .heat-seg--danger { background: rgba(229,83,58,.12); }
-.heat-seg--redline { box-shadow: inset 2px 0 0 rgba(255,111,82,.9); }
+.heat-seg--redline { box-shadow: inset 0 0 0 rgba(255,111,82,.9); }
 .heat-seg--on {
   /* Cool teal at the left of the safe zone → hot amber at the redline */
   background: hsl(calc(182 - 152 * var(--warm, 0)) 68% 52%);
@@ -294,7 +378,7 @@
   background: linear-gradient(180deg, var(--iron-800), var(--iron-850));
   border: 1px dashed var(--rivet); border-radius: 12px; padding: 1.1rem 1rem;
 }
-.rig-add-locked { border-style: solid; opacity: .82; }
+.rig-add-locked { border-style: solid; }
 /* First-run empty state: the commission card becomes the hero of the screen. */
 .rig-add-card.is-empty { margin-top: 1rem; }
 .rig-add-card.is-empty .rig-add {
@@ -350,7 +434,29 @@
 
 @media (prefers-reduced-motion: reduce) {
   .heat-gauge, .heat-gauge--up, .heat-gauge--down .heat-track, .rig-heat-chip[data-zone="over"],
-  .heat-gauge[data-zone="over"], .heat-gauge[data-zone="over"] .heat-seg--danger.heat-seg--on {
+  .heat-gauge[data-zone="over"], .heat-gauge[data-zone="over"] .heat-seg--danger.heat-seg--on,
+  .heat-gauge--refresh, .heat-gauge--refresh .heat-track::after,
+  .heat-gauge--refresh .heat-gauge-read b, .heat-refresh-tag,
+  .rig-comp--hit, .rig-comp--hit .rig-bar, .rig-comp--heal .rig-bar, .rig-comp-delta {
     animation: none !important;
   }
+  /* Keep the static tags visible so the cool-down / hit / repair stays legible. */
+  .heat-refresh-tag, .rig-comp-delta { opacity: 1; }
 }
+
+/* ---- Rig-card Loadout panel (Long Range / Melee / Equipment) ---- */
+.rig-loadout {
+  margin: 0 0 .65rem; padding: .6rem .65rem;
+  border: 1px solid var(--iron-750); border-radius: 10px; background: var(--iron-950);
+  display: flex; flex-direction: column; gap: .55rem;
+}
+.rig-loadout-hd { font-family: var(--font-mono); font-size: .54rem; letter-spacing: .2em; text-transform: uppercase; color: var(--txt-faint); }
+.rig-loadout-row { display: flex; gap: .55rem; align-items: flex-start; }
+.rig-loadout-row--eq { border-top: 1px dashed var(--iron-750); padding-top: .55rem; }
+.rig-loadout-ic { font-size: 1rem; line-height: 1.1; width: 1.3rem; flex: 0 0 auto; text-align: center; }
+.rig-loadout-main { flex: 1; min-width: 0; }
+.rig-loadout-slot { font-family: var(--font-mono); font-size: .5rem; letter-spacing: .16em; text-transform: uppercase; color: var(--txt-faint); }
+.rig-loadout-name { font-family: var(--font-display); font-weight: 700; font-size: .86rem; color: var(--txt); }
+.rig-loadout-up { font-family: var(--font-mono); font-size: .62rem; color: var(--oil-hi); line-height: 1.35; margin-top: .1rem; }
+.rig-loadout-passive { font-family: var(--font-display); font-size: .72rem; color: var(--txt-dim); line-height: 1.35; margin-top: .1rem; }
+.rig-loadout-active { font-family: var(--font-mono); font-size: .62rem; color: #7fd0c4; line-height: 1.35; margin-top: .12rem; }

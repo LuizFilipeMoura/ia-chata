@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "vite-client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:client"],
+      "port": 5173
+    },
+    {
       "name": "oil-iron-server",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],

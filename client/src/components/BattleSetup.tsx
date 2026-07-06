@@ -2,7 +2,7 @@ import { useRoomState } from "../state/RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
 
 export function BattleSetup() {
-  const { rigs, game, session } = useRoomState();
+  const { rigs, game, session, field } = useRoomState();
   const sendCommand = useCommands();
 
   const mySide = session?.side || "a";
@@ -38,6 +38,13 @@ export function BattleSetup() {
         : `Choose ${3 - myCount} more Rig${3 - myCount === 1 ? "" : "s"} to ready up.`;
     readyDisabled = myReady || myCount < 3;
     readyText = "Ready";
+
+    if (!field?.locked) {
+      readyDisabled = true;
+      bountyText = myCount >= 3
+        ? "Owner must lock the field before you can ready up."
+        : bountyText;
+    }
   }
 
   return (

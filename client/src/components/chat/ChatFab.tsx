@@ -12,7 +12,7 @@ export function ChatFab({ hasUnread, onClick }: { hasUnread: boolean; onClick: (
       aria-expanded={chatOpen}
       onClick={onClick}
     >
-      <span className="chat-fab-ic">💬</span>
+      <span className="chat-fab-ic">🛠</span>
     </button>
   );
 }

@@ -1,7 +1,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts } from "./combat.js";
+import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, resolveRam } from "./combat.js";
 import { WEAPONS, makeRig, effectiveWeaponProfile } from "./game-state.js";
+
+// Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
+// game-state.js's combatCtx() injects (§"Mutation primitives" in combat.js),
+// but only records calls instead of mutating real Rig state.
+function makeCtx() {
+  const resolutions = [];
+  return {
+    resolutions,
+    pushResolution(room, entry) { resolutions.push(entry); },
+    applyDamage() {},
+    bumpHeat() {},
+    sunderLocation() {},
+    profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
+  };
+}
 
 const attacker = { weightClass: "medium", hull: { sp: 7 } };
 
@@ -74,6 +89,66 @@ test("Raking Fire against the front arc deals no damage", () => {
   assert.equal(out.every((h) => h.sp === 0), true);
 });
 
+test("Raise Shield negates the front arc and blunts side/rear by 4", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const base = {
+    weightClass: "medium",
+    weapons: { melee: "Bulwark Shield" },
+    weaponUpgrades: { melee: "boss-spike" }, // base coverage (no Tower Shield)
+    preparation: { type: "raise-shield" },
+  };
+
+  // Front: fully negated regardless of the roll.
+  const front = rollImpacts({ weightClass: "medium" }, base, auto, "hull",
+    { arc: "front", hits: 2 }, { impacts: [6, 6] }, () => 0);
+  assert.equal(front.every((h) => h.sp === 0), true);
+
+  // Side: 5 + 8 + 2(side) - 4(shield) = 11 vs medium hull (11/14/17) -> direct(1).
+  const side = rollImpacts({ weightClass: "medium" }, base, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(side[0].total, 11);
+  assert.equal(side[0].sp, 1);
+});
+
+test("Tower Shield extends Raise Shield negation to the side arc", () => {
+  const auto = WEAPONS.longRange["Autocannon"];
+  const tower = {
+    weightClass: "medium",
+    weapons: { melee: "Bulwark Shield" },
+    weaponUpgrades: { melee: "tower-shield" },
+    preparation: { type: "raise-shield" },
+  };
+  // Side negated; rear only blunted: 5 + 8 + 4(rear) - 4 = 13 -> direct on medium hull.
+  const side = rollImpacts({ weightClass: "medium" }, tower, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(side[0].sp, 0);
+  const rear = rollImpacts({ weightClass: "medium" }, tower, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(rear[0].total, 13);
+});
+
+test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () => {
+  const attacker = makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "breaching-round" });
+  const target = makeRig(2, "Fort", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  const room = { rigs: [attacker, target] };
+  let hullBreached = null;
+  const ctx = {
+    applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+    bumpHeat: () => {},
+    pushResolution: () => {},
+    sunderLocation: () => {},
+    breachHull: (t) => { hullBreached = t; t.hullRepairLock = 2; },
+    profileFor: (slot, name, rig) => effectiveWeaponProfile(slot, name, rig),
+  };
+  // Force: to-hit die 6 (hits), location die 1 (hull), impact die 6.
+  const res = resolveAttack(room, attacker, target,
+    { weapon: "longRange", arc: "front", range: "near",
+      dice: { toHit: [6], location: 1, impacts: [6], ap: [1] } }, () => 0, ctx);
+  assert.equal(res.location, "hull");
+  assert.equal(hullBreached, target);
+  assert.equal(target.hullRepairLock, 2);
+});
+
 test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-penalty upgrades", () => {
   const mini = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
@@ -108,4 +183,92 @@ test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
   const mortarRig = makeRig(1, "Airburst", "medium", "a", { longRange: "Mortar", melee: "Sword", longRangeUpgrade: "airburst-fuze" });
   const mortar = effectiveWeaponProfile("longRange", "Mortar", mortarRig);
   assert.equal(computeModifiedAim(mortarRig, mortar, { range: "near", cover: 2 }), 5);
+});
+
+test("resolveAttack emits a per-die roll for each hit-die plus a location d12, each with a tone", () => {
+  // Autocannon: rof 4, acc [0,-1], no Full Auto requested here. Medium attacker,
+  // full hull, near range, front arc, cover 0, fire (not aimed) -> modAim =
+  // AIM.medium(4) - (acc[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
+  const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = makeCtx();
+
+  // modAim is 4: die 6 -> crit; die 4 or 5 -> ok; die < 4 -> miss.
+  const toHit = [6, 4, 2, 5]; // crit, ok, miss, ok (3 hits out of 4 dice)
+  const result = resolveAttack(room, attacker, target, {
+    weapon: "longRange", target: target.name, arc: "front", range: "near", cover: 0,
+    dice: { toHit, location: 3 }, // location d12 = 3 -> hitLocation(3) = "hull"
+  }, () => 0, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.hits, 3);
+
+  const attackRes = ctx.resolutions.find((r) => r.kind === "attack");
+  assert.ok(attackRes, "expected a pushed attack resolution");
+
+  const d6Rolls = attackRes.rolls.filter((r) => r.sides === 6);
+  const d12Rolls = attackRes.rolls.filter((r) => r.sides === 12);
+
+  // rof entries for the d6 hit dice, plus exactly one d12 location die.
+  assert.equal(d6Rolls.length, 4);
+  assert.equal(d12Rolls.length, 1);
+  assert.equal(d12Rolls[0].value, 3);
+  assert.equal(d12Rolls[0].tone, "cool");
+
+  // The face-6 die is a crit; every d6 tone is one of crit/ok/miss.
+  const critDie = d6Rolls.find((r) => r.value === 6);
+  assert.equal(critDie.tone, "crit");
+  assert.ok(d6Rolls.every((r) => ["crit", "ok", "miss"].includes(r.tone)));
+
+  // Damage/summary/heat are untouched by this change: summary still reports
+  // hits and location, and hits/location math is unaffected.
+  assert.equal(result.location, "hull");
+  assert.match(attackRes.summary, /3 hit\(s\)/);
+  assert.match(attackRes.summary, /to hull/);
+
+  // Structured breakdown mirrors the summary: hits + weapon STR -> SP to location.
+  const b = attackRes.breakdown;
+  assert.ok(b, "expected a breakdown on the attack resolution");
+  assert.equal(b.weapon, "Autocannon");
+  assert.equal(b.location, "hull");
+  assert.equal(b.terms[0].value, 3);
+  assert.equal(b.terms[0].label, "hits");
+  assert.equal(b.terms[1].label, "weapon STR");
+  assert.equal(b.terms[1].value, computeStr(attacker, WEAPONS.longRange.Autocannon, {}));
+});
+
+test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage", () => {
+  const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = makeCtx();
+
+  // Ram STR (medium) = 8. A high impact die should deal damage (sp > 0, tone "ok");
+  // location doesn't matter for the assertion, force both to something valid.
+  resolveRam(room, attacker, target, {
+    dice: {
+      self: { location: 1, impact: 6 },   // 6 + 8 = 14 -> medium hull severe (>=14) -> sp>0
+      target: { location: 1, impact: 1 }, // 1 + 8 = 9  -> medium hull (<11 direct) -> sp=0
+    },
+  }, () => 0, ctx);
+
+  const ramResults = ctx.resolutions.filter((r) => r.kind === "ram");
+  assert.equal(ramResults.length, 2);
+  const [selfRes, targetRes] = ramResults;
+  assert.equal(selfRes.rolls[0].tone, "ok");
+  assert.equal(targetRes.rolls[0].tone, "miss");
+
+  // Breakdown spells out the equation and where the ram STR bonus comes from.
+  assert.deepEqual(selfRes.breakdown.terms, [
+    { value: 6, label: "D6", tone: "die" },
+    { value: 8, label: "Ram STR · Medium", op: "+", tone: "mod" },
+  ]);
+  assert.equal(selfRes.breakdown.total, 14);
+  assert.equal(selfRes.breakdown.tier, "severe");
+  assert.equal(selfRes.breakdown.location, "hull");
+  assert.ok(selfRes.breakdown.sp > 0);
+  assert.equal(targetRes.breakdown.total, 9);
+  assert.equal(targetRes.breakdown.tier, "none");
+  assert.equal(targetRes.breakdown.sp, 0);
 });

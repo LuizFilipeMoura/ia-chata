@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from "react";
 import { roomReducer, initialRoomState, type RoomState, type RoomAction } from "./roomReducer";
-import { loadSession, saveSession } from "./session";
+import { loadSession, saveSession, clearSession } from "./session";
 
 const StateCtx = createContext<RoomState | null>(null);
 const DispatchCtx = createContext<React.Dispatch<RoomAction> | null>(null);
@@ -12,6 +12,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (state.session) saveSession(state.session);
+    else clearSession();
   }, [state.session]);
 
   return (

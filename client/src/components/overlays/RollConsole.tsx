@@ -5,7 +5,7 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import type { Resolution } from "../../state/types";
+import type { Resolution, ResolutionBreakdown } from "../../state/types";
 
 export interface DiceSpec {
   key: string;
@@ -21,18 +21,6 @@ export interface RollConsoleHandle {
 
 const OK_REVEAL_MS = 900;
 
-const KIND_TONE: Record<string, string> = {
-  overheat: "crit",
-  attack: "crit",
-  ram: "crit",
-  destruction: "crit",
-  blast: "crit",
-  repair: "cool",
-  initiative: "oil",
-  perk: "crit",
-  skip: "warn",
-};
-
 interface DieState {
   sides: number;
   value: number;
@@ -40,6 +28,9 @@ interface DieState {
   settled: boolean;
   tone: string;
 }
+
+const rollTone = (roll: { sides: number; tone?: string }): string =>
+  roll.tone || (roll.sides === 12 ? "cool" : "");
 
 interface EffectState {
   text: string;
@@ -56,7 +47,9 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   const [kind, setKind] = useState("Resolution");
   const [dice, setDice] = useState<DieState[]>([]);
   const [summary, setSummary] = useState("");
+  const [breakdown, setBreakdown] = useState<ResolutionBreakdown | null>(null);
   const [effects, setEffects] = useState<EffectState[]>([]);
+  const [reveal, setReveal] = useState<{ prep: string; icon: string; label: string } | null>(null);
   const [formHidden, setFormHidden] = useState(true);
   const [formSpecs, setFormSpecs] = useState<DiceSpec[]>([]);
   const [okHidden, setOkHidden] = useState(true);
@@ -116,11 +109,32 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
 
   const playResolution = (entry: Resolution): Promise<void> => {
     setKind((entry.kind || "resolution").toUpperCase());
+    if (entry.kind === "reaction") {
+      const prep = (entry as { prep?: string }).prep || "brace";
+      const face = prep === "evasive"
+        ? { icon: "💨", label: "Evasive", tone: "evasive" }
+        : prep === "return"
+          ? { icon: "↩️", label: "Return Fire", tone: "return" }
+          : { icon: "🛡️", label: "Brace", tone: "brace" };
+      setDice([]);
+      setReveal({ prep: face.tone, icon: face.icon, label: face.label });
+      setSummary("");
+      setBreakdown(null);
+      setEffects([]);
+      open();
+      window.setTimeout(() => {
+        setSummary(entry.summary || "");
+        setEffects((entry.effects || []).map((text, i) => ({ text, delay: 0.4 + i * 0.12 })));
+        showOkAfterDelay();
+      }, reduced ? 0 : 480);
+      return Promise.resolve();
+    }
+    setReveal(null);
     setSummary("");
+    setBreakdown(null);
     setEffects([]);
     setFormHidden(true);
     setFormSpecs([]);
-    const tone = KIND_TONE[entry.kind ?? ""] || "oil";
 
     const rolls = (entry.rolls || []).filter((r) => r.sides);
     dieEls.current = [];
@@ -134,44 +148,65 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     setDice(initial);
     open();
 
-    const finish = () => {
-      setDice(
-        rolls.map((roll) => ({
-          sides: roll.sides,
-          value: roll.value,
-          label: roll.label || `D${roll.sides}`,
-          settled: true,
-          tone:
-            tone === "cool"
-              ? "cool"
-              : roll.sides === 12 || tone === "crit"
-                ? "crit"
-                : "",
-        })),
-      );
+    const finishEffects = () => {
       setSummary(entry.summary || "");
+      setBreakdown(entry.breakdown || null);
       setEffects(
         (entry.effects || []).map((text, i) => ({ text, delay: 0.5 + i * 0.12 })),
       );
       showOkAfterDelay();
     };
 
+    const settleAll = () => {
+      setDice(
+        rolls.map((roll) => ({
+          sides: roll.sides,
+          value: roll.value,
+          label: roll.label || `D${roll.sides}`,
+          settled: true,
+          tone: rollTone(roll),
+        })),
+      );
+      finishEffects();
+    };
+
     if (reduced || rolls.length === 0) {
-      finish();
+      settleAll();
       return Promise.resolve();
     }
 
     return new Promise((resolve) => {
       const started = performance.now();
+      const settleAt = rolls.map((_, i) => 550 + i * 240);
+      const settledFlags = rolls.map(() => false);
       clearFlicker();
       flickerTimer.current = window.setInterval(() => {
+        const elapsed = performance.now() - started;
+        let allSettled = true;
         rolls.forEach((roll, i) => {
+          if (settledFlags[i]) return;
+          if (elapsed >= settleAt[i]) {
+            settledFlags[i] = true;
+            setDice((prev) => {
+              const next = prev.slice();
+              next[i] = {
+                sides: roll.sides,
+                value: roll.value,
+                label: roll.label || `D${roll.sides}`,
+                settled: true,
+                tone: rollTone(roll),
+              };
+              return next;
+            });
+            return;
+          }
+          allSettled = false;
           const el = dieEls.current[i];
-          if (el) el.textContent = String(Math.floor(Math.random() * roll.sides) + 1);
+          if (el) el.textContent = String(1 + Math.floor(Math.random() * roll.sides));
         });
-        if (performance.now() - started > 650) {
+        if (allSettled) {
           clearFlicker();
-          finish();
+          finishEffects();
           resolve();
         }
       }, 60);
@@ -185,6 +220,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     setKind(title.toUpperCase());
     setDice([]);
     setSummary("");
+    setBreakdown(null);
     setEffects([]);
     inputEls.current = [];
     setFormSpecs(specs);
@@ -232,6 +268,8 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
 
   useImperativeHandle(ref, () => ({ playResolution, promptDice, closeRoll }));
 
+  const rolling = dice.length > 0 && dice.some((d) => !d.settled);
+
   return (
     <div
       id="rollScrim"
@@ -262,6 +300,15 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
             ✕
           </button>
         </div>
+        {reveal ? (
+          <div className="rx-reveal">
+            <div className="rx-token flip" data-tone={reveal.prep} aria-label={reveal.label}>
+              <span className="rx-token-face rx-token-back" aria-hidden="true">⟡</span>
+              <span className="rx-token-face rx-token-front" aria-hidden="true">{reveal.icon}</span>
+            </div>
+            <span className="die-label">{reveal.label}</span>
+          </div>
+        ) : null}
         <div id="rollDice" className="roll-dice">
           {dice.map((d, i) => (
             <div className="die-wrap" key={i}>
@@ -276,15 +323,56 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                   dieEls.current[i] = el;
                 }}
               >
-                {d.settled ? String(d.value) : "?"}
+                {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
               </div>
               <span className="die-label">{d.label}</span>
             </div>
           ))}
         </div>
-        <div id="rollSummary" className="roll-summary">
-          {summary}
-        </div>
+        {rolling && <div className="roll-rolling">Rolling…</div>}
+        {breakdown ? (
+          <div id="rollSummary" className="rx-break" aria-label={summary}>
+            {(breakdown.actor || breakdown.weapon || breakdown.target) && (
+              <div className="rx-break-head">
+                {breakdown.actor && <span className="rx-actor">{breakdown.actor}</span>}
+                {breakdown.weapon && <span className="rx-weapon">{breakdown.weapon}</span>}
+                {breakdown.target && <span className="rx-target">→ {breakdown.target}</span>}
+              </div>
+            )}
+            <div className="rx-break-eq">
+              {(breakdown.terms || []).map((t, i) => (
+                <span className="rx-term-group" key={i}>
+                  {t.op ? <span className="rx-op">{t.op}</span> : null}
+                  <span className="rx-term" data-tone={t.tone}>
+                    <b>{t.value}</b>
+                    <em>{t.label}</em>
+                  </span>
+                </span>
+              ))}
+            </div>
+            <div className="rx-break-out">
+              {breakdown.total != null && (
+                <span className="rx-total">
+                  <span className="rx-op">=</span>
+                  {breakdown.total}
+                </span>
+              )}
+              {breakdown.tier && (
+                <span className="rx-tier" data-tier={breakdown.tier}>
+                  {breakdown.tier}
+                </span>
+              )}
+              <span className="rx-sp">
+                <b>{breakdown.sp}</b>
+                <em>{breakdown.location ? `SP → ${breakdown.location}` : "SP"}</em>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div id="rollSummary" className="roll-summary">
+            {summary}
+          </div>
+        )}
         <div id="rollEffects" className="roll-effects">
           {effects.map((e, i) => (
             <div

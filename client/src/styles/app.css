@@ -57,6 +57,13 @@
   letter-spacing: .24em; color: var(--txt-faint); text-transform: uppercase;
   align-self: center;
 }
+.topbar-gloss {
+  margin-left: .5rem; align-self: center; flex: 0 0 auto;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; color: var(--txt-dim);
+  background: var(--iron-800); border: 1px solid var(--line); cursor: pointer;
+}
 
 /* ---- Main stage: the rigs and battle controls are the whole show now ---- */
 .stage {
@@ -72,6 +79,10 @@
 .stage-head h1 {
   margin: 0; font-size: .92rem; letter-spacing: .18em; text-transform: uppercase;
   color: var(--oil); font-weight: 700;
+}
+.stage-room {
+  font-family: var(--font-mono); font-size: .56rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--txt-faint);
 }
 
 button { border: none; cursor: pointer; font-family: inherit; }
@@ -127,19 +138,35 @@ button:focus-visible, select:focus-visible, textarea:focus-visible {
 .hint--warn::before { content: "⚠ "; }
 
 /* ---- Floating assistant launcher ---- */
-.chat-fab {
-  position: absolute; z-index: 55; right: 1.05rem; bottom: 1.05rem;
-  width: 58px; height: 58px; border-radius: 50%;
+.chat-fab,
+.leave-fab {
+  position: absolute; z-index: 55; bottom: 1.05rem;
+  width: 54px; height: 54px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(160deg, var(--oil-hi), var(--oil-deep));
-  border: 1px solid rgba(231,154,61,.7);
-  box-shadow: 0 10px 26px rgba(231,154,61,.32), 0 4px 14px rgba(0,0,0,.55);
   transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
   animation: fadeIn .4s ease .2s both;
 }
-.chat-fab-ic { font-size: 1.45rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
-.chat-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(231,154,61,.4), 0 6px 16px rgba(0,0,0,.55); }
-.chat-fab:active { transform: translateY(0); }
+.chat-fab {
+  right: 1.05rem;
+  background: linear-gradient(160deg, var(--oil-hi), var(--oil-deep));
+  border: 1px solid rgba(231,154,61,.7);
+  box-shadow: 0 10px 26px rgba(231,154,61,.32), 0 4px 14px rgba(0,0,0,.55);
+}
+.leave-fab {
+  left: 1.05rem;
+  background: linear-gradient(160deg, var(--iron-780), var(--iron-900));
+  border: 1px solid rgba(229,83,58,.58);
+  box-shadow: 0 10px 26px rgba(229,83,58,.18), 0 4px 14px rgba(0,0,0,.55);
+}
+.chat-fab-ic,
+.leave-fab-ic { font-size: 1.4rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.leave-fab-ic { color: var(--ember-hi); transform: translateX(-1px); }
+.chat-fab:hover { box-shadow: 0 14px 30px rgba(231,154,61,.4), 0 6px 16px rgba(0,0,0,.55); }
+.leave-fab:hover { box-shadow: 0 14px 30px rgba(229,83,58,.25), 0 6px 16px rgba(0,0,0,.55); }
+.chat-fab:hover,
+.leave-fab:hover { transform: translateY(-2px); }
+.chat-fab:active,
+.leave-fab:active { transform: translateY(0); }
 .chat-fab.active {
   background: linear-gradient(160deg, var(--iron-780), var(--iron-850));
   border-color: var(--rivet);
@@ -151,6 +178,40 @@ button:focus-visible, select:focus-visible, textarea:focus-visible {
   box-shadow: 0 0 8px rgba(229,83,58,.85);
   animation: pulse 1.6s ease-in-out infinite;
 }
+
+/* ---- Leave-room confirmation dialog ---- */
+.leave-dialog-scrim {
+  position: absolute; inset: 0; z-index: 88;
+  display: grid; place-items: center; padding: 1rem;
+  background: rgba(5,7,10,.74); backdrop-filter: blur(2px);
+}
+.leave-dialog {
+  width: min(340px, 100%);
+  background: linear-gradient(180deg, var(--iron-850), var(--iron-900));
+  border: 1px solid var(--rivet); border-radius: 14px;
+  padding: .9rem .95rem 1rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,.65);
+}
+.leave-dialog-head {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding-bottom: .55rem; margin-bottom: .7rem; border-bottom: 1px solid var(--line);
+}
+.leave-dialog-title {
+  font-family: var(--font-mono); font-size: .68rem; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--ember-hi);
+}
+.leave-dialog-close {
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  color: var(--txt-dim); background: var(--iron-800); border: 1px solid var(--line);
+}
+.leave-dialog-close:hover { color: var(--ember-hi); border-color: rgba(229,83,58,.4); }
+.leave-dialog-copy {
+  margin: 0; font-family: var(--font-display); font-size: .82rem;
+  line-height: 1.45; color: var(--txt-dim);
+}
+.leave-dialog-actions { display: flex; gap: .5rem; margin-top: .9rem; }
+.leave-dialog-actions .btn { flex: 1 1 0; white-space: nowrap; }
 
 /* ---- Floating assistant panel ---- */
 .chat-panel {

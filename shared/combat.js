@@ -2,7 +2,7 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  IMPACT, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity,
+  IMPACT, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity, shieldCoverage,
 } from "./rules.js";
 
 function rollD(sides, provided, random) {
@@ -74,20 +74,24 @@ export function arcBonus(profile, arc) {
 
 // §7.7-8 — one Impact Roll per hit. Adds AP (+D3 per raw 6) and Rend (+D3 per
 // raw 5-6). Brace subtracts 2 on the target's front arc (§5 preparation).
+// Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 4.
 export function rollImpacts(attacker, target, profile, location, opts, providedDice, random) {
   const str = computeStr(attacker, profile, opts);
   const bonus = arcBonus(profile, opts.arc);
   const braced = target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
   const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
+  const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
+  const shieldNegates = !!shield && shield.negate.includes(opts.arc);
+  const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
   const row = IMPACT[target.weightClass][location];
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
     const die = rollD(6, providedDice?.impacts?.[i], random);
-    if (bonus == null) { out.push({ die, total: 0, tier: "none", sp: 0 }); continue; }
+    if (bonus == null || shieldNegates) { out.push({ die, total: 0, tier: "none", sp: 0 }); continue; }
     let extra = 0;
     if (profile.perks.includes("Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
     if (profile.perks.includes("Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
-    const total = die + str + bonus + braced + hardened + extra;
+    const total = die + str + bonus + braced + hardened + shieldBlunt + extra;
     const sev = impactSeverity(total, row);
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
   }
@@ -112,25 +116,42 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
 
-  const rolls = [{ sides: 6, value: th.hits, label: `hits (${th.hits}/${th.rof})` }];
+  const rolls = th.dice.map((d, i) => ({
+    sides: 6, value: d, label: `hit ${i + 1}`,
+    tone: d === 6 ? "crit" : d >= th.modAim ? "ok" : "miss",
+  }));
   let impacts = [];
   let location = null;
   if (th.hits > 0) {
-    location = opts.aimed ? opts.aimedLoc : hitLocation(rollD(12, opts.dice?.location, random));
+    const locDie = rollD(12, opts.dice?.location, random);
+    location = opts.aimed ? opts.aimedLoc : hitLocation(locDie);
+    if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     impacts = rollImpacts(attacker, target, profile, location,
       { arc: opts.arc, hits: th.hits, charged: opts.charged }, opts.dice, random);
     for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
     if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
       ctx.sunderLocation?.(target, location);
     }
+    if (profile.upgradeEffect?.onDamage === "breaching-round" && location === "hull" && impacts.some((h) => h.sp > 0)) {
+      ctx.breachHull?.(target);
+    }
     applyOnHitPerks(room, attacker, target, profile, opts, random, ctx);
   }
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
+  const str = computeStr(attacker, profile, opts);
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
-    summary: `${attacker.name} → ${target.name} with ${weaponName}: ${th.hits} hit(s), ${total} SP${location ? ` to ${location}` : ""}`,
+    summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s) = ${total} SP${location ? ` to ${location}` : ""}`,
+    breakdown: {
+      actor: attacker.name, weapon: weaponName, target: target.name,
+      terms: [
+        { value: th.hits, label: "hits", tone: "die" },
+        { value: str, label: "weapon STR", op: "·", tone: "mod" },
+      ],
+      sp: total, location,
+    },
     effects: [],
   });
   return { ok: true, hits: th.hits, location, impacts, heat };
@@ -184,13 +205,24 @@ export function resolveRam(room, attacker, target, opts, random, ctx) {
     const d = opts.dice?.[who] || {};
     const loc = hitLocation(rollD(12, d.location, random));
     const die = rollD(6, d.impact, random);
-    const total = die + (RAM_STR[rig.weightClass] || 9);
+    const ramStr = RAM_STR[rig.weightClass] || 8;
+    const total = die + ramStr;
     const sev = impactSeverity(total, IMPACT[rig.weightClass][loc]);
     if (sev.sp > 0) ctx.applyDamage(room, rig, loc, sev.sp, { random });
+    const cls = rig.weightClass ? rig.weightClass[0].toUpperCase() + rig.weightClass.slice(1) : "";
     ctx.pushResolution(room, {
       kind: "ram", actor: attacker.owner, rigId: rig.id,
-      rolls: [{ sides: 6, value: die, label: "D6" }],
-      summary: `Ram hits ${rig.name}: ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`, effects: [],
+      rolls: [{ sides: 6, value: die, label: "D6", tone: sev.sp > 0 ? "ok" : "miss" }],
+      summary: `Ram hits ${rig.name}: D6 ${die} + Ram STR ${ramStr} = ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`,
+      breakdown: {
+        weapon: "Ram", target: rig.name,
+        terms: [
+          { value: die, label: "D6", tone: "die" },
+          { value: ramStr, label: `Ram STR · ${cls}`, op: "+", tone: "mod" },
+        ],
+        total, tier: sev.tier, sp: sev.sp, location: loc,
+      },
+      effects: [],
     });
   }
   return { ok: true };
