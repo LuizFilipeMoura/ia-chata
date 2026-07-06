@@ -1096,7 +1096,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         t.movedThisActivation = false;
         t.longRangeShots = 0; // ranged shots fired this activation (2nd+ runs hot)
         const penalty = Math.max(0, Math.floor(rig.actionPenaltyNextActivation || 0));
-        t.actionsMax = Math.max(0, 3 - (rig.hull.sp === 0 ? 2 : 0) - penalty);
+        const base = UNIT_KINDS[kindOf(rig)]?.actionBudget ?? 3;
+        const [structPart] = partsByRole(kindOf(rig), "structural");
+        const structPenalty = structPart && rig[structPart]?.sp === 0 ? 2 : 0;
+        t.actionsMax = Math.max(0, base - structPenalty - penalty);
         rig.actionPenaltyNextActivation = 0;
         rig.loaded = { longRange: true, melee: true };
       }

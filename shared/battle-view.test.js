@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { availableActions, actionBudget, rigModifiers, phaseSummary, outcomeText } from "./battle-view.js";
+import { makeRig } from "./game-state.js";
 
 function rig(over = {}) {
   return {
@@ -123,4 +124,17 @@ test("availableActions appends the Rig's equipment active, gated by budget", () 
 
   const capped = availableActions(rig({ equipment: "ablative-plating" }), { activeRigId: 1, actionsUsed: 5, actionsMax: 5 });
   assert.equal(capped.find((a) => a.key === "harden").enabled, false);
+});
+
+test("actionBudget.reduced fires from the structural part (regression)", () => {
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  rig.hull.sp = 0;
+  const budget = actionBudget(rig, { actionsUsed: 0, actionsMax: 1 });
+  assert.equal(budget.reduced, true);
+});
+
+test("actionBudget.reduced stays false when the structural part is unhurt", () => {
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  const budget = actionBudget(rig, { actionsUsed: 0, actionsMax: 3 });
+  assert.equal(budget.reduced, false);
 });

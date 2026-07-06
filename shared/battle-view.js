@@ -2,6 +2,7 @@
 // tested in node and imported by the browser (via the /shared static mount).
 import { ACTIONS } from "./rules.js";
 import { EQUIPMENT } from "./game-state.js";
+import { kindOf, partsByRole } from "./unit-kinds.js";
 
 const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repair", "prepare", "shutdown"];
 

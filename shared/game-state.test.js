@@ -1661,3 +1661,14 @@ test("makeUnit rejects unknown kinds", () => {
 test("makeUnit('tank', ...) returns null until Task 11 wires cold kinds", () => {
   assert.equal(makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" }), null);
 });
+
+test("activation reads actionBudget from the unit registry (rig = 3)", () => {
+  // There is no `start` verb in this codebase — the startedRoom() dance
+  // (claim + add rigs + field lock + both sides ready) is the setup that gets
+  // the game into activation phase with a live turn. Regression-pin the
+  // Rig's registry-derived budget of 3 by running an actual `activate`.
+  const r = startedRoom(); // turn.side === "b" after ready-order dance
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(r.game.turn.actionsMax, 3);
+});
