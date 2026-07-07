@@ -42,3 +42,9 @@
 }
 .join-hint--go { color: var(--act); }
 .join-err { min-height: 1rem; margin: 0; color: var(--ember-hi); font-size: .78rem; text-align: center; }
+.join-test-btn {
+  margin-top: .4rem; width: 100%; padding: .55rem; border-radius: 10px;
+  background: transparent; color: var(--txt-faint); border: 1px dashed var(--line);
+  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .06em; cursor: pointer;
+}
+.join-test-btn:hover { color: var(--act); border-color: var(--act); }
