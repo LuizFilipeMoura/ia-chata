@@ -12,6 +12,7 @@ import { useDrawer } from "./DrawerContext";
 import { useRoll } from "./RollContext";
 import { useRoomState } from "./RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
+import { useMySide } from "../hooks/useMySide";
 import ChoiceField from "../components/overlays/ChoiceField";
 import ReactionPicker from "../components/overlays/ReactionPicker";
 import type { Rig, PrepType } from "./types";
@@ -132,18 +133,17 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   const { openDrawer, closeDrawer } = useDrawer();
   const { promptDice } = useRoll();
   const sendCommand = useCommands();
-  const { game, session, rigs } = useRoomState();
+  const { game, rigs } = useRoomState();
 
   const rigsRef = useRef(rigs);
   rigsRef.current = rigs;
 
-  // Keep game/session current inside stable callbacks without recreating them.
+  // Keep game current inside stable callbacks without recreating them.
   const gameRef = useRef(game);
-  const sessionRef = useRef(session);
   gameRef.current = game;
-  sessionRef.current = session;
 
-  const mySide = useCallback(() => sessionRef.current?.side || "a", []);
+  const viewSide = useMySide();
+  const mySide = useCallback(() => viewSide, [viewSide]);
 
   const promptOneDie = useCallback(
     async (label: string, cb: (d: number) => void) => {

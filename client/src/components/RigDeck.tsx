@@ -2,15 +2,16 @@ import { Fragment } from "react";
 import { useRoomState } from "../state/RoomStateContext";
 import { useUi } from "../state/UiStateContext";
 import { useCommands } from "../hooks/useCommands";
+import { useMySide } from "../hooks/useMySide";
 import { orderedRigs, ownerLabel } from "../lib/rigView";
 import { RigItem } from "./rig/RigItem";
 import { RigAddScreen } from "./RigAddScreen";
 
 export function RigDeck() {
-  const { rigs, game, session } = useRoomState();
+  const { rigs, game } = useRoomState();
   const { expandedRigs, activeRigId, toggleExpanded, setActiveRig } = useUi();
   const sendCommand = useCommands();
-  const mySide = session?.side || "a";
+  const mySide = useMySide();
   const started = Boolean(game?.started);
   const ordered = orderedRigs(rigs, mySide);
 

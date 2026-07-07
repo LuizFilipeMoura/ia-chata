@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FIELD_MIN, FIELD_MAX } from "/shared/field.js";
 import { useRoomState } from "../state/RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
+import { useMySide } from "../hooks/useMySide";
 import { useDrawer } from "../state/DrawerContext";
 import { FieldMap } from "./FieldMap";
 import type { FieldState, Objective } from "../state/types";
@@ -12,8 +13,9 @@ const DEFAULT_FIELD: FieldState = {
 
 // The drawer body: local dims, live server-driven preview, dispatches commands.
 function FieldSetupBody({ onLocked }: { onLocked: () => void }) {
-  const { game, field, ownerSide, session } = useRoomState();
+  const { game, field, ownerSide } = useRoomState();
   const sendCommand = useCommands();
+  const mySide = useMySide();
   const f = field ?? DEFAULT_FIELD;
   const [w, setW] = useState(f.width);
   const [h, setH] = useState(f.height);
@@ -32,7 +34,7 @@ function FieldSetupBody({ onLocked }: { onLocked: () => void }) {
       <FieldMap
         field={f}
         objectives={(game?.objectives as Objective[]) ?? []}
-        mySide={session?.side ?? "a"}
+        mySide={mySide}
         ownerSide={ownerSide ?? null}
       />
 
@@ -77,6 +79,7 @@ function FieldSetupBody({ onLocked }: { onLocked: () => void }) {
 export function FieldControls() {
   const { game, field, ownerSide, session } = useRoomState();
   const { openDrawer, closeDrawer } = useDrawer();
+  const mySide = useMySide();
   const f = field ?? DEFAULT_FIELD;
   const isOwner = Boolean(session?.side && session.side === ownerSide);
   const started = Boolean(game?.started);
@@ -86,7 +89,7 @@ export function FieldControls() {
       <FieldMap
         field={f}
         objectives={(game?.objectives as Objective[]) ?? []}
-        mySide={session?.side ?? "a"}
+        mySide={mySide}
         ownerSide={ownerSide ?? null}
       />
       {isOwner && !started && !f.locked ? (

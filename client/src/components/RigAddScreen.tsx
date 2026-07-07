@@ -1,15 +1,16 @@
 import { canAddRigForSide, MAX_RIGS_TOTAL, MAX_RIGS_PER_SIDE } from "/shared/game-state.js";
 import { useRoomState } from "../state/RoomStateContext";
 import { useWizard } from "../state/WizardContext";
+import { useMySide } from "../hooks/useMySide";
 
 interface Props {
   onCommission?: () => void;
 }
 
 export function RigAddScreen({ onCommission }: Props) {
-  const { rigs, game, session } = useRoomState();
+  const { rigs, game } = useRoomState();
   const { openCommission } = useWizard();
-  const owner = session?.side || "a";
+  const owner = useMySide();
   const canAdd = canAddRigForSide({ rigs, game }, owner);
 
   const sideRigCount = rigs.filter((rig) => (rig.owner || "a") === owner).length;

@@ -1,11 +1,12 @@
 import { useRoomState } from "../state/RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
+import { useMySide } from "../hooks/useMySide";
 
 export function BattleSetup() {
-  const { rigs, game, session, field } = useRoomState();
+  const { rigs, game, field } = useRoomState();
   const sendCommand = useCommands();
 
-  const mySide = session?.side || "a";
+  const mySide = useMySide();
   const enemySide = mySide === "a" ? "b" : "a";
   const sideName = (id: string) =>
     game?.sides?.find((s) => s.id === id)?.name || (id === "a" ? "Side A" : "Side B");

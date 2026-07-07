@@ -7,6 +7,7 @@ import {
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
+  randomRigWeapons, randomEquipment,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -1955,4 +1956,35 @@ test("performAction 'prepare' is refused for cold kinds (reactions: false)", () 
   applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "prepare", prep: "brace" } });
   assert.equal(tank.preparation, null);
   assert.equal(room.game.turn.actionsUsed, 0);
+});
+
+test("randomRigWeapons returns a valid lr+melee pair with upgrade ids", () => {
+  const seq = [0, 0, 0, 0]; let i = 0;
+  const rng = () => seq[i++ % seq.length];
+  const w = randomRigWeapons(rng);
+  assert.ok(Object.keys(WEAPONS.longRange).includes(w.longRange));
+  assert.ok(Object.keys(WEAPONS.melee).includes(w.melee));
+  if (w.longRangeUpgrade) {
+    assert.ok((WEAPON_UPGRADES[w.longRange] || []).some((u) => u.id === w.longRangeUpgrade));
+  }
+});
+
+test("randomEquipment returns a valid EQUIPMENT key", () => {
+  const eq = randomEquipment(() => 0);
+  assert.ok(Object.keys(EQUIPMENT).includes(eq));
+});
+
+test("randomize verb rebuilds a rig in place, preserving id/name/owner", () => {
+  const r = createRoom("RND1");
+  applyCommand(r, { verb: "add", attrs: { name: "Alpha", class: "medium", owner: "a", lr: "Mini Gun", melee: "Sword" } });
+  const before = findRig(r, "Alpha");
+  const beforeId = before.id;
+  applyCommand(r, { verb: "randomize", attrs: { name: "Alpha" } }, {}, { random: () => 0.99 });
+  const after = findRig(r, "Alpha");
+  assert.equal(after.id, beforeId);
+  assert.equal(after.name, "Alpha");
+  assert.equal(after.owner, "a");
+  assert.equal(after.kind, "rig");
+  assert.ok(after.weapons.longRange && after.weapons.melee);
+  assert.equal(after.hull.sp, after.hull.max);
 });

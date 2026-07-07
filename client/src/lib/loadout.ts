@@ -1,4 +1,4 @@
-import { EQUIPMENT, WEAPON_UPGRADES } from "/shared/game-state.js";
+import { EQUIPMENT, WEAPON_UPGRADES, randomRigWeapons, randomEquipment } from "/shared/game-state.js";
 import type { Rig } from "../state/types";
 
 export interface LoadoutWeapon { name: string; upName: string; upTag: string; }
@@ -39,4 +39,10 @@ export function buildLoadout(rig: Rig): Loadout | null {
     melee: weapon(rig.weapons.melee, rig.weaponUpgrades?.melee),
     equipment,
   };
+}
+
+/** Attrs for an `add` command that commissions a full-capacity medium Rig
+ *  with a random weapons/upgrades/equipment loadout. */
+export function randomAddAttrs(): Record<string, unknown> {
+  return { class: "medium", ...randomRigWeapons(), equipment: randomEquipment() };
 }

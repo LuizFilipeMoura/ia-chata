@@ -20,6 +20,8 @@ declare module "/shared/game-state.js" {
     heat: number; cap: number; floor: number; over: number; bonus: number;
     zone: "cold" | "cool" | "warm" | "redline" | "over";
   };
+  export function randomRigWeapons(rng?: () => number): { longRange: string; melee: string; longRangeUpgrade: string; meleeUpgrade: string };
+  export function randomEquipment(rng?: () => number): string;
   export function defaultWeaponUpgrade(weaponName: string): string;
   export function normalizeWeaponUpgrade(weaponName: string, upgradeId?: string | null): string;
   export function upgradeForWeapon(weaponName: string, upgradeId?: string | null): { id: string; name: string } | null;

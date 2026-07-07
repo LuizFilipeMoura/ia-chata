@@ -3,14 +3,15 @@ import { useRoomState } from "../state/RoomStateContext";
 import { useWizard } from "../state/WizardContext";
 import { useBattleActions } from "../state/BattleActionsContext";
 import { useCommands } from "../hooks/useCommands";
+import { useMySide } from "../hooks/useMySide";
 import { computeFocus, type FocusCtaKind } from "../lib/computeFocus";
 
 // The one thing this player should do right now, pinned above everything and
 // independent of scroll — plus a whole-screen border while it's actually their
 // move (battle.js:165-196).
 export function TurnBanner() {
-  const { rigs, game, session } = useRoomState();
-  const mySide = session?.side || "a";
+  const { rigs, game } = useRoomState();
+  const mySide = useMySide();
   const focus = computeFocus(game, rigs, mySide);
 
   const { openCommission, openScore } = useWizard();
