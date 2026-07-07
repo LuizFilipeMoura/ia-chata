@@ -11,6 +11,7 @@ export default function App() {
   const { session } = useRoomState();
   const dispatch = useRoomDispatch();
   const [joinError, setJoinError] = useState("");
+  const [testMode, setTestMode] = useState(false);
   useViewportHeight();
 
   const applyState = useCallback(
@@ -37,10 +38,16 @@ export default function App() {
     }
   }, [dispatch]);
 
-  if (import.meta.env.DEV && typeof window !== "undefined" && window.location.pathname === "/test") {
-    return <TestHarness />;
-  }
+  if (testMode) return <TestHarness />;
 
-  if (!session?.room) return <JoinGate onJoin={onJoin} error={joinError} />;
+  if (!session?.room) {
+    return (
+      <JoinGate
+        onJoin={onJoin}
+        error={joinError}
+        onOpenTest={import.meta.env.DEV ? () => setTestMode(true) : undefined}
+      />
+    );
+  }
   return <Terminal />;
 }

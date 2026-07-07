@@ -3,9 +3,11 @@ import { useMemo, useState } from "react";
 interface Props {
   onJoin: (room: string, name: string, side: string) => Promise<void> | void;
   error?: string;
+  /** Dev-only: when provided, renders a button that opens the /test debug harness. */
+  onOpenTest?: () => void;
 }
 
-export function JoinGate({ onJoin, error }: Props) {
+export function JoinGate({ onJoin, error, onOpenTest }: Props) {
   const [room, setRoom] = useState("");
   const [name, setName] = useState("");
   const [side, setSide] = useState<string | null>(null);
@@ -39,6 +41,11 @@ export function JoinGate({ onJoin, error }: Props) {
         </button>
         <p className={`join-hint${hint.startsWith("Ready") ? " join-hint--go" : ""}`}>{hint}</p>
         <p className="join-err">{error ?? ""}</p>
+        {onOpenTest && (
+          <button className="join-test-btn btn" type="button" onClick={onOpenTest}>
+            🛠 Debug Harness
+          </button>
+        )}
       </div>
     </div>
   );
