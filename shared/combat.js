@@ -55,7 +55,8 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
 // §12/§7 — STR = weapon STR + weight modifier + Charged Shot.
 export function computeStr(attacker, profile, opts) {
   const charged = opts.charged && profile.perks.includes("Charged Shot") ? 2 : 0;
-  return profile.str + (WEIGHT_STR_MOD[attacker.weightClass] || 0) + charged;
+  const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
+  return profile.str + weightMod + charged;
 }
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
@@ -102,7 +103,11 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
 // a resolution descriptor (or { ok:false, reason } when the shot can't be made).
 // The weapon profile is resolved by the caller via ctx.profileFor(slot, name).
 export function resolveAttack(room, attacker, target, opts, random, ctx) {
-  const slot = opts.weapon === "melee" ? "melee" : "longRange";
+  // Rigs carry a two-slot loadout (longRange + melee). Flat-pick kinds
+  // (Tank / Walker) carry a single "unit" slot instead.
+  let slot;
+  if (attacker.weapons?.unit != null) slot = "unit";
+  else slot = opts.weapon === "melee" ? "melee" : "longRange";
   const weaponName = attacker.weapons?.[slot];
   const profile = ctx.profileFor(slot, weaponName, attacker);
   if (!profile) return { ok: false, reason: "no-weapon" };
@@ -111,10 +116,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // A spent ranged weapon normally can't fire — unless the caller folds in a
   // rushed reload (§7), paid for with an extra action-slot upstream.
   if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };
+  if (slot === "unit" && attacker.loaded.unit === false && !opts.autoReload) return { ok: false, reason: "reload" };
 
   const th = rollToHit(attacker, profile, opts, opts.dice?.toHit, random);
   const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
+  if (slot === "unit") attacker.loaded.unit = false;
 
   const rolls = th.dice.map((d, i) => ({
     sides: 6, value: d, label: `hit ${i + 1}`,

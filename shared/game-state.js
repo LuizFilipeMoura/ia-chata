@@ -203,6 +203,14 @@ function uniquePerks(base, added = []) {
 }
 
 export function effectiveWeaponProfile(slot, weaponName, rig) {
+  if (slot === "unit") {
+    const base = UNIT_WEAPONS[weaponName];
+    if (!base) return null;
+    // Flat-pick weapons have no upgrades and no weight-class scaling. Ship a
+    // shape identical to the rig-catalog result so downstream code (computeStr,
+    // rollToHit) doesn't need to know which domain the profile came from.
+    return { ...base, upgradeEffect: {} };
+  }
   const base = WEAPONS[slot]?.[weaponName];
   if (!base) return null;
   const upgrade = upgradeForWeapon(weaponName, rig?.weaponUpgrades?.[slot]);

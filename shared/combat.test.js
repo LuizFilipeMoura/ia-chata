@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, resolveRam } from "./combat.js";
-import { WEAPONS, makeRig, effectiveWeaponProfile } from "./game-state.js";
+import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
 // game-state.js's combatCtx() injects (§"Mutation primitives" in combat.js),
@@ -271,4 +271,32 @@ test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage",
   assert.equal(targetRes.breakdown.total, 9);
   assert.equal(targetRes.breakdown.tier, "none");
   assert.equal(targetRes.breakdown.sp, 0);
+});
+
+test("computeStr skips weight-class modifier for flat-pick weapons", () => {
+  const attackerWithClass = { kind: "tank", weightClass: "heavy" };
+  const profile = { str: 12, perks: [], flatPick: true };
+  assert.equal(computeStr(attackerWithClass, profile, { charged: false }), 12);
+});
+
+test("computeStr still applies weight-class modifier for rig-catalog weapons", () => {
+  const attacker = { kind: "rig", weightClass: "heavy" };
+  const profile = { str: 8, perks: [] };
+  assert.equal(computeStr(attacker, profile, { charged: false }), 8 + 2);
+});
+
+test("resolveAttack reads weapons.unit when the attacker is a Tank", () => {
+  const room = { rigs: [], history: [], game: { nextResolutionId: 1, resolutions: [] } };
+  const attacker = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  const target = makeUnit("tank", 2, "Enemy", "b", { unit: "Coaxial MG" });
+  room.rigs = [attacker, target];
+  const ctx = {
+    applyDamage: () => {}, bumpHeat: () => {}, pushResolution: () => {},
+    profileFor: (slot, name) => ({ ...UNIT_WEAPONS[name], upgradeEffect: {}, flatPick: true }),
+  };
+  const res = resolveAttack(room, attacker, target, {
+    weapon: "unit", target: "Enemy", arc: "front", range: "near", cover: 0, aimed: false,
+    dice: { toHit: [5], location: 3 },
+  }, () => 0, ctx);
+  assert.equal(res.ok, true);
 });
