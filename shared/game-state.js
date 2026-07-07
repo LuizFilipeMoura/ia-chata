@@ -1,5 +1,5 @@
 import { ACTIONS, heatThreshold, hitLocation, impactSeverity, impactRow } from "./rules.js";
-import { resolveAttack, resolveRam } from "./combat.js";
+import { resolveAttack } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
 } from "./field.js";
@@ -30,13 +30,13 @@ export const WEAPONS = {
     "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16],  perks: ["Armour Piercing", "Hot"] },
   },
   melee: {
-    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Shock"] },
-    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Cleave"] },
-    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Rend"] },
-    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Armour Piercing"] },
-    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [1.5, 1.5], perks: ["Melee", "Impale"] },
-    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Staggering"] },
-    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Bulwark"] },
+    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Shock"] },
+    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Cleave"] },
+    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Rend"] },
+    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [2, 2], perks: ["Melee", "Armour Piercing"] },
+    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], perks: ["Melee", "Impale"] },
+    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Staggering"] },
+    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] },
   },
 };
 
@@ -48,8 +48,8 @@ export const UNIT_WEAPONS = {
   "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"],              flatPick: true },
   "Coaxial MG":       { rof: 6, str: 5,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Raking Fire"], flatPick: true },
   "Rocket Pod":       { rof: 2, str: 10, acc: [0, 0],  rng: [15, 30], perks: ["Charged Shot"],           flatPick: true },
-  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [1.5, 1.5], perks: ["Melee"],                flatPick: true },
-  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [1.5, 1.5], perks: ["Melee", "Impale"],      flatPick: true },
+  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], perks: ["Melee"],                flatPick: true },
+  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], perks: ["Melee", "Impale"],      flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -328,6 +328,7 @@ function ensureGameShape(room) {
   if (room.game.pendingBlast === undefined) room.game.pendingBlast = null;
   if (room.game.pendingAnswer === undefined) room.game.pendingAnswer = null;
   if (room.game.pendingReaction === undefined) room.game.pendingReaction = null;
+  if (!Array.isArray(room._history)) room._history = [];
   for (const rig of room.rigs) ensureRigShape(rig);
   return room;
 }
@@ -569,7 +570,7 @@ function applyInitiative(room, order, rolls) {
     room.game.answerTokens[second] > 0 && eligibleForPrep(room, second).length > 0
       ? { side: second, remaining: room.game.answerTokens[second] }
       : null;
-  room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0, movedThisActivation: false };
+  room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
   room.game.phase = "activation";
 }
 
@@ -877,8 +878,13 @@ function resolveFire(room, rig, target, a, act, random) {
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
   if (act === "shutdown") {
-    if (t.actionsUsed !== 0) return false;
-    rig.engine.heat = engineHeatFloor(rig);
+    // Shutdown may be called at any point in the activation. Cooling is
+    // proportional to how much of the activation was spent acting: the more
+    // slots already used, the less heat it sheds (0 used → full cool to floor).
+    const floor = engineHeatFloor(rig);
+    const overFloor = Math.max(0, rig.engine.heat - floor);
+    const frac = t.actionsMax > 0 ? Math.min(1, t.actionsUsed / t.actionsMax) : 0;
+    rig.engine.heat = floor + Math.round(overFloor * frac);
     recompute(rig);
     endActivation(room, rig, null, random);
     return true;
@@ -939,22 +945,12 @@ function performAction(room, rig, act, a, random) {
     }
     return resolveFire(room, rig, target, a, act, random);
   }
-  if (act === "ram") {
-    const target = findRig(room, a.target);
-    if (!target) return false;
-    resolveRam(room, rig, target, { dice: a.dice }, random, combatCtx());
-    t.actionsUsed += 1;
-    bumpHeat(rig, def.heat);
-    return true;
-  }
   if (act === "move" || act === "sprint") {
-    // House rule: only one Move (or Sprint) per activation. Sprint costs 2 heat
-    // — 1 with Servo Actuators (Mobility) — and, like Move, spends one slot.
-    if (t.movedThisActivation) return false;
+    // Move / Sprint may repeat within an activation; each spends one slot and
+    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
     const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
     t.actionsUsed += 1;
     bumpHeat(rig, heat);
-    t.movedThisActivation = true;
     return true;
   }
   if (act === "reload") {
@@ -1022,6 +1018,12 @@ function advanceRound(room) {
   }
 }
 
+// Turn-scoped verbs whose effect the acting side may revert with `undo`.
+const UNDO_VERBS = new Set(["action", "endactivation", "activate", "blast", "react", "answer"]);
+const UNDO_LIMIT = 12; // bounded so the serialized room stays small
+
+const cloneState = (v) => JSON.parse(JSON.stringify(v));
+
 // Apply a single normalized command { verb, attrs } to the room in place.
 // Returns the room. Bumps room.version only when something actually changed.
 export function applyCommand(room, cmd, context = {}, options = {}) {
@@ -1029,6 +1031,35 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   const verb = (cmd?.verb || "").toLowerCase();
   const a = cmd?.attrs || {};
   let changed = false;
+
+  // Revert: pop the last turn-scoped snapshot, but only for the side that made
+  // it (the acting side). Restores rigs + game wholesale; dice already rolled
+  // are undone with it.
+  if (verb === "undo") {
+    const top = room._history?.[room._history.length - 1];
+    const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    if (top && sideId && top.side === sideId) {
+      room._history.pop();
+      room.rigs = top.rigs;
+      room.game = top.game;
+      room.version++;
+    }
+    return room;
+  }
+
+  // Snapshot before a turn-scoped mutation so it can be reverted. Captured up
+  // front (pre-mutation) and only committed to history if the command changed
+  // anything. Tag it with the acting side: turn-owner verbs belong to the turn
+  // side; answer/react are the opponent's reactions and belong to that side.
+  let undoSnapshot = null;
+  if (UNDO_VERBS.has(verb) && room.game.phase === "activation") {
+    const actor = (verb === "answer" || verb === "react")
+      ? (normalizeSide(room, a.side) || normalizeSide(room, context.side))
+      : room.game.turn?.side;
+    if (actor) {
+      undoSnapshot = { side: actor, rigs: cloneState(room.rigs), game: cloneState(room.game) };
+    }
+  }
 
   if (verb === "add") {
     if (a.name && !findRig(room, a.name)) {
@@ -1107,6 +1138,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     room.game.deployOrder = [];
     room.game.initiative = null;
     room.game.bounties = {};
+    room._history = [];
     for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
     changed = true;
   } else if (verb === "setdice") {
@@ -1172,7 +1204,6 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       } else {
         t.activeRigId = rig.id;
         t.actionsUsed = 0;
-        t.movedThisActivation = false;
         t.longRangeShots = 0; // ranged shots fired this activation (2nd+ runs hot)
         const penalty = Math.max(0, Math.floor(rig.actionPenaltyNextActivation || 0));
         const base = UNIT_KINDS[kindOf(rig)]?.actionBudget ?? 3;
@@ -1333,7 +1364,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     }
   }
 
-  if (changed) room.version++;
+  if (changed) {
+    if (undoSnapshot) {
+      room._history.push(undoSnapshot);
+      while (room._history.length > UNDO_LIMIT) room._history.shift();
+    }
+    room.version++;
+  }
   return room;
 }
 
@@ -1344,6 +1381,8 @@ export function publicState(room, side) {
   const bounties = {};
   if (sideId && room.game.bounties[sideId]) bounties[sideId] = room.game.bounties[sideId];
   const viewer = sideId;
+  const top = room._history?.[room._history.length - 1];
+  const canUndo = !!top && room.game.phase === "activation" && top.side === viewer;
   const rigs = room.rigs.map((rig) => {
     const prep = rig.preparation;
     if (prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {
@@ -1363,6 +1402,7 @@ export function publicState(room, side) {
       sides: room.game.sides.map((s) => ({ ...s })),
       objectives: room.game.objectives.map((objective) => ({ ...objective })),
       bounties,
+      canUndo,
     },
     rigs,
   };

@@ -11,7 +11,6 @@ export const ACTIONS = {
   sprint:   { label: "Sprint",      heat: 2, slot: 1 },
   fire:     { label: "Fire Weapon", heat: 1, slot: 1 },
   aimed:    { label: "Aimed Shot",  heat: 1, slot: 1 },
-  ram:      { label: "Ram",         heat: 1, slot: 1 },
   reload:   { label: "Reload",      heat: 1, slot: 1 },
   repair:   { label: "Repair",      heat: 1, slot: 1 },
   shutdown: { label: "Shut Down",   heat: 0, slot: 0 },
@@ -43,10 +42,9 @@ export function heatThreshold(total) {
 }
 
 // Weight-class STR modifier applied to every Impact Roll (§12); Aim target
-// number (§2, roll >= to hit); Ram STR by weight class (§5).
+// number (§2, roll >= to hit).
 export const WEIGHT_STR_MOD = { light: -2, medium: 0, heavy: 2, colossal: 4 };
 export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
-export const RAM_STR = { light: 7, medium: 8, heavy: 9, colossal: 10 };
 
 // Hit-location table (§7): defender's D12 → part-name, keyed by unit kind.
 export function hitLocation(kindId, d12) {

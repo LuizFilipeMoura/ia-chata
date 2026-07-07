@@ -1,14 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { impactRow, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity } from "./rules.js";
+import { impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity } from "./rules.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.move.heat, 1);
   assert.equal(ACTIONS.sprint.heat, 2);
   assert.equal(ACTIONS.fire.heat, 1);
   assert.equal(ACTIONS.aimed.heat, 1);
-  assert.equal(ACTIONS.ram.heat, 1);
+  assert.equal(ACTIONS.ram, undefined); // ram removed — melee covers close combat
   assert.equal(ACTIONS.prepare.heat, 1);
   assert.equal(ACTIONS.reload.heat, 1);
   assert.equal(ACTIONS.repair.heat, 1);
@@ -55,7 +55,6 @@ test("impactSeverity reads a class/location row (§2) and scalars are correct", 
   assert.equal(impactSeverity(12, row).sp, 3);
   assert.equal(WEIGHT_STR_MOD.light, -2);
   assert.equal(WEIGHT_STR_MOD.medium, 0);
-  assert.equal(RAM_STR.medium, 8);
   assert.equal(AIM.medium, 4);
   assert.equal(AIM.heavy, 3);
 });

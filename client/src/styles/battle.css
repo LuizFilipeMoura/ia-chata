@@ -352,6 +352,50 @@ body.my-turn-glow::after {
 .aw-range-note { color: var(--oil-hi); }
 .aw-range-warn { color: var(--ember-hi); }
 
+/* ---- Draggable range (inches) ---- */
+.aw-range-slider {
+  padding: .55rem .6rem; border-radius: 9px;
+  background: var(--iron-950); border: 1px solid var(--line);
+  border-left: 3px solid var(--rivet);
+}
+.aw-range-slider[data-band="near"] { border-left-color: var(--hp-ok-a); }
+.aw-range-slider[data-band="far"] { border-left-color: var(--oil); }
+.aw-range-slider[data-band="out"] { border-left-color: var(--ember); }
+.aw-range-slider input[type="range"] { width: 100%; accent-color: var(--oil); margin: 0; }
+.aw-range-readout {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: .35rem;
+}
+.aw-range-inches { color: var(--txt); font-size: 1rem; font-weight: 700; }
+.aw-range-band {
+  font-family: var(--font-mono); font-size: .58rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--txt-dim);
+}
+.aw-range-slider[data-band="out"] .aw-range-band { color: var(--ember-hi); }
+.aw-range-ticks {
+  margin-top: .2rem; font-family: var(--font-mono); font-size: .52rem;
+  letter-spacing: .04em; color: var(--txt-faint);
+}
+
+/* ---- Blast target checkbox list ---- */
+.blast-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .3rem; }
+.blast-opt {
+  display: flex; align-items: center; gap: .5rem; width: 100%;
+  padding: .5rem .6rem; border-radius: 8px; text-align: left;
+  background: var(--iron-800); border: 1px solid var(--line); color: var(--txt-dim);
+  transition: background .16s, border-color .16s, color .16s;
+}
+.blast-opt:hover { border-color: var(--oil); color: var(--txt); }
+.blast-opt.sel {
+  background: rgba(229,83,58,.12); border-color: rgba(229,83,58,.55); color: var(--ember-hi);
+}
+.blast-opt-check { font-size: 1.05rem; line-height: 1; }
+.blast-opt-name { font-weight: 600; flex: 1 1 auto; }
+.blast-opt-cls {
+  font-family: var(--font-mono); font-size: .55rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--txt-faint);
+}
+
 /* ===== Battle HUD ===== */
 .battle-hud {
   flex: 0 0 auto; margin: .3rem .15rem 0; padding: .5rem .6rem;

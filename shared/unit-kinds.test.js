@@ -80,8 +80,7 @@ test("Tank entry — parts, roles, flags, strawman armour", () => {
   assert.equal(t.weaponMode, "flat-pick");
   assert.equal(t.reloads, true);
   assert.equal(t.hasEquipment, false);
-  assert.equal(t.reactions, false);
-  assert.equal(t.ramStr, 9);
+  assert.equal(t.reactions, false);
   assert.equal(t.destruction, "single-model");
   assert.equal(t.speed, 3);
   assert.equal(hitPart("tank", 3), "hull");
@@ -100,8 +99,7 @@ test("Walker entry — parts, roles, flags, Sentinel strawman", () => {
   assert.deepEqual(w.parts.map((p) => p.name), ["hull", "legs", "mount", "engine"]);
   assert.equal(roleOf("walker", "mount"), "weapon");
   assert.equal(w.hasHeat, false);
-  assert.equal(w.actionBudget, 3);
-  assert.equal(w.ramStr, 8);
+  assert.equal(w.actionBudget, 3);
   assert.equal(w.speed, 4);
   assert.equal(hitPart("walker", 6), "legs");
   assert.equal(hitPart("walker", 9), "mount");

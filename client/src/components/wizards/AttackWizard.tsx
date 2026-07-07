@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS } from "/shared/game-state.js";
+import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-state.js";
+import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useBattleActions } from "../../state/BattleActionsContext";
@@ -7,7 +8,7 @@ import { useRoll } from "../../state/RollContext";
 import { useUi } from "../../state/UiStateContext";
 import type { Rig } from "../../state/types";
 
-export type AttackMode = "fire" | "aimed" | "ram";
+export type AttackMode = "fire" | "aimed";
 
 // Small glyphs so each control reads at a glance (§ UI polish).
 const FIELD_ICONS: Record<string, string> = {
@@ -16,20 +17,23 @@ const FIELD_ICONS: Record<string, string> = {
 const ARC_ICONS: Record<string, string> = { front: "⬆️", side: "↔️", rear: "⬇️" };
 const RANGE_ICONS: Record<string, string> = { near: "📍", far: "🔭", out: "🚫" };
 const COVER_ICONS: Record<string, string> = { "0": "○", "1": "◐", "2": "●" };
-const LOC_ICONS: Record<string, string> = { hull: "🛡️", arms: "🦾", legs: "🦿", engine: "🔩" };
+const LOC_ICONS: Record<string, string> = {
+  hull: "🛡️", arms: "🦾", legs: "🦿", engine: "🔩",
+  tracks: "⚙️", turret: "🎯", mount: "🔭",
+};
 const FIELD_DESC: Record<string, string> = {
   target: "The enemy Rig you're attacking",
-  weapon: "Ranged reloads between shots; melee strikes within 1.5\"",
+  weapon: "Ranged reloads between shots; melee strikes within 2\"",
   arc: "Which of the target's facings you strike",
   range: "How far the target sits from you",
   cover: "Obstruction shielding the target",
   location: "Component to hit — an Aimed Shot takes −2 ACC",
 };
 const ARC_DESC: Record<string, string> = { front: "No STR bonus", side: "+2 STR", rear: "+4 STR" };
-const RANGE_DESC: Record<string, string> = { near: "Close band", far: "Far band", out: "Out of range" };
 const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 ACC", "2": "−2 ACC" };
 const LOC_DESC: Record<string, string> = {
   hull: "−2 actions at 0", arms: "Weapons at 0", legs: "Slows at 0", engine: "Heat at 0",
+  tracks: "Slows at 0", turret: "Gun lost at 0", mount: "Gun lost at 0",
 };
 
 type IconMap = ((opt: string) => string) | Record<string, string> | undefined;
@@ -80,11 +84,14 @@ function Field({
   );
 }
 
+type WeaponSlot = "longRange" | "melee" | "unit";
 interface AwState {
   target: string;
-  weapon: "longRange" | "melee";
+  weapon: WeaponSlot;
   arc: string;
   range: string;
+  /** Measured distance to target in inches — drives the range band. */
+  inches: number;
   cover: number;
   loc: string;
 }
@@ -134,11 +141,16 @@ export function AttackWizard({
     (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
   );
 
+  // Cold kinds (Tank / Walker) carry a single flat-pick "unit" weapon instead of
+  // the Rig's longRange + melee pair.
+  const flat = UNIT_KINDS[kindOf(rig)]?.weaponMode === "flat-pick";
+
   const [state, setState] = useState<AwState>(() => ({
     target: target ?? enemies[0]?.name ?? "",
-    weapon: "longRange",
+    weapon: flat ? "unit" : "longRange",
     arc: "front",
     range: "near",
+    inches: 3,
     cover: 0,
     loc: "hull",
   }));
@@ -166,53 +178,88 @@ export function AttackWizard({
 
   const patch = (p: Partial<AwState>) => setState((s) => ({ ...s, ...p }));
 
-  const weapons = rig.weapons ?? { longRange: "", melee: "" };
+  const weapons = (rig.weapons ?? {}) as Partial<Record<WeaponSlot, string>>;
 
+  const cap = (s?: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
   const targetDesc = (name: string) => {
     const e = enemies.find((x) => x.name === name);
-    return e ? e.weightClass.charAt(0).toUpperCase() + e.weightClass.slice(1) : "";
+    if (!e) return "";
+    // Cold kinds have no weightClass — label them by their kind instead.
+    return e.weightClass ? cap(e.weightClass) : (UNIT_KINDS[kindOf(e)]?.label || "");
+  };
+
+  // Resolve a slot's weapon profile from the right catalogue: the shared unit
+  // list for the flat-pick "unit" slot, the Rig catalogue otherwise.
+  const profileOf = (slot: WeaponSlot) => {
+    const name = weapons[slot];
+    if (!name) return null;
+    if (slot === "unit") return (UNIT_WEAPONS as any)[name] || null;
+    return (WEAPONS as any)[slot]?.[name] || null;
   };
   const weaponDesc = (opt: string) => {
-    const slot = opt === weapons.melee ? "melee" : "longRange";
-    const p = (WEAPONS as any)[slot]?.[opt];
+    const slot: WeaponSlot = flat ? "unit" : opt === weapons.melee ? "melee" : "longRange";
+    const p = flat ? (UNIT_WEAPONS as any)[opt] : (WEAPONS as any)[slot]?.[opt];
     if (!p) return "";
-    return slot === "melee"
+    return p.perks?.includes("Melee")
       ? `Reach ${p.rng[0]}" · ROF ${p.rof}`
       : `RNG ${p.rng[0]}–${p.rng[1]}" · ROF ${p.rof}`;
   };
 
-  const profileOf = (slot: "longRange" | "melee") => {
-    const name = weapons[slot];
-    return (WEAPONS as any)[slot]?.[name] || null;
-  };
   const actionsLeft = () => {
     const t = game?.turn;
     return t ? Math.max(0, t.actionsMax - t.actionsUsed) : 0;
   };
 
-  const isMelee = state.weapon === "melee";
-  // Melee strikes within reach — arc facings and range bands don't apply, so we
-  // hide those controls (and force a valid in-reach range) when melee is chosen.
+  // Melee is a property of the weapon (the Melee perk), not the slot — so a
+  // flat-pick melee unit weapon (Dozer Blade) hides arc/range like a Rig's melee.
+  const isMelee = !!profileOf(state.weapon)?.perks?.includes("Melee");
   useEffect(() => {
     if (isMelee && state.range === "out") patch({ range: "near" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMelee]);
 
+  // Aimed Shot hits a component of the TARGET, so its locations follow the
+  // target's kind (Tank: hull/tracks/turret/engine; Walker: hull/legs/mount/engine).
+  const targetRig = enemies.find((x) => x.name === state.target);
+  const targetLocs = partNamesOf(kindOf(targetRig || rig));
+  useEffect(() => {
+    if (!targetLocs.includes(state.loc)) patch({ loc: targetLocs[0] || "hull" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.target]);
+
+  // Range band is derived from the measured distance (inches) against the
+  // weapon's own thresholds: ≤near → near, ≤far → far, else out of range.
+  const rangeProfile = profileOf(state.weapon);
+  const rngNear = rangeProfile?.rng?.[0] ?? 6;
+  const rngFar = rangeProfile?.rng?.[1] ?? 12;
+  const sliderMax = Math.max(Math.ceil(rngFar + 6), Math.ceil(rngFar * 1.25));
+  const bandFor = (inches: number) => (inches <= rngNear ? "near" : inches <= rngFar ? "far" : "out");
+  useEffect(() => {
+    if (isMelee) return;
+    const band = bandFor(state.inches);
+    if (band !== state.range) patch({ range: band });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.inches, rngNear, rngFar, isMelee]);
+
   const submit = async () => {
     // Return-Fire counter: send a `react` with an `attack` payload rather than a
     // normal `action`. The server resolves it as a plain fire on the attacker, so
-    // ram/aimed don't apply here — collect weapon/arc/range/cover (+ manual dice).
+    // aimed doesn't apply here — collect weapon/arc/range/cover (+ manual dice).
+    // The server resolves the weapon slot itself (flat kinds always fire "unit"),
+    // but we send the right slot and size the manual-dice prompt from the profile.
+    const slotSel: WeaponSlot = flat ? "unit" : state.weapon;
+    const weaponName = weapons[slotSel] || "";
+    const rof = profileOf(slotSel)?.rof || ROF_BY_NAME[weaponName] || 1;
+
     if (react) {
       const attack: Record<string, unknown> = {
-        weapon: state.weapon, arc: state.arc, range: state.range, cover: state.cover,
+        weapon: slotSel, arc: state.arc, range: state.range, cover: state.cover,
       };
       if (game?.autoResolve === false) {
-        const profile = weapons[state.weapon === "melee" ? "melee" : "longRange"];
-        const rof = ROF_BY_NAME[profile] || 1;
         const specs: { key: string; label: string; sides: number }[] = [];
         for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
         specs.push({ key: "loc", label: "Location", sides: 12 });
-        const d = await promptDice(specs, `${profile} dice`);
+        const d = await promptDice(specs, `${weaponName} dice`);
         const toHit: number[] = [];
         for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
         const dice: Record<string, unknown> = { toHit, impacts: toHit.map(() => undefined) };
@@ -224,44 +271,24 @@ export function AttackWizard({
       return;
     }
 
-    const attrs: Record<string, unknown> = { name: rig.name, action: mode, target: state.target };
-    if (mode !== "ram") {
-      Object.assign(attrs, {
-        weapon: state.weapon, arc: state.arc, range: state.range, cover: state.cover,
-      });
-      if (mode === "aimed") attrs.loc = state.loc;
-    }
+    const attrs: Record<string, unknown> = {
+      name: rig.name, action: mode, target: state.target,
+      weapon: slotSel, arc: state.arc, range: state.range, cover: state.cover,
+    };
+    if (mode === "aimed") attrs.loc = state.loc;
     if (game?.autoResolve === false) {
-      if (mode === "ram") {
-        const d = await promptDice(
-          [
-            { key: "sl", label: "Self location", sides: 12 },
-            { key: "si", label: "Self impact", sides: 6 },
-            { key: "tl", label: "Target location", sides: 12 },
-            { key: "ti", label: "Target impact", sides: 6 },
-          ],
-          "Ram dice",
-        );
-        attrs.dice = {
-          self: { location: d.sl, impact: d.si },
-          target: { location: d.tl, impact: d.ti },
-        };
-      } else {
-        const profile = weapons[state.weapon === "melee" ? "melee" : "longRange"];
-        const rof = ROF_BY_NAME[profile] || 1;
-        const specs: { key: string; label: string; sides: number }[] = [];
-        for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
-        if (mode !== "aimed") specs.push({ key: "loc", label: "Location", sides: 12 });
-        const d = await promptDice(specs, `${profile} dice`);
-        const toHit: number[] = [];
-        for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
-        const dice: Record<string, unknown> = { toHit };
-        if (d.loc) dice.location = d.loc;
-        // Impact dice are entered on demand only when hits land; for manual play
-        // we supply a generous impacts array using the hit-dice count as an upper bound.
-        dice.impacts = toHit.map(() => undefined);
-        attrs.dice = dice;
-      }
+      const specs: { key: string; label: string; sides: number }[] = [];
+      for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
+      if (mode !== "aimed") specs.push({ key: "loc", label: "Location", sides: 12 });
+      const d = await promptDice(specs, `${weaponName} dice`);
+      const toHit: number[] = [];
+      for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
+      const dice: Record<string, unknown> = { toHit };
+      if (d.loc) dice.location = d.loc;
+      // Impact dice are entered on demand only when hits land; for manual play
+      // we supply a generous impacts array using the hit-dice count as an upper bound.
+      dice.impacts = toHit.map(() => undefined);
+      attrs.dice = dice;
     }
     sendCommand("action", attrs);
     close();
@@ -270,21 +297,22 @@ export function AttackWizard({
   // Effective-range readout + go button — mirrors update() in attack-wizard.js.
   let rangeHtml: React.ReactNode = null;
   let rangeState = "ok";
-  let goText = "Ram";
+  let goText = "Fire";
   let goDisabled = false;
 
-  const modeLabel = mode === "ram" ? "Ram" : mode === "aimed" ? "Aimed Shot" : "Fire";
-  let dicePreview: string =
-    mode === "ram" ? "🎲 Rolls 2 impact dice (d6)" : "";
+  const modeLabel = mode === "aimed" ? "Aimed Shot" : "Fire";
+  let dicePreview = "";
 
-  if (mode !== "ram") {
+  {
     const slot = state.weapon;
     const profile = profileOf(slot);
-    const spent = slot === "longRange" && rig.loaded?.longRange === false;
+    // A spent ranged weapon needs a rushed reload (Rig longRange or cold-kind unit).
+    const spent = (slot === "longRange" && rig.loaded?.longRange === false)
+      || (slot === "unit" && rig.loaded?.unit === false);
     const cost = spent ? 2 : 1;
     const left = actionsLeft();
     const outOfRange = state.range === "out";
-    const rof = ROF_BY_NAME[weapons[slot]] || profile?.rof || 1;
+    const rof = profile?.rof || ROF_BY_NAME[weapons[slot] || ""] || 1;
 
     dicePreview =
       `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
@@ -292,7 +320,7 @@ export function AttackWizard({
       (mode === "aimed" ? " · +1 to hit" : "");
 
     if (isMelee) {
-      const reach = profile?.rng?.[0] ?? 1.5;
+      const reach = profile?.rng?.[0] ?? 2;
       rangeHtml = (
         <>
           <span className="aw-range-ic">📏</span>Reach <b>{reach}"</b> · melee never needs reloading
@@ -324,21 +352,17 @@ export function AttackWizard({
         : `${modeLabel}${costTag}`;
   }
 
-  const title =
-    mode === "ram" ? "💥 Ram" : mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";
+  const title = mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";
 
   const attackNotice = (() => {
     const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;
     const equipmentLine = equipment ? `${equipment.label} passive remains active.` : "";
-    if (mode === "ram") {
-      return {
-        main: "Ram uses no weapon, so weapon upgrades do not trigger.",
-        equipment: equipmentLine,
-      };
+    const weaponName = weapons[state.weapon] || "";
+    // Cold kinds carry no weapon upgrades — just name the weapon.
+    if (flat) {
+      return { main: `Firing ${weaponName} (flat STR — no weight-class scaling).`, equipment: equipmentLine };
     }
-    const slot = state.weapon;
-    const weaponName = weapons[slot];
-    const upgrade = selectedUpgrade(rig, slot, weaponName);
+    const upgrade = selectedUpgrade(rig, state.weapon as "longRange" | "melee", weaponName);
     return {
       main: upgrade
         ? `${upgrade.name} activates on ${weaponName}: ${upgrade.tag || "selected upgrade effect applies"}.`
@@ -377,16 +401,21 @@ export function AttackWizard({
           hidden={react}
         />
 
-        {mode !== "ram" && (
+        {(
           <>
             <Field
               label="Weapon"
-              options={[weapons.longRange, weapons.melee]}
-              selected={state.weapon === "melee" ? weapons.melee : weapons.longRange}
-              onChange={(v) => patch({ weapon: v === weapons.melee ? "melee" : "longRange" })}
+              options={flat ? [weapons.unit || ""] : [weapons.longRange || "", weapons.melee || ""]}
+              selected={
+                flat ? (weapons.unit || "") : state.weapon === "melee" ? (weapons.melee || "") : (weapons.longRange || "")
+              }
+              onChange={(v) => {
+                if (flat) return; // single flat-pick weapon — nothing to switch
+                patch({ weapon: v === weapons.melee ? "melee" : "longRange" });
+              }}
               icon={FIELD_ICONS.weapon}
-              optIcon={(opt) => (opt === weapons.melee ? "🗡️" : "🎯")}
-              desc={FIELD_DESC.weapon}
+              optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
+              desc={flat ? "One flat-pick weapon — no weight-class STR scaling." : FIELD_DESC.weapon}
               optDesc={weaponDesc}
             />
             <Field
@@ -400,17 +429,35 @@ export function AttackWizard({
               optDesc={ARC_DESC}
               hidden={isMelee}
             />
-            <Field
-              label="Range"
-              options={["near", "far", "out"]}
-              selected={state.range}
-              onChange={(v) => patch({ range: v })}
-              icon={FIELD_ICONS.range}
-              optIcon={RANGE_ICONS}
-              desc={FIELD_DESC.range}
-              optDesc={RANGE_DESC}
-              hidden={isMelee}
-            />
+            {!isMelee && (
+              <div className="aw-field">
+                <label>
+                  <span className="aw-field-ic">{FIELD_ICONS.range}</span>
+                  Range
+                </label>
+                <p className="aw-field-desc">Drag to the measured distance to the target.</p>
+                <div className="aw-range-slider" data-band={state.range}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={sliderMax}
+                    step={1}
+                    value={state.inches}
+                    aria-label="Distance to target in inches"
+                    onChange={(e) => patch({ inches: Number(e.target.value) })}
+                  />
+                  <div className="aw-range-readout">
+                    <b className="aw-range-inches">{state.inches}"</b>
+                    <span className="aw-range-band" data-band={state.range}>
+                      {RANGE_ICONS[state.range]} {state.range}
+                    </span>
+                  </div>
+                  <div className="aw-range-ticks">
+                    Near ≤{rngNear}" · Far ≤{rngFar}"
+                  </div>
+                </div>
+              </div>
+            )}
             <Field
               label="Cover"
               options={["0", "1", "2"]}
@@ -424,7 +471,7 @@ export function AttackWizard({
             {mode === "aimed" && (
               <Field
                 label="Location"
-                options={["hull", "arms", "legs", "engine"]}
+                options={targetLocs}
                 selected={state.loc}
                 onChange={(v) => patch({ loc: v })}
                 icon={FIELD_ICONS.location}

@@ -7,6 +7,7 @@ import { ChatProvider } from "./chat/ChatContext";
 import { ChatFab } from "./chat/ChatFab";
 import { ChatPanel } from "./chat/ChatPanel";
 import { LeaveRoomFab } from "./LeaveRoomFab";
+import { RevertFab } from "./RevertFab";
 import { GlossaryDialog } from "./overlays/GlossaryDialog";
 import { useUi } from "../state/UiStateContext";
 import { useBattleWatchers } from "../hooks/useBattleWatchers";
@@ -41,6 +42,7 @@ export function Terminal() {
         <OutcomeBanner />
         <GlossaryDialog open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
         <LeaveRoomFab />
+        <RevertFab />
         <ChatMount />
       </div>
     </>

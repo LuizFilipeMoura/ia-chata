@@ -1,7 +1,7 @@
 import React from "react";
 import { heatMeter } from "/shared/game-state.js";
 import { rigModifiers } from "/shared/battle-view.js";
-import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
+import { partNamesOf, kindOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { rigStatus } from "../../lib/rigView";
 import { buildLoadout } from "../../lib/loadout";
 import { CompRow } from "./CompRow";
@@ -32,7 +32,12 @@ export const RigItem = React.memo(function RigItem({
   const m = heatMeter(rig);
   const st = rigStatus(rig);
   const isMine = (rig.owner || "a") === mySide;
-  const LOCS: string[] = partNamesOf(kindOf(rig));
+  const kind = kindOf(rig);
+  const LOCS: string[] = partNamesOf(kind);
+  // Cold kinds (Tank / Walker) don't track heat — hide heat UI, and label the
+  // header by kind since they carry no weight class.
+  const cold = !UNIT_KINDS[kind].hasHeat;
+  const badge = rig.weightClass || UNIT_KINDS[kind].label;
 
   const itemCls = ["rig-item"];
   if (rig.destroyed) itemCls.push("is-destroyed");
@@ -55,32 +60,45 @@ export const RigItem = React.memo(function RigItem({
     }
   };
 
-  // Enemy Rigs, in battle, expose no activation control — you can't drive them.
-  // Show a read-only status token instead ("● Active" / "Done" / "Inactive").
-  let activate: React.ReactNode;
-  if (started && !isMine) {
-    activate = (
-      <span
-        className={"rig-activate rig-activate--readonly" + (isActive ? " on" : "")}
-        title={isActive ? "This enemy Rig is taking its activation"
-          : rig.activated ? "This enemy Rig has already acted this round" : "This enemy Rig is idle"}
-      >
-        {isActive ? "● Active" : (rig.activated ? "Done" : "Inactive")}
-      </span>
-    );
-  } else {
-    activate = (
+  // The header carries only a read-only status token so tapping the row to
+  // expand can never fire an activation. The interactive Activate control lives
+  // in the body (below), out of the expand target's way.
+  const statusText = isActive
+    ? "● Active"
+    : started
+      ? (rig.activated ? "Done" : "Idle")
+      : "Idle";
+  const headerStatus = (
+    <span
+      className={"rig-activate rig-activate--readonly" + (isActive ? " on" : "")}
+      title={isActive ? "This Rig is taking its activation"
+        : started ? (rig.activated ? "Already acted this round" : "Not yet activated")
+        : "Not in battle yet"}
+    >
+      {statusText}
+    </span>
+  );
+
+  // Own Rigs get an interactive Activate button in the body. Before the battle
+  // starts it toggles a local heat-gauge preview; during battle it activates.
+  // Only render the body control when it's actionable/informative: an idle own
+  // Rig during battle (activate CTA or a "wait" hint), or the pre-battle preview
+  // toggle. Once active or done, the header status chip already says so — no
+  // need for a redundant full-width bar.
+  let activateControl: React.ReactNode = null;
+  if (isMine && !(started && (isActive || rig.activated))) {
+    const label = started
+      ? (canActivateNow ? "Activate Rig" : "Wait for your turn")
+      : (isActive ? "● Previewing" : "Preview heat gauge");
+    activateControl = (
       <button
         type="button"
-        className={"rig-activate" + (isActive ? " on" : "")}
+        className={"rig-activate rig-activate--body" + (isActive ? " on" : "")}
         aria-pressed={isActive}
-        title={isActive ? "This Rig is taking its activation"
-          : started ? (canActivateNow ? "Activate this Rig" : "Wait for your turn to activate")
-          : isMine ? "Preview this Rig's heat gauge" : "You can only preview your own Rig's heat gauge"}
-        disabled={started ? !canActivateNow : !isMine}
+        disabled={started ? !canActivateNow : false}
         onClick={onActivateClick}
       >
-        {isActive ? "● Active" : (started && rig.activated ? "Done" : "Activate")}
+        {label}
       </button>
     );
   }
@@ -100,15 +118,17 @@ export const RigItem = React.memo(function RigItem({
       >
         <span className={"rig-dot " + (st.cls || "ok")} />
         <span className="rig-head-name">{rig.name}</span>
-        <span className="rig-badge">{rig.weightClass}</span>
-        <span
-          className="rig-heat-chip"
-          data-zone={m.zone}
-          title={m.over > 0 ? `Overheating: misfire roll D12 + ${m.bonus}` : `Heat ${m.heat} of ${m.cap}`}
-        >
-          <span className="rig-heat-chip-ic">🔥</span>{m.heat}
-        </span>
-        {activate}
+        <span className="rig-badge">{badge}</span>
+        {!cold && (
+          <span
+            className="rig-heat-chip"
+            data-zone={m.zone}
+            title={m.over > 0 ? `Overheating: misfire roll D12 + ${m.bonus}` : `Heat ${m.heat} of ${m.cap}`}
+          >
+            <span className="rig-heat-chip-ic">🔥</span>{m.heat}
+          </span>
+        )}
+        {headerStatus}
         <span className="rig-chev">▾</span>
       </div>
 
@@ -131,26 +151,39 @@ export const RigItem = React.memo(function RigItem({
             return (
               <div className="rig-loadout">
                 <div className="rig-loadout-hd">Loadout</div>
-                <div className="rig-loadout-row">
-                  <span className="rig-loadout-ic">🎯</span>
-                  <div className="rig-loadout-main">
-                    <div className="rig-loadout-slot">Long Range</div>
-                    <div className="rig-loadout-name">{lo.lr.name}</div>
-                    <div className="rig-loadout-up">
-                      Upgrade · {lo.lr.upName} — <GlossaryText text={lo.lr.upTag} />
+                {lo.flat ? (
+                  <div className="rig-loadout-row">
+                    <span className="rig-loadout-ic">🎯</span>
+                    <div className="rig-loadout-main">
+                      <div className="rig-loadout-slot">Weapon</div>
+                      <div className="rig-loadout-name">{lo.unit?.name}</div>
+                      <div className="rig-loadout-up">Flat STR · no weight-class scaling</div>
                     </div>
                   </div>
-                </div>
-                <div className="rig-loadout-row">
-                  <span className="rig-loadout-ic">🗡️</span>
-                  <div className="rig-loadout-main">
-                    <div className="rig-loadout-slot">Melee</div>
-                    <div className="rig-loadout-name">{lo.melee.name}</div>
-                    <div className="rig-loadout-up">
-                      Upgrade · {lo.melee.upName} — <GlossaryText text={lo.melee.upTag} />
+                ) : (
+                  <>
+                    <div className="rig-loadout-row">
+                      <span className="rig-loadout-ic">🎯</span>
+                      <div className="rig-loadout-main">
+                        <div className="rig-loadout-slot">Long Range</div>
+                        <div className="rig-loadout-name">{lo.lr?.name}</div>
+                        <div className="rig-loadout-up">
+                          Upgrade · {lo.lr?.upName} — <GlossaryText text={lo.lr?.upTag ?? ""} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                    <div className="rig-loadout-row">
+                      <span className="rig-loadout-ic">🗡️</span>
+                      <div className="rig-loadout-main">
+                        <div className="rig-loadout-slot">Melee</div>
+                        <div className="rig-loadout-name">{lo.melee?.name}</div>
+                        <div className="rig-loadout-up">
+                          Upgrade · {lo.melee?.upName} — <GlossaryText text={lo.melee?.upTag ?? ""} />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
                 {lo.equipment && (
                   <div className="rig-loadout-row rig-loadout-row--eq">
                     <span className="rig-loadout-ic">🛠</span>
@@ -174,6 +207,10 @@ export const RigItem = React.memo(function RigItem({
           {LOCS.map((loc) => (
             <CompRow key={loc} rig={rig} loc={loc} onCommand={onCommand} />
           ))}
+
+          {activateControl && (
+            <div className="rig-activate-row">{activateControl}</div>
+          )}
 
           <HeatGauge rig={rig} isActive={isActive} started={started} onCommand={onCommand} />
 

@@ -96,8 +96,17 @@ export function useBattleWatchers(): void {
     const fresh = log.filter((e) => e.id > lastSeenResolution.current);
     if (!fresh.length) return;
     lastSeenResolution.current = log[log.length - 1].id;
-    // Play only the newest to avoid a backlog stampede.
-    void playResolution(fresh[fresh.length - 1]);
+    // Play fresh entries in order so dice-bearing resolutions (e.g. the attack
+    // behind a revealed answer token) each get their roll animation instead of
+    // being skipped. A large backlog (first hydrate) fast-forwards to the newest
+    // to avoid a stampede.
+    const toPlay = fresh.length > 3 ? [fresh[fresh.length - 1]] : fresh;
+    void (async () => {
+      for (const entry of toPlay) {
+        // eslint-disable-next-line no-await-in-loop
+        await playResolution(entry);
+      }
+    })();
   }, [game?.resolutions, playResolution]);
 
   // ---- Answer-token gate: mandatory immediate placement ----

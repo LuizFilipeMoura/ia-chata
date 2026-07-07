@@ -5,6 +5,7 @@ declare module "/shared/game-state.js" {
   export const MAX_RIGS_TOTAL: number;
   export const SUPPORTED_RIG_CLASSES: string[];
   export const WEAPONS: Record<string, string[]>;
+  export const UNIT_WEAPONS: Record<string, { rof: number; str: number; acc: number[]; rng: number[]; perks: string[]; flatPick?: boolean }>;
   export const EQUIPMENT: Record<string, {
     family: string;
     label: string;

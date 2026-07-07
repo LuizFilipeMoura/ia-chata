@@ -64,7 +64,9 @@ test("disables activation while the opponent has pending answer tokens", async (
     </AppProviders>,
   );
 
-  const activateButtons = await screen.findAllByRole("button", { name: "Activate" });
+  // The Activate control now lives in each own Rig's body (out of the expand
+  // target). With the opponent holding answer tokens, all three are disabled.
+  const activateButtons = await screen.findAllByRole("button", { name: "Wait for your turn" });
   expect(activateButtons).toHaveLength(3);
   for (const button of activateButtons) {
     expect(button).toBeDisabled();

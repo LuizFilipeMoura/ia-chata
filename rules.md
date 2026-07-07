@@ -55,10 +55,10 @@ Every Rig starts from a **weight class**, which sets its base profile.
 | Legs SP | 5 | 6 | 7 | 8 |
 | Engine SP | 4 | 5 | 6 | 7 |
 | Aim | 4+ | 4+ | 3+ | 3+ |
-| Speed | 4.5" | 2.5" | 3" | 2.5" |
+| Speed | 5" | 4" | 3" | 2" |
 | Weapon slots | 2 | 2 | 2 | 2 (+1 Hull) |
 
-- **Speed** — max move distance in inches. *⚙ TUNING: movement was halved across the board (Mediums cut hardest, ~70%) to slow the table game; source baseline was 9/8/6/5.*
+- **Speed** — max move distance in inches. *⚙ TUNING: whole-inch speeds (5/4/3/2); Mediums bumped back up from an earlier over-nerf.*
 - **Aim** — base D6 target number to hit (modified by weapon ACC and cover).
 - **Weapon slots** — how many weapons the Rig may carry. Colossal Rigs get an extra **Hull-mounted** slot.
 - **Structure Points (SP)** — durability per component. At 0 SP → catastrophic damage (§8).
@@ -147,7 +147,7 @@ The game then returns to the Initiative Phase of the next round, unless a player
 
 Each Rig may take **up to 3 actions** per activation. The number in **[brackets]** is the base heat it generates (see §6 for **Sprint** and **Hot** modifiers). You need not use all 3 — pushing hard risks overheating (§6). *⚙ TUNING: action budget cut from 5 to 3 to tighten each activation.*
 
-- **Move [1]** — reposition up to the Rig's full Speed. **Only one Move (or Sprint) may be taken per activation.** *⚙ TUNING: one move per activation.*
+- **Move [1]** — reposition up to the Rig's full Speed. **May be taken more than once per activation**, each spending 1 action and generating heat. *⚙ TUNING: multiple moves allowed; heat scales with distance covered.*
   - *Forward:* up to full Speed, straight ahead.
   - *Backpedal:* straight back at **half** Speed.
   - *Side-step:* directly left or right without changing facing, at **half** Speed.
@@ -158,20 +158,11 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Aimed Shot [1]** — a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
 
-- **Ram [1]** — if an enemy is within **1.5"**, move into base contact. **Both** Rigs suffer one hit. For each, roll a hit location (D12, §7) and one Impact Roll of **D6 + the ramming STR** below (each Rig uses **its own** weight class value):
-
-  | Weight class | Ram STR |
-  |---|:--:|
-  | Light | 7 |
-  | Medium | 8 |
-  | Heavy | 9 |
-  | Colossal | 10 |
-
 - **Reload [1]** — reloads **all** weapons.
 
 - **Repair [1]** — roll 1 D12: on **7+** repair 1 SP to any one location; on **10+** repair 2 SP. *⚙ TUNING: now generates 1 heat.*
 
-- **Shut Down [0]** — declared **before any other action**: forfeit all actions this activation to set heat to **0**.
+- **Shut Down [0]** — end the activation and vent heat. May be declared **at any point** in the activation; cooling is **proportional** to how much of the activation is spent shutting down — declared first (no actions used) it vents all heat to the floor, and the more slots already spent, the less it sheds. *⚙ TUNING: was first-action-only + full vent.*
 
 - **Prepare [1]** — generate 1 heat and place a facedown preparation token by the Rig, choosing one reaction below. It lasts until this Rig's next activation; reveal it when its trigger occurs. A Rig may hold **only one** preparation at a time.
   - *Evasive Manoeuvre* — when targeted by an attack on an enemy's turn, **before** the attack resolves, move up to **half Speed** in any direction. If this puts the Rig out of range or line of sight, the attack fails.
@@ -193,7 +184,7 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 | Move (up to Speed) | 1 |
 | Move — **Sprint** (up to 1½× Speed) | 2 |
 | Fire Weapon | 1 (**2** if the weapon is **Hot**) |
-| Aimed Shot / Ram / Prepare | 1 |
+| Aimed Shot / Prepare | 1 |
 | Reload / Repair | 1 |
 | Shut Down | 0 |
 
@@ -335,7 +326,7 @@ Each player secretly notes one enemy Rig as their **Priority Target**. Destroyin
 Every weapon is one of **two types**, and every Rig equips **one of each** (§3):
 
 - **Long Range** — any weapon **without** the Melee perk. Fires at range; once spent it must be **reloaded** between shots in the same activation. The second such shot in an activation costs **+1 heat** (§5).
-- **Melee** — any weapon with the **Melee** perk (RNG 1.5"). Usable only within 1.5" and never needs reloading.
+- **Melee** — any weapon with the **Melee** perk (RNG 2"). Usable only within 2" and never needs reloading.
 
 There are **seven weapons of each type**. Any weapon may be fitted to a Rig of **any weight class** and **any faction**. **ACC** shows **near / far** values matching the weapon's two range bands (**RNG** = near / far, in inches); a single value applies at all ranges.
 
@@ -372,13 +363,13 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 | Weapon | ROF | STR | ACC | RNG | Perks |
 |---|:--:|:--:|:--:|:--:|---|
-| Sword | 2 | 6 | – | 1.5 | Melee, Shock |
-| Circular Saw | 3 | 6 | – | 1.5 | Melee, Cleave |
-| Chainsaw | 3 | 8 | – | 1.5 | Melee, Rend |
-| Claw | 2 | 8 | +1 | 1.5 | Melee, Armour Piercing |
-| Lance | 1 | 11 | +1 | 1.5 | Melee, Impale |
-| Wrecking Ball | 1 | 12 | – | 1.5 | Melee, Staggering |
-| Bulwark Shield | 1 | 6 | – | 1.5 | Melee, Bulwark |
+| Sword | 2 | 6 | – | 2 | Melee, Shock |
+| Circular Saw | 3 | 6 | – | 2 | Melee, Cleave |
+| Chainsaw | 3 | 8 | – | 2 | Melee, Rend |
+| Claw | 2 | 8 | +1 | 2 | Melee, Armour Piercing |
+| Lance | 1 | 11 | +1 | 2 | Melee, Impale |
+| Wrecking Ball | 1 | 12 | – | 2 | Melee, Staggering |
+| Bulwark Shield | 1 | 6 | – | 2 | Melee, Bulwark |
 
 ### Weapon Upgrades
 
@@ -406,15 +397,15 @@ Each weapon has **two upgrade options**. When a Rig is commissioned, choose **on
 ## 13. Weapon Perks
 
 - **Armour Piercing** — for each Impact Roll of 6, add a D3 to the result.
-- **Bulwark** — the Rig may arm a fourth preparation, **Raise Shield** (Prepare [1 heat], §5), placed facedown like any preparation. When this Rig is attacked while Raise Shield is active, reveal it: a **front-arc** attack is **negated** (every Impact Roll automatically fails); a **side- or rear-arc** attack has every Impact Roll at **−4**. It protects regardless of the attacker's range (it is not the 1.5" bash). An Answer token (§5) may place Raise Shield only on a Rig carrying a Bulwark Shield.
+- **Bulwark** — the Rig may arm a fourth preparation, **Raise Shield** (Prepare [1 heat], §5), placed facedown like any preparation. When this Rig is attacked while Raise Shield is active, reveal it: a **front-arc** attack is **negated** (every Impact Roll automatically fails); a **side- or rear-arc** attack has every Impact Roll at **−4**. It protects regardless of the attacker's range (it is not the 2" bash). An Answer token (§5) may place Raise Shield only on a Rig carrying a Bulwark Shield.
 - **Charged Shot** — optional fire-mode: **+2 STR**, but each attack die that rolls a 1 adds 1 heat.
-- **Cleave** — the spinning blade carries through: on a successful hit, one other enemy Rig within **1.5"** of the target also suffers 1 hit (roll its hit location and Impact Roll normally).
+- **Cleave** — the spinning blade carries through: on a successful hit, one other enemy Rig within **2"** of the target also suffers 1 hit (roll its hit location and Impact Roll normally).
 - **Full Auto** — optional fire-mode: **+2 ROF**, but each attack die that rolls a 1 adds 1 heat.
 - **Hot** — firing generates **2 heat** instead of 1. If written as **(Hot)** before a perk, the weapon is not Hot by default, but the Ironclad may push the engine to gain that perk for the attack at the cost of being Hot.
 - **Hull** — a Hull-mounted weapon (Colossal only, in this edition). May be equipped only once per Rig.
 - **Impale** — on a successful hit, roll 1 D12; on **8+** the target is impaled — immobilised until this Rig's next activation (it may still pivot).
 - **Incendiary** — a successful hit increases the target's heat by 1 (needs only to hit).
-- **Melee** — usable only within **1.5"**; never needs reloading.
+- **Melee** — usable only within **2"**; never needs reloading.
 - **Precision** — may make an Aimed Shot **without** the −2 ACC penalty.
 - **Raking Fire** — this weapon **cannot damage a target's front arc**: resolve the attack normally, but every Impact Roll against a front-arc target automatically fails. Against the **side arc** the weapon gains **+4 STR**, and against the **rear arc +8 STR** — these **replace** the standard +2 / +4 side/rear bonuses (§7). Machine guns rip apart exposed flanks but glance off frontal armour.
 - **Rend** — the chain grinds deeper: for each Impact Roll of **5 or 6**, add a **D3** to the result.
@@ -461,16 +452,16 @@ Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weap
 
 ### Tank
 
-Four components (Hull / Tracks / Turret / Engine). **Cold** — no heat, no overheat rolls, no Shut Down. **One weapon** from the shared unit-weapon list (flat STR, no weight-class scaling). No equipment, no Prepare. **2 actions** per activation. Ram STR **9** ⚙. Speed **3"** ⚙.
+Four components (Hull / Tracks / Turret / Engine). **Cold** — no heat, no overheat rolls, no Shut Down. **One weapon** from the shared unit-weapon list (flat STR, no weight-class scaling). No equipment, no Prepare. **2 actions** per activation. Speed **3"** ⚙.
 
 Hit table (D12): 1–4 Hull · 5–7 Tracks · 8–10 Turret · 11–12 Engine.
 Strawman armour ⚙ (Direct / Severe / Critical): Hull 13-14 / 15-16 / 17+; Tracks 14-15 / 16 / 17+; Turret 12-13 / 14-15 / 16+; Engine 8-10 / 11-12 / 13+.
 
-At 0 SP on Turret: the Tank's single gun is destroyed but the Tank can still **Ram** until repaired. Cascade at 0 on any part follows §8 by role: structural / power / mobility / weapon effects match the Rig set.
+At 0 SP on Turret: the Tank's single gun is destroyed — a Tank armed only with a ranged weapon has no attack until repaired (a melee-armed Tank can still strike). Cascade at 0 on any part follows §8 by role: structural / power / mobility / weapon effects match the Rig set.
 
 ### Walker
 
-Four components (Hull / Legs / Mount / Engine). Cold like a Tank, faster and lighter. **One weapon** from the shared unit-weapon list. No equipment, no Prepare. **3 actions** per activation. Ram STR **8** ⚙. Speed **4"** ⚙.
+Four components (Hull / Legs / Mount / Engine). Cold like a Tank, faster and lighter. **One weapon** from the shared unit-weapon list. No equipment, no Prepare. **3 actions** per activation. Speed **4"** ⚙.
 
 Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Armour ≈ Medium-Rig grade ⚙.
 
@@ -482,14 +473,14 @@ Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Arm
 | Autocannon Mount | ranged | 3 | 8 | 0 / −1 | 12" / 24" | Full Auto |
 | Coaxial MG | ranged | 6 | 5 | +1 / −1 | 9" / 18" | Full Auto, Raking Fire |
 | Rocket Pod | ranged | 2 | 10 | 0 / 0 | 15" / 30" | Charged Shot |
-| Dozer Blade | melee | 1 | 10 | 0 | 1.5" | Melee |
-| Ram Spike | melee | 1 | 11 | +1 | 1.5" | Melee, Impale |
+| Dozer Blade | melee | 1 | 10 | 0 | 2" | Melee |
+| Ram Spike | melee | 1 | 11 | +1 | 2" | Melee, Impale |
 
-STR is **flat** — no weight-class modifier applies. A Tank / Walker that carries a ranged weapon uses **Ram** for close combat via its `ramStr` (§5).
+STR is **flat** — no weight-class modifier applies. Close combat requires a **melee** weapon (Dozer Blade or Ram Spike); a Tank / Walker fielding only a ranged weapon cannot fight in melee.
 
 ### Notes
 
-All numeric values on Tanks and Walkers above (SP, armour rows, ROF/STR, ramStr, speeds) are strawman — subject to tuning in playtest.
+All numeric values on Tanks and Walkers above (SP, armour rows, ROF/STR, speeds) are strawman — subject to tuning in playtest.
 
 ---
 
@@ -505,9 +496,12 @@ All numeric values on Tanks and Walkers above (SP, armour rows, ROF/STR, ramStr,
 - Brace for Incoming Fire → **−2 to Impact Rolls** on front-arc attacks.
 - Initiative → **roll every round**.
 - Heavy Legs Impact Table → **14–15 / 16 / 17+** (removed overlap).
-- Ram → one Impact Roll each of **D6 + ram STR**.
 
 **House rules added:**
+- **Ram removed** (§5) — the Ram action is gone; **melee** weapons cover close combat. Removes a redundant second close-combat system.
+- **Multiple moves** (§5) — a Rig may Move (or Sprint) more than once per activation; each spends an action and generates its heat, bounded only by the 3-action budget.
+- **Shut Down anywhere** (§5) — Shut Down may be declared at any point in the activation; heat vented scales with how much of the activation is spent shutting down (first-action = full vent, later = proportionally less).
+- **Whole-inch speeds** (§2) — base Speed 5 / 4 / 3 / 2 by weight class; all distances round to whole inches.
 - **Sprint** (§5/§6) — normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot.
 - **Raking Fire** (§13) — machine guns do no frontal damage but hit far harder (+4 side / +8 rear).
 - **Answer tokens** (§5) — the player going second each round gets 1 free preparation.

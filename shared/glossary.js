@@ -98,10 +98,6 @@ export const GLOSSARY = [
     def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −2 ACC (Precision removes the penalty) (§5, §13).",
   },
   {
-    id: "ram", term: "Ram", match: ["Ram"],
-    def: "Action [1 heat]: move into base contact with an enemy within 1.5\". Both Rigs suffer one hit, each rolling D6 + its own weight class's Ram STR (§5).",
-  },
-  {
     id: "reload", term: "Reload", match: ["Reload"],
     def: "Action: reloads all of the Rig's weapons (§5).",
   },
