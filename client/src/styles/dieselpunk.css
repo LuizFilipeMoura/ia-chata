@@ -1,0 +1,406 @@
+/* =============================================================================
+   Dieselpunk skeuomorphic layer — the "Iron Works 3a" pass.
+
+   Layers over the existing terminal look with three physical primitives:
+     .dp-riv4    → four corner rivets on the target element
+     .dp-frame   → engraved metal sub-panel (bevel + inset shadow)
+     .dp-recess  → recessed dark slot (readouts sit in these)
+
+   Then, targeted overrides give the existing components (topbar, rig-item,
+   heat-gauge, action-console, turn-banner) the tactile controls from the
+   design without touching their component structure.
+   ============================================================================= */
+
+/* ---- Primitives ---- */
+.dp-riv4 {
+  --dp-rx: 12px; --dp-ry: 12px; --dp-rs: 4px;
+}
+.dp-riv4::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  border-radius: inherit; background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle var(--dp-rs) at var(--dp-rx) var(--dp-ry),
+      #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle var(--dp-rs) at calc(100% - var(--dp-rx)) var(--dp-ry),
+      #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle var(--dp-rs) at var(--dp-rx) calc(100% - var(--dp-ry)),
+      #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle var(--dp-rs) at calc(100% - var(--dp-rx)) calc(100% - var(--dp-ry)),
+      #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%);
+}
+.dp-frame {
+  position: relative; border-radius: 11px;
+  background: linear-gradient(180deg, #262c35, #181d25);
+  border: 1px solid #464f5b;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45),
+    0 3px 7px rgba(0,0,0,.55);
+}
+.dp-recess {
+  position: relative; border-radius: 8px;
+  background: linear-gradient(180deg, #0a0d11, #05070a);
+  border: 1px solid #05070a;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.85), inset 0 0 0 1px rgba(255,255,255,.02);
+}
+
+/* ---- Topbar → riveted brand strip in an engraved frame ---- */
+.topbar {
+  position: relative;
+  background:
+    radial-gradient(120% 140% at 50% -30%, rgba(231,154,61,.10), transparent 60%),
+    linear-gradient(180deg, #262c35, #181d25);
+  border: 1px solid #464f5b; border-bottom: 1px solid #05070a;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45);
+  --dp-rx: 12px; --dp-ry: 10px; --dp-rs: 4px;
+}
+.topbar::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle 4px at 12px 10px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 4px at calc(100% - 12px) 10px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 4px at 12px calc(100% - 10px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 4px at calc(100% - 12px) calc(100% - 10px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%);
+}
+.brand-sub {
+  padding: .3rem .55rem; border-radius: 6px;
+  background: linear-gradient(180deg, #0a0d11, #05070a);
+  border: 1px solid #05070a;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.85);
+  color: #8a7a5a;
+}
+.topbar-gloss {
+  background: linear-gradient(180deg, #333a44, #20262e);
+  border: 1px solid #4a535f;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.5);
+  color: #dbe1e9;
+}
+
+/* ---- Rig items → engraved metal panels with corner bolts ---- */
+.rig-item {
+  position: relative;
+  background:
+    radial-gradient(120% 140% at 50% -20%, rgba(231,154,61,.05), transparent 60%),
+    linear-gradient(180deg, #262c35, #181d25) !important;
+  border: 1px solid #464f5b !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45),
+    0 3px 7px rgba(0,0,0,.55) !important;
+}
+.rig-item::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  border-radius: inherit; background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle 4px at 12px 12px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 4px at calc(100% - 12px) 12px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 4px at 12px calc(100% - 12px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 4px at calc(100% - 12px) calc(100% - 12px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%);
+}
+.rig-item.is-active {
+  border-color: rgba(231,154,61,.6) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45),
+    0 0 0 1px rgba(231,154,61,.25),
+    0 6px 22px rgba(231,154,61,.12) !important;
+}
+/* Keep rig-head chevron/name above the rivet layer. */
+.rig-head { position: relative; z-index: 5; }
+.rig-body-inner { position: relative; z-index: 5; }
+
+.rig-badge {
+  background: linear-gradient(180deg, #0a0d11, #05070a);
+  border-color: #6e5636;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.85);
+  color: #c9a15a;
+}
+
+/* ---- Heat gauge → skeuomorphic recess + redline needle ---- */
+.heat-gauge {
+  background:
+    linear-gradient(180deg, #0a0d11, #05070a) !important;
+  border: 1px solid #05070a !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.85), inset 0 0 0 1px rgba(255,255,255,.02) !important;
+  padding-top: 1.1rem;
+}
+.heat-gauge-label { color: #8a7a5a; letter-spacing: .16em; }
+.heat-gauge-read {
+  padding: .16rem .5rem; border-radius: 6px;
+  background: linear-gradient(180deg, #1a1e24, #0c0f14);
+  border: 1px solid #6e5636;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.8);
+}
+.heat-gauge-read b { text-shadow: 0 0 8px rgba(255,191,106,.5); }
+
+.heat-track {
+  position: relative;
+  background:
+    linear-gradient(180deg, #05070a, #0a0d11) !important;
+  border: 1px solid #05070a !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.9);
+}
+/* Redline label above the track, positioned at the first danger cell. */
+.heat-gauge {
+  --redline-pos: 62%;
+}
+.heat-track::before {
+  content: "Redline";
+  position: absolute;
+  left: var(--redline-pos, 62%);
+  top: -12px; transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: .5rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: #ff5a3c;
+  text-shadow: 0 0 6px rgba(229,83,58,.7);
+  pointer-events: none;
+}
+/* Redline needle — a bright bar at the redline position. */
+.heat-track::after {
+  content: "";
+  position: absolute;
+  top: -4px; bottom: -4px;
+  left: var(--redline-pos, 62%);
+  width: 3px; border-radius: 2px;
+  background: linear-gradient(180deg, #ff8a6f, #e5533a);
+  box-shadow: 0 0 10px rgba(229,83,58,1), 0 0 4px rgba(255,120,90,.9);
+  pointer-events: none;
+  animation: dp-glowpulse 2.2s ease-in-out infinite;
+}
+@keyframes dp-glowpulse { 0%,100% { opacity: .7 } 50% { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .heat-track::after { animation: none; } }
+
+.heat-btn {
+  background: linear-gradient(180deg, #333a44, #20262e) !important;
+  border: 1px solid #4a535f !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.09),
+    inset 0 -3px 6px rgba(0,0,0,.4),
+    0 2px 4px rgba(0,0,0,.5) !important;
+  color: #dbe1e9 !important;
+}
+.heat-btn-vent:not(:disabled) {
+  background: linear-gradient(180deg, #556e3c, #33481f) !important;
+  border-color: #6b8548 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(200,255,180,.18),
+    inset 0 -3px 6px rgba(0,0,0,.4),
+    0 2px 4px rgba(0,0,0,.5) !important;
+  color: #cfe3b0 !important;
+}
+.heat-btn-cool:not(:disabled) {
+  background: linear-gradient(180deg, #4a4033, #2a2318) !important;
+  border-color: #6e5636 !important;
+  color: #d6c399 !important;
+}
+
+/* ---- Action console → tactile Fire (pushbutton) / Move (joystick) / Reload (knob) ----
+   Each button gets a data-kind so we can render its chrome via ::before, with the
+   text label sitting below. Applies to fire, aimed, move, sprint, reload, repair,
+   prepare — everything else falls back to the base .ac-btn styling. */
+.ac-grid { gap: .5rem !important; }
+.ac-btn {
+  position: relative; overflow: hidden;
+  padding: .7rem .3rem .55rem !important;
+  border-radius: 9px !important;
+  background: linear-gradient(180deg, #333a44, #20262e) !important;
+  border: 1px solid #4a535f !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.5),
+    0 2px 6px rgba(0,0,0,.5) !important;
+}
+.ac-btn[data-kind]::before {
+  content: ""; display: block;
+  width: 44px; height: 44px; margin: 0 auto .32rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 30%, #4f5862, #1a1f26 74%);
+  border: 2px solid #0e1218;
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,.22),
+    inset 0 -4px 9px rgba(0,0,0,.6),
+    0 2px 4px rgba(0,0,0,.6);
+}
+.ac-btn[data-kind] .ac-ic { display: none; }
+/* Fire — a red pushbutton with a brass collar. */
+.ac-btn[data-kind="fire"],
+.ac-btn[data-kind="aimed"] {
+  background: linear-gradient(180deg, #5c2a1c, #38160f) !important;
+  border-color: #7a3320 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,150,120,.2),
+    inset 0 -4px 10px rgba(0,0,0,.5),
+    0 2px 6px rgba(0,0,0,.5) !important;
+  color: #f4d6cd !important;
+}
+.ac-btn[data-kind="fire"]::before,
+.ac-btn[data-kind="aimed"]::before {
+  background: radial-gradient(circle at 42% 30%, #ff9a86, #e5533a 46%, #8a1f14 92%);
+  border: 3px solid #b98a4e;
+  box-shadow:
+    inset 0 2px 5px rgba(255,220,200,.45),
+    inset 0 -5px 9px rgba(0,0,0,.55),
+    0 0 13px rgba(229,83,58,.55),
+    0 2px 4px rgba(0,0,0,.6);
+}
+.ac-btn[data-kind="fire"]:not(:disabled):hover,
+.ac-btn[data-kind="aimed"]:not(:disabled):hover {
+  color: #fff !important;
+  border-color: #b04630 !important;
+}
+.ac-btn[data-kind="fire"] .ac-heat,
+.ac-btn[data-kind="aimed"] .ac-heat { color: #ff9a86 !important; }
+/* Move / Sprint — a joystick. */
+.ac-btn[data-kind="move"]::before,
+.ac-btn[data-kind="sprint"]::before {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
+}
+.ac-btn[data-kind="move"],
+.ac-btn[data-kind="sprint"] { position: relative; }
+.ac-btn[data-kind="move"]::before,
+.ac-btn[data-kind="sprint"]::before {
+  background:
+    /* stick */
+    linear-gradient(90deg, transparent calc(50% - 4px), #4a535f calc(50% - 4px),
+      #20252d calc(50% + 4px), transparent calc(50% + 4px)) center/100% 60% no-repeat,
+    /* base */
+    radial-gradient(ellipse 20px 8px at 50% 90%, #242a32 40%, transparent 60%);
+}
+.ac-btn[data-kind="move"]::after,
+.ac-btn[data-kind="sprint"]::after {
+  content: "";
+  position: absolute; left: 50%; top: 8px;
+  transform: translateX(-50%);
+  width: 20px; height: 20px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #6a737e, #20252d 74%);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.35), 0 2px 4px rgba(0,0,0,.65);
+  pointer-events: none;
+}
+/* Reload — rotary knob with an indicator dot. */
+.ac-btn[data-kind="reload"]::before {
+  background: radial-gradient(circle at 42% 30%, #4f5862, #1a1f26 74%);
+  border: 2px solid #0e1218;
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,.22),
+    inset 0 -4px 9px rgba(0,0,0,.6),
+    0 2px 4px rgba(0,0,0,.6);
+  position: relative;
+}
+.ac-btn[data-kind="reload"] { position: relative; }
+.ac-btn[data-kind="reload"]::after {
+  content: "";
+  position: absolute; left: 50%; top: 12px;
+  transform: translateX(-50%);
+  width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 30%, #6a737e, #141920);
+  box-shadow: 0 1px 3px rgba(0,0,0,.75);
+  pointer-events: none;
+}
+/* Repair — a wrench-shaped knob in green. */
+.ac-btn[data-kind="repair"]::before,
+.ac-btn[data-kind="emergencypatch"]::before {
+  background: radial-gradient(circle at 42% 30%, #8ec38f, #33481f 74%);
+  border: 2px solid #6b8548;
+}
+/* Prepare — teal indicator. */
+.ac-btn[data-kind="prepare"]::before {
+  background: radial-gradient(circle at 42% 30%, #a6e2d9, #1e5451 74%);
+  border: 2px solid #2f7a75;
+}
+.ac-cost {
+  top: .28rem !important; right: .3rem !important;
+  z-index: 6;
+}
+
+/* End activation — brass finish. */
+.ac-end.bh-btn {
+  background: linear-gradient(180deg, #e7cf94, #c7a45f 55%, #a5843f) !important;
+  border: 1px solid #6e5531 !important;
+  color: #2a1c07 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,.75),
+    inset 0 -3px 6px rgba(110,80,35,.5),
+    0 2px 5px rgba(0,0,0,.5) !important;
+  text-shadow: 0 1px 0 rgba(255,240,200,.35);
+}
+.ac-end.bh-btn.ghost { color: #2a1c07 !important; }
+
+/* ---- Turn banner → riveted brass CTA card ---- */
+.turn-banner[data-tone="act"] .tb-card {
+  position: relative;
+  background: linear-gradient(180deg, #f2e6c4, #d9bd82 52%, #bd9a56) !important;
+  border: 1px solid #6e5531 !important;
+  color: #2a1c07;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,225,.85),
+    inset 0 -3px 6px rgba(120,90,40,.4),
+    0 12px 34px rgba(231,154,61,.4),
+    0 2px 5px rgba(0,0,0,.55) !important;
+}
+.turn-banner[data-tone="act"] .tb-card::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  border-radius: inherit; background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle 3.5px at 13px 12px, #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%),
+    radial-gradient(circle 3.5px at calc(100% - 13px) 12px, #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%),
+    radial-gradient(circle 3.5px at 13px calc(100% - 12px), #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%),
+    radial-gradient(circle 3.5px at calc(100% - 13px) calc(100% - 12px), #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%);
+}
+.turn-banner[data-tone="act"] .tb-icon,
+.turn-banner[data-tone="act"] .tb-primary,
+.turn-banner[data-tone="act"] .tb-secondary {
+  color: #2a1c07 !important;
+  filter: none !important;
+  text-shadow: 0 1px 0 rgba(255,240,200,.5);
+}
+.turn-banner[data-tone="act"] .tb-cta .btn--primary {
+  background: linear-gradient(180deg, #ff9a86, #e5533a) !important;
+  color: #2a0a05 !important;
+  border-color: rgba(229,83,58,.75) !important;
+  box-shadow: 0 4px 12px rgba(229,83,58,.4);
+  text-shadow: 0 1px 0 rgba(255,240,235,.35);
+}
+
+/* ---- Battle-HUD → phase-strip look ---- */
+.battle-hud {
+  background:
+    radial-gradient(120% 140% at 50% -30%, rgba(231,154,61,.10), transparent 60%),
+    linear-gradient(180deg, #262c35, #181d25) !important;
+  border: 1px solid #464f5b !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45),
+    0 3px 7px rgba(0,0,0,.55) !important;
+}
+.bh-round {
+  background: linear-gradient(180deg, #0a0d11, #05070a);
+  border: 1px solid #6e5636 !important;
+  color: #c9a15a !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.8);
+}
+
+/* ---- Rig structure bars → recessed slots ---- */
+.rig-bar {
+  background: linear-gradient(180deg, #05070a, #0a0d11) !important;
+  border: 1px solid #05070a !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.9);
+}
+.rig-step {
+  background: linear-gradient(180deg, #333a44, #20262e) !important;
+  border: 1px solid #4a535f !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.1),
+    inset 0 -2px 4px rgba(0,0,0,.5),
+    0 1px 2px rgba(0,0,0,.5) !important;
+  color: #cfd6df !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heat-track::after { animation: none !important; }
+}

@@ -5,3 +5,5 @@ data/
 client/dist
 .vite
 .agents/
+.design/
+*-handoff.zip

@@ -91,6 +91,7 @@ export function ActionConsole({ rig }: Props) {
               disabled={!act.enabled}
               title={act.note || undefined}
               data-note={act.note ? "1" : undefined}
+              data-kind={act.key}
               onClick={() => onAction(rig, act.key)}
             >
               <span className="ac-ic" aria-hidden="true">{iconFor(act.key)}</span>

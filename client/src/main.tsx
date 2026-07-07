@@ -6,6 +6,7 @@ import "./styles/join.css";
 import "./styles/glossary.css";
 import "./styles/rig-wizard.css";
 import "./styles/vp-wizard.css";
+import "./styles/dieselpunk.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";

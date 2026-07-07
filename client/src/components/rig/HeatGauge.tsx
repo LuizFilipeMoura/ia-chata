@@ -100,8 +100,17 @@ export function HeatGauge({ rig, isActive, started, onCommand }: Props) {
     </button>
   );
 
+  // Position of the redline marker across the segmented track. The gauge is
+  // drawn with cap safe cells plus 4 danger cells; the padding around the track
+  // (~3px each side) accounts for the small inset, but percentage alone is
+  // close enough for the marker's optical alignment.
+  const redlinePos = `${(m.cap / displayMax) * 100}%`;
   return (
-    <div className={cls.join(" ")} data-zone={m.zone}>
+    <div
+      className={cls.join(" ")}
+      data-zone={m.zone}
+      style={{ ["--redline-pos" as string]: redlinePos }}
+    >
       {decreased && (
         <span className="heat-refresh-tag" aria-hidden="true">❄ −{cooled}</span>
       )}
