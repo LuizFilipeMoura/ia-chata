@@ -1717,3 +1717,35 @@ test("activation reads actionBudget from the unit registry (rig = 3)", () => {
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   assert.equal(r.game.turn.actionsMax, 3);
 });
+
+test("add command commissions a Tank", () => {
+  const clean = createRoom("R2"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Bulwark", kind: "tank", owner: "a", unit: "Tank Cannon" } });
+  const tank = clean.rigs.find((r) => r.name === "Bulwark");
+  assert.ok(tank);
+  assert.equal(tank.kind, "tank");
+  assert.equal(tank.weapons.unit, "Tank Cannon");
+});
+
+test("add command commissions a Walker", () => {
+  const clean = createRoom("R3"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Sentinel-1", kind: "walker", owner: "a", unit: "Autocannon Mount" } });
+  const w = clean.rigs.find((r) => r.name === "Sentinel-1");
+  assert.ok(w);
+  assert.equal(w.kind, "walker");
+});
+
+test("add command ignores an unknown kind", () => {
+  const clean = createRoom("R4"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Ghost", kind: "banana", owner: "a", unit: "Tank Cannon" } });
+  assert.equal(clean.rigs.find((r) => r.name === "Ghost"), undefined);
+});
+
+test("add command with no kind defaults to rig (regression)", () => {
+  const clean = createRoom("R5"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Alpha", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  const rig = clean.rigs.find((r) => r.name === "Alpha");
+  assert.ok(rig);
+  assert.equal(rig.kind, "rig");
+  assert.equal(rig.weightClass, "medium");
+});

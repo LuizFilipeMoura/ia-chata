@@ -1029,12 +1029,24 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
 
   if (verb === "add") {
     if (a.name && !findRig(room, a.name)) {
+      const kindId = String(a.kind || "rig").toLowerCase();
+      if (!UNIT_KINDS[kindId]) return room;
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
       if (canAddRigForSide(room, owner)) {
-        const rig = makeRig(room.nextRigId, a.name, (a.class || "").toLowerCase(), owner, a, a.equipment);
-        if (!rig) return room;
+        const unit = makeUnit(kindId, room.nextRigId, a.name, owner, {
+          // Rig options
+          weightClass: (a.class || a.weightClass || "").toLowerCase() || undefined,
+          longRange: a.longRange || a.lr,
+          melee: a.melee,
+          longRangeUpgrade: a.longRangeUpgrade || a.lrUpgrade,
+          meleeUpgrade: a.meleeUpgrade,
+          equipment: a.equipment ?? null,
+          // Flat-pick options
+          unit: a.unit,
+        });
+        if (!unit) return room;
         room.nextRigId++;
-        room.rigs.push(rig);
+        room.rigs.push(unit);
         resetReadyBeforeStart(room);
         changed = true;
       }
