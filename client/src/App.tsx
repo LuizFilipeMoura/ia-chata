@@ -4,6 +4,7 @@ import { useRoomSocket } from "./hooks/useRoomSocket";
 import { useViewportHeight } from "./hooks/useViewportHeight";
 import { JoinGate } from "./components/JoinGate";
 import { Terminal } from "./components/Terminal";
+import { TestHarness } from "./components/test/TestHarness";
 import type { ServerState } from "./state/types";
 
 export default function App() {
@@ -35,6 +36,10 @@ export default function App() {
       setJoinError(e instanceof Error ? e.message : "Join failed");
     }
   }, [dispatch]);
+
+  if (import.meta.env.DEV && typeof window !== "undefined" && window.location.pathname === "/test") {
+    return <TestHarness />;
+  }
 
   if (!session?.room) return <JoinGate onJoin={onJoin} error={joinError} />;
   return <Terminal />;
