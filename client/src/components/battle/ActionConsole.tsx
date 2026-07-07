@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { availableActions, actionBudget } from "/shared/battle-view.js";
 import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
-import { useBattleActions, iconFor } from "../../state/BattleActionsContext";
+import { useBattleActions } from "../../state/BattleActionsContext";
 import { useWizard } from "../../state/WizardContext";
+import { IronActionTile } from "../dieselpunk/IronActionTile";
 import type { AttackMode } from "../wizards/AttackWizard";
 import type { Rig } from "../../state/types";
 
@@ -11,12 +13,34 @@ interface Props {
   rig: Rig;
 }
 
+interface Action {
+  key: string;
+  label: string;
+  heat: number;
+  enabled: boolean;
+  cost: number;
+  note: string;
+}
+
+// Three tactile groups collapse the full action list into one row. Each tile
+// opens a popover of its enabled sub-actions (unless only one, which fires
+// straight through). `kind` picks the dieselpunk chrome (pushbutton/joystick/knob).
+const GROUPS: { id: string; label: string; kind: string; keys: string[] }[] = [
+  { id: "attack", label: "Attack", kind: "fire", keys: ["fire", "aimed", "reload"] },
+  { id: "move", label: "Move", kind: "move", keys: ["move", "sprint"] },
+  { id: "support", label: "Support", kind: "repair", keys: [] }, // catch-all
+];
+
+const heatText = (heat: number) =>
+  heat > 0 ? `+${heat} heat` : heat < 0 ? `${heat} heat` : "free";
+
 // The action console injected into the active rig's body (battle.js:275-329).
 export function ActionConsole({ rig }: Props) {
   const { game } = useRoomState();
   const sendCommand = useCommands();
   const { openMove, openRepair, endActivation, openPrepare } = useBattleActions();
   const { openAttack } = useWizard();
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   const t = game?.turn;
   // Render nothing unless this rig is the active one in the activation phase
@@ -26,6 +50,7 @@ export function ActionConsole({ rig }: Props) {
   }
 
   const onAction = (r: Rig, key: string) => {
+    setOpenGroup(null);
     if (key === "fire" || key === "aimed") {
       openAttack(r, key as AttackMode);
       return;
@@ -50,9 +75,15 @@ export function ActionConsole({ rig }: Props) {
   };
 
   const b = actionBudget(rig, t);
-  const actions = availableActions(rig, t);
+  const actions = availableActions(rig, t) as Action[];
   // Cold kinds (Tank / Walker) don't track heat — suppress per-action heat tags.
   const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
+
+  const claimed = new Set(GROUPS.flatMap((g) => g.keys));
+  const childrenFor = (g: (typeof GROUPS)[number]) =>
+    g.id === "support"
+      ? actions.filter((a) => !claimed.has(a.key))
+      : actions.filter((a) => g.keys.includes(a.key));
 
   // Surface the "why" behind constrained actions as inline hints, deduplicated.
   const notes = [...new Set(actions.map((a) => a.note).filter(Boolean))] as string[];
@@ -79,25 +110,56 @@ export function ActionConsole({ rig }: Props) {
         </div>
       </div>
 
-      <div className="ac-grid">
-        {actions.map((act) => {
-          const heatLabel =
-            act.heat > 0 ? `+${act.heat} heat` : act.heat < 0 ? `${act.heat} heat` : "0 heat";
+      <div className="ac-grid ac-grid--groups">
+        {GROUPS.map((g) => {
+          const kids = childrenFor(g);
+          if (kids.length === 0) return null;
+          const enabledKids = kids.filter((a) => a.enabled);
+          const groupEnabled = enabledKids.length > 0;
+          const open = openGroup === g.id;
+
+          const onGroup = () => {
+            if (!groupEnabled) return;
+            if (enabledKids.length === 1) onAction(rig, enabledKids[0].key);
+            else setOpenGroup(open ? null : g.id);
+          };
+
           return (
-            <button
-              key={act.key}
-              type="button"
-              className="ac-btn"
-              disabled={!act.enabled}
-              title={act.note || undefined}
-              data-note={act.note ? "1" : undefined}
-              data-kind={act.key}
-              onClick={() => onAction(rig, act.key)}
-            >
-              <span className="ac-ic" aria-hidden="true">{iconFor(act.key)}</span>
-              <span className="ac-label">{act.label}</span>
-              {!cold && <span className="ac-heat" data-heat={act.heat}>{heatLabel}</span>}
-            </button>
+            <div className="ac-cell" key={g.id}>
+              <IronActionTile
+                asset={g.kind === "fire" ? "fire" : "lever"}
+                label={g.label}
+                lamp={g.kind === "fire"}
+                disabled={!groupEnabled}
+                open={open}
+                hasPopup={enabledKids.length > 1}
+                onClick={onGroup}
+              />
+
+              {open && (
+                <>
+                  <div className="ac-pop-scrim" onClick={() => setOpenGroup(null)} />
+                  <div className="ac-pop" role="menu">
+                    {kids.map((a) => (
+                      <button
+                        key={a.key}
+                        type="button"
+                        role="menuitem"
+                        className="ac-pop-row"
+                        disabled={!a.enabled}
+                        title={a.note || undefined}
+                        onClick={() => onAction(rig, a.key)}
+                      >
+                        <span className="ac-pop-label">{a.label}</span>
+                        {!cold && (
+                          <span className="ac-pop-heat" data-heat={a.heat}>{heatText(a.heat)}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           );
         })}
       </div>
@@ -112,7 +174,7 @@ export function ActionConsole({ rig }: Props) {
       ))}
 
       <button className="bh-btn ac-end ghost" type="button" onClick={() => endActivation(rig)}>
-        End Activation
+        End {rig.name}'s turn
       </button>
     </div>
   );

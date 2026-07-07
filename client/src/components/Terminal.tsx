@@ -4,10 +4,8 @@ import { Stage } from "./Stage";
 import { OutcomeBanner } from "./OutcomeBanner";
 import { TurnBanner } from "./TurnBanner";
 import { ChatProvider } from "./chat/ChatContext";
-import { ChatFab } from "./chat/ChatFab";
 import { ChatPanel } from "./chat/ChatPanel";
-import { LeaveRoomFab } from "./LeaveRoomFab";
-import { RevertFab } from "./RevertFab";
+import { FabDock } from "./FabDock";
 import { GlossaryDialog } from "./overlays/GlossaryDialog";
 import { useUi } from "../state/UiStateContext";
 import { useBattleWatchers } from "../hooks/useBattleWatchers";
@@ -24,7 +22,7 @@ function ChatMount() {
 
   return (
     <ChatProvider>
-      <ChatFab hasUnread={hasUnread} onClick={toggleChat} />
+      <FabDock chatOpen={chatOpen} hasUnread={hasUnread} onToggleChat={toggleChat} />
       <ChatPanel onBotMessage={flagUnread} />
     </ChatProvider>
   );
@@ -41,8 +39,6 @@ export function Terminal() {
         <Stage />
         <OutcomeBanner />
         <GlossaryDialog open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
-        <LeaveRoomFab />
-        <RevertFab />
         <ChatMount />
       </div>
     </>

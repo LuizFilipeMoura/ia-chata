@@ -82,35 +82,57 @@
 /* ---- Rig items → engraved metal panels with corner bolts ---- */
 .rig-item {
   position: relative;
+  border-radius: 0 !important;
+  /* IronPanel: cut (chamfered) corners — kept small so short collapsed rows
+     don't lose their whole corner to the cut. */
+  clip-path: polygon(
+    9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px),
+    calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+  /* Brushed-steel iron face — same material as the action tiles. */
   background:
-    radial-gradient(120% 140% at 50% -20%, rgba(231,154,61,.05), transparent 60%),
-    linear-gradient(180deg, #262c35, #181d25) !important;
-  border: 1px solid #464f5b !important;
+    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, rgba(0,0,0,.05) 1px 3px),
+    radial-gradient(150% 130% at 50% 32%, #2c3139, #1a1e25 55%, #0e1116) !important;
+  /* No border — clip-path would crop its corners. A brass inset ring gives the
+     bevel edge and, being clipped to the octagon, traces the chamfer cleanly. */
+  border: none !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.08),
-    inset 0 -4px 10px rgba(0,0,0,.45),
-    0 3px 7px rgba(0,0,0,.55) !important;
+    inset 0 0 0 1px rgba(150,120,66,.42),
+    inset 0 1px 0 rgba(255,255,255,.07),
+    inset 2px 2px 5px rgba(0,0,0,.5),
+    inset -2px -2px 5px rgba(0,0,0,.42) !important;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.55));
 }
 .rig-item::before {
   content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
-  border-radius: inherit; background-repeat: no-repeat;
+  background-repeat: no-repeat;
+  /* IronPanel brass dome bolts, seated just inside each cut corner */
   background-image:
-    radial-gradient(circle 4px at 12px 12px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
-    radial-gradient(circle 4px at calc(100% - 12px) 12px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
-    radial-gradient(circle 4px at 12px calc(100% - 12px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
-    radial-gradient(circle 4px at calc(100% - 12px) calc(100% - 12px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%);
+    radial-gradient(circle 3.5px at 9px 9px, #dcbc74 0, #9c7736 46%, #3a2c14 80%, transparent 84%),
+    radial-gradient(circle 3.5px at calc(100% - 9px) 9px, #dcbc74 0, #9c7736 46%, #3a2c14 80%, transparent 84%),
+    radial-gradient(circle 3.5px at 9px calc(100% - 9px), #dcbc74 0, #9c7736 46%, #3a2c14 80%, transparent 84%),
+    radial-gradient(circle 3.5px at calc(100% - 9px) calc(100% - 9px), #dcbc74 0, #9c7736 46%, #3a2c14 80%, transparent 84%);
 }
 .rig-item.is-active {
-  border-color: rgba(231,154,61,.6) !important;
   box-shadow:
+    inset 0 0 0 1px rgba(231,154,61,.6),
     inset 0 1px 0 rgba(255,255,255,.08),
-    inset 0 -4px 10px rgba(0,0,0,.45),
-    0 0 0 1px rgba(231,154,61,.25),
-    0 6px 22px rgba(231,154,61,.12) !important;
+    inset 0 -4px 10px rgba(0,0,0,.45) !important;
+  filter: drop-shadow(0 4px 14px rgba(231,154,61,.35));
 }
 /* Keep rig-head chevron/name above the rivet layer. */
 .rig-head { position: relative; z-index: 5; }
 .rig-body-inner { position: relative; z-index: 5; }
+/* Open card body sinks into a recessed well inside the iron plate. */
+.rig-item.is-open .rig-body-inner {
+  margin: 0 .4rem .5rem;
+  padding: .6rem .65rem .7rem !important;
+  border-radius: 8px;
+  background: radial-gradient(140% 120% at 50% -10%, #15181d, #0b0d11 72%);
+  box-shadow:
+    inset 0 2px 7px rgba(0,0,0,.72),
+    inset 0 0 0 1px rgba(0,0,0,.55),
+    inset 0 0 0 2px rgba(120,95,50,.1);
+}
 
 .rig-badge {
   background: linear-gradient(180deg, #0a0d11, #05070a);
@@ -318,39 +340,131 @@
   z-index: 6;
 }
 
-/* End activation — brass finish. */
+/* ---- Grouped action row: three chunky tactile tiles, one row ---- */
+.ac-grid--groups {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: .55rem !important;
+  align-items: stretch;
+}
+.ac-cell { position: relative; display: flex; }
+.ac-cell > .ac-btn {
+  flex: 1;
+  padding: .8rem .35rem .6rem !important;
+  min-height: 118px;
+  justify-content: flex-start;
+  gap: .3rem;
+}
+.ac-cell > .ac-btn[data-kind]::before { width: 50px; height: 50px; }
+.ac-cell > .ac-btn .ac-label {
+  font-size: .92rem; letter-spacing: .02em; margin-top: auto;
+}
+.ac-cell > .ac-btn .ac-heat { font-size: .56rem; }
+.ac-btn.is-open { border-color: #b98a4e !important; }
+
+/* Indicator lamp on the Attack tile — lit ember pip, top-right. */
+.ac-lamp {
+  position: absolute; top: .5rem; right: .55rem;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #ffd39a, #ff7a2e 45%, #7a2606 90%);
+  box-shadow:
+    0 0 8px 1px rgba(255,140,50,.7),
+    inset 0 1px 1px rgba(255,235,200,.6),
+    inset 0 -1px 2px rgba(0,0,0,.5);
+}
+
+/* Sub-action popover — recessed brass-edged panel above the tile. */
+.ac-pop-scrim { position: fixed; inset: 0; z-index: 20; }
+.ac-pop {
+  position: absolute; z-index: 21;
+  left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  min-width: max(100%, 150px);
+  padding: 5px; border-radius: 9px;
+  background: linear-gradient(180deg, #2b323c, #171c22);
+  border: 1px solid #4a535f;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 8px 22px rgba(0,0,0,.6),
+    0 0 0 1px rgba(120,95,50,.25);
+}
+.ac-pop::after {
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 7px solid transparent; border-top-color: #171c22;
+}
+.ac-pop-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  width: 100%; padding: .5rem .6rem; border-radius: 6px;
+  background: linear-gradient(180deg, #333a44, #232932);
+  border: 1px solid #3c444e; color: #e6ded0;
+  font-family: var(--font-display); font-weight: 600; font-size: .82rem; text-align: left;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.ac-pop-row + .ac-pop-row { margin-top: 5px; }
+.ac-pop-row:not(:disabled):hover {
+  border-color: #b98a4e; color: #fff;
+  background: linear-gradient(180deg, #3c4550, #2a313b);
+}
+.ac-pop-row:not(:disabled):active { transform: translateY(1px); }
+.ac-pop-row:disabled { opacity: .4; }
+.ac-pop-heat {
+  font-family: var(--font-mono); font-size: .58rem; letter-spacing: .03em; color: #ff9a86;
+}
+.ac-pop-heat[data-heat="0"] { color: var(--txt-faint); }
+
+/* End turn — brass IronPanel bar (chamfer + bevel ring + corner bolts). */
 .ac-end.bh-btn {
+  position: relative;
+  display: block; width: 100%; margin-top: .6rem;
+  padding: .75rem !important;
+  font-size: .96rem; letter-spacing: .06em; text-transform: uppercase;
+  border-radius: 0 !important;
+  clip-path: polygon(
+    11px 0, calc(100% - 11px) 0, 100% 11px, 100% calc(100% - 11px),
+    calc(100% - 11px) 100%, 11px 100%, 0 calc(100% - 11px), 0 11px);
   background: linear-gradient(180deg, #e7cf94, #c7a45f 55%, #a5843f) !important;
-  border: 1px solid #6e5531 !important;
+  border: none !important;
   color: #2a1c07 !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,248,220,.75),
-    inset 0 -3px 6px rgba(110,80,35,.5),
-    0 2px 5px rgba(0,0,0,.5) !important;
+    inset 0 0 0 1px #6e5531,
+    inset 0 1px 0 rgba(255,248,220,.8),
+    inset 0 -3px 6px rgba(110,80,35,.5) !important;
+  filter: drop-shadow(0 3px 7px rgba(0,0,0,.5));
   text-shadow: 0 1px 0 rgba(255,240,200,.35);
 }
 .ac-end.bh-btn.ghost { color: #2a1c07 !important; }
+/* recessed brass dome bolts in the cut corners */
+.ac-end.bh-btn::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle 4px at 11px 50%, #4a3818 0, #8a6c34 42%, #d8bd7a 72%, transparent 76%),
+    radial-gradient(circle 4px at calc(100% - 11px) 50%, #4a3818 0, #8a6c34 42%, #d8bd7a 72%, transparent 76%);
+}
 
 /* ---- Turn banner → riveted brass CTA card ---- */
 .turn-banner[data-tone="act"] .tb-card {
   position: relative;
+  border-radius: 0 !important;
+  clip-path: polygon(
+    13px 0, calc(100% - 13px) 0, 100% 13px, 100% calc(100% - 13px),
+    calc(100% - 13px) 100%, 13px 100%, 0 calc(100% - 13px), 0 13px);
   background: linear-gradient(180deg, #f2e6c4, #d9bd82 52%, #bd9a56) !important;
-  border: 1px solid #6e5531 !important;
+  border: none !important;
   color: #2a1c07;
   box-shadow:
+    inset 0 0 0 1px #6e5531,
     inset 0 1px 0 rgba(255,248,225,.85),
-    inset 0 -3px 6px rgba(120,90,40,.4),
-    0 12px 34px rgba(231,154,61,.4),
-    0 2px 5px rgba(0,0,0,.55) !important;
+    inset 0 -3px 6px rgba(120,90,40,.4) !important;
+  filter: drop-shadow(0 6px 16px rgba(231,154,61,.35));
 }
 .turn-banner[data-tone="act"] .tb-card::before {
   content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
-  border-radius: inherit; background-repeat: no-repeat;
+  background-repeat: no-repeat;
+  /* recessed brass dome bolts, seated inside each cut corner */
   background-image:
-    radial-gradient(circle 3.5px at 13px 12px, #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%),
-    radial-gradient(circle 3.5px at calc(100% - 13px) 12px, #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%),
-    radial-gradient(circle 3.5px at 13px calc(100% - 12px), #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%),
-    radial-gradient(circle 3.5px at calc(100% - 13px) calc(100% - 12px), #f8ecc5 0, #a5843f 42%, #4a3818 78%, transparent 82%);
+    radial-gradient(circle 4px at 12px 12px, #5a4526 0, #8a6c34 42%, #cdae66 72%, transparent 76%),
+    radial-gradient(circle 4px at calc(100% - 12px) 12px, #5a4526 0, #8a6c34 42%, #cdae66 72%, transparent 76%),
+    radial-gradient(circle 4px at 12px calc(100% - 12px), #5a4526 0, #8a6c34 42%, #cdae66 72%, transparent 76%),
+    radial-gradient(circle 4px at calc(100% - 12px) calc(100% - 12px), #5a4526 0, #8a6c34 42%, #cdae66 72%, transparent 76%);
 }
 .turn-banner[data-tone="act"] .tb-icon,
 .turn-banner[data-tone="act"] .tb-primary,

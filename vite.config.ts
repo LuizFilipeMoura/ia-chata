@@ -1,12 +1,31 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from "vitest/config";
+import { defineConfig, createLogger } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 
 const shared = fileURLToPath(new URL("./shared", import.meta.url));
 
+// Vite core logs "ws proxy socket error" directly from its HTTP-upgrade
+// socket handler — not via the http-proxy `error` event — so it can't be
+// silenced through the proxy `configure` hook. A custom logger that drops
+// only the benign write-abort/reset churn (client reconnect, HMR reload,
+// React StrictMode double-mount) keeps real proxy errors visible.
+const logger = createLogger();
+const baseError = logger.error;
+logger.error = (msg, options) => {
+  if (
+    typeof msg === "string" &&
+    msg.includes("ws proxy socket error") &&
+    /ECONNABORTED|ECONNRESET/.test(msg)
+  ) {
+    return;
+  }
+  baseError(msg, options);
+};
+
 export default defineConfig({
   root: "client",
+  customLogger: logger,
   plugins: [react()],
   resolve: {
     alias: [{ find: /^\/shared/, replacement: shared }],
