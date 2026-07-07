@@ -198,6 +198,29 @@ export function upgradeForWeapon(weaponName, upgradeId) {
   return (WEAPON_UPGRADES[weaponName] || []).find((u) => u.id === normalized) || null;
 }
 
+function pickKey(obj, rng) {
+  return randomPick(Object.keys(obj), rng);
+}
+
+// A random full Rig loadout: one long-range + one melee weapon, each with a
+// random signature upgrade. Shape matches makeRig's `weapons` argument.
+export function randomRigWeapons(rng) {
+  const longRange = pickKey(WEAPONS.longRange, rng);
+  const melee = pickKey(WEAPONS.melee, rng);
+  const lrUps = WEAPON_UPGRADES[longRange] || [];
+  const meleeUps = WEAPON_UPGRADES[melee] || [];
+  return {
+    longRange,
+    melee,
+    longRangeUpgrade: randomPick(lrUps, rng)?.id,
+    meleeUpgrade: randomPick(meleeUps, rng)?.id,
+  };
+}
+
+export function randomEquipment(rng) {
+  return pickKey(EQUIPMENT, rng);
+}
+
 function uniquePerks(base, added = []) {
   return [...new Set([...(base || []), ...(added || [])])];
 }
@@ -1353,6 +1376,16 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         room.game.pendingReaction = null;
         changed = true;
       }
+    }
+  } else if (verb === "randomize") {
+    const rig = findRig(room, a.name);
+    if (rig && kindOf(rig) === "rig") {
+      const idx = room.rigs.indexOf(rig);
+      const fresh = makeRig(
+        rig.id, rig.name, rig.weightClass, rig.owner,
+        randomRigWeapons(options.random), randomEquipment(options.random),
+      );
+      if (fresh && idx >= 0) { room.rigs[idx] = fresh; changed = true; }
     }
   } else {
     const rig = findRig(room, a.name);
