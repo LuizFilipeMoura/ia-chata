@@ -2,8 +2,9 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  IMPACT, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity, shieldCoverage,
+  impactRow, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity, shieldCoverage,
 } from "./rules.js";
+import { UNIT_KINDS, kindOf, partNamesOf } from "./unit-kinds.js";
 
 function rollD(sides, provided, random) {
   if (provided != null) {
@@ -55,7 +56,8 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
 // §12/§7 — STR = weapon STR + weight modifier + Charged Shot.
 export function computeStr(attacker, profile, opts) {
   const charged = opts.charged && profile.perks.includes("Charged Shot") ? 2 : 0;
-  return profile.str + (WEIGHT_STR_MOD[attacker.weightClass] || 0) + charged;
+  const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
+  return profile.str + weightMod + charged;
 }
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
@@ -83,7 +85,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
   const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
-  const row = IMPACT[target.weightClass][location];
+  const row = impactRow(target.kind || "rig", location, target.weightClass);
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
     const die = rollD(6, providedDice?.impacts?.[i], random);
@@ -102,7 +104,11 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
 // a resolution descriptor (or { ok:false, reason } when the shot can't be made).
 // The weapon profile is resolved by the caller via ctx.profileFor(slot, name).
 export function resolveAttack(room, attacker, target, opts, random, ctx) {
-  const slot = opts.weapon === "melee" ? "melee" : "longRange";
+  // Rigs carry a two-slot loadout (longRange + melee). Flat-pick kinds
+  // (Tank / Walker) carry a single "unit" slot instead.
+  let slot;
+  if (attacker.weapons?.unit != null) slot = "unit";
+  else slot = opts.weapon === "melee" ? "melee" : "longRange";
   const weaponName = attacker.weapons?.[slot];
   const profile = ctx.profileFor(slot, weaponName, attacker);
   if (!profile) return { ok: false, reason: "no-weapon" };
@@ -111,10 +117,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // A spent ranged weapon normally can't fire — unless the caller folds in a
   // rushed reload (§7), paid for with an extra action-slot upstream.
   if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };
+  if (slot === "unit" && attacker.loaded.unit === false && !opts.autoReload) return { ok: false, reason: "reload" };
 
   const th = rollToHit(attacker, profile, opts, opts.dice?.toHit, random);
   const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
+  if (slot === "unit") attacker.loaded.unit = false;
 
   const rolls = th.dice.map((d, i) => ({
     sides: 6, value: d, label: `hit ${i + 1}`,
@@ -124,7 +132,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   let location = null;
   if (th.hits > 0) {
     const locDie = rollD(12, opts.dice?.location, random);
-    location = opts.aimed ? opts.aimedLoc : hitLocation(locDie);
+    location = opts.aimed ? opts.aimedLoc : hitLocation(attacker.kind || "rig", locDie);
     if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     impacts = rollImpacts(attacker, target, profile, location,
       { arc: opts.arc, hits: th.hits, charged: opts.charged }, opts.dice, random);
@@ -175,7 +183,7 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
   if (perks.includes("Cleave") && opts.cleaveTarget) {
     const extra = room.rigs.find((x) => x.name.toLowerCase() === String(opts.cleaveTarget).toLowerCase());
     if (extra && !extra.destroyed) {
-      const loc = hitLocation(rollD(12, opts.dice?.cleaveLocation, random));
+      const loc = hitLocation(extra.kind || "rig", rollD(12, opts.dice?.cleaveLocation, random));
       const [hit] = rollImpacts(attacker, extra, profile, loc, { arc: "front", hits: 1, charged: opts.charged }, { impacts: [opts.dice?.cleaveImpact] }, random);
       if (hit.sp > 0) ctx.applyDamage(room, extra, loc, hit.sp, { random });
       effects.push(`Cleave → ${extra.name}`);
@@ -188,8 +196,8 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
   }
   if (onHit === "cluster-shells") {
     const primary = opts.aimed ? opts.aimedLoc : null;
-    const locs = ["hull", "arms", "legs", "engine"];
-    let loc = hitLocation(rollD(12, opts.dice?.clusterLocation, random));
+    const locs = partNamesOf(target.kind || "rig");
+    let loc = hitLocation(target.kind || "rig", rollD(12, opts.dice?.clusterLocation, random));
     if (primary && loc === primary) loc = locs[(locs.indexOf(loc) + 1) % locs.length];
     ctx.applyDamage(room, target, loc, 1, { random, dice: opts.dice });
     effects.push(`Cluster Shells - 1 SP to ${loc}`);
@@ -203,11 +211,13 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
 export function resolveRam(room, attacker, target, opts, random, ctx) {
   for (const [rig, who] of [[attacker, "self"], [target, "target"]]) {
     const d = opts.dice?.[who] || {};
-    const loc = hitLocation(rollD(12, d.location, random));
+    const loc = hitLocation(rig.kind || "rig", rollD(12, d.location, random));
     const die = rollD(6, d.impact, random);
-    const ramStr = RAM_STR[rig.weightClass] || 8;
+    // Cold kinds (Tank / Walker) carry a flat ramStr on their registry entry.
+    // Rigs keep the weight-class RAM_STR table.
+    const ramStr = UNIT_KINDS[kindOf(rig)]?.ramStr ?? RAM_STR[rig.weightClass] ?? 8;
     const total = die + ramStr;
-    const sev = impactSeverity(total, IMPACT[rig.weightClass][loc]);
+    const sev = impactSeverity(total, impactRow(rig.kind || "rig", loc, rig.weightClass));
     if (sev.sp > 0) ctx.applyDamage(room, rig, loc, sev.sp, { random });
     const cls = rig.weightClass ? rig.weightClass[0].toUpperCase() + rig.weightClass.slice(1) : "";
     ctx.pushResolution(room, {

@@ -15,7 +15,14 @@ vi.mock("../../state/RoomStateContext", () => ({
 
 beforeEach(() => sendCommand.mockClear());
 
-test("owner selector offers You and Enemy", () => {
+// Task 19 added a leading Kind step. Rig is preselected there, so every Rig
+// assertion below first advances past it to reach the old Identity view.
+async function advanceToIdentity(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Next" }));
+}
+
+test("owner selector offers You and Enemy", async () => {
+  const user = userEvent.setup();
   render(
     <UiProvider>
       <GlossaryTipProvider>
@@ -23,11 +30,13 @@ test("owner selector offers You and Enemy", () => {
       </GlossaryTipProvider>
     </UiProvider>,
   );
+  await advanceToIdentity(user);
   expect(screen.getByRole("option", { name: "You" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "Enemy" })).toBeInTheDocument();
 });
 
-test("only light and medium rig classes are offered", () => {
+test("only light and medium rig classes are offered", async () => {
+  const user = userEvent.setup();
   render(
     <UiProvider>
       <GlossaryTipProvider>
@@ -35,13 +44,15 @@ test("only light and medium rig classes are offered", () => {
       </GlossaryTipProvider>
     </UiProvider>,
   );
+  await advanceToIdentity(user);
   expect(screen.getByRole("option", { name: "light" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "medium" })).toBeInTheDocument();
   expect(screen.queryByRole("option", { name: "heavy" })).toBeNull();
   expect(screen.queryByRole("option", { name: "colossal" })).toBeNull();
 });
 
-test("Identity step shows an SP preview for the selected weight class", () => {
+test("Identity step shows an SP preview for the selected weight class", async () => {
+  const user = userEvent.setup();
   render(
     <UiProvider>
       <GlossaryTipProvider>
@@ -49,6 +60,7 @@ test("Identity step shows an SP preview for the selected weight class", () => {
       </GlossaryTipProvider>
     </UiProvider>,
   );
+  await advanceToIdentity(user);
   expect(screen.getByText(/heat cap/i)).toBeInTheDocument();
 });
 
@@ -61,6 +73,7 @@ test("commissioning posts an add command carrying the chosen owner", async () =>
       </GlossaryTipProvider>
     </UiProvider>,
   );
+  await advanceToIdentity(user);
   await user.type(screen.getByPlaceholderText("Rig name"), "Vulcan");
   // Identity -> Weapons -> Equipment -> Confirm
   await user.click(screen.getByRole("button", { name: "Next" }));

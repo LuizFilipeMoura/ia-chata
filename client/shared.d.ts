@@ -43,6 +43,37 @@ declare module "/shared/glossary.js" {
   export const GLOSSARY: Array<{ id: string; term: string; def: string; match: string[] }>;
 }
 
+declare module "/shared/unit-kinds.js" {
+  export const ROLES: string[];
+  export const UNIT_KINDS: Record<string, {
+    id: string;
+    label: string;
+    parts: Array<{ name: string; role: string }>;
+    hitLocation: Array<{ min: number; part: string }>;
+    armour: unknown;
+    hasHeat: boolean;
+    hasArcs: boolean;
+    actionBudget: number;
+    weaponMode: string;
+    reloads: boolean;
+    hasEquipment: boolean;
+    reactions: boolean;
+    ramStr: unknown;
+    destruction: string;
+  }>;
+  export function kindOf(unit: unknown): string;
+  export function partsOf(kindId: string): Array<{ name: string; role: string }>;
+  export function partNamesOf(kindId: string): string[];
+  export function roleOf(kindId: string, partName: string): string | null;
+  export function partsByRole(kindId: string, role: string): string[];
+  export function hitPart(kindId: string, d12: number): string | undefined;
+  export function impactRow(
+    kindId: string,
+    partName: string,
+    weightClass?: string,
+  ): { direct: number; severe: number; critical: number } | null | undefined;
+}
+
 declare module "/shared/field.js" {
   export interface FieldLike { width: number; height: number; diagonal: "tlbr" | "trbl"; }
   export const FIELD_MIN: { width: number; height: number };

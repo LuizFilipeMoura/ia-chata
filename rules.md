@@ -451,6 +451,48 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 
 ---
 
+## 17. Units
+
+The game fields three unit **kinds**. Every kind is one **slot** = one **count** = one **activation** (§3 balance rules unchanged). Balance is matched composition only — both sides mirror kinds.
+
+### Rig
+
+Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weapon slots (long-range + melee) with fixed upgrades (§12). Weight-class STR scaling (§12). Equipment slot (§15). May Prepare (§5). **3 actions** per activation. Structural (Hull) 0 SP → −2 actions −1 Aim; power (Engine) 0 SP → skip next activation; weapon (Arms) 0 SP → destroy one weapon + 1 SP to Hull + 1 SP to Engine; mobility (Legs) 0 SP → move penalty.
+
+### Tank
+
+Four components (Hull / Tracks / Turret / Engine). **Cold** — no heat, no overheat rolls, no Shut Down. **One weapon** from the shared unit-weapon list (flat STR, no weight-class scaling). No equipment, no Prepare. **2 actions** per activation. Ram STR **9** ⚙. Speed **3"** ⚙.
+
+Hit table (D12): 1–4 Hull · 5–7 Tracks · 8–10 Turret · 11–12 Engine.
+Strawman armour ⚙ (Direct / Severe / Critical): Hull 13-14 / 15-16 / 17+; Tracks 14-15 / 16 / 17+; Turret 12-13 / 14-15 / 16+; Engine 8-10 / 11-12 / 13+.
+
+At 0 SP on Turret: the Tank's single gun is destroyed but the Tank can still **Ram** until repaired. Cascade at 0 on any part follows §8 by role: structural / power / mobility / weapon effects match the Rig set.
+
+### Walker
+
+Four components (Hull / Legs / Mount / Engine). Cold like a Tank, faster and lighter. **One weapon** from the shared unit-weapon list. No equipment, no Prepare. **3 actions** per activation. Ram STR **8** ⚙. Speed **4"** ⚙.
+
+Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Armour ≈ Medium-Rig grade ⚙.
+
+### Shared unit weapons (Tanks + Walkers only) ⚙
+
+| Weapon | Type | ROF | STR | ACC (near/far) | RNG (near/far) | Perks |
+|---|---|:--:|:--:|:--:|:--:|---|
+| Tank Cannon | ranged | 1 | 12 | 0 / −1 | 12" / 24" | — |
+| Autocannon Mount | ranged | 3 | 8 | 0 / −1 | 12" / 24" | Full Auto |
+| Coaxial MG | ranged | 6 | 5 | +1 / −1 | 9" / 18" | Full Auto, Raking Fire |
+| Rocket Pod | ranged | 2 | 10 | 0 / 0 | 15" / 30" | Charged Shot |
+| Dozer Blade | melee | 1 | 10 | 0 | 1.5" | Melee |
+| Ram Spike | melee | 1 | 11 | +1 | 1.5" | Melee, Impale |
+
+STR is **flat** — no weight-class modifier applies. A Tank / Walker that carries a ranged weapon uses **Ram** for close combat via its `ramStr` (§5).
+
+### Notes
+
+All numeric values on Tanks and Walkers above (SP, armour rows, ROF/STR, ramStr, speeds) are strawman — subject to tuning in playtest.
+
+---
+
 ## 16. Design Notes & Open Items
 
 **Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, and **engine types** (Crude Oil / Diesel / Arc). Equipment returned in a redesigned form as the single-slot system in §15. Squadrons balance by matching composition (§3); heat tolerance is set by weight class (§6).

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, resolveRam } from "./combat.js";
-import { WEAPONS, makeRig, effectiveWeaponProfile } from "./game-state.js";
+import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
 // game-state.js's combatCtx() injects (§"Mutation primitives" in combat.js),
@@ -271,4 +271,72 @@ test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage",
   assert.equal(targetRes.breakdown.total, 9);
   assert.equal(targetRes.breakdown.tier, "none");
   assert.equal(targetRes.breakdown.sp, 0);
+});
+
+test("computeStr skips weight-class modifier for flat-pick weapons", () => {
+  const attackerWithClass = { kind: "tank", weightClass: "heavy" };
+  const profile = { str: 12, perks: [], flatPick: true };
+  assert.equal(computeStr(attackerWithClass, profile, { charged: false }), 12);
+});
+
+test("computeStr still applies weight-class modifier for rig-catalog weapons", () => {
+  const attacker = { kind: "rig", weightClass: "heavy" };
+  const profile = { str: 8, perks: [] };
+  assert.equal(computeStr(attacker, profile, { charged: false }), 8 + 2);
+});
+
+test("resolveAttack reads weapons.unit when the attacker is a Tank", () => {
+  const room = { rigs: [], history: [], game: { nextResolutionId: 1, resolutions: [] } };
+  const attacker = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  const target = makeUnit("tank", 2, "Enemy", "b", { unit: "Coaxial MG" });
+  room.rigs = [attacker, target];
+  const ctx = {
+    applyDamage: () => {}, bumpHeat: () => {}, pushResolution: () => {},
+    profileFor: (slot, name) => ({ ...UNIT_WEAPONS[name], upgradeEffect: {}, flatPick: true }),
+  };
+  const res = resolveAttack(room, attacker, target, {
+    weapon: "unit", target: "Enemy", arc: "front", range: "near", cover: 0, aimed: false,
+    dice: { toHit: [5], location: 3 },
+  }, () => 0, ctx);
+  assert.equal(res.ok, true);
+});
+
+test("resolveRam reads ramStr from the unit registry for cold kinds (Tank = 9)", () => {
+  const room = { rigs: [], history: [], game: { nextResolutionId: 1, resolutions: [] } };
+  const attacker = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  const target = makeUnit("tank", 2, "Enemy", "b", { unit: "Coaxial MG" });
+  room.rigs = [attacker, target];
+  const recorded = [];
+  const ctx = {
+    applyDamage: () => {}, bumpHeat: () => {}, pushResolution: (_r, e) => recorded.push(e),
+  };
+  resolveRam(room, attacker, target, { dice: { self: { location: 3, impact: 6 }, target: { location: 3, impact: 6 } } }, () => 0, ctx);
+  // Both entries should print "Ram STR 9" — Tank ramStr from registry, not weight-class default 8.
+  const summaries = recorded.map((r) => r.summary).join(" | ");
+  assert.ok(/Ram STR 9/.test(summaries), `expected ramStr 9 in ${summaries}`);
+});
+
+test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret, not arms/legs)", () => {
+  const room = { rigs: [], history: [], game: { nextResolutionId: 1, resolutions: [] } };
+  const attacker = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  const target = makeUnit("tank", 2, "Enemy", "b", { unit: "Coaxial MG" });
+  room.rigs = [attacker, target];
+  const hits = [];
+  const ctx = {
+    applyDamage: (_r, _t, loc) => hits.push(loc),
+    bumpHeat: () => {}, pushResolution: () => {},
+    // Inject the cluster-shells upgrade AND keep flatPick so combat.js takes cold-kind paths.
+    profileFor: (_s, name) => ({ ...UNIT_WEAPONS[name], upgradeEffect: { onHit: "cluster-shells" }, flatPick: true }),
+  };
+  // Aim at "turret" and force the cluster D12 to 9 → hitLocation("tank", 9) === "turret" — matches primary, must cycle.
+  // Force to-hit dice to 6 so the shot always hits regardless of modAim.
+  resolveAttack(room, attacker, target, {
+    weapon: "unit", target: "Enemy", arc: "front", range: "near", cover: 0, aimed: true, aimedLoc: "turret",
+    dice: { toHit: [6], clusterLocation: 9, impacts: [6] },
+  }, () => 0, ctx);
+  // Cluster-shells runs AFTER the primary aimed hit. The cluster loc must be a Tank part, never a Rig-only name.
+  const clusterLoc = hits.find((loc) => loc !== "turret") ?? hits[hits.length - 1];
+  const tankParts = ["hull", "tracks", "turret", "engine"];
+  assert.ok(tankParts.includes(clusterLoc), `cluster fell on ${clusterLoc} — not a Tank part`);
+  assert.ok(clusterLoc !== "arms" && clusterLoc !== "legs", `cluster leaked a Rig-only part name: ${clusterLoc}`);
 });

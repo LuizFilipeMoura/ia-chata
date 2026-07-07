@@ -1,4 +1,4 @@
-export type Loc = "hull" | "arms" | "legs" | "engine";
+export type Loc = string;
 
 export interface Component {
   sp: number;
@@ -34,8 +34,10 @@ export interface PendingReaction {
 export interface Rig {
   id: number;
   name: string;
+  kind?: "rig" | "tank" | "walker";
   weightClass: "light" | "medium";
   owner: "a" | "b";
+  parts?: Record<string, Component>;
   hull: Component;
   arms: Component;
   legs: Component;

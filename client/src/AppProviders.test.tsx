@@ -33,6 +33,8 @@ test("opening the commission wizard resolves the glossary context", async () => 
   await user.click(screen.getByText("open"));
   // The Weapons step renders GlossaryText inside its upgrade choices — advancing
   // to it is what previously crashed with "useGlossaryTip outside provider".
+  // Kind -> Identity -> Weapons (Rig is preselected on the Kind step).
+  await user.click(screen.getByRole("button", { name: "Next" }));
   await user.type(screen.getByPlaceholderText("Rig name"), "Vulcan");
   await user.click(screen.getByRole("button", { name: "Next" }));
   expect(screen.getByText("Long range weapon")).toBeInTheDocument();

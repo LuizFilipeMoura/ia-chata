@@ -43,3 +43,23 @@ test("player start guide hands off to deployment after registration", () => {
   assert.match(PLAYER_START_GUIDE, /deploy/i);
   assert.match(PLAYER_START_GUIDE, /score objectives/i);
 });
+
+test("tracker protocol teaches Tank and Walker add grammar", () => {
+  assert.match(TRACKER_PROTOCOL, /kind="rig"/);
+  assert.match(TRACKER_PROTOCOL, /kind="tank"/);
+  assert.match(TRACKER_PROTOCOL, /kind="walker"/);
+  assert.match(TRACKER_PROTOCOL, /unit="<flat unit weapon>"/);
+});
+
+test("tracker protocol documents kind-specific loc enums", () => {
+  assert.match(TRACKER_PROTOCOL, /rig.*hull\|arms\|legs\|engine/i);
+  assert.match(TRACKER_PROTOCOL, /tank.*hull\|tracks\|turret\|engine/i);
+  assert.match(TRACKER_PROTOCOL, /walker.*hull\|legs\|mount\|engine/i);
+});
+
+test("tracker protocol lists the flat unit-weapon catalogue", () => {
+  const names = ["Tank Cannon", "Autocannon Mount", "Coaxial MG", "Rocket Pod", "Dozer Blade", "Ram Spike"];
+  for (const n of names) {
+    assert.ok(TRACKER_PROTOCOL.includes(n), `TRACKER_PROTOCOL mentions ${n}`);
+  }
+});

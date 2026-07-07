@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  createRoom, makeRig, claimSide, applyCommand, findRig,
+  createRoom, makeRig, makeUnit, claimSide, applyCommand, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
+  UNIT_WEAPONS, normalizeUnitWeapon,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -792,6 +793,28 @@ test("applyDamage arms-to-0 destroys a weapon and spills to hull and engine", ()
   assert.equal(b1.skipNextActivation, false);     // engine at 3, not 0
 });
 
+test("engine-role zero fires the 'lose next activation' clause (regression)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.engine.sp = 1;
+  __test.applyDamage(room, rig, "engine", 1, {});
+  assert.equal(rig.skipNextActivation, true);
+});
+
+test("weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1 (regression)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  const hullBefore = rig.hull.sp;
+  const engineBefore = rig.engine.sp;
+  rig.arms.sp = 1;
+  __test.applyDamage(room, rig, "arms", 1, { dice: { armsWeapon: 3 } });
+  assert.ok(rig.weaponsDestroyed.includes(rig.weapons.longRange));
+  assert.equal(rig.hull.sp, hullBefore - 1);
+  assert.equal(rig.engine.sp, engineBefore - 1);
+});
+
 test("applyDamage: first hit to 0 SP hull does not destroy; additional damage destroys the rig", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");
@@ -810,6 +833,24 @@ test("applyOverheat still routes through the cascade (engine failure sets noCool
   __test.applyOverheat(r, b1, 14, { random: () => 0 }); // 14 -> engine-failure: 2 dmg engine + noCool
   assert.equal(b1.engine.sp, Math.max(0, before - 2));
   assert.equal(b1.noCool, true);
+});
+
+test("recompute destroys the unit when every registered part hits 0 (regression)", () => {
+  const room = createRoom("R"); claimSide(room, { name: "u", side: "a" });
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  for (const p of ["hull", "arms", "legs", "engine"]) __test.setRigSp(rig, p, 0);
+  assert.equal(rig.destroyed, true);
+});
+
+test("recompute leaves the unit alive while any part has SP (regression)", () => {
+  const room = createRoom("R"); claimSide(room, { name: "u", side: "a" });
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  __test.setRigSp(rig, "hull", 0);
+  __test.setRigSp(rig, "arms", 0);
+  __test.setRigSp(rig, "legs", 0);
+  assert.equal(rig.destroyed, false);
 });
 
 test("destruction rolls a D12; 4+ records a pending blast", () => {
@@ -1570,4 +1611,220 @@ test("reset returns a mid/finished battle to a fresh pre-start state, keeping th
     assert.equal(side.ready, false);
     assert.equal(side.vp, 0);
   }
+});
+
+test("makeRig exposes a parts map aliasing the four fixed component fields", () => {
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  assert.equal(rig.kind, "rig");
+  assert.equal(rig.parts.hull, rig.hull);
+  assert.equal(rig.parts.arms, rig.arms);
+  assert.equal(rig.parts.legs, rig.legs);
+  assert.equal(rig.parts.engine, rig.engine);
+});
+
+test("ensureRigShape backfills parts alias + kind on legacy rig objects", () => {
+  const legacy = {
+    id: 9, name: "Legacy", weightClass: "medium", owner: "a",
+    hull: { sp: 7, max: 7, destroyed: false },
+    arms: { sp: 6, max: 6, destroyed: false },
+    legs: { sp: 6, max: 6, destroyed: false },
+    engine: { sp: 5, max: 5, destroyed: false, heat: 0 },
+    weapons: { longRange: "Autocannon", melee: "Sword" },
+  };
+  const room = createRoom("R"); claimSide(room, { name: "u", side: "a" });
+  room.rigs = [legacy];
+  __test.ensureRigShape(legacy);
+  assert.equal(legacy.kind, "rig");
+  assert.equal(legacy.parts.hull, legacy.hull);
+  assert.equal(legacy.parts.engine, legacy.engine);
+});
+
+test("makeUnit('rig', ...) returns a rig identical to makeRig", () => {
+  const a = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  const b = makeUnit("rig", 1, "Alpha", "a", {
+    weightClass: "medium", longRange: "Autocannon", melee: "Sword",
+  });
+  assert.ok(b, "makeUnit returned a rig");
+  assert.equal(b.kind, "rig");
+  assert.equal(b.weightClass, "medium");
+  assert.equal(b.name, "Alpha");
+  // Every top-level scalar / component matches.
+  assert.deepEqual({ ...a, parts: undefined }, { ...b, parts: undefined });
+  // parts alias is fresh but points at the correct new component objects.
+  assert.equal(b.parts.hull, b.hull);
+  assert.equal(b.parts.engine, b.engine);
+});
+
+test("makeUnit rejects unknown kinds", () => {
+  assert.equal(makeUnit("banana", 1, "X", "a", {}), null);
+});
+
+test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
+  const ids = Object.keys(UNIT_WEAPONS).sort();
+  assert.deepEqual(ids, [
+    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Tank Cannon",
+  ]);
+  for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
+    assert.equal(typeof w.rof, "number");
+    assert.equal(typeof w.str, "number");
+    assert.ok(Array.isArray(w.acc));
+    assert.ok(Array.isArray(w.rng));
+    assert.ok(Array.isArray(w.perks));
+    assert.equal(w.flatPick, true, `${name} carries flatPick marker`);
+  }
+});
+
+test("normalizeUnitWeapon is case-insensitive and rejects unknown names", () => {
+  assert.equal(normalizeUnitWeapon("tank cannon"), "Tank Cannon");
+  assert.equal(normalizeUnitWeapon(""), null);
+  assert.equal(normalizeUnitWeapon("Chainsaw"), null);
+});
+
+test("makeUnit('tank', ...) returns a valid tank with the four parts", () => {
+  const t = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  assert.ok(t);
+  assert.equal(t.kind, "tank");
+  assert.equal(t.owner, "a");
+  assert.equal(t.parts.hull.sp, 8);
+  assert.equal(t.parts.tracks.sp, 7);
+  assert.equal(t.parts.turret.sp, 6);
+  assert.equal(t.parts.engine.sp, 6);
+  assert.equal(t.weapons.unit, "Tank Cannon");
+  assert.equal(t.equipment, null);
+  assert.equal(t.destroyed, false);
+});
+
+test("makeUnit('tank', ...) rejects a weapon not in the flat catalogue", () => {
+  const t = makeUnit("tank", 1, "Bulwark", "a", { unit: "Not A Weapon" });
+  assert.equal(t, null);
+});
+
+test("makeUnit('walker', ...) uses the walker part table", () => {
+  const w = makeUnit("walker", 1, "Sentinel", "a", { unit: "Autocannon Mount" });
+  assert.ok(w);
+  assert.equal(w.kind, "walker");
+  assert.equal(w.parts.legs.sp, 6);
+  assert.equal(w.parts.mount.sp, 5);
+});
+
+test("activation reads actionBudget from the unit registry (rig = 3)", () => {
+  // There is no `start` verb in this codebase — the startedRoom() dance
+  // (claim + add rigs + field lock + both sides ready) is the setup that gets
+  // the game into activation phase with a live turn. Regression-pin the
+  // Rig's registry-derived budget of 3 by running an actual `activate`.
+  const r = startedRoom(); // turn.side === "b" after ready-order dance
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(r.game.turn.actionsMax, 3);
+});
+
+test("add command commissions a Tank", () => {
+  const clean = createRoom("R2"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Bulwark", kind: "tank", owner: "a", unit: "Tank Cannon" } });
+  const tank = clean.rigs.find((r) => r.name === "Bulwark");
+  assert.ok(tank);
+  assert.equal(tank.kind, "tank");
+  assert.equal(tank.weapons.unit, "Tank Cannon");
+});
+
+test("add command commissions a Walker", () => {
+  const clean = createRoom("R3"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Sentinel-1", kind: "walker", owner: "a", unit: "Autocannon Mount" } });
+  const w = clean.rigs.find((r) => r.name === "Sentinel-1");
+  assert.ok(w);
+  assert.equal(w.kind, "walker");
+});
+
+test("add command ignores an unknown kind", () => {
+  const clean = createRoom("R4"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Ghost", kind: "banana", owner: "a", unit: "Tank Cannon" } });
+  assert.equal(clean.rigs.find((r) => r.name === "Ghost"), undefined);
+});
+
+test("add command with no kind defaults to rig (regression)", () => {
+  const clean = createRoom("R5"); claimSide(clean, { name: "u", side: "a" });
+  applyCommand(clean, { verb: "add", attrs: { name: "Alpha", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  const rig = clean.rigs.find((r) => r.name === "Alpha");
+  assert.ok(rig);
+  assert.equal(rig.kind, "rig");
+  assert.equal(rig.weightClass, "medium");
+});
+
+test("Tank turret 0 SP: weapon destroyed, munition cook-off (1 hull + 1 engine)", () => {
+  const room = createRoom("Rt"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  const hullBefore = tank.parts.hull.sp;
+  const engineBefore = tank.parts.engine.sp;
+  tank.parts.turret.sp = 1;
+  __test.applyDamage(room, tank, "turret", 1, {});
+  assert.ok(tank.weaponsDestroyed.includes("Tank Cannon"));
+  assert.equal(tank.parts.hull.sp, hullBefore - 1);
+  assert.equal(tank.parts.engine.sp, engineBefore - 1);
+});
+
+test("Tank engine 0 SP: skipNextActivation (no equipment escape)", () => {
+  const room = createRoom("Rt2"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  tank.parts.engine.sp = 1;
+  __test.applyDamage(room, tank, "engine", 1, {});
+  assert.equal(tank.skipNextActivation, true);
+});
+
+test("Tank endActivation skips the overheat roll (cold kind)", () => {
+  const room = createRoom("Rt3"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  // Force the room into activation phase with this tank active. Simplest path:
+  // set the turn shape directly since Tank pre-battle setup isn't wired yet.
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2, longRangeShots: 0 };
+  // Would have exploded if overheat routing ran — cold kinds must skip it.
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Bulwark", dice: { overheat: 12 } } });
+  assert.equal(tank.destroyed, false);
+});
+
+test("Tank activation sets actionsMax = 2 (registry actionBudget)", () => {
+  const room = createRoom("Rt4"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  // Force activation phase without needing a Ready dance.
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: null, side: "a", actionsUsed: 0, actionsMax: 0 };
+  applyCommand(room, { verb: "activate", attrs: { name: "Bulwark" } }, { side: "a" });
+  assert.equal(room.game.turn.actionsMax, 2);
+});
+
+test("formatBattleState renders a Tank without heat and with a single unit weapon", () => {
+  const room = createRoom("Rfmt"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  const view = formatBattleState(room, "a");
+  assert.ok(view.includes("Bulwark (Tank, owner a)"));
+  assert.ok(view.includes("hull 8/8"));
+  assert.ok(view.includes("tracks 7/7"));
+  assert.ok(view.includes("turret 6/6"));
+  assert.ok(view.includes("engine 6/6")); // no "heat" suffix — cold kind
+  assert.ok(!/engine 6\/6 heat/.test(view));
+  assert.ok(view.includes("weapon Tank Cannon"));
+});
+
+test("__test.setRigSp sets skipNextActivation via power-role, not literal 'engine'", () => {
+  const room = createRoom("Rp"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  __test.setRigSp(tank, "engine", 0); // tank's engine IS its power part (name matches by design)
+  assert.equal(tank.skipNextActivation, true);
+});
+
+test("performAction 'prepare' is refused for cold kinds (reactions: false)", () => {
+  const room = createRoom("Rq"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2, longRangeShots: 0 };
+  applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "prepare", prep: "brace" } });
+  assert.equal(tank.preparation, null);
+  assert.equal(room.game.turn.actionsUsed, 0);
 });

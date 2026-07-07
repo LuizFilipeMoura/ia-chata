@@ -1,8 +1,9 @@
-import { ACTIONS, heatThreshold, hitLocation, impactSeverity, IMPACT } from "./rules.js";
+import { ACTIONS, heatThreshold, hitLocation, impactSeverity, impactRow } from "./rules.js";
 import { resolveAttack, resolveRam } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
 } from "./field.js";
+import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -38,6 +39,24 @@ export const WEAPONS = {
     "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Bulwark"] },
   },
 };
+
+// Flat unit-weapon list (spec §Weapons, "Unit-weapon list"). Tanks and Walkers
+// pick exactly one. Marked flatPick: true so combat.js skips the weight-class
+// STR modifier — the listed STR is the shot's STR on any chassis.
+export const UNIT_WEAPONS = {
+  "Tank Cannon":      { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: [],                         flatPick: true },
+  "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"],              flatPick: true },
+  "Coaxial MG":       { rof: 6, str: 5,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Raking Fire"], flatPick: true },
+  "Rocket Pod":       { rof: 2, str: 10, acc: [0, 0],  rng: [15, 30], perks: ["Charged Shot"],           flatPick: true },
+  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [1.5, 1.5], perks: ["Melee"],                flatPick: true },
+  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [1.5, 1.5], perks: ["Melee", "Impale"],      flatPick: true },
+};
+
+export function normalizeUnitWeapon(name) {
+  if (!name) return null;
+  const ref = String(name).trim().toLowerCase();
+  return Object.keys(UNIT_WEAPONS).find((w) => w.toLowerCase() === ref) || null;
+}
 
 // Rig equipment loadout (docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md,
 // Part 1). One slot per Rig. Passives hook into existing systems (see makeRig /
@@ -184,6 +203,14 @@ function uniquePerks(base, added = []) {
 }
 
 export function effectiveWeaponProfile(slot, weaponName, rig) {
+  if (slot === "unit") {
+    const base = UNIT_WEAPONS[weaponName];
+    if (!base) return null;
+    // Flat-pick weapons have no upgrades and no weight-class scaling. Ship a
+    // shape identical to the rig-catalog result so downstream code (computeStr,
+    // rollToHit) doesn't need to know which domain the profile came from.
+    return { ...base, upgradeEffect: {} };
+  }
   const base = WEAPONS[slot]?.[weaponName];
   if (!base) return null;
   const upgrade = upgradeForWeapon(weaponName, rig?.weaponUpgrades?.[slot]);
@@ -258,6 +285,8 @@ function ensureRigShape(rig) {
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
+  if (!rig.kind) rig.kind = "rig";
+  if (!rig.parts) rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
   return rig;
 }
 
@@ -326,9 +355,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   const equipmentId = normalizeEquipment(equipment);
   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
   const hullMax = d.hull + (equipmentId === "ablative-plating" ? 1 : 0);
-  return {
+  const rig = {
     id,
     name: String(name || "Rig").trim() || "Rig",
+    kind: "rig",
     weightClass,
     owner: owner === "b" ? "b" : "a",
     hull:   { sp: hullMax, max: hullMax, destroyed: false },
@@ -353,6 +383,61 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     hullRepairLock: 0,
     destroyed: false,
   };
+  rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
+  return rig;
+}
+
+// Registry-driven unit factory. Rigs still go through makeRig (which handles
+// weight-class stats, weapon slots, equipment). Cold single-model kinds (Tank,
+// Walker) build directly from the registry entry's partSp with one flat-pick
+// weapon and no equipment.
+export function makeUnit(kindId, id, name, owner, opts = {}) {
+  const kind = UNIT_KINDS[kindId];
+  if (!kind) return null;
+  if (kindId === "rig") {
+    return makeRig(id, name, opts.weightClass, owner, {
+      longRange: opts.longRange, melee: opts.melee,
+      longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
+    }, opts.equipment ?? null);
+  }
+  // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
+  // registry; the unit carries exactly one flat-pick weapon and no equipment.
+  const weaponName = normalizeUnitWeapon(opts.unit);
+  if (!weaponName) return null;
+  const parts = {};
+  for (const p of kind.parts) {
+    const sp = kind.partSp[p.name];
+    parts[p.name] = { sp, max: sp, destroyed: false };
+  }
+  // heatMeter/engineHeatFloor read power-part heat via rig.engine.heat. Give
+  // the power part a heat=0 so cold-kind code paths that touch it don't NPE.
+  const [powerPart] = partsByRole(kindId, "power");
+  if (powerPart && !("heat" in parts[powerPart])) parts[powerPart].heat = 0;
+  const unit = {
+    id,
+    name: String(name || kind.label).trim() || kind.label,
+    kind: kindId,
+    owner: owner === "b" ? "b" : "a",
+    parts,
+    weapons: { unit: weaponName },
+    equipment: null,
+    activated: false,
+    skipNextActivation: false,
+    noCool: false,
+    speedHalvedNextRound: false,
+    loaded: { unit: true },
+    preparation: null,
+    weaponsDestroyed: [],
+    immobilised: false,
+    hardened: false,
+    actionPenaltyNextActivation: 0,
+    destroyed: false,
+  };
+  // Alias top-level part fields so shared-code reads like rig.hull / rig.engine
+  // resolve for cold kinds too (Task 4's recompute + Task 7's action-budget
+  // helper walk names via partNamesOf, so they read rig[name] directly).
+  for (const p of kind.parts) unit[p.name] = parts[p.name];
+  return unit;
 }
 
 // Derive the full heat picture for a Rig's engine: current heat, its Heat
@@ -360,6 +445,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
 // hot — the misfire bonus that would be added to the D12 overheat roll right
 // now. `zone` is a coarse severity band for UI colouring.
 export function heatMeter(rig) {
+  const kind = kindOf(rig);
+  if (!UNIT_KINDS[kind].hasHeat) return { heat: 0, cap: 0, floor: 0, over: 0, bonus: 0, zone: "none" };
   const heat = rig?.engine?.heat || 0;
   const cap = HEAT_CAPACITY[rig?.weightClass] ?? 5;
   const floor = rig?.engine?.sp === 0 ? 3 : 0;
@@ -516,42 +603,63 @@ function maybeStartGame(room, random = Math.random) {
 }
 
 function engineHeatFloor(rig) {
-  return rig.engine.sp === 0 ? 3 : 0;
+  const kind = kindOf(rig);
+  if (!UNIT_KINDS[kind].hasHeat) return 0;
+  const [powerPart] = partsByRole(kind, "power");
+  return rig[powerPart]?.sp === 0 ? 3 : 0;
 }
 
 function recompute(rig) {
-  rig.destroyed = rig.hull.destroyed || rig.engine.destroyed ||
-    LOCS.every((l) => rig[l].sp === 0);
+  const kind = kindOf(rig);
+  const names = partNamesOf(kind);
+  rig.destroyed = names.some((n) => rig[n]?.destroyed) ||
+    names.every((n) => rig[n]?.sp === 0);
   const floor = engineHeatFloor(rig);
-  if (rig.engine.heat < floor) rig.engine.heat = floor;
+  if (rig.engine && rig.engine.heat < floor) rig.engine.heat = floor;
 }
 
 // §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
 function catastrophicOnZero(room, rig, loc, opts) {
-  if (loc === "engine") {
-    // Overclock Core (Power) — the first time the Engine hits 0 SP, the Rig
-    // does not skip its next activation. Every time after that, normal rules apply.
+  const kind = kindOf(rig);
+  const role = roleOf(kind, loc);
+  if (role === "power") {
+    // Overclock Core (Rig only) — the first time the power part hits 0 SP,
+    // the unit does not skip its next activation. After that, normal rules apply.
     if (rig.equipment === "overclock-core" && !rig.overclockCoreUsed) rig.overclockCoreUsed = true;
     else rig.skipNextActivation = true;
-    rig.engine.heat = Math.max(rig.engine.heat, 3);
+    if (rig.engine) rig.engine.heat = Math.max(rig.engine.heat, 3);
+  } else if (role === "weapon") {
+    if (kind === "rig") {
+      // Rig two-slot weapon-destroy roll (D12 ≤6 → long-range, >6 → melee).
+      const roll = rollD(12, opts?.dice?.armsWeapon, opts?.random);
+      const slot = roll <= 6 ? "longRange" : "melee";
+      const name = rig.weapons?.[slot];
+      if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
+    } else {
+      // Flat-pick kinds carry exactly one gun on the weapon part.
+      const name = rig.weapons?.unit;
+      if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
+    }
+    // Munition cook-off: 1 to a structural + 1 to a power part.
+    const [structPart] = partsByRole(kind, "structural");
+    const [powerPart] = partsByRole(kind, "power");
+    if (structPart) applyDamage(room, rig, structPart, 1, opts);
+    if (powerPart) applyDamage(room, rig, powerPart, 1, opts);
   }
-  else if (loc === "arms") {
-    const roll = rollD(12, opts?.dice?.armsWeapon, opts?.random);
-    const slot = roll <= 6 ? "longRange" : "melee";
-    const name = rig.weapons?.[slot];
-    if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
-    applyDamage(room, rig, "hull", 1, opts);
-    applyDamage(room, rig, "engine", 1, opts);
-  }
-  // Legs at 0 (move penalties) and Hull at 0 (−2 actions / −1 Aim) are enforced
-  // where they apply (activation budget, combat modAim) — no state to set here.
+  // structural and mobility 0-SP effects are enforced where they apply
+  // (activation budget, combat modAim, movement) — no state to set here.
 }
 
 // §8 — additional damage to an already 0-SP location.
 function catastrophicAdditional(room, rig, loc, opts) {
-  if (loc === "hull" || loc === "engine") rig[loc].destroyed = true;
-  else if (loc === "legs") rig.immobilised = true;
-  else if (loc === "arms") applyDamage(room, rig, "hull", 3, opts);
+  const kind = kindOf(rig);
+  const role = roleOf(kind, loc);
+  if (role === "structural" || role === "power") rig[loc].destroyed = true;
+  else if (role === "mobility") rig.immobilised = true;
+  else if (role === "weapon") {
+    const [structPart] = partsByRole(kind, "structural");
+    if (structPart) applyDamage(room, rig, structPart, 3, opts);
+  }
 }
 
 // Cascade-aware damage entry point. Applies `amount` SP one point at a time,
@@ -626,7 +734,7 @@ function setRigSp(rig, loc, sp) {
   c.sp = v;
   if (v > 0) c.destroyed = false;
   recompute(rig);
-  if (loc === "engine" && c.sp === 0) rig.skipNextActivation = true;
+  if (c.sp === 0 && roleOf(kindOf(rig), loc) === "power") rig.skipNextActivation = true;
 }
 
 function heatRig(rig, spec) {
@@ -710,12 +818,18 @@ function endActivation(room, rig, dice, random) {
 // the §8 cascade-aware applyDamage. Returns the row.
 function applyOverheat(room, rig, total, opts) {
   const row = heatThreshold(total);
-  if (row.key === "stall") applyDamage(room, rig, "engine", 1, opts);
-  else if (row.key === "detonation") applyDamage(room, rig, "arms", 2, opts);
-  else if (row.key === "blowout") { applyDamage(room, rig, "legs", 2, opts); rig.speedHalvedNextRound = true; }
-  else if (row.key === "buckling") for (const l of LOCS) applyDamage(room, rig, l, 1, opts);
-  else if (row.key === "engine-failure") { applyDamage(room, rig, "engine", 2, opts); rig.noCool = true; }
-  else if (row.key === "catastrophic") { for (const l of LOCS) setRigSp(rig, l, 0); rig.noCool = true; }
+  const kind = kindOf(rig);
+  if (!UNIT_KINDS[kind].hasHeat) return row;
+  const [powerPart] = partsByRole(kind, "power");
+  const [mobPart]   = partsByRole(kind, "mobility");
+  const [weapPart]  = partsByRole(kind, "weapon");
+  const all = partNamesOf(kind);
+  if (row.key === "stall") applyDamage(room, rig, powerPart, 1, opts);
+  else if (row.key === "detonation") applyDamage(room, rig, weapPart, 2, opts);
+  else if (row.key === "blowout") { applyDamage(room, rig, mobPart, 2, opts); rig.speedHalvedNextRound = true; }
+  else if (row.key === "buckling") for (const l of all) applyDamage(room, rig, l, 1, opts);
+  else if (row.key === "engine-failure") { applyDamage(room, rig, powerPart, 2, opts); rig.noCool = true; }
+  else if (row.key === "catastrophic") { for (const l of all) setRigSp(rig, l, 0); rig.noCool = true; }
   return row;
 }
 
@@ -858,6 +972,9 @@ function performAction(room, rig, act, a, random) {
       summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
   } else if (act === "prepare") {
+    // Preparations are Rig-only (spec §17). Cold kinds (Tank / Walker) carry
+    // reactions: false in their registry entry and cannot Prepare.
+    if (!UNIT_KINDS[kindOf(rig)]?.reactions) return false;
     rig.preparation = { type: normalizePrep(a.prep, rig), source: "action", faceUp: false };
   }
   bumpHeat(rig, def.heat);
@@ -915,12 +1032,24 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
 
   if (verb === "add") {
     if (a.name && !findRig(room, a.name)) {
+      const kindId = String(a.kind || "rig").toLowerCase();
+      if (!UNIT_KINDS[kindId]) return room;
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
       if (canAddRigForSide(room, owner)) {
-        const rig = makeRig(room.nextRigId, a.name, (a.class || "").toLowerCase(), owner, a, a.equipment);
-        if (!rig) return room;
+        const unit = makeUnit(kindId, room.nextRigId, a.name, owner, {
+          // Rig options
+          weightClass: (a.class || a.weightClass || "").toLowerCase() || undefined,
+          longRange: a.longRange || a.lr,
+          melee: a.melee,
+          longRangeUpgrade: a.longRangeUpgrade || a.lrUpgrade,
+          meleeUpgrade: a.meleeUpgrade,
+          equipment: a.equipment ?? null,
+          // Flat-pick options
+          unit: a.unit,
+        });
+        if (!unit) return room;
         room.nextRigId++;
-        room.rigs.push(rig);
+        room.rigs.push(unit);
         resetReadyBeforeStart(room);
         changed = true;
       }
@@ -1046,7 +1175,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         t.movedThisActivation = false;
         t.longRangeShots = 0; // ranged shots fired this activation (2nd+ runs hot)
         const penalty = Math.max(0, Math.floor(rig.actionPenaltyNextActivation || 0));
-        t.actionsMax = Math.max(0, 3 - (rig.hull.sp === 0 ? 2 : 0) - penalty);
+        const base = UNIT_KINDS[kindOf(rig)]?.actionBudget ?? 3;
+        const [structPart] = partsByRole(kindOf(rig), "structural");
+        const structPenalty = structPart && rig[structPart]?.sp === 0 ? 2 : 0;
+        t.actionsMax = Math.max(0, base - structPenalty - penalty);
         rig.actionPenaltyNextActivation = 0;
         rig.loaded = { longRange: true, melee: true };
       }
@@ -1112,10 +1244,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       for (const name of names) {
         const t = findRig(room, name);
         if (!t || t.destroyed) continue;
-        const loc = hitLocation(rollD(12, a.dice?.location?.[name], options.random));
+        const loc = hitLocation(t.kind || "rig", rollD(12, a.dice?.location?.[name], options.random));
         const die = rollD(6, a.dice?.impacts?.[name], options.random);
         const total = die + 10; // D6 + STR 10 (§9)
-        const sev = impactSeverity(total, IMPACT[t.weightClass][loc]);
+        const sev = impactSeverity(total, impactRow(t.kind || "rig", loc, t.weightClass));
         if (sev.sp > 0) applyDamage(room, t, loc, sev.sp, { random: options.random });
         pushResolution(room, {
           kind: "blast", actor, rigId: t.id,
@@ -1254,19 +1386,28 @@ export function formatBattleState(room, side) {
     lines.push("(No Rigs are being tracked yet.)");
   } else {
     for (const rig of room.rigs) {
-      const parts = LOCS.map((loc) => {
+      const kind = kindOf(rig);
+      const cfg = UNIT_KINDS[kind];
+      const [powerPart] = partsByRole(kind, "power");
+      const parts = partNamesOf(kind).map((loc) => {
         const c = rig[loc];
         let tag = `${loc} ${c.sp}/${c.max}`;
-        if (loc === "engine") tag += ` heat ${c.heat}`;
+        if (cfg.hasHeat && loc === powerPart) tag += ` heat ${c.heat}`;
         if (c.destroyed) tag += " (DESTROYED)";
         else if (c.sp === 0) tag += " (CATASTROPHIC)";
         return tag;
       });
-      const status = rig.destroyed ? " [RIG DESTROYED]" : "";
-      const weapons = rig.weapons
-        ? `; weapons ${rig.weapons.longRange || "?"} / ${rig.weapons.melee || "?"}`
-        : "";
-      lines.push(`- ${rig.name} (${rig.weightClass}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
+      const status = rig.destroyed ? ` [${cfg.label.toUpperCase()} DESTROYED]` : "";
+      let weapons = "";
+      if (rig.weapons) {
+        if (cfg.weaponMode === "flat-pick") {
+          weapons = `; weapon ${rig.weapons.unit || "?"}`;
+        } else {
+          weapons = `; weapons ${rig.weapons.longRange || "?"} / ${rig.weapons.melee || "?"}`;
+        }
+      }
+      const chassis = cfg.id === "rig" ? rig.weightClass : cfg.label;
+      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
     }
   }
   const sideId = normalizeSide(room, side);
@@ -1276,4 +1417,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape };

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RULEBOOK_MD } from "./config.js";
-import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS } from "../shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS, UNIT_WEAPONS } from "../shared/game-state.js";
 
 // Instructions that teach Gemma the rig-tracker command protocol. The browser
 // parses these [[RIG ...]] tags out of the reply, applies them to the tracker,
@@ -16,11 +16,13 @@ export const TRACKER_PROTOCOL = [
   "emit the matching command AND speak a short natural confirmation. Reply in the",
   "same language the player used. Put commands on their own, exactly in this form:",
   "",
-  '[[RIG add name="<name>" class="<class: light|medium>" owner="a|b" lr="<long-range weapon>" melee="<melee weapon>"]]',
-  '[[RIG damage name="<name>" loc="hull|arms|legs|engine" amount="<n>"]]',
-  '[[RIG repair name="<name>" loc="hull|arms|legs|engine" amount="<n>"]]',
+  '[[RIG add name="<name>" kind="rig" class="<class: light|medium>" owner="a|b" lr="<long-range weapon>" melee="<melee weapon>"]]',
+  '[[RIG add name="<name>" kind="tank" owner="a|b" unit="<flat unit weapon>"]]',
+  '[[RIG add name="<name>" kind="walker" owner="a|b" unit="<flat unit weapon>"]]',
+  '[[RIG damage name="<name>" loc="<part>" amount="<n>"]]',
+  '[[RIG repair name="<name>" loc="<part>" amount="<n>"]]',
   '[[RIG heat name="<name>" amount="+<n>" | "-<n>" | "0" | "<n>"]]',
-  '[[RIG set name="<name>" loc="hull|arms|legs|engine" sp="<n>"]]',
+  '[[RIG set name="<name>" loc="<part>" sp="<n>"]]',
   '[[RIG remove name="<name>"]]',
   "",
   "Rules for the tags:",
@@ -34,6 +36,13 @@ export const TRACKER_PROTOCOL = [
   "  If that limit is already reached, explain that the roster is full and emit no `[[RIG add]]` tag.",
   "- Valid Long Range weapons: " + Object.keys(WEAPONS.longRange).join(", ") + ".",
   "- Valid Melee weapons: " + Object.keys(WEAPONS.melee).join(", ") + ".",
+  "- Kind-specific `loc` enums:",
+  "  rig: hull|arms|legs|engine",
+  "  tank: hull|tracks|turret|engine",
+  "  walker: hull|legs|mount|engine",
+  "- If the player asks to add a Tank or Walker, use `kind=\"tank\"` or `kind=\"walker\"` and set exactly one `unit=\"…\"` field from the flat unit-weapon list. Tanks and Walkers have no class, no long-range/melee split, no equipment.",
+  "- Valid Unit weapons (Tanks / Walkers): " + Object.keys(UNIT_WEAPONS).join(", ") + ".",
+  "- Tanks and Walkers do not have Heat and cannot Overheat. Do not emit `heat` tags for them.",
   "- Use those weapon names exactly in tags. You may map imperfect player wording",
   "  to the closest valid weapon when the intent is clear; if it is not clear,",
   "  ask again and include the valid options.",
