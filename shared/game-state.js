@@ -734,7 +734,7 @@ function setRigSp(rig, loc, sp) {
   c.sp = v;
   if (v > 0) c.destroyed = false;
   recompute(rig);
-  if (loc === "engine" && c.sp === 0) rig.skipNextActivation = true;
+  if (c.sp === 0 && roleOf(kindOf(rig), loc) === "power") rig.skipNextActivation = true;
 }
 
 function heatRig(rig, spec) {
@@ -972,6 +972,9 @@ function performAction(room, rig, act, a, random) {
       summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
   } else if (act === "prepare") {
+    // Preparations are Rig-only (spec §17). Cold kinds (Tank / Walker) carry
+    // reactions: false in their registry entry and cannot Prepare.
+    if (!UNIT_KINDS[kindOf(rig)]?.reactions) return false;
     rig.preparation = { type: normalizePrep(a.prep, rig), source: "action", faceUp: false };
   }
   bumpHeat(rig, def.heat);

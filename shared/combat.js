@@ -4,6 +4,7 @@
 import {
   impactRow, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity, shieldCoverage,
 } from "./rules.js";
+import { UNIT_KINDS, kindOf, partNamesOf } from "./unit-kinds.js";
 
 function rollD(sides, provided, random) {
   if (provided != null) {
@@ -195,7 +196,7 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
   }
   if (onHit === "cluster-shells") {
     const primary = opts.aimed ? opts.aimedLoc : null;
-    const locs = ["hull", "arms", "legs", "engine"];
+    const locs = partNamesOf(target.kind || "rig");
     let loc = hitLocation(target.kind || "rig", rollD(12, opts.dice?.clusterLocation, random));
     if (primary && loc === primary) loc = locs[(locs.indexOf(loc) + 1) % locs.length];
     ctx.applyDamage(room, target, loc, 1, { random, dice: opts.dice });
@@ -212,7 +213,9 @@ export function resolveRam(room, attacker, target, opts, random, ctx) {
     const d = opts.dice?.[who] || {};
     const loc = hitLocation(rig.kind || "rig", rollD(12, d.location, random));
     const die = rollD(6, d.impact, random);
-    const ramStr = RAM_STR[rig.weightClass] || 8;
+    // Cold kinds (Tank / Walker) carry a flat ramStr on their registry entry.
+    // Rigs keep the weight-class RAM_STR table.
+    const ramStr = UNIT_KINDS[kindOf(rig)]?.ramStr ?? RAM_STR[rig.weightClass] ?? 8;
     const total = die + ramStr;
     const sev = impactSeverity(total, impactRow(rig.kind || "rig", loc, rig.weightClass));
     if (sev.sp > 0) ctx.applyDamage(room, rig, loc, sev.sp, { random });

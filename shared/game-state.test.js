@@ -1809,3 +1809,22 @@ test("formatBattleState renders a Tank without heat and with a single unit weapo
   assert.ok(!/engine 6\/6 heat/.test(view));
   assert.ok(view.includes("weapon Tank Cannon"));
 });
+
+test("__test.setRigSp sets skipNextActivation via power-role, not literal 'engine'", () => {
+  const room = createRoom("Rp"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  __test.setRigSp(tank, "engine", 0); // tank's engine IS its power part (name matches by design)
+  assert.equal(tank.skipNextActivation, true);
+});
+
+test("performAction 'prepare' is refused for cold kinds (reactions: false)", () => {
+  const room = createRoom("Rq"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2, longRangeShots: 0 };
+  applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "prepare", prep: "brace" } });
+  assert.equal(tank.preparation, null);
+  assert.equal(room.game.turn.actionsUsed, 0);
+});
