@@ -1749,3 +1749,49 @@ test("add command with no kind defaults to rig (regression)", () => {
   assert.equal(rig.kind, "rig");
   assert.equal(rig.weightClass, "medium");
 });
+
+test("Tank turret 0 SP: weapon destroyed, munition cook-off (1 hull + 1 engine)", () => {
+  const room = createRoom("Rt"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  const hullBefore = tank.parts.hull.sp;
+  const engineBefore = tank.parts.engine.sp;
+  tank.parts.turret.sp = 1;
+  __test.applyDamage(room, tank, "turret", 1, {});
+  assert.ok(tank.weaponsDestroyed.includes("Tank Cannon"));
+  assert.equal(tank.parts.hull.sp, hullBefore - 1);
+  assert.equal(tank.parts.engine.sp, engineBefore - 1);
+});
+
+test("Tank engine 0 SP: skipNextActivation (no equipment escape)", () => {
+  const room = createRoom("Rt2"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  tank.parts.engine.sp = 1;
+  __test.applyDamage(room, tank, "engine", 1, {});
+  assert.equal(tank.skipNextActivation, true);
+});
+
+test("Tank endActivation skips the overheat roll (cold kind)", () => {
+  const room = createRoom("Rt3"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  // Force the room into activation phase with this tank active. Simplest path:
+  // set the turn shape directly since Tank pre-battle setup isn't wired yet.
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2, longRangeShots: 0 };
+  // Would have exploded if overheat routing ran — cold kinds must skip it.
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Bulwark", dice: { overheat: 12 } } });
+  assert.equal(tank.destroyed, false);
+});
+
+test("Tank activation sets actionsMax = 2 (registry actionBudget)", () => {
+  const room = createRoom("Rt4"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  // Force activation phase without needing a Ready dance.
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: null, side: "a", actionsUsed: 0, actionsMax: 0 };
+  applyCommand(room, { verb: "activate", attrs: { name: "Bulwark" } }, { side: "a" });
+  assert.equal(room.game.turn.actionsMax, 2);
+});
