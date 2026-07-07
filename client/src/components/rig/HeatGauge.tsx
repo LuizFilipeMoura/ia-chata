@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { heatMeter } from "/shared/game-state.js";
+import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import type { Rig } from "../../state/types";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 // player knows precisely what's at stake. Controls are live only for the
 // active Rig.
 export function HeatGauge({ rig, isActive, started, onCommand }: Props) {
+  if (!UNIT_KINDS[kindOf(rig)].hasHeat) return null;
   const m = heatMeter(rig);
   const displayMax = m.cap + 4;
   const shownHeat = Math.min(m.heat, displayMax);
