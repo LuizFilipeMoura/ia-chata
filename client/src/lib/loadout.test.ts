@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildLoadout } from "./loadout";
+import { buildLoadout, randomAddAttrs } from "./loadout";
 import type { Rig } from "../state/types";
 
 const baseRig = (over: Partial<Rig>): Rig => ({
@@ -58,4 +58,12 @@ describe("buildLoadout", () => {
     expect(lo.lr).toBeUndefined();
     expect(lo.equipment).toBeNull();
   });
+});
+
+it("randomAddAttrs produces valid medium-rig add attrs", () => {
+  const a = randomAddAttrs();
+  expect(a.class).toBe("medium");
+  expect(typeof a.longRange).toBe("string");
+  expect(typeof a.melee).toBe("string");
+  expect(typeof a.equipment).toBe("string");
 });
