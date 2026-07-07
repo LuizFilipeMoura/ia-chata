@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useRoomState, useRoomDispatch } from "../../state/RoomStateContext";
 import { ViewSideContext } from "../../state/ViewSideContext";
+import { UiProvider } from "../../state/UiStateContext";
+import { DrawerProvider } from "../../state/DrawerContext";
+import { RollProvider } from "../../state/RollContext";
+import { BattleActionsProvider } from "../../state/BattleActionsContext";
+import { WizardProvider } from "../../state/WizardContext";
 import { Stage } from "../Stage";
 import { DevToolbar } from "./DevToolbar";
 import { buildSeedCommands } from "./seed";
@@ -62,10 +67,20 @@ export function TestHarness() {
       <div className="test-split" style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
         {(["a", "b"] as const).map((side) => (
           <ViewSideContext.Provider key={side} value={side}>
-            <div style={{ flex: 1, minWidth: 0, borderTop: "3px solid #444" }}>
-              <h3>Side {side.toUpperCase()}</h3>
-              <Stage />
-            </div>
+            <UiProvider>
+              <DrawerProvider>
+                <RollProvider>
+                  <BattleActionsProvider>
+                    <WizardProvider>
+                      <div style={{ flex: 1, minWidth: 0, borderTop: "3px solid #444" }}>
+                        <h3>Side {side.toUpperCase()}</h3>
+                        <Stage />
+                      </div>
+                    </WizardProvider>
+                  </BattleActionsProvider>
+                </RollProvider>
+              </DrawerProvider>
+            </UiProvider>
           </ViewSideContext.Provider>
         ))}
       </div>
