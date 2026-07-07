@@ -1,9 +1,10 @@
 import { useRoomState } from "../state/RoomStateContext";
+import { useMySide } from "../hooks/useMySide";
 import { phaseSummary } from "/shared/battle-view.js";
 
 export function BattleHud() {
-  const { rigs, game, session } = useRoomState();
-  const mySide = session?.side || "a";
+  const { rigs, game } = useRoomState();
+  const mySide = useMySide();
 
   if (!game?.started) return null;
 

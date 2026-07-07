@@ -6,6 +6,7 @@ import {
 import { UNIT_KINDS } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
+import { useMySide } from "../../hooks/useMySide";
 import { useUi } from "../../state/UiStateContext";
 import { GlossaryText } from "../chat/GlossaryText";
 
@@ -33,10 +34,10 @@ interface WizardState {
 }
 
 export function UnitWizard({ onClose }: { onClose: () => void }) {
-  const { rigs, game, session } = useRoomState();
+  const { rigs, game } = useRoomState();
   const sendCommand = useCommands();
   const { setGlossaryOpen } = useUi();
-  const mySide = session?.side || "a";
+  const mySide = useMySide();
   const enemySide = mySide === "a" ? "b" : "a";
 
   const [state, setState] = useState<WizardState>(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
+import { useMySide } from "../../hooks/useMySide";
 import type { Objective } from "../../state/types";
 
 // Label a marker for the picker: the 2-VP centre, or a corner tagged with a
@@ -16,9 +17,9 @@ function markerLabel(objectives: Objective[], i: number): { name: string; hint: 
 }
 
 export function VpWizard({ onClose }: { onClose: () => void }) {
-  const { game, session } = useRoomState();
+  const { game } = useRoomState();
   const sendCommand = useCommands();
-  const mySide = session?.side || "a";
+  const mySide = useMySide();
 
   const objectives = game?.objectives ?? [];
   const conflict = new Set(game?.recoveryConflict ?? []);
