@@ -19,7 +19,7 @@ import type { Rig, PrepType } from "./types";
 // A glyph per action so the console reads at a glance instead of as a wall of
 // text (battle.js:11-16).
 const ACTION_ICONS: Record<string, string> = {
-  move: "👣", sprint: "🏃", fire: "🎯", aimed: "🔭", ram: "💢",
+  move: "👣", sprint: "🏃", fire: "🎯", aimed: "🔭",
   reload: "🔄", repair: "🔧", prepare: "🛡️", shutdown: "⏻",
   harden: "🧱", purge: "❄️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹",
 };
@@ -33,10 +33,10 @@ const LOC_CHOICES = [
 ];
 
 // §5 base Speed (inches) per weight class — the physical reach of a Move.
-// House-rule tuning: movement halved across the board so Rigs commit rather than
-// swim across the table, with Mediums pulled down harder (~70% off their old 8")
-// so they play as the slow, punchy bruisers they're meant to be.
-const SPEED: Record<string, number> = { light: 4.5, medium: 2.5, heavy: 3, colossal: 2.5 };
+// House-rule tuning: whole-inch speeds so tabletop measuring stays clean.
+// Mediums bumped up a notch (were crawling) while keeping the light > medium >
+// heavy > colossal ladder.
+const SPEED: Record<string, number> = { light: 5, medium: 4, heavy: 3, colossal: 2 };
 const MOVE_HOLD_MS = 5000;
 const SPRINT_HOLD_MS = 8000;
 const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOLD_MS);
@@ -69,7 +69,8 @@ function MoveBody({
 }) {
   const sprint = actionKey === "sprint";
   const base = SPEED[rig.weightClass] ?? 8;
-  const dist = sprint ? base * 1.5 : base;
+  // Sprint is 1½× Speed, rounded to a whole inch so table measuring stays clean.
+  const dist = sprint ? Math.round(base * 1.5) : base;
   const heat = sprint ? (rig.equipment === "servo-actuators" ? 1 : 2) : 1;
   const holdMs = holdMsFor(actionKey);
   const holdSec = Math.round(holdMs / 1000);
@@ -77,7 +78,9 @@ function MoveBody({
   const [remaining, setRemaining] = useState(holdSec);
   const [pct, setPct] = useState(0);
   const done = remaining <= 0;
-  const costNote = sprint ? `Costs 2 actions · +${heat} heat` : "Costs 1 action · no heat";
+  // Move and Sprint each spend one action slot; both generate heat (Move +1,
+  // Sprint +2 / +1 with Servo Actuators). You may repeat them within the budget.
+  const costNote = `Costs 1 action · +${heat} heat`;
 
   useEffect(() => {
     const start = performance.now();
@@ -129,7 +132,10 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   const { openDrawer, closeDrawer } = useDrawer();
   const { promptDice } = useRoll();
   const sendCommand = useCommands();
-  const { game, session } = useRoomState();
+  const { game, session, rigs } = useRoomState();
+
+  const rigsRef = useRef(rigs);
+  rigsRef.current = rigs;
 
   // Keep game/session current inside stable callbacks without recreating them.
   const gameRef = useRef(game);
@@ -266,11 +272,35 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   );
 
   const resolveBlast = useCallback(() => {
-    const names = window.prompt('Names of rigs within 12" (comma-separated):', "");
-    if (names == null) return;
-    const targets = names.split(",").map((s) => s.trim()).filter(Boolean);
-    sendCommand("blast", { targets });
-  }, [sendCommand]);
+    const sourceId = (gameRef.current?.pendingBlast as { sourceId?: number } | null)?.sourceId;
+    // Every living Rig is a candidate — the controller ticks those within 12"
+    // of the wreck. Exclude the exploding wreck itself.
+    const candidates = (rigsRef.current || []).filter(
+      (r) => !r.destroyed && r.id !== sourceId,
+    );
+    if (!candidates.length) {
+      sendCommand("blast", { targets: [] });
+      return;
+    }
+    const picked = new Set<string>();
+    openDrawer({
+      title: '💥 Resolve blast — mark Rigs within 12"',
+      tone: "ember",
+      render: () => <BlastBody candidates={candidates} picked={picked} />,
+      actions: [
+        { label: "None", ghost: true, onClick: () => { closeDrawer(); sendCommand("blast", { targets: [] }); } },
+        {
+          label: "Resolve blast",
+          primary: true,
+          icon: "💥",
+          onClick: () => {
+            closeDrawer();
+            sendCommand("blast", { targets: [...picked] });
+          },
+        },
+      ],
+    });
+  }, [openDrawer, closeDrawer, sendCommand]);
 
   const endActivation = useCallback(
     (rig: Rig) => {
@@ -334,6 +364,47 @@ function PrepareBody({
           onChange(v);
         }}
       />
+    </>
+  );
+}
+
+// Checkbox list for blast resolution: the controller ticks the Rigs standing
+// within 12" of the wreck. Owns a local version counter so ticking re-renders;
+// mirrors each pick into the caller's `picked` Set for the Confirm handler.
+function BlastBody({
+  candidates, picked,
+}: {
+  candidates: Rig[];
+  picked: Set<string>;
+}) {
+  const [, force] = useState(0);
+  return (
+    <>
+      <p className="dwr-hint">
+        Select every Rig within 12" of the wreck — each takes a D6 + STR 10 blast hit.
+      </p>
+      <div className="blast-list">
+        {candidates.map((r) => {
+          const on = picked.has(r.name);
+          return (
+            <button
+              key={r.id}
+              type="button"
+              className={"blast-opt" + (on ? " sel" : "")}
+              aria-pressed={on}
+              onClick={() => {
+                if (on) picked.delete(r.name);
+                else picked.add(r.name);
+                force((n) => n + 1);
+              }}
+            >
+              <span className="blast-opt-check" aria-hidden="true">{on ? "☑" : "☐"}</span>
+              <span className="blast-opt-name">{r.name}</span>
+              <span className="blast-opt-cls">{r.weightClass}</span>
+            </button>
+          );
+        })}
+      </div>
     </>
   );
 }

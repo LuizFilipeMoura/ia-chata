@@ -2,9 +2,9 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  impactRow, AIM, WEIGHT_STR_MOD, RAM_STR, hitLocation, impactSeverity, shieldCoverage,
+  impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity, shieldCoverage,
 } from "./rules.js";
-import { UNIT_KINDS, kindOf, partNamesOf } from "./unit-kinds.js";
+import { partNamesOf } from "./unit-kinds.js";
 
 function rollD(sides, provided, random) {
   if (provided != null) {
@@ -205,35 +205,4 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
   if (effects.length) ctx.pushResolution(room, {
     kind: "perk", actor: attacker.owner, rigId: target.id, rolls: [], summary: effects.join("; "), effects,
   });
-}
-
-// §5 Ram — both Rigs take one D6 + their own weight-class ram STR hit.
-export function resolveRam(room, attacker, target, opts, random, ctx) {
-  for (const [rig, who] of [[attacker, "self"], [target, "target"]]) {
-    const d = opts.dice?.[who] || {};
-    const loc = hitLocation(rig.kind || "rig", rollD(12, d.location, random));
-    const die = rollD(6, d.impact, random);
-    // Cold kinds (Tank / Walker) carry a flat ramStr on their registry entry.
-    // Rigs keep the weight-class RAM_STR table.
-    const ramStr = UNIT_KINDS[kindOf(rig)]?.ramStr ?? RAM_STR[rig.weightClass] ?? 8;
-    const total = die + ramStr;
-    const sev = impactSeverity(total, impactRow(rig.kind || "rig", loc, rig.weightClass));
-    if (sev.sp > 0) ctx.applyDamage(room, rig, loc, sev.sp, { random });
-    const cls = rig.weightClass ? rig.weightClass[0].toUpperCase() + rig.weightClass.slice(1) : "";
-    ctx.pushResolution(room, {
-      kind: "ram", actor: attacker.owner, rigId: rig.id,
-      rolls: [{ sides: 6, value: die, label: "D6", tone: sev.sp > 0 ? "ok" : "miss" }],
-      summary: `Ram hits ${rig.name}: D6 ${die} + Ram STR ${ramStr} = ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`,
-      breakdown: {
-        weapon: "Ram", target: rig.name,
-        terms: [
-          { value: die, label: "D6", tone: "die" },
-          { value: ramStr, label: `Ram STR · ${cls}`, op: "+", tone: "mod" },
-        ],
-        total, tier: sev.tier, sp: sev.sp, location: loc,
-      },
-      effects: [],
-    });
-  }
-  return { ok: true };
 }

@@ -100,6 +100,12 @@
   background: rgba(229,83,58,.12); color: var(--ember-hi);
   border-color: rgba(229,83,58,.5); border-style: solid; box-shadow: none;
 }
+/* Body Activate control: full-width, out of the expand-target header. */
+.rig-activate-row { margin: .1rem 0 .5rem; }
+.rig-activate--body {
+  display: block; width: 100%; text-align: center;
+  padding: .55rem .5rem; font-size: .64rem;
+}
 .rig-chev {
   flex: 0 0 auto; color: var(--txt-faint); font-size: .8rem; width: 1rem; text-align: center;
   transition: transform .28s cubic-bezier(.2,.85,.25,1);

@@ -24,10 +24,11 @@ describe("buildLoadout", () => {
     });
     const lo = buildLoadout(rig)!;
     expect(lo).not.toBeNull();
-    expect(lo.lr.name).toBe("Mini Gun");
-    expect(lo.lr.upName).toBe("Extended Belt");
-    expect(lo.lr.upTag).toBe("+2 ROF; dice showing 1 add heat");
-    expect(lo.melee.name).toBe("Sword");
+    expect(lo.flat).toBe(false);
+    expect(lo.lr!.name).toBe("Mini Gun");
+    expect(lo.lr!.upName).toBe("Extended Belt");
+    expect(lo.lr!.upTag).toBe("+2 ROF; dice showing 1 add heat");
+    expect(lo.melee!.name).toBe("Sword");
     expect(lo.equipment).toEqual({
       family: "Armor",
       label: "Ablative Plating",
@@ -45,7 +46,16 @@ describe("buildLoadout", () => {
       equipment: null,
     });
     const lo = buildLoadout(rig)!;
-    expect(lo.lr.upName).toBe("");
+    expect(lo.lr!.upName).toBe("");
+    expect(lo.equipment).toBeNull();
+  });
+
+  it("returns a single flat-pick weapon for cold kinds (Tank / Walker)", () => {
+    const rig = baseRig({ kind: "tank", weapons: { unit: "Tank Cannon" }, equipment: null });
+    const lo = buildLoadout(rig)!;
+    expect(lo.flat).toBe(true);
+    expect(lo.unit!.name).toBe("Tank Cannon");
+    expect(lo.lr).toBeUndefined();
     expect(lo.equipment).toBeNull();
   });
 });

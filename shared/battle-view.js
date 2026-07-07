@@ -4,7 +4,7 @@ import { ACTIONS } from "./rules.js";
 import { EQUIPMENT } from "./game-state.js";
 import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
 
-const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repair", "prepare", "shutdown"];
+const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "reload", "repair", "prepare", "shutdown"];
 
 // The action console list for the active rig: each action with its heat cost and
 // whether the current budget/state allows it.
@@ -28,7 +28,7 @@ export function availableActions(rig, turn) {
       let cost = def.slot;
       let heat = def.heat;
       let note = "";
-      if (key === "shutdown") enabled = turn.actionsUsed === 0;
+      if (key === "shutdown") enabled = true; // available any time; cools proportional to slots used
       if (key === "reload") {
         enabled = left > 0 && rangedSpent;
         if (!rangedSpent) note = "Weapons already loaded";

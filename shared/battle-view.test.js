@@ -23,8 +23,11 @@ test("availableActions lists actions and marks the ones the budget allows", () =
   assert.equal(move.heat, 1);
   assert.equal(move.enabled, true);
   assert.equal(acts.find((a) => a.key === "shutdown").enabled, true);
+  // Shutdown is available at any point in the activation now (cooling scales
+  // with how many slots were already spent).
   const mid = availableActions(rig(), { activeRigId: 1, actionsUsed: 2, actionsMax: 5 });
-  assert.equal(mid.find((a) => a.key === "shutdown").enabled, false);
+  assert.equal(mid.find((a) => a.key === "shutdown").enabled, true);
+  assert.ok(!acts.some((a) => a.key === "ram"), "ram removed from the console");
 });
 
 test("availableActions disables everything at the budget cap", () => {

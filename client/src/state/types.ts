@@ -42,10 +42,10 @@ export interface Rig {
   arms: Component;
   legs: Component;
   engine: Engine;
-  weapons?: { longRange: string; melee: string };
+  weapons?: { longRange?: string; melee?: string; unit?: string };
   weaponUpgrades?: { longRange: string; melee: string };
   equipment: string | null;
-  loaded?: { longRange: boolean; melee: boolean };
+  loaded?: { longRange?: boolean; melee?: boolean; unit?: boolean };
   preparation?: Preparation | null;
   activated: boolean;
   destroyed: boolean;
@@ -78,9 +78,9 @@ export interface ResolutionBreakdown {
   target?: string;
   /** Input terms of the damage equation (die + STR, or hits · weapon STR). */
   terms?: ResolutionTerm[];
-  /** Impact-roll total, when the equation resolves to one (ram). */
+  /** Impact-roll total, when the equation resolves to a single total. */
   total?: number;
-  /** Severity tier badge (ram: direct/severe/critical). */
+  /** Severity tier badge (direct/severe/critical). */
   tier?: string;
   /** Structure points dealt. */
   sp?: number;
@@ -145,6 +145,8 @@ export interface GameState {
   answerTokens?: Record<string, number>;
   pendingAnswer?: PendingAnswer | null;
   pendingReaction?: PendingReaction | null;
+  /** True for the acting side when a turn-scoped action can be reverted. */
+  canUndo?: boolean;
 }
 
 export interface Session {

@@ -6,7 +6,14 @@ export interface LoadoutEquipment {
   family: string; label: string; passive: string;
   activeLabel: string; activeHeat: number; activeText: string;
 }
-export interface Loadout { lr: LoadoutWeapon; melee: LoadoutWeapon; equipment: LoadoutEquipment | null; }
+export interface Loadout {
+  /** Flat-pick kinds (Tank / Walker) carry one `unit` weapon; Rigs carry lr + melee. */
+  flat: boolean;
+  unit?: LoadoutWeapon;
+  lr?: LoadoutWeapon;
+  melee?: LoadoutWeapon;
+  equipment: LoadoutEquipment | null;
+}
 
 function weapon(name: string | undefined, upId: string | undefined): LoadoutWeapon {
   const up = (WEAPON_UPGRADES[name as string] || []).find((u: { id: string }) => u.id === upId);
@@ -18,12 +25,18 @@ function weapon(name: string | undefined, upId: string | undefined): LoadoutWeap
 export function buildLoadout(rig: Rig): Loadout | null {
   if (!rig.weapons) return null;
   const eqDef = rig.equipment ? EQUIPMENT[rig.equipment] : undefined;
+  const equipment = eqDef ? {
+    family: eqDef.family, label: eqDef.label, passive: eqDef.passive,
+    activeLabel: eqDef.active.label, activeHeat: eqDef.active.heat, activeText: eqDef.active.text,
+  } : null;
+  // Cold kinds (Tank / Walker) store a single flat-pick weapon under `unit`.
+  if (rig.weapons.unit) {
+    return { flat: true, unit: weapon(rig.weapons.unit, undefined), equipment };
+  }
   return {
+    flat: false,
     lr: weapon(rig.weapons.longRange, rig.weaponUpgrades?.longRange),
     melee: weapon(rig.weapons.melee, rig.weaponUpgrades?.melee),
-    equipment: eqDef ? {
-      family: eqDef.family, label: eqDef.label, passive: eqDef.passive,
-      activeLabel: eqDef.active.label, activeHeat: eqDef.active.heat, activeText: eqDef.active.text,
-    } : null,
+    equipment,
   };
 }

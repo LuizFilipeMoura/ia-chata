@@ -171,6 +171,23 @@ button:focus-visible, select:focus-visible, textarea:focus-visible {
   background: linear-gradient(160deg, var(--iron-780), var(--iron-850));
   border-color: var(--rivet);
 }
+
+/* ---- Revert-last-action pill (only shown to the acting side) ---- */
+.revert-fab {
+  position: absolute; z-index: 56; left: 1.05rem; bottom: 4.6rem;
+  display: flex; align-items: center; gap: .4rem;
+  padding: .5rem .85rem; border-radius: 999px;
+  background: linear-gradient(160deg, var(--iron-780), var(--iron-900));
+  border: 1px solid rgba(231,154,61,.7);
+  color: var(--oil-hi);
+  box-shadow: 0 10px 26px rgba(231,154,61,.22), 0 4px 14px rgba(0,0,0,.55);
+  transition: transform .16s ease, box-shadow .16s ease;
+  animation: fadeIn .3s ease both;
+}
+.revert-fab-ic { font-size: 1.15rem; line-height: 1; }
+.revert-fab-label { font-size: .82rem; font-weight: 600; letter-spacing: .02em; }
+.revert-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(231,154,61,.32), 0 6px 16px rgba(0,0,0,.55); }
+.revert-fab:active { transform: translateY(0); }
 .chat-fab.has-unread::after {
   content: ""; position: absolute; top: -1px; right: -1px;
   width: 13px; height: 13px; border-radius: 50%;

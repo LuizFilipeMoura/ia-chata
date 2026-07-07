@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, resolveRam } from "./combat.js";
+import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
@@ -29,6 +29,13 @@ test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () 
   const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
   assert.equal(computeModifiedAim(attacker, autocannon, { range: "near", cover: 0, aimed: true }), 6); // 4 + 2
   assert.equal(computeModifiedAim({ weightClass: "medium", hull: { sp: 0 } }, claw, { range: "near", cover: 0 }), 4);
+});
+
+test("range band selects the weapon's near vs far ACC column (§7.4)", () => {
+  const mg = WEAPONS.longRange["Mini Gun"]; // acc [1, -1]
+  // The UI's inch slider derives this band; the server only sees near/far/out.
+  assert.equal(computeModifiedAim(attacker, mg, { range: "near", cover: 0 }), 3); // 4 - 1
+  assert.equal(computeModifiedAim(attacker, mg, { range: "far", cover: 0 }), 5);  // 4 - (-1)
 });
 
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
@@ -160,7 +167,7 @@ test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-pen
   assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Rend"), true);
 
   const lance = makeRig(4, "Reach", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "couched-reach" });
-  assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [2.5, 2.5]);
+  assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [3, 3]); // 2" base + 1" Couched Reach
 
   const sniper = makeRig(5, "Barrel", "medium", "a", { longRange: "Sniper Cannon", melee: "Sword", longRangeUpgrade: "match-barrel" });
   assert.deepEqual(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).acc, [0, 0]);
@@ -238,41 +245,6 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   assert.equal(b.terms[1].value, computeStr(attacker, WEAPONS.longRange.Autocannon, {}));
 });
 
-test("resolveRam adds a tone to its D6 roll reflecting whether it dealt damage", () => {
-  const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
-  const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
-  const room = { rigs: [attacker, target] };
-  const ctx = makeCtx();
-
-  // Ram STR (medium) = 8. A high impact die should deal damage (sp > 0, tone "ok");
-  // location doesn't matter for the assertion, force both to something valid.
-  resolveRam(room, attacker, target, {
-    dice: {
-      self: { location: 1, impact: 6 },   // 6 + 8 = 14 -> medium hull severe (>=14) -> sp>0
-      target: { location: 1, impact: 1 }, // 1 + 8 = 9  -> medium hull (<11 direct) -> sp=0
-    },
-  }, () => 0, ctx);
-
-  const ramResults = ctx.resolutions.filter((r) => r.kind === "ram");
-  assert.equal(ramResults.length, 2);
-  const [selfRes, targetRes] = ramResults;
-  assert.equal(selfRes.rolls[0].tone, "ok");
-  assert.equal(targetRes.rolls[0].tone, "miss");
-
-  // Breakdown spells out the equation and where the ram STR bonus comes from.
-  assert.deepEqual(selfRes.breakdown.terms, [
-    { value: 6, label: "D6", tone: "die" },
-    { value: 8, label: "Ram STR · Medium", op: "+", tone: "mod" },
-  ]);
-  assert.equal(selfRes.breakdown.total, 14);
-  assert.equal(selfRes.breakdown.tier, "severe");
-  assert.equal(selfRes.breakdown.location, "hull");
-  assert.ok(selfRes.breakdown.sp > 0);
-  assert.equal(targetRes.breakdown.total, 9);
-  assert.equal(targetRes.breakdown.tier, "none");
-  assert.equal(targetRes.breakdown.sp, 0);
-});
-
 test("computeStr skips weight-class modifier for flat-pick weapons", () => {
   const attackerWithClass = { kind: "tank", weightClass: "heavy" };
   const profile = { str: 12, perks: [], flatPick: true };
@@ -299,21 +271,6 @@ test("resolveAttack reads weapons.unit when the attacker is a Tank", () => {
     dice: { toHit: [5], location: 3 },
   }, () => 0, ctx);
   assert.equal(res.ok, true);
-});
-
-test("resolveRam reads ramStr from the unit registry for cold kinds (Tank = 9)", () => {
-  const room = { rigs: [], history: [], game: { nextResolutionId: 1, resolutions: [] } };
-  const attacker = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
-  const target = makeUnit("tank", 2, "Enemy", "b", { unit: "Coaxial MG" });
-  room.rigs = [attacker, target];
-  const recorded = [];
-  const ctx = {
-    applyDamage: () => {}, bumpHeat: () => {}, pushResolution: (_r, e) => recorded.push(e),
-  };
-  resolveRam(room, attacker, target, { dice: { self: { location: 3, impact: 6 }, target: { location: 3, impact: 6 } } }, () => 0, ctx);
-  // Both entries should print "Ram STR 9" — Tank ramStr from registry, not weight-class default 8.
-  const summaries = recorded.map((r) => r.summary).join(" | ");
-  assert.ok(/Ram STR 9/.test(summaries), `expected ramStr 9 in ${summaries}`);
 });
 
 test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret, not arms/legs)", () => {

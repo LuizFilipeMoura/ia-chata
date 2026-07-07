@@ -1,4 +1,5 @@
 import { availableActions, actionBudget } from "/shared/battle-view.js";
+import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useBattleActions, iconFor } from "../../state/BattleActionsContext";
@@ -25,7 +26,7 @@ export function ActionConsole({ rig }: Props) {
   }
 
   const onAction = (r: Rig, key: string) => {
-    if (key === "fire" || key === "aimed" || key === "ram") {
+    if (key === "fire" || key === "aimed") {
       openAttack(r, key as AttackMode);
       return;
     }
@@ -50,6 +51,8 @@ export function ActionConsole({ rig }: Props) {
 
   const b = actionBudget(rig, t);
   const actions = availableActions(rig, t);
+  // Cold kinds (Tank / Walker) don't track heat — suppress per-action heat tags.
+  const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
 
   // Surface the "why" behind constrained actions as inline hints, deduplicated.
   const notes = [...new Set(actions.map((a) => a.note).filter(Boolean))] as string[];
@@ -92,7 +95,7 @@ export function ActionConsole({ rig }: Props) {
             >
               <span className="ac-ic" aria-hidden="true">{iconFor(act.key)}</span>
               <span className="ac-label">{act.label}</span>
-              <span className="ac-heat" data-heat={act.heat}>{heatLabel}</span>
+              {!cold && <span className="ac-heat" data-heat={act.heat}>{heatLabel}</span>}
             </button>
           );
         })}

@@ -55,6 +55,44 @@ beforeEach(() => {
   };
 });
 
+// A cold kind (Tank / Walker) carries no weightClass and a single `unit` weapon.
+function tank(over: Partial<Rig> = {}): Rig {
+  return {
+    id: 9,
+    name: "Bulwark",
+    kind: "tank",
+    weightClass: undefined as unknown as Rig["weightClass"],
+    owner: "b",
+    hull: component(8),
+    tracks: component(7),
+    turret: component(6),
+    engine: { ...component(6), heat: 0 },
+    weapons: { unit: "Tank Cannon" },
+    equipment: null,
+    loaded: { unit: true },
+    activated: false,
+    destroyed: false,
+    ...over,
+  } as unknown as Rig;
+}
+
+test("does not crash when the target is a cold kind with no weightClass (regression)", () => {
+  state.rigs = [rig({}), tank({})];
+  render(<AttackWizard rig={state.rigs[0]} mode="fire" onClose={() => {}} />);
+  // Target option labels the tank by its kind, not a (missing) weight class.
+  expect(screen.getByRole("button", { name: /Fire/ })).toBeInTheDocument();
+  expect(screen.getAllByText(/Tank/).length).toBeGreaterThan(0);
+});
+
+test("flat-pick attacker shows its single unit weapon and no upgrade line", () => {
+  const attacker = tank({ id: 1, name: "Bulwark", owner: "a" });
+  state.rigs = [attacker, rig({ id: 2, name: "Raider", owner: "b" })];
+  render(<AttackWizard rig={attacker} mode="fire" onClose={() => {}} />);
+  const notice = screen.getByText(/Before you attack/i).closest(".aw-attack-notice") as HTMLElement;
+  expect(notice).toHaveTextContent("Tank Cannon");
+  expect(notice).toHaveTextContent(/flat STR/i);
+});
+
 test("attack drawer warns about the selected weapon upgrade before the attack button", () => {
   render(<AttackWizard rig={state.rigs[0]} mode="fire" onClose={() => {}} />);
 

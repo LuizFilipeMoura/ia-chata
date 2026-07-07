@@ -75,7 +75,7 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   assert.deepEqual(maul, { rof: 1, str: 13, acc: [0, -1], rng: [8, 16], perks: ["Armour Piercing", "Hot"] });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
-  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [1.5, 1.5], perks: ["Melee", "Bulwark"] });
+  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] });
 
   // The list is now 7 + 7.
   assert.equal(Object.keys(WEAPONS.longRange).length, 7);
@@ -545,16 +545,142 @@ test("actions add their heat and spend the budget", () => {
   assert.equal(r.game.turn.actionsUsed, 2);
 });
 
-test("only one Move (or Sprint) is allowed per activation", () => {
+test("Move may repeat within an activation, each spending a slot and adding heat", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } }); // slot 1, +1 heat
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } }); // slot 2, +1 heat
+  const b1 = findRig(r, "b1");
+  assert.equal(r.game.turn.actionsUsed, 2);
+  assert.equal(b1.engine.heat, 2);            // heat corresponds to both Moves
+});
+
+test("Sprint may repeat within an activation, each spending a slot and +2 heat", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } }); // light, no Servo Actuators
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } }); // slot 1, +2 heat
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } }); // slot 2, +2 heat
+  const b1 = findRig(r, "b1");
+  assert.equal(r.game.turn.actionsUsed, 2);
+  assert.equal(b1.engine.heat, 4);            // 2 + 2 — heat corresponds to both Sprints
+});
+
+test("Sprint then Move stack heat and slots (mixed movement in one activation)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } }); // +2 heat
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });   // +1 heat
+  const b1 = findRig(r, "b1");
+  assert.equal(r.game.turn.actionsUsed, 2);
+  assert.equal(b1.engine.heat, 3);            // 2 + 1
+});
+
+test("Shutdown is allowed after a real action has been spent (not just as the first)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } }); // spend a slot first
+  assert.equal(r.game.turn.actionsUsed, 1);
+  const b1 = findRig(r, "b1");
+  b1.engine.heat = 9;                          // hot after the move
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
+  assert.equal(b1.activated, true);            // shutdown went through mid-activation (was blocked before)
+  assert.equal(b1.engine.heat, 3);             // 0 + round(9 · 1/3) — cooled proportionally
+});
+
+test("Shutdown cools proportionally to slots already used and ends the activation", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.engine.heat = 6;              // floor is 0 for a fresh engine
+  r.game.turn.actionsUsed = 2;     // of 3 slots → keeps 2/3 of the heat
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
+  assert.equal(b1.engine.heat, 4); // 0 + round(6 · 2/3)
+  assert.equal(b1.activated, true);
+});
+
+test("Shutdown as the first action cools fully to the floor", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.engine.heat = 6;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
+  assert.equal(b1.engine.heat, 0); // 0 slots used → full cool
+});
+
+test("undo reverts the acting side's last turn-scoped action", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const heatBefore = findRig(r, "b1").engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  assert.equal(r.game.turn.actionsUsed, 1);
+  // The other side cannot undo it.
+  applyCommand(r, { verb: "undo", attrs: { side: "a" } });
+  assert.equal(r.game.turn.actionsUsed, 1);
+  // The acting side can.
+  applyCommand(r, { verb: "undo", attrs: { side: "b" } });
+  assert.equal(r.game.turn.actionsUsed, 0);
+  assert.equal(findRig(r, "b1").engine.heat, heatBefore);
+});
+
+test("undo restores full state after an attack — damage, heat and slot reverted", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const spSum = (rig) => rig.hull.sp + rig.arms.sp + rig.legs.sp + rig.engine.sp;
+  const targetSpBefore = spSum(findRig(r, "a1"));
+  const heatBefore = findRig(r, "b1").engine.heat;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+  } });
+  assert.ok(spSum(findRig(r, "a1")) < targetSpBefore, "attack dealt damage");
+  assert.equal(r.game.turn.actionsUsed, 1);
+  applyCommand(r, { verb: "undo", attrs: { side: "b" } });
+  assert.equal(spSum(findRig(r, "a1")), targetSpBefore); // damage rolled back
+  assert.equal(findRig(r, "b1").engine.heat, heatBefore);
+  assert.equal(r.game.turn.actionsUsed, 0);
+});
+
+test("undo reverts an ended activation back to the acting Rig", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
-  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } }); // rejected — already moved
-  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });   // rejected — already moved
-  const b1 = findRig(r, "b1");
-  assert.equal(r.game.turn.actionsUsed, 1);
-  assert.equal(b1.engine.heat, 1);            // just the one Move
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(findRig(r, "b1").activated, true);
+  applyCommand(r, { verb: "undo", attrs: { side: "b" } });
+  assert.equal(findRig(r, "b1").activated, false);       // active again
+  assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
+});
+
+test("answer-token placement is undoable by the answering side, not the turn side", () => {
+  const r = startedRoom(); // turn.side === "b"; "a" holds the answer gate
+  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1 });
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
+  // The reacting side (a) owns the undo, not the turn side (b).
+  assert.equal(publicState(r, "a").game.canUndo, true);
+  assert.equal(publicState(r, "b").game.canUndo, false);
+  applyCommand(r, { verb: "undo", attrs: { side: "a" } });
+  assert.equal(findRig(r, "a1").preparation, null); // token placement reverted
+});
+
+test("publicState exposes canUndo only to the side that made the last move", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  assert.equal(publicState(r, "b").game.canUndo, true);
+  assert.equal(publicState(r, "a").game.canUndo, false);
+  applyCommand(r, { verb: "undo", attrs: { side: "b" } });
+  // Only the activate snapshot remains; still b's to revert.
+  assert.equal(publicState(r, "b").game.canUndo, true);
 });
 
 test("actions beyond the budget are rejected", () => {
@@ -927,20 +1053,22 @@ test("a second ranged shot costs 1 slot but runs the barrel hot: +1 heat", () =>
   assert.equal(r.game.turn.actionsUsed, 3);                // fire + reload + fire = 3 slots
 });
 
-test("ram deals a D6 + ram-STR hit to both rigs", () => {
+test("ram action is removed — melee covers close combat, so it is a no-op", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const b1 = findRig(r, "b1"); // Light ram STR 7
-  const a1 = findRig(r, "a1"); // Light ram STR 7
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  const aBefore = a1.hull.sp;
+  const bBefore = b1.hull.sp;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "ram", target: "a1",
     dice: { self: { location: 1, impact: 6 }, target: { location: 1, impact: 6 } },
   } });
-  // Each: D6 6 + STR 7 = 13 vs light hull (10/14/16) -> direct (1 SP).
-  assert.equal(a1.hull.sp, 5);
-  assert.equal(b1.hull.sp, 5);
-  assert.equal(r.game.turn.actionsUsed, 1);
+  // No damage, no slot spent — ram no longer exists.
+  assert.equal(a1.hull.sp, aBefore);
+  assert.equal(b1.hull.sp, bBefore);
+  assert.equal(r.game.turn.actionsUsed, 0);
 });
 
 test("Incendiary adds target heat; Shock halves target speed next round", () => {
