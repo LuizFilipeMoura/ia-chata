@@ -1383,19 +1383,28 @@ export function formatBattleState(room, side) {
     lines.push("(No Rigs are being tracked yet.)");
   } else {
     for (const rig of room.rigs) {
-      const parts = LOCS.map((loc) => {
+      const kind = kindOf(rig);
+      const cfg = UNIT_KINDS[kind];
+      const [powerPart] = partsByRole(kind, "power");
+      const parts = partNamesOf(kind).map((loc) => {
         const c = rig[loc];
         let tag = `${loc} ${c.sp}/${c.max}`;
-        if (loc === "engine") tag += ` heat ${c.heat}`;
+        if (cfg.hasHeat && loc === powerPart) tag += ` heat ${c.heat}`;
         if (c.destroyed) tag += " (DESTROYED)";
         else if (c.sp === 0) tag += " (CATASTROPHIC)";
         return tag;
       });
-      const status = rig.destroyed ? " [RIG DESTROYED]" : "";
-      const weapons = rig.weapons
-        ? `; weapons ${rig.weapons.longRange || "?"} / ${rig.weapons.melee || "?"}`
-        : "";
-      lines.push(`- ${rig.name} (${rig.weightClass}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
+      const status = rig.destroyed ? ` [${cfg.label.toUpperCase()} DESTROYED]` : "";
+      let weapons = "";
+      if (rig.weapons) {
+        if (cfg.weaponMode === "flat-pick") {
+          weapons = `; weapon ${rig.weapons.unit || "?"}`;
+        } else {
+          weapons = `; weapons ${rig.weapons.longRange || "?"} / ${rig.weapons.melee || "?"}`;
+        }
+      }
+      const chassis = cfg.id === "rig" ? rig.weightClass : cfg.label;
+      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
     }
   }
   const sideId = normalizeSide(room, side);

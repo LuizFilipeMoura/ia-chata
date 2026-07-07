@@ -1795,3 +1795,17 @@ test("Tank activation sets actionsMax = 2 (registry actionBudget)", () => {
   applyCommand(room, { verb: "activate", attrs: { name: "Bulwark" } }, { side: "a" });
   assert.equal(room.game.turn.actionsMax, 2);
 });
+
+test("formatBattleState renders a Tank without heat and with a single unit weapon", () => {
+  const room = createRoom("Rfmt"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  const view = formatBattleState(room, "a");
+  assert.ok(view.includes("Bulwark (Tank, owner a)"));
+  assert.ok(view.includes("hull 8/8"));
+  assert.ok(view.includes("tracks 7/7"));
+  assert.ok(view.includes("turret 6/6"));
+  assert.ok(view.includes("engine 6/6")); // no "heat" suffix — cold kind
+  assert.ok(!/engine 6\/6 heat/.test(view));
+  assert.ok(view.includes("weapon Tank Cannon"));
+});
