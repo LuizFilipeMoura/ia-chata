@@ -40,6 +40,24 @@ export const WEAPONS = {
   },
 };
 
+// Flat unit-weapon list (spec §Weapons, "Unit-weapon list"). Tanks and Walkers
+// pick exactly one. Marked flatPick: true so combat.js skips the weight-class
+// STR modifier — the listed STR is the shot's STR on any chassis.
+export const UNIT_WEAPONS = {
+  "Tank Cannon":      { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: [],                         flatPick: true },
+  "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"],              flatPick: true },
+  "Coaxial MG":       { rof: 6, str: 5,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Raking Fire"], flatPick: true },
+  "Rocket Pod":       { rof: 2, str: 10, acc: [0, 0],  rng: [15, 30], perks: ["Charged Shot"],           flatPick: true },
+  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [1.5, 1.5], perks: ["Melee"],                flatPick: true },
+  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [1.5, 1.5], perks: ["Melee", "Impale"],      flatPick: true },
+};
+
+export function normalizeUnitWeapon(name) {
+  if (!name) return null;
+  const ref = String(name).trim().toLowerCase();
+  return Object.keys(UNIT_WEAPONS).find((w) => w.toLowerCase() === ref) || null;
+}
+
 // Rig equipment loadout (docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md,
 // Part 1). One slot per Rig. Passives hook into existing systems (see makeRig /
 // runRecovery / catastrophicOnZero / performAction below); actives are ordinary
@@ -362,8 +380,9 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
 }
 
 // Registry-driven unit factory. Rigs still go through makeRig (which handles
-// weight-class stats, weapon slots, equipment). Cold kinds (Tank, Walker) land
-// in Task 11.
+// weight-class stats, weapon slots, equipment). Cold single-model kinds (Tank,
+// Walker) build directly from the registry entry's partSp with one flat-pick
+// weapon and no equipment.
 export function makeUnit(kindId, id, name, owner, opts = {}) {
   const kind = UNIT_KINDS[kindId];
   if (!kind) return null;
@@ -373,7 +392,44 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
       longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
     }, opts.equipment ?? null);
   }
-  return null;
+  // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
+  // registry; the unit carries exactly one flat-pick weapon and no equipment.
+  const weaponName = normalizeUnitWeapon(opts.unit);
+  if (!weaponName) return null;
+  const parts = {};
+  for (const p of kind.parts) {
+    const sp = kind.partSp[p.name];
+    parts[p.name] = { sp, max: sp, destroyed: false };
+  }
+  // heatMeter/engineHeatFloor read power-part heat via rig.engine.heat. Give
+  // the power part a heat=0 so cold-kind code paths that touch it don't NPE.
+  const [powerPart] = partsByRole(kindId, "power");
+  if (powerPart && !("heat" in parts[powerPart])) parts[powerPart].heat = 0;
+  const unit = {
+    id,
+    name: String(name || kind.label).trim() || kind.label,
+    kind: kindId,
+    owner: owner === "b" ? "b" : "a",
+    parts,
+    weapons: { unit: weaponName },
+    equipment: null,
+    activated: false,
+    skipNextActivation: false,
+    noCool: false,
+    speedHalvedNextRound: false,
+    loaded: { unit: true },
+    preparation: null,
+    weaponsDestroyed: [],
+    immobilised: false,
+    hardened: false,
+    actionPenaltyNextActivation: 0,
+    destroyed: false,
+  };
+  // Alias top-level part fields so shared-code reads like rig.hull / rig.engine
+  // resolve for cold kinds too (Task 4's recompute + Task 7's action-budget
+  // helper walk names via partNamesOf, so they read rig[name] directly).
+  for (const p of kind.parts) unit[p.name] = parts[p.name];
+  return unit;
 }
 
 // Derive the full heat picture for a Rig's engine: current heat, its Heat

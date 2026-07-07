@@ -6,6 +6,7 @@ import {
   EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
+  UNIT_WEAPONS, normalizeUnitWeapon,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -1658,8 +1659,52 @@ test("makeUnit rejects unknown kinds", () => {
   assert.equal(makeUnit("banana", 1, "X", "a", {}), null);
 });
 
-test("makeUnit('tank', ...) returns null until Task 11 wires cold kinds", () => {
-  assert.equal(makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" }), null);
+test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
+  const ids = Object.keys(UNIT_WEAPONS).sort();
+  assert.deepEqual(ids, [
+    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Tank Cannon",
+  ]);
+  for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
+    assert.equal(typeof w.rof, "number");
+    assert.equal(typeof w.str, "number");
+    assert.ok(Array.isArray(w.acc));
+    assert.ok(Array.isArray(w.rng));
+    assert.ok(Array.isArray(w.perks));
+    assert.equal(w.flatPick, true, `${name} carries flatPick marker`);
+  }
+});
+
+test("normalizeUnitWeapon is case-insensitive and rejects unknown names", () => {
+  assert.equal(normalizeUnitWeapon("tank cannon"), "Tank Cannon");
+  assert.equal(normalizeUnitWeapon(""), null);
+  assert.equal(normalizeUnitWeapon("Chainsaw"), null);
+});
+
+test("makeUnit('tank', ...) returns a valid tank with the four parts", () => {
+  const t = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  assert.ok(t);
+  assert.equal(t.kind, "tank");
+  assert.equal(t.owner, "a");
+  assert.equal(t.parts.hull.sp, 8);
+  assert.equal(t.parts.tracks.sp, 7);
+  assert.equal(t.parts.turret.sp, 6);
+  assert.equal(t.parts.engine.sp, 6);
+  assert.equal(t.weapons.unit, "Tank Cannon");
+  assert.equal(t.equipment, null);
+  assert.equal(t.destroyed, false);
+});
+
+test("makeUnit('tank', ...) rejects a weapon not in the flat catalogue", () => {
+  const t = makeUnit("tank", 1, "Bulwark", "a", { unit: "Not A Weapon" });
+  assert.equal(t, null);
+});
+
+test("makeUnit('walker', ...) uses the walker part table", () => {
+  const w = makeUnit("walker", 1, "Sentinel", "a", { unit: "Autocannon Mount" });
+  assert.ok(w);
+  assert.equal(w.kind, "walker");
+  assert.equal(w.parts.legs.sp, 6);
+  assert.equal(w.parts.mount.sp, 5);
 });
 
 test("activation reads actionBudget from the unit registry (rig = 3)", () => {
