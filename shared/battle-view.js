@@ -9,36 +9,42 @@ const ACTION_ORDER = ["move", "sprint", "fire", "aimed", "ram", "reload", "repai
 // The action console list for the active rig: each action with its heat cost and
 // whether the current budget/state allows it.
 export function availableActions(rig, turn) {
+  const cfg = UNIT_KINDS[kindOf(rig)];
   const left = turn.actionsMax - turn.actionsUsed;
-  const rangedSpent = rig.loaded?.longRange === false; // fired, not yet reloaded
-  const firedRanged = (turn.longRangeShots || 0) >= 1; // a ranged shot already went off
-  const list = ACTION_ORDER.map((key) => {
-    const def = ACTIONS[key];
-    let enabled = left > 0;
-    let cost = def.slot;
-    let heat = def.heat;
-    let note = "";
-    if (key === "shutdown") enabled = turn.actionsUsed === 0; // declared before any action
-    if (key === "reload") {
-      // A reload only makes sense once a weapon has actually been fired.
-      enabled = left > 0 && rangedSpent;
-      if (!rangedSpent) note = "Weapons already loaded";
-    }
-    if (key === "fire" || key === "aimed") {
-      if (rangedSpent) {
-        // The ranged weapon is spent — it must be reloaded before it can fire
-        // again (§7). The button still opens the drawer for a melee attack.
-        enabled = false;
-        note = "Ranged weapon spent — reload before firing again";
-      } else if (firedRanged) {
-        // A second ranged shot this activation runs the barrel hot: +1 heat.
-        heat = def.heat + 1;
-        note = "Second shot — +1 heat";
+  // Rig uses two slots (longRange + melee); flat-pick uses one "unit" slot.
+  const rangedSpent = cfg.weaponMode === "flat-pick"
+    ? rig.loaded?.unit === false
+    : rig.loaded?.longRange === false;
+  const firedRanged = (turn.longRangeShots || 0) >= 1;
+  const list = ACTION_ORDER
+    .filter((key) => {
+      if (key === "shutdown" && !cfg.hasHeat) return false;
+      if (key === "prepare" && !cfg.reactions) return false;
+      return true;
+    })
+    .map((key) => {
+      const def = ACTIONS[key];
+      let enabled = left > 0;
+      let cost = def.slot;
+      let heat = def.heat;
+      let note = "";
+      if (key === "shutdown") enabled = turn.actionsUsed === 0;
+      if (key === "reload") {
+        enabled = left > 0 && rangedSpent;
+        if (!rangedSpent) note = "Weapons already loaded";
       }
-    }
-    return { key, label: def.label, heat, enabled, cost, note };
-  });
-  if (rig.equipment && EQUIPMENT[rig.equipment]) {
+      if (key === "fire" || key === "aimed") {
+        if (rangedSpent) {
+          enabled = false;
+          note = "Ranged weapon spent — reload before firing again";
+        } else if (firedRanged) {
+          heat = def.heat + 1;
+          note = "Second shot — +1 heat";
+        }
+      }
+      return { key, label: def.label, heat, enabled, cost, note };
+    });
+  if (cfg.hasEquipment && rig.equipment && EQUIPMENT[rig.equipment]) {
     const active = EQUIPMENT[rig.equipment].active;
     list.push({ key: active.key, label: active.label, heat: active.heat, enabled: left > 0, cost: 1, note: "" });
   }

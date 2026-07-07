@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { availableActions, actionBudget, rigModifiers, phaseSummary, outcomeText } from "./battle-view.js";
-import { makeRig } from "./game-state.js";
+import { makeRig, makeUnit } from "./game-state.js";
 
 function rig(over = {}) {
   return {
@@ -158,4 +158,37 @@ test("rigModifiers labels the mobility chip 'Legs 0' for a Rig", () => {
   rig.legs.sp = 0;
   const mods = rigModifiers(rig);
   assert.ok(mods.find((m) => m.tag.startsWith("Legs 0")));
+});
+
+test("Tank action console = 2 actions, no shutdown, no prepare, no equipment", () => {
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 0, longRangeShots: 0 });
+  const keys = actions.map((a) => a.key);
+  assert.ok(!keys.includes("shutdown"), "no shutdown");
+  assert.ok(!keys.includes("prepare"), "no prepare");
+  assert.ok(
+    !keys.some((k) => ["harden", "purge", "jumpjets", "overclock", "emergencypatch"].includes(k)),
+    "no equipment active",
+  );
+});
+
+test("Walker action console keeps prepare hidden, keeps other actions (regression)", () => {
+  const w = makeUnit("walker", 1, "Sentinel", "a", { unit: "Autocannon Mount" });
+  const actions = availableActions(w, { actionsMax: 3, actionsUsed: 0, longRangeShots: 0 });
+  const keys = actions.map((a) => a.key);
+  assert.ok(!keys.includes("prepare"));
+  assert.ok(!keys.includes("shutdown"));
+  assert.ok(keys.includes("move"));
+  assert.ok(keys.includes("fire"));
+});
+
+test("Flat-pick fired: 'reload' enabled, 'fire' disabled with correct note", () => {
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  tank.loaded.unit = false; // just fired
+  const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 1, longRangeShots: 1 });
+  const reload = actions.find((a) => a.key === "reload");
+  const fire = actions.find((a) => a.key === "fire");
+  assert.equal(reload.enabled, true);
+  assert.equal(fire.enabled, false);
+  assert.ok(fire.note.includes("Ranged weapon spent"));
 });
