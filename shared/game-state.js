@@ -940,6 +940,7 @@ function resolveFire(room, rig, target, a, act, random) {
   if (t.actionsUsed + cost > t.actionsMax) return false;
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
+    engaged: rig.engagedWith != null,
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",

@@ -41,7 +41,9 @@ export function computeModifiedAim(attacker, profile, opts) {
   const cover = profile.upgradeEffect?.ignoreCover ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
   const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
-  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty;
+  // §engagement — a rig locked in melee fires ranged weapons at −2 accuracy.
+  const engagedPenalty = opts.engaged && !profile.melee ? -2 : 0;
+  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty;
   return base - accTotal;
 }
 

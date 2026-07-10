@@ -285,6 +285,20 @@ test("resolveAttack reads weapons.unit when the attacker is a Tank", () => {
   assert.equal(res.ok, true);
 });
 
+test("computeModifiedAim adds +2 to the target number for an engaged ranged shot", () => {
+  const mg = WEAPONS.longRange["Mini Gun"]; // sweet 7, peak 2
+  const base = computeModifiedAim(attacker, mg, { distance: 7, cover: 0 });
+  const engaged = computeModifiedAim(attacker, mg, { distance: 7, cover: 0, engaged: true });
+  assert.equal(engaged, base + 2); // −2 accuracy raises the D6 target by 2
+});
+
+test("engaged penalty does not apply to melee weapons", () => {
+  const sword = WEAPONS.melee["Sword"];
+  const base = computeModifiedAim(attacker, sword, { range: "near", cover: 0 });
+  const engaged = computeModifiedAim(attacker, sword, { range: "near", cover: 0, engaged: true });
+  assert.equal(engaged, base); // melee unaffected
+});
+
 test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret, not arms/legs)", () => {
   const room = { rigs: [], history: [], game: { nextResolutionId: 1, resolutions: [] } };
   const attacker = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
