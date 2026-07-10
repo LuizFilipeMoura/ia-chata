@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY,
-  UNIT_WEAPONS, PREBUILT_RIGS,
+  UNIT_WEAPONS, PREBUILT_RIGS, upgradeNature,
 } from "/shared/game-state.js";
 import { UNIT_KINDS } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
@@ -66,6 +66,8 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
 
   // Selecting a prebuilt locks weight class + both weapons and resets each
   // weapon to its first upgrade; the player re-picks upgrades below the grid.
+  // Invariant: the first upgrade per weapon is always Field nature (Task 2), so
+  // this reset can never leave the rig with two Prototype upgrades selected.
   const selectPrebuilt = (id: string) => {
     const pb = PREBUILT_RIGS.find((p) => p.id === id);
     if (!pb) return;
@@ -148,20 +150,25 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
     name: string,
     selected: string | null,
     onSelect: (id: string) => void,
+    otherIsPrototype: boolean,
   ) => (
     <div className="rw-upgrade-choices">
-      {(WEAPON_UPGRADES[name] || []).map((u) => (
-        <button
-          key={u.id}
-          type="button"
-          className={"rw-upgrade-choice" + (u.id === selected ? " sel" : "")}
-          title={u.tag}
-          onClick={() => onSelect(u.id)}
-        >
-          <span>{u.name} <em className={"rw-nature rw-nature-" + u.nature}>{u.nature[0].toUpperCase() + u.nature.slice(1)}</em></span>
-          <small>Upgrade · <GlossaryText text={u.tag} /></small>
-        </button>
-      ))}
+      {(WEAPON_UPGRADES[name] || []).map((u) => {
+        const locked = u.nature === "prototype" && otherIsPrototype && u.id !== selected;
+        return (
+          <button
+            key={u.id}
+            type="button"
+            disabled={locked}
+            className={"rw-upgrade-choice" + (u.id === selected ? " sel" : "") + (locked ? " locked" : "")}
+            title={locked ? "A rig may run at most one Prototype upgrade" : u.tag}
+            onClick={() => !locked && onSelect(u.id)}
+          >
+            <span>{u.name} <em className={"rw-nature rw-nature-" + u.nature}>{u.nature[0].toUpperCase() + u.nature.slice(1)}</em></span>
+            <small>Upgrade · <GlossaryText text={u.tag} /></small>
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -246,12 +253,14 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
           </div>
           {upgradeChoices(state.longRange, state.longRangeUpgrade, (id) =>
             patch({ longRangeUpgrade: id }),
+            upgradeNature(state.melee, state.meleeUpgrade) === "prototype",
           )}
           <div className="rw-field">
             <label>🗡️ {state.melee} <small>· ROF {ml.rof} · STR {ml.str} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small></label>
           </div>
           {upgradeChoices(state.melee, state.meleeUpgrade, (id) =>
             patch({ meleeUpgrade: id }),
+            upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype",
           )}
           <div className="rw-hint">
             Weapons and weight class are fixed by the prebuilt. Choose one upgrade for each weapon.

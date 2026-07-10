@@ -89,6 +89,23 @@ test("weapons step badges each upgrade with its nature", async () => {
   expect(screen.getAllByText("Prototype").length).toBeGreaterThan(0);
 });
 
+test("selecting a Prototype on one weapon disables Prototype on the other", async () => {
+  const user = userEvent.setup();
+  render(
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
+  );
+  await advanceToWeapons(user);
+  // Pick the long-range Prototype (Penetrator Rounds).
+  await user.click(screen.getByRole("button", { name: /Penetrator Rounds/ }));
+  // The melee Prototype (Breach Grip) button must now be disabled.
+  const breach = screen.getByRole("button", { name: /Breach Grip/ });
+  expect(breach).toBeDisabled();
+});
+
 test("commissioning posts an add command with the prebuilt's fixed class and weapons", async () => {
   const user = userEvent.setup();
   render(
