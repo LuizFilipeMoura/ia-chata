@@ -701,8 +701,9 @@ test("Fire Control Lock only fires vs the exact painted target", () => {
   assert.equal(attacker.lockedTarget, painted.id); // paint still saved for the real target
 });
 
-test("Breach Grip — a cracked location adds +2 to every impact while the crack is live", () => {
+test("Breach Grip — a cracked location adds +2 to every impact over its 2-round window, gone by N+2", () => {
   const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  // Applied at round N=4 stores expiry N+1=5: live at rounds 4 and 5, gone at 6.
   const cracked = { weightClass: "medium", cracked: { hull: 5 } };
   const plain = { weightClass: "medium" };
   // die 5 + STR 8 = 13 -> direct(1) on a medium hull (11/14/17) with no crack.
@@ -710,14 +711,16 @@ test("Breach Grip — a cracked location adds +2 to every impact while the crack
     { arc: "front", hits: 1, round: 5 }, { impacts: [5] }, () => 0);
   assert.equal(base[0].total, 13);
   assert.equal(base[0].tier, "direct");
-  // Same roll vs the cracked hull while live: 13 + 2 = 15 -> severe(2).
-  const live = rollImpacts({ weightClass: "medium" }, cracked, auto, "hull",
-    { arc: "front", hits: 1, round: 5 }, { impacts: [5] }, () => 0);
-  assert.equal(live[0].total, 15);
-  assert.equal(live[0].tier, "severe");
-  // Once the expiry round has passed (5 < 8) the +2 is gone again.
+  // Round N (4) and N+1 (5) are both live: 13 + 2 = 15 -> severe(2).
+  for (const round of [4, 5]) {
+    const live = rollImpacts({ weightClass: "medium" }, cracked, auto, "hull",
+      { arc: "front", hits: 1, round }, { impacts: [5] }, () => 0);
+    assert.equal(live[0].total, 15, `round ${round} should still be cracked`);
+    assert.equal(live[0].tier, "severe");
+  }
+  // Gone by N+2 (round 6): the +2 is no longer applied (5 >= 6 is false).
   const stale = rollImpacts({ weightClass: "medium" }, cracked, auto, "hull",
-    { arc: "front", hits: 1, round: 8 }, { impacts: [5] }, () => 0);
+    { arc: "front", hits: 1, round: 6 }, { impacts: [5] }, () => 0);
   assert.equal(stale[0].total, 13);
 });
 
@@ -817,4 +820,41 @@ test("Kneecapper cripple ramp — armsSuppressed halves ROF for every weapon", (
   const melee = effectiveWeaponProfile("melee", "Chainsaw", rig); // base rof 3
   const meleeRes = rollToHit(rig, melee, { range: "near", cover: 0 }, [1, 1, 1], () => 0);
   assert.equal(meleeRes.rof, 1); // floor(3/2)
+});
+
+test("armsSuppressed never silences a ROF-1 weapon — it floors at 1 die (#4)", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Sniper Cannon", melee: "Lance" });
+  rig.armsSuppressed = true;
+  const sniper = effectiveWeaponProfile("longRange", "Sniper Cannon", rig); // base rof 1
+  const res = rollToHit(rig, sniper, { range: "near", cover: 0 }, [6], () => 0);
+  assert.equal(res.rof, 1); // Math.max(1, floor(1/2)) = 1, not 0
+  const lance = effectiveWeaponProfile("melee", "Lance", rig); // base rof 1
+  const lres = rollToHit(rig, lance, { range: "near", cover: 0 }, [6], () => 0);
+  assert.equal(lres.rof, 1);
+});
+
+test("Kneecapper tags the raked limb on a damaging hit; a non-kneecapper Double MG does not", () => {
+  const attacker = makeRig(1, "K", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = {
+    ...makeCtx(),
+    applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+  };
+  resolveAttack(room, attacker, target,
+    { weapon: "longRange", arc: "front", range: "near", aimed: true, aimedLoc: "legs",
+      dice: { toHit: [6], impacts: [6], ap: [1] } }, () => 0, ctx);
+  assert.equal(target.kneecapped.legs, true);
+  assert.notEqual(target.kneecapped.arms, true); // only the raked limb is tagged
+
+  // A plain Pinning-Burst Double MG (no kneecapper) tags nothing; on the front
+  // arc its Raking Fire even auto-fails, but the point is: no kneecapped tag.
+  const plain = makeRig(3, "P", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "pinning-burst" });
+  const target2 = makeRig(4, "T2", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room2 = { rigs: [plain, target2] };
+  const ctx2 = { ...makeCtx(), applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); } };
+  resolveAttack(room2, plain, target2,
+    { weapon: "longRange", arc: "side", range: "near", aimed: true, aimedLoc: "legs",
+      dice: { toHit: [6], impacts: [6], ap: [1] } }, () => 0, ctx2);
+  assert.deepEqual(target2.kneecapped, {}); // untagged by an ordinary weapon
 });

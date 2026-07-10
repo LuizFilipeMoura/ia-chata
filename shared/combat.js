@@ -79,13 +79,15 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     if (penetratorShot) attacker.autocannonSlowNext = true;
   }
   let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
-  if (penetratorSlow) rof = Math.floor(rof / 2);
+  // Every ROF-halving downside floors at 1 die — a suppressed / slow-belt
+  // weapon fires at reduced volume, it is not silenced (a ROF-1 gun stays 1).
+  if (penetratorSlow) rof = Math.max(1, Math.floor(rof / 2));
   // Kneecapper progressive cripple (§13, Double MG) — a rig whose own weapon
-  // limb (arms, or the equivalent weapon-role part on Tank/Walker) has been
-  // ground down to <= half max SP fires every weapon, long-range or melee, at
-  // half ROF. `armsSuppressed` is derived purely from live SP in game-state.js
-  // (recompute), independent of which weapon caused the damage.
-  if (attacker.armsSuppressed) rof = Math.floor(rof / 2);
+  // limb (Rig arms, or the weapon-role part on Tank/Walker) has been raked by
+  // a Kneecapper down to <= half max SP fires every weapon, long-range or
+  // melee, at half ROF. `armsSuppressed` is derived in game-state.js
+  // (recompute), scoped to limbs a Kneecapper actually tagged.
+  if (attacker.armsSuppressed) rof = Math.max(1, Math.floor(rof / 2));
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
@@ -321,7 +323,22 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       impacts = rollImpacts(attacker, target, profile, location,
         { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0 },
         opts.dice, random);
-      for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
+      // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
+      //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple
+      //      ramp in game-state recompute applies ONLY to limbs this weapon
+      //      actually raked — keeping the "focus one limb; switching resets"
+      //      identity instead of every weapon crippling half-limbs. Set BEFORE
+      //      applyDamage so the recompute fired inside it sees the tag.
+      //  (b) thread `noSpill` so the §8 munition cook-off / cascade can't bleed
+      //      into hull/engine — "cripple, never kill" (the limb still degrades
+      //      and can be destroyed; nothing spills to hull/engine).
+      const kneecapHit = !!profile.upgradeEffect?.kneecapper && impacts.some((h) => h.sp > 0);
+      if (kneecapHit) {
+        target.kneecapped = target.kneecapped || {};
+        target.kneecapped[location] = true;
+      }
+      const dmgOpts = { random, dice: opts.dice, noSpill: kneecapHit || undefined };
+      for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, dmgOpts);
       if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
         ctx.sunderLocation?.(target, location);
       }

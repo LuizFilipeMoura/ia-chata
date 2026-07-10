@@ -446,6 +446,9 @@ function ensureRigShape(rig) {
   if (!rig.cracked || typeof rig.cracked !== "object") rig.cracked = {};
   if (!rig.crippled || typeof rig.crippled !== "object") rig.crippled = {};
   if (!rig.noRepair || typeof rig.noRepair !== "object") rig.noRepair = {};
+  // Kneecapper (§13, Double MG) — per-limb tag: which limbs a Kneecapper has
+  // raked (gates the cripple ramp in recompute so ordinary weapons don't).
+  if (!rig.kneecapped || typeof rig.kneecapped !== "object") rig.kneecapped = {};
   // Dismember origMax — default each part to its current max on a legacy rig
   // (best-effort yardstick; a rig commissioned pre-Dismember was never sundered).
   if (!rig.origMax || typeof rig.origMax !== "object") {
@@ -596,6 +599,9 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     lockExpiresRound: 0,
     // Breach Grip (§13, Claw) — location → the round the armour crack expires.
     cracked: {},
+    // Kneecapper (§13, Double MG) — which limbs a Kneecapper rake has tagged;
+    // gates the cripple ramp in recompute so ordinary weapons don't cripple.
+    kneecapped: {},
     // Dismember (§13, Circular Saw) — locations already crippled (apply once),
     // and locations whose repairs are permanently blocked by a dismembered
     // hull/engine.
@@ -660,8 +666,9 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     engagedWith: null,
     hardened: false,
     actionPenaltyNextActivation: 0,
-    // Group E per-location state (Breach Grip / Dismember), mirrored from makeRig.
+    // Group E per-location state (Breach Grip / Dismember / Kneecapper), mirrored from makeRig.
     cracked: {},
+    kneecapped: {},
     crippled: {},
     noRepair: {},
     destroyed: false,
@@ -852,30 +859,39 @@ function recompute(rig) {
     names.every((n) => rig[n]?.sp === 0);
   const floor = engineHeatFloor(rig);
   if (rig.engine && rig.engine.heat < floor) rig.engine.heat = floor;
-  // Kneecapper progressive cripple (§13, Double MG) — "track nothing extra":
-  // re-derived from live SP vs max on the limb locations every time recompute
-  // runs (every applyDamage, every repairRig, and every Recovery tick), with
-  // no gate on which weapon caused the damage — a crippled limb is crippled
-  // however it got that way. Generalised via role lookup so it applies to Rig
-  // (legs/arms), Tank (tracks/turret) and Walker (legs/mount) alike; a kind
-  // missing a role (none today) is a no-op guard, not a crash.
-  //   legs (mobility) <= half max -> speedHalvedNextRound = true. Recovery
-  //     resets this flag to false every round THEN calls recompute() again
-  //     (see runRecovery), so a leg still at <= half keeps re-flagging it —
-  //     that's the "re-apply while <= half" behaviour, without persisting a
-  //     separate "was crippled" bit.
-  //   arms (weapon) <= half max -> armsSuppressed = true, read by
-  //     combat.js rollToHit to halve this rig's own ROF on every shot.
-  // At 0 SP the existing destruction consequences (weaponsDestroyed /
-  // immobilised via catastrophicOnZero/catastrophicAdditional) already fire
-  // elsewhere; these flags just layer the "still fireable but crippled"
-  // in-between state on top and don't conflict with full destruction.
-  const [mobilityPart] = partsByRole(kind, "mobility");
-  const mob = mobilityPart && rig[mobilityPart];
-  if (mob && mob.max > 0 && mob.sp <= mob.max / 2) rig.speedHalvedNextRound = true;
-  const [weaponPart] = partsByRole(kind, "weapon");
-  const wpn = weaponPart && rig[weaponPart];
-  rig.armsSuppressed = !!(wpn && wpn.max > 0 && wpn.sp <= wpn.max / 2);
+  // Kneecapper progressive cripple (§13, Double MG) — SCOPED to limbs a
+  // Kneecapper attack has actually raked. `rig.kneecapped[part]` is set true
+  // ONLY by a kneecapper-sourced damaging hit (combat.js), so ordinary weapons
+  // never impose a half-limb debuff — Kneecapper keeps its "focus one limb"
+  // identity. The debuff itself is still derived from live SP here, re-derived
+  // on every applyDamage / repairRig / Recovery tick:
+  //   mobility limb (Rig legs / Tank tracks / Walker legs) <= half max ->
+  //     speedHalvedNextRound = true. Recovery resets that flag to false each
+  //     round THEN calls recompute() again, so a still-<=half tagged limb
+  //     keeps re-flagging it (the "re-apply while <= half" behaviour).
+  //   weapon limb (Rig arms / Tank turret / Walker mount) <= half max ->
+  //     armsSuppressed = true, read by combat.js rollToHit to halve this
+  //     rig's own ROF on every shot.
+  // A tagged limb repaired back ABOVE half clears its tag, so it's re-armable
+  // by a later rake — and, with the attacker only ever tagging the limb it is
+  // raking, that gives the design's "switching limbs resets the ramp". At 0 SP
+  // the existing §8 destruction consequences (weaponsDestroyed / immobilised)
+  // already fire; these flags only add the crippled-but-not-destroyed state.
+  rig.armsSuppressed = false;
+  if (rig.kneecapped) {
+    for (const part of names) {
+      if (!rig.kneecapped[part]) continue;
+      const c = rig[part];
+      if (!c || c.max <= 0) continue;
+      if (c.sp <= c.max / 2) {
+        const role = roleOf(kind, part);
+        if (role === "mobility") rig.speedHalvedNextRound = true;
+        else if (role === "weapon") rig.armsSuppressed = true;
+      } else {
+        rig.kneecapped[part] = false; // repaired above half — re-armable
+      }
+    }
+  }
 }
 
 // §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
@@ -900,11 +916,16 @@ function catastrophicOnZero(room, rig, loc, opts) {
       const name = rig.weapons?.unit;
       if (name && !rig.weaponsDestroyed.includes(name)) rig.weaponsDestroyed.push(name);
     }
-    // Munition cook-off: 1 to a structural + 1 to a power part.
-    const [structPart] = partsByRole(kind, "structural");
-    const [powerPart] = partsByRole(kind, "power");
-    if (structPart) applyDamage(room, rig, structPart, 1, opts);
-    if (powerPart) applyDamage(room, rig, powerPart, 1, opts);
+    // Munition cook-off: 1 to a structural + 1 to a power part — UNLESS the
+    // hit was a Kneecapper rake (opts.noSpill). Kneecapper is limbs-only and
+    // "cripples, never kills": the weapon limb still dies, but no damage bleeds
+    // into hull/engine, so a rake can never finish a target through the cascade.
+    if (!opts?.noSpill) {
+      const [structPart] = partsByRole(kind, "structural");
+      const [powerPart] = partsByRole(kind, "power");
+      if (structPart) applyDamage(room, rig, structPart, 1, opts);
+      if (powerPart) applyDamage(room, rig, powerPart, 1, opts);
+    }
   }
   // structural and mobility 0-SP effects are enforced where they apply
   // (activation budget, combat modAim, movement) — no state to set here.
@@ -917,6 +938,9 @@ function catastrophicAdditional(room, rig, loc, opts) {
   if (role === "structural" || role === "power") rig[loc].destroyed = true;
   else if (role === "mobility") rig.immobilised = true;
   else if (role === "weapon") {
+    // Kneecapper (§13) — a limbs-only rake never spills the extra structural
+    // damage into hull; the weapon limb is already dead, that's the finish.
+    if (opts?.noSpill) return;
     const [structPart] = partsByRole(kind, "structural");
     if (structPart) applyDamage(room, rig, structPart, 3, opts);
   }
@@ -1034,13 +1058,13 @@ function sunderLocation(target, loc) {
 }
 
 // Breach Grip (§13, Claw) — pry the struck location's armour open. The crack
-// expires at the end of the round after next (round + 2); while live it adds +2
-// to every impact from any attacker (applied in combat.js rollImpacts). Stale
-// entries are swept in runRecovery.
+// covers a 2-round window: the round it lands (N) and the next (N+1). It stores
+// expiry N+1; rollImpacts applies the +2 while `expiry >= currentRound`, so it
+// is live at N and N+1 and gone by N+2. Stale entries are swept in runRecovery.
 function crackLocation(room, target, loc) {
   if (!target || !target[loc]) return;
   target.cracked = target.cracked || {};
-  target.cracked[loc] = (room?.game?.round || 0) + 2;
+  target.cracked[loc] = (room?.game?.round || 0) + 1;
 }
 
 // Dismember (§13, Circular Saw) — the prototype escalation of Sunder. Chips the

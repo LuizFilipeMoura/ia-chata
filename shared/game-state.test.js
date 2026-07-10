@@ -1216,32 +1216,46 @@ test("weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1 (regressio
   assert.equal(rig.engine.sp, engineBefore - 1);
 });
 
-test("Kneecapper cripple ramp — legs at <= half max flags speedHalvedNextRound", () => {
+test("Kneecapper cripple ramp — a raked leg at <= half max flags speedHalvedNextRound", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
   assert.equal(rig.legs.max, 6); // medium default
-  // Not caused by a Kneecapper attack at all — the ramp reads live SP, no
-  // matter which weapon (or overheat, etc.) did the damage.
+  rig.kneecapped.legs = true; // as a Kneecapper hit would tag it (combat.js)
   __test.applyDamage(room, rig, "legs", 3, {}); // 6 -> 3, exactly half
   assert.equal(rig.legs.sp, 3);
   assert.equal(rig.speedHalvedNextRound, true);
 });
 
-test("Kneecapper cripple ramp — arms at <= half max sets armsSuppressed", () => {
+test("Kneecapper cripple ramp — a raked arm at <= half max sets armsSuppressed", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
   assert.equal(rig.arms.max, 6);
+  rig.kneecapped.arms = true;
   __test.applyDamage(room, rig, "arms", 3, { dice: { armsWeapon: 12 } }); // 6 -> 3, exactly half
   assert.equal(rig.arms.sp, 3);
   assert.equal(rig.armsSuppressed, true);
 });
 
-test("Kneecapper cripple ramp — above half, neither speedHalvedNextRound nor armsSuppressed applies", () => {
+test("Kneecapper cripple ramp is SCOPED — the SAME limb ground to <= half by a non-Kneecapper weapon does NOT debuff", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
+  // No kneecapped tag — ordinary damage grinds both limbs to exactly half.
+  __test.applyDamage(room, rig, "legs", 3, {}); // 6 -> 3
+  __test.applyDamage(room, rig, "arms", 3, { dice: { armsWeapon: 12 } }); // 6 -> 3
+  assert.equal(rig.legs.sp, 3);
+  assert.equal(rig.arms.sp, 3);
+  assert.equal(rig.speedHalvedNextRound, false); // untagged -> no cripple
+  assert.equal(rig.armsSuppressed, false);
+});
+
+test("Kneecapper cripple ramp — a raked limb above half applies nothing", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.kneecapped.legs = true; rig.kneecapped.arms = true;
   __test.applyDamage(room, rig, "legs", 2, {}); // 6 -> 4, still above half (3)
   __test.applyDamage(room, rig, "arms", 2, { dice: { armsWeapon: 12 } }); // 6 -> 4, still above half (3)
   assert.equal(rig.legs.sp, 4);
@@ -1250,14 +1264,42 @@ test("Kneecapper cripple ramp — above half, neither speedHalvedNextRound nor a
   assert.equal(rig.armsSuppressed, false);
 });
 
-test("Kneecapper cripple ramp — Recovery re-applies speedHalvedNextRound while legs stay <= half", () => {
+test("Kneecapper cripple ramp — repairing a raked limb above half clears its tag (switching-limbs reset)", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
+  rig.kneecapped.arms = true;
+  __test.applyDamage(room, rig, "arms", 3, { dice: { armsWeapon: 12 } }); // 6 -> 3, suppressed
+  assert.equal(rig.armsSuppressed, true);
+  __test.repairRig(rig, "arms", 2); // 3 -> 5, back above half -> tag cleared
+  assert.equal(rig.armsSuppressed, false);
+  assert.equal(rig.kneecapped.arms, false);
+});
+
+test("Kneecapper cripple ramp — Recovery re-applies speedHalvedNextRound while a raked leg stays <= half", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.kneecapped.legs = true;
   __test.applyDamage(room, rig, "legs", 3, {}); // 6 -> 3, exactly half
   assert.equal(rig.speedHalvedNextRound, true);
   __test.runRecovery(room); // resets the flag to false, then recompute() re-derives it
-  assert.equal(rig.speedHalvedNextRound, true); // still crippled -> re-flagged
+  assert.equal(rig.speedHalvedNextRound, true); // still raked & <= half -> re-flagged
+});
+
+test("Kneecapper — a rake to 0 arms destroys the weapon but never spills into hull/engine (cripple, never kill)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  const hullBefore = rig.hull.sp;
+  const engineBefore = rig.engine.sp;
+  // noSpill mirrors what combat.js threads for a kneecapper-sourced hit.
+  __test.applyDamage(room, rig, "arms", 6, { random: () => 0, dice: { armsWeapon: 3 }, noSpill: true }); // 6 -> 0
+  assert.equal(rig.arms.sp, 0);
+  assert.ok(rig.weaponsDestroyed.includes(rig.weapons.longRange)); // weapon still dies
+  assert.equal(rig.hull.sp, hullBefore);     // no cook-off spill
+  assert.equal(rig.engine.sp, engineBefore); // no cook-off spill
+  assert.equal(rig.destroyed, false);        // cripple, never kill
 });
 
 test("applyDamage: first hit to 0 SP hull does not destroy; additional damage destroys the rig", () => {
@@ -2826,17 +2868,17 @@ test("ensureRigShape back-fills origMax and the Group-E maps on a legacy rig", (
   assert.equal(rig.origMax.hull, 4);
 });
 
-test("crackLocation flags the struck location through this round + next; Recovery expires it", () => {
+test("crackLocation covers a 2-round window (N, N+1) and is gone by N+2", () => {
   const target = makeRig(2, "a1", "medium", "b", W);
   const room = { game: { round: 3, resolutions: [], nextResolutionId: 1 }, rigs: [target] };
   __test.crackLocation(room, target, "hull");
-  assert.equal(target.cracked.hull, 5); // round 3 + 2
-  // Recovery at round 4 keeps a still-live crack (5 >= 4)...
+  assert.equal(target.cracked.hull, 4); // round 3 (N) + 1 -> expiry N+1 = 4
+  // Recovery at round 4 (N+1) keeps a still-live crack (4 >= 4)...
   room.game.round = 4;
   __test.runRecovery(room);
-  assert.equal(target.cracked.hull, 5);
-  // ...but drops it once the round passes the expiry (5 < 6).
-  room.game.round = 6;
+  assert.equal(target.cracked.hull, 4);
+  // ...but it's gone by round 5 (N+2): the sweep drops it (4 < 5).
+  room.game.round = 5;
   __test.runRecovery(room);
   assert.equal(target.cracked.hull, undefined);
 });
@@ -2853,7 +2895,7 @@ test("a Breach Grip Claw hit cracks the struck location so any later attack gets
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
     dice: { toHit: [6, 6, 6], impacts: [6, 6, 6], location: 1 },
   } });
-  assert.equal(a1.cracked.hull, r.game.round + 2);
+  assert.equal(a1.cracked.hull, r.game.round + 1);
 });
 
 test("Dismember cripples legs (immobilise) once ground to <= half original, not before", () => {
