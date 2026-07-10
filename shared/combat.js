@@ -378,12 +378,16 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
     if (stacks >= 1) target.speedHalvedNextRound = true;
     if (stacks >= 2) target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);
     if (stacks === 3) {
-      target.immobilised = true;
+      // A scoped, self-clearing pin — NOT the permanent `immobilised` flag (that
+      // one is reserved for leg destruction and never resets mid-match).
+      // suppressImmobile is cleared in runRecovery, so the pin lasts one round
+      // and must be re-applied by continued suppression.
+      target.suppressImmobile = true;
       target.noPrepNextActivation = true;
     }
     ctx.bumpHeat(attacker, 1);
     effects.push(`Suppression Lock ${stacks} — ${target.name} ${
-      stacks === 3 ? "immobilised, Prepare blocked" : stacks === 2 ? "action penalty" : "speed halved"
+      stacks === 3 ? "pinned, Prepare blocked" : stacks === 2 ? "action penalty" : "speed halved"
     }`);
   }
   // Ion Storm (§13, Arc Gun) — an EMP surge. A landed Arc Gun hit disrupts the

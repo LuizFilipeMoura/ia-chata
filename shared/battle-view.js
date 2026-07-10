@@ -96,6 +96,7 @@ export function rigModifiers(rig) {
   if (mobPart && rig[mobPart].sp === 0 && !rig.immobilised)
     mods.push({ key: `${mobPart}0`, tag: `${cap(mobPart)} 0 · −3\" move`, tone: "warn" });
   if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit" });
+  else if (rig.suppressImmobile) mods.push({ key: "suppress-immobile", tag: "Pinned", tone: "crit" });
   if (rig.engagedWith != null) mods.push({ key: "engaged", tag: "Engaged", tone: "warn" });
   if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit" });
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });

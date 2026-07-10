@@ -425,6 +425,7 @@ function ensureRigShape(rig) {
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
   if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
+  if (typeof rig.suppressImmobile !== "boolean") rig.suppressImmobile = false;
   // Ion Storm (§13, Arc Gun) — EMP active-lockout on the struck target, and the
   // attacker's own Arc Gun overload flag.
   if (typeof rig.noActivesNextActivation !== "boolean") rig.noActivesNextActivation = false;
@@ -554,8 +555,12 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // and how many consecutive-fire stacks it has piled on.
     suppressTarget: null,
     suppressStacks: 0,
-    // Suppression Lock's 3rd-stack payload: blocks this rig's next Prepare.
+    // Suppression Lock's 3rd-stack payload: blocks this rig's next Prepare and
+    // pins it in place. Both are scoped, self-clearing (NOT the permanent
+    // `immobilised` flag): noPrepNextActivation clears at activation end,
+    // suppressImmobile clears in Recovery.
     noPrepNextActivation: false,
+    suppressImmobile: false,
     // Ion Storm (§13, Arc Gun) — an EMP hit blocks the target's equipment
     // actives for its next activation; arcLockedNext overloads the attacker's
     // own Arc Gun until its next fire attempt.
@@ -1003,6 +1008,7 @@ function runRecovery(room) {
     rig.speedHalvedNextRound = false;
     rig.preparation = null;
     rig.ripostedThisRound = false; // Anvil Boss — the riposte re-arms each round
+    rig.suppressImmobile = false;  // Suppression Lock pin lasts one round; re-applied by continued fire
     tickBreach(rig);
     recompute(rig);
   }
@@ -1171,6 +1177,9 @@ function performAction(room, rig, act, a, random) {
     // §engagement — Jump Jets is movement; an engaged rig is pinned and must
     // Disengage before it can jump out. Other actives (harden/purge/…) are fine.
     if (act === "jumpjets" && rig.engagedWith != null) return false;
+    // Suppression Lock (§13, Mini Gun) — a stack-3 pin also grounds Jump Jets
+    // (movement) until it clears in Recovery.
+    if (act === "jumpjets" && rig.suppressImmobile) return false;
     // Ion Storm (§13, Arc Gun) — an EMP'd rig can't fire any equipment active
     // for its whole next activation. Cleared in endActivation (mirrors
     // noPrepNextActivation) so it's scoped to exactly that one activation.
@@ -1248,6 +1257,9 @@ function performAction(room, rig, act, a, random) {
     // §engagement — a rig locked in melee is pinned; it must Disengage before it
     // can reposition. (Repositioning while engaged is meaningless without a grid.)
     if (rig.engagedWith != null) return false;
+    // Suppression Lock (§13, Mini Gun) — a stack-3 pin holds the target in place
+    // for the round: no Move/Sprint until it clears in Recovery.
+    if (rig.suppressImmobile) return false;
     // Optional move-into declaration: the player states they moved into base
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);

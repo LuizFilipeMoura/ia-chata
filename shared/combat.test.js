@@ -576,7 +576,8 @@ test("Suppression Lock ramps consecutive same-target hits: speed -> action penal
   attacker.loaded.longRange = true;
   resolveAttack(room, attacker, target, SUPPRESS_SHOT, () => 0, ctx);
   assert.equal(attacker.suppressStacks, 3);
-  assert.equal(target.immobilised, true);
+  assert.equal(target.suppressImmobile, true);   // scoped, self-clearing pin
+  assert.equal(target.immobilised, false);        // never the permanent leg-destruction flag
   assert.equal(target.noPrepNextActivation, true);
 
   attacker.loaded.longRange = true;

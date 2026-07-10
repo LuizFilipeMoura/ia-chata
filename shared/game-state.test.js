@@ -738,6 +738,24 @@ test("noPrepNextActivation clears when the pinned rig's activation ends", () => 
   assert.equal(b1.noPrepNextActivation, false);             // scoped to just the blocked activation
 });
 
+test("Suppression Lock's stack-3 pin (suppressImmobile) blocks Move/Sprint that round, then clears in Recovery", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.suppressImmobile = true; // simulates a Suppression Lock 3-stack pin landed on this rig
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const usedBefore = r.game.turn.actionsUsed;
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
+  assert.equal(r.game.turn.actionsUsed, usedBefore);        // both movement actions refused
+  assert.equal(b1.engine.heat, heatBefore);                 // no heat spent on the refusals
+
+  __test.runRecovery(r);
+  assert.equal(b1.suppressImmobile, false);                 // the pin lasts one round, then recovers
+  assert.equal(b1.immobilised, false);                      // and never touched the permanent flag
+});
+
 test("Ion Storm's active-lockout blocks an equipment active during the pinned activation", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
