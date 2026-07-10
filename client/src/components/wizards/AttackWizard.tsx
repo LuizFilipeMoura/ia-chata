@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
+import { weaponAccAt } from "/shared/combat.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useBattleActions } from "../../state/BattleActionsContext";
@@ -15,7 +16,6 @@ const FIELD_ICONS: Record<string, string> = {
   target: "🎯", weapon: "⚔️", arc: "🧭", range: "📏", cover: "🧱", location: "◎",
 };
 const ARC_ICONS: Record<string, string> = { front: "⬆️", side: "↔️", rear: "⬇️" };
-const RANGE_ICONS: Record<string, string> = { near: "📍", far: "🔭", out: "🚫" };
 const COVER_ICONS: Record<string, string> = { "0": "○", "1": "◐", "2": "●" };
 const LOC_ICONS: Record<string, string> = {
   hull: "🛡️", arms: "🦾", legs: "🦿", engine: "🔩",
@@ -202,7 +202,7 @@ export function AttackWizard({
     if (!p) return "";
     return p.melee
       ? `Reach ${p.rng[0]}" · ROF ${p.rof}`
-      : `RNG ${p.rng[0]}–${p.rng[1]}" · ROF ${p.rof}`;
+      : `Sweet ${p.sweet}" · usable ${p.minRange}"–${p.maxRange}" · ROF ${p.rof}`;
   };
 
   const actionsLeft = () => {
@@ -228,19 +228,33 @@ export function AttackWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.target]);
 
-  // Range band is derived from the measured distance (inches) against the
-  // weapon's own thresholds: ≤near → near, ≤far → far, else out of range.
-  const rangeProfile = profileOf(state.weapon);
-  const rngNear = rangeProfile?.rng?.[0] ?? 6;
-  const rngFar = rangeProfile?.rng?.[1] ?? 12;
-  const sliderMax = Math.max(Math.ceil(rngFar + 6), Math.ceil(rngFar * 1.25));
-  const bandFor = (inches: number) => (inches <= rngNear ? "near" : inches <= rngFar ? "far" : "out");
+  // Accuracy is a continuous function of the measured distance: it peaks at the
+  // weapon's `sweet` and falls off by `dropoff` per inch. minRange/maxRange gate
+  // "out". Melee has a fixed reach and no falloff.
+  const rangeProfile = profileOf(state.weapon) as
+    | { sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number; rng?: number[] }
+    | null;
+  const sweet = rangeProfile?.sweet ?? 8;
+  const peak = rangeProfile?.peak ?? 0;
+  const minRange = rangeProfile?.minRange ?? 0;
+  const maxRange = rangeProfile?.maxRange ?? 12;
+  const sliderMax = maxRange + 4; // headroom so the player can drag into "out"
+  const accHere = rangeProfile ? weaponAccAt(rangeProfile as never, state.inches) : 0;
+  const penalty = peak - accHere;
+  const inRange = state.inches >= minRange && state.inches <= maxRange;
+  const accTier = !inRange ? "out" : penalty <= 0 ? "sweet" : penalty <= 2 ? "good" : "poor";
+
+  // Seed the slider to the weapon's sweet spot whenever the selected weapon
+  // changes (melee seeds to its reach). Keeps "open at the best range" intent.
   useEffect(() => {
-    if (isMelee) return;
-    const band = bandFor(state.inches);
-    if (band !== state.range) patch({ range: band });
+    if (isMelee) {
+      const reach = rangeProfile?.rng?.[0] ?? 2;
+      patch({ inches: reach });
+    } else {
+      patch({ inches: sweet });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.inches, rngNear, rngFar, isMelee]);
+  }, [state.weapon, isMelee]);
 
   const submit = async () => {
     // Return-Fire counter: send a `react` with an `attack` payload rather than a
@@ -254,7 +268,7 @@ export function AttackWizard({
 
     if (react) {
       const attack: Record<string, unknown> = {
-        weapon: slotSel, arc: state.arc, range: state.range, cover: state.cover,
+        weapon: slotSel, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
       };
       if (game?.autoResolve === false) {
         const specs: { key: string; label: string; sides: number }[] = [];
@@ -274,7 +288,7 @@ export function AttackWizard({
 
     const attrs: Record<string, unknown> = {
       name: rig.name, action: mode, target: state.target,
-      weapon: slotSel, arc: state.arc, range: state.range, cover: state.cover,
+      weapon: slotSel, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
     };
     if (mode === "aimed") attrs.loc = state.loc;
     if (game?.autoResolve === false) {
@@ -312,7 +326,7 @@ export function AttackWizard({
       || (slot === "unit" && rig.loaded?.unit === false);
     const cost = spent ? 2 : 1;
     const left = actionsLeft();
-    const outOfRange = state.range === "out";
+    const outOfRange = !isMelee && !inRange;
     const rof = profile?.rof || ROF_BY_NAME[weapons[slot] || ""] || 1;
 
     dicePreview =
@@ -329,15 +343,21 @@ export function AttackWizard({
       );
       rangeState = outOfRange ? "bad" : "ok";
     } else if (profile) {
-      const [near, far] = profile.rng;
+      const accLabel =
+        penalty <= 0 ? `Sweet spot +${peak}` : `${accHere >= 0 ? "+" : ""}${accHere} · falloff`;
+      const gate =
+        state.inches < minRange
+          ? <span className="aw-range-warn">Too close — out of range</span>
+          : state.inches > maxRange
+            ? <span className="aw-range-warn">Target is out of range — this shot will fail</span>
+            : spent
+              ? <span className="aw-range-note">Weapon spent — a rushed reload folds into this shot (2 actions)</span>
+              : null;
       rangeHtml = (
         <>
-          <span className="aw-range-ic">📏</span>Effective range — Near <b>≤{near}"</b> · Far <b>≤{far}"</b> · beyond {far}" is out
-          {outOfRange ? (
-            <span className="aw-range-warn">Target is out of range — this shot will fail</span>
-          ) : spent ? (
-            <span className="aw-range-note">Weapon spent — a rushed reload folds into this shot (2 actions)</span>
-          ) : null}
+          <span className="aw-range-ic">📏</span>
+          Sweet spot <b>{sweet}"</b> · usable <b>{minRange}"–{maxRange}"</b> · at {state.inches}": <b>{accLabel}</b>
+          {gate}
         </>
       );
       rangeState = outOfRange ? "bad" : spent ? "warn" : "ok";
@@ -437,7 +457,7 @@ export function AttackWizard({
                   Range
                 </label>
                 <p className="aw-field-desc">Drag to the measured distance to the target.</p>
-                <div className="aw-range-slider" data-band={state.range}>
+                <div className="aw-range-slider" data-band={accTier}>
                   <input
                     type="range"
                     min={0}
@@ -449,12 +469,14 @@ export function AttackWizard({
                   />
                   <div className="aw-range-readout">
                     <b className="aw-range-inches">{state.inches}"</b>
-                    <span className="aw-range-band" data-band={state.range}>
-                      {RANGE_ICONS[state.range]} {state.range}
+                    <span className="aw-range-band" data-band={accTier}>
+                      {accTier === "sweet" ? "🎯 sweet spot"
+                        : accTier === "out" ? "🚫 out of range"
+                        : `${accHere >= 0 ? "+" : ""}${accHere} falloff`}
                     </span>
                   </div>
                   <div className="aw-range-ticks">
-                    Near ≤{rngNear}" · Far ≤{rngFar}"
+                    Sweet {sweet}" · usable {minRange}"–{maxRange}"
                   </div>
                 </div>
               </div>
