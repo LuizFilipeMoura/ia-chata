@@ -192,6 +192,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     },
     effects: [],
   });
+  // §engagement — a legal melee blow (reached here = not out-of-range, weapon not
+  // destroyed) locks attacker and target together. No-op if either is already
+  // engaged (one-to-one) or same side.
+  const isMelee = slot === "melee" || (slot === "unit" && profile.melee);
+  if (isMelee) ctx.engage?.(room, attacker, target);
+
   return { ok: true, hits: th.hits, location, impacts, heat };
 }
 

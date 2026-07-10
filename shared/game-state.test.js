@@ -2143,3 +2143,39 @@ test("engagement survives Recovery (unlike preparation)", () => {
   assert.equal(a.engagedWith, 2);      // engagement persists
   assert.equal(b.engagedWith, 1);
 });
+
+test("a legal melee attack engages attacker and target", () => {
+  const r = startedRoom(); // b's turn
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
+  } });
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  assert.equal(b1.engagedWith, a1.id);
+  assert.equal(a1.engagedWith, b1.id);
+});
+
+test("an out-of-reach melee attack does not engage", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "out",
+  } });
+  assert.equal(findRig(r, "b1").engagedWith, null);
+  assert.equal(findRig(r, "a1").engagedWith, null);
+});
+
+test("a ranged attack does not engage", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", distance: 7,
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
+  } });
+  assert.equal(findRig(r, "b1").engagedWith, null);
+});

@@ -925,6 +925,7 @@ function combatCtx() {
     sunderLocation,
     breachHull,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
+    engage: (room, attacker, target) => maybeEngage(room, attacker, target),
   };
 }
 
