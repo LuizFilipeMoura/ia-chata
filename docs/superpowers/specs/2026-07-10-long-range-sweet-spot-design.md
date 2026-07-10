@@ -1,173 +1,205 @@
-# Long-Range Sweet Spot & Point-Blank Falloff
+# Long-Range Sweet Spot & Accuracy Falloff
 
 **Date:** 2026-07-10
 **Status:** Design approved, pending spec review
 
 ## Goal
 
-Make melee relatively more efficient by **nerfing long-range weapons at close
-distance** — no direct melee buff. Long-range weapons gain a per-weapon *sweet
-spot* (peak accuracy band) with accuracy falloff on either side, and a harsh
-**point-blank** penalty so a ranged unit caught up close mostly misses.
+Make melee relatively more efficient by giving each **ranged** weapon a
+per-weapon *sweet-spot distance* where accuracy peaks, with accuracy falling off
+the farther the target sits from that distance. Long-range weapons become bad up
+close; short-range weapons become bad at range. No direct melee buff — melee
+wins by comparison.
 
-Melee weapons are unchanged in effect.
+Melee weapons are unchanged.
 
-## Current model (baseline)
+## Model
 
-- Weapon profile: `{ rof, str, acc: [near, far], rng: [near, far] }`.
-- Distance → band (`AttackWizard.bandFor`): `≤rng[0]` → `near`, `≤rng[1]` →
-  `far`, else `out`.
-- `computeModifiedAim` (combat.js) reads `acc[opts.range === "far" ? 1 : 0]`.
-- `opts.range === "out"` → shot fails; there is **no** close-range penalty.
-- Melee weapons: `rng: [2, 2]`, no reload, `melee: true` structural flag.
+Accuracy is a continuous function of the **measured distance** (inches), not a
+discrete band:
 
-## New model
-
-### Four range bands
-
-Distance → band from a **three-entry** `rng: [pb, near, far]` (ascending):
-
-| Band | Distance | Fires? |
-|------|----------|--------|
-| `point-blank` | ≤ `rng[0]` | yes — harsh acc penalty |
-| `near` | ≤ `rng[1]` | yes |
-| `far` | ≤ `rng[2]` | yes |
-| `out` | > `rng[2]` | no (as today) |
-
-`point-blank` fires (unlike `out`); it is just brutally inaccurate for
-distance weapons.
-
-### Three-entry accuracy
-
-`acc` grows `[near, far]` → **`[pointBlank, near, far]`**, indexed by band:
-`point-blank`→0, `near`→1, `far`→2. A weapon's *sweet spot* is the band holding
-its max `acc`; the other entries are the falloff.
-
-### combat.js change
-
-`computeModifiedAim` maps band → index:
-
-```js
-const RANGE_INDEX = { "point-blank": 0, near: 1, far: 2 };
-const weaponAcc = profile.acc[RANGE_INDEX[opts.range] ?? 1] || 0;
+```
+penalty   = round(dropoff × |distance − sweet|)
+weaponAcc = peak − penalty          // feeds modified Aim exactly as today
+out of range  ⇔  distance < minRange  OR  distance > maxRange
 ```
 
-`opts.range === "out"` still fails early (unchanged). No other combat math
-changes — STR, ROF, arc, impacts all stay.
+Per-weapon parameters (ranged only):
 
-### Melee weapons
+| Field | Meaning |
+|-------|---------|
+| `sweet` | peak-accuracy distance, inches |
+| `peak` | accuracy modifier at the sweet spot |
+| `dropoff` | accuracy lost per inch of distance from `sweet` (small = wide/forgiving, large = narrow) |
+| `minRange` | below this → out (indirect dead zone; default 0) |
+| `maxRange` | above this → out |
 
-Melee only ever fires at reach, so falloff must not touch it. Pad every melee
-`acc` to three **equal** entries (= old `acc[0]`) and `rng` to `[2, 2, 2]`
-(reach = `rng[0]`). Melee attacks continue to pass `range: "near"` (index 1) —
-with equal entries the index is irrelevant, so behavior is identical. Example:
-Flamethrower `[1, 0]` → `[1, 1, 1]` (the old unused far entry is dropped; no
-live change, since melee never read index 1).
+Falloff is symmetric (one `dropoff` both directions). Examples this produces:
 
-Range upgrades that map over `rng` (Extended Barrel, Couched Reach) map over all
-three entries. Couched Reach `+1` turns melee `[2,2,2]` → `[3,3,3]`. Extended
-Barrel `+4` shifts `pb`/`near`/`far` together — acceptable and consistent.
+- **Shotgun-like** — `sweet` at point-blank + high `dropoff`: deadly close, junk
+  after a few inches.
+- **Mortar-like** — `sweet` mid + low `dropoff` + `minRange`: dead up close,
+  good across the whole middle, still usable far.
+- **Sniper-like** — `sweet` far + low `dropoff`: bad up close, best at long range.
+
+### Replaces the old band model
+
+This removes the discrete `acc: [near, far]` / `rng: [near, far]` band pair for
+**ranged** weapons — replaced by `{ sweet, peak, dropoff, minRange, maxRange }`.
+The `"near"/"far"/"out"` string band is no longer how accuracy is chosen; combat
+now needs the measured **distance** passed through (today only a band label is).
+
+Melee weapons keep their existing shape (`acc`, `rng: [2,2]`, `melee: true`) and
+are read exactly as today.
+
+## combat.js
+
+`computeModifiedAim` gains a distance-based branch:
+
+```js
+export function weaponAccAt(profile, distance) {
+  if (profile.melee) return profile.acc?.[0] || 0;      // melee: scalar, unchanged
+  const d = Number(distance);
+  const penalty = Math.round(profile.dropoff * Math.abs(d - profile.sweet));
+  return profile.peak - penalty;
+}
+```
+
+`computeModifiedAim(attacker, profile, opts)` uses
+`weaponAccAt(profile, opts.distance)` in place of the old
+`profile.acc[opts.range === "far" ? 1 : 0]`. Everything else in the Aim math
+(base Aim, cover, aimed, hull penalty) is unchanged.
+
+Out-of-range check moves to distance:
+
+```js
+// in performAttack, replacing `if (opts.range === "out")`
+if (!profile.melee) {
+  const d = Number(opts.distance);
+  if (!Number.isFinite(d) || d < profile.minRange || d > profile.maxRange)
+    return { ok: false, reason: "range" };
+}
+```
+
+`opts.distance` (inches) is threaded from the UI through the same path that
+carries `arc`/`cover`/`range` today (`game-state.js` attack plumbing at the two
+`arc: a.attack.arc, ...` sites). The legacy `opts.range` string may stay for
+melee/back-compat but no longer drives ranged accuracy.
+
+No changes to STR, ROF, arc bonus, impacts, heat, or reload.
 
 ## Weapon tuning tables (starting values)
 
-Bold `acc` entry = sweet spot. These are starting points; tune freely later.
+Tune freely later. `minRange` 0 unless noted.
 
 ### Long-range (`WEAPONS.longRange`)
 
-| Weapon | rng `[pb,near,far]` | acc `[pb,near,far]` | identity |
-|--------|--------------------|---------------------|----------|
-| Mini Gun | `[4, 9, 18]` | `[-2, **2**, -1]` | short-range hoser |
-| Double MG | `[4, 9, 18]` | `[-2, **1**, 0]` | near/mid |
-| Autocannon | `[6, 12, 24]` | `[-3, **1**, -1]` | mid |
-| Arc Gun | `[7, 15, 30]` | `[-3, 0, **1**]` | long |
-| Mortar | `[8, 15, 30]` | `[-4, -1, **1**]` | indirect, dead up close |
-| Sniper Cannon | `[8, 12, 24]` | `[-4, -1, **1**]` | pure far (fixes odd current profile) |
-| Siege Maul | `[4, 8, 16]` | `[-2, **1**, -1]` | short heavy |
-| Missile Barrage | `[8, 15, 30]` | `[-4, -1, **1**]` | long |
+| Weapon | sweet | peak | dropoff | min | max | feel |
+|--------|------:|----:|-------:|---:|---:|------|
+| Mini Gun | 7 | 2 | 0.35 | 0 | 18 | deadly close, fades |
+| Double MG | 9 | 1 | 0.25 | 0 | 20 | near/mid |
+| Siege Maul | 8 | 1 | 0.30 | 0 | 16 | short heavy |
+| Autocannon | 12 | 1 | 0.22 | 0 | 26 | mid workhorse |
+| Arc Gun | 20 | 1 | 0.18 | 0 | 32 | long |
+| Sniper Cannon | 22 | 2 | 0.15 | 0 | 28 | low dropoff, sweet far |
+| Mortar | 18 | 1 | 0.15 | 6 | 34 | dead close, good mid–far |
+| Missile Barrage | 20 | 1 | 0.15 | 6 | 34 | dead close, long |
 
 ### Unit weapons (`UNIT_WEAPONS`, flat-pick)
 
-| Weapon | rng | acc | identity |
-|--------|-----|-----|----------|
-| Tank Cannon | `[6, 12, 24]` | `[-3, 0, **1**]` | long main gun |
-| Autocannon Mount | `[6, 12, 24]` | `[-3, **1**, -1]` | mid |
-| Coaxial MG | `[4, 9, 18]` | `[-2, **2**, -1]` | short hoser |
-| Rocket Pod | `[7, 15, 30]` | `[-3, 0, **1**]` | long |
-| Dozer Blade (melee) | `[2, 2, 2]` | `[0, 0, 0]` | unchanged |
-| Ram Spike (melee) | `[2, 2, 2]` | `[1, 1, 1]` | unchanged |
+| Weapon | sweet | peak | dropoff | min | max |
+|--------|------:|----:|-------:|---:|---:|
+| Tank Cannon | 18 | 2 | 0.16 | 0 | 28 |
+| Autocannon Mount | 12 | 1 | 0.22 | 0 | 26 |
+| Coaxial MG | 8 | 2 | 0.35 | 0 | 18 |
+| Rocket Pod | 20 | 1 | 0.16 | 4 | 34 |
+| Dozer Blade (melee) | — | — | — | — | — | reach 2, unchanged |
+| Ram Spike (melee) | — | — | — | — | — | reach 2, unchanged |
 
-### Melee (`WEAPONS.melee`) — pad only, no effect change
+Sanity: Sniper at 2" → `2 − round(0.15·20) = −1`; at 22" → `+2`. Mortar under 6"
+→ out; at 18" → `+1`; at 34" → `−1`. Mini Gun at 2" → `2 − round(0.35·5) = 0`;
+at 18" → `−2`.
 
-`rng` → `[2, 2, 2]`; `acc` → three copies of old `acc[0]`:
-Sword `[0,0,0]`, Circular Saw `[0,0,0]`, Chainsaw `[0,0,0]`, Claw `[1,1,1]`,
-Lance `[1,1,1]`, Wrecking Ball `[0,0,0]`, Bulwark Shield `[0,0,0]`,
-Flamethrower `[1,1,1]`.
+### Melee (`WEAPONS.melee`) — unchanged
+
+`Sword … Flamethrower` keep `acc`, `rng: [2,2]`, `melee: true` exactly as they
+are today. No falloff, no new fields.
+
+## Weapon upgrades (`WEAPON_UPGRADES`) reconciliation
+
+Existing effects that touched the old band fields get remapped:
+
+- **Extended Barrel** (was "+4 to both range bands") → `maxRange += 4`,
+  `sweet += 2` (pushes reach and ideal window outward). Tag reworded.
+- **Match Barrel** (was "no far-range penalty") → `dropoff × 0.5` (tighter,
+  more forgiving falloff). Tag reworded.
+- **Couched Reach** (melee `+1` reach) → melee `rng += 1`, unchanged.
+- STR/ROF/heat upgrades (Depleted Core, Extended Belt, Haymaker, etc.) — no
+  change; they never touched acc/range.
+
+`normalizeWeaponProfile` in game-state.js copies the new fields
+(`sweet/peak/dropoff/minRange/maxRange`) and applies these effects.
 
 ## AttackWizard UI
 
-### 4-band derivation
+### Distance drives everything
 
-```js
-const [rngPb, rngNear, rngFar] = profile.rng;   // ranged
-const bandFor = (inches) =>
-  inches <= rngPb   ? "point-blank" :
-  inches <= rngNear ? "near" :
-  inches <= rngFar  ? "far" : "out";
-```
+The slider (`state.inches`, 0…`maxRange`+headroom) is the single source of truth.
+Remove `bandFor`/`acc[]` band derivation. On each inch value compute
+`weaponAccAt(profile, inches)` and whether it's in range (`minRange…maxRange`).
 
-Ranged effective-range readout shows all three: `PB ≤{pb}" · Near ≤{near}" ·
-Far ≤{far}" · beyond {far}" out`. Melee readout unchanged (`Reach rng[0]"`).
-`weaponDesc` for ranged shows `RNG {near}–{far}"` (i.e. `rng[1]`–`rng[2]`).
+### Slider opens at the sweet spot
 
-### Slider starts at sweet spot
-
-On open, initialize `inches` (and `range`) to the weapon's sweet-spot band:
-
-- sweet index = `argmax(acc)` (ties → prefer the farther band).
-- representative distance = midpoint of that band, e.g. sweet=`far` →
-  `round((rngNear + rngFar) / 2)`; sweet=`near` → `round((rngPb + rngNear)/2)`;
-  sweet=`point-blank` → `round(rngPb / 2)`.
-
-Recompute when the selected weapon changes (switching longRange ⇄ melee resets
-to that weapon's sweet spot; melee → its reach).
+Initialize `inches` to the weapon's `sweet` on open, and re-seed to `sweet`
+whenever the selected weapon changes (longRange ⇄ melee → melee seeds to reach).
 
 ### Dropoff / efficiency readout
 
-Beside the band label, show accuracy relative to the sweet spot:
+Beside the slider show the live accuracy at the selected distance:
 
-- At the sweet-spot band: badge **"sweet spot"**.
-- Otherwise: show the delta, e.g. **"−3 acc"** (current `acc[band]` minus
-  sweet `acc`), with band name — e.g. `point-blank · −6 acc`.
-- `out`: existing "out of range — this shot will fail" warning.
+- penalty 0 → badge **"Sweet spot +{peak}"**.
+- in range, penalty > 0 → **"{acc:+d} · falloff"** (e.g. `−3 · falloff`).
+- `< minRange` → **"Too close — out of range"**; `> maxRange` → existing
+  out-of-range warning. Go button disabled in both.
 
-Colour cue via `data-band`: reuse slider `data-band` styling, add a
-`point-blank` variant (harsh/ember tone) in `battle.css`.
+A small efficiency bar (acc relative to `peak`) reinforces the falloff visually.
+Colour via slider `data-band`, now derived from the acc tier
+(`sweet` / `good` / `poor` / `out`) rather than distance bands; add the new
+variants in `battle.css`.
+
+Ranged weapon summary (`weaponDesc`) shows `Sweet {sweet}" · {min}–{max}"`
+instead of `RNG near–far`. Melee summary (`Reach 2"`) unchanged.
 
 ## Touched files
 
-- `shared/game-state.js` — WEAPONS + UNIT_WEAPONS `rng`/`acc` data (3 entries).
-- `shared/combat.js` — `computeModifiedAim` band→index map; `RANGE_INDEX`.
-- `client/src/components/wizards/AttackWizard.tsx` — 4-band `bandFor`, sweet-spot
-  init, dropoff readout, ranged 3-band display.
-- `client/src/styles/battle.css` — `data-band="point-blank"` styling.
-- `shared/glossary.js` — RNG def text (near/far → pb/near/far, mention falloff).
+- `shared/game-state.js` — WEAPONS + UNIT_WEAPONS ranged entries reshaped to
+  `{ rof, str, sweet, peak, dropoff, minRange, maxRange }`; melee entries
+  unchanged; upgrade-effect remap in `normalizeWeaponProfile`; upgrade tags.
+- `shared/combat.js` — `weaponAccAt`, `computeModifiedAim` distance branch,
+  distance-based out-of-range check; thread `opts.distance`.
+- `client/src/components/wizards/AttackWizard.tsx` — distance-driven acc,
+  sweet-spot init, efficiency readout, ranged summary text.
+- `client/src/styles/battle.css` — acc-tier `data-band` variants.
+- `client/shared.d.ts` — ranged weapon type gains the new fields.
+- `shared/glossary.js` — RNG def rewritten (sweet spot + falloff).
 - Tests: `shared/combat.test.js`, `shared/game-state.test.js`,
   `client/src/components/wizards/AttackWizard.test.tsx`.
 
 ## Testing
 
-- **combat.test.js**: `point-blank` band selects `acc[0]` and applies its
-  (negative) modifier; `far` selects `acc[2]`; `out` still fails; melee acc
-  unchanged across bands.
-- **game-state.test.js**: every WEAPONS/UNIT_WEAPONS entry has `rng.length===3`
-  and `acc.length===3`, ascending `rng`; range upgrades map all three entries;
-  melee weapons keep uniform acc.
-- **AttackWizard.test.tsx**: slider initializes at sweet-spot distance per
-  weapon; dragging to point-blank shows the negative delta badge; band label
-  matches `bandFor` thresholds.
+- **combat.test.js**: `weaponAccAt` returns `peak` at `sweet`, drops by
+  `round(dropoff·Δ)` away from it, symmetric; distance `<minRange` or
+  `>maxRange` fails the attack; melee accuracy is distance-independent.
+- **game-state.test.js**: every ranged WEAPONS/UNIT_WEAPONS entry has
+  `sweet/peak/dropoff/minRange/maxRange` with `minRange ≤ sweet ≤ maxRange`;
+  melee entries keep the old shape; Extended Barrel raises `maxRange`, Match
+  Barrel lowers `dropoff`.
+- **AttackWizard.test.tsx**: slider initializes at `sweet`; readout shows
+  "Sweet spot" at `sweet` and a negative delta off it; go button disables below
+  `minRange` and above `maxRange`.
 
 ## Out of scope
 
 - Any melee stat buff (STR/ROF/acc/reach/action cost).
 - Changing STR, impact, arc, heat, or reload math.
-- New range upgrades.
+- Asymmetric falloff, new range upgrades, per-weapon custom curves.
