@@ -397,3 +397,87 @@ test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret,
   assert.ok(tankParts.includes(clusterLoc), `cluster fell on ${clusterLoc} — not a Tank part`);
   assert.ok(clusterLoc !== "arms" && clusterLoc !== "legs", `cluster leaked a Rig-only part name: ${clusterLoc}`);
 });
+
+test("Pinning Burst sets a 1-action penalty at 4+ hits, not below", () => {
+  const attacker = makeRig(1, "P", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "pinning-burst" });
+  const target4 = makeRig(2, "T4", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room4 = { rigs: [attacker, target4] };
+  const ctx = makeCtx();
+  // 4 crits (die=6, always hits) out of 8 dice -> hits === 4.
+  resolveAttack(room4, attacker, target4, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 6, 6, 6, 1, 1, 1, 1], location: 1 },
+  }, () => 0, ctx);
+  assert.equal(target4.actionPenaltyNextActivation, 1);
+
+  const target3 = makeRig(3, "T3", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room3 = { rigs: [attacker, target3] };
+  // Only 3 crits -> hits === 3, below the 4-hit threshold.
+  resolveAttack(room3, attacker, target3, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 6, 6, 1, 1, 1, 1, 1], location: 1 },
+  }, () => 0, ctx);
+  assert.equal(target3.actionPenaltyNextActivation || 0, 0);
+});
+
+test("Redline Governor adds STR from attacker heat over cap, capped at +3", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "redline-governor" });
+  const p = effectiveWeaponProfile("melee", "Chainsaw", rig);
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // at cap -> no bonus
+  assert.equal(computeStr(rig, p, {}), p.str);
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 2; // +2 over cap
+  assert.equal(computeStr(rig, p, {}), p.str + 2);
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 10; // way over cap, still capped at +3
+  assert.equal(computeStr(rig, p, {}), p.str + 3);
+});
+
+test("Redline Governor adds to-hit dice from attacker heat over cap, capped at +3", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "redline-governor" });
+  const p = effectiveWeaponProfile("melee", "Chainsaw", rig);
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // at cap -> no bonus
+  const atCap = rollToHit(rig, p, { range: "near", cover: 0 }, [1, 1, 1], () => 0);
+  assert.equal(atCap.rof, 3); // base Chainsaw ROF
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 2; // +2 over cap
+  const over = rollToHit(rig, p, { range: "near", cover: 0 }, [1, 1, 1, 1, 1], () => 0);
+  assert.equal(over.rof, 5); // base 3 + 2 extra dice
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 10; // way over, capped at +3
+  const capped = rollToHit(rig, p, { range: "near", cover: 0 }, [1, 1, 1, 1, 1, 1], () => 0);
+  assert.equal(capped.rof, 6); // base 3 + capped 3
+});
+
+test("Superconductor Edge adds +2 STR when attacker heat is over half class cap", () => {
+  const rig = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
+  const p = effectiveWeaponProfile("melee", "Sword", rig);
+  rig.engine.heat = Math.floor(HEAT_CAPACITY[rig.weightClass] / 2); // at/under half -> no bonus
+  assert.equal(computeStr(rig, p, {}), p.str);
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // clearly over half
+  assert.equal(computeStr(rig, p, {}), p.str + 2);
+});
+
+test("Superconductor Edge moves 1 heat attacker->target once per attack while running hot", () => {
+  const attacker = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  attacker.engine.heat = HEAT_CAPACITY[attacker.weightClass]; // over half cap
+  const room = { rigs: [attacker, target] };
+  const heatBumps = [];
+  const ctx = { ...makeCtx(), bumpHeat(rig, n) { heatBumps.push([rig.id, n]); } };
+  resolveAttack(room, attacker, target, {
+    weapon: "melee", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6], location: 1 },
+  }, () => 0, ctx);
+  assert.deepEqual(heatBumps, [[attacker.id, -1], [target.id, 1]]);
+});
+
+test("Superconductor Edge does nothing under half class cap heat", () => {
+  const attacker = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  attacker.engine.heat = 0; // well under half cap
+  const room = { rigs: [attacker, target] };
+  const heatBumps = [];
+  const ctx = { ...makeCtx(), bumpHeat(rig, n) { heatBumps.push([rig.id, n]); } };
+  resolveAttack(room, attacker, target, {
+    weapon: "melee", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6], location: 1 },
+  }, () => 0, ctx);
+  assert.deepEqual(heatBumps, []);
+});

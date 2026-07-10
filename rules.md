@@ -428,6 +428,9 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Momentum Swing** (Wrecking Ball, Tuned) — +2 STR under the same "moved this activation" trigger as Full Tilt; the 3" knockback is deferred pending a positional model (§ Group G).
 - **Bloodletter** (Chainsaw, Tuned) — +1 ROF (an extra to-hit die) vs a target missing SP anywhere.
 - **Opportunist** (Sword, Tuned) — +3 STR vs a target that is overheated (heat over its class's Heat Capacity) or is carrying an action penalty into its next activation.
+- **Pinning Burst** (Double MG, Tuned) — landing 4+ hits in one attack pins the target: it loses 1 action on its next activation.
+- **Redline Governor** (Chainsaw, Prototype) — the attacker's own heat over its class's Heat Capacity adds +1 STR and +1 to-hit die each, capped at +3/+3.
+- **Superconductor Edge** (Sword, Prototype) — while the attacker's heat is over half its class's Heat Capacity, the blade gets +2 STR, and once per attack (not per hit) 1 heat is drawn from the attacker into the target.
 
 ---
 

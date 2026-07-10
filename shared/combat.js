@@ -55,7 +55,15 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   // Bloodletter — an extra to-hit die vs a target missing SP anywhere.
   const bloodletterRof = opts.target && profile.upgradeEffect?.vsDamaged?.rof && !isUndamaged(opts.target)
     ? profile.upgradeEffect.vsDamaged.rof : 0;
-  const rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof;
+  // Redline Governor — extra to-hit dice from attacker heat over its class
+  // cap, mirroring the STR bonus in computeStr (capped at +3).
+  let redlineRof = 0;
+  if (profile.upgradeEffect?.redline) {
+    const cap = HEAT_CAPACITY[attacker.weightClass];
+    const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
+    redlineRof = Math.min(3, over);
+  }
+  const rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
@@ -111,6 +119,19 @@ export function computeStr(attacker, profile, opts) {
     const disrupted = (opts.target.actionPenaltyNextActivation || 0) > 0
       || (cap != null && (opts.target.engine?.heat || 0) > cap);
     if (disrupted) bonus += 3;
+  }
+  // Redline Governor — the hotter the attacker runs past its own class cap,
+  // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
+  if (profile.upgradeEffect?.redline) {
+    const cap = HEAT_CAPACITY[attacker.weightClass];
+    const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
+    bonus += Math.min(3, over);
+  }
+  // Superconductor Edge — running past half the attacker's own heat cap
+  // charges the blade for +2 STR.
+  if (profile.upgradeEffect?.superconductor) {
+    const cap = HEAT_CAPACITY[attacker.weightClass];
+    if (cap != null && (attacker.engine?.heat || 0) > cap / 2) bonus += 2;
   }
   return profile.str + weightMod + charged + bonus;
 }
@@ -212,7 +233,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     if (profile.upgradeEffect?.onDamage === "breaching-round" && location === "hull" && impacts.some((h) => h.sp > 0)) {
       ctx.breachHull?.(target);
     }
-    applyOnHitPerks(room, attacker, target, profile, opts, random, ctx);
+    applyOnHitPerks(room, attacker, target, profile, { ...opts, hits: th.hits }, random, ctx);
   }
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
@@ -262,6 +283,21 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
       const [hit] = rollImpacts(attacker, extra, profile, loc, { arc: "front", hits: 1, charged: opts.charged }, { impacts: [opts.dice?.cleaveImpact] }, random);
       if (hit.sp > 0) ctx.applyDamage(room, extra, loc, hit.sp, { random });
       effects.push(`Cleave → ${extra.name}`);
+    }
+  }
+  // Pinning Burst — 4+ landed hits pin the target for its next activation.
+  if (profile.upgradeEffect?.pinOnHits && opts.hits >= profile.upgradeEffect.pinOnHits) {
+    target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);
+    effects.push("Pinning Burst — target loses 1 action");
+  }
+  // Superconductor Edge — once per attack (not per hit), while running past
+  // half the attacker's heat cap, dump 1 heat from attacker into target.
+  if (profile.upgradeEffect?.superconductor) {
+    const cap = HEAT_CAPACITY[attacker.weightClass];
+    if (cap != null && (attacker.engine?.heat || 0) > cap / 2) {
+      ctx.bumpHeat(attacker, -1);
+      ctx.bumpHeat(target, 1);
+      effects.push("Superconductor Edge — 1 heat transferred to target");
     }
   }
   const onHit = profile.upgradeEffect?.onHit;
