@@ -158,7 +158,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
           title={u.tag}
           onClick={() => onSelect(u.id)}
         >
-          <span>{u.name}</span>
+          <span>{u.name} <em className={"rw-nature rw-nature-" + u.nature}>{u.nature[0].toUpperCase() + u.nature.slice(1)}</em></span>
           <small>Upgrade · <GlossaryText text={u.tag} /></small>
         </button>
       ))}

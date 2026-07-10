@@ -73,6 +73,22 @@ test("Weapons step shows an SP preview with heat cap for each prebuilt", async (
   expect(screen.getAllByText(/heat cap/i).length).toBeGreaterThan(0);
 });
 
+test("weapons step badges each upgrade with its nature", async () => {
+  const user = userEvent.setup();
+  render(
+    <UiProvider>
+      <GlossaryTipProvider>
+        <RigWizard onClose={() => {}} />
+      </GlossaryTipProvider>
+    </UiProvider>,
+  );
+  await advanceToWeapons(user);
+  // Default prebuilt light-claw-autocannon: Autocannon has a Field (Depleted Core)
+  // and a Prototype (Penetrator Rounds); their badges must render.
+  expect(screen.getAllByText("Field").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Prototype").length).toBeGreaterThan(0);
+});
+
 test("commissioning posts an add command with the prebuilt's fixed class and weapons", async () => {
   const user = userEvent.setup();
   render(
