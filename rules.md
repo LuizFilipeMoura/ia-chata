@@ -419,6 +419,16 @@ Each weapon has **two upgrade options**. When a Rig is commissioned, choose **on
 | Missile Barrage | **Swarm Warheads:** +2 ROF | **Shaped Charges:** gains Armour Piercing |
 | Flamethrower | **Pressurized Tank:** +2 STR; attacking adds +1 heat | **Sticky Fuel:** gains Rend |
 
+#### Tuned / Prototype Upgrade Mechanics
+
+The table above predates the Field/Tuned/Prototype natures and lists only the original two options; each weapon now offers a third, conditional **Tuned** (and a fourth, systemic **Prototype**) upgrade (see *Upgrade natures* above). Mechanics are implemented incrementally — each line below is live in the engine:
+
+- **Cold Bore** (Sniper Cannon, Tuned) — +3 STR when the target's every location (Hull/Arms/Legs/Engine) is at max SP.
+- **Full Tilt** (Lance, Tuned) — +3 STR if the Rig moved (Move or Sprint) at any point this activation before striking.
+- **Momentum Swing** (Wrecking Ball, Tuned) — +2 STR under the same "moved this activation" trigger as Full Tilt; the 3" knockback is deferred pending a positional model (§ Group G).
+- **Bloodletter** (Chainsaw, Tuned) — +1 ROF (an extra to-hit die) vs a target missing SP anywhere.
+- **Opportunist** (Sword, Tuned) — +3 STR vs a target that is overheated (heat over its class's Heat Capacity) or is carrying an action penalty into its next activation.
+
 ---
 
 ## 13. Weapon Perks
