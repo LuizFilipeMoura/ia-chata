@@ -24,14 +24,14 @@ export const MAX_RIGS_TOTAL = 6;
 // perk) that drives arc/range logic in combat.js and the wizards.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":      { rof: 8, str: 4,  acc: [1, -1], rng: [9, 18] },
-    "Double MG":     { rof: 8, str: 6,  acc: [1, 0],  rng: [9, 18] },
-    "Autocannon":    { rof: 4, str: 8,  acc: [0, -1], rng: [12, 24] },
-    "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30] },
-    "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30] },
-    "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24] },
-    "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16] },
-    "Missile Barrage":{ rof: 4, str: 9,  acc: [-1, 0], rng: [15, 30] },
+    "Mini Gun":       { rof: 8, str: 4,  sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18 },
+    "Double MG":      { rof: 8, str: 6,  sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20 },
+    "Autocannon":     { rof: 4, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
+    "Arc Gun":        { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
+    "Mortar":         { rof: 3, str: 9,  sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Sniper Cannon":  { rof: 1, str: 12, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
+    "Siege Maul":     { rof: 1, str: 13, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
+    "Missile Barrage":{ rof: 4, str: 9,  sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
@@ -49,10 +49,10 @@ export const WEAPONS = {
 // pick exactly one. Marked flatPick: true so combat.js skips the weight-class
 // STR modifier — the listed STR is the shot's STR on any chassis.
 export const UNIT_WEAPONS = {
-  "Tank Cannon":      { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], flatPick: true },
-  "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], flatPick: true },
-  "Coaxial MG":       { rof: 6, str: 5,  acc: [1, -1], rng: [9, 18],  flatPick: true },
-  "Rocket Pod":       { rof: 2, str: 10, acc: [0, 0],  rng: [15, 30], flatPick: true },
+  "Tank Cannon":      { rof: 1, str: 12, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
+  "Autocannon Mount": { rof: 3, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
+  "Coaxial MG":       { rof: 6, str: 5,  sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true },
+  "Rocket Pod":       { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
   "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
   "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
 };

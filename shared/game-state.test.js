@@ -64,8 +64,13 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(Object.keys(WEAPONS.melee).length, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
-  assert.deepEqual(WEAPONS.longRange["Mini Gun"].acc, [1, -1]);
-  assert.deepEqual(WEAPONS.longRange["Mini Gun"].rng, [9, 18]);
+  assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
+  assert.equal(WEAPONS.longRange["Mini Gun"].peak, 2);
+  assert.equal(WEAPONS.longRange["Mini Gun"].dropoff, 0.35);
+  assert.equal(WEAPONS.longRange["Mini Gun"].minRange, 0);
+  assert.equal(WEAPONS.longRange["Mini Gun"].maxRange, 18);
+  assert.equal(WEAPONS.longRange["Mini Gun"].acc, undefined);
+  assert.equal(WEAPONS.longRange["Mini Gun"].rng, undefined);
   // Base weapons are stat-only; no perks. Ranged weapons carry no melee flag.
   assert.equal(WEAPONS.longRange["Mini Gun"].perks, undefined);
   assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
@@ -76,7 +81,7 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, str: 13, acc: [0, -1], rng: [8, 16] });
+  assert.deepEqual(maul, { rof: 1, str: 13, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
   assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
@@ -1818,8 +1823,16 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
     assert.equal(typeof w.rof, "number");
     assert.equal(typeof w.str, "number");
-    assert.ok(Array.isArray(w.acc));
-    assert.ok(Array.isArray(w.rng));
+    if (w.melee) {
+      assert.ok(Array.isArray(w.acc), `${name} melee keeps acc[]`);
+      assert.ok(Array.isArray(w.rng), `${name} melee keeps rng[]`);
+    } else {
+      assert.equal(typeof w.sweet, "number", `${name} has sweet`);
+      assert.equal(typeof w.peak, "number", `${name} has peak`);
+      assert.equal(typeof w.dropoff, "number", `${name} has dropoff`);
+      assert.equal(typeof w.minRange, "number", `${name} has minRange`);
+      assert.equal(typeof w.maxRange, "number", `${name} has maxRange`);
+    }
     assert.equal(w.perks, undefined, `${name} is stat-only, no perks`);
     assert.equal(w.flatPick, true, `${name} carries flatPick marker`);
   }
