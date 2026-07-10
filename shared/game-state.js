@@ -738,6 +738,13 @@ function maybeEngage(room, a, b) {
   return setEngagement(a, b);
 }
 
+// Move-into declaration: resolve an engage-target name to a rig and try to
+// engage it. Tolerates an unknown/invalid name (returns false, no throw).
+function maybeEngageByName(room, rig, name) {
+  const target = findRig(room, name);
+  return target ? maybeEngage(room, rig, target) : false;
+}
+
 // Cascade-aware damage entry point. Applies `amount` SP one point at a time,
 // firing §8 clauses, then recomputes destruction (§9 handled in onRigDamaged).
 function applyDamage(room, rig, loc, amount, opts) {
@@ -1032,6 +1039,9 @@ function performAction(room, rig, act, a, random) {
     // §engagement — a rig locked in melee is pinned; it must Disengage before it
     // can reposition. (Repositioning while engaged is meaningless without a grid.)
     if (rig.engagedWith != null) return false;
+    // Optional move-into declaration: the player states they moved into base
+    // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
+    if (a.engage) maybeEngageByName(room, rig, a.engage);
     // Move / Sprint may repeat within an activation; each spends one slot and
     // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
     const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;

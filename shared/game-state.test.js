@@ -2236,3 +2236,25 @@ test("Disengage is a no-op when the rig is not engaged", () => {
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
   assert.equal(r.game.turn.actionsUsed, 0); // nothing spent
 });
+
+test("Move with an engage declaration forms the pair", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move", engage: "a1" } });
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  assert.equal(r.game.turn.actionsUsed, 1); // the move still spends its slot
+  assert.equal(b1.engagedWith, a1.id);      // and forms the lock
+  assert.equal(a1.engagedWith, b1.id);
+});
+
+test("Move engage declaration against a friendly is ignored but the move still happens", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move", engage: "b2" } });
+  const b1 = findRig(r, "b1");
+  assert.equal(r.game.turn.actionsUsed, 1); // move resolves
+  assert.equal(b1.engagedWith, null);       // no engagement (same side)
+});
