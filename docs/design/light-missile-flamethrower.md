@@ -3,7 +3,7 @@
 **Weapons:** Missile Barrage (long-range) · Flamethrower (melee) · **Class:** light
 **Focus:** incendiary saturator — high-volume missiles + flame that set targets **Burning** (escalating damage-over-time) and hammer them with guaranteed armor-piercing volleys. Volume + fire, no geometry.
 
-Design under the invariants in [AGENTS.md](../../AGENTS.md): weapons globally unique, each rig once on the field, **no mirror matchups**, and (this rig onward) **no battlefield / spatial mechanics** — everything here runs on SP, heat, actions, engagement, and status flags, not positions. Upgrades follow the **Field / Tuned / Prototype** nature system (pick one per weapon, **max one Prototype per rig**).
+Design under the invariants in [AGENTS.md](../../AGENTS.md): weapons globally unique, each rig once on the field, **no mirror matchups**, and **spatial effects resolve as narrated player instructions** — the app is a tabletop assistant, not a simulator: the engine runs on SP, heat, actions, engagement, and status flags, and tells the player what to physically do. Upgrades follow the **Field / Tuned / Prototype** nature system (pick one per weapon, **max one Prototype per rig**).
 
 Both weapons are ROF-4 volume sprayers. Missile Barrage is min 6″ / max 34″ saturation fire; the Flamethrower washes the close band inside the missiles' 6″ blind spot. The unique throughline is **Burning** — a damage-over-time status no other rig applies.
 

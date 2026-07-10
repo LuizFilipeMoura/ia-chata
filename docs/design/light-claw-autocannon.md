@@ -3,7 +3,7 @@
 **Weapons:** Autocannon (long-range) · Claw (melee) · **Class:** light
 **Focus:** anti-armor specialist — the rig you bring for heavies. The Claw pries armor open, the Autocannon punches through. Everything it does is about cracking tough targets.
 
-Design under the invariants in [AGENTS.md](../../AGENTS.md): weapons globally unique, each rig once on the field, **no mirror matchups**, **no battlefield / spatial mechanics** (SP, heat, actions, engagement, status flags only). Upgrades follow the **Field / Tuned / Prototype** nature system (pick one per weapon, **max one Prototype per rig**).
+Design under the invariants in [AGENTS.md](../../AGENTS.md): weapons globally unique, each rig once on the field, **no mirror matchups**, and **spatial effects resolve as narrated player instructions** (the app is a tabletop assistant, not a simulator — the engine tracks SP, heat, actions, engagement, and status flags, and tells the player what to do on the table). Upgrades follow the **Field / Tuned / Prototype** nature system (pick one per weapon, **max one Prototype per rig**).
 
 Relevant weapon stats (from `shared/game-state.js`):
 - Autocannon: ROF 4, STR 8, sweet 12″, max 26″ — the reliable mid-range workhorse gun.

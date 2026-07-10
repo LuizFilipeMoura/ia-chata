@@ -3,7 +3,7 @@
 **Weapons:** Mini Gun (long-range) · Circular Saw (melee) · **Class:** light
 **Focus:** attrition grinder — doesn't burst-kill; it permanently wears rigs down until they're crippled husks. The Mini Gun grinds **tempo** (suppress → pin); the Circular Saw grinds **durability** (Sunder → permanent max-SP loss that never heals). Weak in a quick trade, brutal over a full 10-round match.
 
-Design under the invariants in [AGENTS.md](../../AGENTS.md): weapons globally unique, each rig once on the field, **no mirror matchups**, **no battlefield / spatial mechanics** (SP, heat, actions, engagement, status flags only). Upgrades follow the **Field / Tuned / Prototype** nature system (pick one per weapon, **max one Prototype per rig**).
+Design under the invariants in [AGENTS.md](../../AGENTS.md): weapons globally unique, each rig once on the field, **no mirror matchups**, and **spatial effects resolve as narrated player instructions** (the app is a tabletop assistant, not a simulator — the engine tracks SP, heat, actions, engagement, and status flags, and tells the player what to do on the table). Upgrades follow the **Field / Tuned / Prototype** nature system (pick one per weapon, **max one Prototype per rig**).
 
 Relevant weapon stats (from `shared/game-state.js`):
 - Mini Gun: ROF 8, STR 4, sweet 7″, max 18″. **Machine gun → Raking Fire:** side +4, rear +8, **front arc auto-fails** ([combat.js:87](../../shared/combat.js)) — wired onto the base weapon (`perks: ["Raking Fire"]` in `WEAPONS.longRange`). A short-range volume flanker.
