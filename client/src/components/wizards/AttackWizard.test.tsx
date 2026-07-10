@@ -34,7 +34,7 @@ function rig(over: Partial<Rig>): Rig {
     legs: component(6),
     engine: { ...component(5), heat: 0 },
     weapons: { longRange: "Mini Gun", melee: "Sword" },
-    weaponUpgrades: { longRange: "extended-belt", melee: "keen-edge" },
+    weaponUpgrades: { longRange: "extended-belt", melee: "opportunist" },
     equipment: null,
     loaded: { longRange: true, melee: true },
     activated: false,

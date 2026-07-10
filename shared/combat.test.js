@@ -113,7 +113,7 @@ test("Raise Shield negates the front arc and blunts side/rear by 4", () => {
   const base = {
     weightClass: "medium",
     weapons: { melee: "Bulwark Shield" },
-    weaponUpgrades: { melee: "boss-spike" }, // base coverage (no Tower Shield)
+    weaponUpgrades: { melee: "anvil-boss" }, // base coverage (no Tower Shield)
     preparation: { type: "raise-shield" },
   };
 
@@ -168,21 +168,21 @@ test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () =
   assert.equal(target.hullRepairLock, 2);
 });
 
-test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-penalty upgrades", () => {
+test("effectiveWeaponProfile applies selected ROF, STR, perk, and range upgrades", () => {
   const mini = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
 
   const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
   assert.equal(computeStr(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 10);
 
-  const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "keen-edge" });
-  assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Rend"), true);
+  const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "duelist-balance" });
+  assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Precision"), true);
 
   const lance = makeRig(4, "Reach", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "couched-reach" });
-  assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [3, 3]); // 2" base + 1" Couched Reach
+  assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [4, 4]); // 2" base, Couched Reach doubles it to 4"
 
-  const sniper = makeRig(5, "Barrel", "medium", "a", { longRange: "Sniper Cannon", melee: "Sword", longRangeUpgrade: "match-barrel" });
-  assert.equal(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).dropoff, 0.075); // Match Barrel halves dropoff
+  const sniper = makeRig(5, "Marksman", "medium", "a", { longRange: "Sniper Cannon", melee: "Sword", longRangeUpgrade: "marksman-optics" });
+  assert.equal(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).perks.includes("Precision"), true);
 });
 
 test("rollToHit uses selected upgrade heat-on-ones and one missed-die reroll", () => {
@@ -208,7 +208,10 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   // Autocannon: rof 4, acc [0,-1], no Full Auto requested here. Medium attacker,
   // full hull, near range, front arc, cover 0, fire (not aimed) -> modAim =
   // AIM.medium(4) - (acc[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
-  const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  // ap-shells (tuned) carries no STR bonus, so the expected STR below stays the
+  // bare base+weight-class value — the default upgrade (depleted-core, field)
+  // would add +2 STR and throw off the comparison.
+  const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw", longRangeUpgrade: "ap-shells" });
   const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target] };
   const ctx = makeCtx();

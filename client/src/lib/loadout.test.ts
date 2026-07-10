@@ -19,7 +19,7 @@ describe("buildLoadout", () => {
   it("resolves weapon names, upgrade name+tag, and equipment passive/active", () => {
     const rig = baseRig({
       weapons: { longRange: "Mini Gun", melee: "Sword" },
-      weaponUpgrades: { longRange: "extended-belt", melee: "keen-edge" },
+      weaponUpgrades: { longRange: "extended-belt", melee: "opportunist" },
       equipment: "ablative-plating",
     });
     const lo = buildLoadout(rig)!;

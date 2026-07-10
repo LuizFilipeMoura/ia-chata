@@ -177,72 +177,100 @@ export function normalizeEquipment(id) {
   return Object.keys(EQUIPMENT).includes(ref) ? ref : null;
 }
 
-// Weapon upgrades (Part 2 of the design) — every weapon's two fixed signature
-// upgrades, authored as flavor + a toolkit-effect tag.
+// The three upgrade natures (AGENTS.md). Field = unconditional upside; Tuned =
+// conditional upside; Prototype = systemic/tracked, may carry a downside, and a
+// rig may run at most one. Order is display order.
+export const NATURES = ["field", "tuned", "prototype"];
+
+export function upgradeNature(weaponName, upgradeId) {
+  const u = (WEAPON_UPGRADES[weaponName] || []).find((x) => x.id === upgradeId);
+  return u?.nature || null;
+}
+
+// Weapon upgrades (Part 2 of the design) — every weapon offers exactly three
+// signature upgrades, one of each nature (Field / Tuned / Prototype), authored
+// as flavor + a toolkit-effect tag. New-mechanic Prototype/Tuned upgrades ship
+// `effect: {}` until the mechanics plan implements them (TODO(mechanics)).
 export const WEAPON_UPGRADES = {
   "Mini Gun": [
-    { id: "extended-belt", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
-    { id: "suppressive-fire", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
+    { id: "suppressive-fire", nature: "field", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
+    { id: "extended-belt", nature: "tuned", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
+    { id: "suppression-lock", nature: "prototype", name: "Suppression Lock", tag: "Grind one target down turn by turn until it's pinned", effect: {} }, // TODO(mechanics)
   ],
   "Double MG": [
-    { id: "tracer-rounds", name: "Tracer Rounds", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
-    { id: "gyro-mount", name: "Gyro Mount", tag: "Reroll one missed to-hit die", effect: { rerollMisses: 1 } },
+    { id: "gyro-mount", nature: "field", name: "Gyro Mount", tag: "Reroll one missed to-hit die", effect: { rerollMisses: 1 } },
+    { id: "pinning-burst", nature: "tuned", name: "Pinning Burst", tag: "4+ hits: target loses 1 action next activation", effect: {} }, // TODO(mechanics)
+    { id: "kneecapper", nature: "prototype", name: "Kneecapper", tag: "Rake legs/arms from any arc to cripple them; never hull/engine", effect: {} }, // TODO(mechanics)
   ],
   "Autocannon": [
-    { id: "ap-shells", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "depleted-core", name: "Depleted Core", tag: "+2 STR", effect: { str: 2 } },
+    { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+2 STR", effect: { str: 2 } },
+    { id: "ap-shells", nature: "tuned", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour; belt cycles slow after", effect: {} }, // TODO(mechanics)
   ],
   "Arc Gun": [
-    { id: "systems-overload", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
-    { id: "ion-burn", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
+    { id: "ion-burn", nature: "field", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
+    { id: "systems-overload", nature: "tuned", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
+    { id: "ion-storm", nature: "prototype", name: "Ion Storm", tag: "EMP a rig's systems for a turn; overloads your own gun", effect: {} }, // TODO(mechanics)
   ],
   "Mortar": [
-    { id: "airburst-fuze", name: "Airburst Fuze", tag: "Ignores cover", effect: { ignoreCover: true } },
-    { id: "cluster-shells", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
+    { id: "cluster-shells", nature: "field", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
+    { id: "airburst-fuze", nature: "tuned", name: "Airburst Fuze", tag: "Ignores cover", effect: { ignoreCover: true } },
+    { id: "barrage", nature: "prototype", name: "Barrage", tag: "Shell a zone for 2 rounds; mortar locked + hot (spatial)", effect: {} }, // TODO(mechanics, spatial)
   ],
   "Sniper Cannon": [
-    { id: "match-barrel", name: "Match Barrel", tag: "Halves accuracy falloff (tighter spread)", effect: { noFarPenalty: true } },
-    { id: "marksman-optics", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
-  ],
-  "Sword": [
-    { id: "duelist-balance", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
-    { id: "keen-edge", name: "Keen Edge", tag: "Gains Rend", effect: { perks: ["Rend"] } },
-  ],
-  "Circular Saw": [
-    { id: "tempered-teeth", name: "Tempered Teeth", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "sunder", name: "Sunder", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
-  ],
-  "Chainsaw": [
-    { id: "high-rev-motor", name: "High-Rev Motor", tag: "+2 STR; +1 heat per attack", effect: { str: 2, heat: 1 } },
-    { id: "ripper-teeth", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
-  ],
-  "Claw": [
-    { id: "vice-grip", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
-    { id: "rending-talons", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
-  ],
-  "Lance": [
-    { id: "couched-reach", name: "Couched Reach", tag: "+1 inch melee reach", effect: { range: 1 } },
-    { id: "spearpoint", name: "Spearpoint", tag: "Gains Impale", effect: { perks: ["Impale"] } },
-  ],
-  "Wrecking Ball": [
-    { id: "haymaker", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
-    { id: "wrecking-momentum", name: "Wrecking Momentum", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
+    { id: "marksman-optics", nature: "field", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
+    { id: "cold-bore", nature: "tuned", name: "Cold Bore", tag: "+3 STR vs undamaged targets", effect: {} }, // TODO(mechanics)
+    { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", effect: {} }, // TODO(mechanics, spatial)
   ],
   "Siege Maul": [
-    { id: "breaching-round", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
-    { id: "extended-barrel", name: "Extended Barrel", tag: "+4\" max range; sweet spot +2\"", effect: { range: 4 } },
-  ],
-  "Bulwark Shield": [
-    { id: "tower-shield", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
-    { id: "boss-spike", name: "Boss Spike", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
+    { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+2 STR", effect: { str: 2 } },
+    { id: "breaching-round", nature: "tuned", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
+    { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", effect: {} }, // TODO(mechanics, spatial)
   ],
   "Missile Barrage": [
-    { id: "swarm-warheads", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
-    { id: "shaped-charges", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "swarm-warheads", nature: "field", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
+    { id: "shaped-charges", nature: "tuned", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "fire-control-lock", nature: "prototype", name: "Fire Control Lock", tag: "Lock a target for one unmissable armor-piercing volley", effect: {} }, // TODO(mechanics)
+  ],
+  "Sword": [
+    { id: "duelist-balance", nature: "field", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
+    { id: "opportunist", nature: "tuned", name: "Opportunist", tag: "+3 STR vs disrupted / overheated targets", effect: {} }, // TODO(mechanics)
+    { id: "superconductor-edge", nature: "prototype", name: "Superconductor Edge", tag: "Run hot and dump your heat into them through the blade", effect: {} }, // TODO(mechanics)
+  ],
+  "Circular Saw": [
+    { id: "tempered-teeth", nature: "field", name: "Tempered Teeth", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "sunder", nature: "tuned", name: "Sunder", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
+    { id: "dismember", nature: "prototype", name: "Dismember", tag: "Saw a location in half to cripple it for good", effect: {} }, // TODO(mechanics)
+  ],
+  "Chainsaw": [
+    { id: "ripper-teeth", nature: "field", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
+    { id: "bloodletter", nature: "tuned", name: "Bloodletter", tag: "Extra hit vs damaged targets", effect: {} }, // TODO(mechanics)
+    { id: "redline-governor", nature: "prototype", name: "Redline Governor", tag: "The hotter you run, the harder it bites", effect: {} }, // TODO(mechanics)
+  ],
+  "Claw": [
+    { id: "rending-talons", nature: "field", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
+    { id: "vice-grip", nature: "tuned", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
+    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 impact from anyone)", effect: {} }, // TODO(mechanics)
+  ],
+  "Lance": [
+    { id: "couched-reach", nature: "field", name: "Couched Reach", tag: "Doubles melee reach to 4\"", effect: { range: 2 } },
+    { id: "full-tilt", nature: "tuned", name: "Full Tilt", tag: "Charge in for +3 STR", effect: {} }, // TODO(mechanics)
+    { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", effect: {} }, // TODO(mechanics)
+  ],
+  "Wrecking Ball": [
+    { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
+    { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 STR and a knockback (knockback spatial)", effect: { str: 2 } }, // TODO(mechanics: charge-gate + knockback)
+    { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", effect: {} }, // TODO(mechanics, spatial)
+  ],
+  "Bulwark Shield": [
+    { id: "tower-shield", nature: "field", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
+    { id: "anvil-boss", nature: "tuned", name: "Anvil Boss", tag: "Counter the first melee attacker each round while braced", effect: {} }, // TODO(mechanics)
+    { id: "emplacement", nature: "prototype", name: "Emplacement", tag: "Root into a permanent fortress shield; immobile, 2 actions, cooldown", effect: {} }, // TODO(mechanics)
   ],
   "Flamethrower": [
-    { id: "pressurized-tank", name: "Pressurized Tank", tag: "+2 STR; +1 heat per attack", effect: { str: 2, heat: 1 } },
-    { id: "sticky-fuel", name: "Sticky Fuel", tag: "Gains Rend", effect: { perks: ["Rend"] } },
+    { id: "sticky-fuel", nature: "field", name: "Sticky Fuel", tag: "Gains Rend", effect: { perks: ["Rend"] } },
+    { id: "napalm", nature: "tuned", name: "Napalm", tag: "Hits set the target burning (1 SP/round until doused)", effect: {} }, // TODO(mechanics)
+    { id: "conflagration", nature: "prototype", name: "Conflagration", tag: "Stack burns for escalating damage-over-time; runs you hot", effect: {} }, // TODO(mechanics)
   ],
 };
 

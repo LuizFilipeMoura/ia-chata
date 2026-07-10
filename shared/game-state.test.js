@@ -8,6 +8,7 @@ import {
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
+  NATURES, upgradeNature,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -127,28 +128,46 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
-  assert.equal(WEAPON_UPGRADES["Siege Maul"].length, 2);
-  assert.equal(WEAPON_UPGRADES["Bulwark Shield"].length, 2);
+  assert.equal(WEAPON_UPGRADES["Siege Maul"].length, 3);
+  assert.equal(WEAPON_UPGRADES["Bulwark Shield"].length, 3);
 
-  // Extended Barrel: +4 maxRange (16 -> 20) and +2 sweet (8 -> 10), reusing effect.range.
-  const barrel = makeRig(1, "Breaker", "medium", "a",
-    { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "extended-barrel" });
-  const barrelProfile = effectiveWeaponProfile("longRange", "Siege Maul", barrel);
-  assert.equal(barrelProfile.maxRange, 20);
-  assert.equal(barrelProfile.sweet, 10);
-
-  // Breaching Round is the default (first) Siege Maul upgrade and marks onDamage.
-  const breach = makeRig(2, "Breaker2", "medium", "a",
+  // Reinforced Head is the default (first) Siege Maul upgrade: +2 STR.
+  const headed = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword" });
-  assert.equal(breach.weaponUpgrades.longRange, "breaching-round");
+  assert.equal(headed.weaponUpgrades.longRange, "reinforced-head");
+  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).str, 15); // 13 base + 2
+
+  // Breaching Round marks onDamage.
+  const breach = makeRig(2, "Breaker2", "medium", "a",
+    { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "breaching-round" });
   assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", breach).upgradeEffect.onDamage, "breaching-round");
 
-  // Boss Spike grants Staggering; Tower Shield is the default shield upgrade.
-  const spike = makeRig(3, "Guard", "medium", "a",
-    { longRange: "Autocannon", melee: "Bulwark Shield", meleeUpgrade: "boss-spike" });
-  assert.equal(effectiveWeaponProfile("melee", "Bulwark Shield", spike).perks.includes("Staggering"), true);
+  // Anvil Boss is a valid non-Tower-Shield melee upgrade; Tower Shield is the default.
+  const anvil = makeRig(3, "Guard", "medium", "a",
+    { longRange: "Autocannon", melee: "Bulwark Shield", meleeUpgrade: "anvil-boss" });
+  assert.equal(effectiveWeaponProfile("melee", "Bulwark Shield", anvil).upgrade.id, "anvil-boss");
   assert.equal(makeRig(4, "Guard2", "medium", "a",
     { longRange: "Autocannon", melee: "Bulwark Shield" }).weaponUpgrades.melee, "tower-shield");
+});
+
+test("NATURES lists the three upgrade natures in order", () => {
+  assert.deepEqual(NATURES, ["field", "tuned", "prototype"]);
+});
+
+test("every WEAPON_UPGRADES entry declares a valid nature", () => {
+  for (const [weapon, ups] of Object.entries(WEAPON_UPGRADES)) {
+    for (const u of ups) {
+      assert.ok(NATURES.includes(u.nature), `${weapon}/${u.id} nature=${u.nature}`);
+    }
+  }
+});
+
+test("every weapon offers exactly one upgrade of each nature", () => {
+  for (const [weapon, ups] of Object.entries(WEAPON_UPGRADES)) {
+    assert.equal(ups.length, 3, `${weapon} has ${ups.length} upgrades`);
+    const natures = ups.map((u) => u.nature).sort();
+    assert.deepEqual(natures, ["field", "prototype", "tuned"], `${weapon} natures`);
+  }
 });
 
 test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
@@ -163,7 +182,7 @@ test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
 });
 
 test("shieldCoverage depends on the Tower Shield upgrade", () => {
-  const base = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "boss-spike" } };
+  const base = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "anvil-boss" } };
   const tower = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "tower-shield" } };
 
   assert.deepEqual(shieldCoverage(base), { negate: ["front"], blunt: ["side", "rear"] });
@@ -1121,19 +1140,19 @@ test("ram action is removed — melee covers close combat, so it is a no-op", ()
 });
 
 // Perks now come only from the chosen upgrade, so these drive the effect through
-// the upgrade that grants it: Tracer Rounds → Incendiary, Suppressive Fire → Shock.
-test("Incendiary (via Tracer Rounds) adds 1 heat to the target", () => {
+// the upgrade that grants it: Ion Burn → Incendiary, Suppressive Fire → Shock.
+test("Incendiary (via Ion Burn) adds 1 heat to the target", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
-  b1.weapons.longRange = "Double MG";
-  b1.weaponUpgrades.longRange = "tracer-rounds";
+  b1.weapons.longRange = "Arc Gun";
+  b1.weaponUpgrades.longRange = "ion-burn";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   const heatBefore = a1.engine.heat;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], impacts: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
+    dice: { toHit: [6, 6], impacts: [1, 1], location: 1 },
   } });
   assert.equal(a1.engine.heat, heatBefore + 1);
 });
@@ -1153,17 +1172,17 @@ test("Shock (via Suppressive Fire) halves target speed next round", () => {
   assert.equal(a1.speedHalvedNextRound, true);
 });
 
-test("Impale (via Spearpoint) immobilises on a D12 of 8+", () => {
+test("Impale (via Vice Grip) immobilises on a D12 of 8+", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
-  b1.weapons.melee = "Lance";
-  b1.weaponUpgrades.melee = "spearpoint";
+  b1.weapons.melee = "Claw";
+  b1.weaponUpgrades.melee = "vice-grip";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6], impacts: [6], location: 1, impale: 9 },
+    dice: { toHit: [6, 6], impacts: [6, 6], location: 1, impale: 9 },
   } });
   assert.equal(a1.immobilised, true);
 });
@@ -1188,13 +1207,13 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment(null), null);
 });
 
-test("WEAPON_UPGRADES has exactly 2 upgrades for all 16 weapons", () => {
+test("WEAPON_UPGRADES has exactly 3 upgrades for all 16 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
   assert.equal(all.length, 16);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
-    assert.equal(ups.length, 2, `${name} must have exactly 2 upgrades`);
+    assert.equal(ups.length, 3, `${name} must have exactly 3 upgrades`);
     for (const u of ups) {
       assert.equal(typeof u.name, "string");
       assert.equal(typeof u.tag, "string");
@@ -1206,7 +1225,7 @@ test("WEAPON_UPGRADES has stable ids and effect objects for every option", () =>
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
-    assert.equal(ups.length, 2, `${name} must have exactly 2 upgrades`);
+    assert.equal(ups.length, 3, `${name} must have exactly 3 upgrades`);
     const ids = new Set();
     for (const u of ups) {
       assert.equal(typeof u.id, "string", `${name} upgrade missing id`);
@@ -1220,25 +1239,25 @@ test("WEAPON_UPGRADES has stable ids and effect objects for every option", () =>
 });
 
 test("normalizeWeaponUpgrade resolves valid ids and defaults missing/invalid selections", () => {
-  assert.equal(defaultWeaponUpgrade("Mini Gun"), "extended-belt");
+  assert.equal(defaultWeaponUpgrade("Mini Gun"), "suppressive-fire");
   assert.equal(normalizeWeaponUpgrade("Mini Gun", "suppressive-fire"), "suppressive-fire");
-  assert.equal(normalizeWeaponUpgrade("Mini Gun", ""), "extended-belt");
-  assert.equal(normalizeWeaponUpgrade("Mini Gun", "not-real"), "extended-belt");
+  assert.equal(normalizeWeaponUpgrade("Mini Gun", ""), "suppressive-fire");
+  assert.equal(normalizeWeaponUpgrade("Mini Gun", "not-real"), "suppressive-fire");
   assert.equal(normalizeWeaponUpgrade("Not A Weapon", "extended-belt"), null);
   assert.equal(upgradeForWeapon("Mini Gun", "suppressive-fire").name, "Suppressive Fire");
 });
 
 test("makeRig stores default and explicit selected weapon upgrades", () => {
   const fallback = makeRig(1, "Warden", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
-  assert.deepEqual(fallback.weaponUpgrades, { longRange: "extended-belt", melee: "duelist-balance" });
+  assert.deepEqual(fallback.weaponUpgrades, { longRange: "suppressive-fire", melee: "duelist-balance" });
 
   const explicit = makeRig(2, "Reaver", "medium", "a", {
     longRange: "Mini Gun",
     melee: "Sword",
-    longRangeUpgrade: "suppressive-fire",
-    meleeUpgrade: "keen-edge",
+    longRangeUpgrade: "extended-belt",
+    meleeUpgrade: "opportunist",
   });
-  assert.deepEqual(explicit.weaponUpgrades, { longRange: "suppressive-fire", melee: "keen-edge" });
+  assert.deepEqual(explicit.weaponUpgrades, { longRange: "extended-belt", melee: "opportunist" });
 });
 
 test("add command passes selected weapon upgrades through to the created rig", () => {
@@ -1260,7 +1279,7 @@ test("ensureRigShape backfills selected weapon upgrades on legacy rig objects", 
       legs:{sp:5,max:5,destroyed:false}, engine:{sp:4,max:4,destroyed:false,heat:0},
       weapons:{longRange:"Double MG",melee:"Chainsaw"}, destroyed:false }] };
   applyCommand(legacy, { verb: "nonsense", attrs: {} });
-  assert.deepEqual(legacy.rigs[0].weaponUpgrades, { longRange: "tracer-rounds", melee: "high-rev-motor" });
+  assert.deepEqual(legacy.rigs[0].weaponUpgrades, { longRange: "gyro-mount", melee: "ripper-teeth" });
 });
 
 test("makeRig accepts an equipment id and Ablative Plating grants +1 max/current Hull SP", () => {
@@ -1560,20 +1579,6 @@ test("Sunder reduces the struck location max SP once when the selected upgrade d
   } });
   assert.equal(a1.hull.max, 5);
   assert.equal(a1.hull.sp <= a1.hull.max, true);
-});
-
-test("High-Rev Motor adds attack heat in addition to base fire heat", () => {
-  const r = startedRoom();
-  clearPendingAnswer(r);
-  const b1 = findRig(r, "b1");
-  b1.weapons.melee = "Chainsaw";
-  b1.weaponUpgrades.melee = "high-rev-motor";
-  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1, 1] },
-  } });
-  assert.equal(b1.engine.heat, 2);
 });
 
 test("createRoom seeds owner=null and a default 54x36 field with objectives", () => {
