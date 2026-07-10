@@ -4,6 +4,7 @@ import { useSpeech } from "../../hooks/useSpeech";
 import { useChat } from "./ChatContext";
 import { useChatStream } from "../../hooks/useChatStream";
 import { MessageList } from "./MessageList";
+import { SuggestedPrompts } from "./SuggestedPrompts";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 
 const GREETING =
@@ -132,6 +133,7 @@ export function ChatPanel({ onBotMessage }: { onBotMessage: () => void }) {
         {chat.status}
       </div>
       <MessageList />
+      <SuggestedPrompts onSend={send} />
       <ChatInput
         ref={inputRef}
         onSend={send}

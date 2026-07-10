@@ -448,6 +448,25 @@ button:focus-visible, select:focus-visible, textarea:focus-visible {
   text-underline-offset: 2px;
 }
 
+/* ---- Suggested prompts (shown above the input on a fresh chat) ---- */
+.suggested-prompts {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: .35rem;
+  padding: .35rem .1rem .1rem;
+}
+.suggested-prompt {
+  padding: .32rem .6rem; border-radius: 999px;
+  background: var(--iron-800); color: var(--txt-dim);
+  border: 1px solid var(--line); cursor: pointer;
+  font-family: var(--font-mono); font-size: .64rem; letter-spacing: .03em;
+  line-height: 1.2; text-align: left;
+  transition: border-color .16s, color .16s, background .16s, box-shadow .16s;
+}
+.suggested-prompt:hover {
+  border-color: var(--oil); color: var(--oil-hi);
+  background: linear-gradient(180deg, rgba(231,154,61,.16), rgba(231,154,61,.06));
+  box-shadow: 0 0 10px rgba(231,154,61,.14);
+}
+
 /* ---- Input row (mic + text + send), enclosed in the floating panel ---- */
 .input-row { flex: 0 0 auto; display: flex; gap: .4rem; align-items: flex-end; padding-top: .35rem; }
 #textInput {
