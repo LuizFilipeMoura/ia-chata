@@ -2179,3 +2179,26 @@ test("a ranged attack does not engage", () => {
   } });
   assert.equal(findRig(r, "b1").engagedWith, null);
 });
+
+test("an engaged rig cannot Move or Sprint", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  __test.setEngagement(b1, a1); // lock b1 to a1
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  assert.equal(r.game.turn.actionsUsed, 0);   // move rejected — no slot spent
+  assert.equal(b1.engine.heat, heatBefore);   // no heat added
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
+  assert.equal(r.game.turn.actionsUsed, 0);   // sprint rejected too
+});
+
+test("an unengaged rig moves normally", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  assert.equal(r.game.turn.actionsUsed, 1);   // still works when not engaged
+});

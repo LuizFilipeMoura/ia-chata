@@ -1029,6 +1029,9 @@ function performAction(room, rig, act, a, random) {
     return resolveFire(room, rig, target, a, act, random);
   }
   if (act === "move" || act === "sprint") {
+    // §engagement — a rig locked in melee is pinned; it must Disengage before it
+    // can reposition. (Repositioning while engaged is meaningless without a grid.)
+    if (rig.engagedWith != null) return false;
     // Move / Sprint may repeat within an activation; each spends one slot and
     // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
     const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
