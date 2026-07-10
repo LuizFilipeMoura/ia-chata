@@ -2760,3 +2760,89 @@ test("if the skewerer is gone, the victim disengages with no strike and no crash
   assert.equal(b1.skeweredBy, null);     // mark cleared anyway
   assert.equal(b1.engagedWith, null);    // and the rig disengages
 });
+
+// --- Group E: per-location tracking (Breach Grip + Dismember) -----------------
+
+test("makeRig seeds cracked/crippled/noRepair maps and per-location origMax", () => {
+  const rig = makeRig(1, "r", "medium", "a", W);
+  assert.deepEqual(rig.cracked, {});
+  assert.deepEqual(rig.crippled, {});
+  assert.deepEqual(rig.noRepair, {});
+  assert.deepEqual(rig.origMax, { hull: 7, arms: 6, legs: 6, engine: 5 });
+});
+
+test("ensureRigShape back-fills origMax and the Group-E maps on a legacy rig", () => {
+  const rig = makeRig(1, "r", "medium", "a", W);
+  delete rig.cracked; delete rig.crippled; delete rig.noRepair; delete rig.origMax;
+  rig.hull.max = 4; // legacy rig already sundered — origMax should track current max
+  __test.ensureRigShape(rig);
+  assert.deepEqual(rig.cracked, {});
+  assert.deepEqual(rig.crippled, {});
+  assert.deepEqual(rig.noRepair, {});
+  assert.equal(rig.origMax.hull, 4);
+});
+
+test("crackLocation flags the struck location through this round + next; Recovery expires it", () => {
+  const target = makeRig(2, "a1", "medium", "b", W);
+  const room = { game: { round: 3, resolutions: [], nextResolutionId: 1 }, rigs: [target] };
+  __test.crackLocation(room, target, "hull");
+  assert.equal(target.cracked.hull, 5); // round 3 + 2
+  // Recovery at round 4 keeps a still-live crack (5 >= 4)...
+  room.game.round = 4;
+  __test.runRecovery(room);
+  assert.equal(target.cracked.hull, 5);
+  // ...but drops it once the round passes the expiry (5 < 6).
+  room.game.round = 6;
+  __test.runRecovery(room);
+  assert.equal(target.cracked.hull, undefined);
+});
+
+test("a Breach Grip Claw hit cracks the struck location so any later attack gets +2", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Claw";
+  b1.weaponUpgrades.melee = "breach-grip";
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6, 6], impacts: [6, 6, 6], location: 1 },
+  } });
+  assert.equal(a1.cracked.hull, r.game.round + 2);
+});
+
+test("Dismember cripples legs (immobilise) once ground to <= half original, not before", () => {
+  const target = makeRig(2, "a1", "medium", "b", W); // legs max 6, origMax 6
+  const room = { game: { round: 1, resolutions: [], nextResolutionId: 1 }, rigs: [target] };
+  // Grind 6 -> 5 -> 4: still above half (3), no cripple.
+  __test.dismemberLocation(room, target, "legs", { random: () => 0 });
+  __test.dismemberLocation(room, target, "legs", { random: () => 0 });
+  assert.equal(target.legs.max, 4);
+  assert.equal(target.immobilised, false);
+  assert.equal(target.crippled.legs, undefined);
+  // One more grind: 4 -> 3 (<= half of 6) -> permanent immobilise.
+  __test.dismemberLocation(room, target, "legs", { random: () => 0 });
+  assert.equal(target.legs.max, 3);
+  assert.equal(target.immobilised, true);
+  assert.equal(target.crippled.legs, true);
+});
+
+test("Dismember on a weapon location destroys a weapon; on hull it blocks repair", () => {
+  const armT = makeRig(2, "a1", "medium", "b", W); // arms max 6
+  const room = { game: { round: 1, resolutions: [], nextResolutionId: 1 }, rigs: [armT] };
+  armT.arms.max = 4; // simulate prior grinding to just above half
+  __test.dismemberLocation(room, armT, "arms", { random: () => 0 }); // 4 -> 3 (<= 3) cripple
+  assert.equal(armT.crippled.arms, true);
+  assert.equal(armT.weaponsDestroyed.length, 1);
+
+  const hullT = makeRig(3, "a2", "medium", "b", W); // hull max 7, half 3.5
+  const room2 = { game: { round: 1, resolutions: [], nextResolutionId: 1 }, rigs: [hullT] };
+  hullT.hull.max = 4;
+  __test.dismemberLocation(room2, hullT, "hull", { random: () => 0 }); // 4 -> 3 (<= 3.5) cripple
+  assert.equal(hullT.crippled.hull, true);
+  assert.equal(hullT.noRepair.hull, true);
+  const spBefore = hullT.hull.sp; // clamped to the new max 3 by the sunder
+  __test.repairRig(hullT, "hull", 3);
+  assert.equal(hullT.hull.sp, spBefore); // repair refused on a dismembered hull
+});

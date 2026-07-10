@@ -250,7 +250,7 @@ export const WEAPON_UPGRADES = {
   "Circular Saw": [
     { id: "tempered-teeth", nature: "field", name: "Tempered Teeth", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "sunder", nature: "tuned", name: "Sunder", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
-    { id: "dismember", nature: "prototype", name: "Dismember", tag: "Saw a location in half to cripple it for good", effect: {} }, // TODO(mechanics)
+    { id: "dismember", nature: "prototype", name: "Dismember", tag: "Saw a location in half to cripple it for good", effect: { dismember: true } },
   ],
   "Chainsaw": [
     { id: "ripper-teeth", nature: "field", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
@@ -260,7 +260,7 @@ export const WEAPON_UPGRADES = {
   "Claw": [
     { id: "rending-talons", nature: "field", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
     { id: "vice-grip", nature: "tuned", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
-    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 impact from anyone)", effect: {} }, // TODO(mechanics)
+    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 impact from anyone)", effect: { breachGrip: true } },
   ],
   "Lance": [
     { id: "couched-reach", nature: "field", name: "Couched Reach", tag: "Doubles melee reach to 4\"", effect: { range: 2 } },
@@ -437,6 +437,16 @@ function ensureRigShape(rig) {
   // paint goes stale.
   if (rig.lockedTarget === undefined) rig.lockedTarget = null;
   if (typeof rig.lockExpiresRound !== "number") rig.lockExpiresRound = 0;
+  // Breach Grip / Dismember (§13) — per-location tracking maps.
+  if (!rig.cracked || typeof rig.cracked !== "object") rig.cracked = {};
+  if (!rig.crippled || typeof rig.crippled !== "object") rig.crippled = {};
+  if (!rig.noRepair || typeof rig.noRepair !== "object") rig.noRepair = {};
+  // Dismember origMax — default each part to its current max on a legacy rig
+  // (best-effort yardstick; a rig commissioned pre-Dismember was never sundered).
+  if (!rig.origMax || typeof rig.origMax !== "object") {
+    rig.origMax = {};
+    for (const l of partNamesOf(rig.kind || "rig")) if (rig[l]) rig.origMax[l] = rig[l].max;
+  }
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -575,9 +585,19 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // round the paint expires; the next Missile Barrage volley on it can't miss.
     lockedTarget: null,
     lockExpiresRound: 0,
+    // Breach Grip (§13, Claw) — location → the round the armour crack expires.
+    cracked: {},
+    // Dismember (§13, Circular Saw) — locations already crippled (apply once),
+    // and locations whose repairs are permanently blocked by a dismembered
+    // hull/engine.
+    crippled: {},
+    noRepair: {},
     destroyed: false,
   };
   rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
+  // Dismember (§13) — each location's commissioned max SP, the yardstick for the
+  // "ground to <= half" cripple check (Sunder chips away at the live max).
+  rig.origMax = { hull: rig.hull.max, arms: rig.arms.max, legs: rig.legs.max, engine: rig.engine.max };
   return rig;
 }
 
@@ -627,12 +647,19 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     engagedWith: null,
     hardened: false,
     actionPenaltyNextActivation: 0,
+    // Group E per-location state (Breach Grip / Dismember), mirrored from makeRig.
+    cracked: {},
+    crippled: {},
+    noRepair: {},
     destroyed: false,
   };
   // Alias top-level part fields so shared-code reads like rig.hull / rig.engine
   // resolve for cold kinds too (Task 4's recompute + Task 7's action-budget
   // helper walk names via partNamesOf, so they read rig[name] directly).
   for (const p of kind.parts) unit[p.name] = parts[p.name];
+  // Dismember (§13) — commissioned max SP per part for the cripple yardstick.
+  unit.origMax = {};
+  for (const p of kind.parts) unit.origMax[p.name] = parts[p.name].max;
   return unit;
 }
 
@@ -943,6 +970,8 @@ function repairRig(rig, loc, amount) {
   if (!c) return;
   // Breaching Round (§12) — a breached Hull can't be repaired until the lock clears.
   if (loc === "hull" && (rig.hullRepairLock || 0) > 0) return;
+  // Dismember (§13) — a location sawn past half its original is crippled for good.
+  if (rig.noRepair && rig.noRepair[loc]) return;
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   c.sp = Math.min(c.max, c.sp + n);
   if (c.sp > 0) c.destroyed = false;
@@ -965,6 +994,61 @@ function sunderLocation(target, loc) {
   c.sp = Math.min(c.sp, c.max);
   recompute(target);
   return true;
+}
+
+// Breach Grip (§13, Claw) — pry the struck location's armour open. The crack
+// expires at the end of the round after next (round + 2); while live it adds +2
+// to every impact from any attacker (applied in combat.js rollImpacts). Stale
+// entries are swept in runRecovery.
+function crackLocation(room, target, loc) {
+  if (!target || !target[loc]) return;
+  target.cracked = target.cracked || {};
+  target.cracked[loc] = (room?.game?.round || 0) + 2;
+}
+
+// Dismember (§13, Circular Saw) — the prototype escalation of Sunder. Chips the
+// location's max SP down like Sunder, then, once that max reaches <= half its
+// commissioned original, applies a one-time PERMANENT cripple keyed by the
+// location's role: mobility → immobilise; weapon → destroy a weapon; structural
+// or power → block repairs on that location for good.
+function dismemberLocation(room, target, loc, opts) {
+  sunderLocation(target, loc);
+  const c = target?.[loc];
+  if (!c) return;
+  target.crippled = target.crippled || {};
+  if (target.crippled[loc]) return; // permanent — apply the cripple only once
+  const orig = target.origMax?.[loc] ?? c.max;
+  if (c.max > orig / 2) return;     // not yet ground to half — no cripple
+  target.crippled[loc] = true;
+  const kind = kindOf(target);
+  const role = roleOf(kind, loc);
+  const effects = [];
+  if (role === "mobility") {
+    // Permanent immobilise — reuse the leg-destruction flag; never resets mid-match.
+    target.immobilised = true;
+    if (target.engagedWith != null) clearEngagement(room, target);
+    effects.push(`Dismember — ${loc} severed; ${target.name} immobilised for good`);
+  } else if (role === "weapon") {
+    if (kind === "rig") {
+      // Rig arms carry two guns; roll which one the saw wrecks (mirrors §8).
+      const roll = rollD(12, opts?.dice?.dismemberWeapon, opts?.random);
+      const slot = roll <= 6 ? "longRange" : "melee";
+      const name = target.weapons?.[slot];
+      if (name && !target.weaponsDestroyed.includes(name)) target.weaponsDestroyed.push(name);
+    } else {
+      const name = target.weapons?.unit;
+      if (name && !target.weaponsDestroyed.includes(name)) target.weaponsDestroyed.push(name);
+    }
+    effects.push(`Dismember — ${loc} mangled; weapon destroyed`);
+  } else {
+    // structural / power — a permanent repair block on this location.
+    target.noRepair = target.noRepair || {};
+    target.noRepair[loc] = true;
+    effects.push(`Dismember — ${loc} wrecked; repairs permanently blocked`);
+  }
+  if (room?.game) pushResolution(room, {
+    kind: "perk", actor: target.owner, rigId: target.id, rolls: [], summary: effects.join("; "), effects,
+  });
 }
 
 function setRigSp(rig, loc, sp) {
@@ -1020,6 +1104,12 @@ function runRecovery(room) {
     rig.preparation = null;
     rig.ripostedThisRound = false; // Anvil Boss — the riposte re-arms each round
     rig.suppressImmobile = false;  // Suppression Lock pin lasts one round; re-applied by continued fire
+    // Breach Grip (§13, Claw) — sweep out cracks whose expiry round has passed.
+    if (rig.cracked) {
+      for (const loc of Object.keys(rig.cracked)) {
+        if (rig.cracked[loc] < room.game.round) delete rig.cracked[loc];
+      }
+    }
     tickBreach(rig);
     recompute(rig);
   }
@@ -1098,6 +1188,8 @@ function combatCtx() {
     bumpHeat,
     pushResolution,
     sunderLocation,
+    crackLocation,
+    dismemberLocation,
     breachHull,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
     engage: (room, attacker, target) => maybeEngage(room, attacker, target),
@@ -1919,4 +2011,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation };

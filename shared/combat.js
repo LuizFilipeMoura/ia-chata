@@ -188,6 +188,11 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
   const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
+  // Breach Grip (§13, Claw) — a location cracked open eats +2 on every impact
+  // from ANY attacker while the crack is live (its stored expiry round is at or
+  // past the current round). `opts.round` is threaded in from resolveAttack.
+  const crackExpiry = target.cracked?.[location];
+  const cracked = crackExpiry != null && opts.round != null && crackExpiry >= opts.round ? 2 : 0;
   const row = impactRow(target.kind || "rig", location, target.weightClass);
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
@@ -196,7 +201,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     let extra = 0;
     if (hasPerk(profile, "Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
     if (hasPerk(profile, "Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
-    const total = die + str + bonus + braced + hardened + shieldBlunt + extra;
+    const total = die + str + bonus + braced + hardened + shieldBlunt + cracked + extra;
     // Penetrator Rounds — every 3rd Autocannon volley bypasses the armour row
     // entirely: every landed hit is forced to Severe (2 SP) regardless of the
     // total rolled or the location's row.
@@ -269,11 +274,22 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     location = opts.aimed ? opts.aimedLoc : hitLocation(attacker.kind || "rig", locDie);
     if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     impacts = rollImpacts(attacker, target, profile, location,
-      { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot },
+      { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0 },
       opts.dice, random);
     for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
     if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
       ctx.sunderLocation?.(target, location);
+    }
+    // Breach Grip (§13, Claw) — a damaging Claw hit pries the struck location's
+    // armour open, cracking it for +2 impact from anyone until it expires.
+    if (profile.upgradeEffect?.breachGrip && impacts.some((h) => h.sp > 0)) {
+      ctx.crackLocation?.(room, target, location);
+    }
+    // Dismember (§13, Circular Saw) — the prototype escalation of Sunder: also
+    // grinds max SP down (via ctx) and permanently cripples the location once
+    // it drops to <= half its commissioned original.
+    if (profile.upgradeEffect?.dismember && impacts.some((h) => h.sp > 0)) {
+      ctx.dismemberLocation?.(room, target, location, { random, dice: opts.dice });
     }
     if (profile.upgradeEffect?.onDamage === "breaching-round" && location === "hull" && impacts.some((h) => h.sp > 0)) {
       ctx.breachHull?.(target);

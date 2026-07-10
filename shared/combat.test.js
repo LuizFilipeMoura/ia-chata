@@ -700,3 +700,57 @@ test("Fire Control Lock only fires vs the exact painted target", () => {
   assert.equal(res.hits, 0);
   assert.equal(attacker.lockedTarget, painted.id); // paint still saved for the real target
 });
+
+test("Breach Grip — a cracked location adds +2 to every impact while the crack is live", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const cracked = { weightClass: "medium", cracked: { hull: 5 } };
+  const plain = { weightClass: "medium" };
+  // die 5 + STR 8 = 13 -> direct(1) on a medium hull (11/14/17) with no crack.
+  const base = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "front", hits: 1, round: 5 }, { impacts: [5] }, () => 0);
+  assert.equal(base[0].total, 13);
+  assert.equal(base[0].tier, "direct");
+  // Same roll vs the cracked hull while live: 13 + 2 = 15 -> severe(2).
+  const live = rollImpacts({ weightClass: "medium" }, cracked, auto, "hull",
+    { arc: "front", hits: 1, round: 5 }, { impacts: [5] }, () => 0);
+  assert.equal(live[0].total, 15);
+  assert.equal(live[0].tier, "severe");
+  // Once the expiry round has passed (5 < 8) the +2 is gone again.
+  const stale = rollImpacts({ weightClass: "medium" }, cracked, auto, "hull",
+    { arc: "front", hits: 1, round: 8 }, { impacts: [5] }, () => 0);
+  assert.equal(stale[0].total, 13);
+});
+
+test("Breach Grip — a damaging Claw hit routes through ctx.crackLocation", () => {
+  const attacker = makeRig(1, "Pry", "medium", "a", { longRange: "Autocannon", melee: "Claw", meleeUpgrade: "breach-grip" });
+  const target = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 4 } };
+  const cracks = [];
+  const ctx = {
+    ...makeCtx(),
+    applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+    crackLocation: (rm, t, loc) => { cracks.push([t.id, loc, rm.game.round]); },
+  };
+  const res = resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", range: "near",
+      dice: { toHit: [6, 6, 6], location: 1, impacts: [6, 6, 6] } }, () => 0, ctx);
+  assert.equal(res.location, "hull");
+  assert.deepEqual(cracks, [[2, "hull", 4]]);
+});
+
+test("Dismember — a damaging Circular Saw hit routes through ctx.dismemberLocation", () => {
+  const attacker = makeRig(1, "Grind", "medium", "a", { longRange: "Autocannon", melee: "Circular Saw", meleeUpgrade: "dismember" });
+  const target = makeRig(2, "Slab", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const calls = [];
+  const ctx = {
+    ...makeCtx(),
+    applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+    dismemberLocation: (rm, t, loc) => { calls.push([t.id, loc]); },
+  };
+  const res = resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", range: "near",
+      dice: { toHit: [6, 6, 6], location: 1, impacts: [6, 6, 6] } }, () => 0, ctx);
+  assert.equal(res.location, "hull");
+  assert.deepEqual(calls, [[2, "hull"]]);
+});
