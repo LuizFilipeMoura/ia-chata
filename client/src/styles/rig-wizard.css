@@ -63,6 +63,12 @@
 .rw-upgrade-choice small {
   display: block; margin-top: .22rem; font-size: .68rem; line-height: 1.25; color: var(--txt-dim);
 }
+.rw-nature { font-style: normal; font-size: 0.7em; padding: 0 .35em; border-radius: 3px; margin-left: .35em; vertical-align: middle; }
+.rw-nature-field { background: #24406b; color: #cfe0ff; }
+.rw-nature-tuned { background: #6b4a1f; color: #ffe6bf; }
+.rw-nature-prototype { background: #5a2340; color: #ffd0e6; }
+.rw-upgrade-choice.locked { opacity: .45; cursor: not-allowed; }
+
 .rw-hint { font-size: .74rem; color: var(--txt-faint); line-height: 1.4; }
 
 .rw-equip-grid { display: flex; flex-direction: column; gap: .5rem; }
