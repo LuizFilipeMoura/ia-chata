@@ -205,7 +205,7 @@ export const WEAPON_UPGRADES = {
   "Mini Gun": [
     { id: "suppressive-fire", nature: "field", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
     { id: "extended-belt", nature: "tuned", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
-    { id: "suppression-lock", nature: "prototype", name: "Suppression Lock", tag: "Grind one target down turn by turn until it's pinned", effect: {} }, // TODO(mechanics)
+    { id: "suppression-lock", nature: "prototype", name: "Suppression Lock", tag: "Grind one target down turn by turn until it's pinned", effect: { suppressLock: true } },
   ],
   "Double MG": [
     { id: "gyro-mount", nature: "field", name: "Gyro Mount", tag: "Reroll one missed to-hit die", effect: { rerollMisses: 1 } },
@@ -215,7 +215,7 @@ export const WEAPON_UPGRADES = {
   "Autocannon": [
     { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+2 STR", effect: { str: 2 } },
     { id: "ap-shells", nature: "tuned", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour; belt cycles slow after", effect: {} }, // TODO(mechanics)
+    { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour; belt cycles slow after", effect: { penetrator: true } },
   ],
   "Arc Gun": [
     { id: "ion-burn", nature: "field", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
@@ -420,6 +420,11 @@ function ensureRigShape(rig) {
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
   if (typeof rig.burning !== "number") rig.burning = 0;
   if (typeof rig.ripostedThisRound !== "boolean") rig.ripostedThisRound = false;
+  if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
+  if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
+  if (rig.suppressTarget === undefined) rig.suppressTarget = null;
+  if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
+  if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -533,6 +538,16 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     hullRepairLock: 0,
     burning: 0,
     ripostedThisRound: false,
+    // Penetrator Rounds (§13, Autocannon) — belt-cycle counter + the ROF-halving
+    // downside carried into the attack right after a penetrator shot.
+    autocannonShots: 0,
+    autocannonSlowNext: false,
+    // Suppression Lock (§13, Mini Gun) — which target this rig is grinding down
+    // and how many consecutive-fire stacks it has piled on.
+    suppressTarget: null,
+    suppressStacks: 0,
+    // Suppression Lock's 3rd-stack payload: blocks this rig's next Prepare.
+    noPrepNextActivation: false,
     destroyed: false,
   };
   rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
@@ -1007,6 +1022,10 @@ function endActivation(room, rig, dice, random) {
   // just at start), so a stale `true` can't leak into a reactive strike on the
   // opponent's turn before this rig next activates.
   rig.movedThisActivation = false;
+  // Suppression Lock's Prepare block (§13) is scoped to exactly the one
+  // activation it landed on — clear it here so it doesn't leak into the rig's
+  // activation after next.
+  rig.noPrepNextActivation = false;
   room.game.turn.activeRigId = null;
   handoff(room);
 }
@@ -1253,6 +1272,12 @@ function performAction(room, rig, act, a, random) {
     // Preparations are Rig-only (spec §17). Cold kinds (Tank / Walker) carry
     // reactions: false in their registry entry and cannot Prepare.
     if (!UNIT_KINDS[kindOf(rig)]?.reactions) return false;
+    // Suppression Lock (§13, Mini Gun) — a 3rd stack denies this rig's Prepare
+    // for its whole next activation. Cleared in endActivation once that
+    // activation concludes (NOT at activation start — Prepare is only ever
+    // reachable *after* activate() runs for this same activation, so clearing
+    // it there would zero the flag before the gate below ever sees it).
+    if (rig.noPrepNextActivation) return false;
     rig.preparation = { type: normalizePrep(a.prep, rig), source: "action", faceUp: false };
   }
   bumpHeat(rig, def.heat);

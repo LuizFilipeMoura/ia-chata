@@ -435,6 +435,8 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Burning** (status) — a rig on fire takes `burning` SP to its Hull at the start of each of its activations, then keeps burning until doused. The **Douse** action (1 slot, 0 heat) removes one Burning stack.
 - **Napalm** (Flamethrower, Tuned) — a landed hit sets the target Burning at 1; it never stacks past 1, so one Douse clears it.
 - **Conflagration** (Flamethrower, Prototype) — each landed hit adds +1 Burning to the target (stacks with no cap) and runs the attacker +1 heat as its downside; each stack needs its own Douse.
+- **Penetrator Rounds** (Autocannon, Prototype) — every 3rd Autocannon volley (per-rig belt counter) bypasses the armour row entirely: every landed hit is forced to Severe (2 SP) regardless of location or roll. The belt then cycles slow for exactly the attack right after — that attack's ROF is halved.
+- **Suppression Lock** (Mini Gun, Prototype) — consecutive hits on the *same* target ramp a pin: 1 stack halves its Speed next round, 2 stacks also docks it 1 action on its next activation, 3 stacks immobilises it and blocks its next Prepare entirely. Firing on a different target resets the count to 1 stack. The attacker runs +1 heat every attack while the lock is active. Stacks cap at 3 and don't decay on their own.
 
 ---
 

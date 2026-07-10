@@ -508,3 +508,106 @@ test("Conflagration stacks the target's burning and self-heats the attacker per 
   // +1 heat to the attacker per hit-resolution (two attacks landed).
   assert.deepEqual(heatBumps.filter(([id]) => id === attacker.id), [[attacker.id, 1], [attacker.id, 1]]);
 });
+
+test("Penetrator Rounds forces the 3rd Autocannon volley's hits to Severe, bypassing the armour row", () => {
+  const attacker = makeRig(1, "P", "medium", "a", { longRange: "Autocannon", melee: "Claw", longRangeUpgrade: "penetrator-rounds" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = makeCtx();
+  const miss = { weapon: "longRange", arc: "front", range: "near", cover: 0, dice: { toHit: [1, 1, 1, 1] } };
+  resolveAttack(room, attacker, target, miss, () => 0, ctx); // 1st volley — all miss, counter -> 1
+  attacker.loaded.longRange = true; // simulate the reload a new activation grants
+  resolveAttack(room, attacker, target, miss, () => 0, ctx); // 2nd volley — all miss, counter -> 2
+  assert.equal(attacker.autocannonShots, 2);
+  assert.equal(attacker.autocannonSlowNext, false);
+  attacker.loaded.longRange = true;
+  // 3rd volley: 1 landed hit (die 6), impact die 5 -> total 5 + 8(STR) + 0(front arc) = 13,
+  // which is only "direct" (1 SP) on a medium Hull row (11/14/17) without the upgrade.
+  const res = resolveAttack(room, attacker, target, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 1, 1, 1], location: 1, impacts: [5] },
+  }, () => 0, ctx);
+  assert.equal(attacker.autocannonShots, 3);
+  assert.equal(res.impacts.length, 1);
+  assert.equal(res.impacts[0].tier, "severe");
+  assert.equal(res.impacts[0].sp, 2); // forced Severe instead of the would-be Direct (1 SP)
+  assert.equal(attacker.autocannonSlowNext, true); // downside armed for the very next attack
+});
+
+test("Penetrator Rounds halves ROF on the attack immediately after it fires", () => {
+  const attacker = makeRig(1, "P", "medium", "a", { longRange: "Autocannon", melee: "Claw", longRangeUpgrade: "penetrator-rounds" });
+  const profile = effectiveWeaponProfile("longRange", "Autocannon", attacker);
+  attacker.autocannonShots = 2; // the next volley will be the 3rd
+  const third = rollToHit(attacker, profile, { range: "near", cover: 0 }, [1, 1, 1, 1], () => 0);
+  assert.equal(attacker.autocannonShots, 3);
+  assert.equal(third.penetratorShot, true);
+  assert.equal(third.rof, 4); // full ROF — the slow-belt downside hasn't landed yet
+  assert.equal(attacker.autocannonSlowNext, true);
+  const fourth = rollToHit(attacker, profile, { range: "near", cover: 0 }, [1, 1], () => 0);
+  assert.equal(fourth.rof, 2); // halved: belt cycles slow the attack right after a penetrator shot
+  assert.equal(attacker.autocannonSlowNext, false); // consumed
+  assert.equal(fourth.penetratorShot, false); // 4 % 3 !== 0
+});
+
+const SUPPRESS_SHOT = {
+  weapon: "longRange", arc: "front", range: "near", cover: 0,
+  dice: { toHit: [6, 1, 1, 1, 1, 1, 1, 1], location: 1 }, // exactly 1 landed hit
+};
+
+test("Suppression Lock ramps consecutive same-target hits: speed -> action penalty -> immobilise", () => {
+  const attacker = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "suppression-lock" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const heatBumps = [];
+  const ctx = { ...makeCtx(), bumpHeat(rig, n) { heatBumps.push([rig.id, n]); } };
+
+  resolveAttack(room, attacker, target, SUPPRESS_SHOT, () => 0, ctx);
+  assert.equal(attacker.suppressStacks, 1);
+  assert.equal(target.speedHalvedNextRound, true);
+  assert.equal(target.actionPenaltyNextActivation || 0, 0);
+  assert.equal(target.immobilised, false);
+
+  attacker.loaded.longRange = true; // simulate the reload a new activation grants
+  resolveAttack(room, attacker, target, SUPPRESS_SHOT, () => 0, ctx);
+  assert.equal(attacker.suppressStacks, 2);
+  assert.equal(target.actionPenaltyNextActivation, 1);
+  assert.equal(target.immobilised, false);
+
+  attacker.loaded.longRange = true;
+  resolveAttack(room, attacker, target, SUPPRESS_SHOT, () => 0, ctx);
+  assert.equal(attacker.suppressStacks, 3);
+  assert.equal(target.immobilised, true);
+  assert.equal(target.noPrepNextActivation, true);
+
+  attacker.loaded.longRange = true;
+  resolveAttack(room, attacker, target, SUPPRESS_SHOT, () => 0, ctx); // 4th hit — stacks cap at 3
+  assert.equal(attacker.suppressStacks, 3);
+
+  // The attacker runs hot every attack while the lock is active — one +1 heat
+  // bump per landed hit above.
+  assert.deepEqual(
+    heatBumps.filter(([id]) => id === attacker.id),
+    [[attacker.id, 1], [attacker.id, 1], [attacker.id, 1], [attacker.id, 1]],
+  );
+});
+
+test("Suppression Lock resets to 1 stack (speed only) when the attacker switches target", () => {
+  const attacker = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "suppression-lock" });
+  const targetA = makeRig(2, "A", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const targetB = makeRig(3, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, targetA, targetB] };
+  const ctx = makeCtx();
+
+  resolveAttack(room, attacker, targetA, SUPPRESS_SHOT, () => 0, ctx);
+  attacker.loaded.longRange = true; // simulate the reload a new activation grants
+  resolveAttack(room, attacker, targetA, SUPPRESS_SHOT, () => 0, ctx);
+  assert.equal(attacker.suppressStacks, 2);
+  assert.equal(targetA.actionPenaltyNextActivation, 1);
+
+  attacker.loaded.longRange = true;
+  resolveAttack(room, attacker, targetB, SUPPRESS_SHOT, () => 0, ctx);
+  assert.equal(attacker.suppressTarget, targetB.id);
+  assert.equal(attacker.suppressStacks, 1); // reset by the target switch
+  assert.equal(targetB.speedHalvedNextRound, true);
+  assert.equal(targetB.actionPenaltyNextActivation || 0, 0); // only 1 stack — speed only
+});

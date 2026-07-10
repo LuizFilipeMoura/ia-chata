@@ -63,7 +63,23 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
     redlineRof = Math.min(3, over);
   }
-  const rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
+  // Penetrator Rounds — every 3rd Autocannon volley ignores the armour row
+  // (forced in rollImpacts below); the belt then cycles slow for exactly the
+  // next attack, halving that attack's ROF. `autocannonSlowNext` is a
+  // one-shot downside: read here and immediately consumed.
+  let penetratorShot = false;
+  let penetratorSlow = false;
+  if (profile.upgradeEffect?.penetrator) {
+    if (attacker.autocannonSlowNext) {
+      penetratorSlow = true;
+      attacker.autocannonSlowNext = false; // consumed
+    }
+    attacker.autocannonShots = (attacker.autocannonShots || 0) + 1;
+    penetratorShot = attacker.autocannonShots % 3 === 0;
+    if (penetratorShot) attacker.autocannonSlowNext = true;
+  }
+  let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
+  if (penetratorSlow) rof = Math.floor(rof / 2);
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
@@ -83,7 +99,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     if (hit) hits += 1;
     if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
-  return { modAim, rof, hits, fireModeHeat, dice };
+  return { modAim, rof, hits, fireModeHeat, dice, penetratorShot };
 }
 
 // §13 — every one of the target's real locations is at max SP, i.e. the target
@@ -178,7 +194,10 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     if (hasPerk(profile, "Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
     if (hasPerk(profile, "Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
     const total = die + str + bonus + braced + hardened + shieldBlunt + extra;
-    const sev = impactSeverity(total, row);
+    // Penetrator Rounds — every 3rd Autocannon volley bypasses the armour row
+    // entirely: every landed hit is forced to Severe (2 SP) regardless of the
+    // total rolled or the location's row.
+    const sev = opts.penetrate ? { tier: "severe", sp: 2 } : impactSeverity(total, row);
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
   }
   return out;
@@ -230,7 +249,8 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     location = opts.aimed ? opts.aimedLoc : hitLocation(attacker.kind || "rig", locDie);
     if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     impacts = rollImpacts(attacker, target, profile, location,
-      { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride }, opts.dice, random);
+      { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot },
+      opts.dice, random);
     for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
     if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
       ctx.sunderLocation?.(target, location);
@@ -238,7 +258,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     if (profile.upgradeEffect?.onDamage === "breaching-round" && location === "hull" && impacts.some((h) => h.sp > 0)) {
       ctx.breachHull?.(target);
     }
-    applyOnHitPerks(room, attacker, target, profile, { ...opts, hits: th.hits }, random, ctx);
+    applyOnHitPerks(room, attacker, target, profile, { ...opts, hits: th.hits, penetratorShot: th.penetratorShot }, random, ctx);
   }
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
@@ -317,6 +337,34 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
       ctx.bumpHeat(target, 1);
       effects.push("Superconductor Edge — 1 heat transferred to target");
     }
+  }
+  // Penetrator Rounds — cosmetic confirmation that this volley was the 3rd
+  // (armour-bypassing) one; the actual severity override happened in rollImpacts.
+  if (profile.upgradeEffect?.penetrator && opts.penetratorShot) {
+    effects.push("Penetrator Rounds — armour bypassed, hits forced to Severe");
+  }
+  // Suppression Lock — consecutive Mini Gun hits on the same target ramp a
+  // pin: 1 stack halves their speed, 2 also docks an action, 3 immobilises
+  // them and blocks their next Prepare. Switching targets resets to 1 stack.
+  // The attacker runs hot (+1 heat) every attack while the lock is active.
+  if (profile.upgradeEffect?.suppressLock) {
+    if (attacker.suppressTarget === target.id) {
+      attacker.suppressStacks = Math.min(3, (attacker.suppressStacks || 0) + 1);
+    } else {
+      attacker.suppressTarget = target.id;
+      attacker.suppressStacks = 1;
+    }
+    const stacks = attacker.suppressStacks;
+    if (stacks >= 1) target.speedHalvedNextRound = true;
+    if (stacks >= 2) target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);
+    if (stacks === 3) {
+      target.immobilised = true;
+      target.noPrepNextActivation = true;
+    }
+    ctx.bumpHeat(attacker, 1);
+    effects.push(`Suppression Lock ${stacks} — ${target.name} ${
+      stacks === 3 ? "immobilised, Prepare blocked" : stacks === 2 ? "action penalty" : "speed halved"
+    }`);
   }
   const onHit = profile.upgradeEffect?.onHit;
   if (onHit === "systems-overload") {

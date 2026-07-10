@@ -714,6 +714,30 @@ test("douse spends an action and removes one burning stack", () => {
   assert.equal(r.game.turn.actionsUsed, usedBefore + 1);    // costs one action slot
 });
 
+test("Suppression Lock's 3rd stack blocks Prepare during the pinned rig's activation", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.noPrepNextActivation = true; // simulates a Suppression Lock 3-stack landed on this rig
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const usedBefore = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "brace" } });
+  assert.equal(b1.preparation, null);                       // Prepare refused
+  assert.equal(r.game.turn.actionsUsed, usedBefore);        // no slot/heat spent on the refusal
+});
+
+test("noPrepNextActivation clears when the pinned rig's activation ends", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.noPrepNextActivation = true;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "brace" } }); // refused
+  assert.equal(b1.preparation, null);
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(b1.noPrepNextActivation, false);             // scoped to just the blocked activation
+});
+
 test("Shutdown is allowed after a real action has been spent (not just as the first)", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
