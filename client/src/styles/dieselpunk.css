@@ -88,19 +88,31 @@
   clip-path: polygon(
     9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px),
     calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+  /* Brass FRAME colour. An inset box-shadow ring can't follow the diagonal cut
+     edges, so instead the parent is the brass and the ::after fill (inset 1px,
+     clipped to a 1px-smaller octagon) reveals the brass as a border that traces
+     every edge — chamfers included. Same two-layer clip as <IronPanel>. */
+  background:
+    linear-gradient(135deg, #7a5c26, #3c2c12 30%, #2e2210 68%, #5a441e) !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.55));
+}
+/* Dark iron face, inset 1px so the brass parent shows through as the chamfer
+   border. Clipped to a 1px-smaller octagon so its own corners follow the cut. */
+.rig-item::after {
+  content: ""; position: absolute; inset: 1px; z-index: 0; pointer-events: none;
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
   /* Brushed-steel iron face — same material as the action tiles. */
   background:
     repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, rgba(0,0,0,.05) 1px 3px),
-    radial-gradient(150% 130% at 50% 32%, #2c3139, #1a1e25 55%, #0e1116) !important;
-  /* No border — clip-path would crop its corners. A brass inset ring gives the
-     bevel edge and, being clipped to the octagon, traces the chamfer cleanly. */
-  border: none !important;
+    radial-gradient(150% 130% at 50% 32%, #2c3139, #1a1e25 55%, #0e1116);
   box-shadow:
-    inset 0 0 0 1px rgba(150,120,66,.42),
     inset 0 1px 0 rgba(255,255,255,.07),
     inset 2px 2px 5px rgba(0,0,0,.5),
-    inset -2px -2px 5px rgba(0,0,0,.42) !important;
-  filter: drop-shadow(0 3px 6px rgba(0,0,0,.55));
+    inset -2px -2px 5px rgba(0,0,0,.42);
 }
 .rig-item::before {
   content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
@@ -112,12 +124,24 @@
     radial-gradient(circle 3.5px at 9px calc(100% - 9px), #dcbc74 0, #9c7736 46%, #3a2c14 80%, transparent 84%),
     radial-gradient(circle 3.5px at calc(100% - 9px) calc(100% - 9px), #dcbc74 0, #9c7736 46%, #3a2c14 80%, transparent 84%);
 }
+/* Active: recolour the brass frame to hot orange so the chamfer border lights
+   up on every edge; the ::after fill keeps the dark face. */
 .rig-item.is-active {
-  box-shadow:
-    inset 0 0 0 1px rgba(231,154,61,.6),
-    inset 0 1px 0 rgba(255,255,255,.08),
-    inset 0 -4px 10px rgba(0,0,0,.45) !important;
+  background:
+    linear-gradient(135deg, #e79a3d, #c7873a 45%, #7a5c26) !important;
+  box-shadow: none !important;
   filter: drop-shadow(0 4px 14px rgba(231,154,61,.35));
+}
+.rig-item.is-active::after {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45);
+}
+/* Destroyed: rust-red chamfer frame (the old border-color is dead under the
+   frame approach). */
+.rig-item.is-destroyed {
+  background:
+    linear-gradient(135deg, #6e2a20, #3c1712 40%, #2a100c) !important;
 }
 /* Keep rig-head chevron/name above the rivet layer. */
 .rig-head { position: relative; z-index: 5; }
@@ -373,11 +397,12 @@
 }
 
 /* Sub-action popover — recessed brass-edged panel above the tile. */
-.ac-pop-scrim { position: fixed; inset: 0; z-index: 20; }
+.ac-pop-scrim { position: fixed; inset: 0; z-index: 60; }
+/* Portaled to <body> (ActionConsole AcPopover) to escape the rig card clip-path;
+   left/top are set inline from the anchor tile's rect. */
 .ac-pop {
-  position: absolute; z-index: 21;
-  left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
-  min-width: max(100%, 150px);
+  position: fixed; z-index: 61;
+  min-width: 160px;
   padding: 5px; border-radius: 9px;
   background: linear-gradient(180deg, #2b323c, #171c22);
   border: 1px solid #4a535f;
@@ -387,7 +412,7 @@
     0 0 0 1px rgba(120,95,50,.25);
 }
 .ac-pop::after {
-  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  content: ""; position: absolute; top: 100%; left: var(--arrow-x, 50%); transform: translateX(-50%);
   border: 7px solid transparent; border-top-color: #171c22;
 }
 .ac-pop-row {
@@ -517,4 +542,316 @@
 
 @media (prefers-reduced-motion: reduce) {
   .heat-track::after { animation: none !important; }
+}
+
+/* =============================================================================
+   Iron Works 3b — pull the last flat panels into the machine.
+
+   The hero controls (action tiles, End-Turn bar, rig heads) already read as
+   stamped brass over iron; these lagged behind in the flat terminal look. Each
+   is brought into the SAME material vocabulary at its correct TIER — not brass
+   everywhere, but the right primitive for its job:
+     · pinned turn banner   → stamped steel plaque (brass reserved for GO)
+     · battle-HUD strip      → engraved frame + corner rivets (topbar's sibling)
+     · battle-setup footer   → matching engraved frame, brass READY button
+     · remove-rig            → recessed rust slot (destructive, understated)
+     · comp +/- steppers     → machined steel pushbuttons
+   ============================================================================= */
+
+/* ---- Pinned turn banner → square bolted iron plate ----
+   The "act" tone is already hot brass (above). Every other tone reads as a
+   sharp-cornered iron plaque: dark iron edge, top light-catch + sunken bottom,
+   and a real drop shadow so it sits proud of the stage. Corner bolts on top. */
+.turn-banner:not([data-tone="act"]) .tb-card {
+  position: relative;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  background:
+    radial-gradient(120% 160% at 50% -40%, rgba(231,154,61,.06), transparent 62%),
+    linear-gradient(180deg, #2b323c, #171c22) !important;
+  border: 1px solid #0e1218 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.09),
+    inset 0 0 0 1px rgba(120,131,142,.16),
+    inset 0 -5px 11px rgba(0,0,0,.5),
+    0 4px 12px rgba(0,0,0,.55) !important;
+  filter: none;
+}
+.turn-banner:not([data-tone="act"]) .tb-card::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  background-repeat: no-repeat;
+  /* steel dome bolts seated inside each cut corner (same as the topbar) */
+  background-image:
+    radial-gradient(circle 3.5px at 12px 12px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 3.5px at calc(100% - 12px) 12px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 3.5px at 12px calc(100% - 12px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 3.5px at calc(100% - 12px) calc(100% - 12px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%);
+}
+.turn-banner:not([data-tone="act"]) .tb-icon,
+.turn-banner:not([data-tone="act"]) .tb-text,
+.turn-banner:not([data-tone="act"]) .tb-cta { position: relative; z-index: 5; }
+
+/* ---- Battle-HUD strip → cut-corner engraved frame (IronPanel two-layer) ----
+   Same technique as .rig-item: the parent is the light steel FRAME and its
+   ::after (inset 1px, a 1px-smaller octagon) is the dark engraved face, so the
+   frame reads as a 1px bevel tracing every cut edge. Corner bolts on top. */
+.battle-hud {
+  position: relative;
+  border-radius: 0 !important;
+  clip-path: polygon(
+    10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px),
+    calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+  background: linear-gradient(180deg, #4c555f, #333b45) !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 3px 7px rgba(0,0,0,.5));
+}
+.battle-hud::after {
+  content: ""; position: absolute; inset: 1px; z-index: 0; pointer-events: none;
+  clip-path: polygon(
+    9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px),
+    calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+  background:
+    radial-gradient(120% 140% at 50% -30%, rgba(231,154,61,.10), transparent 60%),
+    linear-gradient(180deg, #262c35, #181d25);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45);
+}
+.bh-phase, .bh-turn, .bh-tokens, .bh-prompt, .bh-round { position: relative; z-index: 5; }
+
+/* ---- Battle-setup footer → the HUD's bottom bookend, same cut-corner frame ---- */
+.battle-setup {
+  position: relative;
+  border-radius: 0 !important;
+  clip-path: polygon(
+    11px 0, calc(100% - 11px) 0, 100% 11px, 100% calc(100% - 11px),
+    calc(100% - 11px) 100%, 11px 100%, 0 calc(100% - 11px), 0 11px);
+  background: linear-gradient(180deg, #4c555f, #333b45) !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 3px 7px rgba(0,0,0,.5));
+}
+.battle-setup::after {
+  content: ""; position: absolute; inset: 1px; z-index: 0; pointer-events: none;
+  clip-path: polygon(
+    10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px),
+    calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+  background:
+    radial-gradient(120% 140% at 50% -30%, rgba(231,154,61,.09), transparent 60%),
+    linear-gradient(180deg, #262c35, #181d25);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -4px 10px rgba(0,0,0,.45);
+}
+.battle-ready-status, .battle-bounty, .ready-battle, .dice-mode { position: relative; z-index: 5; }
+.battle-bounty { color: #e6c07a !important; }
+
+/* READY → square raised brass button; locked → cold raised iron.
+   Sharp corners, real border, top light-catch + sunken bottom + outer drop:
+   a button standing proud of the steel frame. Press sinks it into the plate. */
+.ready-battle {
+  position: relative;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  filter: none;
+}
+.ready-battle:not(:disabled) {
+  background: linear-gradient(180deg, #e7cf94, #c7a45f 55%, #a5843f) !important;
+  color: #2a1c07 !important;
+  border: 1px solid #6e5531 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,.85),
+    inset 0 -3px 6px rgba(110,80,35,.5),
+    0 2px 4px rgba(0,0,0,.55) !important;
+  text-shadow: 0 1px 0 rgba(255,240,200,.35);
+}
+.ready-battle:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 5px rgba(110,80,35,.6) !important;
+}
+.ready-battle:disabled {
+  background: linear-gradient(180deg, #3a4149, #23282f) !important;
+  color: #8b93a0 !important;
+  border: 1px solid #0e1218 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.1),
+    inset 0 -3px 6px rgba(0,0,0,.5),
+    0 2px 4px rgba(0,0,0,.6) !important;
+}
+
+/* AUTO toggle → square raised iron switch; sinks into a brass-lit recess when engaged */
+.dice-mode {
+  position: relative;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  background: linear-gradient(180deg, #3a4149, #23282f) !important;
+  border: 1px solid #0e1218 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    inset 0 -3px 6px rgba(0,0,0,.5),
+    0 2px 4px rgba(0,0,0,.6) !important;
+  color: #9fb0ad !important;
+  filter: none;
+}
+.dice-mode[aria-pressed="true"] {
+  background: linear-gradient(180deg, #2a2318, #1b1710) !important;
+  border-color: #6e5636 !important;
+  color: #e6c07a !important;
+  box-shadow:
+    inset 0 2px 5px rgba(0,0,0,.65),
+    inset 0 0 0 1px rgba(110,86,54,.45) !important;
+}
+
+/* ---- Remove-rig → recessed rust slot ----
+   A destructive secondary action: sink it into the iron as a dark cut with a
+   faint rust-lit edge, heating to full ember on hover. Machined, not floating. */
+.rig-remove-row {
+  background: linear-gradient(180deg, #0a0d11, #05070a) !important;
+  border: 1px solid #05070a !important;
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,.85),
+    inset 0 0 0 1px rgba(229,83,58,.12) !important;
+  color: #a4564a !important;
+}
+.rig-remove-row:hover {
+  color: #ff8a72 !important;
+  border-color: #05070a !important;
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,.9),
+    inset 0 0 0 1px rgba(229,83,58,.5),
+    0 0 12px rgba(229,83,58,.15) !important;
+}
+
+/* ---- Comp +/- steppers → square raised iron pushbuttons ----
+   Sharp-cornered iron keys standing proud of the card: dark iron border, top
+   light-catch, sunken bottom, outer drop. Hover heats the edge to brass; press
+   sinks the key into the plate. */
+.rig-step {
+  position: relative;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  background: linear-gradient(180deg, #454d57, #1e232a) !important;
+  border: 1px solid #0b0e12 !important;
+  /* Depth stack, top→bottom: bright cap edge, domed inner shade, a hard 3px
+     side wall so the key has real thickness, then a soft cast shadow on the
+     plate below. */
+  box-shadow:
+    inset 0 2px 1px rgba(255,255,255,.24),
+    inset 0 1px 0 rgba(255,255,255,.12),
+    inset 0 -4px 6px rgba(0,0,0,.6),
+    inset 0 -1px 0 rgba(0,0,0,.7),
+    0 3px 0 #0a0d10,
+    0 5px 9px rgba(0,0,0,.7) !important;
+  color: #cfd6df !important;
+  filter: none;
+}
+.rig-step::after { content: none !important; }
+.rig-step:not(:disabled):hover {
+  border-color: #b98a4e !important;
+  color: #f0d9a8 !important;
+}
+.rig-step:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 5px rgba(0,0,0,.7),
+    inset 0 1px 0 rgba(0,0,0,.4),
+    0 1px 0 #0a0d10,
+    0 1px 3px rgba(0,0,0,.6) !important;
+}
+
+/* =============================================================================
+   Iron Works 3c — the dice-resolution dialog joins the machine.
+
+   Same vocabulary as the battle screen: the console is a cut-corner engraved
+   steel plate (IronPanel two-layer + corner bolts), the header a brass band,
+   the OK/Confirm a square raised brass button, the ✕ a square iron key, and the
+   dice-entry fields recessed dark slots.
+   ============================================================================= */
+
+/* ---- Console → cut-corner engraved steel plate ---- */
+.roll-console {
+  position: relative;
+  border-radius: 0 !important;
+  clip-path: polygon(
+    14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px),
+    calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  background: linear-gradient(180deg, #4c555f, #333b45) !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 22px 48px rgba(0,0,0,.72));
+}
+.roll-console::after {
+  content: ""; position: absolute; inset: 1px; z-index: 0; pointer-events: none;
+  clip-path: polygon(
+    13px 0, calc(100% - 13px) 0, 100% 13px, 100% calc(100% - 13px),
+    calc(100% - 13px) 100%, 13px 100%, 0 calc(100% - 13px), 0 13px);
+  background: linear-gradient(180deg, #232a33, #141922);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    inset 0 -7px 18px rgba(0,0,0,.5);
+}
+.roll-console::before {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle 3.5px at 13px 13px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 3.5px at calc(100% - 13px) 13px, #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 3.5px at 13px calc(100% - 13px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%),
+    radial-gradient(circle 3.5px at calc(100% - 13px) calc(100% - 13px), #c4ccd6 0, #7b838e 42%, #262c34 78%, transparent 82%);
+}
+.roll-console > * { position: relative; z-index: 1; }
+
+/* ---- Header → squared brass band with an inset base line ---- */
+.roll-head {
+  border-radius: 0 !important;
+  border-bottom: 1px solid #0b0e12 !important;
+  box-shadow: inset 0 1px 0 rgba(255,248,220,.22) !important;
+}
+
+/* ---- ✕ close → small square iron key ---- */
+.roll-close {
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, #3a4149, #23282f) !important;
+  border: 1px solid #0b0e12 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    inset 0 -2px 4px rgba(0,0,0,.5),
+    0 2px 3px rgba(0,0,0,.6) !important;
+  color: #cfd6df !important;
+}
+.roll-close:hover { border-color: #b98a4e !important; color: #f0d9a8 !important; }
+.roll-close:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.6) !important;
+}
+
+/* ---- OK / Confirm → square raised brass button (ready-battle's build) ---- */
+.roll-ok, .roll-form-go {
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, #e7cf94, #c7a45f 55%, #a5843f) !important;
+  color: #2a1c07 !important;
+  border: 1px solid #6e5531 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,.85),
+    inset 0 -3px 6px rgba(110,80,35,.5),
+    0 2px 5px rgba(0,0,0,.55) !important;
+  text-shadow: 0 1px 0 rgba(255,240,200,.35);
+}
+.roll-ok:active, .roll-form-go:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 5px rgba(110,80,35,.6) !important;
+}
+
+/* ---- Dice-entry fields → recessed dark slots ---- */
+.roll-form-row input {
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, #0a0d11, #05070a) !important;
+  border: 1px solid #05070a !important;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.85) !important;
+  color: #e6ded0 !important;
+}
+.roll-form-row input:focus {
+  border-color: #6e5636 !important;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.85), inset 0 0 0 1px rgba(110,86,54,.6) !important;
 }

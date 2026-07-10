@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect, useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { availableActions, actionBudget } from "/shared/battle-view.js";
 import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
@@ -34,6 +35,73 @@ const GROUPS: { id: string; label: string; kind: string; keys: string[] }[] = [
 const heatText = (heat: number) =>
   heat > 0 ? `+${heat} heat` : heat < 0 ? `${heat} heat` : "free";
 
+// The popover is portaled to <body> so it escapes the rig card's clip-path
+// (dieselpunk.css:88) — an absolutely-positioned child stays inside that clip
+// and gets sliced at the card edge. Position is measured off the anchor tile,
+// opening above it and clamped to the viewport (mirrors GlossaryTip).
+function AcPopover({
+  anchor,
+  onClose,
+  children,
+}: {
+  anchor: HTMLElement | null;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number; arrow: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !anchor) return;
+    const place = () => {
+      const r = anchor.getBoundingClientRect();
+      const margin = 8;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      let left = r.left + r.width / 2 - w / 2;
+      left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
+      const top = Math.max(margin, r.top - h - 8);
+      const arrow = Math.max(14, Math.min(r.left + r.width / 2 - left, w - 14));
+      setPos({ left, top, arrow });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [anchor]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <>
+      <div className="ac-pop-scrim" onClick={onClose} />
+      <div
+        className="ac-pop"
+        role="menu"
+        ref={ref}
+        style={
+          pos
+            ? { left: pos.left, top: pos.top, ["--arrow-x" as string]: `${pos.arrow}px` }
+            : { visibility: "hidden" }
+        }
+      >
+        {children}
+      </div>
+    </>,
+    document.body,
+  );
+}
+
 // The action console injected into the active rig's body (battle.js:275-329).
 export function ActionConsole({ rig }: Props) {
   const { game } = useRoomState();
@@ -41,6 +109,7 @@ export function ActionConsole({ rig }: Props) {
   const { openMove, openRepair, endActivation, openPrepare } = useBattleActions();
   const { openAttack } = useWizard();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const cellRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const t = game?.turn;
   // Render nothing unless this rig is the active one in the activation phase
@@ -125,7 +194,7 @@ export function ActionConsole({ rig }: Props) {
           };
 
           return (
-            <div className="ac-cell" key={g.id}>
+            <div className="ac-cell" key={g.id} ref={(el) => (cellRefs.current[g.id] = el)}>
               <IronActionTile
                 asset={g.kind === "fire" ? "fire" : "lever"}
                 label={g.label}
@@ -137,27 +206,24 @@ export function ActionConsole({ rig }: Props) {
               />
 
               {open && (
-                <>
-                  <div className="ac-pop-scrim" onClick={() => setOpenGroup(null)} />
-                  <div className="ac-pop" role="menu">
-                    {kids.map((a) => (
-                      <button
-                        key={a.key}
-                        type="button"
-                        role="menuitem"
-                        className="ac-pop-row"
-                        disabled={!a.enabled}
-                        title={a.note || undefined}
-                        onClick={() => onAction(rig, a.key)}
-                      >
-                        <span className="ac-pop-label">{a.label}</span>
-                        {!cold && (
-                          <span className="ac-pop-heat" data-heat={a.heat}>{heatText(a.heat)}</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </>
+                <AcPopover anchor={cellRefs.current[g.id]} onClose={() => setOpenGroup(null)}>
+                  {kids.map((a) => (
+                    <button
+                      key={a.key}
+                      type="button"
+                      role="menuitem"
+                      className="ac-pop-row"
+                      disabled={!a.enabled}
+                      title={a.note || undefined}
+                      onClick={() => onAction(rig, a.key)}
+                    >
+                      <span className="ac-pop-label">{a.label}</span>
+                      {!cold && (
+                        <span className="ac-pop-heat" data-heat={a.heat}>{heatText(a.heat)}</span>
+                      )}
+                    </button>
+                  ))}
+                </AcPopover>
               )}
             </div>
           );
