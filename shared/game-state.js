@@ -230,7 +230,7 @@ export const WEAPON_UPGRADES = {
   "Sniper Cannon": [
     { id: "marksman-optics", nature: "field", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
     { id: "cold-bore", nature: "tuned", name: "Cold Bore", tag: "+3 STR vs undamaged targets", effect: { coldBore: true } },
-    { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", effect: {} }, // TODO(mechanics, spatial)
+    { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", effect: { enfilade: true } }, // spatial ricochet narrated as a player instruction (Group G)
   ],
   "Siege Maul": [
     { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+2 STR", effect: { str: 2 } },
@@ -430,6 +430,9 @@ function ensureRigShape(rig) {
   if (rig.skeweredBy === undefined) rig.skeweredBy = null;
   if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
   if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
+  // Enfilade (§13, Sniper Cannon) — per-rig aimed-shot counter; every 3rd aimed
+  // shot emits a ricochet instruction (spatial — narrated, not simulated).
+  if (typeof rig.enfiladeShots !== "number") rig.enfiladeShots = 0;
   // Piledriver Protocol (§13, Siege Maul) — stored Momentum (+1 per advancing
   // activation, cap 3); spent whole on a Siege Maul shot for guard-break + STR.
   if (typeof rig.momentum !== "number") rig.momentum = 0;
@@ -585,6 +588,9 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // downside carried into the attack right after a penetrator shot.
     autocannonShots: 0,
     autocannonSlowNext: false,
+    // Enfilade (§13, Sniper Cannon) — per-rig aimed-shot cadence counter; every
+    // 3rd aimed Sniper Cannon shot emits a ricochet instruction (spatial).
+    enfiladeShots: 0,
     // Piledriver Protocol (§13, Siege Maul) — stored Momentum: +1 for any
     // activation this rig advanced (cap 3), spent whole on a Siege Maul shot for
     // a guard-break (ignores Brace + cover) and +1 STR per point. While
@@ -689,6 +695,9 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     // Piledriver Protocol (§13) — mirrored for shape parity (cold kinds never
     // carry the Siege Maul upgrade, so Momentum never actually builds).
     momentum: 0,
+    // Enfilade (§13) — mirrored for shape parity (cold kinds never carry the
+    // Sniper Cannon upgrade, so the counter never actually advances).
+    enfiladeShots: 0,
     // Group E per-location state (Breach Grip / Dismember / Kneecapper), mirrored from makeRig.
     cracked: {},
     kneecapped: {},

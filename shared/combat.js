@@ -398,6 +398,36 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     },
     effects: [],
   });
+  // Group G — spatial upgrade effects. The board is physical and the engine has
+  // no grid, so forced movement / ricochets are NOT simulated with coordinates:
+  // each resolves its positional part as a clear player-facing INSTRUCTION in the
+  // log (AGENTS.md "Spatial effects — narrate, don't simulate"). Only the
+  // non-spatial cadence (Enfilade's aimed-shot counter) is tracked in state.
+  const landedDamage = impacts.some((h) => h.sp > 0);
+  const pushInstruction = (summary) => ctx.pushResolution(room, {
+    kind: "perk", actor: attacker.owner, rigId: target.id, rolls: [], summary, effects: [summary],
+  });
+  // G1a — Momentum Swing (Wrecking Ball, Tuned): a charging swing that connects
+  // knocks the target back 3". Gated on the same "moved this activation" charge
+  // that already granted the +2 STR, so it only fires when the charge applied.
+  if (profile.upgrade?.id === "momentum-swing" && attacker.movedThisActivation && landedDamage) {
+    pushInstruction(`Momentum Swing — knock ${target.name} back 3" (move the mini).`);
+  }
+  // G1b — Piledriver Protocol (Siege Maul, Prototype): a Momentum-spending smash
+  // that connects shoves the target back 3" (piledriverSpend was computed above).
+  if (piledriverSpend > 0 && landedDamage) {
+    pushInstruction(`Piledriver — shove ${target.name} back 3" (move the mini).`);
+  }
+  // G1c — Enfilade (Sniper Cannon, Prototype): only AIMED shots feed the cadence
+  // (per the design). Count every aimed shot fired; on every 3rd, emit a ricochet
+  // instruction — the player picks the rig in line of sight behind the target and
+  // applies the +2 STR hit via the normal controls.
+  if (profile.upgradeEffect?.enfilade && opts.aimed) {
+    attacker.enfiladeShots = (attacker.enfiladeShots || 0) + 1;
+    if (attacker.enfiladeShots % 3 === 0) {
+      pushInstruction(`Enfilade — ricochet! Resolve a +2 STR hit on the next rig in line of sight behind ${target.name} (player's choice).`);
+    }
+  }
   // §engagement — a legal melee blow (reached here = not out-of-range, weapon not
   // destroyed) locks attacker and target together. No-op if either is already
   // engaged (one-to-one) or same side.

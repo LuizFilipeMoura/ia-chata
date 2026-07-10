@@ -447,6 +447,8 @@ test("new rigs carry activation/heat-effect defaults", () => {
   assert.equal(rig.preparation, null);
   assert.deepEqual(rig.weaponsDestroyed, []);
   assert.equal(rig.immobilised, false);
+  // Enfilade (§13, Sniper Cannon) — per-rig aimed-shot cadence counter starts at 0.
+  assert.equal(rig.enfiladeShots, 0);
 });
 
 test("createRoom game carries round-loop defaults", () => {

@@ -884,6 +884,106 @@ test("armsSuppressed never silences a ROF-1 weapon — it floors at 1 die (#4)",
   assert.equal(lres.rof, 1);
 });
 
+// Group G — spatial upgrade effects. The engine has no grid, so forced movement
+// / ricochets surface as player-facing instructions in the resolution log. These
+// tests assert the pushed instruction text and its gating, not any coordinates.
+
+test("Momentum Swing emits a knockback instruction only on a landed charging swing", () => {
+  const opts = { weapon: "melee", arc: "front", range: "near", dice: { toHit: [6], location: 1, impacts: [6] } };
+
+  // Charged (moved this activation) + a landed damaging hit → instruction present.
+  const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
+  ball.movedThisActivation = true;
+  const t1 = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const ctx1 = makeCtx();
+  resolveAttack({ rigs: [ball, t1] }, ball, t1, { ...opts, target: t1.name }, () => 0, ctx1);
+  const kb = ctx1.resolutions.find((r) => /Momentum Swing — knock/.test(r.summary));
+  assert.ok(kb, "expected a knockback instruction");
+  assert.equal(kb.summary, 'Momentum Swing — knock T back 3" (move the mini).');
+
+  // Did NOT move → the charge never triggered, so no knockback even on a hit.
+  const still = makeRig(3, "WB2", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
+  const t2 = makeRig(4, "T2", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const ctx2 = makeCtx();
+  resolveAttack({ rigs: [still, t2] }, still, t2, { ...opts, target: t2.name }, () => 0, ctx2);
+  assert.ok(!ctx2.resolutions.some((r) => /Momentum Swing — knock/.test(r.summary)));
+
+  // Moved but whiffed (no damaging hit) → no knockback.
+  const miss = makeRig(5, "WB3", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
+  miss.movedThisActivation = true;
+  const t3 = makeRig(6, "T3", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const ctx3 = makeCtx();
+  resolveAttack({ rigs: [miss, t3] }, miss, t3,
+    { weapon: "melee", target: t3.name, arc: "front", range: "near", dice: { toHit: [1], location: 1 } }, () => 0, ctx3);
+  assert.ok(!ctx3.resolutions.some((r) => /Momentum Swing — knock/.test(r.summary)));
+});
+
+test("Piledriver emits a shove instruction only when Momentum was spent on a landed hit", () => {
+  const shot = { weapon: "longRange", arc: "front", range: "near", cover: 0, dice: { toHit: [6], location: 1, impacts: [5] } };
+
+  // Momentum spent (2) + a landed hit → shove instruction present.
+  const ram = makeRig(1, "Ram", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
+  ram.momentum = 2;
+  const wall = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  const ctx = makeCtx();
+  const res = resolveAttack({ rigs: [ram, wall], game: { round: 1 } }, ram, wall, { ...shot, target: wall.name }, () => 0, ctx);
+  assert.ok(res.hits >= 1);
+  const shove = ctx.resolutions.find((r) => /Piledriver — shove/.test(r.summary));
+  assert.ok(shove, "expected a shove instruction");
+  assert.equal(shove.summary, 'Piledriver — shove Wall back 3" (move the mini).');
+
+  // No stored Momentum → no shove even on a landed hit.
+  const ram2 = makeRig(3, "Ram2", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
+  ram2.momentum = 0;
+  const wall2 = makeRig(4, "Wall2", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  const ctx2 = makeCtx();
+  resolveAttack({ rigs: [ram2, wall2], game: { round: 1 } }, ram2, wall2, { ...shot, target: wall2.name }, () => 0, ctx2);
+  assert.ok(!ctx2.resolutions.some((r) => /Piledriver — shove/.test(r.summary)));
+
+  // Momentum spent but the smash misses → no shove.
+  const ram3 = makeRig(5, "Ram3", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
+  ram3.momentum = 3;
+  const wall3 = makeRig(6, "Wall3", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  const ctx3 = makeCtx();
+  resolveAttack({ rigs: [ram3, wall3], game: { round: 1 } }, ram3, wall3,
+    { weapon: "longRange", target: wall3.name, arc: "front", range: "near", cover: 0, dice: { toHit: [1], location: 1 } }, () => 0, ctx3);
+  assert.ok(!ctx3.resolutions.some((r) => /Piledriver — shove/.test(r.summary)));
+});
+
+test("Enfilade emits the ricochet instruction on every 3rd aimed shot; non-aimed shots don't count", () => {
+  const sniper = makeRig(1, "Sn", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "enfilade" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [sniper, target], game: { round: 1 } };
+  const aimed = { weapon: "longRange", target: target.name, arc: "front", range: "near", aimed: true, aimedLoc: "hull", dice: { toHit: [1], location: 1 } };
+
+  function fire(opts) {
+    sniper.loaded.longRange = true; // a new activation reloads the single-shot cannon
+    const ctx = makeCtx();
+    resolveAttack(room, sniper, target, opts, () => 0, ctx);
+    return ctx;
+  }
+
+  const c1 = fire(aimed);
+  assert.equal(sniper.enfiladeShots, 1);
+  assert.ok(!c1.resolutions.some((r) => /Enfilade — ricochet/.test(r.summary)));
+
+  const c2 = fire(aimed);
+  assert.equal(sniper.enfiladeShots, 2);
+  assert.ok(!c2.resolutions.some((r) => /Enfilade — ricochet/.test(r.summary)));
+
+  const c3 = fire(aimed);
+  assert.equal(sniper.enfiladeShots, 3);
+  const ric = c3.resolutions.find((r) => /Enfilade — ricochet/.test(r.summary));
+  assert.ok(ric, "expected a ricochet instruction on the 3rd aimed shot");
+  assert.equal(ric.summary,
+    "Enfilade — ricochet! Resolve a +2 STR hit on the next rig in line of sight behind T (player's choice).");
+
+  // A non-aimed shot fires but must NOT advance the aimed-shot cadence.
+  const c4 = fire({ ...aimed, aimed: false, aimedLoc: undefined });
+  assert.equal(sniper.enfiladeShots, 3); // unchanged by the non-aimed shot
+  assert.ok(!c4.resolutions.some((r) => /Enfilade — ricochet/.test(r.summary)));
+});
+
 test("Kneecapper tags the raked limb on a damaging hit; a non-kneecapper Double MG does not", () => {
   const attacker = makeRig(1, "K", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
