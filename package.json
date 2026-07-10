@@ -8,6 +8,7 @@
     "start": "node server/index.js",
     "dev:server": "node --watch server/index.js",
     "dev:client": "vite",
+    "predev": "node scripts/free-port.js",
     "dev": "concurrently -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
     "build": "vite build",
     "preview": "set PORT=8123&& node --watch server/index.js",
