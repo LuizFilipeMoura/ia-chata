@@ -671,31 +671,24 @@ test("Sprint sets movedThisActivation (Full Tilt/Momentum Swing's charge flag)",
   assert.equal(findRig(r, "b1").movedThisActivation, true);
 });
 
-test("movedThisActivation resets when a rig activates again next round", () => {
+test("endActivation clears movedThisActivation (no stale charge into a reaction)", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
-  const counts = { a: 0, b: 0 };
-  while (r.game.phase === "activation") {
-    const side = r.game.turn.side;
-    const name = `${side}${++counts[side]}`;
-    applyCommand(r, { verb: "activate", attrs: { name } });
-    if (name === "b1") applyCommand(r, { verb: "action", attrs: { name, action: "move" } });
-    applyCommand(r, { verb: "endactivation", attrs: { name } });
-  }
-  assert.equal(findRig(r, "b1").movedThisActivation, true);
-  assert.equal(r.game.phase, "recovery");
-  applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [] } });
-  applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
-  assert.equal(r.game.round, 2);
-  assert.equal(r.game.phase, "initiative");
-  applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
-  assert.equal(r.game.phase, "activation");
-  clearPendingAnswer(r);
-  applyCommand(r, { verb: "activate", attrs: { name: "a1" } }); // a wins init this round
-  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
-  clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  assert.equal(findRig(r, "b1").movedThisActivation, false); // cleared on reactivation
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  assert.equal(findRig(r, "b1").movedThisActivation, true);
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(findRig(r, "b1").movedThisActivation, false);
+});
+
+test("activation start clears a stale movedThisActivation flag", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  // Simulate a lingering flag (belt-and-braces with the endActivation clear):
+  // activating a rig must always open it uncharged.
+  findRig(r, "b1").movedThisActivation = true;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(findRig(r, "b1").movedThisActivation, false);
 });
 
 test("Shutdown is allowed after a real action has been spent (not just as the first)", () => {

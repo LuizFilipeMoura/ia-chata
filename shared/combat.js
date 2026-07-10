@@ -78,11 +78,13 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   return { modAim, rof, hits, fireModeHeat, dice };
 }
 
-// §13 — every tracked location (hull/arms/legs/engine) is at max SP, i.e. the
-// target is entirely undamaged. Shared by Cold Bore (needs "undamaged") and
-// Bloodletter (needs its negation, "damaged somewhere").
+// §13 — every one of the target's real locations is at max SP, i.e. the target
+// is entirely undamaged. Walks the target's actual anatomy (via partNamesOf) so
+// it's correct for Tank (hull/tracks/turret/engine) and Walker
+// (hull/legs/mount/engine), not just Rigs. Shared by Cold Bore (needs
+// "undamaged") and Bloodletter (needs its negation, "damaged somewhere").
 function isUndamaged(target) {
-  return ["hull", "arms", "legs", "engine"].every(
+  return partNamesOf(target.kind || "rig").every(
     (l) => target[l] && target[l].sp >= target[l].max,
   );
 }

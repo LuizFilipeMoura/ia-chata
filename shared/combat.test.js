@@ -341,6 +341,23 @@ test("Bloodletter adds +1 to-hit die vs a target missing SP anywhere", () => {
   assert.equal(hurtRoll.rof, 4);
 });
 
+test("Cold Bore / Bloodletter read the target's real parts (Tank: no arms/legs)", () => {
+  // A pristine Tank is hull/tracks/turret/engine — it has no `arms`/`legs`.
+  // The undamaged/damaged checks must walk the target's actual anatomy, or
+  // Bloodletter over-fires and Cold Bore under-fires against units.
+  const pristineTank = makeUnit("tank", 9, "Panzer", "b", { unit: "Coaxial MG" });
+
+  const chainsawRig = makeRig(1, "C", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "bloodletter" });
+  const bl = effectiveWeaponProfile("melee", "Chainsaw", chainsawRig);
+  const dice = [1, 1, 1, 1]; // all misses — only ROF (dice count) matters
+  const roll = rollToHit(chainsawRig, bl, { range: "near", cover: 0, target: pristineTank }, dice, () => 0);
+  assert.equal(roll.rof, 3); // full-SP tank is NOT damaged → no extra die
+
+  const sniper = makeRig(2, "S", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "cold-bore" });
+  const cb = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
+  assert.equal(computeStr(sniper, cb, { target: pristineTank }), cb.str + 3); // pristine tank IS undamaged → +3
+});
+
 test("Opportunist adds +3 STR vs an overheated or action-penalised target", () => {
   const sword = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "opportunist" });
   const p = effectiveWeaponProfile("melee", "Sword", sword);

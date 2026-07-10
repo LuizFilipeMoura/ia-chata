@@ -998,6 +998,10 @@ function endActivation(room, rig, dice, random) {
     checkAnnihilation(room);
   }
   rig.activated = true;
+  // Clear the Full Tilt/Momentum Swing charge flag at activation end too (not
+  // just at start), so a stale `true` can't leak into a reactive strike on the
+  // opponent's turn before this rig next activates.
+  rig.movedThisActivation = false;
   room.game.turn.activeRigId = null;
   handoff(room);
 }
