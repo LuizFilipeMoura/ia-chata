@@ -787,6 +787,7 @@ test("firing on a return-fire rig resolves the shot then parks a counter", () =>
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses — target survives so Return triggers
   } });
   assert.equal(findRig(r, "a1").preparation.faceUp, true);
   assert.equal(r.game.pendingReaction.kind, "return");
@@ -1689,6 +1690,7 @@ test("return-fire react lets the defender counter the attacker", () => {
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses — target survives so Return triggers
   } });
   assert.equal(r.game.pendingReaction.kind, "return");
   const n = r.game.resolutions.length;
@@ -1707,6 +1709,7 @@ test("an engaged reactor can still return ranged fire (engaged penalty path runs
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses — target survives so Return triggers
   } });
   assert.equal(r.game.pendingReaction.kind, "return");
   // Lock the reactor in melee — its return ranged fire must take the -2 engaged path.
