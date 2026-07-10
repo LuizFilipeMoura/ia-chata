@@ -10,6 +10,29 @@ What this means concretely:
 - **Favor fun and iteration speed** over ceremony. Don't over-engineer, don't gold-plate, don't add abstraction for hypothetical future needs. Ship the change, keep it readable.
 - **Keep TDD discipline.** Despite the hobby framing, the maintainer values the test safety net — write tests first for real logic (game rules, math, state transitions). UI glue and throwaway experiments can skip it.
 
+## Game design invariants
+
+Hold these when designing rigs, weapons, upgrades, or mechanics:
+
+- **Every weapon is globally unique.** No two prebuilt rigs share a long-range or a melee weapon. Each of the 8 weapons per slot-type belongs to exactly one rig.
+- **Each rig appears at most once on the field.** A given prebuilt is never mirrored across the board.
+- **Therefore: no mirror matchups.** The shield rig never faces another shield; the sniper never faces another sniper; and so on. A rig will never fight a copy of its own kit.
+- **Design consequence:** an upgrade or mechanic must NOT assume the enemy shares your gear. "Counters other shields" is dead weight on the only shield. Balance each kit against a *varied* field of the other rigs, and lean on universal mechanics (Brace, movement, arcs, heat) rather than mirror interactions.
+
+### Upgrade natures (Field / Tuned / Prototype)
+
+Every weapon offers exactly **three** upgrades, one of each nature. The axis is commitment + bookkeeping, NOT power — all three are balanced against each other.
+
+- **Field** (nature 1): unconditional, always-on, reinforces the rig's core gameplay focus. Zero cognitive load, never a trap pick. Must be viable on its own — a player who only ever picks Field upgrades still has a functional rig.
+- **Tuned** (nature 2): conditional. A trigger (target state, range, positioning, timing) that out-pays Field when set up, and is weak when it isn't. Light tracking.
+- **Prototype** (nature 3): systemic. Introduces a tracked resource / cadence / chain / zone effect (counters, every-N-turns, ricochet, stacking). High ceiling, high payoff, real bookkeeping — usually needs new engine mechanics. Must be *worth* the tracking. **Prototype upgrades MAY carry a downside** — a genuine cost or drawback (extra heat, self-damage, weakened defense, lockout, unreliability). They are the only nature allowed to have one; Field and Tuned are strictly upside. The downside is what makes the big payoff a gamble rather than a free pick.
+
+Selection rules:
+- Player picks **one upgrade per weapon** (long-range + melee), so two upgrades per rig. Each weapon's three choices are badged by nature.
+- **A rig may run at most ONE Prototype upgrade** across its two picks (bounds mental load). Enforce in the wizard (disable the second Prototype) and server-side.
+
+**No battlefield / spatial mechanics — for now.** The engine has no grid; positions, distances, line-of-sight, arcs-as-placement, zones, walls, radius/AoE, adjacency, and forced movement (knockback / fling / pull) are not reliably trackable. Design upgrades around what *is* tracked: SP & hit locations, heat, actions/tempo, engagement (the 1-to-1 melee lock), reloads, preparations/reactions, perks, and status flags (immobilised, speed-halved, action-loss, burning, etc.). Revisit spatial ideas once a positional model exists.
+
 ## Git workflow (many agents, one dev)
 
 There may be LOTS of agents running simultaneously on this repo. Keep the workflow the absolute simplest possible for a single dev with multiple agents. These rules OVERRIDE any skill, plugin, or default behavior that says otherwise (e.g. "always use a worktree", "create a feature branch", "stash first) — do NOT follow those here.
