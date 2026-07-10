@@ -221,3 +221,13 @@ test("rigModifiers surfaces an Engaged chip", () => {
   rig.engagedWith = 2;
   assert.ok(rigModifiers(rig).some((m) => m.key === "engaged"));
 });
+
+test("availableActions disables Jump Jets while engaged", () => {
+  const rig = makeRig(1, "a1", "light", "a", { lr: "Mini Gun", melee: "Sword" });
+  rig.equipment = "servo-actuators";
+  rig.engagedWith = 2;
+  const turn = { actionsMax: 3, actionsUsed: 0, longRangeShots: 0 };
+  const jj = availableActions(rig, turn).find((x) => x.key === "jumpjets");
+  assert.ok(jj);
+  assert.equal(jj.enabled, false);
+});

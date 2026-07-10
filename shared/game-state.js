@@ -981,6 +981,9 @@ function performAction(room, rig, act, a, random) {
   }
   const equipId = EQUIPMENT_ACTIVE_BY_KEY[act];
   if (equipId) {
+    // §engagement — Jump Jets is movement; an engaged rig is pinned and must
+    // Disengage before it can jump out. Other actives (harden/purge/…) are fine.
+    if (act === "jumpjets" && rig.engagedWith != null) return false;
     if (rig.equipment !== equipId || t.actionsUsed >= t.actionsMax) return false;
     const active = EQUIPMENT[equipId].active;
     t.actionsUsed += 1;

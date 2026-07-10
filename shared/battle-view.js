@@ -57,7 +57,12 @@ export function availableActions(rig, turn) {
     });
   if (cfg.hasEquipment && rig.equipment && EQUIPMENT[rig.equipment]) {
     const active = EQUIPMENT[rig.equipment].active;
-    list.push({ key: active.key, label: active.label, heat: active.heat, enabled: left > 0, cost: 1, note: "" });
+    const jjLocked = active.key === "jumpjets" && rig.engagedWith != null;
+    list.push({
+      key: active.key, label: active.label, heat: active.heat,
+      enabled: left > 0 && !jjLocked, cost: 1,
+      note: jjLocked ? "Engaged — Disengage first" : "",
+    });
   }
   return list;
 }

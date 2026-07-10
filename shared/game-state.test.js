@@ -2307,3 +2307,28 @@ test("set-to-destroyed clears the dead rig's engagement", () => {
   assert.equal(findRig(r, "b1").engagedWith, null);
   assert.equal(findRig(r, "a1").engagedWith, null); // partner freed too
 });
+
+test("an engaged rig cannot Jump Jets out (must Disengage first)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.equipment = "servo-actuators"; // grant the Jump Jets active
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  __test.setEngagement(b1, findRig(r, "a1"));
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "jumpjets" } });
+  assert.equal(r.game.turn.actionsUsed, 0);   // rejected — no slot spent
+  assert.equal(b1.engine.heat, heatBefore);   // no heat
+});
+
+test("an engaged rig can still use a non-movement active (Harden)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.equipment = "ablative-plating"; // grants Harden (not movement)
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  __test.setEngagement(b1, findRig(r, "a1"));
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "harden" } });
+  assert.equal(r.game.turn.actionsUsed, 1);   // allowed
+  assert.equal(b1.hardened, true);
+});
