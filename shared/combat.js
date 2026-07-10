@@ -38,7 +38,9 @@ export function weaponAccAt(profile, distance) {
 export function computeModifiedAim(attacker, profile, opts) {
   const base = AIM[attacker.weightClass] ?? 4;
   const weaponAcc = weaponAccAt(profile, opts.distance);
-  const cover = profile.upgradeEffect?.ignoreCover ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
+  // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
+  // guard-break (opts.guardBreak, §13 Siege Maul) — both reuse the same path.
+  const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
   const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
   // §engagement — a rig locked in melee fires ranged weapons at −2 accuracy.
@@ -165,6 +167,12 @@ export function computeStr(attacker, profile, opts) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
     if (cap != null && (attacker.engine?.heat || 0) > cap / 2) bonus += 2;
   }
+  // Piledriver Protocol — a Siege Maul shot spends stored Momentum for +1 STR
+  // per point. The spent amount is threaded in via opts.momentum (computed once
+  // in resolveAttack so the STR bonus and the post-shot Momentum reset stay in
+  // lockstep). Gated on the piledriver effect so a stray opts.momentum on any
+  // other weapon is inert.
+  if (opts.momentum && profile.upgradeEffect?.piledriver) bonus += opts.momentum;
   return profile.str + weightMod + charged + bonus;
 }
 
@@ -221,7 +229,9 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     const role = roleOf(target.kind || "rig", location);
     if (role === "mobility" || role === "weapon") bonus = 4;
   }
-  const braced = target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
+  // Brace's front-arc -2 is skipped by a Piledriver Protocol guard-break
+  // (opts.guardBreak, §13 Siege Maul) — the smash ignores the target's Brace.
+  const braced = !opts.guardBreak && target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
   const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
@@ -292,10 +302,18 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   } else if (attacker.lockedTarget != null && round > (attacker.lockExpiresRound || 0)) {
     attacker.lockedTarget = null; // expire a stale lock
   }
+  // Piledriver Protocol (§13, Siege Maul) — a shot fired while storing Momentum
+  // unloads ALL of it: +1 STR per point (computeStr) plus a guard-break that
+  // ignores the target's Brace (rollImpacts) and cover (computeModifiedAim).
+  // Compute the spend ONCE here so the STR bonus, the guard-break, and the
+  // post-shot reset below all read the same number. (The design's 3" shove is
+  // deferred to the spatial group and NOT applied here.)
+  const piledriverSpend = profile.upgradeEffect?.piledriver ? Math.max(0, attacker.momentum || 0) : 0;
+  const guardBreak = piledriverSpend > 0;
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock }, opts.dice?.toHit, random);
+  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
@@ -321,7 +339,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // than crashing on a missing part.
     if (location) {
       impacts = rollImpacts(attacker, target, profile, location,
-        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0 },
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak },
         opts.dice, random);
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
       //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple
@@ -359,10 +377,14 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       applyOnHitPerks(room, attacker, target, profile, { ...opts, hits: th.hits, penetratorShot: th.penetratorShot }, random, ctx);
     }
   }
+  // Piledriver Protocol (§13) — the swing is committed, so the stored Momentum is
+  // fully spent whether or not it connected. Reset AFTER every read above
+  // (computeStr/rollImpacts already used the captured `piledriverSpend`).
+  if (piledriverSpend > 0) attacker.momentum = 0;
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
-  const str = computeStr(attacker, profile, { ...opts, target });
+  const str = computeStr(attacker, profile, { ...opts, target, momentum: piledriverSpend });
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
     summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s) = ${total} SP${location ? ` to ${location}` : ""}`,

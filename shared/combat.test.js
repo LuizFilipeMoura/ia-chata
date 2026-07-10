@@ -328,6 +328,57 @@ test("Momentum Swing reuses the charge gate for +2 STR (generalised charge key)"
   assert.equal(computeStr(ball, p, {}), p.str + 2);
 });
 
+test("Piledriver Protocol spends Momentum for +STR and ignores a braced front arc", () => {
+  const ram = makeRig(1, "Ram", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
+  const wall = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  wall.preparation = { type: "brace" }; // braced on the front arc
+  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // STR 13, medium (+0)
+
+  // computeStr: the threaded momentum spend adds +1 STR per point.
+  assert.equal(computeStr(ram, p, { target: wall, momentum: 3 }), p.str + 3);
+
+  // Without a guard-break, the brace's -2 applies: 5 + 13 + 0(front) - 2 = 16.
+  const normal = rollImpacts(ram, wall, p, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(normal[0].total, 16);
+
+  // Piledriver guard-break skips the brace AND adds +3 STR: 5 + (13+3) + 0 = 21.
+  const smash = rollImpacts(ram, wall, p, "hull",
+    { arc: "front", hits: 1, momentum: 3, guardBreak: true }, { impacts: [5] }, () => 0);
+  assert.equal(smash[0].total, 21);
+});
+
+test("computeModifiedAim ignores cover during a Piledriver guard-break", () => {
+  const ram = makeRig(1, "Ram", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
+  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // peak 1 at distance-less
+  // Cover 2 normally raises the D6 target by 2; the guard-break zeroes it.
+  assert.equal(computeModifiedAim(ram, p, { cover: 2 }), 5);                    // 4 - (1 - 2)
+  assert.equal(computeModifiedAim(ram, p, { cover: 2, guardBreak: true }), 3);  // 4 - 1
+});
+
+test("A Piledriver Siege Maul volley spends all Momentum (resets to 0) and lands through cover", () => {
+  const ram = makeRig(1, "Ram", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
+  ram.momentum = 3;
+  const wall = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  wall.preparation = { type: "brace" };
+  const room = { rigs: [ram, wall], game: { round: 1 } };
+  const ctx = makeCtx();
+  // Siege Maul ROF 1; die 4 clears the guard-broken modAim of 3 despite cover 2.
+  const res = resolveAttack(room, ram, wall,
+    { weapon: "longRange", target: wall.name, arc: "front", range: "near", cover: 2,
+      dice: { toHit: [4], location: 1, impacts: [5] } }, () => 0, ctx);
+  assert.equal(res.ok, true);
+  assert.equal(res.hits, 1);          // cover ignored → the shot lands
+  assert.equal(ram.momentum, 0);      // all Momentum unloaded by the shot
+});
+
+test("A Siege Maul rig without Piledriver never spends or reads Momentum", () => {
+  const ram = makeRig(1, "Plain", "medium", "a", { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "breaching-round" });
+  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram);
+  // A stray momentum in opts must NOT add STR without the piledriver effect.
+  assert.equal(computeStr(ram, p, { target: {}, momentum: 3 }), p.str);
+});
+
 test("Bloodletter adds +1 to-hit die vs a target missing SP anywhere", () => {
   const chainsawRig = makeRig(1, "C", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "bloodletter" });
   const p = effectiveWeaponProfile("melee", "Chainsaw", chainsawRig);

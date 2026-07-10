@@ -235,7 +235,7 @@ export const WEAPON_UPGRADES = {
   "Siege Maul": [
     { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+2 STR", effect: { str: 2 } },
     { id: "breaching-round", nature: "tuned", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
-    { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", effect: {} }, // TODO(mechanics, spatial)
+    { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", effect: { piledriver: true } }, // shove (3") deferred — Group G (spatial)
   ],
   "Missile Barrage": [
     { id: "swarm-warheads", nature: "field", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
@@ -430,6 +430,9 @@ function ensureRigShape(rig) {
   if (rig.skeweredBy === undefined) rig.skeweredBy = null;
   if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
   if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
+  // Piledriver Protocol (§13, Siege Maul) — stored Momentum (+1 per advancing
+  // activation, cap 3); spent whole on a Siege Maul shot for guard-break + STR.
+  if (typeof rig.momentum !== "number") rig.momentum = 0;
   // Emplacement (§13, Bulwark Shield) — the rooted-stance flag and the round the
   // stance may next be re-entered (cooldown measured from when it was entered).
   if (typeof rig.emplaced !== "boolean") rig.emplaced = false;
@@ -582,6 +585,11 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // downside carried into the attack right after a penetrator shot.
     autocannonShots: 0,
     autocannonSlowNext: false,
+    // Piledriver Protocol (§13, Siege Maul) — stored Momentum: +1 for any
+    // activation this rig advanced (cap 3), spent whole on a Siege Maul shot for
+    // a guard-break (ignores Brace + cover) and +1 STR per point. While
+    // momentum > 0 the rig can't Raise Shield (all-in on the charge).
+    momentum: 0,
     // Emplacement (§13, Bulwark Shield) — the rooted fortress stance and the
     // round it may next be re-entered (3-round cooldown from entry).
     emplaced: false,
@@ -678,6 +686,9 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     // never carry the upgrade, so the stance never actually engages).
     emplaced: false,
     emplaceCooldownUntil: 0,
+    // Piledriver Protocol (§13) — mirrored for shape parity (cold kinds never
+    // carry the Siege Maul upgrade, so Momentum never actually builds).
+    momentum: 0,
     // Group E per-location state (Breach Grip / Dismember / Kneecapper), mirrored from makeRig.
     cracked: {},
     kneecapped: {},
@@ -1215,6 +1226,16 @@ function endActivation(room, rig, dice, random) {
     checkAnnihilation(room);
   }
   rig.activated = true;
+  // Piledriver Protocol (§13, Siege Maul) — a rig carrying the piledriver
+  // upgrade gains +1 Momentum (cap 3) for any activation it advanced. Read
+  // movedThisActivation HERE, before the clear below zeroes it — endActivation is
+  // the once-per-activation choke point, so the gain lands exactly once even if
+  // the rig moved several times. Gated on the live long-range profile so only a
+  // Siege Maul actually carrying the upgrade charges.
+  if (rig.movedThisActivation) {
+    const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    if (lr?.upgradeEffect?.piledriver) rig.momentum = Math.min(3, (rig.momentum || 0) + 1);
+  }
   // Clear the Full Tilt/Momentum Swing charge flag at activation end too (not
   // just at start), so a stale `true` can't leak into a reactive strike on the
   // opponent's turn before this rig next activates.
@@ -1604,7 +1625,13 @@ function performAction(room, rig, act, a, random) {
     // reachable *after* activate() runs for this same activation, so clearing
     // it there would zero the flag before the gate below ever sees it).
     if (rig.noPrepNextActivation) return false;
-    rig.preparation = { type: normalizePrep(a.prep, rig), source: "action", faceUp: false };
+    let prepType = normalizePrep(a.prep, rig);
+    // Piledriver Protocol (§13, Siege Maul) — a rig storing Momentum is all-in on
+    // the charge and cannot Raise Shield: a requested Raise Shield downgrades to
+    // Brace while momentum > 0 (mirrors normalizePrep's "can't raise → brace"
+    // fallback, so the action still yields a preparation rather than fizzling).
+    if (prepType === "raise-shield" && (rig.momentum || 0) > 0) prepType = "brace";
+    rig.preparation = { type: prepType, source: "action", faceUp: false };
   }
   bumpHeat(rig, def.heat);
   t.actionsUsed += 1;
@@ -1758,6 +1785,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.ripostedThisRound = false;
       rig.emplaced = false;
       rig.emplaceCooldownUntil = 0;
+      rig.momentum = 0; // Piledriver Protocol (§13) — clear stored Momentum on reset
       delete rig._blastRolled;
     }
     room.game.started = false;

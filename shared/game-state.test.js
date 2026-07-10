@@ -756,6 +756,86 @@ test("Suppression Lock's stack-3 pin (suppressImmobile) blocks Move/Sprint that 
   assert.equal(b1.immobilised, false);                      // and never touched the permanent flag
 });
 
+// A started room whose b1 is a medium Siege Maul rig with a chosen Siege Maul
+// upgrade (Bulwark Shield melee, so Raise Shield is available). Mirrors
+// startedRoom's deploy/initiative so turn.side === "b" and b1 activates first.
+function siegeRoom(lrUpgrade) {
+  const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "add", attrs: {
+    name: "b1", class: "medium", owner: "b",
+    longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade,
+  } });
+  for (const owner of ["a", "b"]) {
+    for (let i = owner === "b" ? 2 : 1; i <= 3; i++) {
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+    }
+  }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  return r;
+}
+
+test("a Piledriver rig gains 1 Momentum for an activation it advanced", () => {
+  const r = siegeRoom("piledriver-protocol");
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  assert.equal(b1.momentum, 0);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(b1.momentum, 1);
+});
+
+test("Piledriver Momentum caps at 3 across activations", () => {
+  const r = siegeRoom("piledriver-protocol");
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.momentum = 3; // already fully charged from prior advances
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(b1.momentum, 3); // capped — never 4
+});
+
+test("a Piledriver rig that did not advance gains no Momentum", () => {
+  const r = siegeRoom("piledriver-protocol");
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "brace" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(b1.momentum, 0);
+});
+
+test("a Siege Maul rig WITHOUT the Piledriver upgrade gains no Momentum from advancing", () => {
+  const r = siegeRoom("breaching-round"); // Siege Maul, but not the piledriver prototype
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(b1.momentum, 0);
+});
+
+test("a Piledriver rig storing Momentum cannot Raise Shield (downgrades to Brace)", () => {
+  const r = siegeRoom("piledriver-protocol");
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.momentum = 2; // charged — all-in on the smash, no guard
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "raise-shield" } });
+  assert.equal(b1.preparation.type, "brace"); // Raise Shield refused, downgraded to Brace
+
+  // Control: with no Momentum stored, the same Bulwark Shield rig CAN raise its shield.
+  const r2 = siegeRoom("piledriver-protocol");
+  clearPendingAnswer(r2);
+  applyCommand(r2, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r2, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "raise-shield" } });
+  assert.equal(findRig(r2, "b1").preparation.type, "raise-shield");
+});
+
 test("Ion Storm's active-lockout blocks an equipment active during the pinned activation", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
