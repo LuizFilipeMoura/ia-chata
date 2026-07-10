@@ -354,6 +354,11 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 > **Perks are being reworked.** Base weapons now carry **stats only** — every *signature* perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. **Exception:** the two **Machine Guns** (Mini Gun, Double MG) carry **Raking Fire** innately (§13) — it defines the weapon type (no frontal damage; +4 side / +8 rear), not a signature upgrade. *Melee* is likewise a weapon **type** (the Melee Weapons section), not a perk.
 
+> **Upgrade natures.** Every weapon now offers **three** upgrades, one of each nature, and you pick **one per weapon**:
+> - **Field** — unconditional, always-on, reinforces the weapon's role. The safe default.
+> - **Tuned** — conditional: a trigger (target state, timing, positioning) that out-pays Field when set up.
+> - **Prototype** — systemic, tracked, high-payoff, and may carry a downside. **A rig may run at most one Prototype.**
+
 ### Long Range Weapons
 
 **Machine Guns** — fast-firing, low-STR flanking specialists.
