@@ -95,7 +95,7 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   assert.equal(WEAPON_UPGRADES["Siege Maul"].length, 2);
   assert.equal(WEAPON_UPGRADES["Bulwark Shield"].length, 2);
 
-  // Extended Barrel shifts both range bands by +4 (8/16 -> 12/20), reusing effect.range.
+  // Extended Barrel: +4 maxRange (16 -> 20) and +2 sweet (8 -> 10), reusing effect.range.
   const barrel = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "extended-barrel" });
   const barrelProfile = effectiveWeaponProfile("longRange", "Siege Maul", barrel);

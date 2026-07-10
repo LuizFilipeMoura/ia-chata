@@ -245,7 +245,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
                   </div>
                   <div className="rw-equip-label">{name}</div>
                   <div className="rw-equip-passive">
-                    ROF {w.rof} · STR {w.str} · RNG {w.rng[0]}/{w.rng[1]}"
+                    ROF {w.rof} · STR {w.str} · {w.melee ? `RNG ${w.rng[0]}/${w.rng[1]}"` : `Sweet ${w.sweet}" · ${w.minRange}–${w.maxRange}"`}
                   </div>
                   <div className="rw-equip-active">
                     {w.perks?.length ? w.perks.join(", ") : "—"}

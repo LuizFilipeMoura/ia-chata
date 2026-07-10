@@ -149,7 +149,7 @@ export const WEAPON_UPGRADES = {
     { id: "cluster-shells", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
   ],
   "Sniper Cannon": [
-    { id: "match-barrel", name: "Match Barrel", tag: "No far-range penalty", effect: { noFarPenalty: true } },
+    { id: "match-barrel", name: "Match Barrel", tag: "Halves accuracy falloff (tighter spread)", effect: { noFarPenalty: true } },
     { id: "marksman-optics", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
   ],
   "Sword": [
@@ -178,7 +178,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Siege Maul": [
     { id: "breaching-round", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
-    { id: "extended-barrel", name: "Extended Barrel", tag: "+4\" to both range bands (12 / 20)", effect: { range: 4 } },
+    { id: "extended-barrel", name: "Extended Barrel", tag: "+4\" max range; sweet spot +2\"", effect: { range: 4 } },
   ],
   "Bulwark Shield": [
     { id: "tower-shield", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
