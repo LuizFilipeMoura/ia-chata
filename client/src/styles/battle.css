@@ -358,8 +358,9 @@ body.my-turn-glow::after {
   background: var(--iron-950); border: 1px solid var(--line);
   border-left: 3px solid var(--rivet);
 }
-.aw-range-slider[data-band="near"] { border-left-color: var(--hp-ok-a); }
-.aw-range-slider[data-band="far"] { border-left-color: var(--oil); }
+.aw-range-slider[data-band="sweet"] { border-left-color: var(--hp-ok-a); }
+.aw-range-slider[data-band="good"] { border-left-color: var(--oil); }
+.aw-range-slider[data-band="poor"] { border-left-color: var(--ember); }
 .aw-range-slider[data-band="out"] { border-left-color: var(--ember); }
 .aw-range-slider input[type="range"] { width: 100%; accent-color: var(--oil); margin: 0; }
 .aw-range-readout {
@@ -372,6 +373,7 @@ body.my-turn-glow::after {
   text-transform: uppercase; color: var(--txt-dim);
 }
 .aw-range-slider[data-band="out"] .aw-range-band { color: var(--ember-hi); }
+.aw-range-slider[data-band="sweet"] .aw-range-band { color: var(--hp-ok-a); }
 .aw-range-ticks {
   margin-top: .2rem; font-family: var(--font-mono); font-size: .52rem;
   letter-spacing: .04em; color: var(--txt-faint);
