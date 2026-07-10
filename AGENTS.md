@@ -4,6 +4,8 @@
 
 This is a hobby / personal project — a game made for fun by one person. NOT a production app. No team, no external users, no uptime obligations, no support burden. Optimize for the maintainer's fun and iteration speed, not for enterprise caution.
 
+**The app is a tabletop assistant, not a simulator; the minis are physical.** It tracks state (SP, heat, upgrades, turn order, VP) for a real game played with real models on a real table. So a spatial effect just needs to **tell the player what to do / what happened** — the player moves the minis and adjudicates positions, line of sight, and who's in a zone.
+
 What this means concretely:
 - **Refactor freely, but propose first.** Don't be timid about rewriting, deleting, or restructuring large portions of code. When a bigger refactor is worth it, briefly explain the plan (one short paragraph), then execute it — no need to wait for explicit approval. Land it as one commit (see Git workflow below).
 - **No backwards-compatibility burden.** Single user. Break save formats, APIs, data shapes, and internal contracts freely. Do NOT write migration shims, compatibility layers, or deprecation paths unless explicitly asked. Just change the thing.
