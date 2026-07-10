@@ -1425,6 +1425,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           resolveAttack(room, reactor, attacker, {
             weapon: a.attack.weapon, target: attacker.name,
             arc: a.attack.arc, range: a.attack.range, distance: a.attack.distance, cover: a.attack.cover,
+            engaged: reactor.engagedWith != null,
             aimed: false, aimedLoc: "hull",
             fullAuto: a.attack.fullAuto === true || a.attack.fullAuto === "true",
             charged: a.attack.charged === true || a.attack.charged === "true",

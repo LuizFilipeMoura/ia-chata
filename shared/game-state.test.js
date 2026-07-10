@@ -1700,6 +1700,26 @@ test("return-fire react lets the defender counter the attacker", () => {
   assert.ok(r.game.resolutions.length > n);                  // a counter-attack was logged
 });
 
+test("an engaged reactor can still return ranged fire (engaged penalty path runs)", () => {
+  const r = startedRoom();
+  applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "return", side: "a" } });
+  applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "brace", side: "a" } });
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+  } });
+  assert.equal(r.game.pendingReaction.kind, "return");
+  // Lock the reactor in melee — its return ranged fire must take the -2 engaged path.
+  findRig(r, "a1").engagedWith = findRig(r, "b1").id;
+  const n = r.game.resolutions.length;
+  applyCommand(r, { verb: "react", attrs: {
+    side: "a", attack: { weapon: "longRange", arc: "front", range: "near" },
+  } });
+  assert.equal(r.game.pendingReaction, null);
+  assert.equal(findRig(r, "a1").preparation, null);          // consumed
+  assert.ok(r.game.resolutions.length > n);                  // a counter-attack was logged
+});
+
 test("react is ignored from the wrong side", () => {
   const r = startedRoom();
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "evasive", side: "a" } });
