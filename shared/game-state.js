@@ -220,7 +220,7 @@ export const WEAPON_UPGRADES = {
   "Arc Gun": [
     { id: "ion-burn", nature: "field", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
     { id: "systems-overload", nature: "tuned", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
-    { id: "ion-storm", nature: "prototype", name: "Ion Storm", tag: "EMP a rig's systems for a turn; overloads your own gun", effect: {} }, // TODO(mechanics)
+    { id: "ion-storm", nature: "prototype", name: "Ion Storm", tag: "EMP a rig's systems for a turn; overloads your own gun", effect: { ionStorm: true } },
   ],
   "Mortar": [
     { id: "cluster-shells", nature: "field", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
@@ -240,7 +240,7 @@ export const WEAPON_UPGRADES = {
   "Missile Barrage": [
     { id: "swarm-warheads", nature: "field", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
     { id: "shaped-charges", nature: "tuned", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "fire-control-lock", nature: "prototype", name: "Fire Control Lock", tag: "Lock a target for one unmissable armor-piercing volley", effect: {} }, // TODO(mechanics)
+    { id: "fire-control-lock", nature: "prototype", name: "Fire Control Lock", tag: "Lock a target for one unmissable armor-piercing volley", effect: { fireControl: true } },
   ],
   "Sword": [
     { id: "duelist-balance", nature: "field", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
@@ -425,6 +425,14 @@ function ensureRigShape(rig) {
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
   if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
+  // Ion Storm (§13, Arc Gun) — EMP active-lockout on the struck target, and the
+  // attacker's own Arc Gun overload flag.
+  if (typeof rig.noActivesNextActivation !== "boolean") rig.noActivesNextActivation = false;
+  if (typeof rig.arcLockedNext !== "boolean") rig.arcLockedNext = false;
+  // Fire Control Lock (§13, Missile Barrage) — painted target id + the round the
+  // paint goes stale.
+  if (rig.lockedTarget === undefined) rig.lockedTarget = null;
+  if (typeof rig.lockExpiresRound !== "number") rig.lockExpiresRound = 0;
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -548,6 +556,15 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     suppressStacks: 0,
     // Suppression Lock's 3rd-stack payload: blocks this rig's next Prepare.
     noPrepNextActivation: false,
+    // Ion Storm (§13, Arc Gun) — an EMP hit blocks the target's equipment
+    // actives for its next activation; arcLockedNext overloads the attacker's
+    // own Arc Gun until its next fire attempt.
+    noActivesNextActivation: false,
+    arcLockedNext: false,
+    // Fire Control Lock (§13, Missile Barrage) — the painted target's id and the
+    // round the paint expires; the next Missile Barrage volley on it can't miss.
+    lockedTarget: null,
+    lockExpiresRound: 0,
     destroyed: false,
   };
   rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
@@ -1026,6 +1043,10 @@ function endActivation(room, rig, dice, random) {
   // activation it landed on — clear it here so it doesn't leak into the rig's
   // activation after next.
   rig.noPrepNextActivation = false;
+  // Ion Storm's EMP active-lockout (§13) is scoped to exactly the one activation
+  // it penalises — clear it here alongside noPrepNextActivation so it can't leak
+  // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
+  rig.noActivesNextActivation = false;
   room.game.turn.activeRigId = null;
   handoff(room);
 }
@@ -1150,6 +1171,10 @@ function performAction(room, rig, act, a, random) {
     // §engagement — Jump Jets is movement; an engaged rig is pinned and must
     // Disengage before it can jump out. Other actives (harden/purge/…) are fine.
     if (act === "jumpjets" && rig.engagedWith != null) return false;
+    // Ion Storm (§13, Arc Gun) — an EMP'd rig can't fire any equipment active
+    // for its whole next activation. Cleared in endActivation (mirrors
+    // noPrepNextActivation) so it's scoped to exactly that one activation.
+    if (rig.noActivesNextActivation) return false;
     if (rig.equipment !== equipId || t.actionsUsed >= t.actionsMax) return false;
     const active = EQUIPMENT[equipId].active;
     t.actionsUsed += 1;
@@ -1172,6 +1197,15 @@ function performAction(room, rig, act, a, random) {
   if (act === "fire" || act === "aimed") {
     const target = findRig(room, a.target);
     if (!target) return false;
+    // Ion Storm (§13, Arc Gun) — the discharge overloads the attacker's own gun:
+    // its next Arc Gun shot is refused and the lock is consumed on that blocked
+    // attempt (mirrors the autocannonSlowNext one-shot downside). Gating here —
+    // before any facedown reveal — covers the direct, brace/return and evasive
+    // paths in one place. Melee and other long-range weapons are unaffected.
+    if (a.weapon !== "melee" && rig.arcLockedNext) {
+      const p = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+      if (p?.upgradeEffect?.ionStorm) { rig.arcLockedNext = false; return false; }
+    }
     const facedown = target.preparation && target.preparation.faceUp === false;
     if (facedown) {
       const prep = target.preparation;
@@ -1251,6 +1285,26 @@ function performAction(room, rig, act, a, random) {
     pushResolution(room, {
       kind: "douse", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} douses the flames (burning ${rig.burning}).`, effects: [],
+    });
+    return true;
+  }
+  if (act === "lock") {
+    // Fire Control Lock (§13, Missile Barrage) — paint one target for one slot.
+    // The next Missile Barrage volley aimed at that exact rig (this round or the
+    // next) auto-hits and gains Armour Piercing (see resolveAttack). Only a rig
+    // carrying the fire-control upgrade can lock; an unknown target is a no-op.
+    const profile = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    if (!profile?.upgradeEffect?.fireControl) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.id === rig.id) return false;
+    rig.lockedTarget = target.id;
+    rig.lockExpiresRound = room.game.round + 1;
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "lock", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} locks Fire Control onto ${target.name}.`,
+      effects: [`Next Missile Barrage volley vs ${target.name} auto-hits with Armour Piercing.`],
     });
     return true;
   }

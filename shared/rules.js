@@ -17,6 +17,7 @@ export const ACTIONS = {
   prepare:  { label: "Prepare",     heat: 1, slot: 1 },
   disengage:{ label: "Disengage",   heat: 1, slot: 1 },
   douse:    { label: "Douse",       heat: 0, slot: 1 },
+  lock:     { label: "Lock Target", heat: 1, slot: 1 },
 };
 
 // Heat Threshold Table (§6), consulted with a D12 + overheat bonus total.

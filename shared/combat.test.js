@@ -611,3 +611,91 @@ test("Suppression Lock resets to 1 stack (speed only) when the attacker switches
   assert.equal(targetB.speedHalvedNextRound, true);
   assert.equal(targetB.actionPenaltyNextActivation || 0, 0); // only 1 stack — speed only
 });
+
+test("Ion Storm EMPs the struck target and overloads the attacker's own Arc Gun", () => {
+  const attacker = makeRig(1, "Ion", "medium", "a", { longRange: "Arc Gun", melee: "Sword", longRangeUpgrade: "ion-storm" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const heatBumps = [];
+  const ctx = { ...makeCtx(), bumpHeat(rig, n) { heatBumps.push([rig.id, n]); } };
+  // Arc Gun rof 2; die 6 hits (modAim 3), die 1 misses -> exactly 1 landed hit.
+  const res = resolveAttack(room, attacker, target, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 1], location: 1, impacts: [1] },
+  }, () => 0, ctx);
+  assert.equal(res.hits, 1);
+  // Target EMP'd for its next activation.
+  assert.equal(target.actionPenaltyNextActivation, 1);
+  assert.equal(target.noPrepNextActivation, true);
+  assert.equal(target.noActivesNextActivation, true);
+  // Attacker's own gun overloaded.
+  assert.equal(attacker.arcLockedNext, true);
+  // 2-heat spike on the target, 3 on the attacker (no other heat sources here).
+  assert.deepEqual(heatBumps, [[target.id, 2], [attacker.id, 3]]);
+});
+
+test("Ion Storm does nothing on a whiff (no landed hit, no EMP, no self-heat)", () => {
+  const attacker = makeRig(1, "Ion", "medium", "a", { longRange: "Arc Gun", melee: "Sword", longRangeUpgrade: "ion-storm" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const heatBumps = [];
+  const ctx = { ...makeCtx(), bumpHeat(rig, n) { heatBumps.push([rig.id, n]); } };
+  resolveAttack(room, attacker, target, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [1, 1], location: 1 }, // both miss
+  }, () => 0, ctx);
+  assert.equal(target.noActivesNextActivation, false);
+  assert.equal(attacker.arcLockedNext, false);
+  assert.deepEqual(heatBumps, []);
+});
+
+test("Fire Control Lock's painted Missile Barrage volley auto-hits with Armour Piercing", () => {
+  const attacker = makeRig(1, "Lock", "medium", "a", { longRange: "Missile Barrage", melee: "Sword", longRangeUpgrade: "fire-control-lock" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  attacker.lockedTarget = target.id;
+  attacker.lockExpiresRound = 2; // fresh paint (round 1 <= 2)
+  // rof 4; every to-hit die is a 1 (would all miss at modAim 3) — the lock forces
+  // all four to land. Impact die 6 + AP die 3 proves Armour Piercing is applied.
+  const res = resolveAttack(room, attacker, target, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [1, 1, 1, 1], location: 1, impacts: [6, 6, 6, 6], ap: [3, 3, 3, 3] },
+  }, () => 0, ctx);
+  assert.equal(res.hits, 4);                    // unmissable volley — all shots land
+  // STR: Missile Barrage 9 + medium weight 0 = 9; front arc +0; die 6 + AP +3.
+  assert.equal(res.impacts[0].total, 6 + 9 + 0 + 3); // 18 — AP D3 folded in
+  assert.equal(attacker.lockedTarget, null);    // paint consumed by the volley
+});
+
+test("Fire Control Lock ignores a stale paint (expired round) and clears it", () => {
+  const attacker = makeRig(1, "Lock", "medium", "a", { longRange: "Missile Barrage", melee: "Sword", longRangeUpgrade: "fire-control-lock" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 3 } };
+  const ctx = makeCtx();
+  attacker.lockedTarget = target.id;
+  attacker.lockExpiresRound = 2; // stale: round 3 > 2
+  const res = resolveAttack(room, attacker, target, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [1, 1, 1, 1], location: 1 }, // all miss — no auto-hit
+  }, () => 0, ctx);
+  assert.equal(res.hits, 0);                 // no lock -> the misses stand
+  assert.equal(attacker.lockedTarget, null); // stale paint dropped
+});
+
+test("Fire Control Lock only fires vs the exact painted target", () => {
+  const attacker = makeRig(1, "Lock", "medium", "a", { longRange: "Missile Barrage", melee: "Sword", longRangeUpgrade: "fire-control-lock" });
+  const painted = makeRig(2, "P", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const other = makeRig(3, "O", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, painted, other], game: { round: 1 } };
+  const ctx = makeCtx();
+  attacker.lockedTarget = painted.id;
+  attacker.lockExpiresRound = 2;
+  // Firing at the un-painted rig gets no auto-hit and leaves the lock intact.
+  const res = resolveAttack(room, attacker, other, {
+    weapon: "longRange", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [1, 1, 1, 1], location: 1 },
+  }, () => 0, ctx);
+  assert.equal(res.hits, 0);
+  assert.equal(attacker.lockedTarget, painted.id); // paint still saved for the real target
+});

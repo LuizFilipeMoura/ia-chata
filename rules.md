@@ -437,6 +437,8 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Conflagration** (Flamethrower, Prototype) — each landed hit adds +1 Burning to the target (stacks with no cap) and runs the attacker +1 heat as its downside; each stack needs its own Douse.
 - **Penetrator Rounds** (Autocannon, Prototype) — every 3rd Autocannon volley (per-rig belt counter) bypasses the armour row entirely: every landed hit is forced to Severe (2 SP) regardless of location or roll. The belt then cycles slow for exactly the attack right after — that attack's ROF is halved.
 - **Suppression Lock** (Mini Gun, Prototype) — consecutive hits on the *same* target ramp a pin: 1 stack halves its Speed next round, 2 stacks also docks it 1 action on its next activation, 3 stacks immobilises it and blocks its next Prepare entirely. Firing on a different target resets the count to 1 stack. The attacker runs +1 heat every attack while the lock is active. Stacks cap at 3 and don't decay on their own.
+- **Ion Storm** (Arc Gun, Prototype) — a landed Arc Gun hit EMPs the target: it loses 1 action, can't Prepare, and can't fire an equipment active on its next activation, plus takes a 2-heat spike. The discharge overloads the attacker: +3 self-heat and its own Arc Gun can't fire until its next attempt (which is refused and clears the overload).
+- **Fire Control Lock** (Missile Barrage, Prototype) — the **Lock Target** action (1 slot, 1 heat) paints one target. The next Missile Barrage volley aimed at that exact rig, this round or the next, can't miss (every shot hits) and gains Armour Piercing; the paint is then consumed. An unused lock goes stale after its expiry round and does nothing.
 
 ---
 

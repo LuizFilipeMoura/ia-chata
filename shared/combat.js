@@ -89,7 +89,10 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   let rerollsUsed = 0;
   for (let i = 0; i < rof; i++) {
     let d = rollD(6, providedDice?.[i], random);
-    let hit = d >= modAim || d === 6;
+    // Fire Control Lock (§13, Missile Barrage) — a painted volley can't miss:
+    // every die counts as a hit regardless of face. Dice are still rolled (so
+    // heat-on-ones and the per-die log stay honest) but the to-hit test is skipped.
+    let hit = opts.autoHit || d >= modAim || d === 6;
     if (!hit && rerollsUsed < rerolls) {
       rerollsUsed += 1;
       d = rollD(6, providedDice?.rerolls?.[rerollsUsed - 1], random);
@@ -213,7 +216,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (attacker.weapons?.unit != null) slot = "unit";
   else slot = opts.weapon === "melee" ? "melee" : "longRange";
   const weaponName = attacker.weapons?.[slot];
-  const profile = ctx.profileFor(slot, weaponName, attacker);
+  let profile = ctx.profileFor(slot, weaponName, attacker);
   if (!profile) return { ok: false, reason: "no-weapon" };
   if (attacker.weaponsDestroyed.includes(weaponName)) return { ok: false, reason: "weapon-destroyed" };
   // Out of range is now distance-driven for ranged weapons; melee keeps the
@@ -230,10 +233,27 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };
   if (slot === "unit" && attacker.loaded.unit === false && !opts.autoReload) return { ok: false, reason: "reload" };
 
+  // Fire Control Lock (§13, Missile Barrage) — a painted target eats one
+  // unmissable, armour-piercing volley. Live only while the paint is fresh (the
+  // current round is at or before its expiry round) and aimed at the very rig
+  // that was locked. All reads are defensive so a room with no game state (unit
+  // tests / cold callers) simply sees no lock. A stale paint is dropped so it
+  // can never fire late.
+  const round = room?.game?.round || 0;
+  const fireControlLock = !!profile.upgradeEffect?.fireControl
+    && attacker.lockedTarget != null
+    && attacker.lockedTarget === target.id
+    && round <= (attacker.lockExpiresRound || 0);
+  if (fireControlLock) {
+    profile = { ...profile, perks: [...new Set([...(profile.perks || []), "Armour Piercing"])] };
+  } else if (attacker.lockedTarget != null && round > (attacker.lockExpiresRound || 0)) {
+    attacker.lockedTarget = null; // expire a stale lock
+  }
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target }, opts.dice?.toHit, random);
+  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock }, opts.dice?.toHit, random);
+  if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
   if (slot === "unit") attacker.loaded.unit = false;
@@ -365,6 +385,20 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
     effects.push(`Suppression Lock ${stacks} — ${target.name} ${
       stacks === 3 ? "immobilised, Prepare blocked" : stacks === 2 ? "action penalty" : "speed halved"
     }`);
+  }
+  // Ion Storm (§13, Arc Gun) — an EMP surge. A landed Arc Gun hit disrupts the
+  // target for its next activation (loses an action, can't Prepare, can't fire
+  // an equipment active) and spikes its heat by 2. The discharge overloads the
+  // attacker's own gun: +3 self-heat and its Arc Gun is locked until its next
+  // fire attempt (arcLockedNext, consumed by the fire gate in game-state.js).
+  if (profile.upgradeEffect?.ionStorm) {
+    target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);
+    target.noPrepNextActivation = true;
+    target.noActivesNextActivation = true;
+    ctx.bumpHeat(target, 2);
+    ctx.bumpHeat(attacker, 3);
+    attacker.arcLockedNext = true;
+    effects.push("Ion Storm — target EMP'd (no action / Prepare / active next activation), attacker's Arc Gun overloaded");
   }
   const onHit = profile.upgradeEffect?.onHit;
   if (onHit === "systems-overload") {

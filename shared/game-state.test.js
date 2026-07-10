@@ -738,6 +738,100 @@ test("noPrepNextActivation clears when the pinned rig's activation ends", () => 
   assert.equal(b1.noPrepNextActivation, false);             // scoped to just the blocked activation
 });
 
+test("Ion Storm's active-lockout blocks an equipment active during the pinned activation", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.equipment = "radiator-array";         // grants the Purge active
+  b1.noActivesNextActivation = true;       // simulates an Ion Storm hit landed on this rig
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const usedBefore = r.game.turn.actionsUsed;
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "purge" } });
+  assert.equal(r.game.turn.actionsUsed, usedBefore); // active refused — no slot spent
+  assert.equal(b1.engine.heat, heatBefore);          // and no heat vented
+});
+
+test("Ion Storm's active-lockout clears when the pinned rig's activation ends", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.noActivesNextActivation = true;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(b1.noActivesNextActivation, false);   // scoped to just the blocked activation
+});
+
+test("Ion Storm's Arc Gun overload refuses the next Arc Gun shot, then clears (consumed)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Arc Gun";
+  b1.weaponUpgrades.longRange = "ion-storm";
+  b1.arcLockedNext = true;                 // gun overloaded from a prior Ion Storm discharge
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  const spBefore = a1.hull.sp + a1.arms.sp + a1.legs.sp + a1.engine.sp;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+  } });
+  const spAfter = a1.hull.sp + a1.arms.sp + a1.legs.sp + a1.engine.sp;
+  assert.equal(r.game.turn.actionsUsed, 0);  // shot refused — no slot spent
+  assert.equal(spAfter, spBefore);           // target untouched
+  assert.equal(b1.arcLockedNext, false);     // overload consumed by the blocked attempt
+  // The lock is one-shot: the very next Arc Gun shot now goes through.
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+  } });
+  assert.equal(r.game.turn.actionsUsed, 1);  // fired this time
+});
+
+test("Fire Control Lock: the `lock` action paints a target for one slot", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Missile Barrage";
+  b1.weaponUpgrades.longRange = "fire-control-lock";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "lock", target: "a1" } });
+  assert.equal(b1.lockedTarget, a1.id);
+  assert.equal(b1.lockExpiresRound, r.game.round + 1);
+  assert.equal(r.game.turn.actionsUsed, usedBefore + 1); // costs one slot
+});
+
+test("Fire Control Lock: only a rig carrying the upgrade can lock", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1"); // default loadout: Mini Gun / Sword, no fire-control
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const usedBefore = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "lock", target: "a1" } });
+  assert.equal(b1.lockedTarget, null);                 // no paint applied
+  assert.equal(r.game.turn.actionsUsed, usedBefore);   // refused — no slot spent
+});
+
+test("Fire Control Lock: the painted Missile Barrage volley auto-hits and clears the lock", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Missile Barrage";
+  b1.weaponUpgrades.longRange = "fire-control-lock";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "lock", target: "a1" } });
+  // Every to-hit die is a 1 (would all miss) — the lock forces all four to land.
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1, 1, 1], location: 1, impacts: [6, 6, 6, 6], ap: [1, 1, 1, 1] },
+  } });
+  const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
+  assert.match(attack.summary, /4 hit\(s\)/); // unmissable — all shots landed
+  assert.equal(findRig(r, "b1").lockedTarget, null); // paint consumed
+});
+
 test("Shutdown is allowed after a real action has been spent (not just as the first)", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
