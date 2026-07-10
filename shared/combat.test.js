@@ -984,6 +984,43 @@ test("Enfilade emits the ricochet instruction on every 3rd aimed shot; non-aimed
   assert.ok(!c4.resolutions.some((r) => /Enfilade — ricochet/.test(r.summary)));
 });
 
+test("Tow Chain emits the fling instruction, adds +2 heat, roots the attacker, and sets the cooldown — then no fling while recharging", () => {
+  const opts = { weapon: "melee", arc: "front", range: "near", dice: { toHit: [6], location: 1, impacts: [6] } };
+
+  // Charged chain (round >= cooldown) + a landed damaging hit → fling + state.
+  const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "tow-chain" });
+  const t1 = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  let heat = 0;
+  const ctx1 = { ...makeCtx(), bumpHeat: (rig, n) => { if (rig === ball) heat += n; } };
+  resolveAttack({ rigs: [ball, t1], game: { round: 1 } }, ball, t1, { ...opts, target: t1.name }, () => 0, ctx1);
+  const fling = ctx1.resolutions.find((r) => /Tow Chain — fling/.test(r.summary));
+  assert.ok(fling, "expected a Tow Chain fling instruction");
+  assert.equal(fling.summary, 'Tow Chain — fling T up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.');
+  assert.equal(heat, 2);                       // +2 tow heat
+  assert.equal(ball.towedThisActivation, true); // rooted
+  assert.equal(ball.towChainCooldownUntil, 4);  // round 1 + 3
+
+  // Recharging (round below the cooldown) → hit lands but no fling, no heat, no root.
+  const ball2 = makeRig(3, "WB2", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "tow-chain" });
+  ball2.towChainCooldownUntil = 5;
+  const t2 = makeRig(4, "T2", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  let heat2 = 0;
+  const ctx2 = { ...makeCtx(), bumpHeat: (rig, n) => { if (rig === ball2) heat2 += n; } };
+  resolveAttack({ rigs: [ball2, t2], game: { round: 1 } }, ball2, t2, { ...opts, target: t2.name }, () => 0, ctx2);
+  assert.ok(!ctx2.resolutions.some((r) => /Tow Chain — fling/.test(r.summary)));
+  assert.equal(heat2, 0);
+  assert.equal(ball2.towedThisActivation, false);
+
+  // Moved but whiffed (no damaging hit) → no fling.
+  const ball3 = makeRig(5, "WB3", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "tow-chain" });
+  const t3 = makeRig(6, "T3", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const ctx3 = makeCtx();
+  resolveAttack({ rigs: [ball3, t3], game: { round: 1 } }, ball3, t3,
+    { weapon: "melee", target: t3.name, arc: "front", range: "near", dice: { toHit: [1], location: 1 } }, () => 0, ctx3);
+  assert.ok(!ctx3.resolutions.some((r) => /Tow Chain — fling/.test(r.summary)));
+  assert.equal(ball3.towChainCooldownUntil, 0); // never charged/spent
+});
+
 test("Kneecapper tags the raked limb on a damaging hit; a non-kneecapper Double MG does not", () => {
   const attacker = makeRig(1, "K", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });

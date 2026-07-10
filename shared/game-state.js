@@ -225,7 +225,7 @@ export const WEAPON_UPGRADES = {
   "Mortar": [
     { id: "cluster-shells", nature: "field", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
     { id: "airburst-fuze", nature: "tuned", name: "Airburst Fuze", tag: "Ignores cover", effect: { ignoreCover: true } },
-    { id: "barrage", nature: "prototype", name: "Barrage", tag: "Shell a zone for 2 rounds; mortar locked + hot (spatial)", effect: {} }, // TODO(mechanics, spatial)
+    { id: "barrage", nature: "prototype", name: "Barrage", tag: "Shell a zone for 2 rounds; mortar locked + hot (spatial)", effect: { barrage: true } },
   ],
   "Sniper Cannon": [
     { id: "marksman-optics", nature: "field", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
@@ -270,7 +270,7 @@ export const WEAPON_UPGRADES = {
   "Wrecking Ball": [
     { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
     { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 STR and a knockback (knockback spatial)", effect: { charge: 2 } }, // knockback deferred — Group G (spatial)
-    { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", effect: {} }, // TODO(mechanics, spatial)
+    { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", effect: { towChain: true } },
   ],
   "Bulwark Shield": [
     { id: "tower-shield", nature: "field", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
@@ -440,6 +440,12 @@ function ensureRigShape(rig) {
   // stance may next be re-entered (cooldown measured from when it was entered).
   if (typeof rig.emplaced !== "boolean") rig.emplaced = false;
   if (typeof rig.emplaceCooldownUntil !== "number") rig.emplaceCooldownUntil = 0;
+  // Barrage (§13, Mortar) — rounds of shelling left on the committed tube.
+  if (typeof rig.barrageRoundsLeft !== "number") rig.barrageRoundsLeft = 0;
+  // Tow Chain (§13, Wrecking Ball) — the round the fling recharges by, and the
+  // per-activation root flag a successful tow sets (blocks Move/Sprint after).
+  if (typeof rig.towChainCooldownUntil !== "number") rig.towChainCooldownUntil = 0;
+  if (typeof rig.towedThisActivation !== "boolean") rig.towedThisActivation = false;
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
   if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
@@ -600,6 +606,13 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // round it may next be re-entered (3-round cooldown from entry).
     emplaced: false,
     emplaceCooldownUntil: 0,
+    // Barrage (§13, Mortar) — rounds of shelling left; while > 0 the Mortar is
+    // locked (can't fire a direct shot) and takes +1 heat upkeep each Recovery.
+    barrageRoundsLeft: 0,
+    // Tow Chain (§13, Wrecking Ball) — the round the fling recharges by (3-round
+    // cooldown from a tow) and a per-activation root flag a successful tow sets.
+    towChainCooldownUntil: 0,
+    towedThisActivation: false,
     // Suppression Lock (§13, Mini Gun) — which target this rig is grinding down
     // and how many consecutive-fire stacks it has piled on.
     suppressTarget: null,
@@ -692,6 +705,11 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     // never carry the upgrade, so the stance never actually engages).
     emplaced: false,
     emplaceCooldownUntil: 0,
+    // Barrage / Tow Chain (§13) — mirrored for shape parity (cold kinds never
+    // carry the Mortar / Wrecking Ball upgrades, so these never actually fire).
+    barrageRoundsLeft: 0,
+    towChainCooldownUntil: 0,
+    towedThisActivation: false,
     // Piledriver Protocol (§13) — mirrored for shape parity (cold kinds never
     // carry the Siege Maul upgrade, so Momentum never actually builds).
     momentum: 0,
@@ -1204,6 +1222,17 @@ function runRecovery(room) {
       }
     }
     tickBreach(rig);
+    // Barrage (§13, Mortar) — upkeep for a committed tube: +1 heat, emit the
+    // per-round apply-SP prompt, then count down. At 0 the mortar unlocks.
+    if ((rig.barrageRoundsLeft || 0) > 0) {
+      bumpHeat(rig, 1);
+      pushResolution(room, {
+        kind: "barrage", actor: rig.owner, rigId: rig.id, rolls: [],
+        summary: `Barrage active — apply 1 SP to each rig in the 3" zone (${rig.barrageRoundsLeft} round(s) left).`,
+        effects: [],
+      });
+      rig.barrageRoundsLeft -= 1;
+    }
     recompute(rig);
   }
   room.game.answerTokens = { a: 0, b: 0 };
@@ -1249,6 +1278,9 @@ function endActivation(room, rig, dice, random) {
   // just at start), so a stale `true` can't leak into a reactive strike on the
   // opponent's turn before this rig next activates.
   rig.movedThisActivation = false;
+  // Tow Chain (§13, Wrecking Ball) — clear the per-activation root flag at
+  // activation end too, so a stale root can't leak past this activation.
+  rig.towedThisActivation = false;
   // Suppression Lock's Prepare block (§13) is scoped to exactly the one
   // activation it landed on — clear it here so it doesn't leak into the rig's
   // activation after next.
@@ -1458,6 +1490,12 @@ function performAction(room, rig, act, a, random) {
       const p = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
       if (p?.upgradeEffect?.ionStorm) { rig.arcLockedNext = false; return false; }
     }
+    // Barrage (§13, Mortar) — while the tube is committed to a barrage it can't
+    // fire a direct Mortar shot (the mortar is locked). Melee is unaffected.
+    if (a.weapon !== "melee" && (rig.barrageRoundsLeft || 0) > 0) {
+      const p = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+      if (p?.upgradeEffect?.barrage) return false;
+    }
     const facedown = target.preparation && target.preparation.faceUp === false;
     if (facedown) {
       const prep = target.preparation;
@@ -1509,6 +1547,9 @@ function performAction(room, rig, act, a, random) {
     // Emplacement (§13, Bulwark Shield) — a rooted rig cannot move; it must
     // Un-plant first (which lifts the stance and costs +2 heat).
     if (rig.emplaced) return false;
+    // Tow Chain (§13, Wrecking Ball) — hauling a rig in with the chain roots the
+    // attacker for the rest of this activation: no Move/Sprint after a tow.
+    if (rig.towedThisActivation) return false;
     // Optional move-into declaration: the player states they moved into base
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
@@ -1607,6 +1648,24 @@ function performAction(room, rig, act, a, random) {
     pushResolution(room, {
       kind: "unplant", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} un-plants (+2 heat).`, effects: [],
+    });
+    return true;
+  }
+  if (act === "barrage") {
+    // Barrage (§13, Mortar) — commit the tube to a shelled zone for 2 rounds.
+    // Only a Mortar carrying the barrage upgrade may barrage, and not while a
+    // barrage is already running (barrageRoundsLeft must be 0). While active the
+    // Mortar is locked (see the fire gate) and takes +1 heat upkeep each Recovery.
+    const profile = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    if (!profile?.upgradeEffect?.barrage) return false;
+    if ((rig.barrageRoundsLeft || 0) > 0) return false;
+    rig.barrageRoundsLeft = 2;
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "barrage", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `Barrage — place a shelled-zone marker within 6–34" of this Rig; it shells a 3" zone for 2 rounds. Each round, apply 1 SP to every rig in the zone (players adjudicate who's inside).`,
+      effects: [`${rig.name} commits its Mortar to a Barrage.`],
     });
     return true;
   }
@@ -1795,6 +1854,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.emplaced = false;
       rig.emplaceCooldownUntil = 0;
       rig.momentum = 0; // Piledriver Protocol (§13) — clear stored Momentum on reset
+      rig.barrageRoundsLeft = 0;      // Barrage (§13) — clear a committed tube
+      rig.towChainCooldownUntil = 0;  // Tow Chain (§13) — clear the fling cooldown
+      rig.towedThisActivation = false;
       delete rig._blastRolled;
     }
     room.game.started = false;
@@ -1892,6 +1954,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         t.actionsMax = actionsMax;
         rig.actionPenaltyNextActivation = 0;
         rig.movedThisActivation = false; // Full Tilt/Momentum Swing charge flag (§13)
+        rig.towedThisActivation = false; // Tow Chain root flag (§13) — fresh each activation
         rig.loaded = { longRange: true, melee: true };
         // Emplacement (§13) — the fortress shield is permanent: re-establish
         // Raise Shield for free each activation (no Prepare, no Answer token),

@@ -3104,3 +3104,164 @@ test("a shield rig without the emplacement upgrade can't emplace", () => {
   assert.equal(b2.emplaced, false);
   assert.equal(r.game.turn.actionsUsed, 0); // refused — no slot spent
 });
+
+// --- Barrage (§13, Mortar prototype) -----------------------------------------
+// The Barrage action commits the Mortar to a 2-round shelled zone: the tube is
+// locked (no direct fire), each Recovery adds +1 heat and emits the apply-SP
+// prompt, then counts down; after 2 Recoveries the mortar unlocks.
+function barrageRoom() {
+  const r = createRoom("BAR");
+  claimSide(r, { name: "Owner", side: "a" });
+  // b1: Mortar with the barrage prototype; b2: Mortar with a non-barrage upgrade.
+  applyCommand(r, { verb: "add", attrs: { name: "b1", class: "medium", owner: "b",
+    longRange: "Mortar", melee: "Sword", longRangeUpgrade: "barrage" } });
+  applyCommand(r, { verb: "add", attrs: { name: "b2", class: "medium", owner: "b",
+    longRange: "Mortar", melee: "Sword", longRangeUpgrade: "cluster-shells" } });
+  applyCommand(r, { verb: "add", attrs: { name: "b3", class: "light", owner: "b", ...W } });
+  for (let i = 1; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+  }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  clearPendingAnswer(r); // b activates first; lift the answer gate
+  return r;
+}
+
+test("barrage commits the tube for 2 rounds and emits the place instruction", () => {
+  const r = barrageRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "barrage" } });
+  const b1 = findRig(r, "b1");
+  assert.equal(b1.barrageRoundsLeft, 2);
+  assert.equal(r.game.turn.actionsUsed, 1); // barrage spent one slot
+  const placed = r.game.resolutions.find((x) => /Barrage — place a shelled-zone marker/.test(x.summary));
+  assert.ok(placed, "expected the barrage place instruction in the log");
+});
+
+test("a Mortar committed to a barrage can't fire a direct shot", () => {
+  const r = barrageRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "barrage" } });
+  const used = r.game.turn.actionsUsed; // 1
+  const a1 = findRig(r, "a1");
+  const spBefore = a1.hull.sp + a1.arms.sp + a1.legs.sp + a1.engine.sp;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1",
+    arc: "front", range: "near", distance: 18, dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.equal(r.game.turn.actionsUsed, used); // fire refused — mortar locked
+  const a1b = findRig(r, "a1");
+  assert.equal(a1b.hull.sp + a1b.arms.sp + a1b.legs.sp + a1b.engine.sp, spBefore); // target untouched
+});
+
+test("Recovery applies +1 barrage upkeep heat, emits the apply-SP prompt, and counts down", () => {
+  const r = barrageRoom();
+  const b1 = findRig(r, "b1");
+  b1.barrageRoundsLeft = 2;
+  b1.noCool = true;      // isolate the +1 upkeep from the usual −1 Recovery cooling
+  b1.engine.heat = 0;
+  __test.runRecovery(r);
+  assert.equal(b1.barrageRoundsLeft, 1);   // decremented
+  assert.equal(b1.engine.heat, 1);         // +1 upkeep
+  const p1 = r.game.resolutions.find((x) => /Barrage active — apply 1 SP/.test(x.summary));
+  assert.ok(p1, "expected the per-round apply-SP prompt");
+  assert.match(p1.summary, /2 round\(s\) left/); // count shown before the decrement
+
+  __test.runRecovery(r);
+  assert.equal(b1.barrageRoundsLeft, 0);   // reaches 0 after the second tick
+  assert.equal(b1.engine.heat, 2);         // +1 more
+
+  __test.runRecovery(r);
+  assert.equal(b1.barrageRoundsLeft, 0);   // no underflow once finished
+  assert.equal(b1.engine.heat, 2);         // and no further upkeep
+});
+
+test("a Mortar whose barrage has finished can fire again", () => {
+  const r = barrageRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.barrageRoundsLeft = 0; // barrage ended — tube unlocked
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1",
+    arc: "front", range: "near", distance: 18, dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.equal(r.game.turn.actionsUsed, 1); // fire went through
+});
+
+test("a non-barrage Mortar rig can't use the barrage action", () => {
+  const r = barrageRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b2" } });
+  const b2 = findRig(r, "b2");
+  applyCommand(r, { verb: "action", attrs: { name: "b2", action: "barrage" } });
+  assert.equal(b2.barrageRoundsLeft, 0);     // refused
+  assert.equal(r.game.turn.actionsUsed, 0);  // no slot spent
+});
+
+// --- Tow Chain (§13, Wrecking Ball prototype) --------------------------------
+// A damaging Wrecking Ball hit flings the target (narrated), roots the attacker
+// for the rest of its activation, adds +2 heat, and goes on a 3-round cooldown.
+function towRoom() {
+  const r = createRoom("TOW");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "add", attrs: { name: "b1", class: "medium", owner: "b",
+    longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "tow-chain" } });
+  applyCommand(r, { verb: "add", attrs: { name: "b2", class: "light", owner: "b", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "b3", class: "light", owner: "b", ...W } });
+  for (let i = 1; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+  }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  clearPendingAnswer(r);
+  return r;
+}
+
+test("a damaging Tow Chain hit flings, adds +2 heat, roots the attacker, and sets a 3-round cooldown", () => {
+  const r = towRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1",
+    arc: "front", range: "near", dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.equal(b1.towChainCooldownUntil, 4);          // round 1 + 3
+  assert.equal(b1.towedThisActivation, true);          // rooted for the rest of the activation
+  assert.equal(b1.engine.heat - heatBefore, 3);        // +1 melee fire heat, +2 tow
+  const fling = r.game.resolutions.find((x) => /Tow Chain — fling/.test(x.summary));
+  assert.ok(fling, "expected a Tow Chain fling instruction");
+  assert.equal(fling.summary,
+    'Tow Chain — fling a1 up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.');
+});
+
+test("a rig rooted by a tow can't Move or Sprint for the rest of the activation", () => {
+  const r = towRoom();
+  const b1 = findRig(r, "b1");
+  b1.towedThisActivation = true; // simulates a tow already landed this activation
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  // Re-set: activate() clears the flag at activation start (fresh each activation).
+  b1.towedThisActivation = true;
+  const used = r.game.turn.actionsUsed;
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
+  assert.equal(r.game.turn.actionsUsed, used);  // both movement actions refused
+  assert.equal(b1.engine.heat, heatBefore);     // no heat spent on the refusals
+});
+
+test("a second Tow Chain hit within 3 rounds doesn't fling or add the +2 heat", () => {
+  const r = towRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.towChainCooldownUntil = 5; // recharging — current round (1) is below the cooldown
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1",
+    arc: "front", range: "near", dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.ok(!r.game.resolutions.some((x) => /Tow Chain — fling/.test(x.summary))); // no fling
+  assert.equal(b1.towedThisActivation, false);   // not rooted while recharging
+  assert.equal(b1.engine.heat - heatBefore, 1);  // only the melee fire heat, no +2 tow
+});

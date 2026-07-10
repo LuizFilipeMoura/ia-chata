@@ -61,6 +61,12 @@ export function availableActions(rig, turn, round) {
       if ((key === "fire" || key === "aimed") && rig.engagedWith != null && !rangedSpent) {
         note = note ? `${note} · Engaged −2 Aim` : "Engaged — ranged −2 Aim";
       }
+      // Barrage (§13, Mortar) — while barraging, the Mortar is locked out of a
+      // direct shot; note it on Fire/Aimed (melee weapons are still fair game).
+      if ((key === "fire" || key === "aimed") && rig.weapons?.longRange === "Mortar" && (rig.barrageRoundsLeft || 0) > 0) {
+        const msg = "Mortar committed to Barrage — melee only";
+        note = note ? `${note} · ${msg}` : msg;
+      }
       return { key, label: def.label, heat, enabled, cost, note };
     });
   if (cfg.hasEquipment && rig.equipment && EQUIPMENT[rig.equipment]) {
@@ -87,6 +93,18 @@ export function availableActions(rig, turn, round) {
     list.push({
       key: "unplant", label: ACTIONS.unplant.label, heat: 2,
       enabled: left > 0, cost: ACTIONS.unplant.slot, note: "+2 heat",
+    });
+  }
+  // Barrage (§13, Mortar) — surfaced only for a Mortar carrying the barrage
+  // upgrade. Enabled with budget left and no barrage already running; while a
+  // barrage is active it's disabled and the tube is locked out of direct fire.
+  const hasBarrage = rig.weapons?.longRange === "Mortar" && rig.weaponUpgrades?.longRange === "barrage";
+  if (hasBarrage) {
+    const active = (rig.barrageRoundsLeft || 0) > 0;
+    list.push({
+      key: "barrage", label: ACTIONS.barrage.label, heat: ACTIONS.barrage.heat,
+      enabled: left > 0 && !active, cost: ACTIONS.barrage.slot,
+      note: active ? `Barrage active — ${rig.barrageRoundsLeft} round(s) left` : "",
     });
   }
   return list;
@@ -119,6 +137,7 @@ export function rigModifiers(rig) {
   if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit" });
   else if (rig.suppressImmobile) mods.push({ key: "suppress-immobile", tag: "Pinned", tone: "crit" });
   if (rig.emplaced) mods.push({ key: "emplaced", tag: "Emplaced", tone: "prep" });
+  if ((rig.barrageRoundsLeft || 0) > 0) mods.push({ key: "barrage", tag: `Barrage ${rig.barrageRoundsLeft}`, tone: "warn" });
   if (rig.engagedWith != null) mods.push({ key: "engaged", tag: "Engaged", tone: "warn" });
   if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit" });
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });

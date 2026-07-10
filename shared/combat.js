@@ -418,6 +418,21 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (piledriverSpend > 0 && landedDamage) {
     pushInstruction(`Piledriver — shove ${target.name} back 3" (move the mini).`);
   }
+  // G1d — Tow Chain (Wrecking Ball, Prototype): a damaging swing hooks the target
+  // and flings it up to 4" where the attacker chooses, but the effort roots the
+  // attacker for the rest of its activation and runs it +2 heat. On a per-rig
+  // 3-round cooldown (from `round`): while recharging the ball hits normally with
+  // no fling. `round` is defined above (room.game.round || 0).
+  if (profile.upgradeEffect?.towChain && landedDamage) {
+    if (round >= (attacker.towChainCooldownUntil || 0)) {
+      ctx.bumpHeat(attacker, 2);
+      attacker.towedThisActivation = true;
+      attacker.towChainCooldownUntil = round + 3;
+      pushInstruction(`Tow Chain — fling ${target.name} up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.`);
+    } else {
+      pushInstruction(`Tow Chain recharging — ${attacker.name}'s hit lands with no fling.`);
+    }
+  }
   // G1c — Enfilade (Sniper Cannon, Prototype): only AIMED shots feed the cadence
   // (per the design). Count every aimed shot fired; on every 3rd, emit a ricochet
   // instruction — the player picks the rig in line of sight behind the target and

@@ -85,6 +85,35 @@ test("rigModifiers surfaces every value-changing effect in play", () => {
   }
 });
 
+test("availableActions surfaces Barrage only for a barrage Mortar and disables it while active", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  // A Mortar carrying the barrage upgrade, idle → Barrage offered and enabled.
+  const idle = availableActions(rig({
+    weapons: { longRange: "Mortar", melee: "Sword" },
+    weaponUpgrades: { longRange: "barrage" }, barrageRoundsLeft: 0,
+  }), turn).find((a) => a.key === "barrage");
+  assert.ok(idle, "expected a Barrage action");
+  assert.equal(idle.enabled, true);
+  // Already barraging → offered but disabled with a countdown note; Fire is noted.
+  const active = availableActions(rig({
+    weapons: { longRange: "Mortar", melee: "Sword" },
+    weaponUpgrades: { longRange: "barrage" }, barrageRoundsLeft: 2,
+  }), turn);
+  assert.equal(active.find((a) => a.key === "barrage").enabled, false);
+  assert.match(active.find((a) => a.key === "fire").note, /Barrage/);
+  // A plain Mortar (no barrage upgrade) never sees the action.
+  const plain = availableActions(rig({
+    weapons: { longRange: "Mortar", melee: "Sword" },
+    weaponUpgrades: { longRange: "cluster-shells" },
+  }), turn);
+  assert.ok(!plain.some((a) => a.key === "barrage"));
+});
+
+test("rigModifiers shows a Barrage chip while a barrage is running", () => {
+  const mod = rigModifiers(rig({ barrageRoundsLeft: 2 })).find((m) => m.key === "barrage");
+  assert.equal(mod.tag, "Barrage 2");
+});
+
 test("rigModifiers shows a generic chip for a hidden reaction", () => {
   const r = rig({ preparation: { hidden: true } });
   const mod = rigModifiers(r).find((m) => m.key === "prep");

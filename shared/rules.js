@@ -22,6 +22,9 @@ export const ACTIONS = {
   // costs +2 heat, added by the engine rather than this base `heat`.
   emplace:  { label: "Emplace",     heat: 0, slot: 1 },
   unplant:  { label: "Un-plant",    heat: 0, slot: 1 },
+  // Barrage (§13, Mortar). Commits the tube to a 2-round shelled zone. The
+  // per-round +1 heat is upkeep added in Recovery, not on this placing action.
+  barrage:  { label: "Barrage",     heat: 0, slot: 1 },
 };
 
 // Heat Threshold Table (§6), consulted with a D12 + overheat bonus total.
