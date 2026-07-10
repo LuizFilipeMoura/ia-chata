@@ -16,7 +16,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 |---|---|---|---|---|
 | **Field** | Depleted Core | +2 STR (8 → 10). Reliable punch. | `+2 STR` | ✅ coded (`str: 2`) |
 | **Tuned** | AP Shells | Gains Armour Piercing (+D3 per raw 6). Conditional — great vs armor, wasted on soft targets. | `Gains Armour Piercing` | ✅ coded (AP) |
-| **Prototype** | Penetrator Rounds | Every **3rd Autocannon attack** loads a penetrator: it **ignores armor entirely** — each hit is a guaranteed **severe (2 SP)** regardless of the location's armor row. **Downside:** cycling the heavy belt **halves the Autocannon's ROF next turn.** | `Every 3rd volley ignores armor outright — but the belt cycles slow after` | 🔧 new — medium (cadence counter + armor-bypass) |
+| **Prototype** | Penetrator Rounds | Every **3rd Autocannon attack** loads a penetrator: it **ignores armor entirely** — each hit is a guaranteed **severe (2 SP)** regardless of the location's armor row. **Downside:** cycling the heavy belt **halves the Autocannon's ROF next turn.** | `Every 3rd volley ignores armor outright — but the belt cycles slow after` | ✅ implemented (per-rig belt counter; forced Severe every 3rd volley, ROF halved — floors at 1 — the attack right after) |
 
 ## Claw (melee) — ROF 2, STR 8, +1 acc
 
@@ -24,7 +24,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 |---|---|---|---|---|
 | **Field** | Rending Talons | Gains Rend (+D3 per raw 5–6). Reliable extra bite. | `Gains Rend` | ✅ coded (Rend) |
 | **Tuned** | Vice Grip | Gains Impale — on a strong hit (D12 ≥ 8) the target is **immobilised**. Conditional grab; holds a mobile target still. | `Impale — immobilise on a strong hit` | ✅ coded (Impale) |
-| **Prototype** | Breach Grip | A Claw hit **cracks** the struck location (tracked, ~2 rounds): while cracked, **all** attacks against that location roll at **+2 impact** (far easier to reach severe/critical). Pry it open, then pour fire in. **Downside:** prying isn't killing — the Claw does less finishing damage while it works, and you must commit in melee (fragile light) to keep cracking. | `Pry a location's armor open (+2 impact from anyone) — but prying costs you the kill tempo` | 🔧 new — medium (per-location armor-crack debuff) |
+| **Prototype** | Breach Grip | A damaging Claw hit **cracks** the struck location for a 2-round window (the round it lands + the next): while cracked, **all** attacks against that location — from any attacker, any weapon — roll at **+2 impact** (far easier to reach severe/critical). Pry it open, then pour fire in. **Downside:** prying isn't killing — the Claw does less finishing damage while it works, and you must commit in melee (fragile light) to keep cracking. | `Pry a location's armor open (+2 impact from anyone) — but prying costs you the kill tempo` | ✅ implemented (per-location `cracked` map, expiry swept in Recovery) |
 
 ## Internal synergy & cap
 
@@ -33,13 +33,10 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 ## Decided values (all tunable)
 
-- Penetrator Rounds: every **3rd** Autocannon attack ignores armor (guaranteed severe / 2 SP per hit); downside **ROF halved next turn**.
-- Breach Grip: Claw hit cracks the struck location → **+2 impact** vs it from any attacker, lasts ~**2 rounds**.
+- Penetrator Rounds: every **3rd** Autocannon attack ignores armor (guaranteed severe / 2 SP per hit); downside **ROF halved next turn** (floors at 1, never zeroed).
+- Breach Grip: a damaging Claw hit cracks the struck location → **+2 impact** vs it from any attacker, lasts **2 rounds** (the round it lands + the next, gone the round after).
 - Vice Grip: Impale immobilise on **D12 ≥ 8** (as coded).
 
-## Engine work to build later (when the `nature` system lands)
+## As built
 
-- Add `nature: "field" | "tuned" | "prototype"` to each `WEAPON_UPGRADES` entry; badge in the wizard; enforce **max one Prototype per rig** (wizard + server).
-- ✅ Ready to wire now: Depleted Core (`str`), AP Shells (AP), Rending Talons (Rend), Vice Grip (Impale).
-- 🔧 Penetrator Rounds: per-Rig Autocannon attack counter; every 3rd attack, bypass the armour row (force `severe` / 2 SP per hit); halve the Autocannon's ROF on its next activation.
-- 🔧 Breach Grip: on a damaging Claw hit, flag the struck location `cracked` with a round timer; in `rollImpacts`, +2 to the impact total against a cracked location (any attacker); expire after ~2 rounds.
+All six upgrades above are live in the engine (`shared/game-state.js` `WEAPON_UPGRADES`, `shared/combat.js`). Nature badges (Field/Tuned/Prototype) and the max-one-Prototype-per-rig guard are wired in the wizard and server. Neither Penetrator Rounds nor Breach Grip has a spatial component — both are pure SP/heat-tracking mechanics, so there's no player-instruction narration involved for this rig.

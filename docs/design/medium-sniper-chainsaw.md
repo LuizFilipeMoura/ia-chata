@@ -17,16 +17,16 @@ Relevant weapon stats (from `shared/game-state.js`):
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
 | **Field** | Marksman Optics | Gains Precision — aimed shots ignore the −2 aim penalty. Reliable accuracy, the core sniper pick. | `Aimed shots ignore the aim penalty` | ✅ coded (Precision perk) |
-| **Tuned** | Cold Bore | +3 STR (12 → 15) vs a target at **full SP** (undamaged). Rewards opening on fresh targets; nothing once they're hurt. | `+3 STR vs undamaged targets` | 🔧 new — small (check target SP == max) |
-| **Prototype** | Enfilade | Every **3rd aimed shot** ricochets, after hitting the primary target, to another rig in **line of sight of that target** (+2 STR on the ricochet). No positioning requirement — the every-3rd cadence is the whole cost. | `Every 3rd aimed shot ricochets to a rig the target can see` | 🔧 new — large (target-relative LoS, chain hit, aimed-shot counter) |
+| **Tuned** | Cold Bore | +3 STR (12 → 15) vs a target whose **every location** (Hull/Arms/Legs/Engine) is at max SP (undamaged). Rewards opening on fresh targets; nothing once they're hurt. | `+3 STR vs undamaged targets` | ✅ implemented (`coldBore` all-locations-max-SP check) |
+| **Prototype** | Enfilade | Only **aimed** Sniper Cannon shots feed a per-rig counter; on every **3rd** aimed shot, the engine emits a player instruction — *"Enfilade — ricochet! Resolve a +2 STR hit on the next rig in line of sight behind &lt;target&gt; (player's choice)."* The player picks the rig behind the target (they know line of sight) and applies the +2 STR hit via the normal attack/damage controls. Only the aimed-shot cadence is tracked in state — the ricochet itself is narrated, not auto-resolved. No positioning requirement — the every-3rd cadence is the whole cost. | `Every 3rd aimed shot ricochets to a rig the target can see (you resolve the hit)` | ✅ implemented (`enfiladeShots` cadence counter; the ricochet is a player instruction) |
 
 ## Chainsaw (melee)
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
 | **Field** | Ripper Teeth | Gains Rend (+D3 per raw 5–6). Reliable extra bite on the multi-hit saw. | `Gains Rend` | ✅ coded (Rend perk) |
-| **Tuned** | Bloodletter | +1 ROF (3 → 4, an extra bite) vs a target that's **already damaged** (missing SP anywhere). The finisher half of the loop. | `Extra hit vs damaged targets` | 🔧 new — small (check target SP < max) |
-| **Prototype** | Redline Governor | +1 STR **and** +1 hit per point the Rig is **over its heat cap** (max **+3 / +3** at +3 over). Rewards running dangerously hot. **Downside is built in:** you're overheating — misfire risk on ranged shots + all overheat penalties. | `The hotter you run, the harder it bites` | 🔧 new — medium (reads heat-over-cap) |
+| **Tuned** | Bloodletter | +1 ROF (3 → 4, an extra bite) vs a target that's **already damaged** (missing SP anywhere). The finisher half of the loop. | `Extra hit vs damaged targets` | ✅ implemented (`vsDamaged: { rof: 1 }`) |
+| **Prototype** | Redline Governor | +1 STR **and** +1 to-hit die per point the attacker's own heat is **over its class's Heat Capacity** (max **+3 / +3** at +3 over). Rewards running dangerously hot. **Downside is built in:** you're overheating — misfire risk on ranged shots + all overheat penalties. | `The hotter you run, the harder it bites` | ✅ implemented (`redline` heat-over-cap check) |
 
 ## Internal synergy & cap
 
@@ -38,13 +38,8 @@ Relevant weapon stats (from `shared/game-state.js`):
 - Cold Bore: **+3 STR** vs undamaged (target at full SP).
 - Bloodletter: **+1 ROF** vs damaged (target missing SP anywhere).
 - Redline Governor: **+1 STR / +1 hit per point over heat cap, capped +3 / +3**.
-- Enfilade: **+2 STR** on the ricochet; triggers on every **3rd aimed shot**; ricochet target must be in **line of sight of the primary (struck) target**; no stationary requirement.
+- Enfilade: **+2 STR** on the ricochet (player-resolved); triggers on every **3rd aimed shot** (non-aimed shots don't advance the counter); the player picks the rig in **line of sight behind the primary target**; no stationary requirement.
 
-## Engine work to build later (when the `nature` system lands)
+## As built
 
-- Add `nature: "field" | "tuned" | "prototype"` to each `WEAPON_UPGRADES` entry; badge in the wizard; enforce **max one Prototype per rig** (wizard + server).
-- ✅ Ready to wire now: Marksman Optics (Precision), Ripper Teeth (Rend).
-- 🔧 Cold Bore: conditional STR bonus when the target's every location is at max SP.
-- 🔧 Bloodletter: conditional +1 ROF when the target is missing SP anywhere.
-- 🔧 Redline Governor: read the attacker's heat-over-cap (`heat - HEAT_CAPACITY[class]`), add that (capped 3) to Chainsaw STR and hit count.
-- 🔧 Enfilade: per-Rig aimed-shot counter; on every 3rd, after resolving the primary hit, pick a ricochet target in line of sight of the struck target and resolve a +2 STR hit on it (reuse the Cleave-style chain path).
+All six upgrades above are live in the engine (`shared/game-state.js` `WEAPON_UPGRADES`, `shared/combat.js`). Nature badges and the max-one-Prototype-per-rig guard are wired in the wizard and server. Enfilade's ricochet is a **player instruction** — per [AGENTS.md](../../AGENTS.md) ("the app is a tabletop assistant, not a simulator"), the engine only tracks the aimed-shot cadence and narrates the ricochet for the players to resolve via the normal attack controls.

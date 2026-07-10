@@ -15,35 +15,29 @@ Relevant weapon stats (from `shared/game-state.js`):
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
 | **Field** | Gyro Mount | Reroll one missed to-hit die. Reliable accuracy on the volume gun. | `Reroll one missed to-hit die` | ✅ coded (`rerollMisses: 1`) |
-| **Tuned** | Suppressive Fire | Land **4+ hits** on a target in one attack → it loses **1 action** next activation. Volume becomes control; sets up the smash. | `4+ hits pins the target (−1 action)` | 🔧 new — small (count hits → action penalty) |
-| **Prototype** | Kneecapper | The MG rakes exposed appendages from **any arc — legs or arms, even on the front** (the frontal hull is the armored face it bounces off; limbs stick out). Sustained fire dismantles a limb progressively: focus one limb and track cumulative rake damage; at **half SP** it's *functionally crippled* (legs → Speed halved, no Sprint; arm → that weapon can't aim / half ROF); at **0** it's destroyed (legs → immobilised; arm → weapon dead). **Downside:** Kneecapper fire **only ever hits limbs — never hull or engine.** You can cripple, never kill — hand the finish to the Wrecking Ball or an ally. Switching limbs resets the ramp. | `Rake legs/arms from any arc to cripple then destroy them — but never touches hull or engine` | 🔧 new — large (limbs-only targeting incl. front arc, per-limb cripple ramp: half = debuff / 0 = destroy) |
+| **Tuned** | Pinning Burst | Land **4+ hits** on a target in one attack → it loses **1 action** next activation. Volume becomes control; sets up the smash. | `4+ hits pins the target (−1 action)` | ✅ implemented (`pinOnHits: 4` → `actionPenaltyNextActivation`) |
+| **Prototype** | Kneecapper | The MG rakes exposed appendages from **any arc — legs or arms, even on the front**: every shot is remapped onto a limb location if it isn't already one, and against limbs it bypasses its own Raking Fire front-arc auto-fail at the side-arc value (**+4 STR**); side/rear keep their normal Raking Fire bonuses. **Hull and Engine can never be damaged by it, on any arc — not even the §8 cook-off/cascade spills into them** (it cripples, never kills). A limb it has actually raked (per-limb tagged) to **≤ half max SP** is progressively crippled: a raked Leg keeps re-flagging Speed halved next round for as long as it stays at or below half; a raked Arm halves **that Rig's own ROF, all weapons** (floors at 1 die), until repaired back above half. Only limbs a Kneecapper actually hit ramp — ordinary weapons impose no half-limb debuff — and a raked limb repaired above half is re-armable, so **switching limbs resets the ramp**. | `Rake legs/arms from any arc to cripple them — but never touches hull or engine` | ✅ implemented (per-limb `kneecapped` tag gates the cripple ramp; `noSpill` blocks the cook-off cascade) |
 
 ## Wrecking Ball (melee)
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
 | **Field** | Haymaker | +3 STR (12 → 15). Reliable massive swing. | `+3 STR` | ✅ coded (`{ str: 3 }`) |
-| **Tuned** | Momentum Swing | If the Rig **advanced this activation**, +2 STR and knock the target back 3″. Rewards the fast charge-in. | `Charge in for +2 STR and a knockback` | 🔧 new — small (moved-flag + push) |
-| **Prototype** | Tow Chain | On a damaging hit (usable every **3 turns**), **fling the target up to 4″** in a direction you choose — off an objective, into terrain, into your killzone. **Downside:** +2 heat and you **can't move** the turn you heave. | `Yank a rig 4″ where you want it — but it roots you and runs you hot` | 🔧 new — large (chosen forced movement) |
+| **Tuned** | Momentum Swing | If the Rig **advanced this activation** (Moved or Sprinted), +2 STR. When such a charging swing lands ≥1 damaging hit, the engine emits a player instruction — *"Momentum Swing — knock &lt;target&gt; back 3″ (move the mini)."* The 3″ knockback is narrated for the players to resolve on the board, not a simulated position. Rewards the fast charge-in. | `Charge in for +2 STR and a knockback (you move the mini 3″)` | ✅ implemented (+2 STR simulated; knockback is a player instruction) |
+| **Prototype** | Tow Chain | On a damaging hit, if the chain is charged (off cooldown), the engine emits a player instruction — *"Tow Chain — fling &lt;target&gt; up to 4″ in a direction you choose (move the mini). You are rooted until end of activation; +2 heat."* The **4″ fling itself is narrated** (players move the mini); the attacker's own **+2 heat** and **rooted-for-the-rest-of-the-activation** cost are simulated. Goes on a **3-round cooldown** after use; while recharging the Wrecking Ball hits normally with no fling. | `Yank a rig 4″ where you want it — but it roots you and runs you hot` | ✅ implemented (+2 heat, root-this-activation, and 3-round cooldown simulated; the 4″ fling is a player instruction) |
 
 ## Internal synergy & cap
 
-- **Kneecapper** saws the legs → target immobilised → **Momentum Swing** charges in for a guaranteed +2 STR knockback. Or **Suppressive Fire** pins (−1 action) to set up the swing.
-- **Kneecapper and Tow Chain are both Prototype**, and a rig runs at most one — deny mobility by crippling legs *or* deny position by flinging rigs around.
+- **Kneecapper** saws a leg → it stays speed-halved while raked → **Momentum Swing** charges in for a guaranteed +2 STR (and the resolution log tells the players to move the target back 3″ on a landed hit). Or **Pinning Burst** pins (−1 action) to set up the swing.
+- **Kneecapper and Tow Chain are both Prototype**, and a rig runs at most one — deny mobility/tempo by crippling limbs *or* deny position by flinging rigs around (as a narrated instruction).
 
 ## Decided values (all tunable)
 
-- Suppressive Fire: **4+ hits** in one attack → target −1 action next activation.
-- Momentum Swing: **+2 STR + 3″ knockback** when the Rig advanced this activation.
-- Kneecapper: MG hits **limbs only, any arc** (legs/arms incl. front; never hull/engine); per-limb cripple ramp — **half SP → functional cripple** (legs: Speed halved / no Sprint; arm: no aimed shots / half ROF), **0 → destroyed**; switching limbs resets progress.
-- Tow Chain: **4″ fling**, **+2 heat**, roots you that turn, usable **every 3 turns**.
+- Pinning Burst: **4+ hits** in one attack → target −1 action next activation.
+- Momentum Swing: **+2 STR** (simulated) when the Rig advanced this activation; a landing charge swing also emits a 3″-knockback player instruction.
+- Kneecapper: MG hits **limbs only, any arc** (legs/arms incl. front, remapped if needed; never hull/engine, no cook-off spill); front-arc bypass at **+4 STR** (the Raking Fire side value); a Kneecapper-tagged limb at **≤ half max SP** is progressively crippled — leg: Speed halved next round while it stays at/below half; arm: this Rig's own ROF halved (all weapons, floors at 1) until repaired above half; switching limbs resets progress.
+- Tow Chain: **4″ fling** (player instruction), **+2 heat**, roots you for the rest of that activation, **3-round cooldown** from use.
 
-## Engine work to build later (when the `nature` system lands)
+## As built
 
-- **⚠️ Wire the Raking Fire rule (implementation pass):** add `perks: ["Raking Fire"]` to the base **Double MG** (and Mini Gun) in `WEAPONS.longRange` so front-arc auto-fail actually applies — Kneecapper's whole premise. Coded + tested but not attached ([combat.js:87](../../shared/combat.js)). Update `rules.md`; recheck MG-firing tests.
-- Add `nature: "field" | "tuned" | "prototype"` to each `WEAPON_UPGRADES` entry; badge in the wizard; enforce **max one Prototype per rig** (wizard + server).
-- ✅ Ready to wire now: Gyro Mount (`rerollMisses`), Haymaker (`str`).
-- 🔧 Suppressive Fire: count landed hits in the attack; if ≥ 4, set target `actionPenaltyNextActivation`.
-- 🔧 Momentum Swing: if attacker advanced this activation, +2 Chainsaw... (Wrecking Ball) STR and push target 3″ (reuse Staggering-style positional push).
-- 🔧 Kneecapper: restrict the MG to limb locations (legs/arms) on every arc, bypassing the `arcBonus` Raking-Fire front auto-fail (combat.js:87) for limbs while hull/engine stay untouchable; per-limb cripple ramp — at half SP apply a functional debuff (legs → speed/immobilise state, partly present; arm → suppress that arm's aimed shots / ROF via part role), at 0 destroy the limb.
-- 🔧 Tow Chain: on a damaging Wrecking Ball hit, a player-chosen forced move of up to 4″; +2 heat; root the attacker that turn; 3-turn cooldown.
+All six upgrades above are live in the engine (`shared/game-state.js` `WEAPON_UPGRADES`, `shared/combat.js`). The Raking Fire rule is wired onto both Double MG and Mini Gun (`WEAPONS.longRange`). Nature badges and the max-one-Prototype-per-rig guard are wired in the wizard and server. Momentum Swing's knockback and Tow Chain's fling are **player instructions** — per [AGENTS.md](../../AGENTS.md) ("the app is a tabletop assistant, not a simulator"), the engine tracks and simulates the SP/heat/cooldown side of each mechanic and narrates the spatial resolution for the players to carry out on the table.

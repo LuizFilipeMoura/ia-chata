@@ -18,15 +18,15 @@ Relevant weapon stats (from `shared/game-state.js`):
 |---|---|---|---|---|
 | **Field** | Cluster Shells | On hit, +1 SP to a second random location. Reliable spread on the arcing shell. | `On hit: 1 SP to a second location` | ✅ coded (`onHit: cluster-shells`) |
 | **Tuned** | Airburst Fuze | Ignores cover. Dead vs a target in the open; brutal vs anyone entrenched — flushes cover-huggers. | `Ignores cover` | ✅ coded (`ignoreCover`) |
-| **Prototype** | Barrage | Spend an action to designate a point **within Mortar range (6″–34″)** → it becomes a **shelled 3″ zone for 2 rounds**; any rig starting or ending its activation there takes **1 SP** each round. Area denial / objective lockdown. **Downside:** the Mortar is **locked** to the barrage (can't fire elsewhere) while it's up, and it costs heat each round you sustain it. | `Shell a zone for 2 rounds — but your mortar is locked to it and runs hot` | 🔧 new — large (persistent zone + per-round upkeep, obeys 6″–34″ envelope) |
+| **Prototype** | Barrage | The **Barrage** action (1 slot) commits the Mortar to a shelled zone: the engine emits a player instruction — *"Barrage — place a shelled-zone marker within 6–34″ of this Rig; it shells a 3″ zone for 2 rounds. Each round, apply 1 SP to every rig in the zone (players adjudicate who's inside)."* Placement and who's-in-the-zone are narrated for the players; the **2-round countdown, Mortar lock, and heat upkeep are simulated**. Area denial / objective lockdown. **Downside:** the Mortar is **locked** (can't fire a direct shot; melee unaffected) while it's up, and each **Recovery** adds **+1 heat** upkeep until the 2 rounds elapse. | `Shell a zone for 2 rounds — but your mortar is locked to it and runs hot` | ✅ implemented (`barrageRoundsLeft` countdown + Mortar lock + heat upkeep; the zone/placement is a player instruction) |
 
 ## Lance (melee) — ROF 1, STR 11, +1 acc, reach 2″
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
-| **Field** | Couched Reach | **+2″ reach** — doubles the Lance's 2″ to **4″**. Strike well outside normal melee; hit chargers before they reach you. | `Doubles melee reach to 4″` | ✅ coded as `range: 1`; bump to **+2** |
-| **Tuned** | Full Tilt | If the Rig **advanced ≥ half Speed** this activation, +3 STR (11 → 14). The couched charge; nothing if you stand still. | `Charge in for +3 STR` | 🔧 new — small (moved-flag + STR) |
-| **Prototype** | Skewer | On a damaging Lance hit, the melee **engagement** becomes an impaling pin: while Skewered, the target **can't Disengage without taking a free Lance strike (STR 11)** as it tears free. It's stuck bleeding on your lance until it pays in armor to leave — or you finish it. **Downside:** you're engaged too (can't reposition without Disengaging yourself), lance committed — a third rig can punish the rooted duel. | `Impale a rig in the melee lock — leaving you costs it a free lance hit` | 🔧 new — medium (skewered flag on the `engagedWith` link + free-strike reaction on the target's Disengage) |
+| **Field** | Couched Reach | **+2″ reach** — doubles the Lance's 2″ to **4″**. Strike well outside normal melee; hit chargers before they reach you. | `Doubles melee reach to 4″` | ✅ coded (`range: 2`) |
+| **Tuned** | Full Tilt | If the Rig **moved (Move or Sprint) at any point this activation** before striking, +3 STR (11 → 14). The couched charge; nothing if you stand still. | `Charge in for +3 STR` | ✅ implemented (`movedThisActivation` flag + `charge: 3`) |
+| **Prototype** | Skewer | A damaging Lance hit that leaves the target locked to the skewerer impales it. While impaled, if the target **Disengages** it first eats a free **STR-11** Lance strike as it tears free, then the lock breaks as normal. The impale clears with the lock (a destroyed skewerer strikes nothing). **Downside:** you're engaged too (can't reposition without Disengaging yourself), lance committed — a third rig can punish the rooted duel. | `Impale a rig in the melee lock — leaving you costs it a free lance hit` | ✅ implemented (`skeweredBy` on the target + free-strike reaction on Disengage) |
 
 ## Internal synergy & cap
 
@@ -36,14 +36,10 @@ Relevant weapon stats (from `shared/game-state.js`):
 ## Decided values (all tunable)
 
 - Couched Reach: **+2″** (reach 2″ → 4″).
-- Full Tilt: **+3 STR** when the Rig advanced ≥ half Speed this activation.
-- Barrage: point within **6″–34″**; **3″ radius**, **2 rounds**, **1 SP/round** to rigs starting/ending activation inside; Mortar locked + heat/round upkeep.
-- Skewer: on a damaging Lance hit, the engagement is Skewered; the target's Disengage provokes a **free STR-11 Lance strike**.
+- Full Tilt: **+3 STR** when the Rig moved (Move or Sprint) at any point this activation.
+- Barrage: shelled zone placed **within 6″–34″** of the firer (narrated); **3″ radius**, **2 rounds**, **1 SP/round** to rigs in the zone (players adjudicate who's inside); Mortar locked + **1 heat/Recovery** upkeep — simulated.
+- Skewer: on a damaging Lance hit that leaves the target locked to the skewerer, it's impaled; its Disengage provokes a **free STR-11 Lance strike** before the lock breaks.
 
-## Engine work to build later (when the `nature` system lands)
+## As built
 
-- Add `nature: "field" | "tuned" | "prototype"` to each `WEAPON_UPGRADES` entry; badge in the wizard; enforce **max one Prototype per rig** (wizard + server).
-- ✅ Ready to wire now: Cluster Shells (`onHit`), Airburst Fuze (`ignoreCover`); Couched Reach (change its `range` effect from 1 to **2**).
-- 🔧 Full Tilt: if attacker advanced ≥ half Speed this activation, +3 Lance STR.
-- 🔧 Barrage: designate a target point (validate 6″–34″ from firer); persistent 3″ zone with a 2-round timer; each round deal 1 SP to rigs inside on activation start/end; lock the Mortar and add heat upkeep while active.
-- 🔧 Skewer: add a `skewered` flag to the `engagedWith` link on a damaging Lance hit; when the pinned target runs the `disengage` action, first resolve a free STR-11 Lance strike from the skewerer (reuse the `return`/counter-attack resolution path).
+All six upgrades above are live in the engine (`shared/game-state.js` `WEAPON_UPGRADES`, `shared/combat.js`). Nature badges and the max-one-Prototype-per-rig guard are wired in the wizard and server. Barrage's zone placement and occupancy are **player instructions** — per [AGENTS.md](../../AGENTS.md) ("the app is a tabletop assistant, not a simulator"), the engine simulates the countdown/lock/heat and narrates the spatial resolution for the players to carry out on the table.
