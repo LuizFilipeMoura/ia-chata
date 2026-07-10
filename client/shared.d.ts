@@ -5,7 +5,12 @@ declare module "/shared/game-state.js" {
   export const MAX_RIGS_TOTAL: number;
   export const SUPPORTED_RIG_CLASSES: string[];
   export const WEAPONS: Record<string, string[]>;
-  export const UNIT_WEAPONS: Record<string, { rof: number; str: number; acc: number[]; rng: number[]; melee?: boolean; perks?: string[]; flatPick?: boolean }>;
+  export const UNIT_WEAPONS: Record<string, {
+    rof: number; str: number;
+    acc?: number[]; rng?: number[];
+    sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
+    melee?: boolean; perks?: string[]; flatPick?: boolean;
+  }>;
   export const EQUIPMENT: Record<string, {
     family: string;
     label: string;
@@ -25,6 +30,13 @@ declare module "/shared/game-state.js" {
   export function defaultWeaponUpgrade(weaponName: string): string;
   export function normalizeWeaponUpgrade(weaponName: string, upgradeId?: string | null): string;
   export function upgradeForWeapon(weaponName: string, upgradeId?: string | null): { id: string; name: string } | null;
+}
+
+declare module "/shared/combat.js" {
+  export function weaponAccAt(
+    profile: { melee?: boolean; acc?: number[]; peak?: number; sweet?: number; dropoff?: number },
+    distance: number | undefined,
+  ): number;
 }
 
 declare module "/shared/battle-view.js" {
