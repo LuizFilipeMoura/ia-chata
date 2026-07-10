@@ -1047,8 +1047,11 @@ function combatCtx() {
   };
 }
 
-// Resolve one Fire/Aimed shot end-to-end (to-hit, heat, budget). Returns whether
-// the shot was made. Shared by the direct path and the deferred Evasive path.
+// Resolve one Fire/Aimed shot end-to-end (to-hit, heat, budget). Returns the
+// resolveAttack result ({ ok, hits, ... }, always truthy) when the shot was made,
+// or false when it couldn't be. Callers that only need "did it fire?" treat the
+// object as truthy; the Anvil Boss hook reads `res.hits`. Shared by the direct
+// path and the deferred Evasive path.
 function resolveFire(room, rig, target, a, act, random) {
   const t = room.game.turn;
   const slot = a.weapon === "melee" ? "melee" : "longRange";
@@ -1072,17 +1075,19 @@ function resolveFire(room, rig, target, a, act, random) {
   const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
   bumpHeat(rig, ACTIONS[act].heat + (secondShot ? 1 : 0));
   if (slot === "longRange") t.longRangeShots = (t.longRangeShots || 0) + 1;
-  return true;
+  return res;
 }
 
 // Anvil Boss (§13 Bulwark) — a reactive riposte. When a rig holding Raise Shield
-// with the Anvil Boss upgrade is hit by the FIRST melee attack of the round, it
-// answers with a free counter-hit at the upgrade's riposteStr (a flat STR-6 melee
-// blow that bypasses weight/conditional STR — see combat.computeStr strOverride).
-// Melee only (never ranged), once per round (ripostedThisRound). Reuses the same
-// resolveAttack path as the `return` preparation's counter.
-function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, random) {
+// with the Anvil Boss upgrade is HIT (>=1 landed hit) by the FIRST melee attack
+// of the round, it answers with a free counter-hit at the upgrade's riposteStr (a
+// flat STR-6 melee blow that bypasses weight/conditional STR — see
+// combat.computeStr strOverride). A whiff (0 hits) provokes nothing and does NOT
+// consume the round's riposte. Melee only (never ranged), once per round
+// (ripostedThisRound). Reuses the same resolveAttack path as `return`'s counter.
+function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, random) {
   if (incomingWeapon !== "melee") return false;                 // melee attacks only
+  if (!(hits > 0)) return false;                                // only a landed hit ripostes
   if (!defender || defender.destroyed) return false;
   if (defender.preparation?.type !== "raise-shield") return false;
   if (defender.weaponUpgrades?.melee !== "anvil-boss") return false;
@@ -1167,8 +1172,8 @@ function performAction(room, rig, act, a, random) {
         };
         return true; // whole attack deferred to the `react` verb
       }
-      const ok = resolveFire(room, rig, target, a, act, random);
-      if (!ok) return false;
+      const res = resolveFire(room, rig, target, a, act, random);
+      if (!res) return false;
       prep.faceUp = true;
       pushResolution(room, reactionRevealEntry(target, prep.type));
       if (prep.type === "return" && !target.destroyed) {
@@ -1176,15 +1181,15 @@ function performAction(room, rig, act, a, random) {
           kind: "return", attackerId: rig.id, targetId: target.id, defender: target.owner,
         };
       }
-      // Anvil Boss — a raised shield answers the first melee attacker each round.
-      maybeAnvilRiposte(room, rig, target, a.weapon, random);
+      // Anvil Boss — a raised shield answers the first melee attacker to land a hit.
+      maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
       return true;
     }
-    const ok = resolveFire(room, rig, target, a, act, random);
+    const res = resolveFire(room, rig, target, a, act, random);
     // The shield may already be revealed (face-up) from an earlier attack this
-    // round; the riposte still gates itself on ripostedThisRound.
-    if (ok) maybeAnvilRiposte(room, rig, target, a.weapon, random);
-    return ok;
+    // round; the riposte still gates on a landed hit and ripostedThisRound.
+    if (res) maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
+    return !!res;
   }
   if (act === "move" || act === "sprint") {
     // §engagement — a rig locked in melee is pinned; it must Disengage before it

@@ -2474,48 +2474,57 @@ function anvilRoom(defUpgrade = "anvil-boss") {
 const raiseShield = () => ({ type: "raise-shield", source: "action", faceUp: false });
 const countRiposte = (r) => r.game.resolutions.filter((x) => x.kind === "riposte").length;
 
-test("Anvil Boss ripostes the first melee attacker while Raise Shield is up", () => {
+// A melee attack that lands (toHit 6s = hits) vs one that whiffs (toHit 1s).
+const meleeLand = { toHit: [6, 6], impacts: [1, 1], location: 1 };
+const meleeMiss = { toHit: [1, 1], impacts: [1, 1], location: 1 };
+const fireMelee = (r, dice, options) => applyCommand(r, { verb: "action", attrs: {
+  name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", dice,
+} }, {}, options);
+
+test("Anvil Boss ripostes the first melee attacker that lands a hit while Raise Shield is up", () => {
   const r = anvilRoom("anvil-boss");
   assert.equal(r.game.turn.side, "b");
-  const a1 = findRig(r, "a1");
-  a1.preparation = raiseShield();
+  findRig(r, "a1").preparation = raiseShield();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const spSum = (rig) => rig.hull.sp + rig.arms.sp + rig.legs.sp + rig.engine.sp;
   const attackerSpBefore = spSum(findRig(r, "b1"));
-  // The incoming melee whiffs (toHit 1s); the counter uses the raw RNG, forced
-  // high so the free STR-6 blow lands on the attacker.
-  applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
-  } }, {}, { random: () => 0.999 });
+  // Incoming melee lands (toHit 6s); the counter uses the raw RNG, forced high so
+  // the free STR-6 blow lands back on the attacker.
+  fireMelee(r, meleeLand, { random: () => 0.999 });
   assert.equal(findRig(r, "a1").ripostedThisRound, true);
   assert.equal(countRiposte(r), 1);
   assert.ok(spSum(findRig(r, "b1")) < attackerSpBefore, "attacker took counter damage");
 });
 
-test("Anvil Boss only ripostes once per round (second melee gets nothing)", () => {
+test("a melee whiff (0 hits) provokes no riposte and does not consume the round", () => {
   const r = anvilRoom("anvil-boss");
-  const a1 = findRig(r, "a1");
-  a1.preparation = raiseShield();
+  findRig(r, "a1").preparation = raiseShield();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const fire = () => applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
-  } });
-  fire();
-  fire();
-  assert.equal(countRiposte(r), 1);              // second melee did not add a counter
+  fireMelee(r, meleeMiss);                          // misses — no hit landed
+  assert.equal(findRig(r, "a1").ripostedThisRound, false);
+  assert.equal(countRiposte(r), 0);
+  fireMelee(r, meleeLand);                          // a later attack that DOES land
+  assert.equal(findRig(r, "a1").ripostedThisRound, true);
+  assert.equal(countRiposte(r), 1);                // the riposte was still available
+});
+
+test("Anvil Boss only ripostes once per round (second landing melee gets nothing)", () => {
+  const r = anvilRoom("anvil-boss");
+  findRig(r, "a1").preparation = raiseShield();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  fireMelee(r, meleeLand);
+  fireMelee(r, meleeLand);
+  assert.equal(countRiposte(r), 1);                // second landing hit did not add a counter
   assert.equal(findRig(r, "a1").ripostedThisRound, true);
 });
 
 test("Anvil Boss does not riposte a ranged attack", () => {
   const r = anvilRoom("anvil-boss");
-  const a1 = findRig(r, "a1");
-  a1.preparation = raiseShield();
+  findRig(r, "a1").preparation = raiseShield();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", distance: 7,
-    dice: { toHit: [1, 1, 1], location: 1 },
+    dice: { toHit: [6, 6, 6], location: 1 },   // lands hits, but ranged never ripostes
   } });
   assert.equal(findRig(r, "a1").ripostedThisRound, false);
   assert.equal(countRiposte(r), 0);
@@ -2523,13 +2532,9 @@ test("Anvil Boss does not riposte a ranged attack", () => {
 
 test("Raise Shield without Anvil Boss does not riposte", () => {
   const r = anvilRoom("tower-shield");
-  const a1 = findRig(r, "a1");
-  a1.preparation = raiseShield();
+  findRig(r, "a1").preparation = raiseShield();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
-  } });
+  fireMelee(r, meleeLand);                          // lands, but no anvil-boss upgrade
   assert.equal(findRig(r, "a1").ripostedThisRound, false);
   assert.equal(countRiposte(r), 0);
 });
