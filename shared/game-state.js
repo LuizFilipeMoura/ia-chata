@@ -1197,6 +1197,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "remove") {
     const rig = findRig(room, a.name);
     if (rig) {
+      clearEngagement(room, rig);
       room.rigs = room.rigs.filter((r) => r !== rig);
       resetReadyBeforeStart(room);
       changed = true;
@@ -1224,6 +1225,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.preparation = null;
       rig.weaponsDestroyed = [];
       rig.immobilised = false;
+      rig.engagedWith = null;
       rig.hardened = false;
       rig.overclockCoreUsed = false;
       rig.actionPenaltyNextActivation = 0;
@@ -1467,6 +1469,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "randomize") {
     const rig = findRig(room, a.name);
     if (rig && kindOf(rig) === "rig") {
+      clearEngagement(room, rig);
       const idx = room.rigs.indexOf(rig);
       const fresh = makeRig(
         rig.id, rig.name, rig.weightClass, rig.owner,
@@ -1479,7 +1482,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     if (rig) {
       if (verb === "damage") { applyDamage(room, rig, (a.loc || "").toLowerCase(), a.amount, { random: options.random }); changed = true; }
       else if (verb === "repair") { repairRig(rig, (a.loc || "").toLowerCase(), a.amount); changed = true; }
-      else if (verb === "set") { setRigSp(rig, (a.loc || "").toLowerCase(), a.sp); changed = true; }
+      else if (verb === "set") {
+        setRigSp(rig, (a.loc || "").toLowerCase(), a.sp);
+        // §engagement — setRigSp can mark a rig destroyed/immobilised without routing
+        // through onRigDamaged; clear any melee lock here too.
+        if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
+        changed = true;
+      }
       else if (verb === "heat") { heatRig(rig, a.amount); changed = true; }
     }
   }

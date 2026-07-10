@@ -2261,3 +2261,49 @@ test("Move engage declaration against a friendly is ignored but the move still h
   assert.equal(r.game.turn.actionsUsed, 1); // move resolves
   assert.equal(b1.engagedWith, null);       // no engagement (same side)
 });
+
+test("remove clears the removed rig's engagement on its partner", () => {
+  const r = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  r.rigs = [a, b];
+  __test.setEngagement(a, b);
+  applyCommand(r, { verb: "remove", attrs: { name: "b1" } });
+  assert.equal(findRig(r, "a1").engagedWith, null); // partner freed, no dangling link
+});
+
+test("randomize clears engagement so no asymmetric link remains", () => {
+  const r = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  r.rigs = [a, b];
+  __test.setEngagement(a, b);
+  applyCommand(r, { verb: "randomize", attrs: { name: "b1" } });
+  assert.equal(findRig(r, "a1").engagedWith, null); // partner freed
+  assert.equal(findRig(r, "b1").engagedWith, null); // fresh rig unengaged (symmetric)
+});
+
+test("reset clears engagement between matches", () => {
+  const r = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  r.rigs = [a, b];
+  __test.setEngagement(a, b);
+  applyCommand(r, { verb: "reset", attrs: {} });
+  assert.equal(findRig(r, "a1").engagedWith, null);
+  assert.equal(findRig(r, "b1").engagedWith, null);
+});
+
+test("set-to-destroyed clears the dead rig's engagement", () => {
+  const r = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  r.rigs = [a, b];
+  __test.setEngagement(a, b);
+  for (const loc of ["hull", "arms", "legs", "engine"]) {
+    applyCommand(r, { verb: "set", attrs: { name: "b1", loc, sp: "0" } });
+  }
+  assert.equal(findRig(r, "b1").destroyed, true);
+  assert.equal(findRig(r, "b1").engagedWith, null);
+  assert.equal(findRig(r, "a1").engagedWith, null); // partner freed too
+});
