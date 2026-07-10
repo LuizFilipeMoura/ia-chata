@@ -47,6 +47,13 @@ export function heatThreshold(total) {
 export const WEIGHT_STR_MOD = { light: -2, medium: 0, heavy: 2, colossal: 4 };
 export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
 
+// Heat Capacity by weight class (rules §6). A Rig is safe at or below this
+// value; each point beyond it adds +2 (capped +10) to the misfire roll.
+// Lives here (not game-state.js) so combat.js — which imports ONLY from
+// rules.js to avoid a cycle with game-state.js — can read it for
+// conditional STR effects (e.g. Opportunist §13).
+export const HEAT_CAPACITY = { light: 6, medium: 5, heavy: 4, colossal: 3 };
+
 // Hit-location table (§7): defender's D12 → part-name, keyed by unit kind.
 export function hitLocation(kindId, d12) {
   return hitPart(kindId, d12);

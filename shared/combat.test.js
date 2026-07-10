@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
-import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile } from "./game-state.js";
+import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
 // game-state.js's combatCtx() injects (§"Mutation primitives" in combat.js),
@@ -300,6 +300,60 @@ test("engaged penalty does not apply to melee weapons", () => {
   const base = computeModifiedAim(attacker, sword, { range: "near", cover: 0 });
   const engaged = computeModifiedAim(attacker, sword, { range: "near", cover: 0, engaged: true });
   assert.equal(engaged, base); // melee unaffected
+});
+
+test("Cold Bore adds +3 STR only when the target is at full SP", () => {
+  const sniper = makeRig(1, "S", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "cold-bore" });
+  const fresh = makeRig(2, "F", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const hurt = makeRig(3, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  hurt.arms.sp -= 1;
+  const p = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
+  assert.equal(computeStr(sniper, p, { target: fresh }), p.str + 3);
+  assert.equal(computeStr(sniper, p, { target: hurt }), p.str);
+});
+
+test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
+  const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
+  const p = effectiveWeaponProfile("melee", "Lance", lance);
+  assert.equal(computeStr(lance, p, {}), p.str); // stationary — no bonus
+  lance.movedThisActivation = true;
+  assert.equal(computeStr(lance, p, {}), p.str + 3);
+});
+
+test("Momentum Swing reuses the charge gate for +2 STR (generalised charge key)", () => {
+  const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
+  const p = effectiveWeaponProfile("melee", "Wrecking Ball", ball);
+  assert.equal(computeStr(ball, p, {}), p.str); // stationary — no bonus
+  ball.movedThisActivation = true;
+  assert.equal(computeStr(ball, p, {}), p.str + 2);
+});
+
+test("Bloodletter adds +1 to-hit die vs a target missing SP anywhere", () => {
+  const chainsawRig = makeRig(1, "C", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "bloodletter" });
+  const p = effectiveWeaponProfile("melee", "Chainsaw", chainsawRig);
+  const fresh = makeRig(2, "F", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const hurt = makeRig(3, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  hurt.legs.sp -= 1;
+  const dice = [1, 1, 1, 1]; // all misses — only ROF (dice count) matters here
+  const freshRoll = rollToHit(chainsawRig, p, { range: "near", cover: 0, target: fresh }, dice, () => 0);
+  const hurtRoll = rollToHit(chainsawRig, p, { range: "near", cover: 0, target: hurt }, dice, () => 0);
+  assert.equal(freshRoll.rof, 3);
+  assert.equal(hurtRoll.rof, 4);
+});
+
+test("Opportunist adds +3 STR vs an overheated or action-penalised target", () => {
+  const sword = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "opportunist" });
+  const p = effectiveWeaponProfile("melee", "Sword", sword);
+  const healthy = makeRig(2, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  assert.equal(computeStr(sword, p, { target: healthy }), p.str);
+
+  const overheated = makeRig(3, "O", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  overheated.engine.heat = HEAT_CAPACITY[overheated.weightClass] + 1;
+  assert.equal(computeStr(sword, p, { target: overheated }), p.str + 3);
+
+  const disrupted = makeRig(4, "D", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  disrupted.actionPenaltyNextActivation = 1;
+  assert.equal(computeStr(sword, p, { target: disrupted }), p.str + 3);
 });
 
 test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret, not arms/legs)", () => {

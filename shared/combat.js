@@ -2,7 +2,7 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity, shieldCoverage,
+  impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity, shieldCoverage, HEAT_CAPACITY,
 } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
 
@@ -52,7 +52,10 @@ export function computeModifiedAim(attacker, profile, opts) {
 export function rollToHit(attacker, profile, opts, providedDice, random) {
   const modAim = computeModifiedAim(attacker, profile, opts);
   const fullAuto = opts.fullAuto && hasPerk(profile, "Full Auto");
-  const rof = profile.rof + (fullAuto ? 2 : 0);
+  // Bloodletter — an extra to-hit die vs a target missing SP anywhere.
+  const bloodletterRof = opts.target && profile.upgradeEffect?.vsDamaged?.rof && !isUndamaged(opts.target)
+    ? profile.upgradeEffect.vsDamaged.rof : 0;
+  const rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof;
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
@@ -75,11 +78,39 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   return { modAim, rof, hits, fireModeHeat, dice };
 }
 
-// §12/§7 — STR = weapon STR + weight modifier + Charged Shot.
+// §13 — every tracked location (hull/arms/legs/engine) is at max SP, i.e. the
+// target is entirely undamaged. Shared by Cold Bore (needs "undamaged") and
+// Bloodletter (needs its negation, "damaged somewhere").
+function isUndamaged(target) {
+  return ["hull", "arms", "legs", "engine"].every(
+    (l) => target[l] && target[l].sp >= target[l].max,
+  );
+}
+
+// §12/§7 — STR = weapon STR + weight modifier + Charged Shot + any conditional
+// Tuned/Prototype bonuses (§13) that read the attacker/target state via `opts`.
 export function computeStr(attacker, profile, opts) {
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
-  return profile.str + weightMod + charged;
+  let bonus = 0;
+  // Cold Bore — +3 STR against a target whose every location is at max SP.
+  if (opts.target && profile.upgradeEffect?.coldBore && isUndamaged(opts.target)) {
+    bonus += 3;
+  }
+  // Full Tilt / Momentum Swing — STR while charging in (moved this activation).
+  // `charge` is a generalised key: Full Tilt sets it to 3, Momentum Swing to 2.
+  if (attacker.movedThisActivation && profile.upgradeEffect?.charge) {
+    bonus += profile.upgradeEffect.charge;
+  }
+  // Opportunist — +3 STR vs a target that's disrupted: overheated past its
+  // class cap, or carrying an action penalty into its next activation.
+  if (opts.target && profile.upgradeEffect?.vsDisrupted) {
+    const cap = HEAT_CAPACITY[opts.target.weightClass];
+    const disrupted = (opts.target.actionPenaltyNextActivation || 0) > 0
+      || (cap != null && (opts.target.engine?.heat || 0) > cap);
+    if (disrupted) bonus += 3;
+  }
+  return profile.str + weightMod + charged + bonus;
 }
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
@@ -100,7 +131,10 @@ export function arcBonus(profile, arc) {
 // raw 5-6). Brace subtracts 2 on the target's front arc (§5 preparation).
 // Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 4.
 export function rollImpacts(attacker, target, profile, location, opts, providedDice, random) {
-  const str = computeStr(attacker, profile, opts);
+  // Thread the real target rig into computeStr's opts (the caller's `opts`
+  // here may carry only a display name at `opts.target` — see resolveAttack)
+  // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
+  const str = computeStr(attacker, profile, { ...opts, target });
   const bonus = arcBonus(profile, opts.arc);
   const braced = target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
   const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
@@ -149,7 +183,10 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };
   if (slot === "unit" && attacker.loaded.unit === false && !opts.autoReload) return { ok: false, reason: "reload" };
 
-  const th = rollToHit(attacker, profile, opts, opts.dice?.toHit, random);
+  // `opts.target` from the caller is a display name (§ see resolveFire), not
+  // the rig — override it with the real target so Bloodletter (§13) can read
+  // its live SP.
+  const th = rollToHit(attacker, profile, { ...opts, target }, opts.dice?.toHit, random);
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
   if (slot === "unit") attacker.loaded.unit = false;
@@ -178,7 +215,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
-  const str = computeStr(attacker, profile, opts);
+  const str = computeStr(attacker, profile, { ...opts, target });
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
     summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s) = ${total} SP${location ? ` to ${location}` : ""}`,

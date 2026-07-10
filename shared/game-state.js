@@ -1,4 +1,4 @@
-import { ACTIONS, heatThreshold, hitLocation, impactSeverity, impactRow } from "./rules.js";
+import { ACTIONS, heatThreshold, hitLocation, impactSeverity, impactRow, HEAT_CAPACITY } from "./rules.js";
 import { resolveAttack } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
@@ -12,9 +12,10 @@ export const RIG_DEFAULTS = {
   colossal: { hull: 9, arms: 8, legs: 8, engine: 7 },
 };
 export const LOCS = ["hull", "arms", "legs", "engine"];
-// Heat Capacity by weight class (rules §6). A Rig is safe at or below this
-// value; each point beyond it adds +2 (capped +10) to the misfire roll.
-export const HEAT_CAPACITY = { light: 6, medium: 5, heavy: 4, colossal: 3 };
+// HEAT_CAPACITY now lives in rules.js (combat.js needs it and imports only
+// from rules.js); re-exported here so existing callers (client, tests) keep
+// importing it from game-state.js.
+export { HEAT_CAPACITY };
 export const MAX_OVERHEAT_BONUS = 10;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
@@ -228,7 +229,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Sniper Cannon": [
     { id: "marksman-optics", nature: "field", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
-    { id: "cold-bore", nature: "tuned", name: "Cold Bore", tag: "+3 STR vs undamaged targets", effect: {} }, // TODO(mechanics)
+    { id: "cold-bore", nature: "tuned", name: "Cold Bore", tag: "+3 STR vs undamaged targets", effect: { coldBore: true } },
     { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", effect: {} }, // TODO(mechanics, spatial)
   ],
   "Siege Maul": [
@@ -243,7 +244,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Sword": [
     { id: "duelist-balance", nature: "field", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
-    { id: "opportunist", nature: "tuned", name: "Opportunist", tag: "+3 STR vs disrupted / overheated targets", effect: {} }, // TODO(mechanics)
+    { id: "opportunist", nature: "tuned", name: "Opportunist", tag: "+3 STR vs disrupted / overheated targets", effect: { vsDisrupted: true } },
     { id: "superconductor-edge", nature: "prototype", name: "Superconductor Edge", tag: "Run hot and dump your heat into them through the blade", effect: {} }, // TODO(mechanics)
   ],
   "Circular Saw": [
@@ -253,7 +254,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Chainsaw": [
     { id: "ripper-teeth", nature: "field", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
-    { id: "bloodletter", nature: "tuned", name: "Bloodletter", tag: "Extra hit vs damaged targets", effect: {} }, // TODO(mechanics)
+    { id: "bloodletter", nature: "tuned", name: "Bloodletter", tag: "Extra hit vs damaged targets", effect: { vsDamaged: { rof: 1 } } },
     { id: "redline-governor", nature: "prototype", name: "Redline Governor", tag: "The hotter you run, the harder it bites", effect: {} }, // TODO(mechanics)
   ],
   "Claw": [
@@ -263,12 +264,12 @@ export const WEAPON_UPGRADES = {
   ],
   "Lance": [
     { id: "couched-reach", nature: "field", name: "Couched Reach", tag: "Doubles melee reach to 4\"", effect: { range: 2 } },
-    { id: "full-tilt", nature: "tuned", name: "Full Tilt", tag: "Charge in for +3 STR", effect: {} }, // TODO(mechanics)
+    { id: "full-tilt", nature: "tuned", name: "Full Tilt", tag: "Charge in for +3 STR", effect: { charge: 3 } },
     { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", effect: {} }, // TODO(mechanics)
   ],
   "Wrecking Ball": [
     { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
-    { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 STR and a knockback (knockback spatial)", effect: { str: 2 } }, // TODO(mechanics: charge-gate + knockback)
+    { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 STR and a knockback (knockback spatial)", effect: { charge: 2 } }, // knockback deferred — Group G (spatial)
     { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", effect: {} }, // TODO(mechanics, spatial)
   ],
   "Bulwark Shield": [
@@ -405,6 +406,7 @@ function ensureRigShape(rig) {
   if (typeof rig.skipNextActivation !== "boolean") rig.skipNextActivation = false;
   if (typeof rig.noCool !== "boolean") rig.noCool = false;
   if (typeof rig.speedHalvedNextRound !== "boolean") rig.speedHalvedNextRound = false;
+  if (typeof rig.movedThisActivation !== "boolean") rig.movedThisActivation = false;
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
   if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
@@ -517,6 +519,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     skipNextActivation: false,
     noCool: false,
     speedHalvedNextRound: false,
+    movedThisActivation: false,
     loaded: { longRange: true, melee: true },
     preparation: null,
     weaponsDestroyed: [],
@@ -1149,6 +1152,9 @@ function performAction(room, rig, act, a, random) {
     const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
     t.actionsUsed += 1;
     bumpHeat(rig, heat);
+    // Full Tilt / Momentum Swing (§13) — advancing this activation charges
+    // the "moved" flag their melee STR bonus is gated on.
+    rig.movedThisActivation = true;
     return true;
   }
   if (act === "disengage") {
@@ -1425,6 +1431,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         const structPenalty = structPart && rig[structPart]?.sp === 0 ? 2 : 0;
         t.actionsMax = Math.max(0, base - structPenalty - penalty);
         rig.actionPenaltyNextActivation = 0;
+        rig.movedThisActivation = false; // Full Tilt/Momentum Swing charge flag (§13)
         rig.loaded = { longRange: true, melee: true };
       }
       changed = true;
