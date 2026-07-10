@@ -133,7 +133,15 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const profile = ctx.profileFor(slot, weaponName, attacker);
   if (!profile) return { ok: false, reason: "no-weapon" };
   if (attacker.weaponsDestroyed.includes(weaponName)) return { ok: false, reason: "weapon-destroyed" };
-  if (opts.range === "out") return { ok: false, reason: "range" };
+  // Out of range is now distance-driven for ranged weapons; melee keeps the
+  // legacy band flag. A missing distance (older callers) is treated as in range.
+  if (!profile.melee) {
+    const d = Number(opts.distance);
+    if (Number.isFinite(d) && (d < profile.minRange || d > profile.maxRange))
+      return { ok: false, reason: "range" };
+  } else if (opts.range === "out") {
+    return { ok: false, reason: "range" };
+  }
   // A spent ranged weapon normally can't fire — unless the caller folds in a
   // rushed reload (§7), paid for with an extra action-slot upstream.
   if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };

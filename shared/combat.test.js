@@ -201,7 +201,7 @@ test("rollToHit uses selected upgrade heat-on-ones and one missed-die reroll", (
 test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
   const mortarRig = makeRig(1, "Airburst", "medium", "a", { longRange: "Mortar", melee: "Sword", longRangeUpgrade: "airburst-fuze" });
   const mortar = effectiveWeaponProfile("longRange", "Mortar", mortarRig);
-  assert.equal(computeModifiedAim(mortarRig, mortar, { range: "near", cover: 2 }), 5);
+  assert.equal(computeModifiedAim(mortarRig, mortar, { distance: 18, cover: 2 }), 3);
 });
 
 test("resolveAttack emits a per-die roll for each hit-die plus a location d12, each with a tone", () => {

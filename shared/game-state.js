@@ -902,7 +902,7 @@ function resolveFire(room, rig, target, a, act, random) {
   const cost = 1;
   if (t.actionsUsed + cost > t.actionsMax) return false;
   const res = resolveAttack(room, rig, target, {
-    weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
+    weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
@@ -1386,7 +1386,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         if (!declined && a.attack && !reactor.destroyed) {
           resolveAttack(room, reactor, attacker, {
             weapon: a.attack.weapon, target: attacker.name,
-            arc: a.attack.arc, range: a.attack.range, cover: a.attack.cover,
+            arc: a.attack.arc, range: a.attack.range, distance: a.attack.distance, cover: a.attack.cover,
             aimed: false, aimedLoc: "hull",
             fullAuto: a.attack.fullAuto === true || a.attack.fullAuto === "true",
             charged: a.attack.charged === true || a.attack.charged === "true",
