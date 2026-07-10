@@ -771,6 +771,9 @@ function onRigDamaged(room, rig, opts) {
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
   }
+  // Engagement (§engagement) — a destroyed or immobilised rig can no longer hold
+  // the melee lock; free both ends.
+  if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
   checkAnnihilation(room);
 }
 
@@ -1542,4 +1545,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery };
