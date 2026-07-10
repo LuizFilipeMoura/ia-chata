@@ -15,6 +15,7 @@ export const ACTIONS = {
   repair:   { label: "Repair",      heat: 1, slot: 1 },
   shutdown: { label: "Shut Down",   heat: 0, slot: 0 },
   prepare:  { label: "Prepare",     heat: 1, slot: 1 },
+  disengage:{ label: "Disengage",   heat: 1, slot: 1 },
 };
 
 // Heat Threshold Table (§6), consulted with a D12 + overheat bonus total.

@@ -2202,3 +2202,37 @@ test("an unengaged rig moves normally", () => {
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
   assert.equal(r.game.turn.actionsUsed, 1);   // still works when not engaged
 });
+
+test("Disengage frees both rigs and costs 1 slot + 1 heat", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  __test.setEngagement(b1, a1);
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
+  assert.equal(b1.engagedWith, null);
+  assert.equal(a1.engagedWith, null);          // mutual — partner freed
+  assert.equal(r.game.turn.actionsUsed, 1);    // one slot
+  assert.equal(b1.engine.heat, heatBefore + 1); // +1 heat
+});
+
+test("Disengage then Move works in the same activation", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  __test.setEngagement(b1, findRig(r, "a1"));
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } }); // now unlocked
+  assert.equal(r.game.turn.actionsUsed, 2);
+});
+
+test("Disengage is a no-op when the rig is not engaged", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
+  assert.equal(r.game.turn.actionsUsed, 0); // nothing spent
+});

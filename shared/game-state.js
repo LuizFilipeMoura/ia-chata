@@ -1039,6 +1039,19 @@ function performAction(room, rig, act, a, random) {
     bumpHeat(rig, heat);
     return true;
   }
+  if (act === "disengage") {
+    // §engagement — break the melee lock. The budget/`def` guard above already
+    // ran (a slot is available). No-op if the rig isn't actually engaged.
+    if (rig.engagedWith == null) return false;
+    clearEngagement(room, rig);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "disengage", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} disengages.`, effects: [],
+    });
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
