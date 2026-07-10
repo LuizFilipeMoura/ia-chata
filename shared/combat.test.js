@@ -754,3 +754,52 @@ test("Dismember — a damaging Circular Saw hit routes through ctx.dismemberLoca
   assert.equal(res.location, "hull");
   assert.deepEqual(calls, [[2, "hull"]]);
 });
+
+test("Kneecapper — a front-arc limb hit lands (Raking Fire would otherwise auto-fail)", () => {
+  const attacker = makeRig(1, "K", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = {
+    ...makeCtx(),
+    applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+  };
+  const res = resolveAttack(room, attacker, target,
+    { weapon: "longRange", arc: "front", range: "near", aimed: true, aimedLoc: "legs",
+      dice: { toHit: [6], impacts: [6], ap: [1] } }, () => 0, ctx);
+  assert.equal(res.location, "legs");
+  assert.ok(res.impacts.some((h) => h.sp > 0), "a plain Raking Fire MG would auto-fail the front arc; Kneecapper must not");
+  assert.ok(target.legs.sp < target.legs.max);
+});
+
+test("Kneecapper — hull and engine are never valid targets, aimed or not", () => {
+  const attacker = makeRig(1, "K2", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
+  for (const badAim of ["hull", "engine"]) {
+    const target = makeRig(2, "T2", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+    const room = { rigs: [attacker, target] };
+    const ctx = {
+      ...makeCtx(),
+      applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+    };
+    const res = resolveAttack(room, attacker, target,
+      { weapon: "longRange", arc: "front", range: "near", aimed: true, aimedLoc: badAim,
+        dice: { toHit: [6], impacts: [6], ap: [1] } }, () => 0, ctx);
+    assert.notEqual(res.location, "hull");
+    assert.notEqual(res.location, "engine");
+    assert.equal(target.hull.sp, target.hull.max, `aiming at ${badAim} must not touch hull`);
+    assert.equal(target.engine.sp, target.engine.max, `aiming at ${badAim} must not touch engine`);
+  }
+  // Un-aimed fire that would randomly roll hull (D12 = 1) is remapped too.
+  const target3 = makeRig(3, "T3", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room3 = { rigs: [attacker, target3] };
+  const ctx3 = {
+    ...makeCtx(),
+    applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); },
+  };
+  const res3 = resolveAttack(room3, attacker, target3,
+    { weapon: "longRange", arc: "front", range: "near", aimed: false,
+      dice: { toHit: [6], location: 1, impacts: [6], ap: [1] } }, () => 0, ctx3);
+  assert.notEqual(res3.location, "hull");
+  assert.notEqual(res3.location, "engine");
+  assert.equal(target3.hull.sp, target3.hull.max);
+  assert.equal(target3.engine.sp, target3.engine.max);
+});

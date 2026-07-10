@@ -4,7 +4,7 @@
 import {
   impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity, shieldCoverage, HEAT_CAPACITY,
 } from "./rules.js";
-import { partNamesOf } from "./unit-kinds.js";
+import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
 
 // Perks now come solely from the chosen weapon upgrade; a base weapon (or a
 // profile built straight from WEAPONS/UNIT_WEAPONS) may carry no perks array at
@@ -174,6 +174,23 @@ export function arcBonus(profile, arc) {
   return 0;
 }
 
+// Kneecapper (§13, Double MG) — limbs-only targeting. Guarantees hull/engine
+// can NEVER be struck by this upgrade: after the normal location pick (aimed
+// or the D12 fire roll), any non-limb result (structural/power role) is
+// remapped onto a limb — preferring the mobility part (Rig legs), falling
+// back to the weapon part (Rig arms). Reads the TARGET's own part roles via
+// unit-kinds.js so it generalises past Rig (arms/legs) to Tank
+// (tracks/turret) and Walker (legs/mount) alike; a kind with no limb parts at
+// all (none exist today) yields null and the shot simply finds no legal
+// location — the "guard reads for units" case.
+function kneecapperLocation(kindId, location) {
+  const role = roleOf(kindId, location);
+  if (role === "mobility" || role === "weapon") return location;
+  const [mobility] = partsByRole(kindId, "mobility");
+  const [weapon] = partsByRole(kindId, "weapon");
+  return mobility || weapon || null;
+}
+
 // §7.7-8 — one Impact Roll per hit. Adds AP (+D3 per raw 6) and Rend (+D3 per
 // raw 5-6). Brace subtracts 2 on the target's front arc (§5 preparation).
 // Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 4.
@@ -182,7 +199,20 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // here may carry only a display name at `opts.target` — see resolveAttack)
   // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
   const str = computeStr(attacker, profile, { ...opts, target });
-  const bonus = arcBonus(profile, opts.arc);
+  let bonus = arcBonus(profile, opts.arc);
+  // Kneecapper — bypasses Raking Fire's front-arc auto-fail (arcBonus
+  // returning null) but ONLY when the struck location is a limb on the
+  // TARGET (mobility or weapon role). resolveAttack has already remapped
+  // `location` onto a limb whenever this upgrade is active, so hull/engine
+  // are structurally unreachable here; this is defense-in-depth, not the
+  // primary guarantee. Reuses Raking Fire's own side-arc value (+4) as the
+  // "workable" front bonus rather than inventing a new number — does NOT
+  // touch arcBonus itself, so non-kneecapper Raking Fire guns still auto-fail
+  // on the front arc exactly as before.
+  if (bonus == null && profile.upgradeEffect?.kneecapper) {
+    const role = roleOf(target.kind || "rig", location);
+    if (role === "mobility" || role === "weapon") bonus = 4;
+  }
   const braced = target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
   const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
@@ -273,28 +303,38 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     const locDie = rollD(12, opts.dice?.location, random);
     location = opts.aimed ? opts.aimedLoc : hitLocation(attacker.kind || "rig", locDie);
     if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
-    impacts = rollImpacts(attacker, target, profile, location,
-      { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0 },
-      opts.dice, random);
-    for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
-    if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
-      ctx.sunderLocation?.(target, location);
+    // Kneecapper (§13, Double MG) — remap whatever location was just picked
+    // (aimed or random) onto a limb. This is the PRIMARY guarantee that
+    // hull/engine are never damaged by this upgrade — it runs unconditionally
+    // before any impact/damage code below ever sees `location`.
+    if (profile.upgradeEffect?.kneecapper) location = kneecapperLocation(target.kind || "rig", location);
+    // A kind with no limb parts at all (none exist today) leaves `location`
+    // null here — no legal target, so the shot lands with zero effect rather
+    // than crashing on a missing part.
+    if (location) {
+      impacts = rollImpacts(attacker, target, profile, location,
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0 },
+        opts.dice, random);
+      for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
+      if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
+        ctx.sunderLocation?.(target, location);
+      }
+      // Breach Grip (§13, Claw) — a damaging Claw hit pries the struck location's
+      // armour open, cracking it for +2 impact from anyone until it expires.
+      if (profile.upgradeEffect?.breachGrip && impacts.some((h) => h.sp > 0)) {
+        ctx.crackLocation?.(room, target, location);
+      }
+      // Dismember (§13, Circular Saw) — the prototype escalation of Sunder: also
+      // grinds max SP down (via ctx) and permanently cripples the location once
+      // it drops to <= half its commissioned original.
+      if (profile.upgradeEffect?.dismember && impacts.some((h) => h.sp > 0)) {
+        ctx.dismemberLocation?.(room, target, location, { random, dice: opts.dice });
+      }
+      if (profile.upgradeEffect?.onDamage === "breaching-round" && location === "hull" && impacts.some((h) => h.sp > 0)) {
+        ctx.breachHull?.(target);
+      }
+      applyOnHitPerks(room, attacker, target, profile, { ...opts, hits: th.hits, penetratorShot: th.penetratorShot }, random, ctx);
     }
-    // Breach Grip (§13, Claw) — a damaging Claw hit pries the struck location's
-    // armour open, cracking it for +2 impact from anyone until it expires.
-    if (profile.upgradeEffect?.breachGrip && impacts.some((h) => h.sp > 0)) {
-      ctx.crackLocation?.(room, target, location);
-    }
-    // Dismember (§13, Circular Saw) — the prototype escalation of Sunder: also
-    // grinds max SP down (via ctx) and permanently cripples the location once
-    // it drops to <= half its commissioned original.
-    if (profile.upgradeEffect?.dismember && impacts.some((h) => h.sp > 0)) {
-      ctx.dismemberLocation?.(room, target, location, { random, dice: opts.dice });
-    }
-    if (profile.upgradeEffect?.onDamage === "breaching-round" && location === "hull" && impacts.some((h) => h.sp > 0)) {
-      ctx.breachHull?.(target);
-    }
-    applyOnHitPerks(room, attacker, target, profile, { ...opts, hits: th.hits, penetratorShot: th.penetratorShot }, random, ctx);
   }
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
