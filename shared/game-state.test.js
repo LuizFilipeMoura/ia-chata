@@ -98,7 +98,9 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   // Extended Barrel shifts both range bands by +4 (8/16 -> 12/20), reusing effect.range.
   const barrel = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "extended-barrel" });
-  assert.deepEqual(effectiveWeaponProfile("longRange", "Siege Maul", barrel).rng, [12, 20]);
+  const barrelProfile = effectiveWeaponProfile("longRange", "Siege Maul", barrel);
+  assert.equal(barrelProfile.maxRange, 20);
+  assert.equal(barrelProfile.sweet, 10);
 
   // Breaching Round is the default (first) Siege Maul upgrade and marks onDamage.
   const breach = makeRig(2, "Breaker2", "medium", "a",

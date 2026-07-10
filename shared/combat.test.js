@@ -182,7 +182,7 @@ test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-pen
   assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [3, 3]); // 2" base + 1" Couched Reach
 
   const sniper = makeRig(5, "Barrel", "medium", "a", { longRange: "Sniper Cannon", melee: "Sword", longRangeUpgrade: "match-barrel" });
-  assert.deepEqual(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).acc, [0, 0]);
+  assert.equal(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).dropoff, 0.075); // Match Barrel halves dropoff
 });
 
 test("rollToHit uses selected upgrade heat-on-ones and one missed-die reroll", () => {

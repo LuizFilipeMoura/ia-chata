@@ -255,14 +255,22 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     ...base,
     rof: base.rof + (effect.rof || 0),
     str: base.str + (effect.str || 0),
-    acc: [...base.acc],
-    rng: [...base.rng],
     perks: uniquePerks(base.perks, effect.perks),
     upgrade: upgrade || null,
     upgradeEffect: effect,
   };
-  if (effect.noFarPenalty) profile.acc[1] = Math.max(profile.acc[1] || 0, profile.acc[0] || 0);
-  if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
+  if (base.melee) {
+    profile.acc = [...base.acc];
+    profile.rng = [...base.rng];
+    if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
+  } else {
+    // Ranged: `...base` already copied sweet/peak/dropoff/minRange/maxRange.
+    if (effect.range) {
+      profile.maxRange = base.maxRange + effect.range;
+      profile.sweet = base.sweet + Math.round(effect.range / 2);
+    }
+    if (effect.noFarPenalty) profile.dropoff = base.dropoff * 0.5;
+  }
   return profile;
 }
 
