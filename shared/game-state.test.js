@@ -2025,3 +2025,47 @@ test("randomize verb rebuilds a rig in place, preserving id/name/owner", () => {
   assert.ok(after.weapons.longRange && after.weapons.melee);
   assert.equal(after.hull.sp, after.hull.max);
 });
+
+test("setEngagement links both ends symmetrically", () => {
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  assert.equal(__test.setEngagement(a, b), true);
+  assert.equal(a.engagedWith, 2);
+  assert.equal(b.engagedWith, 1);
+});
+
+test("setEngagement is one-to-one: refuses if either rig already engaged", () => {
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  const c = makeRig(3, "b2", "light", "b", W);
+  assert.equal(__test.setEngagement(a, b), true);
+  assert.equal(__test.setEngagement(a, c), false); // a already engaged
+  assert.equal(c.engagedWith, null);
+});
+
+test("clearEngagement clears both ends", () => {
+  const room = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  room.rigs = [a, b];
+  __test.setEngagement(a, b);
+  __test.clearEngagement(room, a);
+  assert.equal(a.engagedWith, null);
+  assert.equal(b.engagedWith, null);
+});
+
+test("maybeEngage refuses friendlies and dead rigs", () => {
+  const a = makeRig(1, "a1", "light", "a", W);
+  const friend = makeRig(2, "a2", "light", "a", W);
+  const enemyDead = makeRig(3, "b1", "light", "b", W);
+  enemyDead.destroyed = true;
+  assert.equal(__test.maybeEngage(null, a, friend), false); // same side
+  assert.equal(__test.maybeEngage(null, a, enemyDead), false); // dead
+  assert.equal(a.engagedWith, null);
+});
+
+test("makeRig and makeUnit default engagedWith to null", () => {
+  assert.equal(makeRig(1, "a1", "light", "a", W).engagedWith, null);
+  const tank = makeUnit("tank", 2, "t1", "b", { unit: "Tank Cannon" });
+  assert.equal(tank.engagedWith, null);
+});

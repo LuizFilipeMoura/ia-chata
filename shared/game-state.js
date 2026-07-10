@@ -321,6 +321,7 @@ function ensureRigShape(rig) {
   if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
+  if (rig.engagedWith === undefined) rig.engagedWith = null;
   if (rig.equipment === undefined) rig.equipment = null;
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
@@ -422,6 +423,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     preparation: null,
     weaponsDestroyed: [],
     immobilised: false,
+    engagedWith: null,
     hardened: false,
     overclockCoreUsed: false,
     actionPenaltyNextActivation: 0,
@@ -474,6 +476,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     preparation: null,
     weaponsDestroyed: [],
     immobilised: false,
+    engagedWith: null,
     hardened: false,
     actionPenaltyNextActivation: 0,
     destroyed: false,
@@ -705,6 +708,34 @@ function catastrophicAdditional(room, rig, loc, opts) {
     const [structPart] = partsByRole(kind, "structural");
     if (structPart) applyDamage(room, rig, structPart, 3, opts);
   }
+}
+
+// Engagement (melee lock, §engagement design). Symmetric one-to-one link between
+// two rigs, stored as each rig's `engagedWith` = the other's id. The two helpers
+// below are the ONLY way the link changes, so the symmetric invariant holds.
+function findRigById(room, id) {
+  return room?.rigs?.find((r) => r.id === id) || null;
+}
+function setEngagement(a, b) {
+  if (!a || !b || a === b) return false;
+  if (a.engagedWith != null || b.engagedWith != null) return false; // one-to-one
+  a.engagedWith = b.id;
+  b.engagedWith = a.id;
+  return true;
+}
+function clearEngagement(room, rig) {
+  if (!rig || rig.engagedWith == null) return;
+  const partner = findRigById(room, rig.engagedWith);
+  rig.engagedWith = null;
+  if (partner) partner.engagedWith = null;
+}
+// Enemy-only, both-alive guard around setEngagement (used by the melee and
+// move-into triggers). `room` is unused today but kept for signature symmetry.
+function maybeEngage(room, a, b) {
+  if (!a || !b) return false;
+  if ((a.owner || "a") === (b.owner || "a")) return false;
+  if (a.destroyed || b.destroyed) return false;
+  return setEngagement(a, b);
 }
 
 // Cascade-aware damage entry point. Applies `amount` SP one point at a time,
@@ -1511,4 +1542,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage };
