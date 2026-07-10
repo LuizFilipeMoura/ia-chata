@@ -429,6 +429,7 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Bloodletter** (Chainsaw, Tuned) — +1 ROF (an extra to-hit die) vs a target missing SP anywhere.
 - **Opportunist** (Sword, Tuned) — +3 STR vs a target that is overheated (heat over its class's Heat Capacity) or is carrying an action penalty into its next activation.
 - **Pinning Burst** (Double MG, Tuned) — landing 4+ hits in one attack pins the target: it loses 1 action on its next activation.
+- **Anvil Boss** (Bulwark Shield, Tuned) — while Raise Shield is up, the *first* enemy to hit this Rig with a **melee** attack each round eats a free STR-6 melee counter-hit from the shield-bearer. Melee only (ranged attacks provoke nothing), once per round.
 - **Redline Governor** (Chainsaw, Prototype) — the attacker's own heat over its class's Heat Capacity adds +1 STR and +1 to-hit die each, capped at +3/+3.
 - **Superconductor Edge** (Sword, Prototype) — while the attacker's heat is over half its class's Heat Capacity, the blade gets +2 STR, and once per attack (not per hit) 1 heat is drawn from the attacker into the target.
 - **Burning** (status) — a rig on fire takes `burning` SP to its Hull at the start of each of its activations, then keeps burning until doused. The **Douse** action (1 slot, 0 heat) removes one Burning stack.

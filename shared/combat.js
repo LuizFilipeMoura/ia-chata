@@ -100,6 +100,11 @@ function isUndamaged(target) {
 // §12/§7 — STR = weapon STR + weight modifier + Charged Shot + any conditional
 // Tuned/Prototype bonuses (§13) that read the attacker/target state via `opts`.
 export function computeStr(attacker, profile, opts) {
+  // Anvil Boss riposte (§13 Bulwark) — a forced, flat STR for the free counter
+  // that ignores weight class and every conditional Tuned/Prototype bonus, so
+  // the counter lands at exactly the upgrade's riposteStr regardless of who owns
+  // the shield. Threaded through `rollImpacts` from `resolveAttack`.
+  if (opts.strOverride != null) return opts.strOverride;
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
   let bonus = 0;
@@ -225,7 +230,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     location = opts.aimed ? opts.aimedLoc : hitLocation(attacker.kind || "rig", locDie);
     if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     impacts = rollImpacts(attacker, target, profile, location,
-      { arc: opts.arc, hits: th.hits, charged: opts.charged }, opts.dice, random);
+      { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride }, opts.dice, random);
     for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, { random, dice: opts.dice });
     if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
       ctx.sunderLocation?.(target, location);

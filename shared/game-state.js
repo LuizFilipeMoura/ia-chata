@@ -274,7 +274,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Bulwark Shield": [
     { id: "tower-shield", nature: "field", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
-    { id: "anvil-boss", nature: "tuned", name: "Anvil Boss", tag: "Counter the first melee attacker each round while braced", effect: {} }, // TODO(mechanics)
+    { id: "anvil-boss", nature: "tuned", name: "Anvil Boss", tag: "Counter the first melee attacker each round while braced", effect: { riposteStr: 6 } },
     { id: "emplacement", nature: "prototype", name: "Emplacement", tag: "Root into a permanent fortress shield; immobile, 2 actions, cooldown", effect: {} }, // TODO(mechanics)
   ],
   "Flamethrower": [
@@ -419,6 +419,7 @@ function ensureRigShape(rig) {
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
   if (typeof rig.burning !== "number") rig.burning = 0;
+  if (typeof rig.ripostedThisRound !== "boolean") rig.ripostedThisRound = false;
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -531,6 +532,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     actionPenaltyNextActivation: 0,
     hullRepairLock: 0,
     burning: 0,
+    ripostedThisRound: false,
     destroyed: false,
   };
   rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
@@ -968,6 +970,7 @@ function runRecovery(room) {
     rig.activated = false;
     rig.speedHalvedNextRound = false;
     rig.preparation = null;
+    rig.ripostedThisRound = false; // Anvil Boss — the riposte re-arms each round
     tickBreach(rig);
     recompute(rig);
   }
@@ -1072,6 +1075,37 @@ function resolveFire(room, rig, target, a, act, random) {
   return true;
 }
 
+// Anvil Boss (§13 Bulwark) — a reactive riposte. When a rig holding Raise Shield
+// with the Anvil Boss upgrade is hit by the FIRST melee attack of the round, it
+// answers with a free counter-hit at the upgrade's riposteStr (a flat STR-6 melee
+// blow that bypasses weight/conditional STR — see combat.computeStr strOverride).
+// Melee only (never ranged), once per round (ripostedThisRound). Reuses the same
+// resolveAttack path as the `return` preparation's counter.
+function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, random) {
+  if (incomingWeapon !== "melee") return false;                 // melee attacks only
+  if (!defender || defender.destroyed) return false;
+  if (defender.preparation?.type !== "raise-shield") return false;
+  if (defender.weaponUpgrades?.melee !== "anvil-boss") return false;
+  if (defender.ripostedThisRound) return false;
+  if (!attacker || attacker.destroyed) return false;
+  if ((attacker.owner || "a") === (defender.owner || "a")) return false; // enemy only
+  const effect = effectiveWeaponProfile("melee", defender.weapons?.melee, defender)?.upgradeEffect;
+  const riposteStr = effect?.riposteStr;
+  if (riposteStr == null) return false;
+  defender.ripostedThisRound = true;
+  pushResolution(room, {
+    kind: "riposte", actor: defender.owner, rigId: defender.id, rolls: [],
+    summary: `${defender.name} ripostes ${attacker.name} — Anvil Boss free counter (STR ${riposteStr}).`,
+    effects: [`Anvil Boss — free STR ${riposteStr} melee counter`],
+  });
+  resolveAttack(room, defender, attacker, {
+    weapon: "melee", target: attacker.name,
+    arc: "front", range: "near", aimed: false, aimedLoc: "hull",
+    engaged: defender.engagedWith != null, strOverride: riposteStr,
+  }, random, combatCtx());
+  return true;
+}
+
 // One action during an activation. Returns whether anything changed.
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
@@ -1142,9 +1176,15 @@ function performAction(room, rig, act, a, random) {
           kind: "return", attackerId: rig.id, targetId: target.id, defender: target.owner,
         };
       }
+      // Anvil Boss — a raised shield answers the first melee attacker each round.
+      maybeAnvilRiposte(room, rig, target, a.weapon, random);
       return true;
     }
-    return resolveFire(room, rig, target, a, act, random);
+    const ok = resolveFire(room, rig, target, a, act, random);
+    // The shield may already be revealed (face-up) from an earlier attack this
+    // round; the riposte still gates itself on ripostedThisRound.
+    if (ok) maybeAnvilRiposte(room, rig, target, a.weapon, random);
+    return ok;
   }
   if (act === "move" || act === "sprint") {
     // §engagement — a rig locked in melee is pinned; it must Disengage before it
@@ -1359,6 +1399,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.overclockCoreUsed = false;
       rig.actionPenaltyNextActivation = 0;
       rig.hullRepairLock = 0;
+      rig.ripostedThisRound = false;
       delete rig._blastRolled;
     }
     room.game.started = false;
