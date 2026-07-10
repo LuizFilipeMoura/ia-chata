@@ -154,6 +154,8 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   - *Pivot:* up to **90° free** at any point(s) during the Move. A pivot of **more than 90°** consumes the Rig's entire movement for that action.
   - *Sprint:* you may extend a Move to up to **1½ × Speed**; a Sprinting Move generates **2 heat** instead of 1 (§6).
 
+- **Disengage [1]** — break a melee **engagement** (see below). Frees **both** Rigs from the lock; after Disengaging, the Rig may Move/Sprint later in the same activation. No effect (and costs nothing) if the Rig isn't engaged.
+
 - **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first (a separate 1-action step) — a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 3 actions and 1 + 1 + 2 = 4 heat. **Melee** weapons never need reloading.
 
 - **Aimed Shot [1]** — a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
@@ -171,6 +173,15 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Answer Tokens (for the player going second).** At the start of each round, the player who activates **second** gains **1 Answer token**. An Answer token may be spent at any time to place one of the preparations above on one of their Rigs **for free** — no action, no heat — otherwise following all normal preparation rules (facedown, revealed on trigger, one per Rig). Unspent Answer tokens are removed in the Recovery Phase. *⚙ TUNING: 1 per round.*
 
+### Engagement (melee lock)
+
+Closing to melee **locks two Rigs together** — this is what stops an enemy from simply kiting you with ranged fire. *⚙ TUNING: new mechanic to make melee matter.*
+
+- **Getting engaged.** A Rig becomes **engaged** with an enemy either by **making a melee attack** against it (in reach) or by **Moving into base contact** and declaring the engagement. The lock is **mutual** (both Rigs are engaged) and **one-to-one** (a Rig already engaged can't be pulled into a second lock; you may still melee an already-engaged enemy, you just don't lock to it).
+- **Pinned.** While engaged, a Rig **cannot Move, Sprint, or Jump Jets** — it must **Disengage** first (a 1-action, 1-heat step, §5). Non-movement equipment (Harden, Purge, Overclock, Emergency Patch) still works.
+- **Ranged penalty.** An engaged Rig firing a **ranged** weapon does so at **−2 ACC** (point-blank scramble). **Melee** attacks are unaffected — so while locked, your melee weapon is the better answer.
+- **Breaking the lock.** Engagement ends when: a Rig spends **Disengage** (frees both), the engaged partner is **destroyed** or **immobilised** (legs gone), or a Rig **Disengages and moves away**. Engagement **persists across rounds** — it is *not* cleared in Recovery.
+
 ---
 
 ## 6. Heat & Overheating
@@ -186,6 +197,7 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 | Fire Weapon | 1 (**2** if the weapon is **Hot**) |
 | Aimed Shot / Prepare | 1 |
 | Reload / Repair | 1 |
+| Disengage | 1 |
 | Shut Down | 0 |
 
 - **Full Auto** and **Charged Shot** fire-modes: each attack **die** that rolls a **1** adds 1 heat.
