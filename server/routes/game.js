@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { claimSide, applyCommand, publicState, resolvePrebuilt } from "../../shared/game-state.js";
+import { claimSide, applyCommand, publicState, resolvePrebuilt, upgradeNature, countPrototypes } from "../../shared/game-state.js";
 
 // Server-side commissioning guard: a Rig may only be added as one of the fixed
 // prebuilt loadouts. Resolve the command's attrs to a prebuilt (by id, else by
@@ -14,6 +14,16 @@ export function enforcePrebuilt(cmd) {
   if (kind !== "rig") return { cmd };
   const pb = resolvePrebuilt(a);
   if (!pb) return { error: "rig must match a prebuilt loadout" };
+  const lrUp = a.longRangeUpgrade || a.lrUpgrade;
+  const meleeUp = a.meleeUpgrade;
+  // Unknown upgrade id for the resolved weapon → reject (null nature means the id
+  // isn't in that weapon's list; an omitted upgrade is allowed and defaults later).
+  if (lrUp && !upgradeNature(pb.longRange, lrUp)) return { error: "unknown long-range upgrade" };
+  if (meleeUp && !upgradeNature(pb.melee, meleeUp)) return { error: "unknown melee upgrade" };
+  // At most one Prototype per rig (AGENTS.md).
+  if (countPrototypes({ longRange: pb.longRange, melee: pb.melee }, { longRange: lrUp, melee: meleeUp }) > 1) {
+    return { error: "a rig may run at most one Prototype upgrade" };
+  }
   return {
     cmd: {
       ...cmd,

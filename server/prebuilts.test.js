@@ -85,3 +85,28 @@ test("enforcePrebuilt leaves tanks/walkers and non-add commands untouched", () =
   assert.equal(dmg.error, undefined);
   assert.equal(dmg.cmd.verb, "damage");
 });
+
+test("enforcePrebuilt rejects a rig running two Prototype upgrades", () => {
+  const out = enforcePrebuilt({ verb: "add", attrs: {
+    name: "X", kind: "rig", prebuilt: "light-claw-autocannon",
+    longRangeUpgrade: "penetrator-rounds", meleeUpgrade: "breach-grip",
+  } });
+  assert.ok(out.error);
+  assert.equal(out.cmd, undefined);
+});
+
+test("enforcePrebuilt allows one Prototype", () => {
+  const out = enforcePrebuilt({ verb: "add", attrs: {
+    name: "X", kind: "rig", prebuilt: "light-claw-autocannon",
+    longRangeUpgrade: "penetrator-rounds", meleeUpgrade: "vice-grip",
+  } });
+  assert.equal(out.error, undefined);
+});
+
+test("enforcePrebuilt rejects an upgrade id that isn't valid for the weapon", () => {
+  const out = enforcePrebuilt({ verb: "add", attrs: {
+    name: "X", kind: "rig", prebuilt: "light-claw-autocannon",
+    longRangeUpgrade: "not-a-real-upgrade", meleeUpgrade: "vice-grip",
+  } });
+  assert.ok(out.error);
+});
