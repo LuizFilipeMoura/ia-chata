@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { AttackWizard } from "./AttackWizard";
 import type { GameState, Rig } from "../../state/types";
@@ -105,4 +105,26 @@ test("attack drawer warns about the selected weapon upgrade before the attack bu
   expect(
     notice.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
+});
+
+test("slider opens at the weapon's sweet-spot distance", async () => {
+  // Mini Gun (the default rig fixture's longRange weapon) has sweet: 7.
+  render(<AttackWizard rig={state.rigs[0]} mode="fire" onClose={() => {}} />);
+  const slider = (await screen.findByLabelText(
+    "Distance to target in inches",
+  )) as HTMLInputElement;
+  expect(slider.value).toBe("7");
+  // The band chip's exact copy — disambiguated from the "Sweet spot +N"
+  // wording used in the effective-range paragraph below the slider.
+  expect(screen.getByText("🎯 sweet spot")).toBeInTheDocument();
+});
+
+test("dragging off the sweet spot shows the accuracy falloff", async () => {
+  render(<AttackWizard rig={state.rigs[0]} mode="fire" onClose={() => {}} />);
+  const slider = (await screen.findByLabelText(
+    "Distance to target in inches",
+  )) as HTMLInputElement;
+  // |18 - 7| * 0.35 = 3.85 -> round to 4 penalty -> acc = peak(2) - 4 = -2.
+  fireEvent.change(slider, { target: { value: "18" } });
+  expect(screen.getByText("-2 falloff")).toBeInTheDocument();
 });
