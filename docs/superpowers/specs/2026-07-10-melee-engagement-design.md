@@ -75,6 +75,11 @@ While `rig.engagedWith != null`, the `move` and `sprint` actions are **rejected*
 engaged is meaningless without a grid, so the rule is simply: an engaged rig
 cannot Move/Sprint. To move, it must Disengage first (§4).
 
+The **Jump Jets** active (Servo Actuators equipment, action key `jumpjets`) is
+movement too, so it is blocked by the same lock — an engaged rig cannot jump out
+without Disengaging first. Non-movement actives (Harden, Purge, Overclock,
+Emergency Patch) remain usable while engaged.
+
 Because the lock is mutual, both rigs are pinned; either one leaving requires its
 own Disengage.
 
