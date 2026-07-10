@@ -2932,3 +2932,93 @@ test("Dismember on a weapon location destroys a weapon; on hull it blocks repair
   __test.repairRig(hullT, "hull", 3);
   assert.equal(hullT.hull.sp, spBefore); // repair refused on a dismembered hull
 });
+
+// --- Emplacement (§13, Bulwark Shield prototype) -----------------------------
+// A rooted fortress stance: permanent Raise Shield, a 3→2 action budget, no
+// movement, +2 heat to un-plant, and a 3-round cooldown from when it's entered.
+function emplaceRoom() {
+  const r = createRoom("EMP");
+  claimSide(r, { name: "Owner", side: "a" });
+  // b1 carries the emplacement Bulwark Shield; b2 a Bulwark Shield with a
+  // different (non-emplacement) upgrade; the rest are filler.
+  applyCommand(r, { verb: "add", attrs: { name: "b1", class: "medium", owner: "b",
+    longRange: "Autocannon", melee: "Bulwark Shield", meleeUpgrade: "emplacement" } });
+  applyCommand(r, { verb: "add", attrs: { name: "b2", class: "medium", owner: "b",
+    longRange: "Autocannon", melee: "Bulwark Shield", meleeUpgrade: "anvil-boss" } });
+  applyCommand(r, { verb: "add", attrs: { name: "b3", class: "light", owner: "b", ...W } });
+  for (let i = 1; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+  }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  clearPendingAnswer(r); // b activates first; lift the answer gate
+  return r;
+}
+
+test("emplace raises the shield, roots the rig, and sets a 3-round cooldown", () => {
+  const r = emplaceRoom();
+  assert.equal(r.game.round, 1);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "emplace" } });
+  const b1 = findRig(r, "b1");
+  assert.equal(b1.emplaced, true);
+  assert.equal(b1.preparation.type, "raise-shield");
+  assert.equal(b1.emplaceCooldownUntil, 4); // round 1 + 3
+  assert.equal(r.game.turn.actionsUsed, 1); // emplace spent one slot
+});
+
+test("a rig can't re-emplace before its cooldown round", () => {
+  const r = emplaceRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "emplace" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "unplant" } });
+  const b1 = findRig(r, "b1");
+  assert.equal(b1.emplaced, false);
+  const used = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "emplace" } });
+  assert.equal(b1.emplaced, false);              // still round 1 < cooldownUntil 4
+  assert.equal(r.game.turn.actionsUsed, used);   // refused — no slot spent
+});
+
+test("an emplaced rig activates with a 2-action budget and a free raised shield", () => {
+  const r = emplaceRoom();
+  const b1 = findRig(r, "b1");
+  b1.emplaced = true;    // already rooted from a prior round
+  b1.preparation = null; // Recovery cleared last round's shield
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(r.game.turn.actionsMax, 2);           // base 3 − 1
+  assert.equal(b1.preparation.type, "raise-shield"); // auto-raised
+  assert.equal(r.game.turn.actionsUsed, 0);          // without spending an action
+});
+
+test("an emplaced rig can't Move or Sprint", () => {
+  const r = emplaceRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "emplace" } });
+  const used = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  assert.equal(r.game.turn.actionsUsed, used); // move refused
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
+  assert.equal(r.game.turn.actionsUsed, used); // sprint refused
+});
+
+test("un-planting clears the stance and adds 2 heat", () => {
+  const r = emplaceRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "emplace" } });
+  const b1 = findRig(r, "b1");
+  const heatBefore = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "unplant" } });
+  assert.equal(b1.emplaced, false);
+  assert.equal(b1.engine.heat, heatBefore + 2);
+});
+
+test("a shield rig without the emplacement upgrade can't emplace", () => {
+  const r = emplaceRoom();
+  applyCommand(r, { verb: "activate", attrs: { name: "b2" } });
+  const b2 = findRig(r, "b2");
+  applyCommand(r, { verb: "action", attrs: { name: "b2", action: "emplace" } });
+  assert.equal(b2.emplaced, false);
+  assert.equal(r.game.turn.actionsUsed, 0); // refused — no slot spent
+});

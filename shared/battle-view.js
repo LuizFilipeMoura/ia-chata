@@ -8,7 +8,7 @@ const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "reload", 
 
 // The action console list for the active rig: each action with its heat cost and
 // whether the current budget/state allows it.
-export function availableActions(rig, turn) {
+export function availableActions(rig, turn, round) {
   const cfg = UNIT_KINDS[kindOf(rig)];
   const left = turn.actionsMax - turn.actionsUsed;
   // Rig uses two slots (longRange + melee); flat-pick uses one "unit" slot.
@@ -46,6 +46,10 @@ export function availableActions(rig, turn) {
         enabled = false;
         note = "Engaged — Disengage first";
       }
+      if ((key === "move" || key === "sprint") && rig.emplaced) {
+        enabled = false;
+        note = "Emplaced — Un-plant first";
+      }
       if (key === "disengage") {
         enabled = left > 0 && rig.engagedWith != null;
         if (rig.engagedWith == null) note = "Not engaged";
@@ -66,6 +70,23 @@ export function availableActions(rig, turn) {
       key: active.key, label: active.label, heat: active.heat,
       enabled: left > 0 && !jjLocked, cost: 1,
       note: jjLocked ? "Engaged — Disengage first" : "",
+    });
+  }
+  // Emplacement (§13, Bulwark Shield) — plant / un-plant the fortress stance.
+  // Only surfaced for a rig carrying the upgrade (or already rooted).
+  const hasEmplace = rig.weaponUpgrades?.melee === "emplacement";
+  if (hasEmplace && !rig.emplaced) {
+    const onCooldown = round != null && round < (rig.emplaceCooldownUntil || 0);
+    list.push({
+      key: "emplace", label: ACTIONS.emplace.label, heat: ACTIONS.emplace.heat,
+      enabled: left > 0 && !onCooldown, cost: ACTIONS.emplace.slot,
+      note: onCooldown ? `On cooldown until round ${rig.emplaceCooldownUntil}` : "",
+    });
+  }
+  if (rig.emplaced) {
+    list.push({
+      key: "unplant", label: ACTIONS.unplant.label, heat: 2,
+      enabled: left > 0, cost: ACTIONS.unplant.slot, note: "+2 heat",
     });
   }
   return list;
@@ -97,6 +118,7 @@ export function rigModifiers(rig) {
     mods.push({ key: `${mobPart}0`, tag: `${cap(mobPart)} 0 · −3\" move`, tone: "warn" });
   if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit" });
   else if (rig.suppressImmobile) mods.push({ key: "suppress-immobile", tag: "Pinned", tone: "crit" });
+  if (rig.emplaced) mods.push({ key: "emplaced", tag: "Emplaced", tone: "prep" });
   if (rig.engagedWith != null) mods.push({ key: "engaged", tag: "Engaged", tone: "warn" });
   if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit" });
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });

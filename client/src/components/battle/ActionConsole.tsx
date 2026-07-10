@@ -144,7 +144,7 @@ export function ActionConsole({ rig }: Props) {
   };
 
   const b = actionBudget(rig, t);
-  const actions = availableActions(rig, t) as Action[];
+  const actions = availableActions(rig, t, game?.round) as Action[];
   // Cold kinds (Tank / Walker) don't track heat — suppress per-action heat tags.
   const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
 

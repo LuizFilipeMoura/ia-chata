@@ -53,7 +53,7 @@ declare module "/shared/combat.js" {
 }
 
 declare module "/shared/battle-view.js" {
-  export function availableActions(rig: Rig, turn: Turn): Array<{
+  export function availableActions(rig: Rig, turn: Turn, round?: number): Array<{
     key: string; label: string; enabled: boolean; heat: number; cost?: number; note?: string;
   }>;
   export function actionBudget(rig: Rig, turn: Turn): {

@@ -275,7 +275,7 @@ export const WEAPON_UPGRADES = {
   "Bulwark Shield": [
     { id: "tower-shield", nature: "field", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
     { id: "anvil-boss", nature: "tuned", name: "Anvil Boss", tag: "Counter the first melee attacker each round while braced", effect: { riposteStr: 6 } },
-    { id: "emplacement", nature: "prototype", name: "Emplacement", tag: "Root into a permanent fortress shield; immobile, 2 actions, cooldown", effect: {} }, // TODO(mechanics)
+    { id: "emplacement", nature: "prototype", name: "Emplacement", tag: "Root into a permanent fortress shield; immobile, 2 actions, cooldown", effect: { emplacement: true } },
   ],
   "Flamethrower": [
     { id: "sticky-fuel", nature: "field", name: "Sticky Fuel", tag: "Gains Rend", effect: { perks: ["Rend"] } },
@@ -430,6 +430,10 @@ function ensureRigShape(rig) {
   if (rig.skeweredBy === undefined) rig.skeweredBy = null;
   if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
   if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
+  // Emplacement (§13, Bulwark Shield) — the rooted-stance flag and the round the
+  // stance may next be re-entered (cooldown measured from when it was entered).
+  if (typeof rig.emplaced !== "boolean") rig.emplaced = false;
+  if (typeof rig.emplaceCooldownUntil !== "number") rig.emplaceCooldownUntil = 0;
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
   if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
@@ -578,6 +582,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // downside carried into the attack right after a penetrator shot.
     autocannonShots: 0,
     autocannonSlowNext: false,
+    // Emplacement (§13, Bulwark Shield) — the rooted fortress stance and the
+    // round it may next be re-entered (3-round cooldown from entry).
+    emplaced: false,
+    emplaceCooldownUntil: 0,
     // Suppression Lock (§13, Mini Gun) — which target this rig is grinding down
     // and how many consecutive-fire stacks it has piled on.
     suppressTarget: null,
@@ -666,6 +674,10 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     engagedWith: null,
     hardened: false,
     actionPenaltyNextActivation: 0,
+    // Emplacement (§13) — mirrored from makeRig for shape parity (cold kinds
+    // never carry the upgrade, so the stance never actually engages).
+    emplaced: false,
+    emplaceCooldownUntil: 0,
     // Group E per-location state (Breach Grip / Dismember / Kneecapper), mirrored from makeRig.
     cracked: {},
     kneecapped: {},
@@ -1378,6 +1390,9 @@ function performAction(room, rig, act, a, random) {
     // Suppression Lock (§13, Mini Gun) — a stack-3 pin also grounds Jump Jets
     // (movement) until it clears in Recovery.
     if (act === "jumpjets" && rig.suppressImmobile) return false;
+    // Emplacement (§13, Bulwark Shield) — a rooted rig can't move, so Jump Jets
+    // (movement) is blocked while emplaced. Un-plant first.
+    if (act === "jumpjets" && rig.emplaced) return false;
     // Ion Storm (§13, Arc Gun) — an EMP'd rig can't fire any equipment active
     // for its whole next activation. Cleared in endActivation (mirrors
     // noPrepNextActivation) so it's scoped to exactly that one activation.
@@ -1461,6 +1476,9 @@ function performAction(room, rig, act, a, random) {
     // Suppression Lock (§13, Mini Gun) — a stack-3 pin holds the target in place
     // for the round: no Move/Sprint until it clears in Recovery.
     if (rig.suppressImmobile) return false;
+    // Emplacement (§13, Bulwark Shield) — a rooted rig cannot move; it must
+    // Un-plant first (which lifts the stance and costs +2 heat).
+    if (rig.emplaced) return false;
     // Optional move-into declaration: the player states they moved into base
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
@@ -1526,6 +1544,39 @@ function performAction(room, rig, act, a, random) {
       kind: "lock", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} locks Fire Control onto ${target.name}.`,
       effects: [`Next Missile Barrage volley vs ${target.name} auto-hits with Armour Piercing.`],
+    });
+    return true;
+  }
+  if (act === "emplace") {
+    // Emplacement (§13, Bulwark Shield) — root into the fortress stance. Only a
+    // rig carrying the emplacement upgrade may plant, it can't double-plant, and
+    // the stance is on a 3-round cooldown measured from when it was entered.
+    if (rig.weaponUpgrades?.melee !== "emplacement") return false;
+    if (rig.emplaced) return false;
+    if (room.game.round < rig.emplaceCooldownUntil) return false;
+    rig.emplaced = true;
+    rig.emplaceCooldownUntil = room.game.round + 3;
+    // Immediately raise the shield — while emplaced this stays up permanently
+    // (re-established free at each activation start; see the `activate` verb).
+    rig.preparation = { type: "raise-shield", source: "emplace", faceUp: false };
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "emplace", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} emplaces — shield raised, rooted in place.`,
+      effects: ["Raise Shield permanent · 2 actions · cannot move · +2 heat to un-plant."],
+    });
+    return true;
+  }
+  if (act === "unplant") {
+    // Emplacement (§13) — tear the roots up. Lifts the stance and costs +2 heat.
+    if (!rig.emplaced) return false;
+    rig.emplaced = false;
+    bumpHeat(rig, 2);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "unplant", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} un-plants (+2 heat).`, effects: [],
     });
     return true;
   }
@@ -1705,6 +1756,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.actionPenaltyNextActivation = 0;
       rig.hullRepairLock = 0;
       rig.ripostedThisRound = false;
+      rig.emplaced = false;
+      rig.emplaceCooldownUntil = 0;
       delete rig._blastRolled;
     }
     room.game.started = false;
@@ -1795,10 +1848,20 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         const base = UNIT_KINDS[kindOf(rig)]?.actionBudget ?? 3;
         const [structPart] = partsByRole(kindOf(rig), "structural");
         const structPenalty = structPart && rig[structPart]?.sp === 0 ? 2 : 0;
-        t.actionsMax = Math.max(0, base - structPenalty - penalty);
+        let actionsMax = Math.max(0, base - structPenalty - penalty);
+        // Emplacement (§13, Bulwark Shield) — a rooted rig trades one action for
+        // its permanent guard: budget drops by 1 (floored at 1).
+        if (rig.emplaced) actionsMax = Math.max(1, actionsMax - 1);
+        t.actionsMax = actionsMax;
         rig.actionPenaltyNextActivation = 0;
         rig.movedThisActivation = false; // Full Tilt/Momentum Swing charge flag (§13)
         rig.loaded = { longRange: true, melee: true };
+        // Emplacement (§13) — the fortress shield is permanent: re-establish
+        // Raise Shield for free each activation (no Prepare, no Answer token),
+        // unless it's already up (e.g. carried over from a mid-round reveal).
+        if (rig.emplaced && !(rig.preparation && rig.preparation.type === "raise-shield")) {
+          rig.preparation = { type: "raise-shield", source: "emplace", faceUp: false };
+        }
         // Burning (§13, Napalm/Conflagration) — a rig on fire takes `burning` SP
         // to its Hull at the start of its activation. The status persists until
         // doused (one stack per Douse action).

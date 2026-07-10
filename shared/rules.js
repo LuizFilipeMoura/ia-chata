@@ -18,6 +18,10 @@ export const ACTIONS = {
   disengage:{ label: "Disengage",   heat: 1, slot: 1 },
   douse:    { label: "Douse",       heat: 0, slot: 1 },
   lock:     { label: "Lock Target", heat: 1, slot: 1 },
+  // Emplacement (§13, Bulwark Shield). Emplace's shield-raise is free; un-plant
+  // costs +2 heat, added by the engine rather than this base `heat`.
+  emplace:  { label: "Emplace",     heat: 0, slot: 1 },
+  unplant:  { label: "Un-plant",    heat: 0, slot: 1 },
 };
 
 // Heat Threshold Table (§6), consulted with a D12 + overheat bonus total.
