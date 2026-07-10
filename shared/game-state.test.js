@@ -55,13 +55,13 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
-  assert.equal(Object.keys(WEAPONS.melee).length, 7);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
+  assert.equal(Object.keys(WEAPONS.melee).length, 8);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
-  assert.equal(Object.keys(WEAPONS.melee).length, 7);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
+  assert.equal(Object.keys(WEAPONS.melee).length, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].acc, [1, -1]);
@@ -78,9 +78,9 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   const shield = WEAPONS.melee["Bulwark Shield"];
   assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] });
 
-  // The list is now 7 + 7.
-  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
-  assert.equal(Object.keys(WEAPONS.melee).length, 7);
+  // The list is now 8 + 8.
+  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
+  assert.equal(Object.keys(WEAPONS.melee).length, 8);
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
@@ -1121,9 +1121,9 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment(null), null);
 });
 
-test("WEAPON_UPGRADES has exactly 2 upgrades for all 14 weapons", () => {
+test("WEAPON_UPGRADES has exactly 2 upgrades for all 16 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 14);
+  assert.equal(all.length, 16);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);

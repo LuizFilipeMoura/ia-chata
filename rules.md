@@ -356,6 +356,9 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Mortar | 3 | 9 | −1 / – | 15 / 30 | Charged Shot, Incendiary |
 | Sniper Cannon | 1 | 12 | – / −1 | 12 / 24 | Precision |
 | Siege Maul | 1 | 13 | – / −1 | 8 / 16 | Armour Piercing, Hot |
+| Missile Barrage | 4 | 9 | −1 / – | 15 / 30 | Full Auto, Incendiary |
+
+> The **Missile Barrage** saturates a far target with a salvo of incendiary rockets — long reach and Full Auto volume, but loose ACC up close.
 
 > The **Siege Maul** is a close-in demolition gun: the highest STR on the board and Armour Piercing, but the shortest range of any ranged weapon and it runs Hot — you must get dangerously close to fire it.
 
@@ -370,6 +373,7 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Lance | 1 | 11 | +1 | 2 | Melee, Impale |
 | Wrecking Ball | 1 | 12 | – | 2 | Melee, Staggering |
 | Bulwark Shield | 1 | 6 | – | 2 | Melee, Bulwark |
+| Flamethrower | 4 | 7 | +1 | 2 | Melee, Incendiary, Cleave |
 
 ### Weapon Upgrades
 
@@ -391,6 +395,8 @@ Each weapon has **two upgrade options**. When a Rig is commissioned, choose **on
 | Wrecking Ball | **Haymaker:** +3 STR | **Wrecking Momentum:** gains Staggering |
 | Siege Maul | **Breaching Round:** Hull SP this weapon strips cannot be repaired until the end of the next round | **Extended Barrel:** +4" to both range bands (12 / 20) |
 | Bulwark Shield | **Tower Shield:** while Raise Shield is active, front *and side* attacks are negated (rear at −4) | **Boss Spike:** gains Staggering |
+| Missile Barrage | **Swarm Warheads:** +2 ROF | **Shaped Charges:** gains Armour Piercing |
+| Flamethrower | **Pressurized Tank:** +2 STR; attacking adds +1 heat | **Sticky Fuel:** gains Rend |
 
 ---
 

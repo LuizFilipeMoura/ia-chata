@@ -28,6 +28,7 @@ export const WEAPONS = {
     "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Charged Shot", "Incendiary"] },
     "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: ["Precision"] },
     "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16],  perks: ["Armour Piercing", "Hot"] },
+    "Missile Barrage":{ rof: 4, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Full Auto", "Incendiary"] },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Shock"] },
@@ -37,6 +38,7 @@ export const WEAPONS = {
     "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], perks: ["Melee", "Impale"] },
     "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Staggering"] },
     "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] },
+    "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], perks: ["Melee", "Incendiary", "Cleave"] },
   },
 };
 
@@ -178,6 +180,14 @@ export const WEAPON_UPGRADES = {
   "Bulwark Shield": [
     { id: "tower-shield", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
     { id: "boss-spike", name: "Boss Spike", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
+  ],
+  "Missile Barrage": [
+    { id: "swarm-warheads", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
+    { id: "shaped-charges", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+  ],
+  "Flamethrower": [
+    { id: "pressurized-tank", name: "Pressurized Tank", tag: "+2 STR; +1 heat per attack", effect: { str: 2, heat: 1 } },
+    { id: "sticky-fuel", name: "Sticky Fuel", tag: "Gains Rend", effect: { perks: ["Rend"] } },
   ],
 };
 
