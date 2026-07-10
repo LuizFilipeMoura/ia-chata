@@ -338,38 +338,44 @@ There are **seven weapons of each type**. Any weapon may be fitted to a Rig of *
 
 Apply this modifier to the weapon's STR every time you make an Impact Roll (§7). *Example: a Sniper Cannon (STR 12) reads STR 10 on a Light Rig, 12 on a Medium, 14 on a Heavy, 16 on a Colossal.*
 
+> **Perks are being reworked.** Base weapons now carry **stats only** — every perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. *Melee* is a weapon **type** (the Melee Weapons section), not a perk.
+
 ### Long Range Weapons
 
-**Machine Guns** — the flanking specialists. Their **Raking Fire** means they do **no damage to a target's front arc**, but tear through the exposed **side (+4 STR)** and **rear (+8 STR)**. Fast-firing and low-STR head-on: manoeuvre onto a flank to make them count.
+**Machine Guns** — fast-firing, low-STR flanking specialists.
 
-| Weapon | ROF | STR | ACC | RNG | Perks |
-|---|:--:|:--:|:--:|:--:|---|
-| Mini Gun | 8 | 4 | +1 / −1 | 9 / 18 | Full Auto, Hot, Raking Fire |
-| Double MG | 8 | 6 | +1 / – | 9 / 18 | Full Auto, Raking Fire |
+| Weapon | ROF | STR | ACC | RNG |
+|---|:--:|:--:|:--:|:--:|
+| Mini Gun | 8 | 4 | +1 / −1 | 9 / 18 |
+| Double MG | 8 | 6 | +1 / – | 9 / 18 |
 
-**Cannons & Artillery** — front-capable firepower; damage every arc normally.
+**Cannons & Artillery** — front-capable firepower.
 
-| Weapon | ROF | STR | ACC | RNG | Perks |
-|---|:--:|:--:|:--:|:--:|---|
-| Autocannon | 4 | 8 | – / −1 | 12 / 24 | Full Auto |
-| Arc Gun | 2 | 10 | – / +1 | 15 / 30 | Charged Shot, Precision |
-| Mortar | 3 | 9 | −1 / – | 15 / 30 | Charged Shot, Incendiary |
-| Sniper Cannon | 1 | 12 | – / −1 | 12 / 24 | Precision |
-| Siege Maul | 1 | 13 | – / −1 | 8 / 16 | Armour Piercing, Hot |
+| Weapon | ROF | STR | ACC | RNG |
+|---|:--:|:--:|:--:|:--:|
+| Autocannon | 4 | 8 | – / −1 | 12 / 24 |
+| Arc Gun | 2 | 10 | – / +1 | 15 / 30 |
+| Mortar | 3 | 9 | −1 / – | 15 / 30 |
+| Sniper Cannon | 1 | 12 | – / −1 | 12 / 24 |
+| Siege Maul | 1 | 13 | – / −1 | 8 / 16 |
+| Missile Barrage | 4 | 9 | −1 / – | 15 / 30 |
 
-> The **Siege Maul** is a close-in demolition gun: the highest STR on the board and Armour Piercing, but the shortest range of any ranged weapon and it runs Hot — you must get dangerously close to fire it.
+> The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose ACC up close.
+
+> The **Siege Maul** is a close-in demolition gun: the highest STR on the board, but the shortest range of any ranged weapon.
 
 ### Melee Weapons
 
-| Weapon | ROF | STR | ACC | RNG | Perks |
-|---|:--:|:--:|:--:|:--:|---|
-| Sword | 2 | 6 | – | 2 | Melee, Shock |
-| Circular Saw | 3 | 6 | – | 2 | Melee, Cleave |
-| Chainsaw | 3 | 8 | – | 2 | Melee, Rend |
-| Claw | 2 | 8 | +1 | 2 | Melee, Armour Piercing |
-| Lance | 1 | 11 | +1 | 2 | Melee, Impale |
-| Wrecking Ball | 1 | 12 | – | 2 | Melee, Staggering |
-| Bulwark Shield | 1 | 6 | – | 2 | Melee, Bulwark |
+| Weapon | ROF | STR | ACC | RNG |
+|---|:--:|:--:|:--:|:--:|
+| Sword | 2 | 6 | – | 2 |
+| Circular Saw | 3 | 6 | – | 2 |
+| Chainsaw | 3 | 8 | – | 2 |
+| Claw | 2 | 8 | +1 | 2 |
+| Lance | 1 | 11 | +1 | 2 |
+| Wrecking Ball | 1 | 12 | – | 2 |
+| Bulwark Shield | 1 | 6 | – | 2 |
+| Flamethrower | 4 | 7 | +1 | 2 |
 
 ### Weapon Upgrades
 
@@ -391,6 +397,8 @@ Each weapon has **two upgrade options**. When a Rig is commissioned, choose **on
 | Wrecking Ball | **Haymaker:** +3 STR | **Wrecking Momentum:** gains Staggering |
 | Siege Maul | **Breaching Round:** Hull SP this weapon strips cannot be repaired until the end of the next round | **Extended Barrel:** +4" to both range bands (12 / 20) |
 | Bulwark Shield | **Tower Shield:** while Raise Shield is active, front *and side* attacks are negated (rear at −4) | **Boss Spike:** gains Staggering |
+| Missile Barrage | **Swarm Warheads:** +2 ROF | **Shaped Charges:** gains Armour Piercing |
+| Flamethrower | **Pressurized Tank:** +2 STR; attacking adds +1 heat | **Sticky Fuel:** gains Rend |
 
 ---
 
@@ -467,14 +475,14 @@ Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Arm
 
 ### Shared unit weapons (Tanks + Walkers only) ⚙
 
-| Weapon | Type | ROF | STR | ACC (near/far) | RNG (near/far) | Perks |
-|---|---|:--:|:--:|:--:|:--:|---|
-| Tank Cannon | ranged | 1 | 12 | 0 / −1 | 12" / 24" | — |
-| Autocannon Mount | ranged | 3 | 8 | 0 / −1 | 12" / 24" | Full Auto |
-| Coaxial MG | ranged | 6 | 5 | +1 / −1 | 9" / 18" | Full Auto, Raking Fire |
-| Rocket Pod | ranged | 2 | 10 | 0 / 0 | 15" / 30" | Charged Shot |
-| Dozer Blade | melee | 1 | 10 | 0 | 2" | Melee |
-| Ram Spike | melee | 1 | 11 | +1 | 2" | Melee, Impale |
+| Weapon | Type | ROF | STR | ACC (near/far) | RNG (near/far) |
+|---|---|:--:|:--:|:--:|:--:|
+| Tank Cannon | ranged | 1 | 12 | 0 / −1 | 12" / 24" |
+| Autocannon Mount | ranged | 3 | 8 | 0 / −1 | 12" / 24" |
+| Coaxial MG | ranged | 6 | 5 | +1 / −1 | 9" / 18" |
+| Rocket Pod | ranged | 2 | 10 | 0 / 0 | 15" / 30" |
+| Dozer Blade | melee | 1 | 10 | 0 | 2" |
+| Ram Spike | melee | 1 | 11 | +1 | 2" |
 
 STR is **flat** — no weight-class modifier applies. Close combat requires a **melee** weapon (Dozer Blade or Ram Spike); a Tank / Walker fielding only a ranged weapon cannot fight in melee.
 

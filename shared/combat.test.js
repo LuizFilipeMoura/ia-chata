@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
+import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
@@ -24,22 +24,33 @@ test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () 
   const claw = WEAPONS.melee["Claw"]; // acc [1,1]
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 0 }), 3); // 4 - 1
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 2 }), 5); // 4 - 1 + 2
-  const sniper = WEAPONS.longRange["Sniper Cannon"]; // Precision
-  assert.equal(computeModifiedAim(attacker, sniper, { range: "near", cover: 0, aimed: true }), 4); // waived
+  // Perks now ride on the upgrade, so exercise Precision by injecting it (base is stat-only).
+  const sniper = { ...WEAPONS.longRange["Sniper Cannon"], perks: ["Precision"] };
+  assert.equal(computeModifiedAim(attacker, sniper, { distance: 22, cover: 0, aimed: true }), 2); // peak waived-penalty
   const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
-  assert.equal(computeModifiedAim(attacker, autocannon, { range: "near", cover: 0, aimed: true }), 6); // 4 + 2
+  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, cover: 0, aimed: true }), 5); // 4 - (1 - 2)
   assert.equal(computeModifiedAim({ weightClass: "medium", hull: { sp: 0 } }, claw, { range: "near", cover: 0 }), 4);
 });
 
-test("range band selects the weapon's near vs far ACC column (§7.4)", () => {
-  const mg = WEAPONS.longRange["Mini Gun"]; // acc [1, -1]
-  // The UI's inch slider derives this band; the server only sees near/far/out.
-  assert.equal(computeModifiedAim(attacker, mg, { range: "near", cover: 0 }), 3); // 4 - 1
-  assert.equal(computeModifiedAim(attacker, mg, { range: "far", cover: 0 }), 5);  // 4 - (-1)
+test("weaponAccAt peaks at the sweet spot and falls off with distance", () => {
+  const mg = WEAPONS.longRange["Mini Gun"]; // sweet 7, peak 2, dropoff 0.35
+  assert.equal(weaponAccAt(mg, 7), 2);                 // at sweet spot
+  assert.equal(weaponAccAt(mg, 2), 0);                 // |2-7|*0.35 = 1.75 -> 2 penalty
+  assert.equal(weaponAccAt(mg, 18), -2);               // |18-7|*0.35 = 3.85 -> 4 penalty
+  assert.equal(weaponAccAt(mg, undefined), 2);         // no distance -> peak (legacy fallback)
+  const claw = WEAPONS.melee["Claw"];                  // melee: scalar acc, distance-independent
+  assert.equal(weaponAccAt(claw, 99), 1);
+});
+
+test("computeModifiedAim uses distance-based accuracy for ranged weapons", () => {
+  const mg = WEAPONS.longRange["Mini Gun"];
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 7, cover: 0 }), 2);  // 4 - 2
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 2, cover: 0 }), 4);  // 4 - 0
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
 });
 
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
-  const dbl = WEAPONS.longRange["Double MG"]; // rof 8, Full Auto, acc [1,0]
+  const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, acc [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3
   const res = rollToHit(attacker, dbl, { range: "near", cover: 0, fullAuto: true }, dice, () => 0);
   assert.equal(res.rof, 10);
@@ -49,7 +60,8 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
 
 test("computeStr applies weight and Charged Shot", () => {
   assert.equal(computeStr({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 10); // 12-2
-  assert.equal(computeStr({ weightClass: "medium" }, WEAPONS.longRange["Arc Gun"], { charged: true }), 12); // 10+0+2
+  const arcGun = { ...WEAPONS.longRange["Arc Gun"], perks: ["Charged Shot"] };
+  assert.equal(computeStr({ weightClass: "medium" }, arcGun, { charged: true }), 12); // 10+0+2
 });
 
 test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
@@ -57,8 +69,8 @@ test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
   assert.equal(arcBonus(auto, "front"), 0);
   assert.equal(arcBonus(auto, "side"), 2);
   assert.equal(arcBonus(auto, "rear"), 4);
-  assert.equal(arcBonus(WEAPONS.melee["Sword"], "rear"), 0); // melee
-  const mini = WEAPONS.longRange["Mini Gun"]; // Raking Fire
+  assert.equal(arcBonus(WEAPONS.melee["Sword"], "rear"), 0); // melee (structural flag)
+  const mini = { ...WEAPONS.longRange["Mini Gun"], perks: ["Raking Fire"] };
   assert.equal(arcBonus(mini, "front"), null); // front auto-fails
   assert.equal(arcBonus(mini, "side"), 4);
   assert.equal(arcBonus(mini, "rear"), 8);
@@ -90,7 +102,7 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
 });
 
 test("Raking Fire against the front arc deals no damage", () => {
-  const mini = WEAPONS.longRange["Mini Gun"];
+  const mini = { ...WEAPONS.longRange["Mini Gun"], perks: ["Raking Fire"] };
   const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",
     { arc: "front", hits: 3 }, { impacts: [6, 6, 6] }, () => 0);
   assert.equal(out.every((h) => h.sp === 0), true);
@@ -170,7 +182,7 @@ test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-pen
   assert.deepEqual(effectiveWeaponProfile("melee", "Lance", lance).rng, [3, 3]); // 2" base + 1" Couched Reach
 
   const sniper = makeRig(5, "Barrel", "medium", "a", { longRange: "Sniper Cannon", melee: "Sword", longRangeUpgrade: "match-barrel" });
-  assert.deepEqual(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).acc, [0, 0]);
+  assert.equal(effectiveWeaponProfile("longRange", "Sniper Cannon", sniper).dropoff, 0.075); // Match Barrel halves dropoff
 });
 
 test("rollToHit uses selected upgrade heat-on-ones and one missed-die reroll", () => {
@@ -189,7 +201,7 @@ test("rollToHit uses selected upgrade heat-on-ones and one missed-die reroll", (
 test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
   const mortarRig = makeRig(1, "Airburst", "medium", "a", { longRange: "Mortar", melee: "Sword", longRangeUpgrade: "airburst-fuze" });
   const mortar = effectiveWeaponProfile("longRange", "Mortar", mortarRig);
-  assert.equal(computeModifiedAim(mortarRig, mortar, { range: "near", cover: 2 }), 5);
+  assert.equal(computeModifiedAim(mortarRig, mortar, { distance: 18, cover: 2 }), 3);
 });
 
 test("resolveAttack emits a per-die roll for each hit-die plus a location d12, each with a tone", () => {

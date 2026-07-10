@@ -71,7 +71,7 @@ export const GLOSSARY = [
   },
   {
     id: "rng", term: "RNG", match: ["RNG"],
-    def: "A weapon's range bands (near / far, in inches) — the attack fails outside them (§12).",
+    def: "A weapon's sweet-spot distance (peak accuracy) and usable min–max range in inches. Accuracy falls off the farther the target is from the sweet spot; outside min–max the attack fails (§12).",
   },
   {
     id: "impact-roll", term: "Impact Roll", match: ["Impact Roll", "Impact Rolls"],

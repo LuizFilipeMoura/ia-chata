@@ -55,42 +55,52 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
-  assert.equal(Object.keys(WEAPONS.melee).length, 7);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
+  assert.equal(Object.keys(WEAPONS.melee).length, 8);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
-  assert.equal(Object.keys(WEAPONS.melee).length, 7);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
+  assert.equal(Object.keys(WEAPONS.melee).length, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
-  assert.deepEqual(WEAPONS.longRange["Mini Gun"].acc, [1, -1]);
-  assert.deepEqual(WEAPONS.longRange["Mini Gun"].rng, [9, 18]);
-  assert.ok(WEAPONS.longRange["Mini Gun"].perks.includes("Raking Fire"));
+  assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
+  assert.equal(WEAPONS.longRange["Mini Gun"].peak, 2);
+  assert.equal(WEAPONS.longRange["Mini Gun"].dropoff, 0.35);
+  assert.equal(WEAPONS.longRange["Mini Gun"].minRange, 0);
+  assert.equal(WEAPONS.longRange["Mini Gun"].maxRange, 18);
+  assert.equal(WEAPONS.longRange["Mini Gun"].acc, undefined);
+  assert.equal(WEAPONS.longRange["Mini Gun"].rng, undefined);
+  // Base weapons are stat-only; no perks. Ranged weapons carry no melee flag.
+  assert.equal(WEAPONS.longRange["Mini Gun"].perks, undefined);
+  assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
   assert.equal(WEAPONS.melee["Lance"].str, 11);
-  assert.ok(WEAPONS.melee["Sword"].perks.includes("Melee"));
+  assert.equal(WEAPONS.melee["Sword"].melee, true);
+  assert.equal(WEAPONS.melee["Sword"].perks, undefined);
 });
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, str: 13, acc: [0, -1], rng: [8, 16], perks: ["Armour Piercing", "Hot"] });
+  assert.deepEqual(maul, { rof: 1, str: 13, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
-  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] });
+  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
 
-  // The list is now 7 + 7.
-  assert.equal(Object.keys(WEAPONS.longRange).length, 7);
-  assert.equal(Object.keys(WEAPONS.melee).length, 7);
+  // The list is now 8 + 8.
+  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
+  assert.equal(Object.keys(WEAPONS.melee).length, 8);
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   assert.equal(WEAPON_UPGRADES["Siege Maul"].length, 2);
   assert.equal(WEAPON_UPGRADES["Bulwark Shield"].length, 2);
 
-  // Extended Barrel shifts both range bands by +4 (8/16 -> 12/20), reusing effect.range.
+  // Extended Barrel: +4 maxRange (16 -> 20) and +2 sweet (8 -> 10), reusing effect.range.
   const barrel = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "extended-barrel" });
-  assert.deepEqual(effectiveWeaponProfile("longRange", "Siege Maul", barrel).rng, [12, 20]);
+  const barrelProfile = effectiveWeaponProfile("longRange", "Siege Maul", barrel);
+  assert.equal(barrelProfile.maxRange, 20);
+  assert.equal(barrelProfile.sweet, 10);
 
   // Breaching Round is the default (first) Siege Maul upgrade and marks onDamage.
   const breach = makeRig(2, "Breaker2", "medium", "a",
@@ -1072,26 +1082,45 @@ test("ram action is removed — melee covers close combat, so it is a no-op", ()
   assert.equal(r.game.turn.actionsUsed, 0);
 });
 
-test("Incendiary adds target heat; Shock halves target speed next round", () => {
+// Perks now come only from the chosen upgrade, so these drive the effect through
+// the upgrade that grants it: Tracer Rounds → Incendiary, Suppressive Fire → Shock.
+test("Incendiary (via Tracer Rounds) adds 1 heat to the target", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Double MG";
+  b1.weaponUpgrades.longRange = "tracer-rounds";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   const heatBefore = a1.engine.heat;
-  // Fire the Sword (Shock) — melee, 2 hits guaranteed.
   applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], impacts: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
   } });
-  assert.equal(a1.speedHalvedNextRound, true);
-  assert.equal(a1.engine.heat, heatBefore); // Sword is not Incendiary
+  assert.equal(a1.engine.heat, heatBefore + 1);
 });
 
-test("Impale immobilises on a D12 of 8+", () => {
+test("Shock (via Suppressive Fire) halves target speed next round", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Mini Gun";
+  b1.weaponUpgrades.longRange = "suppressive-fire";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], impacts: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
+  } });
+  assert.equal(a1.speedHalvedNextRound, true);
+});
+
+test("Impale (via Spearpoint) immobilises on a D12 of 8+", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
   b1.weapons.melee = "Lance";
+  b1.weaponUpgrades.melee = "spearpoint";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
@@ -1121,9 +1150,9 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment(null), null);
 });
 
-test("WEAPON_UPGRADES has exactly 2 upgrades for all 14 weapons", () => {
+test("WEAPON_UPGRADES has exactly 2 upgrades for all 16 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 14);
+  assert.equal(all.length, 16);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
@@ -1796,9 +1825,17 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
     assert.equal(typeof w.rof, "number");
     assert.equal(typeof w.str, "number");
-    assert.ok(Array.isArray(w.acc));
-    assert.ok(Array.isArray(w.rng));
-    assert.ok(Array.isArray(w.perks));
+    if (w.melee) {
+      assert.ok(Array.isArray(w.acc), `${name} melee keeps acc[]`);
+      assert.ok(Array.isArray(w.rng), `${name} melee keeps rng[]`);
+    } else {
+      assert.equal(typeof w.sweet, "number", `${name} has sweet`);
+      assert.equal(typeof w.peak, "number", `${name} has peak`);
+      assert.equal(typeof w.dropoff, "number", `${name} has dropoff`);
+      assert.equal(typeof w.minRange, "number", `${name} has minRange`);
+      assert.equal(typeof w.maxRange, "number", `${name} has maxRange`);
+    }
+    assert.equal(w.perks, undefined, `${name} is stat-only, no perks`);
     assert.equal(w.flatPick, true, `${name} carries flatPick marker`);
   }
 });

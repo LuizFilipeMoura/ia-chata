@@ -19,24 +19,29 @@ export const MAX_OVERHEAT_BONUS = 10;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
+// Base weapons carry stats only. Perks are delivered exclusively by the chosen
+// weapon upgrade (see WEAPON_UPGRADES); `melee: true` is a structural flag (not a
+// perk) that drives arc/range logic in combat.js and the wizards.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":      { rof: 8, str: 4,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Hot", "Raking Fire"] },
-    "Double MG":     { rof: 8, str: 6,  acc: [1, 0],  rng: [9, 18],  perks: ["Full Auto", "Raking Fire"] },
-    "Autocannon":    { rof: 4, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"] },
-    "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30], perks: ["Charged Shot", "Precision"] },
-    "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Charged Shot", "Incendiary"] },
-    "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: ["Precision"] },
-    "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16],  perks: ["Armour Piercing", "Hot"] },
+    "Mini Gun":       { rof: 8, str: 4,  sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18 },
+    "Double MG":      { rof: 8, str: 6,  sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20 },
+    "Autocannon":     { rof: 4, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
+    "Arc Gun":        { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
+    "Mortar":         { rof: 3, str: 9,  sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Sniper Cannon":  { rof: 1, str: 12, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
+    "Siege Maul":     { rof: 1, str: 13, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
+    "Missile Barrage":{ rof: 4, str: 9,  sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
   },
   melee: {
-    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Shock"] },
-    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Cleave"] },
-    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Rend"] },
-    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [2, 2], perks: ["Melee", "Armour Piercing"] },
-    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], perks: ["Melee", "Impale"] },
-    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Staggering"] },
-    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] },
+    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [2, 2], melee: true },
+    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], melee: true },
+    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
+    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], melee: true },
   },
 };
 
@@ -44,12 +49,12 @@ export const WEAPONS = {
 // pick exactly one. Marked flatPick: true so combat.js skips the weight-class
 // STR modifier — the listed STR is the shot's STR on any chassis.
 export const UNIT_WEAPONS = {
-  "Tank Cannon":      { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: [],                         flatPick: true },
-  "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"],              flatPick: true },
-  "Coaxial MG":       { rof: 6, str: 5,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Raking Fire"], flatPick: true },
-  "Rocket Pod":       { rof: 2, str: 10, acc: [0, 0],  rng: [15, 30], perks: ["Charged Shot"],           flatPick: true },
-  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], perks: ["Melee"],                flatPick: true },
-  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], perks: ["Melee", "Impale"],      flatPick: true },
+  "Tank Cannon":      { rof: 1, str: 12, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
+  "Autocannon Mount": { rof: 3, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
+  "Coaxial MG":       { rof: 6, str: 5,  sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true },
+  "Rocket Pod":       { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
+  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -144,7 +149,7 @@ export const WEAPON_UPGRADES = {
     { id: "cluster-shells", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
   ],
   "Sniper Cannon": [
-    { id: "match-barrel", name: "Match Barrel", tag: "No far-range penalty", effect: { noFarPenalty: true } },
+    { id: "match-barrel", name: "Match Barrel", tag: "Halves accuracy falloff (tighter spread)", effect: { noFarPenalty: true } },
     { id: "marksman-optics", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
   ],
   "Sword": [
@@ -173,11 +178,19 @@ export const WEAPON_UPGRADES = {
   ],
   "Siege Maul": [
     { id: "breaching-round", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
-    { id: "extended-barrel", name: "Extended Barrel", tag: "+4\" to both range bands (12 / 20)", effect: { range: 4 } },
+    { id: "extended-barrel", name: "Extended Barrel", tag: "+4\" max range; sweet spot +2\"", effect: { range: 4 } },
   ],
   "Bulwark Shield": [
     { id: "tower-shield", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
     { id: "boss-spike", name: "Boss Spike", tag: "Gains Staggering", effect: { perks: ["Staggering"] } },
+  ],
+  "Missile Barrage": [
+    { id: "swarm-warheads", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
+    { id: "shaped-charges", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+  ],
+  "Flamethrower": [
+    { id: "pressurized-tank", name: "Pressurized Tank", tag: "+2 STR; +1 heat per attack", effect: { str: 2, heat: 1 } },
+    { id: "sticky-fuel", name: "Sticky Fuel", tag: "Gains Rend", effect: { perks: ["Rend"] } },
   ],
 };
 
@@ -232,7 +245,7 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     // Flat-pick weapons have no upgrades and no weight-class scaling. Ship a
     // shape identical to the rig-catalog result so downstream code (computeStr,
     // rollToHit) doesn't need to know which domain the profile came from.
-    return { ...base, upgradeEffect: {} };
+    return { ...base, perks: base.perks || [], upgradeEffect: {} };
   }
   const base = WEAPONS[slot]?.[weaponName];
   if (!base) return null;
@@ -242,14 +255,22 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     ...base,
     rof: base.rof + (effect.rof || 0),
     str: base.str + (effect.str || 0),
-    acc: [...base.acc],
-    rng: [...base.rng],
     perks: uniquePerks(base.perks, effect.perks),
     upgrade: upgrade || null,
     upgradeEffect: effect,
   };
-  if (effect.noFarPenalty) profile.acc[1] = Math.max(profile.acc[1] || 0, profile.acc[0] || 0);
-  if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
+  if (base.melee) {
+    profile.acc = [...base.acc];
+    profile.rng = [...base.rng];
+    if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
+  } else {
+    // Ranged: `...base` already copied sweet/peak/dropoff/minRange/maxRange.
+    if (effect.range) {
+      profile.maxRange = base.maxRange + effect.range;
+      profile.sweet = base.sweet + Math.round(effect.range / 2);
+    }
+    if (effect.noFarPenalty) profile.dropoff = base.dropoff * 0.5;
+  }
   return profile;
 }
 
@@ -881,7 +902,7 @@ function resolveFire(room, rig, target, a, act, random) {
   const cost = 1;
   if (t.actionsUsed + cost > t.actionsMax) return false;
   const res = resolveAttack(room, rig, target, {
-    weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, cover: a.cover,
+    weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
@@ -1346,7 +1367,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           const secondShot = slot === "longRange" && (rt.longRangeShots || 0) >= 1;
           if (slot === "longRange") attacker.loaded.longRange = false;
           const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
-          const hot = profile?.perks.includes("Hot") ? 1 : 0;
+          const hot = profile?.perks?.includes("Hot") ? 1 : 0;
           bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot + (secondShot ? 1 : 0));
           rt.actionsUsed += cost;
           if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;
@@ -1365,7 +1386,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         if (!declined && a.attack && !reactor.destroyed) {
           resolveAttack(room, reactor, attacker, {
             weapon: a.attack.weapon, target: attacker.name,
-            arc: a.attack.arc, range: a.attack.range, cover: a.attack.cover,
+            arc: a.attack.arc, range: a.attack.range, distance: a.attack.distance, cover: a.attack.cover,
             aimed: false, aimedLoc: "hull",
             fullAuto: a.attack.fullAuto === true || a.attack.fullAuto === "true",
             charged: a.attack.charged === true || a.attack.charged === "true",
