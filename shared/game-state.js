@@ -419,6 +419,11 @@ function ensureRigShape(rig) {
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
   if (typeof rig.burning !== "number") rig.burning = 0;
+  // Kneecapper progressive cripple (§13, Double MG) — derived state, not set
+  // directly here; recompute() below (also called on every applyDamage/
+  // repairRig) re-derives it from live SP. Just guard the field's shape on a
+  // legacy rig loaded from an older save.
+  if (typeof rig.armsSuppressed !== "boolean") rig.armsSuppressed = false;
   if (typeof rig.ripostedThisRound !== "boolean") rig.ripostedThisRound = false;
   // Skewer (§13, Lance) — the id of the rig that impaled this one in the melee
   // lock; Disengaging from it costs a free STR-11 lance strike.
@@ -548,6 +553,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     skipNextActivation: false,
     noCool: false,
     speedHalvedNextRound: false,
+    // Kneecapper progressive cripple (§13, Double MG) — derived state; recompute()
+    // (called below and on every applyDamage/repairRig) keeps it in sync with
+    // live arms SP. Initialised false since a fresh rig starts undamaged.
+    armsSuppressed: false,
     movedThisActivation: false,
     loaded: { longRange: true, melee: true },
     preparation: null,
@@ -640,6 +649,10 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     skipNextActivation: false,
     noCool: false,
     speedHalvedNextRound: false,
+    // Kneecapper progressive cripple (§13, Double MG) — mirrors makeRig; kept
+    // in sync by recompute() off the unit's own weapon-role part (turret /
+    // mount rather than "arms" on cold kinds).
+    armsSuppressed: false,
     loaded: { unit: true },
     preparation: null,
     weaponsDestroyed: [],
@@ -839,6 +852,30 @@ function recompute(rig) {
     names.every((n) => rig[n]?.sp === 0);
   const floor = engineHeatFloor(rig);
   if (rig.engine && rig.engine.heat < floor) rig.engine.heat = floor;
+  // Kneecapper progressive cripple (§13, Double MG) — "track nothing extra":
+  // re-derived from live SP vs max on the limb locations every time recompute
+  // runs (every applyDamage, every repairRig, and every Recovery tick), with
+  // no gate on which weapon caused the damage — a crippled limb is crippled
+  // however it got that way. Generalised via role lookup so it applies to Rig
+  // (legs/arms), Tank (tracks/turret) and Walker (legs/mount) alike; a kind
+  // missing a role (none today) is a no-op guard, not a crash.
+  //   legs (mobility) <= half max -> speedHalvedNextRound = true. Recovery
+  //     resets this flag to false every round THEN calls recompute() again
+  //     (see runRecovery), so a leg still at <= half keeps re-flagging it —
+  //     that's the "re-apply while <= half" behaviour, without persisting a
+  //     separate "was crippled" bit.
+  //   arms (weapon) <= half max -> armsSuppressed = true, read by
+  //     combat.js rollToHit to halve this rig's own ROF on every shot.
+  // At 0 SP the existing destruction consequences (weaponsDestroyed /
+  // immobilised via catastrophicOnZero/catastrophicAdditional) already fire
+  // elsewhere; these flags just layer the "still fireable but crippled"
+  // in-between state on top and don't conflict with full destruction.
+  const [mobilityPart] = partsByRole(kind, "mobility");
+  const mob = mobilityPart && rig[mobilityPart];
+  if (mob && mob.max > 0 && mob.sp <= mob.max / 2) rig.speedHalvedNextRound = true;
+  const [weaponPart] = partsByRole(kind, "weapon");
+  const wpn = weaponPart && rig[weaponPart];
+  rig.armsSuppressed = !!(wpn && wpn.max > 0 && wpn.sp <= wpn.max / 2);
 }
 
 // §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.

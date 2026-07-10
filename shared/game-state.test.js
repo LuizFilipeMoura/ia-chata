@@ -1216,6 +1216,50 @@ test("weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1 (regressio
   assert.equal(rig.engine.sp, engineBefore - 1);
 });
 
+test("Kneecapper cripple ramp — legs at <= half max flags speedHalvedNextRound", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  assert.equal(rig.legs.max, 6); // medium default
+  // Not caused by a Kneecapper attack at all — the ramp reads live SP, no
+  // matter which weapon (or overheat, etc.) did the damage.
+  __test.applyDamage(room, rig, "legs", 3, {}); // 6 -> 3, exactly half
+  assert.equal(rig.legs.sp, 3);
+  assert.equal(rig.speedHalvedNextRound, true);
+});
+
+test("Kneecapper cripple ramp — arms at <= half max sets armsSuppressed", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  assert.equal(rig.arms.max, 6);
+  __test.applyDamage(room, rig, "arms", 3, { dice: { armsWeapon: 12 } }); // 6 -> 3, exactly half
+  assert.equal(rig.arms.sp, 3);
+  assert.equal(rig.armsSuppressed, true);
+});
+
+test("Kneecapper cripple ramp — above half, neither speedHalvedNextRound nor armsSuppressed applies", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  __test.applyDamage(room, rig, "legs", 2, {}); // 6 -> 4, still above half (3)
+  __test.applyDamage(room, rig, "arms", 2, { dice: { armsWeapon: 12 } }); // 6 -> 4, still above half (3)
+  assert.equal(rig.legs.sp, 4);
+  assert.equal(rig.arms.sp, 4);
+  assert.equal(rig.speedHalvedNextRound, false);
+  assert.equal(rig.armsSuppressed, false);
+});
+
+test("Kneecapper cripple ramp — Recovery re-applies speedHalvedNextRound while legs stay <= half", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  __test.applyDamage(room, rig, "legs", 3, {}); // 6 -> 3, exactly half
+  assert.equal(rig.speedHalvedNextRound, true);
+  __test.runRecovery(room); // resets the flag to false, then recompute() re-derives it
+  assert.equal(rig.speedHalvedNextRound, true); // still crippled -> re-flagged
+});
+
 test("applyDamage: first hit to 0 SP hull does not destroy; additional damage destroys the rig", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");

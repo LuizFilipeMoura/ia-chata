@@ -80,6 +80,12 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   }
   let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
   if (penetratorSlow) rof = Math.floor(rof / 2);
+  // Kneecapper progressive cripple (§13, Double MG) — a rig whose own weapon
+  // limb (arms, or the equivalent weapon-role part on Tank/Walker) has been
+  // ground down to <= half max SP fires every weapon, long-range or melee, at
+  // half ROF. `armsSuppressed` is derived purely from live SP in game-state.js
+  // (recompute), independent of which weapon caused the damage.
+  if (attacker.armsSuppressed) rof = Math.floor(rof / 2);
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));

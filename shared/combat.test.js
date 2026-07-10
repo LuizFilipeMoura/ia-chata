@@ -803,3 +803,18 @@ test("Kneecapper — hull and engine are never valid targets, aimed or not", () 
   assert.equal(target3.hull.sp, target3.hull.max);
   assert.equal(target3.engine.sp, target3.engine.max);
 });
+
+test("Kneecapper cripple ramp — armsSuppressed halves ROF for every weapon", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Chainsaw" });
+  const profile = effectiveWeaponProfile("longRange", "Autocannon", rig); // base rof 4
+  const dice = [1, 1, 1, 1];
+  const healthy = rollToHit(rig, profile, { range: "near", cover: 0 }, dice, () => 0);
+  assert.equal(healthy.rof, 4);
+  rig.armsSuppressed = true;
+  const suppressed = rollToHit(rig, profile, { range: "near", cover: 0 }, dice, () => 0);
+  assert.equal(suppressed.rof, 2); // halved, floor division
+  // Melee is suppressed too — it's the rig's own weapon limb, not a per-weapon flag.
+  const melee = effectiveWeaponProfile("melee", "Chainsaw", rig); // base rof 3
+  const meleeRes = rollToHit(rig, melee, { range: "near", cover: 0 }, [1, 1, 1], () => 0);
+  assert.equal(meleeRes.rof, 1); // floor(3/2)
+});
