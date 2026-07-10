@@ -344,8 +344,8 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 | Weapon | ROF | STR | ACC | RNG | Perks |
 |---|:--:|:--:|:--:|:--:|---|
-| Mini Gun | 8 | 4 | +1 / −1 | 9 / 18 | Full Auto, Hot, Raking Fire |
-| Double MG | 8 | 6 | +1 / – | 9 / 18 | Full Auto, Raking Fire |
+| Mini Gun | 8 | 5 | +1 / −1 | 9 / 18 | Full Auto, Hot, Raking Fire |
+| Double MG | 6 | 6 | +1 / – | 9 / 18 | Full Auto, Raking Fire |
 
 **Cannons & Artillery** — front-capable firepower; damage every arc normally.
 
@@ -363,8 +363,8 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 | Weapon | ROF | STR | ACC | RNG | Perks |
 |---|:--:|:--:|:--:|:--:|---|
-| Sword | 2 | 6 | – | 2 | Melee, Shock |
-| Circular Saw | 3 | 6 | – | 2 | Melee, Cleave |
+| Sword | 3 | 7 | – | 2 | Melee, Shock |
+| Circular Saw | 3 | 7 | – | 2 | Melee, Cleave |
 | Chainsaw | 3 | 8 | – | 2 | Melee, Rend |
 | Claw | 2 | 8 | +1 | 2 | Melee, Armour Piercing |
 | Lance | 1 | 11 | +1 | 2 | Melee, Impale |
@@ -379,13 +379,13 @@ Each weapon has **two upgrade options**. When a Rig is commissioned, choose **on
 |---|---|---|
 | Mini Gun | **Extended Belt:** +2 ROF; attack dice showing 1 add 1 heat | **Suppressive Fire:** gains Shock |
 | Double MG | **Tracer Rounds:** gains Incendiary | **Gyro Mount:** reroll one missed to-hit die |
-| Autocannon | **AP Shells:** gains Armour Piercing | **Depleted Core:** +2 STR |
+| Autocannon | **AP Shells:** gains Armour Piercing | **Depleted Core:** +1 STR |
 | Arc Gun | **Systems Overload:** on hit, target loses 1 action on its next activation | **Ion Burn:** gains Incendiary |
 | Mortar | **Airburst Fuze:** ignores cover | **Cluster Shells:** on hit, deal 1 SP to a second random location on the target |
 | Sniper Cannon | **Match Barrel:** no far-range ACC penalty | **Marksman Optics:** gains Precision |
 | Sword | **Duelist's Balance:** gains Precision | **Keen Edge:** gains Rend |
 | Circular Saw | **Tempered Teeth:** gains Armour Piercing | **Sunder:** once per damaging attack, the struck location's max SP is reduced by 1, to a minimum of 1 |
-| Chainsaw | **High-Rev Motor:** +2 STR; attacking adds +1 heat | **Ripper Teeth:** gains Rend |
+| Chainsaw | **High-Rev Motor:** +1 STR; attacking adds +1 heat | **Ripper Teeth:** gains Rend |
 | Claw | **Vice Grip:** gains Impale | **Rending Talons:** gains Rend |
 | Lance | **Couched Reach:** melee range increases by 1" | **Spearpoint:** gains Impale |
 | Wrecking Ball | **Haymaker:** +3 STR | **Wrecking Momentum:** gains Staggering |

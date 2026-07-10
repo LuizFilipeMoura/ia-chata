@@ -63,7 +63,7 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(Object.keys(WEAPONS.longRange).length, 7);
   assert.equal(Object.keys(WEAPONS.melee).length, 7);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
-  assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
+  assert.equal(WEAPONS.longRange["Mini Gun"].str, 5);
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].acc, [1, -1]);
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].rng, [9, 18]);
   assert.ok(WEAPONS.longRange["Mini Gun"].perks.includes("Raking Fire"));
@@ -1005,11 +1005,11 @@ test("fire action resolves an attack, applies damage and logs it", () => {
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1"); // Light target, hull 6
-  // Fire the melee Sword: STR 6-2(light)=4. 2 dice both 6 -> impacts 6+4+0(front)=10
-  // vs light hull (10/14/16) -> direct 1 each = 2 SP.
+  // Fire the melee Sword (ROF 3): STR 7-2(light)=5. Two 6s hit, third die misses ->
+  // impacts 6+5+0(front)=11 vs light hull (10/14/16) -> direct 1 each = 2 SP.
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+    dice: { toHit: [6, 6, 1], impacts: [6, 6], location: 1 },
   } });
   assert.equal(a1.hull.sp, 4); // 6 - 2
   assert.equal(r.game.turn.actionsUsed, 1);

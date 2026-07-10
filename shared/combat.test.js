@@ -39,11 +39,11 @@ test("range band selects the weapon's near vs far ACC column (§7.4)", () => {
 });
 
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
-  const dbl = WEAPONS.longRange["Double MG"]; // rof 8, Full Auto, acc [1,0]
-  const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3
+  const dbl = WEAPONS.longRange["Double MG"]; // rof 6, Full Auto, acc [1,0]
+  const dice = [1, 2, 3, 4, 5, 6, 1, 1]; // 6 base + 2 full auto = 8 dice; modAim near = 4 - 1 = 3
   const res = rollToHit(attacker, dbl, { range: "near", cover: 0, fullAuto: true }, dice, () => 0);
-  assert.equal(res.rof, 10);
-  assert.equal(res.hits, 5);          // dice >=3 or ==6: 3,4,5,6,6
+  assert.equal(res.rof, 8);
+  assert.equal(res.hits, 4);          // dice >=3 or ==6: 3,4,5,6
   assert.equal(res.fireModeHeat, 3);  // three 1s under Full Auto
 });
 
@@ -161,7 +161,7 @@ test("effectiveWeaponProfile applies selected ROF, STR, perk, range, and far-pen
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
 
   const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
-  assert.equal(computeStr(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 10);
+  assert.equal(computeStr(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 9); // STR 8 + Depleted Core +1
 
   const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "keen-edge" });
   assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Rend"), true);

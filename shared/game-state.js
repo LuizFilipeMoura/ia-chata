@@ -21,8 +21,8 @@ export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":      { rof: 8, str: 4,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Hot", "Raking Fire"] },
-    "Double MG":     { rof: 8, str: 6,  acc: [1, 0],  rng: [9, 18],  perks: ["Full Auto", "Raking Fire"] },
+    "Mini Gun":      { rof: 8, str: 5,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Hot", "Raking Fire"] },
+    "Double MG":     { rof: 6, str: 6,  acc: [1, 0],  rng: [9, 18],  perks: ["Full Auto", "Raking Fire"] },
     "Autocannon":    { rof: 4, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"] },
     "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30], perks: ["Charged Shot", "Precision"] },
     "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Charged Shot", "Incendiary"] },
@@ -30,8 +30,8 @@ export const WEAPONS = {
     "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16],  perks: ["Armour Piercing", "Hot"] },
   },
   melee: {
-    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Shock"] },
-    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Cleave"] },
+    "Sword":         { rof: 3, str: 7,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Shock"] },
+    "Circular Saw":  { rof: 3, str: 7,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Cleave"] },
     "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Rend"] },
     "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [2, 2], perks: ["Melee", "Armour Piercing"] },
     "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], perks: ["Melee", "Impale"] },
@@ -133,7 +133,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Autocannon": [
     { id: "ap-shells", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "depleted-core", name: "Depleted Core", tag: "+2 STR", effect: { str: 2 } },
+    { id: "depleted-core", name: "Depleted Core", tag: "+1 STR", effect: { str: 1 } },
   ],
   "Arc Gun": [
     { id: "systems-overload", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
@@ -156,7 +156,7 @@ export const WEAPON_UPGRADES = {
     { id: "sunder", name: "Sunder", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
   ],
   "Chainsaw": [
-    { id: "high-rev-motor", name: "High-Rev Motor", tag: "+2 STR; +1 heat per attack", effect: { str: 2, heat: 1 } },
+    { id: "high-rev-motor", name: "High-Rev Motor", tag: "+1 STR; +1 heat per attack", effect: { str: 1, heat: 1 } },
     { id: "ripper-teeth", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
   ],
   "Claw": [
