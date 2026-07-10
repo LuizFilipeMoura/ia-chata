@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { barClass } from "../../lib/rigView";
-import type { Rig, Loc } from "../../state/types";
+import type { Rig, Loc, Component } from "../../state/types";
 
 interface Props { rig: Rig; loc: Loc; onCommand: (verb: string, attrs: Record<string, unknown>) => void }
 
 export function CompRow({ rig, loc, onCommand }: Props) {
-  const c = rig[loc];
+  // `loc` is a part name (hull/arms/legs/engine, or tank/walker parts like
+  // tracks/turret/mount) — all share the Component shape { sp, max, destroyed }.
+  const c = rig[loc as keyof Rig] as Component;
   const label = loc.charAt(0).toUpperCase() + loc.slice(1);
   const text = c.destroyed ? "DESTROYED" : c.sp === 0 ? "CATASTROPHIC" : `${c.sp}/${c.max}`;
 

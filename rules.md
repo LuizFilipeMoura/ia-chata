@@ -117,7 +117,7 @@ An Impact Roll total **below** a location's Direct threshold does nothing (it gl
    - Light / Medium / Heavy: **2 weapons — one Long Range and one Melee.**
    - Colossal: **one Long Range + one Melee, plus 1 Hull-mounted weapon** of either type (3 weapons total).
    - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **STR then scales with the chassis** (Light −2 / Medium +0 / Heavy +2 / Colossal +4, §12).
-   - Each equipped weapon has **two upgrade options**. Choose **one** upgrade for the Long Range weapon and **one** upgrade for the Melee weapon when the Rig is commissioned. A selected upgrade modifies only that weapon.
+   - Each equipped weapon has **three upgrade options — one of each nature (Field / Tuned / Prototype)** (§12). Choose **one** upgrade for the Long Range weapon and **one** for the Melee weapon when the Rig is commissioned; a Rig may run **at most one Prototype**. A selected upgrade modifies only that weapon.
 
 ### Balancing without points
 - **Balanced game (recommended):** both sides field the **same number of Rigs in each weight class** (mirror the composition).
@@ -398,26 +398,26 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 ### Weapon Upgrades
 
-Each weapon has **two upgrade options**. When a Rig is commissioned, choose **one** upgrade for each equipped weapon. The selected upgrade changes only that weapon.
+Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures* above). When a Rig is commissioned, choose **one** upgrade for each equipped weapon; a Rig may run **at most one Prototype** across its two weapons. Full Tuned/Prototype mechanics are detailed below the table.
 
-| Weapon | Upgrade Option A | Upgrade Option B |
-|---|---|---|
-| Mini Gun | **Extended Belt:** +2 ROF; attack dice showing 1 add 1 heat | **Suppressive Fire:** gains Shock |
-| Double MG | **Tracer Rounds:** gains Incendiary | **Gyro Mount:** reroll one missed to-hit die |
-| Autocannon | **AP Shells:** gains Armour Piercing | **Depleted Core:** +2 STR |
-| Arc Gun | **Systems Overload:** on hit, target loses 1 action on its next activation | **Ion Burn:** gains Incendiary |
-| Mortar | **Airburst Fuze:** ignores cover | **Cluster Shells:** on hit, deal 1 SP to a second random location on the target |
-| Sniper Cannon | **Match Barrel:** no far-range ACC penalty | **Marksman Optics:** gains Precision |
-| Sword | **Duelist's Balance:** gains Precision | **Keen Edge:** gains Rend |
-| Circular Saw | **Tempered Teeth:** gains Armour Piercing | **Sunder:** once per damaging attack, the struck location's max SP is reduced by 1, to a minimum of 1 |
-| Chainsaw | **High-Rev Motor:** +2 STR; attacking adds +1 heat | **Ripper Teeth:** gains Rend |
-| Claw | **Vice Grip:** gains Impale | **Rending Talons:** gains Rend |
-| Lance | **Couched Reach:** melee range increases by 1" | **Spearpoint:** gains Impale |
-| Wrecking Ball | **Haymaker:** +3 STR | **Wrecking Momentum:** gains Staggering |
-| Siege Maul | **Breaching Round:** Hull SP this weapon strips cannot be repaired until the end of the next round | **Extended Barrel:** +4" to both range bands (12 / 20) |
-| Bulwark Shield | **Tower Shield:** while Raise Shield is active, front *and side* attacks are negated (rear at −4) | **Boss Spike:** gains Staggering |
-| Missile Barrage | **Swarm Warheads:** +2 ROF | **Shaped Charges:** gains Armour Piercing |
-| Flamethrower | **Pressurized Tank:** +2 STR; attacking adds +1 heat | **Sticky Fuel:** gains Rend |
+| Weapon | Field | Tuned | Prototype |
+|---|---|---|---|
+| Mini Gun | Suppressive Fire (Shock) | Extended Belt (+2 ROF; 1s add heat) | Suppression Lock |
+| Double MG | Gyro Mount (reroll a miss) | Pinning Burst (4+ hits → −1 action) | Kneecapper |
+| Autocannon | Depleted Core (+2 STR) | AP Shells (Armour Piercing) | Penetrator Rounds |
+| Arc Gun | Ion Burn (Incendiary) | Systems Overload (−1 action) | Ion Storm |
+| Mortar | Cluster Shells (2nd location) | Airburst Fuze (ignores cover) | Barrage *(deferred — spatial)* |
+| Sniper Cannon | Marksman Optics (Precision) | Cold Bore (+3 STR vs undamaged) | Enfilade *(deferred — spatial)* |
+| Siege Maul | Reinforced Head (+2 STR) | Breaching Round (Hull no-repair) | Piledriver Protocol |
+| Missile Barrage | Swarm Warheads (+2 ROF) | Shaped Charges (Armour Piercing) | Fire Control Lock |
+| Sword | Duelist's Balance (Precision) | Opportunist (+3 STR vs disrupted) | Superconductor Edge |
+| Circular Saw | Tempered Teeth (Armour Piercing) | Sunder (−1 max SP struck) | Dismember |
+| Chainsaw | Ripper Teeth (Rend) | Bloodletter (+1 ROF vs damaged) | Redline Governor |
+| Claw | Rending Talons (Rend) | Vice Grip (Impale) | Breach Grip |
+| Lance | Couched Reach (+2" reach) | Full Tilt (+3 STR charge) | Skewer |
+| Wrecking Ball | Haymaker (+3 STR) | Momentum Swing (+2 STR charge) | Tow Chain *(deferred — spatial)* |
+| Bulwark Shield | Tower Shield (front+side) | Anvil Boss (riposte) | Emplacement |
+| Flamethrower | Sticky Fuel (Rend) | Napalm (Burning) | Conflagration |
 
 #### Tuned / Prototype Upgrade Mechanics
 
