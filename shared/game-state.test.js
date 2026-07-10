@@ -8,7 +8,7 @@ import {
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
-  NATURES, upgradeNature,
+  NATURES, upgradeNature, countPrototypes,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -168,6 +168,16 @@ test("every weapon offers exactly one upgrade of each nature", () => {
     const natures = ups.map((u) => u.nature).sort();
     assert.deepEqual(natures, ["field", "prototype", "tuned"], `${weapon} natures`);
   }
+});
+
+test("countPrototypes counts prototype picks across a rig's two upgrades", () => {
+  // Autocannon penetrator-rounds is prototype; depleted-core is field.
+  assert.equal(countPrototypes({ longRange: "Autocannon", melee: "Claw" },
+    { longRange: "penetrator-rounds", melee: "breach-grip" }), 2);
+  assert.equal(countPrototypes({ longRange: "Autocannon", melee: "Claw" },
+    { longRange: "penetrator-rounds", melee: "vice-grip" }), 1);
+  assert.equal(countPrototypes({ longRange: "Autocannon", melee: "Claw" },
+    { longRange: "depleted-core", melee: "vice-grip" }), 0);
 });
 
 test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {

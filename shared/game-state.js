@@ -187,6 +187,15 @@ export function upgradeNature(weaponName, upgradeId) {
   return u?.nature || null;
 }
 
+// How many of a rig's two chosen weapon upgrades are Prototype nature. Used to
+// enforce "at most one Prototype per rig" (AGENTS.md).
+export function countPrototypes(weapons = {}, upgrades = {}) {
+  let n = 0;
+  if (upgradeNature(weapons.longRange, upgrades.longRange) === "prototype") n++;
+  if (upgradeNature(weapons.melee, upgrades.melee) === "prototype") n++;
+  return n;
+}
+
 // Weapon upgrades (Part 2 of the design) — every weapon offers exactly three
 // signature upgrades, one of each nature (Field / Tuned / Prototype), authored
 // as flavor + a toolkit-effect tag. New-mechanic Prototype/Tuned upgrades ship
