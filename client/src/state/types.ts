@@ -49,6 +49,7 @@ export interface Rig {
   preparation?: Preparation | null;
   activated: boolean;
   destroyed: boolean;
+  engagedWith?: number | null;
 }
 
 export interface Side {

@@ -195,3 +195,29 @@ test("Flat-pick fired: 'reload' enabled, 'fire' disabled with correct note", () 
   assert.equal(fire.enabled, false);
   assert.ok(fire.note.includes("Ranged weapon spent"));
 });
+
+test("availableActions blocks Move/Sprint and enables Disengage while engaged", () => {
+  const rig = makeRig(1, "a1", "light", "a", { lr: "Mini Gun", melee: "Sword" });
+  rig.engagedWith = 2;
+  const turn = { actionsMax: 3, actionsUsed: 0, longRangeShots: 0 };
+  const list = availableActions(rig, turn);
+  const by = (k) => list.find((x) => x.key === k);
+  assert.equal(by("move").enabled, false);
+  assert.equal(by("sprint").enabled, false);
+  assert.equal(by("disengage").enabled, true);
+});
+
+test("availableActions enables Move and disables Disengage when not engaged", () => {
+  const rig = makeRig(1, "a1", "light", "a", { lr: "Mini Gun", melee: "Sword" });
+  const turn = { actionsMax: 3, actionsUsed: 0, longRangeShots: 0 };
+  const list = availableActions(rig, turn);
+  const by = (k) => list.find((x) => x.key === k);
+  assert.equal(by("move").enabled, true);
+  assert.equal(by("disengage").enabled, false);
+});
+
+test("rigModifiers surfaces an Engaged chip", () => {
+  const rig = makeRig(1, "a1", "light", "a", { lr: "Mini Gun", melee: "Sword" });
+  rig.engagedWith = 2;
+  assert.ok(rigModifiers(rig).some((m) => m.key === "engaged"));
+});

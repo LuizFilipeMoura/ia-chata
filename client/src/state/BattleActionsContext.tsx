@@ -21,7 +21,7 @@ import type { Rig, PrepType } from "./types";
 // text (battle.js:11-16).
 const ACTION_ICONS: Record<string, string> = {
   move: "👣", sprint: "🏃", fire: "🎯", aimed: "🔭",
-  reload: "🔄", repair: "🔧", prepare: "🛡️", shutdown: "⏻",
+  reload: "🔄", repair: "🔧", prepare: "🛡️", shutdown: "⏻", disengage: "🔓",
   harden: "🧱", purge: "❄️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹",
 };
 const iconFor = (key: string) => ACTION_ICONS[key] || "⚙️";
@@ -61,10 +61,12 @@ const Ctx = createContext<BattleActionsApi | null>(null);
 // MOVE_HOLD_MS (long enough to actually push the Rig) before it unlocks. Cancel
 // is live the whole time so a misclick isn't a trap (battle.js:349-426).
 function MoveBody({
-  rig, actionKey, onCancel, onConfirm,
+  rig, actionKey, enemies, onEngageChange, onCancel, onConfirm,
 }: {
   rig: Rig;
   actionKey: string;
+  enemies: Rig[];
+  onEngageChange: (v: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -117,6 +119,21 @@ function MoveBody({
       <p className={"dwr-hint dwr-move-call" + (done ? " is-ready" : "")}>
         {done ? "✔ Model placed? Confirm to lock in the move." : "Move the Rig on the table now, then confirm."}
       </p>
+      {enemies.length > 0 && (
+        <label className="dwr-engage">
+          <span className="dwr-engage-label">Engage an enemy in reach (optional)</span>
+          <select
+            className="dwr-engage-select"
+            defaultValue=""
+            onChange={(e) => onEngageChange(e.target.value)}
+          >
+            <option value="">— none —</option>
+            {enemies.map((e) => (
+              <option key={e.id} value={e.name}>{e.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="dwr-actions">
         <button type="button" className="dwr-btn ghost" onClick={onCancel}>
           <span>Cancel</span>
@@ -170,6 +187,10 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   const openMove = useCallback(
     (rig: Rig, key: string) => {
       const sprint = key === "sprint";
+      const enemies = (rigsRef.current || []).filter(
+        (r) => !r.destroyed && r.owner !== rig.owner && r.engagedWith == null,
+      );
+      const state: { engage: string } = { engage: "" };
       openDrawer({
         title: `${iconFor(key)} ${sprint ? "Sprint" : "Move"} — ${rig.name}`,
         tone: "oil",
@@ -178,10 +199,14 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
           <MoveBody
             rig={rig}
             actionKey={key}
+            enemies={enemies}
+            onEngageChange={(v) => (state.engage = v)}
             onCancel={() => closeDrawer()}
             onConfirm={() => {
               closeDrawer();
-              sendCommand("action", { name: rig.name, action: key });
+              const attrs: Record<string, unknown> = { name: rig.name, action: key };
+              if (state.engage) attrs.engage = state.engage;
+              sendCommand("action", attrs);
             }}
           />
         ),
