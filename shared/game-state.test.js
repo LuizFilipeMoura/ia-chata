@@ -2674,3 +2674,89 @@ test("Raise Shield without Anvil Boss does not riposte", () => {
   assert.equal(findRig(r, "a1").ripostedThisRound, false);
   assert.equal(countRiposte(r), 0);
 });
+
+// ── §13 Skewer (Lance) ───────────────────────────────────────────────────────
+// A Lance with the Skewer prototype impales the rig it pins: while the mark holds,
+// Disengaging from the skewerer costs the fleeing rig a free STR-11 Lance strike.
+function skewerRoom() {
+  const r = createRoom("SKEWER");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "add", attrs: {
+    name: "a1", class: "medium", owner: "a", longRange: "Autocannon", melee: "Lance", meleeUpgrade: "skewer",
+  } });
+  applyCommand(r, { verb: "add", attrs: {
+    name: "b1", class: "medium", owner: "b", longRange: "Autocannon", melee: "Lance", meleeUpgrade: "skewer",
+  } });
+  for (let i = 2; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+    applyCommand(r, { verb: "add", attrs: { name: `b${i}`, class: "light", owner: "b", ...W } });
+  }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  clearPendingAnswer(r);
+  return r;
+}
+
+const countSkewer = (r) => r.game.resolutions.filter((x) => x.kind === "skewer").length;
+const spSum = (rig) => rig.hull.sp + rig.arms.sp + rig.legs.sp + rig.engine.sp;
+const lanceLand = { toHit: [6], impacts: [6], location: 1 };
+
+test("a Lance-skewer hit marks the engaged target as skewered", () => {
+  const r = skewerRoom(); // b's turn
+  assert.equal(r.game.turn.side, "b");
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", dice: lanceLand,
+  } });
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  assert.equal(b1.engagedWith, a1.id);
+  assert.equal(a1.engagedWith, b1.id);
+  assert.equal(a1.skeweredBy, b1.id); // the pinned target remembers its skewerer
+});
+
+test("disengaging from a Skewer provokes a free STR-11 lance strike, then clears", () => {
+  const r = skewerRoom();
+  const a1 = findRig(r, "a1"); // the skewerer
+  const b1 = findRig(r, "b1"); // the victim — disengages on b's turn
+  __test.setEngagement(b1, a1);
+  b1.skeweredBy = a1.id;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const spBefore = spSum(b1);
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } }, {}, { random: () => 0.999 });
+  assert.equal(countSkewer(r), 1);                 // a skewer strike was resolved
+  assert.ok(spSum(b1) < spBefore, "victim took the free lance strike");
+  assert.equal(b1.skeweredBy, null);               // mark cleared
+  assert.equal(b1.engagedWith, null);              // engagement broken
+  assert.equal(a1.engagedWith, null);
+});
+
+test("a non-skewered engaged rig disengages with no free strike", () => {
+  const r = skewerRoom();
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  __test.setEngagement(b1, a1); // engaged but NOT skewered
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const spBefore = spSum(b1);
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } }, {}, { random: () => 0.999 });
+  assert.equal(countSkewer(r), 0);       // no skewer strike
+  assert.equal(spSum(b1), spBefore);     // no damage
+  assert.equal(b1.engagedWith, null);    // still disengages normally
+});
+
+test("if the skewerer is gone, the victim disengages with no strike and no crash", () => {
+  const r = skewerRoom();
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  __test.setEngagement(b1, a1);
+  b1.skeweredBy = a1.id;
+  a1.destroyed = true; // skewerer knocked out before the victim tears free
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const spBefore = spSum(b1);
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } }, {}, { random: () => 0.999 });
+  assert.equal(countSkewer(r), 0);       // dead skewerer can't strike
+  assert.equal(spSum(b1), spBefore);     // no damage
+  assert.equal(b1.skeweredBy, null);     // mark cleared anyway
+  assert.equal(b1.engagedWith, null);    // and the rig disengages
+});

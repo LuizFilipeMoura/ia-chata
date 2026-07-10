@@ -265,7 +265,7 @@ export const WEAPON_UPGRADES = {
   "Lance": [
     { id: "couched-reach", nature: "field", name: "Couched Reach", tag: "Doubles melee reach to 4\"", effect: { range: 2 } },
     { id: "full-tilt", nature: "tuned", name: "Full Tilt", tag: "Charge in for +3 STR", effect: { charge: 3 } },
-    { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", effect: {} }, // TODO(mechanics)
+    { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", effect: { skewer: true } },
   ],
   "Wrecking Ball": [
     { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
@@ -420,6 +420,9 @@ function ensureRigShape(rig) {
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
   if (typeof rig.burning !== "number") rig.burning = 0;
   if (typeof rig.ripostedThisRound !== "boolean") rig.ripostedThisRound = false;
+  // Skewer (§13, Lance) — the id of the rig that impaled this one in the melee
+  // lock; Disengaging from it costs a free STR-11 lance strike.
+  if (rig.skeweredBy === undefined) rig.skeweredBy = null;
   if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
   if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
@@ -547,6 +550,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     hullRepairLock: 0,
     burning: 0,
     ripostedThisRound: false,
+    // Skewer (§13, Lance) — set to the skewerer's id while impaled in the lock.
+    skeweredBy: null,
     // Penetrator Rounds (§13, Autocannon) — belt-cycle counter + the ROF-halving
     // downside carried into the attack right after a penetrator shot.
     autocannonShots: 0,
@@ -870,7 +875,13 @@ function clearEngagement(room, rig) {
   if (!rig || rig.engagedWith == null) return;
   const partner = findRigById(room, rig.engagedWith);
   rig.engagedWith = null;
-  if (partner) partner.engagedWith = null;
+  // Skewer (§13, Lance) — the impale can't outlive the lock; clear the mark on
+  // both ends however the engagement ends (Disengage, destruction, remove, …).
+  if (rig.skeweredBy != null) rig.skeweredBy = null;
+  if (partner) {
+    partner.engagedWith = null;
+    if (partner.skeweredBy != null) partner.skeweredBy = null;
+  }
 }
 // Enemy-only, both-alive guard around setEngagement (used by the melee and
 // move-into triggers). `room` is unused today but kept for signature symmetry.
@@ -1157,6 +1168,40 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
   return true;
 }
 
+// Skewer (§13, Lance) — after a melee Lance attack resolves, mark the target as
+// impaled if the Skewer prototype is fitted, the blow dealt SP (>=1 damaging
+// hit), and the attacker↔target melee lock actually holds. The mark is stored on
+// the pinned target (`skeweredBy` = the skewerer's id) and read by Disengage.
+function maybeSkewer(room, attacker, target, incomingWeapon, res) {
+  if (incomingWeapon !== "melee") return false;                 // melee (Lance) only
+  if (!attacker || !target || attacker.destroyed) return false;
+  if (!res || !(res.hits > 0)) return false;                    // must land a hit
+  const dealtSp = Array.isArray(res.impacts) && res.impacts.some((h) => h.sp > 0);
+  if (!dealtSp) return false;                                   // and deal SP
+  const effect = effectiveWeaponProfile("melee", attacker.weapons?.melee, attacker)?.upgradeEffect;
+  if (!effect?.skewer) return false;                            // Skewer prototype only
+  // Only mark when the lock actually holds attacker↔target (one-to-one).
+  if (attacker.engagedWith !== target.id || target.engagedWith !== attacker.id) return false;
+  target.skeweredBy = attacker.id;
+  return true;
+}
+
+// Skewer's Disengage payload — one free STR-11 Lance strike from the skewerer
+// onto the fleeing rig as it tears itself off the point. Reuses the same
+// strOverride escape hatch and resolveAttack path as the Anvil Boss riposte.
+function resolveSkewerStrike(room, skewerer, victim, random) {
+  pushResolution(room, {
+    kind: "skewer", actor: skewerer.owner, rigId: skewerer.id, rolls: [],
+    summary: `${victim.name} tears free of ${skewerer.name}'s Lance — Skewer free strike (STR 11).`,
+    effects: ["Skewer — free STR 11 lance strike on Disengage"],
+  });
+  resolveAttack(room, skewerer, victim, {
+    weapon: "melee", target: victim.name,
+    arc: "front", range: "near", aimed: false, aimedLoc: "hull",
+    engaged: skewerer.engagedWith != null, strOverride: 11,
+  }, random, combatCtx());
+}
+
 // One action during an activation. Returns whether anything changed.
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
@@ -1245,12 +1290,15 @@ function performAction(room, rig, act, a, random) {
       }
       // Anvil Boss — a raised shield answers the first melee attacker to land a hit.
       maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
+      // Skewer — a damaging Lance blow impales the target it just locked.
+      maybeSkewer(room, rig, target, a.weapon, res);
       return true;
     }
     const res = resolveFire(room, rig, target, a, act, random);
     // The shield may already be revealed (face-up) from an earlier attack this
     // round; the riposte still gates on a landed hit and ripostedThisRound.
     if (res) maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
+    if (res) maybeSkewer(room, rig, target, a.weapon, res);
     return !!res;
   }
   if (act === "move" || act === "sprint") {
@@ -1277,6 +1325,14 @@ function performAction(room, rig, act, a, random) {
     // §engagement — break the melee lock. The budget/`def` guard above already
     // ran (a slot is available). No-op if the rig isn't actually engaged.
     if (rig.engagedWith == null) return false;
+    // Skewer (§13, Lance) — if this rig is impaled by the very partner it's
+    // locked to, tearing free provokes one free STR-11 lance strike before the
+    // lock breaks. A missing/destroyed skewerer just clears the mark (no strike).
+    if (rig.skeweredBy != null && rig.engagedWith === rig.skeweredBy) {
+      const skewerer = findRigById(room, rig.skeweredBy);
+      if (skewerer && !skewerer.destroyed) resolveSkewerStrike(room, skewerer, rig, random);
+      rig.skeweredBy = null;
+    }
     clearEngagement(room, rig);
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
