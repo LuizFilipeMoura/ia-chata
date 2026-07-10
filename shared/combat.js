@@ -6,6 +6,14 @@ import {
 } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
 
+// Perks now come solely from the chosen weapon upgrade; a base weapon (or a
+// profile built straight from WEAPONS/UNIT_WEAPONS) may carry no perks array at
+// all, so every read goes through this guard. `Melee` is NOT a perk — it is the
+// structural `profile.melee` flag.
+function hasPerk(profile, name) {
+  return Array.isArray(profile.perks) && profile.perks.includes(name);
+}
+
 function rollD(sides, provided, random) {
   if (provided != null) {
     const v = Math.floor(Number(provided));
@@ -19,7 +27,7 @@ export function computeModifiedAim(attacker, profile, opts) {
   const base = AIM[attacker.weightClass] ?? 4;
   const weaponAcc = profile.acc[opts.range === "far" ? 1 : 0] || 0;
   const cover = profile.upgradeEffect?.ignoreCover ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
-  const aimedPenalty = opts.aimed && !profile.perks.includes("Precision") ? -2 : 0;
+  const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
   const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty;
   return base - accTotal;
@@ -29,9 +37,9 @@ export function computeModifiedAim(attacker, profile, opts) {
 // (each 1 rolled under Full Auto / Charged Shot adds 1 heat, §6).
 export function rollToHit(attacker, profile, opts, providedDice, random) {
   const modAim = computeModifiedAim(attacker, profile, opts);
-  const fullAuto = opts.fullAuto && profile.perks.includes("Full Auto");
+  const fullAuto = opts.fullAuto && hasPerk(profile, "Full Auto");
   const rof = profile.rof + (fullAuto ? 2 : 0);
-  const charged = opts.charged && profile.perks.includes("Charged Shot");
+  const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
   const dice = [];
@@ -55,7 +63,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
 
 // §12/§7 — STR = weapon STR + weight modifier + Charged Shot.
 export function computeStr(attacker, profile, opts) {
-  const charged = opts.charged && profile.perks.includes("Charged Shot") ? 2 : 0;
+  const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
   return profile.str + weightMod + charged;
 }
@@ -63,12 +71,12 @@ export function computeStr(attacker, profile, opts) {
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
 // side/rear values and cannot damage the front arc (returns null = auto-fail).
 export function arcBonus(profile, arc) {
-  if (profile.perks.includes("Raking Fire")) {
+  if (hasPerk(profile, "Raking Fire")) {
     if (arc === "side") return 4;
     if (arc === "rear") return 8;
     return null;
   }
-  if (profile.perks.includes("Melee")) return 0;
+  if (profile.melee) return 0;
   if (arc === "side") return 2;
   if (arc === "rear") return 4;
   return 0;
@@ -91,8 +99,8 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     const die = rollD(6, providedDice?.impacts?.[i], random);
     if (bonus == null || shieldNegates) { out.push({ die, total: 0, tier: "none", sp: 0 }); continue; }
     let extra = 0;
-    if (profile.perks.includes("Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
-    if (profile.perks.includes("Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
+    if (hasPerk(profile, "Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
+    if (hasPerk(profile, "Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
     const total = die + str + bonus + braced + hardened + shieldBlunt + extra;
     const sev = impactSeverity(total, row);
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
@@ -120,7 +128,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (slot === "unit" && attacker.loaded.unit === false && !opts.autoReload) return { ok: false, reason: "reload" };
 
   const th = rollToHit(attacker, profile, opts, opts.dice?.toHit, random);
-  const heat = (profile.perks.includes("Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
+  const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
   if (slot === "unit") attacker.loaded.unit = false;
 
@@ -167,7 +175,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
 
 // §13 — post-hit perk effects (only reached when at least one hit landed).
 function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
-  const perks = profile.perks;
+  const perks = profile.perks || [];
   const effects = [];
   if (perks.includes("Incendiary")) { ctx.bumpHeat(target, 1); effects.push("Incendiary +1 heat"); }
   if (perks.includes("Shock")) { target.speedHalvedNextRound = true; effects.push("Shock — speed halved"); }

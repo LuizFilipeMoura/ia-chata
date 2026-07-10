@@ -200,7 +200,7 @@ export function AttackWizard({
     const slot: WeaponSlot = flat ? "unit" : opt === weapons.melee ? "melee" : "longRange";
     const p = flat ? (UNIT_WEAPONS as any)[opt] : (WEAPONS as any)[slot]?.[opt];
     if (!p) return "";
-    return p.perks?.includes("Melee")
+    return p.melee
       ? `Reach ${p.rng[0]}" · ROF ${p.rof}`
       : `RNG ${p.rng[0]}–${p.rng[1]}" · ROF ${p.rof}`;
   };
@@ -210,9 +210,10 @@ export function AttackWizard({
     return t ? Math.max(0, t.actionsMax - t.actionsUsed) : 0;
   };
 
-  // Melee is a property of the weapon (the Melee perk), not the slot — so a
-  // flat-pick melee unit weapon (Dozer Blade) hides arc/range like a Rig's melee.
-  const isMelee = !!profileOf(state.weapon)?.perks?.includes("Melee");
+  // Melee is a structural property of the weapon (the `melee` flag), not the
+  // slot — so a flat-pick melee unit weapon (Dozer Blade) hides arc/range like a
+  // Rig's melee.
+  const isMelee = !!profileOf(state.weapon)?.melee;
   useEffect(() => {
     if (isMelee && state.range === "out") patch({ range: "near" });
     // eslint-disable-next-line react-hooks/exhaustive-deps

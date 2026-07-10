@@ -241,14 +241,14 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
                   onClick={() => patch({ unit: name })}
                 >
                   <div className="rw-equip-family">
-                    {w.perks.includes("Melee") ? "Melee" : "Ranged"}
+                    {w.melee ? "Melee" : "Ranged"}
                   </div>
                   <div className="rw-equip-label">{name}</div>
                   <div className="rw-equip-passive">
                     ROF {w.rof} · STR {w.str} · RNG {w.rng[0]}/{w.rng[1]}"
                   </div>
                   <div className="rw-equip-active">
-                    {w.perks.length ? w.perks.join(", ") : "—"}
+                    {w.perks?.length ? w.perks.join(", ") : "—"}
                   </div>
                 </button>
               ))}

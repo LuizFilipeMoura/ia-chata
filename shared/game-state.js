@@ -19,26 +19,29 @@ export const MAX_OVERHEAT_BONUS = 10;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
+// Base weapons carry stats only. Perks are delivered exclusively by the chosen
+// weapon upgrade (see WEAPON_UPGRADES); `melee: true` is a structural flag (not a
+// perk) that drives arc/range logic in combat.js and the wizards.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":      { rof: 8, str: 4,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Hot", "Raking Fire"] },
-    "Double MG":     { rof: 8, str: 6,  acc: [1, 0],  rng: [9, 18],  perks: ["Full Auto", "Raking Fire"] },
-    "Autocannon":    { rof: 4, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"] },
-    "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30], perks: ["Charged Shot", "Precision"] },
-    "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Charged Shot", "Incendiary"] },
-    "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: ["Precision"] },
-    "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16],  perks: ["Armour Piercing", "Hot"] },
-    "Missile Barrage":{ rof: 4, str: 9,  acc: [-1, 0], rng: [15, 30], perks: ["Full Auto", "Incendiary"] },
+    "Mini Gun":      { rof: 8, str: 4,  acc: [1, -1], rng: [9, 18] },
+    "Double MG":     { rof: 8, str: 6,  acc: [1, 0],  rng: [9, 18] },
+    "Autocannon":    { rof: 4, str: 8,  acc: [0, -1], rng: [12, 24] },
+    "Arc Gun":       { rof: 2, str: 10, acc: [0, 1],  rng: [15, 30] },
+    "Mortar":        { rof: 3, str: 9,  acc: [-1, 0], rng: [15, 30] },
+    "Sniper Cannon": { rof: 1, str: 12, acc: [0, -1], rng: [12, 24] },
+    "Siege Maul":    { rof: 1, str: 13, acc: [0, -1], rng: [8, 16] },
+    "Missile Barrage":{ rof: 4, str: 9,  acc: [-1, 0], rng: [15, 30] },
   },
   melee: {
-    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Shock"] },
-    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Cleave"] },
-    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Rend"] },
-    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [2, 2], perks: ["Melee", "Armour Piercing"] },
-    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], perks: ["Melee", "Impale"] },
-    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Staggering"] },
-    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] },
-    "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], perks: ["Melee", "Incendiary", "Cleave"] },
+    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [2, 2], melee: true },
+    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], melee: true },
+    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
+    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
+    "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], melee: true },
   },
 };
 
@@ -46,12 +49,12 @@ export const WEAPONS = {
 // pick exactly one. Marked flatPick: true so combat.js skips the weight-class
 // STR modifier — the listed STR is the shot's STR on any chassis.
 export const UNIT_WEAPONS = {
-  "Tank Cannon":      { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: [],                         flatPick: true },
-  "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"],              flatPick: true },
-  "Coaxial MG":       { rof: 6, str: 5,  acc: [1, -1], rng: [9, 18],  perks: ["Full Auto", "Raking Fire"], flatPick: true },
-  "Rocket Pod":       { rof: 2, str: 10, acc: [0, 0],  rng: [15, 30], perks: ["Charged Shot"],           flatPick: true },
-  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], perks: ["Melee"],                flatPick: true },
-  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], perks: ["Melee", "Impale"],      flatPick: true },
+  "Tank Cannon":      { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], flatPick: true },
+  "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], flatPick: true },
+  "Coaxial MG":       { rof: 6, str: 5,  acc: [1, -1], rng: [9, 18],  flatPick: true },
+  "Rocket Pod":       { rof: 2, str: 10, acc: [0, 0],  rng: [15, 30], flatPick: true },
+  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -242,7 +245,7 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     // Flat-pick weapons have no upgrades and no weight-class scaling. Ship a
     // shape identical to the rig-catalog result so downstream code (computeStr,
     // rollToHit) doesn't need to know which domain the profile came from.
-    return { ...base, upgradeEffect: {} };
+    return { ...base, perks: base.perks || [], upgradeEffect: {} };
   }
   const base = WEAPONS[slot]?.[weaponName];
   if (!base) return null;
@@ -1356,7 +1359,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           const secondShot = slot === "longRange" && (rt.longRangeShots || 0) >= 1;
           if (slot === "longRange") attacker.loaded.longRange = false;
           const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
-          const hot = profile?.perks.includes("Hot") ? 1 : 0;
+          const hot = profile?.perks?.includes("Hot") ? 1 : 0;
           bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot + (secondShot ? 1 : 0));
           rt.actionsUsed += cost;
           if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;

@@ -66,17 +66,20 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].acc, [1, -1]);
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].rng, [9, 18]);
-  assert.ok(WEAPONS.longRange["Mini Gun"].perks.includes("Raking Fire"));
+  // Base weapons are stat-only; no perks. Ranged weapons carry no melee flag.
+  assert.equal(WEAPONS.longRange["Mini Gun"].perks, undefined);
+  assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
   assert.equal(WEAPONS.melee["Lance"].str, 11);
-  assert.ok(WEAPONS.melee["Sword"].perks.includes("Melee"));
+  assert.equal(WEAPONS.melee["Sword"].melee, true);
+  assert.equal(WEAPONS.melee["Sword"].perks, undefined);
 });
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, str: 13, acc: [0, -1], rng: [8, 16], perks: ["Armour Piercing", "Hot"] });
+  assert.deepEqual(maul, { rof: 1, str: 13, acc: [0, -1], rng: [8, 16] });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
-  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], perks: ["Melee", "Bulwark"] });
+  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 8 + 8.
   assert.equal(Object.keys(WEAPONS.longRange).length, 8);
@@ -1072,26 +1075,45 @@ test("ram action is removed — melee covers close combat, so it is a no-op", ()
   assert.equal(r.game.turn.actionsUsed, 0);
 });
 
-test("Incendiary adds target heat; Shock halves target speed next round", () => {
+// Perks now come only from the chosen upgrade, so these drive the effect through
+// the upgrade that grants it: Tracer Rounds → Incendiary, Suppressive Fire → Shock.
+test("Incendiary (via Tracer Rounds) adds 1 heat to the target", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Double MG";
+  b1.weaponUpgrades.longRange = "tracer-rounds";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   const heatBefore = a1.engine.heat;
-  // Fire the Sword (Shock) — melee, 2 hits guaranteed.
   applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], impacts: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
   } });
-  assert.equal(a1.speedHalvedNextRound, true);
-  assert.equal(a1.engine.heat, heatBefore); // Sword is not Incendiary
+  assert.equal(a1.engine.heat, heatBefore + 1);
 });
 
-test("Impale immobilises on a D12 of 8+", () => {
+test("Shock (via Suppressive Fire) halves target speed next round", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.longRange = "Mini Gun";
+  b1.weaponUpgrades.longRange = "suppressive-fire";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], impacts: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
+  } });
+  assert.equal(a1.speedHalvedNextRound, true);
+});
+
+test("Impale (via Spearpoint) immobilises on a D12 of 8+", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
   b1.weapons.melee = "Lance";
+  b1.weaponUpgrades.melee = "spearpoint";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
@@ -1798,7 +1820,7 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
     assert.equal(typeof w.str, "number");
     assert.ok(Array.isArray(w.acc));
     assert.ok(Array.isArray(w.rng));
-    assert.ok(Array.isArray(w.perks));
+    assert.equal(w.perks, undefined, `${name} is stat-only, no perks`);
     assert.equal(w.flatPick, true, `${name} carries flatPick marker`);
   }
 });

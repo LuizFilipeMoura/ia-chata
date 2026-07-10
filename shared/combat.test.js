@@ -24,7 +24,8 @@ test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () 
   const claw = WEAPONS.melee["Claw"]; // acc [1,1]
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 0 }), 3); // 4 - 1
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 2 }), 5); // 4 - 1 + 2
-  const sniper = WEAPONS.longRange["Sniper Cannon"]; // Precision
+  // Perks now ride on the upgrade, so exercise Precision by injecting it (base is stat-only).
+  const sniper = { ...WEAPONS.longRange["Sniper Cannon"], perks: ["Precision"] };
   assert.equal(computeModifiedAim(attacker, sniper, { range: "near", cover: 0, aimed: true }), 4); // waived
   const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
   assert.equal(computeModifiedAim(attacker, autocannon, { range: "near", cover: 0, aimed: true }), 6); // 4 + 2
@@ -39,7 +40,7 @@ test("range band selects the weapon's near vs far ACC column (§7.4)", () => {
 });
 
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
-  const dbl = WEAPONS.longRange["Double MG"]; // rof 8, Full Auto, acc [1,0]
+  const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, acc [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3
   const res = rollToHit(attacker, dbl, { range: "near", cover: 0, fullAuto: true }, dice, () => 0);
   assert.equal(res.rof, 10);
@@ -49,7 +50,8 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
 
 test("computeStr applies weight and Charged Shot", () => {
   assert.equal(computeStr({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 10); // 12-2
-  assert.equal(computeStr({ weightClass: "medium" }, WEAPONS.longRange["Arc Gun"], { charged: true }), 12); // 10+0+2
+  const arcGun = { ...WEAPONS.longRange["Arc Gun"], perks: ["Charged Shot"] };
+  assert.equal(computeStr({ weightClass: "medium" }, arcGun, { charged: true }), 12); // 10+0+2
 });
 
 test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
@@ -57,8 +59,8 @@ test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
   assert.equal(arcBonus(auto, "front"), 0);
   assert.equal(arcBonus(auto, "side"), 2);
   assert.equal(arcBonus(auto, "rear"), 4);
-  assert.equal(arcBonus(WEAPONS.melee["Sword"], "rear"), 0); // melee
-  const mini = WEAPONS.longRange["Mini Gun"]; // Raking Fire
+  assert.equal(arcBonus(WEAPONS.melee["Sword"], "rear"), 0); // melee (structural flag)
+  const mini = { ...WEAPONS.longRange["Mini Gun"], perks: ["Raking Fire"] };
   assert.equal(arcBonus(mini, "front"), null); // front auto-fails
   assert.equal(arcBonus(mini, "side"), 4);
   assert.equal(arcBonus(mini, "rear"), 8);
@@ -90,7 +92,7 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
 });
 
 test("Raking Fire against the front arc deals no damage", () => {
-  const mini = WEAPONS.longRange["Mini Gun"];
+  const mini = { ...WEAPONS.longRange["Mini Gun"], perks: ["Raking Fire"] };
   const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",
     { arc: "front", hits: 3 }, { impacts: [6, 6, 6] }, () => 0);
   assert.equal(out.every((h) => h.sp === 0), true);
