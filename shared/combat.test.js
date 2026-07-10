@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
+import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
@@ -26,17 +26,27 @@ test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () 
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 2 }), 5); // 4 - 1 + 2
   // Perks now ride on the upgrade, so exercise Precision by injecting it (base is stat-only).
   const sniper = { ...WEAPONS.longRange["Sniper Cannon"], perks: ["Precision"] };
-  assert.equal(computeModifiedAim(attacker, sniper, { range: "near", cover: 0, aimed: true }), 4); // waived
+  assert.equal(computeModifiedAim(attacker, sniper, { distance: 22, cover: 0, aimed: true }), 2); // peak waived-penalty
   const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
-  assert.equal(computeModifiedAim(attacker, autocannon, { range: "near", cover: 0, aimed: true }), 6); // 4 + 2
+  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, cover: 0, aimed: true }), 5); // 4 - (1 - 2)
   assert.equal(computeModifiedAim({ weightClass: "medium", hull: { sp: 0 } }, claw, { range: "near", cover: 0 }), 4);
 });
 
-test("range band selects the weapon's near vs far ACC column (§7.4)", () => {
-  const mg = WEAPONS.longRange["Mini Gun"]; // acc [1, -1]
-  // The UI's inch slider derives this band; the server only sees near/far/out.
-  assert.equal(computeModifiedAim(attacker, mg, { range: "near", cover: 0 }), 3); // 4 - 1
-  assert.equal(computeModifiedAim(attacker, mg, { range: "far", cover: 0 }), 5);  // 4 - (-1)
+test("weaponAccAt peaks at the sweet spot and falls off with distance", () => {
+  const mg = WEAPONS.longRange["Mini Gun"]; // sweet 7, peak 2, dropoff 0.35
+  assert.equal(weaponAccAt(mg, 7), 2);                 // at sweet spot
+  assert.equal(weaponAccAt(mg, 2), 0);                 // |2-7|*0.35 = 1.75 -> 2 penalty
+  assert.equal(weaponAccAt(mg, 18), -2);               // |18-7|*0.35 = 3.85 -> 4 penalty
+  assert.equal(weaponAccAt(mg, undefined), 2);         // no distance -> peak (legacy fallback)
+  const claw = WEAPONS.melee["Claw"];                  // melee: scalar acc, distance-independent
+  assert.equal(weaponAccAt(claw, 99), 1);
+});
+
+test("computeModifiedAim uses distance-based accuracy for ranged weapons", () => {
+  const mg = WEAPONS.longRange["Mini Gun"];
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 7, cover: 0 }), 2);  // 4 - 2
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 2, cover: 0 }), 4);  // 4 - 0
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
 });
 
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {

@@ -22,10 +22,22 @@ function rollD(sides, provided, random) {
   return Math.floor((random || Math.random)() * sides) + 1;
 }
 
+// §7.4 — ranged accuracy as a function of measured distance: peak at the sweet
+// spot, falling off by `dropoff` per inch away from it. Melee weapons have a
+// fixed reach and keep their scalar `acc`. A missing distance (legacy callers /
+// tests) yields the peak — i.e. "at the sweet spot, in range".
+export function weaponAccAt(profile, distance) {
+  if (profile.melee) return profile.acc?.[0] || 0;
+  const d = Number(distance);
+  if (!Number.isFinite(d)) return profile.peak || 0;
+  const penalty = Math.round((profile.dropoff || 0) * Math.abs(d - profile.sweet));
+  return (profile.peak || 0) - penalty;
+}
+
 // §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
 export function computeModifiedAim(attacker, profile, opts) {
   const base = AIM[attacker.weightClass] ?? 4;
-  const weaponAcc = profile.acc[opts.range === "far" ? 1 : 0] || 0;
+  const weaponAcc = weaponAccAt(profile, opts.distance);
   const cover = profile.upgradeEffect?.ignoreCover ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
   const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
