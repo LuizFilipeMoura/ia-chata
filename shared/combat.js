@@ -285,6 +285,19 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
       effects.push(`Cleave → ${extra.name}`);
     }
   }
+  // Napalm — a non-stacking burn: raise the target's burning to the effect's
+  // value (never past it), leaving it to tick each activation until doused.
+  if (profile.upgradeEffect?.burn && !profile.upgradeEffect?.burnStacks) {
+    target.burning = Math.max(target.burning || 0, profile.upgradeEffect.burn);
+    effects.push(`Napalm — target burning ${target.burning}`);
+  }
+  // Conflagration — a stacking burn: +1 burn per hit-resolution, and the
+  // attacker runs itself hot (+1 heat) as the downside of the chain.
+  if (profile.upgradeEffect?.burnStacks) {
+    target.burning = (target.burning || 0) + 1;
+    ctx.bumpHeat(attacker, 1);
+    effects.push(`Conflagration — target burning ${target.burning}, +1 self-heat`);
+  }
   // Pinning Burst — 4+ landed hits pin the target for its next activation.
   if (profile.upgradeEffect?.pinOnHits && opts.hits >= profile.upgradeEffect.pinOnHits) {
     target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);

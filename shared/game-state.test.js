@@ -691,6 +691,29 @@ test("activation start clears a stale movedThisActivation flag", () => {
   assert.equal(findRig(r, "b1").movedThisActivation, false);
 });
 
+test("a burning rig loses `burning` SP to its Hull at activation start", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.burning = 2;
+  const hullBefore = b1.hull.sp; // light hull = 6
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  assert.equal(b1.hull.sp, hullBefore - 2); // 2 SP burn damage to hull
+  assert.equal(b1.burning, 2);              // burning persists until doused
+});
+
+test("douse spends an action and removes one burning stack", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.burning = 2;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const usedBefore = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "douse" } });
+  assert.equal(b1.burning, 1);                              // one stack cleared
+  assert.equal(r.game.turn.actionsUsed, usedBefore + 1);    // costs one action slot
+});
+
 test("Shutdown is allowed after a real action has been spent (not just as the first)", () => {
   const r = startedRoom();
   clearPendingAnswer(r);

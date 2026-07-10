@@ -481,3 +481,30 @@ test("Superconductor Edge does nothing under half class cap heat", () => {
   }, () => 0, ctx);
   assert.deepEqual(heatBumps, []);
 });
+
+const BURN_OPTS = { weapon: "melee", arc: "front", range: "near", cover: 0, dice: { toHit: [6], location: 1 } };
+
+test("Napalm sets the target burning to 1 and never stacks past 1", () => {
+  const attacker = makeRig(1, "N", "medium", "a", { longRange: "Mini Gun", melee: "Flamethrower", meleeUpgrade: "napalm" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target, BURN_OPTS, () => 0, ctx);
+  assert.equal(target.burning, 1);
+  resolveAttack(room, attacker, target, BURN_OPTS, () => 0, ctx);
+  assert.equal(target.burning, 1); // max, not stack
+});
+
+test("Conflagration stacks the target's burning and self-heats the attacker per hit", () => {
+  const attacker = makeRig(1, "C", "medium", "a", { longRange: "Mini Gun", melee: "Flamethrower", meleeUpgrade: "conflagration" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  const heatBumps = [];
+  const ctx = { ...makeCtx(), bumpHeat(rig, n) { heatBumps.push([rig.id, n]); } };
+  resolveAttack(room, attacker, target, BURN_OPTS, () => 0, ctx);
+  assert.equal(target.burning, 1);
+  resolveAttack(room, attacker, target, BURN_OPTS, () => 0, ctx);
+  assert.equal(target.burning, 2); // stacks
+  // +1 heat to the attacker per hit-resolution (two attacks landed).
+  assert.deepEqual(heatBumps.filter(([id]) => id === attacker.id), [[attacker.id, 1], [attacker.id, 1]]);
+});

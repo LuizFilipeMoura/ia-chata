@@ -431,6 +431,9 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Pinning Burst** (Double MG, Tuned) — landing 4+ hits in one attack pins the target: it loses 1 action on its next activation.
 - **Redline Governor** (Chainsaw, Prototype) — the attacker's own heat over its class's Heat Capacity adds +1 STR and +1 to-hit die each, capped at +3/+3.
 - **Superconductor Edge** (Sword, Prototype) — while the attacker's heat is over half its class's Heat Capacity, the blade gets +2 STR, and once per attack (not per hit) 1 heat is drawn from the attacker into the target.
+- **Burning** (status) — a rig on fire takes `burning` SP to its Hull at the start of each of its activations, then keeps burning until doused. The **Douse** action (1 slot, 0 heat) removes one Burning stack.
+- **Napalm** (Flamethrower, Tuned) — a landed hit sets the target Burning at 1; it never stacks past 1, so one Douse clears it.
+- **Conflagration** (Flamethrower, Prototype) — each landed hit adds +1 Burning to the target (stacks with no cap) and runs the attacker +1 heat as its downside; each stack needs its own Douse.
 
 ---
 

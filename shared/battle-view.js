@@ -4,7 +4,7 @@ import { ACTIONS } from "./rules.js";
 import { EQUIPMENT } from "./game-state.js";
 import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
 
-const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "reload", "repair", "prepare", "shutdown"];
+const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "reload", "repair", "douse", "prepare", "shutdown"];
 
 // The action console list for the active rig: each action with its heat cost and
 // whether the current budget/state allows it.
@@ -50,6 +50,10 @@ export function availableActions(rig, turn) {
         enabled = left > 0 && rig.engagedWith != null;
         if (rig.engagedWith == null) note = "Not engaged";
       }
+      if (key === "douse") {
+        enabled = left > 0 && (rig.burning || 0) > 0;
+        if ((rig.burning || 0) <= 0) note = "Not burning";
+      }
       if ((key === "fire" || key === "aimed") && rig.engagedWith != null && !rangedSpent) {
         note = note ? `${note} · Engaged −2 Aim` : "Engaged — ranged −2 Aim";
       }
@@ -93,6 +97,7 @@ export function rigModifiers(rig) {
     mods.push({ key: `${mobPart}0`, tag: `${cap(mobPart)} 0 · −3\" move`, tone: "warn" });
   if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit" });
   if (rig.engagedWith != null) mods.push({ key: "engaged", tag: "Engaged", tone: "warn" });
+  if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit" });
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });
   if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn" });
   if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn" });

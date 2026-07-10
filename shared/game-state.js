@@ -279,8 +279,8 @@ export const WEAPON_UPGRADES = {
   ],
   "Flamethrower": [
     { id: "sticky-fuel", nature: "field", name: "Sticky Fuel", tag: "Gains Rend", effect: { perks: ["Rend"] } },
-    { id: "napalm", nature: "tuned", name: "Napalm", tag: "Hits set the target burning (1 SP/round until doused)", effect: {} }, // TODO(mechanics)
-    { id: "conflagration", nature: "prototype", name: "Conflagration", tag: "Stack burns for escalating damage-over-time; runs you hot", effect: {} }, // TODO(mechanics)
+    { id: "napalm", nature: "tuned", name: "Napalm", tag: "Hits set the target burning (1 SP/activation until doused)", effect: { burn: 1 } },
+    { id: "conflagration", nature: "prototype", name: "Conflagration", tag: "Stack burns for escalating damage-over-time; runs you hot", effect: { burn: 1, burnStacks: true } },
   ],
 };
 
@@ -418,6 +418,7 @@ function ensureRigShape(rig) {
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
+  if (typeof rig.burning !== "number") rig.burning = 0;
   if (!rig.weaponUpgrades || typeof rig.weaponUpgrades !== "object") rig.weaponUpgrades = {};
   rig.weaponUpgrades.longRange = normalizeWeaponUpgrade(rig.weapons?.longRange, rig.weaponUpgrades.longRange);
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
@@ -529,6 +530,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     overclockCoreUsed: false,
     actionPenaltyNextActivation: 0,
     hullRepairLock: 0,
+    burning: 0,
     destroyed: false,
   };
   rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
@@ -1174,6 +1176,20 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
+  if (act === "douse") {
+    // §13 — beat out the flames: one slot removes one Burning stack. Napalm
+    // never stacks past 1, so a single Douse clears it; Conflagration needs one
+    // Douse per stack. No-op if the rig isn't burning.
+    if ((rig.burning || 0) <= 0) return false;
+    rig.burning = Math.max(0, rig.burning - 1);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "douse", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} douses the flames (burning ${rig.burning}).`, effects: [],
+    });
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
@@ -1437,6 +1453,16 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         rig.actionPenaltyNextActivation = 0;
         rig.movedThisActivation = false; // Full Tilt/Momentum Swing charge flag (§13)
         rig.loaded = { longRange: true, melee: true };
+        // Burning (§13, Napalm/Conflagration) — a rig on fire takes `burning` SP
+        // to its Hull at the start of its activation. The status persists until
+        // doused (one stack per Douse action).
+        if (rig.burning > 0) {
+          applyDamage(room, rig, "hull", rig.burning, { random: options.random });
+          pushResolution(room, {
+            kind: "burning", actor: rig.owner, rigId: rig.id, rolls: [],
+            summary: `${rig.name} burns for ${rig.burning} SP to the Hull.`, effects: [],
+          });
+        }
       }
       changed = true;
     }
