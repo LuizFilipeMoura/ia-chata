@@ -1,5 +1,8 @@
 /// <reference types="vitest/config" />
-import { defineConfig, createLogger } from "vitest/config";
+import { defineConfig } from "vitest/config";
+// `createLogger` is a Vite export; vitest/config no longer re-exports it
+// (it isn't present on vitest 2.x's config surface), so import it from vite.
+import { createLogger } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 

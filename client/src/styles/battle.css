@@ -182,9 +182,141 @@
   opacity: 0; transform: translateY(4px); animation: line-in .3s ease forwards;
 }
 
+/* ===== Engine misfire — the overheat check gets an ember danger skin (§6).
+   Automating the roll shouldn't make blowing your own engine feel quiet. ===== */
+.roll-console.misfire {
+  border-color: rgba(229,83,58,.6);
+  box-shadow: 0 24px 70px rgba(0,0,0,.7), 0 0 34px rgba(229,83,58,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  animation: oh-shake .5s cubic-bezier(.36,.07,.19,.97);
+}
+.roll-console[data-sev="engine-failure"], .roll-console[data-sev="catastrophic"] {
+  animation-duration: .7s;
+}
+.oh-klaxon {
+  display: flex; align-items: center; gap: .55rem;
+  margin: .4rem .5rem -.1rem; padding: .3rem .6rem; border-radius: 8px;
+  background: repeating-linear-gradient(45deg, rgba(229,83,58,.22) 0 10px, rgba(20,24,31,.5) 10px 20px);
+  border: 1px solid rgba(229,83,58,.5);
+  animation: oh-flash 1s steps(2, jump-none) infinite;
+}
+.oh-klaxon .oh-text {
+  flex: 0 0 auto; font-family: var(--font-display); font-weight: 700;
+  letter-spacing: .14em; font-size: .74rem; text-transform: uppercase;
+  color: var(--ember-hi); text-shadow: 0 0 10px rgba(229,83,58,.6);
+}
+.oh-klaxon .oh-bar { flex: 1 1 auto; height: 2px; background: linear-gradient(90deg, transparent, var(--ember-hi)); }
+.oh-klaxon .oh-bar:last-child { background: linear-gradient(90deg, var(--ember-hi), transparent); }
+.oh-klaxon[data-sev="engine-failure"], .oh-klaxon[data-sev="catastrophic"] { animation-duration: .55s; }
+@keyframes oh-flash { 50% { filter: brightness(1.55); } }
+@keyframes oh-shake {
+  10%,90% { transform: translateX(-2px); }
+  20%,80% { transform: translateX(3px); }
+  30%,50%,70% { transform: translateX(-5px); }
+  40%,60% { transform: translateX(5px); }
+}
+
+/* ===== KABOOM — a rig is destroyed (§9). The loudest beat in the game:
+   full-screen flash, shockwave, quake, and a stamped death notice. ===== */
+.kaboom {
+  position: fixed; inset: 0; z-index: 120;
+  display: grid; place-items: center; overflow: hidden; cursor: pointer;
+  background: radial-gradient(80% 80% at 50% 45%, rgba(70,20,8,.5), rgba(4,3,2,.86));
+  animation: kaboom-in .12s ease, kaboom-quake .5s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes kaboom-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kaboom-quake {
+  0%,100% { transform: translate(0,0); }
+  15% { transform: translate(-8px,4px); }
+  30% { transform: translate(7px,-6px); }
+  45% { transform: translate(-6px,-3px); }
+  60% { transform: translate(5px,5px); }
+  75% { transform: translate(-3px,2px); }
+}
+.kaboom.erupt { animation: kaboom-in .12s ease, kaboom-quake .7s cubic-bezier(.36,.07,.19,.97); }
+
+.kaboom-flash {
+  position: absolute; inset: -20%; pointer-events: none;
+  background: radial-gradient(closest-side, #fff, var(--oil-hi) 25%, var(--ember) 55%, transparent 72%);
+  opacity: 0; animation: kaboom-flash .7s ease-out forwards;
+}
+@keyframes kaboom-flash {
+  0% { opacity: 0; transform: scale(.2); }
+  8% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+.kaboom-shock {
+  position: absolute; left: 50%; top: 46%; width: 40px; height: 40px;
+  margin: -20px 0 0 -20px; border-radius: 50%; pointer-events: none;
+  border: 3px solid rgba(255,191,106,.85); opacity: 0;
+  animation: kaboom-shock 1.1s cubic-bezier(.15,.7,.3,1) forwards;
+}
+.kaboom-shock-2 { border-color: rgba(229,83,58,.7); animation-delay: .12s; }
+@keyframes kaboom-shock {
+  0% { opacity: .9; transform: scale(.2); }
+  70% { opacity: .5; }
+  100% { opacity: 0; transform: scale(16); border-width: 1px; }
+}
+
+.kaboom-core {
+  position: relative; text-align: center; padding: 1rem;
+  animation: kaboom-pop .5s cubic-bezier(.2,1.5,.3,1) both;
+}
+@keyframes kaboom-pop {
+  0% { opacity: 0; transform: scale(.4) rotate(-4deg); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.kaboom-sparks { position: absolute; left: 50%; top: 30%; width: 0; height: 0; pointer-events: none; }
+.kaboom-sparks span {
+  position: absolute; left: 0; top: 0; width: 3px; height: 16px; margin: -8px 0 0 -1.5px;
+  border-radius: 2px; background: linear-gradient(var(--oil-hi), rgba(229,83,58,0));
+  transform: rotate(var(--ang)) translateY(0); opacity: 0;
+  animation: kaboom-spark 1s ease-out forwards;
+}
+@keyframes kaboom-spark {
+  0% { opacity: 0; transform: rotate(var(--ang)) translateY(0) scaleY(.4); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--ang)) translateY(-190px) scaleY(1.2); }
+}
+.kaboom-skull {
+  font-size: 3.4rem; line-height: 1; color: var(--oil-hi);
+  text-shadow: 0 0 26px rgba(229,83,58,.8), 0 0 8px #fff;
+  animation: kaboom-skull 1.4s ease-in-out infinite;
+}
+@keyframes kaboom-skull { 50% { text-shadow: 0 0 40px rgba(229,83,58,1), 0 0 14px #fff; } }
+.kaboom-title {
+  margin-top: .3rem; font-family: var(--font-display); font-weight: 700;
+  font-size: 2.1rem; letter-spacing: .16em; text-transform: uppercase;
+  color: #fff; text-shadow: 0 0 20px rgba(229,83,58,.9), 0 2px 0 #5a1a0d;
+  -webkit-text-stroke: 1px rgba(229,83,58,.5);
+}
+.kaboom-name {
+  margin-top: .1rem; font-family: var(--font-mono); font-size: 1rem;
+  letter-spacing: .28em; text-transform: uppercase; color: var(--oil-hi);
+}
+.kaboom-erupt {
+  margin-top: .8rem; display: inline-block; padding: .35rem .7rem; border-radius: 8px;
+  font-family: var(--font-mono); font-size: .72rem; font-weight: 700; letter-spacing: .12em;
+  color: #241606; background: linear-gradient(180deg, var(--oil-hi), var(--oil));
+  border: 1px solid rgba(255,191,106,.7); box-shadow: 0 0 22px rgba(231,154,61,.6);
+  animation: kaboom-erupt-pulse 1s ease-in-out infinite;
+}
+@keyframes kaboom-erupt-pulse { 50% { box-shadow: 0 0 34px rgba(229,83,58,.85); } }
+.kaboom-hint {
+  margin-top: 1rem; font-family: var(--font-mono); font-size: .56rem;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--txt-faint);
+  animation: kaboom-hint-in .3s ease 1.2s both;
+}
+@keyframes kaboom-hint-in { from { opacity: 0; } to { opacity: .8; } }
+
 @media (prefers-reduced-motion: reduce) {
   .die.rolling { animation: none; }
   .die.settled, .roll-summary, .rx-break, .roll-effect, .roll-console, .roll-ok { animation: none; opacity: 1; transform: none; }
+  .roll-console.misfire, .oh-klaxon { animation: none; }
+  .kaboom, .kaboom-core, .kaboom-skull, .kaboom-title, .kaboom-erupt, .kaboom-hint {
+    animation: none; opacity: 1; transform: none;
+  }
+  .kaboom-flash, .kaboom-shock, .kaboom-sparks { display: none; }
 }
 
 /* ===== Turn focus: the next-action coach banner + whole-screen turn border =====

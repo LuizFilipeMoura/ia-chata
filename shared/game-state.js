@@ -713,9 +713,12 @@ function onRigDamaged(room, rig, opts) {
     const exploded = roll >= 4;
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
+      // Structured fields so the client can stage the explosion cinematic
+      // without parsing the summary string.
+      rigName: rig.name, exploded,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 12")' : "no secondary blast"}`,
-      effects: [],
+      effects: exploded ? ['Munitions cook off — every rig within 12" takes a D6 + STR 10 hit'] : [],
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
   }
@@ -827,6 +830,9 @@ function endActivation(room, rig, dice, random) {
     const row = applyOverheat(room, rig, total, { random });
     pushResolution(room, {
       kind: "overheat", actor: rig.owner, rigId: rig.id,
+      // `sev` lets the client escalate the misfire klaxon by severity
+      // (nothing → stall → … → catastrophic). "nothing" is the 1–5 no-op row.
+      sev: row.key,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name}: ${row.label} (D12 ${roll}+${m.bonus}=${total})`,
       effects: [row.text],

@@ -96,6 +96,12 @@ export interface Resolution {
   breakdown?: ResolutionBreakdown;
   effects?: string[];
   rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
+  /** Heat Threshold row key on `overheat` entries (safe/stall/…/catastrophic). */
+  sev?: string;
+  /** Destroyed rig's name on `destruction` entries — drives the KABOOM cinematic. */
+  rigName?: string;
+  /** Whether the destroyed rig's munitions cooked off (§9 blast). */
+  exploded?: boolean;
 }
 
 export type Diagonal = "tlbr" | "trbl";
