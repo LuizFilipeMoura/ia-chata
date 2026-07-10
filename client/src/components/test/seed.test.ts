@@ -8,7 +8,10 @@ describe("buildSeedCommands", () => {
     const adds = cmds.filter((c) => c.verb === "add");
     expect(adds.filter((c) => c.side === "a")).toHaveLength(3);
     expect(adds.filter((c) => c.side === "b")).toHaveLength(3);
-    expect(adds.every((c) => c.attrs.class === "medium")).toBe(true);
+    // Seed rigs are random prebuilts now — each carries a prebuilt id and a
+    // supported weight class.
+    expect(adds.every((c) => typeof c.attrs.prebuilt === "string")).toBe(true);
+    expect(adds.every((c) => ["light", "medium"].includes(c.attrs.class as string))).toBe(true);
   });
 
   it("locks the field as side a (the owner) after adds, before ready", () => {

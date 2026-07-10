@@ -1,0 +1,90 @@
+[
+  {
+    "id": "light-claw-autocannon",
+    "label": "Claw · Autocannon",
+    "class": "light",
+    "longRange": "Autocannon",
+    "melee": "Claw",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  },
+  {
+    "id": "light-missile-flamethrower",
+    "label": "Missile Barrage · Flamethrower",
+    "class": "light",
+    "longRange": "Missile Barrage",
+    "melee": "Flamethrower",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  },
+  {
+    "id": "light-saw-minigun",
+    "label": "Circular Saw · Mini Gun",
+    "class": "light",
+    "longRange": "Mini Gun",
+    "melee": "Circular Saw",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  },
+  {
+    "id": "light-wreckingball-double",
+    "label": "Wrecking Ball · Double MG",
+    "class": "light",
+    "longRange": "Double MG",
+    "melee": "Wrecking Ball",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  },
+  {
+    "id": "light-sword-arc",
+    "label": "Sword · Arc Gun",
+    "class": "light",
+    "longRange": "Arc Gun",
+    "melee": "Sword",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  },
+  {
+    "id": "medium-lance-mortar",
+    "label": "Lance · Mortar",
+    "class": "medium",
+    "longRange": "Mortar",
+    "melee": "Lance",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  },
+  {
+    "id": "medium-shield-siege",
+    "label": "Bulwark Shield · Siege Maul",
+    "class": "medium",
+    "longRange": "Siege Maul",
+    "melee": "Bulwark Shield",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  },
+  {
+    "id": "medium-sniper-chainsaw",
+    "label": "Sniper Cannon · Chainsaw",
+    "class": "medium",
+    "longRange": "Sniper Cannon",
+    "melee": "Chainsaw",
+    "description": "",
+    "focus": "",
+    "balance": "",
+    "personality": ""
+  }
+]

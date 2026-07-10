@@ -127,7 +127,7 @@ An Impact Roll total **below** a location's Direct threshold does nothing (it gl
 
 ## 4. The Round
 
-A game lasts **5 rounds** (§11). Each round has three phases.
+A game lasts **10 rounds** (§11). Each round has three phases.
 
 **Initiative Phase.** Both players roll 1 D12; highest activates first this round (reroll ties). The player who activates **second** this round gains free **Answer tokens** (§5). *(Round 1 is the exception — initiative there is set by deployment order, not rolled: §10.)*
 
@@ -328,7 +328,7 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 ### Scoring & winning
 - During each **Recovery Phase**, each player scores the VP value of every marker they control.
 - **Annihilation:** if a player has **no Rigs left** at any point, their opponent **wins immediately**.
-- **On points:** after **5 rounds** (use **4** for a quicker 3-Rig game), **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
+- **On points:** after **10 rounds**, **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
 
 ### Optional — Ironclad Bounty
 Each player secretly notes one enemy Rig as their **Priority Target**. Destroying it is worth **+2 VP** — a light combat incentive that fits a 3-Rig brawl, where every machine matters.
@@ -352,7 +352,7 @@ Any weapon may be fitted to a Rig of **any weight class** and **any faction**. R
 
 Apply this modifier to the weapon's STR every time you make an Impact Roll (§7). *Example: a Sniper Cannon (STR 12) reads STR 10 on a Light Rig, 12 on a Medium, 14 on a Heavy, 16 on a Colossal.*
 
-> **Perks are being reworked.** Base weapons now carry **stats only** — every perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. *Melee* is a weapon **type** (the Melee Weapons section), not a perk.
+> **Perks are being reworked.** Base weapons now carry **stats only** — every *signature* perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. **Exception:** the two **Machine Guns** (Mini Gun, Double MG) carry **Raking Fire** innately (§13) — it defines the weapon type (no frontal damage; +4 side / +8 rear), not a signature upgrade. *Melee* is likewise a weapon **type** (the Melee Weapons section), not a perk.
 
 ### Long Range Weapons
 

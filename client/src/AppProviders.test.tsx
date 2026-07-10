@@ -37,7 +37,7 @@ test("opening the commission wizard resolves the glossary context", async () => 
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.type(screen.getByPlaceholderText("Rig name"), "Vulcan");
   await user.click(screen.getByRole("button", { name: "Next" }));
-  expect(screen.getByText("Long range weapon")).toBeInTheDocument();
+  expect(screen.getByText("Prebuilt chassis")).toBeInTheDocument();
 });
 
 // The AttackWizard is also portalled by WizardProvider, and it calls

@@ -71,12 +71,47 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(WEAPONS.longRange["Mini Gun"].maxRange, 18);
   assert.equal(WEAPONS.longRange["Mini Gun"].acc, undefined);
   assert.equal(WEAPONS.longRange["Mini Gun"].rng, undefined);
-  // Base weapons are stat-only; no perks. Ranged weapons carry no melee flag.
-  assert.equal(WEAPONS.longRange["Mini Gun"].perks, undefined);
+  // Machine guns carry Raking Fire innately (it defines the type, not a
+  // signature upgrade); every other base weapon is stat-only. Ranged carry no
+  // melee flag.
+  assert.deepEqual(WEAPONS.longRange["Mini Gun"].perks, ["Raking Fire"]);
+  assert.deepEqual(WEAPONS.longRange["Double MG"].perks, ["Raking Fire"]);
   assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
   assert.equal(WEAPONS.melee["Lance"].str, 11);
   assert.equal(WEAPONS.melee["Sword"].melee, true);
   assert.equal(WEAPONS.melee["Sword"].perks, undefined);
+});
+
+test("makeRig honours a per-rig SP override, else falls back to class defaults", () => {
+  // Default (no sp): medium class defaults 7/6/6/5.
+  const def = makeRig(1, "Default", "medium", "a", { lr: "Sniper Cannon", melee: "Chainsaw" });
+  assert.equal(def.hull.max, 7);
+  assert.equal(def.engine.max, 5);
+
+  // Override: the prebuilt-style sp wins field-by-field.
+  const custom = makeRig(2, "Tanky", "medium", "a", {
+    lr: "Siege Maul", melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 },
+  });
+  assert.equal(custom.hull.max, 16);
+  assert.equal(custom.hull.sp, 16);
+  assert.equal(custom.arms.max, 13);
+  assert.equal(custom.legs.max, 12);
+  assert.equal(custom.engine.max, 11);
+
+  // Ablative Plating still adds its +1 Hull on top of the override.
+  const plated = makeRig(3, "Plated", "medium", "a", {
+    lr: "Siege Maul", melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 },
+  }, "ablative-plating");
+  assert.equal(plated.hull.max, 17);
+});
+
+test("makeUnit threads the sp override through to the rig", () => {
+  const rig = makeUnit("rig", 9, "Sniper", "a", {
+    weightClass: "medium", longRange: "Sniper Cannon", melee: "Chainsaw",
+    sp: { hull: 12, arms: 11, legs: 11, engine: 9 },
+  });
+  assert.equal(rig.hull.max, 12);
+  assert.equal(rig.engine.max, 9);
 });
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
@@ -861,13 +896,15 @@ test("VP claims ignore out-of-range and duplicate indices", () => {
   assert.equal(r.game.phase, "initiative");
 });
 
-test("after round 5 the higher VP wins", () => {
+test("after the final round (10) the higher VP wins", () => {
   const r = startedRoom();
-  for (let round = 1; round <= 5; round++) {
+  for (let round = 1; round <= 10; round++) {
     if (round >= 2) applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
     runFullRound(r);
     applyCommand(r, { verb: "vp", attrs: { side: "a", claims: round === 1 ? [0, 1] : [] } });
     applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
+    // Not finished until the last round resolves.
+    if (round < 10) assert.equal(r.game.phase, "initiative");
   }
   assert.equal(r.game.phase, "finished");
   assert.deepEqual(r.game.outcome, { winner: "a", reason: "points" });

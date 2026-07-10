@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY,
-  UNIT_WEAPONS,
+  UNIT_WEAPONS, PREBUILT_RIGS,
 } from "/shared/game-state.js";
 import { UNIT_KINDS } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
@@ -19,12 +19,18 @@ function firstUpgradeId(name: string): string | null {
   return (WEAPON_UPGRADES[name] || [])[0]?.id || null;
 }
 
+// Authored content layered onto a prebuilt by the server (content/prebuilts.json).
+interface PrebuiltContent {
+  description?: string; focus?: string; balance?: string; personality?: string;
+}
+
 interface WizardState {
   step: number;
   kind: "rig" | "tank" | "walker";
   name: string;
   cls: string;
   owner: string;
+  prebuilt: string; // chosen PREBUILT_RIGS id; drives cls + longRange + melee
   longRange: string;
   melee: string;
   longRangeUpgrade: string | null;
@@ -41,24 +47,59 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
   const enemySide = mySide === "a" ? "b" : "a";
 
   const [state, setState] = useState<WizardState>(() => {
-    const longRange = Object.keys(WEAPONS.longRange)[0];
-    const melee = Object.keys(WEAPONS.melee)[0];
+    const pb = PREBUILT_RIGS[0];
     return {
       step: 0,
       kind: "rig",
       name: "",
-      cls: "medium",
+      cls: pb.class,
       owner: mySide,
-      longRange,
-      melee,
-      longRangeUpgrade: firstUpgradeId(longRange),
-      meleeUpgrade: firstUpgradeId(melee),
+      prebuilt: pb.id,
+      longRange: pb.longRange,
+      melee: pb.melee,
+      longRangeUpgrade: firstUpgradeId(pb.longRange),
+      meleeUpgrade: firstUpgradeId(pb.melee),
       equipment: Object.keys(EQUIPMENT)[0],
       unit: Object.keys(UNIT_WEAPONS)[0],
     };
   });
 
+  // Selecting a prebuilt locks weight class + both weapons and resets each
+  // weapon to its first upgrade; the player re-picks upgrades below the grid.
+  const selectPrebuilt = (id: string) => {
+    const pb = PREBUILT_RIGS.find((p) => p.id === id);
+    if (!pb) return;
+    patch({
+      prebuilt: pb.id,
+      cls: pb.class,
+      longRange: pb.longRange,
+      melee: pb.melee,
+      longRangeUpgrade: firstUpgradeId(pb.longRange),
+      meleeUpgrade: firstUpgradeId(pb.melee),
+    });
+  };
+
   const STEPS = stepsFor(state.kind);
+
+  // Authored description / focus / balance / personality per prebuilt id, loaded
+  // from the server's editable catalogue. Falls back to empty (grid still works
+  // off the built-in weapons/class) if the fetch fails.
+  const [content, setContent] = useState<Record<string, PrebuiltContent>>({});
+  useEffect(() => {
+    let live = true;
+    fetch("/api/prebuilts")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!live || !data?.prebuilts) return;
+        const map: Record<string, PrebuiltContent> = {};
+        for (const p of data.prebuilts) {
+          map[p.id] = { description: p.description, focus: p.focus, balance: p.balance, personality: p.personality };
+        }
+        setContent(map);
+      })
+      .catch(() => { /* keep built-in defaults */ });
+    return () => { live = false; };
+  }, []);
 
   // Scrim enter/leave: mount without `show`, add it next frame; on close remove
   // `show` and unmount after the 250ms transition. Mirrors rig-wizard.js.
@@ -83,6 +124,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
       sendCommand("add", {
         name: state.name.trim(),
         kind: "rig",
+        prebuilt: state.prebuilt,
         class: state.cls,
         owner: state.owner,
         lr: state.longRange,
@@ -162,19 +204,6 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
             onChange={(e) => patch({ name: e.target.value })}
           />
         </div>
-        {state.kind === "rig" && (
-          <div className="rw-field">
-            <label>Weight class</label>
-            <select value={state.cls} onChange={(e) => patch({ cls: e.target.value })}>
-              {["light", "medium"].map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </select>
-            <div className="rw-sp-preview">
-              Hull {RIG_DEFAULTS[state.cls].hull} · Arms/Legs {RIG_DEFAULTS[state.cls].arms} · Engine {RIG_DEFAULTS[state.cls].engine} (heat cap {HEAT_CAPACITY[state.cls]})
-            </div>
-          </div>
-        )}
         <div className="rw-field">
           <label>Side</label>
           <select value={state.owner} onChange={(e) => patch({ owner: e.target.value })}>
@@ -186,44 +215,46 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
     );
   } else if (state.step === 2) {
     if (state.kind === "rig") {
+      const lr = WEAPONS.longRange[state.longRange];
+      const ml = WEAPONS.melee[state.melee];
       body = (
         <div className="rw-body">
           <div className="rw-field">
-            <label>Long range weapon</label>
-            <select
-              value={state.longRange}
-              onChange={(e) => {
-                const v = e.target.value;
-                patch({ longRange: v, longRangeUpgrade: firstUpgradeId(v) });
-              }}
-            >
-              {Object.keys(WEAPONS.longRange).map((o) => (
-                <option key={o} value={o}>{o}</option>
+            <label>Prebuilt chassis</label>
+            <div className="rw-equip-grid">
+              {PREBUILT_RIGS.map((pb) => (
+                <button
+                  key={pb.id}
+                  type="button"
+                  className={"rw-equip-card" + (pb.id === state.prebuilt ? " sel" : "")}
+                  onClick={() => selectPrebuilt(pb.id)}
+                >
+                  <div className="rw-equip-family">{pb.class}{content[pb.id]?.focus ? ` · ${content[pb.id]!.focus}` : ""}</div>
+                  <div className="rw-equip-label">{pb.label}</div>
+                  <div className="rw-equip-passive">
+                    Hull {RIG_DEFAULTS[pb.class].hull} · Arms/Legs {RIG_DEFAULTS[pb.class].arms} · Engine {RIG_DEFAULTS[pb.class].engine} (heat cap {HEAT_CAPACITY[pb.class]})
+                  </div>
+                  {content[pb.id]?.description ? (
+                    <div className="rw-equip-active">{content[pb.id]!.description}</div>
+                  ) : null}
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
+          <div className="rw-field">
+            <label>🎯 {state.longRange} <small>· ROF {lr.rof} · STR {lr.str} · {lr.minRange}–{lr.maxRange}"</small></label>
           </div>
           {upgradeChoices(state.longRange, state.longRangeUpgrade, (id) =>
             patch({ longRangeUpgrade: id }),
           )}
           <div className="rw-field">
-            <label>Melee weapon</label>
-            <select
-              value={state.melee}
-              onChange={(e) => {
-                const v = e.target.value;
-                patch({ melee: v, meleeUpgrade: firstUpgradeId(v) });
-              }}
-            >
-              {Object.keys(WEAPONS.melee).map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </select>
+            <label>🗡️ {state.melee} <small>· ROF {ml.rof} · STR {ml.str} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small></label>
           </div>
           {upgradeChoices(state.melee, state.meleeUpgrade, (id) =>
             patch({ meleeUpgrade: id }),
           )}
           <div className="rw-hint">
-            Choose one upgrade for each weapon. The selected upgrade changes how that weapon works.
+            Weapons and weight class are fixed by the prebuilt. Choose one upgrade for each weapon.
           </div>
         </div>
       );
@@ -303,6 +334,9 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
         <div className="rw-confirm-row">🎯 {state.longRange} · {lrUpgrade?.name || "Upgrade ?"}</div>
         <div className="rw-confirm-row">🗡️ {state.melee} · {meleeUpgrade?.name || "Upgrade ?"}</div>
         <div className="rw-confirm-row">🛠 {e.label} · {e.passive}</div>
+        {content[state.prebuilt]?.personality ? (
+          <div className="rw-confirm-row rw-confirm-flavor">“{content[state.prebuilt]!.personality}”</div>
+        ) : null}
       </div>
     );
   }

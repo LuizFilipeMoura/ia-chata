@@ -4,7 +4,12 @@ declare module "/shared/game-state.js" {
   export const MAX_RIGS_PER_SIDE: number;
   export const MAX_RIGS_TOTAL: number;
   export const SUPPORTED_RIG_CLASSES: string[];
-  export const WEAPONS: Record<string, string[]>;
+  export const WEAPONS: Record<string, Record<string, {
+    rof: number; str: number;
+    acc?: number[]; rng?: number[];
+    sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
+    melee?: boolean;
+  }>>;
   export const UNIT_WEAPONS: Record<string, {
     rof: number; str: number;
     acc?: number[]; rng?: number[];
@@ -18,6 +23,8 @@ declare module "/shared/game-state.js" {
     active: { key: string; label: string; heat: number; text: string };
   }>;
   export const WEAPON_UPGRADES: Record<string, Array<{ id: string; name: string; tag: string; [k: string]: unknown }>>;
+  export const PREBUILT_RIGS: Array<{ id: string; label: string; class: string; longRange: string; melee: string }>;
+  export function prebuiltRig(id?: string | null): { id: string; label: string; class: string; longRange: string; melee: string } | null;
   export const RIG_DEFAULTS: Record<string, { hull: number; arms: number; legs: number; engine: number }>;
   export const HEAT_CAPACITY: Record<string, number>;
   export function canAddRigForSide(room: { rigs: Rig[]; game?: GameState | null }, sideId: string): boolean;

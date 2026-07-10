@@ -195,11 +195,11 @@ export const GLOSSARY = [
   },
   {
     id: "salvage", term: "Salvage", match: ["Salvage"],
-    def: "The victory system: control objective markers to score Victory Points over 5 rounds (§11).",
+    def: "The victory system: control objective markers to score Victory Points over 10 rounds (§11).",
   },
   {
     id: "vp", term: "Victory Points", match: ["Victory Points", "VP"],
-    def: "Points scored each Recovery Phase for controlling objective markers; most VP after 5 rounds wins (§11).",
+    def: "Points scored each Recovery Phase for controlling objective markers; most VP after 10 rounds wins (§11).",
   },
   {
     id: "ironclad-bounty", term: "Ironclad Bounty", match: ["Ironclad Bounty"],

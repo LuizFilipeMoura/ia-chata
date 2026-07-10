@@ -35,7 +35,16 @@ test("owner selector offers You and Enemy", async () => {
   expect(screen.getByRole("option", { name: "Enemy" })).toBeInTheDocument();
 });
 
-test("only light and medium rig classes are offered", async () => {
+// Weapons step now offers only prebuilt chassis (fixed weight class + weapons);
+// weight class is no longer a free select. Reach it with a second Next.
+async function advanceToWeapons(user: ReturnType<typeof userEvent.setup>) {
+  await advanceToIdentity(user);
+  // Next is gated on a non-empty name at the Identity step.
+  await user.type(screen.getByPlaceholderText("Rig name"), "Vulcan");
+  await user.click(screen.getByRole("button", { name: "Next" }));
+}
+
+test("only light and medium prebuilt chassis are offered", async () => {
   const user = userEvent.setup();
   render(
     <UiProvider>
@@ -44,14 +53,14 @@ test("only light and medium rig classes are offered", async () => {
       </GlossaryTipProvider>
     </UiProvider>,
   );
-  await advanceToIdentity(user);
-  expect(screen.getByRole("option", { name: "light" })).toBeInTheDocument();
-  expect(screen.getByRole("option", { name: "medium" })).toBeInTheDocument();
-  expect(screen.queryByRole("option", { name: "heavy" })).toBeNull();
-  expect(screen.queryByRole("option", { name: "colossal" })).toBeNull();
+  await advanceToWeapons(user);
+  expect(screen.getAllByText("light").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("medium").length).toBeGreaterThan(0);
+  expect(screen.queryByText("heavy")).toBeNull();
+  expect(screen.queryByText("colossal")).toBeNull();
 });
 
-test("Identity step shows an SP preview for the selected weight class", async () => {
+test("Weapons step shows an SP preview with heat cap for each prebuilt", async () => {
   const user = userEvent.setup();
   render(
     <UiProvider>
@@ -60,11 +69,11 @@ test("Identity step shows an SP preview for the selected weight class", async ()
       </GlossaryTipProvider>
     </UiProvider>,
   );
-  await advanceToIdentity(user);
-  expect(screen.getByText(/heat cap/i)).toBeInTheDocument();
+  await advanceToWeapons(user);
+  expect(screen.getAllByText(/heat cap/i).length).toBeGreaterThan(0);
 });
 
-test("commissioning posts an add command carrying the chosen owner", async () => {
+test("commissioning posts an add command with the prebuilt's fixed class and weapons", async () => {
   const user = userEvent.setup();
   render(
     <UiProvider>
@@ -80,8 +89,12 @@ test("commissioning posts an add command carrying the chosen owner", async () =>
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.click(screen.getByRole("button", { name: "Commission" }));
+  // Default prebuilt is the first entry: light Claw · Autocannon.
   expect(sendCommand).toHaveBeenCalledWith(
     "add",
-    expect.objectContaining({ name: "Vulcan", class: "medium", owner: "a" }),
+    expect.objectContaining({
+      name: "Vulcan", class: "light", owner: "a",
+      prebuilt: "light-claw-autocannon", lr: "Autocannon", melee: "Claw",
+    }),
   );
 });

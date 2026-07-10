@@ -60,9 +60,10 @@ describe("buildLoadout", () => {
   });
 });
 
-it("randomAddAttrs produces valid medium-rig add attrs", () => {
+it("randomAddAttrs produces a valid prebuilt add", () => {
   const a = randomAddAttrs();
-  expect(a.class).toBe("medium");
+  expect(typeof a.prebuilt).toBe("string");
+  expect(["light", "medium"]).toContain(a.class);
   expect(typeof a.longRange).toBe("string");
   expect(typeof a.melee).toBe("string");
   expect(typeof a.equipment).toBe("string");

@@ -19,13 +19,17 @@ export const MAX_OVERHEAT_BONUS = 10;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
+// The objective game runs this many rounds before victory resolves on points
+// (§11). Doubled from the original 5 to pair with the ~2× per-rig SP scaling —
+// longer fights so the upgrade natures (ramps, DoT, attrition) have time to matter.
+export const MAX_ROUNDS = 10;
 // Base weapons carry stats only. Perks are delivered exclusively by the chosen
 // weapon upgrade (see WEAPON_UPGRADES); `melee: true` is a structural flag (not a
 // perk) that drives arc/range logic in combat.js and the wizards.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":       { rof: 8, str: 4,  sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18 },
-    "Double MG":      { rof: 8, str: 6,  sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20 },
+    "Mini Gun":       { rof: 8, str: 4,  sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"] },
+    "Double MG":      { rof: 8, str: 6,  sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"] },
     "Autocannon":     { rof: 4, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
     "Arc Gun":        { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
     "Mortar":         { rof: 3, str: 9,  sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
@@ -61,6 +65,54 @@ export function normalizeUnitWeapon(name) {
   if (!name) return null;
   const ref = String(name).trim().toLowerCase();
   return Object.keys(UNIT_WEAPONS).find((w) => w.toLowerCase() === ref) || null;
+}
+
+// Prebuilt Rigs — the physical minis arrive pre-assembled, so a Rig is
+// commissioned by picking one of these fixed weight-class + weapon combos rather
+// than free-picking each slot. Weapon upgrades are still chosen per weapon at
+// commission time; only the two weapons and the weight class are locked. Names
+// (`longRange` / `melee`) index straight into WEAPONS. `sp` is the per-rig
+// Structure Points (≈2× the old class defaults) — a durability lever tuned to
+// each rig's identity; makeRig uses it in place of RIG_DEFAULTS.
+export const PREBUILT_RIGS = [
+  { id: "light-claw-autocannon",      label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-missile-flamethrower", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
+  { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-wreckingball-double",  label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
+  { id: "light-sword-arc",            label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
+  { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
+  { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
+  { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+];
+
+export function prebuiltRig(id) {
+  if (!id) return null;
+  const ref = String(id).trim().toLowerCase();
+  return PREBUILT_RIGS.find((p) => p.id === ref) || null;
+}
+
+// Find the prebuilt whose fixed loadout matches an exact (class, longRange,
+// melee) triple — case-insensitive. Lets callers that only know the weapon combo
+// (e.g. the AI tracker tag) resolve back to the canonical prebuilt.
+export function matchPrebuiltCombo(cls, longRange, melee) {
+  const c = String(cls || "").trim().toLowerCase();
+  const lr = String(longRange || "").trim().toLowerCase();
+  const ml = String(melee || "").trim().toLowerCase();
+  if (!c || !lr || !ml) return null;
+  return PREBUILT_RIGS.find(
+    (p) => p.class === c && p.longRange.toLowerCase() === lr && p.melee.toLowerCase() === ml,
+  ) || null;
+}
+
+// Resolve an `add` command's attrs to the prebuilt it must use — by id first,
+// then by exact weapon+class combo. Returns the PREBUILT_RIGS entry or null.
+// Server-side enforcement uses this so a rig can only be commissioned as one of
+// the fixed prebuilt loadouts (weapons + weight class are not free-picked).
+export function resolvePrebuilt(attrs = {}) {
+  return (
+    prebuiltRig(attrs.prebuilt) ||
+    matchPrebuiltCombo(attrs.class || attrs.weightClass, attrs.longRange || attrs.lr, attrs.melee)
+  );
 }
 
 // Rig equipment loadout (docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md,
@@ -398,9 +450,18 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
 
   const weightClass = normalizedClass;
   const d = RIG_DEFAULTS[weightClass];
+  // Per-rig SP override (prebuilt `sp`) wins field-by-field, else the class
+  // default. Lets each prebuilt carry its own durability without a class change.
+  const o = weapons.sp && typeof weapons.sp === "object" ? weapons.sp : {};
+  const base = {
+    hull:   Number.isFinite(o.hull)   ? o.hull   : d.hull,
+    arms:   Number.isFinite(o.arms)   ? o.arms   : d.arms,
+    legs:   Number.isFinite(o.legs)   ? o.legs   : d.legs,
+    engine: Number.isFinite(o.engine) ? o.engine : d.engine,
+  };
   const equipmentId = normalizeEquipment(equipment);
   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
-  const hullMax = d.hull + (equipmentId === "ablative-plating" ? 1 : 0);
+  const hullMax = base.hull + (equipmentId === "ablative-plating" ? 1 : 0);
   const rig = {
     id,
     name: String(name || "Rig").trim() || "Rig",
@@ -408,9 +469,9 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     weightClass,
     owner: owner === "b" ? "b" : "a",
     hull:   { sp: hullMax, max: hullMax, destroyed: false },
-    arms:   { sp: d.arms, max: d.arms, destroyed: false },
-    legs:   { sp: d.legs, max: d.legs, destroyed: false },
-    engine: { sp: d.engine, max: d.engine, destroyed: false, heat: 0 },
+    arms:   { sp: base.arms, max: base.arms, destroyed: false },
+    legs:   { sp: base.legs, max: base.legs, destroyed: false },
+    engine: { sp: base.engine, max: base.engine, destroyed: false, heat: 0 },
     weapons: { longRange, melee },
     weaponUpgrades,
     equipment: equipmentId,
@@ -445,6 +506,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     return makeRig(id, name, opts.weightClass, owner, {
       longRange: opts.longRange, melee: opts.melee,
       longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
+      sp: opts.sp,
     }, opts.equipment ?? null);
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
@@ -1105,11 +1167,11 @@ function checkAnnihilation(room) {
 }
 
 // After both sides score Recovery VP: advance to the next round's initiative,
-// or — at round 5 (or beyond, in Sudden Death) — resolve victory by points,
-// enter one Sudden Death round on a tie, or declare a draw if still tied.
+// or — at round MAX_ROUNDS (or beyond, in Sudden Death) — resolve victory by
+// points, enter one Sudden Death round on a tie, or declare a draw if still tied.
 function advanceRound(room) {
   const [sa, sb] = room.game.sides;
-  const lastRound = room.game.suddenDeath || room.game.round >= 5;
+  const lastRound = room.game.suddenDeath || room.game.round >= MAX_ROUNDS;
   if (lastRound) {
     if (sa.vp !== sb.vp) {
       room.game.outcome = { winner: sa.vp > sb.vp ? sa.id : sb.id, reason: "points" };
@@ -1187,6 +1249,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           longRangeUpgrade: a.longRangeUpgrade || a.lrUpgrade,
           meleeUpgrade: a.meleeUpgrade,
           equipment: a.equipment ?? null,
+          sp: a.sp,
           // Flat-pick options
           unit: a.unit,
         });

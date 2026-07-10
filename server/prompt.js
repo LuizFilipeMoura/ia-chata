@@ -1,7 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RULEBOOK_MD } from "./config.js";
-import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, WEAPONS, UNIT_WEAPONS } from "../shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, PREBUILT_RIGS, UNIT_WEAPONS } from "../shared/game-state.js";
+
+// The fixed prebuilt Rig loadouts. Weapons + weight class are locked together
+// (they mirror the physical minis), so the AI picks one whole combo rather than
+// free-choosing a long-range and a melee weapon. Server add-enforcement rejects
+// any rig that isn't one of these combos.
+const PREBUILT_LINES = PREBUILT_RIGS.map(
+  (p) => `  - ${p.class} — lr="${p.longRange}" melee="${p.melee}"`,
+).join("\n");
 
 // Instructions that teach Gemma the rig-tracker command protocol. The browser
 // parses these [[RIG ...]] tags out of the reply, applies them to the tracker,
@@ -27,15 +35,16 @@ export const TRACKER_PROTOCOL = [
   "",
   "Rules for the tags:",
   "- Emit one tag per change; the app applies each exactly once.",
-  "- A Rig is only complete with a name, a supported class, one Long Range",
-  "  weapon, and one Melee weapon. Supported creation classes are Light and",
-  "  Medium only.",
-  "- If the player asks to add a Rig without all required details, ask for every",
-  "  missing field in one response and emit no `[[RIG add]]` tag.",
+  "- A Rig must be one of the fixed prebuilt loadouts below. Weapon slots are not",
+  "  free-picked: class, long-range, and melee are locked together as a set. Emit",
+  "  the add tag using that combo's exact class, lr, and melee values.",
+  "- Prebuilt loadouts (choose one whole row):",
+  PREBUILT_LINES,
+  "- A Rig is only complete with a name plus one of the prebuilt loadouts above.",
+  "  If the player asks to add a Rig without enough detail to pick a loadout, ask",
+  "  which prebuilt (or which mini) and emit no `[[RIG add]]` tag yet.",
   `- The tracker allows at most ${MAX_RIGS_PER_SIDE} Rigs per side and ${MAX_RIGS_TOTAL} Rigs total.`,
   "  If that limit is already reached, explain that the roster is full and emit no `[[RIG add]]` tag.",
-  "- Valid Long Range weapons: " + Object.keys(WEAPONS.longRange).join(", ") + ".",
-  "- Valid Melee weapons: " + Object.keys(WEAPONS.melee).join(", ") + ".",
   "- Kind-specific `loc` enums:",
   "  rig: hull|arms|legs|engine",
   "  tank: hull|tracks|turret|engine",
@@ -43,9 +52,9 @@ export const TRACKER_PROTOCOL = [
   "- If the player asks to add a Tank or Walker, use `kind=\"tank\"` or `kind=\"walker\"` and set exactly one `unit=\"…\"` field from the flat unit-weapon list. Tanks and Walkers have no class, no long-range/melee split, no equipment.",
   "- Valid Unit weapons (Tanks / Walkers): " + Object.keys(UNIT_WEAPONS).join(", ") + ".",
   "- Tanks and Walkers do not have Heat and cannot Overheat. Do not emit `heat` tags for them.",
-  "- Use those weapon names exactly in tags. You may map imperfect player wording",
-  "  to the closest valid weapon when the intent is clear; if it is not clear,",
-  "  ask again and include the valid options.",
+  "- Use the exact class/lr/melee from a prebuilt row in tags. You may map",
+  "  imperfect player wording to the closest prebuilt loadout when the intent is",
+  "  clear; if it is not clear, ask again and list the prebuilt loadouts.",
   "- Heavy and Colossal Rigs are not available in the tracker yet. If the player",
   "  asks to create one, explain that and ask them to choose Light or Medium.",
   "- On `add`, `owner` picks the side; if you omit it, the requesting player's",
@@ -80,21 +89,21 @@ export const PLAYER_START_GUIDE = [
   "player's side.",
   "",
   "For each missing own-side Rig, ask for the next physical mini. The minis",
-  "already have glued weapons, so do not ask the player to choose an optimized",
-  "loadout. Ask what the mini already has: Rig name, whether it is Light or",
-  "Medium, a visible ranged weapon description, and a visible melee weapon",
-  "description. If details are missing, ask only for the missing details.",
+  "already have glued weapons, so the player does not choose a loadout — they",
+  "identify which prebuilt the mini is. Ask the Rig name and which prebuilt",
+  "loadout it matches (each is a fixed class + long-range + melee set). If the",
+  "player describes the sculpt instead, map it to a prebuilt.",
   "",
-  "Weapon matching is strict. If the player gives an exact canonical weapon",
-  "name, use it. If they describe a sculpt or use vague words, offer 2-3 likely legal matches",
-  "from the relevant list and ask which one to use. Do not emit a",
-  "[[RIG add]] tag while waiting for the player to choose exact legal profiles.",
-  "Canonical Long Range weapons: " + Object.keys(WEAPONS.longRange).join(", ") + ".",
-  "Canonical Melee weapons: " + Object.keys(WEAPONS.melee).join(", ") + ".",
+  "Matching is to a whole prebuilt row, never a single weapon. If the description",
+  "is clear, use that prebuilt. If it is ambiguous, offer the 2-3 closest",
+  "prebuilt loadouts and ask which one. Do not emit a [[RIG add]] tag while",
+  "waiting for the player to pick a prebuilt.",
+  "Prebuilt loadouts:",
+  PREBUILT_LINES,
   "",
-  "After the player confirms a Rig name, Light or Medium class, one exact Long",
-  "Range weapon, and one exact Melee weapon, emit exactly one [[RIG add ...]] tag",
-  "for that Rig using the tracker protocol. Register it to the current player's",
+  "After the player confirms a Rig name and a prebuilt loadout, emit exactly one",
+  "[[RIG add ...]] tag for that Rig using that combo's exact class/lr/melee.",
+  "Register it to the current player's",
   "side when you know the side; otherwise rely on the app's owner default. Then",
   "ask for the next mini until there are 3 complete own-side Rigs.",
   "",
@@ -116,7 +125,7 @@ export const PLAYER_START_GUIDE = [
   "Answer tokens.",
   "",
   "After deployment, explain the goal briefly: score objectives during Recovery",
-  "over 5 rounds, or win immediately by destroying all enemy Rigs. During play,",
+  "over 10 rounds, or win immediately by destroying all enemy Rigs. During play,",
   "continue giving the current player the next concrete thing to do, in order,",
   "based strictly on the rulebook and CURRENT BATTLE STATE.",
 ].join("\n");
