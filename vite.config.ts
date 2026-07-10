@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
-import { defineConfig, createLogger } from "vitest/config";
+import { defineConfig } from "vitest/config";
+import { createLogger } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 
