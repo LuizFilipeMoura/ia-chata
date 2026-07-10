@@ -240,11 +240,13 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 ## 7. Attacking & Damage
 
 1. **Declare attacker & target.** The target must be in the attacker's **front 90° arc**. Declare before measuring.
-2. **Check range.** Measure base-to-base; must be within the weapon's range band. Out of range → the attack fails. (Do not pre-measure before declaring.)
+2. **Check range.** Measure base-to-base; the distance must fall within the weapon's **min–max range band**. Out of range → the attack fails. (Do not pre-measure before declaring.)
 3. **Verify line of sight.** At least **50%** of the target must be visible.
    - Up to **25% obscured** → **−1 ACC**.
    - Up to **50% obscured** → **−2 ACC**.
-4. **Roll to hit.** Roll **ROF** D6. Apply ACC modifiers (weapon + cover) to the Rig's **Aim**; each die that **meets or beats** the modified Aim is a hit. A natural **6 always hits**.
+4. **Roll to hit.** Roll **ROF** D6. Apply ACC modifiers (weapon + cover) to the Rig's **Aim**; each die that **meets or beats** the modified Aim is a hit. A natural **6 always hits**. A ranged weapon's **ACC depends on the measured distance** — see the **sweet-spot** rule below.
+
+**Sweet spot (ranged ACC by distance).** A ranged weapon fires most accurately at its **sweet spot** (an optimal distance in inches), where it delivers its **peak ACC**. The farther the measured distance is from the sweet spot — **closer *or* farther** — the more accuracy bleeds off: subtract the weapon's **falloff** (ACC lost per inch) times the number of inches away from the sweet spot. So a long-range gun is sloppy in your face *and* at extreme range, sharpest in its band. **Melee** weapons ignore this — they carry a single fixed ACC at their **2" reach**. *⚙ TUNING: replaced the old flat near/far ACC bands with a continuous sweet-spot falloff.*
 5. **Apply weapon perks** (§13).
 6. **Determine impact location.** Unless it was an **Aimed Shot**, the *defender* rolls 1 D12:
 
@@ -340,7 +342,7 @@ Every weapon is one of **two types**, and every Rig equips **one of each** (§3)
 - **Long Range** — any weapon **without** the Melee perk. Fires at range; once spent it must be **reloaded** between shots in the same activation. The second such shot in an activation costs **+1 heat** (§5).
 - **Melee** — any weapon with the **Melee** perk (RNG 2"). Usable only within 2" and never needs reloading.
 
-There are **seven weapons of each type**. Any weapon may be fitted to a Rig of **any weight class** and **any faction**. **ACC** shows **near / far** values matching the weapon's two range bands (**RNG** = near / far, in inches); a single value applies at all ranges.
+Any weapon may be fitted to a Rig of **any weight class** and **any faction**. Ranged weapons use the **sweet-spot** model (§7): **Sweet** is the optimal distance (inches), **Peak** is the ACC at that distance, **Falloff** is the ACC lost per inch away from the sweet spot (in either direction), and **Range** is the min–max band the weapon can fire within. **Melee** weapons instead carry a single fixed ACC at a **2" reach**.
 
 **Weight-class STR.** The **STR** listed below is the **Medium** baseline. A weapon's STR shifts with the chassis carrying it — heavier Rigs drive it harder, lighter Rigs can't. Everything else (ROF, ACC, RNG, perks) is unchanged:
 
@@ -356,21 +358,21 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 **Machine Guns** — fast-firing, low-STR flanking specialists.
 
-| Weapon | ROF | STR | ACC | RNG |
-|---|:--:|:--:|:--:|:--:|
-| Mini Gun | 8 | 4 | +1 / −1 | 9 / 18 |
-| Double MG | 8 | 6 | +1 / – | 9 / 18 |
+| Weapon | ROF | STR | Sweet | Peak | Falloff/in | Range |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Mini Gun | 8 | 4 | 7" | +2 | −0.35 | 0–18" |
+| Double MG | 8 | 6 | 9" | +1 | −0.25 | 0–20" |
 
 **Cannons & Artillery** — front-capable firepower.
 
-| Weapon | ROF | STR | ACC | RNG |
-|---|:--:|:--:|:--:|:--:|
-| Autocannon | 4 | 8 | – / −1 | 12 / 24 |
-| Arc Gun | 2 | 10 | – / +1 | 15 / 30 |
-| Mortar | 3 | 9 | −1 / – | 15 / 30 |
-| Sniper Cannon | 1 | 12 | – / −1 | 12 / 24 |
-| Siege Maul | 1 | 13 | – / −1 | 8 / 16 |
-| Missile Barrage | 4 | 9 | −1 / – | 15 / 30 |
+| Weapon | ROF | STR | Sweet | Peak | Falloff/in | Range |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Autocannon | 4 | 8 | 12" | +1 | −0.22 | 0–26" |
+| Arc Gun | 2 | 10 | 20" | +1 | −0.18 | 0–32" |
+| Mortar | 3 | 9 | 18" | +1 | −0.15 | 6–34" |
+| Sniper Cannon | 1 | 12 | 22" | +2 | −0.15 | 0–28" |
+| Siege Maul | 1 | 13 | 8" | +1 | −0.30 | 0–16" |
+| Missile Barrage | 4 | 9 | 20" | +1 | −0.15 | 6–34" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose ACC up close.
 
@@ -523,6 +525,8 @@ All numeric values on Tanks and Walkers above (SP, armour rows, ROF/STR, speeds)
 - **Shut Down anywhere** (§5) — Shut Down may be declared at any point in the activation; heat vented scales with how much of the activation is spent shutting down (first-action = full vent, later = proportionally less).
 - **Whole-inch speeds** (§2) — base Speed 5 / 4 / 3 / 2 by weight class; all distances round to whole inches.
 - **Sprint** (§5/§6) — normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot.
+- **Sweet-spot ranged ACC** (§7) — ranged weapons peak at a sweet-spot distance and lose ACC per inch away in either direction, within a min–max band. Replaces the flat near/far ACC bands so positioning matters at range.
+- **Engagement / melee lock** (§5) — a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 ACC. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13) — machine guns do no frontal damage but hit far harder (+4 side / +8 rear).
 - **Answer tokens** (§5) — the player going second each round gets 1 free preparation.
 - **Weight-based heat** (§6) — Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
