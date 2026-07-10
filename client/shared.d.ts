@@ -22,7 +22,13 @@ declare module "/shared/game-state.js" {
     passive: string;
     active: { key: string; label: string; heat: number; text: string };
   }>;
-  export const WEAPON_UPGRADES: Record<string, Array<{ id: string; name: string; tag: string; [k: string]: unknown }>>;
+  export const WEAPON_UPGRADES: Record<string, Array<{ id: string; nature: "field" | "tuned" | "prototype"; name: string; tag: string; [k: string]: unknown }>>;
+  export const NATURES: ReadonlyArray<"field" | "tuned" | "prototype">;
+  export function upgradeNature(weaponName: string, upgradeId?: string | null): "field" | "tuned" | "prototype" | null;
+  export function countPrototypes(
+    weapons: { longRange?: string; melee?: string },
+    upgrades: { longRange?: string | null; melee?: string | null },
+  ): number;
   export const PREBUILT_RIGS: Array<{ id: string; label: string; class: string; longRange: string; melee: string }>;
   export function prebuiltRig(id?: string | null): { id: string; label: string; class: string; longRange: string; melee: string } | null;
   export const RIG_DEFAULTS: Record<string, { hull: number; arms: number; legs: number; engine: number }>;
