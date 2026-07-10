@@ -2077,7 +2077,7 @@ test("destroying an engaged rig clears the link on both ends", () => {
   room.rigs = [a, b];
   room.game.started = true;
   __test.setEngagement(a, b);
-  // Kill b outright: drop every location to 0, then one more hit to destroy.
+  // Zero every location (already destroyed), then one more hit exercises the cascade.
   for (const p of ["hull", "arms", "legs", "engine"]) __test.setRigSp(b, p, 0);
   __test.applyDamage(room, b, "hull", 1, { random: () => 0 });
   assert.equal(b.destroyed, true);
@@ -2094,6 +2094,19 @@ test("immobilising an engaged rig clears the link", () => {
   __test.setRigSp(b, "legs", 0);            // legs to 0 (first time — not yet immobile)
   __test.applyDamage(room, b, "legs", 1, {}); // additional damage to 0-SP legs → immobilised
   assert.equal(b.immobilised, true);
+  assert.equal(b.engagedWith, null);
+  assert.equal(a.engagedWith, null);
+});
+
+test("a catastrophic overheat clears the engaged rig's lock", () => {
+  const room = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  room.rigs = [a, b];
+  room.game.started = true;
+  __test.setEngagement(a, b);
+  __test.applyOverheat(room, b, 17, { random: () => 0 }); // 17 = catastrophic row
+  assert.equal(b.destroyed, true);
   assert.equal(b.engagedWith, null);
   assert.equal(a.engagedWith, null);
 });

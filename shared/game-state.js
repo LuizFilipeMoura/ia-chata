@@ -734,7 +734,7 @@ function clearEngagement(room, rig) {
 function maybeEngage(room, a, b) {
   if (!a || !b) return false;
   if ((a.owner || "a") === (b.owner || "a")) return false;
-  if (a.destroyed || b.destroyed) return false;
+  if (a.destroyed || b.destroyed || a.immobilised || b.immobilised) return false;
   return setEngagement(a, b);
 }
 
@@ -909,6 +909,9 @@ function applyOverheat(room, rig, total, opts) {
   else if (row.key === "buckling") for (const l of all) applyDamage(room, rig, l, 1, opts);
   else if (row.key === "engine-failure") { applyDamage(room, rig, powerPart, 2, opts); rig.noCool = true; }
   else if (row.key === "catastrophic") { for (const l of all) setRigSp(rig, l, 0); rig.noCool = true; }
+  // Engagement (§engagement) — a catastrophic overheat destroys via setRigSp,
+  // which bypasses onRigDamaged; clear the melee lock here too.
+  if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
   return row;
 }
 
