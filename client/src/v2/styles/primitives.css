@@ -1,0 +1,121 @@
+/* V2 primitives — shared classes built on tokens.css.
+   Imported once after tokens.css. Component files MUST NOT redefine these. */
+
+/* layout utils */
+.v2-stack{display:flex;flex-direction:column;gap:var(--v2-gap,.5rem);}
+.v2-row{display:flex;align-items:center;gap:var(--v2-gap,.5rem);}
+.v2-center{display:grid;place-items:center;}
+.v2-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--v2-gap,.5rem);}
+.v2-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--v2-gap,.5rem);}
+
+/* panel surface (A) */
+.v2-panel{
+  background:var(--v2-surface);
+  border:1px solid var(--v2-rivet);
+  border-radius:var(--v2-r-card);
+  box-shadow:var(--v2-bevel-top),0 18px 50px rgba(0,0,0,.6);
+}
+.v2-panel--sharp{border-radius:0;}
+
+/* scrim (C/D) */
+.v2-scrim{
+  position:fixed;inset:0;display:grid;place-items:center;
+  padding:1rem;background:var(--v2-scrim);
+  backdrop-filter:blur(2px);z-index:40;
+}
+.v2-scrim--oil{background:var(--v2-scrim-oil);}
+.v2-scrim--ember{background:var(--v2-scrim-ember);}
+
+/* eyebrow micro-label (F) */
+.v2-eyebrow{
+  font-family:var(--v2-mono);font-size:9px;
+  letter-spacing:var(--v2-ls-eyebrow);text-transform:uppercase;
+  color:var(--v2-txt-faint);
+}
+
+/* stencil title (G) */
+.v2-title{
+  font-family:var(--v2-stencil);font-weight:700;
+  letter-spacing:var(--v2-ls-title);color:var(--v2-txt);
+  text-shadow:0 2px 0 rgba(0,0,0,.6);
+}
+
+/* CTA button (I/J) */
+.v2-cta{
+  font-family:var(--v2-disp);font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--v2-on-oil);cursor:pointer;
+  background:var(--v2-grad-oil-cta);
+  border:1px solid var(--v2-oil-lite);
+  border-bottom:3px solid var(--v2-oil-edge);
+  border-radius:var(--v2-r-sm);
+  box-shadow:0 0 12px var(--v2-oil-glow);
+  transition:filter var(--v2-dur-fast);
+}
+.v2-cta:hover{filter:brightness(1.08);}
+.v2-cta:disabled{opacity:.5;cursor:not-allowed;filter:none;}
+.v2-cta--ember{
+  background:var(--v2-grad-ember-cta);
+  border-color:var(--v2-ember-lite);
+  border-bottom-color:var(--v2-ember-deep);
+  box-shadow:0 0 12px var(--v2-ember-glow);
+}
+
+/* sunken well (E) */
+.v2-well{
+  background:var(--v2-well-deep);
+  border:1px solid var(--v2-well-line);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.75);
+}
+
+/* canonical selected oil state (H) */
+.is-sel{
+  border-color:var(--v2-oil);
+  background:linear-gradient(180deg,var(--v2-oil-wash),var(--v2-iron-850));
+  box-shadow:inset 0 0 0 1px var(--v2-oil-ring),0 0 16px var(--v2-oil-wash);
+}
+
+/* segmented option field (P) */
+.v2-field{display:flex;flex-direction:column;gap:.35rem;}
+.v2-field-seg{display:flex;flex-wrap:wrap;gap:.4rem;}
+.v2-opt{
+  flex:1 1 0;padding:.5rem .6rem;text-align:center;cursor:pointer;
+  background:var(--v2-iron-800);border:1px solid var(--v2-line);
+  color:var(--v2-txt-dim);border-radius:var(--v2-r-sm);
+  transition:border-color var(--v2-dur-fast),color var(--v2-dur-fast);
+}
+.v2-opt:hover{color:var(--v2-txt);}
+
+/* lamp dot (N) */
+.v2-lamp{
+  width:8px;height:8px;border-radius:var(--v2-r-round);
+  background:var(--v2-ok);box-shadow:0 0 8px currentColor;
+  animation:v2-lampfast var(--v2-lamp-speed,2s) infinite;
+}
+
+/* corner rivet (B) */
+.v2-rivet{
+  position:absolute;width:8px;height:8px;border-radius:var(--v2-r-round);
+  background:var(--v2-rivet-dot);
+}
+
+/* badge medallion (M) */
+.v2-badge{
+  display:grid;place-items:center;border-radius:var(--v2-r-round);
+  background:var(--v2-grad-badge);
+}
+
+/* hazard stripe (L) */
+.v2-hazard{
+  background:repeating-linear-gradient(-45deg,
+    var(--v2-hazard-dark,#0c0709) 0 var(--v2-hazard-w,9px),
+    var(--v2-hazard-accent,#7c2331) var(--v2-hazard-w,9px) calc(var(--v2-hazard-w,9px)*2));
+}
+
+/* dialog close button */
+.v2-close{
+  display:grid;place-items:center;width:30px;height:30px;
+  background:var(--v2-iron-800);border:1px solid var(--v2-line);
+  color:var(--v2-txt-dim);cursor:pointer;
+  transition:color var(--v2-dur-fast),border-color var(--v2-dur-fast);
+}
+.v2-close:hover{color:var(--v2-ember-hi);border-color:var(--v2-ember-deep);}
