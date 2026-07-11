@@ -1,0 +1,151 @@
+/* V2 battlefield blueprint — native port of V1 field-map.css. Every selector is
+   scoped under .v2-root and the palette is keyed off the --v2-* tokens (with the
+   blueprint's own literal hues kept where V1 used them, so the recon look is
+   identical). Two blocks: the SVG map (.v2-fm*) and the field-setup drawer body
+   (.v2-fs*). */
+
+/* ===== Blueprint map ======================================================= */
+.v2-root .v2-fm { width: 100%; display: block; }
+.v2-root .v2-fm-field { fill: var(--v2-iron-950); stroke: var(--v2-rivet); stroke-width: 1; }
+.v2-root .v2-fm-grid { stroke: #ffffff; stroke-opacity: .045; stroke-width: 1; }
+.v2-root .v2-fm-tick { stroke: var(--v2-oil); stroke-opacity: .55; stroke-width: 1.5; }
+.v2-root .v2-fm-half-mine { fill: #1d9e75; fill-opacity: 0.2; }
+.v2-root .v2-fm-half-foe { fill: #d85a30; fill-opacity: 0.2; }
+/* Legal deployment zone — an 8" quarter-circle at each corner (§10). */
+.v2-root .v2-fm-deploy { fill-opacity: 0.32; stroke-width: 1; stroke-dasharray: 4 3; }
+.v2-root .v2-fm-deploy--mine { fill: #1d9e75; stroke: #46e3ad; }
+.v2-root .v2-fm-deploy--foe { fill: #d85a30; stroke: #ff9366; }
+.v2-root .v2-fm-diag { stroke: #8b93a0; stroke-width: 1.25; stroke-dasharray: 6 5; stroke-opacity: .8; }
+.v2-root .v2-fm-obj { fill: #ef9f27; stroke: #854f0b; }
+.v2-root .v2-fm-obj-label,
+.v2-root .v2-fm-zone-label {
+  fill: #c2c0b6; font-size: 11px; font-family: var(--v2-mono);
+}
+.v2-root .v2-fm-zone-label { letter-spacing: .06em; text-transform: uppercase; fill-opacity: .78; }
+.v2-root .v2-fm-dim {
+  fill: var(--v2-txt-faint); font-size: 9px; font-weight: 600;
+  font-family: var(--v2-mono); letter-spacing: .06em;
+}
+.v2-root .v2-fm-terrain { fill: #5f5e5a; stroke: #2c2c2a; stroke-width: 0.6; }
+.v2-root .v2-fm-terrain--wood      { fill: #3c5a3a; stroke: #223421; }
+.v2-root .v2-fm-terrain--crater    { fill: #47423a; stroke: #29241d; }
+.v2-root .v2-fm-terrain--building  { fill: #6a6862; stroke: #34332f; }
+.v2-root .v2-fm-terrain--barricade { fill: #7a5a37; stroke: #3e2f1d; }
+.v2-root .v2-fm-terrain--ruin      { fill: #565049; stroke: #2c2823; }
+.v2-root .v2-fm-terrain--rock      { fill: #514f4a; stroke: #2a2926; }
+.v2-root .v2-fm-terrain--crate     { fill: #6f5a3e; stroke: #382d1f; }
+
+/* ===== Inline battlefield section (owner Set-field button / waiting note) === */
+.v2-root .v2-fc { display: flex; flex-direction: column; gap: .6rem; }
+.v2-root .v2-fc-set {
+  align-self: flex-start; padding: .55rem 1.1rem;
+  border: 1px solid rgba(231,154,61,.7); border-radius: 10px;
+  background: linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil-deep));
+  color: #201203; font-family: var(--v2-stencil); font-weight: 700;
+  font-size: .8rem; letter-spacing: .08em; text-transform: uppercase;
+  cursor: pointer;
+  transition: transform var(--v2-dur-fast, .14s), box-shadow var(--v2-dur-fast, .14s);
+}
+.v2-root .v2-fc-set:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(231,154,61,.28); }
+.v2-root .v2-fc-set:active { transform: translateY(1px); }
+
+/* Non-owner / pre-lock waiting note in the inline section. */
+.v2-root .v2-fc-wait {
+  margin: .6rem 0 0; padding: .55rem .7rem;
+  border: 1px dashed var(--v2-line); border-radius: 10px;
+  background: var(--v2-iron-850);
+  font-family: var(--v2-mono); font-size: .62rem; letter-spacing: .04em;
+  color: var(--v2-txt-faint); text-align: center;
+}
+
+/* ===== Field-setup console (drawer body) ===================================
+   A tactical "field briefing": recon map on top, dimension console + a single
+   commit action below. Everything speaks the shared iron/oil/ember system. */
+.v2-root .v2-fs { display: flex; flex-direction: column; gap: .8rem; }
+
+.v2-root .v2-fs .v2-fm {
+  border: 1px solid var(--v2-line); border-radius: 10px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(231,154,61,.05), transparent 60%),
+    var(--v2-iron-950);
+}
+
+/* Legend — decodes the two deploy-zone tints + the objective marker. */
+.v2-root .v2-fs-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; }
+.v2-root .v2-fs-leg {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-family: var(--v2-mono); font-size: .55rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--v2-txt-dim);
+}
+.v2-root .v2-fs-leg::before {
+  content: ""; width: 10px; height: 10px; border-radius: 3px;
+  background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0,0,0,.45);
+}
+.v2-root .v2-fs-leg--mine { --sw: #1d9e75; }
+.v2-root .v2-fs-leg--foe  { --sw: #d85a30; }
+.v2-root .v2-fs-leg--obj  { --sw: var(--v2-oil); }
+.v2-root .v2-fs-leg--obj::before { border-radius: 999px; }
+
+/* Grouped sections with a mono micro-header + hairline rule. */
+.v2-root .v2-fs-group { display: flex; flex-direction: column; gap: .45rem; }
+.v2-root .v2-fs-label {
+  display: flex; align-items: center; gap: .55rem;
+  font-family: var(--v2-mono); font-size: .55rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--v2-txt-dim);
+}
+.v2-root .v2-fs-label::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--v2-line), transparent);
+}
+
+/* Dimension inputs: themed number fields with an "in" suffix + inline Apply. */
+.v2-root .v2-fs-dims { display: flex; gap: .5rem; align-items: flex-end; }
+.v2-root .v2-fs-num { position: relative; flex: 1 1 0; }
+.v2-root .v2-fs-cap {
+  display: block; margin-bottom: .3rem;
+  font-family: var(--v2-mono); font-size: .5rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--v2-txt-faint);
+}
+.v2-root .v2-fs-num input {
+  width: 100%; height: 2.5rem; padding: 0 1.9rem 0 .65rem;
+  background: var(--v2-iron-950); color: var(--v2-txt);
+  border: 1px solid var(--v2-line); border-radius: 9px;
+  font-family: var(--v2-mono); font-size: 1rem; font-weight: 600;
+  transition: border-color .14s, box-shadow .14s;
+}
+.v2-root .v2-fs-num input:focus { outline: none; border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil); }
+.v2-root .v2-fs-num input::-webkit-inner-spin-button,
+.v2-root .v2-fs-num input::-webkit-outer-spin-button { opacity: .3; height: 1.6rem; }
+.v2-root .v2-fs-unit {
+  position: absolute; right: .6rem; bottom: .78rem;
+  font-family: var(--v2-mono); font-size: .62rem; color: var(--v2-txt-faint);
+  pointer-events: none;
+}
+.v2-root .v2-fs-apply {
+  flex: 0 0 auto; height: 2.5rem; padding: 0 1rem;
+  border: 1px solid var(--v2-rivet); border-radius: 9px;
+  background: var(--v2-iron-780); color: var(--v2-txt);
+  font-family: var(--v2-disp); font-weight: 700; font-size: .74rem;
+  letter-spacing: .07em; text-transform: uppercase; cursor: pointer;
+  transition: background .14s, border-color .14s, transform .14s;
+}
+.v2-root .v2-fs-apply:hover { background: var(--v2-iron-750); border-color: var(--v2-oil); color: var(--v2-oil-hi); }
+.v2-root .v2-fs-apply:active { transform: translateY(1px); }
+
+/* Secondary "tweak" actions — equal, quiet ghost buttons. */
+.v2-root .v2-fs-actions { display: flex; gap: .5rem; }
+.v2-root .v2-fs-actions .v2-dwr-btn { flex: 1 1 0; }
+
+/* The single commit action — the hero of the screen. */
+.v2-root .v2-fs-lock {
+  position: relative; width: 100%; padding: .8rem; margin-top: .1rem;
+  border: 1px solid rgba(231,154,61,.7); border-radius: 12px;
+  background: linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil-deep));
+  color: #201203; font-family: var(--v2-stencil); font-weight: 700;
+  font-size: .9rem; letter-spacing: .16em; text-transform: uppercase;
+  cursor: pointer; overflow: hidden;
+  box-shadow: 0 8px 22px rgba(231,154,61,.25);
+  transition: transform .14s, box-shadow .14s;
+}
+.v2-root .v2-fs-lock:hover { transform: translateY(-1px); box-shadow: 0 11px 26px rgba(231,154,61,.3); }
+.v2-root .v2-fs-lock:active { transform: translateY(1px); box-shadow: 0 5px 14px rgba(231,154,61,.25); }
