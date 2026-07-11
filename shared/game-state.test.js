@@ -2984,6 +2984,64 @@ test("if the skewerer is gone, the victim disengages with no strike and no crash
   assert.equal(b1.engagedWith, null);    // and the rig disengages
 });
 
+// ── §13 Ground Anchor (Anchor) ───────────────────────────────────────────────
+// An Anchor with the Ground Anchor prototype pins the rig it locks: while the
+// mark holds, Disengaging from the anchorer costs the fleeing rig a free
+// Anchor strike at its NATURAL STR (not a flat override, unlike Skewer).
+function groundAnchorRoom() {
+  const r = createRoom("ANCHOR");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "add", attrs: {
+    name: "a1", class: "medium", owner: "a", longRange: "Autocannon", melee: "Anchor", meleeUpgrade: "ground-anchor",
+  } });
+  applyCommand(r, { verb: "add", attrs: {
+    name: "b1", class: "medium", owner: "b", longRange: "Autocannon", melee: "Anchor", meleeUpgrade: "ground-anchor",
+  } });
+  for (let i = 2; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+    applyCommand(r, { verb: "add", attrs: { name: `b${i}`, class: "light", owner: "b", ...W } });
+  }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  clearPendingAnswer(r);
+  return r;
+}
+
+const countAnchor = (r) => r.game.resolutions.filter((x) => x.kind === "anchor").length;
+
+test("Ground Anchor: a damaging Anchor hit marks the target; Disengage provokes a free strike", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Anchor";
+  b1.weaponUpgrades.melee = "ground-anchor";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.equal(a1.anchoredBy, b1.id);
+  assert.equal(a1.engagedWith, b1.id);
+});
+
+test("Ground Anchor: Disengaging off the anchor provokes a free Anchor strike then clears", () => {
+  const r = groundAnchorRoom();
+  const a1 = findRig(r, "a1"); // the anchorer
+  const b1 = findRig(r, "b1"); // the victim — disengages on b's turn
+  __test.setEngagement(b1, a1);
+  b1.anchoredBy = a1.id;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const spBefore = spSum(b1);
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } }, {}, { random: () => 0.999 });
+  assert.equal(countAnchor(r), 1);                 // an anchor strike was resolved
+  assert.ok(spSum(b1) < spBefore, "victim took the free anchor strike");
+  assert.equal(b1.anchoredBy, null);               // mark cleared
+  assert.equal(b1.engagedWith, null);              // engagement broken
+  assert.equal(a1.engagedWith, null);
+});
+
 // --- Group E: per-location tracking (Breach Grip + Dismember) -----------------
 
 test("makeRig seeds cracked/crippled/noRepair maps and per-location origMax", () => {

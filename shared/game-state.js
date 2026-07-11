@@ -455,6 +455,9 @@ function ensureRigShape(rig) {
   // Skewer (§13, Lance) — the id of the rig that impaled this one in the melee
   // lock; Disengaging from it costs a free STR-11 lance strike.
   if (rig.skeweredBy === undefined) rig.skeweredBy = null;
+  // Ground Anchor (§13, Anchor) — the id of the rig that anchored this one in
+  // the melee lock; Disengaging from it costs a free natural-STR Anchor strike.
+  if (rig.anchoredBy === undefined) rig.anchoredBy = null;
   if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
   if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
   // Enfilade (§13, Sniper Cannon) — per-rig aimed-shot counter; every 3rd aimed
@@ -622,6 +625,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     ripostedThisRound: false,
     // Skewer (§13, Lance) — set to the skewerer's id while impaled in the lock.
     skeweredBy: null,
+    // Ground Anchor (§13, Anchor) — set to the anchorer's id while pinned in the lock.
+    anchoredBy: null,
     // Penetrator Rounds (§13, Autocannon) — belt-cycle counter + the ROF-halving
     // downside carried into the attack right after a penetrator shot.
     autocannonShots: 0,
@@ -1056,9 +1061,13 @@ function clearEngagement(room, rig) {
   // Skewer (§13, Lance) — the impale can't outlive the lock; clear the mark on
   // both ends however the engagement ends (Disengage, destruction, remove, …).
   if (rig.skeweredBy != null) rig.skeweredBy = null;
+  // Ground Anchor (§13, Anchor) — mirrors Skewer: the anchor can't outlive the
+  // lock, so clear the mark on both ends however the engagement ends.
+  if (rig.anchoredBy != null) rig.anchoredBy = null;
   if (partner) {
     partner.engagedWith = null;
     if (partner.skeweredBy != null) partner.skeweredBy = null;
+    if (partner.anchoredBy != null) partner.anchoredBy = null;
   }
 }
 // Enemy-only, both-alive guard around setEngagement (used by the melee and
@@ -1471,6 +1480,36 @@ function maybeDeadWeight(room, attacker, target, incomingWeapon, res) {
   return true;
 }
 
+// Ground Anchor (§13, Anchor) — a damaging Anchor blow that leaves the target
+// locked to the anchorer drives the anchor in (`anchoredBy`). Mirrors maybeSkewer.
+function maybeGroundAnchor(room, attacker, target, incomingWeapon, res) {
+  if (incomingWeapon !== "melee") return false;
+  if (!attacker || !target || attacker.destroyed) return false;
+  if (!res || !(res.hits > 0)) return false;
+  const dealtSp = Array.isArray(res.impacts) && res.impacts.some((h) => h.sp > 0);
+  if (!dealtSp) return false;
+  const effect = effectiveWeaponProfile("melee", attacker.weapons?.melee, attacker)?.upgradeEffect;
+  if (!effect?.groundAnchor) return false;
+  if (attacker.engagedWith !== target.id || target.engagedWith !== attacker.id) return false;
+  target.anchoredBy = attacker.id;
+  return true;
+}
+
+// Ground Anchor's Disengage payload — one free Anchor strike at the weapon's
+// natural STR (unlike Skewer's flat STR 11). Reuses the resolveAttack path.
+function resolveAnchorStrike(room, anchorer, victim, random) {
+  pushResolution(room, {
+    kind: "anchor", actor: anchorer.owner, rigId: anchorer.id, rolls: [],
+    summary: `${victim.name} tears off ${anchorer.name}'s Anchor — free strike as it breaks the lock.`,
+    effects: ["Ground Anchor — free Anchor strike on Disengage"],
+  });
+  resolveAttack(room, anchorer, victim, {
+    weapon: "melee", target: victim.name,
+    arc: "front", range: "near", aimed: false, aimedLoc: "hull",
+    engaged: anchorer.engagedWith != null,
+  }, random, combatCtx());
+}
+
 // Skewer's Disengage payload — one free STR-11 Lance strike from the skewerer
 // onto the fleeing rig as it tears itself off the point. Reuses the same
 // strOverride escape hatch and resolveAttack path as the Anvil Boss riposte.
@@ -1588,6 +1627,8 @@ function performAction(room, rig, act, a, random) {
       maybeSkewer(room, rig, target, a.weapon, res);
       // Dead Weight — a damaging Anchor blow pins the target's next Disengage.
       maybeDeadWeight(room, rig, target, a.weapon, res);
+      // Ground Anchor — a damaging Anchor blow drives the anchor into the target it just locked.
+      maybeGroundAnchor(room, rig, target, a.weapon, res);
       return true;
     }
     const res = resolveFire(room, rig, target, a, act, random);
@@ -1596,6 +1637,7 @@ function performAction(room, rig, act, a, random) {
     if (res) maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
     if (res) maybeSkewer(room, rig, target, a.weapon, res);
     if (res) maybeDeadWeight(room, rig, target, a.weapon, res);
+    if (res) maybeGroundAnchor(room, rig, target, a.weapon, res);
     return !!res;
   }
   if (act === "move" || act === "sprint") {
@@ -1638,6 +1680,13 @@ function performAction(room, rig, act, a, random) {
       const skewerer = findRigById(room, rig.skeweredBy);
       if (skewerer && !skewerer.destroyed) resolveSkewerStrike(room, skewerer, rig, random);
       rig.skeweredBy = null;
+    }
+    // Ground Anchor (§13, Anchor) — tearing off the anchor provokes one free
+    // Anchor strike at its natural STR before the lock breaks.
+    if (rig.anchoredBy != null && rig.engagedWith === rig.anchoredBy) {
+      const anchorer = findRigById(room, rig.anchoredBy);
+      if (anchorer && !anchorer.destroyed) resolveAnchorStrike(room, anchorer, rig, random);
+      rig.anchoredBy = null;
     }
     clearEngagement(room, rig);
     bumpHeat(rig, def.heat);
