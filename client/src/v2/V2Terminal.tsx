@@ -6,7 +6,7 @@ import { RigTerminal } from "./overlays/RigTerminal";
 import { CommissionWizard } from "./overlays/CommissionWizard";
 import { OutcomeBanner } from "./overlays/OutcomeBanner";
 import { V2ChatMount } from "./components/V2ChatMount";
-import { GlossaryDialog } from "../components/overlays/GlossaryDialog";
+import { GlossaryDialog } from "./overlays/GlossaryDialog";
 import { useRoomState } from "../state/RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
 import { useMySide } from "../hooks/useMySide";

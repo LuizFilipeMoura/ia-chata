@@ -1,19 +1,24 @@
 import { markdownToHtml } from "../../lib/markdown";
 import { stripRigTags } from "../../lib/rigTags";
 import type { ChatMessage } from "../../components/chat/ChatContext";
+import { GlossaryText } from "./GlossaryText";
 
 // Renders one V2 Quartermaster chat message. Ports V1 chat/Bubble.tsx but with
-// v2-qm-* classes. Phase I renders bot text PLAIN (no glossary highlighting —
-// Phase J adds it), so plain seed/greeting bubbles and streamed answers both
-// use the same markdown/text path.
+// v2-qm-* classes. Plain seed/greeting bot bubbles run through the V2 GlossaryText
+// so recognised rules terms become tappable definition controls.
 export function Bubble({ msg }: { msg: ChatMessage }) {
   if (msg.role === "user") {
     return <div className="v2-qm-bubble v2-qm-user">{msg.text}</div>;
   }
 
-  // Plain seed/greeting/clear/error bot bubbles: render as text.
+  // Plain seed/greeting/clear/error bot bubbles: render text with glossary terms
+  // highlighted.
   if (msg.plain) {
-    return <div className="v2-qm-bubble v2-qm-bot">{msg.text}</div>;
+    return (
+      <div className="v2-qm-bubble v2-qm-bot">
+        <GlossaryText text={msg.text} />
+      </div>
+    );
   }
 
   const html = markdownToHtml(stripRigTags(msg.text));
