@@ -13,6 +13,34 @@
   --v2-disp:"Oswald",system-ui,sans-serif;
   --v2-mono:"JetBrains Mono",ui-monospace,monospace;
 
+  /* surfaces / lines / edges */
+  --v2-well:#0a0d11; --v2-well-deep:#07090c; --v2-well-line:#000; --v2-edge-dark:#05070a;
+  /* canonical gradients */
+  --v2-surface:linear-gradient(180deg,var(--v2-iron-850),var(--v2-iron-900));
+  --v2-grad-oil-cta:linear-gradient(180deg,#f0a94a,#c47a26);
+  --v2-grad-ember-cta:linear-gradient(180deg,#f0663f,#b8351f);
+  --v2-grad-ember-well:linear-gradient(180deg,#26170f,#160c07);
+  --v2-grad-green-well:linear-gradient(180deg,#1c2a1c,#0d160d);
+  --v2-grad-oil-sel:linear-gradient(180deg,#241a0d,#1a1207);
+  --v2-grad-badge:conic-gradient(from 20deg,#2a1c0c,#5a3c14,#2a1c0c);
+  --v2-rivet-dot:radial-gradient(circle at 40% 35%,#69727f,#20252e 60%,rgba(0,0,0,.7));
+  /* accents */
+  --v2-oil-lite:#ffcf82; --v2-oil-edge:#7c4d14; --v2-ember-lite:#ff8a6a;
+  --v2-on-oil:#1a1206; --v2-verdigris:#2f5c33;
+  /* canonical alphas */
+  --v2-oil-wash:rgba(231,154,61,.1); --v2-oil-ring:rgba(231,154,61,.4); --v2-oil-glow:rgba(231,154,61,.3);
+  --v2-ember-wash:rgba(229,83,58,.12); --v2-ember-glow:rgba(229,83,58,.3);
+  --v2-ok-wash:rgba(108,196,127,.12); --v2-ok-glow:rgba(108,196,127,.3);
+  --v2-bevel-top:inset 0 1px 0 rgba(255,255,255,.05);
+  /* scrim */
+  --v2-scrim:rgba(5,7,10,.72);
+  --v2-scrim-oil:radial-gradient(80% 60% at 50% 18%,var(--v2-oil-wash),transparent 70%),var(--v2-scrim);
+  --v2-scrim-ember:radial-gradient(80% 60% at 50% 18%,var(--v2-ember-wash),transparent 70%),var(--v2-scrim);
+  /* motion / shape */
+  --v2-dur-fast:.14s; --v2-dur-slow:.25s;
+  --v2-r-sm:8px; --v2-r-card:14px; --v2-r-pill:999px; --v2-r-round:50%;
+  --v2-ls-eyebrow:.2em; --v2-ls-title:.1em;
+
   position:fixed; inset:0; z-index:10; display:flex; flex-direction:column;
   color:var(--v2-txt); font-family:var(--v2-disp); -webkit-font-smoothing:antialiased;
   background:
@@ -20,6 +48,10 @@
     radial-gradient(100% 60% at 50% 120%,rgba(50,58,72,.12),transparent 60%),
     #080a0d;
 }
+/* Token-only portal scope: inherits --v2-* and satisfies `.v2-root …` selectors
+   but generates no box, so it never paints the full-screen shell backdrop over
+   the app (used by small portaled popovers/tips). */
+.v2-root.v2-portal{display:contents;}
 .v2-root *{box-sizing:border-box;}
 .v2-root ::-webkit-scrollbar{width:8px;height:8px;}
 .v2-root ::-webkit-scrollbar-thumb{background:#39414d;border:1px solid #10141a;}
