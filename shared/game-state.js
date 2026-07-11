@@ -476,6 +476,10 @@ function ensureRigShape(rig) {
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
   if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
+  // Dead Weight (§13, Anchor) — a damaging Anchor melee hit pins the struck
+  // target: it can't Disengage on its next activation. Scoped/self-clearing
+  // like noPrepNextActivation.
+  if (typeof rig.noDisengageNextActivation !== "boolean") rig.noDisengageNextActivation = false;
   if (typeof rig.suppressImmobile !== "boolean") rig.suppressImmobile = false;
   // Ion Storm (§13, Arc Gun) — EMP active-lockout on the struck target, and the
   // attacker's own Arc Gun overload flag.
@@ -650,6 +654,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // `immobilised` flag): noPrepNextActivation clears at activation end,
     // suppressImmobile clears in Recovery.
     noPrepNextActivation: false,
+    // Dead Weight (§13, Anchor) — mirrors noPrepNextActivation's shape: a
+    // damaging Anchor hit blocks this rig's next Disengage, self-clears at
+    // that activation's end.
+    noDisengageNextActivation: false,
     suppressImmobile: false,
     // Ion Storm (§13, Arc Gun) — an EMP hit blocks the target's equipment
     // actives for its next activation; arcLockedNext overloads the attacker's
@@ -730,6 +738,9 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     engagedWith: null,
     hardened: false,
     actionPenaltyNextActivation: 0,
+    // Dead Weight (§13, Anchor) — mirrored for shape parity (cold kinds never
+    // carry the Anchor upgrade, so this never actually triggers).
+    noDisengageNextActivation: false,
     // Emplacement (§13) — mirrored from makeRig for shape parity (cold kinds
     // never carry the upgrade, so the stance never actually engages).
     emplaced: false,
@@ -1314,6 +1325,9 @@ function endActivation(room, rig, dice, random) {
   // activation it landed on — clear it here so it doesn't leak into the rig's
   // activation after next.
   rig.noPrepNextActivation = false;
+  // Dead Weight (§13, Anchor) — the no-Disengage pin is scoped to the one
+  // activation it targeted; clear it here so it can't leak forward.
+  rig.noDisengageNextActivation = false;
   // Ion Storm's EMP active-lockout (§13) is scoped to exactly the one activation
   // it penalises — clear it here alongside noPrepNextActivation so it can't leak
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
@@ -1442,6 +1456,21 @@ function maybeSkewer(room, attacker, target, incomingWeapon, res) {
   return true;
 }
 
+// Dead Weight (§13, Anchor) — a damaging Anchor melee blow pins the struck target
+// under the anchor: it can't Disengage on its next activation. Mirrors the
+// maybeSkewer gate shape (melee only, must land SP, upgrade must be equipped).
+function maybeDeadWeight(room, attacker, target, incomingWeapon, res) {
+  if (incomingWeapon !== "melee") return false;
+  if (!attacker || !target || attacker.destroyed) return false;
+  if (!res || !(res.hits > 0)) return false;
+  const dealtSp = Array.isArray(res.impacts) && res.impacts.some((h) => h.sp > 0);
+  if (!dealtSp) return false;
+  const effect = effectiveWeaponProfile("melee", attacker.weapons?.melee, attacker)?.upgradeEffect;
+  if (!effect?.deadWeight) return false;
+  target.noDisengageNextActivation = true;
+  return true;
+}
+
 // Skewer's Disengage payload — one free STR-11 Lance strike from the skewerer
 // onto the fleeing rig as it tears itself off the point. Reuses the same
 // strOverride escape hatch and resolveAttack path as the Anvil Boss riposte.
@@ -1557,6 +1586,8 @@ function performAction(room, rig, act, a, random) {
       maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
       // Skewer — a damaging Lance blow impales the target it just locked.
       maybeSkewer(room, rig, target, a.weapon, res);
+      // Dead Weight — a damaging Anchor blow pins the target's next Disengage.
+      maybeDeadWeight(room, rig, target, a.weapon, res);
       return true;
     }
     const res = resolveFire(room, rig, target, a, act, random);
@@ -1564,6 +1595,7 @@ function performAction(room, rig, act, a, random) {
     // round; the riposte still gates on a landed hit and ripostedThisRound.
     if (res) maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
     if (res) maybeSkewer(room, rig, target, a.weapon, res);
+    if (res) maybeDeadWeight(room, rig, target, a.weapon, res);
     return !!res;
   }
   if (act === "move" || act === "sprint") {
@@ -1596,6 +1628,9 @@ function performAction(room, rig, act, a, random) {
     // §engagement — break the melee lock. The budget/`def` guard above already
     // ran (a slot is available). No-op if the rig isn't actually engaged.
     if (rig.engagedWith == null) return false;
+    // Dead Weight (§13, Anchor) — pinned under the anchor: can't break the lock
+    // this activation. Refused without spending a slot; clears at activation end.
+    if (rig.noDisengageNextActivation) return false;
     // Skewer (§13, Lance) — if this rig is impaled by the very partner it's
     // locked to, tearing free provokes one free STR-11 lance strike before the
     // lock breaks. A missing/destroyed skewerer just clears the mark (no strike).
@@ -1887,6 +1922,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.barrageRoundsLeft = 0;      // Barrage (§13) — clear a committed tube
       rig.towChainCooldownUntil = 0;  // Tow Chain (§13) — clear the fling cooldown
       rig.towedThisActivation = false;
+      rig.noDisengageNextActivation = false; // Dead Weight (§13) — clear the Disengage pin on reset
       delete rig._blastRolled;
     }
     room.game.started = false;

@@ -1981,6 +1981,36 @@ test("Sunder reduces the struck location max SP once when the selected upgrade d
   assert.equal(a1.hull.sp <= a1.hull.max, true);
 });
 
+test("Dead Weight: a damaging Anchor hit blocks the target's next Disengage", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Anchor";
+  b1.weaponUpgrades.melee = "dead-weight";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.equal(a1.noDisengageNextActivation, true);
+  assert.equal(a1.engagedWith, b1.id);
+});
+
+test("Dead Weight: a rig flagged noDisengageNextActivation cannot Disengage", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  __test.setEngagement(b1, a1);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  b1.noDisengageNextActivation = true;
+  const used = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
+  assert.equal(r.game.turn.actionsUsed, used); // refused, no slot spent
+  assert.equal(b1.engagedWith, a1.id);          // still locked
+});
+
 test("createRoom seeds owner=null and a default 54x36 field with objectives", () => {
   const r = createRoom("F1");
   assert.equal(r.ownerSide, null);

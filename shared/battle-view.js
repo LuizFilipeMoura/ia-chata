@@ -51,8 +51,9 @@ export function availableActions(rig, turn, round) {
         note = "Emplaced — Un-plant first";
       }
       if (key === "disengage") {
-        enabled = left > 0 && rig.engagedWith != null;
+        enabled = left > 0 && rig.engagedWith != null && !rig.noDisengageNextActivation;
         if (rig.engagedWith == null) note = "Not engaged";
+        else if (rig.noDisengageNextActivation) note = "Anchored — can't Disengage this activation";
       }
       if (key === "douse") {
         enabled = left > 0 && (rig.burning || 0) > 0;
@@ -158,6 +159,7 @@ export function rigModifiers(rig) {
   if (rig.lockedTarget != null) mods.push({ key: "locked", tag: "Missiles locked", tone: "prep" });
   if ((rig.actionPenaltyNextActivation || 0) > 0) mods.push({ key: "actionpen", tag: `−${rig.actionPenaltyNextActivation} action next`, tone: "warn" });
   if (rig.noPrepNextActivation) mods.push({ key: "noprep", tag: "No Prepare next", tone: "warn" });
+  if (rig.noDisengageNextActivation) mods.push({ key: "nodisengage", tag: "Anchored — no Disengage next", tone: "warn" });
   if (rig.noActivesNextActivation) mods.push({ key: "noactive", tag: "No actives next", tone: "warn" });
   if (rig.arcLockedNext) mods.push({ key: "arclock", tag: "Arc Gun locked", tone: "warn" });
   if (rig.armsSuppressed) mods.push({ key: "armssup", tag: "Arms suppressed · ½ ROF", tone: "warn" });
