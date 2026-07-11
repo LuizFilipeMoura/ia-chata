@@ -224,3 +224,202 @@
   letter-spacing: .06em;
   color: var(--v2-crit);
 }
+
+/* ============ Rig Control Terminal overlay — ported from mockup 310-416 ====
+   The whole overlay lives under .v2-root; the scrim is fixed to the viewport
+   (radial ember bloom over a dark wash) and scrolls when the sheet overflows. */
+.v2-root .v2-rt-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px 16px;
+  overflow-y: auto;
+  background:
+    radial-gradient(80% 60% at 50% 20%, rgba(231, 154, 61, .08), transparent 70%),
+    rgba(4, 5, 7, .72);
+}
+
+/* Iron sheet: gradient face, rivet border, breathing amber glow + corner rivets. */
+.v2-root .v2-rt {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-900));
+  border: 1px solid var(--v2-rivet);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .05),
+    inset 0 -40px 70px rgba(0, 0, 0, .5),
+    0 14px 34px rgba(0, 0, 0, .6);
+  animation: v2-glowpulse 3.2s infinite;
+}
+.v2-root .v2-rt::before,
+.v2-root .v2-rt::after {
+  content: "";
+  position: absolute;
+  top: 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #69727f, #20252e 60%, rgba(0, 0, 0, .7));
+}
+.v2-root .v2-rt::before { left: 9px; }
+.v2-root .v2-rt::after { right: 9px; }
+
+.v2-root .v2-rt-close {
+  position: absolute;
+  top: 10px;
+  right: 26px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  background: var(--v2-iron-850);
+  border: 1px solid var(--v2-line);
+  color: var(--v2-txt-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: filter .14s;
+}
+.v2-root .v2-rt-close:hover { filter: brightness(1.3); }
+
+/* Header: class glyph tile, stencilled name + loadout sub, status token. */
+.v2-root .v2-rt-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--v2-line);
+  background: repeating-linear-gradient(-45deg,
+    rgba(20, 16, 8, 0) 0 20px, rgba(168, 100, 28, .05) 20px 40px);
+}
+.v2-root .v2-rt-glyph {
+  flex: 0 0 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--v2-iron-950);
+  border: 1px solid var(--v2-oil-deep);
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 28px;
+  color: #8fbcff;
+}
+.v2-root .v2-rt-id { flex: 1; min-width: 0; }
+.v2-root .v2-rt-name {
+  margin: 0;
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: .08em;
+  color: var(--v2-txt);
+}
+.v2-root .v2-rt-sub {
+  margin-top: 3px;
+  font-family: var(--v2-disp);
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--v2-txt-dim);
+  text-transform: capitalize;
+}
+.v2-root .v2-rt-status {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  font-family: var(--v2-mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-align: right;
+  max-width: 120px;
+}
+.v2-root .v2-rt-status--ok { color: var(--v2-ok); }
+.v2-root .v2-rt-status--warn { color: var(--v2-warn); }
+.v2-root .v2-rt-status--crit { color: var(--v2-crit); }
+
+/* Modifier chip row: coloured tokens keyed off the modifier tone. */
+.v2-root .v2-rt-mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 20px 0;
+}
+.v2-root .v2-rt-mod {
+  font-family: var(--v2-mono);
+  font-size: 8.5px;
+  letter-spacing: .06em;
+  padding: 3px 8px;
+  border: 1px solid var(--v2-line);
+  color: var(--v2-txt-dim);
+  background: var(--v2-iron-850);
+}
+.v2-root .v2-rt-mod[data-tone="warn"] {
+  border-color: rgba(232, 189, 87, .5);
+  color: var(--v2-warn);
+}
+.v2-root .v2-rt-mod[data-tone="crit"] {
+  border-color: rgba(242, 106, 80, .5);
+  color: var(--v2-crit);
+}
+.v2-root .v2-rt-mod[data-tone="prep"] {
+  border-color: rgba(231, 154, 61, .5);
+  color: var(--v2-oil);
+}
+
+.v2-root .v2-rt-comps {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Action row: green Activate CTA + dim danger Remove. */
+.v2-root .v2-rt-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px 18px;
+  border-top: 1px solid var(--v2-line);
+  background: var(--v2-iron-950);
+}
+.v2-root .v2-rt-activate {
+  flex: 1;
+  padding: 14px;
+  background: linear-gradient(180deg, #1c2a1c, #0d160d);
+  border: 1px solid #2f5c33;
+  border-bottom: 3px solid #0a1a0d;
+  color: var(--v2-ok);
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(108, 196, 127, .25);
+  transition: filter .14s;
+}
+.v2-root .v2-rt-activate:hover:not(:disabled) { filter: brightness(1.12); }
+.v2-root .v2-rt-activate:disabled {
+  color: var(--v2-txt-faint);
+  background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-900));
+  border-color: var(--v2-line);
+  border-bottom-color: #05070a;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.v2-root .v2-rt-remove {
+  flex: 0 0 auto;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, #26170f, #160c07);
+  border: 1px solid var(--v2-ember-deep);
+  border-bottom: 3px solid #120503;
+  color: var(--v2-ember-hi);
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter .14s;
+}
+.v2-root .v2-rt-remove:hover { filter: brightness(1.2); }
