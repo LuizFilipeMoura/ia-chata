@@ -1,6 +1,6 @@
 import "../styles/squadron.css";
 import { heatMeter } from "/shared/game-state.js";
-import { kindOf, UNIT_KINDS } from "/shared/unit-kinds.js";
+import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { buildLoadout } from "../../lib/loadout";
 import { spColor } from "../lib/viewModels";
 import type { Rig, Component } from "../../state/types";
@@ -17,12 +17,8 @@ function loadoutText(rig: Rig): string {
   return [lo.lr?.name, lo.melee?.name].filter(Boolean).join(" · ");
 }
 
-const BARS: { tag: string; loc: "hull" | "arms" | "legs" | "engine" }[] = [
-  { tag: "H", loc: "hull" }, { tag: "A", loc: "arms" },
-  { tag: "L", loc: "legs" }, { tag: "E", loc: "engine" },
-];
-
 export function RigRow({ rig, hostile, onOpen }: { rig: Rig; hostile: boolean; onOpen: (id: number) => void }) {
+  const locs: string[] = partNamesOf(kindOf(rig));
   const [glyph, short, color] = CLASS_GLYPH[rig.weightClass] ?? CLASS_GLYPH.light;
   const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
   const m = cold ? null : heatMeter(rig);
@@ -47,10 +43,12 @@ export function RigRow({ rig, hostile, onOpen }: { rig: Rig; hostile: boolean; o
         </span>
         <span className="v2-rigrow-loadout">{loadoutText(rig)}</span>
         <span className="v2-rigrow-bars">
-          {BARS.map(({ tag, loc }) => {
-            const c = rig[loc] as Component;
+          {locs.map((loc) => {
+            const c = (rig as unknown as Record<string, Component | undefined>)[loc];
+            if (!c) return null;
+            const tag = loc[0].toUpperCase();
             return (
-              <span key={tag} className="v2-rigrow-bar">
+              <span key={loc} className="v2-rigrow-bar">
                 <span className="v2-rigrow-bar-head">
                   <span>{tag}</span><span>{c.sp}/{c.max}</span>
                 </span>
