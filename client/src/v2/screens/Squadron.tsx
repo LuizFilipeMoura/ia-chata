@@ -33,8 +33,8 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
       <BattleHud />
       <div className="v2-yard-head">
         <div>
-          <div className="v2-yard-eyebrow">DEPOT ROSTER</div>
-          <h1 className="v2-yard-title">THE YARD</h1>
+          <div className="v2-yard-eyebrow v2-eyebrow">DEPOT ROSTER</div>
+          <h1 className="v2-yard-title v2-title">THE YARD</h1>
         </div>
         <div className="v2-yard-stats">
           <div className="v2-yard-count">{count} / {max} COMMISSIONED</div>
@@ -88,7 +88,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             onClick={() => sendCommand("setdice", { value: auto ? "manual" : "auto" })}>
             🎲 {auto ? "AUTO" : "MANUAL"}
           </button>
-          <button type="button" className="v2-yard-readybtn" disabled={readyDisabled}
+          <button type="button" className="v2-yard-readybtn v2-cta" disabled={readyDisabled}
             onClick={() => sendCommand("ready", { side: mySide })}>
             READY
           </button>

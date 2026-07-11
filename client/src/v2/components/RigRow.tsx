@@ -30,14 +30,14 @@ export function RigRow({ rig, hostile, onOpen }: { rig: Rig; hostile: boolean; o
       className={"v2-rigrow" + (hostile ? " v2-rigrow--hostile" : "")}
       onClick={() => onOpen(rig.id)}
     >
-      <span className="v2-rigrow-stripe" />
+      <span className={"v2-rigrow-stripe" + (hostile ? " v2-hazard" : "")} />
       <span className="v2-rigrow-class" style={{ color }}>
         <span className="v2-rigrow-glyph">{glyph}</span>
-        <span className="v2-rigrow-short">{short}</span>
+        <span className="v2-rigrow-short v2-eyebrow">{short}</span>
       </span>
       <span className="v2-rigrow-main">
         <span className="v2-rigrow-head">
-          <span className="v2-rigrow-name">{rig.name}</span>
+          <span className="v2-rigrow-name v2-title">{rig.name}</span>
           {rig.activated && !hostile && <span className="v2-rigrow-badge">ACTIVE</span>}
           {!cold && m && <span className="v2-rigrow-heat" data-zone={m.zone}>🔥{m.heat}</span>}
         </span>
@@ -49,10 +49,10 @@ export function RigRow({ rig, hostile, onOpen }: { rig: Rig; hostile: boolean; o
             const tag = loc[0].toUpperCase();
             return (
               <span key={loc} className="v2-rigrow-bar">
-                <span className="v2-rigrow-bar-head">
+                <span className="v2-rigrow-bar-head v2-eyebrow">
                   <span>{tag}</span><span>{c.sp}/{c.max}</span>
                 </span>
-                <span className="v2-rigrow-bar-track">
+                <span className="v2-rigrow-bar-track v2-well">
                   <span className="v2-rigrow-bar-fill"
                     style={{ width: `${Math.max(0, Math.round((c.sp / c.max) * 100))}%`, background: spColor(c.sp, c.max) }} />
                 </span>
