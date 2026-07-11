@@ -92,6 +92,18 @@ export const CHASSIS = [
   { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
 ];
 
+// Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
+// weight classes (3 medium / 3 light — the catalogue has no heavy). All chassis
+// ids are unique, honouring the no-mirror-matchup invariant (AGENTS.md).
+export const SEED_ROSTER = [
+  { name: "A1", owner: "a", chassis: "medium-lance-mortar" },
+  { name: "A2", owner: "a", chassis: "light-claw-autocannon" },
+  { name: "A3", owner: "a", chassis: "light-sword-arc" },
+  { name: "B1", owner: "b", chassis: "medium-shield-siege" },
+  { name: "B2", owner: "b", chassis: "medium-sniper-chainsaw" },
+  { name: "B3", owner: "b", chassis: "light-harpoon-anchor" },
+];
+
 export function chassisById(id) {
   if (!id) return null;
   const ref = String(id).trim().toLowerCase();
@@ -397,6 +409,7 @@ export function createRoom(code) {
     version: 0,
     nextRigId: 1,
     ownerSide: null,
+    seeded: false,
     field,
     game: {
       round: 1,
@@ -523,6 +536,7 @@ function ensureRigShape(rig) {
 function ensureGameShape(room) {
   room.game ||= {};
   if (room.ownerSide === undefined) room.ownerSide = null;
+  if (room.seeded === undefined) room.seeded = false;
   if (!room.field || typeof room.field !== "object") {
     room.field = { ...FIELD_DEFAULT, diagonal: "tlbr", terrain: [], locked: false };
   }
@@ -937,6 +951,53 @@ function randomPick(items, random = Math.random) {
   if (!items.length) return null;
   const index = Math.min(items.length - 1, Math.floor(random() * items.length));
   return items[index];
+}
+
+// The game-field portion of a full reset (no per-rig work). Shared by the
+// `reset` verb (which also rebuilds each rig) and the `seed` verb (which
+// discards all rigs, so it only needs this).
+function resetGameShape(room) {
+  room.game.started = false;
+  room.game.phase = "setup";
+  room.game.round = 1;
+  room.game.turn = null;
+  room.game.resolutions = [];
+  room.game.nextResolutionId = 1;
+  room.game.recoveryClaims = {};
+  room.game.recoveryConflict = null;
+  room.game.outcome = null;
+  room.game.pendingBlast = null;
+  room.game.pendingAnswer = null;
+  room.game.pendingReaction = null;
+  room.game.answerTokens = { a: 0, b: 0 };
+  room.game.suddenDeath = false;
+  room.game.deployOrder = [];
+  room.game.initiative = null;
+  room.game.bounties = {};
+  room._history = [];
+  for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
+}
+
+// Deterministic force-start for seeded test rooms: no dice, no deployment-order
+// inference. Bounty for each side = its first enemy rig. turn.side = `first`.
+function startGameSeeded(room, first) {
+  const other = first === "b" ? "a" : "b";
+  const bounties = {};
+  for (const side of room.game.sides) {
+    const target = room.rigs.find((rig) => (rig.owner || "a") !== side.id);
+    if (!target) return false;
+    bounties[side.id] = target.id;
+  }
+  room.game.bounties = bounties;
+  room.game.started = true;
+  room.game.phase = "initiative";
+  room.game.round = 1;
+  applyInitiative(room, [first, other], null);
+  pushResolution(room, {
+    kind: "initiative", actor: first, rigId: null, rolls: [],
+    summary: `Seeded battle — ${first} activates first`, effects: [],
+  });
+  return true;
 }
 
 function maybeStartGame(room, random = Math.random) {
@@ -2075,25 +2136,31 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       // every location is back at max and the tag maps are cleared.
       recompute(rig);
     }
-    room.game.started = false;
-    room.game.phase = "setup";
-    room.game.round = 1;
-    room.game.turn = null;
-    room.game.resolutions = [];
-    room.game.nextResolutionId = 1;
-    room.game.recoveryClaims = {};
-    room.game.recoveryConflict = null;
-    room.game.outcome = null;
-    room.game.pendingBlast = null;
-    room.game.pendingAnswer = null;
-    room.game.pendingReaction = null;
-    room.game.answerTokens = { a: 0, b: 0 };
-    room.game.suddenDeath = false;
-    room.game.deployOrder = [];
-    room.game.initiative = null;
-    room.game.bounties = {};
-    room._history = [];
-    for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
+    resetGameShape(room);
+    changed = true;
+  } else if (verb === "seed") {
+    const roster = Array.isArray(a.roster) && a.roster.length ? a.roster : SEED_ROSTER;
+    const first = normalizeSide(room, a.first) || "a";
+    room.rigs = [];
+    room.nextRigId = 1;
+    resetGameShape(room);
+    for (const entry of roster) {
+      const pb = resolveChassis({ chassis: entry.chassis });
+      if (!pb) continue;
+      const owner = normalizeSide(room, entry.owner) || "a";
+      const unit = makeUnit("rig", room.nextRigId, entry.name, owner, {
+        weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
+        chassis: pb.id, sp: pb.sp,
+      });
+      if (!unit) continue;
+      room.nextRigId++;
+      room.rigs.push(unit);
+    }
+    room.field.locked = true;
+    room.seeded = true;
+    if (sideRigCount(room, "a") >= 3 && sideRigCount(room, "b") >= 3) {
+      startGameSeeded(room, first);
+    }
     changed = true;
   } else if (verb === "setdice") {
     if (!room.game.started) {

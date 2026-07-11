@@ -9,7 +9,7 @@ import {
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
-  chassisById, resolveChassis,
+  chassisById, resolveChassis, SEED_ROSTER,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -3497,4 +3497,44 @@ test("the two new light chassis resolve by id and by combo", () => {
   const rp = resolveChassis({ class: "light", longRange: "Rivet Gun", melee: "Pressure Claw" });
   assert.equal(rp.id, "light-rivet-pressureclaw");
   assert.deepEqual(rp.sp, { hull: 13, arms: 11, legs: 10, engine: 9 });
+});
+
+test("seed builds a started 3v3 with 6 distinct chassis and turn=first", () => {
+  const r = createRoom("SEED-T1");
+  applyCommand(r, { verb: "seed", attrs: { first: "b" } });
+
+  assert.equal(r.seeded, true);
+  assert.equal(r.game.started, true);
+  assert.equal(r.game.phase, "activation");
+  assert.equal(r.game.round, 1);
+  assert.equal(r.field.locked, true);
+  assert.equal(r.game.turn.side, "b");
+
+  const a = r.rigs.filter((rig) => rig.owner === "a");
+  const b = r.rigs.filter((rig) => rig.owner === "b");
+  assert.equal(a.length, 3);
+  assert.equal(b.length, 3);
+  const chassisIds = r.rigs.map((rig) => rig.chassis);
+  assert.equal(new Set(chassisIds).size, 6);
+});
+
+test("seed first defaults to 'a' and is idempotent (re-seed resets)", () => {
+  const r = createRoom("SEED-T2");
+  applyCommand(r, { verb: "seed", attrs: {} });
+  assert.equal(r.game.turn.side, "a");
+  const firstIds = r.rigs.map((rig) => rig.id);
+
+  applyCommand(r, { verb: "seed", attrs: { first: "b" } });
+  assert.equal(r.rigs.length, 6);
+  assert.equal(r.game.turn.side, "b");
+  // A fresh build re-numbers from 1, not appends.
+  assert.deepEqual(r.rigs.map((rig) => rig.id), firstIds);
+});
+
+test("SEED_ROSTER is 6 entries, 3 per side, all chassis distinct", () => {
+  assert.equal(SEED_ROSTER.length, 6);
+  assert.equal(SEED_ROSTER.filter((e) => e.owner === "a").length, 3);
+  assert.equal(SEED_ROSTER.filter((e) => e.owner === "b").length, 3);
+  assert.equal(new Set(SEED_ROSTER.map((e) => e.chassis)).size, 6);
+  for (const e of SEED_ROSTER) assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
 });
