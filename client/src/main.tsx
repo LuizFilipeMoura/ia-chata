@@ -7,24 +7,22 @@ import "./styles/glossary.css";
 import "./styles/rig-wizard.css";
 import "./styles/vp-wizard.css";
 import "./styles/dieselpunk.css";
-import { StrictMode, Suspense, lazy } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AppProviders } from "./AppProviders";
 import { shouldUseV2 } from "./v2/shouldUseV2";
+import { V2Boot } from "./v2/V2Boot";
 
-// V2 is one lazy chunk (its own provider stack + app), so default (no ?v2) users
-// never download any V2 code or CSS. V2 runs on V2Providers — it never mounts the
-// V1 overlay providers. V1 keeps its own AppProviders, untouched.
-const V2Root = lazy(() => import("./v2/V2Root"));
+// V2 loads as one lazy chunk (behind V2Boot's Suspense + error boundary), so
+// default (no ?v2) users never download it and a stale chunk can never black-screen
+// the entry. V1 keeps its own AppProviders, untouched.
 const useV2 = shouldUseV2(window.location.search);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {useV2 ? (
-      <Suspense fallback={null}>
-        <V2Root />
-      </Suspense>
+      <V2Boot />
     ) : (
       <AppProviders>
         <App />
