@@ -3531,6 +3531,26 @@ test("seed first defaults to 'a' and is idempotent (re-seed resets)", () => {
   assert.deepEqual(r.rigs.map((rig) => rig.id), firstIds);
 });
 
+test("seed with a roster that can't fill 3 per side does not lock/flag/start", () => {
+  const r = createRoom("SEED-BAD");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", roster: [
+    { name: "A1", owner: "a", chassis: "light-sword-arc" },
+    { name: "B1", owner: "b", chassis: "medium-lance-mortar" },
+  ] } });
+  assert.equal(r.game.started, false);
+  assert.equal(r.seeded, false);
+  assert.equal(r.field.locked, false);
+  assert.equal(r.rigs.length, 2); // rigs were still built, just no start
+});
+
+test("seed marks both sides ready and populates deployOrder consistent with first", () => {
+  const r = createRoom("SEED-RDY");
+  applyCommand(r, { verb: "seed", attrs: { first: "b" } });
+  assert.equal(r.game.sides.every((s) => s.ready), true);
+  assert.equal(r.game.deployOrder[0], "a"); // other = a is first-to-deploy, activates second
+  assert.equal(r.game.turn.side, "b");
+});
+
 test("SEED_ROSTER is 6 entries, 3 per side, all chassis distinct", () => {
   assert.equal(SEED_ROSTER.length, 6);
   assert.equal(SEED_ROSTER.filter((e) => e.owner === "a").length, 3);

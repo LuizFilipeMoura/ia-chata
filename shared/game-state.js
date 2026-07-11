@@ -993,6 +993,10 @@ function startGameSeeded(room, first) {
   room.game.phase = "initiative";
   room.game.round = 1;
   applyInitiative(room, [first, other], null);
+  for (const side of room.game.sides) side.ready = true;
+  // deployOrder[0] is the first-to-deploy = second activator (deploymentOrder()).
+  // `first` activates first, so it is the second-to-deploy.
+  room.game.deployOrder = [other, first];
   pushResolution(room, {
     kind: "initiative", actor: first, rigId: null, rolls: [],
     summary: `Seeded battle — ${first} activates first`, effects: [],
@@ -2156,9 +2160,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.nextRigId++;
       room.rigs.push(unit);
     }
-    room.field.locked = true;
-    room.seeded = true;
-    if (sideRigCount(room, "a") >= 3 && sideRigCount(room, "b") >= 3) {
+    const canStart = sideRigCount(room, "a") >= 3 && sideRigCount(room, "b") >= 3;
+    if (canStart) {
+      room.field.locked = true;
+      room.seeded = true;
       startGameSeeded(room, first);
     }
     changed = true;
