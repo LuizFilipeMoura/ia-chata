@@ -1606,9 +1606,9 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment(null), null);
 });
 
-test("WEAPON_UPGRADES has exactly 3 upgrades for all 16 weapons", () => {
+test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 16);
+  assert.equal(all.length, 20);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
@@ -3288,4 +3288,14 @@ test("a second Tow Chain hit within 3 rounds doesn't fling or add the +2 heat", 
   assert.ok(!r.game.resolutions.some((x) => /Tow Chain — fling/.test(x.summary))); // no fling
   assert.equal(b1.towedThisActivation, false);   // not rooted while recharging
   assert.equal(b1.engine.heat - heatBefore, 1);  // only the melee fire heat, no +2 tow
+});
+
+test("new weapons each expose three correctly-natured upgrades", () => {
+  for (const w of ["Harpoon", "Anchor", "Rivet Gun", "Pressure Claw"]) {
+    const ups = WEAPON_UPGRADES[w];
+    assert.ok(ups, `${w} has upgrades`);
+    assert.deepEqual(ups.map((u) => u.nature).sort(), ["field", "prototype", "tuned"], `${w} natures`);
+  }
+  assert.equal(WEAPON_UPGRADES["Harpoon"].find((u) => u.nature === "tuned").effect.vsPinned, true);
+  assert.equal(WEAPON_UPGRADES["Pressure Claw"].find((u) => u.nature === "tuned").effect.onDamage, "sunder");
 });

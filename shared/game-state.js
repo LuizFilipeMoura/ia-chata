@@ -286,6 +286,26 @@ export const WEAPON_UPGRADES = {
     { id: "napalm", nature: "tuned", name: "Napalm", tag: "Hits set the target burning (1 SP/activation until doused)", effect: { burn: 1 } },
     { id: "conflagration", nature: "prototype", name: "Conflagration", tag: "Stack burns for escalating damage-over-time; runs you hot", effect: { burn: 1, burnStacks: true } },
   ],
+  "Harpoon": [
+    { id: "barbed-head", nature: "field", name: "Barbed Head", tag: "Gains Impale", effect: { perks: ["Impale"] } },
+    { id: "taut-cable", nature: "tuned", name: "Taut Cable", tag: "+3 STR vs immobilised or engaged targets", effect: { vsPinned: true } },
+    { id: "harpoon-winch", nature: "prototype", name: "Harpoon Winch", tag: "Spear and reel a rig 4\" toward you; roots you, runs hot", effect: { harpoonWinch: true } },
+  ],
+  "Rivet Gun": [
+    { id: "rapid-feed", nature: "field", name: "Rapid Feed", tag: "+2 ROF", effect: { rof: 2 } },
+    { id: "staple-burst", nature: "tuned", name: "Staple Burst", tag: "4+ hits: target loses 1 action next activation", effect: { pinOnHits: 4 } },
+    { id: "rivet-lock", nature: "prototype", name: "Rivet Lock", tag: "Rivet a location shut — no repairs, jams a weapon there", effect: { rivetLock: true } },
+  ],
+  "Anchor": [
+    { id: "fluked-head", nature: "field", name: "Fluked Head", tag: "+3 STR", effect: { str: 3 } },
+    { id: "dead-weight", nature: "tuned", name: "Dead Weight", tag: "Struck target can't Disengage next activation", effect: { deadWeight: true } },
+    { id: "ground-anchor", nature: "prototype", name: "Ground Anchor", tag: "Anchor a rig in the lock; leaving you costs it a free Anchor hit", effect: { groundAnchor: true } },
+  ],
+  "Pressure Claw": [
+    { id: "hardened-jaws", nature: "field", name: "Hardened Jaws", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "crush-grip", nature: "tuned", name: "Crush Grip", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
+    { id: "hydraulic-vice", nature: "prototype", name: "Hydraulic Vice", tag: "Pry a location's armour open (+2 impact from anyone)", effect: { breachGrip: true } },
+  ],
 };
 
 export function defaultWeaponUpgrade(weaponName) {
