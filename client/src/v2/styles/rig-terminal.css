@@ -29,9 +29,6 @@
   flex: 1;
   height: 22px;
   overflow: hidden;
-  background: #07090c;
-  border: 1px solid #000;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8);
 }
 .v2-root .v2-comp-bar::before {
   content: "";
@@ -76,7 +73,7 @@
   font-weight: 700;
   letter-spacing: .03em;
   color: #fff;
-  text-shadow: 0 1px 2px #000;
+  text-shadow: 0 1px 2px var(--v2-well-line);
 }
 
 /* Step buttons: ember well for damage, verdigris well for repair. */
@@ -88,18 +85,18 @@
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  transition: filter .14s, transform .1s;
+  transition: filter var(--v2-dur-fast), transform .1s;
 }
 .v2-root .v2-comp-step:hover { filter: brightness(1.25); }
 .v2-root .v2-comp-step:active { transform: translateY(1px); }
 .v2-root .v2-comp-step--dmg {
-  background: linear-gradient(180deg, #26170f, #160c07);
+  background: var(--v2-grad-ember-well);
   border: 1px solid var(--v2-ember-deep);
   color: var(--v2-ember-hi);
 }
 .v2-root .v2-comp-step--rep {
-  background: linear-gradient(180deg, #1c2a1c, #0d160d);
-  border: 1px solid #2f5c33;
+  background: var(--v2-grad-green-well);
+  border: 1px solid var(--v2-verdigris);
   color: var(--v2-ok);
 }
 
@@ -158,7 +155,7 @@
 .v2-root .v2-heat {
   margin-top: 4px;
   padding: 14px 16px 16px;
-  background: #0a0d11;
+  background: var(--v2-well);
   border: 1px solid var(--v2-line);
   border-top: 2px solid var(--v2-line-soft);
 }
@@ -169,10 +166,8 @@
   margin-bottom: 10px;
 }
 .v2-root .v2-heat-label {
-  font-family: var(--v2-mono);
   font-size: 8.5px;
   letter-spacing: .24em;
-  color: var(--v2-txt-faint);
 }
 .v2-root .v2-heat-read {
   font-family: var(--v2-stencil);
@@ -189,8 +184,8 @@
 }
 .v2-root .v2-heat-seg {
   flex: 1;
-  background: #12161d;
-  border: 1px solid #000;
+  background: var(--v2-iron-850);
+  border: 1px solid var(--v2-well-line);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, .7);
 }
 /* Safe cells light warm amber; danger cells (>= cap) light ember-red. */
@@ -229,17 +224,10 @@
    The whole overlay lives under .v2-root; the scrim is fixed to the viewport
    (radial ember bloom over a dark wash) and scrolls when the sheet overflows. */
 .v2-root .v2-rt-scrim {
-  position: fixed;
-  inset: 0;
   z-index: 9500;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
   padding: 20px 16px;
+  align-items: safe center;
   overflow-y: auto;
-  background:
-    radial-gradient(80% 60% at 50% 20%, rgba(231, 154, 61, .08), transparent 70%),
-    rgba(4, 5, 7, .72);
 }
 
 /* Iron sheet: gradient face, rivet border, breathing amber glow + corner rivets. */
@@ -247,12 +235,6 @@
   position: relative;
   width: 100%;
   max-width: 720px;
-  background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-900));
-  border: 1px solid var(--v2-rivet);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .05),
-    inset 0 -40px 70px rgba(0, 0, 0, .5),
-    0 14px 34px rgba(0, 0, 0, .6);
   animation: v2-glowpulse 3.2s infinite;
 }
 .v2-root .v2-rt::before,
@@ -263,7 +245,7 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #69727f, #20252e 60%, rgba(0, 0, 0, .7));
+  background: var(--v2-rivet-dot);
 }
 .v2-root .v2-rt::before { left: 9px; }
 .v2-root .v2-rt::after { right: 9px; }
@@ -273,17 +255,9 @@
   top: 10px;
   right: 26px;
   z-index: 2;
-  width: 30px;
-  height: 30px;
-  background: var(--v2-iron-850);
-  border: 1px solid var(--v2-line);
-  color: var(--v2-txt-dim);
   font-size: 15px;
   line-height: 1;
-  cursor: pointer;
-  transition: filter .14s;
 }
-.v2-root .v2-rt-close:hover { filter: brightness(1.3); }
 
 /* Header: class glyph tile, stencilled name + loadout sub, status token. */
 .v2-root .v2-rt-head {
@@ -303,19 +277,14 @@
   justify-content: center;
   background: var(--v2-iron-950);
   border: 1px solid var(--v2-oil-deep);
-  font-family: var(--v2-stencil);
-  font-weight: 700;
   font-size: 28px;
   color: #8fbcff;
 }
 .v2-root .v2-rt-id { flex: 1; min-width: 0; }
 .v2-root .v2-rt-name {
   margin: 0;
-  font-family: var(--v2-stencil);
-  font-weight: 700;
   font-size: 24px;
   letter-spacing: .08em;
-  color: var(--v2-txt);
 }
 .v2-root .v2-rt-sub {
   margin-top: 3px;
@@ -328,6 +297,8 @@
 .v2-root .v2-rt-status {
   flex: 0 0 auto;
   align-self: flex-start;
+  /* Clear the absolutely-positioned close button (26px right + 30px wide). */
+  margin-right: 44px;
   font-family: var(--v2-mono);
   font-size: 9px;
   letter-spacing: .1em;
@@ -374,10 +345,9 @@
   gap: 15px;
 }
 
-/* Action row: green Activate CTA + dim danger Remove. */
+/* Action row: single full-width green Activate CTA. */
 .v2-root .v2-rt-actions {
   display: flex;
-  gap: 10px;
   padding: 16px 20px 18px;
   border-top: 1px solid var(--v2-line);
   background: var(--v2-iron-950);
@@ -385,8 +355,8 @@
 .v2-root .v2-rt-activate {
   flex: 1;
   padding: 14px;
-  background: linear-gradient(180deg, #1c2a1c, #0d160d);
-  border: 1px solid #2f5c33;
+  background: var(--v2-grad-green-well);
+  border: 1px solid var(--v2-verdigris);
   border-bottom: 3px solid #0a1a0d;
   color: var(--v2-ok);
   font-family: var(--v2-stencil);
@@ -396,7 +366,7 @@
   text-transform: uppercase;
   cursor: pointer;
   box-shadow: 0 0 20px rgba(108, 196, 127, .25);
-  transition: filter .14s;
+  transition: filter var(--v2-dur-fast);
 }
 .v2-root .v2-rt-activate:hover:not(:disabled) { filter: brightness(1.12); }
 .v2-root .v2-rt-activate:disabled {
@@ -407,19 +377,19 @@
   box-shadow: none;
   cursor: not-allowed;
 }
-.v2-root .v2-rt-remove {
-  flex: 0 0 auto;
-  padding: 14px 18px;
-  background: linear-gradient(180deg, #26170f, #160c07);
-  border: 1px solid var(--v2-ember-deep);
-  border-bottom: 3px solid #120503;
-  color: var(--v2-ember-hi);
+
+/* Static "already activated this round" chip — replaces the CTA once the rig
+   has spent its activation, so it never reads as an actionable button. */
+.v2-root .v2-rt-done {
+  flex: 1;
+  padding: 14px;
+  text-align: center;
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 13px;
-  letter-spacing: .1em;
+  font-size: 14px;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: filter .14s;
+  color: var(--v2-txt-faint);
+  background: var(--v2-iron-900);
+  border: 1px solid var(--v2-line);
 }
-.v2-root .v2-rt-remove:hover { filter: brightness(1.2); }
