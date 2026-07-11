@@ -9,7 +9,7 @@ import { useRoll } from "../../state/RollContext";
 import { useUi } from "../../state/UiStateContext";
 import type { Rig } from "../../state/types";
 
-export type AttackMode = "fire" | "aimed";
+export type AttackMode = "fire" | "aimed" | "lock";
 
 // Small glyphs so each control reads at a glance (§ UI polish).
 const FIELD_ICONS: Record<string, string> = {
@@ -393,6 +393,52 @@ export function AttackWizard({
   })();
 
   if (noEnemies) return null;
+
+  // Fire Control Lock (§13, Missile Barrage) — a minimal flow: pick the enemy
+  // to paint, dispatch, done. No weapon/arc/range/cover/location and no dice
+  // (the server-side `lock` verb never rolls — see game-state.js act==="lock").
+  if (mode === "lock") {
+    return (
+      <div
+        className={"aw-scrim" + (show ? " show" : "")}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) close();
+        }}
+      >
+        <div className="aw-card">
+          <div className="aw-handle" />
+          <div className="aw-title-row">
+            <div className="aw-title">🔒 Fire Control Lock — {rig.name}</div>
+            <button type="button" className="sheet-gloss-chip" onClick={() => setGlossaryOpen(true)}>
+              ⓘ Glossary
+            </button>
+          </div>
+
+          <Field
+            label="Target"
+            options={enemies.map((e) => e.name)}
+            selected={state.target}
+            onChange={(v) => patch({ target: v })}
+            icon={FIELD_ICONS.target}
+            optIcon={() => "🤖"}
+            desc={FIELD_DESC.target}
+            optDesc={targetDesc}
+          />
+
+          <button
+            className="aw-go"
+            disabled={!state.target}
+            onClick={() => {
+              sendCommand("action", { name: rig.name, action: "lock", target: state.target });
+              close();
+            }}
+          >
+            Lock Target
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

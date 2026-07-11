@@ -3,16 +3,18 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { AttackWizard } from "./AttackWizard";
 import type { GameState, Rig } from "../../state/types";
 
-const { state } = vi.hoisted(() => ({
+const { state, sendCommand, promptDice } = vi.hoisted(() => ({
   state: { rigs: [] as Rig[], game: null as GameState | null },
+  sendCommand: vi.fn(),
+  promptDice: vi.fn(),
 }));
 
-vi.mock("../../hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
+vi.mock("../../hooks/useCommands", () => ({ useCommands: () => sendCommand }));
 vi.mock("../../state/BattleActionsContext", () => ({
   useBattleActions: () => ({ sendReact: vi.fn() }),
 }));
 vi.mock("../../state/RollContext", () => ({
-  useRoll: () => ({ promptDice: vi.fn() }),
+  useRoll: () => ({ promptDice }),
 }));
 vi.mock("../../state/RoomStateContext", () => ({
   useRoomState: () => state,
@@ -44,6 +46,8 @@ function rig(over: Partial<Rig>): Rig {
 }
 
 beforeEach(() => {
+  sendCommand.mockClear();
+  promptDice.mockClear();
   state.rigs = [rig({}), rig({ id: 2, name: "Raider", owner: "b" })];
   state.game = {
     round: 1,
@@ -127,4 +131,35 @@ test("dragging off the sweet spot shows the accuracy falloff", async () => {
   // |18 - 7| * 0.35 = 3.85 -> round to 4 penalty -> acc = peak(2) - 4 = -2.
   fireEvent.change(slider, { target: { value: "18" } });
   expect(screen.getByText("-2 falloff")).toBeInTheDocument();
+});
+
+test("lock mode shows only a target picker and dispatches a lock command with no dice prompt", async () => {
+  const onClose = vi.fn();
+  render(<AttackWizard rig={state.rigs[0]} mode="lock" onClose={onClose} />);
+
+  // Minimal flow: title + target picker, no weapon/arc/range/cover/location fields.
+  expect(screen.getByText(/Fire Control Lock/)).toBeInTheDocument();
+  expect(screen.queryByLabelText("Distance to target in inches")).toBeNull();
+  expect(screen.queryByText(/Weapon/)).toBeNull();
+  expect(screen.queryByText(/Cover/)).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: /Raider/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Lock Target" }));
+
+  expect(sendCommand).toHaveBeenCalledWith("action", {
+    name: "Vulcan", action: "lock", target: "Raider",
+  });
+  expect(promptDice).not.toHaveBeenCalled();
+});
+
+test("lock mode never prompts for dice even when autoResolve is off", async () => {
+  state.game = { ...(state.game as GameState), autoResolve: false };
+  const onClose = vi.fn();
+  render(<AttackWizard rig={state.rigs[0]} mode="lock" onClose={onClose} />);
+  fireEvent.click(screen.getByRole("button", { name: "Lock Target" }));
+  expect(promptDice).not.toHaveBeenCalled();
+  expect(sendCommand).toHaveBeenCalledWith(
+    "action",
+    expect.objectContaining({ action: "lock" }),
+  );
 });

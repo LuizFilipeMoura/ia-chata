@@ -120,7 +120,7 @@ export function ActionConsole({ rig }: Props) {
 
   const onAction = (r: Rig, key: string) => {
     setOpenGroup(null);
-    if (key === "fire" || key === "aimed") {
+    if (key === "fire" || key === "aimed" || key === "lock") {
       openAttack(r, key as AttackMode);
       return;
     }

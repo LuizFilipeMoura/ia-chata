@@ -107,6 +107,16 @@ export function availableActions(rig, turn, round) {
       note: active ? `Barrage active — ${rig.barrageRoundsLeft} round(s) left` : "",
     });
   }
+  // Fire Control Lock (§13, Missile Barrage) — paint a target for one auto-hit
+  // Armour-Piercing volley. Surfaced only for a Missile Barrage carrying it.
+  const hasFireControl = rig.weapons?.longRange === "Missile Barrage" && rig.weaponUpgrades?.longRange === "fire-control-lock";
+  if (hasFireControl) {
+    list.push({
+      key: "lock", label: ACTIONS.lock.label, heat: ACTIONS.lock.heat,
+      enabled: left > 0, cost: ACTIONS.lock.slot,
+      note: rig.lockedTarget != null ? "A lock is already primed" : "",
+    });
+  }
   return list;
 }
 
@@ -143,6 +153,17 @@ export function rigModifiers(rig) {
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });
   if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn" });
   if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn" });
+  // Prototype-upgrade states so the player can track them at a glance.
+  if ((rig.momentum || 0) > 0) mods.push({ key: "momentum", tag: `Momentum ${rig.momentum}`, tone: "prep" });
+  if (rig.lockedTarget != null) mods.push({ key: "locked", tag: "Missiles locked", tone: "prep" });
+  if ((rig.actionPenaltyNextActivation || 0) > 0) mods.push({ key: "actionpen", tag: `−${rig.actionPenaltyNextActivation} action next`, tone: "warn" });
+  if (rig.noPrepNextActivation) mods.push({ key: "noprep", tag: "No Prepare next", tone: "warn" });
+  if (rig.noActivesNextActivation) mods.push({ key: "noactive", tag: "No actives next", tone: "warn" });
+  if (rig.arcLockedNext) mods.push({ key: "arclock", tag: "Arc Gun locked", tone: "warn" });
+  if (rig.armsSuppressed) mods.push({ key: "armssup", tag: "Arms suppressed · ½ ROF", tone: "warn" });
+  if (rig.autocannonSlowNext) mods.push({ key: "beltcycle", tag: "Belt cycling · ½ ROF", tone: "warn" });
+  for (const loc of Object.keys(rig.cracked || {})) mods.push({ key: `crack-${loc}`, tag: `Cracked: ${cap(loc)}`, tone: "warn" });
+  for (const loc of Object.keys(rig.noRepair || {})) mods.push({ key: `norepair-${loc}`, tag: `No repair: ${cap(loc)}`, tone: "crit" });
   if (cfg.reactions && rig.preparation) {
     const p = rig.preparation;
     const tag = p.hidden || p.faceUp === false ? "Reaction set" : prepLabel(p.type);
