@@ -157,3 +157,224 @@
   pointer-events: none;
   z-index: 8000;
 }
+
+/* ---- Action console (.v2-ac*) — ported from V1's ActionConsole.tsx. The
+   grouped tiles (Attack/Move/Support) collapse the full action list into one
+   row; each opens a portaled popover of its sub-actions. Accents lifted from
+   the oil-iron-terminal mockup's activate/action console (green header, 2-col
+   tiles, ember Fire tile). The popover is portaled to <body> and wrapped in
+   .v2-root, so `.v2-root .v2-ac-pop` still applies. ---- */
+.v2-root .v2-ac {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 13px 14px 15px;
+  background: linear-gradient(90deg, #142a1c, #0e1f15);
+  border: 1px solid #1f4a2c;
+  border-radius: 10px;
+  box-shadow: inset 0 0 26px rgba(108, 196, 127, 0.12);
+}
+.v2-root .v2-ac:empty {
+  display: none;
+}
+
+/* budget row: label + action pips */
+.v2-root .v2-ac-budget {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.v2-root .v2-ac-budget-label {
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #baf7c9;
+}
+.v2-root .v2-ac-reduced {
+  font-family: var(--v2-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--v2-warn);
+  text-transform: none;
+}
+.v2-root .v2-ac-pips {
+  display: flex;
+  gap: 5px;
+}
+.v2-root .v2-ac-pip {
+  width: 13px;
+  height: 13px;
+  background: var(--v2-ok);
+  box-shadow: 0 0 8px var(--v2-ok);
+}
+.v2-root .v2-ac-pip.spent {
+  background: #1a2b20;
+  border: 1px solid #2f5c33;
+  box-shadow: none;
+}
+.v2-root .v2-ac-pip.locked {
+  background: transparent;
+  border: 1px solid var(--v2-line);
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+/* grouped action tiles — 2-col grid, mockup lines 399-405 */
+.v2-root .v2-ac-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.v2-root .v2-ac-cell {
+  position: relative;
+}
+.v2-root .v2-ac-tile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-850));
+  border: 1px solid var(--v2-line);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--v2-txt);
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  transition: filter 0.12s ease, border-color 0.12s ease;
+}
+.v2-root .v2-ac-tile:hover:not(:disabled) {
+  filter: brightness(1.1);
+  border-color: var(--v2-rivet);
+}
+.v2-root .v2-ac-tile:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.v2-root .v2-ac-tile.is-open {
+  border-color: var(--v2-oil);
+}
+/* ember Fire/Attack tile */
+.v2-root .v2-ac-tile[data-tone="ember"] {
+  background: linear-gradient(180deg, #26170f, #160c07);
+  border-color: var(--v2-ember-deep);
+  color: var(--v2-ember-hi);
+}
+.v2-root .v2-ac-tile[data-tone="ember"].is-open {
+  border-color: var(--v2-ember);
+}
+.v2-root .v2-ac-tile-lamp {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--v2-ember-hi);
+  box-shadow: 0 0 8px var(--v2-ember-hi);
+}
+.v2-root .v2-ac-tile-label {
+  flex: 1 1 auto;
+}
+.v2-root .v2-ac-tile-caret {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--v2-txt-faint);
+}
+
+/* portaled popover of sub-actions — high z-index, positioned via inline left/top */
+.v2-root .v2-ac-pop-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9590;
+}
+.v2-root .v2-ac-pop {
+  position: fixed;
+  z-index: 9600;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-900));
+  border: 1px solid var(--v2-rivet);
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+}
+.v2-root .v2-ac-pop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--v2-txt);
+  font-family: var(--v2-disp);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+.v2-root .v2-ac-pop-row:hover:not(:disabled) {
+  background: var(--v2-iron-750);
+}
+.v2-root .v2-ac-pop-row:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.v2-root .v2-ac-pop-label {
+  flex: 1 1 auto;
+}
+.v2-root .v2-ac-pop-heat {
+  flex: 0 0 auto;
+  font-family: var(--v2-mono);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--v2-txt-faint);
+}
+.v2-root .v2-ac-pop-heat[data-heat="0"] {
+  color: var(--v2-ok);
+}
+.v2-root .v2-ac-pop-row:not(:disabled) .v2-ac-pop-heat:not([data-heat="0"]) {
+  color: var(--v2-low);
+}
+
+/* inline hints */
+.v2-root .v2-ac-hint {
+  margin: 0;
+  font-family: var(--v2-mono);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+  color: var(--v2-txt-faint);
+}
+.v2-root .v2-ac-hint.is-warn {
+  color: var(--v2-warn);
+}
+
+/* end-turn button */
+.v2-root .v2-ac-end {
+  align-self: stretch;
+  padding: 10px;
+  background: var(--v2-iron-800);
+  border: 1px solid var(--v2-line);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--v2-txt-dim);
+  font-family: var(--v2-disp);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.v2-root .v2-ac-end:hover {
+  border-color: var(--v2-rivet);
+  color: var(--v2-txt);
+}

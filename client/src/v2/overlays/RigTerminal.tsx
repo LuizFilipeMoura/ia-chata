@@ -6,6 +6,7 @@ import { buildLoadout } from "../../lib/loadout";
 import { rigStatus } from "../../lib/rigView";
 import { CompRow } from "../components/CompRow";
 import { HeatGauge } from "../components/HeatGauge";
+import { ActionConsole } from "../battle/ActionConsole";
 import type { Rig, Component } from "../../state/types";
 
 const CLASS_GLYPH: Record<string, string> = { light: "◆", medium: "◈", heavy: "⬢", colossal: "✦" };
@@ -64,6 +65,8 @@ export function RigTerminal({ rig, canActivate, started, onCommand, onClose }: P
         </div>
 
         {!cold && <HeatGauge rig={rig} />}
+
+        {started && <ActionConsole rig={rig} />}
 
         <div className="v2-rt-actions">
           <button type="button" className="v2-rt-activate" disabled={!canActivate || !started}
