@@ -293,6 +293,82 @@
   opacity: 0; transform: translateY(4px); animation: v2-line-in .3s ease forwards;
 }
 
+/* ===== Drawer bodies (Move / Repair / Prepare / Blast) ===== */
+.v2-root .v2-dwr-hint {
+  margin: 0 0 .5rem; font-family: var(--v2-disp); font-size: .74rem;
+  color: var(--v2-txt-dim); line-height: 1.4;
+}
+
+/* Repair location — segmented choice field */
+.v2-root .v2-dwr-field { margin: .5rem 0; }
+.v2-root .v2-dwr-field > label {
+  display: block; font-family: var(--v2-mono); font-size: .56rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--v2-txt-dim); margin-bottom: .3rem;
+}
+.v2-root .v2-dwr-field-ic { margin-right: .35rem; }
+.v2-root .v2-dwr-seg { display: flex; gap: .3rem; flex-wrap: wrap; }
+.v2-root .v2-dwr-opt {
+  flex: 1 1 auto; padding: .45rem .3rem; border-radius: 8px;
+  border: 1px solid var(--v2-line); background: var(--v2-iron-800); color: var(--v2-txt-dim);
+  font-family: var(--v2-disp); font-size: .78rem; text-align: center;
+}
+.v2-root .v2-dwr-opt-ic { margin-right: .25rem; }
+.v2-root .v2-dwr-opt.sel { border-color: var(--v2-oil); color: var(--v2-oil-hi); background: rgba(231, 154, 61, .1); }
+
+/* Timed Move / Sprint hold — the Confirm button unlocks only once this bar fills */
+.v2-root .v2-dwr-move-call { color: var(--v2-oil-hi); font-weight: 600; }
+.v2-root .v2-dwr-move-call.is-ready { color: #6cc47f; }
+.v2-root .v2-dwr-cost {
+  font-family: var(--v2-mono); font-size: .62rem; letter-spacing: .04em;
+  color: var(--v2-txt-faint); margin-top: .15rem; text-align: center;
+}
+.v2-root .v2-dwr-big-wrap { display: flex; justify-content: center; margin-top: 1rem; }
+.v2-root .v2-dwr-big {
+  font-family: var(--v2-mono); font-size: 2.1rem; font-weight: 700; line-height: 1;
+  letter-spacing: .02em; color: var(--v2-oil-hi); text-shadow: 0 0 16px rgba(231, 154, 61, .35);
+}
+.v2-root .v2-dwr-big.is-ready { color: #6cc47f; text-shadow: 0 0 16px rgba(108, 196, 127, .5); }
+.v2-root .v2-dwr-hold-track {
+  height: 8px; border-radius: 999px; background: var(--v2-iron-800);
+  border: 1px solid var(--v2-line); overflow: hidden; margin: .1rem 0 .3rem;
+}
+.v2-root .v2-dwr-hold-fill { height: 100%; width: 0; background: linear-gradient(90deg, #c47a26, #ffbf6a); }
+.v2-root .v2-dwr-hold-fill.is-ready { background: linear-gradient(90deg, #4c9a5f, #6cc47f); }
+
+/* Optional engage-an-enemy select on Move */
+.v2-root .v2-dwr-engage { display: block; margin: .5rem 0 .1rem; }
+.v2-root .v2-dwr-engage-label {
+  display: block; font-family: var(--v2-mono); font-size: .56rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--v2-txt-dim); margin-bottom: .3rem;
+}
+.v2-root .v2-dwr-engage-select {
+  width: 100%; padding: .5rem .55rem; border-radius: 8px;
+  background: var(--v2-iron-950); border: 1px solid var(--v2-line); color: var(--v2-txt);
+  font-family: var(--v2-disp); font-size: .82rem;
+}
+.v2-root .v2-dwr-engage-select:focus {
+  outline: none; border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil);
+}
+
+/* Blast resolution — checkbox list of Rigs within 12" of the wreck */
+.v2-root .v2-blast-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .3rem; }
+.v2-root .v2-blast-opt {
+  display: flex; align-items: center; gap: .5rem; width: 100%;
+  padding: .5rem .6rem; border-radius: 8px; text-align: left;
+  background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt-dim);
+  transition: background .16s, border-color .16s, color .16s;
+}
+.v2-root .v2-blast-opt:hover { border-color: var(--v2-oil); color: var(--v2-txt); }
+.v2-root .v2-blast-opt.sel {
+  background: rgba(229, 83, 58, .12); border-color: rgba(229, 83, 58, .55); color: var(--v2-ember-hi);
+}
+.v2-root .v2-blast-opt-check { font-size: 1.05rem; line-height: 1; }
+.v2-root .v2-blast-opt-name { font-weight: 600; flex: 1 1 auto; }
+.v2-root .v2-blast-opt-cls {
+  font-family: var(--v2-mono); font-size: .55rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--v2-txt-faint);
+}
+
 /* ===== Reaction picker (Answer token / Prepare) ===== */
 .v2-root .v2-rx-picker { display: flex; flex-direction: column; gap: .4rem; }
 .v2-root .v2-rx-choice {

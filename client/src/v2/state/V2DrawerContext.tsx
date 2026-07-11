@@ -62,7 +62,13 @@ export function V2DrawerProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{ openDrawer, closeDrawer }}>
-      {children}
+      {/* While a drawer is mounted it is a modal: the rest of the app is hidden
+          from the accessibility tree (and from assistive-tech / focus) so screen
+          readers don't wander behind the sheet. `display:contents` keeps the
+          wrapper layout-neutral. The portaled Drawer below sits outside it. */}
+      <div style={{ display: "contents" }} aria-hidden={config ? true : undefined}>
+        {children}
+      </div>
       {config
         ? createPortal(
             <Drawer config={config} visible={visible} onClose={closeDrawer} />,
