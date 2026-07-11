@@ -47,9 +47,7 @@ export function Shell({
       <div aria-hidden="true" className="v2-crt v2-crt--flick" />
 
       <header className="v2-strip">
-        <div className="v2-brand">
-          <div className="v2-brand-badge v2-badge"><div className="v2-brand-core" /></div>
-        </div>
+        <div className="v2-brand-badge v2-badge" aria-hidden="true"><div className="v2-brand-core" /></div>
         <div className="v2-strip-spacer" />
         <div className="v2-strip-rm">RM <span>{session?.room}</span></div>
         <button type="button" className="v2-gloss-btn" aria-label="Glossary" onClick={() => onGlossary?.()}>ⓘ</button>

@@ -14,7 +14,6 @@
 .v2-root .v2-strip{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:6px 14px;background:linear-gradient(180deg,var(--v2-iron-850),#0b0e13);border-bottom:2px solid #000;box-shadow:inset 0 -1px 0 rgba(231,154,61,.14),0 3px 10px rgba(0,0,0,.6);}
 .v2-root .v2-strip-spacer{flex:1;}
 
-.v2-root .v2-brand{display:flex;align-items:center;gap:11px;}
 .v2-root .v2-brand-badge{width:20px;height:20px;border:2px solid var(--v2-oil-deep);box-shadow:inset 0 0 8px rgba(0,0,0,.7);position:relative;}
 .v2-root .v2-brand-core{width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffbf6a,#a8641c 60%,#3a220a);box-shadow:0 0 8px rgba(231,154,61,.6);}
 
@@ -22,7 +21,7 @@
 .v2-root .v2-strip-rm{font-family:var(--v2-mono);font-size:var(--v2-text-sm);letter-spacing:.14em;color:var(--v2-txt-faint);}
 .v2-root .v2-strip-rm span{color:var(--v2-oil-hi);}
 
-.v2-root .v2-lamp--ok{color:var(--v2-ok);}
+.v2-root .v2-lamp--ok{color:var(--v2-ok);} /* kept: used by chat/ChatPanel.tsx */
 .v2-root .v2-gloss-btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--v2-line);background:var(--v2-well);color:var(--v2-oil-hi);font-size:var(--v2-text-sm);line-height:1;cursor:pointer;}
 .v2-root .v2-gloss-btn:hover{border-color:var(--v2-oil-deep);color:var(--v2-oil);}
 
