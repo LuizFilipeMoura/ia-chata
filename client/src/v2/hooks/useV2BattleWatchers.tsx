@@ -166,10 +166,22 @@ export function useV2BattleWatchers(): void {
   const myTurn =
     game?.phase === "activation" && phaseSummary(game, rigs).turnSide === mySide;
   useEffect(() => {
-    if (myTurn) { playEngineStart(); startEngineLoop(); }
+    if (myTurn) startEngineLoop();
     else stopEngineLoop();
     return () => stopEngineLoop();
   }, [myTurn]);
+
+  // ---- Engine start: ignition one-shot each time one of YOUR rigs activates ----
+  const activeRigId = game?.turn?.activeRigId ?? null;
+  const startSeeded = useRef(false);
+  useEffect(() => {
+    const active = activeRigId != null ? rigs.find((r) => r.id === activeRigId) : null;
+    const mineActivating =
+      !!active && (active.owner || "a") === mySide && game?.phase === "activation";
+    if (startSeeded.current && mineActivating) playEngineStart();
+    startSeeded.current = true; // skip the first render (hydration)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRigId]);
 
   // ---- Answer-token gate: mandatory immediate placement ----
   const sendCommand = useCommands();

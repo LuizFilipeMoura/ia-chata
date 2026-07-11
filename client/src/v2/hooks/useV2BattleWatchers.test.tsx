@@ -10,7 +10,7 @@ import { useRoomDispatch } from "../../state/RoomStateContext";
 import { ViewSideContext } from "../../state/ViewSideContext";
 import type { Rig, ServerState } from "../../state/types";
 import { useV2BattleWatchers } from "./useV2BattleWatchers";
-import { playDamage, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
+import { playDamage, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
 
 vi.mock("../../hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
 
@@ -79,4 +79,16 @@ test("starts engine loop on your turn, stops on opponent turn", async () => {
   await waitFor(() => expect(vi.mocked(startEngineLoop)).toHaveBeenCalled());
   rerender(wrap(<Harness state={foe} />));
   await waitFor(() => expect(vi.mocked(stopEngineLoop)).toHaveBeenCalled());
+});
+
+test("fires engine start when one of your rigs activates (not merely on turn start)", async () => {
+  const noActive = { version: 30, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")],
+    game: { ...gameBase, turn: { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 3 } } } as unknown as ServerState;
+  const rigActive = { version: 31, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")],
+    game: { ...gameBase, turn: { side: "a", activeRigId: 1, actionsUsed: 0, actionsMax: 3 } } } as unknown as ServerState;
+  const { rerender } = render(wrap(<Harness state={noActive} />));
+  await waitFor(() => expect(vi.mocked(startEngineLoop)).toHaveBeenCalled());
+  vi.mocked(playEngineStart).mockClear(); // ignore any hydration-render call
+  rerender(wrap(<Harness state={rigActive} />));
+  await waitFor(() => expect(vi.mocked(playEngineStart)).toHaveBeenCalled());
 });
