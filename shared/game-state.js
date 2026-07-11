@@ -478,6 +478,12 @@ function ensureRigShape(rig) {
   if (typeof rig.towedThisActivation !== "boolean") rig.towedThisActivation = false;
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
+  // Rivet Lock (§13, Rivet Gun) — which target+location this rig is riveting
+  // and how many consecutive-fire stacks it has piled on.
+  if (rig.rivetTarget === undefined) rig.rivetTarget = null;
+  if (rig.rivetLoc === undefined) rig.rivetLoc = null;
+  if (typeof rig.rivetStacks !== "number") rig.rivetStacks = 0;
+  if (!rig.rivetSeized || typeof rig.rivetSeized !== "object") rig.rivetSeized = {};
   if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
   // Dead Weight (§13, Anchor) — a damaging Anchor melee hit pins the struck
   // target: it can't Disengage on its next activation. Scoped/self-clearing
@@ -675,6 +681,13 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     lockExpiresRound: 0,
     // Breach Grip (§13, Claw) — location → the round the armour crack expires.
     cracked: {},
+    // Rivet Lock (§13, Rivet Gun) — which target+location this rig is riveting,
+    // how many consecutive-fire stacks it has piled on, and (on the receiving
+    // end) location → the round a seize expires.
+    rivetTarget: null,
+    rivetLoc: null,
+    rivetStacks: 0,
+    rivetSeized: {},
     // Kneecapper (§13, Double MG) — which limbs a Kneecapper rake has tagged;
     // gates the cripple ramp in recompute so ordinary weapons don't cripple.
     kneecapped: {},
@@ -763,6 +776,12 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     enfiladeShots: 0,
     // Group E per-location state (Breach Grip / Dismember / Kneecapper), mirrored from makeRig.
     cracked: {},
+    // Rivet Lock (§13) — mirrored for shape parity (cold kinds never carry the
+    // Rivet Gun upgrade, so the stack never actually advances).
+    rivetTarget: null,
+    rivetLoc: null,
+    rivetStacks: 0,
+    rivetSeized: {},
     kneecapped: {},
     crippled: {},
     noRepair: {},
@@ -1132,6 +1151,8 @@ function repairRig(rig, loc, amount) {
   if (loc === "hull" && (rig.hullRepairLock || 0) > 0) return;
   // Dismember (§13) — a location sawn past half its original is crippled for good.
   if (rig.noRepair && rig.noRepair[loc]) return;
+  // Rivet Lock (§13) — a seized location can't be repaired while rivets hold.
+  if (rig.rivetSeized && (rig.rivetSeized[loc] || 0) > 0) return;
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   c.sp = Math.min(c.max, c.sp + n);
   if (c.sp > 0) c.destroyed = false;
@@ -1164,6 +1185,28 @@ function crackLocation(room, target, loc) {
   if (!target || !target[loc]) return;
   target.cracked = target.cracked || {};
   target.cracked[loc] = (room?.game?.round || 0) + 1;
+}
+
+// Rivet Lock (§13, Rivet Gun) — stack rivets on the struck location. Consecutive
+// damaging volleys on the SAME target+location ramp; switching either resets to 1.
+// At 3 rivets the location seizes: SP can't be repaired (checked in repairRig) and,
+// if it's a weapon-role location, that rig's long-range weapon jams (fire gate) —
+// both for a two-Recovery window (round N and N+1, swept in runRecovery). The
+// attacker runs +1 heat every rivet volley while the lock is live.
+function rivetHit(room, attacker, target, loc) {
+  if (!attacker || !target || !target[loc]) return;
+  if (attacker.rivetTarget === target.id && attacker.rivetLoc === loc) {
+    attacker.rivetStacks = Math.min(3, (attacker.rivetStacks || 0) + 1);
+  } else {
+    attacker.rivetTarget = target.id;
+    attacker.rivetLoc = loc;
+    attacker.rivetStacks = 1;
+  }
+  bumpHeat(attacker, 1);
+  if (attacker.rivetStacks >= 3) {
+    target.rivetSeized = target.rivetSeized || {};
+    target.rivetSeized[loc] = (room?.game?.round || 0) + 1;
+  }
 }
 
 // Dismember (§13, Circular Saw) — the prototype escalation of Sunder. Chips the
@@ -1268,6 +1311,12 @@ function runRecovery(room) {
     if (rig.cracked) {
       for (const loc of Object.keys(rig.cracked)) {
         if (rig.cracked[loc] < room.game.round) delete rig.cracked[loc];
+      }
+    }
+    // Rivet Lock (§13) — sweep out seizes whose expiry round has passed.
+    if (rig.rivetSeized) {
+      for (const loc of Object.keys(rig.rivetSeized)) {
+        if (rig.rivetSeized[loc] < room.game.round) delete rig.rivetSeized[loc];
       }
     }
     tickBreach(rig);
@@ -1376,6 +1425,7 @@ function combatCtx() {
     pushResolution,
     sunderLocation,
     crackLocation,
+    rivetHit: (room, attacker, target, loc) => rivetHit(room, attacker, target, loc),
     dismemberLocation,
     breachHull,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
@@ -1592,6 +1642,15 @@ function performAction(room, rig, act, a, random) {
     if (a.weapon !== "melee" && (rig.barrageRoundsLeft || 0) > 0) {
       const p = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
       if (p?.upgradeEffect?.barrage) return false;
+    }
+    // Rivet Lock (§13, Rivet Gun) — a seized weapon-role location jams this rig's
+    // long-range weapon (the gun arm is riveted shut). Melee is unaffected.
+    if (a.weapon !== "melee" && rig.rivetSeized) {
+      const kind = kindOf(rig);
+      const jammed = Object.keys(rig.rivetSeized).some(
+        (loc) => (rig.rivetSeized[loc] || 0) > 0 && roleOf(kind, loc) === "weapon",
+      );
+      if (jammed) return false;
     }
     const facedown = target.preparation && target.preparation.faceUp === false;
     if (facedown) {
@@ -2350,4 +2409,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation, rivetHit };

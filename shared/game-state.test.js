@@ -3128,6 +3128,35 @@ test("Dismember on a weapon location destroys a weapon; on hull it blocks repair
   assert.equal(hullT.hull.sp, spBefore); // repair refused on a dismembered hull
 });
 
+// --- Rivet Lock (§13, Rivet Gun prototype) -----------------------------------
+
+test("Rivet Lock: 3 volleys on one location seize it — no repair + long-range jammed", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const a1 = findRig(r, "a1");
+  a1.weapons.longRange = "Rivet Gun";
+  a1.weaponUpgrades.longRange = "rivet-lock";
+  const b1 = findRig(r, "b1");
+  for (let i = 0; i < 3; i++) __test.rivetHit(r, a1, b1, "arms");
+  assert.equal(b1.rivetSeized.arms >= r.game.round, true); // seized (expiry in the future)
+  b1.arms.sp = 2;
+  __test.repairRig(b1, "arms", 3);
+  assert.equal(b1.arms.sp, 2); // no repair while seized
+});
+
+test("Rivet Lock: switching location resets the rivet stack", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const a1 = findRig(r, "a1");
+  a1.weapons.longRange = "Rivet Gun";
+  a1.weaponUpgrades.longRange = "rivet-lock";
+  const b1 = findRig(r, "b1");
+  __test.rivetHit(r, a1, b1, "arms");
+  __test.rivetHit(r, a1, b1, "legs"); // switch → resets to 1 on legs
+  __test.rivetHit(r, a1, b1, "arms"); // switch back → resets to 1 on arms
+  assert.equal(Object.keys(b1.rivetSeized).length, 0); // never reached 3 on one loc
+});
+
 // --- Emplacement (§13, Bulwark Shield prototype) -----------------------------
 // A rooted fortress stance: permanent Raise Shield, a 3→2 action budget, no
 // movement, +2 heat to un-plant, and a 3-round cooldown from when it's entered.

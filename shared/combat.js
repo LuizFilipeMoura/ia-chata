@@ -370,6 +370,11 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       if (profile.upgradeEffect?.breachGrip && impacts.some((h) => h.sp > 0)) {
         ctx.crackLocation?.(room, target, location);
       }
+      // Rivet Lock (§13, Rivet Gun) — a damaging volley drives a rivet into the
+      // struck location; ctx stacks it and seizes at 3.
+      if (profile.upgradeEffect?.rivetLock && impacts.some((h) => h.sp > 0)) {
+        ctx.rivetHit?.(room, attacker, target, location);
+      }
       // Dismember (§13, Circular Saw) — the prototype escalation of Sunder: also
       // grinds max SP down (via ctx) and permanently cripples the location once
       // it drops to <= half its commissioned original.
