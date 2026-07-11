@@ -49,8 +49,18 @@ test("engine loop resolves both engine stems", () => {
   expect(stopLoop).toHaveBeenCalled();
 });
 
-test("registry covers the 10 v1 action keys", () => {
+test("registry covers the mapped action keys", () => {
   expect(Object.keys(ACTION_AUDIO).sort()).toEqual(
-    ["aimed","disengage","fire","move","overclock","prepare","purge","reload","shutdown","sprint"].sort(),
+    ["aimed","disengage","emergencypatch","fire","move","overclock","prepare","purge","reload","repair","shutdown","sprint"].sort(),
   );
+});
+
+test("repair and emergencypatch play the console beep", () => {
+  for (const key of ["repair", "emergencypatch"]) {
+    play.mockClear();
+    playAction(key);
+    const [voices, sfx] = play.mock.calls[0];
+    expect(voices).toEqual([]);
+    expect(sfx).toEqual(["url:old_panel_beep"]);
+  }
 });

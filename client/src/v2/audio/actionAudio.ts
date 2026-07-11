@@ -18,6 +18,8 @@ export const ACTION_AUDIO: Record<string, Layers> = {
   reload: { voices: [], sfx: ["old_panel_beep"] },
   prepare: { voices: [], sfx: ["old_panel_beep"] },
   shutdown: { voices: [], sfx: ["old_panel_beep"] },
+  repair: { voices: [], sfx: ["old_panel_beep"] },
+  emergencypatch: { voices: [], sfx: ["old_panel_beep"] },
 };
 
 const DAMAGE_SFX = ["tank_getting_shot_1", "tank_getting_shot_2"];
