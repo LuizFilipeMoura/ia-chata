@@ -17,7 +17,7 @@
   --v2-well:#0a0d11; --v2-well-deep:#07090c; --v2-well-line:#000; --v2-edge-dark:#05070a;
   /* canonical gradients */
   --v2-surface:linear-gradient(180deg,var(--v2-iron-850),var(--v2-iron-900));
-  --v2-grad-oil-cta:linear-gradient(180deg,#f0a94a,#c47a26);
+  --v2-grad-oil-cta:linear-gradient(180deg,var(--v2-oil-hi),var(--v2-oil-deep));
   --v2-grad-ember-cta:linear-gradient(180deg,#f0663f,#b8351f);
   --v2-grad-ember-well:linear-gradient(180deg,#26170f,#160c07);
   --v2-grad-green-well:linear-gradient(180deg,#1c2a1c,#0d160d);

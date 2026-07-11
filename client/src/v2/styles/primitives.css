@@ -40,24 +40,27 @@
   text-shadow:0 2px 0 rgba(0,0,0,.6);
 }
 
-/* CTA button (I/J) */
+/* CTA button (I/J) — canonical "forged hero" oil action: stencil face, oil
+   gradient, deep bottom edge, amber bloom. One source of truth for every
+   primary button (forge commit, field lock, roll confirm, join, chat, etc.). */
 .v2-cta{
-  font-family:var(--v2-disp);font-weight:600;text-transform:uppercase;
-  letter-spacing:.08em;color:var(--v2-on-oil);cursor:pointer;
+  font-family:var(--v2-stencil);font-weight:700;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--v2-on-oil);cursor:pointer;
   background:var(--v2-grad-oil-cta);
   border:1px solid var(--v2-oil-lite);
   border-bottom:3px solid var(--v2-oil-edge);
   border-radius:var(--v2-r-sm);
-  box-shadow:0 0 12px var(--v2-oil-glow);
-  transition:filter var(--v2-dur-fast);
+  box-shadow:0 0 20px var(--v2-oil-glow);
+  transition:filter var(--v2-dur-fast),transform var(--v2-dur-fast),box-shadow var(--v2-dur-fast);
 }
-.v2-cta:hover{filter:brightness(1.08);}
-.v2-cta:disabled{opacity:.5;cursor:not-allowed;filter:none;}
+.v2-cta:hover:not(:disabled){filter:brightness(1.08);}
+.v2-cta:active:not(:disabled){transform:translateY(1px);}
+.v2-cta:disabled{opacity:.5;cursor:not-allowed;filter:none;box-shadow:none;}
 .v2-cta--ember{
   background:var(--v2-grad-ember-cta);
   border-color:var(--v2-ember-lite);
   border-bottom-color:var(--v2-ember-deep);
-  box-shadow:0 0 12px var(--v2-ember-glow);
+  box-shadow:0 0 20px var(--v2-ember-glow);
 }
 
 /* sunken well (E) */

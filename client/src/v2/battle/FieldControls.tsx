@@ -72,7 +72,7 @@ function FieldSetupBody({ onLocked }: { onLocked: () => void }) {
         </div>
       </div>
 
-      <button type="button" className="v2-fs-lock" onClick={lock}>Lock field</button>
+      <button type="button" className="v2-cta v2-fs-lock" onClick={lock}>Lock field</button>
     </div>
   );
 }
@@ -96,7 +96,7 @@ export function FieldControls() {
       {isOwner && !started && !f.locked ? (
         <button
           type="button"
-          className="v2-fc-set"
+          className="v2-cta v2-fc-set"
           onClick={() =>
             openDrawer({
               title: "Field setup",
