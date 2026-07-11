@@ -37,6 +37,8 @@ export const WEAPONS = {
     "Sniper Cannon":  { rof: 1, str: 12, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
     "Siege Maul":     { rof: 1, str: 13, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
     "Missile Barrage":{ rof: 4, str: 9,  sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Harpoon":        { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
+    "Rivet Gun":      { rof: 6, str: 4,  sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
@@ -47,6 +49,8 @@ export const WEAPONS = {
     "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
     "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
     "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], melee: true },
+    "Anchor":        { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
+    "Pressure Claw": { rof: 2, str: 9,  acc: [1, 1], rng: [2, 2], melee: true },
   },
 };
 

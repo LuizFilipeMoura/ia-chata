@@ -56,13 +56,13 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
-  assert.equal(Object.keys(WEAPONS.melee).length, 8);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
-  assert.equal(Object.keys(WEAPONS.melee).length, 8);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
   assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
@@ -133,9 +133,22 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   const shield = WEAPONS.melee["Bulwark Shield"];
   assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
 
-  // The list is now 8 + 8.
-  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
-  assert.equal(Object.keys(WEAPONS.melee).length, 8);
+  // The list is now 10 + 10.
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+});
+
+test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
+  assert.deepEqual(WEAPONS.longRange["Harpoon"],
+    { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
+  assert.deepEqual(WEAPONS.melee["Anchor"],
+    { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true });
+  assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
+    { rof: 6, str: 4, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
+  assert.deepEqual(WEAPONS.melee["Pressure Claw"],
+    { rof: 2, str: 9, acc: [1, 1], rng: [2, 2], melee: true });
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
