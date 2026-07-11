@@ -89,3 +89,38 @@ test("no activation control for an enemy rig", () => {
   );
   expect(screen.queryByRole("button", { name: /Activate|Wait for your turn/i })).not.toBeInTheDocument();
 });
+
+test("defaults to the Status view with component rows visible", () => {
+  render(
+    <V2Providers>
+      <RigTerminal rig={rig} canActivate={false} started mine myTurn={false} onCommand={vi.fn()} onClose={vi.fn()} />
+    </V2Providers>,
+  );
+  expect(screen.getByRole("tab", { name: "Status" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByText("Hull")).toBeInTheDocument();
+});
+
+test("Loadout tab swaps in the loadout card; Status restores the rows", async () => {
+  const user = userEvent.setup();
+  render(
+    <V2Providers>
+      <RigTerminal rig={rig} canActivate={false} started mine myTurn={false} onCommand={vi.fn()} onClose={vi.fn()} />
+    </V2Providers>,
+  );
+  await user.click(screen.getByRole("tab", { name: "Loadout" }));
+  expect(screen.getByText("Autocannon")).toBeInTheDocument();
+  expect(screen.queryByText("Hull")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("tab", { name: "Status" }));
+  expect(screen.getByText("Hull")).toBeInTheDocument();
+});
+
+test("enemy rig still exposes the Loadout tab", async () => {
+  const user = userEvent.setup();
+  render(
+    <V2Providers>
+      <RigTerminal rig={rig} canActivate={false} started mine={false} myTurn={false} onCommand={vi.fn()} onClose={vi.fn()} />
+    </V2Providers>,
+  );
+  await user.click(screen.getByRole("tab", { name: "Loadout" }));
+  expect(screen.getByText("Autocannon")).toBeInTheDocument();
+});

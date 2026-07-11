@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import "../styles/rig-terminal.css";
 import { rigModifiers } from "/shared/battle-view.js";
 import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
@@ -7,6 +7,7 @@ import { rigStatus } from "../../lib/rigView";
 import { CompRow } from "../components/CompRow";
 import { HeatGauge } from "../components/HeatGauge";
 import { ActionConsole } from "../battle/ActionConsole";
+import { LoadoutView } from "../components/LoadoutView";
 import type { Rig, Component } from "../../state/types";
 
 const CLASS_GLYPH: Record<string, string> = { light: "◆", medium: "◈", heavy: "⬢", colossal: "✦" };
@@ -37,6 +38,7 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
   const st = rigStatus(rig);
   const mods = rigModifiers(rig);
   const lo = buildLoadout(rig);
+  const [view, setView] = useState<"status" | "loadout">("status");
   const loadoutText = lo?.flat ? lo.unit?.name : [lo?.lr?.name, lo?.melee?.name].filter(Boolean).join(" · ");
 
   // Activation control only makes sense for your own, live, undestroyed rig.
@@ -86,19 +88,36 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
           </div>
         )}
 
-        <div className="v2-rt-comps">
-          {locs.map((loc) => {
-            const comp = (rig as unknown as Record<string, Component>)[loc];
-            if (!comp) return null;
-            return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} onCommand={onCommand} />;
-          })}
-        </div>
+        {lo && (
+          <div className="v2-rt-tabs" role="tablist" aria-label="Terminal view">
+            <button type="button" role="tab" aria-selected={view === "status"}
+              className={"v2-rt-tab" + (view === "status" ? " is-on" : "")}
+              onClick={() => setView("status")}>Status</button>
+            <button type="button" role="tab" aria-selected={view === "loadout"}
+              className={"v2-rt-tab" + (view === "loadout" ? " is-on" : "")}
+              onClick={() => setView("loadout")}>Loadout</button>
+          </div>
+        )}
 
-        {!cold && <HeatGauge rig={rig} />}
+        {view === "loadout" && lo ? (
+          <LoadoutView loadout={lo} />
+        ) : (
+          <>
+            <div className="v2-rt-comps">
+              {locs.map((loc) => {
+                const comp = (rig as unknown as Record<string, Component>)[loc];
+                if (!comp) return null;
+                return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} onCommand={onCommand} />;
+              })}
+            </div>
 
-        {started && <ActionConsole rig={rig} />}
+            {!cold && <HeatGauge rig={rig} />}
 
-        {activation && <div className="v2-rt-actions">{activation}</div>}
+            {started && <ActionConsole rig={rig} />}
+
+            {activation && <div className="v2-rt-actions">{activation}</div>}
+          </>
+        )}
       </section>
     </div>
   );
