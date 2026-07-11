@@ -6,6 +6,8 @@ import { useMySide } from "../../hooks/useMySide";
 import { orderedRigs } from "../../lib/rigView";
 import { commissioned, tonnage } from "../lib/viewModels";
 import { RigRow } from "../components/RigRow";
+import { BattleHud } from "../components/BattleHud";
+import { FieldControls } from "../../components/FieldControls";
 
 export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) => void; onCommission: () => void }) {
   const { rigs, game, field } = useRoomState();
@@ -28,6 +30,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
 
   return (
     <section className="v2-yard">
+      <BattleHud />
       <div className="v2-yard-head">
         <div>
           <div className="v2-yard-eyebrow">DEPOT ROSTER</div>
@@ -56,6 +59,8 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
           </div>
         </>
       )}
+
+      {started && <FieldControls />}
 
       {!started && (
         <button type="button" className="v2-yard-add" disabled={!canAdd}

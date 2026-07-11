@@ -1,0 +1,23 @@
+import { useEffect } from "react";
+import { render, screen } from "@testing-library/react";
+import { expect, test } from "vitest";
+import { AppProviders } from "../../AppProviders";
+import { useRoomDispatch } from "../../state/RoomStateContext";
+import type { ServerState } from "../../state/types";
+import { OutcomeBanner } from "./OutcomeBanner";
+
+function Seed({state}:{state:ServerState}){ const d=useRoomDispatch();
+  useEffect(()=>{d({type:"setSession",session:{room:"IR",side:"a",name:"K"}});d({type:"applyServerState",state});},[d,state]); return null; }
+
+test("hidden unless the game is finished", () => {
+  const state:ServerState={version:1,ownerSide:"a",field:null,rigs:[],game:{round:1,phase:"activation",started:true,sides:[]}};
+  const { container } = render(<AppProviders><Seed state={state}/><OutcomeBanner/></AppProviders>);
+  expect(container.querySelector(".v2-outcome")).toBeNull();
+});
+test("shows New Battle when finished", async () => {
+  const state:ServerState={version:1,ownerSide:"a",field:null,rigs:[],
+    game:{round:6,phase:"finished",started:true,outcome:{winner:"a"} as any,
+      sides:[{id:"a",name:"K",vp:28,ready:true},{id:"b",name:"R",vp:19,ready:true}]}};
+  render(<AppProviders><Seed state={state}/><OutcomeBanner/></AppProviders>);
+  expect(await screen.findByRole("button", { name: /New Battle/i })).toBeInTheDocument();
+});
