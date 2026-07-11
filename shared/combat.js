@@ -154,6 +154,11 @@ export function computeStr(attacker, profile, opts) {
       || (cap != null && (opts.target.engine?.heat || 0) > cap);
     if (disrupted) bonus += 3;
   }
+  // Taut Cable — +3 STR against a target already pinned down: immobilised, or
+  // held in a melee lock (engaged).
+  if (opts.target && profile.upgradeEffect?.vsPinned) {
+    if (opts.target.immobilised || opts.target.engagedWith != null) bonus += 3;
+  }
   // Redline Governor — the hotter the attacker runs past its own class cap,
   // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
   if (profile.upgradeEffect?.redline) {

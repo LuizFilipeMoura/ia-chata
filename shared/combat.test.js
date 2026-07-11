@@ -1046,3 +1046,12 @@ test("Kneecapper tags the raked limb on a damaging hit; a non-kneecapper Double 
       dice: { toHit: [6], impacts: [6], ap: [1] } }, () => 0, ctx2);
   assert.deepEqual(target2.kneecapped, {}); // untagged by an ordinary weapon
 });
+
+test("Taut Cable: +3 STR vs an immobilised or engaged target, else nothing", () => {
+  const harpoon = { ...WEAPONS.longRange["Harpoon"], upgradeEffect: { vsPinned: true } };
+  const attacker = { weightClass: "medium" };
+  // base STR 12, medium weight mod 0
+  assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light" } }), 12);
+  assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 15);
+  assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 15);
+});
