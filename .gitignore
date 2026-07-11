@@ -7,3 +7,6 @@ client/dist
 .agents/
 .design/
 *-handoff.zip
+
+# superpowers brainstorm scratch
+.superpowers/
