@@ -11,7 +11,7 @@ export function ImpersonateChip() {
   if (!seeded) return null;
   return (
     <div className="v2-impersonate" role="group" aria-label="Impersonate side">
-      <span className="v2-impersonate-label">Acting as</span>
+      <span className="v2-impersonate-label v2-eyebrow">Acting as</span>
       <button
         type="button"
         className="v2-impersonate-btn"

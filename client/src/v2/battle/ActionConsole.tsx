@@ -25,26 +25,47 @@ interface Action {
 // Three tactile groups collapse the full action list into one row (exactly as
 // V1's ActionConsole). Each button opens a popover of its enabled sub-actions
 // (unless only one, which fires straight through). `tone` picks the V2 accent
-// (ember for Attack, gunmetal for Move/Support).
-const GROUPS: { id: string; label: string; tone: string; keys: string[] }[] = [
-  { id: "attack", label: "Attack", tone: "ember", keys: ["fire", "aimed", "reload"] },
-  { id: "move", label: "Move", tone: "steel", keys: ["move", "sprint"] },
-  { id: "support", label: "Support", tone: "steel", keys: [] }, // catch-all
+// (ember for Attack, gunmetal for Move/Support); `glyph` is the tile's stencil
+// mark, echoing the design-reference console (▶ fire / ⇢ move / ⚙ support).
+//
+// Disengage lives in the Move group on purpose: a rig locked in melee can't Move
+// until it Disengages, so the two occupy the same slot interchangeably — when
+// engaged only Disengage is live (and the tile relabels to it); otherwise
+// Move/Sprint are live and Disengage sits greyed as the "why you can't move" cue.
+const GROUPS: { id: string; label: string; tone: string; glyph: string; keys: string[] }[] = [
+  { id: "attack", label: "Attack", tone: "ember", glyph: "▶", keys: ["fire", "aimed", "reload"] },
+  { id: "move", label: "Move", tone: "steel", glyph: "⇢", keys: ["move", "sprint", "disengage"] },
+  { id: "support", label: "Support", tone: "steel", glyph: "⚙", keys: [] }, // catch-all
 ];
+
+// When a group collapses to a single live action, the tile borrows that action's
+// mark so its face matches what tapping it actually fires (Move → Disengage).
+const ACTION_GLYPH: Record<string, string> = {
+  move: "⇢", sprint: "⇉", disengage: "⇲", reload: "⟳", fire: "▶", aimed: "◎",
+};
 
 const heatText = (heat: number) =>
   heat > 0 ? `+${heat} heat` : heat < 0 ? `${heat} heat` : "free";
+// Sign bucket drives the heat chip's colour (cost vs cooling vs free).
+const heatBucket = (heat: number) => (heat > 0 ? "pos" : heat < 0 ? "neg" : "zero");
 
 // The popover is portaled to <body> so it escapes the rig terminal's overflow.
 // Its contents are wrapped in `.v2-root` so the scoped V2 styles apply even
 // though it mounts outside the app's root. Position is measured off the anchor
-// button, opening above it and clamped to the viewport (mirrors V1).
+// button, opening above it and clamped to the viewport (mirrors V1). It reads as
+// a stamped iron selector module: a tone-keyed header strip, a downward pointer
+// aimed back at the tile, and rows that stagger in once placed. `tone`/`title`
+// tie it to the group that spawned it (ember Attack vs steel Move/Support).
 function AcPopover({
   anchor,
+  tone,
+  title,
   onClose,
   children,
 }: {
   anchor: HTMLElement | null;
+  tone: string;
+  title: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -83,10 +104,15 @@ function AcPopover({
   }, [onClose]);
 
   return createPortal(
-    <div className="v2-root">
+    // `v2-portal` keeps the scoped-token context (--v2-* + `.v2-root …` selectors)
+    // WITHOUT the full-screen shell box: tokens.css makes a bare `.v2-root` a
+    // fixed, opaque, inset:0 layer — fine for full overlays, but on this small
+    // floating popover it would black out the whole app behind it.
+    <div className="v2-root v2-portal">
       <div className="v2-ac-pop-scrim" onClick={onClose} />
       <div
-        className="v2-ac-pop"
+        className={"v2-ac-pop" + (pos ? " is-placed" : "")}
+        data-tone={tone}
         role="menu"
         ref={ref}
         style={
@@ -95,6 +121,11 @@ function AcPopover({
             : { visibility: "hidden" }
         }
       >
+        <div className="v2-ac-pop-head">
+          <span className="v2-ac-pop-head-tick" aria-hidden="true" />
+          <span className="v2-ac-pop-head-text v2-title">{title}</span>
+          <span className="v2-ac-pop-head-sub v2-eyebrow">select</span>
+        </div>
         {children}
       </div>
     </div>,
@@ -159,17 +190,20 @@ export function ActionConsole({ rig }: Props) {
 
   return (
     <div className="v2-ac">
-      <div className="v2-ac-budget">
-        <span className="v2-ac-budget-label">
-          Actions {b.left}/{b.max}
-          {b.reduced ? (
-            <>
-              {" · "}
-              <span className="v2-ac-reduced">Hull damage −2</span>
-            </>
-          ) : null}
-        </span>
-        <div className="v2-ac-pips">
+      <div className="v2-ac-head">
+        <span className="v2-ac-lamp" aria-hidden="true" />
+        <div className="v2-ac-head-text">
+          <span className="v2-ac-title">Choose an Action</span>
+          <span className="v2-ac-budget-line">
+            {b.left}/{b.max} actions left
+            {b.reduced ? <span className="v2-ac-reduced"> · Hull damage −2</span> : null}
+          </span>
+        </div>
+        <div
+          className="v2-ac-pips"
+          role="img"
+          aria-label={`${b.left} of ${b.max} actions remaining`}
+        >
           {Array.from({ length: Math.max(3, b.max) }, (_, i) => (
             <span
               key={i}
@@ -179,17 +213,22 @@ export function ActionConsole({ rig }: Props) {
         </div>
       </div>
 
-      <div className="v2-ac-grid">
+      <div className="v2-ac-grid v2-grid-3">
         {GROUPS.map((g) => {
           const kids = childrenFor(g);
           if (kids.length === 0) return null;
           const enabledKids = kids.filter((a) => a.enabled);
           const groupEnabled = enabledKids.length > 0;
           const open = openGroup === g.id;
+          // Collapsed to one live action → the tile wears that action's face so
+          // its label matches the straight-through fire (Move ⇢ becomes Disengage ⇲).
+          const solo = enabledKids.length === 1 ? enabledKids[0] : null;
+          const tileGlyph = solo ? ACTION_GLYPH[solo.key] ?? g.glyph : g.glyph;
+          const tileLabel = solo ? solo.label : g.label;
 
           const onGroup = () => {
             if (!groupEnabled) return;
-            if (enabledKids.length === 1) onAction(rig, enabledKids[0].key);
+            if (solo) onAction(rig, solo.key);
             else setOpenGroup(open ? null : g.id);
           };
 
@@ -205,26 +244,36 @@ export function ActionConsole({ rig }: Props) {
                 onClick={onGroup}
                 ref={(el) => (cellRefs.current[g.id] = el)}
               >
-                {g.tone === "ember" && <span className="v2-ac-tile-lamp" aria-hidden="true" />}
-                <span className="v2-ac-tile-label">{g.label}</span>
+                <span className="v2-ac-tile-glyph" aria-hidden="true">{tileGlyph}</span>
+                <span className="v2-ac-tile-label">{tileLabel}</span>
                 {enabledKids.length > 1 && <span className="v2-ac-tile-caret" aria-hidden="true">▾</span>}
               </button>
 
               {open && (
-                <AcPopover anchor={cellRefs.current[g.id]} onClose={() => setOpenGroup(null)}>
-                  {kids.map((a) => (
+                <AcPopover
+                  anchor={cellRefs.current[g.id]}
+                  tone={g.tone}
+                  title={g.label}
+                  onClose={() => setOpenGroup(null)}
+                >
+                  {kids.map((a, i) => (
                     <button
                       key={a.key}
                       type="button"
                       role="menuitem"
                       className="v2-ac-pop-row"
+                      style={{ ["--i" as string]: i }}
                       disabled={!a.enabled}
-                      title={a.note || undefined}
                       onClick={() => onAction(rig, a.key)}
                     >
-                      <span className="v2-ac-pop-label">{a.label}</span>
+                      <span className="v2-ac-pop-main">
+                        <span className="v2-ac-pop-label">{a.label}</span>
+                        {a.note && <span className="v2-ac-pop-note">{a.note}</span>}
+                      </span>
                       {!cold && (
-                        <span className="v2-ac-pop-heat" data-heat={a.heat}>{heatText(a.heat)}</span>
+                        <span className="v2-ac-pop-heat" data-heat={heatBucket(a.heat)}>
+                          {heatText(a.heat)}
+                        </span>
                       )}
                     </button>
                   ))}

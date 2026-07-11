@@ -16,7 +16,7 @@ export function BattleHud() {
   return (
     <div className="v2-bh">
       <div className="v2-bh-phase">
-        <span className="v2-bh-label">{sum.label}</span>
+        <span className="v2-bh-label v2-title">{sum.label}</span>
         <span className="v2-bh-round">R{sum.round}</span>
       </div>
       <div className="v2-bh-turn">
