@@ -25,7 +25,15 @@ const baseState: ServerState = {
 
 test("shows the room code and only the Yard channel active", async () => {
   render(<AppProviders><Seed state={baseState} /><Shell channel="yard"><div /></Shell></AppProviders>);
+  // survivors
   expect(await screen.findByText(/IRON-42/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Glossary/i })).toBeInTheDocument();
+  // removed chrome — strip is now a minimal utility line
+  expect(screen.queryByText(/OIL & IRON/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/MK·IV/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^LINK$/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^LOCAL$/)).not.toBeInTheDocument();
+  // channels unchanged
   expect(screen.getByRole("button", { name: /Yard/i })).toBeEnabled();
   expect(screen.getByRole("button", { name: /Yard/i })).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("button", { name: /Forge/i })).toBeEnabled();

@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import "../styles/shell.css";
 import { useRoomState, useRoomDispatch } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
@@ -49,22 +49,9 @@ export function Shell({
       <header className="v2-strip">
         <div className="v2-brand">
           <div className="v2-brand-badge v2-badge"><div className="v2-brand-core" /></div>
-          <div className="v2-brand-name v2-title">OIL &amp; IRON</div>
-          <div className="v2-brand-mk">MK·IV</div>
         </div>
         <div className="v2-strip-spacer" />
-        <div className="v2-telemetry">
-          <div className="v2-tele">
-            <span className="v2-lamp v2-lamp--ok" style={{ "--v2-lamp-speed": "2.4s" } as CSSProperties} />
-            <span className="v2-tele-key">LINK</span>
-            <span className="v2-tele-val">LOCAL</span>
-          </div>
-          <span className="v2-tele-sep" aria-hidden="true" />
-          <div className="v2-tele">
-            <span className="v2-tele-key">RM</span>
-            <span className="v2-tele-val">{session?.room}</span>
-          </div>
-        </div>
+        <div className="v2-strip-rm">RM <span>{session?.room}</span></div>
         <button type="button" className="v2-gloss-btn" aria-label="Glossary" onClick={() => onGlossary?.()}>ⓘ</button>
       </header>
 
