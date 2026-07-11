@@ -2766,27 +2766,51 @@ test("reset clears engagement between matches", () => {
   assert.equal(findRig(r, "b1").engagedWith, null);
 });
 
-test("reset clears melee-lock marks and rivet stacks so they don't leak into the next match", () => {
+test("reset clears every transient combat status so nothing leaks into the next match", () => {
   const r = createRoom("X");
   const a = makeRig(1, "a1", "light", "a", W);
   const b = makeRig(2, "b1", "light", "b", W);
   r.rigs = [a, b];
-  // Simulate mid-match marks/stacks that outlive the match without a Disengage.
+  // Simulate mid-match marks/stacks/counters/maps that outlive the match.
   b.anchoredBy = a.id;
   b.skeweredBy = a.id;
-  a.rivetTarget = b.id;
-  a.rivetLoc = "arms";
-  a.rivetStacks = 2;
+  a.rivetTarget = b.id; a.rivetLoc = "arms"; a.rivetStacks = 2;
   b.rivetSeized = { arms: 5 };
+  b.burning = 3;
+  a.suppressTarget = b.id; a.suppressStacks = 3; b.suppressImmobile = true;
+  a.autocannonShots = 2; a.autocannonSlowNext = true; a.enfiladeShots = 2;
+  a.arcLockedNext = true; b.noPrepNextActivation = true; b.noActivesNextActivation = true;
+  a.lockedTarget = b.id; a.lockExpiresRound = 9;
+  b.cracked = { hull: 5 }; b.crippled = { arms: true }; b.noRepair = { arms: true };
+  b.kneecapped = { legs: true }; b.armsSuppressed = true;
   applyCommand(r, { verb: "reset", attrs: {} });
   const a1 = findRig(r, "a1");
   const b1 = findRig(r, "b1");
+  // Anchor/skewer/rivet marks.
   assert.equal(b1.anchoredBy, null);
   assert.equal(b1.skeweredBy, null);
   assert.equal(a1.rivetTarget, null);
   assert.equal(a1.rivetLoc, null);
   assert.equal(a1.rivetStacks, 0);
   assert.deepEqual(b1.rivetSeized, {});
+  // Every other transient status.
+  assert.equal(b1.burning, 0);
+  assert.equal(a1.suppressTarget, null);
+  assert.equal(a1.suppressStacks, 0);
+  assert.equal(b1.suppressImmobile, false);
+  assert.equal(a1.autocannonShots, 0);
+  assert.equal(a1.autocannonSlowNext, false);
+  assert.equal(a1.enfiladeShots, 0);
+  assert.equal(a1.arcLockedNext, false);
+  assert.equal(b1.noPrepNextActivation, false);
+  assert.equal(b1.noActivesNextActivation, false);
+  assert.equal(a1.lockedTarget, null);
+  assert.equal(a1.lockExpiresRound, 0);
+  assert.deepEqual(b1.cracked, {});
+  assert.deepEqual(b1.crippled, {});
+  assert.deepEqual(b1.noRepair, {});
+  assert.deepEqual(b1.kneecapped, {});
+  assert.equal(b1.armsSuppressed, false); // re-derived by recompute (arms back at max)
 });
 
 test("set-to-destroyed clears the dead rig's engagement", () => {

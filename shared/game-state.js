@@ -2048,7 +2048,32 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.rivetLoc = null;
       rig.rivetStacks = 0;
       rig.rivetSeized = {};
+      // §13 status effects — a reset returns each rig to its commissioned state,
+      // so clear every remaining transient combat status. A stale counter/stack/
+      // paint or a leftover per-location map would otherwise misfire on the first
+      // action of the next match (e.g. an instant Suppression pin, a phantom
+      // Fire Control volley, or a location still marked cracked/no-repair).
+      rig.burning = 0;                    // Napalm / Conflagration DoT
+      rig.suppressTarget = null;          // Suppression Lock (Mini Gun)
+      rig.suppressStacks = 0;
+      rig.suppressImmobile = false;
+      rig.autocannonShots = 0;            // Penetrator Rounds (Autocannon) belt cadence
+      rig.autocannonSlowNext = false;
+      rig.enfiladeShots = 0;              // Enfilade (Sniper Cannon) ricochet cadence
+      rig.arcLockedNext = false;          // Ion Storm (Arc Gun) self-overload
+      rig.noPrepNextActivation = false;   // Suppression Lock / Ion Storm scoped pins
+      rig.noActivesNextActivation = false;
+      rig.movedThisActivation = false;
+      rig.lockedTarget = null;            // Fire Control Lock (Missile Barrage) paint
+      rig.lockExpiresRound = 0;
+      rig.cracked = {};                   // Breach Grip (Claw)
+      rig.crippled = {};                  // Dismember (Circular Saw) — permanent within a match, cleared between
+      rig.noRepair = {};
+      rig.kneecapped = {};                // Kneecapper (Double MG) per-limb tags
       delete rig._blastRolled;
+      // Re-derive SP-dependent state (armsSuppressed, cripple ramps) now that
+      // every location is back at max and the tag maps are cleared.
+      recompute(rig);
     }
     room.game.started = false;
     room.game.phase = "setup";
