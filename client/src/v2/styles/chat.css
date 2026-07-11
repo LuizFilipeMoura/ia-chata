@@ -31,10 +31,6 @@
 .v2-root .v2-qm-badge {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: conic-gradient(from 20deg, #2a1c0c, #5a3c14, #2a1c0c);
   border: 1px solid var(--v2-oil-deep);
   font-size: 15px;
 }
@@ -50,19 +46,7 @@
   color: var(--v2-oil);
 }
 .v2-root .v2-qm-sub {
-  font-family: var(--v2-mono);
-  font-size: 8px;
-  letter-spacing: .16em;
-  color: var(--v2-txt-faint);
   margin-top: 2px;
-}
-.v2-root .v2-qm-lamp {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--v2-ok);
-  box-shadow: 0 0 8px var(--v2-ok);
-  animation: v2-lampfast 2s infinite;
 }
 
 /* ---- toolbar ---- */
@@ -88,10 +72,8 @@
 .v2-root .v2-qm-chip:hover {
   border-color: var(--v2-oil-deep);
 }
-.v2-root .v2-qm-chip.v2-qm-active {
-  border-color: var(--v2-oil);
+.v2-root .v2-qm-chip.is-sel {
   color: var(--v2-oil);
-  box-shadow: inset 0 0 0 1px rgba(231, 154, 61, .4);
 }
 .v2-root .v2-qm-x:hover {
   border-color: var(--v2-ember);
@@ -142,7 +124,7 @@
   align-self: flex-end;
   max-width: 78%;
   padding: 11px 14px;
-  background: linear-gradient(180deg, #241a0d, #1a1207);
+  background: var(--v2-grad-oil-sel);
   border: 1px solid var(--v2-oil-deep);
   color: var(--v2-oil-hi);
   white-space: pre-wrap;
@@ -184,10 +166,6 @@
   margin-bottom: 8px;
 }
 .v2-root .v2-qm-think > summary {
-  font-family: var(--v2-mono);
-  font-size: 8px;
-  letter-spacing: .16em;
-  color: var(--v2-txt-faint);
   cursor: pointer;
   list-style: none;
   margin-bottom: 6px;
@@ -243,17 +221,7 @@
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #f0663f, #b8351f);
-  border: 1px solid #ff8a6a;
-  color: #fff;
   font-size: 19px;
-  cursor: pointer;
-  box-shadow: 0 0 18px rgba(229, 83, 58, .4);
-}
-.v2-root .v2-qm-mic:disabled {
-  opacity: .45;
-  cursor: not-allowed;
-  box-shadow: none;
 }
 .v2-root .v2-qm-mic.v2-qm-recording {
   animation: v2-lampfast 1s infinite;
@@ -287,13 +255,5 @@
   flex: 0 0 auto;
   width: 46px;
   height: 46px;
-  background: linear-gradient(180deg, #f0a94a, #c47a26);
-  border: 1px solid #ffcf82;
-  color: #1a1206;
   font-size: 18px;
-  cursor: pointer;
-}
-.v2-root .v2-qm-send:disabled {
-  opacity: .5;
-  cursor: not-allowed;
 }

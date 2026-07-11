@@ -52,7 +52,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
   return (
     <div className="v2-qm-input">
       <button
-        className={`v2-qm-mic${mic.recording ? " v2-qm-recording" : ""}`}
+        className={`v2-qm-mic v2-cta v2-cta--ember${mic.recording ? " v2-qm-recording" : ""}`}
         aria-label="Toggle voice input"
         title="Voice input"
         type="button"
@@ -73,7 +73,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         />
       </div>
       <button
-        className="v2-qm-send"
+        className="v2-qm-send v2-cta"
         aria-label="Send message"
         title="Send"
         type="button"

@@ -27,7 +27,7 @@ export function Bubble({ msg }: { msg: ChatMessage }) {
     <div className={`v2-qm-bubble v2-qm-bot${msg.pending ? " v2-qm-pending" : ""}`}>
       {msg.thinking ? (
         <details className="v2-qm-think" open={msg.thinkOpen}>
-          <summary>▸ Reasoning</summary>
+          <summary className="v2-eyebrow">▸ Reasoning</summary>
           <div className="v2-qm-think-text">{msg.thinking}</div>
         </details>
       ) : null}
