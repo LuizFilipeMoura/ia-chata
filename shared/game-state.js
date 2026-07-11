@@ -409,6 +409,7 @@ function ensureRigShape(rig) {
   if (typeof rig.movedThisActivation !== "boolean") rig.movedThisActivation = false;
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
+  if (rig.prebuilt === undefined) rig.prebuilt = null;
   if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
@@ -567,6 +568,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     weapons: { longRange, melee },
     weaponUpgrades,
     equipment: equipmentId,
+    prebuilt: weapons.prebuilt || null, // PREBUILT_RIGS id it was commissioned from — drives its flavor description in the UI
     prepare: 0,    // Phase 4
     activated: false,
     skipNextActivation: false,
@@ -662,7 +664,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     return makeRig(id, name, opts.weightClass, owner, {
       longRange: opts.longRange, melee: opts.melee,
       longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
-      sp: opts.sp,
+      sp: opts.sp, prebuilt: opts.prebuilt,
     }, opts.equipment ?? null);
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
@@ -686,6 +688,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     parts,
     weapons: { unit: weaponName },
     equipment: null,
+    prebuilt: null, // cold kinds (tank / walker) aren't commissioned from a prebuilt
     activated: false,
     skipNextActivation: false,
     noCool: false,
@@ -1804,6 +1807,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           meleeUpgrade: a.meleeUpgrade,
           equipment: a.equipment ?? null,
           sp: a.sp,
+          prebuilt: a.prebuilt,
           // Flat-pick options
           unit: a.unit,
         });

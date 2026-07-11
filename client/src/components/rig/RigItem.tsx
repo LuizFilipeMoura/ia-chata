@@ -4,6 +4,7 @@ import { rigModifiers } from "/shared/battle-view.js";
 import { partNamesOf, kindOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { rigStatus } from "../../lib/rigView";
 import { buildLoadout } from "../../lib/loadout";
+import { usePrebuiltDescriptions } from "../../hooks/usePrebuiltDescriptions";
 import { CompRow } from "./CompRow";
 import { HeatGauge } from "./HeatGauge";
 import { ActionConsole } from "../battle/ActionConsole";
@@ -104,6 +105,8 @@ export const RigItem = React.memo(function RigItem({
   }
 
   const mods = rigModifiers(rig);
+  const prebuiltDescriptions = usePrebuiltDescriptions();
+  const description = rig.prebuilt ? prebuiltDescriptions[rig.prebuilt] : undefined;
 
   return (
     <div className={itemCls.join(" ")}>
@@ -135,6 +138,7 @@ export const RigItem = React.memo(function RigItem({
       {/* ---- Body (collapsible) ---- */}
       <div className="rig-body">
         <div className="rig-body-inner">
+          {description && <div className="rig-desc">{description}</div>}
           <div className={"rig-status " + st.cls}>{st.text}</div>
 
           {mods.length > 0 && (

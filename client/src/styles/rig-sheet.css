@@ -127,6 +127,11 @@
 }
 .rig-status.warn { color: var(--oil-hi); }
 .rig-status.crit { color: var(--ember-hi); }
+/* Prebuilt flavor blurb — a quiet italic line under the header. */
+.rig-desc {
+  font-size: .72rem; line-height: 1.4; font-style: italic;
+  color: var(--txt-faint); margin: 0 0 .5rem;
+}
 .rig-comp { position: relative; display: flex; align-items: center; gap: .5rem; margin: .4rem 0; }
 .rig-comp-label {
   width: 3.4rem; flex: 0 0 auto; font-family: var(--font-mono);

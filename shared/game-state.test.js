@@ -106,6 +106,17 @@ test("makeRig honours a per-rig SP override, else falls back to class defaults",
   assert.equal(plated.hull.max, 17);
 });
 
+test("makeUnit stores the prebuilt id on the rig (for its flavor description)", () => {
+  const rig = makeUnit("rig", 1, "Vulcan", "a", {
+    weightClass: "light", longRange: "Autocannon", melee: "Claw", prebuilt: "light-claw-autocannon",
+  });
+  assert.equal(rig.prebuilt, "light-claw-autocannon");
+  const bare = makeRig(2, "Plain", "medium", "a", { lr: "Sniper Cannon", melee: "Chainsaw" });
+  assert.equal(bare.prebuilt, null);
+  const tank = makeUnit("tank", 3, "T", "a", { unit: "Tank Cannon" });
+  assert.equal(tank.prebuilt, null);
+});
+
 test("makeUnit threads the sp override through to the rig", () => {
   const rig = makeUnit("rig", 9, "Sniper", "a", {
     weightClass: "medium", longRange: "Sniper Cannon", melee: "Chainsaw",
