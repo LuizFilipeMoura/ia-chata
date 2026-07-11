@@ -3180,6 +3180,28 @@ test("Rivet Lock: switching location resets the rivet stack", () => {
   assert.equal(Object.keys(b1.rivetSeized).length, 0); // never reached 3 on one loc
 });
 
+test("Rivet Lock: a seized Arms location jams long-range fire but not melee", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1"); // b activates first in this suite
+  const a1 = findRig(r, "a1");
+  // Seize b1's weapon-role location (arms) directly.
+  b1.rivetSeized = { arms: r.game.round + 1 };
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const usedBeforeLR = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", distance: 7,
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
+  } });
+  assert.equal(r.game.turn.actionsUsed, usedBeforeLR); // long-range fire refused (jammed)
+  // Melee is unaffected: a melee swing still spends its slot.
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
+  } });
+  assert.equal(r.game.turn.actionsUsed, usedBeforeLR + 1); // melee went through
+});
+
 // --- Emplacement (§13, Bulwark Shield prototype) -----------------------------
 // A rooted fortress stance: permanent Raise Shield, a 3→2 action budget, no
 // movement, +2 heat to un-plant, and a 3-round cooldown from when it's entered.
