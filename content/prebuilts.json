@@ -5,7 +5,7 @@
     "class": "light",
     "longRange": "Autocannon",
     "melee": "Claw",
-    "description": "",
+    "description": "A methodical light built to gut heavies. The claw pries armour open; the autocannon punches straight through the gap. Bring it when the enemy is wearing too much steel.",
     "focus": "",
     "balance": "",
     "personality": ""
@@ -16,7 +16,7 @@
     "class": "light",
     "longRange": "Missile Barrage",
     "melee": "Flamethrower",
-    "description": "",
+    "description": "A walking bonfire. Rains missile volleys from range and washes close quarters in flame, leaving targets burning long after the salvo lands.",
     "focus": "",
     "balance": "",
     "personality": ""
@@ -27,7 +27,7 @@
     "class": "light",
     "longRange": "Mini Gun",
     "melee": "Circular Saw",
-    "description": "",
+    "description": "It doesn't kill fast — it wears you down. The mini gun pins you in place while the circular saw grinds your frame into scrap that never repairs.",
     "focus": "",
     "balance": "",
     "personality": ""
@@ -38,7 +38,7 @@
     "class": "light",
     "longRange": "Double MG",
     "melee": "Wrecking Ball",
-    "description": "",
+    "description": "Fast, loud, and mean. Runs down the flank, hoses exposed arcs with the twin guns, and swings a wrecking ball hard enough to reshape whatever it hits.",
     "focus": "",
     "balance": "",
     "personality": ""
@@ -49,7 +49,7 @@
     "class": "light",
     "longRange": "Arc Gun",
     "melee": "Sword",
-    "description": "",
+    "description": "An electro-fencer that fights with heat. The arc gun cooks and jams the enemy's systems; the sword finishes whatever's left twitching.",
     "focus": "",
     "balance": "",
     "personality": ""
@@ -60,7 +60,7 @@
     "class": "medium",
     "longRange": "Mortar",
     "melee": "Lance",
-    "description": "",
+    "description": "Half siege gun, half cavalry. Shells the field from across the table, then couches the lance and skewers anything that dares close the distance.",
     "focus": "",
     "balance": "",
     "personality": ""
@@ -71,7 +71,7 @@
     "class": "medium",
     "longRange": "Siege Maul",
     "melee": "Bulwark Shield",
-    "description": "",
+    "description": "An immovable object with a hammer. Plants on the objective behind a tower shield and refuses to die, cracking anything that comes within reach of the maul.",
     "focus": "",
     "balance": "",
     "personality": ""
@@ -82,7 +82,7 @@
     "class": "medium",
     "longRange": "Sniper Cannon",
     "melee": "Chainsaw",
-    "description": "",
+    "description": "A patient killer. Opens with a devastating shot on a fresh target, then closes to butcher the wounded with a screaming chainsaw.",
     "focus": "",
     "balance": "",
     "personality": ""
