@@ -12,7 +12,7 @@ import type { Rig, Resolution, PrepType } from "../../state/types";
 import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
 import { phaseSummary } from "/shared/battle-view.js";
 import { useMySide } from "../../hooks/useMySide";
-import { playDamage, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
+import { playDamage, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
 
 interface RecapLine {
   text: string;
@@ -147,7 +147,7 @@ export function useV2BattleWatchers(): void {
   const myTurn =
     game?.phase === "activation" && phaseSummary(game, rigs).turnSide === mySide;
   useEffect(() => {
-    if (myTurn) startEngineLoop();
+    if (myTurn) { playEngineStart(); startEngineLoop(); }
     else stopEngineLoop();
     return () => stopEngineLoop();
   }, [myTurn]);
@@ -157,7 +157,7 @@ export function useV2BattleWatchers(): void {
   const answerShownFor = useRef<number>(-1); // remaining count last shown
   useEffect(() => {
     const g = gameRef.current;
-    const mine = sessionRef.current?.side || "a";
+    const mine = mySideRef.current;
     const gate = g?.pendingAnswer;
     if (!gate || gate.side !== mine) { answerShownFor.current = -1; return; }
     if (answerShownFor.current === gate.remaining) return; // already prompting this step
@@ -189,7 +189,7 @@ export function useV2BattleWatchers(): void {
       ],
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side]);
+  }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side, mySide]);
 
   // ---- Reaction watcher: defender resolves a triggered facedown reaction ----
   // When an incoming attack reveals an Evasive/Return-Fire prep, the server parks
@@ -198,7 +198,7 @@ export function useV2BattleWatchers(): void {
   const reactionShown = useRef(false);
   useEffect(() => {
     const g = gameRef.current;
-    const mine = sessionRef.current?.side || "a";
+    const mine = mySideRef.current;
     const pr = g?.pendingReaction;
     if (!pr || pr.defender !== mine) { reactionShown.current = false; return; }
     if (reactionShown.current) return;
@@ -269,7 +269,7 @@ export function useV2BattleWatchers(): void {
       sendReact({ decline: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.pendingReaction?.targetId, game?.pendingReaction?.kind]);
+  }, [game?.pendingReaction?.targetId, game?.pendingReaction?.kind, mySide]);
 
   // ---- Activation summary watcher (battle.js:58-120) ----
   const watchedActiveRig = useRef<number | null>(null); // rig active on previous render
@@ -289,6 +289,11 @@ export function useV2BattleWatchers(): void {
   rigsRef.current = rigs;
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  // The side "I" am acting as — impersonation-aware (ViewSideContext override wins
+  // over session.side). Mandatory gates key off this so seed-room testers acting
+  // as either side still get the answer/reaction drawer. See useMySide.
+  const mySideRef = useRef(mySide);
+  mySideRef.current = mySide;
 
   useEffect(() => {
     const g = gameRef.current;

@@ -7,6 +7,7 @@ import { V2RollProvider } from "../state/V2RollContext";
 import { V2BattleActionsProvider } from "../state/V2BattleActionsContext";
 import { V2WizardProvider } from "../state/V2WizardContext";
 import { useRoomDispatch } from "../../state/RoomStateContext";
+import { ViewSideContext } from "../../state/ViewSideContext";
 import type { Rig, ServerState } from "../../state/types";
 import { useV2BattleWatchers } from "./useV2BattleWatchers";
 import { playDamage, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
@@ -14,7 +15,7 @@ import { playDamage, startEngineLoop, stopEngineLoop } from "../audio/actionAudi
 vi.mock("../../hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
 
 vi.mock("../audio/actionAudio", () => ({
-  playDamage: vi.fn(), startEngineLoop: vi.fn(), stopEngineLoop: vi.fn(),
+  playDamage: vi.fn(), playEngineStart: vi.fn(), startEngineLoop: vi.fn(), stopEngineLoop: vi.fn(),
 }));
 
 const gameBase = {
@@ -43,6 +44,16 @@ test("opens the answer-token gate when the current side owes answer tokens", asy
       turn: { side: "b", activeRigId: 2, actionsUsed: 0, actionsMax: 3 }, pendingAnswer: { side: "a", remaining: 2 } } } as unknown as ServerState;
   render(wrap(<Harness state={state} />));
   // The gate drawer title ported from V1 useBattleWatchers: "⟡ Answer Tokens — prepare a reaction".
+  expect(await screen.findByText(/answer tokens/i)).toBeInTheDocument();
+});
+
+test("opens the gate for the impersonated side, not the session side", async () => {
+  // Session joined as "a", but impersonating "b" (seed-room act-as-either-side).
+  // The answer token belongs to "b"; the gate must follow the impersonated view.
+  const state = { version: 1, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")],
+    game: { round: 2, phase: "activation", started: true, sides: [{ id: "a", name: "K", vp: 0, ready: true }, { id: "b", name: "R", vp: 0, ready: true }],
+      turn: { side: "a", activeRigId: 1, actionsUsed: 0, actionsMax: 3 }, pendingAnswer: { side: "b", remaining: 1 } } } as unknown as ServerState;
+  render(wrap(<ViewSideContext.Provider value="b"><Harness state={state} /></ViewSideContext.Provider>));
   expect(await screen.findByText(/answer tokens/i)).toBeInTheDocument();
 });
 

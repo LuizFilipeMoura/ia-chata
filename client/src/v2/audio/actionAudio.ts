@@ -1,4 +1,4 @@
-import { play, startLoop, stopLoop } from "./audioMixer";
+import { play, startIdle, stopIdle } from "./audioMixer";
 import { soundUrl } from "./soundAssets";
 
 interface Layers { voices: string[]; sfx: string[]; }
@@ -24,6 +24,7 @@ export const ACTION_AUDIO: Record<string, Layers> = {
 
 const DAMAGE_SFX = ["tank_getting_shot_1", "tank_getting_shot_2"];
 const ENGINE_LOOP = ["engine_idle"];
+const ENGINE_START = ["engine_start"];
 
 // Resolve stems to URLs, dropping any that are absent.
 function urls(stems: string[]): string[] {
@@ -40,10 +41,14 @@ export function playDamage(): void {
   play([], urls(DAMAGE_SFX));
 }
 
+export function playEngineStart(): void {
+  play([], urls(ENGINE_START));
+}
+
 export function startEngineLoop(): void {
-  startLoop(urls(ENGINE_LOOP));
+  startIdle(urls(ENGINE_LOOP));
 }
 
 export function stopEngineLoop(): void {
-  stopLoop();
+  stopIdle();
 }

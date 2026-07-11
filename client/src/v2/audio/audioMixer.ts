@@ -20,9 +20,14 @@ let ctx: AudioContext | null = null;
 const buffers = new Map<string, AudioBuffer>();
 const lastPick = new Map<string, number>(); // category key -> last index
 
-let loopSource: AudioBufferSourceNode | null = null;
-let loopStarting = false;
-let loopGen = 0;
+const IDLE_GAIN = 0.3;
+const IDLE_FADE_S = 1.5;
+const IDLE_GAP_S = 5;
+
+let idleActive = false;
+let idleGen = 0;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let idleSource: AudioBufferSourceNode | null = null;
 
 function readEnabled(): boolean {
   try {
@@ -51,7 +56,7 @@ export function setEnabled(v: boolean): void {
   try {
     localStorage.setItem(STORAGE_KEY, String(v));
   } catch { /* storage unavailable — in-memory only */ }
-  if (!v) stopLoop();
+  if (!v) stopIdle();
   notify();
 }
 
@@ -122,40 +127,52 @@ export function play(voiceUrls: string[], sfxUrls: string[]): void {
   if (sfx) void playOne(c, sfx, 0.5);
 }
 
-/** Start the engine idle loop (idempotent). Picks one URL at random. */
-export function startLoop(urls: string[]): void {
+// One fade-in / play / fade-out cycle, then schedule the next after a gap.
+function playIdleCycle(c: AudioContext, url: string, gen: number): void {
+  void (async () => {
+    const buf = await loadBuffer(c, url);
+    if (gen !== idleGen || !idleActive || !buf || !enabled) return; // superseded/stopped
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const gain = c.createGain();
+    const now = c.currentTime;
+    const dur = buf.duration || 0;
+    const fade = Math.min(IDLE_FADE_S, dur / 2);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(IDLE_GAIN, now + fade);
+    gain.gain.setValueAtTime(IDLE_GAIN, Math.max(now + fade, now + dur - fade));
+    gain.gain.linearRampToValueAtTime(0, now + dur);
+    src.connect(gain);
+    gain.connect(c.destination);
+    src.start();
+    idleSource = src;
+    idleTimer = setTimeout(() => {
+      if (gen === idleGen && idleActive) playIdleCycle(c, url, gen);
+    }, (dur + IDLE_GAP_S) * 1000);
+  })();
+}
+
+/** Start the engine idle bed: a non-looping clip that fades in/out and repeats
+ *  after a 5s gap. Idempotent; cancelled cleanly by stopIdle. */
+export function startIdle(urls: string[]): void {
   if (!enabled) return;
-  if (loopSource || loopStarting) return; // already running / starting
+  if (idleActive) return;
   const c = getCtx();
   if (!c) return;
   if (c.state === "suspended") void c.resume().catch(() => {});
   const url = pick(urls);
   if (!url) return;
-  loopStarting = true;
-  const gen = ++loopGen; // this call's generation; stopLoop bumps loopGen to cancel
-  void (async () => {
-    const buf = await loadBuffer(c, url);
-    if (gen !== loopGen) return; // superseded by a stopLoop/startLoop during the await
-    loopStarting = false;
-    if (!buf || !enabled) return;
-    const src = c.createBufferSource();
-    src.buffer = buf;
-    src.loop = true;
-    const gain = c.createGain();
-    gain.gain.value = 0.3;
-    src.connect(gain);
-    gain.connect(c.destination);
-    src.start();
-    loopSource = src;
-  })();
+  idleActive = true;
+  playIdleCycle(c, url, ++idleGen);
 }
 
-export function stopLoop(): void {
-  loopGen++; // invalidate any in-flight startLoop load
-  loopStarting = false;
-  if (loopSource) {
-    try { loopSource.stop(); } catch { /* already stopped */ }
-    loopSource = null;
+export function stopIdle(): void {
+  idleGen++; // invalidate any in-flight cycle
+  idleActive = false;
+  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+  if (idleSource) {
+    try { idleSource.stop(); } catch { /* already stopped */ }
+    idleSource = null;
   }
 }
 
@@ -167,5 +184,5 @@ export function _resetForTest(): void {
   ctx = null;
   buffers.clear();
   lastPick.clear();
-  stopLoop();
+  stopIdle();
 }

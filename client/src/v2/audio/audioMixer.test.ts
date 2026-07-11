@@ -1,10 +1,10 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import {
   getEnabled, setEnabled, subscribe, _resetForTest,
-  configureAudio, play, startLoop, stopLoop,
+  configureAudio, play, startIdle, stopIdle,
 } from "./audioMixer";
 
-beforeEach(() => { localStorage.clear(); _resetForTest(); });
+beforeEach(() => { vi.useRealTimers(); localStorage.clear(); _resetForTest(); });
 
 // Deterministic rng returning 0, 0.99, 0, 0.99, … so "random" pick alternates.
 function mkSeqRng() {
@@ -12,17 +12,17 @@ function mkSeqRng() {
   let i = 0;
   return () => seq[i++ % seq.length];
 }
-class FakeGain { gain = { value: -1 }; connect = vi.fn(); }
+class FakeGain { gain = { value: -1, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() }; connect = vi.fn(); }
 class FakeSource {
   buffer: unknown = null; loop = false; onended: (() => void) | null = null;
   connect = vi.fn(); start = vi.fn(); stop = vi.fn();
 }
 class FakeCtx {
-  state = "running"; destination = {};
+  state = "running"; destination = {}; currentTime = 0;
   gains: FakeGain[] = []; sources: FakeSource[] = [];
   createGain = () => { const g = new FakeGain(); this.gains.push(g); return g; };
   createBufferSource = () => { const s = new FakeSource(); this.sources.push(s); return s; };
-  decodeAudioData = async () => ({} as AudioBuffer);
+  decodeAudioData = async () => ({ duration: 2 } as unknown as AudioBuffer);
   resume = vi.fn(async () => { this.state = "running"; });
 }
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -74,47 +74,58 @@ test("no immediate repeat across two plays of a 2-item category", async () => {
   expect(ctx.sources[0].buffer).not.toBe(ctx.sources[1].buffer);
 });
 
-test("startLoop plays a looping source at low gain and is idempotent", async () => {
+test("startIdle plays a non-looping clip with a fade envelope, idempotent", async () => {
   const ctx = new FakeCtx(); cfg(ctx);
-  startLoop(["e1", "e2"]); await flush();
+  startIdle(["e"]); await flush();
   expect(ctx.sources.length).toBe(1);
-  expect(ctx.sources[0].loop).toBe(true);
-  expect(ctx.gains[0].gain.value).toBe(0.3);
-  startLoop(["e1", "e2"]); await flush();
-  expect(ctx.sources.length).toBe(1);
+  expect(ctx.sources[0].loop).toBe(false);
+  const ramps = ctx.gains[0].gain.linearRampToValueAtTime.mock.calls.map((c: unknown[]) => c[0]);
+  expect(ramps).toContain(0.3); // fade in to idle gain
+  expect(ramps).toContain(0);   // fade out
+  startIdle(["e"]); await flush();
+  expect(ctx.sources.length).toBe(1); // idempotent — no second clip
 });
 
-test("stopLoop stops the loop and allows a fresh start", async () => {
+test("stopIdle stops the current clip and allows a fresh start", async () => {
   const ctx = new FakeCtx(); cfg(ctx);
-  startLoop(["e1"]); await flush();
-  stopLoop();
+  startIdle(["e"]); await flush();
+  stopIdle();
   expect(ctx.sources[0].stop).toHaveBeenCalled();
-  startLoop(["e1"]); await flush();
+  startIdle(["e"]); await flush();
   expect(ctx.sources.length).toBe(2);
 });
 
-test("setEnabled(false) stops the loop", async () => {
+test("setEnabled(false) stops the idle", async () => {
   const ctx = new FakeCtx(); cfg(ctx);
-  startLoop(["e1"]); await flush();
+  startIdle(["e"]); await flush();
   setEnabled(false);
   expect(ctx.sources[0].stop).toHaveBeenCalled();
 });
 
-test("stopLoop during an in-flight startLoop cancels it (no orphaned source)", async () => {
+test("stopIdle during an in-flight startIdle cancels it (no orphaned clip)", async () => {
   const ctx = new FakeCtx(); cfg(ctx);
-  startLoop(["e1"]);   // buffer load is async — still pending
-  stopLoop();          // cancel before it resolves
-  await flush();
-  expect(ctx.sources.length).toBe(0); // the cancelled load never created a source
+  startIdle(["e"]); stopIdle(); await flush();
+  expect(ctx.sources.length).toBe(0);
 });
 
-test("rapid start/stop/start leaves exactly one stoppable loop", async () => {
+test("rapid start/stop/start leaves exactly one stoppable idle", async () => {
   const ctx = new FakeCtx(); cfg(ctx);
-  startLoop(["e1"]); stopLoop();  // first start cancelled
-  startLoop(["e1"]);              // second start wins
-  await flush();
+  startIdle(["e"]); stopIdle();
+  startIdle(["e"]); await flush();
   const running = () => ctx.sources.filter((s) => s.start.mock.calls.length > 0 && s.stop.mock.calls.length === 0);
   expect(running().length).toBe(1);
-  stopLoop();
-  expect(running().length).toBe(0); // stopLoop reaches the surviving source
+  stopIdle();
+  expect(running().length).toBe(0);
+});
+
+test("idle repeats after the clip duration plus a 5s gap", async () => {
+  vi.useFakeTimers();
+  const ctx = new FakeCtx(); cfg(ctx);
+  startIdle(["e"]);
+  await vi.advanceTimersByTimeAsync(0);                    // flush async load + first cycle
+  expect(ctx.sources.length).toBe(1);
+  await vi.advanceTimersByTimeAsync((2 + 5) * 1000 + 50);  // dur 2 + gap 5
+  expect(ctx.sources.length).toBe(2);
+  stopIdle();
+  vi.useRealTimers();
 });

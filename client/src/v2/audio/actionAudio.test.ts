@@ -1,19 +1,19 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
-const { play, startLoop, stopLoop } = vi.hoisted(() => ({
+const { play, startIdle, stopIdle } = vi.hoisted(() => ({
   play: vi.fn(),
-  startLoop: vi.fn(),
-  stopLoop: vi.fn(),
+  startIdle: vi.fn(),
+  stopIdle: vi.fn(),
 }));
-vi.mock("./audioMixer", () => ({ play, startLoop, stopLoop }));
+vi.mock("./audioMixer", () => ({ play, startIdle, stopIdle }));
 vi.mock("./soundAssets", () => ({
   // echo the stem back as its "URL" so assertions read clearly; unknowns → null
   soundUrl: (s: string) => (s === "missing" ? null : `url:${s}`),
 }));
 
-import { playAction, playDamage, startEngineLoop, stopEngineLoop, ACTION_AUDIO } from "./actionAudio";
+import { playAction, playDamage, playEngineStart, startEngineLoop, stopEngineLoop, ACTION_AUDIO } from "./actionAudio";
 
-beforeEach(() => { play.mockClear(); startLoop.mockClear(); stopLoop.mockClear(); });
+beforeEach(() => { play.mockClear(); startIdle.mockClear(); stopIdle.mockClear(); });
 
 test("fire plays 4 voice barks + 3 mechanical beds", () => {
   playAction("fire");
@@ -44,9 +44,17 @@ test("playDamage plays tank_getting_shot as sfx", () => {
 
 test("engine loop resolves both engine stems", () => {
   startEngineLoop();
-  expect(startLoop).toHaveBeenCalledWith(["url:engine_idle"]);
+  expect(startIdle).toHaveBeenCalledWith(["url:engine_idle"]);
   stopEngineLoop();
-  expect(stopLoop).toHaveBeenCalled();
+  expect(stopIdle).toHaveBeenCalled();
+});
+
+test("playEngineStart plays the engine_start clip as sfx", () => {
+  play.mockClear();
+  playEngineStart();
+  const [voices, sfx] = play.mock.calls[0];
+  expect(voices).toEqual([]);
+  expect(sfx).toEqual(["url:engine_start"]);
 });
 
 test("registry covers the mapped action keys", () => {
