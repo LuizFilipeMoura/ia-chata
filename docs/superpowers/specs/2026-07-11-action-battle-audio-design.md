@@ -43,6 +43,16 @@ Recorded clips in `client/src/assets/sounds/` (shared, `.mp3`):
 - `massive_mechanical_1`, `massive_mechanical_2`, `massive_mechanical_3` — servos / machinery
 - `old_panel_beep` — console blip
 
+**Engine idle loops (background ambience):**
+- `old_tank_engine_runn_#4-1783782719259.mp3`
+- `old_tank_engine_runn_#2-1783782725509.mp3`
+
+⚠️ **Rename required first.** These two filenames contain `#` (a URL-fragment
+character) and a volatile timestamp suffix, which break `import.meta.glob` `?url`
+resolution and make unstable stems. Plan step 0: `git mv` them to
+`engine_idle_1.mp3` and `engine_idle_2.mp3`. The rest of the spec assumes those
+clean stems.
+
 More barks (weapon abilities) get recorded later; the registry just grows.
 
 ## Architecture
@@ -87,8 +97,9 @@ with an empty list, or whose stems all resolve to `null`, plays silent. Exposes
 | `shutdown` | — | old_panel_beep |
 
 Action keys without an entry (`harden`, `jumpjets`, `emergencypatch`, `lock`, …)
-play nothing in v1 — safe default, no crash. A separate constant maps the **damage
-event** (not an action) to `tank_getting_shot_1/2`.
+play nothing in v1 — safe default, no crash. Two more constants live here:
+- **damage event** (not an action) → `tank_getting_shot_1/2`.
+- **engine idle loop** → `engine_idle_1/2` (one picked at random per turn).
 
 **Depends on:** `soundAssets`, `audioMixer`.
 
@@ -107,9 +118,16 @@ Responsibilities:
   voice + one sfx at random avoiding the immediately-previous index per category,
   play each through its own `GainNode` — **voice gain 1.0, sfx gain ~0.5** so the
   scream cuts through.
+- **Loop channel** for the engine bed: `startLoop(stems)` picks one stem at random,
+  plays it through a dedicated `GainNode` (gain ~0.3, an idle rumble under
+  everything) on a looping `AudioBufferSourceNode` (`loop = true`); `stopLoop()`
+  stops and clears it. `startLoop` is idempotent — calling it while already looping
+  is a no-op (does not restart), so re-renders don't stutter the loop. Disabling
+  audio (`setEnabled(false)`) also stops the loop.
 - Autoplay policy: resume the `AudioContext` if `state === "suspended"` before
-  scheduling. The first `play()` runs inside an action tap (a user gesture), so it
-  unlocks cleanly.
+  scheduling. The first `play()`/`startLoop()` runs after a user gesture (action tap
+  or turn handoff following interaction), so it unlocks cleanly; if the context is
+  still suspended when a loop is requested, defer the start until the next resume.
 - **Enabled state + persistence, as an external store**: holds `enabled` (seeded
   from `localStorage["v2BattleAudioOn"]`, default `true`), plus
   `subscribe(cb)` / `getSnapshot()` / `setEnabled(v)` (writes localStorage,
@@ -166,12 +184,26 @@ the previous render (kept in a `useRef<Map<id, number>>`). When any rig's total 
 seeds the baseline without playing; SP increase (repair) never triggers. This rides
 the same state stream the existing watchers use.
 
-### 6. Toggle UI — edit `client/src/v2/components/BattleHud.tsx`
+### 6. Engine idle loop — edit `client/src/v2/hooks/useV2BattleWatchers.tsx`
+
+Add one `useEffect` that starts/stops the background engine bed based on whose turn
+it is. "Your turn" = `phaseSummary(game, rigs).turnSide === mySide` (the same signal
+`BattleHud` already uses) while `game.phase === "activation"`. On each relevant
+state change:
+- your turn → `mixer.startLoop(["engine_idle_1","engine_idle_2"])` (idempotent, so
+  it keeps rumbling across your action taps without restarting);
+- not your turn / not in activation → `mixer.stopLoop()`.
+
+The effect cleanup calls `stopLoop()` on unmount so leaving the battle kills the
+loop. `mySide`/`session` and `game`/`rigs` are already available in this hook.
+
+### 7. Toggle UI — edit `client/src/v2/components/BattleHud.tsx`
 
 Add a mute button to the HUD row. A `useBattleAudio()` hook (in `v2/audio/`, backed
 by the mixer's external store via `useSyncExternalStore`) returns `{ on, toggle }`;
 the button shows a speaker/mute glyph and calls `toggle()`. Independent of the
-narration-TTS toggle so the two never talk over each other.
+narration-TTS toggle so the two never talk over each other. Muting also silences the
+engine loop (via `setEnabled(false)` → `stopLoop`).
 
 ## Data flow
 
@@ -187,6 +219,11 @@ tap action tile
 enemy fire resolves → server state → applyServerState
   → rigs SP total drops → useV2BattleWatchers damage effect
       → mixer.play([], tank_getting_shot)
+
+turnSide === mySide (activation) → useV2BattleWatchers engine effect
+  → mixer.startLoop(engine_idle)   (looping GainNode, gain ~0.3)
+turnSide !== mySide / phase changes / unmount
+  → mixer.stopLoop()
 ```
 
 ## Error handling
@@ -204,11 +241,14 @@ enemy fire resolves → server state → applyServerState
   with the right stems; unmapped key is a no-op.
 - **`audioMixer`** (injected ctx + decode shim): enabled gate; null-stem skip;
   no-immediate-repeat; voice vs sfx gain wiring; suspended→resume; external-store
-  subscribe/snapshot; localStorage persistence.
+  subscribe/snapshot; localStorage persistence; `startLoop` idempotent + loops;
+  `stopLoop` clears; `setEnabled(false)` stops the loop.
 - **`useV2Commands`**: `verb:"action"` triggers `playAction`; other verbs do not;
   still delegates to shared `useCommands`.
 - **`useV2BattleWatchers`** damage effect: SP drop → one damage play; first render
   seeds silently; SP increase does not trigger.
+- **`useV2BattleWatchers`** engine effect: your turn → `startLoop`; opponent turn /
+  non-activation phase → `stopLoop`; unmount → `stopLoop`.
 - **`BattleHud`**: renders the toggle; clicking flips `useBattleAudio` state.
 - `no-v1-imports.test.ts` stays green (all new imports are V2-internal or allowed
   shared logic/assets).
@@ -217,8 +257,9 @@ enemy fire resolves → server state → applyServerState
 
 ## Scope
 
-**In:** the 10 mapped action keys, damage SFX, layered voice+sfx mix, persisted mute
-toggle in the V2 HUD. All code under `client/src/v2/`.
+**In:** the 10 mapped action keys, damage SFX, layered voice+sfx mix, looping engine
+idle bed on your turn, persisted mute toggle in the V2 HUD. All code under
+`client/src/v2/`.
 
 **Out (future):** weapon-ability barks (Harpoon Winch, Rivet Lock, …), Return-Fire
 bark, per-rig voice variation, spatial audio, opponent-action audio, TTS fills.
