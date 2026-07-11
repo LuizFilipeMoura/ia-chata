@@ -8,8 +8,8 @@ const MECH = ["massive_mechanical_1", "massive_mechanical_2", "massive_mechanica
 
 // action key -> layer stems. Keys absent here play nothing (safe default).
 export const ACTION_AUDIO: Record<string, Layers> = {
-  fire: { voices: FIRE_BARKS, sfx: ["cannon_fire", "mg_50cal", "mg_machine_gun"] },
-  aimed: { voices: FIRE_BARKS, sfx: ["cannon_fire", "mg_50cal", "mg_machine_gun"] },
+  fire: { voices: FIRE_BARKS, sfx: ["cannon_fire"] }, // default; weapon-aware override below
+  aimed: { voices: FIRE_BARKS, sfx: ["cannon_fire"] },
   overclock: { voices: ["overclock_redline_it"], sfx: MECH },
   move: { voices: [], sfx: ["mech_running"] },
   sprint: { voices: [], sfx: ["mech_running"] },
@@ -24,6 +24,17 @@ export const ACTION_AUDIO: Record<string, Layers> = {
 
 const DAMAGE_SFX = ["tank_getting_shot_1", "tank_getting_shot_2"];
 const HEAT_SFX = ["heat_furnace"];
+const MG_SFX = ["mg_50cal", "mg_machine_gun"];
+// Weapons whose fire should rattle like a machine gun rather than boom like a cannon.
+const MG_WEAPONS = new Set(["Mini Gun", "Double MG"]);
+
+// Pick the gun bed for a fire/aimed action from the weapon it was dispatched with:
+// melee = mechanical clank, named MG weapon = MG rattle, everything else = cannon.
+function gunSfxFor(attrs: Record<string, unknown>): string[] {
+  if (attrs.weapon === "melee") return MECH;
+  const name = typeof attrs.weaponName === "string" ? attrs.weaponName : "";
+  return MG_WEAPONS.has(name) ? MG_SFX : ["cannon_fire"];
+}
 const ENGINE_LOOP = ["engine_idle"];
 const ENGINE_START = ["engine_start"];
 
@@ -32,10 +43,11 @@ function urls(stems: string[]): string[] {
   return stems.map(soundUrl).filter((u): u is string => u !== null);
 }
 
-export function playAction(key: string): void {
+export function playAction(key: string, attrs?: Record<string, unknown>): void {
   const layers = ACTION_AUDIO[key];
   if (!layers) return;
-  play(urls(layers.voices), urls(layers.sfx));
+  const sfx = (key === "fire" || key === "aimed") && attrs ? gunSfxFor(attrs) : layers.sfx;
+  play(urls(layers.voices), urls(sfx));
 }
 
 export function playDamage(): void {

@@ -9,7 +9,7 @@ export function useV2Commands() {
   return useCallback(
     (verb: string, attrs: Record<string, unknown> = {}) => {
       if (verb === "action" && typeof attrs.action === "string") {
-        playAction(attrs.action);
+        playAction(attrs.action, attrs);
       }
       return send(verb, attrs);
     },

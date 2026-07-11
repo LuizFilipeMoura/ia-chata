@@ -11,7 +11,7 @@ test("fires playAction for action verbs and always delegates", () => {
   send.mockClear(); playAction.mockClear();
   const { result } = renderHook(() => useV2Commands());
   result.current("action", { name: "R1", action: "fire" });
-  expect(playAction).toHaveBeenCalledWith("fire");
+  expect(playAction).toHaveBeenCalledWith("fire", { name: "R1", action: "fire" });
   expect(send).toHaveBeenCalledWith("action", { name: "R1", action: "fire" });
 });
 

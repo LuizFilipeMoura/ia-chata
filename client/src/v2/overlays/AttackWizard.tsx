@@ -287,7 +287,7 @@ export function AttackWizard({
 
     const attrs: Record<string, unknown> = {
       name: rig.name, action: mode, target: state.target,
-      weapon: slotSel, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
+      weapon: slotSel, weaponName, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
     };
     if (mode === "aimed") attrs.loc = state.loc;
     if (game?.autoResolve === false) {

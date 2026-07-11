@@ -15,12 +15,28 @@ import { playAction, playDamage, playHeat, playEngineStart, startEngineLoop, sto
 
 beforeEach(() => { play.mockClear(); startIdle.mockClear(); stopIdle.mockClear(); });
 
-test("fire plays 4 voice barks + the gun bed pool (cannon + MGs)", () => {
+test("fire without weapon info plays barks + the default cannon bed", () => {
   playAction("fire");
   const [voices, sfx] = play.mock.calls[0];
   expect(voices).toHaveLength(4);
-  expect(sfx).toEqual(["url:cannon_fire", "url:mg_50cal", "url:mg_machine_gun"]);
+  expect(sfx).toEqual(["url:cannon_fire"]);
   expect(voices[0]).toBe("url:fire_firing");
+});
+
+test("gun bed is weapon-aware: MG rattles, cannon booms, melee clanks", () => {
+  play.mockClear();
+  playAction("fire", { weapon: "longRange", weaponName: "Mini Gun" });
+  expect(play.mock.calls[0][1]).toEqual(["url:mg_50cal", "url:mg_machine_gun"]);
+
+  play.mockClear();
+  playAction("fire", { weapon: "longRange", weaponName: "Autocannon" });
+  expect(play.mock.calls[0][1]).toEqual(["url:cannon_fire"]);
+
+  play.mockClear();
+  playAction("aimed", { weapon: "melee", weaponName: "Sword" });
+  expect(play.mock.calls[0][1]).toEqual([
+    "url:massive_mechanical_1", "url:massive_mechanical_2", "url:massive_mechanical_3",
+  ]);
 });
 
 test("move plays sfx only (no voice)", () => {
