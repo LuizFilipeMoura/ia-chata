@@ -15,11 +15,11 @@ import { playAction, playDamage, playHeat, playEngineStart, startEngineLoop, sto
 
 beforeEach(() => { play.mockClear(); startIdle.mockClear(); stopIdle.mockClear(); });
 
-test("fire plays 4 voice barks + the cannon bed", () => {
+test("fire plays 4 voice barks + the gun bed pool (cannon + MGs)", () => {
   playAction("fire");
   const [voices, sfx] = play.mock.calls[0];
   expect(voices).toHaveLength(4);
-  expect(sfx).toEqual(["url:cannon_fire"]);
+  expect(sfx).toEqual(["url:cannon_fire", "url:mg_50cal", "url:mg_machine_gun"]);
   expect(voices[0]).toBe("url:fire_firing");
 });
 

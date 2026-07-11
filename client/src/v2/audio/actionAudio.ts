@@ -8,8 +8,8 @@ const MECH = ["massive_mechanical_1", "massive_mechanical_2", "massive_mechanica
 
 // action key -> layer stems. Keys absent here play nothing (safe default).
 export const ACTION_AUDIO: Record<string, Layers> = {
-  fire: { voices: FIRE_BARKS, sfx: ["cannon_fire"] },
-  aimed: { voices: FIRE_BARKS, sfx: ["cannon_fire"] },
+  fire: { voices: FIRE_BARKS, sfx: ["cannon_fire", "mg_50cal", "mg_machine_gun"] },
+  aimed: { voices: FIRE_BARKS, sfx: ["cannon_fire", "mg_50cal", "mg_machine_gun"] },
   overclock: { voices: ["overclock_redline_it"], sfx: MECH },
   move: { voices: [], sfx: ["mech_running"] },
   sprint: { voices: [], sfx: ["mech_running"] },
