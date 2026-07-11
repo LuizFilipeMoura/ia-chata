@@ -7,19 +7,27 @@ import "./styles/glossary.css";
 import "./styles/rig-wizard.css";
 import "./styles/vp-wizard.css";
 import "./styles/dieselpunk.css";
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AppProviders } from "./AppProviders";
 import { shouldUseV2 } from "./v2/shouldUseV2";
-import V2App from "./v2/V2App";
 
-const Root = shouldUseV2(window.location.search) ? V2App : App;
+// V2 is lazy so default (no ?v2) users never download the V2 bundle or its CSS
+// (including the remote font @import) — keeping V1's load truly untouched.
+const V2App = lazy(() => import("./v2/V2App"));
+const useV2 = shouldUseV2(window.location.search);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProviders>
-      <Root />
+      {useV2 ? (
+        <Suspense fallback={null}>
+          <V2App />
+        </Suspense>
+      ) : (
+        <App />
+      )}
     </AppProviders>
   </StrictMode>,
 );

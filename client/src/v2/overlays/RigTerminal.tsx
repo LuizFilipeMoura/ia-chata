@@ -59,9 +59,11 @@ export function RigTerminal({ rig, canActivate, started, onCommand, onClose }: P
         )}
 
         <div className="v2-rt-comps">
-          {locs.map((loc) => (
-            <CompRow key={loc} rigName={rig.name} loc={loc} comp={(rig as unknown as Record<string, Component>)[loc]} onCommand={onCommand} />
-          ))}
+          {locs.map((loc) => {
+            const comp = (rig as unknown as Record<string, Component>)[loc];
+            if (!comp) return null;
+            return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} onCommand={onCommand} />;
+          })}
         </div>
 
         {!cold && <HeatGauge rig={rig} />}
