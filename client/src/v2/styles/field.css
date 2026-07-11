@@ -19,11 +19,11 @@
 .v2-root .v2-fm-obj { fill: #ef9f27; stroke: #854f0b; }
 .v2-root .v2-fm-obj-label,
 .v2-root .v2-fm-zone-label {
-  fill: #c2c0b6; font-size: 11px; font-family: var(--v2-mono);
+  fill: #c2c0b6; font-size:var(--v2-text-sm); font-family: var(--v2-mono);
 }
 .v2-root .v2-fm-zone-label { letter-spacing: .06em; text-transform: uppercase; fill-opacity: .78; }
 .v2-root .v2-fm-dim {
-  fill: var(--v2-txt-faint); font-size: 9px; font-weight: 600;
+  fill: var(--v2-txt-faint); font-size:var(--v2-text-sm); font-weight: 600;
   font-family: var(--v2-mono); letter-spacing: .06em;
 }
 .v2-root .v2-fm-terrain { fill: #5f5e5a; stroke: #2c2c2a; stroke-width: 0.6; }
@@ -40,7 +40,7 @@
 /* .v2-cta primitive supplies the forged-oil face; these are its layout overrides. */
 .v2-root .v2-fc-set {
   align-self: flex-start; padding: .55rem 1.1rem;
-  border-radius: 0; font-size: .8rem; letter-spacing: .08em;
+  border-radius: 0; font-size:var(--v2-text-sm); letter-spacing: .08em;
 }
 .v2-root .v2-fc-set:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(231,154,61,.28); }
 .v2-root .v2-fc-set:active { transform: translateY(1px); }
@@ -50,7 +50,7 @@
   margin: .6rem 0 0; padding: .55rem .7rem;
   border: 1px dashed var(--v2-line); border-radius: 10px;
   background: var(--v2-iron-850);
-  font-family: var(--v2-mono); font-size: .62rem; letter-spacing: .04em;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .04em;
   color: var(--v2-txt-faint); text-align: center;
 }
 
@@ -70,7 +70,7 @@
 .v2-root .v2-fs-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; }
 .v2-root .v2-fs-leg {
   display: inline-flex; align-items: center; gap: .4rem;
-  font-size: .55rem; letter-spacing: .1em; color: var(--v2-txt-dim);
+  font-size:var(--v2-text-sm); letter-spacing: .1em; color: var(--v2-txt-dim);
 }
 .v2-root .v2-fs-leg::before {
   content: ""; width: 10px; height: 10px; border-radius: 3px;
@@ -85,7 +85,7 @@
 .v2-root .v2-fs-group { display: flex; flex-direction: column; gap: .45rem; }
 .v2-root .v2-fs-label {
   display: flex; align-items: center; gap: .55rem;
-  font-size: .55rem; letter-spacing: .14em; color: var(--v2-txt-dim);
+  font-size:var(--v2-text-sm); letter-spacing: .14em; color: var(--v2-txt-dim);
 }
 .v2-root .v2-fs-label::after {
   content: ""; flex: 1; height: 1px;
@@ -97,13 +97,13 @@
 .v2-root .v2-fs-num { position: relative; flex: 1 1 0; }
 .v2-root .v2-fs-cap {
   display: block; margin-bottom: .3rem;
-  font-size: .5rem; letter-spacing: .12em;
+  font-size:var(--v2-text-sm); letter-spacing: .12em;
 }
 .v2-root .v2-fs-num input {
   width: 100%; height: 2.5rem; padding: 0 1.9rem 0 .65rem;
   background: var(--v2-iron-950); color: var(--v2-txt);
   border: 1px solid var(--v2-line); border-radius: 9px;
-  font-family: var(--v2-mono); font-size: 1rem; font-weight: 600;
+  font-family: var(--v2-mono); font-size:var(--v2-text-lg); font-weight: 600;
   transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
 .v2-root .v2-fs-num input:focus { outline: none; border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil); }
@@ -111,14 +111,14 @@
 .v2-root .v2-fs-num input::-webkit-outer-spin-button { opacity: .3; height: 1.6rem; }
 .v2-root .v2-fs-unit {
   position: absolute; right: .6rem; bottom: .78rem;
-  font-family: var(--v2-mono); font-size: .62rem; color: var(--v2-txt-faint);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); color: var(--v2-txt-faint);
   pointer-events: none;
 }
 .v2-root .v2-fs-apply {
   flex: 0 0 auto; height: 2.5rem; padding: 0 1rem;
   border: 1px solid var(--v2-rivet); border-radius: 9px;
   background: var(--v2-iron-780); color: var(--v2-txt);
-  font-family: var(--v2-disp); font-weight: 700; font-size: .74rem;
+  font-family: var(--v2-disp); font-weight: 700; font-size:var(--v2-text-sm);
   letter-spacing: .07em; text-transform: uppercase; cursor: pointer;
   transition: background var(--v2-dur-fast), border-color var(--v2-dur-fast), transform var(--v2-dur-fast);
 }
@@ -132,7 +132,7 @@
 /* The single commit action — the hero of the screen. .v2-cta supplies the face. */
 .v2-root .v2-fs-lock {
   position: relative; width: 100%; padding: .8rem; margin-top: .1rem;
-  border-radius: 12px; font-size: .9rem; overflow: hidden;
+  border-radius: 12px; font-size:var(--v2-text-base); overflow: hidden;
   box-shadow: 0 8px 22px rgba(231,154,61,.25);
 }
 .v2-root .v2-fs-lock:hover { transform: translateY(-1px); box-shadow: 0 11px 26px rgba(231,154,61,.3); }

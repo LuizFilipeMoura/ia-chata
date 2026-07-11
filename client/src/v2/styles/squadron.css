@@ -71,12 +71,12 @@
 .v2-root .v2-rigrow-glyph {
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 22px;
+  font-size:var(--v2-text-2xl);
   line-height: 1;
 }
 .v2-root .v2-rigrow-short {
   /* .v2-eyebrow (applied in JSX) covers font-family/color; unique tighter size/spacing kept */
-  font-size: 7.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.18em;
 }
 
@@ -95,7 +95,7 @@
 }
 .v2-root .v2-rigrow-name {
   /* .v2-title (applied in JSX) covers font-family/weight/color/text-shadow; unique size/spacing/ellipsis kept */
-  font-size: 17px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.06em;
   white-space: nowrap;
   overflow: hidden;
@@ -107,7 +107,7 @@
 .v2-root .v2-rigrow-badge {
   flex: 0 0 auto;
   font-family: var(--v2-mono);
-  font-size: 7.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.14em;
   color: #1a1206;
   background: var(--v2-oil);
@@ -117,7 +117,7 @@
   flex: 0 0 auto;
   margin-left: auto;
   font-family: var(--v2-mono);
-  font-size: 10px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.04em;
   padding: 2px 6px;
   color: var(--v2-txt-dim);
@@ -130,7 +130,7 @@
 
 .v2-root .v2-rigrow-loadout {
   font-family: var(--v2-disp);
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.04em;
   color: var(--v2-txt-dim);
   margin-top: 5px;
@@ -153,7 +153,7 @@
   /* .v2-eyebrow (applied in JSX) covers font-family/color; unique layout + tighter size/spacing kept */
   display: flex;
   justify-content: space-between;
-  font-size: 7px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.1em;
   margin-bottom: 3px;
 }
@@ -207,20 +207,20 @@
 }
 .v2-root .v2-yard-eyebrow {
   /* .v2-eyebrow (applied in JSX) covers font-family/color; unique size/spacing kept */
-  font-size: 8.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.3em;
   margin-bottom: 5px;
 }
 .v2-root .v2-yard-title {
   /* .v2-title (applied in JSX) covers font-family/weight/color/text-shadow; unique size/spacing kept */
   margin: 0;
-  font-size: 26px;
+  font-size:var(--v2-text-2xl);
   letter-spacing: 0.08em;
 }
 .v2-root .v2-yard-stats {
   text-align: right;
   font-family: var(--v2-mono);
-  font-size: 9px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.14em;
   color: var(--v2-txt-dim);
 }
@@ -234,7 +234,7 @@
   gap: 9px;
   margin: 22px 0 12px;
   font-family: var(--v2-mono);
-  font-size: 10px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.26em;
 }
 .v2-root .v2-yard-band--foe { margin-top: 24px; }
@@ -286,7 +286,7 @@
   cursor: pointer;
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 15px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   transition: border-color var(--v2-dur-fast), color var(--v2-dur-fast);
@@ -300,7 +300,7 @@
   cursor: not-allowed;
 }
 .v2-root .v2-yard-add-plus {
-  font-size: 22px;
+  font-size:var(--v2-text-2xl);
   line-height: 0;
   color: var(--v2-oil);
 }
@@ -320,13 +320,13 @@
 .v2-root .v2-yard-ready-line {
   font-family: var(--v2-disp);
   font-weight: 600;
-  font-size: 13px;
+  font-size:var(--v2-text-base);
   letter-spacing: 0.05em;
   color: var(--v2-txt);
 }
 .v2-root .v2-yard-ready-sub {
   font-family: var(--v2-mono);
-  font-size: 9px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.1em;
   color: var(--v2-txt-faint);
   margin-top: 4px;
@@ -340,7 +340,7 @@
   background: var(--v2-well);
   border: 1px solid var(--v2-line);
   font-family: var(--v2-mono);
-  font-size: 11px;
+  font-size:var(--v2-text-sm);
   color: var(--v2-txt-dim);
   cursor: pointer;
   transition: border-color var(--v2-dur-fast);
@@ -352,5 +352,5 @@
 .v2-root .v2-yard-readybtn {
   flex: 0 0 auto;
   padding: 12px 22px;
-  font-size: 14px;
+  font-size:var(--v2-text-base);
 }

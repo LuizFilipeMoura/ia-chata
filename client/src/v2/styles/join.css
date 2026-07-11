@@ -58,7 +58,7 @@
 /* .v2-title primitive supplies stencil face/weight; these are its unique
    size, tracking and oil-glow overrides. */
 .v2-root .v2-join-title {
-  font-size: 44px;
+  font-size:var(--v2-text-4xl);
   line-height: 0.9;
   letter-spacing: 0.06em;
   color: var(--v2-oil);
@@ -112,14 +112,14 @@
   color: var(--v2-txt);
   font-family: var(--v2-disp);
   font-weight: 500;
-  font-size: 15px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.06em;
   padding: 13px 0;
 }
 .v2-root .v2-join-input--code {
   color: var(--v2-oil-hi);
   font-family: var(--v2-mono);
-  font-size: 16px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.18em;
 }
 
@@ -148,13 +148,13 @@
 /* .v2-eyebrow primitive supplies mono/color/tracking/case; tag keeps its own
    slightly smaller size. */
 .v2-root .v2-side-tag {
-  font-size: 8px;
+  font-size:var(--v2-text-sm);
   margin-bottom: 5px;
 }
 .v2-root .v2-side-name {
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 17px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.08em;
   color: var(--v2-txt-dim);
 }
@@ -189,13 +189,13 @@
   width: 100%;
   padding: 16px;
   border-radius: 0;
-  font-size: 16px;
+  font-size:var(--v2-text-lg);
 }
 
 .v2-root .v2-join-status {
   text-align: center;
   font-family: var(--v2-mono);
-  font-size: 9px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.16em;
   color: var(--v2-ok);
   margin: 16px 0 0;

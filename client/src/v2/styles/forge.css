@@ -22,16 +22,16 @@
 /* ---- head + step rail --------------------------------------------------- */
 .v2-root .v2-fw-head { padding: 18px 20px 6px; border-bottom: 1px solid var(--v2-line-soft); }
 .v2-root .v2-fw-order { letter-spacing: .3em; margin-bottom: 5px; }
-.v2-root .v2-fw-title { margin: 0 0 4px; font-size: 22px; }
+.v2-root .v2-fw-title { margin: 0 0 4px; font-size:var(--v2-text-2xl); }
 .v2-root .v2-fw-rail { display: flex; gap: 0; margin: 14px 0 8px; }
 .v2-root .v2-fw-step { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .v2-root .v2-fw-step-n {
   flex: 0 0 26px; height: 26px; display: flex; align-items: center; justify-content: center;
-  font-family: var(--v2-mono); font-size: 11px;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm);
   background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt-faint);
 }
 .v2-root .v2-fw-step-label {
-  font-family: var(--v2-disp); font-weight: 600; font-size: 10px; letter-spacing: .1em;
+  font-family: var(--v2-disp); font-weight: 600; font-size:var(--v2-text-sm); letter-spacing: .1em;
   text-transform: uppercase; color: var(--v2-txt-faint); white-space: nowrap;
 }
 .v2-root .v2-fw-step-rail { flex: 1; height: 1px; background: var(--v2-line); }
@@ -47,12 +47,12 @@
 .v2-root .v2-fw-body { padding: 16px 20px 20px; }
 .v2-root .v2-fc-cue { display: flex; align-items: baseline; gap: 9px; margin: 2px 0 12px; flex-wrap: wrap; }
 .v2-root .v2-fc-cue-lead {
-  font-family: var(--v2-mono); font-size: 9px; letter-spacing: .2em; color: var(--v2-oil);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .2em; color: var(--v2-oil);
   text-transform: uppercase;
 }
 .v2-root .v2-fc-cue-sub { letter-spacing: .06em; }
 .v2-root .v2-fw-hint {
-  margin-top: 14px; font-family: var(--v2-disp); font-size: 11px; line-height: 1.5;
+  margin-top: 14px; font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.5;
   color: var(--v2-txt-faint); letter-spacing: .02em;
 }
 
@@ -67,11 +67,11 @@
 }
 .v2-root .v2-fc-kind:hover { border-color: var(--v2-rivet); }
 .v2-root .v2-fc-kind-top { display: flex; align-items: center; gap: 9px; }
-.v2-root .v2-fc-kind-glyph { font-family: var(--v2-stencil); font-size: 18px; line-height: 1; color: var(--v2-oil); }
-.v2-root .v2-fc-kind-label { font-size: 14px; }
+.v2-root .v2-fc-kind-glyph { font-family: var(--v2-stencil); font-size:var(--v2-text-xl); line-height: 1; color: var(--v2-oil); }
+.v2-root .v2-fc-kind-label { font-size:var(--v2-text-base); }
 .v2-root .v2-fc-kind.is-sel .v2-fc-kind-label { color: var(--v2-oil-hi); }
 .v2-root .v2-fc-kind-desc {
-  font-family: var(--v2-mono); font-size: 8px; letter-spacing: .06em; line-height: 1.5;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .06em; line-height: 1.5;
   color: var(--v2-txt-faint);
 }
 .v2-root .v2-fc-kind-lamp {
@@ -101,23 +101,23 @@
 }
 .v2-root .v2-fc-emblem {
   width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--v2-oil); font-family: var(--v2-stencil); font-weight: 700; font-size: 17px;
+  border: 1px solid var(--v2-oil); font-family: var(--v2-stencil); font-weight: 700; font-size:var(--v2-text-lg);
   color: var(--v2-oil);
 }
 .v2-root .v2-fc-medium .v2-fc-emblem { border-color: var(--v2-ember); color: var(--v2-ember-hi); }
-.v2-root .v2-fc-classshort { font-size: 7px; letter-spacing: .14em; }
+.v2-root .v2-fc-classshort { font-size:var(--v2-text-sm); letter-spacing: .14em; }
 .v2-root .v2-fc-info { flex: 1; min-width: 0; padding: 12px 15px; display: flex; flex-direction: column; gap: 4px; }
 .v2-root .v2-fc-tierrow { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .v2-root .v2-fc-tier { letter-spacing: .12em; flex: 0 0 auto; }
-.v2-root .v2-fc-codename { font-size: 17px; }
+.v2-root .v2-fc-codename { font-size:var(--v2-text-lg); }
 .v2-root .v2-fc-card.is-sel .v2-fc-codename { color: var(--v2-oil-hi); }
 .v2-root .v2-fc-combo {
-  font-family: var(--v2-disp); font-size: 12px; letter-spacing: .02em; color: var(--v2-txt-dim);
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-txt-dim);
 }
 .v2-root .v2-fc-combo i { font-style: normal; }
 .v2-root .v2-fc-combo b { color: var(--v2-rivet); }
 .v2-root .v2-fc-desc {
-  font-family: var(--v2-disp); font-size: 10.5px; line-height: 1.5; color: var(--v2-txt-faint); margin-top: 2px;
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.5; color: var(--v2-txt-faint); margin-top: 2px;
 }
 
 /* right stat rail — machine dossier readout */
@@ -131,13 +131,13 @@
 }
 .v2-root .v2-fc-stat + .v2-fc-stat { border-left: 1px solid var(--v2-line-soft); }
 .v2-root .v2-fc-stat em {
-  font-style: normal; font-family: var(--v2-mono); font-weight: 700; font-size: 15px; color: var(--v2-txt);
+  font-style: normal; font-family: var(--v2-mono); font-weight: 700; font-size:var(--v2-text-lg); color: var(--v2-txt);
 }
 .v2-root .v2-fc-card.is-sel .v2-fc-stat em { color: var(--v2-oil-hi); }
 .v2-root .v2-fc-stat:first-child em { color: var(--v2-low); }
-.v2-root .v2-fc-stat small { font-size: 6.5px; letter-spacing: .1em; }
+.v2-root .v2-fc-stat small { font-size:var(--v2-text-sm); letter-spacing: .1em; }
 .v2-root .v2-fc-sel-tag {
-  position: absolute; top: 9px; right: 9px; font-family: var(--v2-mono); font-size: 7px; letter-spacing: .12em;
+  position: absolute; top: 9px; right: 9px; font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .12em;
   color: var(--v2-on-oil); background: var(--v2-oil); padding: 2px 6px;
 }
 
@@ -149,15 +149,15 @@
 .v2-root .v2-fc-bay-head {
   display: flex; align-items: center; gap: 8px; padding: 12px 15px; flex-wrap: wrap;
   border-bottom: 1px solid var(--v2-line-soft);
-  font-size: 13px; color: var(--v2-oil);
+  font-size:var(--v2-text-base); color: var(--v2-oil);
 }
 .v2-root .v2-fc-bay-head span { font-weight: 400; letter-spacing: .06em; }
 .v2-root .v2-fc-weapon { padding: 14px 15px; }
 .v2-root .v2-fc-weapon + .v2-fc-weapon { border-top: 1px solid var(--v2-line-soft); }
 .v2-root .v2-fc-weapon-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
-.v2-root .v2-fc-weapon-icon { font-size: 13px; line-height: 1; }
-.v2-root .v2-fc-weapon-name { font-size: 13px; }
-.v2-root .v2-fc-weapon-stat { font-family: var(--v2-mono); font-size: 8px; letter-spacing: .1em; color: var(--v2-txt-faint); }
+.v2-root .v2-fc-weapon-icon { font-size:var(--v2-text-base); line-height: 1; }
+.v2-root .v2-fc-weapon-name { font-size:var(--v2-text-base); }
+.v2-root .v2-fc-weapon-stat { font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .1em; color: var(--v2-txt-faint); }
 
 .v2-root .v2-fc-node {
   position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 11px; text-align: left;
@@ -178,18 +178,18 @@
 .v2-root .v2-fc-node.locked { opacity: .4; cursor: not-allowed; }
 .v2-root .v2-fc-node.locked:hover { border-color: rgba(229, 83, 58, .5); }
 .v2-root .v2-fc-node-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.v2-root .v2-fc-node-mark { font-family: var(--v2-mono); font-size: 9px; font-weight: 700; color: var(--v2-txt-faint); }
+.v2-root .v2-fc-node-mark { font-family: var(--v2-mono); font-size:var(--v2-text-sm); font-weight: 700; color: var(--v2-txt-faint); }
 .v2-root .v2-fc-node.is-sel .v2-fc-node-mark { color: var(--v2-oil); }
-.v2-root .v2-fc-node-name { font-size: 12px; }
+.v2-root .v2-fc-node-name { font-size:var(--v2-text-sm); }
 .v2-root .v2-fc-node-nature {
-  font-style: normal; font-size: 7px; letter-spacing: .1em;
+  font-style: normal; font-size:var(--v2-text-sm); letter-spacing: .1em;
   padding: 1px 5px; border: 1px solid var(--v2-line);
 }
 .v2-root .v2-fc-node-nature.nat-field { color: var(--v2-txt-dim); }
 .v2-root .v2-fc-node-nature.nat-tuned { color: var(--v2-oil); border-color: var(--v2-oil-deep); }
 .v2-root .v2-fc-node-nature.nat-prototype { color: var(--v2-ember-hi); border-color: var(--v2-ember-deep); }
 .v2-root .v2-fc-node-tag {
-  font-family: var(--v2-mono); font-size: 7.5px; letter-spacing: .04em; line-height: 1.5; color: var(--v2-txt-faint);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .04em; line-height: 1.5; color: var(--v2-txt-faint);
 }
 .v2-root .v2-fc-warn { display: block; color: var(--v2-ember-hi); margin-bottom: 3px; }
 
@@ -202,21 +202,21 @@
   transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
 .v2-root .v2-fc-equip:hover { border-color: var(--v2-rivet); }
-.v2-root .v2-fc-equip-label { font-size: 14px; }
+.v2-root .v2-fc-equip-label { font-size:var(--v2-text-base); }
 .v2-root .v2-fc-equip.is-sel .v2-fc-equip-label { color: var(--v2-oil-hi); }
-.v2-root .v2-fc-equip-passive { font-family: var(--v2-disp); font-size: 10.5px; line-height: 1.45; color: var(--v2-txt-dim); }
-.v2-root .v2-fc-equip-active { font-family: var(--v2-disp); font-size: 10px; line-height: 1.45; color: var(--v2-txt-faint); }
+.v2-root .v2-fc-equip-passive { font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.45; color: var(--v2-txt-dim); }
+.v2-root .v2-fc-equip-active { font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.45; color: var(--v2-txt-faint); }
 .v2-root .v2-fc-equip-active b { color: var(--v2-oil); }
 
 /* ---- confirm ------------------------------------------------------------ */
 .v2-root .v2-fc-confirm { display: flex; flex-direction: column; gap: 8px; }
-.v2-root .v2-fc-confirm-name { font-size: 18px; color: var(--v2-oil-hi); }
+.v2-root .v2-fc-confirm-name { font-size:var(--v2-text-xl); color: var(--v2-oil-hi); }
 .v2-root .v2-fc-confirm-row {
   display: flex; align-items: center; gap: 8px; padding: 11px 13px;
   background: var(--v2-iron-800); border: 1px solid var(--v2-line);
-  font-family: var(--v2-disp); font-size: 12.5px; letter-spacing: .02em; color: var(--v2-txt-dim);
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-txt-dim);
 }
-.v2-root .v2-fc-confirm-flavor { font-style: italic; color: var(--v2-txt-faint); font-size: 11px; }
+.v2-root .v2-fc-confirm-flavor { font-style: italic; color: var(--v2-txt-faint); font-size:var(--v2-text-sm); }
 
 /* ---- nav bar ------------------------------------------------------------ */
 .v2-root .v2-fw-nav { display: flex; gap: 12px; padding: 14px 20px 20px; border-top: 1px solid var(--v2-line-soft); }
@@ -224,7 +224,7 @@
   padding: 14px 20px; cursor: pointer;
   background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-800));
   border: 1px solid var(--v2-line); border-bottom: 2px solid var(--v2-edge-dark); color: var(--v2-txt);
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 13px; letter-spacing: .12em;
+  font-family: var(--v2-stencil); font-weight: 700; font-size:var(--v2-text-base); letter-spacing: .12em;
   transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
 .v2-root .v2-fw-btn:hover:not(:disabled) { border-color: var(--v2-rivet); }

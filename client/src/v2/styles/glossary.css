@@ -48,12 +48,12 @@
   background: var(--v2-iron-850);
 }
 .v2-root .v2-gloss-tip-term {
-  font-family: var(--v2-mono); font-size: .6rem; font-weight: 700;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); font-weight: 700;
   letter-spacing: .12em; text-transform: uppercase; color: var(--v2-oil);
   margin-bottom: .3rem;
 }
 .v2-root .v2-gloss-tip-def {
-  font-family: var(--v2-disp); font-size: .82rem; line-height: 1.42;
+  font-family: var(--v2-disp); font-size:var(--v2-text-base); line-height: 1.42;
   color: var(--v2-txt);
 }
 /* Deliberately smaller than the canonical `.v2-close` (20px vs 30px, tighter
@@ -61,7 +61,7 @@
    override rather than force-fit to the primitive's size. */
 .v2-root .v2-gloss-tip-close {
   position: absolute; top: .38rem; right: .38rem; width: 20px; height: 20px;
-  border-radius: 6px; background: var(--v2-iron-750); font-size: .68rem;
+  border-radius: 6px; background: var(--v2-iron-750); font-size:var(--v2-text-sm);
 }
 .v2-root .v2-gloss-tip-close:hover { border-color: rgba(229, 83, 58, .4); }
 
@@ -76,19 +76,19 @@
   padding-bottom: .55rem; margin-bottom: .7rem; border-bottom: 1px solid var(--v2-line);
 }
 .v2-root .v2-gloss-dialog-title {
-  font-family: var(--v2-mono); font-size: .68rem; letter-spacing: .2em;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .2em;
   text-transform: uppercase; color: var(--v2-oil);
 }
 .v2-root .v2-gloss-dialog-close {
-  flex: 0 0 auto; border-radius: var(--v2-r-sm); font-size: 1rem;
+  flex: 0 0 auto; border-radius: var(--v2-r-sm); font-size:var(--v2-text-lg);
 }
 .v2-root .v2-gloss-entry { border-left: 2px solid var(--v2-oil); padding-left: .6rem; margin-bottom: .7rem; }
 .v2-root .v2-gloss-entry-hd { display: flex; align-items: baseline; gap: .45rem; flex-wrap: wrap; }
 .v2-root .v2-gloss-entry-term {
-  font-family: var(--v2-mono); font-size: .78rem; font-weight: 700; color: var(--v2-oil-hi);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); font-weight: 700; color: var(--v2-oil-hi);
 }
 .v2-root .v2-gloss-entry-def {
-  font-family: var(--v2-disp); font-size: .76rem; color: var(--v2-txt-dim);
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); color: var(--v2-txt-dim);
   line-height: 1.4; margin-top: .15rem;
 }
 

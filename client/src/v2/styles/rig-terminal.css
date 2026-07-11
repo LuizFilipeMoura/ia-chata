@@ -16,7 +16,7 @@
   flex: 0 0 64px;
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 13px;
+  font-size:var(--v2-text-base);
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--v2-txt-dim);
@@ -69,7 +69,7 @@
   justify-content: flex-end;
   padding-right: 9px;
   font-family: var(--v2-mono);
-  font-size: 11px;
+  font-size:var(--v2-text-sm);
   font-weight: 700;
   letter-spacing: .03em;
   color: #fff;
@@ -82,7 +82,7 @@
   width: 30px;
   height: 30px;
   font-family: var(--v2-mono);
-  font-size: 16px;
+  font-size:var(--v2-text-lg);
   line-height: 1;
   cursor: pointer;
   transition: filter var(--v2-dur-fast), transform .1s;
@@ -138,7 +138,7 @@
   z-index: 4;
   pointer-events: none;
   font-family: var(--v2-mono);
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   font-weight: 700;
   letter-spacing: .02em;
   animation: v2-comp-delta-rise 1s ease both;
@@ -166,12 +166,12 @@
   margin-bottom: 10px;
 }
 .v2-root .v2-heat-label {
-  font-size: 8.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: .24em;
 }
 .v2-root .v2-heat-read {
   font-family: var(--v2-stencil);
-  font-size: 22px;
+  font-size:var(--v2-text-2xl);
   line-height: 1;
   color: var(--v2-ember-hi);
   text-shadow: 0 0 18px rgba(229, 83, 58, .35);
@@ -204,7 +204,7 @@
 .v2-root .v2-heat-note {
   margin-top: 9px;
   font-family: var(--v2-mono);
-  font-size: 9px;
+  font-size:var(--v2-text-sm);
   letter-spacing: .06em;
   color: var(--v2-txt-faint);
 }
@@ -215,9 +215,90 @@
 .v2-root .v2-heat-lock {
   margin-top: 6px;
   font-family: var(--v2-mono);
-  font-size: 8.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: .06em;
   color: var(--v2-crit);
+}
+
+/* ---- OVERHEAT alarm — the gauge throbs like a redlining engine ----
+   Only fires in the "over" zone: the panel breathes a red halo, the lit
+   overheat cells glow molten (desynced per cell so it flickers like fire),
+   the read-out and misfire note pulse in time, and a heat shimmer rises off
+   the track. Everything shares a ~900ms beat so it reads as one alarm. */
+@keyframes v2-heat-throb {
+  0%, 100% {
+    border-color: var(--v2-crit);
+    box-shadow: 0 0 0 rgba(229, 83, 58, 0), inset 0 0 20px rgba(229, 83, 58, .10);
+  }
+  50% {
+    border-color: var(--v2-ember-hi);
+    box-shadow: 0 0 24px rgba(229, 83, 58, .55), inset 0 0 34px rgba(229, 83, 58, .30);
+  }
+}
+@keyframes v2-heat-molten {
+  0%, 100% { filter: brightness(1);              transform: translateY(0); }
+  50%      { filter: brightness(1.6) saturate(1.25); transform: translateY(-.5px); }
+}
+@keyframes v2-heat-read-pulse {
+  0%, 100% { color: var(--v2-crit);     text-shadow: 0 0 18px rgba(229, 83, 58, .40); }
+  50%      { color: var(--v2-ember-hi); text-shadow: 0 0 28px rgba(229, 83, 58, .90), 0 0 8px rgba(255, 190, 130, .55); }
+}
+@keyframes v2-heat-note-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .45; }
+}
+@keyframes v2-heat-shimmer {
+  0%   { opacity: 0;   transform: translateY(2px)  scaleY(.9); }
+  40%  { opacity: .55; }
+  100% { opacity: 0;   transform: translateY(-9px) scaleY(1.15); }
+}
+
+.v2-root .v2-heat[data-zone="over"] {
+  border-color: var(--v2-crit);
+  animation: v2-heat-throb 900ms ease-in-out infinite;
+}
+.v2-root .v2-heat[data-zone="over"] .v2-heat-read {
+  animation: v2-heat-read-pulse 900ms ease-in-out infinite;
+}
+/* Molten flicker on the lit danger cells; nth-child offsets desync them. */
+.v2-root .v2-heat[data-zone="over"] .v2-heat-seg--danger.v2-heat-seg--on {
+  animation: v2-heat-molten 900ms ease-in-out infinite;
+}
+.v2-root .v2-heat[data-zone="over"] .v2-heat-seg--on:nth-child(2n)   { animation-delay: -220ms; }
+.v2-root .v2-heat[data-zone="over"] .v2-heat-seg--on:nth-child(3n)   { animation-delay: -450ms; }
+.v2-root .v2-heat[data-zone="over"] .v2-heat-seg--on:nth-child(4n+1) { animation-delay: -680ms; }
+/* Heat shimmer rising off the whole track. */
+.v2-root .v2-heat[data-zone="over"] .v2-heat-track {
+  position: relative;
+}
+.v2-root .v2-heat[data-zone="over"] .v2-heat-track::after {
+  content: "";
+  position: absolute;
+  inset: -8px 0 auto;
+  height: 10px;
+  pointer-events: none;
+  background: radial-gradient(60% 100% at 78% 100%, rgba(229, 83, 58, .5), transparent 70%);
+  filter: blur(2px);
+  animation: v2-heat-shimmer 1400ms ease-out infinite;
+}
+.v2-root .v2-heat[data-zone="over"] .v2-heat-note {
+  animation: v2-heat-note-blink 900ms steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-root .v2-heat[data-zone="over"],
+  .v2-root .v2-heat[data-zone="over"] .v2-heat-read,
+  .v2-root .v2-heat[data-zone="over"] .v2-heat-seg--danger.v2-heat-seg--on,
+  .v2-root .v2-heat[data-zone="over"] .v2-heat-track::after,
+  .v2-root .v2-heat[data-zone="over"] .v2-heat-note {
+    animation: none;
+  }
+  /* Keep the static alarm cues without the motion. */
+  .v2-root .v2-heat[data-zone="over"] {
+    border-color: var(--v2-crit);
+    box-shadow: 0 0 18px rgba(229, 83, 58, .40), inset 0 0 26px rgba(229, 83, 58, .22);
+  }
+  .v2-root .v2-heat[data-zone="over"] .v2-heat-read { color: var(--v2-crit); }
 }
 
 /* ============ Rig Control Terminal overlay — ported from mockup 310-416 ====
@@ -255,7 +336,7 @@
   top: 10px;
   right: 26px;
   z-index: 2;
-  font-size: 15px;
+  font-size:var(--v2-text-lg);
   line-height: 1;
 }
 
@@ -277,19 +358,19 @@
   justify-content: center;
   background: var(--v2-iron-950);
   border: 1px solid var(--v2-oil-deep);
-  font-size: 28px;
+  font-size:var(--v2-text-3xl);
   color: #8fbcff;
 }
 .v2-root .v2-rt-id { flex: 1; min-width: 0; }
 .v2-root .v2-rt-name {
   margin: 0;
-  font-size: 24px;
+  font-size:var(--v2-text-2xl);
   letter-spacing: .08em;
 }
 .v2-root .v2-rt-sub {
   margin-top: 3px;
   font-family: var(--v2-disp);
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   letter-spacing: .04em;
   color: var(--v2-txt-dim);
   text-transform: capitalize;
@@ -300,7 +381,7 @@
   /* Clear the absolutely-positioned close button (26px right + 30px wide). */
   margin-right: 44px;
   font-family: var(--v2-mono);
-  font-size: 9px;
+  font-size:var(--v2-text-sm);
   letter-spacing: .1em;
   text-align: right;
   max-width: 120px;
@@ -318,7 +399,7 @@
 }
 .v2-root .v2-rt-mod {
   font-family: var(--v2-mono);
-  font-size: 8.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: .06em;
   padding: 3px 8px;
   border: 1px solid var(--v2-line);
@@ -361,7 +442,7 @@
   color: var(--v2-ok);
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 15px;
+  font-size:var(--v2-text-lg);
   letter-spacing: .16em;
   text-transform: uppercase;
   cursor: pointer;
@@ -386,7 +467,7 @@
   text-align: center;
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 14px;
+  font-size:var(--v2-text-base);
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--v2-txt-faint);

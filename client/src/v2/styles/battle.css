@@ -23,14 +23,14 @@
   gap: 8px;
 }
 .v2-root .v2-bh-label {
-  font-size: 14px;
+  font-size:var(--v2-text-base);
   text-transform: uppercase;
   color: var(--v2-oil);
 }
 .v2-root .v2-bh-round {
   font-family: var(--v2-mono);
   font-weight: 700;
-  font-size: 11px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.06em;
   padding: 2px 7px;
   border: 1px solid var(--v2-line);
@@ -39,7 +39,7 @@
   color: var(--v2-txt-dim);
 }
 .v2-root .v2-bh-turn {
-  font-size: 13px;
+  font-size:var(--v2-text-base);
   letter-spacing: 0.03em;
   color: var(--v2-txt-dim);
 }
@@ -54,13 +54,13 @@
 .v2-root .v2-bh-tokens {
   margin-left: auto;
   font-family: var(--v2-mono);
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.05em;
   color: var(--v2-oil);
 }
 .v2-root .v2-bh-reacting {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.04em;
   color: var(--v2-warn);
 }
@@ -94,7 +94,7 @@
 
 .v2-root .v2-tb-icon {
   flex: 0 0 auto;
-  font-size: 22px;
+  font-size:var(--v2-text-2xl);
   line-height: 1;
   color: var(--v2-oil);
 }
@@ -108,12 +108,12 @@
 .v2-root .v2-tb-primary {
   font-family: var(--v2-disp);
   font-weight: 600;
-  font-size: 15px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.02em;
   color: var(--v2-txt);
 }
 .v2-root .v2-tb-secondary {
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.02em;
   color: var(--v2-txt-dim);
 }
@@ -126,7 +126,7 @@
   border-radius: 0;
   font-family: var(--v2-disp);
   font-weight: 600;
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
@@ -210,14 +210,14 @@
 .v2-root .v2-ac-title {
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 14px;
+  font-size:var(--v2-text-base);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #baf7c9;
 }
 .v2-root .v2-ac-budget-line {
   font-family: var(--v2-mono);
-  font-size: 9.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.05em;
   color: #7fbf90;
 }
@@ -287,6 +287,15 @@
 .v2-root .v2-ac-tile.is-open {
   border-color: var(--v2-oil);
 }
+/* Overheated: warm the Support tile so Shut Down reads as recommended, not forced */
+.v2-root .v2-ac-tile.is-hot {
+  border-color: var(--v2-low);
+  box-shadow: 0 0 0 1px var(--v2-low) inset, 0 0 14px rgba(239, 148, 80, 0.25);
+}
+.v2-root .v2-ac-tile.is-hot .v2-ac-tile-glyph {
+  color: var(--v2-low);
+  text-shadow: 0 0 10px rgba(239, 148, 80, 0.55);
+}
 /* ember Attack tile — the one that fires */
 .v2-root .v2-ac-tile[data-tone="ember"] {
   background: var(--v2-grad-ember-well);
@@ -298,7 +307,7 @@
   border-color: var(--v2-ember);
 }
 .v2-root .v2-ac-tile-glyph {
-  font-size: 22px;
+  font-size:var(--v2-text-2xl);
   line-height: 1;
   color: var(--v2-txt-dim);
 }
@@ -309,7 +318,7 @@
 .v2-root .v2-ac-tile-label {
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 13px;
+  font-size:var(--v2-text-base);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -317,7 +326,7 @@
   position: absolute;
   top: 6px;
   right: 8px;
-  font-size: 10px;
+  font-size:var(--v2-text-sm);
   color: var(--v2-txt-faint);
 }
 
@@ -398,7 +407,7 @@
 }
 .v2-root .v2-ac-pop-head-text {
   flex: 1 1 auto;
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   text-transform: uppercase;
   color: var(--v2-txt-dim);
 }
@@ -452,6 +461,17 @@
   cursor: not-allowed;
   color: var(--v2-txt-faint);
 }
+/* Overheated: mark the Shut Down row as the recommended cool-down */
+.v2-root .v2-ac-pop-row.is-hot {
+  background: rgba(239, 148, 80, 0.08);
+}
+.v2-root .v2-ac-pop-row.is-hot::before {
+  opacity: 1;
+  background: var(--v2-low);
+}
+.v2-root .v2-ac-pop-row.is-hot .v2-ac-pop-label {
+  color: var(--v2-low);
+}
 .v2-root .v2-ac-pop-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -462,13 +482,13 @@
 .v2-root .v2-ac-pop-label {
   font-family: var(--v2-disp);
   font-weight: 600;
-  font-size: 13.5px;
+  font-size:var(--v2-text-base);
   letter-spacing: 0.03em;
 }
 /* the "why this is locked" reason, surfaced inline instead of tooltip-only */
 .v2-root .v2-ac-pop-note {
   font-family: var(--v2-mono);
-  font-size: 9px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.02em;
   line-height: 1.3;
   color: var(--v2-txt-faint);
@@ -485,7 +505,7 @@
   border: 1px solid var(--v2-line);
   background: var(--v2-iron-850);
   font-family: var(--v2-mono);
-  font-size: 9.5px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.04em;
   color: var(--v2-txt-faint);
   white-space: nowrap;
@@ -507,7 +527,7 @@
 .v2-root .v2-ac-hint {
   margin: 0;
   font-family: var(--v2-mono);
-  font-size: 10px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.03em;
   line-height: 1.4;
   color: var(--v2-txt-faint);
@@ -526,7 +546,7 @@
   color: var(--v2-txt-dim);
   font-family: var(--v2-disp);
   font-weight: 600;
-  font-size: 12px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -553,7 +573,7 @@
 .v2-root .v2-outcome-text {
   display: inline-block;
   padding: 6px 4px;
-  font-size: 56px;
+  font-size:var(--v2-text-5xl);
   line-height: 0.9;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -568,7 +588,7 @@
   color: var(--v2-oil);
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 15px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;
@@ -587,7 +607,7 @@
   gap: 0.4rem;
   padding: 0.35rem 0.6rem;
   font-family: var(--v2-mono);
-  font-size: 0.75rem;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--v2-txt-dim);

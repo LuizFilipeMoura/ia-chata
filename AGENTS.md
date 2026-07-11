@@ -19,6 +19,7 @@ What this means concretely:
 - **Do not build new UI in the legacy V1 tree** (`client/src/components/**`). V1 is frozen; treat it as read-only reference. If a feature needs a V1-only file changed, stop and flag it — don't extend V1.
 - New UI files: create them in the matching `client/src/v2/` folder (`screens/`, `overlays/`, `components/`, `battle/`, `state/`, `hooks/`, `styles/`).
 - Reuse the V2 provider stack (`client/src/v2/state/V2Providers.tsx`) and V2 primitives (Drawer, wizards, Shell) — never import V1 overlay providers into V2 (there's a `no-v1-imports.test.ts` guard; keep it green).
+- **Minimum font size is 12px.** Never render text below 12px on mobile — smaller is unreadable on phones. All V2 text uses the `--v2-text-*` / `.v2-text-*` scale in `styles/type.css` (floor `sm` = 12px); a guard test (`no-raw-font-size.test.ts`) rejects raw `font-size`.
 
 ## Debugging the UI as an agent
 

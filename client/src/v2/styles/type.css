@@ -1,0 +1,33 @@
+/* V2 type scale — the ONLY source of font sizes in V2.
+   Fixed px, 12px floor (min readable on mobile). No em/rem/raw-px font-size
+   anywhere else in V2; a guard test (no-raw-font-size.test.ts) enforces it.
+   Each step is both a --v2-text-* var (for component CSS) and a .v2-text-*
+   utility class (for JSX className) — same value, use whichever fits. */
+.v2-root {
+  /* Scale default: any element that declares no size resolves to this, never
+     the document/UA default (16px / 13.333px buttons). Keeps EVERY text node
+     on the scale. */
+  font-size:var(--v2-text-base);
+
+  --v2-text-sm:12px;   /* micro labels, eyebrows, chips — the mobile floor */
+  --v2-text-base:14px; /* body / default */
+  --v2-text-lg:16px;   /* emphasized body, small headings */
+  --v2-text-xl:20px;   /* section titles */
+  --v2-text-2xl:24px;  /* screen titles */
+  --v2-text-3xl:32px;  /* big headings */
+  --v2-text-4xl:44px;  /* hero / display */
+  --v2-text-5xl:56px;  /* the big battle number */
+}
+/* Form controls default to a UA font (buttons: 13.333px). Defer to the scale
+   so unstyled controls inherit the base step; component rules with higher
+   specificity still override. */
+.v2-root button, .v2-root input, .v2-root select, .v2-root textarea { font-family:inherit; font-size:inherit; }
+
+.v2-text-sm{font-size:var(--v2-text-sm);}
+.v2-text-base{font-size:var(--v2-text-base);}
+.v2-text-lg{font-size:var(--v2-text-lg);}
+.v2-text-xl{font-size:var(--v2-text-xl);}
+.v2-text-2xl{font-size:var(--v2-text-2xl);}
+.v2-text-3xl{font-size:var(--v2-text-3xl);}
+.v2-text-4xl{font-size:var(--v2-text-4xl);}
+.v2-text-5xl{font-size:var(--v2-text-5xl);}
