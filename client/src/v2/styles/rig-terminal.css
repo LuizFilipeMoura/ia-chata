@@ -478,3 +478,90 @@
   background: var(--v2-iron-900);
   border: 1px solid var(--v2-line);
 }
+
+/* --- Status / Loadout toggle ------------------------------------------- */
+.v2-root .v2-rt-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px 0;
+}
+.v2-root .v2-rt-tab {
+  flex: 1;
+  padding: 7px 10px;
+  font-family: var(--v2-mono);
+  font-size: var(--v2-text-sm);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--v2-txt-dim);
+  background: var(--v2-iron-850);
+  border: 1px solid var(--v2-line);
+  cursor: pointer;
+}
+.v2-root .v2-rt-tab.is-on {
+  color: var(--v2-ok);
+  border-color: var(--v2-ok);
+  background: var(--v2-ok-wash);
+}
+
+/* --- Loadout card ------------------------------------------------------- */
+.v2-root .v2-rt-lo {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.v2-root .v2-rt-lo-weapon,
+.v2-root .v2-rt-lo-equip {
+  padding: 12px 14px;
+  background: var(--v2-well);
+  border: 1px solid var(--v2-line);
+}
+.v2-root .v2-rt-lo-weapon-head,
+.v2-root .v2-rt-lo-equip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.v2-root .v2-rt-lo-name { font-size: var(--v2-text-lg); }
+.v2-root .v2-rt-lo-equip-family { color: var(--v2-txt-dim); margin-left: auto; }
+.v2-root .v2-rt-lo-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-family: var(--v2-mono);
+  font-size: var(--v2-text-sm);
+}
+.v2-root .v2-rt-lo-stat em { color: var(--v2-txt-dim); margin-right: 4px; font-style: normal; }
+.v2-root .v2-rt-delta { color: var(--v2-ok); margin-left: 3px; font-weight: 700; }
+.v2-root .v2-rt-lo-perks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.v2-root .v2-rt-lo-perk {
+  font-family: var(--v2-mono);
+  font-size: var(--v2-text-sm);
+  letter-spacing: .06em;
+  padding: 2px 7px;
+  border: 1px solid var(--v2-line);
+  color: var(--v2-txt-dim);
+}
+.v2-root .v2-rt-lo-perk.is-added { color: var(--v2-ok); border-color: var(--v2-ok); }
+.v2-root .v2-rt-lo-up {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--v2-line);
+}
+.v2-root .v2-rt-lo-up-name { font-family: var(--v2-disp); letter-spacing: .04em; }
+.v2-root .v2-rt-lo-up-nature { color: var(--v2-txt-dim); }
+.v2-root .v2-rt-lo-up-tag {
+  flex-basis: 100%;
+  font-size: var(--v2-text-sm);
+  color: var(--v2-txt-dim);
+}
+.v2-root .v2-rt-lo-equip-line {
+  font-size: var(--v2-text-sm);
+  color: var(--v2-txt-dim);
+  margin-top: 4px;
+}
