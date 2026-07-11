@@ -2766,6 +2766,29 @@ test("reset clears engagement between matches", () => {
   assert.equal(findRig(r, "b1").engagedWith, null);
 });
 
+test("reset clears melee-lock marks and rivet stacks so they don't leak into the next match", () => {
+  const r = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  r.rigs = [a, b];
+  // Simulate mid-match marks/stacks that outlive the match without a Disengage.
+  b.anchoredBy = a.id;
+  b.skeweredBy = a.id;
+  a.rivetTarget = b.id;
+  a.rivetLoc = "arms";
+  a.rivetStacks = 2;
+  b.rivetSeized = { arms: 5 };
+  applyCommand(r, { verb: "reset", attrs: {} });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  assert.equal(b1.anchoredBy, null);
+  assert.equal(b1.skeweredBy, null);
+  assert.equal(a1.rivetTarget, null);
+  assert.equal(a1.rivetLoc, null);
+  assert.equal(a1.rivetStacks, 0);
+  assert.deepEqual(b1.rivetSeized, {});
+});
+
 test("set-to-destroyed clears the dead rig's engagement", () => {
   const r = createRoom("X");
   const a = makeRig(1, "a1", "light", "a", W);

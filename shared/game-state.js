@@ -2035,6 +2035,19 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.harpoonWinchCooldownUntil = 0; // Harpoon Winch (§13) — clear the reel cooldown
       rig.towedThisActivation = false;
       rig.noDisengageNextActivation = false; // Dead Weight (§13) — clear the Disengage pin on reset
+      // Melee-lock marks (§13) — a reset rebuilds each rig pristine and drops
+      // engagedWith directly (bypassing clearEngagement), so clear the free-strike
+      // marks here too or a stale id survives into the next match and fires a
+      // phantom strike the first time the re-engaged partner Disengages.
+      rig.skeweredBy = null;     // Skewer (§13, Lance)
+      rig.anchoredBy = null;     // Ground Anchor (§13, Anchor)
+      // Rivet Lock (§13, Rivet Gun) — clear the attacker's stacking counters and
+      // the target's seizes, else a carried stack instantly seizes on the first
+      // hit of the next match.
+      rig.rivetTarget = null;
+      rig.rivetLoc = null;
+      rig.rivetStacks = 0;
+      rig.rivetSeized = {};
       delete rig._blastRolled;
     }
     room.game.started = false;
