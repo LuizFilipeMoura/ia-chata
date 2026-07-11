@@ -378,8 +378,8 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Sniper Cannon | 1 | 12 | 22" | +2 | −0.15 | 0–28" |
 | Siege Maul | 1 | 13 | 8" | +1 | −0.30 | 0–16" |
 | Missile Barrage | 4 | 9 | 20" | +1 | −0.15 | 6–34" |
-| Harpoon | 1 | 12 | 14" | +2 | −0.15 | 0–22" |
-| Rivet Gun | 6 | 4 | 6" | +2 | −0.35 | 0–14" |
+| Harpoon | 1 | 12 | 14" | +2 | −0.28 | 0–22" |
+| Rivet Gun | 6 | 4 | 6" | +2 | −0.40 | 0–14" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose ACC up close.
 
