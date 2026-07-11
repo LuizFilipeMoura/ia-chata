@@ -1,0 +1,381 @@
+/* V2 Squadron screen styles — ported from design-reference/oil-iron-terminal.html
+   lines 150-178 (own rig row) and 186-205 (hostile row). EVERY selector is scoped
+   under .v2-root so nothing leaks into V1's global styles. Colors use --v2-* tokens.
+
+   This file holds the roster-row rules (.v2-rigrow*). The Squadron/Yard screen
+   rules (.v2-yard*) are appended in the next task below the marker at the bottom. */
+
+/* ---- Rig roster row (mockup 150-178) ---- */
+.v2-root .v2-rigrow {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  background: linear-gradient(180deg, #161b23, #0f1319);
+  border: 1px solid var(--v2-line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 5px 14px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  cursor: pointer;
+  color: var(--v2-txt);
+  font-family: var(--v2-disp);
+  transition: border-color 0.12s ease;
+}
+.v2-root .v2-rigrow:hover {
+  border-color: var(--v2-oil-deep);
+}
+.v2-root .v2-rigrow:focus-visible {
+  outline: 2px solid var(--v2-oil);
+  outline-offset: -2px;
+}
+
+/* hostile variant (mockup 186-205) */
+.v2-root .v2-rigrow--hostile {
+  background: linear-gradient(180deg, #1a1418, #120d10);
+  border-color: #2a1e22;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.5);
+  opacity: 0.94;
+}
+.v2-root .v2-rigrow--hostile:hover {
+  border-color: var(--v2-ember-deep);
+}
+
+/* side stripe: own = oil gradient, hostile = red hazard diagonal */
+.v2-root .v2-rigrow-stripe {
+  flex: 0 0 8px;
+  background: linear-gradient(180deg, var(--v2-oil), var(--v2-oil-deep));
+}
+.v2-root .v2-rigrow--hostile .v2-rigrow-stripe {
+  background: repeating-linear-gradient(-45deg, #0c0709 0 8px, #7c2331 8px 16px);
+}
+
+/* class column */
+.v2-root .v2-rigrow-class {
+  flex: 0 0 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 4px;
+  background: #0a0d11;
+  border-right: 1px solid var(--v2-line);
+}
+.v2-root .v2-rigrow--hostile .v2-rigrow-class {
+  background: #0d0709;
+  border-right-color: #2a1e22;
+}
+.v2-root .v2-rigrow-glyph {
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+}
+.v2-root .v2-rigrow-short {
+  font-family: var(--v2-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.18em;
+  color: var(--v2-txt-faint);
+}
+
+/* main column */
+.v2-root .v2-rigrow-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+}
+.v2-root .v2-rigrow-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.v2-root .v2-rigrow-name {
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  color: var(--v2-txt);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v2-root .v2-rigrow--hostile .v2-rigrow-name {
+  color: var(--v2-ember-hi);
+}
+.v2-root .v2-rigrow-badge {
+  flex: 0 0 auto;
+  font-family: var(--v2-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  color: #1a1206;
+  background: var(--v2-oil);
+  padding: 2px 6px;
+}
+.v2-root .v2-rigrow-heat {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: var(--v2-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  color: var(--v2-txt-dim);
+  background: #0a0d11;
+  border: 1px solid var(--v2-line);
+}
+.v2-root .v2-rigrow-heat[data-zone="warm"] { color: var(--v2-warn); border-color: #4a3d1a; }
+.v2-root .v2-rigrow-heat[data-zone="redline"] { color: var(--v2-low); border-color: #5a3a1a; }
+.v2-root .v2-rigrow-heat[data-zone="over"] { color: var(--v2-crit); border-color: var(--v2-ember-deep); }
+
+.v2-root .v2-rigrow-loadout {
+  font-family: var(--v2-disp);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--v2-txt-dim);
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 4-up mini component bars */
+.v2-root .v2-rigrow-bars {
+  display: flex;
+  gap: 5px;
+  margin-top: 11px;
+}
+.v2-root .v2-rigrow-bar {
+  flex: 1;
+  min-width: 0;
+}
+.v2-root .v2-rigrow-bar-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--v2-mono);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  color: var(--v2-txt-faint);
+  margin-bottom: 3px;
+}
+.v2-root .v2-rigrow-bar-track {
+  display: block;
+  height: 5px;
+  background: #07090c;
+  border: 1px solid #000;
+  overflow: hidden;
+}
+.v2-root .v2-rigrow-bar-fill {
+  display: block;
+  height: 100%;
+}
+
+/* right status column */
+.v2-root .v2-rigrow-status {
+  flex: 0 0 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #0a0d11;
+  border-left: 1px solid var(--v2-line);
+}
+.v2-root .v2-rigrow--hostile .v2-rigrow-status {
+  display: none;
+}
+.v2-root .v2-rigrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* ---- Squadron / Yard screen rules (.v2-yard*), ported from mockup 131-221 ---- */
+.v2-root .v2-yard {
+  padding: 18px 16px 40px;
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+  overflow-y: auto;
+}
+
+/* header: eyebrow + title on the left, stats on the right */
+.v2-root .v2-yard-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.v2-root .v2-yard-eyebrow {
+  font-family: var(--v2-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.3em;
+  color: var(--v2-txt-faint);
+  margin-bottom: 5px;
+}
+.v2-root .v2-yard-title {
+  margin: 0;
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 0.08em;
+  color: var(--v2-txt);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.v2-root .v2-yard-stats {
+  text-align: right;
+  font-family: var(--v2-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--v2-txt-dim);
+}
+.v2-root .v2-yard-count { color: var(--v2-oil); }
+.v2-root .v2-yard-tons { color: var(--v2-txt-faint); margin-top: 3px; }
+
+/* section bands: dot + label + fading gradient rule */
+.v2-root .v2-yard-band {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 22px 0 12px;
+  font-family: var(--v2-mono);
+  font-size: 10px;
+  letter-spacing: 0.26em;
+}
+.v2-root .v2-yard-band--foe { margin-top: 24px; }
+.v2-root .v2-yard-band-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+}
+.v2-root .v2-yard-band-rule {
+  flex: 1;
+  height: 1px;
+}
+.v2-root .v2-yard-band--own { color: var(--v2-oil); }
+.v2-root .v2-yard-band--own .v2-yard-band-dot {
+  background: var(--v2-oil);
+  box-shadow: 0 0 8px var(--v2-oil);
+}
+.v2-root .v2-yard-band--own .v2-yard-band-rule {
+  background: linear-gradient(90deg, var(--v2-oil-deep), transparent);
+}
+.v2-root .v2-yard-band--foe { color: var(--v2-ember); }
+.v2-root .v2-yard-band--foe .v2-yard-band-dot {
+  background: var(--v2-ember);
+  box-shadow: 0 0 8px var(--v2-ember);
+}
+.v2-root .v2-yard-band--foe .v2-yard-band-rule {
+  background: linear-gradient(90deg, var(--v2-ember-deep), transparent);
+}
+
+/* rig list stack */
+.v2-root .v2-yard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+/* commission add card: dashed hazard tape */
+.v2-root .v2-yard-add {
+  width: 100%;
+  margin-top: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: repeating-linear-gradient(-45deg, #0e1117 0 12px, #131820 12px 24px);
+  border: 2px dashed var(--v2-rivet);
+  color: var(--v2-txt-dim);
+  cursor: pointer;
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+.v2-root .v2-yard-add:hover:not(:disabled) {
+  border-color: var(--v2-oil-deep);
+  color: var(--v2-oil);
+}
+.v2-root .v2-yard-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.v2-root .v2-yard-add-plus {
+  font-size: 22px;
+  line-height: 0;
+  color: var(--v2-oil);
+}
+
+/* ready bar: oil left-border, status text, dice toggle, READY button */
+.v2-root .v2-yard-ready {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #12161d, #0b0e13);
+  border: 1px solid var(--v2-line);
+  border-left: 4px solid var(--v2-oil);
+}
+.v2-root .v2-yard-ready-txt { flex: 1; min-width: 0; }
+.v2-root .v2-yard-ready-line {
+  font-family: var(--v2-disp);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--v2-txt);
+}
+.v2-root .v2-yard-ready-sub {
+  font-family: var(--v2-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--v2-txt-faint);
+  margin-top: 4px;
+}
+.v2-root .v2-yard-dice {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 12px;
+  background: #0a0d11;
+  border: 1px solid var(--v2-line);
+  font-family: var(--v2-mono);
+  font-size: 11px;
+  color: var(--v2-txt-dim);
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+.v2-root .v2-yard-dice:hover:not(:disabled) { border-color: var(--v2-oil-deep); }
+.v2-root .v2-yard-dice[aria-pressed="false"] { color: var(--v2-txt-faint); }
+.v2-root .v2-yard-readybtn {
+  flex: 0 0 auto;
+  padding: 12px 22px;
+  background: linear-gradient(180deg, #f0a94a, #c47a26);
+  border: 1px solid #ffcf82;
+  border-bottom: 3px solid #7c4d14;
+  color: #1a1206;
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(231, 154, 61, 0.3);
+  transition: filter 0.12s ease;
+}
+.v2-root .v2-yard-readybtn:hover:not(:disabled) { filter: brightness(1.08); }
+.v2-root .v2-yard-readybtn:disabled {
+  background: #1c2029;
+  border-color: var(--v2-line);
+  border-bottom-color: var(--v2-line);
+  color: var(--v2-txt-faint);
+  box-shadow: none;
+  cursor: not-allowed;
+}

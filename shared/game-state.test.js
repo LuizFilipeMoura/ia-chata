@@ -9,6 +9,7 @@ import {
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
+  chassisById, resolveChassis,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -56,13 +57,13 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
-  assert.equal(Object.keys(WEAPONS.melee).length, 8);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
-  assert.equal(Object.keys(WEAPONS.melee).length, 8);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
   assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
@@ -133,9 +134,22 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   const shield = WEAPONS.melee["Bulwark Shield"];
   assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
 
-  // The list is now 8 + 8.
-  assert.equal(Object.keys(WEAPONS.longRange).length, 8);
-  assert.equal(Object.keys(WEAPONS.melee).length, 8);
+  // The list is now 10 + 10.
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+});
+
+test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
+  assert.deepEqual(WEAPONS.longRange["Harpoon"],
+    { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
+  assert.deepEqual(WEAPONS.melee["Anchor"],
+    { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true });
+  assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
+    { rof: 6, str: 4, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
+  assert.deepEqual(WEAPONS.melee["Pressure Claw"],
+    { rof: 2, str: 9, acc: [1, 1], rng: [2, 2], melee: true });
+  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
+  assert.equal(Object.keys(WEAPONS.melee).length, 10);
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
@@ -1593,9 +1607,9 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment(null), null);
 });
 
-test("WEAPON_UPGRADES has exactly 3 upgrades for all 16 weapons", () => {
+test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 16);
+  assert.equal(all.length, 20);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
@@ -1965,6 +1979,36 @@ test("Sunder reduces the struck location max SP once when the selected upgrade d
   } });
   assert.equal(a1.hull.max, 5);
   assert.equal(a1.hull.sp <= a1.hull.max, true);
+});
+
+test("Dead Weight: a damaging Anchor hit blocks the target's next Disengage", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Anchor";
+  b1.weaponUpgrades.melee = "dead-weight";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.equal(a1.noDisengageNextActivation, true);
+  assert.equal(a1.engagedWith, b1.id);
+});
+
+test("Dead Weight: a rig flagged noDisengageNextActivation cannot Disengage", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  __test.setEngagement(b1, a1);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  b1.noDisengageNextActivation = true;
+  const used = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
+  assert.equal(r.game.turn.actionsUsed, used); // refused, no slot spent
+  assert.equal(b1.engagedWith, a1.id);          // still locked
 });
 
 test("createRoom seeds owner=null and a default 54x36 field with objectives", () => {
@@ -2722,6 +2766,53 @@ test("reset clears engagement between matches", () => {
   assert.equal(findRig(r, "b1").engagedWith, null);
 });
 
+test("reset clears every transient combat status so nothing leaks into the next match", () => {
+  const r = createRoom("X");
+  const a = makeRig(1, "a1", "light", "a", W);
+  const b = makeRig(2, "b1", "light", "b", W);
+  r.rigs = [a, b];
+  // Simulate mid-match marks/stacks/counters/maps that outlive the match.
+  b.anchoredBy = a.id;
+  b.skeweredBy = a.id;
+  a.rivetTarget = b.id; a.rivetLoc = "arms"; a.rivetStacks = 2;
+  b.rivetSeized = { arms: 5 };
+  b.burning = 3;
+  a.suppressTarget = b.id; a.suppressStacks = 3; b.suppressImmobile = true;
+  a.autocannonShots = 2; a.autocannonSlowNext = true; a.enfiladeShots = 2;
+  a.arcLockedNext = true; b.noPrepNextActivation = true; b.noActivesNextActivation = true;
+  a.lockedTarget = b.id; a.lockExpiresRound = 9;
+  b.cracked = { hull: 5 }; b.crippled = { arms: true }; b.noRepair = { arms: true };
+  b.kneecapped = { legs: true }; b.armsSuppressed = true;
+  applyCommand(r, { verb: "reset", attrs: {} });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  // Anchor/skewer/rivet marks.
+  assert.equal(b1.anchoredBy, null);
+  assert.equal(b1.skeweredBy, null);
+  assert.equal(a1.rivetTarget, null);
+  assert.equal(a1.rivetLoc, null);
+  assert.equal(a1.rivetStacks, 0);
+  assert.deepEqual(b1.rivetSeized, {});
+  // Every other transient status.
+  assert.equal(b1.burning, 0);
+  assert.equal(a1.suppressTarget, null);
+  assert.equal(a1.suppressStacks, 0);
+  assert.equal(b1.suppressImmobile, false);
+  assert.equal(a1.autocannonShots, 0);
+  assert.equal(a1.autocannonSlowNext, false);
+  assert.equal(a1.enfiladeShots, 0);
+  assert.equal(a1.arcLockedNext, false);
+  assert.equal(b1.noPrepNextActivation, false);
+  assert.equal(b1.noActivesNextActivation, false);
+  assert.equal(a1.lockedTarget, null);
+  assert.equal(a1.lockExpiresRound, 0);
+  assert.deepEqual(b1.cracked, {});
+  assert.deepEqual(b1.crippled, {});
+  assert.deepEqual(b1.noRepair, {});
+  assert.deepEqual(b1.kneecapped, {});
+  assert.equal(b1.armsSuppressed, false); // re-derived by recompute (arms back at max)
+});
+
 test("set-to-destroyed clears the dead rig's engagement", () => {
   const r = createRoom("X");
   const a = makeRig(1, "a1", "light", "a", W);
@@ -2940,6 +3031,64 @@ test("if the skewerer is gone, the victim disengages with no strike and no crash
   assert.equal(b1.engagedWith, null);    // and the rig disengages
 });
 
+// ── §13 Ground Anchor (Anchor) ───────────────────────────────────────────────
+// An Anchor with the Ground Anchor prototype pins the rig it locks: while the
+// mark holds, Disengaging from the anchorer costs the fleeing rig a free
+// Anchor strike at its NATURAL STR (not a flat override, unlike Skewer).
+function groundAnchorRoom() {
+  const r = createRoom("ANCHOR");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "add", attrs: {
+    name: "a1", class: "medium", owner: "a", longRange: "Autocannon", melee: "Anchor", meleeUpgrade: "ground-anchor",
+  } });
+  applyCommand(r, { verb: "add", attrs: {
+    name: "b1", class: "medium", owner: "b", longRange: "Autocannon", melee: "Anchor", meleeUpgrade: "ground-anchor",
+  } });
+  for (let i = 2; i <= 3; i++) {
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+    applyCommand(r, { verb: "add", attrs: { name: `b${i}`, class: "light", owner: "b", ...W } });
+  }
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  clearPendingAnswer(r);
+  return r;
+}
+
+const countAnchor = (r) => r.game.resolutions.filter((x) => x.kind === "anchor").length;
+
+test("Ground Anchor: a damaging Anchor hit marks the target; Disengage provokes a free strike", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Anchor";
+  b1.weaponUpgrades.melee = "ground-anchor";
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [6], impacts: [6], location: 1 },
+  } });
+  assert.equal(a1.anchoredBy, b1.id);
+  assert.equal(a1.engagedWith, b1.id);
+});
+
+test("Ground Anchor: Disengaging off the anchor provokes a free Anchor strike then clears", () => {
+  const r = groundAnchorRoom();
+  const a1 = findRig(r, "a1"); // the anchorer
+  const b1 = findRig(r, "b1"); // the victim — disengages on b's turn
+  __test.setEngagement(b1, a1);
+  b1.anchoredBy = a1.id;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const spBefore = spSum(b1);
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } }, {}, { random: () => 0.999 });
+  assert.equal(countAnchor(r), 1);                 // an anchor strike was resolved
+  assert.ok(spSum(b1) < spBefore, "victim took the free anchor strike");
+  assert.equal(b1.anchoredBy, null);               // mark cleared
+  assert.equal(b1.engagedWith, null);              // engagement broken
+  assert.equal(a1.engagedWith, null);
+});
+
 // --- Group E: per-location tracking (Breach Grip + Dismember) -----------------
 
 test("makeRig seeds cracked/crippled/noRepair maps and per-location origMax", () => {
@@ -3024,6 +3173,57 @@ test("Dismember on a weapon location destroys a weapon; on hull it blocks repair
   const spBefore = hullT.hull.sp; // clamped to the new max 3 by the sunder
   __test.repairRig(hullT, "hull", 3);
   assert.equal(hullT.hull.sp, spBefore); // repair refused on a dismembered hull
+});
+
+// --- Rivet Lock (§13, Rivet Gun prototype) -----------------------------------
+
+test("Rivet Lock: 3 volleys on one location seize it — no repair + long-range jammed", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const a1 = findRig(r, "a1");
+  a1.weapons.longRange = "Rivet Gun";
+  a1.weaponUpgrades.longRange = "rivet-lock";
+  const b1 = findRig(r, "b1");
+  for (let i = 0; i < 3; i++) __test.rivetHit(r, a1, b1, "arms");
+  assert.equal(b1.rivetSeized.arms >= r.game.round, true); // seized (expiry in the future)
+  b1.arms.sp = 2;
+  __test.repairRig(b1, "arms", 3);
+  assert.equal(b1.arms.sp, 2); // no repair while seized
+});
+
+test("Rivet Lock: switching location resets the rivet stack", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const a1 = findRig(r, "a1");
+  a1.weapons.longRange = "Rivet Gun";
+  a1.weaponUpgrades.longRange = "rivet-lock";
+  const b1 = findRig(r, "b1");
+  __test.rivetHit(r, a1, b1, "arms");
+  __test.rivetHit(r, a1, b1, "legs"); // switch → resets to 1 on legs
+  __test.rivetHit(r, a1, b1, "arms"); // switch back → resets to 1 on arms
+  assert.equal(Object.keys(b1.rivetSeized).length, 0); // never reached 3 on one loc
+});
+
+test("Rivet Lock: a seized Arms location jams long-range fire but not melee", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1"); // b activates first in this suite
+  const a1 = findRig(r, "a1");
+  // Seize b1's weapon-role location (arms) directly.
+  b1.rivetSeized = { arms: r.game.round + 1 };
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const usedBeforeLR = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", distance: 7,
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
+  } });
+  assert.equal(r.game.turn.actionsUsed, usedBeforeLR); // long-range fire refused (jammed)
+  // Melee is unaffected: a melee swing still spends its slot.
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
+  } });
+  assert.equal(r.game.turn.actionsUsed, usedBeforeLR + 1); // melee went through
 });
 
 // --- Emplacement (§13, Bulwark Shield prototype) -----------------------------
@@ -3275,4 +3475,26 @@ test("a second Tow Chain hit within 3 rounds doesn't fling or add the +2 heat", 
   assert.ok(!r.game.resolutions.some((x) => /Tow Chain — fling/.test(x.summary))); // no fling
   assert.equal(b1.towedThisActivation, false);   // not rooted while recharging
   assert.equal(b1.engine.heat - heatBefore, 1);  // only the melee fire heat, no +2 tow
+});
+
+test("new weapons each expose three correctly-natured upgrades", () => {
+  for (const w of ["Harpoon", "Anchor", "Rivet Gun", "Pressure Claw"]) {
+    const ups = WEAPON_UPGRADES[w];
+    assert.ok(ups, `${w} has upgrades`);
+    assert.deepEqual(ups.map((u) => u.nature).sort(), ["field", "prototype", "tuned"], `${w} natures`);
+  }
+  assert.equal(WEAPON_UPGRADES["Harpoon"].find((u) => u.nature === "tuned").effect.vsPinned, true);
+  assert.equal(WEAPON_UPGRADES["Pressure Claw"].find((u) => u.nature === "tuned").effect.onDamage, "sunder");
+});
+
+test("the two new light chassis resolve by id and by combo", () => {
+  const ha = chassisById("light-harpoon-anchor");
+  assert.equal(ha.class, "light");
+  assert.equal(ha.longRange, "Harpoon");
+  assert.equal(ha.melee, "Anchor");
+  assert.deepEqual(ha.sp, { hull: 12, arms: 11, legs: 11, engine: 8 });
+
+  const rp = resolveChassis({ class: "light", longRange: "Rivet Gun", melee: "Pressure Claw" });
+  assert.equal(rp.id, "light-rivet-pressureclaw");
+  assert.deepEqual(rp.sp, { hull: 13, arms: 11, legs: 10, engine: 9 });
 });

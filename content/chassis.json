@@ -86,5 +86,27 @@
     "focus": "",
     "balance": "",
     "personality": ""
+  },
+  {
+    "id": "light-harpoon-anchor",
+    "label": "Harpoon · Anchor",
+    "class": "light",
+    "longRange": "Harpoon",
+    "melee": "Anchor",
+    "description": "A tether rig. The harpoon spears a target at range and the anchor chains it down in the lock — pick one enemy and refuse to let it leave. Fragile, but nothing it grabs gets away.",
+    "focus": "Control one target: spear it, anchor it, deny the escape.",
+    "balance": "Light SP and one heavy shot per turn — it wins by pinning, not by trading blows. Loses if it can't close.",
+    "personality": "Patient and vindictive. Marks a rig and hunts it to the scrapline."
+  },
+  {
+    "id": "light-rivet-pressureclaw",
+    "label": "Rivet Gun · Pressure Claw",
+    "class": "light",
+    "longRange": "Rivet Gun",
+    "melee": "Pressure Claw",
+    "description": "An industrial brawler. The rivet gun stitches pins into a rig at spitting range; the pressure claw crushes its locations open in melee. Grinds a target down plate by plate.",
+    "focus": "Attrition: seize a location with rivets, then crack it open with the claw.",
+    "balance": "Short range and low STR per hit — it must get close and stay close. Rewards focus fire on one location.",
+    "personality": "Methodical, mechanical, relentless. Treats an enemy rig like a stubborn bolt."
   }
 ]

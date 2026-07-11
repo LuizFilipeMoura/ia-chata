@@ -37,6 +37,8 @@ export const WEAPONS = {
     "Sniper Cannon":  { rof: 1, str: 12, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
     "Siege Maul":     { rof: 1, str: 13, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
     "Missile Barrage":{ rof: 4, str: 9,  sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Harpoon":        { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
+    "Rivet Gun":      { rof: 6, str: 4,  sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
@@ -47,6 +49,8 @@ export const WEAPONS = {
     "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
     "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
     "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], melee: true },
+    "Anchor":        { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
+    "Pressure Claw": { rof: 2, str: 9,  acc: [1, 1], rng: [2, 2], melee: true },
   },
 };
 
@@ -81,6 +85,8 @@ export const CHASSIS = [
   { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
   { id: "light-wreckingball-double",  label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
   { id: "light-sword-arc",            label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
+  { id: "light-harpoon-anchor",       label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
+  { id: "light-rivet-pressureclaw",   label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
   { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
   { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
   { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
@@ -282,6 +288,26 @@ export const WEAPON_UPGRADES = {
     { id: "napalm", nature: "tuned", name: "Napalm", tag: "Hits set the target burning (1 SP/activation until doused)", effect: { burn: 1 } },
     { id: "conflagration", nature: "prototype", name: "Conflagration", tag: "Stack burns for escalating damage-over-time; runs you hot", effect: { burn: 1, burnStacks: true } },
   ],
+  "Harpoon": [
+    { id: "barbed-head", nature: "field", name: "Barbed Head", tag: "Gains Impale", effect: { perks: ["Impale"] } },
+    { id: "taut-cable", nature: "tuned", name: "Taut Cable", tag: "+3 STR vs immobilised or engaged targets", effect: { vsPinned: true } },
+    { id: "harpoon-winch", nature: "prototype", name: "Harpoon Winch", tag: "Spear and reel a rig 4\" toward you; roots you, runs hot", effect: { harpoonWinch: true } },
+  ],
+  "Rivet Gun": [
+    { id: "rapid-feed", nature: "field", name: "Rapid Feed", tag: "+2 ROF", effect: { rof: 2 } },
+    { id: "staple-burst", nature: "tuned", name: "Staple Burst", tag: "4+ hits: target loses 1 action next activation", effect: { pinOnHits: 4 } },
+    { id: "rivet-lock", nature: "prototype", name: "Rivet Lock", tag: "Rivet a location shut — no repairs, jams a weapon there", effect: { rivetLock: true } },
+  ],
+  "Anchor": [
+    { id: "fluked-head", nature: "field", name: "Fluked Head", tag: "+3 STR", effect: { str: 3 } },
+    { id: "dead-weight", nature: "tuned", name: "Dead Weight", tag: "Struck target can't Disengage next activation", effect: { deadWeight: true } },
+    { id: "ground-anchor", nature: "prototype", name: "Ground Anchor", tag: "Anchor a rig in the lock; leaving you costs it a free Anchor hit", effect: { groundAnchor: true } },
+  ],
+  "Pressure Claw": [
+    { id: "hardened-jaws", nature: "field", name: "Hardened Jaws", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
+    { id: "crush-grip", nature: "tuned", name: "Crush Grip", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
+    { id: "hydraulic-vice", nature: "prototype", name: "Hydraulic Vice", tag: "Pry a location's armour open (+2 impact from anyone)", effect: { breachGrip: true } },
+  ],
 };
 
 export function defaultWeaponUpgrade(weaponName) {
@@ -429,6 +455,9 @@ function ensureRigShape(rig) {
   // Skewer (§13, Lance) — the id of the rig that impaled this one in the melee
   // lock; Disengaging from it costs a free STR-11 lance strike.
   if (rig.skeweredBy === undefined) rig.skeweredBy = null;
+  // Ground Anchor (§13, Anchor) — the id of the rig that anchored this one in
+  // the melee lock; Disengaging from it costs a free natural-STR Anchor strike.
+  if (rig.anchoredBy === undefined) rig.anchoredBy = null;
   if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
   if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
   // Enfilade (§13, Sniper Cannon) — per-rig aimed-shot counter; every 3rd aimed
@@ -446,10 +475,21 @@ function ensureRigShape(rig) {
   // Tow Chain (§13, Wrecking Ball) — the round the fling recharges by, and the
   // per-activation root flag a successful tow sets (blocks Move/Sprint after).
   if (typeof rig.towChainCooldownUntil !== "number") rig.towChainCooldownUntil = 0;
+  if (typeof rig.harpoonWinchCooldownUntil !== "number") rig.harpoonWinchCooldownUntil = 0;
   if (typeof rig.towedThisActivation !== "boolean") rig.towedThisActivation = false;
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
+  // Rivet Lock (§13, Rivet Gun) — which target+location this rig is riveting
+  // and how many consecutive-fire stacks it has piled on.
+  if (rig.rivetTarget === undefined) rig.rivetTarget = null;
+  if (rig.rivetLoc === undefined) rig.rivetLoc = null;
+  if (typeof rig.rivetStacks !== "number") rig.rivetStacks = 0;
+  if (!rig.rivetSeized || typeof rig.rivetSeized !== "object") rig.rivetSeized = {};
   if (typeof rig.noPrepNextActivation !== "boolean") rig.noPrepNextActivation = false;
+  // Dead Weight (§13, Anchor) — a damaging Anchor melee hit pins the struck
+  // target: it can't Disengage on its next activation. Scoped/self-clearing
+  // like noPrepNextActivation.
+  if (typeof rig.noDisengageNextActivation !== "boolean") rig.noDisengageNextActivation = false;
   if (typeof rig.suppressImmobile !== "boolean") rig.suppressImmobile = false;
   // Ion Storm (§13, Arc Gun) — EMP active-lockout on the struck target, and the
   // attacker's own Arc Gun overload flag.
@@ -592,6 +632,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     ripostedThisRound: false,
     // Skewer (§13, Lance) — set to the skewerer's id while impaled in the lock.
     skeweredBy: null,
+    // Ground Anchor (§13, Anchor) — set to the anchorer's id while pinned in the lock.
+    anchoredBy: null,
     // Penetrator Rounds (§13, Autocannon) — belt-cycle counter + the ROF-halving
     // downside carried into the attack right after a penetrator shot.
     autocannonShots: 0,
@@ -614,6 +656,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // Tow Chain (§13, Wrecking Ball) — the round the fling recharges by (3-round
     // cooldown from a tow) and a per-activation root flag a successful tow sets.
     towChainCooldownUntil: 0,
+    harpoonWinchCooldownUntil: 0,
     towedThisActivation: false,
     // Suppression Lock (§13, Mini Gun) — which target this rig is grinding down
     // and how many consecutive-fire stacks it has piled on.
@@ -624,6 +667,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // `immobilised` flag): noPrepNextActivation clears at activation end,
     // suppressImmobile clears in Recovery.
     noPrepNextActivation: false,
+    // Dead Weight (§13, Anchor) — mirrors noPrepNextActivation's shape: a
+    // damaging Anchor hit blocks this rig's next Disengage, self-clears at
+    // that activation's end.
+    noDisengageNextActivation: false,
     suppressImmobile: false,
     // Ion Storm (§13, Arc Gun) — an EMP hit blocks the target's equipment
     // actives for its next activation; arcLockedNext overloads the attacker's
@@ -636,6 +683,13 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     lockExpiresRound: 0,
     // Breach Grip (§13, Claw) — location → the round the armour crack expires.
     cracked: {},
+    // Rivet Lock (§13, Rivet Gun) — which target+location this rig is riveting,
+    // how many consecutive-fire stacks it has piled on, and (on the receiving
+    // end) location → the round a seize expires.
+    rivetTarget: null,
+    rivetLoc: null,
+    rivetStacks: 0,
+    rivetSeized: {},
     // Kneecapper (§13, Double MG) — which limbs a Kneecapper rake has tagged;
     // gates the cripple ramp in recompute so ordinary weapons don't cripple.
     kneecapped: {},
@@ -704,6 +758,9 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     engagedWith: null,
     hardened: false,
     actionPenaltyNextActivation: 0,
+    // Dead Weight (§13, Anchor) — mirrored for shape parity (cold kinds never
+    // carry the Anchor upgrade, so this never actually triggers).
+    noDisengageNextActivation: false,
     // Emplacement (§13) — mirrored from makeRig for shape parity (cold kinds
     // never carry the upgrade, so the stance never actually engages).
     emplaced: false,
@@ -712,6 +769,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     // carry the Mortar / Wrecking Ball upgrades, so these never actually fire).
     barrageRoundsLeft: 0,
     towChainCooldownUntil: 0,
+    harpoonWinchCooldownUntil: 0,
     towedThisActivation: false,
     // Piledriver Protocol (§13) — mirrored for shape parity (cold kinds never
     // carry the Siege Maul upgrade, so Momentum never actually builds).
@@ -721,6 +779,12 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     enfiladeShots: 0,
     // Group E per-location state (Breach Grip / Dismember / Kneecapper), mirrored from makeRig.
     cracked: {},
+    // Rivet Lock (§13) — mirrored for shape parity (cold kinds never carry the
+    // Rivet Gun upgrade, so the stack never actually advances).
+    rivetTarget: null,
+    rivetLoc: null,
+    rivetStacks: 0,
+    rivetSeized: {},
     kneecapped: {},
     crippled: {},
     noRepair: {},
@@ -1019,9 +1083,13 @@ function clearEngagement(room, rig) {
   // Skewer (§13, Lance) — the impale can't outlive the lock; clear the mark on
   // both ends however the engagement ends (Disengage, destruction, remove, …).
   if (rig.skeweredBy != null) rig.skeweredBy = null;
+  // Ground Anchor (§13, Anchor) — mirrors Skewer: the anchor can't outlive the
+  // lock, so clear the mark on both ends however the engagement ends.
+  if (rig.anchoredBy != null) rig.anchoredBy = null;
   if (partner) {
     partner.engagedWith = null;
     if (partner.skeweredBy != null) partner.skeweredBy = null;
+    if (partner.anchoredBy != null) partner.anchoredBy = null;
   }
 }
 // Enemy-only, both-alive guard around setEngagement (used by the melee and
@@ -1086,6 +1154,8 @@ function repairRig(rig, loc, amount) {
   if (loc === "hull" && (rig.hullRepairLock || 0) > 0) return;
   // Dismember (§13) — a location sawn past half its original is crippled for good.
   if (rig.noRepair && rig.noRepair[loc]) return;
+  // Rivet Lock (§13) — a seized location can't be repaired while rivets hold.
+  if (rig.rivetSeized && (rig.rivetSeized[loc] || 0) > 0) return;
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   c.sp = Math.min(c.max, c.sp + n);
   if (c.sp > 0) c.destroyed = false;
@@ -1118,6 +1188,28 @@ function crackLocation(room, target, loc) {
   if (!target || !target[loc]) return;
   target.cracked = target.cracked || {};
   target.cracked[loc] = (room?.game?.round || 0) + 1;
+}
+
+// Rivet Lock (§13, Rivet Gun) — stack rivets on the struck location. Consecutive
+// damaging volleys on the SAME target+location ramp; switching either resets to 1.
+// At 3 rivets the location seizes: SP can't be repaired (checked in repairRig) and,
+// if it's a weapon-role location, that rig's long-range weapon jams (fire gate) —
+// both for a two-Recovery window (round N and N+1, swept in runRecovery). The
+// attacker runs +1 heat every rivet volley while the lock is live.
+function rivetHit(room, attacker, target, loc) {
+  if (!attacker || !target || !target[loc]) return;
+  if (attacker.rivetTarget === target.id && attacker.rivetLoc === loc) {
+    attacker.rivetStacks = Math.min(3, (attacker.rivetStacks || 0) + 1);
+  } else {
+    attacker.rivetTarget = target.id;
+    attacker.rivetLoc = loc;
+    attacker.rivetStacks = 1;
+  }
+  bumpHeat(attacker, 1);
+  if (attacker.rivetStacks >= 3) {
+    target.rivetSeized = target.rivetSeized || {};
+    target.rivetSeized[loc] = (room?.game?.round || 0) + 1;
+  }
 }
 
 // Dismember (§13, Circular Saw) — the prototype escalation of Sunder. Chips the
@@ -1224,6 +1316,12 @@ function runRecovery(room) {
         if (rig.cracked[loc] < room.game.round) delete rig.cracked[loc];
       }
     }
+    // Rivet Lock (§13) — sweep out seizes whose expiry round has passed.
+    if (rig.rivetSeized) {
+      for (const loc of Object.keys(rig.rivetSeized)) {
+        if (rig.rivetSeized[loc] < room.game.round) delete rig.rivetSeized[loc];
+      }
+    }
     tickBreach(rig);
     // Barrage (§13, Mortar) — upkeep for a committed tube: +1 heat, emit the
     // per-round apply-SP prompt, then count down. At 0 the mortar unlocks.
@@ -1288,6 +1386,9 @@ function endActivation(room, rig, dice, random) {
   // activation it landed on — clear it here so it doesn't leak into the rig's
   // activation after next.
   rig.noPrepNextActivation = false;
+  // Dead Weight (§13, Anchor) — the no-Disengage pin is scoped to the one
+  // activation it targeted; clear it here so it can't leak forward.
+  rig.noDisengageNextActivation = false;
   // Ion Storm's EMP active-lockout (§13) is scoped to exactly the one activation
   // it penalises — clear it here alongside noPrepNextActivation so it can't leak
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
@@ -1327,6 +1428,7 @@ function combatCtx() {
     pushResolution,
     sunderLocation,
     crackLocation,
+    rivetHit: (room, attacker, target, loc) => rivetHit(room, attacker, target, loc),
     dismemberLocation,
     breachHull,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
@@ -1416,6 +1518,51 @@ function maybeSkewer(room, attacker, target, incomingWeapon, res) {
   return true;
 }
 
+// Dead Weight (§13, Anchor) — a damaging Anchor melee blow pins the struck target
+// under the anchor: it can't Disengage on its next activation. Mirrors the
+// maybeSkewer gate shape (melee only, must land SP, upgrade must be equipped).
+function maybeDeadWeight(room, attacker, target, incomingWeapon, res) {
+  if (incomingWeapon !== "melee") return false;
+  if (!attacker || !target || attacker.destroyed) return false;
+  if (!res || !(res.hits > 0)) return false;
+  const dealtSp = Array.isArray(res.impacts) && res.impacts.some((h) => h.sp > 0);
+  if (!dealtSp) return false;
+  const effect = effectiveWeaponProfile("melee", attacker.weapons?.melee, attacker)?.upgradeEffect;
+  if (!effect?.deadWeight) return false;
+  target.noDisengageNextActivation = true;
+  return true;
+}
+
+// Ground Anchor (§13, Anchor) — a damaging Anchor blow that leaves the target
+// locked to the anchorer drives the anchor in (`anchoredBy`). Mirrors maybeSkewer.
+function maybeGroundAnchor(room, attacker, target, incomingWeapon, res) {
+  if (incomingWeapon !== "melee") return false;
+  if (!attacker || !target || attacker.destroyed) return false;
+  if (!res || !(res.hits > 0)) return false;
+  const dealtSp = Array.isArray(res.impacts) && res.impacts.some((h) => h.sp > 0);
+  if (!dealtSp) return false;
+  const effect = effectiveWeaponProfile("melee", attacker.weapons?.melee, attacker)?.upgradeEffect;
+  if (!effect?.groundAnchor) return false;
+  if (attacker.engagedWith !== target.id || target.engagedWith !== attacker.id) return false;
+  target.anchoredBy = attacker.id;
+  return true;
+}
+
+// Ground Anchor's Disengage payload — one free Anchor strike at the weapon's
+// natural STR (unlike Skewer's flat STR 11). Reuses the resolveAttack path.
+function resolveAnchorStrike(room, anchorer, victim, random) {
+  pushResolution(room, {
+    kind: "anchor", actor: anchorer.owner, rigId: anchorer.id, rolls: [],
+    summary: `${victim.name} tears off ${anchorer.name}'s Anchor — free strike as it breaks the lock.`,
+    effects: ["Ground Anchor — free Anchor strike on Disengage"],
+  });
+  resolveAttack(room, anchorer, victim, {
+    weapon: "melee", target: victim.name,
+    arc: "front", range: "near", aimed: false, aimedLoc: "hull",
+    engaged: anchorer.engagedWith != null,
+  }, random, combatCtx());
+}
+
 // Skewer's Disengage payload — one free STR-11 Lance strike from the skewerer
 // onto the fleeing rig as it tears itself off the point. Reuses the same
 // strOverride escape hatch and resolveAttack path as the Anvil Boss riposte.
@@ -1499,6 +1646,15 @@ function performAction(room, rig, act, a, random) {
       const p = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
       if (p?.upgradeEffect?.barrage) return false;
     }
+    // Rivet Lock (§13, Rivet Gun) — a seized weapon-role location jams this rig's
+    // long-range weapon (the gun arm is riveted shut). Melee is unaffected.
+    if (a.weapon !== "melee" && rig.rivetSeized) {
+      const kind = kindOf(rig);
+      const jammed = Object.keys(rig.rivetSeized).some(
+        (loc) => (rig.rivetSeized[loc] || 0) > 0 && roleOf(kind, loc) === "weapon",
+      );
+      if (jammed) return false;
+    }
     const facedown = target.preparation && target.preparation.faceUp === false;
     if (facedown) {
       const prep = target.preparation;
@@ -1531,6 +1687,10 @@ function performAction(room, rig, act, a, random) {
       maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
       // Skewer — a damaging Lance blow impales the target it just locked.
       maybeSkewer(room, rig, target, a.weapon, res);
+      // Dead Weight — a damaging Anchor blow pins the target's next Disengage.
+      maybeDeadWeight(room, rig, target, a.weapon, res);
+      // Ground Anchor — a damaging Anchor blow drives the anchor into the target it just locked.
+      maybeGroundAnchor(room, rig, target, a.weapon, res);
       return true;
     }
     const res = resolveFire(room, rig, target, a, act, random);
@@ -1538,6 +1698,8 @@ function performAction(room, rig, act, a, random) {
     // round; the riposte still gates on a landed hit and ripostedThisRound.
     if (res) maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
     if (res) maybeSkewer(room, rig, target, a.weapon, res);
+    if (res) maybeDeadWeight(room, rig, target, a.weapon, res);
+    if (res) maybeGroundAnchor(room, rig, target, a.weapon, res);
     return !!res;
   }
   if (act === "move" || act === "sprint") {
@@ -1570,6 +1732,9 @@ function performAction(room, rig, act, a, random) {
     // §engagement — break the melee lock. The budget/`def` guard above already
     // ran (a slot is available). No-op if the rig isn't actually engaged.
     if (rig.engagedWith == null) return false;
+    // Dead Weight (§13, Anchor) — pinned under the anchor: can't break the lock
+    // this activation. Refused without spending a slot; clears at activation end.
+    if (rig.noDisengageNextActivation) return false;
     // Skewer (§13, Lance) — if this rig is impaled by the very partner it's
     // locked to, tearing free provokes one free STR-11 lance strike before the
     // lock breaks. A missing/destroyed skewerer just clears the mark (no strike).
@@ -1577,6 +1742,13 @@ function performAction(room, rig, act, a, random) {
       const skewerer = findRigById(room, rig.skeweredBy);
       if (skewerer && !skewerer.destroyed) resolveSkewerStrike(room, skewerer, rig, random);
       rig.skeweredBy = null;
+    }
+    // Ground Anchor (§13, Anchor) — tearing off the anchor provokes one free
+    // Anchor strike at its natural STR before the lock breaks.
+    if (rig.anchoredBy != null && rig.engagedWith === rig.anchoredBy) {
+      const anchorer = findRigById(room, rig.anchoredBy);
+      if (anchorer && !anchorer.destroyed) resolveAnchorStrike(room, anchorer, rig, random);
+      rig.anchoredBy = null;
     }
     clearEngagement(room, rig);
     bumpHeat(rig, def.heat);
@@ -1860,8 +2032,48 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.momentum = 0; // Piledriver Protocol (§13) — clear stored Momentum on reset
       rig.barrageRoundsLeft = 0;      // Barrage (§13) — clear a committed tube
       rig.towChainCooldownUntil = 0;  // Tow Chain (§13) — clear the fling cooldown
+      rig.harpoonWinchCooldownUntil = 0; // Harpoon Winch (§13) — clear the reel cooldown
       rig.towedThisActivation = false;
+      rig.noDisengageNextActivation = false; // Dead Weight (§13) — clear the Disengage pin on reset
+      // Melee-lock marks (§13) — a reset rebuilds each rig pristine and drops
+      // engagedWith directly (bypassing clearEngagement), so clear the free-strike
+      // marks here too or a stale id survives into the next match and fires a
+      // phantom strike the first time the re-engaged partner Disengages.
+      rig.skeweredBy = null;     // Skewer (§13, Lance)
+      rig.anchoredBy = null;     // Ground Anchor (§13, Anchor)
+      // Rivet Lock (§13, Rivet Gun) — clear the attacker's stacking counters and
+      // the target's seizes, else a carried stack instantly seizes on the first
+      // hit of the next match.
+      rig.rivetTarget = null;
+      rig.rivetLoc = null;
+      rig.rivetStacks = 0;
+      rig.rivetSeized = {};
+      // §13 status effects — a reset returns each rig to its commissioned state,
+      // so clear every remaining transient combat status. A stale counter/stack/
+      // paint or a leftover per-location map would otherwise misfire on the first
+      // action of the next match (e.g. an instant Suppression pin, a phantom
+      // Fire Control volley, or a location still marked cracked/no-repair).
+      rig.burning = 0;                    // Napalm / Conflagration DoT
+      rig.suppressTarget = null;          // Suppression Lock (Mini Gun)
+      rig.suppressStacks = 0;
+      rig.suppressImmobile = false;
+      rig.autocannonShots = 0;            // Penetrator Rounds (Autocannon) belt cadence
+      rig.autocannonSlowNext = false;
+      rig.enfiladeShots = 0;              // Enfilade (Sniper Cannon) ricochet cadence
+      rig.arcLockedNext = false;          // Ion Storm (Arc Gun) self-overload
+      rig.noPrepNextActivation = false;   // Suppression Lock / Ion Storm scoped pins
+      rig.noActivesNextActivation = false;
+      rig.movedThisActivation = false;
+      rig.lockedTarget = null;            // Fire Control Lock (Missile Barrage) paint
+      rig.lockExpiresRound = 0;
+      rig.cracked = {};                   // Breach Grip (Claw)
+      rig.crippled = {};                  // Dismember (Circular Saw) — permanent within a match, cleared between
+      rig.noRepair = {};
+      rig.kneecapped = {};                // Kneecapper (Double MG) per-limb tags
       delete rig._blastRolled;
+      // Re-derive SP-dependent state (armsSuppressed, cripple ramps) now that
+      // every location is back at max and the tag maps are cleared.
+      recompute(rig);
     }
     room.game.started = false;
     room.game.phase = "setup";
@@ -2239,4 +2451,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation, rivetHit };

@@ -154,6 +154,11 @@ export function computeStr(attacker, profile, opts) {
       || (cap != null && (opts.target.engine?.heat || 0) > cap);
     if (disrupted) bonus += 3;
   }
+  // Taut Cable — +3 STR against a target already pinned down: immobilised, or
+  // held in a melee lock (engaged).
+  if (opts.target && profile.upgradeEffect?.vsPinned) {
+    if (opts.target.immobilised || opts.target.engagedWith != null) bonus += 3;
+  }
   // Redline Governor — the hotter the attacker runs past its own class cap,
   // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
   if (profile.upgradeEffect?.redline) {
@@ -365,6 +370,11 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       if (profile.upgradeEffect?.breachGrip && impacts.some((h) => h.sp > 0)) {
         ctx.crackLocation?.(room, target, location);
       }
+      // Rivet Lock (§13, Rivet Gun) — a damaging volley drives a rivet into the
+      // struck location; ctx stacks it and seizes at 3.
+      if (profile.upgradeEffect?.rivetLock && impacts.some((h) => h.sp > 0)) {
+        ctx.rivetHit?.(room, attacker, target, location);
+      }
       // Dismember (§13, Circular Saw) — the prototype escalation of Sunder: also
       // grinds max SP down (via ctx) and permanently cripples the location once
       // it drops to <= half its commissioned original.
@@ -431,6 +441,20 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       pushInstruction(`Tow Chain — fling ${target.name} up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.`);
     } else {
       pushInstruction(`Tow Chain recharging — ${attacker.name}'s hit lands with no fling.`);
+    }
+  }
+  // G1e — Harpoon Winch (Harpoon, Prototype): a damaging shot spears the target
+  // and reels it up to 4" toward the attacker (narrated). The reel roots the
+  // attacker for the rest of its activation and runs it +2 heat; 3-round cooldown,
+  // during which the harpoon fires normally with no reel. Mirrors Tow Chain.
+  if (profile.upgradeEffect?.harpoonWinch && landedDamage) {
+    if (round >= (attacker.harpoonWinchCooldownUntil || 0)) {
+      ctx.bumpHeat(attacker, 2);
+      attacker.towedThisActivation = true;
+      attacker.harpoonWinchCooldownUntil = round + 3;
+      pushInstruction(`Harpoon Winch — reel ${target.name} up to 4" toward you (move the mini). You are rooted until end of activation; +2 heat.`);
+    } else {
+      pushInstruction(`Harpoon Winch recharging — ${attacker.name}'s hit lands with no reel.`);
     }
   }
   // G1c — Enfilade (Sniper Cannon, Prototype): only AIMED shots feed the cadence

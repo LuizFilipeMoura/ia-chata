@@ -1,0 +1,236 @@
+/* V2 Join screen — ported from design-reference/oil-iron-terminal.html
+   lines 90-128. Every selector scoped under .v2-root; colors use --v2-* tokens. */
+
+.v2-root .v2-join {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 18px;
+  position: relative;
+}
+/* diagonal hazard wash behind the card */
+.v2-root .v2-join::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(20, 16, 8, 0) 0 22px,
+    rgba(168, 100, 28, 0.05) 22px 44px
+  );
+  pointer-events: none;
+}
+
+.v2-root .v2-join-card {
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  background: linear-gradient(180deg, #161b23, #0e1218);
+  border: 1px solid var(--v2-line);
+  border-top-color: var(--v2-rivet);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -30px 60px rgba(0, 0, 0, 0.5),
+    0 20px 50px rgba(0, 0, 0, 0.7);
+  padding: 34px 30px 30px;
+}
+
+/* corner rivets */
+.v2-root .v2-join-rivet {
+  position: absolute;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #69727f, #20252e 60%, rgba(0, 0, 0, 0.7));
+}
+.v2-root .v2-join-rivet--l { left: 8px; }
+.v2-root .v2-join-rivet--r { right: 8px; }
+
+/* hazard stripe under the rivets */
+.v2-root .v2-join-hazard {
+  height: 14px;
+  background: repeating-linear-gradient(-45deg, #141008 0 11px, var(--v2-oil-deep) 11px 22px);
+  opacity: 0.85;
+  margin-bottom: 26px;
+}
+
+.v2-root .v2-join-head {
+  text-align: center;
+}
+.v2-root .v2-join-title {
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 44px;
+  line-height: 0.9;
+  letter-spacing: 0.06em;
+  color: var(--v2-oil);
+  text-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.75),
+    0 0 30px rgba(231, 154, 61, 0.25);
+}
+.v2-root .v2-join-title span {
+  color: var(--v2-txt-faint);
+  font-style: normal;
+  margin: 0 8px;
+}
+.v2-root .v2-join-tagline {
+  font-family: var(--v2-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.42em;
+  color: var(--v2-txt-faint);
+  margin-top: 12px;
+}
+
+.v2-root .v2-join-rule {
+  height: 1px;
+  background: var(--v2-line);
+  margin: 26px 0 22px;
+}
+
+.v2-root .v2-join-label {
+  display: block;
+  font-family: var(--v2-mono);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: var(--v2-txt-faint);
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+
+.v2-root .v2-join-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #07090c;
+  border: 1px solid var(--v2-line);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
+  padding: 0 12px;
+  margin-bottom: 16px;
+}
+.v2-root .v2-join-ic {
+  color: var(--v2-oil-deep);
+  font-family: var(--v2-mono);
+}
+.v2-root .v2-join-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--v2-txt);
+  font-family: var(--v2-disp);
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  padding: 13px 0;
+}
+.v2-root .v2-join-input--code {
+  color: var(--v2-oil-hi);
+  font-family: var(--v2-mono);
+  font-size: 16px;
+  letter-spacing: 0.18em;
+}
+
+/* the Commander field carries a little extra breathing room before the sides */
+.v2-root .v2-join-field:has(.v2-join-input:not(.v2-join-input--code)) {
+  margin-bottom: 20px;
+}
+
+.v2-root .v2-join-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.v2-root .v2-side {
+  position: relative;
+  padding: 15px 12px;
+  text-align: left;
+  cursor: pointer;
+  background: linear-gradient(180deg, #141820, #0d1015);
+  border: 1px solid var(--v2-line);
+}
+.v2-root .v2-side--b:not(.is-sel):hover {
+  border-color: var(--v2-rivet);
+}
+.v2-root .v2-side-tag {
+  font-family: var(--v2-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  color: var(--v2-txt-faint);
+  margin-bottom: 5px;
+}
+.v2-root .v2-side-name {
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  color: var(--v2-txt-dim);
+}
+
+/* selected — glowing oil (mirrors the mockup's Side A "active" look) */
+.v2-root .v2-side.is-sel {
+  background: linear-gradient(180deg, #241a0d, #1a1207);
+  border-color: var(--v2-oil-deep);
+  box-shadow:
+    inset 0 0 0 1px rgba(231, 154, 61, 0.3),
+    0 0 16px rgba(231, 154, 61, 0.18);
+}
+.v2-root .v2-side.is-sel .v2-side-tag {
+  color: var(--v2-oil);
+}
+.v2-root .v2-side.is-sel .v2-side-name {
+  color: var(--v2-oil-hi);
+}
+.v2-root .v2-side.is-sel::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--v2-oil);
+  box-shadow: 0 0 10px var(--v2-oil);
+  animation: v2-lampfast 2s infinite;
+}
+
+.v2-root .v2-join-cta {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(180deg, #f0a94a, #c47a26);
+  border: 1px solid #ffcf82;
+  border-bottom: 3px solid #7c4d14;
+  color: #1a1206;
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(231, 154, 61, 0.3);
+}
+.v2-root .v2-join-cta:not([disabled]):hover {
+  filter: brightness(1.08);
+}
+.v2-root .v2-join-cta[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: saturate(0.6);
+}
+
+.v2-root .v2-join-status {
+  text-align: center;
+  font-family: var(--v2-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--v2-ok);
+  margin: 16px 0 0;
+}
+.v2-root .v2-join-status--err {
+  color: var(--v2-crit);
+}

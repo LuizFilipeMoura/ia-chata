@@ -378,10 +378,14 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Sniper Cannon | 1 | 12 | 22" | +2 | −0.15 | 0–28" |
 | Siege Maul | 1 | 13 | 8" | +1 | −0.30 | 0–16" |
 | Missile Barrage | 4 | 9 | 20" | +1 | −0.15 | 6–34" |
+| Harpoon | 1 | 12 | 14" | +2 | −0.28 | 0–22" |
+| Rivet Gun | 6 | 4 | 6" | +2 | −0.40 | 0–14" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose ACC up close.
 
 > The **Siege Maul** is a close-in demolition gun: the highest STR on the board, but the shortest range of any ranged weapon.
+
+> The **Harpoon** is a heavy line-thrower — a Sniper Cannon–grade STR punch with a shorter, closer sweet spot. The **Rivet Gun** is a rapid, low-STR fastener gun with the shortest max range of any weapon in the table — volume, not punch.
 
 ### Melee Weapons
 
@@ -395,6 +399,8 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Wrecking Ball | 1 | 12 | – | 2 |
 | Bulwark Shield | 1 | 6 | – | 2 |
 | Flamethrower | 4 | 7 | +1 | 2 |
+| Anchor | 1 | 12 | – | 2 |
+| Pressure Claw | 2 | 9 | +1 | 2 |
 
 ### Weapon Upgrades
 
@@ -418,6 +424,10 @@ Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures*
 | Wrecking Ball | Haymaker (+3 STR) | Momentum Swing (+2 STR charge) | Tow Chain |
 | Bulwark Shield | Tower Shield (front+side) | Anvil Boss (riposte) | Emplacement |
 | Flamethrower | Sticky Fuel (Rend) | Napalm (Burning) | Conflagration |
+| Harpoon | Barbed Head (Impale) | Taut Cable (+3 STR vs pinned/engaged) | Harpoon Winch |
+| Rivet Gun | Rapid Feed (+2 ROF) | Staple Burst (4+ hits → −1 action) | Rivet Lock |
+| Anchor | Fluked Head (+3 STR) | Dead Weight (no Disengage next) | Ground Anchor |
+| Pressure Claw | Hardened Jaws (Armour Piercing) | Crush Grip (−1 max SP) | Hydraulic Vice |
 
 #### Tuned / Prototype Upgrade Mechanics
 
@@ -448,6 +458,11 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Barrage** (Mortar, Prototype) — the **Barrage** action (1 slot) commits the Mortar to a shelled zone. The engine emits a player instruction — *"Barrage — place a shelled-zone marker within 6–34" of this Rig; it shells a 3" zone for 2 rounds. Each round, apply 1 SP to every rig in the zone (players adjudicate who's inside)."* — and sets `barrageRoundsLeft = 2`. While a barrage is active the Mortar is **locked** (it can't fire a direct shot; melee is unaffected), and each **Recovery** the Rig takes **+1 heat** (upkeep) and emits the per-round apply-SP prompt before counting down. After 2 Recoveries the barrage ends and the Mortar unlocks. A Rig can't start a new Barrage while one is still running, and only a Mortar carrying this upgrade can Barrage.
 - **Tow Chain** (Wrecking Ball, Prototype) — a spatial fling, narrated rather than simulated. On a damaging Wrecking Ball hit, if the chain is charged (`round ≥ towChainCooldownUntil`), the engine emits a player instruction — *"Tow Chain — fling &lt;target&gt; up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat."* The attacker takes **+2 heat**, is **rooted for the rest of this activation** (no Move/Sprint after the tow), and the fling goes on a **3-round cooldown** (`towChainCooldownUntil = round + 3`). While recharging, the Wrecking Ball hits normally with no fling.
 - **Kneecapper** (Double MG, Prototype) — this Double MG only ever strikes limbs (Arms or Legs — whatever the hit location resolves to is remapped onto one if it isn't already): Hull and Engine can **never** be damaged by it, on any arc — not even the §8 cook-off/cascade from a limb hitting 0 SP spills into them (it *cripples, never kills*). Against limbs it also bypasses its own Raking Fire front-arc auto-fail, at Raking Fire's side-arc value (+4 STR); side/rear keep their normal Raking Fire bonuses. A limb a Kneecapper has raked to **≤ half** max SP is progressively crippled: a raked Leg keeps re-flagging Speed halved next round for as long as it stays at or below half, and a raked Arm halves that Rig's own ROF (**all** weapons) until repaired back above half. Only limbs a Kneecapper actually hit ramp — ordinary weapons impose no half-limb debuff — and a raked limb repaired above half is re-armable, so **switching limbs resets the ramp**.
+- **Taut Cable** (Harpoon, Tuned) — +3 STR against a target already pinned down: immobilised, or held in a melee lock (engaged).
+- **Harpoon Winch** (Harpoon, Prototype) — a spatial reel, narrated rather than simulated. On a damaging Harpoon hit, if charged (`round ≥ harpoonWinchCooldownUntil`), the engine emits a player instruction to reel the target up to 4" toward the attacker. The attacker takes +2 heat, is rooted for the rest of this activation, and the reel goes on a 3-round cooldown. While recharging, the harpoon fires normally with no reel.
+- **Dead Weight** (Anchor, Tuned) — a damaging Anchor blow pins the struck target under the anchor: it cannot Disengage on its next activation (scoped to that one activation).
+- **Ground Anchor** (Anchor, Prototype) — a damaging Anchor blow that leaves the target locked to the anchorer drives the anchor in. If that target Disengages, it first eats a free Anchor strike (the Anchor's natural STR) as it tears free, then the lock breaks. The mark clears with the lock.
+- **Rivet Lock** (Rivet Gun, Prototype) — consecutive damaging volleys on the *same* location stack rivets; switching target or location resets to 1. At 3 rivets the location seizes: its SP can't be repaired, and a weapon-role location (a rig's Arms) jams the rig's long-range weapon for a round. Seizes expire in Recovery (round N and N+1). The attacker runs +1 heat every rivet volley while stacking. Fully non-spatial.
 
 ---
 

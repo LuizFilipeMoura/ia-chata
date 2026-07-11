@@ -1,0 +1,299 @@
+/* V2 Quartermaster chat panel — dieselpunk terminal look ported from
+   design-reference/oil-iron-terminal.html:453-475. All rules scoped under
+   .v2-root so they never touch V1's global chat styles. */
+
+.v2-root .v2-qm-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  flex-direction: column;
+  max-width: 720px;
+  margin: 0 auto;
+  background:
+    radial-gradient(130% 90% at 50% -20%, rgba(231, 154, 61, .06), transparent 55%),
+    var(--v2-iron-950);
+}
+.v2-root .v2-qm-panel.v2-qm-open {
+  display: flex;
+}
+
+/* ---- header ---- */
+.v2-root .v2-qm-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--v2-line);
+  background: var(--v2-iron-900);
+}
+.v2-root .v2-qm-badge {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(from 20deg, #2a1c0c, #5a3c14, #2a1c0c);
+  border: 1px solid var(--v2-oil-deep);
+  font-size: 15px;
+}
+.v2-root .v2-qm-titles {
+  flex: 1;
+  min-width: 0;
+}
+.v2-root .v2-qm-title {
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .08em;
+  color: var(--v2-oil);
+}
+.v2-root .v2-qm-sub {
+  font-family: var(--v2-mono);
+  font-size: 8px;
+  letter-spacing: .16em;
+  color: var(--v2-txt-faint);
+  margin-top: 2px;
+}
+.v2-root .v2-qm-lamp {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--v2-ok);
+  box-shadow: 0 0 8px var(--v2-ok);
+  animation: v2-lampfast 2s infinite;
+}
+
+/* ---- toolbar ---- */
+.v2-root .v2-qm-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.v2-root .v2-qm-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: var(--v2-iron-850);
+  border: 1px solid var(--v2-line);
+  color: var(--v2-txt-dim);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.v2-root .v2-qm-chip:hover {
+  border-color: var(--v2-oil-deep);
+}
+.v2-root .v2-qm-chip.v2-qm-active {
+  border-color: var(--v2-oil);
+  color: var(--v2-oil);
+  box-shadow: inset 0 0 0 1px rgba(231, 154, 61, .4);
+}
+.v2-root .v2-qm-x:hover {
+  border-color: var(--v2-ember);
+  color: var(--v2-ember-hi);
+}
+.v2-root .v2-qm-lang {
+  height: 30px;
+  padding: 0 6px;
+  background: var(--v2-iron-850);
+  border: 1px solid var(--v2-line);
+  color: var(--v2-txt-dim);
+  font-family: var(--v2-mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  cursor: pointer;
+}
+
+/* ---- status row ---- */
+.v2-root .v2-qm-status {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 0 16px;
+  font-family: var(--v2-mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: var(--v2-txt-faint);
+}
+.v2-root .v2-qm-status:not(:empty) {
+  padding: 6px 16px;
+}
+
+/* ---- messages ---- */
+.v2-root .v2-qm-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v2-root .v2-qm-bubble {
+  font-family: var(--v2-disp);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.v2-root .v2-qm-user {
+  align-self: flex-end;
+  max-width: 78%;
+  padding: 11px 14px;
+  background: linear-gradient(180deg, #241a0d, #1a1207);
+  border: 1px solid var(--v2-oil-deep);
+  color: var(--v2-oil-hi);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.v2-root .v2-qm-bot {
+  align-self: flex-start;
+  max-width: 82%;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-850));
+  border: 1px solid var(--v2-line);
+  color: var(--v2-txt);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.v2-root .v2-qm-bot.v2-qm-pending {
+  opacity: .8;
+}
+.v2-root .v2-qm-answer {
+  white-space: normal;
+}
+.v2-root .v2-qm-answer > :first-child { margin-top: 0; }
+.v2-root .v2-qm-answer > :last-child { margin-bottom: 0; }
+.v2-root .v2-qm-answer p { margin: .5em 0; }
+.v2-root .v2-qm-answer ul,
+.v2-root .v2-qm-answer ol { margin: .5em 0; padding-left: 1.3em; }
+.v2-root .v2-qm-answer code {
+  font-family: var(--v2-mono);
+  font-size: .9em;
+  background: var(--v2-iron-950);
+  padding: 1px 4px;
+  border: 1px solid var(--v2-line-soft);
+}
+.v2-root .v2-qm-answer b,
+.v2-root .v2-qm-answer strong { color: var(--v2-oil); }
+
+/* ---- reasoning disclosure (mockup 464-465) ---- */
+.v2-root .v2-qm-think {
+  margin-bottom: 8px;
+}
+.v2-root .v2-qm-think > summary {
+  font-family: var(--v2-mono);
+  font-size: 8px;
+  letter-spacing: .16em;
+  color: var(--v2-txt-faint);
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 6px;
+}
+.v2-root .v2-qm-think > summary::-webkit-details-marker { display: none; }
+.v2-root .v2-qm-think-text {
+  padding: 10px 13px;
+  background: var(--v2-iron-950);
+  border: 1px dashed var(--v2-line);
+  color: var(--v2-txt-faint);
+  font-family: var(--v2-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+/* ---- suggested prompts ---- */
+.v2-root .v2-qm-prompts {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+.v2-root .v2-qm-prompt {
+  padding: 8px 12px;
+  background: var(--v2-iron-850);
+  border: 1px solid var(--v2-line);
+  color: var(--v2-txt-dim);
+  font-family: var(--v2-disp);
+  font-size: 11px;
+  letter-spacing: .02em;
+  cursor: pointer;
+}
+.v2-root .v2-qm-prompt:hover {
+  border-color: var(--v2-oil-deep);
+  color: var(--v2-oil);
+}
+
+/* ---- input row (mockup 469-473) ---- */
+.v2-root .v2-qm-input {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--v2-line);
+  background: var(--v2-iron-900);
+}
+.v2-root .v2-qm-mic {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #f0663f, #b8351f);
+  border: 1px solid #ff8a6a;
+  color: #fff;
+  font-size: 19px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(229, 83, 58, .4);
+}
+.v2-root .v2-qm-mic:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.v2-root .v2-qm-mic.v2-qm-recording {
+  animation: v2-lampfast 1s infinite;
+}
+.v2-root .v2-qm-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--v2-iron-950);
+  border: 1px solid var(--v2-line);
+  padding: 0 14px;
+}
+.v2-root .v2-qm-field textarea {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--v2-txt);
+  font-family: var(--v2-disp);
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 13px 0;
+  resize: none;
+  max-height: 120px;
+}
+.v2-root .v2-qm-field textarea::placeholder {
+  color: var(--v2-txt-faint);
+}
+.v2-root .v2-qm-send {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(180deg, #f0a94a, #c47a26);
+  border: 1px solid #ffcf82;
+  color: #1a1206;
+  font-size: 18px;
+  cursor: pointer;
+}
+.v2-root .v2-qm-send:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
