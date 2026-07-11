@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import "../styles/shell.css";
 import { useRoomState, useRoomDispatch } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
@@ -48,15 +48,18 @@ export function Shell({
 
       <header className="v2-strip">
         <div className="v2-brand">
-          <div className="v2-brand-badge"><div className="v2-brand-core" /></div>
+          <div className="v2-brand-badge v2-badge"><div className="v2-brand-core" /></div>
           <div className="v2-brand-txt">
-            <div className="v2-brand-name">OIL &amp; IRON</div>
-            <div className="v2-brand-sub">RIG CONTROL TERMINAL · MK.IV</div>
+            <div className="v2-brand-name v2-title">OIL &amp; IRON</div>
+            <div className="v2-brand-sub v2-eyebrow">RIG CONTROL TERMINAL · MK.IV</div>
           </div>
         </div>
         <div className="v2-strip-spacer" />
         <div className="v2-strip-meta">
-          <div className="v2-link"><span className="v2-lamp v2-lamp--ok" />LINK ·LOCAL</div>
+          <div className="v2-link">
+            <span className="v2-lamp v2-lamp--ok" style={{ "--v2-lamp-speed": "2.4s" } as CSSProperties} />
+            LINK ·LOCAL
+          </div>
           <div className="v2-room">RM// {session?.room}</div>
           <button type="button" className="v2-gloss-btn" aria-label="Glossary" onClick={() => onGlossary?.()}>ⓘ</button>
         </div>
@@ -82,7 +85,7 @@ export function Shell({
       <main className="v2-screen">{children}</main>
 
       <footer className="v2-dock">
-        <div className="v2-dock-label">CMD DOCK</div>
+        <div className="v2-dock-label v2-eyebrow">CMD DOCK</div>
         <div className="v2-strip-spacer" />
         <button type="button" className="v2-dock-btn" title="Rulebook" onClick={() => onRulebook?.()}>
           <span>🛠</span>Rulebook
@@ -102,8 +105,8 @@ export function Shell({
       </footer>
 
       {confirmLeave && (
-        <div className="v2-leave-scrim" onClick={() => setConfirmLeave(false)}>
-          <section className="v2-leave" role="dialog" aria-modal="true"
+        <div className="v2-leave-scrim v2-scrim" onClick={() => setConfirmLeave(false)}>
+          <section className="v2-leave v2-panel" role="dialog" aria-modal="true"
             aria-labelledby="v2LeaveTitle" onClick={(e) => e.stopPropagation()}>
             <div id="v2LeaveTitle" className="v2-leave-title">Leave room</div>
             <p className="v2-leave-copy">
