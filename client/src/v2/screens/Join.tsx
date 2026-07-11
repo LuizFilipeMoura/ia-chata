@@ -4,12 +4,14 @@ import "../styles/join.css";
 interface Props {
   onJoin: (room: string, name: string, side: string) => void;
   error: string;
+  onSeed?: (first: "a" | "b") => void;
 }
 
-export function Join({ onJoin, error }: Props) {
+export function Join({ onJoin, error, onSeed }: Props) {
   const [room, setRoom] = useState("");
   const [name, setName] = useState("");
   const [side, setSide] = useState("a");
+  const [seeding, setSeeding] = useState(false);
 
   const ready = room.trim().length > 0 && !!side;
   const status = ready
@@ -93,6 +95,31 @@ export function Join({ onJoin, error }: Props) {
           >
             Enter The Yard ▸
           </button>
+
+          {onSeed && !seeding && (
+            <button
+              type="button"
+              className="v2-join-seed"
+              onClick={() => setSeeding(true)}
+            >
+              Seed Test Battle ▸
+            </button>
+          )}
+
+          {onSeed && seeding && (
+            <div className="v2-join-seedpick" role="group" aria-label="Seed opening turn">
+              <div className="v2-join-label">Who acts first?</div>
+              <button type="button" className="v2-join-seedbtn" onClick={() => onSeed("a")}>
+                Your turn
+              </button>
+              <button type="button" className="v2-join-seedbtn" onClick={() => onSeed("b")}>
+                Enemies turn
+              </button>
+              <button type="button" className="v2-join-seedcancel" onClick={() => setSeeding(false)}>
+                Cancel
+              </button>
+            </div>
+          )}
 
           {error ? (
             <p className="v2-join-status v2-join-status--err">{error}</p>

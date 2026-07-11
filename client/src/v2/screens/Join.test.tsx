@@ -21,3 +21,23 @@ test("shows the error line when provided", () => {
   render(<Join onJoin={vi.fn()} error="Room is full." />);
   expect(screen.getByText("Room is full.")).toBeInTheDocument();
 });
+
+test("seed CTA opens the turn picker and fires onSeed with the chosen side", async () => {
+  const user = userEvent.setup();
+  const onSeed = vi.fn();
+  render(<Join onJoin={vi.fn()} error="" onSeed={onSeed} />);
+
+  await user.click(screen.getByRole("button", { name: /Seed Test Battle/i }));
+  await user.click(screen.getByRole("button", { name: /Enemies turn/i }));
+
+  expect(onSeed).toHaveBeenCalledWith("b");
+});
+
+test("seed 'Your turn' fires onSeed with a", async () => {
+  const user = userEvent.setup();
+  const onSeed = vi.fn();
+  render(<Join onJoin={vi.fn()} error="" onSeed={onSeed} />);
+  await user.click(screen.getByRole("button", { name: /Seed Test Battle/i }));
+  await user.click(screen.getByRole("button", { name: /Your turn/i }));
+  expect(onSeed).toHaveBeenCalledWith("a");
+});
