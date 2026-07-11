@@ -443,6 +443,20 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       pushInstruction(`Tow Chain recharging — ${attacker.name}'s hit lands with no fling.`);
     }
   }
+  // G1e — Harpoon Winch (Harpoon, Prototype): a damaging shot spears the target
+  // and reels it up to 4" toward the attacker (narrated). The reel roots the
+  // attacker for the rest of its activation and runs it +2 heat; 3-round cooldown,
+  // during which the harpoon fires normally with no reel. Mirrors Tow Chain.
+  if (profile.upgradeEffect?.harpoonWinch && landedDamage) {
+    if (round >= (attacker.harpoonWinchCooldownUntil || 0)) {
+      ctx.bumpHeat(attacker, 2);
+      attacker.towedThisActivation = true;
+      attacker.harpoonWinchCooldownUntil = round + 3;
+      pushInstruction(`Harpoon Winch — reel ${target.name} up to 4" toward you (move the mini). You are rooted until end of activation; +2 heat.`);
+    } else {
+      pushInstruction(`Harpoon Winch recharging — ${attacker.name}'s hit lands with no reel.`);
+    }
+  }
   // G1c — Enfilade (Sniper Cannon, Prototype): only AIMED shots feed the cadence
   // (per the design). Count every aimed shot fired; on every 3rd, emit a ricochet
   // instruction — the player picks the rig in line of sight behind the target and

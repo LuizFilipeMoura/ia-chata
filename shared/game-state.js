@@ -475,6 +475,7 @@ function ensureRigShape(rig) {
   // Tow Chain (§13, Wrecking Ball) — the round the fling recharges by, and the
   // per-activation root flag a successful tow sets (blocks Move/Sprint after).
   if (typeof rig.towChainCooldownUntil !== "number") rig.towChainCooldownUntil = 0;
+  if (typeof rig.harpoonWinchCooldownUntil !== "number") rig.harpoonWinchCooldownUntil = 0;
   if (typeof rig.towedThisActivation !== "boolean") rig.towedThisActivation = false;
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
@@ -655,6 +656,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     // Tow Chain (§13, Wrecking Ball) — the round the fling recharges by (3-round
     // cooldown from a tow) and a per-activation root flag a successful tow sets.
     towChainCooldownUntil: 0,
+    harpoonWinchCooldownUntil: 0,
     towedThisActivation: false,
     // Suppression Lock (§13, Mini Gun) — which target this rig is grinding down
     // and how many consecutive-fire stacks it has piled on.
@@ -767,6 +769,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     // carry the Mortar / Wrecking Ball upgrades, so these never actually fire).
     barrageRoundsLeft: 0,
     towChainCooldownUntil: 0,
+    harpoonWinchCooldownUntil: 0,
     towedThisActivation: false,
     // Piledriver Protocol (§13) — mirrored for shape parity (cold kinds never
     // carry the Siege Maul upgrade, so Momentum never actually builds).
@@ -2029,6 +2032,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.momentum = 0; // Piledriver Protocol (§13) — clear stored Momentum on reset
       rig.barrageRoundsLeft = 0;      // Barrage (§13) — clear a committed tube
       rig.towChainCooldownUntil = 0;  // Tow Chain (§13) — clear the fling cooldown
+      rig.harpoonWinchCooldownUntil = 0; // Harpoon Winch (§13) — clear the reel cooldown
       rig.towedThisActivation = false;
       rig.noDisengageNextActivation = false; // Dead Weight (§13) — clear the Disengage pin on reset
       delete rig._blastRolled;

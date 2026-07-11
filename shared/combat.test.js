@@ -1021,6 +1021,21 @@ test("Tow Chain emits the fling instruction, adds +2 heat, roots the attacker, a
   assert.equal(ball3.towChainCooldownUntil, 0); // never charged/spent
 });
 
+test("Harpoon Winch: a damaging hit emits a reel instruction, roots + heats the attacker, sets cooldown", () => {
+  const rig = makeRig(1, "Reeler", "light", "a", { longRange: "Harpoon", melee: "Anchor", longRangeUpgrade: "harpoon-winch" });
+  const target = makeRig(2, "Prey", "light", "b", { longRange: "Harpoon", melee: "Anchor" });
+  const ctx = makeCtx();
+  const room = { rigs: [rig, target], game: { round: 2 } };
+  resolveAttack(room, rig, target, {
+    weapon: "longRange", target: "Prey", arc: "front", distance: 10,
+    dice: { toHit: [6], impacts: [6], location: 1 },
+  }, () => 0, ctx);
+  assert.equal(rig.towedThisActivation, true);
+  assert.equal(rig.harpoonWinchCooldownUntil, 5); // round 2 + 3
+  const reel = ctx.resolutions.some((e) => /reel/i.test(e.summary || ""));
+  assert.equal(reel, true);
+});
+
 test("Kneecapper tags the raked limb on a damaging hit; a non-kneecapper Double MG does not", () => {
   const attacker = makeRig(1, "K", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
