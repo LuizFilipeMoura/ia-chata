@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChatProvider } from "../../components/chat/ChatContext";
-import { ChatPanel } from "../../components/chat/ChatPanel";
+import { ChatPanel } from "../chat/ChatPanel";
 import { useUi } from "../../state/UiStateContext";
 
 export function V2ChatMount({ onUnreadChange }: { onUnreadChange?: (v: boolean) => void }) {
