@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import "../styles/shell.css";
 import { useRoomState, useRoomDispatch } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
+import { useMySide } from "../../hooks/useMySide";
 
 type Channel = "yard";
 const CHANNELS: { id: string; num: string; label: string; enabled: boolean }[] = [
@@ -25,6 +26,7 @@ export function Shell({
   const { game, session } = useRoomState();
   const dispatch = useRoomDispatch();
   const sendCommand = useCommands();
+  const mySide = useMySide();
   const [confirmLeave, setConfirmLeave] = useState(false);
   const canUndo = !!game?.canUndo;
 
@@ -88,7 +90,7 @@ export function Shell({
         </button>
         {canUndo && (
           <button type="button" className="v2-dock-btn"
-            onClick={() => sendCommand("undo", { side: session?.side })}>
+            onClick={() => sendCommand("undo", { side: mySide })}>
             <span>↺</span>Revert
           </button>
         )}
