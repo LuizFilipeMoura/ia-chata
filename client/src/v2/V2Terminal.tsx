@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Shell } from "./components/Shell";
 import { Squadron } from "./screens/Squadron";
 import { TurnBanner } from "./components/TurnBanner";
+import { ImpersonateChip } from "./components/ImpersonateChip";
 import { RigTerminal } from "./overlays/RigTerminal";
 import { CommissionWizard } from "./overlays/CommissionWizard";
 import { OutcomeBanner } from "./overlays/OutcomeBanner";
@@ -40,6 +41,7 @@ export function V2Terminal() {
       onGlossary={() => setGlossaryOpen(true)}
       chatUnread={chatUnread}
     >
+      <ImpersonateChip />
       <TurnBanner onCommission={() => setCommissionOpen(true)} />
       <Squadron onOpenRig={setOpenRigId} onCommission={() => setCommissionOpen(true)} />
       {openRig && (

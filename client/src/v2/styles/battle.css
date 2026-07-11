@@ -81,7 +81,7 @@
   background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-850));
   border: 1px solid var(--v2-line);
   border-left: 4px solid var(--v2-rivet);
-  border-radius: 10px;
+  border-radius: 0;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 6px 16px rgba(0, 0, 0, 0.5);
 }
 /* tone-colored left border */
@@ -126,7 +126,7 @@
 .v2-root .v2-tb-btn {
   white-space: nowrap;
   padding: 9px 16px;
-  border-radius: 8px;
+  border-radius: 0;
   font-family: var(--v2-disp);
   font-weight: 600;
   font-size: 12px;
@@ -432,4 +432,40 @@
 .v2-root .v2-outcome-new:hover {
   border-color: var(--v2-oil);
   filter: brightness(1.08);
+}
+
+/* ---- Impersonate chip (.v2-impersonate*) — dev/test-only "Acting as: A / B"
+   toggle shown in seeded rooms, flips the app-wide impersonated side. ---- */
+.v2-root .v2-impersonate {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  font-family: var(--v2-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--v2-txt-dim);
+}
+.v2-root .v2-impersonate-label {
+  color: var(--v2-txt-faint);
+}
+.v2-root .v2-impersonate-btn {
+  min-width: 2rem;
+  padding: 0.2rem 0.5rem;
+  background: var(--v2-iron-800);
+  border: 1px solid var(--v2-line);
+  border-radius: 4px;
+  color: var(--v2-txt);
+  font: inherit;
+  cursor: pointer;
+}
+.v2-root .v2-impersonate-btn:hover {
+  border-color: var(--v2-rivet);
+}
+.v2-root .v2-impersonate-btn[aria-pressed="true"] {
+  border-color: var(--v2-oil);
+  color: var(--v2-oil-hi);
+  outline: 2px solid var(--v2-oil);
+  outline-offset: -1px;
 }
