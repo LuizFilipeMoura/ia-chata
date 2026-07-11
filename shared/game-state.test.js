@@ -9,6 +9,7 @@ import {
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
+  chassisById, resolveChassis,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -3298,4 +3299,16 @@ test("new weapons each expose three correctly-natured upgrades", () => {
   }
   assert.equal(WEAPON_UPGRADES["Harpoon"].find((u) => u.nature === "tuned").effect.vsPinned, true);
   assert.equal(WEAPON_UPGRADES["Pressure Claw"].find((u) => u.nature === "tuned").effect.onDamage, "sunder");
+});
+
+test("the two new light chassis resolve by id and by combo", () => {
+  const ha = chassisById("light-harpoon-anchor");
+  assert.equal(ha.class, "light");
+  assert.equal(ha.longRange, "Harpoon");
+  assert.equal(ha.melee, "Anchor");
+  assert.deepEqual(ha.sp, { hull: 12, arms: 11, legs: 11, engine: 8 });
+
+  const rp = resolveChassis({ class: "light", longRange: "Rivet Gun", melee: "Pressure Claw" });
+  assert.equal(rp.id, "light-rivet-pressureclaw");
+  assert.deepEqual(rp.sp, { hull: 13, arms: 11, legs: 10, engine: 9 });
 });
