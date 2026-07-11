@@ -1,0 +1,155 @@
+/* V2 Rig Terminal styles — all rules scoped under .v2-root so they never leak
+   into V1's global stylesheet. This file starts with the CompRow (.v2-comp*)
+   rules ported from the mockup (oil-iron-terminal.html lines 346-362).
+   NOTE: later tasks append the engine-heat gauge and the terminal-overlay
+   rules to this same file — keep additions under .v2-root. */
+
+/* ---- Component-SP row: label · − damage · SP bar · + repair · float ∓N ---- */
+.v2-root .v2-comp {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-root .v2-comp-label {
+  flex: 0 0 64px;
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--v2-txt-dim);
+}
+
+/* Bar track: sunken oily well with a faint tick hatch and a redline danger
+   band hatched across the low (left) end of the gauge. */
+.v2-root .v2-comp-bar {
+  position: relative;
+  flex: 1;
+  height: 22px;
+  overflow: hidden;
+  background: #07090c;
+  border: 1px solid #000;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8);
+}
+.v2-root .v2-comp-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 14px);
+}
+.v2-root .v2-comp-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 18%;
+  pointer-events: none;
+  z-index: 2;
+  background: repeating-linear-gradient(-45deg,
+    rgba(143, 47, 34, .28) 0 3px, transparent 3px 6px);
+  border-right: 1px solid rgba(242, 106, 80, .45);
+}
+
+.v2-root .v2-comp-bar-fill {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  transition: width .35s cubic-bezier(.2, .8, .2, 1);
+}
+
+.v2-root .v2-comp-bar-text {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 9px;
+  font-family: var(--v2-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* Step buttons: ember well for damage, verdigris well for repair. */
+.v2-root .v2-comp-step {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  font-family: var(--v2-mono);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: filter .14s, transform .1s;
+}
+.v2-root .v2-comp-step:hover { filter: brightness(1.25); }
+.v2-root .v2-comp-step:active { transform: translateY(1px); }
+.v2-root .v2-comp-step--dmg {
+  background: linear-gradient(180deg, #26170f, #160c07);
+  border: 1px solid var(--v2-ember-deep);
+  color: var(--v2-ember-hi);
+}
+.v2-root .v2-comp-step--rep {
+  background: linear-gradient(180deg, #1c2a1c, #0d160d);
+  border: 1px solid #2f5c33;
+  color: var(--v2-ok);
+}
+
+/* ---- Damage & repair feedback: fires when a location's structure changes ----
+   Hit → the row shakes and the bar flares red; Repair → the bar pulses green.
+   A floating ∓N drifts up so the change is easy to catch. Purely presentational. */
+.v2-root .v2-comp.is-hit { animation: v2-comp-shake .4s ease both; }
+.v2-root .v2-comp.is-hit .v2-comp-bar {
+  border-color: rgba(229, 83, 58, .7);
+  animation: v2-comp-hit-flash .55s ease both;
+}
+@keyframes v2-comp-shake {
+  0%, 100% { transform: translateX(0); }
+  12% { transform: translateX(-3px); }
+  28% { transform: translateX(3px); }
+  44% { transform: translateX(-2px); }
+  60% { transform: translateX(2px); }
+  76% { transform: translateX(-1px); }
+}
+@keyframes v2-comp-hit-flash {
+  0%   { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 0 0 0 rgba(229, 83, 58, 0); }
+  25%  { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 0 16px 2px rgba(229, 83, 58, .75); }
+  100% { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 0 0 0 rgba(229, 83, 58, 0); }
+}
+.v2-root .v2-comp.is-heal .v2-comp-bar {
+  border-color: rgba(108, 196, 127, .6);
+  animation: v2-comp-heal-pulse .85s ease both;
+}
+@keyframes v2-comp-heal-pulse {
+  0%   { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 0 0 0 rgba(108, 196, 127, 0); }
+  30%  { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 0 16px 2px rgba(108, 196, 127, .7); }
+  100% { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 0 0 0 rgba(108, 196, 127, 0); }
+}
+
+.v2-root .v2-comp-delta {
+  position: absolute;
+  right: 40px;
+  top: 50%;
+  z-index: 4;
+  pointer-events: none;
+  font-family: var(--v2-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  animation: v2-comp-delta-rise 1s ease both;
+}
+.v2-root .v2-comp-delta.is-hit  { color: #ff8a72; text-shadow: 0 0 8px rgba(229, 83, 58, .7); }
+.v2-root .v2-comp-delta.is-heal { color: #9be8ab; text-shadow: 0 0 8px rgba(108, 196, 127, .7); }
+@keyframes v2-comp-delta-rise {
+  0%   { opacity: 0; transform: translateY(2px); }
+  22%  { opacity: 1; transform: translateY(-7px); }
+  100% { opacity: 0; transform: translateY(-19px); }
+}
