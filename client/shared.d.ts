@@ -8,7 +8,7 @@ declare module "/shared/game-state.js" {
     rof: number; str: number;
     acc?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
-    melee?: boolean;
+    melee?: boolean; perks?: string[];
   }>>;
   export const UNIT_WEAPONS: Record<string, {
     rof: number; str: number;
@@ -43,6 +43,18 @@ declare module "/shared/game-state.js" {
   export function defaultWeaponUpgrade(weaponName: string): string;
   export function normalizeWeaponUpgrade(weaponName: string, upgradeId?: string | null): string;
   export function upgradeForWeapon(weaponName: string, upgradeId?: string | null): { id: string; name: string } | null;
+  export function effectiveWeaponProfile(
+    slot: "longRange" | "melee" | "unit",
+    weaponName: string,
+    rig?: Rig,
+  ): {
+    rof: number; str: number;
+    acc?: number[]; rng?: number[];
+    sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
+    melee?: boolean; perks: string[];
+    upgrade: { id: string; nature: "field" | "tuned" | "prototype"; name: string; tag: string } | null;
+    upgradeEffect: Record<string, unknown>;
+  } | null;
 }
 
 declare module "/shared/combat.js" {

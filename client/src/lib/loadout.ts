@@ -1,7 +1,24 @@
-import { EQUIPMENT, WEAPON_UPGRADES, CHASSIS, randomEquipment } from "/shared/game-state.js";
+import {
+  EQUIPMENT, WEAPON_UPGRADES, CHASSIS, randomEquipment,
+  WEAPONS, UNIT_WEAPONS, effectiveWeaponProfile,
+} from "/shared/game-state.js";
 import type { Rig } from "../state/types";
 
-export interface LoadoutWeapon { name: string; upName: string; upTag: string; }
+type Slot = "longRange" | "melee" | "unit";
+
+export interface LoadoutWeapon {
+  slot: Slot;
+  name: string;
+  melee: boolean;
+  rof: { base: number; delta: number };
+  str: { base: number; delta: number };
+  range: { text: string; delta: number };
+  perks: string[];       // base perks
+  addedPerks: string[];  // perks added by the upgrade (rendered green)
+  upName: string;        // "" when no/unknown upgrade
+  upTag: string;
+  upNature: string;      // "" when no/unknown upgrade
+}
 export interface LoadoutEquipment {
   family: string; label: string; passive: string;
   activeLabel: string; activeHeat: number; activeText: string;
@@ -15,9 +32,41 @@ export interface Loadout {
   equipment: LoadoutEquipment | null;
 }
 
-function weapon(name: string | undefined, upId: string | undefined): LoadoutWeapon {
-  const up = (WEAPON_UPGRADES[name as string] || []).find((u: { id: string }) => u.id === upId);
-  return { name: name || "", upName: up?.name || "", upTag: up?.tag || "" };
+// Resolve one weapon slot into display-ready base stats + upgrade deltas.
+// Base numbers come straight from the weapon table; deltas from the chosen
+// upgrade's `effect`; the merged perk list (for `addedPerks`) from
+// `effectiveWeaponProfile`. Unknown weapon/upgrade names degrade to zeros/"".
+function weapon(rig: Rig, slot: Slot): LoadoutWeapon {
+  const name = (rig.weapons as Record<string, string | undefined>)?.[slot] || "";
+  const table = slot === "unit" ? UNIT_WEAPONS : WEAPONS[slot];
+  const base = table?.[name];
+  const prof = base ? effectiveWeaponProfile(slot, name, rig) : null;
+  const effect = (prof?.upgradeEffect || {}) as { rof?: number; str?: number; range?: number };
+  const up = slot === "unit"
+    ? null
+    : (WEAPON_UPGRADES[name] || []).find(
+        (u: { id: string }) => u.id === rig.weaponUpgrades?.[slot as "longRange" | "melee"],
+      );
+  const isMelee = !!base?.melee;
+  const rangeText = isMelee
+    ? `RNG ${base?.rng?.[0] ?? 0}"`
+    : `${base?.minRange ?? 0}–${base?.maxRange ?? 0}"`;
+  const basePerks: string[] = base?.perks || [];
+  const effPerks: string[] = prof?.perks || basePerks;
+  const addedPerks = effPerks.filter((p: string) => !basePerks.includes(p));
+  return {
+    slot,
+    name,
+    melee: isMelee,
+    rof: { base: base?.rof ?? 0, delta: effect.rof || 0 },
+    str: { base: base?.str ?? 0, delta: effect.str || 0 },
+    range: { text: rangeText, delta: effect.range || 0 },
+    perks: basePerks,
+    addedPerks,
+    upName: up?.name || "",
+    upTag: up?.tag || "",
+    upNature: up?.nature || "",
+  };
 }
 
 /** Resolve a rig's stored loadout ids into display-ready names/tags/passive/active.
@@ -31,12 +80,12 @@ export function buildLoadout(rig: Rig): Loadout | null {
   } : null;
   // Cold kinds (Tank / Walker) store a single flat-pick weapon under `unit`.
   if (rig.weapons.unit) {
-    return { flat: true, unit: weapon(rig.weapons.unit, undefined), equipment };
+    return { flat: true, unit: weapon(rig, "unit"), equipment };
   }
   return {
     flat: false,
-    lr: weapon(rig.weapons.longRange, rig.weaponUpgrades?.longRange),
-    melee: weapon(rig.weapons.melee, rig.weaponUpgrades?.melee),
+    lr: weapon(rig, "longRange"),
+    melee: weapon(rig, "melee"),
     equipment,
   };
 }
