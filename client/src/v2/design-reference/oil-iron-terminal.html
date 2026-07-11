@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --iron-950:#080a0d; --iron-900:#0c0f14; --iron-850:#12161d; --iron-800:#171d25;
+    --iron-780:#1c2029; --iron-750:#232a34; --line:#2b323d; --line-soft:#20262f; --rivet:#3a424e;
+    --oil:#e79a3d; --oil-hi:#ffbf6a; --oil-deep:#a8641c;
+    --ember:#e5533a; --ember-hi:#ff6f52; --ember-deep:#8f2f22;
+    --txt:#eef2f7; --txt-dim:#aeb7c4; --txt-faint:#7b8593;
+    --ok:#6cc47f; --warn:#e8bd57; --low:#ef9450; --crit:#f26a50;
+    --stencil:"Stardos Stencil","Oswald",system-ui,sans-serif;
+    --disp:"Oswald",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;}
+  *::-webkit-scrollbar{width:8px;height:8px;}
+  *::-webkit-scrollbar-thumb{background:#39414d;border:1px solid #10141a;}
+  *::-webkit-scrollbar-track{background:#0b0e12;}
+  html,body{height:100%;margin:0;background:#050608;color:var(--txt);font-family:var(--disp);-webkit-font-smoothing:antialiased;overflow:hidden;}
+  a{color:var(--oil);}a:hover{color:var(--oil-hi);}
+  @keyframes flick{0%,100%{opacity:.14}7%{opacity:.24}9%{opacity:.10}40%{opacity:.18}42%{opacity:.30}80%{opacity:.13}}
+  @keyframes scan{from{background-position:0 0}to{background-position:0 6px}}
+  @keyframes lamp{0%,100%{opacity:.35;filter:brightness(.7)}50%{opacity:1;filter:brightness(1.4)}}
+  @keyframes lampfast{0%,100%{opacity:.4}50%{opacity:1}}
+  @keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-2%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+  @keyframes sweepin{from{transform:rotate(-42deg)}to{transform:rotate(var(--needle,20deg))}}
+  @keyframes bootline{from{top:-4%}to{top:104%}}
+  @keyframes glowpulse{0%,100%{box-shadow:inset 0 0 0 1px rgba(231,154,61,.5),0 0 0 rgba(231,154,61,0)}50%{box-shadow:inset 0 0 0 1px rgba(231,154,61,.9),0 0 22px rgba(231,154,61,.35)}}
+  @keyframes barwarn{0%,100%{opacity:1}50%{opacity:.55}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</helmet>
+
+<!-- ================= CRT / AMBIENT OVERLAYS ================= -->
+<div aria-hidden="true" style="position:fixed;inset:0;z-index:9000;pointer-events:none;background:radial-gradient(120% 120% at 50% 50%,transparent 42%,rgba(0,0,0,.55) 82%,rgba(0,0,0,.92) 100%);"></div>
+<div aria-hidden="true" style="position:fixed;inset:0;z-index:9001;pointer-events:none;mix-blend-mode:multiply;background:repeating-linear-gradient(0deg,rgba(0,0,0,.32) 0 1px,rgba(0,0,0,0) 1px 3px);animation:scan 1s steps(6) infinite;opacity:.7;"></div>
+<div aria-hidden="true" style="position:fixed;inset:0;z-index:9002;pointer-events:none;background:linear-gradient(90deg,rgba(255,60,40,.05),transparent 4%,transparent 96%,rgba(60,120,255,.05));"></div>
+<div aria-hidden="true" style="position:fixed;inset:-40%;z-index:9003;pointer-events:none;opacity:.06;mix-blend-mode:overlay;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);animation:grain 1.2s steps(5) infinite;"></div>
+<div aria-hidden="true" style="position:fixed;inset:0;z-index:9004;pointer-events:none;background:radial-gradient(90% 70% at 50% 40%,rgba(231,154,61,.05),transparent 70%);animation:flick 4s infinite;"></div>
+
+<!-- ================= APP SHELL ================= -->
+<div style="position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;background:radial-gradient(130% 90% at 50% -20%,rgba(231,154,61,.07),transparent 55%),radial-gradient(100% 60% at 50% 120%,rgba(50,58,72,.12),transparent 60%),#080a0d;">
+
+  <!-- ---- STATUS STRIP ---- -->
+  <header style="flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 16px 9px;background:linear-gradient(180deg,#12161d,#0b0e13);border-bottom:2px solid #000;box-shadow:inset 0 -1px 0 rgba(231,154,61,.14),0 3px 10px rgba(0,0,0,.6);">
+    <div style="display:flex;align-items:center;gap:11px;">
+      <div style="width:30px;height:30px;border:2px solid var(--oil-deep);background:conic-gradient(from 20deg,#2a1c0c,#5a3c14,#2a1c0c);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 8px rgba(0,0,0,.7);position:relative;">
+        <div style="width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffbf6a,#a8641c 60%,#3a220a);box-shadow:0 0 8px rgba(231,154,61,.6);"></div>
+      </div>
+      <div style="line-height:1;">
+        <div style="font-family:var(--stencil);font-weight:700;font-size:16px;letter-spacing:.16em;color:var(--oil);text-shadow:0 2px 0 rgba(0,0,0,.7);">OIL &amp; IRON</div>
+        <div style="font-family:var(--mono);font-size:8.5px;letter-spacing:.34em;color:var(--txt-faint);margin-top:3px;">RIG CONTROL TERMINAL · MK.IV</div>
+      </div>
+    </div>
+    <div style="flex:1;"></div>
+    <div style="display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--txt-dim);">
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 7px var(--ok);animation:lampfast 2.4s infinite;"></span>LINK ·LOCAL</div>
+      <div style="padding:4px 9px;border:1px solid var(--line);background:#0a0d11;color:var(--oil-hi);">RM// {{ roomCode }}</div>
+    </div>
+  </header>
+
+  <!-- ---- CHANNEL SELECTOR ---- -->
+  <nav style="flex:0 0 auto;display:flex;gap:2px;padding:6px 12px 0;background:linear-gradient(180deg,#0b0e13,#0a0c10);border-bottom:1px solid #000;overflow-x:auto;">
+    <sc-for list="{{ channels }}" as="ch" hint-placeholder-count="8">
+      <button type="button" onClick="{{ ch.onSelect }}" style="position:relative;flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:9px 14px 10px;background:transparent;border:0;border-top:2px solid transparent;cursor:pointer;font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-faint);" style-hover="color:var(--txt-dim);">
+        <span style="font-family:var(--mono);font-size:8px;opacity:.6;">{{ ch.num }}</span>
+        {{ ch.label }}
+        <sc-if value="{{ ch.active }}" hint-placeholder-val="{{ false }}">
+          <span style="position:absolute;left:6px;right:6px;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--oil),transparent);box-shadow:0 0 10px var(--oil);"></span>
+          <span style="position:absolute;left:8px;top:6px;color:var(--oil);font-size:11px;letter-spacing:0;text-shadow:0 0 8px var(--oil);">◈</span>
+        </sc-if>
+      </button>
+    </sc-for>
+  </nav>
+
+  <!-- ---- SCREEN AREA ---- -->
+  <main style="flex:1;min-height:0;overflow-y:auto;position:relative;">
+
+    <!-- ============ JOIN ============ -->
+    <sc-if value="{{ isJoin }}" hint-placeholder-val="{{ false }}">
+    <section data-screen-label="Join" style="min-height:100%;display:flex;align-items:center;justify-content:center;padding:32px 18px;position:relative;">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(-45deg,rgba(20,16,8,0) 0 22px,rgba(168,100,28,.05) 22px 44px);pointer-events:none;"></div>
+      <div style="width:100%;max-width:440px;position:relative;background:linear-gradient(180deg,#161b23,#0e1218);border:1px solid var(--line);border-top-color:var(--rivet);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 -30px 60px rgba(0,0,0,.5),0 20px 50px rgba(0,0,0,.7);padding:34px 30px 30px;">
+        <div style="position:absolute;top:8px;left:8px;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#69727f,#20252e 60%,rgba(0,0,0,.7));"></div>
+        <div style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#69727f,#20252e 60%,rgba(0,0,0,.7));"></div>
+        <div style="height:14px;background:repeating-linear-gradient(-45deg,#141008 0 11px,var(--oil-deep) 11px 22px);opacity:.85;margin-bottom:26px;"></div>
+        <div style="text-align:center;">
+          <div style="font-family:var(--stencil);font-weight:700;font-size:44px;line-height:.9;letter-spacing:.06em;color:var(--oil);text-shadow:0 3px 0 rgba(0,0,0,.75),0 0 30px rgba(231,154,61,.25);">OIL<span style="color:var(--txt-faint);font-style:normal;margin:0 8px;">&amp;</span>IRON</div>
+          <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.42em;color:var(--txt-faint);margin-top:12px;">ENLIST · COMMISSION · DEPLOY</div>
+        </div>
+        <div style="height:1px;background:var(--line);margin:26px 0 22px;"></div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--txt-faint);text-transform:uppercase;margin-bottom:7px;">Battle Room Code</label>
+        <div style="display:flex;align-items:center;gap:10px;background:#07090c;border:1px solid var(--line);box-shadow:inset 0 2px 8px rgba(0,0,0,.7);padding:0 12px;margin-bottom:16px;">
+          <span style="color:var(--oil-deep);font-family:var(--mono);">◈</span>
+          <input value="IRON-42" style="flex:1;background:transparent;border:0;outline:none;color:var(--oil-hi);font-family:var(--mono);font-size:16px;letter-spacing:.18em;padding:13px 0;" />
+        </div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--txt-faint);text-transform:uppercase;margin-bottom:7px;">Commander Designation</label>
+        <div style="display:flex;align-items:center;gap:10px;background:#07090c;border:1px solid var(--line);box-shadow:inset 0 2px 8px rgba(0,0,0,.7);padding:0 12px;margin-bottom:20px;">
+          <span style="color:var(--oil-deep);font-family:var(--mono);">▸</span>
+          <input value="V. KOSTOV" style="flex:1;background:transparent;border:0;outline:none;color:var(--txt);font-family:var(--disp);font-weight:500;font-size:15px;letter-spacing:.06em;padding:13px 0;" />
+        </div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--txt-faint);text-transform:uppercase;margin-bottom:9px;">Declare Allegiance</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;">
+          <div style="position:relative;padding:15px 12px;background:linear-gradient(180deg,#241a0d,#1a1207);border:1px solid var(--oil-deep);box-shadow:inset 0 0 0 1px rgba(231,154,61,.3),0 0 16px rgba(231,154,61,.18);cursor:pointer;">
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--oil);margin-bottom:5px;">SIDE · A</div>
+            <div style="font-family:var(--stencil);font-weight:700;font-size:17px;letter-spacing:.08em;color:var(--oil-hi);">FRIENDLY</div>
+            <span style="position:absolute;top:11px;right:11px;width:9px;height:9px;border-radius:50%;background:var(--oil);box-shadow:0 0 10px var(--oil);animation:lampfast 2s infinite;"></span>
+          </div>
+          <div style="position:relative;padding:15px 12px;background:linear-gradient(180deg,#141820,#0d1015);border:1px solid var(--line);cursor:pointer;" style-hover="border-color:var(--rivet);">
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--txt-faint);margin-bottom:5px;">SIDE · B</div>
+            <div style="font-family:var(--stencil);font-weight:700;font-size:17px;letter-spacing:.08em;color:var(--txt-dim);">HOSTILE</div>
+          </div>
+        </div>
+        <button type="button" style="width:100%;padding:16px;background:linear-gradient(180deg,#f0a94a,#c47a26);border:1px solid #ffcf82;border-bottom:3px solid #7c4d14;color:#1a1206;font-family:var(--stencil);font-weight:700;font-size:16px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.5),0 0 24px rgba(231,154,61,.3);" style-hover="filter:brightness(1.08);">Enter The Yard ▸</button>
+        <p style="text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--ok);margin:16px 0 0;">◈ ALL SYSTEMS NOMINAL — READY TO ENLIST</p>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ SQUADRON ============ -->
+    <sc-if value="{{ isSquadron }}" hint-placeholder-val="{{ false }}">
+    <section data-screen-label="Squadron" style="padding:18px 16px 40px;max-width:760px;margin:0 auto;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px;">
+        <div>
+          <div style="font-family:var(--mono);font-size:8.5px;letter-spacing:.3em;color:var(--txt-faint);margin-bottom:5px;">DEPOT ROSTER</div>
+          <h1 style="margin:0;font-family:var(--stencil);font-weight:700;font-size:26px;letter-spacing:.08em;color:var(--txt);text-shadow:0 2px 0 rgba(0,0,0,.6);">THE YARD</h1>
+        </div>
+        <div style="text-align:right;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--txt-dim);">
+          <div style="color:var(--oil);">03 / 03 COMMISSIONED</div>
+          <div style="color:var(--txt-faint);margin-top:3px;">TONNAGE · 22 T</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:9px;margin:22px 0 12px;">
+        <span style="width:9px;height:9px;background:var(--oil);box-shadow:0 0 8px var(--oil);"></span>
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:.26em;color:var(--oil);">YOUR SQUADRON</span>
+        <span style="flex:1;height:1px;background:linear-gradient(90deg,var(--oil-deep),transparent);"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px;">
+        <sc-for list="{{ yourRigs }}" as="r" hint-placeholder-count="3">
+          <div onClick="{{ r.onOpen }}" style="position:relative;display:flex;align-items:stretch;gap:0;background:linear-gradient(180deg,#161b23,#0f1319);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 5px 14px rgba(0,0,0,.5);overflow:hidden;cursor:pointer;" style-hover="border-color:var(--oil-deep);">
+            <div style="flex:0 0 8px;background:{{ r.sideStripe }};"></div>
+            <div style="flex:0 0 70px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0d11;border-right:1px solid var(--line);padding:8px 4px;">
+              <div style="font-family:var(--stencil);font-weight:700;font-size:22px;color:{{ r.classColor }};line-height:1;">{{ r.classGlyph }}</div>
+              <div style="font-family:var(--mono);font-size:7.5px;letter-spacing:.18em;color:var(--txt-faint);margin-top:5px;">{{ r.classShort }}</div>
+            </div>
+            <div style="flex:1;min-width:0;padding:12px 14px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="font-family:var(--stencil);font-weight:700;font-size:17px;letter-spacing:.06em;color:var(--txt);">{{ r.name }}</div>
+                <sc-if value="{{ r.active }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;color:#1a1206;background:var(--oil);padding:2px 6px;">ACTIVE</span></sc-if>
+              </div>
+              <div style="font-family:var(--disp);font-size:12px;letter-spacing:.04em;color:var(--txt-dim);margin-top:5px;">{{ r.loadout }}</div>
+              <div style="display:flex;gap:5px;margin-top:11px;">
+                <sc-for list="{{ r.comps }}" as="c" hint-placeholder-count="4">
+                  <div style="flex:1;">
+                    <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;letter-spacing:.1em;color:var(--txt-faint);margin-bottom:3px;"><span>{{ c.tag }}</span><span>{{ c.val }}</span></div>
+                    <div style="height:5px;background:#07090c;border:1px solid #000;overflow:hidden;"><div style="height:100%;width:{{ c.pct }};background:{{ c.color }};"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex:0 0 42px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#0a0d11;border-left:1px solid var(--line);">
+              <span style="width:7px;height:7px;border-radius:50%;background:{{ r.statusColor }};box-shadow:0 0 7px {{ r.statusColor }};"></span>
+              <span style="font-family:var(--mono);font-size:7px;letter-spacing:.06em;color:var(--txt-faint);writing-mode:vertical-rl;">{{ r.statusText }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:9px;margin:24px 0 12px;">
+        <span style="width:9px;height:9px;background:var(--ember);box-shadow:0 0 8px var(--ember);"></span>
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:.26em;color:var(--ember);">HOSTILE FORCES</span>
+        <span style="flex:1;height:1px;background:linear-gradient(90deg,var(--ember-deep),transparent);"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px;">
+        <sc-for list="{{ enemyRigs }}" as="r" hint-placeholder-count="2">
+          <div onClick="{{ r.onOpen }}" style="position:relative;display:flex;align-items:stretch;background:linear-gradient(180deg,#1a1418,#120d10);border:1px solid #2a1e22;box-shadow:0 5px 14px rgba(0,0,0,.5);overflow:hidden;opacity:.94;cursor:pointer;" style-hover="border-color:var(--ember-deep);">
+            <div style="flex:0 0 8px;background:repeating-linear-gradient(-45deg,#0c0709 0 8px,#7c2331 8px 16px);"></div>
+            <div style="flex:0 0 70px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d0709;border-right:1px solid #2a1e22;padding:8px 4px;">
+              <div style="font-family:var(--stencil);font-weight:700;font-size:22px;color:{{ r.classColor }};line-height:1;">{{ r.classGlyph }}</div>
+              <div style="font-family:var(--mono);font-size:7.5px;letter-spacing:.18em;color:var(--txt-faint);margin-top:5px;">{{ r.classShort }}</div>
+            </div>
+            <div style="flex:1;min-width:0;padding:12px 14px;">
+              <div style="font-family:var(--stencil);font-weight:700;font-size:17px;letter-spacing:.06em;color:var(--ember-hi);">{{ r.name }}</div>
+              <div style="font-family:var(--disp);font-size:12px;letter-spacing:.04em;color:var(--txt-dim);margin-top:5px;">{{ r.loadout }}</div>
+              <div style="display:flex;gap:5px;margin-top:11px;">
+                <sc-for list="{{ r.comps }}" as="c" hint-placeholder-count="4">
+                  <div style="flex:1;"><div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;color:var(--txt-faint);margin-bottom:3px;"><span>{{ c.tag }}</span><span>{{ c.val }}</span></div><div style="height:5px;background:#07090c;border:1px solid #000;overflow:hidden;"><div style="height:100%;width:{{ c.pct }};background:{{ c.color }};"></div></div></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- commission add card -->
+      <button type="button" style="width:100%;margin-top:16px;padding:20px;display:flex;align-items:center;justify-content:center;gap:12px;background:repeating-linear-gradient(-45deg,#0e1117 0 12px,#131820 12px 24px);border:2px dashed var(--rivet);color:var(--txt-dim);cursor:pointer;font-family:var(--stencil);font-weight:700;font-size:15px;letter-spacing:.14em;text-transform:uppercase;" style-hover="border-color:var(--oil-deep);color:var(--oil);">
+        <span style="font-size:22px;line-height:0;color:var(--oil);">＋</span> Commission New Rig
+      </button>
+
+      <!-- ready bar -->
+      <div style="margin-top:16px;display:flex;align-items:center;gap:14px;padding:14px 16px;background:linear-gradient(180deg,#12161d,#0b0e13);border:1px solid var(--line);border-left:4px solid var(--oil);">
+        <div style="flex:1;">
+          <div style="font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.05em;color:var(--txt);">KOSTOV <span style="color:var(--oil);">READY</span> · ENEMY NOT READY</div>
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--txt-faint);margin-top:4px;">Tap any Rig to open its Control Terminal.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;padding:9px 12px;background:#0a0d11;border:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--txt-dim);cursor:pointer;">🎲 AUTO</div>
+        <button type="button" style="padding:12px 22px;background:linear-gradient(180deg,#f0a94a,#c47a26);border:1px solid #ffcf82;border-bottom:3px solid #7c4d14;color:#1a1206;font-family:var(--stencil);font-weight:700;font-size:14px;letter-spacing:.14em;cursor:pointer;box-shadow:0 0 18px rgba(231,154,61,.3);">READY</button>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ COMMISSION / FORGE ============ -->
+    <sc-if value="{{ isCommission }}" hint-placeholder-val="{{ false }}">
+    <section data-screen-label="Commission" style="padding:18px 16px 40px;max-width:760px;margin:0 auto;">
+      <div style="font-family:var(--mono);font-size:8.5px;letter-spacing:.3em;color:var(--txt-faint);margin-bottom:5px;">COMMISSION ORDER · FORM 7-C</div>
+      <h1 style="margin:0 0 4px;font-family:var(--stencil);font-weight:700;font-size:26px;letter-spacing:.08em;color:var(--txt);text-shadow:0 2px 0 rgba(0,0,0,.6);">COMMISSION A CHASSIS</h1>
+      <!-- step rail -->
+      <div style="display:flex;gap:0;margin:16px 0 22px;">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+          <div style="flex:1;display:flex;align-items:center;gap:8px;">
+            <div style="flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;background:{{ s.bg }};border:1px solid {{ s.border }};color:{{ s.fg }};">{{ s.n }}</div>
+            <span style="font-family:var(--disp);font-weight:600;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:{{ s.fg }};">{{ s.label }}</span>
+            <span style="flex:1;height:1px;background:var(--line);"></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- kind selector -->
+      <div style="display:flex;gap:9px;margin-bottom:16px;">
+        <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="3">
+          <div style="flex:1;position:relative;padding:12px 14px;background:{{ k.bg }};border:1px solid {{ k.border }};cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:9px;"><span style="font-family:var(--stencil);font-size:18px;color:{{ k.glyphColor }};line-height:1;">{{ k.glyph }}</span><span style="font-family:var(--stencil);font-weight:700;font-size:14px;letter-spacing:.08em;color:{{ k.fg }};">{{ k.label }}</span></div>
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:var(--txt-faint);margin-top:6px;line-height:1.4;">{{ k.desc }}</div>
+            <sc-if value="{{ k.sel }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--oil);box-shadow:0 0 9px var(--oil);animation:lampfast 2s infinite;"></span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- chassis roster cue -->
+      <div style="display:flex;align-items:center;gap:9px;margin:4px 0 12px;">
+        <span style="font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--oil);">◈ CHOOSE YOUR CHASSIS</span>
+        <span style="font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;color:var(--txt-faint);">— weapons &amp; weight class are fixed by the frame</span>
+      </div>
+
+      <!-- chassis roster -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <sc-for list="{{ chassisList }}" as="c" hint-placeholder-count="8">
+          <div style="position:relative;display:flex;align-items:stretch;background:{{ c.bg }};border:1px solid {{ c.border }};box-shadow:{{ c.glow }};overflow:hidden;cursor:pointer;">
+            <div style="flex:0 0 56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:#0a0d11;border-right:1px solid var(--line);">
+              <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid {{ c.classColor }};font-family:var(--stencil);font-weight:700;font-size:17px;color:{{ c.classColor }};">{{ c.emblem }}</div>
+              <div style="font-family:var(--mono);font-size:7px;letter-spacing:.14em;color:var(--txt-faint);">{{ c.classShort }}</div>
+            </div>
+            <div style="flex:1;min-width:0;padding:11px 13px;">
+              <div style="font-family:var(--stencil);font-weight:700;font-size:16px;letter-spacing:.08em;color:{{ c.nameColor }};">{{ c.codename }}</div>
+              <div style="font-family:var(--disp);font-size:11.5px;letter-spacing:.02em;color:var(--txt-dim);margin-top:4px;">{{ c.combo }}</div>
+              <div style="font-family:var(--mono);font-size:8px;letter-spacing:.04em;color:var(--txt-faint);margin-top:8px;">{{ c.stats }}</div>
+            </div>
+            <sc-if value="{{ c.sel }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;top:9px;right:9px;font-family:var(--mono);font-size:7px;letter-spacing:.12em;color:#1a1206;background:var(--oil);padding:2px 6px;">◈ SEL</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- upgrade bay for selected chassis -->
+      <div style="margin-top:16px;background:linear-gradient(180deg,#141922,#0c1015);border:1px solid var(--line);border-top:2px solid var(--oil-deep);">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 15px;border-bottom:1px solid var(--line-soft);">
+          <span style="font-family:var(--stencil);font-weight:700;font-size:14px;letter-spacing:.08em;color:var(--oil);">◈ IRONJAW · UPGRADE BAY</span>
+          <span style="font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--txt-faint);">commit one path per weapon</span>
+        </div>
+        <div style="padding:14px 15px;display:flex;flex-direction:column;gap:16px;">
+          <sc-for list="{{ upWeapons }}" as="w" hint-placeholder-count="2">
+            <div>
+              <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:9px;">
+                <span style="font-family:var(--stencil);font-weight:700;font-size:13px;letter-spacing:.06em;color:var(--txt);">{{ w.name }}</span>
+                <span style="font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--txt-faint);">{{ w.kind }} · {{ w.stat }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                <sc-for list="{{ w.nodes }}" as="n" hint-placeholder-count="3">
+                  <div style="position:relative;padding:10px 11px;background:{{ n.bg }};border:1px solid {{ n.border }};cursor:{{ n.cursor }};opacity:{{ n.opacity }};">
+                    <div style="display:flex;align-items:center;gap:7px;"><span style="font-family:var(--mono);font-size:9px;font-weight:700;color:{{ n.markColor }};">{{ n.mark }}</span><span style="font-family:var(--stencil);font-weight:700;font-size:12px;letter-spacing:.05em;color:{{ n.fg }};">{{ n.label }}</span></div>
+                    <div style="font-family:var(--mono);font-size:7.5px;letter-spacing:.04em;color:{{ n.tagColor }};margin-top:6px;line-height:1.4;">{{ n.tag }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:18px;">
+        <button type="button" style="padding:14px 20px;background:linear-gradient(180deg,#1c222b,#12161d);border:1px solid var(--line);border-bottom:2px solid #05070a;color:var(--txt-dim);font-family:var(--stencil);font-weight:700;font-size:13px;letter-spacing:.12em;cursor:pointer;">◂ BACK</button>
+        <button type="button" style="flex:1;padding:14px;background:linear-gradient(180deg,#f0a94a,#c47a26);border:1px solid #ffcf82;border-bottom:3px solid #7c4d14;color:#1a1206;font-family:var(--stencil);font-weight:700;font-size:15px;letter-spacing:.16em;cursor:pointer;box-shadow:0 0 20px rgba(231,154,61,.3);">NEXT · EQUIPMENT ▸</button>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ RIG CONTROL TERMINAL — overlay from Yard ============ -->
+    <sc-if value="{{ rigOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:450;display:flex;align-items:flex-start;justify-content:center;padding:20px 16px;overflow-y:auto;background:radial-gradient(80% 60% at 50% 20%,rgba(231,154,61,.08),transparent 70%),rgba(4,5,7,.72);">
+      <div onClick="{{ closeRig }}" style="position:absolute;inset:0;"></div>
+      <section data-screen-label="Rig Terminal" style="position:relative;width:100%;max-width:720px;">
+      <!-- pager + close -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <button type="button" style="width:38px;height:38px;background:linear-gradient(180deg,#1c222b,#12161d);border:1px solid var(--line);color:var(--txt-dim);font-size:16px;cursor:pointer;">‹</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--oil);box-shadow:0 0 8px var(--oil);"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--rivet);"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--rivet);"></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" style="width:38px;height:38px;background:linear-gradient(180deg,#1c222b,#12161d);border:1px solid var(--line);color:var(--txt-dim);font-size:16px;cursor:pointer;">›</button>
+          <button type="button" onClick="{{ closeRig }}" style="width:38px;height:38px;background:#12161d;border:1px solid var(--line);color:var(--txt-dim);font-size:15px;cursor:pointer;">✕</button>
+        </div>
+      </div>
+
+      <div style="position:relative;background:linear-gradient(180deg,#171d25,#0d1116);border:1px solid var(--rivet);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 -40px 70px rgba(0,0,0,.5),0 14px 34px rgba(0,0,0,.6);animation:glowpulse 3.2s infinite;">
+        <div style="position:absolute;top:9px;left:9px;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#69727f,#20252e 60%,rgba(0,0,0,.7));"></div>
+        <div style="position:absolute;top:9px;right:9px;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#69727f,#20252e 60%,rgba(0,0,0,.7));"></div>
+        <!-- header -->
+        <div style="display:flex;align-items:center;gap:14px;padding:18px 20px 16px;border-bottom:1px solid var(--line);background:repeating-linear-gradient(-45deg,rgba(20,16,8,0) 0 20px,rgba(168,100,28,.05) 20px 40px);">
+          <div style="flex:0 0 54px;height:54px;display:flex;align-items:center;justify-content:center;background:#0a0d11;border:1px solid var(--oil-deep);font-family:var(--stencil);font-weight:700;font-size:28px;color:#8fbcff;">◆</div>
+          <div style="flex:1;">
+            <div style="font-family:var(--stencil);font-weight:700;font-size:24px;letter-spacing:.08em;color:var(--txt);">STALKER</div>
+            <div style="font-family:var(--disp);font-size:12px;letter-spacing:.04em;color:var(--txt-dim);margin-top:3px;">LIGHT · Autocannon · Claw</div>
+          </div>
+          <div style="text-align:right;">
+            <sc-if value="{{ rigActive }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;color:#1a1206;background:var(--oil);padding:3px 8px;">◈ ACTIVE</span></sc-if>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--warn);margin-top:8px;">STATUS · WORN</div>
+          </div>
+        </div>
+
+        <!-- component bars -->
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:15px;">
+          <sc-for list="{{ rigComps }}" as="c" hint-placeholder-count="4">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">
+                <span style="font-family:var(--stencil);font-weight:700;font-size:13px;letter-spacing:.1em;color:var(--txt-dim);width:64px;">{{ c.name }}</span>
+                <div style="flex:1;position:relative;height:22px;background:#07090c;border:1px solid #000;box-shadow:inset 0 2px 6px rgba(0,0,0,.8);overflow:hidden;">
+                  <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 14px);"></div>
+                  <div style="height:100%;width:{{ c.pct }};background:{{ c.color }};box-shadow:0 0 12px {{ c.glow }};"></div>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;padding-right:9px;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px #000;">{{ c.val }} SP</div>
+                </div>
+                <div style="display:flex;gap:5px;">
+                  <button type="button" style="width:30px;height:30px;background:linear-gradient(180deg,#26170f,#160c07);border:1px solid var(--ember-deep);color:var(--ember-hi);font-family:var(--mono);font-size:16px;cursor:pointer;">−</button>
+                  <button type="button" style="width:30px;height:30px;background:linear-gradient(180deg,#1c2a1c,#0d160d);border:1px solid #2f5c33;color:var(--ok);font-family:var(--mono);font-size:16px;cursor:pointer;">＋</button>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- engine heat gauge -->
+        <div style="display:flex;align-items:center;gap:20px;padding:16px 20px 22px;border-top:1px solid var(--line);background:#0a0d11;">
+          <div style="position:relative;width:130px;height:74px;overflow:hidden;flex:0 0 auto;">
+            <div style="position:absolute;left:0;top:0;width:130px;height:130px;border-radius:50%;border:2px solid var(--line);background:conic-gradient(from 180deg,#2f5c33 0deg,#c99327 90deg,#cf6a24 130deg,#8f2f22 180deg,transparent 180deg);opacity:.35;"></div>
+            <div style="position:absolute;left:50%;bottom:0;width:3px;height:60px;background:linear-gradient(180deg,var(--ember-hi),var(--ember));transform-origin:bottom center;transform:rotate(52deg);box-shadow:0 0 8px var(--ember);border-radius:2px;"></div>
+            <div style="position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#69727f,#20252e);border:1px solid #000;"></div>
+          </div>
+          <div>
+            <div style="font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--txt-faint);">ENGINE HEAT</div>
+            <div style="font-family:var(--stencil);font-weight:700;font-size:34px;line-height:1;color:var(--ember-hi);text-shadow:0 0 20px rgba(229,83,58,.4);">4<span style="font-size:16px;color:var(--txt-faint);">/6</span></div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--warn);margin-top:5px;">⚠ RUNNING HOT</div>
+          </div>
+          <div style="flex:1;"></div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button type="button" style="padding:9px 14px;background:linear-gradient(180deg,#26170f,#160c07);border:1px solid var(--ember-deep);color:var(--ember-hi);font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.1em;cursor:pointer;">🔥 STOKE</button>
+            <button type="button" style="padding:9px 14px;background:linear-gradient(180deg,#12242e,#0a151b);border:1px solid #285a6b;color:#7fd4e6;font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.1em;cursor:pointer;">❄ VENT</button>
+          </div>
+        </div>
+
+        <!-- ACTIVATE / ACTION CONSOLE -->
+        <sc-if value="{{ rigActive }}" hint-placeholder-val="{{ false }}">
+          <div style="border-top:2px solid #1f4a2c;">
+            <div style="padding:13px 18px;display:flex;align-items:center;gap:13px;background:linear-gradient(90deg,#142a1c,#0e1f15);box-shadow:inset 0 0 26px rgba(108,196,127,.12);">
+              <span style="font-size:18px;color:var(--ok);text-shadow:0 0 12px var(--ok);animation:lamp 1.8s infinite;">◈</span>
+              <div style="flex:1;">
+                <div style="font-family:var(--stencil);font-weight:700;font-size:14px;letter-spacing:.08em;color:#baf7c9;text-transform:uppercase;">Choose an Action</div>
+                <div style="font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:#7fbf90;margin-top:3px;">Move · Attack · or another action</div>
+              </div>
+              <div style="display:flex;gap:5px;">
+                <span style="width:13px;height:13px;background:var(--ok);box-shadow:0 0 8px var(--ok);"></span>
+                <span style="width:13px;height:13px;background:var(--ok);box-shadow:0 0 8px var(--ok);"></span>
+                <span style="width:13px;height:13px;background:#1a2b20;border:1px solid #2f5c33;"></span>
+              </div>
+            </div>
+            <div style="padding:14px 18px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#0a0d11;">
+              <sc-for list="{{ actions }}" as="a" hint-placeholder-count="4">
+                <button type="button" onClick="{{ a.onClick }}" style="text-align:left;padding:14px;background:{{ a.bg }};border:1px solid {{ a.border }};cursor:{{ a.cursor }};opacity:{{ a.opacity }};">
+                  <div style="display:flex;align-items:center;gap:9px;"><span style="font-size:17px;">{{ a.icon }}</span><span style="font-family:var(--stencil);font-weight:700;font-size:15px;letter-spacing:.06em;color:{{ a.fg }};">{{ a.label }}</span></div>
+                  <div style="font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--txt-faint);margin-top:7px;line-height:1.4;">{{ a.note }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <!-- activate CTA (before activation) -->
+      <sc-if value="{{ rigNotActive }}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{ activateRig }}" style="width:100%;margin-top:12px;padding:16px;background:linear-gradient(180deg,#1c2a1c,#0d160d);border:1px solid #2f5c33;border-bottom:3px solid #0a1a0d;color:var(--ok);font-family:var(--stencil);font-weight:700;font-size:16px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 20px rgba(108,196,127,.25);" style-hover="filter:brightness(1.12);">◈ Activate Rig</button>
+      </sc-if>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- ============ ATTACK WIZARD — overlay sheet over Combat ============ -->
+    <sc-if value="{{ fireOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;padding:20px 16px;background:radial-gradient(80% 60% at 50% 30%,rgba(229,83,58,.1),transparent 70%),rgba(4,5,7,.72);">
+      <div onClick="{{ closeFire }}" style="position:absolute;inset:0;"></div>
+      <div style="position:relative;width:100%;max-width:460px;background:linear-gradient(180deg,#1a1216,#0e0a0c);border:1px solid var(--ember-deep);box-shadow:inset 0 1px 0 rgba(255,120,90,.14),0 -10px 40px rgba(229,83,58,.15),0 20px 50px rgba(0,0,0,.7);">
+        <div style="height:14px;background:repeating-linear-gradient(-45deg,#0c0709 0 11px,#7c2331 11px 22px);"></div>
+        <div style="padding:18px 20px 22px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div><div style="font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:#c86b5a;">FIRE CONTROL</div><div style="font-family:var(--stencil);font-weight:700;font-size:22px;letter-spacing:.06em;color:var(--ember-hi);text-shadow:0 0 18px rgba(229,83,58,.4);">TARGET LOCK</div></div>
+            <button type="button" onClick="{{ closeFire }}" style="width:34px;height:34px;background:#12161d;border:1px solid var(--line);color:var(--txt-dim);font-size:16px;cursor:pointer;">✕</button>
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--txt-faint);margin-bottom:9px;">◈ TARGET</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0d0709;border:1px solid #2a1e22;margin-bottom:16px;">
+            <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:#160d10;border:1px solid var(--ember-deep);font-family:var(--stencil);font-weight:700;font-size:20px;color:#ef9450;">⬢</div>
+            <div style="flex:1;"><div style="font-family:var(--stencil);font-weight:700;font-size:17px;color:var(--ember-hi);">GRAVELORD</div><div style="font-family:var(--disp);font-size:11px;color:var(--txt-dim);margin-top:2px;">HEAVY · Hull 8/8</div></div>
+            <span style="width:9px;height:9px;border-radius:50%;background:var(--ember);box-shadow:0 0 10px var(--ember);animation:lampfast 1.4s infinite;"></span>
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--txt-faint);margin-bottom:9px;">◈ WEAPON</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px;">
+            <div style="padding:13px;background:linear-gradient(180deg,#241a0d,#160f06);border:1px solid var(--oil-deep);box-shadow:0 0 14px rgba(231,154,61,.2);cursor:pointer;"><div style="font-family:var(--stencil);font-weight:700;font-size:14px;color:var(--oil-hi);">AUTOCANNON</div><div style="font-family:var(--mono);font-size:8.5px;color:var(--txt-faint);margin-top:4px;">LONG RANGE · LOADED</div></div>
+            <div style="padding:13px;background:#0f1319;border:1px solid var(--line);cursor:pointer;"><div style="font-family:var(--stencil);font-weight:700;font-size:14px;color:var(--txt-dim);">CLAW</div><div style="font-family:var(--mono);font-size:8.5px;color:var(--txt-faint);margin-top:4px;">MELEE · IN RANGE ✗</div></div>
+          </div>
+          <!-- range readout -->
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:#0d1611;border:1px solid #2f5c33;margin-bottom:18px;">
+            <span style="font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--txt-faint);">RANGE</span>
+            <div style="flex:1;position:relative;height:6px;background:#07090c;border:1px solid #000;"><div style="height:100%;width:62%;background:linear-gradient(90deg,#4c9a5f,#6cc47f);"></div><div style="position:absolute;left:62%;top:-4px;width:2px;height:14px;background:#fff;"></div></div>
+            <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ok);">9″ · IN RANGE</span>
+          </div>
+          <button type="button" style="width:100%;padding:17px;background:linear-gradient(180deg,#f0663f,#b8351f);border:1px solid #ff8a6a;border-bottom:3px solid #6e2013;color:#180605;font-family:var(--stencil);font-weight:700;font-size:18px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.5),0 0 30px rgba(229,83,58,.4);" style-hover="filter:brightness(1.08);">▶ OPEN FIRE</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ RULEBOOK / CHAT ============ -->
+    <sc-if value="{{ isRulebook }}" hint-placeholder-val="{{ false }}">
+    <section data-screen-label="Rulebook" style="height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto;">
+      <div style="flex:0 0 auto;display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--line);background:#0b0e13;">
+        <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:conic-gradient(from 20deg,#2a1c0c,#5a3c14,#2a1c0c);border:1px solid var(--oil-deep);font-size:15px;">📻</div>
+        <div style="flex:1;"><div style="font-family:var(--stencil);font-weight:700;font-size:15px;letter-spacing:.08em;color:var(--oil);">THE QUARTERMASTER</div><div style="font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--txt-faint);margin-top:2px;">RULES MASTER · VOICE LINK OPEN</div></div>
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:lampfast 2s infinite;"></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="align-self:flex-end;max-width:78%;padding:11px 14px;background:linear-gradient(180deg,#241a0d,#1a1207);border:1px solid var(--oil-deep);color:var(--oil-hi);font-family:var(--disp);font-size:13px;line-height:1.5;">The Stalker takes 3 damage to its legs.</div>
+        <div style="align-self:flex-start;max-width:82%;">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--txt-faint);margin-bottom:6px;">▸ REASONING</div>
+          <div style="padding:10px 13px;background:#0a0d11;border:1px dashed var(--line);color:var(--txt-faint);font-family:var(--mono);font-size:10px;line-height:1.5;font-style:italic;">Legs at 5 SP · applying 3 damage · 2 SP remaining · not yet catastrophic…</div>
+          <div style="margin-top:8px;padding:12px 14px;background:linear-gradient(180deg,#161b23,#0f1319);border:1px solid var(--line);color:var(--txt);font-family:var(--disp);font-size:13px;line-height:1.55;">Understood. The <b style="color:var(--oil);">Stalker's</b> legs drop to <b style="color:var(--warn);">2 SP</b> — mobility's failing but she's still standing. One more solid hit there and she's crippled.</div>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);background:#0b0e13;">
+        <button type="button" style="width:46px;height:46px;border-radius:50%;background:linear-gradient(180deg,#f0663f,#b8351f);border:1px solid #ff8a6a;color:#fff;font-size:19px;cursor:pointer;box-shadow:0 0 18px rgba(229,83,58,.4);">🎙</button>
+        <div style="flex:1;display:flex;align-items:center;gap:8px;background:#07090c;border:1px solid var(--line);padding:0 14px;"><input placeholder="Narrate what happens…" style="flex:1;background:transparent;border:0;outline:none;color:var(--txt);font-family:var(--disp);font-size:13px;padding:13px 0;" /></div>
+        <button type="button" style="width:46px;height:46px;background:linear-gradient(180deg,#f0a94a,#c47a26);border:1px solid #ffcf82;color:#1a1206;font-size:18px;cursor:pointer;">▸</button>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ OUTCOME ============ -->
+    <sc-if value="{{ isOutcome }}" hint-placeholder-val="{{ false }}">
+    <section data-screen-label="Outcome" style="min-height:100%;display:flex;align-items:center;justify-content:center;padding:32px 18px;position:relative;">
+      <div style="position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 40%,rgba(231,154,61,.1),transparent 70%);pointer-events:none;"></div>
+      <div style="width:100%;max-width:500px;text-align:center;position:relative;">
+        <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.42em;color:var(--txt-faint);margin-bottom:18px;">BATTLE CONCLUDED · ROUND 6</div>
+        <div style="position:relative;display:inline-block;padding:6px 4px;">
+          <div style="font-family:var(--stencil);font-weight:700;font-size:72px;line-height:.85;letter-spacing:.04em;color:var(--oil);text-shadow:0 4px 0 rgba(0,0,0,.7),0 0 44px rgba(231,154,61,.35);transform:rotate(-3deg);">VICTORY</div>
+          <div style="position:absolute;inset:-6px -18px;border:3px solid var(--oil-deep);transform:rotate(-3deg);opacity:.6;"></div>
+        </div>
+        <div style="font-family:var(--disp);font-weight:500;font-size:15px;letter-spacing:.05em;color:var(--txt-dim);margin-top:22px;line-height:1.5;">KOSTOV holds the field. <span style="color:var(--oil);">28 VP</span> to <span style="color:var(--ember)">19 VP</span>.<br>The enemy squadron is scrap.</div>
+        <div style="display:flex;gap:12px;justify-content:center;margin:26px 0 24px;">
+          <div style="padding:13px 20px;background:#0f1319;border:1px solid var(--line);"><div style="font-family:var(--stencil);font-weight:700;font-size:26px;color:var(--oil);">02</div><div style="font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--txt-faint);margin-top:4px;">RIGS STANDING</div></div>
+          <div style="padding:13px 20px;background:#0f1319;border:1px solid var(--line);"><div style="font-family:var(--stencil);font-weight:700;font-size:26px;color:var(--ember);">03</div><div style="font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--txt-faint);margin-top:4px;">ENEMY WRECKED</div></div>
+          <div style="padding:13px 20px;background:#0f1319;border:1px solid var(--line);"><div style="font-family:var(--stencil);font-weight:700;font-size:26px;color:var(--txt);">18T</div><div style="font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--txt-faint);margin-top:4px;">SALVAGE</div></div>
+        </div>
+        <button type="button" style="padding:15px 40px;background:linear-gradient(180deg,#1c222b,#12161d);border:1px solid var(--rivet);border-bottom:3px solid #05070a;color:var(--oil);font-family:var(--stencil);font-weight:700;font-size:15px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;" style-hover="border-color:var(--oil);">↻ New Battle</button>
+      </div>
+    </section>
+    </sc-if>
+
+  </main>
+
+  <!-- ---- COMMAND DOCK ---- -->
+  <footer style="flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 16px;background:linear-gradient(180deg,#0b0e13,#070a0d);border-top:2px solid #000;box-shadow:inset 0 1px 0 rgba(231,154,61,.1),0 -3px 12px rgba(0,0,0,.6);">
+    <div style="font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--txt-faint);">CMD DOCK</div>
+    <div style="flex:1;"></div>
+    <sc-for list="{{ dockBtns }}" as="d" hint-placeholder-count="3">
+      <button type="button" style="display:flex;align-items:center;gap:7px;padding:9px 14px;background:linear-gradient(180deg,#1c222b,#12161d);border:1px solid var(--line);border-bottom:2px solid #05070a;color:var(--txt-dim);font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;" style-hover="border-color:var(--oil-deep);color:var(--oil);"><span>{{ d.icon }}</span>{{ d.label }}</button>
+    </sc-for>
+    <button type="button" style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#2a323e,#0e1217);border:2px solid var(--rivet);color:var(--oil);font-size:18px;cursor:pointer;box-shadow:0 0 14px rgba(231,154,61,.25);">⚙</button>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1080,&quot;height&quot;:720},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;join&quot;,&quot;squadron&quot;,&quot;commission&quot;,&quot;rig&quot;,&quot;battle&quot;,&quot;attack&quot;,&quot;rulebook&quot;,&quot;outcome&quot;],&quot;default&quot;:&quot;squadron&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { screen: null, fireOpen: false, rigOpen: false, rigActive: false };
+
+  spColor(cur, max) {
+    const p = max ? cur / max : 0;
+    if (cur <= 0) return "linear-gradient(90deg,#8f2f22,#f26a50)";
+    if (p <= .33) return "linear-gradient(90deg,#cf6a24,#ef9450)";
+    if (p <= .66) return "linear-gradient(90deg,#c99327,#e8bd57)";
+    return "linear-gradient(90deg,#4c9a5f,#6cc47f)";
+  }
+
+  comps(h, a, l, e, cur) {
+    const max = { H: h, A: a, L: l, E: e };
+    return ["H", "A", "L", "E"].map((t) => {
+      const c = cur[t];
+      return { tag: t, val: c + "/" + max[t], pct: Math.max(0, Math.round((c / max[t]) * 100)) + "%", color: this.spColor(c, max[t]) };
+    });
+  }
+
+  renderVals() {
+    const screen = this.state.screen ?? this.props.screen ?? "squadron";
+    const go = (s) => () => this.setState({ screen: s });
+    const chDef = [
+      ["join", "01", "Enlist"], ["squadron", "02", "Yard"], ["commission", "03", "Forge"],
+      ["rulebook", "04", "Rules"], ["outcome", "05", "Verdict"],
+    ];
+    const channels = chDef.map(([id, num, label]) => ({ id, num, label, active: screen === id, onSelect: go(id) }));
+
+    const yourStripe = "linear-gradient(180deg,#e79a3d,#a8641c)";
+    const classMap = { light: ["◆", "LGT", "#8fbcff"], medium: ["◈", "MED", "#e8bd57"], heavy: ["⬢", "HVY", "#ef9450"], colossal: ["✦", "COL", "#f26a50"] };
+    const mk = (name, cls, loadout, cur, opts = {}) => {
+      const [g, s, col] = classMap[cls];
+      const base = { light: [6, 5, 5, 4], medium: [7, 6, 6, 5], heavy: [8, 7, 7, 6], colossal: [9, 8, 8, 7] }[cls];
+      return {
+        name, loadout, classGlyph: g, classShort: s, classColor: col,
+        sideStripe: yourStripe,
+        comps: this.comps(base[0], base[1], base[2], base[3], cur),
+        active: !!opts.active,
+        statusColor: opts.status === "crit" ? "#f26a50" : opts.status === "warn" ? "#e8bd57" : "#6cc47f",
+        statusText: opts.status === "crit" ? "CRIT" : opts.status === "warn" ? "WORN" : "OK",
+      };
+    };
+
+    const yourRigs = [
+      mk("STALKER", "light", "Autocannon · Claw", { H: 4, A: 5, L: 3, E: 4 }, { active: true, status: "warn" }),
+      mk("CINDER", "light", "Missile Barrage · Flamethrower", { H: 6, A: 5, L: 5, E: 2 }, { status: "warn" }),
+      mk("WARDEN", "medium", "Siege Maul · Bulwark Shield", { H: 7, A: 6, L: 6, E: 5 }, { status: "ok" }),
+    ];
+    const enemyRigs = [
+      mk("GRAVELORD", "heavy", "Sniper Cannon · Chainsaw", { H: 8, A: 7, L: 5, E: 6 }, {}),
+      mk("HALLOW", "medium", "Mortar · Lance", { H: 3, A: 6, L: 6, E: 5 }, {}),
+    ].map((r) => ({ ...r, sideStripe: "" }));
+
+    // ---- Commission (Forge) — chassis-based ----
+    const steps = [
+      { n: "1", label: "Kind", state: "done" }, { n: "2", label: "Chassis", state: "active" },
+      { n: "3", label: "Equip", state: "todo" }, { n: "4", label: "Confirm", state: "todo" },
+    ].map((s) => ({
+      n: s.n, label: s.label,
+      bg: s.state === "active" ? "linear-gradient(180deg,#f0a94a,#c47a26)" : s.state === "done" ? "#1a2a1c" : "#0f1319",
+      border: s.state === "active" ? "#ffcf82" : s.state === "done" ? "#2f5c33" : "var(--line)",
+      fg: s.state === "active" ? "#1a1206" : s.state === "done" ? "#6cc47f" : "var(--txt-faint)",
+    }));
+
+    // unit kind — Rig chassis chosen (Tank / Walker are the cold alternatives)
+    const kindDef = [
+      ["◈", "RIG", "Heat · weight class · 2 weapon slots · equipment. 3 actions.", true],
+      ["▰", "TANK", "Cold single machine. One flat-pick weapon. 2 actions.", false],
+      ["⧗", "WALKER", "Cold walker chassis. One weapon. 3 mobile actions.", false],
+    ];
+    const kinds = kindDef.map(([glyph, label, desc, sel]) => ({
+      glyph, label, desc, sel,
+      glyphColor: sel ? "var(--oil-hi)" : "var(--txt-faint)",
+      bg: sel ? "linear-gradient(180deg,#241a0d,#160f06)" : "#0f1319",
+      border: sel ? "var(--oil-deep)" : "var(--line)",
+      fg: sel ? "var(--oil-hi)" : "var(--txt-dim)",
+    }));
+
+    // preset chassis — weight class + fixed weapon pair are locked to the frame
+    const chDefs = [
+      ["IRONJAW", "light", "Autocannon · Claw", "Hull 6 · Arms/Legs 5 · Engine 4 · Heat 4", true],
+      ["CINDERWALK", "light", "Missile Barrage · Flamethrower", "Hull 6 · Arms/Legs 5 · Engine 4 · Heat 4", false],
+      ["SCRAPMAW", "light", "Mini Gun · Circular Saw", "Hull 6 · Arms/Legs 5 · Engine 4 · Heat 4", false],
+      ["SLEDGE", "light", "Double MG · Wrecking Ball", "Hull 6 · Arms/Legs 5 · Engine 4 · Heat 4", false],
+      ["ARCLIGHT", "light", "Arc Gun · Sword", "Hull 6 · Arms/Legs 5 · Engine 4 · Heat 4", false],
+      ["HALBERD", "medium", "Mortar · Lance", "Hull 7 · Arms/Legs 6 · Engine 5 · Heat 5", false],
+      ["RAMPART", "medium", "Siege Maul · Bulwark Shield", "Hull 7 · Arms/Legs 6 · Engine 5 · Heat 5", false],
+      ["DEADEYE", "medium", "Sniper Cannon · Chainsaw", "Hull 7 · Arms/Legs 6 · Engine 5 · Heat 5", false],
+    ];
+    const classGlyph = { light: ["L", "LGT", "#8fbcff"], medium: ["M", "MED", "#e8bd57"] };
+    const chassisList = chDefs.map(([codename, cls, combo, stats, sel]) => {
+      const [emblem, classShort, classColor] = classGlyph[cls];
+      return {
+        codename, combo, stats, sel, emblem, classShort, classColor,
+        nameColor: sel ? "var(--oil-hi)" : "var(--txt)",
+        bg: sel ? "linear-gradient(180deg,#241a0d,#160f06)" : "linear-gradient(180deg,#141922,#0e1218)",
+        border: sel ? "var(--oil-deep)" : "var(--line)",
+        glow: sel ? "0 0 18px rgba(231,154,61,.22)" : "0 4px 12px rgba(0,0,0,.4)",
+      };
+    });
+
+    // upgrade paths for the selected chassis (IRONJAW): Standard / Machined / Wildcat
+    const node = (mark, label, nature, tag, sel, locked) => {
+      const map = {
+        field: ["#3a424e", "var(--txt-dim)", "#2b323d"],
+        tuned: ["#c99327", "var(--oil-hi)", "var(--oil-deep)"],
+        proto: ["#cf3a22", "var(--ember-hi)", "var(--ember-deep)"],
+      }[nature];
+      return {
+        mark, label, tag,
+        markColor: map[0],
+        fg: sel ? map[1] : locked ? "var(--txt-faint)" : "var(--txt-dim)",
+        tagColor: nature === "proto" ? "#c86b5a" : "var(--txt-faint)",
+        bg: sel ? (nature === "proto" ? "linear-gradient(180deg,#2a0d14,#1a080d)" : nature === "tuned" ? "linear-gradient(180deg,#241a0d,#160f06)" : "linear-gradient(180deg,#1c222b,#12161d)") : "#0c1015",
+        border: sel ? map[2] : nature === "proto" ? "#4a2029" : "var(--line-soft)",
+        cursor: locked ? "not-allowed" : "pointer",
+        opacity: locked ? ".4" : "1",
+      };
+    };
+    const upWeapons = [
+      { name: "Autocannon", kind: "LONG RANGE", stat: "ROF 2 · STR 4 · 6–24\"", nodes: [
+        node("I", "Standard", "field", "Issue barrel · reliable", false, false),
+        node("II", "Machined", "tuned", "Bench-bored · +1 STR", true, false),
+        node("III", "Wildcat", "proto", "⚠ one per rig · +heat", false, false),
+      ] },
+      { name: "Claw", kind: "MELEE", stat: "ROF 3 · STR 3 · 0–1\"", nodes: [
+        node("I", "Standard", "field", "Hydraulic grip", true, false),
+        node("II", "Machined", "tuned", "Hardened tips · rend", false, false),
+        node("III", "Wildcat", "proto", "⚠ locked · Wildcat in use", false, true),
+      ] },
+    ];
+
+    // ---- Rig terminal ----
+    const rc = (name, cur, max) => ({ name, val: cur + "/" + max, pct: Math.round((cur / max) * 100) + "%", color: this.spColor(cur, max), glow: cur / max <= .33 ? "rgba(239,148,80,.5)" : cur / max <= .66 ? "rgba(232,189,87,.4)" : "rgba(108,196,127,.4)" });
+    const rigComps = [rc("HULL", 4, 6), rc("ARMS", 5, 5), rc("LEGS", 2, 5), rc("ENGINE", 4, 4)];
+
+    // ---- Battle ----
+    const phaseDef = [["01", "SETUP", "done"], ["02", "INIT", "done"], ["03", "ACTIVATION", "active"], ["04", "RECOVERY", "todo"]];
+    const phases = phaseDef.map(([n, label, st]) => ({
+      n, label,
+      bg: st === "active" ? "linear-gradient(180deg,#241a0d,#160f06)" : "#0a0d11",
+      fg: st === "active" ? "var(--oil-hi)" : st === "done" ? "var(--txt-dim)" : "var(--txt-faint)",
+    }));
+    const act = (icon, label, note, kind) => ({
+      icon, label, note,
+      cursor: kind === "off" ? "not-allowed" : "pointer",
+      opacity: kind === "off" ? ".45" : "1",
+      bg: kind === "fire" ? "linear-gradient(180deg,#26170f,#160c07)" : kind === "off" ? "#0c0f14" : "linear-gradient(180deg,#161b23,#0f1319)",
+      border: kind === "fire" ? "var(--ember-deep)" : "var(--line)",
+      fg: kind === "fire" ? "var(--ember-hi)" : kind === "off" ? "var(--txt-faint)" : "var(--txt)",
+    });
+    const openFire = () => this.setState({ fireOpen: true });
+    const closeFire = () => this.setState({ fireOpen: false });
+    const openRig = () => this.setState({ rigOpen: true, rigActive: false });
+    const closeRig = () => this.setState({ rigOpen: false, rigActive: false });
+    const activateRig = () => this.setState({ rigActive: true });
+    yourRigs.forEach((r) => { r.onOpen = openRig; });
+    enemyRigs.forEach((r) => { r.onOpen = openRig; });
+    const actions = [
+      { ...act("▶", "FIRE", "Autocannon loaded · in range", "fire"), onClick: openFire },
+      act("⚔", "MELEE", "Move to base contact first", "off"),
+      act("⇢", "MOVE", "Up to 8″ · legs worn, −2″", "std"),
+      act("⟳", "RELOAD", "Spent weapons back online", "std"),
+    ];
+
+    const dockBtns = [
+      { icon: "🛠", label: "Rulebook", onSelect: go("rulebook") },
+      { icon: "↺", label: "Revert" },
+      { icon: "⎋", label: "Leave" },
+    ];
+
+    return {
+      roomCode: "IRON-42",
+      screen,
+      isJoin: screen === "join", isSquadron: screen === "squadron", isCommission: screen === "commission",
+      isRig: screen === "rig", isBattle: screen === "battle", isAttack: screen === "attack",
+      isRulebook: screen === "rulebook", isOutcome: screen === "outcome",
+      channels, yourRigs, enemyRigs, dockBtns,
+      steps, kinds, chassisList, upWeapons, rigComps, phases, actions,
+      fireOpen: this.state.fireOpen, openFire, closeFire,
+      rigOpen: this.state.rigOpen, openRig, closeRig,
+      rigActive: this.state.rigActive, rigNotActive: !this.state.rigActive, activateRig,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+/* V2 design tokens — scoped to .v2-root, never :root, to guarantee no collision
+   with V1's global tokens.css. Every custom property is prefixed --v2-. */
+@import url("https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+.v2-root {
+  --v2-iron-950:#080a0d; --v2-iron-900:#0c0f14; --v2-iron-850:#12161d; --v2-iron-800:#171d25;
+  --v2-iron-780:#1c2029; --v2-iron-750:#232a34; --v2-line:#2b323d; --v2-line-soft:#20262f; --v2-rivet:#3a424e;
+  --v2-oil:#e79a3d; --v2-oil-hi:#ffbf6a; --v2-oil-deep:#a8641c;
+  --v2-ember:#e5533a; --v2-ember-hi:#ff6f52; --v2-ember-deep:#8f2f22;
+  --v2-txt:#eef2f7; --v2-txt-dim:#aeb7c4; --v2-txt-faint:#7b8593;
+  --v2-ok:#6cc47f; --v2-warn:#e8bd57; --v2-low:#ef9450; --v2-crit:#f26a50;
+  --v2-stencil:"Stardos Stencil","Oswald",system-ui,sans-serif;
+  --v2-disp:"Oswald",system-ui,sans-serif;
+  --v2-mono:"JetBrains Mono",ui-monospace,monospace;
+
+  position:fixed; inset:0; z-index:10; display:flex; flex-direction:column;
+  color:var(--v2-txt); font-family:var(--v2-disp); -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(130% 90% at 50% -20%,rgba(231,154,61,.07),transparent 55%),
+    radial-gradient(100% 60% at 50% 120%,rgba(50,58,72,.12),transparent 60%),
+    #080a0d;
+}
+.v2-root *{box-sizing:border-box;}
+.v2-root ::-webkit-scrollbar{width:8px;height:8px;}
+.v2-root ::-webkit-scrollbar-thumb{background:#39414d;border:1px solid #10141a;}
+.v2-root ::-webkit-scrollbar-track{background:#0b0e12;}
+.v2-root a{color:var(--v2-oil);}
+.v2-root a:hover{color:var(--v2-oil-hi);}
+
+@keyframes v2-flick{0%,100%{opacity:.14}7%{opacity:.24}9%{opacity:.10}40%{opacity:.18}42%{opacity:.30}80%{opacity:.13}}
+@keyframes v2-scan{from{background-position:0 0}to{background-position:0 6px}}
+@keyframes v2-lampfast{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes v2-grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-2%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+@keyframes v2-glowpulse{0%,100%{box-shadow:inset 0 0 0 1px rgba(231,154,61,.5),0 0 0 rgba(231,154,61,0)}50%{box-shadow:inset 0 0 0 1px rgba(231,154,61,.9),0 0 22px rgba(231,154,61,.35)}}
+@media (prefers-reduced-motion:reduce){.v2-root *{animation:none!important}}
