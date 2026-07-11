@@ -67,6 +67,10 @@ describe("buildLoadout", () => {
     const lo = buildLoadout(rig)!;
     expect(lo.lr!.upName).toBe("");
     expect(lo.equipment).toBeNull();
+    // Unknown upgrade id must NOT leak the weapon's first-upgrade effect.
+    expect(lo.lr!.str).toEqual({ base: 4, delta: 0 });   // Mini Gun base STR 4, no delta
+    expect(lo.lr!.rof).toEqual({ base: 8, delta: 0 });   // Mini Gun base ROF 8
+    expect(lo.lr!.addedPerks).toEqual([]);               // no fallback perk
   });
 
   it("returns a single flat-pick weapon for cold kinds (Tank / Walker)", () => {

@@ -1,6 +1,6 @@
 import {
   EQUIPMENT, WEAPON_UPGRADES, CHASSIS, randomEquipment,
-  WEAPONS, UNIT_WEAPONS, effectiveWeaponProfile,
+  WEAPONS, UNIT_WEAPONS,
 } from "/shared/game-state.js";
 import type { Rig } from "../state/types";
 
@@ -33,27 +33,27 @@ export interface Loadout {
 }
 
 // Resolve one weapon slot into display-ready base stats + upgrade deltas.
-// Base numbers come straight from the weapon table; deltas from the chosen
-// upgrade's `effect`; the merged perk list (for `addedPerks`) from
-// `effectiveWeaponProfile`. Unknown weapon/upgrade names degrade to zeros/"".
+// Base numbers come straight from the weapon table; deltas and added perks
+// come from the STRICTLY-resolved upgrade's `effect`. Unknown weapon/upgrade
+// names degrade to zeros/"" — we do NOT use effectiveWeaponProfile here, since
+// it silently falls back to the weapon's first upgrade for an unknown id and
+// would produce phantom deltas/perks with no matching upgrade line.
 function weapon(rig: Rig, slot: Slot): LoadoutWeapon {
   const name = (rig.weapons as Record<string, string | undefined>)?.[slot] || "";
   const table = slot === "unit" ? UNIT_WEAPONS : WEAPONS[slot];
   const base = table?.[name];
-  const prof = base ? effectiveWeaponProfile(slot, name, rig) : null;
-  const effect = (prof?.upgradeEffect || {}) as { rof?: number; str?: number; range?: number };
   const up = slot === "unit"
     ? null
     : (WEAPON_UPGRADES[name] || []).find(
         (u: { id: string }) => u.id === rig.weaponUpgrades?.[slot as "longRange" | "melee"],
       );
+  const effect = (up?.effect || {}) as { rof?: number; str?: number; range?: number; perks?: string[] };
   const isMelee = !!base?.melee;
   const rangeText = isMelee
     ? `RNG ${base?.rng?.[0] ?? 0}"`
     : `${base?.minRange ?? 0}–${base?.maxRange ?? 0}"`;
   const basePerks: string[] = base?.perks || [];
-  const effPerks: string[] = prof?.perks || basePerks;
-  const addedPerks = effPerks.filter((p: string) => !basePerks.includes(p));
+  const addedPerks: string[] = (effect.perks || []).filter((p) => !basePerks.includes(p));
   return {
     slot,
     name,
