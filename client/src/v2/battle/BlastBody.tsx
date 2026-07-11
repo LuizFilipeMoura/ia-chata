@@ -3,7 +3,7 @@ import type { Rig } from "../../state/types";
 import "../styles/overlay.css";
 
 // Checkbox list for blast resolution: the controller ticks the Rigs standing
-// within 12" of the wreck. Owns a local version counter so ticking re-renders;
+// within 4" of the wreck. Owns a local version counter so ticking re-renders;
 // mirrors each pick into the caller's `picked` Set for the Confirm handler.
 export default function BlastBody({
   candidates, picked,
@@ -15,7 +15,7 @@ export default function BlastBody({
   return (
     <>
       <p className="v2-dwr-hint">
-        Select every Rig within 12" of the wreck — each takes a D6 + STR 10 blast hit.
+        Select every Rig within 4" of the wreck — each takes a D6 + STR 10 blast hit.
       </p>
       <div className="v2-blast-list">
         {candidates.map((r) => {

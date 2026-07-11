@@ -12,7 +12,8 @@ import type { Rig, ServerState } from "../../state/types";
 import { useV2BattleWatchers } from "./useV2BattleWatchers";
 import { playDamage, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
 
-vi.mock("../../hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
+const sent = vi.hoisted(() => vi.fn());
+vi.mock("../../hooks/useCommands", () => ({ useCommands: () => sent }));
 
 vi.mock("../audio/actionAudio", () => ({
   playDamage: vi.fn(), playHeat: vi.fn(), playEngineStart: vi.fn(), startEngineLoop: vi.fn(), stopEngineLoop: vi.fn(),
@@ -79,6 +80,34 @@ test("starts engine loop on your turn, stops on opponent turn", async () => {
   await waitFor(() => expect(vi.mocked(startEngineLoop)).toHaveBeenCalled());
   rerender(wrap(<Harness state={foe} />));
   await waitFor(() => expect(vi.mocked(stopEngineLoop)).toHaveBeenCalled());
+});
+
+test("auto-ends the activation once your active rig has spent its whole budget", async () => {
+  sent.mockClear();
+  const spent = { version: 40, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")],
+    game: { ...gameBase, turn: { side: "a", activeRigId: 1, actionsUsed: 3, actionsMax: 3 } } } as unknown as ServerState;
+  render(wrap(<Harness state={spent} />));
+  await waitFor(() =>
+    expect(sent).toHaveBeenCalledWith("endactivation", expect.objectContaining({ name: "MINE1" })),
+  );
+});
+
+test("does not auto-end the opponent's spent activation", async () => {
+  sent.mockClear();
+  const spent = { version: 41, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")],
+    game: { ...gameBase, turn: { side: "b", activeRigId: 2, actionsUsed: 3, actionsMax: 3 } } } as unknown as ServerState;
+  render(wrap(<Harness state={spent} />));
+  await waitFor(() => expect(vi.mocked(startEngineLoop)).toHaveBeenCalled()); // let effects settle
+  expect(sent).not.toHaveBeenCalledWith("endactivation", expect.anything());
+});
+
+test("does not auto-end while your active rig still has budget", async () => {
+  sent.mockClear();
+  const live = { version: 42, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")],
+    game: { ...gameBase, turn: { side: "a", activeRigId: 1, actionsUsed: 1, actionsMax: 3 } } } as unknown as ServerState;
+  render(wrap(<Harness state={live} />));
+  await waitFor(() => expect(vi.mocked(startEngineLoop)).toHaveBeenCalled());
+  expect(sent).not.toHaveBeenCalledWith("endactivation", expect.anything());
 });
 
 test("fires engine start when one of your rigs activates (not merely on turn start)", async () => {

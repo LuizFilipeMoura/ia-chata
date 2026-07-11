@@ -171,7 +171,7 @@ There is already `computeFocus()` in `battle.js` producing `{ text, urgent }` an
 | `activation`, your side, **no active rig** | "Activate one of your Rigs" | "Tap a Rig to take its turn." | — | act |
 | `activation`, your side, **rig active** | "Choose your next action" | shows actions left, e.g. "2 actions left" | — | act |
 | `activation`, opponent's side | "Waiting on {name}…" | — | — | wait |
-| `pendingBlast` | "Resolve blast" | "Mark rigs within 12″." | Resolve blast | act |
+| `pendingBlast` | "Resolve blast" | "Mark rigs within 4″." | Resolve blast | act |
 | `recovery`, you haven't scored | "Score your objectives" | "Tally VP for this round." | Score VP | act |
 | `recovery`, you scored | "Waiting for opponent to score…" | — | — | wait |
 | `finished` | *(outcome banner takes over — B4)* | — | — | — |

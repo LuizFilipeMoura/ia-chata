@@ -361,27 +361,6 @@
   letter-spacing: .04em; margin-top: .1rem;
 }
 
-/* Heat controls — enabled only for the active Rig */
-.heat-controls { display: grid; grid-template-columns: 1.5fr 1fr .8fr .8fr; gap: .35rem; margin-top: .55rem; }
-.heat-btn {
-  padding: .5rem .2rem; border-radius: 8px; border: 1px solid var(--line);
-  font-family: var(--font-display); font-weight: 700; font-size: .82rem; letter-spacing: .02em;
-  background: var(--iron-750); color: var(--txt);
-  transition: border-color .14s, color .14s, background .14s, transform .1s;
-}
-.heat-btn:not(:disabled):active { transform: translateY(1px); }
-.heat-btn-plus:not(:disabled)  { border-color: rgba(229,83,58,.45); color: var(--ember-hi); }
-.heat-btn-plus:not(:disabled):hover  { background: rgba(229,83,58,.16); border-color: var(--ember); }
-.heat-btn-minus:not(:disabled):hover { border-color: #7fd0c4; color: #a6e2d9; }
-.heat-btn-vent:not(:disabled):hover  { border-color: #7fd0c4; color: #a6e2d9; }
-.heat-btn-cool:not(:disabled):hover  { border-color: var(--oil); color: var(--oil-hi); }
-.heat-btn:disabled { opacity: .38; cursor: not-allowed; }
-
-.heat-locked-hint {
-  margin-top: .5rem; text-align: center; font-family: var(--font-mono);
-  font-size: .58rem; letter-spacing: .08em; text-transform: uppercase; color: var(--txt-faint);
-}
-
 /* ---- Commission-a-Rig card (bottom of list) ---- */
 .rig-add-card { flex: 0 0 auto; margin-top: .3rem; }
 .rig-add {

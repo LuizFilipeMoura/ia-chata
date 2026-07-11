@@ -28,9 +28,13 @@ export function V2Terminal() {
   const openRig = rigs.find((r) => r.id === openRigId) || null;
   const started = Boolean(game?.started);
   const pendingGate = Boolean(game?.pendingAnswer || game?.pendingReaction || game?.pendingBlast);
+  // Whether it's this player's activation turn at all — distinct from whether
+  // *this* rig can activate right now. "Wait for your turn" is only honest when
+  // it is NOT my turn; on my turn a blocked rig shows no control instead.
+  const myTurn = started && game?.phase === "activation" && game?.turn?.side === mySide;
   const canActivate =
-    !!openRig && started && game?.phase === "activation" && game?.turn?.side === mySide &&
-    (openRig.owner || "a") === mySide && game?.turn?.activeRigId == null && !pendingGate &&
+    !!openRig && myTurn && (openRig.owner || "a") === mySide &&
+    game?.turn?.activeRigId == null && !pendingGate &&
     !openRig.activated && !openRig.destroyed;
 
   return (
@@ -46,6 +50,7 @@ export function V2Terminal() {
       <Squadron onOpenRig={setOpenRigId} onCommission={() => setCommissionOpen(true)} />
       {openRig && (
         <RigTerminal rig={openRig} started={started} canActivate={canActivate}
+          mine={(openRig.owner || "a") === mySide} myTurn={myTurn}
           onCommand={sendCommand} onClose={() => setOpenRigId(null)} />
       )}
       {commissionOpen && <CommissionWizard onClose={() => setCommissionOpen(false)} />}

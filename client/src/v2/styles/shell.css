@@ -5,7 +5,7 @@
 
 /* ---- CRT / ambient overlays (mockup 45-50) ---- */
 .v2-root .v2-crt{position:fixed;inset:0;z-index:9000;pointer-events:none;}
-.v2-root .v2-crt--vignette{background:radial-gradient(120% 120% at 50% 50%,transparent 42%,rgba(0,0,0,.55) 82%,rgba(0,0,0,.92) 100%);}
+.v2-root .v2-crt--vignette{z-index:9700;background:radial-gradient(120% 120% at 50% 50%,transparent 28%,rgba(0,0,0,.66) 71%,rgba(0,0,0,.96) 95%);}
 .v2-root .v2-crt--scan{z-index:9001;mix-blend-mode:multiply;background:repeating-linear-gradient(0deg,rgba(0,0,0,.32) 0 1px,rgba(0,0,0,0) 1px 3px);animation:v2-scan 1s steps(6) infinite;opacity:.7;}
 .v2-root .v2-crt--grain{inset:-40%;z-index:9003;opacity:.06;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:v2-grain 1.2s steps(5) infinite;}
 .v2-root .v2-crt--flick{z-index:9004;background:radial-gradient(90% 70% at 50% 40%,rgba(231,154,61,.05),transparent 70%);animation:v2-flick 4s infinite;}

@@ -38,7 +38,7 @@ export function RigRow({ rig, hostile, onOpen }: { rig: Rig; hostile: boolean; o
       <span className="v2-rigrow-main">
         <span className="v2-rigrow-head">
           <span className="v2-rigrow-name v2-title">{rig.name}</span>
-          {rig.activated && !hostile && <span className="v2-rigrow-badge">ACTIVE</span>}
+          {rig.activated && !hostile && <span className="v2-rigrow-badge">DONE</span>}
           {!cold && m && <span className="v2-rigrow-heat" data-zone={m.zone}>🔥{m.heat}</span>}
         </span>
         <span className="v2-rigrow-loadout">{loadoutText(rig)}</span>

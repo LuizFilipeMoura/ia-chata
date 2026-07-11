@@ -34,6 +34,15 @@ interface DieState {
 const rollTone = (roll: { sides: number; tone?: string }): string =>
   roll.tone || (roll.sides === 12 ? "cool" : "");
 
+// Per-die verdict word shown under a settled to-hit die, alongside the tone
+// color — crit/ok land, miss whiffs. Location (cool) and untoned dice get none.
+const verdictLabel = (tone: string): string | null => {
+  if (tone === "crit") return "CRIT!";
+  if (tone === "ok") return "HIT!";
+  if (tone === "miss") return "FAILED!";
+  return null;
+};
+
 interface EffectState {
   text: string;
   delay: number;
@@ -333,6 +342,11 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                 >
                   {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
                 </div>
+                {d.settled && verdictLabel(d.tone) ? (
+                  <span className="v2-die-verdict v2-eyebrow" data-tone={d.tone}>
+                    {verdictLabel(d.tone)}
+                  </span>
+                ) : null}
                 <span className="v2-die-label v2-eyebrow">{d.label}</span>
               </div>
             ))}

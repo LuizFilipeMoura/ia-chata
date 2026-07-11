@@ -10,6 +10,7 @@ import { useV2Drawer } from "./V2DrawerContext";
 import { useV2Roll } from "./V2RollContext";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useV2Commands } from "../hooks/useV2Commands";
+import { playAction } from "../audio/actionAudio";
 import { useMySide } from "../../hooks/useMySide";
 import MoveBody from "../battle/MoveBody";
 import RepairBody from "../battle/RepairBody";
@@ -74,6 +75,9 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const openMove = useCallback(
     (rig: Rig, key: string) => {
+      // Spool the engine the moment the player selects to move (opens the wizard),
+      // not when the move resolves. Dispatch-time cue is suppressed in useV2Commands.
+      playAction(key);
       const sprint = key === "sprint";
       const enemies = (rigsRef.current || []).filter(
         (r) => !r.destroyed && r.owner !== rig.owner && r.engagedWith == null,
@@ -186,7 +190,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const resolveBlast = useCallback(() => {
     const sourceId = (gameRef.current?.pendingBlast as { sourceId?: number } | null)?.sourceId;
-    // Every living Rig is a candidate — the controller ticks those within 12"
+    // Every living Rig is a candidate — the controller ticks those within 4"
     // of the wreck. Exclude the exploding wreck itself.
     const candidates = (rigsRef.current || []).filter(
       (r) => !r.destroyed && r.id !== sourceId,
@@ -197,7 +201,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
     }
     const picked = new Set<string>();
     openDrawer({
-      title: '💥 Resolve blast — mark Rigs within 12"',
+      title: '💥 Resolve blast — mark Rigs within 4"',
       tone: "ember",
       render: () => <BlastBody candidates={candidates} picked={picked} />,
       actions: [

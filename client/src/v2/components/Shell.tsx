@@ -49,20 +49,23 @@ export function Shell({
       <header className="v2-strip">
         <div className="v2-brand">
           <div className="v2-brand-badge v2-badge"><div className="v2-brand-core" /></div>
-          <div className="v2-brand-txt">
-            <div className="v2-brand-name v2-title">OIL &amp; IRON</div>
-            <div className="v2-brand-sub v2-eyebrow">RIG CONTROL TERMINAL · MK.IV</div>
-          </div>
+          <div className="v2-brand-name v2-title">OIL &amp; IRON</div>
+          <div className="v2-brand-mk">MK·IV</div>
         </div>
         <div className="v2-strip-spacer" />
-        <div className="v2-strip-meta">
-          <div className="v2-link">
+        <div className="v2-telemetry">
+          <div className="v2-tele">
             <span className="v2-lamp v2-lamp--ok" style={{ "--v2-lamp-speed": "2.4s" } as CSSProperties} />
-            LINK ·LOCAL
+            <span className="v2-tele-key">LINK</span>
+            <span className="v2-tele-val">LOCAL</span>
           </div>
-          <div className="v2-room">RM// {session?.room}</div>
-          <button type="button" className="v2-gloss-btn" aria-label="Glossary" onClick={() => onGlossary?.()}>ⓘ</button>
+          <span className="v2-tele-sep" aria-hidden="true" />
+          <div className="v2-tele">
+            <span className="v2-tele-key">RM</span>
+            <span className="v2-tele-val">{session?.room}</span>
+          </div>
         </div>
+        <button type="button" className="v2-gloss-btn" aria-label="Glossary" onClick={() => onGlossary?.()}>ⓘ</button>
       </header>
 
       <nav className="v2-channels">

@@ -15,6 +15,14 @@ test("fires playAction for action verbs and always delegates", () => {
   expect(send).toHaveBeenCalledWith("action", { name: "R1", action: "fire" });
 });
 
+test("does not fire playAction on dispatch for move/sprint (cued at selection instead)", () => {
+  send.mockClear(); playAction.mockClear();
+  const { result } = renderHook(() => useV2Commands());
+  result.current("action", { name: "R1", action: "move" });
+  expect(playAction).not.toHaveBeenCalled();
+  expect(send).toHaveBeenCalledWith("action", { name: "R1", action: "move" });
+});
+
 test("does not fire playAction for non-action verbs", () => {
   send.mockClear(); playAction.mockClear();
   const { result } = renderHook(() => useV2Commands());

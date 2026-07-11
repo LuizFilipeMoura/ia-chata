@@ -81,14 +81,18 @@
 /* ---------- Shared equipment/weapon grid (unit-weapon + equipment steps) ---------- */
 .rw-equip-grid { display: flex; flex-direction: column; gap: .5rem; }
 .rw-equip-card {
-  text-align: left; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--iron-800); padding: .62rem .72rem; cursor: pointer; color: var(--txt);
+  text-align: left; border: 1px solid #05070a; border-radius: 6px;
+  background: var(--grain), linear-gradient(180deg, #171b21, #10131a);
+  background-size: 130px 130px, auto; background-blend-mode: overlay, normal;
+  padding: .62rem .72rem; cursor: pointer; color: var(--txt);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), inset 0 0 16px rgba(0,0,0,.45);
   transition: border-color .16s, box-shadow .16s, background .16s, transform .16s;
 }
 .rw-equip-card:hover { border-color: var(--rivet); transform: translateY(-1px); }
 .rw-equip-card.sel {
-  border-color: var(--oil); background: rgba(231,154,61,.09);
-  box-shadow: 0 0 0 1px rgba(231,154,61,.4), 0 6px 20px rgba(0,0,0,.35);
+  border-color: var(--oil); background: var(--grain), linear-gradient(180deg, rgba(231,154,61,.12), #12151b);
+  background-size: 130px 130px, auto; background-blend-mode: overlay, normal;
+  box-shadow: 0 0 0 1px rgba(231,154,61,.5), 0 6px 20px rgba(0,0,0,.45), inset 0 0 16px rgba(0,0,0,.4);
 }
 .rw-equip-family {
   font-family: var(--font-mono); font-size: .56rem; letter-spacing: .16em;
@@ -106,9 +110,11 @@
 .rw-kind-card {
   position: relative; text-align: center; cursor: pointer; color: var(--txt);
   display: flex; flex-direction: column; align-items: center; gap: .28rem;
-  border: 1px solid var(--line); border-radius: 12px;
-  background: linear-gradient(180deg, var(--iron-800), var(--iron-850));
+  border: 1px solid #05070a; border-radius: 6px;
+  background: var(--grain), linear-gradient(180deg, #191d24, #10131a);
+  background-size: 120px 120px, auto; background-blend-mode: overlay, normal;
   padding: .85rem .5rem; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), inset 0 0 18px rgba(0,0,0,.5);
   transition: border-color .16s, box-shadow .16s, transform .16s, background .16s;
   animation: rw-rise .34s var(--ease-out) both;
 }
@@ -117,8 +123,9 @@
 .rw-kind-card:hover { border-color: var(--rivet); transform: translateY(-2px); }
 .rw-kind-card.sel {
   border-color: var(--oil);
-  background: linear-gradient(180deg, rgba(231,154,61,.14), var(--iron-850));
-  box-shadow: 0 0 0 1px rgba(231,154,61,.45), 0 8px 26px rgba(0,0,0,.4);
+  background: var(--grain), linear-gradient(180deg, rgba(231,154,61,.13), #12151b);
+  background-size: 120px 120px, auto; background-blend-mode: overlay, normal;
+  box-shadow: 0 0 0 1px rgba(231,154,61,.5), 0 8px 26px rgba(0,0,0,.5), inset 0 0 18px rgba(0,0,0,.4);
 }
 .rw-kind-glyph {
   font-size: 1.7rem; line-height: 1; color: var(--txt-faint);
@@ -195,18 +202,23 @@
 .rc-frame::after { bottom: 0; right: 0; border-left: 0; border-top: 0; }
 .rc-card.sel .rc-frame { opacity: 1; }
 
-/* Portrait plate: diagonal-striped bay, big class monogram, weapon pips. */
+/* Portrait plate: hazard-striped, grimy bay stamped with the class monogram. */
 .rc-plate {
-  position: relative; border-radius: 9px; overflow: hidden;
+  position: relative; border-radius: 5px; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .18rem;
   background:
-    repeating-linear-gradient(45deg, rgba(0,0,0,.28) 0 6px, transparent 6px 12px),
-    linear-gradient(160deg, color-mix(in srgb, var(--rc) 32%, var(--iron-780)), var(--iron-900));
-  border: 1px solid color-mix(in srgb, var(--rc) 40%, var(--line));
+    var(--grain),
+    repeating-linear-gradient(45deg, rgba(0,0,0,.42) 0 5px, transparent 5px 11px),
+    linear-gradient(160deg, color-mix(in srgb, var(--rc) 30%, #14181f), #090b0e);
+  background-size: 90px 90px, auto, auto;
+  background-blend-mode: overlay, normal, normal;
+  border: 1px solid #05070a;
+  box-shadow: inset 0 0 12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.05);
 }
 .rc-emblem {
   font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; line-height: 1;
-  color: var(--rc-hi); text-shadow: 0 2px 10px rgba(0,0,0,.5);
+  color: var(--rc-hi); text-shadow: 0 1px 0 #000, 0 2px 10px rgba(0,0,0,.7);
+  filter: saturate(.85);
 }
 .rc-pips { display: flex; gap: .2rem; font-size: .78rem; filter: saturate(1.1); }
 
@@ -214,8 +226,9 @@
 .rc-tierrow { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
 .rc-tier {
   font-family: var(--font-mono); font-size: .54rem; letter-spacing: .14em;
-  text-transform: uppercase; font-weight: 700; color: #10141a;
-  background: var(--rc-hi); padding: .05rem .4rem; border-radius: 4px;
+  text-transform: uppercase; font-weight: 700; color: #0b0e12;
+  background: var(--rc-hi); padding: .05rem .42rem; border-radius: 2px;
+  transform: rotate(-1.5deg); box-shadow: inset 0 0 0 1px rgba(0,0,0,.3);
 }
 .rc-tier-sep { font-family: var(--font-mono); font-size: .54rem; letter-spacing: .12em; text-transform: uppercase; color: var(--txt-faint); }
 /* Sits inline after the class tag (not pinned right) so the "◈ Selected"
@@ -226,10 +239,11 @@
 }
 /* Keep the tier row clear of the corner ribbon on the selected card. */
 .rc-card.sel .rc-tierrow { padding-right: 4.6rem; }
-/* Chassis codename — stencilled, class-tinted; the identity of the card. */
+/* Chassis codename — stencilled and ink-smudged, class-tinted; the card's identity. */
 .rc-label {
-  font-family: var(--font-display); font-weight: 800; font-size: 1.14rem; line-height: 1.1;
-  letter-spacing: .06em; text-transform: uppercase; color: var(--rc-hi); margin: .05rem 0;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.16rem; line-height: 1.1;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--rc-hi); margin: .05rem 0;
+  text-shadow: 0 1px 0 #000, 0 0 3px rgba(0,0,0,.7);
 }
 /* Weapon pair beneath the codename — the loadout the name stands for. */
 .rc-combo { font-family: var(--font-mono); font-size: .62rem; color: var(--txt-dim); letter-spacing: .02em; }
@@ -294,8 +308,11 @@
 .rw-node {
   position: relative; z-index: 1; display: grid; grid-template-columns: 30px 1fr; gap: .5rem;
   align-items: center; text-align: left; cursor: pointer; color: var(--txt);
-  border: 1px solid var(--line); border-radius: 10px; background: var(--iron-800);
+  border: 1px solid #05070a; border-radius: 6px;
+  background: var(--grain), linear-gradient(180deg, #171b21, #10131a);
+  background-size: 120px 120px, auto; background-blend-mode: overlay, normal;
   padding: .5rem .58rem; min-height: 3.4rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), inset 0 0 16px rgba(0,0,0,.45);
   transition: border-color .16s, box-shadow .16s, background .16s, transform .16s;
   animation: rw-rise .3s var(--ease-out) both;
 }
@@ -307,7 +324,9 @@
 .rw-node-mark {
   display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
   font-family: var(--font-mono); font-weight: 700; font-size: .66rem; letter-spacing: .04em;
-  color: var(--txt-dim); background: var(--iron-900); border: 2px solid var(--line);
+  color: var(--txt-dim); background: radial-gradient(circle at 50% 35%, #1c222b, #0a0d11);
+  border: 2px solid #05070a; text-shadow: 0 1px 0 #000;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 6px rgba(0,0,0,.6);
   transition: color .16s, border-color .16s, background .16s, box-shadow .16s;
 }
 .rw-node-body { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
@@ -315,14 +334,18 @@
 .rw-node-name { font-family: var(--font-display); font-weight: 700; font-size: .9rem; color: var(--txt); }
 .rw-node-tag { display: block; font-size: .72rem; line-height: 1.3; color: var(--txt-dim); }
 
-/* Nature badge (also used verbatim by the tests). */
+/* Nature badge stamped like ink on a requisition crate — mono, distressed
+   double border, sitting slightly askew. */
 .rw-nature {
-  font-style: normal; font-size: .58rem; font-weight: 700; letter-spacing: .1em;
-  text-transform: uppercase; padding: .08rem .4rem; border-radius: 4px; vertical-align: middle;
+  display: inline-block; font-style: normal; font-family: var(--font-mono);
+  font-size: .54rem; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; padding: .1rem .4rem; border-radius: 2px; vertical-align: middle;
+  transform: rotate(-1.5deg); text-shadow: 0 1px 0 rgba(0,0,0,.55);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
 }
-.rw-nature-field { background: var(--nat-field-bg); color: var(--nat-field-hi); border: 1px solid var(--nat-field-line); }
-.rw-nature-tuned { background: var(--nat-tuned-bg); color: var(--nat-tuned-hi); border: 1px solid var(--nat-tuned-line); }
-.rw-nature-prototype { background: var(--nat-proto-bg); color: var(--nat-proto-hi); border: 1px solid var(--nat-proto-line); }
+.rw-nature-field { background: var(--nat-field-bg); color: var(--nat-field-hi); border: 1px solid var(--nat-field); }
+.rw-nature-tuned { background: var(--nat-tuned-bg); color: var(--nat-tuned-hi); border: 1px solid var(--nat-tuned); }
+.rw-nature-prototype { background: var(--nat-proto-bg); color: var(--nat-proto-hi); border: 1px solid var(--nat-proto); }
 
 /* Per-nature node accents — rising commitment down the path. */
 .rw-node.nat-field   { --nn: var(--nat-field);  --nn-hi: var(--nat-field-hi);  --nn-bg: var(--nat-field-bg);  --nn-line: var(--nat-field-line); }
@@ -373,16 +396,25 @@
 
 /* ============================== NAV ============================== */
 .rw-nav { display: flex; gap: .5rem; margin-top: 1rem; }
+/* Primary = stamped ochre ordnance plate; Back = raw riveted steel. */
 .rw-btn {
-  flex: 1; background: linear-gradient(180deg, var(--oil-hi), var(--oil));
-  color: #241606; border-radius: 10px; padding: .62rem 1rem;
-  font-weight: 800; font-family: var(--font-display); letter-spacing: .04em; font-size: .92rem;
-  box-shadow: 0 6px 20px rgba(231,154,61,.22);
+  flex: 1; position: relative;
+  background: linear-gradient(180deg, var(--oil-hi), var(--oil-deep));
+  color: #201302; border: 1px solid #05070a; border-top-color: rgba(255,220,160,.5);
+  border-radius: 4px; padding: .64rem 1rem;
+  font-weight: 800; font-family: var(--font-mono); letter-spacing: .14em; text-transform: uppercase; font-size: .82rem;
+  text-shadow: 0 1px 0 rgba(255,225,170,.4);
+  box-shadow: 0 5px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,235,190,.35), inset 0 0 8px rgba(120,70,20,.4);
   transition: transform .12s, box-shadow .16s, filter .16s;
 }
-.rw-btn:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
-.rw-btn:disabled { background: var(--iron-800); color: var(--txt-faint); border: 1px solid var(--line); box-shadow: none; }
-.rw-btn.ghost { background: var(--iron-750); color: var(--txt); flex: 0 0 auto; padding-left: 1.2rem; padding-right: 1.2rem; box-shadow: none; }
+.rw-btn:hover:not(:disabled) { filter: brightness(1.06) saturate(1.05); transform: translateY(-1px); }
+.rw-btn:disabled { background: #14181f; color: var(--txt-faint); border: 1px solid #05070a; text-shadow: none; box-shadow: inset 0 0 10px rgba(0,0,0,.5); }
+.rw-btn.ghost {
+  flex: 0 0 auto; padding-left: 1.2rem; padding-right: 1.2rem;
+  background: linear-gradient(180deg, #232a34, #12151b); color: var(--txt);
+  border: 1px solid #05070a; border-top-color: rgba(255,255,255,.06);
+  text-shadow: 0 1px 0 #000; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 4px 12px rgba(0,0,0,.4);
+}
 
 /* Legacy selectors kept for any lingering markup. */
 .rw-upgrade-choices { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
@@ -395,6 +427,6 @@
   50%      { box-shadow: 0 0 0 1px var(--nat-proto), 0 0 30px var(--nat-proto-glow); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rw-kind-card, .rc-slot, .rc-equip-bay, .rw-node { animation: none; }
+  .rw-kind-card, .rc-slot, .rc-bay, .rw-node { animation: none; }
   .rw-node.nat-prototype.sel { animation: none; }
 }

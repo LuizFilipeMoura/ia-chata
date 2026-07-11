@@ -9,6 +9,7 @@
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
+  margin-bottom: 16px;
   padding: 8px 14px;
   background: var(--v2-surface);
   border: 1px solid var(--v2-line);
@@ -63,6 +64,31 @@
   font-size:var(--v2-text-sm);
   letter-spacing: 0.04em;
   color: var(--v2-warn);
+}
+.v2-root .v2-bh-audio {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--v2-iron-800);
+  border: 1px solid var(--v2-line);
+  border-radius: 5px;
+  color: var(--v2-txt-dim);
+  font-size:var(--v2-text-base);
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color var(--v2-dur-fast) ease, filter var(--v2-dur-fast) ease;
+}
+.v2-root .v2-bh-audio:hover {
+  border-color: var(--v2-rivet);
+  filter: brightness(1.1);
+}
+.v2-root .v2-bh-audio[aria-pressed="true"] {
+  border-color: var(--v2-line-soft);
+  color: var(--v2-txt-faint);
 }
 
 /* ---- Turn banner card ---- */
@@ -167,14 +193,14 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 0;
   padding: 14px 14px 15px;
   background:
     radial-gradient(120% 80% at 50% 0%, rgba(108, 196, 127, 0.08), transparent 65%),
     linear-gradient(180deg, #142a1c, #0d1e14);
   border: 1px solid #1f4a2c;
   border-top: 2px solid #2f6b40;
-  border-radius: 10px;
+  border-radius: 0;
   box-shadow: inset 0 0 28px rgba(108, 196, 127, 0.1), 0 6px 16px rgba(0, 0, 0, 0.45);
 }
 .v2-root .v2-ac:empty {
@@ -536,23 +562,43 @@
   color: var(--v2-warn);
 }
 
-/* end-turn button */
-.v2-root .v2-ac-end {
+/* full-width Shut Down / End-Turn control — the activation's early-out */
+.v2-root .v2-ac-shutdown {
   align-self: stretch;
-  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
   background: var(--v2-iron-800);
-  border: 1px solid var(--v2-line);
+  border: 1px solid var(--v2-ember-deep);
   cursor: pointer;
-  color: var(--v2-txt-dim);
+  color: var(--v2-txt);
+  text-align: left;
+}
+.v2-root .v2-ac-shutdown:hover {
+  border-color: var(--v2-ember);
+  background: var(--v2-ember-wash);
+}
+.v2-root .v2-ac-shutdown-glyph {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--v2-ember);
+}
+.v2-root .v2-ac-shutdown-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.v2-root .v2-ac-shutdown-label {
   font-family: var(--v2-disp);
   font-weight: 600;
-  font-size:var(--v2-text-sm);
+  font-size: var(--v2-text-sm);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.v2-root .v2-ac-end:hover {
-  border-color: var(--v2-rivet);
-  color: var(--v2-txt);
+.v2-root .v2-ac-shutdown-note {
+  font-size: var(--v2-text-xs);
+  color: var(--v2-txt-dim);
 }
 
 /* ---- Outcome banner (.v2-outcome*) — full-screen victory/defeat scrim ported

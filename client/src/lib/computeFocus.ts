@@ -73,7 +73,7 @@ export function computeFocus(
   if (g.pendingBlast) {
     return {
       tone: "act", icon: "💥", primary: "Resolve blast",
-      secondary: 'Mark rigs within 12".',
+      secondary: 'Mark rigs within 4".',
       cta: { label: "Resolve", kind: "blast" },
     };
   }
@@ -103,13 +103,13 @@ export function computeFocus(
       if (g.pendingAnswer.side !== mine) {
         return {
           tone: "wait",
-          icon: "â³",
+          icon: "⏳",
           primary: `Waiting for ${sideNameOf(g.pendingAnswer.side)} to set answer tokens...`,
         };
       }
       return {
         tone: "act",
-        icon: "â—ˆ",
+        icon: "◈",
         primary: "Set answer tokens",
         secondary: `${g.pendingAnswer.remaining} reaction${g.pendingAnswer.remaining === 1 ? "" : "s"} to prepare.`,
       };

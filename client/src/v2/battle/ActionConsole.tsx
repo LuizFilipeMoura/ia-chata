@@ -2,6 +2,7 @@ import { useState, useRef, useLayoutEffect, useEffect, type ReactNode } from "re
 import { createPortal } from "react-dom";
 import { availableActions, actionBudget } from "/shared/battle-view.js";
 import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
+import { HEAT_CAPACITY } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useV2Commands } from "../hooks/useV2Commands";
 import { useV2BattleActions } from "../state/V2BattleActionsContext";
@@ -178,11 +179,15 @@ export function ActionConsole({ rig }: Props) {
   const actions = availableActions(rig, t, game?.round) as Action[];
   // Cold kinds (Tank / Walker) don't track heat — suppress per-action heat tags.
   const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
+  // Overheated (heat past capacity) — Shut Down is worth flagging, not forcing.
+  const hot = !cold && rig.engine.heat > (HEAT_CAPACITY[rig.weightClass] ?? 5);
 
   const claimed = new Set(GROUPS.flatMap((g) => g.keys));
+  // Shut Down is promoted to the full-width button below the grid, so drop it
+  // from the Support catch-all to avoid offering it twice.
   const childrenFor = (g: (typeof GROUPS)[number]) =>
     g.id === "support"
-      ? actions.filter((a) => !claimed.has(a.key))
+      ? actions.filter((a) => !claimed.has(a.key) && a.key !== "shutdown")
       : actions.filter((a) => g.keys.includes(a.key));
 
   // Surface the "why" behind constrained actions as inline hints, deduplicated.
@@ -222,7 +227,16 @@ export function ActionConsole({ rig }: Props) {
           const open = openGroup === g.id;
           // Collapsed to one live action → the tile wears that action's face so
           // its label matches the straight-through fire (Move ⇢ becomes Disengage ⇲).
-          const solo = enabledKids.length === 1 ? enabledKids[0] : null;
+          // Shut Down never solos: it's always live (0-slot), so once the budget is
+          // spent it would be the lone Support survivor and hijack the tile, reading
+          // as an obligatory shutdown. Keep it a menu choice instead.
+          const solo =
+            enabledKids.length === 1 && enabledKids[0].key !== "shutdown"
+              ? enabledKids[0]
+              : null;
+          const opensMenu = groupEnabled && !solo;
+          // Flag (don't force) Shut Down: warm the Support tile when overheated.
+          const hotTile = hot && g.id === "support";
           const tileGlyph = solo ? ACTION_GLYPH[solo.key] ?? g.glyph : g.glyph;
           const tileLabel = solo ? solo.label : g.label;
 
@@ -236,17 +250,17 @@ export function ActionConsole({ rig }: Props) {
             <div className="v2-ac-cell" key={g.id}>
               <button
                 type="button"
-                className={"v2-ac-tile" + (open ? " is-open" : "")}
+                className={"v2-ac-tile" + (open ? " is-open" : "") + (hotTile ? " is-hot" : "")}
                 data-tone={g.tone}
                 disabled={!groupEnabled}
-                aria-haspopup={enabledKids.length > 1 || undefined}
-                aria-expanded={enabledKids.length > 1 ? open : undefined}
+                aria-haspopup={opensMenu || undefined}
+                aria-expanded={opensMenu ? open : undefined}
                 onClick={onGroup}
                 ref={(el) => (cellRefs.current[g.id] = el)}
               >
                 <span className="v2-ac-tile-glyph" aria-hidden="true">{tileGlyph}</span>
                 <span className="v2-ac-tile-label">{tileLabel}</span>
-                {enabledKids.length > 1 && <span className="v2-ac-tile-caret" aria-hidden="true">▾</span>}
+                {opensMenu && <span className="v2-ac-tile-caret" aria-hidden="true">▾</span>}
               </button>
 
               {open && (
@@ -261,14 +275,18 @@ export function ActionConsole({ rig }: Props) {
                       key={a.key}
                       type="button"
                       role="menuitem"
-                      className="v2-ac-pop-row"
+                      className={"v2-ac-pop-row" + (hot && a.key === "shutdown" ? " is-hot" : "")}
                       style={{ ["--i" as string]: i }}
                       disabled={!a.enabled}
                       onClick={() => onAction(rig, a.key)}
                     >
                       <span className="v2-ac-pop-main">
                         <span className="v2-ac-pop-label">{a.label}</span>
-                        {a.note && <span className="v2-ac-pop-note">{a.note}</span>}
+                        {a.note ? (
+                          <span className="v2-ac-pop-note">{a.note}</span>
+                        ) : hot && a.key === "shutdown" ? (
+                          <span className="v2-ac-pop-note">Cools 2 per slot left (max 5) — ends activation</span>
+                        ) : null}
                       </span>
                       {!cold && (
                         <span className="v2-ac-pop-heat" data-heat={heatBucket(a.heat)}>
@@ -293,9 +311,31 @@ export function ActionConsole({ rig }: Props) {
         </p>
       ))}
 
-      <button className="v2-ac-end" type="button" onClick={() => endActivation(rig)}>
-        End {rig.name}&apos;s turn
-      </button>
+      {/* The full-width control ends the activation. A heat unit ends it as a
+          Shut Down (cools 2 per unspent slot, max 5); a cold unit (Tank/Walker)
+          has no Shut Down, so it ends plainly. When the budget runs out the
+          activation auto-ends (useV2BattleWatchers), so this is the early-out. */}
+      {!cold ? (
+        <button className="v2-ac-shutdown" type="button" onClick={() => onAction(rig, "shutdown")}>
+          <span className="v2-ac-shutdown-glyph" aria-hidden="true">⏻</span>
+          <span className="v2-ac-shutdown-text">
+            <span className="v2-ac-shutdown-label">Shut Down</span>
+            <span className="v2-ac-shutdown-note">
+              {b.left > 0
+                ? `Cools ${Math.min(5, 2 * b.left)} heat · ends activation`
+                : "Ends activation"}
+            </span>
+          </span>
+        </button>
+      ) : (
+        <button className="v2-ac-shutdown" type="button" onClick={() => endActivation(rig)}>
+          <span className="v2-ac-shutdown-glyph" aria-hidden="true">⏻</span>
+          <span className="v2-ac-shutdown-text">
+            <span className="v2-ac-shutdown-label">End Turn</span>
+            <span className="v2-ac-shutdown-note">Ends {rig.name}&apos;s activation</span>
+          </span>
+        </button>
+      )}
     </div>
   );
 }

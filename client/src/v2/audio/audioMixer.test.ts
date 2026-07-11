@@ -46,12 +46,21 @@ test("reads persisted false on reset", () => {
   expect(getEnabled()).toBe(false);
 });
 
-test("play mixes voice at 1.0 and sfx at 0.5", async () => {
+test("play mixes voice at 1.0 and sfx at 0.5, each with a fade envelope", async () => {
   const ctx = new FakeCtx(); cfg(ctx);
   play(["v"], ["s"]); await flush();
   expect(ctx.sources.length).toBe(2);
-  expect(ctx.gains.map((g) => g.gain.value).sort()).toEqual([0.5, 1]);
+  const peaks = ctx.gains.map((g) => g.gain.linearRampToValueAtTime.mock.calls[0][0]).sort();
+  expect(peaks).toEqual([0.5, 1]); // fade-in targets
+  const outs = ctx.gains.map((g) => g.gain.linearRampToValueAtTime.mock.calls.at(-1)![0]);
+  expect(outs).toEqual([0, 0]); // both fade out to 0
   expect(ctx.sources[0].start).toHaveBeenCalled();
+});
+
+test("play applies a custom sfx gain", async () => {
+  const ctx = new FakeCtx(); cfg(ctx);
+  play([], ["s"], 0.1); await flush();
+  expect(ctx.gains[0].gain.linearRampToValueAtTime.mock.calls[0][0]).toBe(0.1);
 });
 
 test("play skips a null/empty layer", async () => {

@@ -56,7 +56,7 @@ test("weapons step badges each upgrade with its nature", async () => {
   // Default chassis light-claw-autocannon: Autocannon has a Field (Depleted Core)
   // and a Prototype (Penetrator Rounds); their dieselpunk stamps must render.
   expect(screen.getAllByText("Standard").length).toBeGreaterThan(0);
-  expect(screen.getAllByText("Wildcat").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Prototype").length).toBeGreaterThan(0);
 });
 
 test("the default chassis shows its dieselpunk codename", async () => {

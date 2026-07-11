@@ -1192,7 +1192,7 @@ function applyDamage(room, rig, loc, amount, opts) {
 }
 
 // §9 — on the transition to destroyed, roll a D12; 4+ erupts. Record a pending
-// blast the controller resolves by naming rigs within 12" (see the `blast` verb).
+// blast the controller resolves by naming rigs within 4" (see the `blast` verb).
 function onRigDamaged(room, rig, opts) {
   if (rig.destroyed && !rig._blastRolled) {
     rig._blastRolled = true;
@@ -1201,7 +1201,7 @@ function onRigDamaged(room, rig, opts) {
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 12")' : "no secondary blast"}`,
+      summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
       effects: [],
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
@@ -1648,13 +1648,13 @@ function resolveSkewerStrike(room, skewerer, victim, random) {
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
   if (act === "shutdown") {
-    // Shutdown may be called at any point in the activation. Cooling is
-    // proportional to how much of the activation was spent acting: the more
-    // slots already used, the less heat it sheds (0 used → full cool to floor).
+    // Shutdown may be called at any point in the activation. Cooling scales
+    // with the slots left unspent: 2 heat per remaining action, capped at 5.
+    // Never cools below the engine's heat floor.
     const floor = engineHeatFloor(rig);
-    const overFloor = Math.max(0, rig.engine.heat - floor);
-    const frac = t.actionsMax > 0 ? Math.min(1, t.actionsUsed / t.actionsMax) : 0;
-    rig.engine.heat = floor + Math.round(overFloor * frac);
+    const actionsLeft = Math.max(0, t.actionsMax - t.actionsUsed);
+    const cool = Math.min(5, 2 * actionsLeft);
+    rig.engine.heat = Math.max(floor, rig.engine.heat - cool);
     recompute(rig);
     endActivation(room, rig, null, random);
     return true;

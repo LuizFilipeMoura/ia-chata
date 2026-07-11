@@ -5,7 +5,7 @@ const { play, startIdle, stopIdle } = vi.hoisted(() => ({
   startIdle: vi.fn(),
   stopIdle: vi.fn(),
 }));
-vi.mock("./audioMixer", () => ({ play, startIdle, stopIdle }));
+vi.mock("./audioMixer", () => ({ play, startIdle, stopIdle, SFX_GAIN: 0.5 }));
 vi.mock("./soundAssets", () => ({
   // echo the stem back as its "URL" so assertions read clearly; unknowns → null
   soundUrl: (s: string) => (s === "missing" ? null : `url:${s}`),
@@ -58,12 +58,13 @@ test("playDamage plays tank_getting_shot as sfx", () => {
   expect(sfx).toContain("url:tank_getting_shot_1");
 });
 
-test("playHeat plays the furnace clip as sfx", () => {
+test("playHeat plays the furnace clip as sfx at a third volume", () => {
   play.mockClear();
   playHeat();
-  const [voices, sfx] = play.mock.calls[0];
+  const [voices, sfx, gain] = play.mock.calls[0];
   expect(voices).toEqual([]);
   expect(sfx).toEqual(["url:heat_furnace"]);
+  expect(gain).toBeCloseTo(0.5 / 3);
 });
 
 test("engine loop resolves both engine stems", () => {

@@ -967,29 +967,29 @@ test("Shutdown is allowed after a real action has been spent (not just as the fi
   b1.engine.heat = 9;                          // hot after the move
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
   assert.equal(b1.activated, true);            // shutdown went through mid-activation (was blocked before)
-  assert.equal(b1.engine.heat, 3);             // 0 + round(9 · 1/3) — cooled proportionally
+  assert.equal(b1.engine.heat, 5);             // 9 − min(5, 2·2 left) = 9 − 4
 });
 
-test("Shutdown cools proportionally to slots already used and ends the activation", () => {
+test("Shutdown cools 2 heat per slot left and ends the activation", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.engine.heat = 6;              // floor is 0 for a fresh engine
-  r.game.turn.actionsUsed = 2;     // of 3 slots → keeps 2/3 of the heat
+  r.game.turn.actionsUsed = 2;     // 1 of 3 slots left → cools 2
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
-  assert.equal(b1.engine.heat, 4); // 0 + round(6 · 2/3)
+  assert.equal(b1.engine.heat, 4); // 6 − min(5, 2·1)
   assert.equal(b1.activated, true);
 });
 
-test("Shutdown as the first action cools fully to the floor", () => {
+test("Shutdown as the first action cools by the 5-heat cap", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.engine.heat = 6;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
-  assert.equal(b1.engine.heat, 0); // 0 slots used → full cool
+  assert.equal(b1.engine.heat, 1); // 3 slots left → 2·3 = 6, capped at 5 → 6 − 5
 });
 
 test("undo reverts the acting side's last turn-scoped action", () => {

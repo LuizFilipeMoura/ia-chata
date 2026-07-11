@@ -4,8 +4,9 @@
 import { hitPart, impactRow as _impactRow } from "./unit-kinds.js";
 
 // Action catalogue (§5). `heat` is the base heat generated; `slot` is the
-// action-budget cost. Shut Down is special-cased by the engine (declared before
-// any other action; forfeits the activation and cools to the heat floor).
+// action-budget cost. Shut Down is special-cased by the engine (may be declared
+// at any point; ends the activation and cools 2 heat per slot left, capped at 5,
+// never below the heat floor).
 export const ACTIONS = {
   move:     { label: "Move",        heat: 1, slot: 1 },
   sprint:   { label: "Sprint",      heat: 2, slot: 1 },

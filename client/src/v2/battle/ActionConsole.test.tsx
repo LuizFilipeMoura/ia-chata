@@ -23,10 +23,10 @@ function started(activeRigId: number|null): ServerState {
       turn:{ side:"a", activeRigId, actionsUsed:0, actionsMax:3 } } };
 }
 
-test("shows the action budget + End turn when this rig is active", async () => {
+test("shows the action budget + Shut Down when this heat rig is active", async () => {
   render(<V2Providers><Seed state={started(1)}/><ActionConsole rig={stalker}/></V2Providers>);
   expect(await screen.findByText(/Actions/i)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /End STALKER/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Shut Down/i })).toBeInTheDocument();
 });
 test("renders empty for a non-active rig", () => {
   const { container } = render(<V2Providers><Seed state={started(null)}/><ActionConsole rig={stalker}/></V2Providers>);

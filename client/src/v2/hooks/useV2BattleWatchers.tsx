@@ -10,7 +10,7 @@ import ReactionPicker from "../overlays/ReactionPicker";
 import "../styles/overlay.css";
 import type { Rig, Resolution, PrepType } from "../../state/types";
 import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
-import { phaseSummary } from "/shared/battle-view.js";
+import { phaseSummary, actionBudget } from "/shared/battle-view.js";
 import { useMySide } from "../../hooks/useMySide";
 import { HEAT_CAPACITY } from "/shared/game-state.js";
 import { playDamage, playHeat, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
@@ -105,7 +105,7 @@ export function useV2BattleWatchers(): void {
   const { rigs, game, session } = useRoomState();
   const { playResolution } = useV2Roll();
   const { openDrawer, closeDrawer } = useV2Drawer();
-  const { sendReact } = useV2BattleActions();
+  const { sendReact, endActivation } = useV2BattleActions();
   const { openAttack } = useV2Wizard();
   const mySide = useMySide();
 
@@ -182,6 +182,25 @@ export function useV2BattleWatchers(): void {
     startSeeded.current = true; // skip the first render (hydration)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRigId]);
+
+  // ---- Auto-end: once the active rig has spent its whole budget, end its
+  // activation for it (no manual "end turn" button). Only the side that owns the
+  // active rig drives the end, and only once per activation. Ending early while
+  // budget remains is the Shut Down / End-Turn control in the ActionConsole. ----
+  const autoEndedFor = useRef<number | null>(null);
+  useEffect(() => {
+    if (game?.phase !== "activation") { autoEndedFor.current = null; return; }
+    const t = game?.turn;
+    const activeId = t?.activeRigId ?? null;
+    if (!t || activeId == null) { autoEndedFor.current = null; return; }
+    const rig = rigs.find((r) => r.id === activeId);
+    if (!rig || (rig.owner || "a") !== mySide) return;
+    if (actionBudget(rig, t).left > 0) { autoEndedFor.current = null; return; }
+    if (autoEndedFor.current === activeId) return; // already ended this activation
+    autoEndedFor.current = activeId;
+    endActivation(rig);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.turn?.activeRigId, game?.turn?.actionsUsed, game?.turn?.actionsMax, game?.phase, mySide, rigs]);
 
   // ---- Answer-token gate: mandatory immediate placement ----
   const sendCommand = useCommands();

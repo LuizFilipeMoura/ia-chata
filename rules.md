@@ -286,7 +286,7 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 
 ## 9. Rig Destruction
 
-When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **12"** suffer a **D6 + STR 10** hit — the destroyed Rig's controller rolls the damage; each affected Rig's controller rolls its own hit location.
+When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **4"** suffer a **D6 + STR 10** hit — the destroyed Rig's controller rolls the damage; each affected Rig's controller rolls its own hit location.
 
 ---
 

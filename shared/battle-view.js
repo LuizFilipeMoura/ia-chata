@@ -15,6 +15,11 @@ export function availableActions(rig, turn, round) {
   const rangedSpent = cfg.weaponMode === "flat-pick"
     ? rig.loaded?.unit === false
     : rig.loaded?.longRange === false;
+  // Melee never reloads, so a spent ranged weapon still leaves a melee strike on
+  // the table — Fire stays live (flat-pick kinds carry no separate melee slot).
+  const meleeReady = cfg.weaponMode !== "flat-pick"
+    && !!rig.weapons?.melee
+    && !(rig.weaponsDestroyed || []).includes(rig.weapons.melee);
   const firedRanged = (turn.longRangeShots || 0) >= 1;
   const list = ACTION_ORDER
     .filter((key) => {
@@ -31,43 +36,34 @@ export function availableActions(rig, turn, round) {
       if (key === "shutdown") enabled = true; // available any time; cools proportional to slots used
       if (key === "reload") {
         enabled = left > 0 && rangedSpent;
-        if (!rangedSpent) note = "Weapons already loaded";
       }
+      // Hints only carry HIDDEN costs on an action you can still take, and only
+      // when that cost isn't already shown by the heat chip or a status tag (see
+      // `battleModifiers` below). Every "why this tile is greyed" or persistent-
+      // state note is dropped: the disabled tile and the status tags say it.
       if (key === "fire" || key === "aimed") {
         if (rangedSpent) {
-          enabled = false;
-          note = "Ranged weapon spent — reload before firing again";
+          // Fire falls back to the melee weapon; Aimed stays a ranged-only shot.
+          if (!(key === "fire" && meleeReady)) enabled = false;
         } else if (firedRanged) {
           heat = def.heat + 1;
-          note = "Second shot — +1 heat";
+          note = "Second shot — +1 heat"; // surcharge rule, not obvious from the total
         }
       }
-      if ((key === "move" || key === "sprint") && rig.engagedWith != null) {
+      if ((key === "move" || key === "sprint") && (rig.engagedWith != null || rig.emplaced)) {
         enabled = false;
-        note = "Engaged — Disengage first";
-      }
-      if ((key === "move" || key === "sprint") && rig.emplaced) {
-        enabled = false;
-        note = "Emplaced — Un-plant first";
       }
       if (key === "disengage") {
         enabled = left > 0 && rig.engagedWith != null && !rig.noDisengageNextActivation;
-        if (rig.engagedWith == null) note = "Not engaged";
-        else if (rig.noDisengageNextActivation) note = "Anchored — can't Disengage this activation";
       }
       if (key === "douse") {
         enabled = left > 0 && (rig.burning || 0) > 0;
-        if ((rig.burning || 0) <= 0) note = "Not burning";
       }
       if ((key === "fire" || key === "aimed") && rig.engagedWith != null && !rangedSpent) {
-        note = note ? `${note} · Engaged −2 Aim` : "Engaged — ranged −2 Aim";
+        note = note ? `${note} · Engaged −2 Aim` : "Engaged — ranged −2 Aim"; // penalty shown nowhere else
       }
-      // Barrage (§13, Mortar) — while barraging, the Mortar is locked out of a
-      // direct shot; note it on Fire/Aimed (melee weapons are still fair game).
-      if ((key === "fire" || key === "aimed") && rig.weapons?.longRange === "Mortar" && (rig.barrageRoundsLeft || 0) > 0) {
-        const msg = "Mortar committed to Barrage — melee only";
-        note = note ? `${note} · ${msg}` : msg;
-      }
+      // Barrage lockout (§13, Mortar) carries no note: the "Barrage N" status tag
+      // already signals the tube is committed and firing falls back to melee.
       return { key, label: def.label, heat, enabled, cost, note };
     });
   if (cfg.hasEquipment && rig.equipment && EQUIPMENT[rig.equipment]) {
@@ -75,8 +71,7 @@ export function availableActions(rig, turn, round) {
     const jjLocked = active.key === "jumpjets" && rig.engagedWith != null;
     list.push({
       key: active.key, label: active.label, heat: active.heat,
-      enabled: left > 0 && !jjLocked, cost: 1,
-      note: jjLocked ? "Engaged — Disengage first" : "",
+      enabled: left > 0 && !jjLocked, cost: 1, note: "", // jj lockout shown by "Engaged" tag
     });
   }
   // Emplacement (§13, Bulwark Shield) — plant / un-plant the fortress stance.
@@ -86,14 +81,13 @@ export function availableActions(rig, turn, round) {
     const onCooldown = round != null && round < (rig.emplaceCooldownUntil || 0);
     list.push({
       key: "emplace", label: ACTIONS.emplace.label, heat: ACTIONS.emplace.heat,
-      enabled: left > 0 && !onCooldown, cost: ACTIONS.emplace.slot,
-      note: onCooldown ? `On cooldown until round ${rig.emplaceCooldownUntil}` : "",
+      enabled: left > 0 && !onCooldown, cost: ACTIONS.emplace.slot, note: "",
     });
   }
   if (rig.emplaced) {
     list.push({
       key: "unplant", label: ACTIONS.unplant.label, heat: 2,
-      enabled: left > 0, cost: ACTIONS.unplant.slot, note: "+2 heat",
+      enabled: left > 0, cost: ACTIONS.unplant.slot, note: "", // heat chip shows +2
     });
   }
   // Barrage (§13, Mortar) — surfaced only for a Mortar carrying the barrage
@@ -104,8 +98,7 @@ export function availableActions(rig, turn, round) {
     const active = (rig.barrageRoundsLeft || 0) > 0;
     list.push({
       key: "barrage", label: ACTIONS.barrage.label, heat: ACTIONS.barrage.heat,
-      enabled: left > 0 && !active, cost: ACTIONS.barrage.slot,
-      note: active ? `Barrage active — ${rig.barrageRoundsLeft} round(s) left` : "",
+      enabled: left > 0 && !active, cost: ACTIONS.barrage.slot, note: "", // "Barrage N" tag shows it's running
     });
   }
   // Fire Control Lock (§13, Missile Barrage) — paint a target for one auto-hit
@@ -114,8 +107,7 @@ export function availableActions(rig, turn, round) {
   if (hasFireControl) {
     list.push({
       key: "lock", label: ACTIONS.lock.label, heat: ACTIONS.lock.heat,
-      enabled: left > 0, cost: ACTIONS.lock.slot,
-      note: rig.lockedTarget != null ? "A lock is already primed" : "",
+      enabled: left > 0, cost: ACTIONS.lock.slot, note: "", // "Missiles locked" tag shows a lock is primed
     });
   }
   return list;

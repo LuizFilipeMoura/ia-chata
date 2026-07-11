@@ -22,5 +22,5 @@ test("renders Join when there is no session", () => {
 
 test("renders the Terminal shell once a session exists", async () => {
   render(<V2Providers><Seed /><V2App /></V2Providers>);
-  expect(await screen.findByText(/RIG CONTROL TERMINAL/i)).toBeInTheDocument();
+  expect(await screen.findByText(/CMD DOCK/i)).toBeInTheDocument();
 });

@@ -146,7 +146,12 @@ export function AttackWizard({
 
   const [state, setState] = useState<AwState>(() => ({
     target: target ?? enemies[0]?.name ?? "",
-    weapon: flat ? "unit" : "longRange",
+    // A spent ranged weapon opens on the melee weapon (the only one live).
+    weapon: flat
+      ? "unit"
+      : rig.loaded?.longRange === false && rig.weapons?.melee
+        ? "melee"
+        : "longRange",
     arc: "front",
     range: "near",
     inches: 3,

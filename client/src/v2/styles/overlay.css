@@ -404,7 +404,7 @@
   outline: none; border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil);
 }
 
-/* Blast resolution — checkbox list of Rigs within 12" of the wreck */
+/* Blast resolution — checkbox list of Rigs within 4" of the wreck */
 .v2-root .v2-blast-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .3rem; }
 .v2-root .v2-blast-opt {
   display: flex; align-items: center; gap: .5rem; width: 100%;

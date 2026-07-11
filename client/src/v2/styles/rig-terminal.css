@@ -156,8 +156,8 @@
   margin-top: 4px;
   padding: 14px 16px 16px;
   background: var(--v2-well);
-  border: 1px solid var(--v2-line);
-  border-top: 2px solid var(--v2-line-soft);
+  border: 1px solid var(--v2-oil-ring);
+  border-top: 2px solid var(--v2-oil-ring);
 }
 .v2-root .v2-heat-head {
   display: flex;
@@ -316,6 +316,10 @@
   position: relative;
   width: 100%;
   max-width: 720px;
+  /* Amber frame so the whole outline matches the glow — otherwise the bare
+     .v2-panel rivet border shows gray where full-bleed boxes (heat, actions)
+     cover the inset glow ring. */
+  border-color: var(--v2-oil-ring);
   animation: v2-glowpulse 3.2s infinite;
 }
 .v2-root .v2-rt::before,
