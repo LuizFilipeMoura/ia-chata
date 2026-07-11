@@ -5,17 +5,22 @@ import { TurnBanner } from "./components/TurnBanner";
 import { RigTerminal } from "./overlays/RigTerminal";
 import { CommissionWizard } from "./overlays/CommissionWizard";
 import { OutcomeBanner } from "./overlays/OutcomeBanner";
+import { V2ChatMount } from "./components/V2ChatMount";
+import { GlossaryDialog } from "../components/overlays/GlossaryDialog";
 import { useRoomState } from "../state/RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
 import { useMySide } from "../hooks/useMySide";
 import { useBattleWatchers } from "../hooks/useBattleWatchers";
+import { useUi } from "../state/UiStateContext";
 
 export function V2Terminal() {
   const { rigs, game } = useRoomState();
   const sendCommand = useCommands();
   const mySide = useMySide();
+  const { chatOpen, setChatOpen, glossaryOpen, setGlossaryOpen } = useUi();
   const [openRigId, setOpenRigId] = useState<number | null>(null);
   const [commissionOpen, setCommissionOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(false);
 
   useBattleWatchers();
 
@@ -28,7 +33,13 @@ export function V2Terminal() {
     !openRig.activated && !openRig.destroyed;
 
   return (
-    <Shell channel="yard" onForge={() => setCommissionOpen(true)}>
+    <Shell
+      channel="yard"
+      onForge={() => setCommissionOpen(true)}
+      onRulebook={() => setChatOpen(!chatOpen)}
+      onGlossary={() => setGlossaryOpen(true)}
+      chatUnread={chatUnread}
+    >
       <TurnBanner />
       <Squadron onOpenRig={setOpenRigId} onCommission={() => setCommissionOpen(true)} />
       {openRig && (
@@ -37,6 +48,8 @@ export function V2Terminal() {
       )}
       {commissionOpen && <CommissionWizard onClose={() => setCommissionOpen(false)} />}
       <OutcomeBanner />
+      <GlossaryDialog open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
+      <V2ChatMount onUnreadChange={setChatUnread} />
     </Shell>
   );
 }
