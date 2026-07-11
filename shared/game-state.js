@@ -2451,7 +2451,7 @@ export function publicState(room, side) {
   const canUndo = !!top && room.game.phase === "activation" && top.side === viewer;
   const rigs = room.rigs.map((rig) => {
     const prep = rig.preparation;
-    if (prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {
+    if (!room.seeded && prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {
       return { ...rig, preparation: { hidden: true } };
     }
     return rig;
@@ -2459,6 +2459,7 @@ export function publicState(room, side) {
   return {
     code: room.code,
     version: room.version,
+    seeded: room.seeded ?? false,
     ownerSide: room.ownerSide ?? null,
     field: room.field
       ? { ...room.field, terrain: room.field.terrain.map((t) => ({ ...t })) }

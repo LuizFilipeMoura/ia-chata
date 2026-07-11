@@ -3558,3 +3558,31 @@ test("SEED_ROSTER is 6 entries, 3 per side, all chassis distinct", () => {
   assert.equal(new Set(SEED_ROSTER.map((e) => e.chassis)).size, 6);
   for (const e of SEED_ROSTER) assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
 });
+
+test("publicState exposes seeded and skips enemy face-down prep redaction when seeded", () => {
+  const r = createRoom("SEED-T3");
+  applyCommand(r, { verb: "seed", attrs: { first: "a" } });
+  // Give an enemy (b) rig a hidden face-down preparation.
+  const enemy = r.rigs.find((rig) => rig.owner === "b");
+  enemy.preparation = { type: "brace", faceUp: false };
+
+  const asA = publicState(r, "a");
+  assert.equal(asA.seeded, true);
+  const enemyView = asA.rigs.find((rig) => rig.id === enemy.id);
+  // Not redacted to { hidden: true } because the room is seeded.
+  assert.equal(enemyView.preparation.faceUp, false);
+  assert.equal(enemyView.preparation.type, "brace");
+});
+
+test("publicState still redacts enemy face-down prep in a normal room", () => {
+  const r = createRoom("NORMAL-T");
+  claimSide(r, { side: "a" });
+  applyCommand(r, { verb: "add", attrs: { name: "E1", owner: "b", chassis: "light-sword-arc", class: "light", longRange: "Arc Gun", melee: "Sword" } });
+  const enemy = r.rigs.find((rig) => rig.owner === "b");
+  enemy.preparation = { type: "brace", faceUp: false };
+
+  const asA = publicState(r, "a");
+  assert.equal(asA.seeded, false);
+  const enemyView = asA.rigs.find((rig) => rig.id === enemy.id);
+  assert.deepEqual(enemyView.preparation, { hidden: true });
+});
