@@ -24,6 +24,9 @@ const IDLE_GAIN = 0.3;
 const IDLE_FADE_S = 1.5;
 const IDLE_GAP_S = 15;
 
+export const SFX_GAIN = 0.5;
+const ONESHOT_FADE_S = 0.06; // short fade in/out to kill clicks on start/stop
+
 let idleActive = false;
 let idleGen = 0;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -103,20 +106,29 @@ function pick(urls: string[]): string | null {
   return urls[idx];
 }
 
-async function playOne(c: AudioContext, url: string, gainValue: number): Promise<void> {
+async function playOne(c: AudioContext, url: string, gainValue: number, fadeOutS = ONESHOT_FADE_S): Promise<void> {
   const buf = await loadBuffer(c, url);
   if (!buf) return;
   const src = c.createBufferSource();
   src.buffer = buf;
   const gain = c.createGain();
-  gain.gain.value = gainValue;
+  const now = c.currentTime;
+  const dur = buf.duration || 0;
+  const fadeIn = Math.min(ONESHOT_FADE_S, dur / 2);
+  const fadeOut = Math.min(fadeOutS, dur / 2);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(gainValue, now + fadeIn);
+  gain.gain.setValueAtTime(gainValue, Math.max(now + fadeIn, now + dur - fadeOut));
+  gain.gain.linearRampToValueAtTime(0, now + dur);
   src.connect(gain);
   gain.connect(c.destination);
   src.start();
 }
 
-/** Play one voice + one sfx (either may be empty) layered at set volumes. */
-export function play(voiceUrls: string[], sfxUrls: string[]): void {
+/** Play one voice + one sfx (either may be empty), each fading in/out.
+ *  sfxGain overrides the default sfx volume (e.g. quieter heat furnace).
+ *  sfxFadeOutS overrides the sfx tail length (e.g. a long fade on sustained beds). */
+export function play(voiceUrls: string[], sfxUrls: string[], sfxGain = SFX_GAIN, sfxFadeOutS = ONESHOT_FADE_S): void {
   if (!enabled) return;
   const c = getCtx();
   if (!c) return;
@@ -124,7 +136,7 @@ export function play(voiceUrls: string[], sfxUrls: string[]): void {
   const voice = pick(voiceUrls);
   const sfx = pick(sfxUrls);
   if (voice) void playOne(c, voice, 1.0);
-  if (sfx) void playOne(c, sfx, 0.5);
+  if (sfx) void playOne(c, sfx, sfxGain, sfxFadeOutS);
 }
 
 // One fade-in / play / fade-out cycle, then schedule the next after a gap.

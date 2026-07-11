@@ -1,7 +1,20 @@
-import { play, startIdle, stopIdle } from "./audioMixer";
+import { play, startIdle, stopIdle, SFX_GAIN } from "./audioMixer";
 import { soundUrl } from "./soundAssets";
 
 interface Layers { voices: string[]; sfx: string[]; }
+
+// Sustained beds (running, MG rattle, furnace, engine ramp) run their full clip
+// and would cut hard at the end. Give them an audible tail instead of the default
+// 0.06s click-killer; impacts (cannon, tank hit, clanks, beeps) decay on their own.
+const SUSTAINED_FADE_S = 0.6;
+const SUSTAINED_SFX = new Set([
+  "mech_running", "mg_50cal", "mg_machine_gun", "heat_furnace", "engine_start",
+]);
+
+// Fade for a chosen sfx list: long tail if any stem is a sustained bed.
+function fadeFor(stems: string[]): number | undefined {
+  return stems.some((s) => SUSTAINED_SFX.has(s)) ? SUSTAINED_FADE_S : undefined;
+}
 
 const FIRE_BARKS = ["fire_firing", "fire_eat_this", "fire_rounds_downrange", "fire_light_em_up"];
 const MECH = ["massive_mechanical_1", "massive_mechanical_2", "massive_mechanical_3"];
@@ -47,7 +60,7 @@ export function playAction(key: string, attrs?: Record<string, unknown>): void {
   const layers = ACTION_AUDIO[key];
   if (!layers) return;
   const sfx = (key === "fire" || key === "aimed") && attrs ? gunSfxFor(attrs) : layers.sfx;
-  play(urls(layers.voices), urls(sfx));
+  play(urls(layers.voices), urls(sfx), SFX_GAIN, fadeFor(sfx));
 }
 
 export function playDamage(): void {
@@ -55,11 +68,11 @@ export function playDamage(): void {
 }
 
 export function playHeat(): void {
-  play([], urls(HEAT_SFX));
+  play([], urls(HEAT_SFX), SFX_GAIN / 3, fadeFor(HEAT_SFX)); // furnace is loud — a third volume
 }
 
 export function playEngineStart(): void {
-  play([], urls(ENGINE_START));
+  play([], urls(ENGINE_START), SFX_GAIN, fadeFor(ENGINE_START));
 }
 
 export function startEngineLoop(): void {
