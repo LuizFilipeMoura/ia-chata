@@ -34,7 +34,7 @@ export default function BlastBody({
             >
               <span className="v2-blast-opt-check" aria-hidden="true">{on ? "☑" : "☐"}</span>
               <span className="v2-blast-opt-name">{r.name}</span>
-              <span className="v2-blast-opt-cls">{r.weightClass}</span>
+              <span className="v2-blast-opt-cls v2-eyebrow">{r.weightClass}</span>
             </button>
           );
         })}

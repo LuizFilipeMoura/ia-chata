@@ -69,7 +69,7 @@ export default function MoveBody({
       </p>
       {enemies.length > 0 && (
         <label className="v2-dwr-engage">
-          <span className="v2-dwr-engage-label">Engage an enemy in reach (optional)</span>
+          <span className="v2-dwr-engage-label v2-eyebrow">Engage an enemy in reach (optional)</span>
           <select
             className="v2-dwr-engage-select"
             defaultValue=""

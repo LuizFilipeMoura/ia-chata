@@ -35,7 +35,7 @@ export default function ReactionPicker({ value, onChange, allowShield = false }:
         <button
           key={r.value}
           type="button"
-          className={"v2-rx-choice" + (r.value === value ? " sel" : "")}
+          className={"v2-rx-choice" + (r.value === value ? " is-sel" : "")}
           onClick={() => onChange(r.value)}
         >
           <span className="v2-rx-choice-ic" aria-hidden="true">{r.icon}</span>

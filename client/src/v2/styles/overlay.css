@@ -5,30 +5,24 @@
 
 /* ===== Bottom-sheet drawer ===== */
 .v2-dwr-scrim {
-  position: fixed; inset: 0; z-index: 75;
-  display: grid; place-items: end center;
-  background: rgba(5, 7, 10, .6);
+  z-index: 75;
   opacity: 0; transition: opacity .2s;
 }
 .v2-dwr-scrim.show { opacity: 1; }
 .v2-root .v2-dwr-card {
   width: min(440px, 96vw); max-height: 82vh; overflow-y: auto;
-  background: linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-900));
-  border: 1px solid var(--v2-rivet); border-radius: 16px 16px 0 0;
   padding: .85rem .9rem 1.1rem;
-  transform: translateY(100%); transition: transform .3s cubic-bezier(.2, .85, .25, 1);
+  transform: translateY(10px) scale(.98); opacity: 0;
+  transition: transform .3s cubic-bezier(.2, .85, .25, 1), opacity .3s ease;
 }
-.v2-dwr-scrim.show .v2-dwr-card { transform: none; }
-.v2-root .v2-dwr-title {
-  font-family: var(--v2-mono); font-size: .64rem; letter-spacing: .18em;
-  text-transform: uppercase; margin-bottom: .5rem;
-}
+.v2-dwr-scrim.show .v2-dwr-card { transform: none; opacity: 1; }
+.v2-root .v2-dwr-title { margin-bottom: .5rem; }
 .v2-root .v2-dwr-title[data-tone="oil"] { color: var(--v2-oil); }
 .v2-root .v2-dwr-title[data-tone="ember"] { color: var(--v2-ember-hi); }
 .v2-root .v2-dwr-title[data-tone="cool"] { color: #7fd0c4; }
 .v2-root .v2-dwr-actions { display: flex; gap: .5rem; margin-top: .8rem; }
 .v2-root .v2-dwr-btn {
-  flex: 1 1 auto; padding: .6rem; border-radius: 10px;
+  flex: 1 1 auto; padding: .6rem;
   display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
   font-family: var(--v2-disp); font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; font-size: .78rem;
@@ -42,106 +36,154 @@
 .v2-root .v2-dwr-btn:not(:disabled):active { transform: translateY(1px); }
 .v2-root .v2-dwr-btn:disabled { opacity: .4; }
 
-/* ===== Dice-resolution console ===== */
+/* ===== Dice-resolution console — the "roll rig" ==============================
+   Reworked to speak the same dieselpunk dialect as the Rig Control Terminal
+   (rig-terminal.css): a milled iron sheet with rivet corners, a redline-hatch
+   header, an ember-bloom scrim, a breathing amber glow (v2-glowpulse), and
+   dice that read as stamped, glowing metal tokens rather than plastic pips.
+
+   The console is always mounted (imperative handle) with its scrim hidden until
+   a roll. Its portal wrapper carries `.v2-root` only so the --v2-* tokens
+   resolve; `display:contents` stops that always-present wrapper from painting
+   the opaque full-screen `.v2-root` background over the app. */
+.v2-root.v2-portal-bare { display: contents; }
 .v2-roll-scrim {
-  position: fixed; inset: 0; z-index: 85;
-  display: grid; place-items: center;
-  background: rgba(5, 7, 10, .72); backdrop-filter: blur(3px);
+  z-index: 85;
+  padding: 20px 16px; overflow-y: auto;
   opacity: 0; pointer-events: none; transition: opacity .2s ease;
 }
 .v2-roll-scrim.show { opacity: 1; pointer-events: auto; }
 .v2-roll-scrim[hidden] { display: none; }
+
+/* Iron sheet: gradient face, oil-forged top edge, rivet border, corner rivets,
+   deep drop + breathing amber glow. Sharp corners — no plastic radius. */
 .v2-root .v2-roll-console {
+  position: relative;
   width: min(400px, 100%);
-  background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-900));
-  border: 1px solid var(--v2-rivet); border-radius: 14px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .04);
-  padding: .2rem .2rem .9rem;
-  transform: translateY(10px) scale(.98); opacity: 0;
+  border-top: 2px solid var(--v2-oil-deep);
+  box-shadow:
+    var(--v2-bevel-top),
+    inset 0 -44px 74px rgba(0, 0, 0, .5),
+    0 20px 50px rgba(0, 0, 0, .7);
+  padding-bottom: .9rem;
+  transform: translateY(12px) scale(.985); opacity: 0;
   transition: transform .28s cubic-bezier(.2, .85, .25, 1), opacity .28s ease;
+  animation: v2-glowpulse 3.2s infinite;
 }
 .v2-roll-scrim.show .v2-roll-console { transform: none; opacity: 1; }
+/* Corner rivets on the top frame — mirrors .v2-rt::before/::after. */
+.v2-root .v2-roll-console::before,
+.v2-root .v2-roll-console::after {
+  content: ""; position: absolute; top: 9px; width: 9px; height: 9px;
+  border-radius: 50%; z-index: 3; pointer-events: none;
+  background: var(--v2-rivet-dot);
+}
+.v2-root .v2-roll-console::before { left: 9px; }
+.v2-root .v2-roll-console::after { right: 9px; }
+
+/* Header: redline-hatch band, mono order tag + stencilled kind, square close. */
 .v2-root .v2-roll-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: .5rem .7rem; margin-bottom: .5rem;
-  background: linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil));
-  border-radius: 12px 12px 0 0; border-bottom: 1px solid rgba(0, 0, 0, .5);
+  padding: 14px 18px 12px; margin-bottom: .2rem;
+  border-bottom: 1px solid var(--v2-line);
+  background: repeating-linear-gradient(-45deg,
+    rgba(20, 16, 8, 0) 0 20px, rgba(168, 100, 28, .05) 20px 40px);
 }
+.v2-root .v2-roll-head-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.v2-root .v2-roll-tag { letter-spacing: .3em; color: var(--v2-oil); }
 .v2-root .v2-roll-kind {
-  font-family: var(--v2-mono); font-size: .64rem; font-weight: 700;
-  letter-spacing: .22em; text-transform: uppercase; color: #120c04;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .15);
+  font-size: 16px; letter-spacing: .16em; text-transform: uppercase;
 }
-.v2-root .v2-roll-close {
-  width: 26px; height: 26px; border-radius: 7px;
-  background: rgba(10, 12, 15, .7); color: var(--v2-txt); border: 1px solid rgba(0, 0, 0, .5);
-}
+.v2-root .v2-roll-close { flex: 0 0 auto; font-size: 14px; line-height: 1; }
 
+/* Dice: stamped iron tokens. Rolling → dark sunken blank with a faint flicker
+   numeral; settled → milled face with a stencilled numeral and a tone-keyed
+   glow ring. d6 barely-rounded, d12 a struck coin. */
 .v2-root .v2-roll-dice {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem;
-  padding: .8rem .7rem; min-height: 4.2rem;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem;
+  padding: 1rem .7rem .5rem; min-height: 4.4rem;
 }
+.v2-root .v2-die-wrap { display: flex; flex-direction: column; align-items: center; }
 .v2-root .v2-die {
   --face: var(--v2-oil);
   width: 3rem; height: 3rem; flex: 0 0 auto;
   display: grid; place-items: center;
-  font-family: var(--v2-mono); font-weight: 700; font-size: 1.3rem; color: #10130c;
-  background: linear-gradient(160deg, #d9dee6, #9aa3b1);
-  border: 1px solid #6b7480;
-  box-shadow: inset 0 2px 3px rgba(255, 255, 255, .6), 0 4px 10px rgba(0, 0, 0, .5);
+  font-family: var(--v2-stencil); font-weight: 700; font-size: 1.5rem; line-height: 1;
+  color: var(--v2-oil-hi);
+  background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-900));
+  border: 1px solid var(--v2-well-line);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), var(--v2-bevel-top);
 }
-.v2-root .v2-die.d6 { border-radius: 10px; }
+.v2-root .v2-die.d6 { border-radius: 3px; }
 .v2-root .v2-die.d12 { border-radius: 50%; }
-.v2-root .v2-die.rolling { animation: v2-die-shake .12s linear infinite; }
+.v2-root .v2-die.rolling {
+  color: var(--v2-txt-faint);
+  animation: v2-die-shake .1s steps(2, end) infinite;
+}
 @keyframes v2-die-shake {
-  0% { transform: translate(0, 0) rotate(-6deg); }
+  0% { transform: translate(0, 0) rotate(-5deg); }
   25% { transform: translate(1px, -2px) rotate(4deg); }
   50% { transform: translate(-2px, 1px) rotate(-3deg); }
-  75% { transform: translate(2px, 1px) rotate(5deg); }
-  100% { transform: translate(0, -1px) rotate(-6deg); }
+  75% { transform: translate(2px, 1px) rotate(4deg); }
+  100% { transform: translate(0, -1px) rotate(-5deg); }
 }
 .v2-root .v2-die.settled {
-  color: #fff; background: linear-gradient(160deg, #2a3038, #171b22);
+  color: #fff; text-shadow: 0 0 10px color-mix(in srgb, var(--face) 70%, transparent);
+  background: linear-gradient(180deg, var(--v2-iron-750), var(--v2-iron-850));
   border-color: var(--face);
-  box-shadow: 0 0 14px 1px color-mix(in srgb, var(--face) 55%, transparent), inset 0 1px 0 rgba(255, 255, 255, .08);
+  box-shadow:
+    0 0 16px 0 color-mix(in srgb, var(--face) 58%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 -7px 14px rgba(0, 0, 0, .5);
   animation: v2-die-land .32s cubic-bezier(.2, .85, .25, 1);
 }
 .v2-root .v2-die.settled[data-tone="crit"] { --face: var(--v2-ember-hi); }
 .v2-root .v2-die.settled[data-tone="cool"] { --face: #7fd0c4; }
 .v2-root .v2-die.settled[data-tone="ok"] { --face: var(--v2-ok); }
-.v2-root .v2-die.settled[data-tone="miss"] { --face: var(--v2-txt-faint); box-shadow: none; }
+.v2-root .v2-die.settled[data-tone="miss"] {
+  --face: var(--v2-txt-faint); color: var(--v2-txt-dim);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), var(--v2-bevel-top);
+}
 @keyframes v2-die-land {
   0% { transform: scale(1.28) translateY(-6px); }
   60% { transform: scale(.94); }
   100% { transform: none; }
 }
 .v2-root .v2-die-label {
-  display: block; margin-top: .25rem;
-  font-family: var(--v2-mono); font-size: .5rem; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--v2-txt-faint); text-align: center;
+  display: block; margin-top: .3rem;
+  letter-spacing: .14em; text-align: center;
 }
-.v2-root .v2-die-wrap { display: flex; flex-direction: column; align-items: center; }
 
 .v2-root .v2-roll-rolling {
-  text-align: center; padding: .2rem 0 1rem;
-  font-family: var(--v2-mono); font-size: .6rem; letter-spacing: .18em;
-  text-transform: uppercase; color: var(--v2-txt-dim);
+  text-align: center; padding: .1rem 0 .7rem;
+  letter-spacing: .28em; color: var(--v2-oil);
+  animation: v2-lampfast 1s ease-in-out infinite;
 }
 
+/* Fallback summary line — framed as a stamped readout plate so it reads like the
+   breakdown panel it stands in for (sunken iron, oil top-edge, ember bloom). */
 .v2-root .v2-roll-summary {
-  margin: .2rem .8rem .2rem; text-align: center;
-  font-family: var(--v2-disp); font-size: 1rem; font-weight: 600; color: var(--v2-txt);
+  position: relative;
+  margin: .5rem .7rem .2rem; padding: .55rem .7rem;
+  text-align: center; text-wrap: balance;
+  font-family: var(--v2-disp); font-size: .94rem; font-weight: 600; line-height: 1.35;
+  letter-spacing: .01em; color: var(--v2-txt);
+  background:
+    radial-gradient(120% 140% at 50% -20%, rgba(231, 154, 61, .10), transparent 60%),
+    linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-950));
+  border: 1px solid var(--v2-rivet); border-top: 1px solid var(--v2-oil-deep);
+  box-shadow: var(--v2-bevel-top), inset 0 -8px 20px rgba(0, 0, 0, .45);
   opacity: 0; transform: translateY(4px); animation: v2-line-in .35s ease .45s forwards;
 }
 
-/* Structured damage readout — the equation form of the summary line. */
+/* Structured damage readout — the equation form of the summary line, retooled
+   as a sunken instrument panel: ember bloom crown, rivet border, sharp wells. */
 .v2-root .v2-rx-break {
-  margin: .3rem .7rem .1rem; padding: .55rem .55rem .5rem;
+  margin: .4rem .7rem .1rem; padding: .6rem .55rem .55rem;
   background:
-    radial-gradient(120% 140% at 50% -20%, rgba(231, 154, 61, .10), transparent 60%),
-    linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-900));
-  border: 1px solid var(--v2-rivet); border-radius: 11px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 6px 18px rgba(0, 0, 0, .4);
+    radial-gradient(120% 140% at 50% -20%, rgba(231, 154, 61, .12), transparent 60%),
+    linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-950));
+  border: 1px solid var(--v2-rivet); border-top: 1px solid var(--v2-oil-deep);
+  box-shadow: var(--v2-bevel-top), inset 0 -8px 20px rgba(0, 0, 0, .45);
   opacity: 0; transform: translateY(4px); animation: v2-line-in .35s ease .45s forwards;
 }
 .v2-root .v2-rx-break-head {
@@ -152,8 +194,8 @@
 .v2-root .v2-rx-actor { color: var(--v2-txt-dim); }
 .v2-root .v2-rx-weapon {
   color: var(--v2-oil-hi); font-weight: 700;
-  padding: .08rem .34rem; border-radius: 5px;
-  background: rgba(231, 154, 61, .12); border: 1px solid rgba(231, 154, 61, .28);
+  padding: .08rem .34rem;
+  background: rgba(231, 154, 61, .12); border: 1px solid rgba(231, 154, 61, .32);
 }
 .v2-root .v2-rx-target { color: var(--v2-txt-dim); }
 
@@ -167,13 +209,13 @@
 }
 .v2-root .v2-rx-term {
   display: flex; flex-direction: column; align-items: center; gap: .05rem;
-  min-width: 3rem; padding: .28rem .5rem .22rem;
-  background: linear-gradient(160deg, var(--v2-iron-780), var(--v2-iron-850));
-  border: 1px solid var(--v2-line); border-top-color: var(--v2-rivet);
-  border-radius: 8px;
+  min-width: 3rem; padding: .3rem .5rem .24rem;
+  background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-900));
+  border: 1px solid var(--v2-well-line); border-top: 1px solid var(--v2-line);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .7);
 }
 .v2-root .v2-rx-term b {
-  font-family: var(--v2-disp); font-size: 1.35rem; font-weight: 700; line-height: 1;
+  font-family: var(--v2-stencil); font-size: 1.3rem; font-weight: 700; line-height: 1;
   color: var(--v2-txt);
 }
 .v2-root .v2-rx-term em {
@@ -182,32 +224,32 @@
   color: var(--v2-txt-faint); white-space: nowrap;
 }
 .v2-root .v2-rx-term[data-tone="mod"] {
-  border-color: rgba(231, 154, 61, .5);
-  box-shadow: 0 0 12px -2px rgba(231, 154, 61, .4), inset 0 1px 0 rgba(255, 255, 255, .05);
+  border-color: var(--v2-oil-deep);
+  box-shadow: 0 0 12px -2px rgba(231, 154, 61, .4), inset 0 1px 4px rgba(0, 0, 0, .6);
 }
-.v2-root .v2-rx-term[data-tone="mod"] b { color: var(--v2-oil-hi); }
+.v2-root .v2-rx-term[data-tone="mod"] b { color: var(--v2-oil-hi); text-shadow: 0 0 12px rgba(231, 154, 61, .4); }
 .v2-root .v2-rx-term[data-tone="mod"] em { color: var(--v2-oil); }
 .v2-root .v2-rx-term[data-tone="die"] b { color: #cdd5e0; }
 
 .v2-root .v2-rx-break-out {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem;
-  margin-top: .55rem; padding-top: .5rem;
-  border-top: 1px dashed rgba(255, 255, 255, .08);
+  margin-top: .6rem; padding-top: .55rem;
+  border-top: 1px dashed rgba(255, 255, 255, .09);
 }
 .v2-root .v2-rx-total {
   display: inline-flex; align-items: center; gap: .25rem;
-  font-family: var(--v2-disp); font-size: 1.05rem; font-weight: 700; color: var(--v2-txt-dim);
+  font-family: var(--v2-stencil); font-size: 1.05rem; font-weight: 700; color: var(--v2-txt-dim);
 }
 .v2-root .v2-rx-total .v2-rx-op { font-size: .8rem; }
 .v2-root .v2-rx-tier {
   font-family: var(--v2-mono); font-size: .56rem; font-weight: 700;
   letter-spacing: .16em; text-transform: uppercase;
-  padding: .18rem .45rem; border-radius: 5px;
-  color: var(--v2-txt-dim); border: 1px solid var(--v2-line); background: rgba(0, 0, 0, .25);
+  padding: .2rem .45rem;
+  color: var(--v2-txt-dim); border: 1px solid var(--v2-line); background: rgba(0, 0, 0, .3);
 }
 .v2-root .v2-rx-tier[data-tier="direct"] { color: #cdd5e0; border-color: var(--v2-rivet); }
 .v2-root .v2-rx-tier[data-tier="severe"] {
-  color: var(--v2-oil-hi); border-color: rgba(231, 154, 61, .55); background: rgba(231, 154, 61, .12);
+  color: var(--v2-oil-hi); border-color: var(--v2-oil-deep); background: rgba(231, 154, 61, .12);
 }
 .v2-root .v2-rx-tier[data-tier="critical"] {
   color: #fff; border-color: var(--v2-ember); background: rgba(229, 83, 58, .22);
@@ -216,44 +258,51 @@
 .v2-root .v2-rx-tier[data-tier="none"] { color: var(--v2-txt-faint); }
 .v2-root .v2-rx-sp { display: inline-flex; align-items: baseline; gap: .3rem; }
 .v2-root .v2-rx-sp b {
-  font-family: var(--v2-disp); font-size: 1.9rem; font-weight: 700; line-height: 1;
-  color: var(--v2-oil-hi); text-shadow: 0 0 16px rgba(231, 154, 61, .45);
+  font-family: var(--v2-stencil); font-size: 1.9rem; font-weight: 700; line-height: 1;
+  color: var(--v2-oil-hi); text-shadow: 0 0 18px rgba(231, 154, 61, .5);
 }
 .v2-root .v2-rx-sp em {
   font-family: var(--v2-mono); font-style: normal;
   font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--v2-txt-dim);
 }
 
-.v2-root .v2-roll-effects { display: flex; flex-direction: column; gap: .3rem; padding: .3rem .9rem 0; }
+.v2-root .v2-roll-effects { display: flex; flex-direction: column; gap: .35rem; padding: .5rem .9rem 0; }
 .v2-root .v2-roll-effect {
-  font-family: var(--v2-mono); font-size: .68rem; color: var(--v2-ember-hi);
-  border-left: 2px solid rgba(229, 83, 58, .5); padding-left: .5rem;
+  font-family: var(--v2-mono); font-size: .66rem; letter-spacing: .02em; color: var(--v2-ember-hi);
+  padding: .12rem 0 .12rem .55rem;
+  border-left: 2px solid var(--v2-ember); text-shadow: 0 0 10px rgba(229, 83, 58, .3);
   opacity: 0; transform: translateY(4px); animation: v2-line-in .3s ease forwards;
 }
 @keyframes v2-line-in { to { opacity: 1; transform: none; } }
 
-/* ===== Reaction-token flip reveal ===== */
+/* ===== Reaction-token flip reveal — a struck coin on an oil hatch back ===== */
 .v2-root .v2-rx-reveal {
-  display: flex; flex-direction: column; align-items: center; padding: .9rem .7rem .4rem;
+  display: flex; flex-direction: column; align-items: center; padding: 1rem .7rem .4rem;
 }
 .v2-root .v2-rx-token {
   --face: var(--v2-oil);
-  position: relative; width: 3.2rem; height: 3.2rem; transform-style: preserve-3d;
+  position: relative; width: 3.4rem; height: 3.4rem; transform-style: preserve-3d;
 }
 .v2-root .v2-rx-token.flip { animation: v2-rx-flip .48s cubic-bezier(.2, .85, .25, 1) both; }
 .v2-root .v2-rx-token-face {
   position: absolute; inset: 0; display: grid; place-items: center;
-  border-radius: 50%; backface-visibility: hidden; font-size: 1.5rem;
-  border: 1px solid #6b7480; box-shadow: 0 4px 10px rgba(0, 0, 0, .5);
+  border-radius: 50%; backface-visibility: hidden; font-size: 1.55rem;
+  border: 1px solid var(--v2-well-line); box-shadow: 0 4px 12px rgba(0, 0, 0, .55);
 }
 .v2-root .v2-rx-token-back {
-  background: linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil)); color: #120c04;
+  color: #120c04;
+  background:
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, .18) 0 4px, transparent 4px 8px),
+    linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil));
+  border-color: var(--v2-oil-deep);
 }
 .v2-root .v2-rx-token-front {
-  transform: rotateY(180deg);
-  background: linear-gradient(160deg, #2a3038, #171b22); color: #fff;
+  transform: rotateY(180deg); color: #fff;
+  background: linear-gradient(180deg, var(--v2-iron-750), var(--v2-iron-850));
   border-color: var(--face);
-  box-shadow: 0 0 16px 1px color-mix(in srgb, var(--face) 55%, transparent), inset 0 1px 0 rgba(255, 255, 255, .08);
+  box-shadow:
+    0 0 18px 1px color-mix(in srgb, var(--face) 58%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 -7px 14px rgba(0, 0, 0, .5);
 }
 .v2-root .v2-rx-token[data-tone="brace"] { --face: #7fd0c4; }
 .v2-root .v2-rx-token[data-tone="evasive"] { --face: var(--v2-oil); }
@@ -264,32 +313,25 @@
   100% { transform: rotateY(180deg) scale(1); }
 }
 
-/* ===== Manual dice-entry form ===== */
-.v2-root .v2-roll-form { display: flex; flex-direction: column; gap: .5rem; padding: .4rem .9rem 0; }
+/* ===== Manual dice-entry form — sunken iron input wells ===== */
+.v2-root .v2-roll-form { display: flex; flex-direction: column; gap: .5rem; padding: .6rem .9rem 0; }
 .v2-root .v2-roll-form-row { display: flex; align-items: center; gap: .5rem; }
-.v2-root .v2-roll-form-row label { flex: 1; font-family: var(--v2-mono); font-size: .62rem; color: var(--v2-txt-dim); }
+.v2-root .v2-roll-form-row label { flex: 1; letter-spacing: .06em; color: var(--v2-txt-dim); }
 .v2-root .v2-roll-form-row input {
-  width: 4.5rem; padding: .45rem .5rem; border-radius: 8px;
-  background: var(--v2-iron-950); border: 1px solid var(--v2-line);
+  width: 4.5rem; padding: .45rem .5rem;
   color: var(--v2-txt); font-family: var(--v2-mono); font-size: 1rem; text-align: center;
 }
 .v2-root .v2-roll-form-row input:focus {
-  outline: none; border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil);
-}
-.v2-root .v2-roll-form-go {
-  margin-top: .3rem; padding: .55rem; border-radius: 9px;
-  background: linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil)); color: #241606;
-  font-family: var(--v2-disp); font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  border: 1px solid rgba(231, 154, 61, .65);
+  outline: none; border-color: var(--v2-oil);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .7), 0 0 0 1px var(--v2-oil), 0 0 14px rgba(231, 154, 61, .3);
 }
 
+/* Forged action buttons — stencil, oil face, deep bottom edge, amber bloom. */
+.v2-root .v2-roll-form-go,
+.v2-root .v2-roll-ok { font-size: 13px; }
+.v2-root .v2-roll-form-go { margin-top: .3rem; padding: .7rem; }
 .v2-root .v2-roll-ok {
-  display: block; width: calc(100% - 1.4rem); margin: .7rem .7rem 0;
-  padding: .55rem; border-radius: 9px;
-  font-family: var(--v2-disp); font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; font-size: .8rem;
-  background: linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil)); color: #241606;
-  border: 1px solid rgba(231, 154, 61, .65);
+  display: block; width: calc(100% - 1.4rem); margin: .8rem .7rem 0; padding: .7rem;
   opacity: 0; transform: translateY(4px); animation: v2-line-in .3s ease forwards;
 }
 
@@ -309,21 +351,13 @@
   margin-top: .15rem; font-family: var(--v2-mono); font-size: .62rem; color: var(--v2-ember-hi);
 }
 
-/* Repair location — segmented choice field */
-.v2-root .v2-dwr-field { margin: .5rem 0; }
-.v2-root .v2-dwr-field > label {
-  display: block; font-family: var(--v2-mono); font-size: .56rem;
-  letter-spacing: .12em; text-transform: uppercase; color: var(--v2-txt-dim); margin-bottom: .3rem;
-}
-.v2-root .v2-dwr-field-ic { margin-right: .35rem; }
-.v2-root .v2-dwr-seg { display: flex; gap: .3rem; flex-wrap: wrap; }
-.v2-root .v2-dwr-opt {
-  flex: 1 1 auto; padding: .45rem .3rem; border-radius: 8px;
-  border: 1px solid var(--v2-line); background: var(--v2-iron-800); color: var(--v2-txt-dim);
-  font-family: var(--v2-disp); font-size: .78rem; text-align: center;
-}
-.v2-root .v2-dwr-opt-ic { margin-right: .25rem; }
-.v2-root .v2-dwr-opt.sel { border-color: var(--v2-oil); color: var(--v2-oil-hi); background: rgba(231, 154, 61, .1); }
+/* Repair location — segmented choice field (v2-field/v2-field-seg/v2-opt primitives) */
+.v2-root .v2-field { margin: .5rem 0; }
+.v2-root .v2-field > label { letter-spacing: .12em; color: var(--v2-txt-dim); }
+.v2-root .v2-field-ic { margin-right: .35rem; }
+.v2-root .v2-opt { padding: .45rem .3rem; font-family: var(--v2-disp); font-size: .78rem; }
+.v2-root .v2-opt-ic { margin-right: .25rem; }
+.v2-root .v2-opt.is-sel { color: var(--v2-oil-hi); }
 
 /* Timed Move / Sprint hold — the Confirm button unlocks only once this bar fills */
 .v2-root .v2-dwr-move-call { color: var(--v2-oil-hi); font-weight: 600; }
@@ -348,8 +382,7 @@
 /* Optional engage-an-enemy select on Move */
 .v2-root .v2-dwr-engage { display: block; margin: .5rem 0 .1rem; }
 .v2-root .v2-dwr-engage-label {
-  display: block; font-family: var(--v2-mono); font-size: .56rem;
-  letter-spacing: .12em; text-transform: uppercase; color: var(--v2-txt-dim); margin-bottom: .3rem;
+  display: block; letter-spacing: .12em; color: var(--v2-txt-dim); margin-bottom: .3rem;
 }
 .v2-root .v2-dwr-engage-select {
   width: 100%; padding: .5rem .55rem; border-radius: 8px;
@@ -374,10 +407,7 @@
 }
 .v2-root .v2-blast-opt-check { font-size: 1.05rem; line-height: 1; }
 .v2-root .v2-blast-opt-name { font-weight: 600; flex: 1 1 auto; }
-.v2-root .v2-blast-opt-cls {
-  font-family: var(--v2-mono); font-size: .55rem; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--v2-txt-faint);
-}
+.v2-root .v2-blast-opt-cls { letter-spacing: .08em; }
 
 /* ===== Reaction picker (Answer token / Prepare) ===== */
 .v2-root .v2-rx-picker { display: flex; flex-direction: column; gap: .4rem; }
@@ -386,7 +416,6 @@
   padding: .55rem .6rem; border-radius: 10px;
   background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt);
 }
-.v2-root .v2-rx-choice.sel { border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil) inset; }
 .v2-root .v2-rx-choice-ic { font-size: 1.1rem; line-height: 1.2; }
 .v2-root .v2-rx-choice-body { display: flex; flex-direction: column; gap: .15rem; }
 .v2-root .v2-rx-choice-label { font-family: var(--v2-disp); font-weight: 700; font-size: .82rem; }
