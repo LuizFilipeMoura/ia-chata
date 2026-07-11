@@ -3,7 +3,7 @@ import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
 import { weaponAccAt } from "/shared/combat.js";
 import { useRoomState } from "../../state/RoomStateContext";
-import { useCommands } from "../../hooks/useCommands";
+import { useV2Commands } from "../hooks/useV2Commands";
 import { useV2BattleActions } from "../state/V2BattleActionsContext";
 import { useV2Roll } from "../state/V2RollContext";
 import type { Rig } from "../../state/types";
@@ -132,7 +132,7 @@ export function AttackWizard({
   react?: boolean;
 }) {
   const { rigs, game } = useRoomState();
-  const sendCommand = useCommands();
+  const sendCommand = useV2Commands();
   const { sendReact } = useV2BattleActions();
   const { promptDice } = useV2Roll();
 

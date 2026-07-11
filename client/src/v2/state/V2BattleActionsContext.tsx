@@ -9,7 +9,7 @@ import { HEAT_CAPACITY } from "/shared/game-state.js";
 import { useV2Drawer } from "./V2DrawerContext";
 import { useV2Roll } from "./V2RollContext";
 import { useRoomState } from "../../state/RoomStateContext";
-import { useCommands } from "../../hooks/useCommands";
+import { useV2Commands } from "../hooks/useV2Commands";
 import { useMySide } from "../../hooks/useMySide";
 import MoveBody from "../battle/MoveBody";
 import RepairBody from "../battle/RepairBody";
@@ -37,7 +37,7 @@ const Ctx = createContext<BattleActionsApi | null>(null);
 export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   const { openDrawer, closeDrawer } = useV2Drawer();
   const { promptDice } = useV2Roll();
-  const sendCommand = useCommands();
+  const sendCommand = useV2Commands();
   const { game, rigs } = useRoomState();
 
   const rigsRef = useRef(rigs);

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { availableActions, actionBudget } from "/shared/battle-view.js";
 import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
-import { useCommands } from "../../hooks/useCommands";
+import { useV2Commands } from "../hooks/useV2Commands";
 import { useV2BattleActions } from "../state/V2BattleActionsContext";
 import { useV2Wizard } from "../state/V2WizardContext";
 import type { AttackMode } from "../overlays/AttackWizard";
@@ -106,7 +106,7 @@ function AcPopover({
 // ActionConsole with plain V2 buttons in place of the PNG-asset IronActionTile.
 export function ActionConsole({ rig }: Props) {
   const { game } = useRoomState();
-  const sendCommand = useCommands();
+  const sendCommand = useV2Commands();
   const { openMove, openRepair, endActivation, openPrepare } = useV2BattleActions();
   const { openAttack } = useV2Wizard();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
