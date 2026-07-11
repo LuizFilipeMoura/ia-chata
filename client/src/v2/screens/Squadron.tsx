@@ -3,17 +3,15 @@ import { canAddRigForSide } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
-import { useWizard } from "../../state/WizardContext";
 import { orderedRigs } from "../../lib/rigView";
 import { commissioned, tonnage } from "../lib/viewModels";
 import { RigRow } from "../components/RigRow";
 
-export function Squadron({ onOpenRig }: { onOpenRig: (id: number) => void }) {
+export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) => void; onCommission: () => void }) {
   const { rigs, game, field } = useRoomState();
   const sendCommand = useCommands();
   const mySide = useMySide();
   const enemySide = mySide === "a" ? "b" : "a";
-  const { openCommission } = useWizard();
 
   const ordered = orderedRigs(rigs, mySide);
   const mine = ordered.filter((r) => (r.owner || "a") === mySide);
@@ -61,7 +59,7 @@ export function Squadron({ onOpenRig }: { onOpenRig: (id: number) => void }) {
 
       {!started && (
         <button type="button" className="v2-yard-add" disabled={!canAdd}
-          onClick={() => canAdd && openCommission()}>
+          onClick={() => canAdd && onCommission()}>
           <span className="v2-yard-add-plus">＋</span>
           {canAdd ? "Commission New Rig" : "Roster full — ready up"}
         </button>

@@ -27,7 +27,9 @@ test("shows the room code and only the Yard channel active", async () => {
   render(<AppProviders><Seed state={baseState} /><Shell channel="yard"><div /></Shell></AppProviders>);
   expect(await screen.findByText(/IRON-42/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Yard/i })).toBeEnabled();
-  expect(screen.getByRole("button", { name: /Forge/i })).toBeDisabled();
+  expect(screen.getByRole("button", { name: /Yard/i })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("button", { name: /Forge/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /Rules/i })).toBeDisabled();
 });
 
 test("Leave opens a confirm dialog and wipes the session", async () => {

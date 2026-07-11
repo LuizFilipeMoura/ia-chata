@@ -7,12 +7,12 @@ type Channel = "yard";
 const CHANNELS: { id: string; num: string; label: string; enabled: boolean }[] = [
   { id: "join", num: "01", label: "Enlist", enabled: false },
   { id: "yard", num: "02", label: "Yard", enabled: true },
-  { id: "commission", num: "03", label: "Forge", enabled: false },
+  { id: "commission", num: "03", label: "Forge", enabled: true },
   { id: "rulebook", num: "04", label: "Rules", enabled: false },
   { id: "outcome", num: "05", label: "Verdict", enabled: false },
 ];
 
-export function Shell({ channel, children }: { channel: Channel; children: ReactNode }) {
+export function Shell({ channel, children, onForge }: { channel: Channel; children: ReactNode; onForge?: () => void }) {
   const { game, session } = useRoomState();
   const dispatch = useRoomDispatch();
   const sendCommand = useCommands();
@@ -55,6 +55,7 @@ export function Shell({ channel, children }: { channel: Channel; children: React
           <button
             key={ch.id} type="button" disabled={!ch.enabled}
             aria-current={ch.id === channel ? "page" : undefined}
+            onClick={ch.id === "commission" ? () => onForge?.() : undefined}
             className={"v2-channel" + (ch.id === channel ? " is-active" : "")}
           >
             <span className="v2-channel-num">{ch.num}</span>{ch.label}

@@ -36,7 +36,7 @@ test("groups own vs hostile rigs and shows the commissioned count", async () => 
       { id: "b", name: "Rival", vp: 0, ready: false },
     ] },
   };
-  render(<AppProviders><Seed state={state} /><Squadron onOpenRig={vi.fn()} /></AppProviders>);
+  render(<AppProviders><Seed state={state} /><Squadron onOpenRig={vi.fn()} onCommission={vi.fn()} /></AppProviders>);
   expect(await screen.findByText("YOUR SQUADRON")).toBeInTheDocument();
   expect(screen.getByText("HOSTILE FORCES")).toBeInTheDocument();
   expect(screen.getByText(/2 \/ 3 COMMISSIONED/i)).toBeInTheDocument();
