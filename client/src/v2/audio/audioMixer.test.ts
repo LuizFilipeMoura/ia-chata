@@ -99,3 +99,22 @@ test("setEnabled(false) stops the loop", async () => {
   setEnabled(false);
   expect(ctx.sources[0].stop).toHaveBeenCalled();
 });
+
+test("stopLoop during an in-flight startLoop cancels it (no orphaned source)", async () => {
+  const ctx = new FakeCtx(); cfg(ctx);
+  startLoop(["e1"]);   // buffer load is async — still pending
+  stopLoop();          // cancel before it resolves
+  await flush();
+  expect(ctx.sources.length).toBe(0); // the cancelled load never created a source
+});
+
+test("rapid start/stop/start leaves exactly one stoppable loop", async () => {
+  const ctx = new FakeCtx(); cfg(ctx);
+  startLoop(["e1"]); stopLoop();  // first start cancelled
+  startLoop(["e1"]);              // second start wins
+  await flush();
+  const running = () => ctx.sources.filter((s) => s.start.mock.calls.length > 0 && s.stop.mock.calls.length === 0);
+  expect(running().length).toBe(1);
+  stopLoop();
+  expect(running().length).toBe(0); // stopLoop reaches the surviving source
+});

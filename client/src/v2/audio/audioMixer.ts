@@ -22,6 +22,7 @@ const lastPick = new Map<string, number>(); // category key -> last index
 
 let loopSource: AudioBufferSourceNode | null = null;
 let loopStarting = false;
+let loopGen = 0;
 
 function readEnabled(): boolean {
   try {
@@ -114,7 +115,7 @@ export function play(voiceUrls: string[], sfxUrls: string[]): void {
   if (!enabled) return;
   const c = getCtx();
   if (!c) return;
-  if (c.state === "suspended") void c.resume();
+  if (c.state === "suspended") void c.resume().catch(() => {});
   const voice = pick(voiceUrls);
   const sfx = pick(sfxUrls);
   if (voice) void playOne(c, voice, 1.0);
@@ -127,12 +128,14 @@ export function startLoop(urls: string[]): void {
   if (loopSource || loopStarting) return; // already running / starting
   const c = getCtx();
   if (!c) return;
-  if (c.state === "suspended") void c.resume();
+  if (c.state === "suspended") void c.resume().catch(() => {});
   const url = pick(urls);
   if (!url) return;
   loopStarting = true;
+  const gen = ++loopGen; // this call's generation; stopLoop bumps loopGen to cancel
   void (async () => {
     const buf = await loadBuffer(c, url);
+    if (gen !== loopGen) return; // superseded by a stopLoop/startLoop during the await
     loopStarting = false;
     if (!buf || !enabled) return;
     const src = c.createBufferSource();
@@ -148,6 +151,7 @@ export function startLoop(urls: string[]): void {
 }
 
 export function stopLoop(): void {
+  loopGen++; // invalidate any in-flight startLoop load
   loopStarting = false;
   if (loopSource) {
     try { loopSource.stop(); } catch { /* already stopped */ }
