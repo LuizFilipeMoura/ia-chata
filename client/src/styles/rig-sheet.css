@@ -127,7 +127,7 @@
 }
 .rig-status.warn { color: var(--oil-hi); }
 .rig-status.crit { color: var(--ember-hi); }
-/* Prebuilt flavor blurb — a quiet italic line under the header. */
+/* Chassis flavor blurb — a quiet italic line under the header. */
 .rig-desc {
   font-size: .72rem; line-height: 1.4; font-style: italic;
   color: var(--txt-faint); margin: 0 0 .5rem;

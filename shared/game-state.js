@@ -68,14 +68,14 @@ export function normalizeUnitWeapon(name) {
   return Object.keys(UNIT_WEAPONS).find((w) => w.toLowerCase() === ref) || null;
 }
 
-// Prebuilt Rigs — the physical minis arrive pre-assembled, so a Rig is
+// Chassis Rigs — the physical minis arrive pre-assembled, so a Rig is
 // commissioned by picking one of these fixed weight-class + weapon combos rather
 // than free-picking each slot. Weapon upgrades are still chosen per weapon at
 // commission time; only the two weapons and the weight class are locked. Names
 // (`longRange` / `melee`) index straight into WEAPONS. `sp` is the per-rig
 // Structure Points (≈2× the old class defaults) — a durability lever tuned to
 // each rig's identity; makeRig uses it in place of RIG_DEFAULTS.
-export const PREBUILT_RIGS = [
+export const CHASSIS = [
   { id: "light-claw-autocannon",      label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
   { id: "light-missile-flamethrower", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
   { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
@@ -86,33 +86,33 @@ export const PREBUILT_RIGS = [
   { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
 ];
 
-export function prebuiltRig(id) {
+export function chassisById(id) {
   if (!id) return null;
   const ref = String(id).trim().toLowerCase();
-  return PREBUILT_RIGS.find((p) => p.id === ref) || null;
+  return CHASSIS.find((p) => p.id === ref) || null;
 }
 
-// Find the prebuilt whose fixed loadout matches an exact (class, longRange,
+// Find the chassis whose fixed loadout matches an exact (class, longRange,
 // melee) triple — case-insensitive. Lets callers that only know the weapon combo
-// (e.g. the AI tracker tag) resolve back to the canonical prebuilt.
-export function matchPrebuiltCombo(cls, longRange, melee) {
+// (e.g. the AI tracker tag) resolve back to the canonical chassis.
+export function matchChassisCombo(cls, longRange, melee) {
   const c = String(cls || "").trim().toLowerCase();
   const lr = String(longRange || "").trim().toLowerCase();
   const ml = String(melee || "").trim().toLowerCase();
   if (!c || !lr || !ml) return null;
-  return PREBUILT_RIGS.find(
+  return CHASSIS.find(
     (p) => p.class === c && p.longRange.toLowerCase() === lr && p.melee.toLowerCase() === ml,
   ) || null;
 }
 
-// Resolve an `add` command's attrs to the prebuilt it must use — by id first,
-// then by exact weapon+class combo. Returns the PREBUILT_RIGS entry or null.
+// Resolve an `add` command's attrs to the chassis it must use — by id first,
+// then by exact weapon+class combo. Returns the CHASSIS entry or null.
 // Server-side enforcement uses this so a rig can only be commissioned as one of
-// the fixed prebuilt loadouts (weapons + weight class are not free-picked).
-export function resolvePrebuilt(attrs = {}) {
+// the fixed chassis loadouts (weapons + weight class are not free-picked).
+export function resolveChassis(attrs = {}) {
   return (
-    prebuiltRig(attrs.prebuilt) ||
-    matchPrebuiltCombo(attrs.class || attrs.weightClass, attrs.longRange || attrs.lr, attrs.melee)
+    chassisById(attrs.chassis) ||
+    matchChassisCombo(attrs.class || attrs.weightClass, attrs.longRange || attrs.lr, attrs.melee)
   );
 }
 
@@ -409,7 +409,7 @@ function ensureRigShape(rig) {
   if (typeof rig.movedThisActivation !== "boolean") rig.movedThisActivation = false;
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
-  if (rig.prebuilt === undefined) rig.prebuilt = null;
+  if (rig.chassis === undefined) rig.chassis = null;
   if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
@@ -543,8 +543,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
 
   const weightClass = normalizedClass;
   const d = RIG_DEFAULTS[weightClass];
-  // Per-rig SP override (prebuilt `sp`) wins field-by-field, else the class
-  // default. Lets each prebuilt carry its own durability without a class change.
+  // Per-rig SP override (chassis `sp`) wins field-by-field, else the class
+  // default. Lets each chassis carry its own durability without a class change.
   const o = weapons.sp && typeof weapons.sp === "object" ? weapons.sp : {};
   const base = {
     hull:   Number.isFinite(o.hull)   ? o.hull   : d.hull,
@@ -568,7 +568,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     weapons: { longRange, melee },
     weaponUpgrades,
     equipment: equipmentId,
-    prebuilt: weapons.prebuilt || null, // PREBUILT_RIGS id it was commissioned from — drives its flavor description in the UI
+    chassis: weapons.chassis || null, // CHASSIS id it was commissioned from — drives its flavor description in the UI
     prepare: 0,    // Phase 4
     activated: false,
     skipNextActivation: false,
@@ -664,7 +664,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     return makeRig(id, name, opts.weightClass, owner, {
       longRange: opts.longRange, melee: opts.melee,
       longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
-      sp: opts.sp, prebuilt: opts.prebuilt,
+      sp: opts.sp, chassis: opts.chassis,
     }, opts.equipment ?? null);
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
@@ -688,7 +688,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     parts,
     weapons: { unit: weaponName },
     equipment: null,
-    prebuilt: null, // cold kinds (tank / walker) aren't commissioned from a prebuilt
+    chassis: null, // cold kinds (tank / walker) aren't commissioned from a chassis
     activated: false,
     skipNextActivation: false,
     noCool: false,
@@ -1807,7 +1807,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           meleeUpgrade: a.meleeUpgrade,
           equipment: a.equipment ?? null,
           sp: a.sp,
-          prebuilt: a.prebuilt,
+          chassis: a.chassis,
           // Flat-pick options
           unit: a.unit,
         });

@@ -4,7 +4,7 @@ import { rigModifiers } from "/shared/battle-view.js";
 import { partNamesOf, kindOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { rigStatus } from "../../lib/rigView";
 import { buildLoadout } from "../../lib/loadout";
-import { usePrebuiltDescriptions } from "../../hooks/usePrebuiltDescriptions";
+import { useChassisDescriptions } from "../../hooks/useChassisDescriptions";
 import { CompRow } from "./CompRow";
 import { HeatGauge } from "./HeatGauge";
 import { ActionConsole } from "../battle/ActionConsole";
@@ -105,8 +105,8 @@ export const RigItem = React.memo(function RigItem({
   }
 
   const mods = rigModifiers(rig);
-  const prebuiltDescriptions = usePrebuiltDescriptions();
-  const description = rig.prebuilt ? prebuiltDescriptions[rig.prebuilt] : undefined;
+  const chassisDescriptions = useChassisDescriptions();
+  const description = rig.chassis ? chassisDescriptions[rig.chassis] : undefined;
 
   return (
     <div className={itemCls.join(" ")}>

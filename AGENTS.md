@@ -16,8 +16,8 @@ What this means concretely:
 
 Hold these when designing rigs, weapons, upgrades, or mechanics:
 
-- **Every weapon is globally unique.** No two prebuilt rigs share a long-range or a melee weapon. Each of the 8 weapons per slot-type belongs to exactly one rig.
-- **Each rig appears at most once on the field.** A given prebuilt is never mirrored across the board.
+- **Every weapon is globally unique.** No two chassis rigs share a long-range or a melee weapon. Each of the 8 weapons per slot-type belongs to exactly one rig.
+- **Each rig appears at most once on the field.** A given chassis is never mirrored across the board.
 - **Therefore: no mirror matchups.** The shield rig never faces another shield; the sniper never faces another sniper; and so on. A rig will never fight a copy of its own kit.
 - **Design consequence:** an upgrade or mechanic must NOT assume the enemy shares your gear. "Counters other shields" is dead weight on the only shield. Balance each kit against a *varied* field of the other rigs, and lean on universal mechanics (Brace, movement, arcs, heat) rather than mirror interactions.
 
@@ -37,16 +37,16 @@ Selection rules:
 
 ### Adding a new chassis — step by step
 
-A **chassis** is a prebuilt loadout the player commissions: a fixed weight class + one long-range + one melee weapon, each weapon offering three nature upgrades. (In code the registry is still named `PREBUILT_RIGS` and the content file `content/prebuilts.json` — "chassis" is the player-facing name.) Weapons/class/SP are code-authoritative; the flavor text lives in editable content. To add one:
+A **chassis** is a chassis loadout the player commissions: a fixed weight class + one long-range + one melee weapon, each weapon offering three nature upgrades. (In code the registry is still named `CHASSIS` and the content file `content/chassis.json` — "chassis" is the player-facing name.) Weapons/class/SP are code-authoritative; the flavor text lives in editable content. To add one:
 
 1. **Weapons first.** A chassis needs one long-range + one melee weapon from `WEAPONS` in `shared/game-state.js`. Because weapons are globally unique (no mirror matchups), a new chassis almost always needs **new weapons** — add each to `WEAPONS.longRange` / `WEAPONS.melee` with its stats. Adding a weapon breaks the hardcoded `Object.keys(WEAPONS.longRange|melee).length === 8` asserts in `shared/game-state.test.js` — bump them.
 2. **Weapon upgrades.** Every weapon must have exactly **three** `WEAPON_UPGRADES` entries — one each `nature: "field" | "tuned" | "prototype"` (Field pure-upside, Tuned conditional-upside, Prototype systemic and may carry a downside). Give each an `id`, `name`, `tag`, and `effect` (`{}` if the mechanic isn't built yet). The "exactly one of each nature" test enforces this.
-3. **The chassis entry.** Add to `PREBUILT_RIGS` in `shared/game-state.js`: `{ id, label, class, longRange, melee, sp: { hull, arms, legs, engine } }`. Class must be in `SUPPORTED_RIG_CLASSES` (light/medium). SP is per-chassis (~2× the class default), tuned to its durability tier.
-4. **Flavor content.** Add the same `id` to `content/prebuilts.json` with `label`, `class`, `longRange`, `melee` (mirrors of the code) plus `description` / `focus` / `balance` / `personality`. The server merges this onto the code registry by id — only the label + these content fields come from disk; weapons/class/sp always come from code.
+3. **The chassis entry.** Add to `CHASSIS` in `shared/game-state.js`: `{ id, label, class, longRange, melee, sp: { hull, arms, legs, engine } }`. Class must be in `SUPPORTED_RIG_CLASSES` (light/medium). SP is per-chassis (~2× the class default), tuned to its durability tier.
+4. **Flavor content.** Add the same `id` to `content/chassis.json` with `label`, `class`, `longRange`, `melee` (mirrors of the code) plus `description` / `focus` / `balance` / `personality`. The server merges this onto the code registry by id — only the label + these content fields come from disk; weapons/class/sp always come from code.
 5. **New mechanics (only if a Tuned/Prototype needs engine behavior that doesn't exist yet).** Implement the effect in `shared/combat.js` / `shared/game-state.js` keyed off the upgrade's `effect`; if it creates a tracked status, add a chip in `rigModifiers` (`shared/battle-view.js`); if it adds a player action, add it to `ACTIONS` (`shared/rules.js`) + a `performAction` branch + surface it in `availableActions` and route it in `client/src/components/battle/ActionConsole.tsx`; document the rule in `rules.md`. Spatial parts → narrate (see above). TDD it.
 6. **Author the design doc.** Add `docs/design/<chassis-id>.md` following the existing eight (focus, the 6 upgrades with nature + effect + engine status, decided values). It's the design record.
 
-**Auto-wires — no manual step:** server add-enforcement (`resolvePrebuilt` accepts the new id/combo), the commission wizard (renders from `PREBUILT_RIGS` + `/api/prebuilts`), the one-Prototype guard, the AI tracker protocol (`server/prompt.js` derives the combo list from `PREBUILT_RIGS`), and the description on the picker card + commissioned rig. Then run `node --test` + `npx vitest run` + `npx tsc --noEmit`.
+**Auto-wires — no manual step:** server add-enforcement (`resolveChassis` accepts the new id/combo), the commission wizard (renders from `CHASSIS` + `/api/chassis`), the one-Prototype guard, the AI tracker protocol (`server/prompt.js` derives the combo list from `CHASSIS`), and the description on the picker card + commissioned rig. Then run `node --test` + `npx vitest run` + `npx tsc --noEmit`.
 
 ## Git workflow (many agents, one dev)
 

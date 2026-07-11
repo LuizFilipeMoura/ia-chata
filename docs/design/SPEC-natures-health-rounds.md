@@ -17,7 +17,7 @@ Reference: per-rig upgrade details live in the eight `docs/design/<rig-id>.md` f
 
 ## Phase 2 — Per-rig health (new SP data axis) ✅ done
 
-Rigs currently derive SP from `RIG_DEFAULTS[class]`. Make SP **per prebuilt** so durability expresses identity. SP lives in `PREBUILT_RIGS` (code-authoritative, same as weapons/class — NOT in `content/prebuilts.json`).
+Rigs currently derive SP from `RIG_DEFAULTS[class]`. Make SP **per chassis** so durability expresses identity. SP lives in `CHASSIS` (code-authoritative, same as weapons/class — NOT in `content/chassis.json`).
 
 New per-rig SP (≈1.8–2.2× old; tiers: Bulwark > Durable > Standard > Glass):
 
@@ -33,11 +33,11 @@ New per-rig SP (≈1.8–2.2× old; tiers: Bulwark > Durable > Standard > Glass)
 | light-sword-arc | 11 | 9 | 10 | 7 | 37 |
 
 Implementation:
-- Add `sp: { hull, arms, legs, engine }` to each `PREBUILT_RIGS` entry.
-- Server add path already resolves the prebuilt (`resolvePrebuilt` in `server/routes/game.js`) and stamps class/weapons — also stamp `sp`.
-- `makeRig`: accept an optional `sp` profile; use it when present, else fall back to `RIG_DEFAULTS[class]` (AI/tests without a prebuilt still work).
+- Add `sp: { hull, arms, legs, engine }` to each `CHASSIS` entry.
+- Server add path already resolves the chassis (`resolveChassis` in `server/routes/game.js`) and stamps class/weapons — also stamp `sp`.
+- `makeRig`: accept an optional `sp` profile; use it when present, else fall back to `RIG_DEFAULTS[class]` (AI/tests without a chassis still work).
 - Armour tables (`unit-kinds.js` impact rows) **unchanged** — note: 2× SP ≈ 2× time-to-kill; revisit weapon/armour balance after a playtest (separate pass).
-- Tests: a prebuilt rig gets its per-rig SP; a non-prebuilt add still gets `RIG_DEFAULTS`.
+- Tests: a chassis rig gets its per-rig SP; a non-chassis add still gets `RIG_DEFAULTS`.
 
 ## Phase 3 — Wire the Raking Fire rule (the flagged fix) ✅ done
 
@@ -142,5 +142,5 @@ All groups below (A–G) are implemented in `shared/game-state.js` / `shared/com
 - Phase 5: each mechanic (including Group G's narrated-instruction cadence/state tracking) is covered in `shared/game-state.test.js` / `shared/combat.test.js`. `rules.md`'s "Tuned / Prototype Upgrade Mechanics" section stays in sync with every rule change (AGENTS workflow).
 
 ## Follow-ups (not in this spec)
-- Author `content/prebuilts.json` `description` / `personality` (the `focus` per rig is fixed by the design docs and can seed the file).
+- Author `content/chassis.json` `description` / `personality` (the `focus` per rig is fixed by the design docs and can seed the file).
 - Post-playtest balance pass on weapon output vs the new 2× SP.

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY,
-  UNIT_WEAPONS, PREBUILT_RIGS, upgradeNature,
+  UNIT_WEAPONS, CHASSIS, upgradeNature,
 } from "/shared/game-state.js";
 import { UNIT_KINDS } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
@@ -11,26 +11,59 @@ import { useUi } from "../../state/UiStateContext";
 import { GlossaryText } from "../chat/GlossaryText";
 
 function stepsFor(kind: "rig" | "tank" | "walker"): string[] {
-  if (kind === "rig") return ["Kind", "Identity", "Weapons", "Equipment", "Confirm"];
-  return ["Kind", "Identity", "Weapon", "Confirm"];
+  if (kind === "rig") return ["Kind", "Weapons", "Equipment", "Confirm"];
+  return ["Kind", "Weapon", "Confirm"];
 }
 
 function firstUpgradeId(name: string): string | null {
   return (WEAPON_UPGRADES[name] || [])[0]?.id || null;
 }
 
-// Authored content layered onto a prebuilt by the server (content/prebuilts.json).
-interface PrebuiltContent {
+// Dieselpunk chassis codenames — each cues its weapon pair + weight class, so a
+// rig commissions with a name already attached (the manual name step is gone).
+const CHASSIS_NAME: Record<string, string> = {
+  "light-claw-autocannon": "Ironjaw",
+  "light-missile-flamethrower": "Cinderwalk",
+  "light-saw-minigun": "Scrapmaw",
+  "light-wreckingball-double": "Sledge",
+  "light-sword-arc": "Arclight",
+  "medium-lance-mortar": "Halberd",
+  "medium-shield-siege": "Rampart",
+  "medium-sniper-chainsaw": "Deadeye",
+};
+
+// Weapon -> emblem glyph, used only as a loadout "pip" on the roster cards. Any
+// unmapped weapon falls back to a gear so a new weapon never renders blank.
+const WEAPON_GLYPH: Record<string, string> = {
+  "Autocannon": "🎯", "Mini Gun": "🎯", "Double MG": "🎯", "Sniper Cannon": "🎯",
+  "Arc Gun": "⚡", "Mortar": "💥", "Missile Barrage": "🚀", "Siege Maul": "🔨",
+  "Claw": "🦾", "Flamethrower": "🔥", "Circular Saw": "🪚", "Chainsaw": "🪚",
+  "Wrecking Ball": "⛓️", "Sword": "🗡️", "Lance": "🗡️", "Bulwark Shield": "🛡️",
+};
+const glyph = (weapon: string) => WEAPON_GLYPH[weapon] || "⚙";
+const NODE_MARK = ["I", "II", "III"]; // path rank for each nature step
+
+// Dieselpunk ordnance stamp per upgrade nature (display only — the underlying
+// `nature` id still drives the one-Wildcat-per-rig rule). Field = mass-issue,
+// Tuned = bench-worked, Prototype = unsanctioned/experimental.
+const NATURE_LABEL: Record<string, string> = {
+  field: "Standard",
+  tuned: "Machined",
+  prototype: "Wildcat",
+};
+const natureLabel = (nature: string) => NATURE_LABEL[nature] || nature;
+
+// Authored content layered onto a chassis by the server (content/chassis.json).
+interface ChassisContent {
   description?: string; focus?: string; balance?: string; personality?: string;
 }
 
 interface WizardState {
   step: number;
   kind: "rig" | "tank" | "walker";
-  name: string;
   cls: string;
   owner: string;
-  prebuilt: string; // chosen PREBUILT_RIGS id; drives cls + longRange + melee
+  chassis: string; // chosen CHASSIS id; drives cls + longRange + melee
   longRange: string;
   melee: string;
   longRangeUpgrade: string | null;
@@ -44,17 +77,15 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
   const sendCommand = useCommands();
   const { setGlossaryOpen } = useUi();
   const mySide = useMySide();
-  const enemySide = mySide === "a" ? "b" : "a";
 
   const [state, setState] = useState<WizardState>(() => {
-    const pb = PREBUILT_RIGS[0];
+    const pb = CHASSIS[0];
     return {
       step: 0,
       kind: "rig",
-      name: "",
       cls: pb.class,
       owner: mySide,
-      prebuilt: pb.id,
+      chassis: pb.id,
       longRange: pb.longRange,
       melee: pb.melee,
       longRangeUpgrade: firstUpgradeId(pb.longRange),
@@ -64,15 +95,15 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
     };
   });
 
-  // Selecting a prebuilt locks weight class + both weapons and resets each
+  // Selecting a chassis locks weight class + both weapons and resets each
   // weapon to its first upgrade; the player re-picks upgrades below the grid.
   // Invariant: the first upgrade per weapon is always Field nature (Task 2), so
   // this reset can never leave the rig with two Prototype upgrades selected.
-  const selectPrebuilt = (id: string) => {
-    const pb = PREBUILT_RIGS.find((p) => p.id === id);
+  const selectChassis = (id: string) => {
+    const pb = CHASSIS.find((p) => p.id === id);
     if (!pb) return;
     patch({
-      prebuilt: pb.id,
+      chassis: pb.id,
       cls: pb.class,
       longRange: pb.longRange,
       melee: pb.melee,
@@ -83,18 +114,18 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
 
   const STEPS = stepsFor(state.kind);
 
-  // Authored description / focus / balance / personality per prebuilt id, loaded
+  // Authored description / focus / balance / personality per chassis id, loaded
   // from the server's editable catalogue. Falls back to empty (grid still works
   // off the built-in weapons/class) if the fetch fails.
-  const [content, setContent] = useState<Record<string, PrebuiltContent>>({});
+  const [content, setContent] = useState<Record<string, ChassisContent>>({});
   useEffect(() => {
     let live = true;
-    fetch("/api/prebuilts")
+    fetch("/api/chassis")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!live || !data?.prebuilts) return;
-        const map: Record<string, PrebuiltContent> = {};
-        for (const p of data.prebuilts) {
+        if (!live || !data?.chassis) return;
+        const map: Record<string, ChassisContent> = {};
+        for (const p of data.chassis) {
           map[p.id] = { description: p.description, focus: p.focus, balance: p.balance, personality: p.personality };
         }
         setContent(map);
@@ -121,12 +152,17 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
 
   const patch = (p: Partial<WizardState>) => setState((s) => ({ ...s, ...p }));
 
+  // No manual name step: a rig takes its chassis codename, a tank/walker takes
+  // its weapon's name. Server dedupes collisions on commit.
+  const unitName = () =>
+    state.kind === "rig" ? (CHASSIS_NAME[state.chassis] || state.cls) : state.unit;
+
   const submit = () => {
     if (state.kind === "rig") {
       sendCommand("add", {
-        name: state.name.trim(),
+        name: unitName(),
         kind: "rig",
-        prebuilt: state.prebuilt,
+        chassis: state.chassis,
         class: state.cls,
         owner: state.owner,
         lr: state.longRange,
@@ -137,7 +173,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
       });
     } else {
       sendCommand("add", {
-        name: state.name.trim(),
+        name: unitName(),
         kind: state.kind,
         owner: state.owner,
         unit: state.unit,
@@ -146,124 +182,164 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
     close();
   };
 
-  const upgradeChoices = (
+  // The three upgrades render as a descending "path": a rigid → tuned →
+  // prototype spine. Later nodes read as higher-commitment; the Prototype node
+  // is hazard-lit and gated (one per rig), so it feels dangerous to reach for.
+  const upgradePath = (
     name: string,
     selected: string | null,
     onSelect: (id: string) => void,
     otherIsPrototype: boolean,
   ) => (
-    <div className="rw-upgrade-choices">
-      {(WEAPON_UPGRADES[name] || []).map((u) => {
+    <div className="rw-path">
+      <span className="rw-path-rail" aria-hidden="true" />
+      {(WEAPON_UPGRADES[name] || []).map((u, i) => {
         const locked = u.nature === "prototype" && otherIsPrototype && u.id !== selected;
+        const isSel = u.id === selected;
         return (
           <button
             key={u.id}
             type="button"
             disabled={locked}
-            className={"rw-upgrade-choice" + (u.id === selected ? " sel" : "") + (locked ? " locked" : "")}
-            title={locked ? "A rig may run at most one Prototype upgrade" : u.tag}
+            data-nature={u.nature}
+            className={"rw-node nat-" + u.nature + (isSel ? " sel" : "") + (locked ? " locked" : "")}
+            title={locked ? "A rig may run at most one Wildcat upgrade" : u.tag}
             onClick={() => !locked && onSelect(u.id)}
           >
-            <span>{u.name} <em className={"rw-nature rw-nature-" + u.nature}>{u.nature[0].toUpperCase() + u.nature.slice(1)}</em></span>
-            <small>Upgrade · <GlossaryText text={u.tag} /></small>
+            <span className="rw-node-mark">{NODE_MARK[i]}</span>
+            <span className="rw-node-body">
+              <span className="rw-node-head">
+                <span className="rw-node-name">{u.name}</span>
+                <em className={"rw-nature rw-nature-" + u.nature}>{natureLabel(u.nature)}</em>
+              </span>
+              <small className="rw-node-tag">
+                {u.nature === "prototype" ? <span className="rw-warn">⚠ one per rig</span> : null}
+                <GlossaryText text={u.tag} />
+              </small>
+            </span>
           </button>
         );
       })}
     </div>
   );
 
+  // The weapon upgrade paths live inside the chosen chassis card as an
+  // expandable bay: selecting a roster card unfolds both weapons' Field ->
+  // Tuned -> Prototype paths right under its stats, so picks read as part of
+  // that chassis. Rendered as a sibling of the card <button> (a button cannot
+  // legally nest interactive children).
+  const upgradeBay = () => {
+    const lr = WEAPONS.longRange[state.longRange];
+    const ml = WEAPONS.melee[state.melee];
+    return (
+      <div className="rc-bay">
+        <div className="rc-bay-head">◈ Upgrade paths <span>· commit one per weapon</span></div>
+        <div className="rw-weapon">
+          <div className="rw-weapon-head">
+            <span className="rw-weapon-icon">🎯</span>
+            <span className="rw-weapon-name">{state.longRange}</span>
+            <small>ROF {lr.rof} · STR {lr.str} · {lr.minRange}–{lr.maxRange}"</small>
+          </div>
+          {upgradePath(state.longRange, state.longRangeUpgrade, (id) =>
+            patch({ longRangeUpgrade: id }),
+            upgradeNature(state.melee, state.meleeUpgrade) === "prototype",
+          )}
+        </div>
+        <div className="rw-weapon">
+          <div className="rw-weapon-head">
+            <span className="rw-weapon-icon">🗡️</span>
+            <span className="rw-weapon-name">{state.melee}</span>
+            <small>ROF {ml.rof} · STR {ml.str} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small>
+          </div>
+          {upgradePath(state.melee, state.meleeUpgrade, (id) =>
+            patch({ meleeUpgrade: id }),
+            upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype",
+          )}
+        </div>
+      </div>
+    );
+  };
+
   let body: React.ReactNode;
   if (state.step === 0) {
     body = (
       <div className="rw-body">
-        <div className="rw-equip-grid">
+        <div className="rw-kind">
           {(["rig", "tank", "walker"] as const).map((k) => (
             <button
               key={k}
               type="button"
-              className={"rw-equip-card" + (k === state.kind ? " sel" : "")}
+              data-kind={k}
+              className={"rw-kind-card" + (k === state.kind ? " sel" : "")}
               onClick={() => patch({ kind: k, step: 0 })}
             >
-              <div className="rw-equip-family">Chassis</div>
-              <div className="rw-equip-label">{UNIT_KINDS[k].label}</div>
-              <div className="rw-equip-passive">
+              <span className="rw-kind-glyph">{k === "rig" ? "◈" : k === "tank" ? "▰" : "⧗"}</span>
+              <span className="rw-kind-family">Chassis</span>
+              <span className="rw-kind-label">{UNIT_KINDS[k].label}</span>
+              <span className="rw-kind-desc">
                 {k === "rig"
                   ? "Heat + weight class + two weapon slots + equipment. 3 actions."
                   : k === "tank"
                   ? "Cold single-model machine. One flat-pick weapon. 2 actions."
                   : "Cold walker chassis. One flat-pick weapon. 3 actions, mobile."}
-              </div>
+              </span>
             </button>
           ))}
         </div>
       </div>
     );
   } else if (state.step === 1) {
-    body = (
-      <div className="rw-body">
-        <div className="rw-field">
-          <label>Name</label>
-          <input
-            type="text"
-            className="rw-name"
-            placeholder={`${UNIT_KINDS[state.kind].label} name`}
-            value={state.name}
-            onChange={(e) => patch({ name: e.target.value })}
-          />
-        </div>
-        <div className="rw-field">
-          <label>Side</label>
-          <select value={state.owner} onChange={(e) => patch({ owner: e.target.value })}>
-            <option value={mySide}>You</option>
-            <option value={enemySide}>Enemy</option>
-          </select>
-        </div>
-      </div>
-    );
-  } else if (state.step === 2) {
     if (state.kind === "rig") {
-      const lr = WEAPONS.longRange[state.longRange];
-      const ml = WEAPONS.melee[state.melee];
       body = (
         <div className="rw-body">
           <div className="rw-field">
-            <label>Prebuilt chassis</label>
-            <div className="rw-equip-grid">
-              {PREBUILT_RIGS.map((pb) => (
-                <button
-                  key={pb.id}
-                  type="button"
-                  className={"rw-equip-card" + (pb.id === state.prebuilt ? " sel" : "")}
-                  onClick={() => selectPrebuilt(pb.id)}
-                >
-                  <div className="rw-equip-family">{pb.class}{content[pb.id]?.focus ? ` · ${content[pb.id]!.focus}` : ""}</div>
-                  <div className="rw-equip-label">{pb.label}</div>
-                  <div className="rw-equip-passive">
-                    Hull {RIG_DEFAULTS[pb.class].hull} · Arms/Legs {RIG_DEFAULTS[pb.class].arms} · Engine {RIG_DEFAULTS[pb.class].engine} (heat cap {HEAT_CAPACITY[pb.class]})
+            <label className="rw-roster-cue">Choose your chassis · unfold its upgrade paths</label>
+            <div className="rw-roster">
+              {CHASSIS.map((pb) => {
+                const sel = pb.id === state.chassis;
+                return (
+                  <div key={pb.id} className={"rc-slot" + (sel ? " sel" : "")}>
+                    <button
+                      type="button"
+                      data-class={pb.class}
+                      className={"rc-card rc-" + pb.class + (sel ? " sel" : "")}
+                      onClick={() => selectChassis(pb.id)}
+                    >
+                      <span className="rc-frame" aria-hidden="true" />
+                      <span className="rc-plate">
+                        <span className="rc-emblem">{pb.class[0].toUpperCase()}</span>
+                        <span className="rc-pips">
+                          <i>{glyph(pb.longRange)}</i><i>{glyph(pb.melee)}</i>
+                        </span>
+                      </span>
+                      <span className="rc-info">
+                        <span className="rc-tierrow">
+                          <span className="rc-tier">{pb.class}</span>
+                          <span className="rc-tier-sep">class</span>
+                          <span className="rc-heat">heat cap {HEAT_CAPACITY[pb.class]}</span>
+                        </span>
+                        <span className="rc-label">{CHASSIS_NAME[pb.id] || pb.label}</span>
+                        <span className="rc-combo">
+                          <i>{glyph(pb.longRange)}</i> {pb.longRange} <b>·</b> <i>{glyph(pb.melee)}</i> {pb.melee}
+                        </span>
+                        <span className="rc-stats">
+                          Hull {RIG_DEFAULTS[pb.class].hull} · Arms/Legs {RIG_DEFAULTS[pb.class].arms} · Engine {RIG_DEFAULTS[pb.class].engine}
+                        </span>
+                        {content[pb.id]?.description ? (
+                          <span className="rc-desc">{content[pb.id]!.description}</span>
+                        ) : null}
+                      </span>
+                      <span className="rc-picked" aria-hidden="true">◈ Selected</span>
+                    </button>
+                    {sel ? upgradeBay() : null}
                   </div>
-                  {content[pb.id]?.description ? (
-                    <div className="rw-equip-active">{content[pb.id]!.description}</div>
-                  ) : null}
-                </button>
-              ))}
+                );
+              })}
             </div>
           </div>
-          <div className="rw-field">
-            <label>🎯 {state.longRange} <small>· ROF {lr.rof} · STR {lr.str} · {lr.minRange}–{lr.maxRange}"</small></label>
-          </div>
-          {upgradeChoices(state.longRange, state.longRangeUpgrade, (id) =>
-            patch({ longRangeUpgrade: id }),
-            upgradeNature(state.melee, state.meleeUpgrade) === "prototype",
-          )}
-          <div className="rw-field">
-            <label>🗡️ {state.melee} <small>· ROF {ml.rof} · STR {ml.str} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small></label>
-          </div>
-          {upgradeChoices(state.melee, state.meleeUpgrade, (id) =>
-            patch({ meleeUpgrade: id }),
-            upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype",
-          )}
+
           <div className="rw-hint">
-            Weapons and weight class are fixed by the prebuilt. Choose one upgrade for each weapon.
+            Weapons and weight class are fixed by the chassis. Open a chassis and follow each weapon's path to one upgrade — equipment comes next.
           </div>
         </div>
       );
@@ -297,8 +373,9 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
         </div>
       );
     }
-  } else if (state.step === 3) {
+  } else if (state.step === 2) {
     if (state.kind === "rig") {
+      // Equipment — its own step again (upgrades moved into the chassis bay).
       body = (
         <div className="rw-body">
           <div className="rw-equip-grid">
@@ -324,7 +401,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
       const w = UNIT_WEAPONS[state.unit];
       body = (
         <div className="rw-body rw-confirm">
-          <div className="rw-confirm-name">{(state.name || "(unnamed)")} — {UNIT_KINDS[state.kind].label}</div>
+          <div className="rw-confirm-name">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
           <div className="rw-confirm-row">🎯 {state.unit} · STR {w.str} · ROF {w.rof}</div>
         </div>
       );
@@ -339,19 +416,18 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
     );
     body = (
       <div className="rw-body rw-confirm">
-        <div className="rw-confirm-name">{(state.name || "(unnamed)")} — {state.cls}</div>
+        <div className="rw-confirm-name">{unitName()} — {state.cls}</div>
         <div className="rw-confirm-row">🎯 {state.longRange} · {lrUpgrade?.name || "Upgrade ?"}</div>
         <div className="rw-confirm-row">🗡️ {state.melee} · {meleeUpgrade?.name || "Upgrade ?"}</div>
         <div className="rw-confirm-row">🛠 {e.label} · {e.passive}</div>
-        {content[state.prebuilt]?.personality ? (
-          <div className="rw-confirm-row rw-confirm-flavor">“{content[state.prebuilt]!.personality}”</div>
+        {content[state.chassis]?.personality ? (
+          <div className="rw-confirm-row rw-confirm-flavor">“{content[state.chassis]!.personality}”</div>
         ) : null}
       </div>
     );
   }
 
   const canAdd = canAddRigForSide({ rigs, game }, state.owner);
-  const atName = state.step === 1 && !state.name.trim();
 
   return (
     <div
@@ -397,7 +473,6 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className="rw-btn"
-              disabled={atName}
               onClick={() => patch({ step: state.step + 1 })}
             >
               Next

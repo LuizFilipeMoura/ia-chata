@@ -1,107 +1,400 @@
-/* ---- Commission-a-Rig wizard: bottom-docked sheet (matches AttackWizard) ---- */
+/* ---- Commission-a-Rig wizard: bottom-docked sheet (matches AttackWizard) ----
+   Restyled as a "foundry roster select": chassis picks read like a character
+   roster, and weapon upgrades descend a Field -> Tuned -> Prototype path where
+   the Prototype node is hazard-lit and menacing. Dark theme throughout. */
 .rw-scrim {
   position: fixed; inset: 0; z-index: 70; display: grid; place-items: end center;
-  background: rgba(5,7,10,.62); backdrop-filter: blur(2px);
+  background: rgba(2,3,5,.82); backdrop-filter: blur(3px) saturate(.8);
   opacity: 0; transition: opacity .2s ease;
 }
 .rw-scrim.show { opacity: 1; }
+/* Aged, oil-stained steel bulkhead: mottled grime + baked-in film grain, a worn
+   ochre top rail, and a heavy interior vignette so the panel reads old and lit
+   from a single dirty bulb. */
 .rw-card {
-  width: min(440px, 96vw); max-height: 88%; overflow-y: auto;
-  background: linear-gradient(180deg, var(--iron-850), var(--iron-900));
-  border: 1px solid var(--rivet);
-  border-top-left-radius: 16px; border-top-right-radius: 16px;
-  padding: .95rem .95rem 1.1rem; box-shadow: 0 -20px 60px rgba(0,0,0,.55);
+  width: min(468px, 96vw); max-height: 90%; overflow-y: auto;
+  position: relative;
+  background:
+    var(--grain),
+    var(--grime),
+    radial-gradient(120% 60% at 50% -8%, rgba(231,154,61,.07), transparent 60%),
+    linear-gradient(180deg, #171b21, #0f1217 55%, #080a0d);
+  background-size: 160px 160px, auto, auto, auto;
+  background-blend-mode: overlay, normal, normal, normal;
+  border: 1px solid #05070a; border-top: 2px solid var(--oil-deep);
+  border-top-left-radius: 12px; border-top-right-radius: 12px;
+  padding: .9rem 1rem 1.15rem;
+  box-shadow: 0 -24px 70px rgba(0,0,0,.72), inset 0 0 72px rgba(0,0,0,.66), inset 0 1px 0 rgba(255,255,255,.04);
   transform: translateY(100%); transition: transform .3s cubic-bezier(.2,.85,.25,1);
+}
+/* Stencilled inner frame line, like a painted-on inspection border. */
+.rw-card::before {
+  content: ""; position: absolute; inset: 5px; border-radius: 9px; pointer-events: none;
+  border: 1px solid rgba(150,138,110,.13);
 }
 .rw-scrim.show .rw-card { transform: none; }
 
-.rw-handle { width: 34px; height: 4px; border-radius: 4px; background: var(--rivet); margin: 0 auto .7rem; }
+/* Caution chevrons in place of the drag pill — war hazard tape. */
+.rw-handle {
+  width: 66px; height: 9px; border-radius: 2px; margin: 0 auto .8rem;
+  background: var(--caution); background-size: 220% 100%;
+  border: 1px solid #000; box-shadow: inset 0 0 5px rgba(0,0,0,.65); opacity: .82;
+}
 
-.rw-head { margin-bottom: .9rem; }
+.rw-head { margin-bottom: .95rem; }
 .rw-title-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+/* Stamped-ink stencil header. */
 .rw-title {
-  font-family: var(--font-mono); font-size: .68rem; letter-spacing: .2em;
-  text-transform: uppercase; color: var(--oil); margin-bottom: .55rem;
+  font-family: var(--font-mono); font-size: .7rem; letter-spacing: .3em;
+  text-transform: uppercase; color: #d69f4c; margin-bottom: .6rem;
+  text-shadow: 0 1px 0 #000, 0 0 2px rgba(0,0,0,.9);
 }
-.rw-dots { display: flex; gap: .35rem; }
+/* Step readout rendered as a connected path of segments. */
+.rw-dots { display: flex; gap: .3rem; }
 .rw-dot {
-  flex: 1; text-align: center; font-family: var(--font-mono); font-size: .52rem;
-  letter-spacing: .06em; text-transform: uppercase; color: var(--txt-faint);
-  padding: .3rem .2rem; border-radius: 6px; border: 1px solid var(--line);
-  background: var(--iron-950); white-space: nowrap; overflow: hidden;
+  flex: 1; text-align: center; font-family: var(--font-mono); font-size: .54rem;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--txt-dim);
+  padding: .34rem .2rem; border-radius: 3px; border: 1px solid #000;
+  background: #0a0d11; white-space: nowrap; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), inset 0 0 6px rgba(0,0,0,.5);
+  transition: color .2s, background .2s, border-color .2s;
 }
-.rw-dot.on { color: #241606; background: linear-gradient(180deg, var(--oil-hi), var(--oil)); border-color: var(--oil-deep); }
-.rw-dot.done { color: var(--oil-hi); border-color: rgba(231,154,61,.5); }
+.rw-dot.on {
+  color: #201302; background: linear-gradient(180deg, var(--oil-hi), var(--oil-deep));
+  border-color: #000; box-shadow: 0 0 14px var(--guide-glow), inset 0 1px 0 rgba(255,255,255,.25);
+  text-shadow: 0 1px 0 rgba(255,220,160,.5);
+}
+.rw-dot.done { color: var(--oil-hi); border-color: rgba(150,100,40,.6); background: rgba(120,70,25,.14); }
 
-.rw-body { display: flex; flex-direction: column; gap: .7rem; min-height: 11rem; }
-.rw-field { display: flex; flex-direction: column; gap: .3rem; }
+.rw-body { display: flex; flex-direction: column; gap: .8rem; min-height: 11rem; }
+.rw-field { display: flex; flex-direction: column; gap: .35rem; }
 .rw-field label {
-  font-family: var(--font-mono); font-size: .6rem; letter-spacing: .1em;
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .12em;
   text-transform: uppercase; color: var(--txt-dim);
 }
 .rw-field select, .rw-name {
   background: var(--iron-800); color: var(--txt); border: 1px solid var(--line);
-  border-radius: 10px; padding: .55rem .6rem; font-family: var(--font-display); font-size: .92rem;
+  border-radius: 10px; padding: .58rem .62rem; font-family: var(--font-display); font-size: .92rem;
 }
 .rw-name:focus, .rw-field select:focus { outline: none; border-color: var(--oil); box-shadow: 0 0 0 1px var(--oil); }
 
-.rw-upgrade-choices { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
-.rw-sp-preview { font-family: var(--font-mono); font-size: .62rem; color: var(--txt-faint); line-height: 1.4; }
-.rw-upgrade-choice {
-  text-align: left; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--iron-800); color: var(--txt); padding: .5rem .55rem;
-  cursor: pointer; min-height: 4.1rem;
-}
-.rw-upgrade-choice:hover { border-color: var(--rivet); }
-.rw-upgrade-choice.sel {
-  border-color: var(--oil); background: rgba(231,154,61,.08);
-  box-shadow: 0 0 0 1px rgba(231,154,61,.35);
-}
-.rw-upgrade-choice span {
-  display: block; font-family: var(--font-display); font-weight: 700; font-size: .86rem;
-}
-.rw-upgrade-choice small {
-  display: block; margin-top: .22rem; font-size: .68rem; line-height: 1.25; color: var(--txt-dim);
-}
-.rw-nature { font-style: normal; font-size: 0.7em; padding: 0 .35em; border-radius: 3px; margin-left: .35em; vertical-align: middle; }
-.rw-nature-field { background: #24406b; color: #cfe0ff; }
-.rw-nature-tuned { background: #6b4a1f; color: #ffe6bf; }
-.rw-nature-prototype { background: #5a2340; color: #ffd0e6; }
-.rw-upgrade-choice.locked { opacity: .45; cursor: not-allowed; }
-
-.rw-hint { font-size: .74rem; color: var(--txt-faint); line-height: 1.4; }
-
+/* ---------- Shared equipment/weapon grid (unit-weapon + equipment steps) ---------- */
 .rw-equip-grid { display: flex; flex-direction: column; gap: .5rem; }
 .rw-equip-card {
   text-align: left; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--iron-800); padding: .6rem .7rem; cursor: pointer;
-  transition: border-color .16s, box-shadow .16s, background .16s;
+  background: var(--iron-800); padding: .62rem .72rem; cursor: pointer; color: var(--txt);
+  transition: border-color .16s, box-shadow .16s, background .16s, transform .16s;
 }
-.rw-equip-card:hover { border-color: var(--rivet); }
+.rw-equip-card:hover { border-color: var(--rivet); transform: translateY(-1px); }
 .rw-equip-card.sel {
-  border-color: var(--oil); background: rgba(231,154,61,.08);
-  box-shadow: 0 0 0 1px rgba(231,154,61,.35);
+  border-color: var(--oil); background: rgba(231,154,61,.09);
+  box-shadow: 0 0 0 1px rgba(231,154,61,.4), 0 6px 20px rgba(0,0,0,.35);
 }
 .rw-equip-family {
   font-family: var(--font-mono); font-size: .56rem; letter-spacing: .16em;
   text-transform: uppercase; color: var(--txt-faint);
 }
-.rw-equip-label { font-family: var(--font-display); font-weight: 700; font-size: 1rem; margin: .1rem 0 .25rem; }
-.rw-equip-passive { font-size: .78rem; color: var(--txt-dim); line-height: 1.35; }
+.rw-equip-label { font-family: var(--font-display); font-weight: 700; font-size: 1rem; margin: .1rem 0 .25rem; color: var(--txt); }
+.rw-equip-passive { font-size: .8rem; color: var(--txt-dim); line-height: 1.4; }
 .rw-equip-active {
-  margin-top: .35rem; font-size: .74rem; color: var(--oil-hi); line-height: 1.4;
-  border-top: 1px dashed var(--line); padding-top: .35rem;
+  margin-top: .35rem; font-size: .76rem; color: var(--oil-hi); line-height: 1.45;
+  border-top: 1px dashed var(--line); padding-top: .4rem;
 }
 
-.rw-confirm { justify-content: center; text-align: center; }
-.rw-confirm-name { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; color: var(--oil-hi); }
-.rw-confirm-row { font-family: var(--font-mono); font-size: .78rem; color: var(--txt-dim); }
+/* ======================= KIND STEP — archetype select ======================= */
+.rw-kind { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .55rem; }
+.rw-kind-card {
+  position: relative; text-align: center; cursor: pointer; color: var(--txt);
+  display: flex; flex-direction: column; align-items: center; gap: .28rem;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: linear-gradient(180deg, var(--iron-800), var(--iron-850));
+  padding: .85rem .5rem; overflow: hidden;
+  transition: border-color .16s, box-shadow .16s, transform .16s, background .16s;
+  animation: rw-rise .34s var(--ease-out) both;
+}
+.rw-kind-card:nth-child(2) { animation-delay: .05s; }
+.rw-kind-card:nth-child(3) { animation-delay: .1s; }
+.rw-kind-card:hover { border-color: var(--rivet); transform: translateY(-2px); }
+.rw-kind-card.sel {
+  border-color: var(--oil);
+  background: linear-gradient(180deg, rgba(231,154,61,.14), var(--iron-850));
+  box-shadow: 0 0 0 1px rgba(231,154,61,.45), 0 8px 26px rgba(0,0,0,.4);
+}
+.rw-kind-glyph {
+  font-size: 1.7rem; line-height: 1; color: var(--txt-faint);
+  transition: color .16s, text-shadow .16s;
+}
+.rw-kind-card.sel .rw-kind-glyph { color: var(--oil-hi); text-shadow: 0 0 16px var(--guide-glow); }
+.rw-kind-family {
+  font-family: var(--font-mono); font-size: .5rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--txt-faint);
+}
+.rw-kind-label { font-family: var(--font-display); font-weight: 800; font-size: .98rem; color: var(--txt); }
+.rw-kind-desc { font-size: .68rem; color: var(--txt-dim); line-height: 1.35; }
 
+/* ====================== CHASSIS STEP — roster / character select ====================== */
+.rw-roster-cue {
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--oil-hi);
+}
+.rw-roster { display: flex; flex-direction: column; gap: .5rem; }
+
+/* One roster entry = the chassis card plus its (conditionally rendered)
+   equipment bay. Entrance stagger and expand live on the slot. */
+.rc-slot { display: flex; flex-direction: column; animation: rw-rise .34s var(--ease-out) both; }
+.rc-slot:nth-child(2) { animation-delay: .04s; }
+.rc-slot:nth-child(3) { animation-delay: .08s; }
+.rc-slot:nth-child(4) { animation-delay: .12s; }
+.rc-slot:nth-child(5) { animation-delay: .16s; }
+.rc-slot:nth-child(6) { animation-delay: .2s; }
+.rc-slot:nth-child(7) { animation-delay: .24s; }
+.rc-slot:nth-child(8) { animation-delay: .28s; }
+
+.rc-card {
+  position: relative; display: grid; grid-template-columns: 64px 1fr; gap: .7rem;
+  align-items: stretch; text-align: left; cursor: pointer; color: var(--txt); width: 100%;
+  border: 1px solid #05070a; border-radius: 8px; overflow: hidden;
+  background:
+    var(--grain),
+    linear-gradient(180deg, #191d24, #12151b);
+  background-size: 150px 150px, auto;
+  background-blend-mode: overlay, normal;
+  padding: .6rem .7rem .6rem .6rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), inset 0 0 22px rgba(0,0,0,.5);
+  transition: border-color .16s, box-shadow .16s, transform .16s, background .16s, border-radius .16s;
+}
+/* Rivets punched into the top corners of every plate. */
+.rc-card::after {
+  content: ""; position: absolute; top: 6px; left: 8px; right: 8px; height: 7px; pointer-events: none;
+  background: var(--rivet-dot), var(--rivet-dot);
+  background-repeat: no-repeat; background-size: 7px 7px; background-position: left center, right center;
+  opacity: .55;
+}
+.rc-slot:not(.sel) .rc-card:hover { border-color: var(--rc); transform: translateX(2px); box-shadow: inset 0 0 22px rgba(0,0,0,.5), -3px 0 0 -1px color-mix(in srgb, var(--rc) 60%, transparent); }
+
+/* Class-tinted identity: light reads cold steel, medium reads hot brass. */
+.rc-card[data-class="light"]  { --rc: var(--nat-field); --rc-hi: var(--nat-field-hi); }
+.rc-card[data-class="medium"] { --rc: var(--oil);        --rc-hi: var(--oil-hi); }
+.rc-card { border-left: 3px solid color-mix(in srgb, var(--rc) 55%, var(--line)); }
+
+.rc-card.sel {
+  border-color: var(--rc);
+  background:
+    var(--grain),
+    linear-gradient(180deg, color-mix(in srgb, var(--rc) 16%, #171b21), #12151b);
+  background-size: 150px 150px, auto;
+  background-blend-mode: overlay, normal;
+  box-shadow: 0 0 0 1px var(--rc), 0 10px 30px rgba(0,0,0,.55), inset 0 0 26px rgba(0,0,0,.5);
+}
+/* Animated corner brackets appear on the chosen card. */
+.rc-frame { position: absolute; inset: 5px; pointer-events: none; opacity: 0; transition: opacity .18s; }
+.rc-frame::before, .rc-frame::after {
+  content: ""; position: absolute; width: 14px; height: 14px; border: 2px solid var(--rc-hi);
+}
+.rc-frame::before { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.rc-frame::after { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+.rc-card.sel .rc-frame { opacity: 1; }
+
+/* Portrait plate: diagonal-striped bay, big class monogram, weapon pips. */
+.rc-plate {
+  position: relative; border-radius: 9px; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .18rem;
+  background:
+    repeating-linear-gradient(45deg, rgba(0,0,0,.28) 0 6px, transparent 6px 12px),
+    linear-gradient(160deg, color-mix(in srgb, var(--rc) 32%, var(--iron-780)), var(--iron-900));
+  border: 1px solid color-mix(in srgb, var(--rc) 40%, var(--line));
+}
+.rc-emblem {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; line-height: 1;
+  color: var(--rc-hi); text-shadow: 0 2px 10px rgba(0,0,0,.5);
+}
+.rc-pips { display: flex; gap: .2rem; font-size: .78rem; filter: saturate(1.1); }
+
+.rc-info { display: flex; flex-direction: column; gap: .16rem; min-width: 0; }
+.rc-tierrow { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.rc-tier {
+  font-family: var(--font-mono); font-size: .54rem; letter-spacing: .14em;
+  text-transform: uppercase; font-weight: 700; color: #10141a;
+  background: var(--rc-hi); padding: .05rem .4rem; border-radius: 4px;
+}
+.rc-tier-sep { font-family: var(--font-mono); font-size: .54rem; letter-spacing: .12em; text-transform: uppercase; color: var(--txt-faint); }
+/* Sits inline after the class tag (not pinned right) so the "◈ Selected"
+   ribbon owns the top-right corner without overlapping it. */
+.rc-heat {
+  font-family: var(--font-mono); font-size: .56rem;
+  letter-spacing: .06em; color: var(--txt-dim);
+}
+/* Keep the tier row clear of the corner ribbon on the selected card. */
+.rc-card.sel .rc-tierrow { padding-right: 4.6rem; }
+/* Chassis codename — stencilled, class-tinted; the identity of the card. */
+.rc-label {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.14rem; line-height: 1.1;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--rc-hi); margin: .05rem 0;
+}
+/* Weapon pair beneath the codename — the loadout the name stands for. */
+.rc-combo { font-family: var(--font-mono); font-size: .62rem; color: var(--txt-dim); letter-spacing: .02em; }
+.rc-combo i { font-style: normal; }
+.rc-combo b { color: var(--txt-faint); font-weight: 400; }
+.rc-stats { font-family: var(--font-mono); font-size: .62rem; color: var(--txt-faint); letter-spacing: .02em; }
+.rc-desc { margin-top: .18rem; font-size: .78rem; color: var(--txt-dim); line-height: 1.4; }
+
+.rc-picked {
+  position: absolute; top: .5rem; right: .55rem; font-family: var(--font-mono);
+  font-size: .52rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700;
+  color: var(--rc-hi); opacity: 0; transform: translateY(-4px); transition: opacity .18s, transform .18s;
+}
+.rc-card.sel .rc-picked { opacity: 1; transform: none; }
+
+/* ---- Upgrade bay: unfolds under the selected chassis with both weapon paths ---- */
+.rc-slot.sel .rc-card { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.rc-bay {
+  display: flex; flex-direction: column; gap: .5rem;
+  border: 1px solid var(--rc); border-top: 0; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 8%, var(--iron-850)), var(--iron-900));
+  box-shadow: 0 0 0 1px var(--rc), 0 12px 32px rgba(0,0,0,.5);
+  padding: .6rem .6rem .7rem; margin-top: -1px;
+  animation: rw-unfold .22s var(--ease-out) both;
+}
+.rc-slot.sel { --rc: var(--nat-field); --rc-hi: var(--nat-field-hi); } /* fallback tint */
+.rc-slot.sel:has(.rc-card[data-class="medium"]) { --rc: var(--oil); --rc-hi: var(--oil-hi); }
+.rc-slot.sel:has(.rc-card[data-class="light"])  { --rc: var(--nat-field); --rc-hi: var(--nat-field-hi); }
+.rc-bay-head {
+  font-family: var(--font-mono); font-size: .56rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--rc-hi);
+}
+.rc-bay-head span { color: var(--txt-faint); }
+/* Weapon blocks blend into the bay rather than sitting in their own boxes. */
+.rc-bay .rw-weapon {
+  border: 0; border-radius: 0; background: transparent; padding: 0;
+  border-top: 1px solid color-mix(in srgb, var(--rc) 24%, var(--line)); padding-top: .5rem;
+}
+.rc-bay .rw-weapon:first-of-type { border-top: 0; padding-top: 0; }
+
+/* ========================= UPGRADE PATH ========================= */
+.rw-weapon {
+  border: 1px solid var(--line-soft); border-radius: 12px;
+  background: var(--iron-850); padding: .6rem .65rem .7rem;
+}
+.rw-weapon-head { display: flex; align-items: center; gap: .45rem; margin-bottom: .55rem; }
+.rw-weapon-icon {
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
+  background: var(--iron-780); border: 1px solid var(--line); font-size: .9rem;
+}
+.rw-weapon-name { font-family: var(--font-display); font-weight: 700; font-size: .96rem; color: var(--txt); }
+.rw-weapon-head small { font-family: var(--font-mono); font-size: .6rem; color: var(--txt-dim); margin-left: auto; letter-spacing: .02em; }
+
+.rw-path { position: relative; display: flex; flex-direction: column; gap: .4rem; padding-left: .1rem; }
+/* The spine: a gradient rail climbing from calm steel to hazard red. */
+.rw-path-rail {
+  position: absolute; left: 15px; top: 14px; bottom: 14px; width: 2px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--nat-field), var(--nat-tuned) 50%, var(--nat-proto));
+  opacity: .55;
+}
+
+.rw-node {
+  position: relative; z-index: 1; display: grid; grid-template-columns: 30px 1fr; gap: .5rem;
+  align-items: center; text-align: left; cursor: pointer; color: var(--txt);
+  border: 1px solid var(--line); border-radius: 10px; background: var(--iron-800);
+  padding: .5rem .58rem; min-height: 3.4rem;
+  transition: border-color .16s, box-shadow .16s, background .16s, transform .16s;
+  animation: rw-rise .3s var(--ease-out) both;
+}
+.rw-node:nth-child(3) { animation-delay: .05s; }
+.rw-node:nth-child(4) { animation-delay: .1s; }
+.rw-node:hover:not(.locked) { transform: translateX(2px); }
+
+/* Rank marker sitting on the rail (I / II / III). */
+.rw-node-mark {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  font-family: var(--font-mono); font-weight: 700; font-size: .66rem; letter-spacing: .04em;
+  color: var(--txt-dim); background: var(--iron-900); border: 2px solid var(--line);
+  transition: color .16s, border-color .16s, background .16s, box-shadow .16s;
+}
+.rw-node-body { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.rw-node-head { display: flex; align-items: center; gap: .4rem; }
+.rw-node-name { font-family: var(--font-display); font-weight: 700; font-size: .9rem; color: var(--txt); }
+.rw-node-tag { display: block; font-size: .72rem; line-height: 1.3; color: var(--txt-dim); }
+
+/* Nature badge (also used verbatim by the tests). */
+.rw-nature {
+  font-style: normal; font-size: .58rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; padding: .08rem .4rem; border-radius: 4px; vertical-align: middle;
+}
+.rw-nature-field { background: var(--nat-field-bg); color: var(--nat-field-hi); border: 1px solid var(--nat-field-line); }
+.rw-nature-tuned { background: var(--nat-tuned-bg); color: var(--nat-tuned-hi); border: 1px solid var(--nat-tuned-line); }
+.rw-nature-prototype { background: var(--nat-proto-bg); color: var(--nat-proto-hi); border: 1px solid var(--nat-proto-line); }
+
+/* Per-nature node accents — rising commitment down the path. */
+.rw-node.nat-field   { --nn: var(--nat-field);  --nn-hi: var(--nat-field-hi);  --nn-bg: var(--nat-field-bg);  --nn-line: var(--nat-field-line); }
+.rw-node.nat-tuned   { --nn: var(--nat-tuned);  --nn-hi: var(--nat-tuned-hi);  --nn-bg: var(--nat-tuned-bg);  --nn-line: var(--nat-tuned-line); }
+.rw-node.nat-prototype { --nn: var(--nat-proto); --nn-hi: var(--nat-proto-hi); --nn-bg: var(--nat-proto-bg); --nn-line: var(--nat-proto-line); }
+.rw-node .rw-node-mark { border-color: color-mix(in srgb, var(--nn) 60%, var(--line)); }
+.rw-node:hover:not(.locked) { border-color: var(--nn); }
+.rw-node.sel {
+  border-color: var(--nn); background: color-mix(in srgb, var(--nn) 12%, var(--iron-800));
+  box-shadow: 0 0 0 1px var(--nn);
+}
+.rw-node.sel .rw-node-mark { color: #0d0f13; background: var(--nn-hi); border-color: var(--nn); box-shadow: 0 0 12px color-mix(in srgb, var(--nn) 60%, transparent); }
+
+/* The Prototype node is the dangerous end of the path: hazard weave, a red
+   frame, and a live glow/pulse when actually committed to. */
+.rw-node.nat-prototype {
+  background:
+    var(--hazard-stripe),
+    linear-gradient(180deg, var(--iron-800), color-mix(in srgb, var(--nat-proto) 8%, var(--iron-850)));
+  border-color: color-mix(in srgb, var(--nat-proto) 45%, var(--line));
+}
+.rw-node.nat-prototype .rw-node-name { color: var(--nat-proto-hi); }
+.rw-node.nat-prototype .rw-node-mark { color: var(--nat-proto-hi); border-color: var(--nat-proto); }
+.rw-node.nat-prototype.sel {
+  border-color: var(--nat-proto);
+  box-shadow: 0 0 0 1px var(--nat-proto), 0 0 22px var(--nat-proto-glow);
+  animation: rw-danger 1.9s ease-in-out infinite;
+}
+.rw-warn {
+  display: inline-block; margin-right: .35rem; font-family: var(--font-mono);
+  font-size: .58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--nat-proto-hi);
+}
+
+.rw-node.locked {
+  opacity: .4; cursor: not-allowed; filter: grayscale(.5);
+  background: var(--iron-850); border-style: dashed;
+}
+.rw-node.locked .rw-node-name { color: var(--txt-dim); }
+
+.rw-hint { font-size: .76rem; color: var(--txt-faint); line-height: 1.45; }
+
+/* ============================ CONFIRM STEP ============================ */
+.rw-confirm { justify-content: center; text-align: center; gap: .3rem; }
+.rw-confirm-name { font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; color: var(--oil-hi); text-shadow: 0 0 18px var(--guide-glow); }
+.rw-confirm-row { font-family: var(--font-mono); font-size: .8rem; color: var(--txt-dim); }
+.rw-confirm-flavor { color: var(--txt-faint); font-style: italic; margin-top: .3rem; }
+
+/* ============================== NAV ============================== */
 .rw-nav { display: flex; gap: .5rem; margin-top: 1rem; }
 .rw-btn {
   flex: 1; background: linear-gradient(180deg, var(--oil-hi), var(--oil));
-  color: #241606; border-radius: 10px; padding: .6rem 1rem;
-  font-weight: 700; font-family: var(--font-display); letter-spacing: .04em; font-size: .9rem;
+  color: #241606; border-radius: 10px; padding: .62rem 1rem;
+  font-weight: 800; font-family: var(--font-display); letter-spacing: .04em; font-size: .92rem;
+  box-shadow: 0 6px 20px rgba(231,154,61,.22);
+  transition: transform .12s, box-shadow .16s, filter .16s;
 }
-.rw-btn:disabled { background: var(--iron-800); color: var(--txt-faint); border: 1px solid var(--line); }
-.rw-btn.ghost { background: var(--iron-750); color: var(--txt); flex: 0 0 auto; padding-left: 1.2rem; padding-right: 1.2rem; }
+.rw-btn:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
+.rw-btn:disabled { background: var(--iron-800); color: var(--txt-faint); border: 1px solid var(--line); box-shadow: none; }
+.rw-btn.ghost { background: var(--iron-750); color: var(--txt); flex: 0 0 auto; padding-left: 1.2rem; padding-right: 1.2rem; box-shadow: none; }
+
+/* Legacy selectors kept for any lingering markup. */
+.rw-upgrade-choices { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
+.rw-sp-preview { font-family: var(--font-mono); font-size: .62rem; color: var(--txt-faint); line-height: 1.4; }
+
+@keyframes rw-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes rw-unfold { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes rw-danger {
+  0%, 100% { box-shadow: 0 0 0 1px var(--nat-proto), 0 0 18px var(--nat-proto-glow); }
+  50%      { box-shadow: 0 0 0 1px var(--nat-proto), 0 0 30px var(--nat-proto-glow); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rw-kind-card, .rc-slot, .rc-equip-bay, .rw-node { animation: none; }
+  .rw-node.nat-prototype.sel { animation: none; }
+}

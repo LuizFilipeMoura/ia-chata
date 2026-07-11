@@ -4,7 +4,7 @@
 
 **Goal:** Give every weapon three upgrades — one per **nature** (Field / Tuned / Prototype) — badge them in the commission wizard, and enforce "at most one Prototype per rig" client- and server-side. Wire only the upgrades whose effects already exist in the engine; new mechanics are a separate plan.
 
-**Architecture:** Add a `nature` string to every `WEAPON_UPGRADES` entry and expand each weapon's list from 2 to 3 (keep/rename/add/drop per the spec). The wizard already renders `WEAPON_UPGRADES[name]` — add a nature badge and grey-out the second Prototype. The server add-guard (`server/routes/game.js`) already resolves prebuilts; extend it to reject a two-Prototype loadout and unknown upgrade ids. Placeholder-safe upgrade ids for new-mechanic Prototypes are added here (data only) but their effects land in the mechanics plan.
+**Architecture:** Add a `nature` string to every `WEAPON_UPGRADES` entry and expand each weapon's list from 2 to 3 (keep/rename/add/drop per the spec). The wizard already renders `WEAPON_UPGRADES[name]` — add a nature badge and grey-out the second Prototype. The server add-guard (`server/routes/game.js`) already resolves chassis; extend it to reject a two-Prototype loadout and unknown upgrade ids. Placeholder-safe upgrade ids for new-mechanic Prototypes are added here (data only) but their effects land in the mechanics plan.
 
 **Tech Stack:** Node ESM (`shared/*.js`), React + TypeScript (`client/src`), Vitest (client) + `node --test` (shared/server). Work directly on `main` (see AGENTS.md).
 
@@ -16,8 +16,8 @@
 
 - `shared/game-state.js` — `WEAPON_UPGRADES` gets `nature` on every entry + the new 3rd upgrades; add `NATURES` constant + `upgradeNature()` + `countPrototypes()` helpers.
 - `shared/game-state.test.js` — data-shape tests (3 per weapon, one of each nature) + helper tests.
-- `server/routes/game.js` — extend `enforcePrebuilt` (rename to `enforceAdd`) to reject double-Prototype loadouts and unknown upgrade ids.
-- `server/prebuilts.test.js` — enforcement tests for the new rejections.
+- `server/routes/game.js` — extend `enforceChassis` (rename to `enforceAdd`) to reject double-Prototype loadouts and unknown upgrade ids.
+- `server/chassis.test.js` — enforcement tests for the new rejections.
 - `client/shared.d.ts` — type `nature` on `WEAPON_UPGRADES`, declare the new helpers.
 - `client/src/components/wizards/UnitWizard.tsx` — nature badge per upgrade choice; disable the second Prototype.
 - `client/src/components/wizards/RigWizard.test.tsx` — wizard behaviour test for the badge + Prototype lock.
@@ -320,34 +320,34 @@ git commit -m "feat(upgrades): countPrototypes helper for the one-prototype rule
 ## Task 4: Server rejects a two-Prototype loadout and unknown upgrade ids
 
 **Files:**
-- Modify: `server/routes/game.js` (the `enforcePrebuilt` function)
-- Test: `server/prebuilts.test.js`
+- Modify: `server/routes/game.js` (the `enforceChassis` function)
+- Test: `server/chassis.test.js`
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `server/prebuilts.test.js`:
+Add to `server/chassis.test.js`:
 
 ```javascript
-test("enforcePrebuilt rejects a rig running two Prototype upgrades", () => {
-  const out = enforcePrebuilt({ verb: "add", attrs: {
-    name: "X", kind: "rig", prebuilt: "light-claw-autocannon",
+test("enforceChassis rejects a rig running two Prototype upgrades", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
     longRangeUpgrade: "penetrator-rounds", meleeUpgrade: "breach-grip",
   } });
   assert.ok(out.error);
   assert.equal(out.cmd, undefined);
 });
 
-test("enforcePrebuilt allows one Prototype", () => {
-  const out = enforcePrebuilt({ verb: "add", attrs: {
-    name: "X", kind: "rig", prebuilt: "light-claw-autocannon",
+test("enforceChassis allows one Prototype", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
     longRangeUpgrade: "penetrator-rounds", meleeUpgrade: "vice-grip",
   } });
   assert.equal(out.error, undefined);
 });
 
-test("enforcePrebuilt rejects an upgrade id that isn't valid for the weapon", () => {
-  const out = enforcePrebuilt({ verb: "add", attrs: {
-    name: "X", kind: "rig", prebuilt: "light-claw-autocannon",
+test("enforceChassis rejects an upgrade id that isn't valid for the weapon", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
     longRangeUpgrade: "not-a-real-upgrade", meleeUpgrade: "vice-grip",
   } });
   assert.ok(out.error);
@@ -356,18 +356,18 @@ test("enforcePrebuilt rejects an upgrade id that isn't valid for the weapon", ()
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `node --test server/prebuilts.test.js`
+Run: `node --test server/chassis.test.js`
 Expected: FAIL — no error returned yet.
 
-- [ ] **Step 3: Extend `enforcePrebuilt`**
+- [ ] **Step 3: Extend `enforceChassis`**
 
 In `server/routes/game.js`, update the import and the guard. Import line becomes:
 
 ```javascript
-import { claimSide, applyCommand, publicState, resolvePrebuilt, upgradeNature, countPrototypes } from "../../shared/game-state.js";
+import { claimSide, applyCommand, publicState, resolveChassis, upgradeNature, countPrototypes } from "../../shared/game-state.js";
 ```
 
-After the `resolvePrebuilt` resolution and before the `return`, add validation:
+After the `resolveChassis` resolution and before the `return`, add validation:
 
 ```javascript
   const lrUp = a.longRangeUpgrade || a.lrUpgrade;
@@ -386,13 +386,13 @@ After the `resolvePrebuilt` resolution and before the `return`, add validation:
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `node --test server/prebuilts.test.js`
+Run: `node --test server/chassis.test.js`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add server/routes/game.js server/prebuilts.test.js
+git add server/routes/game.js server/chassis.test.js
 git commit -m "feat(server): reject double-Prototype loadouts and unknown upgrade ids on add"
 ```
 
@@ -452,7 +452,7 @@ test("weapons step badges each upgrade with its nature", async () => {
     </UiProvider>,
   );
   await advanceToWeapons(user);
-  // Default prebuilt light-claw-autocannon: Autocannon has a Field (Depleted Core)
+  // Default chassis light-claw-autocannon: Autocannon has a Field (Depleted Core)
   // and a Prototype (Penetrator Rounds); their badges must render.
   expect(screen.getAllByText("Field").length).toBeGreaterThan(0);
   expect(screen.getAllByText("Prototype").length).toBeGreaterThan(0);
@@ -533,7 +533,7 @@ In `UnitWizard.tsx`, import `upgradeNature` and compute whether the *other* slot
 
 ```tsx
 // import
-import { WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY, UNIT_WEAPONS, PREBUILT_RIGS, upgradeNature } from "/shared/game-state.js";
+import { WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY, UNIT_WEAPONS, CHASSIS, upgradeNature } from "/shared/game-state.js";
 
 // helper signature + body
   const upgradeChoices = (
@@ -573,9 +573,9 @@ At the two call sites in the rig Weapons step, pass whether the *other* weapon's
     upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype")}
 ```
 
-- [ ] **Step 4: Guard prebuilt re-selection**
+- [ ] **Step 4: Guard chassis re-selection**
 
-`selectPrebuilt` resets both upgrades to `firstUpgradeId(...)`. First upgrades are all `field` nature (verify against Task 2 — the first entry per weapon is Field), so no double-Prototype can arise from a prebuilt switch. Add a one-line comment noting this invariant above `selectPrebuilt`.
+`selectChassis` resets both upgrades to `firstUpgradeId(...)`. First upgrades are all `field` nature (verify against Task 2 — the first entry per weapon is Field), so no double-Prototype can arise from a chassis switch. Add a one-line comment noting this invariant above `selectChassis`.
 
 - [ ] **Step 5: Run to verify pass**
 

@@ -1,13 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RULEBOOK_MD } from "./config.js";
-import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, PREBUILT_RIGS, UNIT_WEAPONS } from "../shared/game-state.js";
+import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, CHASSIS, UNIT_WEAPONS } from "../shared/game-state.js";
 
-// The fixed prebuilt Rig loadouts. Weapons + weight class are locked together
+// The fixed chassis Rig loadouts. Weapons + weight class are locked together
 // (they mirror the physical minis), so the AI picks one whole combo rather than
 // free-choosing a long-range and a melee weapon. Server add-enforcement rejects
 // any rig that isn't one of these combos.
-const PREBUILT_LINES = PREBUILT_RIGS.map(
+const CHASSIS_LINES = CHASSIS.map(
   (p) => `  - ${p.class} — lr="${p.longRange}" melee="${p.melee}"`,
 ).join("\n");
 
@@ -35,14 +35,14 @@ export const TRACKER_PROTOCOL = [
   "",
   "Rules for the tags:",
   "- Emit one tag per change; the app applies each exactly once.",
-  "- A Rig must be one of the fixed prebuilt loadouts below. Weapon slots are not",
+  "- A Rig must be one of the fixed chassis loadouts below. Weapon slots are not",
   "  free-picked: class, long-range, and melee are locked together as a set. Emit",
   "  the add tag using that combo's exact class, lr, and melee values.",
-  "- Prebuilt loadouts (choose one whole row):",
-  PREBUILT_LINES,
-  "- A Rig is only complete with a name plus one of the prebuilt loadouts above.",
+  "- Chassis loadouts (choose one whole row):",
+  CHASSIS_LINES,
+  "- A Rig is only complete with a name plus one of the chassis loadouts above.",
   "  If the player asks to add a Rig without enough detail to pick a loadout, ask",
-  "  which prebuilt (or which mini) and emit no `[[RIG add]]` tag yet.",
+  "  which chassis (or which mini) and emit no `[[RIG add]]` tag yet.",
   `- The tracker allows at most ${MAX_RIGS_PER_SIDE} Rigs per side and ${MAX_RIGS_TOTAL} Rigs total.`,
   "  If that limit is already reached, explain that the roster is full and emit no `[[RIG add]]` tag.",
   "- Kind-specific `loc` enums:",
@@ -52,9 +52,9 @@ export const TRACKER_PROTOCOL = [
   "- If the player asks to add a Tank or Walker, use `kind=\"tank\"` or `kind=\"walker\"` and set exactly one `unit=\"…\"` field from the flat unit-weapon list. Tanks and Walkers have no class, no long-range/melee split, no equipment.",
   "- Valid Unit weapons (Tanks / Walkers): " + Object.keys(UNIT_WEAPONS).join(", ") + ".",
   "- Tanks and Walkers do not have Heat and cannot Overheat. Do not emit `heat` tags for them.",
-  "- Use the exact class/lr/melee from a prebuilt row in tags. You may map",
-  "  imperfect player wording to the closest prebuilt loadout when the intent is",
-  "  clear; if it is not clear, ask again and list the prebuilt loadouts.",
+  "- Use the exact class/lr/melee from a chassis row in tags. You may map",
+  "  imperfect player wording to the closest chassis loadout when the intent is",
+  "  clear; if it is not clear, ask again and list the chassis loadouts.",
   "- Heavy and Colossal Rigs are not available in the tracker yet. If the player",
   "  asks to create one, explain that and ask them to choose Light or Medium.",
   "- On `add`, `owner` picks the side; if you omit it, the requesting player's",
@@ -90,18 +90,18 @@ export const PLAYER_START_GUIDE = [
   "",
   "For each missing own-side Rig, ask for the next physical mini. The minis",
   "already have glued weapons, so the player does not choose a loadout — they",
-  "identify which prebuilt the mini is. Ask the Rig name and which prebuilt",
+  "identify which chassis the mini is. Ask the Rig name and which chassis",
   "loadout it matches (each is a fixed class + long-range + melee set). If the",
-  "player describes the sculpt instead, map it to a prebuilt.",
+  "player describes the sculpt instead, map it to a chassis.",
   "",
-  "Matching is to a whole prebuilt row, never a single weapon. If the description",
-  "is clear, use that prebuilt. If it is ambiguous, offer the 2-3 closest",
-  "prebuilt loadouts and ask which one. Do not emit a [[RIG add]] tag while",
-  "waiting for the player to pick a prebuilt.",
-  "Prebuilt loadouts:",
-  PREBUILT_LINES,
+  "Matching is to a whole chassis row, never a single weapon. If the description",
+  "is clear, use that chassis. If it is ambiguous, offer the 2-3 closest",
+  "chassis loadouts and ask which one. Do not emit a [[RIG add]] tag while",
+  "waiting for the player to pick a chassis.",
+  "Chassis loadouts:",
+  CHASSIS_LINES,
   "",
-  "After the player confirms a Rig name and a prebuilt loadout, emit exactly one",
+  "After the player confirms a Rig name and a chassis loadout, emit exactly one",
   "[[RIG add ...]] tag for that Rig using that combo's exact class/lr/melee.",
   "Register it to the current player's",
   "side when you know the side; otherwise rely on the app's owner default. Then",

@@ -60,9 +60,9 @@ describe("buildLoadout", () => {
   });
 });
 
-it("randomAddAttrs produces a valid prebuilt add", () => {
+it("randomAddAttrs produces a valid chassis add", () => {
   const a = randomAddAttrs();
-  expect(typeof a.prebuilt).toBe("string");
+  expect(typeof a.chassis).toBe("string");
   expect(["light", "medium"]).toContain(a.class);
   expect(typeof a.longRange).toBe("string");
   expect(typeof a.melee).toBe("string");

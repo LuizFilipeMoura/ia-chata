@@ -8,9 +8,9 @@ describe("buildSeedCommands", () => {
     const adds = cmds.filter((c) => c.verb === "add");
     expect(adds.filter((c) => c.side === "a")).toHaveLength(3);
     expect(adds.filter((c) => c.side === "b")).toHaveLength(3);
-    // Seed rigs are random prebuilts now — each carries a prebuilt id and a
+    // Seed rigs are random chassis now — each carries a chassis id and a
     // supported weight class.
-    expect(adds.every((c) => typeof c.attrs.prebuilt === "string")).toBe(true);
+    expect(adds.every((c) => typeof c.attrs.chassis === "string")).toBe(true);
     expect(adds.every((c) => ["light", "medium"].includes(c.attrs.class as string))).toBe(true);
   });
 

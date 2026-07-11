@@ -89,7 +89,7 @@ test("makeRig honours a per-rig SP override, else falls back to class defaults",
   assert.equal(def.hull.max, 7);
   assert.equal(def.engine.max, 5);
 
-  // Override: the prebuilt-style sp wins field-by-field.
+  // Override: the chassis-style sp wins field-by-field.
   const custom = makeRig(2, "Tanky", "medium", "a", {
     lr: "Siege Maul", melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 },
   });
@@ -106,15 +106,15 @@ test("makeRig honours a per-rig SP override, else falls back to class defaults",
   assert.equal(plated.hull.max, 17);
 });
 
-test("makeUnit stores the prebuilt id on the rig (for its flavor description)", () => {
+test("makeUnit stores the chassis id on the rig (for its flavor description)", () => {
   const rig = makeUnit("rig", 1, "Vulcan", "a", {
-    weightClass: "light", longRange: "Autocannon", melee: "Claw", prebuilt: "light-claw-autocannon",
+    weightClass: "light", longRange: "Autocannon", melee: "Claw", chassis: "light-claw-autocannon",
   });
-  assert.equal(rig.prebuilt, "light-claw-autocannon");
+  assert.equal(rig.chassis, "light-claw-autocannon");
   const bare = makeRig(2, "Plain", "medium", "a", { lr: "Sniper Cannon", melee: "Chainsaw" });
-  assert.equal(bare.prebuilt, null);
+  assert.equal(bare.chassis, null);
   const tank = makeUnit("tank", 3, "T", "a", { unit: "Tank Cannon" });
-  assert.equal(tank.prebuilt, null);
+  assert.equal(tank.chassis, null);
 });
 
 test("makeUnit threads the sp override through to the rig", () => {

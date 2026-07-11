@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import { PORT, MODEL, NUM_CTX, OLLAMA_URL } from "./config.js";
 import { createStore } from "./store.js";
-import { createPrebuiltStore } from "./prebuilts.js";
+import { createChassisStore } from "./chassis.js";
 import { loadRulebook } from "./prompt.js";
 import { createChatRouter } from "./routes/chat.js";
 import { createGameRouter } from "./routes/game.js";
@@ -14,7 +14,7 @@ import { createWsHub } from "./ws.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, "..");
 const store = createStore(path.join(rootDir, "data", "rooms.json"));
-const prebuilts = createPrebuiltStore(path.join(rootDir, "content", "prebuilts.json"));
+const chassisStore = createChassisStore(path.join(rootDir, "content", "chassis.json"));
 const hub = createWsHub();
 
 const app = express();
@@ -30,10 +30,10 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(rootDir, "client", "dist", "index.html"));
 });
 
-// The prebuilt catalogue (weapons + weight class + authored description / focus /
+// The chassis catalogue (weapons + weight class + authored description / focus /
 // balance / personality) the commission wizard renders. Source of truth is
-// content/prebuilts.json, hot-reloaded on edit.
-app.get("/api/prebuilts", (req, res) => res.json({ prebuilts: prebuilts.all() }));
+// content/chassis.json, hot-reloaded on edit.
+app.get("/api/chassis", (req, res) => res.json({ chassis: chassisStore.all() }));
 
 app.use("/api", createChatRouter(store));
 app.use("/api/game", createGameRouter(store, hub));

@@ -29,8 +29,8 @@ declare module "/shared/game-state.js" {
     weapons: { longRange?: string; melee?: string },
     upgrades: { longRange?: string | null; melee?: string | null },
   ): number;
-  export const PREBUILT_RIGS: Array<{ id: string; label: string; class: string; longRange: string; melee: string }>;
-  export function prebuiltRig(id?: string | null): { id: string; label: string; class: string; longRange: string; melee: string } | null;
+  export const CHASSIS: Array<{ id: string; label: string; class: string; longRange: string; melee: string }>;
+  export function chassisById(id?: string | null): { id: string; label: string; class: string; longRange: string; melee: string } | null;
   export const RIG_DEFAULTS: Record<string, { hull: number; arms: number; legs: number; engine: number }>;
   export const HEAT_CAPACITY: Record<string, number>;
   export function canAddRigForSide(room: { rigs: Rig[]; game?: GameState | null }, sideId: string): boolean;

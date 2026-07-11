@@ -32,8 +32,8 @@ export function RigAddScreen({ onCommission }: Props) {
   const hint = !canAdd
     ? "Full lineup of 3 committed — mark ready to deploy."
     : isEmpty
-      ? "Commission your first Rig to begin — name it, pick a prebuilt chassis and its weapon upgrades."
-      : "Name it, pick a prebuilt chassis and weapon upgrades, then choose its equipment.";
+      ? "Commission your first Rig to begin — name it, pick a chassis and its weapon upgrades."
+      : "Name it, pick a chassis and weapon upgrades, then choose its equipment.";
 
   return (
     <div id="rigAddScreen" className={cardCls}>

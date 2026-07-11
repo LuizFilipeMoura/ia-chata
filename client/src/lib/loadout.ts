@@ -1,4 +1,4 @@
-import { EQUIPMENT, WEAPON_UPGRADES, PREBUILT_RIGS, randomEquipment } from "/shared/game-state.js";
+import { EQUIPMENT, WEAPON_UPGRADES, CHASSIS, randomEquipment } from "/shared/game-state.js";
 import type { Rig } from "../state/types";
 
 export interface LoadoutWeapon { name: string; upName: string; upTag: string; }
@@ -41,17 +41,17 @@ export function buildLoadout(rig: Rig): Loadout | null {
   };
 }
 
-/** Attrs for an `add` command that commissions a Rig from a random prebuilt
+/** Attrs for an `add` command that commissions a Rig from a random chassis
  *  loadout with random weapon upgrades + equipment. Server-side add enforcement
- *  only accepts prebuilt combos, so dev/seed adds must pick one too. */
+ *  only accepts chassis combos, so dev/seed adds must pick one too. */
 export function randomAddAttrs(): Record<string, unknown> {
-  const pb = PREBUILT_RIGS[Math.floor(Math.random() * PREBUILT_RIGS.length)];
+  const pb = CHASSIS[Math.floor(Math.random() * CHASSIS.length)];
   const randUpgrade = (name: string) => {
     const ups = WEAPON_UPGRADES[name] || [];
     return ups.length ? ups[Math.floor(Math.random() * ups.length)].id : undefined;
   };
   return {
-    prebuilt: pb.id,
+    chassis: pb.id,
     class: pb.class,
     lr: pb.longRange,
     longRange: pb.longRange,

@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { PREBUILT_RIGS } from "../shared/game-state.js";
+import { CHASSIS } from "../shared/game-state.js";
 
-// Editable content layered on top of the code-authoritative prebuilt registry.
+// Editable content layered on top of the code-authoritative chassis registry.
 // Weapons + weight class live in shared/game-state.js (they mirror the physical
 // minis and drive server-side add enforcement), so the on-disk JSON can only
 // change presentation: the label and these four authored fields. That keeps the
@@ -12,17 +12,17 @@ const CONTENT_FIELDS = ["description", "focus", "balance", "personality"];
 // Canonical entries with empty content, in registry order. The on-disk file is
 // merged onto these by id; anything it omits falls back here.
 function defaults() {
-  return PREBUILT_RIGS.map((p) => ({
+  return CHASSIS.map((p) => ({
     ...p,
     ...Object.fromEntries(CONTENT_FIELDS.map((f) => [f, ""])),
   }));
 }
 
-// A store that loads content/prebuilts.json, hot-reloads it on change, and seeds
+// A store that loads content/chassis.json, hot-reloads it on change, and seeds
 // it from the defaults when the file is missing. `all()`/`get()` return the
 // effective, merged entries (used only for display — enforcement uses the shared
 // registry directly).
-export function createPrebuiltStore(filePath) {
+export function createChassisStore(filePath) {
   let entries = defaults();
 
   function mergeFromDisk() {
