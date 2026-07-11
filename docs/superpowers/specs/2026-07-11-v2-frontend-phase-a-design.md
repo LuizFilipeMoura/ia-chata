@@ -33,8 +33,8 @@ Those gaps are re-implemented in the V2 design language across later phases.
 
 1. V2 renders behind a `?v2` toggle, isolated from V1 in both JS and CSS.
 2. A user can join a room, see the squadron roster (own + enemy), open a rig's
-   Control Terminal, damage/repair components, adjust engine heat, remove a rig,
-   toggle dice mode, and mark ready — all wired to the real server state.
+   Control Terminal, damage/repair components, view the engine heat gauge, remove
+   a rig, toggle dice mode, and mark ready — all wired to the real server state.
 3. Establish the reusable V2 patterns (shell, CSS scoping, state-to-viewmodel
    mapping, command dispatch, tests) that later phases follow.
 
@@ -132,7 +132,8 @@ Mockup join card, wired to the real join flow:
 ### Squadron / Yard (`v2/screens/Squadron.tsx`)
 
 - **Header:** "THE YARD", `N / 3 COMMISSIONED` (from roster count and the real
-  per-side cap), and **tonnage** computed from the real roster's weight classes.
+  `MAX_RIGS_PER_SIDE` cap), and **tonnage** — a **display-only** figure (no server
+  truth) summed from a cosmetic weight-class→tons map defined in V2.
 - **Your Squadron** section: one `RigRow` per own rig, own-first ordering.
 - **Hostile Forces** section: enemy rigs, read-only hostile styling.
 - **Commission add card:** interim — opens the existing V1 commission wizard via
@@ -168,9 +169,11 @@ Terminal, for the selected rig:
   threshold, "CATASTROPHIC"/"DESTROYED" text), **− Damage** / **+ Repair**
   buttons wired to the real `damage` / `repair` commands, with a floating ∓N
   delta flash (red on hit, green on heal) as in V1.
-- **Engine heat gauge (`v2/components/HeatGauge.tsx`):** real heat vs cap, zone
-  coloring, redline/over states; **STOKE** and **VENT** wired to the existing
-  heat commands. Hidden entirely for cold kinds.
+- **Engine heat gauge (`v2/components/HeatGauge.tsx`):** a **read-only** port of
+  V1's segmented thermometer — real heat vs cap, zone coloring, redline/over
+  states, misfire readout. Hidden entirely for cold kinds. (V1 has no standalone
+  stoke/vent command; heat only changes through battle actions like Purge, so the
+  mockup's STOKE/VENT buttons are **deferred to Phase C** and not rendered here.)
 - **Remove Rig:** wired remove command.
 - **Activate CTA:** present, but honors the real `canActivateNow` gate — shows
   "Wait for your turn" outside your activation. The **action console and Fire
