@@ -15,7 +15,7 @@ import { playDamage, startEngineLoop, stopEngineLoop } from "../audio/actionAudi
 vi.mock("../../hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
 
 vi.mock("../audio/actionAudio", () => ({
-  playDamage: vi.fn(), playEngineStart: vi.fn(), startEngineLoop: vi.fn(), stopEngineLoop: vi.fn(),
+  playDamage: vi.fn(), playHeat: vi.fn(), playEngineStart: vi.fn(), startEngineLoop: vi.fn(), stopEngineLoop: vi.fn(),
 }));
 
 const gameBase = {

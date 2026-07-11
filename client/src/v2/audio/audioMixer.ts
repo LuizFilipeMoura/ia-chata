@@ -22,7 +22,7 @@ const lastPick = new Map<string, number>(); // category key -> last index
 
 const IDLE_GAIN = 0.3;
 const IDLE_FADE_S = 1.5;
-const IDLE_GAP_S = 5;
+const IDLE_GAP_S = 15;
 
 let idleActive = false;
 let idleGen = 0;

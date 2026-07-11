@@ -11,15 +11,15 @@ vi.mock("./soundAssets", () => ({
   soundUrl: (s: string) => (s === "missing" ? null : `url:${s}`),
 }));
 
-import { playAction, playDamage, playEngineStart, startEngineLoop, stopEngineLoop, ACTION_AUDIO } from "./actionAudio";
+import { playAction, playDamage, playHeat, playEngineStart, startEngineLoop, stopEngineLoop, ACTION_AUDIO } from "./actionAudio";
 
 beforeEach(() => { play.mockClear(); startIdle.mockClear(); stopIdle.mockClear(); });
 
-test("fire plays 4 voice barks + 3 mechanical beds", () => {
+test("fire plays 4 voice barks + the cannon bed", () => {
   playAction("fire");
   const [voices, sfx] = play.mock.calls[0];
   expect(voices).toHaveLength(4);
-  expect(sfx).toHaveLength(3);
+  expect(sfx).toEqual(["url:cannon_fire"]);
   expect(voices[0]).toBe("url:fire_firing");
 });
 
@@ -40,6 +40,14 @@ test("playDamage plays tank_getting_shot as sfx", () => {
   const [voices, sfx] = play.mock.calls[0];
   expect(voices).toEqual([]);
   expect(sfx).toContain("url:tank_getting_shot_1");
+});
+
+test("playHeat plays the furnace clip as sfx", () => {
+  play.mockClear();
+  playHeat();
+  const [voices, sfx] = play.mock.calls[0];
+  expect(voices).toEqual([]);
+  expect(sfx).toEqual(["url:heat_furnace"]);
 });
 
 test("engine loop resolves both engine stems", () => {

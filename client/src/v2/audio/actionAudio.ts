@@ -8,8 +8,8 @@ const MECH = ["massive_mechanical_1", "massive_mechanical_2", "massive_mechanica
 
 // action key -> layer stems. Keys absent here play nothing (safe default).
 export const ACTION_AUDIO: Record<string, Layers> = {
-  fire: { voices: FIRE_BARKS, sfx: MECH },
-  aimed: { voices: FIRE_BARKS, sfx: MECH },
+  fire: { voices: FIRE_BARKS, sfx: ["cannon_fire"] },
+  aimed: { voices: FIRE_BARKS, sfx: ["cannon_fire"] },
   overclock: { voices: ["overclock_redline_it"], sfx: MECH },
   move: { voices: [], sfx: ["mech_running"] },
   sprint: { voices: [], sfx: ["mech_running"] },
@@ -23,6 +23,7 @@ export const ACTION_AUDIO: Record<string, Layers> = {
 };
 
 const DAMAGE_SFX = ["tank_getting_shot_1", "tank_getting_shot_2"];
+const HEAT_SFX = ["heat_furnace"];
 const ENGINE_LOOP = ["engine_idle"];
 const ENGINE_START = ["engine_start"];
 
@@ -39,6 +40,10 @@ export function playAction(key: string): void {
 
 export function playDamage(): void {
   play([], urls(DAMAGE_SFX));
+}
+
+export function playHeat(): void {
+  play([], urls(HEAT_SFX));
 }
 
 export function playEngineStart(): void {

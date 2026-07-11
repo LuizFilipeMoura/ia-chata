@@ -124,7 +124,7 @@ test("idle repeats after the clip duration plus a 5s gap", async () => {
   startIdle(["e"]);
   await vi.advanceTimersByTimeAsync(0);                    // flush async load + first cycle
   expect(ctx.sources.length).toBe(1);
-  await vi.advanceTimersByTimeAsync((2 + 5) * 1000 + 50);  // dur 2 + gap 5
+  await vi.advanceTimersByTimeAsync((2 + 15) * 1000 + 50);  // dur 2 + gap 15
   expect(ctx.sources.length).toBe(2);
   stopIdle();
   vi.useRealTimers();

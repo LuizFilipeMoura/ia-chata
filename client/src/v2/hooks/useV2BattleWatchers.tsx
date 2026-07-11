@@ -12,7 +12,8 @@ import type { Rig, Resolution, PrepType } from "../../state/types";
 import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
 import { phaseSummary } from "/shared/battle-view.js";
 import { useMySide } from "../../hooks/useMySide";
-import { playDamage, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
+import { HEAT_CAPACITY } from "/shared/game-state.js";
+import { playDamage, playHeat, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
 
 interface RecapLine {
   text: string;
@@ -141,6 +142,24 @@ export function useV2BattleWatchers(): void {
     }
     spBaseline.current = next;
     if (prev && dropped) playDamage(); // skip the first render (prev === null)
+  }, [rigs]);
+
+  // ---- Heat SFX: furnace roar when a rig crosses into overheat ----
+  const heatBaseline = useRef<Map<number, number> | null>(null);
+  useEffect(() => {
+    const prev = heatBaseline.current;
+    const next = new Map<number, number>();
+    let overheated = false;
+    for (const r of rigs) {
+      const heat = r.engine?.heat ?? 0;
+      next.set(r.id, heat);
+      const cap = HEAT_CAPACITY[r.weightClass];
+      if (prev && cap != null && prev.has(r.id) && prev.get(r.id)! <= cap && heat > cap) {
+        overheated = true; // crossed from safe into overheat
+      }
+    }
+    heatBaseline.current = next;
+    if (prev && overheated) playHeat();
   }, [rigs]);
 
   // ---- Engine idle loop: rumble while it's your turn during activation ----
