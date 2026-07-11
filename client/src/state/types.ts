@@ -161,6 +161,7 @@ export interface Session {
 export interface ServerState {
   code?: string;
   version: number;
+  seeded?: boolean;
   rigs: Rig[];
   game: GameState | null;
   ownerSide?: string | null;

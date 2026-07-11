@@ -28,3 +28,19 @@ test("clearSession drops the session and resets room state", () => {
   // Room state must reset so a later re-join isn't ignored by the version guard.
   expect(next).toEqual(initialRoomState);
 });
+
+test("applyServerState carries the seeded flag through", () => {
+  const next = roomReducer(initialRoomState, {
+    type: "applyServerState",
+    state: { version: 1, rigs: [], game: null, field: null, seeded: true },
+  });
+  expect(next.seeded).toBe(true);
+});
+
+test("seeded defaults to false when absent", () => {
+  const next = roomReducer(initialRoomState, {
+    type: "applyServerState",
+    state: { version: 1, rigs: [], game: null, field: null },
+  });
+  expect(next.seeded).toBe(false);
+});
