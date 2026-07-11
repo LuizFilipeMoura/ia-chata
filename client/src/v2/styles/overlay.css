@@ -293,6 +293,19 @@
   opacity: 0; transform: translateY(4px); animation: v2-line-in .3s ease forwards;
 }
 
+/* ===== Reaction picker (Answer token / Prepare) ===== */
+.v2-root .v2-rx-picker { display: flex; flex-direction: column; gap: .4rem; }
+.v2-root .v2-rx-choice {
+  display: flex; gap: .55rem; align-items: flex-start; text-align: left;
+  padding: .55rem .6rem; border-radius: 10px;
+  background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt);
+}
+.v2-root .v2-rx-choice.sel { border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil) inset; }
+.v2-root .v2-rx-choice-ic { font-size: 1.1rem; line-height: 1.2; }
+.v2-root .v2-rx-choice-body { display: flex; flex-direction: column; gap: .15rem; }
+.v2-root .v2-rx-choice-label { font-family: var(--v2-disp); font-weight: 700; font-size: .82rem; }
+.v2-root .v2-rx-choice-rule { font-family: var(--v2-mono); font-size: .58rem; color: var(--v2-txt-dim); line-height: 1.3; }
+
 @media (prefers-reduced-motion: reduce) {
   .v2-root .v2-die.rolling { animation: none; }
   .v2-root .v2-die.settled,
