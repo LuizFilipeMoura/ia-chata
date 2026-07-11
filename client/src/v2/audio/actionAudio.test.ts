@@ -44,7 +44,7 @@ test("playDamage plays tank_getting_shot as sfx", () => {
 
 test("engine loop resolves both engine stems", () => {
   startEngineLoop();
-  expect(startLoop).toHaveBeenCalledWith(["url:engine_idle_1", "url:engine_idle_2"]);
+  expect(startLoop).toHaveBeenCalledWith(["url:engine_idle"]);
   stopEngineLoop();
   expect(stopLoop).toHaveBeenCalled();
 });

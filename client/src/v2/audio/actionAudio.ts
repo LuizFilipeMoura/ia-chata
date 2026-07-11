@@ -23,7 +23,7 @@ export const ACTION_AUDIO: Record<string, Layers> = {
 };
 
 const DAMAGE_SFX = ["tank_getting_shot_1", "tank_getting_shot_2"];
-const ENGINE_LOOP = ["engine_idle_1", "engine_idle_2"];
+const ENGINE_LOOP = ["engine_idle"];
 
 // Resolve stems to URLs, dropping any that are absent.
 function urls(stems: string[]): string[] {
