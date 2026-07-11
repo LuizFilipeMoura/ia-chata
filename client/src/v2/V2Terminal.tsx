@@ -10,7 +10,7 @@ import { GlossaryDialog } from "../components/overlays/GlossaryDialog";
 import { useRoomState } from "../state/RoomStateContext";
 import { useCommands } from "../hooks/useCommands";
 import { useMySide } from "../hooks/useMySide";
-import { useBattleWatchers } from "../hooks/useBattleWatchers";
+import { useV2BattleWatchers } from "./hooks/useV2BattleWatchers";
 import { useUi } from "../state/UiStateContext";
 
 export function V2Terminal() {
@@ -22,7 +22,7 @@ export function V2Terminal() {
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(false);
 
-  useBattleWatchers();
+  useV2BattleWatchers();
 
   const openRig = rigs.find((r) => r.id === openRigId) || null;
   const started = Boolean(game?.started);
@@ -40,7 +40,7 @@ export function V2Terminal() {
       onGlossary={() => setGlossaryOpen(true)}
       chatUnread={chatUnread}
     >
-      <TurnBanner />
+      <TurnBanner onCommission={() => setCommissionOpen(true)} />
       <Squadron onOpenRig={setOpenRigId} onCommission={() => setCommissionOpen(true)} />
       {openRig && (
         <RigTerminal rig={openRig} started={started} canActivate={canActivate}

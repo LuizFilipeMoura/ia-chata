@@ -4,9 +4,9 @@ import { availableActions, actionBudget } from "/shared/battle-view.js";
 import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
-import { useBattleActions } from "../../state/BattleActionsContext";
-import { useWizard } from "../../state/WizardContext";
-import type { AttackMode } from "../../components/wizards/AttackWizard";
+import { useV2BattleActions } from "../state/V2BattleActionsContext";
+import { useV2Wizard } from "../state/V2WizardContext";
+import type { AttackMode } from "../overlays/AttackWizard";
 import type { Rig } from "../../state/types";
 
 interface Props {
@@ -107,8 +107,8 @@ function AcPopover({
 export function ActionConsole({ rig }: Props) {
   const { game } = useRoomState();
   const sendCommand = useCommands();
-  const { openMove, openRepair, endActivation, openPrepare } = useBattleActions();
-  const { openAttack } = useWizard();
+  const { openMove, openRepair, endActivation, openPrepare } = useV2BattleActions();
+  const { openAttack } = useV2Wizard();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const cellRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 

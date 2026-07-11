@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import { AppProviders } from "../AppProviders";
+import { V2Providers } from "./state/V2Providers";
 import { useRoomDispatch } from "../state/RoomStateContext";
 import V2App from "./V2App";
 
@@ -16,11 +16,11 @@ function Seed() {
 }
 
 test("renders Join when there is no session", () => {
-  render(<AppProviders><V2App /></AppProviders>);
+  render(<V2Providers><V2App /></V2Providers>);
   expect(screen.getByText(/ENLIST · COMMISSION · DEPLOY/i)).toBeInTheDocument();
 });
 
 test("renders the Terminal shell once a session exists", async () => {
-  render(<AppProviders><Seed /><V2App /></AppProviders>);
+  render(<V2Providers><Seed /><V2App /></V2Providers>);
   expect(await screen.findByText(/RIG CONTROL TERMINAL/i)).toBeInTheDocument();
 });

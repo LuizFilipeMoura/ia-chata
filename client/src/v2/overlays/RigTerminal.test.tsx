@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
-import { AppProviders } from "../../AppProviders";
+import { V2Providers } from "../state/V2Providers";
 import { RigTerminal } from "./RigTerminal";
 import type { Rig } from "../../state/types";
 
@@ -39,9 +39,9 @@ test("activate CTA disabled with a wait label when not activatable in battle", (
   // this case renders under AppProviders (with no game state seeded the console
   // renders empty and doesn't affect the CTA assertion).
   render(
-    <AppProviders>
+    <V2Providers>
       <RigTerminal rig={rig} canActivate={false} started onCommand={vi.fn()} onClose={vi.fn()} />
-    </AppProviders>,
+    </V2Providers>,
   );
   expect(screen.getByRole("button", { name: /Wait for your turn/i })).toBeDisabled();
 });

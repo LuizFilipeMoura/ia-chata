@@ -7,7 +7,7 @@ import { orderedRigs } from "../../lib/rigView";
 import { commissioned, tonnage } from "../lib/viewModels";
 import { RigRow } from "../components/RigRow";
 import { BattleHud } from "../components/BattleHud";
-import { FieldControls } from "../../components/FieldControls";
+import { FieldControls } from "../battle/FieldControls";
 
 export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) => void; onCommission: () => void }) {
   const { rigs, game, field } = useRoomState();
@@ -60,7 +60,9 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
         </>
       )}
 
-      {started && <FieldControls />}
+      {/* Battlefield: shown pre-battle too — the owner sets & locks the field here
+          (a prerequisite to readying up), matching V1. FieldControls self-gates. */}
+      <FieldControls />
 
       {!started && (
         <button type="button" className="v2-yard-add" disabled={!canAdd}

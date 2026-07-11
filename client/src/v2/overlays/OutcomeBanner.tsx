@@ -1,11 +1,11 @@
 import "../styles/battle.css";
 import { useRoomState } from "../../state/RoomStateContext";
-import { useBattleActions } from "../../state/BattleActionsContext";
+import { useV2BattleActions } from "../state/V2BattleActionsContext";
 import { outcomeText } from "/shared/battle-view.js";
 
 export function OutcomeBanner() {
   const { game } = useRoomState();
-  const { resetBattle } = useBattleActions();
+  const { resetBattle } = useV2BattleActions();
   if (game?.phase !== "finished") return null;
   return (
     <div className="v2-outcome">

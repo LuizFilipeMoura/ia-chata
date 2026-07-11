@@ -1,6 +1,6 @@
 import { useRoomState } from "../../state/RoomStateContext";
-import { useWizard } from "../../state/WizardContext";
-import { useBattleActions } from "../../state/BattleActionsContext";
+import { useV2Wizard } from "../state/V2WizardContext";
+import { useV2BattleActions } from "../state/V2BattleActionsContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
 import { computeFocus, type FocusCtaKind } from "../../lib/computeFocus";
@@ -8,21 +8,22 @@ import "../styles/battle.css";
 
 // The one thing this player should do right now. V2 renders it in normal flow —
 // no fixed positioning, no document.body class toggling, no --turn-banner-h var
-// (the whole-screen my-turn glow is a scoped ::before instead).
-export function TurnBanner() {
+// (the whole-screen my-turn glow is a scoped ::before instead). Commission has no
+// V2 wizard context — the parent (V2Terminal) owns that overlay, so it's a prop.
+export function TurnBanner({ onCommission }: { onCommission?: () => void }) {
   const { rigs, game } = useRoomState();
   const mySide = useMySide();
   const focus = computeFocus(game, rigs, mySide);
 
-  const { openCommission, openScore } = useWizard();
-  const { rollInitiative, resolveBlast, endActivation } = useBattleActions();
+  const { openScore } = useV2Wizard();
+  const { rollInitiative, resolveBlast, endActivation } = useV2BattleActions();
   const sendCommand = useCommands();
 
   if (!focus) return null;
 
   const onCta = (kind: FocusCtaKind) => {
     switch (kind) {
-      case "commission": openCommission(); break;
+      case "commission": onCommission?.(); break;
       case "ready": sendCommand("ready", { side: mySide }); break;
       case "initiative": rollInitiative(); break;
       case "blast": resolveBlast(); break;

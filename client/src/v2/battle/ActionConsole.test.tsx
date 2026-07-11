@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import { AppProviders } from "../../AppProviders";
+import { V2Providers } from "../state/V2Providers";
 import { useRoomDispatch } from "../../state/RoomStateContext";
 import type { Rig, ServerState } from "../../state/types";
 import { ActionConsole } from "./ActionConsole";
@@ -24,12 +24,12 @@ function started(activeRigId: number|null): ServerState {
 }
 
 test("shows the action budget + End turn when this rig is active", async () => {
-  render(<AppProviders><Seed state={started(1)}/><ActionConsole rig={stalker}/></AppProviders>);
+  render(<V2Providers><Seed state={started(1)}/><ActionConsole rig={stalker}/></V2Providers>);
   expect(await screen.findByText(/Actions/i)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /End STALKER/i })).toBeInTheDocument();
 });
 test("renders empty for a non-active rig", () => {
-  const { container } = render(<AppProviders><Seed state={started(null)}/><ActionConsole rig={stalker}/></AppProviders>);
+  const { container } = render(<V2Providers><Seed state={started(null)}/><ActionConsole rig={stalker}/></V2Providers>);
   expect(screen.queryByText(/Actions\s/i)).toBeNull();
   expect(container.querySelector(".v2-ac")?.children.length ?? 0).toBe(0);
 });
