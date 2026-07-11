@@ -555,8 +555,11 @@
   padding: 6px 4px;
   font-size: 56px;
   line-height: 0.9;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--v2-oil);
+  /* .v2-title supplies the drop; restore the dramatic amber bloom on top. */
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 28px var(--v2-oil-glow);
 }
 .v2-root .v2-outcome-new {
   margin-top: 28px;
