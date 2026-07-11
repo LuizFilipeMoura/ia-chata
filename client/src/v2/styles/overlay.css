@@ -299,6 +299,16 @@
   color: var(--v2-txt-dim); line-height: 1.4;
 }
 
+/* Activation-recap + answer-gate body (battle.js:87-113) */
+.v2-root .v2-dwr-recap { display: flex; flex-direction: column; gap: .45rem; margin: .2rem 0 .1rem; }
+.v2-root .v2-dwr-recap-row { border-left: 2px solid var(--v2-line); padding-left: .55rem; }
+.v2-root .v2-dwr-recap-line {
+  font-family: var(--v2-disp); font-size: .82rem; color: var(--v2-txt); line-height: 1.35;
+}
+.v2-root .v2-dwr-recap-eff {
+  margin-top: .15rem; font-family: var(--v2-mono); font-size: .62rem; color: var(--v2-ember-hi);
+}
+
 /* Repair location — segmented choice field */
 .v2-root .v2-dwr-field { margin: .5rem 0; }
 .v2-root .v2-dwr-field > label {
