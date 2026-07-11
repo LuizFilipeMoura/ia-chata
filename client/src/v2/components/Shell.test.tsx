@@ -29,7 +29,23 @@ test("shows the room code and only the Yard channel active", async () => {
   expect(screen.getByRole("button", { name: /Yard/i })).toBeEnabled();
   expect(screen.getByRole("button", { name: /Yard/i })).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("button", { name: /Forge/i })).toBeEnabled();
-  expect(screen.getByRole("button", { name: /Rules/i })).toBeDisabled();
+  expect(screen.getByRole("button", { name: /Rules/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /Verdict/i })).toBeDisabled();
+});
+
+test("Rulebook button, Rules channel, and glossary trigger their handlers", async () => {
+  const user = userEvent.setup();
+  const onRulebook = vi.fn();
+  const onGlossary = vi.fn();
+  render(<AppProviders><Seed state={baseState} />
+    <Shell channel="yard" onRulebook={onRulebook} onGlossary={onGlossary}><div /></Shell>
+  </AppProviders>);
+  await user.click(await screen.findByRole("button", { name: /Rulebook/i }));
+  expect(onRulebook).toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: /Rules/i }));
+  expect(onRulebook).toHaveBeenCalledTimes(2);
+  await user.click(screen.getByRole("button", { name: /Glossary/i }));
+  expect(onGlossary).toHaveBeenCalled();
 });
 
 test("Leave opens a confirm dialog and wipes the session", async () => {

@@ -8,11 +8,20 @@ const CHANNELS: { id: string; num: string; label: string; enabled: boolean }[] =
   { id: "join", num: "01", label: "Enlist", enabled: false },
   { id: "yard", num: "02", label: "Yard", enabled: true },
   { id: "commission", num: "03", label: "Forge", enabled: true },
-  { id: "rulebook", num: "04", label: "Rules", enabled: false },
+  { id: "rulebook", num: "04", label: "Rules", enabled: true },
   { id: "outcome", num: "05", label: "Verdict", enabled: false },
 ];
 
-export function Shell({ channel, children, onForge }: { channel: Channel; children: ReactNode; onForge?: () => void }) {
+export function Shell({
+  channel, children, onForge, onRulebook, onGlossary, chatUnread,
+}: {
+  channel: Channel;
+  children: ReactNode;
+  onForge?: () => void;
+  onRulebook?: () => void;
+  onGlossary?: () => void;
+  chatUnread?: boolean;
+}) {
   const { game, session } = useRoomState();
   const dispatch = useRoomDispatch();
   const sendCommand = useCommands();
@@ -47,6 +56,7 @@ export function Shell({ channel, children, onForge }: { channel: Channel; childr
         <div className="v2-strip-meta">
           <div className="v2-link"><span className="v2-lamp v2-lamp--ok" />LINK ·LOCAL</div>
           <div className="v2-room">RM// {session?.room}</div>
+          <button type="button" className="v2-gloss-btn" aria-label="Glossary" onClick={() => onGlossary?.()}>ⓘ</button>
         </div>
       </header>
 
@@ -55,7 +65,11 @@ export function Shell({ channel, children, onForge }: { channel: Channel; childr
           <button
             key={ch.id} type="button" disabled={!ch.enabled}
             aria-current={ch.id === channel ? "page" : undefined}
-            onClick={ch.id === "commission" ? () => onForge?.() : undefined}
+            onClick={
+              ch.id === "commission" ? () => onForge?.()
+              : ch.id === "rulebook" ? () => onRulebook?.()
+              : undefined
+            }
             className={"v2-channel" + (ch.id === channel ? " is-active" : "")}
           >
             <span className="v2-channel-num">{ch.num}</span>{ch.label}
@@ -68,8 +82,9 @@ export function Shell({ channel, children, onForge }: { channel: Channel; childr
       <footer className="v2-dock">
         <div className="v2-dock-label">CMD DOCK</div>
         <div className="v2-strip-spacer" />
-        <button type="button" className="v2-dock-btn" disabled title="Rulebook — coming soon">
+        <button type="button" className="v2-dock-btn" title="Rulebook" onClick={() => onRulebook?.()}>
           <span>🛠</span>Rulebook
+          {chatUnread && <span className="v2-dock-dot" aria-hidden="true" />}
         </button>
         {canUndo && (
           <button type="button" className="v2-dock-btn"

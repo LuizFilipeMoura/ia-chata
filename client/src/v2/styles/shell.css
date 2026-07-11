@@ -26,6 +26,8 @@
 .v2-root .v2-lamp{width:8px;height:8px;border-radius:50%;}
 .v2-root .v2-lamp--ok{background:var(--v2-ok);box-shadow:0 0 7px var(--v2-ok);animation:v2-lampfast 2.4s infinite;}
 .v2-root .v2-room{padding:4px 9px;border:1px solid var(--v2-line);background:#0a0d11;color:var(--v2-oil-hi);}
+.v2-root .v2-gloss-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--v2-line);background:#0a0d11;color:var(--v2-oil-hi);font-size:11px;line-height:1;cursor:pointer;}
+.v2-root .v2-gloss-btn:hover{border-color:var(--v2-oil-deep);color:var(--v2-oil);}
 
 /* ---- Channel selector (mockup 73-85) ---- */
 .v2-root .v2-channels{flex:0 0 auto;display:flex;gap:2px;padding:6px 12px 0;background:linear-gradient(180deg,#0b0e13,#0a0c10);border-bottom:1px solid #000;overflow-x:auto;}
@@ -42,7 +44,8 @@
 /* ---- Command dock (mockup 500-508) ---- */
 .v2-root .v2-dock{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 16px;background:linear-gradient(180deg,#0b0e13,#070a0d);border-top:2px solid #000;box-shadow:inset 0 1px 0 rgba(231,154,61,.1),0 -3px 12px rgba(0,0,0,.6);}
 .v2-root .v2-dock-label{font-family:var(--v2-mono);font-size:8.5px;letter-spacing:.2em;color:var(--v2-txt-faint);}
-.v2-root .v2-dock-btn{display:flex;align-items:center;gap:7px;padding:9px 14px;background:linear-gradient(180deg,#1c222b,#12161d);border:1px solid var(--v2-line);border-bottom:2px solid #05070a;color:var(--v2-txt-dim);font-family:var(--v2-disp);font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;}
+.v2-root .v2-dock-btn{position:relative;display:flex;align-items:center;gap:7px;padding:9px 14px;background:linear-gradient(180deg,#1c222b,#12161d);border:1px solid var(--v2-line);border-bottom:2px solid #05070a;color:var(--v2-txt-dim);font-family:var(--v2-disp);font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;}
+.v2-root .v2-dock-dot{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--v2-ember-hi);box-shadow:0 0 7px var(--v2-ember-hi);}
 .v2-root .v2-dock-btn:not([disabled]):hover{border-color:var(--v2-oil-deep);color:var(--v2-oil);}
 .v2-root .v2-dock-btn[disabled]{opacity:.4;cursor:not-allowed;}
 .v2-root .v2-dock-btn--danger{color:var(--v2-ember-hi);}
