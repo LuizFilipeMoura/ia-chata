@@ -8,8 +8,8 @@ test("resolves a known stem to a URL string", () => {
 });
 
 test("resolves the renamed engine stems", () => {
-  expect(soundUrl("engine_idle_1")).toBeTruthy();
-  expect(soundUrl("engine_idle_2")).toBeTruthy();
+  expect(soundUrl("engine_idle")).toBeTruthy();
+  expect(soundUrl("engine_start")).toBeTruthy();
 });
 
 test("returns null for an unknown stem", () => {
