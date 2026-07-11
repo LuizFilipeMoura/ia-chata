@@ -1,7 +1,9 @@
+import { Shell } from "./components/Shell";
+
 export function V2Terminal() {
   return (
-    <div className="v2-root">
-      <header>RIG CONTROL TERMINAL · MK.IV</header>
-    </div>
+    <Shell channel="yard">
+      <div />{/* Squadron mounts here in a later task */}
+    </Shell>
   );
 }
