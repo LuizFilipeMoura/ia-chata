@@ -153,3 +153,74 @@
   22%  { opacity: 1; transform: translateY(-7px); }
   100% { opacity: 0; transform: translateY(-19px); }
 }
+
+/* ---- Engine heat gauge (read-only) — ported from mockup lines 365-376 ---- */
+.v2-root .v2-heat {
+  margin-top: 4px;
+  padding: 14px 16px 16px;
+  background: #0a0d11;
+  border: 1px solid var(--v2-line);
+  border-top: 2px solid var(--v2-line-soft);
+}
+.v2-root .v2-heat-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.v2-root .v2-heat-label {
+  font-family: var(--v2-mono);
+  font-size: 8.5px;
+  letter-spacing: .24em;
+  color: var(--v2-txt-faint);
+}
+.v2-root .v2-heat-read {
+  font-family: var(--v2-stencil);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--v2-ember-hi);
+  text-shadow: 0 0 18px rgba(229, 83, 58, .35);
+}
+.v2-root .v2-heat-read b { font-weight: 700; }
+.v2-root .v2-heat-track {
+  display: flex;
+  gap: 3px;
+  height: 16px;
+}
+.v2-root .v2-heat-seg {
+  flex: 1;
+  background: #12161d;
+  border: 1px solid #000;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .7);
+}
+/* Safe cells light warm amber; danger cells (>= cap) light ember-red. */
+.v2-root .v2-heat-seg--on {
+  background: linear-gradient(180deg, #e8bd57, #c99327);
+}
+.v2-root .v2-heat-seg--danger { background: #1a1013; }
+.v2-root .v2-heat-seg--danger.v2-heat-seg--on {
+  background: linear-gradient(180deg, var(--v2-ember-hi), var(--v2-ember-deep));
+}
+/* Redline divider: first danger cell carries a bright left edge. */
+.v2-root .v2-heat-seg--redline {
+  border-left: 2px solid var(--v2-ember);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .7), -1px 0 6px rgba(229, 83, 58, .5);
+}
+.v2-root .v2-heat-note {
+  margin-top: 9px;
+  font-family: var(--v2-mono);
+  font-size: 9px;
+  letter-spacing: .06em;
+  color: var(--v2-txt-faint);
+}
+.v2-root .v2-heat[data-zone="warm"] .v2-heat-note { color: var(--v2-warn); }
+.v2-root .v2-heat[data-zone="redline"] .v2-heat-note { color: var(--v2-low); }
+.v2-root .v2-heat[data-zone="over"] .v2-heat-note { color: var(--v2-crit); }
+.v2-root .v2-heat[data-zone="cold"] .v2-heat-note { color: var(--v2-txt-faint); }
+.v2-root .v2-heat-lock {
+  margin-top: 6px;
+  font-family: var(--v2-mono);
+  font-size: 8.5px;
+  letter-spacing: .06em;
+  color: var(--v2-crit);
+}
