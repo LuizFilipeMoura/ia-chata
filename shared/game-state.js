@@ -1653,6 +1653,7 @@ function runRecovery(room) {
     rig.speedHalvedNextRound = false;
     rig.preparation = null;
     rig.ripostedThisRound = false; // Anvil Boss — the riposte re-arms each round
+    rig.braceRetaliatedThisRound = false; // §5 Brace retaliation re-arms each round
     rig.suppressImmobile = false;  // Suppression Lock pin lasts one round; re-applied by continued fire
     // Breach Grip (§13, Claw) — sweep out cracks whose expiry round has passed.
     if (rig.cracked) {
@@ -1858,6 +1859,36 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
     weapon: "melee", target: attacker.name,
     arc: "front", range: "near", aimed: false, aimedLoc: "hull",
     engaged: defender.engagedWith != null, strOverride: riposteStr,
+  }, random, combatCtx());
+  return true;
+}
+
+// §5 Brace retaliation — a melee attacker that swings at a braced FRONT and
+// fails to breach it (deals no SP) eats a free flat-STR melee counter. Once per
+// round (braceRetaliatedThisRound). Needs a melee weapon to answer with. Reuses
+// the same resolveAttack/strOverride path as Anvil Boss and `return`.
+const BRACE_RIPOSTE_STR = 6; // ⚙ TUNING
+function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingArc, res, random) {
+  if (incomingWeapon !== "melee") return false;
+  if (incomingArc !== "front") return false;
+  if (!defender || defender.destroyed) return false;
+  if (defender.preparation?.type !== "brace") return false;
+  if (defender.braceRetaliatedThisRound) return false;
+  if (!defender.weapons?.melee) return false;                    // needs a melee weapon
+  if (!attacker || attacker.destroyed) return false;
+  if ((attacker.owner || "a") === (defender.owner || "a")) return false; // enemy only
+  const dealtSp = res && Array.isArray(res.impacts) && res.impacts.some((h) => h.sp > 0);
+  if (dealtSp) return false;                                     // only a WITHSTOOD blow
+  defender.braceRetaliatedThisRound = true;
+  pushResolution(room, {
+    kind: "riposte", actor: defender.owner, rigId: defender.id, rolls: [],
+    summary: `${defender.name} holds the brace and counters ${attacker.name} — free STR ${BRACE_RIPOSTE_STR} melee.`,
+    effects: [`Brace — free STR ${BRACE_RIPOSTE_STR} melee counter (attack failed to breach)`],
+  });
+  resolveAttack(room, defender, attacker, {
+    weapon: "melee", target: attacker.name,
+    arc: "front", range: "near", aimed: false, aimedLoc: "hull",
+    engaged: defender.engagedWith != null, strOverride: BRACE_RIPOSTE_STR,
   }, random, combatCtx());
   return true;
 }
@@ -2934,4 +2965,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, maybeBraceRetaliate, runRecovery, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };

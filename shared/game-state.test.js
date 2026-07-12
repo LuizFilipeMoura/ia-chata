@@ -3406,6 +3406,33 @@ test("Raise Shield without Anvil Boss does not riposte", () => {
   assert.equal(countRiposte(r), 0);
 });
 
+test("__test.maybeBraceRetaliate counters a withstood front melee once per round", () => {
+  const attacker = makeRig(1, "Atk", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  const braced = makeRig(2, "Def", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  braced.preparation = { type: "brace", faceUp: true };
+  const room = { rigs: [attacker, braced], game: { round: 1, resolutions: [], nextResolutionId: 1 } };
+
+  // Blow failed to breach (no SP dealt): retaliation fires.
+  const failed = { hits: 1, impacts: [{ sp: 0 }] };
+  assert.equal(__test.maybeBraceRetaliate(room, attacker, braced, "melee", "front", failed, () => 0), true);
+  assert.equal(braced.braceRetaliatedThisRound, true);
+  // Already retaliated this round → no second counter.
+  assert.equal(__test.maybeBraceRetaliate(room, attacker, braced, "melee", "front", failed, () => 0), false);
+
+  // A blow that dealt SP does NOT provoke (fresh braced rig).
+  const dealt = { hits: 1, impacts: [{ sp: 3 }] };
+  const braced2 = makeRig(3, "Def2", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  braced2.preparation = { type: "brace", faceUp: true };
+  room.rigs.push(braced2);
+  assert.equal(__test.maybeBraceRetaliate(room, attacker, braced2, "melee", "front", dealt, () => 0), false);
+
+  // A side-arc blow does NOT provoke (front only).
+  const braced3 = makeRig(4, "Def3", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  braced3.preparation = { type: "brace", faceUp: true };
+  room.rigs.push(braced3);
+  assert.equal(__test.maybeBraceRetaliate(room, attacker, braced3, "melee", "side", failed, () => 0), false);
+});
+
 // ── §13 Skewer (Lance) ───────────────────────────────────────────────────────
 // A Lance with the Skewer prototype impales the rig it pins: while the mark holds,
 // Disengaging from the skewerer costs the fleeing rig a free STR-11 Lance strike.
