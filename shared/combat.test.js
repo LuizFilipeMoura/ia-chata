@@ -32,6 +32,14 @@ test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () 
   assert.equal(computeModifiedAim({ weightClass: "medium", hull: { sp: 0 } }, claw, { range: "near", cover: 0 }), 4);
 });
 
+test("computeModifiedAim waives the aim penalty when waiveAimPenalty is set", () => {
+  const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
+  // Baseline: aimed shot eats the -2 → target number 5.
+  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, aimed: true }), 5);
+  // Waived: no -2 → 4 - 1 = 3.
+  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, aimed: true, waiveAimPenalty: true }), 3);
+});
+
 test("weaponAccAt peaks at the sweet spot and falls off with distance", () => {
   const mg = WEAPONS.longRange["Mini Gun"]; // sweet 7, peak 2, dropoff 0.35
   assert.equal(weaponAccAt(mg, 7), 2);                 // at sweet spot

@@ -41,7 +41,7 @@ export function computeModifiedAim(attacker, profile, opts) {
   // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
   // guard-break (opts.guardBreak, §13 Siege Maul) — both reuse the same path.
   const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak || (opts.painted && !profile.melee)) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
-  const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") ? -2 : 0;
+  const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") && !opts.waiveAimPenalty ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
   // §engagement — a rig locked in melee fires ranged weapons at −2 accuracy.
   const engagedPenalty = opts.engaged && !profile.melee ? -2 : 0;
