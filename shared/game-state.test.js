@@ -1794,6 +1794,15 @@ test("normalizeEquipmentUpgrade validates + normalizes", () => {
   assert.equal(normalizeEquipmentUpgrade("no-such-equipment", "reinforced-plating"), null);
 });
 
+test("makeRig stores a normalized equipmentUpgrade", () => {
+  const rig = makeRig("r1", "Test", "light", "a",
+    { longRange: "Crossbow", melee: "Talon" }, "ablative-plating", "reinforced-plating");
+  assert.equal(rig.equipmentUpgrade, "reinforced-plating");
+  const bad = makeRig("r2", "Test2", "light", "a",
+    { longRange: "Crossbow", melee: "Talon" }, "ablative-plating", "not-real");
+  assert.equal(bad.equipmentUpgrade, null);
+});
+
 test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
   assert.equal(all.length, 22);

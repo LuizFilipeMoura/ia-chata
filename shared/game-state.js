@@ -701,7 +701,7 @@ export function normalizeWeapon(category, name) {
   return Object.keys(table).find((weapon) => weapon.toLowerCase() === ref) || null;
 }
 
-export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
+export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, equipmentUpgrade = null) {
   const normalizedClass = String(cls || "").trim().toLowerCase();
   if (!SUPPORTED_RIG_CLASSES.includes(normalizedClass)) return null;
   const longRange = normalizeWeapon("longRange", weapons.longRange || weapons.lr);
@@ -729,6 +729,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     engine: Number.isFinite(o.engine) ? o.engine : d.engine,
   };
   const equipmentId = normalizeEquipment(equipment);
+  const equipmentUpgradeId = normalizeEquipmentUpgrade(equipmentId, equipmentUpgrade);
   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
   const hullMax = base.hull + (equipmentId === "ablative-plating" ? 1 : 0);
   const rig = {
@@ -744,6 +745,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     weapons: { longRange, melee },
     weaponUpgrades,
     equipment: equipmentId,
+    equipmentUpgrade: equipmentUpgradeId,
     chassis: weapons.chassis || null, // CHASSIS id it was commissioned from — drives its flavor description in the UI
     speed: chassisSpeed,               // per-chassis Move distance (inches); null -> client uses SPEED[weightClass]
     prepare: 0,    // Phase 4
@@ -856,7 +858,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
       longRange: opts.longRange, melee: opts.melee,
       longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
       sp: opts.sp, chassis: opts.chassis,
-    }, opts.equipment ?? null);
+    }, opts.equipment ?? null, opts.equipmentUpgrade ?? null);
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
   // registry; the unit carries exactly one flat-pick weapon and no equipment.
