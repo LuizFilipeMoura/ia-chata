@@ -168,10 +168,15 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Prepare [1]** — generate 1 heat and place a facedown preparation token by the Rig, choosing one reaction below. It lasts until this Rig's next activation; reveal it when its trigger occurs. A Rig may hold **only one** preparation at a time.
   - *Evasive Manoeuvre* — when targeted by an attack on an enemy's turn, **before** the attack resolves, move up to **half Speed** in any direction. If this puts the Rig out of range or line of sight, the attack fails.
-  - *Return Fire* — after an enemy Rig attacks this Rig, choose 1 weapon and make an attack against that enemy.
-  - *Brace for Incoming Fire* — attacks against this Rig's **front arc** suffer **−2 to their Impact Rolls** until the next round.
+  - *Return Fire* — after an enemy Rig attacks this Rig, **pivot for free to face that enemy** (this is not a Move — a pinned Rig may still do it), then choose 1 weapon and make an attack against it.
+  - *Brace for Incoming Fire* — attacks against this Rig's **front arc** suffer **−2 to their Impact Rolls** until the next round. While braced the Rig is **immovable** — it cannot be pushed, shoved, or staggered by weapon perks — and a **melee** attacker that swings at its front and **fails to breach** (deals no SP) eats a **free STR 6 melee counter** (once per round). *⚙ TUNING: counter STR 6.*
 
 - **Answer Tokens (for the player going second).** At the start of each round, the player who activates **second** gains **1 Answer token**. An Answer token may be spent at any time to place one of the preparations above on one of their Rigs **for free** — no action, no heat — otherwise following all normal preparation rules (facedown, revealed on trigger, one per Rig). Unspent Answer tokens are removed in the Recovery Phase. *⚙ TUNING: 1 per round.*
+
+- **Answer Counters (Answer-token only).** Instead of a generic preparation, an Answer token may place one of three **counters** — reactions the Prepare action cannot buy, the reward for activating second and watching the enemy commit. Each is facedown, revealed on its trigger, one per Rig, and fires only when its condition is met (otherwise it stays down for a later attack):
+  - *Riposte* — when an enemy makes a **melee** attack against this Rig, after it resolves this Rig makes **one free melee attack** back at that attacker (no action, no heat).
+  - *Sidestep the Shooter* — when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**.
+  - *Exploit Opening* — when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-shot** at the location you choose, with **no aim penalty**.
 
 ### Engagement (melee lock)
 
