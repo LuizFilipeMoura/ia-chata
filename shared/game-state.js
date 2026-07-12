@@ -265,6 +265,7 @@ export function firstEquipmentUpgradeId(equipmentId) {
 }
 
 // Effective heat of an equipment's active, after any Field heat-override upgrade.
+// Any new heat-override Field tag must add its own branch below, or it drifts silently.
 export function equipmentActiveHeat(equipmentId, equipmentUpgradeId) {
   const base = EQUIPMENT[equipmentId]?.active?.heat ?? 0;
   const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);

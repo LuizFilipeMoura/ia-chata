@@ -2133,6 +2133,17 @@ test("purge vents 2 heat on demand for Radiator Array", () => {
   assert.equal(rig.engine.heat, 3);
 });
 
+test("Twin Radiators purge vents 3 heat through the action pipeline", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "radiator-array" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "twin-radiators"; // Field upgrade: Purge vents -3, not -2
+  rig.engine.heat = 5;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "purge" } });
+  assert.equal(rig.engine.heat, 2); // -3, not the base -2 (which would leave 3)
+});
+
 test("overclock grants +2 actions this activation for Overclock Core", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "overclock-core" });
