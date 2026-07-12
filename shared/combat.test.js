@@ -379,6 +379,14 @@ test("Ballistic Processor: +1 ACC in the sweet band (lower modAim)", () => {
   const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
   const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet });
   assert.equal(plain - inBand, 1);
+  // Band predicate is |distance − sweet| ≤ 2: the +1 holds at the edge
+  // (sweet + 2) but drops just outside it (sweet + 3).
+  const edge = computeModifiedAim(attacker, profile, { distance: profile.sweet + 2 });
+  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 2 });
+  assert.equal(edgePlain - edge, 1);
+  const outside = computeModifiedAim(attacker, profile, { distance: profile.sweet + 3 });
+  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 3 });
+  assert.equal(outsidePlain - outside, 0);
 });
 
 test("Targeting Computer passive: first shot ignores cover + engaged penalties", () => {
@@ -386,7 +394,9 @@ test("Targeting Computer passive: first shot ignores cover + engaged penalties",
   const profile = WEAPONS.longRange["Autocannon"];
   const penalized = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true });
   const compensated = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true, fireControlFirst: true });
-  assert.ok(compensated < penalized);
+  // cover 2 and engaged −2 both feed accTotal (+2 and +2 to the target number);
+  // the first-shot compensator zeroes both, dropping modAim by exactly 4.
+  assert.equal(penalized - compensated, 4);
 });
 
 test("Lock Sight rerolls the whole volley of missed to-hit dice", () => {

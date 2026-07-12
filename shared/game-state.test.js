@@ -2145,6 +2145,18 @@ test("locksight requires Targeting Computer and arms rig.lockSightNext", () => {
   assert.equal(rig.lockSightNext, true);
 });
 
+test("Lock Sight armed but not fired is cleared at activation end (no leak into reactive fire)", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "targeting-computer" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "locksight" } });
+  assert.equal(rig.lockSightNext, true); // armed
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  // A shot not taken must not carry into the enemy turn's Return Fire / riposte.
+  assert.equal(rig.lockSightNext, false);
+});
+
 test("popsmoke breaks an enemy missile Fire Control Lock aimed at this rig", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "reactive-plating" });

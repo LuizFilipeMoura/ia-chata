@@ -1685,6 +1685,7 @@ function endActivation(room, rig, dice, random) {
   // it penalises — clear it here alongside noPrepNextActivation so it can't leak
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
   rig.noActivesNextActivation = false;
+  rig.lockSightNext = false; // Lock Sight (Targeting Computer) — a shot not taken doesn't carry into a reactive shot
   room.game.turn.activeRigId = null;
   handoff(room);
 }
