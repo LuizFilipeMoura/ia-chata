@@ -2,19 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import {
   WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY,
   UNIT_WEAPONS, CHASSIS, upgradeNature, EQUIPMENT_UPGRADES, equipmentUpgradeNature,
+  templatesForKind, templateById,
 } from "/shared/game-state.js";
-import { UNIT_KINDS } from "/shared/unit-kinds.js";
+import { UNIT_KINDS, MODULES } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
-import { CHASSIS_NAME, weaponGlyph, natureLabel, firstUpgradeId, firstEquipmentUpgradeId, NODE_MARK } from "../lib/commissionData";
+import { CHASSIS_NAME, weaponGlyph, natureLabel, firstUpgradeId, firstEquipmentUpgradeId, NODE_MARK, MODULE_BLURB } from "../lib/commissionData";
 import "../styles/forge.css";
 
 type Kind = "rig" | "tank" | "walker";
 
 function stepsFor(kind: Kind): string[] {
   if (kind === "rig") return ["Kind", "Chassis", "Equipment", "Confirm"];
-  return ["Kind", "Weapon", "Confirm"];
+  return ["Kind", "Loadout", "Confirm"];
 }
 
 // Authored content layered onto a chassis by the server (content/chassis.json).
@@ -36,14 +37,14 @@ interface WizardState {
   meleeUpgrade: string | null;
   equipment: string;
   equipmentUpgrade: string | null;
-  unit: string; // flat-pick weapon for Tank / Walker
+  template: string; // chosen SUPPORT_TEMPLATES id for Tank / Walker
 }
 
 const KIND_GLYPH: Record<Kind, string> = { rig: "◈", tank: "⬛", walker: "⬟" };
 const KIND_DESC: Record<Kind, string> = {
   rig: "Heat + weight class + two weapon slots + equipment. 3 actions.",
-  tank: "Cold single-model machine. One flat-pick weapon. 2 actions.",
-  walker: "Cold walker chassis. One flat-pick weapon. 3 actions, mobile.",
+  tank: "Cold single-model machine. Pre-built loadout + two modules. 2 actions.",
+  walker: "Cold walker chassis. Pre-built loadout + two modules. 3 actions, mobile.",
 };
 
 export function CommissionWizard({ onClose }: { onClose: () => void }) {
@@ -65,7 +66,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
       meleeUpgrade: firstUpgradeId(pb.melee),
       equipment: Object.keys(EQUIPMENT)[0],
       equipmentUpgrade: firstEquipmentUpgradeId(Object.keys(EQUIPMENT)[0]),
-      unit: Object.keys(UNIT_WEAPONS)[0],
+      template: templatesForKind("tank")[0].id,
     };
   });
 
@@ -133,7 +134,9 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
   // No manual name step: a rig takes its chassis codename, a tank/walker takes
   // its weapon's name. Server dedupes collisions on commit.
   const unitName = () =>
-    state.kind === "rig" ? (CHASSIS_NAME[state.chassis] || state.cls) : state.unit;
+    state.kind === "rig"
+      ? (CHASSIS_NAME[state.chassis] || state.cls)
+      : (templateById(state.template)?.name || state.cls);
 
   const submit = () => {
     if (state.kind === "rig") {
@@ -151,11 +154,13 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         equipmentUpgrade: state.equipmentUpgrade,
       });
     } else {
+      const t = templateById(state.template);
       sendCommand("add", {
         name: unitName(),
         kind: state.kind,
         owner: state.owner,
-        unit: state.unit,
+        ...(t?.unit ? { unit: t.unit } : {}),
+        modules: t?.modules,
       });
     }
     close();
@@ -249,7 +254,11 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
               type="button"
               data-kind={k}
               className={"v2-fc-kind" + (k === state.kind ? " is-sel" : "")}
-              onClick={() => patch({ kind: k, step: 0 })}
+              onClick={() => patch({
+                kind: k,
+                step: 0,
+                ...(k !== "rig" ? { template: templatesForKind(k)[0].id } : {}),
+              })}
             >
               <span className="v2-fc-kind-top">
                 <span className="v2-fc-kind-glyph">{KIND_GLYPH[k]}</span>
@@ -316,30 +325,42 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         </div>
       );
     } else {
+      const templates = templatesForKind(state.kind);
       body = (
         <div className="v2-fw-body">
           <div className="v2-fc-cue">
-            <span className="v2-fc-cue-lead">◈ Unit weapon</span>
-            <span className="v2-fc-cue-sub v2-eyebrow">— one flat-pick armament</span>
+            <span className="v2-fc-cue-lead">◈ Choose a loadout</span>
+            <span className="v2-fc-cue-sub v2-eyebrow">— gun &amp; two support modules are fixed by the frame</span>
           </div>
           <div className="v2-fc-grid v2-grid-2">
-            {Object.entries(UNIT_WEAPONS).map(([name, w]: [string, any]) => (
-              <button
-                key={name}
-                type="button"
-                className={"v2-fc-equip" + (name === state.unit ? " is-sel" : "")}
-                onClick={() => patch({ unit: name })}
-              >
-                <div className="v2-fc-equip-family v2-eyebrow">{w.melee ? "Melee" : "Ranged"}</div>
-                <div className="v2-fc-equip-label v2-title">{name}</div>
-                <div className="v2-fc-equip-passive">
-                  ROF {w.rof} · STR {w.str} · {w.melee ? `RNG ${w.rng[0]}/${w.rng[1]}"` : `Sweet ${w.sweet}" · ${w.minRange}–${w.maxRange}"`}
-                </div>
-                {w.perks?.length ? (
-                  <div className="v2-fc-equip-active">{w.perks.join(", ")}</div>
-                ) : null}
-              </button>
-            ))}
+            {templates.map((t) => {
+              const w = t.unit ? UNIT_WEAPONS[t.unit] : null;
+              const sel = t.id === state.template;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={"v2-fc-equip" + (sel ? " is-sel" : "")}
+                  onClick={() => patch({ template: t.id })}
+                >
+                  <div className="v2-fc-equip-family v2-eyebrow">{UNIT_KINDS[t.kind].label}</div>
+                  <div className="v2-fc-equip-label v2-title">{t.name}</div>
+                  <div className="v2-fc-equip-passive">
+                    {w
+                      ? <>{weaponGlyph(t.unit!)} {t.unit} · STR {w.str} · ROF {w.rof}</>
+                      : <>⚙ Sidearm · STR 4 · ROF 2 — light plinker</>}
+                  </div>
+                  <div className="v2-fc-equip-active">
+                    {t.modules.map((m) => (
+                      <div key={m} className="v2-fc-module">
+                        <b>{MODULES[m].label}</b>
+                        {MODULE_BLURB[m] ? <> — {MODULE_BLURB[m]}</> : null}
+                      </div>
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       );
@@ -397,11 +418,19 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         </div>
       );
     } else {
-      const w = UNIT_WEAPONS[state.unit];
+      const t = templateById(state.template);
+      const w = t?.unit ? UNIT_WEAPONS[t.unit] : null;
       body = (
         <div className="v2-fw-body v2-fc-confirm">
           <div className="v2-fc-confirm-name v2-title">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
-          <div className="v2-fc-confirm-row">{weaponGlyph(state.unit)} {state.unit} · STR {w.str} · ROF {w.rof}</div>
+          <div className="v2-fc-confirm-row">
+            {w
+              ? <>{weaponGlyph(t!.unit!)} {t!.unit} · STR {w.str} · ROF {w.rof}</>
+              : <>⚙ Sidearm · STR 4 · ROF 2</>}
+          </div>
+          {t?.modules.map((m) => (
+            <div key={m} className="v2-fc-confirm-row">🔧 {MODULES[m].label}</div>
+          ))}
         </div>
       );
     }

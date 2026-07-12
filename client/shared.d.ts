@@ -34,6 +34,9 @@ declare module "/shared/game-state.js" {
   ): number;
   export const CHASSIS: Array<{ id: string; label: string; class: string; longRange: string; melee: string }>;
   export function chassisById(id?: string | null): { id: string; label: string; class: string; longRange: string; melee: string } | null;
+  export const SUPPORT_TEMPLATES: Array<{ id: string; name: string; kind: "tank" | "walker"; unit: string | null; modules: string[] }>;
+  export function templateById(id?: string | null): { id: string; name: string; kind: "tank" | "walker"; unit: string | null; modules: string[] } | null;
+  export function templatesForKind(kind: string): Array<{ id: string; name: string; kind: "tank" | "walker"; unit: string | null; modules: string[] }>;
   export const RIG_DEFAULTS: Record<string, { hull: number; arms: number; legs: number; engine: number }>;
   export const HEAT_CAPACITY: Record<string, number>;
   export function canAddRigForSide(room: { rigs: Rig[]; game?: GameState | null }, sideId: string): boolean;
