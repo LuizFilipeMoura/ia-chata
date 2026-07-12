@@ -315,9 +315,15 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     // is forced to Critical, regardless of the impact roll (mirrors penetrate).
     const evisc = profile.upgradeEffect?.eviscerate && target[location]
       && target[location].sp <= target[location].max / 2;
-    const sev = opts.penetrate ? { tier: "severe", sp: 2 }
+    let sev = opts.penetrate ? { tier: "severe", sp: 2 }
       : evisc ? { tier: "critical", sp: 3 }
       : impactSeverity(total, row);
+    // Machine guns grind, they don't burst — a raking volley chips SP at volume
+    // but can never crit. Cap Critical down to Severe (2 SP) per hit so an
+    // 8-shot burst can't one-shot a location. Scoped to the `machineGun` flag
+    // (Mini Gun / Double MG / Coaxial MG), independent of Raking Fire so the
+    // walker's non-Raking Coaxial MG is covered too.
+    if (sev.tier === "critical" && profile.machineGun) sev = { tier: "severe", sp: 2 };
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
   }
   return out;

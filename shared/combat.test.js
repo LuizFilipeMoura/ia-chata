@@ -170,6 +170,21 @@ test("Raking Fire against the front arc deals no damage", () => {
   assert.equal(out.every((h) => h.sp === 0), true);
 });
 
+test("machine guns grind, not burst — a raking crit is capped at Severe (2 SP)", () => {
+  const target = { weightClass: "light" }; // rig hull crit at 16
+  // Double MG: STR 6 + rear arc +8 + die 6 = 20, well past crit — would be Critical.
+  const dmg = WEAPONS.longRange["Double MG"];
+  const out = rollImpacts({ weightClass: "medium" }, target, dmg, "hull",
+    { arc: "rear", hits: 2 }, { impacts: [6, 6] }, () => 0);
+  assert.equal(out.every((h) => h.tier === "severe" && h.sp === 2), true);
+
+  // Control: a non-MG gun reaching the same crit tier still crits.
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8, no machineGun flag
+  const ctrl = rollImpacts({ weightClass: "medium" }, target, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.equal(ctrl[0].tier, "critical");
+});
+
 test("Raise Shield negates the front arc and blunts side/rear by 4", () => {
   const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
   const base = {

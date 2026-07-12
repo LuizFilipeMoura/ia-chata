@@ -32,8 +32,8 @@ export const MAX_ROUNDS = 10;
 // perk) that drives arc/range logic in combat.js and the wizards.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":       { rof: 8, str: 4,  sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"] },
-    "Double MG":      { rof: 8, str: 6,  sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"] },
+    "Mini Gun":       { rof: 8, str: 4,  sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
+    "Double MG":      { rof: 8, str: 6,  sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
     "Autocannon":     { rof: 4, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
     "Arc Gun":        { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
     "Mortar":         { rof: 3, str: 9,  sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
@@ -65,7 +65,7 @@ export const WEAPONS = {
 export const UNIT_WEAPONS = {
   "Tank Cannon":      { rof: 1, str: 12, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
   "Autocannon Mount": { rof: 3, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
-  "Coaxial MG":       { rof: 6, str: 5,  sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true },
+  "Coaxial MG":       { rof: 6, str: 5,  sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true, machineGun: true },
   "Rocket Pod":       { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
   "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
   "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
