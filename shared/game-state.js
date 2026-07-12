@@ -2871,6 +2871,70 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         reactor.preparation = null;
         room.game.pendingReaction = null;
         changed = true;
+      } else if (pr.kind === "sidestep" && reactor && attacker) {
+        // Anti-ranged dodge: like evasive, plus an optional free engage when the
+        // ½-Speed slip reaches the shooter (player asserts the reach).
+        const evaded = a.evaded === true || a.evaded === "true";
+        if (evaded) {
+          const slot = pr.attack.weapon === "melee" ? "melee" : "longRange";
+          const rt = room.game.turn;
+          const secondShot = slot === "longRange" && (rt.longRangeShots || 0) >= 1;
+          if (slot === "longRange") attacker.loaded.longRange = false;
+          const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
+          const hot = profile?.perks?.includes("Hot") ? 1 : 0;
+          bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot + (secondShot ? 1 : 0));
+          rt.actionsUsed += 1;
+          if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;
+          pushResolution(room, {
+            kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
+            summary: `${reactor.name} sidesteps — ${attacker.name}'s shot fails.`, effects: [],
+          });
+        } else {
+          resolveFire(room, attacker, reactor, pr.attack, pr.attack.act, options.random);
+        }
+        if ((a.engage === true || a.engage === "true") && maybeEngage(room, reactor, attacker)) {
+          pushResolution(room, {
+            kind: "engage", actor: reactor.owner, rigId: reactor.id, rolls: [],
+            summary: `${reactor.name} closes and engages ${attacker.name}.`, effects: [],
+          });
+        }
+        reactor.preparation = null;
+        room.game.pendingReaction = null;
+        changed = true;
+      } else if (pr.kind === "riposte" && reactor && attacker) {
+        // Free melee counter against the melee attacker.
+        const declined = a.decline === true || a.decline === "true";
+        if (!declined && a.attack && !reactor.destroyed) {
+          resolveAttack(room, reactor, attacker, {
+            weapon: "melee", target: attacker.name,
+            arc: a.attack.arc, range: a.attack.range, distance: a.attack.distance, cover: a.attack.cover,
+            engaged: reactor.engagedWith != null,
+            aimed: false, aimedLoc: "hull",
+            charged: a.attack.charged === true || a.attack.charged === "true",
+            dice: a.attack.dice,
+          }, options.random, combatCtx());
+        }
+        reactor.preparation = null;
+        room.game.pendingReaction = null;
+        changed = true;
+      } else if (pr.kind === "exploit" && reactor && attacker) {
+        // Pivot-to-face (player-supplied arc) + free AIMED counter-shot with the
+        // aim penalty waived.
+        const declined = a.decline === true || a.decline === "true";
+        if (!declined && a.attack && !reactor.destroyed) {
+          resolveAttack(room, reactor, attacker, {
+            weapon: a.attack.weapon, target: attacker.name,
+            arc: a.attack.arc, range: a.attack.range, distance: a.attack.distance, cover: a.attack.cover,
+            engaged: reactor.engagedWith != null,
+            aimed: true, aimedLoc: String(a.attack.loc || "hull").toLowerCase(),
+            waiveAimPenalty: true,
+            charged: a.attack.charged === true || a.attack.charged === "true",
+            dice: a.attack.dice,
+          }, options.random, combatCtx());
+        }
+        reactor.preparation = null;
+        room.game.pendingReaction = null;
+        changed = true;
       }
     }
   } else if (verb === "randomize") {

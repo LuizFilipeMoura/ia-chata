@@ -2629,6 +2629,52 @@ test("Sidestep defers a ranged attack but ignores melee", () => {
   }
 });
 
+test("react resolves a Riposte as a free melee counter and clears the prep", () => {
+  const { room, a, b } = battleWithPreparedDefender("riposte");
+  applyCommand(room, { verb: "action", attrs: {
+    name: "Atk", action: "fire", target: "Def", weapon: "melee", arc: "front", range: "near",
+    dice: { toHit: [6], location: 1, impacts: [3] },
+  } });
+  assert.equal(room.game.pendingReaction?.kind, "riposte");
+  const before = a.hull.sp;
+  applyCommand(room, { verb: "react", attrs: {
+    side: "b", attack: { weapon: "melee", arc: "front", range: "near", dice: { toHit: [6], location: 1, impacts: [4] } },
+  } });
+  assert.equal(room.game.pendingReaction, null);
+  assert.equal(b.preparation, null, "prep is consumed");
+  assert.ok(a.hull.sp <= before, "the melee counter struck the attacker");
+});
+
+test("react resolves an Exploit counter as an aimed shot with no aim penalty", () => {
+  const { room, a, b } = battleWithPreparedDefender("exploit");
+  room.game.turn.actionsUsed = 2; // final-action attacker → triggers Exploit
+  applyCommand(room, { verb: "action", attrs: {
+    name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
+    dice: { toHit: [1], location: 1, impacts: [1] },
+  } });
+  assert.equal(room.game.pendingReaction?.kind, "exploit");
+  applyCommand(room, { verb: "react", attrs: {
+    side: "b", attack: { weapon: "longRange", arc: "front", range: "near", loc: "arms",
+      dice: { toHit: [4], location: 1, impacts: [5] } },
+  } });
+  assert.equal(room.game.pendingReaction, null);
+  assert.equal(b.preparation, null);
+});
+
+test("react resolves a Sidestep: evaded fails the shot and may engage the shooter", () => {
+  const { room, a, b } = battleWithPreparedDefender("sidestep");
+  applyCommand(room, { verb: "action", attrs: {
+    name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
+    dice: { toHit: [4], location: 1, impacts: [3] },
+  } });
+  assert.equal(room.game.pendingReaction?.kind, "sidestep");
+  applyCommand(room, { verb: "react", attrs: { side: "b", evaded: true, engage: true } });
+  assert.equal(room.game.pendingReaction, null);
+  assert.equal(b.preparation, null);
+  assert.equal(b.engagedWith, a.id, "reaching the shooter locks it down");
+  assert.equal(a.engagedWith, b.id);
+});
+
 test("evasive react with evaded=true fails the attack and deals no damage", () => {
   const r = startedRoom();
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "evasive", side: "a" } });
