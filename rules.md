@@ -160,7 +160,11 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Aimed Shot [1]** — a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
 
-- **Reload [1]** — reloads **all** weapons.
+- **Reload** — Reloading a spent ranged weapon no longer costs an action. Instead a Rig rolls
+  a d6 for heat when it reloads: **1-3 → +2 heat, 4-6 → +1 heat**. Cold units
+  (Tank / Walker) have no heat track, so they reload for **1 action** instead. A
+  reloaded shot is still the activation's second ranged shot, so it also runs
+  **+1 heat** hot.
 
 - **Repair [1]** — roll 1 D12: on **7+** repair 1 SP to any one location; on **10+** repair 2 SP. *⚙ TUNING: now generates 1 heat.*
 
