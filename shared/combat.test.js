@@ -49,6 +49,13 @@ test("computeModifiedAim uses distance-based accuracy for ranged weapons", () =>
   assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
 });
 
+test("Pop Smoke worsens an attacker's modified Aim by 2", () => {
+  const mg = WEAPONS.longRange["Mini Gun"];
+  const clear = computeModifiedAim(attacker, mg, { distance: 12, cover: 0, targetSmoke: false });
+  const smoked = computeModifiedAim(attacker, mg, { distance: 12, cover: 0, targetSmoke: true });
+  assert.equal(smoked - clear, 2);
+});
+
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
   const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, acc [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3

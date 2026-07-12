@@ -1900,6 +1900,9 @@ function performAction(room, rig, act, a, random) {
       const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
       repairRig(rig, loc, 2);
     }
+    else if (act === "popsmoke") {
+      rig.smokeUntilNext = true;
+    }
     // purge / jumpjets need no extra state beyond the heat cost below.
     bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade));
     pushResolution(room, {
@@ -2508,6 +2511,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
+      rig.smokeUntilNext = false; // Pop Smoke (Reactive Plating) lasts until this Rig's next activation
+      rig.fireControlUsed = false; // Targeting Computer first-shot compensator resets each activation
       // Recon paint (spec: Support Units) expires at the painter's next activation:
       // clear every mark this rig placed as it steps up again.
       for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;

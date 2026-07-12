@@ -2125,6 +2125,15 @@ test("harden requires Ablative Plating, costs 1 slot + 1 heat, and sets rig.hard
   assert.equal(r.game.turn.actionsUsed, usedBefore + 1);
 });
 
+test("popsmoke requires Reactive Plating and sets rig.smokeUntilNext", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "reactive-plating" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
+  assert.equal(rig.smokeUntilNext, true);
+});
+
 test("harden is refused without Ablative Plating", () => {
   const r = createRoom("X");
   readyThreeAndThree(r);
@@ -2227,6 +2236,28 @@ test("a rig's next activation clears its own Harden", () => {
     }
   }
   assert.equal(findRig(r, "a1").hardened, false);
+});
+
+test("a rig's next activation clears its own Pop Smoke", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "reactive-plating" });
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  // cycle everyone else, then come back to a1's next activation
+  while (findRig(r, "a1").smokeUntilNext && r.game.phase !== "finished") {
+    if (r.game.phase === "recovery") applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [] } }), applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
+    if (r.game.phase === "initiative") applyCommand(r, { verb: "initiative", attrs: {} });
+    if (r.game.phase === "activation") {
+      clearPendingAnswer(r);
+      const active = r.rigs.find((x) => !x.activated && !x.destroyed && (x.owner || "a") === r.game.turn.side);
+      if (!active) break;
+      applyCommand(r, { verb: "activate", attrs: { name: active.name } });
+      if (active.name === "a1") break;
+      applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
+    }
+  }
+  assert.equal(findRig(r, "a1").smokeUntilNext, false);
 });
 
 test("Systems Overload reduces the target's next activation budget by 1 and then clears", () => {

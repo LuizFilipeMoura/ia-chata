@@ -48,7 +48,10 @@ export function computeModifiedAim(attacker, profile, opts) {
   // Recon paint (spec: Support Units) — allied ranged fire on a marked enemy
   // gains +1 Aim on top of the cover cancel above.
   const paintBonus = (opts.painted && !profile.melee) ? 1 : 0;
-  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty + paintBonus;
+  // Pop Smoke (Countermeasures active) — every attacker is at −2 ACC against a
+  // rig hidden in its own smoke, until that rig's next activation.
+  const smoke = opts.targetSmoke ? -2 : 0;
+  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty + paintBonus + smoke;
   return base - accTotal;
 }
 
@@ -355,7 +358,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak }, opts.dice?.toHit, random);
+  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeUntilNext }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
