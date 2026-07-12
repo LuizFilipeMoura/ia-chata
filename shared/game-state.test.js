@@ -5,7 +5,7 @@ import {
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
   EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
-  normalizeEquipmentUpgrade,
+  normalizeEquipmentUpgrade, equipmentActiveHeat,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
@@ -1792,6 +1792,14 @@ test("normalizeEquipmentUpgrade validates + normalizes", () => {
   assert.equal(normalizeEquipmentUpgrade("ablative-plating", "unknown-id"), null);
   assert.equal(normalizeEquipmentUpgrade("ablative-plating", null), null);
   assert.equal(normalizeEquipmentUpgrade("no-such-equipment", "reinforced-plating"), null);
+});
+
+test("Field upgrades override equipment active heat", () => {
+  assert.equal(equipmentActiveHeat("radiator-array", null), -2);
+  assert.equal(equipmentActiveHeat("radiator-array", "twin-radiators"), -3);
+  assert.equal(equipmentActiveHeat("overclock-core", null), 3);
+  assert.equal(equipmentActiveHeat("overclock-core", "redundant-capacitors"), 2);
+  assert.equal(equipmentActiveHeat("ablative-plating", "reinforced-plating"), 1);
 });
 
 test("makeRig stores a normalized equipmentUpgrade", () => {

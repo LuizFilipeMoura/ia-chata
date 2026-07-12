@@ -264,6 +264,15 @@ export function firstEquipmentUpgradeId(equipmentId) {
   return (EQUIPMENT_UPGRADES[equipmentId] || [])[0]?.id || null;
 }
 
+// Effective heat of an equipment's active, after any Field heat-override upgrade.
+export function equipmentActiveHeat(equipmentId, equipmentUpgradeId) {
+  const base = EQUIPMENT[equipmentId]?.active?.heat ?? 0;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  if (up?.effect?.purgeHeat != null) return up.effect.purgeHeat;
+  if (up?.effect?.overclockHeat != null) return up.effect.overclockHeat;
+  return base;
+}
+
 // Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.
 export function normalizeEquipmentUpgrade(equipmentId, id) {
   const list = EQUIPMENT_UPGRADES[equipmentId];
@@ -1875,7 +1884,7 @@ function performAction(room, rig, act, a, random) {
       repairRig(rig, loc, 2);
     }
     // purge / jumpjets need no extra state beyond the heat cost below.
-    bumpHeat(rig, active.heat);
+    bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade));
     pushResolution(room, {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} uses ${active.label}.`, effects: [active.text],
