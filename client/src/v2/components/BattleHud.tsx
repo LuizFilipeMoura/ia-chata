@@ -27,8 +27,7 @@ export function BattleHud() {
     if (!fresh.length) return;
     const latest = fresh[fresh.length - 1];
     lastKillId.current = log[log.length - 1].id;
-    const scorer = (game?.sides || []).find((s) => s.id === latest.vp!.side);
-    setToast(`${scorer?.name ?? "?"} — ${latest.victimName ?? "a unit"} wrecked · +${latest.vp!.amount} VP`);
+    setToast(`🎯 Target eliminated — ${latest.victimName ?? "a unit"} · +${latest.vp!.amount} VP`);
     if (toastTimer.current != null) clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 4000);
   }, [game]);
@@ -41,6 +40,8 @@ export function BattleHud() {
   const sides = game.sides || [];
   const mine = sides.find((s) => s.id === mySide);
   const foe = sides.find((s) => s.id !== mySide);
+  const targetId = game.priorityTargets?.[mySide];
+  const targetRig = targetId != null ? rigs.find((r) => r.id === targetId) : null;
   return (
     <div className="v2-bh">
       <div className="v2-bh-phase">
@@ -55,9 +56,12 @@ export function BattleHud() {
         {mine && foe && <span className="v2-bh-vp-sep"> · </span>}
         {foe && <span className="v2-bh-foe">{foe.name} {foe.vp ?? 0}</span>}
       </div>
+      {targetRig && (
+        <div className="v2-bh-target">🎯 Target: {targetRig.name}{targetRig.destroyed ? " ✓" : ""}</div>
+      )}
       <div className="v2-bh-tokens">{tok ? `⟡ ${tok} Answer` : ""}</div>
       {opponentReacting && <div className="v2-bh-reacting">↩️ Opponent is reacting…</div>}
-      {toast && <div className="v2-bh-killtoast" role="status">☠️ {toast}</div>}
+      {toast && <div className="v2-bh-killtoast" role="status">{toast}</div>}
       <button
         type="button"
         className="v2-bh-audio"

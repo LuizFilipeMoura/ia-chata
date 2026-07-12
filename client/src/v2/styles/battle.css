@@ -58,6 +58,12 @@
   letter-spacing: 0.03em;
 }
 .v2-root .v2-bh-vp-sep { color: var(--v2-txt-dim); }
+.v2-root .v2-bh-target {
+  font-family: var(--v2-mono);
+  font-size: var(--v2-text-base);
+  color: var(--v2-ember-hi);
+  letter-spacing: 0.03em;
+}
 .v2-root .v2-bh-killtoast {
   margin-top: 4px;
   font-family: var(--v2-mono);
