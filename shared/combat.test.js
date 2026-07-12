@@ -340,6 +340,17 @@ test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", 
   assert.equal(computeStr(rig, prof, {}), 10);               // no distance: no bonus
 });
 
+test("Exploit Wound grants +3 STR only against an already-damaged struck location", () => {
+  const rig = makeRig("r2", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "exploit-wound" };
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 7
+  const wounded = { weightClass: "medium", hull: { sp: 3, max: 7 } };
+  const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
+  assert.equal(computeStr(rig, prof, { target: wounded, location: "hull" }), 10); // 7 + 3
+  assert.equal(computeStr(rig, prof, { target: fresh, location: "hull" }), 7);    // no bonus
+  assert.equal(computeStr(rig, prof, { target: wounded }), 7);                    // no location: no bonus
+});
+
 test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
   const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
   const p = effectiveWeaponProfile("melee", "Lance", lance);

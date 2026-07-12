@@ -168,6 +168,12 @@ export function computeStr(attacker, profile, opts) {
       && Math.abs(opts.distance - profile.sweet) <= 2) {
     bonus += 3;
   }
+  // Exploit Wound (§13, Talon) — +3 STR against a struck location already below
+  // its max SP. Needs the struck location threaded in via opts.location.
+  if (profile.upgradeEffect?.vsWoundedLoc && opts.target && opts.location) {
+    const p = opts.target[opts.location];
+    if (p && p.sp < p.max) bonus += 3;
+  }
   // Redline Governor — the hotter the attacker runs past its own class cap,
   // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
   if (profile.upgradeEffect?.redline) {
