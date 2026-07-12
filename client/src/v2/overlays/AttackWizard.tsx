@@ -142,6 +142,13 @@ export function AttackWizard({
   const { sendReact } = useV2BattleActions();
   const { promptDice } = useV2Roll();
 
+  // The `rig` prop is a snapshot from open time. Derive the live rig so a reload
+  // echo (loaded flips true) is reflected; `justReloaded` gives instant feedback
+  // before the server round-trip lands.
+  const liveRig = rigs.find((r) => r.id === rig.id) ?? rig;
+  const [justReloaded, setJustReloaded] = useState(false);
+  const heatKind = !!UNIT_KINDS[kindOf(rig)]?.hasHeat;
+
   const enemies = rigs.filter(
     (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
   );
@@ -190,6 +197,37 @@ export function AttackWizard({
 
   const weapons = (rig.weapons ?? {}) as Partial<Record<WeaponSlot, string>>;
 
+  const actionsLeft = () => {
+    const t = game?.turn;
+    return t ? Math.max(0, t.actionsMax - t.actionsUsed) : 0;
+  };
+
+  // Spent on whichever ranged slot the kind uses: a Rig clears loaded.longRange
+  // when it fires (combat.js), a flat-pick cold kind clears loaded.unit. Each
+  // kind only ever writes its own flag, so this OR is exact. Disabled in the
+  // picker until reloaded.
+  const rangedSpent = (liveRig.loaded?.longRange === false || liveRig.loaded?.unit === false) && !justReloaded;
+  const rangedWeaponName = flat ? weapons.unit : weapons.longRange;
+  const hasMelee = !flat && !!weapons.melee
+    && !(rig.weaponsDestroyed || []).includes(weapons.melee as string);
+  // With no live melee, the drawer has nothing to fire — Reload becomes the CTA.
+  const reloadIsPrimary = rangedSpent && !hasMelee;
+  const reloadEnabled = heatKind ? true : actionsLeft() > 0;
+  const reloadLabel = heatKind
+    ? "⟳ Reload · +1–2 heat"
+    : reloadEnabled ? "⟳ Reload · 1 action" : "Reload · Need 1 action";
+
+  const doReload = async () => {
+    const attrs: Record<string, unknown> = { name: rig.name, action: "reload" };
+    if (heatKind && game?.autoResolve === false) {
+      const d = await promptDice([{ key: "reload", label: "Reload heat", sides: 6 }], "Reload heat");
+      attrs.dice = { reload: d.reload };
+    }
+    sendCommand("action", attrs);
+    setJustReloaded(true);
+    patch({ weapon: flat ? "unit" : "longRange" }); // arm + auto-select the ranged weapon
+  };
+
   const cap = (s?: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
   const targetDesc = (name: string) => {
     const e = enemies.find((x) => x.name === name);
@@ -213,11 +251,6 @@ export function AttackWizard({
     return p.melee
       ? `Reach ${p.rng[0]}" · ROF ${p.rof}`
       : `Sweet ${p.sweet}" · usable ${p.minRange}"–${p.maxRange}" · ROF ${p.rof}`;
-  };
-
-  const actionsLeft = () => {
-    const t = game?.turn;
-    return t ? Math.max(0, t.actionsMax - t.actionsUsed) : 0;
   };
 
   // Melee is a structural property of the weapon (the `melee` flag), not the
@@ -319,11 +352,14 @@ export function AttackWizard({
     close();
   };
 
-  // Effective-range readout + go button — mirrors update() in attack-wizard.js.
+  // Effective-range readout + go button. The spent ranged weapon can't be the
+  // selected slot (it's disabled in the picker), so this only ever describes a
+  // live weapon — except the no-melee case, where the CTA becomes Reload.
   let rangeHtml: React.ReactNode = null;
   let rangeState = "ok";
   let goText = "Fire";
   let goDisabled = false;
+  let goIsReload = false;
 
   const modeLabel = mode === "aimed" ? "Aimed Shot" : "Fire";
   let dicePreview = "";
@@ -331,19 +367,20 @@ export function AttackWizard({
   {
     const slot = state.weapon;
     const profile = profileOf(slot);
-    // A spent ranged weapon (Rig longRange or cold-kind unit) can't fire: it must
-    // Reload first (§7 — no rushed shot). Fire is blocked until it's reloaded.
-    const spent = (slot === "longRange" && rig.loaded?.longRange === false)
-      || (slot === "unit" && rig.loaded?.unit === false);
     const cost = 1;
     const left = actionsLeft();
     const outOfRange = !isMelee && !inRange;
     const rof = profile?.rof || ROF_BY_NAME[weapons[slot] || ""] || 1;
+    // A reloaded long-range shot is the activation's SECOND ranged shot, so it
+    // runs the barrel hot (+1 heat) — surfaced honestly on the dice line.
+    const firedRanged = (game?.turn?.longRangeShots || 0) >= 1;
+    const secondShot = !isMelee && firedRanged;
 
     dicePreview =
       `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
       (mode === "fire" ? " + 1 location die (d12)" : "") +
-      (mode === "aimed" ? " · +1 to hit" : "");
+      (mode === "aimed" ? " · +1 to hit" : "") +
+      (secondShot ? " · +1 heat (second shot)" : "");
 
     if (isMelee) {
       const reach = profile?.rng?.[0] ?? 2;
@@ -361,9 +398,7 @@ export function AttackWizard({
           ? <span className="v2-aw-range-warn">Too close — out of range</span>
           : state.inches > maxRange
             ? <span className="v2-aw-range-warn">Target is out of range — this shot will fail</span>
-            : spent
-              ? <span className="v2-aw-range-warn">Weapon spent — Reload before it can fire again</span>
-              : null;
+            : null;
       rangeHtml = (
         <>
           <span className="v2-aw-range-ic">📏</span>
@@ -371,18 +406,22 @@ export function AttackWizard({
           {gate}
         </>
       );
-      rangeState = outOfRange || spent ? "bad" : "ok";
+      rangeState = outOfRange ? "bad" : "ok";
     }
 
     const unaffordable = cost > left;
-    goDisabled = outOfRange || unaffordable || spent;
-    goText = outOfRange
-      ? "Out of range"
-      : spent
-        ? "Reload first"
+    if (reloadIsPrimary) {
+      goIsReload = true;
+      goText = reloadLabel;
+      goDisabled = !reloadEnabled;
+    } else {
+      goDisabled = outOfRange || unaffordable;
+      goText = outOfRange
+        ? "Out of range"
         : unaffordable
           ? `Need ${cost} action${cost === 1 ? "" : "s"} · ${left} left`
           : modeLabel;
+    }
   }
 
   const title = mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";
@@ -494,8 +533,24 @@ export function AttackWizard({
                 icon={FIELD_ICONS.weapon}
                 optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
                 desc={flat ? "One flat-pick weapon — no weight-class STR scaling." : FIELD_DESC.weapon}
-                optDesc={weaponDesc}
+                optDisabled={(opt) => rangedSpent && opt === rangedWeaponName}
+                optDesc={(opt) => (rangedSpent && opt === rangedWeaponName ? "Spent · reload" : weaponDesc(opt))}
               />
+              {rangedSpent && hasMelee && (
+                <div className="v2-aw-reload" role="status">
+                  <div className="v2-aw-reload-text">
+                    <b>Ranged weapon spent.</b> Reload is mandatory before it can fire again.
+                  </div>
+                  <button
+                    type="button"
+                    className="v2-aw-reload-btn"
+                    disabled={!reloadEnabled}
+                    onClick={doReload}
+                  >
+                    {reloadLabel}
+                  </button>
+                </div>
+              )}
               <Field
                 label="Arc"
                 options={["front", "side", "rear"]}
@@ -572,7 +627,11 @@ export function AttackWizard({
             {attackNotice.equipment ? <span>{attackNotice.equipment}</span> : null}
           </div>
 
-          <button className="v2-aw-go v2-cta v2-cta--ember" disabled={goDisabled} onClick={submit}>
+          <button
+            className="v2-aw-go v2-cta v2-cta--ember"
+            disabled={goDisabled}
+            onClick={goIsReload ? doReload : submit}
+          >
             {goText}
           </button>
         </div>

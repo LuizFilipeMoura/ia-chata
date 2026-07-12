@@ -10,12 +10,14 @@ import { useRoomDispatch } from "../../state/RoomStateContext";
 import type { Rig, ServerState } from "../../state/types";
 import { AttackWizard } from "./AttackWizard";
 
-vi.mock("../../hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
+const { sent } = vi.hoisted(() => ({ sent: vi.fn() }));
+vi.mock("../../hooks/useCommands", () => ({ useCommands: () => sent }));
+vi.mock("../audio/actionAudio", () => ({ playAction: vi.fn() }));
 
-const mk = (id: number, owner: "a" | "b"): Rig => ({ id, name: owner === "a" ? "MINE" : "FOE", owner, weightClass: "light",
+const mk = (id: number, owner: "a" | "b", over: Partial<Rig> = {}): Rig => ({ id, name: owner === "a" ? "MINE" : "FOE", owner, weightClass: "light",
   hull: { sp: 6, max: 6, destroyed: false }, arms: { sp: 5, max: 5, destroyed: false }, legs: { sp: 5, max: 5, destroyed: false },
   engine: { sp: 4, max: 4, destroyed: false, heat: 0 }, weapons: { longRange: "Autocannon", melee: "Claw" },
-  weaponUpgrades: { longRange: "field", melee: "field" }, equipment: "ablative-plating", activated: false, destroyed: false, loaded: { longRange: true, melee: true } } as unknown as Rig);
+  weaponUpgrades: { longRange: "field", melee: "field" }, equipment: "ablative-plating", activated: false, destroyed: false, loaded: { longRange: true, melee: true }, ...over } as unknown as Rig);
 
 function Seed({ rigs, children }: { rigs: Rig[]; children: ReactNode }) {
   const d = useRoomDispatch();
@@ -38,4 +40,39 @@ test("renders the fire control with an Open Fire / Fire button", async () => {
     </AppProviders>,
   );
   expect(await screen.findByRole("button", { name: /Fire/i })).toBeInTheDocument();
+});
+
+test("spent long-range weapon is disabled and a Reload button appears", async () => {
+  sent.mockClear();
+  const rigs = [mk(1, "a", { loaded: { longRange: false, melee: true } }), mk(2, "b")];
+  render(
+    <AppProviders>
+      <V2DrawerProvider><V2RollProvider><V2BattleActionsProvider>
+        <Seed rigs={rigs}>
+          <AttackWizard rig={rigs[0]} mode="fire" onClose={vi.fn()} />
+        </Seed>
+      </V2BattleActionsProvider></V2RollProvider></V2DrawerProvider>
+    </AppProviders>,
+  );
+  expect(await screen.findByRole("button", { name: /Autocannon/i })).toBeDisabled();
+  const reload = await screen.findByRole("button", { name: /⟳ Reload/ });
+  reload.click();
+  expect(sent).toHaveBeenCalledWith("action", expect.objectContaining({ action: "reload" }));
+});
+
+test("spent with no melee makes the primary CTA a Reload", async () => {
+  sent.mockClear();
+  const rigs = [mk(1, "a", { weapons: { longRange: "Autocannon" }, loaded: { longRange: false, melee: true } }), mk(2, "b")];
+  render(
+    <AppProviders>
+      <V2DrawerProvider><V2RollProvider><V2BattleActionsProvider>
+        <Seed rigs={rigs}>
+          <AttackWizard rig={rigs[0]} mode="fire" onClose={vi.fn()} />
+        </Seed>
+      </V2BattleActionsProvider></V2RollProvider></V2DrawerProvider>
+    </AppProviders>,
+  );
+  const go = await screen.findByRole("button", { name: /⟳ Reload/ });
+  go.click();
+  expect(sent).toHaveBeenCalledWith("action", expect.objectContaining({ action: "reload" }));
 });

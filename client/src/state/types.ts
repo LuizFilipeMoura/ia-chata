@@ -51,6 +51,7 @@ export interface Rig {
   equipment: string | null;
   chassis?: string | null;
   loaded?: { longRange?: boolean; melee?: boolean; unit?: boolean };
+  weaponsDestroyed?: string[];
   preparation?: Preparation | null;
   activated: boolean;
   destroyed: boolean;
@@ -69,6 +70,7 @@ export interface Turn {
   activeRigId: number | null;
   actionsUsed: number;
   actionsMax: number;
+  longRangeShots?: number;
 }
 
 export interface ResolutionTerm {
