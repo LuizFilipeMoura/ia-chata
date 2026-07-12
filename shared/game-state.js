@@ -571,6 +571,7 @@ function ensureRigShape(rig) {
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
   if (rig.engagedWith === undefined) rig.engagedWith = null;
   if (rig.equipment === undefined) rig.equipment = null;
+  if (rig.equipmentUpgrade === undefined) rig.equipmentUpgrade = null;
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;

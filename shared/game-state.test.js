@@ -1931,9 +1931,10 @@ test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy ri
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
   const rig = findRig(r, "Bastion");
-  delete rig.equipment; delete rig.hardened; delete rig.overclockCoreUsed;
+  delete rig.equipment; delete rig.equipmentUpgrade; delete rig.hardened; delete rig.overclockCoreUsed;
   findRig(r, "Bastion"); // findRig calls ensureGameShape -> ensureRigShape internally
   assert.equal(rig.equipment, null);
+  assert.equal(rig.equipmentUpgrade, null);
   assert.equal(rig.hardened, false);
   assert.equal(rig.overclockCoreUsed, false);
 });
@@ -2527,6 +2528,14 @@ test("makeUnit('rig', ...) returns a rig identical to makeRig", () => {
   // parts alias is fresh but points at the correct new component objects.
   assert.equal(b.parts.hull, b.hull);
   assert.equal(b.parts.engine, b.engine);
+});
+
+test("makeUnit forwards equipmentUpgrade to the rig", () => {
+  const rig = makeUnit("rig", "u1", "U", "a", {
+    weightClass: "light", longRange: "Crossbow", melee: "Talon",
+    equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating",
+  });
+  assert.equal(rig.equipmentUpgrade, "reinforced-plating");
 });
 
 test("makeUnit rejects unknown kinds", () => {
