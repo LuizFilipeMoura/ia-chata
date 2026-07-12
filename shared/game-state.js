@@ -1961,6 +1961,8 @@ function performAction(room, rig, act, a, random) {
     if (!(rig.modules || []).includes("recon")) return false;
     const target = findRig(room, a.target);
     if (!target || target.owner === rig.owner || target.destroyed) return false; // enemies only
+    // One mark per Recon unit — a new Paint replaces this painter's old mark.
+    for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
     target.painted = { by: rig.owner, painterId: rig.id };
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;

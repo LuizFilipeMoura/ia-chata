@@ -169,4 +169,25 @@ test("Paint requires the recon module and refuses friendly targets", () => {
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Ally" } }, {});
   assert.equal(room.rigs[1].painted ?? null, null); // no module → no mark
   assert.equal(room.game.turn.actionsUsed, 0);
+
+  // With the recon module, a friendly target is still refused (enemies only).
+  const friendly = twoAllyRoom();
+  applyCommand(friendly, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(friendly, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Ally" } }, {});
+  assert.equal(friendly.rigs[1].painted ?? null, null); // ally not marked
+  assert.equal(friendly.game.turn.actionsUsed, 0); // rejected — no budget spent
+});
+
+test("A Recon unit holds one mark — a new Paint replaces the painter's old mark", () => {
+  const room = twoAllyRoom();
+  const foe1 = makeUnit("tank", 3, "Foe1", "b", { unit: "Tank Cannon" });
+  const foe2 = makeUnit("tank", 4, "Foe2", "b", { unit: "Tank Cannon" });
+  room.rigs.push(foe1, foe2);
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Foe1" } }, {});
+  assert.deepEqual(foe1.painted, { by: "a", painterId: 1 });
+  // Same activation, paint a second enemy — the first mark is dropped.
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Foe2" } }, {});
+  assert.equal(foe1.painted, null);
+  assert.deepEqual(foe2.painted, { by: "a", painterId: 1 });
 });
