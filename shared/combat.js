@@ -397,6 +397,13 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       if (profile.upgradeEffect?.breachGrip && impacts.some((h) => h.sp > 0)) {
         ctx.crackLocation?.(room, target, location);
       }
+      // Pinning Bolt (§13, Crossbow) — a damaging bolt immobilises the target
+      // until this Rig's next activation (reusing the Impale immobilise
+      // lifecycle) and runs the attacker +2 heat. Guaranteed, no roll.
+      if (profile.upgradeEffect?.pinningBolt && impacts.some((h) => h.sp > 0)) {
+        target.immobilised = true;
+        ctx.bumpHeat(attacker, 2);
+      }
       // Rivet Lock (§13, Rivet Gun) — a damaging volley drives a rivet into the
       // struck location; ctx stacks it and seizes at 3.
       if (profile.upgradeEffect?.rivetLock && impacts.some((h) => h.sp > 0)) {

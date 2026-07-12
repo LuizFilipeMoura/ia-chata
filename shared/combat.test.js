@@ -856,6 +856,30 @@ test("Breach Grip — a damaging Claw hit routes through ctx.crackLocation", () 
   assert.deepEqual(cracks, [[2, "hull", 4]]);
 });
 
+test("Pinning Bolt immobilises the target and adds +2 self-heat on a damaging hit", () => {
+  const heatBumps = [];
+  const ctx = {
+    pushResolution() {},
+    applyDamage() {},
+    bumpHeat(rig, n) { heatBumps.push([rig.id, n]); },
+    engage() {},
+    profileFor: (slot, name, rig) => effectiveWeaponProfile(slot, name, rig),
+  };
+  const shrike = makeRig("atk", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  shrike.weaponUpgrades = { longRange: "pinning-bolt", melee: "honed-talons" };
+  shrike.loaded.longRange = true;
+  const prey = makeRig("def", "Prey", "medium", "B", { longRange: "Autocannon", melee: "Sword" });
+  const room = { rigs: [shrike, prey], game: { round: 1 } };
+  // toHit d6=6 (natural hit), location d12=1 (hull), impact d6=6 -> 6 + STR10 = 16 => severe (sp 2) => damaging.
+  const res = resolveAttack(room, shrike, prey, {
+    weapon: "longRange", arc: "front", distance: 18, aimed: false,
+    dice: { toHit: [6], location: [1], impacts: [6] },
+  }, () => 0, ctx);
+  assert.equal(res.ok, true);
+  assert.equal(prey.immobilised, true);
+  assert.deepEqual(heatBumps, [["atk", 2]]); // only the pinning heat (base fire heat is 0 here)
+});
+
 test("Dismember — a damaging Circular Saw hit routes through ctx.dismemberLocation", () => {
   const attacker = makeRig(1, "Grind", "medium", "a", { longRange: "Autocannon", melee: "Circular Saw", meleeUpgrade: "dismember" });
   const target = makeRig(2, "Slab", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
