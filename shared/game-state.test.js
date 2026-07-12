@@ -2657,6 +2657,19 @@ test("Exploit reveals only when the attacker is overcommitted", () => {
     assert.equal(b.preparation.faceUp, true);
     assert.equal(room.game.pendingReaction?.kind, "exploit");
   }
+  // Overheated attacker (heat ≥ cap) with actions to spare → triggers on the
+  // heat branch alone (finalAction is false here).
+  {
+    const { room, a, b } = battleWithPreparedDefender("exploit");
+    a.engine.heat = 999; // well past any Heat Capacity
+    room.game.turn.actionsUsed = 0; // plenty of actions left — not the final one
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
+      dice: { toHit: [1], location: 1, impacts: [1] },
+    } });
+    assert.equal(b.preparation.faceUp, true);
+    assert.equal(room.game.pendingReaction?.kind, "exploit");
+  }
 });
 
 test("Sidestep defers a ranged attack but ignores melee", () => {
