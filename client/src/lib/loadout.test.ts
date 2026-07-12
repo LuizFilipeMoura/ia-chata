@@ -39,6 +39,25 @@ describe("buildLoadout", () => {
     });
   });
 
+  it("carries base weapon stats and upgrade deltas", () => {
+    const rig = baseRig({
+      weapons: { longRange: "Autocannon", melee: "Claw" },
+      weaponUpgrades: { longRange: "depleted-core", melee: "vice-grip" },
+      equipment: null,
+    });
+    const lo = buildLoadout(rig)!;
+    // Autocannon: base ROF 4 / STR 8, range 0–26"; Depleted Core is +2 STR.
+    expect(lo.lr!.rof).toEqual({ base: 4, delta: 0 });
+    expect(lo.lr!.str).toEqual({ base: 8, delta: 2 });
+    expect(lo.lr!.range.text).toBe('0–26"');
+    expect(lo.lr!.upNature).toBe("field");
+    // Claw: base STR 8, melee reach 2"; Vice Grip adds the Impale perk (no numeric delta).
+    expect(lo.melee!.melee).toBe(true);
+    expect(lo.melee!.str).toEqual({ base: 8, delta: 0 });
+    expect(lo.melee!.range.text).toBe('RNG 2"');
+    expect(lo.melee!.addedPerks).toContain("Impale");
+  });
+
   it("degrades gracefully when an upgrade id is unknown", () => {
     const rig = baseRig({
       weapons: { longRange: "Mini Gun", melee: "Sword" },
@@ -48,6 +67,10 @@ describe("buildLoadout", () => {
     const lo = buildLoadout(rig)!;
     expect(lo.lr!.upName).toBe("");
     expect(lo.equipment).toBeNull();
+    // Unknown upgrade id must NOT leak the weapon's first-upgrade effect.
+    expect(lo.lr!.str).toEqual({ base: 4, delta: 0 });   // Mini Gun base STR 4, no delta
+    expect(lo.lr!.rof).toEqual({ base: 8, delta: 0 });   // Mini Gun base ROF 8
+    expect(lo.lr!.addedPerks).toEqual([]);               // no fallback perk
   });
 
   it("returns a single flat-pick weapon for cold kinds (Tank / Walker)", () => {

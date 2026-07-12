@@ -45,16 +45,22 @@ test("reload is disabled until a ranged weapon has actually been fired", () => {
   assert.equal(spent.enabled, true);   // fired — reload now makes sense
 });
 
-test("a spent ranged weapon disables Fire/Aimed until it is reloaded", () => {
+test("a spent ranged weapon keeps Fire live for melee but disables Aimed", () => {
   const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
   const ready = availableActions(rig(), turn).find((a) => a.key === "fire");
   assert.equal(ready.cost, 1);
   assert.equal(ready.enabled, true);
-  const spent = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn)
-    .find((a) => a.key === "fire");
-  assert.equal(spent.cost, 1);           // no more 2-slot rushed shot
-  assert.equal(spent.enabled, false);    // must reload first
-  assert.match(spent.note, /reload/i);
+  const acts = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn);
+  const fire = acts.find((a) => a.key === "fire");
+  assert.equal(fire.enabled, true);      // melee never reloads — still a strike
+  const aimed = acts.find((a) => a.key === "aimed");
+  assert.equal(aimed.enabled, false);    // Aimed is a ranged-only shot
+  // With no melee weapon, Fire falls back to the reload-first lockout.
+  const noMelee = availableActions(
+    rig({ weapons: { longRange: "Autocannon", melee: null }, loaded: { longRange: false, melee: true } }),
+    turn,
+  ).find((a) => a.key === "fire");
+  assert.equal(noMelee.enabled, false);
 });
 
 test("Fire/Aimed shows 2 heat once a ranged shot has already been fired this activation", () => {
@@ -94,13 +100,13 @@ test("availableActions surfaces Barrage only for a barrage Mortar and disables i
   }), turn).find((a) => a.key === "barrage");
   assert.ok(idle, "expected a Barrage action");
   assert.equal(idle.enabled, true);
-  // Already barraging → offered but disabled with a countdown note; Fire is noted.
+  // Already barraging → offered but disabled (the "Barrage N" status tag signals
+  // it's running, so neither the Barrage tile nor Fire carries a note).
   const active = availableActions(rig({
     weapons: { longRange: "Mortar", melee: "Sword" },
     weaponUpgrades: { longRange: "barrage" }, barrageRoundsLeft: 2,
   }), turn);
   assert.equal(active.find((a) => a.key === "barrage").enabled, false);
-  assert.match(active.find((a) => a.key === "fire").note, /Barrage/);
   // A plain Mortar (no barrage upgrade) never sees the action.
   const plain = availableActions(rig({
     weapons: { longRange: "Mortar", melee: "Sword" },
@@ -119,6 +125,15 @@ test("rigModifiers shows a generic chip for a hidden reaction", () => {
   const mod = rigModifiers(r).find((m) => m.key === "prep");
   assert.equal(mod.tag, "Reaction set");
   assert.equal(mod.tone, "prep");
+});
+
+test("rigModifiers shows a Painted chip for a Recon-marked rig", () => {
+  const mods = rigModifiers(rig({ painted: { by: "b", painterId: 9 } }));
+  const mod = mods.find((m) => m.key === "painted");
+  assert.ok(mod, "expected a painted chip");
+  assert.equal(mod.tag, "Painted");
+  assert.equal(mod.tone, "warn");
+  assert.ok(!rigModifiers(rig()).some((m) => m.key === "painted"));
 });
 
 test("rigModifiers names a revealed reaction", () => {
@@ -214,15 +229,14 @@ test("Walker action console keeps prepare hidden, keeps other actions (regressio
   assert.ok(keys.includes("fire"));
 });
 
-test("Flat-pick fired: 'reload' enabled, 'fire' disabled with correct note", () => {
+test("Flat-pick fired: 'reload' enabled, 'fire' disabled", () => {
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
   tank.loaded.unit = false; // just fired
   const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 1, longRangeShots: 1 });
   const reload = actions.find((a) => a.key === "reload");
   const fire = actions.find((a) => a.key === "fire");
   assert.equal(reload.enabled, true);
-  assert.equal(fire.enabled, false);
-  assert.ok(fire.note.includes("Ranged weapon spent"));
+  assert.equal(fire.enabled, false); // no melee slot on flat-pick — spent ranged locks Fire
 });
 
 test("availableActions blocks Move/Sprint and enables Disengage while engaged", () => {
@@ -259,4 +273,17 @@ test("availableActions disables Jump Jets while engaged", () => {
   const jj = availableActions(rig, turn).find((x) => x.key === "jumpjets");
   assert.ok(jj);
   assert.equal(jj.enabled, false);
+});
+
+test("module actions appear only for units carrying the matching module", () => {
+  const turn = { actionsUsed: 0, actionsMax: 3 };
+  const welder = { kind: "walker", modules: ["repair", "recon"], loaded: { unit: true }, weapons: { unit: "Sidearm" } };
+  const keys = availableActions(welder, turn, 1).map((a) => a.key);
+  assert.ok(keys.includes("fieldweld"));
+  assert.ok(keys.includes("paint"));
+  assert.ok(!keys.includes("vent")); // no coolant module
+
+  const plainTank = { kind: "tank", modules: [], loaded: { unit: true }, weapons: { unit: "Tank Cannon" } };
+  const tankKeys = availableActions(plainTank, { actionsUsed: 0, actionsMax: 2 }, 1).map((a) => a.key);
+  assert.ok(!tankKeys.includes("fieldweld") && !tankKeys.includes("vent") && !tankKeys.includes("paint"));
 });

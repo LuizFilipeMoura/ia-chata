@@ -298,7 +298,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const resolveBlast = useCallback(() => {
     const sourceId = (gameRef.current?.pendingBlast as { sourceId?: number } | null)?.sourceId;
-    // Every living Rig is a candidate — the controller ticks those within 12"
+    // Every living Rig is a candidate — the controller ticks those within 4"
     // of the wreck. Exclude the exploding wreck itself.
     const candidates = (rigsRef.current || []).filter(
       (r) => !r.destroyed && r.id !== sourceId,
@@ -309,7 +309,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     }
     const picked = new Set<string>();
     openDrawer({
-      title: '💥 Resolve blast — mark Rigs within 12"',
+      title: '💥 Resolve blast — mark Rigs within 4"',
       tone: "ember",
       render: () => <BlastBody candidates={candidates} picked={picked} />,
       actions: [
@@ -394,7 +394,7 @@ function PrepareBody({
 }
 
 // Checkbox list for blast resolution: the controller ticks the Rigs standing
-// within 12" of the wreck. Owns a local version counter so ticking re-renders;
+// within 4" of the wreck. Owns a local version counter so ticking re-renders;
 // mirrors each pick into the caller's `picked` Set for the Confirm handler.
 function BlastBody({
   candidates, picked,
@@ -406,7 +406,7 @@ function BlastBody({
   return (
     <>
       <p className="dwr-hint">
-        Select every Rig within 12" of the wreck — each takes a D6 + STR 10 blast hit.
+        Select every Rig within 4" of the wreck — each takes a D6 + STR 10 blast hit.
       </p>
       <div className="blast-list">
         {candidates.map((r) => {

@@ -260,7 +260,7 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 7. **Impact Roll.** For **each hit**, roll 1 D6 and add the weapon's **STR** (adjusted for the firing Rig's weight class, §12). For a **ranged** attack, add **+2 STR** into the target's **side arc** or **+4 STR** into its **rear arc**. **Melee attacks gain no arc bonus** — a melee weapon strikes just as hard from any facing, and being in contact is deadly enough. *(Raking Fire machine guns override the ranged side/rear values — §13.)* Compare each total to the location's row in the Impact Table (§2).
 8. **Apply damage.** Direct = **−1 SP**, Severe = **−2 SP**, Critical = **−3 SP**.
 
-**Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage.
+**Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage. *(Engine note: the digital tracker auto-routes overflow to the Hull, or the next location with SP remaining if the Hull is already at 0.)*
 
 A Rig is **destroyed** when all four components are at 0 SP, or by the Hull/Engine rules in §8.
 
@@ -272,9 +272,9 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 
 | Location | At 0 SP | Additional damage |
 |---|---|---|
-| **Legs** | Move −3"; pivots cost double movement; cannot backpedal. | Rig is **immobilised** for the game (may still pivot). |
+| **Legs** | Move −3"; pivots cost double movement; cannot backpedal. | Rig is **immobilised** for the game (may still pivot); **1 damage spills to Hull** (overflow). |
 | **Hull** | −2 to maximum actions per activation; −1 Aim. | Rig suffers **total system failure — destroyed**. |
-| **Arms** | Roll D12 for which weapon is destroyed (see below); its munitions explode: **1 damage to Hull and 1 to Engine**. | Same weapon: **3 damage to Hull**; weapon gone for the game. |
+| **Arms** | Roll D12 for which weapon is destroyed (see below); its munitions explode: **1 damage to Hull and 1 to Engine**. | Same weapon: **1 damage to Hull** (overflow); weapon already gone. |
 | **Engine** | Rig **loses its next activation**; heat cannot drop below 3 (raise to 3 if lower). | Rig suffers **total system failure — destroyed**. |
 
 **Arms — which weapon?**
@@ -286,7 +286,7 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 
 ## 9. Rig Destruction
 
-When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **12"** suffer a **D6 + STR 10** hit — the destroyed Rig's controller rolls the damage; each affected Rig's controller rolls its own hit location.
+When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **4"** suffer a **D6 + STR 10** hit — the destroyed Rig's controller rolls the damage; each affected Rig's controller rolls its own hit location.
 
 ---
 
@@ -553,6 +553,44 @@ STR is **flat** — no weight-class modifier applies. Close combat requires a **
 ### Notes
 
 All numeric values on Tanks and Walkers above (SP, armour rows, ROF/STR, speeds) are strawman — subject to tuning in playtest.
+
+### Support Units
+
+A **support unit** is a Tank or Walker that swaps its single weapon for a **light Sidearm + 2 role modules**. At commission, pick exactly **2 distinct** modules from:
+
+| Module | Grants |
+|---|---|
+| **Damage** | Fits a real gun from the shared unit-weapon list above, replacing the Sidearm |
+| **Repair** | **Field Weld** action |
+| **Coolant** | **Vent** action |
+| **Recon** | **Paint** action |
+
+Without a Damage module, the unit keeps the Sidearm.
+
+**Sidearm** ⚙ — a weak plinker, flat STR like the rest of the unit-weapon list:
+
+| Weapon | Type | ROF | STR | ACC (near/far) | RNG (near/far) |
+|---|---|:--:|:--:|:--:|:--:|
+| Sidearm | ranged | 2 | 4 | 0 / 0 | 6" / 12" |
+
+Module actions — each costs **1 action**; cold, no heat:
+
+- **Field Weld** (Repair) — heal a friendly unit (self or ally) within reach: roll D12, 7+ = 1 SP, 10+ = 2 SP, to a chosen location.
+- **Vent** (Coolant) — reduce a friendly **Rig's** heat by 2 (Rigs only carry heat).
+- **Paint** (Recon) — mark an enemy in line of sight; allied **ranged** attacks against it ignore cover and gain +1 ACC until the painter's next activation. A Recon unit holds one mark at a time.
+
+Module actions run off the unit's systems, not its gun: losing the Turret (Tank) or Mount (Walker) — the weapon component — destroys only the gun, not Field Weld / Vent / Paint. ⚙
+
+Four shipped exemplars ⚙ (strawman):
+
+| Unit | Kind | Modules | Weapon |
+|---|---|---|---|
+| Marksman Tank | Tank | Damage + Recon | Tank Cannon |
+| Radiator Walker | Walker | Damage + Coolant | Coaxial MG |
+| Field Welder | Walker | Repair + Recon | Sidearm |
+| Depot Tank | Tank | Repair + Coolant | Sidearm |
+
+Balance unchanged — a support unit is still one slot / one count / one activation (§3).
 
 ---
 

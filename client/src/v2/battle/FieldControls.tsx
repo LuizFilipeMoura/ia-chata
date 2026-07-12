@@ -40,22 +40,22 @@ function FieldSetupBody({ onLocked }: { onLocked: () => void }) {
       />
 
       <div className="v2-fs-legend">
-        <span className="v2-fs-leg v2-fs-leg--mine">You deploy</span>
-        <span className="v2-fs-leg v2-fs-leg--foe">Enemy deploys</span>
-        <span className="v2-fs-leg v2-fs-leg--obj">Objective</span>
+        <span className="v2-fs-leg v2-fs-leg--mine v2-eyebrow">You deploy</span>
+        <span className="v2-fs-leg v2-fs-leg--foe v2-eyebrow">Enemy deploys</span>
+        <span className="v2-fs-leg v2-fs-leg--obj v2-eyebrow">Objective</span>
       </div>
 
       <div className="v2-fs-group">
-        <span className="v2-fs-label">Field dimensions</span>
+        <span className="v2-fs-label v2-eyebrow">Field dimensions</span>
         <div className="v2-fs-dims">
           <div className="v2-fs-num">
-            <span className="v2-fs-cap">Width</span>
+            <span className="v2-fs-cap v2-eyebrow">Width</span>
             <input type="number" min={FIELD_MIN.width} max={FIELD_MAX.width}
               value={w} onChange={(e) => setW(Number(e.target.value))} />
             <span className="v2-fs-unit">in</span>
           </div>
           <div className="v2-fs-num">
-            <span className="v2-fs-cap">Height</span>
+            <span className="v2-fs-cap v2-eyebrow">Height</span>
             <input type="number" min={FIELD_MIN.height} max={FIELD_MAX.height}
               value={h} onChange={(e) => setH(Number(e.target.value))} />
             <span className="v2-fs-unit">in</span>
@@ -65,14 +65,14 @@ function FieldSetupBody({ onLocked }: { onLocked: () => void }) {
       </div>
 
       <div className="v2-fs-group">
-        <span className="v2-fs-label">Terrain &amp; orientation</span>
+        <span className="v2-fs-label v2-eyebrow">Terrain &amp; orientation</span>
         <div className="v2-fs-actions">
           <button type="button" className="v2-dwr-btn ghost" onClick={flip}>Flip diagonal</button>
           <button type="button" className="v2-dwr-btn ghost" onClick={reroll}>Re-roll terrain</button>
         </div>
       </div>
 
-      <button type="button" className="v2-fs-lock" onClick={lock}>Lock field</button>
+      <button type="button" className="v2-cta v2-fs-lock" onClick={lock}>Lock field</button>
     </div>
   );
 }
@@ -96,7 +96,7 @@ export function FieldControls() {
       {isOwner && !started && !f.locked ? (
         <button
           type="button"
-          className="v2-fc-set"
+          className="v2-cta v2-fc-set"
           onClick={() =>
             openDrawer({
               title: "Field setup",

@@ -28,7 +28,7 @@ export function CompRow({ rigName, loc, comp, onCommand }: Props) {
       <span className="v2-comp-label">{label}</span>
       <button type="button" className="v2-comp-step v2-comp-step--dmg" aria-label={`Damage ${loc}`}
         onClick={() => onCommand("damage", { name: rigName, loc, amount: "1" })}>−</button>
-      <div className="v2-comp-bar">
+      <div className="v2-comp-bar v2-well">
         <div className="v2-comp-bar-fill"
           style={{ width: `${Math.round((comp.sp / comp.max) * 100)}%`, background: spColor(comp.sp, comp.max) }} />
         <div className="v2-comp-bar-text">{text}</div>

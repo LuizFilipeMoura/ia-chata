@@ -9,7 +9,7 @@ import {
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
-  chassisById, resolveChassis,
+  chassisById, resolveChassis, SEED_ROSTER,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -967,29 +967,29 @@ test("Shutdown is allowed after a real action has been spent (not just as the fi
   b1.engine.heat = 9;                          // hot after the move
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
   assert.equal(b1.activated, true);            // shutdown went through mid-activation (was blocked before)
-  assert.equal(b1.engine.heat, 3);             // 0 + round(9 · 1/3) — cooled proportionally
+  assert.equal(b1.engine.heat, 5);             // 9 − min(5, 2·2 left) = 9 − 4
 });
 
-test("Shutdown cools proportionally to slots already used and ends the activation", () => {
+test("Shutdown cools 2 heat per slot left and ends the activation", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.engine.heat = 6;              // floor is 0 for a fresh engine
-  r.game.turn.actionsUsed = 2;     // of 3 slots → keeps 2/3 of the heat
+  r.game.turn.actionsUsed = 2;     // 1 of 3 slots left → cools 2
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
-  assert.equal(b1.engine.heat, 4); // 0 + round(6 · 2/3)
+  assert.equal(b1.engine.heat, 4); // 6 − min(5, 2·1)
   assert.equal(b1.activated, true);
 });
 
-test("Shutdown as the first action cools fully to the floor", () => {
+test("Shutdown as the first action cools by the 5-heat cap", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   b1.engine.heat = 6;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "shutdown" } });
-  assert.equal(b1.engine.heat, 0); // 0 slots used → full cool
+  assert.equal(b1.engine.heat, 1); // 3 slots left → 2·3 = 6, capped at 5 → 6 − 5
 });
 
 test("undo reverts the acting side's last turn-scoped action", () => {
@@ -1321,6 +1321,53 @@ test("weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1 (regressio
   assert.ok(rig.weaponsDestroyed.includes(rig.weapons.longRange));
   assert.equal(rig.hull.sp, hullBefore - 1);
   assert.equal(rig.engine.sp, engineBefore - 1);
+});
+
+test("additional hit to a 0-SP arms spills exactly 1 SP to Hull (not 3), linear", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.arms.sp = 0;                         // already catastrophic (weapon spent earlier)
+  const hull0 = rig.hull.sp;
+  __test.applyDamage(room, rig, "arms", 1, { dice: { armsWeapon: 3 } }); // additional
+  assert.equal(rig.hull.sp, hull0 - 1);    // 1 spill, not 3
+  __test.applyDamage(room, rig, "arms", 1, { dice: { armsWeapon: 3 } }); // second additional
+  assert.equal(rig.hull.sp, hull0 - 2);    // linear, not compounding
+});
+
+test("additional hit to a 0-SP legs immobilises AND spills 1 SP to Hull (conserved)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.legs.sp = 0;                         // already catastrophic
+  const hull0 = rig.hull.sp;
+  __test.applyDamage(room, rig, "legs", 1, {}); // additional
+  assert.equal(rig.immobilised, true);     // §8 effect kept
+  assert.equal(rig.hull.sp, hull0 - 1);    // damage no longer evaporates
+});
+
+test("catastrophic spill retargets to Engine when Hull is already at 0", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.legs.sp = 0;
+  __test.setRigSp(rig, "hull", 0);         // Hull can't absorb — next living part
+  const engine0 = rig.engine.sp;
+  __test.applyDamage(room, rig, "legs", 1, {});
+  assert.equal(rig.hull.sp, 0);            // dead Hull untouched (no destroyed cascade)
+  assert.equal(rig.engine.sp, engine0 - 1);// spill routed to Engine
+});
+
+test("Kneecapper rake to a 0-SP legs immobilises but never spills (cripple, never kill)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.legs.sp = 0;
+  const hull0 = rig.hull.sp, engine0 = rig.engine.sp;
+  __test.applyDamage(room, rig, "legs", 1, { noSpill: true }); // kneecapper-sourced
+  assert.equal(rig.immobilised, true);
+  assert.equal(rig.hull.sp, hull0);        // no spill
+  assert.equal(rig.engine.sp, engine0);
 });
 
 test("Kneecapper cripple ramp — a raked leg at <= half max flags speedHalvedNextRound", () => {
@@ -2315,7 +2362,7 @@ test("makeUnit rejects unknown kinds", () => {
 test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   const ids = Object.keys(UNIT_WEAPONS).sort();
   assert.deepEqual(ids, [
-    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Tank Cannon",
+    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Sidearm", "Tank Cannon",
   ]);
   for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
     assert.equal(typeof w.rof, "number");
@@ -2469,6 +2516,28 @@ test("formatBattleState renders a Tank without heat and with a single unit weapo
   assert.ok(view.includes("engine 6/6")); // no "heat" suffix — cold kind
   assert.ok(!/engine 6\/6 heat/.test(view));
   assert.ok(view.includes("weapon Tank Cannon"));
+});
+
+test("formatBattleState surfaces a support unit's modules in its line", () => {
+  const room = createRoom("Rmod"); claimSide(room, { name: "u", side: "a" });
+  const walker = makeUnit("walker", 1, "Welder", "a", { modules: ["repair", "recon"] });
+  room.rigs.push(walker);
+  const view = formatBattleState(room, "a");
+  assert.match(view, /modules repair, recon/);
+});
+
+test("formatBattleState flags a painted enemy [PAINTED] only while its painter is alive", () => {
+  const room = createRoom("Rpaint"); claimSide(room, { name: "u", side: "a" });
+  const painter = makeUnit("walker", 1, "Spotter", "a", { modules: ["repair", "recon"] });
+  const foe = makeUnit("tank", 2, "Foe", "b", { unit: "Tank Cannon" });
+  foe.painted = { by: "a", painterId: 1 };
+  room.rigs.push(painter, foe);
+  const alive = formatBattleState(room, "b");
+  assert.match(alive, /Foe \(Tank, owner b\).*\[PAINTED\]/);
+
+  painter.destroyed = true;
+  const dead = formatBattleState(room, "b");
+  assert.doesNotMatch(dead, /\[PAINTED\]/);
 });
 
 test("__test.setRigSp sets skipNextActivation via power-role, not literal 'engine'", () => {
@@ -3497,4 +3566,92 @@ test("the two new light chassis resolve by id and by combo", () => {
   const rp = resolveChassis({ class: "light", longRange: "Rivet Gun", melee: "Pressure Claw" });
   assert.equal(rp.id, "light-rivet-pressureclaw");
   assert.deepEqual(rp.sp, { hull: 13, arms: 11, legs: 10, engine: 9 });
+});
+
+test("seed builds a started 3v3 with 6 distinct chassis and turn=first", () => {
+  const r = createRoom("SEED-T1");
+  applyCommand(r, { verb: "seed", attrs: { first: "b" } });
+
+  assert.equal(r.seeded, true);
+  assert.equal(r.game.started, true);
+  assert.equal(r.game.phase, "activation");
+  assert.equal(r.game.round, 1);
+  assert.equal(r.field.locked, true);
+  assert.equal(r.game.turn.side, "b");
+
+  const a = r.rigs.filter((rig) => rig.owner === "a");
+  const b = r.rigs.filter((rig) => rig.owner === "b");
+  assert.equal(a.length, 3);
+  assert.equal(b.length, 3);
+  const chassisIds = r.rigs.map((rig) => rig.chassis);
+  assert.equal(new Set(chassisIds).size, 6);
+});
+
+test("seed first defaults to 'a' and is idempotent (re-seed resets)", () => {
+  const r = createRoom("SEED-T2");
+  applyCommand(r, { verb: "seed", attrs: {} });
+  assert.equal(r.game.turn.side, "a");
+  const firstIds = r.rigs.map((rig) => rig.id);
+
+  applyCommand(r, { verb: "seed", attrs: { first: "b" } });
+  assert.equal(r.rigs.length, 6);
+  assert.equal(r.game.turn.side, "b");
+  // A fresh build re-numbers from 1, not appends.
+  assert.deepEqual(r.rigs.map((rig) => rig.id), firstIds);
+});
+
+test("seed with a roster that can't fill 3 per side does not lock/flag/start", () => {
+  const r = createRoom("SEED-BAD");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", roster: [
+    { name: "A1", owner: "a", chassis: "light-sword-arc" },
+    { name: "B1", owner: "b", chassis: "medium-lance-mortar" },
+  ] } });
+  assert.equal(r.game.started, false);
+  assert.equal(r.seeded, false);
+  assert.equal(r.field.locked, false);
+  assert.equal(r.rigs.length, 2); // rigs were still built, just no start
+});
+
+test("seed marks both sides ready and populates deployOrder consistent with first", () => {
+  const r = createRoom("SEED-RDY");
+  applyCommand(r, { verb: "seed", attrs: { first: "b" } });
+  assert.equal(r.game.sides.every((s) => s.ready), true);
+  assert.equal(r.game.deployOrder[0], "a"); // other = a is first-to-deploy, activates second
+  assert.equal(r.game.turn.side, "b");
+});
+
+test("SEED_ROSTER is 6 entries, 3 per side, all chassis distinct", () => {
+  assert.equal(SEED_ROSTER.length, 6);
+  assert.equal(SEED_ROSTER.filter((e) => e.owner === "a").length, 3);
+  assert.equal(SEED_ROSTER.filter((e) => e.owner === "b").length, 3);
+  assert.equal(new Set(SEED_ROSTER.map((e) => e.chassis)).size, 6);
+  for (const e of SEED_ROSTER) assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
+});
+
+test("publicState exposes seeded and skips enemy face-down prep redaction when seeded", () => {
+  const r = createRoom("SEED-T3");
+  applyCommand(r, { verb: "seed", attrs: { first: "a" } });
+  // Give an enemy (b) rig a hidden face-down preparation.
+  const enemy = r.rigs.find((rig) => rig.owner === "b");
+  enemy.preparation = { type: "brace", faceUp: false };
+
+  const asA = publicState(r, "a");
+  assert.equal(asA.seeded, true);
+  const enemyView = asA.rigs.find((rig) => rig.id === enemy.id);
+  // Not redacted to { hidden: true } because the room is seeded.
+  assert.equal(enemyView.preparation.faceUp, false);
+  assert.equal(enemyView.preparation.type, "brace");
+});
+
+test("publicState still redacts enemy face-down prep in a normal room", () => {
+  const r = createRoom("NORMAL-T");
+  claimSide(r, { side: "a" });
+  applyCommand(r, { verb: "add", attrs: { name: "E1", owner: "b", chassis: "light-sword-arc", class: "light", longRange: "Arc Gun", melee: "Sword" } });
+  const enemy = r.rigs.find((rig) => rig.owner === "b");
+  enemy.preparation = { type: "brace", faceUp: false };
+
+  const asA = publicState(r, "a");
+  assert.equal(asA.seeded, false);
+  const enemyView = asA.rigs.find((rig) => rig.id === enemy.id);
+  assert.deepEqual(enemyView.preparation, { hidden: true });
 });

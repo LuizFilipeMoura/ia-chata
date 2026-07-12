@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
@@ -66,13 +66,13 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
   return (
     <div className="v2-root">
       <div
-        className={"v2-aw-scrim" + (show ? " show" : "")}
+        className={"v2-aw-scrim v2-scrim v2-scrim--ember" + (show ? " show" : "")}
         onClick={(e) => { if (e.target === e.currentTarget) close(); }}
       >
-        <div className="v2-aw-card" role="dialog" aria-modal="true" aria-label="Score objectives">
-          <div className="v2-aw-handle" />
+        <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label="Score objectives">
+          <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
           <div className="v2-aw-title-row">
-            <div className="v2-aw-title">⟡ Score Objectives — Round {round}</div>
+            <div className="v2-aw-title v2-title">⟡ Score Objectives — Round {round}</div>
           </div>
           <p className="v2-aw-field-desc">
             What points do you control? Tap each marker one of your Rigs holds
@@ -104,7 +104,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
 
           <div className="v2-vpw-total">You'll score <b>{total}</b> VP</div>
 
-          <button className="v2-aw-go" onClick={submit}>Score {total} VP</button>
+          <button className="v2-aw-go v2-cta v2-cta--ember" onClick={submit}>Score {total} VP</button>
         </div>
       </div>
     </div>

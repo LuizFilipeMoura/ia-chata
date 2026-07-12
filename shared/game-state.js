@@ -3,7 +3,7 @@ import { resolveAttack } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
 } from "./field.js";
-import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf } from "./unit-kinds.js";
+import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -64,6 +64,9 @@ export const UNIT_WEAPONS = {
   "Rocket Pod":       { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
   "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
   "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
+  // Built-in weak weapon every support unit carries; replaced by a Damage
+  // module. peak 0 + dropoff 0 = a flat ACC 0 at any distance (spec §Sidearm).
+  "Sidearm":          { rof: 2, str: 4,  sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -90,6 +93,27 @@ export const CHASSIS = [
   { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
   { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
   { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+];
+
+// Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
+// weight classes (3 medium / 3 light — the catalogue has no heavy). All chassis
+// ids are unique, honouring the no-mirror-matchup invariant (AGENTS.md).
+export const SEED_ROSTER = [
+  { name: "A1", owner: "a", chassis: "medium-lance-mortar" },
+  { name: "A2", owner: "a", chassis: "light-claw-autocannon" },
+  { name: "A3", owner: "a", chassis: "light-sword-arc" },
+  { name: "B1", owner: "b", chassis: "medium-shield-siege" },
+  { name: "B2", owner: "b", chassis: "medium-sniper-chainsaw" },
+  { name: "B3", owner: "b", chassis: "light-harpoon-anchor" },
+];
+
+// The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
+// entries omit `unit` — makeUnit fits the Sidearm automatically.
+export const SUPPORT_UNITS = [
+  { name: "Marksman Tank",  owner: "a", kind: "tank",   unit: "Tank Cannon", modules: ["damage", "recon"] },
+  { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",  modules: ["damage", "coolant"] },
+  { name: "Field Welder",   owner: "b", kind: "walker", modules: ["repair", "recon"] },
+  { name: "Depot Tank",     owner: "b", kind: "tank",   modules: ["repair", "coolant"] },
 ];
 
 export function chassisById(id) {
@@ -397,6 +421,7 @@ export function createRoom(code) {
     version: 0,
     nextRigId: 1,
     ownerSide: null,
+    seeded: false,
     field,
     game: {
       round: 1,
@@ -523,6 +548,7 @@ function ensureRigShape(rig) {
 function ensureGameShape(room) {
   room.game ||= {};
   if (room.ownerSide === undefined) room.ownerSide = null;
+  if (room.seeded === undefined) room.seeded = false;
   if (!room.field || typeof room.field !== "object") {
     room.field = { ...FIELD_DEFAULT, diagonal: "tlbr", terrain: [], locked: false };
   }
@@ -723,7 +749,14 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
   // registry; the unit carries exactly one flat-pick weapon and no equipment.
-  const weaponName = normalizeUnitWeapon(opts.unit);
+  // Support units carry exactly two distinct modules; a bare tank/walker carries
+  // none. A Damage module fits the chosen unit-weapon; without one the unit falls
+  // back to the built-in Sidearm.
+  const modules = normalizeModules(opts.modules);
+  if (modules.length > 0 && modules.length !== 2) return null;
+  const weaponName = modules.length > 0
+    ? (modules.includes("damage") ? normalizeUnitWeapon(opts.unit) : "Sidearm")
+    : normalizeUnitWeapon(opts.unit);
   if (!weaponName) return null;
   const parts = {};
   for (const p of kind.parts) {
@@ -741,6 +774,8 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     owner: owner === "b" ? "b" : "a",
     parts,
     weapons: { unit: weaponName },
+    modules,
+    painted: null,
     equipment: null,
     chassis: null, // cold kinds (tank / walker) aren't commissioned from a chassis
     activated: false,
@@ -939,6 +974,57 @@ function randomPick(items, random = Math.random) {
   return items[index];
 }
 
+// The game-field portion of a full reset (no per-rig work). Shared by the
+// `reset` verb (which also rebuilds each rig) and the `seed` verb (which
+// discards all rigs, so it only needs this).
+function resetGameShape(room) {
+  room.game.started = false;
+  room.game.phase = "setup";
+  room.game.round = 1;
+  room.game.turn = null;
+  room.game.resolutions = [];
+  room.game.nextResolutionId = 1;
+  room.game.recoveryClaims = {};
+  room.game.recoveryConflict = null;
+  room.game.outcome = null;
+  room.game.pendingBlast = null;
+  room.game.pendingAnswer = null;
+  room.game.pendingReaction = null;
+  room.game.answerTokens = { a: 0, b: 0 };
+  room.game.suddenDeath = false;
+  room.game.deployOrder = [];
+  room.game.initiative = null;
+  room.game.bounties = {};
+  room._history = [];
+  for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
+}
+
+// Deterministic force-start for seeded test rooms: no dice, no deployment-order
+// inference. Bounty for each side = its first enemy rig. turn.side = `first`.
+function startGameSeeded(room, first) {
+  const other = first === "b" ? "a" : "b";
+  const bounties = {};
+  for (const side of room.game.sides) {
+    const target = room.rigs.find((rig) => (rig.owner || "a") !== side.id);
+    if (!target) return false;
+    bounties[side.id] = target.id;
+  }
+  room.game.bounties = bounties;
+  room.game.started = true;
+  room.game.phase = "initiative";
+  room.game.round = 1;
+  applyInitiative(room, [first, other], null);
+  for (const side of room.game.sides) side.ready = true;
+  // deployOrder[0] is the first-to-deploy = second activator (deploymentOrder()).
+  // `first` activates first, so it is the second-to-deploy.
+  room.game.deployOrder = [other, first];
+  pushResolution(room, {
+    kind: "initiative", actor: first, rigId: null, rolls: [],
+    summary: `Seeded battle — ${first} activates first`, effects: [],
+  });
+  return true;
+}
+
 function maybeStartGame(room, random = Math.random) {
   if (room.game.started) return false;
   const canStart = room.game.sides.every((side) => side.ready && sideRigCount(room, side.id) >= 3);
@@ -1048,19 +1134,41 @@ function catastrophicOnZero(room, rig, loc, opts) {
   // (activation budget, combat modAim, movement) — no state to set here.
 }
 
+// §7 overflow target for a spill: prefer the structural part (Hull) if it can
+// still absorb, else the first part with SP > 0 in role order
+// power → mobility → weapon, excluding the source. This is an AUTO-target — the
+// rules text (§7) says the defender chooses; the engine picks deterministically.
+// See docs/superpowers/specs/2026-07-11-universal-catastrophic-spill-design.md.
+function spillTarget(rig, sourceLoc) {
+  const kind = kindOf(rig);
+  const [structPart] = partsByRole(kind, "structural");
+  if (structPart && structPart !== sourceLoc && rig[structPart]?.sp > 0) return structPart;
+  for (const role of ["power", "mobility", "weapon"]) {
+    for (const p of partsByRole(kind, role)) {
+      if (p !== sourceLoc && rig[p]?.sp > 0) return p;
+    }
+  }
+  // No living part left — the unit is already all-zero (destroyed). Route to the
+  // structural part so its own §8 additional clause fires; harmless edge.
+  return structPart || null;
+}
+
 // §8 — additional damage to an already 0-SP location.
 function catastrophicAdditional(room, rig, loc, opts) {
   const kind = kindOf(rig);
   const role = roleOf(kind, loc);
-  if (role === "structural" || role === "power") rig[loc].destroyed = true;
-  else if (role === "mobility") rig.immobilised = true;
-  else if (role === "weapon") {
-    // Kneecapper (§13) — a limbs-only rake never spills the extra structural
-    // damage into hull; the weapon limb is already dead, that's the finish.
-    if (opts?.noSpill) return;
-    const [structPart] = partsByRole(kind, "structural");
-    if (structPart) applyDamage(room, rig, structPart, 3, opts);
-  }
+  // Structural (Hull) / power (Engine): the §8 kill tier — an extra hit is
+  // total system failure. Instant-kill, no spill.
+  if (role === "structural" || role === "power") { rig[loc].destroyed = true; return; }
+  // Mobility (Legs/Tracks): still immobilises; the numeric overflow is conserved
+  // below rather than evaporating.
+  if (role === "mobility") rig.immobilised = true;
+  // Mobility + weapon: conserve the extra hit as 1 SP of §7 overflow onto a live
+  // part. Kneecapper (§13, opts.noSpill) is limbs-only and never bleeds into the
+  // hull, so it immobilises / kills the limb but skips the spill.
+  if (opts?.noSpill) return;
+  const target = spillTarget(rig, loc);
+  if (target && target !== loc) applyDamage(room, rig, target, 1, opts);
 }
 
 // Engagement (melee lock, §engagement design). Symmetric one-to-one link between
@@ -1127,7 +1235,7 @@ function applyDamage(room, rig, loc, amount, opts) {
 }
 
 // §9 — on the transition to destroyed, roll a D12; 4+ erupts. Record a pending
-// blast the controller resolves by naming rigs within 12" (see the `blast` verb).
+// blast the controller resolves by naming rigs within 4" (see the `blast` verb).
 function onRigDamaged(room, rig, opts) {
   if (rig.destroyed && !rig._blastRolled) {
     rig._blastRolled = true;
@@ -1136,7 +1244,7 @@ function onRigDamaged(room, rig, opts) {
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 12")' : "no secondary blast"}`,
+      summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
       effects: [],
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
@@ -1449,9 +1557,16 @@ function resolveFire(room, rig, target, a, act, random) {
   if (slot === "longRange" && rig.loaded.longRange === false) return false;
   const cost = 1;
   if (t.actionsUsed + cost > t.actionsMax) return false;
+  // A paint mark only helps while its painter is alive: a destroyed painter's
+  // mark lingers on the target (the sweep that clears it runs on the painter's
+  // own activation), so guard against a dead painter here (spec: "until the
+  // painter's next activation").
+  const painter = target.painted ? findRigById(room, target.painted.painterId) : null;
+  const paintedActive = !!(target.painted && target.painted.by === rig.owner && painter && !painter.destroyed);
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,
+    painted: paintedActive,
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
@@ -1583,13 +1698,13 @@ function resolveSkewerStrike(room, skewerer, victim, random) {
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
   if (act === "shutdown") {
-    // Shutdown may be called at any point in the activation. Cooling is
-    // proportional to how much of the activation was spent acting: the more
-    // slots already used, the less heat it sheds (0 used → full cool to floor).
+    // Shutdown may be called at any point in the activation. Cooling scales
+    // with the slots left unspent: 2 heat per remaining action, capped at 5.
+    // Never cools below the engine's heat floor.
     const floor = engineHeatFloor(rig);
-    const overFloor = Math.max(0, rig.engine.heat - floor);
-    const frac = t.actionsMax > 0 ? Math.min(1, t.actionsUsed / t.actionsMax) : 0;
-    rig.engine.heat = floor + Math.round(overFloor * frac);
+    const actionsLeft = Math.max(0, t.actionsMax - t.actionsUsed);
+    const cool = Math.min(5, 2 * actionsLeft);
+    rig.engine.heat = Math.max(floor, rig.engine.heat - cool);
     recompute(rig);
     endActivation(room, rig, null, random);
     return true;
@@ -1844,6 +1959,58 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
+  if (act === "fieldweld") {
+    // Repair module (spec: Support Units) — weld SP onto a friendly unit.
+    if (!(rig.modules || []).includes("repair")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner !== rig.owner || target.destroyed) return false;
+    const roll = rollD(12, a.dice?.weld, random);
+    const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    const names = partNamesOf(kindOf(target));
+    const loc = names.includes(String(a.loc || "").toLowerCase()) ? String(a.loc).toLowerCase() : names[0];
+    if (amt > 0) repairRig(target, loc, amt);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "fieldweld", actor: rig.owner, rigId: rig.id,
+      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      summary: `${rig.name} field-welds ${target.name} — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
+    });
+    return true;
+  }
+  if (act === "vent") {
+    // Coolant module (spec: Support Units) — vent 2 heat off a friendly Rig.
+    if (!(rig.modules || []).includes("coolant")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner !== rig.owner || target.destroyed) return false;
+    if (!UNIT_KINDS[kindOf(target)]?.hasHeat) return false; // only Rigs run hot
+    bumpHeat(target, -2);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "vent", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} vents 2 heat off ${target.name}.`, effects: [],
+    });
+    return true;
+  }
+  if (act === "paint") {
+    // Recon module (spec: Support Units) — mark an enemy so allied ranged attacks
+    // ignore its cover and gain +1 Aim until this unit's next activation.
+    if (!(rig.modules || []).includes("recon")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner === rig.owner || target.destroyed) return false; // enemies only
+    // One mark per Recon unit — a new Paint replaces this painter's old mark.
+    for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
+    target.painted = { by: rig.owner, painterId: rig.id };
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "paint", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} paints ${target.name} — allied ranged attacks ignore its cover and gain +1 Aim until ${rig.name}'s next activation.`,
+      effects: [],
+    });
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
@@ -1982,6 +2149,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           chassis: a.chassis,
           // Flat-pick options
           unit: a.unit,
+          // Support-unit modules — accept a comma string (from the LLM tag) or an array.
+          modules: typeof a.modules === "string"
+            ? a.modules.split(",").map((s) => s.trim()).filter(Boolean)
+            : a.modules,
         });
         if (!unit) return room;
         room.nextRigId++;
@@ -2075,25 +2246,39 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       // every location is back at max and the tag maps are cleared.
       recompute(rig);
     }
-    room.game.started = false;
-    room.game.phase = "setup";
-    room.game.round = 1;
-    room.game.turn = null;
-    room.game.resolutions = [];
-    room.game.nextResolutionId = 1;
-    room.game.recoveryClaims = {};
-    room.game.recoveryConflict = null;
-    room.game.outcome = null;
-    room.game.pendingBlast = null;
-    room.game.pendingAnswer = null;
-    room.game.pendingReaction = null;
-    room.game.answerTokens = { a: 0, b: 0 };
-    room.game.suddenDeath = false;
-    room.game.deployOrder = [];
-    room.game.initiative = null;
-    room.game.bounties = {};
-    room._history = [];
-    for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
+    resetGameShape(room);
+    changed = true;
+  } else if (verb === "seed") {
+    const roster = Array.isArray(a.roster) && a.roster.length ? a.roster : SEED_ROSTER;
+    const first = normalizeSide(room, a.first) || "a";
+    room.rigs = [];
+    room.nextRigId = 1;
+    resetGameShape(room);
+    for (const entry of roster) {
+      const owner = normalizeSide(room, entry.owner) || "a";
+      let unit;
+      if (entry.kind === "tank" || entry.kind === "walker") {
+        unit = makeUnit(entry.kind, room.nextRigId, entry.name, owner, {
+          unit: entry.unit, modules: entry.modules,
+        });
+      } else {
+        const pb = resolveChassis({ chassis: entry.chassis });
+        if (!pb) continue;
+        unit = makeUnit("rig", room.nextRigId, entry.name, owner, {
+          weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
+          chassis: pb.id, sp: pb.sp,
+        });
+      }
+      if (!unit) continue;
+      room.nextRigId++;
+      room.rigs.push(unit);
+    }
+    const canStart = sideRigCount(room, "a") >= 3 && sideRigCount(room, "b") >= 3;
+    if (canStart) {
+      room.field.locked = true;
+      room.seeded = true;
+      startGameSeeded(room, first);
+    }
     changed = true;
   } else if (verb === "setdice") {
     if (!room.game.started) {
@@ -2149,6 +2334,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
+      // Recon paint (spec: Support Units) expires at the painter's next activation:
+      // clear every mark this rig placed as it steps up again.
+      for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
       if (rig.skipNextActivation) {
         rig.skipNextActivation = false;
         rig.activated = true;
@@ -2379,7 +2567,7 @@ export function publicState(room, side) {
   const canUndo = !!top && room.game.phase === "activation" && top.side === viewer;
   const rigs = room.rigs.map((rig) => {
     const prep = rig.preparation;
-    if (prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {
+    if (!room.seeded && prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {
       return { ...rig, preparation: { hidden: true } };
     }
     return rig;
@@ -2387,6 +2575,7 @@ export function publicState(room, side) {
   return {
     code: room.code,
     version: room.version,
+    seeded: room.seeded ?? false,
     ownerSide: room.ownerSide ?? null,
     field: room.field
       ? { ...room.field, terrain: room.field.terrain.map((t) => ({ ...t })) }
@@ -2441,7 +2630,13 @@ export function formatBattleState(room, side) {
         }
       }
       const chassis = cfg.id === "rig" ? rig.weightClass : cfg.label;
-      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
+      let extra = "";
+      if (Array.isArray(rig.modules) && rig.modules.length) extra += `; modules ${rig.modules.join(", ")}`;
+      if (rig.painted) {
+        const painter = findRigById(room, rig.painted.painterId);
+        if (painter && !painter.destroyed) extra += " [PAINTED]";
+      }
+      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}${extra}`);
     }
   }
   const sideId = normalizeSide(room, side);

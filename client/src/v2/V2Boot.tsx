@@ -20,14 +20,16 @@ const SCREEN: React.CSSProperties = {
   fontFamily: '"Oswald", system-ui, sans-serif',
   letterSpacing: ".2em",
   textTransform: "uppercase",
-  fontSize: 13,
+  // Pre-mount splash renders outside .v2-root, so the --v2-text-* scale isn't
+  // reachable here; these inline sizes mirror the scale by value (base / sm).
+  fontSize: 14,
 };
 
 function Loading() {
   return (
     <div style={SCREEN} aria-live="polite">
       <div>◈ Oil &amp; Iron</div>
-      <div style={{ color: "#7b8593", fontSize: 10 }}>Spinning up the terminal…</div>
+      <div style={{ color: "#7b8593", fontSize: 12 }}>Spinning up the terminal…</div>
     </div>
   );
 }
@@ -61,7 +63,7 @@ class V2ErrorBoundary extends Component<{ children: ReactNode }, BoundaryState> 
       return (
         <div style={SCREEN}>
           <div>◈ Oil &amp; Iron</div>
-          <div style={{ color: "#7b8593", fontSize: 10 }}>Terminal failed to load.</div>
+          <div style={{ color: "#7b8593", fontSize: 12 }}>Terminal failed to load.</div>
           <button
             type="button"
             onClick={() => { sessionStorage.removeItem(this.reloadKey); window.location.reload(); }}

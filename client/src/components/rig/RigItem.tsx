@@ -216,7 +216,7 @@ export const RigItem = React.memo(function RigItem({
             <div className="rig-activate-row">{activateControl}</div>
           )}
 
-          <HeatGauge rig={rig} isActive={isActive} started={started} onCommand={onCommand} />
+          <HeatGauge rig={rig} isActive={isActive} />
 
           {started && <ActionConsole rig={rig} />}
 

@@ -24,9 +24,12 @@ interface DrawerProps {
   onClose: () => void;
 }
 
-// Native V2 port of V1's bottom-sheet Drawer. Because the scrim is portaled to
-// document.body (outside the app's V2 root), the card is wrapped in `.v2-root`
-// so the scoped `--v2-*` tokens and `.v2-dwr-*` rules apply.
+// Native V2 centered dialog. Because the scrim is portaled to document.body
+// (outside the app's V2 root), the card is wrapped in `.v2-root` so the scoped
+// `--v2-*` tokens and `.v2-dwr-*` rules apply. That wrapper also needs
+// `.v2-portal-bare` (display:contents) so the always-fixed, full-screen `.v2-root`
+// box doesn't fill the viewport and drag the card to the top-left — with it gone,
+// the card is a direct grid child of the scrim and `place-items: center` centers it.
 export default function Drawer({ config, visible, onClose }: DrawerProps) {
   const dismissable = config.dismissable !== false;
 
@@ -35,10 +38,10 @@ export default function Drawer({ config, visible, onClose }: DrawerProps) {
   };
 
   return (
-    <div className={"v2-dwr-scrim" + (visible ? " show" : "")} onClick={onScrimClick}>
-      <div className="v2-root">
-        <div className="v2-dwr-card">
-          <div className="v2-dwr-title" data-tone={config.tone || "oil"}>
+    <div className={"v2-dwr-scrim v2-scrim" + (visible ? " show" : "")} onClick={onScrimClick}>
+      <div className="v2-root v2-portal-bare">
+        <div className="v2-dwr-card v2-panel v2-panel--sharp">
+          <div className="v2-dwr-title v2-eyebrow" data-tone={config.tone || "oil"}>
             {config.title}
           </div>
           {config.render?.()}

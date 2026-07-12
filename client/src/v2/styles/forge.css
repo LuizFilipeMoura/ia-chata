@@ -1,15 +1,12 @@
 /* Forge / Commission wizard — every selector scoped under .v2-root so V2 styles
    never leak into V1. Ports oil-iron-terminal.html lines 224-308 (step rail, kind
-   cards, chassis roster, upgrade bay, equipment grid, confirm rows, nav bar). */
+   cards, chassis roster, upgrade bay, equipment grid, confirm rows, nav bar).
+   Shell (scrim/card), eyebrow/title text, the CTA button, and selected-state
+   rings are built on primitives.css — see that file for the shared recipe. */
 
 /* ---- modal frame -------------------------------------------------------- */
 .v2-root .v2-fw-scrim {
-  position: fixed; inset: 0; z-index: 460; display: flex;
-  align-items: flex-start; justify-content: center;
-  padding: 20px 16px; overflow-y: auto;
-  background:
-    radial-gradient(80% 60% at 50% 15%, rgba(231, 154, 61, .09), transparent 70%),
-    rgba(4, 5, 7, .74);
+  z-index: 460; padding: 20px 16px; overflow-y: auto;
   opacity: 0; transition: opacity .25s ease;
 }
 .v2-root .v2-fw-scrim.show { opacity: 1; }
@@ -17,33 +14,24 @@
 .v2-root .v2-fw-card {
   position: relative; width: 100%; max-width: 780px; margin: auto;
   display: flex; flex-direction: column;
-  background: linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-900));
-  border: 1px solid var(--v2-line);
   border-top: 2px solid var(--v2-oil-deep);
-  box-shadow: 0 26px 70px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .03);
   transform: translateY(12px); transition: transform .25s ease;
 }
 .v2-root .v2-fw-scrim.show .v2-fw-card { transform: translateY(0); }
 
 /* ---- head + step rail --------------------------------------------------- */
 .v2-root .v2-fw-head { padding: 18px 20px 6px; border-bottom: 1px solid var(--v2-line-soft); }
-.v2-root .v2-fw-order {
-  font-family: var(--v2-mono); font-size: 8.5px; letter-spacing: .3em;
-  color: var(--v2-txt-faint); margin-bottom: 5px; text-transform: uppercase;
-}
-.v2-root .v2-fw-title {
-  margin: 0 0 4px; font-family: var(--v2-stencil); font-weight: 700; font-size: 22px;
-  letter-spacing: .08em; color: var(--v2-txt); text-shadow: 0 2px 0 rgba(0, 0, 0, .6);
-}
+.v2-root .v2-fw-order { letter-spacing: .3em; margin-bottom: 5px; }
+.v2-root .v2-fw-title { margin: 0 0 4px; font-size:var(--v2-text-2xl); }
 .v2-root .v2-fw-rail { display: flex; gap: 0; margin: 14px 0 8px; }
 .v2-root .v2-fw-step { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .v2-root .v2-fw-step-n {
   flex: 0 0 26px; height: 26px; display: flex; align-items: center; justify-content: center;
-  font-family: var(--v2-mono); font-size: 11px;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm);
   background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt-faint);
 }
 .v2-root .v2-fw-step-label {
-  font-family: var(--v2-disp); font-weight: 600; font-size: 10px; letter-spacing: .1em;
+  font-family: var(--v2-disp); font-weight: 600; font-size:var(--v2-text-sm); letter-spacing: .1em;
   text-transform: uppercase; color: var(--v2-txt-faint); white-space: nowrap;
 }
 .v2-root .v2-fw-step-rail { flex: 1; height: 1px; background: var(--v2-line); }
@@ -59,12 +47,12 @@
 .v2-root .v2-fw-body { padding: 16px 20px 20px; }
 .v2-root .v2-fc-cue { display: flex; align-items: baseline; gap: 9px; margin: 2px 0 12px; flex-wrap: wrap; }
 .v2-root .v2-fc-cue-lead {
-  font-family: var(--v2-mono); font-size: 9px; letter-spacing: .2em; color: var(--v2-oil);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .2em; color: var(--v2-oil);
   text-transform: uppercase;
 }
-.v2-root .v2-fc-cue-sub { font-family: var(--v2-mono); font-size: 8.5px; letter-spacing: .06em; color: var(--v2-txt-faint); }
+.v2-root .v2-fc-cue-sub { letter-spacing: .06em; }
 .v2-root .v2-fw-hint {
-  margin-top: 14px; font-family: var(--v2-disp); font-size: 11px; line-height: 1.5;
+  margin-top: 14px; font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.5;
   color: var(--v2-txt-faint); letter-spacing: .02em;
 }
 
@@ -75,23 +63,15 @@
   padding: 12px 14px; text-align: left; cursor: pointer;
   background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-850));
   border: 1px solid var(--v2-line); color: var(--v2-txt-dim);
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast), background var(--v2-dur-fast);
 }
 .v2-root .v2-fc-kind:hover { border-color: var(--v2-rivet); }
-.v2-root .v2-fc-kind.sel {
-  border-color: var(--v2-oil);
-  background: linear-gradient(180deg, rgba(231, 154, 61, .1), var(--v2-iron-850));
-  box-shadow: inset 0 0 0 1px rgba(231, 154, 61, .4), 0 0 20px rgba(231, 154, 61, .18);
-}
 .v2-root .v2-fc-kind-top { display: flex; align-items: center; gap: 9px; }
-.v2-root .v2-fc-kind-glyph { font-family: var(--v2-stencil); font-size: 18px; line-height: 1; color: var(--v2-oil); }
-.v2-root .v2-fc-kind-label {
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 14px; letter-spacing: .08em;
-  color: var(--v2-txt);
-}
-.v2-root .v2-fc-kind.sel .v2-fc-kind-label { color: var(--v2-oil-hi); }
+.v2-root .v2-fc-kind-glyph { font-family: var(--v2-stencil); font-size:var(--v2-text-xl); line-height: 1; color: var(--v2-oil); }
+.v2-root .v2-fc-kind-label { font-size:var(--v2-text-base); }
+.v2-root .v2-fc-kind.is-sel .v2-fc-kind-label { color: var(--v2-oil-hi); }
 .v2-root .v2-fc-kind-desc {
-  font-family: var(--v2-mono); font-size: 8px; letter-spacing: .06em; line-height: 1.5;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .06em; line-height: 1.5;
   color: var(--v2-txt-faint);
 }
 .v2-root .v2-fc-kind-lamp {
@@ -100,60 +80,65 @@
 }
 
 /* ---- chassis roster ----------------------------------------------------- */
-.v2-root .v2-fc-roster { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v2-root .v2-fc-roster { display: flex; flex-direction: column; gap: 8px; }
 .v2-root .v2-fc-slot { display: flex; flex-direction: column; }
-.v2-root .v2-fc-slot.sel { grid-column: 1 / -1; }
 .v2-root .v2-fc-card {
   position: relative; display: flex; align-items: stretch; width: 100%; text-align: left; cursor: pointer;
   background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-850));
   border: 1px solid var(--v2-line); overflow: hidden; color: var(--v2-txt-dim);
-  transition: border-color .15s ease, box-shadow .15s ease;
+  transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
 .v2-root .v2-fc-card:hover { border-color: var(--v2-rivet); }
-.v2-root .v2-fc-card.sel {
-  border-color: var(--v2-oil);
-  box-shadow: inset 0 0 0 1px rgba(231, 154, 61, .4), 0 0 22px rgba(231, 154, 61, .2);
+.v2-root .v2-fc-card:hover::before { opacity: 1; }
+.v2-root .v2-fc-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--v2-oil); opacity: 0; transition: opacity var(--v2-dur-fast);
 }
+.v2-root .v2-fc-card.is-sel::before { opacity: 1; box-shadow: 0 0 10px var(--v2-oil); }
 .v2-root .v2-fc-plate {
-  flex: 0 0 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  flex: 0 0 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
   background: var(--v2-iron-950); border-right: 1px solid var(--v2-line);
 }
 .v2-root .v2-fc-emblem {
   width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--v2-oil); font-family: var(--v2-stencil); font-weight: 700; font-size: 17px;
+  border: 1px solid var(--v2-oil); font-family: var(--v2-stencil); font-weight: 700; font-size:var(--v2-text-lg);
   color: var(--v2-oil);
 }
 .v2-root .v2-fc-medium .v2-fc-emblem { border-color: var(--v2-ember); color: var(--v2-ember-hi); }
-.v2-root .v2-fc-classshort {
-  font-family: var(--v2-mono); font-size: 7px; letter-spacing: .14em; color: var(--v2-txt-faint);
-  text-transform: uppercase;
-}
-.v2-root .v2-fc-info { flex: 1; min-width: 0; padding: 11px 13px; display: flex; flex-direction: column; }
-.v2-root .v2-fc-tierrow { display: flex; gap: 8px; align-items: baseline; }
-.v2-root .v2-fc-tier {
-  font-family: var(--v2-mono); font-size: 8px; letter-spacing: .12em; color: var(--v2-txt-faint);
-  text-transform: uppercase;
-}
-.v2-root .v2-fc-heat { font-family: var(--v2-mono); font-size: 8px; letter-spacing: .06em; color: var(--v2-low); }
-.v2-root .v2-fc-codename {
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 16px; letter-spacing: .08em;
-  color: var(--v2-txt); margin-top: 3px;
-}
-.v2-root .v2-fc-card.sel .v2-fc-codename { color: var(--v2-oil-hi); }
+.v2-root .v2-fc-classshort { font-size:var(--v2-text-sm); letter-spacing: .14em; }
+.v2-root .v2-fc-info { flex: 1; min-width: 0; padding: 12px 15px; display: flex; flex-direction: column; gap: 4px; }
+.v2-root .v2-fc-tierrow { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.v2-root .v2-fc-tier { letter-spacing: .12em; flex: 0 0 auto; }
+.v2-root .v2-fc-codename { font-size:var(--v2-text-lg); }
+.v2-root .v2-fc-card.is-sel .v2-fc-codename { color: var(--v2-oil-hi); }
 .v2-root .v2-fc-combo {
-  font-family: var(--v2-disp); font-size: 11.5px; letter-spacing: .02em; color: var(--v2-txt-dim); margin-top: 4px;
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-txt-dim);
 }
 .v2-root .v2-fc-combo i { font-style: normal; }
 .v2-root .v2-fc-combo b { color: var(--v2-rivet); }
-.v2-root .v2-fc-stats {
-  font-family: var(--v2-mono); font-size: 8px; letter-spacing: .04em; color: var(--v2-txt-faint); margin-top: 8px;
-}
 .v2-root .v2-fc-desc {
-  font-family: var(--v2-disp); font-size: 10.5px; line-height: 1.5; color: var(--v2-txt-faint); margin-top: 8px;
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.5; color: var(--v2-txt-faint); margin-top: 2px;
 }
+
+/* right stat rail — machine dossier readout */
+.v2-root .v2-fc-rail {
+  flex: 0 0 auto; display: flex; align-items: stretch;
+  border-left: 1px solid var(--v2-line); background: rgba(0, 0, 0, .18);
+}
+.v2-root .v2-fc-stat {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 52px; padding: 8px 4px;
+}
+.v2-root .v2-fc-stat + .v2-fc-stat { border-left: 1px solid var(--v2-line-soft); }
+.v2-root .v2-fc-stat em {
+  font-style: normal; font-family: var(--v2-mono); font-weight: 700; font-size:var(--v2-text-lg); color: var(--v2-txt);
+}
+.v2-root .v2-fc-card.is-sel .v2-fc-stat em { color: var(--v2-oil-hi); }
+.v2-root .v2-fc-stat:first-child em { color: var(--v2-low); }
+.v2-root .v2-fc-stat small { font-size:var(--v2-text-sm); letter-spacing: .1em; }
 .v2-root .v2-fc-sel-tag {
-  position: absolute; top: 9px; right: 9px; font-family: var(--v2-mono); font-size: 7px; letter-spacing: .12em;
-  color: #1a1206; background: var(--v2-oil); padding: 2px 6px;
+  position: absolute; top: 9px; right: 9px; font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .12em;
+  color: var(--v2-on-oil); background: var(--v2-oil); padding: 2px 6px;
 }
 
 /* ---- upgrade bay -------------------------------------------------------- */
@@ -164,127 +149,98 @@
 .v2-root .v2-fc-bay-head {
   display: flex; align-items: center; gap: 8px; padding: 12px 15px; flex-wrap: wrap;
   border-bottom: 1px solid var(--v2-line-soft);
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 13px; letter-spacing: .08em; color: var(--v2-oil);
+  font-size:var(--v2-text-base); color: var(--v2-oil);
 }
-.v2-root .v2-fc-bay-head span {
-  font-family: var(--v2-mono); font-weight: 400; font-size: 8px; letter-spacing: .06em; color: var(--v2-txt-faint);
-  text-transform: uppercase;
-}
+.v2-root .v2-fc-bay-head span { font-weight: 400; letter-spacing: .06em; }
 .v2-root .v2-fc-weapon { padding: 14px 15px; }
 .v2-root .v2-fc-weapon + .v2-fc-weapon { border-top: 1px solid var(--v2-line-soft); }
 .v2-root .v2-fc-weapon-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
-.v2-root .v2-fc-weapon-icon { font-size: 13px; line-height: 1; }
-.v2-root .v2-fc-weapon-name {
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 13px; letter-spacing: .06em; color: var(--v2-txt);
-}
-.v2-root .v2-fc-weapon-stat { font-family: var(--v2-mono); font-size: 8px; letter-spacing: .1em; color: var(--v2-txt-faint); }
+.v2-root .v2-fc-weapon-icon { font-size:var(--v2-text-base); line-height: 1; }
+.v2-root .v2-fc-weapon-name { font-size:var(--v2-text-base); }
+.v2-root .v2-fc-weapon-stat { font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .1em; color: var(--v2-txt-faint); }
 
-.v2-root .v2-fc-path { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .v2-root .v2-fc-node {
   position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 11px; text-align: left;
   cursor: pointer; background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt-dim);
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast), background var(--v2-dur-fast);
 }
 .v2-root .v2-fc-node:hover { border-color: var(--v2-rivet); }
-.v2-root .v2-fc-node.sel {
-  border-color: var(--v2-oil);
-  background: linear-gradient(180deg, rgba(231, 154, 61, .12), var(--v2-iron-800));
-  box-shadow: inset 0 0 0 1px rgba(231, 154, 61, .4);
-}
 .v2-root .v2-fc-node.nat-prototype {
   border-color: rgba(229, 83, 58, .5);
   background:
     repeating-linear-gradient(45deg, rgba(229, 83, 58, .06) 0 6px, transparent 6px 12px),
     var(--v2-iron-800);
 }
-.v2-root .v2-fc-node.nat-prototype.sel {
+.v2-root .v2-fc-node.nat-prototype.is-sel {
   border-color: var(--v2-ember);
   box-shadow: inset 0 0 0 1px rgba(229, 83, 58, .5), 0 0 16px rgba(229, 83, 58, .3);
 }
 .v2-root .v2-fc-node.locked { opacity: .4; cursor: not-allowed; }
 .v2-root .v2-fc-node.locked:hover { border-color: rgba(229, 83, 58, .5); }
 .v2-root .v2-fc-node-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.v2-root .v2-fc-node-mark { font-family: var(--v2-mono); font-size: 9px; font-weight: 700; color: var(--v2-txt-faint); }
-.v2-root .v2-fc-node.sel .v2-fc-node-mark { color: var(--v2-oil); }
-.v2-root .v2-fc-node-name {
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 12px; letter-spacing: .05em; color: var(--v2-txt);
-}
+.v2-root .v2-fc-node-mark { font-family: var(--v2-mono); font-size:var(--v2-text-sm); font-weight: 700; color: var(--v2-txt-faint); }
+.v2-root .v2-fc-node.is-sel .v2-fc-node-mark { color: var(--v2-oil); }
+.v2-root .v2-fc-node-name { font-size:var(--v2-text-sm); }
 .v2-root .v2-fc-node-nature {
-  font-style: normal; font-family: var(--v2-mono); font-size: 7px; letter-spacing: .1em; text-transform: uppercase;
-  padding: 1px 5px; border: 1px solid var(--v2-line); color: var(--v2-txt-faint);
+  font-style: normal; font-size:var(--v2-text-sm); letter-spacing: .1em;
+  padding: 1px 5px; border: 1px solid var(--v2-line);
 }
 .v2-root .v2-fc-node-nature.nat-field { color: var(--v2-txt-dim); }
 .v2-root .v2-fc-node-nature.nat-tuned { color: var(--v2-oil); border-color: var(--v2-oil-deep); }
 .v2-root .v2-fc-node-nature.nat-prototype { color: var(--v2-ember-hi); border-color: var(--v2-ember-deep); }
 .v2-root .v2-fc-node-tag {
-  font-family: var(--v2-mono); font-size: 7.5px; letter-spacing: .04em; line-height: 1.5; color: var(--v2-txt-faint);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .04em; line-height: 1.5; color: var(--v2-txt-faint);
 }
 .v2-root .v2-fc-warn { display: block; color: var(--v2-ember-hi); margin-bottom: 3px; }
 
 /* ---- equipment / unit-weapon grid --------------------------------------- */
-.v2-root .v2-fc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v2-root .v2-fc-grid { gap: 10px; }
 .v2-root .v2-fc-equip {
   display: flex; flex-direction: column; gap: 5px; padding: 12px 14px; text-align: left; cursor: pointer;
   background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-850));
   border: 1px solid var(--v2-line); color: var(--v2-txt-dim);
-  transition: border-color .15s ease, box-shadow .15s ease;
+  transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
 .v2-root .v2-fc-equip:hover { border-color: var(--v2-rivet); }
-.v2-root .v2-fc-equip.sel {
-  border-color: var(--v2-oil);
-  background: linear-gradient(180deg, rgba(231, 154, 61, .1), var(--v2-iron-850));
-  box-shadow: inset 0 0 0 1px rgba(231, 154, 61, .4), 0 0 18px rgba(231, 154, 61, .16);
-}
-.v2-root .v2-fc-equip-family {
-  font-family: var(--v2-mono); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--v2-txt-faint);
-}
-.v2-root .v2-fc-equip-label {
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 14px; letter-spacing: .05em; color: var(--v2-txt);
-}
-.v2-root .v2-fc-equip.sel .v2-fc-equip-label { color: var(--v2-oil-hi); }
-.v2-root .v2-fc-equip-passive { font-family: var(--v2-disp); font-size: 10.5px; line-height: 1.45; color: var(--v2-txt-dim); }
-.v2-root .v2-fc-equip-active { font-family: var(--v2-disp); font-size: 10px; line-height: 1.45; color: var(--v2-txt-faint); }
+.v2-root .v2-fc-equip-label { font-size:var(--v2-text-base); }
+.v2-root .v2-fc-equip.is-sel .v2-fc-equip-label { color: var(--v2-oil-hi); }
+.v2-root .v2-fc-equip-passive { font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.45; color: var(--v2-txt-dim); }
+.v2-root .v2-fc-equip-active { font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.45; color: var(--v2-txt-faint); }
 .v2-root .v2-fc-equip-active b { color: var(--v2-oil); }
 
 /* ---- confirm ------------------------------------------------------------ */
 .v2-root .v2-fc-confirm { display: flex; flex-direction: column; gap: 8px; }
-.v2-root .v2-fc-confirm-name {
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 18px; letter-spacing: .06em; color: var(--v2-oil-hi);
-}
+.v2-root .v2-fc-confirm-name { font-size:var(--v2-text-xl); color: var(--v2-oil-hi); }
 .v2-root .v2-fc-confirm-row {
   display: flex; align-items: center; gap: 8px; padding: 11px 13px;
   background: var(--v2-iron-800); border: 1px solid var(--v2-line);
-  font-family: var(--v2-disp); font-size: 12.5px; letter-spacing: .02em; color: var(--v2-txt-dim);
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-txt-dim);
 }
-.v2-root .v2-fc-confirm-flavor { font-style: italic; color: var(--v2-txt-faint); font-size: 11px; }
+.v2-root .v2-fc-confirm-flavor { font-style: italic; color: var(--v2-txt-faint); font-size:var(--v2-text-sm); }
 
 /* ---- nav bar ------------------------------------------------------------ */
 .v2-root .v2-fw-nav { display: flex; gap: 12px; padding: 14px 20px 20px; border-top: 1px solid var(--v2-line-soft); }
 .v2-root .v2-fw-btn {
   padding: 14px 20px; cursor: pointer;
   background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-800));
-  border: 1px solid var(--v2-line); border-bottom: 2px solid #05070a; color: var(--v2-txt);
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 13px; letter-spacing: .12em;
-  transition: border-color .15s ease, box-shadow .15s ease;
+  border: 1px solid var(--v2-line); border-bottom: 2px solid var(--v2-edge-dark); color: var(--v2-txt);
+  font-family: var(--v2-stencil); font-weight: 700; font-size:var(--v2-text-base); letter-spacing: .12em;
+  transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
 .v2-root .v2-fw-btn:hover:not(:disabled) { border-color: var(--v2-rivet); }
 .v2-root .v2-fw-btn.ghost { color: var(--v2-txt-dim); }
 .v2-root .v2-fw-btn:not(.ghost) { flex: 1; }
-.v2-root .v2-fw-btn.cta {
-  background: linear-gradient(180deg, var(--v2-oil-hi), var(--v2-oil-deep));
-  border: 1px solid #ffcf82; border-bottom: 3px solid #7c4d14; color: #1a1206;
-  font-size: 15px; letter-spacing: .16em; box-shadow: 0 0 20px rgba(231, 154, 61, .3);
-}
-.v2-root .v2-fw-btn.cta:hover:not(:disabled) { box-shadow: 0 0 28px rgba(231, 154, 61, .45); }
 .v2-root .v2-fw-btn:disabled { opacity: .5; cursor: not-allowed; }
-.v2-root .v2-fw-btn.cta:disabled {
-  background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-800)); border-color: var(--v2-line);
-  border-bottom-color: #05070a; color: var(--v2-txt-faint); box-shadow: none;
-}
 
 @media (max-width: 560px) {
   .v2-root .v2-fc-kinds { flex-direction: column; }
-  .v2-root .v2-fc-roster { grid-template-columns: 1fr; }
   .v2-root .v2-fc-grid { grid-template-columns: 1fr; }
   .v2-root .v2-fw-step-label { display: none; }
+  /* stack the dossier: plate + info on top, stat rail becomes a full-width footer strip */
+  .v2-root .v2-fc-card { flex-wrap: wrap; }
+  .v2-root .v2-fc-info { flex: 1 1 60%; }
+  .v2-root .v2-fc-rail {
+    flex: 1 1 100%; border-left: 0; border-top: 1px solid var(--v2-line); justify-content: space-around;
+  }
+  .v2-root .v2-fc-stat { flex: 1; }
 }

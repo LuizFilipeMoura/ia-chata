@@ -36,22 +36,18 @@
   padding: 34px 30px 30px;
 }
 
-/* corner rivets */
+/* corner rivets — .v2-rivet primitive supplies the dot; this is its unique
+   per-corner positioning. */
 .v2-root .v2-join-rivet {
-  position: absolute;
   top: 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #69727f, #20252e 60%, rgba(0, 0, 0, 0.7));
 }
 .v2-root .v2-join-rivet--l { left: 8px; }
 .v2-root .v2-join-rivet--r { right: 8px; }
 
-/* hazard stripe under the rivets */
+/* hazard stripe under the rivets — .v2-hazard primitive supplies the
+   repeating diagonal; --v2-hazard-w/--v2-hazard-accent are tuned inline. */
 .v2-root .v2-join-hazard {
   height: 14px;
-  background: repeating-linear-gradient(-45deg, #141008 0 11px, var(--v2-oil-deep) 11px 22px);
   opacity: 0.85;
   margin-bottom: 26px;
 }
@@ -59,10 +55,10 @@
 .v2-root .v2-join-head {
   text-align: center;
 }
+/* .v2-title primitive supplies stencil face/weight; these are its unique
+   size, tracking and oil-glow overrides. */
 .v2-root .v2-join-title {
-  font-family: var(--v2-stencil);
-  font-weight: 700;
-  font-size: 44px;
+  font-size:var(--v2-text-4xl);
   line-height: 0.9;
   letter-spacing: 0.06em;
   color: var(--v2-oil);
@@ -75,11 +71,10 @@
   font-style: normal;
   margin: 0 8px;
 }
+/* .v2-eyebrow primitive supplies mono/size/color; tagline keeps its own
+   much-wider tracking. */
 .v2-root .v2-join-tagline {
-  font-family: var(--v2-mono);
-  font-size: 9.5px;
   letter-spacing: 0.42em;
-  color: var(--v2-txt-faint);
   margin-top: 12px;
 }
 
@@ -89,23 +84,18 @@
   margin: 26px 0 22px;
 }
 
+/* .v2-eyebrow primitive supplies mono/size/color/tracking/case. */
 .v2-root .v2-join-label {
   display: block;
-  font-family: var(--v2-mono);
-  font-size: 9px;
-  letter-spacing: 0.24em;
-  color: var(--v2-txt-faint);
-  text-transform: uppercase;
   margin-bottom: 7px;
 }
 
+/* .v2-well primitive supplies the sunken bg/border/inset-shadow; this is its
+   unique layout. */
 .v2-root .v2-join-field {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #07090c;
-  border: 1px solid var(--v2-line);
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
   padding: 0 12px;
   margin-bottom: 16px;
 }
@@ -122,14 +112,14 @@
   color: var(--v2-txt);
   font-family: var(--v2-disp);
   font-weight: 500;
-  font-size: 15px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.06em;
   padding: 13px 0;
 }
 .v2-root .v2-join-input--code {
   color: var(--v2-oil-hi);
   font-family: var(--v2-mono);
-  font-size: 16px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.18em;
 }
 
@@ -155,28 +145,24 @@
 .v2-root .v2-side--b:not(.is-sel):hover {
   border-color: var(--v2-rivet);
 }
+/* .v2-eyebrow primitive supplies mono/color/tracking/case; tag keeps its own
+   slightly smaller size. */
 .v2-root .v2-side-tag {
-  font-family: var(--v2-mono);
-  font-size: 8px;
-  letter-spacing: 0.2em;
-  color: var(--v2-txt-faint);
+  font-size:var(--v2-text-sm);
   margin-bottom: 5px;
 }
 .v2-root .v2-side-name {
   font-family: var(--v2-stencil);
   font-weight: 700;
-  font-size: 17px;
+  font-size:var(--v2-text-lg);
   letter-spacing: 0.08em;
   color: var(--v2-txt-dim);
 }
 
-/* selected — glowing oil (mirrors the mockup's Side A "active" look) */
+/* selected — .is-sel primitive supplies the oil border/ring/glow; the flat
+   card gradient here is the mockup's own recipe (kept via the token). */
 .v2-root .v2-side.is-sel {
-  background: linear-gradient(180deg, #241a0d, #1a1207);
-  border-color: var(--v2-oil-deep);
-  box-shadow:
-    inset 0 0 0 1px rgba(231, 154, 61, 0.3),
-    0 0 16px rgba(231, 154, 61, 0.18);
+  background: var(--v2-grad-oil-sel);
 }
 .v2-root .v2-side.is-sel .v2-side-tag {
   color: var(--v2-oil);
@@ -197,36 +183,19 @@
   animation: v2-lampfast 2s infinite;
 }
 
+/* .v2-cta primitive supplies the forged-oil face/hover/disabled; this is its
+   layout override (join keeps square corners, no border-radius). */
 .v2-root .v2-join-cta {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(180deg, #f0a94a, #c47a26);
-  border: 1px solid #ffcf82;
-  border-bottom: 3px solid #7c4d14;
-  color: #1a1206;
-  font-family: var(--v2-stencil);
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow:
-    0 4px 0 rgba(0, 0, 0, 0.5),
-    0 0 24px rgba(231, 154, 61, 0.3);
-}
-.v2-root .v2-join-cta:not([disabled]):hover {
-  filter: brightness(1.08);
-}
-.v2-root .v2-join-cta[disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: saturate(0.6);
+  border-radius: 0;
+  font-size:var(--v2-text-lg);
 }
 
 .v2-root .v2-join-status {
   text-align: center;
   font-family: var(--v2-mono);
-  font-size: 9px;
+  font-size:var(--v2-text-sm);
   letter-spacing: 0.16em;
   color: var(--v2-ok);
   margin: 16px 0 0;

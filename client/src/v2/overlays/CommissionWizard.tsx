@@ -158,7 +158,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     onSelect: (id: string) => void,
     otherIsPrototype: boolean,
   ) => (
-    <div className="v2-fc-path">
+    <div className="v2-fc-path v2-grid-3">
       {(WEAPON_UPGRADES[name] || []).map((u, i) => {
         const locked = u.nature === "prototype" && otherIsPrototype && u.id !== selected;
         const isSel = u.id === selected;
@@ -168,14 +168,14 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
             type="button"
             disabled={locked}
             data-nature={u.nature}
-            className={"v2-fc-node nat-" + u.nature + (isSel ? " sel" : "") + (locked ? " locked" : "")}
+            className={"v2-fc-node nat-" + u.nature + (isSel ? " is-sel" : "") + (locked ? " locked" : "")}
             title={locked ? "A rig may run at most one Prototype upgrade" : u.tag}
             onClick={() => !locked && onSelect(u.id)}
           >
             <span className="v2-fc-node-head">
               <span className="v2-fc-node-mark">{NODE_MARK[i]}</span>
-              <span className="v2-fc-node-name">{u.name}</span>
-              <em className={"v2-fc-node-nature nat-" + u.nature}>{natureLabel(u.nature)}</em>
+              <span className="v2-fc-node-name v2-title">{u.name}</span>
+              <em className={"v2-fc-node-nature nat-" + u.nature + " v2-eyebrow"}>{natureLabel(u.nature)}</em>
             </span>
             <small className="v2-fc-node-tag">
               {u.nature === "prototype" ? <span className="v2-fc-warn">⚠ one per rig</span> : null}
@@ -194,14 +194,14 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     const ml = WEAPONS.melee[state.melee];
     return (
       <div className="v2-fc-bay">
-        <div className="v2-fc-bay-head">
+        <div className="v2-fc-bay-head v2-title">
           ◈ {CHASSIS_NAME[state.chassis] || state.cls} · Upgrade Bay
-          <span>commit one path per weapon</span>
+          <span className="v2-eyebrow">commit one path per weapon</span>
         </div>
         <div className="v2-fc-weapon">
           <div className="v2-fc-weapon-head">
             <span className="v2-fc-weapon-icon">{weaponGlyph(state.longRange)}</span>
-            <span className="v2-fc-weapon-name">{state.longRange}</span>
+            <span className="v2-fc-weapon-name v2-title">{state.longRange}</span>
             <small className="v2-fc-weapon-stat">ROF {lr.rof} · STR {lr.str} · {lr.minRange}–{lr.maxRange}"</small>
           </div>
           {upgradePath(state.longRange, state.longRangeUpgrade, (id) =>
@@ -212,7 +212,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         <div className="v2-fc-weapon">
           <div className="v2-fc-weapon-head">
             <span className="v2-fc-weapon-icon">{weaponGlyph(state.melee)}</span>
-            <span className="v2-fc-weapon-name">{state.melee}</span>
+            <span className="v2-fc-weapon-name v2-title">{state.melee}</span>
             <small className="v2-fc-weapon-stat">ROF {ml.rof} · STR {ml.str} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small>
           </div>
           {upgradePath(state.melee, state.meleeUpgrade, (id) =>
@@ -234,12 +234,12 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
               key={k}
               type="button"
               data-kind={k}
-              className={"v2-fc-kind" + (k === state.kind ? " sel" : "")}
+              className={"v2-fc-kind" + (k === state.kind ? " is-sel" : "")}
               onClick={() => patch({ kind: k, step: 0 })}
             >
               <span className="v2-fc-kind-top">
                 <span className="v2-fc-kind-glyph">{KIND_GLYPH[k]}</span>
-                <span className="v2-fc-kind-label">{UNIT_KINDS[k].label}</span>
+                <span className="v2-fc-kind-label v2-title">{UNIT_KINDS[k].label}</span>
               </span>
               <span className="v2-fc-kind-desc">{KIND_DESC[k]}</span>
               {k === state.kind ? <span className="v2-fc-kind-lamp" aria-hidden="true" /> : null}
@@ -254,38 +254,40 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         <div className="v2-fw-body">
           <div className="v2-fc-cue">
             <span className="v2-fc-cue-lead">◈ Choose your chassis</span>
-            <span className="v2-fc-cue-sub">— weapons &amp; weight class are fixed by the frame</span>
+            <span className="v2-fc-cue-sub v2-eyebrow">— weapons &amp; weight class are fixed by the frame</span>
           </div>
           <div className="v2-fc-roster">
             {CHASSIS.map((pb) => {
               const sel = pb.id === state.chassis;
               return (
-                <div key={pb.id} className={"v2-fc-slot" + (sel ? " sel" : "")}>
+                <div key={pb.id} className={"v2-fc-slot" + (sel ? " is-sel" : "")}>
                   <button
                     type="button"
                     data-class={pb.class}
-                    className={"v2-fc-card v2-fc-" + pb.class + (sel ? " sel" : "")}
+                    className={"v2-fc-card v2-fc-" + pb.class + (sel ? " is-sel" : "")}
                     onClick={() => selectChassis(pb.id)}
                   >
                     <span className="v2-fc-plate">
                       <span className="v2-fc-emblem">{pb.class[0].toUpperCase()}</span>
-                      <span className="v2-fc-classshort">{pb.class}</span>
+                      <span className="v2-fc-classshort v2-eyebrow">{pb.class}</span>
                     </span>
                     <span className="v2-fc-info">
                       <span className="v2-fc-tierrow">
-                        <span className="v2-fc-tier">{pb.class} class</span>
-                        <span className="v2-fc-heat">heat cap {HEAT_CAPACITY[pb.class]}</span>
+                        <span className="v2-fc-tier v2-eyebrow">{pb.class} class</span>
+                        <span className="v2-fc-codename v2-title">{CHASSIS_NAME[pb.id] || pb.label}</span>
                       </span>
-                      <span className="v2-fc-codename">{CHASSIS_NAME[pb.id] || pb.label}</span>
                       <span className="v2-fc-combo">
                         <i>{weaponGlyph(pb.longRange)}</i> {pb.longRange} <b>·</b> <i>{weaponGlyph(pb.melee)}</i> {pb.melee}
-                      </span>
-                      <span className="v2-fc-stats">
-                        Hull {RIG_DEFAULTS[pb.class].hull} · Arms/Legs {RIG_DEFAULTS[pb.class].arms} · Engine {RIG_DEFAULTS[pb.class].engine}
                       </span>
                       {content[pb.id]?.description ? (
                         <span className="v2-fc-desc">{content[pb.id]!.description}</span>
                       ) : null}
+                    </span>
+                    <span className="v2-fc-rail" aria-hidden="true">
+                      <span className="v2-fc-stat"><em>{HEAT_CAPACITY[pb.class]}</em><small className="v2-eyebrow">heat cap</small></span>
+                      <span className="v2-fc-stat"><em>{RIG_DEFAULTS[pb.class].hull}</em><small className="v2-eyebrow">hull</small></span>
+                      <span className="v2-fc-stat"><em>{RIG_DEFAULTS[pb.class].arms}</em><small className="v2-eyebrow">arms/legs</small></span>
+                      <span className="v2-fc-stat"><em>{RIG_DEFAULTS[pb.class].engine}</em><small className="v2-eyebrow">engine</small></span>
                     </span>
                     {sel ? <span className="v2-fc-sel-tag" aria-hidden="true">◈ SEL</span> : null}
                   </button>
@@ -304,18 +306,18 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         <div className="v2-fw-body">
           <div className="v2-fc-cue">
             <span className="v2-fc-cue-lead">◈ Unit weapon</span>
-            <span className="v2-fc-cue-sub">— one flat-pick armament</span>
+            <span className="v2-fc-cue-sub v2-eyebrow">— one flat-pick armament</span>
           </div>
-          <div className="v2-fc-grid">
+          <div className="v2-fc-grid v2-grid-2">
             {Object.entries(UNIT_WEAPONS).map(([name, w]: [string, any]) => (
               <button
                 key={name}
                 type="button"
-                className={"v2-fc-equip" + (name === state.unit ? " sel" : "")}
+                className={"v2-fc-equip" + (name === state.unit ? " is-sel" : "")}
                 onClick={() => patch({ unit: name })}
               >
-                <div className="v2-fc-equip-family">{w.melee ? "Melee" : "Ranged"}</div>
-                <div className="v2-fc-equip-label">{name}</div>
+                <div className="v2-fc-equip-family v2-eyebrow">{w.melee ? "Melee" : "Ranged"}</div>
+                <div className="v2-fc-equip-label v2-title">{name}</div>
                 <div className="v2-fc-equip-passive">
                   ROF {w.rof} · STR {w.str} · {w.melee ? `RNG ${w.rng[0]}/${w.rng[1]}"` : `Sweet ${w.sweet}" · ${w.minRange}–${w.maxRange}"`}
                 </div>
@@ -332,18 +334,18 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         <div className="v2-fw-body">
           <div className="v2-fc-cue">
             <span className="v2-fc-cue-lead">◈ Fit equipment</span>
-            <span className="v2-fc-cue-sub">— one slot per rig</span>
+            <span className="v2-fc-cue-sub v2-eyebrow">— one slot per rig</span>
           </div>
-          <div className="v2-fc-grid">
+          <div className="v2-fc-grid v2-grid-2">
             {Object.entries(EQUIPMENT).map(([id, e]) => (
               <button
                 key={id}
                 type="button"
-                className={"v2-fc-equip" + (id === state.equipment ? " sel" : "")}
+                className={"v2-fc-equip" + (id === state.equipment ? " is-sel" : "")}
                 onClick={() => patch({ equipment: id })}
               >
-                <div className="v2-fc-equip-family">{e.family}</div>
-                <div className="v2-fc-equip-label">{e.label}</div>
+                <div className="v2-fc-equip-family v2-eyebrow">{e.family}</div>
+                <div className="v2-fc-equip-label v2-title">{e.label}</div>
                 <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
                 <div className="v2-fc-equip-active">
                   Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
@@ -357,7 +359,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
       const w = UNIT_WEAPONS[state.unit];
       body = (
         <div className="v2-fw-body v2-fc-confirm">
-          <div className="v2-fc-confirm-name">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
+          <div className="v2-fc-confirm-name v2-title">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
           <div className="v2-fc-confirm-row">{weaponGlyph(state.unit)} {state.unit} · STR {w.str} · ROF {w.rof}</div>
         </div>
       );
@@ -368,7 +370,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     const meleeUpgrade = (WEAPON_UPGRADES[state.melee] || []).find((u) => u.id === state.meleeUpgrade);
     body = (
       <div className="v2-fw-body v2-fc-confirm">
-        <div className="v2-fc-confirm-name">{unitName()} — {state.cls}</div>
+        <div className="v2-fc-confirm-name v2-title">{unitName()} — {state.cls}</div>
         <div className="v2-fc-confirm-row">{weaponGlyph(state.longRange)} {state.longRange} · {lrUpgrade?.name || "Upgrade ?"}</div>
         <div className="v2-fc-confirm-row">{weaponGlyph(state.melee)} {state.melee} · {meleeUpgrade?.name || "Upgrade ?"}</div>
         <div className="v2-fc-confirm-row">🛠 {e.label} · {e.passive}</div>
@@ -383,18 +385,18 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className={"v2-fw-scrim" + (show ? " show" : "")}
+      className={"v2-fw-scrim v2-scrim v2-scrim--oil" + (show ? " show" : "")}
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <section
-        className="v2-fw-card"
+        className="v2-fw-card v2-panel"
         role="dialog"
         aria-modal="true"
         aria-label={`Commission a ${UNIT_KINDS[state.kind].label}`}
       >
         <div className="v2-fw-head">
-          <div className="v2-fw-order">Commission Order · Form 7-C</div>
-          <h2 className="v2-fw-title">◈ Commission a {UNIT_KINDS[state.kind].label}</h2>
+          <div className="v2-fw-order v2-eyebrow">Commission Order · Form 7-C</div>
+          <h2 className="v2-fw-title v2-title">◈ Commission a {UNIT_KINDS[state.kind].label}</h2>
           <div className="v2-fw-rail">
             {STEPS.map((label, i) => (
               <div
@@ -422,7 +424,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
               Next
             </button>
           ) : (
-            <button type="button" className="v2-fw-btn cta" disabled={!canAdd} onClick={submit}>
+            <button type="button" className="v2-fw-btn cta v2-cta" disabled={!canAdd} onClick={submit}>
               {canAdd ? "Commission" : "Roster full"}
             </button>
           )}

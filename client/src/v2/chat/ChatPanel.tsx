@@ -78,15 +78,15 @@ export function ChatPanel({ onBotMessage }: { onBotMessage: () => void }) {
       aria-label="The Quartermaster"
     >
       <header className="v2-qm-head">
-        <div className="v2-qm-badge" aria-hidden>📻</div>
+        <div className="v2-qm-badge v2-badge" aria-hidden>📻</div>
         <div className="v2-qm-titles">
           <div className="v2-qm-title">THE QUARTERMASTER</div>
-          <div className="v2-qm-sub">RULES MASTER · VOICE LINK OPEN</div>
+          <div className="v2-qm-sub v2-eyebrow">RULES MASTER · VOICE LINK OPEN</div>
         </div>
-        <span className="v2-qm-lamp" aria-hidden />
+        <span className="v2-qm-lamp v2-lamp v2-lamp--ok" aria-hidden />
         <div className="v2-qm-tools" role="toolbar" aria-label="Assistant controls">
           <button
-            className={`v2-qm-chip${chat.think ? " v2-qm-active" : ""}`}
+            className={`v2-qm-chip${chat.think ? " is-sel" : ""}`}
             aria-pressed={chat.think}
             title="Show the model's reasoning before it answers (slower). Turn off for faster replies."
             type="button"
@@ -95,7 +95,7 @@ export function ChatPanel({ onBotMessage }: { onBotMessage: () => void }) {
             🧠
           </button>
           <button
-            className={`v2-qm-chip${speech.tts ? " v2-qm-active" : ""}`}
+            className={`v2-qm-chip${speech.tts ? " is-sel" : ""}`}
             aria-pressed={speech.tts}
             title="Read answers aloud"
             type="button"

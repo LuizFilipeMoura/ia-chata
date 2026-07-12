@@ -9,6 +9,11 @@ import ChoiceField from "../overlays/ChoiceField";
 import ReactionPicker from "../overlays/ReactionPicker";
 import "../styles/overlay.css";
 import type { Rig, Resolution, PrepType } from "../../state/types";
+import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
+import { phaseSummary, actionBudget } from "/shared/battle-view.js";
+import { useMySide } from "../../hooks/useMySide";
+import { HEAT_CAPACITY } from "/shared/game-state.js";
+import { playDamage, playHeat, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
 
 interface RecapLine {
   text: string;
@@ -77,6 +82,14 @@ export function AnswerGateBody({
   );
 }
 
+/** Sum of a rig's current Structure Points across all of its kind's parts. */
+function totalSp(rig: Rig): number {
+  return partNamesOf(kindOf(rig)).reduce(
+    (sum, part) => sum + ((rig as unknown as Record<string, { sp?: number }>)[part]?.sp ?? 0),
+    0,
+  );
+}
+
 /**
  * Native V2 port of V1's useBattleWatchers (battle.js:47-120). Runs the four
  * battle overlay watchers as effects, driving the V2 overlay stack:
@@ -84,14 +97,17 @@ export function AnswerGateBody({
  *   2. Answer-token gate — mandatory facedown-reaction placement.
  *   3. Reaction watcher — defender resolves a triggered facedown reaction.
  *   4. Activation-summary watcher — recaps a Rig's activation when it ends.
+ * Also drives two audio effects: damage SFX on any SP drop, and the engine
+ * idle loop while it's the local player's turn during activation.
  * Renders nothing; drives the V2 roll/drawer overlay services. Call once.
  */
 export function useV2BattleWatchers(): void {
   const { rigs, game, session } = useRoomState();
   const { playResolution } = useV2Roll();
   const { openDrawer, closeDrawer } = useV2Drawer();
-  const { sendReact } = useV2BattleActions();
+  const { sendReact, endActivation } = useV2BattleActions();
   const { openAttack } = useV2Wizard();
+  const mySide = useMySide();
 
   // ---- Resolution log watcher (battle.js:47-56) ----
   const lastSeenResolution = useRef(0);
@@ -113,12 +129,85 @@ export function useV2BattleWatchers(): void {
     })();
   }, [game?.resolutions, playResolution]);
 
+  // ---- Damage SFX: play when any rig's total Structure Points drops ----
+  const spBaseline = useRef<Map<number, number> | null>(null);
+  useEffect(() => {
+    const prev = spBaseline.current;
+    const next = new Map<number, number>();
+    let dropped = false;
+    for (const r of rigs) {
+      const t = totalSp(r);
+      next.set(r.id, t);
+      if (prev && prev.has(r.id) && t < prev.get(r.id)!) dropped = true;
+    }
+    spBaseline.current = next;
+    if (prev && dropped) playDamage(); // skip the first render (prev === null)
+  }, [rigs]);
+
+  // ---- Heat SFX: furnace roar when a rig crosses into overheat ----
+  const heatBaseline = useRef<Map<number, number> | null>(null);
+  useEffect(() => {
+    const prev = heatBaseline.current;
+    const next = new Map<number, number>();
+    let overheated = false;
+    for (const r of rigs) {
+      const heat = r.engine?.heat ?? 0;
+      next.set(r.id, heat);
+      const cap = HEAT_CAPACITY[r.weightClass];
+      if (prev && cap != null && prev.has(r.id) && prev.get(r.id)! <= cap && heat > cap) {
+        overheated = true; // crossed from safe into overheat
+      }
+    }
+    heatBaseline.current = next;
+    if (prev && overheated) playHeat();
+  }, [rigs]);
+
+  // ---- Engine idle loop: rumble while it's your turn during activation ----
+  const myTurn =
+    game?.phase === "activation" && phaseSummary(game, rigs).turnSide === mySide;
+  useEffect(() => {
+    if (myTurn) startEngineLoop();
+    else stopEngineLoop();
+    return () => stopEngineLoop();
+  }, [myTurn]);
+
+  // ---- Engine start: ignition one-shot each time one of YOUR rigs activates ----
+  const activeRigId = game?.turn?.activeRigId ?? null;
+  const startSeeded = useRef(false);
+  useEffect(() => {
+    const active = activeRigId != null ? rigs.find((r) => r.id === activeRigId) : null;
+    const mineActivating =
+      !!active && (active.owner || "a") === mySide && game?.phase === "activation";
+    if (startSeeded.current && mineActivating) playEngineStart();
+    startSeeded.current = true; // skip the first render (hydration)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRigId]);
+
+  // ---- Auto-end: once the active rig has spent its whole budget, end its
+  // activation for it (no manual "end turn" button). Only the side that owns the
+  // active rig drives the end, and only once per activation. Ending early while
+  // budget remains is the Shut Down / End-Turn control in the ActionConsole. ----
+  const autoEndedFor = useRef<number | null>(null);
+  useEffect(() => {
+    if (game?.phase !== "activation") { autoEndedFor.current = null; return; }
+    const t = game?.turn;
+    const activeId = t?.activeRigId ?? null;
+    if (!t || activeId == null) { autoEndedFor.current = null; return; }
+    const rig = rigs.find((r) => r.id === activeId);
+    if (!rig || (rig.owner || "a") !== mySide) return;
+    if (actionBudget(rig, t).left > 0) { autoEndedFor.current = null; return; }
+    if (autoEndedFor.current === activeId) return; // already ended this activation
+    autoEndedFor.current = activeId;
+    endActivation(rig);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.turn?.activeRigId, game?.turn?.actionsUsed, game?.turn?.actionsMax, game?.phase, mySide, rigs]);
+
   // ---- Answer-token gate: mandatory immediate placement ----
   const sendCommand = useCommands();
   const answerShownFor = useRef<number>(-1); // remaining count last shown
   useEffect(() => {
     const g = gameRef.current;
-    const mine = sessionRef.current?.side || "a";
+    const mine = mySideRef.current;
     const gate = g?.pendingAnswer;
     if (!gate || gate.side !== mine) { answerShownFor.current = -1; return; }
     if (answerShownFor.current === gate.remaining) return; // already prompting this step
@@ -150,7 +239,7 @@ export function useV2BattleWatchers(): void {
       ],
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side]);
+  }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side, mySide]);
 
   // ---- Reaction watcher: defender resolves a triggered facedown reaction ----
   // When an incoming attack reveals an Evasive/Return-Fire prep, the server parks
@@ -159,7 +248,7 @@ export function useV2BattleWatchers(): void {
   const reactionShown = useRef(false);
   useEffect(() => {
     const g = gameRef.current;
-    const mine = sessionRef.current?.side || "a";
+    const mine = mySideRef.current;
     const pr = g?.pendingReaction;
     if (!pr || pr.defender !== mine) { reactionShown.current = false; return; }
     if (reactionShown.current) return;
@@ -230,7 +319,7 @@ export function useV2BattleWatchers(): void {
       sendReact({ decline: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.pendingReaction?.targetId, game?.pendingReaction?.kind]);
+  }, [game?.pendingReaction?.targetId, game?.pendingReaction?.kind, mySide]);
 
   // ---- Activation summary watcher (battle.js:58-120) ----
   const watchedActiveRig = useRef<number | null>(null); // rig active on previous render
@@ -250,6 +339,11 @@ export function useV2BattleWatchers(): void {
   rigsRef.current = rigs;
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  // The side "I" am acting as — impersonation-aware (ViewSideContext override wins
+  // over session.side). Mandatory gates key off this so seed-room testers acting
+  // as either side still get the answer/reaction drawer. See useMySide.
+  const mySideRef = useRef(mySide);
+  mySideRef.current = mySide;
 
   useEffect(() => {
     const g = gameRef.current;

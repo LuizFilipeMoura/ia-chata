@@ -204,6 +204,23 @@ test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
   assert.equal(computeModifiedAim(mortarRig, mortar, { distance: 18, cover: 2 }), 3);
 });
 
+test("painted target cancels cover and grants +1 Aim for ranged attacks", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 8 } };
+  const ranged = { peak: 0, dropoff: 0, sweet: 6 }; // flat ACC 0
+  const plain   = computeModifiedAim(attacker, ranged, { distance: 6, cover: 2 });
+  const painted = computeModifiedAim(attacker, ranged, { distance: 6, cover: 2, painted: true });
+  // cover 2 removed (+2 to accTotal) AND +1 Aim ⇒ modAim drops by 3.
+  assert.equal(plain - painted, 3);
+});
+
+test("painted does not help melee weapons", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 8 } };
+  const melee = { melee: true, acc: [0, 0] };
+  const a = computeModifiedAim(attacker, melee, { distance: 2, cover: 0 });
+  const b = computeModifiedAim(attacker, melee, { distance: 2, cover: 0, painted: true });
+  assert.equal(a, b);
+});
+
 test("resolveAttack emits a per-die roll for each hit-die plus a location d12, each with a tone", () => {
   // Autocannon: rof 4, acc [0,-1], no Full Auto requested here. Medium attacker,
   // full hull, near range, front arc, cover 0, fire (not aimed) -> modAim =

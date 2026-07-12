@@ -49,7 +49,7 @@ const NODE_MARK = ["I", "II", "III"]; // path rank for each nature step
 const NATURE_LABEL: Record<string, string> = {
   field: "Standard",
   tuned: "Machined",
-  prototype: "Wildcat",
+  prototype: "Prototype",
 };
 const natureLabel = (nature: string) => NATURE_LABEL[nature] || nature;
 
@@ -203,7 +203,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
             disabled={locked}
             data-nature={u.nature}
             className={"rw-node nat-" + u.nature + (isSel ? " sel" : "") + (locked ? " locked" : "")}
-            title={locked ? "A rig may run at most one Wildcat upgrade" : u.tag}
+            title={locked ? "A rig may run at most one Prototype upgrade" : u.tag}
             onClick={() => !locked && onSelect(u.id)}
           >
             <span className="rw-node-mark">{NODE_MARK[i]}</span>

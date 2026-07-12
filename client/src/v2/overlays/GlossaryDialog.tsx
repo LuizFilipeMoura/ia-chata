@@ -22,11 +22,11 @@ export function GlossaryDialog({ open, onClose }: Props) {
 
   if (!open) return null;
   return (
-    <div className="v2-gloss-dialog-scrim" onClick={onClose}>
-      <div className="v2-gloss-dialog" role="dialog" aria-modal="true" aria-label="Glossary" onClick={(e) => e.stopPropagation()}>
+    <div className="v2-gloss-dialog-scrim v2-scrim" onClick={onClose}>
+      <div className="v2-gloss-dialog v2-panel" role="dialog" aria-modal="true" aria-label="Glossary" onClick={(e) => e.stopPropagation()}>
         <div className="v2-gloss-dialog-head">
           <div className="v2-gloss-dialog-title">ⓘ Glossary</div>
-          <button type="button" className="v2-gloss-dialog-close" onClick={onClose} aria-label="Close glossary">✕</button>
+          <button type="button" className="v2-gloss-dialog-close v2-close" onClick={onClose} aria-label="Close glossary">✕</button>
         </div>
         {GLOSSARY.map((g) => (
           <div className="v2-gloss-entry" key={g.id}>

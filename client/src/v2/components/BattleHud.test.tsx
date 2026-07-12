@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { AppProviders } from "../../AppProviders";
 import { useRoomDispatch } from "../../state/RoomStateContext";
 import type { Rig, ServerState } from "../../state/types";
 import { BattleHud } from "./BattleHud";
+import { _resetForTest, getEnabled } from "../audio/audioMixer";
 
 const rig = (id: number, owner: "a"|"b"): Rig => ({
   id, name: "R"+id, owner, weightClass: "light",
@@ -31,4 +33,17 @@ test("renders nothing pre-battle", () => {
     game:{ round:1, phase:"setup", started:false, sides:[] } };
   const { container } = render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
   expect(container.querySelector(".v2-bh")).toBeNull();
+});
+test("audio mute button toggles battle audio", async () => {
+  localStorage.clear(); _resetForTest();
+  const user = userEvent.setup();
+  const state: ServerState = { version:1, ownerSide:"a", field:null, rigs:[rig(1,"a"),rig(2,"b")],
+    game:{ round:1, phase:"activation", started:true,
+      sides:[{id:"a",name:"Kostov",vp:0,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 } } };
+  render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
+  const btn = await screen.findByRole("button", { name: /audio/i });
+  expect(getEnabled()).toBe(true);
+  await user.click(btn);
+  expect(getEnabled()).toBe(false);
 });

@@ -34,6 +34,15 @@ interface DieState {
 const rollTone = (roll: { sides: number; tone?: string }): string =>
   roll.tone || (roll.sides === 12 ? "cool" : "");
 
+// Per-die verdict word shown under a settled to-hit die, alongside the tone
+// color — crit/ok land, miss whiffs. Location (cool) and untoned dice get none.
+const verdictLabel = (tone: string): string | null => {
+  if (tone === "crit") return "CRIT!";
+  if (tone === "ok") return "HIT!";
+  if (tone === "miss") return "FAILED!";
+  return null;
+};
+
 interface EffectState {
   text: string;
   delay: number;
@@ -280,24 +289,27 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   const rolling = dice.length > 0 && dice.some((d) => !d.settled);
 
   return (
-    <div className="v2-root">
+    <div className="v2-root v2-portal-bare">
       <div
-        className={"v2-roll-scrim" + (visible ? " show" : "")}
+        className={"v2-roll-scrim v2-scrim v2-scrim--oil" + (visible ? " show" : "")}
         hidden={hidden}
         onClick={(e) => {
           if (e.target === e.currentTarget) closeRoll();
         }}
       >
         <div
-          className="v2-roll-console"
+          className="v2-roll-console v2-panel v2-panel--sharp"
           role="dialog"
           aria-modal="true"
           aria-label="Dice resolution"
         >
           <div className="v2-roll-head">
-            <span className="v2-roll-kind">{kind}</span>
+            <div className="v2-roll-head-id">
+              <span className="v2-roll-tag v2-eyebrow" aria-hidden="true">▚ dice cast</span>
+              <span className="v2-roll-kind v2-title">{kind}</span>
+            </div>
             <button
-              className="v2-roll-close"
+              className="v2-roll-close v2-close"
               type="button"
               aria-label="Dismiss"
               onClick={closeRoll}
@@ -311,7 +323,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                 <span className="v2-rx-token-face v2-rx-token-back" aria-hidden="true">⟡</span>
                 <span className="v2-rx-token-face v2-rx-token-front" aria-hidden="true">{reveal.icon}</span>
               </div>
-              <span className="v2-die-label">{reveal.label}</span>
+              <span className="v2-die-label v2-eyebrow">{reveal.label}</span>
             </div>
           ) : null}
           <div className="v2-roll-dice">
@@ -330,11 +342,16 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                 >
                   {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
                 </div>
-                <span className="v2-die-label">{d.label}</span>
+                {d.settled && verdictLabel(d.tone) ? (
+                  <span className="v2-die-verdict v2-eyebrow" data-tone={d.tone}>
+                    {verdictLabel(d.tone)}
+                  </span>
+                ) : null}
+                <span className="v2-die-label v2-eyebrow">{d.label}</span>
               </div>
             ))}
           </div>
-          {rolling && <div className="v2-roll-rolling">Rolling…</div>}
+          {rolling && <div className="v2-roll-rolling v2-eyebrow">Rolling…</div>}
           {breakdown ? (
             <div className="v2-rx-break" aria-label={summary}>
               {(breakdown.actor || breakdown.weapon || breakdown.target) && (
@@ -390,8 +407,9 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
           <div className="v2-roll-form" hidden={formHidden}>
             {formSpecs.map((spec, i) => (
               <div className="v2-roll-form-row" key={i}>
-                <label htmlFor={`${formId}-${i}`}>{`${spec.label} (D${spec.sides})`}</label>
+                <label className="v2-eyebrow" htmlFor={`${formId}-${i}`}>{`${spec.label} (D${spec.sides})`}</label>
                 <input
+                  className="v2-well"
                   id={`${formId}-${i}`}
                   type="number"
                   min="1"
@@ -404,12 +422,12 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
               </div>
             ))}
             {formSpecs.length ? (
-              <button className="v2-roll-form-go" type="button" onClick={onFormGo}>
+              <button className="v2-roll-form-go v2-cta" type="button" onClick={onFormGo}>
                 Confirm roll
               </button>
             ) : null}
           </div>
-          <button className="v2-roll-ok" type="button" hidden={okHidden} onClick={closeRoll}>
+          <button className="v2-roll-ok v2-cta" type="button" hidden={okHidden} onClick={closeRoll}>
             OK
           </button>
         </div>

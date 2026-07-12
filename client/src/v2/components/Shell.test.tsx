@@ -23,17 +23,23 @@ const baseState: ServerState = {
   game: { round: 1, phase: "setup", started: false, sides: [], canUndo: false },
 };
 
-test("shows the room code and only the Yard channel active", async () => {
+test("shows the room code and no channel nav", async () => {
   render(<AppProviders><Seed state={baseState} /><Shell channel="yard"><div /></Shell></AppProviders>);
+  // survivors
   expect(await screen.findByText(/IRON-42/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /Yard/i })).toBeEnabled();
-  expect(screen.getByRole("button", { name: /Yard/i })).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("button", { name: /Forge/i })).toBeEnabled();
-  expect(screen.getByRole("button", { name: /Rules/i })).toBeEnabled();
-  expect(screen.getByRole("button", { name: /Verdict/i })).toBeDisabled();
+  expect(screen.getByRole("button", { name: /Glossary/i })).toBeInTheDocument();
+  // removed chrome — strip is now a minimal utility line
+  expect(screen.queryByText(/OIL & IRON/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/MK·IV/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^LINK$/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^LOCAL$/)).not.toBeInTheDocument();
+  // channel nav removed
+  expect(screen.queryByRole("button", { name: /Yard/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Forge/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Verdict/i })).toBeNull();
 });
 
-test("Rulebook button, Rules channel, and glossary trigger their handlers", async () => {
+test("Rulebook button and glossary trigger their handlers", async () => {
   const user = userEvent.setup();
   const onRulebook = vi.fn();
   const onGlossary = vi.fn();
@@ -42,8 +48,6 @@ test("Rulebook button, Rules channel, and glossary trigger their handlers", asyn
   </AppProviders>);
   await user.click(await screen.findByRole("button", { name: /Rulebook/i }));
   expect(onRulebook).toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: /Rules/i }));
-  expect(onRulebook).toHaveBeenCalledTimes(2);
   await user.click(screen.getByRole("button", { name: /Glossary/i }));
   expect(onGlossary).toHaveBeenCalled();
 });

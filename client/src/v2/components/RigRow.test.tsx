@@ -17,9 +17,20 @@ const rig: Rig = {
 test("renders name and four component bars and opens on click", async () => {
   const user = userEvent.setup();
   const onOpen = vi.fn();
-  render(<RigRow rig={rig} hostile={false} onOpen={onOpen} />);
+  render(<RigRow rig={rig} hostile={false} active={false} onOpen={onOpen} />);
   expect(screen.getByText("STALKER")).toBeInTheDocument();
   ["H", "A", "L", "E"].forEach((t) => expect(screen.getByText(t)).toBeInTheDocument());
   await user.click(screen.getByRole("button", { name: /STALKER/i }));
   expect(onOpen).toHaveBeenCalledWith(1);
+});
+
+test("marks the row ACTIVATING when active", () => {
+  render(<RigRow rig={rig} hostile={false} active onOpen={vi.fn()} />);
+  expect(screen.getByText("ACTIVATING")).toBeInTheDocument();
+  expect(screen.getByRole("button")).toHaveClass("v2-rigrow--active");
+});
+
+test("shows no ACTIVATING tag when inactive", () => {
+  render(<RigRow rig={rig} hostile={false} active={false} onOpen={vi.fn()} />);
+  expect(screen.queryByText("ACTIVATING")).not.toBeInTheDocument();
 });

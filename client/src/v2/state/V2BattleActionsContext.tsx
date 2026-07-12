@@ -6,15 +6,18 @@ import {
   type ReactNode,
 } from "react";
 import { HEAT_CAPACITY } from "/shared/game-state.js";
+import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { useV2Drawer } from "./V2DrawerContext";
 import { useV2Roll } from "./V2RollContext";
 import { useRoomState } from "../../state/RoomStateContext";
-import { useCommands } from "../../hooks/useCommands";
+import { useV2Commands } from "../hooks/useV2Commands";
+import { playAction } from "../audio/actionAudio";
 import { useMySide } from "../../hooks/useMySide";
 import MoveBody from "../battle/MoveBody";
 import RepairBody from "../battle/RepairBody";
 import PrepareBody from "../battle/PrepareBody";
 import BlastBody from "../battle/BlastBody";
+import SupportBody from "../battle/SupportBody";
 import { iconFor } from "../battle/constants";
 import type { Rig, PrepType } from "../../state/types";
 
@@ -22,12 +25,21 @@ interface BattleActionsApi {
   openMove: (rig: Rig, key: string) => void;
   openRepair: (rig: Rig, action: string) => void;
   openPrepare: (rig: Rig) => void;
+  openSupport: (rig: Rig, action: string) => void;
   resolveBlast: () => void;
   sendReact: (attrs: Record<string, unknown>) => void;
   endActivation: (rig: Rig) => void;
   rollInitiative: () => void;
   resetBattle: () => void;
 }
+
+// Meta for the three support-module actions (spec: Support Units) — Field
+// Weld/Vent reach a friendly (self included), Paint reaches an enemy.
+const SUPPORT_META: Record<string, { title: string; icon: string; label: string; needsLoc: boolean }> = {
+  fieldweld: { title: "Field Weld", icon: "🔧", label: "Weld", needsLoc: true },
+  vent: { title: "Vent", icon: "❄️", label: "Vent", needsLoc: false },
+  paint: { title: "Paint", icon: "🎯", label: "Paint", needsLoc: false },
+};
 
 const Ctx = createContext<BattleActionsApi | null>(null);
 
@@ -37,7 +49,7 @@ const Ctx = createContext<BattleActionsApi | null>(null);
 export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   const { openDrawer, closeDrawer } = useV2Drawer();
   const { promptDice } = useV2Roll();
-  const sendCommand = useCommands();
+  const sendCommand = useV2Commands();
   const { game, rigs } = useRoomState();
 
   const rigsRef = useRef(rigs);
@@ -74,6 +86,9 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const openMove = useCallback(
     (rig: Rig, key: string) => {
+      // Spool the engine the moment the player selects to move (opens the wizard),
+      // not when the move resolves. Dispatch-time cue is suppressed in useV2Commands.
+      playAction(key);
       const sprint = key === "sprint";
       const enemies = (rigsRef.current || []).filter(
         (r) => !r.destroyed && r.owner !== rig.owner && r.engagedWith == null,
@@ -179,6 +194,59 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
     [openDrawer, closeDrawer, sendCommand],
   );
 
+  const openSupport = useCallback(
+    (rig: Rig, action: string) => {
+      const meta = SUPPORT_META[action];
+      if (!meta) return;
+      const pool = (rigsRef.current || []).filter((r) => !r.destroyed);
+      // Paint marks an enemy; Field Weld/Vent reach a friendly — "self or ally"
+      // per spec, so the acting unit stays in its own target list. Vent only
+      // helps a heat-tracking kind (a Rig — Tanks/Walkers run cold).
+      const targets = action === "paint"
+        ? pool.filter((r) => (r.owner || "a") !== (rig.owner || "a"))
+        : pool.filter(
+            (r) => (r.owner || "a") === (rig.owner || "a")
+              && (action !== "vent" || UNIT_KINDS[kindOf(r)]?.hasHeat),
+          );
+      if (!targets.length) return;
+
+      const state: { target: string; loc: string } = {
+        target: targets[0].name,
+        loc: partNamesOf(kindOf(targets[0]))[0] || "hull",
+      };
+
+      openDrawer({
+        title: `${meta.icon} ${meta.title} — ${rig.name}`,
+        tone: "cool",
+        render: () => (
+          <SupportBody
+            targets={targets}
+            needsLoc={meta.needsLoc}
+            onChange={(v) => {
+              state.target = v.target;
+              if (v.loc) state.loc = v.loc;
+            }}
+          />
+        ),
+        actions: [
+          { label: "Cancel", ghost: true, onClick: () => closeDrawer() },
+          {
+            label: meta.label,
+            primary: true,
+            icon: meta.icon,
+            onClick: () => {
+              closeDrawer();
+              const attrs: Record<string, unknown> = { name: rig.name, action, target: state.target };
+              if (meta.needsLoc) attrs.loc = state.loc;
+              sendCommand("action", attrs);
+            },
+          },
+        ],
+      });
+    },
+    [openDrawer, closeDrawer, sendCommand],
+  );
+
   const sendReact = useCallback(
     (attrs: Record<string, unknown>) => sendCommand("react", { ...attrs, side: mySide() }),
     [sendCommand, mySide],
@@ -186,7 +254,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const resolveBlast = useCallback(() => {
     const sourceId = (gameRef.current?.pendingBlast as { sourceId?: number } | null)?.sourceId;
-    // Every living Rig is a candidate — the controller ticks those within 12"
+    // Every living Rig is a candidate — the controller ticks those within 4"
     // of the wreck. Exclude the exploding wreck itself.
     const candidates = (rigsRef.current || []).filter(
       (r) => !r.destroyed && r.id !== sourceId,
@@ -197,7 +265,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
     }
     const picked = new Set<string>();
     openDrawer({
-      title: '💥 Resolve blast — mark Rigs within 12"',
+      title: '💥 Resolve blast — mark Rigs within 4"',
       tone: "ember",
       render: () => <BlastBody candidates={candidates} picked={picked} />,
       actions: [
@@ -245,7 +313,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider
       value={{
-        openMove, openRepair, openPrepare, resolveBlast, sendReact, endActivation, rollInitiative, resetBattle,
+        openMove, openRepair, openPrepare, openSupport, resolveBlast, sendReact, endActivation, rollInitiative, resetBattle,
       }}
     >
       {children}

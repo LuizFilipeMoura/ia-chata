@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import "../styles/rig-terminal.css";
 import { rigModifiers } from "/shared/battle-view.js";
 import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
@@ -7,6 +7,7 @@ import { rigStatus } from "../../lib/rigView";
 import { CompRow } from "../components/CompRow";
 import { HeatGauge } from "../components/HeatGauge";
 import { ActionConsole } from "../battle/ActionConsole";
+import { LoadoutView } from "../components/LoadoutView";
 import type { Rig, Component } from "../../state/types";
 
 const CLASS_GLYPH: Record<string, string> = { light: "◆", medium: "◈", heavy: "⬢", colossal: "✦" };
@@ -15,11 +16,15 @@ interface Props {
   rig: Rig;
   canActivate: boolean;
   started: boolean;
+  /** Whether this rig belongs to the viewer; enemy rigs show no activation control. */
+  mine: boolean;
+  /** Whether it's the viewer's activation turn (used to phrase the wait state honestly). */
+  myTurn: boolean;
   onCommand: (verb: string, attrs: Record<string, unknown>) => void;
   onClose: () => void;
 }
 
-export function RigTerminal({ rig, canActivate, started, onCommand, onClose }: Props) {
+export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand, onClose }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -33,20 +38,45 @@ export function RigTerminal({ rig, canActivate, started, onCommand, onClose }: P
   const st = rigStatus(rig);
   const mods = rigModifiers(rig);
   const lo = buildLoadout(rig);
+  const [view, setView] = useState<"status" | "loadout">("status");
   const loadoutText = lo?.flat ? lo.unit?.name : [lo?.lr?.name, lo?.melee?.name].filter(Boolean).join(" · ");
 
-  const activateLabel = canActivate ? "◈ Activate Rig" : "Wait for your turn";
+  // Activation control only makes sense for your own, live, undestroyed rig.
+  //   activated     → static "done" chip (it already spent its turn)
+  //   can activate  → the Activate CTA
+  //   not my turn   → disabled "Wait for your turn"
+  //   my turn, but this rig can't activate now (it's the one mid-activation, or
+  //   another rig is up) → no control; "Wait for your turn" is a lie on my turn.
+  let activation: ReactNode = null;
+  if (mine && started && !rig.destroyed) {
+    if (rig.activated) {
+      activation = <span className="v2-rt-done">✓ Activated this round</span>;
+    } else if (canActivate) {
+      activation = (
+        <button type="button" className="v2-rt-activate"
+          onClick={() => onCommand("activate", { name: rig.name })}>
+          ◈ Activate Rig
+        </button>
+      );
+    } else if (!myTurn) {
+      activation = (
+        <button type="button" className="v2-rt-activate" disabled>
+          Wait for your turn
+        </button>
+      );
+    }
+  }
 
   return (
-    <div className="v2-rt-scrim" onClick={onClose}>
-      <section className="v2-rt" role="dialog" aria-modal="true"
+    <div className="v2-rt-scrim v2-scrim v2-scrim--ember" onClick={onClose}>
+      <section className="v2-rt v2-panel v2-panel--sharp" role="dialog" aria-modal="true"
         aria-label={`${rig.name} control terminal`} onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="v2-rt-close" aria-label="Close terminal" onClick={onClose}>✕</button>
+        <button type="button" className="v2-rt-close v2-close" aria-label="Close terminal" onClick={onClose}>✕</button>
 
         <header className="v2-rt-head">
-          <span className="v2-rt-glyph">{CLASS_GLYPH[rig.weightClass] ?? "◆"}</span>
+          <span className="v2-rt-glyph v2-title">{CLASS_GLYPH[rig.weightClass] ?? "◆"}</span>
           <div className="v2-rt-id">
-            <h2 className="v2-rt-name">{rig.name}</h2>
+            <h2 className="v2-rt-name v2-title">{rig.name}</h2>
             <div className="v2-rt-sub">{badge}{loadoutText ? ` · ${loadoutText}` : ""}</div>
           </div>
           <div className={"v2-rt-status v2-rt-status--" + (st.cls || "ok")}>{st.text}</div>
@@ -58,28 +88,36 @@ export function RigTerminal({ rig, canActivate, started, onCommand, onClose }: P
           </div>
         )}
 
-        <div className="v2-rt-comps">
-          {locs.map((loc) => {
-            const comp = (rig as unknown as Record<string, Component>)[loc];
-            if (!comp) return null;
-            return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} onCommand={onCommand} />;
-          })}
-        </div>
+        {lo && (
+          <div className="v2-rt-tabs" role="tablist" aria-label="Terminal view">
+            <button type="button" role="tab" aria-selected={view === "status"}
+              className={"v2-rt-tab" + (view === "status" ? " is-on" : "")}
+              onClick={() => setView("status")}>Status</button>
+            <button type="button" role="tab" aria-selected={view === "loadout"}
+              className={"v2-rt-tab" + (view === "loadout" ? " is-on" : "")}
+              onClick={() => setView("loadout")}>Loadout</button>
+          </div>
+        )}
 
-        {!cold && <HeatGauge rig={rig} />}
+        {view === "loadout" && lo ? (
+          <LoadoutView loadout={lo} />
+        ) : (
+          <>
+            <div className="v2-rt-comps">
+              {locs.map((loc) => {
+                const comp = (rig as unknown as Record<string, Component>)[loc];
+                if (!comp) return null;
+                return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} onCommand={onCommand} />;
+              })}
+            </div>
 
-        {started && <ActionConsole rig={rig} />}
+            {!cold && <HeatGauge rig={rig} />}
 
-        <div className="v2-rt-actions">
-          <button type="button" className="v2-rt-activate" disabled={!canActivate || !started}
-            onClick={() => canActivate && onCommand("activate", { name: rig.name })}>
-            {activateLabel}
-          </button>
-          <button type="button" className="v2-rt-remove" aria-label={`Remove ${rig.name}`}
-            onClick={() => onCommand("remove", { name: rig.name })}>
-            ✕ Remove Rig
-          </button>
-        </div>
+            {started && <ActionConsole rig={rig} />}
+
+            {activation && <div className="v2-rt-actions">{activation}</div>}
+          </>
+        )}
       </section>
     </div>
   );

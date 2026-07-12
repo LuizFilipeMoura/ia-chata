@@ -22,6 +22,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
   const canAdd = canAddRigForSide({ rigs, game }, mySide);
 
   const started = Boolean(game?.started);
+  const activeId = started && game?.phase === "activation" ? (game?.turn?.activeRigId ?? null) : null;
   const auto = game?.autoResolve !== false;
   const sideName = (id: string) => game?.sides?.find((s) => s.id === id)?.name || (id === "a" ? "Side A" : "Side B");
   const sideReady = (id: string) => Boolean(game?.sides?.find((s) => s.id === id)?.ready);
@@ -33,8 +34,8 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
       <BattleHud />
       <div className="v2-yard-head">
         <div>
-          <div className="v2-yard-eyebrow">DEPOT ROSTER</div>
-          <h1 className="v2-yard-title">THE YARD</h1>
+          <div className="v2-yard-eyebrow v2-eyebrow">DEPOT ROSTER</div>
+          <h1 className="v2-yard-title v2-title">THE YARD</h1>
         </div>
         <div className="v2-yard-stats">
           <div className="v2-yard-count">{count} / {max} COMMISSIONED</div>
@@ -46,7 +47,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
         <span className="v2-yard-band-dot" /><span>YOUR SQUADRON</span><span className="v2-yard-band-rule" />
       </div>
       <div className="v2-yard-list">
-        {mine.map((r) => <RigRow key={r.id} rig={r} hostile={false} onOpen={onOpenRig} />)}
+        {mine.map((r) => <RigRow key={r.id} rig={r} hostile={false} active={r.id === activeId} onOpen={onOpenRig} />)}
       </div>
 
       {foes.length > 0 && (
@@ -55,7 +56,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             <span className="v2-yard-band-dot" /><span>HOSTILE FORCES</span><span className="v2-yard-band-rule" />
           </div>
           <div className="v2-yard-list">
-            {foes.map((r) => <RigRow key={r.id} rig={r} hostile onOpen={onOpenRig} />)}
+            {foes.map((r) => <RigRow key={r.id} rig={r} hostile active={r.id === activeId} onOpen={onOpenRig} />)}
           </div>
         </>
       )}
@@ -88,7 +89,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             onClick={() => sendCommand("setdice", { value: auto ? "manual" : "auto" })}>
             🎲 {auto ? "AUTO" : "MANUAL"}
           </button>
-          <button type="button" className="v2-yard-readybtn" disabled={readyDisabled}
+          <button type="button" className="v2-yard-readybtn v2-cta" disabled={readyDisabled}
             onClick={() => sendCommand("ready", { side: mySide })}>
             READY
           </button>

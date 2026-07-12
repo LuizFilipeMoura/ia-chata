@@ -106,14 +106,14 @@ export function GlossaryTip({ termId, anchorEl, onClose }: Props) {
 
   return (
     <div
-      className={`v2-gloss-tip${show ? " show" : ""}`}
+      className={`v2-gloss-tip v2-panel${show ? " show" : ""}`}
       role="tooltip"
       ref={tipRef}
       hidden={hidden}
     >
       <div className="v2-gloss-tip-term">{entry?.term ?? ""}</div>
       <div className="v2-gloss-tip-def">{entry?.def ?? ""}</div>
-      <button className="v2-gloss-tip-close" type="button" aria-label="Close definition" onClick={onClose}>
+      <button className="v2-gloss-tip-close v2-close" type="button" aria-label="Close definition" onClick={onClose}>
         ✕
       </button>
     </div>

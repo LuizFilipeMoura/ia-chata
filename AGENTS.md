@@ -12,6 +12,32 @@ What this means concretely:
 - **Favor fun and iteration speed** over ceremony. Don't over-engineer, don't gold-plate, don't add abstraction for hypothetical future needs. Ship the change, keep it readable.
 - **Keep TDD discipline.** Despite the hobby framing, the maintainer values the test safety net — write tests first for real logic (game rules, math, state transitions). UI glue and throwaway experiments can skip it.
 
+## UI work — V2 only, everything
+
+**ALL UI work goes in V2. Everything.** Every user-facing UI change — new screens, components, overlays, wizards, styling, battle flows, chat, glossary — lives under `client/src/v2/**` (with shared, non-UI state hooks under `client/src/hooks/**` and `client/src/state/**` where V2 already reuses them).
+
+- **Do not build new UI in the legacy V1 tree** (`client/src/components/**`). V1 is frozen; treat it as read-only reference. If a feature needs a V1-only file changed, stop and flag it — don't extend V1.
+- New UI files: create them in the matching `client/src/v2/` folder (`screens/`, `overlays/`, `components/`, `battle/`, `state/`, `hooks/`, `styles/`).
+- Reuse the V2 provider stack (`client/src/v2/state/V2Providers.tsx`) and V2 primitives (Drawer, wizards, Shell) — never import V1 overlay providers into V2 (there's a `no-v1-imports.test.ts` guard; keep it green).
+- **Minimum font size is 12px.** Never render text below 12px on mobile — smaller is unreadable on phones. All V2 text uses the `--v2-text-*` / `.v2-text-*` scale in `styles/type.css` (floor `sm` = 12px); a guard test (`no-raw-font-size.test.ts`) rejects raw `font-size`.
+
+## Debugging the UI as an agent
+
+You can drive and inspect the running UI yourself — don't ask the user to click.
+
+- **Seed a live battle instantly.** Instead of hand-commissioning 6 rigs, use the `seed` verb to get a valid, already-started 3v3:
+  - **UI:** the Join screen's **"Seed Test Battle ▸"** button → pick *Your turn* / *Enemies turn*. Autogenerates a `SEED-XXXX` room and drops you into the battle.
+  - **HTTP (no browser):** join then seed —
+    ```
+    curl -XPOST localhost:5173/api/game/SEED-DBG1/join  -H 'content-type: application/json' -d '{"side":"a"}'
+    curl -XPOST localhost:5173/api/game/SEED-DBG1/command -H 'content-type: application/json' \
+      -d '{"cmd":{"verb":"seed","attrs":{"first":"a"}},"side":"a"}'
+    ```
+    (`first`: `"a"` = your turn opens, `"b"` = the enemy's.)
+  - **Unit test:** `applyCommand(room, { verb: "seed", attrs: { first } })` builds the same state deterministically (no dice) — assert on `turn.side`, rig counts.
+- **Act on the enemy's turn (impersonate).** Seed rooms are flagged `seeded`, which drops `publicState` fog and shows an **"Acting as: A / B"** chip in the terminal. Toggle it to flip your acting side (view + every command's `side`). Over HTTP, just send commands with the other side: `{"cmd":{...},"side":"b"}` — the server doesn't auth `side`, so impersonation needs no special call.
+- **Inspect at runtime** with the browser preview tools (read the console, the DOM/accessibility tree, and network requests) rather than adding `console.log` and asking the user to report back.
+
 ## Game design invariants
 
 Hold these when designing rigs, weapons, upgrades, or mechanics:

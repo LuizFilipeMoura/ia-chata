@@ -101,6 +101,9 @@ export function GlossaryTip({ termId, anchorEl, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, anchorEl]);
 
+  // Clear any pending hide timer on unmount so it can't fire post-teardown.
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+
   return (
     <div
       id="glossaryTip"

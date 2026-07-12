@@ -18,6 +18,14 @@ test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.reload.slot, 1);
 });
 
+test("support module actions are registered, cold (0 heat), 1 slot each", () => {
+  for (const key of ["fieldweld", "vent", "paint"]) {
+    assert.ok(ACTIONS[key], `${key} registered`);
+    assert.equal(ACTIONS[key].heat, 0);
+    assert.equal(ACTIONS[key].slot, 1);
+  }
+});
+
 test("heatThreshold maps a D12+bonus total to the right band (§6)", () => {
   assert.equal(heatThreshold(1).key, "safe");
   assert.equal(heatThreshold(5).key, "safe");

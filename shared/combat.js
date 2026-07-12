@@ -40,12 +40,15 @@ export function computeModifiedAim(attacker, profile, opts) {
   const weaponAcc = weaponAccAt(profile, opts.distance);
   // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
   // guard-break (opts.guardBreak, §13 Siege Maul) — both reuse the same path.
-  const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
+  const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak || (opts.painted && !profile.melee)) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
   const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
   // §engagement — a rig locked in melee fires ranged weapons at −2 accuracy.
   const engagedPenalty = opts.engaged && !profile.melee ? -2 : 0;
-  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty;
+  // Recon paint (spec: Support Units) — allied ranged fire on a marked enemy
+  // gains +1 Aim on top of the cover cancel above.
+  const paintBonus = (opts.painted && !profile.melee) ? 1 : 0;
+  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty + paintBonus;
   return base - accTotal;
 }
 

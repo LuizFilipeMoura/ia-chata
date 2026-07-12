@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
 import { weaponAccAt } from "/shared/combat.js";
 import { useRoomState } from "../../state/RoomStateContext";
-import { useCommands } from "../../hooks/useCommands";
+import { useV2Commands } from "../hooks/useV2Commands";
 import { useV2BattleActions } from "../state/V2BattleActionsContext";
 import { useV2Roll } from "../state/V2RollContext";
 import type { Rig } from "../../state/types";
@@ -56,13 +56,13 @@ function Field({
   const descFor = (opt: string) =>
     (typeof optDesc === "function" ? optDesc(opt) : optDesc?.[opt]) || "";
   return (
-    <div className="v2-aw-field" hidden={hidden}>
-      <label>
+    <div className="v2-aw-field v2-field" hidden={hidden}>
+      <label className="v2-eyebrow">
         {icon ? <span className="v2-aw-field-ic">{icon}</span> : null}
         {label}
       </label>
       {desc ? <p className="v2-aw-field-desc">{desc}</p> : null}
-      <div className="v2-aw-seg">
+      <div className="v2-aw-seg v2-field-seg">
         {options.map((opt) => {
           const ic = iconFor(opt);
           const od = descFor(opt);
@@ -70,7 +70,7 @@ function Field({
             <button
               key={opt}
               type="button"
-              className={"v2-aw-opt" + (opt === selected ? " sel" : "")}
+              className={"v2-aw-opt v2-opt" + (opt === selected ? " is-sel" : "")}
               onClick={() => onChange(opt)}
             >
               {ic ? <span className="v2-aw-opt-ic" aria-hidden="true">{ic}</span> : null}
@@ -132,7 +132,7 @@ export function AttackWizard({
   react?: boolean;
 }) {
   const { rigs, game } = useRoomState();
-  const sendCommand = useCommands();
+  const sendCommand = useV2Commands();
   const { sendReact } = useV2BattleActions();
   const { promptDice } = useV2Roll();
 
@@ -146,7 +146,12 @@ export function AttackWizard({
 
   const [state, setState] = useState<AwState>(() => ({
     target: target ?? enemies[0]?.name ?? "",
-    weapon: flat ? "unit" : "longRange",
+    // A spent ranged weapon opens on the melee weapon (the only one live).
+    weapon: flat
+      ? "unit"
+      : rig.loaded?.longRange === false && rig.weapons?.melee
+        ? "melee"
+        : "longRange",
     arc: "front",
     range: "near",
     inches: 3,
@@ -287,7 +292,7 @@ export function AttackWizard({
 
     const attrs: Record<string, unknown> = {
       name: rig.name, action: mode, target: state.target,
-      weapon: slotSel, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
+      weapon: slotSel, weaponName, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
     };
     if (mode === "aimed") attrs.loc = state.loc;
     if (game?.autoResolve === false) {
@@ -400,16 +405,16 @@ export function AttackWizard({
     return (
       <div className="v2-root">
         <div
-          className={"v2-aw-scrim" + (show ? " show" : "")}
+          className={"v2-aw-scrim v2-scrim v2-scrim--ember" + (show ? " show" : "")}
           onClick={(e) => {
             if (e.target === e.currentTarget) close();
           }}
         >
-          <div className="v2-aw-card" role="dialog" aria-modal="true" aria-label={`Fire control lock — ${rig.name}`}>
-            <div className="v2-aw-handle" />
+          <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`Fire control lock — ${rig.name}`}>
+            <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
             <div className="v2-aw-title-row">
-              <div className="v2-aw-title">🔒 Fire Control Lock — {rig.name}</div>
-              <button type="button" className="v2-aw-close" aria-label="Close" onClick={close}>✕</button>
+              <div className="v2-aw-title v2-title">🔒 Fire Control Lock — {rig.name}</div>
+              <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
             </div>
 
             <Field
@@ -424,7 +429,7 @@ export function AttackWizard({
             />
 
             <button
-              className="v2-aw-go"
+              className="v2-aw-go v2-cta v2-cta--ember"
               disabled={!state.target}
               onClick={() => {
                 sendCommand("action", { name: rig.name, action: "lock", target: state.target });
@@ -442,16 +447,16 @@ export function AttackWizard({
   return (
     <div className="v2-root">
       <div
-        className={"v2-aw-scrim" + (show ? " show" : "")}
+        className={"v2-aw-scrim v2-scrim v2-scrim--ember" + (show ? " show" : "")}
         onClick={(e) => {
           if (e.target === e.currentTarget) close();
         }}
       >
-        <div className="v2-aw-card" role="dialog" aria-modal="true" aria-label={`${title} — ${rig.name}`}>
-          <div className="v2-aw-handle" />
+        <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`${title} — ${rig.name}`}>
+          <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
           <div className="v2-aw-title-row">
-            <div className="v2-aw-title">{title} — {rig.name}</div>
-            <button type="button" className="v2-aw-close" aria-label="Close" onClick={close}>✕</button>
+            <div className="v2-aw-title v2-title">{title} — {rig.name}</div>
+            <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           </div>
 
           <Field
@@ -495,8 +500,8 @@ export function AttackWizard({
                 hidden={isMelee}
               />
               {!isMelee && (
-                <div className="v2-aw-field">
-                  <label>
+                <div className="v2-aw-field v2-field">
+                  <label className="v2-eyebrow">
                     <span className="v2-aw-field-ic">{FIELD_ICONS.range}</span>
                     Range
                   </label>
@@ -559,7 +564,7 @@ export function AttackWizard({
             {attackNotice.equipment ? <span>{attackNotice.equipment}</span> : null}
           </div>
 
-          <button className="v2-aw-go" disabled={goDisabled} onClick={submit}>
+          <button className="v2-aw-go v2-cta v2-cta--ember" disabled={goDisabled} onClick={submit}>
             {goText}
           </button>
         </div>

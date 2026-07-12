@@ -6,16 +6,13 @@ import type { Rig } from "../../state/types";
 interface Props {
   rig: Rig;
   isActive: boolean;
-  started: boolean;
-  onCommand: (verb: string, attrs: Record<string, unknown>) => void;
 }
 
-// The heat gauge — the centrepiece control. A segmented thermometer that reads
-// left-to-right up to the Rig's Heat Capacity (the redline), then into a red
-// overheat zone. When hot, it spells out the exact misfire roll (§6) so the
-// player knows precisely what's at stake. Controls are live only for the
-// active Rig.
-export function HeatGauge({ rig, isActive, started, onCommand }: Props) {
+// The heat gauge — a read-only segmented thermometer that reads left-to-right up
+// to the Rig's Heat Capacity (the redline), then into a red overheat zone. When
+// hot, it spells out the exact misfire roll (§6) so the player knows precisely
+// what's at stake.
+export function HeatGauge({ rig, isActive }: Props) {
   if (!UNIT_KINDS[kindOf(rig)].hasHeat) return null;
   const m = heatMeter(rig);
   const displayMax = m.cap + 4;
@@ -87,19 +84,6 @@ export function HeatGauge({ rig, isActive, started, onCommand }: Props) {
     );
   }
 
-  const disabled = !isActive || started;
-  const btn = (btnCls: string, text: string, aria: string, spec: string) => (
-    <button
-      type="button"
-      className={`heat-btn ${btnCls}`}
-      aria-label={aria}
-      disabled={disabled}
-      onClick={() => onCommand("heat", { name: rig.name, amount: spec })}
-    >
-      {text}
-    </button>
-  );
-
   // Position of the redline marker across the segmented track. The gauge is
   // drawn with cap safe cells plus 4 danger cells; the padding around the track
   // (~3px each side) accounts for the small inset, but percentage alone is
@@ -127,15 +111,6 @@ export function HeatGauge({ rig, isActive, started, onCommand }: Props) {
           <span className="heat-status-lock">Engine wrecked · heat locked ≥ {m.floor}</span>
         )}
       </div>
-      <div className="heat-controls">
-        {btn("heat-btn-cool", "Shut Down", "Shut down — set heat to 0", "0")}
-        {btn("heat-btn-vent", "Vent −2", "Vent — cool 2 heat", "-2")}
-        {btn("heat-btn-minus", "−1", "Cool 1 heat", "-1")}
-        {btn("heat-btn-plus", "＋1", "Add 1 heat", "+1")}
-      </div>
-      {!isActive && (
-        <div className="heat-locked-hint">Set this Rig active to run its engine</div>
-      )}
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function HeatGauge({ rig }: { rig: Rig }) {
   return (
     <div className="v2-heat" data-zone={m.zone}>
       <div className="v2-heat-head">
-        <span className="v2-heat-label">ENGINE HEAT</span>
+        <span className="v2-heat-label v2-eyebrow">ENGINE HEAT</span>
         <span className="v2-heat-read"><b>{m.heat}</b>/{m.cap}</span>
       </div>
       <div className="v2-heat-track">{segs}</div>

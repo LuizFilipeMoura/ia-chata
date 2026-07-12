@@ -1,24 +1,21 @@
 /* Native V2 targeting / scoring wizards — every selector scoped under .v2-root
    so V2 styles never leak into V1. Ports V1 battle.css `.aw-*`/`.vpw-*` shells to
    `--v2-*` tokens, and layers the mockup's Fire Control look
-   (oil-iron-terminal.html lines 419-451) onto the AttackWizard sheet. */
+   (oil-iron-terminal.html lines 419-451) onto the AttackWizard sheet.
+   Shell (scrim/card/handle/title/close), segmented fields, and the CTA go
+   button are built on primitives.css — see that file for the shared recipe. */
 
 /* ===== Shared bottom-sheet shell (VpWizard + AttackWizard) ================ */
 .v2-root .v2-aw-scrim {
-  position: fixed; inset: 0; z-index: 500;
-  display: grid; place-items: end center;
-  background:
-    radial-gradient(80% 60% at 50% 30%, rgba(229, 83, 58, .1), transparent 70%),
-    rgba(4, 5, 7, .72);
-  backdrop-filter: blur(2px);
+  place-items: end center;
+  z-index: 500;
   opacity: 0; transition: opacity .2s;
 }
 .v2-root .v2-aw-scrim.show { opacity: 1; }
 
 .v2-root .v2-aw-card {
   width: min(460px, 96vw); margin-bottom: 0; max-height: 86vh; overflow-y: auto;
-  background: linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-900));
-  border: 1px solid var(--v2-ember-deep);
+  border-color: var(--v2-ember-deep);
   box-shadow:
     inset 0 1px 0 rgba(255, 120, 90, .14),
     0 -10px 40px rgba(229, 83, 58, .15),
@@ -31,63 +28,50 @@
 /* Hazard-stripe grip bar bleeds to the card edges (mockup line 424). */
 .v2-root .v2-aw-handle {
   height: 14px; margin: 0 -20px 16px;
-  background: repeating-linear-gradient(-45deg, #0c0709 0 11px, #7c2331 11px 22px);
 }
 .v2-root .v2-aw-title-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: .5rem; margin-bottom: 16px;
 }
 .v2-root .v2-aw-title {
-  font-family: var(--v2-stencil); font-weight: 700; font-size: 20px;
+  font-size:var(--v2-text-xl);
   letter-spacing: .06em; color: var(--v2-ember-hi);
   text-shadow: 0 0 18px rgba(229, 83, 58, .4); margin: 0;
 }
 .v2-root .v2-aw-close {
-  flex: 0 0 auto; width: 34px; height: 34px;
-  background: var(--v2-iron-850); border: 1px solid var(--v2-line);
-  color: var(--v2-txt-dim); font-size: 16px; cursor: pointer;
+  flex: 0 0 auto; font-size:var(--v2-text-lg);
 }
-.v2-root .v2-aw-close:hover { color: var(--v2-txt); border-color: var(--v2-rivet); }
 
 /* ===== Segmented fields ================================================== */
 .v2-root .v2-aw-field { margin: 12px 0; }
 .v2-root .v2-aw-field > label {
-  display: block; font-family: var(--v2-mono); font-size: 9px;
-  letter-spacing: .2em; text-transform: uppercase; color: var(--v2-txt-faint);
-  margin-bottom: 9px;
+  display: block; margin-bottom: 9px;
 }
-.v2-root .v2-aw-field > label .v2-aw-field-ic { margin-right: .35rem; font-size: .8rem; }
+.v2-root .v2-aw-field > label .v2-aw-field-ic { margin-right: .35rem; font-size:var(--v2-text-sm); }
 .v2-root .v2-aw-field-desc {
-  margin: 0 0 9px; font-family: var(--v2-disp); font-size: 11px;
+  margin: 0 0 9px; font-family: var(--v2-disp); font-size:var(--v2-text-sm);
   line-height: 1.4; color: var(--v2-txt-faint);
 }
-.v2-root .v2-aw-seg { display: flex; gap: 9px; flex-wrap: wrap; }
 .v2-root .v2-aw-opt {
-  flex: 1 1 0; min-width: 0; min-height: 4.3rem;
+  min-width: 0; min-height: 4.3rem;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem;
-  padding: 13px .3rem; border: 1px solid var(--v2-line);
-  background: var(--v2-iron-800); color: var(--v2-txt-dim);
-  font-family: var(--v2-disp); text-align: center; cursor: pointer;
-  transition: border-color .14s, background .14s, color .14s, box-shadow .14s;
+  padding: 13px .3rem;
+  font-family: var(--v2-disp);
+  transition: border-color var(--v2-dur-fast), background var(--v2-dur-fast), color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
-.v2-root .v2-aw-opt-ic { font-size: 1.4rem; line-height: 1; }
-.v2-root .v2-aw-opt-label { font-weight: 700; font-size: 14px; line-height: 1.05; }
+.v2-root .v2-aw-opt-ic { font-size:var(--v2-text-2xl); line-height: 1; }
+.v2-root .v2-aw-opt-label { font-weight: 700; font-size:var(--v2-text-base); line-height: 1.05; }
 .v2-root .v2-aw-opt-desc {
-  font-family: var(--v2-mono); font-size: 8.5px; letter-spacing: .01em;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .01em;
   line-height: 1.3; color: var(--v2-txt-faint);
 }
-.v2-root .v2-aw-opt.sel {
-  border-color: var(--v2-oil-deep);
-  background: linear-gradient(180deg, #241a0d, #160f06);
-  color: var(--v2-oil-hi);
-  box-shadow: 0 0 14px rgba(231, 154, 61, .2);
-}
-.v2-root .v2-aw-opt.sel .v2-aw-opt-desc { color: var(--v2-oil); }
+.v2-root .v2-aw-opt.is-sel { color: var(--v2-oil-hi); }
+.v2-root .v2-aw-opt.is-sel .v2-aw-opt-desc { color: var(--v2-oil); }
 
 /* ===== Range readouts ==================================================== */
 .v2-root .v2-aw-range {
   margin-top: 16px; padding: 13px 15px;
-  font-family: var(--v2-mono); font-size: 10px; line-height: 1.5; color: var(--v2-txt-dim);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); line-height: 1.5; color: var(--v2-txt-dim);
   background: #0d1611; border: 1px solid var(--v2-line);
   border-left-width: 3px; border-left-color: var(--v2-rivet);
 }
@@ -112,15 +96,15 @@
 .v2-root .v2-aw-range-readout {
   display: flex; align-items: baseline; justify-content: space-between; margin-top: .4rem;
 }
-.v2-root .v2-aw-range-inches { color: var(--v2-txt); font-size: 1rem; font-weight: 700; font-family: var(--v2-mono); }
+.v2-root .v2-aw-range-inches { color: var(--v2-txt); font-size:var(--v2-text-lg); font-weight: 700; font-family: var(--v2-mono); }
 .v2-root .v2-aw-range-band {
-  font-family: var(--v2-mono); font-size: 9px; letter-spacing: .1em;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .1em;
   text-transform: uppercase; color: var(--v2-txt-dim);
 }
 .v2-root .v2-aw-range-slider[data-band="out"] .v2-aw-range-band { color: var(--v2-ember-hi); }
 .v2-root .v2-aw-range-slider[data-band="sweet"] .v2-aw-range-band { color: var(--v2-ok); }
 .v2-root .v2-aw-range-ticks {
-  margin-top: .25rem; font-family: var(--v2-mono); font-size: 8.5px;
+  margin-top: .25rem; font-family: var(--v2-mono); font-size:var(--v2-text-sm);
   letter-spacing: .04em; color: var(--v2-txt-faint);
 }
 
@@ -129,34 +113,24 @@
   margin-top: 12px; display: flex; align-items: center; gap: .4rem;
   padding: 11px 13px; background: rgba(231, 154, 61, .08);
   border: 1px solid rgba(231, 154, 61, .3);
-  font-family: var(--v2-mono); font-size: 10px; letter-spacing: .03em;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .03em;
   color: var(--v2-oil-hi); line-height: 1.4;
 }
 .v2-root .v2-aw-attack-notice {
   margin-top: 10px; display: flex; flex-direction: column; gap: .25rem;
   padding: 11px 13px; background: rgba(229, 83, 58, .08);
   border: 1px solid rgba(229, 83, 58, .28); border-left: 3px solid var(--v2-ember);
-  font-family: var(--v2-disp); font-size: 12px; line-height: 1.4; color: var(--v2-txt-dim);
+  font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.4; color: var(--v2-txt-dim);
 }
 .v2-root .v2-aw-attack-notice-kicker {
-  font-family: var(--v2-mono); font-size: 8.5px; letter-spacing: .16em;
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .16em;
   text-transform: uppercase; color: var(--v2-ember-hi);
 }
 
 /* ===== Primary CTA (OPEN FIRE) ========================================== */
 .v2-root .v2-aw-go {
   width: 100%; margin-top: 18px; padding: 17px;
-  background: linear-gradient(180deg, #f0663f, #b8351f);
-  border: 1px solid #ff8a6a; border-bottom: 3px solid #6e2013;
-  color: #180605; font-family: var(--v2-stencil); font-weight: 700;
-  font-size: 18px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, .5), 0 0 30px rgba(229, 83, 58, .4);
-}
-.v2-root .v2-aw-go:not(:disabled):hover { filter: brightness(1.08); }
-.v2-root .v2-aw-go:disabled {
-  background: var(--v2-iron-800); color: var(--v2-txt-faint);
-  border-color: var(--v2-line); border-bottom-color: var(--v2-line);
-  box-shadow: none; cursor: default;
+  font-size:var(--v2-text-xl);
 }
 
 /* ===== Score-Objectives marker list (v2-vpw-*) ========================== */
@@ -166,7 +140,7 @@
   padding: 12px 14px; border: 1px solid var(--v2-line);
   background: var(--v2-iron-800); color: var(--v2-txt-dim);
   text-align: left; cursor: pointer;
-  transition: border-color .14s, background .14s, color .14s;
+  transition: border-color var(--v2-dur-fast), background var(--v2-dur-fast), color var(--v2-dur-fast);
 }
 .v2-root .v2-vpw-opt.sel {
   border-color: var(--v2-oil); color: var(--v2-oil-hi); background: rgba(231, 154, 61, .1);
@@ -179,9 +153,9 @@
 }
 .v2-root .v2-vpw-name { font-weight: 600; }
 .v2-root .v2-vpw-state {
-  font-family: var(--v2-mono); font-size: 9px; letter-spacing: .04em; color: var(--v2-txt-faint);
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .04em; color: var(--v2-txt-faint);
 }
 .v2-root .v2-vpw-warn {
-  grid-column: 1 / -1; font-family: var(--v2-mono); font-size: 9px; color: var(--v2-ember-hi);
+  grid-column: 1 / -1; font-family: var(--v2-mono); font-size:var(--v2-text-sm); color: var(--v2-ember-hi);
 }
 .v2-root .v2-vpw-total { text-align: center; margin-bottom: 10px; color: var(--v2-txt-dim); }

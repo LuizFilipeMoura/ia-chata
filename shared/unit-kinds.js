@@ -53,7 +53,7 @@ export const UNIT_KINDS = {
     weaponMode: "rig-catalog",
     reloads: true,
     hasEquipment: true,
-    reactions: true,
+    reactions: true,
     destruction: "single-model",
   },
   tank: {
@@ -85,7 +85,7 @@ export const UNIT_KINDS = {
     weaponMode: "flat-pick",
     reloads: true,
     hasEquipment: false,
-    reactions: false,
+    reactions: false,
     destruction: "single-model",
     speed: 3,
   },
@@ -118,11 +118,35 @@ export const UNIT_KINDS = {
     weaponMode: "flat-pick",
     reloads: true,
     hasEquipment: false,
-    reactions: false,
+    reactions: false,
     destruction: "single-model",
     speed: 4,
   },
 };
+
+// Support-unit role modules (spec: Support Units). A support unit is a Tank or
+// Walker carrying exactly TWO distinct modules. Damage grants a real gun from
+// UNIT_WEAPONS; the other three grant an ally-targeting action verb.
+export const MODULES = {
+  damage:  { id: "damage",  label: "Damage",  action: null },
+  repair:  { id: "repair",  label: "Repair",  action: "fieldweld" },
+  coolant: { id: "coolant", label: "Coolant", action: "vent" },
+  recon:   { id: "recon",   label: "Recon",   action: "paint" },
+};
+export const MODULE_IDS = Object.keys(MODULES);
+
+// Canonicalize a module list: lowercase, keep only known ids, drop duplicates,
+// preserve first-seen order. Returns [] for non-arrays.
+export function normalizeModules(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const m of list) {
+    const id = String(m || "").trim().toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(MODULES, id) && !seen.has(id)) { seen.add(id); out.push(id); }
+  }
+  return out;
+}
 
 export function kindOf(unit) {
   if (!unit || typeof unit !== "object") return "rig";
