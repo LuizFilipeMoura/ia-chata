@@ -1920,6 +1920,14 @@ function performAction(room, rig, act, a, random) {
       // painting this rig — mirrors the recon-paint self-clear below.
       for (const r of room.rigs) if (r.lockedTarget === rig.id) { r.lockedTarget = null; r.lockExpiresRound = 0; }
     }
+    else if (act === "heatpurgewave") {
+      // Blast Furnace Core: dump banked heat down to the RAW class Heat
+      // Capacity — not the raised +1/+2 thermal-margin cap from the passive
+      // or the Insulated Core upgrade. The 3" AoE narration rides along on
+      // active.text via the pushResolution below.
+      const rawCap = HEAT_CAPACITY[rig.weightClass] ?? 5;
+      rig.engine.heat = Math.min(rig.engine.heat, rawCap);
+    }
     // purge / jumpjets need no extra state beyond the heat cost below.
     bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade));
     pushResolution(room, {

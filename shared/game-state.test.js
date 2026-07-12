@@ -2180,6 +2180,19 @@ test("Twin Radiators purge vents 3 heat through the action pipeline", () => {
   assert.equal(rig.engine.heat, 2); // -3, not the base -2 (which would leave 3)
 });
 
+test("Heat Purge Wave vents to the raw Heat Capacity and narrates the 3\" AoE", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "blast-furnace-core" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.engine.heat = 9; // well above Medium's raw cap of 5 (and above the +1 margin)
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  assert.equal(rig.engine.heat, 5); // vented to the RAW class cap, not the +1 margin
+  const last = r.game.resolutions.at(-1);
+  const text = `${last.summary} ${last.effects.join(" ")}`;
+  assert.match(text, /3"/);
+});
+
 test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
