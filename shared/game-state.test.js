@@ -275,6 +275,18 @@ test("makeRig requires a supported class, one valid long-range and one valid mel
   assert.equal(makeRig(1, "Warden", "colossal", "a", { longRange: "Autocannon", melee: "Claw" }), null);
 });
 
+test("ensureRigShape backfills speed from the chassis id on reload", () => {
+  // Simulate an old saved rig that predates the speed field.
+  const rig = makeRig(1, "OldSave", "medium", "a", {
+    longRange: "Crossbow", melee: "Talon", chassis: "medium-crossbow-talon",
+  });
+  delete rig.speed;
+  const room = createRoom("r");
+  room.rigs.push(rig);
+  __test.ensureRigShape(rig);
+  assert.equal(rig.speed, 4);
+});
+
 test("add assigns owner, weapons and default SP; damage respects the floor", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", owner: "b", ...W } });

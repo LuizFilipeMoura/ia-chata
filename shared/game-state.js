@@ -477,6 +477,10 @@ function ensureRigShape(rig) {
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
   if (rig.chassis === undefined) rig.chassis = null;
+  if (rig.speed === undefined) {
+    const cd = chassisById(rig.chassis);
+    rig.speed = Number.isFinite(cd?.speed) ? cd.speed : null;
+  }
   if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
