@@ -4,6 +4,7 @@ import {
   createRoom, makeRig, makeUnit, claimSide, applyCommand, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
+  EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
@@ -1748,6 +1749,22 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment("Ablative-Plating"), "ablative-plating");
   assert.equal(normalizeEquipment("nonsense"), null);
   assert.equal(normalizeEquipment(null), null);
+});
+
+test("every equipment family has exactly 3 upgrades, one per nature", () => {
+  for (const id of Object.keys(EQUIPMENT)) {
+    const ups = EQUIPMENT_UPGRADES[id];
+    assert.ok(Array.isArray(ups), `${id} has no upgrades`);
+    assert.equal(ups.length, 3, `${id} needs 3 upgrades`);
+    assert.deepEqual(ups.map((u) => u.nature), ["field", "tuned", "prototype"]);
+  }
+});
+
+test("equipment upgrade helpers resolve", () => {
+  assert.equal(equipmentUpgradeNature("ablative-plating", "reinforced-plating"), "field");
+  assert.equal(equipmentUpgradeNature("ablative-plating", "ablative-cascade"), "prototype");
+  assert.equal(equipmentUpgradeNature("ablative-plating", "nope"), null);
+  assert.equal(firstEquipmentUpgradeId("ablative-plating"), "reinforced-plating");
 });
 
 test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
