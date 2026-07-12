@@ -2637,12 +2637,15 @@ test("react resolves a Riposte as a free melee counter and clears the prep", () 
   } });
   assert.equal(room.game.pendingReaction?.kind, "riposte");
   const before = a.hull.sp;
+  // Sword STR 6 vs a medium hull (direct at 11): impact die 6 → total 12 → 1 SP.
+  // Two guaranteed to-hit 6s so the counter lands regardless of the random rolls.
   applyCommand(room, { verb: "react", attrs: {
-    side: "b", attack: { weapon: "melee", arc: "front", range: "near", dice: { toHit: [6], location: 1, impacts: [4] } },
+    side: "b", attack: { weapon: "melee", arc: "front", range: "near",
+      dice: { toHit: [6, 6], location: 1, impacts: [6, 6] } },
   } });
   assert.equal(room.game.pendingReaction, null);
   assert.equal(b.preparation, null, "prep is consumed");
-  assert.ok(a.hull.sp <= before, "the melee counter struck the attacker");
+  assert.ok(a.hull.sp < before, "the melee counter dealt real SP to the attacker's hull");
 });
 
 test("react resolves an Exploit counter as an aimed shot with no aim penalty", () => {
@@ -2653,12 +2656,17 @@ test("react resolves an Exploit counter as an aimed shot with no aim penalty", (
     dice: { toHit: [1], location: 1, impacts: [1] },
   } });
   assert.equal(room.game.pendingReaction?.kind, "exploit");
+  const before = a.arms.sp;
+  // Aimed Autocannon (STR 8) at the arms (severe at 13): impact die 6 → total 14
+  // → 2 SP. Damage on the arms proves both that the counter resolved AND that
+  // aimedLoc routed the hit to the chosen location.
   applyCommand(room, { verb: "react", attrs: {
     side: "b", attack: { weapon: "longRange", arc: "front", range: "near", loc: "arms",
-      dice: { toHit: [4], location: 1, impacts: [5] } },
+      dice: { toHit: [4, 4, 4, 4], location: 1, impacts: [6, 6, 6, 6] } },
   } });
   assert.equal(room.game.pendingReaction, null);
   assert.equal(b.preparation, null);
+  assert.ok(a.arms.sp < before, "the aimed counter dealt real SP to the attacker's arms");
 });
 
 test("react resolves a Sidestep: evaded fails the shot and may engage the shooter", () => {
