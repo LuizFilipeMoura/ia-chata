@@ -34,3 +34,9 @@ test("shows no ACTIVATING tag when inactive", () => {
   render(<RigRow rig={rig} hostile={false} active={false} onOpen={vi.fn()} />);
   expect(screen.queryByText("ACTIVATING")).not.toBeInTheDocument();
 });
+
+test("renders the Priority Target marker when target is set", () => {
+  const { container } = render(<RigRow rig={rig} hostile target active={false} onOpen={vi.fn()} />);
+  expect(container.querySelector(".v2-rigrow--target")).not.toBeNull();
+  expect(screen.getByText("🎯")).toBeInTheDocument();
+});
