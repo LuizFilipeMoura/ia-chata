@@ -2,12 +2,14 @@ import "../styles/rig-terminal.css";
 import { weaponGlyph, natureLabel } from "../lib/commissionData";
 import type { Loadout, LoadoutWeapon } from "../../lib/loadout";
 import { MODULES } from "/shared/unit-kinds.js";
+import { InfoTerm } from "./InfoTerm";
+import { matchGlossary } from "../../lib/glossaryTerms";
 
 // One base stat term, with an optional green "+N" upgrade mark beside it.
 function Stat({ label, base, delta }: { label: string; base: number | string; delta: number }) {
   return (
     <span className="v2-rt-lo-stat">
-      <em className="v2-eyebrow">{label}</em> {base}
+      <InfoTerm as="em" id={label.toLowerCase()} className="v2-eyebrow">{label}</InfoTerm> {base}
       {delta ? <span className="v2-rt-delta">+{delta}</span> : null}
     </span>
   );
@@ -25,15 +27,15 @@ function WeaponBlock({ w, isSidearm }: { w: LoadoutWeapon; isSidearm?: boolean }
         <Stat label="ROF" base={w.rof.base} delta={w.rof.delta} />
         <Stat label="STR" base={w.str.base} delta={w.str.delta} />
         <span className="v2-rt-lo-stat">
-          <em className="v2-eyebrow">{w.melee ? "RNG" : "RANGE"}</em>{" "}
+          <InfoTerm as="em" id="rng" className="v2-eyebrow">{w.melee ? "RNG" : "RANGE"}</InfoTerm>{" "}
           {w.range.text.replace(/^RNG /, "")}
           {w.range.delta ? <span className="v2-rt-delta">+{w.range.delta}</span> : null}
         </span>
       </div>
       {(w.perks.length > 0 || w.addedPerks.length > 0) && (
         <div className="v2-rt-lo-perks">
-          {w.perks.map((p) => <span key={p} className="v2-rt-lo-perk">{p}</span>)}
-          {w.addedPerks.map((p) => <span key={p} className="v2-rt-lo-perk is-added">{p}</span>)}
+          {w.perks.map((p) => <InfoTerm key={p} id={matchGlossary(p)} className="v2-rt-lo-perk">{p}</InfoTerm>)}
+          {w.addedPerks.map((p) => <InfoTerm key={p} id={matchGlossary(p)} className="v2-rt-lo-perk is-added">{p}</InfoTerm>)}
         </div>
       )}
       {w.upName && (
@@ -67,7 +69,7 @@ export function LoadoutView({ loadout }: { loadout: Loadout }) {
           </div>
           <div className="v2-rt-lo-perks">
             {loadout.modules.map((m) => (
-              <span key={m} className="v2-rt-lo-perk">{MODULES[m]?.label || m}</span>
+              <InfoTerm key={m} id={`module-${m}`} className="v2-rt-lo-perk">{MODULES[m]?.label || m}</InfoTerm>
             ))}
           </div>
         </div>
