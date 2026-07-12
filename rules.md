@@ -117,7 +117,7 @@ An Impact Roll total **below** a location's Direct threshold does nothing (it gl
    - Light / Medium / Heavy: **2 weapons — one Long Range and one Melee.**
    - Colossal: **one Long Range + one Melee, plus 1 Hull-mounted weapon** of either type (3 weapons total).
    - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **STR then scales with the chassis** (Light −2 / Medium +0 / Heavy +2 / Colossal +4, §12).
-   - Each equipped weapon has **three upgrade options — one of each nature (Field / Tuned / Prototype)** (§12). Choose **one** upgrade for the Long Range weapon and **one** for the Melee weapon when the Rig is commissioned; a Rig may run **at most one Prototype**. A selected upgrade modifies only that weapon.
+   - Each equipped weapon has **three upgrade options — one of each nature (Field / Tuned / Prototype)** (§12), and the Rig's equipment offers the same three-nature choice (§15). Choose **one** upgrade for the Long Range weapon, **one** for the Melee weapon, and **one** for the equipment when the Rig is commissioned; a Rig may run **at most one Prototype across its two weapons and its equipment**. A selected upgrade modifies only the item it's chosen for.
 
 ### Balancing without points
 - **Balanced game (recommended):** both sides field the **same number of Rigs in each weight class** (mirror the composition).
@@ -519,6 +519,28 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 | **Mobility** | **Servo Actuators** | Sprint costs 1 heat instead of 2 | **Jump Jets** (+2 heat): move up to **base Speed**, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties |
 | **Power** | **Overclock Core** | The first time this Rig's Engine reaches 0 SP, it does **not** skip its next activation | **Overclock** (+3 heat): +2 actions this activation (net +1 after the slot) |
 | **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 2 SP to one location, no D12 roll |
+| **Thermal** | **Blast Furnace Core** | Safe up to **+1** over Heat Capacity before the overheat roll | **Heat Purge Wave** (0 heat): dump banked heat — vent to Heat Capacity and scald every enemy within 3" (players adjudicate the AoE) |
+| **Fire Control** | **Targeting Computer** | The first **Fire** each activation ignores its cover and engaged accuracy penalties | **Lock Sight** (+1 heat): your next shot this activation rerolls all its missed to-hit dice |
+| **Countermeasures** | **Reactive Plating** | Side/rear-arc attacks against this Rig take **−1 STR** | **Pop Smoke** (0 heat): until this Rig's next activation, every attacker is at **−2 accuracy** against it (and any missile Lock on it is broken) |
+
+### Equipment Upgrades
+
+Each piece of equipment offers **three upgrades, one of each nature** (see *Upgrade natures*, §12). When a Rig is commissioned, choose **one** upgrade for its equipment, of one nature; this counts toward the Rig's **one-Prototype cap** alongside its two weapons (§3).
+
+| Equipment | Field | Tuned | Prototype |
+|---|---|---|---|
+| Ablative Plating | Reinforced Plating (Harden −2 impact, not −1) | Reactive Armor (first hit each round hardens that location) | Ablative Cascade (spend ablative charges to soften hits; each costs heat) |
+| Radiator Array | Twin Radiators (Purge vents −3) | Coolant Injection (−2 heat before the overheat roll when over Capacity) | Cryo Reservoir (bank cold; spend for instant cooling + a STR spike) |
+| Servo Actuators | Reinforced Servos (Sprint costs 0 heat) | Kickstart Pistons (charge into contact → first melee after +2 STR) | Grapnel Launcher (yank free of a lock or reel an enemy in; heat + cooldown) |
+| Overclock Core | Redundant Capacitors (Overclock costs +2 heat) | Adrenaline Surge (below half SP, Overclock grants +3 actions) | Reactor Overdrive (Overclock also +2 STR; overheat bonus doubles) |
+| Field Repair Suite | Master Toolkit (Repair heals +2 SP) | Battlefield Triage (Emergency Patch heals 3 SP on a destroyed location) | Nanite Swarm (seed nanites that heal each Recovery; −1 Heat Capacity while active) |
+| Blast Furnace Core | Insulated Core (safe up to +2 over Capacity) | Backdraft (Heat Purge Wave +1 STR per 2 heat over Capacity) | Meltdown Protocol (bank overheat as charge; spend for STR or a burst) |
+| Targeting Computer | Ballistic Processor (+1 accuracy vs a target in your sweet-spot band) | Predictive Tracking (vs a static/pinned target: +2 accuracy, ignore cover) | Fire Solution Lock (hold still, stack a solution → an auto-hit AP volley) |
+| Reactive Plating | Angled Plates (side/rear attacks −2 STR) | Chaff Burst (under smoke, free half-Speed side-step when targeted) | Point-Defense System (intercept incoming fire, force rerolls; heat cost) |
+
+#### Tuned / Prototype Upgrade Mechanics
+
+As with weapons (§12), equipment Tuned/Prototype mechanics are implemented incrementally: the **Field** effects above, and the three new families' base **passives/actives** (Blast Furnace Core, Targeting Computer, Reactive Plating), are live in the engine now; the Tuned and Prototype effects for all eight equipment lines land over follow-on updates.
 
 ---
 
