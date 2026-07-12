@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MODULES, MODULE_IDS, normalizeModules } from "./unit-kinds.js";
-import { UNIT_WEAPONS, normalizeUnitWeapon, makeUnit, createRoom, applyCommand, makeRig } from "./game-state.js";
+import { UNIT_WEAPONS, normalizeUnitWeapon, makeUnit, createRoom, applyCommand, makeRig, SUPPORT_UNITS } from "./game-state.js";
 
 test("MODULES lists the four roles, one action verb each (Damage has none)", () => {
   assert.deepEqual([...MODULE_IDS].sort(), ["coolant", "damage", "recon", "repair"]);
@@ -212,4 +212,26 @@ test("a destroyed painter's mark stops helping allied guns", () => {
   }
   assert.match(firePaintedFoe(false).summary, /1 hit\(s\)/); // painter alive -> paint helps, shot lands
   assert.match(firePaintedFoe(true).summary, /0 hit\(s\)/);  // painter dead -> mark ignored, shot misses
+});
+
+test("SUPPORT_UNITS defines the four shipped exemplars", () => {
+  const byName = Object.fromEntries(SUPPORT_UNITS.map((u) => [u.name, u]));
+  assert.deepEqual(byName["Marksman Tank"].modules, ["damage", "recon"]);
+  assert.equal(byName["Marksman Tank"].kind, "tank");
+  assert.equal(byName["Marksman Tank"].unit, "Tank Cannon");
+  assert.deepEqual(byName["Field Welder"].modules, ["repair", "recon"]);
+  assert.equal(byName["Field Welder"].unit, undefined); // sidearm-only
+});
+
+test("seed builds support units from a custom roster with kind + modules", () => {
+  const room = createRoom("seedtest");
+  applyCommand(room, { verb: "seed", attrs: { first: "a", roster: [
+    { name: "Marksman Tank", owner: "a", kind: "tank", unit: "Tank Cannon", modules: ["damage", "recon"] },
+    { name: "Depot Tank", owner: "b", kind: "tank", modules: ["repair", "coolant"] },
+  ] } }, {});
+  const marks = room.rigs.find((r) => r.name === "Marksman Tank");
+  const depot = room.rigs.find((r) => r.name === "Depot Tank");
+  assert.equal(marks.weapons.unit, "Tank Cannon");
+  assert.deepEqual(marks.modules, ["damage", "recon"]);
+  assert.equal(depot.weapons.unit, "Sidearm");
 });

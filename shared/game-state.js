@@ -107,6 +107,15 @@ export const SEED_ROSTER = [
   { name: "B3", owner: "b", chassis: "light-harpoon-anchor" },
 ];
 
+// The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
+// entries omit `unit` — makeUnit fits the Sidearm automatically.
+export const SUPPORT_UNITS = [
+  { name: "Marksman Tank",  owner: "a", kind: "tank",   unit: "Tank Cannon", modules: ["damage", "recon"] },
+  { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",  modules: ["damage", "coolant"] },
+  { name: "Field Welder",   owner: "b", kind: "walker", modules: ["repair", "recon"] },
+  { name: "Depot Tank",     owner: "b", kind: "tank",   modules: ["repair", "coolant"] },
+];
+
 export function chassisById(id) {
   if (!id) return null;
   const ref = String(id).trim().toLowerCase();
@@ -2220,13 +2229,20 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     room.nextRigId = 1;
     resetGameShape(room);
     for (const entry of roster) {
-      const pb = resolveChassis({ chassis: entry.chassis });
-      if (!pb) continue;
       const owner = normalizeSide(room, entry.owner) || "a";
-      const unit = makeUnit("rig", room.nextRigId, entry.name, owner, {
-        weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
-        chassis: pb.id, sp: pb.sp,
-      });
+      let unit;
+      if (entry.kind === "tank" || entry.kind === "walker") {
+        unit = makeUnit(entry.kind, room.nextRigId, entry.name, owner, {
+          unit: entry.unit, modules: entry.modules,
+        });
+      } else {
+        const pb = resolveChassis({ chassis: entry.chassis });
+        if (!pb) continue;
+        unit = makeUnit("rig", room.nextRigId, entry.name, owner, {
+          weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
+          chassis: pb.id, sp: pb.sp,
+        });
+      }
       if (!unit) continue;
       room.nextRigId++;
       room.rigs.push(unit);
