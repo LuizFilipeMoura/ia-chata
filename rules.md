@@ -380,6 +380,7 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Missile Barrage | 4 | 9 | 20" | +1 | −0.15 | 6–34" |
 | Harpoon | 1 | 12 | 14" | +2 | −0.28 | 0–22" |
 | Rivet Gun | 6 | 4 | 6" | +2 | −0.40 | 0–14" |
+| Crossbow | 1 | 10 | 18" | +3 | −0.25 | 0–24" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose ACC up close.
 
@@ -401,6 +402,7 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 | Flamethrower | 4 | 7 | +1 | 2 |
 | Anchor | 1 | 12 | – | 2 |
 | Pressure Claw | 2 | 9 | +1 | 2 |
+| Talon | 2 | 7 | +1 | 2 |
 
 ### Weapon Upgrades
 
@@ -428,6 +430,8 @@ Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures*
 | Rivet Gun | Rapid Feed (+2 ROF) | Staple Burst (4+ hits → −1 action) | Rivet Lock |
 | Anchor | Fluked Head (+3 STR) | Dead Weight (no Disengage next) | Ground Anchor |
 | Pressure Claw | Hardened Jaws (Armour Piercing) | Crush Grip (−1 max SP) | Hydraulic Vice |
+| Crossbow | Fletched Bolts (Precision) | Steady Aim (+3 STR in sweet band) | Pinning Bolt |
+| Talon | Honed Talons (+2 STR) | Exploit Wound (+3 STR vs damaged location) | Evisceration |
 
 #### Tuned / Prototype Upgrade Mechanics
 
@@ -455,6 +459,10 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Emplacement** (Bulwark Shield, Prototype) — the **Emplace** action (1 slot, 0 heat) roots the Rig into a fortress stance: its Raise Shield becomes permanent (auto-raised free at each activation start — no Prepare action, no Answer token), its action budget drops from 3 to 2, and it can no longer Move, Sprint, or Jump Jets. The **Un-plant** action (1 slot) lifts the stance and costs +2 heat. Emplacing is on a 3-round cooldown measured from when it was entered (re-enter no earlier than the round you emplaced + 3).
 - **Piledriver Protocol** (Siege Maul, Prototype) — a **Momentum** system. The Rig gains **+1 Momentum** for any activation it **advanced** (Moved or Sprinted), capped at 3; Momentum persists between activations. A Siege Maul shot spends **all** stored Momentum: the hit ignores the target's **Brace** (no −2) and **cover**, and gains **+1 STR per Momentum** spent (Momentum then resets to 0 whether or not the shot connected). **Downside:** while storing Momentum (> 0) the Rig **cannot Raise Shield** — a requested Raise Shield downgrades to Brace (all-in on the charge, no guard). When a Momentum-spending smash lands ≥1 damaging hit, the engine emits a player instruction — *"Piledriver — shove &lt;target&gt; back 3" (move the mini)."* — for the players to resolve on the board (no coordinates are simulated).
 - **Enfilade** (Sniper Cannon, Prototype) — a spatial ricochet, narrated rather than simulated. Only **aimed** Sniper Cannon shots feed a per-rig counter; on every **3rd** aimed shot the engine emits a player instruction — *"Enfilade — ricochet! Resolve a +2 STR hit on the next rig in line of sight behind &lt;target&gt; (player's choice)."* The player picks the rig behind the target (they know line of sight) and applies the +2 STR hit via the normal attack/damage controls. Only the aimed-shot cadence is tracked in state.
+- **Steady Aim** (Crossbow, Tuned) — +3 STR when the measured firing distance is within 2" of the Crossbow's sweet spot (16–20").
+- **Exploit Wound** (Talon, Tuned) — +3 STR against a struck location already below its max SP.
+- **Evisceration** (Talon, Prototype) — a hit on a location at or below half its max SP is forced to Critical (−3 SP), every hit; downside: −1 STR against a fully-undamaged struck location.
+- **Pinning Bolt** (Crossbow, Prototype) — a damaging bolt immobilises the target until the firer's next activation (guaranteed, no roll, may still pivot); the firer runs +2 heat.
 - **Barrage** (Mortar, Prototype) — the **Barrage** action (1 slot) commits the Mortar to a shelled zone. The engine emits a player instruction — *"Barrage — place a shelled-zone marker within 6–34" of this Rig; it shells a 3" zone for 2 rounds. Each round, apply 1 SP to every rig in the zone (players adjudicate who's inside)."* — and sets `barrageRoundsLeft = 2`. While a barrage is active the Mortar is **locked** (it can't fire a direct shot; melee is unaffected), and each **Recovery** the Rig takes **+1 heat** (upkeep) and emits the per-round apply-SP prompt before counting down. After 2 Recoveries the barrage ends and the Mortar unlocks. A Rig can't start a new Barrage while one is still running, and only a Mortar carrying this upgrade can Barrage.
 - **Tow Chain** (Wrecking Ball, Prototype) — a spatial fling, narrated rather than simulated. On a damaging Wrecking Ball hit, if the chain is charged (`round ≥ towChainCooldownUntil`), the engine emits a player instruction — *"Tow Chain — fling &lt;target&gt; up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat."* The attacker takes **+2 heat**, is **rooted for the rest of this activation** (no Move/Sprint after the tow), and the fling goes on a **3-round cooldown** (`towChainCooldownUntil = round + 3`). While recharging, the Wrecking Ball hits normally with no fling.
 - **Kneecapper** (Double MG, Prototype) — this Double MG only ever strikes limbs (Arms or Legs — whatever the hit location resolves to is remapped onto one if it isn't already): Hull and Engine can **never** be damaged by it, on any arc — not even the §8 cook-off/cascade from a limb hitting 0 SP spills into them (it *cripples, never kills*). Against limbs it also bypasses its own Raking Fire front-arc auto-fail, at Raking Fire's side-arc value (+4 STR); side/rear keep their normal Raking Fire bonuses. A limb a Kneecapper has raked to **≤ half** max SP is progressively crippled: a raked Leg keeps re-flagging Speed halved next round for as long as it stays at or below half, and a raked Arm halves that Rig's own ROF (**all** weapons) until repaired back above half. Only limbs a Kneecapper actually hit ramp — ordinary weapons impose no half-limb debuff — and a raked limb repaired above half is re-armable, so **switching limbs resets the ramp**.
@@ -524,7 +532,7 @@ Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weap
 
 ### Tank
 
-Four components (Hull / Tracks / Turret / Engine). **Cold** — no heat, no overheat rolls, no Shut Down. **One weapon** from the shared unit-weapon list (flat STR, no weight-class scaling). No equipment, no Prepare. **2 actions** per activation. Speed **3"** ⚙.
+Four components (Hull / Tracks / Turret / Engine). **Cold** — no heat, no overheat rolls, no Shut Down, **no Sprint** (Move only — Sprint spends heat a cold kind hasn't got). **One weapon** from the shared unit-weapon list (flat STR, no weight-class scaling). No equipment, no Prepare. **2 actions** per activation. Speed **3"** ⚙.
 
 Hit table (D12): 1–4 Hull · 5–7 Tracks · 8–10 Turret · 11–12 Engine.
 Strawman armour ⚙ (Direct / Severe / Critical): Hull 13-14 / 15-16 / 17+; Tracks 14-15 / 16 / 17+; Turret 12-13 / 14-15 / 16+; Engine 8-10 / 11-12 / 13+.
