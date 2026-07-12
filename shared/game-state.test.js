@@ -21,6 +21,24 @@ import {
 // so the add-command attrs used across these tests carry both.
 const W = { lr: "Mini Gun", melee: "Sword" };
 
+// Drive a 2-rig battle to the point where side A's rig is mid-activation and can
+// Fire at side B's prepared rig. Returns { room, a, b }.
+function battleWithPreparedDefender(defenderPrep) {
+  const room = createRoom("PREP01");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "Atk", class: "medium", owner: "a", longRange: "Mini Gun", melee: "Sword" } });
+  applyCommand(room, { verb: "add", attrs: { name: "Def", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword" } });
+  const a = findRig(room, "Atk");
+  const b = findRig(room, "Def");
+  b.preparation = { type: defenderPrep, source: "answer", faceUp: false };
+  // Force the turn state: A active, mid-activation, plenty of actions left.
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: a.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  a.loaded = { longRange: true, melee: true };
+  return { room, a, b };
+}
+
 test("createRoom has two unclaimed sides and empty rigs", () => {
   const r = createRoom("IRON42");
   assert.equal(r.code, "IRON42");
@@ -2522,6 +2540,77 @@ test("publicState reveals a face-up reaction to everyone", () => {
   findRig(r, "a1").preparation.faceUp = true;
   const asFoe = publicState(r, "b").rigs.find((x) => x.name === "a1");
   assert.equal(asFoe.preparation.type, "brace");
+});
+
+test("Riposte reveals only on a melee attack, arming a melee counter", () => {
+  // A RANGED attack must NOT trigger Riposte — token stays down, no pendingReaction.
+  {
+    const { room, b } = battleWithPreparedDefender("riposte");
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
+      dice: { toHit: [1], location: 1, impacts: [1] },
+    } });
+    assert.equal(b.preparation.faceUp, false, "ranged attack leaves Riposte facedown");
+    assert.equal(room.game.pendingReaction, null);
+  }
+  // A MELEE attack reveals Riposte and arms a melee counter.
+  {
+    const { room, b } = battleWithPreparedDefender("riposte");
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Atk", action: "fire", target: "Def", weapon: "melee", arc: "front", range: "near",
+      dice: { toHit: [6], location: 1, impacts: [3] },
+    } });
+    assert.equal(b.preparation.faceUp, true, "melee attack reveals Riposte");
+    assert.equal(room.game.pendingReaction?.kind, "riposte");
+    assert.equal(room.game.pendingReaction.targetId, b.id);
+  }
+});
+
+test("Exploit reveals only when the attacker is overcommitted", () => {
+  // Cautious attacker (actions to spare, cool) → no trigger.
+  {
+    const { room, b } = battleWithPreparedDefender("exploit");
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
+      dice: { toHit: [1], location: 1, impacts: [1] },
+    } });
+    assert.equal(b.preparation.faceUp, false);
+    assert.equal(room.game.pendingReaction, null);
+  }
+  // Final-action attacker → overcommitted → Exploit arms a counter.
+  {
+    const { room, b } = battleWithPreparedDefender("exploit");
+    room.game.turn.actionsUsed = 2; // this shot is action 3 of 3
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
+      dice: { toHit: [1], location: 1, impacts: [1] },
+    } });
+    assert.equal(b.preparation.faceUp, true);
+    assert.equal(room.game.pendingReaction?.kind, "exploit");
+  }
+});
+
+test("Sidestep defers a ranged attack but ignores melee", () => {
+  // Ranged → deferred like evasive.
+  {
+    const { room, b } = battleWithPreparedDefender("sidestep");
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
+      dice: { toHit: [4], location: 1, impacts: [3] },
+    } });
+    assert.equal(b.preparation.faceUp, true);
+    assert.equal(room.game.pendingReaction?.kind, "sidestep");
+  }
+  // Melee → no trigger, token stays down.
+  {
+    const { room, b } = battleWithPreparedDefender("sidestep");
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Atk", action: "fire", target: "Def", weapon: "melee", arc: "front", range: "near",
+      dice: { toHit: [6], location: 1, impacts: [3] },
+    } });
+    assert.equal(b.preparation.faceUp, false);
+    assert.equal(room.game.pendingReaction, null);
+  }
 });
 
 test("evasive react with evaded=true fails the attack and deals no damage", () => {

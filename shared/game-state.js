@@ -1972,6 +1972,28 @@ function resolveSkewerStrike(room, skewerer, victim, random) {
   }, random, combatCtx());
 }
 
+// §5 — does a facedown preparation FIRE against this incoming attack? The three
+// generic preps trigger on any attack; the Answer counters are conditional:
+//  • riposte  — melee attacks only
+//  • sidestep — ranged attacks only
+//  • exploit  — attacker is overcommitted: this shot spends its final action, or
+//               its heat is at/over its Heat Capacity.
+// A non-triggering counter stays facedown and the attack resolves normally.
+function prepTriggeredBy(prep, weapon, attacker, t) {
+  const melee = weapon === "melee";
+  switch (prep.type) {
+    case "riposte":  return melee;
+    case "sidestep": return !melee;
+    case "exploit": {
+      const cap = HEAT_CAPACITY[attacker.weightClass];
+      const overheated = cap != null && (attacker.engine?.heat || 0) >= cap;
+      const finalAction = (t.actionsUsed + 1) >= t.actionsMax;
+      return overheated || finalAction;
+    }
+    default: return true; // brace / evasive / return
+  }
+}
+
 // One action during an activation. Returns whether anything changed.
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
@@ -2068,7 +2090,7 @@ function performAction(room, rig, act, a, random) {
       if (jammed) return false;
     }
     const facedown = target.preparation && target.preparation.faceUp === false;
-    if (facedown) {
+    if (facedown && prepTriggeredBy(target.preparation, a.weapon, rig, t)) {
       const prep = target.preparation;
       // Affordability pre-check so an unaffordable (or unloaded) shot never
       // reveals the token: a spent ranged weapon must be reloaded first.
@@ -2077,11 +2099,13 @@ function performAction(room, rig, act, a, random) {
       const cost = 1;
       if (t.actionsUsed + cost > t.actionsMax) return false;
 
-      if (prep.type === "evasive") {
+      // Pre-resolution dodges — Evasive and Sidestep — defer the WHOLE attack to
+      // the `react` verb (the defender declares whether it broke LoS/range).
+      if (prep.type === "evasive" || prep.type === "sidestep") {
         prep.faceUp = true;
-        pushResolution(room, reactionRevealEntry(target, "evasive"));
+        pushResolution(room, reactionRevealEntry(target, prep.type));
         room.game.pendingReaction = {
-          kind: "evasive", attackerId: rig.id, targetId: target.id, defender: target.owner,
+          kind: prep.type, attackerId: rig.id, targetId: target.id, defender: target.owner,
           attack: { ...a, act },
         };
         return true; // whole attack deferred to the `react` verb
@@ -2090,11 +2114,15 @@ function performAction(room, rig, act, a, random) {
       if (!res) return false;
       prep.faceUp = true;
       pushResolution(room, reactionRevealEntry(target, prep.type));
-      if (prep.type === "return" && !target.destroyed) {
+      // Post-resolution counters: Return Fire, Riposte, Exploit each arm a
+      // pending counter-attack keyed to their type.
+      if ((prep.type === "return" || prep.type === "riposte" || prep.type === "exploit") && !target.destroyed) {
         room.game.pendingReaction = {
-          kind: "return", attackerId: rig.id, targetId: target.id, defender: target.owner,
+          kind: prep.type, attackerId: rig.id, targetId: target.id, defender: target.owner,
         };
       }
+      // Brace answers a withstood front melee.
+      if (prep.type === "brace") maybeBraceRetaliate(room, rig, target, a.weapon, a.arc, res, random);
       // Anvil Boss — a raised shield answers the first melee attacker to land a hit.
       maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
       // Skewer — a damaging Lance blow impales the target it just locked.
