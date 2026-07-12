@@ -2362,7 +2362,7 @@ test("makeUnit rejects unknown kinds", () => {
 test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   const ids = Object.keys(UNIT_WEAPONS).sort();
   assert.deepEqual(ids, [
-    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Tank Cannon",
+    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Sidearm", "Tank Cannon",
   ]);
   for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
     assert.equal(typeof w.rof, "number");
@@ -2516,6 +2516,28 @@ test("formatBattleState renders a Tank without heat and with a single unit weapo
   assert.ok(view.includes("engine 6/6")); // no "heat" suffix — cold kind
   assert.ok(!/engine 6\/6 heat/.test(view));
   assert.ok(view.includes("weapon Tank Cannon"));
+});
+
+test("formatBattleState surfaces a support unit's modules in its line", () => {
+  const room = createRoom("Rmod"); claimSide(room, { name: "u", side: "a" });
+  const walker = makeUnit("walker", 1, "Welder", "a", { modules: ["repair", "recon"] });
+  room.rigs.push(walker);
+  const view = formatBattleState(room, "a");
+  assert.match(view, /modules repair, recon/);
+});
+
+test("formatBattleState flags a painted enemy [PAINTED] only while its painter is alive", () => {
+  const room = createRoom("Rpaint"); claimSide(room, { name: "u", side: "a" });
+  const painter = makeUnit("walker", 1, "Spotter", "a", { modules: ["repair", "recon"] });
+  const foe = makeUnit("tank", 2, "Foe", "b", { unit: "Tank Cannon" });
+  foe.painted = { by: "a", painterId: 1 };
+  room.rigs.push(painter, foe);
+  const alive = formatBattleState(room, "b");
+  assert.match(alive, /Foe \(Tank, owner b\).*\[PAINTED\]/);
+
+  painter.destroyed = true;
+  const dead = formatBattleState(room, "b");
+  assert.doesNotMatch(dead, /\[PAINTED\]/);
 });
 
 test("__test.setRigSp sets skipNextActivation via power-role, not literal 'engine'", () => {

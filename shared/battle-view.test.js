@@ -127,6 +127,15 @@ test("rigModifiers shows a generic chip for a hidden reaction", () => {
   assert.equal(mod.tone, "prep");
 });
 
+test("rigModifiers shows a Painted chip for a Recon-marked rig", () => {
+  const mods = rigModifiers(rig({ painted: { by: "b", painterId: 9 } }));
+  const mod = mods.find((m) => m.key === "painted");
+  assert.ok(mod, "expected a painted chip");
+  assert.equal(mod.tag, "Painted");
+  assert.equal(mod.tone, "warn");
+  assert.ok(!rigModifiers(rig()).some((m) => m.key === "painted"));
+});
+
 test("rigModifiers names a revealed reaction", () => {
   const r = rig({ preparation: { type: "return", source: "answer", faceUp: true } });
   const mod = rigModifiers(r).find((m) => m.key === "prep");
@@ -264,4 +273,17 @@ test("availableActions disables Jump Jets while engaged", () => {
   const jj = availableActions(rig, turn).find((x) => x.key === "jumpjets");
   assert.ok(jj);
   assert.equal(jj.enabled, false);
+});
+
+test("module actions appear only for units carrying the matching module", () => {
+  const turn = { actionsUsed: 0, actionsMax: 3 };
+  const welder = { kind: "walker", modules: ["repair", "recon"], loaded: { unit: true }, weapons: { unit: "Sidearm" } };
+  const keys = availableActions(welder, turn, 1).map((a) => a.key);
+  assert.ok(keys.includes("fieldweld"));
+  assert.ok(keys.includes("paint"));
+  assert.ok(!keys.includes("vent")); // no coolant module
+
+  const plainTank = { kind: "tank", modules: [], loaded: { unit: true }, weapons: { unit: "Tank Cannon" } };
+  const tankKeys = availableActions(plainTank, { actionsUsed: 0, actionsMax: 2 }, 1).map((a) => a.key);
+  assert.ok(!tankKeys.includes("fieldweld") && !tankKeys.includes("vent") && !tankKeys.includes("paint"));
 });

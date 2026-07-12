@@ -3,7 +3,7 @@ import { resolveAttack } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
 } from "./field.js";
-import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf } from "./unit-kinds.js";
+import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -64,6 +64,9 @@ export const UNIT_WEAPONS = {
   "Rocket Pod":       { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
   "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
   "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
+  // Built-in weak weapon every support unit carries; replaced by a Damage
+  // module. peak 0 + dropoff 0 = a flat ACC 0 at any distance (spec §Sidearm).
+  "Sidearm":          { rof: 2, str: 4,  sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -102,6 +105,15 @@ export const SEED_ROSTER = [
   { name: "B1", owner: "b", chassis: "medium-shield-siege" },
   { name: "B2", owner: "b", chassis: "medium-sniper-chainsaw" },
   { name: "B3", owner: "b", chassis: "light-harpoon-anchor" },
+];
+
+// The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
+// entries omit `unit` — makeUnit fits the Sidearm automatically.
+export const SUPPORT_UNITS = [
+  { name: "Marksman Tank",  owner: "a", kind: "tank",   unit: "Tank Cannon", modules: ["damage", "recon"] },
+  { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",  modules: ["damage", "coolant"] },
+  { name: "Field Welder",   owner: "b", kind: "walker", modules: ["repair", "recon"] },
+  { name: "Depot Tank",     owner: "b", kind: "tank",   modules: ["repair", "coolant"] },
 ];
 
 export function chassisById(id) {
@@ -737,7 +749,14 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
   // registry; the unit carries exactly one flat-pick weapon and no equipment.
-  const weaponName = normalizeUnitWeapon(opts.unit);
+  // Support units carry exactly two distinct modules; a bare tank/walker carries
+  // none. A Damage module fits the chosen unit-weapon; without one the unit falls
+  // back to the built-in Sidearm.
+  const modules = normalizeModules(opts.modules);
+  if (modules.length > 0 && modules.length !== 2) return null;
+  const weaponName = modules.length > 0
+    ? (modules.includes("damage") ? normalizeUnitWeapon(opts.unit) : "Sidearm")
+    : normalizeUnitWeapon(opts.unit);
   if (!weaponName) return null;
   const parts = {};
   for (const p of kind.parts) {
@@ -755,6 +774,8 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     owner: owner === "b" ? "b" : "a",
     parts,
     weapons: { unit: weaponName },
+    modules,
+    painted: null,
     equipment: null,
     chassis: null, // cold kinds (tank / walker) aren't commissioned from a chassis
     activated: false,
@@ -1536,9 +1557,16 @@ function resolveFire(room, rig, target, a, act, random) {
   if (slot === "longRange" && rig.loaded.longRange === false) return false;
   const cost = 1;
   if (t.actionsUsed + cost > t.actionsMax) return false;
+  // A paint mark only helps while its painter is alive: a destroyed painter's
+  // mark lingers on the target (the sweep that clears it runs on the painter's
+  // own activation), so guard against a dead painter here (spec: "until the
+  // painter's next activation").
+  const painter = target.painted ? findRigById(room, target.painted.painterId) : null;
+  const paintedActive = !!(target.painted && target.painted.by === rig.owner && painter && !painter.destroyed);
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,
+    painted: paintedActive,
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
@@ -1931,6 +1959,58 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
+  if (act === "fieldweld") {
+    // Repair module (spec: Support Units) — weld SP onto a friendly unit.
+    if (!(rig.modules || []).includes("repair")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner !== rig.owner || target.destroyed) return false;
+    const roll = rollD(12, a.dice?.weld, random);
+    const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    const names = partNamesOf(kindOf(target));
+    const loc = names.includes(String(a.loc || "").toLowerCase()) ? String(a.loc).toLowerCase() : names[0];
+    if (amt > 0) repairRig(target, loc, amt);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "fieldweld", actor: rig.owner, rigId: rig.id,
+      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      summary: `${rig.name} field-welds ${target.name} — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
+    });
+    return true;
+  }
+  if (act === "vent") {
+    // Coolant module (spec: Support Units) — vent 2 heat off a friendly Rig.
+    if (!(rig.modules || []).includes("coolant")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner !== rig.owner || target.destroyed) return false;
+    if (!UNIT_KINDS[kindOf(target)]?.hasHeat) return false; // only Rigs run hot
+    bumpHeat(target, -2);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "vent", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} vents 2 heat off ${target.name}.`, effects: [],
+    });
+    return true;
+  }
+  if (act === "paint") {
+    // Recon module (spec: Support Units) — mark an enemy so allied ranged attacks
+    // ignore its cover and gain +1 Aim until this unit's next activation.
+    if (!(rig.modules || []).includes("recon")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner === rig.owner || target.destroyed) return false; // enemies only
+    // One mark per Recon unit — a new Paint replaces this painter's old mark.
+    for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
+    target.painted = { by: rig.owner, painterId: rig.id };
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "paint", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} paints ${target.name} — allied ranged attacks ignore its cover and gain +1 Aim until ${rig.name}'s next activation.`,
+      effects: [],
+    });
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
@@ -2069,6 +2149,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           chassis: a.chassis,
           // Flat-pick options
           unit: a.unit,
+          // Support-unit modules — accept a comma string (from the LLM tag) or an array.
+          modules: typeof a.modules === "string"
+            ? a.modules.split(",").map((s) => s.trim()).filter(Boolean)
+            : a.modules,
         });
         if (!unit) return room;
         room.nextRigId++;
@@ -2171,13 +2255,20 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     room.nextRigId = 1;
     resetGameShape(room);
     for (const entry of roster) {
-      const pb = resolveChassis({ chassis: entry.chassis });
-      if (!pb) continue;
       const owner = normalizeSide(room, entry.owner) || "a";
-      const unit = makeUnit("rig", room.nextRigId, entry.name, owner, {
-        weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
-        chassis: pb.id, sp: pb.sp,
-      });
+      let unit;
+      if (entry.kind === "tank" || entry.kind === "walker") {
+        unit = makeUnit(entry.kind, room.nextRigId, entry.name, owner, {
+          unit: entry.unit, modules: entry.modules,
+        });
+      } else {
+        const pb = resolveChassis({ chassis: entry.chassis });
+        if (!pb) continue;
+        unit = makeUnit("rig", room.nextRigId, entry.name, owner, {
+          weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
+          chassis: pb.id, sp: pb.sp,
+        });
+      }
       if (!unit) continue;
       room.nextRigId++;
       room.rigs.push(unit);
@@ -2243,6 +2334,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
+      // Recon paint (spec: Support Units) expires at the painter's next activation:
+      // clear every mark this rig placed as it steps up again.
+      for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
       if (rig.skipNextActivation) {
         rig.skipNextActivation = false;
         rig.activated = true;
@@ -2536,7 +2630,13 @@ export function formatBattleState(room, side) {
         }
       }
       const chassis = cfg.id === "rig" ? rig.weightClass : cfg.label;
-      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
+      let extra = "";
+      if (Array.isArray(rig.modules) && rig.modules.length) extra += `; modules ${rig.modules.join(", ")}`;
+      if (rig.painted) {
+        const painter = findRigById(room, rig.painted.painterId);
+        if (painter && !painter.destroyed) extra += " [PAINTED]";
+      }
+      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}${extra}`);
     }
   }
   const sideId = normalizeSide(room, side);

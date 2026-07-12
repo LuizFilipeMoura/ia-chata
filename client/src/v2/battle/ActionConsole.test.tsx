@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { V2Providers } from "../state/V2Providers";
 import { useRoomDispatch } from "../../state/RoomStateContext";
 import type { Rig, ServerState } from "../../state/types";
 import { ActionConsole } from "./ActionConsole";
 
-vi.mock("../../hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
+const sendCommand = vi.fn();
+vi.mock("../../hooks/useCommands", () => ({ useCommands: () => sendCommand }));
 
 const stalker: Rig = { id:1, name:"STALKER", owner:"a", weightClass:"light",
   hull:{sp:6,max:6,destroyed:false}, arms:{sp:5,max:5,destroyed:false}, legs:{sp:5,max:5,destroyed:false},
@@ -32,4 +34,23 @@ test("renders empty for a non-active rig", () => {
   const { container } = render(<V2Providers><Seed state={started(null)}/><ActionConsole rig={stalker}/></V2Providers>);
   expect(screen.queryByText(/Actions\s/i)).toBeNull();
   expect(container.querySelector(".v2-ac")?.children.length ?? 0).toBe(0);
+});
+
+// Field Weld / Vent / Paint (spec: Support Units) — a Recon-module rig's
+// Support tile opens the Paint target picker, which dispatches the command
+// once a target is confirmed.
+test("tapping Paint (Recon module) opens a target picker and dispatches the paint command", async () => {
+  const user = userEvent.setup();
+  sendCommand.mockClear();
+  const recon: Rig = { ...stalker, modules: ["recon"] };
+  const state = started(1);
+  state.rigs = [recon, { ...stalker, id: 2, owner: "b", name: "FOE" }];
+  render(<V2Providers><Seed state={state}/><ActionConsole rig={recon}/></V2Providers>);
+  // Paint shares the Support tile with repair/prepare/douse, so it opens the
+  // group's popover rather than soloing straight through.
+  await user.click(await screen.findByRole("button", { name: /Support/i }));
+  await user.click(await screen.findByRole("menuitem", { name: /Paint/i }));
+  await user.click(await screen.findByRole("button", { name: /FOE/ }));
+  await user.click(screen.getByRole("button", { name: /Paint/ }));
+  expect(sendCommand).toHaveBeenCalledWith("action", { name: "STALKER", action: "paint", target: "FOE" });
 });

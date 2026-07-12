@@ -30,6 +30,8 @@ export interface Loadout {
   lr?: LoadoutWeapon;
   melee?: LoadoutWeapon;
   equipment: LoadoutEquipment | null;
+  modules?: string[];   // support-unit role modules (spec: Support Units)
+  isSidearm?: boolean;  // true when the single weapon is the built-in Sidearm
 }
 
 // Resolve one weapon slot into display-ready base stats + upgrade deltas.
@@ -80,7 +82,13 @@ export function buildLoadout(rig: Rig): Loadout | null {
   } : null;
   // Cold kinds (Tank / Walker) store a single flat-pick weapon under `unit`.
   if (rig.weapons.unit) {
-    return { flat: true, unit: weapon(rig, "unit"), equipment };
+    return {
+      flat: true,
+      unit: weapon(rig, "unit"),
+      equipment,
+      modules: Array.isArray(rig.modules) ? rig.modules : [],
+      isSidearm: rig.weapons?.unit === "Sidearm",
+    };
   }
   return {
     flat: false,

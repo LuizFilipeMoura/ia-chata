@@ -110,6 +110,20 @@ export function availableActions(rig, turn, round) {
       enabled: left > 0, cost: ACTIONS.lock.slot, note: "", // "Missiles locked" tag shows a lock is primed
     });
   }
+  // Support-unit module actions (spec: Support Units) — surfaced per module held.
+  const modules = rig.modules || [];
+  if (modules.includes("repair")) {
+    list.push({ key: "fieldweld", label: ACTIONS.fieldweld.label, heat: ACTIONS.fieldweld.heat,
+      enabled: left > 0, cost: ACTIONS.fieldweld.slot, note: "" });
+  }
+  if (modules.includes("coolant")) {
+    list.push({ key: "vent", label: ACTIONS.vent.label, heat: ACTIONS.vent.heat,
+      enabled: left > 0, cost: ACTIONS.vent.slot, note: "" });
+  }
+  if (modules.includes("recon")) {
+    list.push({ key: "paint", label: ACTIONS.paint.label, heat: ACTIONS.paint.heat,
+      enabled: left > 0, cost: ACTIONS.paint.slot, note: "" });
+  }
   return list;
 }
 
@@ -167,6 +181,9 @@ export function rigModifiers(rig) {
   }
   for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn" });
   if (rig.loaded && rig.loaded.longRange === false) mods.push({ key: "unloaded", tag: "Ranged unloaded", tone: "warn" });
+  // Recon Paint mark (spec: Support Units) — visible so a marked enemy reads
+  // at a glance (allied ranged attacks ignore its cover + gain +1 Aim).
+  if (rig.painted) mods.push({ key: "painted", tag: "Painted", tone: "warn" });
   return mods;
 }
 

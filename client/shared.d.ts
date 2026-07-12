@@ -73,6 +73,9 @@ declare module "/shared/glossary.js" {
 
 declare module "/shared/unit-kinds.js" {
   export const ROLES: string[];
+  export const MODULES: Record<string, { id: string; label: string; action: string | null }>;
+  export const MODULE_IDS: string[];
+  export function normalizeModules(modules: unknown): string[];
   export const UNIT_KINDS: Record<string, {
     id: string;
     label: string;

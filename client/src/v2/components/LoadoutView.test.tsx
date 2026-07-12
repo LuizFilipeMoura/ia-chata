@@ -36,3 +36,16 @@ test("flat-pick weapon: one block, no upgrade line, no equipment", () => {
   expect(screen.queryByText(/⬡/)).not.toBeInTheDocument();      // no upgrade line
   expect(screen.queryByText(/Passive —/)).not.toBeInTheDocument(); // no equipment
 });
+
+test("support unit: module chips render and the sidearm is tagged", () => {
+  const walker = base({
+    kind: "walker",
+    weapons: { unit: "Sidearm" },
+    modules: ["repair", "recon"],
+    equipment: null,
+  });
+  render(<LoadoutView loadout={buildLoadout(walker)!} />);
+  expect(screen.getByText(/repair/i)).toBeInTheDocument();
+  expect(screen.getByText(/recon/i)).toBeInTheDocument();
+  expect(screen.getByText(/\(Sidearm\)/i)).toBeInTheDocument();
+});

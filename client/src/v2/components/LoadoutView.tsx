@@ -1,6 +1,7 @@
 import "../styles/rig-terminal.css";
 import { weaponGlyph, natureLabel } from "../lib/commissionData";
 import type { Loadout, LoadoutWeapon } from "../../lib/loadout";
+import { MODULES } from "/shared/unit-kinds.js";
 
 // One base stat term, with an optional green "+N" upgrade mark beside it.
 function Stat({ label, base, delta }: { label: string; base: number | string; delta: number }) {
@@ -12,12 +13,13 @@ function Stat({ label, base, delta }: { label: string; base: number | string; de
   );
 }
 
-function WeaponBlock({ w }: { w: LoadoutWeapon }) {
+function WeaponBlock({ w, isSidearm }: { w: LoadoutWeapon; isSidearm?: boolean }) {
   return (
     <div className="v2-rt-lo-weapon">
       <div className="v2-rt-lo-weapon-head">
         <span className="v2-rt-lo-glyph" aria-hidden="true">{weaponGlyph(w.name)}</span>
         <span className="v2-rt-lo-name v2-title">{w.name}</span>
+        {isSidearm && <span className="v2-eyebrow">(Sidearm)</span>}
       </div>
       <div className="v2-rt-lo-stats">
         <Stat label="ROF" base={w.rof.base} delta={w.rof.delta} />
@@ -50,13 +52,26 @@ export function LoadoutView({ loadout }: { loadout: Loadout }) {
   return (
     <div className="v2-rt-lo">
       {loadout.flat
-        ? loadout.unit && <WeaponBlock w={loadout.unit} />
+        ? loadout.unit && <WeaponBlock w={loadout.unit} isSidearm={loadout.isSidearm} />
         : (
           <>
             {loadout.lr && <WeaponBlock w={loadout.lr} />}
             {loadout.melee && <WeaponBlock w={loadout.melee} />}
           </>
         )}
+      {loadout.modules && loadout.modules.length > 0 && (
+        <div className="v2-rt-lo-equip">
+          <div className="v2-rt-lo-equip-head">
+            <span aria-hidden="true">⬢</span>
+            <span className="v2-rt-lo-name v2-title">Modules</span>
+          </div>
+          <div className="v2-rt-lo-perks">
+            {loadout.modules.map((m) => (
+              <span key={m} className="v2-rt-lo-perk">{MODULES[m]?.label || m}</span>
+            ))}
+          </div>
+        </div>
+      )}
       {eq && (
         <div className="v2-rt-lo-equip">
           <div className="v2-rt-lo-equip-head">

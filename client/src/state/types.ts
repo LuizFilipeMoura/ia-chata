@@ -44,6 +44,7 @@ export interface Rig {
   engine: Engine;
   weapons?: { longRange?: string; melee?: string; unit?: string };
   weaponUpgrades?: { longRange: string; melee: string };
+  modules?: string[];
   equipment: string | null;
   chassis?: string | null;
   loaded?: { longRange?: boolean; melee?: boolean; unit?: boolean };
