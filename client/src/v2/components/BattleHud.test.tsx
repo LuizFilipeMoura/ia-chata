@@ -34,6 +34,34 @@ test("renders nothing pre-battle", () => {
   const { container } = render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
   expect(container.querySelector(".v2-bh")).toBeNull();
 });
+test("shows both sides' running VP, highlighting mine", async () => {
+  const state: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:4,ready:true},{id:"b",name:"Rival",vp:2,ready:true}] } };
+  render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
+  const mine = await screen.findByText(/Kostov 4/);
+  const foe = screen.getByText(/Rival 2/);
+  expect(mine).toHaveClass("v2-bh-mine");
+  expect(foe).toHaveClass("v2-bh-foe");
+});
+test("pops a kill toast when a fresh destruction resolution carries a vp award", async () => {
+  const base: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:0,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[] } };
+  const killed: ServerState = { version:2, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:2,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[{ id:5, kind:"destruction", rigId:9, victimName:"Ravager", vp:{ side:"a", amount:2 }, effects:[] }] } };
+  const { rerender } = render(<AppProviders><Seed state={base}/><BattleHud/></AppProviders>);
+  await screen.findByText(/Kostov 0/);
+  expect(screen.queryByText(/Ravager/)).toBeNull();
+  rerender(<AppProviders><Seed state={killed}/><BattleHud/></AppProviders>);
+  expect(await screen.findByText(/Ravager wrecked · \+2 VP/)).toBeInTheDocument();
+});
 test("audio mute button toggles battle audio", async () => {
   localStorage.clear(); _resetForTest();
   const user = userEvent.setup();
