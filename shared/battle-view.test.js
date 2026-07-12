@@ -233,10 +233,11 @@ test("Walker action console keeps prepare hidden, keeps other actions (regressio
 
 test("Flat-pick fired: Fire stays live (drawer reload) and reload is not a tile", () => {
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
-  tank.loaded = { longRange: false }; // just fired — spent signal is loaded.longRange
+  tank.loaded = { unit: false }; // just fired — a flat-pick clears loaded.unit (combat.js)
   const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 1, longRangeShots: 1 });
   const fire = actions.find((a) => a.key === "fire");
   assert.equal(fire.enabled, true);                  // opens the reload drawer
+  assert.equal(actions.find((a) => a.key === "aimed").enabled, false); // spent → ranged-only Aimed shut
   assert.ok(!actions.some((a) => a.key === "reload")); // no standalone reload tile
 });
 

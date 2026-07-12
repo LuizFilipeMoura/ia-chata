@@ -11,11 +11,12 @@ const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "repair", 
 export function availableActions(rig, turn, round) {
   const cfg = UNIT_KINDS[kindOf(rig)];
   const left = turn.actionsMax - turn.actionsUsed;
-  // Spent is one universal flag: firing any ranged weapon (Rig longRange OR a
-  // cold-kind "unit" weapon, which resolves under the longRange slot) clears
-  // loaded.longRange, and reload re-sets it. Reload is now a drawer-only path,
-  // so a spent-but-reloadable weapon keeps Fire live (Fire opens that drawer).
-  const rangedSpent = rig.loaded?.longRange === false;
+  // Spent is detected on whichever ranged slot the kind uses: a Rig clears
+  // loaded.longRange when it fires (combat.js), a flat-pick cold kind clears
+  // loaded.unit. Each kind only ever writes its own flag, so this OR is exact.
+  // Reload is a drawer-only path now, so a spent-but-reloadable weapon keeps
+  // Fire live (Fire opens that drawer); only Aimed is shut off while spent.
+  const rangedSpent = rig.loaded?.longRange === false || rig.loaded?.unit === false;
   const firedRanged = (turn.longRangeShots || 0) >= 1;
   const list = ACTION_ORDER
     .filter((key) => {
