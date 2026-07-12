@@ -205,6 +205,18 @@ export const GLOSSARY = [
     id: "ironclad-bounty", term: "Ironclad Bounty", match: ["Ironclad Bounty"],
     def: "Optional rule: each player secretly names one enemy Rig as their Priority Target — destroying it is worth +2 VP (§11).",
   },
+  {
+    id: "riposte", term: "Riposte", match: ["Riposte"],
+    def: "Answer counter (§5): when an enemy melees this Rig, it makes one free melee attack back — no action, no heat. Answer-token only.",
+  },
+  {
+    id: "sidestep", term: "Sidestep the Shooter", match: ["Sidestep the Shooter", "Sidestep"],
+    def: "Answer counter (§5): when an enemy shoots this Rig, slip up to ½ Speed before the shot resolves; if the move reaches the shooter you may engage it. Answer-token only.",
+  },
+  {
+    id: "exploit", term: "Exploit Opening", match: ["Exploit Opening", "Exploit"],
+    def: "Answer counter (§5): when an overcommitted enemy (final action spent, or overheated) attacks this Rig, pivot and land a free Aimed counter-shot with no aim penalty. Answer-token only.",
+  },
   // ── Runtime states (rig terminal mod chips; id-only lookup) ────────────────
   { id: "immobilised", term: "Immobilised", match: [],
     def: "Can't move at all until freed — from destroyed Legs or an Impale result. No repositioning or pivots (§8, §13)." },

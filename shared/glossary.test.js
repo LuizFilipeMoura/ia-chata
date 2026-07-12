@@ -32,3 +32,12 @@ test("glossary ids are unique", () => {
 test("every entry has a non-empty def", () => {
   for (const e of GLOSSARY) assert.ok(e.def && e.def.length > 0, `empty def: ${e.id}`);
 });
+
+test("glossary defines the three Answer counters", () => {
+  const byId = new Map(GLOSSARY.map((e) => [e.id, e]));
+  for (const id of ["riposte", "sidestep", "exploit"]) {
+    const entry = byId.get(id);
+    assert.ok(entry, `missing glossary entry: ${id}`);
+    assert.ok(entry.def.length > 0);
+  }
+});

@@ -22,3 +22,9 @@ test("matchGlossary maps an exact match string to its glossary id", () => {
 test("matchGlossary returns undefined for an unknown string", () => {
   expect(matchGlossary("Nonexistent Perk")).toBeUndefined();
 });
+
+test("includes the Answer counters", () => {
+  for (const id of ["riposte", "sidestep", "exploit"]) {
+    expect(glossaryById(id)).toBeTruthy();
+  }
+});

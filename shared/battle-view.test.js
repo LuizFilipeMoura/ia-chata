@@ -328,3 +328,12 @@ test("a hidden reaction points at reaction-set; a revealed one names the type", 
   const evasive = rigModifiers(rig({ preparation: { type: "evasive", faceUp: true } })).find((m) => m.key === "prep");
   assert.equal(evasive.gloss, "evasive");
 });
+
+test("a revealed riposte/sidestep/exploit chip carries a gloss id that resolves", () => {
+  for (const type of ["riposte", "sidestep", "exploit"]) {
+    const chip = rigModifiers(rig({ preparation: { type, faceUp: true } })).find((m) => m.key === "prep");
+    assert.ok(chip, `no prep chip for ${type}`);
+    assert.equal(chip.gloss, type);
+    assert.ok(GLOSS_IDS.has(chip.gloss), `${type} gloss "${chip.gloss}" not in glossary`);
+  }
+});
