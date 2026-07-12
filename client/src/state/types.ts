@@ -36,6 +36,7 @@ export interface Rig {
   name: string;
   kind?: "rig" | "tank" | "walker";
   weightClass: "light" | "medium";
+  speed?: number;
   owner: "a" | "b";
   parts?: Record<string, Component>;
   hull: Component;

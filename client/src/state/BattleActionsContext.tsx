@@ -71,7 +71,9 @@ function MoveBody({
   onConfirm: () => void;
 }) {
   const sprint = actionKey === "sprint";
-  const base = SPEED[rig.weightClass] ?? 8;
+  // Per-chassis Speed wins; fall back to the weight-class map for support units,
+  // free-combo rigs, and pre-speed saves.
+  const base = rig.speed ?? SPEED[rig.weightClass] ?? 8;
   // Sprint is 1½× Speed, rounded to a whole inch so table measuring stays clean.
   const dist = sprint ? Math.round(base * 1.5) : base;
   const heat = sprint ? (rig.equipment === "servo-actuators" ? 1 : 2) : 1;
