@@ -274,6 +274,18 @@ export function equipmentActiveHeat(equipmentId, equipmentUpgradeId) {
   return base;
 }
 
+// Sprint heat: base 2, Servo Actuators 1, Reinforced Servos 0.
+export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 2) {
+  if (equipmentId !== "servo-actuators") return baseHeat;
+  return equipmentUpgradeId === "reinforced-servos" ? 0 : 1;
+}
+
+// Extra SP a Repair action restores: Field Repair Suite +1, Master Toolkit +2.
+export function equipmentRepairBonus(equipmentId, equipmentUpgradeId) {
+  if (equipmentId !== "field-repair-suite") return 0;
+  return equipmentUpgradeId === "master-toolkit" ? 2 : 1;
+}
+
 // Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.
 export function normalizeEquipmentUpgrade(equipmentId, id) {
   const list = EQUIPMENT_UPGRADES[equipmentId];
@@ -1989,7 +2001,7 @@ function performAction(room, rig, act, a, random) {
     if (a.engage) maybeEngageByName(room, rig, a.engage);
     // Move / Sprint may repeat within an activation; each spends one slot and
     // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
-    const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
+    const heat = act === "sprint" ? equipmentSprintHeat(rig.equipment, rig.equipmentUpgrade, def.heat) : def.heat;
     t.actionsUsed += 1;
     bumpHeat(rig, heat);
     // Full Tilt / Momentum Swing (§13) — advancing this activation charges
@@ -2171,7 +2183,7 @@ function performAction(room, rig, act, a, random) {
     const roll = rollD(12, a.dice?.repair, random);
     let amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
     // Field Repair Suite (Utility) — the Repair action restores +1 additional SP.
-    if (amt > 0 && rig.equipment === "field-repair-suite") amt += 1;
+    if (amt > 0) amt += equipmentRepairBonus(rig.equipment, rig.equipmentUpgrade);
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
     if (amt > 0) repairRig(rig, loc, amt);
     pushResolution(room, {

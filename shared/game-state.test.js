@@ -6,6 +6,7 @@ import {
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
   EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
   normalizeEquipmentUpgrade, equipmentActiveHeat,
+  equipmentSprintHeat, equipmentRepairBonus,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
@@ -1800,6 +1801,18 @@ test("Field upgrades override equipment active heat", () => {
   assert.equal(equipmentActiveHeat("overclock-core", null), 3);
   assert.equal(equipmentActiveHeat("overclock-core", "redundant-capacitors"), 2);
   assert.equal(equipmentActiveHeat("ablative-plating", "reinforced-plating"), 1);
+});
+
+test("Reinforced Servos zeroes Sprint heat; base Servo is 1, none is 2", () => {
+  assert.equal(equipmentSprintHeat(null, null), 2);
+  assert.equal(equipmentSprintHeat("servo-actuators", null), 1);
+  assert.equal(equipmentSprintHeat("servo-actuators", "reinforced-servos"), 0);
+});
+
+test("Master Toolkit repairs +2, base suite +1, none +0", () => {
+  assert.equal(equipmentRepairBonus(null, null), 0);
+  assert.equal(equipmentRepairBonus("field-repair-suite", null), 1);
+  assert.equal(equipmentRepairBonus("field-repair-suite", "master-toolkit"), 2);
 });
 
 test("makeRig stores a normalized equipmentUpgrade", () => {
