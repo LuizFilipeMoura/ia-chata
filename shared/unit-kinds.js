@@ -143,7 +143,7 @@ export function normalizeModules(list) {
   const out = [];
   for (const m of list) {
     const id = String(m || "").trim().toLowerCase();
-    if (MODULES[id] && !seen.has(id)) { seen.add(id); out.push(id); }
+    if (Object.prototype.hasOwnProperty.call(MODULES, id) && !seen.has(id)) { seen.add(id); out.push(id); }
   }
   return out;
 }

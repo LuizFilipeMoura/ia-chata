@@ -15,6 +15,8 @@ test("normalizeModules keeps valid distinct ids, drops junk/dupes, lowercases", 
   assert.deepEqual(normalizeModules(["Repair", "recon"]), ["repair", "recon"]);
   assert.deepEqual(normalizeModules(["repair", "repair"]), ["repair"]);
   assert.deepEqual(normalizeModules(["repair", "bogus"]), ["repair"]);
+  assert.deepEqual(normalizeModules(["constructor", "__proto__", "repair"]), ["repair"]);
+  assert.deepEqual(normalizeModules(["hasOwnProperty"]), []);
   assert.deepEqual(normalizeModules("repair"), []);
   assert.deepEqual(normalizeModules(undefined), []);
 });
