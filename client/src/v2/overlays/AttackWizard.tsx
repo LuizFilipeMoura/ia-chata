@@ -215,7 +215,7 @@ export function AttackWizard({
   const reloadEnabled = heatKind ? true : actionsLeft() > 0;
   const reloadLabel = heatKind
     ? "⟳ Reload · +1–2 heat"
-    : reloadEnabled ? "⟳ Reload · 1 action" : "Reload · Need 1 action";
+    : reloadEnabled ? "⟳ Reload · 1 action" : "⟳ Reload · Need 1 action";
 
   const doReload = async () => {
     const attrs: Record<string, unknown> = { name: rig.name, action: "reload" };
