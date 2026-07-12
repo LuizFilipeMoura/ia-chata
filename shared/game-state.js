@@ -991,15 +991,22 @@ export function heatMeter(rig) {
   const heat = rig?.engine?.heat || 0;
   const cap = HEAT_CAPACITY[rig?.weightClass] ?? 5;
   const floor = rig?.engine?.sp === 0 ? 3 : 0;
-  const over = Math.max(0, heat - cap);
+  // Blast Furnace Core (Thermal) — raises the safe threshold before the overheat
+  // roll. Base margin +1; Insulated Core (Field) makes it +2.
+  let margin = 0;
+  if (rig?.equipment === "blast-furnace-core") {
+    margin = rig?.equipmentUpgrade === "insulated-core" ? 2 : 1;
+  }
+  const effCap = cap + margin;
+  const over = Math.max(0, heat - effCap);
   const bonus = over > 0 ? Math.min(MAX_OVERHEAT_BONUS, 2 * over) : 0;
   let zone;
   if (over > 0) zone = "over";
-  else if (heat >= cap) zone = "redline";
-  else if (heat > cap * 0.6) zone = "warm";
+  else if (heat >= effCap) zone = "redline";
+  else if (heat > effCap * 0.6) zone = "warm";
   else if (heat > 0) zone = "cool";
   else zone = "cold";
-  return { heat, cap, floor, over, bonus, zone };
+  return { heat, cap: effCap, floor, over, bonus, zone };
 }
 
 export function findRig(room, name) {

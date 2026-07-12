@@ -13,6 +13,7 @@ import {
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
   chassisById, resolveChassis, SEED_ROSTER, CHASSIS,
+  heatMeter,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -3986,4 +3987,18 @@ test("publicState still redacts enemy face-down prep in a normal room", () => {
   assert.equal(asA.seeded, false);
   const enemyView = asA.rigs.find((rig) => rig.id === enemy.id);
   assert.deepEqual(enemyView.preparation, { hidden: true });
+});
+
+test("Blast Furnace Core raises the safe heat margin", () => {
+  const mk = (equip, up) => {
+    const r = makeRig("r", "R", "medium", "a",
+      { longRange: "Autocannon", melee: "Sword" }, equip, up);
+    r.engine.heat = 6; // Medium cap 5 → 1 over normally
+    return r;
+  };
+  assert.equal(heatMeter(mk(null, null)).over, 1);
+  assert.equal(heatMeter(mk("blast-furnace-core", null)).over, 0);
+  const insulated = mk("blast-furnace-core", "insulated-core");
+  insulated.engine.heat = 7;
+  assert.equal(heatMeter(insulated).over, 0);
 });
