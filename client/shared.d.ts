@@ -1,8 +1,6 @@
 import type { Rig, GameState, Turn } from "./src/state/types";
 
 declare module "/shared/game-state.js" {
-  export const MAX_RIGS_PER_SIDE: number;
-  export const MAX_RIGS_TOTAL: number;
   export const SUPPORTED_RIG_CLASSES: string[];
   export const WEAPONS: Record<string, Record<string, {
     rof: number; str: number;

@@ -412,37 +412,23 @@ test("add without owner uses the requesting side", () => {
   assert.equal(rig.owner, "b");
 });
 
-test("add blocks a fourth rig for the same side without version bump or id burn", () => {
+test("add allows a fourth rig for the same side (no per-side cap)", () => {
   const r = createRoom("X");
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 4; i++) {
     applyCommand(r, { verb: "add", attrs: { name: `A${i}`, class: "light", owner: "a", ...W } });
   }
-  const version = r.version;
-  applyCommand(r, { verb: "add", attrs: { name: "A4", class: "light", owner: "a", ...W } });
-
-  assert.equal(r.rigs.length, 3);
-  assert.equal(findRig(r, "A4"), null);
-  assert.equal(r.version, version);
-
-  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "light", owner: "b", ...W } });
-  assert.equal(findRig(r, "B1").id, 4);
-  assert.equal(r.version, version + 1);
+  assert.equal(r.rigs.length, 4);
+  assert.equal(findRig(r, "A4").id, 4);
 });
 
-test("add blocks all new rigs once six rigs are in place", () => {
+test("add allows more than six rigs total (no roster cap)", () => {
   const r = createRoom("X");
   for (const owner of ["a", "b"]) {
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
       applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
     }
   }
-  const version = r.version;
-
-  applyCommand(r, { verb: "add", attrs: { name: "Overflow", class: "light", owner: "b", ...W } });
-
-  assert.equal(r.rigs.length, 6);
-  assert.equal(findRig(r, "Overflow"), null);
-  assert.equal(r.version, version);
+  assert.equal(r.rigs.length, 8);
 });
 
 test("adding or removing rigs before start resets ready flags", () => {

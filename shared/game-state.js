@@ -21,8 +21,6 @@ export const MAX_OVERHEAT_BONUS = 10;
 // enemy unit, once per unit. See docs/superpowers/specs/2026-07-11-priority-elimination-design.md.
 export const KILL_VP = 2;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
-export const MAX_RIGS_PER_SIDE = 3;
-export const MAX_RIGS_TOTAL = 6;
 // The objective game runs this many rounds before victory resolves on points
 // (§11). Doubled from the original 5 to pair with the ~2× per-rig SP scaling —
 // longer fights so the upgrade natures (ramps, DoT, attrition) have time to matter.
@@ -1133,11 +1131,10 @@ function sidesAtParity(room) {
   return true;
 }
 
+// Adding is always allowed — composition parity (sidesAtParity), not a cap,
+// governs when the game can start. Kept as a stable predicate for call sites.
 export function canAddRigForSide(room, sideId) {
-  const rigs = Array.isArray(room?.rigs) ? room.rigs : [];
-  const owner = sideId === "b" ? "b" : "a";
-  return rigs.length < MAX_RIGS_TOTAL &&
-    rigs.filter((rig) => (rig.owner || "a") === owner).length < MAX_RIGS_PER_SIDE;
+  return true;
 }
 
 function resetReadyBeforeStart(room) {

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RULEBOOK_MD } from "./config.js";
-import { MAX_RIGS_PER_SIDE, MAX_RIGS_TOTAL, CHASSIS, UNIT_WEAPONS } from "../shared/game-state.js";
+import { CHASSIS, UNIT_WEAPONS } from "../shared/game-state.js";
 
 // The fixed chassis Rig loadouts. Weapons + weight class are locked together
 // (they mirror the physical minis), so the AI picks one whole combo rather than
@@ -43,8 +43,9 @@ export const TRACKER_PROTOCOL = [
   "- A Rig is only complete with a name plus one of the chassis loadouts above.",
   "  If the player asks to add a Rig without enough detail to pick a loadout, ask",
   "  which chassis (or which mini) and emit no `[[RIG add]]` tag yet.",
-  `- The tracker allows at most ${MAX_RIGS_PER_SIDE} Rigs per side and ${MAX_RIGS_TOTAL} Rigs total.`,
-  "  If that limit is already reached, explain that the roster is full and emit no `[[RIG add]]` tag.",
+  "- Both sides must field the same number of Rigs in each weight class, the same",
+  "  number of Tanks, and the same number of Walkers before either can ready. There",
+  "  is no fixed roster size and no cap — rosters just have to mirror each other.",
   "- Kind-specific `loc` enums:",
   "  rig: hull|arms|legs|engine",
   "  tank: hull|tracks|turret|engine",
