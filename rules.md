@@ -156,7 +156,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Disengage [1]** — break a melee **engagement** (see below). Frees **both** Rigs from the lock; after Disengaging, the Rig may Move/Sprint later in the same activation. No effect (and costs nothing) if the Rig isn't engaged.
 
-- **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first (a separate 1-action step) — a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 3 actions and 1 + 1 + 2 = 4 heat. **Melee** weapons never need reloading.
+- **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first — for a Rig this costs **no action**, paid in heat instead (§5) — a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
 
 - **Aimed Shot [1]** — a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
 
@@ -205,7 +205,8 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 | Move — **Sprint** (up to 1½× Speed) | 2 |
 | Fire Weapon | 1 (**2** if the weapon is **Hot**) |
 | Aimed Shot / Prepare | 1 |
-| Reload / Repair | 1 |
+| Reload (Rig) | +1–2 (d6) |
+| Repair | 1 |
 | Disengage | 1 |
 | Shut Down | 0 |
 
@@ -642,7 +643,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 **Contradictions resolved (from the source):**
 - Recovery Phase heat cooldown → **1**. *⚙ TUNING.*
 - Repair → **7+ / 10+**.
-- Brace for Incoming Fire → **−2 to Impact Rolls** on front-arc attacks.
+- Brace for Incoming Fire → **−2 to Impact Rolls** on front-arc attacks (§5 now also makes a braced Rig immovable and gives it a free STR 6 melee counter against a front melee that fails to breach).
 - Initiative → **roll every round**.
 - Heavy Legs Impact Table → **14–15 / 16 / 17+** (removed overlap).
 
@@ -655,7 +656,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 - **Sweet-spot ranged ACC** (§7) — ranged weapons peak at a sweet-spot distance and lose ACC per inch away in either direction, within a min–max band. Replaces the flat near/far ACC bands so positioning matters at range.
 - **Engagement / melee lock** (§5) — a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 ACC. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13) — machine guns do no frontal damage but hit far harder (+4 side / +8 rear).
-- **Answer tokens** (§5) — the player going second each round gets 1 free preparation.
+- **Answer tokens** (§5) — the player going second each round gets 1 free preparation — or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.
 - **Weight-based heat** (§6) — Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
 - **Victory — Salvage** (§11) — weighted centre objective (2 VP), annihilation auto-win.
 
