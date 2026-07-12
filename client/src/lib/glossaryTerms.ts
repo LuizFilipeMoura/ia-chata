@@ -13,6 +13,11 @@ const pattern = new RegExp(`\\b(${alternatives.map(escapeRegExp).join("|")})\\b`
 
 export function glossaryById(id: string): GlossaryEntry | undefined { return byId.get(id); }
 
+/** Resolve an exact match string (e.g. a weapon perk name) to its glossary id. */
+export function matchGlossary(text: string): string | undefined {
+  return byMatch.get(text)?.id;
+}
+
 /** Split plain text into text/term segments; concatenating .text yields the input. */
 export function tokenizeGlossary(text: string): Segment[] {
   const segs: Segment[] = [];
