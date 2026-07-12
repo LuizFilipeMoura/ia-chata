@@ -1,4 +1,4 @@
-import { MAX_RIGS_PER_SIDE } from "/shared/game-state.js";
+import { parityStatus } from "../../lib/composition";
 import type { Rig } from "../../state/types";
 
 // SP-bar gradient thresholds, ported from the mockup's spColor (mockup lines
@@ -19,7 +19,11 @@ export function tonnage(rigs: Rig[], side: string): number {
     .reduce((sum, r) => sum + (TONS[r.weightClass] ?? 0), 0);
 }
 
-export function commissioned(rigs: Rig[], side: string): { count: number; max: number } {
+export function squadronStatus(
+  rigs: Rig[],
+  side: string,
+): { count: number; atParity: boolean; diffLabel: string | null } {
   const count = rigs.filter((r) => (r.owner || "a") === side).length;
-  return { count, max: MAX_RIGS_PER_SIDE };
+  const { atParity, diffLabel } = parityStatus(rigs, side);
+  return { count, atParity, diffLabel };
 }

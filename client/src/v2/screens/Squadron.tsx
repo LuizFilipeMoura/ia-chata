@@ -1,10 +1,9 @@
 import "../styles/squadron.css";
-import { canAddRigForSide } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
 import { orderedRigs } from "../../lib/rigView";
-import { commissioned, tonnage } from "../lib/viewModels";
+import { squadronStatus, tonnage } from "../lib/viewModels";
 import { RigRow } from "../components/RigRow";
 import { BattleHud } from "../components/BattleHud";
 import { FieldControls } from "../battle/FieldControls";
@@ -18,8 +17,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
   const ordered = orderedRigs(rigs, mySide);
   const mine = ordered.filter((r) => (r.owner || "a") === mySide);
   const foes = ordered.filter((r) => (r.owner || "a") === enemySide);
-  const { count, max } = commissioned(rigs, mySide);
-  const canAdd = canAddRigForSide({ rigs, game }, mySide);
+  const { count, atParity, diffLabel } = squadronStatus(rigs, mySide);
 
   const started = Boolean(game?.started);
   const activeId = started && game?.phase === "activation" ? (game?.turn?.activeRigId ?? null) : null;
@@ -27,7 +25,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
   const sideName = (id: string) => game?.sides?.find((s) => s.id === id)?.name || (id === "a" ? "Side A" : "Side B");
   const sideReady = (id: string) => Boolean(game?.sides?.find((s) => s.id === id)?.ready);
   const myReady = sideReady(mySide);
-  const readyDisabled = started || myReady || count < max || !field?.locked;
+  const readyDisabled = started || myReady || !atParity || !field?.locked;
 
   return (
     <section className="v2-yard">
@@ -38,7 +36,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
           <h1 className="v2-yard-title v2-title">THE YARD</h1>
         </div>
         <div className="v2-yard-stats">
-          <div className="v2-yard-count">{count} / {max} COMMISSIONED</div>
+          <div className="v2-yard-count">{count} COMMISSIONED{!started && !atParity && diffLabel ? ` · ${diffLabel}` : ""}</div>
           <div className="v2-yard-tons">TONNAGE · {tonnage(rigs, mySide)} T</div>
         </div>
       </div>
@@ -66,10 +64,9 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
       <FieldControls />
 
       {!started && (
-        <button type="button" className="v2-yard-add" disabled={!canAdd}
-          onClick={() => canAdd && onCommission()}>
+        <button type="button" className="v2-yard-add" onClick={() => onCommission()}>
           <span className="v2-yard-add-plus">＋</span>
-          {canAdd ? "Commission New Rig" : "Roster full — ready up"}
+          Commission New Rig
         </button>
       )}
 
@@ -81,7 +78,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             </div>
             <div className="v2-yard-ready-sub">
               {!field?.locked ? "Owner must lock the field before you can ready up."
-                : count < max ? `Choose ${max - count} more Rig${max - count === 1 ? "" : "s"} to ready up.`
+                : !atParity ? (diffLabel ?? "Match your opponent's composition to ready up.")
                 : "Tap any Rig to open its Control Terminal."}
             </div>
           </div>

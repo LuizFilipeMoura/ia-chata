@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { spColor, tonnage, commissioned } from "./viewModels";
+import { spColor, tonnage, squadronStatus } from "./viewModels";
 import type { Rig } from "../../state/types";
 
 const rig = (owner: "a" | "b", weightClass: "light" | "medium"): Rig => ({
@@ -23,7 +23,13 @@ test("tonnage sums the cosmetic weight-class map for one side", () => {
   expect(tonnage(rigs, "a")).toBe(14);
 });
 
-test("commissioned counts a side's rigs against the per-side cap", () => {
+test("squadronStatus reports count and parity against the opponent", () => {
+  // a: 1 light + 1 medium. b: 1 light. a is off parity.
   const rigs = [rig("a", "light"), rig("a", "medium"), rig("b", "light")];
-  expect(commissioned(rigs, "a")).toEqual({ count: 2, max: 3 });
+  const s = squadronStatus(rigs, "a");
+  expect(s.count).toBe(2);
+  expect(s.atParity).toBe(false);
+
+  const mirrored = [rig("a", "light"), rig("b", "light")];
+  expect(squadronStatus(mirrored, "a")).toEqual({ count: 1, atParity: true, diffLabel: null });
 });

@@ -39,7 +39,7 @@ test("groups own vs hostile rigs and shows the commissioned count", async () => 
   render(<V2Providers><Seed state={state} /><Squadron onOpenRig={vi.fn()} onCommission={vi.fn()} /></V2Providers>);
   expect(await screen.findByText("YOUR SQUADRON")).toBeInTheDocument();
   expect(screen.getByText("HOSTILE FORCES")).toBeInTheDocument();
-  expect(screen.getByText(/2 \/ 3 COMMISSIONED/i)).toBeInTheDocument();
+  expect(screen.getByText(/2 COMMISSIONED · 1 extra Light Rig/i)).toBeInTheDocument();
 });
 
 test("flags the active rig during the activation phase", async () => {
