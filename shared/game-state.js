@@ -1105,6 +1105,34 @@ function sideRigCount(room, sideId) {
   return room.rigs.filter((rig) => (rig.owner || "a") === sideId).length;
 }
 
+// Composition signature for one side: Rigs bucketed by weight class, cold kinds
+// (tank/walker) bucketed by kind. e.g. { "rig:light": 2, "rig:heavy": 1, tank: 1 }
+function compositionOf(room, sideId) {
+  const sig = {};
+  for (const u of room.rigs) {
+    if ((u.owner || "a") !== sideId) continue;
+    const kind = kindOf(u);
+    const key = kind === "rig" ? `rig:${u.weightClass}` : kind;
+    sig[key] = (sig[key] || 0) + 1;
+  }
+  return sig;
+}
+
+// True when both sides are non-empty AND have identical composition signatures.
+// This is the shared precondition for readiness and game start (spec: parity).
+function sidesAtParity(room) {
+  const sides = room.game.sides;
+  if (!Array.isArray(sides) || sides.length < 2) return false;
+  const a = compositionOf(room, sides[0].id);
+  const b = compositionOf(room, sides[1].id);
+  const aCount = Object.values(a).reduce((n, v) => n + v, 0);
+  const bCount = Object.values(b).reduce((n, v) => n + v, 0);
+  if (aCount < 1 || bCount < 1) return false;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) if ((a[k] || 0) !== (b[k] || 0)) return false;
+  return true;
+}
+
 export function canAddRigForSide(room, sideId) {
   const rigs = Array.isArray(room?.rigs) ? room.rigs : [];
   const owner = sideId === "b" ? "b" : "a";
@@ -1256,7 +1284,7 @@ function startGameSeeded(room, first) {
 
 function maybeStartGame(room, random = Math.random) {
   if (room.game.started) return false;
-  const canStart = room.game.sides.every((side) => side.ready && sideRigCount(room, side.id) >= 3);
+  const canStart = room.game.sides.every((side) => side.ready) && sidesAtParity(room);
   if (!canStart) return false;
 
   const priorityTargets = {};
@@ -2537,7 +2565,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     const side = room.game.sides.find((s) => s.id === sideId);
     if (side && !room.game.started && room.field.locked &&
-        sideRigCount(room, side.id) >= 3 && !side.ready) {
+        sidesAtParity(room) && !side.ready) {
       side.ready = true;
       if (!room.game.deployOrder.includes(side.id)) room.game.deployOrder.push(side.id);
       maybeStartGame(room, options.random);
@@ -2650,6 +2678,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.nextRigId++;
       room.rigs.push(unit);
     }
+    // The seed verb is a debug force-start that builds a known, intentionally
+    // varied roster (distinct chassis + a spread of Prototype mechanics; see
+    // SEED_ROSTER). It is out-of-band from the player-facing ready flow, so it
+    // keeps its own fixed-size gate rather than the composition-parity gate.
     const canStart = sideRigCount(room, "a") >= 3 && sideRigCount(room, "b") >= 3;
     if (canStart) {
       room.field.locked = true;

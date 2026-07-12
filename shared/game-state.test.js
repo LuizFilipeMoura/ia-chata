@@ -445,35 +445,25 @@ test("add blocks all new rigs once six rigs are in place", () => {
   assert.equal(r.version, version);
 });
 
-test("ready requires at least three rigs for that side", () => {
-  const r = createRoom("X");
-  claimSide(r, { name: "Owner", side: "a" });
-  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
-  applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", ...W } });
-  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
-  assert.equal(r.game.sides.find((s) => s.id === "a").ready, false);
-
-  applyCommand(r, { verb: "add", attrs: { name: "A2", class: "light", owner: "a", ...W } });
-  applyCommand(r, { verb: "add", attrs: { name: "A3", class: "light", owner: "a", ...W } });
-  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
-  assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
-});
-
 test("adding or removing rigs before start resets ready flags", () => {
   const r = createRoom("X");
   claimSide(r, { name: "Owner", side: "a" });
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
-  for (let i = 1; i <= 3; i++) {
-    applyCommand(r, { verb: "add", attrs: { name: `A${i}`, class: "light", owner: "a", ...W } });
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 2; i++) {
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+    }
   }
   applyCommand(r, { verb: "ready", attrs: { side: "a" } });
   assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
 
-  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "light", owner: "b", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "B3", class: "light", owner: "b", ...W } });
   assert.equal(r.game.sides.every((s) => s.ready === false), true);
 
+  applyCommand(r, { verb: "remove", attrs: { name: "B3" } });
   applyCommand(r, { verb: "ready", attrs: { side: "a" } });
-  applyCommand(r, { verb: "remove", attrs: { name: "B1" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
+  applyCommand(r, { verb: "remove", attrs: { name: "B2" } });
   assert.equal(r.game.sides.every((s) => s.ready === false), true);
 });
 
@@ -494,6 +484,65 @@ test("both ready starts game and assigns private random priorityTargets", () => 
   assert.equal(r.game.started, true);
   assert.equal(r.game.priorityTargets.a, findRig(r, "b3").id);
   assert.equal(r.game.priorityTargets.b, findRig(r, "a1").id);
+});
+
+test("ready is blocked until both sides mirror composition", () => {
+  const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "A2", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "light", owner: "b", ...W } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, false);
+
+  applyCommand(r, { verb: "add", attrs: { name: "B2", class: "light", owner: "b", ...W } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
+});
+
+test("parity checks weight class, not just rig count", () => {
+  const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "medium", owner: "b", ...W } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, false);
+});
+
+test("parity counts tanks and walkers by kind", () => {
+  const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "add", attrs: { name: "AT", kind: "tank", owner: "a", unit: "Tank Cannon" } });
+  applyCommand(r, { verb: "add", attrs: { name: "BW", kind: "walker", owner: "b", unit: "Rocket Pod" } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, false);
+
+  applyCommand(r, { verb: "add", attrs: { name: "AW", kind: "walker", owner: "a", unit: "Rocket Pod" } });
+  applyCommand(r, { verb: "add", attrs: { name: "BT", kind: "tank", owner: "b", unit: "Tank Cannon" } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, true);
+});
+
+test("a single unit per side is enough when mirrored (no fixed floor of three)", () => {
+  const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "add", attrs: { name: "A1", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "B1", class: "light", owner: "b", ...W } });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
+  assert.equal(r.game.started, true);
+});
+
+test("an empty side never reaches parity", () => {
+  const r = createRoom("X");
+  claimSide(r, { name: "Owner", side: "a" });
+  applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(r, { verb: "ready", attrs: { side: "a" } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").ready, false);
 });
 
 test("public state only exposes the requesting side bounty", () => {
@@ -905,9 +954,12 @@ function siegeRoom(lrUpgrade) {
     name: "b1", class: "medium", owner: "b",
     longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade,
   } });
+  // Mirror composition (parity gate): each side ends 1 medium + 2 light. b1 is
+  // the medium; a1 mirrors it, the rest are light filler.
   for (const owner of ["a", "b"]) {
     for (let i = owner === "b" ? 2 : 1; i <= 3; i++) {
-      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+      const cls = owner === "a" && i === 1 ? "medium" : "light";
+      applyCommand(r, { verb: "add", attrs: { name: `${owner}${i}`, class: cls, owner, ...W } });
     }
   }
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -2570,6 +2622,10 @@ test("Ready is blocked until the owner locks the field", () => {
   for (const name of ["r1", "r2", "r3"]) {
     applyCommand(r, { verb: "add", attrs: { name, owner: "a", ...W2 } }, { side: "a" });
   }
+  // Mirror side b so parity holds — this test isolates the field-lock gate.
+  for (const name of ["s1", "s2", "s3"]) {
+    applyCommand(r, { verb: "add", attrs: { name, owner: "b", ...W2 } }, { side: "a" });
+  }
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, { side: "a" });
   assert.equal(r.game.sides.find((s) => s.id === "a").ready, false); // field not locked
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -3952,8 +4008,9 @@ function emplaceRoom() {
   applyCommand(r, { verb: "add", attrs: { name: "b2", class: "medium", owner: "b",
     longRange: "Autocannon", melee: "Bulwark Shield", meleeUpgrade: "anvil-boss" } });
   applyCommand(r, { verb: "add", attrs: { name: "b3", class: "light", owner: "b", ...W } });
+  // Mirror composition (parity gate): b is 2 medium + 1 light, so a matches.
   for (let i = 1; i <= 3; i++) {
-    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: i <= 2 ? "medium" : "light", owner: "a", ...W } });
   }
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
@@ -4042,8 +4099,9 @@ function barrageRoom() {
   applyCommand(r, { verb: "add", attrs: { name: "b2", class: "medium", owner: "b",
     longRange: "Mortar", melee: "Sword", longRangeUpgrade: "cluster-shells" } });
   applyCommand(r, { verb: "add", attrs: { name: "b3", class: "light", owner: "b", ...W } });
+  // Mirror composition (parity gate): b is 2 medium + 1 light, so a matches.
   for (let i = 1; i <= 3; i++) {
-    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: i <= 2 ? "medium" : "light", owner: "a", ...W } });
   }
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
@@ -4132,8 +4190,9 @@ function towRoom() {
     longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "tow-chain" } });
   applyCommand(r, { verb: "add", attrs: { name: "b2", class: "light", owner: "b", ...W } });
   applyCommand(r, { verb: "add", attrs: { name: "b3", class: "light", owner: "b", ...W } });
+  // Mirror composition (parity gate): b is 1 medium + 2 light, so a matches.
   for (let i = 1; i <= 3; i++) {
-    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: "light", owner: "a", ...W } });
+    applyCommand(r, { verb: "add", attrs: { name: `a${i}`, class: i === 1 ? "medium" : "light", owner: "a", ...W } });
   }
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
