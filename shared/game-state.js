@@ -1257,9 +1257,12 @@ function onRigDamaged(room, rig, opts) {
     rig._blastRolled = true;
     const roll = rollD(12, opts?.dice?.destruction, opts?.random);
     const exploded = roll >= 4;
-    // Priority Elimination — the side that does NOT own the wreck scores KILL_VP.
-    // Guarded by _blastRolled above, so a revived-then-rekilled unit never re-awards.
-    const scorer = room.game.sides.find((s) => s.id !== rig.owner);
+    // Priority Elimination — the side whose Priority Target this wreck is scores
+    // KILL_VP. Any other kill scores nothing. Guarded by _blastRolled above, so a
+    // revived-then-rekilled target never re-awards.
+    const scorer = room.game.sides.find(
+      (s) => room.game.priorityTargets?.[s.id] === rig.id,
+    );
     const effects = [];
     if (scorer) {
       scorer.vp = (scorer.vp || 0) + KILL_VP;

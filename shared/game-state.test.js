@@ -1524,32 +1524,46 @@ test("destruction rolls a D12; 4+ records a pending blast", () => {
   assert.equal(r.game.pendingBlast.exploded, true);
 });
 
-test("destroying an enemy rig scores +2 VP for the opposing side", () => {
+test("destroying your Priority Target scores +2 VP", () => {
   const r = startedRoom();
-  const b1 = findRig(r, "b1");        // owned by "b"
+  const b1 = findRig(r, "b1");
+  r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
   b1.hull.sp = 1;
   __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 9 } });
   assert.equal(b1.destroyed, true);
-  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2); // enemy scores
-  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 0); // owner does not
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
   const kill = r.game.resolutions.find((e) => e.kind === "destruction" && e.rigId === b1.id);
   assert.deepEqual(kill.vp, { side: "a", amount: 2 });
   assert.equal(kill.victimName, b1.name);
   assert.ok(kill.effects.some((e) => /Priority Elimination/.test(e)));
 });
 
-test("a rig lost to its own cause still scores for the other side (credit by ownership)", () => {
+test("destroying a NON-target enemy scores nothing", () => {
   const r = startedRoom();
-  const a1 = findRig(r, "a1");        // owned by "a"
+  const b1 = findRig(r, "b1"); const b2 = findRig(r, "b2");
+  r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id }; // a hunts b1, not b2
+  b2.hull.sp = 1;
+  __test.applyDamage(r, b2, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(b2.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 0);
+  const kill = r.game.resolutions.find((e) => e.kind === "destruction" && e.rigId === b2.id);
+  assert.equal(kill.vp, undefined);
+});
+
+test("a Priority Target lost to its own cause still scores for its hunter", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  r.game.priorityTargets = { a: findRig(r, "b1").id, b: a1.id }; // b hunts a1
   a1.hull.sp = 1;
   __test.applyDamage(r, a1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(a1.destroyed, true);
-  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 2); // opponent scores
+  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 2);
 });
 
-test("kill VP is awarded once per rig, never twice", () => {
+test("Priority Target kill VP is awarded once, never twice", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");
+  r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
   b1.hull.sp = 1;
   __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
