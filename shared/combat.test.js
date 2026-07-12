@@ -101,6 +101,20 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
   assert.equal(out2[0].total, 10); // 5 + 8 - 2(brace) - 1(harden)
 });
 
+test("Reinforced Plating deepens Harden to −2 impact", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const hardened = { weightClass: "medium", hardened: true, preparation: null };
+  const reinforced = { weightClass: "medium", hardened: true, preparation: null, equipmentUpgrade: "reinforced-plating" };
+  // 1 hit, d6=5 -> plain: 5 + 8 + 0(front) - 1(harden) = 12; reinforced: 5 + 8 + 0 - 2(harden) = 11
+  const out = rollImpacts({ weightClass: "medium" }, hardened, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  const out2 = rollImpacts({ weightClass: "medium" }, reinforced, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out[0].total, 12);
+  assert.equal(out2[0].total, 11);
+  assert.equal(out[0].total - out2[0].total, 1); // −2 vs −1 = 1 lower
+});
+
 test("Raking Fire against the front arc deals no damage", () => {
   const mini = { ...WEAPONS.longRange["Mini Gun"], perks: ["Raking Fire"] };
   const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",

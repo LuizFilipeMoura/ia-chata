@@ -258,7 +258,10 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // Brace's front-arc -2 is skipped by a Piledriver Protocol guard-break
   // (opts.guardBreak, §13 Siege Maul) — the smash ignores the target's Brace.
   const braced = !opts.guardBreak && target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
-  const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
+  // Harden (Ablative Plating active). Reinforced Plating (Field upgrade) deepens
+  // it from −1 to −2.
+  const hardenDepth = target.equipmentUpgrade === "reinforced-plating" ? 2 : 1;
+  const hardened = target.hardened ? -hardenDepth : 0;
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
   const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
