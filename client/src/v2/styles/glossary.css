@@ -24,6 +24,23 @@
   border-bottom-style: solid; border-bottom-color: var(--v2-oil);
 }
 
+/* ===== Generic click-to-explain affordance for structured UI tokens ===== */
+/* Additive only — layers onto the host element's own look (chips, stat labels,
+   part labels) without restyling it. Mirrors how .v2-gloss-term.is-open reads. */
+.v2-root .v2-info {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color var(--v2-dur-fast) ease;
+}
+.v2-root .v2-info:hover,
+.v2-root .v2-info:focus-visible {
+  background: rgba(231, 154, 61, .16);
+  outline: none;
+}
+.v2-root .v2-info.is-open {
+  background: rgba(231, 154, 61, .24);
+}
+
 /* ===== Definition popover ===== */
 .v2-root .v2-gloss-tip {
   --arrow-x: 50%;
