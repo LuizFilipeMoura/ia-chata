@@ -15,6 +15,7 @@ import {
   NATURES, upgradeNature, countPrototypes,
   chassisById, resolveChassis, SEED_ROSTER, CHASSIS,
   heatMeter,
+  SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -4384,4 +4385,44 @@ test("Blast Furnace Core raises the safe heat margin", () => {
   assert.equal(ins.over, 0);
   assert.equal(ins.cap, 7); // cap 5 + margin 2
   assert.equal(ins.zone, "redline"); // heat 7 >= effCap 7
+});
+
+test("SUPPORT_TEMPLATES is an owner-neutral catalog of named tank/walker loadouts", () => {
+  for (const t of SUPPORT_TEMPLATES) {
+    assert.ok(t.id && t.name, "each template has an id and name");
+    assert.ok(t.kind === "tank" || t.kind === "walker", `${t.id} is tank or walker`);
+    assert.equal(t.owner, undefined, `${t.id} carries no owner`);
+    assert.ok(Array.isArray(t.modules) && t.modules.length === 2, `${t.id} has two modules`);
+  }
+  const ids = SUPPORT_TEMPLATES.map((t) => t.id);
+  assert.equal(new Set(ids).size, ids.length, "template ids are unique");
+});
+
+test("templateById resolves case-insensitively, else null", () => {
+  assert.equal(templateById("MARKSMAN-TANK").name, "Marksman Tank");
+  assert.equal(templateById("nope"), null);
+});
+
+test("templatesForKind filters by kind", () => {
+  assert.ok(templatesForKind("tank").every((t) => t.kind === "tank"));
+  assert.ok(templatesForKind("walker").every((t) => t.kind === "walker"));
+  assert.equal(templatesForKind("tank").length, 2);
+  assert.equal(templatesForKind("walker").length, 5);
+});
+
+test("SUPPORT_UNITS and SEED_SUPPORT are rebuilt unchanged from the catalog", () => {
+  assert.deepEqual(SUPPORT_UNITS, [
+    { name: "Marksman Tank",  owner: "a", kind: "tank",   unit: "Tank Cannon", modules: ["damage", "recon"] },
+    { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",  modules: ["damage", "coolant"] },
+    { name: "Field Welder",   owner: "b", kind: "walker", modules: ["repair", "recon"] },
+    { name: "Depot Tank",     owner: "b", kind: "tank",   modules: ["repair", "coolant"] },
+  ]);
+  assert.deepEqual(SEED_SUPPORT, [
+    { name: "Marksman Tank",   owner: "a", kind: "tank",   unit: "Tank Cannon",      modules: ["damage", "recon"] },
+    { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",       modules: ["damage", "coolant"] },
+    { name: "Medic Walker",    owner: "a", kind: "walker", modules: ["repair", "recon"] },
+    { name: "Depot Tank",      owner: "b", kind: "tank",   modules: ["repair", "coolant"] },
+    { name: "Rocket Walker",   owner: "b", kind: "walker", unit: "Rocket Pod",       modules: ["damage", "recon"] },
+    { name: "Gun Walker",      owner: "b", kind: "walker", unit: "Autocannon Mount", modules: ["damage", "coolant"] },
+  ]);
 });

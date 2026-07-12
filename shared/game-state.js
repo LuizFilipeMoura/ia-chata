@@ -116,25 +116,58 @@ export const SEED_ROSTER = [
 
 // The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
 // entries omit `unit` — makeUnit fits the Sidearm automatically.
-export const SUPPORT_UNITS = [
-  { name: "Marksman Tank",  owner: "a", kind: "tank",   unit: "Tank Cannon", modules: ["damage", "recon"] },
-  { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",  modules: ["damage", "coolant"] },
-  { name: "Field Welder",   owner: "b", kind: "walker", modules: ["repair", "recon"] },
-  { name: "Depot Tank",     owner: "b", kind: "tank",   modules: ["repair", "coolant"] },
+
+// Owner-neutral pre-built Tank/Walker templates (spec:
+// 2026-07-12-prebuilt-support-commission). Single source of truth: the
+// owner-tagged rosters below (SUPPORT_UNITS, SEED_SUPPORT) and the commission
+// wizard all read from this. `unit: null` = sidearm-only (makeUnit fits Sidearm).
+export const SUPPORT_TEMPLATES = [
+  { id: "marksman-tank",   name: "Marksman Tank",   kind: "tank",   unit: "Tank Cannon",      modules: ["damage", "recon"] },
+  { id: "depot-tank",      name: "Depot Tank",      kind: "tank",   unit: null,               modules: ["repair", "coolant"] },
+  { id: "radiator-walker", name: "Radiator Walker", kind: "walker", unit: "Coaxial MG",       modules: ["damage", "coolant"] },
+  { id: "field-welder",    name: "Field Welder",    kind: "walker", unit: null,               modules: ["repair", "recon"] },
+  { id: "medic-walker",    name: "Medic Walker",    kind: "walker", unit: null,               modules: ["repair", "recon"] },
+  { id: "rocket-walker",   name: "Rocket Walker",   kind: "walker", unit: "Rocket Pod",       modules: ["damage", "recon"] },
+  { id: "gun-walker",      name: "Gun Walker",      kind: "walker", unit: "Autocannon Mount", modules: ["damage", "coolant"] },
 ];
 
-// Support units the default `seed` battle deploys alongside the 6 rigs: one Tank
-// and two Walkers per side, the two Walkers deliberately different types so a
-// tester sees both a damage Walker and a support Walker side by side.
+export function templateById(id) {
+  if (!id) return null;
+  const ref = String(id).trim().toLowerCase();
+  return SUPPORT_TEMPLATES.find((t) => t.id === ref) || null;
+}
+
+export function templatesForKind(kind) {
+  const k = String(kind || "").trim().toLowerCase();
+  return SUPPORT_TEMPLATES.filter((t) => t.kind === k);
+}
+
+// Expand a template id + owner into the add-shape used by the seed/exemplar
+// rosters. Omits `unit` when the template is sidearm-only so the emitted object
+// is identical to the previously hand-written literals.
+function supportEntry(id, owner) {
+  const t = templateById(id);
+  const out = { name: t.name, owner, kind: t.kind, modules: t.modules };
+  if (t.unit) out.unit = t.unit;
+  return out;
+}
+
+// The four shipped support-unit exemplars (spec: Support Units).
+export const SUPPORT_UNITS = [
+  supportEntry("marksman-tank", "a"),
+  supportEntry("radiator-walker", "a"),
+  supportEntry("field-welder", "b"),
+  supportEntry("depot-tank", "b"),
+];
+
+// Support units the default `seed` battle deploys alongside the 6 rigs.
 export const SEED_SUPPORT = [
-  // Side A: gun tank + damage walker + repair walker.
-  { name: "Marksman Tank",   owner: "a", kind: "tank",   unit: "Tank Cannon",      modules: ["damage", "recon"] },
-  { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",       modules: ["damage", "coolant"] },
-  { name: "Medic Walker",    owner: "a", kind: "walker",                           modules: ["repair", "recon"] },
-  // Side B: repair tank + rocket walker + autocannon walker.
-  { name: "Depot Tank",      owner: "b", kind: "tank",                             modules: ["repair", "coolant"] },
-  { name: "Rocket Walker",   owner: "b", kind: "walker", unit: "Rocket Pod",       modules: ["damage", "recon"] },
-  { name: "Gun Walker",      owner: "b", kind: "walker", unit: "Autocannon Mount", modules: ["damage", "coolant"] },
+  supportEntry("marksman-tank", "a"),
+  supportEntry("radiator-walker", "a"),
+  supportEntry("medic-walker", "a"),
+  supportEntry("depot-tank", "b"),
+  supportEntry("rocket-walker", "b"),
+  supportEntry("gun-walker", "b"),
 ];
 
 export function chassisById(id) {
