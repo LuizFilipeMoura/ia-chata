@@ -13,7 +13,7 @@ import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
 import { phaseSummary, actionBudget } from "/shared/battle-view.js";
 import { useMySide } from "../../hooks/useMySide";
 import { HEAT_CAPACITY } from "/shared/game-state.js";
-import { playDamage, playHeat, playEngineStart, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
+import { playDamage, playHeat, playEngineStart, playBraceForImpact, playHeatExplosion, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
 
 interface RecapLine {
   text: string;
@@ -123,6 +123,11 @@ export function useV2BattleWatchers(): void {
     const toPlay = fresh.length > 3 ? [fresh[fresh.length - 1]] : fresh;
     void (async () => {
       for (const entry of toPlay) {
+        // A damaging overheat check (any heatKey but "safe") gets a cinematic
+        // blast as it surfaces; the SP-drop watcher still layers the hit crunch.
+        if (entry.kind === "overheat" && entry.heatKey && entry.heatKey !== "safe") {
+          playHeatExplosion();
+        }
         // eslint-disable-next-line no-await-in-loop
         await playResolution(entry);
       }
@@ -217,6 +222,8 @@ export function useV2BattleWatchers(): void {
       (r) => (r.owner || "a") === mine && !r.destroyed && r.preparation == null,
     );
     if (!eligible.length) return; // server clears the gate on its own
+
+    playBraceForImpact(); // ricochet crack as the answer-token gate opens
 
     const pick = { rigName: eligible[0].name, prep: "brace" as PrepType };
     openDrawer({

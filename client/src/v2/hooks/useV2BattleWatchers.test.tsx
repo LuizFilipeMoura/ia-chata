@@ -16,7 +16,8 @@ const sent = vi.hoisted(() => vi.fn());
 vi.mock("../../hooks/useCommands", () => ({ useCommands: () => sent }));
 
 vi.mock("../audio/actionAudio", () => ({
-  playDamage: vi.fn(), playHeat: vi.fn(), playEngineStart: vi.fn(), startEngineLoop: vi.fn(), stopEngineLoop: vi.fn(),
+  playDamage: vi.fn(), playHeat: vi.fn(), playEngineStart: vi.fn(), playBraceForImpact: vi.fn(),
+  playHeatExplosion: vi.fn(), startEngineLoop: vi.fn(), stopEngineLoop: vi.fn(),
 }));
 
 const gameBase = {

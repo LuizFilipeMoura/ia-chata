@@ -27,6 +27,10 @@
 
 /* ---- Screen area (mockup 87-88) ---- */
 .v2-root .v2-screen{flex:1;min-height:0;overflow-y:auto;position:relative;}
+/* Texture backdrop — fixed, behind all shell content (z-index:-1 sits above the
+   root's base fill but below every bar/card/dialog). Opaque bars hide it; the
+   transparent .v2-screen lets it show through. */
+.v2-root::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(5,6,7,.7),rgba(5,6,7,.8)),url("../../assets/empty-brown-rusty-stone-metal-surface-texture_24972-675.jpg");background-size:cover;background-position:center;filter:saturate(0);}
 
 /* ---- Command dock (mockup 500-508) ---- */
 .v2-root .v2-dock{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 16px;background:linear-gradient(180deg,#0b0e13,#070a0d);border-top:2px solid #000;box-shadow:inset 0 1px 0 rgba(231,154,61,.1),0 -3px 12px rgba(0,0,0,.6);}

@@ -24,6 +24,9 @@ export function availableActions(rig, turn, round) {
   const list = ACTION_ORDER
     .filter((key) => {
       if (key === "shutdown" && !cfg.hasHeat) return false;
+      // Sprint burns heat to double-move; heatless cold kinds (Tank, Walker)
+      // can't redline, so they only Move.
+      if (key === "sprint" && !cfg.hasHeat) return false;
       if (key === "prepare" && !cfg.reactions) return false;
       return true;
     })

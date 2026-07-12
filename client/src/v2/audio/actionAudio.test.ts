@@ -19,7 +19,7 @@ test("fire without weapon info plays barks + the default cannon bed", () => {
   playAction("fire");
   const [voices, sfx] = play.mock.calls[0];
   expect(voices).toHaveLength(4);
-  expect(sfx).toEqual(["url:cannon_fire"]);
+  expect(sfx).toEqual(["url:cannon_fire", "url:cannon_fire_2", "url:cannon_fire_3"]);
   expect(voices[0]).toBe("url:fire_firing");
 });
 
@@ -30,7 +30,7 @@ test("gun bed is weapon-aware: MG rattles, cannon booms, melee clanks", () => {
 
   play.mockClear();
   playAction("fire", { weapon: "longRange", weaponName: "Autocannon" });
-  expect(play.mock.calls[0][1]).toEqual(["url:cannon_fire"]);
+  expect(play.mock.calls[0][1]).toEqual(["url:cannon_fire", "url:cannon_fire_2", "url:cannon_fire_3"]);
 
   play.mockClear();
   playAction("aimed", { weapon: "melee", weaponName: "Sword" });
@@ -84,7 +84,7 @@ test("playEngineStart plays the engine_start clip as sfx", () => {
 
 test("registry covers the mapped action keys", () => {
   expect(Object.keys(ACTION_AUDIO).sort()).toEqual(
-    ["aimed","disengage","emergencypatch","fire","move","overclock","prepare","purge","reload","repair","shutdown","sprint"].sort(),
+    ["aimed","disengage","emergencypatch","fieldweld","fire","move","overclock","paint","prepare","purge","reload","repair","shutdown","sprint","vent"].sort(),
   );
 });
 
@@ -94,6 +94,6 @@ test("repair and emergencypatch play the console beep", () => {
     playAction(key);
     const [voices, sfx] = play.mock.calls[0];
     expect(voices).toEqual([]);
-    expect(sfx).toEqual(["url:old_panel_beep"]);
+    expect(sfx).toEqual(["url:old_panel_beep", "url:beep_warning"]);
   }
 });

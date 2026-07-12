@@ -43,6 +43,12 @@
 }
 
 /* ===== Segmented fields ================================================== */
+/* >4 options split into 2 balanced rows via --v2-seg-cols set inline in TSX */
+.v2-root .v2-aw-seg {
+  display: grid;
+  grid-template-columns: repeat(var(--v2-seg-cols, 1), 1fr);
+  gap: .4rem;
+}
 .v2-root .v2-aw-field { margin: 12px 0; }
 .v2-root .v2-aw-field > label {
   display: block; margin-bottom: 9px;

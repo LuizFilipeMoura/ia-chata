@@ -195,7 +195,8 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
 
     return new Promise((resolve) => {
       const started = performance.now();
-      const settleAt = rolls.map((_, i) => 550 + i * 240);
+      // Current cadence is the floor; each die rolls for a random 1x–4x of it.
+      const settleAt = rolls.map((_, i) => (550 + i * 240) * (1 + Math.random() * 3));
       const settledFlags = rolls.map(() => false);
       clearFlicker();
       flickerTimer.current = window.setInterval(() => {
@@ -287,6 +288,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   useImperativeHandle(ref, () => ({ playResolution, promptDice, closeRoll }));
 
   const rolling = dice.length > 0 && dice.some((d) => !d.settled);
+  const showAction = (!formHidden && formSpecs.length > 0) || !okHidden;
 
   return (
     <div className="v2-root v2-portal-bare">
@@ -303,6 +305,8 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
           aria-modal="true"
           aria-label="Dice resolution"
         >
+          <span className="v2-roll-rivet l" aria-hidden="true" />
+          <span className="v2-roll-rivet r" aria-hidden="true" />
           <div className="v2-roll-head">
             <div className="v2-roll-head-id">
               <span className="v2-roll-tag v2-eyebrow" aria-hidden="true">▚ dice cast</span>
@@ -317,119 +321,157 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
               ✕
             </button>
           </div>
+
           {reveal ? (
-            <div className="v2-rx-reveal">
-              <div className="v2-rx-token flip" data-tone={reveal.prep} aria-label={reveal.label}>
-                <span className="v2-rx-token-face v2-rx-token-back" aria-hidden="true">⟡</span>
-                <span className="v2-rx-token-face v2-rx-token-front" aria-hidden="true">{reveal.icon}</span>
+            <div className="v2-roll-zone">
+              <div className="v2-roll-zone-label">Reaction</div>
+              <div className="v2-rx-reveal">
+                <div className="v2-rx-token flip" data-tone={reveal.prep} aria-label={reveal.label}>
+                  <span className="v2-rx-token-face v2-rx-token-back" aria-hidden="true">⟡</span>
+                  <span className="v2-rx-token-face v2-rx-token-front" aria-hidden="true">{reveal.icon}</span>
+                </div>
+                <span className="v2-die-label v2-eyebrow">{reveal.label}</span>
               </div>
-              <span className="v2-die-label v2-eyebrow">{reveal.label}</span>
             </div>
           ) : null}
-          <div className="v2-roll-dice">
-            {dice.map((d, i) => (
-              <div className="v2-die-wrap" key={i}>
-                <div
-                  className={
-                    "v2-die " +
-                    (d.sides === 12 ? "d12" : "d6") +
-                    (d.settled ? " settled" : " rolling")
-                  }
-                  data-tone={d.settled ? d.tone : undefined}
-                  ref={(el) => {
-                    dieEls.current[i] = el;
-                  }}
-                >
-                  {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
-                </div>
-                {d.settled && verdictLabel(d.tone) ? (
-                  <span className="v2-die-verdict v2-eyebrow" data-tone={d.tone}>
-                    {verdictLabel(d.tone)}
-                  </span>
-                ) : null}
-                <span className="v2-die-label v2-eyebrow">{d.label}</span>
-              </div>
-            ))}
-          </div>
-          {rolling && <div className="v2-roll-rolling v2-eyebrow">Rolling…</div>}
-          {breakdown ? (
-            <div className="v2-rx-break" aria-label={summary}>
-              {(breakdown.actor || breakdown.weapon || breakdown.target) && (
-                <div className="v2-rx-break-head">
-                  {breakdown.actor && <span className="v2-rx-actor">{breakdown.actor}</span>}
-                  {breakdown.weapon && <span className="v2-rx-weapon">{breakdown.weapon}</span>}
-                  {breakdown.target && <span className="v2-rx-target">→ {breakdown.target}</span>}
-                </div>
-              )}
-              <div className="v2-rx-break-eq">
-                {(breakdown.terms || []).map((t, i) => (
-                  <span className="v2-rx-term-group" key={i}>
-                    {t.op ? <span className="v2-rx-op">{t.op}</span> : null}
-                    <span className="v2-rx-term" data-tone={t.tone}>
-                      <b>{t.value}</b>
-                      <em>{t.label}</em>
-                    </span>
-                  </span>
+
+          {dice.length > 0 ? (
+            <div className="v2-roll-zone">
+              <div className="v2-roll-zone-label">Dice</div>
+              <div className="v2-roll-dice">
+                {dice.map((d, i) => (
+                  <div className="v2-die-wrap" key={i}>
+                    <div
+                      className={
+                        "v2-die " +
+                        (d.sides === 12 ? "d12" : "d6") +
+                        (d.settled ? " settled" : " rolling")
+                      }
+                      data-tone={d.settled ? d.tone : undefined}
+                      ref={(el) => {
+                        dieEls.current[i] = el;
+                      }}
+                    >
+                      {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
+                    </div>
+                    {d.settled && verdictLabel(d.tone) ? (
+                      <span className="v2-die-verdict v2-eyebrow" data-tone={d.tone}>
+                        {verdictLabel(d.tone)}
+                      </span>
+                    ) : null}
+                    <span className="v2-die-label v2-eyebrow">{d.label}</span>
+                  </div>
                 ))}
               </div>
-              <div className="v2-rx-break-out">
-                {breakdown.total != null && (
-                  <span className="v2-rx-total">
-                    <span className="v2-rx-op">=</span>
-                    {breakdown.total}
-                  </span>
+              {rolling && <div className="v2-roll-rolling v2-eyebrow">Rolling…</div>}
+            </div>
+          ) : null}
+
+          {breakdown ? (
+            <div className="v2-roll-zone">
+              <div className="v2-roll-zone-label">Damage</div>
+              <div className="v2-rx-break" aria-label={summary}>
+                {(breakdown.actor || breakdown.weapon || breakdown.target) && (
+                  <div className="v2-rx-break-head">
+                    {breakdown.actor && <span className="v2-rx-actor">{breakdown.actor}</span>}
+                    {breakdown.weapon && <span className="v2-rx-weapon">{breakdown.weapon}</span>}
+                    {breakdown.target && <span className="v2-rx-target">→ {breakdown.target}</span>}
+                  </div>
                 )}
-                {breakdown.tier && (
-                  <span className="v2-rx-tier" data-tier={breakdown.tier}>
-                    {breakdown.tier}
+                <div className="v2-rx-break-eq">
+                  {(breakdown.terms || []).map((t, i) => (
+                    <span className="v2-rx-term-group" key={i}>
+                      {t.op ? <span className="v2-rx-op">{t.op}</span> : null}
+                      <span className="v2-rx-term" data-tone={t.tone}>
+                        <b>{t.value}</b>
+                        <em>{t.label}</em>
+                      </span>
+                    </span>
+                  ))}
+                </div>
+                <div className="v2-rx-break-out">
+                  {breakdown.total != null && (
+                    <span className="v2-rx-total">
+                      <span className="v2-rx-op">=</span>
+                      {breakdown.total}
+                    </span>
+                  )}
+                  {breakdown.tier && (
+                    <span className="v2-rx-tier" data-tier={breakdown.tier}>
+                      {breakdown.tier}
+                    </span>
+                  )}
+                  <span className="v2-rx-sp">
+                    <b>{breakdown.sp}</b>
+                    <em>{breakdown.location ? `SP → ${breakdown.location}` : "SP"}</em>
                   </span>
-                )}
-                <span className="v2-rx-sp">
-                  <b>{breakdown.sp}</b>
-                  <em>{breakdown.location ? `SP → ${breakdown.location}` : "SP"}</em>
-                </span>
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="v2-roll-summary">{summary}</div>
-          )}
-          <div className="v2-roll-effects">
-            {effects.map((e, i) => (
-              <div
-                className="v2-roll-effect"
-                key={i}
-                style={{ animationDelay: `${e.delay}s` }}
-              >
-                {e.text}
+          ) : summary ? (
+            <div className="v2-roll-zone">
+              <div className="v2-roll-zone-label">Result</div>
+              <div className="v2-roll-strip">
+                <div className="v2-roll-summary">{summary}</div>
               </div>
-            ))}
-          </div>
-          <div className="v2-roll-form" hidden={formHidden}>
-            {formSpecs.map((spec, i) => (
-              <div className="v2-roll-form-row" key={i}>
-                <label className="v2-eyebrow" htmlFor={`${formId}-${i}`}>{`${spec.label} (D${spec.sides})`}</label>
-                <input
-                  className="v2-well"
-                  id={`${formId}-${i}`}
-                  type="number"
-                  min="1"
-                  max={String(spec.sides)}
-                  inputMode="numeric"
-                  ref={(el) => {
-                    inputEls.current[i] = el;
-                  }}
-                />
+            </div>
+          ) : null}
+
+          {effects.length > 0 ? (
+            <div className="v2-roll-zone">
+              <div className="v2-roll-zone-label">Effects</div>
+              <div className="v2-roll-effects">
+                {effects.map((e, i) => (
+                  <div
+                    className="v2-roll-effect"
+                    key={i}
+                    style={{ animationDelay: `${e.delay}s` }}
+                  >
+                    {e.text}
+                  </div>
+                ))}
               </div>
-            ))}
-            {formSpecs.length ? (
-              <button className="v2-roll-form-go v2-cta" type="button" onClick={onFormGo}>
-                Confirm roll
-              </button>
-            ) : null}
-          </div>
-          <button className="v2-roll-ok v2-cta" type="button" hidden={okHidden} onClick={closeRoll}>
-            OK
-          </button>
+            </div>
+          ) : null}
+
+          {!formHidden ? (
+            <div className="v2-roll-zone">
+              <div className="v2-roll-zone-label">Enter dice</div>
+              <div className="v2-roll-form">
+                {formSpecs.map((spec, i) => (
+                  <div className="v2-roll-form-row" key={i}>
+                    <label className="v2-eyebrow" htmlFor={`${formId}-${i}`}>{`${spec.label} (D${spec.sides})`}</label>
+                    <input
+                      className="v2-well"
+                      id={`${formId}-${i}`}
+                      type="number"
+                      min="1"
+                      max={String(spec.sides)}
+                      inputMode="numeric"
+                      ref={(el) => {
+                        inputEls.current[i] = el;
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {showAction ? (
+            <div className="v2-roll-action">
+              {!formHidden && formSpecs.length ? (
+                <button className="v2-roll-form-go v2-cta" type="button" onClick={onFormGo}>
+                  Confirm roll
+                </button>
+              ) : null}
+              {!okHidden ? (
+                <button className="v2-roll-ok v2-cta" type="button" onClick={closeRoll}>
+                  OK
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

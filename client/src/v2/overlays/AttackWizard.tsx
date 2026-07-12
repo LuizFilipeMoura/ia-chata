@@ -62,7 +62,10 @@ function Field({
         {label}
       </label>
       {desc ? <p className="v2-aw-field-desc">{desc}</p> : null}
-      <div className="v2-aw-seg v2-field-seg">
+      <div
+        className="v2-aw-seg v2-field-seg"
+        style={{ "--v2-seg-cols": options.length > 4 ? Math.ceil(options.length / 2) : options.length } as CSSProperties}
+      >
         {options.map((opt) => {
           const ic = iconFor(opt);
           const od = descFor(opt);
@@ -325,10 +328,11 @@ export function AttackWizard({
   {
     const slot = state.weapon;
     const profile = profileOf(slot);
-    // A spent ranged weapon needs a rushed reload (Rig longRange or cold-kind unit).
+    // A spent ranged weapon (Rig longRange or cold-kind unit) can't fire: it must
+    // Reload first (§7 — no rushed shot). Fire is blocked until it's reloaded.
     const spent = (slot === "longRange" && rig.loaded?.longRange === false)
       || (slot === "unit" && rig.loaded?.unit === false);
-    const cost = spent ? 2 : 1;
+    const cost = 1;
     const left = actionsLeft();
     const outOfRange = !isMelee && !inRange;
     const rof = profile?.rof || ROF_BY_NAME[weapons[slot] || ""] || 1;
@@ -355,7 +359,7 @@ export function AttackWizard({
           : state.inches > maxRange
             ? <span className="v2-aw-range-warn">Target is out of range — this shot will fail</span>
             : spent
-              ? <span className="v2-aw-range-note">Weapon spent — a rushed reload folds into this shot (2 actions)</span>
+              ? <span className="v2-aw-range-warn">Weapon spent — Reload before it can fire again</span>
               : null;
       rangeHtml = (
         <>
@@ -364,17 +368,18 @@ export function AttackWizard({
           {gate}
         </>
       );
-      rangeState = outOfRange ? "bad" : spent ? "warn" : "ok";
+      rangeState = outOfRange || spent ? "bad" : "ok";
     }
 
     const unaffordable = cost > left;
-    goDisabled = outOfRange || unaffordable;
-    const costTag = cost === 2 ? " · 2 actions" : "";
+    goDisabled = outOfRange || unaffordable || spent;
     goText = outOfRange
       ? "Out of range"
-      : unaffordable
-        ? `Need ${cost} action${cost === 1 ? "" : "s"} · ${left} left`
-        : `${modeLabel}${costTag}`;
+      : spent
+        ? "Reload first"
+        : unaffordable
+          ? `Need ${cost} action${cost === 1 ? "" : "s"} · ${left} left`
+          : modeLabel;
   }
 
   const title = mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";

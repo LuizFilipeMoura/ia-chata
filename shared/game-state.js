@@ -104,13 +104,16 @@ export const CHASSIS = [
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
 // weight classes (3 medium / 3 light — the catalogue has no heavy). All chassis
 // ids are unique, honouring the no-mirror-matchup invariant (AGENTS.md).
+// `prototype` names which weapon slot carries its signature Prototype upgrade so
+// a seeded battle exercises a spread of Prototype mechanics out of the box; the
+// other slot keeps its default (Field) upgrade, honouring one-Prototype-per-rig.
 export const SEED_ROSTER = [
-  { name: "A1", owner: "a", chassis: "medium-lance-mortar" },
-  { name: "A2", owner: "a", chassis: "light-claw-autocannon" },
-  { name: "A3", owner: "a", chassis: "light-sword-arc" },
-  { name: "B1", owner: "b", chassis: "medium-shield-siege" },
-  { name: "B2", owner: "b", chassis: "medium-sniper-chainsaw" },
-  { name: "B3", owner: "b", chassis: "light-harpoon-anchor" },
+  { name: "A1", owner: "a", chassis: "medium-lance-mortar",    prototype: "longRange" }, // Mortar → Barrage
+  { name: "A2", owner: "a", chassis: "light-claw-autocannon",  prototype: "melee" },     // Claw → Breach Grip
+  { name: "A3", owner: "a", chassis: "light-sword-arc",        prototype: "longRange" }, // Arc Gun → Ion Storm
+  { name: "B1", owner: "b", chassis: "medium-shield-siege",    prototype: "melee" },     // Bulwark Shield → Emplacement
+  { name: "B2", owner: "b", chassis: "medium-sniper-chainsaw", prototype: "longRange" }, // Sniper Cannon → Enfilade
+  { name: "B3", owner: "b", chassis: "light-harpoon-anchor",   prototype: "melee" },     // Anchor → Ground Anchor
 ];
 
 // The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
@@ -120,6 +123,20 @@ export const SUPPORT_UNITS = [
   { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",  modules: ["damage", "coolant"] },
   { name: "Field Welder",   owner: "b", kind: "walker", modules: ["repair", "recon"] },
   { name: "Depot Tank",     owner: "b", kind: "tank",   modules: ["repair", "coolant"] },
+];
+
+// Support units the default `seed` battle deploys alongside the 6 rigs: one Tank
+// and two Walkers per side, the two Walkers deliberately different types so a
+// tester sees both a damage Walker and a support Walker side by side.
+export const SEED_SUPPORT = [
+  // Side A: gun tank + damage walker + repair walker.
+  { name: "Marksman Tank",   owner: "a", kind: "tank",   unit: "Tank Cannon",      modules: ["damage", "recon"] },
+  { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",       modules: ["damage", "coolant"] },
+  { name: "Medic Walker",    owner: "a", kind: "walker",                           modules: ["repair", "recon"] },
+  // Side B: repair tank + rocket walker + autocannon walker.
+  { name: "Depot Tank",      owner: "b", kind: "tank",                             modules: ["repair", "coolant"] },
+  { name: "Rocket Walker",   owner: "b", kind: "walker", unit: "Rocket Pod",       modules: ["damage", "recon"] },
+  { name: "Gun Walker",      owner: "b", kind: "walker", unit: "Autocannon Mount", modules: ["damage", "coolant"] },
 ];
 
 export function chassisById(id) {
@@ -464,6 +481,13 @@ export const WEAPON_UPGRADES = {
 export function defaultWeaponUpgrade(weaponName) {
   const upgrades = WEAPON_UPGRADES[weaponName];
   return Array.isArray(upgrades) && upgrades.length ? upgrades[0].id : null;
+}
+
+// The id of a weapon's sole Prototype-nature upgrade (each weapon lists exactly
+// one). Used by the `seed` verb to hand each rig its signature Prototype.
+export function prototypeUpgradeFor(weaponName) {
+  const upgrades = WEAPON_UPGRADES[weaponName] || [];
+  return upgrades.find((u) => u.nature === "prototype")?.id || null;
 }
 
 export function normalizeWeaponUpgrade(weaponName, upgradeId) {
@@ -2482,7 +2506,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     resetGameShape(room);
     changed = true;
   } else if (verb === "seed") {
-    const roster = Array.isArray(a.roster) && a.roster.length ? a.roster : SEED_ROSTER;
+    // An explicit roster is used verbatim; the default seed bundles the 6-rig
+    // SEED_ROSTER with its support units (tanks + walkers) so a tester gets the
+    // full unit spread out of the box.
+    const roster = Array.isArray(a.roster) && a.roster.length
+      ? a.roster
+      : [...SEED_ROSTER, ...SEED_SUPPORT];
     const first = normalizeSide(room, a.first) || "a";
     room.rigs = [];
     room.nextRigId = 1;
@@ -2497,9 +2526,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       } else {
         const pb = resolveChassis({ chassis: entry.chassis });
         if (!pb) continue;
+        // `entry.prototype` picks which weapon slot carries its Prototype upgrade;
+        // the other slot keeps its default (Field) upgrade.
         unit = makeUnit("rig", room.nextRigId, entry.name, owner, {
           weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
           chassis: pb.id, sp: pb.sp,
+          longRangeUpgrade: entry.prototype === "longRange" ? prototypeUpgradeFor(pb.longRange) : undefined,
+          meleeUpgrade: entry.prototype === "melee" ? prototypeUpgradeFor(pb.melee) : undefined,
         });
       }
       if (!unit) continue;

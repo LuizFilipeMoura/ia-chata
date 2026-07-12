@@ -10,6 +10,12 @@ const CLASS_GLYPH: Record<string, [string, string, string]> = {
   heavy: ["⬢", "HVY", "#ef9450"], colossal: ["✦", "COL", "#f26a50"],
 };
 
+// Cold kinds (Tank, Walker) have no weight class — key the class column off the
+// unit kind so the row shows TNK/WLK instead of falling back to LGT.
+const KIND_GLYPH: Record<string, [string, string, string]> = {
+  tank: ["⬛", "TNK", "#b6c26a"], walker: ["⬟", "WLK", "#6ac2b6"],
+};
+
 function loadoutText(rig: Rig): string {
   const lo = buildLoadout(rig);
   if (!lo) return "";
@@ -18,9 +24,10 @@ function loadoutText(rig: Rig): string {
 }
 
 export function RigRow({ rig, hostile, active, target, onOpen }: { rig: Rig; hostile: boolean; active: boolean; target?: boolean; onOpen: (id: number) => void }) {
-  const locs: string[] = partNamesOf(kindOf(rig));
-  const [glyph, short, color] = CLASS_GLYPH[rig.weightClass] ?? CLASS_GLYPH.light;
-  const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
+  const kind = kindOf(rig);
+  const locs: string[] = partNamesOf(kind);
+  const [glyph, short, color] = KIND_GLYPH[kind] ?? CLASS_GLYPH[rig.weightClass] ?? CLASS_GLYPH.light;
+  const cold = !UNIT_KINDS[kind].hasHeat;
   const m = cold ? null : heatMeter(rig);
   const statusColor = rig.destroyed ? "#f26a50" : "#6cc47f";
 

@@ -36,16 +36,13 @@
 .v2-root .v2-dwr-btn:not(:disabled):active { transform: translateY(1px); }
 .v2-root .v2-dwr-btn:disabled { opacity: .4; }
 
-/* ===== Dice-resolution console — the "roll rig" ==============================
-   Reworked to speak the same dieselpunk dialect as the Rig Control Terminal
-   (rig-terminal.css): a milled iron sheet with rivet corners, a redline-hatch
-   header, an ember-bloom scrim, a breathing amber glow (v2-glowpulse), and
-   dice that read as stamped, glowing metal tokens rather than plastic pips.
-
-   The console is always mounted (imperative handle) with its scrim hidden until
-   a roll. Its portal wrapper carries `.v2-root` only so the --v2-* tokens
-   resolve; `display:contents` stops that always-present wrapper from painting
-   the opaque full-screen `.v2-root` background over the app. */
+/* ===== Dice-resolution console — "Terminal Sibling" =========================
+   A literal sibling of the Rig Control Terminal (rig-terminal.css): one unified
+   amber frame, content split into stacked labelled zones divided by 1px rules,
+   and the damage readout flattened to a single sunken strip with an inline
+   equation. Depth is a STATIC drop shadow on the console; the breathing amber
+   glow lives on a ::after opacity overlay so it never overwrites that shadow
+   (the old design animated box-shadow directly, which erased the depth). */
 .v2-root.v2-portal-bare { display: contents; }
 .v2-roll-scrim {
   z-index: 85;
@@ -55,60 +52,76 @@
 .v2-roll-scrim.show { opacity: 1; pointer-events: auto; }
 .v2-roll-scrim[hidden] { display: none; }
 
-/* Iron sheet: gradient face, oil-forged top edge, rivet border, corner rivets,
-   deep drop + breathing amber glow. Sharp corners — no plastic radius. */
+/* Iron sheet: base .v2-panel surface, re-framed to a single oil-ring outline so
+   the whole border matches the glow. Static deep drop + bottom vignette seat it
+   on the scrim; sharp corners (v2-panel--sharp). */
 .v2-root .v2-roll-console {
   position: relative;
-  width: min(400px, 100%);
-  border-top: 2px solid var(--v2-oil-deep);
+  width: min(480px, 100%);
+  border-color: var(--v2-oil-ring);
   box-shadow:
     var(--v2-bevel-top),
-    inset 0 -44px 74px rgba(0, 0, 0, .5),
-    0 20px 50px rgba(0, 0, 0, .7);
-  padding-bottom: .9rem;
+    inset 0 -40px 70px rgba(0, 0, 0, .45),
+    0 26px 60px rgba(0, 0, 0, .75);
   transform: translateY(12px) scale(.985); opacity: 0;
   transition: transform .28s cubic-bezier(.2, .85, .25, 1), opacity .28s ease;
-  animation: v2-glowpulse 3.2s infinite;
 }
 .v2-roll-scrim.show .v2-roll-console { transform: none; opacity: 1; }
-/* Corner rivets on the top frame — mirrors .v2-rt::before/::after. */
-.v2-root .v2-roll-console::before,
+/* Breathing amber ring — opacity-animated overlay, so the seating box-shadow
+   above is preserved (the whole point of the redesign). */
 .v2-root .v2-roll-console::after {
-  content: ""; position: absolute; top: 9px; width: 9px; height: 9px;
-  border-radius: 50%; z-index: 3; pointer-events: none;
-  background: var(--v2-rivet-dot);
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--v2-oil-ring);
+  animation: v2-roll-glow 3.2s infinite;
 }
-.v2-root .v2-roll-console::before { left: 9px; }
-.v2-root .v2-roll-console::after { right: 9px; }
+@keyframes v2-roll-glow { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+/* Corner rivets as real spans (frees ::after for the glow overlay). */
+.v2-root .v2-roll-rivet {
+  position: absolute; top: 9px; width: 9px; height: 9px; z-index: 3;
+  border-radius: 50%; pointer-events: none; background: var(--v2-rivet-dot);
+}
+.v2-root .v2-roll-rivet.l { left: 9px; }
+.v2-root .v2-roll-rivet.r { right: 9px; }
 
 /* Header: redline-hatch band, mono order tag + stencilled kind, square close. */
 .v2-root .v2-roll-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px 12px; margin-bottom: .2rem;
+  padding: 16px 20px 14px;
   border-bottom: 1px solid var(--v2-line);
   background: repeating-linear-gradient(-45deg,
-    rgba(20, 16, 8, 0) 0 20px, rgba(168, 100, 28, .05) 20px 40px);
+    rgba(20, 16, 8, 0) 0 20px, rgba(168, 100, 28, .06) 20px 40px);
 }
 .v2-root .v2-roll-head-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .v2-root .v2-roll-tag { letter-spacing: .3em; color: var(--v2-oil); }
 .v2-root .v2-roll-kind {
-  font-size:var(--v2-text-lg); letter-spacing: .16em; text-transform: uppercase;
+  font-size: var(--v2-text-lg); letter-spacing: .16em; text-transform: uppercase;
 }
-.v2-root .v2-roll-close { flex: 0 0 auto; font-size:var(--v2-text-base); line-height: 1; }
+.v2-root .v2-roll-close { flex: 0 0 auto; font-size: var(--v2-text-base); line-height: 1; }
 
-/* Dice: stamped iron tokens. Rolling → dark sunken blank with a faint flicker
-   numeral; settled → milled face with a stencilled numeral and a tone-keyed
-   glow ring. d6 barely-rounded, d12 a struck coin. */
+/* Stacked labelled zones, split by hairline dividers. */
+.v2-root .v2-roll-zone {
+  padding: 16px 20px; border-bottom: 1px solid var(--v2-line);
+}
+.v2-root .v2-roll-zone:last-of-type { border-bottom: 0; }
+.v2-root .v2-roll-zone-label {
+  font-family: var(--v2-mono); font-size: var(--v2-text-sm);
+  letter-spacing: .22em; text-transform: uppercase; color: var(--v2-txt-faint);
+  margin-bottom: .8rem;
+}
+
+/* Dice: stamped iron tokens. Rolling → dark sunken blank with a flicker numeral;
+   settled → milled face, stencilled numeral, tone-keyed glow ring. Behaviour
+   unchanged from the previous design. */
 .v2-root .v2-roll-dice {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem;
-  padding: 1rem .7rem .5rem; min-height: 4.4rem;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 1.1rem;
+  min-height: 4.4rem;
 }
 .v2-root .v2-die-wrap { display: flex; flex-direction: column; align-items: center; }
 .v2-root .v2-die {
   --face: var(--v2-oil);
   width: 3rem; height: 3rem; flex: 0 0 auto;
   display: grid; place-items: center;
-  font-family: var(--v2-stencil); font-weight: 700; font-size:var(--v2-text-2xl); line-height: 1;
+  font-family: var(--v2-stencil); font-weight: 700; font-size: var(--v2-text-2xl); line-height: 1;
   color: var(--v2-oil-hi);
   background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-900));
   border: 1px solid var(--v2-well-line);
@@ -158,102 +171,68 @@
 }
 .v2-root .v2-die-verdict[data-tone="ok"] { color: var(--v2-ok); }
 .v2-root .v2-die-verdict[data-tone="miss"] { color: var(--v2-crit); }
-
 .v2-root .v2-die-label {
   display: block; margin-top: .3rem;
   letter-spacing: .14em; text-align: center;
 }
-
 .v2-root .v2-roll-rolling {
-  text-align: center; padding: .1rem 0 .7rem;
+  text-align: center; padding: .6rem 0 0;
   letter-spacing: .28em; color: var(--v2-oil);
   animation: v2-lampfast 1s ease-in-out infinite;
 }
 
-/* Fallback summary line — framed as a stamped readout plate so it reads like the
-   breakdown panel it stands in for (sunken iron, oil top-edge, ember bloom). */
-.v2-root .v2-roll-summary {
-  position: relative;
-  margin: .5rem .7rem .2rem; padding: .55rem .7rem;
-  text-align: center; text-wrap: balance;
-  font-family: var(--v2-disp); font-size:var(--v2-text-lg); font-weight: 600; line-height: 1.35;
-  letter-spacing: .01em; color: var(--v2-txt);
-  background:
-    radial-gradient(120% 140% at 50% -20%, rgba(231, 154, 61, .10), transparent 60%),
-    linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-950));
-  border: 1px solid var(--v2-rivet); border-top: 1px solid var(--v2-oil-deep);
-  box-shadow: var(--v2-bevel-top), inset 0 -8px 20px rgba(0, 0, 0, .45);
-  opacity: 0; transform: translateY(4px); animation: v2-line-in .35s ease .45s forwards;
-}
-
-/* Structured damage readout — the equation form of the summary line, retooled
-   as a sunken instrument panel: ember bloom crown, rivet border, sharp wells. */
+/* Damage readout — a SINGLE sunken strip holding an INLINE equation. No nested
+   panel, no per-term boxes (the old box-in-box). Both the structured breakdown
+   (.v2-rx-break) and the fallback summary (.v2-roll-summary) sit in this well. */
+.v2-root .v2-roll-strip,
 .v2-root .v2-rx-break {
-  margin: .4rem .7rem .1rem; padding: .6rem .55rem .55rem;
-  background:
-    radial-gradient(120% 140% at 50% -20%, rgba(231, 154, 61, .12), transparent 60%),
-    linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-950));
-  border: 1px solid var(--v2-rivet); border-top: 1px solid var(--v2-oil-deep);
-  box-shadow: var(--v2-bevel-top), inset 0 -8px 20px rgba(0, 0, 0, .45);
-  opacity: 0; transform: translateY(4px); animation: v2-line-in .35s ease .45s forwards;
+  background: var(--v2-well);
+  border: 1px solid var(--v2-well-line); border-top: 1px solid var(--v2-line);
+  padding: .8rem .9rem;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .6);
 }
 .v2-root .v2-rx-break-head {
-  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center;
-  gap: .3rem .45rem; margin-bottom: .5rem;
-  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .12em; text-transform: uppercase;
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: .3rem .45rem; margin-bottom: .7rem;
+  font-family: var(--v2-mono); font-size: var(--v2-text-sm); letter-spacing: .1em; text-transform: uppercase;
 }
 .v2-root .v2-rx-actor { color: var(--v2-txt-dim); }
-.v2-root .v2-rx-weapon {
-  color: var(--v2-oil-hi); font-weight: 700;
-  padding: .08rem .34rem;
-  background: rgba(231, 154, 61, .12); border: 1px solid rgba(231, 154, 61, .32);
-}
+.v2-root .v2-rx-weapon { color: var(--v2-oil-hi); font-weight: 700; }
 .v2-root .v2-rx-target { color: var(--v2-txt-dim); }
 
+/* Inline equation row — flat flex, terms are inline (no boxes), wraps if needed. */
 .v2-root .v2-rx-break-eq {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .15rem .35rem;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .5rem;
+  font-family: var(--v2-mono); font-size: var(--v2-text-base);
 }
-.v2-root .v2-rx-term-group { display: inline-flex; align-items: center; gap: .35rem; }
-.v2-root .v2-rx-op {
-  font-family: var(--v2-mono); font-size:var(--v2-text-lg); font-weight: 700;
-  color: var(--v2-txt-faint); line-height: 1;
-}
-.v2-root .v2-rx-term {
-  display: flex; flex-direction: column; align-items: center; gap: .05rem;
-  min-width: 3rem; padding: .3rem .5rem .24rem;
-  background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-900));
-  border: 1px solid var(--v2-well-line); border-top: 1px solid var(--v2-line);
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .7);
-}
+.v2-root .v2-rx-term-group { display: inline-flex; align-items: baseline; gap: .3rem; }
+.v2-root .v2-rx-op { color: var(--v2-txt-faint); font-weight: 700; line-height: 1; }
+.v2-root .v2-rx-term { display: inline-flex; align-items: baseline; gap: .25rem; }
 .v2-root .v2-rx-term b {
-  font-family: var(--v2-stencil); font-size:var(--v2-text-xl); font-weight: 700; line-height: 1;
+  font-family: var(--v2-stencil); font-size: var(--v2-text-lg); font-weight: 700; line-height: 1;
   color: var(--v2-txt);
 }
 .v2-root .v2-rx-term em {
   font-family: var(--v2-mono); font-style: normal;
-  font-size:var(--v2-text-sm); letter-spacing: .08em; text-transform: uppercase;
+  font-size: var(--v2-text-sm); letter-spacing: .06em; text-transform: uppercase;
   color: var(--v2-txt-faint); white-space: nowrap;
-}
-.v2-root .v2-rx-term[data-tone="mod"] {
-  border-color: var(--v2-oil-deep);
-  box-shadow: 0 0 12px -2px rgba(231, 154, 61, .4), inset 0 1px 4px rgba(0, 0, 0, .6);
 }
 .v2-root .v2-rx-term[data-tone="mod"] b { color: var(--v2-oil-hi); text-shadow: 0 0 12px rgba(231, 154, 61, .4); }
 .v2-root .v2-rx-term[data-tone="mod"] em { color: var(--v2-oil); }
 .v2-root .v2-rx-term[data-tone="die"] b { color: #cdd5e0; }
 
 .v2-root .v2-rx-break-out {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem;
-  margin-top: .6rem; padding-top: .55rem;
-  border-top: 1px dashed rgba(255, 255, 255, .09);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem .8rem;
+  margin-top: .9rem; padding-top: .7rem;
+  border-top: 1px dashed rgba(255, 255, 255, .1);
 }
 .v2-root .v2-rx-total {
-  display: inline-flex; align-items: center; gap: .25rem;
-  font-family: var(--v2-stencil); font-size:var(--v2-text-lg); font-weight: 700; color: var(--v2-txt-dim);
+  display: inline-flex; align-items: baseline; gap: .25rem;
+  font-family: var(--v2-stencil); font-size: var(--v2-text-lg); font-weight: 700; color: var(--v2-txt-dim);
 }
-.v2-root .v2-rx-total .v2-rx-op { font-size:var(--v2-text-sm); }
+.v2-root .v2-rx-total .v2-rx-op { font-size: var(--v2-text-sm); }
 .v2-root .v2-rx-tier {
-  font-family: var(--v2-mono); font-size:var(--v2-text-sm); font-weight: 700;
+  font-family: var(--v2-mono); font-size: var(--v2-text-sm); font-weight: 700;
   letter-spacing: .16em; text-transform: uppercase;
   padding: .2rem .45rem;
   color: var(--v2-txt-dim); border: 1px solid var(--v2-line); background: rgba(0, 0, 0, .3);
@@ -267,19 +246,28 @@
   box-shadow: 0 0 12px -1px rgba(229, 83, 58, .6);
 }
 .v2-root .v2-rx-tier[data-tier="none"] { color: var(--v2-txt-faint); }
-.v2-root .v2-rx-sp { display: inline-flex; align-items: baseline; gap: .3rem; }
+.v2-root .v2-rx-sp { display: inline-flex; align-items: baseline; gap: .3rem; margin-left: auto; }
 .v2-root .v2-rx-sp b {
-  font-family: var(--v2-stencil); font-size:var(--v2-text-3xl); font-weight: 700; line-height: 1;
+  font-family: var(--v2-stencil); font-size: var(--v2-text-3xl); font-weight: 700; line-height: 1;
   color: var(--v2-oil-hi); text-shadow: 0 0 18px rgba(231, 154, 61, .5);
 }
 .v2-root .v2-rx-sp em {
   font-family: var(--v2-mono); font-style: normal;
-  font-size:var(--v2-text-sm); letter-spacing: .1em; text-transform: uppercase; color: var(--v2-txt-dim);
+  font-size: var(--v2-text-sm); letter-spacing: .1em; text-transform: uppercase; color: var(--v2-txt-dim);
 }
 
-.v2-root .v2-roll-effects { display: flex; flex-direction: column; gap: .35rem; padding: .5rem .9rem 0; }
+/* Fallback summary sentence — mono readout voice, matching the equation strip
+   it stands in for (the rest of the console is stencil/mono, never Oswald). */
+.v2-root .v2-roll-summary {
+  text-align: center; text-wrap: balance;
+  font-family: var(--v2-mono); font-size: var(--v2-text-base); font-weight: 500; line-height: 1.5;
+  letter-spacing: .01em; color: var(--v2-txt);
+}
+
+/* Effects log lines — mono ember lines with a staggered entrance. */
+.v2-root .v2-roll-effects { display: flex; flex-direction: column; gap: .45rem; }
 .v2-root .v2-roll-effect {
-  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-ember-hi);
+  font-family: var(--v2-mono); font-size: var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-ember-hi);
   padding: .12rem 0 .12rem .55rem;
   border-left: 2px solid var(--v2-ember); text-shadow: 0 0 10px rgba(229, 83, 58, .3);
   opacity: 0; transform: translateY(4px); animation: v2-line-in .3s ease forwards;
@@ -288,7 +276,7 @@
 
 /* ===== Reaction-token flip reveal — a struck coin on an oil hatch back ===== */
 .v2-root .v2-rx-reveal {
-  display: flex; flex-direction: column; align-items: center; padding: 1rem .7rem .4rem;
+  display: flex; flex-direction: column; align-items: center; gap: .5rem;
 }
 .v2-root .v2-rx-token {
   --face: var(--v2-oil);
@@ -297,7 +285,7 @@
 .v2-root .v2-rx-token.flip { animation: v2-rx-flip .48s cubic-bezier(.2, .85, .25, 1) both; }
 .v2-root .v2-rx-token-face {
   position: absolute; inset: 0; display: grid; place-items: center;
-  border-radius: 50%; backface-visibility: hidden; font-size:var(--v2-text-2xl);
+  border-radius: 50%; backface-visibility: hidden; font-size: var(--v2-text-2xl);
   border: 1px solid var(--v2-well-line); box-shadow: 0 4px 12px rgba(0, 0, 0, .55);
 }
 .v2-root .v2-rx-token-back {
@@ -325,26 +313,27 @@
 }
 
 /* ===== Manual dice-entry form — sunken iron input wells ===== */
-.v2-root .v2-roll-form { display: flex; flex-direction: column; gap: .5rem; padding: .6rem .9rem 0; }
+.v2-root .v2-roll-form { display: flex; flex-direction: column; gap: .5rem; }
 .v2-root .v2-roll-form-row { display: flex; align-items: center; gap: .5rem; }
 .v2-root .v2-roll-form-row label { flex: 1; letter-spacing: .06em; color: var(--v2-txt-dim); }
 .v2-root .v2-roll-form-row input {
   width: 4.5rem; padding: .45rem .5rem;
-  color: var(--v2-txt); font-family: var(--v2-mono); font-size:var(--v2-text-lg); text-align: center;
+  color: var(--v2-txt); font-family: var(--v2-mono); font-size: var(--v2-text-lg); text-align: center;
 }
 .v2-root .v2-roll-form-row input:focus {
   outline: none; border-color: var(--v2-oil);
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, .7), 0 0 0 1px var(--v2-oil), 0 0 14px rgba(231, 154, 61, .3);
 }
 
-/* Forged action buttons — stencil, oil face, deep bottom edge, amber bloom. */
-.v2-root .v2-roll-form-go,
-.v2-root .v2-roll-ok { font-size:var(--v2-text-base); }
-.v2-root .v2-roll-form-go { margin-top: .3rem; padding: .7rem; }
-.v2-root .v2-roll-ok {
-  display: block; width: calc(100% - 1.4rem); margin: .8rem .7rem 0; padding: .7rem;
-  opacity: 0; transform: translateY(4px); animation: v2-line-in .3s ease forwards;
+/* Action bar — every state ends with a consistent forged action row. */
+.v2-root .v2-roll-action {
+  display: flex; gap: .6rem;
+  padding: 16px 20px 18px; background: var(--v2-iron-950);
+  border-top: 1px solid var(--v2-line);
 }
+.v2-root .v2-roll-ok,
+.v2-root .v2-roll-form-go { flex: 1; padding: .8rem; font-size: var(--v2-text-base); }
+.v2-root .v2-roll-ok { opacity: 0; transform: translateY(4px); animation: v2-line-in .3s ease forwards; }
 
 /* ===== Drawer bodies (Move / Repair / Prepare / Blast) ===== */
 .v2-root .v2-dwr-hint {
@@ -435,8 +424,7 @@
 @media (prefers-reduced-motion: reduce) {
   .v2-root .v2-die.rolling { animation: none; }
   .v2-root .v2-die.settled,
-  .v2-root .v2-roll-summary,
-  .v2-root .v2-rx-break,
+  .v2-root .v2-die-verdict,
   .v2-root .v2-roll-effect,
   .v2-root .v2-roll-console,
   .v2-root .v2-roll-ok { animation: none; opacity: 1; transform: none; }

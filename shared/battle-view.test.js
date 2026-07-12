@@ -226,6 +226,7 @@ test("Walker action console keeps prepare hidden, keeps other actions (regressio
   const keys = actions.map((a) => a.key);
   assert.ok(!keys.includes("prepare"));
   assert.ok(!keys.includes("shutdown"));
+  assert.ok(!keys.includes("sprint")); // cold kind — no heat to redline
   assert.ok(keys.includes("move"));
   assert.ok(keys.includes("fire"));
 });

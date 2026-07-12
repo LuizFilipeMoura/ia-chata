@@ -96,6 +96,8 @@ export interface Resolution {
   kind?: string;
   rigId?: number;
   prep?: string;
+  /** On an `overheat` entry: the heat-threshold row key. "safe" = no damage. */
+  heatKey?: string;
   summary?: string;
   breakdown?: ResolutionBreakdown;
   effects?: string[];

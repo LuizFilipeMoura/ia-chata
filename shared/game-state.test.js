@@ -3959,12 +3959,31 @@ test("seed builds a started 3v3 with 6 distinct chassis and turn=first", () => {
   assert.equal(r.field.locked, true);
   assert.equal(r.game.turn.side, "b");
 
-  const a = r.rigs.filter((rig) => rig.owner === "a");
-  const b = r.rigs.filter((rig) => rig.owner === "b");
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  const a = rigs.filter((rig) => rig.owner === "a");
+  const b = rigs.filter((rig) => rig.owner === "b");
   assert.equal(a.length, 3);
   assert.equal(b.length, 3);
-  const chassisIds = r.rigs.map((rig) => rig.chassis);
+  const chassisIds = rigs.map((rig) => rig.chassis);
   assert.equal(new Set(chassisIds).size, 6);
+
+  // Default seed also fields support units: one tank + two walkers per side, the
+  // two walkers of different types (one damage, one support).
+  const support = r.rigs.filter((rig) => rig.kind === "tank" || rig.kind === "walker");
+  assert.equal(support.length, 6);
+  for (const side of ["a", "b"]) {
+    const sideSupport = support.filter((u) => u.owner === side);
+    assert.equal(sideSupport.filter((u) => u.kind === "tank").length, 1);
+    assert.equal(sideSupport.filter((u) => u.kind === "walker").length, 2);
+  }
+
+  // Each rig carries exactly one Prototype-nature weapon upgrade.
+  for (const rig of rigs) {
+    const n =
+      (upgradeNature(rig.weapons.longRange, rig.weaponUpgrades.longRange) === "prototype" ? 1 : 0) +
+      (upgradeNature(rig.weapons.melee, rig.weaponUpgrades.melee) === "prototype" ? 1 : 0);
+    assert.equal(n, 1);
+  }
 });
 
 test("seed first defaults to 'a' and is idempotent (re-seed resets)", () => {
@@ -3974,7 +3993,7 @@ test("seed first defaults to 'a' and is idempotent (re-seed resets)", () => {
   const firstIds = r.rigs.map((rig) => rig.id);
 
   applyCommand(r, { verb: "seed", attrs: { first: "b" } });
-  assert.equal(r.rigs.length, 6);
+  assert.equal(r.rigs.length, 12); // 6 rigs + 6 support units
   assert.equal(r.game.turn.side, "b");
   // A fresh build re-numbers from 1, not appends.
   assert.deepEqual(r.rigs.map((rig) => rig.id), firstIds);
