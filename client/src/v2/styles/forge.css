@@ -208,6 +208,26 @@
 .v2-root .v2-fc-equip-active { font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.45; color: var(--v2-txt-faint); }
 .v2-root .v2-fc-equip-active b { color: var(--v2-oil); }
 
+/* equipment slot wraps the family card + its nature sub-picker path */
+.v2-root .v2-fc-equip-slot { display: flex; flex-direction: column; gap: 8px; }
+.v2-root .v2-fc-equip-slot.is-sel .v2-fc-path { margin-top: 4px; }
+
+/* suggested-for-this-chassis highlight (distinct from .is-sel selection) */
+.v2-root .v2-fc-equip.is-suggested {
+  border-color: var(--v2-oil);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--v2-oil) 35%, transparent);
+}
+.v2-root .v2-fc-equip-suggest {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-bottom: 4px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--v2-line);
+}
+.v2-root .v2-fc-equip-suggest-tag { color: var(--v2-oil-hi); }
+.v2-root .v2-fc-equip-suggest-why {
+  font-family: var(--v2-disp); font-size: var(--v2-text-sm);
+  line-height: 1.4; color: var(--v2-txt-dim);
+}
+
 /* ---- confirm ------------------------------------------------------------ */
 .v2-root .v2-fc-confirm { display: flex; flex-direction: column; gap: 8px; }
 .v2-root .v2-fc-confirm-name { font-size:var(--v2-text-xl); color: var(--v2-oil-hi); }

@@ -129,6 +129,8 @@
   border-color:var(--v2-ember-hi);
 }
 @media (prefers-reduced-motion:reduce){.v2-root .v2-rigrow--active{box-shadow:inset 0 0 0 2px var(--v2-active-ring-hi),0 0 16px var(--v2-active-halo)}}
+.v2-root .v2-rigrow--target{ outline:1px solid var(--v2-ember); outline-offset:-1px; }
+.v2-root .v2-rigrow-target{ margin-left:6px; font-size:.9em; }
 .v2-root .v2-rigrow-active-tag{
   flex:0 0 auto; font-family:var(--v2-mono); font-size:var(--v2-text-sm);
   letter-spacing:.14em; color:var(--v2-oil-hi);

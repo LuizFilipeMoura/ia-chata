@@ -2,6 +2,10 @@ import { useEffect, useRef } from "react";
 import "../styles/rig-terminal.css";
 import { spColor } from "../lib/viewModels";
 import type { Component } from "../../state/types";
+import { InfoTerm } from "./InfoTerm";
+
+// Each part name is also its glossary id (added in shared/glossary.js).
+const PART_GLOSS = new Set(["hull", "arms", "legs", "engine", "tracks", "turret", "mount"]);
 
 interface Props {
   rigName: string;
@@ -25,7 +29,7 @@ export function CompRow({ rigName, loc, comp, onCommand }: Props) {
 
   return (
     <div className={cls}>
-      <span className="v2-comp-label">{label}</span>
+      <InfoTerm id={PART_GLOSS.has(loc) ? loc : undefined} className="v2-comp-label">{label}</InfoTerm>
       <button type="button" className="v2-comp-step v2-comp-step--dmg" aria-label={`Damage ${loc}`}
         onClick={() => onCommand("damage", { name: rigName, loc, amount: "1" })}>−</button>
       <div className="v2-comp-bar v2-well">

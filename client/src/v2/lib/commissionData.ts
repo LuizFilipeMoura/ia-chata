@@ -1,4 +1,4 @@
-import { WEAPON_UPGRADES } from "/shared/game-state.js";
+import { WEAPON_UPGRADES, EQUIPMENT_UPGRADES } from "/shared/game-state.js";
 
 export const CHASSIS_NAME: Record<string, string> = {
   "light-claw-autocannon": "Ironjaw",
@@ -22,4 +22,7 @@ export const natureLabel = (nature: string): string => NATURE_LABEL[nature] || n
 export const NODE_MARK = ["I", "II", "III"];
 export function firstUpgradeId(name: string): string | null {
   return (WEAPON_UPGRADES[name] || [])[0]?.id || null;
+}
+export function firstEquipmentUpgradeId(equipmentId: string): string | null {
+  return (EQUIPMENT_UPGRADES[equipmentId] || [])[0]?.id || null;
 }

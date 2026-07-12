@@ -49,6 +49,13 @@ test("computeModifiedAim uses distance-based accuracy for ranged weapons", () =>
   assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
 });
 
+test("Pop Smoke worsens an attacker's modified Aim by 2", () => {
+  const mg = WEAPONS.longRange["Mini Gun"];
+  const clear = computeModifiedAim(attacker, mg, { distance: 12, cover: 0, targetSmoke: false });
+  const smoked = computeModifiedAim(attacker, mg, { distance: 12, cover: 0, targetSmoke: true });
+  assert.equal(smoked - clear, 2);
+});
+
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
   const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, acc [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3
@@ -99,6 +106,53 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
   const out2 = rollImpacts({ weightClass: "medium" }, both, auto, "hull",
     { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
   assert.equal(out2[0].total, 10); // 5 + 8 - 2(brace) - 1(harden)
+});
+
+test("Reinforced Plating deepens Harden to −2 impact", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const hardened = { weightClass: "medium", hardened: true, preparation: null };
+  const reinforced = { weightClass: "medium", hardened: true, preparation: null, equipmentUpgrade: "reinforced-plating", equipmentUpgradeEffect: { hardenImpact: 2 } };
+  // 1 hit, d6=5 -> plain: 5 + 8 + 0(front) - 1(harden) = 12; reinforced: 5 + 8 + 0 - 2(harden) = 11
+  const out = rollImpacts({ weightClass: "medium" }, hardened, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  const out2 = rollImpacts({ weightClass: "medium" }, reinforced, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out[0].total, 12);
+  assert.equal(out2[0].total, 11);
+  assert.equal(out[0].total - out2[0].total, 1); // −2 vs −1 = 1 lower
+});
+
+test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: null };
+  const reactive = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: "reactive-plating" };
+  const angled = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: "angled-plates", equipmentUpgradeEffect: { sideRearStr: -2 }, equipment: "reactive-plating" };
+  // 1 hit, d6=5, side arc -> 5 + 8 + 2(side bonus) = 15 for plain; reactive docks -1; angled docks -2.
+  const outPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  const outReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  const outAngled = rollImpacts({ weightClass: "medium" }, angled, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(outPlain[0].total - outReactive[0].total, 1);
+  assert.equal(outPlain[0].total - outAngled[0].total, 2);
+
+  // Rear arc docks identically to side.
+  const rearPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  const rearReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  const rearAngled = rollImpacts({ weightClass: "medium" }, angled, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(rearPlain[0].total - rearReactive[0].total, 1);
+  assert.equal(rearPlain[0].total - rearAngled[0].total, 2);
+
+  // Front arc is unaffected: a reactive-plating target takes no dock.
+  const frontPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  const frontReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(frontReactive[0].total, frontPlain[0].total);
 });
 
 test("Raking Fire against the front arc deals no damage", () => {
@@ -319,6 +373,44 @@ test("engaged penalty does not apply to melee weapons", () => {
   assert.equal(engaged, base); // melee unaffected
 });
 
+test("Ballistic Processor: +1 ACC in the sweet band (lower modAim)", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor", equipmentUpgradeEffect: { sweetBandAcc: 1 } };
+  const profile = WEAPONS.longRange["Autocannon"]; // has a sweet distance
+  const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
+  const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet });
+  assert.equal(plain - inBand, 1);
+  // Band predicate is |distance − sweet| ≤ 2: the +1 holds at the edge
+  // (sweet + 2) but drops just outside it (sweet + 3).
+  const edge = computeModifiedAim(attacker, profile, { distance: profile.sweet + 2 });
+  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet + 2 });
+  assert.equal(edgePlain - edge, 1);
+  const outside = computeModifiedAim(attacker, profile, { distance: profile.sweet + 3 });
+  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet + 3 });
+  assert.equal(outsidePlain - outside, 0);
+});
+
+test("Targeting Computer passive: first shot ignores cover + engaged penalties", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer" };
+  const profile = WEAPONS.longRange["Autocannon"];
+  const penalized = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true });
+  const compensated = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true, fireControlFirst: true });
+  // cover 2 and engaged −2 both feed accTotal (+2 and +2 to the target number);
+  // the first-shot compensator zeroes both, dropping modAim by exactly 4.
+  assert.equal(penalized - compensated, 4);
+});
+
+test("Lock Sight rerolls the whole volley of missed to-hit dice", () => {
+  const rig = makeRig(1, "L", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  const p = effectiveWeaponProfile("longRange", "Autocannon", rig);
+  const initial = [1, 1, 1, 1]; // rof 4, all misses
+  const rerolls = [6, 6, 6, 6]; // every reroll lands
+  const dice = { 0: 1, 1: 1, 2: 1, 3: 1, rerolls };
+  const without = rollToHit(rig, p, { distance: p.sweet, cover: 0 }, initial, () => 0);
+  const withLock = rollToHit(rig, p, { distance: p.sweet, cover: 0, lockSight: true }, dice, () => 0);
+  assert.equal(without.hits, 0);
+  assert.equal(withLock.hits, 4);
+});
+
 test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   const sniper = makeRig(1, "S", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "cold-bore" });
   const fresh = makeRig(2, "F", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -327,6 +419,53 @@ test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   const p = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
   assert.equal(computeStr(sniper, p, { target: fresh }), p.str + 3);
   assert.equal(computeStr(sniper, p, { target: hurt }), p.str);
+});
+
+test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", () => {
+  const rig = makeRig("r1", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "steady-aim", melee: "honed-talons" };
+  const prof = effectiveWeaponProfile("longRange", "Crossbow", rig); // base STR 10, sweet 18
+  assert.equal(computeStr(rig, prof, { distance: 18 }), 13); // at sweet: 10 + 3
+  assert.equal(computeStr(rig, prof, { distance: 20 }), 13); // +2" edge: still in band
+  assert.equal(computeStr(rig, prof, { distance: 16 }), 13); // -2" edge: still in band
+  assert.equal(computeStr(rig, prof, { distance: 21 }), 10); // off-band: no bonus
+  assert.equal(computeStr(rig, prof, {}), 10);               // no distance: no bonus
+});
+
+test("Exploit Wound grants +3 STR only against an already-damaged struck location", () => {
+  const rig = makeRig("r2", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "exploit-wound" };
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 7
+  const wounded = { weightClass: "medium", hull: { sp: 3, max: 7 } };
+  const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
+  assert.equal(computeStr(rig, prof, { target: wounded, location: "hull" }), 10); // 7 + 3
+  assert.equal(computeStr(rig, prof, { target: fresh, location: "hull" }), 7);    // no bonus
+  assert.equal(computeStr(rig, prof, { target: wounded }), 7);                    // no location: no bonus
+});
+
+test("Evisceration forces Critical on a location at or below half max SP", () => {
+  const rig = makeRig("r3", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "evisceration" };
+  const prof = effectiveWeaponProfile("melee", "Talon", rig);
+  // Hull 3/7 -> 3 <= 3.5 half-dead. Even d6=1 (tiny total) is forced Critical.
+  const halfDead = { weightClass: "medium", hull: { sp: 3, max: 7 } };
+  const out = rollImpacts(rig, halfDead, prof, "hull", { arc: "front", hits: 1 }, { impacts: [1] }, () => 0);
+  assert.equal(out[0].tier, "critical");
+  assert.equal(out[0].sp, 3);
+  // Hull 4/7 -> 4 > 3.5 NOT half-dead: a d6=1 total glances off (no forced crit).
+  const above = { weightClass: "medium", hull: { sp: 4, max: 7 } };
+  const out2 = rollImpacts(rig, above, prof, "hull", { arc: "front", hits: 1 }, { impacts: [1] }, () => 0);
+  assert.notEqual(out2[0].tier, "critical");
+});
+
+test("Evisceration downside: -1 STR against a fully-undamaged struck location", () => {
+  const rig = makeRig("r4", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "evisceration" };
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 7
+  const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
+  const hurt = { weightClass: "medium", hull: { sp: 5, max: 7 } };
+  assert.equal(computeStr(rig, prof, { target: fresh, location: "hull" }), 6); // 7 - 1
+  assert.equal(computeStr(rig, prof, { target: hurt, location: "hull" }), 7);  // damaged: no downside
 });
 
 test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
@@ -807,6 +946,30 @@ test("Breach Grip — a damaging Claw hit routes through ctx.crackLocation", () 
       dice: { toHit: [6, 6, 6], location: 1, impacts: [6, 6, 6] } }, () => 0, ctx);
   assert.equal(res.location, "hull");
   assert.deepEqual(cracks, [[2, "hull", 4]]);
+});
+
+test("Pinning Bolt immobilises the target and adds +2 self-heat on a damaging hit", () => {
+  const heatBumps = [];
+  const ctx = {
+    pushResolution() {},
+    applyDamage() {},
+    bumpHeat(rig, n) { heatBumps.push([rig.id, n]); },
+    engage() {},
+    profileFor: (slot, name, rig) => effectiveWeaponProfile(slot, name, rig),
+  };
+  const shrike = makeRig("atk", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  shrike.weaponUpgrades = { longRange: "pinning-bolt", melee: "honed-talons" };
+  shrike.loaded.longRange = true;
+  const prey = makeRig("def", "Prey", "medium", "B", { longRange: "Autocannon", melee: "Sword" });
+  const room = { rigs: [shrike, prey], game: { round: 1 } };
+  // toHit d6=6 (natural hit), location d12=1 (hull), impact d6=6 -> 6 + STR10 = 16 => severe (sp 2) => damaging.
+  const res = resolveAttack(room, shrike, prey, {
+    weapon: "longRange", arc: "front", distance: 18, aimed: false,
+    dice: { toHit: [6], location: [1], impacts: [6] },
+  }, () => 0, ctx);
+  assert.equal(res.ok, true);
+  assert.equal(prey.immobilised, true);
+  assert.deepEqual(heatBumps, [["atk", 2]]); // only the pinning heat (base fire heat is 0 here)
 });
 
 test("Dismember — a damaging Circular Saw hit routes through ctx.dismemberLocation", () => {

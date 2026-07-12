@@ -3,13 +3,17 @@ import assert from "node:assert/strict";
 import {
   createRoom, makeRig, makeUnit, claimSide, applyCommand, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
-  EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
+  EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
+  EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
+  normalizeEquipmentUpgrade, equipmentActiveHeat,
+  equipmentSprintHeat, equipmentRepairBonus,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
-  chassisById, resolveChassis, SEED_ROSTER,
+  chassisById, resolveChassis, SEED_ROSTER, CHASSIS,
+  heatMeter,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -57,13 +61,13 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
   assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
@@ -107,6 +111,18 @@ test("makeRig honours a per-rig SP override, else falls back to class defaults",
   assert.equal(plated.hull.max, 17);
 });
 
+test("makeRig stamps equipmentUpgradeEffect from the catalog (single source of truth)", () => {
+  // A resolved upgrade copies its catalog `effect` object onto the rig so combat
+  // reads the magnitude from data, not a hardcoded id-check.
+  const reinforced = makeRig(1, "Bulwark", "medium", "a",
+    { longRange: "Autocannon", melee: "Sword" }, "ablative-plating", "reinforced-plating");
+  assert.equal(reinforced.equipmentUpgradeEffect.hardenImpact, 2);
+  // No upgrade → empty object (never null), so combat's `?.tag ?? default` reads
+  // land on the base path.
+  const bare = makeRig(2, "Plain", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  assert.deepEqual(bare.equipmentUpgradeEffect, {});
+});
+
 test("makeUnit stores the chassis id on the rig (for its flavor description)", () => {
   const rig = makeUnit("rig", 1, "Vulcan", "a", {
     weightClass: "light", longRange: "Autocannon", melee: "Claw", chassis: "light-claw-autocannon",
@@ -135,8 +151,8 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 10 + 10.
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
@@ -148,8 +164,8 @@ test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles
     { rof: 6, str: 4, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
     { rof: 2, str: 9, acc: [1, 1], rng: [2, 2], melee: true });
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
@@ -203,6 +219,24 @@ test("countPrototypes counts prototype picks across a rig's two upgrades", () =>
     { longRange: "penetrator-rounds", melee: "vice-grip" }), 1);
   assert.equal(countPrototypes({ longRange: "Autocannon", melee: "Claw" },
     { longRange: "depleted-core", melee: "vice-grip" }), 0);
+});
+
+test("countPrototypes counts an equipment Prototype", () => {
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "fletched-bolts", melee: "honed-talons" },
+    "ablative-plating", "reinforced-plating"), 0);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "fletched-bolts", melee: "honed-talons" },
+    "ablative-plating", "ablative-cascade"), 1);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "pinning-bolt", melee: "honed-talons" },
+    "ablative-plating", "ablative-cascade"), 2);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "pinning-bolt", melee: "honed-talons" }), 1);
 });
 
 test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
@@ -273,6 +307,18 @@ test("makeRig requires a supported class, one valid long-range and one valid mel
   assert.equal(makeRig(1, "Warden", "medium", "a", { longRange: "Nope", melee: "Claw" }), null);
   assert.equal(makeRig(1, "Warden", "heavy", "a", { longRange: "Autocannon", melee: "Claw" }), null);
   assert.equal(makeRig(1, "Warden", "colossal", "a", { longRange: "Autocannon", melee: "Claw" }), null);
+});
+
+test("ensureRigShape backfills speed from the chassis id on reload", () => {
+  // Simulate an old saved rig that predates the speed field.
+  const rig = makeRig(1, "OldSave", "medium", "a", {
+    longRange: "Crossbow", melee: "Talon", chassis: "medium-crossbow-talon",
+  });
+  delete rig.speed;
+  const room = createRoom("r");
+  room.rigs.push(rig);
+  __test.ensureRigShape(rig);
+  assert.equal(rig.speed, 4);
 });
 
 test("add assigns owner, weapons and default SP; damage respects the floor", () => {
@@ -385,7 +431,7 @@ test("adding or removing rigs before start resets ready flags", () => {
   assert.equal(r.game.sides.every((s) => s.ready === false), true);
 });
 
-test("both ready starts game and assigns private random bounties", () => {
+test("both ready starts game and assigns private random priorityTargets", () => {
   const r = createRoom("X");
   claimSide(r, { name: "Owner", side: "a" });
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -400,8 +446,8 @@ test("both ready starts game and assigns private random bounties", () => {
   applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => rolls.shift() });
 
   assert.equal(r.game.started, true);
-  assert.equal(r.game.bounties.a, findRig(r, "b3").id);
-  assert.equal(r.game.bounties.b, findRig(r, "a1").id);
+  assert.equal(r.game.priorityTargets.a, findRig(r, "b3").id);
+  assert.equal(r.game.priorityTargets.b, findRig(r, "a1").id);
 });
 
 test("public state only exposes the requesting side bounty", () => {
@@ -416,10 +462,30 @@ test("public state only exposes the requesting side bounty", () => {
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
   applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
 
-  assert.deepEqual(Object.keys(publicState(r, "a").game.bounties), ["a"]);
-  assert.deepEqual(Object.keys(publicState(r, "b").game.bounties), ["b"]);
-  assert.equal(publicState(r, "a").game.bounties.b, undefined);
-  assert.equal(publicState(r, "b").game.bounties.a, undefined);
+  assert.deepEqual(Object.keys(publicState(r, "a").game.priorityTargets), ["a"]);
+  assert.deepEqual(Object.keys(publicState(r, "b").game.priorityTargets), ["b"]);
+  assert.equal(publicState(r, "a").game.priorityTargets.b, undefined);
+  assert.equal(publicState(r, "b").game.priorityTargets.a, undefined);
+});
+
+test("rerollPriorityTargets picks a living enemy and skips destroyed rigs", () => {
+  const r = startedRoom();
+  const [b1, b2, b3] = ["b1", "b2", "b3"].map((id) => findRig(r, id));
+  b1.destroyed = true; // dead — must be skipped
+  __test.rerollPriorityTargets(r, () => 0); // 0 picks the first LIVING enemy of "a"
+  const targetA = r.game.priorityTargets.a;
+  assert.ok(targetA === b2.id || targetA === b3.id, "target is a living enemy");
+  assert.notEqual(targetA, b1.id, "destroyed rig never chosen");
+});
+
+test("advanceRound re-rolls each side's Priority Target to a living enemy", () => {
+  const r = startedRoom();
+  r.game.round = 3;
+  __test.advanceRound(r);
+  const livingEnemiesOfA = r.rigs
+    .filter((x) => (x.owner || "a") === "b" && !x.destroyed)
+    .map((x) => x.id);
+  assert.ok(livingEnemiesOfA.includes(r.game.priorityTargets.a));
 });
 
 test("engine heat cannot cool below 3 once catastrophic; recovery-less heat math", () => {
@@ -1504,6 +1570,56 @@ test("destruction rolls a D12; 4+ records a pending blast", () => {
   assert.equal(r.game.pendingBlast.exploded, true);
 });
 
+test("destroying your Priority Target scores +2 VP", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
+  b1.hull.sp = 1;
+  __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 9 } });
+  assert.equal(b1.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
+  const kill = r.game.resolutions.find((e) => e.kind === "destruction" && e.rigId === b1.id);
+  assert.deepEqual(kill.vp, { side: "a", amount: 2 });
+  assert.equal(kill.victimName, b1.name);
+  assert.ok(kill.effects.some((e) => /Priority Elimination/.test(e)));
+});
+
+test("destroying a NON-target enemy scores nothing", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1"); const b2 = findRig(r, "b2");
+  r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id }; // a hunts b1, not b2
+  b2.hull.sp = 1;
+  __test.applyDamage(r, b2, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(b2.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 0);
+  const kill = r.game.resolutions.find((e) => e.kind === "destruction" && e.rigId === b2.id);
+  assert.equal(kill.vp, undefined);
+});
+
+test("a Priority Target lost to its own cause still scores for its hunter", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  r.game.priorityTargets = { a: findRig(r, "b1").id, b: a1.id }; // b hunts a1
+  a1.hull.sp = 1;
+  __test.applyDamage(r, a1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(a1.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 2);
+});
+
+test("Priority Target kill VP is awarded once, never twice", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
+  b1.hull.sp = 1;
+  __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
+  __test.setRigSp(b1, "hull", 5);     // "revive" the hull; _blastRolled stays set
+  assert.equal(b1.destroyed, false);
+  __test.applyDamage(r, b1, "hull", 9, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(b1.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2); // still 2, not 4
+});
+
 test("blast applies D6 + STR 10 to each named rig and clears the pending blast", () => {
   const r = startedRoom();
   r.game.pendingBlast = { sourceId: findRig(r, "b1").id, exploded: true };
@@ -1634,9 +1750,12 @@ test("Impale (via Vice Grip) immobilises on a D12 of 8+", () => {
   assert.equal(a1.immobilised, true);
 });
 
-test("EQUIPMENT has the 5 catalogue pieces with passive + active shape", () => {
+test("EQUIPMENT has the 8 catalogue pieces with passive + active shape", () => {
   const ids = Object.keys(EQUIPMENT).sort();
-  assert.deepEqual(ids, ["ablative-plating", "field-repair-suite", "overclock-core", "radiator-array", "servo-actuators"]);
+  assert.deepEqual(ids, [
+    "ablative-plating", "blast-furnace-core", "field-repair-suite", "overclock-core",
+    "radiator-array", "reactive-plating", "servo-actuators", "targeting-computer",
+  ]);
   for (const id of ids) {
     const e = EQUIPMENT[id];
     assert.equal(typeof e.family, "string");
@@ -1648,15 +1767,79 @@ test("EQUIPMENT has the 5 catalogue pieces with passive + active shape", () => {
   }
 });
 
+test("EQUIPMENT has 8 families including the 3 new ones", () => {
+  assert.equal(Object.keys(EQUIPMENT).length, 8);
+  for (const id of ["blast-furnace-core", "targeting-computer", "reactive-plating"]) {
+    assert.ok(EQUIPMENT[id], `missing ${id}`);
+    assert.ok(EQUIPMENT[id].active.key, `${id} needs an active key`);
+  }
+  assert.equal(EQUIPMENT_ACTIVE_BY_KEY["heatpurgewave"], "blast-furnace-core");
+  assert.equal(EQUIPMENT_ACTIVE_BY_KEY["locksight"], "targeting-computer");
+  assert.equal(EQUIPMENT_ACTIVE_BY_KEY["popsmoke"], "reactive-plating");
+});
+
 test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
   assert.equal(normalizeEquipment("Ablative-Plating"), "ablative-plating");
   assert.equal(normalizeEquipment("nonsense"), null);
   assert.equal(normalizeEquipment(null), null);
 });
 
+test("every equipment family has exactly 3 upgrades, one per nature", () => {
+  for (const id of Object.keys(EQUIPMENT)) {
+    const ups = EQUIPMENT_UPGRADES[id];
+    assert.ok(Array.isArray(ups), `${id} has no upgrades`);
+    assert.equal(ups.length, 3, `${id} needs 3 upgrades`);
+    assert.deepEqual(ups.map((u) => u.nature), ["field", "tuned", "prototype"]);
+  }
+});
+
+test("equipment upgrade helpers resolve", () => {
+  assert.equal(equipmentUpgradeNature("ablative-plating", "reinforced-plating"), "field");
+  assert.equal(equipmentUpgradeNature("ablative-plating", "ablative-cascade"), "prototype");
+  assert.equal(equipmentUpgradeNature("ablative-plating", "nope"), null);
+  assert.equal(firstEquipmentUpgradeId("ablative-plating"), "reinforced-plating");
+});
+
+test("normalizeEquipmentUpgrade validates + normalizes", () => {
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", "REINFORCED-PLATING "), "reinforced-plating"); // trims + lowercases
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", "reinforced-plating"), "reinforced-plating");
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", "unknown-id"), null);
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", null), null);
+  assert.equal(normalizeEquipmentUpgrade("no-such-equipment", "reinforced-plating"), null);
+});
+
+test("Field upgrades override equipment active heat", () => {
+  assert.equal(equipmentActiveHeat("radiator-array", null), -2);
+  assert.equal(equipmentActiveHeat("radiator-array", "twin-radiators"), -3);
+  assert.equal(equipmentActiveHeat("overclock-core", null), 3);
+  assert.equal(equipmentActiveHeat("overclock-core", "redundant-capacitors"), 2);
+  assert.equal(equipmentActiveHeat("ablative-plating", "reinforced-plating"), 1);
+});
+
+test("Reinforced Servos zeroes Sprint heat; base Servo is 1, none is 2", () => {
+  assert.equal(equipmentSprintHeat(null, null), 2);
+  assert.equal(equipmentSprintHeat("servo-actuators", null), 1);
+  assert.equal(equipmentSprintHeat("servo-actuators", "reinforced-servos"), 0);
+});
+
+test("Master Toolkit repairs +2, base suite +1, none +0", () => {
+  assert.equal(equipmentRepairBonus(null, null), 0);
+  assert.equal(equipmentRepairBonus("field-repair-suite", null), 1);
+  assert.equal(equipmentRepairBonus("field-repair-suite", "master-toolkit"), 2);
+});
+
+test("makeRig stores a normalized equipmentUpgrade", () => {
+  const rig = makeRig("r1", "Test", "light", "a",
+    { longRange: "Crossbow", melee: "Talon" }, "ablative-plating", "reinforced-plating");
+  assert.equal(rig.equipmentUpgrade, "reinforced-plating");
+  const bad = makeRig("r2", "Test2", "light", "a",
+    { longRange: "Crossbow", melee: "Talon" }, "ablative-plating", "not-real");
+  assert.equal(bad.equipmentUpgrade, null);
+});
+
 test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 20);
+  assert.equal(all.length, 22);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
@@ -1666,6 +1849,31 @@ test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
       assert.equal(typeof u.tag, "string");
     }
   }
+});
+
+test("medium-crossbow-talon chassis resolves and carries its weapons", () => {
+  const entry = CHASSIS.find((c) => c.id === "medium-crossbow-talon");
+  assert.ok(entry, "chassis entry present");
+  assert.equal(entry.longRange, "Crossbow");
+  assert.equal(entry.melee, "Talon");
+  assert.ok(WEAPONS.longRange["Crossbow"], "Crossbow weapon present");
+  assert.ok(WEAPONS.melee["Talon"], "Talon weapon present");
+  assert.equal(WEAPON_UPGRADES["Crossbow"].length, 3);
+  assert.equal(WEAPON_UPGRADES["Talon"].length, 3);
+});
+
+test("makeRig resolves speed from the chassis id", () => {
+  const rig = makeRig(1, "Shrike", "medium", "a", {
+    longRange: "Crossbow", melee: "Talon", chassis: "medium-crossbow-talon",
+  });
+  assert.equal(rig.speed, 4);
+});
+
+test("makeRig leaves speed null for a free combo with no chassis id", () => {
+  const rig = makeRig(1, "Freeform", "light", "a", {
+    longRange: "Mini Gun", melee: "Sword",
+  });
+  assert.equal(rig.speed, null);
 });
 
 test("WEAPON_UPGRADES has stable ids and effect objects for every option", () => {
@@ -1753,13 +1961,21 @@ test("add passes equipment through to the created rig", () => {
   assert.equal(rig.equipment, "servo-actuators");
 });
 
+test("add passes equipmentUpgrade through to the created rig", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw", equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" } });
+  const rig = findRig(r, "Bastion");
+  assert.equal(rig.equipmentUpgrade, "reinforced-plating");
+});
+
 test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy rig objects", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });
   const rig = findRig(r, "Bastion");
-  delete rig.equipment; delete rig.hardened; delete rig.overclockCoreUsed;
+  delete rig.equipment; delete rig.equipmentUpgrade; delete rig.hardened; delete rig.overclockCoreUsed;
   findRig(r, "Bastion"); // findRig calls ensureGameShape -> ensureRigShape internally
   assert.equal(rig.equipment, null);
+  assert.equal(rig.equipmentUpgrade, null);
   assert.equal(rig.hardened, false);
   assert.equal(rig.overclockCoreUsed, false);
 });
@@ -1922,6 +2138,50 @@ test("harden requires Ablative Plating, costs 1 slot + 1 heat, and sets rig.hard
   assert.equal(r.game.turn.actionsUsed, usedBefore + 1);
 });
 
+test("popsmoke requires Reactive Plating and sets rig.smokeNextActivation", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "reactive-plating" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
+  assert.equal(rig.smokeNextActivation, true);
+});
+
+test("locksight requires Targeting Computer and arms rig.lockSightNext", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "targeting-computer" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  assert.equal(rig.lockSightNext, false);
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "locksight" } });
+  assert.equal(rig.lockSightNext, true);
+});
+
+test("Lock Sight armed but not fired is cleared at activation end (no leak into reactive fire)", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "targeting-computer" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "locksight" } });
+  assert.equal(rig.lockSightNext, true); // armed
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  // A shot not taken must not carry into the enemy turn's Return Fire / riposte.
+  assert.equal(rig.lockSightNext, false);
+});
+
+test("popsmoke breaks an enemy missile Fire Control Lock aimed at this rig", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "reactive-plating" });
+  const target = findRig(r, "a1");
+  const enemy = findRig(r, "b1");
+  enemy.lockedTarget = target.id;      // a missile Lock painting a1
+  enemy.lockExpiresRound = 999;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
+  assert.equal(enemy.lockedTarget, null);
+  assert.equal(enemy.lockExpiresRound, 0);
+});
+
 test("harden is refused without Ablative Plating", () => {
   const r = createRoom("X");
   readyThreeAndThree(r);
@@ -1941,6 +2201,51 @@ test("purge vents 2 heat on demand for Radiator Array", () => {
   rig.engine.heat = 5;
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "purge" } });
   assert.equal(rig.engine.heat, 3);
+});
+
+test("Twin Radiators purge vents 3 heat through the action pipeline", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "radiator-array" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "twin-radiators"; // Field upgrade: Purge vents -3, not -2
+  rig.engine.heat = 5;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "purge" } });
+  assert.equal(rig.engine.heat, 2); // -3, not the base -2 (which would leave 3)
+});
+
+test("Heat Purge Wave vents to the raw Heat Capacity and narrates the 3\" AoE", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "blast-furnace-core" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.engine.heat = 9; // well above Medium's raw cap of 5 (and above the +1 margin)
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  assert.equal(rig.engine.heat, 5); // vented to the RAW class cap, not the +1 margin
+  const last = r.game.resolutions.at(-1);
+  const text = `${last.summary} ${last.effects.join(" ")}`;
+  assert.match(text, /3"/);
+});
+
+test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "reinforced-servos"; // Field upgrade: Sprint costs 0, not 1
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint" } });
+  assert.equal(rig.engine.heat, 0); // 0, not the base Servo Actuators 1
+});
+
+test("Master Toolkit repairs +2 through the action pipeline", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "field-repair-suite" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "master-toolkit"; // Field upgrade: Repair heals +2, not +1
+  rig.hull.sp = 3;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "repair", loc: "hull", dice: { repair: 10 } } }); // 10+ = 2 SP roll
+  assert.equal(rig.hull.sp, 7); // 3 + 2 (roll) + 2 (Master Toolkit)
 });
 
 test("overclock grants +2 actions this activation for Overclock Core", () => {
@@ -1992,6 +2297,28 @@ test("a rig's next activation clears its own Harden", () => {
     }
   }
   assert.equal(findRig(r, "a1").hardened, false);
+});
+
+test("a rig's next activation clears its own Pop Smoke", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "reactive-plating" });
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  // cycle everyone else, then come back to a1's next activation
+  while (findRig(r, "a1").smokeNextActivation && r.game.phase !== "finished") {
+    if (r.game.phase === "recovery") applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [] } }), applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
+    if (r.game.phase === "initiative") applyCommand(r, { verb: "initiative", attrs: {} });
+    if (r.game.phase === "activation") {
+      clearPendingAnswer(r);
+      const active = r.rigs.find((x) => !x.activated && !x.destroyed && (x.owner || "a") === r.game.turn.side);
+      if (!active) break;
+      applyCommand(r, { verb: "activate", attrs: { name: active.name } });
+      if (active.name === "a1") break;
+      applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
+    }
+  }
+  assert.equal(findRig(r, "a1").smokeNextActivation, false);
 });
 
 test("Systems Overload reduces the target's next activation budget by 1 and then clears", () => {
@@ -2355,6 +2682,14 @@ test("makeUnit('rig', ...) returns a rig identical to makeRig", () => {
   assert.equal(b.parts.engine, b.engine);
 });
 
+test("makeUnit forwards equipmentUpgrade to the rig", () => {
+  const rig = makeUnit("rig", "u1", "U", "a", {
+    weightClass: "light", longRange: "Crossbow", melee: "Talon",
+    equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating",
+  });
+  assert.equal(rig.equipmentUpgrade, "reinforced-plating");
+});
+
 test("makeUnit rejects unknown kinds", () => {
   assert.equal(makeUnit("banana", 1, "X", "a", {}), null);
 });
@@ -2380,6 +2715,39 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
     assert.equal(w.perks, undefined, `${name} is stat-only, no perks`);
     assert.equal(w.flatPick, true, `${name} carries flatPick marker`);
   }
+});
+
+test("every chassis carries a whole-inch speed", () => {
+  for (const c of CHASSIS) {
+    assert.equal(typeof c.speed, "number", `${c.id} has speed`);
+    assert.ok(Number.isInteger(c.speed), `${c.id} speed is a whole inch`);
+  }
+});
+
+test("speed bands reinforce the weight ladder (fastest medium < slowest light)", () => {
+  const lights = CHASSIS.filter((c) => c.class === "light").map((c) => c.speed);
+  const mediums = CHASSIS.filter((c) => c.class === "medium").map((c) => c.speed);
+  assert.ok(
+    Math.max(...mediums) < Math.min(...lights),
+    "fastest medium must be strictly slower than slowest light",
+  );
+});
+
+test("chassis speeds match the tuned table", () => {
+  const byId = Object.fromEntries(CHASSIS.map((c) => [c.id, c.speed]));
+  assert.deepEqual(byId, {
+    "light-claw-autocannon": 5,
+    "light-missile-flamethrower": 5,
+    "light-saw-minigun": 6,
+    "light-wreckingball-double": 6,
+    "light-sword-arc": 5,
+    "light-harpoon-anchor": 5,
+    "light-rivet-pressureclaw": 6,
+    "medium-lance-mortar": 3,
+    "medium-shield-siege": 3,
+    "medium-sniper-chainsaw": 4,
+    "medium-crossbow-talon": 4,
+  });
 });
 
 test("normalizeUnitWeapon is case-insensitive and rejects unknown names", () => {
@@ -2502,6 +2870,18 @@ test("Tank activation sets actionsMax = 2 (registry actionBudget)", () => {
   room.game.turn = { activeRigId: null, side: "a", actionsUsed: 0, actionsMax: 0 };
   applyCommand(room, { verb: "activate", attrs: { name: "Bulwark" } }, { side: "a" });
   assert.equal(room.game.turn.actionsMax, 2);
+});
+
+test("a cold kind (Tank/Walker) can Move but not Sprint — no heat to redline", () => {
+  const room = createRoom("Rmv"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2, longRangeShots: 0 };
+  applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "sprint" } });
+  assert.equal(room.game.turn.actionsUsed, 0);   // sprint refused, no slot spent
+  applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "move" } });
+  assert.equal(room.game.turn.actionsUsed, 1);   // move allowed
 });
 
 test("formatBattleState renders a Tank without heat and with a single unit weapon", () => {
@@ -3654,4 +4034,26 @@ test("publicState still redacts enemy face-down prep in a normal room", () => {
   assert.equal(asA.seeded, false);
   const enemyView = asA.rigs.find((rig) => rig.id === enemy.id);
   assert.deepEqual(enemyView.preparation, { hidden: true });
+});
+
+test("Blast Furnace Core raises the safe heat margin", () => {
+  const mk = (equip, up) => {
+    const r = makeRig("r", "R", "medium", "a",
+      { longRange: "Autocannon", melee: "Sword" }, equip, up);
+    r.engine.heat = 6; // Medium cap 5 → 1 over normally
+    return r;
+  };
+  assert.equal(heatMeter(mk(null, null)).over, 1);
+  // Blast furnace: base cap 5 + margin 1 → effCap 6, so heat 6 is safe (over 0)
+  // and the returned cap/zone reflect the raised threshold (6 >= effCap → redline).
+  const bfc = heatMeter(mk("blast-furnace-core", null));
+  assert.equal(bfc.over, 0);
+  assert.equal(bfc.cap, 6);
+  assert.equal(bfc.zone, "redline");
+  const insulated = mk("blast-furnace-core", "insulated-core");
+  insulated.engine.heat = 7;
+  const ins = heatMeter(insulated);
+  assert.equal(ins.over, 0);
+  assert.equal(ins.cap, 7); // cap 5 + margin 2
+  assert.equal(ins.zone, "redline"); // heat 7 >= effCap 7
 });

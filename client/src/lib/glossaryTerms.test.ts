@@ -1,4 +1,4 @@
-import { tokenizeGlossary, glossaryById } from "./glossaryTerms";
+import { tokenizeGlossary, glossaryById, matchGlossary } from "./glossaryTerms";
 
 test("tokenizeGlossary splits recognized terms into term segments", () => {
   const segs = tokenizeGlossary("Watch the Heat and the Hull.");
@@ -12,4 +12,13 @@ test("tokenizeGlossary splits recognized terms into term segments", () => {
 test("glossaryById resolves a term entry", () => {
   const anyId = tokenizeGlossary("Heat").find((s) => s.kind === "term")!.id!;
   expect(glossaryById(anyId)?.term).toBeTruthy();
+});
+
+test("matchGlossary maps an exact match string to its glossary id", () => {
+  expect(matchGlossary("Full Auto")).toBe("full-auto");
+  expect(matchGlossary("Hull")).toBe("hull");
+});
+
+test("matchGlossary returns undefined for an unknown string", () => {
+  expect(matchGlossary("Nonexistent Perk")).toBeUndefined();
 });

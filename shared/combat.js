@@ -48,7 +48,23 @@ export function computeModifiedAim(attacker, profile, opts) {
   // Recon paint (spec: Support Units) — allied ranged fire on a marked enemy
   // gains +1 Aim on top of the cover cancel above.
   const paintBonus = (opts.painted && !profile.melee) ? 1 : 0;
-  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty + paintBonus;
+  // Pop Smoke (Countermeasures active) — every attacker is at −2 ACC against a
+  // rig hidden in its own smoke, until that rig's next activation.
+  const smoke = opts.targetSmoke ? -2 : 0;
+  // Targeting Computer passive — the first Fire this activation ignores cover
+  // and the engaged −2 (opts.fireControlFirst is set once per activation by the
+  // fire path). Read directly off the attacker to avoid a game-state import cycle.
+  const coverEff = opts.fireControlFirst ? 0 : cover;
+  const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
+  // Ballistic Processor (Field) — ACC bonus when the measured distance is within
+  // the weapon's sweet band (|distance − sweet| ≤ 2). The bonus magnitude is read
+  // from the equipment upgrade's effect tag (`sweetBandAcc`, the single source of
+  // truth in the catalog), precomputed onto the rig in game-state.js to avoid an
+  // import cycle. Only ballistic-processor carries the tag; other targeting-
+  // computer upgrades resolve to 0.
+  const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
+  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (attacker.equipmentUpgradeEffect?.sweetBandAcc ?? 0) : 0;
+  const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic;
   return base - accTotal;
 }
 
@@ -95,7 +111,9 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   if (attacker.armsSuppressed) rof = Math.max(1, Math.floor(rof / 2));
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
-  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
+  // Lock Sight (Fire Control active) — the next shot this activation rerolls
+  // all its missed to-hit dice, i.e. up to a full volley of rerolls (opts.lockSight).
+  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (opts.lockSight ? rof : 0);
   const dice = [];
   let hits = 0;
   let fireModeHeat = 0;
@@ -162,6 +180,24 @@ export function computeStr(attacker, profile, opts) {
   if (opts.target && profile.upgradeEffect?.vsPinned) {
     if (opts.target.immobilised || opts.target.engagedWith != null) bonus += 3;
   }
+  // Steady Aim (§13, Crossbow) — +3 STR when the measured firing distance is
+  // within 2" of the weapon's sweet spot. Needs the distance threaded in via opts.
+  if (profile.upgradeEffect?.steadyAim && opts.distance != null
+      && Math.abs(opts.distance - profile.sweet) <= 2) {
+    bonus += 3;
+  }
+  // Exploit Wound (§13, Talon) — +3 STR against a struck location already below
+  // its max SP. Needs the struck location threaded in via opts.location.
+  if (profile.upgradeEffect?.vsWoundedLoc && opts.target && opts.location) {
+    const p = opts.target[opts.location];
+    if (p && p.sp < p.max) bonus += 3;
+  }
+  // Evisceration downside (§13, Talon) — the talon needs a wound to grip: -1 STR
+  // against a struck location that is still fully undamaged.
+  if (profile.upgradeEffect?.eviscerate && opts.target && opts.location) {
+    const p = opts.target[opts.location];
+    if (p && p.sp === p.max) bonus -= 1;
+  }
   // Redline Governor — the hotter the attacker runs past its own class cap,
   // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
   if (profile.upgradeEffect?.redline) {
@@ -222,7 +258,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // Thread the real target rig into computeStr's opts (the caller's `opts`
   // here may carry only a display name at `opts.target` — see resolveAttack)
   // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
-  const str = computeStr(attacker, profile, { ...opts, target });
+  const str = computeStr(attacker, profile, { ...opts, target, location });
   let bonus = arcBonus(profile, opts.arc);
   // Kneecapper — bypasses Raking Fire's front-arc auto-fail (arcBonus
   // returning null) but ONLY when the struck location is a limb on the
@@ -240,7 +276,21 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // Brace's front-arc -2 is skipped by a Piledriver Protocol guard-break
   // (opts.guardBreak, §13 Siege Maul) — the smash ignores the target's Brace.
   const braced = !opts.guardBreak && target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
-  const hardened = target.hardened ? -1 : 0; // Harden (Ablative Plating active)
+  // Harden (Ablative Plating active). The depth magnitude is read from the
+  // equipment upgrade's effect tag (`hardenImpact`, the single source of truth in
+  // the catalog), precomputed onto the rig in game-state.js to avoid an import
+  // cycle. Only reinforced-plating carries the tag (→ −2); base stays −1.
+  const hardenDepth = target.equipmentUpgradeEffect?.hardenImpact ?? 1;
+  const hardened = target.hardened ? -hardenDepth : 0;
+  // Reactive Plating (Countermeasures) — side/rear attacks lose STR. The dock
+  // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`,
+  // the single source of truth in the catalog), precomputed onto the rig in
+  // game-state.js to avoid an import cycle. Base Reactive Plating is −1; Angled
+  // Plates carries the −2 tag. Front arc is unaffected.
+  let sideRearDock = 0;
+  if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
+    sideRearDock = target.equipmentUpgradeEffect?.sideRearStr ?? -1;
+  }
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
   const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
@@ -257,11 +307,17 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     let extra = 0;
     if (hasPerk(profile, "Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
     if (hasPerk(profile, "Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
-    const total = die + str + bonus + braced + hardened + shieldBlunt + cracked + extra;
+    const total = die + str + bonus + braced + hardened + shieldBlunt + cracked + sideRearDock + extra;
     // Penetrator Rounds — every 3rd Autocannon volley bypasses the armour row
     // entirely: every landed hit is forced to Severe (2 SP) regardless of the
     // total rolled or the location's row.
-    const sev = opts.penetrate ? { tier: "severe", sp: 2 } : impactSeverity(total, row);
+    // Evisceration (§13, Talon) — a hit on a location at or below half its max SP
+    // is forced to Critical, regardless of the impact roll (mirrors penetrate).
+    const evisc = profile.upgradeEffect?.eviscerate && target[location]
+      && target[location].sp <= target[location].max / 2;
+    const sev = opts.penetrate ? { tier: "severe", sp: 2 }
+      : evisc ? { tier: "critical", sp: 3 }
+      : impactSeverity(total, row);
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
   }
   return out;
@@ -321,7 +377,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak }, opts.dice?.toHit, random);
+  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
@@ -347,7 +403,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // than crashing on a missing part.
     if (location) {
       impacts = rollImpacts(attacker, target, profile, location,
-        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak },
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance },
         opts.dice, random);
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
       //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple
@@ -373,6 +429,13 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       if (profile.upgradeEffect?.breachGrip && impacts.some((h) => h.sp > 0)) {
         ctx.crackLocation?.(room, target, location);
       }
+      // Pinning Bolt (§13, Crossbow) — a damaging bolt immobilises the target
+      // until this Rig's next activation (reusing the Impale immobilise
+      // lifecycle) and runs the attacker +2 heat. Guaranteed, no roll.
+      if (profile.upgradeEffect?.pinningBolt && impacts.some((h) => h.sp > 0)) {
+        target.immobilised = true;
+        ctx.bumpHeat(attacker, 2);
+      }
       // Rivet Lock (§13, Rivet Gun) — a damaging volley drives a rivet into the
       // struck location; ctx stacks it and seizes at 3.
       if (profile.upgradeEffect?.rivetLock && impacts.some((h) => h.sp > 0)) {
@@ -397,7 +460,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
-  const str = computeStr(attacker, profile, { ...opts, target, momentum: piledriverSpend });
+  const str = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
     summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s) = ${total} SP${location ? ` to ${location}` : ""}`,

@@ -56,7 +56,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             <span className="v2-yard-band-dot" /><span>HOSTILE FORCES</span><span className="v2-yard-band-rule" />
           </div>
           <div className="v2-yard-list">
-            {foes.map((r) => <RigRow key={r.id} rig={r} hostile active={r.id === activeId} onOpen={onOpenRig} />)}
+            {foes.map((r) => <RigRow key={r.id} rig={r} hostile target={r.id === game?.priorityTargets?.[mySide]} active={r.id === activeId} onOpen={onOpenRig} />)}
           </div>
         </>
       )}

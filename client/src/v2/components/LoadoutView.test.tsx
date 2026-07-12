@@ -3,6 +3,11 @@ import { expect, test } from "vitest";
 import { LoadoutView } from "./LoadoutView";
 import { buildLoadout } from "../../lib/loadout";
 import type { Rig } from "../../state/types";
+import { V2GlossaryTipProvider } from "../state/V2GlossaryTipContext";
+
+function wrap(node: React.ReactNode) {
+  return render(<V2GlossaryTipProvider>{node}</V2GlossaryTipProvider>);
+}
 
 const base = (over: Partial<Rig>): Rig => ({
   id: 1, name: "STALKER", owner: "a", weightClass: "medium",
@@ -19,7 +24,7 @@ test("shows weapon names, base stats, upgrade delta and equipment", () => {
     weaponUpgrades: { longRange: "depleted-core", melee: "vice-grip" },
     equipment: "ablative-plating",
   });
-  render(<LoadoutView loadout={buildLoadout(rig)!} />);
+  wrap(<LoadoutView loadout={buildLoadout(rig)!} />);
   expect(screen.getByText("Autocannon")).toBeInTheDocument();
   expect(screen.getByText("Claw")).toBeInTheDocument();
   expect(screen.getByText("+2")).toBeInTheDocument();                  // STR delta mark
@@ -31,7 +36,7 @@ test("shows weapon names, base stats, upgrade delta and equipment", () => {
 
 test("flat-pick weapon: one block, no upgrade line, no equipment", () => {
   const tank = base({ kind: "tank", weapons: { unit: "Tank Cannon" }, equipment: null });
-  render(<LoadoutView loadout={buildLoadout(tank)!} />);
+  wrap(<LoadoutView loadout={buildLoadout(tank)!} />);
   expect(screen.getByText("Tank Cannon")).toBeInTheDocument();
   expect(screen.queryByText(/⬡/)).not.toBeInTheDocument();      // no upgrade line
   expect(screen.queryByText(/Passive —/)).not.toBeInTheDocument(); // no equipment
@@ -44,7 +49,7 @@ test("support unit: module chips render and the sidearm is tagged", () => {
     modules: ["repair", "recon"],
     equipment: null,
   });
-  render(<LoadoutView loadout={buildLoadout(walker)!} />);
+  wrap(<LoadoutView loadout={buildLoadout(walker)!} />);
   expect(screen.getByText(/repair/i)).toBeInTheDocument();
   expect(screen.getByText(/recon/i)).toBeInTheDocument();
   expect(screen.getByText(/\(Sidearm\)/i)).toBeInTheDocument();

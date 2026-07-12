@@ -17,7 +17,7 @@ const SCREEN: React.CSSProperties = {
   gap: 14,
   background: "#080a0d",
   color: "#e79a3d",
-  fontFamily: '"Oswald", system-ui, sans-serif',
+  fontFamily: '"JetBrains Mono", ui-monospace, monospace',
   letterSpacing: ".2em",
   textTransform: "uppercase",
   // Pre-mount splash renders outside .v2-root, so the --v2-text-* scale isn't
@@ -70,7 +70,7 @@ class V2ErrorBoundary extends Component<{ children: ReactNode }, BoundaryState> 
             style={{
               marginTop: 6, padding: "10px 18px", cursor: "pointer",
               background: "linear-gradient(180deg,#f0a94a,#c47a26)", border: "1px solid #ffcf82",
-              color: "#1a1206", fontFamily: '"Oswald", system-ui, sans-serif',
+              color: "#1a1206", fontFamily: '"JetBrains Mono", ui-monospace, monospace',
               fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase",
             }}
           >

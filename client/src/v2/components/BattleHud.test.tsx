@@ -34,6 +34,57 @@ test("renders nothing pre-battle", () => {
   const { container } = render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
   expect(container.querySelector(".v2-bh")).toBeNull();
 });
+test("shows both sides' running VP, highlighting mine", async () => {
+  const state: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:4,ready:true},{id:"b",name:"Rival",vp:2,ready:true}] } };
+  render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
+  const mine = await screen.findByText(/Kostov 4/);
+  const foe = screen.getByText(/Rival 2/);
+  expect(mine).toHaveClass("v2-bh-mine");
+  expect(foe).toHaveClass("v2-bh-foe");
+});
+test("pops a kill toast when a fresh destruction resolution carries a vp award", async () => {
+  const base: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:0,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[] } };
+  const killed: ServerState = { version:2, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:2,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[{ id:5, kind:"destruction", rigId:9, victimName:"Ravager", vp:{ side:"a", amount:2 }, effects:[] }] } };
+  const { rerender } = render(<AppProviders><Seed state={base}/><BattleHud/></AppProviders>);
+  await screen.findByText(/Kostov 0/);
+  expect(screen.queryByText(/Ravager/)).toBeNull();
+  rerender(<AppProviders><Seed state={killed}/><BattleHud/></AppProviders>);
+  expect(await screen.findByText(/🎯 Target eliminated — Ravager · \+2 VP/)).toBeInTheDocument();
+});
+test("shows the local side's Priority Target", async () => {
+  const state = { version:1, ownerSide:"a", field:null,
+    rigs:[{ id:9, name:"Ravager", owner:"b", weightClass:"light",
+      hull:{sp:6,max:6,destroyed:false}, arms:{sp:5,max:5,destroyed:false},
+      legs:{sp:5,max:5,destroyed:false}, engine:{sp:4,max:4,destroyed:false,heat:0},
+      equipment:null, activated:false, destroyed:false }],
+    game:{ round:2, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:0,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      priorityTargets:{ a: 9 } } } as unknown as ServerState;
+  render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
+  expect(await screen.findByText(/🎯 Target: Ravager/)).toBeInTheDocument();
+});
+test("does not toast for a kill already in the backlog on (re)connect", async () => {
+  const hydrated: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:2,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[{ id:5, kind:"destruction", rigId:9, victimName:"Ravager", vp:{ side:"a", amount:2 }, effects:[] }] } };
+  render(<AppProviders><Seed state={hydrated}/><BattleHud/></AppProviders>);
+  await screen.findByText(/Kostov 2/);       // HUD hydrated
+  expect(screen.queryByText(/Ravager/)).toBeNull();  // stale backlog kill must NOT toast
+});
 test("audio mute button toggles battle audio", async () => {
   localStorage.clear(); _resetForTest();
   const user = userEvent.setup();

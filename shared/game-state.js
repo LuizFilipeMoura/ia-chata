@@ -17,6 +17,9 @@ export const LOCS = ["hull", "arms", "legs", "engine"];
 // importing it from game-state.js.
 export { HEAT_CAPACITY };
 export const MAX_OVERHEAT_BONUS = 10;
+// Priority Elimination (§11) — flat VP the opposing side scores for wrecking an
+// enemy unit, once per unit. See docs/superpowers/specs/2026-07-11-priority-elimination-design.md.
+export const KILL_VP = 2;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
@@ -39,6 +42,7 @@ export const WEAPONS = {
     "Missile Barrage":{ rof: 4, str: 9,  sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
     "Harpoon":        { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
     "Rivet Gun":      { rof: 6, str: 4,  sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
+    "Crossbow":       { rof: 1, str: 10, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
@@ -51,6 +55,7 @@ export const WEAPONS = {
     "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], melee: true },
     "Anchor":        { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
     "Pressure Claw": { rof: 2, str: 9,  acc: [1, 1], rng: [2, 2], melee: true },
+    "Talon":         { rof: 2, str: 7,  acc: [1, 1], rng: [2, 2], melee: true },
   },
 };
 
@@ -83,16 +88,17 @@ export function normalizeUnitWeapon(name) {
 // Structure Points (≈2× the old class defaults) — a durability lever tuned to
 // each rig's identity; makeRig uses it in place of RIG_DEFAULTS.
 export const CHASSIS = [
-  { id: "light-claw-autocannon",      label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-missile-flamethrower", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
-  { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-wreckingball-double",  label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
-  { id: "light-sword-arc",            label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
-  { id: "light-harpoon-anchor",       label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
-  { id: "light-rivet-pressureclaw",   label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
-  { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
-  { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
-  { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-claw-autocannon",      label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-missile-flamethrower", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
+  { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-wreckingball-double",  label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
+  { id: "light-sword-arc",            label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
+  { id: "light-harpoon-anchor",       label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
+  { id: "light-rivet-pressureclaw",   label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
+  { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
+  { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
+  { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+  { id: "medium-crossbow-talon",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
 ];
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
@@ -176,12 +182,122 @@ export const EQUIPMENT = {
     active: { key: "emergencypatch", label: "Emergency Patch", heat: 2,
       text: "Guaranteed repair 2 SP to one location, no D12 roll." },
   },
+  "blast-furnace-core": {
+    family: "Thermal", label: "Blast Furnace Core",
+    passive: "Safe up to +1 over Heat Capacity before the overheat roll triggers",
+    active: { key: "heatpurgewave", label: "Heat Purge Wave", heat: 0,
+      text: "Dump banked heat: vent to Heat Capacity and scald every enemy within 3\" (players adjudicate the AoE)." },
+  },
+  "targeting-computer": {
+    family: "Fire Control", label: "Targeting Computer",
+    passive: "The first Fire this activation ignores its cover and engaged accuracy penalties",
+    active: { key: "locksight", label: "Lock Sight", heat: 1,
+      text: "Your next shot this activation rerolls all its missed to-hit dice." },
+  },
+  "reactive-plating": {
+    family: "Countermeasures", label: "Reactive Plating",
+    passive: "Side- and rear-arc attacks against this Rig take −1 STR",
+    active: { key: "popsmoke", label: "Pop Smoke", heat: 0,
+      text: "Until this Rig's next activation, every attacker is at −2 accuracy against it (and any missile Lock on it is broken)." },
+  },
 };
 
 // Reverse lookup: active-ability key -> the equipment id that grants it.
 export const EQUIPMENT_ACTIVE_BY_KEY = Object.fromEntries(
   Object.entries(EQUIPMENT).map(([id, e]) => [e.active.key, id])
 );
+
+// Equipment upgrades — mirrors WEAPON_UPGRADES. Each family offers one upgrade
+// of each nature (Field / Tuned / Prototype), picked at commission. The 8 Field
+// rows carry live effect tags (simple modifiers to existing hooks). The Tuned
+// and Prototype rows ship inert (`effect: {}`, TODO(mechanics)) and are wired in
+// follow-on plans, exactly as the weapon Prototypes did.
+export const EQUIPMENT_UPGRADES = {
+  "ablative-plating": [
+    { id: "reinforced-plating", nature: "field", name: "Reinforced Plating", tag: "Harden gives −2 impact, not −1", effect: { hardenImpact: 2 } },
+    { id: "reactive-armor", nature: "tuned", name: "Reactive Armor", tag: "First hit each round hardens that location", effect: {} }, // TODO(mechanics)
+    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits — each costs heat", effect: {} }, // TODO(mechanics)
+  ],
+  "radiator-array": [
+    { id: "twin-radiators", nature: "field", name: "Twin Radiators", tag: "Purge vents −3, not −2", effect: { purgeHeat: -3 } },
+    { id: "coolant-injection", nature: "tuned", name: "Coolant Injection", tag: "−2 heat before the overheat roll when over Capacity", effect: {} }, // TODO(mechanics)
+    { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a STR spike", effect: {} }, // TODO(mechanics)
+  ],
+  "servo-actuators": [
+    { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint costs 0 heat", effect: { sprintHeat: 0 } },
+    { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: {} }, // TODO(mechanics)
+    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", effect: {} }, // TODO(mechanics)
+  ],
+  "overclock-core": [
+    { id: "redundant-capacitors", nature: "field", name: "Redundant Capacitors", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
+    { id: "adrenaline-surge", nature: "tuned", name: "Adrenaline Surge", tag: "Below half SP, Overclock grants +3 actions", effect: {} }, // TODO(mechanics)
+    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 STR — but overheat bonus doubles", effect: {} }, // TODO(mechanics)
+  ],
+  "field-repair-suite": [
+    { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
+    { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 3 SP on a destroyed location", effect: {} }, // TODO(mechanics)
+    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery — at a heat-cap cost", effect: {} }, // TODO(mechanics)
+  ],
+  "blast-furnace-core": [
+    { id: "insulated-core", nature: "field", name: "Insulated Core", tag: "Safe up to +2 over Capacity, not +1", effect: { thermalMargin: 2 } },
+    { id: "backdraft", nature: "tuned", name: "Backdraft", tag: "Heat Purge Wave +1 STR per 2 heat over Capacity", effect: {} }, // TODO(mechanics)
+    { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for STR or a burst", effect: {} }, // TODO(mechanics)
+  ],
+  "targeting-computer": [
+    { id: "ballistic-processor", nature: "field", name: "Ballistic Processor", tag: "+1 accuracy vs a target in your sweet-spot band", effect: { sweetBandAcc: 1 } },
+    { id: "predictive-tracking", nature: "tuned", name: "Predictive Tracking", tag: "vs a static/pinned target: +2 accuracy, ignore cover", effect: {} }, // TODO(mechanics)
+    { id: "fire-solution-lock", nature: "prototype", name: "Fire Solution Lock", tag: "Hold still and stack a solution → an auto-hit AP volley", effect: {} }, // TODO(mechanics)
+  ],
+  "reactive-plating": [
+    { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 STR, not −1", effect: { sideRearStr: -2 } },
+    { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: {} }, // TODO(mechanics)
+    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", effect: {} }, // TODO(mechanics)
+  ],
+};
+
+export function equipmentUpgradeNature(equipmentId, upgradeId) {
+  const u = (EQUIPMENT_UPGRADES[equipmentId] || []).find((x) => x.id === upgradeId);
+  return u?.nature || null;
+}
+
+export function firstEquipmentUpgradeId(equipmentId) {
+  return (EQUIPMENT_UPGRADES[equipmentId] || [])[0]?.id || null;
+}
+
+// Effective heat of an equipment's active, after any Field heat-override upgrade.
+// Any new heat-override Field tag must add its own branch below, or it drifts silently.
+export function equipmentActiveHeat(equipmentId, equipmentUpgradeId) {
+  const base = EQUIPMENT[equipmentId]?.active?.heat ?? 0;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  if (up?.effect?.purgeHeat != null) return up.effect.purgeHeat;
+  if (up?.effect?.overclockHeat != null) return up.effect.overclockHeat;
+  return base;
+}
+
+// Sprint heat: base 2, Servo Actuators 1, and its Reinforced Servos Field
+// upgrade overrides to 0 via its sprintHeat effect tag.
+export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 2) {
+  if (equipmentId !== "servo-actuators") return baseHeat;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  return up?.effect?.sprintHeat ?? 1;
+}
+
+// Extra SP a Repair action restores: Field Repair Suite +1, and its Master
+// Toolkit Field upgrade overrides to +2 via its repairBonus effect tag.
+export function equipmentRepairBonus(equipmentId, equipmentUpgradeId) {
+  if (equipmentId !== "field-repair-suite") return 0;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  return up?.effect?.repairBonus ?? 1;
+}
+
+// Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.
+export function normalizeEquipmentUpgrade(equipmentId, id) {
+  const list = EQUIPMENT_UPGRADES[equipmentId];
+  if (!Array.isArray(list) || list.length === 0) return null;
+  if (!id) return null;
+  const ref = String(id).trim().toLowerCase();
+  return list.find((u) => u.id === ref)?.id || null;
+}
 
 // The three §5 preparation reactions. Unknown/missing input falls back to brace.
 export const PREP_TYPES = ["brace", "evasive", "return"];
@@ -218,12 +334,13 @@ export function upgradeNature(weaponName, upgradeId) {
   return u?.nature || null;
 }
 
-// How many of a rig's two chosen weapon upgrades are Prototype nature. Used to
-// enforce "at most one Prototype per rig" (AGENTS.md).
-export function countPrototypes(weapons = {}, upgrades = {}) {
+// How many of a rig's two weapon upgrades AND its equipment upgrade are
+// Prototype nature. Used to enforce "at most one Prototype per rig" (AGENTS.md).
+export function countPrototypes(weapons = {}, upgrades = {}, equipment, equipmentUpgrade) {
   let n = 0;
   if (upgradeNature(weapons.longRange, upgrades.longRange) === "prototype") n++;
   if (upgradeNature(weapons.melee, upgrades.melee) === "prototype") n++;
+  if (equipment && equipmentUpgradeNature(equipment, equipmentUpgrade) === "prototype") n++;
   return n;
 }
 
@@ -232,6 +349,16 @@ export function countPrototypes(weapons = {}, upgrades = {}) {
 // as flavor + a toolkit-effect tag. New-mechanic Prototype/Tuned upgrades ship
 // `effect: {}` until the mechanics plan implements them (TODO(mechanics)).
 export const WEAPON_UPGRADES = {
+  "Crossbow": [
+    { id: "fletched-bolts", nature: "field", name: "Fletched Bolts", tag: "Aimed shots ignore the aim penalty", effect: { perks: ["Precision"] } },
+    { id: "steady-aim", nature: "tuned", name: "Steady Aim", tag: "+3 STR when firing from the sweet spot (±2\")", effect: { steadyAim: true } },
+    { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn — runs +2 heat", effect: { pinningBolt: true } },
+  ],
+  "Talon": [
+    { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+2 STR", effect: { str: 2 } },
+    { id: "exploit-wound", nature: "tuned", name: "Exploit Wound", tag: "+3 STR vs an already-damaged location", effect: { vsWoundedLoc: true } },
+    { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every hit is Critical (but weak on fresh armour)", effect: { eviscerate: true } },
+  ],
   "Mini Gun": [
     { id: "suppressive-fire", nature: "field", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
     { id: "extended-belt", nature: "tuned", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
@@ -431,7 +558,7 @@ export function createRoom(code) {
       ],
       objectives: computeObjectives(field),
       started: false,
-      bounties: {},
+      priorityTargets: {},
       autoResolve: true,
       phase: "setup",
       deployOrder: [],
@@ -461,12 +588,21 @@ function ensureRigShape(rig) {
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
   if (rig.chassis === undefined) rig.chassis = null;
+  if (rig.speed === undefined) {
+    const cd = chassisById(rig.chassis);
+    rig.speed = Number.isFinite(cd?.speed) ? cd.speed : null;
+  }
   if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
   if (typeof rig.immobilised !== "boolean") rig.immobilised = false;
   if (rig.engagedWith === undefined) rig.engagedWith = null;
   if (rig.equipment === undefined) rig.equipment = null;
+  if (rig.equipmentUpgrade === undefined) rig.equipmentUpgrade = null;
+  if (rig.equipmentUpgradeEffect === undefined) rig.equipmentUpgradeEffect = {};
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
+  if (typeof rig.smokeNextActivation !== "boolean") rig.smokeNextActivation = false;
+  if (typeof rig.fireControlUsed !== "boolean") rig.fireControlUsed = false;
+  if (typeof rig.lockSightNext !== "boolean") rig.lockSightNext = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
@@ -567,7 +703,7 @@ function ensureGameShape(room) {
     room.game.objectives = computeObjectives(room.field);
   }
   if (typeof room.game.started !== "boolean") room.game.started = false;
-  room.game.bounties ||= {};
+  room.game.priorityTargets ||= {};
   room.rigs ||= [];
   if (typeof room.game.autoResolve !== "boolean") room.game.autoResolve = true;
   room.game.phase ||= "setup";
@@ -596,7 +732,7 @@ export function normalizeWeapon(category, name) {
   return Object.keys(table).find((weapon) => weapon.toLowerCase() === ref) || null;
 }
 
-export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
+export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, equipmentUpgrade = null) {
   const normalizedClass = String(cls || "").trim().toLowerCase();
   if (!SUPPORTED_RIG_CLASSES.includes(normalizedClass)) return null;
   const longRange = normalizeWeapon("longRange", weapons.longRange || weapons.lr);
@@ -608,6 +744,11 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   };
 
   const weightClass = normalizedClass;
+  // Speed is a per-chassis stat. Resolve it from the commissioning chassis id so
+  // every caller (add / seed / makeUnit) gets it without threading; free-combo
+  // rigs (no chassis id) stay null and the client falls back to the class map.
+  const chassisDef = chassisById(weapons.chassis);
+  const chassisSpeed = Number.isFinite(chassisDef?.speed) ? chassisDef.speed : null;
   const d = RIG_DEFAULTS[weightClass];
   // Per-rig SP override (chassis `sp`) wins field-by-field, else the class
   // default. Lets each chassis carry its own durability without a class change.
@@ -619,6 +760,12 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     engine: Number.isFinite(o.engine) ? o.engine : d.engine,
   };
   const equipmentId = normalizeEquipment(equipment);
+  const equipmentUpgradeId = normalizeEquipmentUpgrade(equipmentId, equipmentUpgrade);
+  // Resolve the chosen upgrade's effect tags once at commission and stamp the
+  // object onto the rig. Combat reads magnitudes from here (single source of
+  // truth = the catalog `effect`), avoiding a game-state import cycle in combat.js.
+  const equipmentUpgradeRow = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  const equipmentUpgradeEffect = equipmentUpgradeRow?.effect || {};
   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
   const hullMax = base.hull + (equipmentId === "ablative-plating" ? 1 : 0);
   const rig = {
@@ -634,7 +781,10 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     weapons: { longRange, melee },
     weaponUpgrades,
     equipment: equipmentId,
+    equipmentUpgrade: equipmentUpgradeId,
+    equipmentUpgradeEffect,
     chassis: weapons.chassis || null, // CHASSIS id it was commissioned from — drives its flavor description in the UI
+    speed: chassisSpeed,               // per-chassis Move distance (inches); null -> client uses SPEED[weightClass]
     prepare: 0,    // Phase 4
     activated: false,
     skipNextActivation: false,
@@ -651,6 +801,9 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     immobilised: false,
     engagedWith: null,
     hardened: false,
+    smokeNextActivation: false,
+    fireControlUsed: false,
+    lockSightNext: false,
     overclockCoreUsed: false,
     actionPenaltyNextActivation: 0,
     hullRepairLock: 0,
@@ -745,7 +898,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
       longRange: opts.longRange, melee: opts.melee,
       longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
       sp: opts.sp, chassis: opts.chassis,
-    }, opts.equipment ?? null);
+    }, opts.equipment ?? null, opts.equipmentUpgrade ?? null);
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
   // registry; the unit carries exactly one flat-pick weapon and no equipment.
@@ -792,6 +945,12 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     immobilised: false,
     engagedWith: null,
     hardened: false,
+    smokeNextActivation: false,
+    // Cold kinds (tank / walker) carry no equipment, so no upgrade effect —
+    // an empty object keeps combat's `?.tag ?? default` reads on the base path.
+    equipmentUpgradeEffect: {},
+    fireControlUsed: false,
+    lockSightNext: false,
     actionPenaltyNextActivation: 0,
     // Dead Weight (§13, Anchor) — mirrored for shape parity (cold kinds never
     // carry the Anchor upgrade, so this never actually triggers).
@@ -845,15 +1004,23 @@ export function heatMeter(rig) {
   const heat = rig?.engine?.heat || 0;
   const cap = HEAT_CAPACITY[rig?.weightClass] ?? 5;
   const floor = rig?.engine?.sp === 0 ? 3 : 0;
-  const over = Math.max(0, heat - cap);
+  // Blast Furnace Core (Thermal) — raises the safe threshold before the overheat
+  // roll. Base margin +1; Insulated Core (Field) makes it +2.
+  let margin = 0;
+  if (rig?.equipment === "blast-furnace-core") {
+    const up = (EQUIPMENT_UPGRADES["blast-furnace-core"] || []).find((u) => u.id === rig?.equipmentUpgrade);
+    margin = up?.effect?.thermalMargin ?? 1;
+  }
+  const effCap = cap + margin;
+  const over = Math.max(0, heat - effCap);
   const bonus = over > 0 ? Math.min(MAX_OVERHEAT_BONUS, 2 * over) : 0;
   let zone;
   if (over > 0) zone = "over";
-  else if (heat >= cap) zone = "redline";
-  else if (heat > cap * 0.6) zone = "warm";
+  else if (heat >= effCap) zone = "redline";
+  else if (heat > effCap * 0.6) zone = "warm";
   else if (heat > 0) zone = "cool";
   else zone = "cold";
-  return { heat, cap, floor, over, bonus, zone };
+  return { heat, cap: effCap, floor, over, bonus, zone };
 }
 
 export function findRig(room, name) {
@@ -905,7 +1072,7 @@ export function canAddRigForSide(room, sideId) {
 function resetReadyBeforeStart(room) {
   if (room.game.started) return;
   for (const side of room.game.sides) side.ready = false;
-  room.game.bounties = {};
+  room.game.priorityTargets = {};
   room.game.deployOrder = [];
 }
 
@@ -974,6 +1141,19 @@ function randomPick(items, random = Math.random) {
   return items[index];
 }
 
+// Re-designate each side's Priority Target: a random LIVING enemy Rig. Called at
+// battle start and every round advance. Skips destroyed Rigs; leaves a side's
+// target unset if it has no living enemies (annihilation ends the game anyway).
+function rerollPriorityTargets(room, random = Math.random) {
+  const targets = {};
+  for (const side of room.game.sides) {
+    const enemies = room.rigs.filter((r) => (r.owner || "a") !== side.id && !r.destroyed);
+    const pick = randomPick(enemies, random);
+    if (pick) targets[side.id] = pick.id;
+  }
+  room.game.priorityTargets = targets;
+}
+
 // The game-field portion of a full reset (no per-rig work). Shared by the
 // `reset` verb (which also rebuilds each rig) and the `seed` verb (which
 // discards all rigs, so it only needs this).
@@ -994,7 +1174,7 @@ function resetGameShape(room) {
   room.game.suddenDeath = false;
   room.game.deployOrder = [];
   room.game.initiative = null;
-  room.game.bounties = {};
+  room.game.priorityTargets = {};
   room._history = [];
   for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
 }
@@ -1003,13 +1183,13 @@ function resetGameShape(room) {
 // inference. Bounty for each side = its first enemy rig. turn.side = `first`.
 function startGameSeeded(room, first) {
   const other = first === "b" ? "a" : "b";
-  const bounties = {};
+  const priorityTargets = {};
   for (const side of room.game.sides) {
     const target = room.rigs.find((rig) => (rig.owner || "a") !== side.id);
     if (!target) return false;
-    bounties[side.id] = target.id;
+    priorityTargets[side.id] = target.id;
   }
-  room.game.bounties = bounties;
+  room.game.priorityTargets = priorityTargets;
   room.game.started = true;
   room.game.phase = "initiative";
   room.game.round = 1;
@@ -1030,13 +1210,13 @@ function maybeStartGame(room, random = Math.random) {
   const canStart = room.game.sides.every((side) => side.ready && sideRigCount(room, side.id) >= 3);
   if (!canStart) return false;
 
-  const bounties = {};
+  const priorityTargets = {};
   for (const side of room.game.sides) {
     const target = randomPick(room.rigs.filter((rig) => (rig.owner || "a") !== side.id), random);
     if (!target) return false;
-    bounties[side.id] = target.id;
+    priorityTargets[side.id] = target.id;
   }
-  room.game.bounties = bounties;
+  room.game.priorityTargets = priorityTargets;
   room.game.started = true;
   room.game.phase = "initiative";
   room.game.round = 1;
@@ -1241,11 +1421,24 @@ function onRigDamaged(room, rig, opts) {
     rig._blastRolled = true;
     const roll = rollD(12, opts?.dice?.destruction, opts?.random);
     const exploded = roll >= 4;
+    // Priority Elimination — the side whose Priority Target this wreck is scores
+    // KILL_VP. Any other kill scores nothing. Guarded by _blastRolled above, so a
+    // revived-then-rekilled target never re-awards.
+    const scorer = room.game.sides.find(
+      (s) => room.game.priorityTargets?.[s.id] === rig.id,
+    );
+    const effects = [];
+    if (scorer) {
+      scorer.vp = (scorer.vp || 0) + KILL_VP;
+      effects.push(`+${KILL_VP} VP — Priority Elimination (${scorer.name})`);
+    }
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
+      victimName: rig.name,
+      vp: scorer ? { side: scorer.id, amount: KILL_VP } : undefined,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
-      effects: [],
+      effects,
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
   }
@@ -1466,6 +1659,7 @@ function endActivation(room, rig, dice, random) {
     const row = applyOverheat(room, rig, total, { random });
     pushResolution(room, {
       kind: "overheat", actor: rig.owner, rigId: rig.id,
+      heatKey: row.key, // "safe" = engine held; any other key dealt damage (client SFX)
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name}: ${row.label} (D12 ${roll}+${m.bonus}=${total})`,
       effects: [row.text],
@@ -1501,6 +1695,7 @@ function endActivation(room, rig, dice, random) {
   // it penalises — clear it here alongside noPrepNextActivation so it can't leak
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
   rig.noActivesNextActivation = false;
+  rig.lockSightNext = false; // Lock Sight (Targeting Computer) — a shot not taken doesn't carry into a reactive shot
   room.game.turn.activeRigId = null;
   handoff(room);
 }
@@ -1563,6 +1758,10 @@ function resolveFire(room, rig, target, a, act, random) {
   // painter's next activation").
   const painter = target.painted ? findRigById(room, target.painted.painterId) : null;
   const paintedActive = !!(target.painted && target.painted.by === rig.owner && painter && !painter.destroyed);
+  // Targeting Computer passive (§Fire Control) — the FIRST Fire this activation
+  // ignores cover + engaged accuracy penalties. Threaded into computeModifiedAim
+  // via opts.fireControlFirst; consumed once the shot actually resolves below.
+  const fireControlFirst = rig.equipment === "targeting-computer" && !rig.fireControlUsed;
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,
@@ -1570,9 +1769,14 @@ function resolveFire(room, rig, target, a, act, random) {
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
+    fireControlFirst,
     dice: a.dice,
   }, random, combatCtx());
   if (!res.ok) return false;
+  // Mark the first-shot compensator spent, and consume any Lock Sight reroll
+  // (both are per-activation, one-shot flags on the acting rig).
+  if (fireControlFirst) rig.fireControlUsed = true;
+  if (rig.lockSightNext) rig.lockSightNext = false;
   t.actionsUsed += cost;
   // A second (or later) ranged shot in the same activation runs the barrel hot:
   // +1 heat over the base Fire/Aimed cost.
@@ -1733,8 +1937,27 @@ function performAction(room, rig, act, a, random) {
       const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
       repairRig(rig, loc, 2);
     }
+    else if (act === "locksight") {
+      // Lock Sight (Fire Control active) — arm the next shot this activation to
+      // reroll all its missed to-hit dice (consumed in resolveFire).
+      rig.lockSightNext = true;
+    }
+    else if (act === "popsmoke") {
+      rig.smokeNextActivation = true;
+      // Pop Smoke breaks any missile Fire Control Lock (§13, Missile Barrage)
+      // painting this rig — mirrors the recon-paint self-clear below.
+      for (const r of room.rigs) if (r.lockedTarget === rig.id) { r.lockedTarget = null; r.lockExpiresRound = 0; }
+    }
+    else if (act === "heatpurgewave") {
+      // Blast Furnace Core: dump banked heat down to the RAW class Heat
+      // Capacity — not the raised +1/+2 thermal-margin cap from the passive
+      // or the Insulated Core upgrade. The 3" AoE narration rides along on
+      // active.text via the pushResolution below.
+      const rawCap = HEAT_CAPACITY[rig.weightClass] ?? 5;
+      rig.engine.heat = Math.min(rig.engine.heat, rawCap);
+    }
     // purge / jumpjets need no extra state beyond the heat cost below.
-    bumpHeat(rig, active.heat);
+    bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade));
     pushResolution(room, {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} uses ${active.label}.`, effects: [active.text],
@@ -1818,6 +2041,9 @@ function performAction(room, rig, act, a, random) {
     return !!res;
   }
   if (act === "move" || act === "sprint") {
+    // Sprint spends heat to move twice; heatless cold kinds (Tank, Walker) have
+    // no engine to redline, so they may only Move — Sprint is refused outright.
+    if (act === "sprint" && !UNIT_KINDS[kindOf(rig)]?.hasHeat) return false;
     // §engagement — a rig locked in melee is pinned; it must Disengage before it
     // can reposition. (Repositioning while engaged is meaningless without a grid.)
     if (rig.engagedWith != null) return false;
@@ -1834,8 +2060,9 @@ function performAction(room, rig, act, a, random) {
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
     // Move / Sprint may repeat within an activation; each spends one slot and
-    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
-    const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
+    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility),
+    // and 0 with its Reinforced Servos Field upgrade.
+    const heat = act === "sprint" ? equipmentSprintHeat(rig.equipment, rig.equipmentUpgrade, def.heat) : def.heat;
     t.actionsUsed += 1;
     bumpHeat(rig, heat);
     // Full Tilt / Momentum Swing (§13) — advancing this activation charges
@@ -2017,7 +2244,7 @@ function performAction(room, rig, act, a, random) {
     const roll = rollD(12, a.dice?.repair, random);
     let amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
     // Field Repair Suite (Utility) — the Repair action restores +1 additional SP.
-    if (amt > 0 && rig.equipment === "field-repair-suite") amt += 1;
+    if (amt > 0) amt += equipmentRepairBonus(rig.equipment, rig.equipmentUpgrade);
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
     if (amt > 0) repairRig(rig, loc, amt);
     pushResolution(room, {
@@ -2077,6 +2304,7 @@ function advanceRound(room) {
       room.game.round += 1;
       room.game.phase = "initiative";
       room.game.initiative = null;
+      rerollPriorityTargets(room);
     } else {
       room.game.outcome = { winner: null, reason: "draw" };
       room.game.phase = "finished";
@@ -2085,6 +2313,7 @@ function advanceRound(room) {
     room.game.round += 1;
     room.game.phase = "initiative";
     room.game.initiative = null;
+    rerollPriorityTargets(room);
   }
 }
 
@@ -2145,6 +2374,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           longRangeUpgrade: a.longRangeUpgrade || a.lrUpgrade,
           meleeUpgrade: a.meleeUpgrade,
           equipment: a.equipment ?? null,
+          equipmentUpgrade: a.equipmentUpgrade ?? null,
           sp: a.sp,
           chassis: a.chassis,
           // Flat-pick options
@@ -2194,6 +2424,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.immobilised = false;
       rig.engagedWith = null;
       rig.hardened = false;
+      rig.smokeNextActivation = false;
+      rig.fireControlUsed = false;
+      rig.lockSightNext = false;
       rig.overclockCoreUsed = false;
       rig.actionPenaltyNextActivation = 0;
       rig.hullRepairLock = 0;
@@ -2334,6 +2567,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
+      rig.smokeNextActivation = false; // Pop Smoke (Reactive Plating) lasts until this Rig's next activation
+      rig.fireControlUsed = false; // Targeting Computer first-shot compensator resets each activation
+      rig.lockSightNext = false; // Lock Sight (Fire Control) is scoped to a single activation
       // Recon paint (spec: Support Units) expires at the painter's next activation:
       // clear every mark this rig placed as it steps up again.
       for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
@@ -2560,8 +2796,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
 export function publicState(room, side) {
   ensureGameShape(room);
   const sideId = normalizeSide(room, side);
-  const bounties = {};
-  if (sideId && room.game.bounties[sideId]) bounties[sideId] = room.game.bounties[sideId];
+  const priorityTargets = {};
+  if (sideId && room.game.priorityTargets[sideId]) priorityTargets[sideId] = room.game.priorityTargets[sideId];
   const viewer = sideId;
   const top = room._history?.[room._history.length - 1];
   const canUndo = !!top && room.game.phase === "activation" && top.side === viewer;
@@ -2584,7 +2820,7 @@ export function publicState(room, side) {
       ...room.game,
       sides: room.game.sides.map((s) => ({ ...s })),
       objectives: room.game.objectives.map((objective) => ({ ...objective })),
-      bounties,
+      priorityTargets,
       canUndo,
     },
     rigs,
@@ -2640,10 +2876,10 @@ export function formatBattleState(room, side) {
     }
   }
   const sideId = normalizeSide(room, side);
-  const bountyId = sideId ? g.bounties[sideId] : null;
-  const bounty = bountyId ? room.rigs.find((rig) => rig.id === bountyId) : null;
-  if (bounty) lines.push(`Your Ironclad Bounty: ${bounty.name}`);
+  const targetId = sideId ? g.priorityTargets[sideId] : null;
+  const target = targetId ? room.rigs.find((rig) => rig.id === targetId) : null;
+  if (target) lines.push(`Your Priority Target: ${target.name}`);
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation, rivetHit };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };

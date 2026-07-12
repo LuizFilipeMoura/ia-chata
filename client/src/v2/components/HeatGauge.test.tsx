@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { HeatGauge } from "./HeatGauge";
+import { V2GlossaryTipProvider } from "../state/V2GlossaryTipContext";
 import type { Rig } from "../../state/types";
 
 const base = (over: Partial<Rig> = {}): Rig => ({
@@ -12,13 +13,17 @@ const base = (over: Partial<Rig> = {}): Rig => ({
   equipment: "ablative-plating", activated: false, destroyed: false, ...over,
 });
 
+function wrap(node: React.ReactNode) {
+  return render(<V2GlossaryTipProvider>{node}</V2GlossaryTipProvider>);
+}
+
 test("renders the heat reading for a heat-bearing rig", () => {
-  render(<HeatGauge rig={base()} />);
+  wrap(<HeatGauge rig={base()} />);
   expect(screen.getByText("ENGINE HEAT")).toBeInTheDocument();
 });
 
 test("renders nothing for a cold kind", () => {
   const tank = base({ kind: "tank" });
-  const { container } = render(<HeatGauge rig={tank} />);
+  const { container } = wrap(<HeatGauge rig={tank} />);
   expect(container).toBeEmptyDOMElement();
 });

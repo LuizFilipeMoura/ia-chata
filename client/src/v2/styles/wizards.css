@@ -14,7 +14,7 @@
 .v2-root .v2-aw-scrim.show { opacity: 1; }
 
 .v2-root .v2-aw-card {
-  width: min(460px, 96vw); margin-bottom: 0; max-height: 86vh; overflow-y: auto;
+  width: min(460px, 100%); margin-bottom: 0; max-height: 86vh; overflow-y: auto;
   border-color: var(--v2-ember-deep);
   box-shadow:
     inset 0 1px 0 rgba(255, 120, 90, .14),

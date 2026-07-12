@@ -1,6 +1,6 @@
 /* V2 design tokens — scoped to .v2-root, never :root, to guarantee no collision
    with V1's global tokens.css. Every custom property is prefixed --v2-. */
-@import url("https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
 .v2-root {
   --v2-iron-950:#080a0d; --v2-iron-900:#0c0f14; --v2-iron-850:#12161d; --v2-iron-800:#171d25;
@@ -9,8 +9,8 @@
   --v2-ember:#e5533a; --v2-ember-hi:#ff6f52; --v2-ember-deep:#8f2f22;
   --v2-txt:#eef2f7; --v2-txt-dim:#aeb7c4; --v2-txt-faint:#7b8593;
   --v2-ok:#6cc47f; --v2-warn:#e8bd57; --v2-low:#ef9450; --v2-crit:#f26a50;
-  --v2-stencil:"Stardos Stencil","Oswald",system-ui,sans-serif;
-  --v2-disp:"Oswald",system-ui,sans-serif;
+  --v2-stencil:"Stardos Stencil","JetBrains Mono",ui-monospace,monospace;
+  --v2-disp:"JetBrains Mono",ui-monospace,monospace;
   --v2-mono:"JetBrains Mono",ui-monospace,monospace;
 
   /* surfaces / lines / edges */

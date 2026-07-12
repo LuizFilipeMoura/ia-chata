@@ -51,7 +51,7 @@ test("sendState pushes the current room snapshot to a single socket on connect",
   assert.equal(a.sent[0].state.rigs[0].name, "Warden");
 });
 
-test("broadcast scopes bounties per socket's side", () => {
+test("broadcast scopes priorityTargets per socket's side", () => {
   const hub = createWsHub();
   const room = createRoom("IRON42");
   const a = fakeSocket();
@@ -59,7 +59,7 @@ test("broadcast scopes bounties per socket's side", () => {
   hub.attach(a, "IRON42", "a");
   hub.attach(b, "IRON42", "b");
 
-  // Reaching the started state (which assigns bounties) requires an owner and a
+  // Reaching the started state (which assigns priorityTargets) requires an owner and a
   // locked field before either side can ready up (§10 field setup).
   claimSide(room, { name: "Owner", side: "a" });
   applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -72,10 +72,10 @@ test("broadcast scopes bounties per socket's side", () => {
   applyCommand(room, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
   hub.broadcast(room);
 
-  assert.deepEqual(Object.keys(a.sent[0].state.game.bounties), ["a"]);
-  assert.deepEqual(Object.keys(b.sent[0].state.game.bounties), ["b"]);
-  assert.equal(a.sent[0].state.game.bounties.b, undefined);
-  assert.equal(b.sent[0].state.game.bounties.a, undefined);
+  assert.deepEqual(Object.keys(a.sent[0].state.game.priorityTargets), ["a"]);
+  assert.deepEqual(Object.keys(b.sent[0].state.game.priorityTargets), ["b"]);
+  assert.equal(a.sent[0].state.game.priorityTargets.b, undefined);
+  assert.equal(b.sent[0].state.game.priorityTargets.a, undefined);
 });
 
 test("a closed socket is removed and receives no further broadcasts", () => {

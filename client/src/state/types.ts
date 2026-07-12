@@ -36,6 +36,7 @@ export interface Rig {
   name: string;
   kind?: "rig" | "tank" | "walker";
   weightClass: "light" | "medium";
+  speed?: number;
   owner: "a" | "b";
   parts?: Record<string, Component>;
   hull: Component;
@@ -99,6 +100,10 @@ export interface Resolution {
   breakdown?: ResolutionBreakdown;
   effects?: string[];
   rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
+  /** Priority Elimination award attached to a `destruction` entry. */
+  vp?: { side: string; amount: number };
+  /** Name of the wrecked unit, captured before it may be removed. */
+  victimName?: string;
 }
 
 export type Diagonal = "tlbr" | "trbl";
@@ -139,7 +144,7 @@ export interface GameState {
   sides: Side[];
   objectives?: Objective[];
   turn?: Turn | null;
-  bounties?: Record<string, number>;
+  priorityTargets?: Record<string, number>;
   outcome?: unknown;
   resolutions?: Resolution[];
   recoveryClaims?: Record<string, number[]>;

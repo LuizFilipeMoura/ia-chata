@@ -110,3 +110,93 @@ test("enforceChassis rejects an upgrade id that isn't valid for the weapon", () 
   } });
   assert.ok(out.error);
 });
+
+test("enforceChassis rejects a weapon Prototype + an equipment Prototype", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    longRangeUpgrade: "penetrator-rounds", meleeUpgrade: "vice-grip",
+    equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+  } });
+  assert.ok(out.error);
+});
+
+test("enforceChassis allows a lone equipment Prototype", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    longRangeUpgrade: "depleted-core", meleeUpgrade: "vice-grip",
+    equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+  } });
+  assert.equal(out.error, undefined);
+});
+
+test("enforceChassis rejects an unknown equipment upgrade id", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    equipment: "ablative-plating", equipmentUpgrade: "not-a-real-upgrade",
+  } });
+  assert.ok(out.error);
+});
+
+test("enforceChassis rejects an equipment upgrade with no equipment", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    equipmentUpgrade: "ablative-cascade",
+  } });
+  assert.ok(out.error);
+});
+
+test("merges suggestedEquipment from disk", () => {
+  const fp = tmpFile("suggest.json");
+  const id = CHASSIS[0].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [{ id: "radiator-array", reason: "runs hot" }] },
+  ]));
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.get(id).suggestedEquipment, [{ id: "radiator-array", reason: "runs hot" }]);
+});
+
+test("defaults suggestedEquipment to an empty array", () => {
+  const fp = tmpFile("suggest-default.json");
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.all()[0].suggestedEquipment, []);
+});
+
+test("drops suggestions with unknown equipment ids and caps at 2", () => {
+  const fp = tmpFile("suggest-bad.json");
+  const id = CHASSIS[0].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [
+      { id: "not-a-real-eq", reason: "x" },
+      { id: "radiator-array", reason: "a" },
+      { id: "servo-actuators", reason: "b" },
+      { id: "ablative-plating", reason: "c" },
+    ] },
+  ]));
+  const store = createChassisStore(fp);
+  const out = store.get(id).suggestedEquipment;
+  assert.equal(out.length, 2);
+  assert.deepEqual(out.map((e) => e.id), ["radiator-array", "servo-actuators"]);
+});
+
+test("validates and merges a suggestion pointing at a new equipment family", () => {
+  const fp = tmpFile("suggest-new-family.json");
+  const id = CHASSIS[0].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [{ id: "blast-furnace-core", reason: "weaponize the heat" }] },
+  ]));
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.get(id).suggestedEquipment, [{ id: "blast-furnace-core", reason: "weaponize the heat" }]);
+});
+
+test("coerces a missing reason to a string and a non-array to []", () => {
+  const fp = tmpFile("suggest-coerce.json");
+  const id = CHASSIS[0].id;
+  const id2 = CHASSIS[1].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [{ id: "overclock-core" }] },
+    { id: id2, suggestedEquipment: "nope" },
+  ]));
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.get(id).suggestedEquipment, [{ id: "overclock-core", reason: "" }]);
+  assert.deepEqual(store.get(id2).suggestedEquipment, []);
+});

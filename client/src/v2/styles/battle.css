@@ -52,6 +52,26 @@
   color: var(--v2-ember-hi);
   font-weight: 700;
 }
+.v2-root .v2-bh-vp {
+  font-family: var(--v2-mono);
+  font-size: var(--v2-text-base);
+  letter-spacing: 0.03em;
+}
+.v2-root .v2-bh-vp-sep { color: var(--v2-txt-dim); }
+.v2-root .v2-bh-target {
+  font-family: var(--v2-mono);
+  font-size: var(--v2-text-base);
+  color: var(--v2-ember-hi);
+  letter-spacing: 0.03em;
+}
+.v2-root .v2-bh-killtoast {
+  margin-top: 4px;
+  font-family: var(--v2-mono);
+  font-size: var(--v2-text-base);
+  color: var(--v2-ember-hi);
+  animation: v2-bh-killtoast-in 160ms ease-out;
+}
+@keyframes v2-bh-killtoast-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
 .v2-root .v2-bh-tokens {
   margin-left: auto;
   font-family: var(--v2-mono);

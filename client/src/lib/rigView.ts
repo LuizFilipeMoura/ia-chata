@@ -11,16 +11,16 @@ export function barClass(c: Component): string {
   return "rig-fill-ok";
 }
 
-export function rigStatus(rig: Rig): { text: string; cls: string } {
+export function rigStatus(rig: Rig): { text: string; cls: string; gloss: string } {
   const parts = partNamesOf(kindOf(rig));
-  if (rig.destroyed) return { text: "⛔ System failure — destroyed", cls: "crit" };
+  if (rig.destroyed) return { text: "⛔ System failure — destroyed", cls: "crit", gloss: "destroyed" };
   if (parts.some((l: string) => (rig as any)[l]?.sp === 0))
-    return { text: "⚠ Catastrophic damage", cls: "crit" };
+    return { text: "⚠ Catastrophic damage", cls: "crit", gloss: "catastrophic-damage" };
   if (parts.some((l: string) => (rig as any)[l]?.sp / (rig as any)[l]?.max <= 0.34))
-    return { text: "▲ Heavy damage — operational", cls: "warn" };
+    return { text: "▲ Heavy damage — operational", cls: "warn", gloss: "heavy-damage" };
   if (parts.some((l: string) => (rig as any)[l]?.sp < (rig as any)[l]?.max))
-    return { text: "◆ Damaged — operational", cls: "warn" };
-  return { text: "● All systems nominal", cls: "" };
+    return { text: "◆ Damaged — operational", cls: "warn", gloss: "damaged" };
+  return { text: "● All systems nominal", cls: "", gloss: "nominal" };
 }
 
 export function ownerLabel(owner: string | undefined, mySide: string): string {

@@ -23,11 +23,16 @@ declare module "/shared/game-state.js" {
     active: { key: string; label: string; heat: number; text: string };
   }>;
   export const WEAPON_UPGRADES: Record<string, Array<{ id: string; nature: "field" | "tuned" | "prototype"; name: string; tag: string; [k: string]: unknown }>>;
+  export const EQUIPMENT_UPGRADES: Record<string, Array<{ id: string; nature: "field" | "tuned" | "prototype"; name: string; tag: string; [k: string]: unknown }>>;
   export const NATURES: ReadonlyArray<"field" | "tuned" | "prototype">;
   export function upgradeNature(weaponName: string, upgradeId?: string | null): "field" | "tuned" | "prototype" | null;
+  export function equipmentUpgradeNature(equipmentId: string, upgradeId?: string | null): "field" | "tuned" | "prototype" | null;
+  export function firstEquipmentUpgradeId(equipmentId: string): string | null;
   export function countPrototypes(
     weapons: { longRange?: string; melee?: string },
     upgrades: { longRange?: string | null; melee?: string | null },
+    equipment?: string,
+    equipmentUpgrade?: string | null,
   ): number;
   export const CHASSIS: Array<{ id: string; label: string; class: string; longRange: string; melee: string }>;
   export function chassisById(id?: string | null): { id: string; label: string; class: string; longRange: string; melee: string } | null;
@@ -59,7 +64,7 @@ declare module "/shared/battle-view.js" {
   export function actionBudget(rig: Rig, turn: Turn): {
     used: number; left: number; max: number; reduced: boolean;
   };
-  export function rigModifiers(rig: Rig): Array<{ tag: string; tone: string }>;
+  export function rigModifiers(rig: Rig): Array<{ key: string; tag: string; tone: string; gloss: string }>;
   export function phaseSummary(game: GameState, rigs: Rig[]): {
     label: string; round: number; turnSide?: string | null; turnName?: string;
     activeName?: string; answerTokens: Record<string, number>;
