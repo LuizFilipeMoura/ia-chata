@@ -351,6 +351,31 @@ test("Exploit Wound grants +3 STR only against an already-damaged struck locatio
   assert.equal(computeStr(rig, prof, { target: wounded }), 7);                    // no location: no bonus
 });
 
+test("Evisceration forces Critical on a location at or below half max SP", () => {
+  const rig = makeRig("r3", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "evisceration" };
+  const prof = effectiveWeaponProfile("melee", "Talon", rig);
+  // Hull 3/7 -> 3 <= 3.5 half-dead. Even d6=1 (tiny total) is forced Critical.
+  const halfDead = { weightClass: "medium", hull: { sp: 3, max: 7 } };
+  const out = rollImpacts(rig, halfDead, prof, "hull", { arc: "front", hits: 1 }, { impacts: [1] }, () => 0);
+  assert.equal(out[0].tier, "critical");
+  assert.equal(out[0].sp, 3);
+  // Hull 4/7 -> 4 > 3.5 NOT half-dead: a d6=1 total glances off (no forced crit).
+  const above = { weightClass: "medium", hull: { sp: 4, max: 7 } };
+  const out2 = rollImpacts(rig, above, prof, "hull", { arc: "front", hits: 1 }, { impacts: [1] }, () => 0);
+  assert.notEqual(out2[0].tier, "critical");
+});
+
+test("Evisceration downside: -1 STR against a fully-undamaged struck location", () => {
+  const rig = makeRig("r4", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "evisceration" };
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 7
+  const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
+  const hurt = { weightClass: "medium", hull: { sp: 5, max: 7 } };
+  assert.equal(computeStr(rig, prof, { target: fresh, location: "hull" }), 6); // 7 - 1
+  assert.equal(computeStr(rig, prof, { target: hurt, location: "hull" }), 7);  // damaged: no downside
+});
+
 test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
   const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
   const p = effectiveWeaponProfile("melee", "Lance", lance);

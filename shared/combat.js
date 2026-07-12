@@ -174,6 +174,12 @@ export function computeStr(attacker, profile, opts) {
     const p = opts.target[opts.location];
     if (p && p.sp < p.max) bonus += 3;
   }
+  // Evisceration downside (§13, Talon) — the talon needs a wound to grip: -1 STR
+  // against a struck location that is still fully undamaged.
+  if (profile.upgradeEffect?.eviscerate && opts.target && opts.location) {
+    const p = opts.target[opts.location];
+    if (p && p.sp === p.max) bonus -= 1;
+  }
   // Redline Governor — the hotter the attacker runs past its own class cap,
   // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
   if (profile.upgradeEffect?.redline) {
@@ -273,7 +279,13 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     // Penetrator Rounds — every 3rd Autocannon volley bypasses the armour row
     // entirely: every landed hit is forced to Severe (2 SP) regardless of the
     // total rolled or the location's row.
-    const sev = opts.penetrate ? { tier: "severe", sp: 2 } : impactSeverity(total, row);
+    // Evisceration (§13, Talon) — a hit on a location at or below half its max SP
+    // is forced to Critical, regardless of the impact roll (mirrors penetrate).
+    const evisc = profile.upgradeEffect?.eviscerate && target[location]
+      && target[location].sp <= target[location].max / 2;
+    const sev = opts.penetrate ? { tier: "severe", sp: 2 }
+      : evisc ? { tier: "critical", sp: 3 }
+      : impactSeverity(total, row);
     out.push({ die, total, tier: sev.tier, sp: sev.sp });
   }
   return out;
