@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   WEAPONS, EQUIPMENT, canAddRigForSide, WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY,
-  UNIT_WEAPONS, CHASSIS, upgradeNature,
+  UNIT_WEAPONS, CHASSIS, upgradeNature, EQUIPMENT_UPGRADES, equipmentUpgradeNature,
 } from "/shared/game-state.js";
 import { UNIT_KINDS } from "/shared/unit-kinds.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
-import { CHASSIS_NAME, weaponGlyph, natureLabel, firstUpgradeId, NODE_MARK } from "../lib/commissionData";
+import { CHASSIS_NAME, weaponGlyph, natureLabel, firstUpgradeId, firstEquipmentUpgradeId, NODE_MARK } from "../lib/commissionData";
 import "../styles/forge.css";
 
 type Kind = "rig" | "tank" | "walker";
@@ -35,6 +35,7 @@ interface WizardState {
   longRangeUpgrade: string | null;
   meleeUpgrade: string | null;
   equipment: string;
+  equipmentUpgrade: string | null;
   unit: string; // flat-pick weapon for Tank / Walker
 }
 
@@ -63,6 +64,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
       longRangeUpgrade: firstUpgradeId(pb.longRange),
       meleeUpgrade: firstUpgradeId(pb.melee),
       equipment: Object.keys(EQUIPMENT)[0],
+      equipmentUpgrade: firstEquipmentUpgradeId(Object.keys(EQUIPMENT)[0]),
       unit: Object.keys(UNIT_WEAPONS)[0],
     };
   });
@@ -82,7 +84,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
       melee: pb.melee,
       longRangeUpgrade: firstUpgradeId(pb.longRange),
       meleeUpgrade: firstUpgradeId(pb.melee),
-      ...(top ? { equipment: top } : {}),
+      ...(top ? { equipment: top, equipmentUpgrade: firstEquipmentUpgradeId(top) } : {}),
     });
   };
 
@@ -106,7 +108,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         }
         setContent(map);
         const top = map[state.chassis]?.suggestedEquipment?.[0]?.id;
-        if (top) setState((s) => ({ ...s, equipment: top }));
+        if (top) setState((s) => ({ ...s, equipment: top, equipmentUpgrade: firstEquipmentUpgradeId(top) }));
       })
       .catch(() => { /* keep built-in defaults */ });
     return () => { live = false; };
@@ -146,6 +148,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         longRangeUpgrade: state.longRangeUpgrade,
         meleeUpgrade: state.meleeUpgrade,
         equipment: state.equipment,
+        equipmentUpgrade: state.equipmentUpgrade,
       });
     } else {
       sendCommand("add", {
@@ -215,7 +218,8 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
           </div>
           {upgradePath(state.longRange, state.longRangeUpgrade, (id) =>
             patch({ longRangeUpgrade: id }),
-            upgradeNature(state.melee, state.meleeUpgrade) === "prototype",
+            upgradeNature(state.melee, state.meleeUpgrade) === "prototype"
+            || equipmentUpgradeNature(state.equipment, state.equipmentUpgrade) === "prototype",
           )}
         </div>
         <div className="v2-fc-weapon">
@@ -226,7 +230,8 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
           </div>
           {upgradePath(state.melee, state.meleeUpgrade, (id) =>
             patch({ meleeUpgrade: id }),
-            upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype",
+            upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype"
+            || equipmentUpgradeNature(state.equipment, state.equipmentUpgrade) === "prototype",
           )}
         </div>
       </div>
@@ -339,6 +344,11 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     }
   } else if (state.step === 2) {
     if (state.kind === "rig") {
+      // One Prototype per rig spans all three pickers: the equipment Prototype
+      // node locks whenever EITHER weapon already runs a Prototype upgrade.
+      const weaponPrototype =
+        upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype"
+        || upgradeNature(state.melee, state.meleeUpgrade) === "prototype";
       body = (
         <div className="v2-fw-body">
           <div className="v2-fc-cue">
@@ -349,28 +359,59 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
             {Object.entries(EQUIPMENT).map(([id, e]) => {
               const suggestion = (content[state.chassis]?.suggestedEquipment || [])
                 .find((s) => s.id === id);
+              const sel = id === state.equipment;
               return (
-                <button
-                  key={id}
-                  type="button"
-                  className={"v2-fc-equip"
-                    + (id === state.equipment ? " is-sel" : "")
-                    + (suggestion ? " is-suggested" : "")}
-                  onClick={() => patch({ equipment: id })}
-                >
-                  {suggestion && (
-                    <div className="v2-fc-equip-suggest">
-                      <span className="v2-fc-equip-suggest-tag v2-eyebrow">◈ Suggested</span>
-                      <span className="v2-fc-equip-suggest-why">{suggestion.reason}</span>
+                <div key={id} className={"v2-fc-equip-slot" + (sel ? " is-sel" : "")}>
+                  <button
+                    type="button"
+                    className={"v2-fc-equip"
+                      + (sel ? " is-sel" : "")
+                      + (suggestion ? " is-suggested" : "")}
+                    onClick={() => patch({ equipment: id, equipmentUpgrade: firstEquipmentUpgradeId(id) })}
+                  >
+                    {suggestion && (
+                      <div className="v2-fc-equip-suggest">
+                        <span className="v2-fc-equip-suggest-tag v2-eyebrow">◈ Suggested</span>
+                        <span className="v2-fc-equip-suggest-why">{suggestion.reason}</span>
+                      </div>
+                    )}
+                    <div className="v2-fc-equip-family v2-eyebrow">{e.family}</div>
+                    <div className="v2-fc-equip-label v2-title">{e.label}</div>
+                    <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
+                    <div className="v2-fc-equip-active">
+                      Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
                     </div>
-                  )}
-                  <div className="v2-fc-equip-family v2-eyebrow">{e.family}</div>
-                  <div className="v2-fc-equip-label v2-title">{e.label}</div>
-                  <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
-                  <div className="v2-fc-equip-active">
-                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
-                  </div>
-                </button>
+                  </button>
+                  {sel ? (
+                    <div className="v2-fc-path v2-grid-3">
+                      {(EQUIPMENT_UPGRADES[id] || []).map((u, i) => {
+                        const locked = u.nature === "prototype" && weaponPrototype && u.id !== state.equipmentUpgrade;
+                        const isSel = u.id === state.equipmentUpgrade;
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            disabled={locked}
+                            data-nature={u.nature}
+                            className={"v2-fc-node nat-" + u.nature + (isSel ? " is-sel" : "") + (locked ? " locked" : "")}
+                            title={locked ? "A rig may run at most one Prototype upgrade" : u.tag}
+                            onClick={() => !locked && patch({ equipmentUpgrade: u.id })}
+                          >
+                            <span className="v2-fc-node-head">
+                              <span className="v2-fc-node-mark">{NODE_MARK[i]}</span>
+                              <span className="v2-fc-node-name v2-title">{u.name}</span>
+                              <em className={"v2-fc-node-nature nat-" + u.nature + " v2-eyebrow"}>{natureLabel(u.nature)}</em>
+                            </span>
+                            <small className="v2-fc-node-tag">
+                              {u.nature === "prototype" ? <span className="v2-fc-warn">⚠ one per rig</span> : null}
+                              {u.tag}
+                            </small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -389,12 +430,13 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     const e = EQUIPMENT[state.equipment];
     const lrUpgrade = (WEAPON_UPGRADES[state.longRange] || []).find((u) => u.id === state.longRangeUpgrade);
     const meleeUpgrade = (WEAPON_UPGRADES[state.melee] || []).find((u) => u.id === state.meleeUpgrade);
+    const equipUpgrade = (EQUIPMENT_UPGRADES[state.equipment] || []).find((u) => u.id === state.equipmentUpgrade);
     body = (
       <div className="v2-fw-body v2-fc-confirm">
         <div className="v2-fc-confirm-name v2-title">{unitName()} — {state.cls}</div>
         <div className="v2-fc-confirm-row">{weaponGlyph(state.longRange)} {state.longRange} · {lrUpgrade?.name || "Upgrade ?"}</div>
         <div className="v2-fc-confirm-row">{weaponGlyph(state.melee)} {state.melee} · {meleeUpgrade?.name || "Upgrade ?"}</div>
-        <div className="v2-fc-confirm-row">🛠 {e.label} · {e.passive}</div>
+        <div className="v2-fc-confirm-row">🛠 {e.label} · {equipUpgrade?.name || "Upgrade ?"}</div>
         {content[state.chassis]?.personality ? (
           <div className="v2-fc-confirm-row v2-fc-confirm-flavor">“{content[state.chassis]!.personality}”</div>
         ) : null}
