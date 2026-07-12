@@ -165,14 +165,14 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
   // Prototype node is hazard-lit and gated: one Prototype upgrade per rig, so it
   // locks whenever the OTHER weapon already runs a Prototype upgrade.
   const upgradePath = (
-    name: string,
+    list: Array<{ id: string; nature: string; name: string; tag: string }>,
     selected: string | null,
     onSelect: (id: string) => void,
-    otherIsPrototype: boolean,
+    lockPrototype: boolean,
   ) => (
     <div className="v2-fc-path v2-grid-3">
-      {(WEAPON_UPGRADES[name] || []).map((u, i) => {
-        const locked = u.nature === "prototype" && otherIsPrototype && u.id !== selected;
+      {list.map((u, i) => {
+        const locked = u.nature === "prototype" && lockPrototype && u.id !== selected;
         const isSel = u.id === selected;
         return (
           <button
@@ -216,7 +216,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
             <span className="v2-fc-weapon-name v2-title">{state.longRange}</span>
             <small className="v2-fc-weapon-stat">ROF {lr.rof} · STR {lr.str} · {lr.minRange}–{lr.maxRange}"</small>
           </div>
-          {upgradePath(state.longRange, state.longRangeUpgrade, (id) =>
+          {upgradePath(WEAPON_UPGRADES[state.longRange] || [], state.longRangeUpgrade, (id) =>
             patch({ longRangeUpgrade: id }),
             upgradeNature(state.melee, state.meleeUpgrade) === "prototype"
             || equipmentUpgradeNature(state.equipment, state.equipmentUpgrade) === "prototype",
@@ -228,7 +228,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
             <span className="v2-fc-weapon-name v2-title">{state.melee}</span>
             <small className="v2-fc-weapon-stat">ROF {ml.rof} · STR {ml.str} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small>
           </div>
-          {upgradePath(state.melee, state.meleeUpgrade, (id) =>
+          {upgradePath(WEAPON_UPGRADES[state.melee] || [], state.meleeUpgrade, (id) =>
             patch({ meleeUpgrade: id }),
             upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype"
             || equipmentUpgradeNature(state.equipment, state.equipmentUpgrade) === "prototype",
@@ -382,34 +382,11 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
                       Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
                     </div>
                   </button>
-                  {sel ? (
-                    <div className="v2-fc-path v2-grid-3">
-                      {(EQUIPMENT_UPGRADES[id] || []).map((u, i) => {
-                        const locked = u.nature === "prototype" && weaponPrototype && u.id !== state.equipmentUpgrade;
-                        const isSel = u.id === state.equipmentUpgrade;
-                        return (
-                          <button
-                            key={u.id}
-                            type="button"
-                            disabled={locked}
-                            data-nature={u.nature}
-                            className={"v2-fc-node nat-" + u.nature + (isSel ? " is-sel" : "") + (locked ? " locked" : "")}
-                            title={locked ? "A rig may run at most one Prototype upgrade" : u.tag}
-                            onClick={() => !locked && patch({ equipmentUpgrade: u.id })}
-                          >
-                            <span className="v2-fc-node-head">
-                              <span className="v2-fc-node-mark">{NODE_MARK[i]}</span>
-                              <span className="v2-fc-node-name v2-title">{u.name}</span>
-                              <em className={"v2-fc-node-nature nat-" + u.nature + " v2-eyebrow"}>{natureLabel(u.nature)}</em>
-                            </span>
-                            <small className="v2-fc-node-tag">
-                              {u.nature === "prototype" ? <span className="v2-fc-warn">⚠ one per rig</span> : null}
-                              {u.tag}
-                            </small>
-                          </button>
-                        );
-                      })}
-                    </div>
+                  {sel ? upgradePath(
+                    EQUIPMENT_UPGRADES[id] || [],
+                    state.equipmentUpgrade,
+                    (uid) => patch({ equipmentUpgrade: uid }),
+                    weaponPrototype,
                   ) : null}
                 </div>
               );
