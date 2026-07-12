@@ -76,6 +76,7 @@ export function AnswerGateBody({
       <ReactionPicker
         value={prep}
         allowShield={sel?.weapons?.melee === "Bulwark Shield"}
+        answerMode
         onChange={(v) => { setPrep(v); pick.prep = v; }}
       />
     </div>

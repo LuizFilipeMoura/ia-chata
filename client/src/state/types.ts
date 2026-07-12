@@ -9,7 +9,9 @@ export interface Engine extends Component {
   heat: number;
 }
 
-export type PrepType = "brace" | "evasive" | "return" | "raise-shield";
+export type PrepType =
+  | "brace" | "evasive" | "return" | "raise-shield"
+  | "riposte" | "sidestep" | "exploit";
 
 export interface Preparation {
   type?: PrepType;

@@ -10,6 +10,15 @@ const BASE_REACTIONS: { value: PrepType; icon: string; label: string; rule: stri
     rule: "After the enemy attacks, answer with one weapon against that enemy." },
 ];
 
+const ANSWER_COUNTERS: { value: PrepType; icon: string; label: string; rule: string }[] = [
+  { value: "riposte", icon: "⚔️", label: "Riposte",
+    rule: "When an enemy melees this Rig, make one free melee attack back." },
+  { value: "sidestep", icon: "🌀", label: "Sidestep the Shooter",
+    rule: "When shot, slip ½ Speed before it resolves; if you reach the shooter you may engage it." },
+  { value: "exploit", icon: "🎯", label: "Exploit Opening",
+    rule: "When an overcommitted enemy attacks, pivot and land a free Aimed counter-shot — no aim penalty." },
+];
+
 const SHIELD_REACTION: { value: PrepType; icon: string; label: string; rule: string } = {
   value: "raise-shield", icon: "🛡", label: "Raise Shield",
   rule: "Negates the next front-arc attack; side/rear impacts take −4 (Tower Shield also negates the side).",
@@ -22,13 +31,20 @@ interface Props {
   value: PrepType;
   onChange: (v: PrepType) => void;
   allowShield?: boolean; // true when the acting Rig carries a Bulwark Shield
+  answerMode?: boolean;  // true in the Answer-token gate — unlocks the three counters
 }
 
 // Native V2 port of V1's ReactionPicker. The shared reaction chooser used by both
 // the Answer-token gate and the Prepare action. Presentational only — parents own
 // the send. Retagged with `v2-rx-*` classes so the V2 stylesheet owns it.
-export default function ReactionPicker({ value, onChange, allowShield = false }: Props) {
-  const options = allowShield ? [...BASE_REACTIONS, SHIELD_REACTION] : BASE_REACTIONS;
+// The three Answer counters (Riposte / Sidestep / Exploit Opening) are
+// Answer-exclusive and only render when `answerMode` is set.
+export default function ReactionPicker({ value, onChange, allowShield = false, answerMode = false }: Props) {
+  const options = [
+    ...BASE_REACTIONS,
+    ...(answerMode ? ANSWER_COUNTERS : []),
+    ...(allowShield ? [SHIELD_REACTION] : []),
+  ];
   return (
     <div className="v2-rx-picker">
       {options.map((r) => (
