@@ -1323,6 +1323,53 @@ test("weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1 (regressio
   assert.equal(rig.engine.sp, engineBefore - 1);
 });
 
+test("additional hit to a 0-SP arms spills exactly 1 SP to Hull (not 3), linear", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.arms.sp = 0;                         // already catastrophic (weapon spent earlier)
+  const hull0 = rig.hull.sp;
+  __test.applyDamage(room, rig, "arms", 1, { dice: { armsWeapon: 3 } }); // additional
+  assert.equal(rig.hull.sp, hull0 - 1);    // 1 spill, not 3
+  __test.applyDamage(room, rig, "arms", 1, { dice: { armsWeapon: 3 } }); // second additional
+  assert.equal(rig.hull.sp, hull0 - 2);    // linear, not compounding
+});
+
+test("additional hit to a 0-SP legs immobilises AND spills 1 SP to Hull (conserved)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.legs.sp = 0;                         // already catastrophic
+  const hull0 = rig.hull.sp;
+  __test.applyDamage(room, rig, "legs", 1, {}); // additional
+  assert.equal(rig.immobilised, true);     // §8 effect kept
+  assert.equal(rig.hull.sp, hull0 - 1);    // damage no longer evaporates
+});
+
+test("catastrophic spill retargets to Engine when Hull is already at 0", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.legs.sp = 0;
+  __test.setRigSp(rig, "hull", 0);         // Hull can't absorb — next living part
+  const engine0 = rig.engine.sp;
+  __test.applyDamage(room, rig, "legs", 1, {});
+  assert.equal(rig.hull.sp, 0);            // dead Hull untouched (no destroyed cascade)
+  assert.equal(rig.engine.sp, engine0 - 1);// spill routed to Engine
+});
+
+test("Kneecapper rake to a 0-SP legs immobilises but never spills (cripple, never kill)", () => {
+  const room = createRoom("R", "u"); claimSide(room, "u", "a");
+  const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  room.rigs.push(rig);
+  rig.legs.sp = 0;
+  const hull0 = rig.hull.sp, engine0 = rig.engine.sp;
+  __test.applyDamage(room, rig, "legs", 1, { noSpill: true }); // kneecapper-sourced
+  assert.equal(rig.immobilised, true);
+  assert.equal(rig.hull.sp, hull0);        // no spill
+  assert.equal(rig.engine.sp, engine0);
+});
+
 test("Kneecapper cripple ramp — a raked leg at <= half max flags speedHalvedNextRound", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);

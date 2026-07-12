@@ -40,7 +40,6 @@ export function V2Terminal() {
   return (
     <Shell
       channel="yard"
-      onForge={() => setCommissionOpen(true)}
       onRulebook={() => setChatOpen(!chatOpen)}
       onGlossary={() => setGlossaryOpen(true)}
       chatUnread={chatUnread}

@@ -1113,19 +1113,41 @@ function catastrophicOnZero(room, rig, loc, opts) {
   // (activation budget, combat modAim, movement) — no state to set here.
 }
 
+// §7 overflow target for a spill: prefer the structural part (Hull) if it can
+// still absorb, else the first part with SP > 0 in role order
+// power → mobility → weapon, excluding the source. This is an AUTO-target — the
+// rules text (§7) says the defender chooses; the engine picks deterministically.
+// See docs/superpowers/specs/2026-07-11-universal-catastrophic-spill-design.md.
+function spillTarget(rig, sourceLoc) {
+  const kind = kindOf(rig);
+  const [structPart] = partsByRole(kind, "structural");
+  if (structPart && structPart !== sourceLoc && rig[structPart]?.sp > 0) return structPart;
+  for (const role of ["power", "mobility", "weapon"]) {
+    for (const p of partsByRole(kind, role)) {
+      if (p !== sourceLoc && rig[p]?.sp > 0) return p;
+    }
+  }
+  // No living part left — the unit is already all-zero (destroyed). Route to the
+  // structural part so its own §8 additional clause fires; harmless edge.
+  return structPart || null;
+}
+
 // §8 — additional damage to an already 0-SP location.
 function catastrophicAdditional(room, rig, loc, opts) {
   const kind = kindOf(rig);
   const role = roleOf(kind, loc);
-  if (role === "structural" || role === "power") rig[loc].destroyed = true;
-  else if (role === "mobility") rig.immobilised = true;
-  else if (role === "weapon") {
-    // Kneecapper (§13) — a limbs-only rake never spills the extra structural
-    // damage into hull; the weapon limb is already dead, that's the finish.
-    if (opts?.noSpill) return;
-    const [structPart] = partsByRole(kind, "structural");
-    if (structPart) applyDamage(room, rig, structPart, 3, opts);
-  }
+  // Structural (Hull) / power (Engine): the §8 kill tier — an extra hit is
+  // total system failure. Instant-kill, no spill.
+  if (role === "structural" || role === "power") { rig[loc].destroyed = true; return; }
+  // Mobility (Legs/Tracks): still immobilises; the numeric overflow is conserved
+  // below rather than evaporating.
+  if (role === "mobility") rig.immobilised = true;
+  // Mobility + weapon: conserve the extra hit as 1 SP of §7 overflow onto a live
+  // part. Kneecapper (§13, opts.noSpill) is limbs-only and never bleeds into the
+  // hull, so it immobilises / kills the limb but skips the spill.
+  if (opts?.noSpill) return;
+  const target = spillTarget(rig, loc);
+  if (target && target !== loc) applyDamage(room, rig, target, 1, opts);
 }
 
 // Engagement (melee lock, §engagement design). Symmetric one-to-one link between

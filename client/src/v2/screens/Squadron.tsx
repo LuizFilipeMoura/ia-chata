@@ -22,6 +22,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
   const canAdd = canAddRigForSide({ rigs, game }, mySide);
 
   const started = Boolean(game?.started);
+  const activeId = started && game?.phase === "activation" ? (game?.turn?.activeRigId ?? null) : null;
   const auto = game?.autoResolve !== false;
   const sideName = (id: string) => game?.sides?.find((s) => s.id === id)?.name || (id === "a" ? "Side A" : "Side B");
   const sideReady = (id: string) => Boolean(game?.sides?.find((s) => s.id === id)?.ready);
@@ -46,7 +47,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
         <span className="v2-yard-band-dot" /><span>YOUR SQUADRON</span><span className="v2-yard-band-rule" />
       </div>
       <div className="v2-yard-list">
-        {mine.map((r) => <RigRow key={r.id} rig={r} hostile={false} onOpen={onOpenRig} />)}
+        {mine.map((r) => <RigRow key={r.id} rig={r} hostile={false} active={r.id === activeId} onOpen={onOpenRig} />)}
       </div>
 
       {foes.length > 0 && (
@@ -55,7 +56,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             <span className="v2-yard-band-dot" /><span>HOSTILE FORCES</span><span className="v2-yard-band-rule" />
           </div>
           <div className="v2-yard-list">
-            {foes.map((r) => <RigRow key={r.id} rig={r} hostile onOpen={onOpenRig} />)}
+            {foes.map((r) => <RigRow key={r.id} rig={r} hostile active={r.id === activeId} onOpen={onOpenRig} />)}
           </div>
         </>
       )}

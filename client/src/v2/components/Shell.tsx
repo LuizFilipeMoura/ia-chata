@@ -5,20 +5,12 @@ import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
 
 type Channel = "yard";
-const CHANNELS: { id: string; num: string; label: string; enabled: boolean }[] = [
-  { id: "join", num: "01", label: "Enlist", enabled: false },
-  { id: "yard", num: "02", label: "Yard", enabled: true },
-  { id: "commission", num: "03", label: "Forge", enabled: true },
-  { id: "rulebook", num: "04", label: "Rules", enabled: true },
-  { id: "outcome", num: "05", label: "Verdict", enabled: false },
-];
 
 export function Shell({
-  channel, children, onForge, onRulebook, onGlossary, chatUnread,
+  children, onRulebook, onGlossary, chatUnread,
 }: {
   channel: Channel;
   children: ReactNode;
-  onForge?: () => void;
   onRulebook?: () => void;
   onGlossary?: () => void;
   chatUnread?: boolean;
@@ -52,23 +44,6 @@ export function Shell({
         <div className="v2-strip-rm">RM <span>{session?.room}</span></div>
         <button type="button" className="v2-gloss-btn" aria-label="Glossary" onClick={() => onGlossary?.()}>ⓘ</button>
       </header>
-
-      <nav className="v2-channels">
-        {CHANNELS.map((ch) => (
-          <button
-            key={ch.id} type="button" disabled={!ch.enabled}
-            aria-current={ch.id === channel ? "page" : undefined}
-            onClick={
-              ch.id === "commission" ? () => onForge?.()
-              : ch.id === "rulebook" ? () => onRulebook?.()
-              : undefined
-            }
-            className={"v2-channel" + (ch.id === channel ? " is-active" : "")}
-          >
-            <span className="v2-channel-num">{ch.num}</span>{ch.label}
-          </button>
-        ))}
-      </nav>
 
       <main className="v2-screen">{children}</main>
 

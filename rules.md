@@ -260,7 +260,7 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 7. **Impact Roll.** For **each hit**, roll 1 D6 and add the weapon's **STR** (adjusted for the firing Rig's weight class, §12). For a **ranged** attack, add **+2 STR** into the target's **side arc** or **+4 STR** into its **rear arc**. **Melee attacks gain no arc bonus** — a melee weapon strikes just as hard from any facing, and being in contact is deadly enough. *(Raking Fire machine guns override the ranged side/rear values — §13.)* Compare each total to the location's row in the Impact Table (§2).
 8. **Apply damage.** Direct = **−1 SP**, Severe = **−2 SP**, Critical = **−3 SP**.
 
-**Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage.
+**Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage. *(Engine note: the digital tracker auto-routes overflow to the Hull, or the next location with SP remaining if the Hull is already at 0.)*
 
 A Rig is **destroyed** when all four components are at 0 SP, or by the Hull/Engine rules in §8.
 
@@ -272,9 +272,9 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 
 | Location | At 0 SP | Additional damage |
 |---|---|---|
-| **Legs** | Move −3"; pivots cost double movement; cannot backpedal. | Rig is **immobilised** for the game (may still pivot). |
+| **Legs** | Move −3"; pivots cost double movement; cannot backpedal. | Rig is **immobilised** for the game (may still pivot); **1 damage spills to Hull** (overflow). |
 | **Hull** | −2 to maximum actions per activation; −1 Aim. | Rig suffers **total system failure — destroyed**. |
-| **Arms** | Roll D12 for which weapon is destroyed (see below); its munitions explode: **1 damage to Hull and 1 to Engine**. | Same weapon: **3 damage to Hull**; weapon gone for the game. |
+| **Arms** | Roll D12 for which weapon is destroyed (see below); its munitions explode: **1 damage to Hull and 1 to Engine**. | Same weapon: **1 damage to Hull** (overflow); weapon already gone. |
 | **Engine** | Rig **loses its next activation**; heat cannot drop below 3 (raise to 3 if lower). | Rig suffers **total system failure — destroyed**. |
 
 **Arms — which weapon?**
