@@ -46,6 +46,13 @@ test("No Damage module falls back to the Sidearm (opts.unit ignored)", () => {
   assert.deepEqual(u.modules, ["repair", "recon"]);
 });
 
+test("A Damage module can fit a melee unit-weapon (Dozer Blade)", () => {
+  const u = makeUnit("tank", 1, "Rammer", "a", { unit: "Dozer Blade", modules: ["damage", "coolant"] });
+  assert.ok(u);
+  assert.equal(u.weapons.unit, "Dozer Blade");
+  assert.deepEqual(u.modules, ["damage", "coolant"]);
+});
+
 test("A plain tank (no modules) is unchanged: single flat-pick weapon, empty modules", () => {
   const u = makeUnit("tank", 3, "Line Tank", "b", { unit: "Autocannon Mount" });
   assert.ok(u);

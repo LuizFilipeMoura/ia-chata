@@ -2471,6 +2471,28 @@ test("formatBattleState renders a Tank without heat and with a single unit weapo
   assert.ok(view.includes("weapon Tank Cannon"));
 });
 
+test("formatBattleState surfaces a support unit's modules in its line", () => {
+  const room = createRoom("Rmod"); claimSide(room, { name: "u", side: "a" });
+  const walker = makeUnit("walker", 1, "Welder", "a", { modules: ["repair", "recon"] });
+  room.rigs.push(walker);
+  const view = formatBattleState(room, "a");
+  assert.match(view, /modules repair, recon/);
+});
+
+test("formatBattleState flags a painted enemy [PAINTED] only while its painter is alive", () => {
+  const room = createRoom("Rpaint"); claimSide(room, { name: "u", side: "a" });
+  const painter = makeUnit("walker", 1, "Spotter", "a", { modules: ["repair", "recon"] });
+  const foe = makeUnit("tank", 2, "Foe", "b", { unit: "Tank Cannon" });
+  foe.painted = { by: "a", painterId: 1 };
+  room.rigs.push(painter, foe);
+  const alive = formatBattleState(room, "b");
+  assert.match(alive, /Foe \(Tank, owner b\).*\[PAINTED\]/);
+
+  painter.destroyed = true;
+  const dead = formatBattleState(room, "b");
+  assert.doesNotMatch(dead, /\[PAINTED\]/);
+});
+
 test("__test.setRigSp sets skipNextActivation via power-role, not literal 'engine'", () => {
   const room = createRoom("Rp"); claimSide(room, { name: "u", side: "a" });
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });

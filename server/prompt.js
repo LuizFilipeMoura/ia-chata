@@ -50,7 +50,7 @@ export const TRACKER_PROTOCOL = [
   "  tank: hull|tracks|turret|engine",
   "  walker: hull|legs|mount|engine",
   "- If the player asks to add a Tank or Walker, use `kind=\"tank\"` or `kind=\"walker\"` and set exactly one `unit=\"…\"` field from the flat unit-weapon list. Tanks and Walkers have no class, no long-range/melee split, no equipment.",
-  "- Valid Unit weapons (Tanks / Walkers): " + Object.keys(UNIT_WEAPONS).join(", ") + ".",
+  "- Valid Unit weapons (Tanks / Walkers): " + Object.keys(UNIT_WEAPONS).filter((w) => w !== "Sidearm").join(", ") + ".",
   "- Tanks and Walkers do not have Heat and cannot Overheat. Do not emit `heat` tags for them.",
   "- Support units: a Tank or Walker may carry `modules=\"x,y\"` — exactly TWO distinct of: damage, repair, coolant, recon. Omit `modules` for a plain combat Tank/Walker.",
   "  A Damage module uses the `unit` weapon; if there is no Damage module, omit `unit` (the unit carries a built-in weak Sidearm). Support units still have no Heat.",

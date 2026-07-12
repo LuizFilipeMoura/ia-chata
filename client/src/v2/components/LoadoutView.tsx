@@ -1,6 +1,7 @@
 import "../styles/rig-terminal.css";
 import { weaponGlyph, natureLabel } from "../lib/commissionData";
 import type { Loadout, LoadoutWeapon } from "../../lib/loadout";
+import { MODULES } from "/shared/unit-kinds.js";
 
 // One base stat term, with an optional green "+N" upgrade mark beside it.
 function Stat({ label, base, delta }: { label: string; base: number | string; delta: number }) {
@@ -66,7 +67,7 @@ export function LoadoutView({ loadout }: { loadout: Loadout }) {
           </div>
           <div className="v2-rt-lo-perks">
             {loadout.modules.map((m) => (
-              <span key={m} className="v2-rt-lo-perk">{m}</span>
+              <span key={m} className="v2-rt-lo-perk">{MODULES[m]?.label || m}</span>
             ))}
           </div>
         </div>

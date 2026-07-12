@@ -2608,7 +2608,13 @@ export function formatBattleState(room, side) {
         }
       }
       const chassis = cfg.id === "rig" ? rig.weightClass : cfg.label;
-      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}`);
+      let extra = "";
+      if (Array.isArray(rig.modules) && rig.modules.length) extra += `; modules ${rig.modules.join(", ")}`;
+      if (rig.painted) {
+        const painter = findRigById(room, rig.painted.painterId);
+        if (painter && !painter.destroyed) extra += " [PAINTED]";
+      }
+      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}${extra}`);
     }
   }
   const sideId = normalizeSide(room, side);
