@@ -385,7 +385,7 @@ test("adding or removing rigs before start resets ready flags", () => {
   assert.equal(r.game.sides.every((s) => s.ready === false), true);
 });
 
-test("both ready starts game and assigns private random bounties", () => {
+test("both ready starts game and assigns private random priorityTargets", () => {
   const r = createRoom("X");
   claimSide(r, { name: "Owner", side: "a" });
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -400,8 +400,8 @@ test("both ready starts game and assigns private random bounties", () => {
   applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => rolls.shift() });
 
   assert.equal(r.game.started, true);
-  assert.equal(r.game.bounties.a, findRig(r, "b3").id);
-  assert.equal(r.game.bounties.b, findRig(r, "a1").id);
+  assert.equal(r.game.priorityTargets.a, findRig(r, "b3").id);
+  assert.equal(r.game.priorityTargets.b, findRig(r, "a1").id);
 });
 
 test("public state only exposes the requesting side bounty", () => {
@@ -416,10 +416,10 @@ test("public state only exposes the requesting side bounty", () => {
   applyCommand(r, { verb: "ready", attrs: { side: "a" } }, {}, { random: () => 0 });
   applyCommand(r, { verb: "ready", attrs: { side: "b" } }, {}, { random: () => 0 });
 
-  assert.deepEqual(Object.keys(publicState(r, "a").game.bounties), ["a"]);
-  assert.deepEqual(Object.keys(publicState(r, "b").game.bounties), ["b"]);
-  assert.equal(publicState(r, "a").game.bounties.b, undefined);
-  assert.equal(publicState(r, "b").game.bounties.a, undefined);
+  assert.deepEqual(Object.keys(publicState(r, "a").game.priorityTargets), ["a"]);
+  assert.deepEqual(Object.keys(publicState(r, "b").game.priorityTargets), ["b"]);
+  assert.equal(publicState(r, "a").game.priorityTargets.b, undefined);
+  assert.equal(publicState(r, "b").game.priorityTargets.a, undefined);
 });
 
 test("engine heat cannot cool below 3 once catastrophic; recovery-less heat math", () => {

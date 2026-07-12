@@ -434,7 +434,7 @@ export function createRoom(code) {
       ],
       objectives: computeObjectives(field),
       started: false,
-      bounties: {},
+      priorityTargets: {},
       autoResolve: true,
       phase: "setup",
       deployOrder: [],
@@ -570,7 +570,7 @@ function ensureGameShape(room) {
     room.game.objectives = computeObjectives(room.field);
   }
   if (typeof room.game.started !== "boolean") room.game.started = false;
-  room.game.bounties ||= {};
+  room.game.priorityTargets ||= {};
   room.rigs ||= [];
   if (typeof room.game.autoResolve !== "boolean") room.game.autoResolve = true;
   room.game.phase ||= "setup";
@@ -908,7 +908,7 @@ export function canAddRigForSide(room, sideId) {
 function resetReadyBeforeStart(room) {
   if (room.game.started) return;
   for (const side of room.game.sides) side.ready = false;
-  room.game.bounties = {};
+  room.game.priorityTargets = {};
   room.game.deployOrder = [];
 }
 
@@ -997,7 +997,7 @@ function resetGameShape(room) {
   room.game.suddenDeath = false;
   room.game.deployOrder = [];
   room.game.initiative = null;
-  room.game.bounties = {};
+  room.game.priorityTargets = {};
   room._history = [];
   for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
 }
@@ -1006,13 +1006,13 @@ function resetGameShape(room) {
 // inference. Bounty for each side = its first enemy rig. turn.side = `first`.
 function startGameSeeded(room, first) {
   const other = first === "b" ? "a" : "b";
-  const bounties = {};
+  const priorityTargets = {};
   for (const side of room.game.sides) {
     const target = room.rigs.find((rig) => (rig.owner || "a") !== side.id);
     if (!target) return false;
-    bounties[side.id] = target.id;
+    priorityTargets[side.id] = target.id;
   }
-  room.game.bounties = bounties;
+  room.game.priorityTargets = priorityTargets;
   room.game.started = true;
   room.game.phase = "initiative";
   room.game.round = 1;
@@ -1033,13 +1033,13 @@ function maybeStartGame(room, random = Math.random) {
   const canStart = room.game.sides.every((side) => side.ready && sideRigCount(room, side.id) >= 3);
   if (!canStart) return false;
 
-  const bounties = {};
+  const priorityTargets = {};
   for (const side of room.game.sides) {
     const target = randomPick(room.rigs.filter((rig) => (rig.owner || "a") !== side.id), random);
     if (!target) return false;
-    bounties[side.id] = target.id;
+    priorityTargets[side.id] = target.id;
   }
-  room.game.bounties = bounties;
+  room.game.priorityTargets = priorityTargets;
   room.game.started = true;
   room.game.phase = "initiative";
   room.game.round = 1;
@@ -2573,8 +2573,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
 export function publicState(room, side) {
   ensureGameShape(room);
   const sideId = normalizeSide(room, side);
-  const bounties = {};
-  if (sideId && room.game.bounties[sideId]) bounties[sideId] = room.game.bounties[sideId];
+  const priorityTargets = {};
+  if (sideId && room.game.priorityTargets[sideId]) priorityTargets[sideId] = room.game.priorityTargets[sideId];
   const viewer = sideId;
   const top = room._history?.[room._history.length - 1];
   const canUndo = !!top && room.game.phase === "activation" && top.side === viewer;
@@ -2597,7 +2597,7 @@ export function publicState(room, side) {
       ...room.game,
       sides: room.game.sides.map((s) => ({ ...s })),
       objectives: room.game.objectives.map((objective) => ({ ...objective })),
-      bounties,
+      priorityTargets,
       canUndo,
     },
     rigs,
@@ -2653,7 +2653,7 @@ export function formatBattleState(room, side) {
     }
   }
   const sideId = normalizeSide(room, side);
-  const bountyId = sideId ? g.bounties[sideId] : null;
+  const bountyId = sideId ? g.priorityTargets[sideId] : null;
   const bounty = bountyId ? room.rigs.find((rig) => rig.id === bountyId) : null;
   if (bounty) lines.push(`Your Ironclad Bounty: ${bounty.name}`);
   return lines.join("\n");
