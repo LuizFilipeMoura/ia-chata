@@ -143,7 +143,7 @@ export interface GameState {
   sides: Side[];
   objectives?: Objective[];
   turn?: Turn | null;
-  bounties?: Record<string, number>;
+  priorityTargets?: Record<string, number>;
   outcome?: unknown;
   resolutions?: Resolution[];
   recoveryClaims?: Record<string, number[]>;

@@ -2671,9 +2671,9 @@ export function formatBattleState(room, side) {
     }
   }
   const sideId = normalizeSide(room, side);
-  const bountyId = sideId ? g.priorityTargets[sideId] : null;
-  const bounty = bountyId ? room.rigs.find((rig) => rig.id === bountyId) : null;
-  if (bounty) lines.push(`Your Ironclad Bounty: ${bounty.name}`);
+  const targetId = sideId ? g.priorityTargets[sideId] : null;
+  const target = targetId ? room.rigs.find((rig) => rig.id === targetId) : null;
+  if (target) lines.push(`Your Priority Target: ${target.name}`);
   return lines.join("\n");
 }
 

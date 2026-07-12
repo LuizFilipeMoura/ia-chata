@@ -331,10 +331,7 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 - **On points:** after **10 rounds**, **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
 
 ### Priority Elimination
-Wrecking an enemy Rig scores the **opposing side** a flat **+2 VP**, immediately and permanently — however the Rig died. A machine that overheats itself into scrap still hands **+2 VP** to the enemy; the wreck is theirs to claim. This scores **once per Rig** and stacks with objective control, so pressing the attack pays even when you can't hold the markers.
-
-### Optional — Ironclad Bounty
-Each player secretly notes one enemy Rig as their **Priority Target**. Destroying it is worth **+2 VP** — a light combat incentive that fits a 3-Rig brawl, where every machine matters.
+At the start of every round each squadron is assigned a single **Priority Target** — one random enemy Rig, known only to the hunting side. Destroy **your** Priority Target and you score **+2 VP**; wrecking any other enemy Rig scores nothing. The target is re-rolled each round, so the pressure moves from machine to machine. This is the game's only kill reward — it pays to hunt the mark, not just trade blows.
 
 ---
 

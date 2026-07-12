@@ -23,10 +23,10 @@ export function BattleSetup() {
   let readyText: string;
 
   if (started) {
-    const bountyId = game?.bounties?.[mySide];
-    const bounty = rigs.find((rig) => rig.id === bountyId);
+    const targetId = game?.priorityTargets?.[mySide];
+    const target = rigs.find((rig) => rig.id === targetId);
     readyStatus = "Battle started";
-    bountyText = bounty ? `Ironclad Bounty: ${bounty.name}` : "Ironclad Bounty: awaiting target";
+    bountyText = target ? `Priority Target: ${target.name}` : "Priority Target: awaiting target";
     readyDisabled = true;
     readyText = "Started";
   } else {
