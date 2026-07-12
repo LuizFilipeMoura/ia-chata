@@ -144,62 +144,6 @@
   color: var(--v2-on-oil); background: var(--v2-oil); padding: 2px 6px;
 }
 
-/* ---- upgrade bay -------------------------------------------------------- */
-.v2-root .v2-fc-bay {
-  margin-top: 10px; background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-900));
-  border: 1px solid var(--v2-line); border-top: 2px solid var(--v2-oil-deep);
-}
-.v2-root .v2-fc-bay-head {
-  display: flex; align-items: center; gap: 8px; padding: 12px 15px; flex-wrap: wrap;
-  border-bottom: 1px solid var(--v2-line-soft);
-  font-size:var(--v2-text-base); color: var(--v2-oil);
-}
-.v2-root .v2-fc-bay-head span { font-weight: 400; letter-spacing: .06em; }
-.v2-root .v2-fc-weapon { padding: 14px 15px; }
-.v2-root .v2-fc-weapon + .v2-fc-weapon { border-top: 1px solid var(--v2-line-soft); }
-.v2-root .v2-fc-weapon-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
-.v2-root .v2-fc-weapon-icon { font-size:var(--v2-text-base); line-height: 1; }
-.v2-root .v2-fc-weapon-name { font-size:var(--v2-text-base); }
-.v2-root .v2-fc-weapon-stat { font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .1em; color: var(--v2-txt-faint); }
-
-/* nature path picker — let the 3 tracks shrink below their content on narrow
-   screens instead of blowing the modal wider than the viewport */
-.v2-root .v2-fc-path.v2-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.v2-root .v2-fc-node {
-  min-width: 0;
-  position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 11px; text-align: left;
-  cursor: pointer; background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt-dim);
-  transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast), background var(--v2-dur-fast);
-}
-.v2-root .v2-fc-node:hover { border-color: var(--v2-rivet); }
-.v2-root .v2-fc-node.nat-prototype {
-  border-color: rgba(229, 83, 58, .5);
-  background:
-    repeating-linear-gradient(45deg, rgba(229, 83, 58, .06) 0 6px, transparent 6px 12px),
-    var(--v2-iron-800);
-}
-.v2-root .v2-fc-node.nat-prototype.is-sel {
-  border-color: var(--v2-ember);
-  box-shadow: inset 0 0 0 1px rgba(229, 83, 58, .5), 0 0 16px rgba(229, 83, 58, .3);
-}
-.v2-root .v2-fc-node.locked { opacity: .4; cursor: not-allowed; }
-.v2-root .v2-fc-node.locked:hover { border-color: rgba(229, 83, 58, .5); }
-.v2-root .v2-fc-node-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.v2-root .v2-fc-node-mark { font-family: var(--v2-mono); font-size:var(--v2-text-sm); font-weight: 700; color: var(--v2-txt-faint); }
-.v2-root .v2-fc-node.is-sel .v2-fc-node-mark { color: var(--v2-oil); }
-.v2-root .v2-fc-node-name { font-size:var(--v2-text-sm); }
-.v2-root .v2-fc-node-nature {
-  font-style: normal; font-size:var(--v2-text-sm); letter-spacing: .1em;
-  padding: 1px 5px; border: 1px solid var(--v2-line);
-}
-.v2-root .v2-fc-node-nature.nat-field { color: var(--v2-txt-dim); }
-.v2-root .v2-fc-node-nature.nat-tuned { color: var(--v2-oil); border-color: var(--v2-oil-deep); }
-.v2-root .v2-fc-node-nature.nat-prototype { color: var(--v2-ember-hi); border-color: var(--v2-ember-deep); }
-.v2-root .v2-fc-node-tag {
-  font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .04em; line-height: 1.5; color: var(--v2-txt-faint);
-}
-.v2-root .v2-fc-warn { display: block; color: var(--v2-ember-hi); margin-bottom: 3px; }
-
 /* ---- equipment / unit-weapon grid --------------------------------------- */
 .v2-root .v2-fc-grid { gap: 10px; }
 .v2-root .v2-fc-equip {
@@ -217,7 +161,6 @@
 
 /* equipment slot wraps the family card + its nature sub-picker path */
 .v2-root .v2-fc-equip-slot { display: flex; flex-direction: column; gap: 8px; }
-.v2-root .v2-fc-equip-slot.is-sel .v2-fc-path { margin-top: 4px; }
 
 /* suggested-for-this-chassis highlight (distinct from .is-sel selection) */
 .v2-root .v2-fc-equip.is-suggested {
@@ -271,3 +214,44 @@
   }
   .v2-root .v2-fc-stat { flex: 1; }
 }
+
+/* Upgrade ladder — volatility slider + payoff/catch panel */
+.v2-root .v2-ul { padding: 14px 15px; }
+.v2-root .v2-ul + .v2-ul { border-top: 1px solid var(--v2-line-soft); }
+.v2-root .v2-ul-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.v2-root .v2-ul-title { font-size: var(--v2-text-base); }
+.v2-root .v2-ul-sub { font-family: var(--v2-mono); font-size: var(--v2-text-sm); letter-spacing: .1em; color: var(--v2-txt-faint); }
+.v2-root .v2-ul-scale { display: flex; justify-content: space-between; color: var(--v2-txt-faint); margin-bottom: 3px; }
+
+.v2-root .v2-ul-seg { display: flex; border: 1px solid var(--v2-line); border-radius: 6px; overflow: hidden; }
+.v2-root .v2-ul-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0;
+  padding: 7px 4px; background: transparent; border: 0; border-right: 1px solid var(--v2-line);
+  color: var(--v2-txt-dim); cursor: pointer;
+}
+.v2-root .v2-ul-tab:last-child { border-right: 0; }
+.v2-root .v2-ul-tab:hover:not(.locked) { background: rgba(255, 255, 255, .04); }
+.v2-root .v2-ul-tab-n { font-family: var(--v2-mono); font-weight: 700; font-size: var(--v2-text-sm); }
+.v2-root .v2-ul-tab-k { font-size: 10px; letter-spacing: .04em; opacity: .75; }
+.v2-root .v2-ul-tab.locked { opacity: .4; cursor: not-allowed; }
+.v2-root .v2-ul-tab.on.nat-field { background: var(--v2-ok); color: #08130c; }
+.v2-root .v2-ul-tab.on.nat-tuned { background: var(--v2-oil); color: #1a0f02; }
+.v2-root .v2-ul-tab.on.nat-prototype { background: var(--v2-ember); color: #fff; }
+
+.v2-root .v2-ul-panel { margin-top: 8px; border: 1px solid var(--v2-line); border-radius: 6px; overflow: hidden; }
+.v2-root .v2-ul-panel.nat-field { border-left: 3px solid var(--v2-ok); }
+.v2-root .v2-ul-panel.nat-tuned { border-left: 3px solid var(--v2-oil); }
+.v2-root .v2-ul-panel.nat-prototype { border-left: 3px solid var(--v2-ember); }
+.v2-root .v2-ul-panel-hd { display: flex; align-items: center; gap: 8px; padding: 7px 10px; }
+.v2-root .v2-ul-gate { background: var(--v2-ember-wash); color: var(--v2-ember-hi); border: 1px solid var(--v2-ember-deep); padding: 1px 5px; border-radius: 3px; }
+.v2-root .v2-ul-cols { display: flex; }
+.v2-root .v2-ul-col { flex: 1; padding: 9px 10px; font-size: var(--v2-text-sm); min-width: 0; }
+.v2-root .v2-ul-catch { border-left: 1px solid var(--v2-line); background: rgba(0, 0, 0, .2); }
+.v2-root .v2-ul-col-hd { margin-bottom: 3px; }
+.v2-root .v2-ul-pay .v2-ul-col-hd { color: var(--v2-ok); }
+.v2-root .v2-ul-catch .v2-ul-col-hd { color: var(--v2-oil-hi); }
+.v2-root .v2-ul-none { color: var(--v2-txt-faint); }
+.v2-root .v2-ul-meter { display: inline-flex; gap: 2px; vertical-align: middle; margin-left: 4px; }
+.v2-root .v2-ul-pip { width: 7px; height: 7px; border-radius: 50%; background: var(--v2-rivet); display: inline-block; }
+.v2-root .v2-ul-pip.on-rwd { background: var(--v2-ok); }
+.v2-root .v2-ul-pip.on-rsk { background: var(--v2-ember-hi); }
