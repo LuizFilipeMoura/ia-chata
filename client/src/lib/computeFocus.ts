@@ -1,4 +1,5 @@
 import { actionBudget } from "/shared/battle-view.js";
+import { parityStatus } from "./composition";
 import type { GameState, Rig } from "../state/types";
 
 export type FocusCtaKind = "commission" | "ready" | "initiative" | "blast" | "score" | "endTurn";
@@ -10,8 +11,6 @@ export interface Focus {
   secondary?: string;
   cta?: { label: string; kind: FocusCtaKind };
 }
-
-const MIN_RIGS_TO_READY = 3;
 
 // Single source of truth for guidance copy (mirrors battle.js:200-266). Pure:
 // all state comes in via `game`, `rigs`, `mySide`. CTAs carry a `kind` string
@@ -36,23 +35,23 @@ export function computeFocus(
     const myCount = rigCountOf(mine);
     if (myCount === 0) {
       return {
-        tone: "guide", icon: "◈", primary: "Commission your first Rig",
+        tone: "guide", icon: "◈", primary: "Commission your first unit",
         secondary: "Every squadron needs at least one.",
         cta: { label: "Commission", kind: "commission" },
       };
     }
-    if (myCount < MIN_RIGS_TO_READY) {
-      const need = MIN_RIGS_TO_READY - myCount;
+    const parity = parityStatus(rigs, mine);
+    if (!parity.atParity) {
       return {
-        tone: "guide", icon: "◈", primary: `Commission ${need} more Rig${need === 1 ? "" : "s"}`,
-        secondary: `${myCount} of ${MIN_RIGS_TO_READY} ready to deploy.`,
+        tone: "guide", icon: "◈", primary: "Match your opponent's composition",
+        secondary: parity.diffLabel ?? "Both sides must field the same units.",
         cta: { label: "Commission", kind: "commission" },
       };
     }
     if (!sideReadyOf(mine)) {
       return {
         tone: "guide", icon: "✔", primary: "Mark ready when set",
-        secondary: "Tap Ready once your squadron is built.",
+        secondary: "Rosters match — tap Ready to deploy.",
         cta: { label: "Ready", kind: "ready" },
       };
     }

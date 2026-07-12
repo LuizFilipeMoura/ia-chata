@@ -19,8 +19,44 @@ const rig = (over: Partial<Rig>): Rig => ({
 
 test("pre-battle with no rigs prompts commissioning", () => {
   const f = computeFocus(base({ started: false }), [], "a");
-  expect(f?.primary).toMatch(/Commission your first Rig/);
+  expect(f?.primary).toMatch(/Commission your first unit/);
   expect(f?.cta?.kind).toBe("commission");
+});
+
+test("pre-battle off parity shows the composition diff", () => {
+  const g = base({
+    started: false,
+    sides: [
+      { id: "a", name: "Codex", vp: 0, ready: false },
+      { id: "b", name: "Rival", vp: 0, ready: false },
+    ],
+  });
+  // a: 1 light. b: 1 light + 1 heavy. a is short 1 heavy.
+  const rigs = [
+    rig({ id: 1, owner: "a", weightClass: "light" }),
+    rig({ id: 2, owner: "b", weightClass: "light" }),
+    rig({ id: 3, owner: "b", weightClass: "heavy" as Rig["weightClass"] }),
+  ];
+  const f = computeFocus(g, rigs, "a");
+  expect(f?.primary).toBe("Match your opponent's composition");
+  expect(f?.secondary).toBe("Short 1 Heavy Rig");
+});
+
+test("pre-battle at parity prompts Ready", () => {
+  const g = base({
+    started: false,
+    sides: [
+      { id: "a", name: "Codex", vp: 0, ready: false },
+      { id: "b", name: "Rival", vp: 0, ready: false },
+    ],
+  });
+  const rigs = [
+    rig({ id: 1, owner: "a", weightClass: "light" }),
+    rig({ id: 2, owner: "b", weightClass: "light" }),
+  ];
+  const f = computeFocus(g, rigs, "a");
+  expect(f?.cta?.kind).toBe("ready");
+  expect(f?.primary).toMatch(/Mark ready/);
 });
 
 test("finished phase yields no focus", () => {
