@@ -129,6 +129,23 @@ test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", 
     { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
   assert.equal(outPlain[0].total - outReactive[0].total, 1);
   assert.equal(outPlain[0].total - outAngled[0].total, 2);
+
+  // Rear arc docks identically to side.
+  const rearPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  const rearReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  const rearAngled = rollImpacts({ weightClass: "medium" }, angled, auto, "hull",
+    { arc: "rear", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(rearPlain[0].total - rearReactive[0].total, 1);
+  assert.equal(rearPlain[0].total - rearAngled[0].total, 2);
+
+  // Front arc is unaffected: a reactive-plating target takes no dock.
+  const frontPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  const frontReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(frontReactive[0].total, frontPlain[0].total);
 });
 
 test("Raking Fire against the front arc deals no damage", () => {
