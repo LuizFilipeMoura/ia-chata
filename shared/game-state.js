@@ -1955,6 +1955,22 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
+  if (act === "paint") {
+    // Recon module (spec: Support Units) — mark an enemy so allied ranged attacks
+    // ignore its cover and gain +1 Aim until this unit's next activation.
+    if (!(rig.modules || []).includes("recon")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner === rig.owner || target.destroyed) return false; // enemies only
+    target.painted = { by: rig.owner, painterId: rig.id };
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "paint", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} paints ${target.name} — allied ranged attacks ignore its cover and gain +1 Aim until ${rig.name}'s next activation.`,
+      effects: [],
+    });
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
@@ -2267,6 +2283,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
+      // Recon paint (spec: Support Units) expires at the painter's next activation:
+      // clear every mark this rig placed as it steps up again.
+      for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
       if (rig.skipNextActivation) {
         rig.skipNextActivation = false;
         rig.activated = true;

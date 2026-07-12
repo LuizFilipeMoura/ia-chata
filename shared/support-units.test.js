@@ -145,3 +145,28 @@ test("Vent needs the coolant module and refuses a destroyed target", () => {
   assert.equal(rig.engine.heat, 5); // no module → no vent
   assert.equal(room.game.turn.actionsUsed, 0);
 });
+
+test("Paint marks an enemy; mark records painter and clears on the painter's next activation", () => {
+  const room = twoAllyRoom();
+  const enemy = makeUnit("tank", 3, "Foe", "b", { unit: "Tank Cannon" });
+  room.rigs.push(enemy);
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Foe" } }, {});
+  assert.deepEqual(enemy.painted, { by: "a", painterId: 1 });
+  assert.equal(room.game.turn.actionsUsed, 1);
+
+  // End Welder's activation, reset the turn, re-activate it — the mark clears.
+  room.rigs[0].activated = false;
+  room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 0, longRangeShots: 0 };
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  assert.equal(enemy.painted, null);
+});
+
+test("Paint requires the recon module and refuses friendly targets", () => {
+  const room = twoAllyRoom();
+  room.rigs[0].modules = ["repair", "coolant"]; // no recon
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Ally" } }, {});
+  assert.equal(room.rigs[1].painted ?? null, null); // no module → no mark
+  assert.equal(room.game.turn.actionsUsed, 0);
+});
