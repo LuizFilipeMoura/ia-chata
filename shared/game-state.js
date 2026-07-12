@@ -3,7 +3,7 @@ import { resolveAttack } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
 } from "./field.js";
-import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf } from "./unit-kinds.js";
+import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
@@ -740,7 +740,14 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
   }
   // Cold single-model kinds (tank / walker). Parts, SP, and role come from the
   // registry; the unit carries exactly one flat-pick weapon and no equipment.
-  const weaponName = normalizeUnitWeapon(opts.unit);
+  // Support units carry exactly two distinct modules; a bare tank/walker carries
+  // none. A Damage module fits the chosen unit-weapon; without one the unit falls
+  // back to the built-in Sidearm.
+  const modules = normalizeModules(opts.modules);
+  if (modules.length > 0 && modules.length !== 2) return null;
+  const weaponName = modules.length > 0
+    ? (modules.includes("damage") ? normalizeUnitWeapon(opts.unit) : "Sidearm")
+    : normalizeUnitWeapon(opts.unit);
   if (!weaponName) return null;
   const parts = {};
   for (const p of kind.parts) {
@@ -758,6 +765,8 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     owner: owner === "b" ? "b" : "a",
     parts,
     weapons: { unit: weaponName },
+    modules,
+    painted: null,
     equipment: null,
     chassis: null, // cold kinds (tank / walker) aren't commissioned from a chassis
     activated: false,
