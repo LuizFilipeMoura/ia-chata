@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   createRoom, makeRig, makeUnit, claimSide, applyCommand, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
-  EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES,
+  EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
@@ -1716,9 +1716,12 @@ test("Impale (via Vice Grip) immobilises on a D12 of 8+", () => {
   assert.equal(a1.immobilised, true);
 });
 
-test("EQUIPMENT has the 5 catalogue pieces with passive + active shape", () => {
+test("EQUIPMENT has the 8 catalogue pieces with passive + active shape", () => {
   const ids = Object.keys(EQUIPMENT).sort();
-  assert.deepEqual(ids, ["ablative-plating", "field-repair-suite", "overclock-core", "radiator-array", "servo-actuators"]);
+  assert.deepEqual(ids, [
+    "ablative-plating", "blast-furnace-core", "field-repair-suite", "overclock-core",
+    "radiator-array", "reactive-plating", "servo-actuators", "targeting-computer",
+  ]);
   for (const id of ids) {
     const e = EQUIPMENT[id];
     assert.equal(typeof e.family, "string");
@@ -1728,6 +1731,17 @@ test("EQUIPMENT has the 5 catalogue pieces with passive + active shape", () => {
     assert.equal(typeof e.active.heat, "number");
     assert.equal(typeof e.active.text, "string");
   }
+});
+
+test("EQUIPMENT has 8 families including the 3 new ones", () => {
+  assert.equal(Object.keys(EQUIPMENT).length, 8);
+  for (const id of ["blast-furnace-core", "targeting-computer", "reactive-plating"]) {
+    assert.ok(EQUIPMENT[id], `missing ${id}`);
+    assert.ok(EQUIPMENT[id].active.key, `${id} needs an active key`);
+  }
+  assert.equal(EQUIPMENT_ACTIVE_BY_KEY["heatpurgewave"], "blast-furnace-core");
+  assert.equal(EQUIPMENT_ACTIVE_BY_KEY["locksight"], "targeting-computer");
+  assert.equal(EQUIPMENT_ACTIVE_BY_KEY["popsmoke"], "reactive-plating");
 });
 
 test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {

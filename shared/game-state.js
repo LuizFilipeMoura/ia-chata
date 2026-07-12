@@ -182,6 +182,24 @@ export const EQUIPMENT = {
     active: { key: "emergencypatch", label: "Emergency Patch", heat: 2,
       text: "Guaranteed repair 2 SP to one location, no D12 roll." },
   },
+  "blast-furnace-core": {
+    family: "Thermal", label: "Blast Furnace Core",
+    passive: "Safe up to +1 over Heat Capacity before the overheat roll triggers",
+    active: { key: "heatpurgewave", label: "Heat Purge Wave", heat: 0,
+      text: "Dump banked heat: vent to Heat Capacity and scald every enemy within 3\" (players adjudicate the AoE)." },
+  },
+  "targeting-computer": {
+    family: "Fire Control", label: "Targeting Computer",
+    passive: "The first Fire this activation ignores its cover and engaged accuracy penalties",
+    active: { key: "locksight", label: "Lock Sight", heat: 1,
+      text: "Your next shot this activation rerolls all its missed to-hit dice." },
+  },
+  "reactive-plating": {
+    family: "Countermeasures", label: "Reactive Plating",
+    passive: "Side- and rear-arc attacks against this Rig take −1 STR",
+    active: { key: "popsmoke", label: "Pop Smoke", heat: 0,
+      text: "Until this Rig's next activation, every attacker is at −2 accuracy against it (and any missile Lock on it is broken)." },
+  },
 };
 
 // Reverse lookup: active-ability key -> the equipment id that grants it.
