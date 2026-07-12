@@ -4,22 +4,18 @@ import { ACTIONS } from "./rules.js";
 import { EQUIPMENT } from "./game-state.js";
 import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
 
-const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "reload", "repair", "douse", "prepare", "shutdown"];
+const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "repair", "douse", "prepare", "shutdown"];
 
 // The action console list for the active rig: each action with its heat cost and
 // whether the current budget/state allows it.
 export function availableActions(rig, turn, round) {
   const cfg = UNIT_KINDS[kindOf(rig)];
   const left = turn.actionsMax - turn.actionsUsed;
-  // Rig uses two slots (longRange + melee); flat-pick uses one "unit" slot.
-  const rangedSpent = cfg.weaponMode === "flat-pick"
-    ? rig.loaded?.unit === false
-    : rig.loaded?.longRange === false;
-  // Melee never reloads, so a spent ranged weapon still leaves a melee strike on
-  // the table — Fire stays live (flat-pick kinds carry no separate melee slot).
-  const meleeReady = cfg.weaponMode !== "flat-pick"
-    && !!rig.weapons?.melee
-    && !(rig.weaponsDestroyed || []).includes(rig.weapons.melee);
+  // Spent is one universal flag: firing any ranged weapon (Rig longRange OR a
+  // cold-kind "unit" weapon, which resolves under the longRange slot) clears
+  // loaded.longRange, and reload re-sets it. Reload is now a drawer-only path,
+  // so a spent-but-reloadable weapon keeps Fire live (Fire opens that drawer).
+  const rangedSpent = rig.loaded?.longRange === false;
   const firedRanged = (turn.longRangeShots || 0) >= 1;
   const list = ACTION_ORDER
     .filter((key) => {
@@ -37,17 +33,15 @@ export function availableActions(rig, turn, round) {
       let heat = def.heat;
       let note = "";
       if (key === "shutdown") enabled = true; // available any time; cools proportional to slots used
-      if (key === "reload") {
-        enabled = left > 0 && rangedSpent;
-      }
       // Hints only carry HIDDEN costs on an action you can still take, and only
       // when that cost isn't already shown by the heat chip or a status tag (see
       // `battleModifiers` below). Every "why this tile is greyed" or persistent-
       // state note is dropped: the disabled tile and the status tags say it.
       if (key === "fire" || key === "aimed") {
         if (rangedSpent) {
-          // Fire falls back to the melee weapon; Aimed stays a ranged-only shot.
-          if (!(key === "fire" && meleeReady)) enabled = false;
+          // Ranged is spent. Fire still opens the drawer (which offers Reload,
+          // plus a melee strike if one is live); Aimed is ranged-only, so shut it.
+          if (key === "aimed") enabled = false;
         } else if (firedRanged) {
           heat = def.heat + 1;
           note = "Second shot — +1 heat"; // surcharge rule, not obvious from the total

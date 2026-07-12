@@ -34,34 +34,25 @@ test("availableActions lists actions and marks the ones the budget allows", () =
 test("availableActions disables everything at the budget cap", () => {
   const capped = availableActions(rig(), { activeRigId: 1, actionsUsed: 5, actionsMax: 5 });
   assert.equal(capped.find((a) => a.key === "move").enabled, false);
-  assert.equal(capped.find((a) => a.key === "reload").enabled, false);
 });
 
-test("reload is disabled until a ranged weapon has actually been fired", () => {
-  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
-  const loaded = availableActions(rig(), turn).find((a) => a.key === "reload");
-  assert.equal(loaded.enabled, false); // nothing to reload yet
-  const spent = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn)
-    .find((a) => a.key === "reload");
-  assert.equal(spent.enabled, true);   // fired — reload now makes sense
-});
-
-test("a spent ranged weapon keeps Fire live for melee but disables Aimed", () => {
+test("a spent ranged weapon keeps Fire live and disables Aimed", () => {
   const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
   const ready = availableActions(rig(), turn).find((a) => a.key === "fire");
   assert.equal(ready.cost, 1);
   assert.equal(ready.enabled, true);
   const acts = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn);
   const fire = acts.find((a) => a.key === "fire");
-  assert.equal(fire.enabled, true);      // melee never reloads — still a strike
+  assert.equal(fire.enabled, true);      // opens the reload drawer (melee strike too)
   const aimed = acts.find((a) => a.key === "aimed");
   assert.equal(aimed.enabled, false);    // Aimed is a ranged-only shot
-  // With no melee weapon, Fire falls back to the reload-first lockout.
+  assert.ok(!acts.some((a) => a.key === "reload")); // reload is a drawer-only path now
+  // Even with no melee, Fire stays live so the drawer (and its Reload) is reachable.
   const noMelee = availableActions(
     rig({ weapons: { longRange: "Autocannon", melee: null }, loaded: { longRange: false, melee: true } }),
     turn,
   ).find((a) => a.key === "fire");
-  assert.equal(noMelee.enabled, false);
+  assert.equal(noMelee.enabled, true);
 });
 
 test("Fire/Aimed shows 2 heat once a ranged shot has already been fired this activation", () => {
@@ -240,14 +231,13 @@ test("Walker action console keeps prepare hidden, keeps other actions (regressio
   assert.ok(keys.includes("fire"));
 });
 
-test("Flat-pick fired: 'reload' enabled, 'fire' disabled", () => {
+test("Flat-pick fired: Fire stays live (drawer reload) and reload is not a tile", () => {
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
-  tank.loaded.unit = false; // just fired
+  tank.loaded = { longRange: false }; // just fired — spent signal is loaded.longRange
   const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 1, longRangeShots: 1 });
-  const reload = actions.find((a) => a.key === "reload");
   const fire = actions.find((a) => a.key === "fire");
-  assert.equal(reload.enabled, true);
-  assert.equal(fire.enabled, false); // no melee slot on flat-pick — spent ranged locks Fire
+  assert.equal(fire.enabled, true);                  // opens the reload drawer
+  assert.ok(!actions.some((a) => a.key === "reload")); // no standalone reload tile
 });
 
 test("availableActions blocks Move/Sprint and enables Disengage while engaged", () => {
