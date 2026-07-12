@@ -25,7 +25,7 @@
     "balance": "",
     "personality": "",
     "suggestedEquipment": [
-      { "id": "radiator-array", "reason": "Volleys and flame stack heat fast — vent harder." }
+      { "id": "blast-furnace-core", "reason": "Already runs hot — weaponize the heat instead of fighting it." }
     ]
   },
   {
@@ -54,7 +54,7 @@
     "balance": "",
     "personality": "",
     "suggestedEquipment": [
-      { "id": "servo-actuators", "reason": "A flanker lives or dies on mobility." }
+      { "id": "reactive-plating", "reason": "A flanker gets flanked back — deny the side and rear shots." }
     ]
   },
   {
@@ -68,7 +68,7 @@
     "balance": "",
     "personality": "",
     "suggestedEquipment": [
-      { "id": "radiator-array", "reason": "The Arc Gun cooks your own heat too." },
+      { "id": "blast-furnace-core", "reason": "The Arc Gun already cooks — turn redline into a threat." },
       { "id": "servo-actuators", "reason": "Fence in and out of reach on demand." }
     ]
   },
@@ -99,7 +99,7 @@
     "personality": "",
     "suggestedEquipment": [
       { "id": "ablative-plating", "reason": "An objective-holder wants every extra plate." },
-      { "id": "field-repair-suite", "reason": "Weld the shield back up and refuse to die." }
+      { "id": "reactive-plating", "reason": "Punish anything that tries to flank the anchor." }
     ]
   },
   {
@@ -113,8 +113,8 @@
     "balance": "",
     "personality": "",
     "suggestedEquipment": [
-      { "id": "overclock-core", "reason": "Extra actions to snipe then close in one turn." },
-      { "id": "radiator-array", "reason": "Big shots and the chainsaw both run hot." }
+      { "id": "targeting-computer", "reason": "One shot per activation — make it land." },
+      { "id": "overclock-core", "reason": "Extra actions to snipe then close in one turn." }
     ]
   },
   {
@@ -158,7 +158,7 @@
     "balance": "Highest Peak ACC on the board (+3) but steep falloff and only STR 10 at 24\" reach; the Talon is STR 7 and punishing on undamaged targets. Rewards range discipline and follow-through, not trading blows.",
     "personality": "Patient, predatory, precise. Marks its prey, waits for the band, then finishes what the bolt started.",
     "suggestedEquipment": [
-      { "id": "radiator-array", "reason": "The Shrike runs hot holding the sweet spot." },
+      { "id": "targeting-computer", "reason": "Sharpen the shot — a sweet-spot bolt hunter needs the first hit to count." },
       { "id": "servo-actuators", "reason": "Reposition to the band, then pounce." }
     ]
   }

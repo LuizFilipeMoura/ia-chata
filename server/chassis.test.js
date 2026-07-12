@@ -178,6 +178,16 @@ test("drops suggestions with unknown equipment ids and caps at 2", () => {
   assert.deepEqual(out.map((e) => e.id), ["radiator-array", "servo-actuators"]);
 });
 
+test("validates and merges a suggestion pointing at a new equipment family", () => {
+  const fp = tmpFile("suggest-new-family.json");
+  const id = CHASSIS[0].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [{ id: "blast-furnace-core", reason: "weaponize the heat" }] },
+  ]));
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.get(id).suggestedEquipment, [{ id: "blast-furnace-core", reason: "weaponize the heat" }]);
+});
+
 test("coerces a missing reason to a string and a non-array to []", () => {
   const fp = tmpFile("suggest-coerce.json");
   const id = CHASSIS[0].id;
