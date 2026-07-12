@@ -995,7 +995,8 @@ export function heatMeter(rig) {
   // roll. Base margin +1; Insulated Core (Field) makes it +2.
   let margin = 0;
   if (rig?.equipment === "blast-furnace-core") {
-    margin = rig?.equipmentUpgrade === "insulated-core" ? 2 : 1;
+    const up = (EQUIPMENT_UPGRADES["blast-furnace-core"] || []).find((u) => u.id === rig?.equipmentUpgrade);
+    margin = up?.effect?.thermalMargin ?? 1;
   }
   const effCap = cap + margin;
   const over = Math.max(0, heat - effCap);

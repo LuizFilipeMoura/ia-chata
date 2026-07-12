@@ -3997,8 +3997,16 @@ test("Blast Furnace Core raises the safe heat margin", () => {
     return r;
   };
   assert.equal(heatMeter(mk(null, null)).over, 1);
-  assert.equal(heatMeter(mk("blast-furnace-core", null)).over, 0);
+  // Blast furnace: base cap 5 + margin 1 → effCap 6, so heat 6 is safe (over 0)
+  // and the returned cap/zone reflect the raised threshold (6 >= effCap → redline).
+  const bfc = heatMeter(mk("blast-furnace-core", null));
+  assert.equal(bfc.over, 0);
+  assert.equal(bfc.cap, 6);
+  assert.equal(bfc.zone, "redline");
   const insulated = mk("blast-furnace-core", "insulated-core");
   insulated.engine.heat = 7;
-  assert.equal(heatMeter(insulated).over, 0);
+  const ins = heatMeter(insulated);
+  assert.equal(ins.over, 0);
+  assert.equal(ins.cap, 7); // cap 5 + margin 2
+  assert.equal(ins.zone, "redline"); // heat 7 >= effCap 7
 });
