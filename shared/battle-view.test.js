@@ -265,3 +265,16 @@ test("availableActions disables Jump Jets while engaged", () => {
   assert.ok(jj);
   assert.equal(jj.enabled, false);
 });
+
+test("module actions appear only for units carrying the matching module", () => {
+  const turn = { actionsUsed: 0, actionsMax: 3 };
+  const welder = { kind: "walker", modules: ["repair", "recon"], loaded: { unit: true }, weapons: { unit: "Sidearm" } };
+  const keys = availableActions(welder, turn, 1).map((a) => a.key);
+  assert.ok(keys.includes("fieldweld"));
+  assert.ok(keys.includes("paint"));
+  assert.ok(!keys.includes("vent")); // no coolant module
+
+  const plainTank = { kind: "tank", modules: [], loaded: { unit: true }, weapons: { unit: "Tank Cannon" } };
+  const tankKeys = availableActions(plainTank, { actionsUsed: 0, actionsMax: 2 }, 1).map((a) => a.key);
+  assert.ok(!tankKeys.includes("fieldweld") && !tankKeys.includes("vent") && !tankKeys.includes("paint"));
+});
