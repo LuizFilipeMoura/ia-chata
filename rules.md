@@ -33,11 +33,11 @@
 
 ## 1. Overview
 
-A skirmish wargame of dieselpunk war machines (**Rigs**) piloted by **Ironclads**. Each player commands a **Squadron** of 3–5 Rigs on a **54"×36"** table. Players alternate activating Rigs; each Rig manages **heat** as it moves and fights, risking overheating. The game is won by controlling **salvage objectives** (§11).
+A skirmish wargame of dieselpunk war machines (**Rigs**) piloted by **Ironclads**. Each player commands a **Squadron** of war machines on a **54"×36"** table, both sides fielding a mirrored composition (§3). Players alternate activating Rigs; each Rig manages **heat** as it moves and fights, risking overheating. The game is won by controlling **salvage objectives** (§11).
 
 Each Rig has four components — **Hull, Arms, Legs, Engine** — each with its own **Structure Points (SP)**. Reduce a component to 0 SP and it suffers **catastrophic damage**; destroy the key components and the Rig dies.
 
-**You need:** 3–5 Rig models per side, D6 and D12 dice, a tape measure (inches), terrain, 3 objective markers, and tokens for preparations and catastrophic damage.
+**You need:** a matched force per side (see §3 — both sides field the same composition), D6 and D12 dice, a tape measure (inches), terrain, 3 objective markers, and tokens for preparations and catastrophic damage.
 
 > Only **Light** and **Medium** Rigs are currently playable — Heavy and Colossal weapon profiles are not yet written (§12).
 
@@ -111,7 +111,7 @@ An Impact Roll total **below** a location's Direct threshold does nothing (it gl
 
 > **No Oil, no Iron, no engine types.** Squadrons are built from chassis, weapons, and one equipment slot per Rig (§15). Loadout is limited only by **weapon slots**.
 
-1. **Squadron size** — agree on **3–5 Rigs** per side. Max **1 Colossal** per Squadron.
+1. **Squadron size** — both sides field the **same composition**: the same number of Rigs in each weight class, the same number of Tanks, and the same number of Walkers. Any size (at least one unit per side); the two forces must mirror each other.
 2. **Choose each Rig's weight class** (§2).
 3. **Equip weapons** up to the Rig's slots. Weapons come in **two types — Long Range and Melee** (§12), and every Rig **must carry exactly one of each**:
    - Light / Medium / Heavy: **2 weapons — one Long Range and one Melee.**
@@ -120,8 +120,8 @@ An Impact Roll total **below** a location's Direct threshold does nothing (it gl
    - Each equipped weapon has **three upgrade options — one of each nature (Field / Tuned / Prototype)** (§12), and the Rig's equipment offers the same three-nature choice (§15). Choose **one** upgrade for the Long Range weapon, **one** for the Melee weapon, and **one** for the equipment when the Rig is commissioned; a Rig may run **at most one Prototype across its two weapons and its equipment**. A selected upgrade modifies only the item it's chosen for.
 
 ### Balancing without points
-- **Balanced game (recommended):** both sides field the **same number of Rigs in each weight class** (mirror the composition).
-- **Cinematic game:** bring whatever you like.
+- **Mirror composition (required):** neither side may deploy until both forces match unit-for-unit by kind — and, for Rigs, by weight class. Readiness is locked until parity is met.
+- **Cinematic game:** an off-tracker house variant — bring whatever you like, parity not enforced.
 
 ---
 
@@ -636,7 +636,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 
 ## 16. Design Notes & Open Items
 
-**Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, and **engine types** (Crude Oil / Diesel / Arc). Equipment returned in a redesigned form as the single-slot system in §15. Squadrons balance by matching composition (§3); heat tolerance is set by weight class (§6).
+**Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, and **engine types** (Crude Oil / Diesel / Arc). Equipment returned in a redesigned form as the single-slot system in §15. Squadrons are balanced by enforced mirror composition (§3); heat tolerance is set by weight class (§6).
 
 **Distance scale:** distances suit the models this ruleset uses on a **54"×36"** table — **Light 60 mm**, **Medium 75 mm** bases (Heavy 90, Colossal 120).
 
