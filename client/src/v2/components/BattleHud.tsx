@@ -16,10 +16,13 @@ export function BattleHud() {
   useEffect(() => {
     const log = game?.resolutions || [];
     if (!killSeeded.current) {
+      if (!game?.started) return;            // wait for real hydrated state before seeding
       killSeeded.current = true;
       lastKillId.current = log.length ? log[log.length - 1].id : 0;
       return;
     }
+    // Only the newest kill in a batched update toasts; lastKillId jumps past all
+    // fresh entries so earlier ones are intentionally dropped.
     const fresh = log.filter((e) => e.id > lastKillId.current && e.vp);
     if (!fresh.length) return;
     const latest = fresh[fresh.length - 1];
@@ -28,7 +31,7 @@ export function BattleHud() {
     setToast(`${scorer?.name ?? "?"} — ${latest.victimName ?? "a unit"} wrecked · +${latest.vp!.amount} VP`);
     if (toastTimer.current != null) clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 4000);
-  }, [game?.resolutions]);
+  }, [game]);
   useEffect(() => () => { if (toastTimer.current != null) clearTimeout(toastTimer.current); }, []);
   if (!game?.started) return null;
   const sum = phaseSummary(game, rigs);

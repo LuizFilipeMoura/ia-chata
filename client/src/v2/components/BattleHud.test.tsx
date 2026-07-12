@@ -62,6 +62,16 @@ test("pops a kill toast when a fresh destruction resolution carries a vp award",
   rerender(<AppProviders><Seed state={killed}/><BattleHud/></AppProviders>);
   expect(await screen.findByText(/Ravager wrecked · \+2 VP/)).toBeInTheDocument();
 });
+test("does not toast for a kill already in the backlog on (re)connect", async () => {
+  const hydrated: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:2,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[{ id:5, kind:"destruction", rigId:9, victimName:"Ravager", vp:{ side:"a", amount:2 }, effects:[] }] } };
+  render(<AppProviders><Seed state={hydrated}/><BattleHud/></AppProviders>);
+  await screen.findByText(/Kostov 2/);       // HUD hydrated
+  expect(screen.queryByText(/Ravager/)).toBeNull();  // stale backlog kill must NOT toast
+});
 test("audio mute button toggles battle audio", async () => {
   localStorage.clear(); _resetForTest();
   const user = userEvent.setup();
