@@ -111,6 +111,32 @@ test("enforceChassis rejects an upgrade id that isn't valid for the weapon", () 
   assert.ok(out.error);
 });
 
+test("enforceChassis rejects a weapon Prototype + an equipment Prototype", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    longRangeUpgrade: "penetrator-rounds", meleeUpgrade: "vice-grip",
+    equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+  } });
+  assert.ok(out.error);
+});
+
+test("enforceChassis allows a lone equipment Prototype", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    longRangeUpgrade: "depleted-core", meleeUpgrade: "vice-grip",
+    equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+  } });
+  assert.equal(out.error, undefined);
+});
+
+test("enforceChassis rejects an unknown equipment upgrade id", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    equipment: "ablative-plating", equipmentUpgrade: "not-a-real-upgrade",
+  } });
+  assert.ok(out.error);
+});
+
 test("merges suggestedEquipment from disk", () => {
   const fp = tmpFile("suggest.json");
   const id = CHASSIS[0].id;

@@ -1927,6 +1927,13 @@ test("add passes equipment through to the created rig", () => {
   assert.equal(rig.equipment, "servo-actuators");
 });
 
+test("add passes equipmentUpgrade through to the created rig", () => {
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw", equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" } });
+  const rig = findRig(r, "Bastion");
+  assert.equal(rig.equipmentUpgrade, "reinforced-plating");
+});
+
 test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy rig objects", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });

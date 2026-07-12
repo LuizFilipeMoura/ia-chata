@@ -2291,6 +2291,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           longRangeUpgrade: a.longRangeUpgrade || a.lrUpgrade,
           meleeUpgrade: a.meleeUpgrade,
           equipment: a.equipment ?? null,
+          equipmentUpgrade: a.equipmentUpgrade ?? null,
           sp: a.sp,
           chassis: a.chassis,
           // Flat-pick options
