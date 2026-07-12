@@ -296,7 +296,6 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
                     </span>
                     <span className="v2-fc-info">
                       <span className="v2-fc-tierrow">
-                        <span className="v2-fc-tier v2-eyebrow">{pb.class} class</span>
                         <span className="v2-fc-codename v2-title">{CHASSIS_NAME[pb.id] || pb.label}</span>
                       </span>
                       <span className="v2-fc-combo">

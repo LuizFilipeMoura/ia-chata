@@ -8,6 +8,10 @@
 .v2-root .v2-fw-scrim {
   z-index: 460; padding: 20px 16px; overflow-y: auto;
   opacity: 0; transition: opacity .25s ease;
+  /* Cap the centering grid track at the viewport. Without this the single auto
+     track sizes to the card's max-content and the whole modal grows past a
+     narrow screen (horizontal scroll). minmax(0,1fr) lets it shrink to fit. */
+  grid-template-columns: minmax(0, 1fr);
 }
 .v2-root .v2-fw-scrim.show { opacity: 1; }
 
@@ -108,7 +112,6 @@
 .v2-root .v2-fc-classshort { font-size:var(--v2-text-sm); letter-spacing: .14em; }
 .v2-root .v2-fc-info { flex: 1; min-width: 0; padding: 12px 15px; display: flex; flex-direction: column; gap: 4px; }
 .v2-root .v2-fc-tierrow { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-.v2-root .v2-fc-tier { letter-spacing: .12em; flex: 0 0 auto; }
 .v2-root .v2-fc-codename { font-size:var(--v2-text-lg); }
 .v2-root .v2-fc-card.is-sel .v2-fc-codename { color: var(--v2-oil-hi); }
 .v2-root .v2-fc-combo {
@@ -159,7 +162,11 @@
 .v2-root .v2-fc-weapon-name { font-size:var(--v2-text-base); }
 .v2-root .v2-fc-weapon-stat { font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .1em; color: var(--v2-txt-faint); }
 
+/* nature path picker — let the 3 tracks shrink below their content on narrow
+   screens instead of blowing the modal wider than the viewport */
+.v2-root .v2-fc-path.v2-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .v2-root .v2-fc-node {
+  min-width: 0;
   position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 11px; text-align: left;
   cursor: pointer; background: var(--v2-iron-800); border: 1px solid var(--v2-line); color: var(--v2-txt-dim);
   transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast), background var(--v2-dur-fast);
