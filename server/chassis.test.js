@@ -137,6 +137,14 @@ test("enforceChassis rejects an unknown equipment upgrade id", () => {
   assert.ok(out.error);
 });
 
+test("enforceChassis rejects an equipment upgrade with no equipment", () => {
+  const out = enforceChassis({ verb: "add", attrs: {
+    name: "X", kind: "rig", chassis: "light-claw-autocannon",
+    equipmentUpgrade: "ablative-cascade",
+  } });
+  assert.ok(out.error);
+});
+
 test("merges suggestedEquipment from disk", () => {
   const fp = tmpFile("suggest.json");
   const id = CHASSIS[0].id;
