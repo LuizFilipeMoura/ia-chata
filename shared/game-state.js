@@ -2505,6 +2505,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.actionPenaltyNextActivation = 0;
       rig.hullRepairLock = 0;
       rig.ripostedThisRound = false;
+      rig.braceRetaliatedThisRound = false;
       rig.emplaced = false;
       rig.emplaceCooldownUntil = 0;
       rig.momentum = 0; // Piledriver Protocol (§13) — clear stored Momentum on reset
