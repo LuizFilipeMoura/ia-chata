@@ -17,6 +17,7 @@ function pips(kind: "rwd" | "rsk", n: number) {
 }
 
 export function UpgradeLadder({ title, subtitle, glyph, tiers, selected, onSelect, lockPrototype }: UpgradeLadderProps) {
+  if (!tiers.length) return null;
   const current = tiers.find((t) => t.id === selected) || tiers[0];
   const { payoff, catch: risk } = splitUpgradeTag(current);
   const { reward, risk: riskPips } = upgradePips(current.nature);
@@ -31,7 +32,7 @@ export function UpgradeLadder({ title, subtitle, glyph, tiers, selected, onSelec
       </div>
 
       <div className="v2-ul-scale v2-eyebrow"><span>◂ safe</span><span>volatile ▸</span></div>
-      <div className="v2-ul-seg" role="group">
+      <div className="v2-ul-seg" role="group" aria-label={title}>
         {tiers.map((t, i) => {
           const locked = t.nature === "prototype" && lockPrototype && t.id !== selected;
           const on = t.id === current.id;
@@ -40,6 +41,7 @@ export function UpgradeLadder({ title, subtitle, glyph, tiers, selected, onSelec
               key={t.id}
               type="button"
               disabled={locked}
+              aria-pressed={on}
               data-nature={t.nature}
               className={"v2-ul-tab nat-" + t.nature + (on ? " on" : "") + (locked ? " locked" : "")}
               title={locked ? "A rig may run at most one Prototype upgrade" : t.tag}
@@ -59,11 +61,11 @@ export function UpgradeLadder({ title, subtitle, glyph, tiers, selected, onSelec
         </div>
         <div className="v2-ul-cols">
           <div className="v2-ul-col v2-ul-pay">
-            <div className="v2-ul-col-hd v2-eyebrow">Payoff <span className="v2-ul-meter">{pips("rwd", reward)}</span></div>
+            <div className="v2-ul-col-hd v2-eyebrow">Payoff <span className="v2-ul-meter" aria-hidden="true">{pips("rwd", reward)}</span></div>
             {payoff}
           </div>
           <div className="v2-ul-col v2-ul-catch">
-            <div className="v2-ul-col-hd v2-eyebrow">Catch {risk ? <span className="v2-ul-meter">{pips("rsk", riskPips)}</span> : null}</div>
+            <div className="v2-ul-col-hd v2-eyebrow">Catch {risk ? <span className="v2-ul-meter" aria-hidden="true">{pips("rsk", riskPips)}</span> : null}</div>
             {risk ? <span>⚠ {risk}</span> : <span className="v2-ul-none">None — dependable.</span>}
           </div>
         </div>
