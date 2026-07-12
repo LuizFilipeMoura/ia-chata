@@ -96,6 +96,7 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
     target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
   assert.equal(room.rigs[1].hull.sp, before); // no heal — module missing
+  assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
   // Enemy target rejected even with the module:
   room.rigs[0].modules = ["repair", "recon"];
   room.rigs[1].owner = "b";
@@ -103,4 +104,18 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
     target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
   assert.equal(room.rigs[1].hull.sp, 3); // enemy not healed
+  assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
+});
+
+test("Field Weld can't resurrect a destroyed ally", () => {
+  const room = twoAllyRoom();
+  const ally = room.rigs[1];
+  ally.destroyed = true;
+  for (const loc of ["hull", "tracks", "turret", "engine"]) ally[loc].sp = 0;
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
+    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+  assert.equal(ally.destroyed, true); // still dead — not revived
+  assert.equal(ally.hull.sp, 0); // no SP welded on
+  assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
 });

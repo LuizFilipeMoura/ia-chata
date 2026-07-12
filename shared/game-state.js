@@ -1925,7 +1925,7 @@ function performAction(room, rig, act, a, random) {
     // Repair module (spec: Support Units) — weld SP onto a friendly unit.
     if (!(rig.modules || []).includes("repair")) return false;
     const target = findRig(room, a.target);
-    if (!target || target.owner !== rig.owner) return false;
+    if (!target || target.owner !== rig.owner || target.destroyed) return false;
     const roll = rollD(12, a.dice?.weld, random);
     const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
     const names = partNamesOf(kindOf(target));
