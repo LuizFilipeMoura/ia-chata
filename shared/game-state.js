@@ -598,6 +598,7 @@ function ensureRigShape(rig) {
   if (rig.engagedWith === undefined) rig.engagedWith = null;
   if (rig.equipment === undefined) rig.equipment = null;
   if (rig.equipmentUpgrade === undefined) rig.equipmentUpgrade = null;
+  if (rig.equipmentUpgradeEffect === undefined) rig.equipmentUpgradeEffect = {};
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.smokeNextActivation !== "boolean") rig.smokeNextActivation = false;
   if (typeof rig.fireControlUsed !== "boolean") rig.fireControlUsed = false;
@@ -760,6 +761,11 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
   };
   const equipmentId = normalizeEquipment(equipment);
   const equipmentUpgradeId = normalizeEquipmentUpgrade(equipmentId, equipmentUpgrade);
+  // Resolve the chosen upgrade's effect tags once at commission and stamp the
+  // object onto the rig. Combat reads magnitudes from here (single source of
+  // truth = the catalog `effect`), avoiding a game-state import cycle in combat.js.
+  const equipmentUpgradeRow = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  const equipmentUpgradeEffect = equipmentUpgradeRow?.effect || {};
   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
   const hullMax = base.hull + (equipmentId === "ablative-plating" ? 1 : 0);
   const rig = {
@@ -776,6 +782,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     weaponUpgrades,
     equipment: equipmentId,
     equipmentUpgrade: equipmentUpgradeId,
+    equipmentUpgradeEffect,
     chassis: weapons.chassis || null, // CHASSIS id it was commissioned from — drives its flavor description in the UI
     speed: chassisSpeed,               // per-chassis Move distance (inches); null -> client uses SPEED[weightClass]
     prepare: 0,    // Phase 4
@@ -939,6 +946,9 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     engagedWith: null,
     hardened: false,
     smokeNextActivation: false,
+    // Cold kinds (tank / walker) carry no equipment, so no upgrade effect —
+    // an empty object keeps combat's `?.tag ?? default` reads on the base path.
+    equipmentUpgradeEffect: {},
     fireControlUsed: false,
     lockSightNext: false,
     actionPenaltyNextActivation: 0,

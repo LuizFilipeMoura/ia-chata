@@ -111,7 +111,7 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
 test("Reinforced Plating deepens Harden to −2 impact", () => {
   const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
   const hardened = { weightClass: "medium", hardened: true, preparation: null };
-  const reinforced = { weightClass: "medium", hardened: true, preparation: null, equipmentUpgrade: "reinforced-plating" };
+  const reinforced = { weightClass: "medium", hardened: true, preparation: null, equipmentUpgrade: "reinforced-plating", equipmentUpgradeEffect: { hardenImpact: 2 } };
   // 1 hit, d6=5 -> plain: 5 + 8 + 0(front) - 1(harden) = 12; reinforced: 5 + 8 + 0 - 2(harden) = 11
   const out = rollImpacts({ weightClass: "medium" }, hardened, auto, "hull",
     { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
@@ -126,7 +126,7 @@ test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", 
   const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
   const plain = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: null };
   const reactive = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: "reactive-plating" };
-  const angled = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: "angled-plates", equipment: "reactive-plating" };
+  const angled = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: "angled-plates", equipmentUpgradeEffect: { sideRearStr: -2 }, equipment: "reactive-plating" };
   // 1 hit, d6=5, side arc -> 5 + 8 + 2(side bonus) = 15 for plain; reactive docks -1; angled docks -2.
   const outPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
@@ -374,18 +374,18 @@ test("engaged penalty does not apply to melee weapons", () => {
 });
 
 test("Ballistic Processor: +1 ACC in the sweet band (lower modAim)", () => {
-  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" };
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor", equipmentUpgradeEffect: { sweetBandAcc: 1 } };
   const profile = WEAPONS.longRange["Autocannon"]; // has a sweet distance
   const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
-  const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet });
+  const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet });
   assert.equal(plain - inBand, 1);
   // Band predicate is |distance − sweet| ≤ 2: the +1 holds at the edge
   // (sweet + 2) but drops just outside it (sweet + 3).
   const edge = computeModifiedAim(attacker, profile, { distance: profile.sweet + 2 });
-  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 2 });
+  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet + 2 });
   assert.equal(edgePlain - edge, 1);
   const outside = computeModifiedAim(attacker, profile, { distance: profile.sweet + 3 });
-  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 3 });
+  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet + 3 });
   assert.equal(outsidePlain - outside, 0);
 });
 
