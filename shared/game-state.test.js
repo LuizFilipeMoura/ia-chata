@@ -1749,6 +1749,20 @@ test("medium-crossbow-talon chassis resolves and carries its weapons", () => {
   assert.equal(WEAPON_UPGRADES["Talon"].length, 3);
 });
 
+test("makeRig resolves speed from the chassis id", () => {
+  const rig = makeRig(1, "Shrike", "medium", "a", {
+    longRange: "Crossbow", melee: "Talon", chassis: "medium-crossbow-talon",
+  });
+  assert.equal(rig.speed, 4);
+});
+
+test("makeRig leaves speed null for a free combo with no chassis id", () => {
+  const rig = makeRig(1, "Freeform", "light", "a", {
+    longRange: "Mini Gun", melee: "Sword",
+  });
+  assert.equal(rig.speed, null);
+});
+
 test("WEAPON_UPGRADES has stable ids and effect objects for every option", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
   for (const name of all) {

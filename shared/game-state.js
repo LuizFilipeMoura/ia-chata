@@ -624,6 +624,11 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   };
 
   const weightClass = normalizedClass;
+  // Speed is a per-chassis stat. Resolve it from the commissioning chassis id so
+  // every caller (add / seed / makeUnit) gets it without threading; free-combo
+  // rigs (no chassis id) stay null and the client falls back to the class map.
+  const chassisDef = chassisById(weapons.chassis);
+  const chassisSpeed = Number.isFinite(chassisDef?.speed) ? chassisDef.speed : null;
   const d = RIG_DEFAULTS[weightClass];
   // Per-rig SP override (chassis `sp`) wins field-by-field, else the class
   // default. Lets each chassis carry its own durability without a class change.
@@ -651,6 +656,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
     weaponUpgrades,
     equipment: equipmentId,
     chassis: weapons.chassis || null, // CHASSIS id it was commissioned from — drives its flavor description in the UI
+    speed: chassisSpeed,               // per-chassis Move distance (inches); null -> client uses SPEED[weightClass]
     prepare: 0,    // Phase 4
     activated: false,
     skipNextActivation: false,
