@@ -115,6 +115,22 @@ test("Reinforced Plating deepens Harden to −2 impact", () => {
   assert.equal(out[0].total - out2[0].total, 1); // −2 vs −1 = 1 lower
 });
 
+test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: null };
+  const reactive = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: "reactive-plating" };
+  const angled = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: "angled-plates", equipment: "reactive-plating" };
+  // 1 hit, d6=5, side arc -> 5 + 8 + 2(side bonus) = 15 for plain; reactive docks -1; angled docks -2.
+  const outPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  const outReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  const outAngled = rollImpacts({ weightClass: "medium" }, angled, auto, "hull",
+    { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(outPlain[0].total - outReactive[0].total, 1);
+  assert.equal(outPlain[0].total - outAngled[0].total, 2);
+});
+
 test("Raking Fire against the front arc deals no damage", () => {
   const mini = { ...WEAPONS.longRange["Mini Gun"], perks: ["Raking Fire"] };
   const out = rollImpacts({ weightClass: "medium" }, { weightClass: "light" }, mini, "hull",

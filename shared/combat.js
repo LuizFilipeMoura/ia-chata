@@ -262,6 +262,13 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // it from −1 to −2.
   const hardenDepth = target.equipmentUpgrade === "reinforced-plating" ? 2 : 1;
   const hardened = target.hardened ? -hardenDepth : 0;
+  // Reactive Plating (Countermeasures) — side/rear attacks lose STR. Angled
+  // Plates (Field) doubles the dock to −2. Front arc is unaffected. Read the id
+  // directly off the target rig to avoid a game-state.js import cycle.
+  let ctrm = 0;
+  if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
+    ctrm = target.equipmentUpgrade === "angled-plates" ? -2 : -1;
+  }
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
   const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
@@ -278,7 +285,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     let extra = 0;
     if (hasPerk(profile, "Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
     if (hasPerk(profile, "Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
-    const total = die + str + bonus + braced + hardened + shieldBlunt + cracked + extra;
+    const total = die + str + bonus + braced + hardened + shieldBlunt + cracked + ctrm + extra;
     // Penetrator Rounds — every 3rd Autocannon volley bypasses the armour row
     // entirely: every landed hit is forced to Severe (2 SP) regardless of the
     // total rolled or the location's row.
