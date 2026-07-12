@@ -34,13 +34,13 @@ test("rigStatus tags each branch with a resolving gloss id", () => {
   expect(rigStatus(rig({ arms: comp(0, 5) })).gloss).toBe("catastrophic-damage");
   expect(rigStatus(rig({ hull: comp(2, 6) })).gloss).toBe("heavy-damage");
   expect(rigStatus(rig({ hull: comp(5, 6) })).gloss).toBe("damaged");
-  expect(rigStatus(rig()).gloss).toBe("nominal");
+  expect(rigStatus(rig({})).gloss).toBe("nominal");
   for (const s of [
     rigStatus(rig({ destroyed: true })),
     rigStatus(rig({ arms: comp(0, 5) })),
     rigStatus(rig({ hull: comp(2, 6) })),
     rigStatus(rig({ hull: comp(5, 6) })),
-    rigStatus(rig()),
+    rigStatus(rig({})),
   ]) {
     expect(GLOSS_IDS.has(s.gloss)).toBe(true);
   }
