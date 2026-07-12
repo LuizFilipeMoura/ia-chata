@@ -8,7 +8,11 @@
     "description": "A methodical light built to gut heavies. The claw pries armour open; the autocannon punches straight through the gap. Bring it when the enemy is wearing too much steel.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "ablative-plating", "reason": "Duels heavies at close range — survive the trade." },
+      { "id": "field-repair-suite", "reason": "Patch the plate the claw-work costs you." }
+    ]
   },
   {
     "id": "light-missile-flamethrower",
@@ -19,7 +23,10 @@
     "description": "A walking bonfire. Rains missile volleys from range and washes close quarters in flame, leaving targets burning long after the salvo lands.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "radiator-array", "reason": "Volleys and flame stack heat fast — vent harder." }
+    ]
   },
   {
     "id": "light-saw-minigun",
@@ -30,7 +37,11 @@
     "description": "It doesn't kill fast — it wears you down. The mini gun pins you in place while the circular saw grinds your frame into scrap that never repairs.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "servo-actuators", "reason": "Stay latched on the target you're grinding." },
+      { "id": "radiator-array", "reason": "Sustained fire runs the frame hot." }
+    ]
   },
   {
     "id": "light-wreckingball-double",
@@ -41,7 +52,10 @@
     "description": "Fast, loud, and mean. Runs down the flank, hoses exposed arcs with the twin guns, and swings a wrecking ball hard enough to reshape whatever it hits.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "servo-actuators", "reason": "A flanker lives or dies on mobility." }
+    ]
   },
   {
     "id": "light-sword-arc",
@@ -52,7 +66,11 @@
     "description": "An electro-fencer that fights with heat. The arc gun cooks and jams the enemy's systems; the sword finishes whatever's left twitching.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "radiator-array", "reason": "The Arc Gun cooks your own heat too." },
+      { "id": "servo-actuators", "reason": "Fence in and out of reach on demand." }
+    ]
   },
   {
     "id": "medium-lance-mortar",
@@ -63,7 +81,11 @@
     "description": "Half siege gun, half cavalry. Shells the field from across the table, then couches the lance and skewers anything that dares close the distance.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "servo-actuators", "reason": "Reposition between the shelling and the charge." },
+      { "id": "radiator-array", "reason": "Keep the mortar firing without cooking off." }
+    ]
   },
   {
     "id": "medium-shield-siege",
@@ -74,7 +96,11 @@
     "description": "An immovable object with a hammer. Plants on the objective behind a tower shield and refuses to die, cracking anything that comes within reach of the maul.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "ablative-plating", "reason": "An objective-holder wants every extra plate." },
+      { "id": "field-repair-suite", "reason": "Weld the shield back up and refuse to die." }
+    ]
   },
   {
     "id": "medium-sniper-chainsaw",
@@ -85,7 +111,11 @@
     "description": "A patient killer. Opens with a devastating shot on a fresh target, then closes to butcher the wounded with a screaming chainsaw.",
     "focus": "",
     "balance": "",
-    "personality": ""
+    "personality": "",
+    "suggestedEquipment": [
+      { "id": "overclock-core", "reason": "Extra actions to snipe then close in one turn." },
+      { "id": "radiator-array", "reason": "Big shots and the chainsaw both run hot." }
+    ]
   },
   {
     "id": "light-harpoon-anchor",
@@ -96,7 +126,11 @@
     "description": "A tether rig. The harpoon spears a target at range and the anchor chains it down in the lock — pick one enemy and refuse to let it leave. Fragile, but nothing it grabs gets away.",
     "focus": "Control one target: spear it, anchor it, deny the escape.",
     "balance": "Light SP and one heavy shot per turn — it wins by pinning, not by trading blows. Loses if it can't close.",
-    "personality": "Patient and vindictive. Marks a rig and hunts it to the scrapline."
+    "personality": "Patient and vindictive. Marks a rig and hunts it to the scrapline.",
+    "suggestedEquipment": [
+      { "id": "servo-actuators", "reason": "Close the gap to spear, then never let go." },
+      { "id": "ablative-plating", "reason": "Fragile hull needs the extra armour to hold the lock." }
+    ]
   },
   {
     "id": "light-rivet-pressureclaw",
@@ -107,7 +141,11 @@
     "description": "An industrial brawler. The rivet gun stitches pins into a rig at spitting range; the pressure claw crushes its locations open in melee. Grinds a target down plate by plate.",
     "focus": "Attrition: seize a location with rivets, then crack it open with the claw.",
     "balance": "Short range and low STR per hit — it must get close and stay close. Rewards focus fire on one location.",
-    "personality": "Methodical, mechanical, relentless. Treats an enemy rig like a stubborn bolt."
+    "personality": "Methodical, mechanical, relentless. Treats an enemy rig like a stubborn bolt.",
+    "suggestedEquipment": [
+      { "id": "ablative-plating", "reason": "A short-range grinder must stay close and alive." },
+      { "id": "field-repair-suite", "reason": "Outlast the target you're chewing apart." }
+    ]
   },
   {
     "id": "medium-crossbow-talon",
@@ -118,6 +156,10 @@
     "description": "The Shrike — a butcher-bird hunter. It cracks one enemy location with a surgical bolt, pounces in, and tears that same wound open with its talon.",
     "focus": "Pin & dismantle: soften a single location at range, lock in, and gut it. Weak on fresh armour by design — it must play the hunt, not brawl.",
     "balance": "Highest Peak ACC on the board (+3) but steep falloff and only STR 10 at 24\" reach; the Talon is STR 7 and punishing on undamaged targets. Rewards range discipline and follow-through, not trading blows.",
-    "personality": "Patient, predatory, precise. Marks its prey, waits for the band, then finishes what the bolt started."
+    "personality": "Patient, predatory, precise. Marks its prey, waits for the band, then finishes what the bolt started.",
+    "suggestedEquipment": [
+      { "id": "radiator-array", "reason": "The Shrike runs hot holding the sweet spot." },
+      { "id": "servo-actuators", "reason": "Reposition to the band, then pounce." }
+    ]
   }
 ]
