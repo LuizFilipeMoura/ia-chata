@@ -422,6 +422,26 @@ test("public state only exposes the requesting side bounty", () => {
   assert.equal(publicState(r, "b").game.priorityTargets.a, undefined);
 });
 
+test("rerollPriorityTargets picks a living enemy and skips destroyed rigs", () => {
+  const r = startedRoom();
+  const [b1, b2, b3] = ["b1", "b2", "b3"].map((id) => findRig(r, id));
+  b1.destroyed = true; // dead — must be skipped
+  __test.rerollPriorityTargets(r, () => 0); // 0 picks the first LIVING enemy of "a"
+  const targetA = r.game.priorityTargets.a;
+  assert.ok(targetA === b2.id || targetA === b3.id, "target is a living enemy");
+  assert.notEqual(targetA, b1.id, "destroyed rig never chosen");
+});
+
+test("advanceRound re-rolls each side's Priority Target to a living enemy", () => {
+  const r = startedRoom();
+  r.game.round = 3;
+  __test.advanceRound(r);
+  const livingEnemiesOfA = r.rigs
+    .filter((x) => (x.owner || "a") === "b" && !x.destroyed)
+    .map((x) => x.id);
+  assert.ok(livingEnemiesOfA.includes(r.game.priorityTargets.a));
+});
+
 test("engine heat cannot cool below 3 once catastrophic; recovery-less heat math", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "S", class: "light", ...W } });

@@ -977,6 +977,19 @@ function randomPick(items, random = Math.random) {
   return items[index];
 }
 
+// Re-designate each side's Priority Target: a random LIVING enemy Rig. Called at
+// battle start and every round advance. Skips destroyed Rigs; leaves a side's
+// target unset if it has no living enemies (annihilation ends the game anyway).
+function rerollPriorityTargets(room, random = Math.random) {
+  const targets = {};
+  for (const side of room.game.sides) {
+    const enemies = room.rigs.filter((r) => (r.owner || "a") !== side.id && !r.destroyed);
+    const pick = randomPick(enemies, random);
+    if (pick) targets[side.id] = pick.id;
+  }
+  room.game.priorityTargets = targets;
+}
+
 // The game-field portion of a full reset (no per-rig work). Shared by the
 // `reset` verb (which also rebuilds each rig) and the `seed` verb (which
 // discards all rigs, so it only needs this).
@@ -2090,6 +2103,7 @@ function advanceRound(room) {
       room.game.round += 1;
       room.game.phase = "initiative";
       room.game.initiative = null;
+      rerollPriorityTargets(room);
     } else {
       room.game.outcome = { winner: null, reason: "draw" };
       room.game.phase = "finished";
@@ -2098,6 +2112,7 @@ function advanceRound(room) {
     room.game.round += 1;
     room.game.phase = "initiative";
     room.game.initiative = null;
+    rerollPriorityTargets(room);
   }
 }
 
@@ -2659,4 +2674,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation, rivetHit };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, runRecovery, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };
