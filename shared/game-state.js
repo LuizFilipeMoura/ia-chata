@@ -1526,10 +1526,16 @@ function resolveFire(room, rig, target, a, act, random) {
   if (slot === "longRange" && rig.loaded.longRange === false) return false;
   const cost = 1;
   if (t.actionsUsed + cost > t.actionsMax) return false;
+  // A paint mark only helps while its painter is alive: a destroyed painter's
+  // mark lingers on the target (the sweep that clears it runs on the painter's
+  // own activation), so guard against a dead painter here (spec: "until the
+  // painter's next activation").
+  const painter = target.painted ? findRigById(room, target.painted.painterId) : null;
+  const paintedActive = !!(target.painted && target.painted.by === rig.owner && painter && !painter.destroyed);
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,
-    painted: !!(target.painted && target.painted.by === rig.owner),
+    painted: paintedActive,
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",

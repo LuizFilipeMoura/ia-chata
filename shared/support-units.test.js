@@ -191,3 +191,25 @@ test("A Recon unit holds one mark — a new Paint replaces the painter's old mar
   assert.equal(foe1.painted, null);
   assert.deepEqual(foe2.painted, { by: "a", painterId: 1 });
 });
+
+test("a destroyed painter's mark stops helping allied guns", () => {
+  // Threshold shot: Tank Cannon peak ACC 2, attacker AIM 4, cover 2, one to-hit
+  // die of 2. Unpainted modAim = 4 (die 2 misses); a live paint cancels cover
+  // and adds +1 Aim -> modAim 1 (die 2 lands). So the same die hits iff the
+  // paint is honoured — which it must NOT be once the painter (id 1) is dead.
+  function firePaintedFoe(painterDestroyed) {
+    const room = twoAllyRoom(); // rigs[0]=Welder(id 1), rigs[1]=Ally(id 2), both owner "a"
+    const foe = makeUnit("tank", 3, "Foe", "b", { unit: "Tank Cannon" });
+    room.rigs.push(foe);
+    foe.painted = { by: "a", painterId: 1 }; // marked by the Welder
+    room.rigs[0].destroyed = painterDestroyed;
+    applyCommand(room, { verb: "activate", attrs: { name: "Ally" } }, {});
+    applyCommand(room, { verb: "action", attrs: {
+      name: "Ally", action: "fire", weapon: "unit", target: "Foe", arc: "front", range: "near", cover: 2,
+      dice: { toHit: [2], location: 1, impacts: [6] },
+    } }, {});
+    return room.game.resolutions.filter((x) => x.kind === "attack").at(-1);
+  }
+  assert.match(firePaintedFoe(false).summary, /1 hit\(s\)/); // painter alive -> paint helps, shot lands
+  assert.match(firePaintedFoe(true).summary, /0 hit\(s\)/);  // painter dead -> mark ignored, shot misses
+});
