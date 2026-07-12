@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { CHASSIS } from "../shared/game-state.js";
+import { CHASSIS, EQUIPMENT } from "../shared/game-state.js";
 
 // Editable content layered on top of the code-authoritative chassis registry.
 // Weapons + weight class live in shared/game-state.js (they mirror the physical
@@ -9,12 +9,23 @@ import { CHASSIS } from "../shared/game-state.js";
 // file from ever inventing an illegal weapon combo.
 const CONTENT_FIELDS = ["description", "focus", "balance", "personality"];
 
+// Keep only well-formed suggestions pointing at a real equipment id; coerce
+// reason to a string; cap at 2. Anything else (non-array, junk rows) → [].
+function cleanSuggestions(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((s) => s && typeof s.id === "string" && EQUIPMENT[s.id])
+    .map((s) => ({ id: s.id, reason: typeof s.reason === "string" ? s.reason : "" }))
+    .slice(0, 2);
+}
+
 // Canonical entries with empty content, in registry order. The on-disk file is
 // merged onto these by id; anything it omits falls back here.
 function defaults() {
   return CHASSIS.map((p) => ({
     ...p,
     ...Object.fromEntries(CONTENT_FIELDS.map((f) => [f, ""])),
+    suggestedEquipment: [],
   }));
 }
 
@@ -43,6 +54,9 @@ export function createChassisStore(filePath) {
         ...Object.fromEntries(
           CONTENT_FIELDS.map((f) => [f, typeof row[f] === "string" ? row[f] : base[f]]),
         ),
+        suggestedEquipment: "suggestedEquipment" in row
+          ? cleanSuggestions(row.suggestedEquipment)
+          : base.suggestedEquipment,
       });
     }
     entries = defaults().map((d) => byId.get(d.id));

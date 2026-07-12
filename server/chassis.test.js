@@ -110,3 +110,49 @@ test("enforceChassis rejects an upgrade id that isn't valid for the weapon", () 
   } });
   assert.ok(out.error);
 });
+
+test("merges suggestedEquipment from disk", () => {
+  const fp = tmpFile("suggest.json");
+  const id = CHASSIS[0].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [{ id: "radiator-array", reason: "runs hot" }] },
+  ]));
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.get(id).suggestedEquipment, [{ id: "radiator-array", reason: "runs hot" }]);
+});
+
+test("defaults suggestedEquipment to an empty array", () => {
+  const fp = tmpFile("suggest-default.json");
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.all()[0].suggestedEquipment, []);
+});
+
+test("drops suggestions with unknown equipment ids and caps at 2", () => {
+  const fp = tmpFile("suggest-bad.json");
+  const id = CHASSIS[0].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [
+      { id: "not-a-real-eq", reason: "x" },
+      { id: "radiator-array", reason: "a" },
+      { id: "servo-actuators", reason: "b" },
+      { id: "ablative-plating", reason: "c" },
+    ] },
+  ]));
+  const store = createChassisStore(fp);
+  const out = store.get(id).suggestedEquipment;
+  assert.equal(out.length, 2);
+  assert.deepEqual(out.map((e) => e.id), ["radiator-array", "servo-actuators"]);
+});
+
+test("coerces a missing reason to a string and a non-array to []", () => {
+  const fp = tmpFile("suggest-coerce.json");
+  const id = CHASSIS[0].id;
+  const id2 = CHASSIS[1].id;
+  fs.writeFileSync(fp, JSON.stringify([
+    { id, suggestedEquipment: [{ id: "overclock-core" }] },
+    { id: id2, suggestedEquipment: "nope" },
+  ]));
+  const store = createChassisStore(fp);
+  assert.deepEqual(store.get(id).suggestedEquipment, [{ id: "overclock-core", reason: "" }]);
+  assert.deepEqual(store.get(id2).suggestedEquipment, []);
+});
