@@ -17,6 +17,9 @@ export const LOCS = ["hull", "arms", "legs", "engine"];
 // importing it from game-state.js.
 export { HEAT_CAPACITY };
 export const MAX_OVERHEAT_BONUS = 10;
+// Priority Elimination (§11) — flat VP the opposing side scores for wrecking an
+// enemy unit, once per unit. See docs/superpowers/specs/2026-07-11-priority-elimination-design.md.
+export const KILL_VP = 2;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 export const MAX_RIGS_PER_SIDE = 3;
 export const MAX_RIGS_TOTAL = 6;
@@ -1241,11 +1244,21 @@ function onRigDamaged(room, rig, opts) {
     rig._blastRolled = true;
     const roll = rollD(12, opts?.dice?.destruction, opts?.random);
     const exploded = roll >= 4;
+    // Priority Elimination — the side that does NOT own the wreck scores KILL_VP.
+    // Guarded by _blastRolled above, so a revived-then-rekilled unit never re-awards.
+    const scorer = room.game.sides.find((s) => s.id !== rig.owner);
+    const effects = [];
+    if (scorer) {
+      scorer.vp = (scorer.vp || 0) + KILL_VP;
+      effects.push(`+${KILL_VP} VP — Priority Elimination (${scorer.name})`);
+    }
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
+      victimName: rig.name,
+      vp: scorer ? { side: scorer.id, amount: KILL_VP } : undefined,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
-      effects: [],
+      effects,
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
   }

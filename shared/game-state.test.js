@@ -1504,6 +1504,42 @@ test("destruction rolls a D12; 4+ records a pending blast", () => {
   assert.equal(r.game.pendingBlast.exploded, true);
 });
 
+test("destroying an enemy rig scores +2 VP for the opposing side", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");        // owned by "b"
+  b1.hull.sp = 1;
+  __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 9 } });
+  assert.equal(b1.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2); // enemy scores
+  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 0); // owner does not
+  const kill = r.game.resolutions.find((e) => e.kind === "destruction" && e.rigId === b1.id);
+  assert.deepEqual(kill.vp, { side: "a", amount: 2 });
+  assert.equal(kill.victimName, b1.name);
+  assert.ok(kill.effects.some((e) => /Priority Elimination/.test(e)));
+});
+
+test("a rig lost to its own cause still scores for the other side (credit by ownership)", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");        // owned by "a"
+  a1.hull.sp = 1;
+  __test.applyDamage(r, a1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(a1.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 2); // opponent scores
+});
+
+test("kill VP is awarded once per rig, never twice", () => {
+  const r = startedRoom();
+  const b1 = findRig(r, "b1");
+  b1.hull.sp = 1;
+  __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
+  __test.setRigSp(b1, "hull", 5);     // "revive" the hull; _blastRolled stays set
+  assert.equal(b1.destroyed, false);
+  __test.applyDamage(r, b1, "hull", 9, { random: () => 0, dice: { destruction: 1 } });
+  assert.equal(b1.destroyed, true);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2); // still 2, not 4
+});
+
 test("blast applies D6 + STR 10 to each named rig and clears the pending blast", () => {
   const r = startedRoom();
   r.game.pendingBlast = { sourceId: findRig(r, "b1").id, exploded: true };
