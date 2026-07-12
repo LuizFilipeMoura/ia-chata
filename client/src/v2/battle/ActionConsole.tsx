@@ -34,7 +34,7 @@ interface Action {
 // engaged only Disengage is live (and the tile relabels to it); otherwise
 // Move/Sprint are live and Disengage sits greyed as the "why you can't move" cue.
 const GROUPS: { id: string; label: string; tone: string; glyph: string; keys: string[] }[] = [
-  { id: "attack", label: "Attack", tone: "ember", glyph: "▶", keys: ["fire", "aimed", "reload"] },
+  { id: "attack", label: "Attack", tone: "ember", glyph: "▶", keys: ["fire", "aimed"] },
   { id: "move", label: "Move", tone: "steel", glyph: "⇢", keys: ["move", "sprint", "disengage"] },
   { id: "support", label: "Support", tone: "steel", glyph: "⚙", keys: [] }, // catch-all
 ];
@@ -42,7 +42,7 @@ const GROUPS: { id: string; label: string; tone: string; glyph: string; keys: st
 // When a group collapses to a single live action, the tile borrows that action's
 // mark so its face matches what tapping it actually fires (Move → Disengage).
 const ACTION_GLYPH: Record<string, string> = {
-  move: "⇢", sprint: "⇉", disengage: "⇲", reload: "⟳", fire: "▶", aimed: "◎",
+  move: "⇢", sprint: "⇉", disengage: "⇲", fire: "▶", aimed: "◎",
   fieldweld: "🔧", vent: "❄️", paint: "🎯",
 };
 
