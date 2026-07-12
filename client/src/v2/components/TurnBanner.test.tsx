@@ -6,7 +6,7 @@ import { useRoomDispatch } from "../../state/RoomStateContext";
 import type { ServerState } from "../../state/types";
 import { TurnBanner } from "./TurnBanner";
 
-const PRIMARY_RE = /Commission your first Rig/;
+const PRIMARY_RE = /Commission your first unit/;
 
 function Seed({state}:{state:ServerState}){ const d=useRoomDispatch();
   useEffect(()=>{d({type:"setSession",session:{room:"IR",side:"a",name:"K"}});d({type:"applyServerState",state});},[d,state]); return null; }
