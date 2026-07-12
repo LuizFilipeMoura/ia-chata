@@ -1196,6 +1196,59 @@ test("reload reloads all weapons; repair rolls a D12 and heals", () => {
   assert.equal(r.game.resolutions.at(-1).kind, "repair");
 });
 
+test("reload is free for heat kinds and rolls a D6 for heat (1-3 = +2)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.loaded.longRange = false;              // just fired
+  const heat0 = b1.engine.heat;
+  const used0 = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "reload", dice: { reload: 2 } } });
+  assert.equal(b1.loaded.longRange, true);  // armed
+  assert.equal(r.game.turn.actionsUsed, used0); // 0 actions spent
+  assert.equal(b1.engine.heat - heat0, 2);  // roll 2 -> +2 heat
+});
+
+test("reload heat is +1 on a D6 of 4-6", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.loaded.longRange = false;
+  const heat0 = b1.engine.heat;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "reload", dice: { reload: 5 } } });
+  assert.equal(b1.engine.heat - heat0, 1);  // roll 5 -> +1 heat
+});
+
+test("a heat kind can reload with no actions left (reload is free)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.loaded.longRange = false;
+  r.game.turn.actionsUsed = r.game.turn.actionsMax; // budget exhausted
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "reload", dice: { reload: 6 } } });
+  assert.equal(b1.loaded.longRange, true);  // still reloads
+});
+
+test("cold kinds pay 1 action to reload and take no heat", () => {
+  const room = createRoom("COLD1");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "Foe", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword" } });
+  const tank = makeUnit("tank", 99, "Bulwark", "a", { unit: "Tank Cannon" });
+  tank.loaded = { longRange: false, melee: true };
+  room.rigs.push(tank);
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: tank.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 1 };
+  const heat0 = tank.engine.heat;
+  applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "reload" } });
+  assert.equal(tank.loaded.longRange, true);
+  assert.equal(room.game.turn.actionsUsed, 1);   // paid an action
+  assert.equal(tank.engine.heat, heat0);         // no heat charged
+});
+
 test("shut down before any action cools to the floor and ends the activation", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
@@ -1727,7 +1780,7 @@ test("a second ranged shot costs 1 slot but runs the barrel hot: +1 heat", () =>
   applyCommand(r, { verb: "action", attrs: fire }, {}, rand); // shot 2
   const secondDelta = b1.engine.heat - h1;
   assert.equal(secondDelta, firstDelta + 1);               // second shot: +1 heat
-  assert.equal(r.game.turn.actionsUsed, 3);                // fire + reload + fire = 3 slots
+  assert.equal(r.game.turn.actionsUsed, 2);                // fire + free reload + fire = 2 slots
 });
 
 test("ram action is removed — melee covers close combat, so it is a no-op", () => {

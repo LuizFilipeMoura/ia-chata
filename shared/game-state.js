@@ -2066,6 +2066,34 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
+  // Reload (§7) — arm the ranged weapon so it can fire again. RULE: reload no
+  // longer spends an action. Heat kinds pay heat instead — a d6 gamble (1-3 →
+  // +2, 4-6 → +1). Heatless cold kinds (Tank / Walker) can't be charged heat, so
+  // they keep the old 1-action price. Sits BEFORE the budget gate below so a free
+  // heat-kind reload works even at 0 actions left.
+  if (act === "reload") {
+    const heatKind = !!UNIT_KINDS[kindOf(rig)].hasHeat;
+    if (!heatKind && t.actionsUsed >= t.actionsMax) return false;
+    rig.loaded = { longRange: true, melee: true };
+    let roll = 0;
+    let heat = 0;
+    if (heatKind) {
+      roll = rollD(6, a.dice?.reload, random);
+      heat = roll <= 3 ? 2 : 1;
+      bumpHeat(rig, heat);
+    } else {
+      t.actionsUsed += 1;
+    }
+    pushResolution(room, {
+      kind: "reload", actor: rig.owner, rigId: rig.id,
+      rolls: heatKind ? [{ sides: 6, value: roll, label: "D6" }] : [],
+      summary: heatKind
+        ? `${rig.name} reloads — rolled ${roll} → +${heat} heat`
+        : `${rig.name} reloads (1 action).`,
+      effects: [],
+    });
+    return true;
+  }
   const def = ACTIONS[act];
   if (!def || t.actionsUsed >= t.actionsMax) return false;
   if (act === "fire" || act === "aimed") {
@@ -2346,9 +2374,7 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
-  if (act === "reload") {
-    rig.loaded = { longRange: true, melee: true };
-  } else if (act === "repair") {
+  if (act === "repair") {
     const roll = rollD(12, a.dice?.repair, random);
     let amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
     // Field Repair Suite (Utility) — the Repair action restores +1 additional SP.
