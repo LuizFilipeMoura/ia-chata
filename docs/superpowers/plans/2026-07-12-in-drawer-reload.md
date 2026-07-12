@@ -687,9 +687,11 @@ Replace with (note `actionsLeft` now lives here from the move above):
     return t ? Math.max(0, t.actionsMax - t.actionsUsed) : 0;
   };
 
-  // One spent flag: the ranged weapon (Rig longRange OR flat-pick unit) clears
-  // loaded.longRange when fired. It's disabled in the picker until reloaded.
-  const rangedSpent = liveRig.loaded?.longRange === false && !justReloaded;
+  // Spent on whichever ranged slot the kind uses: a Rig clears loaded.longRange
+  // when it fires (combat.js), a flat-pick cold kind clears loaded.unit. Each
+  // kind only ever writes its own flag, so this OR is exact. Disabled in the
+  // picker until reloaded.
+  const rangedSpent = (liveRig.loaded?.longRange === false || liveRig.loaded?.unit === false) && !justReloaded;
   const rangedWeaponName = flat ? weapons.unit : weapons.longRange;
   const hasMelee = !flat && !!weapons.melee
     && !(rig.weaponsDestroyed || []).includes(weapons.melee as string);

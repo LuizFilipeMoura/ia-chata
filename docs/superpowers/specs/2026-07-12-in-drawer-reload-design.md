@@ -38,27 +38,28 @@ without leaving the drawer.
 
 ## Spent-signal unification (prerequisite)
 
-`shared/game-state.js` uses `loaded.longRange` as the universal "ranged is spent" flag:
-firing any ranged weapon — including a flat-pick cold-kind "unit" weapon, which resolves
-under `slot === "longRange"` — sets `loaded.longRange = false`, and the fire gate reads the
-same field. The `reload` verb sets `loaded.longRange = true`.
+The authoritative fire resolution is `shared/combat.js` `resolveAttack`: a Rig's long-range
+shot clears `loaded.longRange` (combat.js:383) and a flat-pick cold-kind "unit" weapon clears
+`loaded.unit` (combat.js:384). Each kind only ever writes its own slot — a Rig never gets a
+`loaded.unit` key, and a flat-pick never gets `loaded.longRange` set false.
 
-`shared/battle-view.js` `availableActions`, however, reads `loaded.unit === false` for
-flat-pick kinds — a field nothing ever writes. Result: cold kinds never register as spent
-in the console, yet their real second shot is silently blocked server-side, and their
-reload tile never lights. Pre-existing bug.
+**Spent check:** detect a spent ranged weapon on **either** slot — `loaded.longRange === false
+|| loaded.unit === false`. Because the two slots are mutually exclusive by kind, this single
+OR is exact for both Rigs and cold kinds; it needs no `weaponMode` branch. Use it in
+`battle-view.js` `availableActions` and in the drawer's spent computation. (An earlier draft
+proposed collapsing to `loaded.longRange` only — that is wrong: it never trips for flat-pick
+kinds, which clear `loaded.unit`.)
 
-**Fix:** unify the spent check to `loaded.longRange === false` for all kinds. Drop the
-`loaded.unit` branch in `battle-view.js` and the `loaded.unit` branch in the drawer's spent
-computation. No code writes `loaded.unit`, so this only removes a dead, wrong read. Cold
-kinds now correctly register as spent and can reload.
+The `reload` verb (server branch below) arms `loaded = { longRange: true, melee: true }`;
+replacing the object drops any stale `unit: false` key, so a reloaded flat-pick reads as
+armed (`loaded.unit` becomes `undefined`, not `false`).
 
 ## Behavior
 
 Scope: `mode === "fire"`, non-react. (`aimed` never opens while spent; react uses a
 separate path.)
 
-**Spent state (`liveRig.loaded.longRange === false`):**
+**Spent state (`liveRig.loaded.longRange === false || liveRig.loaded.unit === false`):**
 
 - **Weapon picker:** the long-range chip renders disabled + greyed with a `Spent · reload`
   sub-label; it can't be selected. The drawer keeps auto-opening on the melee weapon (existing
@@ -100,7 +101,7 @@ Use `liveRig.loaded` for the spent check. Combined with the optimistic `justRelo
 flag, the drawer reflects the reload instantly and stays consistent with the server:
 
 ```
-const spent = liveRig.loaded?.longRange === false && !justReloaded;
+const spent = (liveRig.loaded?.longRange === false || liveRig.loaded?.unit === false) && !justReloaded;
 ```
 
 ## Server reload branch
