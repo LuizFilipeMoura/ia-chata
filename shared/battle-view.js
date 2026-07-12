@@ -181,7 +181,12 @@ export function rigModifiers(rig) {
     const p = rig.preparation;
     const hidden = p.hidden || p.faceUp === false;
     const tag = hidden ? "Reaction set" : prepLabel(p.type);
-    const gloss = hidden ? "reaction-set" : (p.type === "evasive" ? "evasive" : p.type === "return" ? "return-fire" : "braced");
+    const gloss = hidden ? "reaction-set" : (
+      p.type === "evasive" ? "evasive" :
+      p.type === "return" ? "return-fire" :
+      p.type === "riposte" ? "riposte" :
+      p.type === "sidestep" ? "sidestep" :
+      p.type === "exploit" ? "exploit" : "braced");
     mods.push({ key: "prep", tag, tone: "prep", gloss });
   }
   for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn", gloss: "weapon-lost" });
@@ -195,6 +200,9 @@ export function rigModifiers(rig) {
 function prepLabel(type) {
   if (type === "evasive") return "Evasive ready";
   if (type === "return") return "Return fire ready";
+  if (type === "riposte") return "Riposte ready";
+  if (type === "sidestep") return "Sidestep ready";
+  if (type === "exploit") return "Exploit ready";
   return "Braced";
 }
 

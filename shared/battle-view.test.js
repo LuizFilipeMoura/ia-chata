@@ -143,6 +143,15 @@ test("rigModifiers names a revealed reaction", () => {
   assert.equal(mod.tag, "Return fire ready");
 });
 
+test("rigModifiers names the new Answer counters when revealed", () => {
+  const riposte = rig({ preparation: { type: "riposte", faceUp: true } });
+  assert.equal(rigModifiers(riposte).find((m) => m.key === "prep").tag, "Riposte ready");
+  const sidestep = rig({ preparation: { type: "sidestep", faceUp: true } });
+  assert.equal(rigModifiers(sidestep).find((m) => m.key === "prep").tag, "Sidestep ready");
+  const exploit = rig({ preparation: { type: "exploit", faceUp: true } });
+  assert.equal(rigModifiers(exploit).find((m) => m.key === "prep").tag, "Exploit ready");
+});
+
 test("phaseSummary describes the phase and turn", () => {
   const game = { phase: "activation", round: 2, turn: { side: "a", activeRigId: null }, answerTokens: { a: 2, b: 0 },
     sides: [{ id: "a", name: "Ana" }, { id: "b", name: "Bo" }], outcome: null };
