@@ -146,44 +146,46 @@ export function rigModifiers(rig) {
   const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
   const mods = [];
   if (structPart && rig[structPart].sp === 0 && !rig[structPart].destroyed)
-    mods.push({ key: `${structPart}0`, tag: `${cap(structPart)} 0 · −2 actions −1 Aim`, tone: "crit" });
+    mods.push({ key: `${structPart}0`, tag: `${cap(structPart)} 0 · −2 actions −1 Aim`, tone: "crit", gloss: structPart });
   if (cfg.hasHeat && powerPart && rig[powerPart].sp === 0 && !rig[powerPart].destroyed)
-    mods.push({ key: `${powerPart}0`, tag: `${cap(powerPart)} 0 · heat ≥3`, tone: "crit" });
+    mods.push({ key: `${powerPart}0`, tag: `${cap(powerPart)} 0 · heat ≥3`, tone: "crit", gloss: powerPart });
   if (mobPart && rig[mobPart].sp === 0 && !rig.immobilised)
-    mods.push({ key: `${mobPart}0`, tag: `${cap(mobPart)} 0 · −3\" move`, tone: "warn" });
-  if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit" });
-  else if (rig.suppressImmobile) mods.push({ key: "suppress-immobile", tag: "Pinned", tone: "crit" });
-  if (rig.emplaced) mods.push({ key: "emplaced", tag: "Emplaced", tone: "prep" });
-  if ((rig.barrageRoundsLeft || 0) > 0) mods.push({ key: "barrage", tag: `Barrage ${rig.barrageRoundsLeft}`, tone: "warn" });
-  if (rig.engagedWith != null) mods.push({ key: "engaged", tag: "Engaged", tone: "warn" });
-  if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit" });
-  if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit" });
-  if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn" });
-  if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn" });
+    mods.push({ key: `${mobPart}0`, tag: `${cap(mobPart)} 0 · −3\" move`, tone: "warn", gloss: mobPart });
+  if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit", gloss: "immobilised" });
+  else if (rig.suppressImmobile) mods.push({ key: "suppress-immobile", tag: "Pinned", tone: "crit", gloss: "pinned" });
+  if (rig.emplaced) mods.push({ key: "emplaced", tag: "Emplaced", tone: "prep", gloss: "emplaced" });
+  if ((rig.barrageRoundsLeft || 0) > 0) mods.push({ key: "barrage", tag: `Barrage ${rig.barrageRoundsLeft}`, tone: "warn", gloss: "barrage" });
+  if (rig.engagedWith != null) mods.push({ key: "engaged", tag: "Engaged", tone: "warn", gloss: "engaged" });
+  if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit", gloss: "burning" });
+  if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit", gloss: "no-cooling" });
+  if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn", gloss: "speed-halved" });
+  if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn", gloss: "skip-activation" });
   // Prototype-upgrade states so the player can track them at a glance.
-  if ((rig.momentum || 0) > 0) mods.push({ key: "momentum", tag: `Momentum ${rig.momentum}`, tone: "prep" });
-  if (rig.lockedTarget != null) mods.push({ key: "locked", tag: "Missiles locked", tone: "prep" });
-  if ((rig.actionPenaltyNextActivation || 0) > 0) mods.push({ key: "actionpen", tag: `−${rig.actionPenaltyNextActivation} action next`, tone: "warn" });
-  if (rig.noPrepNextActivation) mods.push({ key: "noprep", tag: "No Prepare next", tone: "warn" });
-  if (rig.noDisengageNextActivation) mods.push({ key: "nodisengage", tag: "Anchored — no Disengage next", tone: "warn" });
-  if (rig.anchoredBy != null) mods.push({ key: "anchored", tag: "Anchored — Disengage costs a hit", tone: "warn" });
-  if (rig.noActivesNextActivation) mods.push({ key: "noactive", tag: "No actives next", tone: "warn" });
-  if (rig.arcLockedNext) mods.push({ key: "arclock", tag: "Arc Gun locked", tone: "warn" });
-  if (rig.armsSuppressed) mods.push({ key: "armssup", tag: "Arms suppressed · ½ ROF", tone: "warn" });
-  if (rig.autocannonSlowNext) mods.push({ key: "beltcycle", tag: "Belt cycling · ½ ROF", tone: "warn" });
-  for (const loc of Object.keys(rig.cracked || {})) mods.push({ key: `crack-${loc}`, tag: `Cracked: ${cap(loc)}`, tone: "warn" });
-  for (const loc of Object.keys(rig.rivetSeized || {})) mods.push({ key: `rivet-${loc}`, tag: `Riveted: ${cap(loc)}`, tone: "crit" });
-  for (const loc of Object.keys(rig.noRepair || {})) mods.push({ key: `norepair-${loc}`, tag: `No repair: ${cap(loc)}`, tone: "crit" });
+  if ((rig.momentum || 0) > 0) mods.push({ key: "momentum", tag: `Momentum ${rig.momentum}`, tone: "prep", gloss: "momentum" });
+  if (rig.lockedTarget != null) mods.push({ key: "locked", tag: "Missiles locked", tone: "prep", gloss: "missiles-locked" });
+  if ((rig.actionPenaltyNextActivation || 0) > 0) mods.push({ key: "actionpen", tag: `−${rig.actionPenaltyNextActivation} action next`, tone: "warn", gloss: "action-penalty" });
+  if (rig.noPrepNextActivation) mods.push({ key: "noprep", tag: "No Prepare next", tone: "warn", gloss: "no-prepare" });
+  if (rig.noDisengageNextActivation) mods.push({ key: "nodisengage", tag: "Anchored — no Disengage next", tone: "warn", gloss: "anchored" });
+  if (rig.anchoredBy != null) mods.push({ key: "anchored", tag: "Anchored — Disengage costs a hit", tone: "warn", gloss: "anchored" });
+  if (rig.noActivesNextActivation) mods.push({ key: "noactive", tag: "No actives next", tone: "warn", gloss: "no-actives" });
+  if (rig.arcLockedNext) mods.push({ key: "arclock", tag: "Arc Gun locked", tone: "warn", gloss: "arc-locked" });
+  if (rig.armsSuppressed) mods.push({ key: "armssup", tag: "Arms suppressed · ½ ROF", tone: "warn", gloss: "arms-suppressed" });
+  if (rig.autocannonSlowNext) mods.push({ key: "beltcycle", tag: "Belt cycling · ½ ROF", tone: "warn", gloss: "belt-cycling" });
+  for (const loc of Object.keys(rig.cracked || {})) mods.push({ key: `crack-${loc}`, tag: `Cracked: ${cap(loc)}`, tone: "warn", gloss: "cracked" });
+  for (const loc of Object.keys(rig.rivetSeized || {})) mods.push({ key: `rivet-${loc}`, tag: `Riveted: ${cap(loc)}`, tone: "crit", gloss: "riveted" });
+  for (const loc of Object.keys(rig.noRepair || {})) mods.push({ key: `norepair-${loc}`, tag: `No repair: ${cap(loc)}`, tone: "crit", gloss: "no-repair" });
   if (cfg.reactions && rig.preparation) {
     const p = rig.preparation;
-    const tag = p.hidden || p.faceUp === false ? "Reaction set" : prepLabel(p.type);
-    mods.push({ key: "prep", tag, tone: "prep" });
+    const hidden = p.hidden || p.faceUp === false;
+    const tag = hidden ? "Reaction set" : prepLabel(p.type);
+    const gloss = hidden ? "reaction-set" : (p.type === "evasive" ? "evasive" : p.type === "return" ? "return-fire" : "braced");
+    mods.push({ key: "prep", tag, tone: "prep", gloss });
   }
-  for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn" });
-  if (rig.loaded && rig.loaded.longRange === false) mods.push({ key: "unloaded", tag: "Ranged unloaded", tone: "warn" });
+  for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn", gloss: "weapon-lost" });
+  if (rig.loaded && rig.loaded.longRange === false) mods.push({ key: "unloaded", tag: "Ranged unloaded", tone: "warn", gloss: "ranged-unloaded" });
   // Recon Paint mark (spec: Support Units) — visible so a marked enemy reads
   // at a glance (allied ranged attacks ignore its cover + gain +1 Aim).
-  if (rig.painted) mods.push({ key: "painted", tag: "Painted", tone: "warn" });
+  if (rig.painted) mods.push({ key: "painted", tag: "Painted", tone: "warn", gloss: "painted" });
   return mods;
 }
 

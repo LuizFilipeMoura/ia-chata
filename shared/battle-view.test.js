@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { availableActions, actionBudget, rigModifiers, phaseSummary, outcomeText } from "./battle-view.js";
 import { makeRig, makeUnit } from "./game-state.js";
+import { GLOSSARY } from "./glossary.js";
 
 function rig(over = {}) {
   return {
@@ -286,4 +287,34 @@ test("module actions appear only for units carrying the matching module", () => 
   const plainTank = { kind: "tank", modules: [], loaded: { unit: true }, weapons: { unit: "Tank Cannon" } };
   const tankKeys = availableActions(plainTank, { actionsUsed: 0, actionsMax: 2 }, 1).map((a) => a.key);
   assert.ok(!tankKeys.includes("fieldweld") && !tankKeys.includes("vent") && !tankKeys.includes("paint"));
+});
+
+const GLOSS_IDS = new Set(GLOSSARY.map((e) => e.id));
+
+test("every rigModifiers chip carries a gloss id that resolves", () => {
+  // A rig loaded with as many concurrent states as possible.
+  const r = rig({
+    hull: { sp: 0, max: 6 }, engine: { sp: 0, max: 4, heat: 0 }, legs: { sp: 0, max: 5 },
+    immobilised: true, emplaced: true, barrageRoundsLeft: 2, engagedWith: 7,
+    burning: 2, noCool: true, speedHalvedNextRound: true, skipNextActivation: true,
+    momentum: 1, lockedTarget: 3, actionPenaltyNextActivation: 1, noPrepNextActivation: true,
+    noDisengageNextActivation: true, anchoredBy: 4, noActivesNextActivation: true,
+    arcLockedNext: true, armsSuppressed: true, autocannonSlowNext: true,
+    cracked: { hull: true }, rivetSeized: { arms: true }, noRepair: { legs: true },
+    weaponsDestroyed: ["Autocannon"], loaded: { longRange: false },
+    painted: { by: "b", painterId: 9 },
+  });
+  const mods = rigModifiers(r);
+  assert.ok(mods.length > 0);
+  for (const m of mods) {
+    assert.ok(m.gloss, `mod ${m.key} has no gloss`);
+    assert.ok(GLOSS_IDS.has(m.gloss), `mod ${m.key} gloss "${m.gloss}" not in glossary`);
+  }
+});
+
+test("a hidden reaction points at reaction-set; a revealed one names the type", () => {
+  const hidden = rigModifiers(rig({ preparation: { hidden: true } })).find((m) => m.key === "prep");
+  assert.equal(hidden.gloss, "reaction-set");
+  const evasive = rigModifiers(rig({ preparation: { type: "evasive", faceUp: true } })).find((m) => m.key === "prep");
+  assert.equal(evasive.gloss, "evasive");
 });
