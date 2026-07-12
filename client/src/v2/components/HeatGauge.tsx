@@ -2,6 +2,7 @@ import "../styles/rig-terminal.css";
 import { heatMeter } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import type { Rig } from "../../state/types";
+import { InfoTerm } from "./InfoTerm";
 
 // Read-only segmented thermometer — cap safe cells plus 4 overheat cells, with
 // the redline at the first danger cell. Mirrors V1's HeatGauge logic (heatMeter);
@@ -31,8 +32,8 @@ export function HeatGauge({ rig }: { rig: Rig }) {
   return (
     <div className="v2-heat" data-zone={m.zone}>
       <div className="v2-heat-head">
-        <span className="v2-heat-label v2-eyebrow">ENGINE HEAT</span>
-        <span className="v2-heat-read"><b>{m.heat}</b>/{m.cap}</span>
+        <InfoTerm id="heat" className="v2-heat-label v2-eyebrow">ENGINE HEAT</InfoTerm>
+        <span className="v2-heat-read"><b>{m.heat}</b>/<InfoTerm id="heat-capacity">{m.cap}</InfoTerm></span>
       </div>
       <div className="v2-heat-track">{segs}</div>
       <div className="v2-heat-note">{note}</div>
