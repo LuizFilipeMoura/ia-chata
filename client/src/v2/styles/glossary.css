@@ -45,7 +45,7 @@
 .v2-root .v2-gloss-tip {
   --arrow-x: 50%;
   position: fixed; z-index: 90; width: max-content; max-width: min(280px, calc(100vw - 20px));
-  border: 1px solid var(--v2-oil); border-radius: var(--v2-r-sm);
+  border: 1px solid var(--v2-oil); border-radius: 0;
   box-shadow: 0 18px 44px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .03);
   padding: .55rem 1.7rem .65rem .7rem;
   opacity: 0; transform: translateY(4px) scale(.97); transform-origin: top center;
@@ -73,12 +73,13 @@
   font-family: var(--v2-disp); font-size:var(--v2-text-base); line-height: 1.42;
   color: var(--v2-txt);
 }
-/* Deliberately smaller than the canonical `.v2-close` (20px vs 30px, tighter
-   radius, iron-750 vs iron-800) to suit the compact popover — kept as an
-   override rather than force-fit to the primitive's size. */
+/* Deliberately smaller than the canonical `.v2-close` (20px vs 30px, iron-750
+   vs iron-800) to suit the compact popover — kept as an override rather than
+   force-fit to the primitive's size. */
 .v2-root .v2-gloss-tip-close {
   position: absolute; top: .38rem; right: .38rem; width: 20px; height: 20px;
-  border-radius: 6px; background: var(--v2-iron-750); font-size:var(--v2-text-sm);
+  padding: 0; border-radius: 0; background: var(--v2-iron-750);
+  font-size:var(--v2-text-sm); line-height: 1;
 }
 .v2-root .v2-gloss-tip-close:hover { border-color: rgba(229, 83, 58, .4); }
 
