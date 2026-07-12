@@ -65,7 +65,11 @@
   font-family: var(--v2-disp);
   transition: border-color var(--v2-dur-fast), background var(--v2-dur-fast), color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
 }
-.v2-root .v2-aw-opt-ic { font-size:var(--v2-text-2xl); line-height: 1; }
+.v2-root .v2-aw-opt-ic {
+  /* .v2-title (applied in JSX) covers font-family/weight/color/text-shadow; unique size kept */
+  font-size:var(--v2-text-2xl);
+  line-height: 1;
+}
 .v2-root .v2-aw-opt-label { font-weight: 700; font-size:var(--v2-text-base); line-height: 1.05; }
 .v2-root .v2-aw-opt-desc {
   font-family: var(--v2-mono); font-size:var(--v2-text-sm); letter-spacing: .01em;
@@ -165,3 +169,11 @@
   grid-column: 1 / -1; font-family: var(--v2-mono); font-size:var(--v2-text-sm); color: var(--v2-ember-hi);
 }
 .v2-root .v2-vpw-total { text-align: center; margin-bottom: 10px; color: var(--v2-txt-dim); }
+
+/* A spent weapon can't be picked until it's reloaded — read it as inert iron. */
+.v2-aw-opt.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+}
+.v2-aw-opt.is-disabled .v2-aw-opt-desc { color: var(--v2-ember, #c8552b); }

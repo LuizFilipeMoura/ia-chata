@@ -39,7 +39,7 @@ const LOC_DESC: Record<string, string> = {
 type IconMap = ((opt: string) => string) | Record<string, string> | undefined;
 
 function Field({
-  label, options, selected, onChange, icon, optIcon, desc, optDesc, hidden,
+  label, options, selected, onChange, icon, optIcon, desc, optDesc, hidden, optDisabled,
 }: {
   label: string;
   options: string[];
@@ -50,6 +50,7 @@ function Field({
   desc?: string;
   optDesc?: IconMap;
   hidden?: boolean;
+  optDisabled?: (opt: string) => boolean;
 }) {
   const iconFor = (opt: string) =>
     (typeof optIcon === "function" ? optIcon(opt) : optIcon?.[opt]) || "";
@@ -69,14 +70,16 @@ function Field({
         {options.map((opt) => {
           const ic = iconFor(opt);
           const od = descFor(opt);
+          const isDisabled = optDisabled?.(opt) ?? false;
           return (
             <button
               key={opt}
               type="button"
-              className={"v2-aw-opt v2-opt" + (opt === selected ? " is-sel" : "")}
-              onClick={() => onChange(opt)}
+              disabled={isDisabled}
+              className={"v2-aw-opt v2-opt" + (opt === selected ? " is-sel" : "") + (isDisabled ? " is-disabled" : "")}
+              onClick={() => { if (!isDisabled) onChange(opt); }}
             >
-              {ic ? <span className="v2-aw-opt-ic" aria-hidden="true">{ic}</span> : null}
+              {ic ? <span className="v2-aw-opt-ic v2-title" aria-hidden="true">{ic}</span> : null}
               <span className="v2-aw-opt-label">{opt}</span>
               {od ? <span className="v2-aw-opt-desc">{od}</span> : null}
             </button>
