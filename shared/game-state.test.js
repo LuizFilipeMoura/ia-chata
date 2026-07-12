@@ -2463,6 +2463,39 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   }
 });
 
+test("every chassis carries a whole-inch speed", () => {
+  for (const c of CHASSIS) {
+    assert.equal(typeof c.speed, "number", `${c.id} has speed`);
+    assert.ok(Number.isInteger(c.speed), `${c.id} speed is a whole inch`);
+  }
+});
+
+test("speed bands reinforce the weight ladder (fastest medium < slowest light)", () => {
+  const lights = CHASSIS.filter((c) => c.class === "light").map((c) => c.speed);
+  const mediums = CHASSIS.filter((c) => c.class === "medium").map((c) => c.speed);
+  assert.ok(
+    Math.max(...mediums) < Math.min(...lights),
+    "fastest medium must be strictly slower than slowest light",
+  );
+});
+
+test("chassis speeds match the tuned table", () => {
+  const byId = Object.fromEntries(CHASSIS.map((c) => [c.id, c.speed]));
+  assert.deepEqual(byId, {
+    "light-claw-autocannon": 5,
+    "light-missile-flamethrower": 5,
+    "light-saw-minigun": 6,
+    "light-wreckingball-double": 6,
+    "light-sword-arc": 5,
+    "light-harpoon-anchor": 5,
+    "light-rivet-pressureclaw": 6,
+    "medium-lance-mortar": 3,
+    "medium-shield-siege": 3,
+    "medium-sniper-chainsaw": 4,
+    "medium-crossbow-talon": 4,
+  });
+});
+
 test("normalizeUnitWeapon is case-insensitive and rejects unknown names", () => {
   assert.equal(normalizeUnitWeapon("tank cannon"), "Tank Cannon");
   assert.equal(normalizeUnitWeapon(""), null);

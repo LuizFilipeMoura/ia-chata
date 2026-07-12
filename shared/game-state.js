@@ -88,17 +88,17 @@ export function normalizeUnitWeapon(name) {
 // Structure Points (≈2× the old class defaults) — a durability lever tuned to
 // each rig's identity; makeRig uses it in place of RIG_DEFAULTS.
 export const CHASSIS = [
-  { id: "light-claw-autocannon",      label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-missile-flamethrower", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
-  { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-wreckingball-double",  label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
-  { id: "light-sword-arc",            label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
-  { id: "light-harpoon-anchor",       label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
-  { id: "light-rivet-pressureclaw",   label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
-  { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
-  { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
-  { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
-  { id: "medium-crossbow-talon",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
+  { id: "light-claw-autocannon",      label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-missile-flamethrower", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
+  { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-wreckingball-double",  label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
+  { id: "light-sword-arc",            label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
+  { id: "light-harpoon-anchor",       label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
+  { id: "light-rivet-pressureclaw",   label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
+  { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
+  { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
+  { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+  { id: "medium-crossbow-talon",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
 ];
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
