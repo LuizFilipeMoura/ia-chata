@@ -25,3 +25,23 @@ test("orderedRigs lists my side first", () => {
   const foe = rig({ id: 2, owner: "b" });
   expect(orderedRigs([foe, mine], "a").map((r) => r.id)).toEqual([1, 2]);
 });
+
+import { GLOSSARY } from "/shared/glossary.js";
+const GLOSS_IDS = new Set(GLOSSARY.map((e: { id: string }) => e.id));
+
+test("rigStatus tags each branch with a resolving gloss id", () => {
+  expect(rigStatus(rig({ destroyed: true })).gloss).toBe("destroyed");
+  expect(rigStatus(rig({ arms: comp(0, 5) })).gloss).toBe("catastrophic-damage");
+  expect(rigStatus(rig({ hull: comp(2, 6) })).gloss).toBe("heavy-damage");
+  expect(rigStatus(rig({ hull: comp(5, 6) })).gloss).toBe("damaged");
+  expect(rigStatus(rig()).gloss).toBe("nominal");
+  for (const s of [
+    rigStatus(rig({ destroyed: true })),
+    rigStatus(rig({ arms: comp(0, 5) })),
+    rigStatus(rig({ hull: comp(2, 6) })),
+    rigStatus(rig({ hull: comp(5, 6) })),
+    rigStatus(rig()),
+  ]) {
+    expect(GLOSS_IDS.has(s.gloss)).toBe(true);
+  }
+});
