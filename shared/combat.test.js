@@ -1138,6 +1138,22 @@ test("Piledriver emits a shove instruction only when Momentum was spent on a lan
   assert.ok(!ctx3.resolutions.some((r) => /Piledriver — shove/.test(r.summary)));
 });
 
+test("Brace immovability suppresses the Momentum Swing knockback", () => {
+  const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
+  ball.movedThisActivation = true; // charge is live
+  const wall = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
+  wall.preparation = { type: "brace" };
+  const room = { rigs: [ball, wall], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, ball, wall,
+    { weapon: "melee", target: wall.name, arc: "front", range: "near",
+      dice: { toHit: [6], location: 1, impacts: [5] } }, () => 0, ctx);
+  assert.ok(!ctx.resolutions.some((r) => /knock .* back 3"/.test(r.summary)),
+    "a braced target must not receive a knockback instruction");
+  assert.ok(ctx.resolutions.some((r) => /braced \(immovable\)/.test(r.summary)),
+    "expected an immovable no-op note");
+});
+
 test("Enfilade emits the ricochet instruction on every 3rd aimed shot; non-aimed shots don't count", () => {
   const sniper = makeRig(1, "Sn", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "enfilade" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });

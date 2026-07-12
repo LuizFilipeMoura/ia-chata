@@ -483,16 +483,24 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const pushInstruction = (summary) => ctx.pushResolution(room, {
     kind: "perk", actor: attacker.owner, rigId: target.id, rolls: [], summary, effects: [summary],
   });
+  // §5 Brace — a braced Rig is IMMOVABLE: pure knockback/stagger riders are
+  // narrated as no-ops. (Tow Chain / Harpoon fling+reel, which carry their own
+  // heat/root economy, are intentionally out of scope for v1.)
+  const targetImmovable = target.preparation?.type === "brace";
   // G1a — Momentum Swing (Wrecking Ball, Tuned): a charging swing that connects
   // knocks the target back 3". Gated on the same "moved this activation" charge
   // that already granted the +2 STR, so it only fires when the charge applied.
   if (profile.upgrade?.id === "momentum-swing" && attacker.movedThisActivation && landedDamage) {
-    pushInstruction(`Momentum Swing — knock ${target.name} back 3" (move the mini).`);
+    pushInstruction(targetImmovable
+      ? `Momentum Swing — ${target.name} is braced (immovable): no knockback.`
+      : `Momentum Swing — knock ${target.name} back 3" (move the mini).`);
   }
   // G1b — Piledriver Protocol (Siege Maul, Prototype): a Momentum-spending smash
   // that connects shoves the target back 3" (piledriverSpend was computed above).
   if (piledriverSpend > 0 && landedDamage) {
-    pushInstruction(`Piledriver — shove ${target.name} back 3" (move the mini).`);
+    pushInstruction(targetImmovable
+      ? `Piledriver — ${target.name} is braced (immovable): no shove.`
+      : `Piledriver — shove ${target.name} back 3" (move the mini).`);
   }
   // G1d — Tow Chain (Wrecking Ball, Prototype): a damaging swing hooks the target
   // and flings it up to 4" where the attacker chooses, but the effort roots the
@@ -553,9 +561,13 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
     if (roll >= 8) { target.immobilised = true; effects.push(`Impale ${roll} — immobilised`); }
   }
   if (perks.includes("Staggering")) {
-    const roll = rollD(6, opts.dice?.stagger, random);
-    const note = roll <= 2 ? "pivot left" : roll <= 4 ? 'pushed 3"' : "pivot right";
-    effects.push(`Staggering ${roll} — ${note} (positional)`);
+    if (target.preparation?.type === "brace") {
+      effects.push("Staggering — braced (immovable): no displacement");
+    } else {
+      const roll = rollD(6, opts.dice?.stagger, random);
+      const note = roll <= 2 ? "pivot left" : roll <= 4 ? 'pushed 3"' : "pivot right";
+      effects.push(`Staggering ${roll} — ${note} (positional)`);
+    }
   }
   if (perks.includes("Cleave") && opts.cleaveTarget) {
     const extra = room.rigs.find((x) => x.name.toLowerCase() === String(opts.cleaveTarget).toLowerCase());
