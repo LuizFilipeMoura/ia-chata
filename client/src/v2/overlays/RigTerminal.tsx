@@ -6,6 +6,7 @@ import { buildLoadout } from "../../lib/loadout";
 import { rigStatus } from "../../lib/rigView";
 import { CompRow } from "../components/CompRow";
 import { HeatGauge } from "../components/HeatGauge";
+import { InfoTerm } from "../components/InfoTerm";
 import { ActionConsole } from "../battle/ActionConsole";
 import { LoadoutView } from "../components/LoadoutView";
 import type { Rig, Component } from "../../state/types";
@@ -77,14 +78,18 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
           <span className="v2-rt-glyph v2-title">{CLASS_GLYPH[rig.weightClass] ?? "◆"}</span>
           <div className="v2-rt-id">
             <h2 className="v2-rt-name v2-title">{rig.name}</h2>
-            <div className="v2-rt-sub">{badge}{loadoutText ? ` · ${loadoutText}` : ""}</div>
+            <div className="v2-rt-sub"><InfoTerm id="weight-class">{badge}</InfoTerm>{loadoutText ? ` · ${loadoutText}` : ""}</div>
           </div>
-          <div className={"v2-rt-status v2-rt-status--" + (st.cls || "ok")}>{st.text}</div>
+          <InfoTerm as="div" id={st.gloss} className={"v2-rt-status v2-rt-status--" + (st.cls || "ok")}>{st.text}</InfoTerm>
         </header>
 
         {mods.length > 0 && (
           <div className="v2-rt-mods">
-            {mods.map((mod, i) => <span key={i} className="v2-rt-mod" data-tone={mod.tone}>{mod.tag}</span>)}
+            {mods.map((mod, i) => (
+              <InfoTerm key={i} id={mod.gloss} className="v2-rt-mod" dataTone={mod.tone}>
+                {mod.tag}
+              </InfoTerm>
+            ))}
           </div>
         )}
 

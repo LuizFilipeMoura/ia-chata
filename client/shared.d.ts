@@ -59,7 +59,7 @@ declare module "/shared/battle-view.js" {
   export function actionBudget(rig: Rig, turn: Turn): {
     used: number; left: number; max: number; reduced: boolean;
   };
-  export function rigModifiers(rig: Rig): Array<{ tag: string; tone: string }>;
+  export function rigModifiers(rig: Rig): Array<{ key: string; tag: string; tone: string; gloss: string }>;
   export function phaseSummary(game: GameState, rigs: Rig[]): {
     label: string; round: number; turnSide?: string | null; turnName?: string;
     activeName?: string; answerTokens: Record<string, number>;

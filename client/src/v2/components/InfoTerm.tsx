@@ -8,6 +8,8 @@ interface Props {
   /** Host tag; defaults to a span. */
   as?: ElementType;
   className?: string;
+  /** Optional data-tone for chips whose CSS keys off it (e.g. .v2-rt-mod). */
+  dataTone?: string;
   children: ReactNode;
 }
 
@@ -15,12 +17,12 @@ interface Props {
 // definition via the existing tip (useV2GlossaryTip). Layers the `.v2-info`
 // affordance onto whatever the host already looks like; degrades to inert text
 // when the id has no entry, so an unmapped token never looks clickable.
-export function InfoTerm({ id, as: Tag = "span", className = "", children }: Props) {
+export function InfoTerm({ id, as: Tag = "span", className = "", dataTone, children }: Props) {
   const { showTip } = useV2GlossaryTip();
   const entry = id ? glossaryById(id) : undefined;
 
   if (!entry) {
-    return <Tag className={className || undefined}>{children}</Tag>;
+    return <Tag className={className || undefined} data-tone={dataTone}>{children}</Tag>;
   }
 
   const open = (el: HTMLElement) => showTip(id!, el);
@@ -35,6 +37,7 @@ export function InfoTerm({ id, as: Tag = "span", className = "", children }: Pro
     <Tag
       className={`v2-info${className ? ` ${className}` : ""}`}
       data-info={id}
+      data-tone={dataTone}
       role="button"
       tabIndex={0}
       aria-label={`${entry.term} — what this means`}

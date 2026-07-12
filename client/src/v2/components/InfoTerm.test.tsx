@@ -38,3 +38,8 @@ test("keeps the host className alongside v2-info", () => {
   expect(el.className).toContain("v2-info");
   expect(el.className).toContain("v2-rt-mod");
 });
+
+test("forwards data-tone to the host element", () => {
+  wrap(<InfoTerm id="burning" className="v2-rt-mod" dataTone="crit">Burning 3</InfoTerm>);
+  expect(screen.getByText("Burning 3")).toHaveAttribute("data-tone", "crit");
+});
