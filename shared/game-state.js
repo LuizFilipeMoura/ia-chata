@@ -308,12 +308,13 @@ export function upgradeNature(weaponName, upgradeId) {
   return u?.nature || null;
 }
 
-// How many of a rig's two chosen weapon upgrades are Prototype nature. Used to
-// enforce "at most one Prototype per rig" (AGENTS.md).
-export function countPrototypes(weapons = {}, upgrades = {}) {
+// How many of a rig's two weapon upgrades AND its equipment upgrade are
+// Prototype nature. Used to enforce "at most one Prototype per rig" (AGENTS.md).
+export function countPrototypes(weapons = {}, upgrades = {}, equipment, equipmentUpgrade) {
   let n = 0;
   if (upgradeNature(weapons.longRange, upgrades.longRange) === "prototype") n++;
   if (upgradeNature(weapons.melee, upgrades.melee) === "prototype") n++;
+  if (equipment && equipmentUpgradeNature(equipment, equipmentUpgrade) === "prototype") n++;
   return n;
 }
 

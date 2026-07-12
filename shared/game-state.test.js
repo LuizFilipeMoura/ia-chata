@@ -207,6 +207,24 @@ test("countPrototypes counts prototype picks across a rig's two upgrades", () =>
     { longRange: "depleted-core", melee: "vice-grip" }), 0);
 });
 
+test("countPrototypes counts an equipment Prototype", () => {
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "fletched-bolts", melee: "honed-talons" },
+    "ablative-plating", "reinforced-plating"), 0);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "fletched-bolts", melee: "honed-talons" },
+    "ablative-plating", "ablative-cascade"), 1);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "pinning-bolt", melee: "honed-talons" },
+    "ablative-plating", "ablative-cascade"), 2);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" },
+    { longRange: "pinning-bolt", melee: "honed-talons" }), 1);
+});
+
 test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
   const shieldRig = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "tower-shield" } };
   const swordRig = { weapons: { melee: "Sword" } };
