@@ -26,3 +26,12 @@ export function firstUpgradeId(name: string): string | null {
 export function firstEquipmentUpgradeId(equipmentId: string): string | null {
   return (EQUIPMENT_UPGRADES[equipmentId] || [])[0]?.id || null;
 }
+
+// One-line summaries of the ally-targeting support modules, shown on the
+// commission loadout cards. Damage is represented by the gun itself, so it is
+// intentionally absent here.
+export const MODULE_BLURB: Record<string, string> = {
+  repair:  'Field Weld — heal an ally or self within 2".',
+  coolant: 'Vent — cool a friendly Rig within 2" by 2 heat.',
+  recon:   'Paint — mark an enemy; allies ignore its cover and gain +1 Aim.',
+};
