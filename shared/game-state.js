@@ -2127,6 +2127,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           chassis: a.chassis,
           // Flat-pick options
           unit: a.unit,
+          // Support-unit modules — accept a comma string (from the LLM tag) or an array.
+          modules: typeof a.modules === "string"
+            ? a.modules.split(",").map((s) => s.trim()).filter(Boolean)
+            : a.modules,
         });
         if (!unit) return room;
         room.nextRigId++;

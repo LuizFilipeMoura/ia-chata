@@ -235,3 +235,22 @@ test("seed builds support units from a custom roster with kind + modules", () =>
   assert.deepEqual(marks.modules, ["damage", "recon"]);
   assert.equal(depot.weapons.unit, "Sidearm");
 });
+
+test("the add verb commissions a support unit from a comma module string", () => {
+  const room = createRoom("addtest");
+  applyCommand(room, { verb: "add", attrs: { name: "Spotter", kind: "walker", owner: "a", modules: "repair,recon" } }, {});
+  const u = room.rigs.find((r) => r.name === "Spotter");
+  assert.ok(u);
+  assert.deepEqual(u.modules, ["repair", "recon"]);
+  assert.equal(u.weapons.unit, "Sidearm"); // no damage module
+  assert.equal(u.kind, "walker");
+});
+
+test("the add verb still builds a plain tank (no modules) unchanged", () => {
+  const room = createRoom("addtest2");
+  applyCommand(room, { verb: "add", attrs: { name: "LineTank", kind: "tank", owner: "a", unit: "Autocannon Mount" } }, {});
+  const u = room.rigs.find((r) => r.name === "LineTank");
+  assert.ok(u);
+  assert.deepEqual(u.modules, []);
+  assert.equal(u.weapons.unit, "Autocannon Mount");
+});
