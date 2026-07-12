@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MODULES, MODULE_IDS, normalizeModules } from "./unit-kinds.js";
-import { UNIT_WEAPONS, normalizeUnitWeapon, makeUnit } from "./game-state.js";
+import { UNIT_WEAPONS, normalizeUnitWeapon, makeUnit, createRoom, applyCommand, makeRig } from "./game-state.js";
 
 test("MODULES lists the four roles, one action verb each (Damage has none)", () => {
   assert.deepEqual([...MODULE_IDS].sort(), ["coolant", "damage", "recon", "repair"]);
@@ -60,4 +60,47 @@ test("Support units must carry exactly two distinct modules or fail to build", (
   assert.ok(makeUnit("walker", 6, "X", "a", { modules: ["repair", "coolant"], unit: "nonsense" }));
   // A damage support unit with an invalid gun fails (no weapon to fit).
   assert.equal(makeUnit("tank", 7, "X", "a", { modules: ["damage", "recon"], unit: "nonsense" }), null);
+});
+
+// Minimal harness: a room with two allied units, one activated, ready to act.
+function twoAllyRoom() {
+  const room = createRoom("t");
+  room.rigs = [
+    makeUnit("walker", 1, "Welder", "a", { modules: ["repair", "recon"] }),
+    makeUnit("tank", 2, "Ally", "a", { unit: "Tank Cannon" }),
+  ];
+  room.nextRigId = 3;
+  room.game.started = true;
+  room.game.phase = "activation";
+  room.game.round = 1;
+  room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 0, longRangeShots: 0 };
+  return room;
+}
+
+test("Field Weld heals an allied unit's chosen location (D12 10+ = 2 SP)", () => {
+  const room = twoAllyRoom();
+  const ally = room.rigs[1];
+  ally.hull.sp = 3; // below max 8
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
+    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+  assert.equal(ally.hull.sp, 5); // +2
+  assert.equal(room.game.turn.actionsUsed, 1);
+});
+
+test("Field Weld requires the repair module and an ALLIED target", () => {
+  const room = twoAllyRoom();
+  room.rigs[0].modules = ["coolant", "recon"]; // no repair module
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  const before = room.rigs[1].hull.sp;
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
+    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+  assert.equal(room.rigs[1].hull.sp, before); // no heal — module missing
+  // Enemy target rejected even with the module:
+  room.rigs[0].modules = ["repair", "recon"];
+  room.rigs[1].owner = "b";
+  room.rigs[1].hull.sp = 3;
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
+    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+  assert.equal(room.rigs[1].hull.sp, 3); // enemy not healed
 });

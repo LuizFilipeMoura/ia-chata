@@ -1921,6 +1921,25 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
+  if (act === "fieldweld") {
+    // Repair module (spec: Support Units) — weld SP onto a friendly unit.
+    if (!(rig.modules || []).includes("repair")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner !== rig.owner) return false;
+    const roll = rollD(12, a.dice?.weld, random);
+    const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    const names = partNamesOf(kindOf(target));
+    const loc = names.includes(String(a.loc || "").toLowerCase()) ? String(a.loc).toLowerCase() : names[0];
+    if (amt > 0) repairRig(target, loc, amt);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "fieldweld", actor: rig.owner, rigId: rig.id,
+      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      summary: `${rig.name} field-welds ${target.name} — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
+    });
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
