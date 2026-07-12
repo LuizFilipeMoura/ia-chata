@@ -127,6 +127,15 @@ test("rigModifiers shows a generic chip for a hidden reaction", () => {
   assert.equal(mod.tone, "prep");
 });
 
+test("rigModifiers shows a Painted chip for a Recon-marked rig", () => {
+  const mods = rigModifiers(rig({ painted: { by: "b", painterId: 9 } }));
+  const mod = mods.find((m) => m.key === "painted");
+  assert.ok(mod, "expected a painted chip");
+  assert.equal(mod.tag, "Painted");
+  assert.equal(mod.tone, "warn");
+  assert.ok(!rigModifiers(rig()).some((m) => m.key === "painted"));
+});
+
 test("rigModifiers names a revealed reaction", () => {
   const r = rig({ preparation: { type: "return", source: "answer", faceUp: true } });
   const mod = rigModifiers(r).find((m) => m.key === "prep");

@@ -181,6 +181,9 @@ export function rigModifiers(rig) {
   }
   for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn" });
   if (rig.loaded && rig.loaded.longRange === false) mods.push({ key: "unloaded", tag: "Ranged unloaded", tone: "warn" });
+  // Recon Paint mark (spec: Support Units) — visible so a marked enemy reads
+  // at a glance (allied ranged attacks ignore its cover + gain +1 Aim).
+  if (rig.painted) mods.push({ key: "painted", tag: "Painted", tone: "warn" });
   return mods;
 }
 

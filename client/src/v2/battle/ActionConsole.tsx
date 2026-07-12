@@ -43,6 +43,7 @@ const GROUPS: { id: string; label: string; tone: string; glyph: string; keys: st
 // mark so its face matches what tapping it actually fires (Move → Disengage).
 const ACTION_GLYPH: Record<string, string> = {
   move: "⇢", sprint: "⇉", disengage: "⇲", reload: "⟳", fire: "▶", aimed: "◎",
+  fieldweld: "🔧", vent: "❄️", paint: "🎯",
 };
 
 const heatText = (heat: number) =>
@@ -139,7 +140,7 @@ function AcPopover({
 export function ActionConsole({ rig }: Props) {
   const { game } = useRoomState();
   const sendCommand = useV2Commands();
-  const { openMove, openRepair, endActivation, openPrepare } = useV2BattleActions();
+  const { openMove, openRepair, endActivation, openPrepare, openSupport } = useV2BattleActions();
   const { openAttack } = useV2Wizard();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const cellRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -170,6 +171,10 @@ export function ActionConsole({ rig }: Props) {
     }
     if (key === "prepare") {
       openPrepare(r);
+      return;
+    }
+    if (key === "paint" || key === "fieldweld" || key === "vent") {
+      openSupport(r, key);
       return;
     }
     sendCommand("action", { name: r.name, action: key });
