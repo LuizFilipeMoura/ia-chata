@@ -2315,7 +2315,7 @@ test("makeUnit rejects unknown kinds", () => {
 test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   const ids = Object.keys(UNIT_WEAPONS).sort();
   assert.deepEqual(ids, [
-    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Tank Cannon",
+    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Sidearm", "Tank Cannon",
   ]);
   for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
     assert.equal(typeof w.rof, "number");

@@ -64,6 +64,9 @@ export const UNIT_WEAPONS = {
   "Rocket Pod":       { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
   "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
   "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
+  // Built-in weak weapon every support unit carries; replaced by a Damage
+  // module. peak 0 + dropoff 0 = a flat ACC 0 at any distance (spec §Sidearm).
+  "Sidearm":          { rof: 2, str: 4,  sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {
