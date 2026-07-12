@@ -274,16 +274,20 @@ export function equipmentActiveHeat(equipmentId, equipmentUpgradeId) {
   return base;
 }
 
-// Sprint heat: base 2, Servo Actuators 1, Reinforced Servos 0.
+// Sprint heat: base 2, Servo Actuators 1, and its Reinforced Servos Field
+// upgrade overrides to 0 via its sprintHeat effect tag.
 export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 2) {
   if (equipmentId !== "servo-actuators") return baseHeat;
-  return equipmentUpgradeId === "reinforced-servos" ? 0 : 1;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  return up?.effect?.sprintHeat ?? 1;
 }
 
-// Extra SP a Repair action restores: Field Repair Suite +1, Master Toolkit +2.
+// Extra SP a Repair action restores: Field Repair Suite +1, and its Master
+// Toolkit Field upgrade overrides to +2 via its repairBonus effect tag.
 export function equipmentRepairBonus(equipmentId, equipmentUpgradeId) {
   if (equipmentId !== "field-repair-suite") return 0;
-  return equipmentUpgradeId === "master-toolkit" ? 2 : 1;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  return up?.effect?.repairBonus ?? 1;
 }
 
 // Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.
@@ -2000,7 +2004,8 @@ function performAction(room, rig, act, a, random) {
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
     // Move / Sprint may repeat within an activation; each spends one slot and
-    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
+    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility),
+    // and 0 with its Reinforced Servos Field upgrade.
     const heat = act === "sprint" ? equipmentSprintHeat(rig.equipment, rig.equipmentUpgrade, def.heat) : def.heat;
     t.actionsUsed += 1;
     bumpHeat(rig, heat);

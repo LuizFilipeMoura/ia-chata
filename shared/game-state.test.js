@@ -2157,6 +2157,27 @@ test("Twin Radiators purge vents 3 heat through the action pipeline", () => {
   assert.equal(rig.engine.heat, 2); // -3, not the base -2 (which would leave 3)
 });
 
+test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "reinforced-servos"; // Field upgrade: Sprint costs 0, not 1
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint" } });
+  assert.equal(rig.engine.heat, 0); // 0, not the base Servo Actuators 1
+});
+
+test("Master Toolkit repairs +2 through the action pipeline", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "field-repair-suite" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "master-toolkit"; // Field upgrade: Repair heals +2, not +1
+  rig.hull.sp = 3;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "repair", loc: "hull", dice: { repair: 10 } } }); // 10+ = 2 SP roll
+  assert.equal(rig.hull.sp, 7); // 3 + 2 (roll) + 2 (Master Toolkit)
+});
+
 test("overclock grants +2 actions this activation for Overclock Core", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "overclock-core" });
