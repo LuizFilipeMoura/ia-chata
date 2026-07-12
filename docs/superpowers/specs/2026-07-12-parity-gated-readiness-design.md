@@ -81,8 +81,12 @@ Replace the three fixed-count checks with `sidesAtParity(room)`:
 - `ready` verb handler (~:2540): a side may set `ready = true` only when
   `!room.game.started && room.field.locked && sidesAtParity(room)`. (Floor-of-1 and
   the mirror requirement both fall out of `sidesAtParity`.)
-- seed verb `canStart` (~:2653): `sidesAtParity(room)` in place of the two `>= 3` checks.
-  Seed presets must therefore be mirrored (the existing default rosters already are).
+- seed verb `canStart` (~:2653): **left as its original `>= 3 per side` check.** The
+  seed is a debug force-start whose roster is deliberately *non-mirrored* (distinct
+  chassis + a spread of Prototype mechanics, per the AGENTS.md no-mirror-matchup
+  invariant), so it is intentionally NOT subject to the player-facing parity gate.
+  *(Implementation note: this reverses the spec's original intent, which wrongly assumed
+  the seed roster was already mirrored.)*
 
 ### Un-ready on roster change
 

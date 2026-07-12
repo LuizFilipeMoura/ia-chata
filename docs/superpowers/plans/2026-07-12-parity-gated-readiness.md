@@ -163,15 +163,13 @@ with:
         sidesAtParity(room) && !side.ready) {
 ```
 
-In the seed verb's `canStart` (~:2653), replace:
-
-```js
-    const canStart = sideRigCount(room, "a") >= 3 && sideRigCount(room, "b") >= 3;
-```
-with:
-```js
-    const canStart = sidesAtParity(room);
-```
+In the seed verb's `canStart` (~:2653): **leave it as `sideRigCount(room, "a") >= 3
+&& sideRigCount(room, "b") >= 3`.** The seed is a debug force-start whose roster is
+deliberately non-mirrored (distinct chassis + a mechanic spread, per the AGENTS.md
+no-mirror-matchup invariant), so it is intentionally NOT subject to the parity gate.
+*(This reverses the original plan text, which wrongly assumed the seed roster was
+mirrored — routing it through `sidesAtParity` broke every seed test.)* Add a comment
+explaining why seed keeps its own gate.
 
 - [ ] **Step 5: Rewrite the two now-stale existing tests**
 
