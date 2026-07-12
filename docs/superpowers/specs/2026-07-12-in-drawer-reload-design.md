@@ -111,7 +111,7 @@ early with the new cost model:
 
 ```
 if (act === "reload") {
-  rig.loaded = { longRange: true, melee: true, unit: true }; // arm all slots
+  rig.loaded = { longRange: true, melee: true }; // loaded.longRange is the one spent flag
   const heatKind = !!UNIT_KINDS[kindOf(rig)].hasHeat;
   let roll = 0, heat = 0;
   if (heatKind) {
