@@ -554,6 +554,44 @@ STR is **flat** — no weight-class modifier applies. Close combat requires a **
 
 All numeric values on Tanks and Walkers above (SP, armour rows, ROF/STR, speeds) are strawman — subject to tuning in playtest.
 
+### Support Units
+
+A **support unit** is a Tank or Walker that swaps its single weapon for a **light Sidearm + 2 role modules**. At commission, pick exactly **2 distinct** modules from:
+
+| Module | Grants |
+|---|---|
+| **Damage** | Fits a real gun from the shared unit-weapon list above, replacing the Sidearm |
+| **Repair** | **Field Weld** action |
+| **Coolant** | **Vent** action |
+| **Recon** | **Paint** action |
+
+Without a Damage module, the unit keeps the Sidearm.
+
+**Sidearm** ⚙ — a weak plinker, flat STR like the rest of the unit-weapon list:
+
+| Weapon | Type | ROF | STR | ACC (near/far) | RNG (near/far) |
+|---|---|:--:|:--:|:--:|:--:|
+| Sidearm | ranged | 2 | 4 | 0 / 0 | 6" / 12" |
+
+Module actions — each costs **1 action**; cold, no heat:
+
+- **Field Weld** (Repair) — heal a friendly unit (self or ally) within reach: roll D12, 7+ = 1 SP, 10+ = 2 SP, to a chosen location.
+- **Vent** (Coolant) — reduce a friendly **Rig's** heat by 2 (Rigs only carry heat).
+- **Paint** (Recon) — mark an enemy in line of sight; allied **ranged** attacks against it ignore cover and gain +1 ACC until the painter's next activation. A Recon unit holds one mark at a time.
+
+Module actions run off the unit's systems, not its gun: losing the Turret (Tank) or Mount (Walker) — the weapon component — destroys only the gun, not Field Weld / Vent / Paint. ⚙
+
+Four shipped exemplars ⚙ (strawman):
+
+| Unit | Kind | Modules | Weapon |
+|---|---|---|---|
+| Marksman Tank | Tank | Damage + Recon | Tank Cannon |
+| Radiator Walker | Walker | Damage + Coolant | Coaxial MG |
+| Field Welder | Walker | Repair + Recon | Sidearm |
+| Depot Tank | Tank | Repair + Coolant | Sidearm |
+
+Balance unchanged — a support unit is still one slot / one count / one activation (§3).
+
 ---
 
 ## 16. Design Notes & Open Items
