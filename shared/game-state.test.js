@@ -5,6 +5,7 @@ import {
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
   EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
+  normalizeEquipmentUpgrade,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   UNIT_WEAPONS, normalizeUnitWeapon,
@@ -1765,6 +1766,14 @@ test("equipment upgrade helpers resolve", () => {
   assert.equal(equipmentUpgradeNature("ablative-plating", "ablative-cascade"), "prototype");
   assert.equal(equipmentUpgradeNature("ablative-plating", "nope"), null);
   assert.equal(firstEquipmentUpgradeId("ablative-plating"), "reinforced-plating");
+});
+
+test("normalizeEquipmentUpgrade validates + normalizes", () => {
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", "REINFORCED-PLATING "), "reinforced-plating"); // trims + lowercases
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", "reinforced-plating"), "reinforced-plating");
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", "unknown-id"), null);
+  assert.equal(normalizeEquipmentUpgrade("ablative-plating", null), null);
+  assert.equal(normalizeEquipmentUpgrade("no-such-equipment", "reinforced-plating"), null);
 });
 
 test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {

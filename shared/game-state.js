@@ -264,6 +264,7 @@ export function firstEquipmentUpgradeId(equipmentId) {
   return (EQUIPMENT_UPGRADES[equipmentId] || [])[0]?.id || null;
 }
 
+// Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.
 export function normalizeEquipmentUpgrade(equipmentId, id) {
   const list = EQUIPMENT_UPGRADES[equipmentId];
   if (!Array.isArray(list) || list.length === 0) return null;
