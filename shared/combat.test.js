@@ -329,6 +329,17 @@ test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   assert.equal(computeStr(sniper, p, { target: hurt }), p.str);
 });
 
+test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", () => {
+  const rig = makeRig("r1", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
+  rig.weaponUpgrades = { longRange: "steady-aim", melee: "honed-talons" };
+  const prof = effectiveWeaponProfile("longRange", "Crossbow", rig); // base STR 10, sweet 18
+  assert.equal(computeStr(rig, prof, { distance: 18 }), 13); // at sweet: 10 + 3
+  assert.equal(computeStr(rig, prof, { distance: 20 }), 13); // +2" edge: still in band
+  assert.equal(computeStr(rig, prof, { distance: 16 }), 13); // -2" edge: still in band
+  assert.equal(computeStr(rig, prof, { distance: 21 }), 10); // off-band: no bonus
+  assert.equal(computeStr(rig, prof, {}), 10);               // no distance: no bonus
+});
+
 test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
   const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
   const p = effectiveWeaponProfile("melee", "Lance", lance);

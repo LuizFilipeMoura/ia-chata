@@ -162,6 +162,12 @@ export function computeStr(attacker, profile, opts) {
   if (opts.target && profile.upgradeEffect?.vsPinned) {
     if (opts.target.immobilised || opts.target.engagedWith != null) bonus += 3;
   }
+  // Steady Aim (§13, Crossbow) — +3 STR when the measured firing distance is
+  // within 2" of the weapon's sweet spot. Needs the distance threaded in via opts.
+  if (profile.upgradeEffect?.steadyAim && opts.distance != null
+      && Math.abs(opts.distance - profile.sweet) <= 2) {
+    bonus += 3;
+  }
   // Redline Governor — the hotter the attacker runs past its own class cap,
   // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
   if (profile.upgradeEffect?.redline) {
