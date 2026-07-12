@@ -119,3 +119,29 @@ test("Field Weld can't resurrect a destroyed ally", () => {
   assert.equal(ally.hull.sp, 0); // no SP welded on
   assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
 });
+
+test("Vent drops 2 heat off an allied rig; refuses cold targets", () => {
+  const room = twoAllyRoom();
+  room.rigs[0].modules = ["coolant", "recon"];
+  const rig = makeRig(3, "HotRig", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  rig.engine.heat = 5;
+  room.rigs.push(rig);
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "vent", target: "HotRig" } }, {});
+  assert.equal(rig.engine.heat, 3); // −2
+  // Venting the cold tank ally is a no-op (no heat), budget not spent:
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "vent", target: "Ally" } }, {});
+  assert.equal(room.game.turn.actionsUsed, 1); // second vent rejected
+});
+
+test("Vent needs the coolant module and refuses a destroyed target", () => {
+  const room = twoAllyRoom();
+  room.rigs[0].modules = ["repair", "recon"]; // no coolant
+  const rig = makeRig(3, "HotRig", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
+  rig.engine.heat = 5;
+  room.rigs.push(rig);
+  applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
+  applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "vent", target: "HotRig" } }, {});
+  assert.equal(rig.engine.heat, 5); // no module → no vent
+  assert.equal(room.game.turn.actionsUsed, 0);
+});

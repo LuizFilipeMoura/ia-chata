@@ -1940,6 +1940,21 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
+  if (act === "vent") {
+    // Coolant module (spec: Support Units) — vent 2 heat off a friendly Rig.
+    if (!(rig.modules || []).includes("coolant")) return false;
+    const target = findRig(room, a.target);
+    if (!target || target.owner !== rig.owner || target.destroyed) return false;
+    if (!UNIT_KINDS[kindOf(target)]?.hasHeat) return false; // only Rigs run hot
+    bumpHeat(target, -2);
+    bumpHeat(rig, def.heat);
+    t.actionsUsed += 1;
+    pushResolution(room, {
+      kind: "vent", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} vents 2 heat off ${target.name}.`, effects: [],
+    });
+    return true;
+  }
   if (act === "reload") {
     rig.loaded = { longRange: true, melee: true };
   } else if (act === "repair") {
