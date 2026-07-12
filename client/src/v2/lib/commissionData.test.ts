@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { CHASSIS_NAME, weaponGlyph, natureLabel, firstUpgradeId, MODULE_BLURB } from "./commissionData";
+import { upgradePips, splitUpgradeTag } from "./commissionData";
 
 test("chassis codename lookup", () => {
   expect(CHASSIS_NAME["light-claw-autocannon"]).toBe("Ironjaw");
@@ -23,4 +24,28 @@ test("MODULE_BLURB describes each ally-verb module", () => {
   expect(MODULE_BLURB.recon).toMatch(/mark/i);
   // Damage is shown as the gun itself, so it has no blurb.
   expect(MODULE_BLURB.damage).toBeUndefined();
+});
+
+test("upgradePips climbs reward and risk by nature", () => {
+  expect(upgradePips("field")).toEqual({ reward: 1, risk: 0 });
+  expect(upgradePips("tuned")).toEqual({ reward: 2, risk: 1 });
+  expect(upgradePips("prototype")).toEqual({ reward: 3, risk: 2 });
+  expect(upgradePips("bogus")).toEqual({ reward: 1, risk: 0 });
+});
+
+test("splitUpgradeTag prefers an authored catch", () => {
+  const t = { id: "x", nature: "prototype", name: "N", tag: "Big payoff", catch: "Real cost" };
+  expect(splitUpgradeTag(t)).toEqual({ payoff: "Big payoff", catch: "Real cost" });
+});
+
+test("splitUpgradeTag parses a delimited tag when no catch is authored", () => {
+  const semi = { id: "a", nature: "prototype", name: "N", tag: "Ignores armour; belt cycles slow after" };
+  expect(splitUpgradeTag(semi)).toEqual({ payoff: "Ignores armour", catch: "belt cycles slow after" });
+  const dash = { id: "b", nature: "prototype", name: "N", tag: "Reel a rig in — runs hot" };
+  expect(splitUpgradeTag(dash)).toEqual({ payoff: "Reel a rig in", catch: "runs hot" });
+});
+
+test("splitUpgradeTag reports no catch for a clean safe upgrade", () => {
+  const t = { id: "c", nature: "field", name: "N", tag: "+2 STR" };
+  expect(splitUpgradeTag(t)).toEqual({ payoff: "+2 STR", catch: null });
 });

@@ -35,3 +35,33 @@ export const MODULE_BLURB: Record<string, string> = {
   coolant: 'Vent — cool a friendly Rig within 2" by 2 heat.',
   recon:   'Paint — mark an enemy; allies ignore its cover and gain +1 Aim.',
 };
+
+export interface UpgradeTier {
+  id: string;
+  nature: string;
+  name: string;
+  tag: string;
+  catch?: string;
+  effect?: unknown;
+}
+
+// Reward/risk climb the tier ladder. Derived purely from nature so no upgrade
+// row needs to carry pip counts.
+const PIPS: Record<string, { reward: number; risk: number }> = {
+  field: { reward: 1, risk: 0 },
+  tuned: { reward: 2, risk: 1 },
+  prototype: { reward: 3, risk: 2 },
+};
+export function upgradePips(nature: string): { reward: number; risk: number } {
+  return PIPS[nature] || PIPS.field;
+}
+
+// Payoff vs Catch text for a tier. Prefer an authored `catch`; otherwise split
+// the tag on the first cost delimiter (" — " or ";"). A tag with no delimiter is
+// all payoff and has no catch.
+export function splitUpgradeTag(tier: UpgradeTier): { payoff: string; catch: string | null } {
+  if (tier.catch) return { payoff: tier.tag, catch: tier.catch };
+  const m = tier.tag.match(/^(.*?)(?:\s+—\s+|;\s+)(.*)$/);
+  if (m) return { payoff: m[1].trim(), catch: m[2].trim() };
+  return { payoff: tier.tag, catch: null };
+}
