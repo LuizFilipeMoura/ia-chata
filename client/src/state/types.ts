@@ -99,6 +99,10 @@ export interface Resolution {
   breakdown?: ResolutionBreakdown;
   effects?: string[];
   rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
+  /** Priority Elimination award attached to a `destruction` entry. */
+  vp?: { side: string; amount: number };
+  /** Name of the wrecked unit, captured before it may be removed. */
+  victimName?: string;
 }
 
 export type Diagonal = "tlbr" | "trbl";
