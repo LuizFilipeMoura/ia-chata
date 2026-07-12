@@ -9,6 +9,7 @@ import {
   equipmentSprintHeat, equipmentRepairBonus,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
+  normalizeAnswerPrep, ANSWER_COUNTERS,
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
@@ -248,6 +249,17 @@ test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
   assert.equal(normalizePrep("raise-shield"), "brace");           // no rig -> fallback
   assert.equal(normalizePrep("brace", shieldRig), "brace");       // existing preps unaffected
   assert.equal(normalizePrep("bogus", shieldRig), "brace");
+});
+
+test("normalizeAnswerPrep accepts the three Answer counters; normalizePrep rejects them", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  for (const t of ["riposte", "sidestep", "exploit"]) {
+    assert.equal(normalizeAnswerPrep(t, rig), t);   // Answer path keeps it
+    assert.equal(normalizePrep(t, rig), "brace");   // Prepare path falls back
+  }
+  // Generic three and shield still work on both where valid.
+  assert.equal(normalizeAnswerPrep("evasive", rig), "evasive");
+  assert.deepEqual(ANSWER_COUNTERS, ["riposte", "sidestep", "exploit"]);
 });
 
 test("shieldCoverage depends on the Tower Shield upgrade", () => {

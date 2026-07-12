@@ -316,8 +316,13 @@ export function normalizeEquipmentUpgrade(equipmentId, id) {
   return list.find((u) => u.id === ref)?.id || null;
 }
 
-// The three §5 preparation reactions. Unknown/missing input falls back to brace.
+// The three §5 preparation reactions available to the Prepare action. Unknown/
+// missing input falls back to brace.
 export const PREP_TYPES = ["brace", "evasive", "return"];
+
+// Answer-exclusive counters (§5) — placeable ONLY by spending an Answer token,
+// never by the Prepare action. Each reads what the enemy just did.
+export const ANSWER_COUNTERS = ["riposte", "sidestep", "exploit"];
 
 export function hasBulwarkShield(rig) {
   return rig?.weapons?.melee === "Bulwark Shield";
@@ -333,6 +338,14 @@ export function normalizePrep(type, rig) {
   const ref = String(type || "").trim().toLowerCase();
   if (ref === "raise-shield") return hasBulwarkShield(rig) ? "raise-shield" : "brace";
   return PREP_TYPES.includes(ref) ? ref : "brace";
+}
+
+// The Answer-token path may place any generic prep, the shield (if carried), OR
+// one of the Answer-exclusive counters. Unknown input falls back to brace.
+export function normalizeAnswerPrep(type, rig) {
+  const ref = String(type || "").trim().toLowerCase();
+  if (ANSWER_COUNTERS.includes(ref)) return ref;
+  return normalizePrep(type, rig);
 }
 
 export function normalizeEquipment(id) {
@@ -1121,13 +1134,19 @@ function prepName(type) {
   if (type === "evasive") return "Evasive Manoeuvre";
   if (type === "return") return "Return Fire";
   if (type === "raise-shield") return "Raise Shield";
+  if (type === "riposte") return "Riposte";
+  if (type === "sidestep") return "Sidestep the Shooter";
+  if (type === "exploit") return "Exploit Opening";
   return "Brace for Incoming Fire";
 }
 function prepEffectLine(type) {
   if (type === "evasive") return "Defender may move ½ Speed — the attack can miss entirely.";
-  if (type === "return") return "Defender answers with a counter-attack.";
+  if (type === "return") return "Defender pivots to face the attacker, then answers with a counter-attack.";
   if (type === "raise-shield") return "Front-arc attack negated; side/rear impacts suffer −4.";
-  return "Front-arc impacts suffer −2.";
+  if (type === "riposte") return "Defender answers the melee attacker with a free melee counter.";
+  if (type === "sidestep") return "Defender slips ½ Speed and may engage the shooter.";
+  if (type === "exploit") return "Defender pivots and lands a free Aimed counter-shot (no aim penalty).";
+  return "Front-arc impacts suffer −2 — and the braced Rig is immovable and counters melee that fails to breach.";
 }
 function reactionRevealEntry(rig, type) {
   return {
@@ -2729,7 +2748,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     if (rig && sideId && (rig.owner || "a") === sideId &&
         room.game.answerTokens[sideId] > 0 && rig.preparation == null) {
-      rig.preparation = { type: normalizePrep(a.prep, rig), source: "answer", faceUp: false };
+      rig.preparation = { type: normalizeAnswerPrep(a.prep, rig), source: "answer", faceUp: false };
       room.game.answerTokens[sideId] -= 1;
       if (room.game.pendingAnswer && room.game.pendingAnswer.side === sideId) {
         room.game.pendingAnswer.remaining -= 1;
