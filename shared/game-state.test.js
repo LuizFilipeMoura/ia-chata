@@ -2125,13 +2125,26 @@ test("harden requires Ablative Plating, costs 1 slot + 1 heat, and sets rig.hard
   assert.equal(r.game.turn.actionsUsed, usedBefore + 1);
 });
 
-test("popsmoke requires Reactive Plating and sets rig.smokeUntilNext", () => {
+test("popsmoke requires Reactive Plating and sets rig.smokeNextActivation", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "reactive-plating" });
   activate(r, "a1");
   const rig = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
-  assert.equal(rig.smokeUntilNext, true);
+  assert.equal(rig.smokeNextActivation, true);
+});
+
+test("popsmoke breaks an enemy missile Fire Control Lock aimed at this rig", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "reactive-plating" });
+  const target = findRig(r, "a1");
+  const enemy = findRig(r, "b1");
+  enemy.lockedTarget = target.id;      // a missile Lock painting a1
+  enemy.lockExpiresRound = 999;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
+  assert.equal(enemy.lockedTarget, null);
+  assert.equal(enemy.lockExpiresRound, 0);
 });
 
 test("harden is refused without Ablative Plating", () => {
@@ -2245,7 +2258,7 @@ test("a rig's next activation clears its own Pop Smoke", () => {
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "popsmoke" } });
   applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
   // cycle everyone else, then come back to a1's next activation
-  while (findRig(r, "a1").smokeUntilNext && r.game.phase !== "finished") {
+  while (findRig(r, "a1").smokeNextActivation && r.game.phase !== "finished") {
     if (r.game.phase === "recovery") applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [] } }), applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
     if (r.game.phase === "initiative") applyCommand(r, { verb: "initiative", attrs: {} });
     if (r.game.phase === "activation") {
@@ -2257,7 +2270,7 @@ test("a rig's next activation clears its own Pop Smoke", () => {
       applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
     }
   }
-  assert.equal(findRig(r, "a1").smokeUntilNext, false);
+  assert.equal(findRig(r, "a1").smokeNextActivation, false);
 });
 
 test("Systems Overload reduces the target's next activation budget by 1 and then clears", () => {

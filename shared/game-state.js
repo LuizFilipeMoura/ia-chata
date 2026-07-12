@@ -599,6 +599,8 @@ function ensureRigShape(rig) {
   if (rig.equipment === undefined) rig.equipment = null;
   if (rig.equipmentUpgrade === undefined) rig.equipmentUpgrade = null;
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
+  if (typeof rig.smokeNextActivation !== "boolean") rig.smokeNextActivation = false;
+  if (typeof rig.fireControlUsed !== "boolean") rig.fireControlUsed = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
@@ -791,6 +793,8 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     immobilised: false,
     engagedWith: null,
     hardened: false,
+    smokeNextActivation: false,
+    fireControlUsed: false,
     overclockCoreUsed: false,
     actionPenaltyNextActivation: 0,
     hullRepairLock: 0,
@@ -932,6 +936,8 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     immobilised: false,
     engagedWith: null,
     hardened: false,
+    smokeNextActivation: false,
+    fireControlUsed: false,
     actionPenaltyNextActivation: 0,
     // Dead Weight (§13, Anchor) — mirrored for shape parity (cold kinds never
     // carry the Anchor upgrade, so this never actually triggers).
@@ -1901,7 +1907,10 @@ function performAction(room, rig, act, a, random) {
       repairRig(rig, loc, 2);
     }
     else if (act === "popsmoke") {
-      rig.smokeUntilNext = true;
+      rig.smokeNextActivation = true;
+      // Pop Smoke breaks any missile Fire Control Lock (§13, Missile Barrage)
+      // painting this rig — mirrors the recon-paint self-clear below.
+      for (const r of room.rigs) if (r.lockedTarget === rig.id) { r.lockedTarget = null; r.lockExpiresRound = 0; }
     }
     // purge / jumpjets need no extra state beyond the heat cost below.
     bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade));
@@ -2371,6 +2380,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.immobilised = false;
       rig.engagedWith = null;
       rig.hardened = false;
+      rig.smokeNextActivation = false;
+      rig.fireControlUsed = false;
       rig.overclockCoreUsed = false;
       rig.actionPenaltyNextActivation = 0;
       rig.hullRepairLock = 0;
@@ -2511,7 +2522,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         !room.game.pendingAnswer && !room.game.pendingReaction &&
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
-      rig.smokeUntilNext = false; // Pop Smoke (Reactive Plating) lasts until this Rig's next activation
+      rig.smokeNextActivation = false; // Pop Smoke (Reactive Plating) lasts until this Rig's next activation
       rig.fireControlUsed = false; // Targeting Computer first-shot compensator resets each activation
       // Recon paint (spec: Support Units) expires at the painter's next activation:
       // clear every mark this rig placed as it steps up again.

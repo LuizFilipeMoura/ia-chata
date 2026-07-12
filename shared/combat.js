@@ -358,7 +358,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeUntilNext }, opts.dice?.toHit, random);
+  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
