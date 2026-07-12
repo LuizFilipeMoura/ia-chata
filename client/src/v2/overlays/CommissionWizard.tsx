@@ -18,8 +18,10 @@ function stepsFor(kind: Kind): string[] {
 }
 
 // Authored content layered onto a chassis by the server (content/chassis.json).
+interface EquipSuggestion { id: string; reason: string; }
 interface ChassisContent {
   description?: string; focus?: string; balance?: string; personality?: string;
+  suggestedEquipment?: EquipSuggestion[];
 }
 
 interface WizardState {
@@ -72,6 +74,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
   const selectChassis = (id: string) => {
     const pb = CHASSIS.find((p) => p.id === id);
     if (!pb) return;
+    const top = content[id]?.suggestedEquipment?.[0]?.id;
     patch({
       chassis: pb.id,
       cls: pb.class,
@@ -79,6 +82,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
       melee: pb.melee,
       longRangeUpgrade: firstUpgradeId(pb.longRange),
       meleeUpgrade: firstUpgradeId(pb.melee),
+      ...(top ? { equipment: top } : {}),
     });
   };
 
@@ -95,9 +99,14 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         if (!live || !data?.chassis) return;
         const map: Record<string, ChassisContent> = {};
         for (const p of data.chassis) {
-          map[p.id] = { description: p.description, focus: p.focus, balance: p.balance, personality: p.personality };
+          map[p.id] = {
+            description: p.description, focus: p.focus, balance: p.balance, personality: p.personality,
+            suggestedEquipment: Array.isArray(p.suggestedEquipment) ? p.suggestedEquipment : [],
+          };
         }
         setContent(map);
+        const top = map[state.chassis]?.suggestedEquipment?.[0]?.id;
+        if (top) setState((s) => ({ ...s, equipment: top }));
       })
       .catch(() => { /* keep built-in defaults */ });
     return () => { live = false; };
@@ -337,21 +346,33 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
             <span className="v2-fc-cue-sub v2-eyebrow">— one slot per rig</span>
           </div>
           <div className="v2-fc-grid v2-grid-2">
-            {Object.entries(EQUIPMENT).map(([id, e]) => (
-              <button
-                key={id}
-                type="button"
-                className={"v2-fc-equip" + (id === state.equipment ? " is-sel" : "")}
-                onClick={() => patch({ equipment: id })}
-              >
-                <div className="v2-fc-equip-family v2-eyebrow">{e.family}</div>
-                <div className="v2-fc-equip-label v2-title">{e.label}</div>
-                <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
-                <div className="v2-fc-equip-active">
-                  Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
-                </div>
-              </button>
-            ))}
+            {Object.entries(EQUIPMENT).map(([id, e]) => {
+              const suggestion = (content[state.chassis]?.suggestedEquipment || [])
+                .find((s) => s.id === id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={"v2-fc-equip"
+                    + (id === state.equipment ? " is-sel" : "")
+                    + (suggestion ? " is-suggested" : "")}
+                  onClick={() => patch({ equipment: id })}
+                >
+                  {suggestion && (
+                    <div className="v2-fc-equip-suggest">
+                      <span className="v2-fc-equip-suggest-tag v2-eyebrow">◈ Suggested</span>
+                      <span className="v2-fc-equip-suggest-why">{suggestion.reason}</span>
+                    </div>
+                  )}
+                  <div className="v2-fc-equip-family v2-eyebrow">{e.family}</div>
+                  <div className="v2-fc-equip-label v2-title">{e.label}</div>
+                  <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
+                  <div className="v2-fc-equip-active">
+                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       );
