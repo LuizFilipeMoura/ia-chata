@@ -222,7 +222,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // Thread the real target rig into computeStr's opts (the caller's `opts`
   // here may carry only a display name at `opts.target` — see resolveAttack)
   // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
-  const str = computeStr(attacker, profile, { ...opts, target });
+  const str = computeStr(attacker, profile, { ...opts, target, location });
   let bonus = arcBonus(profile, opts.arc);
   // Kneecapper — bypasses Raking Fire's front-arc auto-fail (arcBonus
   // returning null) but ONLY when the struck location is a limb on the
@@ -347,7 +347,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // than crashing on a missing part.
     if (location) {
       impacts = rollImpacts(attacker, target, profile, location,
-        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak },
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance },
         opts.dice, random);
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
       //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple
@@ -397,7 +397,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
-  const str = computeStr(attacker, profile, { ...opts, target, momentum: piledriverSpend });
+  const str = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
     summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s) = ${total} SP${location ? ` to ${location}` : ""}`,
