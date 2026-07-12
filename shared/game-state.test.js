@@ -351,6 +351,22 @@ test("ensureRigShape backfills speed from the chassis id on reload", () => {
   assert.equal(rig.speed, 4);
 });
 
+test("makeUnit sets speed from the kind for cold single-model units", () => {
+  const tank = makeUnit("tank", 1, "T", "a", { unit: "Tank Cannon" });
+  assert.equal(tank.speed, 3);
+  const walker = makeUnit("walker", 2, "W", "a", { unit: "Coaxial MG" });
+  assert.equal(walker.speed, 4);
+});
+
+test("ensureRigShape backfills a tank/walker speed from its kind on reload", () => {
+  const tank = makeUnit("tank", 1, "T", "a", { unit: "Tank Cannon" });
+  delete tank.speed;
+  const room = createRoom("r");
+  room.rigs.push(tank);
+  __test.ensureRigShape(tank);
+  assert.equal(tank.speed, 3);
+});
+
 test("add assigns owner, weapons and default SP; damage respects the floor", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", owner: "b", ...W } });

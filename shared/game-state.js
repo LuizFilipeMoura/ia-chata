@@ -626,8 +626,13 @@ function ensureRigShape(rig) {
   if (rig.preparation === undefined) rig.preparation = null;
   if (rig.chassis === undefined) rig.chassis = null;
   if (rig.speed === undefined) {
+    // Rigs resolve speed from their chassis; cold kinds (tank / walker) from the
+    // kind registry. Either miss -> null, and the client falls back to SPEED map.
     const cd = chassisById(rig.chassis);
-    rig.speed = Number.isFinite(cd?.speed) ? cd.speed : null;
+    const kd = UNIT_KINDS[kindOf(rig)];
+    rig.speed = Number.isFinite(cd?.speed) ? cd.speed
+      : Number.isFinite(kd?.speed) ? kd.speed
+      : null;
   }
   if (rig.preparation && typeof rig.preparation.faceUp !== "boolean") rig.preparation.faceUp = false;
   if (!Array.isArray(rig.weaponsDestroyed)) rig.weaponsDestroyed = [];
@@ -968,6 +973,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     painted: null,
     equipment: null,
     chassis: null, // cold kinds (tank / walker) aren't commissioned from a chassis
+    speed: Number.isFinite(kind.speed) ? kind.speed : null, // Move distance from the kind registry (tank 3 / walker 4)
     activated: false,
     skipNextActivation: false,
     noCool: false,
