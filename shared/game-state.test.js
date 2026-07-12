@@ -2135,6 +2135,16 @@ test("popsmoke requires Reactive Plating and sets rig.smokeNextActivation", () =
   assert.equal(rig.smokeNextActivation, true);
 });
 
+test("locksight requires Targeting Computer and arms rig.lockSightNext", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "targeting-computer" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  assert.equal(rig.lockSightNext, false);
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "locksight" } });
+  assert.equal(rig.lockSightNext, true);
+});
+
 test("popsmoke breaks an enemy missile Fire Control Lock aimed at this rig", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "reactive-plating" });

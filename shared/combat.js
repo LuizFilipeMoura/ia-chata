@@ -51,7 +51,16 @@ export function computeModifiedAim(attacker, profile, opts) {
   // Pop Smoke (Countermeasures active) — every attacker is at −2 ACC against a
   // rig hidden in its own smoke, until that rig's next activation.
   const smoke = opts.targetSmoke ? -2 : 0;
-  const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty + paintBonus + smoke;
+  // Targeting Computer passive — the first Fire this activation ignores cover
+  // and the engaged −2 (opts.fireControlFirst is set once per activation by the
+  // fire path). Read directly off the attacker to avoid a game-state import cycle.
+  const coverEff = opts.fireControlFirst ? 0 : cover;
+  const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
+  // Ballistic Processor (Field) — +1 ACC when the measured distance is within the
+  // weapon's sweet band (|distance − sweet| ≤ 2).
+  const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
+  const ballistic = (attacker.equipment === "targeting-computer" && attacker.equipmentUpgrade === "ballistic-processor" && inSweetBand) ? 1 : 0;
+  const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic;
   return base - accTotal;
 }
 
@@ -98,7 +107,9 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   if (attacker.armsSuppressed) rof = Math.max(1, Math.floor(rof / 2));
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
-  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0));
+  // Lock Sight (Fire Control active) — the next shot this activation rerolls
+  // all its missed to-hit dice, i.e. up to a full volley of rerolls (opts.lockSight).
+  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (opts.lockSight ? rof : 0);
   const dice = [];
   let hits = 0;
   let fireModeHeat = 0;
@@ -358,7 +369,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation }, opts.dice?.toHit, random);
+  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;

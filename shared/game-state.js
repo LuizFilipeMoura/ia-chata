@@ -601,6 +601,7 @@ function ensureRigShape(rig) {
   if (typeof rig.hardened !== "boolean") rig.hardened = false;
   if (typeof rig.smokeNextActivation !== "boolean") rig.smokeNextActivation = false;
   if (typeof rig.fireControlUsed !== "boolean") rig.fireControlUsed = false;
+  if (typeof rig.lockSightNext !== "boolean") rig.lockSightNext = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
@@ -795,6 +796,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     hardened: false,
     smokeNextActivation: false,
     fireControlUsed: false,
+    lockSightNext: false,
     overclockCoreUsed: false,
     actionPenaltyNextActivation: 0,
     hullRepairLock: 0,
@@ -938,6 +940,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     hardened: false,
     smokeNextActivation: false,
     fireControlUsed: false,
+    lockSightNext: false,
     actionPenaltyNextActivation: 0,
     // Dead Weight (§13, Anchor) — mirrored for shape parity (cold kinds never
     // carry the Anchor upgrade, so this never actually triggers).
@@ -1744,6 +1747,10 @@ function resolveFire(room, rig, target, a, act, random) {
   // painter's next activation").
   const painter = target.painted ? findRigById(room, target.painted.painterId) : null;
   const paintedActive = !!(target.painted && target.painted.by === rig.owner && painter && !painter.destroyed);
+  // Targeting Computer passive (§Fire Control) — the FIRST Fire this activation
+  // ignores cover + engaged accuracy penalties. Threaded into computeModifiedAim
+  // via opts.fireControlFirst; consumed once the shot actually resolves below.
+  const fireControlFirst = rig.equipment === "targeting-computer" && !rig.fireControlUsed;
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,
@@ -1751,9 +1758,14 @@ function resolveFire(room, rig, target, a, act, random) {
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
+    fireControlFirst,
     dice: a.dice,
   }, random, combatCtx());
   if (!res.ok) return false;
+  // Mark the first-shot compensator spent, and consume any Lock Sight reroll
+  // (both are per-activation, one-shot flags on the acting rig).
+  if (fireControlFirst) rig.fireControlUsed = true;
+  if (rig.lockSightNext) rig.lockSightNext = false;
   t.actionsUsed += cost;
   // A second (or later) ranged shot in the same activation runs the barrel hot:
   // +1 heat over the base Fire/Aimed cost.
@@ -1913,6 +1925,11 @@ function performAction(room, rig, act, a, random) {
     else if (act === "emergencypatch") {
       const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
       repairRig(rig, loc, 2);
+    }
+    else if (act === "locksight") {
+      // Lock Sight (Fire Control active) — arm the next shot this activation to
+      // reroll all its missed to-hit dice (consumed in resolveFire).
+      rig.lockSightNext = true;
     }
     else if (act === "popsmoke") {
       rig.smokeNextActivation = true;
@@ -2398,6 +2415,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.hardened = false;
       rig.smokeNextActivation = false;
       rig.fireControlUsed = false;
+      rig.lockSightNext = false;
       rig.overclockCoreUsed = false;
       rig.actionPenaltyNextActivation = 0;
       rig.hullRepairLock = 0;
@@ -2540,6 +2558,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
       rig.smokeNextActivation = false; // Pop Smoke (Reactive Plating) lasts until this Rig's next activation
       rig.fireControlUsed = false; // Targeting Computer first-shot compensator resets each activation
+      rig.lockSightNext = false; // Lock Sight (Fire Control) is scoped to a single activation
       // Recon paint (spec: Support Units) expires at the painter's next activation:
       // clear every mark this rig placed as it steps up again.
       for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;

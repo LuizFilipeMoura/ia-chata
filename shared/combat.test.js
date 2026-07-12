@@ -373,6 +373,34 @@ test("engaged penalty does not apply to melee weapons", () => {
   assert.equal(engaged, base); // melee unaffected
 });
 
+test("Ballistic Processor: +1 ACC in the sweet band (lower modAim)", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" };
+  const profile = WEAPONS.longRange["Autocannon"]; // has a sweet distance
+  const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
+  const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet });
+  assert.equal(plain - inBand, 1);
+});
+
+test("Targeting Computer passive: first shot ignores cover + engaged penalties", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer" };
+  const profile = WEAPONS.longRange["Autocannon"];
+  const penalized = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true });
+  const compensated = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true, fireControlFirst: true });
+  assert.ok(compensated < penalized);
+});
+
+test("Lock Sight rerolls the whole volley of missed to-hit dice", () => {
+  const rig = makeRig(1, "L", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  const p = effectiveWeaponProfile("longRange", "Autocannon", rig);
+  const initial = [1, 1, 1, 1]; // rof 4, all misses
+  const rerolls = [6, 6, 6, 6]; // every reroll lands
+  const dice = { 0: 1, 1: 1, 2: 1, 3: 1, rerolls };
+  const without = rollToHit(rig, p, { distance: p.sweet, cover: 0 }, initial, () => 0);
+  const withLock = rollToHit(rig, p, { distance: p.sweet, cover: 0, lockSight: true }, dice, () => 0);
+  assert.equal(without.hits, 0);
+  assert.equal(withLock.hits, 4);
+});
+
 test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   const sniper = makeRig(1, "S", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "cold-bore" });
   const fresh = makeRig(2, "F", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
