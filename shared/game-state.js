@@ -42,6 +42,7 @@ export const WEAPONS = {
     "Missile Barrage":{ rof: 4, str: 9,  sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
     "Harpoon":        { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
     "Rivet Gun":      { rof: 6, str: 4,  sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
+    "Crossbow":       { rof: 1, str: 10, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
   },
   melee: {
     "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
@@ -54,6 +55,7 @@ export const WEAPONS = {
     "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], melee: true },
     "Anchor":        { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
     "Pressure Claw": { rof: 2, str: 9,  acc: [1, 1], rng: [2, 2], melee: true },
+    "Talon":         { rof: 2, str: 7,  acc: [1, 1], rng: [2, 2], melee: true },
   },
 };
 
@@ -96,6 +98,7 @@ export const CHASSIS = [
   { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
   { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
   { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+  { id: "medium-crossbow-talon",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
 ];
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
@@ -235,6 +238,16 @@ export function countPrototypes(weapons = {}, upgrades = {}) {
 // as flavor + a toolkit-effect tag. New-mechanic Prototype/Tuned upgrades ship
 // `effect: {}` until the mechanics plan implements them (TODO(mechanics)).
 export const WEAPON_UPGRADES = {
+  "Crossbow": [
+    { id: "fletched-bolts", nature: "field", name: "Fletched Bolts", tag: "Aimed shots ignore the aim penalty", effect: { perks: ["Precision"] } },
+    { id: "steady-aim", nature: "tuned", name: "Steady Aim", tag: "+3 STR when firing from the sweet spot (±2\")", effect: { steadyAim: true } },
+    { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn — runs +2 heat", effect: { pinningBolt: true } },
+  ],
+  "Talon": [
+    { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+2 STR", effect: { str: 2 } },
+    { id: "exploit-wound", nature: "tuned", name: "Exploit Wound", tag: "+3 STR vs an already-damaged location", effect: { vsWoundedLoc: true } },
+    { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every hit is Critical (but weak on fresh armour)", effect: { eviscerate: true } },
+  ],
   "Mini Gun": [
     { id: "suppressive-fire", nature: "field", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
     { id: "extended-belt", nature: "tuned", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
@@ -1495,6 +1508,7 @@ function endActivation(room, rig, dice, random) {
     const row = applyOverheat(room, rig, total, { random });
     pushResolution(room, {
       kind: "overheat", actor: rig.owner, rigId: rig.id,
+      heatKey: row.key, // "safe" = engine held; any other key dealt damage (client SFX)
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name}: ${row.label} (D12 ${roll}+${m.bonus}=${total})`,
       effects: [row.text],
@@ -1847,6 +1861,9 @@ function performAction(room, rig, act, a, random) {
     return !!res;
   }
   if (act === "move" || act === "sprint") {
+    // Sprint spends heat to move twice; heatless cold kinds (Tank, Walker) have
+    // no engine to redline, so they may only Move — Sprint is refused outright.
+    if (act === "sprint" && !UNIT_KINDS[kindOf(rig)]?.hasHeat) return false;
     // §engagement — a rig locked in melee is pinned; it must Disengage before it
     // can reposition. (Repositioning while engaged is meaningless without a grid.)
     if (rig.engagedWith != null) return false;

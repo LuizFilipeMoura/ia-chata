@@ -9,7 +9,7 @@ import {
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
-  chassisById, resolveChassis, SEED_ROSTER,
+  chassisById, resolveChassis, SEED_ROSTER, CHASSIS,
 } from "./game-state.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
@@ -57,13 +57,13 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
   assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
@@ -135,8 +135,8 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 10 + 10.
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
@@ -148,8 +148,8 @@ test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles
     { rof: 6, str: 4, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
     { rof: 2, str: 9, acc: [1, 1], rng: [2, 2], melee: true });
-  assert.equal(Object.keys(WEAPONS.longRange).length, 10);
-  assert.equal(Object.keys(WEAPONS.melee).length, 10);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
+  assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
@@ -1726,7 +1726,7 @@ test("normalizeEquipment is case-insensitive and rejects unknown ids", () => {
 
 test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 20);
+  assert.equal(all.length, 22);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
@@ -1736,6 +1736,17 @@ test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
       assert.equal(typeof u.tag, "string");
     }
   }
+});
+
+test("medium-crossbow-talon chassis resolves and carries its weapons", () => {
+  const entry = CHASSIS.find((c) => c.id === "medium-crossbow-talon");
+  assert.ok(entry, "chassis entry present");
+  assert.equal(entry.longRange, "Crossbow");
+  assert.equal(entry.melee, "Talon");
+  assert.ok(WEAPONS.longRange["Crossbow"], "Crossbow weapon present");
+  assert.ok(WEAPONS.melee["Talon"], "Talon weapon present");
+  assert.equal(WEAPON_UPGRADES["Crossbow"].length, 3);
+  assert.equal(WEAPON_UPGRADES["Talon"].length, 3);
 });
 
 test("WEAPON_UPGRADES has stable ids and effect objects for every option", () => {
@@ -2572,6 +2583,18 @@ test("Tank activation sets actionsMax = 2 (registry actionBudget)", () => {
   room.game.turn = { activeRigId: null, side: "a", actionsUsed: 0, actionsMax: 0 };
   applyCommand(room, { verb: "activate", attrs: { name: "Bulwark" } }, { side: "a" });
   assert.equal(room.game.turn.actionsMax, 2);
+});
+
+test("a cold kind (Tank/Walker) can Move but not Sprint — no heat to redline", () => {
+  const room = createRoom("Rmv"); claimSide(room, { name: "u", side: "a" });
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  room.rigs.push(tank);
+  room.game.phase = "activation";
+  room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2, longRangeShots: 0 };
+  applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "sprint" } });
+  assert.equal(room.game.turn.actionsUsed, 0);   // sprint refused, no slot spent
+  applyCommand(room, { verb: "action", attrs: { name: "Bulwark", action: "move" } });
+  assert.equal(room.game.turn.actionsUsed, 1);   // move allowed
 });
 
 test("formatBattleState renders a Tank without heat and with a single unit weapon", () => {
