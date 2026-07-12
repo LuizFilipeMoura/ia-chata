@@ -40,7 +40,6 @@
 .v2-root .v2-dock-btn[disabled]{opacity:.4;cursor:not-allowed;}
 .v2-root .v2-dock-btn--danger{color:var(--v2-ember-hi);}
 .v2-root .v2-dock-btn--danger:not([disabled]):hover{border-color:var(--v2-ember-deep);color:var(--v2-ember-hi);}
-.v2-root .v2-dock-gear{flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#2a323e,#0e1217);border:2px solid var(--v2-rivet);color:var(--v2-oil);font-size:var(--v2-text-xl);cursor:pointer;box-shadow:0 0 14px rgba(231,154,61,.25);}
 
 /* ---- Leave dialog (mirrors V1 .leave-dialog, app.css 262-293) ---- */
 .v2-root .v2-leave-scrim{z-index:9500;}

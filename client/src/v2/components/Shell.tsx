@@ -64,7 +64,6 @@ export function Shell({
           onClick={() => setConfirmLeave(true)}>
           <span>⎋</span>Leave
         </button>
-        <button type="button" className="v2-dock-gear" aria-label="Settings">⚙</button>
       </footer>
 
       {confirmLeave && (

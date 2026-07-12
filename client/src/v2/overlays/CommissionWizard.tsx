@@ -39,7 +39,7 @@ interface WizardState {
   unit: string; // flat-pick weapon for Tank / Walker
 }
 
-const KIND_GLYPH: Record<Kind, string> = { rig: "◈", tank: "▰", walker: "⧗" };
+const KIND_GLYPH: Record<Kind, string> = { rig: "◈", tank: "⬛", walker: "⬟" };
 const KIND_DESC: Record<Kind, string> = {
   rig: "Heat + weight class + two weapon slots + equipment. 3 actions.",
   tank: "Cold single-model machine. One flat-pick weapon. 2 actions.",
@@ -335,7 +335,9 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
                 <div className="v2-fc-equip-passive">
                   ROF {w.rof} · STR {w.str} · {w.melee ? `RNG ${w.rng[0]}/${w.rng[1]}"` : `Sweet ${w.sweet}" · ${w.minRange}–${w.maxRange}"`}
                 </div>
-                <div className="v2-fc-equip-active">{w.perks?.length ? w.perks.join(", ") : "—"}</div>
+                {w.perks?.length ? (
+                  <div className="v2-fc-equip-active">{w.perks.join(", ")}</div>
+                ) : null}
               </button>
             ))}
           </div>
