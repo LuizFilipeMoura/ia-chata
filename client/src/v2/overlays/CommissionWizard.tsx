@@ -513,7 +513,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
                 key={label}
                 className={"v2-fw-step" + (i === state.step ? " on" : i < state.step ? " done" : "")}
               >
-                <span className="v2-fw-step-n">{i + 1}</span>
+                <span className="v2-fw-step-n">{i - minStep + 1}</span>
                 <span className="v2-fw-step-label">{label}</span>
                 <span className="v2-fw-step-rail" aria-hidden="true" />
               </div>
@@ -537,7 +537,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
             </button>
           ) : (
             <button type="button" className="v2-fw-btn cta v2-cta" disabled={!canSubmit} onClick={submit}>
-              {canSubmit ? "Commission" : "Roster full"}
+              {editRig ? "Save loadout" : (canSubmit ? "Commission" : "Roster full")}
             </button>
           )}
         </div>

@@ -135,7 +135,7 @@ test("edit mode seeds the loadout, hides Kind/Chassis, and dispatches reconfigur
   expect(screen.queryByText("Chassis")).toBeNull();
   await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Weapons → Equipment
   await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Equipment → Confirm
-  await user.click(await screen.findByRole("button", { name: /Commission/i }));
+  await user.click(await screen.findByRole("button", { name: /Save loadout/i }));
   expect(sendCommand).toHaveBeenCalledWith("reconfigure", expect.objectContaining({
     name: "Shrike", owner: "a",
     equipment: expect.anything(), equipmentUpgrade: expect.anything(),
