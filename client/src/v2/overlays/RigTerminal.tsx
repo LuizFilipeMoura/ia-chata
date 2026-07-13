@@ -22,10 +22,12 @@ interface Props {
   /** Whether it's the viewer's activation turn (used to phrase the wait state honestly). */
   myTurn: boolean;
   onCommand: (verb: string, attrs: Record<string, unknown>) => void;
+  /** Opens the Commission wizard in edit mode for this rig; rigs only (fixed loadouts on tanks/walkers). */
+  onEdit?: (rigId: number) => void;
   onClose: () => void;
 }
 
-export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand, onClose }: Props) {
+export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand, onEdit, onClose }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -122,6 +124,25 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
 
             {activation && <div className="v2-rt-actions">{activation}</div>}
           </>
+        )}
+
+        {/* Decommission: only your own Rig, and only before the battle starts.
+            Removing it frees its chassis back into the commission picker. */}
+        {mine && !started && (
+          <div className="v2-rt-actions">
+            {kind === "rig" && onEdit && (
+              <button type="button" className="v2-rt-edit"
+                aria-label={`Edit loadout of ${rig.name}`}
+                onClick={() => { onEdit(rig.id); onClose(); }}>
+                ✎ Edit loadout
+              </button>
+            )}
+            <button type="button" className="v2-rt-remove"
+              aria-label={`Remove ${rig.name}`}
+              onClick={() => { onCommand("remove", { name: rig.name }); onClose(); }}>
+              ✕ Remove Rig
+            </button>
+          </div>
         )}
       </section>
     </div>

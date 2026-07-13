@@ -479,6 +479,53 @@
   border: 1px solid var(--v2-line);
 }
 
+/* Edit-loadout control — pre-battle, rigs only. Calmer, non-destructive
+   ghost sitting beside Remove; reopens the Commission wizard in edit mode. */
+.v2-root .v2-rt-edit {
+  flex: 1;
+  padding: 12px;
+  margin-right: 8px;
+  background: transparent;
+  border: 1px solid var(--v2-line);
+  border-bottom: 2px solid #0a1420;
+  color: var(--v2-txt-faint);
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: var(--v2-text-base);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--v2-dur-fast), border-color var(--v2-dur-fast), background var(--v2-dur-fast);
+}
+.v2-root .v2-rt-edit:hover {
+  color: var(--v2-verdigris, #5ec9c9);
+  border-color: var(--v2-verdigris, #5ec9c9);
+  background: rgba(94, 201, 201, .08);
+}
+
+/* Decommission control — pre-battle only. Subdued destructive ghost so it
+   never competes with the Activate CTA. */
+.v2-root .v2-rt-remove {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid var(--v2-line);
+  border-bottom: 2px solid #1a0808;
+  color: var(--v2-txt-faint);
+  font-family: var(--v2-stencil);
+  font-weight: 700;
+  font-size: var(--v2-text-base);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--v2-dur-fast), border-color var(--v2-dur-fast), background var(--v2-dur-fast);
+}
+.v2-root .v2-rt-remove:hover {
+  color: var(--v2-danger, #f26a50);
+  border-color: var(--v2-danger, #f26a50);
+  background: rgba(242, 106, 80, .08);
+}
+
 /* --- Status / Loadout toggle ------------------------------------------- */
 .v2-root .v2-rt-tabs {
   display: flex;

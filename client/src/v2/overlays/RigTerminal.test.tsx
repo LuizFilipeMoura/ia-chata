@@ -26,10 +26,55 @@ test("renders header and four component rows", () => {
   ["Hull", "Arms", "Legs", "Engine"].forEach((l) => expect(screen.getByText(l)).toBeInTheDocument());
 });
 
-test("has no Remove control", () => {
+test("my own rig shows a Remove control before the battle starts", () => {
   render(
     <V2Providers>
       <RigTerminal rig={rig} canActivate={false} started={false} mine myTurn={false} onCommand={vi.fn()} onClose={vi.fn()} />
+    </V2Providers>,
+  );
+  expect(screen.getByRole("button", { name: /Remove/i })).toBeInTheDocument();
+});
+
+test("Remove issues the remove command and closes the terminal", async () => {
+  const user = userEvent.setup();
+  const onCommand = vi.fn();
+  const onClose = vi.fn();
+  render(
+    <V2Providers>
+      <RigTerminal rig={rig} canActivate={false} started={false} mine myTurn={false} onCommand={onCommand} onClose={onClose} />
+    </V2Providers>,
+  );
+  await user.click(screen.getByRole("button", { name: /Remove/i }));
+  expect(onCommand).toHaveBeenCalledWith("remove", { name: "STALKER" });
+  expect(onClose).toHaveBeenCalled();
+});
+
+test("pre-battle own rig shows Edit loadout and calls onEdit with the rig id", async () => {
+  const user = userEvent.setup();
+  const onEdit = vi.fn();
+  render(
+    <V2Providers>
+      <RigTerminal rig={rig} canActivate={false} started={false} mine myTurn={false}
+        onCommand={vi.fn()} onEdit={onEdit} onClose={vi.fn()} />
+    </V2Providers>,
+  );
+  await user.click(screen.getByRole("button", { name: /Edit loadout/i }));
+  expect(onEdit).toHaveBeenCalledWith(1);
+});
+
+test("no Remove control once the battle has started", () => {
+  render(
+    <V2Providers>
+      <RigTerminal rig={rig} canActivate={false} started mine myTurn={false} onCommand={vi.fn()} onClose={vi.fn()} />
+    </V2Providers>,
+  );
+  expect(screen.queryByRole("button", { name: /Remove/i })).not.toBeInTheDocument();
+});
+
+test("no Remove control on an enemy rig", () => {
+  render(
+    <V2Providers>
+      <RigTerminal rig={rig} canActivate={false} started={false} mine={false} myTurn={false} onCommand={vi.fn()} onClose={vi.fn()} />
     </V2Providers>,
   );
   expect(screen.queryByRole("button", { name: /Remove/i })).not.toBeInTheDocument();

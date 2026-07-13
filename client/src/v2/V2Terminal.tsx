@@ -21,11 +21,13 @@ export function V2Terminal() {
   const { chatOpen, setChatOpen, glossaryOpen, setGlossaryOpen } = useUi();
   const [openRigId, setOpenRigId] = useState<number | null>(null);
   const [commissionOpen, setCommissionOpen] = useState(false);
+  const [editRigId, setEditRigId] = useState<number | null>(null);
   const [chatUnread, setChatUnread] = useState(false);
 
   useV2BattleWatchers();
 
   const openRig = rigs.find((r) => r.id === openRigId) || null;
+  const editRig = rigs.find((r) => r.id === editRigId) || null;
   const started = Boolean(game?.started);
   const pendingGate = Boolean(game?.pendingAnswer || game?.pendingReaction || game?.pendingBlast);
   // Whether it's this player's activation turn at all — distinct from whether
@@ -50,9 +52,14 @@ export function V2Terminal() {
       {openRig && (
         <RigTerminal rig={openRig} started={started} canActivate={canActivate}
           mine={(openRig.owner || "a") === mySide} myTurn={myTurn}
-          onCommand={sendCommand} onClose={() => setOpenRigId(null)} />
+          onCommand={sendCommand}
+          onEdit={(id) => { setOpenRigId(null); setEditRigId(id); setCommissionOpen(true); }}
+          onClose={() => setOpenRigId(null)} />
       )}
-      {commissionOpen && <CommissionWizard onClose={() => setCommissionOpen(false)} />}
+      {commissionOpen && (
+        <CommissionWizard editRig={editRig ?? undefined}
+          onClose={() => { setCommissionOpen(false); setEditRigId(null); }} />
+      )}
       <OutcomeBanner />
       <GlossaryDialog open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
       <V2ChatMount onUnreadChange={setChatUnread} />
