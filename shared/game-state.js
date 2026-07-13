@@ -85,18 +85,22 @@ export function normalizeUnitWeapon(name) {
 // (`longRange` / `melee`) index straight into WEAPONS. `sp` is the per-rig
 // Structure Points (≈2× the old class defaults) — a durability lever tuned to
 // each rig's identity; makeRig uses it in place of RIG_DEFAULTS.
+// `name` is the chassis codename — the single source of truth surfaced by the
+// commission UI (client derives its id→name map from here, so a new chassis is
+// named the moment it's added to this array). `label` stays the weapon-combo
+// string used as a secondary descriptor.
 export const CHASSIS = [
-  { id: "light-claw-autocannon",      label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-missile-flamethrower", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
-  { id: "light-saw-minigun",          label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-wreckingball-double",  label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
-  { id: "light-sword-arc",            label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
-  { id: "light-harpoon-anchor",       label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
-  { id: "light-rivet-pressureclaw",   label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
-  { id: "medium-lance-mortar",        label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
-  { id: "medium-shield-siege",        label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
-  { id: "medium-sniper-chainsaw",     label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
-  { id: "medium-crossbow-talon",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
+  { id: "light-claw-autocannon",      name: "Ironjaw",    label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-missile-flamethrower", name: "Cinderwalk", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
+  { id: "light-saw-minigun",          name: "Scrapmaw",   label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-wreckingball-double",  name: "Sledge",     label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
+  { id: "light-sword-arc",            name: "Arclight",   label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
+  { id: "light-harpoon-anchor",       name: "Grapnel",    label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
+  { id: "light-rivet-pressureclaw",   name: "Rivethead",  label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
+  { id: "medium-lance-mortar",        name: "Halberd",    label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
+  { id: "medium-shield-siege",        name: "Rampart",    label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
+  { id: "medium-sniper-chainsaw",     name: "Deadeye",    label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+  { id: "medium-crossbow-talon",      name: "Shrike",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
 ];
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
@@ -1102,6 +1106,20 @@ export function findRig(room, name) {
   if (!name) return null;
   const n = String(name).trim().toLowerCase();
   return room.rigs.find((r) => r.name.toLowerCase() === n) || null;
+}
+
+// Names must be unique per room (findRig / remove key off them). Chassis that
+// lack an authored codename fall back to a weight-class label ("light"), so two
+// such rigs would otherwise collide and the second add be silently dropped.
+// Append " 2", " 3", … until the name is free, honouring the commission wizard's
+// promise that the server dedupes collisions on commit.
+export function uniqueRigName(room, base) {
+  const name = String(base || "").trim();
+  if (!name || !findRig(room, name)) return name;
+  for (let i = 2; ; i++) {
+    const candidate = `${name} ${i}`;
+    if (!findRig(room, candidate)) return candidate;
+  }
 }
 
 export function normalizeSide(room, ref) {
@@ -2553,12 +2571,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   }
 
   if (verb === "add") {
-    if (a.name && !findRig(room, a.name)) {
+    if (a.name) {
       const kindId = String(a.kind || "rig").toLowerCase();
       if (!UNIT_KINDS[kindId]) return room;
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
       if (canAddRigForSide(room, owner)) {
-        const unit = makeUnit(kindId, room.nextRigId, a.name, owner, {
+        const unit = makeUnit(kindId, room.nextRigId, uniqueRigName(room, a.name), owner, {
           // Rig options
           weightClass: (a.class || a.weightClass || "").toLowerCase() || undefined,
           longRange: a.longRange || a.lr,
@@ -2590,6 +2608,32 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.rigs = room.rigs.filter((r) => r !== rig);
       resetReadyBeforeStart(room);
       changed = true;
+    }
+  } else if (verb === "reconfigure") {
+    // Pre-battle loadout edit: rebuild the rig in place through the same
+    // makeUnit path used by `add`, so hull/heat/effect math and the
+    // one-Prototype-per-rig rule stay enforced by construction. Weapons and
+    // chassis are fixed; only equipment + the three upgrade ladders change.
+    if (!room.game.started) {
+      const rig = findRig(room, a.name);
+      const actor = normalizeSide(room, a.owner) || normalizeSide(room, context.side);
+      if (rig && rig.kind === "rig" && actor && (rig.owner || "a") === actor) {
+        const rebuilt = makeUnit("rig", rig.id, rig.name, rig.owner, {
+          weightClass: rig.weightClass,
+          longRange: rig.weapons.longRange,
+          melee: rig.weapons.melee,
+          chassis: rig.chassis,
+          longRangeUpgrade: a.longRangeUpgrade ?? rig.weaponUpgrades?.longRange,
+          meleeUpgrade: a.meleeUpgrade ?? rig.weaponUpgrades?.melee,
+          equipment: a.equipment ?? rig.equipment ?? null,
+          equipmentUpgrade: a.equipmentUpgrade ?? rig.equipmentUpgrade ?? null,
+        });
+        if (rebuilt) {
+          room.rigs[room.rigs.indexOf(rig)] = rebuilt;
+          resetReadyBeforeStart(room);
+          changed = true;
+        }
+      }
     }
   } else if (verb === "ready") {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);

@@ -382,6 +382,18 @@ test("add assigns owner, weapons and default SP; damage respects the floor", () 
   assert.equal(r.version, 2);
 });
 
+test("add dedupes a colliding name instead of silently dropping the rig", () => {
+  // Chassis without an authored codename fall back to a weight-class name, so two
+  // such rigs arrive with the same base name. Both must be added; the second is
+  // suffixed rather than dropped (the old guard returned 200 with no new rig).
+  const r = createRoom("X");
+  applyCommand(r, { verb: "add", attrs: { name: "light", class: "light", owner: "a", ...W } });
+  applyCommand(r, { verb: "add", attrs: { name: "light", class: "light", owner: "a", ...W } });
+  assert.equal(r.rigs.length, 2);
+  assert.deepEqual(r.rigs.map((rig) => rig.name), ["light", "light 2"]);
+  assert.equal(findRig(r, "light 2").id, 2);
+});
+
 test("add without weapons is a no-op — no rig, no version bump, no id burn", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium" } });          // missing both
@@ -4425,4 +4437,37 @@ test("SUPPORT_UNITS and SEED_SUPPORT are rebuilt unchanged from the catalog", ()
     { name: "Rocket Walker",   owner: "b", kind: "walker", unit: "Rocket Pod",       modules: ["damage", "recon"] },
     { name: "Gun Walker",      owner: "b", kind: "walker", unit: "Autocannon Mount", modules: ["damage", "coolant"] },
   ]);
+});
+
+test("reconfigure swaps a pre-battle rig's equipment/upgrades in place", () => {
+  const r = createRoom("RECON1");
+  claimSide(r, { name: "A", side: "a" });
+  claimSide(r, { name: "B", side: "b" });
+  applyCommand(r, { verb: "add", attrs: { name: "Shrike", owner: "a", chassis: "medium-crossbow-talon", class: "medium", lr: "Crossbow", melee: "Talon" } });
+  const before = findRig(r, "Shrike");
+  const beforeId = before.id;
+  applyCommand(r, { verb: "reconfigure", attrs: {
+    name: "Shrike", owner: "a", equipment: "ablative-plating", equipmentUpgrade: null,
+  } });
+  const after = findRig(r, "Shrike");
+  assert.equal(after.id, beforeId, "id preserved");
+  assert.equal(after.name, "Shrike", "name preserved");
+  assert.equal(after.owner, "a", "owner preserved");
+  assert.equal(after.equipment, "ablative-plating", "equipment swapped");
+  // Ablative Plating grants +1 max hull at commission; the rebuild must apply it.
+  assert.equal(after.hull.max, before.hull.max + 1, "passive-SP equipment re-derived");
+});
+
+test("reconfigure is a no-op after start, on a non-rig, and cross-side", () => {
+  const r = createRoom("RECON2");
+  claimSide(r, { name: "A", side: "a" });
+  claimSide(r, { name: "B", side: "b" });
+  applyCommand(r, { verb: "add", attrs: { name: "Mine", owner: "a", chassis: "medium-crossbow-talon", class: "medium", lr: "Crossbow", melee: "Talon" } });
+  // cross-side actor cannot reconfigure my rig
+  applyCommand(r, { verb: "reconfigure", attrs: { name: "Mine", equipment: "ablative-plating" } }, { side: "b" });
+  assert.notEqual(findRig(r, "Mine").equipment, "ablative-plating", "cross-side rejected");
+  // after start it is frozen
+  r.game.started = true;
+  applyCommand(r, { verb: "reconfigure", attrs: { name: "Mine", owner: "a", equipment: "ablative-plating" } });
+  assert.notEqual(findRig(r, "Mine").equipment, "ablative-plating", "post-start rejected");
 });
