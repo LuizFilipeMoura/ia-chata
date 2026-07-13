@@ -59,8 +59,8 @@ export function upgradePips(nature: string): { reward: number; risk: number } {
 // the tag on the first cost delimiter (" — " or ";"). A tag with no delimiter is
 // all payoff and has no catch.
 export function splitUpgradeTag(tier: UpgradeTier): { payoff: string; catch: string | null } {
-  if (tier.catch) return { payoff: tier.tag, catch: tier.catch };
   const m = tier.tag.match(/^(.*?)(?:\s+—\s+|;\s+)(.*)$/);
-  if (m) return { payoff: m[1].trim(), catch: m[2].trim() };
-  return { payoff: tier.tag, catch: null };
+  const payoff = m ? m[1].trim() : tier.tag;
+  const parsed = m ? m[2].trim() : null;
+  return { payoff, catch: tier.catch ?? parsed };
 }

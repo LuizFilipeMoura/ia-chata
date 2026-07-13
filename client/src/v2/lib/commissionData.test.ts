@@ -33,9 +33,14 @@ test("upgradePips climbs reward and risk by nature", () => {
   expect(upgradePips("bogus")).toEqual({ reward: 1, risk: 0 });
 });
 
-test("splitUpgradeTag prefers an authored catch", () => {
-  const t = { id: "x", nature: "prototype", name: "N", tag: "Big payoff", catch: "Real cost" };
-  expect(splitUpgradeTag(t)).toEqual({ payoff: "Big payoff", catch: "Real cost" });
+test("splitUpgradeTag strips the tag for payoff and prefers an authored catch", () => {
+  const t = { id: "x", nature: "prototype", name: "N", tag: "Ignores armour; belt cycles slow after", catch: "Belt cycles slow after — no fire next turn" };
+  expect(splitUpgradeTag(t)).toEqual({ payoff: "Ignores armour", catch: "Belt cycles slow after — no fire next turn" });
+});
+
+test("splitUpgradeTag with an authored catch and no delimiter keeps the whole tag as payoff", () => {
+  const t = { id: "y", nature: "prototype", name: "N", tag: "EMP a rig for a turn", catch: "Overloads your own gun" };
+  expect(splitUpgradeTag(t)).toEqual({ payoff: "EMP a rig for a turn", catch: "Overloads your own gun" });
 });
 
 test("splitUpgradeTag parses a delimited tag when no catch is authored", () => {
