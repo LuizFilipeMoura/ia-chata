@@ -264,42 +264,42 @@ export const EQUIPMENT_UPGRADES = {
   "ablative-plating": [
     { id: "reinforced-plating", nature: "field", name: "Reinforced Plating", tag: "Harden gives −2 impact, not −1", effect: { hardenImpact: 2 } },
     { id: "reactive-armor", nature: "tuned", name: "Reactive Armor", tag: "First hit each round hardens that location", effect: {} }, // TODO(mechanics)
-    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits — each costs heat", effect: {} }, // TODO(mechanics)
+    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits", catch: "Each charge costs heat", effect: {} }, // TODO(mechanics)
   ],
   "radiator-array": [
     { id: "twin-radiators", nature: "field", name: "Twin Radiators", tag: "Purge vents −3, not −2", effect: { purgeHeat: -3 } },
     { id: "coolant-injection", nature: "tuned", name: "Coolant Injection", tag: "−2 heat before the overheat roll when over Capacity", effect: {} }, // TODO(mechanics)
-    { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a STR spike", effect: {} }, // TODO(mechanics)
+    { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a STR spike", catch: "Must charge it up first", effect: {} }, // TODO(mechanics)
   ],
   "servo-actuators": [
     { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint costs 0 heat", effect: { sprintHeat: 0 } },
     { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: {} }, // TODO(mechanics)
-    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", effect: {} }, // TODO(mechanics)
+    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in", catch: "Heat and a cooldown", effect: {} }, // TODO(mechanics)
   ],
   "overclock-core": [
     { id: "redundant-capacitors", nature: "field", name: "Redundant Capacitors", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
     { id: "adrenaline-surge", nature: "tuned", name: "Adrenaline Surge", tag: "Below half SP, Overclock grants +3 actions", effect: {} }, // TODO(mechanics)
-    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 STR — but overheat bonus doubles", effect: {} }, // TODO(mechanics)
+    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 STR", catch: "Overheat bonus doubles", effect: {} }, // TODO(mechanics)
   ],
   "field-repair-suite": [
     { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
     { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 3 SP on a destroyed location", effect: {} }, // TODO(mechanics)
-    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery — at a heat-cap cost", effect: {} }, // TODO(mechanics)
+    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery", catch: "Costs heat-cap", effect: {} }, // TODO(mechanics)
   ],
   "blast-furnace-core": [
     { id: "insulated-core", nature: "field", name: "Insulated Core", tag: "Safe up to +2 over Capacity, not +1", effect: { thermalMargin: 2 } },
     { id: "backdraft", nature: "tuned", name: "Backdraft", tag: "Heat Purge Wave +1 STR per 2 heat over Capacity", effect: {} }, // TODO(mechanics)
-    { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for STR or a burst", effect: {} }, // TODO(mechanics)
+    { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for STR or a burst", catch: "Only banks while overheated", effect: {} }, // TODO(mechanics)
   ],
   "targeting-computer": [
     { id: "ballistic-processor", nature: "field", name: "Ballistic Processor", tag: "+1 accuracy vs a target in your sweet-spot band", effect: { sweetBandAcc: 1 } },
     { id: "predictive-tracking", nature: "tuned", name: "Predictive Tracking", tag: "vs a static/pinned target: +2 accuracy, ignore cover", effect: {} }, // TODO(mechanics)
-    { id: "fire-solution-lock", nature: "prototype", name: "Fire Solution Lock", tag: "Hold still and stack a solution → an auto-hit AP volley", effect: {} }, // TODO(mechanics)
+    { id: "fire-solution-lock", nature: "prototype", name: "Fire Solution Lock", tag: "Hold still and stack a solution → an auto-hit AP volley", catch: "Must hold still to charge", effect: {} }, // TODO(mechanics)
   ],
   "reactive-plating": [
     { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 STR, not −1", effect: { sideRearStr: -2 } },
     { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: {} }, // TODO(mechanics)
-    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", effect: {} }, // TODO(mechanics)
+    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls", catch: "Costs heat", effect: {} }, // TODO(mechanics)
   ],
 };
 
@@ -413,112 +413,112 @@ export const WEAPON_UPGRADES = {
   "Crossbow": [
     { id: "fletched-bolts", nature: "field", name: "Fletched Bolts", tag: "Aimed shots ignore the aim penalty", effect: { perks: ["Precision"] } },
     { id: "steady-aim", nature: "tuned", name: "Steady Aim", tag: "+3 STR when firing from the sweet spot (±2\")", effect: { steadyAim: true } },
-    { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn — runs +2 heat", effect: { pinningBolt: true } },
+    { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn", catch: "Runs +2 heat", effect: { pinningBolt: true } },
   ],
   "Talon": [
     { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+2 STR", effect: { str: 2 } },
     { id: "exploit-wound", nature: "tuned", name: "Exploit Wound", tag: "+3 STR vs an already-damaged location", effect: { vsWoundedLoc: true } },
-    { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every hit is Critical (but weak on fresh armour)", effect: { eviscerate: true } },
+    { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every hit is Critical", catch: "Weak on fresh armour", effect: { eviscerate: true } },
   ],
   "Mini Gun": [
     { id: "suppressive-fire", nature: "field", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
     { id: "extended-belt", nature: "tuned", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
-    { id: "suppression-lock", nature: "prototype", name: "Suppression Lock", tag: "Grind one target down turn by turn until it's pinned", effect: { suppressLock: true } },
+    { id: "suppression-lock", nature: "prototype", name: "Suppression Lock", tag: "Grind one target down turn by turn until it's pinned", catch: "Commits you to that one target", effect: { suppressLock: true } },
   ],
   "Double MG": [
     { id: "gyro-mount", nature: "field", name: "Gyro Mount", tag: "Reroll one missed to-hit die", effect: { rerollMisses: 1 } },
     { id: "pinning-burst", nature: "tuned", name: "Pinning Burst", tag: "4+ hits: target loses 1 action next activation", effect: { pinOnHits: 4 } },
-    { id: "kneecapper", nature: "prototype", name: "Kneecapper", tag: "Rake legs/arms from any arc to cripple them; never hull/engine", effect: { kneecapper: true } },
+    { id: "kneecapper", nature: "prototype", name: "Kneecapper", tag: "Rake legs/arms from any arc to cripple them", catch: "Never hits hull or engine", effect: { kneecapper: true } },
   ],
   "Autocannon": [
     { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+2 STR", effect: { str: 2 } },
     { id: "ap-shells", nature: "tuned", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour; belt cycles slow after", effect: { penetrator: true } },
+    { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour", catch: "Belt cycles slow after — no fire next turn", effect: { penetrator: true } },
   ],
   "Arc Gun": [
     { id: "ion-burn", nature: "field", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
     { id: "systems-overload", nature: "tuned", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
-    { id: "ion-storm", nature: "prototype", name: "Ion Storm", tag: "EMP a rig's systems for a turn; overloads your own gun", effect: { ionStorm: true } },
+    { id: "ion-storm", nature: "prototype", name: "Ion Storm", tag: "EMP a rig's systems for a turn", catch: "Overloads your own gun", effect: { ionStorm: true } },
   ],
   "Mortar": [
     { id: "cluster-shells", nature: "field", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
     { id: "airburst-fuze", nature: "tuned", name: "Airburst Fuze", tag: "Ignores cover", effect: { ignoreCover: true } },
-    { id: "barrage", nature: "prototype", name: "Barrage", tag: "Shell a zone for 2 rounds; mortar locked + hot (spatial)", effect: { barrage: true } },
+    { id: "barrage", nature: "prototype", name: "Barrage", tag: "Shell a zone for 2 rounds (spatial)", catch: "Mortar locked in place and runs hot", effect: { barrage: true } },
   ],
   "Sniper Cannon": [
     { id: "marksman-optics", nature: "field", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
     { id: "cold-bore", nature: "tuned", name: "Cold Bore", tag: "+3 STR vs undamaged targets", effect: { coldBore: true } },
-    { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", effect: { enfilade: true } }, // spatial ricochet narrated as a player instruction (Group G)
+    { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", catch: "You don't choose the ricochet target", effect: { enfilade: true } }, // spatial ricochet narrated as a player instruction (Group G)
   ],
   "Siege Maul": [
     { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+2 STR", effect: { str: 2 } },
     { id: "breaching-round", nature: "tuned", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
-    { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", effect: { piledriver: true } }, // shove (3") deferred — Group G (spatial)
+    { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", catch: "Resets if you stop advancing", effect: { piledriver: true } }, // shove (3") deferred — Group G (spatial)
   ],
   "Missile Barrage": [
     { id: "swarm-warheads", nature: "field", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
     { id: "shaped-charges", nature: "tuned", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "fire-control-lock", nature: "prototype", name: "Fire Control Lock", tag: "Lock a target for one unmissable armor-piercing volley", effect: { fireControl: true } },
+    { id: "fire-control-lock", nature: "prototype", name: "Fire Control Lock", tag: "Lock a target for one unmissable armor-piercing volley", catch: "Takes a turn to paint the target first", effect: { fireControl: true } },
   ],
   "Sword": [
     { id: "duelist-balance", nature: "field", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
     { id: "opportunist", nature: "tuned", name: "Opportunist", tag: "+3 STR vs disrupted / overheated targets", effect: { vsDisrupted: true } },
-    { id: "superconductor-edge", nature: "prototype", name: "Superconductor Edge", tag: "Run hot and dump your heat into them through the blade", effect: { superconductor: true } },
+    { id: "superconductor-edge", nature: "prototype", name: "Superconductor Edge", tag: "Run hot and dump your heat into them through the blade", catch: "Needs heat already banked", effect: { superconductor: true } },
   ],
   "Circular Saw": [
     { id: "tempered-teeth", nature: "field", name: "Tempered Teeth", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "sunder", nature: "tuned", name: "Sunder", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
-    { id: "dismember", nature: "prototype", name: "Dismember", tag: "Saw a location in half to cripple it for good", effect: { dismember: true } },
+    { id: "dismember", nature: "prototype", name: "Dismember", tag: "Saw a location in half to cripple it for good", catch: "Jams the saw afterward", effect: { dismember: true } },
   ],
   "Chainsaw": [
     { id: "ripper-teeth", nature: "field", name: "Ripper Teeth", tag: "Gains Rend", effect: { perks: ["Rend"] } },
     { id: "bloodletter", nature: "tuned", name: "Bloodletter", tag: "Extra hit vs damaged targets", effect: { vsDamaged: { rof: 1 } } },
-    { id: "redline-governor", nature: "prototype", name: "Redline Governor", tag: "The hotter you run, the harder it bites", effect: { redline: true } },
+    { id: "redline-governor", nature: "prototype", name: "Redline Governor", tag: "The hotter you run, the harder it bites", catch: "You take heat damage too", effect: { redline: true } },
   ],
   "Claw": [
     { id: "rending-talons", nature: "field", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
     { id: "vice-grip", nature: "tuned", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
-    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 impact from anyone)", effect: { breachGrip: true } },
+    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 impact from anyone)", catch: "Leaves you locked in melee while gripping", effect: { breachGrip: true } },
   ],
   "Lance": [
     { id: "couched-reach", nature: "field", name: "Couched Reach", tag: "Doubles melee reach to 4\"", effect: { range: 2 } },
     { id: "full-tilt", nature: "tuned", name: "Full Tilt", tag: "Charge in for +3 STR", effect: { charge: 3 } },
-    { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", effect: { skewer: true } },
+    { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", catch: "Also traps you in the lock", effect: { skewer: true } },
   ],
   "Wrecking Ball": [
     { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 STR", effect: { str: 3 } },
     { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 STR and a knockback (knockback spatial)", effect: { charge: 2 } }, // knockback deferred — Group G (spatial)
-    { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", effect: { towChain: true } },
+    { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", catch: "Long cooldown after each pull", effect: { towChain: true } },
   ],
   "Bulwark Shield": [
     { id: "tower-shield", nature: "field", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
     { id: "anvil-boss", nature: "tuned", name: "Anvil Boss", tag: "Counter the first melee attacker each round while braced", effect: { riposteStr: 6 } },
-    { id: "emplacement", nature: "prototype", name: "Emplacement", tag: "Root into a permanent fortress shield; immobile, 2 actions, cooldown", effect: { emplacement: true } },
+    { id: "emplacement", nature: "prototype", name: "Emplacement", tag: "Root into a permanent fortress shield", catch: "Immobile, costs 2 actions, cooldown to leave", effect: { emplacement: true } },
   ],
   "Flamethrower": [
     { id: "sticky-fuel", nature: "field", name: "Sticky Fuel", tag: "Gains Rend", effect: { perks: ["Rend"] } },
     { id: "napalm", nature: "tuned", name: "Napalm", tag: "Hits set the target burning (1 SP/activation until doused)", effect: { burn: 1 } },
-    { id: "conflagration", nature: "prototype", name: "Conflagration", tag: "Stack burns for escalating damage-over-time; runs you hot", effect: { burn: 1, burnStacks: true } },
+    { id: "conflagration", nature: "prototype", name: "Conflagration", tag: "Stack burns for escalating damage-over-time", catch: "Runs you hot", effect: { burn: 1, burnStacks: true } },
   ],
   "Harpoon": [
     { id: "barbed-head", nature: "field", name: "Barbed Head", tag: "Gains Impale", effect: { perks: ["Impale"] } },
     { id: "taut-cable", nature: "tuned", name: "Taut Cable", tag: "+3 STR vs immobilised or engaged targets", effect: { vsPinned: true } },
-    { id: "harpoon-winch", nature: "prototype", name: "Harpoon Winch", tag: "Spear and reel a rig 4\" toward you; roots you, runs hot", effect: { harpoonWinch: true } },
+    { id: "harpoon-winch", nature: "prototype", name: "Harpoon Winch", tag: "Spear and reel a rig 4\" toward you", catch: "Roots you in place and runs hot", effect: { harpoonWinch: true } },
   ],
   "Rivet Gun": [
     { id: "rapid-feed", nature: "field", name: "Rapid Feed", tag: "+2 ROF", effect: { rof: 2 } },
     { id: "staple-burst", nature: "tuned", name: "Staple Burst", tag: "4+ hits: target loses 1 action next activation", effect: { pinOnHits: 4 } },
-    { id: "rivet-lock", nature: "prototype", name: "Rivet Lock", tag: "Rivet a location shut — no repairs, jams a weapon there", effect: { rivetLock: true } },
+    { id: "rivet-lock", nature: "prototype", name: "Rivet Lock", tag: "Rivet a location shut — no repairs, jams a weapon there", catch: "Takes repeated hits to the same spot to lock", effect: { rivetLock: true } },
   ],
   "Anchor": [
     { id: "fluked-head", nature: "field", name: "Fluked Head", tag: "+3 STR", effect: { str: 3 } },
     { id: "dead-weight", nature: "tuned", name: "Dead Weight", tag: "Struck target can't Disengage next activation", effect: { deadWeight: true } },
-    { id: "ground-anchor", nature: "prototype", name: "Ground Anchor", tag: "Anchor a rig in the lock; leaving you costs it a free Anchor hit", effect: { groundAnchor: true } },
+    { id: "ground-anchor", nature: "prototype", name: "Ground Anchor", tag: "Anchor a rig in the lock; leaving you costs it a free Anchor hit", catch: "Also holds you in the lock", effect: { groundAnchor: true } },
   ],
   "Pressure Claw": [
     { id: "hardened-jaws", nature: "field", name: "Hardened Jaws", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "crush-grip", nature: "tuned", name: "Crush Grip", tag: "On damaging hit: -1 max SP to struck location", effect: { onDamage: "sunder" } },
-    { id: "hydraulic-vice", nature: "prototype", name: "Hydraulic Vice", tag: "Pry a location's armour open (+2 impact from anyone)", effect: { breachGrip: true } },
+    { id: "hydraulic-vice", nature: "prototype", name: "Hydraulic Vice", tag: "Pry a location's armour open (+2 impact from anyone)", catch: "Leaves you locked in melee while gripping", effect: { breachGrip: true } },
   ],
 };
 
