@@ -36,7 +36,14 @@ async function main() {
     cards.push({ name: c.name, weapons: `${c.longRange} · ${c.melee}`, label, pngPath, file });
   }
 
-  // 2) A printable PDF: label (codename + weapons) above each QR, grid-laid out.
+  // 2) A printable PDF sized to glue onto a mini's ROUND base. The smallest base
+  // is 40mm; a square QR inscribed in a 40mm circle maxes at 40/√2 ≈ 28mm on a
+  // side (corners touch the rim), so every code fits any base >= 40mm. A faint
+  // 40mm circle is drawn around each QR as a cut/alignment guide, with the
+  // codename + weapons label above it. Printed at 100% scale (no "fit to page").
+  const MM = 2.83465; // pt per millimetre
+  const BASE_MM = 40; // smallest round base
+  const QR_MM = 28;   // largest square fully inscribed in a 40mm circle
   const pdfPath = join(OUT, "chassis-qr-cards.pdf");
   await new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -45,24 +52,32 @@ async function main() {
     stream.on("error", reject);
     doc.pipe(stream);
 
-    const PAGE_W = 595.28, MARGIN = 40, COLS = 2, ROWS = 3;
-    const cardW = (PAGE_W - MARGIN * 2) / COLS;
-    const qrSize = 190;
-    const rowH = 250;
+    const PAGE_W = 595.28, MARGIN = 40, COLS = 3, ROWS = 4;
+    const cellW = (PAGE_W - MARGIN * 2) / COLS;
+    const cellH = 175;
+    const baseR = (BASE_MM * MM) / 2;
+    const qrPt = QR_MM * MM;
+    const labelH = 34;
 
     cards.forEach((card, i) => {
       const slot = i % (COLS * ROWS);
       if (i > 0 && slot === 0) doc.addPage();
       const col = slot % COLS;
       const row = Math.floor(slot / COLS);
-      const x = MARGIN + col * cardW;
-      const y = MARGIN + row * rowH;
+      const cellX = MARGIN + col * cellW;
+      const cellY = MARGIN + row * cellH;
+      const cx = cellX + cellW / 2;
 
-      doc.fillColor("#111").font("Helvetica-Bold").fontSize(14)
-        .text(card.name, x, y, { width: cardW, align: "center" });
-      doc.font("Helvetica").fontSize(10).fillColor("#444")
-        .text(card.weapons, x, y + 20, { width: cardW, align: "center" });
-      doc.image(card.pngPath, x + (cardW - qrSize) / 2, y + 40, { width: qrSize, height: qrSize });
+      // Label: codename (bold) + weapons, centred over the base.
+      doc.fillColor("#111").font("Helvetica-Bold").fontSize(11)
+        .text(card.name, cellX, cellY, { width: cellW, align: "center" });
+      doc.font("Helvetica").fontSize(8).fillColor("#555")
+        .text(card.weapons, cellX, cellY + 14, { width: cellW, align: "center" });
+
+      // 40mm base circle (cut/align guide) with the 28mm QR centred inside it.
+      const cy = cellY + labelH + baseR;
+      doc.save().lineWidth(0.4).strokeColor("#bbb").circle(cx, cy, baseR).stroke().restore();
+      doc.image(card.pngPath, cx - qrPt / 2, cy - qrPt / 2, { width: qrPt, height: qrPt });
     });
 
     doc.end();
