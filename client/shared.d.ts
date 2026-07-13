@@ -32,8 +32,8 @@ declare module "/shared/game-state.js" {
     equipment?: string,
     equipmentUpgrade?: string | null,
   ): number;
-  export const CHASSIS: Array<{ id: string; label: string; class: string; longRange: string; melee: string }>;
-  export function chassisById(id?: string | null): { id: string; label: string; class: string; longRange: string; melee: string } | null;
+  export const CHASSIS: Array<{ id: string; name: string; label: string; class: string; longRange: string; melee: string; speed?: number; sp?: Record<string, number> }>;
+  export function chassisById(id?: string | null): { id: string; name: string; label: string; class: string; longRange: string; melee: string; speed?: number; sp?: Record<string, number> } | null;
   export const SUPPORT_TEMPLATES: Array<{ id: string; name: string; kind: "tank" | "walker"; unit: string | null; modules: string[] }>;
   export function templateById(id?: string | null): { id: string; name: string; kind: "tank" | "walker"; unit: string | null; modules: string[] } | null;
   export function templatesForKind(kind: string): Array<{ id: string; name: string; kind: "tank" | "walker"; unit: string | null; modules: string[] }>;
