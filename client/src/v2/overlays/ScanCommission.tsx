@@ -19,6 +19,9 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const stateRef = useRef({ rigs, game, mySide, sendCommand, onClose });
+  stateRef.current = { rigs, game, mySide, sendCommand, onClose };
+
   useEffect(() => {
     let stream: MediaStream | null = null;
     let raf = 0;
@@ -27,6 +30,8 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
     const canvas = document.createElement("canvas");
 
     const handle = (text: string) => {
+      if (done) return;
+      const { rigs, game, mySide, sendCommand, onClose } = stateRef.current;
       // Rig.chassis is `string | null | undefined` in room state; resolveScan's
       // minimal view only reads it as `string | undefined`, so normalize null.
       const scanRigs = rigs.map((r) => ({ ...r, chassis: r.chassis ?? undefined }));
@@ -43,6 +48,7 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
         try {
           if (detector) {
             const hits = await detector.detect(v);
+            if (done) return;
             if (hits[0]?.rawValue) handle(hits[0].rawValue);
           } else {
             canvas.width = v.videoWidth; canvas.height = v.videoHeight;
@@ -59,6 +65,7 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
 
     navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment" } })
       .then((s) => {
+        if (done) { s.getTracks().forEach((t) => t.stop()); return; }
         stream = s;
         if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play(); }
         raf = requestAnimationFrame(tick);
@@ -66,7 +73,8 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
       .catch(() => setError("Camera unavailable — commission from the wizard instead."));
 
     return () => { done = true; cancelAnimationFrame(raf); stream?.getTracks().forEach((t) => t.stop()); };
-  }, [rigs, game, mySide, sendCommand, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="v2-fw-scrim v2-scrim v2-scrim--oil show"
