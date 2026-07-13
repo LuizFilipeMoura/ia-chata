@@ -30,7 +30,7 @@ The pre-battle Scan button (`.v2-scan-fab`) is a floating iron-gradient **pill**
 - `z-index: 55` unchanged.
 
 ### Shape + fill
-- `border-radius: 8px` (was `999px`).
+- `border-radius: 0` (was `999px`) — sharp corners, no rounding.
 - `background: var(--v2-grad-oil-cta)`.
 - `border: 1px solid var(--v2-oil-edge)`; `border-bottom: 2px solid var(--v2-oil-deep)` (pressed-metal edge, matches dock buttons).
 - `color: #1a0d0a` (dark ink on amber — matches the danger button's dark-on-fill contrast pattern).
