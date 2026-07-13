@@ -37,14 +37,36 @@ test("commissioning a rig dispatches add with the rig field set", async () => {
   const user = userEvent.setup();
   sendCommand.mockClear();
   open();
-  await user.click(await screen.findByRole("button", { name: /^Next$/i }));
-  await user.click(await screen.findByRole("button", { name: /^Next$/i }));
-  await user.click(await screen.findByRole("button", { name: /^Next$/i }));
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Kind → Chassis
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Chassis → Weapons
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Weapons → Equipment
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Equipment → Confirm
   await user.click(await screen.findByRole("button", { name: /Commission/i }));
   expect(sendCommand).toHaveBeenCalledWith("add", expect.objectContaining({
     kind: "rig", chassis: expect.any(String), owner: "a",
     lr: expect.any(String), melee: expect.any(String), equipment: expect.any(String),
+    longRangeUpgrade: expect.any(String), meleeUpgrade: expect.any(String),
   }));
+});
+
+test("rig flow shows a Weapons step between Chassis and Equipment", async () => {
+  const user = userEvent.setup();
+  open();
+  expect(await screen.findByText("Weapons")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  expect(screen.getAllByRole("button", { name: /Prototype/i }).length).toBeGreaterThanOrEqual(2);
+});
+
+test("choosing a Prototype on one weapon locks the other weapon's Prototype", async () => {
+  const user = userEvent.setup();
+  open();
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  const protos = screen.getAllByRole("button", { name: /Prototype/i });
+  expect(protos[1]).not.toBeDisabled();
+  await user.click(protos[0]);
+  expect(screen.getAllByRole("button", { name: /Prototype/i })[1]).toBeDisabled();
 });
 
 test("tank Loadout step lists pre-built templates and commissions gun + modules", async () => {
