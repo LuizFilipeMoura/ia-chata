@@ -10,6 +10,7 @@ import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
 import { CHASSIS_NAME, weaponGlyph, firstUpgradeId, firstEquipmentUpgradeId, MODULE_BLURB } from "../lib/commissionData";
 import { UpgradeLadder } from "./UpgradeLadder";
+import type { Rig } from "../../state/types";
 import "../styles/forge.css";
 
 type Kind = "rig" | "tank" | "walker";
@@ -39,6 +40,7 @@ interface WizardState {
   equipment: string;
   equipmentUpgrade: string | null;
   template: string; // chosen SUPPORT_TEMPLATES id for Tank / Walker
+  rigMode: "standard" | "custom"; // Chassis-step pick: Standard auto-commissions, Custom opens the full flow
 }
 
 const KIND_GLYPH: Record<Kind, string> = { rig: "◈", tank: "⬛", walker: "⬟" };
@@ -48,13 +50,42 @@ const KIND_DESC: Record<Kind, string> = {
   walker: "Cold walker chassis. Pre-built loadout + two modules. 3 actions, mobile.",
 };
 
-export function CommissionWizard({ onClose }: { onClose: () => void }) {
+export function CommissionWizard({ onClose, editRig }: { onClose: () => void; editRig?: Rig }) {
   const { rigs, game } = useRoomState();
   const sendCommand = useCommands();
   const mySide = useMySide();
 
+  // No-mirror invariant (AGENTS.md): a chassis never appears twice on the field.
+  // Any chassis already commissioned by either side drops out of the picker; it
+  // returns the moment that rig is removed (RigTerminal, pre-battle only).
+  const usedChassis = new Set(rigs.map((r) => r.chassis).filter(Boolean));
+  // Mediums lead the picker, then lighter frames; ties keep catalogue order.
+  const CLASS_ORDER: Record<string, number> = { medium: 0, light: 1 };
+  const availableChassis = CHASSIS
+    .filter((pb) => !usedChassis.has(pb.id))
+    .slice()
+    .sort((a, b) => (CLASS_ORDER[a.class] ?? 9) - (CLASS_ORDER[b.class] ?? 9));
+
   const [state, setState] = useState<WizardState>(() => {
-    const pb = CHASSIS[0];
+    if (editRig) {
+      const eq = editRig.equipment ?? Object.keys(EQUIPMENT)[0];
+      return {
+        step: 2, // Weapons — first editable step
+        kind: "rig",
+        cls: editRig.weightClass || "medium",
+        owner: editRig.owner || "a",
+        chassis: editRig.chassis || "",
+        longRange: editRig.weapons?.longRange || "",
+        melee: editRig.weapons?.melee || "",
+        longRangeUpgrade: editRig.weaponUpgrades?.longRange ?? firstUpgradeId(editRig.weapons?.longRange || ""),
+        meleeUpgrade: editRig.weaponUpgrades?.melee ?? firstUpgradeId(editRig.weapons?.melee || ""),
+        equipment: eq,
+        equipmentUpgrade: editRig.equipmentUpgrade ?? firstEquipmentUpgradeId(eq),
+        template: templatesForKind("tank")[0].id,
+        rigMode: "custom",
+      };
+    }
+    const pb = availableChassis[0] ?? CHASSIS[0];
     return {
       step: 0,
       kind: "rig",
@@ -68,6 +99,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
       equipment: Object.keys(EQUIPMENT)[0],
       equipmentUpgrade: firstEquipmentUpgradeId(Object.keys(EQUIPMENT)[0]),
       template: templatesForKind("tank")[0].id,
+      rigMode: "standard",
     };
   });
 
@@ -91,6 +123,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
   };
 
   const STEPS = stepsFor(state.kind);
+  const minStep = editRig ? 2 : 0; // edit mode skips Kind + Chassis
 
   // Authored flavour per chassis id, loaded from the server's editable catalogue.
   // Falls back to empty (grid still works off built-in weapons/class) on failure.
@@ -140,6 +173,18 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
       : (templateById(state.template)?.name || state.cls);
 
   const submit = () => {
+    if (editRig) {
+      sendCommand("reconfigure", {
+        name: editRig.name,
+        owner: editRig.owner || "a",
+        longRangeUpgrade: state.longRangeUpgrade,
+        meleeUpgrade: state.meleeUpgrade,
+        equipment: state.equipment,
+        equipmentUpgrade: state.equipmentUpgrade,
+      });
+      close();
+      return;
+    }
     if (state.kind === "rig") {
       sendCommand("add", {
         name: unitName(),
@@ -173,6 +218,11 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype"
     || upgradeNature(state.melee, state.meleeUpgrade) === "prototype";
   const equipProto = equipmentUpgradeNature(state.equipment, state.equipmentUpgrade) === "prototype";
+
+  // A rig with no free chassis can't advance past (or submit from) the picker.
+  const chassisBlocked = state.kind === "rig" && availableChassis.length === 0;
+  const canAdd = canAddRigForSide({ rigs, game }, state.owner) && !chassisBlocked;
+  const canSubmit = editRig ? true : canAdd;
 
   let body: React.ReactNode;
   if (state.step === 0) {
@@ -210,7 +260,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
           <span className="v2-fc-cue-sub v2-eyebrow">— weapons &amp; weight class are fixed by the frame</span>
         </div>
         <div className="v2-fc-roster">
-          {CHASSIS.map((pb) => {
+          {availableChassis.map((pb) => {
             const sel = pb.id === state.chassis;
             return (
               <div key={pb.id} className={"v2-fc-slot" + (sel ? " is-sel" : "")}>
@@ -243,9 +293,45 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
                   </span>
                   {sel ? <span className="v2-fc-sel-tag" aria-hidden="true">◈ SEL</span> : null}
                 </button>
+                {sel ? (
+                  <div className="v2-fc-mode-panel">
+                    <div className="v2-fc-mode-seg" role="radiogroup" aria-label="Build mode">
+                      {(["standard", "custom"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          role="radio"
+                          aria-checked={state.rigMode === m}
+                          className={"v2-fc-mode-opt" + (state.rigMode === m ? " is-sel" : "")}
+                          onClick={() => patch({ rigMode: m })}
+                        >
+                          <span className="v2-fc-mode-opt-label v2-title">
+                            {m === "standard" ? "Standard" : "Custom"}
+                          </span>
+                          <span className="v2-fc-mode-opt-sub">
+                            {m === "standard"
+                              ? "Suggested equipment · field-tune weapons · commission now"
+                              : "Hand-pick equipment and tune every upgrade"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="v2-fw-btn"
+                      disabled={!canAdd}
+                      onClick={() => (state.rigMode === "standard" ? submit() : patch({ step: 2 }))}
+                    >
+                      {!canAdd ? "Roster full" : state.rigMode === "standard" ? "Commission ▸" : "Next ▸"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             );
           })}
+          {availableChassis.length === 0 && (
+            <div className="v2-fw-hint">Every chassis is already commissioned — remove a Rig to free one.</div>
+          )}
         </div>
         <div className="v2-fw-hint">
           Weapons and weight class are fixed by the chassis. Pick a frame — you'll tune its weapons next.
@@ -402,7 +488,9 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     );
   }
 
-  const canAdd = canAddRigForSide({ rigs, game }, state.owner);
+  // On the rig Chassis step the in-card mode panel owns advancement, so the
+  // footer carries Back only; every other step keeps its inline Next/Commission.
+  const onChassisStep = state.kind === "rig" && state.step === 1;
 
   return (
     <div
@@ -420,6 +508,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
           <h2 className="v2-fw-title v2-title">◈ Commission a {UNIT_KINDS[state.kind].label}</h2>
           <div className="v2-fw-rail">
             {STEPS.map((label, i) => (
+              i < minStep ? null : (
               <div
                 key={label}
                 className={"v2-fw-step" + (i === state.step ? " on" : i < state.step ? " done" : "")}
@@ -428,6 +517,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
                 <span className="v2-fw-step-label">{label}</span>
                 <span className="v2-fw-step-rail" aria-hidden="true" />
               </div>
+              )
             ))}
           </div>
         </div>
@@ -435,18 +525,19 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
         {body}
 
         <div className="v2-fw-nav">
-          {state.step > 0 && (
-            <button type="button" className="v2-fw-btn ghost" onClick={() => patch({ step: state.step - 1 })}>
+          {state.step > minStep && (
+            <button type="button" className="v2-fw-btn ghost" onClick={() => patch({ step: Math.max(minStep, state.step - 1) })}>
               ◂ Back
             </button>
           )}
-          {state.step < STEPS.length - 1 ? (
-            <button type="button" className="v2-fw-btn" onClick={() => patch({ step: state.step + 1 })}>
+          {onChassisStep ? null : state.step < STEPS.length - 1 ? (
+            <button type="button" className="v2-fw-btn"
+              onClick={() => patch({ step: state.step + 1 })}>
               Next
             </button>
           ) : (
-            <button type="button" className="v2-fw-btn cta v2-cta" disabled={!canAdd} onClick={submit}>
-              {canAdd ? "Commission" : "Roster full"}
+            <button type="button" className="v2-fw-btn cta v2-cta" disabled={!canSubmit} onClick={submit}>
+              {canSubmit ? "Commission" : "Roster full"}
             </button>
           )}
         </div>

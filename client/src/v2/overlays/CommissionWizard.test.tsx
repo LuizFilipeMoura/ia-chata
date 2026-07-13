@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 import { useEffect } from "react";
 import { AppProviders } from "../../AppProviders";
 import { useRoomDispatch } from "../../state/RoomStateContext";
-import type { ServerState } from "../../state/types";
+import type { ServerState, Rig } from "../../state/types";
 import { CommissionWizard } from "./CommissionWizard";
 
 const sendCommand = vi.fn();
@@ -25,6 +25,15 @@ function open() {
   render(<AppProviders><Seed /><CommissionWizard onClose={vi.fn()} /></AppProviders>);
 }
 
+// Chassis step now opens a Standard/Custom mode panel on the selected card
+// instead of a plain footer "Next"; Custom is required to reach the full
+// Weapons/Equipment/Confirm flow these tests exercise.
+async function advanceToWeapons(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Kind → Chassis
+  await user.click(await screen.findByRole("radio", { name: /Custom/i }));
+  await user.click(await screen.findByRole("button", { name: /Next ▸/i })); // Chassis → Weapons
+}
+
 test("rig flow has an Equipment step; tank flow does not", async () => {
   const user = userEvent.setup();
   open();
@@ -37,8 +46,7 @@ test("commissioning a rig dispatches add with the rig field set", async () => {
   const user = userEvent.setup();
   sendCommand.mockClear();
   open();
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Kind → Chassis
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Chassis → Weapons
+  await advanceToWeapons(user);
   await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Weapons → Equipment
   await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Equipment → Confirm
   await user.click(await screen.findByRole("button", { name: /Commission/i }));
@@ -53,16 +61,14 @@ test("rig flow shows a Weapons step between Chassis and Equipment", async () => 
   const user = userEvent.setup();
   open();
   expect(await screen.findByText("Weapons")).toBeInTheDocument();
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  await advanceToWeapons(user);
   expect(screen.getAllByRole("button", { name: /Prototype/i }).length).toBeGreaterThanOrEqual(2);
 });
 
 test("choosing a Prototype on one weapon locks the other weapon's Prototype", async () => {
   const user = userEvent.setup();
   open();
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  await advanceToWeapons(user);
   const protos = screen.getAllByRole("button", { name: /Prototype/i });
   expect(protos[1]).not.toBeDisabled();
   await user.click(protos[0]);
@@ -72,8 +78,7 @@ test("choosing a Prototype on one weapon locks the other weapon's Prototype", as
 test("a weapon Prototype also locks the equipment Prototype", async () => {
   const user = userEvent.setup();
   open();
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  await advanceToWeapons(user);
   const protos = screen.getAllByRole("button", { name: /Prototype/i });
   await user.click(protos[0]); // spend the rig's Prototype on a weapon
   await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Equipment
@@ -84,8 +89,7 @@ test("a weapon Prototype also locks the equipment Prototype", async () => {
 test("an equipment Prototype locks both weapon Prototypes", async () => {
   const user = userEvent.setup();
   open();
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
-  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  await advanceToWeapons(user);
   await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Equipment
   // On the Equipment step the selected card shows one ladder; pick its Prototype.
   const equipProto = screen.getByRole("button", { name: /Prototype/i });
@@ -111,6 +115,31 @@ test("tank Loadout step lists pre-built templates and commissions gun + modules"
   expect(sendCommand).toHaveBeenCalledWith("add", expect.objectContaining({
     kind: "tank", owner: "a", name: "Marksman Tank",
     unit: "Tank Cannon", modules: ["damage", "recon"],
+  }));
+});
+
+const editRig = {
+  id: 7, name: "Shrike", kind: "rig", owner: "a", weightClass: "medium",
+  weapons: { longRange: "Crossbow", melee: "Talon" },
+  weaponUpgrades: { longRange: null, melee: null },
+  equipment: null, equipmentUpgrade: null, chassis: "medium-crossbow-talon",
+} as unknown as Rig;
+
+test("edit mode seeds the loadout, hides Kind/Chassis, and dispatches reconfigure", async () => {
+  const user = userEvent.setup();
+  sendCommand.mockClear();
+  render(<AppProviders><Seed /><CommissionWizard onClose={vi.fn()} editRig={editRig} /></AppProviders>);
+  // Lands on Weapons; Kind and Chassis steps are not reachable.
+  expect(await screen.findByText("Weapons")).toBeInTheDocument();
+  expect(screen.queryByText("Kind")).toBeNull();
+  expect(screen.queryByText("Chassis")).toBeNull();
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Weapons → Equipment
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // Equipment → Confirm
+  await user.click(await screen.findByRole("button", { name: /Commission/i }));
+  expect(sendCommand).toHaveBeenCalledWith("reconfigure", expect.objectContaining({
+    name: "Shrike", owner: "a",
+    equipment: expect.anything(), equipmentUpgrade: expect.anything(),
+    longRangeUpgrade: expect.anything(), meleeUpgrade: expect.anything(),
   }));
 });
 
