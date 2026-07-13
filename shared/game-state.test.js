@@ -4443,7 +4443,7 @@ test("reconfigure swaps a pre-battle rig's equipment/upgrades in place", () => {
   const r = createRoom("RECON1");
   claimSide(r, { name: "A", side: "a" });
   claimSide(r, { name: "B", side: "b" });
-  applyCommand(r, { verb: "add", attrs: { name: "Shrike", owner: "a", chassis: "medium-crossbow-talon", class: "medium", lr: "Crossbow", melee: "Talon" } });
+  applyCommand(r, { verb: "add", attrs: { name: "Shrike", owner: "a", chassis: "medium-crossbow-talon", class: "medium", lr: "Crossbow", melee: "Talon", sp: chassisById("medium-crossbow-talon").sp } });
   const before = findRig(r, "Shrike");
   const beforeId = before.id;
   applyCommand(r, { verb: "reconfigure", attrs: {
@@ -4456,6 +4456,19 @@ test("reconfigure swaps a pre-battle rig's equipment/upgrades in place", () => {
   assert.equal(after.equipment, "ablative-plating", "equipment swapped");
   // Ablative Plating grants +1 max hull at commission; the rebuild must apply it.
   assert.equal(after.hull.max, before.hull.max + 1, "passive-SP equipment re-derived");
+});
+
+test("reconfigure honors an explicit null to clear an equipment upgrade", () => {
+  const r = createRoom("RECON3");
+  claimSide(r, { name: "A", side: "a" });
+  claimSide(r, { name: "B", side: "b" });
+  const eq = "ablative-plating";
+  const up = firstEquipmentUpgradeId(eq);
+  assert.ok(up, "chosen equipment must have an upgrade for this test to be meaningful");
+  applyCommand(r, { verb: "add", attrs: { name: "Warden", owner: "a", chassis: "medium-crossbow-talon", class: "medium", lr: "Crossbow", melee: "Talon", equipment: eq, equipmentUpgrade: up } });
+  assert.equal(findRig(r, "Warden").equipmentUpgrade, up, "baseline has the upgrade");
+  applyCommand(r, { verb: "reconfigure", attrs: { name: "Warden", owner: "a", equipment: eq, equipmentUpgrade: null } });
+  assert.equal(findRig(r, "Warden").equipmentUpgrade, null, "explicit null cleared the upgrade");
 });
 
 test("reconfigure is a no-op after start, on a non-rig, and cross-side", () => {

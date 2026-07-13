@@ -2618,15 +2618,21 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       const rig = findRig(room, a.name);
       const actor = normalizeSide(room, a.owner) || normalizeSide(room, context.side);
       if (rig && rig.kind === "rig" && actor && (rig.owner || "a") === actor) {
+        // reconfigure carries the player's full intended loadout for the four
+        // editable fields: use each value as given (an explicit null clears an
+        // upgrade/equipment), falling back to the rig's current value only when
+        // the field is absent from the command.
+        const pick = (key, current) => (key in a ? a[key] : current);
         const rebuilt = makeUnit("rig", rig.id, rig.name, rig.owner, {
           weightClass: rig.weightClass,
           longRange: rig.weapons.longRange,
           melee: rig.weapons.melee,
           chassis: rig.chassis,
-          longRangeUpgrade: a.longRangeUpgrade ?? rig.weaponUpgrades?.longRange,
-          meleeUpgrade: a.meleeUpgrade ?? rig.weaponUpgrades?.melee,
-          equipment: a.equipment ?? rig.equipment ?? null,
-          equipmentUpgrade: a.equipmentUpgrade ?? rig.equipmentUpgrade ?? null,
+          sp: chassisById(rig.chassis)?.sp, // preserve per-chassis SP (add threads it via the server route)
+          longRangeUpgrade: pick("longRangeUpgrade", rig.weaponUpgrades?.longRange),
+          meleeUpgrade: pick("meleeUpgrade", rig.weaponUpgrades?.melee),
+          equipment: pick("equipment", rig.equipment),
+          equipmentUpgrade: pick("equipmentUpgrade", rig.equipmentUpgrade),
         });
         if (rebuilt) {
           room.rigs[room.rigs.indexOf(rig)] = rebuilt;
