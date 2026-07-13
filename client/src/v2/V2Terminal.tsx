@@ -5,6 +5,7 @@ import { TurnBanner } from "./components/TurnBanner";
 import { ImpersonateChip } from "./components/ImpersonateChip";
 import { RigTerminal } from "./overlays/RigTerminal";
 import { CommissionWizard } from "./overlays/CommissionWizard";
+import { ScanCommission } from "./overlays/ScanCommission";
 import { OutcomeBanner } from "./overlays/OutcomeBanner";
 import { V2ChatMount } from "./components/V2ChatMount";
 import { GlossaryDialog } from "./overlays/GlossaryDialog";
@@ -22,6 +23,7 @@ export function V2Terminal() {
   const [openRigId, setOpenRigId] = useState<number | null>(null);
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [editRigId, setEditRigId] = useState<number | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(false);
 
   useV2BattleWatchers();
@@ -60,6 +62,12 @@ export function V2Terminal() {
         <CommissionWizard editRig={editRig ?? undefined}
           onClose={() => { setCommissionOpen(false); setEditRigId(null); }} />
       )}
+      {!started && (
+        <button type="button" className="v2-scan-fab" onClick={() => setScanOpen(true)}>
+          ▦ Scan
+        </button>
+      )}
+      {scanOpen && <ScanCommission onClose={() => setScanOpen(false)} />}
       <OutcomeBanner />
       <GlossaryDialog open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
       <V2ChatMount onUnreadChange={setChatUnread} />

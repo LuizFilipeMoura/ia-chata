@@ -144,6 +144,32 @@
   color: var(--v2-on-oil); background: var(--v2-oil); padding: 2px 6px;
 }
 
+/* Standard/Custom mode panel — expands under the selected chassis card and owns
+   advancement (footer carries Back only on this step). */
+.v2-root .v2-fc-mode-panel {
+  display: flex; flex-direction: column; gap: 10px; padding: 12px;
+  border: 1px solid var(--v2-line); border-top: none;
+  background: linear-gradient(180deg, var(--v2-iron-850), var(--v2-iron-800));
+}
+.v2-root .v2-fc-mode-seg { display: flex; gap: 8px; }
+.v2-root .v2-fc-mode-opt {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; text-align: left; cursor: pointer;
+  background: linear-gradient(180deg, var(--v2-iron-800), var(--v2-iron-850));
+  border: 1px solid var(--v2-line); border-bottom: 2px solid var(--v2-edge-dark); color: var(--v2-txt-dim);
+  transition: border-color var(--v2-dur-fast), box-shadow var(--v2-dur-fast);
+}
+.v2-root .v2-fc-mode-opt:hover { border-color: var(--v2-rivet); }
+.v2-root .v2-fc-mode-opt.is-sel {
+  border-color: var(--v2-oil); box-shadow: inset 0 0 0 1px var(--v2-oil);
+  color: var(--v2-txt);
+}
+.v2-root .v2-fc-mode-opt.is-sel .v2-fc-mode-opt-label { color: var(--v2-oil-hi); }
+.v2-root .v2-fc-mode-opt-label { font-size: var(--v2-text-base); }
+.v2-root .v2-fc-mode-opt-sub { font-family: var(--v2-disp); font-size: var(--v2-text-sm); line-height: 1.4; color: var(--v2-txt-faint); }
+@media (max-width: 560px) {
+  .v2-root .v2-fc-mode-seg { flex-direction: column; }
+}
+
 /* ---- equipment / unit-weapon grid --------------------------------------- */
 .v2-root .v2-fc-grid { gap: 10px; }
 .v2-root .v2-fc-equip {
@@ -196,10 +222,9 @@
 .v2-root .v2-fw-nav {
   display: flex; gap: 12px; padding: 14px 20px 20px;
   border-top: 1px solid var(--v2-line-soft);
-  position: sticky; bottom: 0; z-index: 2;
   background: var(--v2-surface);
-  box-shadow: 0 -10px 22px -10px rgba(0, 0, 0, .6);
 }
+.v2-root .v2-fw-nav:empty { display: none; }
 .v2-root .v2-fw-btn {
   padding: 14px 20px; cursor: pointer;
   background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-800));
@@ -266,3 +291,14 @@
 .v2-root .v2-ul-pip { width: 7px; height: 7px; border-radius: 50%; background: var(--v2-rivet); display: inline-block; }
 .v2-root .v2-ul-pip.on-rwd { background: var(--v2-ok); }
 .v2-root .v2-ul-pip.on-rsk { background: var(--v2-ember-hi); }
+
+/* ---- scan launcher (floating, pre-battle only) --------------------------- */
+.v2-root .v2-scan-fab {
+  position: fixed; right: 16px; bottom: 16px; z-index: 55;
+  padding: 10px 16px; cursor: pointer;
+  background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-800));
+  border: 1px solid var(--v2-line); border-bottom: 2px solid var(--v2-edge-dark); color: var(--v2-txt);
+  font-family: var(--v2-stencil); font-weight: 700; font-size: var(--v2-text-sm); letter-spacing: .1em;
+  border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .4);
+}
+.v2-root .v2-scan-fab:hover { border-color: var(--v2-rivet); }
