@@ -3,7 +3,11 @@ import jsQR from "jsqr";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
 import { useRoomState } from "../../state/RoomStateContext";
-import { resolveScan } from "../lib/qrCommission";
+import { parseChassisQr, resolveScan } from "../lib/qrCommission";
+
+// Authored suggestion, mirrors CommissionWizard's ChassisContent shape (server's
+// content/chassis.json). Only the field the scanner needs is kept here.
+interface EquipSuggestion { id: string; reason: string; }
 
 // Native detector where available (Chromium/Android); jsQR fallback otherwise.
 type Detector = { detect: (src: CanvasImageSource) => Promise<Array<{ rawValue: string }>> };
@@ -22,6 +26,28 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
   const stateRef = useRef({ rigs, game, mySide, sendCommand, onClose });
   stateRef.current = { rigs, game, mySide, sendCommand, onClose };
 
+  // Authored suggested-equipment per chassis id, loaded once from the server's
+  // editable catalogue (mirrors CommissionWizard's `content` fetch). A ref, not
+  // state, since `handle` reads it from inside the mount-once effect below and
+  // a fetch resolving after mount must not need to re-run that effect.
+  const contentRef = useRef<Record<string, EquipSuggestion[]>>({});
+
+  useEffect(() => {
+    let live = true;
+    fetch("/api/chassis")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!live || !data?.chassis) return;
+        const map: Record<string, EquipSuggestion[]> = {};
+        for (const p of data.chassis) {
+          map[p.id] = Array.isArray(p.suggestedEquipment) ? p.suggestedEquipment : [];
+        }
+        contentRef.current = map;
+      })
+      .catch(() => { /* keep default equipment */ });
+    return () => { live = false; };
+  }, []);
+
   useEffect(() => {
     let stream: MediaStream | null = null;
     let raf = 0;
@@ -35,7 +61,12 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
       // Rig.chassis is `string | null | undefined` in room state; resolveScan's
       // minimal view only reads it as `string | undefined`, so normalize null.
       const scanRigs = rigs.map((r) => ({ ...r, chassis: r.chassis ?? undefined }));
-      const r = resolveScan({ rigs: scanRigs, game }, text, mySide);
+      // Mirror the wizard's Standard build: use the chassis's suggested
+      // equipment, picking randomly when there are 2+ suggestions.
+      const id = parseChassisQr(text);
+      const sugg = (id && contentRef.current[id]) || [];
+      const chosen = sugg.length ? sugg[Math.floor(Math.random() * sugg.length)].id : undefined;
+      const r = resolveScan({ rigs: scanRigs, game }, text, mySide, chosen);
       if (!r.ok) { setError(r.error || "Unrecognized code"); return; } // keep scanning
       done = true;
       sendCommand("add", r.attrs!);

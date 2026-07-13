@@ -1,8 +1,11 @@
 import { expect, test } from "vitest";
-import { CHASSIS } from "/shared/game-state.js";
+import { CHASSIS, EQUIPMENT } from "/shared/game-state.js";
+import { firstEquipmentUpgradeId } from "./commissionData";
 import { parseChassisQr, chassisQrPayload, resolveScan } from "./qrCommission";
 
 const anyChassis = CHASSIS[0].id;
+const defaultEquipment = Object.keys(EQUIPMENT)[0];
+const otherEquipment = Object.keys(EQUIPMENT).find((id) => id !== defaultEquipment)!;
 
 test("parseChassisQr accepts a valid tagged id, case-insensitively", () => {
   expect(parseChassisQr(`rig:v1:${anyChassis}`)).toBe(anyChassis);
@@ -36,4 +39,21 @@ test("resolveScan rejects an already-fielded chassis and unknown codes", () => {
   const state = { rigs: [{ chassis: anyChassis }], game: { started: false, sides: [{ id: "a" }, { id: "b" }] } };
   expect(resolveScan(state, chassisQrPayload(anyChassis), "a").ok).toBe(false);
   expect(resolveScan(state, "rig:v1:nope", "a").ok).toBe(false);
+});
+
+test("resolveScan uses a provided valid equipmentId for the Standard build", () => {
+  const state = { rigs: [], game: { started: false, sides: [{ id: "a" }, { id: "b" }] } };
+  const r = resolveScan(state, chassisQrPayload(anyChassis), "a", otherEquipment);
+  expect(r.ok).toBe(true);
+  expect(r.attrs).toMatchObject({
+    equipment: otherEquipment,
+    equipmentUpgrade: firstEquipmentUpgradeId(otherEquipment),
+  });
+});
+
+test("resolveScan falls back to the default equipment when equipmentId is invalid", () => {
+  const state = { rigs: [], game: { started: false, sides: [{ id: "a" }, { id: "b" }] } };
+  const r = resolveScan(state, chassisQrPayload(anyChassis), "a", "not-a-real-equipment");
+  expect(r.ok).toBe(true);
+  expect(r.attrs).toMatchObject({ equipment: defaultEquipment });
 });

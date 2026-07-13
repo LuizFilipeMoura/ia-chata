@@ -33,6 +33,7 @@ export function resolveScan(
   state: { rigs: Array<{ chassis?: string }>; game: unknown },
   text: string,
   mySide: string,
+  equipmentId?: string,
 ): ScanResolve {
   const id = parseChassisQr(text);
   if (!id) return { ok: false, error: "Unrecognized code" };
@@ -43,7 +44,8 @@ export function resolveScan(
   // only needs the minimal { rigs, game } view (this is a stable-true predicate —
   // see game-state.js), so the cast is a type-shape bridge, not a behavior change.
   if (!canAddRigForSide(state as never, mySide)) return { ok: false, error: "Your roster is full" };
-  const equipment = Object.keys(EQUIPMENT)[0];
+  const validPick = typeof equipmentId === "string" && Object.keys(EQUIPMENT).includes(equipmentId);
+  const equipment = validPick ? equipmentId! : Object.keys(EQUIPMENT)[0];
   return {
     ok: true,
     attrs: {
