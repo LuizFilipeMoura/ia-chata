@@ -189,7 +189,17 @@
 .v2-root .v2-fc-confirm-flavor { font-style: italic; color: var(--v2-txt-faint); font-size:var(--v2-text-sm); }
 
 /* ---- nav bar ------------------------------------------------------------ */
-.v2-root .v2-fw-nav { display: flex; gap: 12px; padding: 14px 20px 20px; border-top: 1px solid var(--v2-line-soft); }
+/* Pin Back/Next to the bottom of the viewport so a long step (the chassis
+   roster) never forces a scroll to the end just to advance. The scrim is the
+   scroll container, so sticky bottom:0 holds the bar in view over scrolling
+   content; the surface fill + top shadow keep it legible above that content. */
+.v2-root .v2-fw-nav {
+  display: flex; gap: 12px; padding: 14px 20px 20px;
+  border-top: 1px solid var(--v2-line-soft);
+  position: sticky; bottom: 0; z-index: 2;
+  background: var(--v2-surface);
+  box-shadow: 0 -10px 22px -10px rgba(0, 0, 0, .6);
+}
 .v2-root .v2-fw-btn {
   padding: 14px 20px; cursor: pointer;
   background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-800));
