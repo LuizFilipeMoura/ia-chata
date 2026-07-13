@@ -69,6 +69,18 @@ test("choosing a Prototype on one weapon locks the other weapon's Prototype", as
   expect(screen.getAllByRole("button", { name: /Prototype/i })[1]).toBeDisabled();
 });
 
+test("a weapon Prototype also locks the equipment Prototype", async () => {
+  const user = userEvent.setup();
+  open();
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  const protos = screen.getAllByRole("button", { name: /Prototype/i });
+  await user.click(protos[0]); // spend the rig's Prototype on a weapon
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Equipment
+  const equipProtos = screen.getAllByRole("button", { name: /Prototype/i });
+  expect(equipProtos[equipProtos.length - 1]).toBeDisabled();
+});
+
 test("tank Loadout step lists pre-built templates and commissions gun + modules", async () => {
   const user = userEvent.setup();
   sendCommand.mockClear();

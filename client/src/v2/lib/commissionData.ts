@@ -19,7 +19,6 @@ const WEAPON_GLYPH: Record<string, string> = {
 export const weaponGlyph = (weapon: string): string => WEAPON_GLYPH[weapon] || "⚙";
 const NATURE_LABEL: Record<string, string> = { field: "Standard", tuned: "Machined", prototype: "Prototype" };
 export const natureLabel = (nature: string): string => NATURE_LABEL[nature] || nature;
-export const NODE_MARK = ["I", "II", "III"];
 export function firstUpgradeId(name: string): string | null {
   return (WEAPON_UPGRADES[name] || [])[0]?.id || null;
 }

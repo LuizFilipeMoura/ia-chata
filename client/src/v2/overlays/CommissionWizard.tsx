@@ -388,6 +388,7 @@ export function CommissionWizard({ onClose }: { onClose: () => void }) {
     const lrUpgrade = (WEAPON_UPGRADES[state.longRange] || []).find((u) => u.id === state.longRangeUpgrade);
     const meleeUpgrade = (WEAPON_UPGRADES[state.melee] || []).find((u) => u.id === state.meleeUpgrade);
     const equipUpgrade = (EQUIPMENT_UPGRADES[state.equipment] || []).find((u) => u.id === state.equipmentUpgrade);
+    // state.step === 4 && state.kind === "rig" — rig Confirm (the only combo left)
     body = (
       <div className="v2-fw-body v2-fc-confirm">
         <div className="v2-fc-confirm-name v2-title">{unitName()} — {state.cls}</div>
