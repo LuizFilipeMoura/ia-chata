@@ -1,15 +1,11 @@
-import { WEAPON_UPGRADES, EQUIPMENT_UPGRADES } from "/shared/game-state.js";
+import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT_UPGRADES } from "/shared/game-state.js";
 
-export const CHASSIS_NAME: Record<string, string> = {
-  "light-claw-autocannon": "Ironjaw",
-  "light-missile-flamethrower": "Cinderwalk",
-  "light-saw-minigun": "Scrapmaw",
-  "light-wreckingball-double": "Sledge",
-  "light-sword-arc": "Arclight",
-  "medium-lance-mortar": "Halberd",
-  "medium-shield-siege": "Rampart",
-  "medium-sniper-chainsaw": "Deadeye",
-};
+// id → codename, derived straight from the CHASSIS catalogue so a chassis is
+// named automatically the moment it's added there (its `name` field). No manual
+// map to keep in sync.
+export const CHASSIS_NAME: Record<string, string> = Object.fromEntries(
+  CHASSIS.map((c: { id: string; name: string }) => [c.id, c.name]),
+);
 const WEAPON_GLYPH: Record<string, string> = {
   "Autocannon": "🎯", "Mini Gun": "🎯", "Double MG": "🎯", "Sniper Cannon": "🎯",
   "Arc Gun": "⚡", "Mortar": "💥", "Missile Barrage": "🚀", "Siege Maul": "🔨",

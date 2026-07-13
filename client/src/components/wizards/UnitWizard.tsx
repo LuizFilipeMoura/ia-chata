@@ -21,16 +21,11 @@ function firstUpgradeId(name: string): string | null {
 
 // Dieselpunk chassis codenames — each cues its weapon pair + weight class, so a
 // rig commissions with a name already attached (the manual name step is gone).
-const CHASSIS_NAME: Record<string, string> = {
-  "light-claw-autocannon": "Ironjaw",
-  "light-missile-flamethrower": "Cinderwalk",
-  "light-saw-minigun": "Scrapmaw",
-  "light-wreckingball-double": "Sledge",
-  "light-sword-arc": "Arclight",
-  "medium-lance-mortar": "Halberd",
-  "medium-shield-siege": "Rampart",
-  "medium-sniper-chainsaw": "Deadeye",
-};
+// Derived from the CHASSIS catalogue's `name` field: a new chassis is named the
+// moment it's added there, no map to maintain here.
+const CHASSIS_NAME: Record<string, string> = Object.fromEntries(
+  CHASSIS.map((c: { id: string; name: string }) => [c.id, c.name]),
+);
 
 // Weapon -> emblem glyph, used only as a loadout "pip" on the roster cards. Any
 // unmapped weapon falls back to a gear so a new weapon never renders blank.
