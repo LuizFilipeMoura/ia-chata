@@ -4466,6 +4466,14 @@ test("reconfigure is a no-op after start, on a non-rig, and cross-side", () => {
   // cross-side actor cannot reconfigure my rig
   applyCommand(r, { verb: "reconfigure", attrs: { name: "Mine", equipment: "ablative-plating" } }, { side: "b" });
   assert.notEqual(findRig(r, "Mine").equipment, "ablative-plating", "cross-side rejected");
+  // reconfigure is a no-op on a non-rig (e.g. a Tank), even for its own owner
+  applyCommand(r, { verb: "add", attrs: { name: "Bulwark", kind: "tank", owner: "a", unit: "Tank Cannon" } });
+  const tank = findRig(r, "Bulwark");
+  assert.ok(tank, "tank was added");
+  assert.equal(tank.kind, "tank");
+  assert.equal(tank.equipment, null, "tanks carry no equipment");
+  applyCommand(r, { verb: "reconfigure", attrs: { name: "Bulwark", owner: "a", equipment: "ablative-plating" } });
+  assert.equal(findRig(r, "Bulwark").equipment, null, "non-rig reconfigure rejected, equipment unchanged");
   // after start it is frozen
   r.game.started = true;
   applyCommand(r, { verb: "reconfigure", attrs: { name: "Mine", owner: "a", equipment: "ablative-plating" } });
