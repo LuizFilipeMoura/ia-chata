@@ -220,6 +220,7 @@
 .v2-root .v2-ul + .v2-ul { border-top: 1px solid var(--v2-line-soft); }
 .v2-root .v2-ul-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
 .v2-root .v2-ul-title { font-size: var(--v2-text-base); }
+.v2-root .v2-ul-glyph { font-size: var(--v2-text-base); line-height: 1; }
 .v2-root .v2-ul-sub { font-family: var(--v2-mono); font-size: var(--v2-text-sm); letter-spacing: .1em; color: var(--v2-txt-faint); }
 .v2-root .v2-ul-scale { display: flex; justify-content: space-between; color: var(--v2-txt-faint); margin-bottom: 3px; }
 

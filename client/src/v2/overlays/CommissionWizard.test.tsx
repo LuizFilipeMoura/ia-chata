@@ -81,6 +81,22 @@ test("a weapon Prototype also locks the equipment Prototype", async () => {
   expect(equipProtos[equipProtos.length - 1]).toBeDisabled();
 });
 
+test("an equipment Prototype locks both weapon Prototypes", async () => {
+  const user = userEvent.setup();
+  open();
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Chassis
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Weapons
+  await user.click(await screen.findByRole("button", { name: /^Next$/i })); // → Equipment
+  // On the Equipment step the selected card shows one ladder; pick its Prototype.
+  const equipProto = screen.getByRole("button", { name: /Prototype/i });
+  await user.click(equipProto);
+  // Go back to the Weapons step; both weapon Prototype segments must now be locked.
+  await user.click(await screen.findByRole("button", { name: /◂ Back/i }));
+  const weaponProtos = screen.getAllByRole("button", { name: /Prototype/i });
+  expect(weaponProtos.length).toBeGreaterThanOrEqual(2);
+  for (const b of weaponProtos) expect(b).toBeDisabled();
+});
+
 test("tank Loadout step lists pre-built templates and commissions gun + modules", async () => {
   const user = userEvent.setup();
   sendCommand.mockClear();

@@ -422,7 +422,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Mini Gun": [
     { id: "suppressive-fire", nature: "field", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
-    { id: "extended-belt", nature: "tuned", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
+    { id: "extended-belt", nature: "tuned", name: "Extended Belt", tag: "+2 ROF", catch: "Dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
     { id: "suppression-lock", nature: "prototype", name: "Suppression Lock", tag: "Grind one target down turn by turn until it's pinned", catch: "Commits you to that one target", effect: { suppressLock: true } },
   ],
   "Double MG": [
