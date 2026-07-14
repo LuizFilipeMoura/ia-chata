@@ -2230,7 +2230,11 @@ function performAction(room, rig, act, a, random) {
     else if (act === "overclock") t.actionsMax += 2;
     else if (act === "emergencypatch") {
       const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
-      repairRig(rig, loc, 2);
+      // Battlefield Triage (Utility Tuned) — a destroyed (0 SP) location is patched
+      // for 3 instead of 2. Read the tag live from the catalog by id.
+      const triage = !!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.battlefieldTriage;
+      const amount = (triage && rig[loc] && rig[loc].sp === 0) ? 3 : 2;
+      repairRig(rig, loc, amount);
     }
     else if (act === "locksight") {
       // Lock Sight (Fire Control active) — arm the next shot this activation to

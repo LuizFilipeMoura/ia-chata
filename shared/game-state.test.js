@@ -2481,6 +2481,28 @@ test("emergencypatch guarantees 2 SP with no roll for Field Repair Suite", () =>
   assert.equal(rig.engine.heat, 2);
 });
 
+test("Battlefield Triage heals 3 SP when the Emergency Patch target is at 0 SP", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "field-repair-suite" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "battlefield-triage";
+  rig.arms.sp = 0; // destroyed location
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
+  assert.equal(rig.arms.sp, 3); // 3, not the base 2
+});
+
+test("Battlefield Triage heals only the base 2 SP on a merely damaged location", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "field-repair-suite" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "battlefield-triage";
+  rig.arms.sp = 2; // damaged but not at 0 → no triage bump
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
+  assert.equal(rig.arms.sp, 4); // 2 + 2, the base Emergency Patch
+});
+
 test("jumpjets costs 1 slot + 2 heat for Servo Actuators", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
