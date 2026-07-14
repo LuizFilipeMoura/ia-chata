@@ -59,10 +59,10 @@ export function computeModifiedAim(attacker, profile, opts) {
   const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
   // Ballistic Processor (Field) — ACC bonus when the measured distance is within
   // the weapon's sweet band (|distance − sweet| ≤ 2). The bonus magnitude is read
-  // from the equipment upgrade's effect tag (`sweetBandAcc`, the single source of
-  // truth in the catalog), precomputed onto the rig in game-state.js to avoid an
-  // import cycle. Only ballistic-processor carries the tag; other targeting-
-  // computer upgrades resolve to 0.
+  // from the equipment upgrade's effect tag (`sweetBandAcc`) via
+  // equipmentUpgradeEffectOf — the catalog lives in rules.js, which combat.js may
+  // import without a game-state cycle. Only ballistic-processor carries the tag;
+  // other targeting-computer upgrades resolve to 0.
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
   const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAcc ?? 0) : 0;
   const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic;
@@ -278,15 +278,15 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // (opts.guardBreak, §13 Siege Maul) — the smash ignores the target's Brace.
   const braced = !opts.guardBreak && target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
   // Harden (Ablative Plating active). The depth magnitude is read from the
-  // equipment upgrade's effect tag (`hardenImpact`, the single source of truth in
-  // the catalog), precomputed onto the rig in game-state.js to avoid an import
-  // cycle. Only reinforced-plating carries the tag (→ −2); base stays −1.
+  // equipment upgrade's effect tag (`hardenImpact`) via equipmentUpgradeEffectOf
+  // — the catalog lives in rules.js, importable by combat.js without a
+  // game-state cycle. Only reinforced-plating carries the tag (→ −2); base stays −1.
   const hardenDepth = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.hardenImpact ?? 1;
   const hardened = target.hardened ? -hardenDepth : 0;
   // Reactive Plating (Countermeasures) — side/rear attacks lose STR. The dock
-  // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`,
-  // the single source of truth in the catalog), precomputed onto the rig in
-  // game-state.js to avoid an import cycle. Base Reactive Plating is −1; Angled
+  // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`) via
+  // equipmentUpgradeEffectOf — the catalog lives in rules.js, importable by
+  // combat.js without a game-state cycle. Base Reactive Plating is −1; Angled
   // Plates carries the −2 tag. Front arc is unaffected.
   let sideRearDock = 0;
   if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
