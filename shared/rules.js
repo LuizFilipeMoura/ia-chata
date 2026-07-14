@@ -1,7 +1,7 @@
 // Static rulebook data shared by the resolution engine (server) and the
 // battle UI (client). Pure data + tiny lookups — no state, no randomness.
 
-import { hitPart, impactRow as _impactRow } from "./unit-kinds.js";
+import { hitPart } from "./unit-kinds.js";
 
 // Action catalogue (§5). `heat` is the base heat generated; `slot` is the
 // action-budget cost. Shut Down is special-cased by the engine (may be declared
@@ -76,18 +76,24 @@ export function hitLocation(kindId, d12) {
   return hitPart(kindId, d12);
 }
 
-// Impact Tables (§2): minimum totals for each severity, per kind × part × class.
-export function impactRow(kindId, partName, weightClass) {
-  return _impactRow(kindId, partName, weightClass);
-}
+// §7.5 — the wound roll. A shot's effective STR is compared to the struck
+// location's Toughness: roll a d10 against `6 + T - S`.
+//
+// The clamp is load-bearing. It guarantees a natural 10 always wounds and a
+// natural 1 never does, so no weapon/target/location matchup can be
+// mathematically hopeless. That was the failure mode of the impact-total model
+// this replaces: its total capped at `6 + STR + arc`, leaving 69 combos that
+// could never deal damage at any roll. Do not remove the clamp to "let armour
+// really matter" — that reintroduces the bug.
+//
+// Each point of STR is worth exactly 10%, so the roll is readable as a
+// percentage with no lookup table.
+export const WOUND_DIE = 10;
 
-// Impact Roll total vs a location row → SP lost and severity tier.
-export function impactSeverity(total, row) {
-  const n = Math.floor(Number(total) || 0);
-  if (n >= row.critical) return { sp: 3, tier: "critical" };
-  if (n >= row.severe) return { sp: 2, tier: "severe" };
-  if (n >= row.direct) return { sp: 1, tier: "direct" };
-  return { sp: 0, tier: "none" };
+export function woundTarget(str, toughness) {
+  const s = Math.floor(Number(str) || 0);
+  const t = Math.floor(Number(toughness) || 0);
+  return Math.max(2, Math.min(WOUND_DIE, 6 + t - s));
 }
 
 // §13 Bulwark / Raise Shield — which arcs a raised shield covers. Base: negate
@@ -129,7 +135,7 @@ export const EQUIPMENT_UPGRADES = {
   ],
   "field-repair-suite": [
     { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
-    { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 3 SP on a destroyed location", effect: { battlefieldTriage: true } },
+    { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 5 SP on a destroyed location", effect: { battlefieldTriage: true } },
     { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery — at a heat-cap cost", catch: "Costs heat-cap", effect: { naniteSwarm: true } },
   ],
   "blast-furnace-core": [
