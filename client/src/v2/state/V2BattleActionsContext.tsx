@@ -6,7 +6,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { HEAT_CAPACITY } from "/shared/game-state.js";
+import { HEAT_CAPACITY, rigEffects } from "/shared/game-state.js";
 import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { useV2Drawer } from "./V2DrawerContext";
 import { useV2Roll } from "./V2RollContext";
@@ -175,10 +175,12 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       // Local mutable location; ChoiceField re-renders via the drawer's render fn,
       // so track it in a ref-backed state closure using a plain object.
       const state = { loc: "hull" };
+      const bonusSp = rigEffects(rig).repair.bonusSp;
       const build = () => (
         <RepairBody
           isPatch={isPatch}
           auto={Boolean(auto)}
+          bonusSp={bonusSp}
           onChange={(v) => (state.loc = v)}
         />
       );

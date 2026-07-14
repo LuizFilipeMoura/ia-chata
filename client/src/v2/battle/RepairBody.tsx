@@ -3,23 +3,28 @@ import ChoiceField from "../overlays/ChoiceField";
 import { LOC_CHOICES } from "./constants";
 import "../styles/overlay.css";
 
-// Location picker for the two repair-family actions (battle.js:430-461).
+// Location picker for the two repair-family actions (battle.js:430-461). The SP
+// figures include any Field Repair Suite bonus (bonusSp), so the drawer promises
+// exactly what the engine restores.
 export default function RepairBody({
-  isPatch, auto, onChange,
+  isPatch, auto, bonusSp, onChange,
 }: {
   isPatch: boolean;
   auto: boolean;
+  bonusSp: number;
   onChange: (v: string) => void;
 }) {
   const [loc, setLoc] = useState("hull");
+  const hi = 2 + bonusSp;
+  const lo = 1 + bonusSp;
   return (
     <>
       <p className="v2-dwr-hint">
         {isPatch
-          ? "Restores a guaranteed 2 SP to the chosen location — no dice."
+          ? `Restores a guaranteed ${hi} SP to the chosen location — no dice.`
           : auto
-            ? "Rolls a D12: 10+ restores 2 SP, 7–9 restores 1 SP."
-            : "You'll roll a D12 next: 10+ restores 2 SP, 7–9 restores 1 SP."}
+            ? `Rolls a D12: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`
+            : `You'll roll a D12 next: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`}
       </p>
       <ChoiceField
         label="Location"
