@@ -254,6 +254,33 @@ test("countPrototypes counts an equipment Prototype", () => {
     { longRange: "pinning-bolt", melee: "honed-talons" }), 1);
 });
 
+test("a wired equipment Prototype still counts against the one-Prototype-per-rig cap", () => {
+  // Equipment Prototype alone → 1.
+  assert.equal(
+    countPrototypes({ longRange: "Autocannon", melee: "Claw" }, {}, "ablative-plating", "ablative-cascade"),
+    1,
+  );
+  // Every newly-wired equipment Prototype counts as exactly 1.
+  for (const [equip, up] of [
+    ["ablative-plating", "ablative-cascade"], ["radiator-array", "cryo-reservoir"],
+    ["field-repair-suite", "nanite-swarm"], ["reactive-plating", "point-defense-system"],
+    ["blast-furnace-core", "meltdown-protocol"], ["targeting-computer", "fire-solution-lock"],
+  ]) {
+    assert.equal(equipmentUpgradeNature(equip, up), "prototype", `${up} stays prototype`);
+    assert.equal(countPrototypes({ longRange: "Autocannon", melee: "Claw" }, {}, equip, up), 1, `${up} counts 1`);
+  }
+  // A weapon Prototype + an equipment Prototype → 2 (the wizard/server caps at 1).
+  assert.equal(
+    countPrototypes({ longRange: "Talon", melee: "Talon" }, { longRange: "evisceration" }, "blast-furnace-core", "meltdown-protocol"),
+    2,
+  );
+  // A Field equipment upgrade contributes nothing.
+  assert.equal(
+    countPrototypes({ longRange: "Autocannon", melee: "Claw" }, {}, "ablative-plating", "reinforced-plating"),
+    0,
+  );
+});
+
 test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
   const shieldRig = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "tower-shield" } };
   const swordRig = { weapons: { melee: "Sword" } };
