@@ -119,14 +119,16 @@ export const SEED_ROSTER = [
 ];
 
 // Curated 4v4 rigs-only roster (spec: 2026-07-14-seed-preset-rosters). Reuses
-// the 6 SEED_ROSTER entries and adds one more distinct chassis per side, keeping
-// the all-distinct / no-mirror-matchup invariant (AGENTS.md). No support units.
+// the 6 SEED_ROSTER chassis/prototypes and adds one more distinct chassis per
+// side, keeping the all-distinct / no-mirror-matchup invariant (AGENTS.md). Each
+// rig is named after its chassis codename (chassis.name), not a placeholder. No
+// support units.
 export const SEED_ROSTER_4V4 = [
   ...SEED_ROSTER.filter((e) => e.owner === "a"),
-  { name: "A4", owner: "a", chassis: "medium-crossbow-talon",    prototype: "longRange" },
+  { owner: "a", chassis: "medium-crossbow-talon",    prototype: "longRange" },
   ...SEED_ROSTER.filter((e) => e.owner === "b"),
-  { name: "B4", owner: "b", chassis: "light-wreckingball-double", prototype: "melee" },
-];
+  { owner: "b", chassis: "light-wreckingball-double", prototype: "melee" },
+].map((e) => ({ ...e, name: chassisById(e.chassis).name }));
 
 // The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
 // entries omit `unit` — makeUnit fits the Sidearm automatically.
@@ -185,16 +187,26 @@ export const SEED_SUPPORT = [
 ];
 
 // A random rigs-only 4v4 roster (spec: 2026-07-14-seed-preset-rosters): 4 per
-// side, each a random chassis with its Prototype upgrade on a random weapon
-// slot. Takes the seedable `random` so tests are deterministic and real launches
-// vary. Entry shape matches SEED_ROSTER; no support units.
+// side, each rig a distinct random chassis (named after its chassis codename,
+// chassis.name) with its Prototype upgrade on a random weapon slot. Chassis are
+// drawn without replacement so all 8 are distinct — that keeps rig names unique
+// (findRig resolves by name) and honours the no-mirror-matchup invariant. Takes
+// the seedable `random` so tests are deterministic and real launches vary. No
+// support units.
 export function randomSeedRoster(random = Math.random) {
+  const pool = [...CHASSIS];
+  // Fisher-Yates shuffle, then take the first 8 as the distinct draw.
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor((random || Math.random)() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
   const out = [];
+  let k = 0;
   for (const owner of ["a", "b"]) {
-    for (let i = 1; i <= 4; i++) {
-      const pb = randomPick(CHASSIS, random);
+    for (let i = 0; i < 4; i++) {
+      const pb = pool[k++];
       const prototype = randomPick(["longRange", "melee"], random);
-      out.push({ name: `${owner.toUpperCase()}${i}`, owner, chassis: pb.id, prototype });
+      out.push({ name: pb.name, owner, chassis: pb.id, prototype });
     }
   }
   return out;

@@ -4360,17 +4360,22 @@ test("seed preset 'rigs4' builds 4 rigs, 0 support per side, distinct chassis", 
   assert.equal(rigs.filter((rig) => rig.owner === "a").length, 4);
   assert.equal(rigs.filter((rig) => rig.owner === "b").length, 4);
   assert.equal(new Set(rigs.map((rig) => rig.chassis)).size, 8);
+  // Rigs are named after their chassis codename, not a placeholder like "A1".
+  for (const rig of rigs) assert.equal(rig.name, chassisById(rig.chassis).name);
 });
 
-test("SEED_ROSTER_4V4 is 8 entries, 4 per side, all chassis distinct and resolvable", () => {
+test("SEED_ROSTER_4V4 is 8 entries, 4 per side, chassis distinct, named by chassis", () => {
   assert.equal(SEED_ROSTER_4V4.length, 8);
   assert.equal(SEED_ROSTER_4V4.filter((e) => e.owner === "a").length, 4);
   assert.equal(SEED_ROSTER_4V4.filter((e) => e.owner === "b").length, 4);
   assert.equal(new Set(SEED_ROSTER_4V4.map((e) => e.chassis)).size, 8);
-  for (const e of SEED_ROSTER_4V4) assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
+  for (const e of SEED_ROSTER_4V4) {
+    assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
+    assert.equal(e.name, chassisById(e.chassis).name); // named by chassis codename
+  }
 });
 
-test("seed preset 'random4' builds 4 rigs, 0 support per side, deterministic under a stub RNG", () => {
+test("seed preset 'random4' builds 4 rigs, 0 support per side, distinct chassis named by chassis", () => {
   const r = createRoom("SEED-RND");
   applyCommand(r, { verb: "seed", attrs: { first: "a", preset: "random4" } }, {}, { random: () => 0 });
 
@@ -4379,16 +4384,23 @@ test("seed preset 'random4' builds 4 rigs, 0 support per side, deterministic und
   assert.equal(support.length, 0);
   assert.equal(rigs.filter((rig) => rig.owner === "a").length, 4);
   assert.equal(rigs.filter((rig) => rig.owner === "b").length, 4);
-  // random() === 0 → randomPick picks index 0 → every rig uses CHASSIS[0].
-  assert.ok(rigs.every((rig) => rig.chassis === CHASSIS[0].id));
+  // 8 distinct chassis drawn without replacement → unique names, each the chassis codename.
+  assert.equal(new Set(rigs.map((rig) => rig.chassis)).size, 8);
+  assert.equal(new Set(rigs.map((rig) => rig.name)).size, 8);
+  for (const rig of rigs) assert.equal(rig.name, chassisById(rig.chassis).name);
 });
 
-test("randomSeedRoster returns 8 rig entries, 4 per side", () => {
-  const roster = randomSeedRoster(() => 0);
+test("randomSeedRoster: 8 distinct rig entries, 4 per side, named by chassis, RNG-deterministic", () => {
+  const stub = () => 0.42; // any fixed value → identical draw each call
+  const roster = randomSeedRoster(stub);
   assert.equal(roster.length, 8);
   assert.equal(roster.filter((e) => e.owner === "a").length, 4);
   assert.equal(roster.filter((e) => e.owner === "b").length, 4);
+  assert.equal(new Set(roster.map((e) => e.chassis)).size, 8);
   assert.ok(roster.every((e) => e.chassis && e.prototype));
+  assert.ok(roster.every((e) => e.name === chassisById(e.chassis).name));
+  // Same RNG → same roster (reproducible).
+  assert.deepEqual(randomSeedRoster(stub), roster);
 });
 
 test("explicit roster overrides preset", () => {
