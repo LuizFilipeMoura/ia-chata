@@ -152,7 +152,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   - *Backpedal:* straight back at **half** Speed.
   - *Side-step:* directly left or right without changing facing, at **half** Speed.
   - *Pivot:* up to **90° free** at any point(s) during the Move. A pivot of **more than 90°** consumes the Rig's entire movement for that action.
-  - *Sprint:* you may extend a Move to up to **1½ × Speed**; a Sprinting Move generates **2 heat** instead of 1 (§6).
+  - *Sprint:* you may extend a Move to up to **1½ × Speed** (**2 × Speed** with Reinforced Servos); a Sprinting Move generates **2 heat** instead of 1 (§6). Sprint is **never free** — its heat floors at 1 no matter the loadout.
 
 - **Disengage [1]** — break a melee **engagement** (see below). Frees **both** Rigs from the lock; after Disengaging, the Rig may Move/Sprint later in the same activation. No effect (and costs nothing) if the Rig isn't engaged.
 
@@ -202,7 +202,7 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 | Action | Heat |
 |---|:--:|
 | Move (up to Speed) | 1 |
-| Move — **Sprint** (up to 1½× Speed) | 2 |
+| Move — **Sprint** (up to 1½× Speed; 2× with Reinforced Servos) | 2 |
 | Fire Weapon | 1 (**2** if the weapon is **Hot**) |
 | Aimed Shot / Prepare | 1 |
 | Reload (Rig) | +1–2 (d6) |
@@ -541,7 +541,7 @@ Each piece of equipment offers **three upgrades, one of each nature** (see *Upgr
 |---|---|---|---|
 | Ablative Plating | Reinforced Plating (Harden −2 impact, not −1) | Reactive Armor (first hit each round hardens that location) | Ablative Cascade (spend ablative charges to soften hits; each costs heat) |
 | Radiator Array | Twin Radiators (Purge vents −3) | Coolant Injection (−2 heat before the overheat roll when over Capacity) | Cryo Reservoir (bank cold; spend for instant cooling + a STR spike) |
-| Servo Actuators | Reinforced Servos (Sprint costs 0 heat) | Kickstart Pistons (charge into contact → first melee after +2 STR) | Grapnel Launcher (yank free of a lock or reel an enemy in; heat + cooldown) |
+| Servo Actuators | Reinforced Servos (Sprint reaches 2× Speed, not 1½×) | Kickstart Pistons (charge into contact → first melee after +2 STR) | Grapnel Launcher (yank free of a lock or reel an enemy in; heat + cooldown) |
 | Overclock Core | Redundant Capacitors (Overclock costs +2 heat) | Adrenaline Surge (below half SP, Overclock grants +3 actions) | Reactor Overdrive (Overclock also +2 STR; overheat bonus doubles) |
 | Field Repair Suite | Master Toolkit (Repair heals +2 SP) | Battlefield Triage (Emergency Patch heals 3 SP on a destroyed location) | Nanite Swarm (seed nanites that heal each Recovery; −1 Heat Capacity while active) |
 | Blast Furnace Core | Insulated Core (safe up to +2 over Capacity) | Backdraft (Heat Purge Wave +1 STR per 2 heat over Capacity) | Meltdown Protocol (bank overheat as charge; spend for STR or a burst) |
@@ -652,7 +652,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 - **Multiple moves** (§5) — a Rig may Move (or Sprint) more than once per activation; each spends an action and generates its heat, bounded only by the 3-action budget.
 - **Shut Down anywhere** (§5) — Shut Down may be declared at any point in the activation; heat vented scales with how much of the activation is spent shutting down (first-action = full vent, later = proportionally less).
 - **Whole-inch speeds** (§2) — base Speed 5 / 4 / 3 / 2 by weight class; all distances round to whole inches.
-- **Sprint** (§5/§6) — normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot.
+- **Sprint** (§5/§6) — normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot. ⚙ TUNING: Sprint heat now **floors at 1** — Reinforced Servos used to zero it, which made repositioning free and turned Sprint into a strictly-better Move. The upgrade now grants **2× Speed reach** instead.
 - **Sweet-spot ranged ACC** (§7) — ranged weapons peak at a sweet-spot distance and lose ACC per inch away in either direction, within a min–max band. Replaces the flat near/far ACC bands so positioning matters at range.
 - **Engagement / melee lock** (§5) — a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 ACC. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13) — machine guns do no frontal damage but hit far harder (+4 side / +8 rear).
