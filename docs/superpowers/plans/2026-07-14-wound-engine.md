@@ -16,7 +16,23 @@
 
 ## Background for the engineer
 
-You need three facts about this codebase before you start.
+### The working tree is dirty — this matters
+
+There is **unrelated in-flight work uncommitted** across ~23 files (repair tuning in
+`shared/game-state.js`, budget auto-end, V2 client changes). It is not yours. It is green:
+the baseline is **593 passing, 0 failing**.
+
+Three rules follow:
+
+1. **Never `git add` a directory.** Not `shared/`, not `client/`, not `.`. Stage only the files you
+   edited, by name. A directory add commits someone else's work-in-progress.
+2. **`shared/game-state.js` and `shared/game-state.test.js` contain their changes and yours.**
+   Staging those files unavoidably includes their work. That is accepted and expected — do not try
+   to split it, and do not revert anything you did not write.
+3. **Any test failure you see is yours.** The baseline is 0 failures. If something unrelated breaks,
+   you broke it — do not "fix" a test you do not understand.
+
+### Three facts about this codebase
 
 **1. `shared/` is imported by both server and client.** `combat.js` is pure — it never imports `game-state.js` (that would be an import cycle). Anything it needs from game-state arrives via an injected `ctx` object or on the unit objects passed in. `combat.js` may import from `rules.js` and `unit-kinds.js` only. **Do not break this.**
 
@@ -893,9 +909,12 @@ Expected: PASS, no skips.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add shared/
+git add shared/combat.test.js shared/game-state.test.js shared/rules.test.js shared/unit-kinds.test.js
 git commit -m "test(combat): migrate the suite to the wound model"
 ```
+
+**Never `git add shared/` or any directory.** The working tree carries unrelated in-flight work
+(repair tuning, budget auto-end). Stage only files you edited, by name.
 
 ---
 
@@ -1065,9 +1084,12 @@ Expected: PASS — both vitest and the node suite.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add client/ content/
+git add client/shared.d.ts content/chassis.json client/src/v2/lib/commissionData.ts
 git commit -m "chore(combat): mirror the wound-model weapon stats client-side"
 ```
+
+**Never `git add client/`.** The working tree carries ~15 unrelated modified client files. Stage
+only the three files above, and only if you edited them.
 
 ---
 
