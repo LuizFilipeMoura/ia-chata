@@ -846,7 +846,14 @@ function ensureRigShape(rig) {
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
   if (!rig.kind) rig.kind = "rig";
   if (!rig.parts) rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
+  // Backfill equipState per-field, not just when wholly absent: a rig serialized
+  // partway through the equipment-mechanics rollout may carry an older block that
+  // predates later fields (e.g. firedRangedThisRound/pdLocked). Fill any missing
+  // key from the canonical shape so every consumer's reads are defined.
   if (rig.equipState == null) rig.equipState = freshEquipState();
+  else for (const [k, v] of Object.entries(freshEquipState())) {
+    if (rig.equipState[k] === undefined) rig.equipState[k] = v;
+  }
   return rig;
 }
 
