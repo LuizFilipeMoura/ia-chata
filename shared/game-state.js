@@ -771,6 +771,7 @@ function ensureRigShape(rig) {
   if (typeof rig.fireControlUsed !== "boolean") rig.fireControlUsed = false;
   if (typeof rig.lockSightNext !== "boolean") rig.lockSightNext = false;
   if (typeof rig.overclockCoreUsed !== "boolean") rig.overclockCoreUsed = false;
+  if (typeof rig.reactorOverdriveActive !== "boolean") rig.reactorOverdriveActive = false;
   if (typeof rig.actionPenaltyNextActivation !== "number") rig.actionPenaltyNextActivation = 0;
   if (typeof rig.hullRepairLock !== "number") rig.hullRepairLock = 0;
   if (typeof rig.burning !== "number") rig.burning = 0;
@@ -968,6 +969,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     fireControlUsed: false,
     lockSightNext: false,
     overclockCoreUsed: false,
+    reactorOverdriveActive: false,
     actionPenaltyNextActivation: 0,
     hullRepairLock: 0,
     burning: 0,
@@ -1946,13 +1948,17 @@ function endActivation(room, rig, dice, random) {
       bumpHeat(rig, -m.over); // vent the converted excess back down to Capacity
     } else {
       const roll = rollD(12, dice?.overheat, random);
-      const total = roll + m.bonus;
+      // Reactor Overdrive (§13, Power Prototype) — this activation's overheat bonus
+      // is doubled (the all-in downside of the Overclock STR spike). Scoped to this
+      // one roll; other m.bonus consumers (rigEffects preview) read the raw meter.
+      const bonus = rig.reactorOverdriveActive ? m.bonus * 2 : m.bonus;
+      const total = roll + bonus;
       const row = applyOverheat(room, rig, total, { random });
       pushResolution(room, {
         kind: "overheat", actor: rig.owner, rigId: rig.id,
         heatKey: row.key, // "safe" = engine held; any other key dealt damage (client SFX)
         rolls: [{ sides: 12, value: roll, label: "D12" }],
-        summary: `${rig.name}: ${row.label} (D12 ${roll}+${m.bonus}=${total})`,
+        summary: `${rig.name}: ${row.label} (D12 ${roll}+${bonus}=${total})`,
         effects: [row.text],
       });
       checkAnnihilation(room);
@@ -1992,6 +1998,7 @@ function endActivation(room, rig, dice, random) {
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
   rig.noActivesNextActivation = false;
   rig.lockSightNext = false; // Lock Sight (Targeting Computer) — a shot not taken doesn't carry into a reactive shot
+  rig.reactorOverdriveActive = false; // Reactor Overdrive (§13) — the STR boost + doubled overheat is scoped to this one activation
   // Cryo Reservoir / Meltdown Protocol — clear any leftover +STR spike so an
   // armed-but-unspent bonus can't leak past this activation.
   if (rig.equipState) rig.equipState.nextAttackStr = 0;
@@ -2398,7 +2405,13 @@ function performAction(room, rig, act, a, random) {
     const extra = []; // extra per-active narration lines (e.g. Backdraft STR bonus)
     t.actionsUsed += 1;
     if (act === "harden") rig.hardened = true;
-    else if (act === "overclock") t.actionsMax += 2;
+    else if (act === "overclock") {
+      t.actionsMax += 2;
+      // Reactor Overdrive (§13, Power Prototype) — Overclocking also arms +2 STR to
+      // every attack this activation (read in combat.js computeStr) at the cost of a
+      // doubled overheat bonus this activation (endActivation). All-in push.
+      if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.reactorOverdrive) rig.reactorOverdriveActive = true;
+    }
     else if (act === "emergencypatch") {
       const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
       // Battlefield Triage (Utility Tuned) — a destroyed (0 SP) location is patched

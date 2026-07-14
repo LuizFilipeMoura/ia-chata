@@ -178,6 +178,10 @@ export function computeStr(attacker, profile, opts) {
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
   let bonus = 0;
+  // Reactor Overdrive (§13, Power Prototype) — +2 STR to every attack while the
+  // Overclock-armed flag rides this activation (set in game-state.js's overclock
+  // branch, cleared at activation end).
+  if (attacker.reactorOverdriveActive) bonus += 2;
   // Cold Bore — +3 STR against a target whose every location is at max SP.
   if (opts.target && profile.upgradeEffect?.coldBore && isUndamaged(opts.target)) {
     bonus += 3;

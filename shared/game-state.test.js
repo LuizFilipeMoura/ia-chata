@@ -2749,6 +2749,46 @@ test("overclock grants +2 actions this activation for Overclock Core", () => {
   assert.equal(findRig(r, "a1").engine.heat, 3);
 });
 
+test("Reactor Overdrive: Overclock arms the +2 STR flag (only with the upgrade)", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "reactor-overdrive";
+  activate(r, "a1");
+  assert.equal(a1.reactorOverdriveActive, false);
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax >= 2, true); // still grants the +2 actions
+  assert.equal(a1.reactorOverdriveActive, true);
+});
+
+test("Reactor Overdrive: this activation's overheat bonus is doubled, then the flag clears", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "reactor-overdrive";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  a1.engine.heat = 7; // Medium cap 5 -> 2 over -> base bonus +4, doubled to +8
+  // D12 roll 3 -> total = 3 + 8 = 11; the summary records the doubled bonus.
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 3 } } });
+  const last = r.game.resolutions.at(-1);
+  assert.equal(last.kind, "overheat");
+  assert.match(last.summary, /D12 3\+8=11/);       // doubled: +8, not the base +4
+  assert.equal(a1.reactorOverdriveActive, false);  // per-activation flag cleared
+});
+
+test("Overclock without Reactor Overdrive leaves the overheat bonus untouched", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(a1.reactorOverdriveActive, false);
+  a1.engine.heat = 7; // 2 over -> base bonus +4, NOT doubled
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 3 } } });
+  assert.match(r.game.resolutions.at(-1).summary, /D12 3\+4=7/);
+});
+
 test("emergencypatch guarantees 2 SP with no roll for Field Repair Suite", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "field-repair-suite" });

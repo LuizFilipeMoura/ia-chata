@@ -507,6 +507,15 @@ test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   assert.equal(computeStr(sniper, p, { target: hurt }), p.str);
 });
 
+test("Reactor Overdrive: computeStr adds +2 STR to every attack while active", () => {
+  const profile = { str: 6, sweet: 0 };
+  const base = { weightClass: "medium" };
+  const overdriven = { weightClass: "medium", reactorOverdriveActive: true };
+  const plain = computeStr(base, profile, {});
+  const boosted = computeStr(overdriven, profile, {});
+  assert.equal(boosted, plain + 2);
+});
+
 test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", () => {
   const rig = makeRig("r1", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
   rig.weaponUpgrades = { longRange: "steady-aim", melee: "honed-talons" };
