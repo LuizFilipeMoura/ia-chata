@@ -59,7 +59,19 @@ where the whole roster stays distinct with no clamp at either end.
 
 Each point of STR is exactly 10%, so the wound roll is readable as a percentage with no lookup.
 
-**Cost:** a d10 is a new die type at the table. Current play needs d6 + d12.
+**Cost: none in current play.** All dice are rolled in-app, so the die size is free — d10 was chosen
+purely because it is the only size that fits the ladder without clamping, not as a compromise
+against what players own.
+
+There is one latent exception. `game.autoResolve === false` puts the table into physical-dice mode
+and prompts the player to enter their own rolls (`AttackWizard.tsx`, ~line 423). That mode
+currently asks for **hit dice and a location d12 only** — it passes `impacts: toHit.map(() => undefined)`
+and lets the server roll the impacts. So a physical-dice player has never rolled the die that
+decides their damage, which is the same invisibility that produced the original bug report.
+
+The rewrite should prompt for wound dice in that mode rather than hiding them, which is what makes
+the d10 reach the table. Anyone enabling `autoResolve: false` would then need a physical d10.
+Worth noting, not worth designing around while the mode is unused.
 
 ### Toughness grid
 
@@ -218,6 +230,9 @@ The panel that prompted this work must show the roll that decided the outcome.
 - **Wound dice join `rolls`** as `wound 1..N`, toned pass/fail, so they animate in the DICE zone
   beside the hit dice. Today's impact dice are rolled and discarded, which is why the player could
   not answer "why 0 damage?".
+- **Manual-dice mode prompts for wound dice.** `AttackWizard`'s `autoResolve === false` path builds
+  its `promptDice` specs from ROF and asks only for hit dice + location; it must also ask for a d10
+  per landed hit, and stop passing `impacts: toHit.map(() => undefined)`.
 - **The damage zone shows the wound line**: target's T for the struck location, the shot's
   effective STR, and the resulting target number (`STR 4 vs T5 → 7+`).
 - `ResolutionBreakdown.tier` and the `direct/severe/critical` badge are **removed** — there are no
