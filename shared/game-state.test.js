@@ -281,6 +281,31 @@ test("a wired equipment Prototype still counts against the one-Prototype-per-rig
   );
 });
 
+test("countPrototypes still counts the wired Group-4 equipment Prototypes", () => {
+  // Each wired Prototype counts as one on its own (weapon upgrades are Field, so they contribute 0).
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, { longRange: "depleted-core", melee: "rending-talons" },
+    "servo-actuators", "grapnel-launcher"), 1);
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, { longRange: "depleted-core", melee: "rending-talons" },
+    "overclock-core", "reactor-overdrive"), 1);
+  // Stacked with a weapon Prototype it trips the one-per-rig cap (2 > 1).
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" }, { longRange: "pinning-bolt", melee: "honed-talons" },
+    "servo-actuators", "grapnel-launcher"), 2);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" }, { longRange: "pinning-bolt", melee: "honed-talons" },
+    "overclock-core", "reactor-overdrive"), 2);
+  // A Field/Tuned equipment upgrade in those families contributes nothing.
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, {}, "servo-actuators", firstEquipmentUpgradeId("servo-actuators")), 0);
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, {}, "overclock-core", firstEquipmentUpgradeId("overclock-core")), 0);
+  // Sanity: the nature tag survived the effect wiring.
+  assert.equal(equipmentUpgradeNature("servo-actuators", "grapnel-launcher"), "prototype");
+  assert.equal(equipmentUpgradeNature("overclock-core", "reactor-overdrive"), "prototype");
+});
+
 test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
   const shieldRig = { weapons: { melee: "Bulwark Shield" }, weaponUpgrades: { melee: "tower-shield" } };
   const swordRig = { weapons: { melee: "Sword" } };
