@@ -4743,6 +4743,12 @@ test("rigEffects: no equipment → base costs, empty modifiers", () => {
   assert.deepEqual(eff.modifiers, []);
 });
 
+test("rigEffects: no-arg guard returns base values", () => {
+  const eff = rigEffects();
+  assert.equal(eff.actionHeat.sprint, 2);
+  assert.deepEqual(eff.modifiers, []);
+});
+
 test("rigEffects: Servo Actuators sets sprint 1 and jumpjets heat", () => {
   const eff = rigEffects({ equipment: "servo-actuators" });
   assert.equal(eff.actionHeat.sprint, 1);
@@ -4772,12 +4778,17 @@ test("rigEffects: Field Repair Suite +1 SP, Master Toolkit +2", () => {
 test("rigEffects: passive stat mods (ablative hull, thermal margin, radiator cool)", () => {
   assert.equal(rigEffects({ equipment: "ablative-plating" }).hullMaxBonus, 1);
   assert.equal(rigEffects({ equipment: "blast-furnace-core" }).thermalMargin, 1);
-  assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core" }).thermalMargin, 2);
+  assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core", equipmentUpgradeEffect: { thermalMargin: 2 } }).thermalMargin, 2);
   assert.equal(rigEffects({ equipment: "radiator-array" }).recoveryCool, 2);
 });
 
 test("rigEffects: combat deltas carried for follow-on", () => {
   assert.equal(rigEffects({ equipment: "reactive-plating" }).combat.sideRearStr, -1);
-  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates" }).combat.sideRearStr, -2);
-  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" }).combat.sweetBandAcc, 1);
+  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates", equipmentUpgradeEffect: { sideRearStr: -2 } }).combat.sideRearStr, -2);
+  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor", equipmentUpgradeEffect: { sweetBandAcc: 1 } }).combat.sweetBandAcc, 1);
+});
+
+test("rigEffects: combat.hardenImpact reads stamped ablative-plating effect", () => {
+  assert.equal(rigEffects({ equipment: "ablative-plating" }).combat.hardenImpact, 1);
+  assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating", equipmentUpgradeEffect: { hardenImpact: 2 } }).combat.hardenImpact, 2);
 });

@@ -399,29 +399,46 @@ export function equipmentRepairBonus(equipmentId, equipmentUpgradeId) {
   return up?.effect?.repairBonus ?? 1;
 }
 
+// Ablative Plating (Armor) passive: +1 max SP to Hull. One source for the
+// commission bake and the rig-terminal badge.
+export function equipmentHullBonus(equipmentId) {
+  return equipmentId === "ablative-plating" ? 1 : 0;
+}
+// Radiator Array (Cooling) passive: vents 2 heat in Recovery instead of 1.
+export function equipmentRecoveryCool(equipmentId) {
+  return equipmentId === "radiator-array" ? 2 : 1;
+}
+
 // Single read-model of every equipment/upgrade modifier a rig carries, each
 // pre-resolved to its FINAL value. Built on the atomic helpers above so it adds
 // no resolution logic — consumers (battle-view previews, drawers, loadout card,
 // heat gauge, SP badges) render these values and never recompute an effect.
 export function rigEffects(rig) {
   const equip = rig?.equipment || null;
-  const up = rig?.equipmentUpgrade || null;
+  const upId = rig?.equipmentUpgrade || null;
   const eqDef = equip ? EQUIPMENT[equip] : null;
-  const upDef = equip ? (EQUIPMENT_UPGRADES[equip] || []).find((u) => u.id === up) : null;
+  const upDef = equip ? (EQUIPMENT_UPGRADES[equip] || []).find((u) => u.id === upId) : null;
 
   // Final effective heat, keyed by action key. Sprint is always present (base 2
   // when no Servo Actuators); the active's key is present only when equipped.
-  const actionHeat = { sprint: equipmentSprintHeat(equip, up) };
-  if (eqDef) actionHeat[eqDef.active.key] = equipmentActiveHeat(equip, up);
+  const actionHeat = { sprint: equipmentSprintHeat(equip, upId) };
+  if (eqDef) actionHeat[eqDef.active.key] = equipmentActiveHeat(equip, upId);
 
-  const thermalMargin = equip === "blast-furnace-core" ? (upDef?.effect?.thermalMargin ?? 1) : 0;
-  const hullMaxBonus = equip === "ablative-plating" ? 1 : 0;
-  const recoveryCool = equip === "radiator-array" ? 2 : 1;
+  // Blast Furnace Core (Cooling) — thermal margin reads the stamped upgrade
+  // effect (same source combat.js/commission use), not a catalog re-search.
+  const thermalMargin = equip === "blast-furnace-core" ? (rig?.equipmentUpgradeEffect?.thermalMargin ?? 1) : 0;
+  // Ablative Plating (Armor) — passive +1 max SP to Hull.
+  const hullMaxBonus = equipmentHullBonus(equip);
+  // Radiator Array (Cooling) — cools 2 heat instead of the usual 1 in Recovery.
+  const recoveryCool = equipmentRecoveryCool(equip);
 
   const combat = {
-    hardenImpact: equip === "ablative-plating" ? (upDef?.effect?.hardenImpact ?? 1) : 0,
-    sweetBandAcc: equip === "targeting-computer" ? (upDef?.effect?.sweetBandAcc ?? 0) : 0,
-    sideRearStr: equip === "reactive-plating" ? (upDef?.effect?.sideRearStr ?? -1) : 0,
+    // Ablative Plating (Armor) — hardens impact locations; stamped effect.
+    hardenImpact: equip === "ablative-plating" ? (rig?.equipmentUpgradeEffect?.hardenImpact ?? 1) : 0,
+    // Targeting Computer (Sensors) — sweet-band accuracy bonus; stamped effect.
+    sweetBandAcc: equip === "targeting-computer" ? (rig?.equipmentUpgradeEffect?.sweetBandAcc ?? 0) : 0,
+    // Reactive Plating (Armor) — side/rear STR delta; stamped effect.
+    sideRearStr: equip === "reactive-plating" ? (rig?.equipmentUpgradeEffect?.sideRearStr ?? -1) : 0,
   };
 
   const modifiers = [];
@@ -430,7 +447,7 @@ export function rigEffects(rig) {
     if (upDef) modifiers.push({ source: upDef.id, kind: "upgrade", label: upDef.tag, detail: upDef.name });
   }
 
-  return { actionHeat, repair: { bonusSp: equipmentRepairBonus(equip, up) }, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers };
+  return { actionHeat, repair: { bonusSp: equipmentRepairBonus(equip, upId) }, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers };
 }
 
 // Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.
@@ -937,7 +954,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
   const equipmentUpgradeRow = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
   const equipmentUpgradeEffect = equipmentUpgradeRow?.effect || {};
   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
-  const hullMax = base.hull + (equipmentId === "ablative-plating" ? 1 : 0);
+  const hullMax = base.hull + equipmentHullBonus(equipmentId);
   const rig = {
     id,
     name: String(name || "Rig").trim() || "Rig",
@@ -1821,7 +1838,7 @@ function runRecovery(room) {
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
       // Radiator Array (Cooling) — cools 2 heat instead of the usual 1.
-      const cooling = rig.equipment === "radiator-array" ? 2 : 1;
+      const cooling = equipmentRecoveryCool(rig.equipment);
       rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
     rig.activated = false;
