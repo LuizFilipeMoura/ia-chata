@@ -4558,3 +4558,20 @@ test("threat is not undoable", () => {
   applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
   assert.equal(room._history.length, before); // no snapshot pushed
 });
+
+test("pendingThreat clears when the active rig's activation ends", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Atk", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("pendingThreat clears once the shot resolves", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  applyCommand(room, { verb: "action", attrs: {
+    name: "Atk", action: "fire", target: "Def", weapon: "longRange",
+    arc: "front", range: "near", distance: 6, cover: 0,
+  } });
+  assert.equal(room.game.pendingThreat, null);
+});

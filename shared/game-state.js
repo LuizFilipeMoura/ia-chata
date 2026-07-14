@@ -2535,6 +2535,19 @@ const UNDO_LIMIT = 12; // bounded so the serialized room stays small
 
 const cloneState = (v) => JSON.parse(JSON.stringify(v));
 
+// A parked threat telegraph is stale the moment the active rig is no longer the
+// declaring attacker (activation ended, turn flipped) or we left activation.
+// Returns true if it cleared anything.
+function clearThreatIfStale(room) {
+  const th = room.game.pendingThreat;
+  if (!th) return false;
+  if (room.game.phase !== "activation" || room.game.turn?.activeRigId !== th.attackerId) {
+    room.game.pendingThreat = null;
+    return true;
+  }
+  return false;
+}
+
 // Apply a single normalized command { verb, attrs } to the room in place.
 // Returns the room. Bumps room.version only when something actually changed.
 export function applyCommand(room, cmd, context = {}, options = {}) {
@@ -2880,6 +2893,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         room.game.phase === "activation" && t.activeRigId === rig.id) {
       changed = performAction(room, rig, String(a.action || "").toLowerCase(), a, options.random);
     }
+    // The shot (or its declaration) is over — drop the telegraph so the
+    // defender's overlay yields to the dice/recap.
+    room.game.pendingThreat = null;
   } else if (verb === "endactivation") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
@@ -3132,6 +3148,11 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       else if (verb === "heat") { heatRig(rig, a.amount); changed = true; }
     }
   }
+
+  // Post-command: clear a now-stale attack telegraph — activation ended, turn
+  // flipped, or we left activation. A fresh `threat` declare is never stale here
+  // (its attackerId is the still-active rig), so this is safe for every verb.
+  changed = clearThreatIfStale(room) || changed;
 
   if (changed) {
     if (undoSnapshot) {
