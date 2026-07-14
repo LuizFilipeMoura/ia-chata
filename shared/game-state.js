@@ -338,12 +338,16 @@ export function equipmentActiveHeat(equipmentId, equipmentUpgradeId) {
   return base;
 }
 
-// Sprint heat: base 2, and Servo Actuators (Mobility) brings it to 1. Hard floor
-// of 1 — a free Sprint is no decision at all, so no equipment, no upgrade, and no
-// caller-supplied base may drive this to 0. The clamp is the guarantee; do not
-// rely on the catalog to stay honest.
+// Sprint heat: base 2, and Servo Actuators (Mobility) brings it to 1. A sprintHeat
+// Field tag may still tune it — but the Math.max floors every path at 1, because a
+// free Sprint is no decision at all. The clamp is the guarantee, not the catalog:
+// Reinforced Servos used to ship sprintHeat: 0 and made repositioning free.
+// Resolving the tag (rather than ignoring it) keeps this honest — a future tag
+// that lands here takes effect and gets clamped, instead of drifting silently the
+// way equipmentActiveHeat warns about above.
 export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 2) {
-  const raw = equipmentId === "servo-actuators" ? 1 : baseHeat;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  const raw = up?.effect?.sprintHeat ?? (equipmentId === "servo-actuators" ? 1 : baseHeat);
   return Math.max(1, raw);
 }
 

@@ -76,8 +76,13 @@ function MoveBody({
   const base = rig.speed ?? SPEED[rig.weightClass] ?? 8;
   // Sprint reach and heat are both loadout-derived; rigEffects is the one
   // read-model that resolves them (V2's MoveBody reads the same values).
-  const dist = sprint ? Math.round(base * rigEffects(rig).sprintMult) : base;
-  const heat = sprint ? rigEffects(rig).actionHeat.sprint : 1;
+  const eff = rigEffects(rig);
+  const mult = eff.sprintMult;
+  const dist = sprint ? Math.round(base * mult) : base;
+  // The reach label rides the same value as the distance — printing a literal
+  // "1½×" next to a 2×-derived number is how "16" (1½× Speed)" ships.
+  const reachLabel = mult === 1.5 ? "1½× Speed" : `${mult}× Speed`;
+  const heat = sprint ? eff.actionHeat.sprint : 1;
   const holdMs = holdMsFor(actionKey);
   const holdSec = Math.round(holdMs / 1000);
 
@@ -108,7 +113,7 @@ function MoveBody({
         className="dwr-hint"
         dangerouslySetInnerHTML={{
           __html: sprint
-            ? `Reposition up to <b>${dist}"</b> (1½× Speed). Backpedal / side-step at half. Generates <b>+${heat} heat</b>.`
+            ? `Reposition up to <b>${dist}"</b> (${reachLabel}). Backpedal / side-step at half. Generates <b>+${heat} heat</b>.`
             : `Reposition up to <b>${dist}"</b> (full Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`,
         }}
       />

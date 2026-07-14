@@ -37,6 +37,15 @@ describe("MoveBody sprint reach", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain('16"');
   });
+  it("labels the reach 2×, not a literal 1½× next to a 2×-derived distance", () => {
+    render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+    expect(document.body.textContent).toContain("2× Speed");
+    expect(document.body.textContent).not.toContain("1½×");
+  });
+  it("still labels base Servo Actuators reach 1½×", () => {
+    render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+    expect(document.body.textContent).toContain("1½× Speed");
+  });
   it("a plain Move is full Speed regardless of the upgrade", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="move" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain('8"');
