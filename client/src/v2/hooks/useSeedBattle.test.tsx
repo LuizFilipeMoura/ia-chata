@@ -6,8 +6,8 @@ vi.mock("../../hooks/useCommands", () => ({ useCommands: () => send }));
 
 import { useSeedBattle } from "./useSeedBattle";
 
-test("sends the seed verb with the chosen first side", () => {
+test("sends the seed verb with the chosen first side and preset", () => {
   const { result } = renderHook(() => useSeedBattle());
-  result.current("b");
-  expect(send).toHaveBeenCalledWith("seed", { first: "b" });
+  result.current("b", "rigs4");
+  expect(send).toHaveBeenCalledWith("seed", { first: "b", preset: "rigs4" });
 });
