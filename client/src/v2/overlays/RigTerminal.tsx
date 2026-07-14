@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import "../styles/rig-terminal.css";
 import { rigModifiers } from "/shared/battle-view.js";
+import { rigEffects } from "/shared/game-state.js";
 import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { buildLoadout } from "../../lib/loadout";
 import { rigStatus } from "../../lib/rigView";
@@ -41,6 +42,7 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
   const badge = rig.weightClass || UNIT_KINDS[kind].label;
   const st = rigStatus(rig);
   const mods = rigModifiers(rig);
+  const hullBonus = rigEffects(rig).hullMaxBonus;
   const lo = buildLoadout(rig);
   // Movement stats now live on the chassis — surface Speed (a Move's reach) and
   // its derived Sprint (1½× Speed) so the status view isn't silent on how far
@@ -130,7 +132,7 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
               {locs.map((loc) => {
                 const comp = (rig as unknown as Record<string, Component>)[loc];
                 if (!comp) return null;
-                return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} onCommand={onCommand} />;
+                return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} delta={loc === "hull" ? hullBonus : 0} onCommand={onCommand} />;
               })}
             </div>
 
