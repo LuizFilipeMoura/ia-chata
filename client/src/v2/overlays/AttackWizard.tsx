@@ -194,6 +194,11 @@ export function AttackWizard({
   const [justReloaded, setJustReloaded] = useState(false);
   const heatKind = !!UNIT_KINDS[kindOf(rig)]?.hasHeat;
 
+  // Aimed Shot is a toggle inside the drawer (fire ↔ aimed); the `mode` prop only
+  // seeds the initial state. Lock keeps its own minimal flow further below.
+  const [aimed, setAimed] = useState(mode === "aimed");
+  const effMode: AttackMode = mode === "lock" ? "lock" : aimed ? "aimed" : "fire";
+
   const enemies = rigs.filter(
     (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
   );
@@ -238,12 +243,12 @@ export function AttackWizard({
     const weaponName = weapons[flat ? "unit" : state.weapon] || "";
     const id = window.setTimeout(() => {
       sendCommand("threat", {
-        action: "declare", target: state.target, mode, weapon: weaponName, side: mySide,
+        action: "declare", target: state.target, mode: effMode, weapon: weaponName, side: mySide,
       });
     }, 500);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.target, state.weapon, react]);
+  }, [state.target, state.weapon, react, aimed]);
 
   useEffect(() => {
     if (react) return;
@@ -331,6 +336,8 @@ export function AttackWizard({
   const isMelee = !!profileOf(state.weapon)?.melee;
   useEffect(() => {
     if (isMelee && state.range === "out") patch({ range: "near" });
+    // Aimed Shot is ranged-only — a melee weapon forces the shot back to Fire.
+    if (isMelee && aimed) setAimed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMelee]);
 
@@ -409,14 +416,14 @@ export function AttackWizard({
     }
 
     const attrs: Record<string, unknown> = {
-      name: rig.name, action: mode, target: state.target,
+      name: rig.name, action: effMode, target: state.target,
       weapon: slotSel, weaponName, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
     };
-    if (mode === "aimed") attrs.loc = state.loc;
+    if (aimed) attrs.loc = state.loc;
     if (game?.autoResolve === false) {
       const specs: { key: string; label: string; sides: number }[] = [];
       for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
-      if (mode !== "aimed") specs.push({ key: "loc", label: "Location", sides: 12 });
+      if (!aimed) specs.push({ key: "loc", label: "Location", sides: 12 });
       const d = await promptDice(specs, `${weaponName} dice`);
       const toHit: number[] = [];
       for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
@@ -441,7 +448,7 @@ export function AttackWizard({
   let goDisabled = false;
   let goIsReload = false;
 
-  const modeLabel = mode === "aimed" ? "Aimed Shot" : "Fire";
+  const modeLabel = aimed ? "Aimed Shot" : "Fire";
   let dicePreview = "";
 
   {
@@ -458,8 +465,8 @@ export function AttackWizard({
 
     dicePreview =
       `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
-      (mode === "fire" ? " + 1 location die (d12)" : "") +
-      (mode === "aimed" ? " · +1 to hit" : "") +
+      (!aimed ? " + 1 location die (d12)" : "") +
+      (aimed ? " · +1 to hit" : "") +
       (secondShot ? " · +1 heat (second shot)" : "");
 
     if (isMelee) {
@@ -504,7 +511,7 @@ export function AttackWizard({
     }
   }
 
-  const title = mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";
+  const title = aimed ? "◎ Aimed Shot" : "🎯 Fire Weapon";
 
   const attackNotice = (() => {
     const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;
@@ -589,6 +596,23 @@ export function AttackWizard({
             <div className="v2-aw-title v2-title">{title} — <RigName rig={rig} /></div>
             <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           </div>
+
+          {!react && !isMelee && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={aimed}
+              className={"v2-aw-aim" + (aimed ? " is-on" : "")}
+              onClick={() => setAimed((a) => !a)}
+            >
+              <span className="v2-aw-aim-glyph" aria-hidden="true">◎</span>
+              <span className="v2-aw-aim-text">
+                <span className="v2-aw-aim-label">Aimed Shot</span>
+                <span className="v2-aw-aim-hint">Hit a chosen part · +1 to hit</span>
+              </span>
+              <span className="v2-aw-aim-switch" aria-hidden="true" />
+            </button>
+          )}
 
           <Field
             label="Target"
@@ -691,7 +715,7 @@ export function AttackWizard({
                 desc={FIELD_DESC.cover}
                 optDesc={COVER_DESC}
               />
-              {mode === "aimed" && (
+              {aimed && (
                 <Field
                   label="Location"
                   options={targetLocs}

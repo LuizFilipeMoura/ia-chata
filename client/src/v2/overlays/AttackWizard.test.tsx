@@ -42,6 +42,29 @@ test("renders the fire control with an Open Fire / Fire button", async () => {
   expect(await screen.findByRole("button", { name: /Fire/i })).toBeInTheDocument();
 });
 
+test("Aimed Shot toggle reveals the location field and fires an aimed action", async () => {
+  sent.mockClear();
+  const rigs = [mk(1, "a"), mk(2, "b")];
+  render(
+    <AppProviders>
+      <V2DrawerProvider><V2RollProvider><V2BattleActionsProvider>
+        <Seed rigs={rigs}>
+          <AttackWizard rig={rigs[0]} mode="fire" onClose={vi.fn()} />
+        </Seed>
+      </V2BattleActionsProvider></V2RollProvider></V2DrawerProvider>
+    </AppProviders>,
+  );
+  // Off by default: no Location field, CTA fires a straight shot.
+  const aim = await screen.findByRole("switch", { name: /Aimed Shot/i });
+  expect(aim).toHaveAttribute("aria-checked", "false");
+  expect(screen.queryByText(/Component to hit/i)).not.toBeInTheDocument();
+  // Toggle on: the Location field appears and the shot becomes aimed.
+  fireEvent.click(aim);
+  expect(await screen.findByText(/Component to hit/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Aimed Shot/i }));
+  expect(sent).toHaveBeenCalledWith("action", expect.objectContaining({ action: "aimed", loc: expect.any(String) }));
+});
+
 test("reopening recalls the last target and shot distance per rig", async () => {
   sent.mockClear();
   const rigs = [mk(1, "a"), mk(2, "b", { id: 2, name: "FOE" }), mk(3, "b", { id: 3, name: "FOE2" })];
