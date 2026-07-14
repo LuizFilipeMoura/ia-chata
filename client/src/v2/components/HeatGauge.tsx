@@ -1,5 +1,5 @@
 import "../styles/rig-terminal.css";
-import { heatMeter } from "/shared/game-state.js";
+import { heatMeter, rigEffects } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import type { Rig } from "../../state/types";
 import { InfoTerm } from "./InfoTerm";
@@ -10,6 +10,8 @@ import { InfoTerm } from "./InfoTerm";
 export function HeatGauge({ rig }: { rig: Rig }) {
   if (!UNIT_KINDS[kindOf(rig)].hasHeat) return null;
   const m = heatMeter(rig);
+  const margin = rigEffects(rig).thermalMargin;
+  const baseCap = m.cap - margin;
   const displayMax = m.cap + 4;
   const shownHeat = Math.min(m.heat, displayMax);
 
@@ -33,7 +35,10 @@ export function HeatGauge({ rig }: { rig: Rig }) {
     <div className="v2-heat" data-zone={m.zone}>
       <div className="v2-heat-head">
         <InfoTerm id="heat" className="v2-heat-label v2-eyebrow">ENGINE HEAT</InfoTerm>
-        <span className="v2-heat-read"><b>{m.heat}</b>/<InfoTerm id="heat-capacity">{m.cap}</InfoTerm></span>
+        <span className="v2-heat-read">
+          <b>{m.heat}</b>/<InfoTerm id="heat-capacity">{baseCap}</InfoTerm>
+          {margin > 0 && <span className="v2-rt-delta">+{margin}</span>}
+        </span>
       </div>
       <div className="v2-heat-track">{segs}</div>
       <div className="v2-heat-note">{note}</div>

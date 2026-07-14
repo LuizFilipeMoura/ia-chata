@@ -1192,13 +1192,12 @@ export function heatMeter(rig) {
   const heat = rig?.engine?.heat || 0;
   const cap = HEAT_CAPACITY[rig?.weightClass] ?? 5;
   const floor = rig?.engine?.sp === 0 ? 3 : 0;
-  // Blast Furnace Core (Thermal) — raises the safe threshold before the overheat
-  // roll. Base margin +1; Insulated Core (Field) makes it +2.
-  let margin = 0;
-  if (rig?.equipment === "blast-furnace-core") {
-    const up = (EQUIPMENT_UPGRADES["blast-furnace-core"] || []).find((u) => u.id === rig?.equipmentUpgrade);
-    margin = up?.effect?.thermalMargin ?? 1;
-  }
+  // Blast Furnace Core (Thermal) raises the safe threshold before the overheat
+  // roll. Read the stamped effect (single source of truth, same field rigEffects
+  // and combat.js read) rather than re-searching the catalog.
+  const margin = rig?.equipment === "blast-furnace-core"
+    ? (rig?.equipmentUpgradeEffect?.thermalMargin ?? 1)
+    : 0;
   const effCap = cap + margin;
   const over = Math.max(0, heat - effCap);
   const bonus = over > 0 ? Math.min(MAX_OVERHEAT_BONUS, 2 * over) : 0;
