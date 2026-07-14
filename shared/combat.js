@@ -499,7 +499,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     && attacker.lockedTarget != null
     && attacker.lockedTarget === target.id
     && round <= (attacker.lockExpiresRound || 0);
-  if (fireControlLock) {
+  // Fire Solution Lock (§13, Targeting Computer prototype) — a full 3-solution
+  // stack cashes for the same unmissable, armour-piercing volley. The solution
+  // is stacked/reset/consumed in game-state's resolveFire; here we just honour
+  // the cash-in flag it passes down.
+  const solutionPayoff = !!opts.solutionPayoff;
+  if (fireControlLock || solutionPayoff) {
     profile = { ...profile, perks: [...new Set([...(profile.perks || []), "Armour Piercing"])] };
   } else if (attacker.lockedTarget != null && round > (attacker.lockExpiresRound || 0)) {
     attacker.lockedTarget = null; // expire a stale lock
@@ -521,7 +526,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // than importing game-state (which would form a cycle). Wired into both the
   // to-hit and impact seam call sites below via opts.spendHeat.
   const spendHeat = (n) => ctx.bumpHeat(target, n);
-  const th = rollToHit(attacker, profile, { ...opts, target, spendHeat, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
+  const th = rollToHit(attacker, profile, { ...opts, target, spendHeat, autoHit: fireControlLock || solutionPayoff, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;

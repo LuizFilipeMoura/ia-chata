@@ -2071,6 +2071,20 @@ function resolveFire(room, rig, target, a, act, random) {
       effects: ["Chaff Burst — free side-step under smoke"],
     });
   }
+  // Fire Solution Lock (§Fire Control prototype) — a Fire Weapon shot vs the SAME
+  // target stacks a firing solution (cap 3). Switching target resets it, so this
+  // shot starts a fresh solution on the new target. A full 3-stack arms the NEXT
+  // shot to cash in as an auto-hit, armour-piercing volley (solutionPayoff). The
+  // stack/reset/consume + heat bookkeeping happens after the shot resolves below.
+  const fsl = slot === "longRange"
+    && !!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.fireSolutionLock
+    && rig.equipState != null;
+  let solutionPayoff = false;
+  if (fsl) {
+    const sol = rig.equipState.solution;
+    if (sol.targetId !== target.id) { sol.targetId = target.id; sol.count = 0; } // reset on switch
+    solutionPayoff = sol.count >= 3; // a full solution cashes on this shot
+  }
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,
@@ -2078,6 +2092,7 @@ function resolveFire(room, rig, target, a, act, random) {
     aimed: act === "aimed", aimedLoc: String(a.loc || "hull").toLowerCase(),
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
+    solutionPayoff,
     fireControlFirst,
     // Predictive Tracking (Fire Control Tuned) — the target counts as pinned when
     // it is immobilised, suppression-pinned, held in a melee lock, or emplaced.
@@ -2093,6 +2108,14 @@ function resolveFire(room, rig, target, a, act, random) {
   // activation; later melee blows resolve at normal STR.
   if (slot === "melee" && rig.chargedIntoContact) rig.kickstartUsed = true;
   t.actionsUsed += cost;
+  // Fire Solution Lock — resolve the solution for the shot that just landed. A
+  // payoff shot spends the full stack (reset to 0); any other shot is a building
+  // shot: it stacks the solution (cap 3) and runs the barrel +1 heat.
+  if (fsl) {
+    const sol = rig.equipState.solution;
+    if (solutionPayoff) { sol.count = 0; } // payoff consumed
+    else { sol.count = Math.min(3, sol.count + 1); bumpHeat(rig, 1); } // building shot: stack + run hot
+  }
   // Cryo Reservoir / Meltdown Protocol — the armed +STR spike is a one-shot; the
   // attack that just resolved consumed it, so clear it now.
   if (rig.equipState?.nextAttackStr) rig.equipState.nextAttackStr = 0;
@@ -2586,6 +2609,13 @@ function performAction(room, rig, act, a, random) {
     // Full Tilt / Momentum Swing (§13) — advancing this activation charges
     // the "moved" flag their melee STR bonus is gated on.
     rig.movedThisActivation = true;
+    // Fire Solution Lock (§Fire Control prototype) — the firing solution needs a
+    // held position; any repositioning breaks it. Gated on the tag so it never
+    // clobbers other rigs' solution state.
+    if (rig.equipState
+        && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.fireSolutionLock) {
+      rig.equipState.solution = { targetId: null, count: 0 };
+    }
     return true;
   }
   if (act === "disengage") {

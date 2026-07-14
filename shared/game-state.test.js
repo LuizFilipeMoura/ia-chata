@@ -2222,6 +2222,64 @@ test("Meltdown Protocol: an engine destroyed while charged detonates the charge 
   assert.ok((rig.hull.sp + rig.arms.sp + rig.legs.sp) < spBefore, "self-damage from the meltdown");
 });
 
+test("Fire Solution Lock: repeated fire on one target stacks a solution (cap 3) at +1 heat/shot", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  activate(r, "a1");
+  const fire = () => {
+    r.game.turn.actionsUsed = 0; // keep firing within the one activation (budget is 3)
+    a1.loaded.longRange = true;
+    return applyCommand(r, { verb: "action", attrs: {
+      name: "a1", action: "fire", weapon: "longRange", target: "b1", arc: "front", range: "near",
+      dice: { toHit: [1, 1], impacts: [1, 1], location: 1 } } });
+  };
+  const heat0 = a1.engine.heat;
+  fire();
+  assert.equal(a1.equipState.solution.targetId, findRig(r, "b1").id);
+  assert.equal(a1.equipState.solution.count, 1);
+  assert.ok(a1.engine.heat > heat0, "building shot runs +1 heat");
+  fire(); fire();
+  assert.equal(a1.equipState.solution.count, 3);                 // armed at cap 3 (next shot cashes in)
+  fire();                                                        // firing at cap 3 spends the solution
+  assert.equal(a1.equipState.solution.count, 0);
+});
+
+test("Fire Solution Lock: switching target resets the solution", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  a1.equipState.solution = { targetId: findRig(r, "b1").id, count: 2 };
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "fire", weapon: "longRange", target: "b2", arc: "front", range: "near", dice: { toHit: [1, 1], impacts: [1, 1], location: 1 } } });
+  assert.equal(a1.equipState.solution.targetId, findRig(r, "b2").id);
+  assert.equal(a1.equipState.solution.count, 1);                 // reset to this target, then +1
+});
+
+test("Fire Solution Lock: at count 3 the next shot auto-hits every die and gains Armour Piercing", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  a1.equipState.solution = { targetId: findRig(r, "b1").id, count: 3 };
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "a1", action: "fire", weapon: "longRange", target: "b1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], location: 1, impacts: [6, 6], ap: [3, 3] } } }); // all-1 to-hit would miss without auto-hit
+  const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
+  assert.match(attack.summary, /8 hit\(s\)/);                    // Mini Gun's every die lands — unmissable payoff volley
+  assert.equal(a1.equipState.solution.count, 0);                 // solution consumed
+});
+
+test("Fire Solution Lock: moving loses the solution", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  a1.equipState.solution = { targetId: findRig(r, "b1").id, count: 2 };
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "move" } });
+  assert.deepEqual(a1.equipState.solution, { targetId: null, count: 0 });
+});
+
 test("ensureRigShape backfills equipState on a legacy rig", () => {
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
   delete rig.equipState;
