@@ -1360,7 +1360,7 @@ test("applyDefensiveReactions is an identity pass-through for a defender with no
   assert.deepEqual(out, hit);
 });
 
-test("Reactive Armor hardens the struck location on the first damaging hit each round (−2 impact)", () => {
+test("Reactive Armor hardens the struck location on the first damaging hit each round, softening severity across a band (−2 impact)", () => {
   const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
   const plain = { weightClass: "medium", hardened: false, preparation: null };
   const reactive = {
@@ -1368,19 +1368,62 @@ test("Reactive Armor hardens the struck location on the first damaging hit each 
     equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
     equipState: { reactiveArmorLocs: [] },
   };
-  // d6=5 → plain hull total = 5 + 8 + 0(front) = 13
+  // d6=6 → plain hull total = 6 + 8 + 0(front) = 14. Medium hull bands are
+  // direct:11, severe:14, critical:17 (shared/unit-kinds.js), so 14 resolves
+  // to severe (sp 2). The −2 softening drops it to 12, which falls in the
+  // direct band [11,14): sp 1. The totals straddle the severe/direct boundary,
+  // so this proves the hit was actually mitigated — not just that `total` moved
+  // by 2 while sp/tier stayed identical.
   const outPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
-    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
   const outReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
-    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
-  assert.equal(outPlain[0].total - outReactive[0].total, 2);        // −2 impact, Harden-equivalent
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.equal(outPlain[0].total, 14);
+  assert.equal(outPlain[0].sp, 2);
+  assert.equal(outPlain[0].tier, "severe");
+  assert.equal(outReactive[0].total, 12);
+  assert.equal(outReactive[0].sp, 1);
+  assert.equal(outReactive[0].tier, "direct");
   assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // that location is now hardened
 
-  // A second volley to the SAME hardened location still softens and does not re-record.
+  // A second volley to the SAME hardened location still softens (sp/tier stay
+  // dropped, not just total) and does not re-record the location.
   const outReactive2 = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
-    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
-  assert.equal(outPlain[0].total - outReactive2[0].total, 2);
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.equal(outReactive2[0].sp, 1);
+  assert.equal(outReactive2[0].tier, "direct");
   assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // no duplicate
+});
+
+test("Reactive Armor independently hardens a second, different location (reactiveArmorLocs holds multiple entries)", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null };
+  const reactive = {
+    weightClass: "medium", hardened: false, preparation: null,
+    equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
+    equipState: { reactiveArmorLocs: [] },
+  };
+  // First damaging hit hardens "hull" only.
+  rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]);
+
+  // A first damaging hit to a DIFFERENT location ("legs") is independently
+  // recorded AND softened too — proves reactiveArmorLocs is a per-location list,
+  // not a single "already reacted this round" flag.
+  // d6=6 → plain legs total = 6 + 8 + 0(front) = 14. Medium legs bands are
+  // direct:11, severe:13, critical:15 (shared/unit-kinds.js): 14 → severe
+  // (sp 2); softened to 12 → direct band [11,13): sp 1.
+  const outPlainLegs = rollImpacts({ weightClass: "medium" }, plain, auto, "legs",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  const outReactiveLegs = rollImpacts({ weightClass: "medium" }, reactive, auto, "legs",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull", "legs"]); // both tracked
+  assert.equal(outPlainLegs[0].sp, 2);
+  assert.equal(outPlainLegs[0].tier, "severe");
+  assert.equal(outReactiveLegs[0].total, 12);
+  assert.equal(outReactiveLegs[0].sp, 1);
+  assert.equal(outReactiveLegs[0].tier, "direct");
 });
 
 test("Reactive Armor does not fire for a rig carrying only the base Ablative Plating", () => {

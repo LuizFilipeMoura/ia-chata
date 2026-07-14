@@ -1950,7 +1950,10 @@ test("equipmentUpgradeEffectOf resolves from the catalog by id", () => {
     equipmentUpgradeEffectOf("ablative-plating", "reinforced-plating"),
     { hardenImpact: 2 },
   );
-  assert.deepEqual(equipmentUpgradeEffectOf("ablative-plating", "ablative-cascade"), {}); // inert row → {}
+  // A permanently-unknown id (never a real catalog row) so this stays {} forever —
+  // unlike a real-but-still-inert row (e.g. ablative-cascade today), which stops
+  // being {} the moment mechanics are wired for it.
+  assert.deepEqual(equipmentUpgradeEffectOf("ablative-plating", "no-such-upgrade-xyz"), {});
   assert.deepEqual(equipmentUpgradeEffectOf("servo-actuators", "unknown"), {});         // unknown id → {}
   assert.deepEqual(equipmentUpgradeEffectOf(null, null), {});                            // no equipment → {}
 });
