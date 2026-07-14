@@ -11,10 +11,11 @@ interface Props {
   rigName: string;
   loc: string;
   comp: Component;
+  delta?: number;
   onCommand: (verb: string, attrs: Record<string, unknown>) => void;
 }
 
-export function CompRow({ rigName, loc, comp, onCommand }: Props) {
+export function CompRow({ rigName, loc, comp, delta = 0, onCommand }: Props) {
   const label = loc.charAt(0).toUpperCase() + loc.slice(1);
   const text = comp.destroyed ? "DESTROYED" : comp.sp === 0 ? "CATASTROPHIC" : `${comp.sp}/${comp.max}`;
 
@@ -23,7 +24,7 @@ export function CompRow({ rigName, loc, comp, onCommand }: Props) {
   useEffect(() => { prev.current = comp.sp; });
   const damaged = prior != null && comp.sp < prior;
   const healed = prior != null && comp.sp > prior;
-  const delta = prior != null ? Math.abs(comp.sp - prior) : 0;
+  const stepDelta = prior != null ? Math.abs(comp.sp - prior) : 0;
 
   const cls = "v2-comp" + (damaged ? " is-hit" : healed ? " is-heal" : "");
 
@@ -35,13 +36,13 @@ export function CompRow({ rigName, loc, comp, onCommand }: Props) {
       <div className="v2-comp-bar v2-well">
         <div className="v2-comp-bar-fill"
           style={{ width: `${Math.round((comp.sp / comp.max) * 100)}%`, background: spColor(comp.sp, comp.max) }} />
-        <div className="v2-comp-bar-text">{text}</div>
+        <div className="v2-comp-bar-text">{text}{delta > 0 && <span className="v2-rt-delta">+{delta}</span>}</div>
       </div>
       <button type="button" className="v2-comp-step v2-comp-step--rep" aria-label={`Repair ${loc}`}
         onClick={() => onCommand("repair", { name: rigName, loc, amount: "1" })}>＋</button>
       {(damaged || healed) && (
         <span className={"v2-comp-delta " + (damaged ? "is-hit" : "is-heal")} aria-hidden="true">
-          {damaged ? "−" : "+"}{delta}
+          {damaged ? "−" : "+"}{stepDelta}
         </span>
       )}
     </div>

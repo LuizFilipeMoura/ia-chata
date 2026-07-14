@@ -49,6 +49,15 @@ declare module "/shared/game-state.js" {
   export function defaultWeaponUpgrade(weaponName: string): string;
   export function normalizeWeaponUpgrade(weaponName: string, upgradeId?: string | null): string;
   export function upgradeForWeapon(weaponName: string, upgradeId?: string | null): { id: string; name: string } | null;
+  export function rigEffects(rig: Rig): {
+    actionHeat: Record<string, number>;
+    repair: { bonusSp: number };
+    thermalMargin: number;
+    hullMaxBonus: number;
+    recoveryCool: number;
+    combat: { hardenImpact: number; sweetBandAcc: number; sideRearStr: number };
+    modifiers: Array<{ source: string; kind: string; label: string; detail: string }>;
+  };
 }
 
 declare module "/shared/combat.js" {

@@ -160,6 +160,13 @@ export interface GameState {
   answerTokens?: Record<string, number>;
   pendingAnswer?: PendingAnswer | null;
   pendingReaction?: PendingReaction | null;
+  pendingThreat?: {
+    attackerId: number;
+    targetId: number;
+    defender: string;
+    mode: string;
+    weapon: string;
+  } | null;
   /** True for the acting side when a turn-scoped action can be reverted. */
   canUndo?: boolean;
 }

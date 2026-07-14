@@ -31,8 +31,8 @@ interface Action {
 //
 // Disengage lives in the Move group on purpose: a rig locked in melee can't Move
 // until it Disengages, so the two occupy the same slot interchangeably — when
-// engaged only Disengage is live (and the tile relabels to it); otherwise
-// Move/Sprint are live and Disengage sits greyed as the "why you can't move" cue.
+// engaged only Disengage is live (and the tile relabels to it); otherwise it's
+// hidden (see HIDE_WHEN_DISABLED) so Move/Sprint own the slot cleanly.
 const GROUPS: { id: string; label: string; tone: string; glyph: string; keys: string[] }[] = [
   { id: "attack", label: "Attack", tone: "ember", glyph: "▶", keys: ["fire", "aimed"] },
   { id: "move", label: "Move", tone: "steel", glyph: "⇢", keys: ["move", "sprint", "disengage"] },
@@ -188,12 +188,22 @@ export function ActionConsole({ rig }: Props) {
   const hot = !cold && rig.engine.heat > (HEAT_CAPACITY[rig.weightClass] ?? 5);
 
   const claimed = new Set(GROUPS.flatMap((g) => g.keys));
+  // Disengage and Douse are situational: they only apply when engaged / on fire.
+  // Rather than greying them as a "why you can't" cue, drop them entirely when
+  // disabled so the console shows only actions that are actually live.
+  const HIDE_WHEN_DISABLED = new Set(["disengage", "douse"]);
   // Shut Down is promoted to the full-width button below the grid, so drop it
   // from the Support catch-all to avoid offering it twice.
   const childrenFor = (g: (typeof GROUPS)[number]) =>
-    g.id === "support"
+    (g.id === "support"
       ? actions.filter((a) => !claimed.has(a.key) && a.key !== "shutdown")
-      : actions.filter((a) => g.keys.includes(a.key));
+      : g.id === "attack"
+        // Aimed is now a toggle inside the Fire drawer, not its own tile — so the
+        // Attack group collapses to a lone Fire action. `aimed` stays in the group's
+        // keys (claimed above) so it never leaks into the Support catch-all.
+        ? actions.filter((a) => a.key === "fire")
+        : actions.filter((a) => g.keys.includes(a.key))
+    ).filter((a) => a.enabled || !HIDE_WHEN_DISABLED.has(a.key));
 
   // Surface the "why" behind constrained actions as inline hints, deduplicated.
   const notes = [...new Set(actions.map((a) => a.note).filter(Boolean))] as string[];

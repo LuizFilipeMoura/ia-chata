@@ -22,3 +22,25 @@ test("shows the three counters in answerMode", () => {
   expect(screen.getByText("Sidestep the Shooter")).toBeInTheDocument();
   expect(screen.getByText("Exploit Opening")).toBeInTheDocument();
 });
+
+test("renders the confirm expansion under the selected reaction only", () => {
+  const onConfirm = vi.fn();
+  const { rerender } = render(
+    <ReactionPicker value="brace" onChange={vi.fn()} onConfirm={onConfirm} confirmLabel="Set reaction" />,
+  );
+  // Exactly one confirm button, sitting inside the selected choice's item.
+  const btn = screen.getByRole("button", { name: /Set reaction/i });
+  expect(btn).toBeInTheDocument();
+  btn.click();
+  expect(onConfirm).toHaveBeenCalledOnce();
+  // Selecting a different reaction moves the expansion — still exactly one.
+  rerender(
+    <ReactionPicker value="evasive" onChange={vi.fn()} onConfirm={onConfirm} confirmLabel="Set reaction" />,
+  );
+  expect(screen.getAllByRole("button", { name: /Set reaction/i })).toHaveLength(1);
+});
+
+test("omits the confirm expansion when no onConfirm is given", () => {
+  render(<ReactionPicker value="brace" onChange={vi.fn()} />);
+  expect(screen.queryByRole("button", { name: /Set reaction/i })).toBeNull();
+});

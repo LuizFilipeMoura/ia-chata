@@ -40,6 +40,8 @@
 .v2-root .v2-dock-btn[disabled]{opacity:.4;cursor:not-allowed;}
 .v2-root .v2-dock-btn--danger{color:var(--v2-ember-hi);}
 .v2-root .v2-dock-btn--danger:not([disabled]):hover{border-color:var(--v2-ember-deep);color:var(--v2-ember-hi);}
+/* Narrow screens: drop the CMD DOCK eyebrow so all command buttons fit one row. */
+@media (max-width:560px){.v2-root .v2-dock-label{display:none;}}
 
 /* ---- Leave dialog (mirrors V1 .leave-dialog, app.css 262-293) ---- */
 .v2-root .v2-leave-scrim{z-index:9500;}

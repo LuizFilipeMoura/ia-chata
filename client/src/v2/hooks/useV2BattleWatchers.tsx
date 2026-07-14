@@ -53,11 +53,12 @@ function RecapBody({ lines }: { lines: RecapLine[] }): ReactNode {
 // ChoiceField/ReactionPicker actually re-render on each pick; mirrors both into the
 // caller's `pick` ref for the "Set reaction" handler (matches PrepareBody's pattern).
 export function AnswerGateBody({
-  remaining, eligible, pick,
+  remaining, eligible, pick, onConfirm,
 }: {
   remaining: number;
   eligible: Rig[];
   pick: { rigName: string; prep: PrepType };
+  onConfirm: () => void;
 }) {
   const [rigName, setRigName] = useState(pick.rigName);
   const [prep, setPrep] = useState<PrepType>(pick.prep);
@@ -77,6 +78,8 @@ export function AnswerGateBody({
         value={prep}
         allowShield={sel?.weapons?.melee === "Bulwark Shield"}
         answerMode
+        onConfirm={onConfirm}
+        confirmIcon="⟡"
         onChange={(v) => { setPrep(v); pick.prep = v; }}
       />
     </div>
@@ -232,19 +235,16 @@ export function useV2BattleWatchers(): void {
       tone: "oil",
       dismissable: false,
       render: () => (
-        <AnswerGateBody remaining={gate.remaining} eligible={eligible} pick={pick} />
-      ),
-      actions: [
-        {
-          label: "Set reaction",
-          primary: true,
-          icon: "⟡",
-          onClick: () => {
+        <AnswerGateBody
+          remaining={gate.remaining}
+          eligible={eligible}
+          pick={pick}
+          onConfirm={() => {
             closeDrawer();
             sendCommand("answer", { name: pick.rigName, prep: pick.prep, side: mine });
-          },
-        },
-      ],
+          }}
+        />
+      ),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side, mySide]);

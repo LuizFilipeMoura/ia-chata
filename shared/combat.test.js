@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
+import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
@@ -64,6 +64,26 @@ test("Pop Smoke worsens an attacker's modified Aim by 2", () => {
   assert.equal(smoked - clear, 2);
 });
 
+test("Predictive Tracking: +2 ACC and ignores cover vs a pinned target", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "predictive-tracking" };
+  const mg = WEAPONS.longRange["Mini Gun"];
+  // distance:12 is chosen (not the plan's distance:7) because Mini Gun's own
+  // `sweet` is 7 — at that distance Ballistic Processor's unrelated sweetBandAcc
+  // bonus would also fire and confound the "wrong upgrade" check below. 12 is
+  // outside Mini Gun's sweet band (|12-7| > 2), isolating Predictive Tracking.
+  const openField = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: false });
+  const pinned    = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: true });
+  // +2 ACC lowers the aim number by 2, and the 2 points of cover are ignored
+  // (−2 more) → the pinned aim number is 4 lower.
+  assert.equal(openField - pinned, 4);
+  // The wrong Fire-Control upgrade (Field) never triggers, even vs a pinned target.
+  const ballistic = { ...attacker, equipmentUpgrade: "ballistic-processor" };
+  assert.equal(
+    computeModifiedAim(ballistic, mg, { distance: 12, cover: 2, targetPinned: true }),
+    openField,
+  );
+});
+
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
   const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, acc [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3
@@ -73,10 +93,53 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
   assert.equal(res.fireModeHeat, 3);  // three 1s under Full Auto
 });
 
+test("applyDefensiveReactions is an identity pass-through for an impact hit (no reactive gear)", () => {
+  const target = { weightClass: "medium" }; // no equipment, no equipState
+  const hit = { die: 5, total: 12, tier: "direct", sp: 1, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: 3, spendHeat: () => {} });
+  assert.deepEqual(out, hit); // unchanged
+});
+
+test("applyDefensiveReactions is an identity pass-through for a to-hit tally (no reactive gear)", () => {
+  const target = { weightClass: "medium" };
+  const hit = { kind: "tohit", ranged: true, hits: 4 };
+  const out = applyDefensiveReactions(target, hit, { location: null, row: null, spendHeat: () => {} });
+  assert.equal(out.hits, 4); // hit count untouched by the pass-through seam
+});
+
+test("rollImpacts is byte-unchanged by the impact seam for a plain target", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null };
+  const out = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out[0].total, 13); // 5 + 8(STR) + 0(front) — no dock, seam is a no-op
+  assert.equal(out[0].kind, "impact"); // seam stamps the discriminator
+});
+
+test("rollToHit hit count is unchanged by the to-hit seam for a plain target", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // rof 2, medium
+  const plain = { weightClass: "medium" };
+  const res = rollToHit({ weightClass: "medium", hull: { sp: 7 } }, auto,
+    { range: "near", cover: 0, target: plain }, [6, 6], () => 0);
+  assert.equal(res.hits, 2); // both dice hit; the pass-through seam leaves the tally alone
+});
+
 test("computeStr applies weight and Charged Shot", () => {
   assert.equal(computeStr({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 10); // 12-2
   const arcGun = { ...WEAPONS.longRange["Arc Gun"], perks: ["Charged Shot"] };
   assert.equal(computeStr({ weightClass: "medium" }, arcGun, { charged: true }), 12); // 10+0+2
+});
+
+test("Kickstart Pistons: first melee after charging into contact hits +2 STR", () => {
+  const claw = WEAPONS.melee["Claw"];
+  const charged = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: true,  kickstartUsed: false };
+  const idle    = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: false, kickstartUsed: false };
+  const spent   = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: true,  kickstartUsed: true  };
+  assert.equal(computeStr(charged, claw, {}) - computeStr(idle, claw, {}), 2); // charged → +2
+  assert.equal(computeStr(spent, claw, {}), computeStr(idle, claw, {}));       // charge already spent → no bonus
+  // The wrong Mobility upgrade (Field) never triggers, even when charged.
+  const wrong = { ...charged, equipmentUpgrade: "reinforced-servos" };
+  assert.equal(computeStr(wrong, claw, {}), computeStr(idle, claw, {}));
 });
 
 test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
@@ -119,7 +182,7 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
 test("Reinforced Plating deepens Harden to −2 impact", () => {
   const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
   const hardened = { weightClass: "medium", hardened: true, preparation: null };
-  const reinforced = { weightClass: "medium", hardened: true, preparation: null, equipmentUpgrade: "reinforced-plating", equipmentUpgradeEffect: { hardenImpact: 2 } };
+  const reinforced = { weightClass: "medium", hardened: true, preparation: null, equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" };
   // 1 hit, d6=5 -> plain: 5 + 8 + 0(front) - 1(harden) = 12; reinforced: 5 + 8 + 0 - 2(harden) = 11
   const out = rollImpacts({ weightClass: "medium" }, hardened, auto, "hull",
     { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
@@ -134,7 +197,7 @@ test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", 
   const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
   const plain = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: null };
   const reactive = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: "reactive-plating" };
-  const angled = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: "angled-plates", equipmentUpgradeEffect: { sideRearStr: -2 }, equipment: "reactive-plating" };
+  const angled = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: "angled-plates", equipment: "reactive-plating" };
   // 1 hit, d6=5, side arc -> 5 + 8 + 2(side bonus) = 15 for plain; reactive docks -1; angled docks -2.
   const outPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "side", hits: 1 }, { impacts: [5] }, () => 0);
@@ -397,18 +460,18 @@ test("engaged penalty does not apply to melee weapons", () => {
 });
 
 test("Ballistic Processor: +1 ACC in the sweet band (lower modAim)", () => {
-  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor", equipmentUpgradeEffect: { sweetBandAcc: 1 } };
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" };
   const profile = WEAPONS.longRange["Autocannon"]; // has a sweet distance
   const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
-  const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet });
+  const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet });
   assert.equal(plain - inBand, 1);
   // Band predicate is |distance − sweet| ≤ 2: the +1 holds at the edge
   // (sweet + 2) but drops just outside it (sweet + 3).
   const edge = computeModifiedAim(attacker, profile, { distance: profile.sweet + 2 });
-  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet + 2 });
+  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 2 });
   assert.equal(edgePlain - edge, 1);
   const outside = computeModifiedAim(attacker, profile, { distance: profile.sweet + 3 });
-  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null, equipmentUpgradeEffect: {} }, profile, { distance: profile.sweet + 3 });
+  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 3 });
   assert.equal(outsidePlain - outside, 0);
 });
 
@@ -442,6 +505,15 @@ test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   const p = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
   assert.equal(computeStr(sniper, p, { target: fresh }), p.str + 3);
   assert.equal(computeStr(sniper, p, { target: hurt }), p.str);
+});
+
+test("Reactor Overdrive: computeStr adds +2 STR to every attack while active", () => {
+  const profile = { str: 6, sweet: 0 };
+  const base = { weightClass: "medium" };
+  const overdriven = { weightClass: "medium", reactorOverdriveActive: true };
+  const plain = computeStr(base, profile, {});
+  const boosted = computeStr(overdriven, profile, {});
+  assert.equal(boosted, plain + 2);
 });
 
 test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", () => {
@@ -1288,4 +1360,196 @@ test("Taut Cable: +3 STR vs an immobilised or engaged target, else nothing", () 
   assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light" } }), 12);
   assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 15);
   assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 15);
+});
+
+test("applyDefensiveReactions is an identity pass-through for a defender with no reactive gear", () => {
+  const target = { weightClass: "medium" }; // no equipment, no equipState
+  const hit = { die: 5, total: 12, tier: "direct", sp: 1, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: null });
+  assert.deepEqual(out, hit);
+});
+
+test("Reactive Armor hardens the struck location on the first damaging hit each round, softening severity across a band (−2 impact)", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null };
+  const reactive = {
+    weightClass: "medium", hardened: false, preparation: null,
+    equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
+    equipState: { reactiveArmorLocs: [] },
+  };
+  // d6=6 → plain hull total = 6 + 8 + 0(front) = 14. Medium hull bands are
+  // direct:11, severe:14, critical:17 (shared/unit-kinds.js), so 14 resolves
+  // to severe (sp 2). The −2 softening drops it to 12, which falls in the
+  // direct band [11,14): sp 1. The totals straddle the severe/direct boundary,
+  // so this proves the hit was actually mitigated — not just that `total` moved
+  // by 2 while sp/tier stayed identical.
+  const outPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  const outReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.equal(outPlain[0].total, 14);
+  assert.equal(outPlain[0].sp, 2);
+  assert.equal(outPlain[0].tier, "severe");
+  assert.equal(outReactive[0].total, 12);
+  assert.equal(outReactive[0].sp, 1);
+  assert.equal(outReactive[0].tier, "direct");
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // that location is now hardened
+
+  // A second volley to the SAME hardened location still softens (sp/tier stay
+  // dropped, not just total) and does not re-record the location.
+  const outReactive2 = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.equal(outReactive2[0].sp, 1);
+  assert.equal(outReactive2[0].tier, "direct");
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // no duplicate
+});
+
+test("Reactive Armor independently hardens a second, different location (reactiveArmorLocs holds multiple entries)", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null };
+  const reactive = {
+    weightClass: "medium", hardened: false, preparation: null,
+    equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
+    equipState: { reactiveArmorLocs: [] },
+  };
+  // First damaging hit hardens "hull" only.
+  rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]);
+
+  // A first damaging hit to a DIFFERENT location ("legs") is independently
+  // recorded AND softened too — proves reactiveArmorLocs is a per-location list,
+  // not a single "already reacted this round" flag.
+  // d6=6 → plain legs total = 6 + 8 + 0(front) = 14. Medium legs bands are
+  // direct:11, severe:13, critical:15 (shared/unit-kinds.js): 14 → severe
+  // (sp 2); softened to 12 → direct band [11,13): sp 1.
+  const outPlainLegs = rollImpacts({ weightClass: "medium" }, plain, auto, "legs",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  const outReactiveLegs = rollImpacts({ weightClass: "medium" }, reactive, auto, "legs",
+    { arc: "front", hits: 1 }, { impacts: [6] }, () => 0);
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull", "legs"]); // both tracked
+  assert.equal(outPlainLegs[0].sp, 2);
+  assert.equal(outPlainLegs[0].tier, "severe");
+  assert.equal(outReactiveLegs[0].total, 12);
+  assert.equal(outReactiveLegs[0].sp, 1);
+  assert.equal(outReactiveLegs[0].tier, "direct");
+});
+
+test("Reactive Armor does not fire for a rig carrying only the base Ablative Plating", () => {
+  const auto = WEAPONS.longRange["Autocannon"];
+  const base = {
+    weightClass: "medium", hardened: false, preparation: null,
+    equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating",
+    equipState: { reactiveArmorLocs: [] },
+  };
+  const out = rollImpacts({ weightClass: "medium" }, base, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out[0].total, 13);                          // no reactive dock
+  assert.deepEqual(base.equipState.reactiveArmorLocs, []);  // nothing hardened
+});
+
+// Ablative Cascade (Ablative Plating, Prototype). NOTE: the plan's fixtures were
+// drafted against a hypothetical seam (nested `hit.impact`, `ctx.bumpHeat`); the
+// live Plan-2 seam is flat (`hit.tier`/`hit.sp`/`kind:"impact"`) and injects heat
+// via `ctx.spendHeat(n)`. These tests target the real seam.
+test("Ablative Cascade: spends a charge to soften a Critical to Severe, at +1 heat", () => {
+  const target = {
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 2 },
+  };
+  let heated = 0;
+  const ctx = { location: "hull", row: null, spendHeat: (n) => { heated += n; } };
+  const hit = { die: 6, total: 18, tier: "critical", sp: 3, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, ctx);
+  assert.equal(out.tier, "severe");                        // softened one step
+  assert.equal(out.sp, 2);
+  assert.equal(target.equipState.ablativeCharges, 1);      // one charge spent
+  assert.equal(heated, 1);                                 // +1 heat per spend
+});
+
+test("Ablative Cascade: softens Severe→Direct and Direct→negated, one step per spend", () => {
+  const mk = () => ({
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 2 },
+  });
+  const noop = { location: "hull", row: null, spendHeat: () => {} };
+  const sev = applyDefensiveReactions(mk(), { die: 5, total: 14, tier: "severe", sp: 2, kind: "impact" }, noop);
+  assert.equal(sev.tier, "direct"); assert.equal(sev.sp, 1);
+  const dir = applyDefensiveReactions(mk(), { die: 3, total: 11, tier: "direct", sp: 1, kind: "impact" }, noop);
+  assert.equal(dir.tier, "none"); assert.equal(dir.sp, 0);
+});
+
+test("Ablative Cascade: with no charges left, the hit lands full", () => {
+  const target = {
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 0 },
+  };
+  let heated = 0;
+  const hit = { die: 6, total: 18, tier: "critical", sp: 3, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: null, spendHeat: (n) => { heated += n; } });
+  assert.equal(out.tier, "critical");                      // untouched
+  assert.equal(out.sp, 3);
+  assert.equal(heated, 0);                                 // no heat when nothing spent
+});
+
+test("Ablative Cascade: a zero-damage impact never spends a charge (gated on hit.sp > 0)", () => {
+  const target = {
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 2 },
+  };
+  let heated = 0;
+  const hit = { die: 1, total: 5, tier: "none", sp: 0, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: null, spendHeat: (n) => { heated += n; } });
+  assert.equal(out.sp, 0);
+  assert.equal(target.equipState.ablativeCharges, 2);      // charge untouched
+  assert.equal(heated, 0);
+});
+
+// Point-Defense System (Reactive Plating, Prototype). NOTE: like Ablative
+// Cascade above, the plan's fixtures were drafted against a hypothetical seam
+// (`hit.rerollHits`, `ctx.bumpHeat`). The live Plan-2 to-hit seam has already
+// COUNTED the landed dice into `hit.hits` and writes the returned `.hits` back
+// into rollToHit's tally; heat is injected via `ctx.spendHeat(n)`. So the branch
+// itself rerolls the landed dice and returns the new count. combat.js stays pure:
+// the RNG (`random`) and any `providedDice.pd` reroll faces are threaded through
+// ctx by rollToHit exactly like `spendHeat`. These tests target the real seam.
+test("Point-Defense: a ranged hit spends 1 interceptor to reroll landed dice, at +1 heat", () => {
+  const target = {
+    kind: "rig", weightClass: "medium", equipment: "reactive-plating", equipmentUpgrade: "point-defense-system",
+    engine: { heat: 0 }, equipState: { interceptors: 2, pdLocked: false },
+  };
+  let heated = 0;
+  const ctx = {
+    location: null, row: null, spendHeat: (n) => { heated += n; },
+    random: () => 0, providedDice: { pd: [6, 1, 1] },     // 3 landed dice reroll to 6,1,1 vs modAim 4 → 1 survives
+  };
+  const hit = { kind: "tohit", ranged: true, hits: 3, modAim: 4 };
+  const out = applyDefensiveReactions(target, hit, ctx);
+  assert.equal(out.hits, 1);                              // reroll softened 3 landed hits down to 1
+  assert.equal(target.equipState.interceptors, 1);        // one interceptor spent
+  assert.equal(heated, 1);                                // +1 heat per charge spent
+});
+
+test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-locked", () => {
+  const base = {
+    kind: "rig", weightClass: "medium", equipment: "reactive-plating",
+    equipmentUpgrade: "point-defense-system", engine: { heat: 0 },
+  };
+  // pd reroll faces of all 1s would zero the tally IF a reroll fired — so an
+  // unchanged hits===2 proves the branch did NOT engage.
+  const mkCtx = () => ({ location: null, row: null, spendHeat: () => {}, random: () => 0, providedDice: { pd: [1, 1, 1] } });
+
+  const meleeTarget = { ...base, equipState: { interceptors: 2, pdLocked: false } };
+  const melee = applyDefensiveReactions(meleeTarget, { kind: "tohit", ranged: false, hits: 2, modAim: 4 }, mkCtx());
+  assert.equal(melee.hits, 2);                            // melee is not intercepted
+  assert.equal(meleeTarget.equipState.interceptors, 2);   // no charge spent
+
+  const spentTarget = { ...base, equipState: { interceptors: 0, pdLocked: false } };
+  const spent = applyDefensiveReactions(spentTarget, { kind: "tohit", ranged: true, hits: 2, modAim: 4 }, mkCtx());
+  assert.equal(spent.hits, 2);                            // no charges → no reroll
+
+  const lockedTarget = { ...base, equipState: { interceptors: 2, pdLocked: true } };
+  const locked = applyDefensiveReactions(lockedTarget, { kind: "tohit", ranged: true, hits: 2, modAim: 4 }, mkCtx());
+  assert.equal(locked.hits, 2);                          // locked the round after firing ranged
+  assert.equal(lockedTarget.equipState.interceptors, 2);  // no charge spent
 });

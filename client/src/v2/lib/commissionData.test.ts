@@ -3,7 +3,7 @@ import { CHASSIS_NAME, weaponGlyph, natureLabel, firstUpgradeId, MODULE_BLURB } 
 import { upgradePips, splitUpgradeTag } from "./commissionData";
 
 test("chassis codename lookup", () => {
-  expect(CHASSIS_NAME["light-claw-autocannon"]).toBe("Ironjaw");
+  expect(CHASSIS_NAME["light-claw-autocannon"]).toBe("Gold");
 });
 test("weapon glyph falls back to a gear", () => {
   expect(weaponGlyph("Autocannon")).toBe("🎯");

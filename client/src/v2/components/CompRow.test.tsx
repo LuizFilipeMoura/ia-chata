@@ -22,3 +22,13 @@ test("shows CATASTROPHIC at 0 SP", () => {
   wrap(<CompRow rigName="X" loc="legs" comp={{ sp: 0, max: 5, destroyed: false }} onCommand={vi.fn()} />);
   expect(screen.getByText("CATASTROPHIC")).toBeInTheDocument();
 });
+
+test("renders a +N max-SP badge when delta > 0", () => {
+  wrap(<CompRow rigName="Vela" loc="hull" comp={{ sp: 7, max: 7, destroyed: false }} delta={1} onCommand={vi.fn()} />);
+  expect(document.body.textContent).toContain("+1");
+});
+
+test("renders no badge when delta is 0", () => {
+  const { container } = wrap(<CompRow rigName="Vela" loc="arms" comp={{ sp: 5, max: 5, destroyed: false }} delta={0} onCommand={vi.fn()} />);
+  expect(container.querySelector(".v2-rt-delta")).toBeNull();
+});

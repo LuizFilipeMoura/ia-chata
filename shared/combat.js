@@ -3,6 +3,7 @@
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
   impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity, shieldCoverage, HEAT_CAPACITY,
+  equipmentUpgradeEffectOf,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
 
@@ -51,20 +52,27 @@ export function computeModifiedAim(attacker, profile, opts) {
   // Pop Smoke (Countermeasures active) — every attacker is at −2 ACC against a
   // rig hidden in its own smoke, until that rig's next activation.
   const smoke = opts.targetSmoke ? -2 : 0;
+  // Predictive Tracking (Fire Control Tuned) — vs a static/pinned/immobilised
+  // target the shot ignores cover and gains +2 ACC. `opts.targetPinned` is set by
+  // the fire path (game-state.js). Read the effect live from the catalog by id;
+  // combat.js imports only rules.js, so no game-state cycle.
+  const predictive = attacker.equipment === "targeting-computer" && !profile.melee && !!opts.targetPinned
+    && !!equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.predictiveTracking;
+  const predictiveAcc = predictive ? 2 : 0;
   // Targeting Computer passive — the first Fire this activation ignores cover
   // and the engaged −2 (opts.fireControlFirst is set once per activation by the
   // fire path). Read directly off the attacker to avoid a game-state import cycle.
-  const coverEff = opts.fireControlFirst ? 0 : cover;
+  const coverEff = (opts.fireControlFirst || predictive) ? 0 : cover;
   const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
   // Ballistic Processor (Field) — ACC bonus when the measured distance is within
   // the weapon's sweet band (|distance − sweet| ≤ 2). The bonus magnitude is read
-  // from the equipment upgrade's effect tag (`sweetBandAcc`, the single source of
-  // truth in the catalog), precomputed onto the rig in game-state.js to avoid an
-  // import cycle. Only ballistic-processor carries the tag; other targeting-
-  // computer upgrades resolve to 0.
+  // from the equipment upgrade's effect tag (`sweetBandAcc`) via
+  // equipmentUpgradeEffectOf — the catalog lives in rules.js, which combat.js may
+  // import without a game-state cycle. Only ballistic-processor carries the tag;
+  // other targeting-computer upgrades resolve to 0.
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
-  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (attacker.equipmentUpgradeEffect?.sweetBandAcc ?? 0) : 0;
-  const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic;
+  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAcc ?? 0) : 0;
+  const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAcc;
   return base - accTotal;
 }
 
@@ -133,6 +141,18 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     if (hit) hits += 1;
     if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
+  // §7 — reactive on-incoming-hit seam, to-hit stage. A defender may reroll/alter
+  // the counted hits before impacts are rolled (Point-Defense System). `location`/
+  // `row` are null here; `modAim` (the target number) and the RNG (`random` +
+  // any `providedDice.pd` reroll faces) are threaded through so the branch can
+  // reroll the landed dice while combat.js stays pure — it only touches the
+  // injected RNG, never game-state.
+  const reacted = applyDefensiveReactions(
+    opts.target,
+    { kind: "tohit", ranged: !profile.melee, hits, modAim },
+    { location: null, row: null, spendHeat: opts.spendHeat || (() => {}), random, providedDice },
+  );
+  hits = reacted.hits;
   return { modAim, rof, hits, fireModeHeat, dice, penetratorShot };
 }
 
@@ -158,6 +178,10 @@ export function computeStr(attacker, profile, opts) {
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
   let bonus = 0;
+  // Reactor Overdrive (§13, Power Prototype) — +2 STR to every attack while the
+  // Overclock-armed flag rides this activation (set in game-state.js's overclock
+  // branch, cleared at activation end).
+  if (attacker.reactorOverdriveActive) bonus += 2;
   // Cold Bore — +3 STR against a target whose every location is at max SP.
   if (opts.target && profile.upgradeEffect?.coldBore && isUndamaged(opts.target)) {
     bonus += 3;
@@ -217,7 +241,22 @@ export function computeStr(attacker, profile, opts) {
   // lockstep). Gated on the piledriver effect so a stray opts.momentum on any
   // other weapon is inert.
   if (opts.momentum && profile.upgradeEffect?.piledriver) bonus += opts.momentum;
-  return profile.str + weightMod + charged + bonus;
+  // Kickstart Pistons (Mobility Tuned) — a melee blow right after Sprinting into
+  // base contact this activation hits +2 STR, but only the FIRST such blow:
+  // `chargedIntoContact` is armed by the Sprint path, `kickstartUsed` is set by
+  // resolveFire once a melee attack lands. Read the equipment effect live from the
+  // catalog by id (combat.js imports only rules.js). NOTE: the design also names
+  // Jump-into-contact, but the Jump Jets active can't form an engagement lock in
+  // this engine yet, so only Sprint arms it today (see follow-up task).
+  if (profile.melee && attacker.chargedIntoContact && !attacker.kickstartUsed
+      && equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.kickstartPistons) {
+    bonus += 2;
+  }
+  // Cryo Reservoir / Meltdown Protocol — a spent charge arms +STR on the next
+  // attack. Shared transient off the attacker's equipState; consumed in
+  // resolveFire and cleared in endActivation so it can't leak past its activation.
+  const nextStr = attacker.equipState?.nextAttackStr || 0;
+  return profile.str + weightMod + charged + bonus + nextStr;
 }
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
@@ -277,19 +316,19 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // (opts.guardBreak, §13 Siege Maul) — the smash ignores the target's Brace.
   const braced = !opts.guardBreak && target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
   // Harden (Ablative Plating active). The depth magnitude is read from the
-  // equipment upgrade's effect tag (`hardenImpact`, the single source of truth in
-  // the catalog), precomputed onto the rig in game-state.js to avoid an import
-  // cycle. Only reinforced-plating carries the tag (→ −2); base stays −1.
-  const hardenDepth = target.equipmentUpgradeEffect?.hardenImpact ?? 1;
+  // equipment upgrade's effect tag (`hardenImpact`) via equipmentUpgradeEffectOf
+  // — the catalog lives in rules.js, importable by combat.js without a
+  // game-state cycle. Only reinforced-plating carries the tag (→ −2); base stays −1.
+  const hardenDepth = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.hardenImpact ?? 1;
   const hardened = target.hardened ? -hardenDepth : 0;
   // Reactive Plating (Countermeasures) — side/rear attacks lose STR. The dock
-  // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`,
-  // the single source of truth in the catalog), precomputed onto the rig in
-  // game-state.js to avoid an import cycle. Base Reactive Plating is −1; Angled
+  // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`) via
+  // equipmentUpgradeEffectOf — the catalog lives in rules.js, importable by
+  // combat.js without a game-state cycle. Base Reactive Plating is −1; Angled
   // Plates carries the −2 tag. Front arc is unaffected.
   let sideRearDock = 0;
   if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
-    sideRearDock = target.equipmentUpgradeEffect?.sideRearStr ?? -1;
+    sideRearDock = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.sideRearStr ?? -1;
   }
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
@@ -324,9 +363,106 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     // (Mini Gun / Double MG / Coaxial MG), independent of Raking Fire so the
     // walker's non-Raking Coaxial MG is covered too.
     if (sev.tier === "critical" && profile.machineGun) sev = { tier: "severe", sp: 2 };
-    out.push({ die, total, tier: sev.tier, sp: sev.sp });
+    const resolved = applyDefensiveReactions(
+      target,
+      { die, total, tier: sev.tier, sp: sev.sp, kind: "impact" },
+      { location, row, spendHeat: opts.spendHeat || (() => {}) },
+    );
+    out.push(resolved);
   }
   return out;
+}
+
+// §7 — reactive on-incoming-hit seam. The single point where a DEFENDER may
+// alter an incoming attack. It is installed at TWO pipeline stages, discriminated
+// by `hit.kind`, so later mechanics only ADD branches here — never new call sites:
+//   • "tohit"  — in rollToHit, AFTER successful hit dice are counted, BEFORE
+//                impacts are rolled. Consumer: Point-Defense System (reroll the
+//                landed dice; only ranged hits carry `hit.ranged === true`).
+//                `location`/`row` are null at this stage; `modAim` + the RNG
+//                (`random`/`providedDice`) are threaded in for the reroll.
+//   • "impact" — in rollImpacts, per damaging hit, AFTER impactSeverity.
+//                Consumers: Reactive Armor, Ablative Cascade (soften a severity
+//                step). Carries real `{ location, row }`.
+// combat.js is pure (no game-state import), so any heat spend goes through the
+// injected `ctx.spendHeat(n)` mutator that game-state.js wires to bumpHeat. A
+// defender with no reactive gear falls through every branch and the hit is
+// returned unchanged.
+// Ablative Cascade — the one-step-gentler severity ladder (critical→severe→
+// direct→negated). Looked up by the resolved tier; a Math.min floor at the call
+// site guarantees a spend can only hold or lower an already-capped hit.
+const ABLATIVE_SOFTEN = {
+  critical: { tier: "severe", sp: 2 },
+  severe: { tier: "direct", sp: 1 },
+  direct: { tier: "none", sp: 0 },
+};
+
+export function applyDefensiveReactions(target, hit, ctx) {
+  // Point-Defense System (Reactive Plating, Prototype) — a ranged hit may be met
+  // by one interceptor charge, forcing the attacker to reroll every landed hit
+  // die. The seam has already counted `hit.hits` landed dice; rerolling them
+  // ("all successful hit dice") re-tests the same number of dice against the
+  // shot's target number (`hit.modAim`) and returns the new landed count in
+  // `.hits`, which rollToHit writes back into its tally. A 6 always lands, matching
+  // rollToHit. +1 heat per charge (ctx.spendHeat). Unusable the round after this
+  // rig fired its own ranged weapon (equipState.pdLocked, rolled forward in
+  // refreshEquipState). Ranged only; melee carries `ranged === false`. combat.js
+  // stays pure: the RNG (`ctx.random`) and reroll faces (`ctx.providedDice.pd`)
+  // are injected by rollToHit exactly like `spendHeat`.
+  if (hit.kind === "tohit" && hit.ranged && target
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.pointDefense
+      && (target.equipState?.interceptors || 0) > 0
+      && !target.equipState?.pdLocked) {
+    target.equipState.interceptors -= 1;
+    ctx.spendHeat(1);
+    let newHits = 0;
+    for (let i = 0; i < hit.hits; i++) {
+      const d = rollD(6, ctx.providedDice?.pd?.[i], ctx.random);
+      if (d >= hit.modAim || d === 6) newHits += 1;
+    }
+    return { ...hit, hits: newHits };
+  }
+  // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging hit each round
+  // to a location hardens THAT location by −2 impact (Harden-equivalent) until
+  // this rig's next activation; further damaging hits to a hardened location
+  // soften too. The per-round list is cleared in Recovery (refreshEquipState).
+  // Impact-stage only, and only for a hit that actually deals damage: the seam is
+  // reached for every severity-resolved hit including zero-damage ones, so gate
+  // on hit.sp before recording or softening.
+  if (hit.kind === "impact" && hit.sp > 0
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.reactiveArmor) {
+    const locs = target.equipState?.reactiveArmorLocs;
+    if (locs) {
+      if (!locs.includes(ctx.location)) locs.push(ctx.location); // first damaging hit hardens it
+      const total = hit.total - 2;
+      const sev = impactSeverity(total, ctx.row);
+      // −2 impact can only hold or lower severity; never let the re-derive raise it
+      // above the resolved hit (e.g. a machine-gun crit already capped to Severe).
+      const sp = Math.min(hit.sp, sev.sp);
+      return { ...hit, total, sp, tier: sp === hit.sp ? hit.tier : sev.tier };
+    }
+  }
+  // Ablative Cascade (Ablative Plating, Prototype) — spend one ablative charge to
+  // soften a damaging impact by exactly one severity step; each spend runs the
+  // defender +1 heat via the injected ctx.spendHeat. Charges refill to 2 each
+  // Recovery (game-state refreshEquipState). Impact-stage only, damaging hits only
+  // (the seam fires for every severity-resolved hit including zero-damage ones, so
+  // gate on hit.sp > 0), and only while a charge is banked.
+  if (hit.kind === "impact" && hit.sp > 0
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.ablativeCascade
+      && (target.equipState?.ablativeCharges || 0) > 0) {
+    const softened = ABLATIVE_SOFTEN[hit.tier];
+    if (softened) {
+      // Math.min floor: never let the ladder raise an already-capped hit.
+      const sp = Math.min(hit.sp, softened.sp);
+      if (sp < hit.sp) {
+        target.equipState.ablativeCharges -= 1;
+        ctx.spendHeat(1);
+        return { ...hit, sp, tier: softened.tier };
+      }
+    }
+  }
+  return hit;
 }
 
 // §7 — full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
@@ -367,7 +503,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     && attacker.lockedTarget != null
     && attacker.lockedTarget === target.id
     && round <= (attacker.lockExpiresRound || 0);
-  if (fireControlLock) {
+  // Fire Solution Lock (§13, Targeting Computer prototype) — a full 3-solution
+  // stack cashes for the same unmissable, armour-piercing volley. The solution
+  // is stacked/reset/consumed in game-state's resolveFire; here we just honour
+  // the cash-in flag it passes down.
+  const solutionPayoff = !!opts.solutionPayoff;
+  if (fireControlLock || solutionPayoff) {
     profile = { ...profile, perks: [...new Set([...(profile.perks || []), "Armour Piercing"])] };
   } else if (attacker.lockedTarget != null && round > (attacker.lockExpiresRound || 0)) {
     attacker.lockedTarget = null; // expire a stale lock
@@ -383,7 +524,13 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
+  // Injected heat mutator for the reactive on-incoming-hit seam. combat.js is
+  // pure, so a defender's reactive heat spend (future: Ablative Cascade,
+  // Point-Defense) flows through this callback into game-state's bumpHeat rather
+  // than importing game-state (which would form a cycle). Wired into both the
+  // to-hit and impact seam call sites below via opts.spendHeat.
+  const spendHeat = (n) => ctx.bumpHeat(target, n);
+  const th = rollToHit(attacker, profile, { ...opts, target, spendHeat, autoHit: fireControlLock || solutionPayoff, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
@@ -409,7 +556,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // than crashing on a missing part.
     if (location) {
       impacts = rollImpacts(attacker, target, profile, location,
-        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance },
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat },
         opts.dice, random);
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
       //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple

@@ -2,6 +2,7 @@
 import { defineConfig } from "vitest/config";
 import { createLogger } from "vite";
 import react from "@vitejs/plugin-react";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 import { fileURLToPath } from "node:url";
 
 const shared = fileURLToPath(new URL("./shared", import.meta.url));
@@ -27,11 +28,12 @@ logger.error = (msg, options) => {
 export default defineConfig({
   root: "client",
   customLogger: logger,
-  plugins: [react()],
+  plugins: [react(), basicSsl()],
   resolve: {
     alias: [{ find: /^\/shared/, replacement: shared }],
   },
   server: {
+    host: true,
     port: 5173,
     allowedHosts: [".ngrok-free.app"],
     proxy: {

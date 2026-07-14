@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { availableActions, actionBudget, rigModifiers, phaseSummary, outcomeText } from "./battle-view.js";
-import { makeRig, makeUnit } from "./game-state.js";
+import { makeRig, makeUnit, rigEffects } from "./game-state.js";
 import { GLOSSARY } from "./glossary.js";
 
 function rig(over = {}) {
@@ -62,6 +62,31 @@ test("Fire/Aimed shows 2 heat once a ranged shot has already been fired this act
   const second = availableActions(rig(), { activeRigId: 1, actionsUsed: 2, actionsMax: 5, longRangeShots: 1 })
     .find((a) => a.key === "fire");
   assert.equal(second.heat, 2);          // second shot runs the barrel hot
+});
+
+test("availableActions: sprint chip reflects Servo Actuators and its upgrade", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const servo = availableActions(rig({ equipment: "servo-actuators" }), turn);
+  assert.equal(servo.find((a) => a.key === "sprint").heat, 1);
+  const reinf = availableActions(rig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" }), turn);
+  assert.equal(reinf.find((a) => a.key === "sprint").heat, 0);
+  const bare = availableActions(rig(), turn);
+  assert.equal(bare.find((a) => a.key === "sprint").heat, 2);
+});
+
+test("availableActions: active chip reflects heat-override upgrades", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const rad = availableActions(rig({ equipment: "radiator-array", equipmentUpgrade: "twin-radiators" }), turn);
+  assert.equal(rad.find((a) => a.key === "purge").heat, -3);
+});
+
+test("drift guard: sprint chip equals rigEffects (which the resolution path uses)", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  for (const over of [{}, { equipment: "servo-actuators" }, { equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" }]) {
+    const r = rig(over);
+    const chip = availableActions(r, turn).find((a) => a.key === "sprint").heat;
+    assert.equal(chip, rigEffects(r).actionHeat.sprint);
+  }
 });
 
 test("actionBudget reports remaining and the Hull-0 reduction", () => {
@@ -275,6 +300,21 @@ test("availableActions disables Jump Jets while engaged", () => {
   const jj = availableActions(rig, turn).find((x) => x.key === "jumpjets");
   assert.ok(jj);
   assert.equal(jj.enabled, false);
+});
+
+test("Move is hidden when Sprint costs no more than Move (Servo Actuators)", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const servo = availableActions(rig({ equipment: "servo-actuators" }), turn);
+  assert.ok(!servo.some((a) => a.key === "move"), "Move dropped for Servo Actuators");
+  assert.ok(servo.some((a) => a.key === "sprint"), "Sprint stays");
+  const bare = availableActions(rig(), turn);
+  assert.ok(bare.some((a) => a.key === "move"), "Move stays without the discount");
+});
+
+test("Move stays for cold kinds (no Sprint to dominate it)", () => {
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  const acts = availableActions(tank, { actionsMax: 2, actionsUsed: 0, longRangeShots: 0 });
+  assert.ok(acts.some((a) => a.key === "move"), "cold kind keeps Move");
 });
 
 test("module actions appear only for units carrying the matching module", () => {

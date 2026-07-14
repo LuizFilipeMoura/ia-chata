@@ -1,13 +1,16 @@
 import { useEffect } from "react";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import type { ReactNode } from "react";
 import { V2DrawerProvider } from "./V2DrawerContext";
 import { V2RollProvider } from "./V2RollContext";
 import { RoomProvider, useRoomDispatch } from "../../state/RoomStateContext";
 import { V2BattleActionsProvider, useV2BattleActions } from "./V2BattleActionsContext";
+import { emitCommandRejected } from "../../state/commandRejectionBus";
 import type { Rig, ServerState } from "../../state/types";
+
+afterEach(() => { vi.unstubAllGlobals(); });
 
 const sendCommand = vi.fn();
 vi.mock("../../hooks/useCommands", () => ({ useCommands: () => sendCommand }));
@@ -84,4 +87,45 @@ test("Field Weld defaults to a friendly target (self included) with a location",
   await user.click(screen.getByRole("button", { name: /ALLY/ }));
   await user.click(screen.getByRole("button", { name: /Weld/ }));
   expect(sendCommand).toHaveBeenCalledWith("action", { name: "STALKER", action: "fieldweld", target: "ALLY", loc: "hull" });
+});
+
+// Preflight (spec: check before the action is shown) — when /command/check says
+// the action is illegal, the wizard never opens; a blocking dialog explains why.
+function SessionSeed() {
+  const d = useRoomDispatch();
+  useEffect(() => { d({ type: "setSession", session: { room: "RM1", side: "a", name: "K" } }); }, [d]);
+  return null;
+}
+function wrapWithSession(ui: ReactNode) {
+  return (
+    <RoomProvider>
+      <SessionSeed />
+      <V2DrawerProvider><V2RollProvider><V2BattleActionsProvider>{ui}</V2BattleActionsProvider></V2RollProvider></V2DrawerProvider>
+    </RoomProvider>
+  );
+}
+test("a rejected preflight blocks the wizard and shows the reason", async () => {
+  const user = userEvent.setup();
+  sendCommand.mockClear();
+  vi.stubGlobal("fetch", vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ ok: false, reason: "Pinned by Suppression — can't move this round." }),
+  })));
+  render(wrapWithSession(<Harness />));
+  await user.click(screen.getByText("patch"));
+  // The reason dialog appears…
+  expect(await screen.findByText(/Pinned by Suppression/)).toBeInTheDocument();
+  expect(screen.getByText(/Action blocked/i)).toBeInTheDocument();
+  // …and neither the patch wizard nor the command fired.
+  expect(screen.queryByRole("button", { name: /^Patch$/i })).toBeNull();
+  expect(sendCommand).not.toHaveBeenCalled();
+});
+
+// The submit-time 409 (raised in useCommands after a wizard already closed) is
+// delivered over the rejection bus and shown by the same dialog.
+test("a server rejection on the bus surfaces the dialog", async () => {
+  render(wrap(<span>idle</span>));
+  act(() => emitCommandRejected("It isn't your side's turn to activate."));
+  expect(await screen.findByText(/isn't your side's turn/)).toBeInTheDocument();
+  expect(screen.getByText(/Action blocked/i)).toBeInTheDocument();
 });

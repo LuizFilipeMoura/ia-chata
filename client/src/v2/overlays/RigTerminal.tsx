@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import "../styles/rig-terminal.css";
 import { rigModifiers } from "/shared/battle-view.js";
+import { rigEffects } from "/shared/game-state.js";
 import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { buildLoadout } from "../../lib/loadout";
 import { rigStatus } from "../../lib/rigView";
@@ -8,6 +9,7 @@ import { CompRow } from "../components/CompRow";
 import { HeatGauge } from "../components/HeatGauge";
 import { InfoTerm } from "../components/InfoTerm";
 import { ActionConsole } from "../battle/ActionConsole";
+import { SPEED } from "../battle/constants";
 import { LoadoutView } from "../components/LoadoutView";
 import type { Rig, Component } from "../../state/types";
 
@@ -40,7 +42,13 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
   const badge = rig.weightClass || UNIT_KINDS[kind].label;
   const st = rigStatus(rig);
   const mods = rigModifiers(rig);
+  const hullBonus = rigEffects(rig).hullMaxBonus;
   const lo = buildLoadout(rig);
+  // Movement stats now live on the chassis — surface Speed (a Move's reach) and
+  // its derived Sprint (1½× Speed) so the status view isn't silent on how far
+  // this Rig travels. Same resolution order as MoveBody: chassis > class > 8.
+  const speed = rig.speed ?? SPEED[rig.weightClass] ?? 8;
+  const sprint = Math.round(speed * 1.5);
   const [view, setView] = useState<"status" | "loadout">("status");
   const loadoutText = lo?.flat ? lo.unit?.name : [lo?.lr?.name, lo?.melee?.name].filter(Boolean).join(" · ");
 
@@ -87,6 +95,7 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
 
         {mods.length > 0 && (
           <div className="v2-rt-mods">
+            <span className="v2-rt-mods-eyebrow">Active rules · tap to read</span>
             {mods.map((mod, i) => (
               <InfoTerm key={i} id={mod.gloss} className="v2-rt-mod" dataTone={mod.tone}>
                 {mod.tag}
@@ -110,11 +119,20 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
           <LoadoutView loadout={lo} />
         ) : (
           <>
+            <div className="v2-rt-stats">
+              <span className="v2-rt-lo-stat">
+                <InfoTerm as="em" id="speed" className="v2-eyebrow">Speed</InfoTerm> {speed}″
+              </span>
+              <span className="v2-rt-lo-stat">
+                <InfoTerm as="em" id="sprint" className="v2-eyebrow">Sprint</InfoTerm> {sprint}″
+              </span>
+            </div>
+
             <div className="v2-rt-comps">
               {locs.map((loc) => {
                 const comp = (rig as unknown as Record<string, Component>)[loc];
                 if (!comp) return null;
-                return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} onCommand={onCommand} />;
+                return <CompRow key={loc} rigName={rig.name} loc={loc} comp={comp} delta={loc === "hull" ? hullBonus : 0} onCommand={onCommand} />;
               })}
             </div>
 

@@ -85,6 +85,13 @@ export function LoadoutView({ loadout }: { loadout: Loadout }) {
           <div className="v2-rt-lo-equip-line">
             Active — {eq.activeLabel} ({eq.activeHeat >= 0 ? "+" : ""}{eq.activeHeat} heat): {eq.activeText}
           </div>
+          {eq.upName && (
+            <div className="v2-rt-lo-up">
+              <span className="v2-rt-lo-up-name">⬡ {eq.upName}</span>
+              {eq.upNature && <span className="v2-rt-lo-up-nature v2-eyebrow">{natureLabel(eq.upNature)}</span>}
+              {eq.upTag && <span className="v2-rt-lo-up-tag">{eq.upTag}</span>}
+            </div>
+          )}
         </div>
       )}
     </div>

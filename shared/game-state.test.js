@@ -1,19 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  createRoom, makeRig, makeUnit, claimSide, applyCommand, findRig,
+  createRoom, makeRig, makeUnit, claimSide, applyCommand, checkCommand, lastRejectionReason, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
-  EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
+  EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId, equipmentUpgradeEffectOf,
   normalizeEquipmentUpgrade, equipmentActiveHeat,
-  equipmentSprintHeat, equipmentRepairBonus,
+  equipmentSprintHeat, equipmentRepairBonus, rigEffects,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   normalizeAnswerPrep, ANSWER_COUNTERS,
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
-  chassisById, resolveChassis, SEED_ROSTER, CHASSIS,
+  chassisById, resolveChassis, SEED_ROSTER, SEED_ROSTER_4V4, CHASSIS, randomSeedRoster,
+  CHASSIS_PRIMARY_EQUIPMENT,
   heatMeter,
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
 } from "./game-state.js";
@@ -131,16 +132,10 @@ test("makeRig honours a per-rig SP override, else falls back to class defaults",
   assert.equal(plated.hull.max, 17);
 });
 
-test("makeRig stamps equipmentUpgradeEffect from the catalog (single source of truth)", () => {
-  // A resolved upgrade copies its catalog `effect` object onto the rig so combat
-  // reads the magnitude from data, not a hardcoded id-check.
-  const reinforced = makeRig(1, "Bulwark", "medium", "a",
-    { longRange: "Autocannon", melee: "Sword" }, "ablative-plating", "reinforced-plating");
-  assert.equal(reinforced.equipmentUpgradeEffect.hardenImpact, 2);
-  // No upgrade → empty object (never null), so combat's `?.tag ?? default` reads
-  // land on the base path.
-  const bare = makeRig(2, "Plain", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
-  assert.deepEqual(bare.equipmentUpgradeEffect, {});
+test("makeRig does not persist equipmentUpgradeEffect (catalog is the source)", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" }, "ablative-plating", "reinforced-plating");
+  assert.equal("equipmentUpgradeEffect" in rig, false);
+  assert.deepEqual(equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade), { hardenImpact: 2 });
 });
 
 test("makeUnit stores the chassis id on the rig (for its flavor description)", () => {
@@ -257,6 +252,58 @@ test("countPrototypes counts an equipment Prototype", () => {
   assert.equal(countPrototypes(
     { longRange: "Crossbow", melee: "Talon" },
     { longRange: "pinning-bolt", melee: "honed-talons" }), 1);
+});
+
+test("a wired equipment Prototype still counts against the one-Prototype-per-rig cap", () => {
+  // Equipment Prototype alone → 1.
+  assert.equal(
+    countPrototypes({ longRange: "Autocannon", melee: "Claw" }, {}, "ablative-plating", "ablative-cascade"),
+    1,
+  );
+  // Every newly-wired equipment Prototype counts as exactly 1.
+  for (const [equip, up] of [
+    ["ablative-plating", "ablative-cascade"], ["radiator-array", "cryo-reservoir"],
+    ["field-repair-suite", "nanite-swarm"], ["reactive-plating", "point-defense-system"],
+    ["blast-furnace-core", "meltdown-protocol"], ["targeting-computer", "fire-solution-lock"],
+  ]) {
+    assert.equal(equipmentUpgradeNature(equip, up), "prototype", `${up} stays prototype`);
+    assert.equal(countPrototypes({ longRange: "Autocannon", melee: "Claw" }, {}, equip, up), 1, `${up} counts 1`);
+  }
+  // A weapon Prototype + an equipment Prototype → 2 (the wizard/server caps at 1).
+  assert.equal(
+    countPrototypes({ longRange: "Talon", melee: "Talon" }, { longRange: "evisceration" }, "blast-furnace-core", "meltdown-protocol"),
+    2,
+  );
+  // A Field equipment upgrade contributes nothing.
+  assert.equal(
+    countPrototypes({ longRange: "Autocannon", melee: "Claw" }, {}, "ablative-plating", "reinforced-plating"),
+    0,
+  );
+});
+
+test("countPrototypes still counts the wired Group-4 equipment Prototypes", () => {
+  // Each wired Prototype counts as one on its own (weapon upgrades are Field, so they contribute 0).
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, { longRange: "depleted-core", melee: "rending-talons" },
+    "servo-actuators", "grapnel-launcher"), 1);
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, { longRange: "depleted-core", melee: "rending-talons" },
+    "overclock-core", "reactor-overdrive"), 1);
+  // Stacked with a weapon Prototype it trips the one-per-rig cap (2 > 1).
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" }, { longRange: "pinning-bolt", melee: "honed-talons" },
+    "servo-actuators", "grapnel-launcher"), 2);
+  assert.equal(countPrototypes(
+    { longRange: "Crossbow", melee: "Talon" }, { longRange: "pinning-bolt", melee: "honed-talons" },
+    "overclock-core", "reactor-overdrive"), 2);
+  // A Field/Tuned equipment upgrade in those families contributes nothing.
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, {}, "servo-actuators", firstEquipmentUpgradeId("servo-actuators")), 0);
+  assert.equal(countPrototypes(
+    { longRange: "Autocannon", melee: "Claw" }, {}, "overclock-core", firstEquipmentUpgradeId("overclock-core")), 0);
+  // Sanity: the nature tag survived the effect wiring.
+  assert.equal(equipmentUpgradeNature("servo-actuators", "grapnel-launcher"), "prototype");
+  assert.equal(equipmentUpgradeNature("overclock-core", "reactor-overdrive"), "prototype");
 });
 
 test("normalizePrep gates raise-shield to Bulwark Shield rigs", () => {
@@ -1950,6 +1997,19 @@ test("equipment upgrade helpers resolve", () => {
   assert.equal(firstEquipmentUpgradeId("ablative-plating"), "reinforced-plating");
 });
 
+test("equipmentUpgradeEffectOf resolves from the catalog by id", () => {
+  assert.deepEqual(
+    equipmentUpgradeEffectOf("ablative-plating", "reinforced-plating"),
+    { hardenImpact: 2 },
+  );
+  // A permanently-unknown id (never a real catalog row) so this stays {} forever —
+  // unlike a real-but-still-inert row (e.g. ablative-cascade today), which stops
+  // being {} the moment mechanics are wired for it.
+  assert.deepEqual(equipmentUpgradeEffectOf("ablative-plating", "no-such-upgrade-xyz"), {});
+  assert.deepEqual(equipmentUpgradeEffectOf("servo-actuators", "unknown"), {});         // unknown id → {}
+  assert.deepEqual(equipmentUpgradeEffectOf(null, null), {});                            // no equipment → {}
+});
+
 test("normalizeEquipmentUpgrade validates + normalizes", () => {
   assert.equal(normalizeEquipmentUpgrade("ablative-plating", "REINFORCED-PLATING "), "reinforced-plating"); // trims + lowercases
   assert.equal(normalizeEquipmentUpgrade("ablative-plating", "reinforced-plating"), "reinforced-plating");
@@ -2116,6 +2176,168 @@ test("add passes equipmentUpgrade through to the created rig", () => {
   applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw", equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" } });
   const rig = findRig(r, "Bastion");
   assert.equal(rig.equipmentUpgrade, "reinforced-plating");
+});
+
+test("makeRig initialises the equipState tracked-state block", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  assert.deepEqual(rig.equipState, {
+    ablativeCharges: 0, cryo: 0, naniteStacks: [], interceptors: 0,
+    meltdownCharge: 0, solution: { targetId: null, count: 0 },
+    reactiveArmorLocs: [], grapnelCooldown: 0,
+    firedRangedThisRound: false, pdLocked: false,
+  });
+});
+
+test("Point-Defense: Recovery refills interceptors to 2 and rolls the fire-lockout forward", () => {
+  const rig = makeRig(1, "Sentry", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "reactive-plating", "point-defense-system");
+  rig.equipState.interceptors = 0;
+  rig.equipState.firedRangedThisRound = true;                    // fired ranged this round
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.interceptors, 2);                  // refilled 2/round
+  assert.equal(rig.equipState.pdLocked, true);                   // locked out next round
+  assert.equal(rig.equipState.firedRangedThisRound, false);      // fire flag reset
+  // A following Recovery with no ranged shot fired clears the lockout.
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.pdLocked, false);
+  assert.equal(rig.equipState.interceptors, 2);
+});
+
+test("Meltdown Protocol: over-capacity heat at activation end banks as charge (no overheat roll)", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  activate(r, "a1");
+  a1.engine.heat = heatMeter(a1).cap + 3;                         // 3 over the redline
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  assert.equal(a1.equipState.meltdownCharge, 3);                 // banked, not rolled
+  assert.equal(r.game.resolutions.some((x) => x.kind === "overheat" && x.rigId === a1.id), false);
+});
+
+test("Meltdown Protocol: charge caps at 6", () => {
+  const rig = makeRig(1, "Furnace", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "blast-furnace-core", "meltdown-protocol");
+  rig.equipState.meltdownCharge = 5;
+  const room = createRoom("X");
+  room.game = { turn: { activeRigId: rig.id, side: "a" }, round: 1, resolutions: [], sides: [] };
+  rig.engine.heat = heatMeter(rig).cap + 4;
+  __test.endActivation(room, rig, null, () => 0);
+  assert.equal(rig.equipState.meltdownCharge, 6);
+});
+
+test("Meltdown Protocol: while charged, Shut Down and Cooling are refused", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  a1.equipState.meltdownCharge = 2;
+  activate(r, "a1");
+  const before = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "shutdown" } });
+  assert.equal(a1.activated, false);                             // shutdown refused (didn't end activation)
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  assert.equal(r.game.turn.actionsUsed, before);                 // cooling active refused (no slot spent)
+});
+
+test("Meltdown Protocol: spending N in STR mode arms +N STR and burns N charge", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  a1.equipState.meltdownCharge = 4;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "meltdown", mode: "str", n: 3 } });
+  assert.equal(a1.equipState.meltdownCharge, 1);
+  assert.equal(a1.equipState.nextAttackStr, 3);
+});
+
+test("Meltdown Protocol: burst mode narrates the 4\" spatial instruction and spends the charge", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  a1.equipState.meltdownCharge = 3;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "meltdown", mode: "burst", n: 3 } });
+  assert.equal(a1.equipState.meltdownCharge, 0);
+  const note = r.game.resolutions.at(-1);
+  assert.match(note.summary, /4"/);                              // narrated player instruction
+  assert.match(note.summary, /3 heat-damage/);
+});
+
+test("Meltdown Protocol: an engine destroyed while charged detonates the charge on self", () => {
+  const rig = makeRig(1, "Furnace", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "blast-furnace-core", "meltdown-protocol");
+  rig.equipState.meltdownCharge = 4;
+  const room = createRoom("X"); room.rigs = [rig];
+  const spBefore = rig.hull.sp + rig.arms.sp + rig.legs.sp;
+  __test.applyDamage(room, rig, "engine", rig.engine.sp, { random: () => 0 });
+  assert.equal(rig.equipState.meltdownCharge, 0);                // detonated
+  assert.ok((rig.hull.sp + rig.arms.sp + rig.legs.sp) < spBefore, "self-damage from the meltdown");
+});
+
+test("Fire Solution Lock: repeated fire on one target stacks a solution (cap 3) at +1 heat/shot", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  activate(r, "a1");
+  const fire = () => {
+    r.game.turn.actionsUsed = 0; // keep firing within the one activation (budget is 3)
+    a1.loaded.longRange = true;
+    return applyCommand(r, { verb: "action", attrs: {
+      name: "a1", action: "fire", weapon: "longRange", target: "b1", arc: "front", range: "near",
+      dice: { toHit: [1, 1], impacts: [1, 1], location: 1 } } });
+  };
+  const heat0 = a1.engine.heat;
+  fire();
+  assert.equal(a1.equipState.solution.targetId, findRig(r, "b1").id);
+  assert.equal(a1.equipState.solution.count, 1);
+  assert.ok(a1.engine.heat > heat0, "building shot runs +1 heat");
+  fire(); fire();
+  assert.equal(a1.equipState.solution.count, 3);                 // armed at cap 3 (next shot cashes in)
+  fire();                                                        // firing at cap 3 spends the solution
+  assert.equal(a1.equipState.solution.count, 0);
+});
+
+test("Fire Solution Lock: switching target resets the solution", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  a1.equipState.solution = { targetId: findRig(r, "b1").id, count: 2 };
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "fire", weapon: "longRange", target: "b2", arc: "front", range: "near", dice: { toHit: [1, 1], impacts: [1, 1], location: 1 } } });
+  assert.equal(a1.equipState.solution.targetId, findRig(r, "b2").id);
+  assert.equal(a1.equipState.solution.count, 1);                 // reset to this target, then +1
+});
+
+test("Fire Solution Lock: at count 3 the next shot auto-hits every die and gains Armour Piercing", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  a1.equipState.solution = { targetId: findRig(r, "b1").id, count: 3 };
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: {
+    name: "a1", action: "fire", weapon: "longRange", target: "b1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], location: 1, impacts: [6, 6], ap: [3, 3] } } }); // all-1 to-hit would miss without auto-hit
+  const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
+  assert.match(attack.summary, /8 hit\(s\)/);                    // Mini Gun's every die lands — unmissable payoff volley
+  assert.equal(a1.equipState.solution.count, 0);                 // solution consumed
+});
+
+test("Fire Solution Lock: moving loses the solution", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
+  a1.equipState.solution = { targetId: findRig(r, "b1").id, count: 2 };
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "move" } });
+  assert.deepEqual(a1.equipState.solution, { targetId: null, count: 0 });
+});
+
+test("ensureRigShape backfills equipState on a legacy rig", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  delete rig.equipState;
+  __test.ensureRigShape(rig);
+  assert.equal(rig.equipState.ablativeCharges, 0);
+  assert.deepEqual(rig.equipState.solution, { targetId: null, count: 0 });
 });
 
 test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy rig objects", () => {
@@ -2288,6 +2510,88 @@ test("harden requires Ablative Plating, costs 1 slot + 1 heat, and sets rig.hard
   assert.equal(r.game.turn.actionsUsed, usedBefore + 1);
 });
 
+test("Recovery clears reactiveArmorLocs so Reactive Armor re-arms next round", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "ablative-plating" });
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "reactive-armor";
+  rig.equipState.reactiveArmorLocs.push("hull", "legs");
+  __test.runRecovery(r);
+  assert.deepEqual(rig.equipState.reactiveArmorLocs, []);
+});
+
+test("Nanite Swarm: seeding costs 1 slot + 1 heat and stacks a location (cap 3)", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "field-repair-suite"; a1.equipmentUpgrade = "nanite-swarm";
+  a1.hull.sp = 2; // wounded so we can watch it heal later
+  activate(r, "a1");
+  const heatBefore = a1.engine.heat, usedBefore = r.game.turn.actionsUsed;
+  // Pre-seed to 2 so the two live seeds below drive the location to the cap and
+  // then clamp — proving cap 3 while respecting the 3-action budget (the seed is
+  // an ordinary equipment active: 1 slot + 1 heat each, and every other active
+  // is budget-gated the same way).
+  a1.equipState.naniteStacks = [{ loc: "hull", sp: 2 }];
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "nanite", loc: "hull" } }); // 2 → 3
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "nanite", loc: "hull" } }); // clamped at 3
+  assert.equal(r.game.turn.actionsUsed, usedBefore + 2);         // 1 slot each
+  assert.equal(a1.engine.heat, heatBefore + 2);                  // +1 heat each (clamp doesn't refund)
+  const st = a1.equipState.naniteStacks.find((x) => x.loc === "hull");
+  assert.equal(st.sp, 3);                                        // capped at 3
+});
+
+test("Nanite Swarm: each Recovery a stack heals 1 SP then decays 1, dropping at 0", () => {
+  const rig = makeRig(1, "Mender", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "field-repair-suite", "nanite-swarm");
+  rig.hull.sp = rig.hull.max - 3;
+  rig.equipState.naniteStacks = [{ loc: "hull", sp: 2 }];
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.hull.sp, rig.hull.max - 2);                   // healed 1
+  assert.equal(rig.equipState.naniteStacks[0].sp, 1);           // decayed 1
+  __test.runRecovery(room);
+  assert.equal(rig.hull.sp, rig.hull.max - 1);                   // healed 1 more
+  assert.equal(rig.equipState.naniteStacks.length, 0);          // stack spent → dropped
+});
+
+test("Nanite Swarm downside: Heat Capacity −1 while a stack rides", () => {
+  const rig = makeRig(1, "Mender", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "field-repair-suite", "nanite-swarm");
+  const capClean = heatMeter(rig).cap;
+  rig.equipState.naniteStacks = [{ loc: "hull", sp: 1 }];
+  assert.equal(heatMeter(rig).cap, capClean - 1);
+});
+
+test("Chaff Burst narrates a free side-step when a smoked Reactive-Plating rig is targeted", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const target = findRig(r, "a1");
+  target.equipment = "reactive-plating";
+  target.equipmentUpgrade = "chaff-burst";
+  target.smokeNextActivation = true; // Smoke up from an earlier Pop Smoke
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], impacts: [1], location: 1 },
+  } });
+  assert.ok(r.game.resolutions.some((e) => /Chaff Burst/.test(e.summary || "")));
+});
+
+test("Chaff Burst stays silent when the targeted rig has no Smoke up", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const target = findRig(r, "a1");
+  target.equipment = "reactive-plating";
+  target.equipmentUpgrade = "chaff-burst";
+  target.smokeNextActivation = false;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], impacts: [1], location: 1 },
+  } });
+  assert.equal(r.game.resolutions.some((e) => /Chaff Burst/.test(e.summary || "")), false);
+});
+
 test("popsmoke requires Reactive Plating and sets rig.smokeNextActivation", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "reactive-plating" });
@@ -2377,6 +2681,54 @@ test("Heat Purge Wave vents to the raw Heat Capacity and narrates the 3\" AoE", 
   assert.match(text, /3"/);
 });
 
+test("Backdraft adds +1 STR per 2 heat over Capacity to the narrated Heat Purge Wave", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "blast-furnace-core", a2: "blast-furnace-core" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "backdraft";
+  rig.engine.heat = 9; // Medium raw cap 5 → over by 4 → +2 STR
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  assert.equal(rig.engine.heat, 5); // still vents down to the raw class cap
+  const withBackdraft = r.game.resolutions.at(-1);
+  const text = `${withBackdraft.summary} ${withBackdraft.effects.join(" ")}`;
+  assert.match(text, /3"/);        // the AoE narration is preserved
+  assert.match(text, /\+2 STR/);   // and now carries the Backdraft bonus
+});
+
+test("Heat Purge Wave without Backdraft carries no STR bonus", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "blast-furnace-core" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1"); // default upgrade = Insulated Core (Field), no backdraft tag
+  rig.engine.heat = 9;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  const last = r.game.resolutions.at(-1);
+  assert.doesNotMatch(`${last.summary} ${last.effects.join(" ")}`, /STR/);
+});
+
+test("Coolant Injection vents 2 heat before the overheat roll and can skip it", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "radiator-array" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "coolant-injection";
+  rig.engine.heat = 6; // Medium cap 5 → over by 1
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  assert.equal(rig.engine.heat, 4); // vented 2 → back under the cap
+  assert.equal(r.game.resolutions.some((e) => e.kind === "overheat"), false); // the D12 is skipped
+});
+
+test("without Coolant Injection an over-Capacity rig still rolls overheat at activation end", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "radiator-array" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1"); // default upgrade = Twin Radiators (Field), no coolant tag
+  rig.engine.heat = 6; // over by 1
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 1 } } });
+  assert.equal(r.game.resolutions.some((e) => e.kind === "overheat"), true);
+});
+
 test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
@@ -2385,6 +2737,20 @@ test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
   rig.equipmentUpgrade = "reinforced-servos"; // Field upgrade: Sprint costs 0, not 1
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint" } });
   assert.equal(rig.engine.heat, 0); // 0, not the base Servo Actuators 1
+});
+
+test("Sprinting into base contact sets the Kickstart charge, and it clears at activation end", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "kickstart-pistons";
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint", engage: "b1" } });
+  assert.equal(rig.engagedWith != null, true);      // the sprint declared the lock
+  assert.equal(rig.chargedIntoContact, true);       // charge armed for the first melee
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  assert.equal(rig.chargedIntoContact, false);      // cleared — no leak past the activation
+  assert.equal(rig.kickstartUsed, false);
 });
 
 test("Master Toolkit repairs +2 through the action pipeline", () => {
@@ -2408,6 +2774,97 @@ test("overclock grants +2 actions this activation for Overclock Core", () => {
   assert.equal(findRig(r, "a1").engine.heat, 3);
 });
 
+test("Reactor Overdrive: Overclock arms the +2 STR flag (only with the upgrade)", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "reactor-overdrive";
+  activate(r, "a1");
+  assert.equal(a1.reactorOverdriveActive, false);
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax >= 2, true); // still grants the +2 actions
+  assert.equal(a1.reactorOverdriveActive, true);
+});
+
+test("Reactor Overdrive: this activation's overheat bonus is doubled, then the flag clears", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "reactor-overdrive";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  a1.engine.heat = 7; // Medium cap 5 -> 2 over -> base bonus +4, doubled to +8
+  // D12 roll 3 -> total = 3 + 8 = 11; the summary records the doubled bonus.
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 3 } } });
+  const last = r.game.resolutions.at(-1);
+  assert.equal(last.kind, "overheat");
+  assert.match(last.summary, /D12 3\+8=11/);       // doubled: +8, not the base +4
+  assert.equal(a1.reactorOverdriveActive, false);  // per-activation flag cleared
+});
+
+test("Reactor Overdrive: the doubling breaches the normal overheat-bonus cap (deliberate all-in gamble)", () => {
+  // Base overheat bonus caps at MAX_OVERHEAT_BONUS (10): min(10, 2*over). Reactor
+  // Overdrive doubles that ALREADY-CAPPED value, so it can exceed 10 — this is the
+  // intended risk (plan: doubling applies after the cap). Lock it in so a future
+  // balance pass that wants a re-clamp does so deliberately, not silently.
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "reactor-overdrive";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  a1.engine.heat = 11; // Medium cap 5 -> 6 over -> base bonus min(10,12)=10, doubled to 20 (> cap)
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 3 } } });
+  assert.match(r.game.resolutions.at(-1).summary, /D12 3\+20=23/); // 20 = 2*10, above the normal +10 ceiling
+});
+
+test("Overclock without Reactor Overdrive leaves the overheat bonus untouched", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(a1.reactorOverdriveActive, false);
+  a1.engine.heat = 7; // 2 over -> base bonus +4, NOT doubled
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 3 } } });
+  assert.match(r.game.resolutions.at(-1).summary, /D12 3\+4=7/);
+});
+
+test("Adrenaline Surge: below half total SP, Overclock grants +3 actions", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "adrenaline-surge";
+  activate(r, "a1");
+  // Drop below half total SP across the location set.
+  for (const loc of ["hull", "arms", "legs", "engine"]) a1[loc].sp = 0;
+  const maxBefore = r.game.turn.actionsMax;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax, maxBefore + 3);
+});
+
+test("Adrenaline Surge: at/above half total SP, Overclock grants only +2 actions", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "adrenaline-surge";
+  activate(r, "a1"); // fresh rig = full SP, at/above half
+  const maxBefore = r.game.turn.actionsMax;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax, maxBefore + 2);
+});
+
+test("Overclock Core with no upgrade grants +2 even below half SP", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  activate(r, "a1");
+  for (const loc of ["hull", "arms", "legs", "engine"]) a1[loc].sp = 0;
+  const maxBefore = r.game.turn.actionsMax;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax, maxBefore + 2);
+});
+
 test("emergencypatch guarantees 2 SP with no roll for Field Repair Suite", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "field-repair-suite" });
@@ -2419,12 +2876,158 @@ test("emergencypatch guarantees 2 SP with no roll for Field Repair Suite", () =>
   assert.equal(rig.engine.heat, 2);
 });
 
+test("Battlefield Triage heals 3 SP when the Emergency Patch target is at 0 SP", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "field-repair-suite" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "battlefield-triage";
+  rig.arms.sp = 0; // destroyed location
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
+  assert.equal(rig.arms.sp, 3); // 3, not the base 2
+});
+
+test("Battlefield Triage heals only the base 2 SP on a merely damaged location", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "field-repair-suite" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "battlefield-triage";
+  rig.arms.sp = 2; // damaged but not at 0 → no triage bump
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
+  assert.equal(rig.arms.sp, 4); // 2 + 2, the base Emergency Patch
+});
+
 test("jumpjets costs 1 slot + 2 heat for Servo Actuators", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
   activate(r, "a1");
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
   assert.equal(findRig(r, "a1").engine.heat, 2);
+});
+
+test("Grapnel Launcher: jumpjets breaks a melee lock, roots, arms cooldown, +2 heat, narrates", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";        // the servo-actuators Prototype
+  __test.setEngagement(a1, b1);                    // a1 pinned in a melee lock
+  assert.equal(a1.engagedWith, b1.id);
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engagedWith, null);              // grapnel yank broke the lock
+  assert.equal(a1.towedThisActivation, true);      // rooted rest of activation
+  assert.equal(a1.equipState.grapnelCooldown, 3);  // 3-round cooldown armed
+  assert.equal(a1.engine.heat, 2);                 // +2 heat
+  const last = r.game.resolutions.at(-1);
+  const text = `${last.summary} ${last.effects.join(" ")}`;
+  assert.match(text, /4"/);                         // spatial instruction narrated
+});
+
+test("Grapnel Launcher: reel mode engages the named enemy", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets", mode: "reel", engage: "b1" } });
+  assert.equal(a1.engagedWith, b1.id);             // reeled into contact + engaged
+  assert.equal(a1.equipState.grapnelCooldown, 3);
+});
+
+test("Grapnel Launcher: cooldown blocks reuse and no move follows the root", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  const heatAfterFire = a1.engine.heat;
+  const usedAfterFire = r.game.turn.actionsUsed;
+  // Second grapnel this game is on cooldown -> refused, no heat, no slot spent.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engine.heat, heatAfterFire);
+  assert.equal(r.game.turn.actionsUsed, usedAfterFire);
+  // And the root blocks a follow-up Move (towedThisActivation guard).
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "move" } });
+  assert.equal(r.game.turn.actionsUsed, usedAfterFire);
+});
+
+test("Grapnel Launcher: cooldown ticks down each Recovery", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  a1.equipState.grapnelCooldown = 3;
+  __test.runRecovery(r);
+  assert.equal(a1.equipState.grapnelCooldown, 2);  // one tick per round
+  __test.runRecovery(r);
+  __test.runRecovery(r);
+  assert.equal(a1.equipState.grapnelCooldown, 0);  // floors at 0, never negative
+});
+
+test("Grapnel Launcher refuses to fire while suppressed (suppressImmobile), both modes", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";        // the servo-actuators Prototype
+  __test.setEngagement(a1, b1);                    // a1 pinned in a melee lock
+  a1.suppressImmobile = true;                      // Suppression Lock 3-stack pin landed on this rig
+  activate(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  const heatBefore = a1.engine.heat;
+  // Yank mode: refused before consuming a slot, heat, cooldown, or breaking the lock.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engagedWith, b1.id);             // still locked — grapnel refused
+  assert.equal(a1.equipState.grapnelCooldown, 0);  // no cooldown armed
+  assert.equal(a1.engine.heat, heatBefore);        // no heat spent
+  assert.equal(r.game.turn.actionsUsed, usedBefore); // no slot spent
+  // Reel mode: refused the same way.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets", mode: "reel", engage: "b1" } });
+  assert.equal(a1.equipState.grapnelCooldown, 0);
+  assert.equal(a1.engine.heat, heatBefore);
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
+});
+
+test("Grapnel Launcher refuses to fire while emplaced, both modes", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  a1.emplaced = true;                              // already rooted (emplacement upgrade planted)
+  activate(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  const heatBefore = a1.engine.heat;
+  // Yank mode: refused before consuming a slot, heat, or cooldown.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.equipState.grapnelCooldown, 0);
+  assert.equal(a1.engine.heat, heatBefore);
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
+  assert.equal(a1.emplaced, true);                 // still emplaced
+  // Reel mode: refused the same way, and doesn't engage the target.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets", mode: "reel", engage: "b1" } });
+  assert.equal(a1.engagedWith, null);
+  assert.equal(a1.equipState.grapnelCooldown, 0);
+  assert.equal(a1.engine.heat, heatBefore);
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
+});
+
+test("servo rig without the grapnel upgrade still gets plain Jump Jets", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  __test.setEngagement(a1, b1);                    // plain Jump Jets is grounded while engaged
+  activate(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engagedWith, b1.id);             // still locked — Jump Jets refused
+  assert.equal(a1.equipState.grapnelCooldown, 0);  // no grapnel cooldown armed
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
 });
 
 test("a rig's next activation clears its own Harden", () => {
@@ -4349,6 +4952,90 @@ test("SEED_ROSTER is 6 entries, 3 per side, all chassis distinct", () => {
   for (const e of SEED_ROSTER) assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
 });
 
+test("seed preset 'rigs4' builds 4 rigs, 0 support per side, distinct chassis", () => {
+  const r = createRoom("SEED-4V4");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", preset: "rigs4" } });
+
+  assert.equal(r.game.started, true);
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  const support = r.rigs.filter((rig) => rig.kind === "tank" || rig.kind === "walker");
+  assert.equal(support.length, 0);
+  assert.equal(rigs.filter((rig) => rig.owner === "a").length, 4);
+  assert.equal(rigs.filter((rig) => rig.owner === "b").length, 4);
+  assert.equal(new Set(rigs.map((rig) => rig.chassis)).size, 8);
+  // Rigs are named after their chassis codename, not a placeholder like "A1".
+  for (const rig of rigs) assert.equal(rig.name, chassisById(rig.chassis).name);
+  // Rigs are commissioned with their chassis's primary suggested equipment.
+  for (const rig of rigs) assert.equal(rig.equipment, CHASSIS_PRIMARY_EQUIPMENT[rig.chassis]);
+});
+
+test("SEED_ROSTER_4V4 is 8 entries, 4 per side, chassis distinct, named by chassis", () => {
+  assert.equal(SEED_ROSTER_4V4.length, 8);
+  assert.equal(SEED_ROSTER_4V4.filter((e) => e.owner === "a").length, 4);
+  assert.equal(SEED_ROSTER_4V4.filter((e) => e.owner === "b").length, 4);
+  assert.equal(new Set(SEED_ROSTER_4V4.map((e) => e.chassis)).size, 8);
+  for (const e of SEED_ROSTER_4V4) {
+    assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
+    assert.equal(e.name, chassisById(e.chassis).name); // named by chassis codename
+  }
+});
+
+test("seed preset 'random4' builds 4 rigs, 0 support per side, distinct chassis named by chassis", () => {
+  const r = createRoom("SEED-RND");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", preset: "random4" } }, {}, { random: () => 0 });
+
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  const support = r.rigs.filter((rig) => rig.kind === "tank" || rig.kind === "walker");
+  assert.equal(support.length, 0);
+  assert.equal(rigs.filter((rig) => rig.owner === "a").length, 4);
+  assert.equal(rigs.filter((rig) => rig.owner === "b").length, 4);
+  // 8 distinct chassis drawn without replacement → unique names, each the chassis codename.
+  assert.equal(new Set(rigs.map((rig) => rig.chassis)).size, 8);
+  assert.equal(new Set(rigs.map((rig) => rig.name)).size, 8);
+  for (const rig of rigs) assert.equal(rig.name, chassisById(rig.chassis).name);
+  // Every random rig also carries its chassis's primary suggested equipment.
+  for (const rig of rigs) assert.equal(rig.equipment, CHASSIS_PRIMARY_EQUIPMENT[rig.chassis]);
+});
+
+test("randomSeedRoster: 8 distinct rig entries, 4 per side, named by chassis, RNG-deterministic", () => {
+  const stub = () => 0.42; // any fixed value → identical draw each call
+  const roster = randomSeedRoster(stub);
+  assert.equal(roster.length, 8);
+  assert.equal(roster.filter((e) => e.owner === "a").length, 4);
+  assert.equal(roster.filter((e) => e.owner === "b").length, 4);
+  assert.equal(new Set(roster.map((e) => e.chassis)).size, 8);
+  assert.ok(roster.every((e) => e.chassis && e.prototype));
+  assert.ok(roster.every((e) => e.name === chassisById(e.chassis).name));
+  // Same RNG → same roster (reproducible).
+  assert.deepEqual(randomSeedRoster(stub), roster);
+});
+
+test("CHASSIS_PRIMARY_EQUIPMENT maps every chassis to a valid equipment id", () => {
+  for (const c of CHASSIS) {
+    const eq = CHASSIS_PRIMARY_EQUIPMENT[c.id];
+    assert.ok(eq, `missing primary equipment for ${c.id}`);
+    assert.ok(EQUIPMENT[eq], `unknown equipment ${eq} for ${c.id}`);
+  }
+});
+
+test("default seed also commissions rigs with their primary equipment", () => {
+  const r = createRoom("SEED-EQ");
+  applyCommand(r, { verb: "seed", attrs: { first: "a" } });
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  assert.ok(rigs.length > 0);
+  for (const rig of rigs) assert.equal(rig.equipment, CHASSIS_PRIMARY_EQUIPMENT[rig.chassis]);
+});
+
+test("explicit roster overrides preset", () => {
+  const r = createRoom("SEED-OVR");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", preset: "random4", roster: [
+    ...SEED_ROSTER.filter((e) => e.owner === "a"),
+    ...SEED_ROSTER.filter((e) => e.owner === "b"),
+  ] } });
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  assert.equal(rigs.length, 6); // the explicit 6-entry roster, not random4's 8
+});
+
 test("publicState exposes seeded and skips enemy face-down prep redaction when seeded", () => {
   const r = createRoom("SEED-T3");
   applyCommand(r, { verb: "seed", attrs: { first: "a" } });
@@ -4491,4 +5178,270 @@ test("reconfigure is a no-op after start, on a non-rig, and cross-side", () => {
   r.game.started = true;
   applyCommand(r, { verb: "reconfigure", attrs: { name: "Mine", owner: "a", equipment: "ablative-plating" } });
   assert.notEqual(findRig(r, "Mine").equipment, "ablative-plating", "post-start rejected");
+});
+
+// --- Threat telegraph (pendingThreat) ---
+
+test("createRoom seeds pendingThreat null", () => {
+  const r = createRoom("THREAT0");
+  assert.equal(r.game.pendingThreat, null);
+});
+
+test("ensureGameShape backfills pendingThreat on legacy rooms", () => {
+  const r = createRoom("THREAT1");
+  delete r.game.pendingThreat;
+  // Any applyCommand runs ensureGameShape first.
+  applyCommand(r, { verb: "reset", attrs: {} });
+  assert.equal(r.game.pendingThreat, null);
+});
+
+// A active mid-activation, B is the enemy. Returns { room, a, b }.
+function battleMidActivation() {
+  const room = createRoom("THR");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "Atk", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  applyCommand(room, { verb: "add", attrs: { name: "Def", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword" } });
+  const a = findRig(room, "Atk");
+  const b = findRig(room, "Def");
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: a.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  a.loaded = { longRange: true, melee: true };
+  return { room, a, b };
+}
+
+test("threat declare sets pendingThreat keyed to the target's owner", () => {
+  const { room, a, b } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.deepEqual(room.game.pendingThreat, {
+    attackerId: a.id, targetId: b.id, defender: "b", mode: "fire", weapon: "Autocannon",
+  });
+});
+
+test("threat clear nulls it", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  applyCommand(room, { verb: "threat", attrs: { action: "clear", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("only the active side may declare a threat", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "b" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("threat declare on a friendly or unknown target is a no-op", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Atk", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Ghost", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("threat is not undoable", () => {
+  const { room } = battleMidActivation();
+  const before = room._history.length;
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.equal(room._history.length, before); // no snapshot pushed
+});
+
+test("pendingThreat clears when the active rig's activation ends", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Atk", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("pendingThreat clears once the shot resolves", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  applyCommand(room, { verb: "action", attrs: {
+    name: "Atk", action: "fire", target: "Def", weapon: "longRange",
+    arc: "front", range: "near", distance: 6, cover: 0,
+  } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+// --- Rejection reasons + checkCommand preflight (spec: 40x on unapplied command) ---
+
+test("checkCommand approves a legal action without mutating the room", () => {
+  const { room } = battleMidActivation();
+  const before = JSON.stringify(room);
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Atk", action: "move" } });
+  assert.equal(res.ok, true);
+  assert.equal(res.reason, null);
+  // Dry-run touches only a throwaway clone.
+  assert.equal(JSON.stringify(room), before);
+});
+
+test("checkCommand rejects an action on a unit that isn't active, with a reason", () => {
+  const { room } = battleMidActivation();
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Def", action: "move" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /active unit/i);
+});
+
+test("checkCommand rejects an unknown unit with a reason", () => {
+  const { room } = battleMidActivation();
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Ghost", action: "move" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /no such unit/i);
+});
+
+test("checkCommand surfaces a per-rule reason: can't move while engaged", () => {
+  const { room, a, b } = battleMidActivation();
+  a.engagedWith = b.id;
+  b.engagedWith = a.id;
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Atk", action: "move" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /engaged/i);
+});
+
+test("checkCommand rejects activating an opponent's rig with a reason", () => {
+  const room = createRoom("REJ01");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "Atk", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  applyCommand(room, { verb: "add", attrs: { name: "Def", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword" } });
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  const res = checkCommand(room, { verb: "activate", attrs: { name: "Def" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /isn't your side's turn|already/i);
+});
+
+test("applyCommand records lastRejectionReason on a no-op action", () => {
+  const { room } = battleMidActivation();
+  const before = room.version;
+  applyCommand(room, { verb: "action", attrs: { name: "Def", action: "move" } });
+  assert.equal(room.version, before); // nothing changed
+  assert.match(lastRejectionReason(), /active unit/i);
+});
+
+test("applyCommand clears the rejection reason on a command that does apply", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "action", attrs: { name: "Ghost", action: "move" } }); // sets a reason
+  assert.notEqual(lastRejectionReason(), null);
+  applyCommand(room, { verb: "action", attrs: { name: "Atk", action: "move" } }); // applies
+  assert.equal(lastRejectionReason(), null);
+});
+
+test("checkCommand falls back to a generic reason for an unknown verb", () => {
+  const { room } = battleMidActivation();
+  const res = checkCommand(room, { verb: "nonsense", attrs: {} });
+  assert.equal(res.ok, false);
+  assert.equal(typeof res.reason, "string");
+  assert.ok(res.reason.length > 0);
+});
+
+test("rigEffects: no equipment → base costs, empty modifiers", () => {
+  const eff = rigEffects({ weightClass: "light" });
+  assert.equal(eff.actionHeat.sprint, 2);
+  assert.equal(eff.repair.bonusSp, 0);
+  assert.equal(eff.thermalMargin, 0);
+  assert.equal(eff.hullMaxBonus, 0);
+  assert.equal(eff.recoveryCool, 1);
+  assert.deepEqual(eff.modifiers, []);
+});
+
+test("rigEffects: no-arg guard returns base values", () => {
+  const eff = rigEffects();
+  assert.equal(eff.actionHeat.sprint, 2);
+  assert.deepEqual(eff.modifiers, []);
+});
+
+test("rigEffects: Servo Actuators sets sprint 1 and jumpjets heat", () => {
+  const eff = rigEffects({ equipment: "servo-actuators" });
+  assert.equal(eff.actionHeat.sprint, 1);
+  assert.equal(eff.actionHeat.jumpjets, 2);
+  assert.equal(eff.modifiers[0].source, "servo-actuators");
+});
+
+test("rigEffects: Reinforced Servos drives sprint to 0", () => {
+  const eff = rigEffects({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" });
+  assert.equal(eff.actionHeat.sprint, 0);
+  assert.equal(eff.modifiers.length, 2); // passive + upgrade
+  assert.equal(eff.modifiers[1].kind, "upgrade");
+});
+
+test("rigEffects: Twin Radiators sets purge -3; Redundant Capacitors overclock 2", () => {
+  const rad = rigEffects({ equipment: "radiator-array", equipmentUpgrade: "twin-radiators" });
+  assert.equal(rad.actionHeat.purge, -3);
+  const oc = rigEffects({ equipment: "overclock-core", equipmentUpgrade: "redundant-capacitors" });
+  assert.equal(oc.actionHeat.overclock, 2);
+});
+
+test("rigEffects: Field Repair Suite +1 SP, Master Toolkit +2", () => {
+  assert.equal(rigEffects({ equipment: "field-repair-suite" }).repair.bonusSp, 1);
+  assert.equal(rigEffects({ equipment: "field-repair-suite", equipmentUpgrade: "master-toolkit" }).repair.bonusSp, 2);
+});
+
+test("rigEffects: passive stat mods (ablative hull, thermal margin, radiator cool)", () => {
+  assert.equal(rigEffects({ equipment: "ablative-plating" }).hullMaxBonus, 1);
+  assert.equal(rigEffects({ equipment: "blast-furnace-core" }).thermalMargin, 1);
+  assert.equal(rigEffects({ equipment: "radiator-array" }).recoveryCool, 2);
+});
+
+test("rigEffects derives combat/thermal tags from the catalog, not a stamp", () => {
+  assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core" }).thermalMargin, 2);
+  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates" }).combat.sideRearStr, -2);
+  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" }).combat.sweetBandAcc, 1);
+  assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" }).combat.hardenImpact, 2);
+  // family default when the upgrade carries no such tag
+  assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reactive-armor" }).combat.hardenImpact, 1);
+});
+
+test("rigEffects: combat.hardenImpact falls back to the family default with no upgrade", () => {
+  assert.equal(rigEffects({ equipment: "ablative-plating" }).combat.hardenImpact, 1);
+});
+
+test("Ablative Cascade: Recovery refills charges to 2", () => {
+  const rig = makeRig(1, "Aegis", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "ablative-plating", "ablative-cascade");
+  rig.equipState.ablativeCharges = 0;
+  const room = createRoom("X");
+  room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.ablativeCharges, 2);
+});
+
+test("Ablative Cascade: refill is scoped to the upgrade (base plating gets none)", () => {
+  const rig = makeRig(1, "Plain", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "ablative-plating", "reinforced-plating");
+  rig.equipState.ablativeCharges = 0;
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.ablativeCharges, 0);
+});
+
+test("Cryo Reservoir: banks 1 cryo each Recovery, capped at 3", () => {
+  const rig = makeRig(1, "Frost", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "radiator-array", "cryo-reservoir");
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 1);
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 2);
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 3);
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 3); // capped
+});
+
+test("Cryo Reservoir downside: while hoarding cryo the Radiator cools only 1", () => {
+  const rig = makeRig(1, "Frost", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "radiator-array", "cryo-reservoir");
+  rig.engine.heat = 5; rig.equipState.cryo = 2;         // already banked → hoarding
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.engine.heat, 4);                      // cooled 1, not the Radiator's usual 2
+});
+
+test("Cryo Reservoir: spending N cools 2 heat each and arms +1 STR/cryo on the next attack", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "radiator-array"; a1.equipmentUpgrade = "cryo-reservoir";
+  a1.equipState.cryo = 3; a1.engine.heat = 6;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "cryo", n: 2 } });
+  assert.equal(a1.equipState.cryo, 1);                   // 2 spent
+  assert.equal(a1.engine.heat, 2);                       // −2 each → −4
+  assert.equal(a1.equipState.nextAttackStr, 2);          // +1 STR per cryo spent
 });

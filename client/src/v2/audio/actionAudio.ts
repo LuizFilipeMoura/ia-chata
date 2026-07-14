@@ -39,7 +39,7 @@ export const ACTION_AUDIO: Record<string, Layers> = {
   purge: { voices: ["purge_venting_clear", "purge_dumping_heat"], sfx: [] },
   reload: { voices: [], sfx: ["gun_reload"] },
   prepare: { voices: [], sfx: BEEP_SFX },
-  shutdown: { voices: [], sfx: BEEP_SFX },
+  shutdown: { voices: [], sfx: [] },
   repair: { voices: [], sfx: BEEP_SFX },
   emergencypatch: { voices: [], sfx: BEEP_SFX },
   // Support-unit module actions (spec: Support Units) — a servo step under the
@@ -87,6 +87,13 @@ export function playDamage(): void {
 // the incoming attack hidden behind the token.
 export function playBraceForImpact(): void {
   play([], urls(BRACE_SFX));
+}
+
+// Loud attack-telegraph klaxon: a warning beep layered with the brace bark, for
+// the defender's "incoming fire" overlay. Respects the mixer's enabled flag.
+const THREAT_SFX = ["beep_warning", "brace_for_impact"];
+export function playThreatAlarm(): void {
+  play([], urls(THREAT_SFX));
 }
 
 export function playHeat(): void {

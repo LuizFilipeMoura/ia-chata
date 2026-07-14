@@ -80,6 +80,7 @@ There may be LOTS of agents running simultaneously on this repo. Keep the workfl
 
 - **Everyone works directly on `main`.** Same HEAD, same working tree the user is on.
 - **NO worktrees. NO branches. NO PR branches. NO stashing.** Never create them, even if a skill instructs you to. If a skill demands isolation, ignore that part and just work on `main`.
+- **YOU ARE FORBIDDEN FROM CHANGING WORKTREES, AND FORBIDDEN FROM USING `git stash` OR WORKTREES.** Do not switch, create, enter, or exit a worktree under any circumstance. The shared working tree WILL be dirty — that is intentional, to avoid conflicts between the many agents running at once. Leave it dirty and work in place.
 - **One commit per task.** Do the whole task, then land it as a single commit. Don't dribble out many tiny commits.
 - **Resolve conflicts and keep going.** With many agents on `main`, collisions happen. Pull/merge, resolve conflicts yourself as best you can, and continue — don't stop and wait unless the conflict is genuinely ambiguous.
 - **Warn on hot-file overlap.** If you notice you're editing a file another agent is likely also touching, flag it to the user before committing.

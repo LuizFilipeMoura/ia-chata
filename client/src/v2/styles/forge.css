@@ -294,11 +294,17 @@
 
 /* ---- scan launcher (floating, pre-battle only) --------------------------- */
 .v2-root .v2-scan-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 55;
-  padding: 10px 16px; cursor: pointer;
-  background: linear-gradient(180deg, var(--v2-iron-780), var(--v2-iron-800));
-  border: 1px solid var(--v2-line); border-bottom: 2px solid var(--v2-edge-dark); color: var(--v2-txt);
-  font-family: var(--v2-stencil); font-weight: 700; font-size: var(--v2-text-sm); letter-spacing: .1em;
-  border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .4);
+  position: fixed; right: 16px; bottom: 84px; z-index: 55;
+  padding: 11px 20px; cursor: pointer;
+  background: var(--v2-grad-oil-cta);
+  border: 1px solid var(--v2-oil-edge); border-bottom: 2px solid var(--v2-oil-deep); color: #1a0d0a;
+  font-family: var(--v2-stencil); font-weight: 700; font-size: var(--v2-text-sm); letter-spacing: .12em;
+  border-radius: 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .4), 0 0 0 0 var(--v2-oil-glow);
+  animation: v2-scan-pulse 2s ease-in-out infinite;
 }
-.v2-root .v2-scan-fab:hover { border-color: var(--v2-rivet); }
+.v2-root .v2-scan-fab:hover { filter: brightness(1.06); box-shadow: 0 6px 18px rgba(0, 0, 0, .5), 0 0 14px var(--v2-oil-glow); }
+@keyframes v2-scan-pulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(0, 0, 0, .4), 0 0 0 0 var(--v2-oil-glow); }
+  50%      { box-shadow: 0 4px 14px rgba(0, 0, 0, .4), 0 0 0 6px var(--v2-oil-ring); }
+}

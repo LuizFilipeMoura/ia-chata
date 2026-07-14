@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { expect, it, test } from "vitest";
 import { LoadoutView } from "./LoadoutView";
 import { buildLoadout } from "../../lib/loadout";
+import type { Loadout } from "../../lib/loadout";
 import type { Rig } from "../../state/types";
 import { V2GlossaryTipProvider } from "../state/V2GlossaryTipContext";
 
@@ -40,6 +41,21 @@ test("flat-pick weapon: one block, no upgrade line, no equipment", () => {
   expect(screen.getByText("Tank Cannon")).toBeInTheDocument();
   expect(screen.queryByText(/⬡/)).not.toBeInTheDocument();      // no upgrade line
   expect(screen.queryByText(/Passive —/)).not.toBeInTheDocument(); // no equipment
+});
+
+it("shows upgrade-aware active heat and an equipment-upgrade line", () => {
+  const loadout = {
+    flat: false, lr: null, melee: null, modules: [],
+    equipment: {
+      family: "Cooling", label: "Radiator Array", passive: "Cools 2 heat in Recovery instead of 1",
+      activeLabel: "Purge", activeHeat: -3, activeText: "Vent heat on demand.",
+      upName: "Twin Radiators", upNature: "field", upTag: "Purge vents −3, not −2",
+    },
+  } as unknown as Loadout;
+  wrap(<LoadoutView loadout={loadout} />);
+  expect(document.body.textContent).toContain("-3 heat");
+  expect(document.body.textContent).toContain("Twin Radiators");
+  expect(document.body.textContent).toContain("Purge vents −3");
 });
 
 test("support unit: module chips render and the sidearm is tagged", () => {
