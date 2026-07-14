@@ -4492,3 +4492,18 @@ test("reconfigure is a no-op after start, on a non-rig, and cross-side", () => {
   applyCommand(r, { verb: "reconfigure", attrs: { name: "Mine", owner: "a", equipment: "ablative-plating" } });
   assert.notEqual(findRig(r, "Mine").equipment, "ablative-plating", "post-start rejected");
 });
+
+// --- Threat telegraph (pendingThreat) ---
+
+test("createRoom seeds pendingThreat null", () => {
+  const r = createRoom("THREAT0");
+  assert.equal(r.game.pendingThreat, null);
+});
+
+test("ensureGameShape backfills pendingThreat on legacy rooms", () => {
+  const r = createRoom("THREAT1");
+  delete r.game.pendingThreat;
+  // Any applyCommand runs ensureGameShape first.
+  applyCommand(r, { verb: "reset", attrs: {} });
+  assert.equal(r.game.pendingThreat, null);
+});

@@ -90,17 +90,17 @@ export function normalizeUnitWeapon(name) {
 // named the moment it's added to this array). `label` stays the weapon-combo
 // string used as a secondary descriptor.
 export const CHASSIS = [
-  { id: "light-claw-autocannon",      name: "Ironjaw",    label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-missile-flamethrower", name: "Cinderwalk", label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
-  { id: "light-saw-minigun",          name: "Scrapmaw",   label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-wreckingball-double",  name: "Sledge",     label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
-  { id: "light-sword-arc",            name: "Arclight",   label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
-  { id: "light-harpoon-anchor",       name: "Grapnel",    label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
-  { id: "light-rivet-pressureclaw",   name: "Rivethead",  label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
-  { id: "medium-lance-mortar",        name: "Halberd",    label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
-  { id: "medium-shield-siege",        name: "Rampart",    label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
-  { id: "medium-sniper-chainsaw",     name: "Deadeye",    label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
-  { id: "medium-crossbow-talon",      name: "Shrike",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
+  { id: "light-claw-autocannon",      name: "Gold",       label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-missile-flamethrower", name: "Blue",       label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
+  { id: "light-saw-minigun",          name: "Purple",     label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-wreckingball-double",  name: "Pumpkin",    label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
+  { id: "light-sword-arc",            name: "Zebra",      label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 7 } },
+  { id: "light-harpoon-anchor",       name: "Turquoise",  label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
+  { id: "light-rivet-pressureclaw",   name: "Green",      label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
+  { id: "medium-lance-mortar",        name: "Copper",     label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
+  { id: "medium-shield-siege",        name: "Black",      label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
+  { id: "medium-sniper-chainsaw",     name: "Red",        label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+  { id: "medium-crossbow-talon",      name: "Silver",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
 ];
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
@@ -646,6 +646,7 @@ export function createRoom(code) {
       pendingBlast: null,
       pendingAnswer: null,
       pendingReaction: null,
+      pendingThreat: null,
     },
     rigs: [],
   };
@@ -797,6 +798,7 @@ function ensureGameShape(room) {
   if (room.game.pendingBlast === undefined) room.game.pendingBlast = null;
   if (room.game.pendingAnswer === undefined) room.game.pendingAnswer = null;
   if (room.game.pendingReaction === undefined) room.game.pendingReaction = null;
+  if (room.game.pendingThreat === undefined) room.game.pendingThreat = null;
   if (!Array.isArray(room._history)) room._history = [];
   for (const rig of room.rigs) ensureRigShape(rig);
   return room;
