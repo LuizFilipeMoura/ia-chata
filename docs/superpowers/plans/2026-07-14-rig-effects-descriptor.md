@@ -302,6 +302,20 @@ with:
 
 Update the code comment on line 34-35 to drop the stale "+1 with Servo Actuators" phrasing if desired (optional, no behavior change).
 
+Also correct the Sprint hint copy: Sprint gets the same free 90° pivot as Move, but the Sprint branch omits it. In the `dangerouslySetInnerHTML` block (lines 57-60), change the sprint (first) branch to include the pivot note so it reads like Move's:
+```tsx
+            ? `Reposition up to <b>${dist}"</b> (1½× Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`
+```
+(The `move` branch already carries "pivot up to 90° free" — this brings Sprint to parity. Matters because once Move is hidden for Servo Actuators rigs (Task 8), the Sprint drawer is the only reposition surface.)
+
+Add a test asserting the Sprint hint mentions the pivot:
+```tsx
+it("Sprint hint notes the free 90° pivot", () => {
+  render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+  expect(document.body.textContent).toContain("pivot up to 90° free");
+});
+```
+
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run client/src/v2/battle/MoveBody.test.tsx`
@@ -666,7 +680,7 @@ git commit -m "feat(v2): Hull location shows Ablative +1 max-SP badge"
 - Modify: `shared/battle-view.js` (`availableActions`, just before `return list;`)
 - Test: `shared/battle-view.test.js`
 
-**Rationale:** with Servo Actuators, Sprint costs 1 heat (0 with Reinforced Servos) for 1½× Speed — same-or-less heat than Move (+1) for more distance, so Move is strictly dominated. Drop it; the Move group tile then fires Sprint directly (the existing single-live-action collapse in `ActionConsole` handles the relabel). Rule is generalized to `sprintHeat <= moveHeat` so any future sprint-discount equipment behaves the same. Cold kinds (no Sprint) are unaffected — the guard requires a live Sprint in the list.
+**Rationale:** with Servo Actuators, Sprint costs 1 heat (0 with Reinforced Servos) for 1½× Speed — same-or-less heat than Move (+1) for more distance, and Sprint gets the same free 90° pivot as Move (see Task 3 copy fix). Move is therefore strictly dominated. Drop it; the Move group tile then fires Sprint directly (the existing single-live-action collapse in `ActionConsole` handles the relabel). Rule is generalized to `sprintHeat <= moveHeat` so any future sprint-discount equipment behaves the same. Cold kinds (no Sprint) are unaffected — the guard requires a live Sprint in the list.
 
 - [ ] **Step 1: Write the failing test**
 
