@@ -399,6 +399,40 @@ export function equipmentRepairBonus(equipmentId, equipmentUpgradeId) {
   return up?.effect?.repairBonus ?? 1;
 }
 
+// Single read-model of every equipment/upgrade modifier a rig carries, each
+// pre-resolved to its FINAL value. Built on the atomic helpers above so it adds
+// no resolution logic — consumers (battle-view previews, drawers, loadout card,
+// heat gauge, SP badges) render these values and never recompute an effect.
+export function rigEffects(rig) {
+  const equip = rig?.equipment || null;
+  const up = rig?.equipmentUpgrade || null;
+  const eqDef = equip ? EQUIPMENT[equip] : null;
+  const upDef = equip ? (EQUIPMENT_UPGRADES[equip] || []).find((u) => u.id === up) : null;
+
+  // Final effective heat, keyed by action key. Sprint is always present (base 2
+  // when no Servo Actuators); the active's key is present only when equipped.
+  const actionHeat = { sprint: equipmentSprintHeat(equip, up) };
+  if (eqDef) actionHeat[eqDef.active.key] = equipmentActiveHeat(equip, up);
+
+  const thermalMargin = equip === "blast-furnace-core" ? (upDef?.effect?.thermalMargin ?? 1) : 0;
+  const hullMaxBonus = equip === "ablative-plating" ? 1 : 0;
+  const recoveryCool = equip === "radiator-array" ? 2 : 1;
+
+  const combat = {
+    hardenImpact: equip === "ablative-plating" ? (upDef?.effect?.hardenImpact ?? 1) : 0,
+    sweetBandAcc: equip === "targeting-computer" ? (upDef?.effect?.sweetBandAcc ?? 0) : 0,
+    sideRearStr: equip === "reactive-plating" ? (upDef?.effect?.sideRearStr ?? -1) : 0,
+  };
+
+  const modifiers = [];
+  if (eqDef) {
+    modifiers.push({ source: equip, kind: "passive", label: eqDef.passive, detail: eqDef.family });
+    if (upDef) modifiers.push({ source: upDef.id, kind: "upgrade", label: upDef.tag, detail: upDef.name });
+  }
+
+  return { actionHeat, repair: { bonusSp: equipmentRepairBonus(equip, up) }, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers };
+}
+
 // Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.
 export function normalizeEquipmentUpgrade(equipmentId, id) {
   const list = EQUIPMENT_UPGRADES[equipmentId];

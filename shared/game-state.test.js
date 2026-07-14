@@ -6,7 +6,7 @@ import {
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
   EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
   normalizeEquipmentUpgrade, equipmentActiveHeat,
-  equipmentSprintHeat, equipmentRepairBonus,
+  equipmentSprintHeat, equipmentRepairBonus, rigEffects,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   normalizeAnswerPrep, ANSWER_COUNTERS,
@@ -4731,4 +4731,53 @@ test("checkCommand falls back to a generic reason for an unknown verb", () => {
   assert.equal(res.ok, false);
   assert.equal(typeof res.reason, "string");
   assert.ok(res.reason.length > 0);
+});
+
+test("rigEffects: no equipment → base costs, empty modifiers", () => {
+  const eff = rigEffects({ weightClass: "light" });
+  assert.equal(eff.actionHeat.sprint, 2);
+  assert.equal(eff.repair.bonusSp, 0);
+  assert.equal(eff.thermalMargin, 0);
+  assert.equal(eff.hullMaxBonus, 0);
+  assert.equal(eff.recoveryCool, 1);
+  assert.deepEqual(eff.modifiers, []);
+});
+
+test("rigEffects: Servo Actuators sets sprint 1 and jumpjets heat", () => {
+  const eff = rigEffects({ equipment: "servo-actuators" });
+  assert.equal(eff.actionHeat.sprint, 1);
+  assert.equal(eff.actionHeat.jumpjets, 2);
+  assert.equal(eff.modifiers[0].source, "servo-actuators");
+});
+
+test("rigEffects: Reinforced Servos drives sprint to 0", () => {
+  const eff = rigEffects({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" });
+  assert.equal(eff.actionHeat.sprint, 0);
+  assert.equal(eff.modifiers.length, 2); // passive + upgrade
+  assert.equal(eff.modifiers[1].kind, "upgrade");
+});
+
+test("rigEffects: Twin Radiators sets purge -3; Redundant Capacitors overclock 2", () => {
+  const rad = rigEffects({ equipment: "radiator-array", equipmentUpgrade: "twin-radiators" });
+  assert.equal(rad.actionHeat.purge, -3);
+  const oc = rigEffects({ equipment: "overclock-core", equipmentUpgrade: "redundant-capacitors" });
+  assert.equal(oc.actionHeat.overclock, 2);
+});
+
+test("rigEffects: Field Repair Suite +1 SP, Master Toolkit +2", () => {
+  assert.equal(rigEffects({ equipment: "field-repair-suite" }).repair.bonusSp, 1);
+  assert.equal(rigEffects({ equipment: "field-repair-suite", equipmentUpgrade: "master-toolkit" }).repair.bonusSp, 2);
+});
+
+test("rigEffects: passive stat mods (ablative hull, thermal margin, radiator cool)", () => {
+  assert.equal(rigEffects({ equipment: "ablative-plating" }).hullMaxBonus, 1);
+  assert.equal(rigEffects({ equipment: "blast-furnace-core" }).thermalMargin, 1);
+  assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core" }).thermalMargin, 2);
+  assert.equal(rigEffects({ equipment: "radiator-array" }).recoveryCool, 2);
+});
+
+test("rigEffects: combat deltas carried for follow-on", () => {
+  assert.equal(rigEffects({ equipment: "reactive-plating" }).combat.sideRearStr, -1);
+  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates" }).combat.sideRearStr, -2);
+  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" }).combat.sweetBandAcc, 1);
 });
