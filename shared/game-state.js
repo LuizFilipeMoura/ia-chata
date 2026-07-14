@@ -347,6 +347,15 @@ export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 
   return Math.max(1, raw);
 }
 
+// Sprint reach as a multiple of Speed: 1½× by default, and Servo Actuators'
+// Reinforced Servos Field upgrade sharpens it to 2× via its sprintMult effect
+// tag. Reach is what the upgrade pays out now that Sprint heat is floored at 1.
+export function equipmentSprintMult(equipmentId, equipmentUpgradeId) {
+  if (equipmentId !== "servo-actuators") return 1.5;
+  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
+  return up?.effect?.sprintMult ?? 1.5;
+}
+
 // Extra SP a Repair action restores: Field Repair Suite +1, and its Master
 // Toolkit Field upgrade overrides to +2 via its repairBonus effect tag.
 export function equipmentRepairBonus(equipmentId, equipmentUpgradeId) {
@@ -381,6 +390,10 @@ export function rigEffects(rig) {
   const actionHeat = { sprint: equipmentSprintHeat(equip, upId) };
   if (eqDef) actionHeat[eqDef.active.key] = equipmentActiveHeat(equip, upId);
 
+  // Sprint reach multiple (1½× Speed, 2× with Reinforced Servos). Clients render
+  // this — none of them may hardcode the multiplier.
+  const sprintMult = equipmentSprintMult(equip, upId);
+
   // Blast Furnace Core (Cooling) — thermal margin reads live from the catalog
   // (same source combat.js/commission use), not a stamp on the rig.
   const thermalMargin = equip === "blast-furnace-core" ? (eff.thermalMargin ?? 1) : 0;
@@ -404,7 +417,7 @@ export function rigEffects(rig) {
     if (upDef) modifiers.push({ source: upDef.id, kind: "upgrade", label: upDef.tag, detail: upDef.name });
   }
 
-  return { actionHeat, repair: { bonusSp: equipmentRepairBonus(equip, upId) }, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers };
+  return { actionHeat, sprintMult, repair: { bonusSp: equipmentRepairBonus(equip, upId) }, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers };
 }
 
 // Deliberately unlike normalizeWeaponUpgrade: equipment upgrades are optional, so an unknown/empty id returns null instead of defaulting to the first upgrade.

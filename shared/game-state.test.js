@@ -6,7 +6,7 @@ import {
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
   EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId, equipmentUpgradeEffectOf,
   normalizeEquipmentUpgrade, equipmentActiveHeat,
-  equipmentSprintHeat, equipmentRepairBonus, rigEffects,
+  equipmentSprintHeat, equipmentSprintMult, equipmentRepairBonus, rigEffects,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   normalizeAnswerPrep, ANSWER_COUNTERS,
@@ -2046,6 +2046,31 @@ test("Sprint heat can never be driven below 1, even by a 0-heat catalog tag", ()
   }
   // A 0 passed as the base heat is clamped too.
   assert.equal(equipmentSprintHeat(null, null, 0), 1);
+});
+
+test("Reinforced Servos reaches 2× Speed; base Servo and bare are 1½×", () => {
+  assert.equal(equipmentSprintMult(null, null), 1.5);
+  assert.equal(equipmentSprintMult("servo-actuators", null), 1.5);
+  assert.equal(equipmentSprintMult("servo-actuators", "reinforced-servos"), 2);
+  // A non-servo equipment's upgrade can't smuggle reach in.
+  assert.equal(equipmentSprintMult("radiator-array", "twin-radiators"), 1.5);
+});
+
+test("rigEffects.sprintMult matches the helper across all three servo tiers", () => {
+  const tiers = [
+    {},
+    { equipment: "servo-actuators" },
+    { equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" },
+  ];
+  for (const over of tiers) {
+    const rig = { name: "T", ...over };
+    assert.equal(
+      rigEffects(rig).sprintMult,
+      equipmentSprintMult(rig.equipment || null, rig.equipmentUpgrade || null),
+    );
+  }
+  assert.equal(rigEffects({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" }).sprintMult, 2);
+  assert.equal(rigEffects({}).sprintMult, 1.5);
 });
 
 test("Master Toolkit repairs +2, base suite +1, none +0", () => {
