@@ -4960,3 +4960,34 @@ test("Ablative Cascade: refill is scoped to the upgrade (base plating gets none)
   __test.runRecovery(room);
   assert.equal(rig.equipState.ablativeCharges, 0);
 });
+
+test("Cryo Reservoir: banks 1 cryo each Recovery, capped at 3", () => {
+  const rig = makeRig(1, "Frost", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "radiator-array", "cryo-reservoir");
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 1);
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 2);
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 3);
+  __test.runRecovery(room); assert.equal(rig.equipState.cryo, 3); // capped
+});
+
+test("Cryo Reservoir downside: while hoarding cryo the Radiator cools only 1", () => {
+  const rig = makeRig(1, "Frost", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "radiator-array", "cryo-reservoir");
+  rig.engine.heat = 5; rig.equipState.cryo = 2;         // already banked → hoarding
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.engine.heat, 4);                      // cooled 1, not the Radiator's usual 2
+});
+
+test("Cryo Reservoir: spending N cools 2 heat each and arms +1 STR/cryo on the next attack", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "radiator-array"; a1.equipmentUpgrade = "cryo-reservoir";
+  a1.equipState.cryo = 3; a1.engine.heat = 6;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "cryo", n: 2 } });
+  assert.equal(a1.equipState.cryo, 1);                   // 2 spent
+  assert.equal(a1.engine.heat, 2);                       // −2 each → −4
+  assert.equal(a1.equipState.nextAttackStr, 2);          // +1 STR per cryo spent
+});

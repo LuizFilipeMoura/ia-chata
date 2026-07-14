@@ -245,7 +245,11 @@ export function computeStr(attacker, profile, opts) {
       && equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.kickstartPistons) {
     bonus += 2;
   }
-  return profile.str + weightMod + charged + bonus;
+  // Cryo Reservoir / Meltdown Protocol — a spent charge arms +STR on the next
+  // attack. Shared transient off the attacker's equipState; consumed in
+  // resolveFire and cleared in endActivation so it can't leak past its activation.
+  const nextStr = attacker.equipState?.nextAttackStr || 0;
+  return profile.str + weightMod + charged + bonus + nextStr;
 }
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard

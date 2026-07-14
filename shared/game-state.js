@@ -1818,14 +1818,22 @@ function refreshEquipState(rig) {
   const eff = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade);
   // Ablative Cascade (Prototype) — refill to 2 ablative charges each Recovery.
   if (eff.ablativeCascade) s.ablativeCharges = 2;
+  // Cryo Reservoir (Prototype) — bank 1 cryo each Recovery the rig cooled, cap 3.
+  // Runs AFTER runRecovery's cooling read so the "cool only 1" downside checks
+  // the pre-bank cryo count.
+  if (eff.cryoReservoir && !rig.noCool) s.cryo = Math.min(3, (s.cryo || 0) + 1);
 }
 
 function runRecovery(room) {
   for (const rig of room.rigs) {
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
-      // Radiator Array (Cooling) — cools 2 heat instead of the usual 1.
-      const cooling = equipmentRecoveryCool(rig.equipment);
+      // Radiator Array (Cooling) — cools 2 heat instead of the usual 1. Cryo
+      // Reservoir downside: while cryo is banked the passive hoards, cooling only
+      // 1. Read the pre-bank cryo count (refreshEquipState banks AFTER this).
+      let cooling = equipmentRecoveryCool(rig.equipment);
+      if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir
+          && (rig.equipState?.cryo || 0) > 0) cooling = 1;
       rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
     rig.activated = false;
@@ -1932,6 +1940,9 @@ function endActivation(room, rig, dice, random) {
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
   rig.noActivesNextActivation = false;
   rig.lockSightNext = false; // Lock Sight (Targeting Computer) — a shot not taken doesn't carry into a reactive shot
+  // Cryo Reservoir / Meltdown Protocol — clear any leftover +STR spike so an
+  // armed-but-unspent bonus can't leak past this activation.
+  if (rig.equipState) rig.equipState.nextAttackStr = 0;
   room.game.turn.activeRigId = null;
   handoff(room);
 }
@@ -2033,6 +2044,9 @@ function resolveFire(room, rig, target, a, act, random) {
   // activation; later melee blows resolve at normal STR.
   if (slot === "melee" && rig.chargedIntoContact) rig.kickstartUsed = true;
   t.actionsUsed += cost;
+  // Cryo Reservoir / Meltdown Protocol — the armed +STR spike is a one-shot; the
+  // attack that just resolved consumed it, so clear it now.
+  if (rig.equipState?.nextAttackStr) rig.equipState.nextAttackStr = 0;
   // A second (or later) ranged shot in the same activation runs the barrel hot:
   // +1 heat over the base Fire/Aimed cost.
   const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
@@ -2322,6 +2336,23 @@ function performAction(room, rig, act, a, random) {
         ? `${rig.name} reloads — rolled ${roll} → +${heat} heat`
         : `${rig.name} reloads (1 action).`,
       effects: [],
+    });
+    return true;
+  }
+  // Cryo Reservoir (Cooling Prototype) — an activation-start spend. Vent N banked
+  // cryo: −2 heat each and arm +1 STR per cryo on this rig's NEXT attack (the
+  // transient nextAttackStr, consumed in resolveFire / cleared in endActivation).
+  // Doesn't cost an action slot (mirrors reload sitting before the budget gate).
+  if (act === "cryo") {
+    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir) return reject("This unit has no Cryo Reservoir.");
+    const spend = Math.max(0, Math.min(Math.floor(Number(a.n) || 0), rig.equipState.cryo || 0));
+    if (spend === 0) return reject("No cryo banked to spend.");
+    rig.equipState.cryo -= spend;
+    bumpHeat(rig, -2 * spend);
+    rig.equipState.nextAttackStr = (rig.equipState.nextAttackStr || 0) + spend;
+    pushResolution(room, {
+      kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} vents cryo ×${spend} — −${2 * spend} heat, +${spend} STR to the next attack.`, effects: [],
     });
     return true;
   }
