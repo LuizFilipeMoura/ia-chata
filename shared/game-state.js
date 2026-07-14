@@ -1655,6 +1655,20 @@ function onRigDamaged(room, rig, opts) {
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
   }
+  // Meltdown Protocol (Thermal Prototype) downside — an Engine destroyed with
+  // charge still banked cooks the charge off on the rig itself (self-damage to
+  // Hull). Guarded by _meltdownDetonated so the re-entrant applyDamage below (and
+  // any later hits) can't detonate twice.
+  if (rig.engine?.sp === 0 && (rig.equipState?.meltdownCharge || 0) > 0 && !rig._meltdownDetonated) {
+    rig._meltdownDetonated = true;
+    const n = rig.equipState.meltdownCharge;
+    rig.equipState.meltdownCharge = 0;
+    applyDamage(room, rig, "hull", n, opts);
+    pushResolution(room, {
+      kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name}'s meltdown charge detonates — ${n} damage to its own Hull.`, effects: [],
+    });
+  }
   // Engagement (§engagement) — a destroyed or immobilised rig can no longer hold
   // the melee lock; free both ends.
   if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
@@ -1915,17 +1929,31 @@ function endActivation(room, rig, dice, random) {
     m = heatMeter(rig);
   }
   if (m.over > 0) {
-    const roll = rollD(12, dice?.overheat, random);
-    const total = roll + m.bonus;
-    const row = applyOverheat(room, rig, total, { random });
-    pushResolution(room, {
-      kind: "overheat", actor: rig.owner, rigId: rig.id,
-      heatKey: row.key, // "safe" = engine held; any other key dealt damage (client SFX)
-      rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name}: ${row.label} (D12 ${roll}+${m.bonus}=${total})`,
-      effects: [row.text],
-    });
-    checkAnnihilation(room);
+    // Meltdown Protocol (Thermal Prototype) — instead of rolling the overheat
+    // D12, convert the over-Capacity heat into meltdown charge (cap 6), then vent
+    // that excess heat down to the cap (the heat became charge — it doesn't stay
+    // banked in the engine too, or it would re-convert every activation).
+    if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.meltdownProtocol) {
+      rig.equipState.meltdownCharge = Math.min(6, (rig.equipState.meltdownCharge || 0) + m.over);
+      pushResolution(room, {
+        kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+        summary: `${rig.name} banks ${m.over} meltdown charge (now ${rig.equipState.meltdownCharge}/6) — no overheat roll.`,
+        effects: [],
+      });
+      bumpHeat(rig, -m.over); // vent the converted excess back down to Capacity
+    } else {
+      const roll = rollD(12, dice?.overheat, random);
+      const total = roll + m.bonus;
+      const row = applyOverheat(room, rig, total, { random });
+      pushResolution(room, {
+        kind: "overheat", actor: rig.owner, rigId: rig.id,
+        heatKey: row.key, // "safe" = engine held; any other key dealt damage (client SFX)
+        rolls: [{ sides: 12, value: roll, label: "D12" }],
+        summary: `${rig.name}: ${row.label} (D12 ${roll}+${m.bonus}=${total})`,
+        effects: [row.text],
+      });
+      checkAnnihilation(room);
+    }
   }
   rig.activated = true;
   // Piledriver Protocol (§13, Siege Maul) — a rig carrying the piledriver
@@ -2264,6 +2292,9 @@ export function lastRejectionReason() { return _rejectionReason; }
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
   if (act === "shutdown") {
+    // Meltdown Protocol downside — a rig sitting on banked meltdown charge can't
+    // Shut Down (the core stays hot on purpose).
+    if ((rig.equipState?.meltdownCharge || 0) > 0) return reject("Can't Shut Down while a meltdown charge is banked.");
     // Shutdown may be called at any point in the activation. Cooling scales
     // with the slots left unspent: 2 heat per remaining action, capped at 5.
     // Never cools below the engine's heat floor.
@@ -2291,6 +2322,12 @@ function performAction(room, rig, act, a, random) {
     // noPrepNextActivation) so it's scoped to exactly that one activation.
     if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (EMP).");
     if (rig.equipment !== equipId) return reject("This unit isn't carrying that equipment.");
+    // Meltdown Protocol downside — no venting heat while a charge is banked. The
+    // only cooling active a blast-furnace-core rig carries is Heat Purge Wave;
+    // guard Purge too for robustness.
+    if ((act === "purge" || act === "heatpurgewave") && (rig.equipState?.meltdownCharge || 0) > 0) {
+      return reject("Can't vent heat while a meltdown charge is banked.");
+    }
     if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
     const active = EQUIPMENT[equipId].active;
     const extra = []; // extra per-active narration lines (e.g. Backdraft STR bonus)
@@ -2407,6 +2444,31 @@ function performAction(room, rig, act, a, random) {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} seeds a nanite stack on ${host.name}'s ${loc}.`, effects: [],
     });
+    return true;
+  }
+  // Meltdown Protocol (Thermal Prototype) — an activation-start spend of banked
+  // meltdown charge. Two modes: `str` arms +N STR on this rig's attacks this
+  // activation (reuses the transient nextAttackStr, consumed in resolveFire /
+  // cleared in endActivation); `burst` narrates a 4" AoE dealing N heat-damage
+  // (spatial → players adjudicate the targets). Free of the action budget, like
+  // cryo/reload — an activation-start spend.
+  if (act === "meltdown") {
+    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.meltdownProtocol) return reject("This unit has no Meltdown Protocol.");
+    const spend = Math.max(0, Math.min(Math.floor(Number(a.n) || 0), rig.equipState.meltdownCharge || 0));
+    if (spend === 0) return reject("No meltdown charge to spend.");
+    rig.equipState.meltdownCharge -= spend;
+    if (a.mode === "burst") {
+      pushResolution(room, {
+        kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+        summary: `${rig.name} vents a meltdown burst — deal ${spend} heat-damage to every enemy within 4" (players adjudicate the AoE).`, effects: [],
+      });
+    } else {
+      rig.equipState.nextAttackStr = (rig.equipState.nextAttackStr || 0) + spend;
+      pushResolution(room, {
+        kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+        summary: `${rig.name} overloads — +${spend} STR to its attacks this activation.`, effects: [],
+      });
+    }
     return true;
   }
   const def = ACTIONS[act];
@@ -2991,6 +3053,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.noRepair = {};
       rig.kneecapped = {};                // Kneecapper (Double MG) per-limb tags
       delete rig._blastRolled;
+      delete rig._meltdownDetonated;      // Meltdown Protocol — clear the one-shot detonation guard
       // Re-derive SP-dependent state (armsSuppressed, cripple ramps) now that
       // every location is back at max and the tag maps are cleared.
       recompute(rig);
@@ -3558,4 +3621,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, maybeBraceRetaliate, runRecovery, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };
+export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, maybeBraceRetaliate, runRecovery, endActivation, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };

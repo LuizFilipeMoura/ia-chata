@@ -2152,6 +2152,76 @@ test("Point-Defense: Recovery refills interceptors to 2 and rolls the fire-locko
   assert.equal(rig.equipState.interceptors, 2);
 });
 
+test("Meltdown Protocol: over-capacity heat at activation end banks as charge (no overheat roll)", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  activate(r, "a1");
+  a1.engine.heat = heatMeter(a1).cap + 3;                         // 3 over the redline
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  assert.equal(a1.equipState.meltdownCharge, 3);                 // banked, not rolled
+  assert.equal(r.game.resolutions.some((x) => x.kind === "overheat" && x.rigId === a1.id), false);
+});
+
+test("Meltdown Protocol: charge caps at 6", () => {
+  const rig = makeRig(1, "Furnace", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "blast-furnace-core", "meltdown-protocol");
+  rig.equipState.meltdownCharge = 5;
+  const room = createRoom("X");
+  room.game = { turn: { activeRigId: rig.id, side: "a" }, round: 1, resolutions: [], sides: [] };
+  rig.engine.heat = heatMeter(rig).cap + 4;
+  __test.endActivation(room, rig, null, () => 0);
+  assert.equal(rig.equipState.meltdownCharge, 6);
+});
+
+test("Meltdown Protocol: while charged, Shut Down and Cooling are refused", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  a1.equipState.meltdownCharge = 2;
+  activate(r, "a1");
+  const before = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "shutdown" } });
+  assert.equal(a1.activated, false);                             // shutdown refused (didn't end activation)
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  assert.equal(r.game.turn.actionsUsed, before);                 // cooling active refused (no slot spent)
+});
+
+test("Meltdown Protocol: spending N in STR mode arms +N STR and burns N charge", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  a1.equipState.meltdownCharge = 4;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "meltdown", mode: "str", n: 3 } });
+  assert.equal(a1.equipState.meltdownCharge, 1);
+  assert.equal(a1.equipState.nextAttackStr, 3);
+});
+
+test("Meltdown Protocol: burst mode narrates the 4\" spatial instruction and spends the charge", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
+  a1.equipState.meltdownCharge = 3;
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "meltdown", mode: "burst", n: 3 } });
+  assert.equal(a1.equipState.meltdownCharge, 0);
+  const note = r.game.resolutions.at(-1);
+  assert.match(note.summary, /4"/);                              // narrated player instruction
+  assert.match(note.summary, /3 heat-damage/);
+});
+
+test("Meltdown Protocol: an engine destroyed while charged detonates the charge on self", () => {
+  const rig = makeRig(1, "Furnace", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "blast-furnace-core", "meltdown-protocol");
+  rig.equipState.meltdownCharge = 4;
+  const room = createRoom("X"); room.rigs = [rig];
+  const spBefore = rig.hull.sp + rig.arms.sp + rig.legs.sp;
+  __test.applyDamage(room, rig, "engine", rig.engine.sp, { random: () => 0 });
+  assert.equal(rig.equipState.meltdownCharge, 0);                // detonated
+  assert.ok((rig.hull.sp + rig.arms.sp + rig.legs.sp) < spBefore, "self-damage from the meltdown");
+});
+
 test("ensureRigShape backfills equipState on a legacy rig", () => {
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
   delete rig.equipState;
