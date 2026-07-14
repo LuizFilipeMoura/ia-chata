@@ -118,7 +118,7 @@ export const EQUIPMENT_UPGRADES = {
     { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a STR spike", catch: "Must charge it up first", effect: { cryoReservoir: true } },
   ],
   "servo-actuators": [
-    { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint costs 0 heat", effect: { sprintHeat: 0 } },
+    { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint reaches 2× Speed, not 1½×", effect: { sprintMult: 2 } },
     { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: { kickstartPistons: true } },
     { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", catch: "Heat and a cooldown", effect: { grapnelLauncher: true } },
   ],

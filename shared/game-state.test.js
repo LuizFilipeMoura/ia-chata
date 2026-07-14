@@ -2026,10 +2026,26 @@ test("Field upgrades override equipment active heat", () => {
   assert.equal(equipmentActiveHeat("ablative-plating", "reinforced-plating"), 1);
 });
 
-test("Reinforced Servos zeroes Sprint heat; base Servo is 1, none is 2", () => {
+test("Sprint heat floors at 1: Reinforced Servos is 1, base Servo is 1, none is 2", () => {
   assert.equal(equipmentSprintHeat(null, null), 2);
   assert.equal(equipmentSprintHeat("servo-actuators", null), 1);
-  assert.equal(equipmentSprintHeat("servo-actuators", "reinforced-servos"), 0);
+  assert.equal(equipmentSprintHeat("servo-actuators", "reinforced-servos"), 1);
+});
+
+test("Sprint heat can never be driven below 1, even by a 0-heat catalog tag", () => {
+  // The clamp — not the catalog — is the guarantee. Prove it holds against an
+  // upgrade that explicitly asks for a free Sprint.
+  const servos = EQUIPMENT_UPGRADES["servo-actuators"];
+  const victim = servos.find((u) => u.id === "reinforced-servos");
+  const restore = victim.effect;
+  victim.effect = { sprintHeat: 0 };
+  try {
+    assert.equal(equipmentSprintHeat("servo-actuators", "reinforced-servos"), 1);
+  } finally {
+    victim.effect = restore;
+  }
+  // A 0 passed as the base heat is clamped too.
+  assert.equal(equipmentSprintHeat(null, null, 0), 1);
 });
 
 test("Master Toolkit repairs +2, base suite +1, none +0", () => {
@@ -2729,14 +2745,14 @@ test("without Coolant Injection an over-Capacity rig still rolls overheat at act
   assert.equal(r.game.resolutions.some((e) => e.kind === "overheat"), true);
 });
 
-test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
+test("Reinforced Servos Sprint still costs 1 heat through the action pipeline", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
   activate(r, "a1");
   const rig = findRig(r, "a1");
-  rig.equipmentUpgrade = "reinforced-servos"; // Field upgrade: Sprint costs 0, not 1
+  rig.equipmentUpgrade = "reinforced-servos"; // Field upgrade: reach, not a heat discount
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint" } });
-  assert.equal(rig.engine.heat, 0); // 0, not the base Servo Actuators 1
+  assert.equal(rig.engine.heat, 1); // the floor holds — never 0
 });
 
 test("Sprinting into base contact sets the Kickstart charge, and it clears at activation end", () => {
@@ -5358,9 +5374,9 @@ test("rigEffects: Servo Actuators sets sprint 1 and jumpjets heat", () => {
   assert.equal(eff.modifiers[0].source, "servo-actuators");
 });
 
-test("rigEffects: Reinforced Servos drives sprint to 0", () => {
+test("rigEffects: Reinforced Servos sprint still floors at 1", () => {
   const eff = rigEffects({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" });
-  assert.equal(eff.actionHeat.sprint, 0);
+  assert.equal(eff.actionHeat.sprint, 1);
   assert.equal(eff.modifiers.length, 2); // passive + upgrade
   assert.equal(eff.modifiers[1].kind, "upgrade");
 });

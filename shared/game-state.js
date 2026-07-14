@@ -338,12 +338,13 @@ export function equipmentActiveHeat(equipmentId, equipmentUpgradeId) {
   return base;
 }
 
-// Sprint heat: base 2, Servo Actuators 1, and its Reinforced Servos Field
-// upgrade overrides to 0 via its sprintHeat effect tag.
+// Sprint heat: base 2, and Servo Actuators (Mobility) brings it to 1. Hard floor
+// of 1 — a free Sprint is no decision at all, so no equipment, no upgrade, and no
+// caller-supplied base may drive this to 0. The clamp is the guarantee; do not
+// rely on the catalog to stay honest.
 export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 2) {
-  if (equipmentId !== "servo-actuators") return baseHeat;
-  const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
-  return up?.effect?.sprintHeat ?? 1;
+  const raw = equipmentId === "servo-actuators" ? 1 : baseHeat;
+  return Math.max(1, raw);
 }
 
 // Extra SP a Repair action restores: Field Repair Suite +1, and its Master
@@ -2670,8 +2671,8 @@ function performAction(room, rig, act, a, random) {
     // it on the first melee after. Only Sprint (not a plain Move) charges it.
     if (act === "sprint" && rig.engagedWith != null) rig.chargedIntoContact = true;
     // Move / Sprint may repeat within an activation; each spends one slot and
-    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility),
-    // and 0 with its Reinforced Servos Field upgrade.
+    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
+    // It is never free: equipmentSprintHeat floors it at 1.
     const heat = act === "sprint" ? equipmentSprintHeat(rig.equipment, rig.equipmentUpgrade, def.heat) : def.heat;
     t.actionsUsed += 1;
     bumpHeat(rig, heat);
