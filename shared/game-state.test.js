@@ -2123,6 +2123,23 @@ test("add passes equipmentUpgrade through to the created rig", () => {
   assert.equal(rig.equipmentUpgrade, "reinforced-plating");
 });
 
+test("makeRig initialises the equipState tracked-state block", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  assert.deepEqual(rig.equipState, {
+    ablativeCharges: 0, cryo: 0, naniteStacks: [], interceptors: 0,
+    meltdownCharge: 0, solution: { targetId: null, count: 0 },
+    reactiveArmorLocs: [], grapnelCooldown: 0,
+  });
+});
+
+test("ensureRigShape backfills equipState on a legacy rig", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  delete rig.equipState;
+  __test.ensureRigShape(rig);
+  assert.equal(rig.equipState.ablativeCharges, 0);
+  assert.deepEqual(rig.equipState.solution, { targetId: null, count: 0 });
+});
+
 test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy rig objects", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Bastion", class: "medium", owner: "a", lr: "Autocannon", melee: "Claw" } });

@@ -723,6 +723,18 @@ export function createRoom(code) {
   };
 }
 
+// Per-rig equipment tracked-state block (charges, banks, stacks, cooldowns).
+// A FACTORY so every rig gets its OWN arrays/objects — never a shared
+// reference. Empty scaffold: mechanic branches are filled in by later plans
+// (Groups 2-4); this task only wires the plumbing.
+function freshEquipState() {
+  return {
+    ablativeCharges: 0, cryo: 0, naniteStacks: [], interceptors: 0,
+    meltdownCharge: 0, solution: { targetId: null, count: 0 },
+    reactiveArmorLocs: [], grapnelCooldown: 0,
+  };
+}
+
 function ensureRigShape(rig) {
   if (typeof rig.activated !== "boolean") rig.activated = false;
   if (typeof rig.skipNextActivation !== "boolean") rig.skipNextActivation = false;
@@ -826,6 +838,7 @@ function ensureRigShape(rig) {
   rig.weaponUpgrades.melee = normalizeWeaponUpgrade(rig.weapons?.melee, rig.weaponUpgrades.melee);
   if (!rig.kind) rig.kind = "rig";
   if (!rig.parts) rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
+  if (rig.equipState == null) rig.equipState = freshEquipState();
   return rig;
 }
 
@@ -1021,6 +1034,9 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     crippled: {},
     noRepair: {},
     destroyed: false,
+    // Equipment tracked-state block (charges, banks, stacks, cooldowns) — see
+    // freshEquipState. Empty scaffold; mechanic branches land in later plans.
+    equipState: freshEquipState(),
   };
   rig.parts = { hull: rig.hull, arms: rig.arms, legs: rig.legs, engine: rig.engine };
   // Dismember (§13) — each location's commissioned max SP, the yardstick for the
@@ -1785,6 +1801,15 @@ function handoff(room) {
   else runRecovery(room);
 }
 
+// Per-round equipment tracked-state upkeep (charges refill, banks/stacks tick,
+// per-round flags clear). Mechanic plans (Groups 2-4) fill in their branches;
+// the guard keeps legacy rigs safe.
+function refreshEquipState(rig) {
+  const s = rig.equipState;
+  if (!s) return;
+  // (branches added by Group 2/3/4)
+}
+
 function runRecovery(room) {
   for (const rig of room.rigs) {
     if (!rig.noCool) {
@@ -1812,6 +1837,7 @@ function runRecovery(room) {
       }
     }
     tickBreach(rig);
+    refreshEquipState(rig);
     // Barrage (§13, Mortar) — upkeep for a committed tube: +1 heat, emit the
     // per-round apply-SP prompt, then count down. At 0 the mortar unlocks.
     if ((rig.barrageRoundsLeft || 0) > 0) {
