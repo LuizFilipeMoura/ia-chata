@@ -50,9 +50,6 @@ export interface Rig {
   modules?: string[];
   equipment: string | null;
   equipmentUpgrade?: string | null;
-  // Upgrade effect tags stamped at commission (single source of truth read by
-  // combat.js / heatMeter / rigEffects). Defaulted to {} by ensureRigShape.
-  equipmentUpgradeEffect?: Record<string, number> | null;
   chassis?: string | null;
   loaded?: { longRange?: boolean; melee?: boolean; unit?: boolean };
   weaponsDestroyed?: string[];

@@ -32,7 +32,6 @@ test("splits a boosted capacity into base + thermal-margin badge", () => {
   const rig = base({
     weightClass: "medium",
     equipment: "blast-furnace-core",
-    equipmentUpgradeEffect: { thermalMargin: 1 },
   });
   const { container } = wrap(<HeatGauge rig={rig} />);
   expect(container.textContent).toContain("+1");

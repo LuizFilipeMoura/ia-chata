@@ -132,16 +132,10 @@ test("makeRig honours a per-rig SP override, else falls back to class defaults",
   assert.equal(plated.hull.max, 17);
 });
 
-test("makeRig stamps equipmentUpgradeEffect from the catalog (single source of truth)", () => {
-  // A resolved upgrade copies its catalog `effect` object onto the rig so combat
-  // reads the magnitude from data, not a hardcoded id-check.
-  const reinforced = makeRig(1, "Bulwark", "medium", "a",
-    { longRange: "Autocannon", melee: "Sword" }, "ablative-plating", "reinforced-plating");
-  assert.equal(reinforced.equipmentUpgradeEffect.hardenImpact, 2);
-  // No upgrade → empty object (never null), so combat's `?.tag ?? default` reads
-  // land on the base path.
-  const bare = makeRig(2, "Plain", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
-  assert.deepEqual(bare.equipmentUpgradeEffect, {});
+test("makeRig does not persist equipmentUpgradeEffect (catalog is the source)", () => {
+  const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Claw" }, "ablative-plating", "reinforced-plating");
+  assert.equal("equipmentUpgradeEffect" in rig, false);
+  assert.deepEqual(equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade), { hardenImpact: 2 });
 });
 
 test("makeUnit stores the chassis id on the rig (for its flavor description)", () => {
