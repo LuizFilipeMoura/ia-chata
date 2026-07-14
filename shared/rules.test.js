@@ -74,11 +74,31 @@ test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
   assert.equal(woundTarget(1, 20), 10);
   // A natural 1 must NEVER wound.
   assert.equal(woundTarget(20, 1), 2);
+
+  // The clamp must engage on real inputs, not just absurd ones: the weakest
+  // melee into colossal armour is the in-domain worst case.
+  assert.equal(woundTarget(2, 7), 10);   // raw 11, clamped
+  // These two pin 10 and 2 as legitimate target numbers in their own right,
+  // not merely artifacts of the clamp.
+  assert.equal(woundTarget(1, 5), 10);   // raw 10, NOT clamped
+  assert.equal(woundTarget(5, 1), 2);    // raw 2,  NOT clamped
 });
 
 test("woundTarget — the original bug case is possible, not impossible", () => {
-  // light Circular Saw: STR 5 base, light weight mod -1 => 4. Medium hull T5.
-  // Under the old model this was mathematically 0 damage. Now it is 7+ (40%).
+  // The light Circular Saw vs a medium hull is the matchup that motivated this
+  // rewrite: under the impact-total model it was mathematically 0 damage at any
+  // roll. At HEAD the Saw is STR 6 (game-state.js WEAPONS.melee) and
+  // WEIGHT_STR_MOD.light is -2, so its effective STR is 4; vs a medium hull T5
+  // that is a 7+ (40%).
+  //
+  // TODO(task-7): derive these operands from the live stats rather than
+  // hardcoding 4 —
+  //   const str = WEAPONS.melee["Circular Saw"].str + WEIGHT_STR_MOD.light;
+  // so a retune of the Saw or the weight ladder cannot silently send this
+  // matchup back to hopeless while the test still passes. Cannot be done here:
+  // WEAPONS lives only in game-state.js, which imports combat.js, which still
+  // imports the impactRow/impactSeverity this task deletes — so the import
+  // would make this whole suite fail to load until combat.js is repaired.
   assert.equal(woundTarget(4, 5), 7);
 });
 

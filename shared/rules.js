@@ -76,20 +76,22 @@ export function hitLocation(kindId, d12) {
   return hitPart(kindId, d12);
 }
 
+// The wound roll is a d10 (§7.5).
+export const WOUND_DIE = 10;
+
 // §7.5 — the wound roll. A shot's effective STR is compared to the struck
 // location's Toughness: roll a d10 against `6 + T - S`.
 //
 // The clamp is load-bearing. It guarantees a natural 10 always wounds and a
 // natural 1 never does, so no weapon/target/location matchup can be
 // mathematically hopeless. That was the failure mode of the impact-total model
-// this replaces: its total capped at `6 + STR + arc`, leaving 69 combos that
-// could never deal damage at any roll. Do not remove the clamp to "let armour
-// really matter" — that reintroduces the bug.
+// this replaces: its base total capped at `6 + STR + arc`, leaving 69 combos
+// that could never deal damage at any roll. Do not remove the clamp to "let
+// armour really matter" — that reintroduces the bug. See
+// docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
 //
 // Each point of STR is worth exactly 10%, so the roll is readable as a
 // percentage with no lookup table.
-export const WOUND_DIE = 10;
-
 export function woundTarget(str, toughness) {
   const s = Math.floor(Number(str) || 0);
   const t = Math.floor(Number(toughness) || 0);
