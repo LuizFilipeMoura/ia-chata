@@ -2343,6 +2343,12 @@ function performAction(room, rig, act, a, random) {
     if (act === "jumpjets" && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.grapnelLauncher) {
       if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (EMP).");
       if (rig.equipment !== equipId) return reject("This unit isn't carrying that equipment.");
+      // Suppression Lock (§13, Mini Gun) — a stack-3 pin also grounds the Grapnel
+      // Launcher (it's still Jump Jets movement underneath) until it clears in Recovery.
+      if (rig.suppressImmobile) return reject("Grapnel Launcher is grounded while this unit is suppressed.");
+      // Emplacement (§13, Bulwark Shield) — a rooted rig can't move, so the Grapnel
+      // Launcher (movement) is blocked while emplaced. Un-plant first.
+      if (rig.emplaced) return reject("Grapnel Launcher can't fire while emplaced — un-plant first.");
       if ((rig.equipState?.grapnelCooldown || 0) > 0) return reject(`Grapnel is recharging — ${rig.equipState.grapnelCooldown} round(s) left.`);
       if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
       t.actionsUsed += 1;

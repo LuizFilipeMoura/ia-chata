@@ -2852,6 +2852,54 @@ test("Grapnel Launcher: cooldown ticks down each Recovery", () => {
   assert.equal(a1.equipState.grapnelCooldown, 0);  // floors at 0, never negative
 });
 
+test("Grapnel Launcher refuses to fire while suppressed (suppressImmobile), both modes", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";        // the servo-actuators Prototype
+  __test.setEngagement(a1, b1);                    // a1 pinned in a melee lock
+  a1.suppressImmobile = true;                      // Suppression Lock 3-stack pin landed on this rig
+  activate(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  const heatBefore = a1.engine.heat;
+  // Yank mode: refused before consuming a slot, heat, cooldown, or breaking the lock.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engagedWith, b1.id);             // still locked — grapnel refused
+  assert.equal(a1.equipState.grapnelCooldown, 0);  // no cooldown armed
+  assert.equal(a1.engine.heat, heatBefore);        // no heat spent
+  assert.equal(r.game.turn.actionsUsed, usedBefore); // no slot spent
+  // Reel mode: refused the same way.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets", mode: "reel", engage: "b1" } });
+  assert.equal(a1.equipState.grapnelCooldown, 0);
+  assert.equal(a1.engine.heat, heatBefore);
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
+});
+
+test("Grapnel Launcher refuses to fire while emplaced, both modes", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  a1.emplaced = true;                              // already rooted (emplacement upgrade planted)
+  activate(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  const heatBefore = a1.engine.heat;
+  // Yank mode: refused before consuming a slot, heat, or cooldown.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.equipState.grapnelCooldown, 0);
+  assert.equal(a1.engine.heat, heatBefore);
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
+  assert.equal(a1.emplaced, true);                 // still emplaced
+  // Reel mode: refused the same way, and doesn't engage the target.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets", mode: "reel", engage: "b1" } });
+  assert.equal(a1.engagedWith, null);
+  assert.equal(a1.equipState.grapnelCooldown, 0);
+  assert.equal(a1.engine.heat, heatBefore);
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
+});
+
 test("servo rig without the grapnel upgrade still gets plain Jump Jets", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
