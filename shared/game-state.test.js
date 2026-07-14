@@ -2777,6 +2777,22 @@ test("Reactor Overdrive: this activation's overheat bonus is doubled, then the f
   assert.equal(a1.reactorOverdriveActive, false);  // per-activation flag cleared
 });
 
+test("Reactor Overdrive: the doubling breaches the normal overheat-bonus cap (deliberate all-in gamble)", () => {
+  // Base overheat bonus caps at MAX_OVERHEAT_BONUS (10): min(10, 2*over). Reactor
+  // Overdrive doubles that ALREADY-CAPPED value, so it can exceed 10 — this is the
+  // intended risk (plan: doubling applies after the cap). Lock it in so a future
+  // balance pass that wants a re-clamp does so deliberately, not silently.
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "reactor-overdrive";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  a1.engine.heat = 11; // Medium cap 5 -> 6 over -> base bonus min(10,12)=10, doubled to 20 (> cap)
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 3 } } });
+  assert.match(r.game.resolutions.at(-1).summary, /D12 3\+20=23/); // 20 = 2*10, above the normal +10 ceiling
+});
+
 test("Overclock without Reactor Overdrive leaves the overheat bonus untouched", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "overclock-core" });
