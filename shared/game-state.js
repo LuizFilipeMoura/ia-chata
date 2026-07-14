@@ -2104,7 +2104,20 @@ function prepTriggeredBy(prep, weapon, attacker, t) {
   }
 }
 
-// One action during an activation. Returns whether anything changed.
+// Per-rule rejection channel. applyCommand runs synchronously start-to-finish on
+// a single room, so a module-scoped slot safely carries the "why" from a deep
+// guard (e.g. performAction, many frames down) back out to the caller without
+// changing every bool/return signature in the engine. `reject(reason)` records
+// the reason and returns false, so a `return reject("…")` doubles as the no-op
+// signal. Read the reason with lastRejectionReason(); applyCommand clears it at
+// entry, so it only reflects the most recent command.
+let _rejectionReason = null;
+function reject(reason) { _rejectionReason = reason; return false; }
+export function lastRejectionReason() { return _rejectionReason; }
+
+// One action during an activation. Returns whether anything changed. On a no-op
+// it records a player-facing reason via reject() (surfaced by the preflight check
+// and the /command 409).
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
   if (act === "shutdown") {
@@ -2123,18 +2136,19 @@ function performAction(room, rig, act, a, random) {
   if (equipId) {
     // §engagement — Jump Jets is movement; an engaged rig is pinned and must
     // Disengage before it can jump out. Other actives (harden/purge/…) are fine.
-    if (act === "jumpjets" && rig.engagedWith != null) return false;
+    if (act === "jumpjets" && rig.engagedWith != null) return reject("Jump Jets can't fire while engaged — Disengage first.");
     // Suppression Lock (§13, Mini Gun) — a stack-3 pin also grounds Jump Jets
     // (movement) until it clears in Recovery.
-    if (act === "jumpjets" && rig.suppressImmobile) return false;
+    if (act === "jumpjets" && rig.suppressImmobile) return reject("Jump Jets are grounded while this unit is suppressed.");
     // Emplacement (§13, Bulwark Shield) — a rooted rig can't move, so Jump Jets
     // (movement) is blocked while emplaced. Un-plant first.
-    if (act === "jumpjets" && rig.emplaced) return false;
+    if (act === "jumpjets" && rig.emplaced) return reject("Jump Jets can't fire while emplaced — un-plant first.");
     // Ion Storm (§13, Arc Gun) — an EMP'd rig can't fire any equipment active
     // for its whole next activation. Cleared in endActivation (mirrors
     // noPrepNextActivation) so it's scoped to exactly that one activation.
-    if (rig.noActivesNextActivation) return false;
-    if (rig.equipment !== equipId || t.actionsUsed >= t.actionsMax) return false;
+    if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (EMP).");
+    if (rig.equipment !== equipId) return reject("This unit isn't carrying that equipment.");
+    if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
     const active = EQUIPMENT[equipId].active;
     t.actionsUsed += 1;
     if (act === "harden") rig.hardened = true;
@@ -2177,7 +2191,7 @@ function performAction(room, rig, act, a, random) {
   // heat-kind reload works even at 0 actions left.
   if (act === "reload") {
     const heatKind = !!UNIT_KINDS[kindOf(rig)].hasHeat;
-    if (!heatKind && t.actionsUsed >= t.actionsMax) return false;
+    if (!heatKind && t.actionsUsed >= t.actionsMax) return reject("No actions left to reload.");
     rig.loaded = { longRange: true, melee: true };
     let roll = 0;
     let heat = 0;
@@ -2199,10 +2213,11 @@ function performAction(room, rig, act, a, random) {
     return true;
   }
   const def = ACTIONS[act];
-  if (!def || t.actionsUsed >= t.actionsMax) return false;
+  if (!def) return reject("Unknown action.");
+  if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
   if (act === "fire" || act === "aimed") {
     const target = findRig(room, a.target);
-    if (!target) return false;
+    if (!target) return reject("Choose a target to fire on.");
     // Ion Storm (§13, Arc Gun) — the discharge overloads the attacker's own gun:
     // its next Arc Gun shot is refused and the lock is consumed on that blocked
     // attempt (mirrors the autocannonSlowNext one-shot downside). Gating here —
@@ -2210,13 +2225,13 @@ function performAction(room, rig, act, a, random) {
     // paths in one place. Melee and other long-range weapons are unaffected.
     if (a.weapon !== "melee" && rig.arcLockedNext) {
       const p = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
-      if (p?.upgradeEffect?.ionStorm) { rig.arcLockedNext = false; return false; }
+      if (p?.upgradeEffect?.ionStorm) { rig.arcLockedNext = false; return reject("The Arc Gun is overloaded from its last discharge — this shot is refused."); }
     }
     // Barrage (§13, Mortar) — while the tube is committed to a barrage it can't
     // fire a direct Mortar shot (the mortar is locked). Melee is unaffected.
     if (a.weapon !== "melee" && (rig.barrageRoundsLeft || 0) > 0) {
       const p = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
-      if (p?.upgradeEffect?.barrage) return false;
+      if (p?.upgradeEffect?.barrage) return reject("The Mortar is committed to a Barrage — it can't fire directly.");
     }
     // Rivet Lock (§13, Rivet Gun) — a seized weapon-role location jams this rig's
     // long-range weapon (the gun arm is riveted shut). Melee is unaffected.
@@ -2225,7 +2240,7 @@ function performAction(room, rig, act, a, random) {
       const jammed = Object.keys(rig.rivetSeized).some(
         (loc) => (rig.rivetSeized[loc] || 0) > 0 && roleOf(kind, loc) === "weapon",
       );
-      if (jammed) return false;
+      if (jammed) return reject("The long-range weapon is riveted shut.");
     }
     const facedown = target.preparation && target.preparation.faceUp === false;
     if (facedown && prepTriggeredBy(target.preparation, a.weapon, rig, t)) {
@@ -2233,9 +2248,9 @@ function performAction(room, rig, act, a, random) {
       // Affordability pre-check so an unaffordable (or unloaded) shot never
       // reveals the token: a spent ranged weapon must be reloaded first.
       const slot = a.weapon === "melee" ? "melee" : "longRange";
-      if (slot === "longRange" && rig.loaded.longRange === false) return false;
+      if (slot === "longRange" && rig.loaded.longRange === false) return reject("The ranged weapon is empty — reload first.");
       const cost = 1;
-      if (t.actionsUsed + cost > t.actionsMax) return false;
+      if (t.actionsUsed + cost > t.actionsMax) return reject("Not enough actions left for this attack.");
 
       // Pre-resolution dodges — Evasive and Sidestep — defer the WHOLE attack to
       // the `react` verb (the defender declares whether it broke LoS/range).
@@ -2249,7 +2264,7 @@ function performAction(room, rig, act, a, random) {
         return true; // whole attack deferred to the `react` verb
       }
       const res = resolveFire(room, rig, target, a, act, random);
-      if (!res) return false;
+      if (!res) return reject("This attack can't be resolved.");
       prep.faceUp = true;
       pushResolution(room, reactionRevealEntry(target, prep.type));
       // Post-resolution counters: Return Fire, Riposte, Exploit each arm a
@@ -2283,19 +2298,19 @@ function performAction(room, rig, act, a, random) {
   if (act === "move" || act === "sprint") {
     // Sprint spends heat to move twice; heatless cold kinds (Tank, Walker) have
     // no engine to redline, so they may only Move — Sprint is refused outright.
-    if (act === "sprint" && !UNIT_KINDS[kindOf(rig)]?.hasHeat) return false;
+    if (act === "sprint" && !UNIT_KINDS[kindOf(rig)]?.hasHeat) return reject("Only Rigs can Sprint.");
     // §engagement — a rig locked in melee is pinned; it must Disengage before it
     // can reposition. (Repositioning while engaged is meaningless without a grid.)
-    if (rig.engagedWith != null) return false;
+    if (rig.engagedWith != null) return reject("Can't move while engaged — Disengage first.");
     // Suppression Lock (§13, Mini Gun) — a stack-3 pin holds the target in place
     // for the round: no Move/Sprint until it clears in Recovery.
-    if (rig.suppressImmobile) return false;
+    if (rig.suppressImmobile) return reject("Pinned by Suppression — can't move this round.");
     // Emplacement (§13, Bulwark Shield) — a rooted rig cannot move; it must
     // Un-plant first (which lifts the stance and costs +2 heat).
-    if (rig.emplaced) return false;
+    if (rig.emplaced) return reject("Can't move while emplaced — un-plant first.");
     // Tow Chain (§13, Wrecking Ball) — hauling a rig in with the chain roots the
     // attacker for the rest of this activation: no Move/Sprint after a tow.
-    if (rig.towedThisActivation) return false;
+    if (rig.towedThisActivation) return reject("Rooted after the tow — no move left this activation.");
     // Optional move-into declaration: the player states they moved into base
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
@@ -2313,10 +2328,10 @@ function performAction(room, rig, act, a, random) {
   if (act === "disengage") {
     // §engagement — break the melee lock. The budget/`def` guard above already
     // ran (a slot is available). No-op if the rig isn't actually engaged.
-    if (rig.engagedWith == null) return false;
+    if (rig.engagedWith == null) return reject("This unit isn't engaged.");
     // Dead Weight (§13, Anchor) — pinned under the anchor: can't break the lock
     // this activation. Refused without spending a slot; clears at activation end.
-    if (rig.noDisengageNextActivation) return false;
+    if (rig.noDisengageNextActivation) return reject("Pinned by Dead Weight — can't Disengage this activation.");
     // Skewer (§13, Lance) — if this rig is impaled by the very partner it's
     // locked to, tearing free provokes one free STR-11 lance strike before the
     // lock breaks. A missing/destroyed skewerer just clears the mark (no strike).
@@ -2345,7 +2360,7 @@ function performAction(room, rig, act, a, random) {
     // §13 — beat out the flames: one slot removes one Burning stack. Napalm
     // never stacks past 1, so a single Douse clears it; Conflagration needs one
     // Douse per stack. No-op if the rig isn't burning.
-    if ((rig.burning || 0) <= 0) return false;
+    if ((rig.burning || 0) <= 0) return reject("This unit isn't burning.");
     rig.burning = Math.max(0, rig.burning - 1);
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
@@ -2361,9 +2376,9 @@ function performAction(room, rig, act, a, random) {
     // next) auto-hits and gains Armour Piercing (see resolveAttack). Only a rig
     // carrying the fire-control upgrade can lock; an unknown target is a no-op.
     const profile = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
-    if (!profile?.upgradeEffect?.fireControl) return false;
+    if (!profile?.upgradeEffect?.fireControl) return reject("This unit can't Fire-Control lock.");
     const target = findRig(room, a.target);
-    if (!target || target.id === rig.id) return false;
+    if (!target || target.id === rig.id) return reject("Choose an enemy target to lock.");
     rig.lockedTarget = target.id;
     rig.lockExpiresRound = room.game.round + 1;
     bumpHeat(rig, def.heat);
@@ -2379,9 +2394,9 @@ function performAction(room, rig, act, a, random) {
     // Emplacement (§13, Bulwark Shield) — root into the fortress stance. Only a
     // rig carrying the emplacement upgrade may plant, it can't double-plant, and
     // the stance is on a 3-round cooldown measured from when it was entered.
-    if (rig.weaponUpgrades?.melee !== "emplacement") return false;
-    if (rig.emplaced) return false;
-    if (room.game.round < rig.emplaceCooldownUntil) return false;
+    if (rig.weaponUpgrades?.melee !== "emplacement") return reject("This unit can't emplace.");
+    if (rig.emplaced) return reject("Already emplaced.");
+    if (room.game.round < rig.emplaceCooldownUntil) return reject("Emplacement is on cooldown.");
     rig.emplaced = true;
     rig.emplaceCooldownUntil = room.game.round + 3;
     // Immediately raise the shield — while emplaced this stays up permanently
@@ -2398,7 +2413,7 @@ function performAction(room, rig, act, a, random) {
   }
   if (act === "unplant") {
     // Emplacement (§13) — tear the roots up. Lifts the stance and costs +2 heat.
-    if (!rig.emplaced) return false;
+    if (!rig.emplaced) return reject("This unit isn't emplaced.");
     rig.emplaced = false;
     bumpHeat(rig, 2);
     t.actionsUsed += 1;
@@ -2414,8 +2429,8 @@ function performAction(room, rig, act, a, random) {
     // barrage is already running (barrageRoundsLeft must be 0). While active the
     // Mortar is locked (see the fire gate) and takes +1 heat upkeep each Recovery.
     const profile = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
-    if (!profile?.upgradeEffect?.barrage) return false;
-    if ((rig.barrageRoundsLeft || 0) > 0) return false;
+    if (!profile?.upgradeEffect?.barrage) return reject("This unit can't Barrage.");
+    if ((rig.barrageRoundsLeft || 0) > 0) return reject("A Barrage is already running.");
     rig.barrageRoundsLeft = 2;
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
@@ -2428,9 +2443,9 @@ function performAction(room, rig, act, a, random) {
   }
   if (act === "fieldweld") {
     // Repair module (spec: Support Units) — weld SP onto a friendly unit.
-    if (!(rig.modules || []).includes("repair")) return false;
+    if (!(rig.modules || []).includes("repair")) return reject("This unit has no Repair module.");
     const target = findRig(room, a.target);
-    if (!target || target.owner !== rig.owner || target.destroyed) return false;
+    if (!target || target.owner !== rig.owner || target.destroyed) return reject("Choose a friendly, undestroyed unit to weld.");
     const roll = rollD(12, a.dice?.weld, random);
     const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
     const names = partNamesOf(kindOf(target));
@@ -2447,10 +2462,10 @@ function performAction(room, rig, act, a, random) {
   }
   if (act === "vent") {
     // Coolant module (spec: Support Units) — vent 2 heat off a friendly Rig.
-    if (!(rig.modules || []).includes("coolant")) return false;
+    if (!(rig.modules || []).includes("coolant")) return reject("This unit has no Coolant module.");
     const target = findRig(room, a.target);
-    if (!target || target.owner !== rig.owner || target.destroyed) return false;
-    if (!UNIT_KINDS[kindOf(target)]?.hasHeat) return false; // only Rigs run hot
+    if (!target || target.owner !== rig.owner || target.destroyed) return reject("Choose a friendly, undestroyed unit to vent.");
+    if (!UNIT_KINDS[kindOf(target)]?.hasHeat) return reject("That unit doesn't track heat."); // only Rigs run hot
     bumpHeat(target, -2);
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
@@ -2463,9 +2478,9 @@ function performAction(room, rig, act, a, random) {
   if (act === "paint") {
     // Recon module (spec: Support Units) — mark an enemy so allied ranged attacks
     // ignore its cover and gain +1 Aim until this unit's next activation.
-    if (!(rig.modules || []).includes("recon")) return false;
+    if (!(rig.modules || []).includes("recon")) return reject("This unit has no Recon module.");
     const target = findRig(room, a.target);
-    if (!target || target.owner === rig.owner || target.destroyed) return false; // enemies only
+    if (!target || target.owner === rig.owner || target.destroyed) return reject("Choose an enemy, undestroyed unit to paint."); // enemies only
     // One mark per Recon unit — a new Paint replaces this painter's old mark.
     for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
     target.painted = { by: rig.owner, painterId: rig.id };
@@ -2493,13 +2508,13 @@ function performAction(room, rig, act, a, random) {
   } else if (act === "prepare") {
     // Preparations are Rig-only (spec §17). Cold kinds (Tank / Walker) carry
     // reactions: false in their registry entry and cannot Prepare.
-    if (!UNIT_KINDS[kindOf(rig)]?.reactions) return false;
+    if (!UNIT_KINDS[kindOf(rig)]?.reactions) return reject("Only Rigs can Prepare.");
     // Suppression Lock (§13, Mini Gun) — a 3rd stack denies this rig's Prepare
     // for its whole next activation. Cleared in endActivation once that
     // activation concludes (NOT at activation start — Prepare is only ever
     // reachable *after* activate() runs for this same activation, so clearing
     // it there would zero the flag before the gate below ever sees it).
-    if (rig.noPrepNextActivation) return false;
+    if (rig.noPrepNextActivation) return reject("Prepare is denied this activation (Suppression).");
     let prepType = normalizePrep(a.prep, rig);
     // Piledriver Protocol (§13, Siege Maul) — a rig storing Momentum is all-in on
     // the charge and cannot Raise Shield: a requested Raise Shield downgrades to
@@ -2581,6 +2596,11 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   const verb = (cmd?.verb || "").toLowerCase();
   const a = cmd?.attrs || {};
   let changed = false;
+  // Clear the rejection channel so lastRejectionReason() only ever reflects this
+  // call. A verb that no-ops records its "why" via reject(); one that changes
+  // state leaves this stale value, but callers only read it when version didn't
+  // move (see checkCommand / the /command 409).
+  _rejectionReason = null;
 
   // Revert: pop the last turn-scoped snapshot, but only for the side that made
   // it (the acting side). Restores rigs + game wholesale; dice already rolled
@@ -2612,11 +2632,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   }
 
   if (verb === "add") {
-    if (a.name) {
+    if (!a.name) reject("A unit needs a name.");
+    else {
       const kindId = String(a.kind || "rig").toLowerCase();
-      if (!UNIT_KINDS[kindId]) return room;
+      if (!UNIT_KINDS[kindId]) { reject("Unknown unit kind."); return room; }
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
-      if (canAddRigForSide(room, owner)) {
+      if (!canAddRigForSide(room, owner)) reject("This side's roster is full.");
+      else {
         const unit = makeUnit(kindId, room.nextRigId, uniqueRigName(room, a.name), owner, {
           // Rig options
           weightClass: (a.class || a.weightClass || "").toLowerCase() || undefined,
@@ -2635,7 +2657,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
             ? a.modules.split(",").map((s) => s.trim()).filter(Boolean)
             : a.modules,
         });
-        if (!unit) return room;
+        if (!unit) { reject("Couldn't build that unit from the given loadout."); return room; }
         room.nextRigId++;
         room.rigs.push(unit);
         resetReadyBeforeStart(room);
@@ -2644,7 +2666,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     }
   } else if (verb === "remove") {
     const rig = findRig(room, a.name);
-    if (rig) {
+    if (!rig) reject("No such unit to remove.");
+    else {
       clearEngagement(room, rig);
       room.rigs = room.rigs.filter((r) => r !== rig);
       resetReadyBeforeStart(room);
@@ -2655,10 +2678,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     // makeUnit path used by `add`, so hull/heat/effect math and the
     // one-Prototype-per-rig rule stay enforced by construction. Weapons and
     // chassis are fixed; only equipment + the three upgrade ladders change.
-    if (!room.game.started) {
+    if (room.game.started) reject("Can't reconfigure once the battle has started.");
+    else {
       const rig = findRig(room, a.name);
       const actor = normalizeSide(room, a.owner) || normalizeSide(room, context.side);
-      if (rig && rig.kind === "rig" && actor && (rig.owner || "a") === actor) {
+      if (!rig || rig.kind !== "rig") reject("No such rig to reconfigure.");
+      else if (!actor || (rig.owner || "a") !== actor) reject("You can only reconfigure your own rig.");
+      else {
         // reconfigure carries the player's full intended loadout for the four
         // editable fields: use each value as given (an explicit null clears an
         // upgrade/equipment), falling back to the rig's current value only when
@@ -2675,7 +2701,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           equipment: pick("equipment", rig.equipment),
           equipmentUpgrade: pick("equipmentUpgrade", rig.equipmentUpgrade),
         });
-        if (rebuilt) {
+        if (!rebuilt) reject("That loadout is invalid.");
+        else {
           room.rigs[room.rigs.indexOf(rig)] = rebuilt;
           resetReadyBeforeStart(room);
           changed = true;
@@ -2685,8 +2712,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "ready") {
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     const side = room.game.sides.find((s) => s.id === sideId);
-    if (side && !room.game.started && room.field.locked &&
-        sidesAtParity(room) && !side.ready) {
+    if (!side) reject("Unknown side.");
+    else if (room.game.started) reject("The battle has already started.");
+    else if (!room.field.locked) reject("Lock the field before readying up.");
+    else if (!sidesAtParity(room)) reject("Both sides must field a mirrored composition before you can ready.");
+    else if (side.ready) reject("This side is already ready.");
+    else {
       side.ready = true;
       if (!room.game.deployOrder.includes(side.id)) room.game.deployOrder.push(side.id);
       maybeStartGame(room, options.random);
@@ -2867,9 +2898,15 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "activate") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
-    if (rig && t && room.game.phase === "activation" && t.activeRigId == null &&
-        !room.game.pendingAnswer && !room.game.pendingReaction &&
-        (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
+    if (!rig) reject("No such unit.");
+    else if (room.game.phase !== "activation") reject("Units can only be activated during the activation phase.");
+    else if (!t) reject("No active turn.");
+    else if (room.game.pendingAnswer || room.game.pendingReaction) reject("Resolve the pending reaction first.");
+    else if ((rig.owner || "a") !== t.side) reject("It isn't your side's turn to activate.");
+    else if (t.activeRigId != null) reject("Another unit is already active — end its activation first.");
+    else if (rig.destroyed) reject("That unit is destroyed.");
+    else if (rig.activated) reject(`${rig.name} has already activated this round.`);
+    else {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
       rig.smokeNextActivation = false; // Pop Smoke (Reactive Plating) lasts until this Rig's next activation
       rig.fireControlUsed = false; // Targeting Computer first-shot compensator resets each activation
@@ -2922,18 +2959,25 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "action") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
-    if (rig && t && !room.game.pendingReaction &&
-        room.game.phase === "activation" && t.activeRigId === rig.id) {
-      changed = performAction(room, rig, String(a.action || "").toLowerCase(), a, options.random);
-    }
+    if (!rig) reject("No such unit.");
+    else if (room.game.phase !== "activation") reject("Actions can only be taken during the activation phase.");
+    else if (!t) reject("No active turn.");
+    else if (room.game.pendingReaction) reject("Resolve the pending reaction first.");
+    else if (t.activeRigId !== rig.id) reject(`${rig.name} isn't the active unit — activate it first.`);
+    // performAction records its own per-rule reason on a no-op.
+    else changed = performAction(room, rig, String(a.action || "").toLowerCase(), a, options.random);
     // The shot (or its declaration) is over — drop the telegraph so the
     // defender's overlay yields to the dice/recap.
     room.game.pendingThreat = null;
   } else if (verb === "endactivation") {
     const rig = findRig(room, a.name);
     const t = room.game.turn;
-    if (rig && t && !room.game.pendingReaction &&
-        room.game.phase === "activation" && t.activeRigId === rig.id) {
+    if (!rig) reject("No such unit.");
+    else if (room.game.phase !== "activation") reject("No activation to end.");
+    else if (!t) reject("No active turn.");
+    else if (room.game.pendingReaction) reject("Resolve the pending reaction first.");
+    else if (t.activeRigId !== rig.id) reject(`${rig.name} isn't the active unit.`);
+    else {
       endActivation(room, rig, a.dice, options.random);
       changed = true;
     }
@@ -3001,8 +3045,11 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "answer") {
     const rig = findRig(room, a.name);
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
-    if (rig && sideId && (rig.owner || "a") === sideId &&
-        room.game.answerTokens[sideId] > 0 && rig.preparation == null) {
+    if (!rig || !sideId) reject("No such unit.");
+    else if ((rig.owner || "a") !== sideId) reject("You can only Answer with your own rig.");
+    else if (!(room.game.answerTokens[sideId] > 0)) reject("No Answer tokens left.");
+    else if (rig.preparation != null) reject(`${rig.name} is already prepared.`);
+    else {
       rig.preparation = { type: normalizeAnswerPrep(a.prep, rig), source: "answer", faceUp: false };
       room.game.answerTokens[sideId] -= 1;
       if (room.game.pendingAnswer && room.game.pendingAnswer.side === sideId) {
@@ -3016,7 +3063,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "react") {
     const pr = room.game.pendingReaction;
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
-    if (pr && sideId === pr.defender) {
+    if (!pr) reject("There's no pending reaction to resolve.");
+    else if (sideId !== pr.defender) reject("This reaction isn't yours to make.");
+    else {
       const reactor = room.rigs.find((x) => x.id === pr.targetId);   // the prepared rig
       const attacker = room.rigs.find((x) => x.id === pr.attackerId);
       if (pr.kind === "evasive" && reactor && attacker) {
@@ -3193,8 +3242,26 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       while (room._history.length > UNDO_LIMIT) room._history.shift();
     }
     room.version++;
+  } else if (!_rejectionReason) {
+    // No branch matched (unknown verb, missing target, or a rare admin no-op that
+    // doesn't record its own reason). Give the preflight/409 a generic fallback so
+    // it never reports "rejected" with an empty why.
+    reject("This command can't be applied right now.");
   }
   return room;
+}
+
+// Preflight: would this command change anything? Runs applyCommand on a throwaway
+// deep clone (rooms are JSON state) and reads the version delta as the
+// authoritative "did it apply" signal, surfacing the recorded per-rule reason
+// when it wouldn't. Mutates nothing on the real room. Used by /command/check so
+// the UI can block an illegal action before showing its wizard, and explain why.
+export function checkCommand(room, cmd, context = {}, options = {}) {
+  const clone = cloneState(room);
+  const before = clone.version;
+  applyCommand(clone, cmd, context, options);
+  if (clone.version !== before) return { ok: true, reason: null };
+  return { ok: false, reason: lastRejectionReason() || "This command can't be applied right now." };
 }
 
 // The room view sent to clients — omit internal bookkeeping.

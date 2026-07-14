@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useCallback,
+  useEffect,
   useRef,
   type ReactNode,
 } from "react";
@@ -11,6 +12,8 @@ import { useV2Drawer } from "./V2DrawerContext";
 import { useV2Roll } from "./V2RollContext";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useV2Commands } from "../hooks/useV2Commands";
+import { useCommandCheck } from "../hooks/useCommandCheck";
+import { onCommandRejected } from "../../state/commandRejectionBus";
 import { playAction } from "../audio/actionAudio";
 import { useMySide } from "../../hooks/useMySide";
 import MoveBody from "../battle/MoveBody";
@@ -50,7 +53,46 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   const { openDrawer, closeDrawer } = useV2Drawer();
   const { promptDice } = useV2Roll();
   const sendCommand = useV2Commands();
+  const checkCommand = useCommandCheck();
   const { game, rigs } = useRoomState();
+
+  // A blocking, dismissable dialog explaining why an action was refused. Fed both
+  // by the preflight below (before a wizard opens) and, via the rejection bus, by
+  // a server 409 on submit (see useCommands) — so an illegal action is always
+  // explained, whichever layer catches it.
+  const showRejection = useCallback(
+    (reason: string) => {
+      openDrawer({
+        title: "⛔ Action blocked",
+        tone: "ember",
+        render: () => (
+          <p style={{ margin: 0, lineHeight: 1.5 }} role="alert">
+            {reason}
+          </p>
+        ),
+        actions: [{ label: "OK", primary: true, onClick: () => closeDrawer() }],
+      });
+    },
+    [openDrawer, closeDrawer],
+  );
+
+  // Surface server-side 409 rejections (raised on submit, after a wizard closed).
+  useEffect(() => onCommandRejected(showRejection), [showRejection]);
+
+  // Preflight before opening an action's wizard: if the server would refuse the
+  // command, show the reason and never open the wizard. Returns true when the
+  // caller may proceed.
+  const guardAction = useCallback(
+    async (verb: string, attrs: Record<string, unknown>): Promise<boolean> => {
+      const { ok, reason } = await checkCommand(verb, attrs);
+      if (!ok) {
+        showRejection(reason || "That action isn't allowed right now.");
+        return false;
+      }
+      return true;
+    },
+    [checkCommand, showRejection],
+  );
 
   const rigsRef = useRef(rigs);
   rigsRef.current = rigs;
@@ -86,6 +128,11 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const openMove = useCallback(
     (rig: Rig, key: string) => {
+      void (async () => {
+      // Preflight before showing the wizard — an illegal move (engaged, pinned,
+      // emplaced, no actions left, …) is explained up front instead of failing
+      // silently after the player commits.
+      if (!(await guardAction("action", { name: rig.name, action: key }))) return;
       // Spool the engine the moment the player selects to move (opens the wizard),
       // not when the move resolves. Dispatch-time cue is suppressed in useV2Commands.
       playAction(key);
@@ -114,12 +161,15 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
           />
         ),
       });
+      })();
     },
-    [openDrawer, closeDrawer, sendCommand],
+    [openDrawer, closeDrawer, sendCommand, guardAction],
   );
 
   const openRepair = useCallback(
     (rig: Rig, action: string) => {
+      void (async () => {
+      if (!(await guardAction("action", { name: rig.name, action }))) return;
       const auto = gameRef.current?.autoResolve;
       const isPatch = action === "emergencypatch";
       // Local mutable location; ChoiceField re-renders via the drawer's render fn,
@@ -159,18 +209,25 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
           },
         ],
       });
+      })();
     },
-    [openDrawer, closeDrawer, sendCommand, promptOneDie],
+    [openDrawer, closeDrawer, sendCommand, promptOneDie, guardAction],
   );
 
   const openPrepare = useCallback(
     (rig: Rig) => {
+      void (async () => {
+      if (!(await guardAction("action", { name: rig.name, action: "prepare" }))) return;
       const state: { prep: PrepType } = { prep: "brace" };
       const build = () => (
         <PrepareBody
           rigName={rig.name}
           allowShield={rig.weapons?.melee === "Bulwark Shield"}
           onChange={(v) => (state.prep = v)}
+          onConfirm={() => {
+            closeDrawer();
+            sendCommand("action", { name: rig.name, action: "prepare", prep: state.prep });
+          }}
         />
       );
       openDrawer({
@@ -179,23 +236,16 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
         render: build,
         actions: [
           { label: "Cancel", ghost: true, onClick: () => closeDrawer() },
-          {
-            label: "Set reaction",
-            primary: true,
-            icon: "🛡️",
-            onClick: () => {
-              closeDrawer();
-              sendCommand("action", { name: rig.name, action: "prepare", prep: state.prep });
-            },
-          },
         ],
       });
+      })();
     },
-    [openDrawer, closeDrawer, sendCommand],
+    [openDrawer, closeDrawer, sendCommand, guardAction],
   );
 
   const openSupport = useCallback(
     (rig: Rig, action: string) => {
+      void (async () => {
       const meta = SUPPORT_META[action];
       if (!meta) return;
       const pool = (rigsRef.current || []).filter((r) => !r.destroyed);
@@ -209,6 +259,10 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
               && (action !== "vent" || UNIT_KINDS[kindOf(r)]?.hasHeat),
           );
       if (!targets.length) return;
+      // Preflight with the first candidate target so the module/turn gate is
+      // checked while a real target still satisfies the target guard — the player
+      // refines the actual target in the wizard.
+      if (!(await guardAction("action", { name: rig.name, action, target: targets[0].name }))) return;
 
       const state: { target: string; loc: string } = {
         target: targets[0].name,
@@ -243,8 +297,9 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
           },
         ],
       });
+      })();
     },
-    [openDrawer, closeDrawer, sendCommand],
+    [openDrawer, closeDrawer, sendCommand, guardAction],
   );
 
   const sendReact = useCallback(

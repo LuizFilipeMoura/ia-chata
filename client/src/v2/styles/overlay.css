@@ -420,6 +420,31 @@
 .v2-root .v2-rx-choice-body { display: flex; flex-direction: column; gap: .15rem; }
 .v2-root .v2-rx-choice-label { font-family: var(--v2-disp); font-weight: 700; font-size:var(--v2-text-base); }
 .v2-root .v2-rx-choice-rule { font-family: var(--v2-mono); font-size:var(--v2-text-sm); color: var(--v2-txt-dim); line-height: 1.3; }
+.v2-root .v2-rx-choice { width: 100%; cursor: pointer; }
+/* Confirm expansion — tucks under the selected choice as one connected panel. */
+.v2-root .v2-rx-item.is-open .v2-rx-choice { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.v2-root .v2-rx-confirm {
+  overflow: hidden;
+  border: 1px solid var(--v2-oil); border-top: 0;
+  border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;
+  background: linear-gradient(180deg, var(--v2-oil-wash), var(--v2-iron-850));
+  padding: .5rem; animation: v2-rx-confirm-in .18s ease both;
+}
+.v2-root .v2-rx-confirm-btn {
+  display: flex; align-items: center; justify-content: center; gap: .4rem; width: 100%;
+  padding: .5rem .7rem; border-radius: 8px; cursor: pointer;
+  font-family: var(--v2-disp); font-weight: 700; font-size: var(--v2-text-base);
+  color: #10130f; background: var(--v2-oil); border: 1px solid var(--v2-oil-hi);
+}
+.v2-root .v2-rx-confirm-btn:active { transform: translateY(1px); }
+.v2-root .v2-rx-confirm-ic { line-height: 1; }
+@keyframes v2-rx-confirm-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-root .v2-rx-confirm { animation: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .v2-root .v2-die.rolling { animation: none; }

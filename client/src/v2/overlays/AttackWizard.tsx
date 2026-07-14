@@ -157,7 +157,7 @@ interface WeaponUpgradeNotice {
 // Per-rig recall of the last shot: whom this Rig fired on and the measured
 // distance. Survives drawer close (the wizard remounts on each open) so the
 // next attack opens pre-aimed at the same foe and range. Keyed by rig id.
-const LAST_SHOT = new Map<string, { target?: string; inches?: number }>();
+const LAST_SHOT = new Map<number, { target?: string; inches?: number }>();
 
 function selectedUpgrade(
   rig: Rig,

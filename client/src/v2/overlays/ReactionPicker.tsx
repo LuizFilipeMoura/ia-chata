@@ -32,6 +32,11 @@ interface Props {
   onChange: (v: PrepType) => void;
   allowShield?: boolean; // true when the acting Rig carries a Bulwark Shield
   answerMode?: boolean;  // true in the Answer-token gate — unlocks the three counters
+  // When set, the confirm control renders inline as an expansion beneath the
+  // selected reaction (instead of a footer button on the drawer).
+  onConfirm?: () => void;
+  confirmLabel?: string;
+  confirmIcon?: string;
 }
 
 // Native V2 port of V1's ReactionPicker. The shared reaction chooser used by both
@@ -39,7 +44,10 @@ interface Props {
 // the send. Retagged with `v2-rx-*` classes so the V2 stylesheet owns it.
 // The three Answer counters (Riposte / Sidestep / Exploit Opening) are
 // Answer-exclusive and only render when `answerMode` is set.
-export default function ReactionPicker({ value, onChange, allowShield = false, answerMode = false }: Props) {
+export default function ReactionPicker({
+  value, onChange, allowShield = false, answerMode = false,
+  onConfirm, confirmLabel = "Set reaction", confirmIcon,
+}: Props) {
   const options = [
     ...BASE_REACTIONS,
     ...(answerMode ? ANSWER_COUNTERS : []),
@@ -47,20 +55,34 @@ export default function ReactionPicker({ value, onChange, allowShield = false, a
   ];
   return (
     <div className="v2-rx-picker">
-      {options.map((r) => (
-        <button
-          key={r.value}
-          type="button"
-          className={"v2-rx-choice" + (r.value === value ? " is-sel" : "")}
-          onClick={() => onChange(r.value)}
-        >
-          <span className="v2-rx-choice-ic" aria-hidden="true">{r.icon}</span>
-          <span className="v2-rx-choice-body">
-            <span className="v2-rx-choice-label">{r.label}</span>
-            <span className="v2-rx-choice-rule">{r.rule}</span>
-          </span>
-        </button>
-      ))}
+      {options.map((r) => {
+        const selected = r.value === value;
+        return (
+          <div key={r.value} className={"v2-rx-item" + (selected ? " is-open" : "")}>
+            <button
+              type="button"
+              className={"v2-rx-choice" + (selected ? " is-sel" : "")}
+              onClick={() => onChange(r.value)}
+            >
+              <span className="v2-rx-choice-ic" aria-hidden="true">{r.icon}</span>
+              <span className="v2-rx-choice-body">
+                <span className="v2-rx-choice-label">{r.label}</span>
+                <span className="v2-rx-choice-rule">{r.rule}</span>
+              </span>
+            </button>
+            {selected && onConfirm ? (
+              <div className="v2-rx-confirm">
+                <button type="button" className="v2-rx-confirm-btn" onClick={onConfirm}>
+                  {confirmIcon ? (
+                    <span className="v2-rx-confirm-ic" aria-hidden="true">{confirmIcon}</span>
+                  ) : null}
+                  <span>{confirmLabel}</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  createRoom, makeRig, makeUnit, claimSide, applyCommand, findRig,
+  createRoom, makeRig, makeUnit, claimSide, applyCommand, checkCommand, lastRejectionReason, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
   EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
@@ -4626,4 +4626,76 @@ test("pendingThreat clears once the shot resolves", () => {
     arc: "front", range: "near", distance: 6, cover: 0,
   } });
   assert.equal(room.game.pendingThreat, null);
+});
+
+// --- Rejection reasons + checkCommand preflight (spec: 40x on unapplied command) ---
+
+test("checkCommand approves a legal action without mutating the room", () => {
+  const { room } = battleMidActivation();
+  const before = JSON.stringify(room);
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Atk", action: "move" } });
+  assert.equal(res.ok, true);
+  assert.equal(res.reason, null);
+  // Dry-run touches only a throwaway clone.
+  assert.equal(JSON.stringify(room), before);
+});
+
+test("checkCommand rejects an action on a unit that isn't active, with a reason", () => {
+  const { room } = battleMidActivation();
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Def", action: "move" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /active unit/i);
+});
+
+test("checkCommand rejects an unknown unit with a reason", () => {
+  const { room } = battleMidActivation();
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Ghost", action: "move" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /no such unit/i);
+});
+
+test("checkCommand surfaces a per-rule reason: can't move while engaged", () => {
+  const { room, a, b } = battleMidActivation();
+  a.engagedWith = b.id;
+  b.engagedWith = a.id;
+  const res = checkCommand(room, { verb: "action", attrs: { name: "Atk", action: "move" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /engaged/i);
+});
+
+test("checkCommand rejects activating an opponent's rig with a reason", () => {
+  const room = createRoom("REJ01");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "Atk", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  applyCommand(room, { verb: "add", attrs: { name: "Def", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword" } });
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  const res = checkCommand(room, { verb: "activate", attrs: { name: "Def" } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /isn't your side's turn|already/i);
+});
+
+test("applyCommand records lastRejectionReason on a no-op action", () => {
+  const { room } = battleMidActivation();
+  const before = room.version;
+  applyCommand(room, { verb: "action", attrs: { name: "Def", action: "move" } });
+  assert.equal(room.version, before); // nothing changed
+  assert.match(lastRejectionReason(), /active unit/i);
+});
+
+test("applyCommand clears the rejection reason on a command that does apply", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "action", attrs: { name: "Ghost", action: "move" } }); // sets a reason
+  assert.notEqual(lastRejectionReason(), null);
+  applyCommand(room, { verb: "action", attrs: { name: "Atk", action: "move" } }); // applies
+  assert.equal(lastRejectionReason(), null);
+});
+
+test("checkCommand falls back to a generic reason for an unknown verb", () => {
+  const { room } = battleMidActivation();
+  const res = checkCommand(room, { verb: "nonsense", attrs: {} });
+  assert.equal(res.ok, false);
+  assert.equal(typeof res.reason, "string");
+  assert.ok(res.reason.length > 0);
 });

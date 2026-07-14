@@ -7,11 +7,12 @@ import "../styles/overlay.css";
 // the ReactionPicker re-renders on each pick; onChange mirrors it to the drawer's
 // ref-backed state for the Confirm handler (matches RepairBody's pattern).
 export default function PrepareBody({
-  rigName, allowShield, onChange,
+  rigName, allowShield, onChange, onConfirm,
 }: {
   rigName: string;
   allowShield: boolean;
   onChange: (v: PrepType) => void;
+  onConfirm: () => void;
 }) {
   const [prep, setPrep] = useState<PrepType>("brace");
   return (
@@ -22,6 +23,8 @@ export default function PrepareBody({
       <ReactionPicker
         value={prep}
         allowShield={allowShield}
+        onConfirm={onConfirm}
+        confirmIcon="🛡️"
         onChange={(v) => {
           setPrep(v);
           onChange(v);

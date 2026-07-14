@@ -63,8 +63,8 @@ test("the default chassis shows its dieselpunk codename", async () => {
   const user = userEvent.setup();
   renderWizard();
   await advanceToWeapons(user);
-  // light-claw-autocannon is named "Ironjaw".
-  expect(screen.getAllByText("Ironjaw").length).toBeGreaterThan(0);
+  // light-claw-autocannon is named "Gold".
+  expect(screen.getAllByText("Gold").length).toBeGreaterThan(0);
 });
 
 test("selecting a Prototype on one weapon disables Prototype on the other", async () => {
@@ -86,11 +86,11 @@ test("commissioning posts an add command with the chassis codename and fixed loa
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.click(screen.getByRole("button", { name: "Commission" }));
-  // Default chassis is the first entry: light Claw · Autocannon, codename Ironjaw.
+  // Default chassis is the first entry: light Claw · Autocannon, codename Gold.
   expect(sendCommand).toHaveBeenCalledWith(
     "add",
     expect.objectContaining({
-      name: "Ironjaw", class: "light", owner: "a",
+      name: "Gold", class: "light", owner: "a",
       chassis: "light-claw-autocannon", lr: "Autocannon", melee: "Claw",
     }),
   );
