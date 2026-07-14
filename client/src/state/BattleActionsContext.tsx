@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { HEAT_CAPACITY } from "/shared/game-state.js";
+import { HEAT_CAPACITY, rigEffects } from "/shared/game-state.js";
 import { useDrawer } from "./DrawerContext";
 import { useRoll } from "./RollContext";
 import { useRoomState } from "./RoomStateContext";
@@ -74,9 +74,10 @@ function MoveBody({
   // Per-chassis Speed wins; fall back to the weight-class map for support units,
   // free-combo rigs, and pre-speed saves.
   const base = rig.speed ?? SPEED[rig.weightClass] ?? 8;
-  // Sprint is 1½× Speed, rounded to a whole inch so table measuring stays clean.
-  const dist = sprint ? Math.round(base * 1.5) : base;
-  const heat = sprint ? (rig.equipment === "servo-actuators" ? 1 : 2) : 1;
+  // Sprint reach and heat are both loadout-derived; rigEffects is the one
+  // read-model that resolves them (V2's MoveBody reads the same values).
+  const dist = sprint ? Math.round(base * rigEffects(rig).sprintMult) : base;
+  const heat = sprint ? rigEffects(rig).actionHeat.sprint : 1;
   const holdMs = holdMsFor(actionKey);
   const holdSec = Math.round(holdMs / 1000);
 
@@ -84,7 +85,7 @@ function MoveBody({
   const [pct, setPct] = useState(0);
   const done = remaining <= 0;
   // Move and Sprint each spend one action slot; both generate heat (Move +1,
-  // Sprint +2 / +1 with Servo Actuators). You may repeat them within the budget.
+  // Sprint +2 / +1 with Servo Actuators). Repeat them within the budget.
   const costNote = `Costs 1 action · +${heat} heat`;
 
   useEffect(() => {
