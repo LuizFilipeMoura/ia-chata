@@ -302,6 +302,21 @@ test("availableActions disables Jump Jets while engaged", () => {
   assert.equal(jj.enabled, false);
 });
 
+test("Move is hidden when Sprint costs no more than Move (Servo Actuators)", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const servo = availableActions(rig({ equipment: "servo-actuators" }), turn);
+  assert.ok(!servo.some((a) => a.key === "move"), "Move dropped for Servo Actuators");
+  assert.ok(servo.some((a) => a.key === "sprint"), "Sprint stays");
+  const bare = availableActions(rig(), turn);
+  assert.ok(bare.some((a) => a.key === "move"), "Move stays without the discount");
+});
+
+test("Move stays for cold kinds (no Sprint to dominate it)", () => {
+  const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
+  const acts = availableActions(tank, { actionsMax: 2, actionsUsed: 0, longRangeShots: 0 });
+  assert.ok(acts.some((a) => a.key === "move"), "cold kind keeps Move");
+});
+
 test("module actions appear only for units carrying the matching module", () => {
   const turn = { actionsUsed: 0, actionsMax: 3 };
   const welder = { kind: "walker", modules: ["repair", "recon"], loaded: { unit: true }, weapons: { unit: "Sidearm" } };
