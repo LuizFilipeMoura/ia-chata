@@ -1,6 +1,6 @@
 import {
-  EQUIPMENT, WEAPON_UPGRADES, CHASSIS, randomEquipment,
-  WEAPONS, UNIT_WEAPONS,
+  EQUIPMENT, EQUIPMENT_UPGRADES, WEAPON_UPGRADES, CHASSIS, randomEquipment,
+  rigEffects, WEAPONS, UNIT_WEAPONS,
 } from "/shared/game-state.js";
 import type { Rig } from "../state/types";
 
@@ -22,6 +22,7 @@ export interface LoadoutWeapon {
 export interface LoadoutEquipment {
   family: string; label: string; passive: string;
   activeLabel: string; activeHeat: number; activeText: string;
+  upName?: string; upNature?: string; upTag?: string;
 }
 export interface Loadout {
   /** Flat-pick kinds (Tank / Walker) carry one `unit` weapon; Rigs carry lr + melee. */
@@ -76,9 +77,15 @@ function weapon(rig: Rig, slot: Slot): LoadoutWeapon {
 export function buildLoadout(rig: Rig): Loadout | null {
   if (!rig.weapons) return null;
   const eqDef = rig.equipment ? EQUIPMENT[rig.equipment] : undefined;
+  const eqUp = rig.equipment && rig.equipmentUpgrade
+    ? (EQUIPMENT_UPGRADES[rig.equipment] || []).find((u) => u.id === rig.equipmentUpgrade)
+    : undefined;
   const equipment = eqDef ? {
     family: eqDef.family, label: eqDef.label, passive: eqDef.passive,
-    activeLabel: eqDef.active.label, activeHeat: eqDef.active.heat, activeText: eqDef.active.text,
+    activeLabel: eqDef.active.label,
+    activeHeat: rigEffects(rig).actionHeat[eqDef.active.key],
+    activeText: eqDef.active.text,
+    upName: eqUp?.name, upNature: eqUp?.nature, upTag: eqUp?.tag,
   } : null;
   // Cold kinds (Tank / Walker) store a single flat-pick weapon under `unit`.
   if (rig.weapons.unit) {
