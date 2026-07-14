@@ -1984,6 +1984,9 @@ function resolveFire(room, rig, target, a, act, random) {
     fullAuto: a.fullAuto === true || a.fullAuto === "true",
     charged: a.charged === true || a.charged === "true",
     fireControlFirst,
+    // Predictive Tracking (Fire Control Tuned) — the target counts as pinned when
+    // it is immobilised, suppression-pinned, held in a melee lock, or emplaced.
+    targetPinned: !!(target.immobilised || target.suppressImmobile || target.engagedWith != null || target.emplaced),
     dice: a.dice,
   }, random, combatCtx());
   if (!res.ok) return false;

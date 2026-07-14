@@ -64,6 +64,26 @@ test("Pop Smoke worsens an attacker's modified Aim by 2", () => {
   assert.equal(smoked - clear, 2);
 });
 
+test("Predictive Tracking: +2 ACC and ignores cover vs a pinned target", () => {
+  const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "predictive-tracking" };
+  const mg = WEAPONS.longRange["Mini Gun"];
+  // distance:12 is chosen (not the plan's distance:7) because Mini Gun's own
+  // `sweet` is 7 — at that distance Ballistic Processor's unrelated sweetBandAcc
+  // bonus would also fire and confound the "wrong upgrade" check below. 12 is
+  // outside Mini Gun's sweet band (|12-7| > 2), isolating Predictive Tracking.
+  const openField = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: false });
+  const pinned    = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: true });
+  // +2 ACC lowers the aim number by 2, and the 2 points of cover are ignored
+  // (−2 more) → the pinned aim number is 4 lower.
+  assert.equal(openField - pinned, 4);
+  // The wrong Fire-Control upgrade (Field) never triggers, even vs a pinned target.
+  const ballistic = { ...attacker, equipmentUpgrade: "ballistic-processor" };
+  assert.equal(
+    computeModifiedAim(ballistic, mg, { distance: 12, cover: 2, targetPinned: true }),
+    openField,
+  );
+});
+
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
   const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, acc [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3

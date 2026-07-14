@@ -52,10 +52,17 @@ export function computeModifiedAim(attacker, profile, opts) {
   // Pop Smoke (Countermeasures active) — every attacker is at −2 ACC against a
   // rig hidden in its own smoke, until that rig's next activation.
   const smoke = opts.targetSmoke ? -2 : 0;
+  // Predictive Tracking (Fire Control Tuned) — vs a static/pinned/immobilised
+  // target the shot ignores cover and gains +2 ACC. `opts.targetPinned` is set by
+  // the fire path (game-state.js). Read the effect live from the catalog by id;
+  // combat.js imports only rules.js, so no game-state cycle.
+  const predictive = attacker.equipment === "targeting-computer" && !profile.melee && !!opts.targetPinned
+    && !!equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.predictiveTracking;
+  const predictiveAcc = predictive ? 2 : 0;
   // Targeting Computer passive — the first Fire this activation ignores cover
   // and the engaged −2 (opts.fireControlFirst is set once per activation by the
   // fire path). Read directly off the attacker to avoid a game-state import cycle.
-  const coverEff = opts.fireControlFirst ? 0 : cover;
+  const coverEff = (opts.fireControlFirst || predictive) ? 0 : cover;
   const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
   // Ballistic Processor (Field) — ACC bonus when the measured distance is within
   // the weapon's sweet band (|distance − sweet| ≤ 2). The bonus magnitude is read
@@ -65,7 +72,7 @@ export function computeModifiedAim(attacker, profile, opts) {
   // other targeting-computer upgrades resolve to 0.
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
   const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAcc ?? 0) : 0;
-  const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic;
+  const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAcc;
   return base - accTotal;
 }
 
