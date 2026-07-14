@@ -1950,7 +1950,7 @@ test("equipmentUpgradeEffectOf resolves from the catalog by id", () => {
     equipmentUpgradeEffectOf("ablative-plating", "reinforced-plating"),
     { hardenImpact: 2 },
   );
-  assert.deepEqual(equipmentUpgradeEffectOf("ablative-plating", "reactive-armor"), {}); // inert row → {}
+  assert.deepEqual(equipmentUpgradeEffectOf("ablative-plating", "ablative-cascade"), {}); // inert row → {}
   assert.deepEqual(equipmentUpgradeEffectOf("servo-actuators", "unknown"), {});         // unknown id → {}
   assert.deepEqual(equipmentUpgradeEffectOf(null, null), {});                            // no equipment → {}
 });
@@ -2308,6 +2308,16 @@ test("harden requires Ablative Plating, costs 1 slot + 1 heat, and sets rig.hard
   assert.equal(rig.hardened, true);
   assert.equal(rig.engine.heat, 1);
   assert.equal(r.game.turn.actionsUsed, usedBefore + 1);
+});
+
+test("Recovery clears reactiveArmorLocs so Reactive Armor re-arms next round", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "ablative-plating" });
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "reactive-armor";
+  rig.equipState.reactiveArmorLocs.push("hull", "legs");
+  __test.runRecovery(r);
+  assert.deepEqual(rig.equipState.reactiveArmorLocs, []);
 });
 
 test("popsmoke requires Reactive Plating and sets rig.smokeNextActivation", () => {

@@ -376,6 +376,26 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
 // injected `ctx.spendHeat(n)` mutator that game-state.js wires to bumpHeat. This
 // is a pure pass-through today (no consumers): it returns the hit unchanged.
 export function applyDefensiveReactions(target, hit, ctx) {
+  // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging hit each round
+  // to a location hardens THAT location by −2 impact (Harden-equivalent) until
+  // this rig's next activation; further damaging hits to a hardened location
+  // soften too. The per-round list is cleared in Recovery (refreshEquipState).
+  // Impact-stage only, and only for a hit that actually deals damage: the seam is
+  // reached for every severity-resolved hit including zero-damage ones, so gate
+  // on hit.sp before recording or softening.
+  if (hit.kind === "impact" && hit.sp > 0
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.reactiveArmor) {
+    const locs = target.equipState?.reactiveArmorLocs;
+    if (locs) {
+      if (!locs.includes(ctx.location)) locs.push(ctx.location); // first damaging hit hardens it
+      const total = hit.total - 2;
+      const sev = impactSeverity(total, ctx.row);
+      // −2 impact can only hold or lower severity; never let the re-derive raise it
+      // above the resolved hit (e.g. a machine-gun crit already capped to Severe).
+      const sp = Math.min(hit.sp, sev.sp);
+      return { ...hit, total, sp, tier: sp === hit.sp ? hit.tier : sev.tier };
+    }
+  }
   return hit;
 }
 

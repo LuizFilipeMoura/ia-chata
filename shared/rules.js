@@ -109,7 +109,7 @@ export function shieldCoverage(rig) {
 export const EQUIPMENT_UPGRADES = {
   "ablative-plating": [
     { id: "reinforced-plating", nature: "field", name: "Reinforced Plating", tag: "Harden gives −2 impact, not −1", effect: { hardenImpact: 2 } },
-    { id: "reactive-armor", nature: "tuned", name: "Reactive Armor", tag: "First hit each round hardens that location", effect: {} }, // TODO(mechanics)
+    { id: "reactive-armor", nature: "tuned", name: "Reactive Armor", tag: "First hit each round hardens that location", effect: { reactiveArmor: true } },
     { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits — each costs heat", catch: "Each charge costs heat", effect: {} }, // TODO(mechanics)
   ],
   "radiator-array": [

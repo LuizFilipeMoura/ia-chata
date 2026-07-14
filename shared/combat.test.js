@@ -1352,3 +1352,46 @@ test("Taut Cable: +3 STR vs an immobilised or engaged target, else nothing", () 
   assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 15);
   assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 15);
 });
+
+test("applyDefensiveReactions is an identity pass-through for a defender with no reactive gear", () => {
+  const target = { weightClass: "medium" }; // no equipment, no equipState
+  const hit = { die: 5, total: 12, tier: "direct", sp: 1, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: null });
+  assert.deepEqual(out, hit);
+});
+
+test("Reactive Armor hardens the struck location on the first damaging hit each round (−2 impact)", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null };
+  const reactive = {
+    weightClass: "medium", hardened: false, preparation: null,
+    equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
+    equipState: { reactiveArmorLocs: [] },
+  };
+  // d6=5 → plain hull total = 5 + 8 + 0(front) = 13
+  const outPlain = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  const outReactive = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(outPlain[0].total - outReactive[0].total, 2);        // −2 impact, Harden-equivalent
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // that location is now hardened
+
+  // A second volley to the SAME hardened location still softens and does not re-record.
+  const outReactive2 = rollImpacts({ weightClass: "medium" }, reactive, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(outPlain[0].total - outReactive2[0].total, 2);
+  assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // no duplicate
+});
+
+test("Reactive Armor does not fire for a rig carrying only the base Ablative Plating", () => {
+  const auto = WEAPONS.longRange["Autocannon"];
+  const base = {
+    weightClass: "medium", hardened: false, preparation: null,
+    equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating",
+    equipState: { reactiveArmorLocs: [] },
+  };
+  const out = rollImpacts({ weightClass: "medium" }, base, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out[0].total, 13);                          // no reactive dock
+  assert.deepEqual(base.equipState.reactiveArmorLocs, []);  // nothing hardened
+});

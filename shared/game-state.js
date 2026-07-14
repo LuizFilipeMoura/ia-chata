@@ -1811,7 +1811,10 @@ function handoff(room) {
 function refreshEquipState(rig) {
   const s = rig.equipState;
   if (!s) return;
-  // (branches added by Group 2/3/4)
+  // Reactive Armor (Tuned) — the per-round "hardened that location" flags reset,
+  // so the first damaging hit next round re-hardens.
+  if (Array.isArray(s.reactiveArmorLocs)) s.reactiveArmorLocs.length = 0;
+  // (Group 3/4 branches added below.)
 }
 
 function runRecovery(room) {
