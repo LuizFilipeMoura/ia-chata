@@ -1995,6 +1995,19 @@ function resolveFire(room, rig, target, a, act, random) {
   // ignores cover + engaged accuracy penalties. Threaded into computeModifiedAim
   // via opts.fireControlFirst; consumed once the shot actually resolves below.
   const fireControlFirst = rig.equipment === "targeting-computer" && !rig.fireControlUsed;
+  // Chaff Burst (Reactive Plating, Tuned) — a smoked rig that gets targeted may
+  // take a free half-Speed side-step before the attack resolves. Spatial → narrate
+  // the instruction; the player moves the model (AGENTS.md "narrate, don't
+  // simulate"). Free whenever Smoke is up, so there is no cadence to track.
+  if (target.smokeNextActivation
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.chaffBurst) {
+    const step = Number.isFinite(target.speed) ? `${Math.floor(target.speed / 2)}" ` : "half-Speed ";
+    pushResolution(room, {
+      kind: "perk", actor: target.owner, rigId: target.id, rolls: [],
+      summary: `Chaff Burst — ${target.name} has Smoke up: it may take a free ${step}side-step before the attack resolves (move the mini).`,
+      effects: ["Chaff Burst — free side-step under smoke"],
+    });
+  }
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,

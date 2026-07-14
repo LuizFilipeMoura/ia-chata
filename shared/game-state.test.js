@@ -2323,6 +2323,36 @@ test("Recovery clears reactiveArmorLocs so Reactive Armor re-arms next round", (
   assert.deepEqual(rig.equipState.reactiveArmorLocs, []);
 });
 
+test("Chaff Burst narrates a free side-step when a smoked Reactive-Plating rig is targeted", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const target = findRig(r, "a1");
+  target.equipment = "reactive-plating";
+  target.equipmentUpgrade = "chaff-burst";
+  target.smokeNextActivation = true; // Smoke up from an earlier Pop Smoke
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], impacts: [1], location: 1 },
+  } });
+  assert.ok(r.game.resolutions.some((e) => /Chaff Burst/.test(e.summary || "")));
+});
+
+test("Chaff Burst stays silent when the targeted rig has no Smoke up", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const target = findRig(r, "a1");
+  target.equipment = "reactive-plating";
+  target.equipmentUpgrade = "chaff-burst";
+  target.smokeNextActivation = false;
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
+    dice: { toHit: [1, 1], impacts: [1], location: 1 },
+  } });
+  assert.equal(r.game.resolutions.some((e) => /Chaff Burst/.test(e.summary || "")), false);
+});
+
 test("popsmoke requires Reactive Plating and sets rig.smokeNextActivation", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "reactive-plating" });
