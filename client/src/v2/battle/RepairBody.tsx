@@ -3,9 +3,10 @@ import ChoiceField from "../overlays/ChoiceField";
 import { LOC_CHOICES } from "./constants";
 import "../styles/overlay.css";
 
-// Location picker for the two repair-family actions (battle.js:430-461). The SP
-// figures include any Field Repair Suite bonus (bonusSp), so the drawer promises
-// exactly what the engine restores.
+// Location picker for the two repair-family actions (battle.js:430-461). Roll
+// figures include any Field Repair Suite bonus (bonusSp). Emergency Patch is a
+// flat guaranteed 2 SP — the engine does NOT add the suite bonus to the patch,
+// only to the dice Repair.
 export default function RepairBody({
   isPatch, auto, bonusSp, onChange,
 }: {
@@ -21,7 +22,7 @@ export default function RepairBody({
     <>
       <p className="v2-dwr-hint">
         {isPatch
-          ? `Restores a guaranteed ${hi} SP to the chosen location — no dice.`
+          ? `Restores a guaranteed 2 SP to the chosen location — no dice.`
           : auto
             ? `Rolls a D12: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`
             : `You'll roll a D12 next: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`}

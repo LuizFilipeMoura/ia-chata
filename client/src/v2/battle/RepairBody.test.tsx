@@ -15,8 +15,8 @@ describe("RepairBody copy reflects repair bonus", () => {
     expect(document.body.textContent).toContain("10+ restores 3 SP");
     expect(document.body.textContent).toContain("7–9 restores 2 SP");
   });
-  it("+1 suite patch: guaranteed 3 SP", () => {
+  it("patch is a flat guaranteed 2 SP even with a suite bonus", () => {
     render(<RepairBody isPatch bonusSp={1} auto={false} onChange={noop} />);
-    expect(document.body.textContent).toContain("guaranteed 3 SP");
+    expect(document.body.textContent).toContain("guaranteed 2 SP");
   });
 });
