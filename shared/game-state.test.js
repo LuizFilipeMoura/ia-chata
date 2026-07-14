@@ -13,7 +13,7 @@ import {
   UNIT_WEAPONS, normalizeUnitWeapon,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
-  chassisById, resolveChassis, SEED_ROSTER, CHASSIS,
+  chassisById, resolveChassis, SEED_ROSTER, SEED_ROSTER_4V4, CHASSIS, randomSeedRoster,
   heatMeter,
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
 } from "./game-state.js";
@@ -4347,6 +4347,58 @@ test("SEED_ROSTER is 6 entries, 3 per side, all chassis distinct", () => {
   assert.equal(SEED_ROSTER.filter((e) => e.owner === "b").length, 3);
   assert.equal(new Set(SEED_ROSTER.map((e) => e.chassis)).size, 6);
   for (const e of SEED_ROSTER) assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
+});
+
+test("seed preset 'rigs4' builds 4 rigs, 0 support per side, distinct chassis", () => {
+  const r = createRoom("SEED-4V4");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", preset: "rigs4" } });
+
+  assert.equal(r.game.started, true);
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  const support = r.rigs.filter((rig) => rig.kind === "tank" || rig.kind === "walker");
+  assert.equal(support.length, 0);
+  assert.equal(rigs.filter((rig) => rig.owner === "a").length, 4);
+  assert.equal(rigs.filter((rig) => rig.owner === "b").length, 4);
+  assert.equal(new Set(rigs.map((rig) => rig.chassis)).size, 8);
+});
+
+test("SEED_ROSTER_4V4 is 8 entries, 4 per side, all chassis distinct and resolvable", () => {
+  assert.equal(SEED_ROSTER_4V4.length, 8);
+  assert.equal(SEED_ROSTER_4V4.filter((e) => e.owner === "a").length, 4);
+  assert.equal(SEED_ROSTER_4V4.filter((e) => e.owner === "b").length, 4);
+  assert.equal(new Set(SEED_ROSTER_4V4.map((e) => e.chassis)).size, 8);
+  for (const e of SEED_ROSTER_4V4) assert.ok(resolveChassis({ chassis: e.chassis }), e.chassis);
+});
+
+test("seed preset 'random4' builds 4 rigs, 0 support per side, deterministic under a stub RNG", () => {
+  const r = createRoom("SEED-RND");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", preset: "random4" } }, {}, { random: () => 0 });
+
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  const support = r.rigs.filter((rig) => rig.kind === "tank" || rig.kind === "walker");
+  assert.equal(support.length, 0);
+  assert.equal(rigs.filter((rig) => rig.owner === "a").length, 4);
+  assert.equal(rigs.filter((rig) => rig.owner === "b").length, 4);
+  // random() === 0 → randomPick picks index 0 → every rig uses CHASSIS[0].
+  assert.ok(rigs.every((rig) => rig.chassis === CHASSIS[0].id));
+});
+
+test("randomSeedRoster returns 8 rig entries, 4 per side", () => {
+  const roster = randomSeedRoster(() => 0);
+  assert.equal(roster.length, 8);
+  assert.equal(roster.filter((e) => e.owner === "a").length, 4);
+  assert.equal(roster.filter((e) => e.owner === "b").length, 4);
+  assert.ok(roster.every((e) => e.chassis && e.prototype));
+});
+
+test("explicit roster overrides preset", () => {
+  const r = createRoom("SEED-OVR");
+  applyCommand(r, { verb: "seed", attrs: { first: "a", preset: "random4", roster: [
+    ...SEED_ROSTER.filter((e) => e.owner === "a"),
+    ...SEED_ROSTER.filter((e) => e.owner === "b"),
+  ] } });
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  assert.equal(rigs.length, 6); // the explicit 6-entry roster, not random4's 8
 });
 
 test("publicState exposes seeded and skips enemy face-down prep redaction when seeded", () => {

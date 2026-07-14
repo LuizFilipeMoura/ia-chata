@@ -118,6 +118,16 @@ export const SEED_ROSTER = [
   { name: "B3", owner: "b", chassis: "light-harpoon-anchor",   prototype: "melee" },     // Anchor → Ground Anchor
 ];
 
+// Curated 4v4 rigs-only roster (spec: 2026-07-14-seed-preset-rosters). Reuses
+// the 6 SEED_ROSTER entries and adds one more distinct chassis per side, keeping
+// the all-distinct / no-mirror-matchup invariant (AGENTS.md). No support units.
+export const SEED_ROSTER_4V4 = [
+  ...SEED_ROSTER.filter((e) => e.owner === "a"),
+  { name: "A4", owner: "a", chassis: "medium-crossbow-talon",    prototype: "longRange" },
+  ...SEED_ROSTER.filter((e) => e.owner === "b"),
+  { name: "B4", owner: "b", chassis: "light-wreckingball-double", prototype: "melee" },
+];
+
 // The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
 // entries omit `unit` — makeUnit fits the Sidearm automatically.
 
@@ -173,6 +183,22 @@ export const SEED_SUPPORT = [
   supportEntry("rocket-walker", "b"),
   supportEntry("gun-walker", "b"),
 ];
+
+// A random rigs-only 4v4 roster (spec: 2026-07-14-seed-preset-rosters): 4 per
+// side, each a random chassis with its Prototype upgrade on a random weapon
+// slot. Takes the seedable `random` so tests are deterministic and real launches
+// vary. Entry shape matches SEED_ROSTER; no support units.
+export function randomSeedRoster(random = Math.random) {
+  const out = [];
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 4; i++) {
+      const pb = randomPick(CHASSIS, random);
+      const prototype = randomPick(["longRange", "melee"], random);
+      out.push({ name: `${owner.toUpperCase()}${i}`, owner, chassis: pb.id, prototype });
+    }
+  }
+  return out;
+}
 
 export function chassisById(id) {
   if (!id) return null;
@@ -2743,9 +2769,16 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     // An explicit roster is used verbatim; the default seed bundles the 6-rig
     // SEED_ROSTER with its support units (tanks + walkers) so a tester gets the
     // full unit spread out of the box.
+    // An explicit roster wins. Otherwise a `preset` selects a known composition;
+    // omitted/unknown preset keeps the full-spread default (rigs + support).
+    const preset = String(a.preset || "").toLowerCase();
     const roster = Array.isArray(a.roster) && a.roster.length
       ? a.roster
-      : [...SEED_ROSTER, ...SEED_SUPPORT];
+      : preset === "rigs4"
+        ? SEED_ROSTER_4V4
+        : preset === "random4"
+          ? randomSeedRoster(options.random)
+          : [...SEED_ROSTER, ...SEED_SUPPORT];
     const first = normalizeSide(room, a.first) || "a";
     room.rigs = [];
     room.nextRigId = 1;
