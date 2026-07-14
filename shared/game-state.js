@@ -2224,6 +2224,7 @@ function performAction(room, rig, act, a, random) {
     if (rig.equipment !== equipId) return reject("This unit isn't carrying that equipment.");
     if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
     const active = EQUIPMENT[equipId].active;
+    const extra = []; // extra per-active narration lines (e.g. Backdraft STR bonus)
     t.actionsUsed += 1;
     if (act === "harden") rig.hardened = true;
     else if (act === "overclock") t.actionsMax += 2;
@@ -2248,13 +2249,20 @@ function performAction(room, rig, act, a, random) {
       // or the Insulated Core upgrade. The 3" AoE narration rides along on
       // active.text via the pushResolution below.
       const rawCap = HEAT_CAPACITY[rig.weightClass] ?? 5;
+      // Backdraft (Thermal Tuned) — the wave hits +1 STR per 2 heat the rig is
+      // over Capacity, measured BEFORE the vent below dumps that heat. Spatial:
+      // the bonus rides on the narrated AoE (the player applies the light hits).
+      const overCap = Math.max(0, (rig.engine.heat || 0) - rawCap);
+      const backdraftStr = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.backdraft
+        ? Math.floor(overCap / 2) : 0;
+      if (backdraftStr > 0) extra.push(`Backdraft — +${backdraftStr} STR to the 3" wave (banked heat over Capacity).`);
       rig.engine.heat = Math.min(rig.engine.heat, rawCap);
     }
     // purge / jumpjets need no extra state beyond the heat cost below.
     bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade));
     pushResolution(room, {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} uses ${active.label}.`, effects: [active.text],
+      summary: `${rig.name} uses ${active.label}.`, effects: [active.text, ...extra],
     });
     return true;
   }

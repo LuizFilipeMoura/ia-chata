@@ -2399,6 +2399,32 @@ test("Heat Purge Wave vents to the raw Heat Capacity and narrates the 3\" AoE", 
   assert.match(text, /3"/);
 });
 
+test("Backdraft adds +1 STR per 2 heat over Capacity to the narrated Heat Purge Wave", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "blast-furnace-core", a2: "blast-furnace-core" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "backdraft";
+  rig.engine.heat = 9; // Medium raw cap 5 → over by 4 → +2 STR
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  assert.equal(rig.engine.heat, 5); // still vents down to the raw class cap
+  const withBackdraft = r.game.resolutions.at(-1);
+  const text = `${withBackdraft.summary} ${withBackdraft.effects.join(" ")}`;
+  assert.match(text, /3"/);        // the AoE narration is preserved
+  assert.match(text, /\+2 STR/);   // and now carries the Backdraft bonus
+});
+
+test("Heat Purge Wave without Backdraft carries no STR bonus", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "blast-furnace-core" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1"); // default upgrade = Insulated Core (Field), no backdraft tag
+  rig.engine.heat = 9;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
+  const last = r.game.resolutions.at(-1);
+  assert.doesNotMatch(`${last.summary} ${last.effects.join(" ")}`, /STR/);
+});
+
 test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
