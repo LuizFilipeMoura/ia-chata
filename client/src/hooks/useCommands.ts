@@ -21,7 +21,10 @@ export function useCommands() {
           // The server rejected the command (409 "command not applied"): surface
           // the per-rule reason so the player learns why instead of the action
           // silently no-op'ing. Other errors fall through to the socket.
-          if (resp.status === 409) {
+          // `threat` is a cosmetic attack telegraph the player never explicitly
+          // invokes; its idempotent clear/declare no-ops legitimately don't bump
+          // version, so never turn one into a rejection banner.
+          if (resp.status === 409 && verb !== "threat") {
             try {
               const { reason } = await resp.json();
               if (reason) emitCommandRejected(reason);
