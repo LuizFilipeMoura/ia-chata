@@ -223,21 +223,88 @@ charge, firing into a rake's blind arc) is a mechanic.
 **Obsolete outright:** the machine-gun crit cap (`sev.tier === "critical" && profile.machineGun`)
 has nothing to cap — volume weapons are now bounded by D1 instead.
 
-## UI
+## UI — the resolution ledger
 
-The panel that prompted this work must show the roll that decided the outcome.
+**Requirement: the panel shows every input that fed the outcome.** Not a summary of it. The bug
+that started this work was a player looking at "2 hits · 4 weapon STR → 0 SP" with no way to
+answer their own question, and no amount of rebalancing fixes a panel that hides its arithmetic.
 
-- **Wound dice join `rolls`** as `wound 1..N`, toned pass/fail, so they animate in the DICE zone
-  beside the hit dice. Today's impact dice are rolled and discarded, which is why the player could
-  not answer "why 0 damage?".
+This is the largest single piece of the rewrite. It is not a tweak to the existing damage zone.
+
+### Why the current shape can't carry it
+
+`ResolutionBreakdown` is **one flat equation** — `terms[]`, one `total`, one `tier`, one `sp`
+(`client/src/state/types.ts`). The resolution it describes is actually four sequential steps, and
+each step has its own inputs, its own dice, and its own output. The flat shape can only ever show
+the last one, which is why the impact roll was invisible.
+
+The scale of what's being hidden: `computeModifiedAim` folds **eleven** inputs into a single
+`modAim` (`combat.js:75`) — base AIM by weight class, weapon ACC at the measured range, cover,
+aimed penalty, wrecked-hull penalty, engagement penalty, recon paint, smoke, ballistic sweet-band,
+predictive tracking. Five more alter ROF (Full Auto, Bloodletter, Redline Governor, Penetrator
+slow-cycle). The player currently sees none of them.
+
+### Shape
+
+Replace `terms`/`total`/`tier` with an ordered `steps[]`. Each step is self-describing, so the
+renderer never needs to know which rule produced a term:
+
+```js
+breakdown: {
+  actor, weapon, target,
+  steps: [
+    { kind: "hit",      target: 4,  terms: [...], dice: [...], out: "2 of 3 hit" },
+    { kind: "wound",    target: 7,  terms: [...], dice: [...], out: "1 of 2 wounded" },
+    { kind: "location", die: 2,     out: "hull" },
+    { kind: "damage",   terms: [...], out: "2 SP → hull" },
+  ],
+}
+```
+
+A `term` is `{ label, value, op?, tone? }` — reuse the existing `ResolutionTerm`.
+
+### What each step must show
+
+| Step | Target number | Terms (every one that applied) | Dice |
+|---|---|---|---|
+| **Hit** | `modAim` | base AIM (weight class), weapon ACC at distance, cover, aimed −2, wrecked hull −1, engaged −2, paint +1, smoke −2, ballistic sweet-band, predictive +2; ROF sources: base, Full Auto +2, Bloodletter, Redline, Penetrator slow | ROF × d6, pass/fail each; rerolls; 1s that added heat; Point-Defense rerolls |
+| **Wound** | `6 + T − S` | weapon base STR, weight mod, arc, every live STR upgrade (Cold Bore, charge, Opportunist, Taut Cable, Steady Aim, Reactor Overdrive, Piledriver momentum, Charged Shot), every defender modifier (Brace, Harden, Reactive Plating, shield blunt, Breach Grip crack); **effective STR and target T shown explicitly** | one d10 per landed hit, pass/fail; AP/Rend rerolls |
+| **Location** | — | aimed (no roll) vs rolled; Kneecapper remap when it fires | d12 |
+| **Damage** | — | wounds, weapon D, Evisceration +1 D, Ablative Cascade negations | — |
+
+**Show applied terms only.** A term that resolved to 0 is noise, not information — with ~30
+possible modifiers, rendering every zero would bury the two that mattered. The exception is the
+step's target number and, on the wound step, effective STR and T: those always render, because
+they are the answer to "why".
+
+**Auto-fails are steps, not absences.** A negating shield or a Raking front-arc must render as a
+wound step that says so (`shield negates — no wound roll`). A step that silently vanishes is the
+same failure as a hidden die.
+
+### Constraints
+
+- **Mobile first.** The originating screenshot is a phone. Four stacked term-lists will not fit;
+  each step needs a compact headline (target number + dice + outcome) with its terms as a wrapped
+  chip row beneath. Long modifier lists must not push the OK button off-screen.
+- **Animation order is the teaching tool.** `RollConsole` settles dice sequentially already. Steps
+  should reveal in resolution order — hit, then wound, then location, then damage — so the panel
+  *narrates* the rule rather than presenting a finished sum.
 - **Manual-dice mode prompts for wound dice.** `AttackWizard`'s `autoResolve === false` path builds
   its `promptDice` specs from ROF and asks only for hit dice + location; it must also ask for a d10
   per landed hit, and stop passing `impacts: toHit.map(() => undefined)`.
-- **The damage zone shows the wound line**: target's T for the struck location, the shot's
-  effective STR, and the resulting target number (`STR 4 vs T5 → 7+`).
-- `ResolutionBreakdown.tier` and the `direct/severe/critical` badge are **removed** — there are no
-  tiers. `total` is likewise gone. `sp` becomes wounds × D.
-- The glossary and any `InfoTerm` entries covering impact rows / severity need rewriting.
+
+### Removals
+
+- `ResolutionBreakdown.tier`, `.total`, and the `direct/severe/critical` badge — there are no
+  tiers. `RollConsole`'s `v2-rx-tier` and `v2-rx-total` render paths go with them.
+- `verdictLabel`'s tone→word map (`CRIT!`/`HIT!`/`FAILED!`) is to-hit vocabulary being reused for
+  impacts; each step should name its own outcome instead.
+- Glossary and `InfoTerm` entries covering impact rows and severity need rewriting to toughness /
+  wound roll.
+
+**The ledger is worth building for its own sake.** Every rule in this spec is inert to a player who
+cannot see it operate. The wound roll's readability — a flat 10% per STR point — only pays off if
+the panel shows the STR, the T, and the number they produced.
 
 ## Testing
 
@@ -250,6 +317,15 @@ The panel that prompted this work must show the roll that decided the outcome.
 - Sunder / Dismember fire on a wound (they gate on damage > 0 and were unreachable before).
 - Earned zeroes still zero: shield negate and Raking front-arc deal nothing on a natural 10.
 - Per-weapon D is applied per wound, not per hit.
+- **Ledger completeness** — the highest-value test in the suite, because it is the one that fails
+  when a future rule is added and forgotten. Resolve an attack with a modifier live at every step
+  (cover + smoke on the hit, an arc + a STR upgrade + a braced target on the wound, Evisceration on
+  the damage) and assert each appears as a term. A rule that moves a number but leaves no term is
+  the original bug returning.
+- Every step renders its dice: hit dice count equals effective ROF; wound dice count equals landed
+  hits; a wound step exists even when zero hits landed (it must say so, not vanish).
+- Auto-fails render as an explicit step: shield negate and Raking front-arc produce a wound step
+  stating the negation, not a missing one.
 - Expected-damage band holds: no weapon outside ~0.8–3.0 SP/volley vs a medium hull (Sidearm
   exempt).
 
