@@ -4,7 +4,7 @@ import {
   createRoom, makeRig, makeUnit, claimSide, applyCommand, checkCommand, lastRejectionReason, findRig,
   normalizeWeapon, WEAPONS, formatBattleState, publicState, __test,
   EQUIPMENT, EQUIPMENT_ACTIVE_BY_KEY, normalizeEquipment, WEAPON_UPGRADES,
-  EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId,
+  EQUIPMENT_UPGRADES, equipmentUpgradeNature, firstEquipmentUpgradeId, equipmentUpgradeEffectOf,
   normalizeEquipmentUpgrade, equipmentActiveHeat,
   equipmentSprintHeat, equipmentRepairBonus, rigEffects,
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
@@ -1949,6 +1949,16 @@ test("equipment upgrade helpers resolve", () => {
   assert.equal(equipmentUpgradeNature("ablative-plating", "ablative-cascade"), "prototype");
   assert.equal(equipmentUpgradeNature("ablative-plating", "nope"), null);
   assert.equal(firstEquipmentUpgradeId("ablative-plating"), "reinforced-plating");
+});
+
+test("equipmentUpgradeEffectOf resolves from the catalog by id", () => {
+  assert.deepEqual(
+    equipmentUpgradeEffectOf("ablative-plating", "reinforced-plating"),
+    { hardenImpact: 2 },
+  );
+  assert.deepEqual(equipmentUpgradeEffectOf("ablative-plating", "reactive-armor"), {}); // inert row → {}
+  assert.deepEqual(equipmentUpgradeEffectOf("servo-actuators", "unknown"), {});         // unknown id → {}
+  assert.deepEqual(equipmentUpgradeEffectOf(null, null), {});                            // no equipment → {}
 });
 
 test("normalizeEquipmentUpgrade validates + normalizes", () => {

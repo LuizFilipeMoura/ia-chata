@@ -100,3 +100,60 @@ export function shieldCoverage(rig) {
     ? { negate: ["front", "side"], blunt: ["rear"] }
     : { negate: ["front"], blunt: ["side", "rear"] };
 }
+
+// Equipment upgrades — mirrors WEAPON_UPGRADES. Each family offers one upgrade
+// of each nature (Field / Tuned / Prototype), picked at commission. The 8 Field
+// rows carry live effect tags (simple modifiers to existing hooks). The Tuned
+// and Prototype rows ship inert (`effect: {}`, TODO(mechanics)) and are wired in
+// follow-on plans, exactly as the weapon Prototypes did.
+export const EQUIPMENT_UPGRADES = {
+  "ablative-plating": [
+    { id: "reinforced-plating", nature: "field", name: "Reinforced Plating", tag: "Harden gives −2 impact, not −1", effect: { hardenImpact: 2 } },
+    { id: "reactive-armor", nature: "tuned", name: "Reactive Armor", tag: "First hit each round hardens that location", effect: {} }, // TODO(mechanics)
+    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits — each costs heat", catch: "Each charge costs heat", effect: {} }, // TODO(mechanics)
+  ],
+  "radiator-array": [
+    { id: "twin-radiators", nature: "field", name: "Twin Radiators", tag: "Purge vents −3, not −2", effect: { purgeHeat: -3 } },
+    { id: "coolant-injection", nature: "tuned", name: "Coolant Injection", tag: "−2 heat before the overheat roll when over Capacity", effect: {} }, // TODO(mechanics)
+    { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a STR spike", catch: "Must charge it up first", effect: {} }, // TODO(mechanics)
+  ],
+  "servo-actuators": [
+    { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint costs 0 heat", effect: { sprintHeat: 0 } },
+    { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: {} }, // TODO(mechanics)
+    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", catch: "Heat and a cooldown", effect: {} }, // TODO(mechanics)
+  ],
+  "overclock-core": [
+    { id: "redundant-capacitors", nature: "field", name: "Redundant Capacitors", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
+    { id: "adrenaline-surge", nature: "tuned", name: "Adrenaline Surge", tag: "Below half SP, Overclock grants +3 actions", effect: {} }, // TODO(mechanics)
+    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 STR — but overheat bonus doubles", catch: "Overheat bonus doubles", effect: {} }, // TODO(mechanics)
+  ],
+  "field-repair-suite": [
+    { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
+    { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 3 SP on a destroyed location", effect: {} }, // TODO(mechanics)
+    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery — at a heat-cap cost", catch: "Costs heat-cap", effect: {} }, // TODO(mechanics)
+  ],
+  "blast-furnace-core": [
+    { id: "insulated-core", nature: "field", name: "Insulated Core", tag: "Safe up to +2 over Capacity, not +1", effect: { thermalMargin: 2 } },
+    { id: "backdraft", nature: "tuned", name: "Backdraft", tag: "Heat Purge Wave +1 STR per 2 heat over Capacity", effect: {} }, // TODO(mechanics)
+    { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for STR or a burst", catch: "Only banks while overheated", effect: {} }, // TODO(mechanics)
+  ],
+  "targeting-computer": [
+    { id: "ballistic-processor", nature: "field", name: "Ballistic Processor", tag: "+1 accuracy vs a target in your sweet-spot band", effect: { sweetBandAcc: 1 } },
+    { id: "predictive-tracking", nature: "tuned", name: "Predictive Tracking", tag: "vs a static/pinned target: +2 accuracy, ignore cover", effect: {} }, // TODO(mechanics)
+    { id: "fire-solution-lock", nature: "prototype", name: "Fire Solution Lock", tag: "Hold still and stack a solution → an auto-hit AP volley", catch: "Must hold still to charge it", effect: {} }, // TODO(mechanics)
+  ],
+  "reactive-plating": [
+    { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 STR, not −1", effect: { sideRearStr: -2 } },
+    { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: {} }, // TODO(mechanics)
+    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", catch: "Costs heat", effect: {} }, // TODO(mechanics)
+  ],
+};
+
+// Single source for every equipment-upgrade effect tag. Both game-state.js and
+// combat.js import this; combat.js may not import game-state.js (cycle), so the
+// catalog lives here in the shared leaf.
+export function equipmentUpgradeEffectOf(equipmentId, upgradeId) {
+  if (!equipmentId || !upgradeId) return {};
+  const row = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === upgradeId);
+  return row?.effect || {};
+}
