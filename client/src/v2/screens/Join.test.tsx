@@ -22,7 +22,7 @@ test("shows the error line when provided", () => {
   expect(screen.getByText("Room is full.")).toBeInTheDocument();
 });
 
-test("seed CTA opens the turn picker and fires onSeed with the chosen side", async () => {
+test("seed defaults to the 'support' preset and fires onSeed(first, preset)", async () => {
   const user = userEvent.setup();
   const onSeed = vi.fn();
   render(<Join onJoin={vi.fn()} error="" onSeed={onSeed} />);
@@ -30,14 +30,17 @@ test("seed CTA opens the turn picker and fires onSeed with the chosen side", asy
   await user.click(screen.getByRole("button", { name: /Seed Test Battle/i }));
   await user.click(screen.getByRole("button", { name: /Enemies turn/i }));
 
-  expect(onSeed).toHaveBeenCalledWith("b");
+  expect(onSeed).toHaveBeenCalledWith("b", "support");
 });
 
-test("seed 'Your turn' fires onSeed with a", async () => {
+test("seed forwards the chosen preset and 'Your turn'", async () => {
   const user = userEvent.setup();
   const onSeed = vi.fn();
   render(<Join onJoin={vi.fn()} error="" onSeed={onSeed} />);
+
   await user.click(screen.getByRole("button", { name: /Seed Test Battle/i }));
+  await user.click(screen.getByRole("button", { name: /4v4 random/i }));
   await user.click(screen.getByRole("button", { name: /Your turn/i }));
-  expect(onSeed).toHaveBeenCalledWith("a");
+
+  expect(onSeed).toHaveBeenCalledWith("a", "random4");
 });

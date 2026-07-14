@@ -203,3 +203,18 @@
 .v2-root .v2-join-status--err {
   color: var(--v2-crit);
 }
+
+/* Seed preset toggle row — a horizontal band of preset buttons; selected uses
+   the shared .is-sel treatment. */
+.v2-root .v2-join-presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.v2-root .v2-join-preset {
+  flex: 1;
+}
+.v2-root .v2-join-preset.is-sel {
+  border-color: var(--v2-oil-deep);
+  box-shadow: inset 0 0 0 1px var(--v2-oil-deep);
+}

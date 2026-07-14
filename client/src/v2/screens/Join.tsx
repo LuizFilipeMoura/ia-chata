@@ -1,10 +1,11 @@
 import { useState, type CSSProperties } from "react";
 import "../styles/join.css";
+import { SEED_PRESETS, type SeedPreset } from "./seedPreset";
 
 interface Props {
   onJoin: (room: string, name: string, side: string) => void;
   error: string;
-  onSeed?: (first: "a" | "b") => void;
+  onSeed?: (first: "a" | "b", preset: SeedPreset) => void;
 }
 
 export function Join({ onJoin, error, onSeed }: Props) {
@@ -12,6 +13,7 @@ export function Join({ onJoin, error, onSeed }: Props) {
   const [name, setName] = useState("");
   const [side, setSide] = useState("a");
   const [seeding, setSeeding] = useState(false);
+  const [preset, setPreset] = useState<SeedPreset>("support");
 
   const ready = room.trim().length > 0 && !!side;
   const status = ready
@@ -111,12 +113,26 @@ export function Join({ onJoin, error, onSeed }: Props) {
           )}
 
           {onSeed && seeding && (
-            <div className="v2-join-seedpick" role="group" aria-label="Seed opening turn">
+            <div className="v2-join-seedpick" role="group" aria-label="Seed a test battle">
+              <div className="v2-join-label v2-eyebrow">Roster preset</div>
+              <div className="v2-join-presets">
+                {SEED_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={"v2-join-seedbtn v2-join-preset" + (preset === p.id ? " is-sel" : "")}
+                    aria-pressed={preset === p.id}
+                    onClick={() => setPreset(p.id)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
               <div className="v2-join-label v2-eyebrow">Who acts first?</div>
-              <button type="button" className="v2-join-seedbtn" onClick={() => onSeed("a")}>
+              <button type="button" className="v2-join-seedbtn" onClick={() => onSeed("a", preset)}>
                 Your turn
               </button>
-              <button type="button" className="v2-join-seedbtn" onClick={() => onSeed("b")}>
+              <button type="button" className="v2-join-seedbtn" onClick={() => onSeed("b", preset)}>
                 Enemies turn
               </button>
               <button type="button" className="v2-join-seedcancel" onClick={() => setSeeding(false)}>
