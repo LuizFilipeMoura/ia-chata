@@ -660,7 +660,75 @@ git commit -m "feat(v2): Hull location shows Ablative +1 max-SP badge"
 
 ---
 
-## Task 8: Full suite + final verification
+## Task 8: Hide Move when Sprint is same-or-cheaper
+
+**Files:**
+- Modify: `shared/battle-view.js` (`availableActions`, just before `return list;`)
+- Test: `shared/battle-view.test.js`
+
+**Rationale:** with Servo Actuators, Sprint costs 1 heat (0 with Reinforced Servos) for 1½× Speed — same-or-less heat than Move (+1) for more distance, so Move is strictly dominated. Drop it; the Move group tile then fires Sprint directly (the existing single-live-action collapse in `ActionConsole` handles the relabel). Rule is generalized to `sprintHeat <= moveHeat` so any future sprint-discount equipment behaves the same. Cold kinds (no Sprint) are unaffected — the guard requires a live Sprint in the list.
+
+- [ ] **Step 1: Write the failing test**
+
+Add to `shared/battle-view.test.js`:
+
+```js
+test("Move is hidden when Sprint costs no more than Move (Servo Actuators)", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const servo = availableActions(rig({ equipment: "servo-actuators" }), turn);
+  assert.ok(!servo.some((a) => a.key === "move"), "Move dropped for Servo Actuators");
+  assert.ok(servo.some((a) => a.key === "sprint"), "Sprint stays");
+  // Base rig keeps both.
+  const bare = availableActions(rig(), turn);
+  assert.ok(bare.some((a) => a.key === "move"), "Move stays without the discount");
+});
+
+test("Move stays for cold kinds (no Sprint to dominate it)", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  // A Tank has no Sprint (filtered by hasHeat); Move must remain.
+  const tank = makeUnit({ name: "Bison", kind: "tank", owner: "a" });
+  const acts = availableActions(tank, { ...turn, activeRigId: tank.id });
+  assert.ok(acts.some((a) => a.key === "move"), "cold kind keeps Move");
+});
+```
+
+(If `makeUnit`'s signature differs, build the simplest cold-kind object the existing cold-kind tests in this file already use — mirror them. The key assertion is the servo case.)
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `node --test shared/battle-view.test.js`
+Expected: FAIL — Move still present for the Servo Actuators rig.
+
+- [ ] **Step 3: Write minimal implementation**
+
+In `shared/battle-view.js`, immediately before `return list;` at the end of `availableActions`:
+
+```js
+  // Servo Actuators (and its Reinforced Servos upgrade) drop Sprint's heat to
+  // Move's or below. Same-or-less heat for 1½× the distance makes Move strictly
+  // dominated, so hide it — the Move group tile then fires Sprint directly.
+  const sprintAct = list.find((a) => a.key === "sprint");
+  if (sprintAct && sprintAct.heat <= ACTIONS.move.heat) {
+    const i = list.findIndex((a) => a.key === "move");
+    if (i >= 0) list.splice(i, 1);
+  }
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `node --test shared/battle-view.test.js`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add shared/battle-view.js shared/battle-view.test.js
+git commit -m "feat(v2): hide Move when Sprint costs no more (Servo Actuators dominates)"
+```
+
+---
+
+## Task 9: Full suite + final verification
 
 **Files:** none (verification only)
 
@@ -681,6 +749,6 @@ No commit if everything passed on the task commits above.
 
 ## Self-Review Notes
 
-- **Spec coverage:** descriptor (Task 1) · all 5 preview surfaces — picker (T2), Move (T3), Repair (T4), loadout card active-heat + upgrade line (T5) · both passive badges — thermal margin (T6), Hull SP (T7) · guard test (T2) · no resolution change (verified T8). Combat deltas are carried in the descriptor but not rendered — matches the spec's "out of scope: wiring combat previews."
+- **Spec coverage:** descriptor (Task 1) · all 5 preview surfaces — picker (T2), Move (T3), Repair (T4), loadout card active-heat + upgrade line (T5) · both passive badges — thermal margin (T6), Hull SP (T7) · hide-Move-when-Sprint-dominates (T8, added post-spec per user) · guard test (T2) · no resolution change (verified T9). Combat deltas are carried in the descriptor but not rendered — matches the spec's "out of scope: wiring combat previews."
 - **Type consistency:** `rigEffects` returns `{ actionHeat, repair:{bonusSp}, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers }` — every consumer reads only these keys. `RepairBody` gains `bonusSp: number`; `CompRow` gains `delta?: number`; `LoadoutEquipment` gains `upName?/upNature?/upTag?`.
 - **Passive prose caveat (T5):** left as base text by design; the upgrade line carries the override. Documented in the task so an out-of-order reader doesn't "fix" it with string surgery.
