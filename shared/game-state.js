@@ -2413,7 +2413,14 @@ function performAction(room, rig, act, a, random) {
     t.actionsUsed += 1;
     if (act === "harden") rig.hardened = true;
     else if (act === "overclock") {
-      t.actionsMax += 2;
+      // Adrenaline Surge (Power Tuned) — while the rig is strictly below half its
+      // total SP across the location set, Overclock grants +3 actions (net +2)
+      // instead of the normal +2 (net +1). Mutually exclusive with Reactor
+      // Overdrive, so the two upgrade hooks never co-occur.
+      const surge = !!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.adrenalineSurge;
+      let curSp = 0, maxSp = 0;
+      for (const loc of LOCS) { curSp += rig[loc].sp; maxSp += rig[loc].max; }
+      t.actionsMax += (surge && curSp * 2 < maxSp) ? 3 : 2;
       // Reactor Overdrive (§13, Power Prototype) — Overclocking also arms +2 STR to
       // every attack this activation (read in combat.js computeStr) at the cost of a
       // doubled overheat bonus this activation (endActivation). All-in push.

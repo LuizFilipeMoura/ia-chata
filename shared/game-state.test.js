@@ -2830,6 +2830,41 @@ test("Overclock without Reactor Overdrive leaves the overheat bonus untouched", 
   assert.match(r.game.resolutions.at(-1).summary, /D12 3\+4=7/);
 });
 
+test("Adrenaline Surge: below half total SP, Overclock grants +3 actions", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "adrenaline-surge";
+  activate(r, "a1");
+  // Drop below half total SP across the location set.
+  for (const loc of ["hull", "arms", "legs", "engine"]) a1[loc].sp = 0;
+  const maxBefore = r.game.turn.actionsMax;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax, maxBefore + 3);
+});
+
+test("Adrenaline Surge: at/above half total SP, Overclock grants only +2 actions", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "adrenaline-surge";
+  activate(r, "a1"); // fresh rig = full SP, at/above half
+  const maxBefore = r.game.turn.actionsMax;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax, maxBefore + 2);
+});
+
+test("Overclock Core with no upgrade grants +2 even below half SP", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "overclock-core" });
+  const a1 = findRig(r, "a1");
+  activate(r, "a1");
+  for (const loc of ["hull", "arms", "legs", "engine"]) a1[loc].sp = 0;
+  const maxBefore = r.game.turn.actionsMax;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "overclock" } });
+  assert.equal(r.game.turn.actionsMax, maxBefore + 2);
+});
+
 test("emergencypatch guarantees 2 SP with no roll for Field Repair Suite", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "field-repair-suite" });
