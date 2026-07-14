@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { availableActions, actionBudget, rigModifiers, phaseSummary, outcomeText } from "./battle-view.js";
-import { makeRig, makeUnit } from "./game-state.js";
+import { makeRig, makeUnit, rigEffects } from "./game-state.js";
 import { GLOSSARY } from "./glossary.js";
 
 function rig(over = {}) {
@@ -62,6 +62,31 @@ test("Fire/Aimed shows 2 heat once a ranged shot has already been fired this act
   const second = availableActions(rig(), { activeRigId: 1, actionsUsed: 2, actionsMax: 5, longRangeShots: 1 })
     .find((a) => a.key === "fire");
   assert.equal(second.heat, 2);          // second shot runs the barrel hot
+});
+
+test("availableActions: sprint chip reflects Servo Actuators and its upgrade", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const servo = availableActions(rig({ equipment: "servo-actuators" }), turn);
+  assert.equal(servo.find((a) => a.key === "sprint").heat, 1);
+  const reinf = availableActions(rig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" }), turn);
+  assert.equal(reinf.find((a) => a.key === "sprint").heat, 0);
+  const bare = availableActions(rig(), turn);
+  assert.equal(bare.find((a) => a.key === "sprint").heat, 2);
+});
+
+test("availableActions: active chip reflects heat-override upgrades", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  const rad = availableActions(rig({ equipment: "radiator-array", equipmentUpgrade: "twin-radiators" }), turn);
+  assert.equal(rad.find((a) => a.key === "purge").heat, -3);
+});
+
+test("drift guard: sprint chip equals rigEffects (which the resolution path uses)", () => {
+  const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
+  for (const over of [{}, { equipment: "servo-actuators" }, { equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" }]) {
+    const r = rig(over);
+    const chip = availableActions(r, turn).find((a) => a.key === "sprint").heat;
+    assert.equal(chip, rigEffects(r).actionHeat.sprint);
+  }
 });
 
 test("actionBudget reports remaining and the Hull-0 reduction", () => {

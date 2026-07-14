@@ -1,7 +1,7 @@
 // Pure, DOM-free view-model derived from room state. Shared so it can be unit
 // tested in node and imported by the browser (via the /shared static mount).
 import { ACTIONS } from "./rules.js";
-import { EQUIPMENT } from "./game-state.js";
+import { EQUIPMENT, rigEffects } from "./game-state.js";
 import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
 
 const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "repair", "douse", "prepare", "shutdown"];
@@ -10,6 +10,7 @@ const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "repair", 
 // whether the current budget/state allows it.
 export function availableActions(rig, turn, round) {
   const cfg = UNIT_KINDS[kindOf(rig)];
+  const eff = rigEffects(rig);
   const left = turn.actionsMax - turn.actionsUsed;
   // Spent is detected on whichever ranged slot the kind uses: a Rig clears
   // loaded.longRange when it fires (combat.js), a flat-pick cold kind clears
@@ -31,7 +32,7 @@ export function availableActions(rig, turn, round) {
       const def = ACTIONS[key];
       let enabled = left > 0;
       let cost = def.slot;
-      let heat = def.heat;
+      let heat = eff.actionHeat[key] ?? def.heat;
       let note = "";
       if (key === "shutdown") enabled = true; // available any time; cools proportional to slots used
       // Hints only carry HIDDEN costs on an action you can still take, and only
@@ -68,7 +69,7 @@ export function availableActions(rig, turn, round) {
     const active = EQUIPMENT[rig.equipment].active;
     const jjLocked = active.key === "jumpjets" && rig.engagedWith != null;
     list.push({
-      key: active.key, label: active.label, heat: active.heat,
+      key: active.key, label: active.label, heat: eff.actionHeat[active.key] ?? active.heat,
       enabled: left > 0 && !jjLocked, cost: 1, note: "", // jj lockout shown by "Engaged" tag
     });
   }
