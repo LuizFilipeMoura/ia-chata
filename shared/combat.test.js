@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack } from "./combat.js";
+import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
@@ -91,6 +91,37 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
   assert.equal(res.rof, 10);
   assert.equal(res.hits, 5);          // dice >=3 or ==6: 3,4,5,6,6
   assert.equal(res.fireModeHeat, 3);  // three 1s under Full Auto
+});
+
+test("applyDefensiveReactions is an identity pass-through for an impact hit (no reactive gear)", () => {
+  const target = { weightClass: "medium" }; // no equipment, no equipState
+  const hit = { die: 5, total: 12, tier: "direct", sp: 1, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: 3, spendHeat: () => {} });
+  assert.deepEqual(out, hit); // unchanged
+});
+
+test("applyDefensiveReactions is an identity pass-through for a to-hit tally (no reactive gear)", () => {
+  const target = { weightClass: "medium" };
+  const hit = { kind: "tohit", ranged: true, hits: 4 };
+  const out = applyDefensiveReactions(target, hit, { location: null, row: null, spendHeat: () => {} });
+  assert.equal(out.hits, 4); // hit count untouched by the pass-through seam
+});
+
+test("rollImpacts is byte-unchanged by the impact seam for a plain target", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+  const plain = { weightClass: "medium", hardened: false, preparation: null };
+  const out = rollImpacts({ weightClass: "medium" }, plain, auto, "hull",
+    { arc: "front", hits: 1 }, { impacts: [5] }, () => 0);
+  assert.equal(out[0].total, 13); // 5 + 8(STR) + 0(front) — no dock, seam is a no-op
+  assert.equal(out[0].kind, "impact"); // seam stamps the discriminator
+});
+
+test("rollToHit hit count is unchanged by the to-hit seam for a plain target", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // rof 2, medium
+  const plain = { weightClass: "medium" };
+  const res = rollToHit({ weightClass: "medium", hull: { sp: 7 } }, auto,
+    { range: "near", cover: 0, target: plain }, [6, 6], () => 0);
+  assert.equal(res.hits, 2); // both dice hit; the pass-through seam leaves the tally alone
 });
 
 test("computeStr applies weight and Charged Shot", () => {

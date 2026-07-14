@@ -141,6 +141,15 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     if (hit) hits += 1;
     if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
+  // §7 — reactive on-incoming-hit seam, to-hit stage. A defender may reroll/alter
+  // the counted hits before impacts are rolled (future: Point-Defense). Pure
+  // pass-through today, so `hits` is unchanged; `location`/`row` are null here.
+  const reacted = applyDefensiveReactions(
+    opts.target,
+    { kind: "tohit", ranged: !profile.melee, hits },
+    { location: null, row: null, spendHeat: opts.spendHeat || (() => {}) },
+  );
+  hits = reacted.hits;
   return { modAim, rof, hits, fireModeHeat, dice, penetratorShot };
 }
 
@@ -343,9 +352,31 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
     // (Mini Gun / Double MG / Coaxial MG), independent of Raking Fire so the
     // walker's non-Raking Coaxial MG is covered too.
     if (sev.tier === "critical" && profile.machineGun) sev = { tier: "severe", sp: 2 };
-    out.push({ die, total, tier: sev.tier, sp: sev.sp });
+    const resolved = applyDefensiveReactions(
+      target,
+      { die, total, tier: sev.tier, sp: sev.sp, kind: "impact" },
+      { location, row, spendHeat: opts.spendHeat || (() => {}) },
+    );
+    out.push(resolved);
   }
   return out;
+}
+
+// §7 — reactive on-incoming-hit seam. The single point where a DEFENDER may
+// alter an incoming attack. It is installed at TWO pipeline stages, discriminated
+// by `hit.kind`, so later mechanics only ADD branches here — never new call sites:
+//   • "tohit"  — in rollToHit, AFTER successful hit dice are counted, BEFORE
+//                impacts are rolled. Future consumer: Point-Defense (reroll hits;
+//                only ranged hits carry `hit.ranged === true`). `location`/`row`
+//                are null at this stage.
+//   • "impact" — in rollImpacts, per damaging hit, AFTER impactSeverity. Future
+//                consumers: Reactive Armor, Ablative Cascade (soften a severity
+//                step). Carries real `{ location, row }`.
+// combat.js is pure (no game-state import), so any heat spend goes through the
+// injected `ctx.spendHeat(n)` mutator that game-state.js wires to bumpHeat. This
+// is a pure pass-through today (no consumers): it returns the hit unchanged.
+export function applyDefensiveReactions(target, hit, ctx) {
+  return hit;
 }
 
 // §7 — full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
@@ -402,7 +433,13 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // `opts.target` from the caller is a display name (§ see resolveFire), not
   // the rig — override it with the real target so Bloodletter (§13) can read
   // its live SP.
-  const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
+  // Injected heat mutator for the reactive on-incoming-hit seam. combat.js is
+  // pure, so a defender's reactive heat spend (future: Ablative Cascade,
+  // Point-Defense) flows through this callback into game-state's bumpHeat rather
+  // than importing game-state (which would form a cycle). Wired into both the
+  // to-hit and impact seam call sites below via opts.spendHeat.
+  const spendHeat = (n) => ctx.bumpHeat(target, n);
+  const th = rollToHit(attacker, profile, { ...opts, target, spendHeat, autoHit: fireControlLock, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
@@ -428,7 +465,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // than crashing on a missing part.
     if (location) {
       impacts = rollImpacts(attacker, target, profile, location,
-        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance },
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat },
         opts.dice, random);
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
       //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple
