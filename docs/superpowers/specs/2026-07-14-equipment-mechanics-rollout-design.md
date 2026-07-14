@@ -25,10 +25,20 @@ Two findings from the [equipment & upgrade audit](../../design/equipment-upgrade
   lines 105-137, Tuned in the upgrade table). This spec does **not** re-derive
   those rules — it owns implementation order, shared plumbing, per-mechanic
   engine hook + state field + test, and the read-model refactor.
-- **Catalog-everywhere** for finding 4. All equipment modifiers re-derive live
-  from `EQUIPMENT_UPGRADES` by id. The stamped `equipmentUpgradeEffect` is
-  removed. A catalog rebalance then applies to live rigs with no recommission;
-  the catalog is the single source of truth.
+- **Catalog-everywhere** for finding 4, via **relocating the catalog** (Option
+  A). `EQUIPMENT_UPGRADES` and a pure `equipmentUpgradeEffectOf` lookup move into
+  `rules.js` — the leaf module both `game-state.js` and `combat.js` already
+  import. All equipment modifiers re-derive live from the catalog by id; the
+  stamped `equipmentUpgradeEffect` is removed. A catalog rebalance then applies
+  to live rigs with no recommission; the catalog is the single source of truth.
+
+  **Why relocate.** `combat.js` deliberately imports *only* from `rules.js` to
+  stay import-cycle-free (its header, lines 2-3). It cannot reach a catalog that
+  lives in `game-state.js` — which is the whole reason the effect is stamped onto
+  the rig today. Moving the catalog to the shared leaf lets both modules read it
+  directly, so the stamp is no longer needed. `rules.js` stays a leaf:
+  `EQUIPMENT_UPGRADES` is pure data + a tiny lookup, matching what already lives
+  there.
 - **One spec, four implementation plans.** The 16 mechanics do not fit one plan.
   This spec designs all four groups; each becomes its own TDD plan.
 
@@ -57,12 +67,17 @@ snapshots smaller.
 
 ### Target state
 
-Add one helper next to `equipmentSprintHeat` / `equipmentRepairBonus`:
+Move the catalog data and one lookup into `rules.js`:
 
 ```js
-// The stamped-free source for every equipment-upgrade effect tag. Resolves the
-// chosen upgrade's `effect` object live from the catalog by id — the single
-// path all consumers (rigEffects, heatModel, combat) read, so a rebalance of
+// rules.js — EQUIPMENT_UPGRADES relocated here (pure data) so both game-state.js
+// and combat.js can import it without the game-state import cycle combat.js
+// forbids. Behavior of the 24 rows is unchanged by the move.
+export const EQUIPMENT_UPGRADES = { /* …the existing 24 rows, moved verbatim… */ };
+
+// The single source for every equipment-upgrade effect tag. Resolves the chosen
+// upgrade's `effect` object live from the catalog by id — the one path all
+// consumers (rigEffects, heatModel, combat) read, so a rebalance of
 // EQUIPMENT_UPGRADES applies to live rigs with no recommission.
 export function equipmentUpgradeEffectOf(equipmentId, upgradeId) {
   if (!equipmentId || !upgradeId) return {};
@@ -71,19 +86,25 @@ export function equipmentUpgradeEffectOf(equipmentId, upgradeId) {
 }
 ```
 
+- **`game-state.js`** — re-export the relocated symbols for existing callers,
+  exactly as it already does for `shieldCoverage`
+  (`export { EQUIPMENT_UPGRADES, equipmentUpgradeEffectOf } from "./rules.js";`).
+  The nature/heat helpers (`equipmentUpgradeNature`, `equipmentActiveHeat`,
+  `equipmentSprintHeat`, `equipmentRepairBonus`, `firstEquipmentUpgradeId`,
+  `normalizeEquipmentUpgrade`) stay in `game-state.js` and read the imported data.
 - **`rigEffects`** — resolve `const eff = equipmentUpgradeEffectOf(equip, upId)`
   once, then read `eff.thermalMargin`, `eff.hardenImpact`, `eff.sweetBandAcc`,
   `eff.sideRearStr` from it. Keep the existing `equip === "…"` family guards and
   the same defaults, so behavior is identical for the 8 Field rows.
 - **`heatModel`** — replace the `rig?.equipmentUpgradeEffect?.thermalMargin`
   read with `equipmentUpgradeEffectOf(rig?.equipment, rig?.equipmentUpgrade)?.thermalMargin`.
-- **`combat.js`** — `computeModifiedAim` and impact resolution take an
-  attacker/target that already carries `equipment` + `equipmentUpgrade` ids;
-  swap the three `equipmentUpgradeEffect?.…` reads for
+- **`combat.js`** — import `equipmentUpgradeEffectOf` from `rules.js`. In
+  `computeModifiedAim` (line 66) and impact resolution (lines 283, 292), swap the
+  three `x.equipmentUpgradeEffect?.…` reads for
   `equipmentUpgradeEffectOf(x.equipment, x.equipmentUpgrade)?.…`.
 - **Remove the stamp** — delete the `equipmentUpgradeEffect` assignment in
-  `makeRig`, the `{}` in `makeUnit`, and the field init at `game-state.js:787`.
-  Drop the field from `client/src/state/types.ts`.
+  `makeRig` (955, 972), the `{}` in `makeUnit` (1139), and the field init at
+  `game-state.js:787`. Drop the field from `client/src/state/types.ts`.
 
 ### Refactor tests
 
@@ -114,10 +135,24 @@ state field, and the test surface.
 - **Recovery-refresh hook.** Extend `runRecovery` to refill per-round charges
   (Ablative Cascade → 2, Point-Defense → 2), tick banks and stacks (Cryo,
   Nanite, Meltdown), and clear per-round Tuned flags (Reactive Armor).
-- **Reactive on-incoming-hit hook.** A single seam in the impact-resolution path
-  (`combat.js`) where a defender may spend a charge before the hit resolves —
-  consumed by Ablative Cascade and Point-Defense System, and by the Reactive
-  Armor Tuned flag.
+- **Reactive on-incoming-hit hook.** A single seam, `applyDefensiveReactions(target, hit, ctx)`,
+  where a defender may alter an incoming attack. It runs at **two** pipeline
+  stages, discriminated by `hit.kind` — so **Group 2 installs both call sites**
+  when it creates the seam (even though its own consumers use only the impact
+  one); later groups add branches, never new call sites.
+
+  - `hit.kind === "tohit"` — called in `rollToHit` after successful dice are
+    counted, before impacts. Consumer: **Point-Defense System** (sets
+    `hit.rerollHits = true`). Only ranged hits carry `hit.ranged === true`.
+  - `hit.kind === "impact"` — called in `rollImpacts` after `impactSeverity`.
+    Consumers: **Reactive Armor**, **Ablative Cascade** (soften one severity step).
+
+  `ctx` shape is `{ location, row, spendHeat }`. `spendHeat(n)` is an **injected
+  mutator**: `combat.js` stays pure (its header forbids mutating outside `ctx`),
+  so `game-state.js` passes a callback that calls `bumpHeat`. Ablative Cascade and
+  Point-Defense call `ctx.spendHeat(1)` per charge; Reactive Armor ignores it.
+  Both call sites must construct the full `ctx` (the impact site adds `location`/
+  `row`, the to-hit site passes them `null`).
 
 ### Group 1 — Simple conditional Tuned (no new tracked state)
 
