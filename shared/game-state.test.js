@@ -4800,7 +4800,6 @@ test("rigEffects derives combat/thermal tags from the catalog, not a stamp", () 
   assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reactive-armor" }).combat.hardenImpact, 1);
 });
 
-test("rigEffects: combat.hardenImpact reads stamped ablative-plating effect", () => {
+test("rigEffects: combat.hardenImpact falls back to the family default with no upgrade", () => {
   assert.equal(rigEffects({ equipment: "ablative-plating" }).combat.hardenImpact, 1);
-  assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating", equipmentUpgradeEffect: { hardenImpact: 2 } }).combat.hardenImpact, 2);
 });
