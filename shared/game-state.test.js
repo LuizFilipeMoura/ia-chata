@@ -2132,7 +2132,24 @@ test("makeRig initialises the equipState tracked-state block", () => {
     ablativeCharges: 0, cryo: 0, naniteStacks: [], interceptors: 0,
     meltdownCharge: 0, solution: { targetId: null, count: 0 },
     reactiveArmorLocs: [], grapnelCooldown: 0,
+    firedRangedThisRound: false, pdLocked: false,
   });
+});
+
+test("Point-Defense: Recovery refills interceptors to 2 and rolls the fire-lockout forward", () => {
+  const rig = makeRig(1, "Sentry", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "reactive-plating", "point-defense-system");
+  rig.equipState.interceptors = 0;
+  rig.equipState.firedRangedThisRound = true;                    // fired ranged this round
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.interceptors, 2);                  // refilled 2/round
+  assert.equal(rig.equipState.pdLocked, true);                   // locked out next round
+  assert.equal(rig.equipState.firedRangedThisRound, false);      // fire flag reset
+  // A following Recovery with no ranged shot fired clears the lockout.
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.pdLocked, false);
+  assert.equal(rig.equipState.interceptors, 2);
 });
 
 test("ensureRigShape backfills equipState on a legacy rig", () => {

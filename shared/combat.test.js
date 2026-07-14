@@ -1495,3 +1495,52 @@ test("Ablative Cascade: a zero-damage impact never spends a charge (gated on hit
   assert.equal(target.equipState.ablativeCharges, 2);      // charge untouched
   assert.equal(heated, 0);
 });
+
+// Point-Defense System (Reactive Plating, Prototype). NOTE: like Ablative
+// Cascade above, the plan's fixtures were drafted against a hypothetical seam
+// (`hit.rerollHits`, `ctx.bumpHeat`). The live Plan-2 to-hit seam has already
+// COUNTED the landed dice into `hit.hits` and writes the returned `.hits` back
+// into rollToHit's tally; heat is injected via `ctx.spendHeat(n)`. So the branch
+// itself rerolls the landed dice and returns the new count. combat.js stays pure:
+// the RNG (`random`) and any `providedDice.pd` reroll faces are threaded through
+// ctx by rollToHit exactly like `spendHeat`. These tests target the real seam.
+test("Point-Defense: a ranged hit spends 1 interceptor to reroll landed dice, at +1 heat", () => {
+  const target = {
+    kind: "rig", weightClass: "medium", equipment: "reactive-plating", equipmentUpgrade: "point-defense-system",
+    engine: { heat: 0 }, equipState: { interceptors: 2, pdLocked: false },
+  };
+  let heated = 0;
+  const ctx = {
+    location: null, row: null, spendHeat: (n) => { heated += n; },
+    random: () => 0, providedDice: { pd: [6, 1, 1] },     // 3 landed dice reroll to 6,1,1 vs modAim 4 → 1 survives
+  };
+  const hit = { kind: "tohit", ranged: true, hits: 3, modAim: 4 };
+  const out = applyDefensiveReactions(target, hit, ctx);
+  assert.equal(out.hits, 1);                              // reroll softened 3 landed hits down to 1
+  assert.equal(target.equipState.interceptors, 1);        // one interceptor spent
+  assert.equal(heated, 1);                                // +1 heat per charge spent
+});
+
+test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-locked", () => {
+  const base = {
+    kind: "rig", weightClass: "medium", equipment: "reactive-plating",
+    equipmentUpgrade: "point-defense-system", engine: { heat: 0 },
+  };
+  // pd reroll faces of all 1s would zero the tally IF a reroll fired — so an
+  // unchanged hits===2 proves the branch did NOT engage.
+  const mkCtx = () => ({ location: null, row: null, spendHeat: () => {}, random: () => 0, providedDice: { pd: [1, 1, 1] } });
+
+  const meleeTarget = { ...base, equipState: { interceptors: 2, pdLocked: false } };
+  const melee = applyDefensiveReactions(meleeTarget, { kind: "tohit", ranged: false, hits: 2, modAim: 4 }, mkCtx());
+  assert.equal(melee.hits, 2);                            // melee is not intercepted
+  assert.equal(meleeTarget.equipState.interceptors, 2);   // no charge spent
+
+  const spentTarget = { ...base, equipState: { interceptors: 0, pdLocked: false } };
+  const spent = applyDefensiveReactions(spentTarget, { kind: "tohit", ranged: true, hits: 2, modAim: 4 }, mkCtx());
+  assert.equal(spent.hits, 2);                            // no charges → no reroll
+
+  const lockedTarget = { ...base, equipState: { interceptors: 2, pdLocked: true } };
+  const locked = applyDefensiveReactions(lockedTarget, { kind: "tohit", ranged: true, hits: 2, modAim: 4 }, mkCtx());
+  assert.equal(locked.hits, 2);                          // locked the round after firing ranged
+  assert.equal(lockedTarget.equipState.interceptors, 2);  // no charge spent
+});

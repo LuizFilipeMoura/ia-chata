@@ -142,12 +142,15 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
   // §7 — reactive on-incoming-hit seam, to-hit stage. A defender may reroll/alter
-  // the counted hits before impacts are rolled (future: Point-Defense). Pure
-  // pass-through today, so `hits` is unchanged; `location`/`row` are null here.
+  // the counted hits before impacts are rolled (Point-Defense System). `location`/
+  // `row` are null here; `modAim` (the target number) and the RNG (`random` +
+  // any `providedDice.pd` reroll faces) are threaded through so the branch can
+  // reroll the landed dice while combat.js stays pure — it only touches the
+  // injected RNG, never game-state.
   const reacted = applyDefensiveReactions(
     opts.target,
-    { kind: "tohit", ranged: !profile.melee, hits },
-    { location: null, row: null, spendHeat: opts.spendHeat || (() => {}) },
+    { kind: "tohit", ranged: !profile.melee, hits, modAim },
+    { location: null, row: null, spendHeat: opts.spendHeat || (() => {}), random, providedDice },
   );
   hits = reacted.hits;
   return { modAim, rof, hits, fireModeHeat, dice, penetratorShot };
@@ -370,15 +373,17 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
 // alter an incoming attack. It is installed at TWO pipeline stages, discriminated
 // by `hit.kind`, so later mechanics only ADD branches here — never new call sites:
 //   • "tohit"  — in rollToHit, AFTER successful hit dice are counted, BEFORE
-//                impacts are rolled. Future consumer: Point-Defense (reroll hits;
-//                only ranged hits carry `hit.ranged === true`). `location`/`row`
-//                are null at this stage.
-//   • "impact" — in rollImpacts, per damaging hit, AFTER impactSeverity. Future
-//                consumers: Reactive Armor, Ablative Cascade (soften a severity
+//                impacts are rolled. Consumer: Point-Defense System (reroll the
+//                landed dice; only ranged hits carry `hit.ranged === true`).
+//                `location`/`row` are null at this stage; `modAim` + the RNG
+//                (`random`/`providedDice`) are threaded in for the reroll.
+//   • "impact" — in rollImpacts, per damaging hit, AFTER impactSeverity.
+//                Consumers: Reactive Armor, Ablative Cascade (soften a severity
 //                step). Carries real `{ location, row }`.
 // combat.js is pure (no game-state import), so any heat spend goes through the
-// injected `ctx.spendHeat(n)` mutator that game-state.js wires to bumpHeat. This
-// is a pure pass-through today (no consumers): it returns the hit unchanged.
+// injected `ctx.spendHeat(n)` mutator that game-state.js wires to bumpHeat. A
+// defender with no reactive gear falls through every branch and the hit is
+// returned unchanged.
 // Ablative Cascade — the one-step-gentler severity ladder (critical→severe→
 // direct→negated). Looked up by the resolved tier; a Math.min floor at the call
 // site guarantees a spend can only hold or lower an already-capped hit.
@@ -389,6 +394,30 @@ const ABLATIVE_SOFTEN = {
 };
 
 export function applyDefensiveReactions(target, hit, ctx) {
+  // Point-Defense System (Reactive Plating, Prototype) — a ranged hit may be met
+  // by one interceptor charge, forcing the attacker to reroll every landed hit
+  // die. The seam has already counted `hit.hits` landed dice; rerolling them
+  // ("all successful hit dice") re-tests the same number of dice against the
+  // shot's target number (`hit.modAim`) and returns the new landed count in
+  // `.hits`, which rollToHit writes back into its tally. A 6 always lands, matching
+  // rollToHit. +1 heat per charge (ctx.spendHeat). Unusable the round after this
+  // rig fired its own ranged weapon (equipState.pdLocked, rolled forward in
+  // refreshEquipState). Ranged only; melee carries `ranged === false`. combat.js
+  // stays pure: the RNG (`ctx.random`) and reroll faces (`ctx.providedDice.pd`)
+  // are injected by rollToHit exactly like `spendHeat`.
+  if (hit.kind === "tohit" && hit.ranged && target
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.pointDefense
+      && (target.equipState?.interceptors || 0) > 0
+      && !target.equipState?.pdLocked) {
+    target.equipState.interceptors -= 1;
+    ctx.spendHeat(1);
+    let newHits = 0;
+    for (let i = 0; i < hit.hits; i++) {
+      const d = rollD(6, ctx.providedDice?.pd?.[i], ctx.random);
+      if (d >= hit.modAim || d === 6) newHits += 1;
+    }
+    return { ...hit, hits: newHits };
+  }
   // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging hit each round
   // to a location hardens THAT location by −2 impact (Harden-equivalent) until
   // this rig's next activation; further damaging hits to a hardened location

@@ -145,7 +145,7 @@ export const EQUIPMENT_UPGRADES = {
   "reactive-plating": [
     { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 STR, not −1", effect: { sideRearStr: -2 } },
     { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: { chaffBurst: true } },
-    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", catch: "Costs heat", effect: {} }, // TODO(mechanics)
+    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
   ],
 };
 

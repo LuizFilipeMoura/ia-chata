@@ -732,6 +732,9 @@ function freshEquipState() {
     ablativeCharges: 0, cryo: 0, naniteStacks: [], interceptors: 0,
     meltdownCharge: 0, solution: { targetId: null, count: 0 },
     reactiveArmorLocs: [], grapnelCooldown: 0,
+    // Point-Defense System — firedRangedThisRound arms the fire-lockout that
+    // Recovery rolls forward into pdLocked (unusable the round after firing ranged).
+    firedRangedThisRound: false, pdLocked: false,
   };
 }
 
@@ -1832,6 +1835,14 @@ function refreshEquipState(rig) {
     for (const st of s.naniteStacks) { repairRig(rig, st.loc, 1); st.sp -= 1; }
     s.naniteStacks = s.naniteStacks.filter((st) => st.sp > 0);
   }
+  // Point-Defense System (Reactive Plating, Prototype) — refill 2 interceptors
+  // each Recovery, then roll the fire-lockout forward: PD is unusable for the
+  // round following the one in which this rig fired its own ranged weapon.
+  if (eff.pointDefense) {
+    s.interceptors = 2;
+    s.pdLocked = !!s.firedRangedThisRound;
+    s.firedRangedThisRound = false;
+  }
 }
 
 function runRecovery(room) {
@@ -2062,6 +2073,13 @@ function resolveFire(room, rig, target, a, act, random) {
   const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
   bumpHeat(rig, ACTIONS[act].heat + (secondShot ? 1 : 0));
   if (slot === "longRange") t.longRangeShots = (t.longRangeShots || 0) + 1;
+  // Point-Defense System (Reactive Plating, Prototype) — firing your own ranged
+  // weapon arms the fire-lockout; next Recovery rolls it into pdLocked so PD
+  // can't intercept the following round.
+  if (slot === "longRange" && rig.equipState
+      && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.pointDefense) {
+    rig.equipState.firedRangedThisRound = true;
+  }
   return res;
 }
 
