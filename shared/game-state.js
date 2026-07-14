@@ -3077,6 +3077,35 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         changed = true;
       }
     }
+  } else if (verb === "threat") {
+    // Cosmetic attack telegraph: the active side broadcasts that it has opened
+    // an attack on an enemy Rig, so the defender's client can raise the loud
+    // "incoming fire" overlay. Never enters undo history (see UNDO_VERBS).
+    const action = String(a.action || "declare").toLowerCase();
+    const side = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    const t = room.game.turn;
+    if (room.game.phase === "activation" && side && t && t.side === side) {
+      if (action === "clear") {
+        if (room.game.pendingThreat && room.game.pendingThreat.attackerId === t.activeRigId) {
+          room.game.pendingThreat = null;
+          changed = true;
+        }
+      } else if (t.activeRigId != null) {
+        const attacker = room.rigs.find((r) => r.id === t.activeRigId);
+        const target = room.rigs.find((r) => r.name === a.target && !r.destroyed);
+        if (attacker && (attacker.owner || "a") === side &&
+            target && (target.owner || "a") !== side) {
+          room.game.pendingThreat = {
+            attackerId: attacker.id,
+            targetId: target.id,
+            defender: target.owner || "b",
+            mode: String(a.mode || "fire"),
+            weapon: String(a.weapon || ""),
+          };
+          changed = true;
+        }
+      }
+    }
   } else if (verb === "randomize") {
     const rig = findRig(room, a.name);
     if (rig && kindOf(rig) === "rig") {

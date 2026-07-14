@@ -4507,3 +4507,54 @@ test("ensureGameShape backfills pendingThreat on legacy rooms", () => {
   applyCommand(r, { verb: "reset", attrs: {} });
   assert.equal(r.game.pendingThreat, null);
 });
+
+// A active mid-activation, B is the enemy. Returns { room, a, b }.
+function battleMidActivation() {
+  const room = createRoom("THR");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "Atk", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  applyCommand(room, { verb: "add", attrs: { name: "Def", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword" } });
+  const a = findRig(room, "Atk");
+  const b = findRig(room, "Def");
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: a.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  a.loaded = { longRange: true, melee: true };
+  return { room, a, b };
+}
+
+test("threat declare sets pendingThreat keyed to the target's owner", () => {
+  const { room, a, b } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.deepEqual(room.game.pendingThreat, {
+    attackerId: a.id, targetId: b.id, defender: "b", mode: "fire", weapon: "Autocannon",
+  });
+});
+
+test("threat clear nulls it", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  applyCommand(room, { verb: "threat", attrs: { action: "clear", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("only the active side may declare a threat", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "b" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("threat declare on a friendly or unknown target is a no-op", () => {
+  const { room } = battleMidActivation();
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Atk", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Ghost", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.equal(room.game.pendingThreat, null);
+});
+
+test("threat is not undoable", () => {
+  const { room } = battleMidActivation();
+  const before = room._history.length;
+  applyCommand(room, { verb: "threat", attrs: { action: "declare", target: "Def", mode: "fire", weapon: "Autocannon", side: "a" } });
+  assert.equal(room._history.length, before); // no snapshot pushed
+});
