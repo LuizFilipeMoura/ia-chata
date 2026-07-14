@@ -1870,7 +1870,15 @@ function bumpHeat(rig, n) {
 // End the acting rig's activation: run the overheat check (§6), mark it done,
 // close the turn, then hand off (which may trigger Recovery).
 function endActivation(room, rig, dice, random) {
-  const m = heatMeter(rig);
+  let m = heatMeter(rig);
+  // Coolant Injection (Cooling Tuned) — if the rig ends its activation over Heat
+  // Capacity, dump 2 heat BEFORE the overheat D12. This can drop it under the cap
+  // and skip the roll entirely. Read the tag live from the catalog by id.
+  if (m.over > 0 && rig.equipment === "radiator-array"
+      && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.coolantInjection) {
+    bumpHeat(rig, -2);
+    m = heatMeter(rig);
+  }
   if (m.over > 0) {
     const roll = rollD(12, dice?.overheat, random);
     const total = roll + m.bonus;

@@ -2425,6 +2425,28 @@ test("Heat Purge Wave without Backdraft carries no STR bonus", () => {
   assert.doesNotMatch(`${last.summary} ${last.effects.join(" ")}`, /STR/);
 });
 
+test("Coolant Injection vents 2 heat before the overheat roll and can skip it", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "radiator-array" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "coolant-injection";
+  rig.engine.heat = 6; // Medium cap 5 → over by 1
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  assert.equal(rig.engine.heat, 4); // vented 2 → back under the cap
+  assert.equal(r.game.resolutions.some((e) => e.kind === "overheat"), false); // the D12 is skipped
+});
+
+test("without Coolant Injection an over-Capacity rig still rolls overheat at activation end", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "radiator-array" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1"); // default upgrade = Twin Radiators (Field), no coolant tag
+  rig.engine.heat = 6; // over by 1
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1", dice: { overheat: 1 } } });
+  assert.equal(r.game.resolutions.some((e) => e.kind === "overheat"), true);
+});
+
 test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "servo-actuators" });
