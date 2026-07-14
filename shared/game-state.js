@@ -431,9 +431,10 @@ export function hasBulwarkShield(rig) {
 export { shieldCoverage } from "./rules.js";
 
 // EQUIPMENT_UPGRADES + equipmentUpgradeEffectOf also live in rules.js (leaf
-// module, importable by combat.js without a cycle). Imported above for local
-// use by the helpers below, and re-exported here so existing callers/tests
-// keep reaching them via game-state.
+// module, importable by combat.js without a cycle). EQUIPMENT_UPGRADES is
+// imported above for local use by the helpers below; equipmentUpgradeEffectOf is
+// imported only to re-export it here so existing callers/tests keep reaching
+// both via game-state (later rollout tasks wire it into combat.js and makeRig).
 export { EQUIPMENT_UPGRADES, equipmentUpgradeEffectOf };
 
 // "raise-shield" is a fourth, gated §5 preparation available only to Rigs
