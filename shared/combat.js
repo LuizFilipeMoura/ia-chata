@@ -3,6 +3,7 @@
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
   impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity, shieldCoverage, HEAT_CAPACITY,
+  equipmentUpgradeEffectOf,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
 
@@ -63,7 +64,7 @@ export function computeModifiedAim(attacker, profile, opts) {
   // import cycle. Only ballistic-processor carries the tag; other targeting-
   // computer upgrades resolve to 0.
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
-  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (attacker.equipmentUpgradeEffect?.sweetBandAcc ?? 0) : 0;
+  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAcc ?? 0) : 0;
   const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic;
   return base - accTotal;
 }
@@ -280,7 +281,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // equipment upgrade's effect tag (`hardenImpact`, the single source of truth in
   // the catalog), precomputed onto the rig in game-state.js to avoid an import
   // cycle. Only reinforced-plating carries the tag (→ −2); base stays −1.
-  const hardenDepth = target.equipmentUpgradeEffect?.hardenImpact ?? 1;
+  const hardenDepth = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.hardenImpact ?? 1;
   const hardened = target.hardened ? -hardenDepth : 0;
   // Reactive Plating (Countermeasures) — side/rear attacks lose STR. The dock
   // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`,
@@ -289,7 +290,7 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // Plates carries the −2 tag. Front arc is unaffected.
   let sideRearDock = 0;
   if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
-    sideRearDock = target.equipmentUpgradeEffect?.sideRearStr ?? -1;
+    sideRearDock = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.sideRearStr ?? -1;
   }
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
