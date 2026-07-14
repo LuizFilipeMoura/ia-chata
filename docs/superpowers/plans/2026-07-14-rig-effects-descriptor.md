@@ -358,12 +358,17 @@ describe("RepairBody copy reflects repair bonus", () => {
     expect(document.body.textContent).toContain("10+ restores 3 SP");
     expect(document.body.textContent).toContain("7–9 restores 2 SP");
   });
-  it("+1 suite patch: guaranteed 3 SP", () => {
+  it("patch is a flat guaranteed 2 SP even with a suite bonus", () => {
+    // Emergency Patch resolution does repairRig(rig, loc, 2) — a FLAT 2, and does
+    // NOT add equipmentRepairBonus (locked by game-state.test.js ~:2412). The
+    // suite bonus applies to the dice Repair only, never the guaranteed Patch.
     render(<RepairBody isPatch bonusSp={1} auto={false} onChange={noop} />);
-    expect(document.body.textContent).toContain("guaranteed 3 SP");
+    expect(document.body.textContent).toContain("guaranteed 2 SP");
   });
 });
 ```
+
+**Correctness note:** Emergency Patch is a flat guaranteed **2 SP** regardless of the suite — only the dice Repair (auto/manual) branches add `bonusSp`. In the implementation below, the patch branch must use the literal `2`, not `hi`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -380,9 +385,10 @@ import ChoiceField from "../overlays/ChoiceField";
 import { LOC_CHOICES } from "./constants";
 import "../styles/overlay.css";
 
-// Location picker for the two repair-family actions (battle.js:430-461). The SP
-// figures include any Field Repair Suite bonus (bonusSp), so the drawer promises
-// exactly what the engine restores.
+// Location picker for the two repair-family actions (battle.js:430-461). The dice
+// Repair figures include any Field Repair Suite bonus (bonusSp). Emergency Patch is
+// a flat guaranteed 2 SP — the engine does NOT add the suite bonus to the patch,
+// only to the dice Repair.
 export default function RepairBody({
   isPatch, auto, bonusSp, onChange,
 }: {
@@ -398,7 +404,7 @@ export default function RepairBody({
     <>
       <p className="v2-dwr-hint">
         {isPatch
-          ? `Restores a guaranteed ${hi} SP to the chosen location — no dice.`
+          ? `Restores a guaranteed 2 SP to the chosen location — no dice.`
           : auto
             ? `Rolls a D12: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`
             : `You'll roll a D12 next: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`}
@@ -546,6 +552,8 @@ git commit -m "fix(v2): equipment card active heat is upgrade-aware + adds an up
 - Test: `client/src/v2/components/HeatGauge.test.tsx` (existing)
 
 **Note:** `heatMeter(rig)` already returns `cap` = base + margin, so the redline position is correct today. The badge is explanatory: display the base capacity with a `+N` mark rather than a bare boosted number.
+
+**Also (single-source cleanup, from Task 1 review):** `heatMeter` in `shared/game-state.js` (~line 1198) still computes its `margin` by re-searching `EQUIPMENT_UPGRADES["blast-furnace-core"]` for the upgrade id — the exact catalog re-search that Task 1 eliminated from `rigEffects`. Change it to read the stamped SoT: `const margin = rig?.equipment === "blast-furnace-core" ? (rig?.equipmentUpgradeEffect?.thermalMargin ?? 1) : 0;` (drop the `EQUIPMENT_UPGRADES` lookup there). This guarantees the gauge's `m.cap` and `rigEffects(rig).thermalMargin` derive from the same field, so `baseCap = m.cap - margin` is always exact. Verify existing heat/overheat tests stay green (`node --test shared/game-state.test.js`); if any test built a blast-furnace rig without a stamped `equipmentUpgradeEffect`, stamp it in the fixture (mirrors the `combat.test.js` convention).
 
 - [ ] **Step 1: Write the failing test**
 

@@ -63,7 +63,7 @@ pre-resolved final values:
     overclock: 2,        // base 3 → Redundant Capacitors 2
     // ...one entry per action whose cost this rig's kit changes
   },
-  repair:  { bonusSp: 1 },   // extra SP a Repair/Patch restores (0 if no suite)
+  repair:  { bonusSp: 1 },   // extra SP the dice Repair restores (0 if no suite; NOT applied to flat-2 Emergency Patch)
   thermalMargin: 1,          // safe-over-capacity before the overheat roll
   hullMaxBonus: 1,           // Ablative baked bonus, echoed for display parity
   recoveryCool: 2,           // Radiator Array recovery vent (base 1)
@@ -114,8 +114,11 @@ All five surfaces read the descriptor:
    `openMove` so the drawer renders the value it was opened with. Fixes drift #2.
 
 3. **`RepairBody.tsx`** — receive `repair.bonusSp` (via the drawer-open call, same pattern
-   as Move). Copy becomes engine-true: with a +1 suite, "Rolls a D12: 10+ restores 3 SP,
-   7–9 restores 2 SP" and Emergency Patch "restores a guaranteed 3 SP". Fixes drift #4.
+   as Move). The **dice Repair** copy becomes engine-true: with a +1 suite, "Rolls a D12:
+   10+ restores 3 SP, 7–9 restores 2 SP". **Emergency Patch stays a flat guaranteed 2 SP** —
+   the engine's `emergencypatch` does `repairRig(rig, loc, 2)` and does NOT add the suite
+   bonus (locked by `game-state.test.js` ~:2412), so the bonus applies to the dice Repair
+   only, never the guaranteed Patch. Fixes drift #4.
 
 4. **`loadout.ts` builder** — replace static `activeHeat: eqDef.active.heat` and
    `passive: eqDef.passive` with descriptor-sourced values so the equipment card is
