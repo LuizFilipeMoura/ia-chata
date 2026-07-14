@@ -373,27 +373,28 @@ export function rigEffects(rig) {
   const upId = rig?.equipmentUpgrade || null;
   const eqDef = equip ? EQUIPMENT[equip] : null;
   const upDef = equip ? (EQUIPMENT_UPGRADES[equip] || []).find((u) => u.id === upId) : null;
+  const eff = equipmentUpgradeEffectOf(equip, upId);
 
   // Final effective heat, keyed by action key. Sprint is always present (base 2
   // when no Servo Actuators); the active's key is present only when equipped.
   const actionHeat = { sprint: equipmentSprintHeat(equip, upId) };
   if (eqDef) actionHeat[eqDef.active.key] = equipmentActiveHeat(equip, upId);
 
-  // Blast Furnace Core (Cooling) — thermal margin reads the stamped upgrade
-  // effect (same source combat.js/commission use), not a catalog re-search.
-  const thermalMargin = equip === "blast-furnace-core" ? (rig?.equipmentUpgradeEffect?.thermalMargin ?? 1) : 0;
+  // Blast Furnace Core (Cooling) — thermal margin reads live from the catalog
+  // (same source combat.js/commission use), not a stamp on the rig.
+  const thermalMargin = equip === "blast-furnace-core" ? (eff.thermalMargin ?? 1) : 0;
   // Ablative Plating (Armor) — passive +1 max SP to Hull.
   const hullMaxBonus = equipmentHullBonus(equip);
   // Radiator Array (Cooling) — cools 2 heat instead of the usual 1 in Recovery.
   const recoveryCool = equipmentRecoveryCool(equip);
 
   const combat = {
-    // Ablative Plating (Armor) — hardens impact locations; stamped effect.
-    hardenImpact: equip === "ablative-plating" ? (rig?.equipmentUpgradeEffect?.hardenImpact ?? 1) : 0,
-    // Targeting Computer (Sensors) — sweet-band accuracy bonus; stamped effect.
-    sweetBandAcc: equip === "targeting-computer" ? (rig?.equipmentUpgradeEffect?.sweetBandAcc ?? 0) : 0,
-    // Reactive Plating (Armor) — side/rear STR delta; stamped effect.
-    sideRearStr: equip === "reactive-plating" ? (rig?.equipmentUpgradeEffect?.sideRearStr ?? -1) : 0,
+    // Ablative Plating (Armor) — hardens impact locations; catalog effect.
+    hardenImpact: equip === "ablative-plating" ? (eff.hardenImpact ?? 1) : 0,
+    // Targeting Computer (Sensors) — sweet-band accuracy bonus; catalog effect.
+    sweetBandAcc: equip === "targeting-computer" ? (eff.sweetBandAcc ?? 0) : 0,
+    // Reactive Plating (Armor) — side/rear STR delta; catalog effect.
+    sideRearStr: equip === "reactive-plating" ? (eff.sideRearStr ?? -1) : 0,
   };
 
   const modifiers = [];
@@ -1155,10 +1156,10 @@ export function heatMeter(rig) {
   const cap = HEAT_CAPACITY[rig?.weightClass] ?? 5;
   const floor = rig?.engine?.sp === 0 ? 3 : 0;
   // Blast Furnace Core (Thermal) raises the safe threshold before the overheat
-  // roll. Read the stamped effect (single source of truth, same field rigEffects
-  // and combat.js read) rather than re-searching the catalog.
+  // roll. Read live from the catalog (single source of truth, same field
+  // rigEffects and combat.js read) rather than a stamp on the rig.
   const margin = rig?.equipment === "blast-furnace-core"
-    ? (rig?.equipmentUpgradeEffect?.thermalMargin ?? 1)
+    ? (equipmentUpgradeEffectOf(rig?.equipment, rig?.equipmentUpgrade)?.thermalMargin ?? 1)
     : 0;
   const effCap = cap + margin;
   const over = Math.max(0, heat - effCap);

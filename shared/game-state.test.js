@@ -4788,14 +4788,16 @@ test("rigEffects: Field Repair Suite +1 SP, Master Toolkit +2", () => {
 test("rigEffects: passive stat mods (ablative hull, thermal margin, radiator cool)", () => {
   assert.equal(rigEffects({ equipment: "ablative-plating" }).hullMaxBonus, 1);
   assert.equal(rigEffects({ equipment: "blast-furnace-core" }).thermalMargin, 1);
-  assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core", equipmentUpgradeEffect: { thermalMargin: 2 } }).thermalMargin, 2);
   assert.equal(rigEffects({ equipment: "radiator-array" }).recoveryCool, 2);
 });
 
-test("rigEffects: combat deltas carried for follow-on", () => {
-  assert.equal(rigEffects({ equipment: "reactive-plating" }).combat.sideRearStr, -1);
-  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates", equipmentUpgradeEffect: { sideRearStr: -2 } }).combat.sideRearStr, -2);
-  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor", equipmentUpgradeEffect: { sweetBandAcc: 1 } }).combat.sweetBandAcc, 1);
+test("rigEffects derives combat/thermal tags from the catalog, not a stamp", () => {
+  assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core" }).thermalMargin, 2);
+  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates" }).combat.sideRearStr, -2);
+  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" }).combat.sweetBandAcc, 1);
+  assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" }).combat.hardenImpact, 2);
+  // family default when the upgrade carries no such tag
+  assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reactive-armor" }).combat.hardenImpact, 1);
 });
 
 test("rigEffects: combat.hardenImpact reads stamped ablative-plating effect", () => {
