@@ -7,6 +7,7 @@ import { RigTerminal } from "./overlays/RigTerminal";
 import { CommissionWizard } from "./overlays/CommissionWizard";
 import { ScanCommission } from "./overlays/ScanCommission";
 import { OutcomeBanner } from "./overlays/OutcomeBanner";
+import { ThreatOverlay } from "./overlays/ThreatOverlay";
 import { V2ChatMount } from "./components/V2ChatMount";
 import { GlossaryDialog } from "./overlays/GlossaryDialog";
 import { useRoomState } from "../state/RoomStateContext";
@@ -69,6 +70,7 @@ export function V2Terminal() {
       )}
       {scanOpen && <ScanCommission onClose={() => setScanOpen(false)} />}
       <OutcomeBanner />
+      <ThreatOverlay />
       <GlossaryDialog open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
       <V2ChatMount onUnreadChange={setChatUnread} />
     </Shell>
