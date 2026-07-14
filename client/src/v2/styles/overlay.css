@@ -430,3 +430,72 @@
   .v2-root .v2-roll-ok { animation: none; opacity: 1; transform: none; }
   .v2-root .v2-rx-token.flip { animation: none; transform: rotateY(180deg); }
 }
+
+/* --- Threat telegraph: loud, blocking "incoming fire" overlay --- */
+.v2-threat {
+  position: fixed; inset: 0; z-index: 1200;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(6, 8, 11, .45);
+  animation: v2-threat-shake .12s linear infinite;
+}
+@keyframes v2-threat-shake {
+  0% { transform: translate(0, 0); } 25% { transform: translate(-1.2px, 1px); }
+  50% { transform: translate(1px, -1px); } 75% { transform: translate(-1px, -1px); }
+  100% { transform: translate(1px, 1px); }
+}
+.v2-threat-siren {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 50%, transparent 40%, rgba(229, 83, 58, .28) 100%);
+  animation: v2-threat-siren 1s ease-in-out infinite;
+}
+@keyframes v2-threat-siren { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
+.v2-threat-hazard {
+  position: absolute; left: 0; right: 0; height: 20px; pointer-events: none;
+  background: repeating-linear-gradient(-45deg, #0c0709 0 13px, #8a2735 13px 26px);
+  animation: v2-threat-slide .7s linear infinite;
+}
+.v2-threat-hazard.top { top: 0; } .v2-threat-hazard.bot { bottom: 0; }
+@keyframes v2-threat-slide { to { background-position: 37px 0; } }
+.v2-threat-reticle {
+  position: absolute; top: 34%; left: 50%; width: 96px; height: 96px; margin: -48px;
+  border: 2px solid var(--ember-hi); border-radius: 50%;
+  box-shadow: 0 0 18px rgba(255, 111, 82, .7); pointer-events: none;
+  animation: v2-threat-ret 1.4s ease-out infinite;
+}
+@keyframes v2-threat-ret {
+  0% { transform: scale(1.4); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(.7); opacity: .2; }
+}
+.v2-threat-reticle .h, .v2-threat-reticle .v { position: absolute; background: var(--ember-hi); opacity: .85; }
+.v2-threat-reticle .h { left: 0; right: 0; top: 50%; height: 1px; }
+.v2-threat-reticle .v { top: 0; bottom: 0; left: 50%; width: 1px; }
+.v2-threat-card {
+  position: relative; z-index: 1; text-align: center;
+  padding: 26px 20px calc(26px + env(safe-area-inset-bottom, 0px));
+  width: 100%; max-width: 460px;
+}
+.v2-threat-klaxon {
+  font-size: 12px; font-weight: 800; letter-spacing: .28em; text-transform: uppercase;
+  color: var(--ember-hi); animation: v2-threat-blink .7s steps(1) infinite;
+}
+@keyframes v2-threat-blink { 50% { opacity: .25; } }
+.v2-threat-title {
+  font-size: 28px; font-weight: 800; color: var(--txt); margin: 10px 0 6px; line-height: 1.06;
+  text-shadow: 0 0 24px rgba(229, 83, 58, .55);
+}
+.v2-threat-title em { color: var(--ember-hi); font-style: normal; }
+.v2-threat-title b { color: var(--oil-hi); font-weight: 800; }
+.v2-threat-weapon { font-size: 14px; color: var(--txt-dim); letter-spacing: .04em; }
+.v2-threat-brace {
+  margin-top: 16px; display: inline-block; font-size: 13px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; padding: 9px 20px; border-radius: 6px;
+  color: #12060a; background: linear-gradient(180deg, var(--ember-hi), var(--ember));
+  box-shadow: 0 0 26px rgba(229, 83, 58, .6);
+}
+.v2-threat-dismiss {
+  display: block; margin: 16px auto 0; padding: 7px 18px; border-radius: 6px;
+  background: transparent; color: var(--txt-dim); border: 1px solid var(--line);
+  font: inherit; cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-threat, .v2-threat-siren, .v2-threat-hazard, .v2-threat-reticle, .v2-threat-klaxon { animation: none; }
+}
