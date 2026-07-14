@@ -466,7 +466,7 @@ export function AttackWizard({
     dicePreview =
       `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
       (!aimed ? " + 1 location die (d12)" : "") +
-      (aimed ? " · +1 to hit" : "") +
+      (aimed ? " · −2 to hit (pick location)" : "") +
       (secondShot ? " · +1 heat (second shot)" : "");
 
     if (isMelee) {
@@ -608,7 +608,7 @@ export function AttackWizard({
               <span className="v2-aw-aim-glyph" aria-hidden="true">◎</span>
               <span className="v2-aw-aim-text">
                 <span className="v2-aw-aim-label">Aimed Shot</span>
-                <span className="v2-aw-aim-hint">Hit a chosen part · +1 to hit</span>
+                <span className="v2-aw-aim-hint">Hit a chosen part · −2 to hit</span>
               </span>
               <span className="v2-aw-aim-switch" aria-hidden="true" />
             </button>
