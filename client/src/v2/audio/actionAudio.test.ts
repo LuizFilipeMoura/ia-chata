@@ -11,7 +11,7 @@ vi.mock("./soundAssets", () => ({
   soundUrl: (s: string) => (s === "missing" ? null : `url:${s}`),
 }));
 
-import { playAction, playDamage, playHeat, playEngineStart, startEngineLoop, stopEngineLoop, ACTION_AUDIO } from "./actionAudio";
+import { playAction, playDamage, playHeat, playEngineStart, startEngineLoop, stopEngineLoop, playThreatAlarm, ACTION_AUDIO } from "./actionAudio";
 
 beforeEach(() => { play.mockClear(); startIdle.mockClear(); stopIdle.mockClear(); });
 
@@ -96,4 +96,10 @@ test("repair and emergencypatch play the console beep", () => {
     expect(voices).toEqual([]);
     expect(sfx).toEqual(["url:old_panel_beep", "url:beep_warning"]);
   }
+});
+
+test("playThreatAlarm is callable without throwing", () => {
+  // The mixer is a no-op without a real AudioContext (jsdom); we only assert the
+  // export exists and runs. Fuller behaviour is covered by the mixer's own tests.
+  expect(() => playThreatAlarm()).not.toThrow();
 });
