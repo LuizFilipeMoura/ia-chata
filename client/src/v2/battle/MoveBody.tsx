@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Rig } from "../../state/types";
+import { rigEffects } from "/shared/game-state.js";
 import { SPEED, holdMsFor } from "./constants";
 import "../styles/overlay.css";
 
@@ -24,7 +25,10 @@ export default function MoveBody({
   const base = rig.speed ?? SPEED[rig.weightClass] ?? 8;
   // Sprint is 1½× Speed, rounded to a whole inch so table measuring stays clean.
   const dist = sprint ? Math.round(base * 1.5) : base;
-  const heat = sprint ? (rig.equipment === "servo-actuators" ? 1 : 2) : 1;
+  // Sprint heat is engine-derived (Servo Actuators → 1, its Reinforced Servos
+  // Field upgrade → 0); Move is always +1. Reading rigEffects keeps this drawer
+  // identical to the picker chip and to what resolution charges.
+  const heat = sprint ? rigEffects(rig).actionHeat.sprint : 1;
   const holdMs = holdMsFor(actionKey);
   const holdSec = Math.round(holdMs / 1000);
 
@@ -55,7 +59,7 @@ export default function MoveBody({
         className="v2-dwr-hint"
         dangerouslySetInnerHTML={{
           __html: sprint
-            ? `Reposition up to <b>${dist}"</b> (1½× Speed). Backpedal / side-step at half. Generates <b>+${heat} heat</b>.`
+            ? `Reposition up to <b>${dist}"</b> (1½× Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`
             : `Reposition up to <b>${dist}"</b> (full Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`,
         }}
       />
