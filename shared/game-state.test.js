@@ -2790,6 +2790,82 @@ test("jumpjets costs 1 slot + 2 heat for Servo Actuators", () => {
   assert.equal(findRig(r, "a1").engine.heat, 2);
 });
 
+test("Grapnel Launcher: jumpjets breaks a melee lock, roots, arms cooldown, +2 heat, narrates", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";        // the servo-actuators Prototype
+  __test.setEngagement(a1, b1);                    // a1 pinned in a melee lock
+  assert.equal(a1.engagedWith, b1.id);
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engagedWith, null);              // grapnel yank broke the lock
+  assert.equal(a1.towedThisActivation, true);      // rooted rest of activation
+  assert.equal(a1.equipState.grapnelCooldown, 3);  // 3-round cooldown armed
+  assert.equal(a1.engine.heat, 2);                 // +2 heat
+  const last = r.game.resolutions.at(-1);
+  const text = `${last.summary} ${last.effects.join(" ")}`;
+  assert.match(text, /4"/);                         // spatial instruction narrated
+});
+
+test("Grapnel Launcher: reel mode engages the named enemy", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets", mode: "reel", engage: "b1" } });
+  assert.equal(a1.engagedWith, b1.id);             // reeled into contact + engaged
+  assert.equal(a1.equipState.grapnelCooldown, 3);
+});
+
+test("Grapnel Launcher: cooldown blocks reuse and no move follows the root", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  activate(r, "a1");
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  const heatAfterFire = a1.engine.heat;
+  const usedAfterFire = r.game.turn.actionsUsed;
+  // Second grapnel this game is on cooldown -> refused, no heat, no slot spent.
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engine.heat, heatAfterFire);
+  assert.equal(r.game.turn.actionsUsed, usedAfterFire);
+  // And the root blocks a follow-up Move (towedThisActivation guard).
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "move" } });
+  assert.equal(r.game.turn.actionsUsed, usedAfterFire);
+});
+
+test("Grapnel Launcher: cooldown ticks down each Recovery", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  a1.equipmentUpgrade = "grapnel-launcher";
+  a1.equipState.grapnelCooldown = 3;
+  __test.runRecovery(r);
+  assert.equal(a1.equipState.grapnelCooldown, 2);  // one tick per round
+  __test.runRecovery(r);
+  __test.runRecovery(r);
+  assert.equal(a1.equipState.grapnelCooldown, 0);  // floors at 0, never negative
+});
+
+test("servo rig without the grapnel upgrade still gets plain Jump Jets", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  const a1 = findRig(r, "a1");
+  const b1 = findRig(r, "b1");
+  __test.setEngagement(a1, b1);                    // plain Jump Jets is grounded while engaged
+  activate(r, "a1");
+  const usedBefore = r.game.turn.actionsUsed;
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
+  assert.equal(a1.engagedWith, b1.id);             // still locked — Jump Jets refused
+  assert.equal(a1.equipState.grapnelCooldown, 0);  // no grapnel cooldown armed
+  assert.equal(r.game.turn.actionsUsed, usedBefore);
+});
+
 test("a rig's next activation clears its own Harden", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "ablative-plating" });

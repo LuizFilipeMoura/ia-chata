@@ -1835,6 +1835,9 @@ function refreshEquipState(rig) {
   // so the first damaging hit next round re-hardens.
   if (Array.isArray(s.reactiveArmorLocs)) s.reactiveArmorLocs.length = 0;
   // (Group 3/4 branches added below.)
+  // Grapnel Launcher (§13, Servo Actuators Prototype) — 3-round cooldown counts
+  // down one per Recovery, floored at 0 (canonical field, never goes negative).
+  if ((s.grapnelCooldown || 0) > 0) s.grapnelCooldown = Math.max(0, s.grapnelCooldown - 1);
   const eff = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade);
   // Ablative Cascade (Prototype) — refill to 2 ablative charges each Recovery.
   if (eff.ablativeCascade) s.ablativeCharges = 2;
@@ -2331,6 +2334,39 @@ function performAction(room, rig, act, a, random) {
   }
   const equipId = EQUIPMENT_ACTIVE_BY_KEY[act];
   if (equipId) {
+    // Grapnel Launcher (§13, Servo Actuators Prototype) — REPLACES Jump Jets for a
+    // rig carrying it. Unlike Jump Jets it ignores engagement (the grapnel yanks
+    // the rig free of a melee lock), so it bypasses the movement guards below. It
+    // still honours the EMP lockout, the carry check, and the action budget.
+    // Spatial → narrated instruction; the engine tracks only the cooldown and the
+    // engagement-lock change.
+    if (act === "jumpjets" && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.grapnelLauncher) {
+      if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (EMP).");
+      if (rig.equipment !== equipId) return reject("This unit isn't carrying that equipment.");
+      if ((rig.equipState?.grapnelCooldown || 0) > 0) return reject(`Grapnel is recharging — ${rig.equipState.grapnelCooldown} round(s) left.`);
+      if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
+      t.actionsUsed += 1;
+      const reel = a.mode === "reel";
+      if (reel) {
+        // Reel an enemy into base contact and form the lock. Invalid/friendly
+        // names are ignored by maybeEngageByName (no throw); the shot still fires.
+        if (a.engage) maybeEngageByName(room, rig, a.engage);
+      } else if (rig.engagedWith != null) {
+        // Yank self free — break the melee lock the rig is pinned in.
+        clearEngagement(room, rig);
+      }
+      rig.towedThisActivation = true;                 // rooted: no Move/Sprint after (reuses the tow root)
+      if (rig.equipState) rig.equipState.grapnelCooldown = 3; // 3-round cooldown, ticked in Recovery
+      bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade)); // +2 heat (Jump Jets base)
+      pushResolution(room, {
+        kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+        summary: `${rig.name} fires the Grapnel Launcher.`,
+        effects: [reel
+          ? `Reel the target into base contact and engage it — move the minis (up to 4").`
+          : `Yank ${rig.name} up to 4" (ignore terrain and any melee lock) — move the mini.`],
+      });
+      return true;
+    }
     // §engagement — Jump Jets is movement; an engaged rig is pinned and must
     // Disengage before it can jump out. Other actives (harden/purge/…) are fine.
     if (act === "jumpjets" && rig.engagedWith != null) return reject("Jump Jets can't fire while engaged — Disengage first.");
