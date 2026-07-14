@@ -14,6 +14,7 @@ import {
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
   chassisById, resolveChassis, SEED_ROSTER, SEED_ROSTER_4V4, CHASSIS, randomSeedRoster,
+  CHASSIS_PRIMARY_EQUIPMENT,
   heatMeter,
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
 } from "./game-state.js";
@@ -4362,6 +4363,8 @@ test("seed preset 'rigs4' builds 4 rigs, 0 support per side, distinct chassis", 
   assert.equal(new Set(rigs.map((rig) => rig.chassis)).size, 8);
   // Rigs are named after their chassis codename, not a placeholder like "A1".
   for (const rig of rigs) assert.equal(rig.name, chassisById(rig.chassis).name);
+  // Rigs are commissioned with their chassis's primary suggested equipment.
+  for (const rig of rigs) assert.equal(rig.equipment, CHASSIS_PRIMARY_EQUIPMENT[rig.chassis]);
 });
 
 test("SEED_ROSTER_4V4 is 8 entries, 4 per side, chassis distinct, named by chassis", () => {
@@ -4388,6 +4391,8 @@ test("seed preset 'random4' builds 4 rigs, 0 support per side, distinct chassis 
   assert.equal(new Set(rigs.map((rig) => rig.chassis)).size, 8);
   assert.equal(new Set(rigs.map((rig) => rig.name)).size, 8);
   for (const rig of rigs) assert.equal(rig.name, chassisById(rig.chassis).name);
+  // Every random rig also carries its chassis's primary suggested equipment.
+  for (const rig of rigs) assert.equal(rig.equipment, CHASSIS_PRIMARY_EQUIPMENT[rig.chassis]);
 });
 
 test("randomSeedRoster: 8 distinct rig entries, 4 per side, named by chassis, RNG-deterministic", () => {
@@ -4401,6 +4406,22 @@ test("randomSeedRoster: 8 distinct rig entries, 4 per side, named by chassis, RN
   assert.ok(roster.every((e) => e.name === chassisById(e.chassis).name));
   // Same RNG → same roster (reproducible).
   assert.deepEqual(randomSeedRoster(stub), roster);
+});
+
+test("CHASSIS_PRIMARY_EQUIPMENT maps every chassis to a valid equipment id", () => {
+  for (const c of CHASSIS) {
+    const eq = CHASSIS_PRIMARY_EQUIPMENT[c.id];
+    assert.ok(eq, `missing primary equipment for ${c.id}`);
+    assert.ok(EQUIPMENT[eq], `unknown equipment ${eq} for ${c.id}`);
+  }
+});
+
+test("default seed also commissions rigs with their primary equipment", () => {
+  const r = createRoom("SEED-EQ");
+  applyCommand(r, { verb: "seed", attrs: { first: "a" } });
+  const rigs = r.rigs.filter((rig) => rig.kind === "rig");
+  assert.ok(rigs.length > 0);
+  for (const rig of rigs) assert.equal(rig.equipment, CHASSIS_PRIMARY_EQUIPMENT[rig.chassis]);
 });
 
 test("explicit roster overrides preset", () => {

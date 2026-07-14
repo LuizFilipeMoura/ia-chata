@@ -103,6 +103,25 @@ export const CHASSIS = [
   { id: "medium-crossbow-talon",      name: "Silver",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
 ];
 
+// Each chassis's primary suggested equipment — mirrors content/chassis.json
+// `suggestedEquipment[0]` (the same list the commission wizard defaults to). The
+// engine keeps its own copy for the same reason CHASSIS is duplicated here: the
+// isomorphic module can't read the content file in the browser. Seeded rigs are
+// commissioned with this so a test battle exercises equipment out of the box.
+export const CHASSIS_PRIMARY_EQUIPMENT = {
+  "light-claw-autocannon": "ablative-plating",
+  "light-missile-flamethrower": "blast-furnace-core",
+  "light-saw-minigun": "servo-actuators",
+  "light-wreckingball-double": "reactive-plating",
+  "light-sword-arc": "blast-furnace-core",
+  "light-harpoon-anchor": "servo-actuators",
+  "light-rivet-pressureclaw": "ablative-plating",
+  "medium-lance-mortar": "servo-actuators",
+  "medium-shield-siege": "ablative-plating",
+  "medium-sniper-chainsaw": "targeting-computer",
+  "medium-crossbow-talon": "targeting-computer",
+};
+
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
 // weight classes (3 medium / 3 light — the catalogue has no heavy). All chassis
 // ids are unique, honouring the no-mirror-matchup invariant (AGENTS.md).
@@ -2843,6 +2862,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           chassis: pb.id, sp: pb.sp,
           longRangeUpgrade: entry.prototype === "longRange" ? prototypeUpgradeFor(pb.longRange) : undefined,
           meleeUpgrade: entry.prototype === "melee" ? prototypeUpgradeFor(pb.melee) : undefined,
+          // Commission with the chassis's primary suggested equipment unless the
+          // roster entry names its own — so seeded rigs aren't fielded bare.
+          equipment: entry.equipment ?? CHASSIS_PRIMARY_EQUIPMENT[pb.id] ?? null,
         });
       }
       if (!unit) continue;
