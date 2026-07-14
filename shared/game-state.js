@@ -1171,7 +1171,10 @@ export function heatMeter(rig) {
   const margin = rig?.equipment === "blast-furnace-core"
     ? (equipmentUpgradeEffectOf(rig?.equipment, rig?.equipmentUpgrade)?.thermalMargin ?? 1)
     : 0;
-  const effCap = cap + margin;
+  // Nanite Swarm (Utility Prototype) — while any nanite stack rides this rig,
+  // its Heat Capacity is −1 (the downside for the free self-repair each Recovery).
+  const naniteDock = (rig?.equipState?.naniteStacks?.length || 0) > 0 ? 1 : 0;
+  const effCap = cap + margin - naniteDock;
   const over = Math.max(0, heat - effCap);
   const bonus = over > 0 ? Math.min(MAX_OVERHEAT_BONUS, 2 * over) : 0;
   let zone;
@@ -1822,6 +1825,13 @@ function refreshEquipState(rig) {
   // Runs AFTER runRecovery's cooling read so the "cool only 1" downside checks
   // the pre-bank cryo count.
   if (eff.cryoReservoir && !rig.noCool) s.cryo = Math.min(3, (s.cryo || 0) + 1);
+  // Nanite Swarm (Utility Prototype) — every stack heals 1 SP on its location
+  // (repairRig clamps to max + honours repair locks), then decays 1 charge;
+  // stacks spent to 0 drop off (and with them the Heat Capacity −1 downside).
+  if (Array.isArray(s.naniteStacks) && s.naniteStacks.length) {
+    for (const st of s.naniteStacks) { repairRig(rig, st.loc, 1); st.sp -= 1; }
+    s.naniteStacks = s.naniteStacks.filter((st) => st.sp > 0);
+  }
 }
 
 function runRecovery(room) {
@@ -2353,6 +2363,31 @@ function performAction(room, rig, act, a, random) {
     pushResolution(room, {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} vents cryo ×${spend} — −${2 * spend} heat, +${spend} STR to the next attack.`, effects: [],
+    });
+    return true;
+  }
+  // Nanite Swarm (Utility Prototype) — an ACTIVE (1 slot, +1 heat) that seeds a
+  // nanite stack on a location: self, or a friendly unit "in reach" (spatial →
+  // player-adjudicated, named on the action and resolved by name). The stack
+  // lives on the HEALED (hosting) rig's equipState.naniteStacks as { loc, sp }
+  // (sp = remaining charges, cap 3); each Recovery it heals 1 SP there then
+  // decays 1 (refreshEquipState). The "1 slot + 1 heat" is paid by the seeding
+  // rig; the "Heat Capacity −1" downside rides the hosting rig (heatMeter) —
+  // these coincide on a self-seed. Gated by the budget like every other active.
+  if (act === "nanite") {
+    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.naniteSwarm) return reject("This unit has no Nanite Swarm.");
+    if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
+    const host = a.target ? findRig(room, a.target) : rig; // self, or an ally in reach (player-adjudicated)
+    if (!host || (host.owner || "a") !== (rig.owner || "a")) return reject("Seed the swarm on yourself or a friendly unit in reach.");
+    const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? String(a.loc).toLowerCase() : "hull";
+    const stacks = host.equipState.naniteStacks;
+    const st = stacks.find((x) => x.loc === loc);
+    if (st) st.sp = Math.min(3, st.sp + 1); else stacks.push({ loc, sp: 1 }); // cap 3 / location
+    t.actionsUsed += 1;
+    bumpHeat(rig, 1);
+    pushResolution(room, {
+      kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `${rig.name} seeds a nanite stack on ${host.name}'s ${loc}.`, effects: [],
     });
     return true;
   }

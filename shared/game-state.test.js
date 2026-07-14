@@ -2323,6 +2323,48 @@ test("Recovery clears reactiveArmorLocs so Reactive Armor re-arms next round", (
   assert.deepEqual(rig.equipState.reactiveArmorLocs, []);
 });
 
+test("Nanite Swarm: seeding costs 1 slot + 1 heat and stacks a location (cap 3)", () => {
+  const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.equipment = "field-repair-suite"; a1.equipmentUpgrade = "nanite-swarm";
+  a1.hull.sp = 2; // wounded so we can watch it heal later
+  activate(r, "a1");
+  const heatBefore = a1.engine.heat, usedBefore = r.game.turn.actionsUsed;
+  // Pre-seed to 2 so the two live seeds below drive the location to the cap and
+  // then clamp — proving cap 3 while respecting the 3-action budget (the seed is
+  // an ordinary equipment active: 1 slot + 1 heat each, and every other active
+  // is budget-gated the same way).
+  a1.equipState.naniteStacks = [{ loc: "hull", sp: 2 }];
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "nanite", loc: "hull" } }); // 2 → 3
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "nanite", loc: "hull" } }); // clamped at 3
+  assert.equal(r.game.turn.actionsUsed, usedBefore + 2);         // 1 slot each
+  assert.equal(a1.engine.heat, heatBefore + 2);                  // +1 heat each (clamp doesn't refund)
+  const st = a1.equipState.naniteStacks.find((x) => x.loc === "hull");
+  assert.equal(st.sp, 3);                                        // capped at 3
+});
+
+test("Nanite Swarm: each Recovery a stack heals 1 SP then decays 1, dropping at 0", () => {
+  const rig = makeRig(1, "Mender", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "field-repair-suite", "nanite-swarm");
+  rig.hull.sp = rig.hull.max - 3;
+  rig.equipState.naniteStacks = [{ loc: "hull", sp: 2 }];
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.hull.sp, rig.hull.max - 2);                   // healed 1
+  assert.equal(rig.equipState.naniteStacks[0].sp, 1);           // decayed 1
+  __test.runRecovery(room);
+  assert.equal(rig.hull.sp, rig.hull.max - 1);                   // healed 1 more
+  assert.equal(rig.equipState.naniteStacks.length, 0);          // stack spent → dropped
+});
+
+test("Nanite Swarm downside: Heat Capacity −1 while a stack rides", () => {
+  const rig = makeRig(1, "Mender", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "field-repair-suite", "nanite-swarm");
+  const capClean = heatMeter(rig).cap;
+  rig.equipState.naniteStacks = [{ loc: "hull", sp: 1 }];
+  assert.equal(heatMeter(rig).cap, capClean - 1);
+});
+
 test("Chaff Burst narrates a free side-step when a smoked Reactive-Plating rig is targeted", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
