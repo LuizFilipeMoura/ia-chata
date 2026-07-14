@@ -99,6 +99,18 @@ test("computeStr applies weight and Charged Shot", () => {
   assert.equal(computeStr({ weightClass: "medium" }, arcGun, { charged: true }), 12); // 10+0+2
 });
 
+test("Kickstart Pistons: first melee after charging into contact hits +2 STR", () => {
+  const claw = WEAPONS.melee["Claw"];
+  const charged = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: true,  kickstartUsed: false };
+  const idle    = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: false, kickstartUsed: false };
+  const spent   = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: true,  kickstartUsed: true  };
+  assert.equal(computeStr(charged, claw, {}) - computeStr(idle, claw, {}), 2); // charged → +2
+  assert.equal(computeStr(spent, claw, {}), computeStr(idle, claw, {}));       // charge already spent → no bonus
+  // The wrong Mobility upgrade (Field) never triggers, even when charged.
+  const wrong = { ...charged, equipmentUpgrade: "reinforced-servos" };
+  assert.equal(computeStr(wrong, claw, {}), computeStr(idle, claw, {}));
+});
+
 test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
   const auto = WEAPONS.longRange["Autocannon"];
   assert.equal(arcBonus(auto, "front"), 0);

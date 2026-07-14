@@ -2409,6 +2409,20 @@ test("Reinforced Servos zeroes Sprint heat through the action pipeline", () => {
   assert.equal(rig.engine.heat, 0); // 0, not the base Servo Actuators 1
 });
 
+test("Sprinting into base contact sets the Kickstart charge, and it clears at activation end", () => {
+  const r = createRoom("X");
+  readyThreeAndThree(r, { a1: "servo-actuators" });
+  activate(r, "a1");
+  const rig = findRig(r, "a1");
+  rig.equipmentUpgrade = "kickstart-pistons";
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint", engage: "b1" } });
+  assert.equal(rig.engagedWith != null, true);      // the sprint declared the lock
+  assert.equal(rig.chargedIntoContact, true);       // charge armed for the first melee
+  applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
+  assert.equal(rig.chargedIntoContact, false);      // cleared — no leak past the activation
+  assert.equal(rig.kickstartUsed, false);
+});
+
 test("Master Toolkit repairs +2 through the action pipeline", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "field-repair-suite" });

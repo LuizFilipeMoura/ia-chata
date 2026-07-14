@@ -741,6 +741,10 @@ function ensureRigShape(rig) {
   if (typeof rig.noCool !== "boolean") rig.noCool = false;
   if (typeof rig.speedHalvedNextRound !== "boolean") rig.speedHalvedNextRound = false;
   if (typeof rig.movedThisActivation !== "boolean") rig.movedThisActivation = false;
+  // Kickstart Pistons (Mobility Tuned) — per-activation charge state; guard the
+  // shape for a legacy rig loaded from an older save (mirrors movedThisActivation).
+  if (typeof rig.chargedIntoContact !== "boolean") rig.chargedIntoContact = false;
+  if (typeof rig.kickstartUsed !== "boolean") rig.kickstartUsed = false;
   if (!rig.loaded || typeof rig.loaded !== "object") rig.loaded = { longRange: true, melee: true };
   if (rig.preparation === undefined) rig.preparation = null;
   if (rig.chassis === undefined) rig.chassis = null;
@@ -1895,6 +1899,10 @@ function endActivation(room, rig, dice, random) {
   // just at start), so a stale `true` can't leak into a reactive strike on the
   // opponent's turn before this rig next activates.
   rig.movedThisActivation = false;
+  // Kickstart Pistons — the charge and its spent-flag are scoped to one
+  // activation; clear both so a stale charge can't leak into a later melee.
+  rig.chargedIntoContact = false;
+  rig.kickstartUsed = false;
   // Tow Chain (§13, Wrecking Ball) — clear the per-activation root flag at
   // activation end too, so a stale root can't leak past this activation.
   rig.towedThisActivation = false;
@@ -1994,6 +2002,9 @@ function resolveFire(room, rig, target, a, act, random) {
   // (both are per-activation, one-shot flags on the acting rig).
   if (fireControlFirst) rig.fireControlUsed = true;
   if (rig.lockSightNext) rig.lockSightNext = false;
+  // Kickstart Pistons — the charge is spent by the first melee attack this
+  // activation; later melee blows resolve at normal STR.
+  if (slot === "melee" && rig.chargedIntoContact) rig.kickstartUsed = true;
   t.actionsUsed += cost;
   // A second (or later) ranged shot in the same activation runs the barrel hot:
   // +1 heat over the base Fire/Aimed cost.
@@ -2377,6 +2388,10 @@ function performAction(room, rig, act, a, random) {
     // Optional move-into declaration: the player states they moved into base
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
+    // Kickstart Pistons (Mobility Tuned) — a Sprint that closes into base contact
+    // this activation arms the charge; computeStr reads it and resolveFire spends
+    // it on the first melee after. Only Sprint (not a plain Move) charges it.
+    if (act === "sprint" && rig.engagedWith != null) rig.chargedIntoContact = true;
     // Move / Sprint may repeat within an activation; each spends one slot and
     // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility),
     // and 0 with its Reinforced Servos Field upgrade.

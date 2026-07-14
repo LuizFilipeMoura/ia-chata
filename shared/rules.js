@@ -119,7 +119,7 @@ export const EQUIPMENT_UPGRADES = {
   ],
   "servo-actuators": [
     { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint costs 0 heat", effect: { sprintHeat: 0 } },
-    { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: {} }, // TODO(mechanics)
+    { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: { kickstartPistons: true } },
     { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", catch: "Heat and a cooldown", effect: {} }, // TODO(mechanics)
   ],
   "overclock-core": [

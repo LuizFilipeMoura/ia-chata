@@ -225,6 +225,15 @@ export function computeStr(attacker, profile, opts) {
   // lockstep). Gated on the piledriver effect so a stray opts.momentum on any
   // other weapon is inert.
   if (opts.momentum && profile.upgradeEffect?.piledriver) bonus += opts.momentum;
+  // Kickstart Pistons (Mobility Tuned) — a melee blow right after Sprinting/Jumping
+  // into base contact this activation hits +2 STR, but only the FIRST such blow:
+  // `chargedIntoContact` is armed by the move path, `kickstartUsed` is set by
+  // resolveFire once a melee attack lands. Read the equipment effect live from the
+  // catalog by id (combat.js imports only rules.js).
+  if (profile.melee && attacker.chargedIntoContact && !attacker.kickstartUsed
+      && equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.kickstartPistons) {
+    bonus += 2;
+  }
   return profile.str + weightMod + charged + bonus;
 }
 
