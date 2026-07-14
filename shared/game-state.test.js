@@ -4941,3 +4941,22 @@ test("rigEffects derives combat/thermal tags from the catalog, not a stamp", () 
 test("rigEffects: combat.hardenImpact falls back to the family default with no upgrade", () => {
   assert.equal(rigEffects({ equipment: "ablative-plating" }).combat.hardenImpact, 1);
 });
+
+test("Ablative Cascade: Recovery refills charges to 2", () => {
+  const rig = makeRig(1, "Aegis", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "ablative-plating", "ablative-cascade");
+  rig.equipState.ablativeCharges = 0;
+  const room = createRoom("X");
+  room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.ablativeCharges, 2);
+});
+
+test("Ablative Cascade: refill is scoped to the upgrade (base plating gets none)", () => {
+  const rig = makeRig(1, "Plain", "medium", "a",
+    { longRange: "Autocannon", melee: "Claw" }, "ablative-plating", "reinforced-plating");
+  rig.equipState.ablativeCharges = 0;
+  const room = createRoom("X"); room.rigs = [rig];
+  __test.runRecovery(room);
+  assert.equal(rig.equipState.ablativeCharges, 0);
+});

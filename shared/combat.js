@@ -375,6 +375,15 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
 // combat.js is pure (no game-state import), so any heat spend goes through the
 // injected `ctx.spendHeat(n)` mutator that game-state.js wires to bumpHeat. This
 // is a pure pass-through today (no consumers): it returns the hit unchanged.
+// Ablative Cascade — the one-step-gentler severity ladder (critical→severe→
+// direct→negated). Looked up by the resolved tier; a Math.min floor at the call
+// site guarantees a spend can only hold or lower an already-capped hit.
+const ABLATIVE_SOFTEN = {
+  critical: { tier: "severe", sp: 2 },
+  severe: { tier: "direct", sp: 1 },
+  direct: { tier: "none", sp: 0 },
+};
+
 export function applyDefensiveReactions(target, hit, ctx) {
   // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging hit each round
   // to a location hardens THAT location by −2 impact (Harden-equivalent) until
@@ -394,6 +403,26 @@ export function applyDefensiveReactions(target, hit, ctx) {
       // above the resolved hit (e.g. a machine-gun crit already capped to Severe).
       const sp = Math.min(hit.sp, sev.sp);
       return { ...hit, total, sp, tier: sp === hit.sp ? hit.tier : sev.tier };
+    }
+  }
+  // Ablative Cascade (Ablative Plating, Prototype) — spend one ablative charge to
+  // soften a damaging impact by exactly one severity step; each spend runs the
+  // defender +1 heat via the injected ctx.spendHeat. Charges refill to 2 each
+  // Recovery (game-state refreshEquipState). Impact-stage only, damaging hits only
+  // (the seam fires for every severity-resolved hit including zero-damage ones, so
+  // gate on hit.sp > 0), and only while a charge is banked.
+  if (hit.kind === "impact" && hit.sp > 0
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.ablativeCascade
+      && (target.equipState?.ablativeCharges || 0) > 0) {
+    const softened = ABLATIVE_SOFTEN[hit.tier];
+    if (softened) {
+      // Math.min floor: never let the ladder raise an already-capped hit.
+      const sp = Math.min(hit.sp, softened.sp);
+      if (sp < hit.sp) {
+        target.equipState.ablativeCharges -= 1;
+        ctx.spendHeat(1);
+        return { ...hit, sp, tier: softened.tier };
+      }
     }
   }
   return hit;

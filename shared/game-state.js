@@ -1815,6 +1815,9 @@ function refreshEquipState(rig) {
   // so the first damaging hit next round re-hardens.
   if (Array.isArray(s.reactiveArmorLocs)) s.reactiveArmorLocs.length = 0;
   // (Group 3/4 branches added below.)
+  const eff = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade);
+  // Ablative Cascade (Prototype) — refill to 2 ablative charges each Recovery.
+  if (eff.ablativeCascade) s.ablativeCharges = 2;
 }
 
 function runRecovery(room) {

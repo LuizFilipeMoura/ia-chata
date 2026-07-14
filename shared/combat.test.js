@@ -1438,3 +1438,60 @@ test("Reactive Armor does not fire for a rig carrying only the base Ablative Pla
   assert.equal(out[0].total, 13);                          // no reactive dock
   assert.deepEqual(base.equipState.reactiveArmorLocs, []);  // nothing hardened
 });
+
+// Ablative Cascade (Ablative Plating, Prototype). NOTE: the plan's fixtures were
+// drafted against a hypothetical seam (nested `hit.impact`, `ctx.bumpHeat`); the
+// live Plan-2 seam is flat (`hit.tier`/`hit.sp`/`kind:"impact"`) and injects heat
+// via `ctx.spendHeat(n)`. These tests target the real seam.
+test("Ablative Cascade: spends a charge to soften a Critical to Severe, at +1 heat", () => {
+  const target = {
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 2 },
+  };
+  let heated = 0;
+  const ctx = { location: "hull", row: null, spendHeat: (n) => { heated += n; } };
+  const hit = { die: 6, total: 18, tier: "critical", sp: 3, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, ctx);
+  assert.equal(out.tier, "severe");                        // softened one step
+  assert.equal(out.sp, 2);
+  assert.equal(target.equipState.ablativeCharges, 1);      // one charge spent
+  assert.equal(heated, 1);                                 // +1 heat per spend
+});
+
+test("Ablative Cascade: softens Severe→Direct and Direct→negated, one step per spend", () => {
+  const mk = () => ({
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 2 },
+  });
+  const noop = { location: "hull", row: null, spendHeat: () => {} };
+  const sev = applyDefensiveReactions(mk(), { die: 5, total: 14, tier: "severe", sp: 2, kind: "impact" }, noop);
+  assert.equal(sev.tier, "direct"); assert.equal(sev.sp, 1);
+  const dir = applyDefensiveReactions(mk(), { die: 3, total: 11, tier: "direct", sp: 1, kind: "impact" }, noop);
+  assert.equal(dir.tier, "none"); assert.equal(dir.sp, 0);
+});
+
+test("Ablative Cascade: with no charges left, the hit lands full", () => {
+  const target = {
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 0 },
+  };
+  let heated = 0;
+  const hit = { die: 6, total: 18, tier: "critical", sp: 3, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: null, spendHeat: (n) => { heated += n; } });
+  assert.equal(out.tier, "critical");                      // untouched
+  assert.equal(out.sp, 3);
+  assert.equal(heated, 0);                                 // no heat when nothing spent
+});
+
+test("Ablative Cascade: a zero-damage impact never spends a charge (gated on hit.sp > 0)", () => {
+  const target = {
+    weightClass: "medium", equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade",
+    equipState: { ablativeCharges: 2 },
+  };
+  let heated = 0;
+  const hit = { die: 1, total: 5, tier: "none", sp: 0, kind: "impact" };
+  const out = applyDefensiveReactions(target, hit, { location: "hull", row: null, spendHeat: (n) => { heated += n; } });
+  assert.equal(out.sp, 0);
+  assert.equal(target.equipState.ablativeCharges, 2);      // charge untouched
+  assert.equal(heated, 0);
+});
