@@ -3,11 +3,34 @@ import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
 import { weaponAccAt } from "/shared/combat.js";
 import { useRoomState } from "../../state/RoomStateContext";
+import { useMySide } from "../../hooks/useMySide";
 import { useV2Commands } from "../hooks/useV2Commands";
 import { useV2BattleActions } from "../state/V2BattleActionsContext";
 import { useV2Roll } from "../state/V2RollContext";
+import { rigColor, CHASSIS_NAME, type RigColor } from "../lib/commissionData";
 import type { Rig } from "../../state/types";
 import "../styles/wizards.css";
+
+// Chassis codenames are colours. Resolve a rig's colour from its chassis first,
+// then its name (commissioned rigs are named the codename); null when neither
+// maps to a colour.
+function rigColorOf(rig: Rig): RigColor | null {
+  const codename = rig.chassis ? CHASSIS_NAME[rig.chassis] : null;
+  return (codename ? rigColor(codename) : null) ?? rigColor(rig.name);
+}
+
+// Tint a rig's callsign (e.g. "A1") in its chassis colour with a matching
+// swatch chip; plain text when the rig has no colour.
+function RigName({ rig }: { rig: Rig }) {
+  const c = rigColorOf(rig);
+  if (!c) return <>{rig.name}</>;
+  return (
+    <span className="v2-aw-rigname" style={{ color: c.text }}>
+      <span className="v2-aw-rigname-swatch" style={{ background: c.swatch }} aria-hidden="true" />
+      {rig.name}
+    </span>
+  );
+}
 
 export type AttackMode = "fire" | "aimed" | "lock";
 
@@ -39,7 +62,7 @@ const LOC_DESC: Record<string, string> = {
 type IconMap = ((opt: string) => string) | Record<string, string> | undefined;
 
 function Field({
-  label, options, selected, onChange, icon, optIcon, desc, optDesc, hidden, optDisabled,
+  label, options, selected, onChange, icon, optIcon, desc, optDesc, hidden, optDisabled, optColor,
 }: {
   label: string;
   options: string[];
@@ -51,6 +74,9 @@ function Field({
   optDesc?: IconMap;
   hidden?: boolean;
   optDisabled?: (opt: string) => boolean;
+  // Per-option colour (target Rigs are tinted by chassis) — adds a swatch and
+  // tints the label. Return null for options with no colour.
+  optColor?: (opt: string) => RigColor | null;
 }) {
   const iconFor = (opt: string) =>
     (typeof optIcon === "function" ? optIcon(opt) : optIcon?.[opt]) || "";
@@ -71,16 +97,29 @@ function Field({
           const ic = iconFor(opt);
           const od = descFor(opt);
           const isDisabled = optDisabled?.(opt) ?? false;
+          const col = optColor?.(opt) ?? null;
+          const isSel = opt === selected;
+          // Selected target: recolour the oil selection chrome to the rig's
+          // chassis colour (inline beats the shared .is-sel rule). col is only
+          // set on the target field, so no other field is affected.
+          const selStyle: CSSProperties | undefined =
+            col && isSel
+              ? { color: col.text, borderColor: col.text, boxShadow: `inset 0 0 0 1px ${col.text}, 0 0 16px ${col.text}40` }
+              : undefined;
           return (
             <button
               key={opt}
               type="button"
               disabled={isDisabled}
-              className={"v2-aw-opt v2-opt" + (opt === selected ? " is-sel" : "") + (isDisabled ? " is-disabled" : "")}
+              className={"v2-aw-opt v2-opt" + (isSel ? " is-sel" : "") + (isDisabled ? " is-disabled" : "")}
+              style={selStyle}
               onClick={() => { if (!isDisabled) onChange(opt); }}
             >
               {ic ? <span className="v2-aw-opt-ic v2-title" aria-hidden="true">{ic}</span> : null}
-              <span className="v2-aw-opt-label">{opt}</span>
+              <span className="v2-aw-opt-label" style={col ? { color: col.text } : undefined}>
+                {col ? <span className="v2-aw-rigname-swatch" style={{ background: col.swatch }} aria-hidden="true" /> : null}
+                {opt}
+              </span>
               {od ? <span className="v2-aw-opt-desc">{od}</span> : null}
             </button>
           );
@@ -115,6 +154,11 @@ interface WeaponUpgradeNotice {
   tag?: string;
 }
 
+// Per-rig recall of the last shot: whom this Rig fired on and the measured
+// distance. Survives drawer close (the wizard remounts on each open) so the
+// next attack opens pre-aimed at the same foe and range. Keyed by rig id.
+const LAST_SHOT = new Map<string, { target?: string; inches?: number }>();
+
 function selectedUpgrade(
   rig: Rig,
   slot: "longRange" | "melee",
@@ -138,6 +182,7 @@ export function AttackWizard({
   react?: boolean;
 }) {
   const { rigs, game } = useRoomState();
+  const mySide = useMySide();
   const sendCommand = useV2Commands();
   const { sendReact } = useV2BattleActions();
   const { promptDice } = useV2Roll();
@@ -157,8 +202,14 @@ export function AttackWizard({
   // the Rig's longRange + melee pair.
   const flat = UNIT_KINDS[kindOf(rig)]?.weaponMode === "flat-pick";
 
+  // Snapshot the recall once (stable across renders). A remembered target is
+  // only honored while that foe is still a live enemy.
+  const recall = useRef(LAST_SHOT.get(rig.id)).current;
+  const recalledTarget =
+    recall?.target && enemies.some((e) => e.name === recall.target) ? recall.target : undefined;
+
   const [state, setState] = useState<AwState>(() => ({
-    target: target ?? enemies[0]?.name ?? "",
+    target: target ?? recalledTarget ?? enemies[0]?.name ?? "",
     // A spent ranged weapon opens on the melee weapon (the only one live).
     weapon: flat
       ? "unit"
@@ -167,7 +218,7 @@ export function AttackWizard({
         : "longRange",
     arc: "front",
     range: "near",
-    inches: 3,
+    inches: recall?.inches ?? 3,
     cover: 0,
     loc: "hull",
   }));
@@ -177,6 +228,27 @@ export function AttackWizard({
   useEffect(() => {
     const id = requestAnimationFrame(() => setShow(true));
     return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Attack telegraph: 500ms after opening on an enemy, broadcast a `threat` so
+  // the defender's ThreatOverlay lights up. Re-declare when the target switches;
+  // clear on unmount (close or after Fire). Skipped for return-fire (react).
+  useEffect(() => {
+    if (react || !state.target) return;
+    const weaponName = weapons[flat ? "unit" : state.weapon] || "";
+    const id = window.setTimeout(() => {
+      sendCommand("threat", {
+        action: "declare", target: state.target, mode, weapon: weaponName, side: mySide,
+      });
+    }, 500);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.target, state.weapon, react]);
+
+  useEffect(() => {
+    if (react) return;
+    return () => { sendCommand("threat", { action: "clear", side: mySide }); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // No opposing, non-destroyed Rigs — there is nothing to attack (attack-wizard.js:45).
@@ -289,10 +361,15 @@ export function AttackWizard({
 
   // Seed the slider to the weapon's sweet spot whenever the selected weapon
   // changes (melee seeds to its reach). Keeps "open at the best range" intent.
+  // On the first mount we keep a recalled ranged distance instead of re-seeding,
+  // so reopening the drawer holds the last measured range.
+  const skipRangedSeed = useRef(recall?.inches != null);
   useEffect(() => {
     if (isMelee) {
       const reach = rangeProfile?.rng?.[0] ?? 2;
       patch({ inches: reach });
+    } else if (skipRangedSeed.current) {
+      skipRangedSeed.current = false; // honor the recalled distance once
     } else {
       patch({ inches: sweet });
     }
@@ -324,6 +401,8 @@ export function AttackWizard({
         if (d.loc) dice.location = d.loc;
         attack.dice = dice;
       }
+      // Return Fire keeps the pinned target; still recall the distance.
+      LAST_SHOT.set(rig.id, { ...LAST_SHOT.get(rig.id), inches: state.inches });
       sendReact({ attack });
       close();
       return;
@@ -348,6 +427,7 @@ export function AttackWizard({
       dice.impacts = toHit.map(() => undefined);
       attrs.dice = dice;
     }
+    LAST_SHOT.set(rig.id, { target: state.target, inches: state.inches });
     sendCommand("action", attrs);
     close();
   };
@@ -460,7 +540,7 @@ export function AttackWizard({
           <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`Fire control lock — ${rig.name}`}>
             <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
             <div className="v2-aw-title-row">
-              <div className="v2-aw-title v2-title">🔒 Fire Control Lock — {rig.name}</div>
+              <div className="v2-aw-title v2-title">🔒 Fire Control Lock — <RigName rig={rig} /></div>
               <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
             </div>
 
@@ -473,6 +553,10 @@ export function AttackWizard({
               optIcon={() => "🤖"}
               desc={FIELD_DESC.target}
               optDesc={targetDesc}
+              optColor={(name) => {
+                const e = enemies.find((x) => x.name === name);
+                return e ? rigColorOf(e) : null;
+              }}
             />
 
             <button
@@ -502,7 +586,7 @@ export function AttackWizard({
         <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`${title} — ${rig.name}`}>
           <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
           <div className="v2-aw-title-row">
-            <div className="v2-aw-title v2-title">{title} — {rig.name}</div>
+            <div className="v2-aw-title v2-title">{title} — <RigName rig={rig} /></div>
             <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           </div>
 
@@ -515,6 +599,10 @@ export function AttackWizard({
             optIcon={() => "🤖"}
             desc={FIELD_DESC.target}
             optDesc={targetDesc}
+            optColor={(name) => {
+              const e = enemies.find((x) => x.name === name);
+              return e ? rigColorOf(e) : null;
+            }}
             hidden={react}
           />
 
