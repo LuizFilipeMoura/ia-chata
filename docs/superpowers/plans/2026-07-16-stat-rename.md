@@ -389,6 +389,108 @@ git commit -m "refactor(weapons): the weapon stat str -> pen"
 
 ---
 
+### Task 4b: the camelCase `Str` compounds — the ~130 sites `\bstr\b` cannot see
+
+**This task exists because the plan was wrong.** Every grep in Tasks 1–4 anchors on `\bstr\b`, which **cannot match `computeStr`, `strBreakdown`, `nextAttackStr`** or any other camelCase compound — the same word-boundary quirk that (deliberately) hides `strOvermatchD`. Task 12's final verification used the same anchor, so **the rename would have reported clean with 130 sites still saying `Str`.** Found only because Task 4's implementer read the meltdown comment and surfaced `nextAttackStr`.
+
+**Files:**
+- Modify: `shared/combat.js`, `shared/game-state.js`, `shared/rules.js`, their tests, `client/shared.d.ts`, `client/src/**`
+
+- [ ] **Step 1: Inventory**
+
+```bash
+grep -rhoE '\b[A-Za-z]+Str\b|\bstr[A-Z][A-Za-z]*\b' shared/ server/ client/src client/shared.d.ts scripts/ | sort | uniq -c | sort -rn
+```
+
+Expected, and the disposition of each:
+
+| identifier | sites | rename to |
+|---|---|---|
+| `computeStr` | 63 | **`computePen`** |
+| `strOvermatchD` | 31 | **LEAVE** — the rework deletes it (trap 1) |
+| `strBreakdown` | 17 | **`penBreakdown`** |
+| `nextAttackStr` | 12 | **`nextAttackPen`** — see Step 3, this one is persisted |
+| `strOverride` | 11 | **`penOverride`** |
+| `riposteStr` | 9 | **`ripostePen`** |
+| `sideRearStr` | 7 | **`sideRearPen`** |
+| `nextStr` | 4 | **`nextPen`** |
+| `binaryStr` | 4 | **LEAVE** — a binary string in `client/src/assets/Robot Move standalone.html`, unrelated to this game's stats |
+| `strBd` | 3 | **`penBd`** |
+| `backdraftStr` | 3 | **`backdraftPen`** |
+| `strTerm` | 2 | **`penTerm`** |
+
+- [ ] **Step 2: Rename them**
+
+`computeStr` is the public effective-Penetration entry point (`combat.js:389`) — `computeStr(attacker, profile, opts)` returns `strBreakdown(...).value`. Both rename together.
+
+`riposteStr` is also an **upgrade effect key** (`{ id: "anvil-boss", effect: { riposteStr: 6 } }` in `rules.js`). Internal to the catalog, so renaming it is safe — but rename the key and its reader in the same edit or Anvil Boss silently stops countering.
+
+- [ ] **Step 3: `nextAttackStr` is PERSISTED STATE — read this before renaming it**
+
+`server/store.js` serialises the whole rooms map to disk (`fs.writeFileSync(filePath, JSON.stringify(Object.fromEntries(rooms)))`) and reads it back with `JSON.parse`. `rig.equipState.nextAttackStr` is therefore a **saved key**, not a local.
+
+Renaming it means a room saved with a banked Meltdown Protocol charge loads into a server that reads `nextAttackPen` — `undefined` — and the bonus **silently vanishes**. It is transient (set at activation start, consumed in `resolveFire`, cleared in `endActivation`), so the blast radius is one in-flight room on a dev branch. **Accepted deliberately; do not add a migration shim for a transient field.**
+
+- [ ] **Step 4: `mode: "str"` — rename it, and know why it is safe**
+
+`game-state.js` Meltdown Protocol takes two modes: `"str"` (arm +N Penetration on this activation's attacks) and `"burst"` (a 4" AoE). It **crosses the wire** — `client/src/state/types.ts:191` declares `mode: string`.
+
+Rename it to `"pen"` on both sides. This is safe for a reason worth understanding: the server only ever compares `if (a.mode === "burst")`, so **every other string falls to the Penetration branch**. A stale cached client sending `"str"` still gets the right behaviour.
+
+**That same property is a trap.** Because nothing compares `"str"`, a *wrong* value also reaches the Penetration branch — so **a broken rename here passes every test silently.** Task 4's implementer flagged exactly this. Assert it explicitly:
+
+```js
+test("Meltdown Protocol's pen mode arms the next attack", () => {
+  // `mode` is a wire value and only "burst" is ever compared, so any string
+  // reaches this branch — a broken rename here would pass silently. Pin it.
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  b1.equipment = "thermal-lance"; b1.equipmentUpgrade = "meltdown-protocol";
+  b1.equipState.meltdownCharge = 3;
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "meltdown", mode: "pen", n: 3 } });
+  assert.equal(b1.equipState.nextAttackPen, 3, "pen mode must bank the bonus onto the next attack");
+});
+```
+
+> Check the real equipment/upgrade ids and the verb's attr names against `rules.js` and `game-state.js` before running this — the ids above are the shape, not verified strings. If the verb rejects, read the reject reason and fix the fixture, not the assertion.
+
+- [ ] **Step 5: Verify**
+
+```bash
+grep -rhoE '\b[A-Za-z]+Str\b|\bstr[A-Z][A-Za-z]*\b' shared/ server/ client/src client/shared.d.ts scripts/ | sort | uniq -c | sort -rn
+```
+
+Expected: **only `strOvermatchD` (31) and `binaryStr` (4).** Nothing else.
+
+- [ ] **Step 6: Full suite**
+
+```bash
+npm test
+```
+
+Expected: `293 passed`, `ℹ pass 812 / ℹ fail 0` — 811 plus the meltdown pin from Step 4.
+
+- [ ] **Step 7: Stage, gate, commit**
+
+```bash
+git commit -m "refactor(combat): the camelCase Str compounds
+
+computeStr, strBreakdown, nextAttackStr and eight others - ~130 sites that
+\bstr\b cannot match, the same word-boundary quirk that hides strOvermatchD.
+The plan's own final check used that anchor and would have passed with all of
+them still saying Str.
+
+nextAttackStr is persisted (server/store.js serialises the rooms map), so a
+room saved mid-activation loses a banked Meltdown charge. Transient field,
+dev branch, accepted rather than shimmed. Meltdown's wire mode str -> pen is
+safe because only \"burst\" is ever compared - which is also why it needed a
+test pinning it."
+```
+
+---
+
 ### Task 5: the weapon field `d` → `dmg`
 
 **Files:**
@@ -467,13 +569,26 @@ git commit -m "refactor(weapons): the weapon stat d -> dmg"
 **Files:**
 - Modify: `shared/game-state.js` (melee entries in `WEAPONS.melee`, `UNIT_WEAPONS`), `shared/combat.js:31`, tests, client
 
-- [ ] **Step 1: Inventory**
+- [ ] **Step 1: Inventory — BOTH forms**
 
 ```bash
 grep -rn '\bacc\b' shared/ server/ client/ scripts/
+grep -rhoE '\b[A-Za-z]+Acc\b|\bacc[A-Z][A-Za-z]*\b' shared/ server/ client/src client/shared.d.ts scripts/ | sort | uniq -c | sort -rn
 ```
 
-Expected: **36** hits. `acc` is melee-only — ranged weapons derive accuracy from `sweet`/`peak`/`dropoff`.
+Expected: **36** bare hits, plus **45** camelCase compounds `\bacc\b` cannot see — the same anchor bug that hid 130 `Str` compounds until Task 4b:
+
+| identifier | sites | rename to |
+|---|---|---|
+| `accHere` | 12 | `accuracyHere` |
+| `accTier` | 10 | `accuracyTier` |
+| `sweetBandAcc` | 8 | `sweetBandAccuracy` |
+| `predictiveAcc` | 4 | `predictiveAccuracy` |
+| `accTotal` | 4 | `accuracyTotal` |
+| `accLabel` | 4 | `accuracyLabel` |
+| `weaponAcc` | 3 | `weaponAccuracy` |
+
+`acc` is melee-only as a *weapon field* — ranged weapons derive accuracy from `sweet`/`peak`/`dropoff`. The compounds above are the modifier-space plumbing and span both.
 
 - [ ] **Step 2: Rename the melee entries**
 
@@ -839,14 +954,29 @@ prompt to the engine. Now covered by shared/rulebook.test.js."
 
 ### Task 12: final verification
 
-- [ ] **Step 1: No legacy identifiers survive**
+- [ ] **Step 1: No legacy identifiers survive — bare forms**
 
 ```bash
 grep -rn '\bstr\b\|\bacc\b\|effStr\|WEIGHT_STR_MOD\|BLAST_STR\|BLAST_D\b' \
   shared/ server/ client/ scripts/ | grep -v strOvermatch
 ```
 
-Expected: **no output.**
+Expected: **exactly two hits, both correct:**
+- `shared/rules.js` — the `str` parameter inside `strOvermatchD`'s **body**. Trap 1 mandates leaving it; the rework deletes the function.
+- `shared/rules.js:93` — the comment `// See docs/superpowers/specs/2026-07-15-str-overflow-design.md.` **That is a real file on disk.** Renaming the reference breaks it.
+
+> **This step used to say "no output", which was unreachable by construction** — it contradicted trap 1, since `strOvermatchD`'s body contains `str`. Task 4's implementer caught it. An expectation that cannot be met trains the reader to ignore the check.
+
+- [ ] **Step 1b: No legacy identifiers survive — camelCase forms**
+
+**This is the check that actually matters**, and its absence is why the plan nearly shipped a half-done rename:
+
+```bash
+grep -rhoE '\b[A-Za-z]+Str\b|\bstr[A-Z][A-Za-z]*\b|\b[A-Za-z]+Acc\b|\bacc[A-Z][A-Za-z]*\b' \
+  shared/ server/ client/src client/shared.d.ts scripts/ | sort | uniq -c | sort -rn
+```
+
+Expected: **only `strOvermatchD` (31) and `binaryStr` (4).** Anything else is an unfinished rename that `\bstr\b` cannot see.
 
 - [ ] **Step 2: No legacy vocabulary survives**
 
