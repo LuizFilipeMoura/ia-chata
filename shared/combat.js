@@ -261,15 +261,20 @@ export function computeStr(attacker, profile, opts) {
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
 // side/rear values and cannot damage the front arc (returns null = auto-fail).
+//
+// Melee used to return 0 here. That was the root cause of the impact-total
+// model's 69 dead zones: ranged had a ladder to climb into heavy armour and
+// melee had none, so a melee total was capped at `6 + STR` forever. Melee now
+// falls through to the shared ladder. The Raking branch stays FIRST — no melee
+// weapon carries the perk, but ordering makes that explicit.
 export function arcBonus(profile, arc) {
   if (hasPerk(profile, "Raking Fire")) {
-    if (arc === "side") return 4;
-    if (arc === "rear") return 8;
+    if (arc === "side") return 3;
+    if (arc === "rear") return 6;
     return null;
   }
-  if (profile.melee) return 0;
   if (arc === "side") return 2;
-  if (arc === "rear") return 4;
+  if (arc === "rear") return 3;
   return 0;
 }
 

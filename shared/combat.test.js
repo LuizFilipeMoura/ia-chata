@@ -142,16 +142,31 @@ test("Kickstart Pistons: first melee after charging into contact hits +2 STR", (
   assert.equal(computeStr(wrong, claw, {}), computeStr(idle, claw, {}));
 });
 
-test("arcBonus: ranged +0/+2/+4, melee none, Raking Fire overrides", () => {
+test("arcBonus: ranged +0/+2/+3, Raking Fire overrides", () => {
   const auto = WEAPONS.longRange["Autocannon"];
   assert.equal(arcBonus(auto, "front"), 0);
   assert.equal(arcBonus(auto, "side"), 2);
-  assert.equal(arcBonus(auto, "rear"), 4);
-  assert.equal(arcBonus(WEAPONS.melee["Sword"], "rear"), 0); // melee (structural flag)
+  assert.equal(arcBonus(auto, "rear"), 3);
   const mini = { ...WEAPONS.longRange["Mini Gun"], perks: ["Raking Fire"] };
   assert.equal(arcBonus(mini, "front"), null); // front auto-fails
-  assert.equal(arcBonus(mini, "side"), 4);
-  assert.equal(arcBonus(mini, "rear"), 8);
+  assert.equal(arcBonus(mini, "side"), 3);
+  assert.equal(arcBonus(mini, "rear"), 6);
+});
+
+test("arcBonus — melee gets the same side/rear ladder as ranged", () => {
+  // Melee returning 0 here was the root cause of the old model's 69 dead zones:
+  // ranged could climb into heavy armour and melee could not.
+  const melee = { melee: true, acc: [0, 0] };
+  assert.equal(arcBonus(melee, "front"), 0);
+  assert.equal(arcBonus(melee, "side"), 2);
+  assert.equal(arcBonus(melee, "rear"), 3);
+});
+
+test("arcBonus — Raking Fire still replaces the ladder and auto-fails the front", () => {
+  const rake = { perks: ["Raking Fire"] };
+  assert.equal(arcBonus(rake, "front"), null);
+  assert.equal(arcBonus(rake, "side"), 3);
+  assert.equal(arcBonus(rake, "rear"), 6);
 });
 
 test("rollImpacts computes per-hit severity and honours Brace on the front arc", () => {
