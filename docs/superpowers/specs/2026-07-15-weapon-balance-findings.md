@@ -68,9 +68,31 @@ The weapon that gained most is the one this design never aimed at: **Autocannon
 lifts it to STR 9 → 12 on a rear arc → +1 D, multiplied by ROF 4. A mid-STR,
 high-ROF gun captures more of Overmatch than any heavy does.
 
-**Consequence: F2-B (price ROF in heat) is now the live option**, not a fallback.
-F2's recommendation was "A, then re-measure, then B if the spread persists." A has
-shipped, this is the re-measure, and the spread persists. B is next.
+**F2-B was designed off this and then SHELVED — taxing ROF makes the spread
+worse.** See `2026-07-15-rof-heat-design.md`. Two things killed it:
+
+1. **SP/attack does not rise with ROF.** It peaks at ROF 4 (mean 6.18) and dips at
+   ROF 6 (3.64) — below several ROF-1 weapons. So `floor(ROF/3)` would charge Rivet
+   Gun (second-worst band) 3 heat while Autocannon (the actual outlier) pays 2.
+   Measured SP/heat spread: 3.0× today, **3.9×** taxed by ROF, 2.6× taxed by ROF×D.
+2. **"ROF dominates" was true of the pre-Overmatch numbers only.** The clamp had
+   flattened `P(wound)` to a 1.3× lever, leaving ROF the only thing moving.
+   Overmatch un-clamped it. Post-Overmatch neither end of the board is a ROF story
+   — the top is ROF 4 and 8 mixed, the bottom is Sword (ROF 2), Anchor (ROF 1),
+   Lance (ROF 1), Circular Saw (ROF 3). **The residual spread is per-weapon, not a
+   lever asymmetry.** F2 as framed is answered: the levers are alive, and what is
+   left is tuning.
+
+**And the tuning cannot be done from this report.** Of the 85 upgrades it measures,
+**44 (52%) are worth +0.00 in both conditions**; Arc Gun's and Bulwark Shield's
+entire trees are invisible. The "Not measured" section below lists ~20 — the true
+figure is more than double. So this ranking does not measure weapon strength; it
+measures how much of each weapon happens to be raw stats. Sword is last because all
+three of its tiers are conditional, not because it is weak.
+
+**Consequence: the turn-level harness (step 5 below) is the bottleneck for every
+remaining item**, not a follow-up. It blocks F2-C, per-weapon tuning, any heat
+rule, and F5-C alike.
 
 ## F4 — reconnected, still small
 
@@ -497,14 +519,22 @@ the first run.
 3. ~~**F3-B** — re-tier Swarm Warheads.~~ **DONE**, as a magnitude nerf rather than
    a re-tier: `+2 ROF` is correctly Field-shaped, so the tier was never the
    problem. Uplift +2.31 → +1.20.
-4. **F2-B (price ROF in heat)** — *promoted to next.* Step 2 falsified F2-A's
-   hypothesis that fixing F1 would resolve the spread. It didn't, for a structural
-   reason: overflow adds to D, which ROF multiplies. ROF remains an 8× lever
-   against a wound chance that is now unclamped but still narrow. Run
-   `TRIALS=3000` before tuning.
-5. **Turn-level harness** — value the ~20 upgrades this sweep can't see. Note
-   Redline Governor now measures **+4.85 primed**, the largest conditional swing in
-   the game, which this single-shot metric still cannot properly price.
-6. **F5-C** — find out what speed is actually worth before touching durability.
-7. **F4-C** — revisit deleting `WEIGHT_STR_MOD`. Now worth 5–9% instead of 0%, so
+4. ~~**F2-B (price ROF in heat)**~~ — **SHELVED.** Designed, then killed by its own
+   numbers: taxing ROF moves the SP/heat spread 3.0× → 3.9×, worse than shipping
+   nothing, because SP peaks at ROF 4 and dips at ROF 6. See above and
+   `2026-07-15-rof-heat-design.md`.
+5. **Turn-level harness** — **now the bottleneck, not a follow-up.** 44 of 85
+   upgrades (52%) are invisible to the single-shot metric, so nothing downstream can
+   be measured until this exists. Note Redline Governor measures **+4.85 primed**,
+   the largest conditional swing in the game, and even that is under-priced here.
+6. **F2-C** (raise D on the ROF-1 weapons) — `ROF × D` is 6–8 across the catalog
+   and 3–5 for the heavies. One systematic gap in one column, possibly intentional
+   (they trade output for a ~90% wound chance). Needs step 5 to judge.
+7. **Per-weapon tuning** — Sword 2.20 vs Flamethrower 6.53 is a 3× gap with no
+   lever between them. Blocked on step 5: the bottom weapons' upgrades are
+   conditional and score 0.00 here, so tuning off this data would buff them for
+   being illegible rather than weak.
+8. **F5-C** — find out what speed is actually worth before touching durability.
+   Needs a positional sim; this sweep is positional-agnostic by construction.
+9. **F4-C** — revisit deleting `WEIGHT_STR_MOD`. Now worth 5–9% instead of 0%, so
    the question is finally measurable; it was not before.

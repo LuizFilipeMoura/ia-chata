@@ -1,9 +1,78 @@
 # Rate of fire runs the barrel hot — design
 
 **Date:** 2026-07-15
-**Status:** approved, not implemented
+**Status:** **SHELVED — do not implement.** The design is sound; its premise is
+false. Kept as a record of why, and of the two findings the work turned up.
 **Source:** `docs/superpowers/specs/2026-07-15-weapon-balance-findings.md` (F2-B)
 **Baseline:** `scripts/balance/report-2026-07-15-overflow.txt` (3000 trials, post-Overmatch)
+
+---
+
+# Why this was shelved
+
+**Taxing ROF makes the spread worse than doing nothing.** Measured against the
+committed 3000-trial data:
+
+| SP/heat spread | |
+|---|---|
+| today (heat is flat 1) | **3.0×** |
+| taxed by ROF, as this spec designs | **3.9×** — worse than shipping nothing |
+| taxed by raw output (ROF × D) | 2.6× |
+
+The reason is that **F2's premise does not survive its own re-measurement.**
+SP/attack does not rise with ROF. It peaks in the middle and dips at the top:
+
+| ROF | mean SP/attack | weapons |
+|---|---|---|
+| 8 | 5.09 | Mini Gun 4.37, Double MG 5.81 |
+| 6 | **3.64** | Rivet Gun |
+| 4 | **6.18** | Autocannon 6.06, Missile Barrage 5.96, Flamethrower 6.53 |
+| 3 | 3.77 | Mortar, Chainsaw, Circular Saw |
+| 2 | 3.72 | Arc Gun, Sword, Claw, Pressure Claw, Talon |
+| 1 | 3.17 | the eight heavies |
+
+ROF 4 is the peak; ROF 6 is nearly the trough. So `floor(ROF/3)` charges **Rivet
+Gun (3.64, second-worst band) 3 heat** while **Autocannon (6.06, the actual
+outlier) pays 2**. It taxes hardest precisely where the problem isn't.
+
+"ROF dominates" was a fair reading of the *pre-Overmatch* numbers, where the
+wound clamp flattened `P(wound)` to a 1.3× lever and ROF was the only thing left
+moving. Overmatch un-clamped that. Post-Overmatch, neither end of the board is a
+ROF story: the top is ROF 4 and 8 mixed; the bottom is Sword (ROF 2), Anchor
+(ROF 1), Lance (ROF 1) and Circular Saw (ROF 3). The residual spread is
+per-weapon, not a lever asymmetry.
+
+## The two findings worth keeping
+
+**1. `ROF × D` is 6–8 for the whole catalog except the ROF-1 weapons at 3–5.**
+`game-state.js:41` says `d` exists to differentiate the ROF-1 weapons; it cannot,
+because D5 × 1 = 5 against D2 × 4 = 8. This is F2-C's territory and it is one
+systematic gap in one column, not the whack-a-mole the findings doc called it. It
+may well be intentional — heavies trade output for reliability, wounding ~90%
+where STR 3 wounds ~40%. Recorded so the option is chosen rather than forgotten.
+
+**2. The harness cannot see half the catalog, which is why no tuning follows from
+this data.** Of 85 upgrades measured, **44 (52%) are worth +0.00 in both
+conditions**. Arc Gun's and Bulwark Shield's *entire* trees are invisible. The
+ranking therefore measures how much of each weapon happens to be raw stats, not
+how strong it is: Flamethrower tops the board because Sticky Fuel is +2.19 of pure
+stat, and Sword sits at the bottom because all three of its tiers are conditional
+(Precision waives an aimed-shot penalty the sweep never pays, since it fires
+unaimed). See the turn-level harness design.
+
+## If a heat rule is ever wanted for its own sake
+
+Tax **ROF × D**, not ROF: propellant burned rather than rounds fired. A ROF-8/D1
+minigun and a ROF-4/D2 autocannon put the same mass downrange and pay the same;
+a Siege Maul's single charge pays less. Coherent fiction, and it improves the
+spread (2.6×) rather than degrading it. But it would be a **lore feature with a
+balance side-benefit**, not a balance fix, and should be argued as such.
+
+The design below is left intact and unedited. Everything in it — the seam, the
+cold-kind trap, the display requirement, the anti-drift test — remains correct if
+the premise is ever revisited.
+
+---
 
 Implements F2-B. F2-A (fix F1 first) shipped as Overmatch on 2026-07-15 and was
 re-measured; it did not resolve F2, which is why F2-B is now the live step rather
