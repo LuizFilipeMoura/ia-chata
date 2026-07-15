@@ -1698,6 +1698,39 @@ git commit -m "feat(state): derive distance/arc/cover from geometry in digital r
 
 ---
 
+### Task 10b: The reaction paths bypass the seam (FOLLOW-UP — needs a design decision first)
+
+Found while implementing Task 10. Not a defect in it; a genuinely separate question.
+
+Five reaction paths call `resolveAttack`. Two route through `resolveFire` and inherit the
+seam for free — `game-state.js:3707` (evasive) and `:3747` (sidestep). **Three call
+`resolveAttack` directly and still read client-declared geometry verbatim** (`a.attack.arc`,
+`.range`, `.distance`, `.cover`):
+
+- `game-state.js:3715` — **Return Fire**
+- `game-state.js:3762` — **Riposte**
+- `game-state.js:3779` — **Exploit**
+
+Also unrouted: `:2401`/`:2431` (brace retaliate, anvil riposte), `:2495` (ground anchor),
+`:2511` (skewer).
+
+**Why this was NOT folded into Task 10.** These are the *reactor* shooting back, so the
+geometry must be derived in the **reverse direction** (reactor → attacker), and the reactor
+may have moved or pivoted as part of the reaction itself. Exploit is explicitly a
+pivot-to-face with a **player-supplied arc** — deriving it would either delete that choice
+or need the post-pivot facing threaded in. That is a design decision, not a mechanical
+repeat of Task 10.
+
+**It is not reachable today**: digital rooms have no `react` verb wired up. So this is a
+prerequisite for reactions in digital rooms, not a live bug.
+
+**The decision needed before implementing:** for a reaction, is the arc derived from the
+reactor's facing *after* its reaction move/pivot (which means the engine must apply the
+pivot first and Exploit loses its player-supplied arc), or does Exploit stay player-declared
+because choosing the facing IS the mechanic? Answer that, then this becomes mechanical.
+
+---
+
 ### Task 11: Move by path, with pivot
 
 Client sends `{ dest, facing }`. The server pathfinds it itself and applies. Pivot ≤ 90° per Move, either end, 0" travel allowed.
