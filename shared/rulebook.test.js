@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { WEIGHT_PEN_MOD } from "./rules.js";
 
 // rules.md is a RUNTIME INPUT, not documentation: server/config.js -> server/prompt.js
 // bakes it verbatim into the rules bot's system prompt as "the single source of truth",
@@ -20,4 +21,32 @@ test("rules.md teaches the current stat vocabulary, not the pre-rename one", () 
     if (hits) found.push(`${msg} (${hits.length} occurrences)`);
   }
   assert.deepEqual(found, [], `rules.md still teaches renamed stats:\n  ${found.join("\n  ")}`);
+});
+
+test("rules.md's weight ladder matches WEIGHT_PEN_MOD", () => {
+  // The engine is the truth; rules.md must quote it. §4 taught the pre-halving
+  // ±2/±4 ladder long after rules.js halved it to ±1/±2, and nothing caught it
+  // because nothing tested this file.
+  //
+  // rules.md writes the ladder in two different shapes: §4's full
+  // "Light X / Medium Y / Heavy Z / Colossal W" and §16's Medium-relative
+  // "Light X / Heavy Z / Colossal W vs the Medium baseline" — which omits Medium
+  // entirely. Matching each class/value pair on its own binds BOTH wordings (and
+  // any third one written later), where a whole-ladder regex would silently miss
+  // §16 and certify the file as bound while half of it stayed stale.
+  //
+  // The minus sign in rules.md is U+2212, not an ASCII hyphen; the class covers both.
+  const sign = (n) => (n < 0 ? `−${Math.abs(n)}` : `+${n}`);
+  const pairs = [...RULEBOOK.matchAll(/\b(Light|Medium|Heavy|Colossal)\s*([+−-]\d)\b/g)];
+
+  // §4 contributes 4 pairs, §16 contributes 3. Fewer means a ladder was reworded
+  // out from under this guard — fail loudly rather than vacuously pass.
+  assert.ok(
+    pairs.length >= 7,
+    `expected at least the §4 and §16 weight ladders (7 class/value pairs), found ${pairs.length} — did the wording change?`,
+  );
+  for (const [text, cls, value] of pairs) {
+    const expected = sign(WEIGHT_PEN_MOD[cls.toLowerCase()]);
+    assert.equal(value, expected, `rules.md "${text}" disagrees with WEIGHT_PEN_MOD.${cls.toLowerCase()} (${expected})`);
+  }
 });
