@@ -350,7 +350,7 @@ which is all a 3-7 band allows."
 - [ ] **Step 1: Inventory**
 
 ```bash
-grep -rn 'strOvermatchD\|OVERMATCH_PER_D\|OVERMATCH_MAX_D\|overmatch\|Overmatch' shared/ client/src/ scripts/ rules.md
+grep -rn 'strOvermatchD\|OVERMATCH_PER_D\|OVERMATCH_MAX_D\|overmatch\|Overmatch' shared/ client/ scripts/ rules.md
 ```
 
 Expected: **31+** hits.
@@ -428,7 +428,7 @@ Remove the Overmatch tests from `shared/rules.test.js` and `shared/combat.test.j
 - [ ] **Step 6: Verify nothing but `rules.md` remains**
 
 ```bash
-grep -rn 'strOvermatchD\|OVERMATCH_\|overmatch\|Overmatch' shared/ client/src/ scripts/
+grep -rn 'strOvermatchD\|OVERMATCH_\|overmatch\|Overmatch' shared/ client/ scripts/
 ```
 
 Expected: **no output.** (`rules.md` is Task 6; the specs under `docs/` are Task 9.)
@@ -511,7 +511,7 @@ Expected: **PASS** (both guards, added by the rename plan).
 - [ ] **Step 6: Confirm Overmatch is gone from every runtime surface**
 
 ```bash
-grep -rn 'Overmatch' rules.md shared/ client/src/ scripts/
+grep -rn 'Overmatch' rules.md shared/ client/ scripts/
 ```
 
 Expected: **no output.**

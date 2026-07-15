@@ -37,14 +37,16 @@ diff <(git diff --cached -U0 | grep '^-' | grep -v '^---' | grep -oE '\b[0-9]+\b
 
 **Expected output: nothing.** Any line means a number moved, and a number moving is this plan failing. (`+2 STR` → `+2 Penetration` keeps its `2`, so tag edits pass cleanly.)
 
-## Traps — read all six, each has already cost someone
+## Traps — read all seven, each has already cost someone
 
 1. **Do NOT rename `strOvermatchD`, `OVERMATCH_PER_D`, or `OVERMATCH_MAX_D`.** 31 sites. The **penetration rework deletes them wholesale**; renaming them is wasted work and a guaranteed merge conflict. After this plan lands they will sit in a `pen`-flavoured file still saying `str`. **That inconsistency is correct and temporary. Do not tidy it.**
 2. **Do NOT use `sed -i` on this repo.** It rewrites CRLF and leaves files dirty with an empty `git diff`. This is a 700-site mechanical rename and `sed -i` is exactly the tool you will reach for. Use your editor's rename, or `node -e` with explicit `\r\n` preservation, or edit by hand.
 3. **`grep -r str` is useless** — it matches `String`, `strict`, `construct`, `strip`. Always anchor: `\bstr\b`. (Verified: `strOvermatchD` does *not* match `\bstr\b`, because `O` is a word character. That is load-bearing for trap 1.)
-4. **`git add <file>` stages the whole file.** `package.json`, `package-lock.json` and `client/shared.d.ts` carry an **in-progress dependency upgrade belonging to the user**. `client/shared.d.ts` is *also* a file this rename touches. Stage deliberately; never `git add -A`. An earlier task swept them in and it had to be undone.
-5. **Another agent commits to this branch.** Never trust `HEAD~1`. HEAD moved twice while the spec was being written. Re-check `git log --oneline -1` before each commit.
-6. **`Aim` is not `Accuracy` and must not be renamed.** `Aim` is the **D6 target number** (lower is better); `Accuracy` is the **stat** (higher is better). They invert. `combat.js:42` exists purely to protect that sign convention. `modAim`, `aimBreakdown`, `computeModifiedAim`, `aimTerms`, `"base aim"` and the `Aimed` **action** all stay exactly as they are.
+4. **`git add <file>` stages the whole file, and `git add -p` is unavailable here** (this environment is non-interactive). `package.json` and `package-lock.json` carry an **in-progress dependency upgrade belonging to the user** — this rename never touches them, so **never `git add -A`** and they stay clean. An earlier task swept them in and it had to be undone.
+   **`client/shared.d.ts` is different:** it carries one uncommitted user line (`+ sprintMult: number;` in `rigEffects`) *and* the rename must edit it. The user has explicitly authorised that line to ride along in the rename's commit. **Say so in that commit message** rather than letting it look like a stray edit.
+5. **Search `client/`, never `client/src/`.** `client/shared.d.ts` sits one level *above* `client/src/` and is a real rename target (`rof: number; str: number; d: number;` at `:8` and `:14`, `acc?: number[]` at `:9`, `:15`, `:73`). Every grep in this plan scopes `client/` for exactly this reason. A `client/src/` scope silently misses the file **and the final verification passes anyway** — which is how this plan shipped with the bug until dispatch.
+6. **Another agent commits to this branch, and it is live.** It commits with a broad `git add`. HEAD moved twice while the spec was being written. **Re-check `git log --oneline -1` before every commit**, never trust `HEAD~1`, and stage only your own exact paths — a broad `git add` from either side is how a half-finished rename lands in someone else's commit.
+7. **`Aim` is not `Accuracy` and must not be renamed.** `Aim` is the **D6 target number** (lower is better); `Accuracy` is the **stat** (higher is better). They invert. `combat.js:42` exists purely to protect that sign convention. `modAim`, `aimBreakdown`, `computeModifiedAim`, `aimTerms`, `"base aim"` and the `Aimed` **action** all stay exactly as they are.
 
 ## File Structure
 
@@ -57,6 +59,7 @@ No files are created or deleted except one new test file. Every change is in pla
 | `shared/combat.js` | 68 | `effStr`, aim terms, ledger labels, attack summary |
 | `shared/glossary.js` | 11 | the `str` / `acc` glossary entries and their `match` arrays |
 | `shared/*.test.js` | 250+ | identifier + string updates only |
+| `client/shared.d.ts` | 7 | the shared-module type decls (`str`/`d`/`acc`). **Above `client/src/` — see trap 5.** Carries one authorised user line. |
 | `client/src/**` | ~45 | `types.ts`, wizards, `RollConsole`, `loadout`, CSS class names |
 | `scripts/balance/*.mjs` | 4 | harness reads of `.str` / `.d` |
 | `rules.md` | 86 | **runtime input** — the rules bot's system prompt |
@@ -68,12 +71,12 @@ No files are created or deleted except one new test file. Every change is in pla
 
 **Files:**
 - Modify: `shared/rules.js:62-64`
-- Modify: every consumer (16 sites total across `shared/`, `client/src/`, `scripts/`)
+- Modify: every consumer (16 sites total across `shared/`, `client/`, `scripts/`)
 
 - [ ] **Step 1: Find every site**
 
 ```bash
-grep -rn 'WEIGHT_STR_MOD' shared/ server/ client/src/ scripts/ rules.md
+grep -rn 'WEIGHT_STR_MOD' shared/ server/ client/ scripts/ rules.md
 ```
 
 Expected: **16** hits.
@@ -104,7 +107,7 @@ Update all remaining hits from Step 1 to `WEIGHT_PEN_MOD`. Identifier-only; no v
 - [ ] **Step 4: Verify no sites remain**
 
 ```bash
-grep -rn 'WEIGHT_STR_MOD' shared/ server/ client/src/ scripts/ rules.md
+grep -rn 'WEIGHT_STR_MOD' shared/ server/ client/ scripts/ rules.md
 ```
 
 Expected: **no output.**
@@ -120,8 +123,10 @@ Expected: `Tests 293 passed (293)` and `ℹ pass 811 / ℹ fail 0`.
 - [ ] **Step 6: Stage, run the numbers gate, commit**
 
 ```bash
+# Stage ONLY the exact files Step 1 reported. Never a directory: `git add client/`
+# would sweep the user's authorised shared.d.ts line into THIS commit, which does
+# not touch that file. One task, one file list, derived from its own grep.
 git add shared/rules.js shared/rules.test.js shared/combat.js shared/game-state.js
-git add client/src scripts/balance
 diff <(git diff --cached -U0 | grep '^-' | grep -v '^---' | grep -oE '\b[0-9]+\b' | sort) \
      <(git diff --cached -U0 | grep '^+' | grep -v '^+++' | grep -oE '\b[0-9]+\b' | sort)
 ```
@@ -145,7 +150,7 @@ git commit -m "refactor(rules): WEIGHT_STR_MOD -> WEIGHT_PEN_MOD"
 - [ ] **Step 1: Find every site**
 
 ```bash
-grep -rn 'BLAST_STR\|BLAST_D\b' shared/ server/ client/src/ scripts/
+grep -rn 'BLAST_STR\|BLAST_D\b' shared/ server/ client/ scripts/
 ```
 
 Expected: **15** hits.
@@ -181,7 +186,7 @@ Update all remaining hits from Step 1. Includes `client/src/v2/battle/BlastBody.
 - [ ] **Step 4: Verify**
 
 ```bash
-grep -rn 'BLAST_STR\|BLAST_D\b' shared/ server/ client/src/ scripts/
+grep -rn 'BLAST_STR\|BLAST_D\b' shared/ server/ client/ scripts/
 ```
 
 Expected: **no output.**
@@ -213,7 +218,7 @@ git commit -m "refactor(rules): BLAST_STR/BLAST_D -> BLAST_PEN/BLAST_DMG"
 - [ ] **Step 1: Find every site**
 
 ```bash
-grep -rn 'effStr' shared/ server/ client/src/ scripts/
+grep -rn 'effStr' shared/ server/ client/ scripts/
 ```
 
 Expected: **19** hits.
@@ -271,7 +276,7 @@ Update the remaining `effStr` readers from Step 1.
 - [ ] **Step 6: Verify**
 
 ```bash
-grep -rn 'effStr' shared/ server/ client/src/ scripts/
+grep -rn 'effStr' shared/ server/ client/ scripts/
 ```
 
 Expected: **no output.**
@@ -304,7 +309,7 @@ The big one: 190 `\bstr\b` sites. Atomic — every definition and every reader i
 - [ ] **Step 1: Inventory**
 
 ```bash
-grep -rn '\bstr\b' shared/ server/ client/src/ scripts/ | grep -v strOvermatch
+grep -rn '\bstr\b' shared/ server/ client/ scripts/ | grep -v strOvermatch
 ```
 
 Expected: **190** hits. Read the list before editing — confirm none are `String`/`strict`/`construct` (there are none in `shared/combat.js`; verified).
@@ -344,12 +349,22 @@ Sweep the remaining hits. `client/src/state/types.ts:95-96`:
   pen?: number | null;
 ```
 
-**`client/shared.d.ts` is dirty with the user's unrelated work — stage your hunks only (trap 4).**
+**`client/shared.d.ts` is a rename target and this plan's greps reach it only because they scope `client/`, not `client/src/` (trap 5).** Rename `str` → `pen` at `:8` and `:14`, and update the §7.5 comment at `:5-6`:
+
+```ts
+  // §7.5 wound model: `pen` is compared against the struck location's Toughness
+  // via `woundTarget(pen, T)`; each wound then deals `dmg` SP.
+  interface WeaponProfile {
+    rof: number; pen: number; dmg: number;
+    acc?: number[]; rng?: number[];
+```
+
+> `d` → `dmg` and `acc` → `accuracy` here belong to Tasks 5 and 6; do only `str` → `pen` now. **The file also carries one uncommitted user line (`+ sprintMult: number;`) which the user has authorised to ride along — name it in the commit message (trap 4).**
 
 - [ ] **Step 7: Verify**
 
 ```bash
-grep -rn '\bstr\b' shared/ server/ client/src/ scripts/ | grep -v strOvermatch
+grep -rn '\bstr\b' shared/ server/ client/ scripts/ | grep -v strOvermatch
 ```
 
 Expected: **no output.**
@@ -453,7 +468,7 @@ git commit -m "refactor(weapons): the weapon stat d -> dmg"
 - [ ] **Step 1: Inventory**
 
 ```bash
-grep -rn '\bacc\b' shared/ server/ client/src/ scripts/
+grep -rn '\bacc\b' shared/ server/ client/ scripts/
 ```
 
 Expected: **36** hits. `acc` is melee-only — ranged weapons derive accuracy from `sweet`/`peak`/`dropoff`.
@@ -583,7 +598,7 @@ Then update every `def` that mentions the old names — lines 46, 78, 90, 110, 1
       ? `weapon Accuracy at ${opts.distance}"` : "weapon Accuracy",     // was "weapon ACC" (:92)
 ```
 
-> **`terms.push({ label: "base aim", value: base })` at `:89` stays.** It *is* the target number, not the stat (trap 6).
+> **`terms.push({ label: "base aim", value: base })` at `:89` stays.** It *is* the target number, not the stat (trap 7).
 
 - [ ] **Step 5: Sweep remaining client display strings**
 
@@ -678,7 +693,7 @@ Replace `STR` → `Penetration` and `ACC` → `Accuracy` throughout, including:
 - §12 the weapon tables (`:359`, `:366`, `:386`) — the `| Weapon | ROF | STR | D | …` headers become `| Weapon | ROF | Pen | Dmg | …`
 - §13 the upgrade tables (`:408-427`) and the conditional notes (`:433-437`)
 
-**Leave `Aim` and `Aimed Shot` alone** (trap 6). **Leave the Overmatch paragraph at `:253` and its mention at `:254` alone** — the rework deletes them (trap 1).
+**Leave `Aim` and `Aimed Shot` alone** (trap 7). **Leave the Overmatch paragraph at `:253` and its mention at `:254` alone** — the rework deletes them (trap 1).
 
 - [ ] **Step 2: Run the guard test**
 
@@ -826,7 +841,7 @@ prompt to the engine. Now covered by shared/rulebook.test.js."
 
 ```bash
 grep -rn '\bstr\b\|\bacc\b\|effStr\|WEIGHT_STR_MOD\|BLAST_STR\|BLAST_D\b' \
-  shared/ server/ client/src/ scripts/ | grep -v strOvermatch
+  shared/ server/ client/ scripts/ | grep -v strOvermatch
 ```
 
 Expected: **no output.**
@@ -834,7 +849,7 @@ Expected: **no output.**
 - [ ] **Step 2: No legacy vocabulary survives**
 
 ```bash
-grep -rn '\bSTR\b\|\bACC\b' shared/ server/ client/src/ scripts/ rules.md \
+grep -rn '\bSTR\b\|\bACC\b' shared/ server/ client/ scripts/ rules.md \
   | grep -v strOvermatch | grep -v design-reference
 ```
 
@@ -889,7 +904,7 @@ Expected: `package.json`, `package-lock.json` still show ` M` (unstaged, the use
 | `acc` → `accuracy` | 6 |
 | prose/tags/glossary → Penetration/Damage/Accuracy | 7 |
 | `rules.md` (the runtime-input surface) | 9 |
-| keep `modAim` / `Aim` / `Aimed` | trap 6, verified task 12 step 4 |
+| keep `modAim` / `Aim` / `Aimed` | trap 7, verified task 12 step 4 |
 | leave Overmatch symbols alone | trap 1, verified task 12 step 3 |
 | "no number moves" | the gate command, every task |
 | 811 node / 293 vitest green | task 12 step 5 (813 node — +2 new guards, justified) |
