@@ -1764,10 +1764,11 @@ test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wound
 test("rollWounds — a natural 1 never wounds however lopsided", () => {
   const attacker = { weightClass: "medium" };
   const target = makeRig(2, "B", "light", "b", { longRange: "Autocannon", melee: "Claw" });
-  // pen is pinned locally, not read off the catalog: this test needs a matchup
-  // lopsided enough that the TN clamps to the floor, and no shipped weapon
-  // reaches T+4 on a light hull any more. Without the clamp the natural-1 rule
-  // is never the reason the roll fails, and the test would pass testing nothing.
+  // pen is pinned locally, not read off the catalog: this test needs the TN to
+  // clamp to the floor, which on a light hull (T4) takes effPen 8. The Wrecking
+  // Ball's base is pen 6 since the heavies compressed, and this fixture shoots
+  // front-arc with no upgrade, so a catalog read would leave TN at 4 —
+  // unclamped, and the natural-1 rule would not be the reason the roll fails.
   const profile = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 };
   // Penetration 10 + medium 0 + front 0 = 10 vs light hull T4 => TN 6+4-10 = 0 -> clamp 2.
   const out = rollWounds(attacker, target, profile, "hull",
@@ -1814,8 +1815,11 @@ test("rollWounds — defender modifiers reduce effective Penetration, not the ro
 
 test("rollWounds — Overmatch converts wasted STR into damage", () => {
   // Overmatch only exists past the clamp, so the fixtures that need a saturated
-  // shot pin `pen` locally instead of reading the catalog: no shipped weapon
-  // saturates any more, and a catalog read would quietly leave them asserting 0.
+  // shot pin `pen` locally instead of reading the catalog. Since the six heavies
+  // compressed, their base profiles no longer reach T+4 on a front-arc
+  // unupgraded shot like this one, so a catalog read would leave these
+  // asserting 0. This is about THIS matchup, not the catalog: plenty of real
+  // shots still saturate — Arc Gun (pen 8) rear-arc into medium arms pays +1.
   const wb = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 }; // Penetration 10, D7, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   // medium arms are T4, so the floor is pen 8. Penetration 10 wastes 2 — under the
