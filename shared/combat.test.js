@@ -771,9 +771,11 @@ test("Piledriver Protocol spends Momentum for +Penetration and ignores a braced 
   // computePen: the threaded momentum spend adds +1 Penetration per point.
   assert.equal(computePen(ram, p, { target: wall, momentum: 3 }), p.pen + 3);
 
-  // These assert effective Penetration, NOT the wound TN, deliberately: the TN is
-  // clamped at both ends, so a TN assertion can silently swallow the very
-  // difference the guard-break is supposed to make.
+  // These assert effective Penetration, NOT the wound TN, deliberately. `pen` is
+  // the quantity the guard-break manipulates (skip the brace's -2, add +3); the
+  // TN re-encodes it lossily. The smash side is effPen 10 into a T5 hull, and
+  // 6+5-10 = 1 clamps to the floor — TN reads 2 for ANY effPen >= 9, so a TN
+  // assertion there stays green if the +3 ever arrives as a +2.
   // Without a guard-break, the brace's -2 applies: 7 + 0(front) - 2 = 5.
   const normal = rollWounds(ram, wall, p, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1820,7 +1822,7 @@ test("rollWounds — Overmatch converts wasted STR into damage", () => {
   // unupgraded shot like this one, so a catalog read would leave these
   // asserting 0. This is about THIS matchup, not the catalog: plenty of real
   // shots still saturate — Arc Gun (pen 8) rear-arc into medium arms pays +1.
-  const wb = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 }; // Penetration 10, D7, ROF 1
+  const wb = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 }; // D7, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   // medium arms are T4, so the floor is pen 8. Penetration 10 wastes 2 — under the
   // 3-point rate, so a front-arc hit is still a plain D7.
@@ -1836,8 +1838,8 @@ test("rollWounds — Overmatch revives the arc bonus on a saturated weapon", () 
   // THE POINT OF THE WHOLE CHANGE. Before Overmatch, these two shots were
   // byte-identical: both clamped to TN 2, both dealt exactly D, so flanking a
   // Wrecking Ball rig was worth literally nothing (sweep: rear/front ratio x1.00).
-  // pen pinned locally — see the note above; the mechanic under test only has a
-  // subject at all when the shot saturates.
+  // pen pinned locally — see the note on the "converts wasted STR" test; the
+  // mechanic under test only has a subject at all when the shot saturates.
   const wb = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 };
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
@@ -2136,9 +2138,9 @@ test("ledger — the damage step multiplies wounds by the weapon's D", () => {
     () => 0, ctx);
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
   assert.ok(d.terms.some((t) => t.label === "weapon Damage" && t.value === 7));
-  // 7, not 7+n: makeRig fits the melee slot with Haymaker (+3 Penetration), so this
-  // ball swings at effPen 9 into a T5 hull — TN 6+5-9 = 2, exactly the floor and
-  // nothing past it, so Overmatch adds nothing and the total is the bare D.
+  // 7 flat, with no Overmatch rider: makeRig fits the melee slot with Haymaker
+  // (+3 Penetration), so this ball swings at effPen 9 into a T5 hull — TN
+  // 6+5-9 = 2, exactly the floor and nothing past it, so the total is the bare D.
   assert.match(d.out, /7 SP/);
 });
 
