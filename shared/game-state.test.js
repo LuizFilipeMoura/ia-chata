@@ -100,7 +100,7 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(WEAPONS.longRange["Mini Gun"].dropoff, 0.35);
   assert.equal(WEAPONS.longRange["Mini Gun"].minRange, 0);
   assert.equal(WEAPONS.longRange["Mini Gun"].maxRange, 18);
-  assert.equal(WEAPONS.longRange["Mini Gun"].acc, undefined);
+  assert.equal(WEAPONS.longRange["Mini Gun"].accuracy, undefined);
   assert.equal(WEAPONS.longRange["Mini Gun"].rng, undefined);
   // Machine guns carry Raking Fire innately (it defines the type, not a
   // signature upgrade); every other base weapon is stat-only. Ranged carry no
@@ -182,7 +182,7 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   assert.deepEqual(maul, { rof: 1, pen: 11, dmg: 5, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
-  assert.deepEqual(shield, { rof: 1, pen: 5, dmg: 3, acc: [0, 0], rng: [2, 2], melee: true });
+  assert.deepEqual(shield, { rof: 1, pen: 5, dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 10 + 10.
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
@@ -193,11 +193,11 @@ test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles
   assert.deepEqual(WEAPONS.longRange["Harpoon"],
     { rof: 1, pen: 10, dmg: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
   assert.deepEqual(WEAPONS.melee["Anchor"],
-    { rof: 1, pen: 10, dmg: 4, acc: [0, 0], rng: [2, 2], melee: true });
+    { rof: 1, pen: 10, dmg: 4, accuracy: [0, 0], rng: [2, 2], melee: true });
   assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
     { rof: 6, pen: 3, dmg: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
-    { rof: 2, pen: 7, dmg: 3, acc: [1, 1], rng: [2, 2], melee: true });
+    { rof: 2, pen: 7, dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true });
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
   assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
@@ -3753,7 +3753,7 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
     assert.equal(typeof w.rof, "number");
     assert.equal(typeof w.pen, "number");
     if (w.melee) {
-      assert.ok(Array.isArray(w.acc), `${name} melee keeps acc[]`);
+      assert.ok(Array.isArray(w.accuracy), `${name} melee keeps accuracy[]`);
       assert.ok(Array.isArray(w.rng), `${name} melee keeps rng[]`);
     } else {
       assert.equal(typeof w.sweet, "number", `${name} has sweet`);
@@ -5545,7 +5545,7 @@ test("rigEffects: passive stat mods (ablative hull, thermal margin, radiator coo
 test("rigEffects derives combat/thermal tags from the catalog, not a stamp", () => {
   assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core" }).thermalMargin, 2);
   assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates" }).combat.sideRearPen, -2);
-  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" }).combat.sweetBandAcc, 1);
+  assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" }).combat.sweetBandAccuracy, 1);
   assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" }).combat.hardenImpact, 2);
   // family default when the upgrade carries no such tag
   assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reactive-armor" }).combat.hardenImpact, 1);

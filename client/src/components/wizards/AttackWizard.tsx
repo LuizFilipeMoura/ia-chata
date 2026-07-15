@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
-import { weaponAccAt } from "/shared/combat.js";
+import { weaponAccuracyAt } from "/shared/combat.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useBattleActions } from "../../state/BattleActionsContext";
@@ -239,10 +239,10 @@ export function AttackWizard({
   const minRange = rangeProfile?.minRange ?? 0;
   const maxRange = rangeProfile?.maxRange ?? 12;
   const sliderMax = maxRange + 4; // headroom so the player can drag into "out"
-  const accHere = rangeProfile ? weaponAccAt(rangeProfile as never, state.inches) : 0;
-  const penalty = peak - accHere;
+  const accuracyHere = rangeProfile ? weaponAccuracyAt(rangeProfile as never, state.inches) : 0;
+  const penalty = peak - accuracyHere;
   const inRange = state.inches >= minRange && state.inches <= maxRange;
-  const accTier = !inRange ? "out" : penalty <= 0 ? "sweet" : penalty <= 2 ? "good" : "poor";
+  const accuracyTier = !inRange ? "out" : penalty <= 0 ? "sweet" : penalty <= 2 ? "good" : "poor";
 
   // Seed the slider to the weapon's sweet spot whenever the selected weapon
   // changes (melee seeds to its reach). Keeps "open at the best range" intent.
@@ -344,8 +344,8 @@ export function AttackWizard({
       );
       rangeState = outOfRange ? "bad" : "ok";
     } else if (profile) {
-      const accLabel =
-        penalty <= 0 ? `Sweet spot +${peak}` : `${accHere >= 0 ? "+" : ""}${accHere} · falloff`;
+      const accuracyLabel =
+        penalty <= 0 ? `Sweet spot +${peak}` : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} · falloff`;
       const gate =
         state.inches < minRange
           ? <span className="aw-range-warn">Too close — out of range</span>
@@ -357,7 +357,7 @@ export function AttackWizard({
       rangeHtml = (
         <>
           <span className="aw-range-ic">📏</span>
-          Sweet spot <b>{sweet}"</b> · usable <b>{minRange}"–{maxRange}"</b> · at {state.inches}": <b>{accLabel}</b>
+          Sweet spot <b>{sweet}"</b> · usable <b>{minRange}"–{maxRange}"</b> · at {state.inches}": <b>{accuracyLabel}</b>
           {gate}
         </>
       );
@@ -505,7 +505,7 @@ export function AttackWizard({
                   Range
                 </label>
                 <p className="aw-field-desc">Drag to the measured distance to the target.</p>
-                <div className="aw-range-slider" data-band={accTier}>
+                <div className="aw-range-slider" data-band={accuracyTier}>
                   <input
                     type="range"
                     min={0}
@@ -517,10 +517,10 @@ export function AttackWizard({
                   />
                   <div className="aw-range-readout">
                     <b className="aw-range-inches">{state.inches}"</b>
-                    <span className="aw-range-band" data-band={accTier}>
-                      {accTier === "sweet" ? "🎯 sweet spot"
-                        : accTier === "out" ? "🚫 out of range"
-                        : `${accHere >= 0 ? "+" : ""}${accHere} falloff`}
+                    <span className="aw-range-band" data-band={accuracyTier}>
+                      {accuracyTier === "sweet" ? "🎯 sweet spot"
+                        : accuracyTier === "out" ? "🚫 out of range"
+                        : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} falloff`}
                     </span>
                   </div>
                   <div className="aw-range-ticks">

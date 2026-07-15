@@ -25,10 +25,10 @@ function rollD(sides, provided, random) {
 
 // §7.4 — ranged accuracy as a function of measured distance: peak at the sweet
 // spot, falling off by `dropoff` per inch away from it. Melee weapons have a
-// fixed reach and keep their scalar `acc`. A missing distance (legacy callers /
-// tests) yields the peak — i.e. "at the sweet spot, in range".
-export function weaponAccAt(profile, distance) {
-  if (profile.melee) return profile.acc?.[0] || 0;
+// fixed reach and keep their scalar `accuracy`. A missing distance (legacy
+// callers / tests) yields the peak — i.e. "at the sweet spot, in range".
+export function weaponAccuracyAt(profile, distance) {
+  if (profile.melee) return profile.accuracy?.[0] || 0;
   const d = Number(distance);
   if (!Number.isFinite(d)) return profile.peak || 0;
   const penalty = Math.round((profile.dropoff || 0) * Math.abs(d - profile.sweet));
@@ -46,7 +46,7 @@ export function weaponAccAt(profile, distance) {
 export function aimBreakdown(attacker, profile, opts) {
   const terms = [];
   const base = AIM[attacker.weightClass] ?? 4;
-  const weaponAcc = weaponAccAt(profile, opts.distance);
+  const weaponAccuracy = weaponAccuracyAt(profile, opts.distance);
   // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
   // guard-break (opts.guardBreak, §13 Siege Maul) — both reuse the same path.
   const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak || (opts.painted && !profile.melee)) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
@@ -66,7 +66,7 @@ export function aimBreakdown(attacker, profile, opts) {
   // combat.js imports only rules.js, so no game-state cycle.
   const predictive = attacker.equipment === "targeting-computer" && !profile.melee && !!opts.targetPinned
     && !!equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.predictiveTracking;
-  const predictiveAcc = predictive ? 2 : 0;
+  const predictiveAccuracy = predictive ? 2 : 0;
   // Targeting Computer passive — the first Fire this activation ignores cover
   // and the engaged −2 (opts.fireControlFirst is set once per activation by the
   // fire path). Read directly off the attacker to avoid a game-state import cycle.
@@ -74,13 +74,13 @@ export function aimBreakdown(attacker, profile, opts) {
   const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
   // Ballistic Processor (Field) — ACC bonus when the measured distance is within
   // the weapon's sweet band (|distance − sweet| ≤ 2). The bonus magnitude is read
-  // from the equipment upgrade's effect tag (`sweetBandAcc`) via
+  // from the equipment upgrade's effect tag (`sweetBandAccuracy`) via
   // equipmentUpgradeEffectOf — the catalog lives in rules.js, which combat.js may
   // import without a game-state cycle. Only ballistic-processor carries the tag;
   // other targeting-computer upgrades resolve to 0.
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
-  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAcc ?? 0) : 0;
-  const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAcc;
+  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAccuracy ?? 0) : 0;
+  const accuracyTotal = weaponAccuracy - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAccuracy;
 
   // The two headline inputs are ALWAYS terms, even at 0, exactly as penBreakdown
   // always pushes "weapon STR": they are what every modifier below is measured
@@ -90,7 +90,7 @@ export function aimBreakdown(attacker, profile, opts) {
   terms.push({
     label: !profile.melee && Number.isFinite(Number(opts.distance))
       ? `weapon ACC at ${opts.distance}"` : "weapon ACC",
-    value: weaponAcc,
+    value: weaponAccuracy,
   });
   // Cover, and the cancels. `rawCover` is what the target ACTUALLY had on the
   // table, before any upgrade ignored it — the cancel branches above zero
@@ -126,9 +126,9 @@ export function aimBreakdown(attacker, profile, opts) {
   if (paintBonus) terms.push({ label: "recon paint", value: paintBonus });
   if (smoke) terms.push({ label: "target in smoke", value: smoke });
   if (ballistic) terms.push({ label: "ballistic processor", value: ballistic });
-  if (predictiveAcc) terms.push({ label: "predictive tracking", value: predictiveAcc });
+  if (predictiveAccuracy) terms.push({ label: "predictive tracking", value: predictiveAccuracy });
 
-  return { value: base - accTotal, terms };
+  return { value: base - accuracyTotal, terms };
 }
 
 // §7.4 — the D6 target number. Thin wrapper over aimBreakdown so the eleven

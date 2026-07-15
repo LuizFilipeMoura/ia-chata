@@ -62,17 +62,17 @@ export const WEAPONS = {
     "Crossbow":       { rof: 1, pen: 8,  dmg: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
   },
   melee: {
-    "Sword":         { rof: 2, pen: 5,  dmg: 3, acc: [0, 0], rng: [2, 2], melee: true },
-    "Circular Saw":  { rof: 3, pen: 5,  dmg: 2, acc: [0, 0], rng: [2, 2], melee: true },
-    "Chainsaw":      { rof: 3, pen: 7,  dmg: 2, acc: [0, 0], rng: [2, 2], melee: true },
-    "Claw":          { rof: 2, pen: 7,  dmg: 3, acc: [1, 1], rng: [2, 2], melee: true },
-    "Lance":         { rof: 1, pen: 9,  dmg: 4, acc: [1, 1], rng: [2, 2], melee: true },
-    "Wrecking Ball": { rof: 1, pen: 10, dmg: 5, acc: [0, 0], rng: [2, 2], melee: true },
-    "Bulwark Shield":{ rof: 1, pen: 5,  dmg: 3, acc: [0, 0], rng: [2, 2], melee: true },
-    "Flamethrower":  { rof: 4, pen: 6,  dmg: 2, acc: [1, 0], rng: [2, 2], melee: true },
-    "Anchor":        { rof: 1, pen: 10, dmg: 4, acc: [0, 0], rng: [2, 2], melee: true },
-    "Pressure Claw": { rof: 2, pen: 7,  dmg: 3, acc: [1, 1], rng: [2, 2], melee: true },
-    "Talon":         { rof: 2, pen: 6,  dmg: 3, acc: [1, 1], rng: [2, 2], melee: true },
+    "Sword":         { rof: 2, pen: 5,  dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true },
+    "Circular Saw":  { rof: 3, pen: 5,  dmg: 2, accuracy: [0, 0], rng: [2, 2], melee: true },
+    "Chainsaw":      { rof: 3, pen: 7,  dmg: 2, accuracy: [0, 0], rng: [2, 2], melee: true },
+    "Claw":          { rof: 2, pen: 7,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
+    "Lance":         { rof: 1, pen: 9,  dmg: 4, accuracy: [1, 1], rng: [2, 2], melee: true },
+    "Wrecking Ball": { rof: 1, pen: 10, dmg: 5, accuracy: [0, 0], rng: [2, 2], melee: true },
+    "Bulwark Shield":{ rof: 1, pen: 5,  dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true },
+    "Flamethrower":  { rof: 4, pen: 6,  dmg: 2, accuracy: [1, 0], rng: [2, 2], melee: true },
+    "Anchor":        { rof: 1, pen: 10, dmg: 4, accuracy: [0, 0], rng: [2, 2], melee: true },
+    "Pressure Claw": { rof: 2, pen: 7,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
+    "Talon":         { rof: 2, pen: 6,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
   },
 };
 
@@ -84,8 +84,8 @@ export const UNIT_WEAPONS = {
   "Autocannon Mount": { rof: 3, pen: 7,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
   "Coaxial MG":       { rof: 6, pen: 4,  dmg: 1, sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true, machineGun: true },
   "Rocket Pod":       { rof: 2, pen: 8,  dmg: 3, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
-  "Dozer Blade":      { rof: 1, pen: 8,  dmg: 4, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
-  "Ram Spike":        { rof: 1, pen: 9,  dmg: 4, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Dozer Blade":      { rof: 1, pen: 8,  dmg: 4, accuracy: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Ram Spike":        { rof: 1, pen: 9,  dmg: 4, accuracy: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
   // Built-in weak weapon every support unit carries; replaced by a Damage
   // module. peak 0 + dropoff 0 = a flat ACC 0 at any distance (spec §Sidearm).
   "Sidearm":          { rof: 2, pen: 3,  dmg: 1, sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
@@ -432,7 +432,7 @@ export function rigEffects(rig) {
     // Ablative Plating (Armor) — hardens impact locations; catalog effect.
     hardenImpact: equip === "ablative-plating" ? (eff.hardenImpact ?? 1) : 0,
     // Targeting Computer (Sensors) — sweet-band accuracy bonus; catalog effect.
-    sweetBandAcc: equip === "targeting-computer" ? (eff.sweetBandAcc ?? 0) : 0,
+    sweetBandAccuracy: equip === "targeting-computer" ? (eff.sweetBandAccuracy ?? 0) : 0,
     // Reactive Plating (Armor) — side/rear STR delta; catalog effect.
     sideRearPen: equip === "reactive-plating" ? (eff.sideRearPen ?? -1) : 0,
   };
@@ -710,7 +710,7 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     upgradeEffect: effect,
   };
   if (base.melee) {
-    profile.acc = [...base.acc];
+    profile.accuracy = [...base.accuracy];
     profile.rng = [...base.rng];
     if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
   } else {

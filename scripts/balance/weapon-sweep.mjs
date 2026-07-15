@@ -49,7 +49,7 @@ const baseCtx = {
     const b = WEAPONS[slot]?.[name];
     if (!b) return null;
     const p = { ...b, perks: b.perks || [], upgrade: null, upgradeEffect: {} };
-    if (b.melee) { p.acc = [...b.acc]; p.rng = [...b.rng]; }
+    if (b.melee) { p.accuracy = [...b.accuracy]; p.rng = [...b.rng]; }
     return p;
   },
 };

@@ -128,7 +128,7 @@ test("dragging off the sweet spot shows the accuracy falloff", async () => {
   const slider = (await screen.findByLabelText(
     "Distance to target in inches",
   )) as HTMLInputElement;
-  // |18 - 7| * 0.35 = 3.85 -> round to 4 penalty -> acc = peak(2) - 4 = -2.
+  // |18 - 7| * 0.35 = 3.85 -> round to 4 penalty -> accuracy = peak(2) - 4 = -2.
   fireEvent.change(slider, { target: { value: "18" } });
   expect(screen.getByText("-2 falloff")).toBeInTheDocument();
 });

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, aimBreakdown, weaponAccAt, rollToHit, computePen, penBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
+import { computeModifiedAim, aimBreakdown, weaponAccuracyAt, rollToHit, computePen, penBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 import { WEIGHT_PEN_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
@@ -23,7 +23,7 @@ function makeCtx() {
 const attacker = { weightClass: "medium", hull: { sp: 7 } };
 
 test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () => {
-  const claw = WEAPONS.melee["Claw"]; // acc [1,1]
+  const claw = WEAPONS.melee["Claw"]; // accuracy [1,1]
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 0 }), 3); // 4 - 1
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 2 }), 5); // 4 - 1 + 2
   // Perks now ride on the upgrade, so exercise Precision by injecting it (base is stat-only).
@@ -42,14 +42,14 @@ test("computeModifiedAim waives the aim penalty when waiveAimPenalty is set", ()
   assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, aimed: true, waiveAimPenalty: true }), 3);
 });
 
-test("weaponAccAt peaks at the sweet spot and falls off with distance", () => {
+test("weaponAccuracyAt peaks at the sweet spot and falls off with distance", () => {
   const mg = WEAPONS.longRange["Mini Gun"]; // sweet 7, peak 2, dropoff 0.35
-  assert.equal(weaponAccAt(mg, 7), 2);                 // at sweet spot
-  assert.equal(weaponAccAt(mg, 2), 0);                 // |2-7|*0.35 = 1.75 -> 2 penalty
-  assert.equal(weaponAccAt(mg, 18), -2);               // |18-7|*0.35 = 3.85 -> 4 penalty
-  assert.equal(weaponAccAt(mg, undefined), 2);         // no distance -> peak (legacy fallback)
-  const claw = WEAPONS.melee["Claw"];                  // melee: scalar acc, distance-independent
-  assert.equal(weaponAccAt(claw, 99), 1);
+  assert.equal(weaponAccuracyAt(mg, 7), 2);            // at sweet spot
+  assert.equal(weaponAccuracyAt(mg, 2), 0);            // |2-7|*0.35 = 1.75 -> 2 penalty
+  assert.equal(weaponAccuracyAt(mg, 18), -2);          // |18-7|*0.35 = 3.85 -> 4 penalty
+  assert.equal(weaponAccuracyAt(mg, undefined), 2);    // no distance -> peak (legacy fallback)
+  const claw = WEAPONS.melee["Claw"];                  // melee: scalar accuracy, distance-independent
+  assert.equal(weaponAccuracyAt(claw, 99), 1);
 });
 
 test("computeModifiedAim uses distance-based accuracy for ranged weapons", () => {
@@ -183,8 +183,8 @@ test("aimBreakdown — the terms always sum back to the reported target number",
   ]) {
     const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, opts);
     const base = b.terms.find((t) => t.label === "base aim").value;
-    const acc = b.terms.filter((t) => t.label !== "base aim").reduce((s, t) => s + t.value, 0);
-    assert.equal(base - acc, b.value, `terms do not reconcile for ${JSON.stringify(opts)}`);
+    const accuracy = b.terms.filter((t) => t.label !== "base aim").reduce((s, t) => s + t.value, 0);
+    assert.equal(base - accuracy, b.value, `terms do not reconcile for ${JSON.stringify(opts)}`);
   }
 });
 
@@ -199,7 +199,7 @@ test("Predictive Tracking: +2 ACC and ignores cover vs a pinned target", () => {
   const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "predictive-tracking" };
   const mg = WEAPONS.longRange["Mini Gun"];
   // distance:12 is chosen (not the plan's distance:7) because Mini Gun's own
-  // `sweet` is 7 — at that distance Ballistic Processor's unrelated sweetBandAcc
+  // `sweet` is 7 — at that distance Ballistic Processor's unrelated sweetBandAccuracy
   // bonus would also fire and confound the "wrong upgrade" check below. 12 is
   // outside Mini Gun's sweet band (|12-7| > 2), isolating Predictive Tracking.
   const openField = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: false });
@@ -216,7 +216,7 @@ test("Predictive Tracking: +2 ACC and ignores cover vs a pinned target", () => {
 });
 
 test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => {
-  const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, acc [1,0]
+  const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, accuracy [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3
   const res = rollToHit(attacker, dbl, { range: "near", cover: 0, fullAuto: true }, dice, () => 0);
   assert.equal(res.rof, 10);
@@ -320,7 +320,7 @@ test("arcBonus: ranged +0/+2/+3, Raking Fire overrides", () => {
 test("arcBonus — melee gets the same side/rear ladder as ranged", () => {
   // Melee returning 0 here was the root cause of the old model's 69 dead zones:
   // ranged could climb into heavy armour and melee could not.
-  const melee = { melee: true, acc: [0, 0] };
+  const melee = { melee: true, accuracy: [0, 0] };
   assert.equal(arcBonus(melee, "front"), 0);
   assert.equal(arcBonus(melee, "side"), 2);
   assert.equal(arcBonus(melee, "rear"), 3);
@@ -519,22 +519,22 @@ test("painted target cancels cover and grants +1 Aim for ranged attacks", () => 
   const ranged = { peak: 0, dropoff: 0, sweet: 6 }; // flat ACC 0
   const plain   = computeModifiedAim(attacker, ranged, { distance: 6, cover: 2 });
   const painted = computeModifiedAim(attacker, ranged, { distance: 6, cover: 2, painted: true });
-  // cover 2 removed (+2 to accTotal) AND +1 Aim ⇒ modAim drops by 3.
+  // cover 2 removed (+2 to accuracyTotal) AND +1 Aim ⇒ modAim drops by 3.
   assert.equal(plain - painted, 3);
 });
 
 test("painted does not help melee weapons", () => {
   const attacker = { weightClass: "medium", hull: { sp: 8 } };
-  const melee = { melee: true, acc: [0, 0] };
+  const melee = { melee: true, accuracy: [0, 0] };
   const a = computeModifiedAim(attacker, melee, { distance: 2, cover: 0 });
   const b = computeModifiedAim(attacker, melee, { distance: 2, cover: 0, painted: true });
   assert.equal(a, b);
 });
 
 test("resolveAttack emits a per-die roll for each hit-die plus a location d12, each with a tone", () => {
-  // Autocannon: rof 4, acc [0,-1], no Full Auto requested here. Medium attacker,
-  // full hull, near range, front arc, cover 0, fire (not aimed) -> modAim =
-  // AIM.medium(4) - (acc[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
+  // Autocannon: rof 4, accuracy [0,-1], no Full Auto requested here. Medium
+  // attacker, full hull, near range, front arc, cover 0, fire (not aimed) ->
+  // modAim = AIM.medium(4) - (accuracy[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
   // ap-shells (tuned) carries no STR bonus, so the expected STR below stays the
   // bare base+weight-class value — the default upgrade (depleted-core, field)
   // would add +2 STR and throw off the comparison.
@@ -662,7 +662,7 @@ test("Targeting Computer passive: first shot ignores cover + engaged penalties",
   const profile = WEAPONS.longRange["Autocannon"];
   const penalized = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true });
   const compensated = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true, fireControlFirst: true });
-  // cover 2 and engaged −2 both feed accTotal (+2 and +2 to the target number);
+  // cover 2 and engaged −2 both feed accuracyTotal (+2 and +2 to the target number);
   // the first-shot compensator zeroes both, dropping modAim by exactly 4.
   assert.equal(penalized - compensated, 4);
 });

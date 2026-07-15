@@ -58,7 +58,7 @@ export const GLOSSARY = [
     def: "The heat a Rig can carry safely before an overheat check is required — 6/5/4/3 for Light/Medium/Heavy/Colossal (§6).",
   },
   {
-    id: "acc", term: "ACC", match: ["ACC"],
+    id: "accuracy", term: "ACC", match: ["ACC"],
     def: "A weapon's accuracy modifier, applied to the Rig's Aim when rolling to hit (§7, §12).",
   },
   {

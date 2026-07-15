@@ -6,13 +6,13 @@ declare module "/shared/game-state.js" {
   // via `woundTarget(pen, T)`; each wound then deals `dmg` SP.
   export const WEAPONS: Record<string, Record<string, {
     rof: number; pen: number; dmg: number;
-    acc?: number[]; rng?: number[];
+    accuracy?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[];
   }>>;
   export const UNIT_WEAPONS: Record<string, {
     rof: number; pen: number; dmg: number;
-    acc?: number[]; rng?: number[];
+    accuracy?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[]; flatPick?: boolean;
   }>;
@@ -58,7 +58,7 @@ declare module "/shared/game-state.js" {
     thermalMargin: number;
     hullMaxBonus: number;
     recoveryCool: number;
-    combat: { hardenImpact: number; sweetBandAcc: number; sideRearPen: number };
+    combat: { hardenImpact: number; sweetBandAccuracy: number; sideRearPen: number };
     modifiers: Array<{ source: string; kind: string; label: string; detail: string }>;
   };
 }
@@ -69,8 +69,8 @@ declare module "/shared/rules.js" {
 }
 
 declare module "/shared/combat.js" {
-  export function weaponAccAt(
-    profile: { melee?: boolean; acc?: number[]; peak?: number; sweet?: number; dropoff?: number },
+  export function weaponAccuracyAt(
+    profile: { melee?: boolean; accuracy?: number[]; peak?: number; sweet?: number; dropoff?: number },
     distance: number | undefined,
   ): number;
 }
