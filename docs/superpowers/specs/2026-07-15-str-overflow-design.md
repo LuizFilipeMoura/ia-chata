@@ -1,17 +1,39 @@
 # STR overflow + Swarm Warheads re-tier — design
 
 **Date:** 2026-07-15
-**Status:** approved, not implemented
+**Status:** SHIPPED 2026-07-15 and re-measured. See
+`scripts/balance/report-2026-07-15-overflow.txt` and the "Re-measured" section of
+the findings doc.
 **Source:** `docs/superpowers/specs/2026-07-15-weapon-balance-findings.md` (F1-A, F3-B)
+
+> **Naming, as shipped.** This document says "overflow" throughout; the shipped
+> code says **Overmatch** (`strOvermatchD`, `OVERMATCH_PER_D`, `OVERMATCH_MAX_D`,
+> the `overmatch` rider). The rename came out of final review: `overflow` is
+> already the player-facing name of a *different* rule in the same damage pipeline
+> — "Damage overflow", the spill to another location when a hit strikes a part at
+> 0 SP (`rules.md:254`, `game-state.js:1700`). One word, two rules, one pipeline.
+> Read "overflow" below as "Overmatch".
+>
+> Two other deviations, both improvements: `OVERMATCH_PER_D` / `OVERMATCH_MAX_D` /
+> `WOUND_TN_FLOOR` ship **private**, not exported as the code block below shows —
+> nothing outside `rules.js` consumes them. And `woundRaw` ships without the
+> `caller` parameter: hand-maintained string copies of function names are exactly
+> the write-it-twice drift this design exists to remove from the floor constant.
 
 Implements steps 1–3 of the findings doc's suggested order. Steps 4 (turn-level
 harness) and 5 (F5-C, what speed is worth) are explicitly out of scope.
 
 ## Problem
 
-`woundTarget = clamp(2, 10, 6 + T − STR)` (`rules.js:95`) saturates. Rig
-toughness is T3–T5 (`unit-kinds.js:16`), so any STR ≥ 9 sits on the TN-2 floor
-against every part of every rig. Six weapons live there — Siege Maul (11), Sniper
+`woundTarget = clamp(2, 10, 6 + T − STR)` (`rules.js:95`) saturates. Every
+*buildable* rig is T3–T5, so any STR ≥ 9 sits on the TN-2 floor against every part
+of every rig.
+
+(Precisely: `RIG_TOUGHNESS` (`unit-kinds.js:16`) also defines heavy — hull T6 — and
+colossal — hull T7 — but **no chassis uses either**; only light and medium exist,
+which is also all the sweep measured. The saturation finding is scoped to the rigs
+that exist. If a colossal chassis ever ships, its T7 hull puts the floor at STR 11
+and even a Siege Maul would only *reach* it, so this analysis would need redoing.) Six weapons live there — Siege Maul (11), Sniper
 Cannon / Harpoon / Wrecking Ball / Anchor (10), Lance (9).
 
 For those six, three design levers are simultaneously dead, each confirmed
@@ -192,10 +214,31 @@ function.
 - `rules.test.js` — floor boundary (`s = t+4` → 0, `s = t+5` → 0, `s = t+7` → +1);
   cap (`s = t+13` → +2, not +3); non-number T throws; STR 3 vs T3–5 → 0.
 - `combat.test.js` — overflow lands in `sp`; rides the arc bonus (one shot, front
-  vs rear, differs by exactly +1 D); negated path carries `overflow: 0`; ledger
+  vs rear, differs by exactly +1 D); negated path carries `overmatch: 0`; ledger
   emits "Overmatch" only when it fired.
 - `game-state.test.js` — Swarm Warheads `rof: 1`, tag matches.
-- `glossary.test.js` — Overmatch term.
+- ~~`glossary.test.js` — Overmatch term.~~ **Not written, deliberately.** That
+  suite asserts structural invariants over the whole array; its `REQUIRED` list
+  holds only runtime terminal tokens and contains no ledger labels at all — `rend`
+  is a ledger label with an entry and is likewise absent from it. The uniqueness
+  and non-empty-def checks cover a new entry automatically. This line claimed
+  coverage that shouldn't exist.
+
+Added during review, beyond what this spec anticipated:
+
+- `combat.test.js` — a volley whose **first wound die misses** still reports its
+  riders. The damage step picks `impacts.find(h => h.sp > 0) || first`, and riders
+  are only assigned inside `if (wounded)`, so reading `impacts[0]` blind drops them:
+  measured `wounds 2, weapon D 2` against an `8 SP` output, terms reconciling to 4.
+  The mechanism had **zero** executable protection — deleting it left the suite green.
+- `combat.test.js` — Overmatch against a **T6 Tank** hull, pinning that the rule
+  reads whatever `toughnessOf` returns rather than knowing about rigs.
+- `game-state.test.js` — the §9 blast path (`game-state.js:3647`) rolls
+  `woundTarget` directly and bypasses `rollWounds`, so it never gets Overmatch.
+  There is no live divergence — `BLAST_STR` is 8 and Overmatch first pays at
+  `T + 7`, so with a game-minimum T3 nothing diverges until STR 10. That is two
+  points of headroom **by accident, not intent**, so the test reads the exported
+  `BLAST_STR` and trips red if anyone bumps it.
 
 **Balance — the sweep, directional.** The unit tests already prove the levers
 reconnect, deterministically and for free. The sweep answers only what tests
