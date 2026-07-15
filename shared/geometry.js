@@ -38,3 +38,56 @@ export function terrainPolygons(field) {
     return { kind: t.kind, points: rectCorners(t) };
   });
 }
+
+// Standard orientation test. Returns >0 / <0 / 0 for ccw / cw / collinear.
+function cross(ax, ay, bx, by, cx, cy) {
+  return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+}
+
+function onSegment(ax, ay, bx, by, px, py) {
+  return Math.min(ax, bx) - 1e-9 <= px && px <= Math.max(ax, bx) + 1e-9
+    && Math.min(ay, by) - 1e-9 <= py && py <= Math.max(ay, by) + 1e-9;
+}
+
+// True when segment a1-a2 crosses segment b1-b2, touching included.
+export function segmentsIntersect(a1, a2, b1, b2) {
+  const d1 = cross(b1.x, b1.y, b2.x, b2.y, a1.x, a1.y);
+  const d2 = cross(b1.x, b1.y, b2.x, b2.y, a2.x, a2.y);
+  const d3 = cross(a1.x, a1.y, a2.x, a2.y, b1.x, b1.y);
+  const d4 = cross(a1.x, a1.y, a2.x, a2.y, b2.x, b2.y);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+  // Collinear-touch cases.
+  if (Math.abs(d1) < 1e-9 && onSegment(b1.x, b1.y, b2.x, b2.y, a1.x, a1.y)) return true;
+  if (Math.abs(d2) < 1e-9 && onSegment(b1.x, b1.y, b2.x, b2.y, a2.x, a2.y)) return true;
+  if (Math.abs(d3) < 1e-9 && onSegment(a1.x, a1.y, a2.x, a2.y, b1.x, b1.y)) return true;
+  if (Math.abs(d4) < 1e-9 && onSegment(a1.x, a1.y, a2.x, a2.y, b2.x, b2.y)) return true;
+  return false;
+}
+
+// Ray-casting parity test.
+export function pointInPolygon(p, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i];
+    const [xj, yj] = pts[j];
+    const straddles = (yi > p.y) !== (yj > p.y);
+    if (straddles && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// True when the segment crosses any edge of the polygon, OR lies wholly inside
+// it (no edge crossed, but both endpoints within — a rig standing in terrain).
+// Checking endpoint `a` alone is sufficient: if no edge of the polygon is
+// crossed by the segment, the segment cannot pass from inside to outside (or
+// vice versa) anywhere along its length, so both endpoints share the same
+// inside/outside status as `a` — testing one stands in for both.
+export function segmentHitsPolygon(a, b, poly) {
+  const pts = poly.points;
+  for (let i = 0; i < pts.length; i++) {
+    const [cx, cy] = pts[i];
+    const [dx, dy] = pts[(i + 1) % pts.length];
+    if (segmentsIntersect(a, b, { x: cx, y: cy }, { x: dx, y: dy })) return true;
+  }
+  return pointInPolygon(a, pts);
+}
