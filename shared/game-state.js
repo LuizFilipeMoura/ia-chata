@@ -571,7 +571,7 @@ export const WEAPON_UPGRADES = {
     { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", catch: "Resets if you stop advancing", effect: { piledriver: true } }, // shove (3") deferred — Group G (spatial)
   ],
   "Missile Barrage": [
-    { id: "swarm-warheads", nature: "field", name: "Swarm Warheads", tag: "+2 ROF", effect: { rof: 2 } },
+    { id: "swarm-warheads", nature: "field", name: "Swarm Warheads", tag: "+1 ROF", effect: { rof: 1 } },
     { id: "shaped-charges", nature: "tuned", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "fire-control-lock", nature: "prototype", name: "Fire Control Lock", tag: "Lock a target for one unmissable armor-piercing volley", catch: "Takes a turn to paint the target first", effect: { fireControl: true } },
   ],

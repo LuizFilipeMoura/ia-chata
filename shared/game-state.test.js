@@ -224,6 +224,22 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
     { longRange: "Autocannon", melee: "Bulwark Shield" }).weaponUpgrades.melee, "tower-shield");
 });
 
+test("Swarm Warheads is +1 ROF, and its tag says so", () => {
+  // Measured at +2.31 SP, the strongest upgrade in the game, putting Missile
+  // Barrage alone at the top (6.92) and making its own tuned/prototype tiers
+  // read as downgrades. The tier is right (+ROF is a raw stat, which is what
+  // Field means); the magnitude was the outlier.
+  const swarm = WEAPON_UPGRADES["Missile Barrage"].find((u) => u.id === "swarm-warheads");
+  assert.equal(swarm.effect.rof, 1);
+  // `tag` is rendered verbatim by the commission wizard and the loadout view —
+  // it must move with the effect or the UI lies about what the upgrade does.
+  assert.equal(swarm.tag, "+1 ROF");
+  const rig = makeRig(1, "A", "light", "a", {
+    longRange: "Missile Barrage", melee: "Flamethrower", longRangeUpgrade: "swarm-warheads",
+  });
+  assert.equal(effectiveWeaponProfile("longRange", "Missile Barrage", rig).rof, 5); // 4 base + 1
+});
+
 test("NATURES lists the three upgrade natures in order", () => {
   assert.deepEqual(NATURES, ["field", "tuned", "prototype"]);
 });
