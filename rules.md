@@ -249,7 +249,9 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
    **Arc bonus.** Add **+2 STR** into the target's **side arc** and **+3 STR** into its **rear arc**; the front arc gives nothing. **Melee climbs the same ladder as ranged** — a melee weapon flanking a target gains the bonus exactly as a gun does. *(Raking Fire machine guns replace these values — §13.)* *⚙ TUNING: melee used to gain no arc bonus at all, which capped its damage and was the root cause of the old model's dead matchups.*
 
    **The target number clamps to 2–10.** A natural **10 always wounds** and a natural **1 never does**, whatever the numbers say. No target is ever immune. *⚙ TUNING: the clamp is deliberate — it is what retired the old Impact Tables' 69 dead matchups. Do not remove it to "make armour matter".*
-8. **Apply damage.** Each wound costs the location the weapon's **Damage (D)** stat in SP (§12) — plus any per-wound riders such as **Rend** (§13). A hit that fails to wound does nothing.
+
+   **Overmatch.** Once your effective STR reaches the location's **Toughness + 4**, the target number is sitting on its floor of 2 and any further STR would be thrown away. Spend it on depth instead: every **3** full points beyond **Toughness + 4** add **+1 Damage** to each wound, to a maximum of **+2**. So against T4 arms you need effective STR 11 for +1 D and 14 for +2 — and STR past that adds nothing. *⚙ TUNING: new. Without it the arc bonus, the weight-class STR mod and every +STR upgrade measured as literally zero on a saturated weapon, since they only ever pushed a target number that was already clamped.*
+8. **Apply damage.** Each wound costs the location the weapon's **Damage (D)** stat in SP (§12) — plus any per-wound riders such as **Overmatch** (step 7) or **Rend** (§13). A hit that fails to wound does nothing.
 
 **Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage. *(Engine note: the digital tracker auto-routes overflow to the Hull, or the next location with SP remaining if the Hull is already at 0.)*
 
