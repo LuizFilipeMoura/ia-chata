@@ -1,7 +1,7 @@
 // Static rulebook data shared by the resolution engine (server) and the
 // battle UI (client). Pure data + tiny lookups — no state, no randomness.
 
-import { hitPart, toughnessOf as _toughnessOf } from "./unit-kinds.js";
+import { hitPart } from "./unit-kinds.js";
 
 // Action catalogue (§5). `heat` is the base heat generated; `slot` is the
 // action-budget cost. Shut Down is special-cased by the engine (may be declared
@@ -94,16 +94,23 @@ export const WOUND_DIE = 10;
 // percentage with no lookup table.
 export function woundTarget(str, toughness) {
   const s = Math.floor(Number(str) || 0);
-  const t = Math.floor(Number(toughness) || 0);
+  // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
+  // the single most dangerous default in the system. STR may coerce — it fails
+  // toward TN 10 (10%) — but T must be real.
+  //
+  // The check is `typeof`, not `Number.isFinite(Number(t))`: coercing first
+  // reopens the exact hole it means to close, because Number(null), Number(""),
+  // Number(false) and Number([]) are all 0 — and `null` is precisely what a
+  // failed lookup used to hand us. Only a real number may pass.
+  if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
+    throw new Error(`woundTarget: toughness must be a number, got ${toughness}`);
+  }
+  const t = Math.floor(toughness);
   return Math.max(2, Math.min(WOUND_DIE, 6 + t - s));
 }
 
 // Toughness of a struck location — the `toughness` argument to `woundTarget`.
-// Re-exported from unit-kinds.js so combat.js can reach it without importing
-// game-state.js (which would create a cycle).
-export function toughnessOf(kindId, partName, weightClass) {
-  return _toughnessOf(kindId, partName, weightClass);
-}
+export { toughnessOf } from "./unit-kinds.js";
 
 // §13 Bulwark / Raise Shield — which arcs a raised shield covers. Base: negate
 // the front, blunt (−4) side/rear. Tower Shield upgrade: negation extends to the

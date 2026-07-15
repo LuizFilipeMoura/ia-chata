@@ -102,7 +102,24 @@ test("woundTarget — the original bug case is possible, not impossible", () => 
   assert.equal(woundTarget(4, 5), 7);
 });
 
-test("woundTarget — coerces junk to a usable number", () => {
+test("woundTarget — junk STR coerces (fails safe), junk T throws (fails loud)", () => {
+  // The asymmetry is the point. A junk STR floors to 0 and drives the TN toward
+  // 10 — a 10% wound, the safe direction. A junk T would coerce to 0 and drive
+  // the TN to 2 — a 90% wound, making the location the softest thing on the
+  // table. That is the mathematically-wrong matchup this whole rewrite exists
+  // to eliminate, so T must never be guessed at.
   assert.equal(woundTarget(undefined, 5), 10);
-  assert.equal(woundTarget(5, undefined), 2);
+
+  // Every one of these must throw. The five falsy non-numbers are the sharp
+  // ones: Number(null), Number(""), Number(false) and Number([]) are all 0, so
+  // a guard that coerces before checking (`Number.isFinite(Number(t))`) lets
+  // them through to TN 2 and reintroduces the bug. `null` matters most — it is
+  // what a failed toughnessOf lookup used to return.
+  for (const junk of [undefined, null, "", " ", false, [], {}, NaN, Infinity, "soft", "5"]) {
+    assert.throws(
+      () => woundTarget(5, junk),
+      /toughness must be a number/,
+      `woundTarget(5, ${JSON.stringify(junk) ?? String(junk)}) must throw, not guess`,
+    );
+  }
 });

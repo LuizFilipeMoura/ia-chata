@@ -80,9 +80,25 @@ test("toughnessOf — every part of every kind has a value", () => {
   }
 });
 
-test("toughnessOf — unknown kind or part yields null, never a silent 0", () => {
-  assert.equal(toughnessOf("nope", "hull", "medium"), null);
-  assert.equal(toughnessOf("rig", "nope", "medium"), null);
+test("toughnessOf — a failed lookup throws, never a silent 0", () => {
+  // Returning a sentinel here would not stay a sentinel: woundTarget coerces,
+  // and Number(null) === 0 yields TN 2 — a 90% wound. A bad lookup must abort,
+  // not quietly produce the softest location in the game.
+  assert.throws(() => toughnessOf("nope", "hull", "medium"), /unknown kind/);
+  assert.throws(() => toughnessOf("rig", "nope", "medium"), /no T for/);
+});
+
+test("toughnessOf — a rig lookup with no weight class throws, it does not fall back", () => {
+  // The trap the flat/by-weight probe used to hide: `toughness` for a rig is a
+  // grid of grids, so an omitted weightClass found no number and returned null.
+  // `byWeight` makes "rig needs a weight class" distinct from "unknown part".
+  assert.throws(() => toughnessOf("rig", "hull"), /no T for rig\/flat\/hull/);
+  assert.throws(() => toughnessOf("rig", "hull", "nope"), /no T for rig\/nope\/hull/);
+});
+
+test("toughnessOf — flat kinds reject a part that is only a rig part", () => {
+  // "arms" is a rig part; a tank must not resolve it via some shared fallback.
+  assert.throws(() => toughnessOf("tank", "arms"), /no T for tank\/flat\/arms/);
 });
 
 test("kindOf(unit) returns the registry id, defaulting to 'rig' on legacy shape", () => {

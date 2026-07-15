@@ -37,6 +37,7 @@ export const UNIT_KINDS = {
       { min: 11, part: "engine" },
     ],
     toughness: RIG_TOUGHNESS,
+    byWeight: true,
     hasHeat: true,
     hasArcs: true,
     actionBudget: 3,
@@ -159,13 +160,18 @@ export function hitPart(kindId, d12) {
   return picked;
 }
 
-// Toughness for a part. Rig grids are keyed by weight class; Tank/Walker are
-// flat. Returns null (never 0) for an unknown kind or part so a typo surfaces
-// as a crash rather than a silently trivially-woundable location.
+// Toughness for a part. Rig grids are keyed by weight class (`byWeight`);
+// Tank/Walker are flat. Throws rather than returning a sentinel: every caller
+// feeds this straight into woundTarget, where a non-numeric T coerces to 0 and
+// yields a 2+ wound (90%) — i.e. a lookup typo would silently make a location
+// the softest thing on the table. Fail loud instead.
 export function toughnessOf(kindId, partName, weightClass) {
-  const t = UNIT_KINDS[kindId]?.toughness;
-  if (!t) return null;
-  const row = (weightClass && t[weightClass]) ? t[weightClass] : t;
+  const kind = UNIT_KINDS[kindId];
+  if (!kind?.toughness) throw new Error(`toughnessOf: unknown kind "${kindId}"`);
+  const row = kind.byWeight ? kind.toughness[weightClass] : kind.toughness;
   const v = row?.[partName];
-  return typeof v === "number" ? v : null;
+  if (typeof v !== "number") {
+    throw new Error(`toughnessOf: no T for ${kindId}/${weightClass ?? "flat"}/${partName}`);
+  }
+  return v;
 }
