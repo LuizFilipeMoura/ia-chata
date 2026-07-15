@@ -3,15 +3,15 @@ import type { Rig, GameState, Turn } from "./src/state/types";
 declare module "/shared/game-state.js" {
   export const SUPPORTED_RIG_CLASSES: string[];
   // §7.5 wound model: `pen` is compared against the struck location's Toughness
-  // via `woundTarget(pen, T)`; each wound then deals `d` SP.
+  // via `woundTarget(pen, T)`; each wound then deals `dmg` SP.
   export const WEAPONS: Record<string, Record<string, {
-    rof: number; pen: number; d: number;
+    rof: number; pen: number; dmg: number;
     acc?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[];
   }>>;
   export const UNIT_WEAPONS: Record<string, {
-    rof: number; pen: number; d: number;
+    rof: number; pen: number; dmg: number;
     acc?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[]; flatPick?: boolean;

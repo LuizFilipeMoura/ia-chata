@@ -168,7 +168,7 @@ for (const [slot, table] of [["longRange", WEAPONS.longRange], ["melee", WEAPONS
     for (const { tier, id } of tiers) {
       const rig = makeAttacker("medium", name, slot, id);
       const p = tier === "none" ? baseCtx.profileFor(slot, name) : ctx.profileFor(slot, name, rig);
-      const sig = JSON.stringify([p.rof, p.pen, p.d, p.perks?.slice().sort(), p.upgrade?.id ?? null]);
+      const sig = JSON.stringify([p.rof, p.pen, p.dmg, p.perks?.slice().sort(), p.upgrade?.id ?? null]);
       if (tier !== "none" && p.upgrade?.id !== id) throw new Error(`${name}/${tier}: profile carries ${p.upgrade?.id}, wanted ${id}`);
       seen.add(sig);
     }

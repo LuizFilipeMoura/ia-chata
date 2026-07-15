@@ -116,8 +116,8 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
 test("every weapon carries a hand-assigned damage stat in range 1..5", () => {
   const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
   for (const [name, w] of Object.entries(all)) {
-    assert.equal(typeof w.d, "number", `${name} has no d`);
-    assert.ok(w.d >= 1 && w.d <= 5, `${name} d=${w.d} out of range`);
+    assert.equal(typeof w.dmg, "number", `${name} has no dmg`);
+    assert.ok(w.dmg >= 1 && w.dmg <= 5, `${name} dmg=${w.dmg} out of range`);
   }
 });
 
@@ -179,10 +179,10 @@ test("makeUnit threads the sp override through to the rig", () => {
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, pen: 11, d: 5, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
+  assert.deepEqual(maul, { rof: 1, pen: 11, dmg: 5, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
-  assert.deepEqual(shield, { rof: 1, pen: 5, d: 3, acc: [0, 0], rng: [2, 2], melee: true });
+  assert.deepEqual(shield, { rof: 1, pen: 5, dmg: 3, acc: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 10 + 10.
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
@@ -191,13 +191,13 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
   assert.deepEqual(WEAPONS.longRange["Harpoon"],
-    { rof: 1, pen: 10, d: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
+    { rof: 1, pen: 10, dmg: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
   assert.deepEqual(WEAPONS.melee["Anchor"],
-    { rof: 1, pen: 10, d: 4, acc: [0, 0], rng: [2, 2], melee: true });
+    { rof: 1, pen: 10, dmg: 4, acc: [0, 0], rng: [2, 2], melee: true });
   assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
-    { rof: 6, pen: 3, d: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
+    { rof: 6, pen: 3, dmg: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
-    { rof: 2, pen: 7, d: 3, acc: [1, 1], rng: [2, 2], melee: true });
+    { rof: 2, pen: 7, dmg: 3, acc: [1, 1], rng: [2, 2], melee: true });
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
   assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });

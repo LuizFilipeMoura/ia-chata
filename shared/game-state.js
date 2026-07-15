@@ -49,30 +49,30 @@ export const BLAST_DMG = 2;
 // (via woundTarget); `d` decides HOW MUCH.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":       { rof: 8, pen: 3,  d: 1, sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
-    "Double MG":      { rof: 8, pen: 5,  d: 1, sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
-    "Autocannon":     { rof: 4, pen: 7,  d: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
-    "Arc Gun":        { rof: 2, pen: 8,  d: 3, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
-    "Mortar":         { rof: 3, pen: 7,  d: 2, sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
-    "Sniper Cannon":  { rof: 1, pen: 10, d: 4, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
-    "Siege Maul":     { rof: 1, pen: 11, d: 5, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
-    "Missile Barrage":{ rof: 4, pen: 7,  d: 2, sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
-    "Harpoon":        { rof: 1, pen: 10, d: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
-    "Rivet Gun":      { rof: 6, pen: 3,  d: 1, sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
-    "Crossbow":       { rof: 1, pen: 8,  d: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
+    "Mini Gun":       { rof: 8, pen: 3,  dmg: 1, sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
+    "Double MG":      { rof: 8, pen: 5,  dmg: 1, sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
+    "Autocannon":     { rof: 4, pen: 7,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
+    "Arc Gun":        { rof: 2, pen: 8,  dmg: 3, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
+    "Mortar":         { rof: 3, pen: 7,  dmg: 2, sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Sniper Cannon":  { rof: 1, pen: 10, dmg: 4, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
+    "Siege Maul":     { rof: 1, pen: 11, dmg: 5, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
+    "Missile Barrage":{ rof: 4, pen: 7,  dmg: 2, sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Harpoon":        { rof: 1, pen: 10, dmg: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
+    "Rivet Gun":      { rof: 6, pen: 3,  dmg: 1, sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
+    "Crossbow":       { rof: 1, pen: 8,  dmg: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
   },
   melee: {
-    "Sword":         { rof: 2, pen: 5,  d: 3, acc: [0, 0], rng: [2, 2], melee: true },
-    "Circular Saw":  { rof: 3, pen: 5,  d: 2, acc: [0, 0], rng: [2, 2], melee: true },
-    "Chainsaw":      { rof: 3, pen: 7,  d: 2, acc: [0, 0], rng: [2, 2], melee: true },
-    "Claw":          { rof: 2, pen: 7,  d: 3, acc: [1, 1], rng: [2, 2], melee: true },
-    "Lance":         { rof: 1, pen: 9,  d: 4, acc: [1, 1], rng: [2, 2], melee: true },
-    "Wrecking Ball": { rof: 1, pen: 10, d: 5, acc: [0, 0], rng: [2, 2], melee: true },
-    "Bulwark Shield":{ rof: 1, pen: 5,  d: 3, acc: [0, 0], rng: [2, 2], melee: true },
-    "Flamethrower":  { rof: 4, pen: 6,  d: 2, acc: [1, 0], rng: [2, 2], melee: true },
-    "Anchor":        { rof: 1, pen: 10, d: 4, acc: [0, 0], rng: [2, 2], melee: true },
-    "Pressure Claw": { rof: 2, pen: 7,  d: 3, acc: [1, 1], rng: [2, 2], melee: true },
-    "Talon":         { rof: 2, pen: 6,  d: 3, acc: [1, 1], rng: [2, 2], melee: true },
+    "Sword":         { rof: 2, pen: 5,  dmg: 3, acc: [0, 0], rng: [2, 2], melee: true },
+    "Circular Saw":  { rof: 3, pen: 5,  dmg: 2, acc: [0, 0], rng: [2, 2], melee: true },
+    "Chainsaw":      { rof: 3, pen: 7,  dmg: 2, acc: [0, 0], rng: [2, 2], melee: true },
+    "Claw":          { rof: 2, pen: 7,  dmg: 3, acc: [1, 1], rng: [2, 2], melee: true },
+    "Lance":         { rof: 1, pen: 9,  dmg: 4, acc: [1, 1], rng: [2, 2], melee: true },
+    "Wrecking Ball": { rof: 1, pen: 10, dmg: 5, acc: [0, 0], rng: [2, 2], melee: true },
+    "Bulwark Shield":{ rof: 1, pen: 5,  dmg: 3, acc: [0, 0], rng: [2, 2], melee: true },
+    "Flamethrower":  { rof: 4, pen: 6,  dmg: 2, acc: [1, 0], rng: [2, 2], melee: true },
+    "Anchor":        { rof: 1, pen: 10, dmg: 4, acc: [0, 0], rng: [2, 2], melee: true },
+    "Pressure Claw": { rof: 2, pen: 7,  dmg: 3, acc: [1, 1], rng: [2, 2], melee: true },
+    "Talon":         { rof: 2, pen: 6,  dmg: 3, acc: [1, 1], rng: [2, 2], melee: true },
   },
 };
 
@@ -80,15 +80,15 @@ export const WEAPONS = {
 // pick exactly one. Marked flatPick: true so combat.js skips the weight-class
 // STR modifier — the listed STR is the shot's STR on any chassis.
 export const UNIT_WEAPONS = {
-  "Tank Cannon":      { rof: 1, pen: 10, d: 5, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
-  "Autocannon Mount": { rof: 3, pen: 7,  d: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
-  "Coaxial MG":       { rof: 6, pen: 4,  d: 1, sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true, machineGun: true },
-  "Rocket Pod":       { rof: 2, pen: 8,  d: 3, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
-  "Dozer Blade":      { rof: 1, pen: 8,  d: 4, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
-  "Ram Spike":        { rof: 1, pen: 9,  d: 4, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Tank Cannon":      { rof: 1, pen: 10, dmg: 5, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
+  "Autocannon Mount": { rof: 3, pen: 7,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
+  "Coaxial MG":       { rof: 6, pen: 4,  dmg: 1, sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true, machineGun: true },
+  "Rocket Pod":       { rof: 2, pen: 8,  dmg: 3, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
+  "Dozer Blade":      { rof: 1, pen: 8,  dmg: 4, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Ram Spike":        { rof: 1, pen: 9,  dmg: 4, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
   // Built-in weak weapon every support unit carries; replaced by a Damage
   // module. peak 0 + dropoff 0 = a flat ACC 0 at any distance (spec §Sidearm).
-  "Sidearm":          { rof: 2, pen: 3,  d: 1, sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
+  "Sidearm":          { rof: 2, pen: 3,  dmg: 1, sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {

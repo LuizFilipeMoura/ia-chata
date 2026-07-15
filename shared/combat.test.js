@@ -1719,7 +1719,7 @@ test("rollWounds — a wound deals the weapon's D, not 1", () => {
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [9] }, () => 0);
   assert.equal(out.length, 1);
-  assert.equal(out[0].sp, 5); // Wrecking Ball d: 5
+  assert.equal(out[0].sp, 5); // Wrecking Ball dmg: 5
 });
 
 test("rollWounds — a natural 10 always wounds however hopeless the matchup", () => {
@@ -1731,7 +1731,7 @@ test("rollWounds — a natural 10 always wounds however hopeless the matchup", (
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].target, 9);
-  assert.equal(out[0].sp, 2); // Circular Saw d: 2
+  assert.equal(out[0].sp, 2); // Circular Saw dmg: 2
 });
 
 test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wounds", () => {

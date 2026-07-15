@@ -524,7 +524,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       // what the weapon WOULD have dealt rather than render a blank term.
       out.push({
         die, target: null, pen: null, toughness, sp: 0, negated: true, wounded: false,
-        d: profile.d || 1, rend: 0, evisc: 0, overmatch: 0,
+        dmg: profile.dmg || 1, rend: 0, evisc: 0, overmatch: 0,
         noRoll: bonus == null ? "arc" : "shield", terms: woundTerms,
       });
       continue;
@@ -563,7 +563,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       // the arc bonus, WEIGHT_PEN_MOD and every +STR upgrade at once, since all
       // of them are already summed into it above.
       overmatch = strOvermatchD(effPen, toughness);
-      sp = (profile.d || 1) + rend + evisc + overmatch;
+      sp = (profile.dmg || 1) + rend + evisc + overmatch;
     }
     const resolved = applyDefensiveReactions(
       target,
@@ -574,7 +574,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     // (the seam above) zeroes the SP of a wound that DID land, so `sp > 0` is
     // not the same question as "did the wound roll pass" — the ledger's wound
     // step reports the roll, the damage step reports the SP.
-    out.push({ ...resolved, wounded, d: profile.d || 1, rend, evisc, overmatch, terms: woundTerms });
+    out.push({ ...resolved, wounded, dmg: profile.dmg || 1, rend, evisc, overmatch, terms: woundTerms });
   }
   return out;
 }
@@ -891,7 +891,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (location) {
     const dmgTerms = [{ label: "wounds", value: impacts.filter((h) => h.sp > 0).length }];
     if (first) {
-      dmgTerms.push({ label: "weapon D", value: first.d });
+      dmgTerms.push({ label: "weapon D", value: first.dmg });
       // Rend/Evisceration/Overmatch are per-wound riders. PREFER a wound that
       // dealt damage: all three are assigned only inside `if (wounded)`, so a
       // wound that failed its roll carries them as 0 — reading impacts[0] blind
