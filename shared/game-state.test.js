@@ -206,11 +206,11 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   assert.equal(WEAPON_UPGRADES["Siege Maul"].length, 3);
   assert.equal(WEAPON_UPGRADES["Bulwark Shield"].length, 3);
 
-  // Reinforced Head is the default (first) Siege Maul upgrade: +2 Penetration.
+  // Reinforced Head is the default (first) Siege Maul upgrade: +1 Damage.
   const headed = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword" });
   assert.equal(headed.weaponUpgrades.longRange, "reinforced-head");
-  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).pen, 9); // 7 base + 2
+  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).dmg, 7); // 6 base + 1
 
   // Breaching Round marks onDamage.
   const breach = makeRig(2, "Breaker2", "medium", "a",
@@ -226,23 +226,17 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
 });
 
 test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
-  // Reinforced Head and Haymaker become +1 Damage effects in the penetration
-  // rework; before this, effectiveWeaponProfile had no `dmg` branch at all and
-  // the effect silently did nothing. No shipped upgrade grants Damage yet, so
-  // stub one onto the catalog to reach the mechanism.
-  const original = WEAPON_UPGRADES["Siege Maul"][0].effect;
-  WEAPON_UPGRADES["Siege Maul"][0].effect = { dmg: 1 };
-  try {
-    // Reinforced Head is the Siege Maul's field upgrade, so it is what makeRig
-    // fits by default — a rig with no upgrade is not a thing that can exist.
-    const rig = makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword" });
-    assert.equal(rig.weaponUpgrades.longRange, "reinforced-head");
-    const profile = effectiveWeaponProfile("longRange", "Siege Maul", rig);
-    assert.equal(profile.dmg, WEAPONS.longRange["Siege Maul"].dmg + 1, "effect.dmg must add to the base weapon's Damage");
-    assert.equal(profile.pen, WEAPONS.longRange["Siege Maul"].pen, "an unrelated stat must not move");
-  } finally {
-    WEAPON_UPGRADES["Siege Maul"][0].effect = original;
-  }
+  // Reinforced Head IS the mechanism's first shipped user: before the penetration
+  // rework, effectiveWeaponProfile had no `dmg` branch at all and an `effect.dmg`
+  // would have silently done nothing. It is also the Siege Maul's field upgrade,
+  // so it is what makeRig fits by default — a rig with no upgrade is not a thing
+  // that can exist.
+  assert.deepEqual(WEAPON_UPGRADES["Siege Maul"][0].effect, { dmg: 1 });
+  const rig = makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword" });
+  assert.equal(rig.weaponUpgrades.longRange, "reinforced-head");
+  const profile = effectiveWeaponProfile("longRange", "Siege Maul", rig);
+  assert.equal(profile.dmg, WEAPONS.longRange["Siege Maul"].dmg + 1, "effect.dmg must add to the base weapon's Damage");
+  assert.equal(profile.pen, WEAPONS.longRange["Siege Maul"].pen, "an unrelated stat must not move");
 });
 
 test("Swarm Warheads is +1 ROF, and its tag says so", () => {

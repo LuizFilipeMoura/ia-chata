@@ -529,7 +529,7 @@ export const WEAPON_UPGRADES = {
     { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn — runs +2 heat", catch: "Runs +2 heat", effect: { pinningBolt: true } },
   ],
   "Talon": [
-    { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+2 Penetration", effect: { pen: 2 } },
+    { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+1 Penetration", effect: { pen: 1 } },
     { id: "exploit-wound", nature: "tuned", name: "Exploit Wound", tag: "+3 Penetration vs an already-damaged location", effect: { vsWoundedLoc: true } },
     { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every wound deals +1 Damage (but weak on fresh armour)", catch: "Weak on fresh armour", effect: { eviscerate: true } },
   ],
@@ -544,7 +544,7 @@ export const WEAPON_UPGRADES = {
     { id: "kneecapper", nature: "prototype", name: "Kneecapper", tag: "Rake legs/arms from any arc to cripple them; never hull/engine", catch: "Never hits hull or engine", effect: { kneecapper: true } },
   ],
   "Autocannon": [
-    { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+2 Penetration", effect: { pen: 2 } },
+    { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+1 Penetration", effect: { pen: 1 } },
     { id: "ap-shells", nature: "tuned", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour; belt cycles slow after", catch: "Belt cycles slow after — no fire next turn", effect: { penetrator: true } },
   ],
@@ -564,7 +564,7 @@ export const WEAPON_UPGRADES = {
     { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", catch: "You don't choose the ricochet target", effect: { enfilade: true } }, // spatial ricochet narrated as a player instruction (Group G)
   ],
   "Siege Maul": [
-    { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+2 Penetration", effect: { pen: 2 } },
+    { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+1 Damage", effect: { dmg: 1 } },
     { id: "breaching-round", nature: "tuned", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
     { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", catch: "Resets if you stop advancing", effect: { piledriver: true } }, // shove (3") deferred — Group G (spatial)
   ],
@@ -599,7 +599,7 @@ export const WEAPON_UPGRADES = {
     { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", catch: "Also traps you in the lock", effect: { skewer: true } },
   ],
   "Wrecking Ball": [
-    { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 Penetration", effect: { pen: 3 } },
+    { id: "haymaker", nature: "field", name: "Haymaker", tag: "+1 Damage", effect: { dmg: 1 } },
     { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 Penetration and a knockback (knockback spatial)", effect: { charge: 2 } }, // knockback deferred — Group G (spatial)
     { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", catch: "Long cooldown after each pull", effect: { towChain: true } },
   ],
@@ -624,7 +624,7 @@ export const WEAPON_UPGRADES = {
     { id: "rivet-lock", nature: "prototype", name: "Rivet Lock", tag: "Rivet a location shut — no repairs, jams a weapon there", catch: "Takes repeated hits to the same spot to lock", effect: { rivetLock: true } },
   ],
   "Anchor": [
-    { id: "fluked-head", nature: "field", name: "Fluked Head", tag: "+3 Penetration", effect: { pen: 3 } },
+    { id: "fluked-head", nature: "field", name: "Fluked Head", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "dead-weight", nature: "tuned", name: "Dead Weight", tag: "Struck target can't Disengage next activation", effect: { deadWeight: true } },
     { id: "ground-anchor", nature: "prototype", name: "Ground Anchor", tag: "Anchor a rig in the lock; leaving you costs it a free Anchor hit", catch: "Also holds you in the lock", effect: { groundAnchor: true } },
   ],

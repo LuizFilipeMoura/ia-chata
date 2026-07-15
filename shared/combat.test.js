@@ -483,7 +483,7 @@ test("effectiveWeaponProfile applies selected ROF, Penetration, perk, and range 
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
 
   const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
-  assert.equal(computePen(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 8); // 6 base + 2 (Depleted Core)
+  assert.equal(computePen(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 7); // 6 base + 1 (Depleted Core)
 
   const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "duelist-balance" });
   assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Precision"), true);
@@ -537,7 +537,7 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   // modAim = BASE_AIM(4) - (accuracy[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
   // ap-shells (tuned) carries no Penetration bonus, so the expected Penetration below stays the
   // bare base+weight-class value — the default upgrade (depleted-core, field)
-  // would add +2 Penetration and throw off the comparison.
+  // would add +1 Penetration and throw off the comparison.
   const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw", longRangeUpgrade: "ap-shells" });
   const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target] };
@@ -2138,11 +2138,12 @@ test("ledger — the damage step multiplies wounds by the weapon's D", () => {
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 1 } },
     () => 0, ctx);
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
-  assert.ok(d.terms.some((t) => t.label === "weapon Damage" && t.value === 7));
-  // 7 flat, with no Overmatch rider: makeRig fits the melee slot with Haymaker
-  // (+3 Penetration), so this ball swings at effPen 9 into a T5 hull — TN
-  // 6+5-9 = 2, exactly the floor and nothing past it, so the total is the bare D.
-  assert.match(d.out, /7 SP/);
+  assert.ok(d.terms.some((t) => t.label === "weapon Damage" && t.value === 8));
+  // 8 flat, with no Overmatch rider: makeRig fits the melee slot with Haymaker,
+  // which now buys Damage (7 base + 1) rather than Penetration, so this ball
+  // swings at effPen 6 into a T5 hull — TN 6+5-6 = 5, nowhere near the floor of
+  // 2 and so nothing converts. The total is the bare D.
+  assert.match(d.out, /8 SP/);
 });
 
 test("ledger — the location step carries the d12 that picked the part", () => {
@@ -2380,27 +2381,30 @@ test("hit location comes from the target's kind, not the attacker's", () => {
 });
 
 test("ledger — Overmatch is named in the damage step when it fires", () => {
-  // A crushing hit rendering "weapon Damage 7" with an unexplained +1 in the total is
+  // A crushing hit rendering "weapon Damage 6" with an unexplained +1 in the total is
   // exactly the readability failure this ledger exists to close.
-  // Wrecking Ball Penetration 6 + Haymaker 3 + rear arc 3 = effPen 12 vs medium arms
-  // T4 → 4 Penetration past the TN-2 floor → +1 D. Haymaker is pinned rather than left
-  // to the default-upgrade rule: reordering WEAPON_UPGRADES would otherwise drop
-  // effPen to 9 and fail a RENDERING test for a reason unrelated to rendering.
+  // Anchor Penetration 7 + rear arc 3 = effPen 10 vs a medium engine T3 → wound raw
+  // 6+3-10 = -1, i.e. 3 Penetration past the TN-2 floor → +1 D. The engine (T3) is
+  // the aim point because the 3-7 band leaves NO rig melee weapon able to overmatch
+  // a T4 arm: base 7 is the melee ceiling and rear +3 is the largest arc bonus, so
+  // effPen 10 is as hard as a rig swings — and T4 needs 11. Anchor's field upgrade
+  // (Fluked Head) grants Armour Piercing, which rerolls FAILED wounds only; the
+  // natural 10 here wounds outright, so it never fires and adds no term.
   // The rate and cap behind that 1 are rules.test.js's (strOvermatchD's) to pin;
   // what this asserts is that the rider reaches the ledger under its own name.
-  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball", meleeUpgrade: "haymaker" });
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Anchor" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
   const ctx = makeCtx();
   resolveAttack(room, attacker, target,
     { weapon: "melee", arc: "rear", range: "near", cover: 0,
-      dice: { toHit: [6], location: 5, wounds: [10] } }, // location 5 → arms
+      dice: { toHit: [6], location: 11, wounds: [10] } }, // location 11 → engine
     () => 0, ctx);
   const dmg = ctx.resolutions.find((r) => r.kind === "attack")
     .breakdown.steps.find((s) => s.kind === "damage");
   assert.deepEqual(dmg.terms, [
     { label: "wounds", value: 1 },
-    { label: "weapon Damage", value: 7 },
+    { label: "weapon Damage", value: 6 },
     { label: "Overmatch", value: 1 },
   ]);
 });
