@@ -92,7 +92,26 @@ export const WOUND_DIE = 10;
 //
 // Each point of STR is worth exactly 10%, so the roll is readable as a
 // percentage with no lookup table.
-export function woundTarget(str, toughness) {
+
+// The wound roll's floor. Named, not inlined, because `strOverflowD` measures
+// distance PAST it: two literal 2s in two functions is one truth written twice,
+// and it would drift the first time someone touches the wound formula.
+export const WOUND_TN_FLOOR = 2;
+
+// Overflow conversion (§7.5) — STR past the floor is wasted by the clamp, which
+// is why arc, WEIGHT_STR_MOD and every +STR upgrade measure as literally dead on
+// STR >= 9 weapons. Excess converts to damage instead.
+// See docs/superpowers/specs/2026-07-15-str-overflow-design.md.
+export const OVERFLOW_PER_D = 3;
+export const OVERFLOW_MAX_D = 2;
+
+// The pre-clamp wound value, `6 + T - S`. Private: `woundTarget` clamps it,
+// `strOverflowD` measures how far past the floor it went. One expression, so the
+// two can never disagree about where the floor is.
+//
+// `caller` only names the thrower in the error message — a guard that fires
+// deserves to say which public function the caller actually used.
+function woundRaw(str, toughness, caller) {
   const s = Math.floor(Number(str) || 0);
   // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
   // the single most dangerous default in the system. STR may coerce — it fails
@@ -103,10 +122,21 @@ export function woundTarget(str, toughness) {
   // Number(false) and Number([]) are all 0 — and `null` is precisely what a
   // failed lookup used to hand us. Only a real number may pass.
   if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
-    throw new Error(`woundTarget: toughness must be a number, got ${toughness}`);
+    throw new Error(`${caller}: toughness must be a number, got ${toughness}`);
   }
-  const t = Math.floor(toughness);
-  return Math.max(2, Math.min(WOUND_DIE, 6 + t - s));
+  return 6 + Math.floor(toughness) - s;
+}
+
+export function woundTarget(str, toughness) {
+  return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, woundRaw(str, toughness, "woundTarget")));
+}
+
+// §7.5 — bonus D from STR the clamp would otherwise discard. Reaching the floor
+// wastes nothing (that point bought the last 10% of wound chance); only points
+// beyond it convert, at OVERFLOW_PER_D each, capped at OVERFLOW_MAX_D.
+export function strOverflowD(str, toughness) {
+  const over = Math.max(0, WOUND_TN_FLOOR - woundRaw(str, toughness, "strOverflowD"));
+  return Math.min(OVERFLOW_MAX_D, Math.floor(over / OVERFLOW_PER_D));
 }
 
 // Toughness of a struck location — the `toughness` argument to `woundTarget`.
