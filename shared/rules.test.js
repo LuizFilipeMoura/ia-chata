@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { BASE_AIM, WEIGHT_PEN_MOD, HEAT_CAPACITY, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
+import { BASE_AIM, WEIGHT_PEN_MOD, HEAT_CAPACITY, hitLocation, woundTarget } from "./rules.js";
 import { WEAPONS, SUPPORTED_RIG_CLASSES } from "./game-state.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
@@ -130,56 +130,4 @@ test("woundTarget — junk Penetration coerces (fails safe), junk T throws (fail
       `woundTarget(5, ${JSON.stringify(junk) ?? String(junk)}) must throw, not guess`,
     );
   }
-});
-
-test("strOvermatchD — STR that only just reaches the TN-2 floor wastes nothing", () => {
-  // The floor is reached at pen = T + 4 (raw 6+T-pen == 2). Reaching it is not
-  // waste: that point bought the last 10% of wound chance. Only points PAST it
-  // are discarded by the clamp, and only those convert.
-  assert.equal(strOvermatchD(8, 4), 0);   // raw 2 — exactly the floor
-  assert.equal(strOvermatchD(9, 4), 0);   // raw 1 — 1 wasted, under the 3-point rate
-  assert.equal(strOvermatchD(10, 4), 0);  // raw 0 — 2 wasted, still under
-});
-
-test("strOvermatchD — converts at +1 D per 3 wasted points", () => {
-  assert.equal(strOvermatchD(11, 4), 1);  // 3 wasted
-  assert.equal(strOvermatchD(13, 4), 1);  // 5 wasted — floors, no partial credit
-  assert.equal(strOvermatchD(14, 4), 2);  // 6 wasted
-});
-
-test("strOvermatchD — caps at +2 D", () => {
-  // Uncapped, a rear-arc Siege Maul (effPen 16) into an engine (T3) would add
-  // +3 to a D5 weapon = D8 against an engine SP pool of 8-11: a one-shot kill,
-  // which would make the engine the only rational aim point (see unit-kinds.js:11).
-  assert.equal(strOvermatchD(17, 4), 2);  // 9 wasted → 3, capped
-  assert.equal(strOvermatchD(30, 3), 2);  // absurd STR still capped
-});
-
-test("strOvermatchD — weak weapons never overmatch", () => {
-  // Rivet Gun STR 3 against every rig toughness in the game.
-  for (const t of [3, 4, 5]) assert.equal(strOvermatchD(3, t), 0);
-});
-
-test("strOvermatchD — junk T throws, exactly as woundTarget does", () => {
-  // The asymmetry INVERTS relative to woundTarget, which is why it's pinned:
-  // there a junk STR fails toward TN 10 (10%), here it fails toward zero
-  // Overmatch — both the safe direction, but for opposite-looking reasons.
-  assert.equal(strOvermatchD(undefined, 5), 0);  // junk STR floors to 0 → no Overmatch
-
-  // Same guard, same reason, opposite direction of the same hazard: a null T
-  // coercing to 0 reads as MAXIMUM Overmatch here. It must never be guessed at.
-  for (const junk of [undefined, null, "", false, [], {}, NaN, Infinity, "5"]) {
-    assert.throws(
-      () => strOvermatchD(10, junk),
-      /toughness must be a number/,
-      `strOvermatchD(10, ${JSON.stringify(junk) ?? String(junk)}) must throw, not guess`,
-    );
-  }
-});
-
-test("strOvermatchD — the design's worked examples", () => {
-  assert.equal(strOvermatchD(10, 4), 0);  // Wrecking Ball, front arc, arms
-  assert.equal(strOvermatchD(13, 4), 1);  // Wrecking Ball, rear arc (+3), arms
-  assert.equal(strOvermatchD(16, 3), 2);  // Siege Maul + Reinforced Head, rear, engine (capped from 3)
-  assert.equal(strOvermatchD(6, 5), 0);   // Autocannon, front, hull — never overmatches
 });

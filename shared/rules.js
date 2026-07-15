@@ -87,27 +87,24 @@ export function hitLocation(kindId, d12) {
 // The wound roll is a d10 (§7.5).
 export const WOUND_DIE = 10;
 
-// The wound roll's floor. Named, not inlined, because `strOvermatchD` measures
-// distance PAST it: two literal 2s in two functions is one truth written twice,
-// and it would drift the first time someone touches the wound formula.
+// The wound roll's floor — the low end of `woundTarget`'s clamp.
 const WOUND_TN_FLOOR = 2;
 
-// Overmatch conversion (§7.5) — STR past the floor is wasted by the clamp, which
-// is why arc, WEIGHT_PEN_MOD and every +STR upgrade measure as literally dead on
-// STR >= 9 weapons. Excess converts to damage instead.
+// §7.5 — the wound roll. A shot's effective Penetration is compared to the
+// struck location's Toughness: roll a d10 against `6 + T - P`.
 //
-// Named Overmatch, not "overflow": §7 already calls the 0-SP spill "damage
-// overflow" (game-state.js applyDamage routes it), and both land in the same
-// attack resolution. One word, one rule.
-// See docs/superpowers/specs/2026-07-15-str-overflow-design.md.
-const OVERMATCH_PER_D = 3;
-const OVERMATCH_MAX_D = 2;
-
-// The pre-clamp wound value, `6 + T - S`. Private: `woundTarget` clamps it,
-// `strOvermatchD` measures how far past the floor it went. One expression, so the
-// two can never disagree about where the floor is.
-function woundRaw(pen, toughness) {
-  const s = Math.floor(Number(pen) || 0);
+// The clamp is load-bearing. It guarantees a natural 10 always wounds and a
+// natural 1 never does, so no weapon/target/location matchup can be
+// mathematically hopeless. That was the failure mode of the impact-total model
+// this replaces: its base total capped at `6 + Pen + arc`, leaving 69 combos
+// that could never deal damage at any roll. Do not remove the clamp to "let
+// armour really matter" — that reintroduces the bug. See
+// docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
+//
+// Between the clamp's ends each point of Penetration is worth exactly 10%, so
+// the roll is readable as a percentage with no lookup table.
+export function woundTarget(pen, toughness) {
+  const p = Math.floor(Number(pen) || 0);
   // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
   // the single most dangerous default in the system. Penetration may coerce — it
   // fails toward TN 10 (10%) — but T must be real.
@@ -119,32 +116,7 @@ function woundRaw(pen, toughness) {
   if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
     throw new Error(`wound roll: toughness must be a number, got ${toughness}`);
   }
-  return 6 + Math.floor(toughness) - s;
-}
-
-// §7.5 — the wound roll. A shot's effective Penetration is compared to the
-// struck location's Toughness: roll a d10 against `6 + T - S`.
-//
-// The clamp is load-bearing. It guarantees a natural 10 always wounds and a
-// natural 1 never does, so no weapon/target/location matchup can be
-// mathematically hopeless. That was the failure mode of the impact-total model
-// this replaces: its base total capped at `6 + Penetration + arc`, leaving 69 combos
-// that could never deal damage at any roll. Do not remove the clamp to "let
-// armour really matter" — that reintroduces the bug. See
-// docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
-//
-// Each point of Penetration is worth exactly 10%, so the roll is readable as a
-// percentage with no lookup table.
-export function woundTarget(pen, toughness) {
-  return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, woundRaw(pen, toughness)));
-}
-
-// §7.5 — bonus D from STR the clamp would otherwise discard. Reaching the floor
-// wastes nothing (that point bought the last 10% of wound chance); only points
-// beyond it convert, at OVERMATCH_PER_D each, capped at OVERMATCH_MAX_D.
-export function strOvermatchD(str, toughness) {
-  const over = Math.max(0, WOUND_TN_FLOOR - woundRaw(str, toughness));
-  return Math.min(OVERMATCH_MAX_D, Math.floor(over / OVERMATCH_PER_D));
+  return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, 6 + Math.floor(toughness) - p));
 }
 
 // Toughness of a struck location — the `toughness` argument to `woundTarget`.

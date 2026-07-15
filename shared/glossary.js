@@ -86,10 +86,6 @@ export const GLOSSARY = [
     def: "A weapon's Structure Point loss per wound — every wound it lands deals this much, however the roll passed (§7.5, §12).",
   },
   {
-    id: "overmatch", term: "Overmatch", match: ["Overmatch"],
-    def: "The Wound Roll bottoms out at 2+ once your effective STR reaches the location's Toughness + 4, so STR past that would be wasted. Overmatch spends it on depth instead: every 3 points beyond Toughness + 4 adds +1 Damage, up to +2 (§7.5).",
-  },
-  {
     id: "catastrophic-damage", term: "catastrophic damage", match: ["catastrophic damage"],
     def: "The special effect a component suffers when reduced to 0 Structure Points (§8).",
   },

@@ -3,7 +3,7 @@
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
   BASE_AIM, WEIGHT_PEN_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
-  equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE, strOvermatchD,
+  equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
 
@@ -524,7 +524,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       // what the weapon WOULD have dealt rather than render a blank term.
       out.push({
         die, target: null, pen: null, toughness, sp: 0, negated: true, wounded: false,
-        dmg: profile.dmg || 1, rend: 0, evisc: 0, overmatch: 0,
+        dmg: profile.dmg || 1, rend: 0, evisc: 0,
         noRoll: bonus == null ? "arc" : "shield", terms: woundTerms,
       });
       continue;
@@ -540,17 +540,15 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       wounded = re >= tn;
     }
     let sp = 0;
-    // Rend / Evisceration / Overmatch are threaded out per wound, not just folded
-    // into `sp`, because the ledger's damage step names each one. Two of them the
-    // ledger could in principle recompute — Overmatch from the `pen`/`toughness`
-    // the rider already carries, Rend from the profile's perks — and they ride
-    // anyway, for shape parity and to keep the arithmetic in one place.
-    // Evisceration is the one that genuinely CANNOT be re-derived there: it reads
-    // the location's SP BEFORE this volley's damage was applied, which is gone by
-    // the time the ledger runs.
+    // Rend / Evisceration are threaded out per wound, not just folded into `sp`,
+    // because the ledger's damage step names each one. Rend the ledger could in
+    // principle recompute from the profile's perks, and it rides anyway, for
+    // shape parity and to keep the arithmetic in one place. Evisceration is the
+    // one that genuinely CANNOT be re-derived there: it reads the location's SP
+    // BEFORE this volley's damage was applied, which is gone by the time the
+    // ledger runs.
     let rend = 0;
     let evisc = 0;
-    let overmatch = 0;
     if (wounded) {
       // Rend — +1 D per wound. Buys depth, not frequency (cf. AP above).
       rend = hasPerk(profile, "Rend") ? 1 : 0;
@@ -558,12 +556,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       // half its max SP (was: forced Critical).
       evisc = profile.upgradeEffect?.eviscerate && target[location]
         && target[location].sp <= target[location].max / 2 ? 1 : 0;
-      // Overmatch (§7.5) — STR the wound clamp discarded, converted to depth.
-      // Reads `effPen`, NOT the nominal STR: that is what makes one rule revive
-      // the arc bonus, WEIGHT_PEN_MOD and every +STR upgrade at once, since all
-      // of them are already summed into it above.
-      overmatch = strOvermatchD(effPen, toughness);
-      sp = (profile.dmg || 1) + rend + evisc + overmatch;
+      sp = (profile.dmg || 1) + rend + evisc;
     }
     const resolved = applyDefensiveReactions(
       target,
@@ -574,7 +567,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     // (the seam above) zeroes the SP of a wound that DID land, so `sp > 0` is
     // not the same question as "did the wound roll pass" — the ledger's wound
     // step reports the roll, the damage step reports the SP.
-    out.push({ ...resolved, wounded, dmg: profile.dmg || 1, rend, evisc, overmatch, terms: woundTerms });
+    out.push({ ...resolved, wounded, dmg: profile.dmg || 1, rend, evisc, terms: woundTerms });
   }
   return out;
 }
@@ -892,10 +885,10 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     const dmgTerms = [{ label: "wounds", value: impacts.filter((h) => h.sp > 0).length }];
     if (first) {
       dmgTerms.push({ label: "weapon Damage", value: first.dmg });
-      // Rend/Evisceration/Overmatch are per-wound riders. PREFER a wound that
-      // dealt damage: all three are assigned only inside `if (wounded)`, so a
-      // wound that failed its roll carries them as 0 — reading impacts[0] blind
-      // would silently drop the live riders whenever the first die missed.
+      // Rend/Evisceration are per-wound riders. PREFER a wound that dealt
+      // damage: both are assigned only inside `if (wounded)`, so a wound that
+      // failed its roll carries them as 0 — reading impacts[0] blind would
+      // silently drop the live riders whenever the first die missed.
       //
       // When NO impact dealt damage, `first` is a deliberate fallback, not the
       // preference above failing. Mostly it changes nothing: a missed wound, and
@@ -909,7 +902,6 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       const rider = impacts.find((h) => h.sp > 0) || first;
       if (rider.rend) dmgTerms.push({ label: "Rend", value: rider.rend });
       if (rider.evisc) dmgTerms.push({ label: "Evisceration", value: rider.evisc });
-      if (rider.overmatch) dmgTerms.push({ label: "Overmatch", value: rider.overmatch });
     }
     steps.push({ kind: "damage", terms: dmgTerms, out: `${total} SP → ${location}` });
   }
