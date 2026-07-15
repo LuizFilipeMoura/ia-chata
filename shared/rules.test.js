@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { AIM, WEIGHT_STR_MOD, hitLocation, woundTarget, strOverflowD } from "./rules.js";
+import { AIM, WEIGHT_STR_MOD, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
 import { WEAPONS } from "./game-state.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
@@ -116,54 +116,54 @@ test("woundTarget — junk STR coerces (fails safe), junk T throws (fails loud)"
   }
 });
 
-test("strOverflowD — STR that only just reaches the TN-2 floor wastes nothing", () => {
+test("strOvermatchD — STR that only just reaches the TN-2 floor wastes nothing", () => {
   // The floor is reached at str = T + 4 (raw 6+T-str == 2). Reaching it is not
   // waste: that point bought the last 10% of wound chance. Only points PAST it
   // are discarded by the clamp, and only those convert.
-  assert.equal(strOverflowD(8, 4), 0);   // raw 2 — exactly the floor
-  assert.equal(strOverflowD(9, 4), 0);   // raw 1 — 1 wasted, under the 3-point rate
-  assert.equal(strOverflowD(10, 4), 0);  // raw 0 — 2 wasted, still under
+  assert.equal(strOvermatchD(8, 4), 0);   // raw 2 — exactly the floor
+  assert.equal(strOvermatchD(9, 4), 0);   // raw 1 — 1 wasted, under the 3-point rate
+  assert.equal(strOvermatchD(10, 4), 0);  // raw 0 — 2 wasted, still under
 });
 
-test("strOverflowD — converts at +1 D per 3 wasted points", () => {
-  assert.equal(strOverflowD(11, 4), 1);  // 3 wasted
-  assert.equal(strOverflowD(13, 4), 1);  // 5 wasted — floors, no partial credit
-  assert.equal(strOverflowD(14, 4), 2);  // 6 wasted
+test("strOvermatchD — converts at +1 D per 3 wasted points", () => {
+  assert.equal(strOvermatchD(11, 4), 1);  // 3 wasted
+  assert.equal(strOvermatchD(13, 4), 1);  // 5 wasted — floors, no partial credit
+  assert.equal(strOvermatchD(14, 4), 2);  // 6 wasted
 });
 
-test("strOverflowD — caps at +2 D", () => {
+test("strOvermatchD — caps at +2 D", () => {
   // Uncapped, a rear-arc Siege Maul (effStr 16) into an engine (T3) would add
   // +3 to a D5 weapon = D8 against an engine SP pool of 8-11: a one-shot kill,
   // which would make the engine the only rational aim point (see unit-kinds.js:11).
-  assert.equal(strOverflowD(17, 4), 2);  // 9 wasted → 3, capped
-  assert.equal(strOverflowD(30, 3), 2);  // absurd STR still capped
+  assert.equal(strOvermatchD(17, 4), 2);  // 9 wasted → 3, capped
+  assert.equal(strOvermatchD(30, 3), 2);  // absurd STR still capped
 });
 
-test("strOverflowD — weak weapons never overflow", () => {
+test("strOvermatchD — weak weapons never overmatch", () => {
   // Rivet Gun STR 3 against every rig toughness in the game.
-  for (const t of [3, 4, 5]) assert.equal(strOverflowD(3, t), 0);
+  for (const t of [3, 4, 5]) assert.equal(strOvermatchD(3, t), 0);
 });
 
-test("strOverflowD — junk T throws, exactly as woundTarget does", () => {
+test("strOvermatchD — junk T throws, exactly as woundTarget does", () => {
   // The asymmetry INVERTS relative to woundTarget, which is why it's pinned:
   // there a junk STR fails toward TN 10 (10%), here it fails toward zero
-  // overflow — both the safe direction, but for opposite-looking reasons.
-  assert.equal(strOverflowD(undefined, 5), 0);  // junk STR floors to 0 → no overflow
+  // Overmatch — both the safe direction, but for opposite-looking reasons.
+  assert.equal(strOvermatchD(undefined, 5), 0);  // junk STR floors to 0 → no Overmatch
 
   // Same guard, same reason, opposite direction of the same hazard: a null T
-  // coercing to 0 reads as MAXIMUM overflow here. It must never be guessed at.
+  // coercing to 0 reads as MAXIMUM Overmatch here. It must never be guessed at.
   for (const junk of [undefined, null, "", false, [], {}, NaN, Infinity, "5"]) {
     assert.throws(
-      () => strOverflowD(10, junk),
+      () => strOvermatchD(10, junk),
       /toughness must be a number/,
-      `strOverflowD(10, ${JSON.stringify(junk) ?? String(junk)}) must throw, not guess`,
+      `strOvermatchD(10, ${JSON.stringify(junk) ?? String(junk)}) must throw, not guess`,
     );
   }
 });
 
-test("strOverflowD — the design's worked examples", () => {
-  assert.equal(strOverflowD(10, 4), 0);  // Wrecking Ball, front arc, arms
-  assert.equal(strOverflowD(13, 4), 1);  // Wrecking Ball, rear arc (+3), arms
-  assert.equal(strOverflowD(16, 3), 2);  // Siege Maul + Reinforced Head, rear, engine (capped from 3)
-  assert.equal(strOverflowD(7, 5), 0);   // Autocannon, front, hull — never overflows
+test("strOvermatchD — the design's worked examples", () => {
+  assert.equal(strOvermatchD(10, 4), 0);  // Wrecking Ball, front arc, arms
+  assert.equal(strOvermatchD(13, 4), 1);  // Wrecking Ball, rear arc (+3), arms
+  assert.equal(strOvermatchD(16, 3), 2);  // Siege Maul + Reinforced Head, rear, engine (capped from 3)
+  assert.equal(strOvermatchD(7, 5), 0);   // Autocannon, front, hull — never overmatches
 });

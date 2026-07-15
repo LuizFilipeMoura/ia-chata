@@ -1800,7 +1800,7 @@ test("rollWounds — defender modifiers reduce effective STR, not the roll", () 
   assert.equal(out[0].str, 3);
 });
 
-test("rollWounds — overflow converts wasted STR into damage", () => {
+test("rollWounds — Overmatch converts wasted STR into damage", () => {
   const wb = WEAPONS.melee["Wrecking Ball"]; // STR 10, D5, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   // medium arms are T4, so the floor is str 8. STR 10 wastes 2 — under the
@@ -1809,12 +1809,12 @@ test("rollWounds — overflow converts wasted STR into damage", () => {
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(front[0].str, 10);
   assert.equal(front[0].target, 2);      // clamped to the floor
-  assert.equal(front[0].overflow, 0);
+  assert.equal(front[0].overmatch, 0);
   assert.equal(front[0].sp, 5);          // D5, nothing added
 });
 
-test("rollWounds — overflow revives the arc bonus on a saturated weapon", () => {
-  // THE POINT OF THE WHOLE CHANGE. Before overflow, these two shots were
+test("rollWounds — Overmatch revives the arc bonus on a saturated weapon", () => {
+  // THE POINT OF THE WHOLE CHANGE. Before Overmatch, these two shots were
   // byte-identical: both clamped to TN 2, both dealt exactly D5, so flanking a
   // Wrecking Ball rig was worth literally nothing (sweep: rear/front ratio x1.00).
   const wb = WEAPONS.melee["Wrecking Ball"];
@@ -1825,15 +1825,15 @@ test("rollWounds — overflow revives the arc bonus on a saturated weapon", () =
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(rear[0].str, 13);         // 10 + 3 (rear arc)
   assert.equal(front[0].target, rear[0].target); // both STILL clamped to 2...
-  assert.equal(rear[0].overflow, 1);             // ...but the arc now buys depth
+  assert.equal(rear[0].overmatch, 1);            // ...but the arc now buys depth
   assert.equal(rear[0].sp - front[0].sp, 1);
 });
 
-test("rollWounds — overflow revives WEIGHT_STR_MOD on a saturated weapon", () => {
+test("rollWounds — Overmatch revives WEIGHT_STR_MOD on a saturated weapon", () => {
   // Sweep measured the light↔medium delta as Δ0.00 for this weapon: both classes
   // clamped to TN 2, so the -1 was discarded entirely.
   //
-  // The mod bites where overflow crosses a rate boundary. Siege Maul (STR 11)
+  // The mod bites where Overmatch crosses a rate boundary. Siege Maul (STR 11)
   // into medium arms (T4, floor str 8) wastes 3 → +1 D; the light -1 wastes 2 →
   // +0. Same shot, one weight class apart, one point of damage.
   const maul = WEAPONS.longRange["Siege Maul"]; // STR 11, D5
@@ -1845,13 +1845,13 @@ test("rollWounds — overflow revives WEIGHT_STR_MOD on a saturated weapon", () 
   assert.equal(med[0].str, 11);
   assert.equal(light[0].str, 10);           // WEIGHT_STR_MOD light = -1
   assert.equal(med[0].target, light[0].target); // both STILL clamped to 2...
-  assert.equal(med[0].overflow, 1);             // ...but the mod now buys depth
-  assert.equal(light[0].overflow, 0);
+  assert.equal(med[0].overmatch, 1);            // ...but the mod now buys depth
+  assert.equal(light[0].overmatch, 0);
   assert.equal(med[0].sp - light[0].sp, 1);
 });
 
-test("rollWounds — overflow stacks with Rend and respects its own cap", () => {
-  // Overflow, Rend and Evisceration all land in `sp`. The cap is on overflow
+test("rollWounds — Overmatch stacks with Rend and respects its own cap", () => {
+  // Overmatch, Rend and Evisceration all land in `sp`. The cap is on Overmatch
   // alone, not on the total — a Rend weapon still gets its +1 on top.
   //
   // The fixture has to OVERSHOOT the cap or it isn't testing one. str 13 is a
@@ -1864,22 +1864,22 @@ test("rollWounds — overflow stacks with Rend and respects its own cap", () => 
   const out = rollWounds({ weightClass: "medium" }, target, maul, "engine",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].str, 16);
-  assert.equal(out[0].overflow, 2); // capped down from 3
+  assert.equal(out[0].overmatch, 2); // capped down from 3
   assert.equal(out[0].rend, 1);
-  assert.equal(out[0].sp, 8); // D5 + 2 overflow + 1 rend
+  assert.equal(out[0].sp, 8); // D5 + 2 Overmatch + 1 rend
 });
 
-test("rollWounds — a weak weapon never overflows", () => {
+test("rollWounds — a weak weapon never overmatches", () => {
   const rivet = WEAPONS.longRange["Rivet Gun"]; // STR 3, D1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, target, rivet, "engine",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].overflow, 0);
+  assert.equal(out[0].overmatch, 0);
   assert.equal(out[0].sp, 1); // D1, untouched
 });
 
-test("rollWounds — the negated path carries overflow: 0", () => {
-  // Shape parity with rend/evisc. A shield-negated shot resolves no overflow,
+test("rollWounds — the negated path carries overmatch: 0", () => {
+  // Shape parity with rend/evisc. A shield-negated shot resolves no Overmatch,
   // but the rider must still expose the field the ledger reads.
   const wb = WEAPONS.melee["Wrecking Ball"];
   const shielded = {
@@ -1890,7 +1890,7 @@ test("rollWounds — the negated path carries overflow: 0", () => {
   const out = rollWounds({ weightClass: "medium" }, shielded, wb, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].negated, true);
-  assert.equal(out[0].overflow, 0);
+  assert.equal(out[0].overmatch, 0);
   assert.equal(out[0].sp, 0);
 });
 
@@ -2316,7 +2316,7 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
   // T4 → 8 STR past the TN-2 floor → +2 D. Haymaker is pinned rather than left
   // to the default-upgrade rule: reordering WEAPON_UPGRADES would otherwise drop
   // effStr to 13 and fail a RENDERING test for a reason unrelated to rendering.
-  // The rate and cap behind that 2 are rules.test.js's (strOverflowD's) to pin;
+  // The rate and cap behind that 2 are rules.test.js's (strOvermatchD's) to pin;
   // what this asserts is that the rider reaches the ledger under its own name.
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball", meleeUpgrade: "haymaker" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });

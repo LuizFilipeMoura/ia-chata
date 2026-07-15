@@ -79,20 +79,24 @@ export function hitLocation(kindId, d12) {
 // The wound roll is a d10 (§7.5).
 export const WOUND_DIE = 10;
 
-// The wound roll's floor. Named, not inlined, because `strOverflowD` measures
+// The wound roll's floor. Named, not inlined, because `strOvermatchD` measures
 // distance PAST it: two literal 2s in two functions is one truth written twice,
 // and it would drift the first time someone touches the wound formula.
 const WOUND_TN_FLOOR = 2;
 
-// Overflow conversion (§7.5) — STR past the floor is wasted by the clamp, which
+// Overmatch conversion (§7.5) — STR past the floor is wasted by the clamp, which
 // is why arc, WEIGHT_STR_MOD and every +STR upgrade measure as literally dead on
 // STR >= 9 weapons. Excess converts to damage instead.
+//
+// Named Overmatch, not "overflow": §7 already calls the 0-SP spill "damage
+// overflow" (game-state.js applyDamage routes it), and both land in the same
+// attack resolution. One word, one rule.
 // See docs/superpowers/specs/2026-07-15-str-overflow-design.md.
-const OVERFLOW_PER_D = 3;
-const OVERFLOW_MAX_D = 2;
+const OVERMATCH_PER_D = 3;
+const OVERMATCH_MAX_D = 2;
 
 // The pre-clamp wound value, `6 + T - S`. Private: `woundTarget` clamps it,
-// `strOverflowD` measures how far past the floor it went. One expression, so the
+// `strOvermatchD` measures how far past the floor it went. One expression, so the
 // two can never disagree about where the floor is.
 function woundRaw(str, toughness) {
   const s = Math.floor(Number(str) || 0);
@@ -129,10 +133,10 @@ export function woundTarget(str, toughness) {
 
 // §7.5 — bonus D from STR the clamp would otherwise discard. Reaching the floor
 // wastes nothing (that point bought the last 10% of wound chance); only points
-// beyond it convert, at OVERFLOW_PER_D each, capped at OVERFLOW_MAX_D.
-export function strOverflowD(str, toughness) {
+// beyond it convert, at OVERMATCH_PER_D each, capped at OVERMATCH_MAX_D.
+export function strOvermatchD(str, toughness) {
   const over = Math.max(0, WOUND_TN_FLOOR - woundRaw(str, toughness));
-  return Math.min(OVERFLOW_MAX_D, Math.floor(over / OVERFLOW_PER_D));
+  return Math.min(OVERMATCH_MAX_D, Math.floor(over / OVERMATCH_PER_D));
 }
 
 // Toughness of a struck location — the `toughness` argument to `woundTarget`.

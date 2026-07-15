@@ -3,7 +3,7 @@
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
   AIM, WEIGHT_STR_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
-  equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE, strOverflowD,
+  equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE, strOvermatchD,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
 
@@ -524,7 +524,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       // what the weapon WOULD have dealt rather than render a blank term.
       out.push({
         die, target: null, str: null, toughness, sp: 0, negated: true, wounded: false,
-        d: profile.d || 1, rend: 0, evisc: 0, overflow: 0,
+        d: profile.d || 1, rend: 0, evisc: 0, overmatch: 0,
         noRoll: bonus == null ? "arc" : "shield", terms: woundTerms,
       });
       continue;
@@ -550,7 +550,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     // the time the ledger runs.
     let rend = 0;
     let evisc = 0;
-    let overflow = 0;
+    let overmatch = 0;
     if (wounded) {
       // Rend — +1 D per wound. Buys depth, not frequency (cf. AP above).
       rend = hasPerk(profile, "Rend") ? 1 : 0;
@@ -562,8 +562,8 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       // Reads `effStr`, NOT the nominal STR: that is what makes one rule revive
       // the arc bonus, WEIGHT_STR_MOD and every +STR upgrade at once, since all
       // of them are already summed into it above.
-      overflow = strOverflowD(effStr, toughness);
-      sp = (profile.d || 1) + rend + evisc + overflow;
+      overmatch = strOvermatchD(effStr, toughness);
+      sp = (profile.d || 1) + rend + evisc + overmatch;
     }
     const resolved = applyDefensiveReactions(
       target,
@@ -574,7 +574,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     // (the seam above) zeroes the SP of a wound that DID land, so `sp > 0` is
     // not the same question as "did the wound roll pass" — the ledger's wound
     // step reports the roll, the damage step reports the SP.
-    out.push({ ...resolved, wounded, d: profile.d || 1, rend, evisc, overflow, terms: woundTerms });
+    out.push({ ...resolved, wounded, d: profile.d || 1, rend, evisc, overmatch, terms: woundTerms });
   }
   return out;
 }
@@ -909,7 +909,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       const rider = impacts.find((h) => h.sp > 0) || first;
       if (rider.rend) dmgTerms.push({ label: "Rend", value: rider.rend });
       if (rider.evisc) dmgTerms.push({ label: "Evisceration", value: rider.evisc });
-      if (rider.overflow) dmgTerms.push({ label: "Overmatch", value: rider.overflow });
+      if (rider.overmatch) dmgTerms.push({ label: "Overmatch", value: rider.overmatch });
     }
     steps.push({ kind: "damage", terms: dmgTerms, out: `${total} SP → ${location}` });
   }
