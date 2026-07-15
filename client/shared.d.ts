@@ -62,6 +62,11 @@ declare module "/shared/game-state.js" {
   };
 }
 
+declare module "/shared/rules.js" {
+  /** Sides on the wound die (§7.5). The client sizes its manual-dice prompt from it. */
+  export const WOUND_DIE: number;
+}
+
 declare module "/shared/combat.js" {
   export function weaponAccAt(
     profile: { melee?: boolean; acc?: number[]; peak?: number; sweet?: number; dropoff?: number },
