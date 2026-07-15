@@ -4,6 +4,7 @@ import { makeGreedySafe, KNOWN_BIASES } from "./policy.mjs";
 import { createRoom, applyCommand, makeUnit, WEAPONS, HEAT_CAPACITY } from "../../shared/game-state.js";
 import { availableActions } from "../../shared/battle-view.js";
 import { arcBonus } from "../../shared/combat.js";
+import { roleOf, partsByRole } from "../../shared/unit-kinds.js";
 
 const DUEL_DISTANCE = 16;
 const DUEL_ARC = "side"; // never "front": see the Raking Fire test below
@@ -174,6 +175,59 @@ test("greedySafe does not reload a weapon it can never fire again", () => {
   const rig = room.rigs.find((r) => r.name === "A1");
   rig.weaponsDestroyed.push(rig.weapons.longRange);
   rig.loaded.longRange = false; // dead AND spent
+  const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
+  assert.notEqual(cmd?.attrs?.action, "reload");
+});
+
+test("greedySafe passes rather than firing a weapon riveted shut", () => {
+  // Rivet Lock seizes a weapon-role location and the engine refuses the shot for
+  // ~2 rounds while the Fire tile stays enabled. Unlike Ion Storm it does not
+  // clear on the refusal, so retrying never succeeds — it crashed the sweep on
+  // Rivet Gun / prototype at ~10% of trials.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  rig.rivetSeized = { arms: room.game.round + 1 }; // exactly what rivetHit writes
+  const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
+  assert.notEqual(cmd?.attrs?.action, "fire");
+  assert.equal(cmd.attrs.action, "shutdown");
+});
+
+test("greedySafe still fires with a rivet on a NON-weapon location", () => {
+  // The engine only jams on a weapon-role location — for a rig that is `arms`
+  // alone. A rivet on legs leaves the gun firing normally, so a guard that vents
+  // on any seize would pass a rig that can shoot: under-reporting the weapon
+  // instead of crashing. Quieter, still wrong. This pins the role filter.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  assert.equal(roleOf("rig", "legs"), "mobility", "guard: legs must not be weapon-role");
+  assert.deepEqual(partsByRole("rig", "weapon"), ["arms"], "guard: arms is the only weapon-role part");
+  rig.rivetSeized = { legs: room.game.round + 1 };
+  const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
+  assert.equal(cmd.attrs.action, "fire");
+});
+
+test("greedySafe treats a rivet as live by presence, not by expiry round", () => {
+  // rivetSeized[loc] stores the expiry ROUND, which invites a `v > game.round`
+  // test. That would be wrong: recovery DELETES seizes once past expiry, so a key
+  // that is still present is still live — which is why the engine's own check is
+  // a bare `> 0`. On the seize's second round the value EQUALS game.round (the
+  // sweep only deletes when value < round), so a round-aware guard reads false
+  // and fires into the refusal — handing back the very crash this guard removes.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  rig.rivetSeized = { arms: room.game.round }; // second round of the lock, still live
+  assert.equal(rig.rivetSeized.arms > room.game.round, false, "guard: a round-aware test would read this as expired");
+  const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
+  assert.equal(cmd.attrs.action, "shutdown", "the engine still refuses here, so the policy must not fire");
+});
+
+test("greedySafe does not reload a weapon riveted shut", () => {
+  // Reload cannot free the rivets, so a riveted rig would otherwise burn d6 heat
+  // re-arming a gun it cannot fire. The guard must sit above the reload branch.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  rig.rivetSeized = { arms: room.game.round + 1 };
+  rig.loaded.longRange = false; // riveted AND spent
   const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
   assert.notEqual(cmd?.attrs?.action, "reload");
 });

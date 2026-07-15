@@ -10,7 +10,7 @@
 //
 // This asks the engine what things cost (availableActions) rather than recomputing
 // them: one source of truth, and it dogfoods the same view-model the UI renders,
-// so a console that lies to a player lies to the harness too. FOUR places it
+// so a console that lies to a player lies to the harness too. FIVE places it
 // cannot ask, each marked below, and each a stalled duel if trusted:
 //   - a spent weapon's Fire tile reports `enabled` — Fire opens the reload drawer
 //     — though the shot itself is a silent no-op;
@@ -19,12 +19,14 @@
 //     meltdown charge is banked;
 //   - a rig whose weapon has been rolled dead by an Arms hit keeps an `enabled`
 //     Fire tile, while combat.js refuses the shot as `weapon-destroyed` and
-//     performAction's `return !!res` swallows the reason entirely.
+//     performAction's `return !!res` swallows the reason entirely;
+//   - a rig with a Rivet Lock on its weapon-role location keeps an `enabled` Fire
+//     tile while the engine refuses the shot for the ~2 rounds the rivets hold.
 // The lesson generalises: `enabled` means "the console offers this", not "the
 // engine will honour it". availableActions is not a legality oracle.
 import { availableActions } from "../../shared/battle-view.js";
 import { HEAT_CAPACITY } from "../../shared/game-state.js";
-import { kindOf } from "../../shared/unit-kinds.js";
+import { kindOf, roleOf } from "../../shared/unit-kinds.js";
 
 // To be printed verbatim by the duel report (Task 6), so whoever reads the numbers
 // sees the same caveats as whoever reads the code. Exported rather than restated:
@@ -44,6 +46,11 @@ export const KNOWN_BIASES = `
 - It pays reload heat at all, which the clone-per-trial sweep never did: a
   sustained duel is charged 1-2 heat per volley. These numbers are more truthful
   but they are NOT a like-for-like baseline against the old report.
+- A rig it cannot shoot with, it passes with. Gun rolled dead by an Arms hit, or
+  riveted shut by a Rivet Lock, and greedySafe simply vents — it has no melee to
+  fall back on, where a player would swing. So a weapon that disarms the control
+  rig reads as LESS incoming damage (spTaken drops) rather than as the tempo win
+  it actually is: the credit lands on the wrong side of the ledger.
 - IT MAKES NO CHOICES. It never moves, never picks its target, never prepares,
   locks, or triggers an active. So every upgrade that needs a decision to pay off
   — Fire Control Lock, Enfilade, Barrage, and the spatial effects — reads 0.00
@@ -146,6 +153,26 @@ export function makeGreedySafe({ distance, arc } = {}) {
     if (longRangeName != null && rig.weaponsDestroyed?.includes(longRangeName)) {
       return vent();
     }
+
+    // Rivet Lock (§13, Rivet Gun) — a seized WEAPON-role location rivets the gun
+    // arm shut and the engine refuses the shot, while the Fire tile stays enabled.
+    // Unlike Ion Storm, which clears itself on the refusal, this persists ~2 rounds,
+    // so retrying never succeeds. Reload cannot free it either, hence the placement
+    // above the reload branch alongside weaponsDestroyed.
+    //
+    // Mirror the engine's test EXACTLY (game-state.js), and note the two ways a
+    // near-miss goes quietly wrong rather than loudly:
+    //   - the ROLE filter is load-bearing. Only a weapon-role location jams the
+    //     gun (for a rig that is `arms` alone); a rivet on legs or hull leaves it
+    //     firing normally. Venting on any seize would pass a rig that could shoot.
+    //   - do NOT compare against room.game.round. The value is the expiry round,
+    //     but recovery DELETES seizes once past it, so presence already means live.
+    //     A `> round` test would read false on the seize's own second round — the
+    //     exact window this guard exists for — and hand the no-op straight back.
+    const riveted = Object.keys(rig.rivetSeized || {}).some(
+      (loc) => (rig.rivetSeized[loc] || 0) > 0 && roleOf(kind, loc) === "weapon",
+    );
+    if (riveted) return vent();
 
     // A spent ranged weapon must be reloaded before it can fire again (§7). The
     // engine makes firing it a SILENT no-op while the Fire tile stays `enabled`,
