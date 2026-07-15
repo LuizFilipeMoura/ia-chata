@@ -359,11 +359,26 @@ rend/evisc, per the ledger rule at combat.js:543."
 
 Add to `shared/combat.test.js`:
 
+> **Corrected after implementation.** The values first written here were wrong,
+> both for the same reason: they used base STR, and **no legal rig has base STR**
+> (`normalizeWeaponUpgrade` returns `upgrades[0].id` for a null id, so `makeRig`
+> always fits the field upgrade). Wrecking Ball's field upgrade is Haymaker (+3),
+> so effStr is 13 before arc, not 10. The first test expected `Overmatch: 1` when
+> the real answer is 2; the second used a front-arc Wrecking Ball expecting no
+> Overmatch, which overflows to +1 and would have **failed outright**. The
+> implementer caught both. See "Those examples use base STR" in the spec.
+
 ```js
 test("ledger — Overmatch is named in the damage step when it fires", () => {
-  // A crushing hit rendering "weapon D 5, +2" with no label is exactly the
-  // readability failure this ledger exists to close.
-  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball" });
+  // A crushing hit rendering "weapon D 5" with an unexplained +2 in the total is
+  // exactly the readability failure this ledger exists to close.
+  //
+  // Haymaker is pinned explicitly rather than left to the field-upgrade default:
+  // this is a RENDERING test, and it should not break if WEAPON_UPGRADES is
+  // reordered. Wrecking Ball STR 10 + Haymaker 3 + rear arc 3 = effStr 16 into
+  // medium arms (T4) → 8 past the floor → capped at +2.
+  const attacker = makeRig(1, "A", "medium", "a",
+    { longRange: "Double MG", melee: "Wrecking Ball", meleeUpgrade: "haymaker" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
   const ctx = makeCtx();
@@ -373,18 +388,25 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
     () => 0, ctx);
   const dmg = ctx.resolutions.find((r) => r.kind === "attack")
     .breakdown.steps.find((s) => s.kind === "damage");
+  // The literal 2 is deliberate. Computing it via strOverflowD(16, 4) would make
+  // the assertion self-referential — it would pass even if strOverflowD returned
+  // garbage, since both sides would move together. The rate and cap behind the 2
+  // are rules.test.js's to pin; this test owns only the wiring and the label.
   assert.deepEqual(dmg.terms, [
     { label: "wounds", value: 1 },
     { label: "weapon D", value: 5 },
-    { label: "Overmatch", value: 1 },
+    { label: "Overmatch", value: 2 },
   ]);
 });
 
 test("ledger — Overmatch is absent when it did not fire", () => {
-  // Same weapon, front arc: STR 10 vs T4 wastes only 2, under the rate. A term
-  // worth 0 must push nothing (same rule as strBreakdown) or the two entries
+  // A term worth 0 must push nothing (same rule as strBreakdown) or the entries
   // that decided the shot get buried.
-  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball" });
+  //
+  // Sword, not Wrecking Ball: it is STR 5 and its field upgrade (Duelist's
+  // Balance) grants Precision rather than STR, so it genuinely cannot overflow.
+  // Every STR >= 9 weapon overflows on some arc once its field upgrade lands.
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
   const ctx = makeCtx();
@@ -394,9 +416,12 @@ test("ledger — Overmatch is absent when it did not fire", () => {
     () => 0, ctx);
   const dmg = ctx.resolutions.find((r) => r.kind === "attack")
     .breakdown.steps.find((s) => s.kind === "damage");
+  // deepEqual, not .some(): this also catches an accidental EXTRA term, which is
+  // a live risk in a step that now pushes conditionally from three sources.
+  // The wound genuinely lands (wounds: [10] forces it), so this is not vacuous.
   assert.deepEqual(dmg.terms, [
     { label: "wounds", value: 1 },
-    { label: "weapon D", value: 5 },
+    { label: "weapon D", value: 3 },
   ]);
 });
 ```
@@ -416,11 +441,31 @@ At `shared/combat.js:888-889`, after the Evisceration line, add:
       if (rider.overflow) dmgTerms.push({ label: "Overmatch", value: rider.overflow });
 ```
 
-Also update the comment at `combat.js:885-886` so it names all three riders:
+Also update the comment at `combat.js:885-886` so it names all three riders.
+
+> **Corrected after implementation.** This plan originally suggested "report the
+> ones that actually fired on a wound that dealt damage" — which is false in the
+> `|| first` branch, where the rider is sourced from a wound that dealt nothing.
+> A reviewer proved it by execution: against a target with Ablative Cascade, the
+> ledger renders `wounds 0, weapon D 5, Overmatch 2` next to `0 SP → arms`. The
+> comment must describe **both** branches of the `||`, and lead with the reason
+> the `find` exists at all — which the original omitted entirely: a wound that
+> failed its roll carries all three riders as 0 (they are only assigned inside
+> `if (wounded)`), so `impacts[0]` alone would silently drop the terms whenever
+> the first die missed.
+>
+> This same defect class — a comment asserting a rule the code does not hold to —
+> shipped in all three code tasks of this plan and was caught in review each time.
+> The plan text was the upstream source every time. Write the comment against the
+> code's actual branches, not against the rule you wish it followed.
 
 ```js
-      // Rend/Evisceration/Overmatch are per-wound riders; report the ones that
-      // actually fired on a wound that dealt damage.
+      // Rend/Evisceration/Overmatch are per-wound riders. Prefer a wound that
+      // actually dealt damage — a wound that failed its roll carries all three
+      // as 0 and would under-report. When none dealt damage (every wound zeroed
+      // by Ablative Cascade), `first` still reports what the shot WOULD have
+      // added, matching the negated path's `weapon D`. A rider worth 0 pushes
+      // nothing (same rule as the wound step's terms).
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
