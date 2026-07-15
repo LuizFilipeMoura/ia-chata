@@ -1800,6 +1800,93 @@ test("rollWounds — defender modifiers reduce effective STR, not the roll", () 
   assert.equal(out[0].str, 3);
 });
 
+test("rollWounds — overflow converts wasted STR into damage", () => {
+  const wb = WEAPONS.melee["Wrecking Ball"]; // STR 10, D5, ROF 1
+  const target = { weightClass: "medium", hardened: false, preparation: null };
+  // medium arms are T4, so the floor is str 8. STR 10 wastes 2 — under the
+  // 3-point rate, so a front-arc hit is still a plain D5.
+  const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(front[0].str, 10);
+  assert.equal(front[0].target, 2);      // clamped to the floor
+  assert.equal(front[0].overflow, 0);
+  assert.equal(front[0].sp, 5);          // D5, nothing added
+});
+
+test("rollWounds — overflow revives the arc bonus on a saturated weapon", () => {
+  // THE POINT OF THE WHOLE CHANGE. Before overflow, these two shots were
+  // byte-identical: both clamped to TN 2, both dealt exactly D5, so flanking a
+  // Wrecking Ball rig was worth literally nothing (sweep: rear/front ratio x1.00).
+  const wb = WEAPONS.melee["Wrecking Ball"];
+  const target = { weightClass: "medium", hardened: false, preparation: null };
+  const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  const rear = rollWounds({ weightClass: "medium" }, target, wb, "arms",
+    { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(rear[0].str, 13);         // 10 + 3 (rear arc)
+  assert.equal(front[0].target, rear[0].target); // both STILL clamped to 2...
+  assert.equal(rear[0].overflow, 1);             // ...but the arc now buys depth
+  assert.equal(rear[0].sp - front[0].sp, 1);
+});
+
+test("rollWounds — overflow revives WEIGHT_STR_MOD on a saturated weapon", () => {
+  // Sweep measured the light↔medium delta as Δ0.00 for this weapon: both classes
+  // clamped to TN 2, so the -1 was discarded entirely.
+  //
+  // The mod bites where overflow crosses a rate boundary. Siege Maul (STR 11)
+  // into medium arms (T4, floor str 8) wastes 3 → +1 D; the light -1 wastes 2 →
+  // +0. Same shot, one weight class apart, one point of damage.
+  const maul = WEAPONS.longRange["Siege Maul"]; // STR 11, D5
+  const target = { weightClass: "medium", hardened: false, preparation: null };
+  const med = rollWounds({ weightClass: "medium" }, target, maul, "arms",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  const light = rollWounds({ weightClass: "light" }, target, maul, "arms",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(med[0].str, 11);
+  assert.equal(light[0].str, 10);           // WEIGHT_STR_MOD light = -1
+  assert.equal(med[0].target, light[0].target); // both STILL clamped to 2...
+  assert.equal(med[0].overflow, 1);             // ...but the mod now buys depth
+  assert.equal(light[0].overflow, 0);
+  assert.equal(med[0].sp - light[0].sp, 1);
+});
+
+test("rollWounds — overflow stacks with Rend and respects its own cap", () => {
+  // Overflow, Rend and Evisceration all land in `sp`. The cap is on overflow
+  // alone, not on the total — a Rend weapon still gets its +1 on top.
+  const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"] };
+  const target = { weightClass: "medium", hardened: false, preparation: null };
+  const out = rollWounds({ weightClass: "medium" }, target, maul, "engine",
+    { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(out[0].overflow, 2);
+  assert.equal(out[0].rend, 1);
+  assert.equal(out[0].sp, 8); // D5 + 2 overflow + 1 rend
+});
+
+test("rollWounds — a weak weapon never overflows", () => {
+  const rivet = WEAPONS.longRange["Rivet Gun"]; // STR 3, D1
+  const target = { weightClass: "medium", hardened: false, preparation: null };
+  const out = rollWounds({ weightClass: "medium" }, target, rivet, "engine",
+    { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(out[0].overflow, 0);
+  assert.equal(out[0].sp, 1); // D1, untouched
+});
+
+test("rollWounds — the negated path carries overflow: 0", () => {
+  // Shape parity with rend/evisc. A shield-negated shot resolves no overflow,
+  // but the rider must still expose the field the ledger reads.
+  const wb = WEAPONS.melee["Wrecking Ball"];
+  const shielded = {
+    weightClass: "medium", hardened: false,
+    preparation: { type: "raise-shield" },
+    weaponUpgrades: {},
+  };
+  const out = rollWounds({ weightClass: "medium" }, shielded, wb, "arms",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(out[0].negated, true);
+  assert.equal(out[0].overflow, 0);
+  assert.equal(out[0].sp, 0);
+});
+
 test("Reactive Armor — records the location; the dock lands in rollWounds", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -1988,7 +2075,11 @@ test("ledger — the damage step multiplies wounds by the weapon's D", () => {
     () => 0, ctx);
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
   assert.ok(d.terms.some((t) => t.label === "weapon D" && t.value === 5));
-  assert.match(d.out, /5 SP/);
+  // 6, not 5: makeRig fits the melee slot with Haymaker (+3 STR), so this ball
+  // swings at effStr 13 into a T5 hull — 4 STR past the floor, which Overmatch
+  // now converts to +1 D. Haymaker was one of the upgrades the sweep measured at
+  // +0.00; this total moving is that fix landing, not D changing.
+  assert.match(d.out, /6 SP/);
 });
 
 test("ledger — the location step carries the d12 that picked the part", () => {
