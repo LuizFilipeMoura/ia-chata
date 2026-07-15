@@ -174,6 +174,10 @@ export const GLOSSARY = [
     def: "Weapon perk: each wound deals +1 Damage — it wounds deeper rather than more often (§13).",
   },
   {
+    id: "overmatch", term: "Overmatch", match: ["Overmatch"],
+    def: "STR beyond what a location's Toughness can resist is not wasted: every 3 points past the point where you wound on 2+ adds +1 Damage, up to +2 (§7.5).",
+  },
+  {
     id: "shock", term: "Shock", match: ["Shock"],
     def: "Weapon perk: on a successful hit, the target's movement is halved (round down) during its next activation (§13).",
   },
