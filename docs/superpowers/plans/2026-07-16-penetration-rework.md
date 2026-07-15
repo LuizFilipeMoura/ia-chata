@@ -15,7 +15,7 @@
 ## Prerequisites — do not start without these
 
 - [ ] **`2026-07-16-stat-rename.md` has landed.** This plan is written in the renamed vocabulary: the weapon fields are `pen`, `dmg`, `accuracy`; the sum is `effPen`. If `game-state.js` still says `str:` and `d:`, **stop and run the rename plan first.** Landing them together makes the balance measurement unattributable, which is the one thing both specs exist to prevent.
-- [ ] **The suite is green at 817 node / 293 vitest.**
+- [ ] **The suite is green at 816 node / 293 vitest.**
 
 ```bash
 npm test
@@ -24,7 +24,7 @@ npm test
 > The baseline moved twice since this plan was written, both times for good reasons:
 > the rename added 2 `rules.md` guards (811 → 813), Task 1 of this plan added the
 > `dmg`-upgrade test (→ 814), and the **heavy/colossal deletion** (`d8a8d3d`,
-> `5aebc26`) added 3 drift guards and removed a redundant one (→ 817).
+> `5aebc26`) added 3 drift guards and removed a redundant one (→ 816).
 >
 > **Task 1 is already done** (`84ac6f0`). Start at Task 2.
 >
