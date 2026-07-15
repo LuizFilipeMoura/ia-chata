@@ -408,7 +408,7 @@ Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures*
 | Mortar | Cluster Shells (2nd location) | Airburst Fuze (ignores cover) | Barrage |
 | Sniper Cannon | Marksman Optics (Precision) | Cold Bore (+3 STR vs undamaged) | Enfilade |
 | Siege Maul | Reinforced Head (+2 STR) | Breaching Round (Hull no-repair) | Piledriver Protocol |
-| Missile Barrage | Swarm Warheads (+2 ROF) | Shaped Charges (Armour Piercing) | Fire Control Lock |
+| Missile Barrage | Swarm Warheads (+1 ROF) | Shaped Charges (Armour Piercing) | Fire Control Lock |
 | Sword | Duelist's Balance (Precision) | Opportunist (+3 STR vs disrupted) | Superconductor Edge |
 | Circular Saw | Tempered Teeth (Armour Piercing) | Sunder (−1 max SP struck) | Dismember |
 | Chainsaw | Ripper Teeth (Rend) | Bloodletter (+1 ROF vs damaged) | Redline Governor |
