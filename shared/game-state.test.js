@@ -1124,7 +1124,7 @@ test("Ion Storm's Arc Gun overload refuses the next Arc Gun shot, then clears (c
   const spBefore = a1.hull.sp + a1.arms.sp + a1.legs.sp + a1.engine.sp;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
   } });
   const spAfter = a1.hull.sp + a1.arms.sp + a1.legs.sp + a1.engine.sp;
   assert.equal(r.game.turn.actionsUsed, 0);  // shot refused — no slot spent
@@ -1133,7 +1133,7 @@ test("Ion Storm's Arc Gun overload refuses the next Arc Gun shot, then clears (c
   // The lock is one-shot: the very next Arc Gun shot now goes through.
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
   } });
   assert.equal(r.game.turn.actionsUsed, 1);  // fired this time
 });
@@ -1175,7 +1175,7 @@ test("Fire Control Lock: the painted Missile Barrage volley auto-hits and clears
   // Every to-hit die is a 1 (would all miss) — the lock forces all four to land.
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1, 1, 1], location: 1, impacts: [6, 6, 6, 6], ap: [1, 1, 1, 1] },
+    dice: { toHit: [1, 1, 1, 1], location: 1, wounds: [10, 10, 10, 10], ap: [1, 1, 1, 1] },
   } });
   const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
   assert.match(attack.summary, /4 hit\(s\)/); // unmissable — all shots landed
@@ -1242,7 +1242,7 @@ test("undo restores full state after an attack — damage, heat and slot reverte
   const heatBefore = findRig(r, "b1").engine.heat;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
   } });
   assert.ok(spSum(findRig(r, "a1")) < targetSpBefore, "attack dealt damage");
   assert.equal(r.game.turn.actionsUsed, 1);
@@ -1902,13 +1902,15 @@ test("fire action resolves an attack, applies damage and logs it", () => {
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1"); // Light target, hull 6
-  // Fire the melee Sword: STR 6-2(light)=4. 2 dice both 6 -> impacts 6+4+0(front)=10
-  // vs light hull (10/14/16) -> direct 1 each = 2 SP.
+  // Fire the melee Sword: STR 5-1(light)=4, front arc +0, vs a light hull (T4)
+  // -> wound on 6+. Both dice land; the first wounds and the second does not, so
+  // exactly one wound deals the Sword's D3. One of each proves the roll is read
+  // per-die rather than assumed.
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
+    dice: { toHit: [6, 6], wounds: [10, 1], location: 1 },
   } });
-  assert.equal(a1.hull.sp, 4); // 6 - 2
+  assert.equal(a1.hull.sp, 3); // 6 - 3 (one wound x D3)
   assert.equal(r.game.turn.actionsUsed, 1);
   assert.equal(r.game.resolutions.at(-1).kind, "attack");
 });
@@ -1922,7 +1924,7 @@ test("firing a spent ranged weapon is rejected — you must reload first", () =>
   const before = r.game.turn.actionsUsed;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "side", range: "near",
-    dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, impacts: [1,1,1,1,1,1,1,1] },
+    dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, wounds: [1, 1, 1, 1, 1, 1, 1, 1] },
   } });
   assert.equal(r.game.turn.actionsUsed, before); // no-op: the shot needs a reload first
   assert.equal(b1.loaded.longRange, false);
@@ -1935,7 +1937,7 @@ test("a second ranged shot costs 1 slot but runs the barrel hot: +1 heat", () =>
   const b1 = findRig(r, "b1");
   const fire = {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "side", range: "near",
-    dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, impacts: [1,1,1,1,1,1,1,1] },
+    dice: { toHit: [6,6,6,6,6,6,6,6], location: 1, wounds: [1, 1, 1, 1, 1, 1, 1, 1] },
   };
   const rand = { random: () => 0 };                        // keep the shots deterministic
   const h0 = b1.engine.heat;
@@ -1982,7 +1984,7 @@ test("Incendiary (via Ion Burn) adds 1 heat to the target", () => {
   const heatBefore = a1.engine.heat;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6], impacts: [1, 1], location: 1 },
+    dice: { toHit: [6, 6], wounds: [1, 1], location: 1 },
   } });
   assert.equal(a1.engine.heat, heatBefore + 1);
 });
@@ -1997,7 +1999,7 @@ test("Shock (via Suppressive Fire) halves target speed next round", () => {
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], impacts: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
+    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], wounds: [1, 1, 1, 1, 1, 1, 1, 1], location: 1 },
   } });
   assert.equal(a1.speedHalvedNextRound, true);
 });
@@ -2012,7 +2014,7 @@ test("Impale (via Vice Grip) immobilises on a D12 of 8+", () => {
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6], impacts: [6, 6], location: 1, impale: 9 },
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1, impale: 9 },
   } });
   assert.equal(a1.immobilised, true);
 });
@@ -2395,7 +2397,7 @@ test("Fire Solution Lock: repeated fire on one target stacks a solution (cap 3) 
     a1.loaded.longRange = true;
     return applyCommand(r, { verb: "action", attrs: {
       name: "a1", action: "fire", weapon: "longRange", target: "b1", arc: "front", range: "near",
-      dice: { toHit: [1, 1], impacts: [1, 1], location: 1 } } });
+      dice: { toHit: [1, 1], wounds: [1, 1], location: 1 } } });
   };
   const heat0 = a1.engine.heat;
   fire();
@@ -2414,7 +2416,7 @@ test("Fire Solution Lock: switching target resets the solution", () => {
   a1.equipment = "targeting-computer"; a1.equipmentUpgrade = "fire-solution-lock";
   a1.equipState.solution = { targetId: findRig(r, "b1").id, count: 2 };
   activate(r, "a1");
-  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "fire", weapon: "longRange", target: "b2", arc: "front", range: "near", dice: { toHit: [1, 1], impacts: [1, 1], location: 1 } } });
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "fire", weapon: "longRange", target: "b2", arc: "front", range: "near", dice: { toHit: [1, 1], wounds: [1, 1], location: 1 } } });
   assert.equal(a1.equipState.solution.targetId, findRig(r, "b2").id);
   assert.equal(a1.equipState.solution.count, 1);                 // reset to this target, then +1
 });
@@ -2427,7 +2429,7 @@ test("Fire Solution Lock: at count 3 the next shot auto-hits every die and gains
   activate(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
     name: "a1", action: "fire", weapon: "longRange", target: "b1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], location: 1, impacts: [6, 6], ap: [3, 3] } } }); // all-1 to-hit would miss without auto-hit
+    dice: { toHit: [1, 1], location: 1, wounds: [10, 10], ap: [3, 3] } } }); // all-1 to-hit would miss without auto-hit
   const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
   assert.match(attack.summary, /8 hit\(s\)/);                    // Mini Gun's every die lands — unmissable payoff volley
   assert.equal(a1.equipState.solution.count, 0);                 // solution consumed
@@ -2683,7 +2685,7 @@ test("Chaff Burst narrates a free side-step when a smoked Reactive-Plating rig i
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], impacts: [1], location: 1 },
+    dice: { toHit: [1, 1], wounds: [1], location: 1 },
   } });
   assert.ok(r.game.resolutions.some((e) => /Chaff Burst/.test(e.summary || "")));
 });
@@ -2698,7 +2700,7 @@ test("Chaff Burst stays silent when the targeted rig has no Smoke up", () => {
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], impacts: [1], location: 1 },
+    dice: { toHit: [1, 1], wounds: [1], location: 1 },
   } });
   assert.equal(r.game.resolutions.some((e) => /Chaff Burst/.test(e.summary || "")), false);
 });
@@ -3194,7 +3196,7 @@ test("Systems Overload reduces the target's next activation budget by 1 and then
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near", cover: 0,
-    dice: { toHit: [6, 1], impacts: [1], location: 1 },
+    dice: { toHit: [6, 1], wounds: [1], location: 1 },
   } });
   assert.equal(findRig(r, "a1").actionPenaltyNextActivation, 1);
   applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
@@ -3213,7 +3215,7 @@ test("Sunder reduces the struck location max SP once when the selected upgrade d
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6, 6], impacts: [6, 6, 6], location: 1 },
+    dice: { toHit: [6, 6, 6], wounds: [10, 10, 10], location: 1 },
   } });
   assert.equal(a1.hull.max, 5);
   assert.equal(a1.hull.sp <= a1.hull.max, true);
@@ -3229,7 +3231,7 @@ test("Dead Weight: a damaging Anchor hit blocks the target's next Disengage", ()
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6], impacts: [6], location: 1 },
+    dice: { toHit: [6], wounds: [10], location: 1 },
   } });
   assert.equal(a1.noDisengageNextActivation, true);
   assert.equal(a1.engagedWith, b1.id);
@@ -3386,7 +3388,7 @@ test("Riposte reveals only on a melee attack, arming a melee counter", () => {
     const { room, b } = battleWithPreparedDefender("riposte");
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
-      dice: { toHit: [1], location: 1, impacts: [1] },
+      dice: { toHit: [1], location: 1, wounds: [1] },
     } });
     assert.equal(b.preparation.faceUp, false, "ranged attack leaves Riposte facedown");
     assert.equal(room.game.pendingReaction, null);
@@ -3396,7 +3398,7 @@ test("Riposte reveals only on a melee attack, arming a melee counter", () => {
     const { room, b } = battleWithPreparedDefender("riposte");
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "melee", arc: "front", range: "near",
-      dice: { toHit: [6], location: 1, impacts: [3] },
+      dice: { toHit: [6], location: 1, wounds: [10] },
     } });
     assert.equal(b.preparation.faceUp, true, "melee attack reveals Riposte");
     assert.equal(room.game.pendingReaction?.kind, "riposte");
@@ -3410,7 +3412,7 @@ test("Exploit reveals only when the attacker is overcommitted", () => {
     const { room, b } = battleWithPreparedDefender("exploit");
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
-      dice: { toHit: [1], location: 1, impacts: [1] },
+      dice: { toHit: [1], location: 1, wounds: [1] },
     } });
     assert.equal(b.preparation.faceUp, false);
     assert.equal(room.game.pendingReaction, null);
@@ -3421,7 +3423,7 @@ test("Exploit reveals only when the attacker is overcommitted", () => {
     room.game.turn.actionsUsed = 2; // this shot is action 3 of 3
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
-      dice: { toHit: [1], location: 1, impacts: [1] },
+      dice: { toHit: [1], location: 1, wounds: [1] },
     } });
     assert.equal(b.preparation.faceUp, true);
     assert.equal(room.game.pendingReaction?.kind, "exploit");
@@ -3434,7 +3436,7 @@ test("Exploit reveals only when the attacker is overcommitted", () => {
     room.game.turn.actionsUsed = 0; // plenty of actions left — not the final one
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
-      dice: { toHit: [1], location: 1, impacts: [1] },
+      dice: { toHit: [1], location: 1, wounds: [1] },
     } });
     assert.equal(b.preparation.faceUp, true);
     assert.equal(room.game.pendingReaction?.kind, "exploit");
@@ -3447,7 +3449,7 @@ test("Sidestep defers a ranged attack but ignores melee", () => {
     const { room, b } = battleWithPreparedDefender("sidestep");
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
-      dice: { toHit: [4], location: 1, impacts: [3] },
+      dice: { toHit: [4], location: 1, wounds: [10] },
     } });
     assert.equal(b.preparation.faceUp, true);
     assert.equal(room.game.pendingReaction?.kind, "sidestep");
@@ -3457,7 +3459,7 @@ test("Sidestep defers a ranged attack but ignores melee", () => {
     const { room, b } = battleWithPreparedDefender("sidestep");
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "melee", arc: "front", range: "near",
-      dice: { toHit: [6], location: 1, impacts: [3] },
+      dice: { toHit: [6], location: 1, wounds: [10] },
     } });
     assert.equal(b.preparation.faceUp, false);
     assert.equal(room.game.pendingReaction, null);
@@ -3468,7 +3470,7 @@ test("react resolves a Riposte as a free melee counter and clears the prep", () 
   const { room, a, b } = battleWithPreparedDefender("riposte");
   applyCommand(room, { verb: "action", attrs: {
     name: "Atk", action: "fire", target: "Def", weapon: "melee", arc: "front", range: "near",
-    dice: { toHit: [6], location: 1, impacts: [3] },
+    dice: { toHit: [6], location: 1, wounds: [10] },
   } });
   assert.equal(room.game.pendingReaction?.kind, "riposte");
   const before = a.hull.sp;
@@ -3476,7 +3478,7 @@ test("react resolves a Riposte as a free melee counter and clears the prep", () 
   // Two guaranteed to-hit 6s so the counter lands regardless of the random rolls.
   applyCommand(room, { verb: "react", attrs: {
     side: "b", attack: { weapon: "melee", arc: "front", range: "near",
-      dice: { toHit: [6, 6], location: 1, impacts: [6, 6] } },
+      dice: { toHit: [6, 6], location: 1, wounds: [10, 10] } },
   } });
   assert.equal(room.game.pendingReaction, null);
   assert.equal(b.preparation, null, "prep is consumed");
@@ -3488,7 +3490,7 @@ test("react resolves an Exploit counter as an aimed shot with no aim penalty", (
   room.game.turn.actionsUsed = 2; // final-action attacker → triggers Exploit
   applyCommand(room, { verb: "action", attrs: {
     name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
-    dice: { toHit: [1], location: 1, impacts: [1] },
+    dice: { toHit: [1], location: 1, wounds: [1] },
   } });
   assert.equal(room.game.pendingReaction?.kind, "exploit");
   const before = a.arms.sp;
@@ -3497,7 +3499,7 @@ test("react resolves an Exploit counter as an aimed shot with no aim penalty", (
   // aimedLoc routed the hit to the chosen location.
   applyCommand(room, { verb: "react", attrs: {
     side: "b", attack: { weapon: "longRange", arc: "front", range: "near", loc: "arms",
-      dice: { toHit: [4, 4, 4, 4], location: 1, impacts: [6, 6, 6, 6] } },
+      dice: { toHit: [4, 4, 4, 4], location: 1, wounds: [10, 10, 10, 10] } },
   } });
   assert.equal(room.game.pendingReaction, null);
   assert.equal(b.preparation, null);
@@ -3508,7 +3510,7 @@ test("react resolves a Sidestep: evaded fails the shot and may engage the shoote
   const { room, a, b } = battleWithPreparedDefender("sidestep");
   applyCommand(room, { verb: "action", attrs: {
     name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
-    dice: { toHit: [4], location: 1, impacts: [3] },
+    dice: { toHit: [4], location: 1, wounds: [10] },
   } });
   assert.equal(room.game.pendingReaction?.kind, "sidestep");
   applyCommand(room, { verb: "react", attrs: { side: "b", evaded: true, engage: true } });
@@ -4080,7 +4082,7 @@ test("a legal melee attack engages attacker and target", () => {
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
+    dice: { toHit: [1, 1], wounds: [1, 1], location: 1 },
   } });
   const b1 = findRig(r, "b1");
   const a1 = findRig(r, "a1");
@@ -4336,8 +4338,12 @@ const raiseShield = () => ({ type: "raise-shield", source: "action", faceUp: fal
 const countRiposte = (r) => r.game.resolutions.filter((x) => x.kind === "riposte").length;
 
 // A melee attack that lands (toHit 6s = hits) vs one that whiffs (toHit 1s).
-const meleeLand = { toHit: [6, 6], impacts: [1, 1], location: 1 };
-const meleeMiss = { toHit: [1, 1], impacts: [1, 1], location: 1 };
+// The wound dice are natural 10s deliberately: every consumer below has Raise
+// Shield up on the front arc, so the riposte must fire on the landed HIT while
+// the shield still negates the wound outright. Forcing the best possible wound
+// roll proves that negation is an earned zero, not an artefact of a low die.
+const meleeLand = { toHit: [6, 6], wounds: [10, 10], location: 1 };
+const meleeMiss = { toHit: [1, 1], wounds: [1, 1], location: 1 };
 const fireMelee = (r, dice, options) => applyCommand(r, { verb: "action", attrs: {
   name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", dice,
 } }, {}, options);
@@ -4452,7 +4458,7 @@ function skewerRoom() {
 
 const countSkewer = (r) => r.game.resolutions.filter((x) => x.kind === "skewer").length;
 const spSum = (rig) => rig.hull.sp + rig.arms.sp + rig.legs.sp + rig.engine.sp;
-const lanceLand = { toHit: [6], impacts: [6], location: 1 };
+const lanceLand = { toHit: [6], wounds: [10], location: 1 };
 
 test("a Lance-skewer hit marks the engaged target as skewered", () => {
   const r = skewerRoom(); // b's turn
@@ -4549,7 +4555,7 @@ test("Ground Anchor: a damaging Anchor hit marks the target; Disengage provokes 
   const a1 = findRig(r, "a1");
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6], impacts: [6], location: 1 },
+    dice: { toHit: [6], wounds: [10], location: 1 },
   } });
   assert.equal(a1.anchoredBy, b1.id);
   assert.equal(a1.engagedWith, b1.id);
@@ -4617,7 +4623,7 @@ test("a Breach Grip Claw hit cracks the struck location so any later attack gets
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [6, 6, 6], impacts: [6, 6, 6], location: 1 },
+    dice: { toHit: [6, 6, 6], wounds: [10, 10, 10], location: 1 },
   } });
   assert.equal(a1.cracked.hull, r.game.round + 1);
 });
@@ -4703,7 +4709,7 @@ test("Rivet Lock: a seized Arms location jams long-range fire but not melee", ()
   // Melee is unaffected: a melee swing still spends its slot.
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1], impacts: [1, 1], location: 1 },
+    dice: { toHit: [1, 1], wounds: [1, 1], location: 1 },
   } });
   assert.equal(r.game.turn.actionsUsed, usedBeforeLR + 1); // melee went through
 });
@@ -4843,7 +4849,7 @@ test("a Mortar committed to a barrage can't fire a direct shot", () => {
   const spBefore = a1.hull.sp + a1.arms.sp + a1.legs.sp + a1.engine.sp;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1",
-    arc: "front", range: "near", distance: 18, dice: { toHit: [6], impacts: [6], location: 1 },
+    arc: "front", range: "near", distance: 18, dice: { toHit: [6], wounds: [10], location: 1 },
   } });
   assert.equal(r.game.turn.actionsUsed, used); // fire refused — mortar locked
   const a1b = findRig(r, "a1");
@@ -4879,7 +4885,7 @@ test("a Mortar whose barrage has finished can fire again", () => {
   b1.barrageRoundsLeft = 0; // barrage ended — tube unlocked
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1",
-    arc: "front", range: "near", distance: 18, dice: { toHit: [6], impacts: [6], location: 1 },
+    arc: "front", range: "near", distance: 18, dice: { toHit: [6], wounds: [10], location: 1 },
   } });
   assert.equal(r.game.turn.actionsUsed, 1); // fire went through
 });
@@ -4921,7 +4927,7 @@ test("a damaging Tow Chain hit flings, adds +2 heat, roots the attacker, and set
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1",
-    arc: "front", range: "near", dice: { toHit: [6], impacts: [6], location: 1 },
+    arc: "front", range: "near", dice: { toHit: [6], wounds: [10], location: 1 },
   } });
   assert.equal(b1.towChainCooldownUntil, 4);          // round 1 + 3
   assert.equal(b1.towedThisActivation, true);          // rooted for the rest of the activation
@@ -4955,7 +4961,7 @@ test("a second Tow Chain hit within 3 rounds doesn't fling or add the +2 heat", 
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1",
-    arc: "front", range: "near", dice: { toHit: [6], impacts: [6], location: 1 },
+    arc: "front", range: "near", dice: { toHit: [6], wounds: [10], location: 1 },
   } });
   assert.ok(!r.game.resolutions.some((x) => /Tow Chain — fling/.test(x.summary))); // no fling
   assert.equal(b1.towedThisActivation, false);   // not rooted while recharging
