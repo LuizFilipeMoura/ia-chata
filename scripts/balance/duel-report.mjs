@@ -24,6 +24,19 @@ const sign = (n, p = 2) => (Number.isFinite(n) ? (n >= 0 ? "+" : "") + n.toFixed
 // null/null yields a non-finite value, which f() prints as a dash.
 const rate = (r) => (r.spDealt == null || !r.rounds ? NaN : r.spDealt / r.rounds);
 
+// A duel that never wrecked the control did not take `horizon` rounds — it took AT
+// LEAST that many. At wreckRate 0 no trial resolved, so the whole rounds mean IS
+// the horizon: a floor, not a measurement. SP/round divides by that floor, so the
+// rate is a ceiling by an unknown margin. Averaging a non-kill in as though it
+// were a kill at exactly 10 rounds is the same species of silent lie as `?? 0`,
+// and the wreck% column alone will not save a reader scanning sp/rd descending —
+// the inflated rows sort to the very places the eye lands first.
+//
+// wreckRate is null for a fully-censored cell (n=0); `=== 0` keeps those out of
+// here, since they are already dashed everywhere by rate()/f().
+const horizonCensored = (r) => r.wreckRate === 0;
+const mark = (s, r) => s + (horizonCensored(r) ? "†" : "");
+
 // Rows with no measurable rate sort last, not as if they scored zero.
 const byRate = (a, b) => {
   const x = rate(a), y = rate(b);
@@ -53,6 +66,14 @@ Run biases (this run's inputs, not the policy's):
 - SP TOTAL SATURATES AT THE WRECK. The duel ends when the control wrecks, so a
   weapon's total is bounded by the control's SP pool however good it is. Read
   "sp/rd" for the signal and never read "spTot" without "rounds" beside it.
+- AND THE RATE INFLATES WHEN THE CONTROL NEVER DIES — the same coin's other face.
+  rounds-to-wreck is well-behaved for the bulk (most cells wreck) but CENSORED for
+  the weak tail: a duel still running when we stop it contributes ${horizon} rounds,
+  when the truth is "at least ${horizon}". So "rounds" reads LOW and "sp/rd" reads HIGH
+  for any row that failed to wreck. Rows where NO trial resolved are marked † —
+  their rate is a ceiling, not a measurement — and rows at wreck% < 100 are partly
+  censored, leaning the same way in proportion. A 0% wreck row is not a slow kill;
+  it is a NON-kill, and its rounds column is the horizon talking, not the weapon.
 - NOT A LIKE-FOR-LIKE BASELINE against report-2026-07-15-overflow.txt: the duel
   pays reload heat, which the clone-per-trial sweep never did.
 - A dash means the cell was fully censored (n=0) — no sample, not a zero.`);
@@ -66,16 +87,20 @@ for (const r of [...rows].sort(byRate)) {
   console.log(
     r.weapon.padEnd(16), r.tier.padEnd(10), r.upgrade.padEnd(22),
     String(r.distance).padStart(5),
-    f(rate(r)).padStart(7),
-    f(r.rounds, 1).padStart(7),
+    mark(f(rate(r)), r).padStart(7),
+    mark(f(r.rounds, 1), r).padStart(7),
     f(r.spDealt, 1).padStart(7),
     (Number.isFinite(r.wreckRate) ? (r.wreckRate * 100).toFixed(0) + "%" : "  -  ").padStart(7),
     f(r.spTaken, 1).padStart(8),
     String(r.n).padStart(4),
     String(r.censored).padStart(5),
-    r.underSampled ? " UNDER-SAMPLED" : "",
+    [horizonCensored(r) ? "HORIZON" : "", r.underSampled ? "UNDER-SAMPLED" : ""]
+      .filter(Boolean).map((x) => " " + x).join(""),
   );
 }
+console.log(`\n† rounds hit the ${horizon}-round horizon in EVERY trial (wreck% = 0) — a floor,`);
+console.log("  not a measurement; SP/round is correspondingly a ceiling.");
+console.log("  Any row at wreck% < 100 is PARTLY censored the same way: read rounds with wreck%.");
 
 // ────────────────────────── 2. upgrade uplift vs the weapon's field tier
 // On SP/round, not on totals: totals saturate at the wreck, so a faster kill can
@@ -89,7 +114,12 @@ for (const weapon of [...new Set(rows.map((r) => r.weapon))]) {
   const base = rows.find((r) => r.weapon === weapon && r.tier === "field");
   if (!base) continue;
   for (const r of rows.filter((x) => x.weapon === weapon && x.tier !== "field")) {
-    uplift.push({ r, base, up: rate(r) - rate(base) });
+    // REFUSE the subtraction when either side never wrecked. A horizon-censored
+    // rate is a ceiling, so "9.89 → 12.00" would be measurement-minus-ceiling: a
+    // number with no defined sign, printed to two decimals as though it had one.
+    // Dash it and let † say why — the reader can still read both rates above.
+    const up = horizonCensored(r) || horizonCensored(base) ? NaN : rate(r) - rate(base);
+    uplift.push({ r, base, up });
   }
 }
 // Same rule as above: unmeasurable uplift sorts last rather than as a zero.
@@ -102,8 +132,12 @@ uplift.sort((a, b) => {
 for (const { r, base, up } of uplift) {
   console.log(
     r.weapon.padEnd(16), r.tier.padEnd(10), r.upgrade.padEnd(22),
-    f(rate(base)).padStart(7), f(rate(r)).padStart(7), sign(up).padStart(7),
-    `   ${f(base.rounds, 1)} → ${f(r.rounds, 1)}`,
-    r.underSampled || base.underSampled ? " UNDER-SAMPLED" : "",
+    mark(f(rate(base)), base).padStart(7), mark(f(rate(r)), r).padStart(7), sign(up).padStart(7),
+    `   ${mark(f(base.rounds, 1), base)} → ${mark(f(r.rounds, 1), r)}`,
+    [horizonCensored(r) || horizonCensored(base) ? "NOT COMPARABLE († side never wrecked)" : "",
+      r.underSampled || base.underSampled ? "UNDER-SAMPLED" : ""]
+      .filter(Boolean).map((x) => " " + x).join(""),
   );
 }
+console.log(`\n† that side hit the ${horizon}-round horizon in every trial, so its rate is a ceiling.`);
+console.log("  No uplift is computed against a ceiling: the difference would have no defined sign.");
