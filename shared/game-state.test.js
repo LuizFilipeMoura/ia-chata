@@ -1979,6 +1979,106 @@ test("a wound that zeroes a location from full says so in the roll console", () 
   );
 });
 
+// The §7 spill has always fired silently. These two lock in the cases where the
+// console had nothing to say — the second is the one a player most needs, since
+// nothing on screen moves except a part the attack never named.
+function fireSword(r, loc) {
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 6], wounds: [10, 1], location: loc },
+  } });
+  return r.game.resolutions.filter((x) => x.kind === "attack").at(-1).effects;
+}
+
+test("a wound onto an already-wrecked location says where the SP carried through", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  assert.equal(findRig(r, "b1").weapons.melee, "Sword"); // Damage 3
+  a1.legs.sp = 0; // Test-only state poke: already wrecked, so all 3 points spend past 0.
+  const hullBefore = a1.hull.sp;
+  const effects = fireSword(r, 8); // 8 -> legs
+  // The spill is real, not narration: the hull the attack never named lost the SP.
+  assert.equal(a1.hull.sp, hullBefore - 3);
+  assert.ok(
+    effects.some((e) => /through and through \(3 SP spilled\)/.test(e)),
+    `expected a spill line naming 3 SP, got ${JSON.stringify(effects)}`,
+  );
+});
+
+test("a wound that both guts a location and carries through says both", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  // Test-only state poke: legs at 1/1 are full AND cannot absorb the Sword's D3,
+  // so one wound zeroes them from full and carries 2 SP through.
+  a1.legs.max = 1;
+  a1.legs.sp = 1;
+  const hullBefore = a1.hull.sp;
+  const effects = fireSword(r, 8);
+  assert.equal(a1.legs.sp, 0);
+  assert.equal(a1.hull.sp, hullBefore - 2);
+  assert.ok(effects.some((e) => /legs torn open in one blow/.test(e)), JSON.stringify(effects));
+  assert.ok(effects.some((e) => /through and through \(2 SP spilled\)/.test(e)), JSON.stringify(effects));
+});
+
+test("the kill tier speaks once — a wreck does not also report its parts", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  a1.engine.sp = 2; // Test-only state poke: the 3rd point spends past 0 -> §8 kill.
+  const effects = fireSword(r, 11); // 11 -> engine (power)
+  assert.equal(a1.destroyed, true);
+  assert.deepEqual(effects, ["Sword — a1 gutted in a single blow"]);
+});
+
+test("a later wound on a wreck claims no spill it did not cause", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  // The Sword is ROF 2. Wound 1 kills via the hull's §8 clause; wound 2 then
+  // lands on the wreck's 0-SP hull. Hull is structural, so §8 destroys rather
+  // than spills — and `gutted` can't re-fire on an already-dead rig, so an
+  // inferred spill would announce SP that never moved.
+  a1.hull.sp = 2;
+  const outside = () => a1.legs.sp + a1.arms.sp + a1.engine.sp;
+  const outsideBefore = outside();
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 }, // 1 -> hull; both wounds land
+  } });
+  const effects = r.game.resolutions.filter((x) => x.kind === "attack").at(-1).effects;
+  assert.equal(a1.destroyed, true);
+  assert.equal(outside(), outsideBefore); // nothing spilled, so nothing may claim it did
+  assert.ok(!effects.some((e) => /spilled/.test(e)), JSON.stringify(effects));
+});
+
+test("a Kneecapper rake past 0 spills nothing, so it claims nothing", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  // Set BOTH the weapon and its upgrade id: weaponUpgrades still holds the old
+  // weapon's id otherwise, upgradeForWeapon returns null, and it never applies.
+  b1.weapons.longRange = "Double MG";
+  b1.weaponUpgrades.longRange = "kneecapper";
+  a1.legs.sp = 0; // every Double MG point (Damage 1) is spent past 0
+  const hullBefore = a1.hull.sp;
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], wounds: [10, 10, 10, 10, 10, 10, 10, 10], location: 8 },
+  } });
+  const effects = r.game.resolutions.filter((x) => x.kind === "attack").at(-1).effects;
+  // noSpill held — nothing carried through, so a spill line would be a lie.
+  assert.equal(a1.hull.sp, hullBefore);
+  assert.deepEqual(effects, []);
+});
+
 test("firing a spent ranged weapon is rejected — you must reload first", () => {
   const r = startedRoom();
   clearPendingAnswer(r);

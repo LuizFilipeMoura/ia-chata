@@ -776,26 +776,45 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       const dmgOpts = { random, dice: opts.dice, noSpill: kneecapHit || undefined };
       // Drama (§7 spill / §8 kill tier) — the roll console already renders
       // `effects`, so this needs no client change. applyDamage returns nothing
-      // and mutates in place, so the caller must sample the part around each
-      // call: it spends SP one point at a time and every point spent past 0
-      // fires catastrophicAdditional, which for a structural/power part is the
-      // §8 kill. By the time it returns, "was it full?" is already overwritten.
+      // and mutates in place, so the caller must sample around each call: it
+      // spends SP one point at a time and every point spent past 0 fires
+      // catastrophicAdditional. By the time it returns, "was it full?" is
+      // already overwritten.
+      //
+      // The spill is MEASURED, not inferred: sum the SP on every OTHER part and
+      // diff it across the call. Deriving it from `h.sp - before` means
+      // restating §8's clauses here, and that copy is wrong wherever they
+      // disagree — several clauses spend a point without spilling anything
+      // (noSpill/Kneecapper; a structural/power part, which kills instead).
+      // Measuring is true by construction and cannot drift from §8.
+      const otherParts = partNamesOf(target.kind || "rig").filter((p) => p !== location);
+      const spOutside = () => otherParts.reduce((s, p) => s + (target[p]?.sp ?? 0), 0);
       for (const h of impacts) {
         if (h.sp <= 0) continue;
         const part = target[location];
         const before = part?.sp ?? 0;
         const wasFull = part ? before === part.max : false;
         const wasAlive = !target.destroyed;
+        const outsideBefore = spOutside();
         ctx.applyDamage(room, target, location, h.sp, dmgOpts);
         const after = target[location]?.sp ?? 0;
+        const spilled = outsideBefore - spOutside();
         if (wasAlive && target.destroyed) {
+          // A wreck doesn't also report its parts.
           drama.push(`${weaponName} — ${target.name} gutted in a single blow`);
           critWound = h;
-        } else if (wasFull && after === 0) {
+          continue;
+        }
+        if (wasFull && after === 0) {
           drama.push(`${weaponName} — ${location} torn open in one blow`);
           critWound = h;
-        } else if (before > 0 && after === 0 && h.sp > before) {
-          drama.push(`${weaponName} — through and through (${h.sp - before} SP spilled)`);
+        }
+        // Independent of the line above, not exclusive with it: one wound can
+        // both zero the location and carry through. The already-wrecked case
+        // (`before === 0`) is the one that most needs saying — nothing on
+        // screen moves except a part the attack never named.
+        if (spilled > 0) {
+          drama.push(`${weaponName} — through and through (${spilled} SP spilled)`);
         }
       }
       if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
