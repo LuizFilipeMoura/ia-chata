@@ -111,6 +111,89 @@ accidentally "fix" a deliberate mechanic.
 a structural zero moving off zero, not enough to tune against. **Do not re-tune
 from this report.** If F2-B proceeds, run `TRIALS=3000` first.
 
+*(Superseded: the sweep was re-run at 3000 trials — the 500-trial read held to
+within 0.06. `report-2026-07-15-overflow.txt` is now the 3000-trial run.)*
+
+---
+
+# What the duel harness found
+
+**Report:** `scripts/balance/duel-2026-07-15.txt` (500 trials, 33 cells, side arc,
+sweet spot, `medium-lance-mortar` control).
+**Design:** `2026-07-15-duel-harness-design.md`.
+
+It drives the real command path for 10 rounds, so heat, cadence, DoT and chipping
+all carry. It **calibrates against this sweep**: Autocannon's first shot measures
+6.51 against the sweep's arc-pooled 6.06 — a 7% gap in the expected direction,
+since the duel is side-arc only.
+
+## The blindness broke open — 15 of 16
+
+Of the 40 upgrades this sweep scores +0.00 in **both** conditions, the duel reached
+24. Seven of those are *field* tiers compared against themselves (an artifact, not a
+result). **Of the 16 real non-field upgrades, 15 now measure. One did not: `enfilade`,
+at exactly +0.00** — which the design predicted in advance, because Enfilade needs
+Aimed Shots and the policy never aims.
+
+**The falsifiable bar held.** The design said *"if Fire Control Lock lights up, the
+harness is lying"* — it cannot be exercised by a policy that never paints a target.
+It reads **−1.43**. No choice-dependent upgrade showed positive value anywhere in the
+table. The only positives are `steady-aim` (+1.00), `cold-bore` (+0.17) and
+`taut-cable` (+0.03), none of which need a decision.
+
+## But they moved *negative*, and that is the real result
+
+Uplift is measured **against the field tier, because field is the floor** —
+`normalizeWeaponUpgrade` means no un-upgraded rig exists. So choosing Fire Control
+Lock means *giving up* Swarm Warheads' +1 ROF.
+
+**−1.43 is not Fire Control Lock's value. It is the opportunity cost of choosing it
+under a policy that cannot use it.** The harness is being honest; the number just
+answers a different question than "is this upgrade good".
+
+| | on SP/round vs their own field tier |
+|---|---|
+| tuned/prototype tiers **better** | **2** |
+| **worse** | **17** |
+| tied | 2 |
+| censored (never wrecked) | 1 |
+
+That confirms and sharpens **F3** — this sweep found "field is the best damage tier
+for 10 of 22 weapons"; over ten real rounds it is **17 of 20 comparable tiers**.
+
+**It is not yet a balance verdict.** Prototypes are what choices are *for*, and
+greedy-safe makes none. The duel prices their cost and cannot price their benefit.
+That asymmetry is the argument for step 2 (bot-vs-bot), not a finding about the
+upgrades.
+
+## What it also showed
+
+- **Penetrator Rounds ramps.** 3.77 SP on volley one against Depleted Core's 4.30,
+  then closes over the duel. A ramp this sweep scores +0.00 *by construction*.
+- **Duels resolve.** Wreck rates 43–96%, 4.2–9.0 rounds. The design's assumption that
+  most duels would run the horizon was wrong.
+- **The credit can land on the wrong side.** Greedy-safe has no melee, so a control
+  whose gun is riveted or shot off **passes instead of swinging** — and a weapon that
+  disarms it reads as *less incoming damage* rather than the tempo win it is. Rivet
+  Gun is most exposed.
+
+## Six engine blind spots, found by running it
+
+Building the harness surfaced six places where the action console's `enabled` flag
+disagrees with what the engine will do — five where the view says yes and the engine
+silently refuses, and one (`arcBonus` → `null` for Raking Fire off-side) where nothing
+lies and the output is a rule wearing a bad roll's costume. All are documented in the
+duel-harness design, with the rule that came out of it: **when mirroring an engine
+refusal, copy its predicate, not its gist.**
+
+## Next
+
+**Step 2, bot-vs-bot**, is now the live question — and only for the reason above: the
+duel can price a prototype's cost but not its benefit. It needs the opponent brain
+(`2026-07-15-opponent-brain-design.md`), which needs `effectiveStrAgainst` extracted
+from `rollWounds`. Its risk is stated in the duel design: a bot measures only what its
+scorer knows to use, which is the same blindness somewhere harder to see.
+
 ---
 
 ## Method
@@ -523,10 +606,11 @@ the first run.
    numbers: taxing ROF moves the SP/heat spread 3.0× → 3.9×, worse than shipping
    nothing, because SP peaks at ROF 4 and dips at ROF 6. See above and
    `2026-07-15-rof-heat-design.md`.
-5. **Turn-level harness** — **now the bottleneck, not a follow-up.** 44 of 85
-   upgrades (52%) are invisible to the single-shot metric, so nothing downstream can
-   be measured until this exists. Note Redline Governor measures **+4.85 primed**,
-   the largest conditional swing in the game, and even that is under-priced here.
+5. ~~**Turn-level harness**~~ — **BUILT** as the duel harness (step 1 of 2:
+   scripted duel; bot-vs-bot is step 2). `scripts/balance/duel-sim.mjs` +
+   `policy.mjs` + `duel-report.mjs`; first run at
+   `scripts/balance/duel-2026-07-15.txt`. Design:
+   `2026-07-15-duel-harness-design.md`. **See "What the duel harness found" below.**
 6. **F2-C** (raise D on the ROF-1 weapons) — `ROF × D` is 6–8 across the catalog
    and 3–5 for the heavies. One systematic gap in one column, possibly intentional
    (they trade output for a ~90% wound chance). Needs step 5 to judge.
