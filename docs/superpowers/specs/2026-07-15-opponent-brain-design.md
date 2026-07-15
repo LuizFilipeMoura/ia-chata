@@ -81,7 +81,7 @@ shot with **the same maths that resolves it**.
 - `computeModifiedAim(attacker, profile, opts)` gives the to-hit target, so
   `P(hit) = (7 − aim) / 6` per ROF die, floored at `1/6` (a natural 6 always hits).
 - `woundTarget(str, toughness)` gives the wound TN on a D10, so `P(wound) = (11 − TN) / 10`.
-- Chain across ROF, fold in `strOverflowD` for overflow.
+- Chain across ROF, fold in `strOvermatchD` for Overmatch (§7.5).
 
 No dice, no rollout, no heuristic. The damage term is exact.
 

@@ -1870,10 +1870,14 @@ test("rollWounds — Overmatch stacks with Rend and respects its own cap", () =>
 });
 
 test("rollWounds — Overmatch reads the target's kind, not the rig toughness band", () => {
-  // Every other Overmatch test targets a Rig, whose weight classes the design
-  // reasons about as T3-T5. A Tank hull is T6 (unit-kinds.js) — outside that
-  // band — and Overmatch needs no per-kind knowledge: it reads whatever
-  // toughnessOf returns for the TARGET's kind. This pins that.
+  // Every other Overmatch test targets a Rig. A Tank hull is T6, read off the
+  // tank's own grid rather than a rig weight class — and Overmatch needs no
+  // per-kind knowledge: it reads whatever toughnessOf returns for the TARGET's
+  // kind. This pins that dispatch.
+  //
+  // (T6 is not "off the scale" — RIG_TOUGHNESS defines heavy hulls at T6 and
+  // colossal at T7. But no chassis uses either, so T3-T5 is every rig you can
+  // actually build, and a tank is the only way to reach T6 today.)
   //
   // Siege Maul STR 11, medium attacker (WEIGHT_STR_MOD 0), rear arc +3 =>
   // effStr 14 into a T6 hull. The floor is at str T+4 = 10, so 4 points are
@@ -1888,8 +1892,9 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   assert.equal(out[0].overmatch, 1);
   assert.equal(out[0].sp, 6);          // D5 + 1
 
-  // The same shot into a T4 rig arms wastes 6 and pays +2: tougher target,
-  // less Overmatch. Pins that T is actually read, not just tolerated.
+  // The same shot into T4 rig arms wastes 6 and pays +2 — softer target, MORE
+  // Overmatch, since a lower T puts the floor lower and leaves more STR past it.
+  // Pins that T is actually read, not just tolerated.
   const rig = { weightClass: "medium", hardened: false, preparation: null };
   const vsRig = rollWounds({ weightClass: "medium" }, rig, maul, "arms",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);

@@ -15,7 +15,8 @@ Design: `docs/superpowers/specs/2026-07-15-str-overflow-design.md`.
 Plan: `docs/superpowers/plans/2026-07-15-str-overflow.md`.
 
 **F1-A shipped** as Overmatch: STR past the wound clamp's floor converts to damage
-at +1 D per 3, capped +2 (`strOverflowD`, `rules.js`). **F3-B shipped** as a
+at +1 D per 3, capped +2 (`strOvermatchD`, `rules.js`; documented in `rules.md` §7
+and the glossary). **F3-B shipped** as a
 magnitude nerf, not a re-tier: Swarm Warheads +2 ROF → +1, staying Field, because
 `+2 ROF` is a raw stat and Field *means* raw stats — the tier was right, the
 number was the outlier.
