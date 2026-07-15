@@ -12,7 +12,7 @@
     "dev": "concurrently -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
     "build": "vite build",
     "preview": "set PORT=8123&& node --watch server/index.js",
-    "test": "vitest run && node --test \"shared/**/*.test.js\" \"server/**/*.test.js\""
+    "test": "vitest run && node --test \"shared/**/*.test.js\" \"server/**/*.test.js\" \"scripts/**/*.test.mjs\""
   },
   "engines": {
     "node": ">=18"
