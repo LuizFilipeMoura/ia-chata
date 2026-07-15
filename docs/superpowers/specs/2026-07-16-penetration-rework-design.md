@@ -407,13 +407,53 @@ ledger exists.
 
 **Two engine facts make this land correctly; do not "fix" either:**
 
-- **A one-blow location kill is not an instant rig kill.** `catastrophicAdditional`
-  (§8) only fires on a location *already* at 0. So a zeroed engine leaves the rig
-  alive at `engineHeatFloor` +3 heat, one hit from death. That is a doom clock, and
-  it is better drama than a coin-flip kill.
-- **Excess Damage does not evaporate** — §7 spill routes the overflow to another
-  location (`spillTarget`). This is *why* paying Penetration back into Damage is
-  worth doing: Damage 8 is never wasted.
+- **Excess Damage does not evaporate** — `applyDamage` spends SP **one point at a
+  time**, and each point past 0 fires `catastrophicAdditional` (§8), which spills to
+  another location for mobility/weapon roles. This is *why* paying Penetration back
+  into Damage is worth doing: Damage 8 is never wasted.
+- **But for the hull and the engine, §8 is the kill tier — and Damage 8 reaches it
+  from full health.** `catastrophicAdditional` on a `structural` or `power` part
+  sets `destroyed = true` outright, and `recompute` then destroys the rig. So:
+
+> **Damage 8 into a full engine of max SP 7 kills the rig outright, in one wound.**
+> Seven points zero the engine; the **eighth** lands on a 0-SP power part and is an
+> instant kill. Damage 8 into an engine of max SP **8** lands exactly on zero and
+> does **not** kill.
+
+**This is exactly one chassis: `light-sword-arc` ("Zebra"), the only engine-7 rig in
+the game** (the other six lights are engine 8–9, every medium is 9–11). It needs the
+D12 to roll 11–12 *and* the wound to land — roughly a **10%** window per attack that
+targets it, and only from a Damage-8 weapon (Sniper Cannon, Wrecking Ball).
+
+**An earlier draft of this section claimed the opposite** — that a one-blow location
+kill could never be an instant rig kill, because §8 "only fires on a location already
+at 0". That is true of a *separate* attack and false *within one call*, because
+`applyDamage` loops per SP. The claim was reasoned from `catastrophicAdditional`'s
+guard without reading its caller. **Same error, same document, third time.**
+
+So the drama has three tiers, not two, and the third one is a decision rather than a
+render:
+
+| trigger | effect line |
+|---|---|
+| a single wound zeroes a location from full | `Wrecking Ball — engine torn open in one blow` |
+| a single wound zeroes a location and **spills** into another | `Siege Maul — through and through → hull` |
+| a single wound zeroes a **hull or engine from full and kills the rig** | `Wrecking Ball — Zebra gutted in a single blow` |
+
+**Open call for the third tier.** A ~10% one-shot kill on the lightest chassis is
+more than "a big hit removes a limb", which is what was approved. Three options, and
+the implementer must not pick silently:
+
+1. **Ship it.** It is one chassis, it needs the engine roll, and a doom-clock rig
+   dying to a Wrecking Ball is the fiction working.
+2. **Raise Zebra's engine 7 → 8.** One number in `CHASSIS`, and the one-shot window
+   closes completely — Damage 8 then lands exactly on zero against every rig alive.
+3. **Cap Damage at 7.** Costs Sniper Cannon and Wrecking Ball their alpha identity
+   and drops `ROF × Damage` to 7. Not recommended — it undoes the payback.
+
+**Recommend (2).** It is a single digit, it preserves every weapon number in this
+spec, and it makes "Damage 8 can zero any engine but never one-shots" a clean,
+teachable rule. Measure first if you disagree — the duel harness prices exactly this.
 
 The second effect line is the sneaky-good one. Spill fires today and the console
 never says so, so players cannot tell why a hull lost SP the attack never targeted.
