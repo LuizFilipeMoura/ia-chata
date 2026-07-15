@@ -229,12 +229,19 @@ breakdown: {
   actor, weapon, target,          // target is the unit's NAME — do not reuse this key
   steps: [
     { kind: "hit",      target: 4,  terms: [...], dice: [...], out: "2 of 3 hit" },
-    { kind: "wound",    target: 7,  str: 4, toughness: 5, terms: [...], dice: [...], out: "1 of 2 wounded" },
     { kind: "location", die: 2,     out: "hull" },
+    { kind: "wound",    target: 7,  str: 4, toughness: 5, terms: [...], dice: [...], out: "1 of 2 wounded" },
     { kind: "damage",   terms: [...], out: "2 SP → hull" },
   ],
 }
 ```
+
+**The order is `hit → location → wound → damage`, and that is not a typo.** Toughness is
+per-location (a medium hull is T5, its engine T3), so the d12 must land before the wound roll has a
+T to test against — the engine has always resolved it this way. An earlier draft of this plan said
+`hit → wound → location`, copying the 40k sequence; that would render the wound step's `vs T5`
+above the step that determined the 5, i.e. a target number derived from a location the player has
+not been told about yet. The ledger's only job is to be true.
 
 `dice` on a step is `[{ value, ok }]`. `terms` is `[{ label, value }]`.
 
@@ -391,7 +398,9 @@ export interface ResolutionBreakdown {
   weapon?: string;
   /** The target unit's NAME. Never a number — the wound TN lives on the wound step. */
   target?: string;
-  /** The ordered ledger: hit → wound → location → damage. */
+  /** The ordered ledger, in the engine's resolution order: hit → location → wound → damage.
+   *  Location precedes wound because toughness is per-location — the d12 supplies the T
+   *  the wound roll tests against. */
   steps?: ResolutionStep[];
   /** Structure points dealt. */
   sp?: number;
@@ -425,7 +434,7 @@ The live panel renders one equation: a `terms` row, then `= total`, a tier badge
 
 **Mobile first.** The originating screenshot is a phone (~390px). Four stacked term-lists will not fit. Each step is a compact row — target number + dice + outcome — with its terms as a **wrapped chip row** beneath. Long modifier lists must never push the OK button off-screen; the step list scrolls inside its own container.
 
-**Reveal in resolution order.** `RollConsole` already settles dice sequentially. Steps should appear hit → wound → location → damage so the panel *narrates* the rule rather than presenting a finished sum. Respect `prefers-reduced-motion` — the existing `reduced` flag does this.
+**Reveal in resolution order.** `RollConsole` already settles dice sequentially. Steps should appear hit → location → wound → damage so the panel *narrates* the rule rather than presenting a finished sum. Respect `prefers-reduced-motion` — the existing `reduced` flag does this.
 
 - [ ] **Step 1: Write the failing tests**
 

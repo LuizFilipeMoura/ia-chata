@@ -29,13 +29,20 @@ sight of the roll that decided it. The originating bug report for this work was 
 
 ## The model
 
-Three dice, in order:
+Three dice, in resolution order:
 
 | Step | Die | Test |
 |---|---|---|
 | **Hit** | d6 | `≥ AIM` (unchanged; a natural 6 always hits) |
-| **Wound** | **d10** | `≥ 6 + T − S`, clamped to `2..10` |
 | **Location** | d12 | unchanged — picks where the damage lands |
+| **Wound** | **d10** | `≥ 6 + T − S`, clamped to `2..10` |
+
+**Location precedes Wound, unavoidably.** Toughness is per-location (a medium hull is T5, its
+engine T3), so the wound roll has no T to test against until the d12 has landed. This departs from
+the 40k sequence (hit → wound → save), where one Toughness per model lets the wound roll come
+second. It is the direct consequence of choosing a per-location toughness grid over a per-class one:
+per-class would permit the 40k order, per-location does not. The engine has always resolved it this
+way; only this document was briefly wrong.
 
 Each wound deals the weapon's **D** (damage) stat to the struck location. There is no impact
 total and no severity tier.
@@ -287,7 +294,7 @@ same failure as a hidden die.
   each step needs a compact headline (target number + dice + outcome) with its terms as a wrapped
   chip row beneath. Long modifier lists must not push the OK button off-screen.
 - **Animation order is the teaching tool.** `RollConsole` settles dice sequentially already. Steps
-  should reveal in resolution order — hit, then wound, then location, then damage — so the panel
+  should reveal in resolution order — hit, then location, then wound, then damage — so the panel
   *narrates* the rule rather than presenting a finished sum.
 - **Manual-dice mode prompts for wound dice.** `AttackWizard`'s `autoResolve === false` path builds
   its `promptDice` specs from ROF and asks only for hit dice + location; it must also ask for a d10
