@@ -25,7 +25,7 @@ function WeaponBlock({ w, isSidearm }: { w: LoadoutWeapon; isSidearm?: boolean }
       </div>
       <div className="v2-rt-lo-stats">
         <Stat label="ROF" base={w.rof.base} delta={w.rof.delta} />
-        <Stat label="STR" base={w.pen.base} delta={w.pen.delta} />
+        <Stat label="Penetration" base={w.pen.base} delta={w.pen.delta} />
         <span className="v2-rt-lo-stat">
           <InfoTerm as="em" id="rng" className="v2-eyebrow">{w.melee ? "RNG" : "RANGE"}</InfoTerm>{" "}
           {w.range.text.replace(/^RNG /, "")}

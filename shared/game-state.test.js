@@ -121,7 +121,7 @@ test("every weapon carries a hand-assigned damage stat in range 1..5", () => {
   }
 });
 
-test("weapon STR sits on the rescaled 3..11 ladder", () => {
+test("weapon Penetration sits on the rescaled 3..11 ladder", () => {
   const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
   for (const [name, w] of Object.entries(all)) {
     assert.ok(w.pen >= 3 && w.pen <= 11, `${name} pen=${w.pen} off-ladder`);
@@ -206,7 +206,7 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   assert.equal(WEAPON_UPGRADES["Siege Maul"].length, 3);
   assert.equal(WEAPON_UPGRADES["Bulwark Shield"].length, 3);
 
-  // Reinforced Head is the default (first) Siege Maul upgrade: +2 STR.
+  // Reinforced Head is the default (first) Siege Maul upgrade: +2 Penetration.
   const headed = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword" });
   assert.equal(headed.weaponUpgrades.longRange, "reinforced-head");
@@ -1940,7 +1940,7 @@ test("fire action resolves an attack, applies damage and logs it", () => {
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1"); // Light target, hull 6
-  // Fire the melee Sword: STR 5-1(light)=4, front arc +0, vs a light hull (T4)
+  // Fire the melee Sword: Penetration 5-1(light)=4, front arc +0, vs a light hull (T4)
   // -> wound on 6+. Both dice land; the first wounds and the second does not, so
   // exactly one wound deals the Sword's D3. One of each proves the roll is read
   // per-die rather than assumed.
@@ -2836,22 +2836,22 @@ test("Heat Purge Wave vents to the raw Heat Capacity and narrates the 3\" AoE", 
   assert.match(text, /3"/);
 });
 
-test("Backdraft adds +1 STR per 2 heat over Capacity to the narrated Heat Purge Wave", () => {
+test("Backdraft adds +1 Penetration per 2 heat over Capacity to the narrated Heat Purge Wave", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "blast-furnace-core", a2: "blast-furnace-core" });
   activate(r, "a1");
   const rig = findRig(r, "a1");
   rig.equipmentUpgrade = "backdraft";
-  rig.engine.heat = 9; // Medium raw cap 5 → over by 4 → +2 STR
+  rig.engine.heat = 9; // Medium raw cap 5 → over by 4 → +2 Penetration
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
   assert.equal(rig.engine.heat, 5); // still vents down to the raw class cap
   const withBackdraft = r.game.resolutions.at(-1);
   const text = `${withBackdraft.summary} ${withBackdraft.effects.join(" ")}`;
   assert.match(text, /3"/);        // the AoE narration is preserved
-  assert.match(text, /\+2 STR/);   // and now carries the Backdraft bonus
+  assert.match(text, /\+2 Penetration/);   // and now carries the Backdraft bonus
 });
 
-test("Heat Purge Wave without Backdraft carries no STR bonus", () => {
+test("Heat Purge Wave without Backdraft carries no Penetration bonus", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "blast-furnace-core" });
   activate(r, "a1");
@@ -2859,7 +2859,7 @@ test("Heat Purge Wave without Backdraft carries no STR bonus", () => {
   rig.engine.heat = 9;
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "heatpurgewave" } });
   const last = r.game.resolutions.at(-1);
-  assert.doesNotMatch(`${last.summary} ${last.effects.join(" ")}`, /STR/);
+  assert.doesNotMatch(`${last.summary} ${last.effects.join(" ")}`, /Penetration/);
 });
 
 test("Coolant Injection vents 2 heat before the overheat roll and can skip it", () => {
@@ -2929,7 +2929,7 @@ test("overclock grants +2 actions this activation for Overclock Core", () => {
   assert.equal(findRig(r, "a1").engine.heat, 3);
 });
 
-test("Reactor Overdrive: Overclock arms the +2 STR flag (only with the upgrade)", () => {
+test("Reactor Overdrive: Overclock arms the +2 Penetration flag (only with the upgrade)", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "overclock-core" });
   const a1 = findRig(r, "a1");
@@ -3516,7 +3516,7 @@ test("react resolves a Riposte as a free melee counter and clears the prep", () 
   } });
   assert.equal(room.game.pendingReaction?.kind, "riposte");
   const before = a.hull.sp;
-  // Sword STR 6 vs a medium hull (direct at 11): impact die 6 → total 12 → 1 SP.
+  // Sword Penetration 6 vs a medium hull (direct at 11): impact die 6 → total 12 → 1 SP.
   // Two guaranteed to-hit 6s so the counter lands regardless of the random rolls.
   applyCommand(room, { verb: "react", attrs: {
     side: "b", attack: { weapon: "melee", arc: "front", range: "near",
@@ -3536,7 +3536,7 @@ test("react resolves an Exploit counter as an aimed shot with no aim penalty", (
   } });
   assert.equal(room.game.pendingReaction?.kind, "exploit");
   const before = a.arms.sp;
-  // Aimed Autocannon (STR 8) at the arms (severe at 13): impact die 6 → total 14
+  // Aimed Autocannon (Penetration 8) at the arms (severe at 13): impact die 6 → total 14
   // → 2 SP. Damage on the arms proves both that the counter resolved AND that
   // aimedLoc routed the hit to the chosen location.
   applyCommand(room, { verb: "react", attrs: {
@@ -4353,7 +4353,7 @@ test("an engaged rig can still use a non-movement active (Harden)", () => {
 
 // ── §13 Anvil Boss (Bulwark Shield) ──────────────────────────────────────────
 // A rig holding Raise Shield with the Anvil Boss upgrade answers the first melee
-// attacker each round with a free STR-6 counter-hit. Melee only, once per round.
+// attacker each round with a free Penetration-6 counter-hit. Melee only, once per round.
 function anvilRoom(defUpgrade = "anvil-boss") {
   const r = createRoom("ANVIL");
   claimSide(r, { name: "Owner", side: "a" });
@@ -4398,7 +4398,7 @@ test("Anvil Boss ripostes the first melee attacker that lands a hit while Raise 
   const spSum = (rig) => rig.hull.sp + rig.arms.sp + rig.legs.sp + rig.engine.sp;
   const attackerSpBefore = spSum(findRig(r, "b1"));
   // Incoming melee lands (toHit 6s); the counter uses the raw RNG, forced high so
-  // the free STR-6 blow lands back on the attacker.
+  // the free Penetration-6 blow lands back on the attacker.
   fireMelee(r, meleeLand, { random: () => 0.999 });
   assert.equal(findRig(r, "a1").ripostedThisRound, true);
   assert.equal(countRiposte(r), 1);
@@ -4477,7 +4477,7 @@ test("__test.maybeBraceRetaliate counters a withstood front melee once per round
 
 // ── §13 Skewer (Lance) ───────────────────────────────────────────────────────
 // A Lance with the Skewer prototype impales the rig it pins: while the mark holds,
-// Disengaging from the skewerer costs the fleeing rig a free STR-11 Lance strike.
+// Disengaging from the skewerer costs the fleeing rig a free Penetration-11 Lance strike.
 function skewerRoom() {
   const r = createRoom("SKEWER");
   claimSide(r, { name: "Owner", side: "a" });
@@ -4516,7 +4516,7 @@ test("a Lance-skewer hit marks the engaged target as skewered", () => {
   assert.equal(a1.skeweredBy, b1.id); // the pinned target remembers its skewerer
 });
 
-test("disengaging from a Skewer provokes a free STR-11 lance strike, then clears", () => {
+test("disengaging from a Skewer provokes a free Penetration-11 lance strike, then clears", () => {
   const r = skewerRoom();
   const a1 = findRig(r, "a1"); // the skewerer
   const b1 = findRig(r, "b1"); // the victim — disengages on b's turn
@@ -4564,7 +4564,7 @@ test("if the skewerer is gone, the victim disengages with no strike and no crash
 // ── §13 Ground Anchor (Anchor) ───────────────────────────────────────────────
 // An Anchor with the Ground Anchor prototype pins the rig it locks: while the
 // mark holds, Disengaging from the anchorer costs the fleeing rig a free
-// Anchor strike at its NATURAL STR (not a flat override, unlike Skewer).
+// Anchor strike at its NATURAL Penetration (not a flat override, unlike Skewer).
 function groundAnchorRoom() {
   const r = createRoom("ANCHOR");
   claimSide(r, { name: "Owner", side: "a" });
@@ -5593,7 +5593,7 @@ test("Cryo Reservoir downside: while hoarding cryo the Radiator cools only 1", (
   assert.equal(rig.engine.heat, 4);                      // cooled 1, not the Radiator's usual 2
 });
 
-test("Cryo Reservoir: spending N cools 2 heat each and arms +1 STR/cryo on the next attack", () => {
+test("Cryo Reservoir: spending N cools 2 heat each and arms +1 Penetration/cryo on the next attack", () => {
   const r = startedRoom();
   const a1 = findRig(r, "a1");
   a1.equipment = "radiator-array"; a1.equipmentUpgrade = "cryo-reservoir";
@@ -5602,7 +5602,7 @@ test("Cryo Reservoir: spending N cools 2 heat each and arms +1 STR/cryo on the n
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "cryo", n: 2 } });
   assert.equal(a1.equipState.cryo, 1);                   // 2 spent
   assert.equal(a1.engine.heat, 2);                       // −2 each → −4
-  assert.equal(a1.equipState.nextAttackPen, 2);          // +1 STR per cryo spent
+  assert.equal(a1.equipState.nextAttackPen, 2);          // +1 Penetration per cryo spent
 });
 
 // ---------------------------------------------------------------------------

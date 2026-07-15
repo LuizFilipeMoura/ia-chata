@@ -249,7 +249,7 @@
 .v2-root .v2-rx-step[data-kind="damage"] { border-left-color: var(--v2-ember); }
 .v2-root .v2-rx-step[data-kind="damage"]::before { border-color: var(--v2-ember-hi); }
 
-/* Step header: eyebrow + the target number (or the wound step's STR-vs-T line). */
+/* Step header: eyebrow + the target number (or the wound step's Penetration-vs-T line). */
 .v2-root .v2-rx-step-hd {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .5rem;
 }
@@ -263,7 +263,7 @@
   color: var(--v2-oil-hi); text-shadow: 0 0 10px rgba(231, 154, 61, .35);
 }
 
-/* "STR 4 vs T5 → 7+" — THE line that answers "why 0 damage?". Given its own
+/* "Penetration 4 vs T5 → 7+" — THE line that answers "why 0 damage?". Given its own
    weight: this is the sentence the whole ledger exists to print. */
 .v2-root .v2-rx-step-math {
   display: inline-flex; align-items: baseline; gap: .28rem; flex-wrap: wrap;

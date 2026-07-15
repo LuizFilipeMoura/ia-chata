@@ -5,7 +5,7 @@ import { UpgradeLadder } from "./UpgradeLadder";
 import type { UpgradeTier } from "../lib/commissionData";
 
 const TIERS: UpgradeTier[] = [
-  { id: "dep", nature: "field", name: "Depleted Core", tag: "+2 STR" },
+  { id: "dep", nature: "field", name: "Depleted Core", tag: "+2 Penetration" },
   { id: "ap", nature: "tuned", name: "AP Shells", tag: "Gains Armour Piercing" },
   { id: "pen", nature: "prototype", name: "Penetrator", tag: "Every 3rd volley ignores armour; belt cycles slow after" },
 ];

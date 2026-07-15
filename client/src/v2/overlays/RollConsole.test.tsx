@@ -37,7 +37,7 @@ const BUG_CASE: ResolutionStep[] = [
     target: 7,
     pen: 4,
     toughness: 5,
-    terms: [{ label: "weapon STR", value: 4 }, { label: "light chassis", value: -1 }],
+    terms: [{ label: "weapon Penetration", value: 4 }, { label: "light chassis", value: -1 }],
     dice: [{ value: 3, ok: false }, { value: 6, ok: false }],
     out: "0 of 2 wounded",
   },
@@ -58,7 +58,7 @@ test("renders every step of the ledger in order", async () => {
   ]);
 });
 
-test("shows the wound step's STR against toughness and the resulting target", async () => {
+test("shows the wound step's Penetration against toughness and the resulting target", async () => {
   const ref = createRef<RollConsoleHandle>();
   render(<RollConsole ref={ref} />);
   await ref.current!.playResolution(ledger(BUG_CASE));
@@ -69,7 +69,7 @@ test("shows the wound step's STR against toughness and the resulting target", as
   expect(wound).toHaveTextContent("5");
   expect(wound).toHaveTextContent("7+");
   // ...and it reads as one sentence, not three loose numbers.
-  expect(wound).toHaveTextContent(/STR\s*4\s*vs\s*T\s*5\s*→\s*7\+/);
+  expect(wound).toHaveTextContent(/Penetration\s*4\s*vs\s*T\s*5\s*→\s*7\+/);
 });
 
 test("renders an auto-fail step rather than omitting it", async () => {

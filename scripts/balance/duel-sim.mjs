@@ -151,7 +151,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
 
     // The second player gets exactly 1 Answer token per round and there is NO
     // decline path — pendingAnswer blocks activate until it is spent. Spending
-    // sets a preparation, and Brace is -2 STR on the front arc, so it goes on a
+    // sets a preparation, and Brace is -2 Penetration on the front arc, so it goes on a
     // bystander. Answering with a duellist would silently corrupt every number.
     // (Recovery clears every preparation, so the same bystander is eligible again
     // each round.)

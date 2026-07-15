@@ -446,11 +446,11 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                       <div className="v2-rx-step-in" data-testid={`v2-roll-step-${s.kind}`}>
                         <div className="v2-rx-step-hd">
                           <span className="v2-rx-step-kind v2-eyebrow">{STEP_LABEL[s.kind]}</span>
-                          {/* The money shot. "STR 4 vs T5 → 7+" is the single
+                          {/* The money shot. "Penetration 4 vs T5 → 7+" is the single
                               line that answers "why 0 damage?". */}
                           {s.kind === "wound" && s.pen != null && s.toughness != null ? (
                             <span className="v2-rx-step-math">
-                              <span className="v2-rx-step-pair">STR&nbsp;<b>{s.pen}</b></span>
+                              <span className="v2-rx-step-pair">Penetration&nbsp;<b>{s.pen}</b></span>
                               <i>vs</i>
                               <span className="v2-rx-step-pair">T<b>{s.toughness}</b></span>
                               <i>→</i>

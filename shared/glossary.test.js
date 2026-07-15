@@ -44,7 +44,7 @@ test("the glossary teaches the wound roll, not the deleted impact table", () => 
   }
 });
 
-// The wound roll reads `6 + T - STR`. A player who can't look up Toughness or
+// The wound roll reads `6 + T - Penetration`. A player who can't look up Toughness or
 // Damage only half-learns the model, so both stats need their own entry.
 test("glossary defines the stats the wound roll references", () => {
   const byId = new Map(GLOSSARY.map((e) => [e.id, e]));

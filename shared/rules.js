@@ -67,7 +67,7 @@ export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
 // value; each point beyond it adds +2 (capped +10) to the misfire roll.
 // Lives here (not game-state.js) so combat.js — which imports ONLY from
 // rules.js to avoid a cycle with game-state.js — can read it for
-// conditional STR effects (e.g. Opportunist §13).
+// conditional Penetration effects (e.g. Opportunist §13).
 export const HEAT_CAPACITY = { light: 6, medium: 5, heavy: 4, colossal: 3 };
 
 // Hit-location table (§7): defender's D12 → part-name, keyed by unit kind.
@@ -119,7 +119,7 @@ function woundRaw(pen, toughness) {
 // The clamp is load-bearing. It guarantees a natural 10 always wounds and a
 // natural 1 never does, so no weapon/target/location matchup can be
 // mathematically hopeless. That was the failure mode of the impact-total model
-// this replaces: its base total capped at `6 + STR + arc`, leaving 69 combos
+// this replaces: its base total capped at `6 + Penetration + arc`, leaving 69 combos
 // that could never deal damage at any roll. Do not remove the clamp to "let
 // armour really matter" — that reintroduces the bug. See
 // docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
@@ -166,17 +166,17 @@ export const EQUIPMENT_UPGRADES = {
   "radiator-array": [
     { id: "twin-radiators", nature: "field", name: "Twin Radiators", tag: "Purge vents −3, not −2", effect: { purgeHeat: -3 } },
     { id: "coolant-injection", nature: "tuned", name: "Coolant Injection", tag: "−2 heat before the overheat roll when over Capacity", effect: { coolantInjection: true } },
-    { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a STR spike", catch: "Must charge it up first", effect: { cryoReservoir: true } },
+    { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a Penetration spike", catch: "Must charge it up first", effect: { cryoReservoir: true } },
   ],
   "servo-actuators": [
     { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint reaches 2× Speed, not 1½×", effect: { sprintMult: 2 } },
-    { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: { kickstartPistons: true } },
+    { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 Penetration", effect: { kickstartPistons: true } },
     { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", catch: "Heat and a cooldown", effect: { grapnelLauncher: true } },
   ],
   "overclock-core": [
     { id: "redundant-capacitors", nature: "field", name: "Redundant Capacitors", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
     { id: "adrenaline-surge", nature: "tuned", name: "Adrenaline Surge", tag: "Below half SP, Overclock grants +3 actions", effect: { adrenalineSurge: true } },
-    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 STR — but overheat bonus doubles", catch: "Overheat bonus doubles", effect: { reactorOverdrive: true } },
+    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 Penetration — but overheat bonus doubles", catch: "Overheat bonus doubles", effect: { reactorOverdrive: true } },
   ],
   "field-repair-suite": [
     { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
@@ -185,8 +185,8 @@ export const EQUIPMENT_UPGRADES = {
   ],
   "blast-furnace-core": [
     { id: "insulated-core", nature: "field", name: "Insulated Core", tag: "Safe up to +2 over Capacity, not +1", effect: { thermalMargin: 2 } },
-    { id: "backdraft", nature: "tuned", name: "Backdraft", tag: "Heat Purge Wave +1 STR per 2 heat over Capacity", effect: { backdraft: true } },
-    { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for STR or a burst", catch: "Only banks while overheated", effect: { meltdownProtocol: true } },
+    { id: "backdraft", nature: "tuned", name: "Backdraft", tag: "Heat Purge Wave +1 Penetration per 2 heat over Capacity", effect: { backdraft: true } },
+    { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for Penetration or a burst", catch: "Only banks while overheated", effect: { meltdownProtocol: true } },
   ],
   "targeting-computer": [
     { id: "ballistic-processor", nature: "field", name: "Ballistic Processor", tag: "+1 accuracy vs a target in your sweet-spot band", effect: { sweetBandAccuracy: 1 } },
@@ -194,7 +194,7 @@ export const EQUIPMENT_UPGRADES = {
     { id: "fire-solution-lock", nature: "prototype", name: "Fire Solution Lock", tag: "Hold still and stack a solution → an auto-hit AP volley", catch: "Must hold still to charge it", effect: { fireSolutionLock: true } },
   ],
   "reactive-plating": [
-    { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 STR, not −1", effect: { sideRearPen: -2 } },
+    { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 Penetration, not −1", effect: { sideRearPen: -2 } },
     { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: { chaffBurst: true } },
     { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
   ],

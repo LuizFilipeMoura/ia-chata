@@ -94,7 +94,7 @@ test("flat-pick attacker shows its single unit weapon and no upgrade line", () =
   render(<AttackWizard rig={attacker} mode="fire" onClose={() => {}} />);
   const notice = screen.getByText(/Before you attack/i).closest(".aw-attack-notice") as HTMLElement;
   expect(notice).toHaveTextContent("Tank Cannon");
-  expect(notice).toHaveTextContent(/flat STR/i);
+  expect(notice).toHaveTextContent(/flat Penetration/i);
 });
 
 test("attack drawer warns about the selected weapon upgrade before the attack button", () => {

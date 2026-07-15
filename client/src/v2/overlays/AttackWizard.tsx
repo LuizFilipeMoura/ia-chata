@@ -52,10 +52,10 @@ const FIELD_DESC: Record<string, string> = {
   arc: "Which of the enemy's facings you strike",
   range: "How far the enemy sits from you",
   cover: "Obstruction shielding the enemy",
-  location: "Component to hit — an Aimed Shot takes −2 ACC",
+  location: "Component to hit — an Aimed Shot takes −2 Accuracy",
 };
-const ARC_DESC: Record<string, string> = { front: "No STR bonus", side: "+2 STR", rear: "+3 STR" };
-const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 ACC", "2": "−2 ACC" };
+const ARC_DESC: Record<string, string> = { front: "No Penetration bonus", side: "+2 Penetration", rear: "+3 Penetration" };
+const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 Accuracy", "2": "−2 Accuracy" };
 const LOC_DESC: Record<string, string> = {
   hull: "−2 actions at 0", arms: "Weapons at 0", legs: "Slows at 0", engine: "Heat at 0",
   tracks: "Slows at 0", turret: "Gun lost at 0", mount: "Gun lost at 0",
@@ -556,7 +556,7 @@ export function AttackWizard({
     const weaponName = weapons[state.weapon] || "";
     // Cold kinds carry no weapon upgrades — just name the weapon.
     if (flat) {
-      return { main: `Firing ${weaponName} (flat STR — no weight-class scaling).`, equipment: equipmentLine };
+      return { main: `Firing ${weaponName} (flat Penetration — no weight-class scaling).`, equipment: equipmentLine };
     }
     const upgrade = selectedUpgrade(rig, state.weapon as "longRange" | "melee", weaponName);
     return {
@@ -681,7 +681,7 @@ export function AttackWizard({
                 }}
                 icon={FIELD_ICONS.weapon}
                 optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
-                desc={flat ? "One flat-pick weapon — no weight-class STR scaling." : FIELD_DESC.weapon}
+                desc={flat ? "One flat-pick weapon — no weight-class Penetration scaling." : FIELD_DESC.weapon}
                 optDisabled={(opt) => rangedSpent && opt === rangedWeaponName}
                 optDesc={(opt) => (rangedSpent && opt === rangedWeaponName ? "Spent · reload" : weaponDesc(opt))}
               />

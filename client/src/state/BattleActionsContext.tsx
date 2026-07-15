@@ -416,7 +416,7 @@ function BlastBody({
   return (
     <>
       <p className="dwr-hint">
-        Select every Rig within 4" of the wreck — each takes a D6 + STR 10 blast hit.
+        Select every Rig within 4" of the wreck — each takes a D6 + Penetration 10 blast hit.
       </p>
       <div className="blast-list">
         {candidates.map((r) => {

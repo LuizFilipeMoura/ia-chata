@@ -4,7 +4,7 @@
 export const ROLES = ["structural", "power", "mobility", "weapon"];
 
 // §7.5 — Toughness per part. Replaces the old 48-number impact grid: a shot's
-// effective STR is compared to these via `woundTarget` (rules.js).
+// effective Penetration is compared to these via `woundTarget` (rules.js).
 //
 // Designed, not derived. Converting the old armour rows mechanically
 // (`direct - 6`) yields engine values of T1-T3, which would let every weapon in

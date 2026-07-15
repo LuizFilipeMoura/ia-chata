@@ -22,7 +22,7 @@ function makeCtx() {
 
 const attacker = { weightClass: "medium", hull: { sp: 7 } };
 
-test("computeModifiedAim applies weapon ACC, cover, aim and hull penalties", () => {
+test("computeModifiedAim applies weapon Accuracy, cover, aim and hull penalties", () => {
   const claw = WEAPONS.melee["Claw"]; // accuracy [1,1]
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 0 }), 3); // 4 - 1
   assert.equal(computeModifiedAim(attacker, claw, { range: "near", cover: 2 }), 5); // 4 - 1 + 2
@@ -59,12 +59,12 @@ test("computeModifiedAim uses distance-based accuracy for ranged weapons", () =>
   assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
 });
 
-test("aimBreakdown — reports the base aim and the weapon's ACC at range", () => {
+test("aimBreakdown — reports the base aim and the weapon's Accuracy at range", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
   assert.deepEqual(b.terms, [
     { label: "base aim", value: 4 },
-    { label: "weapon ACC at 12\"", value: 1 },
+    { label: "weapon Accuracy at 12\"", value: 1 },
   ]);
   assert.equal(b.value, 3);
 });
@@ -133,7 +133,7 @@ test("aimBreakdown — Airburst Fuze and a Piledriver guard-break each name thei
 });
 
 // Recon paint and Predictive Tracking each do TWO things: cancel cover AND grant
-// ACC. Both facts get their own term — the bonus is not a substitute for the
+// Accuracy. Both facts get their own term — the bonus is not a substitute for the
 // explanation of the missing cover.
 test("aimBreakdown — recon paint emits both its bonus and its cover cancel", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
@@ -195,7 +195,7 @@ test("Pop Smoke worsens an attacker's modified Aim by 2", () => {
   assert.equal(smoked - clear, 2);
 });
 
-test("Predictive Tracking: +2 ACC and ignores cover vs a pinned target", () => {
+test("Predictive Tracking: +2 Accuracy and ignores cover vs a pinned target", () => {
   const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "predictive-tracking" };
   const mg = WEAPONS.longRange["Mini Gun"];
   // distance:12 is chosen (not the plan's distance:7) because Mini Gun's own
@@ -204,7 +204,7 @@ test("Predictive Tracking: +2 ACC and ignores cover vs a pinned target", () => {
   // outside Mini Gun's sweet band (|12-7| > 2), isolating Predictive Tracking.
   const openField = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: false });
   const pinned    = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: true });
-  // +2 ACC lowers the aim number by 2, and the 2 points of cover are ignored
+  // +2 Accuracy lowers the aim number by 2, and the 2 points of cover are ignored
   // (−2 more) → the pinned aim number is 4 lower.
   assert.equal(openField - pinned, 4);
   // The wrong Fire-Control upgrade (Field) never triggers, even vs a pinned target.
@@ -239,11 +239,11 @@ test("applyDefensiveReactions is an identity pass-through for a to-hit tally (no
 });
 
 test("rollWounds is byte-unchanged by the wound seam for a plain target", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium, D2
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium, D2
   const plain = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].pen, 7); // 7(STR) + 0(front) — no dock, seam is a no-op
+  assert.equal(out[0].pen, 7); // 7(Penetration) + 0(front) — no dock, seam is a no-op
   assert.equal(out[0].target, 4); // 6 + 5(medium hull T) - 7
   assert.equal(out[0].sp, 2); // Autocannon D2
   assert.equal(out[0].kind, "wound"); // seam stamps the discriminator
@@ -263,12 +263,12 @@ test("computePen applies weight and Charged Shot", () => {
   assert.equal(computePen({ weightClass: "medium" }, arcGun, { charged: true }), 10); // 8+0+2
 });
 
-test("penBreakdown — reports the base weapon STR and the weight modifier", () => {
+test("penBreakdown — reports the base weapon Penetration and the weight modifier", () => {
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
   assert.equal(b.value, 4);                       // Sword 5, light -1
   assert.deepEqual(b.terms, [
-    { label: "weapon STR", value: 5 },
+    { label: "weapon Penetration", value: 5 },
     { label: "light chassis", value: -1 },
   ]);
 });
@@ -277,7 +277,7 @@ test("penBreakdown — a modifier that does not fire emits no term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
   // medium weight mod is 0 — it must not appear as a term at all.
-  assert.deepEqual(b.terms, [{ label: "weapon STR", value: 5 }]);
+  assert.deepEqual(b.terms, [{ label: "weapon Penetration", value: 5 }]);
   assert.equal(b.value, 5);
 });
 
@@ -294,7 +294,7 @@ test("computePen — still returns a bare number, callers unchanged", () => {
   assert.equal(computePen(attacker, { ...WEAPONS.melee["Sword"] }, {}), 4);
 });
 
-test("Kickstart Pistons: first melee after charging into contact hits +2 STR", () => {
+test("Kickstart Pistons: first melee after charging into contact hits +2 Penetration", () => {
   const claw = WEAPONS.melee["Claw"];
   const charged = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: true,  kickstartUsed: false };
   const idle    = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: false, kickstartUsed: false };
@@ -335,7 +335,7 @@ test("arcBonus — Raking Fire still replaces the ladder and auto-fails the fron
 
 test("rollWounds computes a per-hit wound roll and honours Brace on the front arc", () => {
   const target = { weightClass: "medium", preparation: { type: "brace" } };
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium, D2
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium, D2
   // 2 hits -> effPen 7 + 0(front) - 2(brace) = 5 vs medium hull T5 -> TN 6+5-5 = 6.
   const out = rollWounds({ weightClass: "medium" }, target, auto, "hull",
     { arc: "front", hits: 2 }, { wounds: [10, 10] }, () => 0);
@@ -345,10 +345,10 @@ test("rollWounds computes a per-hit wound roll and honours Brace on the front ar
   assert.equal(out[0].sp, 2); // Autocannon D2
 });
 
-test("rollWounds applies Harden's -1 STR alongside Brace, stacking", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium
+test("rollWounds applies Harden's -1 Penetration alongside Brace, stacking", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium
   const hardened = { weightClass: "medium", hardened: true, preparation: null };
-  // 1 hit -> 7 + 0(front) - 1(harden) = 6 effective STR.
+  // 1 hit -> 7 + 0(front) - 1(harden) = 6 effective Penetration.
   const out = rollWounds({ weightClass: "medium" }, hardened, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].pen, 6);
@@ -360,8 +360,8 @@ test("rollWounds applies Harden's -1 STR alongside Brace, stacking", () => {
   assert.equal(out2[0].target, 7); // 6 + 5 - 4 — the dock moves the TN, not the roll
 });
 
-test("Reinforced Plating deepens Harden to −2 effective STR", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium
+test("Reinforced Plating deepens Harden to −2 effective Penetration", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium
   const hardened = { weightClass: "medium", hardened: true, preparation: null };
   const reinforced = { weightClass: "medium", hardened: true, preparation: null, equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" };
   // plain: 7 + 0(front) - 1(harden) = 6; reinforced: 7 + 0 - 2(harden) = 5
@@ -374,12 +374,12 @@ test("Reinforced Plating deepens Harden to −2 effective STR", () => {
   assert.equal(out[0].pen - out2[0].pen, 1); // −2 vs −1 = 1 lower
 });
 
-test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 8 medium
+test("Reactive Plating docks side/rear attacker Penetration; Angled Plates doubles it", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 8 medium
   const plain = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: null };
   const reactive = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: null, equipment: "reactive-plating" };
   const angled = { weightClass: "medium", hardened: false, preparation: null, equipmentUpgrade: "angled-plates", equipment: "reactive-plating" };
-  // side arc -> 7 + 2(side bonus) = 9 effective STR for plain; reactive docks -1; angled docks -2.
+  // side arc -> 7 + 2(side bonus) = 9 effective Penetration for plain; reactive docks -1; angled docks -2.
   const outPlain = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "side", hits: 1 }, { wounds: [10] }, () => 0);
   const outReactive = rollWounds({ weightClass: "medium" }, reactive, auto, "hull",
@@ -416,7 +416,7 @@ test("Raking Fire against the front arc deals no damage", () => {
 });
 
 test("Raise Shield negates the front arc and blunts side/rear by 3", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium
   const base = {
     weightClass: "medium",
     weapons: { melee: "Bulwark Shield" },
@@ -429,7 +429,7 @@ test("Raise Shield negates the front arc and blunts side/rear by 3", () => {
     { arc: "front", hits: 2 }, { wounds: [10, 10] }, () => 0);
   assert.equal(front.every((h) => h.sp === 0 && h.negated === true), true);
 
-  // Side: only blunted -> 7 + 2(side) - 3(shield) = 6 effective STR, TN 6+5-6 = 5.
+  // Side: only blunted -> 7 + 2(side) - 3(shield) = 6 effective Penetration, TN 6+5-6 = 5.
   const side = rollWounds({ weightClass: "medium" }, base, auto, "hull",
     { arc: "side", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(side[0].pen, 6);
@@ -445,7 +445,7 @@ test("Tower Shield extends Raise Shield negation to the side arc", () => {
     weaponUpgrades: { melee: "tower-shield" },
     preparation: { type: "raise-shield" },
   };
-  // Side negated; rear only blunted: 7 + 3(rear) - 3(shield) = 7 effective STR.
+  // Side negated; rear only blunted: 7 + 3(rear) - 3(shield) = 7 effective Penetration.
   const side = rollWounds({ weightClass: "medium" }, tower, auto, "hull",
     { arc: "side", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(side[0].sp, 0);
@@ -478,7 +478,7 @@ test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () =
   assert.equal(target.hullRepairLock, 2);
 });
 
-test("effectiveWeaponProfile applies selected ROF, STR, perk, and range upgrades", () => {
+test("effectiveWeaponProfile applies selected ROF, Penetration, perk, and range upgrades", () => {
   const mini = makeRig(1, "Belt", "medium", "a", { longRange: "Mini Gun", melee: "Sword", longRangeUpgrade: "extended-belt" });
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
 
@@ -516,7 +516,7 @@ test("computeModifiedAim ignores cover when Airburst Fuze is selected", () => {
 
 test("painted target cancels cover and grants +1 Aim for ranged attacks", () => {
   const attacker = { weightClass: "medium", hull: { sp: 8 } };
-  const ranged = { peak: 0, dropoff: 0, sweet: 6 }; // flat ACC 0
+  const ranged = { peak: 0, dropoff: 0, sweet: 6 }; // flat Accuracy 0
   const plain   = computeModifiedAim(attacker, ranged, { distance: 6, cover: 2 });
   const painted = computeModifiedAim(attacker, ranged, { distance: 6, cover: 2, painted: true });
   // cover 2 removed (+2 to accuracyTotal) AND +1 Aim ⇒ modAim drops by 3.
@@ -535,9 +535,9 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   // Autocannon: rof 4, accuracy [0,-1], no Full Auto requested here. Medium
   // attacker, full hull, near range, front arc, cover 0, fire (not aimed) ->
   // modAim = AIM.medium(4) - (accuracy[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
-  // ap-shells (tuned) carries no STR bonus, so the expected STR below stays the
+  // ap-shells (tuned) carries no Penetration bonus, so the expected Penetration below stays the
   // bare base+weight-class value — the default upgrade (depleted-core, field)
-  // would add +2 STR and throw off the comparison.
+  // would add +2 Penetration and throw off the comparison.
   const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw", longRangeUpgrade: "ap-shells" });
   const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target] };
@@ -577,8 +577,8 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   assert.match(attackRes.summary, /to hull/);
 
   // Structured breakdown mirrors the summary. The hits count and the weapon
-  // STR that used to sit in one flat `terms` array now live on the steps they
-  // belong to: hits on the hit step, weapon STR on the wound step. Same
+  // Penetration that used to sit in one flat `terms` array now live on the steps they
+  // belong to: hits on the hit step, weapon Penetration on the wound step. Same
   // behaviour, moved shape.
   const b = attackRes.breakdown;
   assert.ok(b, "expected a breakdown on the attack resolution");
@@ -590,7 +590,7 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   assert.equal(hit.dice.filter((d) => d.ok).length, 3);
 
   const wound = b.steps.find((s) => s.kind === "wound");
-  const penTerm = wound.terms.find((t) => t.label === "weapon STR");
+  const penTerm = wound.terms.find((t) => t.label === "weapon Penetration");
   assert.equal(penTerm.value, computePen(attacker, WEAPONS.longRange.Autocannon, {}));
 
   // The location the d12 picked is its own step now, not a bare field.
@@ -641,7 +641,7 @@ test("engaged penalty does not apply to melee weapons", () => {
   assert.equal(engaged, base); // melee unaffected
 });
 
-test("Ballistic Processor: +1 ACC in the sweet band (lower modAim)", () => {
+test("Ballistic Processor: +1 Accuracy in the sweet band (lower modAim)", () => {
   const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" };
   const profile = WEAPONS.longRange["Autocannon"]; // has a sweet distance
   const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
@@ -679,7 +679,7 @@ test("Lock Sight rerolls the whole volley of missed to-hit dice", () => {
   assert.equal(withLock.hits, 4);
 });
 
-test("Cold Bore adds +3 STR only when the target is at full SP", () => {
+test("Cold Bore adds +3 Penetration only when the target is at full SP", () => {
   const sniper = makeRig(1, "S", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "cold-bore" });
   const fresh = makeRig(2, "F", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const hurt = makeRig(3, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -689,7 +689,7 @@ test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   assert.equal(computePen(sniper, p, { target: hurt }), p.pen);
 });
 
-test("Reactor Overdrive: computePen adds +2 STR to every attack while active", () => {
+test("Reactor Overdrive: computePen adds +2 Penetration to every attack while active", () => {
   const profile = { pen: 6, sweet: 0 };
   const base = { weightClass: "medium" };
   const overdriven = { weightClass: "medium", reactorOverdriveActive: true };
@@ -698,10 +698,10 @@ test("Reactor Overdrive: computePen adds +2 STR to every attack while active", (
   assert.equal(boosted, plain + 2);
 });
 
-test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", () => {
+test("Steady Aim grants +3 Penetration within 2\" of the sweet spot, nothing off-band", () => {
   const rig = makeRig("r1", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
   rig.weaponUpgrades = { longRange: "steady-aim", melee: "honed-talons" };
-  const prof = effectiveWeaponProfile("longRange", "Crossbow", rig); // base STR 8, sweet 18
+  const prof = effectiveWeaponProfile("longRange", "Crossbow", rig); // base Penetration 8, sweet 18
   assert.equal(computePen(rig, prof, { distance: 18 }), 11); // at sweet: 8 + 3
   assert.equal(computePen(rig, prof, { distance: 20 }), 11); // +2" edge: still in band
   assert.equal(computePen(rig, prof, { distance: 16 }), 11); // -2" edge: still in band
@@ -709,10 +709,10 @@ test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", 
   assert.equal(computePen(rig, prof, {}), 8);                // no distance: no bonus
 });
 
-test("Exploit Wound grants +3 STR only against an already-damaged struck location", () => {
+test("Exploit Wound grants +3 Penetration only against an already-damaged struck location", () => {
   const rig = makeRig("r2", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
   rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "exploit-wound" };
-  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 6
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base Penetration 6
   const wounded = { weightClass: "medium", hull: { sp: 3, max: 7 } };
   const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
   assert.equal(computePen(rig, prof, { target: wounded, location: "hull" }), 9); // 6 + 3
@@ -723,7 +723,7 @@ test("Exploit Wound grants +3 STR only against an already-damaged struck locatio
 test("Evisceration adds +1 D on a location at or below half max SP", () => {
   const rig = makeRig("r3", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
   rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "evisceration" };
-  const prof = effectiveWeaponProfile("melee", "Talon", rig); // STR 6, D3
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // Penetration 6, D3
   // Hull 3/7 -> 3 <= 3.5 half-dead, so a landed wound deals D3 +1 = 4.
   const halfDead = { weightClass: "medium", hull: { sp: 3, max: 7 } };
   const out = rollWounds(rig, halfDead, prof, "hull", { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -734,17 +734,17 @@ test("Evisceration adds +1 D on a location at or below half max SP", () => {
   assert.equal(out2[0].sp, 3);
 });
 
-test("Evisceration downside: -1 STR against a fully-undamaged struck location", () => {
+test("Evisceration downside: -1 Penetration against a fully-undamaged struck location", () => {
   const rig = makeRig("r4", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
   rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "evisceration" };
-  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 6
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // base Penetration 6
   const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
   const hurt = { weightClass: "medium", hull: { sp: 5, max: 7 } };
   assert.equal(computePen(rig, prof, { target: fresh, location: "hull" }), 5); // 6 - 1
   assert.equal(computePen(rig, prof, { target: hurt, location: "hull" }), 6);  // damaged: no downside
 });
 
-test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
+test("Full Tilt adds +3 Penetration only when the attacker moved this activation", () => {
   const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
   const p = effectiveWeaponProfile("melee", "Lance", lance);
   assert.equal(computePen(lance, p, {}), p.pen); // stationary — no bonus
@@ -752,7 +752,7 @@ test("Full Tilt adds +3 STR only when the attacker moved this activation", () =>
   assert.equal(computePen(lance, p, {}), p.pen + 3);
 });
 
-test("Momentum Swing reuses the charge gate for +2 STR (generalised charge key)", () => {
+test("Momentum Swing reuses the charge gate for +2 Penetration (generalised charge key)", () => {
   const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
   const p = effectiveWeaponProfile("melee", "Wrecking Ball", ball);
   assert.equal(computePen(ball, p, {}), p.pen); // stationary — no bonus
@@ -760,16 +760,16 @@ test("Momentum Swing reuses the charge gate for +2 STR (generalised charge key)"
   assert.equal(computePen(ball, p, {}), p.pen + 2);
 });
 
-test("Piledriver Protocol spends Momentum for +STR and ignores a braced front arc", () => {
+test("Piledriver Protocol spends Momentum for +Penetration and ignores a braced front arc", () => {
   const ram = makeRig(1, "Ram", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
   const wall = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
   wall.preparation = { type: "brace" }; // braced on the front arc
-  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // STR 11, medium (+0)
+  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // Penetration 11, medium (+0)
 
-  // computePen: the threaded momentum spend adds +1 STR per point.
+  // computePen: the threaded momentum spend adds +1 Penetration per point.
   assert.equal(computePen(ram, p, { target: wall, momentum: 3 }), p.pen + 3);
 
-  // These assert effective STR, NOT the wound TN, deliberately: the Siege Maul is
+  // These assert effective Penetration, NOT the wound TN, deliberately: the Siege Maul is
   // strong enough that both cases below clamp to TN 2 against a medium hull, so a
   // TN assertion would pass identically whether or not the guard-break worked.
   // Without a guard-break, the brace's -2 applies: 11 + 0(front) - 2 = 9.
@@ -777,7 +777,7 @@ test("Piledriver Protocol spends Momentum for +STR and ignores a braced front ar
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(normal[0].pen, 9);
 
-  // Piledriver guard-break skips the brace AND adds +3 STR: 11 + 3 + 0 = 14.
+  // Piledriver guard-break skips the brace AND adds +3 Penetration: 11 + 3 + 0 = 14.
   const smash = rollWounds(ram, wall, p, "hull",
     { arc: "front", hits: 1, momentum: 3, guardBreak: true }, { wounds: [10] }, () => 0);
   assert.equal(smash[0].pen, 14);
@@ -810,7 +810,7 @@ test("A Piledriver Siege Maul volley spends all Momentum (resets to 0) and lands
 test("A Siege Maul rig without Piledriver never spends or reads Momentum", () => {
   const ram = makeRig(1, "Plain", "medium", "a", { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "breaching-round" });
   const p = effectiveWeaponProfile("longRange", "Siege Maul", ram);
-  // A stray momentum in opts must NOT add STR without the piledriver effect.
+  // A stray momentum in opts must NOT add Penetration without the piledriver effect.
   assert.equal(computePen(ram, p, { target: {}, momentum: 3 }), p.pen);
 });
 
@@ -844,7 +844,7 @@ test("Cold Bore / Bloodletter read the target's real parts (Tank: no arms/legs)"
   assert.equal(computePen(sniper, cb, { target: pristineTank }), cb.pen + 3); // pristine tank IS undamaged → +3
 });
 
-test("Opportunist adds +3 STR vs an overheated or action-penalised target", () => {
+test("Opportunist adds +3 Penetration vs an overheated or action-penalised target", () => {
   const sword = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "opportunist" });
   const p = effectiveWeaponProfile("melee", "Sword", sword);
   const healthy = makeRig(2, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -906,7 +906,7 @@ test("Pinning Burst sets a 1-action penalty at 4+ hits, not below", () => {
   assert.equal(target3.actionPenaltyNextActivation || 0, 0);
 });
 
-test("Redline Governor adds STR from attacker heat over cap, capped at +3", () => {
+test("Redline Governor adds Penetration from attacker heat over cap, capped at +3", () => {
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "redline-governor" });
   const p = effectiveWeaponProfile("melee", "Chainsaw", rig);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // at cap -> no bonus
@@ -931,7 +931,7 @@ test("Redline Governor adds to-hit dice from attacker heat over cap, capped at +
   assert.equal(capped.rof, 6); // base 3 + capped 3
 });
 
-test("Superconductor Edge adds +2 STR when attacker heat is over half class cap", () => {
+test("Superconductor Edge adds +2 Penetration when attacker heat is over half class cap", () => {
   const rig = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
   const p = effectiveWeaponProfile("melee", "Sword", rig);
   rig.engine.heat = Math.floor(HEAT_CAPACITY[rig.weightClass] / 2); // at/under half -> no bonus
@@ -1008,7 +1008,7 @@ test("Penetrator Rounds forces the 3rd Autocannon volley's hits to wound, bypass
   assert.equal(attacker.autocannonSlowNext, false);
   attacker.loaded.longRange = true;
   // 3rd volley: 1 landed hit (die 6). The wound die is a natural 1 — Autocannon
-  // STR 7 vs a medium hull (T5) is TN 4, so that die would FAIL on its own. The
+  // Penetration 7 vs a medium hull (T5) is TN 4, so that die would FAIL on its own. The
   // upgrade skips the wound roll entirely, so it still deals the weapon's D2.
   // A failing die is the point: a 10 here would wound with or without the upgrade.
   const res = resolveAttack(room, attacker, target, {
@@ -1146,7 +1146,7 @@ test("Fire Control Lock's painted Missile Barrage volley auto-hits with Armour P
   attacker.lockedTarget = target.id;
   attacker.lockExpiresRound = 2; // fresh paint (round 1 <= 2)
   // rof 4; every to-hit die is a 1 (would all miss at modAim 3) — the lock forces
-  // all four to land. Every WOUND die is a natural 1 (Missile Barrage STR 7 vs a
+  // all four to land. Every WOUND die is a natural 1 (Missile Barrage Penetration 7 vs a
   // medium hull T5 is TN 4, so all four fail outright); only the AP reroll can
   // save them. Rerolling 10/1/1/1 proves Armour Piercing is applied per-die, not
   // to the volley as a whole.
@@ -1192,12 +1192,12 @@ test("Fire Control Lock only fires vs the exact painted target", () => {
   assert.equal(attacker.lockedTarget, painted.id); // paint still saved for the real target
 });
 
-test("Breach Grip — a cracked location adds +2 effective STR over its 2-round window, gone by N+2", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium
+test("Breach Grip — a cracked location adds +2 effective Penetration over its 2-round window, gone by N+2", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium
   // Applied at round N=4 stores expiry N+1=5: live at rounds 4 and 5, gone at 6.
   const cracked = { weightClass: "medium", cracked: { hull: 5 } };
   const plain = { weightClass: "medium" };
-  // STR 7 + 0(front) = 7 effective with no crack.
+  // Penetration 7 + 0(front) = 7 effective with no crack.
   const base = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "front", hits: 1, round: 5 }, { wounds: [10] }, () => 0);
   assert.equal(base[0].pen, 7);
@@ -1454,7 +1454,7 @@ test("Enfilade emits the ricochet instruction on every 3rd aimed shot; non-aimed
   const ric = c3.resolutions.find((r) => /Enfilade — ricochet/.test(r.summary));
   assert.ok(ric, "expected a ricochet instruction on the 3rd aimed shot");
   assert.equal(ric.summary,
-    "Enfilade — ricochet! Resolve a +2 STR hit on the next rig in line of sight behind T (player's choice).");
+    "Enfilade — ricochet! Resolve a +2 Penetration hit on the next rig in line of sight behind T (player's choice).");
 
   // A non-aimed shot fires but must NOT advance the aimed-shot cadence.
   const c4 = fire({ ...aimed, aimed: false, aimedLoc: undefined });
@@ -1540,26 +1540,26 @@ test("Kneecapper tags the raked limb on a damaging hit; a non-kneecapper Double 
   assert.deepEqual(target2.kneecapped, {}); // untagged by an ordinary weapon
 });
 
-test("Taut Cable: +3 STR vs an immobilised or engaged target, else nothing", () => {
+test("Taut Cable: +3 Penetration vs an immobilised or engaged target, else nothing", () => {
   const harpoon = { ...WEAPONS.longRange["Harpoon"], upgradeEffect: { vsPinned: true } };
   const attacker = { weightClass: "medium" };
-  // base STR 10, medium weight mod 0
+  // base Penetration 10, medium weight mod 0
   assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light" } }), 10);
   assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 13);
   assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 13);
 });
 
-test("Reactive Armor hardens the struck location on the first damaging hit each round (−2 effective STR)", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium
+test("Reactive Armor hardens the struck location on the first damaging hit each round (−2 effective Penetration)", () => {
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium
   const plain = { weightClass: "medium", hardened: false, preparation: null };
   const reactive = {
     weightClass: "medium", hardened: false, preparation: null,
     equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
     equipState: { reactiveArmorLocs: [] },
   };
-  // The FIRST hit is not yet docked — the list is empty when its STR is computed;
+  // The FIRST hit is not yet docked — the list is empty when its Penetration is computed;
   // the seam records "hull" only after that wound resolves. So both sides read
-  // STR 7 here, and the dock shows up on the SECOND volley below.
+  // Penetration 7 here, and the dock shows up on the SECOND volley below.
   const outPlain = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   const outReactive = rollWounds({ weightClass: "medium" }, reactive, auto, "hull",
@@ -1578,7 +1578,7 @@ test("Reactive Armor hardens the struck location on the first damaging hit each 
 });
 
 test("Reactive Armor independently hardens a second, different location (reactiveArmorLocs holds multiple entries)", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium
   const reactive = {
     weightClass: "medium", hardened: false, preparation: null,
     equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
@@ -1591,7 +1591,7 @@ test("Reactive Armor independently hardens a second, different location (reactiv
 
   // A first damaging hit to a DIFFERENT location ("legs") is recorded
   // independently — proves reactiveArmorLocs is a per-location list, not a single
-  // "already reacted this round" flag. Legs are undocked on this first hit (STR 7)
+  // "already reacted this round" flag. Legs are undocked on this first hit (Penetration 7)
   // even though hull is already hardened.
   const firstLegs = rollWounds({ weightClass: "medium" }, reactive, auto, "legs",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1608,7 +1608,7 @@ test("Reactive Armor independently hardens a second, different location (reactiv
 });
 
 test("Reactive Armor does not fire for a rig carrying only the base Ablative Plating", () => {
-  const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium
+  const auto = WEAPONS.longRange["Autocannon"]; // Penetration 7 medium
   const base = {
     weightClass: "medium", hardened: false, preparation: null,
     equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating",
@@ -1715,7 +1715,7 @@ test("rollWounds — a wound deals the weapon's D, not 1", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const profile = { ...WEAPONS.melee["Wrecking Ball"] };
-  // STR 10 + medium 0 + front 0 = 10 vs medium hull T5 => TN 6+5-10 = 1 -> clamp 2. A 9 wounds.
+  // Penetration 10 + medium 0 + front 0 = 10 vs medium hull T5 => TN 6+5-10 = 1 -> clamp 2. A 9 wounds.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [9] }, () => 0);
   assert.equal(out.length, 1);
@@ -1727,7 +1727,7 @@ test("rollWounds — a natural 10 always wounds however hopeless the matchup", (
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Mini Gun", melee: "Circular Saw" });
   const target = { weightClass: "colossal" };
   const profile = { ...WEAPONS.melee["Circular Saw"] };
-  // STR 5 + light -1 + front 0 = 4 vs colossal hull T7 => TN 6+7-4 = 9. Only a 9-10 lands.
+  // Penetration 5 + light -1 + front 0 = 4 vs colossal hull T7 => TN 6+7-4 = 9. Only a 9-10 lands.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].target, 9);
@@ -1737,12 +1737,12 @@ test("rollWounds — a natural 10 always wounds however hopeless the matchup", (
 test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wounds", () => {
   // Pins the boundary itself. Every other fixture in this file rolls a 10 or a 1
   // to force an outcome, so an off-by-one here (`>` for `>=`) passes the whole
-  // suite otherwise — verified by mutation. The TN is 10% per point of STR only
+  // suite otherwise — verified by mutation. The TN is 10% per point of Penetration only
   // if the TN face itself is a hit.
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Mini Gun", melee: "Circular Saw" });
   const target = { weightClass: "colossal" };
   const profile = { ...WEAPONS.melee["Circular Saw"] };
-  // STR 5 + light -1 + front 0 = 4 vs colossal hull T7 => TN 9.
+  // Penetration 5 + light -1 + front 0 = 4 vs colossal hull T7 => TN 9.
   const atTn = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [9] }, () => 0);
   assert.equal(atTn[0].target, 9);
@@ -1757,7 +1757,7 @@ test("rollWounds — a natural 1 never wounds however lopsided", () => {
   const attacker = { weightClass: "colossal" };
   const target = makeRig(2, "B", "light", "b", { longRange: "Autocannon", melee: "Claw" });
   const profile = { ...WEAPONS.melee["Wrecking Ball"] };
-  // STR 10 + colossal +2 + front 0 = 12 vs light hull T4 => TN 6+4-12 = -2 -> clamp 2.
+  // Penetration 10 + colossal +2 + front 0 = 12 vs light hull T4 => TN 6+4-12 = -2 -> clamp 2.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [1] }, () => 0);
   assert.equal(out[0].target, 2);
@@ -1786,12 +1786,12 @@ test("rollWounds — Raking Fire front arc still auto-fails on a natural 10", ()
   assert.equal(out[0].negated, true);
 });
 
-test("rollWounds — defender modifiers reduce effective STR, not the roll", () => {
+test("rollWounds — defender modifiers reduce effective Penetration, not the roll", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   target.preparation = { type: "brace" };
   const profile = { ...WEAPONS.melee["Sword"] };
-  // Sword STR 5, medium mod 0, front arc 0, braced -2 => effPen 3 vs T5 => TN 8.
+  // Sword Penetration 5, medium mod 0, front arc 0, braced -2 => effPen 3 vs T5 => TN 8.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [7] }, () => 0);
   assert.equal(out[0].sp, 0);   // 7 < 8
@@ -1801,9 +1801,9 @@ test("rollWounds — defender modifiers reduce effective STR, not the roll", () 
 });
 
 test("rollWounds — Overmatch converts wasted STR into damage", () => {
-  const wb = WEAPONS.melee["Wrecking Ball"]; // STR 10, D5, ROF 1
+  const wb = WEAPONS.melee["Wrecking Ball"]; // Penetration 10, D5, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
-  // medium arms are T4, so the floor is pen 8. STR 10 wastes 2 — under the
+  // medium arms are T4, so the floor is pen 8. Penetration 10 wastes 2 — under the
   // 3-point rate, so a front-arc hit is still a plain D5.
   const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1836,7 +1836,7 @@ test("rollWounds — Overmatch revives WEIGHT_PEN_MOD on a saturated weapon", ()
   // The mod bites where Overmatch crosses a rate boundary. Siege Maul (STR 11)
   // into medium arms (T4, floor pen 8) wastes 3 → +1 D; the light -1 wastes 2 →
   // +0. Same shot, one weight class apart, one point of damage.
-  const maul = WEAPONS.longRange["Siege Maul"]; // STR 11, D5
+  const maul = WEAPONS.longRange["Siege Maul"]; // Penetration 11, D5
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const med = rollWounds({ weightClass: "medium" }, target, maul, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1879,7 +1879,7 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   // colossal at T7. But no chassis uses either, so T3-T5 is every rig you can
   // actually build, and a tank is the only way to reach T6 today.)
   //
-  // Siege Maul STR 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
+  // Siege Maul Penetration 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
   // effPen 14 into a T6 hull. The floor is at pen T+4 = 10, so 4 points are
   // past it; at 3 points per D that pays out floor(4/3) = +1 D. D5 + 1 = 6 SP.
   const maul = WEAPONS.longRange["Siege Maul"];
@@ -1903,7 +1903,7 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
 });
 
 test("rollWounds — a weak weapon never overmatches", () => {
-  const rivet = WEAPONS.longRange["Rivet Gun"]; // STR 3, D1
+  const rivet = WEAPONS.longRange["Rivet Gun"]; // Penetration 3, D1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, target, rivet, "engine",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1936,7 +1936,7 @@ test("Reactive Armor — records the location; the dock lands in rollWounds", ()
   const profile = { ...WEAPONS.melee["Sword"] };
   rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.ok(target.equipState.reactiveArmorLocs.includes("hull"));
-  // Now hardened: Sword STR 5 - 2 => effPen 3 vs T5 => TN 8, so a 7 fails.
+  // Now hardened: Sword Penetration 5 - 2 => effPen 3 vs T5 => TN 8, so a 7 fails.
   const out = rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [7] }, () => 0);
   assert.equal(out[0].sp, 0);
   assert.equal(out[0].target, 8);
@@ -1989,7 +1989,7 @@ test("resolveAttack — wound dice are visible in rolls, one per landed hit", ()
 
 // ---------------------------------------------------------------------------
 // The resolution ledger (Plan 2). The flat one-equation breakdown could not
-// answer "why 0 damage?" — it showed hits and STR and nothing about the die
+// answer "why 0 damage?" — it showed hits and Penetration and nothing about the die
 // that actually decided it. `breakdown.steps` is the whole chain, in order,
 // with every step's inputs, dice and outcome.
 //
@@ -2036,12 +2036,12 @@ test("ledger — the hit step shows the inputs that made the target number", () 
   const hit = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[0];
   assert.ok(hit.terms.some((t) => t.label === "cover" && t.value === -2));
   assert.equal(hit.dice.length, 4);             // Autocannon ROF 4
-  assert.equal(hit.target, 5);                  // 4 - (ACC 1 - cover 2)
+  assert.equal(hit.target, 5);                  // 4 - (Accuracy 1 - cover 2)
   assert.ok(hit.dice.every((d) => d.ok));
   assert.match(hit.out, /4 of 4 hit/);
 });
 
-test("ledger — the wound step shows effective STR against toughness", () => {
+test("ledger — the wound step shows effective Penetration against toughness", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2050,7 +2050,7 @@ test("ledger — the wound step shows effective STR against toughness", () => {
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
   const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
-  assert.equal(w.pen, 5);          // Sword STR 5, medium mod 0, front arc 0
+  assert.equal(w.pen, 5);          // Sword Penetration 5, medium mod 0, front arc 0
   assert.equal(w.toughness, 5);    // medium hull
   assert.equal(w.target, 6);       // 6 + 5 - 5
   assert.deepEqual(w.dice, [{ value: 9, ok: true }]);
@@ -2082,11 +2082,11 @@ test("ledger — an earned zero still reports what the weapon would have dealt",
     () => 0, ctx);
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
   // Regression: the negated path skips the damage branch, so it must still
-  // carry the weapon's D — this rendered as a blank "weapon D" term with no
+  // carry the weapon's D — this rendered as a blank "weapon Damage" term with no
   // value, which is exactly the kind of hole this ledger exists to close.
   assert.deepEqual(d.terms, [
     { label: "wounds", value: 0 },
-    { label: "weapon D", value: 3 },   // Sword D3, dealt nothing
+    { label: "weapon Damage", value: 3 },   // Sword D3, dealt nothing
   ]);
   assert.match(d.out, /0 SP/);
 });
@@ -2114,8 +2114,8 @@ test("ledger — the damage step multiplies wounds by the weapon's D", () => {
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 1 } },
     () => 0, ctx);
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
-  assert.ok(d.terms.some((t) => t.label === "weapon D" && t.value === 5));
-  // 6, not 5: makeRig fits the melee slot with Haymaker (+3 STR), so this ball
+  assert.ok(d.terms.some((t) => t.label === "weapon Damage" && t.value === 5));
+  // 6, not 5: makeRig fits the melee slot with Haymaker (+3 Penetration), so this ball
   // swings at effPen 13 into a T5 hull — 4 STR past the floor, which Overmatch
   // now converts to +1 D. Haymaker was one of the upgrades the sweep measured at
   // +0.00; this total moving is that fix landing, not D changing.
@@ -2146,7 +2146,7 @@ test("ledger — arc and defender modifiers each earn a named wound term", () =>
     { weapon: "melee", arc: "rear", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
   const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
-  assert.ok(w.terms.some((t) => t.label === "weapon STR" && t.value === 5));
+  assert.ok(w.terms.some((t) => t.label === "weapon Penetration" && t.value === 5));
   assert.ok(w.terms.some((t) => t.label === "rear arc" && t.value === 3));
   assert.equal(w.pen, 8);          // 5 + 3
   assert.equal(w.target, 3);       // 6 + 5 - 8
@@ -2167,7 +2167,7 @@ test("ledger — the hit step's terms reconcile to its target number", () => {
       dice: { toHit: [6, 6, 6, 6], wounds: [10, 10, 10, 10] } },
     () => 0, ctx);
   const hit = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[0];
-  // aimBreakdown reads in ACC space: value = base - (sum of every other term).
+  // aimBreakdown reads in Accuracy space: value = base - (sum of every other term).
   const [base, ...mods] = hit.terms;
   assert.equal(base.label, "base aim");
   assert.equal(base.value - mods.reduce((s, t) => s + t.value, 0), hit.target);
@@ -2175,7 +2175,7 @@ test("ledger — the hit step's terms reconcile to its target number", () => {
     { distance: 12, cover: 2, aimed: true }));
 });
 
-test("ledger — the wound step's terms reconcile to its effective STR", () => {
+test("ledger — the wound step's terms reconcile to its effective Penetration", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2210,8 +2210,8 @@ test("ledger — the damage step's terms reconcile to the SP dealt", () => {
 // No dead zones — the reason the combat model was rewritten.
 //
 // The impact-total model had 69 combos that could NEVER deal damage at any
-// roll: its total capped at `6 + STR + arc`, and melee had no arc ladder, so a
-// light Circular Saw (effective STR 4) topped out at 10 against a medium hull
+// roll: its total capped at `6 + Penetration + arc`, and melee had no arc ladder, so a
+// light Circular Saw (effective Penetration 4) topped out at 10 against a medium hull
 // needing 11. The wound roll replaces it: d10 >= `clamp(6 + T - S, 2, 10)`.
 //
 // NOTE ON HOW THESE TESTS ARE BUILT. The obvious test — sweep the matrix and
@@ -2343,10 +2343,10 @@ test("hit location comes from the target's kind, not the attacker's", () => {
 });
 
 test("ledger — Overmatch is named in the damage step when it fires", () => {
-  // A crushing hit rendering "weapon D 5" with an unexplained +2 in the total is
+  // A crushing hit rendering "weapon Damage 5" with an unexplained +2 in the total is
   // exactly the readability failure this ledger exists to close.
-  // Wrecking Ball STR 10 + Haymaker 3 + rear arc 3 = effPen 16 vs medium arms
-  // T4 → 8 STR past the TN-2 floor → +2 D. Haymaker is pinned rather than left
+  // Wrecking Ball Penetration 10 + Haymaker 3 + rear arc 3 = effPen 16 vs medium arms
+  // T4 → 8 Penetration past the TN-2 floor → +2 D. Haymaker is pinned rather than left
   // to the default-upgrade rule: reordering WEAPON_UPGRADES would otherwise drop
   // effPen to 13 and fail a RENDERING test for a reason unrelated to rendering.
   // The rate and cap behind that 2 are rules.test.js's (strOvermatchD's) to pin;
@@ -2363,7 +2363,7 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
     .breakdown.steps.find((s) => s.kind === "damage");
   assert.deepEqual(dmg.terms, [
     { label: "wounds", value: 1 },
-    { label: "weapon D", value: 5 },
+    { label: "weapon Damage", value: 5 },
     { label: "Overmatch", value: 2 },
   ]);
 });
@@ -2371,7 +2371,7 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
 test("ledger — Overmatch is absent when it did not fire", () => {
   // A term worth 0 must push nothing — same rule as penBreakdown. With ~15
   // possible contributions, rendering the dead ones buries the live ones.
-  // Sword is STR 5 and Duelist's Balance grants Precision, not STR, so a
+  // Sword is Penetration 5 and Duelist's Balance grants Precision, not Penetration, so a
   // front-arc swing reaches effPen 5 — nowhere near medium arms' T4 floor (8).
   // Asserted with deepEqual, not a `some(...)` absence check: the step now
   // pushes conditionally from three riders, so an accidental EXTRA term is a
@@ -2388,15 +2388,15 @@ test("ledger — Overmatch is absent when it did not fire", () => {
     .breakdown.steps.find((s) => s.kind === "damage");
   assert.deepEqual(dmg.terms, [
     { label: "wounds", value: 1 },
-    { label: "weapon D", value: 3 },
+    { label: "weapon Damage", value: 3 },
   ]);
 });
 
 test("ledger — riders survive a volley whose first wound die missed", () => {
   // Riders are assigned only inside `if (wounded)`, so impacts[0] carries them as
-  // 0 when the first die misses. Reading it blind renders `wounds 2, weapon D 2`
+  // 0 when the first die misses. Reading it blind renders `wounds 2, weapon Damage 2`
   // against an out of 8 SP — terms reconciling to 4. The `find` is what prevents it.
-  // Chainsaw (ROF 3, STR 7, D2) + Ripper Teeth (Rend) + rear arc 3 = effPen 10 vs
+  // Chainsaw (ROF 3, Penetration 7, D2) + Ripper Teeth (Rend) + rear arc 3 = effPen 10 vs
   // a medium engine's T3 → wound TN 2, so only a natural 1 misses, and 3 past the
   // floor → Overmatch 1. Each landed wound deals 2 + 1 + 1 = 4.
   const attacker = makeRig(1, "A", "medium", "a",
@@ -2410,7 +2410,7 @@ test("ledger — riders survive a volley whose first wound die missed", () => {
   const d = ctx.resolutions.find((r) => r.kind === "attack")
     .breakdown.steps.find((s) => s.kind === "damage");
   assert.deepEqual(d.terms, [
-    { label: "wounds", value: 2 }, { label: "weapon D", value: 2 },
+    { label: "wounds", value: 2 }, { label: "weapon Damage", value: 2 },
     { label: "Rend", value: 1 }, { label: "Overmatch", value: 1 },
   ]);
   // The invariant the `find` actually protects: a multi-rider volley's terms must

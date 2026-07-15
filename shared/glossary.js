@@ -43,7 +43,7 @@ export const GLOSSARY = [
   },
   {
     id: "aim", term: "Aim", match: ["Aim"],
-    def: "A Rig's base D6 target number to hit, modified by weapon ACC and cover (§2, §7).",
+    def: "A Rig's base D6 target number to hit, modified by weapon Accuracy and cover (§2, §7).",
   },
   {
     id: "speed", term: "Speed", match: ["Speed"],
@@ -58,7 +58,7 @@ export const GLOSSARY = [
     def: "The heat a Rig can carry safely before an overheat check is required — 6/5/4/3 for Light/Medium/Heavy/Colossal (§6).",
   },
   {
-    id: "accuracy", term: "ACC", match: ["ACC"],
+    id: "accuracy", term: "Accuracy", match: ["Accuracy", "ACC"],
     def: "A weapon's accuracy modifier, applied to the Rig's Aim when rolling to hit (§7, §12).",
   },
   {
@@ -66,7 +66,7 @@ export const GLOSSARY = [
     def: "Rate of Fire — the number of D6 a weapon rolls when firing (§12).",
   },
   {
-    id: "str", term: "STR", match: ["STR"],
+    id: "penetration", term: "Penetration", match: ["Penetration", "STR"],
     def: "A weapon's strength, subtracted from the Wound Roll's target — each point makes wounding 10% likelier (§7.5, §12).",
   },
   {
@@ -75,7 +75,7 @@ export const GLOSSARY = [
   },
   {
     id: "wound-roll", term: "Wound Roll", match: ["Wound Roll", "Wound Rolls"],
-    def: "One D10 per landed hit, needing 6 + the location's Toughness − your effective STR (§7.5). Each wound deals the weapon's Damage. A natural 10 always wounds, so no target is ever immune.",
+    def: "One D10 per landed hit, needing 6 + the location's Toughness − your effective Penetration (§7.5). Each wound deals the weapon's Damage. A natural 10 always wounds, so no target is ever immune.",
   },
   {
     id: "toughness", term: "Toughness", match: ["Toughness"],
@@ -107,7 +107,7 @@ export const GLOSSARY = [
   },
   {
     id: "aimed-shot", term: "Aimed Shot", match: ["Aimed Shot"],
-    def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −2 ACC (Precision removes the penalty) (§5, §13).",
+    def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −2 Accuracy (Precision removes the penalty) (§5, §13).",
   },
   {
     id: "reload", term: "Reload", match: ["Reload"],
@@ -151,7 +151,7 @@ export const GLOSSARY = [
   },
   {
     id: "charged-shot", term: "Charged Shot", match: ["Charged Shot"],
-    def: "Weapon perk / optional fire-mode: +2 STR, but each attack die that rolls a 1 adds 1 heat (§13).",
+    def: "Weapon perk / optional fire-mode: +2 Penetration, but each attack die that rolls a 1 adds 1 heat (§13).",
   },
   {
     id: "hot", term: "Hot", match: ["Hot"],
@@ -159,7 +159,7 @@ export const GLOSSARY = [
   },
   {
     id: "raking-fire", term: "Raking Fire", match: ["Raking Fire"],
-    def: "Machine-gun perk: deals no damage to a target's front arc, but gains +3 STR on the side arc and +6 STR on the rear arc, replacing the usual arc bonuses (§13).",
+    def: "Machine-gun perk: deals no damage to a target's front arc, but gains +3 Penetration on the side arc and +6 Penetration on the rear arc, replacing the usual arc bonuses (§13).",
   },
   {
     id: "armour-piercing", term: "Armour Piercing", match: ["Armour Piercing"],
@@ -167,7 +167,7 @@ export const GLOSSARY = [
   },
   {
     id: "precision", term: "Precision", match: ["Precision"],
-    def: "Weapon perk: may make an Aimed Shot without the usual −2 ACC penalty (§13).",
+    def: "Weapon perk: may make an Aimed Shot without the usual −2 Accuracy penalty (§13).",
   },
   {
     id: "cleave", term: "Cleave", match: ["Cleave"],
@@ -199,11 +199,11 @@ export const GLOSSARY = [
   },
   {
     id: "side-arc", term: "side arc", match: ["side arc"],
-    def: "A facing zone to a Rig's flank — attacks gain +2 STR here (+3 with Raking Fire) (§7, §13).",
+    def: "A facing zone to a Rig's flank — attacks gain +2 Penetration here (+3 with Raking Fire) (§7, §13).",
   },
   {
     id: "rear-arc", term: "rear arc", match: ["rear arc"],
-    def: "The facing zone behind a Rig — attacks gain +3 STR here (+6 with Raking Fire). Melee climbs the same ladder as ranged (§7, §13).",
+    def: "The facing zone behind a Rig — attacks gain +3 Penetration here (+6 with Raking Fire). Melee climbs the same ladder as ranged (§7, §13).",
   },
   {
     id: "salvage", term: "Salvage", match: ["Salvage"],

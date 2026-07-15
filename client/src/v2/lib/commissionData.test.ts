@@ -51,6 +51,6 @@ test("splitUpgradeTag parses a delimited tag when no catch is authored", () => {
 });
 
 test("splitUpgradeTag reports no catch for a clean safe upgrade", () => {
-  const t = { id: "c", nature: "field", name: "N", tag: "+2 STR" };
-  expect(splitUpgradeTag(t)).toEqual({ payoff: "+2 STR", catch: null });
+  const t = { id: "c", nature: "field", name: "N", tag: "+2 Penetration" };
+  expect(splitUpgradeTag(t)).toEqual({ payoff: "+2 Penetration", catch: null });
 });

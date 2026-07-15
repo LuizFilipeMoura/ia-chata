@@ -45,7 +45,7 @@ export const BLAST_DMG = 2;
 //
 // `d` is the damage a single wound deals. Hand-assigned per weapon, NOT derived
 // from ROF: deriving it collapsed all eleven ROF-1 weapons onto identical output,
-// which is the differentiation D exists to provide. STR decides WHETHER you wound
+// which is the differentiation D exists to provide. Penetration decides WHETHER you wound
 // (via woundTarget); `d` decides HOW MUCH.
 export const WEAPONS = {
   longRange: {
@@ -78,7 +78,7 @@ export const WEAPONS = {
 
 // Flat unit-weapon list (spec §Weapons, "Unit-weapon list"). Tanks and Walkers
 // pick exactly one. Marked flatPick: true so combat.js skips the weight-class
-// STR modifier — the listed STR is the shot's STR on any chassis.
+// Penetration modifier — the listed Penetration is the shot's Penetration on any chassis.
 export const UNIT_WEAPONS = {
   "Tank Cannon":      { rof: 1, pen: 10, dmg: 5, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
   "Autocannon Mount": { rof: 3, pen: 7,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
@@ -87,7 +87,7 @@ export const UNIT_WEAPONS = {
   "Dozer Blade":      { rof: 1, pen: 8,  dmg: 4, accuracy: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
   "Ram Spike":        { rof: 1, pen: 9,  dmg: 4, accuracy: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
   // Built-in weak weapon every support unit carries; replaced by a Damage
-  // module. peak 0 + dropoff 0 = a flat ACC 0 at any distance (spec §Sidearm).
+  // module. peak 0 + dropoff 0 = a flat Accuracy 0 at any distance (spec §Sidearm).
   "Sidearm":          { rof: 2, pen: 3,  dmg: 1, sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
 };
 
@@ -289,7 +289,7 @@ export const EQUIPMENT = {
   "ablative-plating": {
     family: "Armor", label: "Ablative Plating", passive: "+1 max SP to Hull",
     active: { key: "harden", label: "Harden", heat: 1,
-      text: "Until this Rig's next activation, all Wound Rolls against it are at −1 STR." },
+      text: "Until this Rig's next activation, all Wound Rolls against it are at −1 Penetration." },
   },
   "radiator-array": {
     family: "Cooling", label: "Radiator Array", passive: "Cools 2 heat in Recovery instead of 1",
@@ -324,7 +324,7 @@ export const EQUIPMENT = {
   },
   "reactive-plating": {
     family: "Countermeasures", label: "Reactive Plating",
-    passive: "Side- and rear-arc attacks against this Rig take −1 STR",
+    passive: "Side- and rear-arc attacks against this Rig take −1 Penetration",
     active: { key: "popsmoke", label: "Pop Smoke", heat: 0,
       text: "Until this Rig's next activation, every attacker is at −2 accuracy against it (and any missile Lock on it is broken)." },
   },
@@ -433,7 +433,7 @@ export function rigEffects(rig) {
     hardenImpact: equip === "ablative-plating" ? (eff.hardenImpact ?? 1) : 0,
     // Targeting Computer (Sensors) — sweet-band accuracy bonus; catalog effect.
     sweetBandAccuracy: equip === "targeting-computer" ? (eff.sweetBandAccuracy ?? 0) : 0,
-    // Reactive Plating (Armor) — side/rear STR delta; catalog effect.
+    // Reactive Plating (Armor) — side/rear Penetration delta; catalog effect.
     sideRearPen: equip === "reactive-plating" ? (eff.sideRearPen ?? -1) : 0,
   };
 
@@ -527,12 +527,12 @@ export function countPrototypes(weapons = {}, upgrades = {}, equipment, equipmen
 export const WEAPON_UPGRADES = {
   "Crossbow": [
     { id: "fletched-bolts", nature: "field", name: "Fletched Bolts", tag: "Aimed shots ignore the aim penalty", effect: { perks: ["Precision"] } },
-    { id: "steady-aim", nature: "tuned", name: "Steady Aim", tag: "+3 STR when firing from the sweet spot (±2\")", effect: { steadyAim: true } },
+    { id: "steady-aim", nature: "tuned", name: "Steady Aim", tag: "+3 Penetration when firing from the sweet spot (±2\")", effect: { steadyAim: true } },
     { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn — runs +2 heat", catch: "Runs +2 heat", effect: { pinningBolt: true } },
   ],
   "Talon": [
-    { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+2 STR", effect: { pen: 2 } },
-    { id: "exploit-wound", nature: "tuned", name: "Exploit Wound", tag: "+3 STR vs an already-damaged location", effect: { vsWoundedLoc: true } },
+    { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+2 Penetration", effect: { pen: 2 } },
+    { id: "exploit-wound", nature: "tuned", name: "Exploit Wound", tag: "+3 Penetration vs an already-damaged location", effect: { vsWoundedLoc: true } },
     { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every wound deals +1 Damage (but weak on fresh armour)", catch: "Weak on fresh armour", effect: { eviscerate: true } },
   ],
   "Mini Gun": [
@@ -546,7 +546,7 @@ export const WEAPON_UPGRADES = {
     { id: "kneecapper", nature: "prototype", name: "Kneecapper", tag: "Rake legs/arms from any arc to cripple them; never hull/engine", catch: "Never hits hull or engine", effect: { kneecapper: true } },
   ],
   "Autocannon": [
-    { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+2 STR", effect: { pen: 2 } },
+    { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+2 Penetration", effect: { pen: 2 } },
     { id: "ap-shells", nature: "tuned", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour; belt cycles slow after", catch: "Belt cycles slow after — no fire next turn", effect: { penetrator: true } },
   ],
@@ -562,11 +562,11 @@ export const WEAPON_UPGRADES = {
   ],
   "Sniper Cannon": [
     { id: "marksman-optics", nature: "field", name: "Marksman Optics", tag: "Gains Precision", effect: { perks: ["Precision"] } },
-    { id: "cold-bore", nature: "tuned", name: "Cold Bore", tag: "+3 STR vs undamaged targets", effect: { coldBore: true } },
+    { id: "cold-bore", nature: "tuned", name: "Cold Bore", tag: "+3 Penetration vs undamaged targets", effect: { coldBore: true } },
     { id: "enfilade", nature: "prototype", name: "Enfilade", tag: "Every 3rd aimed shot ricochets to a rig the target can see (spatial)", catch: "You don't choose the ricochet target", effect: { enfilade: true } }, // spatial ricochet narrated as a player instruction (Group G)
   ],
   "Siege Maul": [
-    { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+2 STR", effect: { pen: 2 } },
+    { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+2 Penetration", effect: { pen: 2 } },
     { id: "breaching-round", nature: "tuned", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
     { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", catch: "Resets if you stop advancing", effect: { piledriver: true } }, // shove (3") deferred — Group G (spatial)
   ],
@@ -577,7 +577,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Sword": [
     { id: "duelist-balance", nature: "field", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
-    { id: "opportunist", nature: "tuned", name: "Opportunist", tag: "+3 STR vs disrupted / overheated targets", effect: { vsDisrupted: true } },
+    { id: "opportunist", nature: "tuned", name: "Opportunist", tag: "+3 Penetration vs disrupted / overheated targets", effect: { vsDisrupted: true } },
     { id: "superconductor-edge", nature: "prototype", name: "Superconductor Edge", tag: "Run hot and dump your heat into them through the blade", catch: "Needs heat already banked", effect: { superconductor: true } },
   ],
   "Circular Saw": [
@@ -593,16 +593,16 @@ export const WEAPON_UPGRADES = {
   "Claw": [
     { id: "rending-talons", nature: "field", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
     { id: "vice-grip", nature: "tuned", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
-    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 STR from anyone)", catch: "Leaves you locked in melee while gripping", effect: { breachGrip: true } },
+    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 Penetration from anyone)", catch: "Leaves you locked in melee while gripping", effect: { breachGrip: true } },
   ],
   "Lance": [
     { id: "couched-reach", nature: "field", name: "Couched Reach", tag: "Doubles melee reach to 4\"", effect: { range: 2 } },
-    { id: "full-tilt", nature: "tuned", name: "Full Tilt", tag: "Charge in for +3 STR", effect: { charge: 3 } },
+    { id: "full-tilt", nature: "tuned", name: "Full Tilt", tag: "Charge in for +3 Penetration", effect: { charge: 3 } },
     { id: "skewer", nature: "prototype", name: "Skewer", tag: "Impale a rig in the melee lock; leaving you costs it a free lance hit", catch: "Also traps you in the lock", effect: { skewer: true } },
   ],
   "Wrecking Ball": [
-    { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 STR", effect: { pen: 3 } },
-    { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 STR and a knockback (knockback spatial)", effect: { charge: 2 } }, // knockback deferred — Group G (spatial)
+    { id: "haymaker", nature: "field", name: "Haymaker", tag: "+3 Penetration", effect: { pen: 3 } },
+    { id: "momentum-swing", nature: "tuned", name: "Momentum Swing", tag: "Charge in for +2 Penetration and a knockback (knockback spatial)", effect: { charge: 2 } }, // knockback deferred — Group G (spatial)
     { id: "tow-chain", nature: "prototype", name: "Tow Chain", tag: "Yank a rig 4\" where you want it (spatial)", catch: "Long cooldown after each pull", effect: { towChain: true } },
   ],
   "Bulwark Shield": [
@@ -617,7 +617,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Harpoon": [
     { id: "barbed-head", nature: "field", name: "Barbed Head", tag: "Gains Impale", effect: { perks: ["Impale"] } },
-    { id: "taut-cable", nature: "tuned", name: "Taut Cable", tag: "+3 STR vs immobilised or engaged targets", effect: { vsPinned: true } },
+    { id: "taut-cable", nature: "tuned", name: "Taut Cable", tag: "+3 Penetration vs immobilised or engaged targets", effect: { vsPinned: true } },
     { id: "harpoon-winch", nature: "prototype", name: "Harpoon Winch", tag: "Spear and reel a rig 4\" toward you; roots you, runs hot", catch: "Roots you in place and runs hot", effect: { harpoonWinch: true } },
   ],
   "Rivet Gun": [
@@ -626,7 +626,7 @@ export const WEAPON_UPGRADES = {
     { id: "rivet-lock", nature: "prototype", name: "Rivet Lock", tag: "Rivet a location shut — no repairs, jams a weapon there", catch: "Takes repeated hits to the same spot to lock", effect: { rivetLock: true } },
   ],
   "Anchor": [
-    { id: "fluked-head", nature: "field", name: "Fluked Head", tag: "+3 STR", effect: { pen: 3 } },
+    { id: "fluked-head", nature: "field", name: "Fluked Head", tag: "+3 Penetration", effect: { pen: 3 } },
     { id: "dead-weight", nature: "tuned", name: "Dead Weight", tag: "Struck target can't Disengage next activation", effect: { deadWeight: true } },
     { id: "ground-anchor", nature: "prototype", name: "Ground Anchor", tag: "Anchor a rig in the lock; leaving you costs it a free Anchor hit", catch: "Also holds you in the lock", effect: { groundAnchor: true } },
   ],
@@ -829,10 +829,10 @@ function ensureRigShape(rig, mode = "physical") {
   if (typeof rig.armsSuppressed !== "boolean") rig.armsSuppressed = false;
   if (typeof rig.ripostedThisRound !== "boolean") rig.ripostedThisRound = false;
   // Skewer (§13, Lance) — the id of the rig that impaled this one in the melee
-  // lock; Disengaging from it costs a free STR-11 lance strike.
+  // lock; Disengaging from it costs a free Penetration-11 lance strike.
   if (rig.skeweredBy === undefined) rig.skeweredBy = null;
   // Ground Anchor (§13, Anchor) — the id of the rig that anchored this one in
-  // the melee lock; Disengaging from it costs a free natural-STR Anchor strike.
+  // the melee lock; Disengaging from it costs a free natural-Penetration Anchor strike.
   if (rig.anchoredBy === undefined) rig.anchoredBy = null;
   if (typeof rig.autocannonShots !== "number") rig.autocannonShots = 0;
   if (typeof rig.autocannonSlowNext !== "boolean") rig.autocannonSlowNext = false;
@@ -840,7 +840,7 @@ function ensureRigShape(rig, mode = "physical") {
   // shot emits a ricochet instruction (spatial — narrated, not simulated).
   if (typeof rig.enfiladeShots !== "number") rig.enfiladeShots = 0;
   // Piledriver Protocol (§13, Siege Maul) — stored Momentum (+1 per advancing
-  // activation, cap 3); spent whole on a Siege Maul shot for guard-break + STR.
+  // activation, cap 3); spent whole on a Siege Maul shot for guard-break + Penetration.
   if (typeof rig.momentum !== "number") rig.momentum = 0;
   // Emplacement (§13, Bulwark Shield) — the rooted-stance flag and the round the
   // stance may next be re-entered (cooldown measured from when it was entered).
@@ -1056,7 +1056,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     enfiladeShots: 0,
     // Piledriver Protocol (§13, Siege Maul) — stored Momentum: +1 for any
     // activation this rig advanced (cap 3), spent whole on a Siege Maul shot for
-    // a guard-break (ignores Brace + cover) and +1 STR per point. While
+    // a guard-break (ignores Brace + cover) and +1 Penetration per point. While
     // momentum > 0 the rig can't Raise Shield (all-in on the charge).
     momentum: 0,
     // Emplacement (§13, Bulwark Shield) — the rooted fortress stance and the
@@ -1880,7 +1880,7 @@ function sunderLocation(target, loc) {
 
 // Breach Grip (§13, Claw) — pry the struck location's armour open. The crack
 // covers a 2-round window: the round it lands (N) and the next (N+1). It stores
-// expiry N+1; rollWounds applies the +2 STR while `expiry >= currentRound`, so it
+// expiry N+1; rollWounds applies the +2 Penetration while `expiry >= currentRound`, so it
 // is live at N and N+1 and gone by N+2. Stale entries are swept in runRecovery.
 function crackLocation(room, target, loc) {
   if (!target || !target[loc]) return;
@@ -2117,7 +2117,7 @@ function endActivation(room, rig, dice, random) {
     } else {
       const roll = rollD(12, dice?.overheat, random);
       // Reactor Overdrive (§13, Power Prototype) — this activation's overheat bonus
-      // is doubled (the all-in downside of the Overclock STR spike). Scoped to this
+      // is doubled (the all-in downside of the Overclock Penetration spike). Scoped to this
       // one roll; other m.bonus consumers (rigEffects preview) read the raw meter.
       const bonus = rig.reactorOverdriveActive ? m.bonus * 2 : m.bonus;
       const total = roll + bonus;
@@ -2166,8 +2166,8 @@ function endActivation(room, rig, dice, random) {
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
   rig.noActivesNextActivation = false;
   rig.lockSightNext = false; // Lock Sight (Targeting Computer) — a shot not taken doesn't carry into a reactive shot
-  rig.reactorOverdriveActive = false; // Reactor Overdrive (§13) — the STR boost + doubled overheat is scoped to this one activation
-  // Cryo Reservoir / Meltdown Protocol — clear any leftover +STR spike so an
+  rig.reactorOverdriveActive = false; // Reactor Overdrive (§13) — the Penetration boost + doubled overheat is scoped to this one activation
+  // Cryo Reservoir / Meltdown Protocol — clear any leftover +Penetration spike so an
   // armed-but-unspent bonus can't leak past this activation.
   if (rig.equipState) rig.equipState.nextAttackPen = 0;
   room.game.turn.activeRigId = null;
@@ -2344,7 +2344,7 @@ function resolveFire(room, rig, target, a, act, random) {
   if (fireControlFirst) rig.fireControlUsed = true;
   if (rig.lockSightNext) rig.lockSightNext = false;
   // Kickstart Pistons — the charge is spent by the first melee attack this
-  // activation; later melee blows resolve at normal STR.
+  // activation; later melee blows resolve at normal Penetration.
   if (slot === "melee" && rig.chargedIntoContact) rig.kickstartUsed = true;
   t.actionsUsed += cost;
   // Fire Solution Lock — resolve the solution for the shot that just landed. A
@@ -2355,7 +2355,7 @@ function resolveFire(room, rig, target, a, act, random) {
     if (solutionPayoff) { sol.count = 0; } // payoff consumed
     else { sol.count = Math.min(3, sol.count + 1); bumpHeat(rig, 1); } // building shot: stack + run hot
   }
-  // Cryo Reservoir / Meltdown Protocol — the armed +STR spike is a one-shot; the
+  // Cryo Reservoir / Meltdown Protocol — the armed +Penetration spike is a one-shot; the
   // attack that just resolved consumed it, so clear it now.
   if (rig.equipState?.nextAttackPen) rig.equipState.nextAttackPen = 0;
   // A second (or later) ranged shot in the same activation runs the barrel hot:
@@ -2376,7 +2376,7 @@ function resolveFire(room, rig, target, a, act, random) {
 // Anvil Boss (§13 Bulwark) — a reactive riposte. When a rig holding Raise Shield
 // with the Anvil Boss upgrade is HIT (>=1 landed hit) by the FIRST melee attack
 // of the round, it answers with a free counter-hit at the upgrade's ripostePen (a
-// flat STR-6 melee blow that bypasses weight/conditional STR — see
+// flat Penetration-6 melee blow that bypasses weight/conditional Penetration — see
 // combat.computePen penOverride). A whiff (0 hits) provokes nothing and does NOT
 // consume the round's riposte. Melee only (never ranged), once per round
 // (ripostedThisRound). Reuses the same resolveAttack path as `return`'s counter.
@@ -2395,8 +2395,8 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
   defender.ripostedThisRound = true;
   pushResolution(room, {
     kind: "riposte", actor: defender.owner, rigId: defender.id, rolls: [],
-    summary: `${defender.name} ripostes ${attacker.name} — Anvil Boss free counter (STR ${ripostePen}).`,
-    effects: [`Anvil Boss — free STR ${ripostePen} melee counter`],
+    summary: `${defender.name} ripostes ${attacker.name} — Anvil Boss free counter (Penetration ${ripostePen}).`,
+    effects: [`Anvil Boss — free Penetration ${ripostePen} melee counter`],
   });
   resolveAttack(room, defender, attacker, {
     weapon: "melee", target: attacker.name,
@@ -2407,7 +2407,7 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
 }
 
 // §5 Brace retaliation — a melee attacker that swings at a braced FRONT and
-// fails to breach it (deals no SP) eats a free flat-STR melee counter. Once per
+// fails to breach it (deals no SP) eats a free flat-Penetration melee counter. Once per
 // round (braceRetaliatedThisRound). Needs a melee weapon to answer with. Reuses
 // the same resolveAttack/penOverride path as Anvil Boss and `return`.
 const BRACE_RIPOSTE_PEN = 6; // ⚙ TUNING
@@ -2425,8 +2425,8 @@ function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingA
   defender.braceRetaliatedThisRound = true;
   pushResolution(room, {
     kind: "riposte", actor: defender.owner, rigId: defender.id, rolls: [],
-    summary: `${defender.name} holds the brace and counters ${attacker.name} — free STR ${BRACE_RIPOSTE_PEN} melee.`,
-    effects: [`Brace — free STR ${BRACE_RIPOSTE_PEN} melee counter (attack failed to breach)`],
+    summary: `${defender.name} holds the brace and counters ${attacker.name} — free Penetration ${BRACE_RIPOSTE_PEN} melee.`,
+    effects: [`Brace — free Penetration ${BRACE_RIPOSTE_PEN} melee counter (attack failed to breach)`],
   });
   resolveAttack(room, defender, attacker, {
     weapon: "melee", target: attacker.name,
@@ -2485,7 +2485,7 @@ function maybeGroundAnchor(room, attacker, target, incomingWeapon, res) {
 }
 
 // Ground Anchor's Disengage payload — one free Anchor strike at the weapon's
-// natural STR (unlike Skewer's flat STR 11). Reuses the resolveAttack path.
+// natural Penetration (unlike Skewer's flat Penetration 11). Reuses the resolveAttack path.
 function resolveAnchorStrike(room, anchorer, victim, random) {
   pushResolution(room, {
     kind: "anchor", actor: anchorer.owner, rigId: anchorer.id, rolls: [],
@@ -2499,14 +2499,14 @@ function resolveAnchorStrike(room, anchorer, victim, random) {
   }, random, combatCtx());
 }
 
-// Skewer's Disengage payload — one free STR-11 Lance strike from the skewerer
+// Skewer's Disengage payload — one free Penetration-11 Lance strike from the skewerer
 // onto the fleeing rig as it tears itself off the point. Reuses the same
 // penOverride escape hatch and resolveAttack path as the Anvil Boss riposte.
 function resolveSkewerStrike(room, skewerer, victim, random) {
   pushResolution(room, {
     kind: "skewer", actor: skewerer.owner, rigId: skewerer.id, rolls: [],
-    summary: `${victim.name} tears free of ${skewerer.name}'s Lance — Skewer free strike (STR 11).`,
-    effects: ["Skewer — free STR 11 lance strike on Disengage"],
+    summary: `${victim.name} tears free of ${skewerer.name}'s Lance — Skewer free strike (Penetration 11).`,
+    effects: ["Skewer — free Penetration 11 lance strike on Disengage"],
   });
   resolveAttack(room, skewerer, victim, {
     weapon: "melee", target: victim.name,
@@ -2631,7 +2631,7 @@ function performAction(room, rig, act, a, random) {
     }
     if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
     const active = EQUIPMENT[equipId].active;
-    const extra = []; // extra per-active narration lines (e.g. Backdraft STR bonus)
+    const extra = []; // extra per-active narration lines (e.g. Backdraft Penetration bonus)
     t.actionsUsed += 1;
     if (act === "harden") rig.hardened = true;
     else if (act === "overclock") {
@@ -2643,7 +2643,7 @@ function performAction(room, rig, act, a, random) {
       let curSp = 0, maxSp = 0;
       for (const loc of LOCS) { curSp += rig[loc].sp; maxSp += rig[loc].max; }
       t.actionsMax += (surge && curSp * 2 < maxSp) ? 3 : 2;
-      // Reactor Overdrive (§13, Power Prototype) — Overclocking also arms +2 STR to
+      // Reactor Overdrive (§13, Power Prototype) — Overclocking also arms +2 Penetration to
       // every attack this activation (read in combat.js computePen) at the cost of a
       // doubled overheat bonus this activation (endActivation). All-in push.
       if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.reactorOverdrive) rig.reactorOverdriveActive = true;
@@ -2673,13 +2673,13 @@ function performAction(room, rig, act, a, random) {
       // or the Insulated Core upgrade. The 3" AoE narration rides along on
       // active.text via the pushResolution below.
       const rawCap = HEAT_CAPACITY[rig.weightClass] ?? 5;
-      // Backdraft (Thermal Tuned) — the wave hits +1 STR per 2 heat the rig is
+      // Backdraft (Thermal Tuned) — the wave hits +1 Penetration per 2 heat the rig is
       // over Capacity, measured BEFORE the vent below dumps that heat. Spatial:
       // the bonus rides on the narrated AoE (the player applies the light hits).
       const overCap = Math.max(0, (rig.engine.heat || 0) - rawCap);
       const backdraftPen = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.backdraft
         ? Math.floor(overCap / 2) : 0;
-      if (backdraftPen > 0) extra.push(`Backdraft — +${backdraftPen} STR to the 3" wave (banked heat over Capacity).`);
+      if (backdraftPen > 0) extra.push(`Backdraft — +${backdraftPen} Penetration to the 3" wave (banked heat over Capacity).`);
       rig.engine.heat = Math.min(rig.engine.heat, rawCap);
     }
     // purge / jumpjets need no extra state beyond the heat cost below.
@@ -2719,7 +2719,7 @@ function performAction(room, rig, act, a, random) {
     return true;
   }
   // Cryo Reservoir (Cooling Prototype) — an activation-start spend. Vent N banked
-  // cryo: −2 heat each and arm +1 STR per cryo on this rig's NEXT attack (the
+  // cryo: −2 heat each and arm +1 Penetration per cryo on this rig's NEXT attack (the
   // transient nextAttackPen, consumed in resolveFire / cleared in endActivation).
   // Doesn't cost an action slot (mirrors reload sitting before the budget gate).
   if (act === "cryo") {
@@ -2731,7 +2731,7 @@ function performAction(room, rig, act, a, random) {
     rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
     pushResolution(room, {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} vents cryo ×${spend} — −${2 * spend} heat, +${spend} STR to the next attack.`, effects: [],
+      summary: `${rig.name} vents cryo ×${spend} — −${2 * spend} heat, +${spend} Penetration to the next attack.`, effects: [],
     });
     return true;
   }
@@ -2780,7 +2780,7 @@ function performAction(room, rig, act, a, random) {
       rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
       pushResolution(room, {
         kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-        summary: `${rig.name} overloads — +${spend} STR to its attacks this activation.`, effects: [],
+        summary: `${rig.name} overloads — +${spend} Penetration to its attacks this activation.`, effects: [],
       });
     }
     return true;
@@ -2900,7 +2900,7 @@ function performAction(room, rig, act, a, random) {
     t.actionsUsed += 1;
     bumpHeat(rig, heat);
     // Full Tilt / Momentum Swing (§13) — advancing this activation charges
-    // the "moved" flag their melee STR bonus is gated on.
+    // the "moved" flag their melee Penetration bonus is gated on.
     rig.movedThisActivation = true;
     // Fire Solution Lock (§Fire Control prototype) — the firing solution needs a
     // held position; any repositioning breaks it. Gated on the tag so it never
@@ -2919,7 +2919,7 @@ function performAction(room, rig, act, a, random) {
     // this activation. Refused without spending a slot; clears at activation end.
     if (rig.noDisengageNextActivation) return reject("Pinned by Dead Weight — can't Disengage this activation.");
     // Skewer (§13, Lance) — if this rig is impaled by the very partner it's
-    // locked to, tearing free provokes one free STR-11 lance strike before the
+    // locked to, tearing free provokes one free Penetration-11 lance strike before the
     // lock breaks. A missing/destroyed skewerer just clears the mark (no strike).
     if (rig.skeweredBy != null && rig.engagedWith === rig.skeweredBy) {
       const skewerer = findRigById(room, rig.skeweredBy);
@@ -2927,7 +2927,7 @@ function performAction(room, rig, act, a, random) {
       rig.skeweredBy = null;
     }
     // Ground Anchor (§13, Anchor) — tearing off the anchor provokes one free
-    // Anchor strike at its natural STR before the lock breaks.
+    // Anchor strike at its natural Penetration before the lock breaks.
     if (rig.anchoredBy != null && rig.engagedWith === rig.anchoredBy) {
       const anchorer = findRigById(room, rig.anchoredBy);
       if (anchorer && !anchorer.destroyed) resolveAnchorStrike(room, anchorer, rig, random);
@@ -3639,7 +3639,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         const t = findRig(room, name);
         if (!t || t.destroyed) continue;
         const loc = hitLocation(t.kind || "rig", rollD(12, a.dice?.location?.[name], options.random));
-        // §9 — a munition cook-off is a flat STR 8 / D2 shot (rescaled onto the
+        // §9 — a munition cook-off is a flat Penetration 8 / D2 shot (rescaled onto the
         // weapon ladder), wounding on a d10 like any other attack. It carries no
         // weapon profile, so the two constants live at module scope above.
         const die = rollD(WOUND_DIE, a.dice?.wounds?.[name], options.random);
@@ -3650,7 +3650,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         pushResolution(room, {
           kind: "blast", actor, rigId: t.id,
           rolls: [{ sides: WOUND_DIE, value: die, label: "wound", tone: sp > 0 ? "ok" : "miss" }],
-          summary: `Blast hits ${t.name}: ${die} vs ${tn}+ (STR ${BLAST_PEN} vs T${tough}) → ${sp} SP to ${loc}`, effects: [],
+          summary: `Blast hits ${t.name}: ${die} vs ${tn}+ (Penetration ${BLAST_PEN} vs T${tough}) → ${sp} SP to ${loc}`, effects: [],
         });
       }
       // A target destroyed by this blast may itself chain into a new pending

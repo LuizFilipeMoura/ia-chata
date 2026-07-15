@@ -20,7 +20,7 @@ function seatedRoom(active = "A1") {
   applyCommand(room, { verb: "seed", attrs: { roster, first: "a" } }, {}, { random: rnd });
   // The second player MUST spend an Answer token before anyone can activate —
   // there is no decline path. Spend it on a bystander so no duellist carries a
-  // preparation (Brace is -2 STR on the front arc and would skew everything).
+  // preparation (Brace is -2 Penetration on the front arc and would skew everything).
   const pa = room.game.pendingAnswer;
   if (pa) applyCommand(room, { verb: "answer", attrs: { name: "B3", side: pa.side, prep: "brace" } }, { side: pa.side }, { random: rnd });
   applyCommand(room, { verb: "activate", attrs: { name: active } }, { side: "a" }, { random: rnd });

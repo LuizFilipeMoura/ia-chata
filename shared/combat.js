@@ -35,13 +35,13 @@ export function weaponAccuracyAt(profile, distance) {
   return (profile.peak || 0) - penalty;
 }
 
-// §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
+// §7.4 — modified Aim (the D6 target number). Higher Accuracy lowers the number.
 //
 // Returns `{ value, terms }` — `terms` is the itemised ledger behind `value`,
 // one `{ label, value }` per input that ACTUALLY fired, mirroring penBreakdown.
-// Terms read in ACC SPACE, not in target-number space: a bonus is positive, a
-// penalty is negative, and `value` is `base - (sum of every non-base term)`.
-// So cover, which subtracts 2 from ACC, emits `{ label: "cover", value: -2 }`.
+// Terms read in ACCURACY SPACE, not in target-number space: a bonus is positive,
+// a penalty is negative, and `value` is `base - (sum of every non-base term)`.
+// So cover, which subtracts 2 from Accuracy, emits `{ label: "cover", value: -2 }`.
 // Labels are the words a player reads on the table, not our field names.
 export function aimBreakdown(attacker, profile, opts) {
   const terms = [];
@@ -57,11 +57,11 @@ export function aimBreakdown(attacker, profile, opts) {
   // Recon paint (spec: Support Units) — allied ranged fire on a marked enemy
   // gains +1 Aim on top of the cover cancel above.
   const paintBonus = (opts.painted && !profile.melee) ? 1 : 0;
-  // Pop Smoke (Countermeasures active) — every attacker is at −2 ACC against a
+  // Pop Smoke (Countermeasures active) — every attacker is at −2 Accuracy against a
   // rig hidden in its own smoke, until that rig's next activation.
   const smoke = opts.targetSmoke ? -2 : 0;
   // Predictive Tracking (Fire Control Tuned) — vs a static/pinned/immobilised
-  // target the shot ignores cover and gains +2 ACC. `opts.targetPinned` is set by
+  // target the shot ignores cover and gains +2 Accuracy. `opts.targetPinned` is set by
   // the fire path (game-state.js). Read the effect live from the catalog by id;
   // combat.js imports only rules.js, so no game-state cycle.
   const predictive = attacker.equipment === "targeting-computer" && !profile.melee && !!opts.targetPinned
@@ -72,7 +72,7 @@ export function aimBreakdown(attacker, profile, opts) {
   // fire path). Read directly off the attacker to avoid a game-state import cycle.
   const coverEff = (opts.fireControlFirst || predictive) ? 0 : cover;
   const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
-  // Ballistic Processor (Field) — ACC bonus when the measured distance is within
+  // Ballistic Processor (Field) — Accuracy bonus when the measured distance is within
   // the weapon's sweet band (|distance − sweet| ≤ 2). The bonus magnitude is read
   // from the equipment upgrade's effect tag (`sweetBandAccuracy`) via
   // equipmentUpgradeEffectOf — the catalog lives in rules.js, which combat.js may
@@ -83,13 +83,13 @@ export function aimBreakdown(attacker, profile, opts) {
   const accuracyTotal = weaponAccuracy - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAccuracy;
 
   // The two headline inputs are ALWAYS terms, even at 0, exactly as penBreakdown
-  // always pushes "weapon STR": they are what every modifier below is measured
-  // against. A gun contributing 0 ACC at its current range is a fact the player
+  // always pushes "weapon Penetration": they are what every modifier below is measured
+  // against. A gun contributing 0 Accuracy at its current range is a fact the player
   // needs, not an absence to hide.
   terms.push({ label: "base aim", value: base });
   terms.push({
     label: !profile.melee && Number.isFinite(Number(opts.distance))
-      ? `weapon ACC at ${opts.distance}"` : "weapon ACC",
+      ? `weapon Accuracy at ${opts.distance}"` : "weapon Accuracy",
     value: weaponAccuracy,
   });
   // Cover, and the cancels. `rawCover` is what the target ACTUALLY had on the
@@ -121,7 +121,7 @@ export function aimBreakdown(attacker, profile, opts) {
   // the Targeting Computer's first fire, so name it rather than silently drop it.
   else if (engagedPenalty) terms.push({ label: "targeting computer (ignores melee lock)", value: 0 });
   // Recon paint and Predictive Tracking each do TWO things — cancel cover and
-  // grant ACC. The bonus term below is a separate fact from the cancel term
+  // grant Accuracy. The bonus term below is a separate fact from the cancel term
   // above; neither substitutes for the other.
   if (paintBonus) terms.push({ label: "recon paint", value: paintBonus });
   if (smoke) terms.push({ label: "target in smoke", value: smoke });
@@ -151,7 +151,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   const bloodletterRof = opts.target && profile.upgradeEffect?.vsDamaged?.rof && !isUndamaged(opts.target)
     ? profile.upgradeEffect.vsDamaged.rof : 0;
   // Redline Governor — extra to-hit dice from attacker heat over its class
-  // cap, mirroring the STR bonus in computePen (capped at +3).
+  // cap, mirroring the Penetration bonus in computePen (capped at +3).
   let redlineRof = 0;
   if (profile.upgradeEffect?.redline) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
@@ -247,7 +247,7 @@ function isUndamaged(target) {
   );
 }
 
-// §12/§7 — STR = weapon STR + weight modifier + Charged Shot + any conditional
+// §12/§7 — Penetration = weapon Penetration + weight modifier + Charged Shot + any conditional
 // Tuned/Prototype bonuses (§13) that read the attacker/target state via `opts`.
 //
 // Returns `{ value, terms }` — `terms` is the itemised ledger behind `value`,
@@ -257,40 +257,40 @@ function isUndamaged(target) {
 // player reads on the table ("Cold Bore", "light chassis"), not our field names.
 export function penBreakdown(attacker, profile, opts) {
   const terms = [];
-  // Anvil Boss riposte (§13 Bulwark) — a forced, flat STR for the free counter
+  // Anvil Boss riposte (§13 Bulwark) — a forced, flat Penetration for the free counter
   // that ignores weight class and every conditional Tuned/Prototype bonus, so
   // the counter lands at exactly the upgrade's ripostePen regardless of who owns
   // the shield. Threaded through `rollWounds` from `resolveAttack`.
   if (opts.penOverride != null) {
-    return { value: opts.penOverride, terms: [{ label: "forced STR", value: opts.penOverride }] };
+    return { value: opts.penOverride, terms: [{ label: "forced Penetration", value: opts.penOverride }] };
   }
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_PEN_MOD[attacker.weightClass] || 0);
-  // The weapon's own STR is the floor every modifier is measured against, so it
-  // is always a term even though every other entry here is conditional.
-  terms.push({ label: "weapon STR", value: profile.pen });
+  // The weapon's own Penetration is the floor every modifier is measured against,
+  // so it is always a term even though every other entry here is conditional.
+  terms.push({ label: "weapon Penetration", value: profile.pen });
   if (weightMod) terms.push({ label: `${attacker.weightClass} chassis`, value: weightMod });
   if (charged) terms.push({ label: "Charged Shot", value: charged });
   let bonus = 0;
-  // Reactor Overdrive (§13, Power Prototype) — +2 STR to every attack while the
+  // Reactor Overdrive (§13, Power Prototype) — +2 Penetration to every attack while the
   // Overclock-armed flag rides this activation (set in game-state.js's overclock
   // branch, cleared at activation end).
   if (attacker.reactorOverdriveActive) {
     bonus += 2;
     terms.push({ label: "Reactor Overdrive", value: 2 });
   }
-  // Cold Bore — +3 STR against a target whose every location is at max SP.
+  // Cold Bore — +3 Penetration against a target whose every location is at max SP.
   if (opts.target && profile.upgradeEffect?.coldBore && isUndamaged(opts.target)) {
     bonus += 3;
     terms.push({ label: "Cold Bore", value: 3 });
   }
-  // Full Tilt / Momentum Swing — STR while charging in (moved this activation).
+  // Full Tilt / Momentum Swing — Penetration while charging in (moved this activation).
   // `charge` is a generalised key: Full Tilt sets it to 3, Momentum Swing to 2.
   if (attacker.movedThisActivation && profile.upgradeEffect?.charge) {
     bonus += profile.upgradeEffect.charge;
     terms.push({ label: "charging in", value: profile.upgradeEffect.charge });
   }
-  // Opportunist — +3 STR vs a target that's disrupted: overheated past its
+  // Opportunist — +3 Penetration vs a target that's disrupted: overheated past its
   // class cap, or carrying an action penalty into its next activation.
   if (opts.target && profile.upgradeEffect?.vsDisrupted) {
     const cap = HEAT_CAPACITY[opts.target.weightClass];
@@ -301,7 +301,7 @@ export function penBreakdown(attacker, profile, opts) {
       terms.push({ label: "Opportunist", value: 3 });
     }
   }
-  // Taut Cable — +3 STR against a target already pinned down: immobilised, or
+  // Taut Cable — +3 Penetration against a target already pinned down: immobilised, or
   // held in a melee lock (engaged).
   if (opts.target && profile.upgradeEffect?.vsPinned) {
     if (opts.target.immobilised || opts.target.engagedWith != null) {
@@ -309,14 +309,14 @@ export function penBreakdown(attacker, profile, opts) {
       terms.push({ label: "Taut Cable", value: 3 });
     }
   }
-  // Steady Aim (§13, Crossbow) — +3 STR when the measured firing distance is
+  // Steady Aim (§13, Crossbow) — +3 Penetration when the measured firing distance is
   // within 2" of the weapon's sweet spot. Needs the distance threaded in via opts.
   if (profile.upgradeEffect?.steadyAim && opts.distance != null
       && Math.abs(opts.distance - profile.sweet) <= 2) {
     bonus += 3;
     terms.push({ label: "Steady Aim", value: 3 });
   }
-  // Exploit Wound (§13, Talon) — +3 STR against a struck location already below
+  // Exploit Wound (§13, Talon) — +3 Penetration against a struck location already below
   // its max SP. Needs the struck location threaded in via opts.location.
   if (profile.upgradeEffect?.vsWoundedLoc && opts.target && opts.location) {
     const p = opts.target[opts.location];
@@ -325,7 +325,7 @@ export function penBreakdown(attacker, profile, opts) {
       terms.push({ label: "Exploit Wound", value: 3 });
     }
   }
-  // Evisceration downside (§13, Talon) — the talon needs a wound to grip: -1 STR
+  // Evisceration downside (§13, Talon) — the talon needs a wound to grip: -1 Penetration
   // against a struck location that is still fully undamaged.
   if (profile.upgradeEffect?.eviscerate && opts.target && opts.location) {
     const p = opts.target[opts.location];
@@ -335,7 +335,7 @@ export function penBreakdown(attacker, profile, opts) {
     }
   }
   // Redline Governor — the hotter the attacker runs past its own class cap,
-  // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
+  // the harder the Chainsaw bites (+1 Penetration per heat over cap, capped at +3).
   if (profile.upgradeEffect?.redline) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
     const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
@@ -345,7 +345,7 @@ export function penBreakdown(attacker, profile, opts) {
     if (Math.min(3, over)) terms.push({ label: "Redline Governor", value: Math.min(3, over) });
   }
   // Superconductor Edge — running past half the attacker's own heat cap
-  // charges the blade for +2 STR.
+  // charges the blade for +2 Penetration.
   if (profile.upgradeEffect?.superconductor) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
     if (cap != null && (attacker.engine?.heat || 0) > cap / 2) {
@@ -353,9 +353,9 @@ export function penBreakdown(attacker, profile, opts) {
       terms.push({ label: "Superconductor Edge", value: 2 });
     }
   }
-  // Piledriver Protocol — a Siege Maul shot spends stored Momentum for +1 STR
+  // Piledriver Protocol — a Siege Maul shot spends stored Momentum for +1 Penetration
   // per point. The spent amount is threaded in via opts.momentum (computed once
-  // in resolveAttack so the STR bonus and the post-shot Momentum reset stay in
+  // in resolveAttack so the Penetration bonus and the post-shot Momentum reset stay in
   // lockstep). Gated on the piledriver effect so a stray opts.momentum on any
   // other weapon is inert.
   if (opts.momentum && profile.upgradeEffect?.piledriver) {
@@ -363,7 +363,7 @@ export function penBreakdown(attacker, profile, opts) {
     terms.push({ label: "Piledriver Protocol", value: opts.momentum });
   }
   // Kickstart Pistons (Mobility Tuned) — a melee blow right after Sprinting into
-  // base contact this activation hits +2 STR, but only the FIRST such blow:
+  // base contact this activation hits +2 Penetration, but only the FIRST such blow:
   // `chargedIntoContact` is armed by the Sprint path, `kickstartUsed` is set by
   // resolveFire once a melee attack lands. Read the equipment effect live from the
   // catalog by id (combat.js imports only rules.js). NOTE: the design also names
@@ -374,7 +374,7 @@ export function penBreakdown(attacker, profile, opts) {
     bonus += 2;
     terms.push({ label: "Kickstart Pistons", value: 2 });
   }
-  // Cryo Reservoir / Meltdown Protocol — a spent charge arms +STR on the next
+  // Cryo Reservoir / Meltdown Protocol — a spent charge arms +Penetration on the next
   // attack. Shared transient off the attacker's equipState; consumed in
   // resolveFire and cleared in endActivation so it can't leak past its activation.
   const nextPen = attacker.equipState?.nextAttackPen || 0;
@@ -382,7 +382,7 @@ export function penBreakdown(attacker, profile, opts) {
   return { value: profile.pen + weightMod + charged + bonus + nextPen, terms };
 }
 
-// §12/§7 — the shot's effective STR. Thin wrapper over penBreakdown so the ~15
+// §12/§7 — the shot's effective Penetration. Thin wrapper over penBreakdown so the ~15
 // contributions can be shown in the resolution ledger without changing any
 // caller: the engine used to compute this arithmetic and throw it away, which is
 // why a player could not tell why a shot did nothing.
@@ -390,12 +390,12 @@ export function computePen(attacker, profile, opts) {
   return penBreakdown(attacker, profile, opts).value;
 }
 
-// §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
+// §7.7 / §13 — arc Penetration bonus. Raking Fire (machine guns) replaces the standard
 // side/rear values and cannot damage the front arc (returns null = auto-fail).
 //
 // Melee used to return 0 here. That was the root cause of the impact-total
 // model's 69 dead zones: ranged had a ladder to climb into heavy armour and
-// melee had none, so a melee total was capped at `6 + STR` forever. Melee now
+// melee had none, so a melee total was capped at `6 + Penetration` forever. Melee now
 // falls through to the shared ladder. The Raking branch stays FIRST — no melee
 // weapon carries the perk, but ordering makes that explicit.
 export function arcBonus(profile, arc) {
@@ -426,18 +426,18 @@ function kneecapperLocation(kindId, location) {
   return mobility || weapon || null;
 }
 
-// §7.5 — one Wound Roll (d10) per hit. The shot's effective STR is compared to
-// the struck location's Toughness: wound on `die >= woundTarget(effPen, T)`.
-// Every modifier below moves EFFECTIVE STR, not a total — the wound TN clamps at
+// §7.5 — one Wound Roll (d10) per hit. The shot's effective Penetration is compared
+// to the struck location's Toughness: wound on `die >= woundTarget(effPen, T)`.
+// Every modifier below moves EFFECTIVE Penetration, not a total — the wound TN clamps at
 // 10, so a natural 10 always wounds and no matchup is hopeless. Each wound deals
 // the weapon's `d`. Brace subtracts 2 on the target's front arc (§5 preparation).
 // Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 3.
 export function rollWounds(attacker, target, profile, location, opts, providedDice, random) {
   // Thread the real target rig into computePen's opts (the caller's `opts`
   // here may carry only a display name at `opts.target` — see resolveAttack)
-  // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
+  // so target-conditional Penetration upgrades (Cold Bore, Opportunist, §13) work.
   // penBreakdown, not computePen: the ledger's wound step needs the ~15
-  // contributions behind this STR, and they must be the ones this roll used.
+  // contributions behind this Penetration, and they must be the ones this roll used.
   const penBd = penBreakdown(attacker, profile, { ...opts, target, location });
   const pen = penBd.value;
   let bonus = arcBonus(profile, opts.arc);
@@ -466,10 +466,10 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   const hardenDepth = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.hardenImpact ?? 1;
   const hardened = target.hardened ? -hardenDepth : 0;
   // Reactive Armor (Ablative Plating, Tuned) — a location already hardened this
-  // round docks a further 2 effective STR. The list is recorded by the wound-stage
+  // round docks a further 2 effective Penetration. The list is recorded by the wound-stage
   // defensive seam below and cleared each Recovery (refreshEquipState).
   const reactive = target.equipState?.reactiveArmorLocs?.includes(location) ? -2 : 0;
-  // Reactive Plating (Countermeasures) — side/rear attacks lose STR. The dock
+  // Reactive Plating (Countermeasures) — side/rear attacks lose Penetration. The dock
   // magnitude is read from the equipment upgrade's effect tag (`sideRearPen`) via
   // equipmentUpgradeEffectOf — the catalog lives in rules.js, importable by
   // combat.js without a game-state cycle. Base Reactive Plating is −1; Angled
@@ -490,9 +490,9 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   const toughness = toughnessOf(target.kind || "rig", location, target.weightClass);
 
   // The wound step's ledger terms: everything penBreakdown folded into the
-  // nominal STR, PLUS the arc/defender modifiers computed above. Each is read
+  // nominal Penetration, PLUS the arc/defender modifiers computed above. Each is read
   // from the LOCAL the loop below actually adds into `effPen` — never
-  // recomputed — so the terms are guaranteed to sum to the effective STR the
+  // recomputed — so the terms are guaranteed to sum to the effective Penetration the
   // engine tested. A modifier worth 0 pushes nothing (same rule as
   // penBreakdown): with eight possible entries here, listing the dead ones
   // would bury the one that decided the shot.
@@ -623,7 +623,7 @@ export function applyDefensiveReactions(target, hit, ctx) {
     return { ...hit, hits: newHits };
   }
   // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging wound each
-  // round to a location hardens THAT location by -2 effective STR (Harden-
+  // round to a location hardens THAT location by -2 effective Penetration (Harden-
   // equivalent) until this rig's next activation; further wounds to a hardened
   // location are docked too. The per-round list is cleared in Recovery
   // (refreshEquipState). Wound-stage only, and only for a wound that landed.
@@ -702,9 +702,9 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     attacker.lockedTarget = null; // expire a stale lock
   }
   // Piledriver Protocol (§13, Siege Maul) — a shot fired while storing Momentum
-  // unloads ALL of it: +1 STR per point (computePen) plus a guard-break that
+  // unloads ALL of it: +1 Penetration per point (computePen) plus a guard-break that
   // ignores the target's Brace (rollWounds) and cover (computeModifiedAim).
-  // Compute the spend ONCE here so the STR bonus, the guard-break, and the
+  // Compute the spend ONCE here so the Penetration bonus, the guard-break, and the
   // post-shot reset below all read the same number. (The design's 3" shove is
   // deferred to the spatial group and NOT applied here.)
   const piledriverSpend = profile.upgradeEffect?.piledriver ? Math.max(0, attacker.momentum || 0) : 0;
@@ -754,7 +754,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
         opts.dice, random);
       // The wound die is the one that decides damage, so it MUST reach the log.
       // Under the impact-total model these were rolled and discarded, leaving a
-      // player staring at "2 hits · 4 STR → 0 SP" with no way to answer why.
+      // player staring at "2 hits · 4 Penetration → 0 SP" with no way to answer why.
       for (let i = 0; i < impacts.length; i++) {
         rolls.push({
           sides: WOUND_DIE, value: impacts[i].die, label: `wound ${i + 1}`,
@@ -891,7 +891,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (location) {
     const dmgTerms = [{ label: "wounds", value: impacts.filter((h) => h.sp > 0).length }];
     if (first) {
-      dmgTerms.push({ label: "weapon D", value: first.dmg });
+      dmgTerms.push({ label: "weapon Damage", value: first.dmg });
       // Rend/Evisceration/Overmatch are per-wound riders. PREFER a wound that
       // dealt damage: all three are assigned only inside `if (wounded)`, so a
       // wound that failed its roll carries them as 0 — reading impacts[0] blind
@@ -949,7 +949,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const targetImmovable = target.preparation?.type === "brace";
   // G1a — Momentum Swing (Wrecking Ball, Tuned): a charging swing that connects
   // knocks the target back 3". Gated on the same "moved this activation" charge
-  // that already granted the +2 STR, so it only fires when the charge applied.
+  // that already granted the +2 Penetration, so it only fires when the charge applied.
   if (profile.upgrade?.id === "momentum-swing" && attacker.movedThisActivation && landedDamage) {
     pushInstruction(targetImmovable
       ? `Momentum Swing — ${target.name} is braced (immovable): no knockback.`
@@ -994,11 +994,11 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // G1c — Enfilade (Sniper Cannon, Prototype): only AIMED shots feed the cadence
   // (per the design). Count every aimed shot fired; on every 3rd, emit a ricochet
   // instruction — the player picks the rig in line of sight behind the target and
-  // applies the +2 STR hit via the normal controls.
+  // applies the +2 Penetration hit via the normal controls.
   if (profile.upgradeEffect?.enfilade && opts.aimed) {
     attacker.enfiladeShots = (attacker.enfiladeShots || 0) + 1;
     if (attacker.enfiladeShots % 3 === 0) {
-      pushInstruction(`Enfilade — ricochet! Resolve a +2 STR hit on the next rig in line of sight behind ${target.name} (player's choice).`);
+      pushInstruction(`Enfilade — ricochet! Resolve a +2 Penetration hit on the next rig in line of sight behind ${target.name} (player's choice).`);
     }
   }
   // §engagement — a legal melee blow (reached here = not out-of-range, weapon not

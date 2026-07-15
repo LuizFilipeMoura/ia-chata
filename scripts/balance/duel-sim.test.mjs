@@ -39,7 +39,7 @@ test("CALIBRATION — the first shot agrees with weapon-sweep.mjs", () => {
   // field tier at 6.06 SP/attack, pooled over targets/arcs/classes at its best
   // distance. This duel is one cell of that pool — medium vs medium, side arc,
   // sweet spot — so it will not equal 6.06 exactly. Measured: 6.51, a 7% gap in
-  // the expected direction (side is +2 STR; the sweep averages front/side/rear).
+  // the expected direction (side is +2 Penetration; the sweep averages front/side/rear).
   //
   // The band is wide ON PURPOSE. It catches "the harness is broken", not "the
   // harness is 4% off". Do not tighten it to the measured value — that would make

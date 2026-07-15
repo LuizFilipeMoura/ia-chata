@@ -94,8 +94,8 @@ test("woundTarget — the original bug case is possible, not impossible", () => 
   assert.equal(woundTarget(pen, 5), 7); // medium hull T5 => 40%
 });
 
-test("woundTarget — junk STR coerces (fails safe), junk T throws (fails loud)", () => {
-  // The asymmetry is the point. A junk STR floors to 0 and drives the TN toward
+test("woundTarget — junk Penetration coerces (fails safe), junk T throws (fails loud)", () => {
+  // The asymmetry is the point. A junk Penetration floors to 0 and drives the TN toward
   // 10 — a 10% wound, the safe direction. A junk T would coerce to 0 and drive
   // the TN to 2 — a 90% wound, making the location the softest thing on the
   // table. That is the mathematically-wrong matchup this whole rewrite exists

@@ -15,7 +15,7 @@ export default function BlastBody({
   return (
     <>
       <p className="v2-dwr-hint">
-        Select every Rig within 4" of the wreck — each takes a STR 8 / D2 blast hit.
+        Select every Rig within 4" of the wreck — each takes a Penetration 8 / D2 blast hit.
       </p>
       <div className="v2-blast-list">
         {candidates.map((r) => {

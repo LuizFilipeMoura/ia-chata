@@ -174,7 +174,7 @@ export function rimGap(a, b) {
   return distanceBetween(a, b) - a.radius - b.radius;
 }
 
-// §7 / §12 — melee carries a fixed ACC at its 2in reach. Lance's Couched Reach
+// §7 / §12 — melee carries a fixed Accuracy at its 2in reach. Lance's Couched Reach
 // upgrade passes reach = 4.
 export function meleeInReach(a, b, reach = 2) {
   return rimGap(a, b) <= reach + 1e-9;

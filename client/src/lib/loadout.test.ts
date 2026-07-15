@@ -46,12 +46,12 @@ describe("buildLoadout", () => {
       equipment: null,
     });
     const lo = buildLoadout(rig)!;
-    // Autocannon: base ROF 4 / STR 7, range 0–26"; Depleted Core is +2 STR.
+    // Autocannon: base ROF 4 / Penetration 7, range 0–26"; Depleted Core is +2 Penetration.
     expect(lo.lr!.rof).toEqual({ base: 4, delta: 0 });
     expect(lo.lr!.pen).toEqual({ base: 7, delta: 2 });
     expect(lo.lr!.range.text).toBe('0–26"');
     expect(lo.lr!.upNature).toBe("field");
-    // Claw: base STR 7, melee reach 2"; Vice Grip adds the Impale perk (no numeric delta).
+    // Claw: base Penetration 7, melee reach 2"; Vice Grip adds the Impale perk (no numeric delta).
     expect(lo.melee!.melee).toBe(true);
     expect(lo.melee!.pen).toEqual({ base: 7, delta: 0 });
     expect(lo.melee!.range.text).toBe('RNG 2"');
@@ -68,7 +68,7 @@ describe("buildLoadout", () => {
     expect(lo.lr!.upName).toBe("");
     expect(lo.equipment).toBeNull();
     // Unknown upgrade id must NOT leak the weapon's first-upgrade effect.
-    expect(lo.lr!.pen).toEqual({ base: 3, delta: 0 });   // Mini Gun base STR 3, no delta
+    expect(lo.lr!.pen).toEqual({ base: 3, delta: 0 });   // Mini Gun base Penetration 3, no delta
     expect(lo.lr!.rof).toEqual({ base: 8, delta: 0 });   // Mini Gun base ROF 8
     expect(lo.lr!.addedPerks).toEqual([]);               // no fallback perk
   });
