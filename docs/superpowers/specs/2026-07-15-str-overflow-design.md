@@ -180,13 +180,6 @@ the working tree." That is stale — the fix is **committed**: the explanatory
 comment sits at `combat.js:728` and the regression test ("hit location comes from
 the target's kind") is in `combat.test.js`. The findings doc should be amended.
 
-## Implementation note
-
-`shared/game-state.js` currently carries ~43 lines of unrelated uncommitted work
-(`deriveAttackGeometry` / `meleeReachOf`, the digital-room spatial seam). Edit 7
-touches the same file. The implementation commit needs selective staging, or that
-work should land first.
-
 ## Out of scope
 
 - **F2-B** (price ROF in heat) — revisit only if the spread persists after re-measure.
