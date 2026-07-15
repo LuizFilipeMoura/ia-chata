@@ -17,7 +17,10 @@ import {
   CHASSIS_PRIMARY_EQUIPMENT,
   heatMeter,
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
+  autoDeploy,
 } from "./game-state.js";
+import { deploymentCorners, deployRadius, scatterTerrain } from "./field.js";
+import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
 // so the add-command attrs used across these tests carry both.
@@ -5614,4 +5617,169 @@ test("rigs in a digital room carry pos and facing; physical rigs do not", () => 
     name: "R1", class: "light", owner: "a", longRange: "Autocannon", melee: "Claw",
   } });
   assert.equal(findRig(physical, "R1").pos, undefined, "physical rooms have no simulated position");
+});
+
+// ---------------------------------------------------------------------------
+// autoDeploy — auto-scatter deployment for digital rooms.
+// ---------------------------------------------------------------------------
+
+// A digital room with terrain down and a mirrored 2-light-rig squadron per side
+// (mirrored composition is what sidesAtParity demands before either can ready).
+// The field is locked so the ready verb is reachable.
+function digitalRoomWithMirroredRigs(code = "DEP001", terrainSeed = 42) {
+  const room = digitalRoom(code);
+  room.field.terrain = scatterTerrain(room.field, seededRandom(terrainSeed), { digital: true });
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 2; i++) {
+      applyCommand(room, { verb: "add", attrs: {
+        name: `${owner}${i}`, class: "light", owner, longRange: "Autocannon", melee: "Claw",
+      } });
+    }
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  return room;
+}
+
+test("autoDeploy places every rig inside its own deployment radius", () => {
+  const room = digitalRoomWithMirroredRigs();
+  autoDeploy(room, seededRandom(11));
+  const [ownerC, foeC] = deploymentCorners(room.field);
+  const rad = deployRadius(room.field);
+  for (const rig of room.rigs) {
+    const corner = rig.owner === room.game.sides[0].id ? ownerC : foeC;
+    const d = Math.hypot(rig.pos.x - corner.x, rig.pos.y - corner.y);
+    assert.ok(d <= rad + 1e-6, `${rig.name} is ${d.toFixed(2)}in from its corner, radius is ${rad.toFixed(2)}`);
+  }
+});
+
+test("autoDeploy never overlaps two rigs", () => {
+  const room = digitalRoomWithMirroredRigs();
+  autoDeploy(room, seededRandom(11));
+  for (let i = 0; i < room.rigs.length; i++) {
+    for (let j = i + 1; j < room.rigs.length; j++) {
+      const a = room.rigs[i], b = room.rigs[j];
+      const gap = Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) - radiusOf(a) - radiusOf(b);
+      assert.ok(gap >= -1e-6, `${a.name} and ${b.name} overlap by ${(-gap).toFixed(2)}in`);
+    }
+  }
+});
+
+test("autoDeploy never places a rig inside terrain", () => {
+  const room = digitalRoomWithMirroredRigs();
+  autoDeploy(room, seededRandom(11));
+  const polys = terrainPolygons(room.field);
+  for (const rig of room.rigs) {
+    assert.equal(clearOfTerrain(rig.pos, radiusOf(rig), polys), true, `${rig.name} is inside terrain`);
+  }
+});
+
+test("autoDeploy keeps every rig wholly on the table", () => {
+  const room = digitalRoomWithMirroredRigs();
+  autoDeploy(room, seededRandom(11));
+  for (const rig of room.rigs) {
+    const r = radiusOf(rig);
+    assert.ok(rig.pos.x >= r - 1e-6 && rig.pos.x <= room.field.width - r + 1e-6, `${rig.name} hangs off in x`);
+    assert.ok(rig.pos.y >= r - 1e-6 && rig.pos.y <= room.field.height - r + 1e-6, `${rig.name} hangs off in y`);
+  }
+});
+
+test("autoDeploy faces every rig toward the field centre", () => {
+  const room = digitalRoomWithMirroredRigs();
+  autoDeploy(room, seededRandom(11));
+  for (const rig of room.rigs) {
+    const want = Math.atan2(room.field.height / 2 - rig.pos.y, room.field.width / 2 - rig.pos.x) * 180 / Math.PI;
+    const diff = Math.abs(((rig.facing - want + 540) % 360) - 180);
+    assert.ok(diff < 1e-6, `${rig.name} faces ${rig.facing}, wanted ${want}`);
+  }
+});
+
+test("autoDeploy is deterministic under a seeded RNG", () => {
+  const a = digitalRoomWithMirroredRigs();
+  const b = digitalRoomWithMirroredRigs();
+  autoDeploy(a, seededRandom(5));
+  autoDeploy(b, seededRandom(5));
+  assert.deepEqual(a.rigs.map((r) => r.pos), b.rigs.map((r) => r.pos));
+  assert.deepEqual(a.rigs.map((r) => r.facing), b.rigs.map((r) => r.facing));
+});
+
+// A rig left sitting on the origin means the sampler ran out of attempts — a
+// silent, and very real, bug. One seed proves nothing, so sweep enough of them
+// that a rare failure shows up, and re-check every legality rule on the STORED
+// position: a candidate validated before rounding can round a hundredth of an
+// inch into a wall.
+test("autoDeploy places every rig legally, across many seeds", () => {
+  for (let seed = 1; seed <= 200; seed++) {
+    const room = digitalRoomWithMirroredRigs("DEP002", seed);
+    autoDeploy(room, seededRandom(seed));
+    const polys = terrainPolygons(room.field);
+    const [ownerC, foeC] = deploymentCorners(room.field);
+    const rad = deployRadius(room.field);
+    const seen = [];
+    for (const rig of room.rigs) {
+      assert.notDeepEqual(rig.pos, { x: 0, y: 0 }, `${rig.name} undeployed on seed ${seed}`);
+      const r = radiusOf(rig);
+      const corner = rig.owner === room.game.sides[0].id ? ownerC : foeC;
+      assert.ok(Math.hypot(rig.pos.x - corner.x, rig.pos.y - corner.y) <= rad + 1e-6,
+        `${rig.name} outside its zone on seed ${seed}`);
+      assert.ok(rig.pos.x >= r && rig.pos.y >= r
+        && rig.pos.x <= room.field.width - r && rig.pos.y <= room.field.height - r,
+        `${rig.name} hangs off the table on seed ${seed}`);
+      assert.equal(clearOfTerrain(rig.pos, r, polys), true, `${rig.name} in terrain on seed ${seed}`);
+      for (const q of seen) {
+        assert.ok(Math.hypot(q.pos.x - rig.pos.x, q.pos.y - rig.pos.y) >= r + q.r - 1e-6,
+          `${rig.name} overlaps ${q.name} on seed ${seed}`);
+      }
+      seen.push({ pos: rig.pos, r, name: rig.name });
+    }
+  }
+});
+
+// The stored position is rounded to 2dp, which can shift a base by ~0.007in —
+// so a candidate judged legal BEFORE rounding can be stored illegal. Force every
+// candidate onto the exact rim of the deploy zone (distance roll of 1), where
+// that rounding is the only thing deciding legality, and the invariant has to
+// hold on the value actually written.
+test("autoDeploy judges legality on the rounded position, not the raw one", () => {
+  const room = digitalRoomWithMirroredRigs("DEP003");
+  let calls = 0;
+  const rimRandom = () => {
+    calls++;
+    // Odd call picks the angle, even call is the distance roll — 1 puts the
+    // candidate exactly `deployRadius` from the corner.
+    return calls % 2 === 1 ? ((calls * 7) % 90) / 90 : 1;
+  };
+  autoDeploy(room, rimRandom);
+  const [ownerC, foeC] = deploymentCorners(room.field);
+  const rad = deployRadius(room.field);
+  for (const rig of room.rigs) {
+    const corner = rig.owner === room.game.sides[0].id ? ownerC : foeC;
+    const d = Math.hypot(rig.pos.x - corner.x, rig.pos.y - corner.y);
+    assert.ok(d <= rad + 1e-6, `${rig.name} stored ${d.toFixed(4)}in out, zone is ${rad.toFixed(4)}`);
+  }
+});
+
+test("readying a digital room scatters terrain and deploys both sides", () => {
+  const room = digitalRoomWithMirroredRigs();
+  room.field.terrain = [];
+  applyCommand(room, { verb: "ready", attrs: { side: "a" } }, {}, { random: seededRandom(3) });
+  applyCommand(room, { verb: "ready", attrs: { side: "b" } }, {}, { random: seededRandom(4) });
+  assert.equal(room.game.started, true, "battle started");
+  assert.ok(room.field.terrain.length > 0, "terrain scattered");
+  for (const rig of room.rigs) assert.notDeepEqual(rig.pos, { x: 0, y: 0 }, "deployed off the origin");
+});
+
+test("readying a physical room deploys nothing", () => {
+  const room = createRoom("PHYS03");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 2; i++) {
+      applyCommand(room, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, ...W } });
+    }
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(room, { verb: "ready", attrs: { side: "a" } }, {}, { random: seededRandom(3) });
+  applyCommand(room, { verb: "ready", attrs: { side: "b" } }, {}, { random: seededRandom(4) });
+  assert.equal(room.game.started, true);
+  for (const rig of room.rigs) assert.equal(rig.pos, undefined, "physical rigs are never given a position");
 });

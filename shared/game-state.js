@@ -5,7 +5,9 @@ import {
 import { resolveAttack } from "./combat.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
+  deploymentCorners, deployRadius,
 } from "./field.js";
+import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
 import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
@@ -1484,6 +1486,87 @@ function startGameSeeded(room, first) {
   return true;
 }
 
+// Auto-scatter deployment. The engine drops both squadrons legally inside their
+// own corner; there is no deploy phase and no placement UI. Deterministic under
+// an injected RNG, exactly like scatterTerrain.
+//
+// The 8in zone is measured to the base CENTRE, not the nearest edge — the
+// measurement rebase made centre the default everywhere except melee reach and
+// objective control.
+export function autoDeploy(room, random = Math.random) {
+  const rand = typeof random === "function" ? random : Math.random;
+  const [ownerC, foeC] = deploymentCorners(room.field);
+  const rad = deployRadius(room.field);
+  const polys = terrainPolygons(room.field);
+  const centre = { x: room.field.width / 2, y: room.field.height / 2 };
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const placed = [];
+
+  // Somewhere this base could legally stand: inside its own zone (measured to
+  // the CENTRE), wholly on the table, clear of terrain by its full radius, and
+  // off every base already down. Judged on the ROUNDED point, because that is
+  // the one we store — validating the raw point and then rounding it can nudge
+  // a base a hundredth of an inch into a wall.
+  const legal = (p, r, corner) =>
+    Math.hypot(p.x - corner.x, p.y - corner.y) <= rad
+    && p.x >= r && p.y >= r && p.x <= room.field.width - r && p.y <= room.field.height - r
+    // The whole base must clear terrain, not just the centre point — the same
+    // "clear for a base of radius r" test the occupancy grid uses, so a rig can
+    // never be deployed somewhere it could not have walked to.
+    && clearOfTerrain(p, r, polys)
+    && !placed.some((q) => Math.hypot(q.pos.x - p.x, q.pos.y - p.y) < r + q.r);
+
+  const put = (rig, p, r) => {
+    rig.pos = p;
+    // Squadrons start clustered in their corner and advance across the
+    // diagonal (§10) — so everyone starts looking at the contested centre.
+    rig.facing = Math.atan2(centre.y - p.y, centre.x - p.x) * 180 / Math.PI;
+    placed.push({ pos: p, r });
+  };
+
+  for (const rig of room.rigs) {
+    if (rig.destroyed) continue;
+    const corner = rig.owner === room.game.sides[0].id ? ownerC : foeC;
+    const r = radiusOf(rig);
+    // A deployment corner sits *on* a table corner, so only a quarter of the
+    // 8in disc is on the table. Sample that quadrant directly — mirror the unit
+    // quarter-disc toward the field — instead of sampling the whole disc and
+    // throwing away the three quarters that land off the edge.
+    const sx = corner.x < centre.x ? 1 : -1;
+    const sy = corner.y < centre.y ? 1 : -1;
+    let done = false;
+    for (let attempt = 0; attempt < 400 && !done; attempt++) {
+      const a = rand() * (Math.PI / 2);
+      // sqrt of the roll spreads points evenly over the disc instead of
+      // clumping them at the corner.
+      const d = Math.sqrt(rand()) * rad;
+      const p = { x: round2(corner.x + sx * Math.cos(a) * d), y: round2(corner.y + sy * Math.sin(a) * d) };
+      if (!legal(p, r, corner)) continue;
+      put(rig, p, r);
+      done = true;
+    }
+    if (done) continue;
+    // A full squadron in an 8in quarter-disc packs tight enough that random
+    // darts can jam before every rig is down — and a rig silently left on the
+    // origin is a far worse bug than a slightly regular formation. Fall back to
+    // a deterministic lattice sweep, corner outwards, and take the first legal
+    // cell. This finds a spot whenever one exists, and keeps the RNG untouched.
+    const step = rad / 32;
+    const cells = [];
+    for (let ix = 0; ix <= 32; ix++) {
+      for (let iy = 0; iy <= 32; iy++) {
+        const p = { x: round2(corner.x + sx * ix * step), y: round2(corner.y + sy * iy * step) };
+        cells.push({ p, d: Math.hypot(p.x - corner.x, p.y - corner.y) });
+      }
+    }
+    cells.sort((m, n) => m.d - n.d || m.p.x - n.p.x || m.p.y - n.p.y);
+    const spot = cells.find((c) => legal(c.p, r, corner));
+    if (spot) put(rig, spot.p, r);
+    // No legal cell at all — the zone is genuinely full (a small field with a
+    // big squadron). Leave the rig where it is rather than stack it illegally.
+  }
+}
+
 function maybeStartGame(room, random = Math.random) {
   if (room.game.started) return false;
   const canStart = room.game.sides.every((side) => side.ready) && sidesAtParity(room);
@@ -1496,6 +1579,13 @@ function maybeStartGame(room, random = Math.random) {
     priorityTargets[side.id] = target.id;
   }
   room.game.priorityTargets = priorityTargets;
+  // A digital battle simulates positions, so the table has to be dressed and both
+  // squadrons put on it before round 1. Physical rooms are untouched — there the
+  // players scatter their own terrain and place their own minis.
+  if (room.mode === "digital") {
+    if (!room.field.terrain.length) room.field.terrain = scatterTerrain(room.field, random, { digital: true });
+    autoDeploy(room, random);
+  }
   room.game.started = true;
   room.game.phase = "initiative";
   room.game.round = 1;
