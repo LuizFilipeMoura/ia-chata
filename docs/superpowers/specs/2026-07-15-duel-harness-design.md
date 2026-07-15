@@ -165,6 +165,23 @@ So the tell for the first four is *"check whether the tile lied."* The tell for 
 
 > **Check whether a zero is a measurement or a rule.**
 
+### A sixth, and the rule for writing the guard
+
+**Rivet Lock** (`game-state.js:2811-2817`) seizes the control's weapon-role location; the engine refuses its fire while the Fire tile stays `enabled`. It crashed the sweep on ~10% of `Rivet Gun / prototype` trials — the driver's no-op detector doing its job, since unlike Ion Storm (which clears itself on refusal, so one retry succeeds) a rivet **persists ~2 rounds**.
+
+The interesting part is not the bug; it is that **both plausible fixes were wrong, and both would have failed silently rather than loudly.**
+
+| candidate guard | why it's wrong |
+|---|---|
+| `Object.values(rivetSeized).some(v => v > 0)` | drops the engine's **role filter**. `partsByRole("rig","weapon")` is `["arms"]` alone — a rivet on **legs still fires**. This guard vents a rig that shoots fine. |
+| `v > room.game.round` (round-aware) | **inverted.** Recovery deletes expired seizes (`:2062`, `if (rivetSeized[loc] < round) delete`), so presence *is* liveness — which is why the engine's own test is a bare `> 0`. A seize applied in round R stores `R+1`, so on the lock's second round `value === round` and this guard **fires through a live lock**. |
+
+Both are quieter than the crash and worse than it: the harness would under-report a weapon rather than stop. **A crash tells you; a wrong number doesn't.**
+
+> **The rule: when mirroring an engine refusal, copy its *predicate*, not its *gist*.**
+
+Read the engine's actual condition — its role filter, its comparison, its expiry semantics — and reproduce it exactly. A guard written from a plain-English summary of the rule ("if the weapon is riveted, don't fire") lands on one of the two wrong answers above. Both were caught only by mutation-testing the near-misses, not the absence.
+
 That is the whole reason `arc` is a required parameter with no default, and why `policy.test.mjs` pins `arcBonus(miniGun, "front") === null` against the real profiles — with a contrast case (`arcBonus(mortar, "front") === 0`) showing that a non-Raking weapon has no cliff. Pinning the *reason*, not the throw.
 
 Measured, to make it concrete — Mini Gun, five seeds, real engine:
@@ -294,6 +311,24 @@ precisely which of the 44 this fixes:
 **If Fire Control Lock lights up, the harness is lying.** The right column needs
 *choice*; greedy-safe makes none. A harness reporting value for an upgrade it
 cannot exercise has a bug, and this table is how it gets caught.
+
+### The credit can land on the wrong side of the ledger
+
+Greedy-safe has **no melee fallback**. So a control whose gun is destroyed or
+riveted **passes instead of swinging** — and its output drops.
+
+That means a weapon which disarms the control (Rivet Gun's Rivet Lock; any hit
+that takes an arm) reads as **less incoming damage** — a *lower `spTaken`* — rather
+than as the tempo win it actually is. The advantage shows up in the opponent's
+column, negated, instead of in the weapon's own.
+
+This is the subtlest misread the report can produce, because nothing is zero and
+nothing looks broken: the numbers are all plausible and the credit is simply
+filed under the wrong heading. Rivet Gun is the upgrade that surfaced it and the
+one most exposed to it.
+
+A bot with a melee branch would fix this properly. Until then it is a documented
+bias, printed with the numbers.
 
 ### Unit tests
 
