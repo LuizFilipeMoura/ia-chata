@@ -16,8 +16,6 @@ export const ROLES = ["structural", "power", "mobility", "weapon"];
 const RIG_TOUGHNESS = {
   light:    { hull: 4, arms: 3, legs: 3, engine: 3 },
   medium:   { hull: 5, arms: 4, legs: 4, engine: 3 },
-  heavy:    { hull: 6, arms: 5, legs: 5, engine: 4 },
-  colossal: { hull: 7, arms: 6, legs: 6, engine: 5 },
 };
 
 export const UNIT_KINDS = {

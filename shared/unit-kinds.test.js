@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   ROLES, UNIT_KINDS, roleOf, partsByRole, hitPart, toughnessOf, partNamesOf, kindOf,
 } from "./unit-kinds.js";
+import { SUPPORTED_RIG_CLASSES } from "./game-state.js";
 
 test("ROLES lists the four generalized component roles", () => {
   assert.deepEqual([...ROLES].sort(), ["mobility", "power", "structural", "weapon"]);
@@ -56,7 +57,7 @@ test("hitPart returns the D12 → part-name for a kind", () => {
 test("toughnessOf — rig reads the weight-class grid", () => {
   assert.equal(toughnessOf("rig", "hull", "medium"), 5);
   assert.equal(toughnessOf("rig", "engine", "light"), 3);
-  assert.equal(toughnessOf("rig", "hull", "colossal"), 7);
+  assert.equal(toughnessOf("rig", "hull", "light"), 4);
 });
 
 test("toughnessOf — flat kinds ignore weight class", () => {
@@ -73,10 +74,22 @@ test("toughnessOf — every part of every kind has a value", () => {
       assert.equal(typeof toughnessOf(kind, p), "number", `${kind}/${p}`);
     }
   }
-  for (const wc of ["light", "medium", "heavy", "colossal"]) {
+  // Derived, never hardcoded: this list read ["light","medium","heavy","colossal"]
+  // and went on asserting over two classes makeRig had always rejected.
+  for (const wc of SUPPORTED_RIG_CLASSES) {
     for (const p of partNamesOf("rig")) {
       assert.equal(typeof toughnessOf("rig", p, wc), "number", `rig/${wc}/${p}`);
     }
+  }
+});
+
+test("the rig toughness grid carries exactly the buildable classes", () => {
+  // Heavy and Colossal were deleted 2026-07-16. toughnessOf THROWS on an unknown
+  // class rather than returning 0, so a stale grid entry is not merely dead — it
+  // is a T7 board that reads as real. It did: a penetration-rework spec and its
+  // reviewer both balanced against toughness values no chassis could field.
+  for (const wc of ["heavy", "colossal"]) {
+    assert.throws(() => toughnessOf("rig", "hull", wc), /no T for/, `${wc} must be gone, not merely unused`);
   }
 });
 

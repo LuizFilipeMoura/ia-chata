@@ -15,11 +15,11 @@ export const GLOSSARY = [
   },
   {
     id: "squadron", term: "Squadron", match: ["Squadron"],
-    def: "A player's force of 3–5 Rigs (max 1 Colossal), built purely from chassis and weapons (§3).",
+    def: "A player's force of 3–5 Rigs, built purely from chassis and weapons (§3).",
   },
   {
     id: "weight-class", term: "Weight class", match: ["Weight class", "Weight classes"],
-    def: "A Rig's chassis size — Light, Medium, Heavy, or Colossal — which sets its base Structure Points, Aim, Speed, and Heat Capacity (§2).",
+    def: "A Rig's chassis size — Light or Medium — which sets its base Structure Points, Speed, and Heat Capacity (§2).",
   },
   {
     id: "sp", term: "Structure Points", match: ["Structure Points", "SP"],

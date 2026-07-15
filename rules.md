@@ -39,7 +39,7 @@ Each Rig has four components — **Hull, Arms, Legs, Engine** — each with its 
 
 **You need:** a matched force per side (see §3 — both sides field the same composition), D6 and D12 dice, a tape measure (inches), terrain, 3 objective markers, and tokens for preparations and catastrophic damage.
 
-> Only **Light** and **Medium** Rigs are currently playable — Heavy and Colossal weapon profiles are not yet written (§12).
+> A Rig is **Light** or **Medium**. Those are the two weight classes in the game.
 
 ---
 
@@ -47,32 +47,32 @@ Each Rig has four components — **Hull, Arms, Legs, Engine** — each with its 
 
 Every Rig starts from a **weight class**, which sets its base profile.
 
-| Stat | Light | Medium | Heavy | Colossal |
-|---|:--:|:--:|:--:|:--:|
-| Base size | 60mm | 75mm | 90mm | 120mm |
-| Hull SP | 6 | 7 | 8 | 9 |
-| Arms SP | 5 | 6 | 7 | 8 |
-| Legs SP | 5 | 6 | 7 | 8 |
-| Engine SP | 4 | 5 | 6 | 7 |
+| Stat | Light | Medium |
+|---|:--:|:--:|
+| Base size | 60mm | 75mm |
+| Hull SP | 6 | 7 |
+| Arms SP | 5 | 6 |
+| Legs SP | 5 | 6 |
+| Engine SP | 4 | 5 |
 | Aim | 4+ | 4+ | 3+ | 3+ |
 | Speed | 5" | 4" | 3" | 2" |
 | Weapon slots | 2 | 2 | 2 | 2 (+1 Hull) |
 
 - **Speed** — max move distance in inches. *⚙ TUNING: whole-inch speeds (5/4/3/2); Mediums bumped back up from an earlier over-nerf.*
 - **Aim** — base D6 target number to hit (modified by weapon Accuracy and cover).
-- **Weapon slots** — how many weapons the Rig may carry. Colossal Rigs get an extra **Hull-mounted** slot.
+- **Weapon slots** — how many weapons the Rig may carry: one Long Range and one Melee.
 - **Structure Points (SP)** — durability per component. At 0 SP → catastrophic damage (§8).
 
 ### Toughness (armour)
 
 Armour is a single per-location stat: **Toughness (T)**. It is what the **Wound Roll** (§7.5) tests against — the tougher the location, the higher the D10 you need. There is no lookup table; T feeds straight into one formula.
 
-| Location | Light | Medium | Heavy | Colossal |
-|---|:--:|:--:|:--:|:--:|
-| Hull | 4 | 5 | 6 | 7 |
-| Arms | 3 | 4 | 5 | 6 |
-| Legs | 3 | 4 | 5 | 6 |
-| Engine | 3 | 3 | 4 | 5 |
+| Location | Light | Medium |
+|---|:--:|:--:|
+| Hull | 4 | 5 |
+| Arms | 3 | 4 |
+| Legs | 3 | 4 |
+| Engine | 3 | 3 |
 
 Toughness varies **by location, not just by chassis** — a Medium Rig's Hull is **T5** but its Engine is only **T3**. That is why the hit location is rolled *before* the Wound Roll (§7): the location supplies the T you roll against.
 
@@ -87,9 +87,8 @@ Toughness varies **by location, not just by chassis** — a Medium Rig's Hull is
 1. **Squadron size** — both sides field the **same composition**: the same number of Rigs in each weight class, the same number of Tanks, and the same number of Walkers. Any size (at least one unit per side); the two forces must mirror each other.
 2. **Choose each Rig's weight class** (§2).
 3. **Equip weapons** up to the Rig's slots. Weapons come in **two types — Long Range and Melee** (§12), and every Rig **must carry exactly one of each**:
-   - Light / Medium / Heavy: **2 weapons — one Long Range and one Melee.**
-   - Colossal: **one Long Range + one Melee, plus 1 Hull-mounted weapon** of either type (3 weapons total).
-   - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **Penetration then scales with the chassis** (Light −1 / Medium +0 / Heavy +1 / Colossal +2, §12).
+   - **2 weapons — one Long Range and one Melee**, on every Rig of either class.
+   - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **Penetration then scales with the chassis** (Light −1 / Medium +0, §12).
    - Each equipped weapon has **three upgrade options — one of each nature (Field / Tuned / Prototype)** (§12), and the Rig's equipment offers the same three-nature choice (§15). Choose **one** upgrade for the Long Range weapon, **one** for the Melee weapon, and **one** for the equipment when the Rig is commissioned; a Rig may run **at most one Prototype across its two weapons and its equipment**. A selected upgrade modifies only the item it's chosen for.
 
 ### Balancing without points
@@ -193,8 +192,6 @@ Heavier Rigs run hotter — their mass works the engine harder. A Rig is safe up
 |---|:--:|
 | Light | 6 |
 | Medium | 5 |
-| Heavy | 4 |
-| Colossal | 3 |
 
 ### Overheat check
 
@@ -202,7 +199,7 @@ At the end of an activation, compare the Rig's current heat to its Heat Capacity
 - **Heat ≤ Capacity** → safe, no roll.
 - **Heat > Capacity** → roll **1 D12 + [2 × (heat − Capacity)]** (this bonus is capped at **+10**) and consult the **Heat Threshold Table**.
 
-*Example: a Colossal (Capacity 3) ending its activation on heat 6 rolls D12 + 6.*
+*Example: a Medium (Capacity 5) ending its activation on heat 8 rolls D12 + 6.*
 
 Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§5) sets it to 0.
 
@@ -272,8 +269,7 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 
 **Arms — which weapon?**
 
-- Light / Medium / Heavy: **1–6 Left**, **7–12 Right**.
-- Colossal: **1–4 Left**, **5–8 Hull**, **9–12 Right**.
+**1–6 Left**, **7–12 Right**.
 
 ---
 
@@ -339,11 +335,11 @@ Any weapon may be fitted to a Rig of **any weight class** and **any faction**. R
 
 **Weight-class Penetration.** The **Penetration** listed below is the **Medium** baseline. A weapon's Penetration shifts with the chassis carrying it — heavier Rigs drive it harder, lighter Rigs can't. Everything else (ROF, Accuracy, RNG, perks) is unchanged:
 
-| Chassis | Light | Medium | Heavy | Colossal |
-|---|:--:|:--:|:--:|:--:|
-| **Penetration modifier** | −1 | +0 | +1 | +2 |
+| Chassis | Light | Medium |
+|---|:--:|:--:|
+| **Penetration modifier** | −1 | +0 |
 
-Apply this modifier to the weapon's Penetration every time you make a Wound Roll (§7). *Example: a Sniper Cannon (Penetration 10) reads Penetration 9 on a Light Rig, 10 on a Medium, 11 on a Heavy, 12 on a Colossal.* *⚙ TUNING: the ladder was halved from ±2/±4 when Penetration was rescaled for the Wound Roll — each point is now worth a flat 10%, so it buys twice as much as it used to.*
+Apply this modifier to the weapon's Penetration every time you make a Wound Roll (§7). *Example: a Sniper Cannon (Penetration 10) reads Penetration 9 on a Light Rig and 10 on a Medium.* *⚙ TUNING: the ladder was halved from ±2/±4 when Penetration was rescaled for the Wound Roll — each point is now worth a flat 10%, so it buys twice as much as it used to.*
 
 > **Perks are being reworked.** Base weapons now carry **stats only** — every *signature* perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. **Exception:** the two **Machine Guns** (Mini Gun, Double MG) carry **Raking Fire** innately (§13) — it defines the weapon type (no frontal damage; +3 side / +6 rear), not a signature upgrade. *Melee* is likewise a weapon **type** (the Melee Weapons section), not a perk.
 
@@ -475,7 +471,6 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Cleave** — the spinning blade carries through: on a successful hit, one other enemy Rig within **2"** of the target also suffers 1 hit (roll its hit location and Wound Roll normally).
 - **Full Auto** — optional fire-mode: **+2 ROF**, but each attack die that rolls a 1 adds 1 heat.
 - **Hot** — firing generates **2 heat** instead of 1. If written as **(Hot)** before a perk, the weapon is not Hot by default, but the Ironclad may push the engine to gain that perk for the attack at the cost of being Hot.
-- **Hull** — a Hull-mounted weapon (Colossal only, in this edition). May be equipped only once per Rig.
 - **Impale** — on a successful hit, roll 1 D12; on **8+** the target is impaled — immobilised until this Rig's next activation (it may still pivot).
 - **Incendiary** — a successful hit increases the target's heat by 1 (needs only to hit).
 - **Melee** — usable only within **2"**; never needs reloading.
@@ -621,7 +616,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 
 **Removed from the Alpha:** the Oil points currency, Iron / Iron Cap weight limits, and **engine types** (Crude Oil / Diesel / Arc). Equipment returned in a redesigned form as the single-slot system in §15. Squadrons are balanced by enforced mirror composition (§3); heat tolerance is set by weight class (§6).
 
-**Distance scale:** distances suit the models this ruleset uses on a **54"×36"** table — **Light 60 mm**, **Medium 75 mm** bases (Heavy 90, Colossal 120).
+**Distance scale:** distances suit the models this ruleset uses on a **54"×36"** table — **Light 60 mm**, **Medium 75 mm** bases.
 
 **Contradictions resolved (from the source):**
 - Recovery Phase heat cooldown → **1**. *⚙ TUNING.*
@@ -643,7 +638,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 - **Victory — Salvage** (§11) — weighted centre objective (2 VP), annihilation auto-win.
 
 **Open questions / TBD:**
-- Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class Penetration modifier** (Light −1 / Heavy +1 / Colossal +2 vs the Medium baseline, §12); all four classes are playable. Playtest the ±1-per-step spread — it may need widening/narrowing per weapon later.
+- Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class Penetration modifier** (Light −1 vs the Medium baseline, §12); the game has two classes. Playtest the 1-per-step spread — it may need widening/narrowing per weapon later.
 - Faction perks — not yet written (§14).
 - Machine-gun Penetration/arc values under Raking Fire — watch that they're "strong not silly" on the flanks.
 - Alpha-strike swing at 3v3 — high-Penetration crits can gut a Rig in one activation; see if crits need softening.

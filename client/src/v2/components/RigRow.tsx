@@ -7,7 +7,6 @@ import type { Rig, Component } from "../../state/types";
 
 const CLASS_GLYPH: Record<string, [string, string, string]> = {
   light: ["◆", "LGT", "#8fbcff"], medium: ["◈", "MED", "#e8bd57"],
-  heavy: ["⬢", "HVY", "#ef9450"], colossal: ["✦", "COL", "#f26a50"],
 };
 
 // Cold kinds (Tank, Walker) have no weight class — key the class column off the

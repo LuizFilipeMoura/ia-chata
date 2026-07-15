@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { AIM, WEIGHT_PEN_MOD, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
-import { WEAPONS } from "./game-state.js";
+import { AIM, WEIGHT_PEN_MOD, HEAT_CAPACITY, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
+import { WEAPONS, SUPPORTED_RIG_CLASSES } from "./game-state.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.move.heat, 1);
@@ -59,8 +59,18 @@ test("hitLocation maps the D12 bands (§7)", () => {
 test("weight-class and aim scalars are correct (§2)", () => {
   assert.equal(WEIGHT_PEN_MOD.light, -1);
   assert.equal(WEIGHT_PEN_MOD.medium, 0);
+  assert.equal(AIM.light, 4);
   assert.equal(AIM.medium, 4);
-  assert.equal(AIM.heavy, 3);
+});
+
+test("the weight-class maps carry exactly the buildable classes", () => {
+  // Heavy and Colossal were deleted 2026-07-16. makeRig had always rejected them
+  // (SUPPORTED_RIG_CLASSES), so every heavy/colossal branch in these maps existed
+  // only to be read as if it were real — and it was, twice, by a spec author and
+  // its reviewer during the penetration rework.
+  for (const [name, map] of Object.entries({ WEIGHT_PEN_MOD, AIM, HEAT_CAPACITY })) {
+    assert.deepEqual(Object.keys(map), [...SUPPORTED_RIG_CLASSES], `${name} drifted from SUPPORTED_RIG_CLASSES`);
+  }
 });
 
 test("woundTarget — TN is 6 + T - S", () => {
@@ -76,8 +86,11 @@ test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
   // A natural 1 must NEVER wound.
   assert.equal(woundTarget(20, 1), 2);
 
-  // The clamp must engage on real inputs, not just absurd ones: the weakest
-  // melee into colossal armour is the in-domain worst case.
+  // The clamp must engage on real inputs, not just absurd ones. NOTE: T7 was a
+  // colossal hull, and Heavy/Colossal were deleted 2026-07-16 — so this is now a
+  // unit test of woundTarget's arithmetic, not an in-domain matchup. No rig board
+  // reaches T7 any more; see combat.test.js's "nothing needs the clamp's upper
+  // rail any more", which pins that the whole game's worst raw TN is 9.
   assert.equal(woundTarget(2, 7), 10);   // raw 11, clamped
   // These two pin 10 and 2 as legitimate target numbers in their own right,
   // not merely artifacts of the clamp.

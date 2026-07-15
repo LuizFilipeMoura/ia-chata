@@ -12,7 +12,7 @@ export function spColor(cur: number, max: number): string {
 }
 
 // Cosmetic only — the game has no tonnage stat. Used for the Yard header flavor.
-const TONS: Record<string, number> = { light: 6, medium: 8, heavy: 10, colossal: 12 };
+const TONS: Record<string, number> = { light: 6, medium: 8 };
 export function tonnage(rigs: Rig[], side: string): number {
   return rigs
     .filter((r) => (r.owner || "a") === side)

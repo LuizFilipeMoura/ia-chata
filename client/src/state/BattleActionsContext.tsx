@@ -35,9 +35,9 @@ const LOC_CHOICES = [
 
 // §5 base Speed (inches) per weight class — the physical reach of a Move.
 // House-rule tuning: whole-inch speeds so tabletop measuring stays clean.
-// Mediums bumped up a notch (were crawling) while keeping the light > medium >
-// heavy > colossal ladder.
-const SPEED: Record<string, number> = { light: 5, medium: 4, heavy: 3, colossal: 2 };
+// Mediums bumped up a notch (were crawling) while keeping the light > medium
+// ladder.
+const SPEED: Record<string, number> = { light: 5, medium: 4 };
 const MOVE_HOLD_MS = 5000;
 const SPRINT_HOLD_MS = 8000;
 const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOLD_MS);

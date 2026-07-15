@@ -600,15 +600,17 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
 });
 
 test("computePen skips weight-class modifier for flat-pick weapons", () => {
-  const attackerWithClass = { kind: "tank", weightClass: "heavy" };
+  // A tank has no weightClass at all; this double carries one anyway to prove
+  // flatPick ignores it rather than merely lacking one to read.
+  const attackerWithClass = { kind: "tank", weightClass: "light" };
   const profile = { pen: 12, perks: [], flatPick: true };
   assert.equal(computePen(attackerWithClass, profile, { charged: false }), 12);
 });
 
 test("computePen still applies weight-class modifier for rig-catalog weapons", () => {
-  const attacker = { kind: "rig", weightClass: "heavy" };
+  const attacker = { kind: "rig", weightClass: "light" };
   const profile = { pen: 8, perks: [] };
-  assert.equal(computePen(attacker, profile, { charged: false }), 8 + 1); // heavy is +1 on the d10 ladder
+  assert.equal(computePen(attacker, profile, { charged: false }), 8 - 1); // light is -1 on the d10 ladder
 });
 
 test("resolveAttack reads weapons.unit when the attacker is a Tank", () => {
@@ -1705,11 +1707,17 @@ test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-
 });
 
 // ── §7.5 the wound roll (d10) ────────────────────────────────────────────────
-// Fixture note: makeRig returns null unless BOTH weapon slots are filled, and
-// SUPPORTED_RIG_CLASSES is ["light", "medium"] — so the colossal cases below use
-// bare `{ weightClass }` doubles, matching the plain-object style the older
-// rollWounds tests in this file already use. rollWounds reads only
-// weightClass/kind off those sides, so the doubles are faithful.
+// Fixture note: makeRig returns null unless BOTH weapon slots are filled — so the
+// cases below use bare `{ weightClass }` doubles for the side whose class is the
+// point, matching the plain-object style the older rollWounds tests in this file
+// already use. rollWounds reads only weightClass/kind off those sides, so the
+// doubles are faithful.
+//
+// The extreme cases below used a colossal target to reach the game's worst TN.
+// Heavy and Colossal were deleted 2026-07-16, so the worst matchup is now
+// Rivet Gun/light vs a medium hull at TN 9. Those fixtures moved to the Rivet Gun
+// to keep testing the extreme they claim to, rather than swapping the class and
+// quietly testing a mid-table matchup under an extreme-sounding name.
 
 test("rollWounds — a wound deals the weapon's D, not 1", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball" });
@@ -1724,14 +1732,14 @@ test("rollWounds — a wound deals the weapon's D, not 1", () => {
 
 test("rollWounds — a natural 10 always wounds however hopeless the matchup", () => {
   // The guarantee the whole rewrite exists for. The old model gave 0 here, always.
-  const attacker = makeRig(1, "A", "light", "a", { longRange: "Mini Gun", melee: "Circular Saw" });
-  const target = { weightClass: "colossal" };
-  const profile = { ...WEAPONS.melee["Circular Saw"] };
-  // Penetration 5 + light -1 + front 0 = 4 vs colossal hull T7 => TN 6+7-4 = 9. Only a 9-10 lands.
+  const attacker = makeRig(1, "A", "light", "a", { longRange: "Rivet Gun", melee: "Circular Saw" });
+  const target = { weightClass: "medium" };
+  const profile = { ...WEAPONS.longRange["Rivet Gun"] };
+  // Penetration 3 + light -1 + front 0 = 2 vs medium hull T5 => TN 6+5-2 = 9. Only a 9-10 lands.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].target, 9);
-  assert.equal(out[0].sp, 2); // Circular Saw dmg: 2
+  assert.equal(out[0].sp, 1); // Rivet Gun dmg: 1
 });
 
 test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wounds", () => {
@@ -1739,14 +1747,14 @@ test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wound
   // to force an outcome, so an off-by-one here (`>` for `>=`) passes the whole
   // suite otherwise — verified by mutation. The TN is 10% per point of Penetration only
   // if the TN face itself is a hit.
-  const attacker = makeRig(1, "A", "light", "a", { longRange: "Mini Gun", melee: "Circular Saw" });
-  const target = { weightClass: "colossal" };
-  const profile = { ...WEAPONS.melee["Circular Saw"] };
-  // Penetration 5 + light -1 + front 0 = 4 vs colossal hull T7 => TN 9.
+  const attacker = makeRig(1, "A", "light", "a", { longRange: "Rivet Gun", melee: "Circular Saw" });
+  const target = { weightClass: "medium" };
+  const profile = { ...WEAPONS.longRange["Rivet Gun"] };
+  // Penetration 3 + light -1 + front 0 = 2 vs medium hull T5 => TN 9.
   const atTn = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [9] }, () => 0);
   assert.equal(atTn[0].target, 9);
-  assert.equal(atTn[0].sp, 2); // 9 >= 9 wounds
+  assert.equal(atTn[0].sp, 1); // 9 >= 9 wounds
 
   const belowTn = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [8] }, () => 0);
@@ -1754,10 +1762,10 @@ test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wound
 });
 
 test("rollWounds — a natural 1 never wounds however lopsided", () => {
-  const attacker = { weightClass: "colossal" };
+  const attacker = { weightClass: "medium" };
   const target = makeRig(2, "B", "light", "b", { longRange: "Autocannon", melee: "Claw" });
   const profile = { ...WEAPONS.melee["Wrecking Ball"] };
-  // Penetration 10 + colossal +2 + front 0 = 12 vs light hull T4 => TN 6+4-12 = -2 -> clamp 2.
+  // Penetration 10 + medium 0 + front 0 = 10 vs light hull T4 => TN 6+4-10 = 0 -> clamp 2.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [1] }, () => 0);
   assert.equal(out[0].target, 2);
@@ -1875,9 +1883,8 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   // per-kind knowledge: it reads whatever toughnessOf returns for the TARGET's
   // kind. This pins that dispatch.
   //
-  // (T6 is not "off the scale" — RIG_TOUGHNESS defines heavy hulls at T6 and
-  // colossal at T7. But no chassis uses either, so T3-T5 is every rig you can
-  // actually build, and a tank is the only way to reach T6 today.)
+  // (T6 is not "off the scale" — a tank hull is T6. It is simply not reachable on
+  // a rig: T3-T5 is the whole rig board now that Heavy and Colossal are gone.)
   //
   // Siege Maul Penetration 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
   // effPen 14 into a T6 hull. The floor is at pen T+4 = 10, so 4 points are
@@ -2246,7 +2253,10 @@ function worstUsableArc(profile) {
 // location, at the worst arc it can legally use — the true floor of the game.
 function woundMatrix() {
   const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
-  const classes = ["light", "medium", "heavy", "colossal"];
+  // Derived, never hardcoded: this list read ["light","medium","heavy","colossal"]
+  // and kept asserting over two classes that makeRig had always rejected. Reading
+  // the map means the matrix cannot drift from the game again.
+  const classes = Object.keys(WEIGHT_PEN_MOD);
   const rows = [];
   for (const [name, w] of Object.entries(all)) {
     const arc = worstUsableArc(w);
@@ -2288,24 +2298,35 @@ test("no dead zones — the clamp is a floor, not a crutch: raw TN stays in band
   // quietly papered over a 5-point hole. One point past the die is a floor;
   // several points past it is a balance bug wearing the clamp as a disguise.
   const worst = woundMatrix().sort((a, b) => b.raw - a.raw)[0];
-  assert.equal(worst.raw, 11, `worst raw TN moved: ${worst.label}`);
+  assert.equal(worst.raw, 9, `worst raw TN moved: ${worst.label}`);
   assert.ok(worst.raw <= WOUND_DIE + 1, `raw TN ${worst.raw} leans on the clamp`);
 });
 
-test("no dead zones — the clamp is genuinely engaged, not incidental", () => {
-  // Pins that the clamp does real work: exactly one matchup in the whole game
-  // would be hopeless without it. If this set ever grows, someone has added a
-  // weapon that can only scratch a colossal hull on a natural 10 — a real
-  // design decision, and one that should have to edit this test to land.
+test("no dead zones — nothing needs the clamp's upper rail any more", () => {
+  // This test used to assert the opposite, and the flip is the interesting part.
+  //
+  // Exactly one matchup in the game was hopeless unclamped — Rivet Gun/light vs
+  // a COLOSSAL hull, raw TN 11, unrollable on a d10. Deleting Heavy and Colossal
+  // (2026-07-16) deleted that matchup. The worst raw TN is now 9, inside the die,
+  // so `a natural 10 always wounds` is currently a guarantee about nothing: no
+  // matchup is hopeless even with the clamp switched off.
+  //
+  // That is a STRONGER guarantee than the one this test used to make, so it is
+  // asserted as such rather than deleted. Do NOT read it as "the clamp is dead" —
+  // its other rail (TN floored at 2, the saturation ceiling) is very much live and
+  // is what the penetration rework exists to address. Only the upper rail is idle.
+  //
+  // If this ever fails, someone has added a weapon or raised a toughness far
+  // enough to reintroduce a hopeless matchup. That is a real design decision and
+  // it should have to edit this test to land.
   const reliant = woundMatrix().filter((r) => r.raw > WOUND_DIE);
-  assert.deepEqual(reliant.map((r) => r.label), [
-    "Rivet Gun/light vs colossal/hull (arc +0)",
-  ]);
-  // ...and that the clamp is what saves it: raw 11 would be unrollable on a d10.
+  assert.deepEqual(reliant.map((r) => r.label), []);
+
+  // The worst matchup left, pinned so the margin is visible rather than implied.
   const pen = WEAPONS.longRange["Rivet Gun"].pen + WEIGHT_PEN_MOD.light; // 3 - 1 = 2
-  const t = toughnessOf("rig", "hull", "colossal");                      // 7
-  assert.equal(6 + t - pen, 11);              // unclamped: needs an 11 on a d10
-  assert.equal(woundTarget(pen, t), 10);      // clamped: a natural 10 still wounds
+  const t = toughnessOf("rig", "hull", "medium");                        // 5
+  assert.equal(6 + t - pen, 9);               // unclamped: a 9 or 10 lands it
+  assert.equal(woundTarget(pen, t), 9);       // clamped: unchanged, the rail is idle
 });
 
 test("no dead zones — the light saw vs a medium hull, the case that started this", () => {

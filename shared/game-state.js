@@ -16,8 +16,6 @@ import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules 
 export const RIG_DEFAULTS = {
   light:    { hull: 6, arms: 5, legs: 5, engine: 4 },
   medium:   { hull: 7, arms: 6, legs: 6, engine: 5 },
-  heavy:    { hull: 8, arms: 7, legs: 7, engine: 6 },
-  colossal: { hull: 9, arms: 8, legs: 8, engine: 7 },
 };
 export const LOCS = ["hull", "arms", "legs", "engine"];
 // HEAT_CAPACITY now lives in rules.js (combat.js needs it and imports only
@@ -142,7 +140,7 @@ export const CHASSIS_PRIMARY_EQUIPMENT = {
 };
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
-// weight classes (3 medium / 3 light — the catalogue has no heavy). All chassis
+// weight classes (3 medium / 3 light). All chassis
 // ids are unique, honouring the no-mirror-matchup invariant (AGENTS.md).
 // `prototype` names which weapon slot carries its signature Prototype upgrade so
 // a seeded battle exercises a spread of Prototype mechanics out of the box; the
@@ -1315,7 +1313,7 @@ function sideRigCount(room, sideId) {
 }
 
 // Composition signature for one side: Rigs bucketed by weight class, cold kinds
-// (tank/walker) bucketed by kind. e.g. { "rig:light": 2, "rig:heavy": 1, tank: 1 }
+// (tank/walker) bucketed by kind. e.g. { "rig:light": 2, "rig:medium": 1, tank: 1 }
 function compositionOf(room, sideId) {
   const sig = {};
   for (const u of room.rigs) {

@@ -13,7 +13,7 @@ import { SPEED } from "../battle/constants";
 import { LoadoutView } from "../components/LoadoutView";
 import type { Rig, Component } from "../../state/types";
 
-const CLASS_GLYPH: Record<string, string> = { light: "◆", medium: "◈", heavy: "⬢", colossal: "✦" };
+const CLASS_GLYPH: Record<string, string> = { light: "◆", medium: "◈" };
 
 interface Props {
   rig: Rig;

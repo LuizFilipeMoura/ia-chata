@@ -509,7 +509,7 @@ test("add without weapons is a no-op — no rig, no version bump, no id burn", (
   assert.equal(r.version, 1);
 });
 
-test("add blocks heavy and colossal for now without version bump or id burn", () => {
+test("add blocks heavy and colossal without version bump or id burn", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Breaker", class: "heavy", ...W } });
   applyCommand(r, { verb: "add", attrs: { name: "Atlas", class: "colossal", ...W } });

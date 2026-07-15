@@ -60,15 +60,15 @@ export function heatThreshold(total) {
 }
 
 // Weight-class Penetration modifier applied to every Wound Roll (§12).
-export const WEIGHT_PEN_MOD = { light: -1, medium: 0, heavy: 1, colossal: 2 };
-export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
+export const WEIGHT_PEN_MOD = { light: -1, medium: 0 };
+export const AIM = { light: 4, medium: 4 };
 
 // Heat Capacity by weight class (rules §6). A Rig is safe at or below this
 // value; each point beyond it adds +2 (capped +10) to the misfire roll.
 // Lives here (not game-state.js) so combat.js — which imports ONLY from
 // rules.js to avoid a cycle with game-state.js — can read it for
 // conditional Penetration effects (e.g. Opportunist §13).
-export const HEAT_CAPACITY = { light: 6, medium: 5, heavy: 4, colossal: 3 };
+export const HEAT_CAPACITY = { light: 6, medium: 5 };
 
 // Hit-location table (§7): defender's D12 → part-name, keyed by unit kind.
 export function hitLocation(kindId, d12) {

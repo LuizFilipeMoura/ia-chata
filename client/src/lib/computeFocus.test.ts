@@ -31,15 +31,15 @@ test("pre-battle off parity shows the composition diff", () => {
       { id: "b", name: "Rival", vp: 0, ready: false },
     ],
   });
-  // a: 1 light. b: 1 light + 1 heavy. a is short 1 heavy.
+  // a: 1 light. b: 1 light + 1 medium. a is short 1 medium.
   const rigs = [
     rig({ id: 1, owner: "a", weightClass: "light" }),
     rig({ id: 2, owner: "b", weightClass: "light" }),
-    rig({ id: 3, owner: "b", weightClass: "heavy" as Rig["weightClass"] }),
+    rig({ id: 3, owner: "b", weightClass: "medium" }),
   ];
   const f = computeFocus(g, rigs, "a");
   expect(f?.primary).toBe("Match your opponent's composition");
-  expect(f?.secondary).toBe("Short 1 Heavy Rig");
+  expect(f?.secondary).toBe("Short 1 Medium Rig");
 });
 
 test("pre-battle at parity prompts Ready", () => {
