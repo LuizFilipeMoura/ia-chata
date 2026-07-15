@@ -235,9 +235,30 @@ can see.
 
 | column | why |
 |---|---|
-| **A's SP@10** | primary — the tuning signal |
-| **wreck-rate** | secondary — catches damage going into locations that don't kill |
-| **B's SP@10** | free from the same run, and the only way denial appears: Suppression Lock and Pinning Burst make *B* fire less, which never shows in A's column |
+| **rounds-to-wreck** | **primary** — see the correction below |
+| **A's SP/round** | the rate signal; comparable across rows that ran different lengths |
+| **A's SP total** | shown, but **saturating** — read with `rounds`, never alone |
+| **wreck-rate** | how often the duel resolved at all; also catches damage going into locations that don't kill |
+| **B's SP total** | free from the same run, and the only way denial appears: Suppression Lock and Pinning Burst make *B* fire less, which never shows in A's column |
+
+### Correction: SP@10 was the wrong primary, and my reason for rejecting rounds-to-wreck was empirically false
+
+This spec chose SP@10 and rejected rounds-to-wreck as *"censored, awkward — a large share of duels won't wreck inside the horizon."* Both halves are wrong, measured on the built harness:
+
+| cell | rounds | wreck% | SP total | SP/round |
+|---|---|---|---|---|
+| Autocannon / depleted-core | 4.7 | **92%** | 36.1 | **7.72** |
+| Autocannon / penetrator-rounds | 6.0 | **81%** | 31.6 | **5.29** |
+| Siege Maul / reinforced-head | 5.8 | **93%** | 32.1 | 5.56 |
+| Sniper Cannon / cold-bore | 7.1 | **59%** | 26.6 | 3.76 |
+
+**Wreck rates are 59–93%, not the sparse tail I assumed.** Rounds-to-wreck is well-behaved, barely censored, and is the question a player actually has.
+
+**And SP total saturates.** The duel ends when B1 wrecks, so A's total damage is bounded by B1's pool no matter how good the weapon is. A weapon that kills in 4.7 rounds deals *more* than one taking 6.0 only incidentally — the better weapon has less time to accumulate. Depleted Core vs Penetrator Rounds reads 36.1 vs 31.6 on totals (a 14% gap) and 7.72 vs 5.29 on rate (a 46% gap). The rate is the signal; the total is mostly a measure of how long B1 survived.
+
+So: **rounds-to-wreck primary, SP/round as the rate, SP total shown but never read alone.** Keeping the total is still right — it is what makes `weaponLost` cells legible as censored, and it is the quantity the calibration compares against the old sweep.
+
+The general lesson, and it is the same one as the arc: **a metric choice is a measurement decision, and the way to check it is to measure, not to reason.** I rejected the right primary metric on an assumption I could have tested in ten seconds once the harness existed.
 
 A rig is destroyed at Hull 0 (`rules.md:258,269`). Hull is 12–16 SP and the d12
 table sends 4/12 of hits there, so ~4 SP/round × 10 rounds ≈ 13 to the hull — the
