@@ -95,9 +95,9 @@ test("woundTarget — the original bug case is possible, not impossible", () => 
   assert.equal(woundTarget(4, 5), 7);
 });
 
-test("woundTarget — coerces junk to a usable number", () => {
-  assert.equal(woundTarget(undefined, 5), 10);
-  assert.equal(woundTarget(5, undefined), 2);
+test("woundTarget — junk STR coerces (fails safe), junk toughness throws", () => {
+  assert.equal(woundTarget(undefined, 5), 10);          // 10% — safe direction
+  assert.throws(() => woundTarget(5, undefined), /toughness must be a number/);
 });
 ```
 
@@ -129,10 +129,19 @@ export const WOUND_DIE = 10;
 
 export function woundTarget(str, toughness) {
   const s = Math.floor(Number(str) || 0);
-  const t = Math.floor(Number(toughness) || 0);
+  // No `|| 0` on toughness, deliberately: a missing T coercing to 0 yields TN 2
+  // (a 90% wound), the single most dangerous default in the system. STR may
+  // coerce — it fails toward TN 10 (10%) — but T must be real.
+  const t = Math.floor(Number(toughness));
+  if (!Number.isFinite(t)) throw new Error(`woundTarget: toughness must be a number, got ${toughness}`);
   return Math.max(2, Math.min(WOUND_DIE, 6 + t - s));
 }
 ```
+
+**The asymmetry is the point.** Junk STR fails safe, junk Toughness fails maximally unsafe. An
+earlier draft of this plan coerced both and paired it with a `toughnessOf` that returned `null` on a
+failed lookup — together they silently made any mislooked-up location the softest thing on the
+table, which is the exact class of bug this rewrite exists to kill.
 
 Also delete `impactRow` (lines 80-82) and drop `impactRow as _impactRow` from the `./unit-kinds.js` import on line 4 — Task 2 replaces it.
 
@@ -190,9 +199,12 @@ test("toughnessOf — every part of every kind has a value", () => {
   }
 });
 
-test("toughnessOf — unknown kind or part yields null, never a silent 0", () => {
-  assert.equal(toughnessOf("nope", "hull", "medium"), null);
-  assert.equal(toughnessOf("rig", "nope", "medium"), null);
+test("toughnessOf — an unresolvable lookup throws, never a silent 0", () => {
+  // A sentinel return would coerce to 0 inside woundTarget and yield a 2+ wound
+  // (90%) — the failed lookup would make the location the softest on the table.
+  assert.throws(() => toughnessOf("nope", "hull", "medium"), /unknown kind/);
+  assert.throws(() => toughnessOf("rig", "nope", "medium"), /no T for/);
+  assert.throws(() => toughnessOf("rig", "hull"), /no T for/);  // rig needs a weightClass
 });
 ```
 
@@ -243,17 +255,27 @@ Replace the walker `armour` block (lines 108-113) with — Strawman ⚙, mirrors
 Replace `impactRow` (lines 184-189) with:
 
 ```js
-// Toughness for a part. Rig grids are keyed by weight class; Tank/Walker are
-// flat. Returns null (never 0) for an unknown kind or part so a typo surfaces
-// as a crash rather than a silently unwoundable location.
+// Toughness for a part. Rig grids are keyed by weight class (`byWeight`);
+// Tank/Walker are flat. Throws rather than returning a sentinel: every caller
+// feeds this straight into woundTarget, where a non-numeric T would coerce to 0
+// and yield a 2+ wound (90%) — a lookup typo would silently make a location the
+// softest thing on the table. Fail loud instead.
 export function toughnessOf(kindId, partName, weightClass) {
-  const t = UNIT_KINDS[kindId]?.toughness;
-  if (!t) return null;
-  const row = (weightClass && t[weightClass]) ? t[weightClass] : t;
+  const kind = UNIT_KINDS[kindId];
+  if (!kind?.toughness) throw new Error(`toughnessOf: unknown kind "${kindId}"`);
+  const row = kind.byWeight ? kind.toughness[weightClass] : kind.toughness;
   const v = row?.[partName];
-  return typeof v === "number" ? v : null;
+  if (typeof v !== "number") {
+    throw new Error(`toughnessOf: no T for ${kindId}/${weightClass ?? "flat"}/${partName}`);
+  }
+  return v;
 }
 ```
+
+Add `byWeight: true` to `UNIT_KINDS.rig` beside `toughness: RIG_TOUGHNESS`; omit it on tank/walker.
+**Declare the shape, don't probe for it** — this codebase decides rig-vs-flat explicitly everywhere
+else (`weaponMode`, `flatPick`, `hasHeat`), and probing conflates "rig called without a weightClass"
+with "unknown part".
 
 - [ ] **Step 4: Run to verify they pass**
 
@@ -788,7 +810,35 @@ git commit -m "feat(combat): migrate the defensive-reaction seam to wounds"
 
 **Files:**
 - Modify: `shared/combat.js:539-630`
-- Test: `shared/combat.test.js`
+- Test: `shared/combat.test.js`, `shared/rules.test.js`
+
+**Inherited from Task 1 — land the deferred derivation.** `shared/rules.test.js` carries a
+`TODO(task-7)` on the bug-case test. It currently hardcodes `woundTarget(4, 5) === 7`, which cannot
+detect drift: retune the Saw's STR or the weight ladder and the test still passes while the real
+matchup silently goes dead — the exact regression it exists to catch.
+
+It was deferred for a real reason, not laziness. Deriving the operands needs `WEAPONS` from
+`game-state.js`, and `game-state.js:5` imports `combat.js`, which imported the symbols Task 1
+deleted — so the import chain killed the whole suite at load. **This task is what unblocks it**:
+once `combat.js` no longer imports `impactRow`/`impactSeverity`, the chain resolves.
+
+After the `resolveAttack` work below is green, replace that test:
+
+```js
+import { WEAPONS } from "./game-state.js";
+
+test("woundTarget — the original bug case is possible, not impossible", () => {
+  // The light Circular Saw vs a medium hull is the matchup that motivated this
+  // rewrite: under the impact-total model it was mathematically 0 damage at any
+  // roll. Derived from the live stats, not hardcoded, so a future retune of the
+  // Saw or the weight ladder cannot silently send it back to hopeless.
+  const str = WEAPONS.melee["Circular Saw"].str + WEIGHT_STR_MOD.light;
+  assert.equal(woundTarget(str, 5), 7); // medium hull T5 => 40%
+});
+```
+
+This holds both before and after the Task 3 rescale (6−2 and 5−1 both give 4) — that invariance is
+the point, not a coincidence. Delete the `TODO(task-7)` comment when it lands.
 
 - [ ] **Step 1: Write the failing tests**
 
