@@ -2383,19 +2383,25 @@ test("hit location comes from the target's kind, not the attacker's", () => {
 test("ledger — Overmatch is named in the damage step when it fires", () => {
   // A crushing hit rendering "weapon Damage 6" with an unexplained +1 in the total is
   // exactly the readability failure this ledger exists to close.
-  // Anchor Penetration 7 + rear arc 3 = effPen 10 vs a medium engine T3 → wound raw
-  // 6+3-10 = -1, i.e. 3 Penetration past the TN-2 floor → +1 D. The engine (T3) is
-  // the aim point for THIS rig, which contributes nothing else to the pen sum: it
-  // has not charged, its field upgrade (Fluked Head) adds no Penetration, and no
-  // crack or Overdrive is live — so base 7 + rear 3 is the whole total, and a T4
-  // arm would need 11. Other loadouts reach past 11 on an arm through the terms
-  // this one leaves at zero (charge, vsWoundedLoc, vsDisrupted, Reactor Overdrive,
-  // cracked); do not read this as a ceiling on melee. Fluked Head's Armour Piercing
-  // rerolls FAILED wounds only; the natural 10 here wounds outright, so it never
-  // fires and adds no term.
+  // Anchor Penetration 7 + medium WEIGHT_PEN_MOD 0 + rear arc 3 = effPen 10 vs a
+  // medium engine T3 → wound raw 6+3-10 = -1, i.e. 3 Penetration past the TN-2
+  // floor → +1 D. The engine (T3) is the aim point because THIS rig contributes
+  // nothing else to the pen sum: it has not charged, Fluked Head adds no
+  // Penetration, and no crack or Overdrive is live — so those three terms are the
+  // whole total, and a T4 arm would need 11. Other loadouts DO reach past 11 on an
+  // arm through the terms this one leaves at zero (charge, vsWoundedLoc,
+  // vsDisrupted, Reactor Overdrive, cracked — Lance/Full Tilt rear-arcs an arm at
+  // effPen 12); do not read this as a ceiling on melee.
+  // Fluked Head is pinned rather than left to the default-upgrade rule: it is only
+  // Anchor's [0] by coincidence of the current catalog, and reordering
+  // WEAPON_UPGRADES would swap in a different upgrade and fail a RENDERING test for
+  // a reason unrelated to rendering. (Fluked Head grants Armour Piercing, which
+  // rerolls FAILED wounds only — the natural 10 here wounds outright, so the reroll
+  // never fires. That keeps the fixture deterministic without an `ap` die; it is a
+  // perk, not a pen term, so it could not move effPen either way.)
   // The rate and cap behind that 1 are rules.test.js's (strOvermatchD's) to pin;
   // what this asserts is that the rider reaches the ledger under its own name.
-  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Anchor" });
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Anchor", meleeUpgrade: "fluked-head" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
   const ctx = makeCtx();
