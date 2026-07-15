@@ -1,7 +1,8 @@
 # Wreck Screen — loud destruction + mandatory blast marking
 
 **Date:** 2026-07-14
-**Status:** Design approved, not yet planned
+**Status:** Design approved. **Parked** — blocked on the digital battlefield (see
+Dependency below). Do not plan against this yet.
 
 ## Problem
 
@@ -14,6 +15,29 @@ accident, and the kill itself lands with no weight.
 
 Two changes: destruction throws a loud, blocking, full-screen card; marking the
 blast radius becomes an obligation rather than a prompt.
+
+## Dependency — why this is parked
+
+The digital battlefield (`docs/superpowers/specs/2026-07-14-digital-battlefield-design.md`)
+lands first, and it contests beat 2 of this design:
+
+- Its measurement table claims `blast radius (§8 cook-off, 4")` as a distance the
+  field **derives** from geometry. In a digital room nobody marks anything — the
+  server already knows who stands within 4".
+- "Wrecks vanish. A destroyed rig leaves the map entirely."
+
+Beat 1 — the kill card — survives untouched either way: a death should be loud in
+both room modes. Beat 2 is the open question, and it resolves into a `room.mode`
+branch this spec does not yet have:
+
+- **Physical rooms** — the marking body, as designed here.
+- **Digital rooms** — no marking step. The blast auto-resolves from geometry and the
+  card *reports* the casualties instead of asking for them. Whether the card still
+  blocks in this mode (there is no longer an obligation to discharge, only news to
+  read) is undecided.
+
+Re-open this spec once `room.mode` and the geometry helpers exist, settle the
+digital branch, then plan.
 
 ## Decisions
 
@@ -60,8 +84,9 @@ shared/game-state.js:1416.
 **`acknowledge`** (new) — sets `acked: true` on the head. If `!exploded`, the entry
 shifts off immediately. If `exploded`, it stays head, now in marking mode.
 
-**`blast`** (existing) — body unchanged (D6 + STR 10 per named target, hit location
-D12, severity row). Reads `sourceId` from the head rather than `pendingBlast`, and
+**`blast`** (existing) — body unchanged (hit location on a D12, then a d10 wound roll
+against that location's toughness: `BLAST_STR = 8`, `BLAST_D = 2`). Reads
+`sourceId` from the head rather than `pendingBlast`, and
 shifts the head on completion rather than nulling a flag. The "don't clobber a
 chained blast" line at shared/game-state.js:3448 goes away: a chained death pushes
 to the tail, and the tail is not the head.
@@ -125,7 +150,7 @@ Hot death:
 3. Someone hits `Mark the blast »` → `acknowledge` → head gets `acked: true`.
 4. Marking body swaps in. Still locked.
 5. Someone marks the rigs within 4" (or confirms `Nobody within 4"`) → `blast` →
-   each marked rig eats D6 + STR 10 → head shifts.
+   each marked rig eats a STR 8 / D2 blast hit → head shifts.
 6. Queue empty → unlocked. Queue non-empty → next card, from step 2.
 
 Cold death stops after step 3: the entry shifts on `acknowledge`.
