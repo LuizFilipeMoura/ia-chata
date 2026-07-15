@@ -89,7 +89,7 @@ Toughness varies **by location, not just by chassis** — a Medium Rig's Hull is
 3. **Equip weapons** up to the Rig's slots. Weapons come in **two types — Long Range and Melee** (§12), and every Rig **must carry exactly one of each**:
    - Light / Medium / Heavy: **2 weapons — one Long Range and one Melee.**
    - Colossal: **one Long Range + one Melee, plus 1 Hull-mounted weapon** of either type (3 weapons total).
-   - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **Penetration then scales with the chassis** (Light −2 / Medium +0 / Heavy +2 / Colossal +4, §12).
+   - **Any weapon may be fitted to any Rig**, regardless of weight class or faction; its **Penetration then scales with the chassis** (Light −1 / Medium +0 / Heavy +1 / Colossal +2, §12).
    - Each equipped weapon has **three upgrade options — one of each nature (Field / Tuned / Prototype)** (§12), and the Rig's equipment offers the same three-nature choice (§15). Choose **one** upgrade for the Long Range weapon, **one** for the Melee weapon, and **one** for the equipment when the Rig is commissioned; a Rig may run **at most one Prototype across its two weapons and its equipment**. A selected upgrade modifies only the item it's chosen for.
 
 ### Balancing without points
@@ -643,7 +643,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 - **Victory — Salvage** (§11) — weighted centre objective (2 VP), annihilation auto-win.
 
 **Open questions / TBD:**
-- Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class Penetration modifier** (Light −2 / Heavy +2 / Colossal +4 vs the Medium baseline, §12); all four classes are playable. Playtest the ±2-per-step spread — it may need widening/narrowing per weapon later.
+- Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class Penetration modifier** (Light −1 / Heavy +1 / Colossal +2 vs the Medium baseline, §12); all four classes are playable. Playtest the ±2-per-step spread — it may need widening/narrowing per weapon later.
 - Faction perks — not yet written (§14).
 - Machine-gun Penetration/arc values under Raking Fire — watch that they're "strong not silly" on the flanks.
 - Alpha-strike swing at 3v3 — high-Penetration crits can gut a Rig in one activation; see if crits need softening.
