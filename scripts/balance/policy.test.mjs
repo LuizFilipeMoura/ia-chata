@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { makeGreedySafe, KNOWN_BIASES } from "./policy.mjs";
-import { createRoom, applyCommand, HEAT_CAPACITY } from "../../shared/game-state.js";
+import { createRoom, applyCommand, makeUnit, HEAT_CAPACITY } from "../../shared/game-state.js";
 import { availableActions } from "../../shared/battle-view.js";
 
 const DUEL_DISTANCE = 16;
@@ -151,13 +151,39 @@ test("greedySafe refuses a rig with no weight class instead of guessing medium",
   assert.throws(() => greedySafe(room, rig, room.rigs.find((r) => r.name === "B1")), /Heat Capacity/);
 });
 
-test("greedySafe refuses a cold kind rather than half-supporting it", () => {
-  // A cold kind's spent flag is loaded.unit, not loaded.longRange, so the reload
-  // guard would miss it and emit dead fires. Heat-budgeting is meaningless for a
-  // heatless kind anyway; the duel is rigs-only by design.
+test("greedySafe passes rather than firing a weapon rolled dead by an Arms hit", () => {
+  // An Arms hit at 0 SP rolls a weapon dead; combat.js then refuses the shot as
+  // `weapon-destroyed` while the Fire tile stays enabled and performAction's
+  // `return !!res` swallows the reason — a doubly invisible no-op that hit live
+  // at round 7 of a real duel. weaponsDestroyed holds weapon NAMES, not slots.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
-  const tank = { ...rig, kind: "tank" };
+  rig.weaponsDestroyed.push(rig.weapons.longRange);
+  const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
+  assert.notEqual(cmd?.attrs?.action, "fire");
+  assert.equal(cmd.attrs.action, "shutdown");
+});
+
+test("greedySafe does not reload a weapon it can never fire again", () => {
+  // Reload re-arms `loaded` without consulting weaponsDestroyed, so a dead-weapon
+  // rig would happily burn d6 heat reloading a gun that can never fire. The
+  // destroyed guard must sit above the reload branch.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  rig.weaponsDestroyed.push(rig.weapons.longRange);
+  rig.loaded.longRange = false; // dead AND spent
+  const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
+  assert.notEqual(cmd?.attrs?.action, "reload");
+});
+
+test("greedySafe refuses a cold kind rather than half-supporting it", () => {
+  // A REAL tank, not a rig-shaped fake: a cold kind's spent flag is loaded.unit,
+  // not loaded.longRange, so the reload guard would miss it and emit dead fires.
+  // Heat-budgeting is meaningless for a heatless kind; the duel is rigs-only.
+  const room = seatedRoom();
+  const tank = makeUnit("tank", 99, "Line Tank", "a", { unit: "Autocannon Mount" });
+  assert.equal(tank.loaded?.unit, true, "guard: a cold kind's spent flag is loaded.unit");
+  assert.equal(tank.loaded?.longRange, undefined, "guard: cold kinds have no longRange slot");
   assert.throws(() => greedySafe(room, tank, room.rigs.find((r) => r.name === "B1")), /Rigs only/);
 });
 
@@ -165,6 +191,9 @@ test("makeGreedySafe demands a distance rather than defaulting to one", () => {
   // An unexplained default would quietly become the answer for every swept cell.
   assert.throws(() => makeGreedySafe(), /distance/);
   assert.throws(() => makeGreedySafe({}), /distance/);
+  assert.throws(() => makeGreedySafe({ distance: NaN }), /distance/);
+  assert.throws(() => makeGreedySafe({ distance: Infinity }), /distance/);
+  assert.throws(() => makeGreedySafe({ distance: "16" }), /distance/);
 });
 
 test("KNOWN_BIASES is exported for the report to print verbatim", () => {
@@ -173,6 +202,12 @@ test("KNOWN_BIASES is exported for the report to print verbatim", () => {
   assert.equal(typeof KNOWN_BIASES, "string");
   assert.match(KNOWN_BIASES, /KNOWINGLY/);
   assert.match(KNOWN_BIASES, /not a like-for-like baseline/i);
+  // The caveat a report reader most needs: greedySafe makes no choices, so
+  // decision-dependent upgrades read 0.00 for want of a decider, not for want of
+  // worth. Shipping that column unexplained would recreate the very misreading
+  // this harness was built to end.
+  assert.match(KNOWN_BIASES, /UNMEASURED, not worthless/);
+  assert.match(KNOWN_BIASES, /control rig's loadout is a constant/);
 });
 
 test("driving greedySafe reaches a second volley", () => {
