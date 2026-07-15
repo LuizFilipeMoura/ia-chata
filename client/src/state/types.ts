@@ -84,16 +84,34 @@ export interface ResolutionTerm {
 export interface ResolutionBreakdown {
   actor?: string;
   weapon?: string;
+  /** The target unit's NAME (e.g. "Reaver") — NOT the wound TN. See `woundTarget`. */
   target?: string;
   /** Input terms of the damage equation (die + STR, or hits · weapon STR). */
   terms?: ResolutionTerm[];
-  /** Impact-roll total, when the equation resolves to a single total. */
-  total?: number;
-  /** Severity tier badge (direct/severe/critical). */
-  tier?: string;
+  /** §7.5 — attacker's effective STR into the wound roll. */
+  str?: number | null;
+  /** §7.5 — the struck location's Toughness. */
+  toughness?: number | null;
+  /**
+   * §7.5 — the wound roll's target number: wound on `d10 >= woundTarget`.
+   * `str`/`toughness`/`woundTarget` are all null on an earned zero (shield
+   * negate, Raking front arc), where no wound roll was made.
+   */
+  woundTarget?: number | null;
   /** Structure points dealt. */
   sp?: number;
   location?: string;
+  /**
+   * DEAD since the d10 wound rewrite — the impact-total model and its
+   * direct/severe/critical tiers were deleted, and nothing in `shared/` emits
+   * either field any more, so both renders are unreachable. Kept only so the
+   * existing RollConsole markup still type-checks; drop them (and the
+   * `rx-tier`/`v2-rx-tier` CSS) when Plan 2 reworks this breakdown into a
+   * per-step ledger.
+   */
+  total?: number;
+  /** @deprecated Dead — see `total`. */
+  tier?: string;
 }
 
 export interface Resolution {

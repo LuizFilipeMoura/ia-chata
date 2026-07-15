@@ -2,14 +2,16 @@ import type { Rig, GameState, Turn } from "./src/state/types";
 
 declare module "/shared/game-state.js" {
   export const SUPPORTED_RIG_CLASSES: string[];
+  // §7.5 wound model: `str` is compared against the struck location's Toughness
+  // via `woundTarget(str, T)`; each wound then deals `d` SP.
   export const WEAPONS: Record<string, Record<string, {
-    rof: number; str: number;
+    rof: number; str: number; d: number;
     acc?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[];
   }>>;
   export const UNIT_WEAPONS: Record<string, {
-    rof: number; str: number;
+    rof: number; str: number; d: number;
     acc?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[]; flatPick?: boolean;
@@ -96,7 +98,11 @@ declare module "/shared/unit-kinds.js" {
     label: string;
     parts: Array<{ name: string; role: string }>;
     hitLocation: Array<{ min: number; part: string }>;
-    armour: unknown;
+    // Toughness per part. When `byWeight` is true (the Rig) the grid is keyed by
+    // weight class first: `toughness[weightClass][partName]`. Otherwise it is a
+    // flat `toughness[partName]`. Read it through `toughnessOf`, not directly.
+    toughness: Record<string, number> | Record<string, Record<string, number>>;
+    byWeight?: boolean;
     hasHeat: boolean;
     hasArcs: boolean;
     actionBudget: number;
@@ -104,7 +110,6 @@ declare module "/shared/unit-kinds.js" {
     reloads: boolean;
     hasEquipment: boolean;
     reactions: boolean;
-    ramStr: unknown;
     destruction: string;
   }>;
   export function kindOf(unit: unknown): string;
@@ -113,11 +118,14 @@ declare module "/shared/unit-kinds.js" {
   export function roleOf(kindId: string, partName: string): string | null;
   export function partsByRole(kindId: string, role: string): string[];
   export function hitPart(kindId: string, d12: number): string | undefined;
-  export function impactRow(
+  // Toughness of a single part. `weightClass` is REQUIRED for `byWeight` kinds
+  // (the Rig) and ignored otherwise. THROWS on an unresolvable lookup rather
+  // than returning null — callers get a loud failure, not a silent 0.
+  export function toughnessOf(
     kindId: string,
     partName: string,
     weightClass?: string,
-  ): { direct: number; severe: number; critical: number } | null | undefined;
+  ): number;
 }
 
 declare module "/shared/field.js" {
