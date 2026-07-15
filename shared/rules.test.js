@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
 import { AIM, WEIGHT_STR_MOD, hitLocation, woundTarget } from "./rules.js";
+import { WEAPONS } from "./game-state.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.move.heat, 1);
@@ -87,19 +88,10 @@ test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
 test("woundTarget — the original bug case is possible, not impossible", () => {
   // The light Circular Saw vs a medium hull is the matchup that motivated this
   // rewrite: under the impact-total model it was mathematically 0 damage at any
-  // roll. At HEAD the Saw is STR 5 (game-state.js WEAPONS.melee) and
-  // WEIGHT_STR_MOD.light is -1, so its effective STR is 4; vs a medium hull T5
-  // that is a 7+ (40%).
-  //
-  // TODO(task-7): derive these operands from the live stats rather than
-  // hardcoding 4 —
-  //   const str = WEAPONS.melee["Circular Saw"].str + WEIGHT_STR_MOD.light;
-  // so a retune of the Saw or the weight ladder cannot silently send this
-  // matchup back to hopeless while the test still passes. Cannot be done here:
-  // WEAPONS lives only in game-state.js, which imports combat.js, which still
-  // imports the impactRow/impactSeverity this task deletes — so the import
-  // would make this whole suite fail to load until combat.js is repaired.
-  assert.equal(woundTarget(4, 5), 7);
+  // roll. Derived from the live stats, not hardcoded, so a future retune of the
+  // Saw or the weight ladder cannot silently send it back to hopeless.
+  const str = WEAPONS.melee["Circular Saw"].str + WEIGHT_STR_MOD.light;
+  assert.equal(woundTarget(str, 5), 7); // medium hull T5 => 40%
 });
 
 test("woundTarget — junk STR coerces (fails safe), junk T throws (fails loud)", () => {

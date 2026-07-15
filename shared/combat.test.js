@@ -1687,3 +1687,38 @@ test("Ablative Cascade — spends nothing on a wound that already failed", () =>
   rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [1] }, () => 0);
   assert.equal(target.equipState.ablativeCharges, 2);
 });
+
+test("resolveAttack — wound dice are visible in rolls, one per landed hit", () => {
+  // The impact dice were rolled and DISCARDED, which is why a player could not
+  // answer "why 0 damage?". A wound die must reach the log.
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6, 6], wounds: [9, 1], location: 1 } },
+    () => 0, ctx);
+  const entry = ctx.resolutions.find((r) => r.kind === "attack");
+  const wounds = entry.rolls.filter((r) => r.label?.startsWith("wound"));
+  assert.equal(wounds.length, 2);
+  assert.equal(wounds[0].sides, 10);
+  assert.equal(wounds[0].tone, "ok");    // 9 wounds
+  assert.equal(wounds[1].tone, "miss");  // 1 never wounds
+});
+
+test("resolveAttack — breakdown reports effective STR and toughness", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [9], location: 1 } },
+    () => 0, ctx);
+  const bd = ctx.resolutions.find((r) => r.kind === "attack").breakdown;
+  assert.equal(bd.toughness, 5);   // medium hull
+  assert.equal(bd.str, 5);         // Sword STR 5, medium mod 0, front arc 0
+  assert.equal(bd.woundTarget, 6); // 6 + 5 - 5
+  // The wound TN must NOT clobber the target NAME: RollConsole renders
+  // `breakdown.target` as "→ B", and types.ts declares it `target?: string`.
+  assert.equal(bd.target, "B");
+});

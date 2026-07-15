@@ -562,6 +562,15 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       impacts = rollWounds(attacker, target, profile, location,
         { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat },
         opts.dice, random);
+      // The wound die is the one that decides damage, so it MUST reach the log.
+      // Under the impact-total model these were rolled and discarded, leaving a
+      // player staring at "2 hits · 4 STR → 0 SP" with no way to answer why.
+      for (let i = 0; i < impacts.length; i++) {
+        rolls.push({
+          sides: WOUND_DIE, value: impacts[i].die, label: `wound ${i + 1}`,
+          tone: impacts[i].sp > 0 ? "ok" : "miss",
+        });
+      }
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
       //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple
       //      ramp in game-state recompute applies ONLY to limbs this weapon
@@ -620,13 +629,23 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const str = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
-    summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s) = ${total} SP${location ? ` to ${location}` : ""}`,
+    summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,
     breakdown: {
       actor: attacker.name, weapon: weaponName, target: target.name,
       terms: [
         { value: th.hits, label: "hits", tone: "die" },
         { value: str, label: "weapon STR", op: "·", tone: "mod" },
       ],
+      // Plan 2 replaces this flat shape with a full per-step ledger. Until then
+      // these three fields are the minimum that answers "why 0 damage?".
+      // `woundTarget`, NOT `target` — `breakdown.target` is the target's NAME
+      // (types.ts: `target?: string`; RollConsole renders it as "→ B").
+      // `str`/`woundTarget` are null on an earned zero (shield negate / Raking
+      // front arc), by design — rollWounds pushes `{ str: null, target: null }`
+      // there, so the `?? str` fallback keeps the nominal STR readable.
+      str: impacts[0]?.str ?? str,
+      toughness: impacts[0]?.toughness ?? null,
+      woundTarget: impacts[0]?.target ?? null,
       sp: total, location,
     },
     effects: [],
