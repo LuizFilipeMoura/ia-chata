@@ -73,17 +73,51 @@ All under `shared/bot/`, all pure, all node-testable:
 Split this way because `score.js` is where the tuning churn lives and `evaluate.js` is where
 the maths lives. They change for entirely different reasons.
 
-### Expected damage is closed-form
+### Expected damage is closed-form — after one refactor
 
-This is what makes the design tractable, and it is worth stating plainly: the bot scores a
-shot with **the same maths that resolves it**.
+The formula is already known and empirically validated. The balance work
+(`scripts/balance/weapon-sweep.mjs`, a 32.3M-attack Monte Carlo sweep) derived it:
+
+```
+expectedDamage = ROF × P(hit) × P(wound) × D
+```
 
 - `computeModifiedAim(attacker, profile, opts)` gives the to-hit target, so
   `P(hit) = (7 − aim) / 6` per ROF die, floored at `1/6` (a natural 6 always hits).
-- `woundTarget(str, toughness)` gives the wound TN on a D10, so `P(wound) = (11 − TN) / 10`.
-- Chain across ROF, fold in `strOvermatchD` for Overmatch (§7.5).
+- `woundTarget(effStr, toughness)` gives the wound TN on a D10, so `P(wound) = (11 − TN)/10`.
+- `D` is the weapon's damage dice **plus `strOvermatchD(effStr, toughness)`** — STR past the
+  wound clamp converts to extra D (§7.5, shipped 2026-07-15).
 
-No dice, no rollout, no heuristic. The damage term is exact.
+**The blocker, and the one refactor this spec requires.** `effStr` is not obtainable today.
+`strBreakdown` is exported but covers only the *attacker's* STR. The **defender's** ten
+modifiers are computed inline inside `rollWounds`, interleaved with the dice:
+
+`arcBonus` · Kneecapper's limb exception · **Brace** (−2 front) · **Harden** (−1/−2 by
+upgrade) · **Reactive Armor** (−2 on a re-hardened location) · **Reactive Plating** (−1/−2
+side/rear) · **Raise Shield** (negate, or −3) · **Breach Grip** crack (+2) · `toughnessOf` ·
+Piledriver's guard-break
+
+A scorer built from `computeModifiedAim` + `woundTarget` alone would be blind to Brace,
+shields, and every plating upgrade — mis-scoring exactly the situations that decide games.
+
+So: **extract a pure `effectiveStrAgainst(attacker, target, profile, location, opts)` out of
+`rollWounds`**, and have both `rollWounds` and the bot call it. One source of truth, no
+drift. This modifies `shared/combat.js` — the file the digital-battlefield spec held at a
+zero diff. That property was a *means, not an end*: it proved the derivation seam sat in the
+right place, and it did its job. `combat.test.js`'s 2178 lines are the net for this refactor.
+
+**Why not sample instead.** `resolveAttack` can already be driven with a stub room
+(`{ game: { round: 1 } }`) and a `ctx` whose `applyDamage` taps SP — `weapon-sweep.mjs` does
+exactly this at ~45k attacks/sec, so sampling is fast enough. It is rejected because it is
+**noisy**: at 20 trials the error (≈±0.22 SP) exceeds the gap between competing candidates,
+so the argmax would flip on noise and break the `seed + preset ⇒ identical log` guarantee.
+Pushing noise under the ranking threshold needs ~200 trials per candidate — roughly an hour
+for a 200-game tuning run.
+
+**Sampling becomes the TEST instead.** Using the same `ctx` tap, sample ~5000 attacks and
+assert the analytic EV matches the empirical mean within the sweep's noise band. If
+`ROF × P(hit) × P(wound) × D` disagrees with the real engine, one of them is wrong. The
+instrument exists; copy the pattern from `weapon-sweep.mjs`.
 
 ## Candidate generation
 
@@ -218,8 +252,30 @@ it needs a UI.
   deterministic.
 - **Invariant** — the bot never emits a command `checkCommand` rejects. Fuzz over hundreds of
   seeded boards. If the bot cannot produce an illegal move, the entire class is gone.
+- **EV validation** — assert the analytic `expectedDamage` matches a ~5000-sample empirical
+  mean from the real `resolveAttack`, within the sweep's noise band. Copy the stub-room +
+  `ctx`-tap pattern from `scripts/balance/weapon-sweep.mjs`. This is the acceptance test for
+  `evaluate.js`; without it the scorer is asserted, not verified.
 - **Bot vs bot** — full games headless. Assert they terminate, VP accrues, nothing desyncs.
   Then run 200 games of `aggressive` vs `cagey` and read the win rate.
+
+### Fixture trap — inherited, has already burned real work
+
+`normalizeWeaponUpgrade` returns `upgrades[0].id` (the **Field** upgrade) for a null or
+unknown id, so `makeRig` **cannot build an un-upgraded weapon**. Every legal rig carries its
+field upgrade; a bare-weapon fixture is testing a loadout that cannot be commissioned. This
+silently made the balance sweep measure Field twice, then invalidated two test fixtures and
+every base-STR worked example in the Overmatch spec. `weapon-sweep.mjs` now asserts its own
+tier ladder on startup to catch it. Bot fixtures must build rigs through `makeRig`, never by
+hand-assembling a weapon.
+
+### This harness answers what the balance sweep structurally cannot
+
+`weapon-sweep.mjs` is **positional-agnostic** — arc and distance are *inputs*, not outcomes —
+so by its own notes it "cannot answer what speed is worth; that needs a positional sim."
+Bot-vs-bot **is** that positional sim: arc, distance, and cover become consequences of
+decisions. The two are complementary. The sweep prices a weapon in the abstract; this prices
+it in a game. Neither replaces the other, and nobody should build a third.
 - **Regression** — seed + preset ⇒ identical command log. Any scoring change that shifts a
   decision shows up as a diff.
 
@@ -235,6 +291,18 @@ it needs a UI.
   Task 10b of spec 1: three reaction paths (Return Fire, Riposte, Exploit) still take
   client-declared geometry.
 - **Deployment choices** — `autoDeploy` already places everyone.
+
+## Live coupling to the balance work
+
+The scorer reads the real weapon maths, so **any rebalance moves every bot decision.**
+`F2-B (price ROF in heat)` is named as the live next step in the balance findings — expected
+damage is `ROF × P(hit) × P(wound) × D`, and ROF *multiplies*, so a rivet gun (STR 3, ROF 6)
+currently out-damages a wrecking ball (STR 10, ROF 1), 3.65 to 2.98. Until that is priced,
+**the bot will rationally prefer high-ROF weapons** — and it will be right to.
+
+This is an argument for the analytic EV rather than hand-tuned weapon preferences: it tracks
+the rebalance automatically. But do not tune the bot's weight presets against an arsenal
+that is mid-rebalance; the presets would encode a snapshot.
 
 ## The main risk
 
