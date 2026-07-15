@@ -140,3 +140,73 @@ export function sightCorridor(attacker, target, polys) {
     los: buildingRays < 3,
   };
 }
+
+// Base radii in inches, by weight class. Digital rooms are Rigs only, so these
+// two are the whole table. Lives here because base size is a SPATIAL fact — it
+// is what makes rim gap differ from centre distance, and it is why melee and
+// objectives measure rim while everything else measures centre.
+export const BASE_RADIUS = { light: 1.18, medium: 1.48 }; // 60mm / 75mm
+
+export function radiusOf(rig) {
+  return BASE_RADIUS[rig.weightClass] ?? BASE_RADIUS.medium;
+}
+
+// Which of the target's facings the attacker strikes (rules.md §7). Front is
+// the target's facing +/-45 deg, side out to +/-135, rear beyond.
+export function arcOf(attacker, target) {
+  const bearing = Math.atan2(attacker.pos.y - target.pos.y, attacker.pos.x - target.pos.x) / DEG;
+  // Fold into -180..180 relative to where the target is looking.
+  const rel = Math.abs((((bearing - (target.facing ?? 0)) % 360) + 540) % 360 - 180);
+  if (rel <= 45) return "front";
+  if (rel <= 135) return "side";
+  return "rear";
+}
+
+// Centre to centre. Drives opts.distance and the sweet-spot falloff (§7).
+export function distanceBetween(a, b) {
+  return Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y);
+}
+
+// The empty air between two bases. Melee and objectives measure this rather
+// than centre distance: a 2in CENTRE reach would be unreachable, since two
+// mediums block each other at 2.96in and can never get closer.
+export function rimGap(a, b) {
+  return distanceBetween(a, b) - a.radius - b.radius;
+}
+
+// §7 / §12 — melee carries a fixed ACC at its 2in reach. Lance's Couched Reach
+// upgrade passes reach = 4.
+export function meleeInReach(a, b, reach = 2) {
+  return rimGap(a, b) <= reach + 1e-9;
+}
+
+// §11 — a Rig controls a marker if it is within 2in. Markers are points, so
+// only the rig's own radius comes off.
+export function controlsObjective(rig, marker, reach = 2) {
+  const gap = Math.hypot(rig.pos.x - marker.x, rig.pos.y - marker.y) - rig.radius;
+  return gap <= reach + 1e-9;
+}
+
+// Distance from a point to a polygon: 0 if inside, else the nearest edge.
+// Lives here rather than in pathfind.js because BOTH the occupancy grid and
+// autoDeploy need "is this spot clear for a base of radius r" — and two copies
+// of this would be two chances to disagree about what "clear" means.
+export function distToPolygon(p, pts) {
+  if (pointInPolygon(p, pts)) return 0;
+  let best = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i];
+    const [bx, by] = pts[(i + 1) % pts.length];
+    const vx = bx - ax;
+    const vy = by - ay;
+    const len2 = vx * vx + vy * vy;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - ax) * vx + (p.y - ay) * vy) / len2));
+    best = Math.min(best, Math.hypot(p.x - (ax + t * vx), p.y - (ay + t * vy)));
+  }
+  return best;
+}
+
+// True when a base of `radius` centred at `p` clears every polygon.
+export function clearOfTerrain(p, radius, polys) {
+  return !polys.some((poly) => distToPolygon(p, poly.points) <= radius);
+}
