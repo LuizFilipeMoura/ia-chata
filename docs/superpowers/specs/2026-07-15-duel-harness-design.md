@@ -275,7 +275,42 @@ This spec chose SP@10 and rejected rounds-to-wreck as *"censored, awkward — a 
 
 So: **rounds-to-wreck primary, SP/round as the rate, SP total shown but never read alone.** Keeping the total is still right — it is what makes `weaponLost` cells legible as censored, and it is the quantity the calibration compares against the old sweep.
 
-The general lesson, and it is the same one as the arc: **a metric choice is a measurement decision, and the way to check it is to measure, not to reason.** I rejected the right primary metric on an assumption I could have tested in ten seconds once the harness existed.
+### But the censoring I dismissed is real — for the weak tail, not the bulk
+
+The correction above is itself only two-thirds right, and the report caught it.
+
+`Crossbow / pinning-bolt` and `Double MG / kneecapper` measure **0% wreck at 10.0
+rounds**. That 10.0 is **the horizon, not a measurement** — a floor. The duel was
+still running when we stopped it. And SP/round divided by a floor is a **ceiling**,
+so those rows overstate the rate by an unknown amount.
+
+So both positions were half right:
+
+| | true | false |
+|---|---|---|
+| the original spec | rounds-to-wreck *is* censored | …for "a large share of duels" — it's 59–93% resolved |
+| the correction | it's well-behaved for the bulk | …but silent about the weak tail, where it's fully censored |
+
+A row at 0% wreck is not a slow kill. It is a **non-kill**, and averaging 10 into a
+rounds column as though it were an observation is the same species as `?? 0`.
+
+**Three censoring modes, and the report must distinguish all three:**
+
+| mode | signature | what the number means |
+|---|---|---|
+| **arm-loss** (`weaponLost`) | counted in `censored`, excluded from the mean | `spDealt` was capped by an arm, not the weapon |
+| **wreck** (early exit) | `rounds` low, `wreckRate` high | **SP total saturates** — bounded by the control's pool |
+| **horizon** (no exit) | `rounds` = 10, `wreckRate` < 1 | **rounds is a floor; SP/round is a ceiling** |
+
+The wreck mode and the horizon mode are two faces of one thing: the total
+saturates when the control dies early, and the rate inflates when it never dies
+at all. Marked with `†` in the report, with the legend beside it.
+
+**The lesson, twice over:** a metric choice is a measurement decision, and you
+check it by measuring. I rejected the right primary on an assumption testable in
+ten seconds; then, correcting it, I overshot and declared it clean when it is
+clean *in the middle and censored at both ends*. Neither error was visible from
+the spec. Both were obvious the moment a real number was printed.
 
 A rig is destroyed at Hull 0 (`rules.md:258,269`). Hull is 12–16 SP and the d12
 table sends 4/12 of hits there, so ~4 SP/round × 10 rounds ≈ 13 to the hull — the
