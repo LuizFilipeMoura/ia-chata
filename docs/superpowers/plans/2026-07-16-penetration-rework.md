@@ -37,12 +37,16 @@ Task 10 re-measures against committed baselines. If a number moved that no task 
 4. **Do not use `sed -i`** — it rewrites CRLF and leaves files dirty with an empty `git diff`.
 5. **`git add <file>` stages the whole file.** `package.json` / `package-lock.json` carry the user's in-progress dependency upgrade. Never `git add -A`.
 6. **Another agent commits to this branch.** Never trust `HEAD~1`.
+7. **`startedRoom()` is not the seed roster, and this plan's test fixtures got it wrong.** It builds six **light** rigs (`a1..a3`, `b1..b3`) all carrying **Mini Gun / Sword** — not `medium-shield-siege` with a Siege Maul, and not a Wrecking Ball. Task 1's fixture as written would have read the Siege Maul catalog entry against a rig whose `weaponUpgrades.longRange` was a *Mini Gun* upgrade id: `upgradeForWeapon` returns null → effect `{}` → **the test fails for the wrong reason, then goes green-for-free once the branch lands, exercising nothing.** Task 1's implementer caught it and used `makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword" })` instead — the pattern the neighbouring tests already use — and asserted the resolved upgrade id so the fixture proves itself. **Do the same in Tasks 7–9.**
+   **Poking `rig.melee = "Wrecking Ball"` does NOT work either:** `weaponUpgrades.melee` still holds the old weapon's upgrade id, `upgradeForWeapon` returns null, and Haymaker never applies — so the rig swings at Damage 7, not 8, and a one-shot test silently proves nothing. Build the rig with `makeRig`, or set BOTH the weapon and its upgrade id.
+8. **A test that passes without exercising the branch is worse than no test.** Mutation-test every green in this plan: revert the line you added, confirm the test goes red, restore. Two implementers on the rename found guards that looked real and weren't.
+9. **`effectiveWeaponProfile` is the function; `applyWeaponUpgrade` does not exist.** Earlier drafts of this plan named the latter eight times. It was never real — the upgrade logic is inline in `effectiveWeaponProfile` (`game-state.js:691`). There is no injection seam, which is why Task 1's test mutates `WEAPON_UPGRADES` and restores it.
 
 ## File Structure
 
 | file | responsibility in this plan |
 |---|---|
-| `shared/game-state.js` | `WEAPONS` base stats, `WEAPON_UPGRADES` effects + tags, `applyWeaponUpgrade` gains `dmg` |
+| `shared/game-state.js` | `WEAPONS` base stats, `WEAPON_UPGRADES` effects + tags, `effectiveWeaponProfile` gains `dmg` |
 | `shared/rules.js` | delete `strOvermatchD`, `OVERMATCH_PER_D`, `OVERMATCH_MAX_D`; possibly inline `woundRaw` |
 | `shared/combat.js` | delete the overmatch rider; add the drama effects and the `crit` tone |
 | `shared/glossary.js` | delete the `overmatch` entry |
@@ -53,9 +57,9 @@ Task 10 re-measures against committed baselines. If a number moved that no task 
 
 ---
 
-### Task 1: `applyWeaponUpgrade` learns `dmg`
+### Task 1: `effectiveWeaponProfile` learns `dmg`
 
-**The spec assumes Reinforced Head and Haymaker can grant `+1 Damage`. They cannot — there is no code path.** `applyWeaponUpgrade` handles `rof`, `pen`, `perks`, `range` and `noFarPenalty`, and nothing else. This task adds the path before any upgrade needs it.
+**The spec assumes Reinforced Head and Haymaker can grant `+1 Damage`. They cannot — there is no code path.** `effectiveWeaponProfile` handles `rof`, `pen`, `perks`, `range` and `noFarPenalty`, and nothing else. This task adds the path before any upgrade needs it.
 
 **Files:**
 - Modify: `shared/game-state.js:704-711`
@@ -68,7 +72,7 @@ Add to `shared/game-state.test.js`:
 ```js
 test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
   // Reinforced Head (+1 Damage) and Haymaker (+1 Damage) depend on this path;
-  // before the penetration rework, applyWeaponUpgrade could not apply `dmg` at all.
+  // before the penetration rework, effectiveWeaponProfile could not apply `dmg` at all.
   const base = { rof: 1, pen: 7, dmg: 6, accuracy: [0, 0], rng: [2, 2], melee: true };
   const profile = applyUpgradeToProfile(base, { dmg: 1 });
   assert.equal(profile.dmg, 7, "effect.dmg must add to the base weapon's Damage");
@@ -80,7 +84,7 @@ test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
 
 ```js
 test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
-  // Reinforced Head grants +1 Damage after the rework; before it, applyWeaponUpgrade
+  // Reinforced Head grants +1 Damage after the rework; before it, effectiveWeaponProfile
   // had no `dmg` branch at all and the effect silently did nothing.
   const r = startedRoom();
   const b1 = findRig(r, "b1");
@@ -123,7 +127,7 @@ Expected: **FAIL** — `Expected values to be strictly equal: 5 !== 6` (the base
 
 - [ ] **Step 3: Add the branch**
 
-In `shared/game-state.js`, in `applyWeaponUpgrade`'s profile literal:
+In `shared/game-state.js`, in `effectiveWeaponProfile`'s profile literal:
 
 ```js
   const profile = {
@@ -159,7 +163,7 @@ Expected: `293 passed`, `ℹ pass 814 / ℹ fail 0` (813 + this test).
 git add shared/game-state.js shared/game-state.test.js
 git commit -m "feat(weapons): weapon upgrades can grant Damage
 
-applyWeaponUpgrade handled rof/pen/perks/range and nothing else, so an
+effectiveWeaponProfile handled rof/pen/perks/range and nothing else, so an
 effect: { dmg: N } silently did nothing. The penetration rework needs it for
 Reinforced Head and Haymaker."
 ```
@@ -881,7 +885,7 @@ git commit -m "docs(bot): the opponent brain cited a function this branch delete
 | `UNIT_WEAPONS` deferred, excluded from the bar | 10 step 4 |
 | Crossbow / Bulwark Shield stay out of F2-C | 3 step 1 |
 
-**Beyond the spec:** Task 1 exists because the spec assumes a `dmg` upgrade path that `applyWeaponUpgrade` does not have — found by reading it, not by reasoning about it.
+**Beyond the spec:** Task 1 exists because the spec assumes a `dmg` upgrade path that `effectiveWeaponProfile` does not have — found by reading it, not by reasoning about it.
 
 **Type consistency:** `pen` / `dmg` / `accuracy` / `effPen` throughout, matching the rename plan's targets. `effect.dmg` (Task 1) is the key Task 4 writes. `drama` and `critWound` are declared in Task 7 and read in Task 8.
 
