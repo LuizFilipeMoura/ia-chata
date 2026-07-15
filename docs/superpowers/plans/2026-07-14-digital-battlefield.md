@@ -10,6 +10,15 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-14-digital-battlefield-design.md`
 
+> **⚠ Committing in this repo.** The worktree is routinely dirty, and other sessions commit
+> to this branch concurrently. Two rules, both learned the hard way while writing this plan:
+>
+> 1. **Never `git add -A` / `git add .`.** `git commit` commits the entire index, not just
+>    what you added, so a broad add buries unrelated staged work under your message. Stage
+>    explicit paths and run `git diff --cached --stat` before every commit.
+> 2. **Never rewrite history** (`reset`, `rebase`, `commit --amend`) without re-reading
+>    `git log` first. `HEAD~1` may not be your commit by the time you run it.
+
 ---
 
 ## Background the engineer needs
@@ -2408,10 +2417,18 @@ The stored memory still says *range = nearest-edge gap, movement = front→back 
 
 - [ ] **Step 4: Commit**
 
+**Never `git add -A` in this repo.** The worktree is routinely dirty with unrelated
+in-progress work, and `git commit` commits the WHOLE INDEX — not just the paths you
+added — so a broad add silently buries someone else's staged changes under your commit
+message. Stage explicit paths, and check `git diff --cached --stat` before every commit:
+
 ```bash
-git add -A
-git commit -m "test: full suite green for the digital battlefield"
+git diff --cached --stat          # confirm ONLY your files are staged
+git commit -- <the exact paths this task touched>
 ```
+
+`git commit -- <paths>` commits only those paths and leaves everything else staged,
+which is the safe form when the index may already hold work that isn't yours.
 
 ---
 
