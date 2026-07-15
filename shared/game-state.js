@@ -31,32 +31,37 @@ export const MAX_ROUNDS = 10;
 // Base weapons carry stats only. Perks are delivered exclusively by the chosen
 // weapon upgrade (see WEAPON_UPGRADES); `melee: true` is a structural flag (not a
 // perk) that drives arc/range logic in combat.js and the wizards.
+//
+// `d` is the damage a single wound deals. Hand-assigned per weapon, NOT derived
+// from ROF: deriving it collapsed all eleven ROF-1 weapons onto identical output,
+// which is the differentiation D exists to provide. STR decides WHETHER you wound
+// (via woundTarget); `d` decides HOW MUCH.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":       { rof: 8, str: 4,  sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
-    "Double MG":      { rof: 8, str: 6,  sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
-    "Autocannon":     { rof: 4, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
-    "Arc Gun":        { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
-    "Mortar":         { rof: 3, str: 9,  sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
-    "Sniper Cannon":  { rof: 1, str: 12, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
-    "Siege Maul":     { rof: 1, str: 13, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
-    "Missile Barrage":{ rof: 4, str: 9,  sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
-    "Harpoon":        { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
-    "Rivet Gun":      { rof: 6, str: 4,  sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
-    "Crossbow":       { rof: 1, str: 10, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
+    "Mini Gun":       { rof: 8, str: 3,  d: 1, sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
+    "Double MG":      { rof: 8, str: 5,  d: 1, sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
+    "Autocannon":     { rof: 4, str: 7,  d: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
+    "Arc Gun":        { rof: 2, str: 8,  d: 3, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
+    "Mortar":         { rof: 3, str: 7,  d: 2, sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Sniper Cannon":  { rof: 1, str: 10, d: 4, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
+    "Siege Maul":     { rof: 1, str: 11, d: 5, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
+    "Missile Barrage":{ rof: 4, str: 7,  d: 2, sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Harpoon":        { rof: 1, str: 10, d: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
+    "Rivet Gun":      { rof: 6, str: 3,  d: 1, sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
+    "Crossbow":       { rof: 1, str: 8,  d: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
   },
   melee: {
-    "Sword":         { rof: 2, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
-    "Circular Saw":  { rof: 3, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
-    "Chainsaw":      { rof: 3, str: 8,  acc: [0, 0], rng: [2, 2], melee: true },
-    "Claw":          { rof: 2, str: 8,  acc: [1, 1], rng: [2, 2], melee: true },
-    "Lance":         { rof: 1, str: 11, acc: [1, 1], rng: [2, 2], melee: true },
-    "Wrecking Ball": { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
-    "Bulwark Shield":{ rof: 1, str: 6,  acc: [0, 0], rng: [2, 2], melee: true },
-    "Flamethrower":  { rof: 4, str: 7,  acc: [1, 0], rng: [2, 2], melee: true },
-    "Anchor":        { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true },
-    "Pressure Claw": { rof: 2, str: 9,  acc: [1, 1], rng: [2, 2], melee: true },
-    "Talon":         { rof: 2, str: 7,  acc: [1, 1], rng: [2, 2], melee: true },
+    "Sword":         { rof: 2, str: 5,  d: 3, acc: [0, 0], rng: [2, 2], melee: true },
+    "Circular Saw":  { rof: 3, str: 5,  d: 2, acc: [0, 0], rng: [2, 2], melee: true },
+    "Chainsaw":      { rof: 3, str: 7,  d: 2, acc: [0, 0], rng: [2, 2], melee: true },
+    "Claw":          { rof: 2, str: 7,  d: 3, acc: [1, 1], rng: [2, 2], melee: true },
+    "Lance":         { rof: 1, str: 9,  d: 4, acc: [1, 1], rng: [2, 2], melee: true },
+    "Wrecking Ball": { rof: 1, str: 10, d: 5, acc: [0, 0], rng: [2, 2], melee: true },
+    "Bulwark Shield":{ rof: 1, str: 5,  d: 3, acc: [0, 0], rng: [2, 2], melee: true },
+    "Flamethrower":  { rof: 4, str: 6,  d: 2, acc: [1, 0], rng: [2, 2], melee: true },
+    "Anchor":        { rof: 1, str: 10, d: 4, acc: [0, 0], rng: [2, 2], melee: true },
+    "Pressure Claw": { rof: 2, str: 7,  d: 3, acc: [1, 1], rng: [2, 2], melee: true },
+    "Talon":         { rof: 2, str: 6,  d: 3, acc: [1, 1], rng: [2, 2], melee: true },
   },
 };
 
@@ -64,15 +69,15 @@ export const WEAPONS = {
 // pick exactly one. Marked flatPick: true so combat.js skips the weight-class
 // STR modifier — the listed STR is the shot's STR on any chassis.
 export const UNIT_WEAPONS = {
-  "Tank Cannon":      { rof: 1, str: 12, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
-  "Autocannon Mount": { rof: 3, str: 8,  sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
-  "Coaxial MG":       { rof: 6, str: 5,  sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true, machineGun: true },
-  "Rocket Pod":       { rof: 2, str: 10, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
-  "Dozer Blade":      { rof: 1, str: 10, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
-  "Ram Spike":        { rof: 1, str: 11, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Tank Cannon":      { rof: 1, str: 10, d: 5, sweet: 18, peak: 2, dropoff: 0.16, minRange: 0, maxRange: 28, flatPick: true },
+  "Autocannon Mount": { rof: 3, str: 7,  d: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26, flatPick: true },
+  "Coaxial MG":       { rof: 6, str: 4,  d: 1, sweet: 8,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, flatPick: true, machineGun: true },
+  "Rocket Pod":       { rof: 2, str: 8,  d: 3, sweet: 20, peak: 1, dropoff: 0.16, minRange: 4, maxRange: 34, flatPick: true },
+  "Dozer Blade":      { rof: 1, str: 8,  d: 4, acc: [0, 0],  rng: [2, 2], melee: true, flatPick: true },
+  "Ram Spike":        { rof: 1, str: 9,  d: 4, acc: [1, 0],  rng: [2, 2], melee: true, flatPick: true },
   // Built-in weak weapon every support unit carries; replaced by a Damage
   // module. peak 0 + dropoff 0 = a flat ACC 0 at any distance (spec §Sidearm).
-  "Sidearm":          { rof: 2, str: 4,  sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
+  "Sidearm":          { rof: 2, str: 3,  d: 1, sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -292,7 +297,7 @@ export const EQUIPMENT = {
   "field-repair-suite": {
     family: "Utility", label: "Field Repair Suite", passive: "The Repair action restores +1 additional SP",
     active: { key: "emergencypatch", label: "Emergency Patch", heat: 2,
-      text: "Guaranteed repair 2 SP to one location, no D12 roll." },
+      text: "Guaranteed repair 4 SP to one location, no D6 roll." },
   },
   "blast-furnace-core": {
     family: "Thermal", label: "Blast Furnace Core",
@@ -358,6 +363,12 @@ export function equipmentSprintMult(equipmentId, equipmentUpgradeId) {
   if (equipmentId !== "servo-actuators") return 1.5;
   const up = (EQUIPMENT_UPGRADES[equipmentId] || []).find((u) => u.id === equipmentUpgradeId);
   return up?.effect?.sprintMult ?? 1.5;
+}
+
+// SP a D6 repair roll restores (§5). Repair never whiffs — the floor is 1, so
+// both the Repair action and the Repair module's Field Weld always pay out.
+export function repairSpFor(roll) {
+  return roll >= 5 ? 3 : roll >= 3 ? 2 : 1;
 }
 
 // Extra SP a Repair action restores: Field Repair Suite +1, and its Master
@@ -2447,9 +2458,9 @@ function performAction(room, rig, act, a, random) {
     else if (act === "emergencypatch") {
       const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
       // Battlefield Triage (Utility Tuned) — a destroyed (0 SP) location is patched
-      // for 3 instead of 2. Read the tag live from the catalog by id.
+      // for 5 instead of 4. Read the tag live from the catalog by id.
       const triage = !!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.battlefieldTriage;
-      const amount = (triage && rig[loc] && rig[loc].sp === 0) ? 3 : 2;
+      const amount = (triage && rig[loc] && rig[loc].sp === 0) ? 5 : 4;
       repairRig(rig, loc, amount);
     }
     else if (act === "locksight") {
@@ -2826,16 +2837,16 @@ function performAction(room, rig, act, a, random) {
     if (!(rig.modules || []).includes("repair")) return reject("This unit has no Repair module.");
     const target = findRig(room, a.target);
     if (!target || target.owner !== rig.owner || target.destroyed) return reject("Choose a friendly, undestroyed unit to weld.");
-    const roll = rollD(12, a.dice?.weld, random);
-    const amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    const roll = rollD(6, a.dice?.weld, random);
+    const amt = repairSpFor(roll);
     const names = partNamesOf(kindOf(target));
     const loc = names.includes(String(a.loc || "").toLowerCase()) ? String(a.loc).toLowerCase() : names[0];
-    if (amt > 0) repairRig(target, loc, amt);
+    repairRig(target, loc, amt);
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
     pushResolution(room, {
       kind: "fieldweld", actor: rig.owner, rigId: rig.id,
-      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      rolls: [{ sides: 6, value: roll, label: "D6" }],
       summary: `${rig.name} field-welds ${target.name} — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
     return true;
@@ -2874,15 +2885,15 @@ function performAction(room, rig, act, a, random) {
     return true;
   }
   if (act === "repair") {
-    const roll = rollD(12, a.dice?.repair, random);
-    let amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
+    const roll = rollD(6, a.dice?.repair, random);
     // Field Repair Suite (Utility) — the Repair action restores +1 additional SP.
-    if (amt > 0) amt += equipmentRepairBonus(rig.equipment, rig.equipmentUpgrade);
+    // The roll can't whiff, so the suite bonus now rides on every repair.
+    const amt = repairSpFor(roll) + equipmentRepairBonus(rig.equipment, rig.equipmentUpgrade);
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
-    if (amt > 0) repairRig(rig, loc, amt);
+    repairRig(rig, loc, amt);
     pushResolution(room, {
       kind: "repair", actor: rig.owner, rigId: rig.id,
-      rolls: [{ sides: 12, value: roll, label: "D12" }],
+      rolls: [{ sides: 6, value: roll, label: "D6" }],
       summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
   } else if (act === "prepare") {
@@ -2956,6 +2967,22 @@ const UNDO_LIMIT = 12; // bounded so the serialized room stays small
 
 const cloneState = (v) => JSON.parse(JSON.stringify(v));
 
+// The client ends an activation for the player the moment its action budget hits
+// zero, so a spent-the-last-action command is really "action + end". Snapshotting
+// the end separately would make that pair cost two Reverts, and strand the first
+// one on a rig that is active with nothing left to spend. Detect the auto-end and
+// let it ride on the final action's snapshot, exactly like Shut Down (which ends
+// the activation from inside performAction, under one snapshot). Only coalesces
+// into a snapshot from this same side and this same activation, so an opponent's
+// interleaved answer/react still keeps its own step.
+function isBudgetAutoEnd(room, verb, actor) {
+  if (verb !== "endactivation") return false;
+  const t = room.game.turn;
+  if (!t || t.actionsUsed < t.actionsMax) return false;
+  const top = room._history?.[room._history.length - 1];
+  return !!top && top.side === actor && top.game?.turn?.activeRigId === t.activeRigId;
+}
+
 // A parked threat telegraph is stale the moment the active rig is no longer the
 // declaring attacker (activation ended, turn flipped) or we left activation.
 // Returns true if it cleared anything.
@@ -3006,7 +3033,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     const actor = (verb === "answer" || verb === "react")
       ? (normalizeSide(room, a.side) || normalizeSide(room, context.side))
       : room.game.turn?.side;
-    if (actor) {
+    if (actor && !isBudgetAutoEnd(room, verb, actor)) {
       undoSnapshot = { side: actor, rigs: cloneState(room.rigs), game: cloneState(room.game) };
     }
   }
@@ -3656,7 +3683,14 @@ export function publicState(room, side) {
   if (sideId && room.game.priorityTargets[sideId]) priorityTargets[sideId] = room.game.priorityTargets[sideId];
   const viewer = sideId;
   const top = room._history?.[room._history.length - 1];
-  const canUndo = !!top && room.game.phase === "activation" && top.side === viewer;
+  // Undo is offered through Recovery too, not just during activation: the last
+  // activation of a round auto-ends into runRecovery, so gating on "activation"
+  // alone made that final action the one action in the game nobody could take
+  // back. Restoring a snapshot rolls the phase back with it (VP and claims
+  // included). The wall is the round boundary — advanceRound leaves both phases,
+  // so nothing before the next initiative roll is reachable.
+  const undoablePhase = room.game.phase === "activation" || room.game.phase === "recovery";
+  const canUndo = !!top && undoablePhase && top.side === viewer;
   const rigs = room.rigs.map((rig) => {
     const prep = rig.preparation;
     if (!room.seeded && prep && prep.faceUp === false && (rig.owner || "a") !== viewer) {

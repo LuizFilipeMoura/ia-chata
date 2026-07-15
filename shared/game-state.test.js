@@ -90,7 +90,7 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
   assert.equal(Object.keys(WEAPONS.melee).length, 11);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
-  assert.equal(WEAPONS.longRange["Mini Gun"].str, 4);
+  assert.equal(WEAPONS.longRange["Mini Gun"].str, 3);
   assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
   assert.equal(WEAPONS.longRange["Mini Gun"].peak, 2);
   assert.equal(WEAPONS.longRange["Mini Gun"].dropoff, 0.35);
@@ -104,9 +104,24 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].perks, ["Raking Fire"]);
   assert.deepEqual(WEAPONS.longRange["Double MG"].perks, ["Raking Fire"]);
   assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
-  assert.equal(WEAPONS.melee["Lance"].str, 11);
+  assert.equal(WEAPONS.melee["Lance"].str, 9);
   assert.equal(WEAPONS.melee["Sword"].melee, true);
   assert.equal(WEAPONS.melee["Sword"].perks, undefined);
+});
+
+test("every weapon carries a hand-assigned damage stat in range 1..5", () => {
+  const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
+  for (const [name, w] of Object.entries(all)) {
+    assert.equal(typeof w.d, "number", `${name} has no d`);
+    assert.ok(w.d >= 1 && w.d <= 5, `${name} d=${w.d} out of range`);
+  }
+});
+
+test("weapon STR sits on the rescaled 3..11 ladder", () => {
+  const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
+  for (const [name, w] of Object.entries(all)) {
+    assert.ok(w.str >= 3 && w.str <= 11, `${name} str=${w.str} off-ladder`);
+  }
 });
 
 test("makeRig honours a per-rig SP override, else falls back to class defaults", () => {
@@ -160,10 +175,10 @@ test("makeUnit threads the sp override through to the rig", () => {
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, str: 13, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
+  assert.deepEqual(maul, { rof: 1, str: 11, d: 5, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
-  assert.deepEqual(shield, { rof: 1, str: 6, acc: [0, 0], rng: [2, 2], melee: true });
+  assert.deepEqual(shield, { rof: 1, str: 5, d: 3, acc: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 10 + 10.
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
@@ -172,13 +187,13 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
   assert.deepEqual(WEAPONS.longRange["Harpoon"],
-    { rof: 1, str: 12, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
+    { rof: 1, str: 10, d: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
   assert.deepEqual(WEAPONS.melee["Anchor"],
-    { rof: 1, str: 12, acc: [0, 0], rng: [2, 2], melee: true });
+    { rof: 1, str: 10, d: 4, acc: [0, 0], rng: [2, 2], melee: true });
   assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
-    { rof: 6, str: 4, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
+    { rof: 6, str: 3, d: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
-    { rof: 2, str: 9, acc: [1, 1], rng: [2, 2], melee: true });
+    { rof: 2, str: 7, d: 3, acc: [1, 1], rng: [2, 2], melee: true });
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
   assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
@@ -191,7 +206,7 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   const headed = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword" });
   assert.equal(headed.weaponUpgrades.longRange, "reinforced-head");
-  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).str, 15); // 13 base + 2
+  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).str, 13); // 11 base + 2
 
   // Breaching Round marks onDamage.
   const breach = makeRig(2, "Breaker2", "medium", "a",
@@ -1249,6 +1264,53 @@ test("undo reverts an ended activation back to the acting Rig", () => {
   assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
 });
 
+test("the budget-exhausted auto-end shares the final action's snapshot", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const max = r.game.turn.actionsMax;
+  for (let i = 0; i < max; i++) applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  // The client auto-ends the activation the moment the budget hits zero.
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  assert.equal(findRig(r, "b1").activated, true);
+  // ONE revert takes back the final action AND the auto-end it triggered.
+  applyCommand(r, { verb: "undo", attrs: { side: "b" } });
+  assert.equal(r.game.turn.actionsUsed, max - 1);
+  assert.equal(findRig(r, "b1").activated, false);
+  assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
+});
+
+test("a manual end with actions still in the budget stays its own undo step", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
+  applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "undo", attrs: { side: "b" } });
+  assert.equal(findRig(r, "b1").activated, false);
+  assert.equal(r.game.turn.actionsUsed, 1); // the move survives — only the end was reverted
+});
+
+test("the activation that ends the round is still revertable from recovery", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const counts = { a: 0, b: 0 };
+  let lastSide = null;
+  while (r.game.phase === "activation") {
+    lastSide = r.game.turn.side;
+    const name = `${lastSide}${++counts[lastSide]}`;
+    applyCommand(r, { verb: "activate", attrs: { name } });
+    applyCommand(r, { verb: "action", attrs: { name, action: "move" } });
+    applyCommand(r, { verb: "endactivation", attrs: { name } });
+  }
+  assert.equal(r.game.phase, "recovery");
+  const other = lastSide === "a" ? "b" : "a";
+  assert.equal(publicState(r, lastSide).game.canUndo, true);
+  assert.equal(publicState(r, other).game.canUndo, false);
+  applyCommand(r, { verb: "undo", attrs: { side: lastSide } });
+  assert.equal(r.game.phase, "activation"); // recovery rolled back to the activation
+});
+
 test("answer-token placement is undoable by the answering side, not the turn side", () => {
   const r = startedRoom(); // turn.side === "b"; "a" holds the answer gate
   assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1 });
@@ -1280,7 +1342,7 @@ test("actions beyond the budget are rejected", () => {
   assert.equal(r.game.turn.actionsUsed, 3);   // capped at actionsMax
 });
 
-test("reload reloads all weapons; repair rolls a D12 and heals", () => {
+test("reload reloads all weapons; repair rolls a D6 and heals", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -1289,8 +1351,8 @@ test("reload reloads all weapons; repair rolls a D12 and heals", () => {
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "reload" } });
   assert.equal(b1.loaded.longRange, true);
   applyCommand(r, { verb: "damage", attrs: { name: "b1", loc: "arms", amount: "3" } }); // 5 -> 2
-  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "repair", loc: "arms", dice: { repair: 10 } } });
-  assert.equal(b1.arms.sp, 4);                // 10+ repairs 2
+  applyCommand(r, { verb: "action", attrs: { name: "b1", action: "repair", loc: "arms", dice: { repair: 4 } } });
+  assert.equal(b1.arms.sp, 4);                // 3-4 repairs 2
   assert.equal(r.game.resolutions.at(-1).kind, "repair");
 });
 
@@ -2485,11 +2547,11 @@ test("Field Repair Suite adds +1 SP to the Repair action only", () => {
     applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
   }
   applyCommand(r, { verb: "activate", attrs: { name: "Medic" } });
-  applyCommand(r, { verb: "action", attrs: { name: "Medic", action: "repair", loc: "hull", dice: { repair: 10 } } }); // 10+ = 2 SP roll
+  applyCommand(r, { verb: "action", attrs: { name: "Medic", action: "repair", loc: "hull", dice: { repair: 3 } } }); // 3-4 = 2 SP roll
   assert.equal(medic.hull.sp, 6); // 3 + 2 (roll) + 1 (Field Repair Suite)
 });
 
-test("Field Repair Suite does not add +1 SP when the Repair roll whiffs", () => {
+test("Field Repair Suite rides the lowest Repair roll — the D6 has no whiff", () => {
   const r = createRoom("X");
   claimSide(r, { name: "Owner", side: "a" });
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -2512,8 +2574,8 @@ test("Field Repair Suite does not add +1 SP when the Repair roll whiffs", () => 
     applyCommand(r, { verb: "endactivation", attrs: { name: active.name } });
   }
   applyCommand(r, { verb: "activate", attrs: { name: "Medic" } });
-  applyCommand(r, { verb: "action", attrs: { name: "Medic", action: "repair", loc: "hull", dice: { repair: 6 } } }); // <7 = whiff, amt=0
-  assert.equal(medic.hull.sp, 3); // unchanged: whiff must not be bumped to 1 by Field Repair Suite
+  applyCommand(r, { verb: "action", attrs: { name: "Medic", action: "repair", loc: "hull", dice: { repair: 1 } } }); // 1-2 = 1 SP, the floor
+  assert.equal(medic.hull.sp, 5); // 3 + 1 (floor roll) + 1 (Field Repair Suite)
 });
 
 function readyThreeAndThree(r, equipmentByName = {}) {
@@ -2801,7 +2863,7 @@ test("Master Toolkit repairs +2 through the action pipeline", () => {
   const rig = findRig(r, "a1");
   rig.equipmentUpgrade = "master-toolkit"; // Field upgrade: Repair heals +2, not +1
   rig.hull.sp = 3;
-  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "repair", loc: "hull", dice: { repair: 10 } } }); // 10+ = 2 SP roll
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "repair", loc: "hull", dice: { repair: 3 } } }); // 3-4 = 2 SP roll
   assert.equal(rig.hull.sp, 7); // 3 + 2 (roll) + 2 (Master Toolkit)
 });
 
@@ -2906,18 +2968,18 @@ test("Overclock Core with no upgrade grants +2 even below half SP", () => {
   assert.equal(r.game.turn.actionsMax, maxBefore + 2);
 });
 
-test("emergencypatch guarantees 2 SP with no roll for Field Repair Suite", () => {
+test("emergencypatch guarantees 4 SP with no roll for Field Repair Suite", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "field-repair-suite" });
   activate(r, "a1");
   const rig = findRig(r, "a1");
-  rig.arms.sp = 2;
+  rig.arms.sp = 2; // max 6, so a flat 4 lands exactly at the cap without clamping
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
-  assert.equal(rig.arms.sp, 4);
+  assert.equal(rig.arms.sp, 6);
   assert.equal(rig.engine.heat, 2);
 });
 
-test("Battlefield Triage heals 3 SP when the Emergency Patch target is at 0 SP", () => {
+test("Battlefield Triage heals 5 SP when the Emergency Patch target is at 0 SP", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "field-repair-suite" });
   activate(r, "a1");
@@ -2925,10 +2987,10 @@ test("Battlefield Triage heals 3 SP when the Emergency Patch target is at 0 SP",
   rig.equipmentUpgrade = "battlefield-triage";
   rig.arms.sp = 0; // destroyed location
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
-  assert.equal(rig.arms.sp, 3); // 3, not the base 2
+  assert.equal(rig.arms.sp, 5); // 5, not the base 4
 });
 
-test("Battlefield Triage heals only the base 2 SP on a merely damaged location", () => {
+test("Battlefield Triage heals only the base 4 SP on a merely damaged location", () => {
   const r = createRoom("X");
   readyThreeAndThree(r, { a1: "field-repair-suite" });
   activate(r, "a1");
@@ -2936,7 +2998,7 @@ test("Battlefield Triage heals only the base 2 SP on a merely damaged location",
   rig.equipmentUpgrade = "battlefield-triage";
   rig.arms.sp = 2; // damaged but not at 0 → no triage bump
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "emergencypatch", loc: "arms" } });
-  assert.equal(rig.arms.sp, 4); // 2 + 2, the base Emergency Patch
+  assert.equal(rig.arms.sp, 6); // 2 + 4, the base Emergency Patch
 });
 
 test("jumpjets costs 1 slot + 2 heat for Servo Actuators", () => {

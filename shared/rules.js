@@ -61,7 +61,7 @@ export function heatThreshold(total) {
 
 // Weight-class STR modifier applied to every Impact Roll (§12); Aim target
 // number (§2, roll >= to hit).
-export const WEIGHT_STR_MOD = { light: -2, medium: 0, heavy: 2, colossal: 4 };
+export const WEIGHT_STR_MOD = { light: -1, medium: 0, heavy: 1, colossal: 2 };
 export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
 
 // Heat Capacity by weight class (rules §6). A Rig is safe at or below this

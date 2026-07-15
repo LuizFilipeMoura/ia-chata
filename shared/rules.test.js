@@ -56,7 +56,7 @@ test("hitLocation maps the D12 bands (§7)", () => {
 });
 
 test("weight-class and aim scalars are correct (§2)", () => {
-  assert.equal(WEIGHT_STR_MOD.light, -2);
+  assert.equal(WEIGHT_STR_MOD.light, -1);
   assert.equal(WEIGHT_STR_MOD.medium, 0);
   assert.equal(AIM.medium, 4);
   assert.equal(AIM.heavy, 3);
@@ -87,8 +87,8 @@ test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
 test("woundTarget — the original bug case is possible, not impossible", () => {
   // The light Circular Saw vs a medium hull is the matchup that motivated this
   // rewrite: under the impact-total model it was mathematically 0 damage at any
-  // roll. At HEAD the Saw is STR 6 (game-state.js WEAPONS.melee) and
-  // WEIGHT_STR_MOD.light is -2, so its effective STR is 4; vs a medium hull T5
+  // roll. At HEAD the Saw is STR 5 (game-state.js WEAPONS.melee) and
+  // WEIGHT_STR_MOD.light is -1, so its effective STR is 4; vs a medium hull T5
   // that is a 7+ (40%).
   //
   // TODO(task-7): derive these operands from the live stats rather than
