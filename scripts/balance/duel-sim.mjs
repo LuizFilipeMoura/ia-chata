@@ -28,12 +28,18 @@ const totalSp = (rig) => ["hull", "arms", "legs", "engine"].reduce((s, k) => s +
 // the seed verb force-starts at >=3 rigs per side; they never act, and the third
 // rig of whichever side is second absorbs the Answer token so no duellist carries
 // a preparation.
-export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed }) {
+export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, seed }) {
   const random = mulberry32(seed);
-  // A factory, not a module-level setter: distance is required and throws if
-  // missing. An unexplained default would silently become the answer for every
-  // cell a caller forgot to configure.
-  const greedySafe = makeGreedySafe({ distance });
+  // A factory, not a module-level setter: distance and arc are BOTH required and
+  // throw if missing. An unexplained default would silently become the answer for
+  // every cell a caller forgot to configure — and for arc that is not theoretical.
+  // "front" looks like the harmless default and is the one value that must never
+  // be implicit: arcBonus (combat.js:401) returns null for Raking Fire on the
+  // front arc — a structural zero by rule, not a failed roll — so Mini Gun and
+  // Double MG measure 0 SP across all 10 rounds there. The old sweep hides this by
+  // pooling arcs; a single-arc duel cannot. The caller declares where the shooter
+  // stands and owns what it costs those two weapons.
+  const greedySafe = makeGreedySafe({ distance, arc });
   const room = createRoom("DUEL");
   const roster = ["A1", "A2", "A3"].map((n) => ({ name: n, owner: "a", chassis: chassisA }))
     .concat(["B1", "B2", "B3"].map((n) => ({ name: n, owner: "b", chassis: chassisB })));
@@ -120,12 +126,14 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed 
   while (!room.game.outcome && room.game.round <= DUEL_ROUNDS) {
     if (guard++ >= 3000) throw new Error("duel-sim: loop guard tripped — the driver is spinning.");
     const g = room.game;
-    // Clamped, and NOT read off room.game.round at the end. We claim no objectives,
-    // so VP ends 0-0 unless a Priority Elimination kill breaks it — and advanceRound
+    // Recorded HERE, inside the loop, rather than read off room.game.round at the
+    // end — that would report a round nobody played. We claim no objectives, so VP
+    // ends 0-0 unless a Priority Elimination kill breaks it, and advanceRound
     // answers a tie at MAX_ROUNDS by opening Sudden Death: round becomes 11 and the
-    // loop exits on the round bound. Reporting that 11 would invent a round nobody
-    // played. A `break` (a wreck) likewise wants the round it broke on.
-    roundsPlayed = Math.min(g.round, DUEL_ROUNDS);
+    // loop exits on its bound. A `break` (a wreck) likewise wants the round it
+    // broke on. The loop condition already guarantees g.round <= DUEL_ROUNDS here,
+    // so this needs no clamp of its own.
+    roundsPlayed = g.round;
 
     if (g.phase === "initiative") { cmd("initiative", { dice: null }); continue; }
 
@@ -166,14 +174,18 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed 
     const rig = room.rigs.find((r) => r.id === t.activeRigId);
     // Only the two duellists fight. The four bystanders pass immediately.
     //
-    // A FOURTH availableActions blind spot, beyond the three policy.mjs lists: an
-    // Arms hit at 0 SP rolls a weapon dead (game-state.js:1679) and combat.js:668
-    // then refuses the shot as `weapon-destroyed` — while the Fire tile stays
-    // `enabled` (battle-view shows the loss only as a badge) and performAction's
-    // `return !!res` swallows it with no reason recorded. The policy fires into
-    // that void forever; observed live at round 7 of a real duel. Guard here
-    // because the fix is the driver's: a gunless rig has nothing this
-    // long-range-only policy can do, so it passes like a bystander.
+    // An Arms hit at 0 SP rolls a weapon dead (game-state.js:1679) and
+    // combat.js:668 then refuses the shot as `weapon-destroyed`, which
+    // performAction's `return !!res` swallows with no reason recorded. policy.mjs
+    // owns that refusal now (b068fca — its fourth documented blind spot): a
+    // gunless rig vents instead of firing into the void, so this is no longer
+    // load-bearing for keeping the loop alive.
+    //
+    // It stays because it is the only source of `weaponLost`. A1 with its gun shot
+    // off caps spDealt for a reason that has nothing to do with the weapon under
+    // test, and Task 5's aggregate has to censor those cells rather than average a
+    // blown-off arm in as a weak weapon. Skipping the policy call for a gunless rig
+    // is then just honesty about a rig that has nothing left to decide.
     const gunLost = rig.weaponsDestroyed?.includes(rig.weapons?.longRange);
     if (gunLost && rig === a1) weaponLost = true;
     const canFight = (rig.name === "A1" || rig.name === "B1") && !gunLost;
