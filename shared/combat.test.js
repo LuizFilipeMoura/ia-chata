@@ -258,7 +258,7 @@ test("rollToHit hit count is unchanged by the to-hit seam for a plain target", (
 });
 
 test("computePen applies weight and Charged Shot", () => {
-  assert.equal(computePen({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 9); // 10-1
+  assert.equal(computePen({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 5); // 6-1
   const arcGun = { ...WEAPONS.longRange["Arc Gun"], perks: ["Charged Shot"] };
   assert.equal(computePen({ weightClass: "medium" }, arcGun, { charged: true }), 10); // 8+0+2
 });
@@ -766,23 +766,23 @@ test("Piledriver Protocol spends Momentum for +Penetration and ignores a braced 
   const ram = makeRig(1, "Ram", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
   const wall = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
   wall.preparation = { type: "brace" }; // braced on the front arc
-  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // Penetration 11, medium (+0)
+  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // Penetration 7, medium (+0)
 
   // computePen: the threaded momentum spend adds +1 Penetration per point.
   assert.equal(computePen(ram, p, { target: wall, momentum: 3 }), p.pen + 3);
 
-  // These assert effective Penetration, NOT the wound TN, deliberately: the Siege Maul is
-  // strong enough that both cases below clamp to TN 2 against a medium hull, so a
-  // TN assertion would pass identically whether or not the guard-break worked.
-  // Without a guard-break, the brace's -2 applies: 11 + 0(front) - 2 = 9.
+  // These assert effective Penetration, NOT the wound TN, deliberately: the TN is
+  // clamped at both ends, so a TN assertion can silently swallow the very
+  // difference the guard-break is supposed to make.
+  // Without a guard-break, the brace's -2 applies: 7 + 0(front) - 2 = 5.
   const normal = rollWounds(ram, wall, p, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(normal[0].pen, 9);
+  assert.equal(normal[0].pen, 5);
 
-  // Piledriver guard-break skips the brace AND adds +3 Penetration: 11 + 3 + 0 = 14.
+  // Piledriver guard-break skips the brace AND adds +3 Penetration: 7 + 3 + 0 = 10.
   const smash = rollWounds(ram, wall, p, "hull",
     { arc: "front", hits: 1, momentum: 3, guardBreak: true }, { wounds: [10] }, () => 0);
-  assert.equal(smash[0].pen, 14);
+  assert.equal(smash[0].pen, 10);
 });
 
 test("computeModifiedAim ignores cover during a Piledriver guard-break", () => {
@@ -1545,10 +1545,10 @@ test("Kneecapper tags the raked limb on a damaging hit; a non-kneecapper Double 
 test("Taut Cable: +3 Penetration vs an immobilised or engaged target, else nothing", () => {
   const harpoon = { ...WEAPONS.longRange["Harpoon"], upgradeEffect: { vsPinned: true } };
   const attacker = { weightClass: "medium" };
-  // base Penetration 10, medium weight mod 0
-  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light" } }), 10);
-  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 13);
-  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 13);
+  // base Penetration 7, medium weight mod 0
+  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light" } }), 7);
+  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 10);
+  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 10);
 });
 
 test("Reactive Armor hardens the struck location on the first damaging hit each round (−2 effective Penetration)", () => {
@@ -1723,11 +1723,11 @@ test("rollWounds — a wound deals the weapon's D, not 1", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const profile = { ...WEAPONS.melee["Wrecking Ball"] };
-  // Penetration 10 + medium 0 + front 0 = 10 vs medium hull T5 => TN 6+5-10 = 1 -> clamp 2. A 9 wounds.
+  // Penetration 6 + medium 0 + front 0 = 6 vs medium hull T5 => TN 6+5-6 = 5. A 9 wounds.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [9] }, () => 0);
   assert.equal(out.length, 1);
-  assert.equal(out[0].sp, 5); // Wrecking Ball dmg: 5
+  assert.equal(out[0].sp, 7); // Wrecking Ball dmg: 7
 });
 
 test("rollWounds — a natural 10 always wounds however hopeless the matchup", () => {
@@ -1764,7 +1764,11 @@ test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wound
 test("rollWounds — a natural 1 never wounds however lopsided", () => {
   const attacker = { weightClass: "medium" };
   const target = makeRig(2, "B", "light", "b", { longRange: "Autocannon", melee: "Claw" });
-  const profile = { ...WEAPONS.melee["Wrecking Ball"] };
+  // pen is pinned locally, not read off the catalog: this test needs a matchup
+  // lopsided enough that the TN clamps to the floor, and no shipped weapon
+  // reaches T+4 on a light hull any more. Without the clamp the natural-1 rule
+  // is never the reason the roll fails, and the test would pass testing nothing.
+  const profile = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 };
   // Penetration 10 + medium 0 + front 0 = 10 vs light hull T4 => TN 6+4-10 = 0 -> clamp 2.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [1] }, () => 0);
@@ -1809,23 +1813,28 @@ test("rollWounds — defender modifiers reduce effective Penetration, not the ro
 });
 
 test("rollWounds — Overmatch converts wasted STR into damage", () => {
-  const wb = WEAPONS.melee["Wrecking Ball"]; // Penetration 10, D5, ROF 1
+  // Overmatch only exists past the clamp, so the fixtures that need a saturated
+  // shot pin `pen` locally instead of reading the catalog: no shipped weapon
+  // saturates any more, and a catalog read would quietly leave them asserting 0.
+  const wb = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 }; // Penetration 10, D7, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   // medium arms are T4, so the floor is pen 8. Penetration 10 wastes 2 — under the
-  // 3-point rate, so a front-arc hit is still a plain D5.
+  // 3-point rate, so a front-arc hit is still a plain D7.
   const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(front[0].pen, 10);
   assert.equal(front[0].target, 2);      // clamped to the floor
   assert.equal(front[0].overmatch, 0);
-  assert.equal(front[0].sp, 5);          // D5, nothing added
+  assert.equal(front[0].sp, 7);          // D7, nothing added
 });
 
 test("rollWounds — Overmatch revives the arc bonus on a saturated weapon", () => {
   // THE POINT OF THE WHOLE CHANGE. Before Overmatch, these two shots were
-  // byte-identical: both clamped to TN 2, both dealt exactly D5, so flanking a
+  // byte-identical: both clamped to TN 2, both dealt exactly D, so flanking a
   // Wrecking Ball rig was worth literally nothing (sweep: rear/front ratio x1.00).
-  const wb = WEAPONS.melee["Wrecking Ball"];
+  // pen pinned locally — see the note above; the mechanic under test only has a
+  // subject at all when the shot saturates.
+  const wb = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 };
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1841,10 +1850,11 @@ test("rollWounds — Overmatch revives WEIGHT_PEN_MOD on a saturated weapon", ()
   // Sweep measured the light↔medium delta as Δ0.00 for this weapon: both classes
   // clamped to TN 2, so the -1 was discarded entirely.
   //
-  // The mod bites where Overmatch crosses a rate boundary. Siege Maul (STR 11)
-  // into medium arms (T4, floor pen 8) wastes 3 → +1 D; the light -1 wastes 2 →
-  // +0. Same shot, one weight class apart, one point of damage.
-  const maul = WEAPONS.longRange["Siege Maul"]; // Penetration 11, D5
+  // The mod bites where Overmatch crosses a rate boundary. A pen-11 shot into
+  // medium arms (T4, floor pen 8) wastes 3 → +1 D; the light -1 wastes 2 → +0.
+  // Same shot, one weight class apart, one point of damage.
+  // pen pinned locally — see the note on the "converts wasted STR" test.
+  const maul = { ...WEAPONS.longRange["Siege Maul"], pen: 11 }; // Penetration 11
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const med = rollWounds({ weightClass: "medium" }, target, maul, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1862,11 +1872,10 @@ test("rollWounds — Overmatch stacks with Rend and respects its own cap", () =>
   // Overmatch, Rend and Evisceration all land in `sp`. The cap is on Overmatch
   // alone, not on the total — a Rend weapon still gets its +1 on top.
   //
-  // The fixture has to OVERSHOOT the cap or it isn't testing one. pen 13 is a
-  // real loadout: Siege Maul's base 11 plus Reinforced Head's +2. With the rear
-  // arc that's effPen 16 into a T3 engine — 9 past the floor, which the 3-point
-  // rate would pay out as +3. It resolves to 2 only because the cap bites, so
-  // this goes red if the cap is raised or removed.
+  // The fixture has to OVERSHOOT the cap or it isn't testing one. With the rear
+  // arc, pen 13 is effPen 16 into a T3 engine — 9 past the floor, which the
+  // 3-point rate would pay out as +3. It resolves to 2 only because the cap
+  // bites, so this goes red if the cap is raised or removed.
   const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"], pen: 13 };
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, target, maul, "engine",
@@ -1874,7 +1883,7 @@ test("rollWounds — Overmatch stacks with Rend and respects its own cap", () =>
   assert.equal(out[0].pen, 16);
   assert.equal(out[0].overmatch, 2); // capped down from 3
   assert.equal(out[0].rend, 1);
-  assert.equal(out[0].sp, 8); // D5 + 2 Overmatch + 1 rend
+  assert.equal(out[0].sp, 9); // D6 + 2 Overmatch + 1 rend
 });
 
 test("rollWounds — Overmatch reads the target's kind, not the rig toughness band", () => {
@@ -1886,10 +1895,11 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   // (T6 is not "off the scale" — a tank hull is T6. It is simply not reachable on
   // a rig: T3-T5 is the whole rig board now that Heavy and Colossal are gone.)
   //
-  // Siege Maul Penetration 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
+  // Penetration 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
   // effPen 14 into a T6 hull. The floor is at pen T+4 = 10, so 4 points are
-  // past it; at 3 points per D that pays out floor(4/3) = +1 D. D5 + 1 = 6 SP.
-  const maul = WEAPONS.longRange["Siege Maul"];
+  // past it; at 3 points per D that pays out floor(4/3) = +1 D. D6 + 1 = 7 SP.
+  // pen pinned locally — see the note on the "converts wasted STR" test.
+  const maul = { ...WEAPONS.longRange["Siege Maul"], pen: 11 };
   const tank = { kind: "tank", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, tank, maul, "hull",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1897,7 +1907,7 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   assert.equal(out[0].pen, 14);
   assert.equal(out[0].target, 2);      // 6 + 6 - 14 = -2, clamped to the floor
   assert.equal(out[0].overmatch, 1);
-  assert.equal(out[0].sp, 6);          // D5 + 1
+  assert.equal(out[0].sp, 7);          // D6 + 1
 
   // The same shot into T4 rig arms wastes 6 and pays +2 — softer target, MORE
   // Overmatch, since a lower T puts the floor lower and leaves more STR past it.
@@ -2121,12 +2131,11 @@ test("ledger — the damage step multiplies wounds by the weapon's D", () => {
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 1 } },
     () => 0, ctx);
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
-  assert.ok(d.terms.some((t) => t.label === "weapon Damage" && t.value === 5));
-  // 6, not 5: makeRig fits the melee slot with Haymaker (+3 Penetration), so this ball
-  // swings at effPen 13 into a T5 hull — 4 STR past the floor, which Overmatch
-  // now converts to +1 D. Haymaker was one of the upgrades the sweep measured at
-  // +0.00; this total moving is that fix landing, not D changing.
-  assert.match(d.out, /6 SP/);
+  assert.ok(d.terms.some((t) => t.label === "weapon Damage" && t.value === 7));
+  // 7, not 7+n: makeRig fits the melee slot with Haymaker (+3 Penetration), so this
+  // ball swings at effPen 9 into a T5 hull — TN 6+5-9 = 2, exactly the floor and
+  // nothing past it, so Overmatch adds nothing and the total is the bare D.
+  assert.match(d.out, /7 SP/);
 });
 
 test("ledger — the location step carries the d12 that picked the part", () => {
@@ -2364,13 +2373,13 @@ test("hit location comes from the target's kind, not the attacker's", () => {
 });
 
 test("ledger — Overmatch is named in the damage step when it fires", () => {
-  // A crushing hit rendering "weapon Damage 5" with an unexplained +2 in the total is
+  // A crushing hit rendering "weapon Damage 7" with an unexplained +1 in the total is
   // exactly the readability failure this ledger exists to close.
-  // Wrecking Ball Penetration 10 + Haymaker 3 + rear arc 3 = effPen 16 vs medium arms
-  // T4 → 8 Penetration past the TN-2 floor → +2 D. Haymaker is pinned rather than left
+  // Wrecking Ball Penetration 6 + Haymaker 3 + rear arc 3 = effPen 12 vs medium arms
+  // T4 → 4 Penetration past the TN-2 floor → +1 D. Haymaker is pinned rather than left
   // to the default-upgrade rule: reordering WEAPON_UPGRADES would otherwise drop
-  // effPen to 13 and fail a RENDERING test for a reason unrelated to rendering.
-  // The rate and cap behind that 2 are rules.test.js's (strOvermatchD's) to pin;
+  // effPen to 9 and fail a RENDERING test for a reason unrelated to rendering.
+  // The rate and cap behind that 1 are rules.test.js's (strOvermatchD's) to pin;
   // what this asserts is that the rider reaches the ledger under its own name.
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball", meleeUpgrade: "haymaker" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -2384,8 +2393,8 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
     .breakdown.steps.find((s) => s.kind === "damage");
   assert.deepEqual(dmg.terms, [
     { label: "wounds", value: 1 },
-    { label: "weapon Damage", value: 5 },
-    { label: "Overmatch", value: 2 },
+    { label: "weapon Damage", value: 7 },
+    { label: "Overmatch", value: 1 },
   ]);
 });
 

@@ -108,16 +108,16 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].perks, ["Raking Fire"]);
   assert.deepEqual(WEAPONS.longRange["Double MG"].perks, ["Raking Fire"]);
   assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
-  assert.equal(WEAPONS.melee["Lance"].pen, 9);
+  assert.equal(WEAPONS.melee["Lance"].pen, 6);
   assert.equal(WEAPONS.melee["Sword"].melee, true);
   assert.equal(WEAPONS.melee["Sword"].perks, undefined);
 });
 
-test("every weapon carries a hand-assigned damage stat in range 1..5", () => {
+test("every weapon carries a hand-assigned damage stat in range 1..8", () => {
   const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
   for (const [name, w] of Object.entries(all)) {
     assert.equal(typeof w.dmg, "number", `${name} has no dmg`);
-    assert.ok(w.dmg >= 1 && w.dmg <= 5, `${name} dmg=${w.dmg} out of range`);
+    assert.ok(w.dmg >= 1 && w.dmg <= 8, `${name} dmg=${w.dmg} out of range`);
   }
 });
 
@@ -179,7 +179,7 @@ test("makeUnit threads the sp override through to the rig", () => {
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, pen: 11, dmg: 5, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
+  assert.deepEqual(maul, { rof: 1, pen: 7, dmg: 6, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
   assert.deepEqual(shield, { rof: 1, pen: 5, dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true });
@@ -191,9 +191,9 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
   assert.deepEqual(WEAPONS.longRange["Harpoon"],
-    { rof: 1, pen: 10, dmg: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
+    { rof: 1, pen: 7, dmg: 6, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
   assert.deepEqual(WEAPONS.melee["Anchor"],
-    { rof: 1, pen: 10, dmg: 4, accuracy: [0, 0], rng: [2, 2], melee: true });
+    { rof: 1, pen: 7, dmg: 6, accuracy: [0, 0], rng: [2, 2], melee: true });
   assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
     { rof: 6, pen: 3, dmg: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
@@ -210,7 +210,7 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   const headed = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword" });
   assert.equal(headed.weaponUpgrades.longRange, "reinforced-head");
-  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).pen, 13); // 11 base + 2
+  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).pen, 9); // 7 base + 2
 
   // Breaching Round marks onDamage.
   const breach = makeRig(2, "Breaker2", "medium", "a",
