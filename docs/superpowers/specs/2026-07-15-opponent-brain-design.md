@@ -73,24 +73,65 @@ All under `shared/bot/`, all pure, all node-testable:
 Split this way because `score.js` is where the tuning churn lives and `evaluate.js` is where
 the maths lives. They change for entirely different reasons.
 
-### Expected damage is closed-form — after one refactor
+### v1 scores HITS, not damage — the damage half is deferred
 
-The formula is already known and empirically validated. The balance work
-(`scripts/balance/weapon-sweep.mjs`, a 32.3M-attack Monte Carlo sweep) derived it:
+The full formula, validated by the balance sweep, is
+`expectedDamage = ROF × P(hit) × P(wound) × D`.
+
+**v1 uses only the left half:**
 
 ```
-expectedDamage = ROF × P(hit) × P(wound) × D
+expectedHits = ROF × P(hit)
 ```
 
-- `computeModifiedAim(attacker, profile, opts)` gives the to-hit target, so
-  `P(hit) = (7 − aim) / 6` per ROF die, floored at `1/6` (a natural 6 always hits).
+**Why.** The damage calculations are actively being tuned (`F2-B — price ROF in heat` is the
+live next step). Everything on the right of `P(hit)` — STR, wound TN, `D`, Overmatch — is
+mid-flight. `P(hit)` is not: it is accuracy, cover, and range-band maths, and nothing in the
+balance work touches it. Scoring hits gets a bot playing today against numbers that are
+stable, and defers the damage term until the arsenal settles.
+
+**This costs less than it sounds, because the structural rules are exported separately from
+the magnitudes being tuned.** The bot still sees:
+
+| fact | via | stable under tuning? |
+|---|---|---|
+| accuracy, cover, range falloff | `computeModifiedAim` | yes |
+| **Raking Fire cannot damage a front arc** | `arcBonus(profile, arc) === null` | yes — a veto, not a number |
+| **Raise Shield negates an arc** | `shieldCoverage(rig)` | yes |
+| heat cost | `rigEffects`, `ACTIONS` | yes |
+| objectives, Priority Target | geometry | untouched by damage |
+| rear/side **ordering** | sign of `arcBonus` | ordering yes — *magnitude no* (see Arc, below) |
+
+The rake veto is free and exact. The rear/side *preference* is not — arc changes STR, not
+accuracy, so v1 must shape it by hand. See "Arc: v1 needs an explicit factor" below; it is
+v1's biggest compromise and the reason the damage term is deferred, not cancelled.
+
+**What v1 is blind to — write these down, they are real:**
+
+1. **The wound half.** Brace's −2, Reactive Plating's −1/−2, Harden, Reactive Armor, Breach
+   Grip's crack, and `toughness` all live inside `rollWounds` and are invisible. The bot will
+   not understand that a braced rig is a poor frontal target.
+2. **Weapon quality.** It cannot tell a Wrecking Ball (STR 10, ROF 1) from a Rivet Gun
+   (STR 3, ROF 6) — it prefers volume. Per the balance findings that is **currently correct**
+   (3.65 vs 2.98 SP); F2-B is what makes it wrong, and by then the damage term should be back.
+3. **Three ROF bonuses.** `rollToHit` computes an *effective* ROF internally — `+2` Full Auto,
+   `+Bloodletter` (vs a damaged target), `+Redline Governor` (attacker heat over cap) — and
+   that logic sits inside the function. It cannot be read by calling it, because `rollToHit`
+   also runs `applyDefensiveReactions`, which **mutates the target** (Point-Defense spend);
+   evaluating a candidate must never do that. v1 therefore uses `profile.rof` and under-rates
+   all three. The bias is small, one-directional, and only affects conditional upgrades.
+
+### Deferred: the damage term (do this once tuning settles)
+
+Adding damage means completing the formula:
+
 - `woundTarget(effStr, toughness)` gives the wound TN on a D10, so `P(wound) = (11 − TN)/10`.
 - `D` is the weapon's damage dice **plus `strOvermatchD(effStr, toughness)`** — STR past the
   wound clamp converts to extra D (§7.5, shipped 2026-07-15).
 
-**The blocker, and the one refactor this spec requires.** `effStr` is not obtainable today.
-`strBreakdown` is exported but covers only the *attacker's* STR. The **defender's** ten
-modifiers are computed inline inside `rollWounds`, interleaved with the dice:
+**The blocker.** `effStr` is not obtainable today. `strBreakdown` is exported but covers only
+the *attacker's* STR. The **defender's** ten modifiers are computed inline inside
+`rollWounds`, interleaved with the dice:
 
 `arcBonus` · Kneecapper's limb exception · **Brace** (−2 front) · **Harden** (−1/−2 by
 upgrade) · **Reactive Armor** (−2 on a re-hardened location) · **Reactive Plating** (−1/−2
@@ -118,6 +159,10 @@ for a 200-game tuning run.
 assert the analytic EV matches the empirical mean within the sweep's noise band. If
 `ROF × P(hit) × P(wound) × D` disagrees with the real engine, one of them is wrong. The
 instrument exists; copy the pattern from `weapon-sweep.mjs`.
+
+**The seam holds either way.** `score.js` has one `w.damage` weight consuming one number
+from `evaluate.js`. v1 feeds it `expectedHits`; the deferred work feeds it `expectedDamage`.
+Nothing else in the scorer changes — which is the point of splitting `evaluate.js` out.
 
 ## Candidate generation
 
@@ -165,8 +210,8 @@ One weighted sum (`score.js`):
 ```
 score = w.vp        × objectiveVpDelta        // does this spot take / hold / contest a marker
       + w.priority  × priorityTargetProgress  // the game's ONLY kill-VP: +2
-      + w.damage    × expectedDamageDealt     // analytic, exact
-      - w.threat    × expectedDamageTaken     // every enemy's EV against me AT this spot/facing
+      + w.damage    × offence                 // v1: expectedHits. later: expectedDamage
+      - w.threat    × exposure                // same metric, every enemy's best against me
       - w.heat      × overheatRisk            // P(misfire) given heat vs capacity
       - w.fragile   × exposureOfWeakLocation
 ```
@@ -187,10 +232,15 @@ EV available *after* arriving. Without it, the bot cannot understand why a flank
 walking to. With it, "move to the rear arc, then shoot" **emerges from the maths** instead of
 being special-cased.
 
-The defensive half is symmetric: `expectedDamageTaken` is computed at the candidate spot
-with the candidate facing. That is what makes the bot seek cover and refuse to show its rear.
+The defensive half is symmetric: `exposure` is computed at the candidate spot with the
+candidate facing. That is what makes the bot seek cover and refuse to show its rear.
 
-**Threat assumes static enemies.** `expectedDamageTaken` sums each living enemy's best EV
+**Offence and exposure are the same metric, pointed in opposite directions.** Both come from
+`evaluate.js`, so swapping v1's `expectedHits` for `expectedDamage` later upgrades attack and
+defence together — the bot can never end up valuing its own shots by one yardstick and the
+enemy's by another.
+
+**Threat assumes static enemies.** `exposure` sums each living enemy's best EV
 against the candidate spot **from where that enemy stands right now**, with its current
 facing and weapon state. It does NOT model the enemy moving to a better firing position
 first. That is a deliberate simplification, and it is the bot's main blind spot: it will
@@ -200,17 +250,43 @@ the candidate space. If the bot proves too easy to bait, this is the first thing
 and the cheap partial fix is to inflate each enemy's threat range by its `moveBudget` rather
 than to search.
 
-### The rules' sharp edges score themselves
+### Arc: v1 needs an explicit factor, and this is the honest part
 
-Because the scorer uses the real combat maths, the game's own incentives need no encoding:
+**With the damage term, the game's incentives need no encoding** — Raking Fire's front-arc
+veto, rear's +4 STR, and Brace's −2 all live in the wound step, so an EV built on
+`effectiveStrAgainst` values them automatically. That is the main argument for using the
+engine's own functions rather than approximating.
 
-- **Raking Fire** cannot damage a front arc → the scorer routes a machine gun to a flank on
-  its own.
-- **Rear is +4 STR** → rear shots outscore frontal ones. No "prefer flanking" rule exists.
-- **Brace** is −2 on Wound Rolls into the front → `expectedDamageTaken` values it correctly.
+**v1 does not get that for free, and this is its biggest compromise.** `expectedHits` is
+`ROF × P(hit)`, and **arc does not affect accuracy — it affects STR**. So a hits-only score is
+*identical* front, side, and rear. Left alone, the v1 bot would have **no reason to flank at
+all**, which deletes the single most important behaviour we want.
 
-This is the main argument for computing EV with the engine's own functions rather than
-approximating: every weapon perk and upgrade we already shipped is *already* in the scorer.
+So v1 multiplies offence by an explicit arc factor, read from the exported `arcBonus`:
+
+```js
+// arcBonus is the wound step's arc modifier. v1 cannot use it as STR (no wound
+// term), so it reads it as a PREFERENCE instead: null is a hard veto, and a
+// bigger bonus means a better angle. This is a heuristic bridge, not the real
+// maths — it preserves the ORDERING (rear > side > front, rake-front = never)
+// while the magnitudes are still being tuned. The damage term replaces it
+// wholesale; delete this when it lands.
+function arcFactor(profile, arc) {
+  const bonus = arcBonus(profile, arc);
+  if (bonus == null) return 0;        // earned zero: a rake cannot hurt a front arc
+  return 1 + bonus / 4;               // ordering only; the /4 is a knob, not a law
+}
+```
+
+Being explicit about what this is: `arcBonus` returning `null` is a genuine structural veto
+and will always be right. The `1 + bonus/4` shaping is a **guess** — it preserves the ordering
+(which is what makes the bot flank) but not the true value. It is the one place in v1 where
+the bot's numbers are invented rather than derived, and it is the first thing the damage term
+deletes.
+
+**Still free in v1**, because they are exported and structural:
+- **Raise Shield** negates an arc → `shieldCoverage(rig)`, a hard zero like the rake veto.
+- Range falloff, cover, accuracy modifiers → `computeModifiedAim`.
 
 ### Presets
 

@@ -4,7 +4,9 @@
 
 **Goal:** A deterministic scored engine that plays a side competently — flanks, uses cover, holds objectives, manages heat — with no LLM in the decision path.
 
-**Architecture:** One pure entry point `chooseAction(room, rig, weights)` returns ONE command at a time; a small driver applies it via `applyCommand` and re-asks. The bot never mutates state, so it cannot cheat or desync. Scoring uses the engine's own combat maths, which requires extracting one pure function out of `rollWounds` first.
+**Architecture:** One pure entry point `chooseAction(room, rig, weights)` returns ONE command at a time; a small driver applies it via `applyCommand` and re-asks. The bot never mutates state, so it cannot cheat or desync. Scoring uses the engine's own maths.
+
+**v1 scores HITS, not damage.** The damage calculations are being actively tuned, so `evaluate.js` uses only `ROF × P(hit)` — the half of the formula that is stable. **Task 1 (the `combat.js` refactor) is therefore DEFERRED and must not be implemented**; `shared/combat.js` keeps the zero diff it has held through all of spec 1. Start at Task 2.
 
 **Tech Stack:** Plain ES modules under `shared/bot/`. Tests: `node --test` (NOT Vitest).
 
@@ -71,11 +73,11 @@ Dirty worktree; **another session commits to this branch concurrently using broa
 ## File Structure
 
 **Modify:**
-- `shared/combat.js` — extract `effectiveStrAgainst` out of `rollWounds` (Task 1 only)
 - `shared/game-state.js` — export `spatial`; add `sideBotOf`; `room.game.sides[i].bot`
+- ~~`shared/combat.js`~~ — **NOT touched in v1.** Task 1 is deferred; the zero diff holds.
 
 **Create:**
-- `shared/bot/evaluate.js` — analytic expected damage. Depends on combat.js + rules.js.
+- `shared/bot/evaluate.js` — `expectedHits` (v1's offence metric). Depends on combat.js + game-state.js.
 - `shared/bot/candidates.js` — expand the action menu into parameterised candidates.
 - `shared/bot/score.js` — score one candidate; `PRESETS`.
 - `shared/bot/index.js` — `chooseAction`, `runBotActivation`.
@@ -85,7 +87,19 @@ Split this way because `score.js` is where tuning churn lives and `evaluate.js` 
 
 ---
 
-### Task 1: Extract `effectiveStrAgainst` from `rollWounds`
+### Task 1: DEFERRED — extract `effectiveStrAgainst` from `rollWounds`
+
+> **DO NOT IMPLEMENT THIS YET.** The damage calculations are being actively tuned
+> (`F2-B — price ROF in heat` is live). v1 scores **hits**, not damage, so this refactor is
+> not needed and `shared/combat.js` keeps its zero diff. Kept here in full because the seam
+> is already located and the analysis shouldn't be re-done from scratch later.
+>
+> **Do this when:** the arsenal settles and the bot needs to tell a Wrecking Ball
+> (STR 10, ROF 1) from a Rivet Gun (STR 3, ROF 6). Until F2-B lands, preferring the Rivet
+> Gun is *correct* (3.65 vs 2.98 SP), so v1's blindness costs nothing real.
+>
+> When you do: `score.js` consumes ONE number from `evaluate.js` behind the `w.damage`
+> weight. Swap `expectedHits` for `expectedDamage` and nothing else in the scorer changes.
 
 **The delicate one.** `shared/combat.js` is the most safety-critical file in the repo and has been at a zero diff through all of spec 1. `combat.test.js` (2178 lines) is the net.
 
@@ -210,51 +224,104 @@ git commit -m "refactor(combat): extract effectiveStrAgainst from rollWounds" --
 
 ---
 
-### Task 2: Analytic expected damage
+### Task 2: Expected hits (v1's offence metric) — **START HERE**
 
 **Files:**
 - Create: `shared/bot/evaluate.js`
 - Test: `shared/bot/evaluate.test.js`
 
-The formula, already validated by the 32.3M-attack balance sweep:
+The full formula is `expectedDamage = ROF × P(hit) × P(wound) × D`. **v1 uses only the left
+half**, because everything right of `P(hit)` is mid-tuning:
+
 ```
-expectedDamage = ROF × P(hit) × P(wound) × D
+expectedHits = ROF × P(hit) × arcFactor(profile, arc)
 ```
+
+`P(hit)` is accuracy/cover/range-band maths — stable, and `computeModifiedAim` is already
+exported. **No `combat.js` change is needed for this task.**
+
+**The `arcFactor` is v1's one invented number, and you must understand why it exists.**
+Arc modifies **STR**, not accuracy — so `ROF × P(hit)` is *identical* front, side, and rear.
+Without an explicit factor the bot has **no reason to flank at all**, which deletes the most
+important behaviour in the spec. `arcBonus(profile, arc)` is exported; read it as a
+preference:
+
+```js
+// arcBonus is the WOUND step's arc modifier. v1 has no wound term, so it reads it
+// as a PREFERENCE: null is a hard veto, a bigger bonus is a better angle. This is
+// a heuristic bridge, not the real maths — it preserves the ORDERING (rear > side
+// > front; rake-into-front = never) while the magnitudes are still being tuned.
+// The damage term (Task 1, deferred) deletes this wholesale.
+function arcFactor(profile, arc) {
+  const bonus = arcBonus(profile, arc);
+  if (bonus == null) return 0;   // earned zero: a rake cannot damage a front arc
+  return 1 + bonus / 4;          // ordering only; /4 is a knob, not a law
+}
+```
+
+The `null` veto is exact and always right. The `1 + bonus/4` shaping is a guess.
+
+**Three ROF bonuses are invisible to v1.** `rollToHit` computes an *effective* ROF internally
+(`+2` Full Auto, `+Bloodletter` vs a damaged target, `+Redline Governor` from heat over cap).
+You cannot call `rollToHit` to read it — it also runs `applyDefensiveReactions`, which
+**mutates the target** (Point-Defense spend), and evaluating a candidate must never mutate.
+Use `profile.rof`. Document the bias in the module comment; it under-rates three conditional
+upgrades and is one-directional.
 
 - [ ] **Step 1: Write the failing test**
 
 ```js
-import { expectedDamage } from "./evaluate.js";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { expectedHits } from "./evaluate.js";
+import { makeRig } from "../game-state.js";
 
-test("expectedDamage is zero for an earned zero (rake into a front arc)", () => {
-  const a = rigOf({ longRange: "Mini Gun" });
-  const b = makeRig(2, "Def", "b", { weightClass: "medium", longRange: "Autocannon", melee: "Sword" });
-  assert.equal(expectedDamage(a, b, "longRange", { arc: "front", distance: 7, cover: 0, round: 1 }), 0);
+// Rigs MUST be built through makeRig. normalizeWeaponUpgrade forces the field
+// upgrade for a null id, so a hand-assembled weapon is a loadout the game cannot
+// commission — a fixture built that way tests something that does not exist.
+const atk = (over = {}) => makeRig(1, "Atk", "a", { weightClass: "medium", longRange: "Autocannon", melee: "Sword", ...over });
+const def = () => makeRig(2, "Def", "b", { weightClass: "medium", longRange: "Autocannon", melee: "Sword" });
+
+test("expectedHits is zero for an earned zero — a rake into a front arc", () => {
+  const a = atk({ longRange: "Mini Gun" });   // Mini Gun carries Raking Fire
+  assert.equal(expectedHits(a, def(), "longRange", { arc: "front", distance: 7, cover: 0, round: 1 }), 0);
 });
 
-test("expectedDamage is higher into the rear arc than the front", () => {
-  const a = rigOf();
-  const b = makeRig(2, "Def", "b", { weightClass: "medium", longRange: "Autocannon", melee: "Sword" });
+test("a rake still scores into the side and rear", () => {
+  const a = atk({ longRange: "Mini Gun" });
+  const opts = { distance: 7, cover: 0, round: 1 };
+  assert.ok(expectedHits(a, def(), "longRange", { ...opts, arc: "side" }) > 0);
+  assert.ok(expectedHits(a, def(), "longRange", { ...opts, arc: "rear" }) > 0);
+});
+
+test("rear outscores side outscores front — the flanking ordering", () => {
+  const a = atk();
   const opts = { distance: 12, cover: 0, round: 1 };
-  const front = expectedDamage(a, b, "longRange", { ...opts, arc: "front" });
-  const rear = expectedDamage(a, b, "longRange", { ...opts, arc: "rear" });
-  assert.ok(rear > front, `rear ${rear} should beat front ${front}`);
+  const front = expectedHits(a, def(), "longRange", { ...opts, arc: "front" });
+  const side  = expectedHits(a, def(), "longRange", { ...opts, arc: "side" });
+  const rear  = expectedHits(a, def(), "longRange", { ...opts, arc: "rear" });
+  assert.ok(rear > side && side > front, `expected rear>side>front, got ${rear}/${side}/${front}`);
 });
 
-test("expectedDamage falls off away from the weapon's sweet spot", () => {
-  const a = rigOf();  // Autocannon: sweet 12
-  const b = makeRig(2, "Def", "b", { weightClass: "medium", longRange: "Autocannon", melee: "Sword" });
-  const at = (d) => expectedDamage(a, b, "longRange", { arc: "front", distance: d, cover: 0, round: 1 });
+test("expectedHits falls off away from the weapon's sweet spot", () => {
+  const a = atk();   // Autocannon: sweet 12
+  const at = (d) => expectedHits(a, def(), "longRange", { arc: "front", distance: d, cover: 0, round: 1 });
   assert.ok(at(12) > at(24), "sweet spot beats long range");
   assert.ok(at(12) > at(2), "sweet spot beats point blank");
 });
 
-test("expectedDamage drops with cover", () => {
-  const a = rigOf();
-  const b = makeRig(2, "Def", "b", { weightClass: "medium", longRange: "Autocannon", melee: "Sword" });
+test("expectedHits drops with cover", () => {
+  const a = atk();
   const opts = { arc: "front", distance: 12, round: 1 };
-  assert.ok(expectedDamage(a, b, "longRange", { ...opts, cover: 0 })
-          > expectedDamage(a, b, "longRange", { ...opts, cover: 2 }));
+  assert.ok(expectedHits(a, def(), "longRange", { ...opts, cover: 0 })
+          > expectedHits(a, def(), "longRange", { ...opts, cover: 2 }));
+});
+
+test("a natural 6 always hits — expectedHits never falls below rof/6", () => {
+  const a = atk();
+  // Absurd penalties: max cover at a terrible range.
+  const h = expectedHits(a, def(), "longRange", { arc: "front", distance: 26, cover: 2, round: 1 });
+  assert.ok(h > 0, "a natural 6 always hits, so hits can never be zero on a legal shot");
 });
 ```
 
@@ -264,17 +331,24 @@ test("expectedDamage drops with cover", () => {
 
 ```js
 // shared/bot/evaluate.js
-// Analytic expected damage — the bot's damage term. No dice, no rollout.
+// The bot's offence metric. v1 scores HITS, not damage.
 //
-// The formula is the balance harness's own conclusion, empirically validated over
-// 32.3M sampled attacks (scripts/balance/): ROF x P(hit) x P(wound) x D.
+// The full formula (validated by the balance harness over 32.3M sampled attacks,
+// scripts/balance/) is ROF x P(hit) x P(wound) x D. v1 uses only the left half:
+// everything right of P(hit) — STR, wound TN, D, Overmatch — is being actively
+// tuned (F2-B prices ROF in heat next). P(hit) is not: it is accuracy, cover and
+// range-band maths, which the balance work does not touch.
 //
-// It reads the SAME functions that resolve a real shot, so every weapon perk and
-// upgrade already in the game is already in the scorer — Raking Fire's front-arc
-// veto, rear's +STR, Brace's -2, shields, plating. None of that is encoded here;
-// it falls out of effectiveStrAgainst.
-import { computeModifiedAim, effectiveStrAgainst } from "../combat.js";
-import { woundTarget, strOvermatchD, WOUND_DIE } from "../rules.js";
+// KNOWN BIAS, deliberate: rollToHit computes an EFFECTIVE rof internally (+2 Full
+// Auto, +Bloodletter vs a damaged target, +Redline Governor from heat over cap).
+// We cannot read it — rollToHit also runs applyDefensiveReactions, which MUTATES
+// the target (Point-Defense spend), and evaluating a candidate must never mutate.
+// So we use profile.rof and under-rate those three conditional upgrades. The bias
+// is small and one-directional.
+//
+// Also blind to the whole wound step: Brace's -2, Reactive Plating, Harden,
+// toughness. See Task 1 (deferred) for when that changes.
+import { computeModifiedAim, arcBonus } from "../combat.js";
 import { effectiveWeaponProfile } from "../game-state.js";
 
 // A D6 hits on `aim` or better; a natural 6 ALWAYS hits, so the floor is 1/6 no
@@ -283,25 +357,35 @@ function pHit(aim) {
   return Math.max(1 / 6, Math.min(1, (7 - aim) / 6));
 }
 
-export function expectedDamage(attacker, target, slot, opts) {
+// arcBonus is the WOUND step's arc modifier. v1 has no wound term, so it reads it
+// as a PREFERENCE instead. Without this, ROF x P(hit) is identical on every arc —
+// arc changes STR, not accuracy — and the bot would have no reason to flank at
+// all, which is the single most important behaviour we want.
+//
+// The null veto is exact and always right (a rake genuinely cannot damage a front
+// arc). The `1 + bonus/4` shaping is a GUESS: it preserves the ordering
+// (rear > side > front) but not the true value. It is the one invented number in
+// v1, and the damage term deletes it.
+function arcFactor(profile, arc) {
+  const bonus = arcBonus(profile, arc);
+  if (bonus == null) return 0;
+  return 1 + bonus / 4;
+}
+
+export function expectedHits(attacker, target, slot, opts) {
   const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
   if (!profile) return 0;
-  const location = opts.location || "hull";
-  const str = effectiveStrAgainst(attacker, target, profile, location, opts);
-  // An earned zero is a hard zero — a rake into a front arc, or a raised shield.
-  if (str.negated) return 0;
+  const factor = arcFactor(profile, opts.arc);
+  if (factor === 0) return 0;                 // earned zero — a rake into a front arc
+  // A raised shield covering this arc is the other earned zero. shieldCoverage is
+  // exported from rules.js; read it the same way resolveAttack does.
+  if (shieldNegatesArc(target, opts.arc)) return 0;
   const aim = computeModifiedAim(attacker, profile, { ...opts, target });
-  const tn = woundTarget(str.effStr, str.toughness);
-  const pWound = Math.max(0, Math.min(1, (WOUND_DIE + 1 - tn) / WOUND_DIE));
-  const d = str.d + strOvermatchD(str.effStr, str.toughness);
-  const rof = profile.rof || 1;
-  // D is a dice COUNT; its mean contribution is d * (mean of one damage die).
-  // Read how rollWounds turns `d` into SP and mirror it EXACTLY — do not guess.
-  return rof * pHit(aim) * pWound * meanSpPerWound(d, profile);
+  return (profile.rof || 1) * pHit(aim) * factor;
 }
 ```
 
-**You must determine `meanSpPerWound` by reading `rollWounds`' damage step** — how `d`, `rend`, `evisc`, and `overmatch` become SP. Do NOT guess. If `d` is a count of D3s, the mean is `2 * d`; if D6s, `3.5 * d`; if it's flat, it's `d`. Read `BLAST_D` and the `sp` assignment. Report what you found.
+**You must write `shieldNegatesArc` by reading how `rollWounds` uses `shieldCoverage(target)`** — it returns `{ negate: [...arcs], blunt: [...arcs] }` and only fires when `target.preparation?.type === "raise-shield"`. Mirror that check exactly; do not invent one.
 
 - [ ] **Step 4: Run.** All 4 tests pass, full suite still green.
 
@@ -314,76 +398,89 @@ git commit -m "feat(bot): analytic expected damage" -- shared/bot/evaluate.js sh
 
 ---
 
-### Task 3: Validate the analytic EV against the real engine
+### Task 3: Validate expected hits against the real engine
 
 **The acceptance test for Task 2.** Without it the scorer is asserted, not verified.
 
 **Files:**
 - Test: `shared/bot/evaluate.test.js`
 
-`scripts/balance/weapon-sweep.mjs` drives the real `resolveAttack` with a **stub room** and a `ctx` whose `applyDamage` taps SP — no game-state mutation, ~45k attacks/sec. **Read that file (its first 60 lines) and copy the pattern.**
+`rollToHit(attacker, profile, opts, providedDice, random)` is **exported** and returns
+`{ modAim, rof, hits, ... }`. So validating hits needs no stub room and no `ctx` — just call
+it in a loop and average `hits`.
+
+**Caveat you must handle:** `rollToHit` runs `applyDefensiveReactions`, which can MUTATE the
+target (a Point-Defense reroll changes the counted `hits` and spends the defender's charge).
+`structuredClone` the target every trial, exactly as `scripts/balance/weapon-sweep.mjs` does.
 
 - [ ] **Step 1: Write the test**
 
 ```js
-import { resolveAttack } from "../combat.js";
+import { rollToHit, arcBonus } from "../combat.js";
 import { effectiveWeaponProfile } from "../game-state.js";
 
-function sampleMeanSp(attacker, target, slot, opts, trials, seed) {
+function sampleMeanHits(attacker, target, slot, opts, trials, seed) {
   const rand = seededRandom(seed);
+  const profile = effectiveWeaponProfile(slot, attacker.weapons[slot], attacker);
   let total = 0;
   for (let i = 0; i < trials; i++) {
-    const a = structuredClone(attacker);
+    // Clone: rollToHit runs applyDefensiveReactions, which mutates the target.
     const t = structuredClone(target);
-    let sp = 0;
-    const ctx = {
-      pushResolution() {}, bumpHeat() {}, spendHeat() {},
-      sunderLocation() {}, crackLocation() {}, rivetHit() {}, dismemberLocation() {},
-      breachHull() {}, engage() {},
-      applyDamage(room, rig, loc, amount) { if (rig === t) sp += amount; },
-      profileFor: (s, name, atk) => effectiveWeaponProfile(s, name, atk),
-    };
-    resolveAttack({ game: { round: 1 } }, a, t, { ...opts, weapon: slot, target: t.name }, rand, ctx);
-    total += sp;
+    total += rollToHit(attacker, profile, { ...opts, target: t }, undefined, rand).hits;
   }
   return total / trials;
 }
 
-test("analytic expectedDamage matches the real engine's sampled mean", () => {
+test("analytic expectedHits matches the real engine's sampled mean", () => {
   const cases = [
-    { lr: "Autocannon", arc: "front", distance: 12 },
-    { lr: "Autocannon", arc: "rear",  distance: 12 },
-    { lr: "Arc Gun",    arc: "side",  distance: 20 },
-    { lr: "Mini Gun",   arc: "rear",  distance: 7  },
+    { lr: "Autocannon", arc: "side", distance: 12 },
+    { lr: "Autocannon", arc: "rear", distance: 24 },
+    { lr: "Arc Gun",    arc: "side", distance: 20 },
+    { lr: "Mini Gun",   arc: "rear", distance: 7  },
   ];
   for (const c of cases) {
     const a = makeRig(1, "Atk", "a", { weightClass: "medium", longRange: c.lr, melee: "Sword" });
     const b = makeRig(2, "Def", "b", { weightClass: "medium", longRange: "Autocannon", melee: "Sword" });
     const opts = { arc: c.arc, distance: c.distance, cover: 0, round: 1 };
-    const predicted = expectedDamage(a, b, "longRange", opts);
-    const observed = sampleMeanSp(a, b, "longRange", opts, 5000, 42);
-    const tol = Math.max(0.15, observed * 0.08);
+    const profile = effectiveWeaponProfile("longRange", a.weapons.longRange, a);
+    // expectedHits carries arcFactor, which the engine does NOT apply to hits —
+    // it lives in the wound step. Divide it out to compare like with like.
+    const predicted = expectedHits(a, b, "longRange", opts) / (1 + arcBonus(profile, c.arc) / 4);
+    const observed = sampleMeanHits(a, b, "longRange", opts, 5000, 42);
+    const tol = Math.max(0.08, observed * 0.05);
     assert.ok(Math.abs(predicted - observed) <= tol,
       `${c.lr} ${c.arc}@${c.distance}": analytic ${predicted.toFixed(3)} vs sampled ${observed.toFixed(3)} (tol ${tol.toFixed(3)})`);
   }
 });
 ```
 
-- [ ] **Step 2: Run it. Expect it to FAIL the first time.**
+**Note the `arcFactor` division.** It is v1's invented preference multiplier and has no
+counterpart in the engine's hit step — comparing without dividing it out would compare two
+different quantities. This is exactly the sort of thing that makes a green test meaningless,
+so if you find a cleaner way to structure it (e.g. exporting the raw `rof * pHit` separately
+as `rawExpectedHits` and validating THAT), do it and say so.
 
-This test exists to find the discrepancy. When it fails, **the analytic model is probably the wrong one** — `rollWounds` has Armour Piercing rerolls, Rend, Evisceration, Penetrator Rounds, cluster shells, and overflow, and a naive `ROF × P(hit) × P(wound) × D` misses several.
+- [ ] **Step 2: Run it. It may FAIL first — that is the point.**
 
-Your options, in order of preference:
-1. Fold the missing term into `expectedDamage` (correct, if the term is deterministic).
-2. If a term is genuinely un-analytic (depends on per-shot cadence state, or on SP *before* this volley — Evisceration does), **document it as a known bias in the module comment and widen the tolerance for the affected weapon only**. Do NOT widen the global tolerance to hide a real error.
-3. If the gap is large and structural, report DONE_WITH_CONCERNS with the numbers — the scorer may need sampling after all, which is a spec-level decision.
+`rollToHit` has terms the analytic model omits: Full Auto (+2 ROF), Bloodletter, Redline
+Governor, and a Point-Defense reroll seam. The fixtures above avoid those (no Full Auto in
+`opts`, undamaged target, cold attacker, no Point-Defense equipment) — **verify that is
+actually true** rather than assuming it.
 
-**Report the actual predicted-vs-sampled numbers for all four cases regardless of outcome.** They are the most valuable output of this task.
+Your options when it fails, in order of preference:
+1. Fold the missing term into `expectedHits` (correct, if deterministic).
+2. If a term genuinely cannot be modelled without mutating, document it as a known bias in
+   the module comment and narrow the fixture so the test covers what IS modelled. Do NOT
+   widen the tolerance to hide a real error.
+3. If the gap is structural and large, report DONE_WITH_CONCERNS with the numbers.
+
+**Report the actual predicted-vs-sampled numbers for all four cases regardless of outcome.**
+They are the most valuable output of this task.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git commit -m "test(bot): validate analytic EV against the real engine" -- shared/bot/evaluate.js shared/bot/evaluate.test.js
+git commit -m "test(bot): validate expected hits against the real engine" -- shared/bot/evaluate.js shared/bot/evaluate.test.js
 ```
 
 ---
@@ -517,15 +614,17 @@ git commit -m "feat(bot): move candidates from anchors and a reachable lattice" 
 ```
 score = w.vp        × objectiveVpDelta
       + w.priority  × priorityTargetProgress
-      + w.damage    × expectedDamageDealt
-      - w.threat    × expectedDamageTaken
+      + w.damage    × offence      // v1: expectedHits(me -> them). later: expectedDamage
+      - w.threat    × exposure     // the SAME metric, every enemy's best against me
       - w.heat      × overheatRisk
       - w.fragile   × exposureOfWeakLocation
 ```
 
 **The 1-ply lookahead is the whole ballgame.** A move candidate scores as `positionValue + bestShotFromThere` — the best `fire`/`aimed` EV available *after* arriving, computed by re-deriving geometry at the candidate spot/facing. Without it the bot never learns why a flank is worth walking to.
 
-**`expectedDamageTaken` assumes STATIC enemies** — each living enemy's best EV against the candidate spot **from where it stands now**. It does NOT model the enemy closing first. Documented blind spot; see the spec.
+**`offence` and `exposure` are the same metric pointed in opposite directions** — both call `evaluate.js`. That is what makes the deferred damage swap safe: upgrade one and both sides upgrade together, so the bot can never value its own shots by one yardstick and the enemy's by another.
+
+**`exposure` assumes STATIC enemies** — each living enemy's best EV against the candidate spot **from where it stands now**. It does NOT model the enemy closing first. Documented blind spot; see the spec.
 
 **Why VP leads:** objectives score every Recovery (2 VP centre, 1 VP each flank). Priority Elimination is the ONLY kill-VP (+2). Everything else you destroy is worth zero VP *directly* — the `damage` term captures its instrumental value.
 
@@ -533,17 +632,26 @@ score = w.vp        × objectiveVpDelta
 
 ```js
 test("a rear-arc shot outscores the same shot into the front", () => {});
-test("a machine gun prefers a flank — Raking Fire cannot hurt a front arc", () => {
-  // this must fall out of the EV, with NO 'prefer flanking' rule in score.js
+test("a machine gun will not shoot a front arc at all — Raking Fire's veto", () => {
+  // arcFactor returns 0 for arcBonus === null. This one IS structural and exact.
 });
 test("standing on an uncontested objective outscores standing next to it", () => {});
+test("a contested objective scores below an uncontested one", () => {});
 test("killing the Priority Target outscores killing an identical non-priority rig", () => {});
 test("a move that enables a good shot outscores a move that doesn't", () => {
-  // the 1-ply lookahead, directly
+  // the 1-ply lookahead, directly — the single most important test here
 });
+test("a move into cover lowers exposure", () => {});
 test("an action that would overheat scores below one that doesn't", () => {});
 test("PRESETS.aggressive weights damage above vp; PRESETS.cagey the reverse", () => {});
 ```
+
+**One test from the original draft is deliberately NOT here.** "A machine gun *prefers* a
+flank, falling out of the EV with no flanking rule in `score.js`" is **false in v1** — arc
+does not affect `P(hit)`, so hits are identical on every arc, and the preference comes from
+`arcFactor`'s invented `1 + bonus/4` shaping in `evaluate.js`. The *veto* (never shoot a
+front arc with a rake) is structural and exact and IS tested above. Do not write a test that
+claims the preference is emergent; it isn't, until the damage term lands.
 
 - [ ] Implement, run, commit:
 ```bash
@@ -698,12 +806,16 @@ When an activation opens for a side with `bot` set, run `runBotActivation`. Digi
 
 ## Self-review notes
 
-**Spec coverage:** effectiveStrAgainst refactor → T1. Analytic EV → T2, validated T3. Candidates → T4 (non-move), T5 (move). Scoring + presets → T6. chooseAction + driver → T7. Invariant fuzz → T8. Bot-vs-bot + tuning → T9. Wiring → T10.
+**Start at Task 2.** T1 is deferred and must not be implemented.
 
-**T1 is the risky one.** It touches `shared/combat.js`, which has been at a zero diff through all of spec 1. The acceptance test is `combat.test.js` passing unedited. If it can't, stop.
+**Spec coverage:** expected hits → T2, validated T3. Candidates → T4 (non-move), T5 (move). Scoring + presets → T6. chooseAction + driver → T7. Invariant fuzz → T8. Bot-vs-bot + tuning → T9. Wiring → T10. Damage term → T1, deferred until the arsenal settles.
 
-**T3 is expected to fail first.** That is its job. `rollWounds` has AP rerolls, Rend, Evisceration, Penetrator Rounds, and cluster shells; a naive EV misses several. The numbers it reports are the most valuable output in this plan.
+**`shared/combat.js` is NOT modified in v1.** It has been at a zero diff through all of spec 1 and stays there. If a task finds itself wanting to edit it, that task has drifted into T1 — stop and report.
 
-**Do not tune the weight presets yet.** The balance findings name `F2-B (price ROF in heat)` as the live next step, and expected damage is `ROF × P(hit) × P(wound) × D` where ROF *multiplies* — a rivet gun (STR 3, ROF 6) currently out-damages a wrecking ball (STR 10, ROF 1), 3.65 to 2.98. Until ROF is priced, the bot will rationally prefer high-ROF weapons and be right to. Presets tuned now would encode a snapshot of a mid-rebalance arsenal.
+**v1's one invented number is `arcFactor`'s `1 + bonus/4`** (`evaluate.js`, T2). Everything else the bot uses is read from the engine. It exists because arc modifies STR, not accuracy, so a hits-only score is identical on every arc and the bot would never flank. The `null` veto beside it is exact; the shaping is a guess. It is the first thing the damage term deletes.
+
+**T3 may fail first.** That is its job — `rollToHit` has Full Auto, Bloodletter, Redline Governor, and a Point-Defense reroll seam that the analytic model omits. The fixtures are chosen to avoid all four; verify that rather than assume it. **Report the predicted-vs-sampled numbers either way** — they are the most valuable output in this plan.
+
+**Do not tune the weight presets yet.** The balance findings name `F2-B (price ROF in heat)` as the live next step, and v1's offence is `ROF × P(hit)` — ROF *multiplies*. A rivet gun (STR 3, ROF 6) currently out-damages a wrecking ball (STR 10, ROF 1), 3.65 to 2.98, so the bot preferring volume is **currently correct**. F2-B makes it wrong. Presets tuned now would encode a snapshot of a mid-rebalance arsenal. Run T9's harness to see the bot *works*; do not tune the numbers on what it reports.
 
 **Deliberately not in this plan:** Gemma narration (its own spec), search beyond 1 ply, reactions (blocked by spec 1's Task 10b — three reaction paths still take client geometry), deployment choices (`autoDeploy` handles them).
