@@ -1981,13 +1981,14 @@ function swordDuel() {
   assert.equal(b1.weapons.melee, "Sword"); // Damage 3 — prove it, don't assume it
   return { r, a1, b1 };
 }
+const lastAttack = (r) => r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
 // One wound lands (10) and one does not (1), so exactly one Sword D3 is dealt.
 function fireSword(r, loc, dice = {}) {
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
     dice: { toHit: [6, 6], wounds: [10, 1], location: loc, ...dice },
   } });
-  return r.game.resolutions.filter((x) => x.kind === "attack").at(-1).effects;
+  return lastAttack(r).effects;
 }
 
 test("a wound onto an already-wrecked location says where the SP carried through", () => {
@@ -2103,6 +2104,36 @@ test("no drama line ever claims more SP through than the wound's Damage", () => 
       );
     }
   }
+});
+
+test("the wound die that guts a location is marked CRIT in the roll console", () => {
+  const { r, a1 } = swordDuel();
+  // Test-only state poke: the Sword's Damage 3 meets the location exactly, so
+  // wound 1 takes it full -> 0 and earns the tone. Legs are `mobility`, so this
+  // stops at 0 rather than killing — the tone must fire on this tier too.
+  a1.legs.max = 3;
+  a1.legs.sp = 3;
+  fireSword(r, 8); // 8 -> legs
+  assert.equal(a1.legs.sp, 0); // the wound landed, so there IS a die to promote
+  const woundRolls = lastAttack(r).rolls.filter((x) => /^wound /.test(x.label));
+  assert.equal(woundRolls.length, 2); // one landed (10), one did not (1)
+  assert.equal(woundRolls[0].tone, "crit", "the wound that gutted the location must read CRIT");
+  assert.equal(woundRolls[1].tone, "miss", "the wound that failed must still read miss");
+});
+
+test("the wound die that kills outright also reads CRIT", () => {
+  // The kill tier is a separate branch that `continue`s past the rest of the
+  // loop, so it needs its own proof. Test-only state poke: engine is `power`,
+  // and the kill needs a point spent PAST 0 — zeroing it exactly from full only
+  // tears it open. Damage 3 into 2 SP spends 1 past 0, so this wrecks a1.
+  const { r, a1 } = swordDuel();
+  a1.engine.max = 5;
+  a1.engine.sp = 2;
+  fireSword(r, 11); // 11 -> engine (power)
+  assert.equal(a1.destroyed, true); // the tier under test is the kill, not the tear-open
+  const woundRolls = lastAttack(r).rolls.filter((x) => /^wound /.test(x.label));
+  assert.equal(woundRolls[0].tone, "crit", "the wound that killed must read CRIT");
+  assert.equal(woundRolls[1].tone, "miss", "the wound that failed must still read miss");
 });
 
 test("a Kneecapper rake past 0 spills nothing, so it claims nothing", () => {

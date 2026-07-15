@@ -723,8 +723,8 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }));
   let impacts = [];
   // Drama (§7 spill / §8 kill tier) — player-facing lines for the resolution's
-  // `effects`. `critWound` records the wound die that did the gutting. Nothing
-  // reads it yet; it is the hook the wound die's `crit` tone will read.
+  // `effects`. `critWound` records the wound that did the gutting, so that once
+  // the damage loop below has run, that die's tone can be promoted to `crit`.
   const drama = [];
   let critWound = null;
   let location = null;
@@ -826,6 +826,17 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
         if (spilled > 0) {
           drama.push(`${weaponName} — through and through (${spilled} SP spilled)`);
         }
+      }
+      // The die that gutted the location earns CRIT. The wound rolls were pushed
+      // above, before applyDamage ran, so they could not know — hence the late
+      // promotion. `impacts[i]` is what pushed `wound ${i + 1}`, and `critWound`
+      // is an element of `impacts` (not a copy), so indexOf maps it back to its
+      // own die. The attack resolution below takes this same `rolls` array by
+      // reference, so the mutation reaches the client.
+      if (critWound) {
+        const i = impacts.indexOf(critWound);
+        const roll = rolls.find((x) => x.label === `wound ${i + 1}`);
+        if (roll) roll.tone = "crit";
       }
       if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
         ctx.sunderLocation?.(target, location);
