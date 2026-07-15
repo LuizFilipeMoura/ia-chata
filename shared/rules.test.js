@@ -145,6 +145,11 @@ test("strOverflowD — weak weapons never overflow", () => {
 });
 
 test("strOverflowD — junk T throws, exactly as woundTarget does", () => {
+  // The asymmetry INVERTS relative to woundTarget, which is why it's pinned:
+  // there a junk STR fails toward TN 10 (10%), here it fails toward zero
+  // overflow — both the safe direction, but for opposite-looking reasons.
+  assert.equal(strOverflowD(undefined, 5), 0);  // junk STR floors to 0 → no overflow
+
   // Same guard, same reason, opposite direction of the same hazard: a null T
   // coercing to 0 reads as MAXIMUM overflow here. It must never be guessed at.
   for (const junk of [undefined, null, "", false, [], {}, NaN, Infinity, "5"]) {
