@@ -28,14 +28,16 @@ Test Files  76 passed (76)
 ℹ tests 811 / ℹ pass 811 / ℹ fail 0   <- node --test
 ```
 
-**The gate command**, run before every commit in this plan. It compares the multiset of numeric literals leaving the diff against the multiset entering it:
+**The gate command**, run before every commit in this plan. It compares the multiset of numeric literals leaving the diff against the multiset entering it. Rulebook section references (`§7.5`, `§12`) are stripped first — they are prose, not values, and leaving them in makes the gate cry wolf on every comment edit:
 
 ```bash
-diff <(git diff --cached -U0 | grep '^-' | grep -v '^---' | grep -oE '\b[0-9]+\b' | sort) \
-     <(git diff --cached -U0 | grep '^+' | grep -v '^+++' | grep -oE '\b[0-9]+\b' | sort)
+nums() { git diff --cached -U0 | grep "^$1" | grep -v "^$1$1$1" | sed 's/§[0-9.]*//g' | grep -oE '\b[0-9]+\b' | sort; }
+diff <(nums -) <(nums +)
 ```
 
-**Expected output: nothing.** Any line means a number moved, and a number moving is this plan failing. (`+2 STR` → `+2 Penetration` keeps its `2`, so tag edits pass cleanly.)
+**Expected output: nothing.**
+
+**The gate is a tripwire, not a verdict.** If it fires, *inspect the hit* — do not assume it is a real change, and do not assume it is noise. Legitimate causes: a deleted comment that happened to contain a digit, a line-number reference in a comment. Illegitimate cause, the one this exists to catch: **a balance value edited to make a test pass.** If you cannot explain a hit in one sentence, report `BLOCKED` rather than waving it through. Task 1 fired on a `§2` inside a comment the task itself instructed be deleted — that is the shape of an acceptable hit, and it is why the `sed` above now exists.
 
 ## Traps — read all seven, each has already cost someone
 
