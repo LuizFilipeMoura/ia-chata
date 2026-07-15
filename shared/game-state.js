@@ -898,8 +898,12 @@ function ensureRigShape(rig, mode = "physical") {
   }
   // Simulated position, digital rooms only. Inches, field coords, CENTRE of
   // base. A physical rig never gets these — there is no simulated field to
-  // stand on, and an undefined pos is how the derivation seam tells the modes
-  // apart.
+  // stand on.
+  //
+  // `room.mode` is the ONLY mode discriminator. Never branch on `pos` being
+  // undefined: a freshly-added digital rig has no pos until the next normalise
+  // pass, so it would read as physical for exactly one command. Treat `!rig.pos`
+  // as "not placed yet" (skip it), never as "this room is physical".
   if (mode === "digital") {
     if (!rig.pos) rig.pos = { x: 0, y: 0 };
     if (typeof rig.facing !== "number") rig.facing = 0;
