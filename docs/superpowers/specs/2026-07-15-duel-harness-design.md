@@ -151,6 +151,29 @@ against source:
 | a **spent** weapon's Fire tile is `enabled` (`battle-view.js:43-46`) | firing it is a **silent no-op** (`game-state.js:2287`) | Fire is what opens the reload drawer, so the tile must stay live for a human |
 | Shut Down is **hardcoded** `enabled` (`battle-view.js:37`) | refuses while a meltdown charge is banked (`game-state.js:2559`) | the tile is "available any time" for the player; the engine has the real gate |
 | — | `shutdown` calls `endActivation`, so `activeRigId` goes null and every later command is dropped | the view has no notion of "you already ended" |
+| a **gunless** rig's Fire tile is `enabled` | `combat.js:668` refuses with `weapon-destroyed`, and `performAction`'s `return !!res` swallows it — the surfaced reason is a generic "can't be applied right now" | an Arms hit at 0 SP rolls a weapon dead (`game-state.js:1679`); the tile never learns |
+
+### A fifth shape, and its tell is different
+
+The four above are all **the view saying yes where the engine says no**. The fifth is worse, because nothing lies:
+
+**`arcBonus` returns `null` for Raking Fire outside side/rear** (`combat.js:402-406`). No refusal is recorded anywhere. The command applies, the volley resolves, the damage is genuinely 0. Every layer is telling the truth — and the output is indistinguishable from a weapon that simply rolled badly.
+
+The old sweep survives it by pooling arcs, and even then it took **504 cells** to notice (F7). A single-condition duel just prints it as a measurement.
+
+So the tell for the first four is *"check whether the tile lied."* The tell for this one is:
+
+> **Check whether a zero is a measurement or a rule.**
+
+That is the whole reason `arc` is a required parameter with no default, and why `policy.test.mjs` pins `arcBonus(miniGun, "front") === null` against the real profiles — with a contrast case (`arcBonus(mortar, "front") === 0`) showing that a non-Raking weapon has no cliff. Pinning the *reason*, not the throw.
+
+Measured, to make it concrete — Mini Gun, five seeds, real engine:
+
+| arc | spDealt |
+|---|---|
+| front | `[0, 0, 0, 0, 0]` |
+| side | `[5, 7, 9, 7, 5]` |
+| rear | `[8, 9, 11, 11, 7]` |
 
 **The first one nearly destroyed the harness.** The policy as originally specced
 fired once and then emitted `fire` forever into a no-op — heat, actions and shots
