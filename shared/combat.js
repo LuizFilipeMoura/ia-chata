@@ -806,12 +806,13 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const str = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
 
   // ---- The resolution ledger -------------------------------------------------
-  // One step per stage of the chain, in the order the plan fixed for the panel:
-  // hit → wound → location → damage. NOTE this is NOT the order the engine
-  // resolves them in — the d12 is rolled BEFORE the wound roll, because the
-  // struck location is what supplies the Toughness the wound roll tests
-  // against. The ledger leads with the two dice the player actually asks about
-  // and reports the location as the context for the damage it caused.
+  // One step per stage of the chain, in the order they actually resolve.
+  //
+  // The ledger follows the ENGINE's order — hit, location, wound, damage — not the
+  // hit/wound/location sequence 40k-style games use. Toughness here is per-location
+  // (a medium hull is T5, its engine T3), so the d12 must land before the wound roll
+  // has a T to test against. Rendering wound above location would show a target
+  // number derived from a location the player hasn't been told about yet.
   //
   // EVERY number below is threaded out of rollToHit / rollWounds. Nothing here
   // is recomputed: a ledger derived a second time will drift from the engine,
@@ -825,6 +826,21 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     dice: th.hitDice,
     out: `${th.hits} of ${th.hitDice.length} hit`,
   });
+
+  // The location step rides on whether a d12 was ROLLED, not on whether it
+  // yielded a part: a Kneecapper remap onto a kind with no limbs picks nothing,
+  // and the chain has to say so HERE — before the wound step reports it had no
+  // location to wound. A volley that landed nothing never got this far, so it
+  // emits no location step at all.
+  if (th.hits > 0) {
+    // `die` is null on an aimed shot: the player chose the part, so no d12
+    // decided it and reporting one would be a fiction.
+    steps.push({
+      kind: "location",
+      die: opts.aimed ? null : locDie,
+      out: !location ? "no legal location" : opts.aimed ? `${location} (aimed)` : location,
+    });
+  }
 
   // A step that vanishes is the same failure as a hidden die: the player must
   // SEE where the chain stopped, not infer it from an absence. So every path
@@ -860,9 +876,6 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }
 
   if (location) {
-    // `die` is null on an aimed shot: the player chose the part, so no d12
-    // decided it and reporting one would be a fiction.
-    steps.push({ kind: "location", die: opts.aimed ? null : locDie, out: opts.aimed ? `${location} (aimed)` : location });
     const dmgTerms = [{ label: "wounds", value: impacts.filter((h) => h.sp > 0).length }];
     if (first) {
       dmgTerms.push({ label: "weapon D", value: first.d });

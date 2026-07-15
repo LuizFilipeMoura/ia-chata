@@ -1880,7 +1880,17 @@ test("ledger — every step appears in resolution order", () => {
     { weapon: "melee", arc: "front", dice: { toHit: [6, 1], wounds: [10], location: 1 } },
     () => 0, ctx);
   const bd = ctx.resolutions.find((r) => r.kind === "attack").breakdown;
-  assert.deepEqual(bd.steps.map((s) => s.kind), ["hit", "wound", "location", "damage"]);
+  // The ENGINE's order, which is the real one: the d12 lands before the wound
+  // roll because Toughness is per-location — the struck part is what supplies
+  // the T the wound roll tests against. Not the hit/wound/location sequence
+  // 40k-style games use.
+  assert.deepEqual(bd.steps.map((s) => s.kind), ["hit", "location", "wound", "damage"]);
+  // The wound step's toughness must come from the location step ABOVE it, never
+  // from a step the player hasn't been shown yet.
+  const loc = bd.steps[1];
+  const wound = bd.steps[2];
+  assert.equal(loc.out, "hull");
+  assert.equal(wound.toughness, toughnessOf("rig", "hull", "medium"));
   // The target NAME, not the wound TN. An earlier draft collided these two in
   // one object literal and a rig's name rendered as "→ 6" in RollConsole
   // (types.ts declares `target?: string`). The TN lives on the wound step.
@@ -1912,7 +1922,7 @@ test("ledger — the wound step shows effective STR against toughness", () => {
   resolveAttack(room, attacker, target,
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
-  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
   assert.equal(w.str, 5);          // Sword STR 5, medium mod 0, front arc 0
   assert.equal(w.toughness, 5);    // medium hull
   assert.equal(w.target, 6);       // 6 + 5 - 5
@@ -1928,7 +1938,7 @@ test("ledger — an earned zero is a step that says so, not a missing step", () 
   resolveAttack(room, attacker, target,
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 1 } },
     () => 0, ctx);
-  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
   assert.equal(w.kind, "wound");
   assert.equal(w.target, null);
   assert.match(w.out, /shield/i);
@@ -1989,7 +1999,7 @@ test("ledger — the location step carries the d12 that picked the part", () => 
   resolveAttack(room, attacker, target,
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 5 } },
     () => 0, ctx);
-  const loc = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
+  const loc = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
   assert.equal(loc.die, 5);        // d12 5 -> arms
   assert.equal(loc.out, "arms");
 });
@@ -2004,7 +2014,7 @@ test("ledger — arc and defender modifiers each earn a named wound term", () =>
   resolveAttack(room, attacker, target,
     { weapon: "melee", arc: "rear", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
-  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
   assert.ok(w.terms.some((t) => t.label === "weapon STR" && t.value === 5));
   assert.ok(w.terms.some((t) => t.label === "rear arc" && t.value === 3));
   assert.equal(w.str, 8);          // 5 + 3
@@ -2042,7 +2052,7 @@ test("ledger — the wound step's terms reconcile to its effective STR", () => {
   resolveAttack(room, attacker, target,
     { weapon: "melee", arc: "side", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
-  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
   assert.equal(w.terms.reduce((s, t) => s + t.value, 0), w.str);
   assert.equal(w.target, woundTarget(w.str, w.toughness));
 });
