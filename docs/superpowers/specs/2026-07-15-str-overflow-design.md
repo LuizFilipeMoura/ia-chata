@@ -1,9 +1,25 @@
 # STR overflow + Swarm Warheads re-tier — design
 
 **Date:** 2026-07-15
-**Status:** SHIPPED 2026-07-15 and re-measured. See
-`scripts/balance/report-2026-07-15-overflow.txt` and the "Re-measured" section of
-the findings doc.
+**Status:** SHIPPED 2026-07-15 — and **SUPERSEDED the same day** by
+`2026-07-16-penetration-rework-design.md`, which deletes Overmatch and compresses
+STR into 3–8 instead (the findings doc's F1-C).
+
+> **Why this is kept.** Overmatch was correct, tested, and it revived three
+> mechanics that measured literally zero. It is superseded because it is a *patch
+> on the clamp* rather than a mechanic: `woundRaw` exists precisely because
+> `woundTarget` and `strOvermatchD` compute the same expression, one clamping it
+> and the other measuring how far past the clamp it went. And it couples STR to D,
+> which the World of Tanks model — which this game already is — deliberately keeps
+> orthogonal.
+>
+> Measured: compressing STR to 3–8 drops the saturated band from **44% of matchups
+> to 17%** with **no new rule**, and restores headroom for the three reliability
+> upgrades this design left dead. This document is the record of why the other road
+> was taken first; read it before reverting it.
+
+See `scripts/balance/report-2026-07-15-overflow.txt` and the "Re-measured" section
+of the findings doc.
 **Source:** `docs/superpowers/specs/2026-07-15-weapon-balance-findings.md` (F1-A, F3-B)
 
 > **Naming, as shipped.** This document says "overflow" throughout; the shipped
