@@ -35,7 +35,11 @@ export function greedySafe(room, rig, enemy) {
   // (endActivation), leaving activeRigId null — after which the engine silently
   // drops every further command for this rig. Deciding on regardless would hand
   // the driver an endless stream of no-ops to apply.
-  if (room.game.turn.activeRigId !== rig.id) return null;
+  //
+  // `turn` itself is null through recovery and initiative, so the optional chain
+  // is load-bearing: a caller that skips the phase check gets null back, which is
+  // this function's contract, rather than a TypeError.
+  if (room.game.turn?.activeRigId !== rig.id) return null;
   const acts = availableActions(rig, room.game.turn, room.game.round);
   const fire = acts.find((x) => x.key === "fire");
   const cap = HEAT_CAPACITY[rig.weightClass] ?? 5;

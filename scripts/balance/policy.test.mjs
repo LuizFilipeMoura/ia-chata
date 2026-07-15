@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { greedySafe } from "./policy.mjs";
 import { createRoom, applyCommand, HEAT_CAPACITY } from "../../shared/game-state.js";
+import { availableActions } from "../../shared/battle-view.js";
 
 // A real seeded room at the activation phase with `active` activated.
 // 3v3 because the seed verb force-starts only at >=3 rigs per side.
@@ -40,11 +41,30 @@ test("greedySafe shuts down rather than exceed capacity", () => {
 
 test("greedySafe never issues an action availableActions reports disabled", () => {
   // The whole point of reading availableActions is that the engine owns legality.
+  // Assert the POSITIVE property the name claims — resolve whatever action came
+  // back through availableActions and require that tile to be enabled — rather
+  // than merely "not fire", which a null or any wrong action would also satisfy.
+  // Written to generalise: it still holds for any action the policy later learns.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
   room.game.turn.actionsUsed = room.game.turn.actionsMax;
   const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
-  assert.notEqual(cmd?.attrs?.action, "fire");
+  assert.ok(cmd, "expected a command, not null");
+  const tile = availableActions(rig, room.game.turn, room.game.round)
+    .find((x) => x.key === cmd.attrs.action);
+  assert.ok(tile, `policy issued "${cmd.attrs.action}", which has no tile at all`);
+  assert.equal(tile.enabled, true, `policy issued disabled action "${cmd.attrs.action}"`);
+});
+
+test("greedySafe returns null rather than throwing when there is no turn", () => {
+  // game.turn is genuinely null in recovery and initiative (game-state.js:2081,
+  // :1448). The contract is "null when this rig cannot usefully act", so a caller
+  // that skips the phase check must get null — not a TypeError.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  const enemy = room.rigs.find((r) => r.name === "B1");
+  room.game.turn = null;
+  assert.equal(greedySafe(room, rig, enemy), null);
 });
 
 test("greedySafe returns null when nothing is worth doing", () => {
