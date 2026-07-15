@@ -255,7 +255,7 @@ Create `scripts/balance/duel-sim.mjs`:
 // A harness that models those itself is a second copy of the rules that drifts
 // from the first — and prints a tidy table about a game nobody is playing.
 import { createRoom, applyCommand } from "../../shared/game-state.js";
-import { greedySafe, setDuelDistance } from "./policy.mjs";
+import { makeGreedySafe } from "./policy.mjs";
 
 export const DUEL_ROUNDS = 10; // MAX_ROUNDS — the real game length
 
@@ -276,7 +276,11 @@ const totalSp = (rig) => ["hull", "arms", "legs", "engine"].reduce((s, k) => s +
 // the Answer token so no duellist carries a preparation.
 export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed }) {
   const random = mulberry32(seed);
-  setDuelDistance(distance);
+  // A factory, not a module-level setter: distance is required and throws if
+  // missing. An unexplained default would silently become the answer for every
+  // cell a caller forgot to configure — the same buried-measurement-decision
+  // failure as the sweep's structuredClone.
+  const greedySafe = makeGreedySafe({ distance });
   const room = createRoom("DUEL");
   const roster = ["A1", "A2", "A3"].map((n) => ({ name: n, owner: "a", chassis: chassisA }))
     .concat(["B1", "B2", "B3"].map((n) => ({ name: n, owner: "b", chassis: chassisB })));
@@ -592,14 +596,17 @@ Create `scripts/balance/duel-report.mjs`:
 
 ```js
 import { readFileSync } from "node:fs";
+import { KNOWN_BIASES } from "./policy.mjs";
 const j = JSON.parse(readFileSync(process.env.DATA || "duel.json", "utf8"));
 const f = (n, p = 2) => (Number.isFinite(n) ? n.toFixed(p) : "  -  ");
 
 console.log(`trials/cell=${j.trials} rounds=${j.rounds} control=${j.chassisB}`);
 console.log("");
 console.log("CAVEATS — read before tuning:");
-console.log("  * greedySafe never exceeds Heat Capacity; a real player does.");
-console.log("    High-heat weapons are systematically UNDER-rated here.");
+// Printed from policy.mjs's exported constant, NOT re-typed. Two copies of a
+// caveat drift, and a caveat that drifts is worse than none — the reader trusts
+// it. policy.mjs owns its own biases; this prints them.
+console.log(KNOWN_BIASES);
 console.log("  * The control rig is fixed; its loadout shapes every number.");
 console.log("  * Measures cadence, DoT, chipping and heat — NOT decisions.");
 console.log("    Fire Control Lock, Enfilade, Barrage and the spatial effects");
