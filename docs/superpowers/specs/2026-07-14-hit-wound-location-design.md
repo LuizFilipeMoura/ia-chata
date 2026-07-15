@@ -297,6 +297,11 @@ same failure as a hidden die.
 
 - `ResolutionBreakdown.tier`, `.total`, and the `direct/severe/critical` badge — there are no
   tiers. `RollConsole`'s `v2-rx-tier` and `v2-rx-total` render paths go with them.
+
+**Naming constraint carried over from Plan 1:** `ResolutionBreakdown.target` is the target unit's
+**name** (`RollConsole` renders `→ {breakdown.target}`). The wound target number lives at
+`breakdown.woundTarget`. Plan 1 briefly collided the two in one object literal, where the later key
+silently won and a rig's name rendered as a die roll. Keep them distinct in the `steps[]` shape.
 - `verdictLabel`'s tone→word map (`CRIT!`/`HIT!`/`FAILED!`) is to-hit vocabulary being reused for
   impacts; each step should name its own outcome instead.
 - Glossary and `InfoTerm` entries covering impact rows and severity need rewriting to toughness /

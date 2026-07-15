@@ -910,10 +910,15 @@ Replace the `pushResolution` breakdown (lines 620-627) with:
       // these three fields are what let a player answer "why 0 damage?".
       str: wounds[0]?.str ?? str,
       toughness: wounds[0]?.toughness ?? null,
-      target: wounds[0]?.target ?? null,
+      woundTarget: wounds[0]?.target ?? null,
       sp: total, location,
     },
 ```
+
+**The TN field is `woundTarget`, NOT `target`.** An earlier draft called it `target` — colliding with
+`target: target.name` in the same object literal, where the later key silently wins. `RollConsole`
+renders `→ {breakdown.target}`, so the target's *name* would have displayed as its wound TN ("→ 6"),
+breaking the very console this rewrite exists to fix. Plan 2 must read `breakdown.woundTarget`.
 
 Update the summary string on line 619 to name the wound roll:
 
@@ -941,6 +946,12 @@ git commit -m "feat(combat): resolveAttack rolls wounds and logs the dice"
 - Modify: `shared/combat.test.js`, `shared/game-state.test.js`
 
 These tests encode the old model. They must be **rewritten, not patched** — a test asserting a severity tier is asserting a rule that no longer exists.
+
+**Known loose end from Task 3.** `shared/support-units.test.js` asserts Sidearm `str: 4`; the
+rescale made it 3. Task 3 deliberately left the one-line fix **unstaged in the working tree** because
+that file also carries unrelated in-flight work (a Field Weld D12→D6 change) belonging to someone
+else. Check whether the fix is still sitting uncommitted before rewriting it — and stage
+`support-units.test.js` only if you accept sweeping that foreign hunk along with it.
 
 - [ ] **Step 1: Inventory the failures**
 
