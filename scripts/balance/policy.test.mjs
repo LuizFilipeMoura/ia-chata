@@ -1,8 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { greedySafe } from "./policy.mjs";
+import { makeGreedySafe, KNOWN_BIASES } from "./policy.mjs";
 import { createRoom, applyCommand, HEAT_CAPACITY } from "../../shared/game-state.js";
 import { availableActions } from "../../shared/battle-view.js";
+
+const DUEL_DISTANCE = 16;
+const greedySafe = makeGreedySafe({ distance: DUEL_DISTANCE });
 
 // A real seeded room at the activation phase with `active` activated.
 // 3v3 because the seed verb force-starts only at >=3 rigs per side.
@@ -28,6 +31,7 @@ test("greedySafe fires when heat allows", () => {
   assert.equal(cmd.verb, "action");
   assert.equal(cmd.attrs.action, "fire");
   assert.equal(cmd.attrs.target, "B1");
+  assert.equal(cmd.attrs.distance, DUEL_DISTANCE);
 });
 
 test("greedySafe shuts down rather than exceed capacity", () => {
@@ -35,6 +39,22 @@ test("greedySafe shuts down rather than exceed capacity", () => {
   const rig = room.rigs.find((r) => r.name === "A1");
   // Medium capacity is 5. At 5, one more heat is over — so it must vent, not fire.
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass];
+  const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
+  assert.equal(cmd.attrs.action, "shutdown");
+});
+
+test("greedySafe prices the second-shot surcharge from availableActions", () => {
+  // The file's whole architectural claim: ask the engine what things cost rather
+  // than recomputing them. The surcharge is the case that proves it — a second
+  // ranged shot costs def.heat + 1 (battle-view.js), which no local recompute of
+  // the base cost would see. At cap-1 the base cost still fits and the surcharged
+  // one does not, so a policy hardcoding ACTIONS.fire.heat fires when it must vent.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  rig.engine.heat = HEAT_CAPACITY[rig.weightClass] - 1; // 4: base 1 fits, surcharged 2 does not
+  room.game.turn.longRangeShots = 1;                    // a shot already went downrange
+  const tile = availableActions(rig, room.game.turn, room.game.round).find((x) => x.key === "fire");
+  assert.equal(tile.heat, 2, "guard: the engine must be charging the surcharge here");
   const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
   assert.equal(cmd.attrs.action, "shutdown");
 });
@@ -119,6 +139,40 @@ test("greedySafe does not vent while a meltdown charge is banked", () => {
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // can't fire safely either
   rig.equipState = { ...(rig.equipState || {}), meltdownCharge: 2 };
   assert.equal(greedySafe(room, rig, room.rigs.find((r) => r.name === "B1")), null);
+});
+
+test("greedySafe refuses a rig with no weight class instead of guessing medium", () => {
+  // The repo pins this: game-state has a test named "toughnessOf — a rig lookup
+  // with no weight class throws, it does not fall back". A silent default-to-
+  // medium is the same species as the buried structuredClone this file replaces.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  delete rig.weightClass;
+  assert.throws(() => greedySafe(room, rig, room.rigs.find((r) => r.name === "B1")), /Heat Capacity/);
+});
+
+test("greedySafe refuses a cold kind rather than half-supporting it", () => {
+  // A cold kind's spent flag is loaded.unit, not loaded.longRange, so the reload
+  // guard would miss it and emit dead fires. Heat-budgeting is meaningless for a
+  // heatless kind anyway; the duel is rigs-only by design.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  const tank = { ...rig, kind: "tank" };
+  assert.throws(() => greedySafe(room, tank, room.rigs.find((r) => r.name === "B1")), /Rigs only/);
+});
+
+test("makeGreedySafe demands a distance rather than defaulting to one", () => {
+  // An unexplained default would quietly become the answer for every swept cell.
+  assert.throws(() => makeGreedySafe(), /distance/);
+  assert.throws(() => makeGreedySafe({}), /distance/);
+});
+
+test("KNOWN_BIASES is exported for the report to print verbatim", () => {
+  // The report prints these rather than re-typing them: two copies of a caveat
+  // are two caveats that disagree by the third edit.
+  assert.equal(typeof KNOWN_BIASES, "string");
+  assert.match(KNOWN_BIASES, /KNOWINGLY/);
+  assert.match(KNOWN_BIASES, /not a like-for-like baseline/i);
 });
 
 test("driving greedySafe reaches a second volley", () => {
