@@ -578,9 +578,13 @@ Expected: ~33 rows (11 longRange weapons × 3 tiers), each with `spDealt > 0`.
 git add scripts/balance/duel-sim.mjs
 git commit -m "feat(balance): sweep the duel harness over weapon x tier
 
-Sweet spot only, front arc only, one control chassis. The full grid at
+Sweet spot only, side arc only, one control chassis. The full grid at
 duel length is ~485M attacks (~3h); arc and distance are already owned by
-weapon-sweep.mjs and neither interacts with cadence."
+weapon-sweep.mjs.
+
+The arc must be side, not front: arcBonus returns null for Raking Fire on
+the front arc, so a front-only duel measures Mini Gun and Double MG as a
+structural zero (F7)."
 ```
 
 ---

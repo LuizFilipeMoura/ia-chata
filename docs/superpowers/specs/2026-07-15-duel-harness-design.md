@@ -89,8 +89,31 @@ The sweep does 10,752 cells × 3000 trials = 32.3M attacks in ~12 min. A duel is
 | weapon × tier | 22 × 4 | **22 × 4** | the point |
 | attacker class | light, medium | **both** | cheap |
 | target | light, medium rig | **both** | cheap |
-| arc | front/side/rear | **front only** | F1/F6 answered arc; it doesn't interact with cadence |
+| arc | front/side/rear | **side only** | one arc is enough (F1/F6 own arc, and it doesn't interact with cadence) — but it must be **side**, not front. See below. |
 | distance | ~9 bands | **sweet spot only** | F6: range is the sharpest lever and works as designed |
+
+> **The arc must be side, and this spec originally said front — which measured
+> two weapons as a structural zero.**
+>
+> `arcBonus` returns **`null`** for Raking Fire on the front arc
+> (`combat.js:401-411`), which is a hard "earned zero", not a failed roll. Mini
+> Gun and Double MG are the only two weapons carrying the perk. So a front-only
+> duel reports **`spDealt: 0` for both, in every tier, at every seed** — verified:
+> Mini Gun ran 10 full rounds dealing literally nothing while taking 26–33 SP.
+>
+> This is F7 in the findings doc — *"All 504 zero-damage cells in the sweep are
+> Raking Fire's front arc"* — i.e. the very document this harness was specced
+> from. The sweep survives it by pooling over arcs; a single-arc duel cannot.
+>
+> Side is live for all eleven weapons (standard +2, Raking +3 — the designed
+> asymmetry), and it is the arc a competent player actually seeks now that F1
+> revived the bonus. Measured at side: Mini Gun **27.7**, Double MG **27.7**,
+> Autocannon 31.0, Siege Maul 30.0 — all comparable, none structurally dead.
+>
+> The lesson generalises past the arc: **cutting an axis is a measurement
+> decision, and the thing to check is whether any cell becomes structurally
+> unmeasurable — not whether the axis is "interesting".** A harness built because
+> 44 upgrades read a misleading 0.00 must not manufacture fresh ones.
 
 352 cells × 500 trials × ~15 attacks ≈ **2.6M attacks, about a minute**. The
 dropped axes are not a loss — the existing sweep owns them, and this harness
