@@ -225,6 +225,26 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
     { longRange: "Autocannon", melee: "Bulwark Shield" }).weaponUpgrades.melee, "tower-shield");
 });
 
+test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
+  // Reinforced Head and Haymaker become +1 Damage effects in the penetration
+  // rework; before this, effectiveWeaponProfile had no `dmg` branch at all and
+  // the effect silently did nothing. No shipped upgrade grants Damage yet, so
+  // stub one onto the catalog to reach the mechanism.
+  const original = WEAPON_UPGRADES["Siege Maul"][0].effect;
+  WEAPON_UPGRADES["Siege Maul"][0].effect = { dmg: 1 };
+  try {
+    // Reinforced Head is the Siege Maul's field upgrade, so it is what makeRig
+    // fits by default — a rig with no upgrade is not a thing that can exist.
+    const rig = makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword" });
+    assert.equal(rig.weaponUpgrades.longRange, "reinforced-head");
+    const profile = effectiveWeaponProfile("longRange", "Siege Maul", rig);
+    assert.equal(profile.dmg, WEAPONS.longRange["Siege Maul"].dmg + 1, "effect.dmg must add to the base weapon's Damage");
+    assert.equal(profile.pen, WEAPONS.longRange["Siege Maul"].pen, "an unrelated stat must not move");
+  } finally {
+    WEAPON_UPGRADES["Siege Maul"][0].effect = original;
+  }
+});
+
 test("Swarm Warheads is +1 ROF, and its tag says so", () => {
   // Measured at +2.31 SP, the strongest upgrade in the game, putting Missile
   // Barrage alone at the top (6.92) and making its own tuned/prototype tiers

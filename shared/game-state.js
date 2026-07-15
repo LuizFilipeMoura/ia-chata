@@ -705,6 +705,7 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     ...base,
     rof: base.rof + (effect.rof || 0),
     pen: base.pen + (effect.pen || 0),
+    dmg: base.dmg + (effect.dmg || 0),
     perks: uniquePerks(base.perks, effect.perks),
     upgrade: upgrade || null,
     upgradeEffect: effect,
