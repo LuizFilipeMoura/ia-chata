@@ -1012,7 +1012,7 @@ test("Penetrator Rounds forces the 3rd Autocannon volley's hits to wound, bypass
   assert.equal(attacker.autocannonSlowNext, false);
   attacker.loaded.longRange = true;
   // 3rd volley: 1 landed hit (die 6). The wound die is a natural 1 — Autocannon
-  // Penetration 7 vs a medium hull (T5) is TN 4, so that die would FAIL on its own. The
+  // Penetration 6 vs a medium hull (T5) is TN 5, so that die would FAIL on its own. The
   // upgrade skips the wound roll entirely, so it still deals the weapon's D2.
   // A failing die is the point: a 10 here would wound with or without the upgrade.
   const res = resolveAttack(room, attacker, target, {
@@ -1822,7 +1822,7 @@ test("rollWounds — Overmatch converts wasted STR into damage", () => {
   // unupgraded shot like this one, so a catalog read would leave these
   // asserting 0. This is about THIS matchup, not the catalog: real shots still
   // reach the payout — Tank Cannon (pen 10) rear-arc into medium arms (T4) is
-  // effPen 13, which is 5 past the TN floor and so pays +1.
+  // effPen 13, and 13 − 8 = 5 past the pen floor, so 5/3 → +1.
   const wb = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 }; // D7, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   // medium arms are T4, so the floor is pen 8. Penetration 10 wastes 2 — under the

@@ -181,5 +181,5 @@ test("strOvermatchD — the design's worked examples", () => {
   assert.equal(strOvermatchD(10, 4), 0);  // Wrecking Ball, front arc, arms
   assert.equal(strOvermatchD(13, 4), 1);  // Wrecking Ball, rear arc (+3), arms
   assert.equal(strOvermatchD(16, 3), 2);  // Siege Maul + Reinforced Head, rear, engine (capped from 3)
-  assert.equal(strOvermatchD(7, 5), 0);   // Autocannon, front, hull — never overmatches
+  assert.equal(strOvermatchD(6, 5), 0);   // Autocannon, front, hull — never overmatches
 });

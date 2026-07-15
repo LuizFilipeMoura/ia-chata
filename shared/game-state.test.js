@@ -3556,10 +3556,11 @@ test("react resolves an Exploit counter as an aimed shot with no aim penalty", (
   } });
   assert.equal(room.game.pendingReaction?.kind, "exploit");
   const before = a.arms.sp;
-  // The counter is an aimed Autocannon shot: Penetration 6(base) + 2(Depleted Core)
-  // = 8 vs medium arms (T4) → woundTarget 2, and each landed wound deals the
-  // Autocannon's D2. Damage on the arms proves both that the counter resolved AND
-  // that aimedLoc routed the hit to the chosen location.
+  // The counter is an aimed Autocannon shot with natural-10 wound dice. woundTarget
+  // is clamped to WOUND_DIE, so a 10 wounds whatever the Autocannon's Penetration
+  // is — this test turns on the counter resolving, not on the weapon's stats.
+  // Damage on the arms proves both that the counter resolved AND that aimedLoc
+  // routed the hit to the chosen location.
   applyCommand(room, { verb: "react", attrs: {
     side: "b", attack: { weapon: "longRange", arc: "front", range: "near", loc: "arms",
       dice: { toHit: [4, 4, 4, 4], location: 1, wounds: [10, 10, 10, 10] } },
