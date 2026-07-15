@@ -2410,7 +2410,7 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
 // fails to breach it (deals no SP) eats a free flat-STR melee counter. Once per
 // round (braceRetaliatedThisRound). Needs a melee weapon to answer with. Reuses
 // the same resolveAttack/penOverride path as Anvil Boss and `return`.
-const BRACE_RIPOSTE_STR = 6; // ⚙ TUNING
+const BRACE_RIPOSTE_PEN = 6; // ⚙ TUNING
 function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingArc, res, random) {
   if (incomingWeapon !== "melee") return false;
   if (incomingArc !== "front") return false;
@@ -2425,13 +2425,13 @@ function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingA
   defender.braceRetaliatedThisRound = true;
   pushResolution(room, {
     kind: "riposte", actor: defender.owner, rigId: defender.id, rolls: [],
-    summary: `${defender.name} holds the brace and counters ${attacker.name} — free STR ${BRACE_RIPOSTE_STR} melee.`,
-    effects: [`Brace — free STR ${BRACE_RIPOSTE_STR} melee counter (attack failed to breach)`],
+    summary: `${defender.name} holds the brace and counters ${attacker.name} — free STR ${BRACE_RIPOSTE_PEN} melee.`,
+    effects: [`Brace — free STR ${BRACE_RIPOSTE_PEN} melee counter (attack failed to breach)`],
   });
   resolveAttack(room, defender, attacker, {
     weapon: "melee", target: attacker.name,
     arc: "front", range: "near", aimed: false, aimedLoc: "hull",
-    engaged: defender.engagedWith != null, penOverride: BRACE_RIPOSTE_STR,
+    engaged: defender.engagedWith != null, penOverride: BRACE_RIPOSTE_PEN,
   }, random, combatCtx());
   return true;
 }
