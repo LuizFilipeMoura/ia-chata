@@ -2358,3 +2358,31 @@ test("ledger — Overmatch is absent when it did not fire", () => {
     { label: "weapon D", value: 3 },
   ]);
 });
+
+test("ledger — riders survive a volley whose first wound die missed", () => {
+  // Riders are assigned only inside `if (wounded)`, so impacts[0] carries them as
+  // 0 when the first die misses. Reading it blind renders `wounds 2, weapon D 2`
+  // against an out of 8 SP — terms reconciling to 4. The `find` is what prevents it.
+  // Chainsaw (ROF 3, STR 7, D2) + Ripper Teeth (Rend) + rear arc 3 = effStr 10 vs
+  // a medium engine's T3 → wound TN 2, so only a natural 1 misses, and 3 past the
+  // floor → Overmatch 1. Each landed wound deals 2 + 1 + 1 = 4.
+  const attacker = makeRig(1, "A", "medium", "a",
+    { longRange: "Double MG", melee: "Chainsaw", meleeUpgrade: "ripper-teeth" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const ctx = makeCtx();
+  resolveAttack({ rigs: [attacker, target], game: { round: 1 } }, attacker, target,
+    { weapon: "melee", arc: "rear", range: "near", cover: 0,
+      dice: { toHit: [6, 6, 6], location: 12, wounds: [1, 10, 10] } }, // die 1 misses; engine T3
+    () => 0, ctx);
+  const d = ctx.resolutions.find((r) => r.kind === "attack")
+    .breakdown.steps.find((s) => s.kind === "damage");
+  assert.deepEqual(d.terms, [
+    { label: "wounds", value: 2 }, { label: "weapon D", value: 2 },
+    { label: "Rend", value: 1 }, { label: "Overmatch", value: 1 },
+  ]);
+  // The invariant the `find` actually protects: a multi-rider volley's terms must
+  // still reconcile to the SP it reports (2 wounds x (2+1+1) = 8), which is the
+  // same failure Overmatch was named to close.
+  const perWound = d.terms.slice(1).reduce((n, t) => n + t.value, 0);
+  assert.equal(d.out, `${d.terms[0].value * perWound} SP → engine`);
+});

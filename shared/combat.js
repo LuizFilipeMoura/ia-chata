@@ -901,8 +901,8 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       // preference above failing. Mostly it changes nothing: a missed wound, and
       // a shield/arc-negated one, carry 0 riders and so push no terms either way.
       // The case with teeth is Ablative Cascade, which zeroes the SP of a wound
-      // that DID land while its riders stay set — the step then reports what the
-      // shot WOULD have added, for the same reason `d` rides a negated wound
+      // that DID land while its riders stay set — the step can then report what
+      // the shot WOULD have added, for the same reason `d` rides a negated wound
       // rather than render a blank term (see rollWounds).
       //
       // A rider worth 0 pushes nothing (same rule as the wound step's terms).
