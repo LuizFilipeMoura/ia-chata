@@ -389,7 +389,22 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                         dieEls.current[i] = el;
                       }}
                     >
-                      {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
+                      {/* A rolling die's face is owned by the flicker interval, which
+                          writes el.textContent directly (see `clearFlicker`'s timer).
+                          React must render "" here — NOT a random face.
+
+                          If React rendered a face, its vdom would hold a value it does
+                          not control. On settle, React diffs its OWN previous text
+                          against the real value and skips the DOM write whenever the two
+                          happen to match — stranding the flicker's last face on screen.
+                          That showed the player a number the engine never rolled (~1 in
+                          `sides` per die, so a 6-die volley lied more often than not).
+
+                          With "" here, React's text always differs from the settled
+                          value, so the write always lands. Do not "restore" the random
+                          face: the panel lying about its dice is the exact bug class
+                          this console exists to prevent. */}
+                      {d.settled ? String(d.value) : ""}
                     </div>
                     {d.settled && verdictLabel(d.sides, d.tone) ? (
                       <span className="v2-die-verdict v2-eyebrow" data-tone={d.tone}>

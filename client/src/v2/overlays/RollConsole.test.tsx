@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { createRef } from "react";
 import type { Resolution, ResolutionStep } from "../../state/types";
 import RollConsole, { type RollConsoleHandle } from "./RollConsole";
@@ -189,4 +189,41 @@ test("a settled wound die says WOUND!/NO WOUND — not the to-hit vocabulary", a
   expect(await screen.findByText("NO WOUND")).toBeInTheDocument();
   // The d6 keeps to-hit vocabulary; the d10s must not borrow it.
   expect(screen.queryAllByText("HIT!")).toHaveLength(1);
+});
+
+// A rolling die's face is written by the flicker interval straight to the DOM
+// (el.textContent), which React knows nothing about. If React ALSO rendered a
+// random face, its vdom would hold a face it does not control — and when the die
+// settles, React diffs its own previous text against the real value and skips the
+// DOM write whenever they happen to match, stranding the flicker's last face on
+// screen. That shows the player a number the engine never rolled: the panel
+// lying about the dice, which is the whole class of bug this console exists to
+// avoid. React must own "" while rolling, so a collision is impossible.
+test("a rolling die's face is owned by the flicker, never rendered by React", () => {
+  const ref = createRef<RollConsoleHandle>();
+  render(<RollConsole ref={ref} />);
+  act(() => {
+    void ref.current!.playResolution({
+      id: 1, kind: "attack", rolls: [{ sides: 6, value: 4, label: "hit 1" }],
+      summary: "", effects: [],
+    } as Resolution);
+  });
+  // The interval has not ticked yet, so whatever is on screen came from React.
+  expect(document.querySelector(".v2-die")?.textContent).toBe("");
+});
+
+// The behavioural half of the same guarantee. `playResolution` resolves once every
+// die has settled, so awaiting it needs no timer driving. (Fake timers do NOT work
+// here: the settle check reads performance.now(), which vi.useFakeTimers() leaves
+// real, so elapsed never reaches the settle threshold and no die ever lands.)
+test("a settled die shows the value the engine rolled, not a stale flicker face", async () => {
+  const ref = createRef<RollConsoleHandle>();
+  render(<RollConsole ref={ref} />);
+  await act(async () => {
+    await ref.current!.playResolution({
+      id: 1, kind: "attack", rolls: [{ sides: 6, value: 4, label: "hit 1" }],
+      summary: "", effects: [],
+    } as Resolution);
+  });
+  expect(document.querySelector(".v2-die")?.textContent).toBe("4");
 });
