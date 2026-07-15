@@ -339,29 +339,14 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                 {breakdown.target && <span className="rx-target">→ {breakdown.target}</span>}
               </div>
             )}
-            <div className="rx-break-eq">
-              {(breakdown.terms || []).map((t, i) => (
-                <span className="rx-term-group" key={i}>
-                  {t.op ? <span className="rx-op">{t.op}</span> : null}
-                  <span className="rx-term" data-tone={t.tone}>
-                    <b>{t.value}</b>
-                    <em>{t.label}</em>
-                  </span>
-                </span>
-              ))}
-            </div>
+            {/* The flat equation (`terms`) and the impact-total/tier readout
+                (`total`, `tier`) used to render here. Those fields died with the
+                d10 wound rewrite — nothing in shared/ emits them — and Plan 2
+                removed them from ResolutionBreakdown, so the markup that read
+                them is gone. This component is itself unreachable (main.tsx
+                renders only V2Boot); the live ledger render is
+                client/src/v2/overlays/RollConsole.tsx. */}
             <div className="rx-break-out">
-              {breakdown.total != null && (
-                <span className="rx-total">
-                  <span className="rx-op">=</span>
-                  {breakdown.total}
-                </span>
-              )}
-              {breakdown.tier && (
-                <span className="rx-tier" data-tier={breakdown.tier}>
-                  {breakdown.tier}
-                </span>
-              )}
               <span className="rx-sp">
                 <b>{breakdown.sp}</b>
                 <em>{breakdown.location ? `SP → ${breakdown.location}` : "SP"}</em>

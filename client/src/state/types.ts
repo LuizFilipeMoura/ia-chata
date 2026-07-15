@@ -81,37 +81,43 @@ export interface ResolutionTerm {
   op?: string;
   tone?: string;
 }
+/**
+ * One resolution step. The panel walks these in order and renders each.
+ *
+ * A step is never omitted to signal "nothing happened" — a chain that stopped
+ * early still emits the step that stopped it, with an `out` that says why.
+ * An absent step and a failed step must never look the same to a player.
+ */
+export interface ResolutionStep {
+  kind: "hit" | "wound" | "location" | "damage";
+  /** The number the dice had to beat. Null on an auto-fail (shield negate, blind arc). */
+  target?: number | null;
+  /** Wound step only: the effective STR and the struck location's Toughness. */
+  str?: number | null;
+  toughness?: number | null;
+  /** Location step only. Null on an aimed shot — no d12 decided the part. */
+  die?: number | null;
+  /**
+   * Every input that FIRED. A modifier resolving to 0 is omitted, EXCEPT
+   * cancellers (e.g. "targeting computer (ignores cover)") which explain an
+   * absence — so the render must NOT filter zeros.
+   */
+  terms?: ResolutionTerm[];
+  dice?: Array<{ value: number; ok: boolean }>;
+  /** Human-readable outcome, e.g. "2 of 3 hit". Always present. */
+  out: string;
+}
+
 export interface ResolutionBreakdown {
   actor?: string;
   weapon?: string;
-  /** The target unit's NAME (e.g. "Reaver") — NOT the wound TN. See `woundTarget`. */
+  /** The target unit's NAME. Never a number — the wound TN lives on the wound step. */
   target?: string;
-  /** Input terms of the damage equation (die + STR, or hits · weapon STR). */
-  terms?: ResolutionTerm[];
-  /** §7.5 — attacker's effective STR into the wound roll. */
-  str?: number | null;
-  /** §7.5 — the struck location's Toughness. */
-  toughness?: number | null;
-  /**
-   * §7.5 — the wound roll's target number: wound on `d10 >= woundTarget`.
-   * `str`/`toughness`/`woundTarget` are all null on an earned zero (shield
-   * negate, Raking front arc), where no wound roll was made.
-   */
-  woundTarget?: number | null;
-  /** Structure points dealt. */
+  /** The ordered ledger, in the engine's resolution order: hit → location → wound → damage. */
+  steps?: ResolutionStep[];
+  /** Structure points dealt — the headline, rendered large above the ledger. */
   sp?: number;
   location?: string;
-  /**
-   * DEAD since the d10 wound rewrite — the impact-total model and its
-   * direct/severe/critical tiers were deleted, and nothing in `shared/` emits
-   * either field any more, so both renders are unreachable. Kept only so the
-   * existing RollConsole markup still type-checks; drop them (and the
-   * `rx-tier`/`v2-rx-tier` CSS) when Plan 2 reworks this breakdown into a
-   * per-step ledger.
-   */
-  total?: number;
-  /** @deprecated Dead — see `total`. */
-  tier?: string;
 }
 
 export interface Resolution {

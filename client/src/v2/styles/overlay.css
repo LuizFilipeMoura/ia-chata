@@ -16,7 +16,12 @@
   transition: transform .3s cubic-bezier(.2, .85, .25, 1), opacity .3s ease;
 }
 .v2-dwr-scrim.show .v2-dwr-card { transform: none; opacity: 1; }
-.v2-root .v2-dwr-title { margin-bottom: .5rem; }
+.v2-root .v2-dwr-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .5rem; margin-bottom: .5rem;
+}
+.v2-root .v2-dwr-title { flex: 1 1 auto; min-width: 0; }
+.v2-root .v2-dwr-close { flex: 0 0 auto; font-size: var(--v2-text-base); line-height: 1; }
 .v2-root .v2-dwr-title[data-tone="oil"] { color: var(--v2-oil); }
 .v2-root .v2-dwr-title[data-tone="ember"] { color: var(--v2-ember-hi); }
 .v2-root .v2-dwr-title[data-tone="cool"] { color: #7fd0c4; }
@@ -55,9 +60,15 @@
 /* Iron sheet: base .v2-panel surface, re-framed to a single oil-ring outline so
    the whole border matches the glow. Static deep drop + bottom vignette seat it
    on the scrim; sharp corners (v2-panel--sharp). */
+/* The console is a flex column capped to the viewport: the ledger zone is the
+   only thing allowed to scroll, so the action bar (OK) can never be pushed
+   off-screen by a long chain. Before the ledger the body was always short
+   enough to ignore this; four steps of terms on a 390px phone are not. */
 .v2-root .v2-roll-console {
   position: relative;
   width: min(480px, 100%);
+  display: flex; flex-direction: column;
+  max-height: calc(100dvh - 2rem);
   border-color: var(--v2-oil-ring);
   box-shadow:
     var(--v2-bevel-top),
@@ -101,8 +112,17 @@
 /* Stacked labelled zones, split by hairline dividers. */
 .v2-root .v2-roll-zone {
   padding: 16px 20px; border-bottom: 1px solid var(--v2-line);
+  flex: 0 0 auto;
 }
 .v2-root .v2-roll-zone:last-of-type { border-bottom: 0; }
+/* The ledger absorbs the overflow. `min-height: 0` is what actually lets a flex
+   child shrink below its content and scroll; without it the zone grows and
+   shoves the action bar off the bottom. */
+.v2-root .v2-roll-zone--ledger {
+  flex: 0 1 auto; min-height: 0; overflow-y: auto;
+}
+.v2-root .v2-roll-head,
+.v2-root .v2-roll-action { flex: 0 0 auto; }
 .v2-root .v2-roll-zone-label {
   font-family: var(--v2-mono); font-size: var(--v2-text-sm);
   letter-spacing: .22em; text-transform: uppercase; color: var(--v2-txt-faint);
@@ -181,9 +201,11 @@
   animation: v2-lampfast 1s ease-in-out infinite;
 }
 
-/* Damage readout — a SINGLE sunken strip holding an INLINE equation. No nested
-   panel, no per-term boxes (the old box-in-box). Both the structured breakdown
-   (.v2-rx-break) and the fallback summary (.v2-roll-summary) sit in this well. */
+/* Resolution ledger — a sunken well holding one row PER STEP of the chain
+   (hit → location → wound → damage), not a single flat equation. The old
+   inline-equation model could not say which die decided the damage, which is
+   the whole reason the ledger exists. Both the ledger (.v2-rx-break) and the
+   fallback summary (.v2-roll-summary) sit in this well. */
 .v2-root .v2-roll-strip,
 .v2-root .v2-rx-break {
   background: var(--v2-well);
@@ -200,52 +222,118 @@
 .v2-root .v2-rx-weapon { color: var(--v2-oil-hi); font-weight: 700; }
 .v2-root .v2-rx-target { color: var(--v2-txt-dim); }
 
-/* Inline equation row — flat flex, terms are inline (no boxes), wraps if needed. */
-.v2-root .v2-rx-break-eq {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .5rem;
-  font-family: var(--v2-mono); font-size: var(--v2-text-base);
+/* The step list. One <li> per stage, rail-connected down the left edge so the
+   chain reads as a sequence rather than four unrelated blocks. */
+.v2-root .v2-rx-steps {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column;
 }
-.v2-root .v2-rx-term-group { display: inline-flex; align-items: baseline; gap: .3rem; }
-.v2-root .v2-rx-op { color: var(--v2-txt-faint); font-weight: 700; line-height: 1; }
-.v2-root .v2-rx-term { display: inline-flex; align-items: baseline; gap: .25rem; }
-.v2-root .v2-rx-term b {
-  font-family: var(--v2-stencil); font-size: var(--v2-text-lg); font-weight: 700; line-height: 1;
+.v2-root .v2-rx-step {
+  position: relative;
+  padding: .55rem 0 .55rem .8rem;
+  border-left: 2px solid var(--v2-line);
+  opacity: 0; transform: translateY(4px);
+  animation: v2-line-in .3s ease forwards;
+}
+.v2-root .v2-rx-step:first-child { padding-top: .1rem; }
+.v2-root .v2-rx-step:last-child { padding-bottom: .1rem; }
+/* Node on the rail, tinted per stage — the eye can find "wound" without reading. */
+.v2-root .v2-rx-step::before {
+  content: ""; position: absolute; left: -5px; top: .75rem;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--v2-iron-900); border: 2px solid var(--v2-line);
+}
+.v2-root .v2-rx-step:first-child::before { top: .3rem; }
+.v2-root .v2-rx-step[data-kind="wound"] { border-left-color: var(--v2-oil-deep); }
+.v2-root .v2-rx-step[data-kind="wound"]::before { border-color: var(--v2-oil); }
+.v2-root .v2-rx-step[data-kind="damage"] { border-left-color: var(--v2-ember); }
+.v2-root .v2-rx-step[data-kind="damage"]::before { border-color: var(--v2-ember-hi); }
+
+/* Step header: eyebrow + the target number (or the wound step's STR-vs-T line). */
+.v2-root .v2-rx-step-hd {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .5rem;
+}
+.v2-root .v2-rx-step-kind { color: var(--v2-txt-faint); letter-spacing: .2em; }
+.v2-root .v2-rx-step[data-kind="wound"] .v2-rx-step-kind { color: var(--v2-oil); }
+.v2-root .v2-rx-step[data-kind="damage"] .v2-rx-step-kind { color: var(--v2-ember-hi); }
+
+/* The target number the dice had to beat. */
+.v2-root .v2-rx-step-tn {
+  font-family: var(--v2-stencil); font-size: var(--v2-text-base); font-weight: 700; line-height: 1;
+  color: var(--v2-oil-hi); text-shadow: 0 0 10px rgba(231, 154, 61, .35);
+}
+
+/* "STR 4 vs T5 → 7+" — THE line that answers "why 0 damage?". Given its own
+   weight: this is the sentence the whole ledger exists to print. */
+.v2-root .v2-rx-step-math {
+  display: inline-flex; align-items: baseline; gap: .28rem; flex-wrap: wrap;
+  font-family: var(--v2-mono); font-size: var(--v2-text-sm);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--v2-txt-dim);
+}
+.v2-root .v2-rx-step-math b {
+  font-family: var(--v2-stencil); font-size: var(--v2-text-base); font-weight: 700; line-height: 1;
   color: var(--v2-txt);
 }
-.v2-root .v2-rx-term em {
-  font-family: var(--v2-mono); font-style: normal;
-  font-size: var(--v2-text-sm); letter-spacing: .06em; text-transform: uppercase;
-  color: var(--v2-txt-faint); white-space: nowrap;
+.v2-root .v2-rx-step-math i { font-style: normal; color: var(--v2-txt-faint); }
+/* "T5" is one token, not "T" next to "5" — the flex gap must not split it. */
+.v2-root .v2-rx-step-pair { display: inline-flex; align-items: baseline; gap: 0; }
+.v2-root .v2-rx-step-math .v2-rx-step-tn { font-size: var(--v2-text-lg); }
+
+/* Per-step dice — small stamped pips, not the 3rem theater tokens above. */
+.v2-root .v2-rx-step-dice { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
+.v2-root .v2-rx-pip {
+  min-width: 1.4rem; padding: .05rem .25rem;
+  font-family: var(--v2-stencil); font-size: var(--v2-text-sm); font-weight: 700;
+  line-height: 1.4; text-align: center;
+  color: var(--v2-txt-dim);
+  background: rgba(0, 0, 0, .35); border: 1px solid var(--v2-line); border-radius: 2px;
 }
-.v2-root .v2-rx-term[data-tone="mod"] b { color: var(--v2-oil-hi); text-shadow: 0 0 12px rgba(231, 154, 61, .4); }
-.v2-root .v2-rx-term[data-tone="mod"] em { color: var(--v2-oil); }
-.v2-root .v2-rx-term[data-tone="die"] b { color: #cdd5e0; }
+.v2-root .v2-rx-pip[data-ok="true"] {
+  color: #fff; border-color: var(--v2-ok);
+  box-shadow: 0 0 8px -1px color-mix(in srgb, var(--v2-ok) 60%, transparent);
+}
+.v2-root .v2-rx-pip[data-ok="false"] { color: var(--v2-txt-faint); border-color: var(--v2-line); }
+
+/* The step's own outcome sentence, in its own vocabulary. */
+.v2-root .v2-rx-step-out {
+  margin-top: .35rem;
+  font-family: var(--v2-mono); font-size: var(--v2-text-sm); line-height: 1.4;
+  color: var(--v2-txt);
+}
+.v2-root .v2-rx-step[data-kind="damage"] .v2-rx-step-out { color: var(--v2-ember-hi); }
+
+/* Terms — wrapped chips. Four stacked term LISTS would not fit a 390px phone;
+   chips reflow instead of overflowing. */
+.v2-root .v2-rx-step-terms {
+  display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .4rem;
+}
+.v2-root .v2-rx-chip {
+  display: inline-flex; align-items: baseline; gap: .25rem;
+  padding: .1rem .35rem;
+  background: rgba(0, 0, 0, .3); border: 1px solid var(--v2-line); border-radius: 2px;
+  max-width: 100%;
+}
+.v2-root .v2-rx-chip b {
+  font-family: var(--v2-stencil); font-size: var(--v2-text-sm); font-weight: 700; line-height: 1.3;
+  color: var(--v2-txt);
+}
+.v2-root .v2-rx-chip em {
+  font-family: var(--v2-mono); font-style: normal;
+  font-size: var(--v2-text-sm); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--v2-txt-faint); overflow-wrap: anywhere;
+}
+.v2-root .v2-rx-chip[data-sign="pos"] b { color: var(--v2-oil-hi); }
+.v2-root .v2-rx-chip[data-sign="neg"] b { color: var(--v2-crit); }
+/* A zero term is a CANCELLER — it explains an absence, so it is rendered
+   muted but never hidden. */
+.v2-root .v2-rx-chip[data-sign="zero"] { border-style: dashed; }
+.v2-root .v2-rx-chip[data-sign="zero"] b { color: var(--v2-txt-faint); }
 
 .v2-root .v2-rx-break-out {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem .8rem;
   margin-top: .9rem; padding-top: .7rem;
   border-top: 1px dashed rgba(255, 255, 255, .1);
 }
-.v2-root .v2-rx-total {
-  display: inline-flex; align-items: baseline; gap: .25rem;
-  font-family: var(--v2-stencil); font-size: var(--v2-text-lg); font-weight: 700; color: var(--v2-txt-dim);
-}
-.v2-root .v2-rx-total .v2-rx-op { font-size: var(--v2-text-sm); }
-.v2-root .v2-rx-tier {
-  font-family: var(--v2-mono); font-size: var(--v2-text-sm); font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase;
-  padding: .2rem .45rem;
-  color: var(--v2-txt-dim); border: 1px solid var(--v2-line); background: rgba(0, 0, 0, .3);
-}
-.v2-root .v2-rx-tier[data-tier="direct"] { color: #cdd5e0; border-color: var(--v2-rivet); }
-.v2-root .v2-rx-tier[data-tier="severe"] {
-  color: var(--v2-oil-hi); border-color: var(--v2-oil-deep); background: rgba(231, 154, 61, .12);
-}
-.v2-root .v2-rx-tier[data-tier="critical"] {
-  color: #fff; border-color: var(--v2-ember); background: rgba(229, 83, 58, .22);
-  box-shadow: 0 0 12px -1px rgba(229, 83, 58, .6);
-}
-.v2-root .v2-rx-tier[data-tier="none"] { color: var(--v2-txt-faint); }
 .v2-root .v2-rx-sp { display: inline-flex; align-items: baseline; gap: .3rem; margin-left: auto; }
 .v2-root .v2-rx-sp b {
   font-family: var(--v2-stencil); font-size: var(--v2-text-3xl); font-weight: 700; line-height: 1;
@@ -451,6 +539,7 @@
   .v2-root .v2-die.settled,
   .v2-root .v2-die-verdict,
   .v2-root .v2-roll-effect,
+  .v2-root .v2-rx-step,
   .v2-root .v2-roll-console,
   .v2-root .v2-roll-ok { animation: none; opacity: 1; transform: none; }
   .v2-root .v2-rx-token.flip { animation: none; transform: rotateY(180deg); }
@@ -493,6 +582,19 @@
 .v2-threat-reticle .h, .v2-threat-reticle .v { position: absolute; background: var(--ember-hi); opacity: .85; }
 .v2-threat-reticle .h { left: 0; right: 0; top: 50%; height: 1px; }
 .v2-threat-reticle .v { top: 0; bottom: 0; left: 50%; width: 1px; }
+/* Square ✕ in the card's top-right — a quieter sibling of the ember Dismiss CTA.
+   Hand-styled rather than reusing `.v2-close`: this overlay portals to body with
+   no `.v2-root` wrapper, so the `--v2-*` tokens that primitive relies on don't
+   resolve here. Same V1 palette the rest of the telegraph uses. */
+.v2-threat-close {
+  position: absolute; top: 0; right: 0; z-index: 2;
+  display: grid; place-items: center; width: 30px; height: 30px;
+  padding: 0; font: inherit; font-size: 13px; line-height: 1; cursor: pointer;
+  color: var(--txt-dim); background: rgba(12, 7, 9, .6);
+  border: 1px solid rgba(255, 255, 255, .12);
+  transition: color .14s, border-color .14s;
+}
+.v2-threat-close:hover { color: var(--ember-hi); border-color: var(--ember); }
 .v2-threat-card {
   position: relative; z-index: 1; text-align: center;
   padding: 26px 20px calc(26px + env(safe-area-inset-bottom, 0px));
@@ -510,16 +612,13 @@
 .v2-threat-title em { color: var(--ember-hi); font-style: normal; }
 .v2-threat-title b { color: var(--oil-hi); font-weight: 800; }
 .v2-threat-weapon { font-size: 14px; color: var(--txt-dim); letter-spacing: .04em; }
-.v2-threat-brace {
-  margin-top: 16px; display: inline-block; font-size: 13px; font-weight: 700;
-  letter-spacing: .18em; text-transform: uppercase; padding: 9px 20px; border-radius: 6px;
+/* The only control on the telegraph, so it carries the ember CTA treatment. */
+.v2-threat-dismiss {
+  display: block; margin: 14px auto 0; padding: 9px 26px; border: 0; border-radius: 6px;
+  font: inherit; font-size: 13px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
   color: #12060a; background: linear-gradient(180deg, var(--ember-hi), var(--ember));
   box-shadow: 0 0 26px rgba(229, 83, 58, .6);
-}
-.v2-threat-dismiss {
-  display: block; margin: 16px auto 0; padding: 7px 18px; border-radius: 6px;
-  background: transparent; color: var(--txt-dim); border: 1px solid var(--line);
-  font: inherit; cursor: pointer;
 }
 @media (prefers-reduced-motion: reduce) {
   .v2-threat, .v2-threat-siren, .v2-threat-hazard, .v2-threat-reticle, .v2-threat-klaxon { animation: none; }
