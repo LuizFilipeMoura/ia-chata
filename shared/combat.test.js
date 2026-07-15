@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
+import { WEIGHT_STR_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
+import { partNamesOf } from "./unit-kinds.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
 // game-state.js's combatCtx() injects (§"Mutation primitives" in combat.js),
@@ -1701,4 +1703,116 @@ test("resolveAttack — breakdown reports effective STR and toughness", () => {
   // The wound TN must NOT clobber the target NAME: RollConsole renders
   // `breakdown.target` as "→ B", and types.ts declares it `target?: string`.
   assert.equal(bd.target, "B");
+});
+
+// ---------------------------------------------------------------------------
+// No dead zones — the reason the combat model was rewritten.
+//
+// The impact-total model had 69 combos that could NEVER deal damage at any
+// roll: its total capped at `6 + STR + arc`, and melee had no arc ladder, so a
+// light Circular Saw (effective STR 4) topped out at 10 against a medium hull
+// needing 11. The wound roll replaces it: d10 >= `clamp(6 + T - S, 2, 10)`.
+//
+// NOTE ON HOW THESE TESTS ARE BUILT. The obvious test — sweep the matrix and
+// assert `woundTarget(...) > 10` never happens — is VACUOUS. woundTarget ends
+// in `Math.min(WOUND_DIE, ...)`, so its output cannot exceed 10 by
+// construction; the assertion is unreachable and would hold even if every stat
+// in the game were retuned to nonsense. A test that cannot fail is worse than
+// no test: it advertises a guarantee it never checks.
+//
+// So the guarantee is pinned as a PAIR:
+//   1. the probability floor, off the clamped TN — the player-facing promise;
+//   2. the RAW, unclamped `6 + T - S` gap stays in a sane band — the mechanism.
+// (2) is the one with teeth. It is what fails if a stat retune drives a real
+// matchup so far past the die that the clamp stops being a floor and starts
+// being a crutch that hides a balance bug.
+// ---------------------------------------------------------------------------
+
+// The arc a weapon is WORST off attacking from, counting only arcs it may
+// legally use. Read off the real arcBonus ladder rather than hardcoded, so a
+// change to the ladder reaches these tests. Raking Fire returns null on the
+// front (auto-fail), so its worst usable arc is the side — a subtlety that
+// matters: assuming a flat front +0 for every weapon wrongly paints machine
+// guns as the harshest matchup in the game when they cannot use that arc.
+function worstUsableArc(profile) {
+  const usable = ["front", "side", "rear"]
+    .map((arc) => arcBonus(profile, arc))
+    .filter((b) => b !== null);
+  return Math.min(...usable);
+}
+
+// Every weapon (base profile, no upgrades) x attacker class x target class x
+// location, at the worst arc it can legally use — the true floor of the game.
+function woundMatrix() {
+  const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
+  const classes = ["light", "medium", "heavy", "colossal"];
+  const rows = [];
+  for (const [name, w] of Object.entries(all)) {
+    const arc = worstUsableArc(w);
+    for (const aw of classes) {
+      // flatPick weapons (Tank/Walker mounts) do not take the weight-class mod.
+      const str = w.str + (w.flatPick ? 0 : WEIGHT_STR_MOD[aw]) + arc;
+      for (const tw of classes) {
+        for (const loc of partNamesOf("rig")) {
+          const t = toughnessOf("rig", loc, tw);
+          rows.push({
+            label: `${name}/${aw} vs ${tw}/${loc} (arc +${arc})`,
+            raw: 6 + t - str,          // unclamped TN the design intends
+            tn: woundTarget(str, t),   // clamped TN the game actually rolls
+          });
+        }
+      }
+    }
+  }
+  return rows;
+}
+
+test("no dead zones — every weapon can wound every location of every class", () => {
+  // The player-facing guarantee: no matchup is mathematically hopeless. Stated
+  // as a probability so the failure message is in the units a player cares
+  // about. Backed by the clamp, so it is guarded by the raw-gap test below —
+  // read the two together.
+  const hopeless = woundMatrix()
+    .map((r) => ({ ...r, chance: (WOUND_DIE - r.tn + 1) / WOUND_DIE }))
+    .filter((r) => !(r.chance >= 1 / WOUND_DIE))
+    .map((r) => `${r.label}: TN ${r.tn} = ${r.chance * 100}%`);
+  assert.deepEqual(hopeless, []);
+});
+
+test("no dead zones — the clamp is a floor, not a crutch: raw TN stays in band", () => {
+  // The test with teeth. `6 + T - S` unclamped, for every real matchup. The
+  // clamp guarantees a natural 10 always wounds no matter how bad this gets,
+  // which is exactly why it must be checked separately: if a retune pushed the
+  // worst raw TN to, say, 15, the suite above would still pass while the clamp
+  // quietly papered over a 5-point hole. One point past the die is a floor;
+  // several points past it is a balance bug wearing the clamp as a disguise.
+  const worst = woundMatrix().sort((a, b) => b.raw - a.raw)[0];
+  assert.equal(worst.raw, 11, `worst raw TN moved: ${worst.label}`);
+  assert.ok(worst.raw <= WOUND_DIE + 1, `raw TN ${worst.raw} leans on the clamp`);
+});
+
+test("no dead zones — the clamp is genuinely engaged, not incidental", () => {
+  // Pins that the clamp does real work: exactly one matchup in the whole game
+  // would be hopeless without it. If this set ever grows, someone has added a
+  // weapon that can only scratch a colossal hull on a natural 10 — a real
+  // design decision, and one that should have to edit this test to land.
+  const reliant = woundMatrix().filter((r) => r.raw > WOUND_DIE);
+  assert.deepEqual(reliant.map((r) => r.label), [
+    "Rivet Gun/light vs colossal/hull (arc +0)",
+  ]);
+  // ...and that the clamp is what saves it: raw 11 would be unrollable on a d10.
+  const str = WEAPONS.longRange["Rivet Gun"].str + WEIGHT_STR_MOD.light; // 3 - 1 = 2
+  const t = toughnessOf("rig", "hull", "colossal");                      // 7
+  assert.equal(6 + t - str, 11);              // unclamped: needs an 11 on a d10
+  assert.equal(woundTarget(str, t), 10);      // clamped: a natural 10 still wounds
+});
+
+test("no dead zones — the light saw vs a medium hull, the case that started this", () => {
+  // The combo that proved the impact-total model broken: it could never deal
+  // damage at any roll. TN 7 sits clear of both clamp rails, so this exercises
+  // the arithmetic rather than passing on a clamped edge.
+  const w = WEAPONS.melee["Circular Saw"];
+  const str = w.str + WEIGHT_STR_MOD.light;          // 5 - 1 = 4
+  const t = toughnessOf("rig", "hull", "medium");    // 5
+  assert.equal(woundTarget(str, t), 7);              // 40%, front arc, no upgrades
 });
