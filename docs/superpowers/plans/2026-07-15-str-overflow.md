@@ -28,6 +28,16 @@ Overflow is the wasted amount: `over = 2 - (6 + T - str)`, floored at 0. Equival
 | `shared/combat.js` | apply + report | consume in `rollWounds`; emit the ledger term |
 | `shared/glossary.js` | player-facing definition | one entry |
 | `shared/game-state.js` | weapon/upgrade data | Swarm Warheads `rof: 2` → `1` |
+| `rules.md` | **the live rulebook** | Swarm Warheads `(+2 ROF)` → `(+1 ROF)` |
+| `docs/design/light-missile-flamethrower.md` | chassis design note | same magnitude, stale |
+
+> **`rules.md` is not a document — it is a runtime input.** `server/config.js:6`
+> sets `RULEBOOK_MD = "rules.md"`, and `server/prompt.js:147-159` bakes the whole
+> file into the AI rules master's system prompt as "the single source of truth".
+> A stale line there is a lie told to a player who asks what an upgrade does,
+> while the engine does something else. This plan originally omitted the file
+> entirely and a reviewer caught the result. **Any change to a weapon or upgrade
+> magnitude must grep `rules.md`.**
 
 ---
 
@@ -649,5 +659,33 @@ git commit -m "docs(balance): findings steps 1-3 landed; fix stale bug-status no
 - `strOverflowD` pinned in `rules.test.js`: floor boundary, rate, cap, junk-T guard, weak weapons.
 - `rollWounds` proves the arc bonus now changes the damage of a Wrecking Ball shot — the single fact the whole change exists to produce.
 - "Overmatch" appears in the damage ledger only when it fired, and in the glossary.
-- Swarm Warheads is `+1 ROF` in both `effect` and `tag`.
+- Swarm Warheads is `+1 ROF` in **three** places: `effect`, `tag`, and `rules.md`.
+  The first two are the coupling rule; the third is the one this plan forgot, and
+  it is the only one a player actually reads.
 - A 500-trial report is committed next to the 3000-trial baseline.
+
+## Lessons from executing this plan
+
+Recorded because they are about the plan, not the code, and the next plan in this
+repo will hit them.
+
+1. **A comment asserting a rule the code doesn't hold to shipped in every code
+   task** — three tasks, four separate instances, caught in review every time. The
+   plan text was the upstream source each time: implementers transcribed my
+   comments faithfully. Write comments against the code's real branches, not the
+   rule you wish it followed. The `|| first` fallback is the canonical example: the
+   comment said "source from a wound that dealt damage" while the fallback does the
+   exact opposite.
+2. **Two tests didn't test what their names claimed**, and both were found by
+   *mutation*, not by reading: the cap test stayed green with the cap raised, and
+   the `find` stayed green when deleted entirely. If a test's name asserts a
+   mechanism, break the mechanism and watch it fail — otherwise the name is a
+   guess.
+3. **"Field is the floor" bites every calculation.** `normalizeWeaponUpgrade`
+   returns `upgrades[0].id` for a null id, so no legal rig has base stats. Every
+   worked example in this plan that used base STR was wrong. The findings doc says
+   this trap silently ruined its first sweep run; it then silently ruined two of
+   this plan's test fixtures.
+4. **Grep for the magnitude, not just the field.** A stat lives in `effect`, in
+   the display `tag`, in `rules.md`, and in design docs. This plan's File Structure
+   table listed one of the four.
