@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, strBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
+import { computeModifiedAim, aimBreakdown, weaponAccAt, rollToHit, computeStr, strBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 import { WEIGHT_STR_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
@@ -57,6 +57,135 @@ test("computeModifiedAim uses distance-based accuracy for ranged weapons", () =>
   assert.equal(computeModifiedAim(attacker, mg, { distance: 7, cover: 0 }), 2);  // 4 - 2
   assert.equal(computeModifiedAim(attacker, mg, { distance: 2, cover: 0 }), 4);  // 4 - 0
   assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
+});
+
+test("aimBreakdown — reports the base aim and the weapon's ACC at range", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
+  assert.deepEqual(b.terms, [
+    { label: "base aim", value: 4 },
+    { label: "weapon ACC at 12\"", value: 1 },
+  ]);
+  assert.equal(b.value, 3);
+});
+
+test("aimBreakdown — cover and smoke each emit a named term", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, cover: 2, targetSmoke: true });
+  assert.ok(b.terms.some((t) => t.label === "cover" && t.value === -2));
+  assert.ok(b.terms.some((t) => t.label === "target in smoke" && t.value === -2));
+});
+
+test("aimBreakdown — a modifier that does not fire emits no term", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
+  assert.ok(!b.terms.some((t) => t.label === "cover"));
+});
+
+test("computeModifiedAim — still returns a bare number, callers unchanged", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  assert.equal(computeModifiedAim(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 }), 3);
+});
+
+// The cancellation seam. A cancelled penalty must NOT appear (there is no cover
+// penalty — it was ignored), but the CANCELLER must, as a zero-valued term: it
+// is the only thing explaining why a player looking at real cover on the table
+// sees no cover term. See the matching comment in aimBreakdown.
+test("aimBreakdown — targeting computer's first fire cancels cover and says so", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, cover: 2, fireControlFirst: true });
+  assert.ok(!b.terms.some((t) => t.label === "cover"));
+  assert.ok(b.terms.some((t) => t.label === "targeting computer (ignores cover)" && t.value === 0));
+  assert.equal(b.value, 3); // cover never reached the maths
+});
+
+test("aimBreakdown — a canceller stays silent when there was no cover to cancel", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, cover: 0, fireControlFirst: true });
+  assert.ok(!b.terms.some((t) => t.label.startsWith("targeting computer")));
+});
+
+test("aimBreakdown — first fire cancels the melee-lock penalty and says so", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const engaged = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, engaged: true });
+  assert.ok(engaged.terms.some((t) => t.label === "locked in melee" && t.value === -2));
+  const first = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, engaged: true, fireControlFirst: true });
+  assert.ok(!first.terms.some((t) => t.label === "locked in melee"));
+  assert.ok(first.terms.some((t) => t.label === "targeting computer (ignores melee lock)" && t.value === 0));
+});
+
+test("aimBreakdown — Airburst Fuze and a Piledriver guard-break each name their cover cancel", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const fuze = aimBreakdown(attacker,
+    { ...WEAPONS.longRange["Autocannon"], upgradeEffect: { ignoreCover: true } },
+    { distance: 12, cover: 2 });
+  assert.ok(!fuze.terms.some((t) => t.label === "cover"));
+  assert.ok(fuze.terms.some((t) => t.label === "airburst fuze (ignores cover)" && t.value === 0));
+  const smash = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, cover: 2, guardBreak: true });
+  assert.ok(!smash.terms.some((t) => t.label === "cover"));
+  assert.ok(smash.terms.some((t) => t.label === "piledriver guard-break (ignores cover)" && t.value === 0));
+});
+
+// Recon paint and Predictive Tracking each do TWO things: cancel cover AND grant
+// ACC. Both facts get their own term — the bonus is not a substitute for the
+// explanation of the missing cover.
+test("aimBreakdown — recon paint emits both its bonus and its cover cancel", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, cover: 2, painted: true });
+  assert.ok(b.terms.some((t) => t.label === "recon paint" && t.value === 1));
+  assert.ok(b.terms.some((t) => t.label === "recon paint (ignores cover)" && t.value === 0));
+  assert.ok(!b.terms.some((t) => t.label === "cover"));
+  assert.equal(b.value, 2); // 4 - (1 + 1)
+});
+
+test("aimBreakdown — predictive tracking emits its bonus and its cover cancel", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" },
+    "targeting-computer", "predictive-tracking");
+  const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
+    { distance: 12, cover: 2, targetPinned: true });
+  assert.ok(b.terms.some((t) => t.label === "predictive tracking" && t.value === 2));
+  assert.ok(b.terms.some((t) => t.label === "predictive tracking (ignores cover)" && t.value === 0));
+  assert.ok(!b.terms.some((t) => t.label === "cover"));
+});
+
+test("aimBreakdown — aimed shot, wrecked hull and ballistic processor each name themselves", () => {
+  const aimed = aimBreakdown({ weightClass: "medium", hull: { sp: 7 } },
+    { ...WEAPONS.longRange["Autocannon"] }, { distance: 12, aimed: true });
+  assert.ok(aimed.terms.some((t) => t.label === "aimed shot" && t.value === -2));
+  const wrecked = aimBreakdown({ weightClass: "medium", hull: { sp: 0 } },
+    { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
+  assert.ok(wrecked.terms.some((t) => t.label === "hull wrecked" && t.value === -1));
+  const ballistic = aimBreakdown(
+    { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" },
+    { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
+  assert.ok(ballistic.terms.some((t) => t.label === "ballistic processor" && t.value === 1));
+});
+
+// The terms are a LEDGER, not decoration: they must always reconcile to the
+// value the engine actually used, or the panel lies about the shot it explains.
+test("aimBreakdown — the terms always sum back to the reported target number", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" },
+    "targeting-computer", "ballistic-processor");
+  for (const opts of [
+    { distance: 12 },
+    { distance: 12, cover: 2, aimed: true },
+    { distance: 20, cover: 1, engaged: true, targetSmoke: true },
+    { distance: 12, cover: 2, painted: true, aimed: true },
+    { distance: 12, cover: 2, engaged: true, fireControlFirst: true },
+    { distance: 12, cover: 2, guardBreak: true, targetSmoke: true },
+  ]) {
+    const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, opts);
+    const base = b.terms.find((t) => t.label === "base aim").value;
+    const acc = b.terms.filter((t) => t.label !== "base aim").reduce((s, t) => s + t.value, 0);
+    assert.equal(base - acc, b.value, `terms do not reconcile for ${JSON.stringify(opts)}`);
+  }
 });
 
 test("Pop Smoke worsens an attacker's modified Aim by 2", () => {

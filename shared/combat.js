@@ -36,7 +36,15 @@ export function weaponAccAt(profile, distance) {
 }
 
 // §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
-export function computeModifiedAim(attacker, profile, opts) {
+//
+// Returns `{ value, terms }` — `terms` is the itemised ledger behind `value`,
+// one `{ label, value }` per input that ACTUALLY fired, mirroring strBreakdown.
+// Terms read in ACC SPACE, not in target-number space: a bonus is positive, a
+// penalty is negative, and `value` is `base - (sum of every non-base term)`.
+// So cover, which subtracts 2 from ACC, emits `{ label: "cover", value: -2 }`.
+// Labels are the words a player reads on the table, not our field names.
+export function aimBreakdown(attacker, profile, opts) {
+  const terms = [];
   const base = AIM[attacker.weightClass] ?? 4;
   const weaponAcc = weaponAccAt(profile, opts.distance);
   // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
@@ -73,7 +81,61 @@ export function computeModifiedAim(attacker, profile, opts) {
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
   const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAcc ?? 0) : 0;
   const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAcc;
-  return base - accTotal;
+
+  // The two headline inputs are ALWAYS terms, even at 0, exactly as strBreakdown
+  // always pushes "weapon STR": they are what every modifier below is measured
+  // against. A gun contributing 0 ACC at its current range is a fact the player
+  // needs, not an absence to hide.
+  terms.push({ label: "base aim", value: base });
+  terms.push({
+    label: !profile.melee && Number.isFinite(Number(opts.distance))
+      ? `weapon ACC at ${opts.distance}"` : "weapon ACC",
+    value: weaponAcc,
+  });
+  // Cover, and the cancels. `rawCover` is what the target ACTUALLY had on the
+  // table, before any upgrade ignored it — the cancel branches above zero
+  // `cover`/`coverEff` and so cannot tell us that on their own.
+  const rawCover = Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
+  if (coverEff) terms.push({ label: "cover", value: -coverEff });
+  else if (rawCover) {
+    // A cancelled penalty must NOT be listed (there IS no cover penalty — it was
+    // ignored), but the CANCELLER is listed as a ZERO-VALUED term. This is the one
+    // place a zero term earns its space: it explains an ABSENCE. Without it a
+    // player looking at real cover on the table sees no cover term at all and
+    // concludes the app is broken. Do not "simplify" this away.
+    //
+    // Precedence follows the evaluation order above: `cover` is zeroed by
+    // ignoreCover / guardBreak / paint BEFORE `coverEff` consults fireControlFirst
+    // and predictive, so the earlier canceller is the one that actually did it.
+    const canceller = profile.upgradeEffect?.ignoreCover ? "airburst fuze"
+      : opts.guardBreak ? "piledriver guard-break"
+      : (opts.painted && !profile.melee) ? "recon paint"
+      : opts.fireControlFirst ? "targeting computer"
+      : "predictive tracking";
+    terms.push({ label: `${canceller} (ignores cover)`, value: 0 });
+  }
+  if (aimedPenalty) terms.push({ label: "aimed shot", value: aimedPenalty });
+  if (hullPenalty) terms.push({ label: "hull wrecked", value: hullPenalty });
+  if (engagedEff) terms.push({ label: "locked in melee", value: engagedEff });
+  // Same absence-explaining rule as cover: the engaged −2 is cancelled only by
+  // the Targeting Computer's first fire, so name it rather than silently drop it.
+  else if (engagedPenalty) terms.push({ label: "targeting computer (ignores melee lock)", value: 0 });
+  // Recon paint and Predictive Tracking each do TWO things — cancel cover and
+  // grant ACC. The bonus term below is a separate fact from the cancel term
+  // above; neither substitutes for the other.
+  if (paintBonus) terms.push({ label: "recon paint", value: paintBonus });
+  if (smoke) terms.push({ label: "target in smoke", value: smoke });
+  if (ballistic) terms.push({ label: "ballistic processor", value: ballistic });
+  if (predictiveAcc) terms.push({ label: "predictive tracking", value: predictiveAcc });
+
+  return { value: base - accTotal, terms };
+}
+
+// §7.4 — the D6 target number. Thin wrapper over aimBreakdown so the eleven
+// inputs folded in here can be shown in the resolution ledger without changing
+// any caller.
+export function computeModifiedAim(attacker, profile, opts) {
+  return aimBreakdown(attacker, profile, opts).value;
 }
 
 // §7.4 — roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
