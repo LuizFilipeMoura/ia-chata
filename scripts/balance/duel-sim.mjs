@@ -235,3 +235,86 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
     firstShotSp,
   };
 }
+
+// ---- CLI ----------------------------------------------------------------
+// Axes are deliberately smaller than weapon-sweep.mjs. The full grid at duel
+// length would be ~485M attacks (~3 hours); arc and distance are already
+// answered by that sweep (F1 revived arc; F6 says range works as designed) and
+// neither interacts with cadence. What is left is what only 10 rounds can show.
+import { pathToFileURL } from "node:url";
+import { WEAPONS, WEAPON_UPGRADES } from "../../shared/game-state.js";
+
+const TRIALS = Number(process.env.TRIALS || 500);
+const CHASSIS_A = "medium-lance-mortar";
+const CHASSIS_B = "medium-lance-mortar"; // the CONTROL — a documented constant
+// Side, not front: arcBonus returns null for Raking Fire on the front arc, so a
+// front sweep measures Mini Gun and Double MG as a structural zero (F7).
+const ARC = "side";
+
+// Each cell's mean is only worth reading if enough trials survived censoring.
+// Below this the row is reported with its numbers intact but flagged, because a
+// mean over 3 duels is a rumour, not a measurement.
+const MIN_SAMPLE = Math.max(1, Math.floor(TRIALS * 0.5));
+
+async function main() {
+  if (!Number.isFinite(TRIALS) || TRIALS < 1) {
+    throw new Error(`TRIALS must be a positive number, got ${JSON.stringify(process.env.TRIALS)}.`);
+  }
+  const rows = [];
+  for (const weapon of Object.keys(WEAPONS.longRange)) {
+    const prof = WEAPONS.longRange[weapon];
+    // No `?? 12` fallback. A silent default distance is exactly the buried
+    // measurement decision this harness exists to stop: the cell would still
+    // print a tidy number, just for a range nobody chose. Today every long-range
+    // weapon carries a sweet spot, so this throw is unreachable — it is here for
+    // the day someone adds one that does not.
+    if (!Number.isFinite(prof.sweet)) {
+      throw new Error(`duel-sim sweep: "${weapon}" has no numeric sweet spot (got ${prof.sweet}) — the sweep must not guess a distance for it.`);
+    }
+    const distance = prof.sweet; // sweet spot only
+    // A weapon with no upgrade list would contribute zero rows and the sweep
+    // would under-report it in silence — the reader counts 30 rows and never
+    // learns which weapon went missing. Throw instead.
+    const upgrades = WEAPON_UPGRADES[weapon];
+    if (!upgrades?.length) {
+      throw new Error(`duel-sim sweep: no WEAPON_UPGRADES for "${weapon}" — it would vanish from the sweep without a word.`);
+    }
+    for (const u of upgrades) {
+      let spDealt = 0, spTaken = 0, wrecks = 0, rounds = 0, lost = 0, n = 0;
+      for (let s = 1; s <= TRIALS; s++) {
+        // Each runDuel builds its own mulberry32 from the seed, so cells are
+        // independent and no cross-cell re-seeding is needed. Seeds repeat across
+        // cells BY DESIGN: the same 500 dice streams meet every weapon-tier, which
+        // pairs the comparison instead of leaving it to luck.
+        const r = runDuel({ chassisA: CHASSIS_A, chassisB: CHASSIS_B, weaponA: weapon,
+          upgradeA: u.id, distance, arc: ARC, seed: s });
+        // weaponLost cells are CENSORED, not measured: spDealt was capped by an
+        // arm coming off, not by the weapon. Counted, and excluded from the mean.
+        if (r.weaponLost) { lost++; continue; }
+        spDealt += r.spDealt; spTaken += r.spTaken; rounds += r.rounds;
+        if (r.wrecked) wrecks++;
+        n++;
+      }
+      rows.push({ weapon, tier: u.nature, upgrade: u.id, distance, arc: ARC,
+        spDealt: n ? spDealt / n : null, spTaken: n ? spTaken / n : null,
+        wreckRate: n ? wrecks / n : null, rounds: n ? rounds / n : null,
+        // `n` is the surviving sample, `censored` the trials an arm-loss ate.
+        // `underSampled` saves the reader from doing that division themselves and
+        // mistaking a mean over a handful of duels for a real one.
+        n, censored: lost, underSampled: n < MIN_SAMPLE });
+      process.stderr.write(`${weapon} ${u.nature}\n`);
+    }
+  }
+  const under = rows.filter((r) => r.underSampled);
+  if (under.length) {
+    process.stderr.write(`\nWARNING: ${under.length}/${rows.length} cell(s) kept fewer than ${MIN_SAMPLE}/${TRIALS} trials after censoring:\n`);
+    for (const r of under) process.stderr.write(`  ${r.weapon} ${r.tier}: n=${r.n}, censored=${r.censored}\n`);
+  }
+  process.stdout.write(JSON.stringify({ trials: TRIALS, rounds: DUEL_ROUNDS,
+    chassisA: CHASSIS_A, chassisB: CHASSIS_B, arc: ARC, minSample: MIN_SAMPLE, rows }, null, 0));
+}
+
+// Run ONLY when invoked directly. Comparing resolved URLs rather than matching
+// the filename: `duel-sim.test.mjs` imports this module, and an endsWith check is
+// one sibling filename away from making `npm test` run the whole sweep.
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) main();
