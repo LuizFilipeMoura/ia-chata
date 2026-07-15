@@ -643,7 +643,7 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 - **Victory — Salvage** (§11) — weighted centre objective (2 VP), annihilation auto-win.
 
 **Open questions / TBD:**
-- Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class Penetration modifier** (Light −1 / Heavy +1 / Colossal +2 vs the Medium baseline, §12); all four classes are playable. Playtest the ±2-per-step spread — it may need widening/narrowing per weapon later.
+- Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class Penetration modifier** (Light −1 / Heavy +1 / Colossal +2 vs the Medium baseline, §12); all four classes are playable. Playtest the ±1-per-step spread — it may need widening/narrowing per weapon later.
 - Faction perks — not yet written (§14).
 - Machine-gun Penetration/arc values under Raking Fire — watch that they're "strong not silly" on the flanks.
 - Alpha-strike swing at 3v3 — high-Penetration crits can gut a Rig in one activation; see if crits need softening.
