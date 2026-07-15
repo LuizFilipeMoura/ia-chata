@@ -2,7 +2,7 @@
 
 **Version:** wr-0.10 · **Base:** standalone working ruleset
 **Scale:** distances are written for the models this ruleset uses — **Light on 60 mm bases, Medium on 75 mm bases**. Measure in inches, base-to-base (closest points).
-**Dice:** six-sided (**D6**) and twelve-sided (**D12**).
+**Dice:** six-sided (**D6**), ten-sided (**D10**), and twelve-sided (**D12**).
 
 > This is the single source of truth. It does **not** reference the old PDF — everything needed to play is here.
 > Changes marked **⚙ TUNING** are house decisions or invented baselines that will change during playtesting. See **Design Notes** at the end for the full list.
@@ -63,47 +63,20 @@ Every Rig starts from a **weight class**, which sets its base profile.
 - **Weapon slots** — how many weapons the Rig may carry. Colossal Rigs get an extra **Hull-mounted** slot.
 - **Structure Points (SP)** — durability per component. At 0 SP → catastrophic damage (§8).
 
-### Impact Tables (armour)
+### Toughness (armour)
 
-After a hit, the **Impact Roll** total (D6 + STR + arc modifiers) is compared to the target location's row. The total determines the severity:
+Armour is a single per-location stat: **Toughness (T)**. It is what the **Wound Roll** (§7.5) tests against — the tougher the location, the higher the D10 you need. There is no lookup table; T feeds straight into one formula.
 
-**Light Rig**
+| Location | Light | Medium | Heavy | Colossal |
+|---|:--:|:--:|:--:|:--:|
+| Hull | 4 | 5 | 6 | 7 |
+| Arms | 3 | 4 | 5 | 6 |
+| Legs | 3 | 4 | 5 | 6 |
+| Engine | 3 | 3 | 4 | 5 |
 
-| Location | Direct (−1 SP) | Severe (−2 SP) | Critical (−3 SP) |
-|---|:--:|:--:|:--:|
-| Hull | 10–13 | 14–15 | 16+ |
-| Arms | 10–11 | 12–13 | 14+ |
-| Legs | 10–12 | 13–14 | 15+ |
-| Engine | 7–9 | 10–11 | 12+ |
+Toughness varies **by location, not just by chassis** — a Medium Rig's Hull is **T5** but its Engine is only **T3**. That is why the hit location is rolled *before* the Wound Roll (§7): the location supplies the T you roll against.
 
-**Medium Rig**
-
-| Location | Direct | Severe | Critical |
-|---|:--:|:--:|:--:|
-| Hull | 11–13 | 14–16 | 17+ |
-| Arms | 10–12 | 13–14 | 15+ |
-| Legs | 11–12 | 13–14 | 15+ |
-| Engine | 8–9 | 10–11 | 12+ |
-
-**Heavy Rig**
-
-| Location | Direct | Severe | Critical |
-|---|:--:|:--:|:--:|
-| Hull | 13–14 | 15–16 | 17+ |
-| Arms | 12–13 | 14–15 | 16+ |
-| Legs | 14–15 | 16 | 17+ |
-| Engine | 8–10 | 11–12 | 13+ |
-
-**Colossal Rig**
-
-| Location | Direct | Severe | Critical |
-|---|:--:|:--:|:--:|
-| Hull | 13–15 | 16 | 17+ |
-| Arms | 13 | 14–15 | 16+ |
-| Legs | 13–15 | 16 | 17+ |
-| Engine | 9–10 | 11–13 | 14+ |
-
-An Impact Roll total **below** a location's Direct threshold does nothing (it glances off).
+*⚙ TUNING: replaced the old per-chassis Impact Tables (four severity grids) with a single Toughness stat. The tables left 69 weapon/target combinations that could never deal damage at any roll; the Wound Roll's clamp (§7.5) makes every matchup live.*
 
 ---
 
@@ -166,14 +139,14 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   reloaded shot is still the activation's second ranged shot, so it also runs
   **+1 heat** hot.
 
-- **Repair [1]** — roll 1 D12: on **7+** repair 1 SP to any one location; on **10+** repair 2 SP. *⚙ TUNING: now generates 1 heat.*
+- **Repair [1]** — roll 1 D6 and repair that many SP to any one location: **1-2 → 1 SP**, **3-4 → 2 SP**, **5-6 → 3 SP**. A Repair never whiffs. *⚙ TUNING: now generates 1 heat; was a D12 that failed below 7.*
 
 - **Shut Down [0]** — end the activation and vent heat. May be declared **at any point** in the activation; cooling is **proportional** to how much of the activation is spent shutting down — declared first (no actions used) it vents all heat to the floor, and the more slots already spent, the less it sheds. *⚙ TUNING: was first-action-only + full vent.*
 
 - **Prepare [1]** — generate 1 heat and place a facedown preparation token by the Rig, choosing one reaction below. It lasts until this Rig's next activation; reveal it when its trigger occurs. A Rig may hold **only one** preparation at a time.
   - *Evasive Manoeuvre* — when targeted by an attack on an enemy's turn, **before** the attack resolves, move up to **half Speed** in any direction. If this puts the Rig out of range or line of sight, the attack fails.
   - *Return Fire* — after an enemy Rig attacks this Rig, **pivot for free to face that enemy** (this is not a Move — a pinned Rig may still do it), then choose 1 weapon and make an attack against it.
-  - *Brace for Incoming Fire* — attacks against this Rig's **front arc** suffer **−2 to their Impact Rolls** until the next round. While braced the Rig is **immovable** — it cannot be pushed, shoved, or staggered by weapon perks — and a **melee** attacker that swings at its front and **fails to breach** (deals no SP) eats a **free STR 6 melee counter** (once per round). *⚙ TUNING: counter STR 6.*
+  - *Brace for Incoming Fire* — attacks against this Rig's **front arc** suffer **−2 STR on their Wound Rolls** until the next round. While braced the Rig is **immovable** — it cannot be pushed, shoved, or staggered by weapon perks — and a **melee** attacker that swings at its front and **fails to breach** (deals no SP) eats a **free STR 6 melee counter** (once per round). *⚙ TUNING: counter STR 6.*
 
 - **Answer Tokens (for the player going second).** At the start of each round, the player who activates **second** gains **1 Answer token**. An Answer token may be spent at any time to place one of the preparations above on one of their Rigs **for free** — no action, no heat — otherwise following all normal preparation rules (facedown, revealed on trigger, one per Rig). Unspent Answer tokens are removed in the Recovery Phase. *⚙ TUNING: 1 per round.*
 
@@ -267,8 +240,16 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
    | 8–10 | Legs |
    | 11–12 | Engine |
 
-7. **Impact Roll.** For **each hit**, roll 1 D6 and add the weapon's **STR** (adjusted for the firing Rig's weight class, §12). For a **ranged** attack, add **+2 STR** into the target's **side arc** or **+4 STR** into its **rear arc**. **Melee attacks gain no arc bonus** — a melee weapon strikes just as hard from any facing, and being in contact is deadly enough. *(Raking Fire machine guns override the ranged side/rear values — §13.)* Compare each total to the location's row in the Impact Table (§2).
-8. **Apply damage.** Direct = **−1 SP**, Severe = **−2 SP**, Critical = **−3 SP**.
+7. **Wound Roll.** For **each hit**, roll 1 **D10** against the struck location's **Toughness** (§2). The hit wounds on:
+
+   > **D10 ≥ 6 + Toughness − effective STR**
+
+   Your **effective STR** is the weapon's STR (adjusted for the firing Rig's weight class, §12), plus its **arc bonus** below, plus any perk or equipment modifiers. Each point of STR is worth exactly **10%** — no lookup needed.
+
+   **Arc bonus.** Add **+2 STR** into the target's **side arc** and **+3 STR** into its **rear arc**; the front arc gives nothing. **Melee climbs the same ladder as ranged** — a melee weapon flanking a target gains the bonus exactly as a gun does. *(Raking Fire machine guns replace these values — §13.)* *⚙ TUNING: melee used to gain no arc bonus at all, which capped its damage and was the root cause of the old model's dead matchups.*
+
+   **The target number clamps to 2–10.** A natural **10 always wounds** and a natural **1 never does**, whatever the numbers say. No target is ever immune. *⚙ TUNING: the clamp is deliberate — it is what retired the old Impact Tables' 69 dead matchups. Do not remove it to "make armour matter".*
+8. **Apply damage.** Each wound costs the location the weapon's **Damage (D)** stat in SP (§12) — plus any per-wound riders such as **Rend** (§13). A hit that fails to wound does nothing.
 
 **Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage. *(Engine note: the digital tracker auto-routes overflow to the Hull, or the next location with SP remaining if the Hull is already at 0.)*
 
@@ -296,7 +277,7 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 
 ## 9. Rig Destruction
 
-When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **4"** suffer a **D6 + STR 10** hit — the destroyed Rig's controller rolls the damage; each affected Rig's controller rolls its own hit location.
+When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **4"** suffer a flat **STR 8 / D2** hit, wounding on a D10 like any other attack (§7.5) — the destroyed Rig's controller rolls the wound; each affected Rig's controller rolls its own hit location.
 
 ---
 
@@ -358,11 +339,11 @@ Any weapon may be fitted to a Rig of **any weight class** and **any faction**. R
 
 | Chassis | Light | Medium | Heavy | Colossal |
 |---|:--:|:--:|:--:|:--:|
-| **STR modifier** | −2 | +0 | +2 | +4 |
+| **STR modifier** | −1 | +0 | +1 | +2 |
 
-Apply this modifier to the weapon's STR every time you make an Impact Roll (§7). *Example: a Sniper Cannon (STR 12) reads STR 10 on a Light Rig, 12 on a Medium, 14 on a Heavy, 16 on a Colossal.*
+Apply this modifier to the weapon's STR every time you make a Wound Roll (§7). *Example: a Sniper Cannon (STR 10) reads STR 9 on a Light Rig, 10 on a Medium, 11 on a Heavy, 12 on a Colossal.* *⚙ TUNING: the ladder was halved from ±2/±4 when STR was rescaled for the Wound Roll — each point is now worth a flat 10%, so it buys twice as much as it used to.*
 
-> **Perks are being reworked.** Base weapons now carry **stats only** — every *signature* perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. **Exception:** the two **Machine Guns** (Mini Gun, Double MG) carry **Raking Fire** innately (§13) — it defines the weapon type (no frontal damage; +4 side / +8 rear), not a signature upgrade. *Melee* is likewise a weapon **type** (the Melee Weapons section), not a perk.
+> **Perks are being reworked.** Base weapons now carry **stats only** — every *signature* perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. **Exception:** the two **Machine Guns** (Mini Gun, Double MG) carry **Raking Fire** innately (§13) — it defines the weapon type (no frontal damage; +3 side / +6 rear), not a signature upgrade. *Melee* is likewise a weapon **type** (the Melee Weapons section), not a perk.
 
 > **Upgrade natures.** Every weapon now offers **three** upgrades, one of each nature, and you pick **one per weapon**:
 > - **Field** — unconditional, always-on, reinforces the weapon's role. The safe default.
@@ -373,24 +354,24 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 **Machine Guns** — fast-firing, low-STR flanking specialists.
 
-| Weapon | ROF | STR | Sweet | Peak | Falloff/in | Range |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|
-| Mini Gun | 8 | 4 | 7" | +2 | −0.35 | 0–18" |
-| Double MG | 8 | 6 | 9" | +1 | −0.25 | 0–20" |
+| Weapon | ROF | STR | D | Sweet | Peak | Falloff/in | Range |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| Mini Gun | 8 | 3 | 1 | 7" | +2 | −0.35 | 0–18" |
+| Double MG | 8 | 5 | 1 | 9" | +1 | −0.25 | 0–20" |
 
 **Cannons & Artillery** — front-capable firepower.
 
-| Weapon | ROF | STR | Sweet | Peak | Falloff/in | Range |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|
-| Autocannon | 4 | 8 | 12" | +1 | −0.22 | 0–26" |
-| Arc Gun | 2 | 10 | 20" | +1 | −0.18 | 0–32" |
-| Mortar | 3 | 9 | 18" | +1 | −0.15 | 6–34" |
-| Sniper Cannon | 1 | 12 | 22" | +2 | −0.15 | 0–28" |
-| Siege Maul | 1 | 13 | 8" | +1 | −0.30 | 0–16" |
-| Missile Barrage | 4 | 9 | 20" | +1 | −0.15 | 6–34" |
-| Harpoon | 1 | 12 | 14" | +2 | −0.28 | 0–22" |
-| Rivet Gun | 6 | 4 | 6" | +2 | −0.40 | 0–14" |
-| Crossbow | 1 | 10 | 18" | +3 | −0.25 | 0–24" |
+| Weapon | ROF | STR | D | Sweet | Peak | Falloff/in | Range |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| Autocannon | 4 | 7 | 2 | 12" | +1 | −0.22 | 0–26" |
+| Arc Gun | 2 | 8 | 3 | 20" | +1 | −0.18 | 0–32" |
+| Mortar | 3 | 7 | 2 | 18" | +1 | −0.15 | 6–34" |
+| Sniper Cannon | 1 | 10 | 4 | 22" | +2 | −0.15 | 0–28" |
+| Siege Maul | 1 | 11 | 5 | 8" | +1 | −0.30 | 0–16" |
+| Missile Barrage | 4 | 7 | 2 | 20" | +1 | −0.15 | 6–34" |
+| Harpoon | 1 | 10 | 3 | 14" | +2 | −0.28 | 0–22" |
+| Rivet Gun | 6 | 3 | 1 | 6" | +2 | −0.40 | 0–14" |
+| Crossbow | 1 | 8 | 4 | 18" | +3 | −0.25 | 0–24" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose ACC up close.
 
@@ -400,19 +381,19 @@ Apply this modifier to the weapon's STR every time you make an Impact Roll (§7)
 
 ### Melee Weapons
 
-| Weapon | ROF | STR | ACC | RNG |
-|---|:--:|:--:|:--:|:--:|
-| Sword | 2 | 6 | – | 2 |
-| Circular Saw | 3 | 6 | – | 2 |
-| Chainsaw | 3 | 8 | – | 2 |
-| Claw | 2 | 8 | +1 | 2 |
-| Lance | 1 | 11 | +1 | 2 |
-| Wrecking Ball | 1 | 12 | – | 2 |
-| Bulwark Shield | 1 | 6 | – | 2 |
-| Flamethrower | 4 | 7 | +1 | 2 |
-| Anchor | 1 | 12 | – | 2 |
-| Pressure Claw | 2 | 9 | +1 | 2 |
-| Talon | 2 | 7 | +1 | 2 |
+| Weapon | ROF | STR | D | ACC | RNG |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Sword | 2 | 5 | 3 | – | 2 |
+| Circular Saw | 3 | 5 | 2 | – | 2 |
+| Chainsaw | 3 | 7 | 2 | – | 2 |
+| Claw | 2 | 7 | 3 | +1 | 2 |
+| Lance | 1 | 9 | 4 | +1 | 2 |
+| Wrecking Ball | 1 | 10 | 5 | – | 2 |
+| Bulwark Shield | 1 | 5 | 3 | – | 2 |
+| Flamethrower | 4 | 6 | 2 | +1 | 2 |
+| Anchor | 1 | 10 | 4 | – | 2 |
+| Pressure Claw | 2 | 7 | 3 | +1 | 2 |
+| Talon | 2 | 6 | 3 | +1 | 2 |
 
 ### Weapon Upgrades
 
@@ -459,19 +440,19 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Burning** (status) — a rig on fire takes `burning` SP to its Hull at the start of each of its activations, then keeps burning until doused. The **Douse** action (1 slot, 0 heat) removes one Burning stack.
 - **Napalm** (Flamethrower, Tuned) — a landed hit sets the target Burning at 1; it never stacks past 1, so one Douse clears it.
 - **Conflagration** (Flamethrower, Prototype) — each landed hit adds +1 Burning to the target (stacks with no cap) and runs the attacker +1 heat as its downside; each stack needs its own Douse.
-- **Penetrator Rounds** (Autocannon, Prototype) — every 3rd Autocannon volley (per-rig belt counter) bypasses the armour row entirely: every landed hit is forced to Severe (2 SP) regardless of location or roll. The belt then cycles slow for exactly the attack right after — that attack's ROF is halved.
+- **Penetrator Rounds** (Autocannon, Prototype) — every 3rd Autocannon volley (per-rig belt counter) **skips the Wound Roll entirely**: every landed hit wounds automatically, regardless of location or Toughness. The belt then cycles slow for exactly the attack right after — that attack's ROF is halved.
 - **Suppression Lock** (Mini Gun, Prototype) — consecutive hits on the *same* target ramp a pin: 1 stack halves its Speed next round, 2 stacks also docks it 1 action on its next activation, 3 stacks pins it in place (can't Move, Sprint, or Jump Jets) and blocks its next Prepare entirely. The pin and the Prepare-block are temporary — the pin clears in Recovery (one round) and must be re-applied by continued fire; it never uses the permanent leg-destruction immobilise. Firing on a different target resets the count to 1 stack. The attacker runs +1 heat every attack while the lock is active. Stacks cap at 3 and don't decay on their own.
 - **Ion Storm** (Arc Gun, Prototype) — a landed Arc Gun hit EMPs the target: it loses 1 action, can't Prepare, and can't fire an equipment active on its next activation, plus takes a 2-heat spike. The discharge overloads the attacker: +3 self-heat and its own Arc Gun can't fire until its next attempt (which is refused and clears the overload).
 - **Fire Control Lock** (Missile Barrage, Prototype) — the **Lock Target** action (1 slot, 1 heat) paints one target. The next Missile Barrage volley aimed at that exact rig, this round or the next, can't miss (every shot hits) and gains Armour Piercing; the paint is then consumed. An unused lock goes stale after its expiry round and does nothing.
 - **Skewer** (Lance, Prototype) — a damaging Lance blow (≥1 hit dealing SP) that leaves the target locked to the skewerer impales it. While impaled, if that target **Disengages** from the skewerer it first eats a free STR-11 Lance strike as it tears free, then the lock breaks as normal. The impale clears with the lock (a destroyed skewerer strikes nothing).
-- **Breach Grip** (Claw, Prototype) — a damaging Claw blow (≥1 hit dealing SP) pries the struck location's armour open. That location is **cracked** for a two-round window — the round it lands (N) and the next (N+1), gone by N+2: while the crack is live, **every** Impact Roll against it — from any attacker with any weapon — gets **+2** to its total. The crack expires automatically in Recovery once its round passes.
+- **Breach Grip** (Claw, Prototype) — a damaging Claw blow (≥1 hit dealing SP) pries the struck location's armour open. That location is **cracked** for a two-round window — the round it lands (N) and the next (N+1), gone by N+2: while the crack is live, **every** Wound Roll against it — from any attacker with any weapon — gets **+2 STR**. The crack expires automatically in Recovery once its round passes.
 - **Dismember** (Circular Saw, Prototype) — the escalation of Sunder: a damaging Saw hit reduces the struck location's max SP by 1 **and** checks for a cripple. Once that max is ground to **≤ half** the location's commissioned original, the location is **permanently crippled** (once): legs → the rig is immobilised for good; an arm/weapon location → a weapon is destroyed; hull/engine → that location can never be repaired again.
 - **Emplacement** (Bulwark Shield, Prototype) — the **Emplace** action (1 slot, 0 heat) roots the Rig into a fortress stance: its Raise Shield becomes permanent (auto-raised free at each activation start — no Prepare action, no Answer token), its action budget drops from 3 to 2, and it can no longer Move, Sprint, or Jump Jets. The **Un-plant** action (1 slot) lifts the stance and costs +2 heat. Emplacing is on a 3-round cooldown measured from when it was entered (re-enter no earlier than the round you emplaced + 3).
 - **Piledriver Protocol** (Siege Maul, Prototype) — a **Momentum** system. The Rig gains **+1 Momentum** for any activation it **advanced** (Moved or Sprinted), capped at 3; Momentum persists between activations. A Siege Maul shot spends **all** stored Momentum: the hit ignores the target's **Brace** (no −2) and **cover**, and gains **+1 STR per Momentum** spent (Momentum then resets to 0 whether or not the shot connected). **Downside:** while storing Momentum (> 0) the Rig **cannot Raise Shield** — a requested Raise Shield downgrades to Brace (all-in on the charge, no guard). When a Momentum-spending smash lands ≥1 damaging hit, the engine emits a player instruction — *"Piledriver — shove &lt;target&gt; back 3" (move the mini)."* — for the players to resolve on the board (no coordinates are simulated).
 - **Enfilade** (Sniper Cannon, Prototype) — a spatial ricochet, narrated rather than simulated. Only **aimed** Sniper Cannon shots feed a per-rig counter; on every **3rd** aimed shot the engine emits a player instruction — *"Enfilade — ricochet! Resolve a +2 STR hit on the next rig in line of sight behind &lt;target&gt; (player's choice)."* The player picks the rig behind the target (they know line of sight) and applies the +2 STR hit via the normal attack/damage controls. Only the aimed-shot cadence is tracked in state.
 - **Steady Aim** (Crossbow, Tuned) — +3 STR when the measured firing distance is within 2" of the Crossbow's sweet spot (16–20").
 - **Exploit Wound** (Talon, Tuned) — +3 STR against a struck location already below its max SP.
-- **Evisceration** (Talon, Prototype) — a hit on a location at or below half its max SP is forced to Critical (−3 SP), every hit; downside: −1 STR against a fully-undamaged struck location.
+- **Evisceration** (Talon, Prototype) — a **wound** on a location at or below half its max SP deals **+1 Damage**; downside: −1 STR against a fully-undamaged struck location.
 - **Pinning Bolt** (Crossbow, Prototype) — a damaging bolt immobilises the target until the firer's next activation (guaranteed, no roll, may still pivot); the firer runs +2 heat.
 - **Barrage** (Mortar, Prototype) — the **Barrage** action (1 slot) commits the Mortar to a shelled zone. The engine emits a player instruction — *"Barrage — place a shelled-zone marker within 6–34" of this Rig; it shells a 3" zone for 2 rounds. Each round, apply 1 SP to every rig in the zone (players adjudicate who's inside)."* — and sets `barrageRoundsLeft = 2`. While a barrage is active the Mortar is **locked** (it can't fire a direct shot; melee is unaffected), and each **Recovery** the Rig takes **+1 heat** (upkeep) and emits the per-round apply-SP prompt before counting down. After 2 Recoveries the barrage ends and the Mortar unlocks. A Rig can't start a new Barrage while one is still running, and only a Mortar carrying this upgrade can Barrage.
 - **Tow Chain** (Wrecking Ball, Prototype) — a spatial fling, narrated rather than simulated. On a damaging Wrecking Ball hit, if the chain is charged (`round ≥ towChainCooldownUntil`), the engine emits a player instruction — *"Tow Chain — fling &lt;target&gt; up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat."* The attacker takes **+2 heat**, is **rooted for the rest of this activation** (no Move/Sprint after the tow), and the fling goes on a **3-round cooldown** (`towChainCooldownUntil = round + 3`). While recharging, the Wrecking Ball hits normally with no fling.
@@ -486,10 +467,10 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 
 ## 13. Weapon Perks
 
-- **Armour Piercing** — for each Impact Roll of 6, add a D3 to the result.
-- **Bulwark** — the Rig may arm a fourth preparation, **Raise Shield** (Prepare [1 heat], §5), placed facedown like any preparation. When this Rig is attacked while Raise Shield is active, reveal it: a **front-arc** attack is **negated** (every Impact Roll automatically fails); a **side- or rear-arc** attack has every Impact Roll at **−4**. It protects regardless of the attacker's range (it is not the 2" bash). An Answer token (§5) may place Raise Shield only on a Rig carrying a Bulwark Shield.
+- **Armour Piercing** — reroll each **failed** Wound Roll. It buys *frequency*, not depth: more wounds land, each still deals the weapon's Damage.
+- **Bulwark** — the Rig may arm a fourth preparation, **Raise Shield** (Prepare [1 heat], §5), placed facedown like any preparation. When this Rig is attacked while Raise Shield is active, reveal it: a **front-arc** attack is **negated** (every Wound Roll automatically fails); a **side- or rear-arc** attack has every Wound Roll at **−3 STR**. It protects regardless of the attacker's range (it is not the 2" bash). An Answer token (§5) may place Raise Shield only on a Rig carrying a Bulwark Shield.
 - **Charged Shot** — optional fire-mode: **+2 STR**, but each attack die that rolls a 1 adds 1 heat.
-- **Cleave** — the spinning blade carries through: on a successful hit, one other enemy Rig within **2"** of the target also suffers 1 hit (roll its hit location and Impact Roll normally).
+- **Cleave** — the spinning blade carries through: on a successful hit, one other enemy Rig within **2"** of the target also suffers 1 hit (roll its hit location and Wound Roll normally).
 - **Full Auto** — optional fire-mode: **+2 ROF**, but each attack die that rolls a 1 adds 1 heat.
 - **Hot** — firing generates **2 heat** instead of 1. If written as **(Hot)** before a perk, the weapon is not Hot by default, but the Ironclad may push the engine to gain that perk for the attack at the cost of being Hot.
 - **Hull** — a Hull-mounted weapon (Colossal only, in this edition). May be equipped only once per Rig.
@@ -497,8 +478,8 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Incendiary** — a successful hit increases the target's heat by 1 (needs only to hit).
 - **Melee** — usable only within **2"**; never needs reloading.
 - **Precision** — may make an Aimed Shot **without** the −2 ACC penalty.
-- **Raking Fire** — this weapon **cannot damage a target's front arc**: resolve the attack normally, but every Impact Roll against a front-arc target automatically fails. Against the **side arc** the weapon gains **+4 STR**, and against the **rear arc +8 STR** — these **replace** the standard +2 / +4 side/rear bonuses (§7). Machine guns rip apart exposed flanks but glance off frontal armour.
-- **Rend** — the chain grinds deeper: for each Impact Roll of **5 or 6**, add a **D3** to the result.
+- **Raking Fire** — this weapon **cannot damage a target's front arc**: resolve the attack normally, but every Wound Roll against a front-arc target automatically fails. Against the **side arc** the weapon gains **+3 STR**, and against the **rear arc +6 STR** — these **replace** the standard +2 / +3 side/rear bonuses (§7). Machine guns rip apart exposed flanks but glance off frontal armour.
+- **Rend** — the chain grinds deeper: each wound deals **+1 Damage**. It buys *depth*, not frequency (cf. Armour Piercing above).
 - **Shock** — on a successful hit, the target's movement is halved (round down) during its next activation.
 - **Staggering** — on a successful hit, roll 1 D6: **1–2** target pivots 90° left; **3–4** target is pushed back 3"; **5–6** target pivots 90° right.
 
@@ -524,11 +505,11 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 
 | Family | Equipment | Passive (always on) | Active — *costs 1 slot* |
 |---|---|---|---|
-| **Armor** | **Ablative Plating** | +1 max SP to Hull | **Harden** (+1 heat): until this Rig's next activation, all impact rolls against it are at −1 |
+| **Armor** | **Ablative Plating** | +1 max SP to Hull | **Harden** (+1 heat): until this Rig's next activation, all Wound Rolls against it are at −1 STR |
 | **Cooling** | **Radiator Array** | Cools **2** heat in Recovery instead of 1 | **Purge** (−2 heat): vent on demand |
 | **Mobility** | **Servo Actuators** | Sprint costs 1 heat instead of 2 | **Jump Jets** (+2 heat): move up to **base Speed**, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties |
 | **Power** | **Overclock Core** | The first time this Rig's Engine reaches 0 SP, it does **not** skip its next activation | **Overclock** (+3 heat): +2 actions this activation (net +1 after the slot) |
-| **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 2 SP to one location, no D12 roll |
+| **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 4 SP to one location, no D6 roll |
 | **Thermal** | **Blast Furnace Core** | Safe up to **+1** over Heat Capacity before the overheat roll | **Heat Purge Wave** (0 heat): dump banked heat — vent to Heat Capacity and scald every enemy within 3" (players adjudicate the AoE) |
 | **Fire Control** | **Targeting Computer** | The first **Fire** each activation ignores its cover and engaged accuracy penalties | **Lock Sight** (+1 heat): your next shot this activation rerolls all its missed to-hit dice |
 | **Countermeasures** | **Reactive Plating** | Side/rear-arc attacks against this Rig take **−1 STR** | **Pop Smoke** (0 heat): until this Rig's next activation, every attacker is at **−2 accuracy** against it (and any missile Lock on it is broken) |
@@ -543,7 +524,7 @@ Each piece of equipment offers **three upgrades, one of each nature** (see *Upgr
 | Radiator Array | Twin Radiators (Purge vents −3) | Coolant Injection (−2 heat before the overheat roll when over Capacity) | Cryo Reservoir (bank cold; spend for instant cooling + a STR spike) |
 | Servo Actuators | Reinforced Servos (Sprint reaches 2× Speed, not 1½×) | Kickstart Pistons (charge into contact → first melee after +2 STR) | Grapnel Launcher (yank free of a lock or reel an enemy in; heat + cooldown) |
 | Overclock Core | Redundant Capacitors (Overclock costs +2 heat) | Adrenaline Surge (below half SP, Overclock grants +3 actions) | Reactor Overdrive (Overclock also +2 STR; overheat bonus doubles) |
-| Field Repair Suite | Master Toolkit (Repair heals +2 SP) | Battlefield Triage (Emergency Patch heals 3 SP on a destroyed location) | Nanite Swarm (seed nanites that heal each Recovery; −1 Heat Capacity while active) |
+| Field Repair Suite | Master Toolkit (Repair heals +2 SP) | Battlefield Triage (Emergency Patch heals 5 SP on a destroyed location) | Nanite Swarm (seed nanites that heal each Recovery; −1 Heat Capacity while active) |
 | Blast Furnace Core | Insulated Core (safe up to +2 over Capacity) | Backdraft (Heat Purge Wave +1 STR per 2 heat over Capacity) | Meltdown Protocol (bank overheat as charge; spend for STR or a burst) |
 | Targeting Computer | Ballistic Processor (+1 accuracy vs a target in your sweet-spot band) | Predictive Tracking (vs a static/pinned target: +2 accuracy, ignore cover) | Fire Solution Lock (hold still, stack a solution → an auto-hit AP volley) |
 | Reactive Plating | Angled Plates (side/rear attacks −2 STR) | Chaff Burst (under smoke, free half-Speed side-step when targeted) | Point-Defense System (intercept incoming fire, force rerolls; heat cost) |
@@ -567,7 +548,7 @@ Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weap
 Four components (Hull / Tracks / Turret / Engine). **Cold** — no heat, no overheat rolls, no Shut Down, **no Sprint** (Move only — Sprint spends heat a cold kind hasn't got). **One weapon** from the shared unit-weapon list (flat STR, no weight-class scaling). No equipment, no Prepare. **2 actions** per activation. Speed **3"** ⚙.
 
 Hit table (D12): 1–4 Hull · 5–7 Tracks · 8–10 Turret · 11–12 Engine.
-Strawman armour ⚙ (Direct / Severe / Critical): Hull 13-14 / 15-16 / 17+; Tracks 14-15 / 16 / 17+; Turret 12-13 / 14-15 / 16+; Engine 8-10 / 11-12 / 13+.
+Toughness ⚙: Hull **T6** · Tracks **T5** · Turret **T5** · Engine **T4**.
 
 At 0 SP on Turret: the Tank's single gun is destroyed — a Tank armed only with a ranged weapon has no attack until repaired (a melee-armed Tank can still strike). Cascade at 0 on any part follows §8 by role: structural / power / mobility / weapon effects match the Rig set.
 
@@ -575,7 +556,7 @@ At 0 SP on Turret: the Tank's single gun is destroyed — a Tank armed only with
 
 Four components (Hull / Legs / Mount / Engine). Cold like a Tank, faster and lighter. **One weapon** from the shared unit-weapon list. No equipment, no Prepare. **3 actions** per activation. Speed **4"** ⚙.
 
-Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Armour ≈ Medium-Rig grade ⚙.
+Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Toughness ⚙ (Medium-Rig grade): Hull **T5** · Legs **T4** · Mount **T4** · Engine **T3**.
 
 ### Shared unit weapons (Tanks + Walkers only) ⚙
 
@@ -615,7 +596,7 @@ Without a Damage module, the unit keeps the Sidearm.
 
 Module actions — each costs **1 action**; cold, no heat:
 
-- **Field Weld** (Repair) — heal a friendly unit (self or ally) within reach: roll D12, 7+ = 1 SP, 10+ = 2 SP, to a chosen location.
+- **Field Weld** (Repair) — heal a friendly unit (self or ally) within reach: roll D6, 1-2 = 1 SP, 3-4 = 2 SP, 5-6 = 3 SP, to a chosen location. Like the Repair action, it never whiffs.
 - **Vent** (Coolant) — reduce a friendly **Rig's** heat by 2 (Rigs only carry heat).
 - **Paint** (Recon) — mark an enemy in line of sight; allied **ranged** attacks against it ignore cover and gain +1 ACC until the painter's next activation. A Recon unit holds one mark at a time.
 
@@ -643,9 +624,8 @@ Balance unchanged — a support unit is still one slot / one count / one activat
 **Contradictions resolved (from the source):**
 - Recovery Phase heat cooldown → **1**. *⚙ TUNING.*
 - Repair → **7+ / 10+**.
-- Brace for Incoming Fire → **−2 to Impact Rolls** on front-arc attacks (§5 now also makes a braced Rig immovable and gives it a free STR 6 melee counter against a front melee that fails to breach).
+- Brace for Incoming Fire → **−2 STR** against front-arc attacks (§5 now also makes a braced Rig immovable and gives it a free STR 6 melee counter against a front melee that fails to breach).
 - Initiative → **roll every round**.
-- Heavy Legs Impact Table → **14–15 / 16 / 17+** (removed overlap).
 
 **House rules added:**
 - **Ram removed** (§5) — the Ram action is gone; **melee** weapons cover close combat. Removes a redundant second close-combat system.

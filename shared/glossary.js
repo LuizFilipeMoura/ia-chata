@@ -67,15 +67,23 @@ export const GLOSSARY = [
   },
   {
     id: "str", term: "STR", match: ["STR"],
-    def: "A weapon's strength, added to a D6 on the Impact Roll to determine damage severity (§7, §12).",
+    def: "A weapon's strength, subtracted from the Wound Roll's target — each point makes wounding 10% likelier (§7.5, §12).",
   },
   {
     id: "rng", term: "RNG", match: ["RNG"],
     def: "A weapon's sweet-spot distance (peak accuracy) and usable min–max range in inches. Accuracy falls off the farther the target is from the sweet spot; outside min–max the attack fails (§12).",
   },
   {
-    id: "impact-roll", term: "Impact Roll", match: ["Impact Roll", "Impact Rolls"],
-    def: "D6 + STR (plus arc bonus for ranged attacks), compared against the target location's Impact Table to find damage severity (§2, §7).",
+    id: "wound-roll", term: "Wound Roll", match: ["Wound Roll", "Wound Rolls"],
+    def: "One D10 per landed hit, needing 6 + the location's Toughness − your effective STR (§7.5). Each wound deals the weapon's Damage. A natural 10 always wounds, so no target is ever immune.",
+  },
+  {
+    id: "toughness", term: "Toughness", match: ["Toughness"],
+    def: "How hard a location is to wound, set per component — a Medium Rig's Hull is T5, its Engine T3. Raises the Wound Roll target one-for-one (§2, §7.5).",
+  },
+  {
+    id: "damage", term: "Damage", match: ["Damage"],
+    def: "A weapon's Structure Point loss per wound — every wound it lands deals this much, however the roll passed (§7.5, §12).",
   },
   {
     id: "catastrophic-damage", term: "catastrophic damage", match: ["catastrophic damage"],
@@ -103,7 +111,7 @@ export const GLOSSARY = [
   },
   {
     id: "repair", term: "Repair", match: ["Repair"],
-    def: "Action [0 heat]: roll 1 D12 — on 7+ repair 1 SP to one location, on 10+ repair 2 SP (§5).",
+    def: "Action [0 heat]: roll 1 D6 — 1-2 repairs 1 SP to one location, 3-4 repairs 2 SP, 5-6 repairs 3 SP (§5).",
   },
   {
     id: "shut-down", term: "Shut Down", match: ["Shut Down"],
@@ -147,11 +155,11 @@ export const GLOSSARY = [
   },
   {
     id: "raking-fire", term: "Raking Fire", match: ["Raking Fire"],
-    def: "Machine-gun perk: deals no damage to a target's front arc, but gains +4 STR on the side arc and +8 STR on the rear arc (§13).",
+    def: "Machine-gun perk: deals no damage to a target's front arc, but gains +3 STR on the side arc and +6 STR on the rear arc, replacing the usual arc bonuses (§13).",
   },
   {
     id: "armour-piercing", term: "Armour Piercing", match: ["Armour Piercing"],
-    def: "Weapon perk: for each Impact Roll of 6, add a D3 to the result (§13).",
+    def: "Weapon perk: reroll each failed Wound Roll — it lands more wounds rather than deeper ones (§13).",
   },
   {
     id: "precision", term: "Precision", match: ["Precision"],
@@ -163,7 +171,7 @@ export const GLOSSARY = [
   },
   {
     id: "rend", term: "Rend", match: ["Rend"],
-    def: "Weapon perk: for each Impact Roll of 5 or 6, add a D3 to the result (§13).",
+    def: "Weapon perk: each wound deals +1 Damage — it wounds deeper rather than more often (§13).",
   },
   {
     id: "shock", term: "Shock", match: ["Shock"],
@@ -187,11 +195,11 @@ export const GLOSSARY = [
   },
   {
     id: "side-arc", term: "side arc", match: ["side arc"],
-    def: "A facing zone to a Rig's flank — ranged attacks gain +2 STR here (+4 with Raking Fire) (§7, §13).",
+    def: "A facing zone to a Rig's flank — attacks gain +2 STR here (+3 with Raking Fire) (§7, §13).",
   },
   {
     id: "rear-arc", term: "rear arc", match: ["rear arc"],
-    def: "The facing zone behind a Rig — ranged attacks gain +4 STR here (+8 with Raking Fire); melee gains no arc bonus at all (§7, §13).",
+    def: "The facing zone behind a Rig — attacks gain +3 STR here (+6 with Raking Fire). Melee climbs the same ladder as ranged (§7, §13).",
   },
   {
     id: "salvage", term: "Salvage", match: ["Salvage"],

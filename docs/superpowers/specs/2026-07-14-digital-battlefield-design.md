@@ -168,7 +168,9 @@ inputs, same path, always.
 2. Click commits. The unit walks the path.
 3. **Pivot ≤ 90°**, at either end of the move. 0" travel is allowed — pivoting in place
    still costs the action and its heat.
-4. **Sprint** is the same with `2 × Speed` and its own heat. Pivot cap stays 90°.
+4. **Sprint** is the same with `Math.round(base × rigEffects(rig).sprintMult)` — 1½× Speed,
+   or 2× with the Reinforced Servos field upgrade — and its own heat. Pivot cap stays 90°.
+   Speed budget also honours `speedHalvedNextRound`.
 5. Engaged rigs cannot Move at all (§5, pinned). Unchanged.
 
 The preview is what makes engine-pathfinding acceptable: without it, an illegal move is
@@ -211,8 +213,15 @@ It gains:
 - hover path preview (route + length, green/red)
 - target picking
 
-`MoveBody.tsx` swaps its declared-distance input for the map interaction. The
-declared-distance UI stays alive for physical rooms.
+`MoveBody.tsx` swaps its declared-distance input for the map interaction. In a physical
+room it holds the player on a timed Confirm (long enough to actually push the mini across
+the table); a digital room has no mini to push, so the hold is dropped and Confirm is live
+immediately. The declared-distance UI stays alive for physical rooms.
+
+**Trust boundary:** the client sends only `{ dest: {x, y}, facing }`. The server pathfinds
+it again with the same pure module and applies the result. The client's hover preview is a
+local call to that identical module, so it always agrees — but the server never takes a
+client-supplied path or length on faith.
 
 ## rules.md changes
 

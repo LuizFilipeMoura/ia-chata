@@ -3,7 +3,7 @@ import "../styles/overlay.css";
 
 const BASE_REACTIONS: { value: PrepType; icon: string; label: string; rule: string }[] = [
   { value: "brace", icon: "🛡️", label: "Brace for Incoming Fire",
-    rule: "Front-arc attacks against this Rig take −2 to their Impact Rolls until next round." },
+    rule: "Front-arc attacks against this Rig take −2 STR on their Wound Rolls until next round." },
   { value: "evasive", icon: "💨", label: "Evasive Manoeuvre",
     rule: "Before the attack resolves, move up to ½ Speed. Break line of sight or range and the attack fails." },
   { value: "return", icon: "↩️", label: "Return Fire",

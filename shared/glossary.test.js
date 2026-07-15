@@ -33,6 +33,26 @@ test("every entry has a non-empty def", () => {
   for (const e of GLOSSARY) assert.ok(e.def && e.def.length > 0, `empty def: ${e.id}`);
 });
 
+test("the glossary teaches the wound roll, not the deleted impact table", () => {
+  const entry = GLOSSARY.find((g) => g.id === "wound-roll");
+  assert.ok(entry, "wound-roll entry must exist");
+  assert.match(entry.def, /d10/i);
+  assert.ok(!GLOSSARY.some((g) => g.id === "impact-roll"), "impact-roll must be gone");
+  // No entry anywhere may still teach the deleted vocabulary.
+  for (const g of GLOSSARY) {
+    assert.ok(!/impact table|severity tier/i.test(g.def), `stale: ${g.id}`);
+  }
+});
+
+// The wound roll reads `6 + T - STR`. A player who can't look up Toughness or
+// Damage only half-learns the model, so both stats need their own entry.
+test("glossary defines the stats the wound roll references", () => {
+  const byId = new Map(GLOSSARY.map((e) => [e.id, e]));
+  for (const id of ["toughness", "damage"]) {
+    assert.ok(byId.get(id), `missing glossary entry: ${id}`);
+  }
+});
+
 test("glossary defines the three Answer counters", () => {
   const byId = new Map(GLOSSARY.map((e) => [e.id, e]));
   for (const id of ["riposte", "sidestep", "exploit"]) {

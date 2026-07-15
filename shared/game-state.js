@@ -284,7 +284,7 @@ export const EQUIPMENT = {
   "ablative-plating": {
     family: "Armor", label: "Ablative Plating", passive: "+1 max SP to Hull",
     active: { key: "harden", label: "Harden", heat: 1,
-      text: "Until this Rig's next activation, all impact rolls against it are at −1." },
+      text: "Until this Rig's next activation, all Wound Rolls against it are at −1 STR." },
   },
   "radiator-array": {
     family: "Cooling", label: "Radiator Array", passive: "Cools 2 heat in Recovery instead of 1",
@@ -528,7 +528,7 @@ export const WEAPON_UPGRADES = {
   "Talon": [
     { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+2 STR", effect: { str: 2 } },
     { id: "exploit-wound", nature: "tuned", name: "Exploit Wound", tag: "+3 STR vs an already-damaged location", effect: { vsWoundedLoc: true } },
-    { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every hit is Critical (but weak on fresh armour)", catch: "Weak on fresh armour", effect: { eviscerate: true } },
+    { id: "evisceration", nature: "prototype", name: "Evisceration", tag: "Gut a half-dead location — every wound deals +1 Damage (but weak on fresh armour)", catch: "Weak on fresh armour", effect: { eviscerate: true } },
   ],
   "Mini Gun": [
     { id: "suppressive-fire", nature: "field", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
@@ -588,7 +588,7 @@ export const WEAPON_UPGRADES = {
   "Claw": [
     { id: "rending-talons", nature: "field", name: "Rending Talons", tag: "Gains Rend", effect: { perks: ["Rend"] } },
     { id: "vice-grip", nature: "tuned", name: "Vice Grip", tag: "Gains Impale", effect: { perks: ["Impale"] } },
-    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 impact from anyone)", catch: "Leaves you locked in melee while gripping", effect: { breachGrip: true } },
+    { id: "breach-grip", nature: "prototype", name: "Breach Grip", tag: "Pry a location's armor open (+2 STR from anyone)", catch: "Leaves you locked in melee while gripping", effect: { breachGrip: true } },
   ],
   "Lance": [
     { id: "couched-reach", nature: "field", name: "Couched Reach", tag: "Doubles melee reach to 4\"", effect: { range: 2 } },

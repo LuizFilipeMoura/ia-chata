@@ -59,7 +59,7 @@ export function heatThreshold(total) {
   return HEAT_THRESHOLDS.find((row) => n >= row.min) || HEAT_THRESHOLDS.at(-1);
 }
 
-// Weight-class STR modifier applied to every Impact Roll (§12); Aim target
+// Weight-class STR modifier applied to every Wound Roll (§12); Aim target
 // number (§2, roll >= to hit).
 export const WEIGHT_STR_MOD = { light: -1, medium: 0, heavy: 1, colossal: 2 };
 export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
