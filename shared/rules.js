@@ -1,7 +1,7 @@
 // Static rulebook data shared by the resolution engine (server) and the
 // battle UI (client). Pure data + tiny lookups — no state, no randomness.
 
-import { hitPart } from "./unit-kinds.js";
+import { hitPart, toughnessOf as _toughnessOf } from "./unit-kinds.js";
 
 // Action catalogue (§5). `heat` is the base heat generated; `slot` is the
 // action-budget cost. Shut Down is special-cased by the engine (may be declared
@@ -96,6 +96,13 @@ export function woundTarget(str, toughness) {
   const s = Math.floor(Number(str) || 0);
   const t = Math.floor(Number(toughness) || 0);
   return Math.max(2, Math.min(WOUND_DIE, 6 + t - s));
+}
+
+// Toughness of a struck location — the `toughness` argument to `woundTarget`.
+// Re-exported from unit-kinds.js so combat.js can reach it without importing
+// game-state.js (which would create a cycle).
+export function toughnessOf(kindId, partName, weightClass) {
+  return _toughnessOf(kindId, partName, weightClass);
 }
 
 // §13 Bulwark / Raise Shield — which arcs a raised shield covers. Base: negate

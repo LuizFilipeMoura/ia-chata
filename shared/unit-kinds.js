@@ -1,33 +1,23 @@
 // Registry of unit kinds (rig, tank, walker, …) with parts, hit locations, and
-// armour tables. Pure data + tiny lookups shared by server and client.
+// toughness grids. Pure data + tiny lookups shared by server and client.
 
 export const ROLES = ["structural", "power", "mobility", "weapon"];
 
-const RIG_IMPACT = {
-  light: {
-    hull:   { direct: 10, severe: 14, critical: 16 },
-    arms:   { direct: 10, severe: 12, critical: 14 },
-    legs:   { direct: 10, severe: 13, critical: 15 },
-    engine: { direct: 7,  severe: 10, critical: 12 },
-  },
-  medium: {
-    hull:   { direct: 11, severe: 14, critical: 17 },
-    arms:   { direct: 10, severe: 13, critical: 15 },
-    legs:   { direct: 11, severe: 13, critical: 15 },
-    engine: { direct: 8,  severe: 10, critical: 12 },
-  },
-  heavy: {
-    hull:   { direct: 13, severe: 15, critical: 17 },
-    arms:   { direct: 12, severe: 14, critical: 16 },
-    legs:   { direct: 14, severe: 16, critical: 17 },
-    engine: { direct: 8,  severe: 11, critical: 13 },
-  },
-  colossal: {
-    hull:   { direct: 13, severe: 16, critical: 17 },
-    arms:   { direct: 13, severe: 14, critical: 16 },
-    legs:   { direct: 13, severe: 16, critical: 17 },
-    engine: { direct: 9,  severe: 11, critical: 14 },
-  },
+// §7.5 — Toughness per part. Replaces the old 48-number impact grid: a shot's
+// effective STR is compared to these via `woundTarget` (rules.js).
+//
+// Designed, not derived. Converting the old armour rows mechanically
+// (`direct - 6`) yields engine values of T1-T3, which would let every weapon in
+// the game wound an engine on 2+ and make it the only rational aim point.
+//
+// Per-location texture is carried TWICE on purpose: a soft T here, and a small
+// SP pool in RIG_DEFAULTS (game-state.js). An engine is fragile because it is
+// both easier to wound and has less to lose.
+const RIG_TOUGHNESS = {
+  light:    { hull: 4, arms: 3, legs: 3, engine: 3 },
+  medium:   { hull: 5, arms: 4, legs: 4, engine: 3 },
+  heavy:    { hull: 6, arms: 5, legs: 5, engine: 4 },
+  colossal: { hull: 7, arms: 6, legs: 6, engine: 5 },
 };
 
 export const UNIT_KINDS = {
@@ -46,7 +36,7 @@ export const UNIT_KINDS = {
       { min: 8,  part: "legs" },
       { min: 11, part: "engine" },
     ],
-    armour: RIG_IMPACT,
+    toughness: RIG_TOUGHNESS,
     hasHeat: true,
     hasArcs: true,
     actionBudget: 3,
@@ -71,13 +61,8 @@ export const UNIT_KINDS = {
       { min: 8,  part: "turret" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — heavy-Rig-grade armour, tuned in playtest.
-    armour: {
-      hull:   { direct: 13, severe: 15, critical: 17 },
-      tracks: { direct: 14, severe: 16, critical: 17 },
-      turret: { direct: 12, severe: 14, critical: 16 },
-      engine: { direct: 8,  severe: 11, critical: 13 },
-    },
+    // Strawman ⚙ — heavy-Rig-grade toughness, tuned in playtest.
+    toughness: { hull: 6, tracks: 5, turret: 5, engine: 4 },
     partSp: { hull: 8, tracks: 7, turret: 6, engine: 6 },
     hasHeat: false,
     hasArcs: true,
@@ -104,13 +89,8 @@ export const UNIT_KINDS = {
       { min: 8,  part: "mount" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — medium-Rig-grade armour.
-    armour: {
-      hull:   { direct: 11, severe: 14, critical: 17 },
-      legs:   { direct: 11, severe: 13, critical: 15 },
-      mount:  { direct: 10, severe: 13, critical: 15 },
-      engine: { direct: 8,  severe: 10, critical: 12 },
-    },
+    // Strawman ⚙ — medium-Rig-grade toughness.
+    toughness: { hull: 5, legs: 4, mount: 4, engine: 3 },
     partSp: { hull: 6, legs: 6, mount: 5, engine: 5 },
     hasHeat: false,
     hasArcs: true,
@@ -179,11 +159,13 @@ export function hitPart(kindId, d12) {
   return picked;
 }
 
-// Rig armour is nested by weight class; cold kinds (Tank, Walker) hold a flat
-// map keyed by part name and ignore weightClass.
-export function impactRow(kindId, partName, weightClass) {
-  const armour = UNIT_KINDS[kindId]?.armour;
-  if (!armour) return null;
-  if (weightClass && armour[weightClass]) return armour[weightClass][partName];
-  return armour[partName];
+// Toughness for a part. Rig grids are keyed by weight class; Tank/Walker are
+// flat. Returns null (never 0) for an unknown kind or part so a typo surfaces
+// as a crash rather than a silently trivially-woundable location.
+export function toughnessOf(kindId, partName, weightClass) {
+  const t = UNIT_KINDS[kindId]?.toughness;
+  if (!t) return null;
+  const row = (weightClass && t[weightClass]) ? t[weightClass] : t;
+  const v = row?.[partName];
+  return typeof v === "number" ? v : null;
 }
