@@ -129,14 +129,21 @@ export const WOUND_DIE = 10;
 
 export function woundTarget(str, toughness) {
   const s = Math.floor(Number(str) || 0);
-  // No `|| 0` on toughness, deliberately: a missing T coercing to 0 yields TN 2
-  // (a 90% wound), the single most dangerous default in the system. STR may
-  // coerce — it fails toward TN 10 (10%) — but T must be real.
-  const t = Math.floor(Number(toughness));
-  if (!Number.isFinite(t)) throw new Error(`woundTarget: toughness must be a number, got ${toughness}`);
-  return Math.max(2, Math.min(WOUND_DIE, 6 + t - s));
+  // Validate BEFORE coercing, and check the type — not just finiteness. A
+  // missing T coercing to 0 yields TN 2 (a 90% wound), the single most dangerous
+  // default in the system. STR may coerce — it fails toward TN 10 (10%) — but T
+  // must already be a real number.
+  if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
+    throw new Error(`woundTarget: toughness must be a number, got ${toughness}`);
+  }
+  return Math.max(2, Math.min(WOUND_DIE, 6 + Math.floor(toughness) - s));
 }
 ```
+
+**Do not "simplify" that guard to `!Number.isFinite(Number(toughness))`.** An earlier draft did, and
+it let `null`, `""`, `false` and `[]` straight through — all coerce to `0`, all finite, all yielding
+TN 2. `null` is exactly what a failed lookup used to return, so the coercing guard would have left
+the motivating bug intact while the test asserted it fixed. Validate first, coerce second.
 
 **The asymmetry is the point.** Junk STR fails safe, junk Toughness fails maximally unsafe. An
 earlier draft of this plan coerced both and paired it with a `toughnessOf` that returned `null` on a
