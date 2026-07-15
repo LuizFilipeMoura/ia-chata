@@ -504,6 +504,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
         aria-label={`Commission a ${UNIT_KINDS[state.kind].label}`}
       >
         <div className="v2-fw-head">
+          <button type="button" className="v2-fw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           <div className="v2-fw-order v2-eyebrow">Commission Order · Form 7-C</div>
           <h2 className="v2-fw-title v2-title">◈ Commission a {UNIT_KINDS[state.kind].label}</h2>
           <div className="v2-fw-rail">

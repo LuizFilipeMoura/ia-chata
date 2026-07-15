@@ -25,15 +25,10 @@ export function ThreatOverlay() {
     if (!active) alarmedFor.current = null;
   }, [active, th?.attackerId]);
 
-  // 20s failsafe: if a threat somehow never clears (attacker disconnected),
-  // downgrade to dismissable so the defender is never permanently blocked.
-  const [failsafe, setFailsafe] = useState(false);
+  // Always dismissable: the telegraph is cosmetic, so the defender is never
+  // held hostage by it. A fresh threat (new attacker) re-arms the overlay.
   const [dismissed, setDismissed] = useState(false);
-  useEffect(() => {
-    if (!active) { setFailsafe(false); setDismissed(false); return; }
-    const id = window.setTimeout(() => setFailsafe(true), 20000);
-    return () => window.clearTimeout(id);
-  }, [active, th?.attackerId]);
+  useEffect(() => { setDismissed(false); }, [active, th?.attackerId]);
 
   if (!active || !th || dismissed) return null;
 
@@ -53,17 +48,22 @@ export function ThreatOverlay() {
       <div className="v2-threat-siren" />
       <div className="v2-threat-reticle"><span className="h" /><span className="v" /></div>
       <div className="v2-threat-card">
+        <button
+          type="button"
+          className="v2-threat-close"
+          aria-label="Close"
+          onClick={() => setDismissed(true)}
+        >
+          ✕
+        </button>
         <div className="v2-threat-klaxon">⚠ ◤ INCOMING FIRE ◥ ⚠</div>
         <div className="v2-threat-title">
           Enemy <em>{attackerName}</em> targets your <b>{targetName}</b>
         </div>
         <div className="v2-threat-weapon">{weaponLine}</div>
-        <div className="v2-threat-brace">◇ Brace for impact</div>
-        {failsafe ? (
-          <button type="button" className="v2-threat-dismiss" onClick={() => setDismissed(true)}>
-            Dismiss
-          </button>
-        ) : null}
+        <button type="button" className="v2-threat-dismiss" onClick={() => setDismissed(true)}>
+          Dismiss
+        </button>
       </div>
     </div>,
     document.body,

@@ -105,8 +105,8 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   const mySide = useCallback(() => viewSide, [viewSide]);
 
   const promptOneDie = useCallback(
-    async (label: string, cb: (d: number) => void) => {
-      const out = await promptDice([{ key: "d", label, sides: 12 }], label);
+    async (label: string, cb: (d: number) => void, sides = 12) => {
+      const out = await promptDice([{ key: "d", label, sides }], label);
       cb(out.d);
     },
     [promptDice],
@@ -203,8 +203,10 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
               if (auto) {
                 sendCommand("action", { name: rig.name, action: "repair", loc: state.loc });
               } else {
-                promptOneDie("Repair D12", (d) =>
-                  sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                promptOneDie(
+                  "Repair D6",
+                  (d) => sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                  6,
                 );
               }
             },

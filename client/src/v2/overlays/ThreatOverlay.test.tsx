@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { V2Providers } from "../state/V2Providers";
 import { useRoomDispatch } from "../../state/RoomStateContext";
@@ -36,6 +36,21 @@ test("shows the overlay to the targeted defender", async () => {
   expect(await screen.findByText(/INCOMING FIRE/i)).toBeInTheDocument();
   expect(screen.getByText(/Ironjaw/i)).toBeInTheDocument();
   expect(screen.getByText(/Rivethead/i)).toBeInTheDocument();
+});
+
+test("Dismiss is offered immediately and closes the overlay", async () => {
+  render(<V2Providers><Seed state={stateWithThreat()} side="b" /><ThreatOverlay /></V2Providers>);
+  // The overlay portals to document.body, so assert on the document, not on the
+  // render container (which never holds it).
+  fireEvent.click(await screen.findByRole("button", { name: /dismiss/i }));
+  expect(document.querySelector(".v2-threat")).toBeNull();
+});
+
+test("the close button closes the overlay too", async () => {
+  render(<V2Providers><Seed state={stateWithThreat()} side="b" /><ThreatOverlay /></V2Providers>);
+  await screen.findByText(/INCOMING FIRE/i);
+  fireEvent.click(screen.getByRole("button", { name: /close/i }));
+  expect(document.querySelector(".v2-threat")).toBeNull();
 });
 
 test("hidden for the attacker", () => {

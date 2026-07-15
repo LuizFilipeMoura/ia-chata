@@ -171,8 +171,8 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   const mySide = useCallback(() => viewSide, [viewSide]);
 
   const promptOneDie = useCallback(
-    async (label: string, cb: (d: number) => void) => {
-      const out = await promptDice([{ key: "d", label, sides: 12 }], label);
+    async (label: string, cb: (d: number) => void, sides = 12) => {
+      const out = await promptDice([{ key: "d", label, sides }], label);
       cb(out.d);
     },
     [promptDice],
@@ -256,8 +256,10 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
               if (auto) {
                 sendCommand("action", { name: rig.name, action: "repair", loc: state.loc });
               } else {
-                promptOneDie("Repair D12", (d) =>
-                  sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                promptOneDie(
+                  "Repair D6",
+                  (d) => sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                  6,
                 );
               }
             },
@@ -455,10 +457,10 @@ function RepairBody({
     <>
       <p className="dwr-hint">
         {isPatch
-          ? "Restores a guaranteed 2 SP to the chosen location — no dice."
+          ? "Restores a guaranteed 4 SP to the chosen location — no dice."
           : auto
-            ? "Rolls a D12: 10+ restores 2 SP, 7–9 restores 1 SP."
-            : "You'll roll a D12 next: 10+ restores 2 SP, 7–9 restores 1 SP."}
+            ? "Rolls a D6: 1–2 restores 1 SP, 3–4 restores 2 SP, 5–6 restores 3 SP."
+            : "You'll roll a D6 next: 1–2 restores 1 SP, 3–4 restores 2 SP, 5–6 restores 3 SP."}
       </p>
       <ChoiceField
         label="Location"

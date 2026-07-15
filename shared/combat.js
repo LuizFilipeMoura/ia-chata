@@ -725,7 +725,10 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   let locDie = null;
   if (th.hits > 0) {
     locDie = rollD(12, opts.dice?.location, random);
-    location = opts.aimed ? opts.aimedLoc : hitLocation(attacker.kind || "rig", locDie);
+    // The hit-location table belongs to the TARGET's kind — it names the parts
+    // being shot at, not the shooter's. Reading the attacker's kind sent a Rig's
+    // arms/legs roll into a Tank (tracks/turret) and threw in toughnessOf.
+    location = opts.aimed ? opts.aimedLoc : hitLocation(target.kind || "rig", locDie);
     if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     // Kneecapper (§13, Double MG) — remap whatever location was just picked
     // (aimed or random) onto a limb. This is the PRIMARY guarantee that

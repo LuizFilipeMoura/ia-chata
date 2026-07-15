@@ -26,3 +26,16 @@ test("toggling a marker updates the VP total and submits claims", async () => {
   await user.click(screen.getByRole("button", { name: /Score 2 VP/i }));
   expect(sendCommand).toHaveBeenCalledWith("vp", { side: "a", claims: [0] });
 });
+
+test("the close button dismisses without submitting a claim", async () => {
+  const user = userEvent.setup();
+  sendCommand.mockClear();
+  const onClose = vi.fn();
+  const state = { version:1, ownerSide:"a", field:null, rigs:[], game:{ round:6, phase:"recovery", started:true,
+    sides:[{id:"a",name:"K",vp:0,ready:true}], objectives:[{x:24,y:18,vp:2},{x:6,y:6,vp:1}] } } as unknown as ServerState;
+  render(<AppProviders><Seed state={state} /><VpWizard onClose={onClose} /></AppProviders>);
+  await user.click(await screen.findByRole("button", { name: /close/i }));
+  // The card plays a 250ms exit before handing back to onClose.
+  await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+  expect(sendCommand).not.toHaveBeenCalled();
+});

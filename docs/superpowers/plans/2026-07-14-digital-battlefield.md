@@ -450,7 +450,18 @@ The remaining derived values. Note the split measurement model: distance is cent
 Append to `shared/geometry.test.js`:
 
 ```js
-import { arcOf, distanceBetween, rimGap, meleeInReach, controlsObjective } from "./geometry.js";
+import { arcOf, distanceBetween, rimGap, meleeInReach, controlsObjective, BASE_RADIUS, radiusOf } from "./geometry.js";
+
+test("BASE_RADIUS is half of each weight class's base diameter", () => {
+  assert.equal(BASE_RADIUS.light, 1.18);   // 60mm
+  assert.equal(BASE_RADIUS.medium, 1.48);  // 75mm
+});
+
+test("radiusOf reads the rig's weight class and defaults to medium", () => {
+  assert.equal(radiusOf({ weightClass: "light" }), 1.18);
+  assert.equal(radiusOf({ weightClass: "medium" }), 1.48);
+  assert.equal(radiusOf({}), 1.48, "unknown class falls back to medium");
+});
 
 // A target at the origin facing 0 deg (east, +x). Front arc is facing +/-45.
 const T = { pos: { x: 0, y: 0 }, facing: 0 };
@@ -513,6 +524,16 @@ Expected: FAIL — `arcOf is not a function`
 Append to `shared/geometry.js`:
 
 ```js
+// Base radii in inches, by weight class. Digital rooms are Rigs only, so these
+// two are the whole table. Lives here because base size is a SPATIAL fact —
+// it is what makes rim gap differ from centre distance, and it is why melee and
+// objectives measure rim while everything else measures centre.
+export const BASE_RADIUS = { light: 1.18, medium: 1.48 }; // 60mm / 75mm
+
+export function radiusOf(rig) {
+  return BASE_RADIUS[rig.weightClass] ?? BASE_RADIUS.medium;
+}
+
 // Which of the target's facings the attacker strikes (rules.md §7). Front is
 // the target's facing +/-45 deg, side out to +/-135, rear beyond.
 export function arcOf(attacker, target) {

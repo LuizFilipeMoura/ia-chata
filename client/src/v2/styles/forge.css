@@ -24,8 +24,22 @@
 .v2-root .v2-fw-scrim.show .v2-fw-card { transform: translateY(0); }
 
 /* ---- head + step rail --------------------------------------------------- */
-.v2-root .v2-fw-head { padding: 18px 20px 6px; border-bottom: 1px solid var(--v2-line-soft); }
-.v2-root .v2-fw-order { letter-spacing: .3em; margin-bottom: 5px; }
+/* padding-right clears the absolutely-positioned close button, so the order tag
+   and title wrap before they reach it instead of running under it. */
+.v2-root .v2-fw-head {
+  position: relative;
+  padding: 18px 50px 6px 20px;
+  border-bottom: 1px solid var(--v2-line-soft);
+}
+.v2-root .v2-fw-close {
+  position: absolute; top: 14px; right: 14px; z-index: 1;
+  font-size: var(--v2-text-base); line-height: 1;
+}
+/* .22em, not the .3em the other eyebrows carry: this tag is a fixed 27-character
+   string sharing its line with the close button, and at .3em it can't fit beside
+   it on a phone — it wraps to an orphaned final letter. Tightened just enough to
+   hold one line down to the narrowest supported width. */
+.v2-root .v2-fw-order { letter-spacing: .22em; margin-bottom: 5px; }
 .v2-root .v2-fw-title { margin: 0 0 4px; font-size:var(--v2-text-2xl); }
 .v2-root .v2-fw-rail { display: flex; gap: 0; margin: 14px 0 8px; }
 .v2-root .v2-fw-step { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }

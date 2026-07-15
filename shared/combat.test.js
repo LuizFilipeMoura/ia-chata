@@ -2186,3 +2186,27 @@ test("no dead zones — the light saw vs a medium hull, the case that started th
   const t = toughnessOf("rig", "hull", "medium");    // 5
   assert.equal(woundTarget(str, t), 7);              // 40%, front arc, no upgrades
 });
+
+// The hit-location table is the TARGET's, not the attacker's. Regression: reading
+// attacker.kind sent a Rig's arms/legs roll into a Tank/Walker part list and threw
+// in toughnessOf, so every cross-kind shot crashed on a landed hit.
+test("hit location comes from the target's kind, not the attacker's", () => {
+  const rig = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw" });
+  const tank = makeUnit("tank", 2, "Strawman", "b", { unit: "Tank Cannon" });
+  const walker = makeUnit("walker", 3, "Strider", "b", { unit: "Rocket Pod" });
+  const room = { game: { round: 1 } };
+  const shot = (attacker, target, locDie) => {
+    const a = structuredClone(attacker);
+    return resolveAttack(room, a, structuredClone(target), {
+      weapon: "longRange", arc: "side", distance: 12,
+      dice: { toHit: [6, 6, 6, 6], location: locDie },
+    }, () => 0.5, makeCtx());
+  };
+  // d12 5-7 is "arms" on the rig table; a Tank has a turret and a Walker a mount.
+  assert.equal(shot(rig, tank, 6).location, "tracks");
+  assert.equal(shot(rig, tank, 9).location, "turret");
+  assert.equal(shot(rig, walker, 9).location, "mount");
+  // ...and the tank's own table must not follow it onto a rig target.
+  assert.equal(shot(tank, rig, 6).location, "arms");
+  assert.equal(shot(walker, rig, 9).location, "legs");
+});
