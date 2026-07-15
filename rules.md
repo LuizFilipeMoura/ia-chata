@@ -240,14 +240,14 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 
    > **D10 ≥ 6 + Toughness − effective Penetration**
 
-   Your **effective Penetration** is the weapon's Penetration (adjusted for the firing Rig's weight class, §12), plus its **arc bonus** below, plus any perk or equipment modifiers. Each point of Penetration is worth exactly **10%** — no lookup needed.
+   Your **effective Penetration** is the weapon's Penetration (adjusted for the firing Rig's weight class, §12), plus its **arc bonus** below, plus any perk or equipment modifiers. While the target number is off its rails, each point of Penetration is worth exactly **10%** — no lookup needed. Once the roll bottoms out at **2+**, further Penetration buys nothing at all.
 
    **Arc bonus.** Add **+2 Penetration** into the target's **side arc** and **+3 Penetration** into its **rear arc**; the front arc gives nothing. **Melee climbs the same ladder as ranged** — a melee weapon flanking a target gains the bonus exactly as a gun does. *(Raking Fire machine guns replace these values — §13.)* *⚙ TUNING: melee used to gain no arc bonus at all, which capped its damage and was the root cause of the old model's dead matchups.*
 
    **The target number clamps to 2–10.** A natural **10 always wounds** and a natural **1 never does**, whatever the numbers say. No target is ever immune. *⚙ TUNING: the clamp is deliberate — it is what retired the old Impact Tables' 69 dead matchups. Do not remove it to "make armour matter".*
 
-   **Overmatch.** Once your effective Penetration reaches the location's **Toughness + 4**, the target number is sitting on its floor of 2 and any further Penetration would be thrown away. Spend it on depth instead: every **3** full points beyond **Toughness + 4** add **+1 Damage** to each wound, to a maximum of **+2**. So against T4 arms you need effective Penetration 11 for +1 D and 14 for +2 — and Penetration past that adds nothing. *⚙ TUNING: new. Without it the arc bonus, the weight-class Penetration mod and every +Penetration upgrade measured as literally zero on a saturated weapon, since they only ever pushed a target number that was already clamped.*
-8. **Apply damage.** Each wound costs the location the weapon's **Damage (D)** stat in SP (§12) — plus any per-wound riders such as **Overmatch** (step 7) or **Rend** (§13). A hit that fails to wound does nothing.
+   **Saturation.** Once your effective Penetration reaches the location's **Toughness + 4**, the target number is sitting on its floor of 2 and any further Penetration is thrown away — against a saturated location the arc bonus, the weight-class modifier and every +Penetration upgrade measure literally zero. Every Toughness on the board is **T3–T6** (§2, §17), so a weapon at Penetration 7 already saturates T3 and one at Penetration 9 saturates everything a Rig has. That is why the tables in §12 stop at Penetration **7**: it is the standard band, not a heavy-gun perk, and the guns above it were not stronger — they were merely wasting the difference. **A weapon buys its menace in Damage, not in Penetration.** *⚙ TUNING: past the clamp the ladder is a cliff, not a gradient — so Penetration was compressed into 3–7 and the heavies were paid back in Damage.*
+8. **Apply damage.** Each wound costs the location the weapon's **Damage (D)** stat in SP (§12) — plus any per-wound riders such as **Rend** (§13). A hit that fails to wound does nothing.
 
 **Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage. *(Engine note: the digital tracker auto-routes overflow to the Hull, or the next location with SP remaining if the Hull is already at 0.)*
 
@@ -338,7 +338,7 @@ Any weapon may be fitted to a Rig of **any weight class** and **any faction**. R
 |---|:--:|:--:|
 | **Penetration modifier** | −1 | +0 |
 
-Apply this modifier to the weapon's Penetration every time you make a Wound Roll (§7). *Example: a Sniper Cannon (Penetration 10) reads Penetration 9 on a Light Rig and 10 on a Medium.* *⚙ TUNING: the ladder was halved from ±2/±4 when Penetration was rescaled for the Wound Roll — each point is now worth a flat 10%, so it buys twice as much as it used to.*
+Apply this modifier to the weapon's Penetration every time you make a Wound Roll (§7). *Example: a Sniper Cannon (Penetration 6) reads Penetration 5 on a Light Rig and 6 on a Medium.* *⚙ TUNING: the ladder was halved from ±2/±4 when Penetration was rescaled for the Wound Roll — off the clamp each point is now worth a flat 10%, so it buys twice as much as it used to. Against a location the weapon already saturates (§7, *Saturation*) it still buys nothing.*
 
 > **Perks are being reworked.** Base weapons now carry **stats only** — every *signature* perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. **Exception:** the two **Machine Guns** (Mini Gun, Double MG) carry **Raking Fire** innately (§13) — it defines the weapon type (no frontal damage; +3 side / +6 rear), not a signature upgrade. *Melee* is likewise a weapon **type** (the Melee Weapons section), not a perk.
 
@@ -360,21 +360,21 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 
 | Weapon | ROF | Pen | Dmg | Sweet | Peak | Falloff/in | Range |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Autocannon | 4 | 7 | 2 | 12" | +1 | −0.22 | 0–26" |
-| Arc Gun | 2 | 8 | 3 | 20" | +1 | −0.18 | 0–32" |
+| Autocannon | 4 | 6 | 2 | 12" | +1 | −0.22 | 0–26" |
+| Arc Gun | 2 | 7 | 3 | 20" | +1 | −0.18 | 0–32" |
 | Mortar | 3 | 7 | 2 | 18" | +1 | −0.15 | 6–34" |
-| Sniper Cannon | 1 | 10 | 4 | 22" | +2 | −0.15 | 0–28" |
-| Siege Maul | 1 | 11 | 5 | 8" | +1 | −0.30 | 0–16" |
+| Sniper Cannon | 1 | 6 | 8 | 22" | +2 | −0.15 | 0–28" |
+| Siege Maul | 1 | 7 | 6 | 8" | +1 | −0.30 | 0–16" |
 | Missile Barrage | 4 | 7 | 2 | 20" | +1 | −0.15 | 6–34" |
-| Harpoon | 1 | 10 | 3 | 14" | +2 | −0.28 | 0–22" |
+| Harpoon | 1 | 7 | 6 | 14" | +2 | −0.28 | 0–22" |
 | Rivet Gun | 6 | 3 | 1 | 6" | +2 | −0.40 | 0–14" |
-| Crossbow | 1 | 8 | 4 | 18" | +3 | −0.25 | 0–24" |
+| Crossbow | 1 | 7 | 4 | 18" | +3 | −0.25 | 0–24" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose Accuracy up close.
 
-> The **Siege Maul** is a close-in demolition gun: the highest Penetration on the board, but the shortest range of any ranged weapon.
+> The **Siege Maul** is a close-in demolition gun: standard Penetration, Damage beaten only by the Sniper Cannon and matched only by the Harpoon, and the shortest range of any weapon here bar the Rivet Gun. It is not frightening because it penetrates better — it penetrates the same as a Mortar. It is frightening because of what each wound costs.
 
-> The **Harpoon** is a heavy line-thrower — a Sniper Cannon–grade Penetration punch with a shorter, closer sweet spot. The **Rivet Gun** is a rapid, low-Penetration fastener gun with the shortest max range of any weapon in the table — volume, not punch.
+> The **Harpoon** is a heavy line-thrower — the Siege Maul's payload on a longer leash, trading the Sniper Cannon's reach and alpha for a point of Penetration and a closer sweet spot. The **Rivet Gun** is a rapid, low-Penetration fastener gun with the shortest max range of any weapon in the table — volume, not punch.
 
 ### Melee Weapons
 
@@ -384,13 +384,13 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 | Circular Saw | 3 | 5 | 2 | – | 2 |
 | Chainsaw | 3 | 7 | 2 | – | 2 |
 | Claw | 2 | 7 | 3 | +1 | 2 |
-| Lance | 1 | 9 | 4 | +1 | 2 |
-| Wrecking Ball | 1 | 10 | 5 | – | 2 |
+| Lance | 1 | 6 | 7 | +1 | 2 |
+| Wrecking Ball | 1 | 6 | 7 | – | 2 |
 | Bulwark Shield | 1 | 5 | 3 | – | 2 |
 | Flamethrower | 4 | 6 | 2 | +1 | 2 |
-| Anchor | 1 | 10 | 4 | – | 2 |
+| Anchor | 1 | 7 | 6 | – | 2 |
 | Pressure Claw | 2 | 7 | 3 | +1 | 2 |
-| Talon | 2 | 6 | 3 | +1 | 2 |
+| Talon | 2 | 5 | 3 | +1 | 2 |
 
 ### Weapon Upgrades
 
@@ -400,26 +400,26 @@ Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures*
 |---|---|---|---|
 | Mini Gun | Suppressive Fire (Shock) | Extended Belt (+2 ROF; 1s add heat) | Suppression Lock |
 | Double MG | Gyro Mount (reroll a miss) | Pinning Burst (4+ hits → −1 action) | Kneecapper |
-| Autocannon | Depleted Core (+2 Penetration) | AP Shells (Armour Piercing) | Penetrator Rounds |
+| Autocannon | Depleted Core (+1 Penetration) | AP Shells (Armour Piercing) | Penetrator Rounds |
 | Arc Gun | Ion Burn (Incendiary) | Systems Overload (−1 action) | Ion Storm |
 | Mortar | Cluster Shells (2nd location) | Airburst Fuze (ignores cover) | Barrage |
 | Sniper Cannon | Marksman Optics (Precision) | Cold Bore (+3 Penetration vs undamaged) | Enfilade |
-| Siege Maul | Reinforced Head (+2 Penetration) | Breaching Round (Hull no-repair) | Piledriver Protocol |
+| Siege Maul | Reinforced Head (+1 Damage) | Breaching Round (Hull no-repair) | Piledriver Protocol |
 | Missile Barrage | Swarm Warheads (+1 ROF) | Shaped Charges (Armour Piercing) | Fire Control Lock |
 | Sword | Duelist's Balance (Precision) | Opportunist (+3 Penetration vs disrupted) | Superconductor Edge |
 | Circular Saw | Tempered Teeth (Armour Piercing) | Sunder (−1 max SP struck) | Dismember |
 | Chainsaw | Ripper Teeth (Rend) | Bloodletter (+1 ROF vs damaged) | Redline Governor |
 | Claw | Rending Talons (Rend) | Vice Grip (Impale) | Breach Grip |
 | Lance | Couched Reach (+2" reach) | Full Tilt (+3 Penetration charge) | Skewer |
-| Wrecking Ball | Haymaker (+3 Penetration) | Momentum Swing (+2 Penetration charge) | Tow Chain |
+| Wrecking Ball | Haymaker (+1 Damage) | Momentum Swing (+2 Penetration charge) | Tow Chain |
 | Bulwark Shield | Tower Shield (front+side) | Anvil Boss (riposte) | Emplacement |
 | Flamethrower | Sticky Fuel (Rend) | Napalm (Burning) | Conflagration |
 | Harpoon | Barbed Head (Impale) | Taut Cable (+3 Penetration vs pinned/engaged) | Harpoon Winch |
 | Rivet Gun | Rapid Feed (+2 ROF) | Staple Burst (4+ hits → −1 action) | Rivet Lock |
-| Anchor | Fluked Head (+3 Penetration) | Dead Weight (no Disengage next) | Ground Anchor |
+| Anchor | Fluked Head (Armour Piercing) | Dead Weight (no Disengage next) | Ground Anchor |
 | Pressure Claw | Hardened Jaws (Armour Piercing) | Crush Grip (−1 max SP) | Hydraulic Vice |
 | Crossbow | Fletched Bolts (Precision) | Steady Aim (+3 Penetration in sweet band) | Pinning Bolt |
-| Talon | Honed Talons (+2 Penetration) | Exploit Wound (+3 Penetration vs damaged location) | Evisceration |
+| Talon | Honed Talons (+1 Penetration) | Exploit Wound (+3 Penetration vs damaged location) | Evisceration |
 
 #### Tuned / Prototype Upgrade Mechanics
 

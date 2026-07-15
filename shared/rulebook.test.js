@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { WEIGHT_PEN_MOD } from "./rules.js";
+import { WEAPONS, WEAPON_UPGRADES } from "./game-state.js";
 
 // rules.md is a RUNTIME INPUT, not documentation: server/config.js -> server/prompt.js
 // bakes it verbatim into the rules bot's system prompt as "the single source of truth",
@@ -59,5 +60,86 @@ test("rules.md's weight ladder matches WEIGHT_PEN_MOD", () => {
     );
     const expected = sign(WEIGHT_PEN_MOD[key]);
     assert.equal(value, expected, `rules.md "${text}" disagrees with WEIGHT_PEN_MOD.${key} (${expected})`);
+  }
+});
+
+// §12's stat tables and §13's upgrade table are hand-copied duplicates of
+// WEAPONS / WEAPON_UPGRADES — which makes every cell an unverifiable claim about
+// the engine, and they drifted like one: the Penetration rework moved ten weapons
+// across four commits and §12 kept teaching the pre-rework numbers the whole time
+// (Siege Maul "Penetration 11 / Damage 5" against an engine reading 7/6). The
+// weight-ladder guard above could not see it. These tests derive the expected
+// cells from the engine, so the copy can no longer silently lie.
+//
+// NOTE THE CONVENTION: the tables teach BASE stats, not the stats a legal rig
+// actually fights with. `normalizeWeaponUpgrade` gives a null-upgrade weapon its
+// FIRST (Field) upgrade, so every fielded weapon reads base + Field — a Siege Maul
+// fights at Damage 7, not the 6 printed in §12. §12 prints the base and §13 prints
+// the Field modifier separately; that is why §12 lists the Rivet Gun at ROF 6 while
+// its Field upgrade is "+2 ROF". Do not "fix" §12 to the fielded value.
+const rulebookRows = () => {
+  const rows = new Map();
+  for (const line of RULEBOOK.split(/\r?\n/)) {
+    if (!line.startsWith("| ")) continue;
+    const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+    if (cells.length < 4) continue;
+    if (!rows.has(cells[0])) rows.set(cells[0], []);
+    rows.get(cells[0]).push(cells);
+  }
+  return rows;
+};
+// A weapon names a row in BOTH tables, so classify by shape rather than by key:
+// a §12 stat row's second cell is ROF (digits), a §13 upgrade row's is prose.
+const statRow = (rows, name) => (rows.get(name) || []).find((c) => /^\d+$/.test(c[1]));
+const upgradeRow = (rows, name) => (rows.get(name) || []).find((c) => !/^\d+$/.test(c[1]));
+// rules.md writes U+2212 for minus and quotes inches; the engine stores plain numbers.
+const cellNum = (s) => Number(String(s).replace(/−/g, "-").replace(/"/g, ""));
+
+test("rules.md §12 teaches WEAPONS' base long-range stats", () => {
+  const rows = rulebookRows();
+  assert.ok(Object.keys(WEAPONS.longRange).length > 0, "WEAPONS.longRange is empty — did the shape change?");
+  for (const [name, w] of Object.entries(WEAPONS.longRange)) {
+    const c = statRow(rows, name);
+    assert.ok(c, `rules.md §12 has no stat row for "${name}"`);
+    const got = {
+      rof: cellNum(c[1]), pen: cellNum(c[2]), dmg: cellNum(c[3]),
+      sweet: cellNum(c[4]), peak: cellNum(c[5]), dropoff: Math.abs(cellNum(c[6])),
+    };
+    for (const [field, value] of Object.entries(got)) {
+      assert.equal(value, w[field], `rules.md §12 "${name}" ${field}=${value}, WEAPONS says ${w[field]}`);
+    }
+    const [lo, hi] = c[7].replace(/"/g, "").split(/[–-]/).map(Number);
+    assert.equal(lo, w.minRange, `rules.md §12 "${name}" min range`);
+    assert.equal(hi, w.maxRange, `rules.md §12 "${name}" max range`);
+  }
+});
+
+test("rules.md §12 teaches WEAPONS' base melee stats", () => {
+  const rows = rulebookRows();
+  assert.ok(Object.keys(WEAPONS.melee).length > 0, "WEAPONS.melee is empty — did the shape change?");
+  for (const [name, w] of Object.entries(WEAPONS.melee)) {
+    const c = statRow(rows, name);
+    assert.ok(c, `rules.md §12 has no stat row for "${name}"`);
+    for (const [field, value] of Object.entries({ rof: cellNum(c[1]), pen: cellNum(c[2]), dmg: cellNum(c[3]) })) {
+      assert.equal(value, w[field], `rules.md §12 "${name}" ${field}=${value}, WEAPONS says ${w[field]}`);
+    }
+    // §12 prints a bare en-dash for Accuracy 0.
+    assert.equal(c[4] === "–" ? 0 : cellNum(c[4]), w.accuracy[0], `rules.md §12 "${name}" Acc`);
+    assert.equal(cellNum(c[5]), w.rng[0], `rules.md §12 "${name}" RNG`);
+  }
+});
+
+test("rules.md §13 names WEAPON_UPGRADES' upgrades in Field/Tuned/Prototype order", () => {
+  const rows = rulebookRows();
+  assert.ok(Object.keys(WEAPON_UPGRADES).length > 0, "WEAPON_UPGRADES is empty — did the shape change?");
+  for (const [name, list] of Object.entries(WEAPON_UPGRADES)) {
+    const row = upgradeRow(rows, name);
+    assert.ok(row, `rules.md §13 has no upgrade row for "${name}"`);
+    list.forEach((u, i) => {
+      assert.ok(
+        (row[i + 1] || "").startsWith(u.name),
+        `rules.md §13 "${name}" ${u.nature} cell is "${row[i + 1]}", WEAPON_UPGRADES calls it "${u.name}"`,
+      );
+    });
   }
 });
