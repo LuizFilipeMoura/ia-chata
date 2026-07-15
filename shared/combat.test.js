@@ -2308,3 +2308,45 @@ test("hit location comes from the target's kind, not the attacker's", () => {
   assert.equal(shot(tank, rig, 6).location, "arms");
   assert.equal(shot(walker, rig, 9).location, "legs");
 });
+
+test("ledger — Overmatch is named in the damage step when it fires", () => {
+  // A crushing hit rendering "weapon D 5" with an unexplained +2 in the total is
+  // exactly the readability failure this ledger exists to close.
+  // Wrecking Ball STR 10 + Haymaker 3 (its field upgrade, applied by default)
+  // + rear arc 3 = effStr 16 vs medium arms T4 → 8 STR past the TN-2 floor → +2 D.
+  // The rate and cap behind that 2 are rules.test.js's (strOverflowD's) to pin;
+  // what this asserts is that the rider reaches the ledger under its own name.
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "rear", range: "near", cover: 0,
+      dice: { toHit: [6], location: 5, wounds: [10] } }, // location 5 → arms
+    () => 0, ctx);
+  const dmg = ctx.resolutions.find((r) => r.kind === "attack")
+    .breakdown.steps.find((s) => s.kind === "damage");
+  assert.deepEqual(dmg.terms, [
+    { label: "wounds", value: 1 },
+    { label: "weapon D", value: 5 },
+    { label: "Overmatch", value: 2 },
+  ]);
+});
+
+test("ledger — Overmatch is absent when it did not fire", () => {
+  // A term worth 0 must push nothing — same rule as strBreakdown. With ~15
+  // possible contributions, rendering the dead ones buries the live ones.
+  // Sword is STR 5 and its field upgrade (Duelist Balance) grants Precision, not
+  // STR, so a front-arc swing reaches effStr 5 — nowhere near medium arms' floor.
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", range: "near", cover: 0,
+      dice: { toHit: [6], location: 5, wounds: [10] } },
+    () => 0, ctx);
+  const dmg = ctx.resolutions.find((r) => r.kind === "attack")
+    .breakdown.steps.find((s) => s.kind === "damage");
+  assert.equal(dmg.terms.some((t) => t.label === "Overmatch"), false);
+});

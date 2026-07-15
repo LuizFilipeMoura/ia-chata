@@ -892,11 +892,14 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     const dmgTerms = [{ label: "wounds", value: impacts.filter((h) => h.sp > 0).length }];
     if (first) {
       dmgTerms.push({ label: "weapon D", value: first.d });
-      // Rend/Evisceration are per-wound riders; report the one that actually
-      // fired on a wound that dealt damage.
+      // Rend/Evisceration/Overmatch are per-wound riders. Source them from a
+      // wound that actually dealt damage: one zeroed by Ablative Cascade still
+      // carries its riders but never applied them. Each is tested on its own —
+      // a rider worth 0 pushes nothing (same rule as the wound step's terms).
       const rider = impacts.find((h) => h.sp > 0) || first;
       if (rider.rend) dmgTerms.push({ label: "Rend", value: rider.rend });
       if (rider.evisc) dmgTerms.push({ label: "Evisceration", value: rider.evisc });
+      if (rider.overflow) dmgTerms.push({ label: "Overmatch", value: rider.overflow });
     }
     steps.push({ kind: "damage", terms: dmgTerms, out: `${total} SP → ${location}` });
   }
