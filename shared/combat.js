@@ -169,27 +169,46 @@ function isUndamaged(target) {
 
 // §12/§7 — STR = weapon STR + weight modifier + Charged Shot + any conditional
 // Tuned/Prototype bonuses (§13) that read the attacker/target state via `opts`.
-export function computeStr(attacker, profile, opts) {
+//
+// Returns `{ value, terms }` — `terms` is the itemised ledger behind `value`,
+// one `{ label, value }` per contribution that ACTUALLY fired. A modifier
+// worth 0 pushes nothing: with ~15 possible contributions here, rendering the
+// dead ones would bury the two that decided the shot. Labels are the words a
+// player reads on the table ("Cold Bore", "light chassis"), not our field names.
+export function strBreakdown(attacker, profile, opts) {
+  const terms = [];
   // Anvil Boss riposte (§13 Bulwark) — a forced, flat STR for the free counter
   // that ignores weight class and every conditional Tuned/Prototype bonus, so
   // the counter lands at exactly the upgrade's riposteStr regardless of who owns
   // the shield. Threaded through `rollWounds` from `resolveAttack`.
-  if (opts.strOverride != null) return opts.strOverride;
+  if (opts.strOverride != null) {
+    return { value: opts.strOverride, terms: [{ label: "forced STR", value: opts.strOverride }] };
+  }
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
+  // The weapon's own STR is the floor every modifier is measured against, so it
+  // is always a term even though every other entry here is conditional.
+  terms.push({ label: "weapon STR", value: profile.str });
+  if (weightMod) terms.push({ label: `${attacker.weightClass} chassis`, value: weightMod });
+  if (charged) terms.push({ label: "Charged Shot", value: charged });
   let bonus = 0;
   // Reactor Overdrive (§13, Power Prototype) — +2 STR to every attack while the
   // Overclock-armed flag rides this activation (set in game-state.js's overclock
   // branch, cleared at activation end).
-  if (attacker.reactorOverdriveActive) bonus += 2;
+  if (attacker.reactorOverdriveActive) {
+    bonus += 2;
+    terms.push({ label: "Reactor Overdrive", value: 2 });
+  }
   // Cold Bore — +3 STR against a target whose every location is at max SP.
   if (opts.target && profile.upgradeEffect?.coldBore && isUndamaged(opts.target)) {
     bonus += 3;
+    terms.push({ label: "Cold Bore", value: 3 });
   }
   // Full Tilt / Momentum Swing — STR while charging in (moved this activation).
   // `charge` is a generalised key: Full Tilt sets it to 3, Momentum Swing to 2.
   if (attacker.movedThisActivation && profile.upgradeEffect?.charge) {
     bonus += profile.upgradeEffect.charge;
+    terms.push({ label: "charging in", value: profile.upgradeEffect.charge });
   }
   // Opportunist — +3 STR vs a target that's disrupted: overheated past its
   // class cap, or carrying an action penalty into its next activation.
@@ -197,30 +216,43 @@ export function computeStr(attacker, profile, opts) {
     const cap = HEAT_CAPACITY[opts.target.weightClass];
     const disrupted = (opts.target.actionPenaltyNextActivation || 0) > 0
       || (cap != null && (opts.target.engine?.heat || 0) > cap);
-    if (disrupted) bonus += 3;
+    if (disrupted) {
+      bonus += 3;
+      terms.push({ label: "Opportunist", value: 3 });
+    }
   }
   // Taut Cable — +3 STR against a target already pinned down: immobilised, or
   // held in a melee lock (engaged).
   if (opts.target && profile.upgradeEffect?.vsPinned) {
-    if (opts.target.immobilised || opts.target.engagedWith != null) bonus += 3;
+    if (opts.target.immobilised || opts.target.engagedWith != null) {
+      bonus += 3;
+      terms.push({ label: "Taut Cable", value: 3 });
+    }
   }
   // Steady Aim (§13, Crossbow) — +3 STR when the measured firing distance is
   // within 2" of the weapon's sweet spot. Needs the distance threaded in via opts.
   if (profile.upgradeEffect?.steadyAim && opts.distance != null
       && Math.abs(opts.distance - profile.sweet) <= 2) {
     bonus += 3;
+    terms.push({ label: "Steady Aim", value: 3 });
   }
   // Exploit Wound (§13, Talon) — +3 STR against a struck location already below
   // its max SP. Needs the struck location threaded in via opts.location.
   if (profile.upgradeEffect?.vsWoundedLoc && opts.target && opts.location) {
     const p = opts.target[opts.location];
-    if (p && p.sp < p.max) bonus += 3;
+    if (p && p.sp < p.max) {
+      bonus += 3;
+      terms.push({ label: "Exploit Wound", value: 3 });
+    }
   }
   // Evisceration downside (§13, Talon) — the talon needs a wound to grip: -1 STR
   // against a struck location that is still fully undamaged.
   if (profile.upgradeEffect?.eviscerate && opts.target && opts.location) {
     const p = opts.target[opts.location];
-    if (p && p.sp === p.max) bonus -= 1;
+    if (p && p.sp === p.max) {
+      bonus -= 1;
+      terms.push({ label: "Evisceration (no wound to grip)", value: -1 });
+    }
   }
   // Redline Governor — the hotter the attacker runs past its own class cap,
   // the harder the Chainsaw bites (+1 STR per heat over cap, capped at +3).
@@ -228,19 +260,28 @@ export function computeStr(attacker, profile, opts) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
     const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
     bonus += Math.min(3, over);
+    // The term carries what actually applied, not the +3 cap — a Chainsaw one
+    // point over cap must read "+1", not the headline number.
+    if (Math.min(3, over)) terms.push({ label: "Redline Governor", value: Math.min(3, over) });
   }
   // Superconductor Edge — running past half the attacker's own heat cap
   // charges the blade for +2 STR.
   if (profile.upgradeEffect?.superconductor) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
-    if (cap != null && (attacker.engine?.heat || 0) > cap / 2) bonus += 2;
+    if (cap != null && (attacker.engine?.heat || 0) > cap / 2) {
+      bonus += 2;
+      terms.push({ label: "Superconductor Edge", value: 2 });
+    }
   }
   // Piledriver Protocol — a Siege Maul shot spends stored Momentum for +1 STR
   // per point. The spent amount is threaded in via opts.momentum (computed once
   // in resolveAttack so the STR bonus and the post-shot Momentum reset stay in
   // lockstep). Gated on the piledriver effect so a stray opts.momentum on any
   // other weapon is inert.
-  if (opts.momentum && profile.upgradeEffect?.piledriver) bonus += opts.momentum;
+  if (opts.momentum && profile.upgradeEffect?.piledriver) {
+    bonus += opts.momentum;
+    terms.push({ label: "Piledriver Protocol", value: opts.momentum });
+  }
   // Kickstart Pistons (Mobility Tuned) — a melee blow right after Sprinting into
   // base contact this activation hits +2 STR, but only the FIRST such blow:
   // `chargedIntoContact` is armed by the Sprint path, `kickstartUsed` is set by
@@ -251,12 +292,22 @@ export function computeStr(attacker, profile, opts) {
   if (profile.melee && attacker.chargedIntoContact && !attacker.kickstartUsed
       && equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.kickstartPistons) {
     bonus += 2;
+    terms.push({ label: "Kickstart Pistons", value: 2 });
   }
   // Cryo Reservoir / Meltdown Protocol — a spent charge arms +STR on the next
   // attack. Shared transient off the attacker's equipState; consumed in
   // resolveFire and cleared in endActivation so it can't leak past its activation.
   const nextStr = attacker.equipState?.nextAttackStr || 0;
-  return profile.str + weightMod + charged + bonus + nextStr;
+  if (nextStr) terms.push({ label: "primed charge", value: nextStr });
+  return { value: profile.str + weightMod + charged + bonus + nextStr, terms };
+}
+
+// §12/§7 — the shot's effective STR. Thin wrapper over strBreakdown so the ~15
+// contributions can be shown in the resolution ledger without changing any
+// caller: the engine used to compute this arithmetic and throw it away, which is
+// why a player could not tell why a shot did nothing.
+export function computeStr(attacker, profile, opts) {
+  return strBreakdown(attacker, profile, opts).value;
 }
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard

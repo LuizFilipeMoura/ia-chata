@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
+import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, strBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 import { WEIGHT_STR_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
@@ -132,6 +132,37 @@ test("computeStr applies weight and Charged Shot", () => {
   assert.equal(computeStr({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 9); // 10-1
   const arcGun = { ...WEAPONS.longRange["Arc Gun"], perks: ["Charged Shot"] };
   assert.equal(computeStr({ weightClass: "medium" }, arcGun, { charged: true }), 10); // 8+0+2
+});
+
+test("strBreakdown — reports the base weapon STR and the weight modifier", () => {
+  const attacker = makeRig(1, "A", "light", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = strBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
+  assert.equal(b.value, 4);                       // Sword 5, light -1
+  assert.deepEqual(b.terms, [
+    { label: "weapon STR", value: 5 },
+    { label: "light chassis", value: -1 },
+  ]);
+});
+
+test("strBreakdown — a modifier that does not fire emits no term", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const b = strBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
+  // medium weight mod is 0 — it must not appear as a term at all.
+  assert.deepEqual(b.terms, [{ label: "weapon STR", value: 5 }]);
+  assert.equal(b.value, 5);
+});
+
+test("strBreakdown — a live upgrade emits a named term", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  attacker.reactorOverdriveActive = true;
+  const b = strBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
+  assert.equal(b.value, 7);
+  assert.ok(b.terms.some((t) => t.label === "Reactor Overdrive" && t.value === 2));
+});
+
+test("computeStr — still returns a bare number, callers unchanged", () => {
+  const attacker = makeRig(1, "A", "light", "a", { longRange: "Autocannon", melee: "Sword" });
+  assert.equal(computeStr(attacker, { ...WEAPONS.melee["Sword"] }, {}), 4);
 });
 
 test("Kickstart Pistons: first melee after charging into contact hits +2 STR", () => {
