@@ -91,3 +91,52 @@ export function segmentHitsPolygon(a, b, poly) {
   }
   return pointInPolygon(a, pts);
 }
+
+// The 3-ray sight corridor. Take the centre line A->B, then offset
+// perpendicular to it by each unit's OWN radius to get three parallel rays:
+// top->top, centre->centre, bottom->bottom. Offsetting perpendicular to the
+// shot (rather than along a fixed map axis) is what makes the read
+// rotation-invariant — a flanking shot and a frontal shot are graded alike.
+//
+// Bases differ in radius, so the outer rays converge or diverge slightly. That
+// is correct: a light rig shooting a medium gets a wider corridor at the target
+// end.
+//
+// Every ray is tested against EVERY terrain kind — kind matters in exactly one
+// place, the buildingRays check. That is the whole content of "everything is
+// solid; only buildings block sight". A 1in rock can never obstruct all three,
+// so small scatter naturally reads as cover 1 and a long barricade as cover 2.
+// Geometry grades cover; there is no cover-class table.
+export function sightCorridor(attacker, target, polys) {
+  const dx = target.pos.x - attacker.pos.x;
+  const dy = target.pos.y - attacker.pos.y;
+  const len = Math.hypot(dx, dy);
+  // Coincident bases can't happen (rigs block each other) — degrade, don't throw.
+  if (len < 1e-9) return { obstructed: 0, buildingRays: 0, cover: 0, los: true };
+
+  const nx = -dy / len; // unit perpendicular to the shot
+  const ny = dx / len;
+
+  let obstructed = 0;
+  let buildingRays = 0;
+  for (const side of [1, 0, -1]) { // top, centre, bottom
+    const a = { x: attacker.pos.x + nx * attacker.radius * side, y: attacker.pos.y + ny * attacker.radius * side };
+    const b = { x: target.pos.x + nx * target.radius * side, y: target.pos.y + ny * target.radius * side };
+    let hit = false;
+    let building = false;
+    for (const poly of polys) {
+      if (!segmentHitsPolygon(a, b, poly)) continue;
+      hit = true;
+      if (poly.kind === "building") building = true;
+    }
+    if (hit) obstructed++;
+    if (building) buildingRays++;
+  }
+  return {
+    obstructed,
+    buildingRays,
+    // Lands exactly on combat.js's existing opts.cover clamp of 0-2.
+    cover: Math.min(2, obstructed),
+    los: buildingRays < 3,
+  };
+}
