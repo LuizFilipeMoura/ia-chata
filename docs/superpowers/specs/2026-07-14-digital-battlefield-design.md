@@ -74,7 +74,31 @@ unit.facing = 0..359     // degrees; front arc = facing ±45°
 Radius is derived from weight class (light 1.18", medium 1.48"), not stored per-unit.
 
 **Terrain** in a digital room draws from a reduced vocabulary: `building`, `barricade`,
-`rock`, `crate`. Dropped: `wood`, `crater`, `ruin`.
+`rock`, `crate` — and is **rectangles only, mirrored 180° about the field centre**.
+
+*Rectangles only.* `rock` was the last poly blob; in a digital room it becomes a rect like
+the other three. One shape, one code path, faster rays and grid. `terrainPolygons` already
+normalises everything to polygons, so nothing downstream changes.
+
+*Mirrored.* Pieces are scattered into the half-plane on one side of the empty-corner
+diagonal, then duplicated by a 180° rotation about the field centre. That rotation maps one
+deployment corner exactly onto the other, so **each side sees an identical board from its
+own corner** — neither player can be handed the worse table. This matters more than usual
+here: the whole point of the digital battlefield is an AI opponent, and an asymmetric map
+makes "did the AI outplay me" unanswerable.
+
+The objectives are already symmetric under the same rotation — the centre marker maps to
+itself, and the two 1-VP markers sit toward the empty corners, which map onto each other.
+So `computeObjectives` needs no change.
+
+*Terrain clears the deploy zone.* `scatterTerrain` currently keeps pieces `0.18 × halfDiag`
+(≈5.8" on the reference table) from a deployment corner, while the deploy zone reaches 8".
+Terrain therefore intrudes into the outer third of the staging area, and on ~0.6% of seeds
+it eats enough room that the 4th rig of a 4v4 roster has nowhere legal to stand. The corner
+clearance now covers the full `deployRadius(field)`. **This applies to physical rooms too** —
+terrain should not spawn in your staging area on a real table either.
+
+Dropped from the digital vocabulary entirely: `wood`, `crater`, `ruin`.
 
 Those three were dropped because pure ray-counting lies about them. A `wood` is a 3.4–5.4"
 blob that eats all 3 rays and reads as *no LOS* — a forest becomes a wall, and a rig inside

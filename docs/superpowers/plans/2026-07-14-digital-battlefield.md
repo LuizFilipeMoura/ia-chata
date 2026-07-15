@@ -759,6 +759,193 @@ git commit -m "feat(field): digital rooms scatter a 4-kind terrain subset"
 
 ---
 
+### Task 5b: Mirrored, rectangles-only, deploy-zone-clear terrain
+
+Three changes to `scatterTerrain`, decided after Task 9's deployment probe found the 4v4
+seed roster failing on 0.6% of seeds.
+
+**Files:**
+- Modify: `shared/field.js` (`TERRAIN_KINDS`, `scatterTerrain`)
+- Test: `shared/field.test.js`
+
+**The three decisions:**
+
+1. **Terrain clears the full deploy zone (physical AND digital).** `cornerClear` is currently
+   `0.18 * hd` ≈ 5.84" on the reference table, but `deployRadius(field)` is 8". So terrain
+   legally spawns in the outer third of the staging area. Measured: the shipped
+   `SEED_ROSTER_4V4` (2 medium + 2 light per side) leaves its 4th rig undeployed on 23 of
+   4000 rigs across 500 seeds — always the last one added, because terrain ate the corner.
+   Change `cornerClear` to `deployRadius(field)`. This is not digital-only: terrain should
+   not spawn in your staging area on a real table either.
+
+2. **Digital terrain is rectangles only.** `rock` is the last `poly` blob; give it a rect
+   `make` in digital mode. One shape, one code path.
+
+3. **Digital terrain mirrors 180° about the field centre.** Scatter into the half-plane on
+   one side of the empty-corner diagonal, then duplicate every piece rotated half a turn
+   about the centre. That maps one deployment corner exactly onto the other, so each side
+   sees an identical board from its own corner.
+
+   Geometry notes that matter:
+   - The mirror of a piece at `(x, y)` is `(width - x, height - y)`.
+   - A **rect is centrally symmetric**, so `rot` is unchanged by a 180° turn — do NOT add 180
+     to it. (This is only true because of decision 2. If a poly ever returns, its points must
+     be negated.)
+   - A piece straddling the diagonal would overlap its own mirror. Require each candidate's
+     centre to clear the diagonal by at least its own footprint radius `fp`.
+   - Halve the per-kind counts before mirroring, or the board ends up twice as dense.
+
+- [ ] **Step 1: Write the failing tests**
+
+Append to `shared/field.test.js`:
+
+```js
+import { DIGITAL_TERRAIN_KINDS, deployRadius, scatterTerrain, FIELD_DEFAULT } from "./field.js";
+
+const mirrorOf = (field, p) => ({ x: field.width - p.x, y: field.height - p.y });
+const near = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
+
+test("digital terrain is rectangles only — no poly blobs", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  for (const p of scatterTerrain(field, seeded(4), { digital: true })) {
+    assert.equal(p.shape, "rect", `${p.kind} is a ${p.shape}`);
+  }
+});
+
+test("digital terrain mirrors 180 degrees about the field centre", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const pieces = scatterTerrain(field, seeded(4), { digital: true });
+  assert.ok(pieces.length >= 2 && pieces.length % 2 === 0, `expected pairs, got ${pieces.length}`);
+  for (const p of pieces) {
+    const m = mirrorOf(field, p);
+    const twin = pieces.find((q) => q !== p && q.kind === p.kind && near(q.x, m.x) && near(q.y, m.y));
+    assert.ok(twin, `${p.kind} at (${p.x}, ${p.y}) has no twin at (${m.x.toFixed(2)}, ${m.y.toFixed(2)})`);
+    assert.ok(near(twin.w, p.w) && near(twin.h, p.h), "a twin must be the same size");
+  }
+});
+
+test("scatterTerrain keeps every piece clear of both deployment zones", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const rad = deployRadius(field);
+  for (const digital of [true, false]) {
+    for (let s = 1; s <= 40; s++) {
+      const pieces = scatterTerrain(field, seeded(s), digital ? { digital: true } : undefined);
+      for (const p of pieces) {
+        for (const c of deploymentCorners(field)) {
+          assert.ok(dist(c, p) >= rad, `${digital ? "digital" : "physical"} seed ${s}: ${p.kind} is ${dist(c, p).toFixed(2)}in from a deploy corner, zone is ${rad.toFixed(2)}`);
+        }
+      }
+    }
+  }
+});
+
+test("physical terrain keeps its full vocabulary and stays unmirrored", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const pieces = scatterTerrain(field, seeded(4));
+  assert.ok(pieces.some((p) => !DIGITAL_TERRAIN_KINDS.has(p.kind)), "physical keeps wood/crater/ruin");
+  assert.ok(pieces.some((p) => p.shape === "poly"), "physical keeps organic blobs");
+});
+
+test("digital scatter is still deterministic under a seeded RNG", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  assert.deepEqual(
+    scatterTerrain(field, seeded(9), { digital: true }),
+    scatterTerrain(field, seeded(9), { digital: true }),
+  );
+});
+```
+
+**Note:** the deploy-clearance test asserts `dist(corner, piece) >= rad` on the piece CENTRE.
+Whether it should be centre or footprint-edge is a judgement call — a big building whose
+centre is 8.1" out still overhangs the zone. Decide, make the test say what you decided, and
+justify it in your report. Centre-based is the cheaper, looser choice; `dist >= rad + p.fp`
+is the strict one, but `fp` is stripped from the wire payload, so the test would need to
+re-derive it.
+
+- [ ] **Step 2: Run to verify failure**
+
+Run: `node --test shared/field.test.js`
+Expected: FAIL — poly rocks present, no mirrored twins, pieces inside the deploy zone.
+
+- [ ] **Step 3: Implement**
+
+In `shared/field.js`:
+
+```js
+// Terrain must not spawn in a staging area. This used to be 0.18 * halfDiag
+// (~5.84in on the reference table) while the deploy zone reaches 8in, so pieces
+// intruded into the outer third of it — measured: the 4v4 seed roster's last rig
+// found no legal spot on 0.6% of seeds. Physical rooms get this too; terrain in
+// your own corner is wrong on a real table as well.
+const cornerClear = deployRadius(field);
+```
+
+For rectangles-only, give `rock` a digital rect variant rather than forking `TERRAIN_KINDS`.
+Add a `makeDigital` to the `rock` entry and prefer it when `opts.digital`:
+
+```js
+{ kind: "rock", min: 2, max: 4,
+  make(rand) { /* ...existing poly blob, unchanged for physical... */ },
+  // Digital maps are rectangles only: one shape, one code path for the ray
+  // tests and the occupancy grid.
+  makeDigital(rand) {
+    const w = rrange(rand, 1.6, 3.2);
+    const h = w * rrange(rand, 0.7, 1.05);
+    return { shape: "rect", w: round2(w), h: round2(h), rot: round2(rrange(rand, 0, 180)), fp: Math.hypot(w, h) / 2 };
+  } },
+```
+
+For the mirror, place into one half-plane then duplicate. The empty-corner diagonal is the
+dividing line (`emptyCorners(field)` gives its two endpoints):
+
+```js
+// Which side of the empty-corner diagonal a point falls on, and how far.
+// Pieces are scattered on ONE side and mirrored to the other, so each player
+// sees an identical board from their own corner.
+function diagonalSide(field, p) {
+  const [e0, e1] = emptyCorners(field);
+  return ((e1.x - e0.x) * (p.y - e0.y) - (e1.y - e0.y) * (p.x - e0.x)) / Math.hypot(e1.x - e0.x, e1.y - e0.y);
+}
+```
+
+Then in the placement loop, when `opts.digital`: reject a candidate unless
+`diagonalSide(field, p) > piece.fp` (strictly one side, clear of the diagonal by its own
+footprint so it can't overlap its own mirror), and after the loop emit each placed piece
+plus its twin:
+
+```js
+  // A 180 deg turn about the centre maps one deployment corner onto the other.
+  // A rect is centrally symmetric, so `rot` is unchanged by the turn — this is
+  // only true because digital terrain is rectangles only.
+  const mirrored = placed.flatMap((p) => [p, { ...p, x: round2(field.width - p.x), y: round2(field.height - p.y) }]);
+```
+
+Halve the per-kind counts in digital mode so the mirrored board isn't twice as dense.
+
+- [ ] **Step 4: Run**
+
+Run: `node --test "shared/*.test.js"`
+Expected: PASS. Existing physical terrain tests must stay green EXCEPT any that assert the
+old corner clearance — if one breaks because terrain moved out of the deploy zone, that test
+was encoding the bug; update it and say so.
+
+- [ ] **Step 5: Re-probe deployment**
+
+The whole point of change 1. Confirm the 4v4 roster now deploys clean:
+
+```bash
+node --test shared/game-state.test.js
+```
+and report whether the `autoDeploy` tests still pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git commit -m "feat(field): mirrored rect-only digital terrain, clear of deploy zones" -- shared/field.js shared/field.test.js
+```
+
+---
+
 ### Task 6: Occupancy grid
 
 A* needs a grid. Obstacles are inflated by the mover's radius so the mover is a POINT against fat obstacles — the standard trick, and it makes the swept-corridor check free.
