@@ -7,7 +7,10 @@ import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
   deploymentCorners, deployRadius,
 } from "./field.js";
-import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
+import {
+  radiusOf, terrainPolygons, clearOfTerrain,
+  sightCorridor, arcOf, distanceBetween, meleeInReach,
+} from "./geometry.js";
 import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
@@ -2210,6 +2213,44 @@ function combatCtx() {
   };
 }
 
+// THE SEAM. In a physical room the player reads distance / arc / cover off a
+// real table and declares them. In a digital room we derive the same three from
+// the simulated field and pass them into the SAME resolveAttack signature.
+// resolveAttack does not know which mode it is in, and combat.test.js never has
+// to change.
+//
+// A rig carries no `radius` in state — it is derived from weight class — so bolt
+// it on here for the geometry helpers, which want { pos, facing, radius }.
+function spatial(rig) {
+  return { pos: rig.pos, facing: rig.facing, radius: radiusOf(rig) };
+}
+
+// Melee reach in inches, measured RIM to RIM (§7/§12). The 2in base reach is a
+// rim gap, not a centre distance: two mediums block each other at 2.96in centre
+// to centre, so a centre-measured 2in reach could never connect. Lance's Couched
+// Reach carries `effect.range: 2` — the same field effectiveWeaponProfile adds
+// to the melee `rng` band — which doubles the reach to 4in.
+export function meleeReachOf(rig) {
+  const profile = effectiveWeaponProfile("melee", rig.weapons?.melee, rig);
+  return 2 + (profile?.upgradeEffect?.range ?? 0);
+}
+
+// The three declared values (plus the two predicates that gate the shot),
+// measured off the simulated field. Distance is centre to centre — what
+// resolveAttack's sweet-spot falloff expects; only melee reach is rim to rim.
+export function deriveAttackGeometry(room, attacker, target) {
+  const a = spatial(attacker);
+  const b = spatial(target);
+  const corridor = sightCorridor(a, b, terrainPolygons(room.field));
+  return {
+    distance: distanceBetween(a, b),
+    arc: arcOf(a, b),
+    cover: corridor.cover,
+    los: corridor.los,
+    inMeleeReach: meleeInReach(a, b, meleeReachOf(attacker)),
+  };
+}
+
 // Resolve one Fire/Aimed shot end-to-end (to-hit, heat, budget). Returns the
 // resolveAttack result ({ ok, hits, ... }, always truthy) when the shot was made,
 // or false when it couldn't be. Callers that only need "did it fire?" treat the
@@ -2218,6 +2259,29 @@ function combatCtx() {
 function resolveFire(room, rig, target, a, act, random) {
   const t = room.game.turn;
   const slot = a.weapon === "melee" ? "melee" : "longRange";
+  // Digital rooms overwrite whatever the client claimed. The client is never
+  // trusted for geometry: it has the same pure modules and can preview with
+  // them, but the engine measures for itself. The three fields are written back
+  // ONTO `a` rather than onto a copy, because callers keep reading it after we
+  // return — maybeBraceRetaliate gates on `a.arc`, and a Brace that answered a
+  // client-declared "front" while the shot resolved from the derived rear would
+  // be exactly the trust we are removing.
+  if (room.mode === "digital") {
+    const geo = deriveAttackGeometry(room, rig, target);
+    if (slot === "melee") {
+      if (!geo.inMeleeReach) return reject(`${target.name} is out of melee reach.`);
+      // Melee is the one attack resolveAttack still gates on the legacy `range`
+      // BAND rather than on distance. Having just measured the rim gap we own
+      // that answer, so stamp it — otherwise a client could still veto its own
+      // in-reach blow by declaring "out".
+      a.range = "near";
+    } else if (!geo.los) {
+      return reject(`No line of sight to ${target.name}.`);
+    }
+    a.distance = geo.distance;
+    a.arc = geo.arc;
+    a.cover = geo.cover;
+  }
   // The ranged weapon must be reloaded before it can fire again (§7): no rushed
   // shot. Firing a spent weapon is a no-op until the player spends a Reload.
   if (slot === "longRange" && rig.loaded.longRange === false) return false;
@@ -2773,7 +2837,9 @@ function performAction(room, rig, act, a, random) {
         return true; // whole attack deferred to the `react` verb
       }
       const res = resolveFire(room, rig, target, a, act, random);
-      if (!res) return reject("This attack can't be resolved.");
+      // resolveFire's own refusals (no LoS, out of melee reach) already carry a
+      // reason — keep it rather than papering over it with the generic one.
+      if (!res) return reject(lastRejectionReason() || "This attack can't be resolved.");
       prep.faceUp = true;
       pushResolution(room, reactionRevealEntry(target, prep.type));
       // Post-resolution counters: Return Fire, Riposte, Exploit each arm a

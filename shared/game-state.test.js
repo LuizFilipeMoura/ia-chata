@@ -17,7 +17,7 @@ import {
   CHASSIS_PRIMARY_EQUIPMENT,
   heatMeter,
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
-  autoDeploy,
+  autoDeploy, deriveAttackGeometry, meleeReachOf,
 } from "./game-state.js";
 import { deploymentCorners, deployRadius, scatterTerrain } from "./field.js";
 import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
@@ -5782,4 +5782,144 @@ test("readying a physical room deploys nothing", () => {
   applyCommand(room, { verb: "ready", attrs: { side: "b" } }, {}, { random: seededRandom(4) });
   assert.equal(room.game.started, true);
   for (const rig of room.rigs) assert.equal(rig.pos, undefined, "physical rigs are never given a position");
+});
+
+// ---------------------------------------------------------------------------
+// deriveAttackGeometry — THE SEAM. A physical room takes distance/arc/cover from
+// the player's tape measure; a digital room derives the same three from the
+// simulated field and feeds them to the identical resolveAttack signature.
+// ---------------------------------------------------------------------------
+
+// A digital room mid-activation with `a1` active and loaded, ready to Fire at
+// `b1`. Terrain is cleared so each test can place exactly what it needs.
+function digitalFirefight() {
+  const room = digitalRoomWithMirroredRigs("GEO001");
+  room.field.terrain = [];
+  const a = findRig(room, "a1");
+  const b = findRig(room, "b1");
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: a.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  a.loaded = { longRange: true, melee: true };
+  return { room, a, b };
+}
+
+test("digital rooms derive distance/arc/cover and ignore what the client claimed", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 20, y: 10 }; b.facing = 0;        // b looks AWAY, so this is its REAR
+  const d = deriveAttackGeometry(room, a, b);
+  assert.ok(Math.abs(d.distance - 10) < 1e-9, "centre to centre");
+  assert.equal(d.arc, "rear");
+  assert.equal(d.cover, 0);
+  assert.equal(d.los, true);
+});
+
+test("digital rooms derive no-LOS from a building spanning the corridor", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 30, y: 10 }; b.facing = 180;
+  room.field.terrain = [{ kind: "building", x: 20, y: 10, shape: "rect", w: 2, h: 20 }];
+  assert.equal(deriveAttackGeometry(room, a, b).los, false);
+});
+
+test("a barricade spanning the corridor is cover 2, NOT a blocked shot", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 30, y: 10 }; b.facing = 180;
+  room.field.terrain = [{ kind: "barricade", x: 20, y: 10, shape: "rect", w: 2, h: 20 }];
+  const d = deriveAttackGeometry(room, a, b);
+  assert.equal(d.los, true, "only buildings deny the shot");
+  assert.equal(d.cover, 2);
+});
+
+test("a digital ranged attack with no line of sight is refused", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 30, y: 10 }; b.facing = 180;
+  room.field.terrain = [{ kind: "building", x: 20, y: 10, shape: "rect", w: 2, h: 20 }];
+  // The client claims a clean point-blank front shot; the building says otherwise.
+  const res = checkCommand(room, { verb: "action", attrs: {
+    name: a.name, action: "fire", weapon: "longRange", target: b.name,
+    arc: "front", cover: 0, distance: 1,
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
+  } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /line of sight/i);
+});
+
+test("a digital melee attack out of rim reach is refused", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 20, y: 10 }; b.facing = 180;      // rim gap ~7.6in, way past 2in
+  const res = checkCommand(room, { verb: "action", attrs: {
+    name: a.name, action: "fire", weapon: "melee", target: b.name, arc: "front",
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
+  } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /reach/i);
+});
+
+test("a refused digital melee leaves nobody engaged", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 20, y: 10 }; b.facing = 180;
+  applyCommand(room, { verb: "action", attrs: {
+    name: a.name, action: "fire", weapon: "melee", target: b.name, arc: "front",
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
+  } });
+  assert.equal(findRig(room, "a1").engagedWith, null);
+  assert.equal(findRig(room, "b1").engagedWith, null);
+});
+
+test("a digital melee inside rim reach connects", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 13, y: 10 }; b.facing = 180;      // rim gap ~0.64in, inside 2in
+  const res = checkCommand(room, { verb: "action", attrs: {
+    name: a.name, action: "fire", weapon: "melee", target: b.name, arc: "front",
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
+  } });
+  assert.equal(res.ok, true, res.reason);
+});
+
+test("a digital melee in reach ignores a client-declared out-of-range band", () => {
+  const { room, a, b } = digitalFirefight();
+  a.pos = { x: 10, y: 10 }; a.facing = 0;
+  b.pos = { x: 13, y: 10 }; b.facing = 180;      // in reach, whatever the client says
+  const res = checkCommand(room, { verb: "action", attrs: {
+    name: a.name, action: "fire", weapon: "melee", target: b.name, arc: "front",
+    range: "out",
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
+  } });
+  assert.equal(res.ok, true, res.reason);
+});
+
+test("Couched Reach doubles the derived melee reach", () => {
+  const { room, a, b } = digitalFirefight();
+  a.weapons.melee = "Lance";
+  a.weaponUpgrades = { ...a.weaponUpgrades, melee: "couched-reach" };
+  assert.equal(meleeReachOf(a), 4, "2in base + Couched Reach's range:2");
+  a.pos = { x: 10, y: 10 };
+  b.pos = { x: 15, y: 10 };                      // rim gap ~2.64in — past 2, inside 4
+  assert.equal(deriveAttackGeometry(room, a, b).inMeleeReach, true);
+});
+
+test("physical rooms still take the player's declared values verbatim", () => {
+  const room = createRoom("PHYS04");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "Atk", class: "medium", owner: "a", ...W } });
+  applyCommand(room, { verb: "add", attrs: { name: "Def", class: "medium", owner: "b", ...W } });
+  const a = findRig(room, "Atk");
+  const b = findRig(room, "Def");
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: a.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  a.loaded = { longRange: true, melee: true };
+  // Absurd values, and no pos/facing/terrain anywhere to contradict them.
+  const res = checkCommand(room, { verb: "action", attrs: {
+    name: a.name, action: "fire", weapon: "longRange", target: b.name,
+    arc: "rear", cover: 2, distance: 14,
+    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
+  } });
+  assert.equal(res.ok, true, "no geometry, no refusal — the human measured it");
 });
