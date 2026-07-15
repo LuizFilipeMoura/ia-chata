@@ -45,9 +45,10 @@ test("the glossary teaches the wound roll, not the deleted impact table", () => 
 });
 
 // Same idiom as the impact-table guard above, for the rule deleted by the
-// penetration rework. The scan matters more than the id assert: rules.md still
-// has to be stripped of Overmatch, and a doc pass is exactly how deleted
-// vocabulary leaks back into a def.
+// penetration rework. The scan matters more than the id assert: a doc pass is
+// exactly how deleted vocabulary leaks back into a def. rules.md has since been
+// stripped too, and carries its own Overmatch guard (rulebook.test.js's `legacy`
+// list) — both surfaces are bound, so neither can quietly re-teach the rule.
 test("the glossary does not teach Overmatch, deleted with the penetration rework", () => {
   assert.ok(!GLOSSARY.some((g) => g.id === "overmatch"), "overmatch entry must be gone");
   for (const g of GLOSSARY) {

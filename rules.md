@@ -372,9 +372,9 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose Accuracy up close.
 
-> The **Siege Maul** is a close-in demolition gun: standard Penetration, and **among ranged weapons** Damage beaten only by the Sniper Cannon and matched only by the Harpoon — in melee the Lance and the Wrecking Ball hit harder still, and the Anchor matches it. Its range is the shortest of any weapon in this table bar the Rivet Gun. It is not frightening because it penetrates better — it penetrates the same as a Mortar. It is frightening because of what each wound costs.
+> The **Siege Maul** is a close-in demolition gun: standard Penetration, the heaviest Damage **in this table** after the Sniper Cannon (the Harpoon matches it), and the shortest range here bar the Rivet Gun. It is not frightening because it penetrates better — it penetrates the same as a Mortar. It is frightening because of what each wound costs.
 
-> The **Harpoon** is a heavy line-thrower — the Siege Maul's payload on a longer leash, trading the Sniper Cannon's reach and alpha for a point of Penetration and a closer sweet spot. The **Rivet Gun** is a rapid, low-Penetration fastener gun with the shortest max range of any weapon in the table — volume, not punch.
+> The **Harpoon** is a heavy line-thrower: the Siege Maul's payload on a longer leash, trading the Sniper Cannon's reach and alpha for a mid-board sweet spot. The **Rivet Gun** is a rapid, low-Penetration fastener gun with the shortest max range of any weapon in the table — volume, not punch.
 
 ### Melee Weapons
 
