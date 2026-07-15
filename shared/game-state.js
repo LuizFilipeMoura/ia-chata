@@ -1,5 +1,5 @@
 import {
-  ACTIONS, heatThreshold, hitLocation, impactSeverity, impactRow, HEAT_CAPACITY,
+  ACTIONS, heatThreshold, hitLocation, toughnessOf, woundTarget, WOUND_DIE, HEAT_CAPACITY,
   EQUIPMENT_UPGRADES, equipmentUpgradeEffectOf,
 } from "./rules.js";
 import { resolveAttack } from "./combat.js";
@@ -28,6 +28,12 @@ export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 // (§11). Doubled from the original 5 to pair with the ~2× per-rig SP scaling —
 // longer fights so the upgrade natures (ramps, DoT, attrition) have time to matter.
 export const MAX_ROUNDS = 10;
+// §9 — a munition cook-off has no weapon profile, so its shot is these two
+// constants. STR 8 was rescaled with the weapon ladder (was 10 on the old 4..13
+// scale); D2 is Autocannon/Mortar-grade. vs a medium hull (T5) that is 3+ — a
+// cook-off should be nasty, not certain.
+export const BLAST_STR = 8;
+export const BLAST_D = 2;
 // Base weapons carry stats only. Perks are delivered exclusively by the chosen
 // weapon upgrade (see WEAPON_UPGRADES); `melee: true` is a structural flag (not a
 // perk) that drives arc/range logic in combat.js and the wizards.
@@ -3438,14 +3444,18 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         const t = findRig(room, name);
         if (!t || t.destroyed) continue;
         const loc = hitLocation(t.kind || "rig", rollD(12, a.dice?.location?.[name], options.random));
-        const die = rollD(6, a.dice?.impacts?.[name], options.random);
-        const total = die + 10; // D6 + STR 10 (§9)
-        const sev = impactSeverity(total, impactRow(t.kind || "rig", loc, t.weightClass));
-        if (sev.sp > 0) applyDamage(room, t, loc, sev.sp, { random: options.random });
+        // §9 — a munition cook-off is a flat STR 8 / D2 shot (rescaled onto the
+        // weapon ladder), wounding on a d10 like any other attack. It carries no
+        // weapon profile, so the two constants live at module scope above.
+        const die = rollD(WOUND_DIE, a.dice?.wounds?.[name], options.random);
+        const tough = toughnessOf(t.kind || "rig", loc, t.weightClass);
+        const tn = woundTarget(BLAST_STR, tough);
+        const sp = die >= tn ? BLAST_D : 0;
+        if (sp > 0) applyDamage(room, t, loc, sp, { random: options.random });
         pushResolution(room, {
           kind: "blast", actor, rigId: t.id,
-          rolls: [{ sides: 6, value: die, label: "D6" }],
-          summary: `Blast hits ${t.name}: ${total} → ${sev.tier} (${sev.sp} SP to ${loc})`, effects: [],
+          rolls: [{ sides: WOUND_DIE, value: die, label: "wound", tone: sp > 0 ? "ok" : "miss" }],
+          summary: `Blast hits ${t.name}: ${die} vs ${tn}+ (STR ${BLAST_STR} vs T${tough}) → ${sp} SP to ${loc}`, effects: [],
         });
       }
       // A target destroyed by this blast may itself chain into a new pending

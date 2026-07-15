@@ -10,7 +10,7 @@ import {
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   normalizeAnswerPrep, ANSWER_COUNTERS,
-  UNIT_WEAPONS, normalizeUnitWeapon,
+  UNIT_WEAPONS, normalizeUnitWeapon, BLAST_D,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
   chassisById, resolveChassis, SEED_ROSTER, SEED_ROSTER_4V4, CHASSIS, randomSeedRoster,
@@ -1879,13 +1879,21 @@ test("Priority Target kill VP is awarded once, never twice", () => {
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2); // still 2, not 4
 });
 
-test("blast applies D6 + STR 10 to each named rig and clears the pending blast", () => {
+test("blast wounds on a d10 against the struck location's toughness", () => {
+  // BLAST_STR 8 vs a medium hull (T5) => TN = 6 + 5 - 8 = 3+. A 2 fails, a 3 wounds for D2.
   const r = startedRoom();
+  const a1 = findRig(r, "a1");
+  a1.weightClass = "medium"; // startedRoom fields only light rigs; T4 hull would clamp to TN 2.
+  const sp0 = a1.hull.sp;
+
   r.game.pendingBlast = { sourceId: findRig(r, "b1").id, exploded: true };
-  const a1 = findRig(r, "a1"); // light hull 6
-  applyCommand(r, { verb: "blast", attrs: { targets: ["a1"], dice: { impacts: { a1: 6 }, location: { a1: 1 } } } });
-  // D6 6 + STR 10 = 16 vs light hull (10/14/16) -> critical (3 SP).
-  assert.equal(a1.hull.sp, 3);
+  applyCommand(r, { verb: "blast", attrs: { targets: ["a1"], dice: { wounds: { a1: 2 }, location: { a1: 1 } } } });
+  assert.equal(a1.hull.sp, sp0, "2 < 3 => no wound");
+  assert.equal(r.game.pendingBlast, null);
+
+  r.game.pendingBlast = { sourceId: findRig(r, "b1").id, exploded: true };
+  applyCommand(r, { verb: "blast", attrs: { targets: ["a1"], dice: { wounds: { a1: 3 }, location: { a1: 1 } } } });
+  assert.equal(a1.hull.sp, sp0 - BLAST_D, "3 >= 3 => BLAST_D SP");
   assert.equal(r.game.pendingBlast, null);
 });
 
