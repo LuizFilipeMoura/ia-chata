@@ -1951,51 +1951,47 @@ test("fire action resolves an attack, applies damage and logs it", () => {
 test("a wound that zeroes a location from full says so in the roll console", () => {
   // The RollConsole renders entry.effects as staggered lines, so no client change.
   // Drives applyCommand (the real combatCtx) on purpose: combat.test.js's makeCtx
-  // stubs applyDamage with a clamp at 0 that never fires the §8 cascade, so a
-  // drama test written against it would pass while testing nothing.
-  const r = startedRoom();
-  clearPendingAnswer(r);
-  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const a1 = findRig(r, "a1");
-  // Prove the fixture rather than assume it: startedRoom's rigs are light and
-  // carry Mini Gun / Sword, and the Sword's Damage 3 is what must meet the
-  // location's max exactly for a from-full zeroing.
-  assert.equal(findRig(r, "b1").weapons.melee, "Sword");
+  // stubs applyDamage — at :15 a total no-op, at :465 a clamp at 0 — so neither
+  // ever fires the §8 cascade, and a drama test written against them would pass
+  // while testing nothing.
+  const { r, a1 } = swordDuel();
   assert.equal(a1.legs.max, 5); // light class default — the Sword's D3 can't zero it from full
   // Test-only state poke: shrink the location to exactly the Sword's Damage so
   // one wound takes it full -> 0. Legs are `mobility`, so this stops at 0 and
   // does not cascade to the §8 kill tier — the tier under test is the middle one.
   a1.legs.max = 3;
   a1.legs.sp = 3; // full
-  applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
-    dice: { toHit: [6, 6], wounds: [10, 1], location: 8 }, // 8 -> legs
-  } });
+  const effects = fireSword(r, 8); // 8 -> legs
   assert.equal(a1.legs.sp, 0); // the wound actually landed where the drama claims
-  const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
   assert.ok(
-    attack.effects.some((e) => /in one blow/.test(e)),
-    `expected a one-blow effect line, got ${JSON.stringify(attack.effects)}`,
+    effects.some((e) => /in one blow/.test(e)),
+    `expected a one-blow effect line, got ${JSON.stringify(effects)}`,
   );
 });
 
-// The §7 spill has always fired silently. These two lock in the cases where the
-// console had nothing to say — the second is the one a player most needs, since
-// nothing on screen moves except a part the attack never named.
-function fireSword(r, loc) {
+// --- Roll-console drama (§7 spill / §8 kill tier) ---------------------------
+// b1 activated with a1 in reach; both light, both Mini Gun / Sword (Damage 3).
+// Each test below pokes exactly one field, which is the whole fixture.
+function swordDuel() {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const b1 = findRig(r, "b1");
+  const a1 = findRig(r, "a1");
+  assert.equal(b1.weapons.melee, "Sword"); // Damage 3 — prove it, don't assume it
+  return { r, a1, b1 };
+}
+// One wound lands (10) and one does not (1), so exactly one Sword D3 is dealt.
+function fireSword(r, loc, dice = {}) {
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
-    dice: { toHit: [6, 6], wounds: [10, 1], location: loc },
+    dice: { toHit: [6, 6], wounds: [10, 1], location: loc, ...dice },
   } });
   return r.game.resolutions.filter((x) => x.kind === "attack").at(-1).effects;
 }
 
 test("a wound onto an already-wrecked location says where the SP carried through", () => {
-  const r = startedRoom();
-  clearPendingAnswer(r);
-  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const a1 = findRig(r, "a1");
-  assert.equal(findRig(r, "b1").weapons.melee, "Sword"); // Damage 3
+  const { r, a1 } = swordDuel();
   a1.legs.sp = 0; // Test-only state poke: already wrecked, so all 3 points spend past 0.
   const hullBefore = a1.hull.sp;
   const effects = fireSword(r, 8); // 8 -> legs
@@ -2008,10 +2004,7 @@ test("a wound onto an already-wrecked location says where the SP carried through
 });
 
 test("a wound that both guts a location and carries through says both", () => {
-  const r = startedRoom();
-  clearPendingAnswer(r);
-  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const a1 = findRig(r, "a1");
+  const { r, a1 } = swordDuel();
   // Test-only state poke: legs at 1/1 are full AND cannot absorb the Sword's D3,
   // so one wound zeroes them from full and carries 2 SP through.
   a1.legs.max = 1;
@@ -2025,21 +2018,20 @@ test("a wound that both guts a location and carries through says both", () => {
 });
 
 test("the kill tier speaks once — a wreck does not also report its parts", () => {
-  const r = startedRoom();
-  clearPendingAnswer(r);
-  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const a1 = findRig(r, "a1");
-  a1.engine.sp = 2; // Test-only state poke: the 3rd point spends past 0 -> §8 kill.
+  const { r, a1 } = swordDuel();
+  // Test-only state poke: engine full at 2/2, so the Sword's D3 both zeroes it
+  // from FULL and spends a point past 0. Both the torn-open and the kill line
+  // qualify; only the kill may speak. `max` must move too — leaving it at 4
+  // makes wasFull false and the competing line could never fire anyway.
+  a1.engine.max = 2;
+  a1.engine.sp = 2;
   const effects = fireSword(r, 11); // 11 -> engine (power)
   assert.equal(a1.destroyed, true);
   assert.deepEqual(effects, ["Sword — a1 gutted in a single blow"]);
 });
 
 test("a later wound on a wreck claims no spill it did not cause", () => {
-  const r = startedRoom();
-  clearPendingAnswer(r);
-  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const a1 = findRig(r, "a1");
+  const { r, a1 } = swordDuel();
   // The Sword is ROF 2. Wound 1 kills via the hull's §8 clause; wound 2 then
   // lands on the wreck's 0-SP hull. Hull is structural, so §8 destroys rather
   // than spills — and `gutted` can't re-fire on an already-dead rig, so an
@@ -2047,22 +2039,74 @@ test("a later wound on a wreck claims no spill it did not cause", () => {
   a1.hull.sp = 2;
   const outside = () => a1.legs.sp + a1.arms.sp + a1.engine.sp;
   const outsideBefore = outside();
-  applyCommand(r, { verb: "action", attrs: {
-    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
-    dice: { toHit: [6, 6], wounds: [10, 10], location: 1 }, // 1 -> hull; both wounds land
-  } });
-  const effects = r.game.resolutions.filter((x) => x.kind === "attack").at(-1).effects;
+  const effects = fireSword(r, 1, { wounds: [10, 10] }); // 1 -> hull; both wounds land
   assert.equal(a1.destroyed, true);
   assert.equal(outside(), outsideBefore); // nothing spilled, so nothing may claim it did
   assert.ok(!effects.some((e) => /spilled/.test(e)), JSON.stringify(effects));
 });
 
+// Munition cook-off (§8): a weapon part FIRST reaching 0 sends 1 SP to structural
+// and 1 to power — with no point spent past 0. It is SP leaving other parts that
+// is not a spill, and arms is 3 of the 12 hit-location bands.
+test("a wound the weapon part absorbs whole reports no spill — the cook-off is not one", () => {
+  const { r, a1 } = swordDuel();
+  a1.arms.max = 3;
+  a1.arms.sp = 3; // Test-only state poke: exactly absorbs the Sword's D3.
+  const hullBefore = a1.hull.sp, engineBefore = a1.engine.sp;
+  const effects = fireSword(r, 5, { armsWeapon: 1 }); // 5 -> arms
+  assert.equal(a1.arms.sp, 0);
+  // The cook-off really did move 2 SP — and none of it was pushed through by
+  // this wound, which the arms absorbed to the point.
+  assert.equal(a1.hull.sp, hullBefore - 1);
+  assert.equal(a1.engine.sp, engineBefore - 1);
+  assert.deepEqual(effects, ["Sword — arms torn open in one blow"]);
+});
+
+test("a spill through a weapon part counts the spill only, not the cook-off", () => {
+  const { r, a1 } = swordDuel();
+  a1.arms.sp = 1; // Test-only state poke: 1 absorbed, 2 spend past 0.
+  const effects = fireSword(r, 5, { armsWeapon: 1 });
+  assert.equal(a1.arms.sp, 0);
+  // 4 SP leave other parts (2 spilled + 2 cooked off), but a Damage-3 wound
+  // cannot push 4 SP through. Only the 2 it actually carried may be claimed.
+  assert.ok(
+    effects.some((e) => /through and through \(2 SP spilled\)/.test(e)),
+    `expected the spill line to claim 2 SP, got ${JSON.stringify(effects)}`,
+  );
+});
+
+// The invariant that would have caught the above on sight: no wound can push
+// more SP through than its own Damage. Swept across the fixtures that move SP
+// around, so a future §8 clause that relocates SP can't quietly inflate a claim.
+test("no drama line ever claims more SP through than the wound's Damage", () => {
+  const SWORD_DAMAGE = 3;
+  const fixtures = [
+    ["arms absorbed (cook-off)", (a) => { a.arms.max = 3; a.arms.sp = 3; }, 5],
+    ["arms spill + cook-off", (a) => { a.arms.sp = 1; }, 5],
+    ["arms already wrecked", (a) => { a.arms.sp = 0; }, 5],
+    ["legs already wrecked", (a) => { a.legs.sp = 0; }, 8],
+    ["legs full + overkill", (a) => { a.legs.max = 1; a.legs.sp = 1; }, 8],
+    ["engine + meltdown charge", (a) => {
+      a.engine.max = 3; a.engine.sp = 3;
+      a.equipState = a.equipState || {}; a.equipState.meltdownCharge = 2;
+    }, 11],
+  ];
+  for (const [label, poke, loc] of fixtures) {
+    const { r, a1 } = swordDuel();
+    poke(a1);
+    for (const line of fireSword(r, loc, { armsWeapon: 1 })) {
+      const claimed = /\((\d+) SP spilled\)/.exec(line);
+      if (!claimed) continue;
+      assert.ok(
+        Number(claimed[1]) <= SWORD_DAMAGE,
+        `${label}: claimed ${claimed[1]} SP through on a Damage-${SWORD_DAMAGE} wound — ${line}`,
+      );
+    }
+  }
+});
+
 test("a Kneecapper rake past 0 spills nothing, so it claims nothing", () => {
-  const r = startedRoom();
-  clearPendingAnswer(r);
-  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  const b1 = findRig(r, "b1");
-  const a1 = findRig(r, "a1");
+  const { r, a1, b1 } = swordDuel();
   // Set BOTH the weapon and its upgrade id: weaponUpgrades still holds the old
   // weapon's id otherwise, upgradeForWeapon returns null, and it never applies.
   b1.weapons.longRange = "Double MG";

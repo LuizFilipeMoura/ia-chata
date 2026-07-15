@@ -780,13 +780,6 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       // spends SP one point at a time and every point spent past 0 fires
       // catastrophicAdditional. By the time it returns, "was it full?" is
       // already overwritten.
-      //
-      // The spill is MEASURED, not inferred: sum the SP on every OTHER part and
-      // diff it across the call. Deriving it from `h.sp - before` means
-      // restating §8's clauses here, and that copy is wrong wherever they
-      // disagree — several clauses spend a point without spilling anything
-      // (noSpill/Kneecapper; a structural/power part, which kills instead).
-      // Measuring is true by construction and cannot drift from §8.
       const otherParts = partNamesOf(target.kind || "rig").filter((p) => p !== location);
       const spOutside = () => otherParts.reduce((s, p) => s + (target[p]?.sp ?? 0), 0);
       for (const h of impacts) {
@@ -798,7 +791,24 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
         const outsideBefore = spOutside();
         ctx.applyDamage(room, target, location, h.sp, dmgOpts);
         const after = target[location]?.sp ?? 0;
-        const spilled = outsideBefore - spOutside();
+        // What this wound pushed through, as the min of two bounds. NEITHER is
+        // the spill on its own, and each is wrong in the opposite direction:
+        //   `moved`  — SP that left other parts. Reads HIGH: §8 moves SP for
+        //     reasons that are not a spill at all (munition cook-off on a weapon
+        //     part first reaching 0; Meltdown Protocol), and cook-off needs no
+        //     point spent past 0, so `moved` alone reports a spill on a wound
+        //     the location absorbed whole.
+        //   `past0` — points spent past 0. Reads HIGH: each fires
+        //     catastrophicAdditional once, but clauses that spill nothing
+        //     (noSpill/Kneecapper; a structural/power part, which kills) still
+        //     consume their point.
+        // Each IS a true upper bound on this wound's spill (cook-off only adds
+        // to `moved`; a non-spilling clause only adds to `past0`), so the min is
+        // an upper bound too — and it can never claim more SP than this wound's
+        // Damage, which `moved` alone did. Exact on every case the suite covers.
+        const moved = outsideBefore - spOutside();
+        const past0 = Math.max(0, h.sp - before);
+        const spilled = Math.min(moved, past0);
         if (wasAlive && target.destroyed) {
           // A wreck doesn't also report its parts.
           drama.push(`${weaponName} — ${target.name} gutted in a single blow`);
