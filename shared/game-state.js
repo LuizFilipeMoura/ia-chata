@@ -34,11 +34,11 @@ export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 // longer fights so the upgrade natures (ramps, DoT, attrition) have time to matter.
 export const MAX_ROUNDS = 10;
 // §9 — a munition cook-off has no weapon profile, so its shot is these two
-// constants. STR 8 was rescaled with the weapon ladder (was 10 on the old 4..13
-// scale); D2 is Autocannon/Mortar-grade. vs a medium hull (T5) that is 3+ — a
-// cook-off should be nasty, not certain.
-export const BLAST_STR = 8;
-export const BLAST_D = 2;
+// constants. Penetration 8 was rescaled with the weapon ladder (was 10 on the
+// old 4..13 scale); Damage 2 is Autocannon/Mortar-grade. vs a medium hull (T5)
+// that is 3+ — a cook-off should be nasty, not certain.
+export const BLAST_PEN = 8;
+export const BLAST_DMG = 2;
 // Base weapons carry stats only. Perks are delivered exclusively by the chosen
 // weapon upgrade (see WEAPON_UPGRADES); `melee: true` is a structural flag (not a
 // perk) that drives arc/range logic in combat.js and the wizards.
@@ -3644,13 +3644,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         // weapon profile, so the two constants live at module scope above.
         const die = rollD(WOUND_DIE, a.dice?.wounds?.[name], options.random);
         const tough = toughnessOf(t.kind || "rig", loc, t.weightClass);
-        const tn = woundTarget(BLAST_STR, tough);
-        const sp = die >= tn ? BLAST_D : 0;
+        const tn = woundTarget(BLAST_PEN, tough);
+        const sp = die >= tn ? BLAST_DMG : 0;
         if (sp > 0) applyDamage(room, t, loc, sp, { random: options.random });
         pushResolution(room, {
           kind: "blast", actor, rigId: t.id,
           rolls: [{ sides: WOUND_DIE, value: die, label: "wound", tone: sp > 0 ? "ok" : "miss" }],
-          summary: `Blast hits ${t.name}: ${die} vs ${tn}+ (STR ${BLAST_STR} vs T${tough}) → ${sp} SP to ${loc}`, effects: [],
+          summary: `Blast hits ${t.name}: ${die} vs ${tn}+ (STR ${BLAST_PEN} vs T${tough}) → ${sp} SP to ${loc}`, effects: [],
         });
       }
       // A target destroyed by this blast may itself chain into a new pending

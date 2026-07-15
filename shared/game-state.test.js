@@ -10,7 +10,7 @@ import {
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   normalizeAnswerPrep, ANSWER_COUNTERS,
-  UNIT_WEAPONS, normalizeUnitWeapon, BLAST_D, BLAST_STR,
+  UNIT_WEAPONS, normalizeUnitWeapon, BLAST_DMG, BLAST_PEN,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
   chassisById, resolveChassis, SEED_ROSTER, SEED_ROSTER_4V4, CHASSIS, randomSeedRoster,
@@ -1900,7 +1900,7 @@ test("Priority Target kill VP is awarded once, never twice", () => {
 });
 
 test("blast wounds on a d10 against the struck location's toughness", () => {
-  // BLAST_STR 8 vs a medium hull (T5) => TN = 6 + 5 - 8 = 3+. A 2 fails, a 3 wounds for D2.
+  // BLAST_PEN 8 vs a medium hull (T5) => TN = 6 + 5 - 8 = 3+. A 2 fails, a 3 wounds for D2.
   const r = startedRoom();
   const a1 = findRig(r, "a1");
   a1.weightClass = "medium"; // startedRoom fields only light rigs; T4 hull would clamp to TN 2.
@@ -1913,26 +1913,26 @@ test("blast wounds on a d10 against the struck location's toughness", () => {
 
   r.game.pendingBlast = { sourceId: findRig(r, "b1").id, exploded: true };
   applyCommand(r, { verb: "blast", attrs: { targets: ["a1"], dice: { wounds: { a1: 3 }, location: { a1: 1 } } } });
-  assert.equal(a1.hull.sp, sp0 - BLAST_D, "3 >= 3 => BLAST_D SP");
+  assert.equal(a1.hull.sp, sp0 - BLAST_DMG, "3 >= 3 => BLAST_DMG SP");
   assert.equal(r.game.pendingBlast, null);
 });
 
 test("blast is Overmatch-exempt by construction, not by intent", () => {
   // The §9 cook-off is the ONE wound roll outside combat.js's rollWounds: it
-  // calls woundTarget directly and awards a flat BLAST_D, so Overmatch never
+  // calls woundTarget directly and awards a flat BLAST_DMG, so Overmatch never
   // reaches it. Today that costs nothing, and this pins WHY.
   //
   // Overmatch pays out only once effective STR is OVERMATCH_PER_D (3) points
   // past the TN-2 floor, which sits at str = T + 4 — so the first payout is at
   // str = T + 7. The softest thing on the table is T3, so no blast diverges
-  // until BLAST_STR reaches 10. It is 8: two points of headroom, by accident of
+  // until BLAST_PEN reaches 10. It is 8: two points of headroom, by accident of
   // tuning rather than by design.
   //
-  // BLAST_STR is read, never inlined — a literal 8 here would keep passing
+  // BLAST_PEN is read, never inlined — a literal 8 here would keep passing
   // through exactly the bump this test exists to catch.
   assert.equal(toughnessOf("rig", "engine", "light"), 3, "T3 is the game's softest location");
-  assert.equal(strOvermatchD(BLAST_STR, 3), 0,
-    "BLAST_STR reached T+7: the blast path now silently owes Overmatch that rollWounds would pay");
+  assert.equal(strOvermatchD(BLAST_PEN, 3), 0,
+    "BLAST_PEN reached T+7: the blast path now silently owes Overmatch that rollWounds would pay");
 });
 
 test("fire action resolves an attack, applies damage and logs it", () => {
