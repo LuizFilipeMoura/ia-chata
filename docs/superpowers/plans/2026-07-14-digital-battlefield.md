@@ -34,6 +34,50 @@
 
 **Terrain shapes** (from `field.js` `TERRAIN_KINDS`): a piece is `{ kind, x, y, shape }` plus per-shape geometry — `poly` has `points: [[dx,dy],...]` relative to `(x,y)`; `rect` has `w`, `h`, `rot` (degrees); `ellipse` has `rx`, `ry`, `rot`. Digital rooms only use `building` (rect), `barricade` (rect), `rock` (poly), `crate` (rect).
 
+### The game-state API — get this right or every fixture fails
+
+The task fixtures below were originally drafted against a guessed API. These are the **real**
+signatures, verified against the source. Use them:
+
+```js
+import { createRoom, claimSide, applyCommand, checkCommand, findRig } from "./game-state.js";
+
+const room = createRoom("CODE01");                    // NOT makeRoom(); takes no options
+claimSide(room, { name: "A", side: "a" });
+claimSide(room, { name: "B", side: "b" });
+
+// Commands are { verb, attrs } — EVERYTHING lives under `attrs`, never flat:
+applyCommand(room, { verb: "add", attrs: {
+  name: "Atk", class: "medium", owner: "a", longRange: "Mini Gun", melee: "Sword",
+} });
+
+const rig = findRig(room, "Atk");
+```
+
+**`applyCommand(room, cmd, context, options)` returns `room` — NOT `{ ok, reason }`.**
+To assert a rejection, use `checkCommand(room, cmd)`, which clones, applies, and reports:
+
+```js
+const res = checkCommand(room, { verb: "action", attrs: { name: "Atk", action: "move" } });
+assert.equal(res.ok, false);
+assert.match(res.reason, /Speed/);
+```
+
+`lastRejectionReason()` takes **no argument**. `options.random` is how you inject a seeded RNG.
+
+To put a rig mid-activation, set the turn directly (this is what the existing tests do —
+copy `battleWithPreparedDefender` at the top of `shared/game-state.test.js`):
+
+```js
+room.game.phase = "activation";
+room.game.turn = { side: "a", activeRigId: rig.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+rig.loaded = { longRange: true, melee: true };
+```
+
+**Read the existing helpers before writing new ones** — `shared/game-state.test.js` already has
+`battleWithPreparedDefender`, `startedRoom`, `readyThreeAndThree`, `activate`, `seededRandom`,
+`fireMelee`. Reuse them rather than inventing parallel fixtures.
+
 **Base radii:** light 1.18" (60mm), medium 1.48" (75mm). Digital rooms are Rigs only — no Tanks, no Walkers.
 
 ---
@@ -1061,35 +1105,60 @@ git commit -m "feat(pathfind): A* routing with string-pulled path simplification
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `shared/game-state.test.js` (follow the file's existing room-building helpers):
+Append to `shared/game-state.test.js`. Add this local helper next to the file's existing ones:
+
+```js
+// A claimed 2-side room in digital mode. createRoom takes no options, so the
+// mode is stamped on afterwards — the normalise pass (ensureGameShape) is what
+// gives rigs their pos/facing, and it runs on the next applyCommand.
+function digitalRoom(code = "DIG001") {
+  const room = createRoom(code);
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  return room;
+}
+```
 
 ```js
 test("a room defaults to physical mode", () => {
-  const room = makeRoom();
-  assert.equal(room.mode, "physical");
+  assert.equal(createRoom("PHYS01").mode, "physical");
 });
 
 test("a digital room is rigs-only — adding a tank is refused", () => {
-  const room = makeRoom({ mode: "digital" });
-  const res = applyCommand(room, { verb: "add", name: "T1", kind: "tank", owner: "a", unit: "Autocannon" });
+  const room = digitalRoom();
+  const res = checkCommand(room, { verb: "add", attrs: {
+    name: "T1", kind: "tank", owner: "a", unit: "Autocannon",
+  } });
   assert.equal(res.ok, false);
   assert.match(res.reason, /Rigs only/i);
 });
 
+test("a digital room still accepts a rig", () => {
+  const room = digitalRoom();
+  applyCommand(room, { verb: "add", attrs: {
+    name: "R1", class: "light", owner: "a", longRange: "Autocannon", melee: "Claw",
+  } });
+  assert.equal(room.rigs.length, 1);
+});
+
 test("rigs in a digital room carry pos and facing; physical rigs do not", () => {
-  const digital = makeRoom({ mode: "digital" });
-  applyCommand(digital, { verb: "add", name: "R1", kind: "rig", class: "light", owner: "a", lr: "Autocannon", melee: "Claw" });
-  const r = digital.rigs[0];
+  const digital = digitalRoom();
+  applyCommand(digital, { verb: "add", attrs: {
+    name: "R1", class: "light", owner: "a", longRange: "Autocannon", melee: "Claw",
+  } });
+  const r = findRig(digital, "R1");
   assert.deepEqual(r.pos, { x: 0, y: 0 }, "seeded at the origin until deployment scatters it");
   assert.equal(r.facing, 0);
 
-  const physical = makeRoom();
-  applyCommand(physical, { verb: "add", name: "R1", kind: "rig", class: "light", owner: "a", lr: "Autocannon", melee: "Claw" });
-  assert.equal(physical.rigs[0].pos, undefined, "physical rooms have no simulated position");
+  const physical = createRoom("PHYS02");
+  claimSide(physical, { name: "A", side: "a" });
+  applyCommand(physical, { verb: "add", attrs: {
+    name: "R1", class: "light", owner: "a", longRange: "Autocannon", melee: "Claw",
+  } });
+  assert.equal(findRig(physical, "R1").pos, undefined, "physical rooms have no simulated position");
 });
 ```
-
-**Note:** `makeRoom` is this test file's existing helper — read the top of `shared/game-state.test.js` and use whatever it actually provides. If it takes no options argument, add one that merges into the created room, rather than inventing a parallel helper.
 
 - [ ] **Step 2: Run test to verify it fails**
 
