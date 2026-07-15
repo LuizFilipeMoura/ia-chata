@@ -67,7 +67,7 @@ export const GLOSSARY = [
   },
   {
     id: "penetration", term: "Penetration", match: ["Penetration", "STR"],
-    def: "A weapon's strength, subtracted from the Wound Roll's target — each point makes wounding 10% likelier (§7.5, §12).",
+    def: "A weapon's strength, subtracted from the Wound Roll's target — each point makes wounding 10% likelier, until the roll bottoms out at 2+ and further Penetration is wasted (§7.5, §12).",
   },
   {
     id: "rng", term: "RNG", match: ["RNG"],
@@ -75,7 +75,7 @@ export const GLOSSARY = [
   },
   {
     id: "wound-roll", term: "Wound Roll", match: ["Wound Roll", "Wound Rolls"],
-    def: "One D10 per landed hit, needing 6 + the location's Toughness − your effective Penetration (§7.5). Each wound deals the weapon's Damage. A natural 10 always wounds, so no target is ever immune.",
+    def: "One D10 per landed hit, needing 6 + the location's Toughness − your effective Penetration (§7.5). Each wound deals the weapon's Damage. A natural 10 always wounds, so no target is ever immune; a natural 1 never does, so no shot is ever automatic — the target bottoms out at 2+ once your effective Penetration reaches the location's Toughness + 4, and Penetration past that is wasted.",
   },
   {
     id: "toughness", term: "Toughness", match: ["Toughness"],

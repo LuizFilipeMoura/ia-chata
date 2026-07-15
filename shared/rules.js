@@ -87,27 +87,43 @@ export function hitLocation(kindId, d12) {
 // The wound roll is a d10 (§7.5).
 export const WOUND_DIE = 10;
 
-// The wound roll's floor — the low end of `woundTarget`'s clamp.
+// The wound roll's floor — the rail that saturates. From effective Penetration
+// T + 4 onward this IS the target number, and further Penetration buys nothing.
+// See `woundTarget`'s floor paragraph for why that is a property and not a bug.
 const WOUND_TN_FLOOR = 2;
 
 // §7.5 — the wound roll. A shot's effective Penetration is compared to the
-// struck location's Toughness: roll a d10 against `6 + T - P`.
+// struck location's Toughness: roll a d10 against `6 + T - P`, clamped to
+// WOUND_TN_FLOOR..WOUND_DIE. Between the rails each point of Penetration is
+// worth exactly 10%, so the roll reads as a percentage with no lookup table.
 //
-// The clamp is load-bearing. It guarantees a natural 10 always wounds and a
-// natural 1 never does, so no weapon/target/location matchup can be
-// mathematically hopeless. That was the failure mode of the impact-total model
-// this replaces: its base total capped at `6 + Pen + arc`, leaving 69 combos
-// that could never deal damage at any roll. Do not remove the clamp to "let
-// armour really matter" — that reintroduces the bug. See
-// docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
+// The two rails do OPPOSITE jobs and only one of them is doing it today, so do
+// not reason about "the clamp" as a single thing.
 //
-// Between the clamp's ends each point of Penetration is worth exactly 10%, so
-// the roll is readable as a percentage with no lookup table.
+// The CEILING (WOUND_DIE) is the rail that guarantees a natural 10 always
+// wounds, so no weapon/target/location matchup can be mathematically hopeless.
+// That was the failure mode of the impact-total model this replaces: its base
+// total capped at `6 + Penetration + arc`, leaving 69 combos that could never
+// deal damage at any roll. Do not remove it to "let armour really matter" —
+// that reintroduces the bug. But it is a STANDING guarantee rather than a live
+// one: since Heavy and Colossal were deleted, no matchup's raw TN exceeds the
+// die, so nothing currently leans on this rail. combat.test.js's "the clamp is
+// a floor, not a crutch" pins the exact margin, precisely so that a retune
+// cannot open a hole and let this rail quietly paper over it.
+//
+// The FLOOR (WOUND_TN_FLOOR) is the live rail, and it guarantees the OPPOSITE
+// thing: a natural 1 never wounds, so no matchup is ever automatic either. Its
+// cost is what the penetration rework exists to address — the TN is pinned at 2
+// from P = T + 4 onward, so Penetration past T + 4 is spent on nothing. That
+// saturation is a property of the floor, not a defect in it: it is the price of
+// "no matchup is ever automatic".
+// See docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
 export function woundTarget(pen, toughness) {
-  const p = Math.floor(Number(pen) || 0);
   // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
   // the single most dangerous default in the system. Penetration may coerce — it
-  // fails toward TN 10 (10%) — but T must be real.
+  // fails toward TN 10 (10%) — but T must be real. The guard runs BEFORE the `p`
+  // coercion below, so the asymmetry it exists for reads in one glance: T is
+  // validated, then P is coerced.
   //
   // The check is `typeof`, not `Number.isFinite(Number(t))`: coercing first
   // reopens the exact hole it means to close, because Number(null), Number(""),
@@ -116,6 +132,7 @@ export function woundTarget(pen, toughness) {
   if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
     throw new Error(`wound roll: toughness must be a number, got ${toughness}`);
   }
+  const p = Math.floor(Number(pen) || 0);
   return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, 6 + Math.floor(toughness) - p));
 }
 

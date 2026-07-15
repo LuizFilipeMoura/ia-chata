@@ -1846,7 +1846,12 @@ test("rollWounds — toughness comes from the target's kind, not a rig weight ba
   assert.equal(vsRig[0].toughness, rigT);
   assert.notEqual(rigT, tankT);
   assert.equal(vsRig[0].target, woundTarget(maul.pen, rigT));
-  assert.ok(vsRig[0].target < out[0].target); // softer target, easier wound
+  // Softer target, easier wound. Goes red if the Maul is ever retuned past pen 10,
+  // which would saturate BOTH shots to the floor and collapse the difference this
+  // test is named for — so the message says that rather than "expected truthy".
+  assert.ok(vsRig[0].target < out[0].target,
+    `T${rigT} must be an easier wound than T${tankT}, got TN ${vsRig[0].target} vs ${out[0].target} `
+    + `(both at the floor? the Maul's pen ${maul.pen} now saturates T${rigT} at pen ${rigT + 4})`);
 });
 
 test("Reactive Armor — records the location; the dock lands in rollWounds", () => {
