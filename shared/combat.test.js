@@ -1853,11 +1853,18 @@ test("rollWounds — overflow revives WEIGHT_STR_MOD on a saturated weapon", () 
 test("rollWounds — overflow stacks with Rend and respects its own cap", () => {
   // Overflow, Rend and Evisceration all land in `sp`. The cap is on overflow
   // alone, not on the total — a Rend weapon still gets its +1 on top.
-  const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"] };
+  //
+  // The fixture has to OVERSHOOT the cap or it isn't testing one. str 13 is a
+  // real loadout: Siege Maul's base 11 plus Reinforced Head's +2. With the rear
+  // arc that's effStr 16 into a T3 engine — 9 past the floor, which the 3-point
+  // rate would pay out as +3. It resolves to 2 only because the cap bites, so
+  // this goes red if the cap is raised or removed.
+  const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"], str: 13 };
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, target, maul, "engine",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].overflow, 2);
+  assert.equal(out[0].str, 16);
+  assert.equal(out[0].overflow, 2); // capped down from 3
   assert.equal(out[0].rend, 1);
   assert.equal(out[0].sp, 8); // D5 + 2 overflow + 1 rend
 });

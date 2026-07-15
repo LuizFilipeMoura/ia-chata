@@ -541,9 +541,13 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     }
     let sp = 0;
     // Rend / Evisceration / Overmatch are threaded out per wound, not just folded
-    // into `sp`: the ledger's damage step names them, and re-deriving Evisceration
-    // there is impossible anyway — it reads the location's SP BEFORE this
-    // volley's damage was applied.
+    // into `sp`, because the ledger's damage step names each one. Two of them the
+    // ledger could in principle recompute — Overmatch from the `str`/`toughness`
+    // the rider already carries, Rend from the profile's perks — and they ride
+    // anyway, for shape parity and to keep the arithmetic in one place.
+    // Evisceration is the one that genuinely CANNOT be re-derived there: it reads
+    // the location's SP BEFORE this volley's damage was applied, which is gone by
+    // the time the ledger runs.
     let rend = 0;
     let evisc = 0;
     let overflow = 0;
