@@ -46,9 +46,9 @@ describe("buildLoadout", () => {
       equipment: null,
     });
     const lo = buildLoadout(rig)!;
-    // Autocannon: base ROF 4 / Penetration 7, range 0–26"; Depleted Core is +2 Penetration.
+    // Autocannon: base ROF 4 / Penetration 6, range 0–26"; Depleted Core is +2 Penetration.
     expect(lo.lr!.rof).toEqual({ base: 4, delta: 0 });
-    expect(lo.lr!.pen).toEqual({ base: 7, delta: 2 });
+    expect(lo.lr!.pen).toEqual({ base: 6, delta: 2 });
     expect(lo.lr!.range.text).toBe('0–26"');
     expect(lo.lr!.upNature).toBe("field");
     // Claw: base Penetration 7, melee reach 2"; Vice Grip adds the Impale perk (no numeric delta).

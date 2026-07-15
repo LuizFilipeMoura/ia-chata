@@ -49,15 +49,15 @@ export const WEAPONS = {
   longRange: {
     "Mini Gun":       { rof: 8, pen: 3,  dmg: 1, sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
     "Double MG":      { rof: 8, pen: 5,  dmg: 1, sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
-    "Autocannon":     { rof: 4, pen: 7,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
-    "Arc Gun":        { rof: 2, pen: 8,  dmg: 3, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
+    "Autocannon":     { rof: 4, pen: 6,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
+    "Arc Gun":        { rof: 2, pen: 7,  dmg: 3, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
     "Mortar":         { rof: 3, pen: 7,  dmg: 2, sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
     "Sniper Cannon":  { rof: 1, pen: 6,  dmg: 8, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
     "Siege Maul":     { rof: 1, pen: 7,  dmg: 6, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
     "Missile Barrage":{ rof: 4, pen: 7,  dmg: 2, sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
     "Harpoon":        { rof: 1, pen: 7,  dmg: 6, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
     "Rivet Gun":      { rof: 6, pen: 3,  dmg: 1, sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
-    "Crossbow":       { rof: 1, pen: 8,  dmg: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
+    "Crossbow":       { rof: 1, pen: 7,  dmg: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
   },
   melee: {
     "Sword":         { rof: 2, pen: 5,  dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true },
@@ -70,7 +70,7 @@ export const WEAPONS = {
     "Flamethrower":  { rof: 4, pen: 6,  dmg: 2, accuracy: [1, 0], rng: [2, 2], melee: true },
     "Anchor":        { rof: 1, pen: 7,  dmg: 6, accuracy: [0, 0], rng: [2, 2], melee: true },
     "Pressure Claw": { rof: 2, pen: 7,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
-    "Talon":         { rof: 2, pen: 6,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
+    "Talon":         { rof: 2, pen: 5,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
   },
 };
 
