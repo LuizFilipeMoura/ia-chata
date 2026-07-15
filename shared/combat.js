@@ -2,7 +2,7 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  AIM, WEIGHT_PEN_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
+  BASE_AIM, WEIGHT_PEN_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
   equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE, strOvermatchD,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
@@ -45,7 +45,7 @@ export function weaponAccuracyAt(profile, distance) {
 // Labels are the words a player reads on the table, not our field names.
 export function aimBreakdown(attacker, profile, opts) {
   const terms = [];
-  const base = AIM[attacker.weightClass] ?? 4;
+  const base = BASE_AIM;
   const weaponAccuracy = weaponAccuracyAt(profile, opts.distance);
   // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
   // guard-break (opts.guardBreak, §13 Siege Maul) — both reuse the same path.

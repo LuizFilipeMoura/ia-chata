@@ -54,12 +54,11 @@ Every Rig starts from a **weight class**, which sets its base profile.
 | Arms SP | 5 | 6 |
 | Legs SP | 5 | 6 |
 | Engine SP | 4 | 5 |
-| Aim | 4+ | 4+ | 3+ | 3+ |
-| Speed | 5" | 4" | 3" | 2" |
-| Weapon slots | 2 | 2 | 2 | 2 (+1 Hull) |
+| Speed | 5" | 4" |
+| Weapon slots | 2 | 2 |
 
-- **Speed** — max move distance in inches. *⚙ TUNING: whole-inch speeds (5/4/3/2); Mediums bumped back up from an earlier over-nerf.*
-- **Aim** — base D6 target number to hit (modified by weapon Accuracy and cover).
+- **Speed** — max move distance in inches. *⚙ TUNING: whole-inch speeds (5/4); Mediums bumped back up from an earlier over-nerf.*
+- **Aim** — base D6 target number to hit: **4+**, the same for every Rig (modified by weapon Accuracy and cover). *⚙ TUNING: Aim was a weight-class stat (4+/4+/3+/3+) until Heavy and Colossal were removed, at which point every remaining value was 4+. The chassis does not decide whether you hit; weapon Accuracy and the situation do.*
 - **Weapon slots** — how many weapons the Rig may carry: one Long Range and one Melee.
 - **Structure Points (SP)** — durability per component. At 0 SP → catastrophic damage (§8).
 

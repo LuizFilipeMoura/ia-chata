@@ -61,7 +61,16 @@ export function heatThreshold(total) {
 
 // Weight-class Penetration modifier applied to every Wound Roll (§12).
 export const WEIGHT_PEN_MOD = { light: -1, medium: 0 };
-export const AIM = { light: 4, medium: 4 };
+
+// §2/§7.4 — the base D6 target number to hit, before weapon Accuracy and the
+// situation move it. FLAT: the chassis does not decide whether you hit.
+//
+// This was a weight-class map, `{ light: 4, medium: 4, heavy: 3, colossal: 3 }`.
+// combat.js read it as `AIM[attacker.weightClass] ?? 4` — and Tanks and Walkers
+// have no weightClass, so they always took the fallback. Once Heavy and Colossal
+// were deleted (2026-07-16) the 3s were unreachable and every unit in the game
+// resolved to 4. The map had stopped being a map.
+export const BASE_AIM = 4;
 
 // Heat Capacity by weight class (rules §6). A Rig is safe at or below this
 // value; each point beyond it adds +2 (capped +10) to the misfire roll.

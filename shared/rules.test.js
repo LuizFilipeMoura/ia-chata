@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { AIM, WEIGHT_PEN_MOD, HEAT_CAPACITY, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
+import { BASE_AIM, WEIGHT_PEN_MOD, HEAT_CAPACITY, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
 import { WEAPONS, SUPPORTED_RIG_CLASSES } from "./game-state.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
@@ -59,8 +59,11 @@ test("hitLocation maps the D12 bands (§7)", () => {
 test("weight-class and aim scalars are correct (§2)", () => {
   assert.equal(WEIGHT_PEN_MOD.light, -1);
   assert.equal(WEIGHT_PEN_MOD.medium, 0);
-  assert.equal(AIM.light, 4);
-  assert.equal(AIM.medium, 4);
+  // Flat, not a map. BASE_AIM replaced `AIM[attacker.weightClass] ?? 4`: Tanks
+  // and Walkers have no weightClass and always took the fallback, and once Heavy
+  // and Colossal went every remaining entry was 4. This assertion fails if anyone
+  // re-grows it into an object, which is the only guard it needs.
+  assert.equal(BASE_AIM, 4);
 });
 
 test("the weight-class maps carry exactly the buildable classes", () => {
@@ -68,7 +71,7 @@ test("the weight-class maps carry exactly the buildable classes", () => {
   // (SUPPORTED_RIG_CLASSES), so every heavy/colossal branch in these maps existed
   // only to be read as if it were real — and it was, twice, by a spec author and
   // its reviewer during the penetration rework.
-  for (const [name, map] of Object.entries({ WEIGHT_PEN_MOD, AIM, HEAT_CAPACITY })) {
+  for (const [name, map] of Object.entries({ WEIGHT_PEN_MOD, HEAT_CAPACITY })) {
     assert.deepEqual(Object.keys(map), [...SUPPORTED_RIG_CLASSES], `${name} drifted from SUPPORTED_RIG_CLASSES`);
   }
 });

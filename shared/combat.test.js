@@ -534,7 +534,7 @@ test("painted does not help melee weapons", () => {
 test("resolveAttack emits a per-die roll for each hit-die plus a location d12, each with a tone", () => {
   // Autocannon: rof 4, accuracy [0,-1], no Full Auto requested here. Medium
   // attacker, full hull, near range, front arc, cover 0, fire (not aimed) ->
-  // modAim = AIM.medium(4) - (accuracy[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
+  // modAim = BASE_AIM(4) - (accuracy[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
   // ap-shells (tuned) carries no Penetration bonus, so the expected Penetration below stays the
   // bare base+weight-class value — the default upgrade (depleted-core, field)
   // would add +2 Penetration and throw off the comparison.

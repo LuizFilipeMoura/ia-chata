@@ -200,7 +200,7 @@ test("A Recon unit holds one mark — a new Paint replaces the painter's old mar
 });
 
 test("a destroyed painter's mark stops helping allied guns", () => {
-  // Threshold shot: Tank Cannon peak Accuracy 2, attacker AIM 4, cover 2, one to-hit
+  // Threshold shot: Tank Cannon peak Accuracy 2, attacker BASE_AIM 4, cover 2, one to-hit
   // die of 2. Unpainted modAim = 4 (die 2 misses); a live paint cancels cover
   // and adds +1 Aim -> modAim 1 (die 2 lands). So the same die hits iff the
   // paint is honoured — which it must NOT be once the painter (id 1) is dead.
