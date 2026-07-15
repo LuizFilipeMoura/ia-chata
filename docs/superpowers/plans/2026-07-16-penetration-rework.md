@@ -15,11 +15,23 @@
 ## Prerequisites — do not start without these
 
 - [ ] **`2026-07-16-stat-rename.md` has landed.** This plan is written in the renamed vocabulary: the weapon fields are `pen`, `dmg`, `accuracy`; the sum is `effPen`. If `game-state.js` still says `str:` and `d:`, **stop and run the rename plan first.** Landing them together makes the balance measurement unattributable, which is the one thing both specs exist to prevent.
-- [ ] **The suite is green at 813 node / 293 vitest** (the 811 baseline + the 2 rulebook guards the rename adds).
+- [ ] **The suite is green at 817 node / 293 vitest.**
 
 ```bash
 npm test
 ```
+
+> The baseline moved twice since this plan was written, both times for good reasons:
+> the rename added 2 `rules.md` guards (811 → 813), Task 1 of this plan added the
+> `dmg`-upgrade test (→ 814), and the **heavy/colossal deletion** (`d8a8d3d`,
+> `5aebc26`) added 3 drift guards and removed a redundant one (→ 817).
+>
+> **Task 1 is already done** (`84ac6f0`). Start at Task 2.
+>
+> **Re-verified after the deletion, against the exact design in this plan:**
+> `47.7% → 15.6%` of matchups pinned (all fieldable units), `55.1% → 25.0%` vs rigs
+> only, max Penetration 7, zero weapons pinned above 50%. The figures always came
+> off `SUPPORTED_RIG_CLASSES`, so deleting the dead classes moved nothing.
 
 ## The invariant for this plan
 
