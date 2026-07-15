@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollImpacts, resolveAttack, applyDefensiveReactions } from "./combat.js";
+import { computeModifiedAim, weaponAccAt, rollToHit, computeStr, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
@@ -1567,4 +1567,123 @@ test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-
   const locked = applyDefensiveReactions(lockedTarget, { kind: "tohit", ranged: true, hits: 2, modAim: 4 }, mkCtx());
   assert.equal(locked.hits, 2);                          // locked the round after firing ranged
   assert.equal(lockedTarget.equipState.interceptors, 2);  // no charge spent
+});
+
+// ── §7.5 the wound roll (d10) ────────────────────────────────────────────────
+// Fixture note: makeRig returns null unless BOTH weapon slots are filled, and
+// SUPPORTED_RIG_CLASSES is ["light", "medium"] — so the colossal cases below use
+// bare `{ weightClass }` doubles, matching the plain-object style the older
+// rollImpacts tests in this file already use. rollWounds reads only
+// weightClass/kind off those sides, so the doubles are faithful.
+
+test("rollWounds — a wound deals the weapon's D, not 1", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const profile = { ...WEAPONS.melee["Wrecking Ball"] };
+  // STR 10 + medium 0 + front 0 = 10 vs medium hull T5 => TN 6+5-10 = 1 -> clamp 2. A 9 wounds.
+  const out = rollWounds(attacker, target, profile, "hull",
+    { arc: "front", hits: 1 }, { wounds: [9] }, () => 0);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].sp, 5); // Wrecking Ball d: 5
+});
+
+test("rollWounds — a natural 10 always wounds however hopeless the matchup", () => {
+  // The guarantee the whole rewrite exists for. The old model gave 0 here, always.
+  const attacker = makeRig(1, "A", "light", "a", { longRange: "Mini Gun", melee: "Circular Saw" });
+  const target = { weightClass: "colossal" };
+  const profile = { ...WEAPONS.melee["Circular Saw"] };
+  // STR 5 + light -1 + front 0 = 4 vs colossal hull T7 => TN 6+7-4 = 9. Only a 9-10 lands.
+  const out = rollWounds(attacker, target, profile, "hull",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(out[0].target, 9);
+  assert.equal(out[0].sp, 2); // Circular Saw d: 2
+});
+
+test("rollWounds — a natural 1 never wounds however lopsided", () => {
+  const attacker = { weightClass: "colossal" };
+  const target = makeRig(2, "B", "light", "b", { longRange: "Autocannon", melee: "Claw" });
+  const profile = { ...WEAPONS.melee["Wrecking Ball"] };
+  // STR 10 + colossal +2 + front 0 = 12 vs light hull T4 => TN 6+4-12 = -2 -> clamp 2.
+  const out = rollWounds(attacker, target, profile, "hull",
+    { arc: "front", hits: 1 }, { wounds: [1] }, () => 0);
+  assert.equal(out[0].target, 2);
+  assert.equal(out[0].sp, 0);
+});
+
+test("rollWounds — a raised shield still negates on a natural 10 (earned zero)", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Bulwark Shield" });
+  target.preparation = { type: "raise-shield" };
+  const profile = { ...WEAPONS.melee["Sword"] };
+  const out = rollWounds(attacker, target, profile, "hull",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(out[0].sp, 0);
+  assert.equal(out[0].negated, true);
+});
+
+test("rollWounds — Raking Fire front arc still auto-fails on a natural 10", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  // Base weapons carry no perks; Raking Fire rides the Mini Gun profile itself.
+  const profile = { ...WEAPONS.longRange["Mini Gun"] };
+  const out = rollWounds(attacker, target, profile, "hull",
+    { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.equal(out[0].sp, 0);
+  assert.equal(out[0].negated, true);
+});
+
+test("rollWounds — defender modifiers reduce effective STR, not the roll", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  target.preparation = { type: "brace" };
+  const profile = { ...WEAPONS.melee["Sword"] };
+  // Sword STR 5, medium mod 0, front arc 0, braced -2 => effStr 3 vs T5 => TN 8.
+  const out = rollWounds(attacker, target, profile, "hull",
+    { arc: "front", hits: 1 }, { wounds: [7] }, () => 0);
+  assert.equal(out[0].sp, 0);   // 7 < 8
+  assert.equal(out[0].target, 8);
+  assert.equal(out[0].die, 7);  // the roll is untouched; the TN moved
+  assert.equal(out[0].str, 3);
+});
+
+test("Reactive Armor — records the location; the dock lands in rollWounds", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  target.equipment = "ablative-plating";
+  target.equipmentUpgrade = "reactive-armor";
+  target.equipState = { reactiveArmorLocs: [] };
+  const profile = { ...WEAPONS.melee["Sword"] };
+  rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
+  assert.ok(target.equipState.reactiveArmorLocs.includes("hull"));
+  // Now hardened: Sword STR 5 - 2 => effStr 3 vs T5 => TN 8, so a 7 fails.
+  const out = rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [7] }, () => 0);
+  assert.equal(out[0].sp, 0);
+  assert.equal(out[0].target, 8);
+});
+
+test("Ablative Cascade — a charge negates a wound outright (an earned zero)", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  target.equipment = "ablative-plating";
+  target.equipmentUpgrade = "ablative-cascade";
+  target.equipState = { ablativeCharges: 2 };
+  let heat = 0;
+  const profile = { ...WEAPONS.melee["Wrecking Ball"] };
+  const out = rollWounds(attacker, target, profile, "hull",
+    { arc: "front", hits: 1, spendHeat: (n) => { heat += n; } }, { wounds: [10] }, () => 0);
+  assert.equal(out[0].sp, 0);
+  assert.equal(target.equipState.ablativeCharges, 1);
+  assert.equal(heat, 1);
+});
+
+test("Ablative Cascade — spends nothing on a wound that already failed", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  target.equipment = "ablative-plating";
+  target.equipmentUpgrade = "ablative-cascade";
+  target.equipState = { ablativeCharges: 2 };
+  const profile = { ...WEAPONS.melee["Sword"] };
+  // Sword effStr 5 vs T5 => TN 6; a 1 fails, so no charge is burnt.
+  rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [1] }, () => 0);
+  assert.equal(target.equipState.ablativeCharges, 2);
 });

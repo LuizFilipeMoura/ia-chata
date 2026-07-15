@@ -2,8 +2,8 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity, shieldCoverage, HEAT_CAPACITY,
-  equipmentUpgradeEffectOf,
+  AIM, WEIGHT_STR_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
+  equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
 
@@ -92,8 +92,8 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
     redlineRof = Math.min(3, over);
   }
-  // Penetrator Rounds — every 3rd Autocannon volley ignores the armour row
-  // (forced in rollImpacts below); the belt then cycles slow for exactly the
+  // Penetrator Rounds — every 3rd Autocannon volley skips the wound roll
+  // (forced in rollWounds below); the belt then cycles slow for exactly the
   // next attack, halving that attack's ROF. `autocannonSlowNext` is a
   // one-shot downside: read here and immediately consumed.
   let penetratorShot = false;
@@ -173,7 +173,7 @@ export function computeStr(attacker, profile, opts) {
   // Anvil Boss riposte (§13 Bulwark) — a forced, flat STR for the free counter
   // that ignores weight class and every conditional Tuned/Prototype bonus, so
   // the counter lands at exactly the upgrade's riposteStr regardless of who owns
-  // the shield. Threaded through `rollImpacts` from `resolveAttack`.
+  // the shield. Threaded through `rollWounds` from `resolveAttack`.
   if (opts.strOverride != null) return opts.strOverride;
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
@@ -295,10 +295,13 @@ function kneecapperLocation(kindId, location) {
   return mobility || weapon || null;
 }
 
-// §7.7-8 — one Impact Roll per hit. Adds AP (+D3 per raw 6) and Rend (+D3 per
-// raw 5-6). Brace subtracts 2 on the target's front arc (§5 preparation).
-// Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 4.
-export function rollImpacts(attacker, target, profile, location, opts, providedDice, random) {
+// §7.5 — one Wound Roll (d10) per hit. The shot's effective STR is compared to
+// the struck location's Toughness: wound on `die >= woundTarget(effStr, T)`.
+// Every modifier below moves EFFECTIVE STR, not a total — the wound TN clamps at
+// 10, so a natural 10 always wounds and no matchup is hopeless. Each wound deals
+// the weapon's `d`. Brace subtracts 2 on the target's front arc (§5 preparation).
+// Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 3.
+export function rollWounds(attacker, target, profile, location, opts, providedDice, random) {
   // Thread the real target rig into computeStr's opts (the caller's `opts`
   // here may carry only a display name at `opts.target` — see resolveAttack)
   // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
@@ -309,13 +312,15 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // TARGET (mobility or weapon role). resolveAttack has already remapped
   // `location` onto a limb whenever this upgrade is active, so hull/engine
   // are structurally unreachable here; this is defense-in-depth, not the
-  // primary guarantee. Reuses Raking Fire's own side-arc value (+4) as the
-  // "workable" front bonus rather than inventing a new number — does NOT
+  // primary guarantee. Reuses the STANDARD side-arc bonus (+2) as the
+  // "workable" front value rather than inventing a new number — does NOT
   // touch arcBonus itself, so non-kneecapper Raking Fire guns still auto-fail
-  // on the front arc exactly as before.
+  // on the front arc exactly as before. (Was +4 under the impact-total model,
+  // which read off Raking Fire's old side value; both ladders rescaled in
+  // Task 4, so this tracks the new standard side bonus.)
   if (bonus == null && profile.upgradeEffect?.kneecapper) {
     const role = roleOf(target.kind || "rig", location);
-    if (role === "mobility" || role === "weapon") bonus = 4;
+    if (role === "mobility" || role === "weapon") bonus = 2;
   }
   // Brace's front-arc -2 is skipped by a Piledriver Protocol guard-break
   // (opts.guardBreak, §13 Siege Maul) — the smash ignores the target's Brace.
@@ -326,6 +331,10 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   // game-state cycle. Only reinforced-plating carries the tag (→ −2); base stays −1.
   const hardenDepth = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.hardenImpact ?? 1;
   const hardened = target.hardened ? -hardenDepth : 0;
+  // Reactive Armor (Ablative Plating, Tuned) — a location already hardened this
+  // round docks a further 2 effective STR. The list is recorded by the wound-stage
+  // defensive seam below and cleared each Recovery (refreshEquipState).
+  const reactive = target.equipState?.reactiveArmorLocs?.includes(location) ? -2 : 0;
   // Reactive Plating (Countermeasures) — side/rear attacks lose STR. The dock
   // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`) via
   // equipmentUpgradeEffectOf — the catalog lives in rules.js, importable by
@@ -337,41 +346,49 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
   }
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
-  const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -4 : 0;
-  // Breach Grip (§13, Claw) — a location cracked open eats +2 on every impact
-  // from ANY attacker while the crack is live (its stored expiry round is at or
-  // past the current round). `opts.round` is threaded in from resolveAttack.
+  const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -3 : 0;
+  // Breach Grip (§13, Claw) — a cracked location is easier to wound while the
+  // crack is live (its stored expiry round is at or past the current round).
+  // `opts.round` is threaded in from resolveAttack.
   const crackExpiry = target.cracked?.[location];
   const cracked = crackExpiry != null && opts.round != null && crackExpiry >= opts.round ? 2 : 0;
-  const row = impactRow(target.kind || "rig", location, target.weightClass);
+
+  const toughness = toughnessOf(target.kind || "rig", location, target.weightClass);
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
-    const die = rollD(6, providedDice?.impacts?.[i], random);
-    if (bonus == null || shieldNegates) { out.push({ die, total: 0, tier: "none", sp: 0 }); continue; }
-    let extra = 0;
-    if (hasPerk(profile, "Armour Piercing") && die === 6) extra += rollD(3, providedDice?.ap?.[i], random);
-    if (hasPerk(profile, "Rend") && die >= 5) extra += rollD(3, providedDice?.rend?.[i], random);
-    const total = die + str + bonus + braced + hardened + shieldBlunt + cracked + sideRearDock + extra;
-    // Penetrator Rounds — every 3rd Autocannon volley bypasses the armour row
-    // entirely: every landed hit is forced to Severe (2 SP) regardless of the
-    // total rolled or the location's row.
-    // Evisceration (§13, Talon) — a hit on a location at or below half its max SP
-    // is forced to Critical, regardless of the impact roll (mirrors penetrate).
-    const evisc = profile.upgradeEffect?.eviscerate && target[location]
-      && target[location].sp <= target[location].max / 2;
-    let sev = opts.penetrate ? { tier: "severe", sp: 2 }
-      : evisc ? { tier: "critical", sp: 3 }
-      : impactSeverity(total, row);
-    // Machine guns grind, they don't burst — a raking volley chips SP at volume
-    // but can never crit. Cap Critical down to Severe (2 SP) per hit so an
-    // 8-shot burst can't one-shot a location. Scoped to the `machineGun` flag
-    // (Mini Gun / Double MG / Coaxial MG), independent of Raking Fire so the
-    // walker's non-Raking Coaxial MG is covered too.
-    if (sev.tier === "critical" && profile.machineGun) sev = { tier: "severe", sp: 2 };
+    const die = rollD(WOUND_DIE, providedDice?.wounds?.[i], random);
+    // Earned zeroes — a raised shield, or firing into a rake's blind arc. These
+    // short-circuit before the roll is compared and stay hard zeroes even on a
+    // natural 10. An ARMOUR zero was the bug this rewrite kills; an EARNED zero
+    // is a mechanic and must survive.
+    if (bonus == null || shieldNegates) {
+      out.push({ die, target: null, str: null, toughness, sp: 0, negated: true });
+      continue;
+    }
+    const effStr = str + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
+    const tn = woundTarget(effStr, toughness);
+    // Penetrator Rounds (§13) — every 3rd Autocannon volley skips the wound
+    // roll entirely (was: forced Severe against the old armour row).
+    let wounded = opts.penetrate || die >= tn;
+    // Armour Piercing — reroll a failed wound. Buys frequency, not depth.
+    if (!wounded && hasPerk(profile, "Armour Piercing")) {
+      const re = rollD(WOUND_DIE, providedDice?.ap?.[i], random);
+      wounded = re >= tn;
+    }
+    let sp = 0;
+    if (wounded) {
+      // Rend — +1 D per wound. Buys depth, not frequency (cf. AP above).
+      const rend = hasPerk(profile, "Rend") ? 1 : 0;
+      // Evisceration (§13, Talon) — +1 D against a location already at or below
+      // half its max SP (was: forced Critical).
+      const evisc = profile.upgradeEffect?.eviscerate && target[location]
+        && target[location].sp <= target[location].max / 2 ? 1 : 0;
+      sp = (profile.d || 1) + rend + evisc;
+    }
     const resolved = applyDefensiveReactions(
       target,
-      { die, total, tier: sev.tier, sp: sev.sp, kind: "impact" },
-      { location, row, spendHeat: opts.spendHeat || (() => {}) },
+      { die, target: tn, str: effStr, toughness, sp, kind: "wound" },
+      { location, spendHeat: opts.spendHeat || (() => {}) },
     );
     out.push(resolved);
   }
@@ -386,21 +403,15 @@ export function rollImpacts(attacker, target, profile, location, opts, providedD
 //                landed dice; only ranged hits carry `hit.ranged === true`).
 //                `location`/`row` are null at this stage; `modAim` + the RNG
 //                (`random`/`providedDice`) are threaded in for the reroll.
-//   • "impact" — in rollImpacts, per damaging hit, AFTER impactSeverity.
-//                Consumers: Reactive Armor, Ablative Cascade (soften a severity
-//                step). Carries real `{ location, row }`.
+//   • "wound"  — in rollWounds, per resolved wound roll, AFTER the d10 is
+//                compared to the wound TN. Consumers: Reactive Armor (record the
+//                struck location), Ablative Cascade (negate a wound for a
+//                charge). Carries a real `{ location }` — there is no armour row
+//                under the wound model.
 // combat.js is pure (no game-state import), so any heat spend goes through the
 // injected `ctx.spendHeat(n)` mutator that game-state.js wires to bumpHeat. A
 // defender with no reactive gear falls through every branch and the hit is
 // returned unchanged.
-// Ablative Cascade — the one-step-gentler severity ladder (critical→severe→
-// direct→negated). Looked up by the resolved tier; a Math.min floor at the call
-// site guarantees a spend can only hold or lower an already-capped hit.
-const ABLATIVE_SOFTEN = {
-  critical: { tier: "severe", sp: 2 },
-  severe: { tier: "direct", sp: 1 },
-  direct: { tier: "none", sp: 0 },
-};
 
 export function applyDefensiveReactions(target, hit, ctx) {
   // Point-Defense System (Reactive Plating, Prototype) — a ranged hit may be met
@@ -427,45 +438,33 @@ export function applyDefensiveReactions(target, hit, ctx) {
     }
     return { ...hit, hits: newHits };
   }
-  // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging hit each round
-  // to a location hardens THAT location by −2 impact (Harden-equivalent) until
-  // this rig's next activation; further damaging hits to a hardened location
-  // soften too. The per-round list is cleared in Recovery (refreshEquipState).
-  // Impact-stage only, and only for a hit that actually deals damage: the seam is
-  // reached for every severity-resolved hit including zero-damage ones, so gate
-  // on hit.sp before recording or softening.
-  if (hit.kind === "impact" && hit.sp > 0
+  // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging wound each
+  // round to a location hardens THAT location by -2 effective STR (Harden-
+  // equivalent) until this rig's next activation; further wounds to a hardened
+  // location are docked too. The per-round list is cleared in Recovery
+  // (refreshEquipState). Wound-stage only, and only for a wound that landed.
+  //
+  // The dock itself is applied in rollWounds (it reads this list); this branch
+  // only RECORDS. Re-deriving damage here would double-apply it.
+  if (hit.kind === "wound" && hit.sp > 0
       && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.reactiveArmor) {
     const locs = target.equipState?.reactiveArmorLocs;
-    if (locs) {
-      if (!locs.includes(ctx.location)) locs.push(ctx.location); // first damaging hit hardens it
-      const total = hit.total - 2;
-      const sev = impactSeverity(total, ctx.row);
-      // −2 impact can only hold or lower severity; never let the re-derive raise it
-      // above the resolved hit (e.g. a machine-gun crit already capped to Severe).
-      const sp = Math.min(hit.sp, sev.sp);
-      return { ...hit, total, sp, tier: sp === hit.sp ? hit.tier : sev.tier };
-    }
+    if (locs && !locs.includes(ctx.location)) locs.push(ctx.location);
   }
-  // Ablative Cascade (Ablative Plating, Prototype) — spend one ablative charge to
-  // soften a damaging impact by exactly one severity step; each spend runs the
-  // defender +1 heat via the injected ctx.spendHeat. Charges refill to 2 each
-  // Recovery (game-state refreshEquipState). Impact-stage only, damaging hits only
-  // (the seam fires for every severity-resolved hit including zero-damage ones, so
-  // gate on hit.sp > 0), and only while a charge is banked.
-  if (hit.kind === "impact" && hit.sp > 0
+  // Ablative Cascade (Ablative Plating, Prototype) — spend one charge to negate
+  // a wound outright; each spend runs the defender +1 heat via ctx.spendHeat.
+  // Charges refill to 2 each Recovery (game-state refreshEquipState).
+  //
+  // This is an EARNED zero and is allowed to zero a landed wound — unlike the
+  // armour-row zeroes the wound model exists to eliminate, it costs a finite
+  // resource. Gate on sp > 0 so a charge is never burnt on a wound that already
+  // failed.
+  if (hit.kind === "wound" && hit.sp > 0
       && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.ablativeCascade
       && (target.equipState?.ablativeCharges || 0) > 0) {
-    const softened = ABLATIVE_SOFTEN[hit.tier];
-    if (softened) {
-      // Math.min floor: never let the ladder raise an already-capped hit.
-      const sp = Math.min(hit.sp, softened.sp);
-      if (sp < hit.sp) {
-        target.equipState.ablativeCharges -= 1;
-        ctx.spendHeat(1);
-        return { ...hit, sp, tier: softened.tier };
-      }
-    }
+    target.equipState.ablativeCharges -= 1;
+    ctx.spendHeat(1);
+    return { ...hit, sp: 0, negated: true };
   }
   return hit;
 }
@@ -520,7 +519,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }
   // Piledriver Protocol (§13, Siege Maul) — a shot fired while storing Momentum
   // unloads ALL of it: +1 STR per point (computeStr) plus a guard-break that
-  // ignores the target's Brace (rollImpacts) and cover (computeModifiedAim).
+  // ignores the target's Brace (rollWounds) and cover (computeModifiedAim).
   // Compute the spend ONCE here so the STR bonus, the guard-break, and the
   // post-shot reset below all read the same number. (The design's 3" shove is
   // deferred to the spatial group and NOT applied here.)
@@ -560,7 +559,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // null here — no legal target, so the shot lands with zero effect rather
     // than crashing on a missing part.
     if (location) {
-      impacts = rollImpacts(attacker, target, profile, location,
+      impacts = rollWounds(attacker, target, profile, location,
         { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat },
         opts.dice, random);
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
@@ -613,7 +612,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }
   // Piledriver Protocol (§13) — the swing is committed, so the stored Momentum is
   // fully spent whether or not it connected. Reset AFTER every read above
-  // (computeStr/rollImpacts already used the captured `piledriverSpend`).
+  // (computeStr/rollWounds already used the captured `piledriverSpend`).
   if (piledriverSpend > 0) attacker.momentum = 0;
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
@@ -731,7 +730,7 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
     const extra = room.rigs.find((x) => x.name.toLowerCase() === String(opts.cleaveTarget).toLowerCase());
     if (extra && !extra.destroyed) {
       const loc = hitLocation(extra.kind || "rig", rollD(12, opts.dice?.cleaveLocation, random));
-      const [hit] = rollImpacts(attacker, extra, profile, loc, { arc: "front", hits: 1, charged: opts.charged }, { impacts: [opts.dice?.cleaveImpact] }, random);
+      const [hit] = rollWounds(attacker, extra, profile, loc, { arc: "front", hits: 1, charged: opts.charged }, { wounds: [opts.dice?.cleaveImpact] }, random);
       if (hit.sp > 0) ctx.applyDamage(room, extra, loc, hit.sp, { random });
       effects.push(`Cleave → ${extra.name}`);
     }
@@ -765,9 +764,9 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
     }
   }
   // Penetrator Rounds — cosmetic confirmation that this volley was the 3rd
-  // (armour-bypassing) one; the actual severity override happened in rollImpacts.
+  // (armour-bypassing) one; the wound roll itself was skipped in rollWounds.
   if (profile.upgradeEffect?.penetrator && opts.penetratorShot) {
-    effects.push("Penetrator Rounds — armour bypassed, hits forced to Severe");
+    effects.push("Penetrator Rounds — armour bypassed, every hit wounds");
   }
   // Suppression Lock — consecutive Mini Gun hits on the same target ramp a
   // pin: 1 stack halves their speed, 2 also docks an action, 3 immobilises
