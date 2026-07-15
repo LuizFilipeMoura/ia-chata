@@ -1754,7 +1754,7 @@ function sunderLocation(target, loc) {
 
 // Breach Grip (§13, Claw) — pry the struck location's armour open. The crack
 // covers a 2-round window: the round it lands (N) and the next (N+1). It stores
-// expiry N+1; rollImpacts applies the +2 while `expiry >= currentRound`, so it
+// expiry N+1; rollWounds applies the +2 STR while `expiry >= currentRound`, so it
 // is live at N and N+1 and gone by N+2. Stale entries are swept in runRecovery.
 function crackLocation(room, target, loc) {
   if (!target || !target[loc]) return;
