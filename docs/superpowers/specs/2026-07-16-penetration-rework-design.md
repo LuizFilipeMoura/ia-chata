@@ -72,10 +72,19 @@ This is the fact the first draft missed, and it drives every number here.
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 ```
 
-`makeRig` hard-gates on it. `heavy` and `colossal` are fully plumbed — toughness,
-SP, `WEIGHT_PEN_MOD`, `AIM`, `HEAT_CAPACITY`, UI badges — and **`CHASSIS` contains
-only 7 light and 4 medium entries.** Heavy and colossal rigs cannot be built. They
-are dead config. Do not balance against them.
+`makeRig` hard-gates on it, and **that is now the whole story.**
+
+When this spec was written, `heavy` and `colossal` were *also* fully plumbed —
+toughness, SP, `WEIGHT_PEN_MOD`, `AIM`, `HEAT_CAPACITY`, UI badges — while
+`CHASSIS` carried only 7 light and 4 medium entries. They could not be built but
+read as if they could, and **that trap caught this spec's author and its reviewer,
+in opposite directions**, one giving a T3–T5 board for the wrong reason and the
+other a T3–T7 board that could not be fielded.
+
+**They were deleted on 2026-07-16** (`d8a8d3d`, `5aebc26`). The maps now carry two
+classes, `toughnessOf` throws for the others, and three mutation-tested guards keep
+it that way. The board below is the board, and the trap is gone rather than
+documented.
 
 So the fieldable board is:
 
@@ -163,9 +172,13 @@ saturation *pay*; it does not make it *rare*.
 All three took two minutes to check once someone ran the code instead of reading it.
 
 **1. "Rig toughness is only T3–T5."** True of the *fieldable* game, by luck — the
-toughness table runs T3–T7, and the draft's author read the table. The reason
-T3–T5 is right is `SUPPORTED_RIG_CLASSES`, which the draft never mentions. Right
-answer, wrong reason, and the wrong reason is load-bearing for the next point.
+toughness table ran T3–T7 at the time, and the draft's author read the table. The
+reason T3–T5 was right is `SUPPORTED_RIG_CLASSES`, which the draft never mentions.
+Right answer, wrong reason, and the wrong reason was load-bearing for the next
+point. (The reviewer then "corrected" it to T3–T6 and was wronger. Heavy and
+colossal have since been deleted, so the table now *is* the board — but the two of
+them reached opposite wrong answers from the same file, which is the part worth
+remembering.)
 
 **2. The 44% → 17% headline was computed from base Penetration.** The draft's own
 **Trap 1** says *"any worked example you write from base Pen is wrong"* — field is
@@ -527,12 +540,16 @@ The first draft claimed "one change, three problems." It closes two.
    base. Any worked example you write from base Pen is wrong. This silently ruined a
    sweep's first run, invalidated two test fixtures, **and produced the first draft's
    headline number.** Rule 2 above exists to kill it.
-2. **Heavy and colossal rigs do not exist.** `SUPPORTED_RIG_CLASSES = ["light",
-   "medium"]`, hard-gated in `makeRig`. The toughness table, `WEIGHT_PEN_MOD`, `AIM`,
-   `HEAT_CAPACITY` and the UI all support four classes; `CHASSIS` has two. **Reading
-   the toughness table instead of the chassis list gives you a T3–T7 board that
-   cannot be fielded.** Both the first draft and its reviewer got this wrong, in
-   opposite directions.
+2. **Heavy and colossal are gone — this trap is CLOSED, and the lesson is not.**
+   They were deleted on 2026-07-16 (`d8a8d3d`, `5aebc26`): the maps carry
+   `["light", "medium"]`, `toughnessOf` throws for anything else, and three
+   mutation-tested guards pin it. You cannot fall into this one any more.
+   **What you can still fall into is the shape of it:** this spec's author and its
+   reviewer both balanced against a board that could not be fielded, because they
+   read a *map* instead of the *gate*. The maps were four classes wide and
+   `SUPPORTED_RIG_CLASSES` was two. **A table's keys are not evidence that the
+   thing is reachable.** The same shape is live elsewhere — see trap 1 (field is
+   the floor) and the `UNIT_WEAPONS` deferral.
 3. **The duel must run `arc: "side"`, never `"front"`.** `arcBonus` returns **`null`**
    for Raking Fire outside side/rear (`combat.js:401`) — a hard zero **by rule**, not
    a failed roll. Mini Gun and Double MG carry the perk. At front they run ten full
