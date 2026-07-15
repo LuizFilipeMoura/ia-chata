@@ -724,6 +724,11 @@ export function createRoom(code) {
   return {
     code,
     version: 0,
+    // Physical rooms are the tabletop companion: the player declares distance /
+    // arc / cover off a real table. Digital rooms simulate the field, so those
+    // three are derived from geometry instead. Physical is the default — every
+    // pre-mode save loads as physical and behaves exactly as before.
+    mode: "physical",
     nextRigId: 1,
     ownerSide: null,
     seeded: false,
@@ -773,7 +778,9 @@ function freshEquipState() {
   };
 }
 
-function ensureRigShape(rig) {
+// `mode` is the owning room's room.mode; it defaults to physical so a caller
+// holding a bare rig (and every pre-mode save) gets today's shape unchanged.
+function ensureRigShape(rig, mode = "physical") {
   if (typeof rig.activated !== "boolean") rig.activated = false;
   if (typeof rig.skipNextActivation !== "boolean") rig.skipNextActivation = false;
   if (typeof rig.noCool !== "boolean") rig.noCool = false;
@@ -889,11 +896,22 @@ function ensureRigShape(rig) {
   else for (const [k, v] of Object.entries(freshEquipState())) {
     if (rig.equipState[k] === undefined) rig.equipState[k] = v;
   }
+  // Simulated position, digital rooms only. Inches, field coords, CENTRE of
+  // base. A physical rig never gets these — there is no simulated field to
+  // stand on, and an undefined pos is how the derivation seam tells the modes
+  // apart.
+  if (mode === "digital") {
+    if (!rig.pos) rig.pos = { x: 0, y: 0 };
+    if (typeof rig.facing !== "number") rig.facing = 0;
+  }
   return rig;
 }
 
 function ensureGameShape(room) {
   room.game ||= {};
+  // Physical is the default (see createRoom) — a pre-mode save hydrates here and
+  // must load as physical, behaving exactly as it did before the flag existed.
+  if (room.mode !== "digital") room.mode = "physical";
   if (room.ownerSide === undefined) room.ownerSide = null;
   if (room.seeded === undefined) room.seeded = false;
   if (!room.field || typeof room.field !== "object") {
@@ -933,7 +951,7 @@ function ensureGameShape(room) {
   if (room.game.pendingReaction === undefined) room.game.pendingReaction = null;
   if (room.game.pendingThreat === undefined) room.game.pendingThreat = null;
   if (!Array.isArray(room._history)) room._history = [];
-  for (const rig of room.rigs) ensureRigShape(rig);
+  for (const rig of room.rigs) ensureRigShape(rig, room.mode);
   return room;
 }
 
@@ -3049,6 +3067,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     else {
       const kindId = String(a.kind || "rig").toLowerCase();
       if (!UNIT_KINDS[kindId]) { reject("Unknown unit kind."); return room; }
+      // Digital battles drop support modules, flat unit weapons and the cold-kind
+      // branches, so the simulated engine only ever reasons about one unit shape.
+      if (room.mode === "digital" && kindId !== "rig") {
+        reject("Digital battles are Rigs only — no Tanks or Walkers.");
+        return room;
+      }
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
       if (!canAddRigForSide(room, owner)) reject("This side's roster is full.");
       else {

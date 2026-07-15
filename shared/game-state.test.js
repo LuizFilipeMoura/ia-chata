@@ -5562,3 +5562,56 @@ test("Cryo Reservoir: spending N cools 2 heat each and arms +1 STR/cryo on the n
   assert.equal(a1.engine.heat, 2);                       // −2 each → −4
   assert.equal(a1.equipState.nextAttackStr, 2);          // +1 STR per cryo spent
 });
+
+// ---------------------------------------------------------------------------
+// Digital rooms — room.mode plus pos/facing on digital rigs.
+// ---------------------------------------------------------------------------
+
+// A claimed 2-side room in digital mode. createRoom takes no options, so the
+// mode is stamped on afterwards — the normalise pass is what gives rigs their
+// pos/facing, and it runs on the next applyCommand.
+function digitalRoom(code = "DIG001") {
+  const room = createRoom(code);
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  return room;
+}
+
+test("a room defaults to physical mode", () => {
+  assert.equal(createRoom("PHYS01").mode, "physical");
+});
+
+test("a digital room is rigs-only — adding a tank is refused", () => {
+  const room = digitalRoom();
+  const res = checkCommand(room, { verb: "add", attrs: {
+    name: "T1", kind: "tank", owner: "a", unit: "Autocannon",
+  } });
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /Rigs only/i);
+});
+
+test("a digital room still accepts a rig", () => {
+  const room = digitalRoom();
+  applyCommand(room, { verb: "add", attrs: {
+    name: "R1", class: "light", owner: "a", longRange: "Autocannon", melee: "Claw",
+  } });
+  assert.equal(room.rigs.length, 1);
+});
+
+test("rigs in a digital room carry pos and facing; physical rigs do not", () => {
+  const digital = digitalRoom();
+  applyCommand(digital, { verb: "add", attrs: {
+    name: "R1", class: "light", owner: "a", longRange: "Autocannon", melee: "Claw",
+  } });
+  const r = findRig(digital, "R1");
+  assert.deepEqual(r.pos, { x: 0, y: 0 }, "seeded at the origin until deployment scatters it");
+  assert.equal(r.facing, 0);
+
+  const physical = createRoom("PHYS02");
+  claimSide(physical, { name: "A", side: "a" });
+  applyCommand(physical, { verb: "add", attrs: {
+    name: "R1", class: "light", owner: "a", longRange: "Autocannon", melee: "Claw",
+  } });
+  assert.equal(findRig(physical, "R1").pos, undefined, "physical rooms have no simulated position");
+});
