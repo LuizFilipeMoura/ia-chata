@@ -59,9 +59,8 @@ export function heatThreshold(total) {
   return HEAT_THRESHOLDS.find((row) => n >= row.min) || HEAT_THRESHOLDS.at(-1);
 }
 
-// Weight-class STR modifier applied to every Wound Roll (§12); Aim target
-// number (§2, roll >= to hit).
-export const WEIGHT_STR_MOD = { light: -1, medium: 0, heavy: 1, colossal: 2 };
+// Weight-class Penetration modifier applied to every Wound Roll (§12).
+export const WEIGHT_PEN_MOD = { light: -1, medium: 0, heavy: 1, colossal: 2 };
 export const AIM = { light: 4, medium: 4, heavy: 3, colossal: 3 };
 
 // Heat Capacity by weight class (rules §6). A Rig is safe at or below this
@@ -85,7 +84,7 @@ export const WOUND_DIE = 10;
 const WOUND_TN_FLOOR = 2;
 
 // Overmatch conversion (§7.5) — STR past the floor is wasted by the clamp, which
-// is why arc, WEIGHT_STR_MOD and every +STR upgrade measure as literally dead on
+// is why arc, WEIGHT_PEN_MOD and every +STR upgrade measure as literally dead on
 // STR >= 9 weapons. Excess converts to damage instead.
 //
 // Named Overmatch, not "overflow": §7 already calls the 0-SP spill "damage

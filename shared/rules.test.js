@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { AIM, WEIGHT_STR_MOD, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
+import { AIM, WEIGHT_PEN_MOD, hitLocation, woundTarget, strOvermatchD } from "./rules.js";
 import { WEAPONS } from "./game-state.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
@@ -57,8 +57,8 @@ test("hitLocation maps the D12 bands (§7)", () => {
 });
 
 test("weight-class and aim scalars are correct (§2)", () => {
-  assert.equal(WEIGHT_STR_MOD.light, -1);
-  assert.equal(WEIGHT_STR_MOD.medium, 0);
+  assert.equal(WEIGHT_PEN_MOD.light, -1);
+  assert.equal(WEIGHT_PEN_MOD.medium, 0);
   assert.equal(AIM.medium, 4);
   assert.equal(AIM.heavy, 3);
 });
@@ -90,7 +90,7 @@ test("woundTarget — the original bug case is possible, not impossible", () => 
   // rewrite: under the impact-total model it was mathematically 0 damage at any
   // roll. Derived from the live stats, not hardcoded, so a future retune of the
   // Saw or the weight ladder cannot silently send it back to hopeless.
-  const str = WEAPONS.melee["Circular Saw"].str + WEIGHT_STR_MOD.light;
+  const str = WEAPONS.melee["Circular Saw"].str + WEIGHT_PEN_MOD.light;
   assert.equal(woundTarget(str, 5), 7); // medium hull T5 => 40%
 });
 

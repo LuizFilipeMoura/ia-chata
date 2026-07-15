@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeModifiedAim, aimBreakdown, weaponAccAt, rollToHit, computeStr, strBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
-import { WEIGHT_STR_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
+import { WEIGHT_PEN_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
 
 // Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
@@ -1829,7 +1829,7 @@ test("rollWounds — Overmatch revives the arc bonus on a saturated weapon", () 
   assert.equal(rear[0].sp - front[0].sp, 1);
 });
 
-test("rollWounds — Overmatch revives WEIGHT_STR_MOD on a saturated weapon", () => {
+test("rollWounds — Overmatch revives WEIGHT_PEN_MOD on a saturated weapon", () => {
   // Sweep measured the light↔medium delta as Δ0.00 for this weapon: both classes
   // clamped to TN 2, so the -1 was discarded entirely.
   //
@@ -1843,7 +1843,7 @@ test("rollWounds — Overmatch revives WEIGHT_STR_MOD on a saturated weapon", ()
   const light = rollWounds({ weightClass: "light" }, target, maul, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(med[0].str, 11);
-  assert.equal(light[0].str, 10);           // WEIGHT_STR_MOD light = -1
+  assert.equal(light[0].str, 10);           // WEIGHT_PEN_MOD light = -1
   assert.equal(med[0].target, light[0].target); // both STILL clamped to 2...
   assert.equal(med[0].overmatch, 1);            // ...but the mod now buys depth
   assert.equal(light[0].overmatch, 0);
@@ -1879,7 +1879,7 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   // colossal at T7. But no chassis uses either, so T3-T5 is every rig you can
   // actually build, and a tank is the only way to reach T6 today.)
   //
-  // Siege Maul STR 11, medium attacker (WEIGHT_STR_MOD 0), rear arc +3 =>
+  // Siege Maul STR 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
   // effStr 14 into a T6 hull. The floor is at str T+4 = 10, so 4 points are
   // past it; at 3 points per D that pays out floor(4/3) = +1 D. D5 + 1 = 6 SP.
   const maul = WEAPONS.longRange["Siege Maul"];
@@ -2252,7 +2252,7 @@ function woundMatrix() {
     const arc = worstUsableArc(w);
     for (const aw of classes) {
       // flatPick weapons (Tank/Walker mounts) do not take the weight-class mod.
-      const str = w.str + (w.flatPick ? 0 : WEIGHT_STR_MOD[aw]) + arc;
+      const str = w.str + (w.flatPick ? 0 : WEIGHT_PEN_MOD[aw]) + arc;
       for (const tw of classes) {
         for (const loc of partNamesOf("rig")) {
           const t = toughnessOf("rig", loc, tw);
@@ -2302,7 +2302,7 @@ test("no dead zones — the clamp is genuinely engaged, not incidental", () => {
     "Rivet Gun/light vs colossal/hull (arc +0)",
   ]);
   // ...and that the clamp is what saves it: raw 11 would be unrollable on a d10.
-  const str = WEAPONS.longRange["Rivet Gun"].str + WEIGHT_STR_MOD.light; // 3 - 1 = 2
+  const str = WEAPONS.longRange["Rivet Gun"].str + WEIGHT_PEN_MOD.light; // 3 - 1 = 2
   const t = toughnessOf("rig", "hull", "colossal");                      // 7
   assert.equal(6 + t - str, 11);              // unclamped: needs an 11 on a d10
   assert.equal(woundTarget(str, t), 10);      // clamped: a natural 10 still wounds
@@ -2313,7 +2313,7 @@ test("no dead zones — the light saw vs a medium hull, the case that started th
   // damage at any roll. TN 7 sits clear of both clamp rails, so this exercises
   // the arithmetic rather than passing on a clamped edge.
   const w = WEAPONS.melee["Circular Saw"];
-  const str = w.str + WEIGHT_STR_MOD.light;          // 5 - 1 = 4
+  const str = w.str + WEIGHT_PEN_MOD.light;          // 5 - 1 = 4
   const t = toughnessOf("rig", "hull", "medium");    // 5
   assert.equal(woundTarget(str, t), 7);              // 40%, front arc, no upgrades
 });

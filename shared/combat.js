@@ -2,7 +2,7 @@
 // caller (game-state.js) injects, so this module has no import cycle and is
 // unit-testable in isolation. It imports ONLY from rules.js.
 import {
-  AIM, WEIGHT_STR_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
+  AIM, WEIGHT_PEN_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
   equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE, strOvermatchD,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
@@ -265,7 +265,7 @@ export function strBreakdown(attacker, profile, opts) {
     return { value: opts.strOverride, terms: [{ label: "forced STR", value: opts.strOverride }] };
   }
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
-  const weightMod = profile.flatPick ? 0 : (WEIGHT_STR_MOD[attacker.weightClass] || 0);
+  const weightMod = profile.flatPick ? 0 : (WEIGHT_PEN_MOD[attacker.weightClass] || 0);
   // The weapon's own STR is the floor every modifier is measured against, so it
   // is always a term even though every other entry here is conditional.
   terms.push({ label: "weapon STR", value: profile.str });
@@ -560,7 +560,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
         && target[location].sp <= target[location].max / 2 ? 1 : 0;
       // Overmatch (§7.5) — STR the wound clamp discarded, converted to depth.
       // Reads `effStr`, NOT the nominal STR: that is what makes one rule revive
-      // the arc bonus, WEIGHT_STR_MOD and every +STR upgrade at once, since all
+      // the arc bonus, WEIGHT_PEN_MOD and every +STR upgrade at once, since all
       // of them are already summed into it above.
       overmatch = strOvermatchD(effStr, toughness);
       sp = (profile.d || 1) + rend + evisc + overmatch;
