@@ -128,11 +128,22 @@ const TERRAIN_KINDS = [
   } },
 ];
 
+// The terrain vocabulary a digital room scatters. wood / crater / ruin are
+// excluded: the 3-ray cover model (geometry.js) grades by pure geometry, and
+// those three lie about themselves under it — a wood is a 3.4-5.4in blob that
+// eats all three rays and reads as a WALL, and a crater is a hole that would do
+// the same. Every kind kept here reads correctly with no cover-class table.
+// A physical room is unaffected — you adjudicate a wood yourself at the table.
+export const DIGITAL_TERRAIN_KINDS = new Set(["building", "barricade", "rock", "crate"]);
+
 // Dress the field with a varied terrain scatter — several shapes and sizes,
 // clear of objectives and the deployment corners, roughly wargame density.
 // Piece count scales with field area. Deterministic under `random` (matches rollD).
-export function scatterTerrain(field, random = Math.random) {
+// `opts.digital` restricts the vocabulary to DIGITAL_TERRAIN_KINDS (see above);
+// physical callers omit it and keep the full 7-kind vocabulary unchanged.
+export function scatterTerrain(field, random = Math.random, opts = {}) {
   const rand = typeof random === "function" ? random : Math.random;
+  const kinds = opts.digital ? TERRAIN_KINDS.filter((k) => DIGITAL_TERRAIN_KINDS.has(k.kind)) : TERRAIN_KINDS;
   const objectives = computeObjectives(field);
   const dcorners = deploymentCorners(field);
   const hd = halfDiag(field.width, field.height);
@@ -144,7 +155,7 @@ export function scatterTerrain(field, random = Math.random) {
 
   // Roll a count per kind, then instantiate each piece's geometry.
   const built = [];
-  for (const spec of TERRAIN_KINDS) {
+  for (const spec of kinds) {
     const n = Math.max(spec.min, Math.round(rrange(rand, spec.min, spec.max + 0.999) * areaMul));
     for (let i = 0; i < n; i++) built.push({ kind: spec.kind, ...spec.make(rand) });
   }

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   halfDiag, OBJ_FRACTION, clampDimensions, computeObjectives,
   emptyCorners, deploymentCorners, scatterTerrain, deployRadius, FIELD_DEFAULT,
+  DIGITAL_TERRAIN_KINDS,
 } from "./field.js";
 
 // Deterministic RNG for terrain tests (mulberry32).
@@ -79,4 +80,27 @@ test("scatterTerrain scales piece count with field area", () => {
   const small = scatterTerrain({ width: 24, height: 18, diagonal: "tlbr" }, seeded(2));
   const big = scatterTerrain({ width: 96, height: 72, diagonal: "tlbr" }, seeded(2));
   assert.ok(big.length > small.length);
+});
+
+test("DIGITAL_TERRAIN_KINDS is the 4 kinds pure ray-counting reads correctly", () => {
+  assert.deepEqual([...DIGITAL_TERRAIN_KINDS].sort(), ["barricade", "building", "crate", "rock"]);
+});
+
+test("scatterTerrain digital mode emits only the 4 digital kinds", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const pieces = scatterTerrain(field, seeded(7), { digital: true });
+  assert.ok(pieces.length > 0, "still dresses the field");
+  for (const p of pieces) assert.ok(DIGITAL_TERRAIN_KINDS.has(p.kind), `unexpected kind: ${p.kind}`);
+  assert.ok(pieces.some((p) => p.kind === "building"), "at least one LOS blocker");
+});
+
+test("scatterTerrain default (physical) still emits the full vocabulary", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const pieces = scatterTerrain(field, seeded(7));
+  assert.ok(pieces.some((p) => !DIGITAL_TERRAIN_KINDS.has(p.kind)), "physical keeps wood/crater/ruin");
+});
+
+test("scatterTerrain stays deterministic under a seeded RNG in digital mode", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  assert.deepEqual(scatterTerrain(field, seeded(3), { digital: true }), scatterTerrain(field, seeded(3), { digital: true }));
 });
