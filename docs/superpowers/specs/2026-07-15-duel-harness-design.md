@@ -116,6 +116,48 @@ No second copy of the cost rules — and it dogfoods the same view-model the UI
 renders, so if the action console lies to a player it lies to the harness too, and
 the bug surfaces.
 
+### Correction: `availableActions` is a UI model, not a legality oracle
+
+This section originally claimed "the engine owns legality" and left it there.
+That is **only partly true**, and implementing the policy found three places where
+`enabled` disagrees with what the engine will actually do. All three were verified
+against source:
+
+| the view says | the engine does | why |
+|---|---|---|
+| a **spent** weapon's Fire tile is `enabled` (`battle-view.js:43-46`) | firing it is a **silent no-op** (`game-state.js:2287`) | Fire is what opens the reload drawer, so the tile must stay live for a human |
+| Shut Down is **hardcoded** `enabled` (`battle-view.js:37`) | refuses while a meltdown charge is banked (`game-state.js:2559`) | the tile is "available any time" for the player; the engine has the real gate |
+| — | `shutdown` calls `endActivation`, so `activeRigId` goes null and every later command is dropped | the view has no notion of "you already ended" |
+
+**The first one nearly destroyed the harness.** The policy as originally specced
+fired once and then emitted `fire` forever into a no-op — heat, actions and shots
+all frozen. The duel would have stalled on volley one and reported a tidy table:
+precisely the blindness this harness exists to remove, reproduced in a new place.
+It passed every test the spec asked for.
+
+The lesson is not "don't read `availableActions`" — the cost data is right, and
+`RELOAD_MAX_HEAT` aside it remains the single source of pricing. It is that
+`enabled` answers *"should the UI offer this?"*, not *"will this command have an
+effect?"* Those coincide for a human, who reads the drawer the tile opens. They do
+not coincide for a policy.
+
+So the policy carries three engine-verified exceptions, each documented inline at
+its site, and **`policy.test.mjs` pins the stall itself** — driving real
+`applyCommand` calls and asserting `longRangeShots >= 2`. Pin the defect, not the
+fix; a future refactor that reintroduces it must go red.
+
+### Reload is a cost the old sweep never paid
+
+A rig reloads for **0 action slots**, paid in heat instead: a d6, where 1–3 costs
+2 heat and 4–6 costs 1 (`game-state.js:2705`). The clone-per-trial sweep never
+reloads, so it never pays this. The duel does, every time a weapon runs dry.
+
+Consequence for reading the numbers: **the duel is not a like-for-like baseline
+against `report-2026-07-15-overflow.txt`.** Weapons that empty often now carry a
+real recurring cost the single-shot metric was blind to. That is more truthful,
+not less — but it must be said in the report header, or someone will diff the two
+tables and call the difference a bug.
+
 ### The heat economy is already sharp, and has never been measured
 
 `rules.md:132`: two shots in one activation costs `1 + (1–2 reload) + 2
