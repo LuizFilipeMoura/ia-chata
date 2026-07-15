@@ -2115,6 +2115,7 @@ test("the wound die that guts a location is marked CRIT in the roll console", ()
   a1.legs.sp = 3;
   fireSword(r, 8); // 8 -> legs
   assert.equal(a1.legs.sp, 0); // the wound landed, so there IS a die to promote
+  assert.equal(a1.destroyed, false); // ...on the tear-open tier, not the kill below
   const woundRolls = lastAttack(r).rolls.filter((x) => /^wound /.test(x.label));
   assert.equal(woundRolls.length, 2); // one landed (10), one did not (1)
   assert.equal(woundRolls[0].tone, "crit", "the wound that gutted the location must read CRIT");
