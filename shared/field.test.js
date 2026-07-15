@@ -104,3 +104,67 @@ test("scatterTerrain stays deterministic under a seeded RNG in digital mode", ()
   const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
   assert.deepEqual(scatterTerrain(field, seeded(3), { digital: true }), scatterTerrain(field, seeded(3), { digital: true }));
 });
+
+const mirrorOf = (field, p) => ({ x: field.width - p.x, y: field.height - p.y });
+const near = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
+const twinOf = (pieces, field, p) => {
+  const m = mirrorOf(field, p);
+  return pieces.find((q) => q !== p && q.kind === p.kind && near(q.x, m.x) && near(q.y, m.y));
+};
+
+test("digital terrain is rectangles only — no poly blobs", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  for (const p of scatterTerrain(field, seeded(4), { digital: true })) {
+    assert.equal(p.shape, "rect", `${p.kind} is a ${p.shape}`);
+  }
+});
+
+test("digital terrain mirrors 180 degrees about the field centre", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const pieces = scatterTerrain(field, seeded(4), { digital: true });
+  assert.ok(pieces.length >= 2 && pieces.length % 2 === 0, `expected pairs, got ${pieces.length}`);
+  for (const p of pieces) {
+    const m = mirrorOf(field, p);
+    const twin = twinOf(pieces, field, p);
+    assert.ok(twin, `${p.kind} at (${p.x}, ${p.y}) has no twin at (${m.x.toFixed(2)}, ${m.y.toFixed(2)})`);
+    assert.ok(near(twin.w, p.w) && near(twin.h, p.h), "a twin must be the same size");
+    // A rect is centrally symmetric, so a half turn leaves `rot` alone.
+    assert.ok(near(twin.rot, p.rot), "a twin keeps its rotation — a rect is centrally symmetric");
+  }
+});
+
+// Asserts on the piece CENTRE, because `fp` is stripped from the wire payload and
+// re-deriving it here would just duplicate `make()`. The implementation enforces
+// the strictly stronger `dist >= rad + fp` (it still has `fp` in hand), so no
+// piece actually overhangs the zone — this test pins the guarantee the payload
+// can express on its own.
+test("scatterTerrain keeps every piece clear of both deployment zones", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const rad = deployRadius(field);
+  for (const digital of [true, false]) {
+    for (let s = 1; s <= 40; s++) {
+      const pieces = scatterTerrain(field, seeded(s), digital ? { digital: true } : undefined);
+      for (const p of pieces) {
+        for (const c of deploymentCorners(field)) {
+          assert.ok(dist(c, p) >= rad, `${digital ? "digital" : "physical"} seed ${s}: ${p.kind} is ${dist(c, p).toFixed(2)}in from a deploy corner, zone is ${rad.toFixed(2)}`);
+        }
+      }
+    }
+  }
+});
+
+test("physical terrain keeps its full vocabulary and stays unmirrored", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  const pieces = scatterTerrain(field, seeded(4));
+  assert.ok(pieces.some((p) => !DIGITAL_TERRAIN_KINDS.has(p.kind)), "physical keeps wood/crater/ruin");
+  assert.ok(pieces.some((p) => p.shape === "poly"), "physical keeps organic blobs");
+  assert.ok(pieces.some((p) => !twinOf(pieces, field, p)), "physical scatter is not mirrored");
+});
+
+test("digital scatter is still deterministic under a seeded RNG", () => {
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  assert.deepEqual(
+    scatterTerrain(field, seeded(9), { digital: true }),
+    scatterTerrain(field, seeded(9), { digital: true }),
+  );
+});
