@@ -2385,11 +2385,14 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
   // exactly the readability failure this ledger exists to close.
   // Anchor Penetration 7 + rear arc 3 = effPen 10 vs a medium engine T3 → wound raw
   // 6+3-10 = -1, i.e. 3 Penetration past the TN-2 floor → +1 D. The engine (T3) is
-  // the aim point because the 3-7 band leaves NO rig melee weapon able to overmatch
-  // a T4 arm: base 7 is the melee ceiling and rear +3 is the largest arc bonus, so
-  // effPen 10 is as hard as a rig swings — and T4 needs 11. Anchor's field upgrade
-  // (Fluked Head) grants Armour Piercing, which rerolls FAILED wounds only; the
-  // natural 10 here wounds outright, so it never fires and adds no term.
+  // the aim point for THIS rig, which contributes nothing else to the pen sum: it
+  // has not charged, its field upgrade (Fluked Head) adds no Penetration, and no
+  // crack or Overdrive is live — so base 7 + rear 3 is the whole total, and a T4
+  // arm would need 11. Other loadouts reach past 11 on an arm through the terms
+  // this one leaves at zero (charge, vsWoundedLoc, vsDisrupted, Reactor Overdrive,
+  // cracked); do not read this as a ceiling on melee. Fluked Head's Armour Piercing
+  // rerolls FAILED wounds only; the natural 10 here wounds outright, so it never
+  // fires and adds no term.
   // The rate and cap behind that 1 are rules.test.js's (strOvermatchD's) to pin;
   // what this asserts is that the rider reaches the ledger under its own name.
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Anchor" });
