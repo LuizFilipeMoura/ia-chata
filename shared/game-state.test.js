@@ -10,7 +10,7 @@ import {
   normalizeWeaponUpgrade, upgradeForWeapon, defaultWeaponUpgrade,
   effectiveWeaponProfile, normalizePrep, hasBulwarkShield, shieldCoverage,
   normalizeAnswerPrep, ANSWER_COUNTERS,
-  UNIT_WEAPONS, normalizeUnitWeapon, BLAST_D,
+  UNIT_WEAPONS, normalizeUnitWeapon, BLAST_D, BLAST_STR,
   randomRigWeapons, randomEquipment,
   NATURES, upgradeNature, countPrototypes,
   chassisById, resolveChassis, SEED_ROSTER, SEED_ROSTER_4V4, CHASSIS, randomSeedRoster,
@@ -21,6 +21,7 @@ import {
 } from "./game-state.js";
 import { deploymentCorners, deployRadius, scatterTerrain } from "./field.js";
 import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
+import { strOvermatchD, toughnessOf } from "./rules.js";
 
 // Every Rig must be commissioned with one Long Range and one Melee weapon,
 // so the add-command attrs used across these tests carry both.
@@ -1914,6 +1915,24 @@ test("blast wounds on a d10 against the struck location's toughness", () => {
   applyCommand(r, { verb: "blast", attrs: { targets: ["a1"], dice: { wounds: { a1: 3 }, location: { a1: 1 } } } });
   assert.equal(a1.hull.sp, sp0 - BLAST_D, "3 >= 3 => BLAST_D SP");
   assert.equal(r.game.pendingBlast, null);
+});
+
+test("blast is Overmatch-exempt by construction, not by intent", () => {
+  // The §9 cook-off is the ONE wound roll outside combat.js's rollWounds: it
+  // calls woundTarget directly and awards a flat BLAST_D, so Overmatch never
+  // reaches it. Today that costs nothing, and this pins WHY.
+  //
+  // Overmatch pays out only once effective STR is OVERMATCH_PER_D (3) points
+  // past the TN-2 floor, which sits at str = T + 4 — so the first payout is at
+  // str = T + 7. The softest thing on the table is T3, so no blast diverges
+  // until BLAST_STR reaches 10. It is 8: two points of headroom, by accident of
+  // tuning rather than by design.
+  //
+  // BLAST_STR is read, never inlined — a literal 8 here would keep passing
+  // through exactly the bump this test exists to catch.
+  assert.equal(toughnessOf("rig", "engine", "light"), 3, "T3 is the game's softest location");
+  assert.equal(strOvermatchD(BLAST_STR, 3), 0,
+    "BLAST_STR reached T+7: the blast path now silently owes Overmatch that rollWounds would pay");
 });
 
 test("fire action resolves an attack, applies damage and logs it", () => {
