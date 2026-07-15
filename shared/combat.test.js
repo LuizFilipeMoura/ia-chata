@@ -2312,11 +2312,13 @@ test("hit location comes from the target's kind, not the attacker's", () => {
 test("ledger — Overmatch is named in the damage step when it fires", () => {
   // A crushing hit rendering "weapon D 5" with an unexplained +2 in the total is
   // exactly the readability failure this ledger exists to close.
-  // Wrecking Ball STR 10 + Haymaker 3 (its field upgrade, applied by default)
-  // + rear arc 3 = effStr 16 vs medium arms T4 → 8 STR past the TN-2 floor → +2 D.
+  // Wrecking Ball STR 10 + Haymaker 3 + rear arc 3 = effStr 16 vs medium arms
+  // T4 → 8 STR past the TN-2 floor → +2 D. Haymaker is pinned rather than left
+  // to the default-upgrade rule: reordering WEAPON_UPGRADES would otherwise drop
+  // effStr to 13 and fail a RENDERING test for a reason unrelated to rendering.
   // The rate and cap behind that 2 are rules.test.js's (strOverflowD's) to pin;
   // what this asserts is that the rider reaches the ledger under its own name.
-  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball" });
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball", meleeUpgrade: "haymaker" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
   const ctx = makeCtx();
@@ -2336,9 +2338,12 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
 test("ledger — Overmatch is absent when it did not fire", () => {
   // A term worth 0 must push nothing — same rule as strBreakdown. With ~15
   // possible contributions, rendering the dead ones buries the live ones.
-  // Sword is STR 5 and its field upgrade (Duelist Balance) grants Precision, not
-  // STR, so a front-arc swing reaches effStr 5 — nowhere near medium arms' floor.
-  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Sword" });
+  // Sword is STR 5 and Duelist's Balance grants Precision, not STR, so a
+  // front-arc swing reaches effStr 5 — nowhere near medium arms' T4 floor (8).
+  // Asserted with deepEqual, not a `some(...)` absence check: the step now
+  // pushes conditionally from three riders, so an accidental EXTRA term is a
+  // live risk and only the full-array form catches it.
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Sword", meleeUpgrade: "duelist-balance" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
   const ctx = makeCtx();
@@ -2348,5 +2353,8 @@ test("ledger — Overmatch is absent when it did not fire", () => {
     () => 0, ctx);
   const dmg = ctx.resolutions.find((r) => r.kind === "attack")
     .breakdown.steps.find((s) => s.kind === "damage");
-  assert.equal(dmg.terms.some((t) => t.label === "Overmatch"), false);
+  assert.deepEqual(dmg.terms, [
+    { label: "wounds", value: 1 },
+    { label: "weapon D", value: 3 },
+  ]);
 });

@@ -892,10 +892,20 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     const dmgTerms = [{ label: "wounds", value: impacts.filter((h) => h.sp > 0).length }];
     if (first) {
       dmgTerms.push({ label: "weapon D", value: first.d });
-      // Rend/Evisceration/Overmatch are per-wound riders. Source them from a
-      // wound that actually dealt damage: one zeroed by Ablative Cascade still
-      // carries its riders but never applied them. Each is tested on its own —
-      // a rider worth 0 pushes nothing (same rule as the wound step's terms).
+      // Rend/Evisceration/Overmatch are per-wound riders. PREFER a wound that
+      // dealt damage: all three are assigned only inside `if (wounded)`, so a
+      // wound that failed its roll carries them as 0 — reading impacts[0] blind
+      // would silently drop the live riders whenever the first die missed.
+      //
+      // When NO impact dealt damage, `first` is a deliberate fallback, not the
+      // preference above failing. Mostly it changes nothing: a missed wound, and
+      // a shield/arc-negated one, carry 0 riders and so push no terms either way.
+      // The case with teeth is Ablative Cascade, which zeroes the SP of a wound
+      // that DID land while its riders stay set — the step then reports what the
+      // shot WOULD have added, for the same reason `d` rides a negated wound
+      // rather than render a blank term (see rollWounds).
+      //
+      // A rider worth 0 pushes nothing (same rule as the wound step's terms).
       const rider = impacts.find((h) => h.sp > 0) || first;
       if (rider.rend) dmgTerms.push({ label: "Rend", value: rider.rend });
       if (rider.evisc) dmgTerms.push({ label: "Evisceration", value: rider.evisc });
