@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { makeGreedySafe, KNOWN_BIASES } from "./policy.mjs";
-import { createRoom, applyCommand, makeUnit, HEAT_CAPACITY } from "../../shared/game-state.js";
+import { createRoom, applyCommand, makeUnit, WEAPONS, HEAT_CAPACITY } from "../../shared/game-state.js";
 import { availableActions } from "../../shared/battle-view.js";
+import { arcBonus } from "../../shared/combat.js";
 
 const DUEL_DISTANCE = 16;
-const greedySafe = makeGreedySafe({ distance: DUEL_DISTANCE });
+const DUEL_ARC = "side"; // never "front": see the Raking Fire test below
+const greedySafe = makeGreedySafe({ distance: DUEL_DISTANCE, arc: DUEL_ARC });
 
 // A real seeded room at the activation phase with `active` activated.
 // 3v3 because the seed verb force-starts only at >=3 rigs per side.
@@ -189,11 +191,55 @@ test("greedySafe refuses a cold kind rather than half-supporting it", () => {
 
 test("makeGreedySafe demands a distance rather than defaulting to one", () => {
   // An unexplained default would quietly become the answer for every swept cell.
+  assert.throws(() => makeGreedySafe({ arc: DUEL_ARC }), /distance/);
   assert.throws(() => makeGreedySafe(), /distance/);
   assert.throws(() => makeGreedySafe({}), /distance/);
-  assert.throws(() => makeGreedySafe({ distance: NaN }), /distance/);
-  assert.throws(() => makeGreedySafe({ distance: Infinity }), /distance/);
-  assert.throws(() => makeGreedySafe({ distance: "16" }), /distance/);
+  assert.throws(() => makeGreedySafe({ distance: NaN, arc: DUEL_ARC }), /distance/);
+  assert.throws(() => makeGreedySafe({ distance: Infinity, arc: DUEL_ARC }), /distance/);
+  assert.throws(() => makeGreedySafe({ distance: "16", arc: DUEL_ARC }), /distance/);
+});
+
+test("makeGreedySafe demands a legal arc rather than defaulting to one", () => {
+  assert.throws(() => makeGreedySafe({ distance: DUEL_DISTANCE }), /arc/);
+  assert.throws(() => makeGreedySafe({ distance: DUEL_DISTANCE, arc: null }), /arc/);
+  assert.throws(() => makeGreedySafe({ distance: DUEL_DISTANCE, arc: "sideways" }), /arc/);
+  assert.throws(() => makeGreedySafe({ distance: DUEL_DISTANCE, arc: "Side" }), /arc/);
+  // All three engine arcs are legal — "front" included. The parameter exists so
+  // the caller CHOOSES it, not so the harness forbids it.
+  for (const arc of ["front", "side", "rear"]) {
+    assert.ok(makeGreedySafe({ distance: DUEL_DISTANCE, arc }), `${arc} must be constructible`);
+  }
+});
+
+test("the fire command carries the declared arc verbatim", () => {
+  // The policy is the only thing that names the arc, so if it hardcoded one the
+  // whole duel would silently run at that arc regardless of what was configured.
+  const room = seatedRoom();
+  const rig = room.rigs.find((r) => r.name === "A1");
+  const enemy = room.rigs.find((r) => r.name === "B1");
+  for (const arc of ["front", "side", "rear"]) {
+    const cmd = makeGreedySafe({ distance: DUEL_DISTANCE, arc })(room, rig, enemy);
+    assert.equal(cmd.attrs.arc, arc);
+  }
+});
+
+test("Raking Fire on the front arc is a structural zero — why arc is not optional", () => {
+  // This is the reason the parameter is required rather than defaulted to a
+  // safe-looking "front". arcBonus returns null — not 0, not a failed roll — for
+  // Raking Fire on the front arc, so a front-on duel measures Mini Gun and Double
+  // MG dealing nothing for all 10 rounds. F7: "all 504 zero-damage cells in the
+  // sweep are Raking Fire's front arc". The sweep hides it by pooling arcs; a
+  // single-arc duel cannot. Pinned against the real profiles, not a fake perk.
+  const mini = WEAPONS.longRange["Mini Gun"];
+  const dmg = WEAPONS.longRange["Double MG"];
+  assert.deepEqual(mini.perks, ["Raking Fire"], "guard: Mini Gun still carries the perk");
+  assert.deepEqual(dmg.perks, ["Raking Fire"], "guard: Double MG still carries the perk");
+  assert.equal(arcBonus(mini, "front"), null, "front is a hard zero, not a bonus of 0");
+  assert.equal(arcBonus(mini, "side"), 3);
+  assert.equal(arcBonus(dmg, "front"), null);
+  // A non-Raking weapon has no such cliff — which is exactly why the zero is easy
+  // to miss when arcs are pooled.
+  assert.equal(arcBonus(WEAPONS.longRange["Mortar"], "front"), 0);
 });
 
 test("KNOWN_BIASES is exported for the report to print verbatim", () => {

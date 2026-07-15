@@ -50,21 +50,39 @@ export const KNOWN_BIASES = `
   here. That 0.00 means UNMEASURED, not worthless. This harness exists because 44
   upgrades read a misleading 0.00; do not let it manufacture a new set.
 - The control rig's loadout is a constant, and it shapes every number in the
-  report: each result is "against THIS rig at THIS distance", not in the abstract.
+  report: each result is "against THIS rig at THIS distance and arc", never in
+  the abstract. The arc is the sharpest of these: Raking Fire (Mini Gun, Double
+  MG) scores a hard zero on the front arc by rule, not by luck, so a duel run
+  front-on measures those two weapons dealing nothing at all for 10 rounds.
 `.trim();
 
 // Reload is a d6 gamble for heat kinds: 1-3 -> +2 heat, 4-6 -> +1 (game-state.js).
 // Budget the worst case — that bound is KNOWN, unlike weapon-side heat.
 const RELOAD_MAX_HEAT = 2;
 
-// Build a policy bound to one declared distance. A factory rather than a module
-// -level default: physical mode takes distance as an input and never derives it,
-// so an unexplained default would quietly become the answer for every cell the
-// caller forgot to set. Missing is loud; wrong is silent.
-export function makeGreedySafe({ distance } = {}) {
+// The engine's three arcs. Physical mode takes the arc as an input, exactly like
+// distance — the duel declares where the shooter stands rather than deriving it.
+const LEGAL_ARCS = ["front", "side", "rear"];
+
+// Build a policy bound to one declared distance and arc. A factory rather than
+// module-level defaults: physical mode takes both as inputs and never derives
+// them, so an unexplained default would quietly become the answer for every cell
+// the caller forgot to set. Missing is loud; wrong is silent.
+export function makeGreedySafe({ distance, arc } = {}) {
   // Number.isFinite alone rejects non-numbers, NaN and Infinity.
   if (!Number.isFinite(distance)) {
     throw new Error(`makeGreedySafe needs a finite { distance }, got ${distance}: physical mode takes distance as an input, never derived.`);
+  }
+  // Arc is NOT defaulted, and "front" especially is not a safe-looking default.
+  // arcBonus (combat.js:401) returns null — a hard structural zero, not a failed
+  // roll — for Raking Fire on the front arc, and the only two weapons carrying
+  // that perk are Mini Gun and Double MG. A front-arc duel measures them dealing
+  // literally nothing across all 10 rounds: it is the whole of F7's "all 504
+  // zero-damage cells in the sweep are Raking Fire's front arc". The old sweep
+  // survives it by pooling arcs; a single-arc duel cannot. So the caller must
+  // choose the arc knowingly and own what it costs those two weapons.
+  if (!LEGAL_ARCS.includes(arc)) {
+    throw new Error(`makeGreedySafe needs an { arc } of ${LEGAL_ARCS.join("/")}, got ${JSON.stringify(arc)}: the duel declares its arc, and "front" zeroes every Raking Fire weapon (combat.js arcBonus).`);
   }
 
   return function greedySafe(room, rig, enemy) {
@@ -150,7 +168,7 @@ export function makeGreedySafe({ distance } = {}) {
     if (fire?.enabled && heat + fire.heat <= cap) {
       return { verb: "action", attrs: {
         name: rig.name, action: "fire", target: enemy.name,
-        weapon: "longRange", arc: "front", distance,
+        weapon: "longRange", arc, distance,
       } };
     }
     return vent();
