@@ -98,6 +98,27 @@ A +3 STR upgrade now always buys exactly +1 D on a saturated weapon — `+3` is 
 whole rate step, so it lifts `floor(over / 3)` by exactly 1 from any starting
 point. That is the dead-lever fix, at the smallest magnitude that achieves it.
 
+### Those examples use base STR, and no legal rig has base STR
+
+The rows above illustrate the *rule*. They understate its *impact*, because
+`normalizeWeaponUpgrade` (`game-state.js:651`) returns `upgrades[0].id` for a null
+id — **field is the floor**, and `makeRig` cannot build an un-upgraded weapon. This
+is harness trap 1 from the findings doc, which silently ruined that sweep's first
+run; it bites here too.
+
+So every legal Wrecking Ball carries Haymaker (+3 STR) and swings at effStr **13**,
+not 10. Against medium arms (T4) that is 5 wasted → **+1 D on the front arc**, where
+the table above reads +0, and +2 on the rear. Every legal Siege Maul carries
+Reinforced Head (+2) and hits effStr 13 before arc.
+
+Surfaced by a pre-existing ledger test that changed from 5 SP to 6 SP the moment
+overflow landed: its Wrecking Ball fixture had been swinging at 13 all along, and
+the +3 it was already paying for had been worth exactly nothing until now.
+
+Consequence for measurement: real overflow is **more common and larger** than the
+base-STR table suggests. The sweep drives real `makeRig` loadouts, so it will show
+the higher numbers. Read the table as the rule, not as the forecast.
+
 ### Known limit of the per-3 rate
 
 The rate is integer, so a **±1 modifier only bites when overflow crosses a
