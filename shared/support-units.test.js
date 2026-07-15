@@ -25,7 +25,7 @@ test("Sidearm is a weak flat-pick ranged weapon in the unit list", () => {
   assert.equal(normalizeUnitWeapon("sidearm"), "Sidearm");
   const s = UNIT_WEAPONS["Sidearm"];
   assert.equal(s.rof, 2);
-  assert.equal(s.str, 3);
+  assert.equal(s.pen, 3);
   assert.equal(s.flatPick, true);
   assert.equal(s.maxRange, 12);
 });

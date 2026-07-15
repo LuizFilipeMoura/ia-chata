@@ -2,16 +2,16 @@ import type { Rig, GameState, Turn } from "./src/state/types";
 
 declare module "/shared/game-state.js" {
   export const SUPPORTED_RIG_CLASSES: string[];
-  // §7.5 wound model: `str` is compared against the struck location's Toughness
-  // via `woundTarget(str, T)`; each wound then deals `d` SP.
+  // §7.5 wound model: `pen` is compared against the struck location's Toughness
+  // via `woundTarget(pen, T)`; each wound then deals `d` SP.
   export const WEAPONS: Record<string, Record<string, {
-    rof: number; str: number; d: number;
+    rof: number; pen: number; d: number;
     acc?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[];
   }>>;
   export const UNIT_WEAPONS: Record<string, {
-    rof: number; str: number; d: number;
+    rof: number; pen: number; d: number;
     acc?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[]; flatPick?: boolean;
@@ -53,6 +53,7 @@ declare module "/shared/game-state.js" {
   export function upgradeForWeapon(weaponName: string, upgradeId?: string | null): { id: string; name: string } | null;
   export function rigEffects(rig: Rig): {
     actionHeat: Record<string, number>;
+    sprintMult: number;
     repair: { bonusSp: number };
     thermalMargin: number;
     hullMaxBonus: number;

@@ -92,8 +92,8 @@ export interface ResolutionStep {
   kind: "hit" | "wound" | "location" | "damage";
   /** The number the dice had to beat. Null on an auto-fail (shield negate, blind arc). */
   target?: number | null;
-  /** Wound step only: the effective STR and the struck location's Toughness. */
-  str?: number | null;
+  /** Wound step only: the effective Penetration and the struck location's Toughness. */
+  pen?: number | null;
   toughness?: number | null;
   /** Location step only. Null on an aimed shot — no d12 decided the part. */
   die?: number | null;

@@ -90,8 +90,8 @@ test("woundTarget — the original bug case is possible, not impossible", () => 
   // rewrite: under the impact-total model it was mathematically 0 damage at any
   // roll. Derived from the live stats, not hardcoded, so a future retune of the
   // Saw or the weight ladder cannot silently send it back to hopeless.
-  const str = WEAPONS.melee["Circular Saw"].str + WEIGHT_PEN_MOD.light;
-  assert.equal(woundTarget(str, 5), 7); // medium hull T5 => 40%
+  const pen = WEAPONS.melee["Circular Saw"].pen + WEIGHT_PEN_MOD.light;
+  assert.equal(woundTarget(pen, 5), 7); // medium hull T5 => 40%
 });
 
 test("woundTarget — junk STR coerces (fails safe), junk T throws (fails loud)", () => {
@@ -117,7 +117,7 @@ test("woundTarget — junk STR coerces (fails safe), junk T throws (fails loud)"
 });
 
 test("strOvermatchD — STR that only just reaches the TN-2 floor wastes nothing", () => {
-  // The floor is reached at str = T + 4 (raw 6+T-str == 2). Reaching it is not
+  // The floor is reached at pen = T + 4 (raw 6+T-pen == 2). Reaching it is not
   // waste: that point bought the last 10% of wound chance. Only points PAST it
   // are discarded by the clamp, and only those convert.
   assert.equal(strOvermatchD(8, 4), 0);   // raw 2 — exactly the floor

@@ -226,7 +226,7 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
 
 test("applyDefensiveReactions is an identity pass-through for a wound hit (no reactive gear)", () => {
   const target = { weightClass: "medium" }; // no equipment, no equipState
-  const hit = { die: 5, target: 4, str: 7, toughness: 5, sp: 2, kind: "wound" };
+  const hit = { die: 5, target: 4, pen: 7, toughness: 5, sp: 2, kind: "wound" };
   const out = applyDefensiveReactions(target, hit, { location: "hull", spendHeat: () => {} });
   assert.deepEqual(out, hit); // unchanged
 });
@@ -243,7 +243,7 @@ test("rollWounds is byte-unchanged by the wound seam for a plain target", () => 
   const plain = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].str, 7); // 7(STR) + 0(front) — no dock, seam is a no-op
+  assert.equal(out[0].pen, 7); // 7(STR) + 0(front) — no dock, seam is a no-op
   assert.equal(out[0].target, 4); // 6 + 5(medium hull T) - 7
   assert.equal(out[0].sp, 2); // Autocannon D2
   assert.equal(out[0].kind, "wound"); // seam stamps the discriminator
@@ -340,7 +340,7 @@ test("rollWounds computes a per-hit wound roll and honours Brace on the front ar
   const out = rollWounds({ weightClass: "medium" }, target, auto, "hull",
     { arc: "front", hits: 2 }, { wounds: [10, 10] }, () => 0);
   assert.equal(out.length, 2);
-  assert.equal(out[0].str, 5);
+  assert.equal(out[0].pen, 5);
   assert.equal(out[0].target, 6);
   assert.equal(out[0].sp, 2); // Autocannon D2
 });
@@ -351,12 +351,12 @@ test("rollWounds applies Harden's -1 STR alongside Brace, stacking", () => {
   // 1 hit -> 7 + 0(front) - 1(harden) = 6 effective STR.
   const out = rollWounds({ weightClass: "medium" }, hardened, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].str, 6);
+  assert.equal(out[0].pen, 6);
 
   const both = { weightClass: "medium", hardened: true, preparation: { type: "brace" } };
   const out2 = rollWounds({ weightClass: "medium" }, both, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out2[0].str, 4); // 7 - 2(brace) - 1(harden)
+  assert.equal(out2[0].pen, 4); // 7 - 2(brace) - 1(harden)
   assert.equal(out2[0].target, 7); // 6 + 5 - 4 — the dock moves the TN, not the roll
 });
 
@@ -369,9 +369,9 @@ test("Reinforced Plating deepens Harden to −2 effective STR", () => {
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   const out2 = rollWounds({ weightClass: "medium" }, reinforced, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].str, 6);
-  assert.equal(out2[0].str, 5);
-  assert.equal(out[0].str - out2[0].str, 1); // −2 vs −1 = 1 lower
+  assert.equal(out[0].pen, 6);
+  assert.equal(out2[0].pen, 5);
+  assert.equal(out[0].pen - out2[0].pen, 1); // −2 vs −1 = 1 lower
 });
 
 test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", () => {
@@ -386,9 +386,9 @@ test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", 
     { arc: "side", hits: 1 }, { wounds: [10] }, () => 0);
   const outAngled = rollWounds({ weightClass: "medium" }, angled, auto, "hull",
     { arc: "side", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(outPlain[0].str, 9);
-  assert.equal(outPlain[0].str - outReactive[0].str, 1);
-  assert.equal(outPlain[0].str - outAngled[0].str, 2);
+  assert.equal(outPlain[0].pen, 9);
+  assert.equal(outPlain[0].pen - outReactive[0].pen, 1);
+  assert.equal(outPlain[0].pen - outAngled[0].pen, 2);
 
   // Rear arc docks identically to side.
   const rearPlain = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
@@ -397,15 +397,15 @@ test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", 
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
   const rearAngled = rollWounds({ weightClass: "medium" }, angled, auto, "hull",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(rearPlain[0].str - rearReactive[0].str, 1);
-  assert.equal(rearPlain[0].str - rearAngled[0].str, 2);
+  assert.equal(rearPlain[0].pen - rearReactive[0].pen, 1);
+  assert.equal(rearPlain[0].pen - rearAngled[0].pen, 2);
 
   // Front arc is unaffected: a reactive-plating target takes no dock.
   const frontPlain = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   const frontReactive = rollWounds({ weightClass: "medium" }, reactive, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(frontReactive[0].str, frontPlain[0].str);
+  assert.equal(frontReactive[0].pen, frontPlain[0].pen);
 });
 
 test("Raking Fire against the front arc deals no damage", () => {
@@ -432,7 +432,7 @@ test("Raise Shield negates the front arc and blunts side/rear by 3", () => {
   // Side: only blunted -> 7 + 2(side) - 3(shield) = 6 effective STR, TN 6+5-6 = 5.
   const side = rollWounds({ weightClass: "medium" }, base, auto, "hull",
     { arc: "side", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(side[0].str, 6);
+  assert.equal(side[0].pen, 6);
   assert.equal(side[0].target, 5);
   assert.equal(side[0].sp, 2); // Autocannon D2 — blunted, not negated
 });
@@ -452,7 +452,7 @@ test("Tower Shield extends Raise Shield negation to the side arc", () => {
   assert.equal(side[0].negated, true);
   const rear = rollWounds({ weightClass: "medium" }, tower, auto, "hull",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(rear[0].str, 7);
+  assert.equal(rear[0].pen, 7);
   assert.equal(rear[0].sp, 2); // blunted only — the rear still wounds
 });
 
@@ -601,13 +601,13 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
 
 test("computeStr skips weight-class modifier for flat-pick weapons", () => {
   const attackerWithClass = { kind: "tank", weightClass: "heavy" };
-  const profile = { str: 12, perks: [], flatPick: true };
+  const profile = { pen: 12, perks: [], flatPick: true };
   assert.equal(computeStr(attackerWithClass, profile, { charged: false }), 12);
 });
 
 test("computeStr still applies weight-class modifier for rig-catalog weapons", () => {
   const attacker = { kind: "rig", weightClass: "heavy" };
-  const profile = { str: 8, perks: [] };
+  const profile = { pen: 8, perks: [] };
   assert.equal(computeStr(attacker, profile, { charged: false }), 8 + 1); // heavy is +1 on the d10 ladder
 });
 
@@ -685,12 +685,12 @@ test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   const hurt = makeRig(3, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   hurt.arms.sp -= 1;
   const p = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
-  assert.equal(computeStr(sniper, p, { target: fresh }), p.str + 3);
-  assert.equal(computeStr(sniper, p, { target: hurt }), p.str);
+  assert.equal(computeStr(sniper, p, { target: fresh }), p.pen + 3);
+  assert.equal(computeStr(sniper, p, { target: hurt }), p.pen);
 });
 
 test("Reactor Overdrive: computeStr adds +2 STR to every attack while active", () => {
-  const profile = { str: 6, sweet: 0 };
+  const profile = { pen: 6, sweet: 0 };
   const base = { weightClass: "medium" };
   const overdriven = { weightClass: "medium", reactorOverdriveActive: true };
   const plain = computeStr(base, profile, {});
@@ -747,17 +747,17 @@ test("Evisceration downside: -1 STR against a fully-undamaged struck location", 
 test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
   const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
   const p = effectiveWeaponProfile("melee", "Lance", lance);
-  assert.equal(computeStr(lance, p, {}), p.str); // stationary — no bonus
+  assert.equal(computeStr(lance, p, {}), p.pen); // stationary — no bonus
   lance.movedThisActivation = true;
-  assert.equal(computeStr(lance, p, {}), p.str + 3);
+  assert.equal(computeStr(lance, p, {}), p.pen + 3);
 });
 
 test("Momentum Swing reuses the charge gate for +2 STR (generalised charge key)", () => {
   const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
   const p = effectiveWeaponProfile("melee", "Wrecking Ball", ball);
-  assert.equal(computeStr(ball, p, {}), p.str); // stationary — no bonus
+  assert.equal(computeStr(ball, p, {}), p.pen); // stationary — no bonus
   ball.movedThisActivation = true;
-  assert.equal(computeStr(ball, p, {}), p.str + 2);
+  assert.equal(computeStr(ball, p, {}), p.pen + 2);
 });
 
 test("Piledriver Protocol spends Momentum for +STR and ignores a braced front arc", () => {
@@ -767,7 +767,7 @@ test("Piledriver Protocol spends Momentum for +STR and ignores a braced front ar
   const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // STR 11, medium (+0)
 
   // computeStr: the threaded momentum spend adds +1 STR per point.
-  assert.equal(computeStr(ram, p, { target: wall, momentum: 3 }), p.str + 3);
+  assert.equal(computeStr(ram, p, { target: wall, momentum: 3 }), p.pen + 3);
 
   // These assert effective STR, NOT the wound TN, deliberately: the Siege Maul is
   // strong enough that both cases below clamp to TN 2 against a medium hull, so a
@@ -775,12 +775,12 @@ test("Piledriver Protocol spends Momentum for +STR and ignores a braced front ar
   // Without a guard-break, the brace's -2 applies: 11 + 0(front) - 2 = 9.
   const normal = rollWounds(ram, wall, p, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(normal[0].str, 9);
+  assert.equal(normal[0].pen, 9);
 
   // Piledriver guard-break skips the brace AND adds +3 STR: 11 + 3 + 0 = 14.
   const smash = rollWounds(ram, wall, p, "hull",
     { arc: "front", hits: 1, momentum: 3, guardBreak: true }, { wounds: [10] }, () => 0);
-  assert.equal(smash[0].str, 14);
+  assert.equal(smash[0].pen, 14);
 });
 
 test("computeModifiedAim ignores cover during a Piledriver guard-break", () => {
@@ -811,7 +811,7 @@ test("A Siege Maul rig without Piledriver never spends or reads Momentum", () =>
   const ram = makeRig(1, "Plain", "medium", "a", { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "breaching-round" });
   const p = effectiveWeaponProfile("longRange", "Siege Maul", ram);
   // A stray momentum in opts must NOT add STR without the piledriver effect.
-  assert.equal(computeStr(ram, p, { target: {}, momentum: 3 }), p.str);
+  assert.equal(computeStr(ram, p, { target: {}, momentum: 3 }), p.pen);
 });
 
 test("Bloodletter adds +1 to-hit die vs a target missing SP anywhere", () => {
@@ -841,22 +841,22 @@ test("Cold Bore / Bloodletter read the target's real parts (Tank: no arms/legs)"
 
   const sniper = makeRig(2, "S", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "cold-bore" });
   const cb = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
-  assert.equal(computeStr(sniper, cb, { target: pristineTank }), cb.str + 3); // pristine tank IS undamaged → +3
+  assert.equal(computeStr(sniper, cb, { target: pristineTank }), cb.pen + 3); // pristine tank IS undamaged → +3
 });
 
 test("Opportunist adds +3 STR vs an overheated or action-penalised target", () => {
   const sword = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "opportunist" });
   const p = effectiveWeaponProfile("melee", "Sword", sword);
   const healthy = makeRig(2, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
-  assert.equal(computeStr(sword, p, { target: healthy }), p.str);
+  assert.equal(computeStr(sword, p, { target: healthy }), p.pen);
 
   const overheated = makeRig(3, "O", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   overheated.engine.heat = HEAT_CAPACITY[overheated.weightClass] + 1;
-  assert.equal(computeStr(sword, p, { target: overheated }), p.str + 3);
+  assert.equal(computeStr(sword, p, { target: overheated }), p.pen + 3);
 
   const disrupted = makeRig(4, "D", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   disrupted.actionPenaltyNextActivation = 1;
-  assert.equal(computeStr(sword, p, { target: disrupted }), p.str + 3);
+  assert.equal(computeStr(sword, p, { target: disrupted }), p.pen + 3);
 });
 
 test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret, not arms/legs)", () => {
@@ -910,11 +910,11 @@ test("Redline Governor adds STR from attacker heat over cap, capped at +3", () =
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "redline-governor" });
   const p = effectiveWeaponProfile("melee", "Chainsaw", rig);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // at cap -> no bonus
-  assert.equal(computeStr(rig, p, {}), p.str);
+  assert.equal(computeStr(rig, p, {}), p.pen);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 2; // +2 over cap
-  assert.equal(computeStr(rig, p, {}), p.str + 2);
+  assert.equal(computeStr(rig, p, {}), p.pen + 2);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 10; // way over cap, still capped at +3
-  assert.equal(computeStr(rig, p, {}), p.str + 3);
+  assert.equal(computeStr(rig, p, {}), p.pen + 3);
 });
 
 test("Redline Governor adds to-hit dice from attacker heat over cap, capped at +3", () => {
@@ -935,9 +935,9 @@ test("Superconductor Edge adds +2 STR when attacker heat is over half class cap"
   const rig = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
   const p = effectiveWeaponProfile("melee", "Sword", rig);
   rig.engine.heat = Math.floor(HEAT_CAPACITY[rig.weightClass] / 2); // at/under half -> no bonus
-  assert.equal(computeStr(rig, p, {}), p.str);
+  assert.equal(computeStr(rig, p, {}), p.pen);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // clearly over half
-  assert.equal(computeStr(rig, p, {}), p.str + 2);
+  assert.equal(computeStr(rig, p, {}), p.pen + 2);
 });
 
 test("Superconductor Edge moves 1 heat attacker->target once per attack while running hot", () => {
@@ -1200,17 +1200,17 @@ test("Breach Grip — a cracked location adds +2 effective STR over its 2-round 
   // STR 7 + 0(front) = 7 effective with no crack.
   const base = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "front", hits: 1, round: 5 }, { wounds: [10] }, () => 0);
-  assert.equal(base[0].str, 7);
+  assert.equal(base[0].pen, 7);
   // Round N (4) and N+1 (5) are both live: 7 + 2 = 9.
   for (const round of [4, 5]) {
     const live = rollWounds({ weightClass: "medium" }, cracked, auto, "hull",
       { arc: "front", hits: 1, round }, { wounds: [10] }, () => 0);
-    assert.equal(live[0].str, 9, `round ${round} should still be cracked`);
+    assert.equal(live[0].pen, 9, `round ${round} should still be cracked`);
   }
   // Gone by N+2 (round 6): the +2 is no longer applied (5 >= 6 is false).
   const stale = rollWounds({ weightClass: "medium" }, cracked, auto, "hull",
     { arc: "front", hits: 1, round: 6 }, { wounds: [10] }, () => 0);
-  assert.equal(stale[0].str, 7);
+  assert.equal(stale[0].pen, 7);
 });
 
 test("Breach Grip — a damaging Claw hit routes through ctx.crackLocation", () => {
@@ -1564,15 +1564,15 @@ test("Reactive Armor hardens the struck location on the first damaging hit each 
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   const outReactive = rollWounds({ weightClass: "medium" }, reactive, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(outPlain[0].str, 7);
-  assert.equal(outReactive[0].str, 7);
+  assert.equal(outPlain[0].pen, 7);
+  assert.equal(outReactive[0].pen, 7);
   assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // that location is now hardened
 
   // A second volley to the SAME hardened location is docked -2, and the location
   // is not re-recorded.
   const outReactive2 = rollWounds({ weightClass: "medium" }, reactive, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(outReactive2[0].str, 5); // 7 - 2
+  assert.equal(outReactive2[0].pen, 5); // 7 - 2
   assert.equal(outReactive2[0].target, 6); // 6 + 5 - 5
   assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]); // no duplicate
 });
@@ -1595,7 +1595,7 @@ test("Reactive Armor independently hardens a second, different location (reactiv
   // even though hull is already hardened.
   const firstLegs = rollWounds({ weightClass: "medium" }, reactive, auto, "legs",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(firstLegs[0].str, 7);
+  assert.equal(firstLegs[0].pen, 7);
   assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull", "legs"]); // both tracked
 
   // Each hardened location now docks its own subsequent hits, independently.
@@ -1603,8 +1603,8 @@ test("Reactive Armor independently hardens a second, different location (reactiv
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   const secondHull = rollWounds({ weightClass: "medium" }, reactive, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(secondLegs[0].str, 5);
-  assert.equal(secondHull[0].str, 5);
+  assert.equal(secondLegs[0].pen, 5);
+  assert.equal(secondHull[0].pen, 5);
 });
 
 test("Reactive Armor does not fire for a rig carrying only the base Ablative Plating", () => {
@@ -1620,7 +1620,7 @@ test("Reactive Armor does not fire for a rig carrying only the base Ablative Pla
   // A second hit is still undocked — nothing was ever recorded to dock against.
   const out = rollWounds({ weightClass: "medium" }, base, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].str, 7); // no reactive dock
+  assert.equal(out[0].pen, 7); // no reactive dock
 });
 
 // Ablative Cascade (Ablative Plating, Prototype). The seam is flat
@@ -1635,7 +1635,7 @@ test("Ablative Cascade: with no charges left, the wound lands full", () => {
     equipState: { ablativeCharges: 0 },
   };
   let heated = 0;
-  const hit = { die: 10, target: 4, str: 7, toughness: 5, sp: 2, kind: "wound" };
+  const hit = { die: 10, target: 4, pen: 7, toughness: 5, sp: 2, kind: "wound" };
   const out = applyDefensiveReactions(target, hit, { location: "hull", spendHeat: (n) => { heated += n; } });
   assert.equal(out.sp, 2);                                 // untouched
   assert.equal(out.negated, undefined);
@@ -1648,7 +1648,7 @@ test("Ablative Cascade: a failed wound never spends a charge (gated on hit.sp > 
     equipState: { ablativeCharges: 2 },
   };
   let heated = 0;
-  const hit = { die: 1, target: 4, str: 7, toughness: 5, sp: 0, kind: "wound" };
+  const hit = { die: 1, target: 4, pen: 7, toughness: 5, sp: 0, kind: "wound" };
   const out = applyDefensiveReactions(target, hit, { location: "hull", spendHeat: (n) => { heated += n; } });
   assert.equal(out.sp, 0);
   assert.equal(target.equipState.ablativeCharges, 2);      // charge untouched
@@ -1797,17 +1797,17 @@ test("rollWounds — defender modifiers reduce effective STR, not the roll", () 
   assert.equal(out[0].sp, 0);   // 7 < 8
   assert.equal(out[0].target, 8);
   assert.equal(out[0].die, 7);  // the roll is untouched; the TN moved
-  assert.equal(out[0].str, 3);
+  assert.equal(out[0].pen, 3);
 });
 
 test("rollWounds — Overmatch converts wasted STR into damage", () => {
   const wb = WEAPONS.melee["Wrecking Ball"]; // STR 10, D5, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
-  // medium arms are T4, so the floor is str 8. STR 10 wastes 2 — under the
+  // medium arms are T4, so the floor is pen 8. STR 10 wastes 2 — under the
   // 3-point rate, so a front-arc hit is still a plain D5.
   const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(front[0].str, 10);
+  assert.equal(front[0].pen, 10);
   assert.equal(front[0].target, 2);      // clamped to the floor
   assert.equal(front[0].overmatch, 0);
   assert.equal(front[0].sp, 5);          // D5, nothing added
@@ -1823,7 +1823,7 @@ test("rollWounds — Overmatch revives the arc bonus on a saturated weapon", () 
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   const rear = rollWounds({ weightClass: "medium" }, target, wb, "arms",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(rear[0].str, 13);         // 10 + 3 (rear arc)
+  assert.equal(rear[0].pen, 13);         // 10 + 3 (rear arc)
   assert.equal(front[0].target, rear[0].target); // both STILL clamped to 2...
   assert.equal(rear[0].overmatch, 1);            // ...but the arc now buys depth
   assert.equal(rear[0].sp - front[0].sp, 1);
@@ -1834,7 +1834,7 @@ test("rollWounds — Overmatch revives WEIGHT_PEN_MOD on a saturated weapon", ()
   // clamped to TN 2, so the -1 was discarded entirely.
   //
   // The mod bites where Overmatch crosses a rate boundary. Siege Maul (STR 11)
-  // into medium arms (T4, floor str 8) wastes 3 → +1 D; the light -1 wastes 2 →
+  // into medium arms (T4, floor pen 8) wastes 3 → +1 D; the light -1 wastes 2 →
   // +0. Same shot, one weight class apart, one point of damage.
   const maul = WEAPONS.longRange["Siege Maul"]; // STR 11, D5
   const target = { weightClass: "medium", hardened: false, preparation: null };
@@ -1842,8 +1842,8 @@ test("rollWounds — Overmatch revives WEIGHT_PEN_MOD on a saturated weapon", ()
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   const light = rollWounds({ weightClass: "light" }, target, maul, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(med[0].str, 11);
-  assert.equal(light[0].str, 10);           // WEIGHT_PEN_MOD light = -1
+  assert.equal(med[0].pen, 11);
+  assert.equal(light[0].pen, 10);           // WEIGHT_PEN_MOD light = -1
   assert.equal(med[0].target, light[0].target); // both STILL clamped to 2...
   assert.equal(med[0].overmatch, 1);            // ...but the mod now buys depth
   assert.equal(light[0].overmatch, 0);
@@ -1854,16 +1854,16 @@ test("rollWounds — Overmatch stacks with Rend and respects its own cap", () =>
   // Overmatch, Rend and Evisceration all land in `sp`. The cap is on Overmatch
   // alone, not on the total — a Rend weapon still gets its +1 on top.
   //
-  // The fixture has to OVERSHOOT the cap or it isn't testing one. str 13 is a
+  // The fixture has to OVERSHOOT the cap or it isn't testing one. pen 13 is a
   // real loadout: Siege Maul's base 11 plus Reinforced Head's +2. With the rear
   // arc that's effPen 16 into a T3 engine — 9 past the floor, which the 3-point
   // rate would pay out as +3. It resolves to 2 only because the cap bites, so
   // this goes red if the cap is raised or removed.
-  const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"], str: 13 };
+  const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"], pen: 13 };
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, target, maul, "engine",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].str, 16);
+  assert.equal(out[0].pen, 16);
   assert.equal(out[0].overmatch, 2); // capped down from 3
   assert.equal(out[0].rend, 1);
   assert.equal(out[0].sp, 8); // D5 + 2 Overmatch + 1 rend
@@ -1880,14 +1880,14 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   // actually build, and a tank is the only way to reach T6 today.)
   //
   // Siege Maul STR 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
-  // effPen 14 into a T6 hull. The floor is at str T+4 = 10, so 4 points are
+  // effPen 14 into a T6 hull. The floor is at pen T+4 = 10, so 4 points are
   // past it; at 3 points per D that pays out floor(4/3) = +1 D. D5 + 1 = 6 SP.
   const maul = WEAPONS.longRange["Siege Maul"];
   const tank = { kind: "tank", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, tank, maul, "hull",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].toughness, 6);   // the tank grid, not a rig weight class
-  assert.equal(out[0].str, 14);
+  assert.equal(out[0].pen, 14);
   assert.equal(out[0].target, 2);      // 6 + 6 - 14 = -2, clamped to the floor
   assert.equal(out[0].overmatch, 1);
   assert.equal(out[0].sp, 6);          // D5 + 1
@@ -2050,7 +2050,7 @@ test("ledger — the wound step shows effective STR against toughness", () => {
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
   const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
-  assert.equal(w.str, 5);          // Sword STR 5, medium mod 0, front arc 0
+  assert.equal(w.pen, 5);          // Sword STR 5, medium mod 0, front arc 0
   assert.equal(w.toughness, 5);    // medium hull
   assert.equal(w.target, 6);       // 6 + 5 - 5
   assert.deepEqual(w.dice, [{ value: 9, ok: true }]);
@@ -2148,7 +2148,7 @@ test("ledger — arc and defender modifiers each earn a named wound term", () =>
   const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
   assert.ok(w.terms.some((t) => t.label === "weapon STR" && t.value === 5));
   assert.ok(w.terms.some((t) => t.label === "rear arc" && t.value === 3));
-  assert.equal(w.str, 8);          // 5 + 3
+  assert.equal(w.pen, 8);          // 5 + 3
   assert.equal(w.target, 3);       // 6 + 5 - 8
 });
 
@@ -2184,8 +2184,8 @@ test("ledger — the wound step's terms reconcile to its effective STR", () => {
     { weapon: "melee", arc: "side", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
   const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
-  assert.equal(w.terms.reduce((s, t) => s + t.value, 0), w.str);
-  assert.equal(w.target, woundTarget(w.str, w.toughness));
+  assert.equal(w.terms.reduce((s, t) => s + t.value, 0), w.pen);
+  assert.equal(w.target, woundTarget(w.pen, w.toughness));
 });
 
 test("ledger — the damage step's terms reconcile to the SP dealt", () => {
@@ -2252,14 +2252,14 @@ function woundMatrix() {
     const arc = worstUsableArc(w);
     for (const aw of classes) {
       // flatPick weapons (Tank/Walker mounts) do not take the weight-class mod.
-      const str = w.str + (w.flatPick ? 0 : WEIGHT_PEN_MOD[aw]) + arc;
+      const pen = w.pen + (w.flatPick ? 0 : WEIGHT_PEN_MOD[aw]) + arc;
       for (const tw of classes) {
         for (const loc of partNamesOf("rig")) {
           const t = toughnessOf("rig", loc, tw);
           rows.push({
             label: `${name}/${aw} vs ${tw}/${loc} (arc +${arc})`,
-            raw: 6 + t - str,          // unclamped TN the design intends
-            tn: woundTarget(str, t),   // clamped TN the game actually rolls
+            raw: 6 + t - pen,          // unclamped TN the design intends
+            tn: woundTarget(pen, t),   // clamped TN the game actually rolls
           });
         }
       }
@@ -2302,10 +2302,10 @@ test("no dead zones — the clamp is genuinely engaged, not incidental", () => {
     "Rivet Gun/light vs colossal/hull (arc +0)",
   ]);
   // ...and that the clamp is what saves it: raw 11 would be unrollable on a d10.
-  const str = WEAPONS.longRange["Rivet Gun"].str + WEIGHT_PEN_MOD.light; // 3 - 1 = 2
+  const pen = WEAPONS.longRange["Rivet Gun"].pen + WEIGHT_PEN_MOD.light; // 3 - 1 = 2
   const t = toughnessOf("rig", "hull", "colossal");                      // 7
-  assert.equal(6 + t - str, 11);              // unclamped: needs an 11 on a d10
-  assert.equal(woundTarget(str, t), 10);      // clamped: a natural 10 still wounds
+  assert.equal(6 + t - pen, 11);              // unclamped: needs an 11 on a d10
+  assert.equal(woundTarget(pen, t), 10);      // clamped: a natural 10 still wounds
 });
 
 test("no dead zones — the light saw vs a medium hull, the case that started this", () => {
@@ -2313,9 +2313,9 @@ test("no dead zones — the light saw vs a medium hull, the case that started th
   // damage at any roll. TN 7 sits clear of both clamp rails, so this exercises
   // the arithmetic rather than passing on a clamped edge.
   const w = WEAPONS.melee["Circular Saw"];
-  const str = w.str + WEIGHT_PEN_MOD.light;          // 5 - 1 = 4
+  const pen = w.pen + WEIGHT_PEN_MOD.light;          // 5 - 1 = 4
   const t = toughnessOf("rig", "hull", "medium");    // 5
-  assert.equal(woundTarget(str, t), 7);              // 40%, front arc, no upgrades
+  assert.equal(woundTarget(pen, t), 7);              // 40%, front arc, no upgrades
 });
 
 // The hit-location table is the TARGET's, not the attacker's. Regression: reading

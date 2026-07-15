@@ -11,7 +11,7 @@ export interface LoadoutWeapon {
   name: string;
   melee: boolean;
   rof: { base: number; delta: number };
-  str: { base: number; delta: number };
+  pen: { base: number; delta: number };
   range: { text: string; delta: number };
   perks: string[];       // base perks
   addedPerks: string[];  // perks added by the upgrade (rendered green)
@@ -50,7 +50,7 @@ function weapon(rig: Rig, slot: Slot): LoadoutWeapon {
     : (WEAPON_UPGRADES[name] || []).find(
         (u: { id: string }) => u.id === rig.weaponUpgrades?.[slot as "longRange" | "melee"],
       );
-  const effect = (up?.effect || {}) as { rof?: number; str?: number; range?: number; perks?: string[] };
+  const effect = (up?.effect || {}) as { rof?: number; pen?: number; range?: number; perks?: string[] };
   const isMelee = !!base?.melee;
   const rangeText = isMelee
     ? `RNG ${base?.rng?.[0] ?? 0}"`
@@ -62,7 +62,7 @@ function weapon(rig: Rig, slot: Slot): LoadoutWeapon {
     name,
     melee: isMelee,
     rof: { base: base?.rof ?? 0, delta: effect.rof || 0 },
-    str: { base: base?.str ?? 0, delta: effect.str || 0 },
+    pen: { base: base?.pen ?? 0, delta: effect.pen || 0 },
     range: { text: rangeText, delta: effect.range || 0 },
     perks: basePerks,
     addedPerks,

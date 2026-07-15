@@ -268,7 +268,7 @@ export function strBreakdown(attacker, profile, opts) {
   const weightMod = profile.flatPick ? 0 : (WEIGHT_PEN_MOD[attacker.weightClass] || 0);
   // The weapon's own STR is the floor every modifier is measured against, so it
   // is always a term even though every other entry here is conditional.
-  terms.push({ label: "weapon STR", value: profile.str });
+  terms.push({ label: "weapon STR", value: profile.pen });
   if (weightMod) terms.push({ label: `${attacker.weightClass} chassis`, value: weightMod });
   if (charged) terms.push({ label: "Charged Shot", value: charged });
   let bonus = 0;
@@ -379,7 +379,7 @@ export function strBreakdown(attacker, profile, opts) {
   // resolveFire and cleared in endActivation so it can't leak past its activation.
   const nextStr = attacker.equipState?.nextAttackStr || 0;
   if (nextStr) terms.push({ label: "primed charge", value: nextStr });
-  return { value: profile.str + weightMod + charged + bonus + nextStr, terms };
+  return { value: profile.pen + weightMod + charged + bonus + nextStr, terms };
 }
 
 // §12/§7 — the shot's effective STR. Thin wrapper over strBreakdown so the ~15
@@ -439,7 +439,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   // strBreakdown, not computeStr: the ledger's wound step needs the ~15
   // contributions behind this STR, and they must be the ones this roll used.
   const strBd = strBreakdown(attacker, profile, { ...opts, target, location });
-  const str = strBd.value;
+  const pen = strBd.value;
   let bonus = arcBonus(profile, opts.arc);
   // Kneecapper — bypasses Raking Fire's front-arc auto-fail (arcBonus
   // returning null) but ONLY when the struck location is a limb on the
@@ -523,13 +523,13 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       // reads it off this object, and a shield-negated attack still has to say
       // what the weapon WOULD have dealt rather than render a blank term.
       out.push({
-        die, target: null, str: null, toughness, sp: 0, negated: true, wounded: false,
+        die, target: null, pen: null, toughness, sp: 0, negated: true, wounded: false,
         d: profile.d || 1, rend: 0, evisc: 0, overmatch: 0,
         noRoll: bonus == null ? "arc" : "shield", terms: woundTerms,
       });
       continue;
     }
-    const effPen = str + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
+    const effPen = pen + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
     const tn = woundTarget(effPen, toughness);
     // Penetrator Rounds (§13) — every 3rd Autocannon volley skips the wound
     // roll entirely (was: forced Severe against the old armour row).
@@ -542,7 +542,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     let sp = 0;
     // Rend / Evisceration / Overmatch are threaded out per wound, not just folded
     // into `sp`, because the ledger's damage step names each one. Two of them the
-    // ledger could in principle recompute — Overmatch from the `str`/`toughness`
+    // ledger could in principle recompute — Overmatch from the `pen`/`toughness`
     // the rider already carries, Rend from the profile's perks — and they ride
     // anyway, for shape parity and to keep the arithmetic in one place.
     // Evisceration is the one that genuinely CANNOT be re-derived there: it reads
@@ -567,7 +567,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     }
     const resolved = applyDefensiveReactions(
       target,
-      { die, target: tn, str: effPen, toughness, sp, kind: "wound" },
+      { die, target: tn, pen: effPen, toughness, sp, kind: "wound" },
       { location, spendHeat: opts.spendHeat || (() => {}) },
     );
     // `wounded` is recorded separately from `sp` on purpose. Ablative Cascade
@@ -816,7 +816,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
-  const str = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
+  const pen = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
 
   // ---- The resolution ledger -------------------------------------------------
   // One step per stage of the chain, in the order they actually resolve.
@@ -862,14 +862,14 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const first = impacts[0];
   if (th.hits === 0) {
     steps.push({
-      kind: "wound", target: null, str: null, toughness: null,
+      kind: "wound", target: null, pen: null, toughness: null,
       terms: [], dice: [], out: "no hits to wound",
     });
   } else if (!first) {
     // Kneecapper against a kind with no limb parts at all (none exist today):
     // hits landed but there is no legal location to wound.
     steps.push({
-      kind: "wound", target: null, str: null, toughness: null,
+      kind: "wound", target: null, pen: null, toughness: null,
       terms: [], dice: [], out: "no legal location to wound",
     });
   } else {
@@ -881,7 +881,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
         : `${wounded} of ${impacts.length} wounded`;
     steps.push({
       kind: "wound",
-      target: first.target, str: first.str, toughness: first.toughness,
+      target: first.target, pen: first.pen, toughness: first.toughness,
       terms: first.terms,
       dice: impacts.map((h) => ({ value: h.die, ok: h.wounded })),
       out,
@@ -916,13 +916,13 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
 
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
-    summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,
+    summary: `${attacker.name} → ${target.name} with ${weaponName} (Pen ${pen}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,
     breakdown: {
       actor: attacker.name, weapon: weaponName, target: target.name,
       steps,
       // `sp`/`location` stay at the top level: they are the headline the roll
       // console renders large, and other code reads them. Everything else that
-      // used to live here (`terms`, `str`, `toughness`, `woundTarget`) moved
+      // used to live here (`terms`, `pen`, `toughness`, `woundTarget`) moved
       // ONTO the steps — a flat one-equation breakdown could not say which die
       // decided the damage, which is the whole reason this ledger exists.
       //

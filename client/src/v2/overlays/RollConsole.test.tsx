@@ -35,7 +35,7 @@ const BUG_CASE: ResolutionStep[] = [
   {
     kind: "wound",
     target: 7,
-    str: 4,
+    pen: 4,
     toughness: 5,
     terms: [{ label: "weapon STR", value: 4 }, { label: "light chassis", value: -1 }],
     dice: [{ value: 3, ok: false }, { value: 6, ok: false }],
@@ -78,7 +78,7 @@ test("renders an auto-fail step rather than omitting it", async () => {
   await ref.current!.playResolution(ledger([
     { kind: "hit", target: 4, terms: [{ label: "base aim", value: 4 }], dice: [{ value: 5, ok: true }], out: "1 of 1 hit" },
     { kind: "location", die: 9, out: "hull" },
-    { kind: "wound", target: null, str: null, toughness: null, terms: [], dice: [], out: "shield negates — no wound roll" },
+    { kind: "wound", target: null, pen: null, toughness: null, terms: [], dice: [], out: "shield negates — no wound roll" },
   ]));
 
   const wound = await screen.findByTestId("v2-roll-step-wound");

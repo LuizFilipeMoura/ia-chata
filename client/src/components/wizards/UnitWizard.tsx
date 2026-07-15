@@ -233,7 +233,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
           <div className="rw-weapon-head">
             <span className="rw-weapon-icon">🎯</span>
             <span className="rw-weapon-name">{state.longRange}</span>
-            <small>ROF {lr.rof} · STR {lr.str} · {lr.minRange}–{lr.maxRange}"</small>
+            <small>ROF {lr.rof} · STR {lr.pen} · {lr.minRange}–{lr.maxRange}"</small>
           </div>
           {upgradePath(state.longRange, state.longRangeUpgrade, (id) =>
             patch({ longRangeUpgrade: id }),
@@ -244,7 +244,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
           <div className="rw-weapon-head">
             <span className="rw-weapon-icon">🗡️</span>
             <span className="rw-weapon-name">{state.melee}</span>
-            <small>ROF {ml.rof} · STR {ml.str} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small>
+            <small>ROF {ml.rof} · STR {ml.pen} · RNG {ml.rng?.[0]}/{ml.rng?.[1]}"</small>
           </div>
           {upgradePath(state.melee, state.meleeUpgrade, (id) =>
             patch({ meleeUpgrade: id }),
@@ -356,7 +356,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
                   </div>
                   <div className="rw-equip-label">{name}</div>
                   <div className="rw-equip-passive">
-                    ROF {w.rof} · STR {w.str} · {w.melee ? `RNG ${w.rng[0]}/${w.rng[1]}"` : `Sweet ${w.sweet}" · ${w.minRange}–${w.maxRange}"`}
+                    ROF {w.rof} · STR {w.pen} · {w.melee ? `RNG ${w.rng[0]}/${w.rng[1]}"` : `Sweet ${w.sweet}" · ${w.minRange}–${w.maxRange}"`}
                   </div>
                   <div className="rw-equip-active">
                     {w.perks?.length ? w.perks.join(", ") : "—"}
@@ -397,7 +397,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
       body = (
         <div className="rw-body rw-confirm">
           <div className="rw-confirm-name">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
-          <div className="rw-confirm-row">🎯 {state.unit} · STR {w.str} · ROF {w.rof}</div>
+          <div className="rw-confirm-row">🎯 {state.unit} · STR {w.pen} · ROF {w.rof}</div>
         </div>
       );
     }

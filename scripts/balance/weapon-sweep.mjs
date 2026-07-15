@@ -30,7 +30,7 @@ const STUBS = {
   // The volley's real damage tap. rollWounds' impacts are only PART of a shot:
   // Mortar's cluster-shells lands a second location through this seam
   // (combat.js:1102). Counting impacts alone read those upgrades as inert.
-  // Only damage to the PRIMARY target counts — cleave (combat.js:1014) hits a
+  // Only damage to the PRIMARY target counts ï¿½ cleave (combat.js:1014) hits a
   // different rig and is not this shot's output.
   applyDamage(room, rig, loc, amount) { if (LEDGER && rig === LEDGER.target) LEDGER.sp += amount; },
   bumpHeat() {}, spendHeat() {},
@@ -168,7 +168,7 @@ for (const [slot, table] of [["longRange", WEAPONS.longRange], ["melee", WEAPONS
     for (const { tier, id } of tiers) {
       const rig = makeAttacker("medium", name, slot, id);
       const p = tier === "none" ? baseCtx.profileFor(slot, name) : ctx.profileFor(slot, name, rig);
-      const sig = JSON.stringify([p.rof, p.str, p.d, p.perks?.slice().sort(), p.upgrade?.id ?? null]);
+      const sig = JSON.stringify([p.rof, p.pen, p.d, p.perks?.slice().sort(), p.upgrade?.id ?? null]);
       if (tier !== "none" && p.upgrade?.id !== id) throw new Error(`${name}/${tier}: profile carries ${p.upgrade?.id}, wanted ${id}`);
       seen.add(sig);
     }

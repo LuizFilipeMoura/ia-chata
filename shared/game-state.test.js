@@ -94,7 +94,7 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
   assert.equal(Object.keys(WEAPONS.melee).length, 11);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
-  assert.equal(WEAPONS.longRange["Mini Gun"].str, 3);
+  assert.equal(WEAPONS.longRange["Mini Gun"].pen, 3);
   assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
   assert.equal(WEAPONS.longRange["Mini Gun"].peak, 2);
   assert.equal(WEAPONS.longRange["Mini Gun"].dropoff, 0.35);
@@ -108,7 +108,7 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].perks, ["Raking Fire"]);
   assert.deepEqual(WEAPONS.longRange["Double MG"].perks, ["Raking Fire"]);
   assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
-  assert.equal(WEAPONS.melee["Lance"].str, 9);
+  assert.equal(WEAPONS.melee["Lance"].pen, 9);
   assert.equal(WEAPONS.melee["Sword"].melee, true);
   assert.equal(WEAPONS.melee["Sword"].perks, undefined);
 });
@@ -124,7 +124,7 @@ test("every weapon carries a hand-assigned damage stat in range 1..5", () => {
 test("weapon STR sits on the rescaled 3..11 ladder", () => {
   const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
   for (const [name, w] of Object.entries(all)) {
-    assert.ok(w.str >= 3 && w.str <= 11, `${name} str=${w.str} off-ladder`);
+    assert.ok(w.pen >= 3 && w.pen <= 11, `${name} pen=${w.pen} off-ladder`);
   }
 });
 
@@ -179,10 +179,10 @@ test("makeUnit threads the sp override through to the rig", () => {
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, str: 11, d: 5, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
+  assert.deepEqual(maul, { rof: 1, pen: 11, d: 5, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
 
   const shield = WEAPONS.melee["Bulwark Shield"];
-  assert.deepEqual(shield, { rof: 1, str: 5, d: 3, acc: [0, 0], rng: [2, 2], melee: true });
+  assert.deepEqual(shield, { rof: 1, pen: 5, d: 3, acc: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 10 + 10.
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
@@ -191,13 +191,13 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
   assert.deepEqual(WEAPONS.longRange["Harpoon"],
-    { rof: 1, str: 10, d: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
+    { rof: 1, pen: 10, d: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
   assert.deepEqual(WEAPONS.melee["Anchor"],
-    { rof: 1, str: 10, d: 4, acc: [0, 0], rng: [2, 2], melee: true });
+    { rof: 1, pen: 10, d: 4, acc: [0, 0], rng: [2, 2], melee: true });
   assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
-    { rof: 6, str: 3, d: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
+    { rof: 6, pen: 3, d: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
-    { rof: 2, str: 7, d: 3, acc: [1, 1], rng: [2, 2], melee: true });
+    { rof: 2, pen: 7, d: 3, acc: [1, 1], rng: [2, 2], melee: true });
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
   assert.equal(Object.keys(WEAPONS.melee).length, 11);
 });
@@ -210,7 +210,7 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   const headed = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword" });
   assert.equal(headed.weaponUpgrades.longRange, "reinforced-head");
-  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).str, 13); // 11 base + 2
+  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).pen, 13); // 11 base + 2
 
   // Breaching Round marks onDamage.
   const breach = makeRig(2, "Breaker2", "medium", "a",
@@ -1923,8 +1923,8 @@ test("blast is Overmatch-exempt by construction, not by intent", () => {
   // reaches it. Today that costs nothing, and this pins WHY.
   //
   // Overmatch pays out only once effective STR is OVERMATCH_PER_D (3) points
-  // past the TN-2 floor, which sits at str = T + 4 — so the first payout is at
-  // str = T + 7. The softest thing on the table is T3, so no blast diverges
+  // past the TN-2 floor, which sits at pen = T + 4 — so the first payout is at
+  // pen = T + 7. The softest thing on the table is T3, so no blast diverges
   // until BLAST_PEN reaches 10. It is 8: two points of headroom, by accident of
   // tuning rather than by design.
   //
@@ -3747,7 +3747,7 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   ]);
   for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
     assert.equal(typeof w.rof, "number");
-    assert.equal(typeof w.str, "number");
+    assert.equal(typeof w.pen, "number");
     if (w.melee) {
       assert.ok(Array.isArray(w.acc), `${name} melee keeps acc[]`);
       assert.ok(Array.isArray(w.rng), `${name} melee keeps rng[]`);
