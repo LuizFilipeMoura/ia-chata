@@ -29,7 +29,7 @@ const FIELD_DESC: Record<string, string> = {
   cover: "Obstruction shielding the target",
   location: "Component to hit — an Aimed Shot takes −2 ACC",
 };
-const ARC_DESC: Record<string, string> = { front: "No STR bonus", side: "+2 STR", rear: "+4 STR" };
+const ARC_DESC: Record<string, string> = { front: "No STR bonus", side: "+2 STR", rear: "+3 STR" };
 const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 ACC", "2": "−2 ACC" };
 const LOC_DESC: Record<string, string> = {
   hull: "−2 actions at 0", arms: "Weapons at 0", legs: "Slows at 0", engine: "Heat at 0",
