@@ -336,7 +336,7 @@ test("arcBonus — Raking Fire still replaces the ladder and auto-fails the fron
 test("rollWounds computes a per-hit wound roll and honours Brace on the front arc", () => {
   const target = { weightClass: "medium", preparation: { type: "brace" } };
   const auto = WEAPONS.longRange["Autocannon"]; // STR 7 medium, D2
-  // 2 hits -> effStr 7 + 0(front) - 2(brace) = 5 vs medium hull T5 -> TN 6+5-5 = 6.
+  // 2 hits -> effPen 7 + 0(front) - 2(brace) = 5 vs medium hull T5 -> TN 6+5-5 = 6.
   const out = rollWounds({ weightClass: "medium" }, target, auto, "hull",
     { arc: "front", hits: 2 }, { wounds: [10, 10] }, () => 0);
   assert.equal(out.length, 2);
@@ -1791,7 +1791,7 @@ test("rollWounds — defender modifiers reduce effective STR, not the roll", () 
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   target.preparation = { type: "brace" };
   const profile = { ...WEAPONS.melee["Sword"] };
-  // Sword STR 5, medium mod 0, front arc 0, braced -2 => effStr 3 vs T5 => TN 8.
+  // Sword STR 5, medium mod 0, front arc 0, braced -2 => effPen 3 vs T5 => TN 8.
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [7] }, () => 0);
   assert.equal(out[0].sp, 0);   // 7 < 8
@@ -1856,7 +1856,7 @@ test("rollWounds — Overmatch stacks with Rend and respects its own cap", () =>
   //
   // The fixture has to OVERSHOOT the cap or it isn't testing one. str 13 is a
   // real loadout: Siege Maul's base 11 plus Reinforced Head's +2. With the rear
-  // arc that's effStr 16 into a T3 engine — 9 past the floor, which the 3-point
+  // arc that's effPen 16 into a T3 engine — 9 past the floor, which the 3-point
   // rate would pay out as +3. It resolves to 2 only because the cap bites, so
   // this goes red if the cap is raised or removed.
   const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"], str: 13 };
@@ -1880,7 +1880,7 @@ test("rollWounds — Overmatch reads the target's kind, not the rig toughness ba
   // actually build, and a tank is the only way to reach T6 today.)
   //
   // Siege Maul STR 11, medium attacker (WEIGHT_PEN_MOD 0), rear arc +3 =>
-  // effStr 14 into a T6 hull. The floor is at str T+4 = 10, so 4 points are
+  // effPen 14 into a T6 hull. The floor is at str T+4 = 10, so 4 points are
   // past it; at 3 points per D that pays out floor(4/3) = +1 D. D5 + 1 = 6 SP.
   const maul = WEAPONS.longRange["Siege Maul"];
   const tank = { kind: "tank", hardened: false, preparation: null };
@@ -1936,7 +1936,7 @@ test("Reactive Armor — records the location; the dock lands in rollWounds", ()
   const profile = { ...WEAPONS.melee["Sword"] };
   rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.ok(target.equipState.reactiveArmorLocs.includes("hull"));
-  // Now hardened: Sword STR 5 - 2 => effStr 3 vs T5 => TN 8, so a 7 fails.
+  // Now hardened: Sword STR 5 - 2 => effPen 3 vs T5 => TN 8, so a 7 fails.
   const out = rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [7] }, () => 0);
   assert.equal(out[0].sp, 0);
   assert.equal(out[0].target, 8);
@@ -1964,7 +1964,7 @@ test("Ablative Cascade — spends nothing on a wound that already failed", () =>
   target.equipmentUpgrade = "ablative-cascade";
   target.equipState = { ablativeCharges: 2 };
   const profile = { ...WEAPONS.melee["Sword"] };
-  // Sword effStr 5 vs T5 => TN 6; a 1 fails, so no charge is burnt.
+  // Sword effPen 5 vs T5 => TN 6; a 1 fails, so no charge is burnt.
   rollWounds(attacker, target, profile, "hull", { arc: "front", hits: 1 }, { wounds: [1] }, () => 0);
   assert.equal(target.equipState.ablativeCharges, 2);
 });
@@ -2116,7 +2116,7 @@ test("ledger — the damage step multiplies wounds by the weapon's D", () => {
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
   assert.ok(d.terms.some((t) => t.label === "weapon D" && t.value === 5));
   // 6, not 5: makeRig fits the melee slot with Haymaker (+3 STR), so this ball
-  // swings at effStr 13 into a T5 hull — 4 STR past the floor, which Overmatch
+  // swings at effPen 13 into a T5 hull — 4 STR past the floor, which Overmatch
   // now converts to +1 D. Haymaker was one of the upgrades the sweep measured at
   // +0.00; this total moving is that fix landing, not D changing.
   assert.match(d.out, /6 SP/);
@@ -2345,10 +2345,10 @@ test("hit location comes from the target's kind, not the attacker's", () => {
 test("ledger — Overmatch is named in the damage step when it fires", () => {
   // A crushing hit rendering "weapon D 5" with an unexplained +2 in the total is
   // exactly the readability failure this ledger exists to close.
-  // Wrecking Ball STR 10 + Haymaker 3 + rear arc 3 = effStr 16 vs medium arms
+  // Wrecking Ball STR 10 + Haymaker 3 + rear arc 3 = effPen 16 vs medium arms
   // T4 → 8 STR past the TN-2 floor → +2 D. Haymaker is pinned rather than left
   // to the default-upgrade rule: reordering WEAPON_UPGRADES would otherwise drop
-  // effStr to 13 and fail a RENDERING test for a reason unrelated to rendering.
+  // effPen to 13 and fail a RENDERING test for a reason unrelated to rendering.
   // The rate and cap behind that 2 are rules.test.js's (strOvermatchD's) to pin;
   // what this asserts is that the rider reaches the ledger under its own name.
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Double MG", melee: "Wrecking Ball", meleeUpgrade: "haymaker" });
@@ -2372,7 +2372,7 @@ test("ledger — Overmatch is absent when it did not fire", () => {
   // A term worth 0 must push nothing — same rule as strBreakdown. With ~15
   // possible contributions, rendering the dead ones buries the live ones.
   // Sword is STR 5 and Duelist's Balance grants Precision, not STR, so a
-  // front-arc swing reaches effStr 5 — nowhere near medium arms' T4 floor (8).
+  // front-arc swing reaches effPen 5 — nowhere near medium arms' T4 floor (8).
   // Asserted with deepEqual, not a `some(...)` absence check: the step now
   // pushes conditionally from three riders, so an accidental EXTRA term is a
   // live risk and only the full-array form catches it.
@@ -2396,7 +2396,7 @@ test("ledger — riders survive a volley whose first wound die missed", () => {
   // Riders are assigned only inside `if (wounded)`, so impacts[0] carries them as
   // 0 when the first die misses. Reading it blind renders `wounds 2, weapon D 2`
   // against an out of 8 SP — terms reconciling to 4. The `find` is what prevents it.
-  // Chainsaw (ROF 3, STR 7, D2) + Ripper Teeth (Rend) + rear arc 3 = effStr 10 vs
+  // Chainsaw (ROF 3, STR 7, D2) + Ripper Teeth (Rend) + rear arc 3 = effPen 10 vs
   // a medium engine's T3 → wound TN 2, so only a natural 1 misses, and 3 past the
   // floor → Overmatch 1. Each landed wound deals 2 + 1 + 1 = 4.
   const attacker = makeRig(1, "A", "medium", "a",

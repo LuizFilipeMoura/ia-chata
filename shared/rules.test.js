@@ -132,7 +132,7 @@ test("strOvermatchD — converts at +1 D per 3 wasted points", () => {
 });
 
 test("strOvermatchD — caps at +2 D", () => {
-  // Uncapped, a rear-arc Siege Maul (effStr 16) into an engine (T3) would add
+  // Uncapped, a rear-arc Siege Maul (effPen 16) into an engine (T3) would add
   // +3 to a D5 weapon = D8 against an engine SP pool of 8-11: a one-shot kill,
   // which would make the engine the only rational aim point (see unit-kinds.js:11).
   assert.equal(strOvermatchD(17, 4), 2);  // 9 wasted → 3, capped

@@ -97,11 +97,11 @@ const OVERMATCH_MAX_D = 2;
 // The pre-clamp wound value, `6 + T - S`. Private: `woundTarget` clamps it,
 // `strOvermatchD` measures how far past the floor it went. One expression, so the
 // two can never disagree about where the floor is.
-function woundRaw(str, toughness) {
-  const s = Math.floor(Number(str) || 0);
+function woundRaw(pen, toughness) {
+  const s = Math.floor(Number(pen) || 0);
   // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
-  // the single most dangerous default in the system. STR may coerce — it fails
-  // toward TN 10 (10%) — but T must be real.
+  // the single most dangerous default in the system. Penetration may coerce — it
+  // fails toward TN 10 (10%) — but T must be real.
   //
   // The check is `typeof`, not `Number.isFinite(Number(t))`: coercing first
   // reopens the exact hole it means to close, because Number(null), Number(""),
@@ -113,8 +113,8 @@ function woundRaw(str, toughness) {
   return 6 + Math.floor(toughness) - s;
 }
 
-// §7.5 — the wound roll. A shot's effective STR is compared to the struck
-// location's Toughness: roll a d10 against `6 + T - S`.
+// §7.5 — the wound roll. A shot's effective Penetration is compared to the
+// struck location's Toughness: roll a d10 against `6 + T - S`.
 //
 // The clamp is load-bearing. It guarantees a natural 10 always wounds and a
 // natural 1 never does, so no weapon/target/location matchup can be
@@ -124,10 +124,10 @@ function woundRaw(str, toughness) {
 // armour really matter" — that reintroduces the bug. See
 // docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
 //
-// Each point of STR is worth exactly 10%, so the roll is readable as a
+// Each point of Penetration is worth exactly 10%, so the roll is readable as a
 // percentage with no lookup table.
-export function woundTarget(str, toughness) {
-  return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, woundRaw(str, toughness)));
+export function woundTarget(pen, toughness) {
+  return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, woundRaw(pen, toughness)));
 }
 
 // §7.5 — bonus D from STR the clamp would otherwise discard. Reaching the floor

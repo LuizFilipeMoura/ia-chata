@@ -427,7 +427,7 @@ function kneecapperLocation(kindId, location) {
 }
 
 // §7.5 — one Wound Roll (d10) per hit. The shot's effective STR is compared to
-// the struck location's Toughness: wound on `die >= woundTarget(effStr, T)`.
+// the struck location's Toughness: wound on `die >= woundTarget(effPen, T)`.
 // Every modifier below moves EFFECTIVE STR, not a total — the wound TN clamps at
 // 10, so a natural 10 always wounds and no matchup is hopeless. Each wound deals
 // the weapon's `d`. Brace subtracts 2 on the target's front arc (§5 preparation).
@@ -491,7 +491,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
 
   // The wound step's ledger terms: everything strBreakdown folded into the
   // nominal STR, PLUS the arc/defender modifiers computed above. Each is read
-  // from the LOCAL the loop below actually adds into `effStr` — never
+  // from the LOCAL the loop below actually adds into `effPen` — never
   // recomputed — so the terms are guaranteed to sum to the effective STR the
   // engine tested. A modifier worth 0 pushes nothing (same rule as
   // strBreakdown): with eight possible entries here, listing the dead ones
@@ -529,8 +529,8 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       });
       continue;
     }
-    const effStr = str + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
-    const tn = woundTarget(effStr, toughness);
+    const effPen = str + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
+    const tn = woundTarget(effPen, toughness);
     // Penetrator Rounds (§13) — every 3rd Autocannon volley skips the wound
     // roll entirely (was: forced Severe against the old armour row).
     let wounded = opts.penetrate || die >= tn;
@@ -559,15 +559,15 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       evisc = profile.upgradeEffect?.eviscerate && target[location]
         && target[location].sp <= target[location].max / 2 ? 1 : 0;
       // Overmatch (§7.5) — STR the wound clamp discarded, converted to depth.
-      // Reads `effStr`, NOT the nominal STR: that is what makes one rule revive
+      // Reads `effPen`, NOT the nominal STR: that is what makes one rule revive
       // the arc bonus, WEIGHT_PEN_MOD and every +STR upgrade at once, since all
       // of them are already summed into it above.
-      overmatch = strOvermatchD(effStr, toughness);
+      overmatch = strOvermatchD(effPen, toughness);
       sp = (profile.d || 1) + rend + evisc + overmatch;
     }
     const resolved = applyDefensiveReactions(
       target,
-      { die, target: tn, str: effStr, toughness, sp, kind: "wound" },
+      { die, target: tn, str: effPen, toughness, sp, kind: "wound" },
       { location, spendHeat: opts.spendHeat || (() => {}) },
     );
     // `wounded` is recorded separately from `sp` on purpose. Ablative Cascade
