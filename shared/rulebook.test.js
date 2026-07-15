@@ -69,7 +69,12 @@ test("rules.md's weight ladder matches WEIGHT_PEN_MOD", () => {
 // across four commits and §12 kept teaching the pre-rework numbers the whole time
 // (Siege Maul "Penetration 11 / Damage 5" against an engine reading 7/6). The
 // weight-ladder guard above could not see it. These tests derive the expected
-// cells from the engine, so the copy can no longer silently lie.
+// cells from the engine so that the copy cannot silently lie about a magnitude.
+//
+// What they cover, precisely: every §12 stat cell, and in §13 the upgrade NAMES
+// plus every parenthetical the engine can derive a magnitude for. §13 cells whose
+// effect is prose-only are named-checked but NOT magnitude-checked — see
+// `upgradeClaim` for the explicit list and why.
 //
 // NOTE THE CONVENTION: the tables teach BASE stats, not the stats a legal rig
 // actually fights with. `normalizeWeaponUpgrade` gives a null-upgrade weapon its
@@ -127,6 +132,57 @@ test("rules.md §12 teaches WEAPONS' base melee stats", () => {
     assert.equal(c[4] === "–" ? 0 : cellNum(c[4]), w.accuracy[0], `rules.md §12 "${name}" Acc`);
     assert.equal(cellNum(c[5]), w.rng[0], `rules.md §12 "${name}" RNG`);
   }
+});
+
+// The magnitude an upgrade's §13 parenthetical must state, derived from its
+// `effect`. Returns null for an upgrade whose effect the engine stores as a
+// behaviour flag rather than a number or a perk (`coldBore: true`,
+// `onDamage: "sunder"`, `vsDamaged: { rof: 1 }`, …): there is no magnitude in the
+// data to compare the prose against, so those cells are name-checked only. That
+// exclusion is deliberate and narrow — every cell this rework touched
+// (Depleted Core, Reinforced Head, Haymaker, Fluked Head, Honed Talons) is a
+// top-level pen/dmg/perks effect and IS covered. `derivableUpgradeCells` below
+// pins the count so this cannot quietly decay back into a names-only check.
+const upgradeClaim = (u) => {
+  const e = u.effect || {};
+  if (typeof e.pen === "number") return `+${e.pen} Penetration`;
+  if (typeof e.dmg === "number") return `+${e.dmg} Damage`;
+  if (typeof e.rof === "number") return `+${e.rof} ROF`;
+  if (typeof e.range === "number") return `+${e.range}" reach`;
+  if (Array.isArray(e.perks) && e.perks.length === 1) return e.perks[0];
+  return null;
+};
+// Recomputed from the engine, not hardcoded: 8 numeric + 14 single-perk effects.
+const derivableUpgradeCells = Object.values(WEAPON_UPGRADES)
+  .flat()
+  .filter((u) => upgradeClaim(u) !== null).length;
+
+test("rules.md §13's parentheticals state WEAPON_UPGRADES' actual magnitudes", () => {
+  const rows = rulebookRows();
+  let checked = 0;
+  for (const [name, list] of Object.entries(WEAPON_UPGRADES)) {
+    const row = upgradeRow(rows, name);
+    assert.ok(row, `rules.md §13 has no upgrade row for "${name}"`);
+    list.forEach((u, i) => {
+      const claim = upgradeClaim(u);
+      if (claim === null) return; // prose-only effect — see upgradeClaim
+      const cell = row[i + 1] || "";
+      checked++;
+      assert.ok(
+        cell.includes(claim),
+        `rules.md §13 "${name}" ${u.nature} cell is "${cell}", but WEAPON_UPGRADES' `
+        + `${u.name} effect (${JSON.stringify(u.effect)}) means it must state "${claim}"`,
+      );
+    });
+  }
+  // The bug this guard exists to catch is a wrong NUMBER in a cell whose name is
+  // right ("Depleted Core (+2 Penetration)" — the literal pre-rework value). If a
+  // refactor ever drops these assertions, fail loudly rather than pass vacuously.
+  assert.equal(
+    checked, derivableUpgradeCells,
+    `expected ${derivableUpgradeCells} magnitude-bearing §13 cells, checked ${checked}`,
+  );
+  assert.ok(checked >= 20, `only ${checked} §13 cells carry a derivable magnitude — has the effect shape changed?`);
 });
 
 test("rules.md §13 names WEAPON_UPGRADES' upgrades in Field/Tuned/Prototype order", () => {
