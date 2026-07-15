@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeModifiedAim, aimBreakdown, weaponAccAt, rollToHit, computeStr, strBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
+import { computeModifiedAim, aimBreakdown, weaponAccAt, rollToHit, computePen, penBreakdown, arcBonus, rollWounds, resolveAttack, applyDefensiveReactions } from "./combat.js";
 import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_CAPACITY } from "./game-state.js";
 import { WEIGHT_PEN_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
@@ -257,15 +257,15 @@ test("rollToHit hit count is unchanged by the to-hit seam for a plain target", (
   assert.equal(res.hits, 2); // both dice hit; the pass-through seam leaves the tally alone
 });
 
-test("computeStr applies weight and Charged Shot", () => {
-  assert.equal(computeStr({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 9); // 10-1
+test("computePen applies weight and Charged Shot", () => {
+  assert.equal(computePen({ weightClass: "light" }, WEAPONS.longRange["Sniper Cannon"], {}), 9); // 10-1
   const arcGun = { ...WEAPONS.longRange["Arc Gun"], perks: ["Charged Shot"] };
-  assert.equal(computeStr({ weightClass: "medium" }, arcGun, { charged: true }), 10); // 8+0+2
+  assert.equal(computePen({ weightClass: "medium" }, arcGun, { charged: true }), 10); // 8+0+2
 });
 
-test("strBreakdown — reports the base weapon STR and the weight modifier", () => {
+test("penBreakdown — reports the base weapon STR and the weight modifier", () => {
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Autocannon", melee: "Sword" });
-  const b = strBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
+  const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
   assert.equal(b.value, 4);                       // Sword 5, light -1
   assert.deepEqual(b.terms, [
     { label: "weapon STR", value: 5 },
@@ -273,25 +273,25 @@ test("strBreakdown — reports the base weapon STR and the weight modifier", () 
   ]);
 });
 
-test("strBreakdown — a modifier that does not fire emits no term", () => {
+test("penBreakdown — a modifier that does not fire emits no term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
-  const b = strBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
+  const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
   // medium weight mod is 0 — it must not appear as a term at all.
   assert.deepEqual(b.terms, [{ label: "weapon STR", value: 5 }]);
   assert.equal(b.value, 5);
 });
 
-test("strBreakdown — a live upgrade emits a named term", () => {
+test("penBreakdown — a live upgrade emits a named term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   attacker.reactorOverdriveActive = true;
-  const b = strBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
+  const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
   assert.equal(b.value, 7);
   assert.ok(b.terms.some((t) => t.label === "Reactor Overdrive" && t.value === 2));
 });
 
-test("computeStr — still returns a bare number, callers unchanged", () => {
+test("computePen — still returns a bare number, callers unchanged", () => {
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Autocannon", melee: "Sword" });
-  assert.equal(computeStr(attacker, { ...WEAPONS.melee["Sword"] }, {}), 4);
+  assert.equal(computePen(attacker, { ...WEAPONS.melee["Sword"] }, {}), 4);
 });
 
 test("Kickstart Pistons: first melee after charging into contact hits +2 STR", () => {
@@ -299,11 +299,11 @@ test("Kickstart Pistons: first melee after charging into contact hits +2 STR", (
   const charged = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: true,  kickstartUsed: false };
   const idle    = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: false, kickstartUsed: false };
   const spent   = { weightClass: "medium", equipment: "servo-actuators", equipmentUpgrade: "kickstart-pistons", chargedIntoContact: true,  kickstartUsed: true  };
-  assert.equal(computeStr(charged, claw, {}) - computeStr(idle, claw, {}), 2); // charged → +2
-  assert.equal(computeStr(spent, claw, {}), computeStr(idle, claw, {}));       // charge already spent → no bonus
+  assert.equal(computePen(charged, claw, {}) - computePen(idle, claw, {}), 2); // charged → +2
+  assert.equal(computePen(spent, claw, {}), computePen(idle, claw, {}));       // charge already spent → no bonus
   // The wrong Mobility upgrade (Field) never triggers, even when charged.
   const wrong = { ...charged, equipmentUpgrade: "reinforced-servos" };
-  assert.equal(computeStr(wrong, claw, {}), computeStr(idle, claw, {}));
+  assert.equal(computePen(wrong, claw, {}), computePen(idle, claw, {}));
 });
 
 test("arcBonus: ranged +0/+2/+3, Raking Fire overrides", () => {
@@ -483,7 +483,7 @@ test("effectiveWeaponProfile applies selected ROF, STR, perk, and range upgrades
   assert.equal(effectiveWeaponProfile("longRange", "Mini Gun", mini).rof, 10);
 
   const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
-  assert.equal(computeStr(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 9); // 7 base + 2 (Depleted Core)
+  assert.equal(computePen(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}), 9); // 7 base + 2 (Depleted Core)
 
   const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "duelist-balance" });
   assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Precision"), true);
@@ -590,8 +590,8 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   assert.equal(hit.dice.filter((d) => d.ok).length, 3);
 
   const wound = b.steps.find((s) => s.kind === "wound");
-  const strTerm = wound.terms.find((t) => t.label === "weapon STR");
-  assert.equal(strTerm.value, computeStr(attacker, WEAPONS.longRange.Autocannon, {}));
+  const penTerm = wound.terms.find((t) => t.label === "weapon STR");
+  assert.equal(penTerm.value, computePen(attacker, WEAPONS.longRange.Autocannon, {}));
 
   // The location the d12 picked is its own step now, not a bare field.
   const loc = b.steps.find((s) => s.kind === "location");
@@ -599,16 +599,16 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   assert.equal(loc.out, "hull");
 });
 
-test("computeStr skips weight-class modifier for flat-pick weapons", () => {
+test("computePen skips weight-class modifier for flat-pick weapons", () => {
   const attackerWithClass = { kind: "tank", weightClass: "heavy" };
   const profile = { pen: 12, perks: [], flatPick: true };
-  assert.equal(computeStr(attackerWithClass, profile, { charged: false }), 12);
+  assert.equal(computePen(attackerWithClass, profile, { charged: false }), 12);
 });
 
-test("computeStr still applies weight-class modifier for rig-catalog weapons", () => {
+test("computePen still applies weight-class modifier for rig-catalog weapons", () => {
   const attacker = { kind: "rig", weightClass: "heavy" };
   const profile = { pen: 8, perks: [] };
-  assert.equal(computeStr(attacker, profile, { charged: false }), 8 + 1); // heavy is +1 on the d10 ladder
+  assert.equal(computePen(attacker, profile, { charged: false }), 8 + 1); // heavy is +1 on the d10 ladder
 });
 
 test("resolveAttack reads weapons.unit when the attacker is a Tank", () => {
@@ -685,16 +685,16 @@ test("Cold Bore adds +3 STR only when the target is at full SP", () => {
   const hurt = makeRig(3, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   hurt.arms.sp -= 1;
   const p = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
-  assert.equal(computeStr(sniper, p, { target: fresh }), p.pen + 3);
-  assert.equal(computeStr(sniper, p, { target: hurt }), p.pen);
+  assert.equal(computePen(sniper, p, { target: fresh }), p.pen + 3);
+  assert.equal(computePen(sniper, p, { target: hurt }), p.pen);
 });
 
-test("Reactor Overdrive: computeStr adds +2 STR to every attack while active", () => {
+test("Reactor Overdrive: computePen adds +2 STR to every attack while active", () => {
   const profile = { pen: 6, sweet: 0 };
   const base = { weightClass: "medium" };
   const overdriven = { weightClass: "medium", reactorOverdriveActive: true };
-  const plain = computeStr(base, profile, {});
-  const boosted = computeStr(overdriven, profile, {});
+  const plain = computePen(base, profile, {});
+  const boosted = computePen(overdriven, profile, {});
   assert.equal(boosted, plain + 2);
 });
 
@@ -702,11 +702,11 @@ test("Steady Aim grants +3 STR within 2\" of the sweet spot, nothing off-band", 
   const rig = makeRig("r1", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
   rig.weaponUpgrades = { longRange: "steady-aim", melee: "honed-talons" };
   const prof = effectiveWeaponProfile("longRange", "Crossbow", rig); // base STR 8, sweet 18
-  assert.equal(computeStr(rig, prof, { distance: 18 }), 11); // at sweet: 8 + 3
-  assert.equal(computeStr(rig, prof, { distance: 20 }), 11); // +2" edge: still in band
-  assert.equal(computeStr(rig, prof, { distance: 16 }), 11); // -2" edge: still in band
-  assert.equal(computeStr(rig, prof, { distance: 21 }), 8);  // off-band: no bonus
-  assert.equal(computeStr(rig, prof, {}), 8);                // no distance: no bonus
+  assert.equal(computePen(rig, prof, { distance: 18 }), 11); // at sweet: 8 + 3
+  assert.equal(computePen(rig, prof, { distance: 20 }), 11); // +2" edge: still in band
+  assert.equal(computePen(rig, prof, { distance: 16 }), 11); // -2" edge: still in band
+  assert.equal(computePen(rig, prof, { distance: 21 }), 8);  // off-band: no bonus
+  assert.equal(computePen(rig, prof, {}), 8);                // no distance: no bonus
 });
 
 test("Exploit Wound grants +3 STR only against an already-damaged struck location", () => {
@@ -715,9 +715,9 @@ test("Exploit Wound grants +3 STR only against an already-damaged struck locatio
   const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 6
   const wounded = { weightClass: "medium", hull: { sp: 3, max: 7 } };
   const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
-  assert.equal(computeStr(rig, prof, { target: wounded, location: "hull" }), 9); // 6 + 3
-  assert.equal(computeStr(rig, prof, { target: fresh, location: "hull" }), 6);   // no bonus
-  assert.equal(computeStr(rig, prof, { target: wounded }), 6);                   // no location: no bonus
+  assert.equal(computePen(rig, prof, { target: wounded, location: "hull" }), 9); // 6 + 3
+  assert.equal(computePen(rig, prof, { target: fresh, location: "hull" }), 6);   // no bonus
+  assert.equal(computePen(rig, prof, { target: wounded }), 6);                   // no location: no bonus
 });
 
 test("Evisceration adds +1 D on a location at or below half max SP", () => {
@@ -740,24 +740,24 @@ test("Evisceration downside: -1 STR against a fully-undamaged struck location", 
   const prof = effectiveWeaponProfile("melee", "Talon", rig); // base STR 6
   const fresh = { weightClass: "medium", hull: { sp: 7, max: 7 } };
   const hurt = { weightClass: "medium", hull: { sp: 5, max: 7 } };
-  assert.equal(computeStr(rig, prof, { target: fresh, location: "hull" }), 5); // 6 - 1
-  assert.equal(computeStr(rig, prof, { target: hurt, location: "hull" }), 6);  // damaged: no downside
+  assert.equal(computePen(rig, prof, { target: fresh, location: "hull" }), 5); // 6 - 1
+  assert.equal(computePen(rig, prof, { target: hurt, location: "hull" }), 6);  // damaged: no downside
 });
 
 test("Full Tilt adds +3 STR only when the attacker moved this activation", () => {
   const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
   const p = effectiveWeaponProfile("melee", "Lance", lance);
-  assert.equal(computeStr(lance, p, {}), p.pen); // stationary — no bonus
+  assert.equal(computePen(lance, p, {}), p.pen); // stationary — no bonus
   lance.movedThisActivation = true;
-  assert.equal(computeStr(lance, p, {}), p.pen + 3);
+  assert.equal(computePen(lance, p, {}), p.pen + 3);
 });
 
 test("Momentum Swing reuses the charge gate for +2 STR (generalised charge key)", () => {
   const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
   const p = effectiveWeaponProfile("melee", "Wrecking Ball", ball);
-  assert.equal(computeStr(ball, p, {}), p.pen); // stationary — no bonus
+  assert.equal(computePen(ball, p, {}), p.pen); // stationary — no bonus
   ball.movedThisActivation = true;
-  assert.equal(computeStr(ball, p, {}), p.pen + 2);
+  assert.equal(computePen(ball, p, {}), p.pen + 2);
 });
 
 test("Piledriver Protocol spends Momentum for +STR and ignores a braced front arc", () => {
@@ -766,8 +766,8 @@ test("Piledriver Protocol spends Momentum for +STR and ignores a braced front ar
   wall.preparation = { type: "brace" }; // braced on the front arc
   const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // STR 11, medium (+0)
 
-  // computeStr: the threaded momentum spend adds +1 STR per point.
-  assert.equal(computeStr(ram, p, { target: wall, momentum: 3 }), p.pen + 3);
+  // computePen: the threaded momentum spend adds +1 STR per point.
+  assert.equal(computePen(ram, p, { target: wall, momentum: 3 }), p.pen + 3);
 
   // These assert effective STR, NOT the wound TN, deliberately: the Siege Maul is
   // strong enough that both cases below clamp to TN 2 against a medium hull, so a
@@ -811,7 +811,7 @@ test("A Siege Maul rig without Piledriver never spends or reads Momentum", () =>
   const ram = makeRig(1, "Plain", "medium", "a", { longRange: "Siege Maul", melee: "Sword", lrUpgrade: "breaching-round" });
   const p = effectiveWeaponProfile("longRange", "Siege Maul", ram);
   // A stray momentum in opts must NOT add STR without the piledriver effect.
-  assert.equal(computeStr(ram, p, { target: {}, momentum: 3 }), p.pen);
+  assert.equal(computePen(ram, p, { target: {}, momentum: 3 }), p.pen);
 });
 
 test("Bloodletter adds +1 to-hit die vs a target missing SP anywhere", () => {
@@ -841,22 +841,22 @@ test("Cold Bore / Bloodletter read the target's real parts (Tank: no arms/legs)"
 
   const sniper = makeRig(2, "S", "medium", "a", { longRange: "Sniper Cannon", melee: "Chainsaw", lrUpgrade: "cold-bore" });
   const cb = effectiveWeaponProfile("longRange", "Sniper Cannon", sniper);
-  assert.equal(computeStr(sniper, cb, { target: pristineTank }), cb.pen + 3); // pristine tank IS undamaged → +3
+  assert.equal(computePen(sniper, cb, { target: pristineTank }), cb.pen + 3); // pristine tank IS undamaged → +3
 });
 
 test("Opportunist adds +3 STR vs an overheated or action-penalised target", () => {
   const sword = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "opportunist" });
   const p = effectiveWeaponProfile("melee", "Sword", sword);
   const healthy = makeRig(2, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
-  assert.equal(computeStr(sword, p, { target: healthy }), p.pen);
+  assert.equal(computePen(sword, p, { target: healthy }), p.pen);
 
   const overheated = makeRig(3, "O", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   overheated.engine.heat = HEAT_CAPACITY[overheated.weightClass] + 1;
-  assert.equal(computeStr(sword, p, { target: overheated }), p.pen + 3);
+  assert.equal(computePen(sword, p, { target: overheated }), p.pen + 3);
 
   const disrupted = makeRig(4, "D", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   disrupted.actionPenaltyNextActivation = 1;
-  assert.equal(computeStr(sword, p, { target: disrupted }), p.pen + 3);
+  assert.equal(computePen(sword, p, { target: disrupted }), p.pen + 3);
 });
 
 test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret, not arms/legs)", () => {
@@ -910,11 +910,11 @@ test("Redline Governor adds STR from attacker heat over cap, capped at +3", () =
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "redline-governor" });
   const p = effectiveWeaponProfile("melee", "Chainsaw", rig);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // at cap -> no bonus
-  assert.equal(computeStr(rig, p, {}), p.pen);
+  assert.equal(computePen(rig, p, {}), p.pen);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 2; // +2 over cap
-  assert.equal(computeStr(rig, p, {}), p.pen + 2);
+  assert.equal(computePen(rig, p, {}), p.pen + 2);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass] + 10; // way over cap, still capped at +3
-  assert.equal(computeStr(rig, p, {}), p.pen + 3);
+  assert.equal(computePen(rig, p, {}), p.pen + 3);
 });
 
 test("Redline Governor adds to-hit dice from attacker heat over cap, capped at +3", () => {
@@ -935,9 +935,9 @@ test("Superconductor Edge adds +2 STR when attacker heat is over half class cap"
   const rig = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
   const p = effectiveWeaponProfile("melee", "Sword", rig);
   rig.engine.heat = Math.floor(HEAT_CAPACITY[rig.weightClass] / 2); // at/under half -> no bonus
-  assert.equal(computeStr(rig, p, {}), p.pen);
+  assert.equal(computePen(rig, p, {}), p.pen);
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass]; // clearly over half
-  assert.equal(computeStr(rig, p, {}), p.pen + 2);
+  assert.equal(computePen(rig, p, {}), p.pen + 2);
 });
 
 test("Superconductor Edge moves 1 heat attacker->target once per attack while running hot", () => {
@@ -1544,9 +1544,9 @@ test("Taut Cable: +3 STR vs an immobilised or engaged target, else nothing", () 
   const harpoon = { ...WEAPONS.longRange["Harpoon"], upgradeEffect: { vsPinned: true } };
   const attacker = { weightClass: "medium" };
   // base STR 10, medium weight mod 0
-  assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light" } }), 10);
-  assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 13);
-  assert.equal(computeStr(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 13);
+  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light" } }), 10);
+  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", immobilised: true } }), 13);
+  assert.equal(computePen(attacker, harpoon, { target: { weightClass: "light", engagedWith: 7 } }), 13);
 });
 
 test("Reactive Armor hardens the struck location on the first damaging hit each round (−2 effective STR)", () => {
@@ -2369,7 +2369,7 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
 });
 
 test("ledger — Overmatch is absent when it did not fire", () => {
-  // A term worth 0 must push nothing — same rule as strBreakdown. With ~15
+  // A term worth 0 must push nothing — same rule as penBreakdown. With ~15
   // possible contributions, rendering the dead ones buries the live ones.
   // Sword is STR 5 and Duelist's Balance grants Precision, not STR, so a
   // front-arc swing reaches effPen 5 — nowhere near medium arms' T4 floor (8).

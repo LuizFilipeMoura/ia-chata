@@ -434,7 +434,7 @@ export function rigEffects(rig) {
     // Targeting Computer (Sensors) — sweet-band accuracy bonus; catalog effect.
     sweetBandAcc: equip === "targeting-computer" ? (eff.sweetBandAcc ?? 0) : 0,
     // Reactive Plating (Armor) — side/rear STR delta; catalog effect.
-    sideRearStr: equip === "reactive-plating" ? (eff.sideRearStr ?? -1) : 0,
+    sideRearPen: equip === "reactive-plating" ? (eff.sideRearPen ?? -1) : 0,
   };
 
   const modifiers = [];
@@ -607,7 +607,7 @@ export const WEAPON_UPGRADES = {
   ],
   "Bulwark Shield": [
     { id: "tower-shield", nature: "field", name: "Tower Shield", tag: "Raise Shield also negates side-arc attacks", effect: { shieldArc: "front-side" } },
-    { id: "anvil-boss", nature: "tuned", name: "Anvil Boss", tag: "Counter the first melee attacker each round while braced", effect: { riposteStr: 6 } },
+    { id: "anvil-boss", nature: "tuned", name: "Anvil Boss", tag: "Counter the first melee attacker each round while braced", effect: { ripostePen: 6 } },
     { id: "emplacement", nature: "prototype", name: "Emplacement", tag: "Root into a permanent fortress shield; immobile, 2 actions, cooldown", catch: "Immobile, costs 2 actions, cooldown to leave", effect: { emplacement: true } },
   ],
   "Flamethrower": [
@@ -693,7 +693,7 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     const base = UNIT_WEAPONS[weaponName];
     if (!base) return null;
     // Flat-pick weapons have no upgrades and no weight-class scaling. Ship a
-    // shape identical to the rig-catalog result so downstream code (computeStr,
+    // shape identical to the rig-catalog result so downstream code (computePen,
     // rollToHit) doesn't need to know which domain the profile came from.
     return { ...base, perks: base.perks || [], upgradeEffect: {} };
   }
@@ -2169,7 +2169,7 @@ function endActivation(room, rig, dice, random) {
   rig.reactorOverdriveActive = false; // Reactor Overdrive (§13) — the STR boost + doubled overheat is scoped to this one activation
   // Cryo Reservoir / Meltdown Protocol — clear any leftover +STR spike so an
   // armed-but-unspent bonus can't leak past this activation.
-  if (rig.equipState) rig.equipState.nextAttackStr = 0;
+  if (rig.equipState) rig.equipState.nextAttackPen = 0;
   room.game.turn.activeRigId = null;
   handoff(room);
 }
@@ -2357,7 +2357,7 @@ function resolveFire(room, rig, target, a, act, random) {
   }
   // Cryo Reservoir / Meltdown Protocol — the armed +STR spike is a one-shot; the
   // attack that just resolved consumed it, so clear it now.
-  if (rig.equipState?.nextAttackStr) rig.equipState.nextAttackStr = 0;
+  if (rig.equipState?.nextAttackPen) rig.equipState.nextAttackPen = 0;
   // A second (or later) ranged shot in the same activation runs the barrel hot:
   // +1 heat over the base Fire/Aimed cost.
   const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
@@ -2375,9 +2375,9 @@ function resolveFire(room, rig, target, a, act, random) {
 
 // Anvil Boss (§13 Bulwark) — a reactive riposte. When a rig holding Raise Shield
 // with the Anvil Boss upgrade is HIT (>=1 landed hit) by the FIRST melee attack
-// of the round, it answers with a free counter-hit at the upgrade's riposteStr (a
+// of the round, it answers with a free counter-hit at the upgrade's ripostePen (a
 // flat STR-6 melee blow that bypasses weight/conditional STR — see
-// combat.computeStr strOverride). A whiff (0 hits) provokes nothing and does NOT
+// combat.computePen penOverride). A whiff (0 hits) provokes nothing and does NOT
 // consume the round's riposte. Melee only (never ranged), once per round
 // (ripostedThisRound). Reuses the same resolveAttack path as `return`'s counter.
 function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, random) {
@@ -2390,18 +2390,18 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
   if (!attacker || attacker.destroyed) return false;
   if ((attacker.owner || "a") === (defender.owner || "a")) return false; // enemy only
   const effect = effectiveWeaponProfile("melee", defender.weapons?.melee, defender)?.upgradeEffect;
-  const riposteStr = effect?.riposteStr;
-  if (riposteStr == null) return false;
+  const ripostePen = effect?.ripostePen;
+  if (ripostePen == null) return false;
   defender.ripostedThisRound = true;
   pushResolution(room, {
     kind: "riposte", actor: defender.owner, rigId: defender.id, rolls: [],
-    summary: `${defender.name} ripostes ${attacker.name} — Anvil Boss free counter (STR ${riposteStr}).`,
-    effects: [`Anvil Boss — free STR ${riposteStr} melee counter`],
+    summary: `${defender.name} ripostes ${attacker.name} — Anvil Boss free counter (STR ${ripostePen}).`,
+    effects: [`Anvil Boss — free STR ${ripostePen} melee counter`],
   });
   resolveAttack(room, defender, attacker, {
     weapon: "melee", target: attacker.name,
     arc: "front", range: "near", aimed: false, aimedLoc: "hull",
-    engaged: defender.engagedWith != null, strOverride: riposteStr,
+    engaged: defender.engagedWith != null, penOverride: ripostePen,
   }, random, combatCtx());
   return true;
 }
@@ -2409,7 +2409,7 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
 // §5 Brace retaliation — a melee attacker that swings at a braced FRONT and
 // fails to breach it (deals no SP) eats a free flat-STR melee counter. Once per
 // round (braceRetaliatedThisRound). Needs a melee weapon to answer with. Reuses
-// the same resolveAttack/strOverride path as Anvil Boss and `return`.
+// the same resolveAttack/penOverride path as Anvil Boss and `return`.
 const BRACE_RIPOSTE_STR = 6; // ⚙ TUNING
 function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingArc, res, random) {
   if (incomingWeapon !== "melee") return false;
@@ -2431,7 +2431,7 @@ function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingA
   resolveAttack(room, defender, attacker, {
     weapon: "melee", target: attacker.name,
     arc: "front", range: "near", aimed: false, aimedLoc: "hull",
-    engaged: defender.engagedWith != null, strOverride: BRACE_RIPOSTE_STR,
+    engaged: defender.engagedWith != null, penOverride: BRACE_RIPOSTE_STR,
   }, random, combatCtx());
   return true;
 }
@@ -2501,7 +2501,7 @@ function resolveAnchorStrike(room, anchorer, victim, random) {
 
 // Skewer's Disengage payload — one free STR-11 Lance strike from the skewerer
 // onto the fleeing rig as it tears itself off the point. Reuses the same
-// strOverride escape hatch and resolveAttack path as the Anvil Boss riposte.
+// penOverride escape hatch and resolveAttack path as the Anvil Boss riposte.
 function resolveSkewerStrike(room, skewerer, victim, random) {
   pushResolution(room, {
     kind: "skewer", actor: skewerer.owner, rigId: skewerer.id, rolls: [],
@@ -2511,7 +2511,7 @@ function resolveSkewerStrike(room, skewerer, victim, random) {
   resolveAttack(room, skewerer, victim, {
     weapon: "melee", target: victim.name,
     arc: "front", range: "near", aimed: false, aimedLoc: "hull",
-    engaged: skewerer.engagedWith != null, strOverride: 11,
+    engaged: skewerer.engagedWith != null, penOverride: 11,
   }, random, combatCtx());
 }
 
@@ -2644,7 +2644,7 @@ function performAction(room, rig, act, a, random) {
       for (const loc of LOCS) { curSp += rig[loc].sp; maxSp += rig[loc].max; }
       t.actionsMax += (surge && curSp * 2 < maxSp) ? 3 : 2;
       // Reactor Overdrive (§13, Power Prototype) — Overclocking also arms +2 STR to
-      // every attack this activation (read in combat.js computeStr) at the cost of a
+      // every attack this activation (read in combat.js computePen) at the cost of a
       // doubled overheat bonus this activation (endActivation). All-in push.
       if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.reactorOverdrive) rig.reactorOverdriveActive = true;
     }
@@ -2677,9 +2677,9 @@ function performAction(room, rig, act, a, random) {
       // over Capacity, measured BEFORE the vent below dumps that heat. Spatial:
       // the bonus rides on the narrated AoE (the player applies the light hits).
       const overCap = Math.max(0, (rig.engine.heat || 0) - rawCap);
-      const backdraftStr = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.backdraft
+      const backdraftPen = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.backdraft
         ? Math.floor(overCap / 2) : 0;
-      if (backdraftStr > 0) extra.push(`Backdraft — +${backdraftStr} STR to the 3" wave (banked heat over Capacity).`);
+      if (backdraftPen > 0) extra.push(`Backdraft — +${backdraftPen} STR to the 3" wave (banked heat over Capacity).`);
       rig.engine.heat = Math.min(rig.engine.heat, rawCap);
     }
     // purge / jumpjets need no extra state beyond the heat cost below.
@@ -2720,7 +2720,7 @@ function performAction(room, rig, act, a, random) {
   }
   // Cryo Reservoir (Cooling Prototype) — an activation-start spend. Vent N banked
   // cryo: −2 heat each and arm +1 STR per cryo on this rig's NEXT attack (the
-  // transient nextAttackStr, consumed in resolveFire / cleared in endActivation).
+  // transient nextAttackPen, consumed in resolveFire / cleared in endActivation).
   // Doesn't cost an action slot (mirrors reload sitting before the budget gate).
   if (act === "cryo") {
     if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir) return reject("This unit has no Cryo Reservoir.");
@@ -2728,7 +2728,7 @@ function performAction(room, rig, act, a, random) {
     if (spend === 0) return reject("No cryo banked to spend.");
     rig.equipState.cryo -= spend;
     bumpHeat(rig, -2 * spend);
-    rig.equipState.nextAttackStr = (rig.equipState.nextAttackStr || 0) + spend;
+    rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
     pushResolution(room, {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} vents cryo ×${spend} — −${2 * spend} heat, +${spend} STR to the next attack.`, effects: [],
@@ -2761,8 +2761,8 @@ function performAction(room, rig, act, a, random) {
     return true;
   }
   // Meltdown Protocol (Thermal Prototype) — an activation-start spend of banked
-  // meltdown charge. Two modes: `str` arms +N STR on this rig's attacks this
-  // activation (reuses the transient nextAttackStr, consumed in resolveFire /
+  // meltdown charge. Two modes: `pen` arms +N Penetration on this rig's attacks
+  // this activation (reuses the transient nextAttackPen, consumed in resolveFire /
   // cleared in endActivation); `burst` narrates a 4" AoE dealing N heat-damage
   // (spatial → players adjudicate the targets). Free of the action budget, like
   // cryo/reload — an activation-start spend.
@@ -2777,7 +2777,7 @@ function performAction(room, rig, act, a, random) {
         summary: `${rig.name} vents a meltdown burst — deal ${spend} heat-damage to every enemy within 4" (players adjudicate the AoE).`, effects: [],
       });
     } else {
-      rig.equipState.nextAttackStr = (rig.equipState.nextAttackStr || 0) + spend;
+      rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
       pushResolution(room, {
         kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
         summary: `${rig.name} overloads — +${spend} STR to its attacks this activation.`, effects: [],
@@ -2890,7 +2890,7 @@ function performAction(room, rig, act, a, random) {
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
     // Kickstart Pistons (Mobility Tuned) — a Sprint that closes into base contact
-    // this activation arms the charge; computeStr reads it and resolveFire spends
+    // this activation arms the charge; computePen reads it and resolveFire spends
     // it on the first melee after. Only Sprint (not a plain Move) charges it.
     if (act === "sprint" && rig.engagedWith != null) rig.chargedIntoContact = true;
     // Move / Sprint may repeat within an activation; each spends one slot and

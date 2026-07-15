@@ -2390,15 +2390,19 @@ test("Meltdown Protocol: while charged, Shut Down and Cooling are refused", () =
   assert.equal(r.game.turn.actionsUsed, before);                 // cooling active refused (no slot spent)
 });
 
-test("Meltdown Protocol: spending N in STR mode arms +N STR and burns N charge", () => {
+// `mode` is a wire value and only "burst" is ever compared, so every other
+// string falls through to this branch — meaning a BROKEN rename of the word
+// would pass just as green as a correct one. This test cannot detect that on its
+// own; it pins the intended spelling, and the burst test below pins the fork.
+test("Meltdown Protocol: spending N in pen mode arms +N Penetration and burns N charge", () => {
   const r = startedRoom();
   const a1 = findRig(r, "a1");
   a1.equipment = "blast-furnace-core"; a1.equipmentUpgrade = "meltdown-protocol";
   a1.equipState.meltdownCharge = 4;
   activate(r, "a1");
-  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "meltdown", mode: "str", n: 3 } });
+  applyCommand(r, { verb: "action", attrs: { name: "a1", action: "meltdown", mode: "pen", n: 3 } });
   assert.equal(a1.equipState.meltdownCharge, 1);
-  assert.equal(a1.equipState.nextAttackStr, 3);
+  assert.equal(a1.equipState.nextAttackPen, 3);
 });
 
 test("Meltdown Protocol: burst mode narrates the 4\" spatial instruction and spends the charge", () => {
@@ -5540,7 +5544,7 @@ test("rigEffects: passive stat mods (ablative hull, thermal margin, radiator coo
 
 test("rigEffects derives combat/thermal tags from the catalog, not a stamp", () => {
   assert.equal(rigEffects({ equipment: "blast-furnace-core", equipmentUpgrade: "insulated-core" }).thermalMargin, 2);
-  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates" }).combat.sideRearStr, -2);
+  assert.equal(rigEffects({ equipment: "reactive-plating", equipmentUpgrade: "angled-plates" }).combat.sideRearPen, -2);
   assert.equal(rigEffects({ equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" }).combat.sweetBandAcc, 1);
   assert.equal(rigEffects({ equipment: "ablative-plating", equipmentUpgrade: "reinforced-plating" }).combat.hardenImpact, 2);
   // family default when the upgrade carries no such tag
@@ -5598,7 +5602,7 @@ test("Cryo Reservoir: spending N cools 2 heat each and arms +1 STR/cryo on the n
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "cryo", n: 2 } });
   assert.equal(a1.equipState.cryo, 1);                   // 2 spent
   assert.equal(a1.engine.heat, 2);                       // −2 each → −4
-  assert.equal(a1.equipState.nextAttackStr, 2);          // +1 STR per cryo spent
+  assert.equal(a1.equipState.nextAttackPen, 2);          // +1 STR per cryo spent
 });
 
 // ---------------------------------------------------------------------------

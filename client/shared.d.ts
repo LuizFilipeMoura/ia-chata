@@ -58,7 +58,7 @@ declare module "/shared/game-state.js" {
     thermalMargin: number;
     hullMaxBonus: number;
     recoveryCool: number;
-    combat: { hardenImpact: number; sweetBandAcc: number; sideRearStr: number };
+    combat: { hardenImpact: number; sweetBandAcc: number; sideRearPen: number };
     modifiers: Array<{ source: string; kind: string; label: string; detail: string }>;
   };
 }

@@ -38,7 +38,7 @@ export function weaponAccAt(profile, distance) {
 // §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
 //
 // Returns `{ value, terms }` — `terms` is the itemised ledger behind `value`,
-// one `{ label, value }` per input that ACTUALLY fired, mirroring strBreakdown.
+// one `{ label, value }` per input that ACTUALLY fired, mirroring penBreakdown.
 // Terms read in ACC SPACE, not in target-number space: a bonus is positive, a
 // penalty is negative, and `value` is `base - (sum of every non-base term)`.
 // So cover, which subtracts 2 from ACC, emits `{ label: "cover", value: -2 }`.
@@ -82,7 +82,7 @@ export function aimBreakdown(attacker, profile, opts) {
   const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAcc ?? 0) : 0;
   const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAcc;
 
-  // The two headline inputs are ALWAYS terms, even at 0, exactly as strBreakdown
+  // The two headline inputs are ALWAYS terms, even at 0, exactly as penBreakdown
   // always pushes "weapon STR": they are what every modifier below is measured
   // against. A gun contributing 0 ACC at its current range is a fact the player
   // needs, not an absence to hide.
@@ -151,7 +151,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   const bloodletterRof = opts.target && profile.upgradeEffect?.vsDamaged?.rof && !isUndamaged(opts.target)
     ? profile.upgradeEffect.vsDamaged.rof : 0;
   // Redline Governor — extra to-hit dice from attacker heat over its class
-  // cap, mirroring the STR bonus in computeStr (capped at +3).
+  // cap, mirroring the STR bonus in computePen (capped at +3).
   let redlineRof = 0;
   if (profile.upgradeEffect?.redline) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
@@ -255,14 +255,14 @@ function isUndamaged(target) {
 // worth 0 pushes nothing: with ~15 possible contributions here, rendering the
 // dead ones would bury the two that decided the shot. Labels are the words a
 // player reads on the table ("Cold Bore", "light chassis"), not our field names.
-export function strBreakdown(attacker, profile, opts) {
+export function penBreakdown(attacker, profile, opts) {
   const terms = [];
   // Anvil Boss riposte (§13 Bulwark) — a forced, flat STR for the free counter
   // that ignores weight class and every conditional Tuned/Prototype bonus, so
-  // the counter lands at exactly the upgrade's riposteStr regardless of who owns
+  // the counter lands at exactly the upgrade's ripostePen regardless of who owns
   // the shield. Threaded through `rollWounds` from `resolveAttack`.
-  if (opts.strOverride != null) {
-    return { value: opts.strOverride, terms: [{ label: "forced STR", value: opts.strOverride }] };
+  if (opts.penOverride != null) {
+    return { value: opts.penOverride, terms: [{ label: "forced STR", value: opts.penOverride }] };
   }
   const charged = opts.charged && hasPerk(profile, "Charged Shot") ? 2 : 0;
   const weightMod = profile.flatPick ? 0 : (WEIGHT_PEN_MOD[attacker.weightClass] || 0);
@@ -377,17 +377,17 @@ export function strBreakdown(attacker, profile, opts) {
   // Cryo Reservoir / Meltdown Protocol — a spent charge arms +STR on the next
   // attack. Shared transient off the attacker's equipState; consumed in
   // resolveFire and cleared in endActivation so it can't leak past its activation.
-  const nextStr = attacker.equipState?.nextAttackStr || 0;
-  if (nextStr) terms.push({ label: "primed charge", value: nextStr });
-  return { value: profile.pen + weightMod + charged + bonus + nextStr, terms };
+  const nextPen = attacker.equipState?.nextAttackPen || 0;
+  if (nextPen) terms.push({ label: "primed charge", value: nextPen });
+  return { value: profile.pen + weightMod + charged + bonus + nextPen, terms };
 }
 
-// §12/§7 — the shot's effective STR. Thin wrapper over strBreakdown so the ~15
+// §12/§7 — the shot's effective STR. Thin wrapper over penBreakdown so the ~15
 // contributions can be shown in the resolution ledger without changing any
 // caller: the engine used to compute this arithmetic and throw it away, which is
 // why a player could not tell why a shot did nothing.
-export function computeStr(attacker, profile, opts) {
-  return strBreakdown(attacker, profile, opts).value;
+export function computePen(attacker, profile, opts) {
+  return penBreakdown(attacker, profile, opts).value;
 }
 
 // §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
@@ -433,13 +433,13 @@ function kneecapperLocation(kindId, location) {
 // the weapon's `d`. Brace subtracts 2 on the target's front arc (§5 preparation).
 // Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 3.
 export function rollWounds(attacker, target, profile, location, opts, providedDice, random) {
-  // Thread the real target rig into computeStr's opts (the caller's `opts`
+  // Thread the real target rig into computePen's opts (the caller's `opts`
   // here may carry only a display name at `opts.target` — see resolveAttack)
   // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
-  // strBreakdown, not computeStr: the ledger's wound step needs the ~15
+  // penBreakdown, not computePen: the ledger's wound step needs the ~15
   // contributions behind this STR, and they must be the ones this roll used.
-  const strBd = strBreakdown(attacker, profile, { ...opts, target, location });
-  const pen = strBd.value;
+  const penBd = penBreakdown(attacker, profile, { ...opts, target, location });
+  const pen = penBd.value;
   let bonus = arcBonus(profile, opts.arc);
   // Kneecapper — bypasses Raking Fire's front-arc auto-fail (arcBonus
   // returning null) but ONLY when the struck location is a limb on the
@@ -470,13 +470,13 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   // defensive seam below and cleared each Recovery (refreshEquipState).
   const reactive = target.equipState?.reactiveArmorLocs?.includes(location) ? -2 : 0;
   // Reactive Plating (Countermeasures) — side/rear attacks lose STR. The dock
-  // magnitude is read from the equipment upgrade's effect tag (`sideRearStr`) via
+  // magnitude is read from the equipment upgrade's effect tag (`sideRearPen`) via
   // equipmentUpgradeEffectOf — the catalog lives in rules.js, importable by
   // combat.js without a game-state cycle. Base Reactive Plating is −1; Angled
   // Plates carries the −2 tag. Front arc is unaffected.
   let sideRearDock = 0;
   if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
-    sideRearDock = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.sideRearStr ?? -1;
+    sideRearDock = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.sideRearPen ?? -1;
   }
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
@@ -489,16 +489,16 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
 
   const toughness = toughnessOf(target.kind || "rig", location, target.weightClass);
 
-  // The wound step's ledger terms: everything strBreakdown folded into the
+  // The wound step's ledger terms: everything penBreakdown folded into the
   // nominal STR, PLUS the arc/defender modifiers computed above. Each is read
   // from the LOCAL the loop below actually adds into `effPen` — never
   // recomputed — so the terms are guaranteed to sum to the effective STR the
   // engine tested. A modifier worth 0 pushes nothing (same rule as
-  // strBreakdown): with eight possible entries here, listing the dead ones
+  // penBreakdown): with eight possible entries here, listing the dead ones
   // would bury the one that decided the shot.
   //
   // Labels are the words a player reads on the table, not our field names.
-  const woundTerms = [...strBd.terms];
+  const woundTerms = [...penBd.terms];
   if (bonus) woundTerms.push({ label: `${opts.arc} arc`, value: bonus });
   if (braced) woundTerms.push({ label: "target braced", value: braced });
   if (hardened) woundTerms.push({ label: "hardened", value: hardened });
@@ -702,7 +702,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     attacker.lockedTarget = null; // expire a stale lock
   }
   // Piledriver Protocol (§13, Siege Maul) — a shot fired while storing Momentum
-  // unloads ALL of it: +1 STR per point (computeStr) plus a guard-break that
+  // unloads ALL of it: +1 STR per point (computePen) plus a guard-break that
   // ignores the target's Brace (rollWounds) and cover (computeModifiedAim).
   // Compute the spend ONCE here so the STR bonus, the guard-break, and the
   // post-shot reset below all read the same number. (The design's 3" shove is
@@ -750,7 +750,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // than crashing on a missing part.
     if (location) {
       impacts = rollWounds(attacker, target, profile, location,
-        { arc: opts.arc, hits: th.hits, charged: opts.charged, strOverride: opts.strOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat },
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, penOverride: opts.penOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat },
         opts.dice, random);
       // The wound die is the one that decides damage, so it MUST reach the log.
       // Under the impact-total model these were rolled and discarded, leaving a
@@ -811,12 +811,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }
   // Piledriver Protocol (§13) — the swing is committed, so the stored Momentum is
   // fully spent whether or not it connected. Reset AFTER every read above
-  // (computeStr/rollWounds already used the captured `piledriverSpend`).
+  // (computePen/rollWounds already used the captured `piledriverSpend`).
   if (piledriverSpend > 0) attacker.momentum = 0;
   if (heat > 0) ctx.bumpHeat(attacker, heat);
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
-  const pen = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
+  const pen = computePen(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
 
   // ---- The resolution ledger -------------------------------------------------
   // One step per stage of the chain, in the order they actually resolve.
