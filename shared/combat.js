@@ -141,7 +141,11 @@ export function computeModifiedAim(attacker, profile, opts) {
 // §7.4 — roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
 // (each 1 rolled under Full Auto / Charged Shot adds 1 heat, §6).
 export function rollToHit(attacker, profile, opts, providedDice, random) {
-  const modAim = computeModifiedAim(attacker, profile, opts);
+  // aimBreakdown, not computeModifiedAim: the ledger's hit step needs the terms
+  // that MADE this target number, and they must be the ones the engine actually
+  // used. Recomputing them in resolveAttack would let the two drift.
+  const aim = aimBreakdown(attacker, profile, opts);
+  const modAim = aim.value;
   const fullAuto = opts.fullAuto && hasPerk(profile, "Full Auto");
   // Bloodletter — an extra to-hit die vs a target missing SP anywhere.
   const bloodletterRof = opts.target && profile.upgradeEffect?.vsDamaged?.rof && !isUndamaged(opts.target)
@@ -185,6 +189,13 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   // all its missed to-hit dice, i.e. up to a full volley of rerolls (opts.lockSight).
   const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (opts.lockSight ? rof : 0);
   const dice = [];
+  // The ledger's per-die view. `dice` stays a bare face array (its consumers —
+  // the `rolls` log — predate the ledger); `hitDice` records the face WITH the
+  // verdict the loop actually reached, so the ledger never has to re-derive
+  // "did this die hit?" from `value >= modAim`. That re-derivation would be
+  // wrong under autoHit (Fire Control Lock), where a face below the target
+  // number still counts.
+  const hitDice = [];
   let hits = 0;
   let fireModeHeat = 0;
   let rerollsUsed = 0;
@@ -200,6 +211,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
       hit = d >= modAim || d === 6;
     }
     dice.push(d);
+    hitDice.push({ value: d, ok: hit });
     if (hit) hits += 1;
     if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
@@ -215,7 +227,13 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     { location: null, row: null, spendHeat: opts.spendHeat || (() => {}), random, providedDice },
   );
   hits = reacted.hits;
-  return { modAim, rof, hits, fireModeHeat, dice, penetratorShot };
+  // NOTE: a Point-Defense reroll (the seam above) changes the counted `hits`
+  // WITHOUT changing the faces in `hitDice` — the rerolled faces are the
+  // defender's, not this volley's. So `hits` is authoritative and may disagree
+  // with the count of `ok` flags. The ledger reports `hits`, and the PD spend
+  // gets its own resolution entry, so the disagreement is explained on screen
+  // rather than hidden.
+  return { modAim, rof, hits, fireModeHeat, dice, hitDice, aimTerms: aim.terms, penetratorShot };
 }
 
 // §13 — every one of the target's real locations is at max SP, i.e. the target
@@ -418,7 +436,10 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   // Thread the real target rig into computeStr's opts (the caller's `opts`
   // here may carry only a display name at `opts.target` — see resolveAttack)
   // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
-  const str = computeStr(attacker, profile, { ...opts, target, location });
+  // strBreakdown, not computeStr: the ledger's wound step needs the ~15
+  // contributions behind this STR, and they must be the ones this roll used.
+  const strBd = strBreakdown(attacker, profile, { ...opts, target, location });
+  const str = strBd.value;
   let bonus = arcBonus(profile, opts.arc);
   // Kneecapper — bypasses Raking Fire's front-arc auto-fail (arcBonus
   // returning null) but ONLY when the struck location is a limb on the
@@ -467,6 +488,25 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   const cracked = crackExpiry != null && opts.round != null && crackExpiry >= opts.round ? 2 : 0;
 
   const toughness = toughnessOf(target.kind || "rig", location, target.weightClass);
+
+  // The wound step's ledger terms: everything strBreakdown folded into the
+  // nominal STR, PLUS the arc/defender modifiers computed above. Each is read
+  // from the LOCAL the loop below actually adds into `effStr` — never
+  // recomputed — so the terms are guaranteed to sum to the effective STR the
+  // engine tested. A modifier worth 0 pushes nothing (same rule as
+  // strBreakdown): with eight possible entries here, listing the dead ones
+  // would bury the one that decided the shot.
+  //
+  // Labels are the words a player reads on the table, not our field names.
+  const woundTerms = [...strBd.terms];
+  if (bonus) woundTerms.push({ label: `${opts.arc} arc`, value: bonus });
+  if (braced) woundTerms.push({ label: "target braced", value: braced });
+  if (hardened) woundTerms.push({ label: "hardened", value: hardened });
+  if (reactive) woundTerms.push({ label: "reactive armor", value: reactive });
+  if (shieldBlunt) woundTerms.push({ label: "shield blunt", value: shieldBlunt });
+  if (cracked) woundTerms.push({ label: "cracked open", value: cracked });
+  if (sideRearDock) woundTerms.push({ label: "reactive plating", value: sideRearDock });
+
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
     const die = rollD(WOUND_DIE, providedDice?.wounds?.[i], random);
@@ -475,7 +515,18 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     // natural 10. An ARMOUR zero was the bug this rewrite kills; an EARNED zero
     // is a mechanic and must survive.
     if (bonus == null || shieldNegates) {
-      out.push({ die, target: null, str: null, toughness, sp: 0, negated: true });
+      // `noRoll` names WHY there was no wound roll, so the ledger can say it
+      // rather than emit a step the player has to decode from a null TN. The
+      // order mirrors the condition above: a rake's blind arc short-circuits
+      // before the shield is consulted.
+      // `d` rides even here, where nothing wounded: the ledger's damage step
+      // reads it off this object, and a shield-negated attack still has to say
+      // what the weapon WOULD have dealt rather than render a blank term.
+      out.push({
+        die, target: null, str: null, toughness, sp: 0, negated: true, wounded: false,
+        d: profile.d || 1, rend: 0, evisc: 0,
+        noRoll: bonus == null ? "arc" : "shield", terms: woundTerms,
+      });
       continue;
     }
     const effStr = str + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
@@ -489,12 +540,18 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       wounded = re >= tn;
     }
     let sp = 0;
+    // Rend / Evisceration are threaded out per wound, not just folded into
+    // `sp`: the ledger's damage step names them, and re-deriving Evisceration
+    // there is impossible anyway — it reads the location's SP BEFORE this
+    // volley's damage was applied.
+    let rend = 0;
+    let evisc = 0;
     if (wounded) {
       // Rend — +1 D per wound. Buys depth, not frequency (cf. AP above).
-      const rend = hasPerk(profile, "Rend") ? 1 : 0;
+      rend = hasPerk(profile, "Rend") ? 1 : 0;
       // Evisceration (§13, Talon) — +1 D against a location already at or below
       // half its max SP (was: forced Critical).
-      const evisc = profile.upgradeEffect?.eviscerate && target[location]
+      evisc = profile.upgradeEffect?.eviscerate && target[location]
         && target[location].sp <= target[location].max / 2 ? 1 : 0;
       sp = (profile.d || 1) + rend + evisc;
     }
@@ -503,7 +560,11 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
       { die, target: tn, str: effStr, toughness, sp, kind: "wound" },
       { location, spendHeat: opts.spendHeat || (() => {}) },
     );
-    out.push(resolved);
+    // `wounded` is recorded separately from `sp` on purpose. Ablative Cascade
+    // (the seam above) zeroes the SP of a wound that DID land, so `sp > 0` is
+    // not the same question as "did the wound roll pass" — the ledger's wound
+    // step reports the roll, the damage step reports the SP.
+    out.push({ ...resolved, wounded, d: profile.d || 1, rend, evisc, terms: woundTerms });
   }
   return out;
 }
@@ -659,8 +720,11 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }));
   let impacts = [];
   let location = null;
+  // Hoisted for the ledger's location step. Stays null on an aimed shot (no d12
+  // is rolled — the player chose the part) and on a volley that never landed.
+  let locDie = null;
   if (th.hits > 0) {
-    const locDie = rollD(12, opts.dice?.location, random);
+    locDie = rollD(12, opts.dice?.location, random);
     location = opts.aimed ? opts.aimedLoc : hitLocation(attacker.kind || "rig", locDie);
     if (!opts.aimed) rolls.push({ sides: 12, value: locDie, label: "location", tone: "cool" });
     // Kneecapper (§13, Double MG) — remap whatever location was just picked
@@ -740,25 +804,93 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
 
   const total = impacts.reduce((s, h) => s + h.sp, 0);
   const str = computeStr(attacker, profile, { ...opts, target, location, momentum: piledriverSpend });
+
+  // ---- The resolution ledger -------------------------------------------------
+  // One step per stage of the chain, in the order the plan fixed for the panel:
+  // hit → wound → location → damage. NOTE this is NOT the order the engine
+  // resolves them in — the d12 is rolled BEFORE the wound roll, because the
+  // struck location is what supplies the Toughness the wound roll tests
+  // against. The ledger leads with the two dice the player actually asks about
+  // and reports the location as the context for the damage it caused.
+  //
+  // EVERY number below is threaded out of rollToHit / rollWounds. Nothing here
+  // is recomputed: a ledger derived a second time will drift from the engine,
+  // and a ledger that lies is worse than no ledger. The reconciliation tests in
+  // combat.test.js pin this.
+  const steps = [];
+  steps.push({
+    kind: "hit",
+    target: th.modAim,
+    terms: th.aimTerms,
+    dice: th.hitDice,
+    out: `${th.hits} of ${th.hitDice.length} hit`,
+  });
+
+  // A step that vanishes is the same failure as a hidden die: the player must
+  // SEE where the chain stopped, not infer it from an absence. So every path
+  // that reaches no wound roll — no hits, no legal location, a raised shield, a
+  // rake's blind arc — still emits a wound step that SAYS so.
+  const first = impacts[0];
+  if (th.hits === 0) {
+    steps.push({
+      kind: "wound", target: null, str: null, toughness: null,
+      terms: [], dice: [], out: "no hits to wound",
+    });
+  } else if (!first) {
+    // Kneecapper against a kind with no limb parts at all (none exist today):
+    // hits landed but there is no legal location to wound.
+    steps.push({
+      kind: "wound", target: null, str: null, toughness: null,
+      terms: [], dice: [], out: "no legal location to wound",
+    });
+  } else {
+    const wounded = impacts.filter((h) => h.wounded).length;
+    const out = first.noRoll === "arc"
+      ? "raking fire cannot wound the front arc — no wound roll"
+      : first.noRoll === "shield"
+        ? "shield negates — no wound roll"
+        : `${wounded} of ${impacts.length} wounded`;
+    steps.push({
+      kind: "wound",
+      target: first.target, str: first.str, toughness: first.toughness,
+      terms: first.terms,
+      dice: impacts.map((h) => ({ value: h.die, ok: h.wounded })),
+      out,
+    });
+  }
+
+  if (location) {
+    // `die` is null on an aimed shot: the player chose the part, so no d12
+    // decided it and reporting one would be a fiction.
+    steps.push({ kind: "location", die: opts.aimed ? null : locDie, out: opts.aimed ? `${location} (aimed)` : location });
+    const dmgTerms = [{ label: "wounds", value: impacts.filter((h) => h.sp > 0).length }];
+    if (first) {
+      dmgTerms.push({ label: "weapon D", value: first.d });
+      // Rend/Evisceration are per-wound riders; report the one that actually
+      // fired on a wound that dealt damage.
+      const rider = impacts.find((h) => h.sp > 0) || first;
+      if (rider.rend) dmgTerms.push({ label: "Rend", value: rider.rend });
+      if (rider.evisc) dmgTerms.push({ label: "Evisceration", value: rider.evisc });
+    }
+    steps.push({ kind: "damage", terms: dmgTerms, out: `${total} SP → ${location}` });
+  }
+
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
     summary: `${attacker.name} → ${target.name} with ${weaponName} (STR ${str}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,
     breakdown: {
       actor: attacker.name, weapon: weaponName, target: target.name,
-      terms: [
-        { value: th.hits, label: "hits", tone: "die" },
-        { value: str, label: "weapon STR", op: "·", tone: "mod" },
-      ],
-      // Plan 2 replaces this flat shape with a full per-step ledger. Until then
-      // these three fields are the minimum that answers "why 0 damage?".
-      // `woundTarget`, NOT `target` — `breakdown.target` is the target's NAME
-      // (types.ts: `target?: string`; RollConsole renders it as "→ B").
-      // `str`/`woundTarget` are null on an earned zero (shield negate / Raking
-      // front arc), by design — rollWounds pushes `{ str: null, target: null }`
-      // there, so the `?? str` fallback keeps the nominal STR readable.
-      str: impacts[0]?.str ?? str,
-      toughness: impacts[0]?.toughness ?? null,
-      woundTarget: impacts[0]?.target ?? null,
+      steps,
+      // `sp`/`location` stay at the top level: they are the headline the roll
+      // console renders large, and other code reads them. Everything else that
+      // used to live here (`terms`, `str`, `toughness`, `woundTarget`) moved
+      // ONTO the steps — a flat one-equation breakdown could not say which die
+      // decided the damage, which is the whole reason this ledger exists.
+      //
+      // `target` is the target unit's NAME, and must stay that way: types.ts
+      // declares it `target?: string` and RollConsole renders it as "→ B". The
+      // wound TN is a different number and lives on the wound step, as
+      // `steps[i].target`. Do not merge them back into one key.
       sp: total, location,
     },
     effects: [],

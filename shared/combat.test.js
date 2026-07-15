@@ -576,15 +576,27 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   assert.match(attackRes.summary, /3 hit\(s\)/);
   assert.match(attackRes.summary, /to hull/);
 
-  // Structured breakdown mirrors the summary: hits + weapon STR -> SP to location.
+  // Structured breakdown mirrors the summary. The hits count and the weapon
+  // STR that used to sit in one flat `terms` array now live on the steps they
+  // belong to: hits on the hit step, weapon STR on the wound step. Same
+  // behaviour, moved shape.
   const b = attackRes.breakdown;
   assert.ok(b, "expected a breakdown on the attack resolution");
   assert.equal(b.weapon, "Autocannon");
   assert.equal(b.location, "hull");
-  assert.equal(b.terms[0].value, 3);
-  assert.equal(b.terms[0].label, "hits");
-  assert.equal(b.terms[1].label, "weapon STR");
-  assert.equal(b.terms[1].value, computeStr(attacker, WEAPONS.longRange.Autocannon, {}));
+
+  const hit = b.steps.find((s) => s.kind === "hit");
+  assert.match(hit.out, /3 of 4 hit/);
+  assert.equal(hit.dice.filter((d) => d.ok).length, 3);
+
+  const wound = b.steps.find((s) => s.kind === "wound");
+  const strTerm = wound.terms.find((t) => t.label === "weapon STR");
+  assert.equal(strTerm.value, computeStr(attacker, WEAPONS.longRange.Autocannon, {}));
+
+  // The location the d12 picked is its own step now, not a bare field.
+  const loc = b.steps.find((s) => s.kind === "location");
+  assert.equal(loc.die, 3);
+  assert.equal(loc.out, "hull");
 });
 
 test("computeStr skips weight-class modifier for flat-pick weapons", () => {
@@ -1848,7 +1860,51 @@ test("resolveAttack — wound dice are visible in rolls, one per landed hit", ()
   assert.equal(wounds[1].tone, "miss");  // 1 never wounds
 });
 
-test("resolveAttack — breakdown reports effective STR and toughness", () => {
+// ---------------------------------------------------------------------------
+// The resolution ledger (Plan 2). The flat one-equation breakdown could not
+// answer "why 0 damage?" — it showed hits and STR and nothing about the die
+// that actually decided it. `breakdown.steps` is the whole chain, in order,
+// with every step's inputs, dice and outcome.
+//
+// The invariant that matters most: every number on a step is THREADED out of
+// the engine, never recomputed for display. A ledger that is computed twice
+// will drift, and a ledger that lies is worse than no ledger at all. See the
+// reconciliation tests at the end of this block.
+
+test("ledger — every step appears in resolution order", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6, 1], wounds: [10], location: 1 } },
+    () => 0, ctx);
+  const bd = ctx.resolutions.find((r) => r.kind === "attack").breakdown;
+  assert.deepEqual(bd.steps.map((s) => s.kind), ["hit", "wound", "location", "damage"]);
+  // The target NAME, not the wound TN. An earlier draft collided these two in
+  // one object literal and a rig's name rendered as "→ 6" in RollConsole
+  // (types.ts declares `target?: string`). The TN lives on the wound step.
+  assert.equal(bd.target, "B");
+});
+
+test("ledger — the hit step shows the inputs that made the target number", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "longRange", arc: "front", distance: 12, cover: 2,
+      dice: { toHit: [6, 6, 6, 6], wounds: [10, 10, 10, 10], location: 1 } },
+    () => 0, ctx);
+  const hit = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[0];
+  assert.ok(hit.terms.some((t) => t.label === "cover" && t.value === -2));
+  assert.equal(hit.dice.length, 4);             // Autocannon ROF 4
+  assert.equal(hit.target, 5);                  // 4 - (ACC 1 - cover 2)
+  assert.ok(hit.dice.every((d) => d.ok));
+  assert.match(hit.out, /4 of 4 hit/);
+});
+
+test("ledger — the wound step shows effective STR against toughness", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -1856,13 +1912,157 @@ test("resolveAttack — breakdown reports effective STR and toughness", () => {
   resolveAttack(room, attacker, target,
     { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [9], location: 1 } },
     () => 0, ctx);
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  assert.equal(w.str, 5);          // Sword STR 5, medium mod 0, front arc 0
+  assert.equal(w.toughness, 5);    // medium hull
+  assert.equal(w.target, 6);       // 6 + 5 - 5
+  assert.deepEqual(w.dice, [{ value: 9, ok: true }]);
+});
+
+test("ledger — an earned zero is a step that says so, not a missing step", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Bulwark Shield" });
+  target.preparation = { type: "raise-shield" };
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 1 } },
+    () => 0, ctx);
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  assert.equal(w.kind, "wound");
+  assert.equal(w.target, null);
+  assert.match(w.out, /shield/i);
+});
+
+test("ledger — an earned zero still reports what the weapon would have dealt", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Bulwark Shield" });
+  target.preparation = { type: "raise-shield" };
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 1 } },
+    () => 0, ctx);
+  const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
+  // Regression: the negated path skips the damage branch, so it must still
+  // carry the weapon's D — this rendered as a blank "weapon D" term with no
+  // value, which is exactly the kind of hole this ledger exists to close.
+  assert.deepEqual(d.terms, [
+    { label: "wounds", value: 0 },
+    { label: "weapon D", value: 3 },   // Sword D3, dealt nothing
+  ]);
+  assert.match(d.out, /0 SP/);
+});
+
+test("ledger — a volley that lands no hits still emits a wound step", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [1, 1], wounds: [10, 10], location: 1 } },
+    () => 0, ctx);
   const bd = ctx.resolutions.find((r) => r.kind === "attack").breakdown;
-  assert.equal(bd.toughness, 5);   // medium hull
-  assert.equal(bd.str, 5);         // Sword STR 5, medium mod 0, front arc 0
-  assert.equal(bd.woundTarget, 6); // 6 + 5 - 5
-  // The wound TN must NOT clobber the target NAME: RollConsole renders
-  // `breakdown.target` as "→ B", and types.ts declares it `target?: string`.
-  assert.equal(bd.target, "B");
+  const w = bd.steps.find((s) => s.kind === "wound");
+  assert.ok(w, "the chain must show where it stopped");
+  assert.match(w.out, /no hits/i);
+});
+
+test("ledger — the damage step multiplies wounds by the weapon's D", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Wrecking Ball" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 1 } },
+    () => 0, ctx);
+  const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
+  assert.ok(d.terms.some((t) => t.label === "weapon D" && t.value === 5));
+  assert.match(d.out, /5 SP/);
+});
+
+test("ledger — the location step carries the d12 that picked the part", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6], wounds: [10], location: 5 } },
+    () => 0, ctx);
+  const loc = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[2];
+  assert.equal(loc.die, 5);        // d12 5 -> arms
+  assert.equal(loc.out, "arms");
+});
+
+test("ledger — arc and defender modifiers each earn a named wound term", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  target.preparation = { type: "brace" };
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  // Rear arc: Brace only bites on the front, so the rear bonus lands clean.
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "rear", dice: { toHit: [6], wounds: [9], location: 1 } },
+    () => 0, ctx);
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  assert.ok(w.terms.some((t) => t.label === "weapon STR" && t.value === 5));
+  assert.ok(w.terms.some((t) => t.label === "rear arc" && t.value === 3));
+  assert.equal(w.str, 8);          // 5 + 3
+  assert.equal(w.target, 3);       // 6 + 5 - 8
+});
+
+// Reconciliation — the ledger must be the engine's own arithmetic, not a
+// parallel re-derivation of it. Each step's terms must ADD UP to the number
+// the step reports, using the same composition rule the engine used. If
+// anyone ever recomputes a step for display, these fail.
+
+test("ledger — the hit step's terms reconcile to its target number", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "longRange", arc: "front", distance: 12, cover: 2, aimed: true, aimedLoc: "hull",
+      dice: { toHit: [6, 6, 6, 6], wounds: [10, 10, 10, 10] } },
+    () => 0, ctx);
+  const hit = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[0];
+  // aimBreakdown reads in ACC space: value = base - (sum of every other term).
+  const [base, ...mods] = hit.terms;
+  assert.equal(base.label, "base aim");
+  assert.equal(base.value - mods.reduce((s, t) => s + t.value, 0), hit.target);
+  assert.equal(hit.target, computeModifiedAim(attacker, WEAPONS.longRange.Autocannon,
+    { distance: 12, cover: 2, aimed: true }));
+});
+
+test("ledger — the wound step's terms reconcile to its effective STR", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "side", dice: { toHit: [6], wounds: [9], location: 1 } },
+    () => 0, ctx);
+  const w = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[1];
+  assert.equal(w.terms.reduce((s, t) => s + t.value, 0), w.str);
+  assert.equal(w.target, woundTarget(w.str, w.toughness));
+});
+
+test("ledger — the damage step's terms reconcile to the SP dealt", () => {
+  const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target], game: { round: 1 } };
+  const ctx = makeCtx();
+  // Sword ROF 2, both hit, both wound: 2 wounds x D3 = 6 SP.
+  resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", dice: { toHit: [6, 6], wounds: [10, 10], location: 1 } },
+    () => 0, ctx);
+  const bd = ctx.resolutions.find((r) => r.kind === "attack").breakdown;
+  const d = bd.steps[3];
+  const wounds = d.terms.find((t) => t.label === "wounds").value;
+  const perWound = d.terms.filter((t) => t.label !== "wounds").reduce((s, t) => s + t.value, 0);
+  assert.equal(wounds, 2);
+  assert.equal(wounds * perWound, bd.sp);
+  assert.equal(bd.sp, 6);
 });
 
 // ---------------------------------------------------------------------------
