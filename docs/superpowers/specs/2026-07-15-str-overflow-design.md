@@ -94,8 +94,35 @@ Worked examples:
 | Autocannon, front, hull | 7 | 5 | 0 | +0 |
 | Rivet Gun, anywhere | 3 | 3–5 | 0 | +0 |
 
-A +3 STR upgrade now always buys exactly +1 D on a saturated weapon. That is the
-dead-lever fix, at the smallest magnitude that achieves it.
+A +3 STR upgrade now always buys exactly +1 D on a saturated weapon — `+3` is one
+whole rate step, so it lifts `floor(over / 3)` by exactly 1 from any starting
+point. That is the dead-lever fix, at the smallest magnitude that achieves it.
+
+### Known limit of the per-3 rate
+
+The rate is integer, so a **±1 modifier only bites when overflow crosses a
+multiple of 3** — about a third of the time. This matters for `WEIGHT_STR_MOD`,
+whose light penalty is exactly −1.
+
+F4-A in the findings doc claims that with overflow "the −1 always costs something
+(a fraction of a D step), on every weapon." That is overstated for this design:
+there are no fractional D steps. A light Siege Maul into medium arms wastes 2 and
+gets +0 where a medium wastes 3 and gets +1 — the mod is live there. Into an
+engine, both waste enough to floor to the same +1, and the mod is still worth
+nothing on that shot.
+
+This is accepted, not a defect:
+
+- The six saturated weapons were the target, and their +STR **upgrades** are all
+  +2/+3 — a full rate step or close to it. Those reconnect unconditionally.
+- The alternative (per-2, or fractional D) was rejected in the decisions above for
+  overshoot and for adding a fraction to a stat the whole game reads as an integer.
+- F4's own recommendation is to fix F1 and then **revisit F4-C** (delete
+  `WEIGHT_STR_MOD` entirely) if the mod still fails to earn its place. This design
+  does not settle that question; it makes it measurable for the first time.
+
+Consequence for measurement: expect the light↔medium delta for the six to move
+*off* Δ0.00 but stay small. Do not read a small delta as the change having failed.
 
 ## Wiring
 
