@@ -1948,6 +1948,37 @@ test("fire action resolves an attack, applies damage and logs it", () => {
   assert.equal(r.game.resolutions.at(-1).kind, "attack");
 });
 
+test("a wound that zeroes a location from full says so in the roll console", () => {
+  // The RollConsole renders entry.effects as staggered lines, so no client change.
+  // Drives applyCommand (the real combatCtx) on purpose: combat.test.js's makeCtx
+  // stubs applyDamage with a clamp at 0 that never fires the §8 cascade, so a
+  // drama test written against it would pass while testing nothing.
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  const a1 = findRig(r, "a1");
+  // Prove the fixture rather than assume it: startedRoom's rigs are light and
+  // carry Mini Gun / Sword, and the Sword's Damage 3 is what must meet the
+  // location's max exactly for a from-full zeroing.
+  assert.equal(findRig(r, "b1").weapons.melee, "Sword");
+  assert.equal(a1.legs.max, 5); // light class default — the Sword's D3 can't zero it from full
+  // Test-only state poke: shrink the location to exactly the Sword's Damage so
+  // one wound takes it full -> 0. Legs are `mobility`, so this stops at 0 and
+  // does not cascade to the §8 kill tier — the tier under test is the middle one.
+  a1.legs.max = 3;
+  a1.legs.sp = 3; // full
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6, 6], wounds: [10, 1], location: 8 }, // 8 -> legs
+  } });
+  assert.equal(a1.legs.sp, 0); // the wound actually landed where the drama claims
+  const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
+  assert.ok(
+    attack.effects.some((e) => /in one blow/.test(e)),
+    `expected a one-blow effect line, got ${JSON.stringify(attack.effects)}`,
+  );
+});
+
 test("firing a spent ranged weapon is rejected — you must reload first", () => {
   const r = startedRoom();
   clearPendingAnswer(r);

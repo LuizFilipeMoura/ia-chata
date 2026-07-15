@@ -722,6 +722,11 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     tone: d === 6 ? "crit" : d >= th.modAim ? "ok" : "miss",
   }));
   let impacts = [];
+  // Drama (§7 spill / §8 kill tier) — player-facing lines for the resolution's
+  // `effects`. `critWound` records the wound die that did the gutting. Nothing
+  // reads it yet; it is the hook the wound die's `crit` tone will read.
+  const drama = [];
+  let critWound = null;
   let location = null;
   // Hoisted for the ledger's location step. Stays null on an aimed shot (no d12
   // is rolled — the player chose the part) and on a volley that never landed.
@@ -769,7 +774,30 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
         target.kneecapped[location] = true;
       }
       const dmgOpts = { random, dice: opts.dice, noSpill: kneecapHit || undefined };
-      for (const h of impacts) if (h.sp > 0) ctx.applyDamage(room, target, location, h.sp, dmgOpts);
+      // Drama (§7 spill / §8 kill tier) — the roll console already renders
+      // `effects`, so this needs no client change. applyDamage returns nothing
+      // and mutates in place, so the caller must sample the part around each
+      // call: it spends SP one point at a time and every point spent past 0
+      // fires catastrophicAdditional, which for a structural/power part is the
+      // §8 kill. By the time it returns, "was it full?" is already overwritten.
+      for (const h of impacts) {
+        if (h.sp <= 0) continue;
+        const part = target[location];
+        const before = part?.sp ?? 0;
+        const wasFull = part ? before === part.max : false;
+        const wasAlive = !target.destroyed;
+        ctx.applyDamage(room, target, location, h.sp, dmgOpts);
+        const after = target[location]?.sp ?? 0;
+        if (wasAlive && target.destroyed) {
+          drama.push(`${weaponName} — ${target.name} gutted in a single blow`);
+          critWound = h;
+        } else if (wasFull && after === 0) {
+          drama.push(`${weaponName} — ${location} torn open in one blow`);
+          critWound = h;
+        } else if (before > 0 && after === 0 && h.sp > before) {
+          drama.push(`${weaponName} — through and through (${h.sp - before} SP spilled)`);
+        }
+      }
       if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
         ctx.sunderLocation?.(target, location);
       }
@@ -924,7 +952,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       // `steps[i].target`. Do not merge them back into one key.
       sp: total, location,
     },
-    effects: [],
+    effects: drama,
   });
   // Group G — spatial upgrade effects. The board is physical and the engine has
   // no grid, so forced movement / ricochets are NOT simulated with coordinates:
