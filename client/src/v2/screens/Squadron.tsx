@@ -1,4 +1,5 @@
 import "../styles/squadron.css";
+import { BOT_PRESETS } from "/shared/game-state.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useMySide } from "../../hooks/useMySide";
@@ -13,6 +14,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
   const sendCommand = useCommands();
   const mySide = useMySide();
   const enemySide = mySide === "a" ? "b" : "a";
+  const enemyBot = game?.sides?.find((s) => s.id === enemySide)?.bot ?? null;
 
   const ordered = orderedRigs(rigs, mySide);
   const mine = ordered.filter((r) => (r.owner || "a") === mySide);
@@ -25,7 +27,10 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
   const sideName = (id: string) => game?.sides?.find((s) => s.id === id)?.name || (id === "a" ? "Side A" : "Side B");
   const sideReady = (id: string) => Boolean(game?.sides?.find((s) => s.id === id)?.ready);
   const myReady = sideReady(mySide);
-  const readyDisabled = started || myReady || !atParity || !field?.locked;
+  // A bot opponent is generated server-side on ready, so its side needn't be at
+  // parity yet — gate on your own roster being non-empty and the field locked.
+  const rosterReady = enemyBot ? count >= 1 : atParity;
+  const readyDisabled = started || myReady || !rosterReady || !field?.locked;
 
   return (
     <section className="v2-yard">
@@ -68,6 +73,36 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
           <span className="v2-yard-add-plus">＋</span>
           Commission New Rig
         </button>
+      )}
+
+      {!started && (
+        <div className="v2-yard-opponent">
+          <span className="v2-yard-opponent-label v2-eyebrow">OPPONENT</span>
+          <div className="v2-yard-opponent-opts">
+            <button
+              type="button"
+              className={"v2-yard-opp-btn" + (!enemyBot ? " is-on" : "")}
+              onClick={() => sendCommand("setbot", { side: enemySide, preset: null })}
+            >
+              Human
+            </button>
+            {BOT_PRESETS.map((preset: string) => (
+              <button
+                key={preset}
+                type="button"
+                className={"v2-yard-opp-btn" + (enemyBot === preset ? " is-on" : "")}
+                onClick={() => sendCommand("setbot", { side: enemySide, preset })}
+              >
+                {preset.charAt(0).toUpperCase() + preset.slice(1)} Bot
+              </button>
+            ))}
+          </div>
+          <div className="v2-yard-opponent-sub">
+            {enemyBot
+              ? "The bot mirrors your force at a random Standard loadout. Difficulty is the preset."
+              : "Two-player: your opponent joins and commissions their own squadron."}
+          </div>
+        </div>
       )}
 
       {!started && (

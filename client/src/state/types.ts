@@ -64,6 +64,7 @@ export interface Side {
   name: string;
   vp: number;
   ready: boolean;
+  bot?: string | null;
 }
 
 export interface Turn {
