@@ -11,6 +11,7 @@ import {
   radiusOf, terrainPolygons, clearOfTerrain,
   sightCorridor, arcOf, distanceBetween, meleeInReach,
 } from "./geometry.js";
+import { findPath } from "./pathfind.js";
 import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
 
 export const RIG_DEFAULTS = {
@@ -2220,8 +2221,25 @@ function combatCtx() {
 //
 // A rig carries no `radius` in state — it is derived from weight class — so bolt
 // it on here for the geometry helpers, which want { pos, facing, radius }.
-function spatial(rig) {
+export function spatial(rig) {
   return { pos: rig.pos, facing: rig.facing, radius: radiusOf(rig) };
+}
+
+// The weight-class Move fallback, mirroring the client's own reach maths
+// (client/src/state/BattleActionsContext.tsx and v2/battle/MoveBody.tsx use the
+// identical `rig.speed ?? SPEED[weightClass] ?? 8`). A chassis-less rig has a
+// null server-side speed, so this keeps the engine's reach identical to what the
+// player previews. When the client maps are unified into shared/ this constant
+// is the single source of truth.
+const SPEED_FALLBACK = { light: 5, medium: 4 };
+
+// Move reach in inches for a digital move validation. A plain Move covers the
+// chassis Speed (or the weight-class fallback); a Sprint multiplies it by
+// sprintMult (Reinforced Servos' 2× lives in rigEffects). This is the number a
+// candidate destination's path length is checked against.
+export function moveBudget(rig, act) {
+  const base = Number.isFinite(rig.speed) ? rig.speed : (SPEED_FALLBACK[rig.weightClass] ?? 8);
+  return act === "sprint" ? base * (rigEffects(rig).sprintMult ?? 1.5) : base;
 }
 
 // Melee reach in inches, measured RIM to RIM (§7/§12). The 2in base reach is a
@@ -2885,6 +2903,33 @@ function performAction(room, rig, act, a, random) {
     // Tow Chain (§13, Wrecking Ball) — hauling a rig in with the chain roots the
     // attacker for the rest of this activation: no Move/Sprint after a tow.
     if (rig.towedThisActivation) return reject("Rooted after the tow — no move left this activation.");
+    // Digital rooms MAKE the move spatial: a physical player slides the model on
+    // the table and the app only tracks the budget, but a digital room has no
+    // hand. Validate a real path within Speed and the ±90° pivot cap, then apply
+    // the reposition AFTER the slot/heat spend below (all rejections happen here,
+    // before the spend, so a move can never be billed without also happening).
+    // Physical rooms carry no dest and skip this entirely.
+    let digitalMove = null;
+    if (room.mode === "digital") {
+      if (!a.dest || typeof a.dest.x !== "number" || typeof a.dest.y !== "number") {
+        return reject("A digital move needs a destination.");
+      }
+      const facing = typeof a.facing === "number" ? a.facing : rig.facing;
+      // Pivot cap: a Move may turn at most ±90° from the current facing (§7).
+      const turn = Math.abs(((facing - rig.facing + 540) % 360) - 180);
+      if (turn > 90 + 1e-6) return reject("A move can pivot at most 90°.");
+      // The engine re-routes for itself; the client path is never trusted, the
+      // same stance resolveFire takes on shot geometry. Other living rigs are
+      // blockers; the mover itself is not.
+      const polys = terrainPolygons(room.field);
+      const blockers = room.rigs
+        .filter((r) => r !== rig && !r.destroyed && r.pos)
+        .map(spatial);
+      const route = findPath(room.field, polys, blockers, radiusOf(rig), rig.pos, a.dest);
+      if (!route) return reject("No path to that destination.");
+      if (route.length > moveBudget(rig, act) + 1e-6) return reject("That destination is out of reach.");
+      digitalMove = { pos: { x: a.dest.x, y: a.dest.y }, facing };
+    }
     // Optional move-into declaration: the player states they moved into base
     // contact with an enemy, forming the lock. Invalid/friendly names are ignored.
     if (a.engage) maybeEngageByName(room, rig, a.engage);
@@ -2908,6 +2953,10 @@ function performAction(room, rig, act, a, random) {
         && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.fireSolutionLock) {
       rig.equipState.solution = { targetId: null, count: 0 };
     }
+    // Apply the validated digital reposition now that the move is billed. No
+    // rejection can occur between the pre-spend validation above and here, so a
+    // rig is never left moved-but-unbilled or billed-but-unmoved.
+    if (digitalMove) { rig.pos = digitalMove.pos; rig.facing = digitalMove.facing; }
     return true;
   }
   if (act === "disengage") {

@@ -17,7 +17,7 @@ import {
   CHASSIS_PRIMARY_EQUIPMENT,
   heatMeter,
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
-  autoDeploy, deriveAttackGeometry, meleeReachOf,
+  autoDeploy, deriveAttackGeometry, meleeReachOf, moveBudget, spatial,
 } from "./game-state.js";
 import { partsByRole, UNIT_KINDS } from "./unit-kinds.js";
 import { deploymentCorners, deployRadius, scatterTerrain } from "./field.js";
@@ -6458,4 +6458,90 @@ test("F3-E: one wound that both zeroes-from-full and kills marks exactly ONE die
   assert.equal(woundRolls.length, 1, "one landing wound");
   const crits = woundRolls.filter((roll) => roll.tone === "crit");
   assert.equal(crits.length, 1, "exactly one CRIT die — not double-counted");
+});
+
+// ---------------------------------------------------------------------------
+// E1 — digital rooms apply a path-validated move (opponent-brain Phase E).
+// Today the move/sprint action spends a slot + heat but never repositions the
+// rig; digital rooms must derive the move from a real path within Speed.
+// ---------------------------------------------------------------------------
+
+// A digital room with one medium rig per side, terrain cleared, the a-side rig
+// placed at a known spot and put mid-activation. The enemy is shoved into a far
+// corner so it never blocks a path. Returns { room, rig, foe }.
+function digitalMover(pos = { x: 27, y: 18 }, facing = 0) {
+  const room = digitalRoom("MOV001");
+  applyCommand(room, { verb: "add", attrs: {
+    name: "M1", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword",
+  } });
+  applyCommand(room, { verb: "add", attrs: {
+    name: "E1", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword",
+  } });
+  const rig = findRig(room, "M1");
+  const foe = findRig(room, "E1");
+  foe.pos = { x: 2, y: 2 };
+  rig.pos = { ...pos };
+  rig.facing = facing;
+  room.field.terrain = [];
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: rig.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  rig.loaded = { longRange: true, melee: true };
+  return { room, rig, foe };
+}
+
+const moveCmd = (dest, facing = 0, action = "move") =>
+  ({ verb: "action", attrs: { name: "M1", action, dest, facing } });
+
+test("moveBudget is Speed for a move and Speed×sprintMult for a sprint", () => {
+  const { rig } = digitalMover();
+  const move = moveBudget(rig, "move");
+  assert.ok(move > 0, "a rig has a Move reach");
+  assert.ok(moveBudget(rig, "sprint") > move, "a Sprint reaches farther");
+});
+
+test("a digital move repositions the rig along a valid path", () => {
+  const { room, rig } = digitalMover({ x: 27, y: 18 }, 0);
+  const dest = { x: 27 + moveBudget(rig, "move") * 0.5, y: 18 };   // half a Move east
+  applyCommand(room, moveCmd(dest, 0));
+  assert.ok(Math.hypot(rig.pos.x - dest.x, rig.pos.y - dest.y) < 1e-6, "moved to dest");
+  assert.equal(room.game.turn.actionsUsed, 1, "a slot was spent");
+});
+
+test("a digital move beyond the rig's Speed is rejected", () => {
+  const { room, rig } = digitalMover({ x: 27, y: 18 }, 0);
+  const dest = { x: 27 + moveBudget(rig, "move") + 3, y: 18 };
+  assert.equal(checkCommand(room, moveCmd(dest, 0)).ok, false);
+});
+
+test("a sprint reaches farther than a move", () => {
+  const { room, rig } = digitalMover({ x: 27, y: 18 }, 0);
+  const dest = { x: 27 + moveBudget(rig, "move") + 1, y: 18 };   // past Move, within Sprint
+  assert.equal(checkCommand(room, moveCmd(dest, 0, "move")).ok, false, "out of Move reach");
+  assert.equal(checkCommand(room, moveCmd(dest, 0, "sprint")).ok, true, "within Sprint reach");
+});
+
+test("a digital move pivoting more than 90° is rejected", () => {
+  const { room, rig } = digitalMover({ x: 27, y: 18 }, 0);
+  const dest = { x: 27 + moveBudget(rig, "move") * 0.3, y: 18 };  // reachable — only the pivot is illegal
+  assert.equal(checkCommand(room, moveCmd(dest, 200)).ok, false);
+});
+
+test("a digital move to an unreachable spot (off the table) is rejected", () => {
+  const { room } = digitalMover({ x: 27, y: 18 }, 0);
+  assert.equal(checkCommand(room, moveCmd({ x: -5, y: 18 }, 0)).ok, false);
+});
+
+test("a physical-room move needs no dest and does not touch pos", () => {
+  const room = createRoom("PHYSMV");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "add", attrs: {
+    name: "P1", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword",
+  } });
+  const rig = findRig(room, "P1");
+  room.game.phase = "activation";
+  room.game.turn = { side: "a", activeRigId: rig.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  rig.loaded = { longRange: true, melee: true };
+  applyCommand(room, { verb: "action", attrs: { name: "P1", action: "move" } });  // no dest
+  assert.equal(room.game.turn.actionsUsed, 1, "the move still spent a slot");
+  assert.equal(rig.pos, undefined, "physical rigs have no simulated position");
 });
