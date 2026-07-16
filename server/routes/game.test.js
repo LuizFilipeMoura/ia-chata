@@ -145,3 +145,36 @@ test("a bot side plays itself out after a human command (driveBots hook)", async
   assert.ok(body.state.game.outcome != null || body.state.game.round > 1,
     `driveBots did not advance the bot game: phase ${body.state.game.phase}, round ${body.state.game.round}`);
 });
+
+test("a human starts a match against a bot over HTTP and the bot plays out", async () => {
+  const room = store.getOrCreateRoom("VSBOTHTTP");
+  room.mode = "digital";
+  claimSide(room, { name: "Human", side: "a" });
+  claimSide(room, { name: "Bot", side: "b" });
+  // Human commissions two distinct-chassis rigs directly (add stamps chassis).
+  const light = CHASSIS.filter((c) => c.class === "light");
+  for (let i = 0; i < 2; i++) {
+    const pb = light[i];
+    applyCommand(room, { verb: "add", attrs: {
+      name: `H${i + 1}`, owner: "a", class: pb.class,
+      longRange: pb.longRange, melee: pb.melee, chassis: pb.id, sp: pb.sp,
+    } }, { side: "a" });
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+
+  // Flag the opponent as a bot over HTTP, then ready over HTTP.
+  const flag = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "setbot", attrs: { side: "b", preset: "aggressive" } }, side: "a" });
+  assert.equal(flag.status, 200);
+
+  const res = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "ready", attrs: {} }, side: "a" });
+  const body = await res.json();
+  assert.equal(res.status, 200);
+
+  // The bot side was filled to mirror the human (2 light rigs) and the game ran.
+  const botRigs = body.state.rigs.filter((r) => (r.owner || "a") === "b");
+  assert.equal(botRigs.length, 2);
+  assert.equal(body.state.game.started, true);
+  // driveBots advanced play past the start (a round tick or a final outcome).
+  assert.ok(body.state.game.outcome != null || body.state.game.round >= 1,
+    `expected the bot game to be under way: phase ${body.state.game.phase}`);
+});
