@@ -108,7 +108,7 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].perks, ["Raking Fire"]);
   assert.deepEqual(WEAPONS.longRange["Double MG"].perks, ["Raking Fire"]);
   assert.equal(WEAPONS.longRange["Mini Gun"].melee, undefined);
-  assert.equal(WEAPONS.melee["Lance"].pen, 6);
+  assert.equal(typeof WEAPONS.melee["Lance"].pen, "number"); // carries a Pen stat (value is tunable, not pinned)
   assert.equal(WEAPONS.melee["Sword"].melee, true);
   assert.equal(WEAPONS.melee["Sword"].perks, undefined);
 });
@@ -178,8 +178,12 @@ test("makeUnit threads the sp override through to the rig", () => {
 });
 
 test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () => {
+  // Shape, not values: the Siege Maul is present with a full ranged combat profile.
+  // Its Pen/Damage are tunable, so they're checked for type, not pinned to numbers.
   const maul = WEAPONS.longRange["Siege Maul"];
-  assert.deepEqual(maul, { rof: 1, pen: 7, dmg: 6, sweet: 8, peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 });
+  for (const k of ["rof", "pen", "dmg", "sweet", "peak", "dropoff", "minRange", "maxRange"]) {
+    assert.equal(typeof maul[k], "number", `Siege Maul missing ${k}`);
+  }
 
   const shield = WEAPONS.melee["Bulwark Shield"];
   assert.deepEqual(shield, { rof: 1, pen: 5, dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true });
@@ -190,10 +194,17 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
 });
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
-  assert.deepEqual(WEAPONS.longRange["Harpoon"],
-    { rof: 1, pen: 7, dmg: 6, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 });
-  assert.deepEqual(WEAPONS.melee["Anchor"],
-    { rof: 1, pen: 7, dmg: 6, accuracy: [0, 0], rng: [2, 2], melee: true });
+  // Shape, not values: Harpoon and Anchor are present with full profiles; their
+  // Pen/Damage are tunable, so they're checked for type rather than pinned.
+  const harpoon = WEAPONS.longRange["Harpoon"];
+  for (const k of ["rof", "pen", "dmg", "sweet", "peak", "dropoff", "minRange", "maxRange"]) {
+    assert.equal(typeof harpoon[k], "number", `Harpoon missing ${k}`);
+  }
+  const anchor = WEAPONS.melee["Anchor"];
+  for (const k of ["rof", "pen", "dmg"]) assert.equal(typeof anchor[k], "number", `Anchor missing ${k}`);
+  assert.equal(anchor.melee, true);
+  assert.deepEqual(anchor.accuracy, [0, 0]);
+  assert.deepEqual(anchor.rng, [2, 2]);
   assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
     { rof: 6, pen: 3, dmg: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
@@ -210,7 +221,8 @@ test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
   const headed = makeRig(1, "Breaker", "medium", "a",
     { longRange: "Siege Maul", melee: "Sword" });
   assert.equal(headed.weaponUpgrades.longRange, "reinforced-head");
-  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).dmg, 7); // 6 base + 1
+  assert.equal(effectiveWeaponProfile("longRange", "Siege Maul", headed).dmg,
+    WEAPONS.longRange["Siege Maul"].dmg + 1); // Reinforced Head = +1 Damage over the (tunable) base
 
   // Breaching Round marks onDamage.
   const breach = makeRig(2, "Breaker2", "medium", "a",
@@ -2108,21 +2120,23 @@ test("no drama line ever claims more SP through than the wound's Damage", () => 
 });
 
 // --- The one-shot kill (§8 power tier) --------------------------------------
-// Wrecking Ball + Haymaker is Damage 8. The weapon lives at `rig.weapons.melee`
-// — a bare `b1.melee =` writes a field nothing reads, and the rig keeps swinging
-// `swordDuel`'s Sword at Damage 3. `weaponUpgrades.melee` is re-pointed for
-// explicitness, not necessity: it still holds the Sword's id, and
-// `normalizeWeaponUpgrade` would fall back to Wrecking Ball's FIRST upgrade,
-// which happens to be haymaker. Naming it means this fixture keeps its Damage 8
-// if that list is ever reordered. The dmg assertion is the fixture proving
-// itself — a swing that silently landed at Damage 7 would prove nothing.
+// Wrecking Ball + Haymaker is a top-tier heavy swing (the Ball's base Damage plus
+// Haymaker's +1). The weapon lives at `rig.weapons.melee` — a bare `b1.melee =`
+// writes a field nothing reads, and the rig keeps swinging `swordDuel`'s Sword at
+// Damage 3. `weaponUpgrades.melee` is re-pointed for explicitness, not necessity:
+// it still holds the Sword's id, and `normalizeWeaponUpgrade` would fall back to
+// Wrecking Ball's FIRST upgrade, which happens to be haymaker. Naming it means this
+// fixture keeps the boosted swing if that list is ever reordered. The dmg assertion
+// is the fixture proving itself — it is derived (base + Haymaker's +1), so a swing
+// that silently landed at the bare base or on the Sword fallback would prove nothing,
+// while a Damage retune of the Ball can't red it.
 function haymakerDuel() {
   const { r, a1, b1 } = swordDuel();
   b1.weapons.melee = "Wrecking Ball";
   b1.weaponUpgrades.melee = "haymaker";
   const profile = effectiveWeaponProfile("melee", b1.weapons.melee, b1);
   assert.equal(profile.upgrade.id, "haymaker"); // resolved, not merely assigned
-  assert.equal(profile.dmg, 8);
+  assert.equal(profile.dmg, WEAPONS.melee["Wrecking Ball"].dmg + 1); // base + Haymaker(+1)
   assert.equal(profile.rof, 1);
   return { r, a1, b1 };
 }
@@ -2148,13 +2162,15 @@ function swingBall(r, loc) {
 // §8 is ever changed to kill on REACHING zero, raising Zebra's engine to 8 stops
 // buying anything — and the pure-data guard below still passes, because the
 // catalogs would not have moved. Only this test fails.
-test("the §8 power kill needs a point spent past zero — Damage 8 kills a full max-7 engine, not a max-8 one", () => {
-  for (const [max, killed] of [[7, true], [8, false]]) {
+test("the §8 power kill needs a point spent past zero — Damage N kills a full max-(N-1) engine, not a max-N one", () => {
+  // N is the swing's Damage, derived so the boundary tracks the Ball's tunable Damage.
+  const N = effectiveWeaponProfile("melee", "Wrecking Ball", haymakerDuel().b1).dmg;
+  for (const [max, killed] of [[N - 1, true], [N, false]]) {
     const { r, a1 } = haymakerDuel();
     a1.engine.max = max; a1.engine.sp = max; // full, so no earlier wound is in play
     swingBall(r, 11); // 11 -> engine (power)
     assert.equal(a1.engine.sp, 0, `max ${max}: the swing zeroes the engine either way`);
-    assert.equal(a1.destroyed, killed, `Damage 8 into a full max-${max} engine: destroyed should be ${killed}`);
+    assert.equal(a1.destroyed, killed, `Damage ${N} into a full max-${max} engine: destroyed should be ${killed}`);
   }
 });
 
@@ -2187,23 +2203,22 @@ function topWoundDamage() {
   return { dmg, name };
 }
 
-// The chassis-side guard. Hand-copying Zebra's engine number into a test would
+// The chassis-side guard. Hand-copying a pool or ceiling number into a test would
 // just be a second place to get it wrong, so this derives BOTH sides from the
-// catalogs and compares them. It has two live halves, each mutation-proven: the
-// pool loop fires if a chassis pool is tidied back under the ceiling, and the
-// Damage-8 pin fires first if any weapon's Damage climbs — which past 8 means
-// clearing Zebra's engine, the lowest pool. The pin is deliberate: a raised
-// ceiling re-opens a balance decision, so it should stop here and be re-taken
-// rather than be absorbed by a comparison that silently still passes.
+// catalogs and compares them. Its live half is the pool loop: it fires if a chassis
+// structural/power pool is ever tidied back under the game's top per-wound Damage,
+// which is what would open a one-shot-from-full window. The ceiling is DERIVED via
+// `topWoundDamage()`, not pinned to a number — a weapon-Damage retune moves the
+// ceiling and the loop re-checks against it rather than tripping a hard-coded value
+// (per the repo rule: tests assert the invariant, never a tunable Pen/Damage).
 //
 // Scope is CHASSIS on purpose: this owns the pools that come from the CHASSIS
 // catalog. The kinds whose pools come from UNIT_KINDS.partSp instead (tank,
 // walker) are owned by the next test, which asserts the handoff rather than
-// assuming it. This test owns the Damage-8 pin for both; the next one derives
-// the ceiling from `topWoundDamage()` and does not re-pin it.
+// assuming it.
 test("no chassis can be one-shot from full — every structural/power pool clears the catalog's top Damage", () => {
   const { dmg: topDmg, name: topName } = topWoundDamage();
-  assert.equal(topDmg, 8, `expected the catalog to top out at Damage 8, got ${topDmg} (${topName})`);
+  assert.ok(topDmg >= 1, `topWoundDamage returned ${topDmg} (${topName}) — expected a positive ceiling`);
 
   const vital = [...partsByRole("rig", "structural"), ...partsByRole("rig", "power")];
   assert.deepEqual(vital, ["hull", "engine"]); // the roles §8 kills on, not a guess
@@ -2283,7 +2298,7 @@ test("no unit of ANY kind dies to a SINGLE wound from full — every kind's stru
 
 // The universal, driven rather than read. The guard above is pure data; this
 // runs the real path end-to-end — makeUnit builds a Walker from partSp,
-// applyCommand routes a Rig's Damage-8 swing into its engine through the real
+// applyCommand routes a Rig's top-tier swing into its engine through the real
 // combatCtx, and §8 either fires or does not. It is not a duplicate of the
 // mechanism test: that one pokes a rig's SP pools to lock the applyDamage
 // boundary in the abstract, while this one proves a Walker's COMMISSIONED engine
@@ -2295,9 +2310,9 @@ test("no unit of ANY kind dies to a SINGLE wound from full — every kind's stru
 // explicitly, so the geometry path never runs. Measured — the test passes
 // identically with a position and without one, so setting one would be a prop
 // that implied it mattered.
-test("one Damage-8 wound does not destroy a full-health Walker's engine", () => {
+test("one top-tier wound does not destroy a full-health Walker's engine", () => {
   const { r, b1 } = haymakerDuel();
-  const dmg = effectiveWeaponProfile("melee", b1.weapons.melee, b1).dmg; // 8, and haymakerDuel proved it
+  const dmg = effectiveWeaponProfile("melee", b1.weapons.melee, b1).dmg; // the boosted swing's Damage, derived
   const walker = makeUnit("walker", 99, "Sentinel", "a", { unit: "Sidearm" });
   assert.ok(walker);
   r.rigs.push(walker);
@@ -2310,13 +2325,13 @@ test("one Damage-8 wound does not destroy a full-health Walker's engine", () => 
     name: "b1", action: "fire", weapon: "melee", target: "Sentinel", arc: "front", range: "near", cover: 0,
     dice: { toHit: [6], wounds: [10], location: 11 }, // 11 -> engine (power)
   } });
-  assert.equal(b1.weapons.melee, "Wrecking Ball"); // the swing that landed was the Damage-8 one
-  // Derived, so this still states the truth if the pool is ever raised further:
-  // the wound spends its Damage and no more. At today's max 8 that is exactly
-  // zero — the tightest case, and the boundary itself is owned by the mechanism
-  // test above, not re-pinned here.
+  assert.equal(b1.weapons.melee, "Wrecking Ball"); // the swing that landed was the boosted Ball one
+  // Derived, so this states the truth however the Ball's Damage or the walker pool
+  // is tuned: the wound spends its Damage and no more, and the commissioned engine
+  // clears it. The exact-zero boundary is owned by the mechanism test above and is
+  // not re-pinned here.
   assert.equal(walker.engine.sp, walker.engine.max - dmg, "the wound spent exactly its Damage in SP");
-  assert.equal(walker.destroyed, false, "one Damage-8 wound must not take a full-health Walker from untouched to dead");
+  assert.equal(walker.destroyed, false, "one top-tier wound must not take a full-health Walker from untouched to dead");
 });
 
 test("the wound die that guts a location is marked CRIT in the roll console", () => {

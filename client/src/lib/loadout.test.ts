@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { WEAPONS } from "/shared/game-state.js";
 import { buildLoadout, randomAddAttrs } from "./loadout";
 import type { Rig } from "../state/types";
 
@@ -46,14 +47,17 @@ describe("buildLoadout", () => {
       equipment: null,
     });
     const lo = buildLoadout(rig)!;
-    // Autocannon: base ROF 4 / Penetration 6, range 0–26"; Depleted Core is +1 Penetration.
+    // Mechanic: base weapon stat is passed through from the catalog and the
+    // upgrade's numeric delta is carried separately (base + delta, not merged).
+    // Read the base from the catalog so weapon-value tuning can't red this test.
+    const acBasePen = WEAPONS.longRange["Autocannon"].pen;
     expect(lo.lr!.rof).toEqual({ base: 4, delta: 0 });
-    expect(lo.lr!.pen).toEqual({ base: 6, delta: 1 });
+    expect(lo.lr!.pen).toEqual({ base: acBasePen, delta: 1 }); // Depleted Core = +1 delta
     expect(lo.lr!.range.text).toBe('0–26"');
     expect(lo.lr!.upNature).toBe("field");
-    // Claw: base Penetration 7, melee reach 2"; Vice Grip adds the Impale perk (no numeric delta).
+    // Claw: base Penetration from catalog, melee reach 2"; Vice Grip adds the Impale perk (no numeric delta).
     expect(lo.melee!.melee).toBe(true);
-    expect(lo.melee!.pen).toEqual({ base: 7, delta: 0 });
+    expect(lo.melee!.pen).toEqual({ base: WEAPONS.melee["Claw"].pen, delta: 0 });
     expect(lo.melee!.range.text).toBe('RNG 2"');
     expect(lo.melee!.addedPerks).toContain("Impale");
   });
