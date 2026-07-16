@@ -432,10 +432,22 @@ function kneecapperLocation(kindId, location) {
 // 10, so a natural 10 always wounds and no matchup is hopeless. Each wound deals
 // the weapon's `d`. Brace subtracts 2 on the target's front arc (§5 preparation).
 // Raise Shield (§13 Bulwark) negates covered arcs outright and blunts the rest by 3.
-export function rollWounds(attacker, target, profile, location, opts, providedDice, random) {
-  // Thread the real target rig into computePen's opts (the caller's `opts`
-  // here may carry only a display name at `opts.target` — see resolveAttack)
-  // so target-conditional Penetration upgrades (Cold Bore, Opportunist, §13) work.
+// The wound step's DETERMINISTIC half, split out so the opponent bot can score a
+// shot with the exact arithmetic that resolves it (spec: opponent-brain).
+// rollWounds keeps the dice; this keeps the maths. Two callers, one source of
+// truth — a second copy of these ten defender modifiers would drift the moment an
+// upgrade lands. Every modifier below is read from the LOCAL the effPen sum adds,
+// never recomputed, so `terms` is guaranteed to sum to the effective Penetration
+// the engine tests.
+//
+// `negated` is an EARNED zero, never an armour zero: a rake firing into a front
+// arc (bonus == null) or a raised shield covering the struck arc. Those
+// short-circuit before any roll and stay hard zeroes on a natural 10. `effPen` is
+// null in that case — there is no roll to feed, and `bonus` may itself be null.
+export function effectivePenAgainst(attacker, target, profile, location, opts) {
+  // Thread the real target rig into computePen's opts (the caller's `opts` may
+  // carry only a display name at `opts.target` — see resolveAttack) so
+  // target-conditional Penetration upgrades (Cold Bore, Opportunist, §13) work.
   // penBreakdown, not computePen: the ledger's wound step needs the ~15
   // contributions behind this Penetration, and they must be the ones this roll used.
   const penBd = penBreakdown(attacker, profile, { ...opts, target, location });
@@ -449,9 +461,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   // primary guarantee. Reuses the STANDARD side-arc bonus (+2) as the
   // "workable" front value rather than inventing a new number — does NOT
   // touch arcBonus itself, so non-kneecapper Raking Fire guns still auto-fail
-  // on the front arc exactly as before. (Was +4 under the impact-total model,
-  // which read off Raking Fire's old side value; both ladders rescaled in
-  // Task 4, so this tracks the new standard side bonus.)
+  // on the front arc exactly as before.
   if (bonus == null && profile.upgradeEffect?.kneecapper) {
     const role = roleOf(target.kind || "rig", location);
     if (role === "mobility" || role === "weapon") bonus = 2;
@@ -467,7 +477,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   const hardened = target.hardened ? -hardenDepth : 0;
   // Reactive Armor (Ablative Plating, Tuned) — a location already hardened this
   // round docks a further 2 effective Penetration. The list is recorded by the wound-stage
-  // defensive seam below and cleared each Recovery (refreshEquipState).
+  // defensive seam and cleared each Recovery (refreshEquipState).
   const reactive = target.equipState?.reactiveArmorLocs?.includes(location) ? -2 : 0;
   // Reactive Plating (Countermeasures) — side/rear attacks lose Penetration. The dock
   // magnitude is read from the equipment upgrade's effect tag (`sideRearPen`) via
@@ -490,14 +500,10 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   const toughness = toughnessOf(target.kind || "rig", location, target.weightClass);
 
   // The wound step's ledger terms: everything penBreakdown folded into the
-  // nominal Penetration, PLUS the arc/defender modifiers computed above. Each is read
-  // from the LOCAL the loop below actually adds into `effPen` — never
-  // recomputed — so the terms are guaranteed to sum to the effective Penetration the
-  // engine tested. A modifier worth 0 pushes nothing (same rule as
-  // penBreakdown): with eight possible entries here, listing the dead ones
-  // would bury the one that decided the shot.
-  //
-  // Labels are the words a player reads on the table, not our field names.
+  // nominal Penetration, PLUS the arc/defender modifiers above. Labels are the
+  // words a player reads on the table, not our field names. A modifier worth 0
+  // pushes nothing — with eight possible entries, listing the dead ones would
+  // bury the one that decided the shot.
   const woundTerms = [...penBd.terms];
   if (bonus) woundTerms.push({ label: `${opts.arc} arc`, value: bonus });
   if (braced) woundTerms.push({ label: "target braced", value: braced });
@@ -507,6 +513,23 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   if (cracked) woundTerms.push({ label: "cracked open", value: cracked });
   if (sideRearDock) woundTerms.push({ label: "reactive plating", value: sideRearDock });
 
+  const negated = bonus == null || shieldNegates;
+  return {
+    pen, bonus, braced, hardened, reactive, shieldBlunt, cracked, sideRearDock,
+    shieldNegates, toughness,
+    effPen: negated ? null : pen + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock,
+    d: profile.dmg || 1,
+    negated,
+    // `noRoll` names WHY there was no wound roll. The order mirrors the condition:
+    // a rake's blind arc short-circuits before the shield is consulted.
+    noRoll: bonus == null ? "arc" : shieldNegates ? "shield" : null,
+    terms: woundTerms,
+  };
+}
+
+export function rollWounds(attacker, target, profile, location, opts, providedDice, random) {
+  const { effPen, toughness, negated, noRoll, terms: woundTerms } = effectivePenAgainst(attacker, target, profile, location, opts);
+
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
     const die = rollD(WOUND_DIE, providedDice?.wounds?.[i], random);
@@ -514,22 +537,17 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     // short-circuit before the roll is compared and stay hard zeroes even on a
     // natural 10. An ARMOUR zero was the bug this rewrite kills; an EARNED zero
     // is a mechanic and must survive.
-    if (bonus == null || shieldNegates) {
-      // `noRoll` names WHY there was no wound roll, so the ledger can say it
-      // rather than emit a step the player has to decode from a null TN. The
-      // order mirrors the condition above: a rake's blind arc short-circuits
-      // before the shield is consulted.
+    if (negated) {
       // `d` rides even here, where nothing wounded: the ledger's damage step
       // reads it off this object, and a shield-negated attack still has to say
       // what the weapon WOULD have dealt rather than render a blank term.
       out.push({
         die, target: null, pen: null, toughness, sp: 0, negated: true, wounded: false,
         dmg: profile.dmg || 1, rend: 0, evisc: 0,
-        noRoll: bonus == null ? "arc" : "shield", terms: woundTerms,
+        noRoll, terms: woundTerms,
       });
       continue;
     }
-    const effPen = pen + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
     const tn = woundTarget(effPen, toughness);
     // Penetrator Rounds (§13) — every 3rd Autocannon volley skips the wound
     // roll entirely (was: forced Severe against the old armour row).
