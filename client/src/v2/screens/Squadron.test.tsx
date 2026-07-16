@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 import { V2Providers } from "../state/V2Providers";
 import { useRoomDispatch } from "../../state/RoomStateContext";
 import type { Rig, ServerState } from "../../state/types";
@@ -8,6 +8,8 @@ import { Squadron } from "./Squadron";
 
 const sendSpy = vi.fn();
 vi.mock("../../hooks/useCommands", () => ({ useCommands: () => sendSpy }));
+
+beforeEach(() => sendSpy.mockClear());
 
 const rig = (id: number, name: string, owner: "a" | "b"): Rig => ({
   id, name, owner, weightClass: "light",
@@ -59,7 +61,6 @@ test("flags the active rig during the activation phase", async () => {
 });
 
 test("picking a bot preset fires setbot for the enemy side", async () => {
-  sendSpy.mockClear();
   const state: ServerState = {
     version: 1, ownerSide: "a",
     field: { width: 54, height: 36, diagonal: "tlbr", terrain: [], locked: false },

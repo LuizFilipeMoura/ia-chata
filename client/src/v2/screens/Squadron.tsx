@@ -41,7 +41,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
           <h1 className="v2-yard-title v2-title">THE YARD</h1>
         </div>
         <div className="v2-yard-stats">
-          <div className="v2-yard-count">{count} COMMISSIONED{!started && !atParity && diffLabel ? ` · ${diffLabel}` : ""}</div>
+          <div className="v2-yard-count">{count} COMMISSIONED{!started && !atParity && !enemyBot && diffLabel ? ` · ${diffLabel}` : ""}</div>
           <div className="v2-yard-tons">TONNAGE · {tonnage(rigs, mySide)} T</div>
         </div>
       </div>
@@ -78,10 +78,11 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
       {!started && (
         <div className="v2-yard-opponent">
           <span className="v2-yard-opponent-label v2-eyebrow">OPPONENT</span>
-          <div className="v2-yard-opponent-opts">
+          <div className="v2-yard-opponent-opts" role="group" aria-label="Opponent">
             <button
               type="button"
               className={"v2-yard-opp-btn" + (!enemyBot ? " is-on" : "")}
+              aria-pressed={!enemyBot}
               onClick={() => sendCommand("setbot", { side: enemySide, preset: null })}
             >
               Human
@@ -91,6 +92,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
                 key={preset}
                 type="button"
                 className={"v2-yard-opp-btn" + (enemyBot === preset ? " is-on" : "")}
+                aria-pressed={enemyBot === preset}
                 onClick={() => sendCommand("setbot", { side: enemySide, preset })}
               >
                 {preset.charAt(0).toUpperCase() + preset.slice(1)} Bot
@@ -113,7 +115,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             </div>
             <div className="v2-yard-ready-sub">
               {!field?.locked ? "Owner must lock the field before you can ready up."
-                : !atParity ? (diffLabel ?? "Match your opponent's composition to ready up.")
+                : (!enemyBot && !atParity) ? (diffLabel ?? "Match your opponent's composition to ready up.")
                 : "Tap any Rig to open its Control Terminal."}
             </div>
           </div>
