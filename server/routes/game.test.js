@@ -122,10 +122,10 @@ test("POST /command on an unknown room is 404", async () => {
 
 test("a bot side plays itself out after a human command (driveBots hook)", async () => {
   // Build a digital bot-vs-bot room directly in the store (adds bypass the HTTP
-  // chassis gate; the sides[i].bot flag has no command verb yet — it is a lobby
-  // field set here directly). Ready side A directly, then POST side B's ready:
-  // that command starts the game, and the route's driveBots hook plays BOTH bot
-  // sides to a terminal state before the response is sent.
+  // chassis gate; the sides[i].bot flag is a lobby field set here directly).
+  // Side A's ready over HTTP now auto-readies the bot opponent (B) and starts the
+  // match in one step; the route's driveBots hook then plays BOTH bot sides to a
+  // terminal state before the response is sent.
   const room = store.getOrCreateRoom("BOTHOOK");
   room.mode = "digital";
   claimSide(room, { name: "A", side: "a" });
@@ -138,8 +138,9 @@ test("a bot side plays itself out after a human command (driveBots hook)", async
   applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
   room.game.sides[0].bot = "aggressive";
   room.game.sides[1].bot = "cagey";
-  applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" });
-  const res = await post("/api/game/BOTHOOK/command", { cmd: { verb: "ready", attrs: {} }, side: "b" });
+  // Side A's ready over HTTP now auto-readies the bot opponent (B) and starts the
+  // match in one step; the route's driveBots hook then plays BOTH bot sides out.
+  const res = await post("/api/game/BOTHOOK/command", { cmd: { verb: "ready", attrs: {} }, side: "a" });
   const body = await res.json();
   assert.equal(res.status, 200);
   assert.ok(body.state.game.outcome != null || body.state.game.round > 1,
