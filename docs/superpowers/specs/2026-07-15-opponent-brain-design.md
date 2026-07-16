@@ -147,7 +147,15 @@ v1's biggest compromise and the reason the damage term is deferred, not cancelle
    evaluating a candidate must never do that. v1 therefore uses `profile.rof` and under-rates
    all three. The bias is small, one-directional, and only affects conditional upgrades.
 
-### Deferred: the damage term (do this once tuning settles)
+### The damage term — SHIPPED 2026-07-16 (was deferred)
+
+> **DONE.** `effectivePenAgainst` extracted from `rollWounds` (pure refactor, `combat.test.js`
+> untouched); `expectedDamage` added and validated <1% vs the real engine; the scorer now reads
+> damage, not hits, so arc/Brace/Harden/shields are valued automatically and the invented
+> `arcFactor` is gone. No Overmatch term (it stays deleted). v1's "scores HITS" framing above is
+> now historical — the bot scores full damage. The design reasoning below stands as written.
+
+### Deferred → done: the damage term
 
 Adding damage means completing the formula:
 

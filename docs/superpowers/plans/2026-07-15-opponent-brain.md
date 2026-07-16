@@ -782,7 +782,14 @@ first eligible rig) so the round can start without a human. Same for a `pendingR
 
 ---
 
-## Deferred: the damage term (do NOT implement in v1)
+## The damage term — SHIPPED 2026-07-16 (was deferred)
+
+> **DONE.** Extracted `effectivePenAgainst` from `rollWounds` as a PURE refactor (`combat.test.js`
+> zero edits, `ffc8ee0`); added `expectedDamage = ROF × P(hit) × P(wound) × D` averaged over the
+> D12 hit-location distribution, validated <1% against sampled `resolveAttack` SP (`0f44cf5`);
+> swapped the scorer from hits to damage and deleted `arcFactor`/`expectedHits` — arc is now
+> valued through real effective Penetration (`066430d`). No Overmatch (deleted). The historical
+> reasoning below is kept for the record.
 
 > **Do this when** the arsenal settles and the bot must tell a Wrecking Ball (Penetration 6,
 > Damage 8, ROF 1) from a Rivet Gun (Penetration 3, Damage 1, ROF 6). Until then, preferring
