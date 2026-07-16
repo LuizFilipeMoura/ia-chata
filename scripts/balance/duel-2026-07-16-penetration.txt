@@ -1,0 +1,129 @@
+duel report — trials/cell=500 horizon=10 rounds arc=side cells=33
+test rig=medium-lance-mortar  control rig=medium-lance-mortar  min sample=250
+
+=== READ THIS FIRST — what these numbers are NOT ===
+
+Policy biases (printed verbatim from policy.mjs KNOWN_BIASES):
+
+- Never KNOWINGLY exceeds Heat Capacity: it fires only while the cost it can see
+  keeps it at or under cap. A real player redlines when the trade is worth it, so
+  this UNDER-rates high-heat weapons. It is consistent across weapons, so the
+  comparison still holds; judgment is step 2's bot.
+- It can still overshoot cap by luck. Weapon heat is partly random (fireModeHeat
+  — dice showing 1 under Full Auto / Extended Belt), so a shot budgeted as safe
+  can land over. That is the gamble a player actually takes; modelling it as
+  certain would be the lie.
+- Reloads as soon as the weapon runs dry AND the worst-case d6 reload heat still
+  fits under cap; with no headroom it vents first. So it slightly under-rates
+  weapons that empty often, where a player might strike in melee or push the roll.
+- It pays reload heat at all, which the clone-per-trial sweep never did: a
+  sustained duel is charged 1-2 heat per volley. These numbers are more truthful
+  but they are NOT a like-for-like baseline against the old report.
+- A rig it cannot shoot with, it passes with. Gun rolled dead by an Arms hit, or
+  riveted shut by a Rivet Lock, and greedySafe simply vents — it has no melee to
+  fall back on, where a player would swing. So a weapon that disarms the control
+  rig reads as LESS incoming damage (spTaken drops) rather than as the tempo win
+  it actually is: the credit lands on the wrong side of the ledger.
+- IT MAKES NO CHOICES. It never moves, never picks its target, never prepares,
+  locks, or triggers an active. So every upgrade that needs a decision to pay off
+  — Fire Control Lock, Enfilade, Barrage, and the spatial effects — reads 0.00
+  here. That 0.00 means UNMEASURED, not worthless. This harness exists because 44
+  upgrades read a misleading 0.00; do not let it manufacture a new set.
+- The control rig's loadout is a constant, and it shapes every number in the
+  report: each result is "against THIS rig at THIS distance and arc", never in
+  the abstract. The arc is the sharpest of these: Raking Fire (Mini Gun, Double
+  MG) scores a hard zero on the front arc by rule, not by luck, so a duel run
+  front-on measures those two weapons dealing nothing at all for 10 rounds.
+
+Run biases (this run's inputs, not the policy's):
+- THE CONTROL IS A CONSTANT. Every number here is "against the control rig"
+  (medium-lance-mortar), never in the abstract. A different control reorders this table.
+- SINGLE ARC, SINGLE DISTANCE. arc="side" and each weapon's distance are INPUTS
+  (its sweet spot), not outcomes. No row here is a range or arc profile.
+- A 0.00 OR A DASH HERE MEANS UNMEASURED, NOT WORTHLESS. Greedy-safe makes no
+  choice, so Fire Control Lock, Enfilade, Barrage and the spatial effects cannot
+  be exercised at all. This harness exists because 44 of the old sweep's 85
+  upgrades read a misleading 0.00; do not read a new one as a verdict.
+- SP TOTAL SATURATES AT THE WRECK. The duel ends when the control wrecks, so a
+  weapon's total is bounded by the control's SP pool however good it is. Read
+  "sp/rd" for the signal and never read "spTot" without "rounds" beside it.
+- AND THE RATE INFLATES WHEN THE CONTROL NEVER DIES — the same coin's other face.
+  rounds-to-wreck is well-behaved for the bulk (most cells wreck) but CENSORED for
+  the weak tail: a duel still running when we stop it contributes 10 rounds,
+  when the truth is "at least 10". So "rounds" reads LOW and "sp/rd" reads HIGH
+  for any row that failed to wreck. Rows where NO trial resolved are marked † —
+  their rate is a ceiling, not a measurement — and rows at wreck% < 100 are partly
+  censored, leaning the same way in proportion. A 0% wreck row is not a slow kill;
+  it is a NON-kill, and its rounds column is the horizon talking, not the weapon.
+- NOT A LIKE-FOR-LIKE BASELINE against report-2026-07-15-overflow.txt: the duel
+  pays reload heat, which the clone-per-trial sweep never did.
+- A dash means the cell was fully censored (n=0) — no sample, not a zero.
+
+=== BY WEAPON × TIER — sorted by SP/round (the rate is the signal) ===
+weapon           tier       upgrade                 dist   sp/rd  rounds   spTot  wreck%  spTaken    n  cens
+Sniper Cannon    tuned      cold-bore                 22    6.87     4.4    30.2     87%     16.2  487    13 
+Sniper Cannon    field      marksman-optics           22    6.82     4.5    30.4     87%     16.5  487    13 
+Sniper Cannon    prototype  enfilade                  22    6.82     4.5    30.4     87%     16.5  487    13 
+Mini Gun         field      suppressive-fire           7    6.38     5.2    33.0     96%     15.7  494     6 
+Double MG        field      gyro-mount                 9    6.31     5.0    31.7     88%     18.8  483    17 
+Autocannon       tuned      ap-shells                 12    6.16     5.1    31.1     85%     18.5  484    16 
+Missile Barrage  field      swarm-warheads            20    6.07     4.9    29.8     80%     19.6  487    13 
+Mini Gun         tuned      extended-belt              7    5.74     5.5    31.6     93%     16.7  493     7 
+Double MG        tuned      pinning-burst              9    5.57     5.6    31.1     85%     19.9  482    18 
+Siege Maul       field      reinforced-head            8    5.52     5.7    31.3     92%     15.7  495     5 
+Autocannon       field      depleted-core             12    5.44     5.5    30.1     81%     19.9  478    22 
+Missile Barrage  tuned      shaped-charges            20    5.37     5.6    30.0     75%     22.3  478    22 
+Mini Gun         prototype  suppression-lock           7    5.37     6.1    32.5     94%     16.8  492     8 
+Rivet Gun        field      rapid-feed                 6    5.36     6.2    33.3     91%     19.0  488    12 
+Harpoon          field      barbed-head               14    5.15     5.9    30.1     78%     20.8  480    20 
+Harpoon          tuned      taut-cable                14    5.07     5.9    29.7     76%     20.9  480    20 
+Autocannon       prototype  penetrator-rounds         12    4.81     6.3    30.3     75%     22.2  487    13 
+Siege Maul       tuned      breaching-round            8    4.72     6.4    30.4     85%     18.8  491     9 
+Siege Maul       prototype  piledriver-protocol        8    4.72     6.4    30.4     85%     18.8  491     9 
+Missile Barrage  prototype  fire-control-lock         20    4.64     6.1    28.4     67%     23.4  479    21 
+Harpoon          prototype  harpoon-winch             14    4.61     6.3    28.9     73%     22.7  468    32 
+Rivet Gun        tuned      staple-burst               6    4.05     8.0    32.5     73%     22.5  482    18 
+Mortar           field      cluster-shells            18    3.87     7.1    27.6     51%     26.3  473    27 
+Arc Gun          field      ion-burn                  20    3.29     7.9    26.0     46%     27.1  472    28 
+Rivet Gun        prototype  rivet-lock                 6    3.29     9.0    29.7     43%     27.7  473    27 
+Arc Gun          tuned      systems-overload          20    3.18     8.0    25.3     44%     27.6  462    38 
+Mortar           tuned      airburst-fuze             18    3.01     8.3    24.9     37%     29.2  457    43 
+Mortar           prototype  barrage                   18    3.01     8.3    24.9     37%     29.2  457    43 
+Crossbow         field      fletched-bolts            18    2.89     8.3    23.9     35%     29.5  459    41 
+Crossbow         tuned      steady-aim                18    2.89     8.3    23.9     35%     29.5  459    41 
+Arc Gun          prototype  ion-storm                 20    2.82     8.9    25.1     38%     29.5  459    41 
+Double MG        prototype  kneecapper                 9   2.05†   10.0†    20.5      0%     29.1  464    36  HORIZON
+Crossbow         prototype  pinning-bolt              18    1.78     9.6    17.1      9%     32.2  439    61 
+
+† rounds hit the 10-round horizon in EVERY trial (wreck% = 0) — a floor,
+  not a measurement; SP/round is correspondingly a ceiling.
+  Any row at wreck% < 100 is PARTLY censored the same way: read rounds with wreck%.
+
+=== UPGRADE UPLIFT vs the weapon's FIELD tier — on SP/round ===
+(a tier at ~0.00 is INERT *or* UNMEASURED — greedy-safe exercises no choice; see caveats)
+weapon           tier       upgrade                  field    tier  uplift   rounds field→tier
+Autocannon       tuned      ap-shells                 5.44    6.16   +0.72    5.5 → 5.1 
+Sniper Cannon    tuned      cold-bore                 6.82    6.87   +0.05    4.5 → 4.4 
+Sniper Cannon    prototype  enfilade                  6.82    6.82   +0.00    4.5 → 4.5 
+Crossbow         tuned      steady-aim                2.89    2.89   +0.00    8.3 → 8.3 
+Harpoon          tuned      taut-cable                5.15    5.07   -0.08    5.9 → 5.9 
+Arc Gun          tuned      systems-overload          3.29    3.18   -0.11    7.9 → 8.0 
+Arc Gun          prototype  ion-storm                 3.29    2.82   -0.47    7.9 → 8.9 
+Harpoon          prototype  harpoon-winch             5.15    4.61   -0.54    5.9 → 6.3 
+Autocannon       prototype  penetrator-rounds         5.44    4.81   -0.63    5.5 → 6.3 
+Mini Gun         tuned      extended-belt             6.38    5.74   -0.64    5.2 → 5.5 
+Missile Barrage  tuned      shaped-charges            6.07    5.37   -0.70    4.9 → 5.6 
+Double MG        tuned      pinning-burst             6.31    5.57   -0.74    5.0 → 5.6 
+Siege Maul       tuned      breaching-round           5.52    4.72   -0.80    5.7 → 6.4 
+Siege Maul       prototype  piledriver-protocol       5.52    4.72   -0.80    5.7 → 6.4 
+Mortar           tuned      airburst-fuze             3.87    3.01   -0.86    7.1 → 8.3 
+Mortar           prototype  barrage                   3.87    3.01   -0.86    7.1 → 8.3 
+Mini Gun         prototype  suppression-lock          6.38    5.37   -1.01    5.2 → 6.1 
+Crossbow         prototype  pinning-bolt              2.89    1.78   -1.11    8.3 → 9.6 
+Rivet Gun        tuned      staple-burst              5.36    4.05   -1.30    6.2 → 8.0 
+Missile Barrage  prototype  fire-control-lock         6.07    4.64   -1.43    4.9 → 6.1 
+Rivet Gun        prototype  rivet-lock                5.36    3.29   -2.07    6.2 → 9.0 
+Double MG        prototype  kneecapper                6.31   2.05†     -      5.0 → 10.0†  NOT COMPARABLE († side never wrecked)
+
+† that side hit the 10-round horizon in every trial, so its rate is a ceiling.
+  No uplift is computed against a ceiling: the difference would have no defined sign.
