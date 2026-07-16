@@ -4,7 +4,7 @@
 //
 //   score = w.vp       × objectiveVpDelta   // take / hold / contest a marker (E2 control)
 //         + w.priority  × priorityProgress   // the game's only kill-VP (+2)
-//         + w.damage    × offence            // v1: expectedHits me→them
+//         + w.damage    × offence            // expectedDamage me→them
 //         − w.threat    × exposure           // the SAME metric, every enemy's best against me
 //         − w.heat      × overheatRisk        // heat pushed past the class cap
 //         − w.fragile   × exposureOfWeak      // exposure, weighted up when a part is nearly dead
@@ -23,7 +23,7 @@
 // stands NOW. It does not model the enemy closing first. Documented blind spot
 // (see the spec); the cheap partial fix, if the bot proves bait-able, is to
 // inflate each enemy's threat range by its moveBudget rather than to search.
-import { expectedHits } from "./evaluate.js";
+import { expectedDamage } from "./evaluate.js";
 import { availableActions } from "../battle-view.js";
 import {
   arcOf, sightCorridor, distanceBetween, meleeInReach, controlsObjective,
@@ -54,7 +54,7 @@ function resultingPose(rig, cand) {
 }
 
 // The value of `attacker` (posed at aPos/aFacing) shooting `target` (posed at
-// tPos/tFacing): its best expectedHits with whichever weapon bears, or 0 if the
+// tPos/tFacing): its best expectedDamage with whichever weapon bears, or 0 if the
 // target is not in the attacker's front arc / not in LOS+band / not in reach.
 // The single primitive behind BOTH offence (my best shot) and exposure (the
 // enemy's best shot at me) — same yardstick, opposite ends.
@@ -71,10 +71,10 @@ function shotValue(room, attacker, aPos, aFacing, target, tPos, tFacing) {
   const lr = effectiveWeaponProfile("longRange", attacker.weapons?.longRange, attacker);
   if (corridor.los && lr && attacker.loaded?.longRange !== false
       && distance >= (lr.minRange ?? 0) && distance <= (lr.maxRange ?? Infinity)) {
-    best = Math.max(best, expectedHits(attacker, target, "longRange", opts));
+    best = Math.max(best, expectedDamage(attacker, target, "longRange", opts));
   }
   if (meleeInReach(A, T, meleeReachOf(attacker))) {
-    best = Math.max(best, expectedHits(attacker, target, "melee", opts));
+    best = Math.max(best, expectedDamage(attacker, target, "melee", opts));
   }
   return best;
 }
@@ -97,13 +97,13 @@ function exposureAt(room, rig, pos, facing) {
   return total;
 }
 
-// This candidate's offence: a declared shot's expectedHits, or a move's best shot
+// This candidate's offence: a declared shot's expectedDamage, or a move's best shot
 // after arriving (the 1-ply lookahead), or 0 for a non-attacking action.
 function offenceAt(room, rig, cand, pos, facing) {
   if (cand.action === "fire" || cand.action === "aimed") {
     const target = findRig(room, cand.target);
     if (!target) return 0;
-    return expectedHits(rig, target, cand.weapon, { arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round });
+    return expectedDamage(rig, target, cand.weapon, { arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round });
   }
   if (cand.action === "move" || cand.action === "sprint") {
     return bestShotFrom(room, rig, pos, facing);
@@ -149,7 +149,7 @@ function priorityProgress(room, rig, cand, pos, facing) {
   const pt = room.rigs.find((r) => r.id === pid && !r.destroyed && r.pos);
   if (!pt) return 0;
   if ((cand.action === "fire" || cand.action === "aimed") && cand.target === pt.name) {
-    return expectedHits(rig, pt, cand.weapon, { arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round });
+    return expectedDamage(rig, pt, cand.weapon, { arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round });
   }
   if (cand.action === "move" || cand.action === "sprint") {
     return shotValue(room, rig, pos, facing, pt, pt.pos, pt.facing);

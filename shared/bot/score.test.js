@@ -60,10 +60,14 @@ test("a contested objective scores below an uncontested one", () => {
   const { room, atk, foe } = scoreSetup();
   const mk = room.game.objectives[0];
   const cand = { action: "move", dest: { x: mk.x, y: mk.y }, facing: 0 };
+  // vp-only weights: with the enemy sitting ON the contested marker it is also
+  // adjacent (shootable), so the balanced offence/priority terms would swamp the
+  // objective signal we mean to test. Isolate the vp term.
+  const vpOnly = { vp: 1, priority: 0, damage: 0, threat: 0, heat: 0, fragile: 0 };
   foe.pos = { x: 52, y: 34 };                 // uncontested
-  const uncontested = scoreCandidate(room, atk, cand, PRESETS.balanced);
+  const uncontested = scoreCandidate(room, atk, cand, vpOnly);
   foe.pos = { x: mk.x, y: mk.y };             // enemy also holds the marker
-  const contested = scoreCandidate(room, atk, cand, PRESETS.balanced);
+  const contested = scoreCandidate(room, atk, cand, vpOnly);
   assert.ok(uncontested > contested, `uncontested ${uncontested} should beat contested ${contested}`);
 });
 
