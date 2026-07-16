@@ -486,7 +486,7 @@ test("effectiveWeaponProfile applies selected ROF, Penetration, perk, and range 
 
   const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
   // Assert the upgrade's +1 Pen DELTA over the catalog base (medium weight mod 0),
-  // so tuning Autocannon's Pen can't red this — the mechanic is the +1, not the 7.
+  // so tuning Autocannon's Pen can't red this — the mechanic is the +1, not the total.
   assert.equal(
     computePen(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}) - WEAPONS.longRange["Autocannon"].pen,
     1,
@@ -773,20 +773,21 @@ test("Momentum Swing reuses the charge gate for +2 Penetration (generalised char
 });
 
 test("Piledriver Protocol spends Momentum for +Penetration and ignores a braced front arc", () => {
-  const ram = makeRig(1, "Ram", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
-  const wall = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
-  wall.preparation = { type: "brace" }; // braced on the front arc
-  const p = effectiveWeaponProfile("longRange", "Siege Maul", ram); // Penetration 7, medium (+0)
+  const ram = { weightClass: "medium" };
+  const wall = { weightClass: "medium", preparation: { type: "brace" } }; // braced on the front arc
+  // Synthetic profile carrying the piledriver flag: pins the base Pen locally so the
+  // guard-break / momentum / brace mechanic is verified without a tunable catalog Pen.
+  const p = { pen: 11, dmg: 5, upgradeEffect: { piledriver: true } };
 
   // computePen: the threaded momentum spend adds +1 Penetration per point.
-  assert.equal(computePen(ram, p, { target: wall, momentum: 3 }), p.pen + 3);
+  assert.equal(computePen(ram, p, { target: wall, momentum: 3 }), p.pen + 3); // 11 + 3
 
   // These assert effective Penetration, NOT the wound TN, deliberately. `pen` is
   // the quantity the guard-break manipulates (skip the brace's -2, add +3); the
-  // TN re-encodes it lossily. The smash side is effPen 10 into a T5 hull, and
-  // 6+5-10 = 1 clamps to the floor — TN reads 2 for ANY effPen >= 9, so a TN
+  // TN re-encodes it lossily. The smash side is effPen 14 into a T5 hull, and
+  // 6 + 5 - 14 clamps to the floor — TN reads 2 for ANY effPen >= 9, so a TN
   // assertion there stays green if the +3 ever arrives as a +2.
-  // Without a guard-break, the brace's -2 applies: 7 + 0(front) - 2 = 5.
+  // Without a guard-break, the brace's -2 applies: 11 + 0(front) - 2 = 9.
   const normal = rollWounds(ram, wall, p, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(normal[0].pen, p.pen - 2); // base - 2(brace), front arc

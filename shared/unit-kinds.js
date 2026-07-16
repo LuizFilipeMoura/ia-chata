@@ -26,8 +26,8 @@ const RIG_TOUGHNESS = {
 // the unit dies from full to one wound.
 //
 // That makes the floor structural, not a balance dial: every structural/power
-// `partSp` below must be >= the top Damage in the game (currently 8: Sniper
-// Cannon, and Wrecking Ball + Haymaker). Mobility/weapon pools are exempt —
+// `partSp` below must be >= the top Damage in the game (currently 6: Wrecking
+// Ball + Haymaker, tied with Siege Maul + Reinforced Head). Mobility/weapon pools are exempt —
 // §8 does not kill on those roles, so they carry the fragility instead.
 //
 // Support-unit fragility therefore lives in `toughness` (below) and in the
