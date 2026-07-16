@@ -239,10 +239,7 @@ export const SEED_SUPPORT = [
 export function randomSeedRoster(random = Math.random) {
   const pool = [...CHASSIS];
   // Fisher-Yates shuffle, then take the first 8 as the distinct draw.
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor((random || Math.random)() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
+  shuffleInPlace(pool, random);
   const out = [];
   let k = 0;
   for (const owner of ["a", "b"]) {
@@ -1369,10 +1366,7 @@ function generateBotOpponent(room, humanSideId, botSideId, random = Math.random)
       return { error: `Not enough distinct ${cls} chassis remain for the bot to match your force — field fewer ${cls} Rigs.` };
     }
     // Fisher-Yates shuffle under the injected random, then take `count`.
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
+    shuffleInPlace(pool, random);
     for (let i = 0; i < count; i++) { picks.push(pool[i]); used.add(pool[i].id); }
   }
   for (const pb of picks) {
@@ -1484,6 +1478,18 @@ function randomPick(items, random = Math.random) {
   if (!items.length) return null;
   const index = Math.min(items.length - 1, Math.floor(random() * items.length));
   return items[index];
+}
+
+// Fisher-Yates shuffle in place under an injected random (deterministic in
+// tests). Returns the same array. `random || Math.random` tolerates an explicit
+// falsy arg, matching the fallback idiom used across this module.
+function shuffleInPlace(arr, random = Math.random) {
+  const rand = random || Math.random;
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 // Re-designate each side's Priority Target: a random LIVING enemy Rig. Called at
