@@ -18,6 +18,25 @@ const RIG_TOUGHNESS = {
   medium:   { hull: 5, arms: 4, legs: 4, engine: 3 },
 };
 
+// §8 vital-pool floor. `applyDamage` spends SP one point at a time, and a point
+// landing PAST zero on a structural or power part fires `catastrophicAdditional`
+// (game-state.js), which destroys the part and so the unit. A point landing
+// exactly ON zero does not. So a structural/power pool smaller than the
+// catalog's top per-wound Damage is not a pool at all — it is a coin flip, and
+// the unit dies from full to one wound.
+//
+// That makes the floor structural, not a balance dial: every structural/power
+// `partSp` below must be >= the top Damage in the game (currently 8: Sniper
+// Cannon, and Wrecking Ball + Haymaker). Mobility/weapon pools are exempt —
+// §8 does not kill on those roles, so they carry the fragility instead.
+//
+// Support-unit fragility therefore lives in `toughness` (below) and in the
+// mobility/weapon pools, NOT in how small a hull or engine may be. Derived and
+// enforced by "no unit of ANY kind dies to a SINGLE wound from full" in
+// game-state.test.js; do not lower a hull/engine here to "tidy" it.
+//
+// The floor bounds ONE wound, not one attack: ROF and Damage multiply, so a
+// full volley concentrating on one location can still kill from full, by design.
 export const UNIT_KINDS = {
   rig: {
     id: "rig",
@@ -62,7 +81,8 @@ export const UNIT_KINDS = {
     ],
     // Strawman ⚙ — heavy-Rig-grade toughness, tuned in playtest.
     toughness: { hull: 6, tracks: 5, turret: 5, engine: 4 },
-    partSp: { hull: 8, tracks: 7, turret: 6, engine: 6 },
+    // engine 8, not 6: the §8 vital floor above. tracks/turret stay small.
+    partSp: { hull: 8, tracks: 7, turret: 6, engine: 8 },
     hasHeat: false,
     hasArcs: true,
     actionBudget: 2,
@@ -90,7 +110,9 @@ export const UNIT_KINDS = {
     ],
     // Strawman ⚙ — medium-Rig-grade toughness.
     toughness: { hull: 5, legs: 4, mount: 4, engine: 3 },
-    partSp: { hull: 6, legs: 6, mount: 5, engine: 5 },
+    // hull/engine 8, not 6/5: the §8 vital floor above. legs/mount stay small —
+    // that is where the Walker is still the most fragile thing fielded.
+    partSp: { hull: 8, legs: 6, mount: 5, engine: 8 },
     hasHeat: false,
     hasArcs: true,
     actionBudget: 3,

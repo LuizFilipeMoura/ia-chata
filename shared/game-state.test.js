@@ -19,7 +19,7 @@ import {
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
   autoDeploy, deriveAttackGeometry, meleeReachOf,
 } from "./game-state.js";
-import { partsByRole } from "./unit-kinds.js";
+import { partsByRole, UNIT_KINDS } from "./unit-kinds.js";
 import { deploymentCorners, deployRadius, scatterTerrain } from "./field.js";
 import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
 
@@ -2158,6 +2158,35 @@ test("the §8 power kill needs a point spent past zero — Damage 8 kills a full
   }
 });
 
+// The top per-wound Damage anything in the game can deal to a FULL location:
+// base + one upgrade's `dmg` + Rend(+1). One upgrade per slot, so the best
+// single one. Evisceration is excluded because it requires sp <= max/2, which a
+// full location is not.
+//
+// BOTH catalogs are swept. WEAPONS is the rig catalog (upgradeable); UNIT_WEAPONS
+// is the support units' flat-pick catalog, which `effectiveWeaponProfile("unit",
+// …)` returns verbatim — no upgrades, no weight scaling. Sweeping only one would
+// make the wrong claim in both directions: a Rig shoots support units, so a
+// Walker's floor is the rig ceiling, not the flat-pick one; and a Tank shoots
+// Rigs, so a chassis's floor must clear the flat-pick ceiling too. The union is
+// the only number that bounds every attacker × every target.
+function topWoundDamage() {
+  let dmg = 0, name = null;
+  const bump = (d, n) => { if (d > dmg) { dmg = d; name = n; } };
+  for (const slot of ["longRange", "melee"]) {
+    for (const [wn, w] of Object.entries(WEAPONS[slot])) {
+      for (const u of [{ effect: {} }, ...(WEAPON_UPGRADES[wn] || [])]) {
+        const rend = [...(w.perks || []), ...(u.effect?.perks || [])].includes("Rend") ? 1 : 0;
+        bump(w.dmg + (u.effect?.dmg || 0) + rend, `${wn}${u.id ? ` + ${u.id}` : ""}`);
+      }
+    }
+  }
+  for (const [wn, w] of Object.entries(UNIT_WEAPONS)) {
+    bump(w.dmg + ((w.perks || []).includes("Rend") ? 1 : 0), wn);
+  }
+  return { dmg, name };
+}
+
 // The chassis-side guard. Hand-copying Zebra's engine number into a test would
 // just be a second place to get it wrong, so this derives BOTH sides from the
 // catalogs and compares them. It has two live halves, each mutation-proven: the
@@ -2167,26 +2196,13 @@ test("the §8 power kill needs a point spent past zero — Damage 8 kills a full
 // ceiling re-opens a balance decision, so it should stop here and be re-taken
 // rather than be absorbed by a comparison that silently still passes.
 //
-// Scope is CHASSIS on purpose, and the narrow claim is the true one: among
-// COMMISSIONED chassis this is now airtight, but it is NOT the only one-shot
-// window in the game. Support units are built from UNIT_KINDS.partSp (tank
-// engine 6, walker engine 5, walker hull 6) and Damage 6-8 weapons one-shot
-// those from full today. Widening this guard to them is a balance decision
-// nobody has taken, so it is left un-asserted rather than quietly asserted.
+// Scope is CHASSIS on purpose: this owns the pools that come from the CHASSIS
+// catalog. The kinds whose pools come from UNIT_KINDS.partSp instead (tank,
+// walker) are owned by the next test, which asserts the handoff rather than
+// assuming it. This test owns the Damage-8 pin for both; the next one derives
+// the ceiling from `topWoundDamage()` and does not re-pin it.
 test("no chassis can be one-shot from full — every structural/power pool clears the catalog's top Damage", () => {
-  // Damage against a FULL location = base + upgrade dmg + Rend(+1). One upgrade
-  // per slot, so take the best single one. Evisceration is excluded because it
-  // requires sp <= max/2, which a full location is not.
-  let topDmg = 0, topName = null;
-  for (const slot of ["longRange", "melee"]) {
-    for (const [name, w] of Object.entries(WEAPONS[slot])) {
-      for (const u of [{ effect: {} }, ...(WEAPON_UPGRADES[name] || [])]) {
-        const rend = [...(w.perks || []), ...(u.effect?.perks || [])].includes("Rend") ? 1 : 0;
-        const d = w.dmg + (u.effect?.dmg || 0) + rend;
-        if (d > topDmg) { topDmg = d; topName = `${name}${u.id ? ` + ${u.id}` : ""}`; }
-      }
-    }
-  }
+  const { dmg: topDmg, name: topName } = topWoundDamage();
   assert.equal(topDmg, 8, `expected the catalog to top out at Damage 8, got ${topDmg} (${topName})`);
 
   const vital = [...partsByRole("rig", "structural"), ...partsByRole("rig", "power")];
@@ -2199,6 +2215,108 @@ test("no chassis can be one-shot from full — every structural/power pool clear
       );
     }
   }
+});
+
+// The universal. The test above says "no CHASSIS", which is a claim about the
+// commissioned rig catalog only — support units never touch CHASSIS, they build
+// from UNIT_KINDS.partSp, and all three of tank/engine 6, walker/hull 6 and
+// walker/engine 5 died to one wound from full until this test existed. So the
+// pair of tests, not either one, is what makes the universal true.
+//
+// The universal is about a SINGLE WOUND, and the name says so because the
+// stronger reading is false. A full volley from full can still kill: ROF and
+// Damage multiply, and Flamethrower + sticky-fuel (ROF 4 x Damage 3 = 12),
+// Mini Gun + extended-belt (10), Missile Barrage + swarm-warheads (10) and
+// Chainsaw + ripper-teeth (9) all exceed the smallest vital pool — measured, not
+// assumed. That is intended: several wounds concentrating on one location is a
+// dice outcome the game is allowed to have. What §8 must not do is let ONE wound
+// take a unit from untouched to dead, which is what the per-wound Damage ceiling
+// bounds.
+//
+// Composition, deliberately: this test does NOT re-pin Damage 8. The pin lives
+// once, in the chassis guard above; here the ceiling is derived, so raising it
+// fails there (one loud stop that re-opens the balance decision) and here only
+// if a pool actually stops clearing.
+//
+// Two things are derived rather than assumed, because assuming either is how the
+// "exactly one chassis" claim went false:
+//   - the kind list is walked from UNIT_KINDS, so a kind added later is covered
+//     the day it lands rather than the day someone remembers this file;
+//   - a kind with no partSp gets its pools from somewhere else, and the only
+//     such somewhere is CHASSIS. That is asserted, not assumed — a new kind with
+//     neither partSp nor a chassis catalog would otherwise fall through BOTH
+//     guards and read as covered.
+//
+// Pools are read off a unit `makeUnit` actually built, not off partSp directly.
+// partSp is the input; unit[part].max is what applyDamage spends, and only the
+// second one is the claim.
+test("no unit of ANY kind dies to a SINGLE wound from full — every kind's structural/power pool clears the game's top per-wound Damage", () => {
+  const { dmg: topDmg, name: topName } = topWoundDamage();
+
+  const checked = [];
+  for (const kindId of Object.keys(UNIT_KINDS)) {
+    const vital = [...partsByRole(kindId, "structural"), ...partsByRole(kindId, "power")];
+    assert.ok(vital.length > 0, `${kindId} has no structural/power part — the §8 kill roles are missing`);
+
+    if (!UNIT_KINDS[kindId].partSp) {
+      assert.equal(kindId, "rig", `kind "${kindId}" has no partSp and is not the rig — no guard covers its vital pools`);
+      assert.ok(UNIT_KINDS[kindId].byWeight, "the rig is the CHASSIS-fed kind, covered by the previous test");
+      continue; // covered by the chassis guard above
+    }
+    for (const part of vital) {
+      const unit = makeUnit(kindId, 1, "Guard", "a", { unit: "Sidearm" });
+      assert.ok(unit, `makeUnit could not build a bare ${kindId}`);
+      const max = unit[part]?.max;
+      assert.equal(typeof max, "number", `${kindId}/${part} has no numeric max SP`);
+      assert.ok(
+        max >= topDmg,
+        `${kindId}/${part} has ${max} SP — ${topName} deals ${topDmg}, so one wound from full kills it outright`,
+      );
+      checked.push(`${kindId}/${part}`);
+    }
+  }
+  // The enumeration behind the universal, spelled out: if a kind is ever added
+  // or a part re-roled, this list moves and the mismatch is visible in the diff
+  // rather than silently shrinking the domain the loop above ran over.
+  assert.deepEqual(checked, ["tank/hull", "tank/engine", "walker/hull", "walker/engine"]);
+});
+
+// The universal, driven rather than read. The guard above is pure data; this
+// runs the real path end-to-end — makeUnit builds a Walker from partSp,
+// applyCommand routes a Rig's Damage-8 swing into its engine through the real
+// combatCtx, and §8 either fires or does not. It is not a duplicate of the
+// mechanism test: that one pokes a rig's SP pools to lock the applyDamage
+// boundary in the abstract, while this one proves a Walker's COMMISSIONED engine
+// lands on the safe side of it. Before this change the same swing destroyed it.
+// One wound, not a volley: haymakerDuel pins the Wrecking Ball at ROF 1, and the
+// dice arrays below carry a single die each.
+//
+// No `pos` is set on the Walker: the `fire` attrs carry arc/range/cover
+// explicitly, so the geometry path never runs. Measured — the test passes
+// identically with a position and without one, so setting one would be a prop
+// that implied it mattered.
+test("one Damage-8 wound does not destroy a full-health Walker's engine", () => {
+  const { r, b1 } = haymakerDuel();
+  const dmg = effectiveWeaponProfile("melee", b1.weapons.melee, b1).dmg; // 8, and haymakerDuel proved it
+  const walker = makeUnit("walker", 99, "Sentinel", "a", { unit: "Sidearm" });
+  assert.ok(walker);
+  r.rigs.push(walker);
+  // The fixture proving itself: full, and built from the kind table rather than poked.
+  assert.equal(walker.engine.max, UNIT_KINDS.walker.partSp.engine);
+  assert.equal(walker.engine.sp, walker.engine.max);
+  assert.ok(walker.engine.max >= dmg, `walker engine max ${walker.engine.max} < Damage ${dmg} — one wound would kill from full`);
+
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "Sentinel", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6], wounds: [10], location: 11 }, // 11 -> engine (power)
+  } });
+  assert.equal(b1.weapons.melee, "Wrecking Ball"); // the swing that landed was the Damage-8 one
+  // Derived, so this still states the truth if the pool is ever raised further:
+  // the wound spends its Damage and no more. At today's max 8 that is exactly
+  // zero — the tightest case, and the boundary itself is owned by the mechanism
+  // test above, not re-pinned here.
+  assert.equal(walker.engine.sp, walker.engine.max - dmg, "the wound spent exactly its Damage in SP");
+  assert.equal(walker.destroyed, false, "one Damage-8 wound must not take a full-health Walker from untouched to dead");
 });
 
 test("the wound die that guts a location is marked CRIT in the roll console", () => {
@@ -4111,10 +4229,16 @@ test("makeUnit('tank', ...) returns a valid tank with the four parts", () => {
   assert.ok(t);
   assert.equal(t.kind, "tank");
   assert.equal(t.owner, "a");
-  assert.equal(t.parts.hull.sp, 8);
-  assert.equal(t.parts.tracks.sp, 7);
-  assert.equal(t.parts.turret.sp, 6);
-  assert.equal(t.parts.engine.sp, 6);
+  // Derived, not hand-copied: this test's claim is that makeUnit reads the
+  // kind's part table, not what any one number in it happens to be. The numbers
+  // moved once already (the §8 vital floor raised engine 6 -> 8) and the only
+  // thing a hand-copied 6 caught was itself. The floor those pools must clear is
+  // asserted by "no unit of ANY kind dies to a SINGLE wound from full".
+  assert.deepEqual(
+    { hull: t.parts.hull.sp, tracks: t.parts.tracks.sp, turret: t.parts.turret.sp, engine: t.parts.engine.sp },
+    UNIT_KINDS.tank.partSp,
+  );
+  assert.equal(t.parts.hull.sp, t.parts.hull.max); // built full, not merely present
   assert.equal(t.weapons.unit, "Tank Cannon");
   assert.equal(t.equipment, null);
   assert.equal(t.destroyed, false);
@@ -4240,11 +4364,16 @@ test("formatBattleState renders a Tank without heat and with a single unit weapo
   room.rigs.push(tank);
   const view = formatBattleState(room, "a");
   assert.ok(view.includes("Bulwark (Tank, owner a)"));
-  assert.ok(view.includes("hull 8/8"));
-  assert.ok(view.includes("tracks 7/7"));
-  assert.ok(view.includes("turret 6/6"));
-  assert.ok(view.includes("engine 6/6")); // no "heat" suffix — cold kind
-  assert.ok(!/engine 6\/6 heat/.test(view));
+  // Derived from the kind's part table, not hand-copied: the claim here is that
+  // every part renders as sp/max, not what the tank's SP budget currently is.
+  for (const [part, sp] of Object.entries(UNIT_KINDS.tank.partSp)) {
+    assert.ok(view.includes(`${part} ${sp}/${sp}`), `expected "${part} ${sp}/${sp}" in:\n${view}`);
+  }
+  // No "heat" suffix — cold kind. Anchored to the engine's real number so this
+  // keeps matching the rendered text rather than quietly matching nothing.
+  const engineSp = UNIT_KINDS.tank.partSp.engine;
+  assert.ok(view.includes(`engine ${engineSp}/${engineSp}`));
+  assert.ok(!new RegExp(`engine ${engineSp}/${engineSp} heat`).test(view));
   assert.ok(view.includes("weapon Tank Cannon"));
 });
 
