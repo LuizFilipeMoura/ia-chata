@@ -1986,13 +1986,13 @@ function eligibleForPrep(room, sideId) {
 
 // After a rig finishes, pass to the other side if it can still act; otherwise
 // the same side continues back-to-back; if neither can act, run Recovery (§4).
-function handoff(room) {
+function handoff(room, random) {
   if (room.game.outcome) return;
   const cur = room.game.turn.side;
   const other = cur === "a" ? "b" : "a";
   if (sideHasActivatable(room, other)) room.game.turn.side = other;
   else if (sideHasActivatable(room, cur)) room.game.turn.side = cur;
-  else runRecovery(room);
+  else runRecovery(room, random);
 }
 
 // Per-round equipment tracked-state upkeep (charges refill, banks/stacks tick,
@@ -2032,7 +2032,7 @@ function refreshEquipState(rig) {
   }
 }
 
-function runRecovery(room) {
+function runRecovery(room, random) {
   for (const rig of room.rigs) {
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
@@ -2094,7 +2094,7 @@ function runRecovery(room) {
           && r.pos && controlsObjective(spatial(r), marker)));
       if (holders.length === 1) holders[0].vp += (marker.vp || 0);
     }
-    advanceRound(room);
+    advanceRound(room, random);
   }
 }
 
@@ -2185,7 +2185,7 @@ function endActivation(room, rig, dice, random) {
   // armed-but-unspent bonus can't leak past this activation.
   if (rig.equipState) rig.equipState.nextAttackPen = 0;
   room.game.turn.activeRigId = null;
-  handoff(room);
+  handoff(room, random);
 }
 
 // Apply one Heat Threshold Table row's effect to a rig (§6), routed through
@@ -3193,7 +3193,7 @@ function checkAnnihilation(room) {
 // After both sides score Recovery VP: advance to the next round's initiative,
 // or — at round MAX_ROUNDS (or beyond, in Sudden Death) — resolve victory by
 // points, enter one Sudden Death round on a tie, or declare a draw if still tied.
-function advanceRound(room) {
+function advanceRound(room, random) {
   const [sa, sb] = room.game.sides;
   const lastRound = room.game.suddenDeath || room.game.round >= MAX_ROUNDS;
   if (lastRound) {
@@ -3205,7 +3205,7 @@ function advanceRound(room) {
       room.game.round += 1;
       room.game.phase = "initiative";
       room.game.initiative = null;
-      rerollPriorityTargets(room);
+      rerollPriorityTargets(room, random);
     } else {
       room.game.outcome = { winner: null, reason: "draw" };
       room.game.phase = "finished";
@@ -3214,7 +3214,7 @@ function advanceRound(room) {
     room.game.round += 1;
     room.game.phase = "initiative";
     room.game.initiative = null;
-    rerollPriorityTargets(room);
+    rerollPriorityTargets(room, random);
   }
 }
 
@@ -3593,7 +3593,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         rig.activated = true;
         pushResolution(room, { kind: "skip", actor: rig.owner, rigId: rig.id, rolls: [],
           summary: `${rig.name} loses this activation (engine offline).`, effects: [] });
-        handoff(room);
+        handoff(room, options.random);
       } else {
         t.activeRigId = rig.id;
         t.actionsUsed = 0;
@@ -3686,7 +3686,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
               s.vp += room.game.recoveryClaims[s.id]
                 .reduce((sum, i) => sum + (objs[i]?.vp || 0), 0);
             }
-            advanceRound(room);
+            advanceRound(room, options.random);
           }
         }
       }
