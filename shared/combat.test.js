@@ -471,7 +471,7 @@ test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () =
     breachHull: (t) => { hullBreached = t; t.hullRepairLock = 2; },
     profileFor: (slot, name, rig) => effectiveWeaponProfile(slot, name, rig),
   };
-  // Force: to-hit die 6 (hits), location die 1 (hull), impact die 6.
+  // Force: to-hit D6 = 6 (hits), location D12 = 1 (hull), wound D10 = 10 (wounds).
   const res = resolveAttack(room, attacker, target,
     { weapon: "longRange", arc: "front", range: "near",
       dice: { toHit: [6], location: 1, wounds: [10], ap: [1] } }, () => 0, ctx);
