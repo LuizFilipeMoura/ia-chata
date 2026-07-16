@@ -723,8 +723,9 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }));
   let impacts = [];
   // Drama (§7 spill / §8 kill tier) — player-facing lines for the resolution's
-  // `effects`. `critWound` records the wound that did the gutting, so that once
-  // the damage loop below has run, that die's tone can be promoted to `crit`.
+  // `effects`. `critWound` records the wound that tore a location open or killed
+  // the rig, so that once the damage loop below has run, that die's tone can be
+  // promoted to `crit`.
   const drama = [];
   let critWound = null;
   let location = null;
@@ -753,12 +754,16 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       // The wound die is the one that decides damage, so it MUST reach the log.
       // Under the impact-total model these were rolled and discarded, leaving a
       // player staring at "2 hits · 4 Penetration → 0 SP" with no way to answer why.
-      for (let i = 0; i < impacts.length; i++) {
-        rolls.push({
-          sides: WOUND_DIE, value: impacts[i].die, label: `wound ${i + 1}`,
-          tone: impacts[i].sp > 0 ? "ok" : "miss",
-        });
-      }
+      // Kept as `woundRolls` so the crit promotion below can reach a die by its
+      // impact's index instead of re-deriving this label and searching for it.
+      const woundRolls = impacts.map((h, i) => {
+        const roll = {
+          sides: WOUND_DIE, value: h.die, label: `wound ${i + 1}`,
+          tone: h.sp > 0 ? "ok" : "miss",
+        };
+        rolls.push(roll);
+        return roll;
+      });
       // Kneecapper (§13, Double MG) — a limbs-only rake. On a damaging hit:
       //  (a) TAG the struck limb (`target.kneecapped[location]`) so the cripple
       //      ramp in game-state recompute applies ONLY to limbs this weapon
@@ -827,17 +832,16 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
           drama.push(`${weaponName} — through and through (${spilled} SP spilled)`);
         }
       }
-      // The die that gutted the location earns CRIT. The wound rolls were pushed
-      // above, before applyDamage ran, so they could not know — hence the late
-      // promotion. `impacts[i]` is what pushed `wound ${i + 1}`, and `critWound`
-      // is an element of `impacts` (not a copy), so indexOf maps it back to its
-      // own die. The attack resolution below takes this same `rolls` array by
-      // reference, so the mutation reaches the client.
-      if (critWound) {
-        const i = impacts.indexOf(critWound);
-        const roll = rolls.find((x) => x.label === `wound ${i + 1}`);
-        if (roll) roll.tone = "crit";
-      }
+      // The die that tore a location open — or killed the rig outright — earns
+      // CRIT. The wound rolls were pushed above, before applyDamage ran, so they
+      // could not know then; hence the promotion here.
+      // This must stay OUTSIDE the damage loop, for two reasons:
+      //  - the kill branch `continue`s past the loop tail, so promoting next to
+      //    the tear-open assignment would never fire on a kill; and
+      //  - `critWound` is last-write-wins, so one read here promotes exactly one
+      //    die, where promoting at each assignment would leave TWO dice reading
+      //    CRIT on a volley that tears a location open and then kills.
+      if (critWound) woundRolls[impacts.indexOf(critWound)].tone = "crit";
       if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
         ctx.sunderLocation?.(target, location);
       }

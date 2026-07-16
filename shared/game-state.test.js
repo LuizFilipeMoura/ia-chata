@@ -2133,6 +2133,7 @@ test("the wound die that kills outright also reads CRIT", () => {
   fireSword(r, 11); // 11 -> engine (power)
   assert.equal(a1.destroyed, true); // the tier under test is the kill, not the tear-open
   const woundRolls = lastAttack(r).rolls.filter((x) => /^wound /.test(x.label));
+  assert.equal(woundRolls.length, 2); // one landed (10), one did not (1)
   assert.equal(woundRolls[0].tone, "crit", "the wound that killed must read CRIT");
   assert.equal(woundRolls[1].tone, "miss", "the wound that failed must still read miss");
 });
