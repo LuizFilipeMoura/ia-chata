@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { expectedHits, rawExpectedHits } from "./evaluate.js";
+import { expectedHits, rawExpectedHits, expectedDamage } from "./evaluate.js";
 import { makeRig, effectiveWeaponProfile } from "../game-state.js";
-import { rollToHit } from "../combat.js";
+import { rollToHit, resolveAttack } from "../combat.js";
 
 // Rigs MUST be built through makeRig(id, name, cls, owner, weapons).
 // normalizeWeaponUpgrade forces the field upgrade for a null id, so a
@@ -114,4 +114,54 @@ test("analytic rawExpectedHits matches the real engine's sampled mean", () => {
       `${c.lr} ${c.arc}@${c.distance}": analytic ${predicted.toFixed(3)} vs sampled ${observed.toFixed(3)} (tol ${tol.toFixed(3)})`);
   }
   console.log("  [1.2] " + report.join("\n         "));
+});
+
+// --- Validation of the FULL damage term against the real engine --------------
+// The deferred damage term's acceptance test: sample resolveAttack's actual SP
+// (the same ctx.applyDamage tap scripts/balance/weapon-sweep.mjs uses) and
+// confirm analytic expectedDamage matches the empirical mean. If ROF × P(hit) ×
+// P(wound) × D disagrees with the engine, one of them is wrong.
+
+function sampleMeanDamage(attacker, target, slot, opts, trials, seed) {
+  const rnd = mulberry32(seed);
+  const ROOM = { game: { round: 1 } };
+  let total = 0, n = 0;
+  for (let i = 0; i < trials; i++) {
+    const a = structuredClone(attacker);
+    const t = structuredClone(target);
+    let sp = 0;
+    const ctx = {
+      pushResolution() {}, bumpHeat() {}, spendHeat() {},
+      sunderLocation() {}, crackLocation() {}, rivetHit() {}, dismemberLocation() {}, breachHull() {}, engage() {},
+      applyDamage(room, rig, loc, amount) { if (rig === t) sp += amount; },
+      profileFor: (s, name, atk) => effectiveWeaponProfile(s, name, atk),
+    };
+    const o = { weapon: slot, arc: opts.arc, cover: opts.cover ?? 0, distance: opts.distance };
+    const r = resolveAttack(ROOM, a, t, o, rnd, ctx);
+    if (!r.ok) continue;
+    total += sp; n++;
+  }
+  return n ? total / n : 0;
+}
+
+test("analytic expectedDamage matches the real engine's sampled SP", () => {
+  const cases = [
+    { lr: "Autocannon", arc: "side", distance: 12 },
+    { lr: "Autocannon", arc: "rear", distance: 24 },
+    { lr: "Arc Gun",    arc: "side", distance: 20 },
+    { lr: "Mini Gun",   arc: "rear", distance: 7  },
+  ];
+  const report = [];
+  for (const c of cases) {
+    const a = atk(c.lr);
+    const b = def();
+    const opts = { arc: c.arc, distance: c.distance, cover: 0, round: 1 };
+    const predicted = expectedDamage(a, b, "longRange", opts);
+    const observed = sampleMeanDamage(a, b, "longRange", opts, 5000, 1234);
+    const tol = Math.max(0.15, observed * 0.08);
+    report.push(`${c.lr} ${c.arc}@${c.distance}": analytic ${predicted.toFixed(3)} vs sampled ${observed.toFixed(3)} (tol ${tol.toFixed(3)})`);
+    assert.ok(Math.abs(predicted - observed) <= tol,
+      `${c.lr} ${c.arc}@${c.distance}": analytic ${predicted.toFixed(3)} vs sampled ${observed.toFixed(3)} (tol ${tol.toFixed(3)})`);
+  }
+  console.log("  [damage] " + report.join("\n           "));
 });

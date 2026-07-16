@@ -25,9 +25,9 @@
 //    toughness, per-wound riders. A braced rig does not read as a poor target.
 // 3. arcFactor's `1 + bonus/4` is an invented PREFERENCE (see below), not the
 //    real arc maths — arc modifies Penetration, not accuracy.
-import { computeModifiedAim, arcBonus } from "../combat.js";
+import { computeModifiedAim, arcBonus, effectivePenAgainst } from "../combat.js";
 import { effectiveWeaponProfile } from "../game-state.js";
-import { shieldCoverage } from "../rules.js";
+import { shieldCoverage, woundTarget, WOUND_DIE, hitLocation } from "../rules.js";
 
 // A D6 hits on `aim` or better; a natural 6 ALWAYS hits (rollToHit: `d >= modAim
 // || d === 6`), so the floor is 1/6 no matter how bad the modifiers get, and the
@@ -69,6 +69,54 @@ export function rawExpectedHits(attacker, target, slot, opts) {
   if (!profile) return 0;
   const aim = computeModifiedAim(attacker, profile, { ...opts, target });
   return (profile.rof || 1) * pHit(aim);
+}
+
+// The hit-location distribution of a non-aimed shot: the D12 hit table folded to
+// a probability per location. resolveAttack rolls ONE location per shot (all that
+// shot's hits land there), so averaging P(wound)×D over this distribution and
+// multiplying by the hit expectation gives the shot's mean SP.
+function locationDist(kind) {
+  const counts = {};
+  for (let d = 1; d <= 12; d++) {
+    const loc = hitLocation(kind, d);
+    counts[loc] = (counts[loc] || 0) + 1;
+  }
+  return Object.entries(counts).map(([loc, n]) => ({ loc, p: n / 12 }));
+}
+
+// The FULL offence metric: expectedDamage = ROF × P(hit) × P(wound) × Damage, the
+// number the deferred damage term feeds `score.js` in place of expectedHits. It
+// reads the wound step through effectivePenAgainst — the exact arithmetic
+// rollWounds resolves with — so arc, Brace, Harden, shields, plating and the rest
+// are valued automatically, and the invented arcFactor is gone: rear genuinely
+// wounds harder here because it carries more effective Penetration, not because a
+// heuristic said so.
+//
+// Damage is the weapon's `d` plus its per-wound riders: Rend (+1) and
+// Evisceration (+1 vs a location already at/below half). There is NO Penetration
+// term in Damage — Overmatch was deleted (2026-07-16); Penetration buys P(wound)
+// and nothing else. KNOWN BIAS (small, one-directional): Armour Piercing's
+// failed-wound reroll raises P(wound) and is not modelled, so an AP weapon is
+// slightly under-rated — the same shape as the hit-side ROF biases above.
+export function expectedDamage(attacker, target, slot, opts) {
+  const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
+  if (!profile) return 0;
+  const hits = rawExpectedHits(attacker, target, slot, opts);
+  if (hits === 0) return 0;
+  const locs = opts.location ? [{ loc: opts.location, p: 1 }] : locationDist(target.kind || "rig");
+  const rendD = profile.perks?.includes("Rend") ? 1 : 0;
+  let woundDmg = 0;
+  for (const { loc, p } of locs) {
+    const ep = effectivePenAgainst(attacker, target, profile, loc, opts);
+    if (ep.negated || ep.effPen == null) continue;   // earned zero — a rake/shield blind arc
+    // P(wound) = P(d10 ≥ TN). woundTarget clamps TN to ≤ WOUND_DIE, so the floor
+    // (a natural 10 always wounds) is already baked in.
+    const pWound = (WOUND_DIE - woundTarget(ep.effPen, ep.toughness) + 1) / WOUND_DIE;
+    const eviscD = profile.upgradeEffect?.eviscerate
+      && target[loc] && target[loc].sp <= target[loc].max / 2 ? 1 : 0;
+    woundDmg += p * pWound * (ep.d + rendD + eviscD);
+  }
+  return hits * woundDmg;
 }
 
 // Expected hits for one shot from `attacker` at `target` with weapon `slot`
