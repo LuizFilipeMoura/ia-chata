@@ -736,6 +736,13 @@ test("VP accrues over a game", () => {
 });
 ```
 
+**Perf watch (from Phase 2.2):** `moveCandidates` calls `findPath` once per anchor + lattice
+cell, and `findPath` rebuilds the full occupancy grid each call (~200ms per `candidatesFor`).
+The 1-ply lookahead (Task 3.1) re-derives geometry per move candidate on top. A 200-game sweep
+may run minutes-to-hours. If it drags: build the grid once per activation and thread it through
+`findPath` (its guts already take a grid), and/or thin the lattice. Do this only if the sweep
+is actually too slow — measure first.
+
 - [ ] **Tuning sweep** (throwaway script, do NOT commit): 200 games `aggressive` vs `cagey`.
   **Report** win rate, mean VP, mean game length in rounds, and how often a game hits the round
   cap with no outcome. ~50/50 = weights do nothing; 100/0 = a preset is broken; 60/40-ish =
