@@ -50,12 +50,10 @@ Every Rig starts from a **weight class**, which sets its base profile.
 | Stat | Light | Medium |
 |---|:--:|:--:|
 | Base size | 60mm | 75mm |
-| Hull SP | 6 | 7 |
-| Arms SP | 5 | 6 |
-| Legs SP | 5 | 6 |
-| Engine SP | 4 | 5 |
 | Speed | 5" | 4" |
 | Weapon slots | 2 | 2 |
+
+Each Rig also carries **Structure Points (SP)** per component (Hull, Arms, Legs, Engine) and **Toughness (T)** per location; both are **per-location** and **vary by chassis** (Light vs Medium). Their tuned values live in the unit catalog, not here.
 
 - **Speed** — max move distance in inches. *⚙ TUNING: whole-inch speeds (5/4); Mediums bumped back up from an earlier over-nerf.*
 - **Aim** — base D6 target number to hit: **4+**, the same for every Rig (modified by weapon Accuracy and cover). *⚙ TUNING: Aim was a weight-class stat (4+/4+/3+/3+) until Heavy and Colossal were removed, at which point every remaining value was 4+. The chassis does not decide whether you hit; weapon Accuracy and the situation do.*
@@ -66,14 +64,7 @@ Every Rig starts from a **weight class**, which sets its base profile.
 
 Armour is a single per-location stat: **Toughness (T)**. It is what the **Wound Roll** (§7.5) tests against — the tougher the location, the higher the D10 you need. There is no lookup table; T feeds straight into one formula.
 
-| Location | Light | Medium |
-|---|:--:|:--:|
-| Hull | 4 | 5 |
-| Arms | 3 | 4 |
-| Legs | 3 | 4 |
-| Engine | 3 | 3 |
-
-Toughness varies **by location, not just by chassis** — a Medium Rig's Hull is **T5** but its Engine is only **T3**. That is why the hit location is rolled *before* the Wound Roll (§7): the location supplies the T you roll against.
+Toughness varies **by location, not just by chassis** — within a single Rig the Hull is tougher than the Engine, and a heavier chassis is tougher than a lighter one at the same location. That is why the hit location is rolled *before* the Wound Roll (§7): the location supplies the T you roll against.
 
 *⚙ TUNING: replaced the old per-chassis Impact Tables (four severity grids) with a single Toughness stat. The tables left 69 weapon/target combinations that could never deal damage at any roll; the Wound Roll's clamp (§7.5) makes every matchup live.*
 
@@ -338,7 +329,7 @@ Any weapon may be fitted to a Rig of **any weight class** and **any faction**. R
 |---|:--:|:--:|
 | **Penetration modifier** | −1 | +0 |
 
-Apply this modifier to the weapon's Penetration every time you make a Wound Roll (§7). *Example: a Sniper Cannon (Penetration 6) reads Penetration 5 on a Light Rig and 6 on a Medium.* *⚙ TUNING: the ladder was halved from ±2/±4 when Penetration was rescaled for the Wound Roll — off the clamp each point is now worth a flat 10%, so it buys twice as much as it used to. Against a location the weapon already saturates (§7, *Saturation*) it still buys nothing.*
+Apply this modifier to the weapon's Penetration every time you make a Wound Roll (§7). *Example: a weapon reads its listed Penetration on a Medium Rig and one point lower on a Light Rig.* *⚙ TUNING: the ladder was halved from ±2/±4 when Penetration was rescaled for the Wound Roll — off the clamp each point is now worth a flat 10%, so it buys twice as much as it used to. Against a location the weapon already saturates (§7, *Saturation*) it still buys nothing.*
 
 > **Perks are being reworked.** Base weapons now carry **stats only** — every *signature* perk is delivered by the weapon's chosen **upgrade** (see *Weapon Upgrades* below). The perk mechanics in §13 still apply; how each weapon earns its signature perks is a redesign that is **still open**, so the tables below list no base perks. **Exception:** the two **Machine Guns** (Mini Gun, Double MG) carry **Raking Fire** innately (§13) — it defines the weapon type (no frontal damage; +3 side / +6 rear), not a signature upgrade. *Melee* is likewise a weapon **type** (the Melee Weapons section), not a perk.
 
@@ -351,24 +342,24 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 
 **Machine Guns** — fast-firing, low-Penetration flanking specialists.
 
-| Weapon | ROF | Pen | Dmg | Sweet | Peak | Falloff/in | Range |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Mini Gun | 8 | 3 | 1 | 7" | +2 | −0.35 | 0–18" |
-| Double MG | 8 | 5 | 1 | 9" | +1 | −0.25 | 0–20" |
+| Weapon | ROF | Sweet | Peak | Falloff/in | Range |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Mini Gun | 8 | 7" | +2 | −0.35 | 0–18" |
+| Double MG | 8 | 9" | +1 | −0.25 | 0–20" |
 
 **Cannons & Artillery** — front-capable firepower.
 
-| Weapon | ROF | Pen | Dmg | Sweet | Peak | Falloff/in | Range |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Autocannon | 4 | 6 | 2 | 12" | +1 | −0.22 | 0–26" |
-| Arc Gun | 2 | 7 | 3 | 20" | +1 | −0.18 | 0–32" |
-| Mortar | 3 | 7 | 2 | 18" | +1 | −0.15 | 6–34" |
-| Sniper Cannon | 1 | 6 | 8 | 22" | +2 | −0.15 | 0–28" |
-| Siege Maul | 1 | 7 | 6 | 8" | +1 | −0.30 | 0–16" |
-| Missile Barrage | 4 | 7 | 2 | 20" | +1 | −0.15 | 6–34" |
-| Harpoon | 1 | 7 | 6 | 14" | +2 | −0.28 | 0–22" |
-| Rivet Gun | 6 | 3 | 1 | 6" | +2 | −0.40 | 0–14" |
-| Crossbow | 1 | 7 | 4 | 18" | +3 | −0.25 | 0–24" |
+| Weapon | ROF | Sweet | Peak | Falloff/in | Range |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Autocannon | 4 | 12" | +1 | −0.22 | 0–26" |
+| Arc Gun | 2 | 20" | +1 | −0.18 | 0–32" |
+| Mortar | 3 | 18" | +1 | −0.15 | 6–34" |
+| Sniper Cannon | 1 | 22" | +2 | −0.15 | 0–28" |
+| Siege Maul | 1 | 8" | +1 | −0.30 | 0–16" |
+| Missile Barrage | 4 | 20" | +1 | −0.15 | 6–34" |
+| Harpoon | 1 | 14" | +2 | −0.28 | 0–22" |
+| Rivet Gun | 6 | 6" | +2 | −0.40 | 0–14" |
+| Crossbow | 1 | 18" | +3 | −0.25 | 0–24" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose Accuracy up close.
 
@@ -378,19 +369,19 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 
 ### Melee Weapons
 
-| Weapon | ROF | Pen | Dmg | Acc | RNG |
-|---|:--:|:--:|:--:|:--:|:--:|
-| Sword | 2 | 5 | 3 | – | 2 |
-| Circular Saw | 3 | 5 | 2 | – | 2 |
-| Chainsaw | 3 | 7 | 2 | – | 2 |
-| Claw | 2 | 7 | 3 | +1 | 2 |
-| Lance | 1 | 6 | 7 | +1 | 2 |
-| Wrecking Ball | 1 | 6 | 7 | – | 2 |
-| Bulwark Shield | 1 | 5 | 3 | – | 2 |
-| Flamethrower | 4 | 6 | 2 | +1 | 2 |
-| Anchor | 1 | 7 | 6 | – | 2 |
-| Pressure Claw | 2 | 7 | 3 | +1 | 2 |
-| Talon | 2 | 5 | 3 | +1 | 2 |
+| Weapon | ROF | Acc | RNG |
+|---|:--:|:--:|:--:|
+| Sword | 2 | – | 2 |
+| Circular Saw | 3 | – | 2 |
+| Chainsaw | 3 | – | 2 |
+| Claw | 2 | +1 | 2 |
+| Lance | 1 | +1 | 2 |
+| Wrecking Ball | 1 | – | 2 |
+| Bulwark Shield | 1 | – | 2 |
+| Flamethrower | 4 | +1 | 2 |
+| Anchor | 1 | – | 2 |
+| Pressure Claw | 2 | +1 | 2 |
+| Talon | 2 | +1 | 2 |
 
 ### Weapon Upgrades
 
@@ -400,26 +391,26 @@ Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures*
 |---|---|---|---|
 | Mini Gun | Suppressive Fire (Shock) | Extended Belt (+2 ROF; 1s add heat) | Suppression Lock |
 | Double MG | Gyro Mount (reroll a miss) | Pinning Burst (4+ hits → −1 action) | Kneecapper |
-| Autocannon | Depleted Core (+1 Penetration) | AP Shells (Armour Piercing) | Penetrator Rounds |
+| Autocannon | Depleted Core (grants Penetration) | AP Shells (Armour Piercing) | Penetrator Rounds |
 | Arc Gun | Ion Burn (Incendiary) | Systems Overload (−1 action) | Ion Storm |
 | Mortar | Cluster Shells (2nd location) | Airburst Fuze (ignores cover) | Barrage |
-| Sniper Cannon | Marksman Optics (Precision) | Cold Bore (+3 Penetration vs undamaged) | Enfilade |
-| Siege Maul | Reinforced Head (+1 Damage) | Breaching Round (Hull no-repair) | Piledriver Protocol |
+| Sniper Cannon | Marksman Optics (Precision) | Cold Bore (grants Penetration vs undamaged) | Enfilade |
+| Siege Maul | Reinforced Head (grants Damage) | Breaching Round (Hull no-repair) | Piledriver Protocol |
 | Missile Barrage | Swarm Warheads (+1 ROF) | Shaped Charges (Armour Piercing) | Fire Control Lock |
-| Sword | Duelist's Balance (Precision) | Opportunist (+3 Penetration vs disrupted) | Superconductor Edge |
+| Sword | Duelist's Balance (Precision) | Opportunist (grants Penetration vs disrupted) | Superconductor Edge |
 | Circular Saw | Tempered Teeth (Armour Piercing) | Sunder (−1 max SP struck) | Dismember |
 | Chainsaw | Ripper Teeth (Rend) | Bloodletter (+1 ROF vs damaged) | Redline Governor |
 | Claw | Rending Talons (Rend) | Vice Grip (Impale) | Breach Grip |
-| Lance | Couched Reach (+2" reach) | Full Tilt (+3 Penetration charge) | Skewer |
-| Wrecking Ball | Haymaker (+1 Damage) | Momentum Swing (+2 Penetration charge) | Tow Chain |
+| Lance | Couched Reach (+2" reach) | Full Tilt (grants Penetration on a charge) | Skewer |
+| Wrecking Ball | Haymaker (grants Damage) | Momentum Swing (grants Penetration on a charge) | Tow Chain |
 | Bulwark Shield | Tower Shield (front+side) | Anvil Boss (riposte) | Emplacement |
 | Flamethrower | Sticky Fuel (Rend) | Napalm (Burning) | Conflagration |
-| Harpoon | Barbed Head (Impale) | Taut Cable (+3 Penetration vs pinned/engaged) | Harpoon Winch |
+| Harpoon | Barbed Head (Impale) | Taut Cable (grants Penetration vs pinned/engaged) | Harpoon Winch |
 | Rivet Gun | Rapid Feed (+2 ROF) | Staple Burst (4+ hits → −1 action) | Rivet Lock |
 | Anchor | Fluked Head (Armour Piercing) | Dead Weight (no Disengage next) | Ground Anchor |
 | Pressure Claw | Hardened Jaws (Armour Piercing) | Crush Grip (−1 max SP) | Hydraulic Vice |
-| Crossbow | Fletched Bolts (Precision) | Steady Aim (+3 Penetration in sweet band) | Pinning Bolt |
-| Talon | Honed Talons (+1 Penetration) | Exploit Wound (+3 Penetration vs damaged location) | Evisceration |
+| Crossbow | Fletched Bolts (Precision) | Steady Aim (grants Penetration in sweet band) | Pinning Bolt |
+| Talon | Honed Talons (grants Penetration) | Exploit Wound (grants Penetration vs damaged location) | Evisceration |
 
 #### Tuned / Prototype Upgrade Mechanics
 
@@ -544,7 +535,7 @@ Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weap
 Four components (Hull / Tracks / Turret / Engine). **Cold** — no heat, no overheat rolls, no Shut Down, **no Sprint** (Move only — Sprint spends heat a cold kind hasn't got). **One weapon** from the shared unit-weapon list (flat Penetration, no weight-class scaling). No equipment, no Prepare. **2 actions** per activation. Speed **3"** ⚙.
 
 Hit table (D12): 1–4 Hull · 5–7 Tracks · 8–10 Turret · 11–12 Engine.
-Toughness ⚙: Hull **T6** · Tracks **T5** · Turret **T5** · Engine **T4**.
+Toughness ⚙ is per-location (Hull · Tracks · Turret · Engine), tuned in the catalog.
 
 At 0 SP on Turret: the Tank's single gun is destroyed — a Tank armed only with a ranged weapon has no attack until repaired (a melee-armed Tank can still strike). Cascade at 0 on any part follows §8 by role: structural / power / mobility / weapon effects match the Rig set.
 
@@ -552,18 +543,18 @@ At 0 SP on Turret: the Tank's single gun is destroyed — a Tank armed only with
 
 Four components (Hull / Legs / Mount / Engine). Cold like a Tank, faster and lighter. **One weapon** from the shared unit-weapon list. No equipment, no Prepare. **3 actions** per activation. Speed **4"** ⚙.
 
-Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Toughness ⚙ (Medium-Rig grade): Hull **T5** · Legs **T4** · Mount **T4** · Engine **T3**.
+Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Toughness ⚙ is per-location (Hull · Legs · Mount · Engine), Medium-Rig grade, tuned in the catalog.
 
 ### Shared unit weapons (Tanks + Walkers only) ⚙
 
-| Weapon | Type | ROF | Pen | Acc (near/far) | RNG (near/far) |
-|---|---|:--:|:--:|:--:|:--:|
-| Tank Cannon | ranged | 1 | 12 | 0 / −1 | 12" / 24" |
-| Autocannon Mount | ranged | 3 | 8 | 0 / −1 | 12" / 24" |
-| Coaxial MG | ranged | 6 | 5 | +1 / −1 | 9" / 18" |
-| Rocket Pod | ranged | 2 | 10 | 0 / 0 | 15" / 30" |
-| Dozer Blade | melee | 1 | 10 | 0 | 2" |
-| Ram Spike | melee | 1 | 11 | +1 | 2" |
+| Weapon | Type | ROF | Acc (near/far) | RNG (near/far) |
+|---|---|:--:|:--:|:--:|
+| Tank Cannon | ranged | 1 | 0 / −1 | 12" / 24" |
+| Autocannon Mount | ranged | 3 | 0 / −1 | 12" / 24" |
+| Coaxial MG | ranged | 6 | +1 / −1 | 9" / 18" |
+| Rocket Pod | ranged | 2 | 0 / 0 | 15" / 30" |
+| Dozer Blade | melee | 1 | 0 | 2" |
+| Ram Spike | melee | 1 | +1 | 2" |
 
 Penetration is **flat** — no weight-class modifier applies. Close combat requires a **melee** weapon (Dozer Blade or Ram Spike); a Tank / Walker fielding only a ranged weapon cannot fight in melee.
 
@@ -586,9 +577,9 @@ Without a Damage module, the unit keeps the Sidearm.
 
 **Sidearm** ⚙ — a weak plinker, flat Penetration like the rest of the unit-weapon list:
 
-| Weapon | Type | ROF | Pen | Acc (near/far) | RNG (near/far) |
-|---|---|:--:|:--:|:--:|:--:|
-| Sidearm | ranged | 2 | 4 | 0 / 0 | 6" / 12" |
+| Weapon | Type | ROF | Acc (near/far) | RNG (near/far) |
+|---|---|:--:|:--:|:--:|
+| Sidearm | ranged | 2 | 0 / 0 | 6" / 12" |
 
 Module actions — each costs **1 action**; cold, no heat:
 
