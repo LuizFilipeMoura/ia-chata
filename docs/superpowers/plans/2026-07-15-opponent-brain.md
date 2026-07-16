@@ -762,6 +762,14 @@ git commit -m "test(bot): bot-vs-bot games terminate and reproduce from a seed" 
 
 **Files:** `server/routes/game.js` or `server/ws.js` — grep for where activations are driven.
 
+**DONE (2026-07-16).** `driveBots(room)` (shared/bot/index.js) advances every bot side to the
+next human decision point; hooked into the command route (`server/routes/game.js`) after each
+applied command, digital rooms only. Tested at the module level (bot-vs-bot terminates, stops
+at a human's turn, physical no-op) and over HTTP (a human's ready starts the game and driveBots
+plays both bot sides to a terminal state). **Open follow-up:** `sides[i].bot` has no command
+verb — it is a lobby field, set directly for now. Exposing it (and a bot-vs-bot lobby) is a
+small addition gated on the V2 battle UI, which is not built.
+
 When an activation opens for a side with `bot` set, run `runBotActivation`. Digital rooms only.
 
 **Also resolve the mandatory Answer gate for a bot side (E3's finding).** When
