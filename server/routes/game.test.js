@@ -171,11 +171,26 @@ test("a human starts a match against a bot over HTTP and the bot plays out", asy
   const body = await res.json();
   assert.equal(res.status, 200);
 
-  // The bot side was filled to mirror the human (2 light rigs) and the game ran.
+  // The bot side was filled to mirror the human (2 light rigs) and the game started.
   const botRigs = body.state.rigs.filter((r) => (r.owner || "a") === "b");
   assert.equal(botRigs.length, 2);
   assert.equal(body.state.game.started, true);
-  // driveBots advanced play past the start (a round tick or a final outcome).
-  assert.ok(body.state.game.outcome != null || body.state.game.round >= 1,
-    `expected the bot game to be under way: phase ${body.state.game.phase}`);
+  // The human readied first, so side a is the SECOND activator and holds the
+  // opening Answer token. driveBots correctly stalls at that human-owned gate — no
+  // bot has activated yet. This documents why the next step is needed.
+  assert.equal(body.state.game.pendingAnswer?.side, "a");
+  assert.ok(body.state.rigs.filter((r) => (r.owner || "a") === "b").every((r) => !r.activated),
+    "the bot must not have activated while the human still owes the opening Answer");
+
+  // Human resolves the opening Answer over HTTP (brace on one of their rigs). That
+  // clears the gate, and the same POST's driveBots hook plays out the bot's first
+  // activation before the response returns.
+  const ans = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "answer", attrs: { name: "H1", prep: "brace", side: "a" } }, side: "a" });
+  const played = await ans.json();
+  assert.equal(ans.status, 200);
+  assert.equal(played.state.game.pendingAnswer, null);
+  // Concrete proof the bot acted: side b (the first activator) has activated a rig.
+  const botPlayed = played.state.rigs.filter((r) => (r.owner || "a") === "b");
+  assert.ok(botPlayed.some((r) => r.activated === true),
+    `expected the bot to have activated a rig: turn ${played.state.game.turn?.side}, round ${played.state.game.round}`);
 });
