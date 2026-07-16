@@ -723,11 +723,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }));
   let impacts = [];
   // Drama (§7 spill / §8 kill tier) — player-facing lines for the resolution's
-  // `effects`. `critWound` records the wound that tore a location open or killed
-  // the rig, so that once the damage loop below has run, that die's tone can be
-  // promoted to `crit`.
+  // `effects`. `critWounds` collects EVERY wound that tore a location open or
+  // killed the rig, so that once the damage loop below has run, each of those
+  // dice can be promoted to `crit`. A volley can do both (tear a location open,
+  // then kill on a later wound); both dice earn CRIT, one per `effects` line.
   const drama = [];
-  let critWound = null;
+  const critWounds = [];
   let location = null;
   // Hoisted for the ledger's location step. Stays null on an aimed shot (no d12
   // is rolled — the player chose the part) and on a volley that never landed.
@@ -817,12 +818,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
         if (wasAlive && target.destroyed) {
           // A wreck doesn't also report its parts.
           drama.push(`${weaponName} — ${target.name} gutted in a single blow`);
-          critWound = h;
+          critWounds.push(h);
           continue;
         }
         if (wasFull && after === 0) {
           drama.push(`${weaponName} — ${location} torn open in one blow`);
-          critWound = h;
+          critWounds.push(h);
         }
         // Independent of the line above, not exclusive with it: one wound can
         // both zero the location and carry through. The already-wrecked case
@@ -832,16 +833,17 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
           drama.push(`${weaponName} — through and through (${spilled} SP spilled)`);
         }
       }
-      // The die that tore a location open — or killed the rig outright — earns
+      // Every die that tore a location open — or killed the rig outright — earns
       // CRIT. The wound rolls were pushed above, before applyDamage ran, so they
       // could not know then; hence the promotion here.
-      // This must stay OUTSIDE the damage loop, for two reasons:
-      //  - the kill branch `continue`s past the loop tail, so promoting next to
-      //    the tear-open assignment would never fire on a kill; and
-      //  - `critWound` is last-write-wins, so one read here promotes exactly one
-      //    die, where promoting at each assignment would leave TWO dice reading
-      //    CRIT on a volley that tears a location open and then kills.
-      if (critWound) woundRolls[impacts.indexOf(critWound)].tone = "crit";
+      // This must stay OUTSIDE the damage loop: the kill branch `continue`s past
+      // the loop tail, so promoting inline would never fire on a kill. Promoting
+      // the whole list here also means a volley that tears a location open on one
+      // wound and kills on a later one lights up BOTH dice — one per `effects`
+      // line — instead of last-write-wins keeping only the kill die. The list
+      // holds at most two entries (one tear-open + one kill; the kill branch's
+      // `continue` keeps a single wound that does both from being counted twice).
+      for (const h of critWounds) woundRolls[impacts.indexOf(h)].tone = "crit";
       if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
         ctx.sunderLocation?.(target, location);
       }

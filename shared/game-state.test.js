@@ -6391,3 +6391,56 @@ test("physical rooms still take the player's declared values verbatim", () => {
   } });
   assert.equal(res.ok, true, "no geometry, no refusal — the human measured it");
 });
+
+test("F3-E: a volley that tears a location open AND kills marks BOTH dice CRIT", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Claw";                 // ROF 2, Damage 3
+  b1.weaponUpgrades.melee = "rending-talons"; // grants Rend (+1 Damage) → sp 4 per wounding hit
+  const a1 = findRig(r, "a1");
+  // A small full engine pool: wound 1 (sp 4) zeroes it from full (tear-open),
+  // wound 2 (sp 4) spends past 0 and kills (engine is a power part).
+  a1.engine = { sp: 4, max: 4, destroyed: false, heat: 0 };
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "aimed", weapon: "melee", target: "a1",
+    loc: "engine", arc: "front", range: "near",
+    dice: { toHit: [6, 6], wounds: [10, 10] }, // both hit, both wound
+  } });
+
+  const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
+  assert.ok(attack.effects.some((e) => /torn open/.test(e)), "tear-open effect fired");
+  assert.ok(attack.effects.some((e) => /gutted/.test(e)), "kill effect fired");
+
+  const woundRolls = attack.rolls.filter((roll) => /^wound /.test(roll.label));
+  assert.equal(woundRolls.length, 2, "two wound dice on a ROF-2 volley");
+  const crits = woundRolls.filter((roll) => roll.tone === "crit");
+  assert.equal(crits.length, 2, "BOTH the tear-open die and the kill die read CRIT");
+});
+
+test("F3-E: one wound that both zeroes-from-full and kills marks exactly ONE die CRIT", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const b1 = findRig(r, "b1");
+  b1.weapons.melee = "Claw";
+  b1.weaponUpgrades.melee = "rending-talons"; // sp 4 per wounding hit
+  const a1 = findRig(r, "a1");
+  // Engine max 3: a single sp-4 wound zeroes it from full (tear-open) AND spends
+  // one point past 0 (kill). The kill branch `continue`s past the tear-open push,
+  // so the die is collected once.
+  a1.engine = { sp: 3, max: 3, destroyed: false, heat: 0 };
+  applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "aimed", weapon: "melee", target: "a1",
+    loc: "engine", arc: "front", range: "near",
+    dice: { toHit: [6, 1], wounds: [10] }, // one lands, one misses → a single wound
+  } });
+
+  const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
+  assert.ok(attack.effects.some((e) => /gutted/.test(e)), "kill effect fired");
+  const woundRolls = attack.rolls.filter((roll) => /^wound /.test(roll.label));
+  assert.equal(woundRolls.length, 1, "one landing wound");
+  const crits = woundRolls.filter((roll) => roll.tone === "crit");
+  assert.equal(crits.length, 1, "exactly one CRIT die — not double-counted");
+});
