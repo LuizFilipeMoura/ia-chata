@@ -59,16 +59,29 @@ function shieldNegatesArc(target, arc) {
   return shieldCoverage(target).negate.includes(arc);
 }
 
+// The RAW hit expectation, ROF × P(hit), with NO arc preference and NO earned-arc
+// zeroes. This is the quantity the engine's own to-hit step produces — rollToHit
+// ignores arc (arc is a wound-step modifier), and a negating shield still lets
+// the dice land (it zeroes the wound, not the hit). So this is what the sampling
+// validation (evaluate.test.js) compares against the real engine's mean.
+export function rawExpectedHits(attacker, target, slot, opts) {
+  const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
+  if (!profile) return 0;
+  const aim = computeModifiedAim(attacker, profile, { ...opts, target });
+  return (profile.rof || 1) * pHit(aim);
+}
+
 // Expected hits for one shot from `attacker` at `target` with weapon `slot`
 // ("longRange" | "melee"), given the derived geometry in `opts` ({ arc, distance,
-// cover, round }). Zero for an earned zero (a rake into a front arc, or a shield
-// that negates the arc); otherwise ROF × P(hit) × the arc preference.
+// cover, round }). This is the SCORING quantity: rawExpectedHits scaled by the
+// arc preference, and zeroed on an earned zero (a rake into a front arc, or a
+// shield that negates the arc). Those earned zeroes are wound-step facts the raw
+// hit rate cannot see — folded in here because the bot scores damage-through, not
+// dice in the air.
 export function expectedHits(attacker, target, slot, opts) {
   const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
   if (!profile) return 0;
-  const factor = arcFactor(profile, opts.arc);
-  if (factor === 0) return 0;                        // earned zero — rake into a front arc
-  if (shieldNegatesArc(target, opts.arc)) return 0;  // earned zero — shield negates the arc
-  const aim = computeModifiedAim(attacker, profile, { ...opts, target });
-  return (profile.rof || 1) * pHit(aim) * factor;
+  if (arcBonus(profile, opts.arc) == null) return 0;   // earned zero — rake into a front arc
+  if (shieldNegatesArc(target, opts.arc)) return 0;     // earned zero — shield negates the arc
+  return rawExpectedHits(attacker, target, slot, opts) * arcFactor(profile, opts.arc);
 }
