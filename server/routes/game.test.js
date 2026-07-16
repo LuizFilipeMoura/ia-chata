@@ -6,7 +6,7 @@ import path from "node:path";
 import express from "express";
 import { createStore } from "../store.js";
 import { createGameRouter } from "./game.js";
-import { CHASSIS } from "../../shared/game-state.js";
+import { CHASSIS, claimSide, applyCommand } from "../../shared/game-state.js";
 
 // Two real catalogue chassis — HTTP adds go through enforceChassis, which only
 // admits canonical loadouts.
@@ -118,4 +118,30 @@ test("POST /command/check surfaces an enforceChassis rejection as ok:false", asy
 test("POST /command on an unknown room is 404", async () => {
   const res = await post("/api/game/NOPE/command", { cmd: { verb: "action", attrs: { name: "Atk", action: "move" } }, side: "a" });
   assert.equal(res.status, 404);
+});
+
+test("a bot side plays itself out after a human command (driveBots hook)", async () => {
+  // Build a digital bot-vs-bot room directly in the store (adds bypass the HTTP
+  // chassis gate; the sides[i].bot flag has no command verb yet — it is a lobby
+  // field set here directly). Ready side A directly, then POST side B's ready:
+  // that command starts the game, and the route's driveBots hook plays BOTH bot
+  // sides to a terminal state before the response is sent.
+  const room = store.getOrCreateRoom("BOTHOOK");
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 2; i++) {
+      applyCommand(room, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, longRange: "Autocannon", melee: "Claw" } });
+    }
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  room.game.sides[0].bot = "aggressive";
+  room.game.sides[1].bot = "cagey";
+  applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" });
+  const res = await post("/api/game/BOTHOOK/command", { cmd: { verb: "ready", attrs: {} }, side: "b" });
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.ok(body.state.game.outcome != null || body.state.game.round > 1,
+    `driveBots did not advance the bot game: phase ${body.state.game.phase}, round ${body.state.game.round}`);
 });

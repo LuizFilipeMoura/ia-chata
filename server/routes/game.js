@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { claimSide, applyCommand, checkCommand, lastRejectionReason, publicState, resolveChassis, upgradeNature, countPrototypes, normalizeEquipment, equipmentUpgradeNature } from "../../shared/game-state.js";
+import { driveBots } from "../../shared/bot/index.js";
 
 // Server-side commissioning guard: a Rig may only be added as one of the fixed
 // chassis loadouts. Resolve the command's attrs to a chassis (by id, else by
@@ -91,6 +92,11 @@ export function createGameRouter(store, hub) {
         state: publicState(room, req.body?.side),
       });
     }
+    // A human command may have handed the floor to a bot side (its activation, or
+    // a gate it owns). Play every bot side out to the next human decision point
+    // before persisting/broadcasting, so the pushed state already reflects the
+    // bot's whole turn. No-op unless the room is digital and has a bot side.
+    driveBots(room);
     store.persist();
     hub.broadcast(room);
     res.json({ version: room.version, state: publicState(room, req.body?.side) });

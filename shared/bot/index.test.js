@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { chooseAction, runBotActivation, sideBotOf } from "./index.js";
+import { chooseAction, runBotActivation, driveBots, sideBotOf } from "./index.js";
 import { PRESETS } from "./score.js";
-import { createRoom, claimSide, applyCommand, checkCommand, findRig, autoDeploy } from "../game-state.js";
+import { createRoom, claimSide, applyCommand, checkCommand, findRig, autoDeploy, MAX_ROUNDS } from "../game-state.js";
 import { computeObjectives, scatterTerrain } from "../field.js";
 
 function mulberry32(seed) {
@@ -137,4 +137,52 @@ test("the bot never proposes a command the engine rejects", () => {
       }
     }
   }
+});
+
+// A locked digital room with a mirrored 2-light squadron per side and per-side
+// bot presets, both sides readied (so maybeStartGame deploys + rolls initiative).
+function bvbRoom(botA, botB) {
+  const opts = { random: mulberry32(5) };
+  const room = createRoom("DRIVE");
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 2; i++) {
+      applyCommand(room, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, longRange: "Autocannon", melee: "Claw" } });
+    }
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  room.game.sides[0].bot = botA;
+  room.game.sides[1].bot = botB;
+  applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" }, opts);
+  applyCommand(room, { verb: "ready", attrs: {} }, { side: "b" }, opts);
+  return room;
+}
+
+test("driveBots plays a bot-vs-bot game to a terminal state", () => {
+  const room = bvbRoom("aggressive", "cagey");
+  driveBots(room, { random: mulberry32(5) });
+  assert.ok(room.game.outcome != null || room.game.round > MAX_ROUNDS,
+    `expected a terminal state, got round ${room.game.round} phase ${room.game.phase}`);
+});
+
+test("driveBots stops and hands control back at a human's turn", () => {
+  const room = bvbRoom("aggressive", null);   // side b is human
+  driveBots(room, { random: mulberry32(5) });
+  assert.notEqual(room.game.phase, "finished", "should not have finished the game for the human");
+  const g = room.game;
+  const humanTurn = g.phase === "activation" && g.turn && sideBotOf(room, g.turn.side) == null;
+  const humanGate = !!g.pendingReaction
+    || (g.pendingAnswer && sideBotOf(room, g.pendingAnswer.side) == null);
+  assert.ok(humanTurn || humanGate,
+    `expected to be waiting on the human; phase=${g.phase} turn=${g.turn?.side} pendingAnswer=${g.pendingAnswer?.side}`);
+});
+
+test("driveBots is a no-op in a physical room", () => {
+  const room = createRoom("PHYSDRIVE");   // physical by default
+  claimSide(room, { name: "A", side: "a" });
+  const before = JSON.stringify(room.game);
+  driveBots(room);
+  assert.equal(JSON.stringify(room.game), before, "physical rooms are never driven");
 });

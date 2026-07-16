@@ -76,7 +76,13 @@ export function runBotActivation(room, rig, options = {}) {
     applyCommand(room, { verb: "activate", attrs: { name: rig.name } }, {}, options);
   }
   const log = [];
-  const active = () => room.game.turn?.activeRigId === rig.id && room.game.phase === "activation";
+  // Active only while this rig genuinely holds the floor. A pendingReaction (a
+  // target's Evasive/Return we just tripped) or pendingBlast (a §9 cook-off we
+  // just caused) parks the activation until it is resolved — stop cleanly so the
+  // driver (driveBots) can clear it, then resume this same rig on the next pass.
+  const active = () => room.game.turn?.activeRigId === rig.id
+    && room.game.phase === "activation"
+    && !room.game.pendingReaction && !room.game.pendingBlast;
   for (let guard = 0; guard < 12; guard++) {
     // A command can end the activation out from under us — a kill that annihilates
     // the enemy side ends the game and nulls the turn, a destroyed engine parks a
@@ -90,4 +96,56 @@ export function runBotActivation(room, rig, options = {}) {
   // Only end the activation if it is still ours to end.
   if (active()) applyCommand(room, { verb: "endactivation", attrs: { name: rig.name } }, {}, options);
   return log;
+}
+
+// Advance the game as far as the BOTS can carry it, then stop at the next point
+// that needs a human (or a terminal state). Called after every applied command
+// (server-side) so a bot side plays itself out without a human clicking through
+// its turn. Digital rooms only. It only ever touches gates and turns that belong
+// to a bot side: a human's turn, a human-owned reaction, or a human-owned blast
+// all return control immediately. `options.random` threads the RNG (omit for live
+// play → real randomness).
+export function driveBots(room, options = {}) {
+  if (room.mode !== "digital") return;
+  const isBot = (side) => side != null && sideBotOf(room, side) != null;
+  for (let guard = 0; guard < 2000; guard++) {
+    const g = room.game;
+    if (g.phase === "finished" || g.outcome) return;
+    // Mandatory Answer-token gate — only clear it for a bot side (minimal brace).
+    if (g.pendingAnswer) {
+      if (!isBot(g.pendingAnswer.side)) return;   // a human still owes their answer
+      const side = g.pendingAnswer.side;
+      const rig = room.rigs.find((r) => (r.owner || "a") === side && !r.destroyed && r.preparation == null);
+      if (!rig) return;
+      applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side } }, {}, options);
+      continue;
+    }
+    // §9 munition cook-off — clear it (empty targets, no secondary blast) only
+    // when a bot caused it; a human declares their own blast.
+    if (g.pendingBlast) {
+      const src = room.rigs.find((r) => r.id === g.pendingBlast.sourceId);
+      if (!src || !isBot(src.owner)) return;
+      applyCommand(room, { verb: "blast", attrs: { targets: [] } }, {}, options);
+      continue;
+    }
+    // A pending reaction is always a defender's decision; bots never arm the
+    // pre-resolution preps that create one, so this is a human's to resolve.
+    if (g.pendingReaction) return;
+    // Initiative is a mutual dice roll with no decision — roll it whenever a bot
+    // is in the game so a bot side never stalls waiting on the human to click it.
+    if (g.phase === "initiative") {
+      if (!room.game.sides.some((s) => s.bot)) return;
+      applyCommand(room, { verb: "initiative", attrs: {} }, {}, options);
+      continue;
+    }
+    if (g.phase === "activation") {
+      const t = g.turn;
+      if (!t || !isBot(t.side)) return;           // a human's turn — hand control back
+      const rig = room.rigs.find((r) => (r.owner || "a") === t.side && !r.destroyed && !r.activated);
+      if (!rig) return;
+      runBotActivation(room, rig, options);
+      continue;
+    }
+    return;
+  }
 }
