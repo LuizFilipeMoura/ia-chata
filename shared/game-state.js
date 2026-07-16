@@ -1369,18 +1369,22 @@ function generateBotOpponent(room, humanSideId, botSideId, random = Math.random)
     shuffleInPlace(pool, random);
     for (let i = 0; i < count; i++) { picks.push(pool[i]); used.add(pool[i].id); }
   }
+  // Build every rig before committing any: if a pick fails to construct, reject
+  // without mutating the room, so an aborted generation can't wedge the room
+  // (a half-built bot side would fail parity yet skip regen on the next ready).
+  const built = [];
   for (const pb of picks) {
     // Standard build: default (Field) weapon upgrades + the chassis's primary
     // suggested equipment — the same construction the seed verb uses.
-    const unit = makeUnit("rig", room.nextRigId, uniqueRigName(room, pb.name), botSideId, {
+    const unit = makeUnit("rig", room.nextRigId + built.length, uniqueRigName(room, pb.name), botSideId, {
       weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
       chassis: pb.id, sp: pb.sp,
       equipment: CHASSIS_PRIMARY_EQUIPMENT[pb.id] ?? null,
     });
-    if (!unit) continue;
-    room.nextRigId++;
-    room.rigs.push(unit);
+    if (!unit) return { error: "The bot could not build a matching force." };
+    built.push(unit);
   }
+  for (const unit of built) { room.rigs.push(unit); room.nextRigId++; }
   return { ok: true };
 }
 
