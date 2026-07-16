@@ -110,7 +110,7 @@ the magnitudes being tuned.** The bot still sees:
 | objectives, Priority Target | geometry | untouched by damage |
 | rear/side **ordering** | sign of `arcBonus` | ordering yes — *magnitude no* (see Arc, below) |
 
-The rake veto is free and exact. The rear/side *preference* is not — arc changes STR, not
+The rake veto is free and exact. The rear/side *preference* is not — arc changes Penetration, not
 accuracy, so v1 must shape it by hand. See "Arc: v1 needs an explicit factor" below; it is
 v1's biggest compromise and the reason the damage term is deferred, not cancelled.
 
@@ -136,7 +136,7 @@ v1's biggest compromise and the reason the damage term is deferred, not cancelle
 
 Adding damage means completing the formula:
 
-- `woundTarget(effStr, toughness)` gives the wound TN on a D10, so `P(wound) = (11 − TN)/10`.
+- `woundTarget(pen, toughness)` gives the wound TN on a D10, so `P(wound) = (11 − TN)/10`.
 - `Damage` is the weapon's `dmg` **plus its per-wound riders: Rend** (+1, §13 — Chainsaw, Claw,
   Flamethrower) **and Evisceration** (+1 against an already-damaged location, §13 — Talon).
   That is the whole sum: `rollWounds` computes `sp = dmg + rend + evisc`.
@@ -148,8 +148,8 @@ Adding damage means completing the formula:
 > multiplies Damage. Penetration now buys `P(wound)` and nothing else; the clamp wastes the
 > excess, by design, and the band was compressed to 3–7 so the waste is rare.
 
-**The blocker.** `effStr` is not obtainable today. `strBreakdown` is exported but covers only
-the *attacker's* STR. The **defender's** ten modifiers are computed inline inside
+**The blocker.** `effPen` is not obtainable today. `penBreakdown` is exported but covers only
+the *attacker's* Penetration. The **defender's** ten modifiers are computed inline inside
 `rollWounds`, interleaved with the dice:
 
 `arcBonus` · Kneecapper's limb exception · **Brace** (−2 front) · **Harden** (−1/−2 by
@@ -160,7 +160,7 @@ Piledriver's guard-break
 A scorer built from `computeModifiedAim` + `woundTarget` alone would be blind to Brace,
 shields, and every plating upgrade — mis-scoring exactly the situations that decide games.
 
-So: **extract a pure `effectiveStrAgainst(attacker, target, profile, location, opts)` out of
+So: **extract a pure `effectivePenAgainst(attacker, target, profile, location, opts)` out of
 `rollWounds`**, and have both `rollWounds` and the bot call it. One source of truth, no
 drift. This modifies `shared/combat.js` — the file the digital-battlefield spec held at a
 zero diff. That property was a *means, not an end*: it proved the derivation seam sat in the
@@ -272,19 +272,19 @@ than to search.
 ### Arc: v1 needs an explicit factor, and this is the honest part
 
 **With the damage term, the game's incentives need no encoding** — Raking Fire's front-arc
-veto, rear's +4 STR, and Brace's −2 all live in the wound step, so an EV built on
-`effectiveStrAgainst` values them automatically. That is the main argument for using the
+veto, rear's +3 Penetration, and Brace's −2 all live in the wound step, so an EV built on
+`effectivePenAgainst` values them automatically. That is the main argument for using the
 engine's own functions rather than approximating.
 
 **v1 does not get that for free, and this is its biggest compromise.** `expectedHits` is
-`ROF × P(hit)`, and **arc does not affect accuracy — it affects STR**. So a hits-only score is
+`ROF × P(hit)`, and **arc does not affect accuracy — it affects Penetration**. So a hits-only score is
 *identical* front, side, and rear. Left alone, the v1 bot would have **no reason to flank at
 all**, which deletes the single most important behaviour we want.
 
 So v1 multiplies offence by an explicit arc factor, read from the exported `arcBonus`:
 
 ```js
-// arcBonus is the wound step's arc modifier. v1 cannot use it as STR (no wound
+// arcBonus is the wound step's arc modifier. v1 cannot use it as Penetration (no wound
 // term), so it reads it as a PREFERENCE instead: null is a hard veto, and a
 // bigger bonus means a better angle. This is a heuristic bridge, not the real
 // maths — it preserves the ORDERING (rear > side > front, rake-front = never)
@@ -360,7 +360,7 @@ it needs a UI.
 unknown id, so `makeRig` **cannot build an un-upgraded weapon**. Every legal rig carries its
 field upgrade; a bare-weapon fixture is testing a loadout that cannot be commissioned. This
 silently made the balance sweep measure Field twice, then invalidated two test fixtures and
-every base-STR worked example in the Overmatch spec. `weapon-sweep.mjs` now asserts its own
+every base-Penetration worked example in the Overmatch spec. `weapon-sweep.mjs` now asserts its own
 tier ladder on startup to catch it. Bot fixtures must build rigs through `makeRig`, never by
 hand-assembling a weapon.
 
