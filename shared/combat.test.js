@@ -734,7 +734,7 @@ test("Exploit Wound grants +3 Penetration only against an already-damaged struck
 test("Evisceration adds +1 D on a location at or below half max SP", () => {
   const rig = makeRig("r3", "Shrike", "medium", "A", { longRange: "Crossbow", melee: "Talon" });
   rig.weaponUpgrades = { longRange: "fletched-bolts", melee: "evisceration" };
-  const prof = effectiveWeaponProfile("melee", "Talon", rig); // Penetration 5, D3
+  const prof = effectiveWeaponProfile("melee", "Talon", rig); // Penetration 6, D3
   // Hull 3/7 -> 3 <= 3.5 half-dead, so a landed wound deals D3 +1 = 4.
   const halfDead = { weightClass: "medium", hull: { sp: 3, max: 7 } };
   const out = rollWounds(rig, halfDead, prof, "hull", { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -1023,7 +1023,7 @@ test("Penetrator Rounds forces the 3rd Autocannon volley's hits to wound, bypass
   assert.equal(attacker.autocannonSlowNext, false);
   attacker.loaded.longRange = true;
   // 3rd volley: 1 landed hit (die 6). The wound die is a natural 1 — Autocannon
-  // Penetration 6 vs a medium hull (T5) is TN 5, so that die would FAIL on its own. The
+  // Penetration 7 vs a medium hull (T5) is TN 4, so that die would FAIL on its own. The
   // upgrade skips the wound roll entirely, so it still deals the weapon's D2.
   // A failing die is the point: a 10 here would wound with or without the upgrade.
   const res = resolveAttack(room, attacker, target, {
@@ -1782,11 +1782,11 @@ test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wound
 test("rollWounds — a natural 1 never wounds however lopsided", () => {
   const attacker = { weightClass: "medium" };
   const target = makeRig(2, "B", "light", "b", { longRange: "Autocannon", melee: "Claw" });
-  // pen is pinned locally, not read off the catalog: this test needs the TN to
-  // clamp to the floor, which on a light hull (T4) takes effPen 8. The Wrecking
-  // Ball's base is pen 6 since the heavies compressed, and this fixture shoots
-  // front-arc with no upgrade, so a catalog read would leave TN at 4 —
-  // unclamped, and the natural-1 rule would not be the reason the roll fails.
+  // pen is pinned locally so a future Wrecking Ball Pen retune can't disturb this
+  // fixture: clamping the TN to the floor of 2 on a light hull (T4) takes effPen
+  // >= 8, and pinning pen at 10 (front-arc, no upgrade) puts effPen at exactly 10.
+  // At the floor TN of 2 the natural 1 is the SOLE failing face — the whole point,
+  // which a higher unclamped TN would blur.
   const profile = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 };
   // Penetration 10 + medium 0 + front 0 = 10 vs light hull T4 => TN 6+4-10 = 0 -> clamp 2.
   const out = rollWounds(attacker, target, profile, "hull",
