@@ -84,11 +84,19 @@ The full formula, validated by the balance sweep, is
 expectedHits = ROF × P(hit)
 ```
 
-**Why.** The damage calculations are actively being tuned (`F2-B — price ROF in heat` is the
-live next step). Everything on the right of `P(hit)` — STR, wound TN, `D`, Overmatch — is
-mid-flight. `P(hit)` is not: it is accuracy, cover, and range-band maths, and nothing in the
-balance work touches it. Scoring hits gets a bot playing today against numbers that are
-stable, and defers the damage term until the arsenal settles.
+**Why.** The damage calculations keep moving. Everything on the right of `P(hit)` —
+Penetration, wound TN, `Damage` — has been retuned twice since this was written: Overmatch
+shipped (2026-07-15), then the **penetration rework** deleted it and compressed the
+Penetration band to 3–7 (`2026-07-16-penetration-rework-design.md`, SHIPPED 2026-07-16).
+`P(hit)` is not: it is accuracy, cover, and range-band maths, and nothing in the balance work
+touches it. Scoring hits gets a bot playing today against numbers that are stable, and defers
+the damage term until the arsenal settles.
+
+> **`F2-B — price ROF in heat` is SHELVED, not the live next step.** This sentence cited it as
+> live and reasoned from it. `2026-07-15-rof-heat-design.md` measured the tax as *worse than
+> doing nothing* — weapon spread **3.0× → 3.9×** — and shelved it. ROF still multiplies both
+> `P(wound)` and `Damage`, and that remains **unsolved**; the penetration rework only stopped
+> making it worse. **Nothing scheduled will settle the arsenal on F2-B's account.**
 
 **This costs less than it sounds, because the structural rules are exported separately from
 the magnitudes being tuned.** The bot still sees:
@@ -111,9 +119,12 @@ v1's biggest compromise and the reason the damage term is deferred, not cancelle
 1. **The wound half.** Brace's −2, Reactive Plating's −1/−2, Harden, Reactive Armor, Breach
    Grip's crack, and `toughness` all live inside `rollWounds` and are invisible. The bot will
    not understand that a braced rig is a poor frontal target.
-2. **Weapon quality.** It cannot tell a Wrecking Ball (STR 10, ROF 1) from a Rivet Gun
-   (STR 3, ROF 6) — it prefers volume. Per the balance findings that is **currently correct**
-   (3.65 vs 2.98 SP); F2-B is what makes it wrong, and by then the damage term should be back.
+2. **Weapon quality.** It cannot tell a Wrecking Ball (Penetration 6, Damage 8, ROF 1) from a
+   Rivet Gun (Penetration 3, Damage 1, ROF 6) — it prefers volume. That is **still correct**,
+   by a narrower margin than before: at the field floor the Rivet Gun measures **3.64
+   SP/attack** to the Wrecking Ball's **3.24** (`report-2026-07-16-penetration.txt`; it was
+   3.64 to 3.01 pre-rework). **F2-B is what would have made it wrong, and it is shelved** —
+   so prefer-volume stays right until the ROF economy is solved some other way.
 3. **Three ROF bonuses.** `rollToHit` computes an *effective* ROF internally — `+2` Full Auto,
    `+Bloodletter` (vs a damaged target), `+Redline Governor` (attacker heat over cap) — and
    that logic sits inside the function. It cannot be read by calling it, because `rollToHit`
@@ -126,8 +137,16 @@ v1's biggest compromise and the reason the damage term is deferred, not cancelle
 Adding damage means completing the formula:
 
 - `woundTarget(effStr, toughness)` gives the wound TN on a D10, so `P(wound) = (11 − TN)/10`.
-- `D` is the weapon's damage dice **plus `strOvermatchD(effStr, toughness)`** — STR past the
-  wound clamp converts to extra D (§7.5, shipped 2026-07-15).
+- `Damage` is the weapon's `dmg` **plus its per-wound riders: Rend** (+1, §13 — Chainsaw, Claw,
+  Flamethrower) **and Evisceration** (+1 against an already-damaged location, §13 — Talon).
+  That is the whole sum: `rollWounds` computes `sp = dmg + rend + evisc`.
+
+> **There is no Penetration term in Damage — do not add one back.** This bullet used to read
+> *"plus `strOvermatchD(effStr, toughness)`"*. **That function no longer exists.** Overmatch
+> was deleted by `2026-07-16-penetration-rework-design.md` (SHIPPED 2026-07-16) precisely
+> because feeding Penetration into Damage hands the benefit to high-ROF weapons — ROF
+> multiplies Damage. Penetration now buys `P(wound)` and nothing else; the clamp wastes the
+> excess, by design, and the band was compressed to 3–7 so the waste is rare.
 
 **The blocker.** `effStr` is not obtainable today. `strBreakdown` is exported but covers only
 the *attacker's* STR. The **defender's** ten modifiers are computed inline inside
@@ -370,11 +389,18 @@ it in a game. Neither replaces the other, and nobody should build a third.
 
 ## Live coupling to the balance work
 
-The scorer reads the real weapon maths, so **any rebalance moves every bot decision.**
-`F2-B (price ROF in heat)` is named as the live next step in the balance findings — expected
-damage is `ROF × P(hit) × P(wound) × D`, and ROF *multiplies*, so a rivet gun (STR 3, ROF 6)
-currently out-damages a wrecking ball (STR 10, ROF 1), 3.65 to 2.98. Until that is priced,
-**the bot will rationally prefer high-ROF weapons** — and it will be right to.
+The scorer reads the real weapon maths, so **any rebalance moves every bot decision.** Expected
+damage is `ROF × P(hit) × P(wound) × Damage`, and ROF *multiplies* — so a rivet gun
+(Penetration 3, Damage 1, ROF 6) still out-damages a wrecking ball (Penetration 6, Damage 8,
+ROF 1) at the field floor, **3.64 to 3.24** (`report-2026-07-16-penetration.txt`). **The bot
+will rationally prefer high-ROF weapons — and it will be right to.**
+
+**`F2-B (price ROF in heat)` is shelved, not pending — do not wait for it.** The balance
+findings named it the live next step and this paragraph reasoned from it as though the
+preference were temporary. It is not: `2026-07-15-rof-heat-design.md` measured the tax as
+*worse than doing nothing* (spread **3.0× → 3.9×**) and shelved it. The penetration rework
+narrowed the gap — the wrecking ball climbed **3.01 → 3.24** on the Damage payback — without
+closing it, and no scheduled work will.
 
 This is an argument for the analytic EV rather than hand-tuned weapon preferences: it tracks
 the rebalance automatically. But do not tune the bot's weight presets against an arsenal
