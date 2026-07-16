@@ -289,21 +289,38 @@ git commit -m "feat(game-state): digital objectives score from geometry at recov
 
 ---
 
-### Task E3: Verify the headless digital game loop closes
+### Task E3: Verify the headless digital game loop closes — DONE (2026-07-16)
 
-**Files:** `shared/bot/game.test.js` is written in Phase 4; this task is a **read + spot-check**,
-no new mechanic unless a gap is found.
+**Files:** none — a throwaway driver, no engine change.
 
-Bot-vs-bot drives a whole game by command with no UI. Confirm the loop closes headlessly:
-ready both sides → `autoDeploy` → round → activations (`action` + `endactivation`) →
-`runRecovery` → `advanceRound`, up to `MAX_ROUNDS`, ending in `room.game.outcome`.
+**Verified.** A digital game runs to a terminal state headlessly, driven only by commands:
+`ready` both sides (→ `maybeStartGame` deploys + rolls initiative), then per round: clear the
+Answer gate → activate/endactivation each rig → `runRecovery` (E2 scores + `advanceRound`).
+Across seeds 1/2/3/7/42 with trivial activations it reaches `phase: "finished"`, round 11
+(MAX_ROUNDS 10 + one sudden-death round), `outcome: draw`, deterministically per seed. VP is
+0–0 only because trivial rigs sit in their deploy corners and never contest a marker — E2 runs
+every recovery, nobody controls anything.
 
-- [ ] Read the round/initiative/activation plumbing (`handoff`, `runRecovery`, `advanceRound`,
-  the readiness gate). Write a throwaway script that drives two sides with scripted trivial
-  actions (end activation immediately) for a few rounds.
-- [ ] If it closes to an outcome or the round cap: **DONE, no code.** Record what you drove.
-- [ ] If a seam is missing (e.g. digital readiness, or recovery never fires without a claim),
-  report it as a small blocking task with the exact line — do **not** force a fix into E2.
+**THE FINDING — the driver must clear a MANDATORY gate each round (a requirement on Tasks 4.3
+and 5.1, not an engine gap).** `applyInitiative` (game-state.js:1414) sets `room.game.pendingAnswer`
+for the **second** activator every round — the Answer-token opportunity. It is **mandatory**:
+`useV2BattleWatchers.tsx:101` calls it "mandatory facedown-reaction placement", the drawer is
+`dismissable: false`, and the **only** runtime path that clears it is the `answer` verb
+(game-state.js:3736) — there is **no decline**. `activate` is rejected with "Resolve the pending
+reaction first" (game-state.js:3578) until it clears. So any headless driver — the bot's game
+loop and the server bot wiring — MUST, at the top of each round, issue for the pending side:
+```js
+if (room.game.pendingAnswer) {
+  const side = room.game.pendingAnswer.side;
+  const rig = room.rigs.find((r) => (r.owner || "a") === side && !r.destroyed && r.preparation == null);
+  applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side } }, {}, options);
+}
+```
+`prep: "brace"` is the minimal legal policy — spend the free token, never plan a reaction with
+it. Drain `pendingReaction` (from attacks) and `pendingBlast` (from a destroyed engine) the
+same way — a trivial driver hits neither, but a shooting bot will. This is the "minimal answer
+policy" Tasks 4.3 and 5.1 reference; it is NOT the strategic reaction use that stays out of
+scope.
 
 ---
 
@@ -699,6 +716,12 @@ git commit -m "test(bot): the bot never proposes an illegal command" -- shared/b
 
 The instrument the whole design rests on. No UI.
 
+**The game loop must clear the mandatory Answer gate each round (E3's finding).** Before
+activating, resolve `room.game.pendingAnswer` for the pending side with the minimal policy
+(`answer` verb, `prep: "brace"`, first eligible rig), and drain any `pendingReaction` /
+`pendingBlast` the same way. Without it `activate` is rejected and the loop stalls in round 1.
+Copy the exact snippet from Task E3.
+
 - [ ] **Tests:**
 ```js
 test("two bots play a full game to a terminal state", () => {
@@ -733,6 +756,11 @@ git commit -m "test(bot): bot-vs-bot games terminate and reproduce from a seed" 
 **Files:** `server/routes/game.js` or `server/ws.js` — grep for where activations are driven.
 
 When an activation opens for a side with `bot` set, run `runBotActivation`. Digital rooms only.
+
+**Also resolve the mandatory Answer gate for a bot side (E3's finding).** When
+`room.game.pendingAnswer.side` is a bot side, auto-issue the minimal `answer` (`prep: "brace"`,
+first eligible rig) so the round can start without a human. Same for a `pendingReaction` /
+`pendingBlast` owned by a bot side.
 
 - [ ] Read the existing activation flow first. If the wiring is awkward, report rather than
   force it — the bot is fully usable from tests without it, and the V2 UI isn't built yet.

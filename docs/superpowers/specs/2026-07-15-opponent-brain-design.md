@@ -453,9 +453,15 @@ it in a game. Neither replaces the other, and nobody should build a third.
   destroys the ability to unit-test the opponent. Revisit once the deterministic version
   exists and is tuned.
 - **Search beyond 1 ply** — the scorer is the leaf evaluator a future search would need.
-- **Reactions** — the bot won't spend Answer tokens or trigger Prepares. Blocked anyway by
-  Task 10b of spec 1: three reaction paths (Return Fire, Riposte, Exploit) still take
-  client-declared geometry.
+- **Reactions (strategic use)** — the bot won't *plan* a reaction: it won't pick Answer preps
+  for value, won't trigger Prepares tactically, and won't resolve an incoming `pendingReaction`
+  with judgement. Blocked anyway by Task 10b of spec 1: three reaction paths (Return Fire,
+  Riposte, Exploit) still take client-declared geometry. **What the bot MUST do** — verified by
+  the E3 loop check — is *clear* the engine's **mandatory** Answer-token gate each round
+  (`applyInitiative` sets `pendingAnswer` for the second activator; the only runtime clear is
+  the `answer` verb, and `activate` is gated until it clears). The minimal policy is to brace
+  the first eligible rig — spend the free token, plan nothing with it. Clearing the gate is in
+  scope (the game can't start without it); using reactions well is not.
 - **Deployment choices** — `autoDeploy` already places everyone.
 
 ## Live coupling to the balance work
