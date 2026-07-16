@@ -142,7 +142,7 @@ export const CHASSIS_PRIMARY_EQUIPMENT = {
 
 // The presets a bot side can run. This mirrors the keys of PRESETS in
 // shared/bot/score.js and is duplicated here on purpose: importing the bot
-// module into game-state.js would create a cycle (bot/index.js imports
+// module into game-state.js would create a cycle (shared/bot/score.js imports
 // game-state.js). Keep in sync when a preset is added.
 export const BOT_PRESETS = ["balanced", "aggressive", "cagey"];
 
@@ -1345,6 +1345,61 @@ function sidesAtParity(room) {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   for (const k of keys) if ((a[k] || 0) !== (b[k] || 0)) return false;
   return true;
+}
+
+// Build a random force for a bot opponent that mirrors the human side's rig
+// composition — same count per weight class — at Standard loadouts, keeping the
+// battle-wide "one chassis per battle" invariant (no chassis repeats across
+// either side). Digital rooms are Rigs-only, so only rig weight-class counts
+// matter. Deterministic under an injected `random`. Returns { ok: true }, or
+// { error } when a weight class can't be filled from the remaining distinct
+// chassis — the caller rejects the ready so nothing partial is committed.
+function generateBotOpponent(room, humanSideId, botSideId, random = Math.random) {
+  const used = new Set(room.rigs.map((r) => r.chassis).filter(Boolean));
+  const need = {};
+  for (const r of room.rigs) {
+    if ((r.owner || "a") !== humanSideId) continue;
+    if (kindOf(r) !== "rig") continue;
+    need[r.weightClass] = (need[r.weightClass] || 0) + 1;
+  }
+  const picks = [];
+  for (const [cls, count] of Object.entries(need)) {
+    const pool = CHASSIS.filter((c) => c.class === cls && !used.has(c.id));
+    if (pool.length < count) {
+      return { error: `Not enough distinct ${cls} chassis remain for the bot to match your force — field fewer ${cls} Rigs.` };
+    }
+    // Fisher-Yates shuffle under the injected random, then take `count`.
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    for (let i = 0; i < count; i++) { picks.push(pool[i]); used.add(pool[i].id); }
+  }
+  for (const pb of picks) {
+    // Standard build: default (Field) weapon upgrades + the chassis's primary
+    // suggested equipment — the same construction the seed verb uses.
+    const unit = makeUnit("rig", room.nextRigId, uniqueRigName(room, pb.name), botSideId, {
+      weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
+      chassis: pb.id, sp: pb.sp,
+      equipment: CHASSIS_PRIMARY_EQUIPMENT[pb.id] ?? null,
+    });
+    if (!unit) continue;
+    room.nextRigId++;
+    room.rigs.push(unit);
+  }
+  return { ok: true };
+}
+
+// When a human readies against a flagged-but-empty bot opponent, build its
+// mirrored force so parity holds at the instant of readiness (design: lazy gen,
+// Approach A). No-op for human-vs-human, and idempotent once the bot side is
+// populated. Returns { ok } / { error } from generateBotOpponent.
+function fillBotOpponentIfNeeded(room, humanSideId, random = Math.random) {
+  const opp = room.game.sides.find((s) => s.id !== humanSideId);
+  if (!opp || !opp.bot) return { ok: true };
+  const hasRigs = room.rigs.some((r) => (r.owner || "a") === opp.id);
+  if (hasRigs) return { ok: true };
+  return generateBotOpponent(room, humanSideId, opp.id, random);
 }
 
 // Adding is always allowed — composition parity (sidesAtParity), not a cap,
@@ -3391,13 +3446,23 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     if (!side) reject("Unknown side.");
     else if (room.game.started) reject("The battle has already started.");
     else if (!room.field.locked) reject("Lock the field before readying up.");
-    else if (!sidesAtParity(room)) reject("Both sides must field a mirrored composition before you can ready.");
     else if (side.ready) reject("This side is already ready.");
     else {
-      side.ready = true;
-      if (!room.game.deployOrder.includes(side.id)) room.game.deployOrder.push(side.id);
-      maybeStartGame(room, options.random);
-      changed = true;
+      // Lazy bot fill: a flagged, empty bot opponent gets a mirrored force built
+      // here, before the parity check, so parity holds against the human's final
+      // composition (design: human-vs-bot, Approach A). No-op for human-vs-human.
+      const fill = fillBotOpponentIfNeeded(room, side.id, options.random);
+      if (fill.error) reject(fill.error);
+      else if (!sidesAtParity(room)) reject("Both sides must field a mirrored composition before you can ready.");
+      else {
+        side.ready = true;
+        // Auto-ready a bot opponent so the human's single ready starts the game.
+        const opp = room.game.sides.find((s) => s.id !== side.id);
+        if (opp && opp.bot) opp.ready = true;
+        if (!room.game.deployOrder.includes(side.id)) room.game.deployOrder.push(side.id);
+        maybeStartGame(room, options.random);
+        changed = true;
+      }
     }
   } else if (verb === "setbot") {
     // Flag a side to be driven by the bot at the given preset. Pre-battle,

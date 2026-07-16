@@ -6659,3 +6659,86 @@ test("setbot rejects an unknown preset, a physical room, and a started game", ()
 test("BOT_PRESETS lists exactly the three tunable presets", () => {
   assert.deepEqual([...BOT_PRESETS].sort(), ["aggressive", "balanced", "cagey"]);
 });
+
+// ---------------------------------------------------------------------------
+// Task 2: lazy mirror-force gen + auto-ready when a human readies vs a bot.
+// (Reuses the module-scope seededRandom so a bot-force draw is reproducible.)
+// ---------------------------------------------------------------------------
+
+// Commission one Standard human rig of a given catalogue chassis onto side A.
+function addHumanRig(room, pb, name) {
+  applyCommand(room, { verb: "add", attrs: {
+    name, owner: "a", class: pb.class,
+    longRange: pb.longRange, melee: pb.melee, chassis: pb.id, sp: pb.sp,
+  } }, { side: "a" });
+}
+
+// Build a digital room with side A holding the given chassis and a bot on side B.
+function digitalVsBotRoom(code, humanChassis, preset = "balanced") {
+  const room = createRoom(code);
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  humanChassis.forEach((pb, i) => addHumanRig(room, pb, `H${i + 1}`));
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset } }, { side: "a" });
+  return room;
+}
+
+test("readying against a bot builds a mirrored, distinct-chassis force and starts", () => {
+  const light = CHASSIS.filter((c) => c.class === "light");
+  const medium = CHASSIS.filter((c) => c.class === "medium");
+  const room = digitalVsBotRoom("VSBOT1", [light[0], light[1], medium[0]]);
+  applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" }, { random: seededRandom(7) });
+
+  assert.equal(room.game.started, true, "the match should start on the human's single ready");
+
+  const bot = room.rigs.filter((r) => (r.owner || "a") === "b");
+  assert.equal(bot.filter((r) => r.weightClass === "light").length, 2);
+  assert.equal(bot.filter((r) => r.weightClass === "medium").length, 1);
+
+  const chassis = room.rigs.map((r) => r.chassis).filter(Boolean);
+  assert.equal(new Set(chassis).size, chassis.length, "no chassis repeats across the battle");
+
+  for (const r of bot) {
+    assert.equal(r.equipment, CHASSIS_PRIMARY_EQUIPMENT[r.chassis] ?? null);
+  }
+});
+
+test("bot force generation is deterministic under a seeded random", () => {
+  const light = CHASSIS.filter((c) => c.class === "light");
+  const mk = () => {
+    const room = digitalVsBotRoom("VSBOT2", [light[0], light[1]]);
+    applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" }, { random: seededRandom(42) });
+    return room.rigs.filter((r) => (r.owner || "a") === "b").map((r) => r.chassis).sort();
+  };
+  assert.deepEqual(mk(), mk());
+});
+
+test("readying against a bot rejects when a class pool can't be mirrored", () => {
+  const medium = CHASSIS.filter((c) => c.class === "medium"); // only 4 exist
+  const room = digitalVsBotRoom("VSBOT3", medium);
+  applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" }, { random: seededRandom(1) });
+
+  assert.equal(room.game.started, false, "no game should start");
+  assert.equal(room.rigs.some((r) => (r.owner || "a") === "b"), false, "no bot rigs committed");
+  assert.match(lastRejectionReason() || "", /medium/i);
+});
+
+test("human-vs-human ready is unchanged by the bot fill (no bot flag = no-op)", () => {
+  const light = CHASSIS.filter((c) => c.class === "light");
+  const room = createRoom("VSHUMAN1");
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  addHumanRig(room, light[0], "HA");
+  applyCommand(room, { verb: "add", attrs: {
+    name: "HB", owner: "b", class: light[1].class,
+    longRange: light[1].longRange, melee: light[1].melee, chassis: light[1].id, sp: light[1].sp,
+  } }, { side: "b" });
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" });
+  applyCommand(room, { verb: "ready", attrs: {} }, { side: "b" });
+  assert.equal(room.game.started, true);
+  assert.equal(room.rigs.filter((r) => (r.owner || "a") === "b").length, 1);
+});
