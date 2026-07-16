@@ -133,25 +133,25 @@ A pre-battle **Opponent** selector near the READY row.
 - Sub-copy: the bot mirrors your force at a random Standard loadout; difficulty
   is the preset.
 
-### 5. Verify digital battle + bot turns (1c) — `client/src/v2/battle/`
+### 5. Digital move targeting (1c) — DEFERRED to its own spec
 
-Verification against the E1/E2 seams shipped this cycle. Not new mechanics —
-confirm the human-vs-bot loop runs end-to-end and fix any seam that is still on
-the pre-digital path.
+**Discovery during planning:** the V2 client has **no digital move-targeting
+UI**. `MoveBody` is a physical timed-confirm drawer ("move the model on the
+table, then confirm") — it never emits `{ dest, facing }`, and no other V2 path
+does either. So 1c is not a verification pass over an existing seam; it is a real
+feature: tap the `FieldMap` to choose a destination, pick a facing, and send
+`{ dest, facing }` on the `move`/`sprint` action so E1's path validation runs.
 
-- **Move path:** `MoveBody` sends `{ dest, facing }` on the `move`/`sprint`
-  action so E1's path validation runs (engine re-routes, rejects out-of-reach or
-  >90° pivots). Confirm it is not still on the physical no-position path.
-- **Bot turn render:** after a human command, the server's `driveBots` plays side
-  B to the next human decision point and broadcasts; confirm the client renders
-  the bot's whole resolved turn from the pushed state (the turn arrives resolved
-  — no "bot is thinking" gap needed).
-- **Objectives:** digital rooms auto-score objectives (E2) and advance; confirm
-  the UI reflects geometry-derived VP rather than waiting on a manual claim.
-- **Reaction interplay:** a human-owned reaction (Evasive / Return) against a bot
-  resolves through the normal `react` verb; `driveBots` stops on a human-owned
-  `pendingReaction` and resumes after. Confirm this path for the preps a human
-  can set today.
+That is a self-contained UI project and gets its own brainstorm → spec → plan.
+It is **out of scope for this plan**. Consequence: after this plan lands, a human
+can start a match against the bot and the **bot plays its whole turn**, but the
+human cannot issue a legal digital *Move* until the targeting UI ships. Every
+other human action that already carries its own geometry (Fire via
+`AttackWizard`, etc.) is unaffected.
+
+The bot-render / objective-auto-score / reaction-pause seams (formerly the rest
+of 1c) are exercised end-to-end by the full-loop route test in this plan (§
+Testing, "Full loop"), so they need no separate verification pass here.
 
 ---
 
@@ -223,3 +223,6 @@ Human issues a command  -> command route -> applyCommand
 - The bot *planning* reactions (thread 4a) and secondary blast targeting (4b).
 - Gemma narration and any LLM-in-the-loop opponent (excluded per current
   direction).
+- **Digital move-targeting UI (1c)** — deferred to its own spec (see §5). Its
+  absence is a known, documented consequence: the human can start and the bot
+  plays, but the human's Move action isn't yet issuable in a digital room.
