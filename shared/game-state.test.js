@@ -6649,6 +6649,11 @@ test("setbot rejects an unknown preset, a physical room, and a started game", ()
   applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "wombat" } }, { side: "a" });
   assert.equal(room.game.sides.find((s) => s.id === "b").bot ?? null, null);
   assert.match(lastRejectionReason() || "", /preset/i);
+  // started game is rejected even in a digital room with a valid preset
+  room.game.started = true;
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "balanced" } }, { side: "a" });
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot ?? null, null);
+  assert.match(lastRejectionReason() || "", /started/i);
 });
 
 test("BOT_PRESETS lists exactly the three tunable presets", () => {
