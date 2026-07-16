@@ -835,14 +835,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       }
       // Every die that tore a location open — or killed the rig outright — earns
       // CRIT. The wound rolls were pushed above, before applyDamage ran, so they
-      // could not know then; hence the promotion here.
-      // This must stay OUTSIDE the damage loop: the kill branch `continue`s past
-      // the loop tail, so promoting inline would never fire on a kill. Promoting
-      // the whole list here also means a volley that tears a location open on one
-      // wound and kills on a later one lights up BOTH dice — one per `effects`
-      // line — instead of last-write-wins keeping only the kill die. The list
-      // holds at most two entries (one tear-open + one kill; the kill branch's
-      // `continue` keeps a single wound that does both from being counted twice).
+      // could not know then; hence the promotion here. Promoting the whole list
+      // in one pass — a volley that tears a location open on one wound and kills
+      // on a later one lights up BOTH dice, one per `effects` line, instead of
+      // last-write-wins keeping only the kill die. The list holds at most two
+      // entries; the kill branch's `continue` (not this pass's placement) is what
+      // keeps a single wound that does both from being counted twice.
       for (const h of critWounds) woundRolls[impacts.indexOf(h)].tone = "crit";
       if (profile.upgradeEffect?.onDamage === "sunder" && impacts.some((h) => h.sp > 0)) {
         ctx.sunderLocation?.(target, location);
