@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { WEIGHT_PEN_MOD } from "./rules.js";
-import { WEAPONS, WEAPON_UPGRADES } from "./game-state.js";
+import { WEAPON_UPGRADES } from "./game-state.js";
 
 // rules.md is a RUNTIME INPUT, not documentation: server/config.js -> server/prompt.js
 // bakes it verbatim into the rules bot's system prompt as "the single source of truth",
