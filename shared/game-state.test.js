@@ -6545,3 +6545,75 @@ test("a physical-room move needs no dest and does not touch pos", () => {
   assert.equal(room.game.turn.actionsUsed, 1, "the move still spent a slot");
   assert.equal(rig.pos, undefined, "physical rigs have no simulated position");
 });
+
+// ---------------------------------------------------------------------------
+// E2 — digital objectives score from geometry at recovery (opponent-brain
+// Phase E). Physical rooms keep the manual claim flow; digital rooms derive
+// control from controlsObjective and advance the round with no human claim.
+// ---------------------------------------------------------------------------
+
+// A digital room with one rig per side and a single centre objective at a known
+// point. Rig positions are left to the caller. Returns { room, a, b, marker }.
+function digitalObjectiveRoom() {
+  const room = digitalRoom("OBJ001");
+  applyCommand(room, { verb: "add", attrs: {
+    name: "A1", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword",
+  } });
+  applyCommand(room, { verb: "add", attrs: {
+    name: "B1", class: "medium", owner: "b", longRange: "Autocannon", melee: "Sword",
+  } });
+  const marker = { x: 27, y: 18, vp: 2 };
+  room.game.objectives = [marker];
+  return { room, a: findRig(room, "A1"), b: findRig(room, "B1"), marker };
+}
+
+test("a digital side scores a marker it alone controls", () => {
+  const { room, a, b, marker } = digitalObjectiveRoom();
+  a.pos = { x: marker.x, y: marker.y };   // sitting on it
+  b.pos = { x: 2, y: 2 };                 // nowhere near
+  const before = room.game.sides.map((s) => s.vp);
+  __test.runRecovery(room);
+  const [va, vb] = room.game.sides.map((s) => s.vp);
+  assert.ok(va > before[0], "the controlling side scored");
+  assert.equal(vb, before[1], "the other side did not");
+});
+
+test("a marker both sides control is contested and scores nobody", () => {
+  const { room, a, b, marker } = digitalObjectiveRoom();
+  a.pos = { x: marker.x, y: marker.y };
+  b.pos = { x: marker.x, y: marker.y };   // both on it
+  const before = room.game.sides.map((s) => s.vp);
+  __test.runRecovery(room);
+  assert.deepEqual(room.game.sides.map((s) => s.vp), before, "contested — nobody scores");
+});
+
+test("a destroyed rig controls nothing", () => {
+  const { room, a, b, marker } = digitalObjectiveRoom();
+  a.pos = { x: marker.x, y: marker.y };
+  a.hull.destroyed = true;   // a real kill — recompute derives rig.destroyed from parts
+  b.pos = { x: 2, y: 2 };
+  const before = room.game.sides.map((s) => s.vp);
+  __test.runRecovery(room);
+  assert.deepEqual(room.game.sides.map((s) => s.vp), before, "a dead holder scores nothing");
+});
+
+test("digital recovery advances the round without a manual vp claim", () => {
+  const { room, a, b } = digitalObjectiveRoom();
+  a.pos = { x: 2, y: 2 };
+  b.pos = { x: 50, y: 34 };
+  const round = room.game.round;
+  __test.runRecovery(room);
+  assert.ok(room.game.round > round, "the round advanced");
+  assert.notEqual(room.game.phase, "recovery", "digital rooms do not rest in recovery");
+});
+
+test("physical recovery still waits for the manual vp claim", () => {
+  const room = createRoom("PHYSREC");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "add", attrs: { name: "P1", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  const round = room.game.round;
+  __test.runRecovery(room);
+  assert.equal(room.game.phase, "recovery", "physical rooms hold in recovery for the claim");
+  assert.equal(room.game.round, round, "and do not advance on their own");
+});

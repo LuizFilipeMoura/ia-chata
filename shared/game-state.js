@@ -9,7 +9,7 @@ import {
 } from "./field.js";
 import {
   radiusOf, terrainPolygons, clearOfTerrain,
-  sightCorridor, arcOf, distanceBetween, meleeInReach,
+  sightCorridor, arcOf, distanceBetween, meleeInReach, controlsObjective,
 } from "./geometry.js";
 import { findPath } from "./pathfind.js";
 import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
@@ -2082,6 +2082,20 @@ function runRecovery(room) {
   room.game.phase = "recovery";
   room.game.recoveryClaims = {};
   room.game.recoveryConflict = null;
+  // Digital rooms score objectives from geometry — there is no human to submit
+  // the §11 claims. A marker exactly one living side controls scores it; a marker
+  // both sides control is CONTESTED and scores nobody, the faithful image of the
+  // physical conflict rule. Then advance immediately, exactly as the vp verb's
+  // clean-claim path does — a digital room never rests in recovery.
+  if (room.mode === "digital") {
+    for (const marker of room.game.objectives || []) {
+      const holders = room.game.sides.filter((s) =>
+        room.rigs.some((r) => (r.owner || "a") === s.id && !r.destroyed
+          && r.pos && controlsObjective(spatial(r), marker)));
+      if (holders.length === 1) holders[0].vp += (marker.vp || 0);
+    }
+    advanceRound(room);
+  }
 }
 
 function bumpHeat(rig, n) {
