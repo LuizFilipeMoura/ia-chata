@@ -1,5 +1,21 @@
 # Penetration Rework Implementation Plan
 
+**Status:** **SHIPPED 2026-07-16** — Tasks 1–11 all landed on branch
+`claude/quizzical-chaum-b0aa09`. **Task 10's falsifier passed:** `ap-shells` went
+**−1.47 → +0.72** (positive), `penetrator-rounds` **−2.77 → −0.63**, and
+`shaped-charges` held at **−0.70** byte-identical — an accidental control, since
+Missile Barrage was already at Pen 7 and no task touched it. The effect appears
+exactly where Penetration was compressed and is precisely zero where it was not.
+Baselines committed: `scripts/balance/report-2026-07-16-penetration.txt`,
+`duel-2026-07-16-penetration.txt`. Full result in the spec's Status block.
+
+> **This plan shipped one false claim of its own — see Task 3.** It said Autocannon
+> and Talon "land on the same floor they had". They do not: both are 2-point nerfs
+> (floor 9 → 7 and 8 → 6). The numbers it told implementers to type were correct; the
+> sentence explaining them was not, and it contradicted the spec. Corrected in place,
+> with the correction marked, because that contradiction is the thing worth
+> remembering about this plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Compress the Penetration band to 3–7, delete Overmatch, pay the six heavies' wasted Penetration back into Damage, and surface the result in the roll console.
@@ -262,7 +278,9 @@ the default upgrade is fitted."
     "Talon":         { rof: 2, pen: 5, dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
 ```
 
-> Autocannon 7 → **6** and Talon 6 → **5** are *base* drops that pair with their field upgrades going +2 → +1 in Task 4. Both land on the same floor they had (Autocannon 7, Talon 6) — but the upgrade becomes a real choice rather than a rubber stamp. Arc Gun and Crossbow have no `pen` field upgrade, so their base **is** their floor.
+> Autocannon 7 → **6** and Talon 6 → **5** are *base* drops that pair with their field upgrades going +2 → +1 in Task 4. They land on floor **Pen 7** and **Pen 6** — and the upgrade becomes a real choice rather than a rubber stamp. Arc Gun and Crossbow have no `pen` field upgrade, so their base **is** their floor.
+>
+> > **These are NERFS, not restorations, and an earlier version of this note said otherwise.** It claimed *"Both land on the same floor they had (Autocannon 7, Talon 6)"*. **False, and verified false:** the old floors were **Autocannon 7 + 2 = Pen 9** and **Talon 6 + 2 = Pen 8**, because the old field upgrades granted **+2**. The new floors are **7** and **6** — Autocannon drops **2 points**, Talon **2 points**. The spec has this right (§2: *"base 7 + 2 = Pen 9, 94% pinned by default"*); **the plan contradicted the spec it implements**, and the claim reached two implementers' briefs before it was caught. If you are updating a fixture, derive from **9 → 7** and **8 → 6**, never from "unchanged".
 >
 > **Crossbow keeps `dmg: 4`.** It is a deliberate low-alpha utility weapon (`ROF × Damage` 4) and the spec scopes F2-C to the six. Do not "fix" it.
 

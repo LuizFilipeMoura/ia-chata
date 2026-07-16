@@ -1,7 +1,43 @@
 # Penetration rework — compress the band to 3–7, delete Overmatch
 
 **Date:** 2026-07-16
-**Status:** approved, not implemented. **Handoff spec — written for an engineer with no prior context.**
+**Status:** **SHIPPED 2026-07-16** — Tasks 1–11 of
+`docs/superpowers/plans/2026-07-16-penetration-rework.md`, on branch
+`claude/quizzical-chaum-b0aa09`. **The falsifier passed.** Written as a handoff spec
+for an engineer with no prior context; kept as the record of what was decided, what
+was measured, and — see below — what this document itself got wrong.
+
+> **What landed.** Band compressed to **3–7**; max floor Penetration **7** (was 13).
+> `ROF × Damage` for the six: **7 / 8 / 6 / 8 / 7 / 6** — all inside the 6–8 band §1
+> predicted. Overmatch deleted from every runtime surface, `woundRaw` inlined back
+> into `woundTarget`. `rules.md` retaught, with derived guards binding its §12/§13
+> tables to `WEAPONS`/`WEAPON_UPGRADES`. Zebra engine 7 → 8, plus tank/engine,
+> walker/hull and walker/engine → 8 (`c7f0a0e`).
+>
+> **The falsifier — the sharpest test of the thesis — passed.** Both harnesses re-run
+> with the same inputs as the committed baselines
+> (`report-2026-07-16-penetration.txt`, `duel-2026-07-16-penetration.txt`):
+>
+> | reliability upgrade | was | now |
+> |---|---|---|
+> | `penetrator-rounds` (Autocannon) | −2.77 | **−0.63** |
+> | `ap-shells` (Autocannon) | −1.47 | **+0.72** — positive |
+> | `shaped-charges` (Missile Barrage) | −0.70 | **−0.70** — byte-identical |
+>
+> **`shaped-charges` is an accidental control, and it is the best evidence here.**
+> Missile Barrage was *already* at Pen 7, so no task touched it. The effect appears
+> exactly where Penetration was compressed and is **precisely zero** where it was not.
+>
+> Heavies climbed: Sniper Cannon **4.14 → 6.82** SP/rd, Harpoon **3.11 → 5.15**. All
+> seven dead levers (arc ratio, `WEIGHT_PEN_MOD`) survived Overmatch's deletion, and
+> four are *stronger* than they were with Overmatch propping them up; Autocannon's arc
+> is live at **×1.30**.
+>
+> **Siege Maul measured 5.52 → 5.52 — and that is the thesis, not a stuck number.**
+> The duel is seeded (`mulberry32`) and the expectation is hand-derivable: **5.55**
+> with Overmatch (Pen 13 / Dmg 5) against **5.48** with the payback (Pen 7 / Dmg 7).
+> Overmatch was paying it almost exactly what Damage now pays. *The Siege Maul is not
+> frightening because it penetrates better.*
 **Depends on:** `2026-07-16-stat-rename-design.md` — this document is written in
 that vocabulary (**Accuracy / Penetration / Damage**, formerly ACC / STR / D).
 Land the rename first.
@@ -203,6 +239,31 @@ never in the table.
 > they are cheap."* It then argued. Assume this document contains an instance of
 > the same error and go looking for it.
 
+### The prediction came true. Found during execution:
+
+**Every number this spec asked for was correct. Three of the sentences explaining
+them were not.** All three are **universals or inferences** — never the magnitudes:
+
+| # | where | the false claim | what is true |
+|---|---|---|---|
+| 1 | **§3**, this spec | Depleted Core and Honed Talons keep +Pen "because their weapons sit at base 5–6 with **ROF ≤ 3**" | **Autocannon is ROF 4.** The decision is right and was measured; the *inference* offered for it does not follow. The `ROF ≤ 3` rule governs **adding** Pen; these two are **cuts**. |
+| 2 | **§5**, this spec | the Damage-8 one-shot window is "**exactly one chassis**" | **Four pools.** The author enumerated `CHASSIS` and missed `UNIT_KINDS.partSp` — tank/engine, walker/hull, walker/engine. Closed by `c7f0a0e`. |
+| 3 | **Task 3**, the plan | Autocannon and Talon "**land on the same floor they had**" | Old floors were **9** and **8** (base + the old +2 upgrade); they land on **7** and **6**. Both are **nerfs**, not restorations. The plan contradicted §2 of the spec it implements, which had it right. |
+
+And a fourth, found only because the third was being written up: the correction to
+(2) first claimed *"the rework created all three"* support-unit windows, reasoning
+from a pre-rework Damage ceiling of **5**. **The ceiling was 7** — `dmg` topped out at
+5 but **Overmatch added +2**. Three of the four windows already existed; the rework
+widened them. **The fix to a false universal was itself a false universal**, from
+reading a column and stopping. See §5.
+
+> **The shape is stable across all four: verifying the artifact is not the same as
+> verifying the sentence describing it.** The weapon table was right every time. What
+> went wrong was *"no"*, *"only"*, *"exactly one"*, *"the same"*, and *"X and Y, **so**
+> Z"* — claims whose domain the author never enumerated, attached to numbers the author
+> did check. **When a claim goes false, re-derive it. Do not hedge it into vagueness** —
+> a vague sentence is unfalsifiable, which is worse than a wrong one.
+
 ---
 
 ## The decision: compress the band to 3–7, delete Overmatch
@@ -342,11 +403,25 @@ weapon that can.
 | **Depleted Core** | Autocannon | +2 Pen | **+1 Pen** (base 6 → 7) | 7 / 2 |
 | **Honed Talons** | Talon | +2 Pen | **+1 Pen** (base 5 → 6) | 6 / 3 |
 
-Depleted Core and Honed Talons survive as Penetration because their weapons sit at
-base 5–6 with **ROF ≤ 3** — low enough to spend a point, slow enough that the point
-doesn't get multiplied. Depleted Core becomes a genuine choice: take it for Pen 7,
-or take **AP Shells** for the reroll instead. Reliability-by-penetration versus
-reliability-by-reroll, on one weapon.
+Depleted Core and Honed Talons survive as Penetration because **both are cuts, and
+both land under the cap.** Depleted Core goes +2 → +1 on a weapon whose base drops
+7 → 6: its floor falls **Pen 9 → 7**, out of the 94%-pinned band and onto the
+standard one. Honed Talons goes +2 → +1 on a base dropping 6 → 5: floor **Pen 8 →
+6**, and Talon stops saturating entirely (69% → 0%). Neither survives because it is
+cheap to keep; each survives because the *weapon* came down far enough that one
+point is now spendable rather than wasted.
+
+> **This is not an instance of the `ROF ≤ 3` rule below, and an earlier draft said it
+> was.** It claimed both weapons "sit at base 5–6 with **ROF ≤ 3**". **Autocannon is
+> ROF 4** — verified, `WEAPONS.longRange["Autocannon"].rof === 4`. The rule governs
+> **adding** Penetration to a weapon that does not have it; these two are being **cut**,
+> and a cut needs no headroom argument. The decision was measured and is right; the
+> reason given for it was not. Do not cite this pair as precedent for a +Pen upgrade at
+> ROF 4.
+
+Depleted Core becomes a genuine choice: take it for Pen 7, or take **AP Shells** for
+the reroll instead. Reliability-by-penetration versus reliability-by-reroll, on one
+weapon.
 
 > **Do not "re-shelve" the freed Penetration onto the low-Pen weapons.** It is the
 > obvious move and it is wrong, twice over. Measured: putting +2 Pen on Sword /
@@ -433,10 +508,72 @@ ledger exists.
 > instant kill. Damage 8 into an engine of max SP **8** lands exactly on zero and
 > does **not** kill.
 
-**This is exactly one chassis: `light-sword-arc` ("Zebra"), the only engine-7 rig in
-the game** (the other six lights are engine 8–9, every medium is 9–11). It needs the
-D12 to roll 11–12 *and* the wound to land — roughly a **10%** window per attack that
-targets it, and only from a Damage-8 weapon (Sniper Cannon, Wrecking Ball).
+**This was claimed to be exactly one chassis: `light-sword-arc` ("Zebra"), the only
+engine-7 rig in the game.** That is true of *rigs* — the other six lights are engine
+8–9, every medium is 9–11 — and it is **false of the game**, which is the claim the
+sentence actually made.
+
+> **Corrected by enumeration, 2026-07-16. There were four windows, not one.** The
+> author enumerated `CHASSIS` and forgot that support units get their pools from
+> `UNIT_KINDS.partSp`, not from a chassis catalog. Vital pools are the `structural`
+> and `power` parts — the two roles `catastrophicAdditional` (§8) kills on:
+>
+> | pool | source | max SP | Damage 8 |
+> |---|---|---|---|
+> | `light-sword-arc` engine | `CHASSIS` | 7 | **kills from full** |
+> | `tank/engine` | `UNIT_KINDS.partSp` | 6 | **kills from full** |
+> | `walker/hull` | `UNIT_KINDS.partSp` | 6 | **kills from full** |
+> | `walker/engine` | `UNIT_KINDS.partSp` | 5 | **kills from full** |
+>
+> **All four were closed** — Zebra by `d0fe8ec` (7 → 8) and the other three by
+> `c7f0a0e` (→ 8 each). 8 is the minimum that closes a window: Damage 8 into a max-8
+> pool lands exactly on zero. **The minimum vital pool anywhere in the game is now 8**,
+> and `game-state.test.js` guards it by walking every kind — including the assertion
+> that any kind with no `partSp` is the rig, so a new kind cannot fall through both
+> checks unnoticed.
+
+**But the rework did not create all three support windows — it created one, and
+widened three.** This is the correction to the correction, and it matters because the
+first version of it repeated the original error at one remove:
+
+- **Pre-rework the per-wound Damage ceiling was 7, not 5.** `dmg` topped out at 5
+  (Siege Maul, Wrecking Ball) — but **Overmatch added up to +2**, and against these
+  toughnesses it paid the full 2. Reading the `dmg` column and stopping there is what
+  produced "5".
+- At that ceiling of 7, **`tank/engine` (6), `walker/hull` (6) and `walker/engine` (5)
+  were already one-shot-able from full** — the first two from side or rear arc, the
+  third from *any* arc. Enumerated across the whole pre-rework catalog × every arc.
+- **Zebra was the only genuinely new window.** Its engine 7 survived the old ceiling of
+  7 exactly — the same land-on-zero rule that closes it at 8 today. Damage 8 broke it.
+
+So the rework's real effect on support units was to make three existing windows *wider
+and cheaper* — no longer needing Overmatch, an arc bonus, or the two heaviest weapons.
+Worth closing either way, and `c7f0a0e` closed them.
+
+**`c7f0a0e`'s own commit message carries this false claim** — it reads *"was safe at
+the old ceiling of 5"* — and it is immutable, so this is the correction of record. Note
+what it also says: *"confirmed by enumerating `UNIT_KINDS.partSp` against both weapon
+catalogs, **not by reasoning**"*. It did enumerate. It enumerated `partSp` against the
+**`dmg` column**, and Overmatch was not in that column. **Enumerating the wrong domain
+looks exactly like enumerating** — which is the same failure as "exactly one chassis",
+one level up.
+
+The Zebra window needed the D12 to roll 11–12 *and* the wound to land — roughly a
+**10%** window per attack that targeted it, and only from a Damage-8 weapon. **Sniper
+Cannon and Wrecking Ball are the only two, and that survives enumeration across every
+upgrade tier, both weapon catalogs, and Rend:** Sniper Cannon reads 8 at every tier
+including bare; Wrecking Ball reads 8 **only with Haymaker** and 7 otherwise. Siege
+Maul and Lance are next at 7. `game-state.test.js` derives this ceiling rather than
+hand-copying it (`topWoundDamage()`), and pins it at 8 so that raising it stops the
+suite loudly instead of being absorbed.
+
+**The ceiling is per-wound, and the stronger reading is false — do not "fix" it.** A
+full *volley* from full can still kill: ROF and Damage multiply, and Flamethrower +
+sticky-fuel (ROF 4 × Damage 3 = **12**), Mini Gun + extended-belt (**10**), Missile
+Barrage + swarm-warheads (**10**) and Chainsaw + ripper-teeth (**9**) all exceed the
+smallest vital pool. That is intended. Several wounds concentrating on one location is
+a dice outcome the game is allowed to have; what §8 must not do is let **one** wound
+take a unit from untouched to dead.
 
 **An earlier draft of this section claimed the opposite** — that a one-blow location
 kill could never be an instant rig kill, because §8 "only fires on a location already
@@ -453,23 +590,41 @@ render:
 | a single wound zeroes a location and **spills** into another | `Siege Maul — through and through → hull` |
 | a single wound zeroes a **hull or engine from full and kills the rig** | `Wrecking Ball — Zebra gutted in a single blow` |
 
-**Open call for the third tier.** A ~10% one-shot kill on the lightest chassis is
-more than "a big hit removes a limb", which is what was approved. Three options, and
-the implementer must not pick silently:
+**Open call for the third tier — RESOLVED 2026-07-16: the user took option (2).** A
+~10% one-shot kill on the lightest chassis is more than "a big hit removes a limb",
+which is what was approved. Three options were put, and the implementer was told not
+to pick silently:
 
 1. **Ship it.** It is one chassis, it needs the engine roll, and a doom-clock rig
    dying to a Wrecking Ball is the fiction working.
-2. **Raise Zebra's engine 7 → 8.** One number in `CHASSIS`, and the one-shot window
-   closes completely — Damage 8 then lands exactly on zero against every rig alive.
+2. ~~**Raise Zebra's engine 7 → 8.**~~ **TAKEN.** One number in `CHASSIS` (`d0fe8ec`),
+   and the one-shot window closes completely — Damage 8 then lands exactly on zero
+   against every rig alive. **Then the enumeration above found three more windows on
+   support units, and `c7f0a0e` applied the same fix to all three** (tank/engine,
+   walker/hull, walker/engine → 8). The rule it sets is the general one: **Damage 8 can
+   zero any vital pool in the game and never one-shots it.**
 3. **Cap Damage at 7.** Costs Sniper Cannon and Wrecking Ball their alpha identity
    and drops `ROF × Damage` to 7. Not recommended — it undoes the payback.
 
-**Recommend (2).** It is a single digit, it preserves every weapon number in this
-spec, and it makes "Damage 8 can zero any engine but never one-shots" a clean,
-teachable rule. Measure first if you disagree — the duel harness prices exactly this.
+The third effect line survives the fix and is not dead code: a wound still kills from
+**partial** health, and `combat.js` announces it. What closed is the **from-full**
+window only.
 
-The second effect line is the sneaky-good one. Spill fires today and the console
-never says so, so players cannot tell why a hull lost SP the attack never targeted.
+**Recommended (2), and (2) is what the user took.** It is a single digit per pool, it
+preserves every weapon number in this spec, and it makes a clean, teachable rule —
+though **not the one this sentence originally stated.** It said *"Damage 8 can zero any
+**engine** but never one-shots"*. Engines were never the whole set: `walker/hull` is a
+`structural` part with the same §8 kill tier, and it needed the same fix. The rule, as
+shipped and as guarded:
+
+> **Damage 8 can zero any vital pool in the game and never one-shots it from full.**
+> Vital = the `structural` and `power` parts, the two roles `catastrophicAdditional`
+> destroys on. The minimum such pool is now **8**, everywhere, across both `CHASSIS`
+> and `UNIT_KINDS.partSp`.
+
+The second effect line was the sneaky-good one, and it shipped: spill already fired and
+the console never said so, so players could not tell why a hull lost SP the attack never
+targeted. It says so now.
 
 ### 6. Re-measure — both harnesses, and the second one matters most
 
