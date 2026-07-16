@@ -19,6 +19,7 @@ import {
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
   autoDeploy, deriveAttackGeometry, meleeReachOf,
 } from "./game-state.js";
+import { partsByRole } from "./unit-kinds.js";
 import { deploymentCorners, deployRadius, scatterTerrain } from "./field.js";
 import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
 
@@ -2101,6 +2102,100 @@ test("no drama line ever claims more SP through than the wound's Damage", () => 
       assert.ok(
         Number(claimed[1]) <= SWORD_DAMAGE,
         `${label}: claimed ${claimed[1]} SP through on a Damage-${SWORD_DAMAGE} wound — ${line}`,
+      );
+    }
+  }
+});
+
+// --- The one-shot kill (§8 power tier) --------------------------------------
+// Wrecking Ball + Haymaker is Damage 8. The weapon lives at `rig.weapons.melee`
+// — a bare `b1.melee =` writes a field nothing reads, and the rig keeps swinging
+// `swordDuel`'s Sword at Damage 3. `weaponUpgrades.melee` is re-pointed for
+// explicitness, not necessity: it still holds the Sword's id, and
+// `normalizeWeaponUpgrade` would fall back to Wrecking Ball's FIRST upgrade,
+// which happens to be haymaker. Naming it means this fixture keeps its Damage 8
+// if that list is ever reordered. The dmg assertion is the fixture proving
+// itself — a swing that silently landed at Damage 7 would prove nothing.
+function haymakerDuel() {
+  const { r, a1, b1 } = swordDuel();
+  b1.weapons.melee = "Wrecking Ball";
+  b1.weaponUpgrades.melee = "haymaker";
+  const profile = effectiveWeaponProfile("melee", b1.weapons.melee, b1);
+  assert.equal(profile.upgrade.id, "haymaker"); // resolved, not merely assigned
+  assert.equal(profile.dmg, 8);
+  assert.equal(profile.rof, 1);
+  return { r, a1, b1 };
+}
+// Hand-rolled rather than reusing `fireSword`, but NOT because its ROF-2 dice
+// arrays break a ROF-1 weapon — a swing consumes only the first element, and
+// fireSword was measured to drive this attack to the same result. The reason is
+// naming: `fireSword` and its "exactly one Sword D3" contract both describe a
+// Sword, and a one-die swing states exactly what a ROF-1 Wrecking Ball rolls.
+function swingBall(r, loc) {
+  applyCommand(r, { verb: "action", attrs: {
+    name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near", cover: 0,
+    dice: { toHit: [6], wounds: [10], location: loc },
+  } });
+  return lastAttack(r).effects;
+}
+
+// Both sides of the §8 boundary, because "does not kill" only means something
+// next to the case that does. `applyDamage` spends SP one point at a time; the
+// kill needs a point spent PAST zero, so Damage N into a full max-N power part
+// lands exactly on zero and the rig lives, while max N-1 dies. The SP pools are
+// poked, not commissioned: this is the applyDamage rule, not a fact about any
+// chassis (the guard below is that). What it protects, measured by mutation: if
+// §8 is ever changed to kill on REACHING zero, raising Zebra's engine to 8 stops
+// buying anything — and the pure-data guard below still passes, because the
+// catalogs would not have moved. Only this test fails.
+test("the §8 power kill needs a point spent past zero — Damage 8 kills a full max-7 engine, not a max-8 one", () => {
+  for (const [max, killed] of [[7, true], [8, false]]) {
+    const { r, a1 } = haymakerDuel();
+    a1.engine.max = max; a1.engine.sp = max; // full, so no earlier wound is in play
+    swingBall(r, 11); // 11 -> engine (power)
+    assert.equal(a1.engine.sp, 0, `max ${max}: the swing zeroes the engine either way`);
+    assert.equal(a1.destroyed, killed, `Damage 8 into a full max-${max} engine: destroyed should be ${killed}`);
+  }
+});
+
+// The chassis-side guard. Hand-copying Zebra's engine number into a test would
+// just be a second place to get it wrong, so this derives BOTH sides from the
+// catalogs and compares them. It has two live halves, each mutation-proven: the
+// pool loop fires if a chassis pool is tidied back under the ceiling, and the
+// Damage-8 pin fires first if any weapon's Damage climbs — which past 8 means
+// clearing Zebra's engine, the lowest pool. The pin is deliberate: a raised
+// ceiling re-opens a balance decision, so it should stop here and be re-taken
+// rather than be absorbed by a comparison that silently still passes.
+//
+// Scope is CHASSIS on purpose, and the narrow claim is the true one: among
+// COMMISSIONED chassis this is now airtight, but it is NOT the only one-shot
+// window in the game. Support units are built from UNIT_KINDS.partSp (tank
+// engine 6, walker engine 5, walker hull 6) and Damage 6-8 weapons one-shot
+// those from full today. Widening this guard to them is a balance decision
+// nobody has taken, so it is left un-asserted rather than quietly asserted.
+test("no chassis can be one-shot from full — every structural/power pool clears the catalog's top Damage", () => {
+  // Damage against a FULL location = base + upgrade dmg + Rend(+1). One upgrade
+  // per slot, so take the best single one. Evisceration is excluded because it
+  // requires sp <= max/2, which a full location is not.
+  let topDmg = 0, topName = null;
+  for (const slot of ["longRange", "melee"]) {
+    for (const [name, w] of Object.entries(WEAPONS[slot])) {
+      for (const u of [{ effect: {} }, ...(WEAPON_UPGRADES[name] || [])]) {
+        const rend = [...(w.perks || []), ...(u.effect?.perks || [])].includes("Rend") ? 1 : 0;
+        const d = w.dmg + (u.effect?.dmg || 0) + rend;
+        if (d > topDmg) { topDmg = d; topName = `${name}${u.id ? ` + ${u.id}` : ""}`; }
+      }
+    }
+  }
+  assert.equal(topDmg, 8, `expected the catalog to top out at Damage 8, got ${topDmg} (${topName})`);
+
+  const vital = [...partsByRole("rig", "structural"), ...partsByRole("rig", "power")];
+  assert.deepEqual(vital, ["hull", "engine"]); // the roles §8 kills on, not a guess
+  for (const c of CHASSIS) {
+    for (const part of vital) {
+      assert.ok(
+        c.sp[part] >= topDmg,
+        `${c.name} (${c.id}) has ${part} ${c.sp[part]} SP — ${topName} deals ${topDmg}, so one wound from full kills it outright`,
       );
     }
   }
