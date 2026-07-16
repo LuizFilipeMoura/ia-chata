@@ -10,7 +10,7 @@
 // continuous and needs pathfinding.
 import { availableActions } from "../battle-view.js";
 import { arcOf, radiusOf, terrainPolygons } from "../geometry.js";
-import { findPath } from "../pathfind.js";
+import { buildGrid, findPathOnGrid } from "../pathfind.js";
 import {
   spatial, deriveAttackGeometry, effectiveWeaponProfile, hasBulwarkShield,
   moveBudget, PREP_TYPES, LOCS,
@@ -165,6 +165,12 @@ function moveCandidates(room, rig, enabled) {
   );
   const objectives = room.game.objectives || [];
   const maxBudget = Math.max(...acts.map((a) => moveBudget(rig, a)));
+  // Build the occupancy grid ONCE and reuse it across every anchor + lattice
+  // probe. findPath rebuilds this whole grid per call; a rig generates dozens of
+  // destination probes per activation, so the shared grid is the difference
+  // between a snappy bot and a minutes-long tuning sweep. The grid depends only on
+  // (field, terrain, other rigs, this radius) — all fixed for one activation.
+  const grid = buildGrid(room.field, polys, blockers, radius);
 
   // Semantic ideal points (may be far — each is capped to the budget below).
   const ideals = [{ pt: { ...from }, reason: "hold and pivot" }];
@@ -210,7 +216,7 @@ function moveCandidates(room, rig, enabled) {
       const distToIdeal = Math.hypot(pt.x - from.x, pt.y - from.y);
       for (const frac of distToIdeal <= budget ? [1] : [budget / distToIdeal, (budget / distToIdeal) * 0.6]) {
         const dest = distToIdeal < 1e-9 ? { ...from } : pointAlong(from, pt, distToIdeal * frac);
-        const route = findPath(room.field, polys, blockers, radius, from, dest);
+        const route = findPathOnGrid(grid, from, dest);
         if (!route || route.length > budget + 1e-6) continue;
         for (const facing of facingsAt(rig, dest, enemies, objectives)) emit(act, dest, facing, reason);
         break; // first reachable fraction wins for this ideal
@@ -218,7 +224,7 @@ function moveCandidates(room, rig, enabled) {
     }
     // Lattice.
     for (const { pt, reason } of lattice) {
-      const route = findPath(room.field, polys, blockers, radius, from, pt);
+      const route = findPathOnGrid(grid, from, pt);
       if (!route || route.length > budget + 1e-6) continue;
       for (const facing of facingsAt(rig, pt, enemies, objectives)) emit(act, pt, facing, reason);
     }

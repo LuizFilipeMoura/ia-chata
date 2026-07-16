@@ -2,8 +2,18 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chooseAction, runBotActivation, sideBotOf } from "./index.js";
 import { PRESETS } from "./score.js";
-import { createRoom, claimSide, applyCommand, findRig } from "../game-state.js";
-import { computeObjectives } from "../field.js";
+import { createRoom, claimSide, applyCommand, checkCommand, findRig, autoDeploy } from "../game-state.js";
+import { computeObjectives, scatterTerrain } from "../field.js";
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 // A digital room with a mover ("Atk") and an enemy ("Foe"), objectives down, the
 // a-side ready to activate Atk (turn open, no rig active yet — so runBotActivation
@@ -83,4 +93,48 @@ test("the guard stops a runaway loop", () => {
   room.game.turn = { side: "a", activeRigId: atk.id, actionsUsed: 0, actionsMax: 50 };
   const log = runBotActivation(room, atk, { random: () => 0.5 });
   assert.equal(log.length, 12, "the guard caps the loop at 12 iterations");
+});
+
+// A deployed digital board with a mirrored 2-light squadron per side, terrain
+// scattered from `seed`. Mirrors digitalRoomWithMirroredRigs (game-state.test.js).
+function deployedBoard(seed) {
+  const room = createRoom("FUZZ");
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  room.field.terrain = scatterTerrain(room.field, mulberry32(seed), { digital: true });
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 2; i++) {
+      applyCommand(room, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, longRange: "Autocannon", melee: "Claw" } });
+    }
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  autoDeploy(room, mulberry32(seed + 1000));
+  room.game.objectives = computeObjectives(room.field);
+  return room;
+}
+
+test("the bot never proposes a command the engine rejects", () => {
+  // If the bot can never emit a command checkCommand rejects, an entire class of
+  // bug is gone — including any drift between the move candidates and E1's own
+  // validation. Any failure here is a real bug: fix the bot, never the assertion.
+  // 60 seeds (not the spec's 200): checkCommand deep-clones the room per proposed
+  // command, so this is already the suite's slowest test at ~12s. 60 boards ×
+  // 4 rigs × 4 actions is a solid sample; bump it locally when hunting a
+  // suspected drift.
+  for (let seed = 1; seed <= 60; seed++) {
+    const room = deployedBoard(seed);
+    for (const rig of room.rigs) {
+      room.game.phase = "activation";
+      room.game.turn = { side: rig.owner || "a", activeRigId: rig.id, actionsUsed: 0, actionsMax: 3 };
+      rig.loaded = { longRange: true, melee: true };
+      for (let i = 0; i < 4; i++) {
+        const cmd = chooseAction(room, rig, PRESETS.balanced);
+        if (!cmd) break;
+        const res = checkCommand(room, cmd);
+        assert.equal(res.ok, true, `seed ${seed}: ${rig.name} proposed ${JSON.stringify(cmd)} → ${res.reason}`);
+        applyCommand(room, cmd, {}, { random: mulberry32(seed + i) });
+      }
+    }
+  }
 });
