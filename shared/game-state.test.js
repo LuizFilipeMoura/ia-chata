@@ -3947,7 +3947,7 @@ test("react resolves a Riposte as a free melee counter and clears the prep", () 
   } });
   assert.equal(room.game.pendingReaction?.kind, "riposte");
   const before = a.hull.sp;
-  // Sword Penetration 6 vs a medium hull (direct at 11): impact die 6 → total 12 → 1 SP.
+  // Sword (Penetration 5, Damage 3) vs a medium hull: location die 1 routes both hits to the hull, and both natural-10 wound dice always wound, so the hull loses real SP.
   // Two guaranteed to-hit 6s so the counter lands regardless of the random rolls.
   applyCommand(room, { verb: "react", attrs: {
     side: "b", attack: { weapon: "melee", arc: "front", range: "near",
