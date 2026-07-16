@@ -94,8 +94,13 @@ export function candidatesFor(room, rig) {
     out.push({ action: "reload" });
   }
 
-  // Parameterless actions, straight through the legality gate.
-  for (const key of ["disengage", "douse", "shutdown"]) {
+  // Parameterless actions, straight through the legality gate. Shut Down is
+  // deliberately omitted: it is enabled at ANY budget (even 0) and, scored by the
+  // positional vp every stationary candidate carries, it reads as a free repeatable
+  // "action" — so the bot would burn its whole activation shutting down on an
+  // objective. The v1 sparring bot has no active heat-dump need (Recovery cools it),
+  // so leaving it out both fixes that and keeps the action budget the real bound.
+  for (const key of ["disengage", "douse"]) {
     if (enabled.has(key)) out.push({ action: key });
   }
 
