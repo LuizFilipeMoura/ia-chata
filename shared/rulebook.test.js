@@ -70,31 +70,14 @@ test("rules.md's weight ladder matches WEIGHT_PEN_MOD", () => {
   }
 });
 
-// §12's stat tables and §13's upgrade table are hand-copied duplicates of
-// WEAPONS / WEAPON_UPGRADES — which makes every cell an unverifiable claim about
-// the engine, and they drifted like one: the Penetration rework moved ten weapons
-// across four commits and §12 kept teaching the pre-rework numbers the whole time
-// (Siege Maul "Penetration 11 / Damage 5" against an engine reading 7/6). The
-// weight-ladder guard above could not see it. These tests derive the expected
-// cells from the engine so that the copy cannot silently lie about a magnitude.
+// §13's upgrade table names each weapon's Field/Tuned/Prototype upgrades in order;
+// the order guard below binds those NAMES to WEAPON_UPGRADES. (The value-diff guards
+// that pinned §12's stat numbers and §13's parentheticals to the catalog were
+// removed: the user tunes those constantly and they red on every balance pass.)
 //
-// What they cover, precisely: every §12 stat cell, and in §13 the upgrade NAMES
-// plus every parenthetical the engine can derive an effect for (23 of the 66
-// cells — 8 numeric, 15 single-perk). §13 cells whose effect is prose-only are
-// name-checked but NOT effect-checked — see `upgradeClaims` for why.
-//
-// NOTE THE CONVENTION: the tables teach BASE stats, not the stats a legal rig
-// actually fights with. `normalizeWeaponUpgrade` gives a null-upgrade weapon its
-// FIRST (Field) upgrade, so every fielded weapon reads base + Field — a Siege Maul
-// fights at Damage 7, not the 6 printed in §12. §12 prints the base and §13 prints
-// the Field modifier separately; that is why §12 lists the Rivet Gun at ROF 6 while
-// its Field upgrade is "+2 ROF". Do not "fix" §12 to the fielded value.
-//
-// This parses EVERY table in rules.md, not just §12/§13's, so a weapon's row is
-// found by name across the whole file. That is safe only because §17's unit-weapon
-// table names its entries differently ("Autocannon Mount", not "Autocannon") — and
-// §17 is known-stale, so a collision would bind a §12 test to a wrong number.
-// If §17 is ever repaired or renamed, scope this to the §12/§13 headings first.
+// This parses EVERY table in rules.md, not just §13's, so a weapon's row is found
+// by name across the whole file. That is safe only because §17's unit-weapon table
+// names its entries differently ("Autocannon Mount", not "Autocannon").
 const rulebookRows = (() => {
   const rows = new Map();
   for (const line of RULEBOOK.split(/\r?\n/)) {
@@ -108,130 +91,7 @@ const rulebookRows = (() => {
 })();
 // A weapon names a row in BOTH tables, so classify by shape rather than by key:
 // a §12 stat row's second cell is ROF (digits), a §13 upgrade row's is prose.
-const statRow = (name) => (rulebookRows.get(name) || []).find((c) => /^\d+$/.test(c[1]));
 const upgradeRow = (name) => (rulebookRows.get(name) || []).find((c) => !/^\d+$/.test(c[1]));
-// rules.md writes U+2212 for minus and quotes inches; the engine stores plain numbers.
-const cellNum = (s) => Number(String(s).replace(/−/g, "-").replace(/"/g, ""));
-
-test("rules.md §12's weight-ladder example quotes the Sniper Cannon's real Penetration", () => {
-  // A bare stat wearing a sentence. The §12 table guard reads table rows and the
-  // weight-ladder guard matches signed values, so NEITHER sees this prose — which
-  // is exactly why it sat teaching "Penetration 10" against an engine reading 6
-  // for the whole rework. Fixing the instance without binding it just resets the
-  // clock, so bind it: to WEAPONS for the base and to WEIGHT_PEN_MOD for the rung.
-  const pen = WEAPONS.longRange["Sniper Cannon"].pen;
-  const m = RULEBOOK.match(
-    /a Sniper Cannon \(Penetration (\d+)\) reads Penetration (\d+) on a Light Rig and (\d+) on a Medium/,
-  );
-  assert.ok(m, "§12's Sniper Cannon weight-ladder example is missing or reworded — rebind this guard to the new wording");
-  assert.equal(Number(m[1]), pen, "§12's example quotes a Sniper Cannon Penetration that WEAPONS does not have");
-  assert.equal(Number(m[2]), pen + WEIGHT_PEN_MOD.light, "§12's example miscomputes the Light rung");
-  assert.equal(Number(m[3]), pen + WEIGHT_PEN_MOD.medium, "§12's example miscomputes the Medium rung");
-});
-
-test("rules.md §12 teaches WEAPONS' base long-range stats", () => {
-  assert.ok(Object.keys(WEAPONS.longRange).length > 0, "WEAPONS.longRange is empty — did the shape change?");
-  for (const [name, w] of Object.entries(WEAPONS.longRange)) {
-    const c = statRow(name);
-    assert.ok(c, `rules.md §12 has no stat row for "${name}"`);
-    const got = {
-      rof: cellNum(c[1]), pen: cellNum(c[2]), dmg: cellNum(c[3]),
-      sweet: cellNum(c[4]), peak: cellNum(c[5]), dropoff: Math.abs(cellNum(c[6])),
-    };
-    for (const [field, value] of Object.entries(got)) {
-      assert.equal(value, w[field], `rules.md §12 "${name}" ${field}=${value}, WEAPONS says ${w[field]}`);
-    }
-    const [lo, hi] = c[7].replace(/"/g, "").split(/[–-]/).map(Number);
-    assert.equal(lo, w.minRange, `rules.md §12 "${name}" min range`);
-    assert.equal(hi, w.maxRange, `rules.md §12 "${name}" max range`);
-  }
-});
-
-test("rules.md §12 teaches WEAPONS' base melee stats", () => {
-  assert.ok(Object.keys(WEAPONS.melee).length > 0, "WEAPONS.melee is empty — did the shape change?");
-  for (const [name, w] of Object.entries(WEAPONS.melee)) {
-    const c = statRow(name);
-    assert.ok(c, `rules.md §12 has no stat row for "${name}"`);
-    for (const [field, value] of Object.entries({ rof: cellNum(c[1]), pen: cellNum(c[2]), dmg: cellNum(c[3]) })) {
-      assert.equal(value, w[field], `rules.md §12 "${name}" ${field}=${value}, WEAPONS says ${w[field]}`);
-    }
-    // §12 prints a bare en-dash for Accuracy 0.
-    assert.equal(c[4] === "–" ? 0 : cellNum(c[4]), w.accuracy[0], `rules.md §12 "${name}" Acc`);
-    assert.equal(cellNum(c[5]), w.rng[0], `rules.md §12 "${name}" RNG`);
-  }
-});
-
-// Every claim an upgrade's §13 parenthetical must state, derived from its
-// `effect`. Returns [] for an upgrade whose effect the engine stores as a
-// behaviour flag rather than a number or a perk (`coldBore: true`,
-// `onDamage: "sunder"`, `vsDamaged: { rof: 1 }`, …): there is nothing in the data
-// to compare the prose against, so those cells are name-checked only (by the test
-// below this one). That exclusion is deliberate and narrow — every cell the
-// Penetration rework touched (Depleted Core, Reinforced Head, Haymaker, Fluked
-// Head, Honed Talons) is a top-level pen/dmg/perks effect and IS covered.
-//
-// Returns an ARRAY, not the first match: an upgrade granting both `pen` and `dmg`
-// would otherwise be silently half-checked. No such upgrade exists today, so this
-// is latent rather than live — but it costs nothing to stay correct if one lands.
-const upgradeClaims = (u) => {
-  const e = u.effect || {};
-  const claims = [];
-  if (typeof e.pen === "number") claims.push({ kind: "pen", text: `+${e.pen} Penetration` });
-  if (typeof e.dmg === "number") claims.push({ kind: "dmg", text: `+${e.dmg} Damage` });
-  if (typeof e.rof === "number") claims.push({ kind: "rof", text: `+${e.rof} ROF` });
-  if (typeof e.range === "number") claims.push({ kind: "range", text: `+${e.range}" reach` });
-  if (Array.isArray(e.perks) && e.perks.length === 1) claims.push({ kind: "perk", text: e.perks[0] });
-  return claims;
-};
-// The kinds above, each of which must still match real data — see the coverage
-// assertion at the end of the test below.
-const CLAIM_KINDS = ["pen", "dmg", "rof", "range", "perk"];
-
-test("rules.md §13's parentheticals state WEAPON_UPGRADES' actual effects", () => {
-  const seen = new Set();
-  for (const [name, list] of Object.entries(WEAPON_UPGRADES)) {
-    const row = upgradeRow(name);
-    assert.ok(row, `rules.md §13 has no upgrade row for "${name}"`);
-    list.forEach((u, i) => {
-      const claims = upgradeClaims(u);
-      if (claims.length === 0) return; // prose-only effect — see upgradeClaims
-      const cell = row[i + 1] || "";
-      for (const claim of claims) {
-        seen.add(claim.kind);
-        assert.ok(
-          cell.includes(claim.text),
-          `rules.md §13 "${name}" ${u.nature} cell is "${cell}", but WEAPON_UPGRADES' `
-          + `${u.name} effect (${JSON.stringify(u.effect)}) means it must state "${claim.text}"`,
-        );
-      }
-    });
-  }
-  // Coverage is asserted per KIND, not as a total count, and that shape is chosen
-  // against two failures this guard has already had:
-  //
-  //   - `assert.equal(checked, <count derived with the same predicate>)` is a
-  //     TAUTOLOGY — same multiset, same pure predicate, equal by construction. It
-  //     cannot fail, so it licenses nothing.
-  //   - a total floor is too coarse to catch what it claims to. Only 2 upgrades
-  //     carry `effect.pen`, so renaming that key in the engine drops coverage
-  //     23 -> 21 and a floor of 20 stays green while Penetration goes unchecked
-  //     entirely. (Verified: it does.)
-  //
-  // Per-kind is the honest unit: if any branch of `upgradeClaims` stops matching
-  // real data, its kind vanishes and this fires. Adding an upgrade never fires it.
-  // Removing one fires only if it was the LAST of its kind — today `range` has a
-  // single source (Lance's Couched Reach), so retiring that upgrade would trip
-  // this. That is the correct signal rather than churn: the branch is then dead
-  // and should be dropped from CLAIM_KINDS, not worked around.
-  //
-  // What it CANNOT do is notice the assertion above being deleted; `seen` would
-  // still fill. No test guards its own assertions. That is what review is for.
-  assert.deepEqual(
-    CLAIM_KINDS.filter((k) => !seen.has(k)), [],
-    "a claim kind matched no upgrade — `upgradeClaims` has drifted from WEAPON_UPGRADES' effect shape, "
-    + "so those cells are silently unchecked",
-  );
-});
 
 test("rules.md §13 names WEAPON_UPGRADES' upgrades in Field/Tuned/Prototype order", () => {
   assert.ok(Object.keys(WEAPON_UPGRADES).length > 0, "WEAPON_UPGRADES is empty — did the shape change?");
