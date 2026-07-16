@@ -15,6 +15,7 @@ import {
   NATURES, upgradeNature, countPrototypes,
   chassisById, resolveChassis, SEED_ROSTER, SEED_ROSTER_4V4, CHASSIS, randomSeedRoster,
   CHASSIS_PRIMARY_EQUIPMENT,
+  BOT_PRESETS,
   heatMeter,
   SUPPORT_TEMPLATES, templateById, templatesForKind, SUPPORT_UNITS, SEED_SUPPORT,
   autoDeploy, deriveAttackGeometry, meleeReachOf, moveBudget, spatial,
@@ -6616,4 +6617,40 @@ test("physical recovery still waits for the manual vp claim", () => {
   __test.runRecovery(room);
   assert.equal(room.game.phase, "recovery", "physical rooms hold in recovery for the claim");
   assert.equal(room.game.round, round, "and do not advance on their own");
+});
+
+test("setbot flags a side with a preset in a digital room", () => {
+  const room = createRoom("SETBOT1");
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "aggressive" } }, { side: "a" });
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot, "aggressive");
+});
+
+test("setbot with a null preset clears the flag", () => {
+  const room = createRoom("SETBOT2");
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "cagey" } }, { side: "a" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: null } }, { side: "a" });
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot, null);
+});
+
+test("setbot rejects an unknown preset, a physical room, and a started game", () => {
+  const room = createRoom("SETBOT3");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "cagey" } }, { side: "a" });
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot ?? null, null);
+  assert.match(lastRejectionReason() || "", /digital/i);
+  room.mode = "digital";
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "wombat" } }, { side: "a" });
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot ?? null, null);
+  assert.match(lastRejectionReason() || "", /preset/i);
+});
+
+test("BOT_PRESETS lists exactly the three tunable presets", () => {
+  assert.deepEqual([...BOT_PRESETS].sort(), ["aggressive", "balanced", "cagey"]);
 });

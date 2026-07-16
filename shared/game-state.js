@@ -140,6 +140,12 @@ export const CHASSIS_PRIMARY_EQUIPMENT = {
   "medium-crossbow-talon": "targeting-computer",
 };
 
+// The presets a bot side can run. This mirrors the keys of PRESETS in
+// shared/bot/score.js and is duplicated here on purpose: importing the bot
+// module into game-state.js would create a cycle (bot/index.js imports
+// game-state.js). Keep in sync when a preset is added.
+export const BOT_PRESETS = ["balanced", "aggressive", "cagey"];
+
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
 // weight classes (3 medium / 3 light). All chassis
 // ids are unique, honouring the no-mirror-matchup invariant (AGENTS.md).
@@ -3393,6 +3399,19 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       maybeStartGame(room, options.random);
       changed = true;
     }
+  } else if (verb === "setbot") {
+    // Flag a side to be driven by the bot at the given preset. Pre-battle,
+    // digital rooms only. `null` preset clears the flag (opponent = Human).
+    // Roster generation and auto-ready happen later, in the `ready` path
+    // (design: lazy gen). sideBotOf (shared/bot/index.js) reads sides[i].bot.
+    const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    const side = room.game.sides.find((s) => s.id === sideId);
+    const preset = a.preset == null ? null : String(a.preset).toLowerCase();
+    if (!side) reject("Unknown side.");
+    else if (room.mode !== "digital") reject("Bots play only in digital battles.");
+    else if (room.game.started) reject("The battle has already started.");
+    else if (preset !== null && !BOT_PRESETS.includes(preset)) reject("Unknown bot preset.");
+    else { side.bot = preset; changed = true; }
   } else if (verb === "reset") {
     for (const rig of room.rigs) {
       for (const loc of LOCS) { rig[loc].sp = rig[loc].max; rig[loc].destroyed = false; }
