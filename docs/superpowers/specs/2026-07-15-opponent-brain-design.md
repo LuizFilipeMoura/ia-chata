@@ -1,9 +1,24 @@
 # The Opponent Brain — Design
 
-**Date:** 2026-07-15
-**Status:** Approved, not yet planned
+**Date:** 2026-07-15 · **Restructured:** 2026-07-16
+**Status:** Approved, plan restructured (merged engine seams + bot into one plan).
 **Sub-project:** 2 of 2. Spec 1 is the digital battlefield
-(`2026-07-14-digital-battlefield-design.md`), Tasks 1–10 done.
+(`2026-07-14-digital-battlefield-design.md`).
+
+> **Restructure note (2026-07-16).** Two things moved since this was first written and both
+> reshaped the *plan*, not the *design*:
+>
+> 1. **Combat rework (A).** Overmatch shipped then was deleted; the Penetration band was
+>    compressed to 3–7; CRIT-every-decisive-die and catastrophic spill landed. **v1 is
+>    insulated** — it scores `ROF × P(hit)` and *nothing in the rework touched `P(hit)`*, which
+>    was this design's founding bet. A only rewrites the **deferred** damage term (see below):
+>    `effectiveStrAgainst`/Overmatch → `effectivePenAgainst`, Penetration buys `P(wound)` only.
+> 2. **Spec 1 is not finished (B).** Spec 1 shipped the pure geometry (`geometry.js`,
+>    `pathfind.js`, `autoDeploy`, the derivation seam) but **not** the gameplay seams the bot
+>    rides on: digital rooms still don't *apply* a move (the `move` action spends heat and a
+>    slot but never repositions the rig), there is no `moveBudget`, and objectives are still
+>    scored by manual player claim, not geometry. Those seams are folded into **this** plan as
+>    Phase E — see "Prerequisite engine seams" below.
 
 ## Problem
 
@@ -183,6 +198,62 @@ instrument exists; copy the pattern from `weapon-sweep.mjs`.
 from `evaluate.js`. v1 feeds it `expectedHits`; the deferred work feeds it `expectedDamage`.
 Nothing else in the scorer changes — which is the point of splitting `evaluate.js` out.
 
+## Prerequisite engine seams — built in THIS sub-project (Phase E)
+
+Spec 1 was declared "Tasks 1–10 done", but it shipped the pure *geometry* and stopped short
+of the *gameplay* seams a bot needs. Three are missing, and the bot cannot exist without the
+first two. They are engine work, not bot work — pure `game-state.js` — so they land first, as
+Phase E, and every existing combat test stays green.
+
+### E1 — digital rooms must actually apply a move
+
+Today the `move`/`sprint` action spends a slot and adds heat, then **returns without touching
+`rig.pos` or `rig.facing`**. That is the physical-tabletop model: the human slides the model
+across the real table; the app only tracks the budget. A digital room has no human hand.
+
+E1 makes the action spatial **in digital rooms only**:
+
+- The command carries `attrs.dest = { x, y }` and `attrs.facing` (degrees).
+- The server re-routes with the same pure module the client previews with —
+  `findPath(field, terrainPolygons, blockers, radiusOf(rig), rig.pos, dest)` — and rejects the
+  move unless `path.length ≤ moveBudget(rig, act)`. **The client path is never trusted**; the
+  engine measures for itself, exactly as `resolveFire` already re-derives shot geometry.
+- The pivot is clamped to **±90°** of the current facing (a Move's turn cap).
+- On success it writes `rig.pos` / `rig.facing`.
+
+It exports the two helpers the plan already assumed existed:
+
+- `moveBudget(rig, act)` — reach in inches: base Speed for a Move, `Speed × sprintMult` for a
+  Sprint (reads `rigEffects(rig)`; Reinforced Servos' 2× lives there).
+- `spatial(rig)` — already private in `game-state.js`; the bot needs it to feed geometry.
+
+Physical rooms are untouched — no `dest`, no path check, position stays the human's problem.
+
+### E2 — digital objectives score by geometry, not by claim
+
+Recovery VP is currently claim-based: each side submits `{ verb: "vp", claims: [markerIndex] }`,
+and a marker both sides claim is a **conflict** that scores nobody until re-checked (§11, a
+physical table's "measure it again" step). The engine never checks control — it can't, in a
+physical room.
+
+In a **digital** room it can and must. E2 derives each side's controlled markers from
+`controlsObjective(rig, marker)` at recovery and awards `objs[i].vp` from geometry:
+
+- A marker exactly one side controls scores that side.
+- **A marker both sides control is contested and scores nobody** — the faithful digital image
+  of the physical conflict rule (not "most bases wins"). This is the `objectiveVpDelta` the
+  scorer reads.
+
+Without E2 the bot has no repeatable VP signal at all, and "contest objectives it can hold" —
+the top line of the competence target — is unreachable.
+
+### E3 — headless digital game loop (verify, likely already there)
+
+Bot-vs-bot (Phase 4) drives a whole game through commands with no UI: ready → deploy →
+round → activations → recovery → advance. `autoDeploy`, side readiness, and the
+`vp`/`endactivation` verbs already exist; E3 is a **spot-check that the loop closes headlessly**
+and a thin fixture if a gap turns up — not assumed-done, not assumed-broken.
+
 ## Candidate generation
 
 Start from `availableActions(rig, turn, round)` — it is already the legality gate — and
@@ -192,7 +263,7 @@ expand each **enabled** action:
 |---|---|
 | `fire` | × each enemy with LOS, inside the weapon's range band, in the front 90° arc; × `longRange` \| `melee` (melee needs rim gap ≤ 2") |
 | `aimed` | × enemy × location (`hull`/`arms`/`legs`/`engine`) |
-| `move` / `sprint` | × destination × facing |
+| `move` / `sprint` | × destination × facing — each emits `{ dest, facing }` for E1's spatial move; filtered to `findPath(...).length ≤ moveBudget(rig, act)` |
 | `prepare` | × prep type (Brace / Evasive / Raise Shield) |
 | `repair` | × damaged location |
 | `disengage`, `douse`, `shutdown`, `reload` | parameterless |
@@ -227,7 +298,7 @@ the **±90° pivot cap** a Move allows. Typically 3–5 per destination.
 One weighted sum (`score.js`):
 
 ```
-score = w.vp        × objectiveVpDelta        // does this spot take / hold / contest a marker
+score = w.vp        × objectiveVpDelta        // take / hold / contest a marker — E2's geometry control
       + w.priority  × priorityTargetProgress  // the game's ONLY kill-VP: +2
       + w.damage    × offence                 // v1: expectedHits. later: expectedDamage
       - w.threat    × exposure                // same metric, every enemy's best against me
