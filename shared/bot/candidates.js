@@ -34,6 +34,7 @@ function inFrontArc(attacker, target) {
 // (+location for aimed); the rest carry their own parameter or none.
 export function candidatesFor(room, rig) {
   const turn = room.game.turn;
+  if (!turn) return [];   // no active turn — nothing is legal (defensive)
   const enabled = new Set(
     availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
   );

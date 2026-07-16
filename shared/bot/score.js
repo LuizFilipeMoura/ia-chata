@@ -124,6 +124,23 @@ function objectiveVpAt(room, rig, pos) {
   return vp;
 }
 
+// A distance PULL toward the nearest marker the rig does not yet control. Binary
+// control (objectiveVpAt) gives no gradient until you are already on the marker,
+// so without this a rig stranded a full move away from every objective scores 0
+// for advancing and simply stands still — which is exactly what bot-vs-bot caught.
+// The pull is vp/(1+gap): always well under a real control (gap ≥ 0 ⇒ ≤ vp), and
+// growing as the rig closes, so "walk to the objective, then hold it" emerges.
+function objectiveApproach(room, rig, pos) {
+  const me = { pos, radius: radiusOf(rig) };
+  let best = 0;
+  for (const m of room.game.objectives || []) {
+    if (controlsObjective(me, m)) continue;   // already priced by objectiveVpAt
+    const gap = Math.hypot(pos.x - m.x, pos.y - m.y);
+    best = Math.max(best, (m.vp || 0) / (1 + gap));
+  }
+  return best;
+}
+
 // Progress toward the +2 Priority Elimination kill: offence aimed specifically at
 // my assigned Priority Target (a declared shot at it, or a move's best shot at it).
 function priorityProgress(room, rig, cand, pos, facing) {
@@ -177,7 +194,7 @@ export function scoreCandidate(room, rig, cand, weights) {
   const turn = room.game.turn;
   const offence = offenceAt(room, rig, cand, pos, facing);
   const exposure = exposureAt(room, rig, pos, facing);
-  const vp = objectiveVpAt(room, rig, pos);
+  const vp = objectiveVpAt(room, rig, pos) + objectiveApproach(room, rig, pos);
   const priority = priorityProgress(room, rig, cand, pos, facing);
   const heat = overheatRisk(room, rig, turn, cand);
   const fragile = exposure * fragility(rig);

@@ -76,12 +76,18 @@ export function runBotActivation(room, rig, options = {}) {
     applyCommand(room, { verb: "activate", attrs: { name: rig.name } }, {}, options);
   }
   const log = [];
+  const active = () => room.game.turn?.activeRigId === rig.id && room.game.phase === "activation";
   for (let guard = 0; guard < 12; guard++) {
+    // A command can end the activation out from under us — a kill that annihilates
+    // the enemy side ends the game and nulls the turn, a destroyed engine parks a
+    // pendingBlast. Stop the moment this rig is no longer the one acting.
+    if (!active()) break;
     const cmd = chooseAction(room, rig, weights);
     if (!cmd) break;
     applyCommand(room, cmd, {}, options);
     log.push(cmd);
   }
-  applyCommand(room, { verb: "endactivation", attrs: { name: rig.name } }, {}, options);
+  // Only end the activation if it is still ours to end.
+  if (active()) applyCommand(room, { verb: "endactivation", attrs: { name: rig.name } }, {}, options);
   return log;
 }
