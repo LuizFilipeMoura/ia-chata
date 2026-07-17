@@ -46,7 +46,7 @@ export const PILOTING_HOOKS = {
   // Sniper Cannon prototype. Keys off Aimed-shot cadence, which greedySafe never
   // triggers (its confirmed structural 0.00). The duel is pinned to the sweet
   // spot, so both intensities aim every shot here; they diverge only for a future
-  // off-band cell, which is why conservative still checks the band.
+  // off-band cell, which will need its own band check added to `conservative`.
   enfilade: {
     ceiling: (room, rig, enemy, { distance, arc }) => aimedAt(rig, enemy, distance, arc),
     conservative: (room, rig, enemy, { distance, arc }) => aimedAt(rig, enemy, distance, arc),
