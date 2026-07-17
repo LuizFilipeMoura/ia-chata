@@ -3621,6 +3621,18 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       const want = String(a.value || "").toLowerCase() !== "manual";
       if (room.game.autoResolve !== want) { room.game.autoResolve = want; changed = true; }
     }
+  } else if (verb === "mode") {
+    // Pre-battle room-wide toggle between a physical (tabletop-companion) game
+    // and a digital (simulated-positions) game. Mirrors setdice. Digital unlocks
+    // the battle map + bot opponent; positions and terrain are fixed at game
+    // start, so mode can't change once started. An unknown value is ignored.
+    if (!room.game.started) {
+      const want = String(a.mode || "").toLowerCase();
+      if ((want === "digital" || want === "physical") && room.mode !== want) {
+        room.mode = want;
+        changed = true;
+      }
+    }
   } else if (verb === "field") {
     const sideId = normalizeSide(room, context.side);
     const action = String(a.action || "set").toLowerCase();

@@ -6742,3 +6742,28 @@ test("human-vs-human ready is unchanged by the bot fill (no bot flag = no-op)", 
   assert.equal(room.game.started, true);
   assert.equal(room.rigs.filter((r) => (r.owner || "a") === "b").length, 1);
 });
+
+test("mode verb flips a room to digital and back pre-battle", () => {
+  const room = createRoom("MODE1");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "digital" } }, { side: "a" });
+  assert.equal(room.mode, "digital");
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "physical");
+});
+
+test("mode verb is a no-op once the game has started", () => {
+  const room = createRoom("MODE2");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "digital" } }, { side: "a" });
+  room.game.started = true;
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "digital"); // unchanged after start
+});
+
+test("mode verb ignores an unknown value", () => {
+  const room = createRoom("MODE3");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "hologram" } }, { side: "a" });
+  assert.notEqual(room.mode, "hologram");
+});
