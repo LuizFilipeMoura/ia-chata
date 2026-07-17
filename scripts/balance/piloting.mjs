@@ -14,7 +14,7 @@
 //
 // A hook is a PURE reader: it inspects room/rig/enemy and returns a command. It
 // must never mutate engine state — the engine owns that when the command applies.
-import { HEAT_CAPACITY, equipmentUpgradeEffectOf } from "../../shared/game-state.js";
+import { HEAT_CAPACITY } from "../../shared/game-state.js";
 import { availableActions } from "../../shared/battle-view.js";
 
 // One line per registered hook. The report prints this verbatim next to
@@ -39,6 +39,10 @@ export const PILOTING_BIASES = `
   already rooted. Ceiling roots the instant it's legal; conservative holds off
   the one activation where rooting would spend the last action and skip that
   round's shot entirely.
+- cryo-reservoir: piloted by spending the full banked charge the instant any is
+  banked (charging itself is automatic, 1/round in Recovery). Ceiling and
+  conservative coincide — spending is strictly heat-negative and Penetration-
+  positive, with no catch to weigh against holding it.
 `.trim();
 
 // Build an Aimed command at the duel's fixed geometry. Location defaults to the
@@ -116,6 +120,22 @@ function emplaceCmd(room, rig, careful) {
   return { verb: "action", attrs: { name: rig.name, action: "emplace" } };
 }
 
+// Spend banked Cryo Reservoir charge via the `cryo` active (act === "cryo",
+// game-state.js:2827). Unlike overclock/emplace this has NO availableActions
+// entry (an engine-side gap, not a piloting concern) and costs no action slot
+// (an activation-start spend, like Reload) — so this is a PURE-STATE hook, not
+// a legality-gated one: it reads rig.equipState.cryo directly, exactly as
+// aimedAt reads rig.loaded. Charging is automatic (Recovery banks 1/round, cap
+// 3, whenever the rig cooled); this hook only decides WHEN to cash it in. There
+// is no reason to hold: spending is strictly heat-negative and Penetration-
+// positive, and holding costs the Recovery cooling-1-not-2 downside for free.
+// Ceiling and conservative coincide, same as enfilade — no catch to weigh.
+function cryoCmd(rig) {
+  const banked = rig.equipState?.cryo || 0;
+  if (banked <= 0) return null;
+  return { verb: "action", attrs: { name: rig.name, action: "cryo", n: banked } };
+}
+
 // upgradeId -> { ceiling(room, rig, enemy, { intensity, distance, arc }),
 //                conservative(room, rig, enemy, { intensity, distance, arc }) }
 export const PILOTING_HOOKS = {
@@ -154,6 +174,14 @@ export const PILOTING_HOOKS = {
   emplacement: {
     ceiling: (room, rig) => emplaceCmd(room, rig, false),
     conservative: (room, rig) => emplaceCmd(room, rig, true),
+  },
+  // Cooling prototype (Cryo Reservoir). Spend banked cold for a heat rebate and
+  // a Penetration spike. greedySafe never spends the bank (a structural 0.00
+  // there — it doesn't even know equipState exists). Charging is automatic;
+  // this hook only pilots the spend, and there's no reason to withhold it.
+  "cryo-reservoir": {
+    ceiling: (room, rig) => cryoCmd(rig),
+    conservative: (room, rig) => cryoCmd(rig),
   },
 };
 

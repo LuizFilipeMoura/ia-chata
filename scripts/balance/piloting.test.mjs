@@ -101,6 +101,18 @@ test("fire-control-lock hook makes A1 lock before firing", () => {
   assert.ok(seen.includes("fire"), "fire-control-lock should still let Fire consume the paint");
 });
 
+const CRYO = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
+  weaponA: "Autocannon", upgradeA: "depleted-core",
+  equipmentA: "radiator-array", equipmentUpgradeA: "cryo-reservoir",
+  distance: 12, arc: "side" };
+
+test("cryo-reservoir hook makes A1 spend banked cryo", () => {
+  const seen = [];
+  runDuel({ ...CRYO, seed: 8, intensity: "ceiling",
+    onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
+  assert.ok(seen.includes("cryo"), "cryo-reservoir must pilot the cryo spend at ceiling");
+});
+
 // Emplacement is a MELEE weapon upgrade (Bulwark Shield prototype). duel-sim's
 // public axes only reach A1's LONG-RANGE weapon upgrade or its equipment module
 // (runDuel has no `meleeUpgradeA` parameter, and duel-sim.mjs is out of scope to
