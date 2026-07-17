@@ -23,7 +23,9 @@
       "/shared/field.js": ["./client/shared.d.ts"],
       "/shared/unit-kinds.js": ["./client/shared.d.ts"],
       "/shared/combat.js": ["./client/shared.d.ts"],
-      "/shared/rules.js": ["./client/shared.d.ts"]
+      "/shared/rules.js": ["./client/shared.d.ts"],
+      "/shared/pathfind.js": ["./client/shared.d.ts"],
+      "/shared/geometry.js": ["./client/shared.d.ts"]
     }
   },
   "include": ["client/src", "client/shared.d.ts"],

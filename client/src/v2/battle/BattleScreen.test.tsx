@@ -61,3 +61,29 @@ test("does not activate when a rig is already active", async () => {
   mine.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   expect(sendSpy).not.toHaveBeenCalledWith("activate", { name: "RED" });
 });
+
+test("arming a move, placing a reachable destination, and confirming dispatches action with dest+facing", async () => {
+  render(<V2Providers><Seed state={digitalState(1)} /><BattleScreen /></V2Providers>);
+
+  // Open the Move group tile, then pick Move from its popover (Move + Sprint both
+  // live, so the tile opens a menu rather than firing straight through).
+  const moveBtn = await screen.findByRole("button", { name: /move/i });
+  moveBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  const moveItem = await screen.findByRole("menuitem", { name: /move/i });
+  moveItem.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+  const surface = await screen.findByTestId("field-surface");
+  surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 520, height: 320, right: 520, bottom: 320, x: 0, y: 0, toJSON() {} }) as DOMRect;
+  // With the 54"-wide field this maps to inches ≈ {12, 10} — ~2" east of rig 1's
+  // {10,10} start, comfortably inside its Move budget (fallback Speed 5).
+  surface.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 130, clientY: 99 }));
+
+  const confirm = await screen.findByRole("button", { name: /confirm/i });
+  confirm.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+  const call = sendSpy.mock.calls.find((c) => c[0] === "action" && (c[1] as { action?: string })?.action);
+  expect(call).toBeTruthy();
+  expect(call![1]).toMatchObject({ name: "RED", action: "move" });
+  expect(typeof (call![1] as { dest: { x: number } }).dest.x).toBe("number");
+  expect(typeof (call![1] as { facing: number }).facing).toBe("number");
+});

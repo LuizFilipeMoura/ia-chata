@@ -62,6 +62,27 @@ declare module "/shared/game-state.js" {
     combat: { hardenImpact: number; sweetBandAccuracy: number; sideRearPen: number };
     modifiers: Array<{ source: string; kind: string; label: string; detail: string }>;
   };
+  // Digital-move geometry (spec: Digital battlefield). `spatial` is the engine's
+  // physical footprint of a rig; `moveBudget` is the reach (inches) a candidate
+  // destination's path length is validated against.
+  export function spatial(rig: Rig): { pos: { x: number; y: number }; facing: number; radius: number };
+  export function moveBudget(rig: Rig, act: "move" | "sprint"): number;
+}
+
+declare module "/shared/pathfind.js" {
+  export function findPath(
+    field: { width: number; height: number },
+    polys: Array<Array<{ x: number; y: number }>>,
+    blockers: Array<{ pos: { x: number; y: number }; radius: number }>,
+    radius: number,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ): { path: Array<{ x: number; y: number }>; length: number } | null;
+}
+
+declare module "/shared/geometry.js" {
+  export function terrainPolygons(field: { terrain?: unknown[] }): Array<Array<{ x: number; y: number }>>;
+  export function radiusOf(rig: Rig): number;
 }
 
 declare module "/shared/rules.js" {
