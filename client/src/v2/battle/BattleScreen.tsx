@@ -5,38 +5,37 @@ import { useMySide } from "../../hooks/useMySide";
 import type { Rig } from "../../state/types";
 import { BattleMap } from "./BattleMap";
 import { ActionConsole } from "./ActionConsole";
+import { BattleHud } from "../components/BattleHud";
+import { canRigActivate } from "./activation";
 import "../styles/field.css";
 
 export function BattleScreen() {
-  const { rigs, game, field } = useRoomState();
+  const { rigs, game, field, ownerSide } = useRoomState();
   const sendCommand = useCommands();
   const mySide = useMySide();
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const t = game?.turn;
-  const pendingGate = Boolean(game?.pendingAnswer || game?.pendingReaction || game?.pendingBlast);
-  const myTurn = game?.phase === "activation" && t?.side === mySide;
   const activeRig = rigs.find((r) => r.id === t?.activeRigId) || null;
   const priorityTargetId = mySide ? (game?.priorityTargets?.[mySide] ?? null) : null;
 
-  const activatable = (r: Rig) =>
-    !!myTurn && (r.owner || "a") === mySide && t?.activeRigId == null &&
-    !pendingGate && !r.activated && !r.destroyed;
+  const activatable = (r: Rig) => canRigActivate(r, game, mySide);
 
-  const selected = useMemo(
-    () => rigs.find((r) => r.id === (activeRig?.id ?? selectedId)) || null,
-    [rigs, activeRig, selectedId],
-  );
+  const selected = useMemo(() => {
+    const r = rigs.find((x) => x.id === (activeRig?.id ?? selectedId));
+    return r && !r.destroyed ? r : null;
+  }, [rigs, activeRig, selectedId]);
 
   if (!field) return null;
 
   return (
     <section className="v2-battle">
+      <BattleHud />
       <BattleMap
         field={field}
         rigs={rigs}
         mySide={mySide ?? "a"}
-        ownerSide={game?.sides?.[0]?.id ?? "a"}
+        ownerSide={ownerSide ?? "a"}
         priorityTargetId={priorityTargetId}
         selectedId={selected?.id ?? null}
         onSelect={(r) => setSelectedId(r.id)}
