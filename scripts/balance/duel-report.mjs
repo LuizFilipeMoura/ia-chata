@@ -78,7 +78,7 @@ Run biases (this run's inputs, not the policy's):
   (${chassisB}), never in the abstract. A different control reorders this table.
 - SINGLE ARC, SINGLE DISTANCE. arc="${arc}" and each weapon's distance are INPUTS
   (its sweet spot), not outcomes. No row here is a range or arc profile.
-- TWO INTENSITIES, NOT TWO RUNS. "cons" and "ceil" share the same 500 seeds and
+- TWO INTENSITIES, NOT TWO RUNS. "cons" and "ceil" share the same seed streams and
   differ only in how a PILOTED upgrade's hook decides to act (see PILOTING_BIASES
   above). An upgrade with no hook measures the same under both — the spread is
   the tell for which upgrades reward skillful play and which do not.
