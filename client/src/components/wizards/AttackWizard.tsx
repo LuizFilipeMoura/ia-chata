@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
-import { weaponAccAt } from "/shared/combat.js";
+import { weaponAccuracyAt } from "/shared/combat.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useCommands } from "../../hooks/useCommands";
 import { useBattleActions } from "../../state/BattleActionsContext";
@@ -27,10 +27,10 @@ const FIELD_DESC: Record<string, string> = {
   arc: "Which of the target's facings you strike",
   range: "How far the target sits from you",
   cover: "Obstruction shielding the target",
-  location: "Component to hit — an Aimed Shot takes −2 ACC",
+  location: "Component to hit — an Aimed Shot takes −2 Accuracy",
 };
-const ARC_DESC: Record<string, string> = { front: "No STR bonus", side: "+2 STR", rear: "+4 STR" };
-const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 ACC", "2": "−2 ACC" };
+const ARC_DESC: Record<string, string> = { front: "No Penetration bonus", side: "+2 Penetration", rear: "+3 Penetration" };
+const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 Accuracy", "2": "−2 Accuracy" };
 const LOC_DESC: Record<string, string> = {
   hull: "−2 actions at 0", arms: "Weapons at 0", legs: "Slows at 0", engine: "Heat at 0",
   tracks: "Slows at 0", turret: "Gun lost at 0", mount: "Gun lost at 0",
@@ -239,10 +239,10 @@ export function AttackWizard({
   const minRange = rangeProfile?.minRange ?? 0;
   const maxRange = rangeProfile?.maxRange ?? 12;
   const sliderMax = maxRange + 4; // headroom so the player can drag into "out"
-  const accHere = rangeProfile ? weaponAccAt(rangeProfile as never, state.inches) : 0;
-  const penalty = peak - accHere;
+  const accuracyHere = rangeProfile ? weaponAccuracyAt(rangeProfile as never, state.inches) : 0;
+  const penalty = peak - accuracyHere;
   const inRange = state.inches >= minRange && state.inches <= maxRange;
-  const accTier = !inRange ? "out" : penalty <= 0 ? "sweet" : penalty <= 2 ? "good" : "poor";
+  const accuracyTier = !inRange ? "out" : penalty <= 0 ? "sweet" : penalty <= 2 ? "good" : "poor";
 
   // Seed the slider to the weapon's sweet spot whenever the selected weapon
   // changes (melee seeds to its reach). Keeps "open at the best range" intent.
@@ -344,8 +344,8 @@ export function AttackWizard({
       );
       rangeState = outOfRange ? "bad" : "ok";
     } else if (profile) {
-      const accLabel =
-        penalty <= 0 ? `Sweet spot +${peak}` : `${accHere >= 0 ? "+" : ""}${accHere} · falloff`;
+      const accuracyLabel =
+        penalty <= 0 ? `Sweet spot +${peak}` : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} · falloff`;
       const gate =
         state.inches < minRange
           ? <span className="aw-range-warn">Too close — out of range</span>
@@ -357,7 +357,7 @@ export function AttackWizard({
       rangeHtml = (
         <>
           <span className="aw-range-ic">📏</span>
-          Sweet spot <b>{sweet}"</b> · usable <b>{minRange}"–{maxRange}"</b> · at {state.inches}": <b>{accLabel}</b>
+          Sweet spot <b>{sweet}"</b> · usable <b>{minRange}"–{maxRange}"</b> · at {state.inches}": <b>{accuracyLabel}</b>
           {gate}
         </>
       );
@@ -383,7 +383,7 @@ export function AttackWizard({
     const weaponName = weapons[state.weapon] || "";
     // Cold kinds carry no weapon upgrades — just name the weapon.
     if (flat) {
-      return { main: `Firing ${weaponName} (flat STR — no weight-class scaling).`, equipment: equipmentLine };
+      return { main: `Firing ${weaponName} (flat Penetration — no weight-class scaling).`, equipment: equipmentLine };
     }
     const upgrade = selectedUpgrade(rig, state.weapon as "longRange" | "melee", weaponName);
     return {
@@ -484,7 +484,7 @@ export function AttackWizard({
               }}
               icon={FIELD_ICONS.weapon}
               optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
-              desc={flat ? "One flat-pick weapon — no weight-class STR scaling." : FIELD_DESC.weapon}
+              desc={flat ? "One flat-pick weapon — no weight-class Penetration scaling." : FIELD_DESC.weapon}
               optDesc={weaponDesc}
             />
             <Field
@@ -505,7 +505,7 @@ export function AttackWizard({
                   Range
                 </label>
                 <p className="aw-field-desc">Drag to the measured distance to the target.</p>
-                <div className="aw-range-slider" data-band={accTier}>
+                <div className="aw-range-slider" data-band={accuracyTier}>
                   <input
                     type="range"
                     min={0}
@@ -517,10 +517,10 @@ export function AttackWizard({
                   />
                   <div className="aw-range-readout">
                     <b className="aw-range-inches">{state.inches}"</b>
-                    <span className="aw-range-band" data-band={accTier}>
-                      {accTier === "sweet" ? "🎯 sweet spot"
-                        : accTier === "out" ? "🚫 out of range"
-                        : `${accHere >= 0 ? "+" : ""}${accHere} falloff`}
+                    <span className="aw-range-band" data-band={accuracyTier}>
+                      {accuracyTier === "sweet" ? "🎯 sweet spot"
+                        : accuracyTier === "out" ? "🚫 out of range"
+                        : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} falloff`}
                     </span>
                   </div>
                   <div className="aw-range-ticks">

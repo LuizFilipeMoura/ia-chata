@@ -1,35 +1,42 @@
 // Registry of unit kinds (rig, tank, walker, …) with parts, hit locations, and
-// armour tables. Pure data + tiny lookups shared by server and client.
+// toughness grids. Pure data + tiny lookups shared by server and client.
 
 export const ROLES = ["structural", "power", "mobility", "weapon"];
 
-const RIG_IMPACT = {
-  light: {
-    hull:   { direct: 10, severe: 14, critical: 16 },
-    arms:   { direct: 10, severe: 12, critical: 14 },
-    legs:   { direct: 10, severe: 13, critical: 15 },
-    engine: { direct: 7,  severe: 10, critical: 12 },
-  },
-  medium: {
-    hull:   { direct: 11, severe: 14, critical: 17 },
-    arms:   { direct: 10, severe: 13, critical: 15 },
-    legs:   { direct: 11, severe: 13, critical: 15 },
-    engine: { direct: 8,  severe: 10, critical: 12 },
-  },
-  heavy: {
-    hull:   { direct: 13, severe: 15, critical: 17 },
-    arms:   { direct: 12, severe: 14, critical: 16 },
-    legs:   { direct: 14, severe: 16, critical: 17 },
-    engine: { direct: 8,  severe: 11, critical: 13 },
-  },
-  colossal: {
-    hull:   { direct: 13, severe: 16, critical: 17 },
-    arms:   { direct: 13, severe: 14, critical: 16 },
-    legs:   { direct: 13, severe: 16, critical: 17 },
-    engine: { direct: 9,  severe: 11, critical: 14 },
-  },
+// §7.5 — Toughness per part. Replaces the old 48-number impact grid: a shot's
+// effective Penetration is compared to these via `woundTarget` (rules.js).
+//
+// Designed, not derived. Converting the old armour rows mechanically
+// (`direct - 6`) yields engine values of T1-T3, which would let every weapon in
+// the game wound an engine on 2+ and make it the only rational aim point.
+//
+// Per-location texture is carried TWICE on purpose: a soft T here, and a small
+// SP pool in RIG_DEFAULTS (game-state.js). An engine is fragile because it is
+// both easier to wound and has less to lose.
+const RIG_TOUGHNESS = {
+  light:    { hull: 4, arms: 3, legs: 3, engine: 3 },
+  medium:   { hull: 5, arms: 4, legs: 4, engine: 3 },
 };
 
+// §8 vital-pool floor. `applyDamage` spends SP one point at a time, and a point
+// landing PAST zero on a structural or power part fires `catastrophicAdditional`
+// (game-state.js), which destroys the part and so the unit. A point landing
+// exactly ON zero does not. So a structural/power pool smaller than the
+// catalog's top per-wound Damage is not a pool at all — it is a coin flip, and
+// the unit dies from full to one wound.
+//
+// That makes the floor structural, not a balance dial: every structural/power
+// `partSp` below must be >= the top Damage in the game (currently 6: Wrecking
+// Ball + Haymaker, tied with Siege Maul + Reinforced Head). Mobility/weapon pools are exempt —
+// §8 does not kill on those roles, so they carry the fragility instead.
+//
+// Support-unit fragility therefore lives in `toughness` (below) and in the
+// mobility/weapon pools, NOT in how small a hull or engine may be. Derived and
+// enforced by "no unit of ANY kind dies to a SINGLE wound from full" in
+// game-state.test.js; do not lower a hull/engine here to "tidy" it.
+//
+// The floor bounds ONE wound, not one attack: ROF and Damage multiply, so a
+// full volley concentrating on one location can still kill from full, by design.
 export const UNIT_KINDS = {
   rig: {
     id: "rig",
@@ -46,7 +53,8 @@ export const UNIT_KINDS = {
       { min: 8,  part: "legs" },
       { min: 11, part: "engine" },
     ],
-    armour: RIG_IMPACT,
+    toughness: RIG_TOUGHNESS,
+    byWeight: true,
     hasHeat: true,
     hasArcs: true,
     actionBudget: 3,
@@ -71,14 +79,10 @@ export const UNIT_KINDS = {
       { min: 8,  part: "turret" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — heavy-Rig-grade armour, tuned in playtest.
-    armour: {
-      hull:   { direct: 13, severe: 15, critical: 17 },
-      tracks: { direct: 14, severe: 16, critical: 17 },
-      turret: { direct: 12, severe: 14, critical: 16 },
-      engine: { direct: 8,  severe: 11, critical: 13 },
-    },
-    partSp: { hull: 8, tracks: 7, turret: 6, engine: 6 },
+    // Strawman ⚙ — heavy-Rig-grade toughness, tuned in playtest.
+    toughness: { hull: 6, tracks: 5, turret: 5, engine: 4 },
+    // engine 8, not 6: the §8 vital floor above. tracks/turret stay small.
+    partSp: { hull: 8, tracks: 7, turret: 6, engine: 8 },
     hasHeat: false,
     hasArcs: true,
     actionBudget: 2,
@@ -104,14 +108,11 @@ export const UNIT_KINDS = {
       { min: 8,  part: "mount" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — medium-Rig-grade armour.
-    armour: {
-      hull:   { direct: 11, severe: 14, critical: 17 },
-      legs:   { direct: 11, severe: 13, critical: 15 },
-      mount:  { direct: 10, severe: 13, critical: 15 },
-      engine: { direct: 8,  severe: 10, critical: 12 },
-    },
-    partSp: { hull: 6, legs: 6, mount: 5, engine: 5 },
+    // Strawman ⚙ — medium-Rig-grade toughness.
+    toughness: { hull: 5, legs: 4, mount: 4, engine: 3 },
+    // hull/engine 8, not 6/5: the §8 vital floor above. legs/mount stay small —
+    // that is where the Walker is still the most fragile thing fielded.
+    partSp: { hull: 8, legs: 6, mount: 5, engine: 8 },
     hasHeat: false,
     hasArcs: true,
     actionBudget: 3,
@@ -179,11 +180,18 @@ export function hitPart(kindId, d12) {
   return picked;
 }
 
-// Rig armour is nested by weight class; cold kinds (Tank, Walker) hold a flat
-// map keyed by part name and ignore weightClass.
-export function impactRow(kindId, partName, weightClass) {
-  const armour = UNIT_KINDS[kindId]?.armour;
-  if (!armour) return null;
-  if (weightClass && armour[weightClass]) return armour[weightClass][partName];
-  return armour[partName];
+// Toughness for a part. Rig grids are keyed by weight class (`byWeight`);
+// Tank/Walker are flat. Throws rather than returning a sentinel: every caller
+// feeds this straight into woundTarget, where a non-numeric T coerces to 0 and
+// yields a 2+ wound (90%) — i.e. a lookup typo would silently make a location
+// the softest thing on the table. Fail loud instead.
+export function toughnessOf(kindId, partName, weightClass) {
+  const kind = UNIT_KINDS[kindId];
+  if (!kind?.toughness) throw new Error(`toughnessOf: unknown kind "${kindId}"`);
+  const row = kind.byWeight ? kind.toughness[weightClass] : kind.toughness;
+  const v = row?.[partName];
+  if (typeof v !== "number") {
+    throw new Error(`toughnessOf: no T for ${kindId}/${weightClass ?? "flat"}/${partName}`);
+  }
+  return v;
 }

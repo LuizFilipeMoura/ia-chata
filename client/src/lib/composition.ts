@@ -22,8 +22,6 @@ function sideCount(rigs: Rig[], side: string): number {
 const BUCKET_LABEL: Record<string, string> = {
   "rig:light": "Light Rig",
   "rig:medium": "Medium Rig",
-  "rig:heavy": "Heavy Rig",
-  "rig:colossal": "Colossal Rig",
   tank: "Tank",
   walker: "Walker",
 };
@@ -40,7 +38,7 @@ export interface ParityStatus {
 }
 
 // Compare my composition against the opponent's. Surfaces the single largest
-// mismatch: a shortfall ("Short 1 Heavy Rig") is prioritised over an excess
+// mismatch: a shortfall ("Short 1 Medium Rig") is prioritised over an excess
 // ("1 extra Tank") since adding is the usual fix.
 export function parityStatus(rigs: Rig[], mySide: string): ParityStatus {
   const enemy = mySide === "a" ? "b" : "a";

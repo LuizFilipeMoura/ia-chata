@@ -13,25 +13,22 @@ test("reaction resolution reveals the reaction label", async () => {
   expect(await screen.findByLabelText("Return Fire")).toBeInTheDocument();
 });
 
-test("a ram breakdown renders the equation, its STR source, tier and SP", async () => {
+// The equation/tier assertions that used to live here pinned `breakdown.terms`,
+// `.total` and `.tier` — fields the d10 wound rewrite deleted from the engine and
+// Plan 2 removed from ResolutionBreakdown. They were a false green: they proved
+// dead markup rendered dead fields the game can no longer produce. The live
+// behaviour (the resolution ledger) is tested against the live component, in
+// client/src/v2/overlays/RollConsole.test.tsx.
+test("a ram breakdown renders its target and the SP dealt", async () => {
   const ref = createRef<RollConsoleHandle>();
   render(<RollConsole ref={ref} />);
   await ref.current!.playResolution({
     id: 2, kind: "ram",
     rolls: [{ sides: 6, value: 6, label: "D6", tone: "ok" }],
-    summary: "Ram hits Reaver: D6 6 + Ram STR 8 = 14 → critical (3 SP to engine)",
-    breakdown: {
-      weapon: "Ram", target: "Reaver",
-      terms: [
-        { value: 6, label: "D6", tone: "die" },
-        { value: 8, label: "Ram STR · Medium", op: "+", tone: "mod" },
-      ],
-      total: 14, tier: "critical", sp: 3, location: "engine",
-    },
+    summary: "Ram hits Reaver: 3 SP to engine",
+    breakdown: { weapon: "Ram", target: "Reaver", sp: 3, location: "engine" },
     effects: [],
   });
-  // The +9 is spelled out with its source, so it isn't a mystery modifier.
-  expect(await screen.findByText("Ram STR · Medium")).toBeInTheDocument();
-  expect(await screen.findByText("critical")).toBeInTheDocument();
+  expect(await screen.findByText("Ram")).toBeInTheDocument();
   expect(await screen.findByText("SP → engine")).toBeInTheDocument();
 });

@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ACTIONS, HEAT_THRESHOLDS, heatThreshold } from "./rules.js";
-import { impactRow, AIM, WEIGHT_STR_MOD, hitLocation, impactSeverity } from "./rules.js";
+import { BASE_AIM, WEIGHT_PEN_MOD, HEAT_CAPACITY, hitLocation, woundTarget } from "./rules.js";
+import { WEAPONS, SUPPORTED_RIG_CLASSES } from "./game-state.js";
 
 test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.move.heat, 1);
@@ -55,14 +56,78 @@ test("hitLocation maps the D12 bands (§7)", () => {
   assert.equal(hitLocation("rig", 12), "engine");
 });
 
-test("impactSeverity reads a class/location row (§2) and scalars are correct", () => {
-  const row = impactRow("rig", "engine", "light"); // 7-9 / 10-11 / 12+
-  assert.equal(impactSeverity(6, row).tier, "none");
-  assert.equal(impactSeverity(7, row).sp, 1);
-  assert.equal(impactSeverity(10, row).sp, 2);
-  assert.equal(impactSeverity(12, row).sp, 3);
-  assert.equal(WEIGHT_STR_MOD.light, -2);
-  assert.equal(WEIGHT_STR_MOD.medium, 0);
-  assert.equal(AIM.medium, 4);
-  assert.equal(AIM.heavy, 3);
+test("weight-class and aim scalars are correct (§2)", () => {
+  assert.equal(WEIGHT_PEN_MOD.light, -1);
+  assert.equal(WEIGHT_PEN_MOD.medium, 0);
+  // Flat, not a map. BASE_AIM replaced `AIM[attacker.weightClass] ?? 4`: Tanks
+  // and Walkers have no weightClass and always took the fallback, and once Heavy
+  // and Colossal went every remaining entry was 4. This assertion fails if anyone
+  // re-grows it into an object, which is the only guard it needs.
+  assert.equal(BASE_AIM, 4);
+});
+
+test("the weight-class maps carry exactly the buildable classes", () => {
+  // Heavy and Colossal were deleted 2026-07-16. makeRig had always rejected them
+  // (SUPPORTED_RIG_CLASSES), so every heavy/colossal branch in these maps existed
+  // only to be read as if it were real — and it was, twice, by a spec author and
+  // its reviewer during the penetration rework.
+  for (const [name, map] of Object.entries({ WEIGHT_PEN_MOD, HEAT_CAPACITY })) {
+    assert.deepEqual(Object.keys(map), [...SUPPORTED_RIG_CLASSES], `${name} drifted from SUPPORTED_RIG_CLASSES`);
+  }
+});
+
+test("woundTarget — TN is 6 + T - S", () => {
+  assert.equal(woundTarget(5, 5), 6);  // even match
+  assert.equal(woundTarget(7, 5), 4);  // stronger
+  assert.equal(woundTarget(3, 5), 8);  // weaker
+});
+
+test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
+  // A natural 10 must ALWAYS wound. This is the guarantee that kills the
+  // 69 dead zones of the impact-total model; do not relax it.
+  assert.equal(woundTarget(1, 20), 10);
+  // A natural 1 must NEVER wound.
+  assert.equal(woundTarget(20, 1), 2);
+
+  // The clamp must engage on real inputs, not just absurd ones. NOTE: T7 was a
+  // colossal hull, and Heavy/Colossal were deleted 2026-07-16 — so this is now a
+  // unit test of woundTarget's arithmetic, not an in-domain matchup. No rig board
+  // reaches T7 any more; see combat.test.js's "nothing needs the clamp's upper
+  // rail any more", which pins that the whole game's worst raw TN is 9.
+  assert.equal(woundTarget(2, 7), 10);   // raw 11, clamped
+  // These two pin 10 and 2 as legitimate target numbers in their own right,
+  // not merely artifacts of the clamp.
+  assert.equal(woundTarget(1, 5), 10);   // raw 10, NOT clamped
+  assert.equal(woundTarget(5, 1), 2);    // raw 2,  NOT clamped
+});
+
+test("woundTarget — the original bug case is possible, not impossible", () => {
+  // The light Circular Saw vs a medium hull is the matchup that motivated this
+  // rewrite: under the impact-total model it was mathematically 0 damage at any
+  // roll. Derived from the live stats, not hardcoded, so a future retune of the
+  // Saw or the weight ladder cannot silently send it back to hopeless.
+  const pen = WEAPONS.melee["Circular Saw"].pen + WEIGHT_PEN_MOD.light;
+  assert.equal(woundTarget(pen, 5), 7); // medium hull T5 => 40%
+});
+
+test("woundTarget — junk Penetration coerces (fails safe), junk T throws (fails loud)", () => {
+  // The asymmetry is the point. A junk Penetration floors to 0 and drives the TN toward
+  // 10 — a 10% wound, the safe direction. A junk T would coerce to 0 and drive
+  // the TN to 2 — a 90% wound, making the location the softest thing on the
+  // table. That is the mathematically-wrong matchup this whole rewrite exists
+  // to eliminate, so T must never be guessed at.
+  assert.equal(woundTarget(undefined, 5), 10);
+
+  // Every one of these must throw. The five falsy non-numbers are the sharp
+  // ones: Number(null), Number(""), Number(false) and Number([]) are all 0, so
+  // a guard that coerces before checking (`Number.isFinite(Number(t))`) lets
+  // them through to TN 2 and reintroduces the bug. `null` matters most — it is
+  // what a failed toughnessOf lookup used to return.
+  for (const junk of [undefined, null, "", " ", false, [], {}, NaN, Infinity, "soft", "5"]) {
+    assert.throws(
+      () => woundTarget(5, junk),
+      /toughness must be a number/,
+      `woundTarget(5, ${JSON.stringify(junk) ?? String(junk)}) must throw, not guess`,
+    );
+  }
 });

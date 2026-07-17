@@ -13,8 +13,8 @@ const rig = (owner: "a" | "b", weightClass: string, kind?: "rig" | "tank" | "wal
 });
 
 test("compositionOf buckets rigs by weight class and cold kinds by kind", () => {
-  const rigs = [rig("a", "light"), rig("a", "light"), rig("a", "heavy"), rig("a", "-", "tank")];
-  expect(compositionOf(rigs, "a")).toEqual({ "rig:light": 2, "rig:heavy": 1, tank: 1 });
+  const rigs = [rig("a", "light"), rig("a", "light"), rig("a", "medium"), rig("a", "-", "tank")];
+  expect(compositionOf(rigs, "a")).toEqual({ "rig:light": 2, "rig:medium": 1, tank: 1 });
 });
 
 test("parityStatus reports atParity when both sides mirror", () => {
@@ -24,11 +24,11 @@ test("parityStatus reports atParity when both sides mirror", () => {
 });
 
 test("parityStatus reports a shortfall from my point of view", () => {
-  // a: 1 light. b: 1 light + 1 heavy. I am short 1 heavy.
-  const rigs = [rig("a", "light"), rig("b", "light"), rig("b", "heavy")];
+  // a: 1 light. b: 1 light + 1 medium. I am short 1 medium.
+  const rigs = [rig("a", "light"), rig("b", "light"), rig("b", "medium")];
   const s = parityStatus(rigs, "a");
   expect(s.atParity).toBe(false);
-  expect(s.diffLabel).toBe("Short 1 Heavy Rig");
+  expect(s.diffLabel).toBe("Short 1 Medium Rig");
 });
 
 test("parityStatus reports an excess from my point of view", () => {

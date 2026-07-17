@@ -25,7 +25,7 @@ test("Sidearm is a weak flat-pick ranged weapon in the unit list", () => {
   assert.equal(normalizeUnitWeapon("sidearm"), "Sidearm");
   const s = UNIT_WEAPONS["Sidearm"];
   assert.equal(s.rof, 2);
-  assert.equal(s.str, 4);
+  assert.equal(s.pen, 3);
   assert.equal(s.flatPick, true);
   assert.equal(s.maxRange, 12);
 });
@@ -84,13 +84,13 @@ function twoAllyRoom() {
   return room;
 }
 
-test("Field Weld heals an allied unit's chosen location (D12 10+ = 2 SP)", () => {
+test("Field Weld heals an allied unit's chosen location (D6 3-4 = 2 SP)", () => {
   const room = twoAllyRoom();
   const ally = room.rigs[1];
   ally.hull.sp = 3; // below max 8
   applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
-    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+    target: "Ally", loc: "hull", dice: { weld: 4 } } }, {});
   assert.equal(ally.hull.sp, 5); // +2
   assert.equal(room.game.turn.actionsUsed, 1);
 });
@@ -101,7 +101,7 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
   applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
   const before = room.rigs[1].hull.sp;
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
-    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+    target: "Ally", loc: "hull", dice: { weld: 4 } } }, {});
   assert.equal(room.rigs[1].hull.sp, before); // no heal — module missing
   assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
   // Enemy target rejected even with the module:
@@ -109,7 +109,7 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
   room.rigs[1].owner = "b";
   room.rigs[1].hull.sp = 3;
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
-    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+    target: "Ally", loc: "hull", dice: { weld: 4 } } }, {});
   assert.equal(room.rigs[1].hull.sp, 3); // enemy not healed
   assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
 });
@@ -121,7 +121,7 @@ test("Field Weld can't resurrect a destroyed ally", () => {
   for (const loc of ["hull", "tracks", "turret", "engine"]) ally[loc].sp = 0;
   applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
-    target: "Ally", loc: "hull", dice: { weld: 11 } } }, {});
+    target: "Ally", loc: "hull", dice: { weld: 4 } } }, {});
   assert.equal(ally.destroyed, true); // still dead — not revived
   assert.equal(ally.hull.sp, 0); // no SP welded on
   assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
@@ -200,7 +200,7 @@ test("A Recon unit holds one mark — a new Paint replaces the painter's old mar
 });
 
 test("a destroyed painter's mark stops helping allied guns", () => {
-  // Threshold shot: Tank Cannon peak ACC 2, attacker AIM 4, cover 2, one to-hit
+  // Threshold shot: Tank Cannon peak Accuracy 2, attacker BASE_AIM 4, cover 2, one to-hit
   // die of 2. Unpainted modAim = 4 (die 2 misses); a live paint cancels cover
   // and adds +1 Aim -> modAim 1 (die 2 lands). So the same die hits iff the
   // paint is honoured — which it must NOT be once the painter (id 1) is dead.

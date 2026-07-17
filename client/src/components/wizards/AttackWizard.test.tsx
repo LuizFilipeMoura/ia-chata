@@ -94,7 +94,7 @@ test("flat-pick attacker shows its single unit weapon and no upgrade line", () =
   render(<AttackWizard rig={attacker} mode="fire" onClose={() => {}} />);
   const notice = screen.getByText(/Before you attack/i).closest(".aw-attack-notice") as HTMLElement;
   expect(notice).toHaveTextContent("Tank Cannon");
-  expect(notice).toHaveTextContent(/flat STR/i);
+  expect(notice).toHaveTextContent(/flat Penetration/i);
 });
 
 test("attack drawer warns about the selected weapon upgrade before the attack button", () => {
@@ -128,7 +128,7 @@ test("dragging off the sweet spot shows the accuracy falloff", async () => {
   const slider = (await screen.findByLabelText(
     "Distance to target in inches",
   )) as HTMLInputElement;
-  // |18 - 7| * 0.35 = 3.85 -> round to 4 penalty -> acc = peak(2) - 4 = -2.
+  // |18 - 7| * 0.35 = 3.85 -> round to 4 penalty -> accuracy = peak(2) - 4 = -2.
   fireEvent.change(slider, { target: { value: "18" } });
   expect(screen.getByText("-2 falloff")).toBeInTheDocument();
 });

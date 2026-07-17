@@ -28,7 +28,7 @@ test("shows weapon names, base stats, upgrade delta and equipment", () => {
   wrap(<LoadoutView loadout={buildLoadout(rig)!} />);
   expect(screen.getByText("Autocannon")).toBeInTheDocument();
   expect(screen.getByText("Claw")).toBeInTheDocument();
-  expect(screen.getByText("+2")).toBeInTheDocument();                  // STR delta mark
+  expect(screen.getByText("+1")).toBeInTheDocument();                  // Penetration delta mark
   expect(screen.getByText(/Depleted Core/)).toBeInTheDocument();       // upgrade name
   expect(screen.getByText(/Ablative Plating/)).toBeInTheDocument();
   expect(screen.getByText(/\+1 max SP to Hull/)).toBeInTheDocument();  // passive

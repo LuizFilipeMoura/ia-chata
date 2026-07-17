@@ -13,7 +13,7 @@ import { SPEED } from "../battle/constants";
 import { LoadoutView } from "../components/LoadoutView";
 import type { Rig, Component } from "../../state/types";
 
-const CLASS_GLYPH: Record<string, string> = { light: "◆", medium: "◈", heavy: "⬢", colossal: "✦" };
+const CLASS_GLYPH: Record<string, string> = { light: "◆", medium: "◈" };
 
 interface Props {
   rig: Rig;
@@ -45,10 +45,11 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
   const hullBonus = rigEffects(rig).hullMaxBonus;
   const lo = buildLoadout(rig);
   // Movement stats now live on the chassis — surface Speed (a Move's reach) and
-  // its derived Sprint (1½× Speed) so the status view isn't silent on how far
-  // this Rig travels. Same resolution order as MoveBody: chassis > class > 8.
+  // its derived Sprint (1½× Speed, 2× with Reinforced Servos) so the status view
+  // isn't silent on how far this Rig travels. Same resolution order as MoveBody:
+  // chassis > class > 8.
   const speed = rig.speed ?? SPEED[rig.weightClass] ?? 8;
-  const sprint = Math.round(speed * 1.5);
+  const sprint = Math.round(speed * rigEffects(rig).sprintMult);
   const [view, setView] = useState<"status" | "loadout">("status");
   const loadoutText = lo?.flat ? lo.unit?.name : [lo?.lr?.name, lo?.melee?.name].filter(Boolean).join(" · ");
 

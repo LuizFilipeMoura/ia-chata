@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { HEAT_CAPACITY, rigEffects } from "/shared/game-state.js";
@@ -24,6 +25,14 @@ import SupportBody from "../battle/SupportBody";
 import { iconFor } from "../battle/constants";
 import type { Rig, PrepType } from "../../state/types";
 
+// The on-map move-target handshake (L3): openMove arms it in a digital room and
+// BattleScreen's overlay reads it to render the targeting layer. Kept here (not
+// in ActionConsole) so the console stays untouched.
+export interface MoveTarget {
+  rigId: number;
+  action: string;
+}
+
 interface BattleActionsApi {
   openMove: (rig: Rig, key: string) => void;
   openRepair: (rig: Rig, action: string) => void;
@@ -34,6 +43,9 @@ interface BattleActionsApi {
   endActivation: (rig: Rig) => void;
   rollInitiative: () => void;
   resetBattle: () => void;
+  moveTarget: MoveTarget | null;
+  beginMoveTarget: (rigId: number, action: string) => void;
+  clearMoveTarget: () => void;
 }
 
 // Meta for the three support-module actions (spec: Support Units) — Field
@@ -54,7 +66,17 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   const { promptDice } = useV2Roll();
   const sendCommand = useV2Commands();
   const checkCommand = useCommandCheck();
-  const { game, rigs } = useRoomState();
+  const { game, rigs, mode } = useRoomState();
+
+  // On-map move target (digital rooms). openMove arms it; the BattleScreen
+  // overlay places the destination and dispatches the move.
+  const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null);
+  const beginMoveTarget = useCallback((rigId: number, action: string) => setMoveTarget({ rigId, action }), []);
+  const clearMoveTarget = useCallback(() => setMoveTarget(null), []);
+
+  // Read mode inside the stable openMove callback without recreating it.
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   // A blocking, dismissable dialog explaining why an action was refused. Fed both
   // by the preflight below (before a wizard opens) and, via the rejection bus, by
@@ -105,8 +127,8 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   const mySide = useCallback(() => viewSide, [viewSide]);
 
   const promptOneDie = useCallback(
-    async (label: string, cb: (d: number) => void) => {
-      const out = await promptDice([{ key: "d", label, sides: 12 }], label);
+    async (label: string, cb: (d: number) => void, sides = 12) => {
+      const out = await promptDice([{ key: "d", label, sides }], label);
       cb(out.d);
     },
     [promptDice],
@@ -136,6 +158,12 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       // Spool the engine the moment the player selects to move (opens the wizard),
       // not when the move resolves. Dispatch-time cue is suppressed in useV2Commands.
       playAction(key);
+      // Digital rooms target the move ON THE MAP: arm the overlay and skip the
+      // physical MoveBody drawer entirely. Physical rooms keep the drawer below.
+      if (modeRef.current === "digital") {
+        beginMoveTarget(rig.id, key);
+        return;
+      }
       const sprint = key === "sprint";
       const enemies = (rigsRef.current || []).filter(
         (r) => !r.destroyed && r.owner !== rig.owner && r.engagedWith == null,
@@ -163,7 +191,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       });
       })();
     },
-    [openDrawer, closeDrawer, sendCommand, guardAction],
+    [openDrawer, closeDrawer, sendCommand, guardAction, beginMoveTarget],
   );
 
   const openRepair = useCallback(
@@ -203,8 +231,10 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
               if (auto) {
                 sendCommand("action", { name: rig.name, action: "repair", loc: state.loc });
               } else {
-                promptOneDie("Repair D12", (d) =>
-                  sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                promptOneDie(
+                  "Repair D6",
+                  (d) => sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                  6,
                 );
               }
             },
@@ -371,6 +401,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider
       value={{
         openMove, openRepair, openPrepare, openSupport, resolveBlast, sendReact, endActivation, rollInitiative, resetBattle,
+        moveTarget, beginMoveTarget, clearMoveTarget,
       }}
     >
       {children}

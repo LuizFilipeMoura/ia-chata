@@ -11,7 +11,10 @@ test("tracker protocol documents the chassis add flow", () => {
   assert.doesNotMatch(TRACKER_PROTOCOL, /heavy\|colossal/);
   assert.match(TRACKER_PROTOCOL, /chassis loadout/i);
   assert.match(TRACKER_PROTOCOL, /emit no `\[\[RIG add\]\]` tag/i);
-  assert.match(TRACKER_PROTOCOL, /Heavy and Colossal Rigs are not available/i);
+  // "not part of the game", never "not yet" — the bot must not promise a class
+  // that was deleted (2026-07-16), and the old copy said "not available yet".
+  assert.match(TRACKER_PROTOCOL, /Heavy and Colossal are not part of the game/i);
+  assert.doesNotMatch(TRACKER_PROTOCOL, /not available.*yet|coming soon|for now/i);
   // Every chassis combo is listed as an lr/melee pair.
   for (const p of CHASSIS) {
     assert.ok(

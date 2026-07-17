@@ -5,13 +5,14 @@ export interface RoomState {
   game: GameState | null;
   field: FieldState | null;
   ownerSide: string | null;
+  mode: "physical" | "digital";
   seeded: boolean;
   stateVersion: number;
   session: Session | null;
 }
 
 export const initialRoomState: RoomState = {
-  rigs: [], game: null, field: null, ownerSide: null, seeded: false, stateVersion: -1, session: null,
+  rigs: [], game: null, field: null, ownerSide: null, mode: "physical", seeded: false, stateVersion: -1, session: null,
 };
 
 export type RoomAction =
@@ -31,6 +32,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
         game: s.game ?? null,
         field: s.field ?? null,
         ownerSide: s.ownerSide ?? null,
+        mode: s.mode ?? "physical",
         seeded: s.seeded ?? false,
         stateVersion: s.version ?? state.stateVersion,
       };

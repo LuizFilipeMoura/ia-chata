@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ROLES, UNIT_KINDS, roleOf, partsByRole, hitPart, impactRow, kindOf,
+  ROLES, UNIT_KINDS, roleOf, partsByRole, hitPart, toughnessOf, partNamesOf, kindOf,
 } from "./unit-kinds.js";
+import { SUPPORTED_RIG_CLASSES } from "./game-state.js";
 
 test("ROLES lists the four generalized component roles", () => {
   assert.deepEqual([...ROLES].sort(), ["mobility", "power", "structural", "weapon"]);
@@ -53,11 +54,64 @@ test("hitPart returns the D12 → part-name for a kind", () => {
   assert.equal(hitPart("rig", 12), "engine");
 });
 
-test("impactRow returns { direct, severe, critical } per weight class + part", () => {
-  const row = impactRow("rig", "hull", "medium");
-  assert.equal(row.direct, 11);
-  assert.equal(row.severe, 14);
-  assert.equal(row.critical, 17);
+test("toughnessOf — rig reads the weight-class grid", () => {
+  assert.equal(toughnessOf("rig", "hull", "medium"), 5);
+  assert.equal(toughnessOf("rig", "engine", "light"), 3);
+  assert.equal(toughnessOf("rig", "hull", "light"), 4);
+});
+
+test("toughnessOf — flat kinds ignore weight class", () => {
+  assert.equal(toughnessOf("tank", "hull"), 6);
+  assert.equal(toughnessOf("tank", "tracks"), 5);
+  assert.equal(toughnessOf("walker", "hull"), 5);
+  assert.equal(toughnessOf("walker", "mount"), 4);
+});
+
+test("toughnessOf — every part of every kind has a value", () => {
+  // A missing T would silently become 0 and make the part trivially woundable.
+  for (const kind of ["tank", "walker"]) {
+    for (const p of partNamesOf(kind)) {
+      assert.equal(typeof toughnessOf(kind, p), "number", `${kind}/${p}`);
+    }
+  }
+  // Derived, never hardcoded: this list read ["light","medium","heavy","colossal"]
+  // and went on asserting over two classes makeRig had always rejected.
+  for (const wc of SUPPORTED_RIG_CLASSES) {
+    for (const p of partNamesOf("rig")) {
+      assert.equal(typeof toughnessOf("rig", p, wc), "number", `rig/${wc}/${p}`);
+    }
+  }
+});
+
+test("the rig toughness grid carries exactly the buildable classes", () => {
+  // Heavy and Colossal were deleted 2026-07-16. toughnessOf THROWS on an unknown
+  // class rather than returning 0, so a stale grid entry is not merely dead — it
+  // is a T7 board that reads as real. It did: a penetration-rework spec and its
+  // reviewer both balanced against toughness values no chassis could field.
+  for (const wc of ["heavy", "colossal"]) {
+    assert.throws(() => toughnessOf("rig", "hull", wc), /no T for/, `${wc} must be gone, not merely unused`);
+  }
+});
+
+test("toughnessOf — a failed lookup throws, never a silent 0", () => {
+  // Returning a sentinel here would not stay a sentinel: woundTarget coerces,
+  // and Number(null) === 0 yields TN 2 — a 90% wound. A bad lookup must abort,
+  // not quietly produce the softest location in the game.
+  assert.throws(() => toughnessOf("nope", "hull", "medium"), /unknown kind/);
+  assert.throws(() => toughnessOf("rig", "nope", "medium"), /no T for/);
+});
+
+test("toughnessOf — a rig lookup with no weight class throws, it does not fall back", () => {
+  // The trap the flat/by-weight probe used to hide: `toughness` for a rig is a
+  // grid of grids, so an omitted weightClass found no number and returned null.
+  // `byWeight` makes "rig needs a weight class" distinct from "unknown part".
+  assert.throws(() => toughnessOf("rig", "hull"), /no T for rig\/flat\/hull/);
+  assert.throws(() => toughnessOf("rig", "hull", "nope"), /no T for rig\/nope\/hull/);
+});
+
+test("toughnessOf — flat kinds reject a part that is only a rig part", () => {
+  // "arms" is a rig part; a tank must not resolve it via some shared fallback.
+  assert.throws(() => toughnessOf("tank", "arms"), /no T for tank\/flat\/arms/);
 });
 
 test("kindOf(unit) returns the registry id, defaulting to 'rig' on legacy shape", () => {
@@ -66,7 +120,7 @@ test("kindOf(unit) returns the registry id, defaulting to 'rig' on legacy shape"
   assert.equal(kindOf(null), "rig");
 });
 
-test("Tank entry — parts, roles, flags, strawman armour", () => {
+test("Tank entry — parts, roles, flags, strawman toughness", () => {
   const t = UNIT_KINDS.tank;
   assert.ok(t);
   assert.deepEqual(t.parts.map((p) => p.name), ["hull", "tracks", "turret", "engine"]);
@@ -80,17 +134,15 @@ test("Tank entry — parts, roles, flags, strawman armour", () => {
   assert.equal(t.weaponMode, "flat-pick");
   assert.equal(t.reloads, true);
   assert.equal(t.hasEquipment, false);
-  assert.equal(t.reactions, false);
+  assert.equal(t.reactions, false);
   assert.equal(t.destruction, "single-model");
   assert.equal(t.speed, 3);
   assert.equal(hitPart("tank", 3), "hull");
   assert.equal(hitPart("tank", 6), "tracks");
   assert.equal(hitPart("tank", 9), "turret");
   assert.equal(hitPart("tank", 12), "engine");
-  const row = impactRow("tank", "hull");
-  assert.equal(row.direct, 13);
-  assert.equal(row.severe, 15);
-  assert.equal(row.critical, 17);
+  assert.equal(toughnessOf("tank", "hull"), 6);
+  assert.equal(toughnessOf("tank", "engine"), 4);
 });
 
 test("Walker entry — parts, roles, flags, Sentinel strawman", () => {
@@ -99,8 +151,10 @@ test("Walker entry — parts, roles, flags, Sentinel strawman", () => {
   assert.deepEqual(w.parts.map((p) => p.name), ["hull", "legs", "mount", "engine"]);
   assert.equal(roleOf("walker", "mount"), "weapon");
   assert.equal(w.hasHeat, false);
-  assert.equal(w.actionBudget, 3);
+  assert.equal(w.actionBudget, 3);
   assert.equal(w.speed, 4);
   assert.equal(hitPart("walker", 6), "legs");
   assert.equal(hitPart("walker", 9), "mount");
+  assert.equal(toughnessOf("walker", "hull"), 5);
+  assert.equal(toughnessOf("walker", "engine"), 3);
 });

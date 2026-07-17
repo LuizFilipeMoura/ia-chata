@@ -2,15 +2,17 @@ import type { Rig, GameState, Turn } from "./src/state/types";
 
 declare module "/shared/game-state.js" {
   export const SUPPORTED_RIG_CLASSES: string[];
+  // §7.5 wound model: `pen` is compared against the struck location's Toughness
+  // via `woundTarget(pen, T)`; each wound then deals `dmg` SP.
   export const WEAPONS: Record<string, Record<string, {
-    rof: number; str: number;
-    acc?: number[]; rng?: number[];
+    rof: number; pen: number; dmg: number;
+    accuracy?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[];
   }>>;
   export const UNIT_WEAPONS: Record<string, {
-    rof: number; str: number;
-    acc?: number[]; rng?: number[];
+    rof: number; pen: number; dmg: number;
+    accuracy?: number[]; rng?: number[];
     sweet?: number; peak?: number; dropoff?: number; minRange?: number; maxRange?: number;
     melee?: boolean; perks?: string[]; flatPick?: boolean;
   }>;
@@ -32,6 +34,7 @@ declare module "/shared/game-state.js" {
     equipment?: string,
     equipmentUpgrade?: string | null,
   ): number;
+  export const BOT_PRESETS: string[];
   export const CHASSIS: Array<{ id: string; name: string; label: string; class: string; longRange: string; melee: string; speed?: number; sp?: Record<string, number> }>;
   export function chassisById(id?: string | null): { id: string; name: string; label: string; class: string; longRange: string; melee: string; speed?: number; sp?: Record<string, number> } | null;
   export const SUPPORT_TEMPLATES: Array<{ id: string; name: string; kind: "tank" | "walker"; unit: string | null; modules: string[] }>;
@@ -51,18 +54,45 @@ declare module "/shared/game-state.js" {
   export function upgradeForWeapon(weaponName: string, upgradeId?: string | null): { id: string; name: string } | null;
   export function rigEffects(rig: Rig): {
     actionHeat: Record<string, number>;
+    sprintMult: number;
     repair: { bonusSp: number };
     thermalMargin: number;
     hullMaxBonus: number;
     recoveryCool: number;
-    combat: { hardenImpact: number; sweetBandAcc: number; sideRearStr: number };
+    combat: { hardenImpact: number; sweetBandAccuracy: number; sideRearPen: number };
     modifiers: Array<{ source: string; kind: string; label: string; detail: string }>;
   };
+  // Digital-move geometry (spec: Digital battlefield). `spatial` is the engine's
+  // physical footprint of a rig; `moveBudget` is the reach (inches) a candidate
+  // destination's path length is validated against.
+  export function spatial(rig: Rig): { pos: { x: number; y: number }; facing: number; radius: number };
+  export function moveBudget(rig: Rig, act: "move" | "sprint"): number;
+}
+
+declare module "/shared/pathfind.js" {
+  export function findPath(
+    field: { width: number; height: number },
+    polys: Array<Array<{ x: number; y: number }>>,
+    blockers: Array<{ pos: { x: number; y: number }; radius: number }>,
+    radius: number,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ): { path: Array<{ x: number; y: number }>; length: number } | null;
+}
+
+declare module "/shared/geometry.js" {
+  export function terrainPolygons(field: { terrain?: unknown[] }): Array<Array<{ x: number; y: number }>>;
+  export function radiusOf(rig: Rig): number;
+}
+
+declare module "/shared/rules.js" {
+  /** Sides on the wound die (§7.5). The client sizes its manual-dice prompt from it. */
+  export const WOUND_DIE: number;
 }
 
 declare module "/shared/combat.js" {
-  export function weaponAccAt(
-    profile: { melee?: boolean; acc?: number[]; peak?: number; sweet?: number; dropoff?: number },
+  export function weaponAccuracyAt(
+    profile: { melee?: boolean; accuracy?: number[]; peak?: number; sweet?: number; dropoff?: number },
     distance: number | undefined,
   ): number;
 }
@@ -96,7 +126,11 @@ declare module "/shared/unit-kinds.js" {
     label: string;
     parts: Array<{ name: string; role: string }>;
     hitLocation: Array<{ min: number; part: string }>;
-    armour: unknown;
+    // Toughness per part. When `byWeight` is true (the Rig) the grid is keyed by
+    // weight class first: `toughness[weightClass][partName]`. Otherwise it is a
+    // flat `toughness[partName]`. Read it through `toughnessOf`, not directly.
+    toughness: Record<string, number> | Record<string, Record<string, number>>;
+    byWeight?: boolean;
     hasHeat: boolean;
     hasArcs: boolean;
     actionBudget: number;
@@ -104,7 +138,6 @@ declare module "/shared/unit-kinds.js" {
     reloads: boolean;
     hasEquipment: boolean;
     reactions: boolean;
-    ramStr: unknown;
     destruction: string;
   }>;
   export function kindOf(unit: unknown): string;
@@ -113,11 +146,14 @@ declare module "/shared/unit-kinds.js" {
   export function roleOf(kindId: string, partName: string): string | null;
   export function partsByRole(kindId: string, role: string): string[];
   export function hitPart(kindId: string, d12: number): string | undefined;
-  export function impactRow(
+  // Toughness of a single part. `weightClass` is REQUIRED for `byWeight` kinds
+  // (the Rig) and ignored otherwise. THROWS on an unresolvable lookup rather
+  // than returning null — callers get a loud failure, not a silent 0.
+  export function toughnessOf(
     kindId: string,
     partName: string,
     weightClass?: string,
-  ): { direct: number; severe: number; critical: number } | null | undefined;
+  ): number;
 }
 
 declare module "/shared/field.js" {

@@ -69,7 +69,7 @@ test("availableActions: sprint chip reflects Servo Actuators and its upgrade", (
   const servo = availableActions(rig({ equipment: "servo-actuators" }), turn);
   assert.equal(servo.find((a) => a.key === "sprint").heat, 1);
   const reinf = availableActions(rig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" }), turn);
-  assert.equal(reinf.find((a) => a.key === "sprint").heat, 0);
+  assert.equal(reinf.find((a) => a.key === "sprint").heat, 1);
   const bare = availableActions(rig(), turn);
   assert.equal(bare.find((a) => a.key === "sprint").heat, 2);
 });

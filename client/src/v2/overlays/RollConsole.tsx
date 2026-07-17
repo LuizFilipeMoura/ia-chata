@@ -6,7 +6,7 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import type { Resolution, ResolutionBreakdown } from "../../state/types";
+import type { Resolution, ResolutionBreakdown, ResolutionStep } from "../../state/types";
 import "../styles/overlay.css";
 
 export interface DiceSpec {
@@ -34,13 +34,50 @@ interface DieState {
 const rollTone = (roll: { sides: number; tone?: string }): string =>
   roll.tone || (roll.sides === 12 ? "cool" : "");
 
-// Per-die verdict word shown under a settled to-hit die, alongside the tone
-// color — crit/ok land, miss whiffs. Location (cool) and untoned dice get none.
-const verdictLabel = (tone: string): string | null => {
+// Per-die verdict word shown under a settled die, alongside the tone color.
+//
+// The word is keyed off the DIE, not just its tone: the chain rolls d6 to hit
+// and d10 to wound, and both use tone "ok"/"miss". Keying on tone alone made a
+// successful wound die announce "HIT!" — to-hit vocabulary on a roll that
+// decided damage, which is precisely the confusion this panel exists to end.
+// Location (d12, tone "cool") and untoned dice get no word.
+const verdictLabel = (sides: number, tone: string): string | null => {
+  if (sides === WOUND_DIE) {
+    if (tone === "crit") return "CRIT!";
+    if (tone === "ok") return "WOUND!";
+    if (tone === "miss") return "NO WOUND";
+    return null;
+  }
   if (tone === "crit") return "CRIT!";
   if (tone === "ok") return "HIT!";
   if (tone === "miss") return "FAILED!";
   return null;
+};
+
+// The wound die's sides. Mirrors WOUND_DIE in shared/rules.js — the client
+// reads resolutions off the wire, so it cannot import the engine constant.
+const WOUND_DIE = 10;
+
+// Eyebrow word per ledger step. Each stage names ITSELF; the panel never
+// borrows one stage's vocabulary for another.
+const STEP_LABEL: Record<ResolutionStep["kind"], string> = {
+  hit: "Hit",
+  location: "Location",
+  wound: "Wound",
+  damage: "Damage",
+};
+
+// The dice a step is answerable for, normalised to one shape. The location step
+// carries a single `die` rather than a `dice[]` because a d12 has no pass/fail
+// verdict — it picks a part. `ok: null` renders it neutral rather than lying
+// about a success it never adjudicated.
+const stepDice = (
+  step: ResolutionStep,
+): Array<{ value: number; ok: boolean | null }> => {
+  if (step.kind === "location") {
+    return step.die != null ? [{ value: step.die, ok: null }] : [];
+  }
+  return step.dice || [];
 };
 
 interface EffectState {
@@ -352,11 +389,26 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                         dieEls.current[i] = el;
                       }}
                     >
-                      {d.settled ? String(d.value) : String(1 + Math.floor(Math.random() * d.sides))}
+                      {/* A rolling die's face is owned by the flicker interval, which
+                          writes el.textContent directly (see `clearFlicker`'s timer).
+                          React must render "" here — NOT a random face.
+
+                          If React rendered a face, its vdom would hold a value it does
+                          not control. On settle, React diffs its OWN previous text
+                          against the real value and skips the DOM write whenever the two
+                          happen to match — stranding the flicker's last face on screen.
+                          That showed the player a number the engine never rolled (~1 in
+                          `sides` per die, so a 6-die volley lied more often than not).
+
+                          With "" here, React's text always differs from the settled
+                          value, so the write always lands. Do not "restore" the random
+                          face: the panel lying about its dice is the exact bug class
+                          this console exists to prevent. */}
+                      {d.settled ? String(d.value) : ""}
                     </div>
-                    {d.settled && verdictLabel(d.tone) ? (
+                    {d.settled && verdictLabel(d.sides, d.tone) ? (
                       <span className="v2-die-verdict v2-eyebrow" data-tone={d.tone}>
-                        {verdictLabel(d.tone)}
+                        {verdictLabel(d.sides, d.tone)}
                       </span>
                     ) : null}
                     <span className="v2-die-label v2-eyebrow">{d.label}</span>
@@ -368,8 +420,8 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
           ) : null}
 
           {breakdown ? (
-            <div className="v2-roll-zone">
-              <div className="v2-roll-zone-label">Damage</div>
+            <div className="v2-roll-zone v2-roll-zone--ledger">
+              <div className="v2-roll-zone-label">Resolution</div>
               <div className="v2-rx-break" aria-label={summary}>
                 {(breakdown.actor || breakdown.weapon || breakdown.target) && (
                   <div className="v2-rx-break-head">
@@ -378,29 +430,75 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                     {breakdown.target && <span className="v2-rx-target">→ {breakdown.target}</span>}
                   </div>
                 )}
-                <div className="v2-rx-break-eq">
-                  {(breakdown.terms || []).map((t, i) => (
-                    <span className="v2-rx-term-group" key={i}>
-                      {t.op ? <span className="v2-rx-op">{t.op}</span> : null}
-                      <span className="v2-rx-term" data-tone={t.tone}>
-                        <b>{t.value}</b>
-                        <em>{t.label}</em>
-                      </span>
-                    </span>
+                {/* The ledger. Steps stagger in in resolution order so the panel
+                    NARRATES the rule rather than dumping it; reduced-motion
+                    lands them all at once (see overlay.css). They are in the
+                    DOM from the first frame either way. */}
+                <ol className="v2-rx-steps">
+                  {(breakdown.steps || []).map((s, i) => (
+                    <li
+                      className="v2-rx-step"
+                      key={i}
+                      data-kind={s.kind}
+                      data-testid="v2-roll-step"
+                      style={{ animationDelay: reduced ? undefined : `${i * 0.18}s` }}
+                    >
+                      <div className="v2-rx-step-in" data-testid={`v2-roll-step-${s.kind}`}>
+                        <div className="v2-rx-step-hd">
+                          <span className="v2-rx-step-kind v2-eyebrow">{STEP_LABEL[s.kind]}</span>
+                          {/* The money shot. "Penetration 4 vs T5 → 7+" is the single
+                              line that answers "why 0 damage?". */}
+                          {s.kind === "wound" && s.pen != null && s.toughness != null ? (
+                            <span className="v2-rx-step-math">
+                              <span className="v2-rx-step-pair">Penetration&nbsp;<b>{s.pen}</b></span>
+                              <i>vs</i>
+                              <span className="v2-rx-step-pair">T<b>{s.toughness}</b></span>
+                              <i>→</i>
+                              <span className="v2-rx-step-tn">{s.target}+</span>
+                            </span>
+                          ) : s.target != null ? (
+                            <span className="v2-rx-step-tn">{s.target}+</span>
+                          ) : null}
+                        </div>
+                        {stepDice(s).length > 0 && (
+                          <div className="v2-rx-step-dice">
+                            {stepDice(s).map((d, j) => (
+                              <span
+                                className="v2-rx-pip"
+                                key={j}
+                                data-ok={d.ok == null ? undefined : String(d.ok)}
+                              >
+                                {d.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="v2-rx-step-out">{s.out}</div>
+                        {(s.terms || []).length > 0 && (
+                          <div className="v2-rx-step-terms">
+                            {/* Zeros are NOT filtered: a 0 term is a canceller
+                                explaining why something cost nothing. */}
+                            {(s.terms || []).map((t, j) => (
+                              <span
+                                className="v2-rx-chip"
+                                key={j}
+                                data-sign={
+                                  typeof t.value === "number" && t.value !== 0
+                                    ? t.value > 0 ? "pos" : "neg"
+                                    : "zero"
+                                }
+                              >
+                                <b>{typeof t.value === "number" && t.value > 0 ? `+${t.value}` : t.value}</b>
+                                <em>{t.label}</em>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </li>
                   ))}
-                </div>
+                </ol>
                 <div className="v2-rx-break-out">
-                  {breakdown.total != null && (
-                    <span className="v2-rx-total">
-                      <span className="v2-rx-op">=</span>
-                      {breakdown.total}
-                    </span>
-                  )}
-                  {breakdown.tier && (
-                    <span className="v2-rx-tier" data-tier={breakdown.tier}>
-                      {breakdown.tier}
-                    </span>
-                  )}
                   <span className="v2-rx-sp">
                     <b>{breakdown.sp}</b>
                     <em>{breakdown.location ? `SP → ${breakdown.location}` : "SP"}</em>

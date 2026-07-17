@@ -123,9 +123,9 @@ export function availableActions(rig, turn, round) {
     list.push({ key: "paint", label: ACTIONS.paint.label, heat: ACTIONS.paint.heat,
       enabled: left > 0, cost: ACTIONS.paint.slot, note: "" });
   }
-  // Servo Actuators (and its Reinforced Servos upgrade) drop Sprint's heat to
-  // Move's or below. Same-or-less heat for 1½× the distance makes Move strictly
-  // dominated, so hide it — the Move group tile then fires Sprint directly.
+  // Servo Actuators drops Sprint's heat to 1 — Move's own cost. Same heat for
+  // 1½× the distance (2× with Reinforced Servos) makes Move strictly dominated,
+  // so hide it — the Move group tile then fires Sprint directly.
   const sprintAct = list.find((a) => a.key === "sprint");
   if (sprintAct && sprintAct.heat <= ACTIONS.move.heat) {
     const i = list.findIndex((a) => a.key === "move");

@@ -161,7 +161,7 @@ export const RigItem = React.memo(function RigItem({
                     <div className="rig-loadout-main">
                       <div className="rig-loadout-slot">Weapon</div>
                       <div className="rig-loadout-name">{lo.unit?.name}</div>
-                      <div className="rig-loadout-up">Flat STR · no weight-class scaling</div>
+                      <div className="rig-loadout-up">Flat Penetration · no weight-class scaling</div>
                     </div>
                   </div>
                 ) : (

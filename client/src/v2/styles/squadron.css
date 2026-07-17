@@ -379,3 +379,18 @@
   padding: 12px 22px;
   font-size:var(--v2-text-base);
 }
+
+/* Pre-battle opponent selector — Human vs a difficulty-preset bot. */
+.v2-root .v2-yard-opponent { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.v2-root .v2-yard-opponent-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.v2-root .v2-yard-opp-btn {
+  font: inherit; padding: 6px 10px; border: 1px solid var(--v2-line);
+  background: transparent; color: var(--v2-txt); border-radius: 4px; cursor: pointer;
+  transition: border-color var(--v2-dur-fast);
+}
+.v2-root .v2-yard-opp-btn:hover { border-color: var(--v2-oil-deep); }
+.v2-root .v2-yard-opp-btn.is-on { border-color: var(--v2-oil); color: var(--v2-oil); }
+.v2-root .v2-yard-opponent-sub {
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm);
+  letter-spacing: 0.1em; color: var(--v2-txt-faint);
+}

@@ -121,6 +121,12 @@ const TERRAIN_KINDS = [
   { kind: "rock", min: 2, max: 4, make(rand) {
     const r = rrange(rand, 1, 2);
     return { shape: "poly", points: polyBlob(rand, r, 0.42, 5), fp: r };
+  }, makeDigital(rand) {
+    // The last poly blob in the digital vocabulary, squared off: digital maps are
+    // rectangles only, so the ray tests and the occupancy grid get one shape and
+    // one code path instead of a blob special case.
+    const w = rrange(rand, 1.6, 3.2), h = w * rrange(rand, 0.7, 1.05);
+    return { shape: "rect", w: round2(w), h: round2(h), rot: round2(rrange(rand, 0, 180)), fp: Math.hypot(w, h) / 2 };
   } },
   { kind: "crate", min: 1, max: 3, make(rand) {
     const w = rrange(rand, 1.4, 2.4), h = w * rrange(rand, 0.8, 1.1);
@@ -128,25 +134,58 @@ const TERRAIN_KINDS = [
   } },
 ];
 
+// The terrain vocabulary a digital room scatters. wood / crater / ruin are
+// excluded: the 3-ray cover model (geometry.js) grades by pure geometry, and
+// those three lie about themselves under it — a wood is a 3.4-5.4in blob that
+// eats all three rays and reads as a WALL, and a crater is a hole that would do
+// the same. Every kind kept here reads correctly with no cover-class table.
+// A physical room is unaffected — you adjudicate a wood yourself at the table.
+export const DIGITAL_TERRAIN_KINDS = new Set(["building", "barricade", "rock", "crate"]);
+
+// Signed perpendicular distance from `p` to the empty-corner diagonal — which
+// side of it a point falls on, and by how far. Digital terrain is scattered on
+// ONE side and mirrored to the other, so each player reads an identical board
+// from their own corner. That matters more than usual here: the digital field
+// exists to host an AI opponent, and an asymmetric map makes "did it outplay me
+// or just draw the better table?" unanswerable.
+function diagonalSide(field, p) {
+  const [e0, e1] = emptyCorners(field);
+  return ((e1.x - e0.x) * (p.y - e0.y) - (e1.y - e0.y) * (p.x - e0.x)) / Math.hypot(e1.x - e0.x, e1.y - e0.y);
+}
+
 // Dress the field with a varied terrain scatter — several shapes and sizes,
 // clear of objectives and the deployment corners, roughly wargame density.
 // Piece count scales with field area. Deterministic under `random` (matches rollD).
-export function scatterTerrain(field, random = Math.random) {
+// `opts.digital` restricts the vocabulary to DIGITAL_TERRAIN_KINDS (see above),
+// makes every piece a rect, and scatters half a board which it then mirrors 180deg
+// about the centre so both sides read the same table. Physical callers omit it and
+// keep the full 7-kind vocabulary, organic blobs and an unmirrored scatter.
+export function scatterTerrain(field, random = Math.random, opts = {}) {
   const rand = typeof random === "function" ? random : Math.random;
+  const kinds = opts.digital ? TERRAIN_KINDS.filter((k) => DIGITAL_TERRAIN_KINDS.has(k.kind)) : TERRAIN_KINDS;
   const objectives = computeObjectives(field);
   const dcorners = deploymentCorners(field);
   const hd = halfDiag(field.width, field.height);
   const objClear = 0.10 * hd;
-  const cornerClear = 0.18 * hd;
+  // Terrain must not spawn in a staging area. This used to be 0.18 * hd (~5.84in
+  // on the reference table) while the deploy zone reaches 8in, so pieces intruded
+  // into the outer third of it — measured: the 4v4 seed roster's last rig found no
+  // legal spot on 0.6% of seeds. Physical rooms get this too; terrain in your own
+  // corner is wrong on a real table as well.
+  const cornerClear = deployRadius(field);
   const minGap = 0.03 * hd;
   const margin = Math.min(field.width, field.height) * 0.05;
   const areaMul = Math.sqrt((field.width * field.height) / (REF.width * REF.height));
 
   // Roll a count per kind, then instantiate each piece's geometry.
   const built = [];
-  for (const spec of TERRAIN_KINDS) {
-    const n = Math.max(spec.min, Math.round(rrange(rand, spec.min, spec.max + 0.999) * areaMul));
-    for (let i = 0; i < n; i++) built.push({ kind: spec.kind, ...spec.make(rand) });
+  for (const spec of kinds) {
+    let n = Math.max(spec.min, Math.round(rrange(rand, spec.min, spec.max + 0.999) * areaMul));
+    // Digital scatters half a board and mirrors it, so rolling the full count
+    // would land a board twice the intended density. Never round a kind away.
+    if (opts.digital) n = Math.max(1, Math.round(n / 2));
+    const make = opts.digital && spec.makeDigital ? spec.makeDigital : spec.make;
+    for (let i = 0; i < n; i++) built.push({ kind: spec.kind, ...make(rand) });
   }
   // Pack biggest first so the area anchors claim space before the scatter.
   built.sort((a, b) => b.fp - a.fp);
@@ -164,10 +203,19 @@ export function scatterTerrain(field, random = Math.random) {
       if (objectives.some((o) => distp(o, p) < objClear + piece.fp)) continue;
       if (dcorners.some((c) => distp(c, p) < cornerClear + piece.fp)) continue;
       if (placed.some((q) => distp(q, p) < minGap + piece.fp + q.fp)) continue;
+      // Stay one footprint clear of the diagonal, or the piece would overlap its
+      // own mirror image across it.
+      if (opts.digital && diagonalSide(field, p) <= piece.fp) continue;
       placed.push({ ...piece, x: p.x, y: p.y });
       break;
     }
   }
+  // A half turn about the centre maps one deployment corner onto the other, so
+  // each side reads the same board. `rot` survives the turn untouched because a
+  // rect is centrally symmetric — true only while digital terrain is rects only.
+  const out = opts.digital
+    ? placed.flatMap((p) => [p, { ...p, x: round2(field.width - p.x), y: round2(field.height - p.y) }])
+    : placed;
   // `fp` was only needed for spacing; keep the wire payload to the geometry.
-  return placed.map(({ fp, ...rest }) => rest);
+  return out.map(({ fp, ...rest }) => rest);
 }

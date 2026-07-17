@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Shell } from "./components/Shell";
 import { Squadron } from "./screens/Squadron";
+import { BattleScreen } from "./battle/BattleScreen";
+import { canRigActivate } from "./battle/activation";
 import { TurnBanner } from "./components/TurnBanner";
 import { ImpersonateChip } from "./components/ImpersonateChip";
 import { RigTerminal } from "./overlays/RigTerminal";
@@ -17,7 +19,7 @@ import { useV2BattleWatchers } from "./hooks/useV2BattleWatchers";
 import { useUi } from "../state/UiStateContext";
 
 export function V2Terminal() {
-  const { rigs, game } = useRoomState();
+  const { rigs, game, mode } = useRoomState();
   const sendCommand = useCommands();
   const mySide = useMySide();
   const { chatOpen, setChatOpen, glossaryOpen, setGlossaryOpen } = useUi();
@@ -32,15 +34,12 @@ export function V2Terminal() {
   const openRig = rigs.find((r) => r.id === openRigId) || null;
   const editRig = rigs.find((r) => r.id === editRigId) || null;
   const started = Boolean(game?.started);
-  const pendingGate = Boolean(game?.pendingAnswer || game?.pendingReaction || game?.pendingBlast);
+  const digitalBattle = started && mode === "digital";
   // Whether it's this player's activation turn at all — distinct from whether
   // *this* rig can activate right now. "Wait for your turn" is only honest when
   // it is NOT my turn; on my turn a blocked rig shows no control instead.
   const myTurn = started && game?.phase === "activation" && game?.turn?.side === mySide;
-  const canActivate =
-    !!openRig && myTurn && (openRig.owner || "a") === mySide &&
-    game?.turn?.activeRigId == null && !pendingGate &&
-    !openRig.activated && !openRig.destroyed;
+  const canActivate = !!openRig && canRigActivate(openRig, game, mySide);
 
   return (
     <Shell
@@ -51,7 +50,9 @@ export function V2Terminal() {
     >
       <ImpersonateChip />
       <TurnBanner onCommission={() => setCommissionOpen(true)} />
-      <Squadron onOpenRig={setOpenRigId} onCommission={() => setCommissionOpen(true)} />
+      {digitalBattle
+        ? <BattleScreen onOpenRig={setOpenRigId} />
+        : <Squadron onOpenRig={setOpenRigId} onCommission={() => setCommissionOpen(true)} />}
       {openRig && (
         <RigTerminal rig={openRig} started={started} canActivate={canActivate}
           mine={(openRig.owner || "a") === mySide} myTurn={myTurn}

@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { HEAT_CAPACITY } from "/shared/game-state.js";
+import { HEAT_CAPACITY, rigEffects } from "/shared/game-state.js";
 import { useDrawer } from "./DrawerContext";
 import { useRoll } from "./RollContext";
 import { useRoomState } from "./RoomStateContext";
@@ -35,9 +35,9 @@ const LOC_CHOICES = [
 
 // §5 base Speed (inches) per weight class — the physical reach of a Move.
 // House-rule tuning: whole-inch speeds so tabletop measuring stays clean.
-// Mediums bumped up a notch (were crawling) while keeping the light > medium >
-// heavy > colossal ladder.
-const SPEED: Record<string, number> = { light: 5, medium: 4, heavy: 3, colossal: 2 };
+// Mediums bumped up a notch (were crawling) while keeping the light > medium
+// ladder.
+const SPEED: Record<string, number> = { light: 5, medium: 4 };
 const MOVE_HOLD_MS = 5000;
 const SPRINT_HOLD_MS = 8000;
 const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOLD_MS);
@@ -74,9 +74,15 @@ function MoveBody({
   // Per-chassis Speed wins; fall back to the weight-class map for support units,
   // free-combo rigs, and pre-speed saves.
   const base = rig.speed ?? SPEED[rig.weightClass] ?? 8;
-  // Sprint is 1½× Speed, rounded to a whole inch so table measuring stays clean.
-  const dist = sprint ? Math.round(base * 1.5) : base;
-  const heat = sprint ? (rig.equipment === "servo-actuators" ? 1 : 2) : 1;
+  // Sprint reach and heat are both loadout-derived; rigEffects is the one
+  // read-model that resolves them (V2's MoveBody reads the same values).
+  const eff = rigEffects(rig);
+  const mult = eff.sprintMult;
+  const dist = sprint ? Math.round(base * mult) : base;
+  // The reach label rides the same value as the distance — printing a literal
+  // "1½×" next to a 2×-derived number is how "16" (1½× Speed)" ships.
+  const reachLabel = mult === 1.5 ? "1½× Speed" : `${mult}× Speed`;
+  const heat = sprint ? eff.actionHeat.sprint : 1;
   const holdMs = holdMsFor(actionKey);
   const holdSec = Math.round(holdMs / 1000);
 
@@ -84,7 +90,7 @@ function MoveBody({
   const [pct, setPct] = useState(0);
   const done = remaining <= 0;
   // Move and Sprint each spend one action slot; both generate heat (Move +1,
-  // Sprint +2 / +1 with Servo Actuators). You may repeat them within the budget.
+  // Sprint +2 / +1 with Servo Actuators). Repeat them within the budget.
   const costNote = `Costs 1 action · +${heat} heat`;
 
   useEffect(() => {
@@ -107,7 +113,7 @@ function MoveBody({
         className="dwr-hint"
         dangerouslySetInnerHTML={{
           __html: sprint
-            ? `Reposition up to <b>${dist}"</b> (1½× Speed). Backpedal / side-step at half. Generates <b>+${heat} heat</b>.`
+            ? `Reposition up to <b>${dist}"</b> (${reachLabel}). Backpedal / side-step at half. Generates <b>+${heat} heat</b>.`
             : `Reposition up to <b>${dist}"</b> (full Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`,
         }}
       />
@@ -165,8 +171,8 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
   const mySide = useCallback(() => viewSide, [viewSide]);
 
   const promptOneDie = useCallback(
-    async (label: string, cb: (d: number) => void) => {
-      const out = await promptDice([{ key: "d", label, sides: 12 }], label);
+    async (label: string, cb: (d: number) => void, sides = 12) => {
+      const out = await promptDice([{ key: "d", label, sides }], label);
       cb(out.d);
     },
     [promptDice],
@@ -250,8 +256,10 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
               if (auto) {
                 sendCommand("action", { name: rig.name, action: "repair", loc: state.loc });
               } else {
-                promptOneDie("Repair D12", (d) =>
-                  sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                promptOneDie(
+                  "Repair D6",
+                  (d) => sendCommand("action", { name: rig.name, action: "repair", loc: state.loc, dice: { repair: d } }),
+                  6,
                 );
               }
             },
@@ -408,7 +416,7 @@ function BlastBody({
   return (
     <>
       <p className="dwr-hint">
-        Select every Rig within 4" of the wreck — each takes a D6 + STR 10 blast hit.
+        Select every Rig within 4" of the wreck — each takes a D6 + Penetration 10 blast hit.
       </p>
       <div className="blast-list">
         {candidates.map((r) => {
@@ -449,10 +457,10 @@ function RepairBody({
     <>
       <p className="dwr-hint">
         {isPatch
-          ? "Restores a guaranteed 2 SP to the chosen location — no dice."
+          ? "Restores a guaranteed 4 SP to the chosen location — no dice."
           : auto
-            ? "Rolls a D12: 10+ restores 2 SP, 7–9 restores 1 SP."
-            : "You'll roll a D12 next: 10+ restores 2 SP, 7–9 restores 1 SP."}
+            ? "Rolls a D6: 1–2 restores 1 SP, 3–4 restores 2 SP, 5–6 restores 3 SP."
+            : "You'll roll a D6 next: 1–2 restores 1 SP, 3–4 restores 2 SP, 5–6 restores 3 SP."}
       </p>
       <ChoiceField
         label="Location"

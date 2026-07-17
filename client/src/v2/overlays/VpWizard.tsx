@@ -73,6 +73,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
           <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
           <div className="v2-aw-title-row">
             <div className="v2-aw-title v2-title">⟡ Score Objectives — Round {round}</div>
+            <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           </div>
           <p className="v2-aw-field-desc">
             What points do you control? Tap each marker one of your Rigs holds

@@ -17,12 +17,37 @@ describe("MoveBody sprint heat", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain("+1 heat");
   });
-  it("shows +0 for a Reinforced Servos rig", () => {
+  it("shows +1 for a Reinforced Servos rig — Sprint is never free", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
-    expect(document.body.textContent).toContain("+0 heat");
+    expect(document.body.textContent).toContain("+1 heat");
+    expect(document.body.textContent).not.toContain("+0 heat");
   });
   it("Sprint hint notes the free 90° pivot", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain("pivot up to 90° free");
+  });
+});
+
+describe("MoveBody sprint reach", () => {
+  it("Sprints 12\" at 1½× Speed on base Servo Actuators (Speed 8)", () => {
+    render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+    expect(document.body.textContent).toContain('12"');
+  });
+  it("Sprints 16\" at 2× Speed with Reinforced Servos (Speed 8)", () => {
+    render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+    expect(document.body.textContent).toContain('16"');
+  });
+  it("labels the reach 2×, not a literal 1½× next to a 2×-derived distance", () => {
+    render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+    expect(document.body.textContent).toContain("2× Speed");
+    expect(document.body.textContent).not.toContain("1½×");
+  });
+  it("still labels base Servo Actuators reach 1½×", () => {
+    render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+    expect(document.body.textContent).toContain("1½× Speed");
+  });
+  it("a plain Move is full Speed regardless of the upgrade", () => {
+    render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="move" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
+    expect(document.body.textContent).toContain('8"');
   });
 });

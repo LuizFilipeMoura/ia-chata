@@ -41,8 +41,15 @@ export default function Drawer({ config, visible, onClose }: DrawerProps) {
     <div className={"v2-dwr-scrim v2-scrim" + (visible ? " show" : "")} onClick={onScrimClick}>
       <div className="v2-root v2-portal-bare">
         <div className="v2-dwr-card v2-panel v2-panel--sharp">
-          <div className="v2-dwr-title v2-eyebrow" data-tone={config.tone || "oil"}>
-            {config.title}
+          <div className="v2-dwr-title-row">
+            <div className="v2-dwr-title v2-eyebrow" data-tone={config.tone || "oil"}>
+              {config.title}
+            </div>
+            {dismissable ? (
+              <button type="button" className="v2-dwr-close v2-close" aria-label="Close" onClick={onClose}>
+                ✕
+              </button>
+            ) : null}
           </div>
           {config.render?.()}
           {config.actions?.length ? (

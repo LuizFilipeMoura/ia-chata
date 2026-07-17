@@ -6,7 +6,7 @@ import path from "node:path";
 import express from "express";
 import { createStore } from "../store.js";
 import { createGameRouter } from "./game.js";
-import { CHASSIS } from "../../shared/game-state.js";
+import { CHASSIS, claimSide, applyCommand } from "../../shared/game-state.js";
 
 // Two real catalogue chassis — HTTP adds go through enforceChassis, which only
 // admits canonical loadouts.
@@ -118,4 +118,79 @@ test("POST /command/check surfaces an enforceChassis rejection as ok:false", asy
 test("POST /command on an unknown room is 404", async () => {
   const res = await post("/api/game/NOPE/command", { cmd: { verb: "action", attrs: { name: "Atk", action: "move" } }, side: "a" });
   assert.equal(res.status, 404);
+});
+
+test("a bot side plays itself out after a human command (driveBots hook)", async () => {
+  // Build a digital bot-vs-bot room directly in the store (adds bypass the HTTP
+  // chassis gate; the sides[i].bot flag is a lobby field set here directly).
+  // Side A's ready over HTTP now auto-readies the bot opponent (B) and starts the
+  // match in one step; the route's driveBots hook then plays BOTH bot sides to a
+  // terminal state before the response is sent.
+  const room = store.getOrCreateRoom("BOTHOOK");
+  room.mode = "digital";
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  for (const owner of ["a", "b"]) {
+    for (let i = 1; i <= 2; i++) {
+      applyCommand(room, { verb: "add", attrs: { name: `${owner}${i}`, class: "light", owner, longRange: "Autocannon", melee: "Claw" } });
+    }
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+  room.game.sides[0].bot = "aggressive";
+  room.game.sides[1].bot = "cagey";
+  // Side A's ready over HTTP now auto-readies the bot opponent (B) and starts the
+  // match in one step; the route's driveBots hook then plays BOTH bot sides out.
+  const res = await post("/api/game/BOTHOOK/command", { cmd: { verb: "ready", attrs: {} }, side: "a" });
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.ok(body.state.game.outcome != null || body.state.game.round > 1,
+    `driveBots did not advance the bot game: phase ${body.state.game.phase}, round ${body.state.game.round}`);
+});
+
+test("a human starts a match against a bot over HTTP and the bot plays out", async () => {
+  const room = store.getOrCreateRoom("VSBOTHTTP");
+  room.mode = "digital";
+  claimSide(room, { name: "Human", side: "a" });
+  claimSide(room, { name: "Bot", side: "b" });
+  // Human commissions two distinct-chassis rigs directly (add stamps chassis).
+  const light = CHASSIS.filter((c) => c.class === "light");
+  for (let i = 0; i < 2; i++) {
+    const pb = light[i];
+    applyCommand(room, { verb: "add", attrs: {
+      name: `H${i + 1}`, owner: "a", class: pb.class,
+      longRange: pb.longRange, melee: pb.melee, chassis: pb.id, sp: pb.sp,
+    } }, { side: "a" });
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+
+  // Flag the opponent as a bot over HTTP, then ready over HTTP.
+  const flag = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "setbot", attrs: { side: "b", preset: "aggressive" } }, side: "a" });
+  assert.equal(flag.status, 200);
+
+  const res = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "ready", attrs: {} }, side: "a" });
+  const body = await res.json();
+  assert.equal(res.status, 200);
+
+  // The bot side was filled to mirror the human (2 light rigs) and the game started.
+  const botRigs = body.state.rigs.filter((r) => (r.owner || "a") === "b");
+  assert.equal(botRigs.length, 2);
+  assert.equal(body.state.game.started, true);
+  // The human readied first, so side a is the SECOND activator and holds the
+  // opening Answer token. driveBots correctly stalls at that human-owned gate — no
+  // bot has activated yet. This documents why the next step is needed.
+  assert.equal(body.state.game.pendingAnswer?.side, "a");
+  assert.ok(body.state.rigs.filter((r) => (r.owner || "a") === "b").every((r) => !r.activated),
+    "the bot must not have activated while the human still owes the opening Answer");
+
+  // Human resolves the opening Answer over HTTP (brace on one of their rigs). That
+  // clears the gate, and the same POST's driveBots hook plays out the bot's first
+  // activation before the response returns.
+  const ans = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "answer", attrs: { name: "H1", prep: "brace", side: "a" } }, side: "a" });
+  const played = await ans.json();
+  assert.equal(ans.status, 200);
+  assert.equal(played.state.game.pendingAnswer, null);
+  // Concrete proof the bot acted: side b (the first activator) has activated a rig.
+  const botPlayed = played.state.rigs.filter((r) => (r.owner || "a") === "b");
+  assert.ok(botPlayed.some((r) => r.activated === true),
+    `expected the bot to have activated a rig: turn ${played.state.game.turn?.side}, round ${played.state.game.round}`);
 });

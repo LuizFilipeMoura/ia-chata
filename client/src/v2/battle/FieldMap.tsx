@@ -1,5 +1,6 @@
 import { emptyCorners, deploymentCorners, deployRadius } from "/shared/field.js";
 import type { FieldState, Objective } from "../../state/types";
+import { makeProjection } from "./fieldProjection";
 import "../styles/field.css";
 
 interface Props {
@@ -9,17 +10,12 @@ interface Props {
   ownerSide: string | null;
 }
 
-const PAD = 26;
-const CANVAS_W = 520;
 const GRID_IN = 12; // blueprint foot lines every 12 inches
 
 export function FieldMap({ field, objectives, mySide, ownerSide }: Props) {
-  const scale = (CANVAS_W - PAD * 2) / field.width;
-  const fw = field.width * scale;
-  const fh = field.height * scale;
-  const canvasH = fh + PAD * 2;
-  const sx = (xIn: number) => PAD + xIn * scale;
-  const sy = (yIn: number) => PAD + yIn * scale;
+  const proj = makeProjection(field);
+  const { pad: PAD, scale, fw, fh, canvasH, sx, sy } = proj;
+  const CANVAS_W = proj.canvasW;
 
   const [e0, e1] = emptyCorners(field);
   const [ownerC, enemyC] = deploymentCorners(field);

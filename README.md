@@ -65,8 +65,8 @@ you **swipe left/right** between them (pager dots and ‹ › buttons below, arr
 keys on desktop). Each terminal shows the four rulebook components — **Hull, Arms,
 Legs, Engine** — as Structure Point (SP) bars, an overall status line, and the
 Engine's **heat**. A destroyed Rig gets a stamped `DESTROYED` overlay. Defaults
-are filled from the weight class (Hull 6/7/8/9, Arms & Legs 5/6/7/8, Engine
-4/5/6/7 for Light/Medium/Heavy/Colossal). Swipe past the last Rig to the **add-Rig
+are filled from the weight class (Hull 6/7, Arms & Legs 5/6, Engine 4/5 for
+Light/Medium). Swipe past the last Rig to the **add-Rig
 screen**; a newly added Rig auto-swipes into view. The deck shows your Rigs first,
 then enemy Rigs, based on the side you claimed in the room.
 
@@ -76,7 +76,7 @@ You can drive it two ways:
   one Melee weapon, then use the `−`/`＋` buttons on each component (and the 🔥
   buttons for heat).
 - **By voice/text through Gemma:** just narrate what happens — *"the Stalker
-  takes 3 damage to its hull"*, *"add a heavy rig called Warden"*, *"vent the
+  takes 3 damage to its hull"*, *"add a medium rig called Warden"*, *"vent the
   engine"*. The model answers normally **and** emits a hidden command that
   updates the tracker. Because the command is stripped before display, TTS reads
   only the spoken sentence — never the command.

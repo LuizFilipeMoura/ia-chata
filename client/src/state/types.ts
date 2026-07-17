@@ -57,6 +57,10 @@ export interface Rig {
   activated: boolean;
   destroyed: boolean;
   engagedWith?: number | null;
+  /** Simulated position in field inches (centre of the rig); digital rooms only. */
+  pos?: { x: number; y: number } | null;
+  /** Heading in degrees; digital rooms only. */
+  facing?: number;
 }
 
 export interface Side {
@@ -64,6 +68,7 @@ export interface Side {
   name: string;
   vp: number;
   ready: boolean;
+  bot?: string | null;
 }
 
 export interface Turn {
@@ -81,17 +86,41 @@ export interface ResolutionTerm {
   op?: string;
   tone?: string;
 }
+/**
+ * One resolution step. The panel walks these in order and renders each.
+ *
+ * A step is never omitted to signal "nothing happened" — a chain that stopped
+ * early still emits the step that stopped it, with an `out` that says why.
+ * An absent step and a failed step must never look the same to a player.
+ */
+export interface ResolutionStep {
+  kind: "hit" | "wound" | "location" | "damage";
+  /** The number the dice had to beat. Null on an auto-fail (shield negate, blind arc). */
+  target?: number | null;
+  /** Wound step only: the effective Penetration and the struck location's Toughness. */
+  pen?: number | null;
+  toughness?: number | null;
+  /** Location step only. Null on an aimed shot — no d12 decided the part. */
+  die?: number | null;
+  /**
+   * Every input that FIRED. A modifier resolving to 0 is omitted, EXCEPT
+   * cancellers (e.g. "targeting computer (ignores cover)") which explain an
+   * absence — so the render must NOT filter zeros.
+   */
+  terms?: ResolutionTerm[];
+  dice?: Array<{ value: number; ok: boolean }>;
+  /** Human-readable outcome, e.g. "2 of 3 hit". Always present. */
+  out: string;
+}
+
 export interface ResolutionBreakdown {
   actor?: string;
   weapon?: string;
+  /** The target unit's NAME. Never a number — the wound TN lives on the wound step. */
   target?: string;
-  /** Input terms of the damage equation (die + STR, or hits · weapon STR). */
-  terms?: ResolutionTerm[];
-  /** Impact-roll total, when the equation resolves to a single total. */
-  total?: number;
-  /** Severity tier badge (direct/severe/critical). */
-  tier?: string;
-  /** Structure points dealt. */
+  /** The ordered ledger, in the engine's resolution order: hit → location → wound → damage. */
+  steps?: ResolutionStep[];
+  /** Structure points dealt — the headline, rendered large above the ledger. */
   sp?: number;
   location?: string;
 }
@@ -182,6 +211,7 @@ export interface ServerState {
   code?: string;
   version: number;
   seeded?: boolean;
+  mode?: "physical" | "digital";
   rigs: Rig[];
   game: GameState | null;
   ownerSide?: string | null;

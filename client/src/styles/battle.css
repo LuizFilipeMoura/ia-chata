@@ -70,7 +70,7 @@
   opacity: 0; transform: translateY(4px); animation: line-in .35s ease .45s forwards;
 }
 /* Structured damage readout — the equation form of the summary line.
-   Makes the inputs (hits, weapon/ram STR) and where each modifier comes from
+   Makes the inputs (hits, weapon/ram Penetration) and where each modifier comes from
    explicit, instead of a flat sentence. */
 .rx-break {
   margin: .3rem .7rem .1rem;
@@ -120,7 +120,7 @@
   font-size: .48rem; letter-spacing: .08em; text-transform: uppercase; color: var(--txt-faint);
   white-space: nowrap;
 }
-/* The STR / modifier term is where the "+9" comes from — light it amber so the
+/* The Penetration / modifier term is where the "+9" comes from — light it amber so the
    player's eye lands on the source of the bonus. */
 .rx-term[data-tone="mod"] {
   border-color: rgba(231,154,61,.5);

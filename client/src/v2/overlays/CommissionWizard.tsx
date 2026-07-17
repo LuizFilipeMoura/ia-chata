@@ -361,8 +361,8 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
                 <div className="v2-fc-equip-label v2-title">{t.name}</div>
                 <div className="v2-fc-equip-passive">
                   {w
-                    ? <>{weaponGlyph(t.unit!)} {t.unit} · STR {w.str} · ROF {w.rof}</>
-                    : <>⚙ Sidearm · STR 4 · ROF 2 — light plinker</>}
+                    ? <>{weaponGlyph(t.unit!)} {t.unit} · Penetration {w.pen} · ROF {w.rof}</>
+                    : <>⚙ Sidearm · Penetration 4 · ROF 2 — light plinker</>}
                 </div>
                 <div className="v2-fc-equip-active">
                   {t.modules.map((m) => (
@@ -390,7 +390,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
         <UpgradeLadder
           title={state.longRange}
           glyph={weaponGlyph(state.longRange)}
-          subtitle={`ROF ${lr.rof} · STR ${lr.str} · ${lr.minRange}–${lr.maxRange}"`}
+          subtitle={`ROF ${lr.rof} · Penetration ${lr.pen} · ${lr.minRange}–${lr.maxRange}"`}
           tiers={WEAPON_UPGRADES[state.longRange] || []}
           selected={state.longRangeUpgrade}
           onSelect={(id) => patch({ longRangeUpgrade: id })}
@@ -399,7 +399,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
         <UpgradeLadder
           title={state.melee}
           glyph={weaponGlyph(state.melee)}
-          subtitle={`ROF ${ml.rof} · STR ${ml.str} · RNG ${ml.rng?.[0]}/${ml.rng?.[1]}"`}
+          subtitle={`ROF ${ml.rof} · Penetration ${ml.pen} · RNG ${ml.rng?.[0]}/${ml.rng?.[1]}"`}
           tiers={WEAPON_UPGRADES[state.melee] || []}
           selected={state.meleeUpgrade}
           onSelect={(id) => patch({ meleeUpgrade: id })}
@@ -415,8 +415,8 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
         <div className="v2-fc-confirm-name v2-title">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
         <div className="v2-fc-confirm-row">
           {w
-            ? <>{weaponGlyph(t!.unit!)} {t!.unit} · STR {w.str} · ROF {w.rof}</>
-            : <>⚙ Sidearm · STR 4 · ROF 2</>}
+            ? <>{weaponGlyph(t!.unit!)} {t!.unit} · Penetration {w.pen} · ROF {w.rof}</>
+            : <>⚙ Sidearm · Penetration 4 · ROF 2</>}
         </div>
         {t?.modules.map((m) => (
           <div key={m} className="v2-fc-confirm-row">🔧 {MODULES[m].label}</div>
@@ -504,6 +504,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
         aria-label={`Commission a ${UNIT_KINDS[state.kind].label}`}
       >
         <div className="v2-fw-head">
+          <button type="button" className="v2-fw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           <div className="v2-fw-order v2-eyebrow">Commission Order · Form 7-C</div>
           <h2 className="v2-fw-title v2-title">◈ Commission a {UNIT_KINDS[state.kind].label}</h2>
           <div className="v2-fw-rail">

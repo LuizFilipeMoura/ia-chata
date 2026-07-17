@@ -636,6 +636,10 @@
   max-width: 500px;
   text-align: center;
 }
+.v2-root .v2-outcome-close {
+  position: absolute; top: 0; right: 0; z-index: 1;
+  font-size: var(--v2-text-base); line-height: 1;
+}
 .v2-root .v2-outcome-text {
   display: inline-block;
   padding: 6px 4px;

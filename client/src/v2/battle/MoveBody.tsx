@@ -23,12 +23,18 @@ export default function MoveBody({
   // Per-chassis Speed wins; fall back to the weight-class map for support units,
   // free-combo rigs, and pre-speed saves.
   const base = rig.speed ?? SPEED[rig.weightClass] ?? 8;
-  // Sprint is 1½× Speed, rounded to a whole inch so table measuring stays clean.
-  const dist = sprint ? Math.round(base * 1.5) : base;
-  // Sprint heat is engine-derived (Servo Actuators → 1, its Reinforced Servos
-  // Field upgrade → 0); Move is always +1. Reading rigEffects keeps this drawer
-  // identical to the picker chip and to what resolution charges.
-  const heat = sprint ? rigEffects(rig).actionHeat.sprint : 1;
+  const eff = rigEffects(rig);
+  // Sprint reach is loadout-derived (1½× Speed, 2× with the Reinforced Servos
+  // Field upgrade), rounded to a whole inch so table measuring stays clean.
+  const mult = eff.sprintMult;
+  const dist = sprint ? Math.round(base * mult) : base;
+  // The reach label rides the same value as the distance — printing a literal
+  // "1½×" next to a 2×-derived number is how "16" (1½× Speed)" ships.
+  const reachLabel = mult === 1.5 ? "1½× Speed" : `${mult}× Speed`;
+  // Sprint heat is engine-derived (Servo Actuators → 1) and floored at 1 — never
+  // free. Move is always +1. Reading rigEffects keeps this drawer identical to
+  // the picker chip and to what resolution charges.
+  const heat = sprint ? eff.actionHeat.sprint : 1;
   const holdMs = holdMsFor(actionKey);
   const holdSec = Math.round(holdMs / 1000);
 
@@ -36,7 +42,7 @@ export default function MoveBody({
   const [pct, setPct] = useState(0);
   const done = remaining <= 0;
   // Move and Sprint each spend one action slot; both generate heat (Move +1,
-  // Sprint +2 / +1 with Servo Actuators). You may repeat them within the budget.
+  // Sprint +2 / +1 with Servo Actuators). Repeat them within the budget.
   const costNote = `Costs 1 action · +${heat} heat`;
 
   useEffect(() => {
@@ -59,7 +65,7 @@ export default function MoveBody({
         className="v2-dwr-hint"
         dangerouslySetInnerHTML={{
           __html: sprint
-            ? `Reposition up to <b>${dist}"</b> (1½× Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`
+            ? `Reposition up to <b>${dist}"</b> (${reachLabel}). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`
             : `Reposition up to <b>${dist}"</b> (full Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`,
         }}
       />

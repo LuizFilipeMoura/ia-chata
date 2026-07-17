@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
-import { weaponAccAt } from "/shared/combat.js";
+import { weaponAccuracyAt } from "/shared/combat.js";
+import { WOUND_DIE } from "/shared/rules.js";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useMySide } from "../../hooks/useMySide";
 import { useV2Commands } from "../hooks/useV2Commands";
 import { useV2BattleActions } from "../state/V2BattleActionsContext";
 import { useV2Roll } from "../state/V2RollContext";
 import { rigColor, CHASSIS_NAME, type RigColor } from "../lib/commissionData";
+import type { DiceSpec } from "./RollConsole";
 import type { Rig } from "../../state/types";
 import "../styles/wizards.css";
 
@@ -50,10 +52,10 @@ const FIELD_DESC: Record<string, string> = {
   arc: "Which of the enemy's facings you strike",
   range: "How far the enemy sits from you",
   cover: "Obstruction shielding the enemy",
-  location: "Component to hit — an Aimed Shot takes −2 ACC",
+  location: "Component to hit — an Aimed Shot takes −2 Accuracy",
 };
-const ARC_DESC: Record<string, string> = { front: "No STR bonus", side: "+2 STR", rear: "+4 STR" };
-const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 ACC", "2": "−2 ACC" };
+const ARC_DESC: Record<string, string> = { front: "No Penetration bonus", side: "+2 Penetration", rear: "+3 Penetration" };
+const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 Accuracy", "2": "−2 Accuracy" };
 const LOC_DESC: Record<string, string> = {
   hull: "−2 actions at 0", arms: "Weapons at 0", legs: "Slows at 0", engine: "Heat at 0",
   tracks: "Slows at 0", turret: "Gun lost at 0", mount: "Gun lost at 0",
@@ -158,6 +160,51 @@ interface WeaponUpgradeNotice {
 // distance. Survives drawer close (the wizard remounts on each open) so the
 // next attack opens pre-aimed at the same foe and range. Keyed by rig id.
 const LAST_SHOT = new Map<number, { target?: string; inches?: number }>();
+
+const ordinal = (n: number) => {
+  const teen = n % 100;
+  if (teen >= 11 && teen <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] || "th"}`;
+};
+
+// The dice a manual-play volley needs, in resolution order: ROF hit d6s, the
+// location d12 (an aimed shot picks its part instead), then ROF wound d10s.
+//
+// Wound dice are asked for up front, one per POTENTIAL hit, rather than in a
+// second prompt once the hits are known — the same bargain the hit dice already
+// strike, where all ROF are entered regardless of how many land. The engine
+// (combat.js rollWounds) loops `for (let i = 0; i < opts.hits; i++)` reading
+// `wounds[i]`, so it consumes them from the front and ignores the surplus off
+// the end. That indexing is by LANDED-hit order, not by which hit die landed:
+// faces [1, 6, 6] land two hits and take wounds[0] and wounds[1] — the first two
+// wound dice, not the 2nd and 3rd.
+//
+// Hence the labels. "Wound die 1" sitting under "Hit die 1" would claim a
+// pairing the engine does not honour; each wound die names the landed hit it
+// answers for instead, which is exactly how it will be consumed.
+const attackDiceSpecs = (rof: number, withLocation: boolean): DiceSpec[] => {
+  const specs: DiceSpec[] = [];
+  for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
+  if (withLocation) specs.push({ key: "loc", label: "Location", sides: 12 });
+  for (let i = 0; i < rof; i++) {
+    specs.push({ key: `w${i}`, label: `Wound · ${ordinal(i + 1)} hit that lands`, sides: WOUND_DIE });
+  }
+  return specs;
+};
+
+// Fold the entered faces into the wire shape the engine reads. `wounds` replaces
+// the old `impacts: toHit.map(() => undefined)` — an array of holes that told the
+// server to roll the wound dice itself, unseen, which is how a physical-dice
+// player ended up never rolling the die that decided their own damage.
+const attackDice = (rof: number, d: Record<string, number>): Record<string, unknown> => {
+  const toHit: number[] = [];
+  const wounds: number[] = [];
+  for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
+  for (let i = 0; i < rof; i++) wounds.push(d[`w${i}`]);
+  const dice: Record<string, unknown> = { toHit, wounds };
+  if (d.loc) dice.location = d.loc;
+  return dice;
+};
 
 function selectedUpgrade(
   rig: Rig,
@@ -361,10 +408,10 @@ export function AttackWizard({
   const minRange = rangeProfile?.minRange ?? 0;
   const maxRange = rangeProfile?.maxRange ?? 12;
   const sliderMax = maxRange + 4; // headroom so the player can drag into "out"
-  const accHere = rangeProfile ? weaponAccAt(rangeProfile as never, state.inches) : 0;
-  const penalty = peak - accHere;
+  const accuracyHere = rangeProfile ? weaponAccuracyAt(rangeProfile as never, state.inches) : 0;
+  const penalty = peak - accuracyHere;
   const inRange = state.inches >= minRange && state.inches <= maxRange;
-  const accTier = !inRange ? "out" : penalty <= 0 ? "sweet" : penalty <= 2 ? "good" : "poor";
+  const accuracyTier = !inRange ? "out" : penalty <= 0 ? "sweet" : penalty <= 2 ? "good" : "poor";
 
   // Seed the slider to the weapon's sweet spot whenever the selected weapon
   // changes (melee seeds to its reach). Keeps "open at the best range" intent.
@@ -398,15 +445,9 @@ export function AttackWizard({
         weapon: slotSel, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
       };
       if (game?.autoResolve === false) {
-        const specs: { key: string; label: string; sides: number }[] = [];
-        for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
-        specs.push({ key: "loc", label: "Location", sides: 12 });
-        const d = await promptDice(specs, `${weaponName} dice`);
-        const toHit: number[] = [];
-        for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
-        const dice: Record<string, unknown> = { toHit, impacts: toHit.map(() => undefined) };
-        if (d.loc) dice.location = d.loc;
-        attack.dice = dice;
+        // Return Fire is never aimed, so it always rolls its own location die.
+        const d = await promptDice(attackDiceSpecs(rof, true), `${weaponName} dice`);
+        attack.dice = attackDice(rof, d);
       }
       // Return Fire keeps the pinned target; still recall the distance.
       LAST_SHOT.set(rig.id, { ...LAST_SHOT.get(rig.id), inches: state.inches });
@@ -421,18 +462,10 @@ export function AttackWizard({
     };
     if (aimed) attrs.loc = state.loc;
     if (game?.autoResolve === false) {
-      const specs: { key: string; label: string; sides: number }[] = [];
-      for (let i = 0; i < rof; i++) specs.push({ key: `h${i}`, label: `Hit die ${i + 1}`, sides: 6 });
-      if (!aimed) specs.push({ key: "loc", label: "Location", sides: 12 });
-      const d = await promptDice(specs, `${weaponName} dice`);
-      const toHit: number[] = [];
-      for (let i = 0; i < rof; i++) toHit.push(d[`h${i}`]);
-      const dice: Record<string, unknown> = { toHit };
-      if (d.loc) dice.location = d.loc;
-      // Impact dice are entered on demand only when hits land; for manual play
-      // we supply a generous impacts array using the hit-dice count as an upper bound.
-      dice.impacts = toHit.map(() => undefined);
-      attrs.dice = dice;
+      // An aimed shot names its location, so it rolls no d12 — the wound dice
+      // still ride, since the T they test against comes from the chosen part.
+      const d = await promptDice(attackDiceSpecs(rof, !aimed), `${weaponName} dice`);
+      attrs.dice = attackDice(rof, d);
     }
     LAST_SHOT.set(rig.id, { target: state.target, inches: state.inches });
     sendCommand("action", attrs);
@@ -463,9 +496,13 @@ export function AttackWizard({
     const firedRanged = (game?.turn?.longRangeShots || 0) >= 1;
     const secondShot = !isMelee && firedRanged;
 
+    // The wound dice are named here too: this line is what a manual player reads
+    // to know which dice to pick up, and the d10 that decides the damage was the
+    // one it used to leave out.
     dicePreview =
       `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
       (!aimed ? " + 1 location die (d12)" : "") +
+      ` + up to ${rof} wound ${rof === 1 ? "die" : "dice"} (d10, one per hit that lands)` +
       (aimed ? " · −2 to hit (pick location)" : "") +
       (secondShot ? " · +1 heat (second shot)" : "");
 
@@ -478,8 +515,8 @@ export function AttackWizard({
       );
       rangeState = outOfRange ? "bad" : "ok";
     } else if (profile) {
-      const accLabel =
-        penalty <= 0 ? `Sweet spot +${peak}` : `${accHere >= 0 ? "+" : ""}${accHere} · falloff`;
+      const accuracyLabel =
+        penalty <= 0 ? `Sweet spot +${peak}` : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} · falloff`;
       const gate =
         state.inches < minRange
           ? <span className="v2-aw-range-warn">Too close — out of range</span>
@@ -489,7 +526,7 @@ export function AttackWizard({
       rangeHtml = (
         <>
           <span className="v2-aw-range-ic">📏</span>
-          Sweet spot <b>{sweet}"</b> · usable <b>{minRange}"–{maxRange}"</b> · at {state.inches}": <b>{accLabel}</b>
+          Sweet spot <b>{sweet}"</b> · usable <b>{minRange}"–{maxRange}"</b> · at {state.inches}": <b>{accuracyLabel}</b>
           {gate}
         </>
       );
@@ -519,7 +556,7 @@ export function AttackWizard({
     const weaponName = weapons[state.weapon] || "";
     // Cold kinds carry no weapon upgrades — just name the weapon.
     if (flat) {
-      return { main: `Firing ${weaponName} (flat STR — no weight-class scaling).`, equipment: equipmentLine };
+      return { main: `Firing ${weaponName} (flat Penetration — no weight-class scaling).`, equipment: equipmentLine };
     }
     const upgrade = selectedUpgrade(rig, state.weapon as "longRange" | "melee", weaponName);
     return {
@@ -644,7 +681,7 @@ export function AttackWizard({
                 }}
                 icon={FIELD_ICONS.weapon}
                 optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
-                desc={flat ? "One flat-pick weapon — no weight-class STR scaling." : FIELD_DESC.weapon}
+                desc={flat ? "One flat-pick weapon — no weight-class Penetration scaling." : FIELD_DESC.weapon}
                 optDisabled={(opt) => rangedSpent && opt === rangedWeaponName}
                 optDesc={(opt) => (rangedSpent && opt === rangedWeaponName ? "Spent · reload" : weaponDesc(opt))}
               />
@@ -681,7 +718,7 @@ export function AttackWizard({
                     Range
                   </label>
                   <p className="v2-aw-field-desc">Drag to the measured distance to your foe.</p>
-                  <div className="v2-aw-range-slider" data-band={accTier}>
+                  <div className="v2-aw-range-slider" data-band={accuracyTier}>
                     <input
                       type="range"
                       min={0}
@@ -693,10 +730,10 @@ export function AttackWizard({
                     />
                     <div className="v2-aw-range-readout">
                       <b className="v2-aw-range-inches">{state.inches}"</b>
-                      <span className="v2-aw-range-band" data-band={accTier}>
-                        {accTier === "sweet" ? "🎯 sweet spot"
-                          : accTier === "out" ? "🚫 out of range"
-                          : `${accHere >= 0 ? "+" : ""}${accHere} falloff`}
+                      <span className="v2-aw-range-band" data-band={accuracyTier}>
+                        {accuracyTier === "sweet" ? "🎯 sweet spot"
+                          : accuracyTier === "out" ? "🚫 out of range"
+                          : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} falloff`}
                       </span>
                     </div>
                     <div className="v2-aw-range-ticks">

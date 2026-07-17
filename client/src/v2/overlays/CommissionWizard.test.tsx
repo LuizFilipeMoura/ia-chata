@@ -156,3 +156,14 @@ test("a sidearm-only walker template commissions modules with no unit", async ()
   expect(call?.[1]).toMatchObject({ kind: "walker", owner: "a", name: "Field Welder", modules: ["repair", "recon"] });
   expect(call?.[1].unit).toBeUndefined();
 });
+
+test("the close button dismisses the wizard without commissioning", async () => {
+  const user = userEvent.setup();
+  sendCommand.mockClear();
+  const onClose = vi.fn();
+  render(<AppProviders><Seed /><CommissionWizard onClose={onClose} /></AppProviders>);
+  await user.click(await screen.findByRole("button", { name: /close/i }));
+  // The card plays a 250ms exit before handing back to onClose.
+  await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+  expect(sendCommand).not.toHaveBeenCalled();
+});

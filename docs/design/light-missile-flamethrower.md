@@ -16,7 +16,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
-| **Field** | Swarm Warheads | +2 ROF (4 → 6). Reliable extra volume. | `+2 ROF` | ✅ coded (`rof: 2`) |
+| **Field** | Swarm Warheads | +1 ROF (4 → 5). Reliable extra volume. | `+1 ROF` | ✅ coded (`rof: 1`) |
 | **Tuned** | Shaped Charges | Gains Armour Piercing (+D3 per raw 6). Conditional — mediocre vs soft targets, brutal vs heavy armor. | `Gains Armour Piercing` | ✅ coded (AP) |
 | **Prototype** | Fire Control Lock | The **Lock Target** action (1 slot, 1 heat) paints a target (tracked, no line-of-sight needed). The next Missile Barrage volley aimed at that exact rig, this round or the next, **can't miss and gains Armour Piercing**; the paint is then consumed. **Downside:** the lock turn you don't fire, and an unused lock **goes stale after its expiry round.** | `Paint a target for one unmissable armor-piercing volley — costs a turn to lock` | ✅ implemented (`lockedTarget` id + expiry round) |
 
