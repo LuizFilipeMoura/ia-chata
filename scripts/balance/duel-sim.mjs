@@ -7,6 +7,7 @@
 // from the first — and prints a tidy table about a game nobody is playing.
 import {
   createRoom, applyCommand, lastRejectionReason, effectiveWeaponProfile, MAX_ROUNDS,
+  EQUIPMENT, EQUIPMENT_UPGRADES, equipmentUpgradeNature,
 } from "../../shared/game-state.js";
 import { makeGreedySafe } from "./policy.mjs";
 import { pilotFor } from "./piloting.mjs";
@@ -100,6 +101,25 @@ export function runDuel({
   if (!prof) throw new Error(`duel-sim: no long-range profile for weapon "${weaponA}".`);
   if (prof.upgrade?.id !== upgradeA) {
     throw new Error(`duel-sim: upgrade "${upgradeA}" rejected for "${weaponA}" — profile carries "${prof.upgrade?.id ?? null}".`);
+  }
+
+  // Equipment axis: swap a module + tier onto A1 the same way the weapon is
+  // swapped. Optional — a weapon cell leaves both undefined.
+  if (equipmentA != null || equipmentUpgradeA != null) {
+    if (!EQUIPMENT[equipmentA]) {
+      throw new Error(`duel-sim: unknown equipment "${equipmentA}".`);
+    }
+    // A null upgrade id silently resolves to the FIELD tier (normalizeEquipmentUpgrade),
+    // exactly the weapon-tier trap — so demand it explicitly, like upgradeA.
+    if (typeof equipmentUpgradeA !== "string" || !equipmentUpgradeA) {
+      throw new Error("duel-sim needs an explicit { equipmentUpgradeA } id: a null upgrade silently resolves to the FIELD tier, not to none.");
+    }
+    const nature = equipmentUpgradeNature(equipmentA, equipmentUpgradeA);
+    if (!nature) {
+      throw new Error(`duel-sim: equipment upgrade "${equipmentUpgradeA}" is not a tier of "${equipmentA}".`);
+    }
+    a1.equipment = equipmentA;
+    a1.equipmentUpgrade = equipmentUpgradeA;
   }
 
   const b1 = room.rigs.find((r) => r.name === "B1");

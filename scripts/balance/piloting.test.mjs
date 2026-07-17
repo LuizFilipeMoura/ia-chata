@@ -59,3 +59,20 @@ test("enfilade hook makes A1 take Aimed shots (was a structural 0.00)", () => {
     onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
   assert.ok(seen.includes("aimed"), "enfilade must pilot Aimed shots at ceiling");
 });
+
+const EQCELL = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
+  weaponA: "Autocannon", upgradeA: "depleted-core",
+  equipmentA: "ablative-plating", equipmentUpgradeA: "reinforced-plating",
+  distance: 12, arc: "side" };
+
+test("runDuel stamps an equipment module + tier onto A1 and runs", () => {
+  const r = runDuel({ ...EQCELL, seed: 2, intensity: "conservative" });
+  assert.ok(r.rounds > 1, "equipment cell should play out multiple rounds");
+});
+
+test("a null equipment upgrade id throws (field-is-the-floor trap)", () => {
+  assert.throws(
+    () => runDuel({ ...EQCELL, equipmentUpgradeA: null, seed: 2 }),
+    /equipmentUpgradeA/,
+  );
+});
