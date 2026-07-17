@@ -14,6 +14,8 @@
 //
 // A hook is a PURE reader: it inspects room/rig/enemy and returns a command. It
 // must never mutate engine state — the engine owns that when the command applies.
+import { HEAT_CAPACITY } from "../../shared/game-state.js";
+import { availableActions } from "../../shared/battle-view.js";
 
 // One line per registered hook. The report prints this verbatim next to
 // policy.mjs's KNOWN_BIASES so the assumptions travel with the numbers. KEEP EACH
@@ -23,6 +25,10 @@ export const PILOTING_BIASES = `
 - enfilade: piloted as Aimed shots at the sweet-spot distance. Ceiling and
   conservative coincide because the duel is pinned to the sweet spot; a marksman
   aims every shot here. Off-band cells would diverge.
+- reactor-overdrive: piloted via the overclock active, once per activation, gated
+  on availableActions. Ceiling overclocks whenever legal; conservative overclocks
+  only with heat headroom for its cost, so the doubled-overheat catch does not
+  immediately bite. Benefit lands in A1's spDealt.
 `.trim();
 
 // Build an Aimed command at the duel's fixed geometry. Location defaults to the
@@ -40,6 +46,27 @@ function aimedAt(rig, enemy, distance, arc, location = "engine") {
   } };
 }
 
+const OVERCLOCK_HEAT = 3; // EQUIPMENT["overclock-core"].active.heat — confirmed in shared/game-state.js
+
+// Issue the overclock active once per activation, gated on legality so it never
+// no-ops (a repeated no-op trips the duel driver's 3x guard). `careful` adds the
+// conservative heat-headroom check. Per the hook contract, decline (null) when
+// the room has no live turn to judge legality from.
+function overclockCmd(room, rig, careful) {
+  if (rig.reactorOverdriveActive) return null;   // already overclocked this activation
+  const turn = room?.game?.turn;
+  if (!turn) return null;
+  const enabled = new Set(
+    availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
+  );
+  if (!enabled.has("overclock")) return null;    // not legal now — let greedySafe act
+  if (careful) {
+    const cap = HEAT_CAPACITY[rig.weightClass];
+    if (cap == null || rig.engine.heat + OVERCLOCK_HEAT > cap) return null;
+  }
+  return { verb: "action", attrs: { name: rig.name, action: "overclock" } };
+}
+
 // upgradeId -> { ceiling(room, rig, enemy, { intensity, distance, arc }),
 //                conservative(room, rig, enemy, { intensity, distance, arc }) }
 export const PILOTING_HOOKS = {
@@ -50,6 +77,15 @@ export const PILOTING_HOOKS = {
   enfilade: {
     ceiling: (room, rig, enemy, { distance, arc }) => aimedAt(rig, enemy, distance, arc),
     conservative: (room, rig, enemy, { distance, arc }) => aimedAt(rig, enemy, distance, arc),
+  },
+  // Power prototype (Overclock Core). overclock gains +2 Penetration but DOUBLES
+  // the overheat bonus — the catch. greedySafe never overclocks. Once per
+  // activation, legality-gated. Ceiling: overclock whenever legal. Conservative:
+  // only with heat headroom for its cost so the doubled-overheat catch does not
+  // immediately bite.
+  "reactor-overdrive": {
+    ceiling: (room, rig) => overclockCmd(room, rig, false),
+    conservative: (room, rig) => overclockCmd(room, rig, true),
   },
 };
 

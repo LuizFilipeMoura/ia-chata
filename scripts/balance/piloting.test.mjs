@@ -76,3 +76,15 @@ test("a null equipment upgrade id throws (field-is-the-floor trap)", () => {
     /equipmentUpgradeA/,
   );
 });
+
+const OVERDRIVE = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
+  weaponA: "Autocannon", upgradeA: "depleted-core",
+  equipmentA: "overclock-core", equipmentUpgradeA: "reactor-overdrive",
+  distance: 12, arc: "side" };
+
+test("reactor-overdrive hook makes A1 issue the overclock active", () => {
+  const seen = [];
+  runDuel({ ...OVERDRIVE, seed: 6, intensity: "ceiling",
+    onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
+  assert.ok(seen.includes("overclock"), "reactor-overdrive must pilot the overclock active at ceiling");
+});
