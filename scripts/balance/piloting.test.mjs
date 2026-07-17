@@ -42,3 +42,10 @@ test("a passive upgrade is unaffected by intensity (no hook = no drift)", () => 
     runDuel({ ...WCELL, seed: 11, intensity: "ceiling" }),
   );
 });
+
+test("runDuel reports the actions A1 issued via onCommand", () => {
+  const seen = [];
+  runDuel({ ...WCELL, seed: 3, intensity: "ceiling",
+    onCommand: (rigName, attrs) => { if (rigName === "A1") seen.push(attrs.action); } });
+  assert.ok(seen.includes("fire"), "A1 should fire at least once");
+});

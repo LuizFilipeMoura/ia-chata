@@ -31,7 +31,7 @@ const totalSp = (rig) => ["hull", "arms", "legs", "engine"].reduce((s, k) => s +
 // a preparation.
 export function runDuel({
   chassisA, chassisB, weaponA, upgradeA, equipmentA, equipmentUpgradeA, distance, arc, seed,
-  intensity = "conservative",
+  intensity = "conservative", onCommand = null,
 }) {
   const random = mulberry32(seed);
   // A factory, not a module-level setter: distance and arc are BOTH required and
@@ -62,7 +62,9 @@ export function runDuel({
   const apply = (verb, attrs, side) => {
     const before = room.version;
     applyCommand(room, { verb, attrs }, side ? { side } : {}, { random });
-    return room.version !== before;
+    const changed = room.version !== before;
+    if (changed && onCommand && attrs?.name) onCommand(attrs.name, attrs);
+    return changed;
   };
   // The lifecycle verbs. Every one of these is issued only where the engine has
   // already told us it is legal, so a no-op is a broken driver, not a rules call.
