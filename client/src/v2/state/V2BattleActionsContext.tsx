@@ -161,7 +161,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       // Digital rooms target the move ON THE MAP: arm the overlay and skip the
       // physical MoveBody drawer entirely. Physical rooms keep the drawer below.
       if (modeRef.current === "digital") {
-        setMoveTarget({ rigId: rig.id, action: key });
+        beginMoveTarget(rig.id, key);
         return;
       }
       const sprint = key === "sprint";
@@ -191,7 +191,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       });
       })();
     },
-    [openDrawer, closeDrawer, sendCommand, guardAction],
+    [openDrawer, closeDrawer, sendCommand, guardAction, beginMoveTarget],
   );
 
   const openRepair = useCallback(

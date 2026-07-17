@@ -1,4 +1,4 @@
-import { useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { moveBudget, rigEffects } from "/shared/game-state.js";
 import type { FieldState, Rig } from "../../state/types";
 import type { FieldProjection } from "./fieldProjection";
@@ -22,13 +22,16 @@ function clampToPivot(target: number, cur: number): { facing: number; pivot: num
   return { facing: cur + clamped, pivot: Math.abs(clamped) };
 }
 
-// Convert a DOM pointer position into field inches using the same projection the
-// map renders with (mirrors the click→inches maths documented in the L3 plan).
-function pointToInches(e: { clientX: number; clientY: number; currentTarget: Element }, proj: FieldProjection) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  const px = ((e.clientX - rect.left) / rect.width) * proj.canvasW;
-  const py = ((e.clientY - rect.top) / rect.height) * proj.canvasH;
-  return proj.toInches(px, py);
+// Convert a DOM pointer position into field inches. The surface <rect> spans the
+// field region EXACTLY, so the fraction across it is the fraction across the
+// field in inches — no canvas padding is involved (subtracting `pad` here, as an
+// earlier version did via proj.toInches on a canvas-scaled point, double-counted
+// it: 0" error at centre, ±3" at the edges). Ratio-based, so it's CSS-scale
+// invariant.
+function pointToInches(clientX: number, clientY: number, rect: DOMRect, field: FieldState) {
+  const fx = rect.width ? (clientX - rect.left) / rect.width : 0;
+  const fy = rect.height ? (clientY - rect.top) / rect.height : 0;
+  return { x: fx * field.width, y: fy * field.height };
 }
 
 interface OverlayProps {
@@ -46,6 +49,7 @@ interface OverlayProps {
 // placed, the routed path, a ghost token, and a draggable facing handle.
 export function MoveTargetOverlay({ proj, field, rigs, rig, action, placed, onPlaced }: OverlayProps) {
   const [drag, setDrag] = useState(false);
+  const surfaceRef = useRef<SVGRectElement>(null);
   if (!rig.pos) return null;
 
   const cx = proj.sx(rig.pos.x);
@@ -53,21 +57,30 @@ export function MoveTargetOverlay({ proj, field, rigs, rig, action, placed, onPl
   const ringR = moveBudget(rig as never, action) * proj.scale;
 
   const place = (e: ReactMouseEvent<SVGRectElement>) => {
-    const dest = pointToInches(e, proj);
+    const dest = pointToInches(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect(), field);
     const preview = computeMovePreview(field, rigs, rig, action, dest);
     if (!preview.reachable) return; // out of reach / blocked — ignore the tap
     const { facing, pivot } = clampToPivot(preview.facing, rig.facing ?? 0);
     onPlaced({ dest, facing, pivot, length: preview.length, path: preview.path });
   };
 
-  const onMove = (e: ReactPointerEvent<SVGRectElement>) => {
-    if (!drag || !placed) return;
-    const p = pointToInches(e, proj);
-    const gx = placed.dest.x;
-    const gy = placed.dest.y;
-    const ang = (Math.atan2(p.y - gy, p.x - gx) * 180) / Math.PI;
+  // Facing drag. The handle captures the pointer on down, so pointermove/up keep
+  // firing on it even after the cursor leaves the tiny handle (or the whole
+  // field). Convert against the SURFACE rect (the field box), not the handle's.
+  const startDrag = (e: ReactPointerEvent<SVGCircleElement>) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setDrag(true);
+  };
+  const onDragMove = (e: ReactPointerEvent<SVGCircleElement>) => {
+    if (!drag || !placed || !surfaceRef.current) return;
+    const p = pointToInches(e.clientX, e.clientY, surfaceRef.current.getBoundingClientRect(), field);
+    const ang = (Math.atan2(p.y - placed.dest.y, p.x - placed.dest.x) * 180) / Math.PI;
     const { facing, pivot } = clampToPivot(ang, rig.facing ?? 0);
     onPlaced({ ...placed, facing, pivot });
+  };
+  const endDrag = (e: ReactPointerEvent<SVGCircleElement>) => {
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    setDrag(false);
   };
 
   const gcx = placed ? proj.sx(placed.dest.x) : cx;
@@ -80,17 +93,15 @@ export function MoveTargetOverlay({ proj, field, rigs, rig, action, placed, onPl
     <g className="v2-mt">
       <circle cx={cx} cy={cy} r={ringR} className="v2-mt-ring" fill="none" data-testid="reach-ring" />
       <rect
+        ref={surfaceRef}
         data-testid="field-surface"
         x={proj.pad}
         y={proj.pad}
         width={proj.fw}
         height={proj.fh}
         fill="transparent"
-        style={{ cursor: "crosshair" }}
+        style={{ cursor: "crosshair", touchAction: "none" }}
         onClick={place}
-        onPointerMove={onMove}
-        onPointerUp={() => setDrag(false)}
-        onPointerLeave={() => setDrag(false)}
       />
       {placed && (
         <>
@@ -107,8 +118,10 @@ export function MoveTargetOverlay({ proj, field, rigs, rig, action, placed, onPl
             r={6}
             className="v2-mt-handle"
             data-testid="facing-handle"
-            style={{ cursor: "grab" }}
-            onPointerDown={() => setDrag(true)}
+            style={{ cursor: "grab", touchAction: "none" }}
+            onPointerDown={startDrag}
+            onPointerMove={onDragMove}
+            onPointerUp={endDrag}
           />
         </>
       )}

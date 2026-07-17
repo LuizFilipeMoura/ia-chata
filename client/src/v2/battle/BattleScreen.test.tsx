@@ -73,10 +73,13 @@ test("arming a move, placing a reachable destination, and confirming dispatches 
   moveItem.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
   const surface = await screen.findByTestId("field-surface");
-  surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 520, height: 320, right: 520, bottom: 320, x: 0, y: 0, toJSON() {} }) as DOMRect;
-  // With the 54"-wide field this maps to inches ≈ {12, 10} — ~2" east of rig 1's
-  // {10,10} start, comfortably inside its Move budget (fallback Speed 5).
-  surface.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 130, clientY: 99 }));
+  // Mock the FIELD-SURFACE box (not the whole canvas): the rect spans the field
+  // region exactly, so for the 54×36 field its box ≈ fw×fh = 468×312. The tap
+  // fraction across it maps straight to field inches — this pins the conversion.
+  surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 468, height: 312, right: 468, bottom: 312, x: 0, y: 0, toJSON() {} }) as DOMRect;
+  // clientX = 12/54*468 ≈ 104, clientY = 10/36*312 ≈ 87 → dest ≈ {12,10}, ~2"
+  // east of rig 1's {10,10} start, inside its Move budget (fallback Speed 5).
+  surface.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 104, clientY: 87 }));
 
   const confirm = await screen.findByRole("button", { name: /confirm/i });
   confirm.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -84,6 +87,8 @@ test("arming a move, placing a reachable destination, and confirming dispatches 
   const call = sendSpy.mock.calls.find((c) => c[0] === "action" && (c[1] as { action?: string })?.action);
   expect(call).toBeTruthy();
   expect(call![1]).toMatchObject({ name: "RED", action: "move" });
-  expect(typeof (call![1] as { dest: { x: number } }).dest.x).toBe("number");
-  expect(typeof (call![1] as { facing: number }).facing).toBe("number");
+  const attrs = call![1] as { dest: { x: number; y: number }; facing: number };
+  expect(attrs.dest.x).toBeCloseTo(12, 0); // conversion lands where we tapped
+  expect(attrs.dest.y).toBeCloseTo(10, 0);
+  expect(typeof attrs.facing).toBe("number");
 });

@@ -33,11 +33,17 @@ export function BattleScreen() {
 
   // The move-target session only applies to the currently active rig. Re-arming
   // (or clearing) resets any placed destination.
+  const activeRigId = activeRig?.id ?? null;
   const moving =
-    moveTarget && activeRig && moveTarget.rigId === activeRig.id ? moveTarget : null;
+    moveTarget && moveTarget.rigId === activeRigId ? moveTarget : null;
   useEffect(() => {
     setPlaced(null);
   }, [moveTarget]);
+  // Drop a stale target if the active rig changes (or clears) server-side while
+  // armed — otherwise the overlay could auto-arm when that rig re-activates later.
+  useEffect(() => {
+    if (moveTarget && moveTarget.rigId !== activeRigId) clearMoveTarget();
+  }, [activeRigId, moveTarget, clearMoveTarget]);
 
   if (!field) return null;
 
