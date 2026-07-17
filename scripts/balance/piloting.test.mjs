@@ -88,3 +88,31 @@ test("reactor-overdrive hook makes A1 issue the overclock active", () => {
     onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
   assert.ok(seen.includes("overclock"), "reactor-overdrive must pilot the overclock active at ceiling");
 });
+
+test("conservative fires a subset of ceiling for every hook", () => {
+  // Probe each hook against a spread of synthetic states. A conservative YES with
+  // a ceiling NO is a contradiction — the hook is misdocumented. We assert the
+  // IMPLICATION (conservative => ceiling), never a magnitude.
+  //
+  // The room is deliberately turn-less: hooks that need a live turn to judge
+  // legality (per the contract) must DECLINE (return null) rather than throw, so
+  // this probe is a smoke-level guard for those — it fully exercises pure-state
+  // hooks (e.g. enfilade) and vacuously holds for legality-gated ones. The real
+  // per-hook duel tests prove those actually fire.
+  const room = { game: { turn: null, round: 1 } };
+  const enemy = { name: "E1", id: 2 };
+  const geo = { intensity: "x", distance: 12, arc: "side" };
+  const states = [
+    { name: "A1", id: 1, weightClass: "medium", engine: { heat: 0 },
+      equipState: {}, reactorOverdriveActive: false, weapons: { longRange: "Sniper Cannon" } },
+    { name: "A1", id: 1, weightClass: "medium", engine: { heat: 99 },
+      equipState: {}, reactorOverdriveActive: false, weapons: { longRange: "Sniper Cannon" } },
+  ];
+  for (const [id, h] of Object.entries(PILOTING_HOOKS)) {
+    for (const rig of states) {
+      const c = h.conservative(room, rig, enemy, geo);
+      const k = h.ceiling(room, rig, enemy, geo);
+      if (c) assert.ok(k, `${id}: conservative fired but ceiling did not`);
+    }
+  }
+});
