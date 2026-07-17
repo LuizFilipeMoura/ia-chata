@@ -468,87 +468,108 @@ git commit -m "feat(balance): equipment axis stamping + tier assertion in runDue
 
 ---
 
-## Task 6: Equipment hook — `ablative-cascade` (defensive active spend)
+## Task 6: Equipment hook — `reactor-overdrive` (player-issued active)
 
-`ablative-cascade` (Armor prototype) spends charges to soften incoming hits, each costing heat. Its benefit shows in A1's **spTaken**, not spDealt — so the control must attack and the hook must spend a charge. The active is the `harden` verb (Ablative Plating's active, game-state.js:293).
+**Plan correction:** the earlier draft used `ablative-cascade` here, but that upgrade is **auto-reactive** — combat.js:658-660 spends a charge automatically when the rig is hit (refills to 2 each Recovery, game-state.js:2084). It takes no player command, so it needs no hook and measures passively through the equipment axis (Task 5/8). The representative equipment-active hook is instead `reactor-overdrive` (prototype tier of the Power module `overclock-core`): the player issues the `overclock` active, which the upgrade turns into +2 Penetration at the cost of a **doubled overheat bonus** (game-state.js:2207) — a genuine decision `greedySafe` never makes. Its benefit shows in A1's **spDealt**.
 
 **Files:**
 - Modify: `scripts/balance/piloting.mjs`
 - Test: `scripts/balance/piloting.test.mjs`
 
-- [ ] **Step 1: Read the engine handler first**
+- [ ] **Step 1: Read the engine handlers first**
 
-Read `shared/game-state.js` for `ablativeCascade` (grep it) and the `harden` action handler (game-state.js ~near the equipment actives). Confirm the exact `attrs.action` string that spends a cascade charge and any charge-count state field (e.g. `rig.equipState.ablativeCharges`). Use the real field name in Step 3 — do not guess it.
+Read, and confirm the real field/verb names before coding:
+- The `overclock` action handler in `shared/game-state.js` (~2744) — confirm `attrs.action === "overclock"`, that it sets `rig.reactorOverdriveActive = true` when the upgrade is present (game-state.js:2751), and that the flag is cleared at activation end (game-state.js:2254). This flag is the once-per-activation guard.
+- `availableActions` in `shared/battle-view.js` — confirm the action key emitted for the overclock active (so the hook can gate on it being enabled and never issue a no-op that trips the driver's 3× guard). `scripts/balance/policy.mjs` already imports `availableActions`; mirror that usage.
+- The overclock heat cost (EQUIPMENT `overclock-core.active.heat`, game-state.js:308) for the conservative predicate.
 
 - [ ] **Step 2: Write the failing test**
 
 ```js
 // append to scripts/balance/piloting.test.mjs
-const ABLA = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
+const OVERDRIVE = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
   weaponA: "Autocannon", upgradeA: "depleted-core",
-  equipmentA: "ablative-plating", equipmentUpgradeA: "ablative-cascade",
+  equipmentA: "overclock-core", equipmentUpgradeA: "reactor-overdrive",
   distance: 12, arc: "side" };
 
-test("ablative-cascade hook makes A1 spend its defensive active", () => {
+test("reactor-overdrive hook makes A1 issue the overclock active", () => {
   const seen = [];
-  runDuel({ ...ABLA, seed: 6, intensity: "ceiling",
+  runDuel({ ...OVERDRIVE, seed: 6, intensity: "ceiling",
     onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
-  assert.ok(seen.includes("harden"), "cascade must pilot the harden active at ceiling");
+  assert.ok(seen.includes("overclock"), "reactor-overdrive must pilot the overclock active at ceiling");
 });
 ```
 
 - [ ] **Step 3: Write minimal implementation**
 
-Add to `PILOTING_HOOKS` in `scripts/balance/piloting.mjs` (use the charge-state field confirmed in Step 1; shown here as `equipState.ablativeCharges`):
-
-```js
-  // Armor prototype (Ablative Plating). Spends a charge (the `harden` active) to
-  // soften incoming fire, each costing heat. Ceiling: harden whenever a charge is
-  // available and the shield is down. Conservative: only when heat has headroom
-  // for the cost AND at least one charge remains — a player does not cook itself
-  // to save 1 SP. Falls through to greedySafe (fire) once out of charges/headroom.
-  "ablative-cascade": {
-    ceiling: (room, rig) => {
-      const charges = rig.equipState?.ablativeCharges ?? 0;
-      return charges > 0
-        ? { verb: "action", attrs: { name: rig.name, action: "harden" } }
-        : null;
-    },
-    conservative: (room, rig) => {
-      const charges = rig.equipState?.ablativeCharges ?? 0;
-      const cap = HEAT_CAPACITY[rig.weightClass];
-      const headroom = cap != null && rig.engine.heat + 1 <= cap; // harden costs 1 heat
-      return charges > 0 && headroom
-        ? { verb: "action", attrs: { name: rig.name, action: "harden" } }
-        : null;
-    },
-  },
-```
-
-Add the `HEAT_CAPACITY` import at the top of `piloting.mjs`:
+Add the imports the hook needs at the top of `scripts/balance/piloting.mjs` (confirm the exact `overclock` enabled-key name from Step 1):
 
 ```js
 import { HEAT_CAPACITY } from "../../shared/game-state.js";
+import { availableActions } from "../../shared/battle-view.js";
+```
+
+Add to `PILOTING_HOOKS`:
+
+```js
+  // Power prototype (Overclock Core). The overclock active gains +2 Penetration
+  // but DOUBLES the overheat bonus — the catch. greedySafe never overclocks.
+  // Gate on availableActions so the hook never issues a no-op (which would trip
+  // the driver's 3x guard), and on !reactorOverdriveActive so it fires once per
+  // activation. Ceiling: overclock whenever legal. Conservative: only with heat
+  // headroom for its cost, so the doubled-overheat catch does not immediately bite.
+  "reactor-overdrive": {
+    ceiling: (room, rig) => overclockCmd(room, rig, false),
+    conservative: (room, rig) => overclockCmd(room, rig, true),
+  },
+```
+
+Add the shared helper above `PILOTING_HOOKS` (use the real enabled-key + heat-cost constants confirmed in Step 1; `OVERCLOCK_HEAT` shown as 3):
+
+```js
+const OVERCLOCK_HEAT = 3; // EQUIPMENT["overclock-core"].active.heat — confirm in Step 1
+
+// Issue the overclock active once per activation, gated on legality so it never
+// no-ops. `careful` adds the conservative heat-headroom check.
+function overclockCmd(room, rig, careful) {
+  if (rig.reactorOverdriveActive) return null;              // already overclocked this activation
+  // Defensive: a hook that cannot read the current turn cannot judge legality, so
+  // it declines (the conservative⊆ceiling probe in Task 7 calls hooks with a
+  // turn-less room; in a real duel the turn is always present at a decision point).
+  const turn = room?.game?.turn;
+  if (!turn) return null;
+  const enabled = new Set(
+    availableActions(rig, turn, room.game.round)
+      .filter((a) => a.enabled).map((a) => a.key),
+  );
+  if (!enabled.has("overclock")) return null;               // not legal now — let greedySafe act
+  if (careful) {
+    const cap = HEAT_CAPACITY[rig.weightClass];
+    if (cap == null || rig.engine.heat + OVERCLOCK_HEAT > cap) return null;
+  }
+  return { verb: "action", attrs: { name: rig.name, action: "overclock" } };
+}
 ```
 
 Append its bias line to `PILOTING_BIASES`:
 
 ```
-- ablative-cascade: piloted via the harden active. Ceiling spends a charge on
-  cooldown; conservative spends only with heat headroom for the 1-heat cost. Its
-  benefit lands in A1's spTaken, not spDealt.
+- reactor-overdrive: piloted via the overclock active, once per activation, gated
+  on availableActions. Ceiling overclocks whenever legal; conservative overclocks
+  only with heat headroom for its cost, so the doubled-overheat catch does not
+  immediately bite. Benefit lands in A1's spDealt.
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test scripts/balance/piloting.test.mjs`
-Expected: PASS.
+Expected: PASS — `seen.includes("overclock")`; the `conservative ⊆ ceiling` invariant (Task 7) will also cover it once added.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/balance/piloting.mjs scripts/balance/piloting.test.mjs
-git commit -m "feat(balance): ablative-cascade piloting hook (defensive active)"
+git commit -m "feat(balance): reactor-overdrive piloting hook (overclock active)"
 ```
 
 ---
@@ -570,28 +591,37 @@ test("conservative fires a subset of ceiling for every hook", () => {
   // Probe each hook against a spread of synthetic states. A conservative YES with
   // a ceiling NO is a contradiction — the hook is misdocumented. We assert the
   // IMPLICATION (conservative => ceiling), never a magnitude.
+  //
+  // The room is deliberately turn-less: hooks that need a live turn to judge
+  // legality (per the contract) must DECLINE (return null) rather than throw, so
+  // this probe is a smoke-level guard for those — it fully exercises pure-state
+  // hooks (e.g. enfilade) and vacuously holds for legality-gated ones. The real
+  // per-hook duel tests (Task 6/9) prove those actually fire.
+  const room = { game: { turn: null, round: 1 } };
   const enemy = { name: "E1", id: 2 };
   const geo = { intensity: "x", distance: 12, arc: "side" };
   const states = [
     { name: "A1", id: 1, weightClass: "medium", engine: { heat: 0 },
-      equipState: { ablativeCharges: 2 }, weapons: { longRange: "Sniper Cannon" } },
+      equipState: {}, reactorOverdriveActive: false, weapons: { longRange: "Sniper Cannon" } },
     { name: "A1", id: 1, weightClass: "medium", engine: { heat: 99 },
-      equipState: { ablativeCharges: 0 }, weapons: { longRange: "Sniper Cannon" } },
+      equipState: {}, reactorOverdriveActive: false, weapons: { longRange: "Sniper Cannon" } },
   ];
   for (const [id, h] of Object.entries(HOOKS)) {
     for (const rig of states) {
-      const c = h.conservative({}, rig, enemy, geo);
-      const k = h.ceiling({}, rig, enemy, geo);
+      const c = h.conservative(room, rig, enemy, geo);
+      const k = h.ceiling(room, rig, enemy, geo);
       if (c) assert.ok(k, `${id}: conservative fired but ceiling did not`);
     }
   }
 });
 ```
 
+Note the hook contract this enforces: **a hook that cannot judge legality from the room it is given must return null, never throw.** Any legality-gated hook added in Task 9 must follow the same turn-less guard as `overclockCmd`.
+
 - [ ] **Step 2: Run test to verify it passes**
 
 Run: `node --test scripts/balance/piloting.test.mjs`
-Expected: PASS for the two hooks registered so far. (Each new hook in Task 9 is re-checked by this test automatically.)
+Expected: PASS for the hooks registered so far. (Each new hook in Task 9 is re-checked by this test automatically.)
 
 - [ ] **Step 3: Commit**
 
@@ -720,16 +750,20 @@ Every hook here follows the Task 4 / Task 6 pattern exactly: read the engine han
 
 For each upgrade below, the command verb is given; **read the cited handler before writing the hook** to confirm state-field names (do not guess them):
 
+**Legality-gated hooks must follow `overclockCmd`'s turn-less guard** (return null when `room?.game?.turn` is absent) so the Task 7 invariant probe never throws.
+
 | Upgrade | Catalog | Verb / mechanic | Engine handler to read |
 |---|---|---|---|
 | `fire-control-lock` | Missile Barrage (weapon) | `lock` on the target, then the next volley auto-hits (fall through to `fire`) | game-state.js:3092 (`lock`), combat.js:701 (`fireControlLock`) |
 | `fire-solution-lock` | Fire Control (equipment) | hold position + build solution, then auto-hit volley | game-state.js:2421, 3034-3040 (`fireSolutionLock`), combat.js (`solutionPayoff`) |
 | `emplacement` | Bulwark Shield (weapon) | `emplace`, then fire from the rooted stance | game-state.js:3112 (`emplace`) |
 | `cryo-reservoir` | Cooling (equipment) | charge over rounds, spend the `purge`-class active for the pen spike | game-state.js:2114 (`cryoReservoir`) |
-| `reactor-overdrive` | Power (equipment) | `overclock` active, accepting the doubled overheat | game-state.js (grep `reactorOverdrive`) |
 | `meltdown-protocol` | Thermal (equipment) | bank overheat, spend for pen/burst | game-state.js:2194 (`meltdownProtocol`) |
 | `nanite-swarm` | Utility (equipment) | seed nanites (active), heal each Recovery | game-state.js (grep `naniteSwarm`) |
-| `point-defense-system` | Countermeasures (equipment) | intercept incoming (`pdLocked`/`interceptors`) | combat.js:1718 (`pdLocked`) |
+
+`reactor-overdrive` is **already done in Task 6** (the representative equipment-active hook). Before writing any hook above, **first confirm it is genuinely a player-issued active** (an `action ===` handler or an `availableActions` key), not an auto-reaction. If the engine applies the effect automatically on hit/recovery with no command, it needs NO hook — it measures passively through the equipment axis. Known auto-reactive (NO hook — verify they register in the Task 8 smoke run instead):
+- `ablative-cascade` (Armor) — combat.js:658-660 auto-spends a charge on being hit; refills each Recovery (game-state.js:2084).
+- `point-defense-system` (Countermeasures) — verify at combat.js:1718 (`pdLocked`/`interceptors`); if `applyDefensiveReactions` spends interceptors automatically, it is passive.
 
 Excluded on purpose (measure without a hook — verify each really fires through plain play during the Task 8 smoke run; if any reads 0.00 there, promote it into this table):
 - Passive/cadence/DoT weapon tiers (Cold Bore, Redline Governor, Penetrator Rounds, Napalm, Suppression Lock, Kneecapper, Skewer, etc.) — they trigger through firing.
