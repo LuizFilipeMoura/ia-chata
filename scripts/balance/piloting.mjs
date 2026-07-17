@@ -14,7 +14,7 @@
 //
 // A hook is a PURE reader: it inspects room/rig/enemy and returns a command. It
 // must never mutate engine state — the engine owns that when the command applies.
-import { HEAT_CAPACITY } from "../../shared/game-state.js";
+import { HEAT_CAPACITY, equipmentUpgradeEffectOf } from "../../shared/game-state.js";
 import { availableActions } from "../../shared/battle-view.js";
 
 // One line per registered hook. The report prints this verbatim next to
@@ -29,6 +29,11 @@ export const PILOTING_BIASES = `
   on availableActions. Ceiling overclocks whenever legal; conservative overclocks
   only with heat headroom for its cost, so the doubled-overheat catch does not
   immediately bite. Benefit lands in A1's spDealt.
+- fire-control-lock: piloted by locking the target whenever not already painted
+  (gated on availableActions), then falling through to greedySafe's Fire, which
+  cashes in the paint as an auto-hit Armour-Piercing volley. Ceiling and
+  conservative coincide — the mechanic's only cost is the turn spent painting,
+  which both intensities pay identically.
 `.trim();
 
 // Build an Aimed command at the duel's fixed geometry. Location defaults to the
@@ -67,6 +72,26 @@ function overclockCmd(room, rig, careful) {
   return { verb: "action", attrs: { name: rig.name, action: "overclock" } };
 }
 
+// Issue the Fire Control Lock `lock` active when A1 isn't already painted onto
+// THIS enemy. Gated on legality (availableActions' "lock" key) and the
+// turn-less contract. Once locked, subsequent calls this activation (or next
+// round, if the lock survives that long) see `rig.lockedTarget === enemy.id`
+// and decline — falling through to greedySafe's Fire, whose resolveFire reads
+// the live lock and cashes it in as an auto-hit Armour-Piercing volley
+// (combat.js:701), then clears it. Ceiling and conservative coincide: the
+// catch here IS the mechanic itself (one action spent painting instead of
+// shooting), not a separate risk a careful pilot could dodge.
+function lockCmd(room, rig, enemy) {
+  if (rig.lockedTarget === enemy.id) return null; // already painted this target
+  const turn = room?.game?.turn;
+  if (!turn) return null;
+  const enabled = new Set(
+    availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
+  );
+  if (!enabled.has("lock")) return null;
+  return { verb: "action", attrs: { name: rig.name, action: "lock", target: enemy.name } };
+}
+
 // upgradeId -> { ceiling(room, rig, enemy, { intensity, distance, arc }),
 //                conservative(room, rig, enemy, { intensity, distance, arc }) }
 export const PILOTING_HOOKS = {
@@ -86,6 +111,15 @@ export const PILOTING_HOOKS = {
   "reactor-overdrive": {
     ceiling: (room, rig) => overclockCmd(room, rig, false),
     conservative: (room, rig) => overclockCmd(room, rig, true),
+  },
+  // Missile Barrage prototype (Fire Control Lock). Paint the target, then let
+  // the next volley auto-hit with Armour Piercing. greedySafe never locks
+  // (IT MAKES NO CHOICES — policy.mjs), so this reads a structural 0.00 there.
+  // No conservative/ceiling split: the "catch" (a turn spent painting instead
+  // of shooting) is inherent to the mechanic, not a separate risk to weigh.
+  "fire-control-lock": {
+    ceiling: (room, rig, enemy) => lockCmd(room, rig, enemy),
+    conservative: (room, rig, enemy) => lockCmd(room, rig, enemy),
   },
 };
 

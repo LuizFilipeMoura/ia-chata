@@ -89,6 +89,17 @@ test("reactor-overdrive hook makes A1 issue the overclock active", () => {
   assert.ok(seen.includes("overclock"), "reactor-overdrive must pilot the overclock active at ceiling");
 });
 
+const LOCK = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
+  weaponA: "Missile Barrage", upgradeA: "fire-control-lock", distance: 20, arc: "side" };
+
+test("fire-control-lock hook makes A1 lock before firing", () => {
+  const seen = [];
+  runDuel({ ...LOCK, seed: 5, intensity: "ceiling",
+    onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
+  assert.ok(seen.includes("lock"), "fire-control-lock must pilot the lock action at ceiling");
+  assert.ok(seen.includes("fire"), "fire-control-lock should still let Fire consume the paint");
+});
+
 test("conservative fires a subset of ceiling for every hook", () => {
   // Probe each hook against a spread of synthetic states. A conservative YES with
   // a ceiling NO is a contradiction — the hook is misdocumented. We assert the
