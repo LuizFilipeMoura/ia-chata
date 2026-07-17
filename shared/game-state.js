@@ -3475,18 +3475,25 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       }
     }
   } else if (verb === "setbot") {
-    // Flag a side to be driven by the bot at the given preset. Pre-battle,
-    // digital rooms only. `null` preset clears the flag (opponent = Human).
-    // Roster generation and auto-ready happen later, in the `ready` path
-    // (design: lazy gen). sideBotOf (shared/bot/index.js) reads sides[i].bot.
+    // Flag a side to be driven by the bot at the given preset. Pre-battle;
+    // picking a preset auto-forces the room to digital (bots require digital).
+    // `null` preset clears the flag (opponent = Human). Roster generation and
+    // auto-ready happen later, in the `ready` path (design: lazy gen).
+    // sideBotOf (shared/bot/index.js) reads sides[i].bot.
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     const side = room.game.sides.find((s) => s.id === sideId);
     const preset = a.preset == null ? null : String(a.preset).toLowerCase();
     if (!side) reject("Unknown side.");
-    else if (room.mode !== "digital") reject("Bots play only in digital battles.");
     else if (room.game.started) reject("The battle has already started.");
     else if (preset !== null && !BOT_PRESETS.includes(preset)) reject("Unknown bot preset.");
-    else { side.bot = preset; changed = true; }
+    else {
+      // A bot requires a digital game; picking a preset flips the room to
+      // digital in one step (was: reject in a physical room). Clearing to Human
+      // (null preset) leaves the mode as-is.
+      if (preset !== null) room.mode = "digital";
+      side.bot = preset;
+      changed = true;
+    }
   } else if (verb === "reset") {
     for (const rig of room.rigs) {
       for (const loc of LOCS) { rig[loc].sp = rig[loc].max; rig[loc].destroyed = false; }
@@ -3620,6 +3627,23 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     if (!room.game.started) {
       const want = String(a.value || "").toLowerCase() !== "manual";
       if (room.game.autoResolve !== want) { room.game.autoResolve = want; changed = true; }
+    }
+  } else if (verb === "mode") {
+    // Pre-battle room-wide toggle between a physical (tabletop-companion) game
+    // and a digital (simulated-positions) game. Mirrors setdice. Digital unlocks
+    // the battle map + bot opponent; positions and terrain are fixed at game
+    // start, so mode can't change once started. An unknown value is ignored.
+    // A bot requires digital, so refuse to switch to physical while any side is
+    // bot-flagged (the lobby disables Physical too — this enforces it engine-side
+    // so a raw command can't create a physical room with a passive bot).
+    if (!room.game.started) {
+      const want = String(a.mode || "").toLowerCase();
+      const botFlagged = room.game.sides.some((s) => s.bot);
+      if ((want === "digital" || want === "physical") && room.mode !== want
+          && !(want === "physical" && botFlagged)) {
+        room.mode = want;
+        changed = true;
+      }
     }
   } else if (verb === "field") {
     const sideId = normalizeSide(room, context.side);

@@ -6638,22 +6638,41 @@ test("setbot with a null preset clears the flag", () => {
   assert.equal(room.game.sides.find((s) => s.id === "b").bot, null);
 });
 
-test("setbot rejects an unknown preset, a physical room, and a started game", () => {
+test("setbot flips a physical room to digital; still rejects unknown preset and started game", () => {
   const room = createRoom("SETBOT3");
   claimSide(room, { name: "A", side: "a" });
   claimSide(room, { name: "B", side: "b" });
+  // A physical room: picking a bot now auto-forces digital (was a reject).
   applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "cagey" } }, { side: "a" });
-  assert.equal(room.game.sides.find((s) => s.id === "b").bot ?? null, null);
-  assert.match(lastRejectionReason() || "", /digital/i);
-  room.mode = "digital";
+  assert.equal(room.mode, "digital");
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot, "cagey");
+  // Unknown preset is still rejected (no change).
   applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "wombat" } }, { side: "a" });
-  assert.equal(room.game.sides.find((s) => s.id === "b").bot ?? null, null);
   assert.match(lastRejectionReason() || "", /preset/i);
-  // started game is rejected even in a digital room with a valid preset
+  // A started game is still rejected.
   room.game.started = true;
   applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "balanced" } }, { side: "a" });
-  assert.equal(room.game.sides.find((s) => s.id === "b").bot ?? null, null);
   assert.match(lastRejectionReason() || "", /started/i);
+});
+
+test("setbot with a preset auto-forces the room to digital", () => {
+  const room = createRoom("SETBOT5");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  assert.notEqual(room.mode, "digital"); // starts physical
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "aggressive" } }, { side: "a" });
+  assert.equal(room.mode, "digital");
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot, "aggressive");
+});
+
+test("clearing a bot to Human leaves the room digital", () => {
+  const room = createRoom("SETBOT6");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "balanced" } }, { side: "a" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: null } }, { side: "a" });
+  assert.equal(room.game.sides.find((s) => s.id === "b").bot, null);
+  assert.equal(room.mode, "digital");
 });
 
 test("BOT_PRESETS lists exactly the three tunable presets", () => {
@@ -6741,4 +6760,43 @@ test("human-vs-human ready is unchanged by the bot fill (no bot flag = no-op)", 
   applyCommand(room, { verb: "ready", attrs: {} }, { side: "b" });
   assert.equal(room.game.started, true);
   assert.equal(room.rigs.filter((r) => (r.owner || "a") === "b").length, 1);
+});
+
+test("mode verb flips a room to digital and back pre-battle", () => {
+  const room = createRoom("MODE1");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "digital" } }, { side: "a" });
+  assert.equal(room.mode, "digital");
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "physical");
+});
+
+test("mode verb is a no-op once the game has started", () => {
+  const room = createRoom("MODE2");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "digital" } }, { side: "a" });
+  room.game.started = true;
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "digital"); // unchanged after start
+});
+
+test("mode verb ignores an unknown value", () => {
+  const room = createRoom("MODE3");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "digital" } }, { side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "hologram" } }, { side: "a" });
+  assert.equal(room.mode, "digital"); // unknown value left the prior mode intact
+});
+
+test("mode verb won't leave digital while a side is flagged as a bot", () => {
+  const room = createRoom("MODE4");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "balanced" } }, { side: "a" }); // → digital + flag
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "digital"); // physical refused while a bot is flagged
+  // clearing the bot then allows physical
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: null } }, { side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "physical");
 });
