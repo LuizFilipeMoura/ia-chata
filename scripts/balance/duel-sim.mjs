@@ -296,6 +296,21 @@ const ARC = "side";
 // mean over 3 duels is a rumour, not a measurement.
 const MIN_SAMPLE = Math.max(1, Math.floor(TRIALS * 0.5));
 
+// A tiny sum accumulator so each intensity aggregates independently. Mirrors the
+// existing per-cell running totals; censors weaponLost cells exactly as before.
+function makeAcc() {
+  let spDealt = 0, spTaken = 0, wrecks = 0, rounds = 0, lost = 0, n = 0;
+  return {
+    add(r) {
+      if (r.weaponLost) { lost++; return; }
+      spDealt += r.spDealt; spTaken += r.spTaken; rounds += r.rounds;
+      if (r.wrecked) wrecks++; n++;
+    },
+    row() { return { spDealt: n ? spDealt / n : null, spTaken: n ? spTaken / n : null,
+      wreckRate: n ? wrecks / n : null, rounds: n ? rounds / n : null, n, censored: lost }; },
+  };
+}
+
 async function main() {
   if (!Number.isFinite(TRIALS) || TRIALS < 1) {
     throw new Error(`TRIALS must be a positive number, got ${JSON.stringify(process.env.TRIALS)}.`);
@@ -320,35 +335,69 @@ async function main() {
       throw new Error(`duel-sim sweep: no WEAPON_UPGRADES for "${weapon}" — it would vanish from the sweep without a word.`);
     }
     for (const u of upgrades) {
-      let spDealt = 0, spTaken = 0, wrecks = 0, rounds = 0, lost = 0, n = 0;
+      const agg = { conservative: makeAcc(), ceiling: makeAcc() };
       for (let s = 1; s <= TRIALS; s++) {
         // Each runDuel builds its own mulberry32 from the seed, so cells are
         // independent and no cross-cell re-seeding is needed. Seeds repeat across
         // cells BY DESIGN: the same 500 dice streams meet every weapon-tier, which
         // pairs the comparison instead of leaving it to luck.
-        const r = runDuel({ chassisA: CHASSIS_A, chassisB: CHASSIS_B, weaponA: weapon,
-          upgradeA: u.id, distance, arc: ARC, seed: s });
-        // weaponLost cells are CENSORED, not measured: spDealt was capped by an
-        // arm coming off, not by the weapon. Counted, and excluded from the mean.
-        if (r.weaponLost) { lost++; continue; }
-        spDealt += r.spDealt; spTaken += r.spTaken; rounds += r.rounds;
-        if (r.wrecked) wrecks++;
-        n++;
+        for (const intensity of ["conservative", "ceiling"]) {
+          const r = runDuel({ chassisA: CHASSIS_A, chassisB: CHASSIS_B, weaponA: weapon,
+            upgradeA: u.id, distance, arc: ARC, seed: s, intensity });
+          agg[intensity].add(r);
+        }
       }
-      rows.push({ weapon, tier: u.nature, upgrade: u.id, distance, arc: ARC,
-        spDealt: n ? spDealt / n : null, spTaken: n ? spTaken / n : null,
-        wreckRate: n ? wrecks / n : null, rounds: n ? rounds / n : null,
-        // `n` is the surviving sample, `censored` the trials an arm-loss ate.
-        // `underSampled` saves the reader from doing that division themselves and
-        // mistaking a mean over a handful of duels for a real one.
-        n, censored: lost, underSampled: n < MIN_SAMPLE });
+      rows.push({ axis: "weapon", weapon, tier: u.nature, upgrade: u.id, distance, arc: ARC,
+        conservative: agg.conservative.row(), ceiling: agg.ceiling.row() });
       process.stderr.write(`${weapon} ${u.nature}\n`);
     }
   }
-  const under = rows.filter((r) => r.underSampled);
+
+  // Equipment axis. A1 carries a fixed weapon field tier (the module is the
+  // variable). The control attacks as always, so defensive/heat/repair modules
+  // register via spTaken / firing uptime / survival.
+  const EQ_WEAPON = "Autocannon";              // documented constant, like CHASSIS_B
+  const EQ_WEAPON_FIELD = WEAPON_UPGRADES[EQ_WEAPON][0].id;
+  const EQ_DISTANCE = WEAPONS.longRange[EQ_WEAPON].sweet;
+  for (const equipment of Object.keys(EQUIPMENT)) {
+    const tiers = EQUIPMENT_UPGRADES[equipment];
+    if (!tiers?.length) {
+      throw new Error(`duel-sim equipment sweep: no EQUIPMENT_UPGRADES for "${equipment}".`);
+    }
+    for (const u of tiers) {
+      const agg = { conservative: makeAcc(), ceiling: makeAcc() };
+      for (let s = 1; s <= TRIALS; s++) {
+        for (const intensity of ["conservative", "ceiling"]) {
+          const r = runDuel({ chassisA: CHASSIS_A, chassisB: CHASSIS_B,
+            weaponA: EQ_WEAPON, upgradeA: EQ_WEAPON_FIELD,
+            equipmentA: equipment, equipmentUpgradeA: u.id,
+            distance: EQ_DISTANCE, arc: ARC, seed: s, intensity });
+          agg[intensity].add(r);
+        }
+      }
+      rows.push({ axis: "equipment", equipment, tier: u.nature, upgrade: u.id,
+        distance: EQ_DISTANCE, arc: ARC,
+        conservative: agg.conservative.row(), ceiling: agg.ceiling.row() });
+      process.stderr.write(`${equipment} ${u.nature}\n`);
+    }
+  }
+
+  // Sample-size warning: scan BOTH intensities' sub-rows for under-sampling,
+  // since censoring (weaponLost) can differ between conservative and ceiling
+  // piloting (a hook that fires more often can also lose its gun more often).
+  const under = [];
+  for (const r of rows) {
+    for (const intensity of ["conservative", "ceiling"]) {
+      const sub = r[intensity];
+      if (sub.n < MIN_SAMPLE) under.push({ r, intensity, sub });
+    }
+  }
   if (under.length) {
-    process.stderr.write(`\nWARNING: ${under.length}/${rows.length} cell(s) kept fewer than ${MIN_SAMPLE}/${TRIALS} trials after censoring:\n`);
-    for (const r of under) process.stderr.write(`  ${r.weapon} ${r.tier}: n=${r.n}, censored=${r.censored}\n`);
+    process.stderr.write(`\nWARNING: ${under.length} cell/intensity combo(s) kept fewer than ${MIN_SAMPLE}/${TRIALS} trials after censoring:\n`);
+    for (const { r, intensity, sub } of under) {
+      const label = r.axis === "equipment" ? r.equipment : r.weapon;
+      process.stderr.write(`  [${r.axis}] ${label} ${r.tier} (${intensity}): n=${sub.n}, censored=${sub.censored}\n`);
+    }
   }
   process.stdout.write(JSON.stringify({ trials: TRIALS, rounds: DUEL_ROUNDS,
     chassisA: CHASSIS_A, chassisB: CHASSIS_B, arc: ARC, minSample: MIN_SAMPLE, rows }, null, 0));
