@@ -9,6 +9,7 @@ import {
   createRoom, applyCommand, lastRejectionReason, effectiveWeaponProfile, MAX_ROUNDS,
 } from "../../shared/game-state.js";
 import { makeGreedySafe } from "./policy.mjs";
+import { pilotFor } from "./piloting.mjs";
 
 export const DUEL_ROUNDS = MAX_ROUNDS; // the real game length — imported, never re-typed
 
@@ -28,7 +29,10 @@ const totalSp = (rig) => ["hull", "arms", "legs", "engine"].reduce((s, k) => s +
 // the seed verb force-starts at >=3 rigs per side; they never act, and the third
 // rig of whichever side is second absorbs the Answer token so no duellist carries
 // a preparation.
-export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, seed }) {
+export function runDuel({
+  chassisA, chassisB, weaponA, upgradeA, equipmentA, equipmentUpgradeA, distance, arc, seed,
+  intensity = "conservative",
+}) {
   const random = mulberry32(seed);
   // A factory, not a module-level setter: distance and arc are BOTH required and
   // throw if missing. An unexplained default would silently become the answer for
@@ -40,6 +44,11 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
   // pooling arcs; a single-arc duel cannot. The caller declares where the shooter
   // stands and owns what it costs those two weapons.
   const greedySafe = makeGreedySafe({ distance, arc });
+  // The upgrade under test drives which hook (if any) pilots A1. Equipment takes
+  // precedence when present — an equipment cell tests the module, not the weapon
+  // field tier A1 also carries. A passive/unregistered id yields a no-op hook.
+  const pilotedId = equipmentUpgradeA || upgradeA;
+  const pilot = pilotFor(pilotedId, intensity);
   const room = createRoom("DUEL");
   const roster = ["A1", "A2", "A3"].map((n) => ({ name: n, owner: "a", chassis: chassisA }))
     .concat(["B1", "B2", "B3"].map((n) => ({ name: n, owner: "b", chassis: chassisB })));
@@ -190,7 +199,14 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
     if (gunLost && rig === a1) weaponLost = true;
     const canFight = (rig.name === "A1" || rig.name === "B1") && !gunLost;
     const foe = rig.name === "A1" ? b1 : a1;
-    const next = canFight ? greedySafe(room, rig, foe) : null;
+    // A1 consults its upgrade hook first; a null means "nothing to pilot now" and
+    // greedySafe takes over. The control (B1) is never piloted — it is the fixed
+    // yardstick. Piloting both would measure the matchup, not the upgrade.
+    let next = null;
+    if (canFight) {
+      if (rig.name === "A1") next = pilot(room, rig, foe, { intensity });
+      if (!next) next = greedySafe(room, rig, foe);
+    }
     if (next) {
       // Calibration hook: A1's first attack against a FRESH B1 is the only point
       // where this harness and weapon-sweep.mjs measure the same quantity. The

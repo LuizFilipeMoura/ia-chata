@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pilotFor, PILOTING_HOOKS, PILOTING_BIASES } from "./piloting.mjs";
+import { runDuel } from "./duel-sim.mjs";
 
 test("pilotFor returns a no-op hook for an unregistered upgrade", () => {
   const hook = pilotFor("no-such-upgrade");
@@ -20,4 +21,24 @@ test("PILOTING_BIASES documents exactly the registered hooks", () => {
   for (const id of Object.keys(PILOTING_HOOKS)) {
     assert.ok(PILOTING_BIASES.includes(id), `PILOTING_BIASES missing a line for ${id}`);
   }
+});
+
+const WCELL = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
+  weaponA: "Autocannon", upgradeA: "depleted-core", distance: 12, arc: "side" };
+
+test("runDuel accepts an intensity and stays deterministic per (seed, intensity)", () => {
+  assert.deepEqual(
+    runDuel({ ...WCELL, seed: 7, intensity: "ceiling" }),
+    runDuel({ ...WCELL, seed: 7, intensity: "ceiling" }),
+  );
+});
+
+test("a passive upgrade is unaffected by intensity (no hook = no drift)", () => {
+  // depleted-core is a passive tier with no hook, so both intensities must
+  // produce the identical duel. Calibration guard: the hook layer changes ONLY
+  // piloted upgrades.
+  assert.deepEqual(
+    runDuel({ ...WCELL, seed: 11, intensity: "conservative" }),
+    runDuel({ ...WCELL, seed: 11, intensity: "ceiling" }),
+  );
 });
