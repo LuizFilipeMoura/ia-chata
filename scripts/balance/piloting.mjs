@@ -17,6 +17,17 @@
 import { HEAT_CAPACITY } from "../../shared/game-state.js";
 import { availableActions } from "../../shared/battle-view.js";
 
+// The set of action keys the engine will accept for `rig` right now. Turn-less
+// safe: returns null when there is no live turn to judge legality from (the Task 7
+// invariant probe calls hooks with a turn-less room), so callers `?? return null`.
+function enabledKeys(room, rig) {
+  const turn = room?.game?.turn;
+  if (!turn) return null;
+  return new Set(
+    availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
+  );
+}
+
 // One line per registered hook. The report prints this verbatim next to
 // policy.mjs's KNOWN_BIASES so the assumptions travel with the numbers. KEEP EACH
 // LINE TRUE TO ITS PREDICATE — a lying bias line is the exact trap the last
@@ -32,8 +43,10 @@ export const PILOTING_BIASES = `
 - fire-control-lock: piloted by locking the target whenever not already painted
   (gated on availableActions), then falling through to greedySafe's Fire, which
   cashes in the paint as an auto-hit Armour-Piercing volley. Ceiling and
-  conservative coincide — the mechanic's only cost is the turn spent painting,
-  which both intensities pay identically.
+  conservative coincide, byte-identically (same as enfilade) — the lock trade
+  costs only 1 heat + the turn spent painting (rules.js's lock entry), cheap
+  enough next to overclock's 3-heat catch that conservative never needs a
+  heat-headroom gate here; it always takes the trade too.
 - emplacement: piloted by rooting into the fortress stance whenever legal
   (gated on availableActions), then falling through to greedySafe's Fire once
   already rooted. Ceiling roots the instant it's legal; conservative holds off
@@ -73,12 +86,9 @@ const OVERCLOCK_HEAT = 3; // EQUIPMENT["overclock-core"].active.heat — confirm
 // the room has no live turn to judge legality from.
 function overclockCmd(room, rig, careful) {
   if (rig.reactorOverdriveActive) return null;   // already overclocked this activation
-  const turn = room?.game?.turn;
-  if (!turn) return null;
-  const enabled = new Set(
-    availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
-  );
-  if (!enabled.has("overclock")) return null;    // not legal now — let greedySafe act
+  const keys = enabledKeys(room, rig);
+  if (!keys) return null;
+  if (!keys.has("overclock")) return null;       // not legal now — let greedySafe act
   if (careful) {
     const cap = HEAT_CAPACITY[rig.weightClass];
     if (cap == null || rig.engine.heat + OVERCLOCK_HEAT > cap) return null;
@@ -93,16 +103,14 @@ function overclockCmd(room, rig, careful) {
 // and decline — falling through to greedySafe's Fire, whose resolveFire reads
 // the live lock and cashes it in as an auto-hit Armour-Piercing volley
 // (combat.js:701), then clears it. Ceiling and conservative coincide: the
-// catch here IS the mechanic itself (one action spent painting instead of
-// shooting), not a separate risk a careful pilot could dodge.
+// catch here IS the mechanic itself (one action + 1 heat spent painting
+// instead of shooting — rules.js's `lock` entry), not a separate risk a
+// careful pilot could dodge by weighing heat headroom.
 function lockCmd(room, rig, enemy) {
   if (rig.lockedTarget === enemy.id) return null; // already painted this target
-  const turn = room?.game?.turn;
-  if (!turn) return null;
-  const enabled = new Set(
-    availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
-  );
-  if (!enabled.has("lock")) return null;
+  const keys = enabledKeys(room, rig);
+  if (!keys) return null;
+  if (!keys.has("lock")) return null;
   return { verb: "action", attrs: { name: rig.name, action: "lock", target: enemy.name } };
 }
 
@@ -115,12 +123,10 @@ function lockCmd(room, rig, enemy) {
 // entirely (a competent pilot fires first if the budget can't cover both).
 function emplaceCmd(room, rig, careful) {
   if (rig.emplaced) return null; // already rooted — nothing to plant
-  const turn = room?.game?.turn;
-  if (!turn) return null;
-  const enabled = new Set(
-    availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
-  );
-  if (!enabled.has("emplace")) return null; // on cooldown, or no budget
+  const keys = enabledKeys(room, rig);
+  if (!keys) return null;
+  if (!keys.has("emplace")) return null; // on cooldown, or no budget
+  const turn = room.game.turn;
   if (careful && (turn.actionsMax - turn.actionsUsed) < 2) return null; // would forfeit the shot
   return { verb: "action", attrs: { name: rig.name, action: "emplace" } };
 }
