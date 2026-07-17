@@ -100,7 +100,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
           </div>
           <div className="v2-yard-mode-sub">
             {enemyBot
-              ? "Bots require digital."
+              ? "Bots require digital — set opponent to Human for a physical game."
               : isDigital
                 ? "Simulated positions — play on the map."
                 : "Tabletop companion — you track the physical table."}
