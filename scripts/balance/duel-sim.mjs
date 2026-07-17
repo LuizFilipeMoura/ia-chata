@@ -109,8 +109,10 @@ export function runDuel({
     if (!EQUIPMENT[equipmentA]) {
       throw new Error(`duel-sim: unknown equipment "${equipmentA}".`);
     }
-    // A null upgrade id silently resolves to the FIELD tier (normalizeEquipmentUpgrade),
-    // exactly the weapon-tier trap — so demand it explicitly, like upgradeA.
+    // Demand an explicit tier, symmetric with upgradeA. Unlike the weapon side,
+    // normalizeEquipmentUpgrade returns null for a falsy id (it does NOT fall back
+    // to the field tier), so a null would equip the module with no upgrade at all —
+    // a silently different loadout. Reject it loudly instead.
     if (typeof equipmentUpgradeA !== "string" || !equipmentUpgradeA) {
       throw new Error("duel-sim needs an explicit { equipmentUpgradeA } id: a null upgrade silently resolves to the FIELD tier, not to none.");
     }
