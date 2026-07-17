@@ -206,7 +206,7 @@ export function runDuel({
     // yardstick. Piloting both would measure the matchup, not the upgrade.
     let next = null;
     if (canFight) {
-      if (rig.name === "A1") next = pilot(room, rig, foe, { intensity });
+      if (rig.name === "A1") next = pilot(room, rig, foe, { intensity, distance, arc });
       if (!next) next = greedySafe(room, rig, foe);
     }
     if (next) {

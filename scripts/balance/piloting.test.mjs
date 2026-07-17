@@ -49,3 +49,13 @@ test("runDuel reports the actions A1 issued via onCommand", () => {
     onCommand: (rigName, attrs) => { if (rigName === "A1") seen.push(attrs.action); } });
   assert.ok(seen.includes("fire"), "A1 should fire at least once");
 });
+
+const SNIPER = { chassisA: "medium-sniper-chainsaw", chassisB: "medium-lance-mortar",
+  weaponA: "Sniper Cannon", upgradeA: "enfilade", distance: 20, arc: "side" };
+
+test("enfilade hook makes A1 take Aimed shots (was a structural 0.00)", () => {
+  const seen = [];
+  runDuel({ ...SNIPER, seed: 4, intensity: "ceiling",
+    onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
+  assert.ok(seen.includes("aimed"), "enfilade must pilot Aimed shots at ceiling");
+});

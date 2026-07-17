@@ -20,11 +20,38 @@
 // LINE TRUE TO ITS PREDICATE — a lying bias line is the exact trap the last
 // rework shipped eleven times.
 export const PILOTING_BIASES = `
-(hooks registered below add their line here)
+- enfilade: piloted as Aimed shots at the sweet-spot distance. Ceiling and
+  conservative coincide because the duel is pinned to the sweet spot; a marksman
+  aims every shot here. Off-band cells would diverge.
 `.trim();
 
-// upgradeId -> { ceiling(room, rig, enemy), conservative(room, rig, enemy) }
-export const PILOTING_HOOKS = {};
+// Build an Aimed command at the duel's fixed geometry. Location defaults to the
+// enemy's engine — the kill location a marksman aims for; the choice changes only
+// WHERE the shot lands, not whether the Aimed-cadence mechanic fires. Returns null
+// when the long-range weapon is spent: game-state.js (resolveFire) makes firing a
+// spent weapon a SILENT no-op until it is reloaded, so piloting through that state
+// would retry a doomed shot instead of falling through to greedySafe, which already
+// knows how to reload.
+function aimedAt(rig, enemy, distance, arc, location = "engine") {
+  if (rig.loaded?.longRange === false) return null;
+  return { verb: "action", attrs: {
+    name: rig.name, action: "aimed", weapon: "longRange",
+    loc: location, target: enemy.name, arc, distance,
+  } };
+}
+
+// upgradeId -> { ceiling(room, rig, enemy, { intensity, distance, arc }),
+//                conservative(room, rig, enemy, { intensity, distance, arc }) }
+export const PILOTING_HOOKS = {
+  // Sniper Cannon prototype. Keys off Aimed-shot cadence, which greedySafe never
+  // triggers (its confirmed structural 0.00). The duel is pinned to the sweet
+  // spot, so both intensities aim every shot here; they diverge only for a future
+  // off-band cell, which is why conservative still checks the band.
+  enfilade: {
+    ceiling: (room, rig, enemy, { distance, arc }) => aimedAt(rig, enemy, distance, arc),
+    conservative: (room, rig, enemy, { distance, arc }) => aimedAt(rig, enemy, distance, arc),
+  },
+};
 
 const NOOP = () => null;
 
