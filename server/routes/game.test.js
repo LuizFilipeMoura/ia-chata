@@ -194,3 +194,32 @@ test("a human starts a match against a bot over HTTP and the bot plays out", asy
   assert.ok(botPlayed.some((r) => r.activated === true),
     `expected the bot to have activated a rig: turn ${played.state.game.turn?.side}, round ${played.state.game.round}`);
 });
+
+test("a default physical room becomes digital via setbot and starts a digital game", async () => {
+  const room = store.getOrCreateRoom("MODEHTTP");
+  // NOTE: room.mode is NOT set here — it defaults to physical.
+  claimSide(room, { name: "Human", side: "a" });
+  claimSide(room, { name: "Bot", side: "b" });
+  const light = CHASSIS.filter((c) => c.class === "light");
+  for (let i = 0; i < 2; i++) {
+    const pb = light[i];
+    applyCommand(room, { verb: "add", attrs: {
+      name: `H${i + 1}`, owner: "a", class: pb.class,
+      longRange: pb.longRange, melee: pb.melee, chassis: pb.id, sp: pb.sp,
+    } }, { side: "a" });
+  }
+  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
+
+  // Picking a bot over HTTP flips the physical room to digital.
+  const flag = await post("/api/game/MODEHTTP/command", { cmd: { verb: "setbot", attrs: { side: "b", preset: "aggressive" } }, side: "a" });
+  assert.equal(flag.status, 200);
+
+  const res = await post("/api/game/MODEHTTP/command", { cmd: { verb: "ready", attrs: {} }, side: "a" });
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.state.mode, "digital");        // the room flipped to digital
+  assert.equal(body.state.game.started, true);      // and started
+  assert.equal(body.state.rigs.filter((r) => (r.owner || "a") === "b").length, 2); // mirrored bot force
+  // Digital start assigned positions (autoDeploy), proving the digital path ran.
+  assert.ok(body.state.rigs.every((r) => r.pos && typeof r.pos.x === "number"));
+});
