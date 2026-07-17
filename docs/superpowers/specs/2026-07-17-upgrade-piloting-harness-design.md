@@ -232,6 +232,26 @@ not measured-and-bad.
    never moves. These measure through the equipment axis / plain repeated firing without a hook,
    exactly like the other passive tiers described in [Architecture](#1-hook-layer-over-greedysafe).
 
-**For sub-project B:** treat (1)-(3) as harness-blind. Tune them on rubric + feel, flagged as such
-in whatever B produces, until the follow-up axis/inputs above land — do not use their absence from
-A's report as evidence they are weak.
+5. **Decision-dependent EQUIPMENT tiers with no piloting hook — unmeasured, NOT measured-and-bad.**
+   `PILOTING_HOOKS` (`scripts/balance/piloting.mjs`) registers exactly three equipment tiers:
+   `reactor-overdrive`, `cryo-reservoir`, `nanite-swarm`. Three other equipment tiers are just as
+   decision-dependent but have no hook, so in a `runDuel` cell they never fire and the row collapses
+   to the same numbers as the fixed field-tier control (`EQ_WEAPON`'s field upgrade, `duel-sim.mjs`)
+   — the inert Autocannon-field baseline, not a measurement of the tier's own mechanic:
+   - `adrenaline-surge` (tuned, `overclock-core` — `shared/rules.js:176`) — "Below half SP, Overclock
+     grants +3 actions." Needs A1 to be below half SP when it overclocks; the duel never drives A1
+     into that state.
+   - `kickstart-pistons` (tuned, `servo-actuators` — `shared/rules.js:171`) — "Charge into contact →
+     first melee after +2 Penetration." Needs a Sprint into melee; `greedySafe` never moves (same
+     structural gap noted for `emplacement` in item 3).
+   - `grapnel-launcher` (prototype, `servo-actuators` — `shared/rules.js:172`) — a reposition/pull
+     active (yank free of a lock, or reel an enemy in); `greedySafe` never moves.
+
+   General rule: a fixed-distance, fixed-arc duel cannot measure any tier whose trigger is movement
+   or a self-inflicted state (below-half-SP, over-heat-cap) — the same reason `meltdown-protocol`
+   (item 2) is deferred. These three rows are harness-blind exactly like `meltdown-protocol`: rubric
+   + feel only, until a hook and/or a harness change (forced movement, forced low-SP) lands.
+
+**For sub-project B:** treat (1)-(3) and (5) as harness-blind. Tune them on rubric + feel, flagged as
+such in whatever B produces, until the follow-up axis/inputs above land — do not use their absence
+from (or baseline-matching presence in) A's report as evidence they are weak.

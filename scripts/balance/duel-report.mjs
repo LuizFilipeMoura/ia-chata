@@ -86,6 +86,16 @@ Run biases (this run's inputs, not the policy's):
   choice on its own, so any upgrade without a piloting hook cannot be exercised
   beyond plain firing. This harness exists because 44 of the old sweep's 85
   upgrades read a misleading 0.00; do not read a new one as a verdict.
+- A NO-HOOK DECISION-DEPENDENT TIER READS THE INERT BASELINE, NOT A MEASURED
+  MEDIOCRE VALUE. Without a piloting hook, a tuned/prototype equipment row
+  collapses to plain firing and so lands on the SAME numbers as the fixed
+  field-tier control (EQ_WEAPON's field upgrade in duel-sim.mjs) — a row that
+  matches the field-tier baseline is "unmeasured," not "measured and weak." A
+  fixed-distance, fixed-arc duel structurally cannot trigger a tier whose
+  mechanic needs movement (a reposition/charge active) or a self-inflicted
+  precondition (below-half-SP, over-heat-cap) to fire; PILOTING_HOOKS above
+  lists every tier that IS piloted — anything else in the equipment tables
+  below is silent by construction, not by result.
 - SP TOTAL SATURATES AT THE WRECK. The duel ends when the control wrecks, so a
   weapon's total is bounded by the control's SP pool however good it is. Read
   "sp/rd" for the signal and never read "spTot" without "rounds" beside it.
