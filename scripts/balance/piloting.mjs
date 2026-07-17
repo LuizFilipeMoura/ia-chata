@@ -34,6 +34,11 @@ export const PILOTING_BIASES = `
   cashes in the paint as an auto-hit Armour-Piercing volley. Ceiling and
   conservative coincide — the mechanic's only cost is the turn spent painting,
   which both intensities pay identically.
+- emplacement: piloted by rooting into the fortress stance whenever legal
+  (gated on availableActions), then falling through to greedySafe's Fire once
+  already rooted. Ceiling roots the instant it's legal; conservative holds off
+  the one activation where rooting would spend the last action and skip that
+  round's shot entirely.
 `.trim();
 
 // Build an Aimed command at the duel's fixed geometry. Location defaults to the
@@ -92,6 +97,25 @@ function lockCmd(room, rig, enemy) {
   return { verb: "action", attrs: { name: rig.name, action: "lock", target: enemy.name } };
 }
 
+// Root into the Emplacement fortress stance once (never double-plants; the
+// engine itself rejects that), gated on legality (availableActions' "emplace"
+// key — covers both the cooldown and the budget) and the turn-less contract.
+// Once emplaced, further calls this activation short-circuit on rig.emplaced
+// and fall through to greedySafe's Fire. `careful` adds a headroom check: don't
+// spend the LAST action rooting when that would forfeit this activation's shot
+// entirely (a competent pilot fires first if the budget can't cover both).
+function emplaceCmd(room, rig, careful) {
+  if (rig.emplaced) return null; // already rooted — nothing to plant
+  const turn = room?.game?.turn;
+  if (!turn) return null;
+  const enabled = new Set(
+    availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
+  );
+  if (!enabled.has("emplace")) return null; // on cooldown, or no budget
+  if (careful && (turn.actionsMax - turn.actionsUsed) < 2) return null; // would forfeit the shot
+  return { verb: "action", attrs: { name: rig.name, action: "emplace" } };
+}
+
 // upgradeId -> { ceiling(room, rig, enemy, { intensity, distance, arc }),
 //                conservative(room, rig, enemy, { intensity, distance, arc }) }
 export const PILOTING_HOOKS = {
@@ -120,6 +144,16 @@ export const PILOTING_HOOKS = {
   "fire-control-lock": {
     ceiling: (room, rig, enemy) => lockCmd(room, rig, enemy),
     conservative: (room, rig, enemy) => lockCmd(room, rig, enemy),
+  },
+  // Bulwark Shield prototype (Emplacement). Root into the permanent fortress
+  // shield, trading Move + 1 action budget for a persistent Raise Shield.
+  // greedySafe never moves and never emplaces, so this reads a structural 0.00
+  // there. Ceiling roots as soon as it's legal; conservative holds off on the
+  // one activation where rooting would use the LAST action and forfeit that
+  // round's shot entirely.
+  emplacement: {
+    ceiling: (room, rig) => emplaceCmd(room, rig, false),
+    conservative: (room, rig) => emplaceCmd(room, rig, true),
   },
 };
 

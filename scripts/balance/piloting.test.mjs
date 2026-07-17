@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pilotFor, PILOTING_HOOKS, PILOTING_BIASES } from "./piloting.mjs";
 import { runDuel } from "./duel-sim.mjs";
+import { makeRig } from "../../shared/game-state.js";
 
 test("pilotFor returns a no-op hook for an unregistered upgrade", () => {
   const hook = pilotFor("no-such-upgrade");
@@ -98,6 +99,42 @@ test("fire-control-lock hook makes A1 lock before firing", () => {
     onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
   assert.ok(seen.includes("lock"), "fire-control-lock must pilot the lock action at ceiling");
   assert.ok(seen.includes("fire"), "fire-control-lock should still let Fire consume the paint");
+});
+
+// Emplacement is a MELEE weapon upgrade (Bulwark Shield prototype). duel-sim's
+// public axes only reach A1's LONG-RANGE weapon upgrade or its equipment module
+// (runDuel has no `meleeUpgradeA` parameter, and duel-sim.mjs is out of scope to
+// extend for this task) — so this is a direct hook-level check against a real
+// rig (built with the actual makeRig, not a hand-rolled shape) instead of a
+// full runDuel + onCommand round trip.
+function makeEmplaceRig(overrides = {}) {
+  const rig = makeRig(1, "A1", "medium", "a", { longRange: "Autocannon", melee: "Bulwark Shield" });
+  rig.weaponUpgrades.melee = "emplacement";
+  return Object.assign(rig, overrides);
+}
+const EMPLACE_ENEMY = { name: "B1", id: 2 };
+
+test("emplacement hook makes A1 emplace when legal", () => {
+  const rig = makeEmplaceRig();
+  const room = { game: { turn: { actionsUsed: 0, actionsMax: 3 }, round: 1 } };
+  const cmd = pilotFor("emplacement", "ceiling")(room, rig, EMPLACE_ENEMY, { distance: 2, arc: "side" });
+  assert.equal(cmd?.attrs?.action, "emplace", "emplacement must pilot the emplace action at ceiling when legal");
+});
+
+test("emplacement hook falls through once already emplaced", () => {
+  const rig = makeEmplaceRig({ emplaced: true });
+  const room = { game: { turn: { actionsUsed: 0, actionsMax: 2 }, round: 1 } };
+  const cmd = pilotFor("emplacement", "ceiling")(room, rig, EMPLACE_ENEMY, { distance: 2, arc: "side" });
+  assert.equal(cmd, null, "already emplaced — hook should fall through to greedySafe's Fire");
+});
+
+test("emplacement hook (conservative) declines to root when it would forfeit this activation's shot", () => {
+  const rig = makeEmplaceRig();
+  const room = { game: { turn: { actionsUsed: 2, actionsMax: 3 }, round: 1 } }; // 1 action left
+  const conservative = pilotFor("emplacement", "conservative")(room, rig, EMPLACE_ENEMY, { distance: 2, arc: "side" });
+  const ceiling = pilotFor("emplacement", "ceiling")(room, rig, EMPLACE_ENEMY, { distance: 2, arc: "side" });
+  assert.equal(conservative, null, "conservative shouldn't spend the last action rooting instead of firing");
+  assert.equal(ceiling?.attrs?.action, "emplace", "ceiling roots regardless of the leftover budget");
 });
 
 test("conservative fires a subset of ceiling for every hook", () => {
