@@ -6764,6 +6764,7 @@ test("mode verb is a no-op once the game has started", () => {
 test("mode verb ignores an unknown value", () => {
   const room = createRoom("MODE3");
   claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "digital" } }, { side: "a" });
   applyCommand(room, { verb: "mode", attrs: { mode: "hologram" } }, { side: "a" });
-  assert.notEqual(room.mode, "hologram");
+  assert.equal(room.mode, "digital"); // unknown value left the prior mode intact
 });
