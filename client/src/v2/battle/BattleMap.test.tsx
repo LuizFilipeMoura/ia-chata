@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { BattleMapLayers } from "./BattleMap";
 import type { FieldState, Rig } from "../../state/types";
 
@@ -31,6 +31,23 @@ test("omits destroyed rigs and dims already-activated ones", () => {
   const tokens = getAllByTestId("rig-token");
   expect(tokens).toHaveLength(1);
   expect(tokens[0].getAttribute("data-activated")).toBe("true");
+});
+
+test("clicking a token routes to activate when activatable, else select", () => {
+  const onSelect = vi.fn();
+  const onActivate = vi.fn();
+  const mine = rig({ id: 1, owner: "a", pos: { x: 10, y: 10 } });
+  const foe = rig({ id: 2, owner: "b", pos: { x: 40, y: 25 } });
+  const { getAllByTestId } = render(
+    <svg><BattleMapLayers field={field} rigs={[mine, foe]} mySide="a" ownerSide="a" priorityTargetId={null}
+      selectedId={null} onSelect={onSelect} onActivate={onActivate} activatable={(r) => r.id === 1} /></svg>,
+  );
+  const tokens = getAllByTestId("rig-token");
+  tokens.find((t) => t.getAttribute("data-mine") === "true")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(onActivate).toHaveBeenCalledTimes(1);
+  expect(onSelect).not.toHaveBeenCalled();
+  tokens.find((t) => t.getAttribute("data-mine") === "false")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(onSelect).toHaveBeenCalledTimes(1);
 });
 
 test("marks the priority-target enemy", () => {

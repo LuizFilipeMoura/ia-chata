@@ -139,12 +139,12 @@
 .v2-root .v2-fs-lock:active { transform: translateY(1px); box-shadow: 0 5px 14px rgba(231,154,61,.25); }
 
 /* ===== Battle map tokens (L1 read-only render) ============================= */
-.v2-bm-token { cursor: pointer; }
-.v2-bm-dot { fill: var(--v2-line, #555); }
-.v2-bm-token.is-mine .v2-bm-dot { fill: var(--v2-oil, #e8792a); }
-.v2-bm-token.is-foe  .v2-bm-dot { fill: #e23b3b; }
-.v2-bm-token.is-spent { opacity: 0.5; }
-.v2-bm-token.is-selected .v2-bm-dot { stroke: #fff; stroke-width: 2; }
-.v2-bm-facing { stroke: #1a1712; stroke-width: 3; }
-.v2-bm-label { fill: #1a1712; font: 700 9px var(--v2-mono, monospace); }
-.v2-bm-priority { stroke: #e23b3b; stroke-dasharray: 2 3; }
+.v2-root .v2-bm-token { cursor: pointer; }
+.v2-root .v2-bm-dot { fill: var(--v2-line, #555); }
+.v2-root .v2-bm-token.is-mine .v2-bm-dot { fill: var(--v2-oil, #e8792a); }
+.v2-root .v2-bm-token.is-foe  .v2-bm-dot { fill: #e23b3b; }
+.v2-root .v2-bm-token.is-spent { opacity: 0.5; }
+.v2-root .v2-bm-token.is-selected .v2-bm-dot { stroke: #fff; stroke-width: 2; }
+.v2-root .v2-bm-facing { stroke: #1a1712; stroke-width: 3; }
+.v2-root .v2-bm-label { fill: #1a1712; font: 700 9px var(--v2-mono, monospace); }
+.v2-root .v2-bm-priority { stroke: #e23b3b; stroke-dasharray: 2 3; }
