@@ -57,6 +57,10 @@ export interface Rig {
   activated: boolean;
   destroyed: boolean;
   engagedWith?: number | null;
+  /** Simulated position in field inches (centre of the rig); digital rooms only. */
+  pos?: { x: number; y: number } | null;
+  /** Heading in degrees; digital rooms only. */
+  facing?: number;
 }
 
 export interface Side {
