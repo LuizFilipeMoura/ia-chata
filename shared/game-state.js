@@ -4063,6 +4063,7 @@ export function publicState(room, side) {
     code: room.code,
     version: room.version,
     seeded: room.seeded ?? false,
+    mode: room.mode ?? "physical",
     ownerSide: room.ownerSide ?? null,
     field: room.field
       ? { ...room.field, terrain: room.field.terrain.map((t) => ({ ...t })) }

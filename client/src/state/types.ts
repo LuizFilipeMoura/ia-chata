@@ -211,6 +211,7 @@ export interface ServerState {
   code?: string;
   version: number;
   seeded?: boolean;
+  mode?: "physical" | "digital";
   rigs: Rig[];
   game: GameState | null;
   ownerSide?: string | null;
