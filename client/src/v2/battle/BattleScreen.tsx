@@ -12,7 +12,7 @@ import { BattleHud } from "../components/BattleHud";
 import { canRigActivate } from "./activation";
 import "../styles/field.css";
 
-export function BattleScreen() {
+export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void } = {}) {
   const { rigs, game, field, ownerSide } = useRoomState();
   const sendCommand = useCommands();
   const mySide = useMySide();
@@ -98,6 +98,15 @@ export function BattleScreen() {
             {t && activeRig?.id === selected.id && (
               <span className="v2-battle-actions">{t.actionsMax - t.actionsUsed} actions left</span>
             )}
+            {onOpenRig && (
+              <button
+                type="button"
+                className="v2-battle-details"
+                onClick={() => onOpenRig(selected.id)}
+              >
+                Details
+              </button>
+            )}
           </div>
         )}
         {moving && activeRig ? (
@@ -109,7 +118,7 @@ export function BattleScreen() {
             onCancel={() => clearMoveTarget()}
           />
         ) : (
-          activeRig && <ActionConsole rig={activeRig} />
+          activeRig && (activeRig.owner || "a") === mySide && <ActionConsole rig={activeRig} />
         )}
       </div>
     </section>

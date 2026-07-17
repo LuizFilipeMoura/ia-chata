@@ -51,7 +51,7 @@ export function V2Terminal() {
       <ImpersonateChip />
       <TurnBanner onCommission={() => setCommissionOpen(true)} />
       {digitalBattle
-        ? <BattleScreen />
+        ? <BattleScreen onOpenRig={setOpenRigId} />
         : <Squadron onOpenRig={setOpenRigId} onCommission={() => setCommissionOpen(true)} />}
       {openRig && (
         <RigTerminal rig={openRig} started={started} canActivate={canActivate}
