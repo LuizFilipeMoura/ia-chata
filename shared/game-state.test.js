@@ -6787,3 +6787,16 @@ test("mode verb ignores an unknown value", () => {
   applyCommand(room, { verb: "mode", attrs: { mode: "hologram" } }, { side: "a" });
   assert.equal(room.mode, "digital"); // unknown value left the prior mode intact
 });
+
+test("mode verb won't leave digital while a side is flagged as a bot", () => {
+  const room = createRoom("MODE4");
+  claimSide(room, { name: "A", side: "a" });
+  claimSide(room, { name: "B", side: "b" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "balanced" } }, { side: "a" }); // → digital + flag
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "digital"); // physical refused while a bot is flagged
+  // clearing the bot then allows physical
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: null } }, { side: "a" });
+  applyCommand(room, { verb: "mode", attrs: { mode: "physical" } }, { side: "a" });
+  assert.equal(room.mode, "physical");
+});

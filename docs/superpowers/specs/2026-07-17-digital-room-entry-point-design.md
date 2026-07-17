@@ -105,11 +105,11 @@ human plays on the map; a bot opponent plays via driveBots
 - `setbot` with a bot preset in a physical room: now succeeds by flipping the
   room to digital (was a reject).
 - Switching to Physical while a bot opponent is selected: prevented in the UI
-  (Physical disabled). At the engine level the `mode` verb itself doesn't clear a
-  bot flag — the UI guard is the guardrail; a hand-crafted `mode: physical`
-  command with a bot still flagged would leave `sideBotOf` reading a preset on a
-  physical room, but `driveBots` only runs for digital rooms (its own gate), so
-  the flag is simply inert. No corrupt state.
+  (Physical disabled) and enforced engine-side. The `mode` verb refuses to leave
+  digital while any side is bot-flagged (`room.game.sides.some((s) => s.bot)`), so
+  a hand-crafted `mode: physical` command can't create the contradiction either —
+  the room stays digital until the bot flag is cleared. No corrupt state, and no
+  path to a physical room with a passive, positionless bot.
 
 ## Testing
 

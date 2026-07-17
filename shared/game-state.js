@@ -3633,9 +3633,14 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     // and a digital (simulated-positions) game. Mirrors setdice. Digital unlocks
     // the battle map + bot opponent; positions and terrain are fixed at game
     // start, so mode can't change once started. An unknown value is ignored.
+    // A bot requires digital, so refuse to switch to physical while any side is
+    // bot-flagged (the lobby disables Physical too — this enforces it engine-side
+    // so a raw command can't create a physical room with a passive bot).
     if (!room.game.started) {
       const want = String(a.mode || "").toLowerCase();
-      if ((want === "digital" || want === "physical") && room.mode !== want) {
+      const botFlagged = room.game.sides.some((s) => s.bot);
+      if ((want === "digital" || want === "physical") && room.mode !== want
+          && !(want === "physical" && botFlagged)) {
         room.mode = want;
         changed = true;
       }
