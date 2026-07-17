@@ -198,3 +198,40 @@ B is brainstormed separately once A lands. Sketch, so the seam is clear:
 
 A is done when the gate is real and honest for every entry B will touch; B is done when every entry
 clears it.
+
+## Deferred to a follow-up (harness-blind tiers)
+
+Recorded here so B does not read a `0.00` or a missing row as "weak" — these tiers are unmeasured,
+not measured-and-bad.
+
+1. **Spatial / narrated payoffs** — Barrage (zone), Tow Chain (fling), Piledriver shove, Momentum
+   Swing knockback. Their board effect needs the control to be placed in or out of the effect, so
+   they need an explicit `inZone` / `outOfZone` measurement-input pair rather than a single number
+   (see [Risks & caveats](#risks--caveats) above, where this was already flagged going in). Not
+   piloted this pass.
+
+2. **`meltdown-protocol` (Thermal prototype)** — banking requires being strictly OVER Heat Capacity
+   (`shared/game-state.js` ~2189-2195: `if (m.over > 0) { ... meltdownProtocol ... }`). `greedySafe`
+   deliberately fires under cap, and — per `policy.mjs`'s own `KNOWN_BIASES` — only overshoots cap
+   RARELY, by unlucky weapon-heat dice. It does *not* never bank; it can and does bank occasionally
+   by luck. There is simply no command that DELIBERATELY redlines to bank a charge, so it cannot be
+   reliably piloted in the current duel without a harness change that forces overheat. Deferred.
+
+3. **Melee weapon upgrades are entirely unmeasured by the current sweep.** The Task 8 sweep iterates
+   `WEAPONS.longRange` only, and `runDuel`'s axes are longRange `weaponA`/`upgradeA` plus
+   `equipmentA`/`equipmentUpgradeA` — there is no `meleeUpgradeA` axis. So every melee weapon upgrade
+   (`emplacement`, plus Redline Governor, Dismember, Skewer, Superconductor Edge, Bloodletter, etc.)
+   is not in any report cell. `emplacement`'s hook IS implemented and unit-tested against a real rig
+   (`scripts/balance/piloting.test.mjs`, direct hook-level check via `makeRig`, not a `runDuel` round
+   trip — see the comment at line ~128 there), but it is registered-but-inert until a `meleeUpgradeA`
+   axis and a melee sweep loop are added to `duel-sim.mjs`. That axis is the follow-up.
+
+4. **Passive / auto-reactive (no hook by design — these are classifications, not gaps):**
+   `ablative-cascade` and `point-defense-system` auto-spend on being hit (`shared/combat.js`);
+   `fire-solution-lock` accrues on Fire and resets on Move (`shared/game-state.js`) and `greedySafe`
+   never moves. These measure through the equipment axis / plain repeated firing without a hook,
+   exactly like the other passive tiers described in [Architecture](#1-hook-layer-over-greedysafe).
+
+**For sub-project B:** treat (1)-(3) as harness-blind. Tune them on rubric + feel, flagged as such
+in whatever B produces, until the follow-up axis/inputs above land — do not use their absence from
+A's report as evidence they are weak.
