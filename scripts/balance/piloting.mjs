@@ -43,6 +43,11 @@ export const PILOTING_BIASES = `
   banked (charging itself is automatic, 1/round in Recovery). Ceiling and
   conservative coincide — spending is strictly heat-negative and Penetration-
   positive, with no catch to weigh against holding it.
+- nanite-swarm: piloted by self-seeding a Hull nanite stack, gated directly on
+  the action budget (no availableActions entry exists for it). Ceiling tops up
+  any time the stack is below its 3-charge cap; conservative only re-seeds once
+  the stack has fully lapsed, so it never spends a shot topping up a stack
+  that's still healing.
 `.trim();
 
 // Build an Aimed command at the duel's fixed geometry. Location defaults to the
@@ -136,6 +141,28 @@ function cryoCmd(rig) {
   return { verb: "action", attrs: { name: rig.name, action: "cryo", n: banked } };
 }
 
+// Seed (or top up) a self nanite stack on Hull via the `nanite` active
+// (act === "nanite", game-state.js:2848) — 1 action slot + 1 heat, cap 3/
+// location, healing 1 SP per Recovery until it decays to 0. There is no
+// availableActions entry for it (an engine-side gap, not a piloting concern),
+// so gate directly on the action budget the same way the engine's own guard
+// does (performAction: t.actionsUsed >= t.actionsMax). Self-seed on "hull",
+// the engine's own default location for an unspecified `loc`.
+//   ceiling      — top up any time the hull stack isn't already at cap (3),
+//                  maximising banked healing even at the cost of a shot.
+//   conservative — re-seed only once the stack has fully lapsed (0), so it
+//                  never spends an action topping up a stack that's still
+//                  running.
+function naniteCmd(room, rig, ceiling) {
+  const turn = room?.game?.turn;
+  if (!turn) return null;
+  if (turn.actionsUsed >= turn.actionsMax) return null; // no budget — let greedySafe act
+  const stacks = rig.equipState?.naniteStacks || [];
+  const sp = stacks.find((s) => s.loc === "hull")?.sp || 0;
+  if (ceiling ? sp >= 3 : sp > 0) return null;
+  return { verb: "action", attrs: { name: rig.name, action: "nanite", target: rig.name, loc: "hull" } };
+}
+
 // upgradeId -> { ceiling(room, rig, enemy, { intensity, distance, arc }),
 //                conservative(room, rig, enemy, { intensity, distance, arc }) }
 export const PILOTING_HOOKS = {
@@ -182,6 +209,14 @@ export const PILOTING_HOOKS = {
   "cryo-reservoir": {
     ceiling: (room, rig) => cryoCmd(rig),
     conservative: (room, rig) => cryoCmd(rig),
+  },
+  // Utility prototype (Nanite Swarm). Seed a self-healing nanite stack — a real
+  // action-budget active greedySafe never issues (a structural 0.00 there).
+  // Ceiling tops up whenever below cap (max banked healing, at the cost of a
+  // shot); conservative only re-seeds once the stack has fully lapsed.
+  "nanite-swarm": {
+    ceiling: (room, rig) => naniteCmd(room, rig, true),
+    conservative: (room, rig) => naniteCmd(room, rig, false),
   },
 };
 

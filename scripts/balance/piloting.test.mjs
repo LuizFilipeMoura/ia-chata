@@ -113,6 +113,18 @@ test("cryo-reservoir hook makes A1 spend banked cryo", () => {
   assert.ok(seen.includes("cryo"), "cryo-reservoir must pilot the cryo spend at ceiling");
 });
 
+const NANITE = { chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
+  weaponA: "Autocannon", upgradeA: "depleted-core",
+  equipmentA: "field-repair-suite", equipmentUpgradeA: "nanite-swarm",
+  distance: 12, arc: "side" };
+
+test("nanite-swarm hook makes A1 seed a nanite stack", () => {
+  const seen = [];
+  runDuel({ ...NANITE, seed: 9, intensity: "ceiling",
+    onCommand: (name, attrs) => { if (name === "A1") seen.push(attrs.action); } });
+  assert.ok(seen.includes("nanite"), "nanite-swarm must pilot the seed action at ceiling");
+});
+
 // Emplacement is a MELEE weapon upgrade (Bulwark Shield prototype). duel-sim's
 // public axes only reach A1's LONG-RANGE weapon upgrade or its equipment module
 // (runDuel has no `meleeUpgradeA` parameter, and duel-sim.mjs is out of scope to
