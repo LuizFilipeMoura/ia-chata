@@ -114,7 +114,7 @@ export function runDuel({
     // to the field tier), so a null would equip the module with no upgrade at all —
     // a silently different loadout. Reject it loudly instead.
     if (typeof equipmentUpgradeA !== "string" || !equipmentUpgradeA) {
-      throw new Error("duel-sim needs an explicit { equipmentUpgradeA } id: a null upgrade silently resolves to the FIELD tier, not to none.");
+      throw new Error("duel-sim needs an explicit { equipmentUpgradeA } id: a null id equips the module with no upgrade at all, not the field tier.");
     }
     const nature = equipmentUpgradeNature(equipmentA, equipmentUpgradeA);
     if (!nature) {
