@@ -76,6 +76,37 @@ test("picking a bot preset fires setbot for the enemy side", async () => {
   expect(sendSpy).toHaveBeenCalledWith("setbot", { side: "b", preset: "aggressive" });
 });
 
+test("the battle-mode toggle dispatches mode and reflects room state", async () => {
+  const state: ServerState = {
+    version: 1, ownerSide: "a", mode: "physical",
+    field: { width: 54, height: 36, diagonal: "tlbr", terrain: [], locked: false },
+    rigs: [rig(1, "STALKER", "a")],
+    game: { round: 1, phase: "setup", started: false, sides: [
+      { id: "a", name: "Kostov", vp: 0, ready: false },
+      { id: "b", name: "Rival", vp: 0, ready: false },
+    ] },
+  };
+  render(<V2Providers><Seed state={state} /><Squadron onOpenRig={vi.fn()} onCommission={vi.fn()} /></V2Providers>);
+  const digitalBtn = await screen.findByRole("button", { name: /^digital$/i });
+  digitalBtn.click();
+  expect(sendSpy).toHaveBeenCalledWith("mode", { mode: "digital" });
+});
+
+test("Physical mode is disabled when a bot opponent is selected", async () => {
+  const state: ServerState = {
+    version: 1, ownerSide: "a", mode: "digital",
+    field: { width: 54, height: 36, diagonal: "tlbr", terrain: [], locked: true },
+    rigs: [rig(1, "STALKER", "a")],
+    game: { round: 1, phase: "setup", started: false, sides: [
+      { id: "a", name: "Kostov", vp: 0, ready: false },
+      { id: "b", name: "Rival", vp: 0, ready: false, bot: "balanced" },
+    ] },
+  };
+  render(<V2Providers><Seed state={state} /><Squadron onOpenRig={vi.fn()} onCommission={vi.fn()} /></V2Providers>);
+  const physicalBtn = await screen.findByRole("button", { name: /^physical$/i });
+  expect(physicalBtn).toBeDisabled();
+});
+
 test("with a bot opponent, READY enables on own roster + locked field (no enemy parity)", async () => {
   const state: ServerState = {
     version: 1, ownerSide: "a",

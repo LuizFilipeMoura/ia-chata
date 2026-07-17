@@ -10,11 +10,12 @@ import { BattleHud } from "../components/BattleHud";
 import { FieldControls } from "../battle/FieldControls";
 
 export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) => void; onCommission: () => void }) {
-  const { rigs, game, field } = useRoomState();
+  const { rigs, game, field, mode } = useRoomState();
   const sendCommand = useCommands();
   const mySide = useMySide();
   const enemySide = mySide === "a" ? "b" : "a";
   const enemyBot = game?.sides?.find((s) => s.id === enemySide)?.bot ?? null;
+  const isDigital = mode === "digital";
 
   const ordered = orderedRigs(rigs, mySide);
   const mine = ordered.filter((r) => (r.owner || "a") === mySide);
@@ -73,6 +74,38 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
           <span className="v2-yard-add-plus">＋</span>
           Commission New Rig
         </button>
+      )}
+
+      {!started && (
+        <div className="v2-yard-mode">
+          <span className="v2-yard-mode-label v2-eyebrow">BATTLE MODE</span>
+          <div className="v2-yard-mode-opts" role="group" aria-label="Battle mode">
+            <button
+              type="button"
+              className={"v2-yard-mode-btn" + (!isDigital ? " is-on" : "")}
+              aria-pressed={!isDigital}
+              disabled={!!enemyBot}
+              onClick={() => sendCommand("mode", { mode: "physical" })}
+            >
+              Physical
+            </button>
+            <button
+              type="button"
+              className={"v2-yard-mode-btn" + (isDigital ? " is-on" : "")}
+              aria-pressed={isDigital}
+              onClick={() => sendCommand("mode", { mode: "digital" })}
+            >
+              Digital
+            </button>
+          </div>
+          <div className="v2-yard-mode-sub">
+            {enemyBot
+              ? "Bots require digital."
+              : isDigital
+                ? "Simulated positions — play on the map."
+                : "Tabletop companion — you track the physical table."}
+          </div>
+        </div>
       )}
 
       {!started && (

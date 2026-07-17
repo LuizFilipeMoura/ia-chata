@@ -394,3 +394,19 @@
   font-family: var(--v2-mono); font-size:var(--v2-text-sm);
   letter-spacing: 0.1em; color: var(--v2-txt-faint);
 }
+
+/* Pre-battle battle-mode toggle — Physical (tabletop companion) vs Digital (map). */
+.v2-root .v2-yard-mode { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.v2-root .v2-yard-mode-opts { display: flex; gap: 6px; }
+.v2-root .v2-yard-mode-btn {
+  font: inherit; padding: 6px 12px; border: 1px solid var(--v2-line);
+  background: transparent; color: var(--v2-txt); border-radius: 4px; cursor: pointer;
+  transition: border-color var(--v2-dur-fast);
+}
+.v2-root .v2-yard-mode-btn:hover:not(:disabled) { border-color: var(--v2-oil-deep); }
+.v2-root .v2-yard-mode-btn.is-on { border-color: var(--v2-oil); color: var(--v2-oil); }
+.v2-root .v2-yard-mode-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.v2-root .v2-yard-mode-sub {
+  font-family: var(--v2-mono); font-size:var(--v2-text-sm);
+  letter-spacing: 0.1em; color: var(--v2-txt-faint);
+}
