@@ -120,7 +120,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first — for a Rig this costs **no action**, paid in heat instead (§5) — a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
 
-- **Aimed Shot [1]** — a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 Accuracy**.
+- **Aimed Attack [1]** — a Fire Weapon action, usable with **any** weapon (ranged or melee), where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
 
 - **Reload** — Reloading a spent ranged weapon no longer costs an action. Instead a Rig rolls
   a d6 for heat when it reloads: **1-3 → +2 heat, 4-6 → +1 heat**. Cold units
@@ -142,7 +142,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 - **Answer Counters (Answer-token only).** Instead of a generic preparation, an Answer token may place one of three **counters** — reactions the Prepare action cannot buy, the reward for activating second and watching the enemy commit. Each is facedown, revealed on its trigger, one per Rig, and fires only when its condition is met (otherwise it stays down for a later attack):
   - *Riposte* — when an enemy makes a **melee** attack against this Rig, after it resolves this Rig makes **one free melee attack** back at that attacker (no action, no heat).
   - *Sidestep the Shooter* — when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**.
-  - *Exploit Opening* — when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-shot** at the location you choose, with **no aim penalty**.
+  - *Exploit Opening* — when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-attack** at the location you choose, with **no aim penalty**.
 
 ### Engagement (melee lock)
 
@@ -166,7 +166,7 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 | Move (up to Speed) | 1 |
 | Move — **Sprint** (up to 1½× Speed; 2× with Reinforced Servos) | 2 |
 | Fire Weapon | 1 (**2** if the weapon is **Hot**) |
-| Aimed Shot / Prepare | 1 |
+| Aimed Attack / Prepare | 1 |
 | Reload (Rig) | +1–2 (d6) |
 | Repair | 1 |
 | Disengage | 1 |
@@ -218,7 +218,7 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 
 **Sweet spot (ranged Accuracy by distance).** A ranged weapon fires most accurately at its **sweet spot** (an optimal distance in inches), where it delivers its **peak Accuracy**. The farther the measured distance is from the sweet spot — **closer *or* farther** — the more accuracy bleeds off: subtract the weapon's **falloff** (Accuracy lost per inch) times the number of inches away from the sweet spot. So a long-range gun is sloppy in your face *and* at extreme range, sharpest in its band. **Melee** weapons ignore this — they carry a single fixed Accuracy at their **2" reach**. *⚙ TUNING: replaced the old flat near/far Accuracy bands with a continuous sweet-spot falloff.*
 5. **Apply weapon perks** (§13).
-6. **Determine impact location.** Unless it was an **Aimed Shot**, the *defender* rolls 1 D12:
+6. **Determine impact location.** Unless it was an **Aimed Attack**, the *defender* rolls 1 D12:
 
    | D12 | Location |
    |:--:|---|
@@ -464,7 +464,7 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Impale** — on a successful hit, roll 1 D12; on **8+** the target is impaled — immobilised until this Rig's next activation (it may still pivot).
 - **Incendiary** — a successful hit increases the target's heat by 1 (needs only to hit).
 - **Melee** — usable only within **2"**; never needs reloading.
-- **Precision** — may make an Aimed Shot **without** the −2 Accuracy penalty.
+- **Precision** — may make an Aimed Attack **without** the −2 Accuracy penalty.
 - **Raking Fire** — this weapon **cannot damage a target's front arc**: resolve the attack normally, but every Wound Roll against a front-arc target automatically fails. Against the **side arc** the weapon gains **+3 Penetration**, and against the **rear arc +6 Penetration** — these **replace** the standard +2 / +3 side/rear bonuses (§7). Machine guns rip apart exposed flanks but glance off frontal armour.
 - **Rend** — the chain grinds deeper: each wound deals **+1 Damage**. It buys *depth*, not frequency (cf. Armour Piercing above).
 - **Shock** — on a successful hit, the target's movement is halved (round down) during its next activation.
