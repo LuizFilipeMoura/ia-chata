@@ -1335,6 +1335,17 @@ test("Kneecapper — hull and engine are never valid targets, aimed or not", () 
   assert.equal(target3.engine.sp, target3.engine.max);
 });
 
+test("an aimed MELEE attack routes the hit to the chosen location", () => {
+  const attacker = makeRig(1, "M", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
+  const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
+  const room = { rigs: [attacker, target] };
+  // toHit 6 lands; no location die is consumed because the player named the part.
+  const res = resolveAttack(room, attacker, target,
+    { weapon: "melee", arc: "front", range: "near", aimed: true, aimedLoc: "legs",
+      dice: { toHit: [6], wounds: [10] } }, () => 0, makeCtx());
+  assert.equal(res.location, "legs");
+});
+
 test("Kneecapper cripple ramp — armsSuppressed halves ROF for every weapon", () => {
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Chainsaw" });
   const profile = effectiveWeaponProfile("longRange", "Autocannon", rig); // base rof 4
