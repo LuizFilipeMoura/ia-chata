@@ -81,7 +81,7 @@ test("renders the fire control with an Open Fire / Fire button", async () => {
   expect(await screen.findByRole("button", { name: /Fire/i })).toBeInTheDocument();
 });
 
-test("Aimed Shot toggle reveals the location field and fires an aimed action", async () => {
+test("Aimed Attack toggle reveals the location field and fires an aimed action", async () => {
   sent.mockClear();
   const rigs = [mk(1, "a"), mk(2, "b")];
   render(
@@ -94,14 +94,37 @@ test("Aimed Shot toggle reveals the location field and fires an aimed action", a
     </AppProviders>,
   );
   // Off by default: no Location field, CTA fires a straight shot.
-  const aim = await screen.findByRole("switch", { name: /Aimed Shot/i });
+  const aim = await screen.findByRole("switch", { name: /Aimed Attack/i });
   expect(aim).toHaveAttribute("aria-checked", "false");
   expect(screen.queryByText(/Component to hit/i)).not.toBeInTheDocument();
   // Toggle on: the Location field appears and the shot becomes aimed.
   fireEvent.click(aim);
   expect(await screen.findByText(/Component to hit/i)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /Aimed Shot/i }));
+  fireEvent.click(screen.getByRole("button", { name: /Aimed Attack/i }));
   expect(sent).toHaveBeenCalledWith("action", expect.objectContaining({ action: "aimed", loc: expect.any(String) }));
+});
+
+test("Aimed Attack is available with a melee weapon (ranged spent, opens on melee)", async () => {
+  sent.mockClear();
+  // A spent ranged weapon makes the wizard open on the melee weapon slot.
+  const rigs = [mk(1, "a", { loaded: { longRange: false, melee: true } }), mk(2, "b")];
+  render(
+    <AppProviders>
+      <V2DrawerProvider><V2RollProvider><V2BattleActionsProvider>
+        <Seed rigs={rigs}>
+          <AttackWizard rig={rigs[0]} mode="fire" onClose={vi.fn()} />
+        </Seed>
+      </V2BattleActionsProvider></V2RollProvider></V2DrawerProvider>
+    </AppProviders>,
+  );
+  // The aim toggle now appears for a melee weapon (previously hidden by !isMelee).
+  const aim = await screen.findByRole("switch", { name: /Aimed Attack/i });
+  fireEvent.click(aim);
+  expect(await screen.findByText(/Component to hit/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Aimed Attack/i }));
+  expect(sent).toHaveBeenCalledWith("action", expect.objectContaining({
+    action: "aimed", weaponName: "Claw", loc: expect.any(String),
+  }));
 });
 
 test("reopening recalls the last target and shot distance per rig", async () => {
@@ -245,8 +268,8 @@ test("manual dice: an aimed shot drops the location die but keeps the wound dice
   promptDiceSpy.mockResolvedValue(FACES);
   const rigs = [mk(11, "a", MORTAR), mk(12, "b")];
   render(manual(<AttackWizard rig={rigs[0]} mode="fire" onClose={vi.fn()} />, rigs));
-  fireEvent.click(await screen.findByRole("switch", { name: /Aimed Shot/i }));
-  fireEvent.click(await screen.findByRole("button", { name: /^Aimed Shot$/ }));
+  fireEvent.click(await screen.findByRole("switch", { name: /Aimed Attack/i }));
+  fireEvent.click(await screen.findByRole("button", { name: /^Aimed Attack$/ }));
   await waitFor(() => expect(promptDiceSpy.mock.calls.length).toBe(1));
   const specs = promptDiceSpy.mock.calls[0][0];
   expect(specs.filter((s) => s.sides === 12)).toHaveLength(0);

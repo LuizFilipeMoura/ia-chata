@@ -52,7 +52,7 @@ const FIELD_DESC: Record<string, string> = {
   arc: "Which of the enemy's facings you strike",
   range: "How far the enemy sits from you",
   cover: "Obstruction shielding the enemy",
-  location: "Component to hit — an Aimed Shot takes −2 Accuracy",
+  location: "Component to hit — an Aimed Attack takes −2 Accuracy",
 };
 const ARC_DESC: Record<string, string> = { front: "No Penetration bonus", side: "+2 Penetration", rear: "+3 Penetration" };
 const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 Accuracy", "2": "−2 Accuracy" };
@@ -383,8 +383,6 @@ export function AttackWizard({
   const isMelee = !!profileOf(state.weapon)?.melee;
   useEffect(() => {
     if (isMelee && state.range === "out") patch({ range: "near" });
-    // Aimed Shot is ranged-only — a melee weapon forces the shot back to Fire.
-    if (isMelee && aimed) setAimed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMelee]);
 
@@ -481,7 +479,7 @@ export function AttackWizard({
   let goDisabled = false;
   let goIsReload = false;
 
-  const modeLabel = aimed ? "Aimed Shot" : "Fire";
+  const modeLabel = aimed ? "Aimed Attack" : "Fire";
   let dicePreview = "";
 
   {
@@ -548,7 +546,7 @@ export function AttackWizard({
     }
   }
 
-  const title = aimed ? "◎ Aimed Shot" : "🎯 Fire Weapon";
+  const title = aimed ? "◎ Aimed Attack" : "🎯 Fire Weapon";
 
   const attackNotice = (() => {
     const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;
@@ -634,7 +632,7 @@ export function AttackWizard({
             <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           </div>
 
-          {!react && !isMelee && (
+          {!react && (
             <button
               type="button"
               role="switch"
@@ -644,7 +642,7 @@ export function AttackWizard({
             >
               <span className="v2-aw-aim-glyph" aria-hidden="true">◎</span>
               <span className="v2-aw-aim-text">
-                <span className="v2-aw-aim-label">Aimed Shot</span>
+                <span className="v2-aw-aim-label">Aimed Attack</span>
                 <span className="v2-aw-aim-hint">Hit a chosen part · −2 to hit</span>
               </span>
               <span className="v2-aw-aim-switch" aria-hidden="true" />
