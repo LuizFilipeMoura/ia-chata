@@ -202,7 +202,10 @@ export function ActionConsole({ rig }: Props) {
         // Attack group collapses to a lone Fire action. `aimed` stays in the group's
         // keys (claimed above) so it never leaks into the Support catch-all.
         ? actions.filter((a) => a.key === "fire")
-        : actions.filter((a) => g.keys.includes(a.key))
+        // Sprint is no longer a separate tile: the drag overlay's outer ring
+        // reaches sprint range. The Move tile arms the drag session; sprint stays
+        // in the group's `keys` (claimed) so it never leaks into Support.
+        : actions.filter((a) => g.keys.includes(a.key) && a.key !== "sprint")
     ).filter((a) => a.enabled || !HIDE_WHEN_DISABLED.has(a.key));
 
   // Surface the "why" behind constrained actions as inline hints, deduplicated.
