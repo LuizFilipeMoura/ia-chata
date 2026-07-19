@@ -163,7 +163,7 @@ export const GLOSSARY = [
   },
   {
     id: "precision", term: "Precision", match: ["Precision"],
-    def: "Weapon perk: may make an Aimed Shot without the usual −2 Accuracy penalty (§13).",
+    def: "Weapon perk: may make an Aimed Attack without the usual −2 Accuracy penalty (§13).",
   },
   {
     id: "cleave", term: "Cleave", match: ["Cleave"],

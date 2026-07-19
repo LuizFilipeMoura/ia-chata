@@ -120,7 +120,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Fire Weapon [1]** — attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first — for a Rig this costs **no action**, paid in heat instead (§5) — a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
 
-- **Aimed Attack [1]** — a Fire Weapon action, usable with **any** weapon (ranged or melee), where you **choose the hit location** instead of rolling for it, at **−2 ACC**.
+- **Aimed Attack [1]** — a Fire Weapon action, usable with **any** weapon (ranged or melee), where you **choose the hit location** instead of rolling for it, at **−2 Accuracy**.
 
 - **Reload** — Reloading a spent ranged weapon no longer costs an action. Instead a Rig rolls
   a d6 for heat when it reloads: **1-3 → +2 heat, 4-6 → +1 heat**. Cold units

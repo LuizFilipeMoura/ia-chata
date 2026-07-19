@@ -56,9 +56,9 @@
   flex: 0 0 auto; font-size:var(--v2-text-lg);
 }
 
-/* ===== Aimed Shot toggle ================================================ */
+/* ===== Aimed Attack toggle ================================================ */
 /* A single on/off switch: off fires a normal shot, on reveals the Location
-   field and turns the CTA into an Aimed Shot. Ember accent when engaged. */
+   field and turns the CTA into an Aimed Attack. Ember accent when engaged. */
 .v2-root .v2-aw-aim {
   display: flex; align-items: center; gap: .7rem;
   width: 100%; margin-bottom: 16px; padding: 11px 14px;

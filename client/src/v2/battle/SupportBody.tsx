@@ -14,7 +14,7 @@ const LOC_ICONS: Record<string, string> = {
 // filtered by the caller (friendly, self included, for Field Weld/Vent; enemy
 // for Paint). Field Weld's location list follows the *target's* own kind (a
 // Tank welds tracks/turret, a Walker welds legs/mount) — the same idea as
-// Aimed Shot's location field in AttackWizard.
+// Aimed Attack's location field in AttackWizard.
 export default function SupportBody({
   targets, needsLoc, onChange,
 }: {

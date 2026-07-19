@@ -241,7 +241,7 @@ export function AttackWizard({
   const [justReloaded, setJustReloaded] = useState(false);
   const heatKind = !!UNIT_KINDS[kindOf(rig)]?.hasHeat;
 
-  // Aimed Shot is a toggle inside the drawer (fire ↔ aimed); the `mode` prop only
+  // Aimed Attack is a toggle inside the drawer (fire ↔ aimed); the `mode` prop only
   // seeds the initial state. Lock keeps its own minimal flow further below.
   const [aimed, setAimed] = useState(mode === "aimed");
   const effMode: AttackMode = mode === "lock" ? "lock" : aimed ? "aimed" : "fire";
@@ -386,7 +386,7 @@ export function AttackWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMelee]);
 
-  // Aimed Shot hits a component of the TARGET, so its locations follow the
+  // Aimed Attack hits a component of the TARGET, so its locations follow the
   // target's kind (Tank: hull/tracks/turret/engine; Walker: hull/legs/mount/engine).
   const targetRig = enemies.find((x) => x.name === state.target);
   const targetLocs = partNamesOf(kindOf(targetRig || rig));
