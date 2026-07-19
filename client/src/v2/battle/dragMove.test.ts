@@ -30,6 +30,17 @@ test("placeDrag clamps an out-of-reach point back inside budget", () => {
   expect(dist).toBeLessThan(60 - 27); // pulled in from the raw point
 });
 
+test("placeDrag falls back to a routable point when terrain blocks the ring destination", () => {
+  const wall = { x: 30, y: 18, kind: "building", shape: "rect", w: 1, h: 24 };
+  const f = { ...field, terrain: [wall] } as unknown as FieldState;
+  const rig = mover(); // at (27,18)
+  const p = placeDrag(f, [rig], rig, { x: 40, y: 18 }, false); // east, behind the wall
+  // The straight ring-clamped point sits at/behind the wall; the binary-search
+  // fallback must pull it back to something routable and within budget.
+  expect(Number.isFinite(p.length)).toBe(true);
+  expect(p.dest.x).toBeLessThan(32); // did not land past the wall
+});
+
 test("placeDrag keeps a nearby reachable point as-is and faces toward it", () => {
   const rig = mover();
   const p = placeDrag(field, [rig], rig, { x: 30, y: 18 }, false); // 3\" east, reachable

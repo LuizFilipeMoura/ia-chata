@@ -55,6 +55,10 @@ export function placeDrag(
   const moveB = moveBudget(rig as never, "move");
   const dx = rawDest.x - origin.x, dy = rawDest.y - origin.y;
   const dist = Math.hypot(dx, dy);
+  // Action is chosen from the straight-line distance to the raw point, not the
+  // routed length: the player picks move vs sprint by which ring they drop into,
+  // and the live readout shows the clamped result — so terrain forcing a detour
+  // clamps the move shorter rather than silently upgrading to a +heat sprint.
   const action = actionForDistance(dist, moveB, sprintAllowed);
   const maxR = moveBudget(rig as never, action);
   const ringDest = dist > maxR && dist > 1e-6
