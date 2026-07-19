@@ -114,7 +114,7 @@ export function aimBreakdown(attacker, profile, opts) {
       : "predictive tracking";
     terms.push({ label: `${canceller} (ignores cover)`, value: 0 });
   }
-  if (aimedPenalty) terms.push({ label: "aimed shot", value: aimedPenalty });
+  if (aimedPenalty) terms.push({ label: "aimed attack", value: aimedPenalty });
   if (hullPenalty) terms.push({ label: "hull wrecked", value: hullPenalty });
   if (engagedEff) terms.push({ label: "locked in melee", value: engagedEff });
   // Same absence-explaining rule as cover: the engaged −2 is cancelled only by

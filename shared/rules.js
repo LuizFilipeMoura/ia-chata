@@ -11,7 +11,7 @@ export const ACTIONS = {
   move:     { label: "Move",        heat: 1, slot: 1 },
   sprint:   { label: "Sprint",      heat: 2, slot: 1 },
   fire:     { label: "Fire Weapon", heat: 1, slot: 1 },
-  aimed:    { label: "Aimed Shot",  heat: 1, slot: 1 },
+  aimed:    { label: "Aimed Attack",  heat: 1, slot: 1 },
   // heat/slot below are NON-authoritative for reload: performAction owns the cost
   // (heat kinds pay a d6 heat roll for 0 actions; cold kinds pay 1 action).
   reload:   { label: "Reload",      heat: 1, slot: 1 },

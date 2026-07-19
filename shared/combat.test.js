@@ -158,7 +158,7 @@ test("aimBreakdown — predictive tracking emits its bonus and its cover cancel"
 test("aimBreakdown — aimed shot, wrecked hull and ballistic processor each name themselves", () => {
   const aimed = aimBreakdown({ weightClass: "medium", hull: { sp: 7 } },
     { ...WEAPONS.longRange["Autocannon"] }, { distance: 12, aimed: true });
-  assert.ok(aimed.terms.some((t) => t.label === "aimed shot" && t.value === -2));
+  assert.ok(aimed.terms.some((t) => t.label === "aimed attack" && t.value === -2));
   const wrecked = aimBreakdown({ weightClass: "medium", hull: { sp: 0 } },
     { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
   assert.ok(wrecked.terms.some((t) => t.label === "hull wrecked" && t.value === -1));
