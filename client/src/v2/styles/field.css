@@ -139,6 +139,9 @@
 .v2-root .v2-fs-lock:active { transform: translateY(1px); box-shadow: 0 5px 14px rgba(231,154,61,.25); }
 
 /* ===== Battle map tokens (L1 read-only render) ============================= */
+/* The battle SVG must fill its column like the pre-battle .v2-fm map — without
+   this it collapses to the default 300x150 replaced-element box (a dark stub). */
+.v2-root .v2-bm { width: 100%; display: block; }
 .v2-root .v2-bm-token { cursor: pointer; }
 .v2-root .v2-bm-dot { fill: var(--v2-line, #555); }
 .v2-root .v2-bm-token.is-mine .v2-bm-dot { fill: var(--v2-oil, #e8792a); }
@@ -151,6 +154,10 @@
 
 /* ===== Move-target overlay (L3 on-map Move/Sprint targeting) =============== */
 .v2-root .v2-mt-ring { stroke: var(--v2-oil, #e8792a); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .55; }
+/* Nested reach rings: solid inner (move), fainter dashed outer (sprint). */
+.v2-root .v2-mt-ring.is-sprint { stroke: var(--v2-oil, #e8792a); stroke-width: 1; stroke-dasharray: 2 6; opacity: .3; }
+.v2-root .v2-mt-grab { fill: transparent; }
+.v2-root .v2-mt-grab:active { cursor: grabbing; }
 .v2-root .v2-mt-path { stroke: var(--v2-oil, #e8792a); stroke-width: 2; stroke-dasharray: 3 3; }
 .v2-root .v2-mt-ghost { fill: var(--v2-oil, #e8792a); opacity: .45; stroke: #fff; stroke-width: 1.5; }
 .v2-root .v2-mt-facing { stroke: #fff; stroke-width: 2; }

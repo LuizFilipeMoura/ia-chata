@@ -62,24 +62,23 @@ test("does not activate when a rig is already active", async () => {
   expect(sendSpy).not.toHaveBeenCalledWith("activate", { name: "RED" });
 });
 
-test("arming a move, placing a reachable destination, and confirming dispatches action with dest+facing", async () => {
+test("arming a move, dragging a reachable destination, and confirming dispatches action with dest+facing", async () => {
   render(<V2Providers><Seed state={digitalState(1)} /><BattleScreen /></V2Providers>);
 
-  // Open the Move group tile, then pick Move from its popover (Move + Sprint both
-  // live, so the tile opens a menu rather than firing straight through).
+  // Sprint is gone from the console; Move solos and arms the drag straight through.
   const moveBtn = await screen.findByRole("button", { name: /move/i });
   moveBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  const moveItem = await screen.findByRole("menuitem", { name: /move/i });
-  moveItem.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
   const surface = await screen.findByTestId("field-surface");
-  // Mock the FIELD-SURFACE box (not the whole canvas): the rect spans the field
-  // region exactly, so for the 54×36 field its box ≈ fw×fh = 468×312. The tap
-  // fraction across it maps straight to field inches — this pins the conversion.
+  // The surface rect spans the field region exactly (≈ fw×fh = 468×312 for 54×36),
+  // so a pointer fraction across it maps straight to field inches.
   surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 468, height: 312, right: 468, bottom: 312, x: 0, y: 0, toJSON() {} }) as DOMRect;
-  // clientX = 12/54*468 ≈ 104, clientY = 10/36*312 ≈ 87 → dest ≈ {12,10}, ~2"
-  // east of rig 1's {10,10} start, inside its Move budget (fallback Speed 5).
-  surface.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 104, clientY: 87 }));
+
+  // Grab the rig and drag ~2" east of its {10,10} start (inside the move ring).
+  // clientX = 12/54*468 ≈ 104, clientY = 10/36*312 ≈ 87 → dest ≈ {12,10}.
+  const handle = await screen.findByTestId("drag-handle");
+  handle.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 104, clientY: 87 }));
+  handle.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 104, clientY: 87 }));
 
   const confirm = await screen.findByRole("button", { name: /confirm/i });
   confirm.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -88,7 +87,7 @@ test("arming a move, placing a reachable destination, and confirming dispatches 
   expect(call).toBeTruthy();
   expect(call![1]).toMatchObject({ name: "RED", action: "move" });
   const attrs = call![1] as { dest: { x: number; y: number }; facing: number };
-  expect(attrs.dest.x).toBeCloseTo(12, 0); // conversion lands where we tapped
+  expect(attrs.dest.x).toBeCloseTo(12, 0);
   expect(attrs.dest.y).toBeCloseTo(10, 0);
   expect(typeof attrs.facing).toBe("number");
 });
