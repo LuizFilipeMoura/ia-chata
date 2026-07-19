@@ -36,23 +36,23 @@ test("availableActions disables everything at the budget cap", () => {
   assert.equal(capped.find((a) => a.key === "move").enabled, false);
 });
 
-test("a spent ranged weapon keeps Fire live and disables Aimed", () => {
+test("a spent ranged weapon keeps Fire live; Aimed follows the live melee", () => {
   const turn = { activeRigId: 1, actionsUsed: 0, actionsMax: 5 };
   const ready = availableActions(rig(), turn).find((a) => a.key === "fire");
   assert.equal(ready.cost, 1);
   assert.equal(ready.enabled, true);
+  // Ranged spent, but a live melee weapon remains — Aimed stays live to aim a swing.
   const acts = availableActions(rig({ loaded: { longRange: false, melee: true } }), turn);
-  const fire = acts.find((a) => a.key === "fire");
-  assert.equal(fire.enabled, true);      // opens the reload drawer (melee strike too)
-  const aimed = acts.find((a) => a.key === "aimed");
-  assert.equal(aimed.enabled, false);    // Aimed is a ranged-only shot
-  assert.ok(!acts.some((a) => a.key === "reload")); // reload is a drawer-only path now
-  // Even with no melee, Fire stays live so the drawer (and its Reload) is reachable.
+  assert.equal(acts.find((a) => a.key === "fire").enabled, true);      // opens the reload/melee drawer
+  assert.equal(acts.find((a) => a.key === "aimed").enabled, true);     // aim the melee weapon
+  assert.ok(!acts.some((a) => a.key === "reload"));                    // reload is a drawer-only path now
+  // Ranged spent AND no live melee — nothing to aim, so Aimed shuts (Fire still opens the drawer).
   const noMelee = availableActions(
     rig({ weapons: { longRange: "Autocannon", melee: null }, loaded: { longRange: false, melee: true } }),
     turn,
-  ).find((a) => a.key === "fire");
-  assert.equal(noMelee.enabled, true);
+  );
+  assert.equal(noMelee.find((a) => a.key === "fire").enabled, true);
+  assert.equal(noMelee.find((a) => a.key === "aimed").enabled, false);
 });
 
 test("Fire/Aimed shows 2 heat once a ranged shot has already been fired this activation", () => {
@@ -262,7 +262,7 @@ test("Flat-pick fired: Fire stays live (drawer reload) and reload is not a tile"
   const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 1, longRangeShots: 1 });
   const fire = actions.find((a) => a.key === "fire");
   assert.equal(fire.enabled, true);                  // opens the reload drawer
-  assert.equal(actions.find((a) => a.key === "aimed").enabled, false); // spent → ranged-only Aimed shut
+  assert.equal(actions.find((a) => a.key === "aimed").enabled, false); // no melee to aim + ranged spent
   assert.ok(!actions.some((a) => a.key === "reload")); // no standalone reload tile
 });
 

@@ -19,6 +19,10 @@ export function availableActions(rig, turn, round) {
   // Fire live (Fire opens that drawer); only Aimed is shut off while spent.
   const rangedSpent = rig.loaded?.longRange === false || rig.loaded?.unit === false;
   const firedRanged = (turn.longRangeShots || 0) >= 1;
+  // A melee weapon can be aimed even after the ranged weapon is spent. It counts
+  // as "live" only if the rig actually has a melee slot that isn't destroyed.
+  const meleeName = rig.weapons?.melee;
+  const meleeLive = !!meleeName && !(rig.weaponsDestroyed || []).includes(meleeName);
   const list = ACTION_ORDER
     .filter((key) => {
       if (key === "shutdown" && !cfg.hasHeat) return false;
@@ -41,9 +45,9 @@ export function availableActions(rig, turn, round) {
       // state note is dropped: the disabled tile and the status tags say it.
       if (key === "fire" || key === "aimed") {
         if (rangedSpent) {
-          // Ranged is spent. Fire still opens the drawer (which offers Reload,
-          // plus a melee strike if one is live); Aimed is ranged-only, so shut it.
-          if (key === "aimed") enabled = false;
+          // Ranged is spent. Fire still opens the drawer (Reload + a melee strike
+          // if one is live). Aimed stays live only while a melee weapon can aim.
+          if (key === "aimed" && !meleeLive) enabled = false;
         } else if (firedRanged) {
           heat = def.heat + 1;
           note = "Second shot — +1 heat"; // surcharge rule, not obvious from the total
