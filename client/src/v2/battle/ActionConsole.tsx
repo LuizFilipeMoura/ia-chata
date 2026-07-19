@@ -202,10 +202,17 @@ export function ActionConsole({ rig }: Props) {
         // Attack group collapses to a lone Fire action. `aimed` stays in the group's
         // keys (claimed above) so it never leaks into the Support catch-all.
         ? actions.filter((a) => a.key === "fire")
-        // Sprint is no longer a separate tile: the drag overlay's outer ring
-        // reaches sprint range. The Move tile arms the drag session; sprint stays
-        // in the group's `keys` (claimed) so it never leaks into Support.
-        : actions.filter((a) => g.keys.includes(a.key) && a.key !== "sprint")
+        // Sprint isn't its own tile anymore — the drag overlay's outer ring reaches
+        // sprint range, so the Move tile arms the drag session. But when an equipment
+        // makes Sprint cost ≤ Move, battle-view drops `move` from the action list
+        // (Sprint-heat-floor) and expects the tile to solo on Sprint — so only strip
+        // Sprint while a live Move is present. `sprint` stays in GROUPS keys (claimed)
+        // so it never leaks into the Support catch-all either way.
+        : actions.filter(
+            (a) =>
+              g.keys.includes(a.key) &&
+              !(a.key === "sprint" && actions.some((m) => m.key === "move" && m.enabled)),
+          )
     ).filter((a) => a.enabled || !HIDE_WHEN_DISABLED.has(a.key));
 
   // Surface the "why" behind constrained actions as inline hints, deduplicated.

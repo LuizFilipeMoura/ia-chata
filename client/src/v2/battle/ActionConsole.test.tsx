@@ -36,6 +36,23 @@ test("renders empty for a non-active rig", () => {
   expect(container.querySelector(".v2-ac")?.children.length ?? 0).toBe(0);
 });
 
+// Sprint-heat-floor regression: Servo Actuators drops Sprint to 1 heat (= Move's
+// own cost), so battle-view splices `move` out of the action list and expects the
+// Move-group tile to solo on Sprint. The console's Sprint filter must therefore
+// keep Sprint when there's no live Move to arm — otherwise the Move tile's kids
+// go empty, the group renders null, and such a rig can never move via the UI.
+test("Move tile survives (solos on Sprint) when Servo Actuators dominates Move", async () => {
+  const servo: Rig = { ...stalker, equipment: "servo-actuators" };
+  const state = started(1);
+  state.rigs = [servo, { ...stalker, id: 2, owner: "b", name: "FOE" }];
+  render(<V2Providers><Seed state={state}/><ActionConsole rig={servo}/></V2Providers>);
+  await screen.findByText(/Actions/i);
+  // The Move-group tile is present (as Sprint) and live — not null (the bug).
+  const tile = screen.getByRole("button", { name: /move|sprint/i });
+  expect(tile).toBeInTheDocument();
+  expect(tile).toBeEnabled();
+});
+
 // Field Weld / Vent / Paint (spec: Support Units) — a Recon-module rig's
 // Support tile opens the Paint target picker, which dispatches the command
 // once a target is confirmed.
