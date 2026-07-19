@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
-import type { FieldState, Rig } from "../../state/types";
+import type { FieldState, Objective, Rig } from "../../state/types";
 import { makeProjection } from "./fieldProjection";
+import { FieldFurniture } from "./FieldFurniture";
 import "../styles/field.css";
 
 export interface BattleMapProps {
   field: FieldState;
+  objectives: Objective[];
   rigs: Rig[];
   mySide: string;
   ownerSide: string | null;
@@ -20,13 +22,14 @@ export interface BattleMapProps {
 // Inner presentational layer: renders inside a parent <svg> so it can be unit
 // tested without a wrapping SVG element. Consumers use <BattleMap> (below).
 export function BattleMapLayers(props: BattleMapProps) {
-  const { field, rigs, mySide, priorityTargetId, selectedId, onSelect, onActivate, activatable } = props;
+  const { field, objectives, rigs, mySide, priorityTargetId, selectedId, onSelect, onActivate, activatable } = props;
   const proj = makeProjection(field);
   const living = rigs.filter((r) => !r.destroyed && r.pos);
 
   return (
     <>
       <rect x={proj.pad} y={proj.pad} width={proj.fw} height={proj.fh} rx={8} className="v2-fm-field" />
+      <FieldFurniture field={field} objectives={objectives} proj={proj} rectOnly />
       {living.map((r) => {
         const cx = proj.sx(r.pos!.x);
         const cy = proj.sy(r.pos!.y);

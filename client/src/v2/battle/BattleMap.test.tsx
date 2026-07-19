@@ -16,7 +16,7 @@ test("renders a token per living rig at its projected position", () => {
   const rigs = [rig({ id: 1, name: "RED", owner: "a", pos: { x: 10, y: 10 } }),
                 rig({ id: 2, name: "GREY", owner: "b", pos: { x: 40, y: 25 } })];
   const { getAllByTestId } = render(
-    <svg><BattleMapLayers field={field} rigs={rigs} mySide="a" ownerSide="a" priorityTargetId={null}
+    <svg><BattleMapLayers field={field} objectives={[]} rigs={rigs} mySide="a" ownerSide="a" priorityTargetId={null}
       selectedId={null} onSelect={() => {}} onActivate={() => {}} activatable={() => false} /></svg>,
   );
   expect(getAllByTestId("rig-token")).toHaveLength(2);
@@ -25,7 +25,7 @@ test("renders a token per living rig at its projected position", () => {
 test("omits destroyed rigs and dims already-activated ones", () => {
   const rigs = [rig({ id: 1, activated: true }), rig({ id: 2, destroyed: true, pos: { x: 5, y: 5 } })];
   const { getAllByTestId } = render(
-    <svg><BattleMapLayers field={field} rigs={rigs} mySide="a" ownerSide="a" priorityTargetId={null}
+    <svg><BattleMapLayers field={field} objectives={[]} rigs={rigs} mySide="a" ownerSide="a" priorityTargetId={null}
       selectedId={null} onSelect={() => {}} onActivate={() => {}} activatable={() => false} /></svg>,
   );
   const tokens = getAllByTestId("rig-token");
@@ -39,7 +39,7 @@ test("clicking a token routes to activate when activatable, else select", () => 
   const mine = rig({ id: 1, owner: "a", pos: { x: 10, y: 10 } });
   const foe = rig({ id: 2, owner: "b", pos: { x: 40, y: 25 } });
   const { getAllByTestId } = render(
-    <svg><BattleMapLayers field={field} rigs={[mine, foe]} mySide="a" ownerSide="a" priorityTargetId={null}
+    <svg><BattleMapLayers field={field} objectives={[]} rigs={[mine, foe]} mySide="a" ownerSide="a" priorityTargetId={null}
       selectedId={null} onSelect={onSelect} onActivate={onActivate} activatable={(r) => r.id === 1} /></svg>,
   );
   const tokens = getAllByTestId("rig-token");
@@ -50,10 +50,26 @@ test("clicking a token routes to activate when activatable, else select", () => 
   expect(onSelect).toHaveBeenCalledTimes(1);
 });
 
+test("draws the field furniture as rectangles — grid, terrain and objectives", () => {
+  const terrainField = {
+    width: 54, height: 36, diagonal: "tlbr", locked: true,
+    terrain: [{ x: 20, y: 18, kind: "wood", shape: "poly", points: [[-2, -2], [2, -2], [2, 2], [-2, 2]] }],
+  } as unknown as FieldState;
+  const objectives = [{ x: 27, y: 18, vp: 2 }, { x: 10, y: 10, vp: 1 }] as unknown as never[];
+  const { getAllByTestId, container } = render(
+    <svg><BattleMapLayers field={terrainField} objectives={objectives} rigs={[rig({})]} mySide="a"
+      ownerSide="a" priorityTargetId={null} selectedId={null}
+      onSelect={() => {}} onActivate={() => {}} activatable={() => false} /></svg>,
+  );
+  expect(getAllByTestId("terrain")).toHaveLength(1);
+  expect(container.querySelector("polygon")).toBeNull();
+  expect(getAllByTestId("objective")).toHaveLength(2);
+});
+
 test("marks the priority-target enemy", () => {
   const rigs = [rig({ id: 2, owner: "b", pos: { x: 40, y: 25 } })];
   const { getByTestId } = render(
-    <svg><BattleMapLayers field={field} rigs={rigs} mySide="a" ownerSide="a" priorityTargetId={2}
+    <svg><BattleMapLayers field={field} objectives={[]} rigs={rigs} mySide="a" ownerSide="a" priorityTargetId={2}
       selectedId={null} onSelect={() => {}} onActivate={() => {}} activatable={() => false} /></svg>,
   );
   expect(getByTestId("priority-ring")).toBeTruthy();
