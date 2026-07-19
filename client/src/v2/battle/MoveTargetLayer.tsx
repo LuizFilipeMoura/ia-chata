@@ -150,7 +150,6 @@ export function MoveTargetOverlay({ proj, field, rigs, rig, sprintAllowed, place
 
 interface ControlsProps {
   rig: Rig;
-  action: "move" | "sprint";
   placed: Placed | null;
   onConfirm: () => void;
   onCancel: () => void;
@@ -158,8 +157,10 @@ interface ControlsProps {
 
 // HTML controls docked below the map: a live readout of the placed move and the
 // Cancel / Confirm actions. Confirm stays disabled until a destination is placed.
-export function MoveTargetControls({ rig, action, placed, onConfirm, onCancel }: ControlsProps) {
-  const act = placed?.action ?? action;
+// The action shown is whatever the drag picked (`placed.action`); before a drop
+// the readout is a static prompt, so no action is needed.
+export function MoveTargetControls({ rig, placed, onConfirm, onCancel }: ControlsProps) {
+  const act = placed?.action ?? "move";
   const heat = act === "sprint" ? (rigEffects(rig as never).actionHeat?.sprint ?? 2) : 1;
   return (
     <div className="v2-mt-controls">

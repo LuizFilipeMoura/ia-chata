@@ -30,7 +30,6 @@ import type { Rig, PrepType } from "../../state/types";
 // in ActionConsole) so the console stays untouched.
 export interface MoveTarget {
   rigId: number;
-  action: string;
 }
 
 interface BattleActionsApi {
@@ -44,7 +43,7 @@ interface BattleActionsApi {
   rollInitiative: () => void;
   resetBattle: () => void;
   moveTarget: MoveTarget | null;
-  beginMoveTarget: (rigId: number, action: string) => void;
+  beginMoveTarget: (rigId: number) => void;
   clearMoveTarget: () => void;
 }
 
@@ -71,7 +70,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   // On-map move target (digital rooms). openMove arms it; the BattleScreen
   // overlay places the destination and dispatches the move.
   const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null);
-  const beginMoveTarget = useCallback((rigId: number, action: string) => setMoveTarget({ rigId, action }), []);
+  const beginMoveTarget = useCallback((rigId: number) => setMoveTarget({ rigId }), []);
   const clearMoveTarget = useCallback(() => setMoveTarget(null), []);
 
   // Read mode inside the stable openMove callback without recreating it.
@@ -161,7 +160,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       // Digital rooms target the move ON THE MAP: arm the overlay and skip the
       // physical MoveBody drawer entirely. Physical rooms keep the drawer below.
       if (modeRef.current === "digital") {
-        beginMoveTarget(rig.id, key);
+        beginMoveTarget(rig.id);
         return;
       }
       const sprint = key === "sprint";

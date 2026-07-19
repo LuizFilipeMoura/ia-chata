@@ -118,7 +118,6 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
         {moving && activeRig ? (
           <MoveTargetControls
             rig={activeRig}
-            action={placed?.action ?? "move"}
             placed={placed}
             onConfirm={confirmMove}
             onCancel={() => clearMoveTarget()}
