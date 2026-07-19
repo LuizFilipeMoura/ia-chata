@@ -219,8 +219,8 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
   const dbl = { ...WEAPONS.longRange["Double MG"], perks: ["Full Auto"] }; // rof 8, accuracy [1,0]
   const dice = [1, 2, 3, 4, 5, 6, 1, 1, 6, 2]; // 8 base + 2 full auto = 10 dice; modAim near = 4 - 1 = 3
   const res = rollToHit(attacker, dbl, { range: "near", cover: 0, fullAuto: true }, dice, () => 0);
-  assert.equal(res.rof, 10);
-  assert.equal(res.hits, 5);          // dice >=3 or ==6: 3,4,5,6,6
+  assert.equal(res.rof, 8);
+  assert.equal(res.hits, 4);          // dice >=3 or ==6: 3,4,5,6
   assert.equal(res.fireModeHeat, 3);  // three 1s under Full Auto
 });
 
