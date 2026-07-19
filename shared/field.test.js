@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   halfDiag, OBJ_FRACTION, clampDimensions, computeObjectives,
   emptyCorners, deploymentCorners, scatterTerrain, deployRadius, FIELD_DEFAULT,
-  DIGITAL_TERRAIN_KINDS,
+  DIGITAL_TERRAIN_KINDS, thinDigital,
 } from "./field.js";
 
 // Deterministic RNG for terrain tests (mulberry32).
@@ -86,12 +86,29 @@ test("DIGITAL_TERRAIN_KINDS is the 4 kinds pure ray-counting reads correctly", (
   assert.deepEqual([...DIGITAL_TERRAIN_KINDS].sort(), ["barricade", "building", "crate", "rock"]);
 });
 
+test("thinDigital keeps every other piece (biggest-first order preserved)", () => {
+  assert.deepEqual(thinDigital(["a", "b", "c", "d"]), ["a", "c"]);
+  assert.deepEqual(thinDigital(["only"]), ["only"]);
+  assert.deepEqual(thinDigital([]), []);
+});
+
 test("scatterTerrain digital mode emits only the 4 digital kinds", () => {
   const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
   const pieces = scatterTerrain(field, seeded(7), { digital: true });
   assert.ok(pieces.length > 0, "still dresses the field");
   for (const p of pieces) assert.ok(DIGITAL_TERRAIN_KINDS.has(p.kind), `unexpected kind: ${p.kind}`);
-  assert.ok(pieces.some((p) => p.kind === "building"), "at least one LOS blocker");
+});
+
+test("scatterTerrain digital mode can still produce a building (LOS blocker)", () => {
+  // Thinning drops half the pieces, so any single seed may happen to lose its
+  // only building — check the kind is reachable across a spread of seeds
+  // instead of pinning one seed's exact roll.
+  const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
+  let sawBuilding = false;
+  for (let s = 1; s <= 20 && !sawBuilding; s++) {
+    sawBuilding = scatterTerrain(field, seeded(s), { digital: true }).some((p) => p.kind === "building");
+  }
+  assert.ok(sawBuilding, "no building appeared across seeds 1-20");
 });
 
 test("scatterTerrain default (physical) still emits the full vocabulary", () => {

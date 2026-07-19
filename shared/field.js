@@ -153,6 +153,11 @@ function diagonalSide(field, p) {
   return ((e1.x - e0.x) * (p.y - e0.y) - (e1.y - e0.y) * (p.x - e0.x)) / Math.hypot(e1.x - e0.x, e1.y - e0.y);
 }
 
+// Halve a digital scatter: keep every other piece in the biggest-first order so
+// the largest anchor always survives. Applied before the 180° mirror, so the
+// board reads about half as dense while staying symmetric and deterministic.
+export const thinDigital = (pieces) => pieces.filter((_, i) => i % 2 === 0);
+
 // Dress the field with a varied terrain scatter — several shapes and sizes,
 // clear of objectives and the deployment corners, roughly wargame density.
 // Piece count scales with field area. Deterministic under `random` (matches rollD).
@@ -213,9 +218,10 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
   // A half turn about the centre maps one deployment corner onto the other, so
   // each side reads the same board. `rot` survives the turn untouched because a
   // rect is centrally symmetric — true only while digital terrain is rects only.
+  const base = opts.digital ? thinDigital(placed) : placed;
   const out = opts.digital
-    ? placed.flatMap((p) => [p, { ...p, x: round2(field.width - p.x), y: round2(field.height - p.y) }])
-    : placed;
+    ? base.flatMap((p) => [p, { ...p, x: round2(field.width - p.x), y: round2(field.height - p.y) }])
+    : base;
   // `fp` was only needed for spacing; keep the wire payload to the geometry.
   return out.map(({ fp, ...rest }) => rest);
 }
