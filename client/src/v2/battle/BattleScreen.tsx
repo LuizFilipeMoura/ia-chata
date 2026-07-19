@@ -10,6 +10,7 @@ import { MoveTargetOverlay, MoveTargetControls, type Placed } from "./MoveTarget
 import { ActionConsole } from "./ActionConsole";
 import { BattleHud } from "../components/BattleHud";
 import { canRigActivate } from "./activation";
+import { availableActions } from "/shared/battle-view.js";
 import "../styles/field.css";
 
 export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void } = {}) {
@@ -48,7 +49,11 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
   if (!field) return null;
 
   const proj = makeProjection(field);
-  const moveAction = (moving?.action === "sprint" ? "sprint" : "move") as "move" | "sprint";
+  // The outer sprint ring is only offered when the engine allows sprinting now.
+  const sprintAllowed =
+    !!activeRig && !!t &&
+    (availableActions(activeRig, t, game?.round) as { key: string; enabled: boolean }[])
+      .some((a) => a.key === "sprint" && a.enabled);
 
   const overlay =
     moving && activeRig ? (
@@ -57,7 +62,7 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
         field={field}
         rigs={rigs}
         rig={activeRig}
-        action={moveAction}
+        sprintAllowed={sprintAllowed}
         placed={placed}
         onPlaced={setPlaced}
       />
@@ -67,7 +72,7 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
     if (!moving || !activeRig || !placed) return;
     sendCommand("action", {
       name: activeRig.name,
-      action: moveAction,
+      action: placed.action,
       dest: placed.dest,
       facing: placed.facing,
     });
@@ -80,6 +85,7 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
       <BattleHud />
       <BattleMap
         field={field}
+        objectives={game?.objectives ?? []}
         rigs={rigs}
         mySide={mySide ?? "a"}
         ownerSide={ownerSide ?? "a"}
@@ -112,7 +118,7 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
         {moving && activeRig ? (
           <MoveTargetControls
             rig={activeRig}
-            action={moveAction}
+            action={placed?.action ?? "move"}
             placed={placed}
             onConfirm={confirmMove}
             onCancel={() => clearMoveTarget()}
