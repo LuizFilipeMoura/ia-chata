@@ -4,6 +4,7 @@ import {
   useEffect,
   useImperativeHandle,
   forwardRef,
+  type CSSProperties,
 } from "react";
 import type { Resolution, ResolutionBreakdown } from "../../state/types";
 
@@ -45,6 +46,12 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   const [hidden, setHidden] = useState(true);
   const [visible, setVisible] = useState(false);
   const [kind, setKind] = useState("Resolution");
+  // Raw entry.kind (lowercased) drives per-kind theming — the ember "engine
+  // misfire" treatment on `overheat`, and `sev` escalates its klaxon.
+  const [kindId, setKindId] = useState("");
+  const [sev, setSev] = useState("");
+  // The full-screen destruction cinematic — set when a rig is destroyed.
+  const [kaboom, setKaboom] = useState<{ name: string; exploded: boolean } | null>(null);
   const [dice, setDice] = useState<DieState[]>([]);
   const [summary, setSummary] = useState("");
   const [breakdown, setBreakdown] = useState<ResolutionBreakdown | null>(null);
@@ -57,6 +64,8 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   const hideTimer = useRef<number | null>(null);
   const revealTimer = useRef<number | null>(null);
   const flickerTimer = useRef<number | null>(null);
+  const kaboomTimer = useRef<number | null>(null);
+  const resolveKaboom = useRef<(() => void) | null>(null);
   const rafRef = useRef<number | null>(null);
   // Live refs to each die element so the flicker can mutate text directly
   // (mirrors roll-dialog.js which sets die.textContent every 60ms).
@@ -107,8 +116,43 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     );
   };
 
+  // ── Destruction cinematic ────────────────────────────────────────────────
+  const dismissKaboom = () => {
+    if (kaboomTimer.current != null) {
+      clearTimeout(kaboomTimer.current);
+      kaboomTimer.current = null;
+    }
+    setKaboom(null);
+    const done = resolveKaboom.current;
+    resolveKaboom.current = null;
+    done?.();
+  };
+
+  const playKaboom = (name: string, exploded: boolean): Promise<void> => {
+    // Clear the dice console out of the way — the explosion owns the screen.
+    clearFlicker();
+    closeRoll();
+    setKaboom({ name, exploded });
+    return new Promise((resolve) => {
+      resolveKaboom.current = resolve;
+      const dwell = reduced ? 900 : exploded ? 2800 : 2100;
+      if (kaboomTimer.current != null) clearTimeout(kaboomTimer.current);
+      kaboomTimer.current = window.setTimeout(dismissKaboom, dwell);
+    });
+  };
+
   const playResolution = (entry: Resolution): Promise<void> => {
     setKind((entry.kind || "resolution").toUpperCase());
+    setKindId((entry.kind || "").toLowerCase());
+    setSev(entry.kind === "overheat" ? entry.sev || "" : "");
+    if (entry.kind === "destruction") {
+      const name =
+        entry.rigName ||
+        (entry.summary || "").split(" destroyed")[0] ||
+        "A rig";
+      const exploded = entry.exploded ?? /erupt/i.test(entry.summary || "");
+      return playKaboom(name, exploded);
+    }
     if (entry.kind === "reaction") {
       const prep = (entry as { prep?: string }).prep || "brace";
       const face = prep === "evasive"
@@ -262,6 +306,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
       if (hideTimer.current != null) clearTimeout(hideTimer.current);
       if (revealTimer.current != null) clearTimeout(revealTimer.current);
       if (flickerTimer.current != null) clearInterval(flickerTimer.current);
+      if (kaboomTimer.current != null) clearTimeout(kaboomTimer.current);
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
   }, []);
@@ -269,8 +314,13 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
   useImperativeHandle(ref, () => ({ playResolution, promptDice, closeRoll }));
 
   const rolling = dice.length > 0 && dice.some((d) => !d.settled);
+  const misfire = kindId === "overheat" && !!sev && sev !== "safe";
+
+  const sparkStyle = (i: number): CSSProperties =>
+    ({ "--ang": `${i * 36}deg`, animationDelay: `${(i % 4) * 0.05}s` } as unknown as CSSProperties);
 
   return (
+    <>
     <div
       id="rollScrim"
       className={"roll-scrim" + (visible ? " show" : "")}
@@ -281,11 +331,20 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
     >
       <div
         id="rollConsole"
-        className="roll-console"
+        className={"roll-console" + (misfire ? " misfire" : "")}
+        data-kind={kindId || undefined}
+        data-sev={misfire ? sev : undefined}
         role="dialog"
         aria-modal="true"
         aria-label="Dice resolution"
       >
+        {misfire ? (
+          <div className="oh-klaxon" data-sev={sev} role="status">
+            <span className="oh-bar" aria-hidden="true" />
+            <span className="oh-text">⚠ ENGINE MISFIRE</span>
+            <span className="oh-bar" aria-hidden="true" />
+          </div>
+        ) : null}
         <div className="roll-head">
           <span className="roll-kind" id="rollKind">
             {kind}
@@ -395,6 +454,33 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
         </button>
       </div>
     </div>
+    {kaboom ? (
+      <div
+        className={"kaboom" + (kaboom.exploded ? " erupt" : "")}
+        role="alertdialog"
+        aria-label={`${kaboom.name} destroyed${kaboom.exploded ? " — munitions cook off" : ""}`}
+        onClick={dismissKaboom}
+      >
+        <div className="kaboom-flash" aria-hidden="true" />
+        <div className="kaboom-shock" aria-hidden="true" />
+        <div className="kaboom-shock kaboom-shock-2" aria-hidden="true" />
+        <div className="kaboom-core">
+          <div className="kaboom-sparks" aria-hidden="true">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <span key={i} style={sparkStyle(i)} />
+            ))}
+          </div>
+          <div className="kaboom-skull" aria-hidden="true">☠</div>
+          <div className="kaboom-title">RIG DESTROYED</div>
+          <div className="kaboom-name">{kaboom.name}</div>
+          {kaboom.exploded ? (
+            <div className="kaboom-erupt">☢ MUNITIONS COOK OFF · 12&quot; BLAST</div>
+          ) : null}
+          <div className="kaboom-hint">tap to continue</div>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 });
 

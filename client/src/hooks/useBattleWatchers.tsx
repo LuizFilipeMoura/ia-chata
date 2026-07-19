@@ -99,8 +99,14 @@ export function useBattleWatchers(): void {
     // Play fresh entries in order so dice-bearing resolutions (e.g. the attack
     // behind a revealed answer token) each get their roll animation instead of
     // being skipped. A large backlog (first hydrate) fast-forwards to the newest
-    // to avoid a stampede.
-    const toPlay = fresh.length > 3 ? [fresh[fresh.length - 1]] : fresh;
+    // to avoid a stampede — but a `destruction` (a rig exploding) is the loudest
+    // moment in the game and must never be swallowed, so always keep those.
+    let toPlay = fresh;
+    if (fresh.length > 3) {
+      const kabooms = fresh.filter((e) => e.kind === "destruction");
+      const last = fresh[fresh.length - 1];
+      toPlay = kabooms.includes(last) ? kabooms : [...kabooms, last];
+    }
     void (async () => {
       for (const entry of toPlay) {
         // eslint-disable-next-line no-await-in-loop

@@ -140,6 +140,12 @@ export interface Resolution {
   vp?: { side: string; amount: number };
   /** Name of the wrecked unit, captured before it may be removed. */
   victimName?: string;
+  /** Heat Threshold row key on `overheat` entries (safe/stall/…/catastrophic). */
+  sev?: string;
+  /** Destroyed rig's name on `destruction` entries — drives the KABOOM cinematic. */
+  rigName?: string;
+  /** Whether the destroyed rig's munitions cooked off (§9 blast). */
+  exploded?: boolean;
 }
 
 export type Diagonal = "tlbr" | "trbl";

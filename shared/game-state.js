@@ -1890,6 +1890,9 @@ function onRigDamaged(room, rig, opts) {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       victimName: rig.name,
       vp: scorer ? { side: scorer.id, amount: KILL_VP } : undefined,
+      // Structured fields so the client can stage the explosion cinematic
+      // without parsing the summary string.
+      rigName: rig.name, exploded,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
       effects,
@@ -2210,6 +2213,9 @@ function endActivation(room, rig, dice, random) {
       pushResolution(room, {
         kind: "overheat", actor: rig.owner, rigId: rig.id,
         heatKey: row.key, // "safe" = engine held; any other key dealt damage (client SFX)
+        // `sev` lets the client escalate the misfire klaxon by severity
+        // (nothing → stall → … → catastrophic). "nothing" is the 1–5 no-op row.
+        sev: row.key,
         rolls: [{ sides: 12, value: roll, label: "D12" }],
         summary: `${rig.name}: ${row.label} (D12 ${roll}+${bonus}=${total})`,
         effects: [row.text],
