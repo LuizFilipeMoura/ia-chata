@@ -102,8 +102,8 @@ export const GLOSSARY = [
     def: "Action [1 heat, 2 if Hot]: attack with one equipped weapon. Ranged weapons need Reload before firing again (§5, §7).",
   },
   {
-    id: "aimed-shot", term: "Aimed Shot", match: ["Aimed Shot"],
-    def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −2 Accuracy (Precision removes the penalty) (§5, §13).",
+    id: "aimed-shot", term: "Aimed Attack", match: ["Aimed Attack", "Aimed Shot"],
+    def: "A Fire Weapon action, usable with any weapon, where you choose the hit location instead of rolling for it, at −2 Accuracy (Precision removes the penalty) (§5, §13).",
   },
   {
     id: "reload", term: "Reload", match: ["Reload"],
