@@ -37,21 +37,26 @@ export function FieldFurniture({ field, objectives, proj, rectOnly = false }: Pr
         const cls = `v2-fm-terrain v2-fm-terrain--${t.kind ?? "block"}`;
         const spin = t.rot ? `rotate(${t.rot} ${cx} ${cy})` : undefined;
         if (rectOnly && t.shape !== "rect") {
-          let bw: number, bh: number;
+          let bw: number, bh: number, bx: number, by: number;
           if (t.shape === "poly" && t.points) {
             const xs = t.points.map(([dx]) => dx);
             const ys = t.points.map(([, dy]) => dy);
-            bw = (Math.max(...xs) - Math.min(...xs)) * scale;
-            bh = (Math.max(...ys) - Math.min(...ys)) * scale;
+            const minx = Math.min(...xs), miny = Math.min(...ys);
+            bw = (Math.max(...xs) - minx) * scale;
+            bh = (Math.max(...ys) - miny) * scale;
+            bx = cx + minx * scale;
+            by = cy + miny * scale;
           } else {
-            // ellipse: bounding box is the full 2·rx × 2·ry
+            // ellipse: symmetric about its origin — box is 2·rx × 2·ry, centered
             bw = (t.rx ?? 2) * 2 * scale;
             bh = (t.ry ?? 2) * 2 * scale;
+            bx = cx - bw / 2;
+            by = cy - bh / 2;
           }
           return (
             <rect
               key={i} data-testid="terrain" className={cls}
-              x={cx - bw / 2} y={cy - bh / 2} width={bw} height={bh}
+              x={bx} y={by} width={bw} height={bh}
               rx={Math.min(3, bw * 0.15)} transform={spin}
             />
           );
