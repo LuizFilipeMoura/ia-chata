@@ -18,6 +18,7 @@ import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { reactionCard, rigPortrait } from "../ui/reactions.js";
+import { openInspector } from "../ui/inspector.js";
 import { sfx, ambience } from "../audio.js";
 import { settings } from "../settings.js";
 import { Nameplates } from "../ui/nameplates.js";
@@ -99,6 +100,7 @@ export class LiveMatch {
     this.unsub.forEach((f) => f());
     window.removeEventListener("keydown", this.keyHandler);
     this.director.dispose();
+    document.querySelector(".inspector")?.remove();
     this.minimap.destroy();
     this.plates.destroy();
     this.wires?.destroy();
@@ -209,6 +211,8 @@ export class LiveMatch {
     this.cancelMode();
     this.refresh();
     this.emit("select", r);
+    // Enemies can't be commanded: clicking one shows everything about it.
+    if (r && r.owner !== this.side) openInspector(r);
   }
 
   // A room shaped for the shared previews, with `rig` as the active unit (a rig
@@ -253,6 +257,7 @@ export class LiveMatch {
     bar.append(el("div", { class: "act-head" },
       el("div", { class: "ah-id" },
         el("span", { class: `swatch big sw-${rig.name}` }),
+        el("button", { class: "btn ghost in-open", title: "Full details: weapons, upgrades, equipment, damage", onClick: () => openInspector(rig) }, "ⓘ"),
         el("div", {}, el("div", { class: "act-name" }, rig.name),
           el("div", { class: "ah-weps" }, el("span", { title: "Long-range weapon" }, `🔫 ${rig.weapons?.longRange}`), el("span", { title: "Melee weapon" }, `🗡 ${rig.weapons?.melee}`)))),
       el("div", { class: "ah-stat", title: "Actions left this activation. Most actions use one." },

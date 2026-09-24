@@ -2,17 +2,31 @@
 // match) through the Director with play/pause, speed and scrubbing.
 import { Director } from "./director.js";
 import { Hud } from "../ui/hud.js";
-import { el, clear, fill } from "../ui/dom.js";
+import { el, clear, fill, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { Nameplates } from "../ui/nameplates.js";
+import { openInspector } from "../ui/inspector.js";
 import { CHASSIS } from "/shared/game-state.js";
 
-const WEIGHT_HELP = {
-  vp: "Value of taking / approaching objectives", priority: "Value of damaging the priority target",
-  damage: "Value of expected damage dealt", threat: "Penalty for standing where enemies can hit",
-  heat: "Penalty for heat (overheat risk)", fragile: "Extra caution when a location is nearly dead",
-  tactics: "Value of special actions (stances, equipment, shutdown)",
+// Plain-language pilot vocabulary, shared by the summary and the full menu.
+const TRAITS = {
+  vp: ["Objectives", "How much it wants to stand on salvage beacons (the points that win games)."],
+  priority: ["Hunting the ★ target", "How hard it chases the one enemy worth +2 points if destroyed."],
+  damage: ["Aggression", "How much it values dealing damage."],
+  threat: ["Caution", "How much it avoids standing where enemies can shoot it."],
+  heat: ["Heat discipline", "How much it avoids overheating its own boiler."],
+  fragile: ["Self-preservation", "Extra caution once a part of it is badly damaged."],
+  tactics: ["Specials", "How keen it is on stances, equipment and Shut Down."],
 };
+const HABITS = { move: "walking", sprint: "sprinting", fire: "plain shots", aimed: "aimed shots", prepare: "setting reactions", repair: "repairing", shutdown: "shutting down to cool", special: "special actions" };
+const TIER_TEXT = {
+  easy: "Easy bot: reckless, ignores heat and objectives, and blunders often (55% of decisions are a random pick from its top options).",
+  normal: "Normal bot: balanced priorities, occasional mistakes (10% of decisions).",
+  hard: "Hard bot: the genetic search's champion. Evolved priorities, best builds, never blunders.",
+  balanced: "Evolved pilot: priorities bred by the genetic search. Never blunders on purpose.",
+};
+const TERM_TEXT = { vp: "objectives", priority: "★ target", damage: "damage", tactics: "specials", bias: "habit", threat: "danger (−)", heat: "heat (−)", fragile: "self-preservation (−)" };
+
 
 export class Replay {
   constructor(world, hudRoot, replay, { onExit }) {
@@ -32,6 +46,8 @@ export class Replay {
     this.plates = new Nameplates(hudRoot, world, this.director);
     this.plates.set(this.stateLike(f0).rigs);
     this.renderControls();
+    // Click any mech (or its roster card) to inspect it.
+    this.unclick = world.on("click", (hit) => { if (hit.mechId != null) this.inspect(hit.mechId); });
     this.loop();
   }
 
@@ -53,7 +69,7 @@ export class Replay {
       await this.director.play(f);
       if (this.dead) return;
       const s = this.stateLike(f);
-      this.hud.top(s, "a"); this.hud.roster(s, "a", f.turn?.activeRigId);
+      this.hud.top(s, "a"); this.hud.roster(s, "a", f.turn?.activeRigId, (id) => this.inspect(id));
       this.renderBrain(f.thought);
       this.minimap.set(this.replay.field, this.replay.objectives, f.rigs, f.turn?.activeRigId);
       this.plates.set(s.rigs, { activeId: f.turn?.activeRigId });
@@ -67,34 +83,75 @@ export class Replay {
   // decision the top options with their weighted score terms.
   renderBrain(thought) {
     const p = this.replay.pilots;
-    clear(this.brain);
+    fill(this.brain);
     if (p) {
-      const keys = ["vp", "priority", "damage", "threat", "heat", "fragile", "tactics"];
-      const max = Math.max(1, ...keys.flatMap((k) => [p.a?.[k] ?? 0, p.b?.[k] ?? 0]));
-      this.brain.append(el("div", { class: "pilots" }, ["a", "b"].map((s) => el("div", { class: `pilot p-${s}` },
-        el("b", {}, `${s === "a" ? "Cyan" : "Red"} pilot${p.tiers?.[s] && p.tiers[s] !== "balanced" ? " · " + p.tiers[s] : ""}`),
-        keys.map((k) => el("div", { class: "wrow", title: WEIGHT_HELP[k] }, el("span", {}, k), el("div", { class: "wbar" }, el("i", { style: { width: `${((p[s]?.[k] ?? 0) / max) * 100}%` } })), el("em", {}, String(p[s]?.[k] ?? "–")))),
-        // Evolved action preferences (b_*): + likes, − avoids.
-        Object.keys(p[s] || {}).some((k) => k.startsWith("b_")) ? el("div", { class: "biases", title: "Evolved action preferences: + favours, − avoids" },
-          Object.entries(p[s]).filter(([k, v]) => k.startsWith("b_") && Math.abs(v) >= 0.05).map(([k, v]) => el("span", { class: v > 0 ? "pos" : "neg" }, `${k.slice(2)} ${v > 0 ? "+" : ""}${v}`))) : null))));
+      // Compact summary; the full explanation is one click away.
+      this.brain.append(el("div", { class: "pilots-sum" },
+        ["a", "b"].map((side) => el("div", { class: `ps p-${side}` }, el("b", {}, side === "a" ? "Cyan pilot" : "Red pilot"), el("span", {}, this.pilotTag(side)))),
+        el("button", { class: "btn ghost", onClick: () => this.pilotMenu() }, "ⓘ Explain the pilots")));
     }
     if (thought?.top?.length) {
-      const terms = ["vp", "priority", "damage", "tactics", "bias", "threat", "heat", "fragile"];
+      const terms = Object.keys(TERM_TEXT);
       const scale = Math.max(0.5, ...thought.top.map((t) => terms.reduce((a, k) => a + Math.abs(t.parts[k] || 0), 0)));
       this.brain.append(el("div", { class: `thought p-${thought.side}` },
-        el("b", {}, `🧠 ${thought.rig} weighs its options`),
+        el("b", {}, `🧠 What ${thought.rig} considered`),
+        el("div", { class: "muted small" }, "Its best options, highest score first. Each bar shows what the score was made of."),
         thought.top.map((t) => el("div", { class: `opt ${t.picked ? "picked" : ""}` },
-          el("div", { class: "ol" }, el("span", {}, `${t.picked ? "▶ " : ""}${t.label}${t.blunder ? " (blunder!)" : ""}`), el("em", {}, t.score.toFixed(2))),
-          el("div", { class: "stack" }, terms.filter((k) => t.parts[k]).map((k) => el("i", { class: `t-${k}`, title: `${k} ${t.parts[k]}`, style: { width: `${(Math.abs(t.parts[k]) / scale) * 100}%` } }))))),
-        thought.passed ? el("div", { class: "muted small" }, "Nothing scored above 0 → ends activation.") : null,
-        el("div", { class: "tkey" }, terms.map((k) => el("span", { class: `t-${k}` }, k)))));
+          el("div", { class: "ol" }, el("span", {}, `${t.picked ? "▶ " : ""}${t.label}${t.blunder ? " (a blunder!)" : ""}`), el("em", {}, t.score.toFixed(1))),
+          el("div", { class: "stack" }, terms.filter((k) => t.parts[k]).map((k) => el("i", { class: `t-${k}`, title: `${TERM_TEXT[k]}: ${t.parts[k] > 0 ? "+" : ""}${t.parts[k]}`, style: { width: `${(Math.abs(t.parts[k]) / scale) * 100}%` } }))))),
+        thought.passed ? el("div", { class: "muted small" }, "Nothing was worth doing, so it ended its turn.") : null,
+        el("div", { class: "tkey" }, terms.map((k) => el("span", { class: `t-${k}` }, TERM_TEXT[k])))));
     }
+  }
+
+  pilotTag(side) {
+    const tier = this.replay.pilots?.tiers?.[side];
+    return tier && tier !== "balanced" ? `${tier[0].toUpperCase()}${tier.slice(1)} bot` : "evolved pilot";
+  }
+
+  // The full menu: every priority and habit of both pilots, explained.
+  pilotMenu() {
+    const p = this.replay.pilots;
+    const keys = Object.keys(TRAITS);
+    const max = Math.max(1, ...keys.flatMap((k) => [p.a?.[k] ?? 0, p.b?.[k] ?? 0]));
+    const col = (side) => {
+      const w = p[side] || {};
+      const habits = Object.entries(w).filter(([k, v]) => k.startsWith("b_") && Math.abs(v) >= 0.05).sort((a, b) => b[1] - a[1]);
+      return el("div", { class: `pm-col p-${side}` },
+        el("h3", {}, side === "a" ? "Cyan pilot" : "Red pilot", el("span", { class: "muted" }, ` · ${this.pilotTag(side)}`)),
+        el("p", { class: "muted" }, TIER_TEXT[p.tiers?.[side]] || TIER_TEXT.balanced),
+        el("h4", {}, "Priorities"),
+        keys.map((k) => el("div", { class: "pm-row" },
+          el("div", { class: "pm-top" }, el("b", {}, TRAITS[k][0]), el("span", { class: "pm-v" }, (w[k] ?? 0).toFixed(2))),
+          el("div", { class: "wbar" }, el("i", { style: { width: `${((w[k] ?? 0) / max) * 100}%` } })),
+          el("div", { class: "muted small" }, TRAITS[k][1]))),
+        el("h4", {}, "Habits"),
+        habits.length ? habits.map(([k, v]) => el("div", { class: `pm-habit ${v > 0 ? "pos" : "neg"}` }, `${v > 0 ? "Likes" : "Avoids"} ${HABITS[k.slice(2)] || k.slice(2)}`, el("span", { class: "muted" }, ` (${v > 0 ? "+" : ""}${v})`)))
+          : el("p", { class: "muted small" }, "No learned habits: this pilot judges each action purely on its priorities."));
+    };
+    modal({
+      title: "How the pilots think", cls: "wide",
+      body: el("div", { class: "pm" },
+        el("p", {}, "Every decision, a bot scores each legal action. The score adds up what the action achieves (objectives, damage, specials) and subtracts what it risks (danger, heat), each multiplied by the pilot's priority for it. It picks the highest score. Priorities are relative: what matters is how they compare."),
+        el("div", { class: "pm-cols" }, col("a"), col("b"))),
+      actions: [{ label: "Close", primary: true }],
+    });
+  }
+
+
+  inspect(id) {
+    const f = this.frames[this.i];
+    const r = this.stateLike(f).rigs.find((x) => x.id === id);
+    if (!r) return;
+    const sq = this.replay.squadsFull || this.replay.squads || {};
+    const loadout = [...(sq.a || []), ...(sq.b || [])].find((u) => u && u.chassis === r.chassis) || null;
+    openInspector(r, { loadout });
   }
 
   seek(n) {
     this.i = Math.max(0, Math.min(this.frames.length - 1, n));
     this.director.snap(this.frames[this.i]);
-    const s = this.stateLike(this.frames[this.i]); this.hud.top(s, "a"); this.hud.roster(s, "a", null);
+    const s = this.stateLike(this.frames[this.i]); this.hud.top(s, "a"); this.hud.roster(s, "a", null, (id) => this.inspect(id));
     this.renderControls();
   }
 
@@ -123,5 +180,5 @@ export class Replay {
   }
 
   exit() { this.destroy(); this.onExit?.(); }
-  destroy() { this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.dispose(); this.hud.destroy(); }
+  destroy() { this.unclick?.(); document.querySelector(".inspector")?.remove(); this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.dispose(); this.hud.destroy(); }
 }
