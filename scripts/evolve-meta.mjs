@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { evolve } from "../shared/sim/genetic.js";
 import { calibrationJobs, tierWinRate, TIER_NAMES } from "../shared/sim/tiers.js";
 import { createPool } from "../server/sim/pool.js";
+import { createReplayStore } from "../server/replays.js";
 import { META } from "../shared/bot/meta.js";
 import { playbookFrom, metaSource } from "../shared/sim/playbook.js";
 
@@ -17,7 +18,20 @@ const args = Object.fromEntries(process.argv.slice(2).join(" ").split("--").filt
 }));
 const num = (k, d) => (args[k] != null ? Number(args[k]) : d);
 const pool = createPool();
-const evaluate = (jobs) => Promise.all(jobs.map((j) => pool.run(j)));
+// Every GA match is a simulated game, recorded and filed in the replay library
+// (data/replays) under this run's job id — same as a server-side /api/sim job.
+const replays = createReplayStore(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data", "replays"));
+const jobId = `cli-${Date.now().toString(36)}`;
+let gen = 0;
+const evaluate = (jobs) => {
+  const g = gen++;
+  return Promise.all(jobs.map((j) => pool.run({ ...j, record: true }).then((r) => {
+    replays.save(r, j.squads, { source: "ga", job: jobId, generation: g, label: `GA ${jobId} · gen ${g + 1}`, seed: j.seed });
+    delete r.frames;
+    return r;
+  })));
+};
+const evaluatePlain = (jobs) => Promise.all(jobs.map((j) => pool.run(j)));
 const t0 = Date.now();
 
 const res = await evolve({
@@ -43,7 +57,7 @@ for (const g of top) {
     return { ...j, squads: { ...j.squads, [botSide]: g.squad }, weights: { ...j.weights, [botSide]: g.weights } };
   }).filter(Boolean);
   if (jobs.length < gauntletGames / 2) continue;
-  const results = await evaluate(jobs);
+  const results = await evaluatePlain(jobs);
   const rate = tierWinRate(jobs, results);
   console.log(`gauntlet ${g.squad.map((u) => u.chassis).join(", ")}: ${(rate * 100).toFixed(0)}% over ${jobs.length}`);
   if (rate > bestRate) { bestRate = rate; champion = g; }
@@ -73,4 +87,6 @@ for (const tier of TIER_NAMES) {
   console.log(`  ${tier.padEnd(6)}  vs average builds ${(tierWinRate(vsRandom, r1) * 100).toFixed(0)}%   vs evolved builds ${(tierWinRate(vsEvolved, r2) * 100).toFixed(0)}%`);
 }
 await pool2.close();
+replays.close();
+console.log(`GA matches saved to data/replays under job ${jobId}`);
 console.log(`done in ${((Date.now() - t0) / 1000) | 0}s`);

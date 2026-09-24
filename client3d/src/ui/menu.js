@@ -13,7 +13,7 @@ const TIER_TEXT = {
   hard: "GA-evolved champion: the meta's best builds and tactics.",
 };
 
-export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch }) {
+export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims }) {
   fill(root, el("div", { class: "title" },
     el("div", { class: "logo" }, el("span", {}, "OIL"), el("i", {}, "&"), el("span", {}, "IRON"), el("small", {}, "TACTICS · 3D")),
     el("p", { class: "tag" }, "Dieselpunk war machines on a real tabletop — now in three dimensions."),
@@ -21,6 +21,7 @@ export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch }) {
       el("button", { class: "btn big primary", onClick: onTutorial }, "🎓  Tutorial — learn by playing"),
       el("button", { class: "btn big", onClick: onPlay }, "⚔️  Skirmish vs Bot"),
       el("button", { class: "btn big", onClick: onWatch }, "🍿  Watch Bots Fight"),
+      el("button", { class: "btn big", onClick: onSims }, "🛰  Sim Center — simulate & replay"),
       el("button", { class: "btn big", onClick: onLab }, "🧬  Balance Lab (genetic meta)"),
     ),
     el("p", { class: "muted small" }, "WASD / arrows pan · Q/E or right-drag rotate · wheel zoom · Tab cycles rigs · 1–6 hotkeys · Enter ends activation"),

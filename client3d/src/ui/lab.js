@@ -34,7 +34,7 @@ function chart(canvas, history) {
   }
 }
 
-export function labScreen(root, { onBack, onReplay }) {
+export function labScreen(root, { onBack, onLibrary }) {
   let job = null, timer = null;
   const params = { population: 12, generations: 6, gamesPer: 2, mutationRate: 0.25 };
   const statsEl = el("div", { class: "lab-stats" });
@@ -53,8 +53,16 @@ export function labScreen(root, { onBack, onReplay }) {
     if (job.status === "running") timer = setTimeout(poll, 2000);
   };
 
+  const pickerEl = el("div", { class: "lab-picker" });
+  let allJobs = [];
+  const renderPicker = () => {
+    const ga = allJobs.filter((j) => j.kind === "ga");
+    fill(pickerEl, ga.length ? el("label", { class: "muted" }, "Run: ", el("select", { onChange: async (e) => { job = await api.sim.job(e.target.value); clearTimeout(timer); draw(); if (job.status === "running") poll(); } },
+      ga.slice().reverse().map((j) => el("option", { value: j.id, selected: job?.id === j.id }, `${new Date(j.startedAt).toLocaleString()} · ${j.params.population}×${j.params.generations} · ${j.status}`)))) : null);
+  };
   const draw = () => {
-    statusEl.textContent = job ? `Job ${job.id}: ${job.status} · generation ${job.generation + 1}/${job.params.generations}${job.error ? " · " + job.error : ""}` : "No run yet.";
+    renderPicker();
+    statusEl.textContent = job ? `Run ${job.id}: ${job.status} · generation ${job.generation + 1}/${job.params.generations}${job.games ? ` · ${job.done}/${job.games} simulated games` : ""}${job.error ? " · " + job.error : ""}` : "No run yet.";
     chart(canvas, job?.history || []);
     clear(statsEl);
     const byKind = {};
@@ -69,7 +77,12 @@ export function labScreen(root, { onBack, onReplay }) {
             el("td", {}, el("div", { class: "wr" }, el("i", { style: { width: `${r.winRate * 100}%` } }), el("span", {}, `${(r.winRate * 100).toFixed(0)}%`))),
             el("td", {}, String(r.games)), el("td", {}, r.avgDmg.toFixed(1)))))));
     }
-    fill(replaysEl, el("h3", {}, "Feature matches"), (job?.replays || []).map((r, i) => el("button", { class: "btn", onClick: async () => onReplay(await api.sim.replay(job.id, i)) }, `▶ ${r.title} — ${r.winner ? r.winner.toUpperCase() + " wins" : "draw"} (${r.vp.join("–")})`)));
+    // Every match of the run is a saved simulated game — browse them.
+    fill(replaysEl, el("h3", {}, "This run's games"),
+      job?.id && job.id !== "saved" ? [
+        el("button", { class: "btn primary", onClick: () => onLibrary({ job: job.id }) }, `▶ All ${job.done ?? job.games ?? ""} simulated games`),
+        el("div", { class: "gen-links" }, (job.history || []).map((h) => el("button", { class: "btn ghost", title: `best ${h.best.toFixed(2)} · mean ${h.mean.toFixed(2)}`, onClick: () => onLibrary({ job: job.id, generation: h.generation }) }, `Gen ${h.generation + 1}`))),
+      ] : el("p", { class: "muted small" }, "Run an evolution to record games."));
     clear(bestEl);
     if (job?.ranked?.length) {
       const b = job.ranked[0];
@@ -86,7 +99,7 @@ export function labScreen(root, { onBack, onReplay }) {
   };
 
   const start = async () => {
-    try { job = await api.sim.evolve(params); toast("Evolution started — matches run on the server's worker pool.", "good"); poll(); }
+    try { job = await api.sim.evolve(params); allJobs.push(job); toast("Evolution started — matches run on the server's worker pool.", "good"); poll(); }
     catch (e) { toast(e.message, "bad"); }
   };
 
@@ -99,11 +112,11 @@ export function labScreen(root, { onBack, onReplay }) {
       el("button", { class: "btn", onClick: async () => { toast("Calibrating tiers — a few minutes…"); try { const r = await api.sim.calibrate({ games: 12, job: job?.status === "done" ? job.id : undefined }); renderCal(r.calibration, r.against === "evolved" ? "evolved builds" : "average builds"); } catch (e) { toast(e.message, "bad"); } } }, "⚖ Calibrate tiers"),
       el("button", { class: "btn", onClick: async () => { if (!job) return; try { await api.sim.adopt(job.id); toast("Adopted — the Hard bot now plays this meta.", "good"); } catch (e) { toast(e.message, "bad"); } } }, "🏆 Adopt as Hard bot"),
     ),
-    statusEl,
+    pickerEl, statusEl,
     el("div", { class: "lab-main" }, el("div", { class: "lab-left" }, canvas, el("div", { class: "legend" }, el("span", { class: "l-best" }, "best"), el("span", { class: "l-mean" }, "mean")), bestEl, replaysEl, calEl), statsEl),
   ));
   // Resume the newest job if one exists, else show the last saved meta report.
-  api.sim.jobs().then(({ jobs }) => { if (jobs.length) { job = jobs.at(-1); draw(); if (job.status === "running") poll(); } else draw(); })
+  api.sim.jobs().then(({ jobs }) => { allJobs = jobs; const ga = jobs.filter((j) => j.kind === "ga"); if (ga.length) { job = ga.at(-1); draw(); if (job.status === "running") poll(); } else draw(); })
     .then(async () => {
       if (job) return;
       const { report } = await api.sim.meta();

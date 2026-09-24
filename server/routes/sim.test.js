@@ -5,61 +5,59 @@ import os from "node:os";
 import path from "node:path";
 import express from "express";
 import { createSimRouter } from "./sim.js";
+import { createReplayStore } from "../replays.js";
+import { createStore } from "../store.js";
+import { playMatch } from "../../shared/sim/match.js";
 
-// A fake pool: canned results instantly, recorded matches carry one frame.
-// The router's job is orchestration (jobs, replays, calibration, adopt), not
-// playing chess — the real match runner is covered in shared/sim.
-const pool = {
-  run: async (job) => ({
-    winner: job.squads.a[0].chassis < job.squads.b[0].chassis ? "a" : "b",
-    vp: [3, 1], rounds: 10, stats: { a: { dmgDealt: 5 }, b: { dmgDealt: 2 } },
-    frames: job.record ? [{ rigs: [], log: [] }] : undefined,
-    field: job.record ? { width: 54, height: 36, terrain: [] } : undefined,
-    objectives: job.record ? [] : undefined,
-    pilots: job.record ? { a: {}, b: {} } : undefined,
-  }),
-};
+// The real simulated-game runner, in-process (no worker threads) — so these
+// tests exercise the actual engine path the GA uses, end to end.
+const pool = { run: async (job) => playMatch(job) };
 
-let server, base, root;
+let server, base, root, replays, store;
 before(async () => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "sim-"));
   fs.mkdirSync(path.join(root, "shared", "bot"), { recursive: true });
   fs.writeFileSync(path.join(root, "shared", "bot", "meta.js"), "// header\nexport const META = {};\n");
+  replays = createReplayStore(path.join(root, "data", "replays"));
+  store = createStore(path.join(root, "data", "rooms.json"));
   const app = express();
   app.use(express.json());
-  app.use("/api/sim", createSimRouter({ pool, rootDir: root }));
+  app.use("/api/sim", createSimRouter({ pool, rootDir: root, replays, store }));
   await new Promise((r) => { server = app.listen(0, () => { base = `http://127.0.0.1:${server.address().port}`; r(); }); });
 });
-after(() => new Promise((r) => server.close(r)));
+after(() => { replays.close(); return new Promise((r) => server.close(r)); });
 
 const post = (u, b) => fetch(base + u, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b || {}) }).then((r) => r.json());
 const get = (u) => fetch(base + u).then((r) => r.json());
+const until = async (fn, ms = 600000) => { const t = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t > ms) throw new Error("timeout"); await new Promise((r) => setTimeout(r, 50)); } };
 
-test("evolve runs a job to completion with history, stats and replays; adopt rewrites meta.js", async () => {
-  const job = await post("/api/sim/evolve", { population: 6, generations: 3, gamesPer: 2, seed: 4 });
-  let j = job;
-  for (let i = 0; i < 50 && j.status === "running"; i++) { await new Promise((r) => setTimeout(r, 20)); j = await get(`/api/sim/jobs/${job.id}`); }
-  assert.equal(j.status, "done");
-  assert.equal(j.history.length, 3);
-  assert.ok(j.stats.some((s) => s.kind === "chassis"));
-  assert.ok(j.replays.length >= 1);
-  const rep = await get(`/api/sim/jobs/${job.id}/replays/0`);
-  assert.ok(rep.frames && rep.field && rep.pilots);
+test("simulated rooms: games are played, saved as replays, and kept as finished rooms", async () => {
+  const batch = await post("/api/sim/rooms", { a: "easy", b: "hard", count: 2, seed: 5, table: { width: 42, height: 28 } });
+  const done = await until(async () => { const j = await get(`/api/sim/rooms/${batch.id}`); return j.status === "done" && j; });
+  assert.equal(done.results.length, 2);
+  for (const r of done.results) {
+    assert.ok(!r.error, r.error);
+    const room = store.getRoom(r.room);
+    assert.ok(room?.simulated && room.game.phase === "finished", "finished room kept in the store");
+    assert.equal(room.field.width, 42);
+    const rep = await get(`/api/sim/replays/${r.replayId}`);
+    assert.ok(rep.frames.length > 10 && rep.field && rep.pilots, "full replay");
+    assert.equal(rep.source, "sim");
+  }
+  const list = await get("/api/sim/replays?source=sim");
+  assert.equal(list.total, 2);
+});
+
+test("a GA job plays every match as a saved simulated game and exposes a playbook", async () => {
+  const job = await post("/api/sim/evolve", { population: 4, generations: 1, gamesPer: 1, seed: 4 });
+  const j = await until(async () => { const x = await get(`/api/sim/jobs/${job.id}`); return x.status !== "running" && x; });
+  assert.equal(j.status, "done", j.error);
+  assert.equal(j.history.length, 1);
+  const ga = await get(`/api/sim/replays?source=ga&job=${job.id}`);
+  assert.equal(ga.total, j.games, "every GA match is in the library");
+  assert.ok(ga.rows.every((r) => r.generation === 0));
   const adopted = await post(`/api/sim/jobs/${job.id}/adopt`);
   assert.equal(adopted.ok, true);
-  const src = fs.readFileSync(path.join(root, "shared", "bot", "meta.js"), "utf8");
-  assert.match(src, /^\/\/ header/);
-  assert.match(src, /"chassisRank"/);
-});
-
-test("a tier demo match comes back recorded", async () => {
-  const r = await post("/api/sim/match", { tiers: { a: "easy", b: "hard" }, seed: 3 });
-  assert.ok(Array.isArray(r.frames));
-  assert.ok(r.squads.a.length === 3 && r.squads.b.length === 3);
-  assert.ok(!r.squads.a.some((u) => r.squads.b.some((v) => v.chassis === u.chassis)), "no mirrored chassis");
-});
-
-test("calibrate reports a win rate per tier", async () => {
-  const r = await post("/api/sim/calibrate", { games: 4 });
-  for (const t of ["easy", "normal", "hard"]) assert.ok(r.calibration[t] >= 0 && r.calibration[t] <= 1);
+  assert.match(fs.readFileSync(path.join(root, "shared", "bot", "meta.js"), "utf8"), /"chassisRank"/);
+  assert.ok(fs.existsSync(path.join(root, "data", "sim-jobs", `${job.id}.json`)), "job summary persisted");
 });

@@ -170,3 +170,21 @@ table.mini { font-size: 12px; border-collapse: collapse; margin-top: 6px; } tabl
 .banner.round { color: var(--gold); }
 .title-mute { position: fixed; top: 10px; right: 10px; }
 .tables { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.gen-links { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; } .lab-picker { margin-bottom: 6px; }
+
+/* Sim Center */
+.sim-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.sim-form input { width: 70px; }
+.batches { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.batch { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.lib-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
+.chip { background: rgba(51,214,255,.15); border: 1px solid var(--cyan); border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+.chip .x { background: none; border: none; cursor: pointer; color: var(--text); }
+table.lib { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.lib th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px; }
+table.lib td { padding: 5px 4px; border-top: 1px solid rgba(255,255,255,.05); }
+.lib-row { cursor: pointer; } .lib-row:hover { background: rgba(255,255,255,.05); }
+.lib-row .swatch { margin-right: 3px; }
+.src { font-size: 12px; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.1); }
+.s-ga { background: rgba(185,139,255,.25); } .s-sim { background: rgba(51,214,255,.2); } .s-demo { background: rgba(255,211,90,.2); }
+.w-a { color: var(--cyan); } .w-b { color: var(--red); }

@@ -8,6 +8,7 @@ import { Replay } from "./game/replay.js";
 import { Hud } from "./ui/hud.js";
 import { titleScreen, squadBuilder, createBotRoom } from "./ui/menu.js";
 import { labScreen } from "./ui/lab.js";
+import { simCenter } from "./ui/simcenter.js";
 import { Coach, TUTORIAL_SQUAD } from "./ui/tutorial.js";
 import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
@@ -78,6 +79,7 @@ function home() {
     onPlay: () => builder(),
     onTutorial: () => tutorial(),
     onLab: () => lab(),
+    onSims: () => sims(),
     onWatch: () => watch(),
   });
   screen.append(el("div", { class: "title-mute" }, muteButton()));
@@ -116,7 +118,12 @@ async function tutorial() {
 
 function lab() {
   teardown();
-  labScreen(screen, { onBack: home, onReplay: (r) => replay(r, lab) });
+  labScreen(screen, { onBack: home, onLibrary: (filter) => sims(filter) });
+}
+
+function sims(filter = {}) {
+  teardown();
+  simCenter(screen, { onBack: home, filter, onOpen: (r) => replay(r, () => sims(filter)) });
 }
 
 async function watch() {

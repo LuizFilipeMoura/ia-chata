@@ -1,11 +1,13 @@
-// Headless bot-vs-bot match runner. Builds a digital room from two squads, plays
-// it to a terminal state with the opponent bot driving BOTH sides, and optionally
-// records a frame per command so the 3D client can replay the game. Everything
-// goes through applyCommand — the sim can't cheat rules the live game enforces.
-// Deterministic from `seed`.
-import { createRoom, claimSide, applyCommand, chassisById, LOCS, MAX_ROUNDS } from "../game-state.js";
-import { chooseAction } from "../bot/index.js";
-import { PRESETS, TIERS } from "../bot/score.js";
+// Simulated play: a real bot-vs-bot room driven through the SAME path live games
+// use — `setbot` flags both sides, rigs are commissioned with `add`, `ready`
+// starts (and deploys) the digital battle, then the server's own `driveBots`
+// plays every activation, gate and round to the end. The GA evaluates genomes
+// only through this, so balance numbers come from the engine the players use.
+// Every command can be recorded as a render frame (+ the bot's reasoning) for
+// replays. Deterministic from `seed`.
+import { createRoom, claimSide, applyCommand, chassisById, lastRejectionReason, LOCS, MAX_ROUNDS, BOT_PRESETS } from "../game-state.js";
+import { driveBots } from "../bot/index.js";
+import { PRESETS } from "../bot/score.js";
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -17,40 +19,46 @@ export function mulberry32(seed) {
   };
 }
 
-// squads: { a: [unit], b: [unit] }, unit = { chassis, longRangeUpgrade?,
-// meleeUpgrade?, equipment?, equipmentUpgrade? }. Rig names are the chassis
-// codename so replays read naturally.
-export function buildMatchRoom(squads, weights, random) {
-  const room = createRoom("SIM");
-  room.mode = "digital";
-  claimSide(room, { name: "A", side: "a" });
-  claimSide(room, { name: "B", side: "b" });
+// A side's pilot: a tier / preset name ("easy" | "normal" | "hard" | …) or an
+// explicit weight vector (a GA genome), which flies as "balanced" + weights.
+function pilotAttrs(pilot) {
+  if (typeof pilot === "string" && BOT_PRESETS.includes(pilot)) return { preset: pilot };
+  return { preset: "balanced", weights: pilot && typeof pilot === "object" ? pilot : PRESETS.balanced };
+}
+
+// Build and start a simulated room. squads: { a: [unit], b: [unit] } where unit
+// = { chassis, longRangeUpgrade?, meleeUpgrade?, equipment?, equipmentUpgrade? };
+// weights: { a: pilot, b: pilot }; table: { width, height } (default rulebook).
+export function createSimRoom({ code = "SIM", squads, weights, table, random = Math.random }) {
+  const room = createRoom(code);
+  const opts = { random };
+  const cmd = (verb, attrs, side = "a") => {
+    const v = room.version;
+    applyCommand(room, { verb, attrs }, { side }, opts);
+    return room.version !== v;
+  };
+  claimSide(room, { name: "Cyan", side: "a" });
+  claimSide(room, { name: "Red", side: "b" });
+  for (const s of ["a", "b"]) cmd("setbot", { side: s, ...pilotAttrs(weights?.[s]) }, s);
+  if (table && (table.width !== room.field.width || table.height !== room.field.height)) {
+    cmd("field", { action: "set", width: table.width, height: table.height });
+  }
   for (const owner of ["a", "b"]) {
     for (const u of squads[owner]) {
       const ch = chassisById(u.chassis);
       if (!ch) throw new Error(`unknown chassis ${u.chassis}`);
-      applyCommand(room, { verb: "add", attrs: {
-        name: `${ch.name}`, kind: "rig", owner, chassis: ch.id, class: ch.class,
+      const ok = cmd("add", {
+        name: ch.name, kind: "rig", owner, chassis: ch.id, class: ch.class,
         longRange: ch.longRange, melee: ch.melee, sp: ch.sp,
         longRangeUpgrade: u.longRangeUpgrade, meleeUpgrade: u.meleeUpgrade,
         equipment: u.equipment ?? null, equipmentUpgrade: u.equipmentUpgrade ?? null,
-      } });
+      }, owner);
+      if (!ok) throw new Error(`could not commission ${ch.id}: ${lastRejectionReason()}`);
     }
   }
-  applyCommand(room, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
-  room.game.sides[0].bot = "balanced";
-  room.game.sides[1].bot = "balanced";
-  // A side's pilot is either an explicit weight vector (GA genomes) or a tier /
-  // preset name ("easy" | "normal" | "hard" | …), which also brings its noise.
-  for (const [i, k] of [[0, "a"], [1, "b"]]) {
-    const w = weights?.[k];
-    const side = room.game.sides[i];
-    if (typeof w === "string") { side.bot = w; side.botWeights = PRESETS[w] ?? PRESETS.balanced; side.tier = TIERS[w] ?? null; }
-    else side.botWeights = w ?? PRESETS.balanced;
-  }
-  const opts = { random };
-  applyCommand(room, { verb: "ready", attrs: {} }, { side: "a" }, opts);
-  applyCommand(room, { verb: "ready", attrs: {} }, { side: "b" }, opts);
+  cmd("field", { action: "lock" });
+  if (!cmd("ready", {}) || !room.game.started) throw new Error(`simulated room did not start: ${lastRejectionReason()}`);
+  room.simulated = true;
   return room;
 }
 
@@ -74,82 +82,69 @@ export function frameOf(room, cmd, fromResolutionId) {
   };
 }
 
-// Play to the end. Returns { winner: "a"|"b"|null, vp, rounds, stats, frames? }.
-export function playMatch({ squads, weights, seed = 1, record = false, maxCommands = 1500 }) {
+// Play a simulated room to the end. Returns { winner, vp, rounds, stats,
+// survivors } plus, with `record`, { frames, field, objectives, pilots } — and
+// `room` (the finished room) when `keepRoom` is set.
+export function playMatch({ squads, weights, seed = 1, record = false, table, code, keepRoom = false }) {
   const random = mulberry32(seed);
-  const opts = { random };
-  const room = buildMatchRoom(squads, weights, random);
+  const room = createSimRoom({ code, squads, weights, table, random });
   const frames = [];
-  let pendingThought = null;
-  let nextRes = room.game.nextResolutionId || 0;
-  const step = (cmd, context = {}) => {
-    applyCommand(room, cmd, context, opts);
-    if (record) {
-      const f = frameOf(room, cmd, nextRes);
-      if (pendingThought) { f.thought = pendingThought; pendingThought = null; }
-      frames.push(f);
-      nextRes = room.game.nextResolutionId;
-    }
-  };
-  if (record) frames.push(frameOf(room, null, 0));
   const stats = { a: { dmgDealt: 0, kills: 0 }, b: { dmgDealt: 0, kills: 0 } };
   const spOf = (r) => LOCS.reduce((n, l) => n + (r[l]?.sp || 0), 0);
+  let snapshot = new Map(room.rigs.map((r) => [r.id, [spOf(r), !!r.destroyed]]));
+  let nextRes = room.game.nextResolutionId || 0;
+  let pendingThought = null;
+  if (record) frames.push(frameOf(room, null, 0));
 
-  let guard = 0;
-  while (guard++ < maxCommands && room.game.phase !== "finished" && !room.game.outcome) {
-    const g = room.game;
-    if (g.pendingAnswer) {
-      const side = g.pendingAnswer.side;
-      const rig = room.rigs.find((r) => (r.owner || "a") === side && !r.destroyed && r.preparation == null);
-      if (!rig) break;
-      step({ verb: "answer", attrs: { name: rig.name, prep: "brace", side } });
-      continue;
+  const onStep = (r, cmd) => {
+    // Damage/kill tallies credited to whoever issued the command; a rig hurting
+    // itself (overheat) credits nobody.
+    const named = cmd?.attrs?.name && r.rigs.find((x) => x.name === cmd.attrs.name);
+    const actor = named ? (named.owner || "a") : r.game.turn?.side;
+    for (const rig of r.rigs) {
+      const [sp0, dead0] = snapshot.get(rig.id) || [spOf(rig), false];
+      if (!actor || (rig.owner || "a") === actor) continue;
+      stats[actor].dmgDealt += Math.max(0, sp0 - spOf(rig));
+      if (!dead0 && rig.destroyed) stats[actor].kills++;
     }
-    if (g.pendingBlast) { step({ verb: "blast", attrs: { targets: [] } }); continue; }
-    if (g.pendingReaction) break;
-    if (g.phase === "initiative") { step({ verb: "initiative", attrs: {} }); continue; }
-    if (g.phase !== "activation" || !g.turn) break;
-    const t = g.turn;
-    const rig = t.activeRigId != null
-      ? room.rigs.find((r) => r.id === t.activeRigId)
-      : room.rigs.find((r) => (r.owner || "a") === t.side && !r.destroyed && !r.activated);
-    if (!rig) break;
-    if (t.activeRigId !== rig.id) { step({ verb: "activate", attrs: { name: rig.name } }); continue; }
-    const side = g.sides.find((s) => s.id === (rig.owner || "a"));
-    const before = new Map(room.rigs.map((r) => [r.id, [spOf(r), r.destroyed]]));
-    const explain = record ? {} : null;
-    const cmd = chooseAction(room, rig, side.botWeights, { ...(side.tier || {}), random, explain });
+    snapshot = new Map(r.rigs.map((x) => [x.id, [spOf(x), !!x.destroyed]]));
+    if (record) {
+      const f = frameOf(r, cmd, nextRes);
+      if (pendingThought) { f.thought = pendingThought; pendingThought = null; }
+      frames.push(f);
+      nextRes = r.game.nextResolutionId;
+    }
+  };
+  const onThought = record ? (rig, explain) => { pendingThought = { rig: rig.name, side: rig.owner, ...explain }; } : undefined;
+
+  // driveBots stops at anything a human would owe; with bots on both sides that
+  // is only the end of the game (or a stall, which the guard catches).
+  for (let pass = 0; pass < 50 && room.game.phase !== "finished" && !room.game.outcome; pass++) {
     const v = room.version;
-    // The reasoning rides on the next frame recorded (the action, or the
-    // end-activation when the bot passes).
-    if (record) pendingThought = { rig: rig.name, side: rig.owner, ...explain };
-    if (cmd) step(cmd);
-    if (!cmd || room.version === v) {
-      if (room.game.turn?.activeRigId === rig.id) step({ verb: "endactivation", attrs: { name: rig.name } });
-      if (room.version === v) break; // nothing moved — bail rather than spin
-      continue;
-    }
-    for (const r of room.rigs) {
-      const [sp0, dead0] = before.get(r.id) || [0, false];
-      if ((r.owner || "a") === (rig.owner || "a")) continue;
-      stats[rig.owner || "a"].dmgDealt += Math.max(0, sp0 - spOf(r));
-      if (!dead0 && r.destroyed) stats[rig.owner || "a"].kills++;
-    }
+    driveBots(room, { random, onStep, onThought });
+    if (room.version === v) break;
   }
+
   const vp = room.game.sides.map((s) => s.vp || 0);
   const alive = (o) => room.rigs.some((r) => (r.owner || "a") === o && !r.destroyed);
   let winner = room.game.outcome?.winner ?? null;
-  if (winner == null) {
+  if (winner == null && !room.game.outcome) {
     if (!alive("a") && alive("b")) winner = "b";
     else if (!alive("b") && alive("a")) winner = "a";
     else if (vp[0] !== vp[1]) winner = vp[0] > vp[1] ? "a" : "b";
   }
-  return {
+  const out = {
     winner, vp, rounds: Math.min(room.game.round, MAX_ROUNDS), stats,
+    reason: room.game.outcome?.reason ?? null,
+    finished: !!room.game.outcome,
     survivors: { a: room.rigs.filter((r) => r.owner === "a" && !r.destroyed).map((r) => r.chassis), b: room.rigs.filter((r) => r.owner === "b" && !r.destroyed).map((r) => r.chassis) },
-    frames: record ? frames : undefined,
-    field: record ? { width: room.field.width, height: room.field.height, diagonal: room.field.diagonal, terrain: room.field.terrain } : undefined,
-    objectives: record ? room.game.objectives : undefined,
-    pilots: record ? { a: room.game.sides[0].botWeights, b: room.game.sides[1].botWeights, tiers: { a: room.game.sides[0].bot, b: room.game.sides[1].bot } } : undefined,
   };
+  if (record) {
+    out.frames = frames;
+    out.field = { width: room.field.width, height: room.field.height, diagonal: room.field.diagonal, terrain: room.field.terrain };
+    out.objectives = room.game.objectives;
+    out.pilots = { a: room.game.sides[0].botWeights ?? PRESETS[room.game.sides[0].bot], b: room.game.sides[1].botWeights ?? PRESETS[room.game.sides[1].bot], tiers: { a: room.game.sides[0].bot, b: room.game.sides[1].bot } };
+  }
+  if (keepRoom) out.room = room;
+  return out;
 }

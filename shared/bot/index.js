@@ -140,7 +140,10 @@ export function runBotActivation(room, rig, options = {}) {
     // the enemy side ends the game and nulls the turn, a destroyed engine parks a
     // pendingBlast. Stop the moment this rig is no longer the one acting.
     if (!active()) break;
-    const cmd = chooseAction(room, rig, weights, noise);
+    // options.onThought: a recorder (simulated rooms) wants the reasoning.
+    const explain = options.onThought ? {} : null;
+    const cmd = chooseAction(room, rig, weights, explain ? { ...(noise || {}), random: options.random, explain } : noise);
+    if (explain) options.onThought(rig, explain);
     if (!cmd) break;
     applyCommand(room, cmd, {}, options);
     log.push(cmd);

@@ -114,7 +114,9 @@ npm run dev:tactics      # server :8000 + 3D client on http://localhost:5174/3d/
 npm run build:3d         # builds client3d/dist, served by the server at /3d
 ```
 
-**Balance Lab / genetic meta.** A genome is a squad (distinct chassis + upgrade + equipment picks, one Prototype max) plus the bot pilot's weight vector. Genomes play each other headlessly on a worker pool (`/api/sim`), and the lab shows fitness per generation, per-chassis / per-upgrade win rates (the balance report), a replay of each generation's feature match — with each side's pilot weights and a per-decision "thinking" breakdown — tier calibration, and "Adopt as Hard bot". From the CLI:
+**Simulated play.** Every bot-vs-bot game — GA matches included — is a real room played through the live engine path (`setbot` both sides → `add` → `ready` → the server's `driveBots`), recorded frame by frame (with each bot's per-decision reasoning) and saved to the replay library in `data/replays/`. The **Sim Center** queues batches (Easy / Normal / Hard / random builds, table size, count) and lists every saved game with filters; any one opens in the 3D replay theatre. Finished simulated rooms are also kept in the room store (`/api/game/SIM-…`). API: `POST /api/sim/rooms`, `GET /api/sim/replays`, `GET /api/sim/replays/:id`.
+
+**Balance Lab / genetic meta.** A genome is a squad (distinct chassis + upgrade + equipment picks, one Prototype max) plus the bot pilot's weight vector. Genomes play each other as simulated games on a worker pool (`/api/sim/evolve`) — every match saved as a replay, tagged with its run and generation, and the lab shows fitness per generation, per-chassis / per-upgrade win rates (the balance report), a replay of each generation's feature match — with each side's pilot weights and a per-decision "thinking" breakdown — tier calibration, and "Adopt as Hard bot". From the CLI:
 
 ```
 npm run evolve -- --pop 16 --gens 12 --games 3     # rewrites shared/bot/meta.js (the Hard playbook)

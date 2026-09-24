@@ -12,6 +12,7 @@ import { createGameRouter } from "./routes/game.js";
 import { createWsHub } from "./ws.js";
 import { createSimRouter } from "./routes/sim.js";
 import { createPool } from "./sim/pool.js";
+import { createReplayStore } from "./replays.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, "..");
@@ -40,7 +41,7 @@ app.get("/api/chassis", (req, res) => res.json({ chassis: chassisStore.all() }))
 app.use("/api", createChatRouter(store));
 app.use("/api/game", createGameRouter(store, hub));
 // Balance lab: genetic meta-search + recorded bot-vs-bot replays (worker pool).
-app.use("/api/sim", createSimRouter({ pool: createPool(), rootDir }));
+app.use("/api/sim", createSimRouter({ pool: createPool(), rootDir, store, replays: createReplayStore(path.join(rootDir, "data", "replays")) }));
 
 // The 3D tactical client (client3d/, built to client3d/dist) is served at /3d.
 app.use("/3d", express.static(path.join(rootDir, "client3d", "dist")));
