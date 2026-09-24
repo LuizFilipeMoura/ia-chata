@@ -11,7 +11,7 @@ import { Hud } from "./ui/hud.js";
 import { titleScreen, squadBuilder, createBotRoom, createVersusRoom, addSquad, opponentOf, readyUntilStarted, TABLES } from "./ui/menu.js";
 import { labScreen } from "./ui/lab.js";
 import { simCenter } from "./ui/simcenter.js";
-import { Coach, TUTORIAL_SQUAD } from "./ui/tutorial.js";
+import { Coach, LESSONS } from "./ui/tutorial.js";
 import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
 import { sfx, isMuted, setMuted } from "./audio.js";
@@ -109,14 +109,14 @@ function builder() {
   });
 }
 
-async function play(room, { tutorial = false, cfg = null, side = "a", hotseat = false } = {}) {
+async function play(room, { tutorial = false, lesson = null, cfg = null, side = "a", hotseat = false } = {}) {
   teardown();
   screen.style.display = "none";
   // Remember the battle so the title screen can offer "Continue".
-  try { localStorage.setItem("oi3d-last", JSON.stringify({ room, cfg, tutorial, side, hotseat, at: Date.now() })); } catch {}
+  if (!lesson) try { localStorage.setItem("oi3d-last", JSON.stringify({ room, cfg, tutorial, side, hotseat, at: Date.now() })); } catch {}
   const hud = new Hud(hudRoot);
   const rematch = cfg ? async () => { fill(screen, el("div", { class: "loading" }, "Rematch: deploying…")); screen.style.display = ""; try { play(await createBotRoom(cfg), { cfg }); } catch (e) { toast(e.message, "bad"); home(); } } : null;
-  const match = new LiveMatch(world, hud, { room, side, hotseat, onExit: home, onRematch: rematch });
+  const match = new LiveMatch(world, hud, { room, side, hotseat, tutorial: !!lesson, onExit: home, onRematch: rematch });
   active = match;
   hudRoot.append(el("div", { class: "hud-menu" },
     el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server. "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
@@ -125,7 +125,10 @@ async function play(room, { tutorial = false, cfg = null, side = "a", hotseat = 
     el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"),
     muteButton()));
   try { await match.start(); } catch (e) { toast(e.message, "bad"); return home(); }
-  if (tutorial) match.coach = new Coach(hudRoot, match);
+  if (lesson) {
+    const next = LESSONS[LESSONS.indexOf(lesson) + 1];
+    match.coach = new Coach(hudRoot, match, lesson, { onMenu: tutorial, onNext: next ? () => startLesson(next) : null });
+  }
 }
 
 // Resume the last battle if the server still has it and it isn't over.
@@ -163,10 +166,31 @@ function settingsPanel() {
   });
 }
 
-async function tutorial() {
-  fill(screen, el("div", { class: "loading" }, "Setting up the training ground…"));
-  try { const room = await createBotRoom({ squad: TUTORIAL_SQUAD, tier: "easy" }); play(room, { tutorial: true }); }
-  catch (e) { toast(e.message, "bad", 5000); home(); }
+// Training Grounds: pick a lesson; each is its own scripted scenario room.
+function tutorial() {
+  teardown();
+  screen.style.display = "";
+  let done = [];
+  try { done = JSON.parse(localStorage.getItem("oi3d-lessons") || "[]"); } catch {}
+  fill(screen, el("div", { class: "training" },
+    el("h1", {}, "Training Grounds"),
+    el("p", { class: "muted" }, "One mechanic per lesson, in a set-up situation against a practice dummy. A few minutes each; take them in order or jump to what you need."),
+    el("div", { class: "lessons" }, LESSONS.map((l, i) => el("button", { class: `lesson ${done.includes(l.id) ? "done" : ""}`, onClick: () => startLesson(l) },
+      el("span", { class: "l-n" }, String(i + 1)), el("span", { class: "l-ic" }, l.icon),
+      el("div", {}, el("b", {}, l.title), el("div", { class: "muted" }, l.blurb)),
+      done.includes(l.id) ? el("span", { class: "l-ok", title: "Completed" }, "✓") : null))),
+    el("button", { class: "btn ghost", onClick: home }, "‹ Back")));
+}
+
+async function startLesson(lesson) {
+  fill(screen, el("div", { class: "loading" }, `Setting up: ${lesson.title}…`));
+  screen.style.display = "";
+  try {
+    const room = `TRAIN-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+    await api.join(room, "a");
+    await api.command(room, "a", "scenario", { id: lesson.id });
+    play(room, { lesson });
+  } catch (e) { toast(e.message, "bad", 5000); tutorial(); }
 }
 
 function lab() {

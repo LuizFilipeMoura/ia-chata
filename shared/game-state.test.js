@@ -6676,7 +6676,7 @@ test("clearing a bot to Human leaves the room digital", () => {
 });
 
 test("BOT_PRESETS lists the difficulty tiers and the tunable personalities", () => {
-  assert.deepEqual([...BOT_PRESETS].sort(), ["aggressive", "balanced", "cagey", "easy", "hard", "normal"]);
+  assert.deepEqual([...BOT_PRESETS].sort(), ["aggressive", "balanced", "cagey", "dummy", "easy", "hard", "normal"]);
 });
 
 // ---------------------------------------------------------------------------

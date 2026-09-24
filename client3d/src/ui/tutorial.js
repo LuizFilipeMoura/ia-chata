@@ -1,49 +1,110 @@
-// Guided tutorial: a coach panel walks the player through a real match vs the
-// Easy bot. Each step explains one idea, optionally highlights a HUD element,
-// and advances when the player actually does the thing (predicate over the live
-// match's events/state), or on "Next" for pure-explanation steps.
+// Training Grounds: one short lesson per mechanic, each in its own hand-built
+// scenario room (shared/scenarios.js) against a practice dummy. A coach panel
+// walks through the lesson one idea at a time, locks the game to what the step
+// asks, spotlights the relevant HUD piece, and advances when you actually do it.
 import { el, clear, fill } from "./dom.js";
 import { heatTable } from "./hud.js";
-import { HEAT_CAPACITY } from "/shared/rules.js";
 
-export const TUTORIAL_SQUAD = [
-  { chassis: "medium-lance-mortar", equipment: "radiator-array" },
-  { chassis: "light-claw-autocannon", equipment: "ablative-plating" },
-  { chassis: "light-saw-minigun", equipment: "targeting-computer" },
+const res = (m) => m.state?.game?.resolutions || [];
+const myAttack = (m, test = () => true) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Copper" && test(r));
+const arcOf = (r) => /(side|rear) arc/.exec(JSON.stringify(r.breakdown || {}))?.[1] || "front";
+const vpA = (m) => m.state?.game?.sides?.find((s) => s.id === "a")?.vp || 0;
+const picked = (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; };
+
+const PICK = { title: "Select Copper", allow: { select: true }, text: "Click your rig on the table, or its card on the left. Selecting a rig shows its actions along the bottom.", highlight: ".hud-roster:not(.enemy)", done: picked };
+const DONE = (text) => ({ title: "Lesson complete ✓", allow: null, text, next: true, last: true });
+
+export const LESSONS = [
+  { id: "move", icon: "🦿", title: "Move and Sprint", blurb: "Walk, run, and what each costs.",
+    steps: [
+      { title: "The table", text: "This is a quiet corner of the proving ground: just you (Copper) and a practice dummy far away. Pan with WASD or drag, rotate with Q/E, zoom with the wheel.", next: true },
+      PICK,
+      { title: "Actions and heat", text: "Each activation a rig gets 3 actions. Every button shows its cost: the 🔥 number is heat added to the boiler.", highlight: ".hud-actions", next: true },
+      { title: "Move", allow: { select: true, acts: ["move"] }, text: "Press Move. The green ring is how far you can walk. Click inside it, toward the glowing beacon.", highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
+      { title: "Sprint", allow: { select: true, acts: ["sprint"] }, text: "Sprint goes further but costs 2 heat instead of 1. Press Sprint and dash on toward the beacon.", highlight: '[data-act="sprint"]', done: (m, ev) => ev.sprinted },
+      DONE("Moving spends actions and stokes heat. Sprint when distance matters; walk when heat does."),
+    ] },
+  { id: "beacon", icon: "📡", title: "Claim a beacon", blurb: "How you actually score points.",
+    steps: [
+      { title: "Beacons win games", text: "The glowing beacon ahead is worth 2 victory points each round to whoever holds it alone. Most points after 10 rounds wins.", next: true },
+      PICK,
+      { title: "Stand on it", allow: { select: true, acts: ["move"] }, text: "Move so your rig is on the beacon's ring.", highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
+      { title: "End the activation", allow: { end: true }, text: "Press End activation. At the end of the round every beacon you hold alone pays out.", highlight: '[data-act="end"]', done: (m) => vpA(m) > 0, waitText: "Waiting for the round to end…" },
+      { title: "Points!", text: "Your salvage counter went up (top right). An enemy on the same beacon cancels you out: nobody scores it until one of you leaves or is wrecked.", highlight: ".hud-top", next: true },
+      DONE("Hold beacons, contest theirs. Kills matter because they stop the enemy scoring."),
+    ] },
+  { id: "fire", icon: "🎯", title: "Open fire", blurb: "Shooting, dice and damage.",
+    steps: [
+      { title: "A sitting duck", text: "The dummy is 12 inches ahead, right at your Autocannon's sweet spot, and facing away from you.", next: true },
+      PICK,
+      { title: "Fire", allow: { select: true, acts: ["fire"] }, text: "Press Fire, then click the dummy.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      { title: "Read the result", text: "Hover the newest line in the Combat log: every die, the to-hit target and why, the hit location and the damage are all there.", highlight: ".clog", next: true },
+      { title: "Aimed Shot", allow: { select: true, acts: ["aimed"] }, text: "Aimed Shot fires fewer dice but lets you pick the hit location. Aim for the Engine: at 0 the rig skips its next turn.", highlight: '[data-act="aimed"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2, skippable: true },
+      DONE("Distance matters: each gun has a sweet spot. The Combat log always explains the roll."),
+    ] },
+  { id: "arcs", icon: "↪", title: "Flanking", blurb: "Hit the side and rear for more damage.",
+    steps: [
+      { title: "Armour faces forward", text: "The dummy is looking straight at you. A rig's front is its toughest side: side hits get +2 Penetration, rear hits +3.", next: true },
+      PICK,
+      { title: "Walk around it", allow: { select: true, acts: ["move", "sprint"] }, text: "Move (or Sprint) past the dummy so you end up beside or behind it. Hover an enemy to see its front arc drawn on the table.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
+      { title: "Hit it where it's soft", allow: { select: true, acts: ["fire", "move"] }, text: "Now Fire. If the log shows a side or rear arc bonus, you nailed it.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => arcOf(r) !== "front") },
+      DONE("Manoeuvre first, shoot second. Facing is armour: keep your own front toward the enemy."),
+    ] },
+  { id: "melee", icon: "🗡", title: "Melee", blurb: "Brawling and getting locked in.",
+    steps: [
+      { title: "Too close to shoot straight", text: "The dummy is right in your face: inside your Claw's reach (the orange ring).", next: true },
+      PICK,
+      { title: "Strike", allow: { select: true, acts: ["fire"] }, text: "Press Fire and click the dummy. In reach, Fire swings your melee weapon instead of the gun.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => r.breakdown?.weapon === "Claw") },
+      { title: "Engaged", text: "Rigs in melee are locked together: to walk away you must spend an action to Disengage. Brawlers love that; snipers hate it.", next: true },
+      DONE("Melee skips range bands and line of sight. Charge the shooters, keep your own gunners clear."),
+    ] },
+  { id: "heat", icon: "🔥", title: "Heat and Shut Down", blurb: "Push too hard and the boiler bites.",
+    steps: [
+      { title: "Already running hot", text: "Copper starts at 5 heat; a light rig's capacity is 6. The brass dial on its card shows it.", highlight: ".hud-roster:not(.enemy)", next: true },
+      PICK,
+      { title: "Push it", allow: { select: true, acts: ["fire"] }, text: "Fire at the dummy. That's 1 more heat: right at the limit.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      { title: "Over the edge", allow: { select: true, acts: ["fire"] }, text: "Fire again. Now you're past capacity. Watch the End button: it warns you of the odds.", highlight: '[data-act="fire"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2 },
+      { title: "The overheat roll", text: "End a turn past capacity and you roll: the further over, the worse. Results run from nothing, to damage, to a wrecked engine.", extra: () => heatTable(), next: true },
+      { title: "Shut Down", allow: { acts: ["shutdown"] }, text: "Shut Down ends the activation and vents heat instead of risking the roll. Press it.", highlight: '[data-act="shutdown"]', done: (m, ev) => ev.ended },
+      DONE("Every action heats you. A third action is powerful but risky; Shut Down when you've overdone it."),
+    ] },
+  { id: "equipment", icon: "⚙", title: "Equipment", blurb: "Each rig's special gadget.",
+    steps: [
+      { title: "A new rig", text: "This time you pilot a medium sniper fitted with a Targeting Computer. Equipment gives an always-on bonus plus one special action.", next: true },
+      PICK,
+      { title: "Inspect it", allow: { select: true }, text: "Click Copper on the table to open its full sheet: weapons, upgrades, and equipment with both effects.", highlight: ".hud-roster:not(.enemy)", next: true },
+      { title: "Lock Sight", allow: { select: true, acts: ["locksight"] }, text: "Press Lock Sight (the equipment action) to steady your aim for the next shot.", highlight: '[data-act="locksight"]', done: (m, ev) => ev.equip },
+      { title: "Now shoot", allow: { select: true, acts: ["fire"] }, text: "Fire at the dummy and check the log: the lock shows up as an accuracy bonus.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      DONE("Every chassis carries a different gadget: armour, vents, jump jets, repairs, smoke. Learn yours."),
+    ] },
+  { id: "reactions", icon: "🛡", title: "Reactions", blurb: "The Answer token and preparing for hits.",
+    steps: [
+      { title: "They move first", text: "A raider is about to open fire on you. Whoever acts second each round gets a free Answer token: a face-down reaction placed before the enemy moves.", next: true },
+      { title: "Place your Answer", allow: {}, text: "Pick Copper and a reaction in the popup. Brace is the safe choice: it softens the next hit.", done: (m) => !m.state?.game?.pendingAnswer },
+      { title: "Incoming!", text: "Watch the raider's turn. When it attacks, your reaction triggers.", done: (m) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Raider"), waitText: "The raider is lining up…", next: false },
+      { title: "Prepare", text: "On your own turn, Prepare (1 heat) places another reaction: Brace, Evasive, Return Fire and more. Hover each card to see when it triggers.", next: true },
+      DONE("Reactions are hidden until they trigger: keep your opponent guessing."),
+    ] },
 ];
 
-// Short steps, one idea each, two sentences max. Most advance when you
-// actually do the thing.
-export function tutorialSteps() {
-  return [
-    { title: "Welcome, Ironclad", text: "You command the verdigris squadron; the Warlord bot runs the rust-red one. Pan with WASD, rotate with Q/E, zoom with the wheel.", next: true },
-    { title: "How to win", text: "Park a rig by a glowing salvage beacon to claim it. Each held beacon pays victory points every round. Most points after 10 rounds wins, or wreck the whole enemy squad.", highlight: ".hud-top", next: true },
-    { title: "Wait for your turn", text: "Sides take turns activating one mech at a time.", highlight: ".hud-top .turn", done: (m) => m.myTurn, waitText: "The enemy is going first…" },
-    { title: "Pick a mech", allow: { select: true }, text: "Click one of your rigs, or its card on the left.", highlight: ".hud-roster:not(.enemy)", done: (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; } },
-    { title: "Walk toward a beacon", allow: { select: true, acts: ["move", "sprint"] }, text: "Press Move, then click inside the green ring. Each rig gets 3 actions per activation.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
-    { title: "Watch your heat 🔥", text: "Every action stokes the boiler (the 🔥 on each button). Watch the brass dial: end a turn in the red and the engine may wreck itself. The warning tells you the exact odds.", highlight: ".rig-card.active .rc-heat, .rig-card.sel .rc-heat", next: true },
-    { title: "Shoot what's in front", allow: { select: true, acts: ["fire", "aimed"] }, text: "You can only attack enemies inside your front arc. Hitting their side or back hurts more. Press Fire if anyone's in range.", highlight: '[data-act="fire"]', done: (m, ev) => ev.attacked, skippable: true },
-    { title: "Stuck? Ask the Advisor", allow: { select: true, advisor: true, acts: ["move", "sprint", "fire", "aimed", "prepare", "shutdown"] }, text: "💡 Advisor shows the smartest move for this mech. Try it!", highlight: '[data-act="advisor"]', done: (m, ev) => ev.advised, skippable: true },
-    { title: "End your turn", allow: { end: true, acts: ["shutdown"] }, text: "Press End activation (or Enter). Running hot? Shut Down instead: it cools you off.", highlight: '[data-act="end"], [data-act="shutdown"]', done: (m, ev) => ev.ended },
-    { title: "You've got it!", allow: null, text: "Keep going: hold beacons, gang up on the ★ enemy for bonus points, and don't cook yourself. 📖 has the rules if you need them.", next: true, last: true },
-  ];
-}
-
 export class Coach {
-  constructor(root, match) {
-    this.root = root; this.match = match; this.i = 0; this.steps = tutorialSteps(); this.ev = {};
+  constructor(root, match, lesson, { onNext, onMenu } = {}) {
+    this.root = root; this.match = match; this.i = 0; this.lesson = lesson; this.steps = lesson.steps; this.ev = {}; this.onNext = onNext; this.onMenu = onMenu;
     this.panel = el("div", { class: "coach" });
     // Spotlight: a grey veil over everything except the coach and the
     // highlighted elements (cut out as holes). Clicks pass through; the gate
     // already blocks anything the step doesn't ask for.
     this.veil = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.veil.setAttribute("class", "coach-veil");
+    this.veil.style.pointerEvents = "none";
     root.append(this.veil, this.panel);
     const tick = () => { this.drawVeil(); this.raf = requestAnimationFrame(tick); };
     tick();
     const on = (type, fn) => match.events.addEventListener(type, (e) => { fn(e.detail); this.check(); });
     on("command", ({ verb, attrs }) => {
       if (verb === "action" && (attrs.action === "move" || attrs.action === "sprint")) this.ev.moved = true;
+      if (verb === "action" && attrs.action === "sprint") this.ev.sprinted = true;
+      if (verb === "action" && ["harden", "purge", "jumpjets", "overclock", "emergencypatch", "heatpurgewave", "locksight", "popsmoke"].includes(attrs.action)) this.ev.equip = true;
       if (verb === "action" && (attrs.action === "fire" || attrs.action === "aimed")) this.ev.attacked = true;
       if (verb === "endactivation" || attrs?.action === "shutdown") this.ev.ended = true;
     });
@@ -89,7 +150,7 @@ export class Coach {
     if (key === this.veilKey) return;
     this.veilKey = key;
     this.veil.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    this.veil.innerHTML = `<path fill-rule="evenodd" d="${path}" fill="rgba(12,10,8,${onBoard ? 0.35 : 0.62})"/>`;
+    this.veil.innerHTML = `<path pointer-events="none" fill-rule="evenodd" d="${path}" fill="rgba(12,10,8,${onBoard ? 0.35 : 0.62})"/>`;
   }
 
   unhighlight() { document.querySelectorAll(".coach-hl").forEach((n) => n.classList.remove("coach-hl")); }
@@ -100,18 +161,22 @@ export class Coach {
     // only explain allow nothing but the camera.
     this.match.gate = "allow" in s ? s.allow : {};
     this.match.renderActions?.();
+    if (s.last) try { const d = JSON.parse(localStorage.getItem("oi3d-lessons") || "[]"); if (!d.includes(this.lesson.id)) localStorage.setItem("oi3d-lessons", JSON.stringify([...d, this.lesson.id])); } catch {}
     this.unhighlight();
     if (s.highlight) document.querySelectorAll(s.highlight).forEach((n) => n.classList.add("coach-hl"));
     const waiting = s.done && !s.next && s.waitText && !s.done(this.match, this.ev);
     fill(this.panel, 
-      el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, s.title), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
+      el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, `${this.lesson.icon} ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
       el("p", {}, s.text),
       s.extra ? s.extra() : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,
       already ? el("p", { class: "done-tick" }, "✓ Already done. Nice!") : null,
       el("div", { class: "coach-a" },
         this.i > 0 ? el("button", { class: "btn ghost", onClick: () => { this.i--; this.render(); } }, "‹ Back") : null,
-        s.next || s.skippable ? el("button", { class: "btn primary", onClick: () => s.last ? this.destroy() : this.advance() }, s.last ? "Let's go" : s.skippable ? "Skip ›" : "Next ›") : el("span", { class: "muted" }, "Do it to continue…")),
+        s.last ? el("div", { class: "coach-end" },
+          el("button", { class: "btn ghost", onClick: () => this.onMenu?.() }, "All lessons"),
+          this.onNext ? el("button", { class: "btn primary", onClick: () => this.onNext() }, "Next lesson ›") : el("button", { class: "btn primary", onClick: () => this.onMenu?.() }, "Done")) :
+        s.next || s.skippable ? el("button", { class: "btn primary", onClick: () => this.advance() }, s.skippable ? "Skip ›" : "Next ›") : el("span", { class: "muted" }, "Do it to continue…")),
     );
     // Keep the highlight on elements that re-render (the action bar rebuilds).
     clearInterval(this.hlTimer);

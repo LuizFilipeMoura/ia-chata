@@ -128,6 +128,11 @@ export function runBotActivation(room, rig, options = {}) {
     applyCommand(room, { verb: "activate", attrs: { name: rig.name } }, {}, options);
   }
   const log = [];
+  // "dummy": a Training Grounds practice target. Stands still, ends at once.
+  if (preset === "dummy") {
+    if (room.game.turn?.activeRigId === rig.id) applyCommand(room, { verb: "endactivation", attrs: { name: rig.name } }, {}, options);
+    return log;
+  }
   // Active only while this rig genuinely holds the floor. A pendingReaction (a
   // target's Evasive/Return we just tripped) or pendingBlast (a §9 cook-off we
   // just caused) parks the activation until it is resolved, stop cleanly so the

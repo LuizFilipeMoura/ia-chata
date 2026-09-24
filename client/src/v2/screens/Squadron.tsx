@@ -120,7 +120,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
             >
               Human
             </button>
-            {BOT_PRESETS.map((preset: string) => (
+            {BOT_PRESETS.filter((p: string) => p !== "dummy").map((preset: string) => (
               <button
                 key={preset}
                 type="button"

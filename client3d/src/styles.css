@@ -115,7 +115,7 @@ select, input { background: #1b1e25; color: var(--text); border: 1px solid var(-
 .attack-opt { text-align: left; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
 .attack-opt:hover { background: rgba(255,255,255,.12); } .attack-opt.best { border-color: var(--gold); } .attack-opt span { color: var(--muted); font-size: 13px; }
 table.mini { font-size: 12px; border-collapse: collapse; margin-top: 6px; } table.mini td { padding: 2px 8px; border-bottom: 1px solid var(--line); }
-.coach { position: absolute; top: 80px; left: 250px; width: 340px; background: linear-gradient(180deg, #1d2530, #151a22); border: 1px solid var(--cyan); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(51,214,255,.15); z-index: 20; }
+.coach { position: absolute; top: 80px; left: 310px; width: 340px; background: linear-gradient(180deg, #1d2530, #151a22); border: 1px solid var(--cyan); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(51,214,255,.15); z-index: 20; }
 .coach-h { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 18px; }
 .coach-h .step { font-size: 12px; background: var(--cyan); color: #06232b; border-radius: 10px; padding: 1px 8px; }
 .coach-h .x { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--muted); font-size: 16px; }
@@ -471,3 +471,13 @@ body { font-size: 15px; }
 .vs-opt h3 { margin: 0; font-size: 18px; } .vs-opt p { margin: 0; flex: 1; }
 
 .coach-veil { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 19; pointer-events: none; }
+.training { max-width: 760px; margin: 60px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 14px; }
+.lessons { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.lesson { display: flex; align-items: center; gap: 12px; text-align: left; padding: 14px 16px; background: linear-gradient(180deg, #221c15, #17130e); border: 1px solid #5a4629; border-radius: 10px; color: var(--ink, #eadfc8); cursor: pointer; font: inherit; }
+.lesson:hover { border-color: var(--brass); box-shadow: 0 0 18px rgba(214,164,74,.25); }
+.lesson b { font-family: var(--display); font-size: 18px; letter-spacing: .03em; }
+.lesson .l-n { font-size: 12px; color: var(--muted); width: 14px; }
+.lesson .l-ic { font-size: 26px; width: 34px; text-align: center; }
+.lesson .l-ok { margin-left: auto; color: #7fcf6a; font-size: 20px; }
+.lesson.done { border-color: #3f6a3a; }
+.coach-end { display: flex; gap: 8px; margin-left: auto; }

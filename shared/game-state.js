@@ -4,6 +4,7 @@ import {
 } from "./rules.js";
 import { resolveAttack } from "./combat.js";
 import { META } from "./bot/meta.js";
+import { SCENARIOS } from "./scenarios.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
   deploymentCorners, deployRadius,
@@ -145,7 +146,7 @@ export const CHASSIS_PRIMARY_EQUIPMENT = {
 // shared/bot/score.js and is duplicated here on purpose: importing the bot
 // module into game-state.js would create a cycle (shared/bot/score.js imports
 // game-state.js). Keep in sync when a preset is added.
-export const BOT_PRESETS = ["easy", "normal", "hard", "balanced", "aggressive", "cagey"];
+export const BOT_PRESETS = ["dummy", "easy", "normal", "hard", "balanced", "aggressive", "cagey"];
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
 // weight classes (3 medium / 3 light). All chassis
@@ -3641,6 +3642,42 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.field.locked = true;
       room.seeded = true;
       startGameSeeded(room, first);
+    }
+    changed = true;
+  } else if (verb === "scenario") {
+    // Training Grounds (shared/scenarios.js): a hand-built digital situation
+    // for one lesson. Fixed rigs, positions, headings, heat and beacons; bare
+    // table; starts at once. Side b is a bot ("dummy" by default: stands still).
+    const sc = SCENARIOS[String(a.id || "")];
+    if (!sc) reject("Unknown scenario.");
+    else {
+      room.mode = "digital";
+      room.rigs = [];
+      room.nextRigId = 1;
+      resetGameShape(room);
+      room.field = { ...room.field, terrain: [], locked: true };
+      for (const e of sc.rigs) {
+        const pb = resolveChassis({ chassis: e.chassis });
+        const unit = makeUnit("rig", room.nextRigId++, e.name, e.owner, {
+          weightClass: pb.class, longRange: pb.longRange, melee: pb.melee, chassis: pb.id, sp: pb.sp,
+          equipment: e.equipment ?? CHASSIS_PRIMARY_EQUIPMENT[pb.id] ?? null,
+        });
+        room.rigs.push(unit);
+      }
+      for (const r of room.rigs) ensureRigShape(r, "digital");
+      sc.rigs.forEach((e, i) => {
+        const r = room.rigs[i];
+        r.pos = { x: e.x, y: e.y };
+        r.facing = e.facing;
+        if (e.heat) r.engine.heat = e.heat;
+      });
+      room.game.objectives = sc.objectives.map((o) => ({ ...o }));
+      room.game.sides.find((s) => s.id === "b").bot = sc.enemyBot || "dummy";
+      room.game.sides.find((s) => s.id === "a").bot = null;
+      room.training = String(a.id);
+      startGameSeeded(room, sc.first || "a");
+      // The Answer token is only taught in its own lesson.
+      if (!sc.first) { room.game.answerTokens = { a: 0, b: 0 }; room.game.pendingAnswer = null; }
     }
     changed = true;
   } else if (verb === "setdice") {
