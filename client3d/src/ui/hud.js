@@ -4,6 +4,7 @@ import { el, clear, fill } from "./dom.js";
 import { LOCS } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { chassisOf } from "../game/director.js";
+import { CombatLog } from "./combatlog.js";
 
 export class Hud {
   constructor(root) {
@@ -13,16 +14,17 @@ export class Hud {
     this.rosterEl = el("div", { class: "hud-roster" });
     this.enemyEl = el("div", { class: "hud-roster enemy" });
     this.actions = el("div", { class: "hud-actions" });
-    this.logEl = el("div", { class: "hud-log" });
+    this.names = new Map();
+    this.clog = new CombatLog(root, { side: "a", nameSide: (n) => this.names.get(n) ?? null });
     this.tipEl = el("div", { class: "hud-tip" });
     this.hoverEl = el("div", { class: "hud-hover" });
     this.bannerEl = el("div", { class: "hud-banner" });
     this.extra = el("div", { class: "hud-extra" });
-    root.append(this.topEl, this.rosterEl, this.enemyEl, this.actions, this.logEl, this.tipEl, this.hoverEl, this.bannerEl, this.extra);
+    root.append(this.topEl, this.rosterEl, this.enemyEl, this.actions, this.tipEl, this.hoverEl, this.bannerEl, this.extra);
     this.logLines = [];
   }
 
-  destroy() { clear(this.root); }
+  destroy() { this.clog.destroy(); clear(this.root); }
 
   // Who still has to act this round, in alternation from the side on the floor.
   turnOrder(state) {
@@ -80,15 +82,14 @@ export class Hud {
   }
 
   roster(state, side, selectedId, onPick) {
+    this.names = new Map(state.rigs.map((r) => [r.name, r.owner || "a"]));
+    this.clog.side = side;
     fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Cyan" : "Your squadron"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
     fill(this.enemyEl, el("div", { class: "rh" }, this.spectator ? "Red" : "Enemy"), state.rigs.filter((r) => r.owner !== side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
   }
 
-  log(l, name) {
-    const line = el("div", { class: `ll k-${l.kind}` }, l.summary || l.kind);
-    this.logEl.prepend(line);
-    while (this.logEl.children.length > 40) this.logEl.lastChild.remove();
-  }
+  log(l, round) { this.clog.add(l, round); }
+
 
   banner(text, kind = "info") {
     const b = el("div", { class: `banner ${kind}` }, text);

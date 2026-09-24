@@ -268,13 +268,15 @@ export class Mech {
     const me = (MELEE[melee] || MELEE["Claw"])(paint);
     this.me = me; me.group.position.set(0.1, -0.15, 0.05); this.armL.add(me.group);
 
-    this.baseScale = heavy ? 0.78 : 0.7;
+    // Sized like a real mini on its base: the whole model, weapons included,
+    // stays roughly inside the base ring so move/reach rings read at true scale.
+    this.baseScale = heavy ? 0.52 : 0.48;
     this.body.scale.setScalar(this.baseScale);
 
     // Selection halo + status label anchor.
     this.halo = new THREE.Mesh(new THREE.RingGeometry(this.radius * 1.15, this.radius * 1.35, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
     this.halo.rotation.x = -Math.PI / 2; this.halo.position.y = 0.05; this.root.add(this.halo);
-    this.labelAnchor = new THREE.Object3D(); this.labelAnchor.position.y = hipH * this.baseScale + 2.2; this.root.add(this.labelAnchor);
+    this.labelAnchor = new THREE.Object3D(); this.labelAnchor.position.y = hipH * this.baseScale + 1.5; this.root.add(this.labelAnchor);
 
     this.t = Math.random() * 10; this.walkPhase = 0; this.walking = 0; this.heatFrac = 0;
     this.recoil = 0; this.strike = 0; this.spinSpeed = 0; this.destroyed = false; this.hurt = 0;

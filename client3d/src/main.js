@@ -1,6 +1,8 @@
 // App shell: one persistent 3D World, screens swapped over it (title, squad
 // builder, live battle, tutorial, replay theatre, balance lab).
 import "./styles.css";
+import { installTooltips } from "./ui/tooltip.js";
+installTooltips();
 import { World } from "./scene/world.js";
 import { Director } from "./game/director.js";
 import { LiveMatch } from "./game/live.js";

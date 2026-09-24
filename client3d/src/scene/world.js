@@ -57,6 +57,23 @@ function windowTexture() {
   return t;
 }
 
+// A blotchy oil stain: dark core, soft ragged edge, thin rainbow sheen.
+function oilTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d");
+  for (let i = 0; i < 9; i++) {
+    const x = 40 + Math.random() * 48, y = 40 + Math.random() * 48, r = 18 + Math.random() * 22;
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, "rgba(12,9,6,0.55)"); grd.addColorStop(0.7, "rgba(12,9,6,0.35)"); grd.addColorStop(1, "rgba(12,9,6,0)");
+    g.fillStyle = grd; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  }
+  const sheen = g.createLinearGradient(20, 20, 108, 108);
+  ["rgba(120,60,160,0.18)", "rgba(40,140,150,0.18)", "rgba(180,150,40,0.18)", "rgba(160,60,60,0.15)"].forEach((col, i) => sheen.addColorStop(i / 3, col));
+  g.globalCompositeOperation = "source-atop"; g.fillStyle = sheen; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // A big inverted sphere painted with a smoggy dusk gradient.
 function skyDome() {
   const c = document.createElement("canvas"); c.width = 16; c.height = 256;
@@ -223,11 +240,13 @@ export class World {
     for (let i = 0; i <= 12; i++) for (const z of [-1, h + 1]) {
       const r = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), brass); r.position.set(-1 + (i / 12) * (w + 2), 0.13, z); this.tableGroup.add(r);
     }
-    // Oil slicks: glossy black stains that catch the searchlights.
-    const oil = new THREE.MeshStandardMaterial({ color: 0x050403, roughness: 0.05, metalness: 0.6, transparent: true, opacity: 0.85 });
-    for (let i = 0; i < 7; i++) {
-      const m = new THREE.Mesh(new THREE.CircleGeometry(0.8 + ((i * 37) % 10) / 7, 20), oil);
-      m.rotation.x = -Math.PI / 2; m.scale.set(1, 0.6 + ((i * 13) % 5) / 10, 1);
+    // Oil slicks: irregular, semi-transparent stains with a rainbow sheen, so
+    // they read as spilled oil, not as holes or mini bases.
+    const oilTex = oilTexture();
+    const oil = new THREE.MeshStandardMaterial({ map: oilTex, transparent: true, roughness: 0.08, metalness: 0.3, depthWrite: false });
+    for (let i = 0; i < 6; i++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(3 + (i % 3), 2 + (i % 2)), oil);
+      m.rotation.x = -Math.PI / 2; m.rotation.z = i * 1.3;
       m.position.set(((i * 53) % 100) / 100 * w, 0.015, ((i * 71) % 100) / 100 * h); this.tableGroup.add(m);
     }
     this.buildSearchlights(w, h);

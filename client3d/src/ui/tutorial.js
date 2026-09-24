@@ -19,13 +19,13 @@ export function tutorialSteps() {
     { title: "Welcome, Ironclad", text: "You command the verdigris squadron; the Warlord bot runs the rust-red one. Pan with WASD, rotate with Q/E, zoom with the wheel.", next: true },
     { title: "How to win", text: "Park a rig by a glowing salvage beacon to claim it. Each held beacon pays victory points every round. Most points after 10 rounds wins, or wreck the whole enemy squad.", highlight: ".hud-top", next: true },
     { title: "Wait for your turn", text: "Sides take turns activating one mech at a time.", highlight: ".hud-top .turn", done: (m) => m.myTurn, waitText: "The enemy is going first…" },
-    { title: "Pick a mech", text: "Click one of your rigs, or its card on the left.", highlight: ".hud-roster:not(.enemy)", done: (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; } },
-    { title: "Walk toward a beacon", text: "Press Move, then click inside the green ring. Each rig gets 3 actions per activation.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
+    { title: "Pick a mech", allow: { select: true }, text: "Click one of your rigs, or its card on the left.", highlight: ".hud-roster:not(.enemy)", done: (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; } },
+    { title: "Walk toward a beacon", allow: { select: true, acts: ["move", "sprint"] }, text: "Press Move, then click inside the green ring. Each rig gets 3 actions per activation.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
     { title: "Watch your heat 🔥", text: "Every action stokes the boiler (the 🔥 on each button). Watch the brass dial: end a turn in the red and the engine may wreck itself. The warning tells you the exact odds.", highlight: ".rig-card.active .rc-heat, .rig-card.sel .rc-heat", next: true },
-    { title: "Shoot what's in front", text: "You can only attack enemies inside your front arc. Hitting their side or back hurts more. Press Fire if anyone's in range.", highlight: '[data-act="fire"]', done: (m, ev) => ev.attacked, skippable: true },
-    { title: "Stuck? Ask the Advisor", text: "💡 Advisor shows the smartest move for this mech. Try it!", highlight: '[data-act="advisor"]', done: (m, ev) => ev.advised, skippable: true },
-    { title: "End your turn", text: "Press End activation (or Enter). Running hot? Shut Down instead: it cools you off.", highlight: '[data-act="end"], [data-act="shutdown"]', done: (m, ev) => ev.ended },
-    { title: "You've got it!", text: "Keep going: hold beacons, gang up on the ★ enemy for bonus points, and don't cook yourself. 📖 has the rules if you need them.", next: true, last: true },
+    { title: "Shoot what's in front", allow: { select: true, acts: ["fire", "aimed"] }, text: "You can only attack enemies inside your front arc. Hitting their side or back hurts more. Press Fire if anyone's in range.", highlight: '[data-act="fire"]', done: (m, ev) => ev.attacked, skippable: true },
+    { title: "Stuck? Ask the Advisor", allow: { select: true, advisor: true, acts: ["move", "sprint", "fire", "aimed", "prepare", "shutdown"] }, text: "💡 Advisor shows the smartest move for this mech. Try it!", highlight: '[data-act="advisor"]', done: (m, ev) => ev.advised, skippable: true },
+    { title: "End your turn", allow: { end: true, acts: ["shutdown"] }, text: "Press End activation (or Enter). Running hot? Shut Down instead: it cools you off.", highlight: '[data-act="end"], [data-act="shutdown"]', done: (m, ev) => ev.ended },
+    { title: "You've got it!", allow: null, text: "Keep going: hold beacons, gang up on the ★ enemy for bonus points, and don't cook yourself. 📖 has the rules if you need them.", next: true, last: true },
   ];
 }
 
@@ -47,7 +47,7 @@ export class Coach {
     this.render();
   }
 
-  destroy() { clearInterval(this.camTimer); clearInterval(this.hlTimer); clearTimeout(this.skipTimer); this.panel.remove(); this.unhighlight(); }
+  destroy() { this.match.gate = null; this.match.renderActions?.(); clearInterval(this.camTimer); clearInterval(this.hlTimer); clearTimeout(this.skipTimer); this.panel.remove(); this.unhighlight(); }
 
   check() {
     const s = this.steps[this.i];
@@ -75,6 +75,10 @@ export class Coach {
 
   render(already = false) {
     const s = this.steps[this.i];
+    // Lock the game to what this step teaches (null = free play). Steps that
+    // only explain allow nothing but the camera.
+    this.match.gate = "allow" in s ? s.allow : {};
+    this.match.renderActions?.();
     this.unhighlight();
     if (s.highlight) document.querySelectorAll(s.highlight).forEach((n) => n.classList.add("coach-hl"));
     const waiting = s.done && !s.next && s.waitText && !s.done(this.match, this.ev);

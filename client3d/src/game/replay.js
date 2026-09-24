@@ -19,7 +19,7 @@ export class Replay {
     this.world = world; this.replay = replay; this.frames = replay.frames || []; this.i = 0; this.playing = true; this.onExit = onExit;
     this.hud = new Hud(hudRoot);
     this.hud.spectator = true;
-    this.director = new Director(world, { onLog: (l) => this.hud.log(l), onBanner: (t, k) => this.hud.banner(t, k) });
+    this.director = new Director(world, { onLog: (l, round) => this.hud.log(l, round), onBanner: (t, k) => this.hud.banner(t, k) });
     const f0 = this.frames[0];
     world.buildField(replay.field || { width: 54, height: 36, terrain: replay.terrain || [] }, replay.objectives || []);
     this.director.snap(f0);

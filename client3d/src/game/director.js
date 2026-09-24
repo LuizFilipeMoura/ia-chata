@@ -142,7 +142,7 @@ export class Director {
     if (this.quiet || this.skipping || !m || !settings.get("barks")) return;
     const line = barkFor(m.name, event);
     if (!line) return;
-    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 4.6, 0)), line, m.owner === "a" ? "#5fd3c0" : "#e0533d");
+    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), line, m.owner === "a" ? "#5fd3c0" : "#e0533d");
     sfx.bark();
   }
 
@@ -157,10 +157,10 @@ export class Director {
 
   async animate(frame) {
     const prev = this.current;
-    if (!prev) { this.snap(frame); frame.log?.forEach((l) => this.onLog(l)); return; }
+    if (!prev) { this.snap(frame); frame.log?.forEach((l) => this.onLog(l, frame.round)); return; }
     if (this.skipping) {
       this.snap(frame);
-      frame.log?.forEach((l) => this.onLog(l));
+      frame.log?.forEach((l) => this.onLog(l, frame.round));
       for (const r of frame.rigs) { const m = this.mechs.get(r.id); if (r.destroyed && m && !m.destroyed) m.destroy(); }
       return;
     }
@@ -179,7 +179,7 @@ export class Director {
 
     // 2. Events.
     for (const l of frame.log || []) {
-      this.onLog(l);
+      this.onLog(l, frame.round);
       await this.event(l, frame, prev);
     }
 
@@ -267,35 +267,56 @@ export class Director {
       const m = /=\s*(\d+)\s*SP(?: to (\w+))?/.exec(l.summary || "");
       const sp = m ? Number(m[1]) : 0;
       const loc = m?.[2];
+      // Which dice actually hit, from the engine's own breakdown. Each visual
+      // shot follows one outcome: hits strike the target, misses sail past it.
+      const hitStep = l.breakdown?.steps?.find((st) => st.kind === "hit");
+      const hitCount = hitStep?.dice ? hitStep.dice.filter((d) => d.ok).length : (sp > 0 ? 1 : 0);
+      const diceCount = hitStep?.dice?.length || 1;
       let heard = false;
       const impact = (p) => {
         if (!heard) { heard = true; this.sound(() => sfx.hit(sp)); }
         if (sp > 0) { fx.sparks(p, 10 + sp * 3); fx.flash(p, 0xffaa44, 20 + sp * 8, 8); fx.shake = Math.max(fx.shake, Math.min(0.6, sp * 0.08)); target.body.position.x = -0.2; setTimeout(() => { target.body.position.x = 0; }, 90); }
-        else fx.burst(p, 4, { color: 0xaaaaaa, size: 0.3, life: 0.3, spread: 2 });
+        else fx.burst(p, 6, { color: 0xbbbbbb, size: 0.3, life: 0.3, spread: 3 }); // struck armour, didn't wound
       };
+      // A miss lands on the table beyond / beside the target: dust, no flash.
+      const missPoint = (from) => {
+        const dir = tpos.clone().sub(from).setY(0).normalize();
+        const side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar((Math.random() < 0.5 ? -1 : 1) * (1.4 + Math.random() * 1.6));
+        return target.root.position.clone().add(dir.multiplyScalar(3 + Math.random() * 5)).add(side).setY(0.05);
+      };
+      const whiff = (p) => fx.burst(p, 8, { color: 0x8a7a60, size: 0.6, life: 0.7, spread: 2, additive: false, opacity: 0.5, up: 0.5 });
       if (melee) {
         actor.fire("melee");
         this.sound(() => (actor.melee === "Flamethrower" ? sfx.shot("flame") : sfx.melee(actor.weightClass === "medium")));
-        if (actor.melee === "Flamethrower") fx.flame(actor.muzzleWorld("melee"), tpos);
+        const aim = hitCount ? tpos : missPoint(actor.root.position.clone().setY(1.8)).setY(1.2);
+        if (actor.melee === "Flamethrower") fx.flame(actor.muzzleWorld("melee"), aim);
         await wait(380 / this.speed);
-        impact(tpos);
+        if (hitCount) impact(tpos);   // a whiffed swing just cuts air
       } else {
         const kind = PROJECTILE[l.weapon] || "bullet";
         const n = BURST[l.weapon] || 1;
-        const hits = [];
+        // Spread the real hit ratio over the visual shots (at least one if any die hit).
+        let hitsLeft = hitCount ? Math.max(1, Math.round((n * hitCount) / diceCount)) : 0;
+        const plan = Array.from({ length: n }, () => false).map((_, i) => i < hitsLeft).sort(() => Math.random() - 0.5);
+        const flights = [];
         for (let i = 0; i < n; i++) {
           actor.fire("longRange");
           this.sound(() => sfx.shot(kind));
           const from = actor.muzzleWorld("longRange");
           fx.muzzle(from, kind === "arc" ? 0x66ccff : 0xffcc55);
-          const jitter = tpos.clone().add(new THREE.Vector3((Math.random() - 0.5) * (sp ? 0.6 : 3), (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * (sp ? 0.6 : 3)));
-          if (kind === "arc") { fx.beam(from, jitter, 0x88ddff, 0.35, true); fx.beam(from, jitter, 0xffffff, 0.2, true); impact(jitter); }
-          else hits.push(new Promise((res) => fx.shoot(from, jitter, kind, (p) => { impact(p); if (kind === "lob" || kind === "missile") { fx.explosion(p, false); this.sound(() => sfx.explosion(false)); } res(); })));
+          const hit = plan[i];
+          const end = hit ? tpos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.6)) : missPoint(from);
+          const land = (p) => {
+            if (hit) impact(p); else whiff(p);
+            if (kind === "lob" || kind === "missile") { fx.explosion(p, false); this.sound(() => sfx.explosion(false)); }
+          };
+          if (kind === "arc") { fx.beam(from, end, 0x88ddff, 0.35, true); fx.beam(from, end, 0xffffff, 0.2, true); land(end); }
+          else flights.push(new Promise((res) => fx.shoot(from, end, kind, (p) => { land(p); res(); })));
           await wait((n > 1 ? 90 : 60) / this.speed);
         }
-        await Promise.all(hits);
+        await Promise.all(flights);
       }
-      fx.text(up(target, 3.4), sp > 0 ? `-${sp} ${loc ? loc.toUpperCase() : "SP"}` : "MISS", sp > 0 ? "#ffcf4a" : "#bbbbbb");
+      fx.text(up(target, 3.4), sp > 0 ? `-${sp} ${loc ? loc.toUpperCase() : "SP"}` : hitCount ? "DEFLECTED" : "MISS", sp > 0 ? "#ffcf4a" : "#bbbbbb");
       const killed = frame.rigs.find((r) => r.id === target.id)?.destroyed && !target.destroyed;
       if (killed) { this.bark(actor, "kill"); setTimeout(() => this.bark(target, "die"), 350); }
       else if (sp >= 3) { this.bark(Math.random() < 0.5 ? actor : target, Math.random() < 0.5 ? "hit" : "hurt"); }

@@ -86,7 +86,7 @@ export function frameOf(room, cmd, fromResolutionId) {
       sp: Object.fromEntries(LOCS.map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
     log: (g.resolutions || []).filter((x) => x.id >= fromResolutionId)
-      .map((x) => ({ id: x.id, kind: x.kind, actor: x.actor, rigId: x.rigId, targetId: x.targetId, weapon: x.weapon, summary: x.summary, effects: x.effects || [] })),
+      .map((x) => ({ id: x.id, kind: x.kind, actor: x.actor, rigId: x.rigId, targetId: x.targetId, weapon: x.weapon, summary: x.summary, effects: x.effects || [], rolls: x.rolls, breakdown: x.breakdown })),
   };
 }
 

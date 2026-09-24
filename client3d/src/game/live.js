@@ -15,8 +15,9 @@ import { findPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween } from "/shared/geometry.js";
 import { spatial, moveBudget, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
-import { el, clear, toast, modal } from "../ui/dom.js";
+import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
+import { reactionCard, rigPortrait } from "../ui/reactions.js";
 import { sfx, ambience } from "../audio.js";
 import { settings } from "../settings.js";
 import { Nameplates } from "../ui/nameplates.js";
@@ -50,7 +51,6 @@ function heatGauge(heat, cap) {
     ${ticks}
     <line x1="40" y1="40" x2="${nx}" y2="${ny}" stroke="#f0cf7a" stroke-width="2.5" stroke-linecap="round"/>
     <circle cx="40" cy="40" r="4" fill="#c9a14a" stroke="#3a2a10"/></svg>`;
-  wrap.append(el("div", { class: "gl" }, `${heat}/${cap}`));
   return wrap;
 }
 
@@ -67,7 +67,7 @@ export class LiveMatch {
     this.tutorial = tutorial;
     this.events = new EventTarget();
     this.director = new Director(world, {
-      onLog: (l) => this.hud.log(l, this.nameOf(l.rigId)),
+      onLog: (l, round) => this.hud.log(l, round),
       onBanner: (t, k) => this.hud.banner(t, k),
     });
     this.unsub = [
@@ -202,6 +202,7 @@ export class LiveMatch {
   }
 
   select(id) {
+    if (!this.allowed("select")) return this.locked();
     this.selected = id;
     const r = this.rig(id);
     if (r?.pos) this.world.focus(r.pos.x, r.pos.y);
@@ -246,10 +247,22 @@ export class LiveMatch {
     if (rig.loaded?.longRange === false) extra.push({ key: "reload", label: "Reload", heat: "d6", enabled: turn.actionsUsed < turn.actionsMax });
     const commandable = this.canCommand(rig);
     const left = turn.actionsMax - turn.actionsUsed;
+    // Every readout is labelled: who this is, what it carries, actions left,
+    // boiler heat against capacity.
+    const hm = heatMeter(rig);
     bar.append(el("div", { class: "act-head" },
-      el("div", { class: "act-name" }, `${rig.name}`, el("span", { class: "sub" }, ` ${chassisOf(rig)?.label || ""}`)),
-      el("div", { class: "pips" }, Array.from({ length: turn.actionsMax }, (_, i) => el("span", { class: `pip ${i < left ? "on" : ""}` }))),
-      heatGauge(rig.engine?.heat ?? 0, heatMeter(rig).cap || cap),
+      el("div", { class: "ah-id" },
+        el("span", { class: `swatch big sw-${rig.name}` }),
+        el("div", {}, el("div", { class: "act-name" }, rig.name),
+          el("div", { class: "ah-weps" }, el("span", { title: "Long-range weapon" }, `🔫 ${rig.weapons?.longRange}`), el("span", { title: "Melee weapon" }, `🗡 ${rig.weapons?.melee}`)))),
+      el("div", { class: "ah-stat", title: "Actions left this activation. Most actions use one." },
+        el("div", { class: "ah-k" }, "Actions left"),
+        el("div", { class: "pips" }, Array.from({ length: turn.actionsMax }, (_, i) => el("span", { class: `pip ${i < left ? "on" : ""}` }))),
+        el("div", { class: "ah-v" }, `${left} of ${turn.actionsMax}`)),
+      el("div", { class: "ah-stat", title: "Boiler heat. Every action adds heat; only 1 cools per round. End a turn past capacity (the red zone) and you roll for engine damage." },
+        el("div", { class: "ah-k" }, "Boiler heat"),
+        heatGauge(rig.engine?.heat ?? 0, hm.cap || cap),
+        el("div", { class: `ah-v ${hm.over ? "bad" : hm.zone === "redline" ? "warn-t" : ""}` }, hm.over ? `${hm.heat} / ${hm.cap} · OVER` : `${hm.heat} / ${hm.cap} safe`)),
     ));
     if (!commandable) {
       bar.append(el("div", { class: "hint" }, rig.owner !== this.side ? "Enemy rig. Hover to inspect." : rig.activated ? "Already activated this round." : this.myTurn ? "" : "Not your turn."));
@@ -261,10 +274,12 @@ export class LiveMatch {
       const projected = (rig.engine?.heat ?? 0) + (Number(heat) || 0);
       const hot = projected > cap;
       const btn = el("button", {
-        class: `act ${hot ? "hot" : ""} ${this.mode?.key === a.key ? "on" : ""}`, disabled: !commandable || !a.enabled,
-        title: `${a.label}: ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}${oddsLine(rig, Number(heat) || 0)}`,
+        // Looks disabled but stays hoverable, so its tooltip explains why.
+        class: `act ${hot ? "hot" : ""} ${this.mode?.key === a.key ? "on" : ""} ${!commandable || !a.enabled || !this.allowed("act", a.key) ? "off" : ""}`,
+        "aria-disabled": !commandable || !a.enabled || !this.allowed("act", a.key) ? "true" : null,
+        title: `${a.label}: ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}${!this.allowed("act", a.key) ? "\n⚠ Tutorial: not part of this step yet" : !commandable ? "\n⚠ Not available: this rig can't act right now" : !a.enabled ? "\n⚠ Not available right now (no actions left, or the situation doesn't allow it)" : oddsLine(rig, Number(heat) || 0)}`,
         "data-act": a.key,
-        onClick: () => this.beginAction(rig, a.key),
+        onClick: () => { if (!commandable || !a.enabled) return sfx.bad(); this.beginAction(rig, a.key); },
       }, el("span", { class: "ico" }, ICON[a.key] || "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, `${heat}🔥`));
       row.append(btn);
     }
@@ -272,11 +287,11 @@ export class LiveMatch {
     if (commandable) {
       const foot = el("div", { class: "act-foot" },
         el("span", {},
-          el("button", { class: "btn ghost", "data-act": "advisor", onClick: () => this.advise(rig) }, "💡 Advisor"),
-          g.canUndo ? el("button", { class: "btn ghost", title: "Take back your last action (Ctrl+Z)", onClick: () => this.undo() }, "↶ Undo") : null),
+          el("button", { class: "btn ghost", "data-act": "advisor", disabled: !this.allowed("advisor"), onClick: () => this.advise(rig) }, "💡 Advisor"),
+          g.canUndo && !this.gate ? el("button", { class: "btn ghost", title: "Take back your last action (Ctrl+Z)", onClick: () => this.undo() }, "↶ Undo") : null),
         g.turn.activeRigId === rig.id ? (() => {
           const o = overheatOdds(rig, 0);
-          return el("button", { class: `btn ${o.pBad ? "danger" : "primary"}`, "data-act": "end", title: o.pBad ? "Ending here triggers the overheat roll" : "Pass to the enemy",
+          return el("button", { class: `btn ${o.pBad ? "danger" : "primary"}`, "data-act": "end", disabled: !this.allowed("end"), title: o.pBad ? "Ending here triggers the overheat roll" : "Pass to the enemy",
             onClick: () => this.endActivation(rig) }, o.pBad ? `End: ${Math.round(o.pBad * 100)}% overheat ⚠` : "End activation ⏎");
         })() : null,
       );
@@ -326,17 +341,29 @@ export class LiveMatch {
 
   // The engine keeps turn-scoped snapshots; undo pops the last one (dice and all).
   async undo() {
-    if (!this.game?.canUndo) return;
+    if (!this.game?.canUndo || this.gate) return;
     this.cancelMode();
     if (await this.send("undo", { side: this.side })) toast("↶ Undone", "info", 1200);
   }
 
+  // Tutorial lock: when the coach sets `this.gate` ({ acts: [...], select,
+  // end, advisor }), only what the current step teaches is allowed.
+  allowed(kind, key) {
+    const g = this.gate;
+    if (!g) return true;
+    if (kind === "act") return (g.acts || []).includes(key);
+    return !!g[kind];
+  }
+  locked() { toast("Tutorial: follow the current step first (see the coach panel).", "warn", 2200); }
+
   async endActivation(rig) {
+    if (!this.allowed("end")) return this.locked();
     this.cancelMode();
     await this.send("endactivation", { name: rig.name });
   }
 
   beginAction(rig, key) {
+    if (!this.allowed("act", key)) return this.locked();
     this.cancelMode();
     if (key === "move" || key === "sprint") return this.startMove(rig, key);
     if (key === "fire" || key === "aimed") return this.startTarget(rig, key);
@@ -475,14 +502,16 @@ export class LiveMatch {
 
   pickPrepare(rig) {
     const room = this.previewRoom(rig);
-    const preps = candidatesFor(room, rig).filter((c) => c.action === "prepare");
-    const desc = { brace: "Brace: reduce the next hit's damage.", evasive: "Evasive: chance to dodge the next shot entirely.", return: "Return Fire: shoot back when attacked.", "raise-shield": "Raise Shield: the Bulwark takes the hit." };
-    modal({
-      title: "Prepare a reaction",
-      body: el("div", { class: "attack-list" }, preps.map((p) => el("button", { class: "attack-opt", onClick: () => { document.querySelector(".modal-back")?.remove(); this.act(rig, { action: "prepare", prep: p.prep }); } }, el("b", {}, p.prep), el("span", {}, desc[p.prep] || "")))),
+    const preps = candidatesFor(room, rig).filter((c) => c.action === "prepare").map((c) => c.prep);
+    const m = modal({
+      title: `Prepare a reaction: ${rig.name}`, cls: "wide",
+      body: el("div", { class: "rx" },
+        el("p", { class: "rx-lead" }, "Costs 1 action and 1 heat. The reaction stays face-down until this rig is attacked, then springs automatically."),
+        el("div", { class: "rx-grid" }, preps.map((p) => reactionCard(p, { onClick: () => { m.close(); this.act(rig, { action: "prepare", prep: p }); } })))),
       actions: [{ label: "Cancel", ghost: true }],
     });
   }
+
 
   pickLocation(rig, title, fn) {
     modal({
@@ -494,6 +523,7 @@ export class LiveMatch {
 
   // ---- Advisor: the Hard bot's brain, pointed at your rig ----
   advise(rig) {
+    if (!this.allowed("advisor")) return this.locked();
     const room = this.previewRoom(rig);
     const cmd = chooseAction(room, rig, this.advisorWeights);
     this.emit("advisor", cmd);
@@ -567,7 +597,7 @@ export class LiveMatch {
       const list = r && this.mode.byTarget.get(r.name);
       if (list) { this.chooseAttack(this.mode.rig, r, list); return; }
     }
-    if (hit.mechId != null) { this.select(hit.mechId); return; }
+    if (hit.mechId != null) { if (!this.allowed("select")) return this.locked(); this.select(hit.mechId); return; }
     if (this.mode) this.cancelMode();
   }
 
@@ -601,15 +631,19 @@ export class LiveMatch {
       const eligible = this.state.rigs.filter((r) => r.owner === this.side && !r.destroyed && r.preparation == null);
       if (!eligible.length) return;
       this.gateOpen = true;
-      let pick = { rig: eligible[0].name, prep: "brace" };
-      setTimeout(() => document.querySelector(".modal .attack-opt")?.classList.add("best"), 0);
+      const pick = { rig: eligible[0].name, prep: "brace" };
       const preps = ["brace", "evasive", "return", ...ANSWER_COUNTERS];
-      const desc = { brace: "soak the next hit", evasive: "dodge the next shot", return: "shoot back", riposte: "counter a melee strike", sidestep: "slip a charging attacker", exploit: "punish an overcommitted attacker" };
-      const body = el("div", {},
-        el("p", {}, `🎁 Free reaction! Pick a mech and a trick it will pull the next time it's attacked. Not sure? `, el("b", {}, "Brace"), ` (take less damage) is always a good pick.`),
-        el("label", {}, "Rig ", el("select", { onChange: (e) => { pick.rig = e.target.value; } }, eligible.map((r) => el("option", { value: r.name }, r.name)))),
-        el("div", { class: "attack-list" }, preps.map((p) => el("button", { class: "attack-opt", onClick: (e) => { pick.prep = p; e.currentTarget.parentNode.querySelectorAll(".attack-opt").forEach((b) => b.classList.remove("best")); e.currentTarget.classList.add("best"); } }, el("b", {}, p), el("span", {}, desc[p])))));
-      modal({ title: "Answer token", body, dismissable: false, actions: [{ label: "Place it", primary: true, onClick: async () => { await this.send("answer", { name: pick.rig, prep: pick.prep, side: this.side }); this.gateOpen = false; this.refresh(); } }] });
+      const rigsEl = el("div", { class: "rx-rigs" }), cardsEl = el("div", { class: "rx-grid" });
+      const draw = () => {
+        fill(rigsEl, eligible.map((r) => rigPortrait(r, { selected: r.name === pick.rig, onClick: () => { pick.rig = r.name; draw(); } })));
+        fill(cardsEl, preps.map((p) => reactionCard(p, { selected: p === pick.prep, onClick: () => { pick.prep = p; draw(); } })));
+      };
+      draw();
+      const body = el("div", { class: "rx" },
+        el("p", { class: "rx-lead" }, "🎁 A new round gives you a free reaction. Place it face-down on one rig: it springs the next time that rig is attacked. The enemy won't know which trick it is."),
+        el("h4", {}, "1. Choose a rig"), rigsEl,
+        el("h4", {}, "2. Choose its reaction"), cardsEl);
+      modal({ title: "Answer token", cls: "wide", body, dismissable: false, actions: [{ label: "Place reaction", primary: true, onClick: async () => { await this.send("answer", { name: pick.rig, prep: pick.prep, side: this.side }); this.gateOpen = false; this.refresh(); } }] });
       return;
     }
     const pr = g.pendingReaction;
