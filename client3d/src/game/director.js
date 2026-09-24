@@ -8,6 +8,8 @@ import { Mech } from "../scene/mechs.js";
 import { CHASSIS, LOCS } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
+import { sfx } from "../audio.js";
+import { barkFor } from "./barks.js";
 
 const PROJECTILE = {
   "Autocannon": "cannon", "Missile Barrage": "missile", "Mini Gun": "bullet", "Double MG": "bullet",
@@ -38,8 +40,11 @@ export function frameFromState(state, sinceResolutionId = -1) {
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export class Director {
-  constructor(world, { onLog, onBanner } = {}) {
+  constructor(world, { onLog, onBanner, quiet = false } = {}) {
     this.world = world;
+    this.quiet = quiet;          // attract mode: no sound, no barks
+    this.skipping = false;       // "skip" — snap through queued frames
+    this.drops = new Set();
     this.mechs = new Map();
     this.onLog = onLog || (() => {});
     this.onBanner = onBanner || (() => {});
@@ -99,13 +104,46 @@ export class Director {
   // Queue a frame for animated playback. Returns when it has finished playing.
   play(frame) {
     this.busy++;
-    this.queue = this.queue.then(() => this.animate(frame)).catch((e) => console.error(e)).finally(() => { this.busy--; });
+    this.queue = this.queue.then(() => this.animate(frame)).catch((e) => console.error(e)).finally(() => { this.busy--; if (!this.busy) this.skipping = false; });
     return this.queue;
+  }
+
+  // Jump to the end of whatever is queued: finish walks now, snap the rest.
+  skip() {
+    if (this.idle) return;
+    this.skipping = true;
+    for (const w of this.walkers) { w.m.root.position.set(w.to.x, 0, w.to.y); w.m.targetFacing = w.facing; w.resolve(); }
+    this.walkers.clear();
+  }
+
+  sound(fn) { if (!this.quiet && !this.skipping) fn(); }
+
+  bark(m, event) {
+    if (this.quiet || this.skipping || !m) return;
+    const line = barkFor(m.name, event);
+    if (!line) return;
+    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 4.6, 0)), line, m.owner === "a" ? "#33d6ff" : "#ff4a3d");
+    sfx.bark();
+  }
+
+  // Opening drop: every mech falls from the sky on thrusters and slams down.
+  async dropIn(frame) {
+    this.snap(frame);
+    const mechs = [...this.mechs.values()];
+    mechs.forEach((m, i) => { m.root.position.y = 40 + i * 6; this.drops.add({ m, v: 0, delay: i * 0.35, landed: false }); });
+    this.sound(() => sfx.thrusters());
+    await new Promise((resolve) => { this.dropDone = resolve; });
   }
 
   async animate(frame) {
     const prev = this.current;
     if (!prev) { this.snap(frame); frame.log?.forEach((l) => this.onLog(l)); return; }
+    if (this.skipping) {
+      this.snap(frame);
+      frame.log?.forEach((l) => this.onLog(l));
+      for (const r of frame.rigs) { const m = this.mechs.get(r.id); if (r.destroyed && m && !m.destroyed) m.destroy(); }
+      return;
+    }
     const byId = new Map(prev.rigs.map((r) => [r.id, r]));
     if (frame.round !== prev.round && frame.round) this.onBanner(`Round ${frame.round}`, "round");
 
@@ -132,6 +170,7 @@ export class Director {
       this.applyStatus(m, r);
       if (r.destroyed && !m.destroyed) {
         this.world.fx.explosion(m.root.position.clone().add(new THREE.Vector3(0, 1.5, 0)), true);
+        this.sound(() => sfx.explosion(true));
         m.destroy();
         await wait(500 / this.speed);
       }
@@ -146,18 +185,36 @@ export class Director {
       const dist = Math.hypot(dx, dy);
       const heading = Math.atan2(dy, dx) * 180 / Math.PI;
       m.targetFacing = heading;
+      this.sound(() => sfx.servo());
+      if (Math.random() < 0.5) this.bark(m, "move");
       const w = { m, from, to, t: 0, dur: Math.max(0.35, dist / (m.weightClass === "medium" ? 5 : 7)), facing, resolve, dust: 0 };
       this.walkers.add(w);
     });
   }
 
   tick(dt) {
+    for (const d of this.drops) {
+      if ((d.delay -= dt) > 0) continue;
+      const m = d.m;
+      d.v += 30 * dt;
+      m.root.position.y = Math.max(0, m.root.position.y - d.v * dt * 1.2);
+      if (Math.random() < 0.6) this.world.fx.particle(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), { color: 0xff9933, size: 0.9, life: 0.35, vel: new THREE.Vector3(0, 6, 0), grow: 1.5 });
+      if (m.root.position.y <= 0) {
+        this.drops.delete(d);
+        this.world.fx.burst(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 18, { color: 0x9a8a70, size: 0.8, life: 0.8, spread: 5, additive: false, opacity: 0.6, up: 0.3 });
+        this.world.fx.shake = Math.max(this.world.fx.shake, 0.35);
+        this.sound(() => sfx.step(true));
+        if (!this.drops.size) setTimeout(() => this.dropDone?.(), 400);
+      }
+    }
     for (const w of this.walkers) {
       w.t += (dt * this.speed) / w.dur;
       const t = Math.min(1, w.t);
       const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       w.m.root.position.set(w.from.x + (w.to.x - w.from.x) * e, 0, w.from.y + (w.to.y - w.from.y) * e);
       w.m.walking = Math.min(1, w.m.walking + dt * 4);
+      const stepN = Math.floor(w.m.walkPhase / Math.PI);
+      if (stepN !== w.lastStep) { w.lastStep = stepN; this.sound(() => sfx.step(w.m.weightClass === "medium")); }
       w.dust += dt;
       if (w.dust > 0.15) { w.dust = 0; this.world.fx.particle(w.m.root.position.clone().add(new THREE.Vector3(0, 0.2, 0)), { color: 0x8a7a60, size: 0.6, life: 0.8, grow: 2.5, additive: false, opacity: 0.35, vel: new THREE.Vector3(0, 0.5, 0) }); }
       if (t >= 1) { w.m.targetFacing = w.facing; this.walkers.delete(w); w.resolve(); }
@@ -190,12 +247,15 @@ export class Director {
       const m = /=\s*(\d+)\s*SP(?: to (\w+))?/.exec(l.summary || "");
       const sp = m ? Number(m[1]) : 0;
       const loc = m?.[2];
+      let heard = false;
       const impact = (p) => {
+        if (!heard) { heard = true; this.sound(() => sfx.hit(sp)); }
         if (sp > 0) { fx.sparks(p, 10 + sp * 3); fx.flash(p, 0xffaa44, 20 + sp * 8, 8); fx.shake = Math.max(fx.shake, Math.min(0.6, sp * 0.08)); target.body.position.x = -0.2; setTimeout(() => { target.body.position.x = 0; }, 90); }
         else fx.burst(p, 4, { color: 0xaaaaaa, size: 0.3, life: 0.3, spread: 2 });
       };
       if (melee) {
         actor.fire("melee");
+        this.sound(() => (actor.melee === "Flamethrower" ? sfx.shot("flame") : sfx.melee(actor.weightClass === "medium")));
         if (actor.melee === "Flamethrower") fx.flame(actor.muzzleWorld("melee"), tpos);
         await wait(380 / this.speed);
         impact(tpos);
@@ -205,21 +265,28 @@ export class Director {
         const hits = [];
         for (let i = 0; i < n; i++) {
           actor.fire("longRange");
+          this.sound(() => sfx.shot(kind));
           const from = actor.muzzleWorld("longRange");
           fx.muzzle(from, kind === "arc" ? 0x66ccff : 0xffcc55);
           const jitter = tpos.clone().add(new THREE.Vector3((Math.random() - 0.5) * (sp ? 0.6 : 3), (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * (sp ? 0.6 : 3)));
           if (kind === "arc") { fx.beam(from, jitter, 0x88ddff, 0.35, true); fx.beam(from, jitter, 0xffffff, 0.2, true); impact(jitter); }
-          else hits.push(new Promise((res) => fx.shoot(from, jitter, kind, (p) => { impact(p); if (kind === "lob" || kind === "missile") fx.explosion(p, false); res(); })));
+          else hits.push(new Promise((res) => fx.shoot(from, jitter, kind, (p) => { impact(p); if (kind === "lob" || kind === "missile") { fx.explosion(p, false); this.sound(() => sfx.explosion(false)); } res(); })));
           await wait((n > 1 ? 90 : 60) / this.speed);
         }
         await Promise.all(hits);
       }
       fx.text(up(target, 3.4), sp > 0 ? `-${sp} ${loc ? loc.toUpperCase() : "SP"}` : "MISS", sp > 0 ? "#ffcf4a" : "#bbbbbb");
+      const killed = frame.rigs.find((r) => r.id === target.id)?.destroyed && !target.destroyed;
+      if (killed) { this.bark(actor, "kill"); setTimeout(() => this.bark(target, "die"), 350); }
+      else if (sp >= 3) { this.bark(Math.random() < 0.5 ? actor : target, Math.random() < 0.5 ? "hit" : "hurt"); }
+      else this.bark(actor, sp > 0 ? "hit" : "miss");
       await wait(350 / this.speed);
       actor.aimAt(null);
     } else if (l.kind === "overheat" && actor) {
       for (let i = 0; i < 14; i++) fx.steam(up(actor, 2.6));
       const bad = !/Nothing happens/.test(l.summary || "");
+      this.sound(() => sfx.overheat(bad));
+      if (bad) this.bark(actor, "heat");
       if (bad) { fx.sparks(up(actor, 2), 16); fx.flash(up(actor), 0xff4400, 40, 8); }
       fx.text(up(actor, 3.6), bad ? (l.summary.split(":")[1] || "OVERHEAT").split("(")[0].trim().toUpperCase() : "HEAT OK", bad ? "#ff6a3d" : "#9ee29e");
       await wait(500 / this.speed);
@@ -227,7 +294,7 @@ export class Director {
       // handled by status pass (explosion on destroyed flag)
     } else if (l.kind === "blast") {
       const t = this.mechs.get(l.rigId);
-      if (t) fx.explosion(up(t, 1), false);
+      if (t) { fx.explosion(up(t, 1), false); this.sound(() => sfx.explosion(false)); }
       await wait(250 / this.speed);
     } else if (l.kind === "initiative") {
       this.onBanner(l.summary, "info");

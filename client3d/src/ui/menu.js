@@ -48,11 +48,13 @@ export async function squadBuilder(root, { onStart, onBack }) {
   try { (await api.chassis()).chassis.forEach((c) => { content[c.id] = c; }); } catch {}
   const squad = [];
   let tier = "normal";
+  let table = "skirmish";
   const render = () => {
     const mediums = squad.filter((u) => CHASSIS.find((c) => c.id === u.chassis).class === "medium").length;
     fill(root, el("div", { class: "builder" },
       el("div", { class: "b-head" }, el("button", { class: "btn ghost", onClick: onBack }, "← Back"), el("h1", {}, "Commission your squad"), el("span", { class: "muted" }, `${squad.length}/3 rigs · the bot mirrors your weight classes`)),
       el("div", { class: "tiers" }, ["easy", "normal", "hard"].map((t) => el("button", { class: `tier ${t === tier ? "on" : ""} t-${t}`, onClick: () => { tier = t; render(); } }, el("b", {}, t.toUpperCase()), el("span", {}, TIER_TEXT[t])))),
+      el("div", { class: "tables" }, el("span", { class: "muted" }, "Table:"), Object.entries(TABLES).map(([k, t]) => el("button", { class: `btn ${table === k ? "primary" : "ghost"}`, title: t.hint, onClick: () => { table = k; render(); } }, t.label))),
       el("div", { class: "b-grid" }, CHASSIS.map((ch) => {
         const picked = squad.find((u) => u.chassis === ch.id);
         const full = squad.length >= 3 || (ch.class === "medium" && mediums >= 2);
@@ -69,7 +71,7 @@ export async function squadBuilder(root, { onStart, onBack }) {
       })),
       el("div", { class: "b-foot" },
         el("button", { class: "btn", onClick: () => { squad.length = 0; const pool = [...CHASSIS].sort(() => Math.random() - 0.5); const m = pool.find((c) => c.class === "medium"); squad.push(unitDefaults(m)); pool.filter((c) => c.class === "light").slice(0, 2).forEach((c) => squad.push(unitDefaults(c))); render(); } }, "🎲 Random squad"),
-        el("button", { class: "btn big primary", disabled: squad.length < 1, onClick: () => onStart({ squad, tier }) }, `Deploy vs ${tier.toUpperCase()} bot ▸`)),
+        el("button", { class: "btn big primary", disabled: squad.length < 1, onClick: () => onStart({ squad, tier, table }) }, `Deploy vs ${tier.toUpperCase()} bot ▸`)),
     ));
   };
   render();
@@ -95,10 +97,20 @@ function upgradeEditor(ch, u, render) {
 }
 
 // Create a fresh room vs the bot and commission everything. Returns the room code.
-export async function createBotRoom({ squad, tier }) {
+// Table sizes. Skirmish is smaller so squads meet in round 1–2 instead of
+// spending it walking; Standard is the rulebook's 54×36 (what the GA meta is
+// evolved on).
+export const TABLES = {
+  skirmish: { label: "Skirmish 42×28", width: 42, height: 28, hint: "Fast: contact in the first round or two" },
+  standard: { label: "Standard 54×36", width: 54, height: 36, hint: "The rulebook table — more manoeuvring" },
+};
+
+export async function createBotRoom({ squad, tier, table = "skirmish" }) {
   const room = `3D-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
   await api.join(room, "a");
   await api.command(room, "a", "setbot", { side: "b", preset: tier });
+  const t = TABLES[table] || TABLES.skirmish;
+  if (t.width !== 54 || t.height !== 36) await api.command(room, "a", "field", { action: "set", width: t.width, height: t.height });
   for (const u of squad) {
     const ch = CHASSIS.find((c) => c.id === u.chassis);
     await api.command(room, "a", "add", { kind: "rig", owner: "a", name: ch.name, chassis: ch.id, longRangeUpgrade: u.longRangeUpgrade, meleeUpgrade: u.meleeUpgrade, equipment: u.equipment, equipmentUpgrade: u.equipmentUpgrade || undefined });

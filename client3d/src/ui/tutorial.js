@@ -12,23 +12,20 @@ export const TUTORIAL_SQUAD = [
   { chassis: "light-saw-minigun", equipment: "targeting-computer" },
 ];
 
+// Short steps — one idea each, two sentences max. Most advance when you
+// actually do the thing.
 export function tutorialSteps() {
   return [
-    { title: "Welcome, Commander", text: "This is a skirmish between two squads of dieselpunk Rigs on a tabletop. You command the CYAN rigs; the bot commands the RED ones. Let's learn by playing a real match against the Easy bot.", next: true },
-    { title: "Move the camera", text: "Pan with WASD (or arrow keys, or drag). Rotate with Q/E or right-drag. Zoom with the mouse wheel. Take a look around, then press Next.", next: true, done: (m, ev) => ev.camera },
-    { title: "How you win", text: "The glowing pylons are OBJECTIVES. At the end of each round, a side with a rig within 2\" of a pylon (and no enemy on it) scores its VP — the centre pylon is worth 2, the others 1. Destroying the enemy's ★ Priority target is worth +2. After 10 rounds, most VP wins — or wipe the enemy out.", highlight: ".hud-top", next: true },
-    { title: "Turns", text: "Sides alternate activating one rig at a time. Each rig activates once per round and gets 3 ACTIONS. Wait for 'YOUR TURN' at the top.", highlight: ".hud-top .turn", done: (m) => m.myTurn, waitText: "Waiting for your turn…" },
-    { title: "Pick a rig", text: "Click one of your cyan-ringed rigs (or its card on the left, or press Tab). Its actions appear at the bottom.", highlight: ".hud-roster:not(.enemy)", done: (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; } },
-    { title: "Every action makes HEAT", text: "Each button shows its heat cost 🔥. The heat bar on the card shows your capacity — light rigs hold 6, mediums 5. Heat bleeds off only 1 per round, so over-acting is how rigs die. A red-bordered button would push you over capacity.", highlight: ".hud-actions", next: true },
-    { title: "Move toward an objective", text: "Press Move (key 1) — or Sprint (key 2) to go 1½× as far for double heat. The ring is your reach. Hover to preview the route, Shift+wheel to turn, click to walk. Head for a pylon!", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
-    { title: "Facing matters", text: "The notch on your base is your FRONT. You can only attack enemies inside your front 90° arc — and hitting an enemy's SIDE or REAR arc deals more damage. Flanking wins fights.", next: true },
-    { title: "Attack!", text: "If an enemy is in your front arc and range, press Fire (key 3), then click a red-ringed enemy to see each weapon's expected damage. No target? Move closer or use the Advisor.", highlight: '[data-act="fire"]', done: (m, ev) => ev.attacked, skippable: true },
-    { title: "The overheat roll", text: "When an activation ends above capacity you roll D12 + 2×(heat over cap). Here's the table — high rolls wreck your own rig:", extra: () => heatTable(), next: true },
-    { title: "End the activation", text: "Press 'End activation' (or Enter). If you're running hot, Shut Down instead: it ends the activation and vents 2 heat per unused action.", highlight: '[data-act="end"]', done: (m, ev) => ev.ended },
-    { title: "The enemy acts", text: "Watch the bot take its turn. Bots obey exactly the same rules you do — the server runs both.", done: (m) => m.myTurn, waitText: "Enemy is moving…" },
-    { title: "Ask the Advisor", text: "Stuck? Select a rig and press 💡 Advisor: the Hard bot's brain evaluates every legal action for YOUR rig and suggests the best one. Try it now.", highlight: '[data-act="advisor"]', done: (m, ev) => ev.advised },
-    { title: "Reactions & Answer tokens", text: "Prepare (key 5) sets a face-down reaction — Brace soaks a hit, Evasive may dodge, Return Fire shoots back. At the start of some rounds you also get a free Answer token to place one. Both reveal when the enemy attacks.", next: true },
-    { title: "You're ready", text: "Keep playing this match: hold objectives, focus fire on the ★ priority target, manage your heat. Close this coach any time with ✕. Good hunting!", next: true, last: true },
+    { title: "Welcome, Commander", text: "You lead the CYAN mechs; the bot leads the RED ones. Pan with WASD, rotate with Q/E, zoom with the wheel.", next: true },
+    { title: "How to win", text: "Stand next to the glowing pylons to score points each round. Most points after 10 rounds wins — or wreck the whole enemy squad.", highlight: ".hud-top", next: true },
+    { title: "Wait for your turn", text: "Sides take turns activating one mech at a time.", highlight: ".hud-top .turn", done: (m) => m.myTurn, waitText: "The enemy is going first…" },
+    { title: "Pick a mech", text: "Click one of your mechs, or its card on the left.", highlight: ".hud-roster:not(.enemy)", done: (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; } },
+    { title: "Walk toward a pylon", text: "Press Move, then click inside the green ring. Each mech gets 3 actions per turn.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
+    { title: "Watch your heat 🔥", text: "Every action costs heat (the 🔥 on each button). Go past the bar's limit and your mech may break itself at the end of the turn.", highlight: ".rig-card.active .rc-heat, .rig-card.sel .rc-heat", next: true },
+    { title: "Shoot what's in front", text: "You can only attack enemies inside your front arc — hitting their side or back hurts more. Press Fire if anyone's in range.", highlight: '[data-act="fire"]', done: (m, ev) => ev.attacked, skippable: true },
+    { title: "Stuck? Ask the Advisor", text: "💡 Advisor shows the smartest move for this mech. Try it!", highlight: '[data-act="advisor"]', done: (m, ev) => ev.advised, skippable: true },
+    { title: "End your turn", text: "Press End activation (or Enter). Running hot? Shut Down instead — it cools you off.", highlight: '[data-act="end"], [data-act="shutdown"]', done: (m, ev) => ev.ended },
+    { title: "You've got it!", text: "Keep going: hold pylons, gang up on the ★ enemy for bonus points, and don't cook yourself. 📖 has the rules if you need them.", next: true, last: true },
   ];
 }
 

@@ -17,6 +17,7 @@ export class Replay {
   constructor(world, hudRoot, replay, { onExit }) {
     this.world = world; this.replay = replay; this.frames = replay.frames || []; this.i = 0; this.playing = true; this.onExit = onExit;
     this.hud = new Hud(hudRoot);
+    this.hud.spectator = true;
     this.director = new Director(world, { onLog: (l) => this.hud.log(l), onBanner: (t, k) => this.hud.banner(t, k) });
     const f0 = this.frames[0];
     world.buildField(replay.field || { width: 54, height: 36, terrain: replay.terrain || [] }, replay.objectives || []);
@@ -90,17 +91,28 @@ export class Replay {
     this.renderControls();
   }
 
+  // Built once, then updated in place — rebuilding every frame detached the
+  // controls mid-click and yanked the slider out from under a drag.
   renderControls() {
-    const f = this.frames[this.i];
-    fill(this.controls, 
-      el("button", { class: "btn ghost", onClick: () => this.exit() }, "✕"),
-      el("button", { class: "btn", onClick: () => { this.playing = !this.playing; this.renderControls(); } }, this.playing ? "⏸" : "▶"),
-      el("input", { type: "range", min: 0, max: this.frames.length - 1, value: this.i, onChange: (e) => this.seek(Number(e.target.value)) }),
-      el("span", { class: "muted" }, `Round ${f?.round ?? "-"} · step ${this.i + 1}/${this.frames.length}`),
-      ...[0.5, 1, 2, 4].map((s) => el("button", { class: `btn ${this.director.speed === s ? "primary" : "ghost"}`, onClick: () => { this.director.speed = s; this.renderControls(); } }, `${s}×`)),
-      el("label", { class: "muted" }, el("input", { type: "checkbox", checked: !!this.follow, onChange: (e) => { this.follow = e.target.checked; } }), " follow"),
-      this.i >= this.frames.length - 1 ? el("b", {}, this.replay.winner ? `${this.replay.winner.toUpperCase()} WINS ${this.replay.vp?.join("–")}` : "DRAW") : null,
-    );
+    if (!this.ui) {
+      const u = (this.ui = {});
+      u.play = el("button", { class: "btn", onClick: () => { this.playing = !this.playing; this.renderControls(); } });
+      u.slider = el("input", { type: "range", min: 0, max: this.frames.length - 1, value: 0 });
+      u.slider.addEventListener("input", () => { this.dragging = true; });
+      u.slider.addEventListener("change", (e) => { this.dragging = false; this.seek(Number(e.target.value)); });
+      u.label = el("span", { class: "muted" });
+      u.speeds = [0.5, 1, 2, 4].map((sp) => el("button", { class: "btn ghost", onClick: () => { this.director.speed = sp; this.renderControls(); } }, `${sp}×`));
+      u.skip = el("button", { class: "btn ghost", title: "Finish the current animation", onClick: () => this.director.skip() }, "⏭");
+      u.follow = el("input", { type: "checkbox", onChange: (e) => { this.follow = e.target.checked; } });
+      u.result = el("b", {});
+      fill(this.controls, el("button", { class: "btn ghost", onClick: () => this.exit() }, "✕"), u.play, u.slider, u.label, u.speeds, u.skip, el("label", { class: "muted" }, u.follow, " follow"), u.result);
+    }
+    const u = this.ui, f = this.frames[this.i];
+    u.play.textContent = this.playing ? "⏸" : "▶";
+    if (!this.dragging) u.slider.value = String(this.i);
+    u.label.textContent = `Round ${f?.round ?? "-"} · step ${this.i + 1}/${this.frames.length}`;
+    u.speeds.forEach((b, k) => { b.className = `btn ${this.director.speed === [0.5, 1, 2, 4][k] ? "primary" : "ghost"}`; });
+    u.result.textContent = this.i >= this.frames.length - 1 ? (this.replay.winner ? `${this.replay.winner.toUpperCase()} WINS ${this.replay.vp?.join("–")}` : "DRAW") : "";
   }
 
   exit() { this.destroy(); this.onExit?.(); }

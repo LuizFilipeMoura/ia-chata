@@ -134,6 +134,27 @@ export class FX {
     this.particles = []; this.projectiles = []; this.beams = []; this.texts = []; this.lights = [];
   }
 
+  // A comic speech bubble that bobs over a mech for a couple of seconds.
+  bubble(pos, str, accent = "#33d6ff") {
+    const c = document.createElement("canvas");
+    const g = c.getContext("2d");
+    const font = "600 30px Rajdhani, Arial, sans-serif";
+    g.font = font;
+    const w = Math.min(560, Math.ceil(g.measureText(str).width) + 40), h = 64;
+    c.width = w; c.height = h + 18;
+    g.font = font;
+    g.fillStyle = "rgba(250,248,240,0.96)"; g.strokeStyle = accent; g.lineWidth = 4;
+    g.beginPath(); g.roundRect(2, 2, w - 4, h - 4, 18); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(w / 2 - 12, h - 3); g.lineTo(w / 2, h + 14); g.lineTo(w / 2 + 12, h - 3); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(w / 2 - 12, h - 2); g.lineTo(w / 2, h + 14); g.lineTo(w / 2 + 12, h - 2); g.stroke();
+    g.fillStyle = "#1a1a1a"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(str, w / 2, h / 2);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    const k = 0.028; s.scale.set(c.width * k, c.height * k, 1); s.position.copy(pos); s.renderOrder = 11;
+    this.scene.add(s);
+    this.texts.push({ s, life: 2.6, max: 2.6, still: true, base: pos.y });
+  }
+
   update(dt) {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
@@ -175,8 +196,9 @@ export class FX {
     for (let i = this.texts.length - 1; i >= 0; i--) {
       const t = this.texts[i]; t.life -= dt;
       if (t.life <= 0) { this.scene.remove(t.s); this.texts.splice(i, 1); continue; }
-      t.s.position.y += dt * 1.2;
-      t.s.material.opacity = Math.min(1, t.life / (t.max * 0.5));
+      if (t.still) t.s.position.y = t.base + Math.sin((t.max - t.life) * 6) * 0.08 + Math.min(0.3, (t.max - t.life) * 2);
+      else t.s.position.y += dt * 1.2;
+      t.s.material.opacity = t.still ? Math.min(1, t.life * 3) : Math.min(1, t.life / (t.max * 0.5));
     }
     this.shake = Math.max(0, this.shake - dt * 2.5);
   }

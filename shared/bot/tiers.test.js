@@ -67,3 +67,15 @@ test("chooseAction returns null for a rig that isn't holding the floor", () => {
   room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 3 };
   assert.equal(chooseAction(room, rig, PRESETS.normal), null);
 });
+
+test("resizing the table in a digital room scatters only digital terrain", async () => {
+  const { DIGITAL_TERRAIN_KINDS } = await import("../field.js");
+  const room = createRoom("SIZE");
+  claimSide(room, { name: "A", side: "a" });
+  applyCommand(room, { verb: "setbot", attrs: { side: "b", preset: "normal" } }, { side: "a" });
+  for (let i = 0; i < 20; i++) {
+    applyCommand(room, { verb: "field", attrs: { action: "set", width: 42 + (i % 2), height: 28 } }, { side: "a" }, { random: mulberry32(i) });
+    assert.ok(room.field.terrain.every((t) => DIGITAL_TERRAIN_KINDS.has(t.kind)), `seed ${i}`);
+  }
+  assert.equal(room.field.width, 43);
+});

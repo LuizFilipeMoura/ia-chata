@@ -11,6 +11,15 @@ import { labScreen } from "./ui/lab.js";
 import { Coach, TUTORIAL_SQUAD } from "./ui/tutorial.js";
 import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
+import { sfx, isMuted, setMuted } from "./audio.js";
+
+function muteButton() {
+  const b = el("button", { class: "btn ghost", title: "Sound on/off" }, isMuted() ? "🔇" : "🔊");
+  b.addEventListener("click", () => { setMuted(!isMuted()); b.textContent = isMuted() ? "🔇" : "🔊"; });
+  return b;
+}
+// Every button clicks.
+document.addEventListener("click", (e) => { if (e.target.closest?.("button")) sfx.click(); }, true);
 import { CHASSIS } from "/shared/game-state.js";
 import { mulberry32 } from "/shared/sim/match.js";
 
@@ -33,7 +42,7 @@ function teardown() {
 
 // Title backdrop: a slow orbit over a staged table of every chassis.
 function attractMode() {
-  const d = new Director(world);
+  const d = new Director(world, { quiet: true });
   const rnd = mulberry32(Date.now() % 1e6);
   world.buildField({ width: 54, height: 36, terrain: [
     { kind: "building", shape: "rect", x: 20, y: 14, w: 6, h: 4.5, rot: 10 }, { kind: "building", shape: "rect", x: 36, y: 23, w: 5, h: 5, rot: -12 },
@@ -71,6 +80,7 @@ function home() {
     onLab: () => lab(),
     onWatch: () => watch(),
   });
+  screen.append(el("div", { class: "title-mute" }, muteButton()));
 }
 
 function builder() {
@@ -92,7 +102,8 @@ async function play(room, { tutorial = false } = {}) {
   active = match;
   hudRoot.append(el("div", { class: "hud-menu" },
     el("button", { class: "btn ghost", onClick: () => modal({ title: "Leave battle?", body: el("p", {}, `Room ${room} stays on the server — you can't rejoin from here yet.`), actions: [{ label: "Stay", ghost: true }, { label: "Leave", primary: true, onClick: home }] }) }, "☰"),
-    el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, "📖")));
+    el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, "📖"),
+    muteButton()));
   try { await match.start(); } catch (e) { toast(e.message, "bad"); return home(); }
   if (tutorial) match.coach = new Coach(hudRoot, match);
 }

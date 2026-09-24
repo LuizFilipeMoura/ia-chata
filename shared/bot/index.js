@@ -87,10 +87,12 @@ export function chooseAction(room, rig, weights, noise = null) {
     // Replay "thinking": the top options with their weighted terms.
     // One row per distinct option (move probes at several ranges share a label).
     const seen = new Set();
-    const distinct = scored.filter((x) => { const k = candLabel(x.c); if (seen.has(k)) return false; seen.add(k); return true; });
+    // Aimed shots at each location of one target score alike — show them once.
+    const key = (c) => (c.action === "aimed" ? `aimed ${c.target}` : candLabel(c));
+    const distinct = scored.filter((x) => { const k = key(x.c); if (seen.has(k)) return false; seen.add(k); return true; });
     noise.explain.top = distinct.slice(0, 4).map((x) => {
       const parts = scoreParts(room, rig, x.c);
-      return { label: candLabel(x.c), score: +x.s.toFixed(2), picked: candLabel(x.c) === candLabel(best.c),
+      return { label: candLabel(x.c), score: +x.s.toFixed(2), picked: key(x.c) === key(best.c),
         parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, +((weights[k] ?? (k === "tactics" ? 1 : 0)) * v).toFixed(2)])) };
     });
     if (best && !noise.explain.top.some((t) => t.picked)) noise.explain.top.push({ label: candLabel(best.c), score: +best.s.toFixed(2), picked: true, parts: {}, blunder: true });

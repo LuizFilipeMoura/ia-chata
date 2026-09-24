@@ -24,9 +24,18 @@ export class Hud {
 
   destroy() { clear(this.root); }
 
-  top(state, side) {
+  // `spectator` (replays): neutral Cyan/Red labels instead of you/enemy.
+  top(state, side, spectator = this.spectator) {
     const g = state.game;
     const turn = g.turn?.side;
+    if (spectator) {
+      const va = g.sides.find((s) => s.id === "a")?.vp ?? 0, vb = g.sides.find((s) => s.id === "b")?.vp ?? 0;
+      fill(this.topEl,
+        el("div", { class: "vp a" }, el("span", { class: "k" }, "CYAN"), el("b", {}, String(va))),
+        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…")),
+        el("div", { class: "vp b" }, el("b", {}, String(vb)), el("span", { class: "k" }, "RED")));
+      return;
+    }
     const who = g.phase === "finished" ? "Battle over" : g.phase === "initiative" ? "Rolling initiative…" : g.pendingAnswer ? (g.pendingAnswer.side === side ? "Place your Answer token" : "Enemy placing Answer…") : turn === side ? "YOUR TURN" : "ENEMY TURN";
     fill(this.topEl, 
       el("div", { class: "vp a" }, el("span", { class: "k" }, "YOU"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0)), el("span", { class: "k" }, "VP")),
@@ -54,8 +63,8 @@ export class Hud {
   }
 
   roster(state, side, selectedId, onPick) {
-    fill(this.rosterEl, el("div", { class: "rh" }, "Your squad"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
-    fill(this.enemyEl, el("div", { class: "rh" }, "Enemy"), state.rigs.filter((r) => r.owner !== side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
+    fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Cyan" : "Your squad"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
+    fill(this.enemyEl, el("div", { class: "rh" }, this.spectator ? "Red" : "Enemy"), state.rigs.filter((r) => r.owner !== side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
   }
 
   log(l, name) {

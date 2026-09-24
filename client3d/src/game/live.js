@@ -17,6 +17,7 @@ import { spatial, moveBudget, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS,
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
+import { sfx } from "../audio.js";
 
 const DEG = Math.PI / 180;
 const ICON = { move: "🦿", sprint: "💨", fire: "🎯", aimed: "🔭", prepare: "🛡️", repair: "🔧", shutdown: "❄️", disengage: "↩️", douse: "🧯", reload: "🔄", lock: "📡", emplace: "⚓", unplant: "⛏️", barrage: "💥", harden: "🧱", purge: "♨️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹", heatpurgewave: "🔥", locksight: "🎯", popsmoke: "🌫️", cryo: "🧊" };
@@ -49,6 +50,7 @@ export class LiveMatch {
     this.keyHandler = (e) => this.onKey(e);
     window.addEventListener("keydown", this.keyHandler);
     this.advisorWeights = PRESETS.hard;
+    try { this.director.speed = Number(localStorage.getItem("oi3d-speed")) || 1; } catch {}
     this.minimap = new Minimap(hud.root, world);
   }
 
@@ -91,7 +93,14 @@ export class LiveMatch {
     }
     const maxRes = Math.max(-1, ...(state.game.resolutions || []).map((r) => r.id));
     if (first || !prevState) {
-      this.director.snap(frameFromState(state));
+      // Fresh battle (round 1, nothing logged beyond setup): drop the squads in
+      // from orbit. Rejoining a game in progress just snaps.
+      const fresh = state.game.round <= 1 && !(state.game.resolutions || []).some((r) => r.kind === "attack" || r.kind === "move");
+      if (fresh && state.rigs.some((r) => r.pos)) {
+        this.hud.banner("DROP ZONE", "round");
+        this.director.busy++;
+        this.director.queue = this.director.dropIn(frameFromState(state)).finally(() => { this.director.busy--; });
+      } else this.director.snap(frameFromState(state));
       this.lastRes = maxRes;
     } else {
       // A bot turn arrives as step frames: first play the human command's own
@@ -114,8 +123,7 @@ export class LiveMatch {
     // The HUD (and any gate prompt) catches up once the show has played, so
     // health bars drop when the shot lands, not before.
     const token = (this.animToken = (this.animToken || 0) + 1);
-    if (first || !prevState) this.refresh();
-    else this.renderActions();
+    if (!first && prevState) this.renderActions();
     this.director.queue.then(() => { if (token === this.animToken) this.refresh(); this.emit("state", state); });
   }
 
@@ -131,6 +139,10 @@ export class LiveMatch {
   refresh() {
     if (!this.state) return;
     const g = this.game;
+    // A chime when the floor comes back to you.
+    const mine = this.myTurn;
+    if (mine && !this.wasMine) { sfx.turn(true); this.hud.banner("YOUR TURN", "turn"); }
+    this.wasMine = mine;
     this.hud.top(this.state, this.side);
     this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId);
     this.hud.roster(this.state, this.side, this.selected, (id) => this.select(id));
@@ -179,7 +191,13 @@ export class LiveMatch {
     const rig = this.rig(this.selected);
     const bar = this.hud.actions;
     clear(bar);
-    if (!this.director.idle) { bar.append(el("div", { class: "hint" }, "⏳ Resolving…")); return; }
+    if (!this.director.idle) {
+      bar.append(el("div", { class: "act-foot" },
+        el("span", { class: "hint" }, "⏳ Resolving…"),
+        el("span", {}, [1, 2, 4].map((sp) => el("button", { class: `btn ${this.director.speed === sp ? "primary" : "ghost"}`, onClick: () => { this.director.speed = sp; try { localStorage.setItem("oi3d-speed", String(sp)); } catch {} this.renderActions(); } }, `${sp}×`)),
+          el("button", { class: "btn", title: "Skip the animation (Space)", onClick: () => this.director.skip() }, "⏭ Skip"))));
+      return;
+    }
     if (!rig) { bar.append(el("div", { class: "hint" }, this.myTurn ? "Select one of your rigs (cyan ring) to activate it." : "Waiting…")); return; }
     const g = this.game;
     const cap = HEAT_CAPACITY[rig.weightClass] ?? 6;
@@ -240,6 +258,7 @@ export class LiveMatch {
       this.emit("command", { verb, attrs });
       return true;
     } catch (e) {
+      sfx.bad();
       toast(e.message || "Command rejected", "bad");
       if (e.data?.state) this.apply(e.data.state);
       return false;
@@ -464,6 +483,7 @@ export class LiveMatch {
   onKey(e) {
     if (e.target.closest?.("input,textarea")) return;
     if (e.key === "Escape") this.cancelMode();
+    if (e.key === " " && !this.director.idle) { e.preventDefault(); this.director.skip(); }
     if (e.key === "Enter" && this.activeRig && this.activeRig.owner === this.side) this.endActivation(this.activeRig);
     if (e.key === "Tab") {
       e.preventDefault();
@@ -490,10 +510,11 @@ export class LiveMatch {
       if (!eligible.length) return;
       this.gateOpen = true;
       let pick = { rig: eligible[0].name, prep: "brace" };
+      setTimeout(() => document.querySelector(".modal .attack-opt")?.classList.add("best"), 0);
       const preps = ["brace", "evasive", "return", ...ANSWER_COUNTERS];
       const desc = { brace: "soak the next hit", evasive: "dodge the next shot", return: "shoot back", riposte: "counter a melee strike", sidestep: "slip a charging attacker", exploit: "punish an overcommitted attacker" };
       const body = el("div", {},
-        el("p", {}, `New round: you have an Answer token (${g.answerTokens?.[this.side] ?? 1} left). Place a face-down reaction on one rig.`),
+        el("p", {}, `🎁 Free reaction! Pick a mech and a trick it will pull the next time it's attacked. Not sure? `, el("b", {}, "Brace"), ` (take less damage) is always a good pick.`),
         el("label", {}, "Rig ", el("select", { onChange: (e) => { pick.rig = e.target.value; } }, eligible.map((r) => el("option", { value: r.name }, r.name)))),
         el("div", { class: "attack-list" }, preps.map((p) => el("button", { class: "attack-opt", onClick: (e) => { pick.prep = p; e.currentTarget.parentNode.querySelectorAll(".attack-opt").forEach((b) => b.classList.remove("best")); e.currentTarget.classList.add("best"); } }, el("b", {}, p), el("span", {}, desc[p])))));
       modal({ title: "Answer token", body, dismissable: false, actions: [{ label: "Place it", primary: true, onClick: async () => { await this.send("answer", { name: pick.rig, prep: pick.prep, side: this.side }); this.gateOpen = false; this.refresh(); } }] });
@@ -549,6 +570,8 @@ export class LiveMatch {
     const o = this.game.outcome;
     const won = o?.winner === this.side;
     this.director.queue.then(() => {
+      sfx.fanfare(won);
+      if (won) for (let i = 0; i < 6; i++) setTimeout(() => this.world.fx.explosion(new THREE.Vector3(10 + Math.random() * 34, 6 + Math.random() * 6, 6 + Math.random() * 24), false), i * 300);
       this.emit("finished", o);
       modal({
         title: o?.winner == null ? "Draw" : won ? "🏆 Victory" : "💀 Defeat",

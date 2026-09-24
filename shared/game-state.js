@@ -3673,7 +3673,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         if (!room.field.locked) { room.field.locked = true; changed = true; }
       } else if (!room.field.locked) {
         if (action === "reroll") {
-          room.field.terrain = scatterTerrain(room.field, options.random);
+          room.field.terrain = scatterTerrain(room.field, options.random, { digital: room.mode === "digital" });
           changed = true;
         } else if (action === "set") {
           const dims = clampDimensions(
@@ -3684,7 +3684,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           room.field.height = dims.height;
           if (a.diagonal === "trbl" || a.diagonal === "tlbr") room.field.diagonal = a.diagonal;
           room.game.objectives = computeObjectives(room.field);
-          room.field.terrain = scatterTerrain(room.field, options.random);
+          // A digital room only ever uses the digital vocabulary (rects the ray
+          // model grades honestly) — never woods / craters / ruins.
+          room.field.terrain = scatterTerrain(room.field, options.random, { digital: room.mode === "digital" });
           changed = true;
         }
       }
