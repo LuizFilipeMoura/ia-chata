@@ -98,7 +98,7 @@ export class LiveMatch {
     this.disconnect?.();
     this.unsub.forEach((f) => f());
     window.removeEventListener("keydown", this.keyHandler);
-    this.director.reset();
+    this.director.dispose();
     this.minimap.destroy();
     this.plates.destroy();
     this.wires?.destroy();

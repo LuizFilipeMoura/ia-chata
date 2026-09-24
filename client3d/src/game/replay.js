@@ -123,5 +123,5 @@ export class Replay {
   }
 
   exit() { this.destroy(); this.onExit?.(); }
-  destroy() { this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.reset(); this.hud.destroy(); }
+  destroy() { this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.dispose(); this.hud.destroy(); }
 }

@@ -54,12 +54,29 @@ export class Director {
     this.current = null;
     this.busy = 0;
     this.walkers = new Set();
-    world.tickers.add((dt) => this.tick(dt));
+    this.tickFn = (dt) => this.tick(dt);
+    world.tickers.add(this.tickFn);
   }
 
   get idle() { return this.busy === 0; }
 
+  // Done for good (screen closed): clear, stop ticking, and make any animation
+  // still in flight unable to put mechs back on the table.
+  dispose() {
+    this.reset();
+    this.detached = true;
+    this.world.tickers.delete(this.tickFn);
+  }
+
+  // Clearing bumps the epoch: any frame queued before this (a title-screen
+  // skirmish, a replay step, a bot turn still animating) is dropped instead of
+  // re-creating its mechs on whatever screen comes next.
   reset() {
+    this.epoch = (this.epoch || 0) + 1;
+    for (const w of this.walkers) w.resolve();
+    this.walkers.clear();
+    this.drops.clear();
+    this.dropDone?.();
     for (const m of this.mechs.values()) this.world.scene.remove(m.root);
     this.mechs.clear();
     this.current = null;
@@ -69,6 +86,7 @@ export class Director {
   ensureMech(r) {
     let m = this.mechs.get(r.id);
     if (m) return m;
+    if (this.detached) return { root: new THREE.Object3D(), update() {}, setPose() {}, destroy() {}, aimAt() {}, fire() {}, stacks: [], legs: [] };
     const ch = chassisOf(r) || {};
     m = new Mech({
       id: r.id, name: r.name, owner: r.owner, chassis: r.chassis,
@@ -105,7 +123,8 @@ export class Director {
   // Queue a frame for animated playback. Returns when it has finished playing.
   play(frame) {
     this.busy++;
-    this.queue = this.queue.then(() => this.animate(frame)).catch((e) => console.error(e)).finally(() => { this.busy--; if (!this.busy) this.skipping = false; });
+    const epoch = this.epoch || 0;
+    this.queue = this.queue.then(() => (epoch === (this.epoch || 0) ? this.animate(frame) : null)).catch((e) => console.error(e)).finally(() => { this.busy--; if (!this.busy) this.skipping = false; });
     return this.queue;
   }
 

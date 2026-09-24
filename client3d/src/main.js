@@ -27,6 +27,8 @@ import { CHASSIS } from "/shared/game-state.js";
 import { mulberry32 } from "/shared/sim/match.js";
 
 const world = new World(document.getElementById("stage"));
+// Debug handle (console / automated checks): inspect the live scene.
+window.__oi3d = { world };
 const screen = document.getElementById("screen");
 const hudRoot = document.getElementById("hud");
 let active = null; // current LiveMatch / Replay / Coach
@@ -71,7 +73,7 @@ function attractMode() {
       d.play({ round: 1, rigs, log: [{ kind: "attack", rigId: a.id, targetId: b.id, weapon: rnd() < 0.5 ? a.longRange : a.melee, summary: `${a.name} → ${b.name} with x (Pen 5): 2 hit(s) = ${1 + Math.floor(rnd() * 4)} SP to hull` }] });
     }
   }, 1800);
-  return { destroy() { clearInterval(timer); world.tickers.delete(spin); d.reset(); } };
+  return { destroy() { clearInterval(timer); world.tickers.delete(spin); d.dispose(); } };
 }
 
 function home() {
