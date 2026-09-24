@@ -4,8 +4,17 @@
 // time to applyCommand, so it goes through the same validation, rejection, and
 // resolution a human does and can neither cheat nor desync.
 import { candidatesFor } from "./candidates.js";
-import { scoreCandidate, PRESETS } from "./score.js";
-import { applyCommand } from "../game-state.js";
+import { scoreCandidate, scoreParts, PRESETS, TIERS } from "./score.js";
+import { applyCommand as applyRaw } from "../game-state.js";
+
+// Every bot command funnels through here so a caller can observe the bot's turn
+// step by step (options.onStep) — the 3D client animates those frames instead of
+// watching a whole enemy turn teleport in at once.
+function applyCommand(room, cmd, context, options = {}) {
+  const v = room.version;
+  applyRaw(room, cmd, context, options);
+  if (room.version !== v) options.onStep?.(room, cmd);
+}
 
 // The per-side difficulty/personality dial: which weight vector a bot side plays.
 // Read off the side; unset (a human side, or an unnamed preset) falls back to
@@ -30,7 +39,9 @@ function toCommand(cand, rig) {
     attrs.facing = cand.facing;
   } else if (cand.action === "prepare") {
     attrs.prep = cand.prep;
-  } else if (cand.action === "repair") {
+  } else if (cand.action === "lock") {
+    attrs.target = cand.target;
+  } else if (cand.action === "repair" || cand.action === "emergencypatch") {
     attrs.loc = cand.location;
   }
   return { verb: "action", attrs };
@@ -55,13 +66,47 @@ function cmpStable(a, b) {
 // legitimate move: a rig whose only options would overheat it or walk it into a
 // kill zone (every candidate ≤ 0) stands still. A bot that must act is a bot that
 // hurts itself.
-export function chooseAction(room, rig, weights) {
+// `noise` ({ blunder, topK, random }) is the difficulty dial: with probability
+// `blunder` the pick is uniform over the top-K positive candidates instead of
+// the argmax. Drawn from the injected RNG, so seeded games stay reproducible.
+export function chooseAction(room, rig, weights, noise = null) {
+  // Only the unit holding the floor may act (a Shut Down ends the activation).
+  if (room.game.turn?.activeRigId !== rig.id) return null;
   const scored = candidatesFor(room, rig)
     .map((c) => ({ c, s: scoreCandidate(room, rig, c, weights) }))
     .sort((x, y) => y.s - x.s || cmpStable(x.c, y.c));
-  const best = scored[0];
+  let best = scored[0];
+  if (noise?.blunder > 0) {
+    const rnd = noise.random || Math.random;
+    if (rnd() < noise.blunder) {
+      const top = scored.slice(0, noise.topK || 3).filter((x) => x.s > 0);
+      if (top.length) best = top[Math.floor(rnd() * top.length)];
+    }
+  }
+  if (noise?.explain) {
+    // Replay "thinking": the top options with their weighted terms.
+    // One row per distinct option (move probes at several ranges share a label).
+    const seen = new Set();
+    const distinct = scored.filter((x) => { const k = candLabel(x.c); if (seen.has(k)) return false; seen.add(k); return true; });
+    noise.explain.top = distinct.slice(0, 4).map((x) => {
+      const parts = scoreParts(room, rig, x.c);
+      return { label: candLabel(x.c), score: +x.s.toFixed(2), picked: candLabel(x.c) === candLabel(best.c),
+        parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, +((weights[k] ?? (k === "tactics" ? 1 : 0)) * v).toFixed(2)])) };
+    });
+    if (best && !noise.explain.top.some((t) => t.picked)) noise.explain.top.push({ label: candLabel(best.c), score: +best.s.toFixed(2), picked: true, parts: {}, blunder: true });
+    noise.explain.passed = !best || best.s <= 0;
+  }
   if (!best || best.s <= 0) return null;
   return toCommand(best.c, rig);
+}
+
+function candLabel(c) {
+  if (c.action === "move" || c.action === "sprint") return `${c.action} → ${c.reason ? c.reason + " " : ""}(${c.dest.x.toFixed(0)},${c.dest.y.toFixed(0)})`;
+  if (c.action === "fire" || c.action === "aimed") return `${c.action} ${c.weapon === "melee" ? "melee" : "gun"} → ${c.target}${c.location ? " " + c.location : ""}`;
+  if (c.action === "prepare") return `prepare ${c.prep}`;
+  if (c.action === "repair" || c.action === "emergencypatch") return `${c.action} ${c.location}`;
+  if (c.action === "lock") return `lock ${c.target}`;
+  return c.action;
 }
 
 // Drive one rig's whole activation: activate it, then feed commands to
@@ -71,7 +116,12 @@ export function chooseAction(room, rig, weights) {
 // any rig can take. `options.random` threads the seeded RNG through every roll, so
 // a whole game is reproducible.
 export function runBotActivation(room, rig, options = {}) {
-  const weights = PRESETS[sideBotOf(room, rig.owner)] ?? PRESETS.balanced;
+  // An evolved weight vector (setbot with `weights`, or the GA) beats a named preset.
+  const side = room.game.sides.find((s) => s.id === (rig.owner || "a"));
+  const preset = sideBotOf(room, rig.owner);
+  const weights = side?.botWeights ?? PRESETS[preset] ?? PRESETS.balanced;
+  const tier = TIERS[preset];
+  const noise = tier ? { ...tier, random: options.random } : null;
   if (room.game.turn?.activeRigId !== rig.id) {
     applyCommand(room, { verb: "activate", attrs: { name: rig.name } }, {}, options);
   }
@@ -88,7 +138,7 @@ export function runBotActivation(room, rig, options = {}) {
     // the enemy side ends the game and nulls the turn, a destroyed engine parks a
     // pendingBlast. Stop the moment this rig is no longer the one acting.
     if (!active()) break;
-    const cmd = chooseAction(room, rig, weights);
+    const cmd = chooseAction(room, rig, weights, noise);
     if (!cmd) break;
     applyCommand(room, cmd, {}, options);
     log.push(cmd);

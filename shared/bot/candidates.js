@@ -101,8 +101,34 @@ export function candidatesFor(room, rig) {
   // "action" — so the bot would burn its whole activation shutting down on an
   // objective. The v1 sparring bot has no active heat-dump need (Recovery cools it),
   // so leaving it out both fixes that and keeps the action budget the real bound.
+  // Shut Down: ends the activation venting heat. The scorer only values it when
+  // the engine is near/over Capacity (tacticalValue), so it can't be spammed.
   for (const key of ["disengage", "douse"]) {
     if (enabled.has(key)) out.push({ action: key });
+  }
+  // Only when it would actually vent something (actions left AND heat banked) —
+  // a zero-vent Shut Down is just a free "end activation" that the positional
+  // score would happily pick.
+  if (enabled.has("shutdown") && turn.actionsUsed < turn.actionsMax && (rig.engine?.heat || 0) > 0) {
+    out.push({ action: "shutdown" });
+  }
+
+  // Signature actions — Prototype stances and equipment actives. Without these the
+  // bot never plays the systemic upgrades, so any balance run (the GA) would read
+  // every Prototype as dead weight. Jump Jets is left out: it needs a destination
+  // and the move generator already covers repositioning.
+  for (const key of ["emplace", "unplant", "barrage", "harden", "purge", "overclock", "locksight", "popsmoke", "heatpurgewave"]) {
+    if (enabled.has(key)) out.push({ action: key });
+  }
+  if (enabled.has("emergencypatch")) {
+    const weakest = LOCS.filter((l) => rig[l] && !rig[l].destroyed)
+      .sort((x, y) => rig[x].sp / rig[x].max - rig[y].sp / rig[y].max)[0];
+    if (weakest) out.push({ action: "emergencypatch", location: weakest });
+  }
+  if (enabled.has("lock")) {
+    for (const e of room.rigs) {
+      if ((e.owner || "a") !== (rig.owner || "a") && !e.destroyed) out.push({ action: "lock", target: e.name });
+    }
   }
 
   out.push(...moveCandidates(room, rig, enabled));

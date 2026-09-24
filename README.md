@@ -105,6 +105,24 @@ history and free that context back up — **your tracked Rigs are kept**, since
 their state lives in the room, not the chat. Handy right after you've dictated
 the squadron.
 
+## Oil & Iron Tactics (3D client)
+
+`client3d/` is a three.js RTS-style tabletop client that plays the **same rules on the same server** (`/api/game` rooms + WS pushes). Procedural mech models per chassis, animated moves / per-weapon projectiles / overheat steam, a solo **bot opponent** at Easy / Normal / Hard, a step-by-step **tutorial**, an in-battle **Advisor** (the Hard bot's evaluation of your options), and a **Balance Lab**.
+
+```
+npm run dev:tactics      # server :8000 + 3D client on http://localhost:5174/3d/
+npm run build:3d         # builds client3d/dist, served by the server at /3d
+```
+
+**Balance Lab / genetic meta.** A genome is a squad (distinct chassis + upgrade + equipment picks, one Prototype max) plus the bot pilot's weight vector. Genomes play each other headlessly on a worker pool (`/api/sim`), and the lab shows fitness per generation, per-chassis / per-upgrade win rates (the balance report), a replay of each generation's feature match — with each side's pilot weights and a per-decision "thinking" breakdown — tier calibration, and "Adopt as Hard bot". From the CLI:
+
+```
+npm run evolve -- --pop 16 --gens 12 --games 3     # rewrites shared/bot/meta.js (the Hard playbook)
+node scripts/calibrate-tiers.mjs --games 30         # tier win rates vs a competent average player
+```
+
+Difficulty targets (bot win rate vs random legal builds flown by a balanced pilot): Easy ≤ 25%, Normal ≈ 50%, Hard ≥ 70%.
+
 ## Reasoning toggle
 
 The default model reasons before answering. The **🧠 Reason** button in the bottom command bar controls this:

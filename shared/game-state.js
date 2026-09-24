@@ -3,6 +3,7 @@ import {
   EQUIPMENT_UPGRADES, equipmentUpgradeEffectOf,
 } from "./rules.js";
 import { resolveAttack } from "./combat.js";
+import { META } from "./bot/meta.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
   deploymentCorners, deployRadius,
@@ -144,7 +145,7 @@ export const CHASSIS_PRIMARY_EQUIPMENT = {
 // shared/bot/score.js and is duplicated here on purpose: importing the bot
 // module into game-state.js would create a cycle (shared/bot/score.js imports
 // game-state.js). Keep in sync when a preset is added.
-export const BOT_PRESETS = ["balanced", "aggressive", "cagey"];
+export const BOT_PRESETS = ["easy", "normal", "hard", "balanced", "aggressive", "cagey"];
 
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
 // weight classes (3 medium / 3 light). All chassis
@@ -1351,6 +1352,10 @@ function sidesAtParity(room) {
 // matter. Deterministic under an injected `random`. Returns { ok: true }, or
 // { error } when a weight class can't be filled from the remaining distinct
 // chassis — the caller rejects the ready so nothing partial is committed.
+function botTier(room, sideId) {
+  return room.game.sides.find((s) => s.id === sideId)?.bot ?? null;
+}
+
 function generateBotOpponent(room, humanSideId, botSideId, random = Math.random) {
   const used = new Set(room.rigs.map((r) => r.chassis).filter(Boolean));
   const need = {};
@@ -1365,8 +1370,13 @@ function generateBotOpponent(room, humanSideId, botSideId, random = Math.random)
     if (pool.length < count) {
       return { error: `Not enough distinct ${cls} chassis remain for the bot to match your force — field fewer ${cls} Rigs.` };
     }
-    // Fisher-Yates shuffle under the injected random, then take `count`.
+    // Fisher-Yates shuffle under the injected random, then take `count`. A Hard
+    // bot instead takes the strongest chassis the GA meta found (meta.js).
     shuffleInPlace(pool, random);
+    if (botTier(room, botSideId) === "hard" && META.chassisRank.length) {
+      const rank = (id) => { const i = META.chassisRank.indexOf(id); return i < 0 ? 99 : i; };
+      pool.sort((x, y) => rank(x.id) - rank(y.id));
+    }
     for (let i = 0; i < count; i++) { picks.push(pool[i]); used.add(pool[i].id); }
   }
   // Build every rig before committing any: if a pick fails to construct, reject
@@ -1376,10 +1386,15 @@ function generateBotOpponent(room, humanSideId, botSideId, random = Math.random)
   for (const pb of picks) {
     // Standard build: default (Field) weapon upgrades + the chassis's primary
     // suggested equipment — the same construction the seed verb uses.
+    // Easy fields bare rigs (no equipment); Hard fields the GA's winning build.
+    const tier = botTier(room, botSideId);
+    const metaBuild = tier === "hard" ? META.builds[pb.id] : null;
     const unit = makeUnit("rig", room.nextRigId + built.length, uniqueRigName(room, pb.name), botSideId, {
       weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
       chassis: pb.id, sp: pb.sp,
-      equipment: CHASSIS_PRIMARY_EQUIPMENT[pb.id] ?? null,
+      longRangeUpgrade: metaBuild?.longRangeUpgrade, meleeUpgrade: metaBuild?.meleeUpgrade,
+      equipment: tier === "easy" ? null : (metaBuild?.equipment ?? CHASSIS_PRIMARY_EQUIPMENT[pb.id] ?? null),
+      equipmentUpgrade: metaBuild?.equipmentUpgrade,
     });
     if (!unit) return { error: "The bot could not build a matching force." };
     built.push(unit);
@@ -3492,6 +3507,11 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       // (null preset) leaves the mode as-is.
       if (preset !== null) room.mode = "digital";
       side.bot = preset;
+      // Optional evolved weight vector (from the GA's meta report) — overrides the
+      // preset's weights while keeping the preset name as the bot flag.
+      side.botWeights = preset !== null && a.weights && typeof a.weights === "object"
+        ? Object.fromEntries(Object.entries(a.weights).filter(([, v]) => Number.isFinite(Number(v))).map(([k, v]) => [k, Number(v)]))
+        : null;
       changed = true;
     }
   } else if (verb === "reset") {
@@ -4100,6 +4120,9 @@ export function publicState(room, side) {
       canUndo,
     },
     rigs,
+    // Transient: the bot's step-by-step frames for the latest turn (set by the
+    // command route) — only while they're still the newest state.
+    botFrames: room.botFrames?.version === room.version ? room.botFrames.frames : null,
   };
 }
 

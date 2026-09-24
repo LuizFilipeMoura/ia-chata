@@ -997,7 +997,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   }
 
   ctx.pushResolution(room, {
-    kind: "attack", actor: attacker.owner, rigId: attacker.id, rolls,
+    kind: "attack", actor: attacker.owner, rigId: attacker.id, targetId: target.id, weapon: weaponName, rolls,
     summary: `${attacker.name} → ${target.name} with ${weaponName} (Pen ${pen}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,
     breakdown: {
       actor: attacker.name, weapon: weaponName, target: target.name,

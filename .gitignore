@@ -15,3 +15,7 @@ vite.config.d.ts
 
 # superpowers brainstorm scratch
 .superpowers/
+
+# 3D tactics client
+client3d/dist
+!client3d/vite.config.js

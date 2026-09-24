@@ -223,3 +223,33 @@ test("a default physical room becomes digital via setbot and starts a digital ga
   // Digital start assigned positions (autoDeploy), proving the digital path ran.
   assert.ok(body.state.rigs.every((r) => r.pos && typeof r.pos.x === "number"));
 });
+
+test("a human command that hands the floor to a bot returns the bot's turn as step frames", async () => {
+  const code = "BOTFRAMES";
+  store.getOrCreateRoom(code);
+  await post(`/api/game/${code}/join`, { name: "A", side: "a" });
+  await post(`/api/game/${code}/command`, { cmd: { verb: "setbot", attrs: { side: "b", preset: "normal" } }, side: "a" });
+  for (const ch of [CHASSIS.find((c) => c.class === "medium"), CHASSIS.find((c) => c.class === "light")]) {
+    await post(`/api/game/${code}/command`, { cmd: { verb: "add", attrs: { name: ch.name, kind: "rig", owner: "a", chassis: ch.id } }, side: "a" });
+  }
+  await post(`/api/game/${code}/command`, { cmd: { verb: "field", attrs: { action: "lock" } }, side: "a" });
+  // Ready starts the game; if the bot won initiative its whole first turn is
+  // played before the response. Keep ending our activations until a bot turn
+  // has been recorded.
+  let res = await (await post(`/api/game/${code}/command`, { cmd: { verb: "ready", attrs: {} }, side: "a" })).json();
+  for (let i = 0; i < 6 && !res.state.botFrames; i++) {
+    const g = res.state.game;
+    if (g.pendingAnswer?.side === "a") {
+      const r = res.state.rigs.find((x) => x.owner === "a" && !x.preparation);
+      res = await (await post(`/api/game/${code}/command`, { cmd: { verb: "answer", attrs: { name: r.name, prep: "brace", side: "a" } }, side: "a" })).json();
+      continue;
+    }
+    const mine = res.state.rigs.find((x) => x.owner === "a" && !x.activated && !x.destroyed);
+    await post(`/api/game/${code}/command`, { cmd: { verb: "activate", attrs: { name: mine.name } }, side: "a" });
+    res = await (await post(`/api/game/${code}/command`, { cmd: { verb: "endactivation", attrs: { name: mine.name } }, side: "a" })).json();
+  }
+  const frames = res.state.botFrames;
+  assert.ok(Array.isArray(frames) && frames.length > 0, "bot turn recorded");
+  assert.ok(frames.every((f) => Array.isArray(f.rigs) && f.cmd), "each frame is a render snapshot + the command that made it");
+  assert.ok(frames.some((f) => f.cmd.verb === "activate"), "includes the bot activating a rig");
+});

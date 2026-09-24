@@ -13,23 +13,56 @@ export const CELL = 0.25; // inches per grid cell
 // An occupancy grid for ONE mover. `polys` are terrain (geometry.terrainPolygons),
 // `blockers` are the other rigs ({ pos, radius }) — the mover itself must not be
 // in that list. Objectives are never passed: they are markers, not obstacles.
+// Terrain-only occupancy is identical for every call that shares (terrain, size,
+// radius) — which is every probe of a whole game. Cache it keyed on the polys'
+// geometry so the bot's thousands of path queries pay the rasterisation once.
+const terrainCache = new Map();
+function terrainMask(field, polys, radius, cols, rows) {
+  const key = `${field.width}x${field.height}|${radius}|` + polys.map((p) => p.points.map((q) => q.join(",")).join(";")).join("|");
+  const hit = terrainCache.get(key);
+  if (hit) return hit;
+  const mask = new Uint8Array(cols * rows);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = c * CELL, y = r * CELL;
+      // The base must sit wholly on the table.
+      if (x < radius || y < radius || x > field.width - radius || y > field.height - radius) mask[r * cols + c] = 1;
+    }
+  }
+  // Only the cells inside each polygon's radius-inflated bounding box can be
+  // within `radius` of it — test those, not the whole table.
+  for (const poly of polys) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const [x, y] of poly.points) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
+    const c0 = Math.max(0, Math.floor((minX - radius) / CELL)), c1 = Math.min(cols - 1, Math.ceil((maxX + radius) / CELL));
+    const r0 = Math.max(0, Math.floor((minY - radius) / CELL)), r1 = Math.min(rows - 1, Math.ceil((maxY + radius) / CELL));
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        const i = r * cols + c;
+        if (!mask[i] && distToPolygon({ x: c * CELL, y: r * CELL }, poly.points) <= radius) mask[i] = 1;
+      }
+    }
+  }
+  if (terrainCache.size > 64) terrainCache.clear();
+  terrainCache.set(key, mask);
+  return mask;
+}
+
+// An occupancy grid for ONE mover. `polys` are terrain (geometry.terrainPolygons),
+// `blockers` are the other rigs ({ pos, radius }) — the mover itself must not be
+// in that list. Objectives are never passed: they are markers, not obstacles.
 export function buildGrid(field, polys, blockers, radius) {
   const cols = Math.ceil(field.width / CELL) + 1;
   const rows = Math.ceil(field.height / CELL) + 1;
-  const blocked = new Uint8Array(cols * rows);
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const p = { x: c * CELL, y: r * CELL };
-      let bad = false;
-      // The base must sit wholly on the table.
-      if (p.x < radius || p.y < radius || p.x > field.width - radius || p.y > field.height - radius) bad = true;
-      if (!bad) for (const poly of polys) {
-        if (distToPolygon(p, poly.points) <= radius) { bad = true; break; }
+  const blocked = terrainMask(field, polys, radius, cols, rows).slice();
+  for (const b of blockers) {
+    const reach = radius + b.radius;
+    const c0 = Math.max(0, Math.floor((b.pos.x - reach) / CELL)), c1 = Math.min(cols - 1, Math.ceil((b.pos.x + reach) / CELL));
+    const r0 = Math.max(0, Math.floor((b.pos.y - reach) / CELL)), r1 = Math.min(rows - 1, Math.ceil((b.pos.y + reach) / CELL));
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        if (Math.hypot(c * CELL - b.pos.x, r * CELL - b.pos.y) <= reach) blocked[r * cols + c] = 1;
       }
-      if (!bad) for (const b of blockers) {
-        if (Math.hypot(p.x - b.pos.x, p.y - b.pos.y) <= radius + b.radius) { bad = true; break; }
-      }
-      if (bad) blocked[r * cols + c] = 1;
     }
   }
   return { cols, rows, blocked, field };

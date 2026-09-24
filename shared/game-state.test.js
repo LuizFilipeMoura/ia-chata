@@ -6675,8 +6675,8 @@ test("clearing a bot to Human leaves the room digital", () => {
   assert.equal(room.mode, "digital");
 });
 
-test("BOT_PRESETS lists exactly the three tunable presets", () => {
-  assert.deepEqual([...BOT_PRESETS].sort(), ["aggressive", "balanced", "cagey"]);
+test("BOT_PRESETS lists the difficulty tiers and the tunable personalities", () => {
+  assert.deepEqual([...BOT_PRESETS].sort(), ["aggressive", "balanced", "cagey", "easy", "hard", "normal"]);
 });
 
 // ---------------------------------------------------------------------------
