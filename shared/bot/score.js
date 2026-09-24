@@ -230,10 +230,17 @@ function tacticalValue(room, rig, cand, exposure) {
     case "unplant": return exposure === 0 ? 0.3 : 0;
     case "barrage": return livingEnemies(room, rig).length ? 1.6 : 0;
     case "lock": return 1.2;
-    case "harden": case "popsmoke": return exposure * 0.6;
+    // One-shot buffs: a second use this activation does nothing.
+    case "harden": return rig.hardened ? 0 : exposure * 0.6;
+    case "popsmoke": return rig.smokeNextActivation ? 0 : exposure * 0.6;
     case "purge": case "heatpurgewave": return heat >= cap - 2 ? 2 : 0;
     case "overclock": return left >= 2 && heat + 3 < cap ? 1.4 : 0;
-    case "locksight": return left >= 2 ? 0.6 : 0;
+    case "locksight": {
+      // Only worth it primed for a shot this activation, and only once.
+      if (rig.lockSightNext || left < 2) return 0;
+      const canShoot = livingEnemies(room, rig).some((e) => shotValue(room, rig, rig.pos, rig.facing, e, e.pos, e.facing) > 0);
+      return canShoot ? 0.6 : 0;
+    }
     case "emergencypatch": return fragility(rig) * 3;
     // Shut Down vents 2 heat per unused action and ends the activation — worth it
     // exactly when the rig is about to roll on the overheat table (or close to).
