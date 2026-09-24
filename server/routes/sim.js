@@ -33,11 +33,10 @@ export function createSimRouter({ pool, rootDir, replays, store = null, genePool
     try { const j = JSON.parse(fs.readFileSync(path.join(jobsDir, f), "utf8")); if (j.status === "running") j.status = "interrupted"; jobs.set(j.id, j); } catch {}
   }
 
-  // An empty pool inherits the best genomes of past runs saved on disk.
-  if (!genePool.all().length) {
-    for (const j of [...jobs.values()].filter((x) => x.kind === "ga" && x.ranked?.length)) {
-      genePool.deposit(j.ranked.map((r) => ({ g: { squad: r.squad, weights: r.weights }, fitness: r.fitness })), { job: j.id, rulesHash: j.rulesHash ?? null });
-    }
+  // Past runs saved on disk (finished or cut short) all feed the pool; deposits
+  // dedupe by genome signature, so re-reading them each start is harmless.
+  for (const j of [...jobs.values()].filter((x) => x.kind === "ga" && x.ranked?.length)) {
+    genePool.deposit(j.ranked.map((r) => ({ g: { squad: r.squad, weights: r.weights }, fitness: r.fitness })), { job: j.id, rulesHash: j.rulesHash ?? null, top: 4 });
   }
 
   const view = (job) => ({
@@ -101,6 +100,9 @@ export function createSimRouter({ pool, rootDir, replays, store = null, genePool
         job.history = history;
         job.stats = summarise(stats);
         job.ranked = ranked.slice(0, 8).map((r) => ({ fitness: r.fitness, squad: r.g.squad, weights: r.g.weights }));
+        // Bank this generation's best right away — a run cut short (restart,
+        // stop) still feeds the next one.
+        genePool.deposit(ranked, { job: job.id, rulesHash: rh, top: 4 });
         persistJob(job);
       },
     }).then((result) => {

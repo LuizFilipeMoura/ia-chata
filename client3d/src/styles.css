@@ -195,3 +195,17 @@ table.lib td { padding: 5px 4px; border-top: 1px solid rgba(255,255,255,.05); }
 .biases { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; } .biases span { font-size: 12px; padding: 0 4px; border-radius: 3px; }
 .biases .pos { background: rgba(88,214,141,.2); } .biases .neg { background: rgba(231,76,60,.2); }
 .t-bias { background: #e0e0e0; }
+
+/* Nameplates */
+.plates { position: absolute; inset: 0; pointer-events: none !important; overflow: hidden; }
+.plate { position: absolute; left: 0; top: 0; min-width: 76px; background: rgba(12,14,18,.78); border: 1px solid rgba(255,255,255,.12); border-top: 2px solid var(--cyan); border-radius: 5px; padding: 2px 5px 3px; font-size: 12px; line-height: 1.2; will-change: transform; }
+.plate.o-b { border-top-color: var(--red); }
+.plate.active { box-shadow: 0 0 0 1px var(--gold), 0 0 10px rgba(255,211,90,.4); }
+.plate.dead { opacity: .35; }
+.plate .pt { display: flex; justify-content: space-between; gap: 4px; } .plate .pi { color: var(--gold); }
+.plate .pb { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; margin-top: 2px; overflow: hidden; } .plate .pb i { display: block; height: 100%; transition: width .4s; }
+.plate .ph { display: flex; gap: 1px; margin-top: 2px; } .plate .ph s { flex: 1; height: 3px; background: rgba(255,255,255,.1); text-decoration: none; }
+.plate .ph s.on { background: #f5b041; } .plate .ph s.over { background: #ff3d1f; }
+table.keys td { padding: 4px 8px; } kbd { background: #2a2e37; border: 1px solid #444; border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px; font: 600 12px var(--body); }
+.settings { display: flex; flex-direction: column; gap: 8px; } .set-row { display: flex; align-items: center; gap: 8px; }
+.done-tick { color: var(--good); font-weight: 600; }

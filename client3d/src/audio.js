@@ -2,7 +2,10 @@
 // noise buffer through envelopes: cannon thumps, minigun rattles, missile
 // whooshes, arc-gun zaps, clanky footsteps, overheat klaxons, a victory fanfare.
 // Lazily unlocked on the first user gesture (browsers block audio before one).
+import { settings } from "./settings.js";
 let ctx = null, master = null, noiseBuf = null;
+const vol = () => settings.get("volume") ?? 0.5;
+settings.on((k) => { if (k === "volume" && master) master.gain.value = muted ? 0 : vol(); });
 let muted = (() => { try { return localStorage.getItem("oi3d-muted") === "1"; } catch { return false; } })();
 let lastStep = 0;
 
@@ -11,7 +14,7 @@ function init() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   ctx = new AC();
-  master = ctx.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(ctx.destination);
+  master = ctx.createGain(); master.gain.value = muted ? 0 : vol(); master.connect(ctx.destination);
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -23,7 +26,7 @@ export function isMuted() { return muted; }
 export function setMuted(m) {
   muted = m;
   try { localStorage.setItem("oi3d-muted", m ? "1" : "0"); } catch {}
-  if (master) master.gain.value = m ? 0 : 0.5;
+  if (master) master.gain.value = m ? 0 : vol();
 }
 
 function env(node, t, a, peak, dur) {

@@ -10,6 +10,7 @@ import { HEAT_CAPACITY } from "/shared/rules.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 import { sfx } from "../audio.js";
 import { barkFor } from "./barks.js";
+import { settings } from "../settings.js";
 
 const PROJECTILE = {
   "Autocannon": "cannon", "Missile Barrage": "missile", "Mini Gun": "bullet", "Double MG": "bullet",
@@ -119,7 +120,7 @@ export class Director {
   sound(fn) { if (!this.quiet && !this.skipping) fn(); }
 
   bark(m, event) {
-    if (this.quiet || this.skipping || !m) return;
+    if (this.quiet || this.skipping || !m || !settings.get("barks")) return;
     const line = barkFor(m.name, event);
     if (!line) return;
     this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 4.6, 0)), line, m.owner === "a" ? "#33d6ff" : "#ff4a3d");

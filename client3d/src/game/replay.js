@@ -4,6 +4,7 @@ import { Director } from "./director.js";
 import { Hud } from "../ui/hud.js";
 import { el, clear, fill } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
+import { Nameplates } from "../ui/nameplates.js";
 import { CHASSIS } from "/shared/game-state.js";
 
 const WEIGHT_HELP = {
@@ -28,6 +29,8 @@ export class Replay {
     this.renderBrain(null);
     this.minimap = new Minimap(hudRoot, world);
     this.minimap.set(replay.field, replay.objectives, f0.rigs, null);
+    this.plates = new Nameplates(hudRoot, world, this.director);
+    this.plates.set(this.stateLike(f0).rigs);
     this.renderControls();
     this.loop();
   }
@@ -53,6 +56,7 @@ export class Replay {
       this.hud.top(s, "a"); this.hud.roster(s, "a", f.turn?.activeRigId);
       this.renderBrain(f.thought);
       this.minimap.set(this.replay.field, this.replay.objectives, f.rigs, f.turn?.activeRigId);
+      this.plates.set(s.rigs, { activeId: f.turn?.activeRigId });
       const r = f.turn?.activeRigId != null ? f.rigs.find((x) => x.id === f.turn.activeRigId) : null;
       if (r?.pos && this.follow) this.world.focus(r.pos.x, r.pos.y);
       this.renderControls();
@@ -119,5 +123,5 @@ export class Replay {
   }
 
   exit() { this.destroy(); this.onExit?.(); }
-  destroy() { this.dead = true; this.minimap.destroy(); this.director.reset(); this.hud.destroy(); }
+  destroy() { this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.reset(); this.hud.destroy(); }
 }

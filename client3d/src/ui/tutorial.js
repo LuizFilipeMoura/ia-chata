@@ -47,7 +47,7 @@ export class Coach {
     this.render();
   }
 
-  destroy() { clearInterval(this.camTimer); clearInterval(this.hlTimer); this.panel.remove(); this.unhighlight(); }
+  destroy() { clearInterval(this.camTimer); clearInterval(this.hlTimer); clearTimeout(this.skipTimer); this.panel.remove(); this.unhighlight(); }
 
   check() {
     const s = this.steps[this.i];
@@ -55,13 +55,25 @@ export class Coach {
     else this.render();
   }
 
+  // Things you already did stay done (this.ev is cumulative): a step whose goal
+  // you met earlier shows a quick "✓ already done" and moves on by itself.
   advance() {
-    if (this.i < this.steps.length - 1) { this.i++; this.ev = { camera: this.ev.camera }; this.render(); setTimeout(() => this.check(), 50); }
+    if (this.i >= this.steps.length - 1) return;
+    this.i++;
+    const s = this.steps[this.i];
+    if (s.done && !s.next && s.done(this.match, this.ev)) {
+      this.render(true);
+      clearTimeout(this.skipTimer);
+      this.skipTimer = setTimeout(() => this.advance(), 1400);
+      return;
+    }
+    this.render();
+    setTimeout(() => this.check(), 50);
   }
 
   unhighlight() { document.querySelectorAll(".coach-hl").forEach((n) => n.classList.remove("coach-hl")); }
 
-  render() {
+  render(already = false) {
     const s = this.steps[this.i];
     this.unhighlight();
     if (s.highlight) document.querySelectorAll(s.highlight).forEach((n) => n.classList.add("coach-hl"));
@@ -71,6 +83,7 @@ export class Coach {
       el("p", {}, s.text),
       s.extra ? s.extra() : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,
+      already ? el("p", { class: "done-tick" }, "✓ Already done — nice!") : null,
       el("div", { class: "coach-a" },
         this.i > 0 ? el("button", { class: "btn ghost", onClick: () => { this.i--; this.render(); } }, "‹ Back") : null,
         s.next || s.skippable ? el("button", { class: "btn primary", onClick: () => s.last ? this.destroy() : this.advance() }, s.last ? "Let's go" : s.skippable ? "Skip ›" : "Next ›") : el("span", { class: "muted" }, "Do it to continue…")),

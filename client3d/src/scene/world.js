@@ -5,6 +5,7 @@
 // units: field (x, y) → world (x, 0, y).
 import * as THREE from "three";
 import { FX } from "./fx.js";
+import { settings } from "../settings.js";
 
 const DEG = Math.PI / 180;
 
@@ -313,7 +314,7 @@ export class World {
     if (k.has("d") || k.has("arrowright")) this.panBy(sp, 0);
     if (k.has("q")) this.cam.yaw -= dt * 1.5;
     if (k.has("e")) this.cam.yaw += dt * 1.5;
-    if (this.edgePan && this.lastPointer) {
+    if (this.edgePan && settings.get("edgePan") && this.lastPointer) {
       const m = 14, W = window.innerWidth, H = window.innerHeight, p = this.lastPointer;
       if (p.x < m) this.panBy(-sp, 0); else if (p.x > W - m) this.panBy(sp, 0);
       if (p.y < m) this.panBy(0, -sp); else if (p.y > H - m) this.panBy(0, sp);

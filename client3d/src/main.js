@@ -13,6 +13,7 @@ import { Coach, TUTORIAL_SQUAD } from "./ui/tutorial.js";
 import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
 import { sfx, isMuted, setMuted } from "./audio.js";
+import { settings } from "./settings.js";
 
 function muteButton() {
   const b = el("button", { class: "btn ghost", title: "Sound on/off" }, isMuted() ? "🔇" : "🔊");
@@ -82,7 +83,13 @@ function home() {
     onSims: () => sims(),
     onWatch: () => watch(),
   });
-  screen.append(el("div", { class: "title-mute" }, muteButton()));
+  screen.append(el("div", { class: "title-mute" }, el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"), muteButton()));
+  lastBattle().then((last) => {
+    if (!last) return;
+    const menu = screen.querySelector(".menu");
+    menu?.prepend(el("button", { class: "btn big primary", onClick: () => play(last.room, { cfg: last.cfg, tutorial: last.tutorial }) }, `▶  Continue battle — round ${last.round}`));
+    menu?.querySelector(".btn.primary + .btn.primary, .menu > .btn:nth-child(2)")?.classList.remove("primary");
+  });
 }
 
 function builder() {
@@ -90,24 +97,62 @@ function builder() {
     onBack: home,
     onStart: async (cfg) => {
       fill(screen, el("div", { class: "loading" }, "Deploying…"));
-      try { const room = await createBotRoom(cfg); play(room); }
+      try { const room = await createBotRoom(cfg); play(room, { cfg }); }
       catch (e) { toast(e.message, "bad", 5000); builder(); }
     },
   });
 }
 
-async function play(room, { tutorial = false } = {}) {
+async function play(room, { tutorial = false, cfg = null } = {}) {
   teardown();
   screen.style.display = "none";
+  // Remember the battle so the title screen can offer "Continue".
+  try { localStorage.setItem("oi3d-last", JSON.stringify({ room, cfg, tutorial, at: Date.now() })); } catch {}
   const hud = new Hud(hudRoot);
-  const match = new LiveMatch(world, hud, { room, side: "a", onExit: home });
+  const rematch = cfg ? async () => { fill(screen, el("div", { class: "loading" }, "Rematch — deploying…")); screen.style.display = ""; try { play(await createBotRoom(cfg), { cfg }); } catch (e) { toast(e.message, "bad"); home(); } } : null;
+  const match = new LiveMatch(world, hud, { room, side: "a", onExit: home, onRematch: rematch });
   active = match;
   hudRoot.append(el("div", { class: "hud-menu" },
-    el("button", { class: "btn ghost", onClick: () => modal({ title: "Leave battle?", body: el("p", {}, `Room ${room} stays on the server — you can't rejoin from here yet.`), actions: [{ label: "Stay", ghost: true }, { label: "Leave", primary: true, onClick: home }] }) }, "☰"),
+    el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server — "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
     el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, "📖"),
+    el("button", { class: "btn ghost", title: "Hotkeys (?)", onClick: hotkeys }, "⌨"),
+    el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"),
     muteButton()));
   try { await match.start(); } catch (e) { toast(e.message, "bad"); return home(); }
   if (tutorial) match.coach = new Coach(hudRoot, match);
+}
+
+// Resume the last battle if the server still has it and it isn't over.
+async function lastBattle() {
+  let last = null;
+  try { last = JSON.parse(localStorage.getItem("oi3d-last") || "null"); } catch {}
+  if (!last?.room) return null;
+  try {
+    const r = await api.state(last.room, "a");
+    if (!r.state?.game?.started || r.state.game.phase === "finished") return null;
+    return { ...last, round: r.state.game.round };
+  } catch { return null; }
+}
+
+function hotkeys() {
+  const rows = [["WASD / arrows", "pan camera"], ["Q / E, right-drag", "rotate camera"], ["Wheel", "zoom"], ["Tab", "next ready rig"], ["1 · 2 · 3 · 4 · 5 · 6", "Move · Sprint · Fire · Aimed · Prepare · Shut Down"], ["Shift + wheel", "turn while placing a move"], ["Enter", "end activation"], ["Esc / right-click", "cancel"], ["Ctrl+Z", "undo last action"], ["Space", "skip animation"], ["?", "this list"]];
+  modal({ title: "⌨ Hotkeys", body: el("table", { class: "keys" }, rows.map(([k, v]) => el("tr", {}, el("td", {}, el("kbd", {}, k)), el("td", {}, v)))), actions: [{ label: "Close", primary: true }] });
+}
+window.addEventListener("keydown", (e) => { if (e.key === "?" && !e.target.closest?.("input,textarea")) hotkeys(); });
+
+function settingsPanel() {
+  const toggle = (k, label) => el("label", { class: "set-row" }, el("input", { type: "checkbox", checked: !!settings.get(k), onChange: (e) => settings.set(k, e.target.checked) }), label);
+  modal({
+    title: "⚙ Settings",
+    body: el("div", { class: "settings" },
+      toggle("nameplates", "Nameplates over mechs"),
+      toggle("barks", "Pilot speech bubbles"),
+      toggle("dangerPreview", "Show danger when placing a move"),
+      toggle("edgePan", "Pan the camera at screen edges"),
+      el("label", { class: "set-row" }, "Volume ", el("input", { type: "range", min: 0, max: 1, step: 0.05, value: settings.get("volume"), onInput: (e) => settings.set("volume", Number(e.target.value)) })),
+      el("label", { class: "set-row" }, "Animation speed ", el("select", { onChange: (e) => { settings.set("speed", Number(e.target.value)); if (active?.director) active.director.speed = Number(e.target.value); } }, [1, 2, 4].map((v) => el("option", { value: v, selected: settings.get("speed") === v }, `${v}×`))))),
+    actions: [{ label: "Done", primary: true }],
+  });
 }
 
 async function tutorial() {

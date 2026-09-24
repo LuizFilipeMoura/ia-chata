@@ -9,15 +9,17 @@ import { Director, frameFromState, chassisOf } from "./director.js";
 import { availableActions } from "/shared/battle-view.js";
 import { candidatesFor } from "/shared/bot/candidates.js";
 import { chooseAction } from "/shared/bot/index.js";
-import { scoreCandidate, PRESETS } from "/shared/bot/score.js";
+import { scoreCandidate, scoreParts, PRESETS } from "/shared/bot/score.js";
 import { expectedDamage } from "/shared/bot/evaluate.js";
 import { findPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween } from "/shared/geometry.js";
-import { spatial, moveBudget, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf } from "/shared/game-state.js";
+import { spatial, moveBudget, effectiveWeaponProfile, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { sfx } from "../audio.js";
+import { settings } from "../settings.js";
+import { Nameplates } from "../ui/nameplates.js";
 
 const DEG = Math.PI / 180;
 const ICON = { move: "🦿", sprint: "💨", fire: "🎯", aimed: "🔭", prepare: "🛡️", repair: "🔧", shutdown: "❄️", disengage: "↩️", douse: "🧯", reload: "🔄", lock: "📡", emplace: "⚓", unplant: "⛏️", barrage: "💥", harden: "🧱", purge: "♨️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹", heatpurgewave: "🔥", locksight: "🎯", popsmoke: "🌫️", cryo: "🧊" };
@@ -32,8 +34,8 @@ const HELP = {
 };
 
 export class LiveMatch {
-  constructor(world, hud, { room, side = "a", tutorial = null, onExit }) {
-    this.world = world; this.hud = hud; this.room = room; this.side = side; this.onExit = onExit;
+  constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null }) {
+    this.world = world; this.hud = hud; this.room = room; this.side = side; this.onExit = onExit; this.onRematch = onRematch;
     this.state = null; this.selected = null; this.mode = null; this.lastRes = -1; this.lastVersion = -1;
     this.tutorial = tutorial;
     this.events = new EventTarget();
@@ -50,7 +52,8 @@ export class LiveMatch {
     this.keyHandler = (e) => this.onKey(e);
     window.addEventListener("keydown", this.keyHandler);
     this.advisorWeights = PRESETS.hard;
-    try { this.director.speed = Number(localStorage.getItem("oi3d-speed")) || 1; } catch {}
+    this.director.speed = settings.get("speed") || 1;
+    this.plates = new Nameplates(hud.root, world, this.director);
     this.minimap = new Minimap(hud.root, world);
   }
 
@@ -68,6 +71,7 @@ export class LiveMatch {
     window.removeEventListener("keydown", this.keyHandler);
     this.director.reset();
     this.minimap.destroy();
+    this.plates.destroy();
     this.world.clearOverlay();
     this.world.onShiftWheel = null;
   }
@@ -145,6 +149,7 @@ export class LiveMatch {
     this.wasMine = mine;
     this.hud.top(this.state, this.side);
     this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId);
+    this.plates.set(this.state.rigs, { activeId: g.turn?.activeRigId, priorityIds: Object.values(g.priorityTargets || {}) });
     this.hud.roster(this.state, this.side, this.selected, (id) => this.select(id));
     // Objective control tint.
     const ctrl = (g.objectives || []).map((m) => {
@@ -194,7 +199,7 @@ export class LiveMatch {
     if (!this.director.idle) {
       bar.append(el("div", { class: "act-foot" },
         el("span", { class: "hint" }, "⏳ Resolving…"),
-        el("span", {}, [1, 2, 4].map((sp) => el("button", { class: `btn ${this.director.speed === sp ? "primary" : "ghost"}`, onClick: () => { this.director.speed = sp; try { localStorage.setItem("oi3d-speed", String(sp)); } catch {} this.renderActions(); } }, `${sp}×`)),
+        el("span", {}, [1, 2, 4].map((sp) => el("button", { class: `btn ${this.director.speed === sp ? "primary" : "ghost"}`, onClick: () => { this.director.speed = sp; settings.set("speed", sp); this.renderActions(); } }, `${sp}×`)),
           el("button", { class: "btn", title: "Skip the animation (Space)", onClick: () => this.director.skip() }, "⏭ Skip"))));
       return;
     }
@@ -234,7 +239,9 @@ export class LiveMatch {
     bar.append(row);
     if (commandable) {
       const foot = el("div", { class: "act-foot" },
-        el("button", { class: "btn ghost", "data-act": "advisor", onClick: () => this.advise(rig) }, "💡 Advisor"),
+        el("span", {},
+          el("button", { class: "btn ghost", "data-act": "advisor", onClick: () => this.advise(rig) }, "💡 Advisor"),
+          g.canUndo ? el("button", { class: "btn ghost", title: "Take back your last action (Ctrl+Z)", onClick: () => this.undo() }, "↶ Undo") : null),
         g.turn.activeRigId === rig.id ? el("button", { class: "btn primary", "data-act": "end", onClick: () => this.endActivation(rig) }, "End activation ⏎") : null,
       );
       bar.append(foot);
@@ -275,6 +282,13 @@ export class LiveMatch {
     return this.send("action", { name: rig.name, ...attrs });
   }
 
+  // The engine keeps turn-scoped snapshots; undo pops the last one (dice and all).
+  async undo() {
+    if (!this.game?.canUndo) return;
+    this.cancelMode();
+    if (await this.send("undo", { side: this.side })) toast("↶ Undone", "info", 1200);
+  }
+
   async endActivation(rig) {
     this.cancelMode();
     await this.send("endactivation", { name: rig.name });
@@ -295,6 +309,7 @@ export class LiveMatch {
 
   cancelMode() {
     this.mode = null;
+    this.reachFor = undefined; this.reachMeshes = [];
     this.world.clearOverlay();
     this.ghost && this.world.scene.remove(this.ghost);
     this.ghost = null;
@@ -337,7 +352,38 @@ export class LiveMatch {
     // Pivot cap ±90° from current facing.
     const d = ((facing - rig.facing + 540) % 360) - 180;
     facing = rig.facing + Math.max(-90, Math.min(90, d));
-    return { route, ok, facing };
+    // Danger preview: the bot's own exposure metric at the destination — how
+    // much every enemy could expect to deal to you standing there, as posed.
+    // Throttled to real cursor movement; it traces LOS for each enemy.
+    let danger = null;
+    if (ok && settings.get("dangerPreview")) {
+      const k = `${field.x.toFixed(1)},${field.y.toFixed(1)},${Math.round(facing)}`;
+      if (this.dangerKey !== k) {
+        this.dangerKey = k;
+        const room = this.previewRoom(rig);
+        const parts = scoreParts(room, rig, { action: this.mode.key === "jumpjets" ? "move" : this.mode.key, dest: { x: field.x, y: field.y }, facing });
+        this.dangerVal = -parts.threat;
+      }
+      danger = this.dangerVal;
+    }
+    return { route, ok, facing, danger };
+  }
+
+  // Hovering an enemy: its front arc, gun reach and melee reach on the table.
+  showReach(r) {
+    if (this.reachFor === r?.id) return;
+    this.reachFor = r?.id ?? null;
+    for (const m of this.reachMeshes || []) this.world.overlay.remove(m);
+    this.reachMeshes = [];
+    if (!r || r.destroyed || !r.pos || this.mode) return;
+    const lr = effectiveWeaponProfile("longRange", r.weapons?.longRange, r);
+    const max = Math.min(60, lr?.maxRange ?? 24);
+    const col = r.owner === this.side ? 0x33d6ff : 0xff4a3d;
+    this.reachMeshes.push(
+      this.world.wedge(r.pos.x, r.pos.y, max, r.facing - 45, r.facing + 45, col, 0.07),
+      this.world.ring(r.pos.x, r.pos.y, max, col, 0.35),
+      this.world.ring(r.pos.x, r.pos.y, radiusOf(r) + meleeReachOf(r), 0xffaa33, 0.7),
+    );
   }
 
   // ---- Targeting ----
@@ -437,13 +483,16 @@ export class LiveMatch {
       this.ghostMat.color.setHex(p.ok ? 0x33ff99 : 0xff4433);
       if (this.pathLine) this.world.overlay.remove(this.pathLine);
       if (p.route) this.pathLine = this.world.path(p.route.path, p.ok ? 0x33ff99 : 0xff4433);
-      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}" · facing ${Math.round(p.facing)}° ${p.ok ? "" : "— out of reach"} · Shift+wheel to turn` : "No path there");
+      const dz = p.danger == null ? "" : p.danger < 0.3 ? " · ✅ safe spot" : ` · ⚠ ≈${p.danger.toFixed(1)} SP incoming here`;
+      if (p.ok && p.danger != null) this.ghostMat.color.setHex(p.danger < 0.3 ? 0x33ff99 : p.danger < 2 ? 0xffd35a : 0xff8a3d);
+      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}" · facing ${Math.round(p.facing)}°${p.ok ? dz : " — out of reach"} · Shift+wheel to turn` : "No path there");
       this.mode.preview = { ...p, dest: hit.field };
       return;
     }
     // Hover tooltip for rigs.
     const r = hit.mechId != null ? this.rig(hit.mechId) : null;
     this.hud.hoverRig(r, this.state);
+    this.showReach(r);
     if (this.mode?.byTarget && r) {
       const list = this.mode.byTarget.get(r.name);
       if (list) {
@@ -483,6 +532,7 @@ export class LiveMatch {
   onKey(e) {
     if (e.target.closest?.("input,textarea")) return;
     if (e.key === "Escape") this.cancelMode();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); this.undo(); return; }
     if (e.key === " " && !this.director.idle) { e.preventDefault(); this.director.skip(); }
     if (e.key === "Enter" && this.activeRig && this.activeRig.owner === this.side) this.endActivation(this.activeRig);
     if (e.key === "Tab") {
@@ -578,7 +628,7 @@ export class LiveMatch {
         cls: won ? "victory" : "defeat",
         body: el("div", {},
           el("p", {}, `Reason: ${o?.reason || "—"} · VP ${this.game.sides.map((s) => `${s.id.toUpperCase()} ${s.vp}`).join(" – ")} · Round ${this.game.round}`)),
-        actions: [{ label: "Main menu", primary: true, onClick: () => this.onExit?.() }],
+        actions: [this.onRematch ? { label: "⚔ Rematch", primary: true, onClick: () => this.onRematch() } : null, { label: "Main menu", primary: !this.onRematch, ghost: !!this.onRematch, onClick: () => this.onExit?.() }].filter(Boolean),
         dismissable: false,
       });
     });
