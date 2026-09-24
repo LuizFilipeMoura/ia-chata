@@ -211,7 +211,7 @@ table.keys td { padding: 4px 8px; } kbd { background: #2a2e37; border: 1px solid
 .done-tick { color: var(--good); font-weight: 600; }
 
 /* ===================================================================
-   DIESELPUNK THEME — riveted gunmetal, brass trim, stencil type, soot.
+   DIESELPUNK THEME, riveted gunmetal, brass trim, stencil type, soot.
    Appended last so it restyles the components above without rewiring them.
    =================================================================== */
 :root {
@@ -282,7 +282,7 @@ h1, h2, h3, .rh, .coach-h b, .act-name, .hud-top .turn .who, .hud-top .vp b, .ba
 
 /* Wires (toasts) and the tutorial coach read like telegrams */
 .toast { font-family: var(--type); border-left: 4px solid var(--brass) !important; }
-.toast::before { content: "⚡ WIRE — "; color: var(--brass-hi); }
+.toast::before { content: "⚡ WIRE: "; color: var(--brass-hi); }
 .coach { border: 1px solid var(--brass) !important; }
 .coach p { font-family: var(--type); font-size: 14px; color: #efe3c6; }
 .coach-h .step { background: var(--brass); color: #20170a; }

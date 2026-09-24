@@ -63,7 +63,7 @@ export function labScreen(root, { onBack, onLibrary }) {
   api.sim.meta().then((m) => {
     fill(metaEl,
       m.stale ? el("div", { class: "warn-banner" }, `⚠ The rules changed since the Hard bot's meta was evolved (meta ${m.meta.rulesHash} → rules ${m.rulesHash}). Run an evolution and adopt it to re-tune.`) : null,
-      el("span", { class: "muted small" }, `Rules ${m.rulesHash} · gene pool: ${m.genePool} genomes — new runs continue from them (tick "Fresh start" to ignore).`));
+      el("span", { class: "muted small" }, `Rules ${m.rulesHash} · gene pool: ${m.genePool} genomes. New runs continue from them (tick "Fresh start" to ignore).`));
   }).catch(() => {});
   let allJobs = [];
   const renderPicker = () => {
@@ -86,7 +86,7 @@ export function labScreen(root, { onBack, onLibrary }) {
           rows.map((r) => el("tr", { class: r.winRate > 0.6 ? "hot" : r.winRate < 0.4 ? "cold" : "" },
             el("td", {}, label(kind, r.id)),
             // Bar = win rate; the bracket = 95% confidence range. A range that
-            // crosses 50% hasn't proven anything yet — play more games.
+            // crosses 50% hasn't proven anything yet, play more games.
             el("td", { title: r.ciLow != null ? `95% range ${(r.ciLow * 100).toFixed(0)}–${(r.ciHigh * 100).toFixed(0)}%` : "" },
               el("div", { class: `wr ${r.ciLow > 0.5 ? "sig-hi" : r.ciHigh < 0.5 ? "sig-lo" : ""}` },
                 el("i", { style: { width: `${r.winRate * 100}%` } }),
@@ -94,7 +94,7 @@ export function labScreen(root, { onBack, onLibrary }) {
                 el("span", {}, `${(r.winRate * 100).toFixed(0)}%${r.ciLow != null ? ` ±${(((r.ciHigh - r.ciLow) / 2) * 100).toFixed(0)}` : ""}`))),
             el("td", {}, String(r.games)), el("td", {}, r.avgDmg.toFixed(1)))))));
     }
-    // Every match of the run is a saved simulated game — browse them.
+    // Every match of the run is a saved simulated game, browse them.
     fill(replaysEl, el("h3", {}, "This run's games"),
       job?.id && job.id !== "saved" ? [
         el("button", { class: "btn primary", onClick: () => onLibrary({ job: job.id }) }, `▶ All ${job.done ?? job.games ?? ""} simulated games`),
@@ -103,7 +103,7 @@ export function labScreen(root, { onBack, onLibrary }) {
     clear(bestEl);
     if (job?.ranked?.length) {
       const b = job.ranked[0];
-      bestEl.append(el("h3", {}, "Current champion"), el("ul", {}, b.squad.map((u) => el("li", {}, `${label("chassis", u.chassis)} — ${upgradeName(u.longRangeUpgrade)}, ${upgradeName(u.meleeUpgrade)}, ${EQUIPMENT[u.equipment]?.label} / ${upgradeName(u.equipmentUpgrade)}`))),
+      bestEl.append(el("h3", {}, "Current champion"), el("ul", {}, b.squad.map((u) => el("li", {}, `${label("chassis", u.chassis)}: ${upgradeName(u.longRangeUpgrade)}, ${upgradeName(u.meleeUpgrade)}, ${EQUIPMENT[u.equipment]?.label} / ${upgradeName(u.equipmentUpgrade)}`))),
         el("p", { class: "muted small" }, "Pilot weights: " + Object.entries(b.weights).map(([k, v]) => `${k} ${v}`).join(" · ")));
     }
     if (job?.calibration) renderCal(job.calibration, "evolved builds");
@@ -116,7 +116,7 @@ export function labScreen(root, { onBack, onLibrary }) {
   };
 
   const start = async () => {
-    try { job = await api.sim.evolve(params); allJobs.push(job); toast("Evolution started — matches run on the server's worker pool.", "good"); poll(); }
+    try { job = await api.sim.evolve(params); allJobs.push(job); toast("Evolution started. Matches run on the server's worker pool.", "good"); poll(); }
     catch (e) { toast(e.message, "bad"); }
   };
 
@@ -127,8 +127,8 @@ export function labScreen(root, { onBack, onLibrary }) {
       el("label", { title: "Ignore the gene pool and start from random genomes" }, "Fresh start", el("input", { type: "checkbox", onChange: (e) => { params.fresh = e.target.checked; } })),
       el("button", { class: "btn primary", onClick: start }, "▶ Evolve"),
       el("button", { class: "btn", onClick: async () => { if (job) { await api.sim.stop(job.id); toast("Stopping after this generation…"); } } }, "■ Stop"),
-      el("button", { class: "btn", onClick: async () => { toast("Calibrating tiers — a few minutes…"); try { const r = await api.sim.calibrate({ games: 12, job: job?.status === "done" ? job.id : undefined }); renderCal(r.calibration, r.against === "evolved" ? "evolved builds" : "average builds"); } catch (e) { toast(e.message, "bad"); } } }, "⚖ Calibrate tiers"),
-      el("button", { class: "btn", onClick: async () => { if (!job) return; try { await api.sim.adopt(job.id); toast("Adopted — the Hard bot now plays this meta.", "good"); } catch (e) { toast(e.message, "bad"); } } }, "🏆 Adopt as Hard bot"),
+      el("button", { class: "btn", onClick: async () => { toast("Calibrating tiers. This takes a few minutes…"); try { const r = await api.sim.calibrate({ games: 12, job: job?.status === "done" ? job.id : undefined }); renderCal(r.calibration, r.against === "evolved" ? "evolved builds" : "average builds"); } catch (e) { toast(e.message, "bad"); } } }, "⚖ Calibrate tiers"),
+      el("button", { class: "btn", onClick: async () => { if (!job) return; try { await api.sim.adopt(job.id); toast("Adopted. The Hard bot now plays this meta.", "good"); } catch (e) { toast(e.message, "bad"); } } }, "🏆 Adopt as Hard bot"),
     ),
     metaEl, pickerEl, statusEl,
     el("div", { class: "lab-main" }, el("div", { class: "lab-left" }, canvas, el("div", { class: "legend" }, el("span", { class: "l-best" }, "best"), el("span", { class: "l-mean" }, "mean")), bestEl, replaysEl, calEl), statsEl),

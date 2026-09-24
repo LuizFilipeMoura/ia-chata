@@ -3507,7 +3507,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       // (null preset) leaves the mode as-is.
       if (preset !== null) room.mode = "digital";
       side.bot = preset;
-      // Optional evolved weight vector (from the GA's meta report) — overrides the
+      // Optional evolved weight vector (from the GA's meta report), overrides the
       // preset's weights while keeping the preset name as the bot flag.
       side.botWeights = preset !== null && a.weights && typeof a.weights === "object"
         ? Object.fromEntries(Object.entries(a.weights).filter(([, v]) => Number.isFinite(Number(v))).map(([k, v]) => [k, Number(v)]))
@@ -3685,7 +3685,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           if (a.diagonal === "trbl" || a.diagonal === "tlbr") room.field.diagonal = a.diagonal;
           room.game.objectives = computeObjectives(room.field);
           // A digital room only ever uses the digital vocabulary (rects the ray
-          // model grades honestly) — never woods / craters / ruins.
+          // model grades honestly), never woods / craters / ruins.
           room.field.terrain = scatterTerrain(room.field, options.random, { digital: room.mode === "digital" });
           changed = true;
         }
@@ -4123,7 +4123,7 @@ export function publicState(room, side) {
     },
     rigs,
     // Transient: the bot's step-by-step frames for the latest turn (set by the
-    // command route) — only while they're still the newest state.
+    // command route), only while they're still the newest state.
     botFrames: room.botFrames?.version === room.version ? room.botFrames.frames : null,
   };
 }

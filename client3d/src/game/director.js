@@ -1,6 +1,6 @@
 // The Director turns engine state into a show. It owns one Mech per rig and
-// plays frames — { rigs, log, cmd, round, … } snapshots, from a live push, a bot
-// turn, or a GA replay — as animation: walks along routed paths, per-weapon
+// plays frames, { rigs, log, cmd, round, … } snapshots, from a live push, a bot
+// turn, or a GA replay, as animation: walks along routed paths, per-weapon
 // projectiles, impact sparks + damage numbers, cook-offs, overheat steam. Frames
 // queue, so a whole bot turn plays out move by move.
 import * as THREE from "three";
@@ -44,7 +44,7 @@ export class Director {
   constructor(world, { onLog, onBanner, quiet = false } = {}) {
     this.world = world;
     this.quiet = quiet;          // attract mode: no sound, no barks
-    this.skipping = false;       // "skip" — snap through queued frames
+    this.skipping = false;       // "skip", snap through queued frames
     this.drops = new Set();
     this.mechs = new Map();
     this.onLog = onLog || (() => {});

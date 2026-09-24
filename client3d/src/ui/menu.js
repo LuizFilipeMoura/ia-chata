@@ -9,7 +9,7 @@ import { EQUIPMENT_UPGRADES } from "/shared/rules.js";
 const NATURE = { field: "FIELD", tuned: "TUNED", prototype: "PROTO" };
 const TIER_TEXT = {
   easy: "Sloppy pilot, bare rigs. Learn the ropes.",
-  normal: "A fair fight — roughly even against a decent build.",
+  normal: "A fair fight, roughly even against a decent build.",
   hard: "GA-evolved champion: the meta's best builds and tactics.",
 };
 
@@ -18,10 +18,10 @@ export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims }
     el("div", { class: "logo" }, el("span", {}, "OIL"), el("i", {}, "&"), el("span", {}, "IRON"), el("small", {}, "TACTICS · 3D")),
     el("p", { class: "tag" }, "Oil-soaked war rigs, brass-bound Ironclads, and a table of rubble to fight over."),
     el("div", { class: "menu" },
-      el("button", { class: "btn big primary", onClick: onTutorial }, "🎓  Tutorial — learn by playing"),
+      el("button", { class: "btn big primary", onClick: onTutorial }, "🎓  Tutorial: learn by playing"),
       el("button", { class: "btn big", onClick: onPlay }, "⚔️  Skirmish vs Bot"),
       el("button", { class: "btn big", onClick: onWatch }, "🍿  Watch Bots Fight"),
-      el("button", { class: "btn big", onClick: onSims }, "🛰  Sim Center — simulate & replay"),
+      el("button", { class: "btn big", onClick: onSims }, "🛰  Sim Center: simulate & replay"),
       el("button", { class: "btn big", onClick: onLab }, "🧬  Balance Lab (genetic meta)"),
     ),
     el("p", { class: "muted small" }, "WASD / arrows pan · Q/E or right-drag rotate · wheel zoom · Tab cycles rigs · 1–6 hotkeys · Enter ends activation"),
@@ -83,7 +83,7 @@ function upgradeEditor(ch, u, render) {
     list.map((x) => {
       const trial = { ...u, [slot]: x.id };
       const blocked = x.nature === "prototype" && protoCount(trial) > 1;
-      return el("button", { class: `up ${u[slot] === x.id ? "on" : ""} n-${x.nature}`, disabled: blocked, title: `${x.name} — ${x.tag}${x.catch ? ` (Catch: ${x.catch})` : ""}${blocked ? " · only one Prototype per rig" : ""}`, onClick: () => { u[slot] = x.id; render(); } },
+      return el("button", { class: `up ${u[slot] === x.id ? "on" : ""} n-${x.nature}`, disabled: blocked, title: `${x.name}: ${x.tag}${x.catch ? ` (Catch: ${x.catch})` : ""}${blocked ? " · only one Prototype per rig" : ""}`, onClick: () => { u[slot] = x.id; render(); } },
         el("i", {}, NATURE[x.nature]), x.name);
     }));
   const eqList = EQUIPMENT_UPGRADES[u.equipment] || [];
@@ -92,7 +92,7 @@ function upgradeEditor(ch, u, render) {
     pick("meleeUpgrade", WEAPON_UPGRADES[ch.melee], `🗡 ${ch.melee}`),
     el("div", { class: "up-row" }, el("span", { class: "up-l" }, "⚙ Equipment"),
       el("select", { onChange: (e) => { u.equipment = e.target.value; u.equipmentUpgrade = null; render(); } },
-        Object.entries(EQUIPMENT).map(([id, e]) => el("option", { value: id, selected: id === u.equipment }, `${e.label} — ${e.passive}`)))),
+        Object.entries(EQUIPMENT).map(([id, e]) => el("option", { value: id, selected: id === u.equipment }, `${e.label}: ${e.passive}`)))),
     eqList.length ? pick("equipmentUpgrade", eqList, "⚙ Mod") : null,
   );
 }
@@ -103,7 +103,7 @@ function upgradeEditor(ch, u, render) {
 // evolved on).
 export const TABLES = {
   skirmish: { label: "Skirmish 42×28", width: 42, height: 28, hint: "Fast: contact in the first round or two" },
-  standard: { label: "Standard 54×36", width: 54, height: 36, hint: "The rulebook table — more manoeuvring" },
+  standard: { label: "Standard 54×36", width: 54, height: 36, hint: "The rulebook table, more manoeuvring" },
 };
 
 export async function createBotRoom({ squad, tier, table = "skirmish" }) {

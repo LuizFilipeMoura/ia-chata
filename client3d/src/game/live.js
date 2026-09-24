@@ -26,7 +26,7 @@ const DEG = Math.PI / 180;
 const ICON = { move: "🦿", sprint: "💨", fire: "🎯", aimed: "🔭", prepare: "🛡️", repair: "🔧", shutdown: "❄️", disengage: "↩️", douse: "🧯", reload: "🔄", lock: "📡", emplace: "⚓", unplant: "⛏️", barrage: "💥", harden: "🧱", purge: "♨️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹", heatpurgewave: "🔥", locksight: "🎯", popsmoke: "🌫️", cryo: "🧊" };
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
-  sprint: "Run up to 1½× Speed. 2 heat — fast but hot.",
+  sprint: "Run up to 1½× Speed. 2 heat: fast but hot.",
   fire: "Attack an enemy in your front arc: long-range if in band + line of sight, melee if in reach.",
   aimed: "Long-range shot at a chosen location (usually a to-hit penalty).",
   prepare: "Set a face-down reaction for when you're attacked (Brace, Evasive, Return Fire).",
@@ -132,7 +132,7 @@ export class LiveMatch {
       // from orbit. Rejoining a game in progress just snaps.
       const fresh = state.game.round <= 1 && !(state.game.resolutions || []).some((r) => r.kind === "attack" || r.kind === "move");
       if (fresh && state.rigs.some((r) => r.pos)) {
-        this.hud.banner("RAIL DROP — SQUADRONS INBOUND", "round");
+        this.hud.banner("RAIL DROP · SQUADRONS INBOUND", "round");
         this.director.busy++;
         this.director.queue = this.director.dropIn(frameFromState(state)).finally(() => { this.director.busy--; });
       } else this.director.snap(frameFromState(state));
@@ -252,7 +252,7 @@ export class LiveMatch {
       heatGauge(rig.engine?.heat ?? 0, heatMeter(rig).cap || cap),
     ));
     if (!commandable) {
-      bar.append(el("div", { class: "hint" }, rig.owner !== this.side ? "Enemy rig — hover to inspect." : rig.activated ? "Already activated this round." : this.myTurn ? "" : "Not your turn."));
+      bar.append(el("div", { class: "hint" }, rig.owner !== this.side ? "Enemy rig. Hover to inspect." : rig.activated ? "Already activated this round." : this.myTurn ? "" : "Not your turn."));
       if (rig.owner !== this.side || !this.myTurn) return;
     }
     const row = el("div", { class: "act-row" });
@@ -262,7 +262,7 @@ export class LiveMatch {
       const hot = projected > cap;
       const btn = el("button", {
         class: `act ${hot ? "hot" : ""} ${this.mode?.key === a.key ? "on" : ""}`, disabled: !commandable || !a.enabled,
-        title: `${a.label} — ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}${oddsLine(rig, Number(heat) || 0)}`,
+        title: `${a.label}: ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}${oddsLine(rig, Number(heat) || 0)}`,
         "data-act": a.key,
         onClick: () => this.beginAction(rig, a.key),
       }, el("span", { class: "ico" }, ICON[a.key] || "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, `${heat}🔥`));
@@ -277,7 +277,7 @@ export class LiveMatch {
         g.turn.activeRigId === rig.id ? (() => {
           const o = overheatOdds(rig, 0);
           return el("button", { class: `btn ${o.pBad ? "danger" : "primary"}`, "data-act": "end", title: o.pBad ? "Ending here triggers the overheat roll" : "Pass to the enemy",
-            onClick: () => this.endActivation(rig) }, o.pBad ? `End — ${Math.round(o.pBad * 100)}% overheat ⚠` : "End activation ⏎");
+            onClick: () => this.endActivation(rig) }, o.pBad ? `End: ${Math.round(o.pBad * 100)}% overheat ⚠` : "End activation ⏎");
         })() : null,
       );
       bar.append(foot);
@@ -286,7 +286,7 @@ export class LiveMatch {
       if (o.pBad) {
         const worst = o.rows.filter((r) => r.key !== "safe").sort((x, y) => y.p - x.p)[0];
         bar.append(el("div", { class: "warn" }, `⚠ Boiler over pressure: ending now is a ${Math.round(o.pBad * 100)}% chance of damage`,
-          o.pSevere ? ` (${Math.round(o.pSevere * 100)}% severe)` : "", ` — most likely ${worst?.label}. `, el("b", {}, "Shut Down"), " vents 2 heat per unused action."));
+          o.pSevere ? ` (${Math.round(o.pSevere * 100)}% severe)` : "", `. Most likely: ${worst?.label}. `, el("b", {}, "Shut Down"), " vents 2 heat per unused action."));
       }
     }
   }
@@ -394,7 +394,7 @@ export class LiveMatch {
     // Pivot cap ±90° from current facing.
     const d = ((facing - rig.facing + 540) % 360) - 180;
     facing = rig.facing + Math.max(-90, Math.min(90, d));
-    // Danger preview: the bot's own exposure metric at the destination — how
+    // Danger preview: the bot's own exposure metric at the destination, how
     // much every enemy could expect to deal to you standing there, as posed.
     // Throttled to real cursor movement; it traces LOS for each enemy.
     let danger = null;
@@ -465,9 +465,9 @@ export class LiveMatch {
     modal({
       title: `Attack ${target.name}`,
       body: el("div", { class: "attack-list" },
-        el("p", { class: "muted" }, `Arc: ${list[0].arc} · ${list[0].distance.toFixed(1)}" · cover: ${list[0].cover || "none"}. Rear arcs hit harder — flank!`),
+        el("p", { class: "muted" }, `Arc: ${list[0].arc} · ${list[0].distance.toFixed(1)}" · cover: ${list[0].cover || "none"}. Rear arcs hit harder, so flank!`),
         rows.map((r, i) => el("button", { class: `attack-opt ${i === 0 ? "best" : ""}`, onClick: () => { document.querySelector(".modal-back")?.remove(); this.act(rig, { action: r.c.action, weapon: r.c.weapon, target: target.name, loc: r.c.location }).then(() => this.cancelMode()); } },
-          el("b", {}, `${r.c.action === "aimed" ? "Aimed · " + r.c.location : "Fire"} — ${w(r.c)}`),
+          el("b", {}, `${r.c.action === "aimed" ? "Aimed · " + r.c.location : "Fire"}: ${w(r.c)}`),
           el("span", {}, `≈${r.ed.toFixed(1)} SP expected${i === 0 ? " · advisor pick" : ""}`)))),
       actions: [{ label: "Cancel", ghost: true }],
     });
@@ -476,7 +476,7 @@ export class LiveMatch {
   pickPrepare(rig) {
     const room = this.previewRoom(rig);
     const preps = candidatesFor(room, rig).filter((c) => c.action === "prepare");
-    const desc = { brace: "Brace — reduce the next hit's damage.", evasive: "Evasive — chance to dodge the next shot entirely.", return: "Return Fire — shoot back when attacked.", "raise-shield": "Raise Shield — the Bulwark takes the hit." };
+    const desc = { brace: "Brace: reduce the next hit's damage.", evasive: "Evasive: chance to dodge the next shot entirely.", return: "Return Fire: shoot back when attacked.", "raise-shield": "Raise Shield: the Bulwark takes the hit." };
     modal({
       title: "Prepare a reaction",
       body: el("div", { class: "attack-list" }, preps.map((p) => el("button", { class: "attack-opt", onClick: () => { document.querySelector(".modal-back")?.remove(); this.act(rig, { action: "prepare", prep: p.prep }); } }, el("b", {}, p.prep), el("span", {}, desc[p.prep] || "")))),
@@ -497,7 +497,7 @@ export class LiveMatch {
     const room = this.previewRoom(rig);
     const cmd = chooseAction(room, rig, this.advisorWeights);
     this.emit("advisor", cmd);
-    if (!cmd) { toast("Advisor: nothing here beats standing still — end the activation.", "info", 4000); return; }
+    if (!cmd) { toast("Advisor: nothing here beats standing still. End the activation.", "info", 4000); return; }
     const a = cmd.attrs;
     const what = {
       move: `move to (${a.dest?.x.toFixed(1)}, ${a.dest?.y.toFixed(1)})`, sprint: `sprint to (${a.dest?.x.toFixed(1)}, ${a.dest?.y.toFixed(1)})`,
@@ -527,7 +527,7 @@ export class LiveMatch {
       if (p.route) this.pathLine = this.world.path(p.route.path, p.ok ? 0x33ff99 : 0xff4433);
       const dz = p.danger == null ? "" : p.danger < 0.3 ? " · ✅ safe spot" : ` · ⚠ ≈${p.danger.toFixed(1)} SP incoming here`;
       if (p.ok && p.danger != null) this.ghostMat.color.setHex(p.danger < 0.3 ? 0x33ff99 : p.danger < 2 ? 0xffd35a : 0xff8a3d);
-      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}" · facing ${Math.round(p.facing)}°${p.ok ? dz : " — out of reach"} · Shift+wheel to turn` : "No path there");
+      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}" · facing ${Math.round(p.facing)}°${p.ok ? dz : " · out of reach"} · Shift+wheel to turn` : "No path there");
       this.mode.preview = { ...p, dest: hit.field };
       return;
     }
@@ -540,7 +540,7 @@ export class LiveMatch {
       if (list) {
         const c = list.find((x) => x.action !== "aimed") || list[0];
         const ed = c.weapon ? expectedDamage(this.mode.rig, r, c.weapon, { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round }) : 0;
-        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP — click to choose weapon`);
+        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP · click to choose weapon`);
         this.director.mechs.get(this.mode.rig.id)?.aimAt(new THREE.Vector3(r.pos.x, 2, r.pos.y));
       }
     }
@@ -550,7 +550,7 @@ export class LiveMatch {
     if (this.mode && (this.mode.key === "move" || this.mode.key === "sprint" || this.mode.key === "jumpjets")) {
       const p = this.mode.preview;
       if (!p) return;
-      if (!p.ok) { toast("Out of reach — pick a spot inside the ring.", "warn"); return; }
+      if (!p.ok) { toast("Out of reach. Pick a spot inside the ring.", "warn"); return; }
       const rig = this.mode.rig;
       const attrs = this.mode.key === "jumpjets"
         ? { action: "jumpjets", dest: { x: +p.dest.x.toFixed(2), y: +p.dest.y.toFixed(2) }, facing: Math.round(p.facing) }
@@ -620,14 +620,14 @@ export class LiveMatch {
         // Digital adjudication: the manoeuvre breaks the shot on a 4+ (rules.md §5, digital note).
         const roll = 1 + Math.floor(Math.random() * 6);
         const evaded = roll >= 4;
-        toast(`💨 ${reactor?.name} evades… rolled ${roll} — ${evaded ? "dodged!" : "caught!"}`, evaded ? "good" : "bad", 3500);
+        toast(`💨 ${reactor?.name} evades… rolled ${roll}: ${evaded ? "dodged!" : "caught!"}`, evaded ? "good" : "bad", 3500);
         this.send("react", { evaded, side: this.side }).then(() => { this.gateOpen = false; });
       } else if (pr.kind === "return" && attacker && reactor) {
         const geo = deriveAttackGeometry(this.state, reactor, attacker);
         const inReach = geo.inMeleeReach;
         const weapon = inReach ? "melee" : "longRange";
         modal({
-          title: `↩️ Return Fire — ${reactor.name}`,
+          title: `↩️ Return Fire: ${reactor.name}`,
           body: el("p", {}, `${attacker.name} attacked. Shoot back with ${inReach ? reactor.weapons.melee : reactor.weapons.longRange}? (${geo.distance.toFixed(1)}", ${geo.los ? "clear line" : "no line of sight"})`),
           dismissable: false,
           actions: [
@@ -669,7 +669,7 @@ export class LiveMatch {
         title: o?.winner == null ? "Draw" : won ? "🏆 Victory" : "💀 Defeat",
         cls: won ? "victory" : "defeat",
         body: el("div", {},
-          el("p", {}, `Reason: ${o?.reason || "—"} · VP ${this.game.sides.map((s) => `${s.id.toUpperCase()} ${s.vp}`).join(" – ")} · Round ${this.game.round}`)),
+          el("p", {}, `Reason: ${o?.reason || "-"} · VP ${this.game.sides.map((s) => `${s.id.toUpperCase()} ${s.vp}`).join(" – ")} · Round ${this.game.round}`)),
         actions: [this.onRematch ? { label: "⚔ Rematch", primary: true, onClick: () => this.onRematch() } : null, { label: "Main menu", primary: !this.onRematch, ghost: !!this.onRematch, onClick: () => this.onExit?.() }].filter(Boolean),
         dismissable: false,
       });

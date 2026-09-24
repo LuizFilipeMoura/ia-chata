@@ -20,7 +20,7 @@ const args = Object.fromEntries(process.argv.slice(2).join(" ").split("--").filt
 const num = (k, d) => (args[k] != null ? Number(args[k]) : d);
 const pool = createPool();
 // Every GA match is a simulated game, recorded and filed in the replay library
-// (data/replays) under this run's job id — same as a server-side /api/sim job.
+// (data/replays) under this run's job id, same as a server-side /api/sim job.
 const replays = createReplayStore(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data", "replays"));
 const jobId = `cli-${Date.now().toString(36)}`;
 let gen = 0;
@@ -52,7 +52,7 @@ const res = await evolve({
 
 // Gauntlet: the GA's fitness is relative to its own population, so re-test the
 // top genomes against the reference "average player" and crown the one that
-// actually wins most — that's the Hard bot.
+// actually wins most, that's the Hard bot.
 const gauntletGames = num("gauntlet", 12);
 const top = [res.best.g, ...res.population.slice(0, 4)];
 let champion = res.best.g, bestRate = -1;

@@ -1,5 +1,5 @@
 // Procedural mech models. Every chassis gets its own paint (the codenames ARE
-// colours — Gold, Pumpkin, Zebra…), its weight class sets the frame (lights
+// colours, Gold, Pumpkin, Zebra…), its weight class sets the frame (lights
 // stalk on reverse-jointed legs, mediums plant on stocky pillars), and each of
 // the 22 weapons has its own model hung off the arms. Built from primitives at
 // runtime: no asset pipeline, and every part is a named pivot we can animate.
@@ -36,7 +36,7 @@ function stripeTexture(base, stripe) {
   return t;
 }
 
-// Place a mesh (three's position/rotation are read-only props — copy into them).
+// Place a mesh (three's position/rotation are read-only props, copy into them).
 function at(o, x, y, z, rz = 0) { o.position.set(x, y, z); if (rz) o.rotation.z = rz; return o; }
 function box(w, h, d, m) { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.castShadow = o.receiveShadow = true; return o; }
 function cyl(rt, rb, h, m, seg = 12) { const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); o.castShadow = true; return o; }
@@ -249,7 +249,7 @@ export class Mech {
     const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, mat(0xffcf7a, { emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 }));
     cockpit.position.set(heavy ? 0.6 : 0.45, 0.15, 0); this.torso.add(cockpit);
     if (heavy) this.torso.add(at(box(1.2, 0.2, 1.7, STEEL()), -0.1, 0.62, 0));
-    // Exhaust stacks — they glow and smoke with heat.
+    // Exhaust stacks, they glow and smoke with heat.
     this.ventMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xff3300, emissiveIntensity: 0, metalness: 0.7, roughness: 0.4 });
     this.stacks = [];
     for (const z of [-0.3, 0.3]) {

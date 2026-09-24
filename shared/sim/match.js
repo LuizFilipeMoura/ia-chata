@@ -1,5 +1,5 @@
 // Simulated play: a real bot-vs-bot room driven through the SAME path live games
-// use — `setbot` flags both sides, rigs are commissioned with `add`, `ready`
+// use, `setbot` flags both sides, rigs are commissioned with `add`, `ready`
 // starts (and deploys) the digital battle, then the server's own `driveBots`
 // plays every activation, gate and round to the end. The GA evaluates genomes
 // only through this, so balance numbers come from the engine the players use.
@@ -91,7 +91,7 @@ export function frameOf(room, cmd, fromResolutionId) {
 }
 
 // Play a simulated room to the end. Returns { winner, vp, rounds, stats,
-// survivors } plus, with `record`, { frames, field, objectives, pilots } — and
+// survivors } plus, with `record`, { frames, field, objectives, pilots }, and
 // `room` (the finished room) when `keepRoom` is set.
 export function playMatch({ squads, weights, seed = 1, record = false, table, code, keepRoom = false }) {
   const random = mulberry32(seed);

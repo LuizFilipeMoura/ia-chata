@@ -9,7 +9,7 @@ import { mulberry32 } from "../../shared/sim/match.js";
 import { BOT_PRESETS } from "../../shared/game-state.js";
 import { createGenePool, rulesHash } from "../genepool.js";
 
-// /api/sim — simulated play. Every game here is a real bot-vs-bot room played
+// /api/sim, simulated play. Every game here is a real bot-vs-bot room played
 // through the live engine path (shared/sim/match.js → driveBots) on a worker
 // pool, recorded frame by frame and saved to the replay library:
 //   - GA jobs (/evolve): EVERY match of every generation is a simulated game,
@@ -55,7 +55,7 @@ export function createSimRouter({ pool, rootDir, replays, store = null, genePool
     const entry = replays.save(r, job.squads, { ...meta, table: job.table ?? null, seed: job.seed });
     if (r.room && store) {
       r.room.code = meta.room;
-      delete r.room._history;   // undo snapshots — dead weight in a finished sim
+      delete r.room._history;   // undo snapshots, dead weight in a finished sim
       delete r.room.botFrames;
       store.rooms.set(meta.room, r.room);
       store.persist();
@@ -100,7 +100,7 @@ export function createSimRouter({ pool, rootDir, replays, store = null, genePool
         job.history = history;
         job.stats = summarise(stats);
         job.ranked = ranked.slice(0, 8).map((r) => ({ fitness: r.fitness, squad: r.g.squad, weights: r.g.weights }));
-        // Bank this generation's best right away — a run cut short (restart,
+        // Bank this generation's best right away, a run cut short (restart,
         // stop) still feeds the next one.
         genePool.deposit(ranked, { job: job.id, rulesHash: rh, top: 4 });
         persistJob(job);

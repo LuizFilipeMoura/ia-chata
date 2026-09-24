@@ -67,7 +67,7 @@ test("summarise turns tallies into win-rate rows", () => {
 });
 
 test("simulated rooms go through the server's commissioning guard", () => {
-  // Two Prototypes on one rig is illegal for a player — and for the GA.
+  // Two Prototypes on one rig is illegal for a player, and for the GA.
   const bad = { a: [{ chassis: "medium-lance-mortar", longRangeUpgrade: "barrage", meleeUpgrade: WEAPON_UPGRADES["Lance"].find((u) => u.nature === "prototype").id }, { chassis: "light-claw-autocannon" }, { chassis: "light-sword-arc" }], b: squads.b };
   assert.throws(() => playMatch({ squads: bad, seed: 1 }), /Prototype/);
   assert.throws(() => playMatch({ squads: { a: [{ chassis: "medium-lance-mortar", meleeUpgrade: "not-a-real-upgrade" }, ...squads.a.slice(1)], b: squads.b }, seed: 1 }), /upgrade/);

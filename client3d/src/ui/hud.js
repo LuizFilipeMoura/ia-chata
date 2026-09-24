@@ -55,7 +55,7 @@ export class Hud {
     }
     const who = g.phase === "finished" ? "Battle over" : g.phase === "initiative" ? "Rolling initiative…" : g.pendingAnswer ? (g.pendingAnswer.side === side ? "Place your Answer token" : "Enemy placing Answer…") : turn === side ? "YOUR MOVE, IRONCLAD" : "ENEMY ADVANCING";
     fill(this.topEl, 
-      el("div", { class: "vp a", title: "Victory points — salvage held + priority kills" }, el("span", { class: "k" }, "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0))),
+      el("div", { class: "vp a", title: "Victory points: salvage held + priority kills" }, el("span", { class: "k" }, "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0))),
       el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10${g.suddenDeath ? " · SUDDEN DEATH" : ""}`), el("div", { class: "who" }, who), this.turnOrder(state)),
       el("div", { class: "vp b", title: "Enemy victory points" }, el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : "ENEMY")),
     );
@@ -74,7 +74,7 @@ export class Hud {
         const p = r[l]; const f = p ? p.sp / p.max : 0;
         return el("div", { class: "loc", title: `${l}: ${p?.sp}/${p?.max}` }, el("span", { class: "ln" }, l[0].toUpperCase()), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } })));
       })),
-      el("div", { class: "rc-heat", title: `Heat ${heat}/${cap} — over capacity rolls on the overheat table at end of activation` },
+      el("div", { class: "rc-heat", title: `Heat ${heat}/${cap}. Over capacity rolls on the overheat table at end of activation` },
         Array.from({ length: Math.max(cap + 4, heat) }, (_, i) => el("i", { class: i < heat ? (i >= cap ? "over" : "on") : i >= cap ? "danger" : "" }))),
     );
   }

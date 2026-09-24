@@ -1,4 +1,4 @@
-// Floating nameplates: a tiny HTML card over every mech — name, total SP bar,
+// Floating nameplates: a tiny HTML card over every mech, name, total SP bar,
 // heat pips (red past capacity), and status icons (active, activated, prepared,
 // engaged, priority). Positioned by projecting each mech's label anchor to the
 // screen every frame, so it tracks walks, camera moves and replays alike.

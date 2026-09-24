@@ -1,6 +1,6 @@
 // "Wire from HQ": situational, one-time teaching. Instead of front-loading every
 // rule into the tutorial, a telegram arrives the first time a situation actually
-// comes up — your gun is spent, an enemy shows you its back, your boiler nears
+// comes up, your gun is spent, an enemy shows you its back, your boiler nears
 // the red. Each wire fires once per browser (localStorage) and can be switched
 // off in Settings.
 import { el } from "./dom.js";
@@ -19,16 +19,16 @@ export function resetWires() { seen = new Set(); try { localStorage.removeItem(S
 
 // Each: id, when(ctx) → truthy (or a string to interpolate), text(ctx, hit).
 const WIRES = [
-  { id: "priority", when: (c) => c.myTarget, text: (c) => `HQ has marked ${c.myTarget.name} (★). Scrap it for +2 victory points — the only kill that scores.` },
+  { id: "priority", when: (c) => c.myTarget, text: (c) => `HQ has marked ${c.myTarget.name} (★). Scrap it for +2 victory points. It's the only kill that scores.` },
   { id: "activation", when: (c) => c.rig && c.myTurn && c.rig.owner === c.side, text: () => `Each rig acts once per round: up to 3 actions, then the enemy answers with one of theirs. Pick your rig carefully.` },
-  { id: "heat-near", when: (c) => c.rig && c.meter && c.meter.heat >= c.meter.cap - 1 && c.meter.heat > 0, text: (c) => `${c.rig.name}'s boiler is near the red. Every action adds heat and only 1 bleeds off per round. Past the line, ending the turn rolls on the overheat table — or Shut Down to vent.` },
-  { id: "rear-shot", when: (c) => c.cands?.find((x) => (x.action === "fire" || x.action === "aimed") && x.arc === "rear"), text: (c, x) => `${x.target} is showing you its back! Rear-arc hits carry extra Penetration — they wound far more often.` },
+  { id: "heat-near", when: (c) => c.rig && c.meter && c.meter.heat >= c.meter.cap - 1 && c.meter.heat > 0, text: (c) => `${c.rig.name}'s boiler is near the red. Every action adds heat and only 1 bleeds off per round. Past the line, ending the turn rolls on the overheat table. Or Shut Down to vent.` },
+  { id: "rear-shot", when: (c) => c.cands?.find((x) => (x.action === "fire" || x.action === "aimed") && x.arc === "rear"), text: (c, x) => `${x.target} is showing you its back! Rear-arc hits carry extra Penetration, so they wound far more often.` },
   { id: "side-shot", when: (c) => c.cands?.find((x) => (x.action === "fire") && x.arc === "side"), text: (c, x) => `You have a flank on ${x.target}. Side hits beat front hits; rear hits beat both. Facing is everything.` },
-  { id: "gun-spent", when: (c) => c.rig?.owner === c.side && c.rig?.loaded?.longRange === false, text: () => `Gun's dry. Reloading costs heat (d6 roll) — or close in and use your melee weapon, which never needs reloading.` },
+  { id: "gun-spent", when: (c) => c.rig?.owner === c.side && c.rig?.loaded?.longRange === false, text: () => `Gun's dry. Reloading costs heat (d6 roll), or close in and use your melee weapon, which never needs reloading.` },
   { id: "engaged", when: (c) => c.rig?.owner === c.side && c.rig?.engagedWith != null, text: () => `Locked in melee! An engaged rig can't Move or Sprint until it Disengages (1 action). Ranged shots suffer while locked.` },
-  { id: "out-of-actions", when: (c) => c.turn?.activeRigId === c.rig?.id && c.turn.actionsUsed >= c.turn.actionsMax && c.rig.owner === c.side, text: () => `Out of actions — end the activation and let the enemy move.` },
+  { id: "out-of-actions", when: (c) => c.turn?.activeRigId === c.rig?.id && c.turn.actionsUsed >= c.turn.actionsMax && c.rig.owner === c.side, text: () => `Out of actions. End the activation and let the enemy move.` },
   { id: "hidden-prep", when: (c) => c.state.rigs.find((r) => r.owner !== c.side && r.preparation?.hidden), text: (c, r) => `${r.name} has a face-down reaction (🛡). Attack it and it may Brace, dodge, or shoot back. Sometimes it's worth hitting something else first.` },
-  { id: "contested", when: (c) => c.contested, text: () => `A beacon is contested — both sides are in range, so nobody scores it. Clear it or out-last them.` },
+  { id: "contested", when: (c) => c.contested, text: () => `A beacon is contested: both sides are in range, so nobody scores it. Clear it or out-last them.` },
   { id: "hurt", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && ["hull", "arms", "legs", "engine"].some((l) => r[l] && r[l].sp > 0 && r[l].sp <= r[l].max / 3)), text: (c, r) => `${r.name} is badly damaged. A location at 0 SP cripples it (arms drop weapons, legs slow it, engine stalls it). Repair costs an action, or pull it back.` },
 ];
 

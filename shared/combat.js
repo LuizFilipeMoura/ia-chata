@@ -138,7 +138,7 @@ export function computeModifiedAim(attacker, profile, opts) {
   return aimBreakdown(attacker, profile, opts).value;
 }
 
-// The number of to-hit dice a shot actually rolls — pure, no mutation, so the bot
+// The number of to-hit dice a shot actually rolls, pure, no mutation, so the bot
 // evaluator prices exactly what rollToHit will roll. Full Auto +2, Bloodletter vs
 // a damaged target, Redline Governor from heat over the class cap; halved (floor
 // 1) by a slow Penetrator belt or Kneecapper-suppressed arms. `slowBelt` is the
@@ -155,7 +155,7 @@ export function effectiveRof(attacker, profile, opts = {}, slowBelt = !!attacker
     redlineRof = Math.min(3, over);
   }
   let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
-  // Every ROF-halving downside floors at 1 die — a suppressed / slow-belt
+  // Every ROF-halving downside floors at 1 die, a suppressed / slow-belt
   // weapon fires at reduced volume, it is not silenced (a ROF-1 gun stays 1).
   if (slowBelt) rof = Math.max(1, Math.floor(rof / 2));
   // Kneecapper progressive cripple (§13, Double MG): a rig whose weapon limb was
@@ -164,7 +164,7 @@ export function effectiveRof(attacker, profile, opts = {}, slowBelt = !!attacker
   return rof;
 }
 
-// §7.4 — roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
+// §7.4, roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
 // (each 1 rolled under Full Auto / Charged Shot adds 1 heat, §6).
 export function rollToHit(attacker, profile, opts, providedDice, random) {
   // aimBreakdown, not computeModifiedAim: the ledger's hit step needs the terms
@@ -189,7 +189,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     if (penetratorShot) attacker.autocannonSlowNext = true;
   }
   // Extra dice (Full Auto, Bloodletter, Redline Governor) and halvings (slow
-  // belt, Kneecapper) — shared with the bot evaluator via effectiveRof.
+  // belt, Kneecapper), shared with the bot evaluator via effectiveRof.
   const rof = effectiveRof(attacker, profile, opts, penetratorSlow);
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;

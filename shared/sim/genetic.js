@@ -1,5 +1,5 @@
-// Genetic meta-search. A genome is a whole commission — a squad of distinct
-// chassis, each with its long-range / melee / equipment upgrade picks — plus the
+// Genetic meta-search. A genome is a whole commission, a squad of distinct
+// chassis, each with its long-range / melee / equipment upgrade picks, plus the
 // bot weight vector that pilots it. Genomes play each other headlessly
 // (match.js); fitness is win rate. Selection + crossover + mutation drift the
 // population toward whatever the current rules reward, and the aggregated game
@@ -21,11 +21,11 @@ const EQUIP_IDS = Object.keys(EQUIPMENT);
 
 // Default composition: 1 medium + 2 lights per side. Both sides must mirror
 // weight classes (§3) and no chassis may appear twice on the field, so squads
-// that meet must be disjoint — there are 4 mediums, so 1M leaves room to pair.
+// that meet must be disjoint, there are 4 mediums, so 1M leaves room to pair.
 export const DEFAULT_COMPOSITION = { medium: 1, light: 2 };
 // The squad makeups the GA may explore (3 rigs; only 4 mediums exist, so two
 // disjoint 2M squads is the ceiling). The server's parity rule means genomes only
-// ever meet a foe with the SAME makeup — the GA can't field what a player can't.
+// ever meet a foe with the SAME makeup, the GA can't field what a player can't.
 export const COMPOSITIONS = [{ medium: 1, light: 2 }, { medium: 2, light: 1 }, { light: 3 }];
 const CLASS_OF = (id) => CHASSIS.find((c) => c.id === id)?.class;
 export function compKey(g) {
@@ -187,7 +187,7 @@ const disjoint = (g1, g2) => !g1.squad.some((u) => g2.squad.some((v) => v.chassi
 // A legal foe for `g` when the population has none (small makeup groups often
 // all share a chassis): clone a same-makeup genome (or g's own pilot) and swap
 // every clashing chassis for an unused one of the same class. Its result isn't
-// scored — it only exists so g gets a game.
+// scored, it only exists so g gets a game.
 function sparringPartner(g, pop, rnd) {
   const same = pop.filter((x) => x !== g && compKey(x) === compKey(g));
   const base = structuredClone(same.length ? pick(same, rnd) : g);
@@ -205,7 +205,7 @@ function sparringPartner(g, pop, rnd) {
 }
 
 // Plan this generation's pairings: every genome meets `gamesPer` legal foes
-// (disjoint chassis, mirrored weight classes — what the server allows). Pairs are
+// (disjoint chassis, mirrored weight classes, what the server allows). Pairs are
 // [i, j] population indices; j may be a sparring genome object instead.
 // Sides alternate so neither genome always gets the A deployment corner.
 function planPairings(pop, gamesPer, rnd) {
@@ -250,7 +250,7 @@ export async function evolve(opts = {}) {
     // compositions: makeups to explore ("all" → COMPOSITIONS); tables: table ids
     // from TABLES to alternate matches across.
     compositions: compOpt = null, tables = null,
-    // seedPopulation: genomes (e.g. from the gene pool) to start from — the run
+    // seedPopulation: genomes (e.g. from the gene pool) to start from, the run
     // fine-tunes the previous meta instead of starting from scratch.
     seedPopulation = [],
     evaluate = async (jobs) => jobs.map((j) => playMatch(j)),
@@ -260,7 +260,7 @@ export async function evolve(opts = {}) {
   const compositions = compOpt === "all" ? COMPOSITIONS : Array.isArray(compOpt) ? compOpt : null;
   const tableIds = Array.isArray(tables) && tables.length ? tables.filter((t) => TABLES[t]) : null;
   // Seed the population evenly across makeups so each has foes to meet.
-  // At most 75% seeds — the rest stay random so the run can still find
+  // At most 75% seeds, the rest stay random so the run can still find
   // something the old meta never tried.
   const seeds = (seedPopulation || []).map((g) => sanitiseGenome(g, rnd)).filter(Boolean)
     .filter((g) => !compositions ? compKey(g) === `${composition.medium || 0}M${composition.light || 0}L` : true)
@@ -287,7 +287,7 @@ export async function evolve(opts = {}) {
       const drew = res.winner == null;
       if (res.error) return;   // an illegal/crashed game scores nobody
       for (const [idx, side, other] of [[i, "a", 1], [j, "b", 0]]) {
-        if (typeof idx !== "number") continue;   // sparring partner — not scored
+        if (typeof idx !== "number") continue;   // sparring partner, not scored
         const won = res.winner === side;
         score[idx].g++;
         score[idx].w += won ? 1 : drew ? 0.5 : 0;
@@ -319,7 +319,7 @@ export async function evolve(opts = {}) {
 }
 
 // Tallies → sorted table rows { key, kind, id, games, winRate, avgDmg }.
-// 95% Wilson score interval for a win rate over n games — how much of a row's
+// 95% Wilson score interval for a win rate over n games, how much of a row's
 // number is signal vs dice. A row whose interval straddles 50% isn't proven
 // strong or weak yet.
 export function wilson(rate, n, z = 1.96) {

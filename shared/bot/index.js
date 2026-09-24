@@ -8,7 +8,7 @@ import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS } from "./scor
 import { applyCommand as applyRaw } from "../game-state.js";
 
 // Every bot command funnels through here so a caller can observe the bot's turn
-// step by step (options.onStep) — the 3D client animates those frames instead of
+// step by step (options.onStep), the 3D client animates those frames instead of
 // watching a whole enemy turn teleport in at once.
 function applyCommand(room, cmd, context, options = {}) {
   const v = room.version;
@@ -87,7 +87,7 @@ export function chooseAction(room, rig, weights, noise = null) {
     // Replay "thinking": the top options with their weighted terms.
     // One row per distinct option (move probes at several ranges share a label).
     const seen = new Set();
-    // Aimed shots at each location of one target score alike — show them once.
+    // Aimed shots at each location of one target score alike, show them once.
     const key = (c) => (c.action === "aimed" ? `aimed ${c.target}` : candLabel(c));
     const distinct = scored.filter((x) => { const k = key(x.c); if (seen.has(k)) return false; seen.add(k); return true; });
     noise.explain.top = distinct.slice(0, 4).map((x) => {

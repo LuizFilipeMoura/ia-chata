@@ -1,6 +1,6 @@
 // Sim Center: queue simulated games on the server (bot vs bot, played through
-// the real engine path) and browse the replay library — every GA match,
-// simulated room, tier demo and calibration game — to watch any of them in 3D.
+// the real engine path) and browse the replay library, every GA match,
+// simulated room, tier demo and calibration game, to watch any of them in 3D.
 import { el, fill, toast } from "./dom.js";
 import { api } from "../api.js";
 import { CHASSIS } from "/shared/game-state.js";
@@ -66,7 +66,7 @@ export function simCenter(root, { onBack, onOpen, filter = {} }) {
         el("td", {}, r.tiers?.b && r.tiers.b !== "balanced" ? el("i", { class: "small" }, r.tiers.b + " ") : null, r.squads.b.map((id) => el("span", { class: `swatch sw-${nameOf(id)}`, title: nameOf(id) }))),
         el("td", { class: r.winner === "a" ? "w-a" : r.winner === "b" ? "w-b" : "" }, `${r.winner ? (r.winner === "a" ? "Cyan" : "Red") : "Draw"} ${r.vp?.join("–")}${r.reason === "annihilation" ? " 💀 wipe-out" : ""}`),
         el("td", {}, String(r.rounds ?? "")),
-        el("td", {}, el("button", { class: "btn ghost", onClick: (e) => { e.stopPropagation(); open(r.id); } }, "▶"))))) : el("p", { class: "muted" }, "No games yet — queue some above."));
+        el("td", {}, el("button", { class: "btn ghost", onClick: (e) => { e.stopPropagation(); open(r.id); } }, "▶"))))) : el("p", { class: "muted" }, "No games yet. Queue some above."));
   }
 
   async function open(id) {
@@ -85,7 +85,7 @@ export function simCenter(root, { onBack, onOpen, filter = {} }) {
 
   fill(root, el("div", { class: "lab simcenter" },
     el("div", { class: "b-head" }, el("button", { class: "btn ghost", onClick: onBack }, "← Back"), el("h1", {}, "🛰 Sim Center"),
-      el("span", { class: "muted" }, "Bot-vs-bot games played on the server through the real engine — every one saved for replay.")),
+      el("span", { class: "muted" }, "Bot-vs-bot games played on the server through the real engine, every one saved for replay.")),
     el("div", { class: "sim-form" },
       el("label", {}, "Cyan ", sel(SIDES, form.a, (v) => { form.a = v; })),
       el("span", {}, "vs"),

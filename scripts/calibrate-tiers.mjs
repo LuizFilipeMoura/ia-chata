@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Measure each difficulty tier's win rate against the reference "average
-// player" (random legal builds, balanced pilot) — and optionally against the
+// player" (random legal builds, balanced pilot), and optionally against the
 // last GA population. Targets: easy ≤ 25%, normal ≈ 50%, hard ≥ 70%.
 //   node scripts/calibrate-tiers.mjs [--games 16] [--seed 11] [--tiers easy,normal,hard]
 import { calibrationJobs, tierWinRate } from "../shared/sim/tiers.js";

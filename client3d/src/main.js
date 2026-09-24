@@ -88,7 +88,7 @@ function home() {
   lastBattle().then((last) => {
     if (!last) return;
     const menu = screen.querySelector(".menu");
-    menu?.prepend(el("button", { class: "btn big primary", onClick: () => play(last.room, { cfg: last.cfg, tutorial: last.tutorial }) }, `▶  Continue battle — round ${last.round}`));
+    menu?.prepend(el("button", { class: "btn big primary", onClick: () => play(last.room, { cfg: last.cfg, tutorial: last.tutorial }) }, `▶  Continue battle · round ${last.round}`));
     menu?.querySelector(".btn.primary + .btn.primary, .menu > .btn:nth-child(2)")?.classList.remove("primary");
   });
 }
@@ -110,11 +110,11 @@ async function play(room, { tutorial = false, cfg = null } = {}) {
   // Remember the battle so the title screen can offer "Continue".
   try { localStorage.setItem("oi3d-last", JSON.stringify({ room, cfg, tutorial, at: Date.now() })); } catch {}
   const hud = new Hud(hudRoot);
-  const rematch = cfg ? async () => { fill(screen, el("div", { class: "loading" }, "Rematch — deploying…")); screen.style.display = ""; try { play(await createBotRoom(cfg), { cfg }); } catch (e) { toast(e.message, "bad"); home(); } } : null;
+  const rematch = cfg ? async () => { fill(screen, el("div", { class: "loading" }, "Rematch: deploying…")); screen.style.display = ""; try { play(await createBotRoom(cfg), { cfg }); } catch (e) { toast(e.message, "bad"); home(); } } : null;
   const match = new LiveMatch(world, hud, { room, side: "a", onExit: home, onRematch: rematch });
   active = match;
   hudRoot.append(el("div", { class: "hud-menu" },
-    el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server — "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
+    el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server. "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
     el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, "📖"),
     el("button", { class: "btn ghost", title: "Hotkeys (?)", onClick: hotkeys }, "⌨"),
     el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"),

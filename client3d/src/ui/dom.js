@@ -1,4 +1,4 @@
-// Minimal DOM helpers — the HUD is plain DOM over the canvas.
+// Minimal DOM helpers, the HUD is plain DOM over the canvas.
 export function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {

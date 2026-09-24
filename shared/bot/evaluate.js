@@ -12,7 +12,7 @@
 // invented `1 + arcBonus/4`; the damage term deleted it wholesale.)
 //
 // ROF bonuses (Full Auto, Bloodletter, Redline, slow belt, Kneecapper) come from
-// combat.effectiveRof — the same function the engine rolls with — and rerolls
+// combat.effectiveRof, the same function the engine rolls with, and rerolls
 // (Lock Sight, reroll-misses, Armour Piercing) are priced as 1−(1−p)².
 // The notes below are the ORIGINAL biases, now closed:
 //
@@ -43,7 +43,7 @@ export function rawExpectedHits(attacker, target, slot, opts) {
   if (!profile) return 0;
   const o = { ...opts, target };
   const aim = computeModifiedAim(attacker, profile, o);
-  // The real dice count (Full Auto / Bloodletter / Redline / halvings) — the same
+  // The real dice count (Full Auto / Bloodletter / Redline / halvings), the same
   // function rollToHit uses. Rerolled misses (Lock Sight's primed volley, or a
   // reroll-misses upgrade) turn p into 1−(1−p)² for the dice that get one.
   const rof = effectiveRof(attacker, profile, o) || 1;

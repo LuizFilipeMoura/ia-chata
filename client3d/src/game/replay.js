@@ -98,7 +98,7 @@ export class Replay {
     this.renderControls();
   }
 
-  // Built once, then updated in place — rebuilding every frame detached the
+  // Built once, then updated in place, rebuilding every frame detached the
   // controls mid-click and yanked the slider out from under a drag.
   renderControls() {
     if (!this.ui) {

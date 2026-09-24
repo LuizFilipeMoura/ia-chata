@@ -6,7 +6,7 @@ import { playMatch } from "../../shared/sim/match.js";
 parentPort.on("message", ({ id, job }) => {
   try {
     const r = playMatch(job);
-    // Frames only travel back when asked for (replays) — they're large.
+    // Frames only travel back when asked for (replays), they're large.
     parentPort.postMessage({ id, result: r });
   } catch (err) {
     parentPort.postMessage({ id, error: String(err?.stack || err) });

@@ -36,7 +36,7 @@ function groundTexture(w, h) {
     for (let k = 0; k < 8; k++) { x += (Math.random() - 0.5) * 60; y += (Math.random() - 0.5) * 60; g.lineTo(x, y); }
     g.stroke();
   }
-  // 6" grid, faint — it's a tabletop, after all.
+  // 6" grid, faint, it's a tabletop, after all.
   g.strokeStyle = "rgba(255,240,200,0.07)"; g.lineWidth = 1;
   const px = c.width / w;
   for (let x = 0; x <= w; x += 6) { g.beginPath(); g.moveTo(x * px, 0); g.lineTo(x * px, c.height); g.stroke(); }
@@ -215,7 +215,7 @@ export class World {
     outer.rotation.x = -Math.PI / 2; outer.position.set(w / 2, -0.8, h / 2); outer.receiveShadow = true; this.tableGroup.add(outer);
     const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 0.8, h + 2), new THREE.MeshStandardMaterial({ color: 0x2e2116, roughness: 0.7 }));
     rim.position.set(w / 2, -0.41, h / 2); rim.receiveShadow = true; this.tableGroup.add(rim);
-    // Brass trim + rivets around the table edge — it's a war-room table.
+    // Brass trim + rivets around the table edge, it's a war-room table.
     const brass = new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.9, roughness: 0.3 });
     for (const [x, z, sx, sz] of [[w / 2, -1, w + 2.2, 0.25], [w / 2, h + 1, w + 2.2, 0.25], [-1, h / 2, 0.25, h + 2.2], [w + 1, h / 2, 0.25, h + 2.2]]) {
       const trim = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.18, sz), brass); trim.position.set(x, 0.02, z); this.tableGroup.add(trim);
@@ -239,7 +239,7 @@ export class World {
     const win = windowTexture();
     for (const t of field.terrain || []) this.tableGroup.add(this.terrainMesh(t, win));
 
-    // Deployment zones — tinted quarter-discs in each deployment corner.
+    // Deployment zones, tinted quarter-discs in each deployment corner.
     if (field.deployCorners) {
       field.deployCorners.forEach((c, i) => {
         const m = new THREE.Mesh(new THREE.CircleGeometry(field.deployRadius || 8, 40), new THREE.MeshBasicMaterial({ color: i ? 0xe0533d : 0x5fd3c0, transparent: true, opacity: 0.07, depthWrite: false }));
@@ -264,7 +264,7 @@ export class World {
         roof.position.y = hgt + 0.15; g.add(roof);
         const tank = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0x7a5a3a, metalness: 0.5 })));
         tank.position.set(t.w * 0.25, hgt + 0.9, 0); g.add(tank);
-        // A factory smokestack with a soot band — it belches smoke (see frame()).
+        // A factory smokestack with a soot band, it belches smoke (see frame()).
         const stackH = 3 + (t.w % 2);
         const stack = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, stackH, 10), new THREE.MeshStandardMaterial({ color: 0x6b3a26, roughness: 0.9 })));
         stack.position.set(-t.w * 0.28, hgt + stackH / 2, -t.h * 0.2); g.add(stack);
@@ -356,7 +356,7 @@ export class World {
     const m = new THREE.Mesh(new THREE.CircleGeometry(r, 64), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, y); this.overlay.add(m); return m;
   }
-  // A wedge (front arc) — angles in engine degrees.
+  // A wedge (front arc), angles in engine degrees.
   wedge(x, y, r, fromDeg, toDeg, color, opacity = 0.12) {
     const m = new THREE.Mesh(new THREE.CircleGeometry(r, 48, fromDeg * DEG, (toDeg - fromDeg) * DEG), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }));
     m.rotation.x = Math.PI / 2; m.position.set(x, 0.05, y); this.overlay.add(m); return m;

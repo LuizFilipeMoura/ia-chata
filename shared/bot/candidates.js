@@ -106,14 +106,14 @@ export function candidatesFor(room, rig) {
   for (const key of ["disengage", "douse"]) {
     if (enabled.has(key)) out.push({ action: key });
   }
-  // Only when it would actually vent something (actions left AND heat banked) —
+  // Only when it would actually vent something (actions left AND heat banked) -
   // a zero-vent Shut Down is just a free "end activation" that the positional
   // score would happily pick.
   if (enabled.has("shutdown") && turn.actionsUsed < turn.actionsMax && (rig.engine?.heat || 0) > 0) {
     out.push({ action: "shutdown" });
   }
 
-  // Signature actions — Prototype stances and equipment actives. Without these the
+  // Signature actions, Prototype stances and equipment actives. Without these the
   // bot never plays the systemic upgrades, so any balance run (the GA) would read
   // every Prototype as dead weight. Jump Jets is left out: it needs a destination
   // and the move generator already covers repositioning.

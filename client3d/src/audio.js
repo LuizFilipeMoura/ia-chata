@@ -1,4 +1,4 @@
-// Synthesized sound — no asset files. Every effect is a few oscillators and a
+// Synthesized sound, no asset files. Every effect is a few oscillators and a
 // noise buffer through envelopes: cannon thumps, minigun rattles, missile
 // whooshes, arc-gun zaps, clanky footsteps, overheat klaxons, a victory fanfare.
 // Lazily unlocked on the first user gesture (browsers block audio before one).
@@ -123,7 +123,7 @@ export const sfx = {
 };
 
 // The battlefield idles: two detuned diesel oscillators through a low-pass,
-// throbbing on a slow LFO. Very quiet — it's texture, not a soundtrack.
+// throbbing on a slow LFO. Very quiet, it's texture, not a soundtrack.
 let amb = null;
 export const ambience = {
   start() {

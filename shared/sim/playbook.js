@@ -15,7 +15,7 @@ export function playbookFrom(res, champion = res.best.g) {
     }
   }
   for (const b of Object.values(builds)) { delete b.chassis; b.score = +(b.score % 10).toFixed(3); }
-  // The champion's own chassis lead the ranking — they're the proven squad.
+  // The champion's own chassis lead the ranking, they're the proven squad.
   const own = champion.squad.map((u) => u.chassis);
   chassisRank.sort((a, b) => (own.includes(b) ? 1 : 0) - (own.includes(a) ? 1 : 0));
   return { weights: champion.weights, builds, chassisRank, generatedAt: new Date().toISOString() };

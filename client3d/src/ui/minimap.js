@@ -1,4 +1,4 @@
-// RTS minimap: the whole table in the corner — terrain, objectives, every rig
+// RTS minimap: the whole table in the corner, terrain, objectives, every rig
 // (cyan / red, hollow once activated), and the camera's focus. Click to jump.
 import { el } from "./dom.js";
 

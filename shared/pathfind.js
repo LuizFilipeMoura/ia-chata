@@ -11,10 +11,10 @@ import { distToPolygon } from "./geometry.js";
 export const CELL = 0.25; // inches per grid cell
 
 // An occupancy grid for ONE mover. `polys` are terrain (geometry.terrainPolygons),
-// `blockers` are the other rigs ({ pos, radius }) — the mover itself must not be
+// `blockers` are the other rigs ({ pos, radius }), the mover itself must not be
 // in that list. Objectives are never passed: they are markers, not obstacles.
 // Terrain-only occupancy is identical for every call that shares (terrain, size,
-// radius) — which is every probe of a whole game. Cache it keyed on the polys'
+// radius), which is every probe of a whole game. Cache it keyed on the polys'
 // geometry so the bot's thousands of path queries pay the rasterisation once.
 const terrainCache = new Map();
 function terrainMask(field, polys, radius, cols, rows) {
@@ -30,7 +30,7 @@ function terrainMask(field, polys, radius, cols, rows) {
     }
   }
   // Only the cells inside each polygon's radius-inflated bounding box can be
-  // within `radius` of it — test those, not the whole table.
+  // within `radius` of it, test those, not the whole table.
   for (const poly of polys) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const [x, y] of poly.points) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
@@ -49,7 +49,7 @@ function terrainMask(field, polys, radius, cols, rows) {
 }
 
 // An occupancy grid for ONE mover. `polys` are terrain (geometry.terrainPolygons),
-// `blockers` are the other rigs ({ pos, radius }) — the mover itself must not be
+// `blockers` are the other rigs ({ pos, radius }), the mover itself must not be
 // in that list. Objectives are never passed: they are markers, not obstacles.
 export function buildGrid(field, polys, blockers, radius) {
   const cols = Math.ceil(field.width / CELL) + 1;

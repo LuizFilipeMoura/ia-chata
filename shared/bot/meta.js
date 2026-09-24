@@ -1,4 +1,4 @@
-// The HARD bot's playbook — evolved by the genetic meta-search, not hand-tuned.
+// The HARD bot's playbook, evolved by the genetic meta-search, not hand-tuned.
 // Regenerate with `node scripts/evolve-meta.mjs` after a rules change; it rewrites
 // this file with the champion weight vector and, per chassis, the upgrade +
 // equipment picks that won most often. Pure data: imported by game-state.js (bot

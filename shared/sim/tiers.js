@@ -1,9 +1,9 @@
 // Difficulty tiers as whole opponents: a tier fixes BOTH how the bot commissions
 // its squad and how it pilots it. Mirrors generateBotOpponent's rules so the
 // calibration measures the same bot a solo player actually meets.
-//   easy   — random chassis, default upgrades, no equipment, blundering pilot
-//   normal — random chassis, default upgrades + primary equipment, balanced pilot
-//   hard   — GA-ranked chassis with the GA's winning builds, champion pilot
+//   easy  , random chassis, default upgrades, no equipment, blundering pilot
+//   normal, random chassis, default upgrades + primary equipment, balanced pilot
+//   hard  , GA-ranked chassis with the GA's winning builds, champion pilot
 import { CHASSIS, CHASSIS_PRIMARY_EQUIPMENT } from "../game-state.js";
 import { META } from "../bot/meta.js";
 import { DEFAULT_COMPOSITION, randomGenome } from "./genetic.js";
@@ -34,7 +34,7 @@ export function tierSquad(tier, avoid = [], rnd = Math.random, composition = DEF
 
 // Build calibration jobs: each challenger genome plays the tier bot `games`
 // times, alternating corners. `challengers` defaults to random builds flown by
-// the balanced pilot — a stand-in for "an average human".
+// the balanced pilot, a stand-in for "an average human".
 export function calibrationJobs(tier, { challengers, games = 12, seed = 77 } = {}) {
   const rnd = mulberry32(seed);
   const jobs = [];

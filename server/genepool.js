@@ -1,11 +1,11 @@
 // The gene pool: the GA's long-term memory. Every finished run deposits its best
-// genomes here (data/gene-pool.json), and every new run is SEEDED from it — so
+// genomes here (data/gene-pool.json), and every new run is SEEDED from it, so
 // checking the meta after a tweak fine-tunes the last meta instead of starting
 // from scratch. Genes never bend rules: a seeded genome is re-legalised against
 // the current catalogue, and anything the server's commissioning guard rejects
 // simply loses its games.
 //
-// Also: the rules fingerprint — a hash of the engine files + rules.md. Stored
+// Also: the rules fingerprint, a hash of the engine files + rules.md. Stored
 // with the Hard playbook and with pooled genes so the Lab can say "rules changed
 // since this meta was evolved".
 import fs from "node:fs";
@@ -39,7 +39,7 @@ export function createGenePool(file, { cap = 48 } = {}) {
         if (i >= 0) pool[i] = { ...entry, fitness: Math.max(entry.fitness, pool[i].fitness), runs: (pool[i].runs || 1) + 1 };
         else pool.push({ ...entry, runs: 1 });
       }
-      // Newest rules first, then fitness — stale-rules genes age out first.
+      // Newest rules first, then fitness, stale-rules genes age out first.
       pool.sort((a, b) => (b.rulesHash === rh) - (a.rulesHash === rh) || b.fitness - a.fitness);
       pool = pool.slice(0, cap);
       save();

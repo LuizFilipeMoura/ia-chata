@@ -191,7 +191,7 @@ function overheatRisk(room, rig, turn, cand) {
   const heatNow = rig.engine?.heat || 0;
   if (cand.action === "shutdown") return 0;
   const projected = heatNow + candidateHeat(rig, turn, room.game.round, cand);
-  // Overheat bonus is 2 × excess on a D12 whose bad rows start at 6 — so the
+  // Overheat bonus is 2 × excess on a D12 whose bad rows start at 6, so the
   // real cost grows much faster than linearly. Price each step past the cap at
   // the marginal worsening of the roll, and charge the step that CROSSES the cap
   // extra (it turns a free activation into a roll). Only the heat this action
@@ -218,7 +218,7 @@ function fragility(rig) {
 
 // Rough worth of a signature action (Prototype stance / equipment active). These
 // don't deal damage this instant, so offence prices them at 0; this heuristic is
-// what lets the bot — and therefore the GA — actually play them. Deliberately
+// what lets the bot, and therefore the GA, actually play them. Deliberately
 // crude and weighted by w.tactics so evolution can dial it up or down.
 function tacticalValue(room, rig, cand, exposure) {
   const heat = rig.engine?.heat || 0;
@@ -242,7 +242,7 @@ function tacticalValue(room, rig, cand, exposure) {
       return canShoot ? 0.6 : 0;
     }
     case "emergencypatch": return fragility(rig) * 3;
-    // Shut Down vents 2 heat per unused action and ends the activation — worth it
+    // Shut Down vents 2 heat per unused action and ends the activation, worth it
     // exactly when the rig is about to roll on the overheat table (or close to).
     case "shutdown": {
       const vented = Math.min(heat, Math.min(5, 2 * left));
@@ -253,7 +253,7 @@ function tacticalValue(room, rig, cand, exposure) {
   }
 }
 
-// The raw (unweighted) terms of one candidate's score — what the bot "sees".
+// The raw (unweighted) terms of one candidate's score, what the bot "sees".
 // Exposed so replays can show the reasoning behind each pick.
 export function scoreParts(room, rig, cand) {
   const { pos, facing } = resultingPose(rig, cand);

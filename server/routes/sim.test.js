@@ -9,7 +9,7 @@ import { createReplayStore } from "../replays.js";
 import { createStore } from "../store.js";
 import { playMatch } from "../../shared/sim/match.js";
 
-// The real simulated-game runner, in-process (no worker threads) — so these
+// The real simulated-game runner, in-process (no worker threads), so these
 // tests exercise the actual engine path the GA uses, end to end.
 const pool = { run: async (job) => playMatch(job) };
 
