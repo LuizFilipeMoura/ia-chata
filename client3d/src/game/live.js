@@ -62,7 +62,8 @@ function oddsLine(rig, extra) {
 }
 
 export class LiveMatch {
-  constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null }) {
+  constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null, hotseat = false }) {
+    this.hotseat = hotseat;
     this.world = world; this.hud = hud; this.room = room; this.side = side; this.onExit = onExit; this.onRematch = onRematch;
     this.state = null; this.selected = null; this.mode = null; this.lastRes = -1; this.lastVersion = -1;
     this.tutorial = tutorial;
@@ -107,6 +108,7 @@ export class LiveMatch {
     ambience.stop();
     this.world.clearOverlay();
     this.world.onShiftWheel = null;
+    this.curtain?.remove();
   }
 
   nameOf(id) { return this.state?.rigs.find((r) => r.id === id)?.name; }
@@ -173,8 +175,34 @@ export class LiveMatch {
     });
   }
 
+  // Hot-seat: whoever must decide next (their turn, their reaction, their
+  // Answer token) takes the device. Swap sides behind a curtain so neither
+  // player sees the other's hidden reactions.
+  hotseatSwap() {
+    const g = this.game;
+    if (!this.hotseat || !g || g.phase === "finished" || this.curtain) return false;
+    const want = g.pendingAnswer?.side || g.pendingReaction?.defender || (g.phase === "activation" ? g.turn?.side : null);
+    if (!want || want === this.side) return false;
+    this.curtain = el("div", { class: "curtain" },
+      el("div", { class: "curtain-box" },
+        el("div", { class: "curtain-k" }, "Pass the device"),
+        el("h2", { class: want === "a" ? "c-a" : "c-b" }, want === "a" ? "Cyan commander" : "Red commander"),
+        el("p", {}, "Your opponent looks away. Press when you're ready."),
+        el("button", { class: "btn big primary", onClick: async () => {
+          this.side = want; this.selected = null; this.hud.clog.side = want;
+          this.disconnect?.();
+          this.disconnect = connect(this.room, this.side, (st) => this.apply(st));
+          try { const r = await api.state(this.room, this.side); this.state = r.state; this.lastVersion = r.state.version; } catch {}
+          this.curtain.remove(); this.curtain = null; this.wasMine = false;
+          this.refresh();
+        } }, "I'm ready")));
+    document.body.append(this.curtain);
+    return true;
+  }
+
   refresh() {
     if (!this.state) return;
+    if (this.hotseatSwap()) return;
     const g = this.game;
     // A chime when the floor comes back to you.
     const mine = this.myTurn;

@@ -8,7 +8,7 @@ import { Director } from "./game/director.js";
 import { LiveMatch } from "./game/live.js";
 import { Replay } from "./game/replay.js";
 import { Hud } from "./ui/hud.js";
-import { titleScreen, squadBuilder, createBotRoom } from "./ui/menu.js";
+import { titleScreen, squadBuilder, createBotRoom, createVersusRoom, addSquad, opponentOf, readyUntilStarted, TABLES } from "./ui/menu.js";
 import { labScreen } from "./ui/lab.js";
 import { simCenter } from "./ui/simcenter.js";
 import { Coach, TUTORIAL_SQUAD } from "./ui/tutorial.js";
@@ -86,13 +86,14 @@ function home() {
     onTutorial: () => tutorial(),
     onLab: () => lab(),
     onSims: () => sims(),
+    onVersus: () => versus(),
     onWatch: () => watch(),
   });
   screen.append(el("div", { class: "title-mute" }, el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"), muteButton()));
   lastBattle().then((last) => {
     if (!last) return;
     const menu = screen.querySelector(".menu");
-    menu?.prepend(el("button", { class: "btn big primary", onClick: () => play(last.room, { cfg: last.cfg, tutorial: last.tutorial }) }, `▶  Continue battle · round ${last.round}`));
+    menu?.prepend(el("button", { class: "btn big primary", onClick: () => play(last.room, { cfg: last.cfg, tutorial: last.tutorial, side: last.side || "a", hotseat: !!last.hotseat }) }, `▶  Continue battle · round ${last.round}`));
     menu?.querySelector(".btn.primary + .btn.primary, .menu > .btn:nth-child(2)")?.classList.remove("primary");
   });
 }
@@ -108,14 +109,14 @@ function builder() {
   });
 }
 
-async function play(room, { tutorial = false, cfg = null } = {}) {
+async function play(room, { tutorial = false, cfg = null, side = "a", hotseat = false } = {}) {
   teardown();
   screen.style.display = "none";
   // Remember the battle so the title screen can offer "Continue".
-  try { localStorage.setItem("oi3d-last", JSON.stringify({ room, cfg, tutorial, at: Date.now() })); } catch {}
+  try { localStorage.setItem("oi3d-last", JSON.stringify({ room, cfg, tutorial, side, hotseat, at: Date.now() })); } catch {}
   const hud = new Hud(hudRoot);
   const rematch = cfg ? async () => { fill(screen, el("div", { class: "loading" }, "Rematch: deploying…")); screen.style.display = ""; try { play(await createBotRoom(cfg), { cfg }); } catch (e) { toast(e.message, "bad"); home(); } } : null;
-  const match = new LiveMatch(world, hud, { room, side: "a", onExit: home, onRematch: rematch });
+  const match = new LiveMatch(world, hud, { room, side, hotseat, onExit: home, onRematch: rematch });
   active = match;
   hudRoot.append(el("div", { class: "hud-menu" },
     el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server. "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
@@ -133,7 +134,7 @@ async function lastBattle() {
   try { last = JSON.parse(localStorage.getItem("oi3d-last") || "null"); } catch {}
   if (!last?.room) return null;
   try {
-    const r = await api.state(last.room, "a");
+    const r = await api.state(last.room, last.side || "a");
     if (!r.state?.game?.started || r.state.game.phase === "finished") return null;
     return { ...last, round: r.state.game.round };
   } catch { return null; }
@@ -171,6 +172,82 @@ async function tutorial() {
 function lab() {
   teardown();
   labScreen(screen, { onBack: home, onLibrary: (filter) => sims(filter) });
+}
+
+// ---- Versus: two humans ----
+function versus() {
+  const code = el("input", { placeholder: "Room code, e.g. VS-4K2Q", style: { width: "220px", textTransform: "uppercase" } });
+  modal({
+    title: "⚔ Versus: 2 players", cls: "wide",
+    body: el("div", { class: "vs-menu" },
+      el("div", { class: "vs-opt" }, el("h3", {}, "🌐 Host an online room"), el("p", { class: "muted" }, "Build your squadron and get a room code. Send it to your friend; the battle starts when they've deployed."),
+        el("button", { class: "btn primary", onClick: () => { document.querySelector(".modal-back")?.remove(); hostVersus(); } }, "Host")),
+      el("div", { class: "vs-opt" }, el("h3", {}, "🔗 Join a room"), el("p", { class: "muted" }, "Enter the code your friend sent you."),
+        el("div", { style: { display: "flex", gap: "8px" } }, code, el("button", { class: "btn primary", onClick: () => { const c = code.value.trim().toUpperCase(); if (!c) return; document.querySelector(".modal-back")?.remove(); joinVersus(c); } }, "Join"))),
+      el("div", { class: "vs-opt" }, el("h3", {}, "🪑 Same screen (hot-seat)"), el("p", { class: "muted" }, "Two players, one device. You take turns; a curtain hides the board while you swap."),
+        el("button", { class: "btn primary", onClick: () => { document.querySelector(".modal-back")?.remove(); hotseatVersus(); } }, "Play"))),
+    actions: [{ label: "Back", ghost: true }],
+  });
+}
+
+function waiting(title, lines) {
+  fill(screen, el("div", { class: "title" }, el("h2", {}, title), ...lines, el("button", { class: "btn ghost", onClick: home }, "Cancel")));
+  screen.style.display = "";
+}
+
+async function hostVersus() {
+  teardown();
+  squadBuilder(screen, { mode: "pvp", title: "Commission your squadron (host)", cta: "Create room ▸", onBack: home, onStart: async ({ squad, table }) => {
+    waiting("Setting up…", []);
+    try {
+      const room = await createVersusRoom({ squad, table });
+      const link = `${location.origin}${location.pathname}?join=${room}`;
+      const status = el("p", { class: "muted" }, "Waiting for your opponent to join…");
+      waiting("Room ready", [el("p", {}, "Send this code to your opponent:"), el("div", { class: "vs-code" }, room),
+        el("p", { class: "muted small" }, "or this link: ", el("b", { style: { userSelect: "all" } }, link)),
+        el("button", { class: "btn", onClick: () => { navigator.clipboard?.writeText(link); toast("Link copied.", "good"); } }, "Copy link"), status]);
+      await readyUntilStarted(room, "a", (st) => {
+        const theirs = st.rigs.filter((r) => r.owner === "b").length;
+        status.textContent = theirs ? `Opponent is deploying (${theirs} rigs)…` : "Waiting for your opponent to join…";
+      });
+      play(room, { side: "a" });
+    } catch (e) { toast(e.message, "bad", 5000); home(); }
+  } });
+}
+
+async function joinVersus(room) {
+  teardown();
+  waiting(`Joining ${room}…`, []);
+  try {
+    await api.join(room, "b", "Challenger");
+    const opp = await opponentOf(room, "b");
+    if (opp.started) { play(room, { side: "b" }); return; }
+    if (!opp.need) { toast("That room has no host squadron yet. Check the code.", "bad", 5000); return home(); }
+    squadBuilder(screen, { mode: "pvp", taken: opp.taken, need: opp.need, hostTable: false, title: `Commission your squadron (room ${room})`, cta: "Deploy ▸", onBack: home, onStart: async ({ squad }) => {
+      waiting("Deploying…", [el("p", { class: "muted" }, "Waiting for the host to start the battle…")]);
+      try { await addSquad(room, "b", squad); await readyUntilStarted(room, "b"); play(room, { side: "b" }); }
+      catch (e) { toast(e.message, "bad", 5000); home(); }
+    } });
+  } catch (e) { toast(e.message, "bad", 5000); home(); }
+}
+
+async function hotseatVersus() {
+  teardown();
+  squadBuilder(screen, { mode: "pvp", title: "Cyan commander: commission your squadron", cta: "Next: Red commander ▸", onBack: home, onStart: ({ squad: cyan, table }) => {
+    const need = { medium: 0, light: 0 };
+    cyan.forEach((u) => { need[u.chassis.startsWith("medium") ? "medium" : "light"]++; });
+    squadBuilder(screen, { mode: "pvp", taken: cyan.map((u) => u.chassis), need, hostTable: false, title: "Red commander: commission your squadron", cta: "Start battle ▸", onBack: home, onStart: async ({ squad: red }) => {
+      waiting("Deploying…", []);
+      try {
+        const room = await createVersusRoom({ squad: cyan, table });
+        await api.join(room, "b", "Red");
+        await addSquad(room, "b", red);
+        await api.command(room, "a", "ready", {});
+        await readyUntilStarted(room, "b");
+        play(room, { side: "a", hotseat: true });
+      } catch (e) { toast(e.message, "bad", 5000); home(); }
+    } });
+  } });
 }
 
 function sims(filter = {}) {
@@ -213,4 +290,6 @@ function cheatSheet() {
   });
 }
 
-home();
+// A shared link (?join=CODE) goes straight to joining.
+const joinCode = new URLSearchParams(location.search).get("join");
+if (joinCode) { history.replaceState(null, "", location.pathname); joinVersus(joinCode.toUpperCase()); } else home();

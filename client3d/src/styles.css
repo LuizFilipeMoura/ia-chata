@@ -460,3 +460,14 @@ body { font-size: 15px; }
 .pm-row .wbar { height: 7px; margin: 3px 0; }
 .pm-habit { padding: 4px 8px; margin: 3px 0; border-radius: 3px; } .pm-habit.pos { background: rgba(127,207,106,.12); } .pm-habit.neg { background: rgba(224,83,61,.12); }
 .thought .ol { font-size: 14px; } .tkey span { font-size: 12px; padding: 1px 6px; }
+.curtain { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(30,22,12,.97), rgba(8,6,4,.99)); }
+.curtain-box { text-align: center; } .curtain-k { font: 600 14px var(--label); letter-spacing: .3em; text-transform: uppercase; color: var(--brass); }
+.curtain h2 { font-size: 56px; margin: 8px 0; } .c-a { color: var(--cyan); } .c-b { color: var(--red); }
+.need { margin: 10px 0 14px; padding: 10px 14px; border: 1px solid var(--brass-lo); border-radius: 5px; background: rgba(0,0,0,.3); }
+.need.ok { border-color: var(--good); }
+.vs-code { font: 900 56px var(--display); letter-spacing: .12em; color: var(--brass-hi); text-align: center; margin: 8px 0; user-select: all; }
+.vs-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.vs-opt { background: rgba(0,0,0,.28); border: 1px solid var(--brass-lo); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.vs-opt h3 { margin: 0; font-size: 18px; } .vs-opt p { margin: 0; flex: 1; }
+
+.coach-veil { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 19; pointer-events: none; }

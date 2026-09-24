@@ -33,7 +33,14 @@ export class Coach {
   constructor(root, match) {
     this.root = root; this.match = match; this.i = 0; this.steps = tutorialSteps(); this.ev = {};
     this.panel = el("div", { class: "coach" });
-    root.append(this.panel);
+    // Spotlight: a grey veil over everything except the coach and the
+    // highlighted elements (cut out as holes). Clicks pass through; the gate
+    // already blocks anything the step doesn't ask for.
+    this.veil = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    this.veil.setAttribute("class", "coach-veil");
+    root.append(this.veil, this.panel);
+    const tick = () => { this.drawVeil(); this.raf = requestAnimationFrame(tick); };
+    tick();
     const on = (type, fn) => match.events.addEventListener(type, (e) => { fn(e.detail); this.check(); });
     on("command", ({ verb, attrs }) => {
       if (verb === "action" && (attrs.action === "move" || attrs.action === "sprint")) this.ev.moved = true;
@@ -47,7 +54,7 @@ export class Coach {
     this.render();
   }
 
-  destroy() { this.match.gate = null; this.match.renderActions?.(); clearInterval(this.camTimer); clearInterval(this.hlTimer); clearTimeout(this.skipTimer); this.panel.remove(); this.unhighlight(); }
+  destroy() { this.match.gate = null; this.match.renderActions?.(); clearInterval(this.camTimer); clearInterval(this.hlTimer); clearTimeout(this.skipTimer); cancelAnimationFrame(this.raf); this.veil.remove(); this.panel.remove(); this.unhighlight(); }
 
   check() {
     const s = this.steps[this.i];
@@ -69,6 +76,20 @@ export class Coach {
     }
     this.render();
     setTimeout(() => this.check(), 50);
+  }
+
+  drawVeil() {
+    const s = this.steps[this.i] || {};
+    // Steps played on the board keep it readable: lighter veil.
+    const onBoard = s.allow && (s.allow.select || s.allow.acts);
+    const holes = [...document.querySelectorAll(".coach-hl")].map((n) => n.getBoundingClientRect()).filter((r) => r.width && r.height);
+    const w = innerWidth, h = innerHeight, pad = 6;
+    const path = `M0 0H${w}V${h}H0Z` + holes.map((r) => `M${r.left - pad} ${r.top - pad}v${r.height + pad * 2}h${r.width + pad * 2}v${-(r.height + pad * 2)}Z`).join("");
+    const key = `${path}|${onBoard}`;
+    if (key === this.veilKey) return;
+    this.veilKey = key;
+    this.veil.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    this.veil.innerHTML = `<path fill-rule="evenodd" d="${path}" fill="rgba(12,10,8,${onBoard ? 0.35 : 0.62})"/>`;
   }
 
   unhighlight() { document.querySelectorAll(".coach-hl").forEach((n) => n.classList.remove("coach-hl")); }
