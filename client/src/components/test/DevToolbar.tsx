@@ -43,8 +43,8 @@ export function DevToolbar({ room, status }: { room: string; status: string }) {
       }}
     >
       <strong>/test</strong>
-      <span>phase: {game?.phase ?? "—"}</span>
-      <span>turn: {game?.turn?.side ?? "—"}</span>
+      <span>phase: {game?.phase ?? "-"}</span>
+      <span>turn: {game?.turn?.side ?? "-"}</span>
       <button onClick={rerollAll}>🎲 Reroll all</button>
       <button onClick={() => addRig("a")}>+ Rig A</button>
       <button onClick={() => addRig("b")}>+ Rig B</button>

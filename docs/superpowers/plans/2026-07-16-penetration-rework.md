@@ -1,15 +1,15 @@
 # Penetration Rework Implementation Plan
 
-**Status:** **SHIPPED 2026-07-16** — Tasks 1–11 all landed on branch
+**Status:** **SHIPPED 2026-07-16**: Tasks 1–11 all landed on branch
 `claude/quizzical-chaum-b0aa09`. **Task 10's falsifier passed:** `ap-shells` went
 **−1.47 → +0.72** (positive), `penetrator-rounds` **−2.77 → −0.63**, and
-`shaped-charges` held at **−0.70** byte-identical — an accidental control, since
+`shaped-charges` held at **−0.70** byte-identical, an accidental control, since
 Missile Barrage was already at Pen 7 and no task touched it. The effect appears
 exactly where Penetration was compressed and is precisely zero where it was not.
 Baselines committed: `scripts/balance/report-2026-07-16-penetration.txt`,
 `duel-2026-07-16-penetration.txt`. Full result in the spec's Status block.
 
-> **This plan shipped one false claim of its own — see Task 3.** It said Autocannon
+> **This plan shipped one false claim of its own, see Task 3.** It said Autocannon
 > and Talon "land on the same floor they had". They do not: both are 2-point nerfs
 > (floor 9 → 7 and 8 → 6). The numbers it told implementers to type were correct; the
 > sentence explaining them was not, and it contradicted the spec. Corrected in place,
@@ -20,7 +20,7 @@ Baselines committed: `scripts/balance/report-2026-07-16-penetration.txt`,
 
 **Goal:** Compress the Penetration band to 3–7, delete Overmatch, pay the six heavies' wasted Penetration back into Damage, and surface the result in the roll console.
 
-**Architecture:** Numbers first (they are what must be measured), then the deletion, then the rulebook, then the drama. Every balance task is one commit so the harness can bisect. The drama is `combat.js` only — the client already renders `effects` and the `crit` tone.
+**Architecture:** Numbers first (they are what must be measured), then the deletion, then the rulebook, then the drama. Every balance task is one commit so the harness can bisect. The drama is `combat.js` only, the client already renders `effects` and the `crit` tone.
 
 **Tech Stack:** Plain ESM JavaScript (`shared/`, `scripts/`), `node --test` + Vitest, two Monte Carlo harnesses under `scripts/balance/`.
 
@@ -28,7 +28,7 @@ Baselines committed: `scripts/balance/report-2026-07-16-penetration.txt`,
 
 ---
 
-## Prerequisites — do not start without these
+## Prerequisites, do not start without these
 
 - [ ] **`2026-07-16-stat-rename.md` has landed.** This plan is written in the renamed vocabulary: the weapon fields are `pen`, `dmg`, `accuracy`; the sum is `effPen`. If `game-state.js` still says `str:` and `d:`, **stop and run the rename plan first.** Landing them together makes the balance measurement unattributable, which is the one thing both specs exist to prevent.
 - [ ] **The suite is green at 816 node / 293 vitest.**
@@ -59,16 +59,16 @@ Task 10 re-measures against committed baselines. If a number moved that no task 
 
 ## Traps
 
-1. **`combat.test.js`'s `applyDamage` is a stub that lies.** `makeCtx()` (`shared/combat.test.js:11-16`) wires `applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); }` — it **floors at 0 and never fires the §8 cascade**. The real `combatCtx()` (`game-state.js:2201`) wires the real one. **Any drama test written against `makeCtx()` will pass while testing nothing.** Tasks 7–9 use `applyCommand` with injected dice instead — the pattern at `game-state.test.js:1938`.
-2. **Field is the floor.** `normalizeWeaponUpgrade` returns `upgrades[0].id` for a null id, so `makeRig` cannot build an un-upgraded rig. **Every number in Task 2 is a BASE value chosen so that base + field upgrade lands on the spec's floor value.** Do not read the spec's table into `WEAPONS` directly — Siege Maul's spec line says Pen 7 / Dmg 7, and its base `dmg` is **6**.
-3. **The duel must run `arc: "side"`, never `"front"`.** `arcBonus` returns `null` for Raking Fire outside side/rear (`combat.js:401`) — a hard zero **by rule**. Mini Gun and Double MG carry the perk and deal literally 0 at front for ten rounds. The tell: ask whether a zero is a measurement or a rule.
-4. **Do not use `sed -i`** — it rewrites CRLF and leaves files dirty with an empty `git diff`.
+1. **`combat.test.js`'s `applyDamage` is a stub that lies.** `makeCtx()` (`shared/combat.test.js:11-16`) wires `applyDamage: (rm, t, loc, sp) => { t[loc].sp = Math.max(0, t[loc].sp - sp); }`: it **floors at 0 and never fires the §8 cascade**. The real `combatCtx()` (`game-state.js:2201`) wires the real one. **Any drama test written against `makeCtx()` will pass while testing nothing.** Tasks 7–9 use `applyCommand` with injected dice instead, the pattern at `game-state.test.js:1938`.
+2. **Field is the floor.** `normalizeWeaponUpgrade` returns `upgrades[0].id` for a null id, so `makeRig` cannot build an un-upgraded rig. **Every number in Task 2 is a BASE value chosen so that base + field upgrade lands on the spec's floor value.** Do not read the spec's table into `WEAPONS` directly, Siege Maul's spec line says Pen 7 / Dmg 7, and its base `dmg` is **6**.
+3. **The duel must run `arc: "side"`, never `"front"`.** `arcBonus` returns `null` for Raking Fire outside side/rear (`combat.js:401`), a hard zero **by rule**. Mini Gun and Double MG carry the perk and deal literally 0 at front for ten rounds. The tell: ask whether a zero is a measurement or a rule.
+4. **Do not use `sed -i`**: it rewrites CRLF and leaves files dirty with an empty `git diff`.
 5. **`git add <file>` stages the whole file.** `package.json` / `package-lock.json` carry the user's in-progress dependency upgrade. Never `git add -A`.
 6. **Another agent commits to this branch.** Never trust `HEAD~1`.
-7. **`startedRoom()` is not the seed roster, and this plan's test fixtures got it wrong.** It builds six **light** rigs (`a1..a3`, `b1..b3`) all carrying **Mini Gun / Sword** — not `medium-shield-siege` with a Siege Maul, and not a Wrecking Ball. Task 1's fixture as written would have read the Siege Maul catalog entry against a rig whose `weaponUpgrades.longRange` was a *Mini Gun* upgrade id: `upgradeForWeapon` returns null → effect `{}` → **the test fails for the wrong reason, then goes green-for-free once the branch lands, exercising nothing.** Task 1's implementer caught it and used `makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword" })` instead — the pattern the neighbouring tests already use — and asserted the resolved upgrade id so the fixture proves itself. **Do the same in Tasks 7–9.**
-   **Poking `rig.melee = "Wrecking Ball"` does NOT work either:** `weaponUpgrades.melee` still holds the old weapon's upgrade id, `upgradeForWeapon` returns null, and Haymaker never applies — so the rig swings at Damage 7, not 8, and a one-shot test silently proves nothing. Build the rig with `makeRig`, or set BOTH the weapon and its upgrade id.
+7. **`startedRoom()` is not the seed roster, and this plan's test fixtures got it wrong.** It builds six **light** rigs (`a1..a3`, `b1..b3`) all carrying **Mini Gun / Sword**: not `medium-shield-siege` with a Siege Maul, and not a Wrecking Ball. Task 1's fixture as written would have read the Siege Maul catalog entry against a rig whose `weaponUpgrades.longRange` was a *Mini Gun* upgrade id: `upgradeForWeapon` returns null → effect `{}` → **the test fails for the wrong reason, then goes green-for-free once the branch lands, exercising nothing.** Task 1's implementer caught it and used `makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword" })` instead, the pattern the neighbouring tests already use, and asserted the resolved upgrade id so the fixture proves itself. **Do the same in Tasks 7–9.**
+   **Poking `rig.melee = "Wrecking Ball"` does NOT work either:** `weaponUpgrades.melee` still holds the old weapon's upgrade id, `upgradeForWeapon` returns null, and Haymaker never applies, so the rig swings at Damage 7, not 8, and a one-shot test silently proves nothing. Build the rig with `makeRig`, or set BOTH the weapon and its upgrade id.
 8. **A test that passes without exercising the branch is worse than no test.** Mutation-test every green in this plan: revert the line you added, confirm the test goes red, restore. Two implementers on the rename found guards that looked real and weren't.
-9. **`effectiveWeaponProfile` is the function; `applyWeaponUpgrade` does not exist.** Earlier drafts of this plan named the latter eight times. It was never real — the upgrade logic is inline in `effectiveWeaponProfile` (`game-state.js:691`). There is no injection seam, which is why Task 1's test mutates `WEAPON_UPGRADES` and restores it.
+9. **`effectiveWeaponProfile` is the function; `applyWeaponUpgrade` does not exist.** Earlier drafts of this plan named the latter eight times. It was never real, the upgrade logic is inline in `effectiveWeaponProfile` (`game-state.js:691`). There is no injection seam, which is why Task 1's test mutates `WEAPON_UPGRADES` and restores it.
 
 ## File Structure
 
@@ -78,7 +78,7 @@ Task 10 re-measures against committed baselines. If a number moved that no task 
 | `shared/rules.js` | delete `strOvermatchD`, `OVERMATCH_PER_D`, `OVERMATCH_MAX_D`; possibly inline `woundRaw` |
 | `shared/combat.js` | delete the overmatch rider; add the drama effects and the `crit` tone |
 | `shared/glossary.js` | delete the `overmatch` entry |
-| `rules.md` | **runtime input** — every magnitude this plan moves, plus the Overmatch paragraph |
+| `rules.md` | **runtime input**: every magnitude this plan moves, plus the Overmatch paragraph |
 | `shared/game-state.test.js` | the `dmg` upgrade test and all three drama tests (real ctx) |
 | `shared/rules.test.js`, `shared/combat.test.js` | remove the Overmatch tests |
 | `docs/superpowers/specs/2026-07-15-opponent-brain-design.md` | dangling `strOvermatchD` reference |
@@ -87,7 +87,7 @@ Task 10 re-measures against committed baselines. If a number moved that no task 
 
 ### Task 1: `effectiveWeaponProfile` learns `dmg`
 
-**The spec assumes Reinforced Head and Haymaker can grant `+1 Damage`. They cannot — there is no code path.** `effectiveWeaponProfile` handles `rof`, `pen`, `perks`, `range` and `noFarPenalty`, and nothing else. This task adds the path before any upgrade needs it.
+**The spec assumes Reinforced Head and Haymaker can grant `+1 Damage`. They cannot, there is no code path.** `effectiveWeaponProfile` handles `rof`, `pen`, `perks`, `range` and `noFarPenalty`, and nothing else. This task adds the path before any upgrade needs it.
 
 **Files:**
 - Modify: `shared/game-state.js:704-711`
@@ -108,7 +108,7 @@ test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
 });
 ```
 
-> This test calls a helper that does not exist yet — `applyUpgradeToProfile`. **Do not create one.** Instead write the test against the real public path, which is `effectiveWeaponProfile(slot, name, rig)`. Replace the body above with:
+> This test calls a helper that does not exist yet, `applyUpgradeToProfile`. **Do not create one.** Instead write the test against the real public path, which is `effectiveWeaponProfile(slot, name, rig)`. Replace the body above with:
 
 ```js
 test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
@@ -123,7 +123,7 @@ test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
 });
 ```
 
-> Import `effectiveWeaponProfile` and `WEAPONS` from `./game-state.js` if the test file does not already. Check the existing import block first — `WEAPONS` is likely already there.
+> Import `effectiveWeaponProfile` and `WEAPONS` from `./game-state.js` if the test file does not already. Check the existing import block first, `WEAPONS` is likely already there.
 
 **This test cannot pass until Task 4 makes Reinforced Head a `dmg` effect.** So for *this* task, assert the mechanism directly with a temporary effect instead:
 
@@ -151,7 +151,7 @@ test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
 node --test shared/game-state.test.js
 ```
 
-Expected: **FAIL** — `Expected values to be strictly equal: 5 !== 6` (the base `dmg` came through unchanged because no branch reads `effect.dmg`).
+Expected: **FAIL**: `Expected values to be strictly equal: 5 !== 6` (the base `dmg` came through unchanged because no branch reads `effect.dmg`).
 
 - [ ] **Step 3: Add the branch**
 
@@ -198,7 +198,7 @@ Reinforced Head and Haymaker."
 
 ---
 
-### Task 2: the six — base Penetration and Damage
+### Task 2: the six, base Penetration and Damage
 
 **Every value here is a BASE, derived by subtracting what the field upgrade adds** (trap 2). The spec's table is the **floor**.
 
@@ -236,11 +236,11 @@ Reinforced Head and Haymaker."
 npm test
 ```
 
-Expected: **failures** in `shared/combat.test.js` and `shared/game-state.test.js` — fixtures that assert old Penetration/Damage values. **This is correct.** Read each failure and confirm it is an expectation about a number this task moved, not a behaviour change.
+Expected: **failures** in `shared/combat.test.js` and `shared/game-state.test.js`: fixtures that assert old Penetration/Damage values. **This is correct.** Read each failure and confirm it is an expectation about a number this task moved, not a behaviour change.
 
 - [ ] **Step 4: Update the fixtures**
 
-Recompute each failing expectation from the new stats. **Do not blanket-update to whatever the code now prints** — derive the expected number by hand from `woundTarget(pen, T)` and the new `dmg`, and confirm the code agrees. A fixture updated to match a bug is a bug with a green test.
+Recompute each failing expectation from the new stats. **Do not blanket-update to whatever the code now prints**: derive the expected number by hand from `woundTarget(pen, T)` and the new `dmg`, and confirm the code agrees. A fixture updated to match a bug is a bug with a green test.
 
 - [ ] **Step 5: Full suite**
 
@@ -278,9 +278,9 @@ the default upgrade is fitted."
     "Talon":         { rof: 2, pen: 5, dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
 ```
 
-> Autocannon 7 → **6** and Talon 6 → **5** are *base* drops that pair with their field upgrades going +2 → +1 in Task 4. They land on floor **Pen 7** and **Pen 6** — and the upgrade becomes a real choice rather than a rubber stamp. Arc Gun and Crossbow have no `pen` field upgrade, so their base **is** their floor.
+> Autocannon 7 → **6** and Talon 6 → **5** are *base* drops that pair with their field upgrades going +2 → +1 in Task 4. They land on floor **Pen 7** and **Pen 6**: and the upgrade becomes a real choice rather than a rubber stamp. Arc Gun and Crossbow have no `pen` field upgrade, so their base **is** their floor.
 >
-> > **These are NERFS, not restorations, and an earlier version of this note said otherwise.** It claimed *"Both land on the same floor they had (Autocannon 7, Talon 6)"*. **False, and verified false:** the old floors were **Autocannon 7 + 2 = Pen 9** and **Talon 6 + 2 = Pen 8**, because the old field upgrades granted **+2**. The new floors are **7** and **6** — Autocannon drops **2 points**, Talon **2 points**. The spec has this right (§2: *"base 7 + 2 = Pen 9, 94% pinned by default"*); **the plan contradicted the spec it implements**, and the claim reached two implementers' briefs before it was caught. If you are updating a fixture, derive from **9 → 7** and **8 → 6**, never from "unchanged".
+> > **These are NERFS, not restorations, and an earlier version of this note said otherwise.** It claimed *"Both land on the same floor they had (Autocannon 7, Talon 6)"*. **False, and verified false:** the old floors were **Autocannon 7 + 2 = Pen 9** and **Talon 6 + 2 = Pen 8**, because the old field upgrades granted **+2**. The new floors are **7** and **6**: Autocannon drops **2 points**, Talon **2 points**. The spec has this right (§2: *"base 7 + 2 = Pen 9, 94% pinned by default"*); **the plan contradicted the spec it implements**, and the claim reached two implementers' briefs before it was caught. If you are updating a fixture, derive from **9 → 7** and **8 → 6**, never from "unchanged".
 >
 > **Crossbow keeps `dmg: 4`.** It is a deliberate low-alpha utility weapon (`ROF × Damage` 4) and the spec scopes F2-C to the six. Do not "fix" it.
 
@@ -290,7 +290,7 @@ the default upgrade is fitted."
 npm test
 ```
 
-Same discipline as Task 2 Step 4 — derive, don't accept.
+Same discipline as Task 2 Step 4, derive, don't accept.
 
 - [ ] **Step 3: Full suite**
 
@@ -311,7 +311,7 @@ in the six. Arc Gun and Crossbow sat at Pen 8 (69%)."
 ### Task 4: the five field upgrades stop selling what the band can't carry
 
 **Files:**
-- Modify: `shared/game-state.js` — `WEAPON_UPGRADES` entries for Talon, Autocannon, Siege Maul, Wrecking Ball, Anchor
+- Modify: `shared/game-state.js`: `WEAPON_UPGRADES` entries for Talon, Autocannon, Siege Maul, Wrecking Ball, Anchor
 
 - [ ] **Step 1: Rewrite the five entries**
 
@@ -333,7 +333,7 @@ in the six. Arc Gun and Crossbow sat at Pen 8 (69%)."
 
 > `tag` is rendered **verbatim** by the commission wizard, loadout view, rig terminal and passive badges. Change the words; do not restructure it or add metadata.
 >
-> `fluked-head` needs no code — `uniquePerks(base.perks, effect.perks)` already merges perks. `reinforced-head` and `haymaker` depend on Task 1.
+> `fluked-head` needs no code, `uniquePerks(base.perks, effect.perks)` already merges perks. `reinforced-head` and `haymaker` depend on Task 1.
 
 - [ ] **Step 2: Verify the floors are what the spec says**
 
@@ -389,14 +389,14 @@ grep -rn 'strOvermatchD\|OVERMATCH_PER_D\|OVERMATCH_MAX_D\|overmatch\|Overmatch'
 
 Expected: **31+** hits.
 
-- [ ] **Step 2: `shared/rules.js` — delete the rule**
+- [ ] **Step 2: `shared/rules.js`: delete the rule**
 
 Delete `OVERMATCH_PER_D`, `OVERMATCH_MAX_D` and the whole `strOvermatchD` function with its doc comment.
 
 Then **inline `woundRaw`**. It exists only because `woundTarget` and `strOvermatchD` computed the same expression and had to agree about the floor. With `strOvermatchD` gone it has one caller, and the spec permits inlining:
 
 ```js
-// §7.5 — the wound roll. A shot's effective Penetration is compared to the struck
+// §7.5, the wound roll. A shot's effective Penetration is compared to the struck
 // location's Toughness: roll a d10 against `6 + T - P`.
 //
 // The clamp is load-bearing. It guarantees a natural 10 always wounds and a
@@ -404,7 +404,7 @@ Then **inline `woundRaw`**. It exists only because `woundTarget` and `strOvermat
 // mathematically hopeless. That was the failure mode of the impact-total model
 // this replaces: its base total capped at `6 + Pen + arc`, leaving 69 combos
 // that could never deal damage at any roll. Do not remove the clamp to "let
-// armour really matter" — that reintroduces the bug. See
+// armour really matter", that reintroduces the bug. See
 // docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
 //
 // Each point of Penetration is worth exactly 10%, so the roll is readable as a
@@ -412,12 +412,12 @@ Then **inline `woundRaw`**. It exists only because `woundTarget` and `strOvermat
 export function woundTarget(pen, toughness) {
   const p = Math.floor(Number(pen) || 0);
   // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
-  // the single most dangerous default in the system. Penetration may coerce — it
-  // fails toward TN 10 (10%) — but T must be real.
+  // the single most dangerous default in the system. Penetration may coerce, it
+  // fails toward TN 10 (10%), but T must be real.
   //
   // The check is `typeof`, not `Number.isFinite(Number(t))`: coercing first
   // reopens the exact hole it means to close, because Number(null), Number(""),
-  // Number(false) and Number([]) are all 0 — and `null` is precisely what a
+  // Number(false) and Number([]) are all 0, and `null` is precisely what a
   // failed lookup used to hand us. Only a real number may pass.
   if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
     throw new Error(`wound roll: toughness must be a number, got ${toughness}`);
@@ -426,9 +426,9 @@ export function woundTarget(pen, toughness) {
 }
 ```
 
-> **`WOUND_TN_FLOOR` stays** — it is still the clamp. The whole `typeof toughness` comment block moves across verbatim; it is load-bearing and unrelated to Overmatch.
+> **`WOUND_TN_FLOOR` stays**: it is still the clamp. The whole `typeof toughness` comment block moves across verbatim; it is load-bearing and unrelated to Overmatch.
 
-- [ ] **Step 3: `shared/combat.js` — delete the rider**
+- [ ] **Step 3: `shared/combat.js`: delete the rider**
 
 Remove, in `rollWounds`: the `overmatch` computation, its term in the `sp` sum, the `overmatch: 0` on the negated path (`:527`), and the rider push (`:577`). The three lines become:
 
@@ -449,15 +449,15 @@ Remove the ledger term at `:912`:
       if (rider.evisc) dmgTerms.push({ label: "Evisceration", value: rider.evisc });
 ```
 
-Update the comment above it — it names all three riders — to name only Rend and Evisceration.
+Update the comment above it, it names all three riders, to name only Rend and Evisceration.
 
-- [ ] **Step 4: `shared/glossary.js` — delete the entry**
+- [ ] **Step 4: `shared/glossary.js`: delete the entry**
 
 Remove the `overmatch` entry (`id: "overmatch"`, lines ~89-90) entirely.
 
 - [ ] **Step 5: Delete the tests**
 
-Remove the Overmatch tests from `shared/rules.test.js` and `shared/combat.test.js`. **Do not delete the wound-roll or clamp tests** — they cover `woundTarget`, which survives.
+Remove the Overmatch tests from `shared/rules.test.js` and `shared/combat.test.js`. **Do not delete the wound-roll or clamp tests**: they cover `woundTarget`, which survives.
 
 - [ ] **Step 6: Verify nothing but `rules.md` remains**
 
@@ -473,7 +473,7 @@ Expected: **no output.** (`rules.md` is Task 6; the specs under `docs/` are Task
 npm test
 ```
 
-Expected: `293 passed`. Node count **drops** by however many Overmatch tests existed. Record the new number — it is the baseline for the rest of this plan.
+Expected: `293 passed`. Node count **drops** by however many Overmatch tests existed. Record the new number, it is the baseline for the rest of this plan.
 
 - [ ] **Step 8: Commit**
 
@@ -489,7 +489,7 @@ to the high-ROF weapons that were already winning. woundRaw is inlined back."
 
 ---
 
-### Task 6: `rules.md` — the rulebook the bot teaches from
+### Task 6: `rules.md`: the rulebook the bot teaches from
 
 `rules.md` is baked verbatim into the rules bot's system prompt as "the single source of truth" (`server/config.js:6` → `server/prompt.js`), and the bot is instructed to refuse rather than guess. **Every magnitude this plan moved must move here, or the bot teaches a game that does not exist.**
 
@@ -501,7 +501,7 @@ to the high-ROF weapons that were already winning. woundRaw is inlined back."
 Remove the **Overmatch** paragraph at `:253` entirely, and its mention in step 8 at `:254`:
 
 ```
-8. **Apply damage.** Each wound costs the location the weapon's **Damage** stat in SP (§12) — plus any per-wound riders such as **Rend** (§13). A hit that fails to wound does nothing.
+8. **Apply damage.** Each wound costs the location the weapon's **Damage** stat in SP (§12), plus any per-wound riders such as **Rend** (§13). A hit that fails to wound does nothing.
 ```
 
 - [ ] **Step 2: Update the weapon tables**
@@ -522,16 +522,16 @@ In §13 (`:408-427`):
 
 - [ ] **Step 4: Fix the prose that names a changed weapon**
 
-`:380` — *"The **Siege Maul** is a close-in demolition gun: the highest STR on the board, but the shortest range of any ranged weapon."* **This is now false twice** (it is Penetration, and it is no longer highest — it ties the standard band at 7). Replace:
+`:380`: *"The **Siege Maul** is a close-in demolition gun: the highest STR on the board, but the shortest range of any ranged weapon."* **This is now false twice** (it is Penetration, and it is no longer highest, it ties the standard band at 7). Replace:
 
 ```
 > The **Siege Maul** is a close-in demolition gun: standard Penetration, the heaviest ranged Damage short of the Sniper Cannon, and the shortest range of any ranged weapon.
 ```
 
-`:382` — *"The **Harpoon** is a heavy line-thrower — a Sniper Cannon–grade STR punch with a shorter, closer sweet spot."* Replace:
+`:382`: *"The **Harpoon** is a heavy line-thrower, a Sniper Cannon–grade STR punch with a shorter, closer sweet spot."* Replace:
 
 ```
-> The **Harpoon** is a heavy line-thrower — reliable Penetration and a shorter, closer sweet spot than the Sniper Cannon, trading alpha for reach and Impale.
+> The **Harpoon** is a heavy line-thrower, reliable Penetration and a shorter, closer sweet spot than the Sniper Cannon, trading alpha for reach and Impale.
 ```
 
 - [ ] **Step 5: Verify the rulebook guards still pass**
@@ -559,7 +559,7 @@ git commit -m "docs(rules): the rulebook drops Overmatch and teaches the 3-7 ban
 
 ---
 
-### Task 7: the drama — a wound that guts a location
+### Task 7: the drama, a wound that guts a location
 
 **Files:**
 - Modify: `shared/combat.js:779` (the damage loop) and `:935` (`effects: []`)
@@ -593,7 +593,7 @@ test("a wound that zeroes a location from full says so in the roll console", () 
 });
 ```
 
-> The Sword deals Damage 3 and a light rig's legs are 10–11, so **this test will not trigger on the seed roster as written.** Set `a1.legs.max = 3; a1.legs.sp = 3;` before firing to make the weapon's Damage meet the location's max exactly. That is a legitimate fixture poke — `game-state.test.js:1516` already establishes the precedent (`// Test-only state poke.`).
+> The Sword deals Damage 3 and a light rig's legs are 10–11, so **this test will not trigger on the seed roster as written.** Set `a1.legs.max = 3; a1.legs.sp = 3;` before firing to make the weapon's Damage meet the location's max exactly. That is a legitimate fixture poke, `game-state.test.js:1516` already establishes the precedent (`// Test-only state poke.`).
 
 - [ ] **Step 2: Run it and watch it fail**
 
@@ -601,7 +601,7 @@ test("a wound that zeroes a location from full says so in the roll console", () 
 node --test shared/game-state.test.js
 ```
 
-Expected: **FAIL** — `expected a one-blow effect line, got []`. The attack resolution's `effects` is hard-coded `[]` at `combat.js:935`.
+Expected: **FAIL**: `expected a one-blow effect line, got []`. The attack resolution's `effects` is hard-coded `[]` at `combat.js:935`.
 
 - [ ] **Step 3: Instrument the damage loop**
 
@@ -614,7 +614,7 @@ At `shared/combat.js:779`, replace:
 with:
 
 ```js
-      // Drama (§7 spill / §8 kill tier) — the console already renders `effects`
+      // Drama (§7 spill / §8 kill tier), the console already renders `effects`
       // and the `crit` tone, so this needs no client change. Read the part BEFORE
       // each wound lands: applyDamage spends SP one point at a time and every
       // point past 0 fires catastrophicAdditional, so "was it full?" and "did the
@@ -628,13 +628,13 @@ with:
         ctx.applyDamage(room, target, location, h.sp, dmgOpts);
         const after = target[location]?.sp ?? 0;
         if (wasAlive && target.destroyed) {
-          drama.push(`${weaponName} — ${target.name} gutted in a single blow`);
+          drama.push(`${weaponName}, ${target.name} gutted in a single blow`);
           critWound = h;
         } else if (wasFull && after === 0) {
-          drama.push(`${weaponName} — ${location} torn open in one blow`);
+          drama.push(`${weaponName}, ${location} torn open in one blow`);
           critWound = h;
         } else if (before > 0 && after === 0 && h.sp > before) {
-          drama.push(`${weaponName} — through and through (${h.sp - before} SP spilled)`);
+          drama.push(`${weaponName}, through and through (${h.sp - before} SP spilled)`);
         }
       }
 ```
@@ -685,7 +685,7 @@ entry.effects."
 
 ### Task 8: the `crit` tone on the die that did it
 
-`RollConsole`'s `verdictLabel` prints **`CRIT!`** for a d10 with `tone: "crit"` (`client/src/v2/overlays/RollConsole.tsx:44-48`). Wound rolls are pushed at `combat.js:759-762` with `tone: "ok" | "miss"` — **before** the damage loop, so the upgrade is a post-loop mutation.
+`RollConsole`'s `verdictLabel` prints **`CRIT!`** for a d10 with `tone: "crit"` (`client/src/v2/overlays/RollConsole.tsx:44-48`). Wound rolls are pushed at `combat.js:759-762` with `tone: "ok" | "miss"`: **before** the damage loop, so the upgrade is a post-loop mutation.
 
 **Files:**
 - Modify: `shared/combat.js`
@@ -717,7 +717,7 @@ test("the wound die that guts a location is marked CRIT in the roll console", ()
 node --test shared/game-state.test.js
 ```
 
-Expected: **FAIL** — `'ok' !== 'crit'`.
+Expected: **FAIL**: `'ok' !== 'crit'`.
 
 - [ ] **Step 3: Promote the tone after the damage loop**
 
@@ -725,7 +725,7 @@ Immediately after the loop from Task 7:
 
 ```js
       // The die that gutted the location earns CRIT. The wound rolls were pushed
-      // before damage landed (they cannot know), so promote the tone here — the
+      // before damage landed (they cannot know), so promote the tone here, the
       // whole point of the ledger is that the player sees WHICH die did it.
       if (critWound) {
         const i = impacts.indexOf(critWound);
@@ -749,7 +749,7 @@ git commit -m "feat(combat): the wound die that guts a location reads CRIT"
 
 ---
 
-### Task 9: the one-shot kill — a decision, not a render
+### Task 9: the one-shot kill, a decision, not a render
 
 **This is the open call in the spec's Section 5 and it must not be made silently.**
 
@@ -763,7 +763,7 @@ light-wreckingball-double 8   light-sword-arc 7   light-harpoon-anchor 8
 light-rivet-pressureclaw 9    medium-* 9/10/11
 ```
 
-**`light-sword-arc` ("Zebra") is the only engine-7 rig in the game.** It needs the D12 to roll 11–12 and the wound to land — roughly a **10%** window per attack from a Damage-8 weapon (Sniper Cannon, Wrecking Ball).
+**`light-sword-arc` ("Zebra") is the only engine-7 rig in the game.** It needs the D12 to roll 11–12 and the wound to land, roughly a **10%** window per attack from a Damage-8 weapon (Sniper Cannon, Wrecking Ball).
 
 - [ ] **Step 1: Prove the behaviour before deciding about it**
 
@@ -795,7 +795,7 @@ test("Damage 8 into a full engine of max SP 7 kills the rig outright", () => {
 node --test shared/game-state.test.js
 ```
 
-Expected: **PASS immediately** — this documents existing behaviour, it does not add any. If it **fails**, the spec's Section 5 is wrong again and you must stop and report rather than tune around it.
+Expected: **PASS immediately**: this documents existing behaviour, it does not add any. If it **fails**, the spec's Section 5 is wrong again and you must stop and report rather than tune around it.
 
 - [ ] **Step 3: Take the decision to the user**
 
@@ -851,9 +851,9 @@ diff scripts/balance/duel-2026-07-15.txt duel-new.txt | head -60
 | Autocannon stopped saturating? | sweep | its arc bonus comes alive (was Pen 9 / 94% pinned at ROF 4) |
 | `ROF × Damage` for the six | stat table | all six in 6–8 |
 
-**Read the duel report's caveat block first — it is printed first for a reason.** The numbers are censored three ways (arm-loss, early-wreck, horizon `†` rows). And the duel prices a prototype's **cost**, not its benefit: `greedySafe` makes no choices, so Fire Control Lock, Enfilade, Barrage and the spatial effects read 0.00 because they *cannot be exercised*.
+**Read the duel report's caveat block first, it is printed first for a reason.** The numbers are censored three ways (arm-loss, early-wreck, horizon `†` rows). And the duel prices a prototype's **cost**, not its benefit: `greedySafe` makes no choices, so Fire Control Lock, Enfilade, Barrage and the spatial effects read 0.00 because they *cannot be exercised*.
 
-**`UNIT_WEAPONS` is excluded from every bar** — Tank Cannon is still Pen 10 / 100% pinned by design, deferred to its own spec. Do not read that gap as a regression.
+**`UNIT_WEAPONS` is excluded from every bar**: Tank Cannon is still Pen 10 / 100% pinned by design, deferred to its own spec. Do not read that gap as a regression.
 
 - [ ] **Step 5: Commit the new baselines**
 
@@ -875,11 +875,11 @@ Report it. Do not tune. The thesis is falsifiable and this is the falsifier.
 
 - [ ] **Step 1: Fix the dead function reference**
 
-`:129` says *"`D` is the weapon's damage dice **plus `strOvermatchD(effStr, toughness)`**"*. That function no longer exists, and the doc points **forward** at unbuilt work — whoever implements the bot will grep it and find nothing. Commit `29952da` deferred the damage term but left the reference. Replace with the weapon's `dmg` plus Rend/Evisceration.
+`:129` says *"`D` is the weapon's damage dice **plus `strOvermatchD(effStr, toughness)`**"*. That function no longer exists, and the doc points **forward** at unbuilt work, whoever implements the bot will grep it and find nothing. Commit `29952da` deferred the damage term but left the reference. Replace with the weapon's `dmg` plus Rend/Evisceration.
 
 - [ ] **Step 2: Fix the stale F2-B reasoning**
 
-`:87`, `:116` and `:374` cite *"F2-B — price ROF in heat is the live next step"* and reason from it. **F2-B is shelved** (`2026-07-15-rof-heat-design.md`: taxing ROF measured *worse*, spread 3.0× → 3.9×). Mark it shelved wherever it is cited as live.
+`:87`, `:116` and `:374` cite *"F2-B, price ROF in heat is the live next step"* and reason from it. **F2-B is shelved** (`2026-07-15-rof-heat-design.md`: taxing ROF measured *worse*, spread 3.0× → 3.9×). Mark it shelved wherever it is cited as live.
 
 - [ ] **Step 3: Leave the historical docs alone**
 
@@ -915,8 +915,8 @@ git commit -m "docs(bot): the opponent brain cited a function this branch delete
 | `UNIT_WEAPONS` deferred, excluded from the bar | 10 step 4 |
 | Crossbow / Bulwark Shield stay out of F2-C | 3 step 1 |
 
-**Beyond the spec:** Task 1 exists because the spec assumes a `dmg` upgrade path that `effectiveWeaponProfile` does not have — found by reading it, not by reasoning about it.
+**Beyond the spec:** Task 1 exists because the spec assumes a `dmg` upgrade path that `effectiveWeaponProfile` does not have, found by reading it, not by reasoning about it.
 
 **Type consistency:** `pen` / `dmg` / `accuracy` / `effPen` throughout, matching the rename plan's targets. `effect.dmg` (Task 1) is the key Task 4 writes. `drama` and `critWound` are declared in Task 7 and read in Task 8.
 
-**Known gap:** Task 2 and Task 3 say "update the fixtures by hand" without listing them, because the failing set depends on the rename's outcome. The discipline is stated instead — derive each expectation from `woundTarget(pen, T)` and the new `dmg`, never accept what the code prints. That is the one place this plan trades enumeration for a rule, and it does so deliberately: a stale list would be worse than none.
+**Known gap:** Task 2 and Task 3 say "update the fixtures by hand" without listing them, because the failing set depends on the rename's outcome. The discipline is stated instead, derive each expectation from `woundTarget(pen, T)` and the new `dmg`, never accept what the code prints. That is the one place this plan trades enumeration for a rule, and it does so deliberately: a stale list would be worse than none.

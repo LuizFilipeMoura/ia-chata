@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 const css = import.meta.glob("./styles/*.css", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 // V2 has ONE type scale (styles/type.css). Every font-size in every other V2
-// stylesheet must reference a --v2-text-* var — never a raw px/rem/em value.
+// stylesheet must reference a --v2-text-* var, never a raw px/rem/em value.
 // This keeps sizing on the common scale and enforces the 12px mobile floor.
 test("no V2 stylesheet sets a raw font-size (must use var(--v2-text-*))", () => {
   const offenders: string[] = [];

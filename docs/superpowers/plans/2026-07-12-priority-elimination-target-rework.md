@@ -1,4 +1,4 @@
-# Priority Elimination — Target Rework Implementation Plan
+# Priority Elimination, Target Rework Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -62,7 +62,7 @@ Add to `shared/game-state.test.js`:
 test("rerollPriorityTargets picks a living enemy and skips destroyed rigs", () => {
   const r = startedRoom();
   const [b1, b2, b3] = ["b1","b2","b3"].map((id) => findRig(r, id));
-  b1.destroyed = true;                       // dead — must be skipped
+  b1.destroyed = true;                       // dead, must be skipped
   // random() = 0 picks the first of the filtered (living) enemy list for side "a".
   __test.rerollPriorityTargets(r, () => 0);
   const targetA = r.game.priorityTargets.a;
@@ -87,7 +87,7 @@ above to `__test.advanceRound`).
 - [ ] **Step 2: Run to verify failure**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `__test.rerollPriorityTargets` / `__test.advanceRound` undefined.
+Expected: FAIL, `__test.rerollPriorityTargets` / `__test.advanceRound` undefined.
 
 - [ ] **Step 3: Implement the helper + wire it**
 
@@ -229,7 +229,7 @@ git commit -m "feat(vp): score kill VP only for the Priority Target"
 
 ## Task 4: Types rename + remove Ironclad Bounty (V1 + prompt + rules)
 
-**Files:** Modify `client/src/state/types.ts`, `client/src/components/BattleSetup.tsx`, `rules.md`. (`formatBattleState` label was covered in Task 1's rename — update its text here.)
+**Files:** Modify `client/src/state/types.ts`, `client/src/components/BattleSetup.tsx`, `rules.md`. (`formatBattleState` label was covered in Task 1's rename, update its text here.)
 
 - [ ] **Step 1: Types rename**
 
@@ -252,16 +252,16 @@ In `client/src/components/BattleSetup.tsx`:
 
 - [ ] **Step 4: rules.md §11**
 
-Delete the `### Optional — Ironclad Bounty` heading and its paragraph. Rewrite the
+Delete the `### Optional, Ironclad Bounty` heading and its paragraph. Rewrite the
 `### Priority Elimination` paragraph to:
 
 ```markdown
 ### Priority Elimination
 At the start of every round each squadron is assigned a single **Priority
-Target** — one random enemy Rig, known only to the hunting side. Destroy **your**
+Target**: one random enemy Rig, known only to the hunting side. Destroy **your**
 Priority Target and you score **+2 VP**; wrecking any other enemy Rig scores
 nothing. The target is re-rolled each round, so the pressure moves from machine
-to machine. This is the game's only kill reward — it pays to hunt the mark, not
+to machine. This is the game's only kill reward, it pays to hunt the mark, not
 just trade blows.
 ```
 
@@ -279,7 +279,7 @@ git commit -m "refactor(vp): remove Ironclad Bounty, rename to Priority Target"
 
 ---
 
-## Task 5: V2 HUD — target line + toast text
+## Task 5: V2 HUD, target line + toast text
 
 **Files:** Modify `client/src/v2/components/BattleHud.tsx`, `client/src/v2/styles/battle.css`. Test: `client/src/v2/components/BattleHud.test.tsx`.
 
@@ -309,7 +309,7 @@ test("shows the local side's Priority Target", async () => {
 ```
 
 Also update the existing kill-toast test's expected text to
-`/🎯 Target eliminated — Ravager · \+2 VP/`.
+`/🎯 Target eliminated, Ravager · \+2 VP/`.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -331,10 +331,10 @@ Render a line inside the `v2-bh` container (after the VP row):
 ```
 Update the toast string to:
 ```tsx
-    setToast(`🎯 Target eliminated — ${latest.victimName ?? "a unit"} · +${latest.vp!.amount} VP`);
+    setToast(`🎯 Target eliminated, ${latest.victimName ?? "a unit"} · +${latest.vp!.amount} VP`);
 ```
 (`targetId`/`targetRig` must be computed before the `if (!game?.started) return null;`
-early return; use optional chaining — they're only rendered after the guard.)
+early return; use optional chaining, they're only rendered after the guard.)
 
 Add to `battle.css`:
 ```css
@@ -387,7 +387,7 @@ test("renders the Priority Target marker when target is set", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run RigRow`
-Expected: FAIL — no `target` prop / marker.
+Expected: FAIL, no `target` prop / marker.
 
 - [ ] **Step 3: Implement**
 

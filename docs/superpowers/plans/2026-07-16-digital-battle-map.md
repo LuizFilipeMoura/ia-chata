@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give digital rooms a map-primary battle screen where the player sees every unit, clicks a rig to activate it, and issues Moves directly on the map — unblocking the human's digital Move (deferred item 1c).
+**Goal:** Give digital rooms a map-primary battle screen where the player sees every unit, clicks a rig to activate it, and issues Moves directly on the map, unblocking the human's digital Move (deferred item 1c).
 
 **Architecture:** A new interactive `BattleMap` SVG surface renders unit tokens from `rig.pos`/`rig.facing`. A `BattleScreen` composes it with a docked active-rig action bar and mounts in place of the roster `Squadron` when `mode === "digital" && game.started`. Move/Sprint are intercepted for digital rooms and resolved on the map: the client computes reach/path/facing with the **same shared geometry the engine validates with** (`findPath`/`moveBudget`/`terrainPolygons`/`radiusOf`/`spatial`), then sends `action {dest, facing}`. The engine is unchanged; the server re-validates on submit.
 
@@ -10,20 +10,20 @@
 
 **Design:** `docs/superpowers/specs/2026-07-16-digital-battle-map-design.md`
 
-**Scope:** Digital rooms only. Physical rooms keep the roster + timed-drawer flow — do not touch `MoveBody`'s existing behavior. No engine edits.
+**Scope:** Digital rooms only. Physical rooms keep the roster + timed-drawer flow, do not touch `MoveBody`'s existing behavior. No engine edits.
 
 ---
 
 ## File Structure
 
-- `client/src/v2/battle/fieldProjection.ts` — **create.** Pure inches↔px projection extracted from `FieldMap` (`PAD`, `CANVAS_W`, `scale`, `sx`/`sy`, plus an inverse `toInches`). One source of truth for both the pre-battle `FieldMap` and the battle `BattleMap`.
-- `client/src/v2/battle/FieldMap.tsx` — **modify.** Use `fieldProjection` instead of inline constants (no behavior change).
-- `client/src/state/types.ts` — **modify.** Add `pos?` / `facing?` to `Rig`.
-- `client/src/v2/battle/BattleMap.tsx` — **create.** Read-only render of the field + a token per living rig (L1), and the move-target overlay (L3).
-- `client/src/v2/battle/movePreview.ts` — **create.** Pure `computeMovePreview(...)` over shared geometry — reach/path/facing/pivot for a proposed destination.
-- `client/src/v2/battle/BattleScreen.tsx` — **create.** Composes `BattleMap` + a docked active-rig bar (reuses the existing `ActionConsole`); owns selection + activation (L2).
-- `client/src/v2/V2Terminal.tsx` — **modify.** Render `BattleScreen` for started digital rooms; keep `Squadron` otherwise.
-- `client/src/v2/state/V2BattleActionsContext.tsx` — **modify.** Make `openMove` digital-aware: set on-map move-target state instead of opening the physical `MoveBody` drawer.
+- `client/src/v2/battle/fieldProjection.ts`: **create.** Pure inches↔px projection extracted from `FieldMap` (`PAD`, `CANVAS_W`, `scale`, `sx`/`sy`, plus an inverse `toInches`). One source of truth for both the pre-battle `FieldMap` and the battle `BattleMap`.
+- `client/src/v2/battle/FieldMap.tsx`: **modify.** Use `fieldProjection` instead of inline constants (no behavior change).
+- `client/src/state/types.ts`: **modify.** Add `pos?` / `facing?` to `Rig`.
+- `client/src/v2/battle/BattleMap.tsx`: **create.** Read-only render of the field + a token per living rig (L1), and the move-target overlay (L3).
+- `client/src/v2/battle/movePreview.ts`: **create.** Pure `computeMovePreview(...)` over shared geometry, reach/path/facing/pivot for a proposed destination.
+- `client/src/v2/battle/BattleScreen.tsx`: **create.** Composes `BattleMap` + a docked active-rig bar (reuses the existing `ActionConsole`); owns selection + activation (L2).
+- `client/src/v2/V2Terminal.tsx`: **modify.** Render `BattleScreen` for started digital rooms; keep `Squadron` otherwise.
+- `client/src/v2/state/V2BattleActionsContext.tsx`: **modify.** Make `openMove` digital-aware: set on-map move-target state instead of opening the physical `MoveBody` drawer.
 - Test files colocated: `fieldProjection.test.ts`, `BattleMap.test.tsx`, `movePreview.test.ts`, `BattleScreen.test.tsx`.
 
 ---
@@ -64,7 +64,7 @@ test("toInches is the inverse of sx/sy", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/fieldProjection.test.ts`
-Expected: FAIL — module `./fieldProjection` does not exist.
+Expected: FAIL, module `./fieldProjection` does not exist.
 
 - [ ] **Step 3: Create the projection helper**
 
@@ -121,7 +121,7 @@ import { makeProjection } from "./fieldProjection";
   const CANVAS_W = proj.canvasW;
 ```
 
-Leave the rest of FieldMap unchanged. This is a pure refactor — the existing `FieldControls.test.tsx` (which renders FieldMap) must still pass.
+Leave the rest of FieldMap unchanged. This is a pure refactor, the existing `FieldControls.test.tsx` (which renders FieldMap) must still pass.
 
 - [ ] **Step 5: Add pos/facing to the Rig type**
 
@@ -204,12 +204,12 @@ test("marks the priority-target enemy", () => {
 });
 ```
 
-Note: the test imports a named `BattleMapLayers` — the presentational inner layer (pure `<g>` content) so it can be mounted inside a test `<svg>`. Export both `BattleMap` (the full `<svg>` wrapper used by the app) and `BattleMapLayers` (the inner content) from the module.
+Note: the test imports a named `BattleMapLayers`: the presentational inner layer (pure `<g>` content) so it can be mounted inside a test `<svg>`. Export both `BattleMap` (the full `<svg>` wrapper used by the app) and `BattleMapLayers` (the inner content) from the module.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/BattleMap.test.tsx`
-Expected: FAIL — module does not exist.
+Expected: FAIL, module does not exist.
 
 - [ ] **Step 3: Implement BattleMap (render layer)**
 
@@ -230,7 +230,7 @@ export interface BattleMapProps {
   onSelect: (rig: Rig) => void;
   onActivate: (rig: Rig) => void;
   activatable: (rig: Rig) => boolean;
-  /** L3 overlay slot — the move-target layer renders here when arming a move. */
+  /** L3 overlay slot, the move-target layer renders here when arming a move. */
   overlay?: React.ReactNode;
 }
 
@@ -296,7 +296,7 @@ export function BattleMap(props: BattleMapProps) {
 }
 ```
 
-(Remove the unused `rad` line if your linter flags it — it is not needed; the facing arrow uses `facing`.)
+(Remove the unused `rad` line if your linter flags it, it is not needed; the facing arrow uses `facing`.)
 
 - [ ] **Step 4: Add minimal token styles**
 
@@ -408,7 +408,7 @@ test("does not activate when a rig is already active", async () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/BattleScreen.test.tsx`
-Expected: FAIL — `BattleScreen` module does not exist.
+Expected: FAIL, `BattleScreen` module does not exist.
 
 - [ ] **Step 3: Implement BattleScreen**
 
@@ -478,7 +478,7 @@ export function BattleScreen() {
 }
 ```
 
-Note: `ownerSide` here is passed as the first side id for the deploy-zone drawing — acceptable for token rendering. If `BattleMap` doesn't draw deploy zones during battle, this prop is unused for tokens; keep the signature but it need not be exact.
+Note: `ownerSide` here is passed as the first side id for the deploy-zone drawing, acceptable for token rendering. If `BattleMap` doesn't draw deploy zones during battle, this prop is unused for tokens; keep the signature but it need not be exact.
 
 - [ ] **Step 4: Mount BattleScreen in V2Terminal for started digital rooms**
 
@@ -496,7 +496,7 @@ import { BattleScreen } from "./battle/BattleScreen";
 
 Leave `RigTerminal`, overlays, chat, and everything else in `V2Terminal` as-is (they still render alongside).
 
-If `ServerState["game"]` has no `mode` field, add `mode?: "physical" | "digital";` to the game type in `client/src/state/types.ts` (grep for the game/`ServerState` type; add the optional field). The server already sends `room.game` spread which does NOT include `room.mode` — **verify**: `mode` lives on `room`, not `room.game`. `publicState` returns `game: { ...room.game }` and does not currently surface `room.mode`. So this needs a one-line server change OR read it from elsewhere.
+If `ServerState["game"]` has no `mode` field, add `mode?: "physical" | "digital";` to the game type in `client/src/state/types.ts` (grep for the game/`ServerState` type; add the optional field). The server already sends `room.game` spread which does NOT include `room.mode`: **verify**: `mode` lives on `room`, not `room.game`. `publicState` returns `game: { ...room.game }` and does not currently surface `room.mode`. So this needs a one-line server change OR read it from elsewhere.
 
 - [ ] **Step 4b: Ensure the client can see digital mode**
 
@@ -511,7 +511,7 @@ Check `shared/game-state.js` `publicState` (~line 4062): the returned object doe
     // ...rest unchanged
 ```
 
-Then in `BattleScreen`/`V2Terminal`, read `mode` from room state top-level (where `publicState` fields land — the same place `ownerSide`/`seeded` are read; grep the reducer/`applyServerState` and `RoomStateContext` for how `ownerSide` is exposed, and expose `mode` the same way). Add `mode?: "physical" | "digital";` to the `ServerState` type. Prefer this top-level `mode` over `game.mode`. Update the Task-3 test's `digitalState` to set top-level `mode: "digital"` accordingly (and drop `game.mode`).
+Then in `BattleScreen`/`V2Terminal`, read `mode` from room state top-level (where `publicState` fields land, the same place `ownerSide`/`seeded` are read; grep the reducer/`applyServerState` and `RoomStateContext` for how `ownerSide` is exposed, and expose `mode` the same way). Add `mode?: "physical" | "digital";` to the `ServerState` type. Prefer this top-level `mode` over `game.mode`. Update the Task-3 test's `digitalState` to set top-level `mode: "digital"` accordingly (and drop `game.mode`).
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
@@ -521,7 +521,7 @@ Expected: PASS + exit 0. Adjust the test's mode placement (top-level vs game) to
 - [ ] **Step 6: Verify the whole client suite didn't regress**
 
 Run: `npx vitest run`
-Expected: PASS. (A started digital room now renders `BattleScreen`; confirm no existing test assumed `Squadron` renders during a started digital game — if one does, it was exercising the old flow; investigate before changing it.)
+Expected: PASS. (A started digital room now renders `BattleScreen`; confirm no existing test assumed `Squadron` renders during a started digital game, if one does, it was exercising the old flow; investigate before changing it.)
 
 - [ ] **Step 7: Commit**
 
@@ -541,11 +541,11 @@ git commit -m "feat(map): BattleScreen mount + click-to-activate; publish room m
 - Modify: `client/src/v2/battle/BattleScreen.tsx` (arming state + confirm dispatch)
 - Modify: `client/src/v2/state/V2BattleActionsContext.tsx` (`openMove` digital branch)
 
-### 4a — Pure move-preview helper
+### 4a, Pure move-preview helper
 
 - [ ] **Step 1: Write the failing test**
 
-`client/src/v2/battle/movePreview.test.ts`. Asserts the reach/pivot *relationships* via the shared helpers — never a hardcoded inch count ([[no-value-pinning-tests]]).
+`client/src/v2/battle/movePreview.test.ts`. Asserts the reach/pivot *relationships* via the shared helpers, never a hardcoded inch count ([[no-value-pinning-tests]]).
 
 ```ts
 import { expect, test } from "vitest";
@@ -591,7 +591,7 @@ test("facing defaults to the movement heading and reports the pivot from current
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/movePreview.test.ts`
-Expected: FAIL — module does not exist.
+Expected: FAIL, module does not exist.
 
 - [ ] **Step 3: Implement the pure helper**
 
@@ -660,7 +660,7 @@ git add client/src/v2/battle/movePreview.ts client/src/v2/battle/movePreview.tes
 git commit -m "feat(map): pure move-preview over shared geometry (L3a)"
 ```
 
-### 4b — Arm Move → on-map target → confirm
+### 4b, Arm Move → on-map target → confirm
 
 - [ ] **Step 6: Make openMove digital-aware**
 
@@ -685,7 +685,7 @@ In `client/src/v2/state/V2BattleActionsContext.tsx`: add move-target state to th
 
 - Expose `moveTarget`, `beginMoveTarget: (rigId, action) => setMoveTarget({ rigId, action })`, and `clearMoveTarget: () => setMoveTarget(null)` in the context `value`, and add them to the context type.
 
-Note on reading room mode inside the context: read it from the same room-state source the provider already uses (grep the provider for `useRoomState`; if it isn't imported, import it and read `mode`). If wiring mode into this context proves awkward, an acceptable alternative is to have `BattleScreen` pass an `onMove` callback into `ActionConsole` — but prefer the context branch so `ActionConsole` stays untouched.
+Note on reading room mode inside the context: read it from the same room-state source the provider already uses (grep the provider for `useRoomState`; if it isn't imported, import it and read `mode`). If wiring mode into this context proves awkward, an acceptable alternative is to have `BattleScreen` pass an `onMove` callback into `ActionConsole`: but prefer the context branch so `ActionConsole` stays untouched.
 
 - [ ] **Step 7: Write the failing test for the confirm dispatch**
 
@@ -704,7 +704,7 @@ test("arming a move, placing a reachable destination, and confirming dispatches 
   // point maps to a known viewBox coordinate, then to inches near the rig.
   const surface = await screen.findByTestId("field-surface");
   surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 520, height: 320, right: 520, bottom: 320, x: 0, y: 0, toJSON() {} });
-  // A point a couple inches east of rig 1 (pos ~ {10,10}) — comfortably reachable.
+  // A point a couple inches east of rig 1 (pos ~ {10,10}), comfortably reachable.
   surface.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 40, clientY: 40 }));
 
   const confirm = await screen.findByRole("button", { name: /confirm/i });
@@ -773,7 +773,7 @@ git commit -m "feat(map): on-map Move/Sprint targeting sends dest+facing (L3)"
 - [ ] **Step 1: Full suite**
 
 Run: `npm test`
-Expected: PASS — Vitest (client) + `node --test` (shared/server/scripts) all green. Then `npm run build` → built (bundle resolves the new `/shared/*` imports in `movePreview.ts`).
+Expected: PASS, Vitest (client) + `node --test` (shared/server/scripts) all green. Then `npm run build` → built (bundle resolves the new `/shared/*` imports in `movePreview.ts`).
 
 - [ ] **Step 2: Live smoke via the preview**
 
@@ -786,7 +786,7 @@ git add <specific files you fixed>
 git commit -m "fix(map): <describe the smoke-test fix>"
 ```
 
-(Never `git add -A` — concurrent committer; stage only files you touched.)
+(Never `git add -A`: concurrent committer; stage only files you touched.)
 
 ---
 

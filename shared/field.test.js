@@ -112,7 +112,7 @@ const twinOf = (pieces, field, p) => {
   return pieces.find((q) => q !== p && q.kind === p.kind && near(q.x, m.x) && near(q.y, m.y));
 };
 
-test("digital terrain is rectangles only — no poly blobs", () => {
+test("digital terrain is rectangles only, no poly blobs", () => {
   const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
   for (const p of scatterTerrain(field, seeded(4), { digital: true })) {
     assert.equal(p.shape, "rect", `${p.kind} is a ${p.shape}`);
@@ -129,14 +129,14 @@ test("digital terrain mirrors 180 degrees about the field centre", () => {
     assert.ok(twin, `${p.kind} at (${p.x}, ${p.y}) has no twin at (${m.x.toFixed(2)}, ${m.y.toFixed(2)})`);
     assert.ok(near(twin.w, p.w) && near(twin.h, p.h), "a twin must be the same size");
     // A rect is centrally symmetric, so a half turn leaves `rot` alone.
-    assert.ok(near(twin.rot, p.rot), "a twin keeps its rotation — a rect is centrally symmetric");
+    assert.ok(near(twin.rot, p.rot), "a twin keeps its rotation, a rect is centrally symmetric");
   }
 });
 
 // Asserts on the piece CENTRE, because `fp` is stripped from the wire payload and
 // re-deriving it here would just duplicate `make()`. The implementation enforces
 // the strictly stronger `dist >= rad + fp` (it still has `fp` in hand), so no
-// piece actually overhangs the zone — this test pins the guarantee the payload
+// piece actually overhangs the zone, this test pins the guarantee the payload
 // can express on its own.
 test("scatterTerrain keeps every piece clear of both deployment zones", () => {
   const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };

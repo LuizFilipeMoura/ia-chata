@@ -1,8 +1,8 @@
-# V2 Phase G — Targeting, Scoring & Watchers Implementation Plan
+# V2 Phase G, Targeting, Scoring & Watchers Implementation Plan
 
 > **For agentic workers:** Use superpowers:subagent-driven-development. Steps use `- [ ]`.
 
-**Goal:** Native V2 AttackWizard + VpWizard + `V2WizardContext`, and `useV2BattleWatchers` — isolated tested units on top of Phases E+F. (The app switchover that activates all of E–H happens in Phase H's final task.)
+**Goal:** Native V2 AttackWizard + VpWizard + `V2WizardContext`, and `useV2BattleWatchers`: isolated tested units on top of Phases E+F. (The app switchover that activates all of E–H happens in Phase H's final task.)
 
 **Architecture:** V2 mirrors V1 `WizardContext` (portals the two wizards) and `useBattleWatchers`. Behavior sources: `client/src/components/wizards/AttackWizard.tsx` (570 lines), `client/src/components/wizards/VpWizard.tsx`, `client/src/hooks/useBattleWatchers.tsx`, `client/src/state/WizardContext.tsx`. V2 deps: `useV2Drawer`, `useV2Roll`, `useV2BattleActions` (Phases E/F).
 
@@ -16,7 +16,7 @@
 
 Port V1 `VpWizard.tsx` (small). Props `{ onClose }`. Reads `game.objectives`/`recoveryClaims`/`recoveryConflict`; toggles claims; live VP total; sends `sendCommand("vp", { side, claims })`. V2 classes `v2-vpw*` + `v2-aw*` sheet frame.
 
-- [ ] **Step 1** — failing test:
+- [ ] **Step 1**: failing test:
 ```tsx
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
@@ -47,19 +47,19 @@ test("toggling a marker updates the VP total and submits claims", async () => {
   expect(sendCommand).toHaveBeenCalledWith("vp", { side: "a", claims: [0] });
 });
 ```
-- [ ] **Step 2** — run → FAIL. **Step 3** — implement `VpWizard.tsx`. **Step 4** — `.v2-vpw*`/`.v2-aw*` styles in `wizards.css` under `.v2-root`. **Step 5** — run → PASS; `tsc` clean. **Step 6** — commit `feat(v2): native VpWizard`.
+- [ ] **Step 2**: run → FAIL. **Step 3**: implement `VpWizard.tsx`. **Step 4**: `.v2-vpw*`/`.v2-aw*` styles in `wizards.css` under `.v2-root`. **Step 5**: run → PASS; `tsc` clean. **Step 6**: commit `feat(v2): native VpWizard`.
 
 ---
 
 ## Task 2: V2 AttackWizard + V2WizardContext
 
-**Files:** Create `client/src/v2/overlays/AttackWizard.tsx` (port the 570-line V1 — READ it), `client/src/v2/state/V2WizardContext.tsx`, tests `client/src/v2/overlays/AttackWizard.test.tsx`, `client/src/v2/state/V2WizardContext.test.tsx`; append to `wizards.css`.
+**Files:** Create `client/src/v2/overlays/AttackWizard.tsx` (port the 570-line V1, READ it), `client/src/v2/state/V2WizardContext.tsx`, tests `client/src/v2/overlays/AttackWizard.test.tsx`, `client/src/v2/state/V2WizardContext.test.tsx`; append to `wizards.css`.
 
 Port V1 `AttackWizard.tsx` faithfully. Props `{ rig, mode, onClose, target?, react? }`; `export type AttackMode = "fire"|"aimed"|"lock"`. Replace V1 `useBattleActions`→`useV2BattleActions`, `useRoll`→`useV2Roll`; keep `useCommands`/`useMySide`/`useRoomState`. Preserve every field (Target/Weapon/Arc/Cover/Range slider + accuracy tier/Location(aimed)), the dice preview, effective-range gate, spent-ranged rushed-reload cost, manual-dice mode (`promptDice`), return-fire (`react`) mode, lock mode. Command dispatches VERBATIM: fire/aimed → `sendCommand("action", attrs)`; lock → `sendCommand("action", { name, action:"lock", target })`; react mode → `sendReact(attack)`. Render upgrade/tag text as PLAIN text (no GlossaryText; Phase J adds it). V2 classes `v2-aw*`.
 
 `V2WizardContext.tsx`: port V1 `WizardContext` but only `openAttack`/`openScore`/`close` (commission is native/separate). Portals V2 `AttackWizard`/`VpWizard`. `openAttack` guards "no enemies → don't open". `useV2Wizard` hook, error "useV2Wizard outside V2WizardProvider".
 
-- [ ] **Step 1** — failing test `client/src/v2/state/V2WizardContext.test.tsx`:
+- [ ] **Step 1**: failing test `client/src/v2/state/V2WizardContext.test.tsx`:
 ```tsx
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
@@ -98,7 +98,7 @@ test("openAttack shows the fire control for a rig with enemies", async () => {
   expect(await screen.findByText(/TARGET|Target/)).toBeInTheDocument();
 });
 ```
-- [ ] **Step 2** — run → FAIL. **Step 3** — implement `AttackWizard.tsx` + `V2WizardContext.tsx`. **Step 4** — an AttackWizard smoke test (`AttackWizard.test.tsx`) rendering it directly with a rig + one enemy in seeded state, asserting the Open Fire button exists and, when clicked in a valid state, calls `sendCommand`/`sendReact` (keep it light — the field math is V1-tested). **Step 5** — `.v2-aw*` fire-control styles in `wizards.css` (port mockup lines 419–451). **Step 6** — run `npx vitest run client/src/v2` → green; `tsc` clean. **Step 7** — commit `feat(v2): native AttackWizard + V2WizardContext`.
+- [ ] **Step 2**: run → FAIL. **Step 3**: implement `AttackWizard.tsx` + `V2WizardContext.tsx`. **Step 4**: an AttackWizard smoke test (`AttackWizard.test.tsx`) rendering it directly with a rig + one enemy in seeded state, asserting the Open Fire button exists and, when clicked in a valid state, calls `sendCommand`/`sendReact` (keep it light, the field math is V1-tested). **Step 5**: `.v2-aw*` fire-control styles in `wizards.css` (port mockup lines 419–451). **Step 6**: run `npx vitest run client/src/v2` → green; `tsc` clean. **Step 7**: commit `feat(v2): native AttackWizard + V2WizardContext`.
 
 ---
 
@@ -108,11 +108,11 @@ test("openAttack shows the fire control for a rig with enemies", async () => {
 
 Port V1 `useBattleWatchers.tsx`: uses `useV2Roll` (playResolution), `useV2Drawer` (openDrawer/closeDrawer), `useV2BattleActions` (sendReact), `useV2Wizard` (openAttack for return-fire). Four watchers: resolution log → playResolution; answer-token gate drawer; reaction-resolution drawer (evasive/return-fire → `openAttack(reactor,"fire",{target,react:true})`); activation-summary recap drawer (auto-fade ~6.5s). Same command sends as V1.
 
-- [ ] **Step 1** — failing test: render a component calling `useV2BattleWatchers()` inside the full V2 provider stack (V2Drawer/Roll/BattleActions/Wizard + AppProviders) with a seeded `pendingAnswer`, and assert the answer-token gate drawer opens (find its title text). Match the title to what you port.
-- [ ] **Step 2** — run → FAIL. **Step 3** — implement. **Step 4** — run `npx vitest run client/src/v2` → green; `tsc` clean. **Step 5** — commit `feat(v2): useV2BattleWatchers`.
+- [ ] **Step 1**: failing test: render a component calling `useV2BattleWatchers()` inside the full V2 provider stack (V2Drawer/Roll/BattleActions/Wizard + AppProviders) with a seeded `pendingAnswer`, and assert the answer-token gate drawer opens (find its title text). Match the title to what you port.
+- [ ] **Step 2**: run → FAIL. **Step 3**: implement. **Step 4**: run `npx vitest run client/src/v2` → green; `tsc` clean. **Step 5**: commit `feat(v2): useV2BattleWatchers`.
 
 ---
 
 ## Self-Review Notes
-- Coverage: VpWizard (T1), AttackWizard + wizard context (T2), watchers (T3). No app wiring — Phase H's final task does the switchover.
-- Command parity mandatory: `vp`, `action` (fire/aimed/lock), `react`, plus the watcher gate/reaction sends — copy from V1 exactly.
+- Coverage: VpWizard (T1), AttackWizard + wizard context (T2), watchers (T3). No app wiring, Phase H's final task does the switchover.
+- Command parity mandatory: `vp`, `action` (fire/aimed/lock), `react`, plus the watcher gate/reaction sends, copy from V1 exactly.

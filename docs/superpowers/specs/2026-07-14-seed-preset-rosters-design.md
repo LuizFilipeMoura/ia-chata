@@ -1,4 +1,4 @@
-# Seed Preset Rosters — Design
+# Seed Preset Rosters, Design
 
 **Date:** 2026-07-14
 **Status:** Approved, ready for planning
@@ -7,7 +7,7 @@
 
 The V2 "Seed Test Battle" flow builds exactly one roster: 3 rigs + 3 support
 units (tanks/walkers) per side, from `SEED_ROSTER` + `SEED_SUPPORT`. A tester who
-wants a rigs-only board, more rigs, or a randomized loadout has no path — they
+wants a rigs-only board, more rigs, or a randomized loadout has no path, they
 must hand-commission every unit. We want a small preset menu so a seed can launch
 into one of three known compositions.
 
@@ -21,7 +21,7 @@ Exactly three, chosen from the Join-screen seed panel:
 | `rigs4` | 4 | none | curated `SEED_ROSTER_4V4` (fixed chassis + prototypes) |
 | `random4` | 4 | none | random chassis + random prototype slot, re-rolled each launch |
 
-- `support` is exactly today's default seed — unchanged output.
+- `support` is exactly today's default seed, unchanged output.
 - `rigs4` curated roster = the 6 existing `SEED_ROSTER` entries plus one new
   distinct chassis per side:
   - Side A adds `medium-crossbow-talon` (prototype `longRange`).
@@ -33,7 +33,7 @@ Exactly three, chosen from the Join-screen seed panel:
 
 All three clear the seed verb's existing `≥3 rigs/side` start gate.
 
-## Architecture — server preset keyword (Approach A)
+## Architecture, server preset keyword (Approach A)
 
 The `seed` verb (`shared/game-state.js`) already accepts an explicit
 `attrs.roster` used verbatim, else falls back to `SEED_ROSTER + SEED_SUPPORT`.
@@ -52,9 +52,9 @@ The wire payload stays tiny: `{ first, preset }`.
 
 ### New shared exports (`shared/game-state.js`)
 
-- `SEED_ROSTER_4V4` — the 8-entry curated 4v4 array (same entry shape as
+- `SEED_ROSTER_4V4`: the 8-entry curated 4v4 array (same entry shape as
   `SEED_ROSTER`: `{ name, owner, chassis, prototype }`).
-- `randomSeedRoster(random)` — returns an 8-entry array (4 per side) of random
+- `randomSeedRoster(random)`: returns an 8-entry array (4 per side) of random
   rig entries. Names follow the existing `A1..A4` / `B1..B4` convention. Uses the
   passed `random` (falls back to `Math.random` when absent, matching other
   helpers) to pick a chassis from `CHASSIS` and to pick the prototype slot.
@@ -63,17 +63,17 @@ The wire payload stays tiny: `{ first, preset }`.
 
 Each rig entry stays `{ name, owner, chassis, prototype }`. The existing seed
 loop resolves `chassis` via `resolveChassis` and applies the `prototype` upgrade
-to the named slot — no new fields, no new branch in the per-entry loop.
+to the named slot, no new fields, no new branch in the per-entry loop.
 
-## UI — one-panel seed picker
+## UI, one-panel seed picker
 
 `client/src/v2/screens/Join.tsx`: the current two-step seed picker (button →
 "Who acts first?") becomes a single panel shown when `seeding` is true:
 
-1. **Preset row** — 3 toggle buttons (`Full spread` / `4v4 rigs` /
+1. **Preset row**: 3 toggle buttons (`Full spread` / `4v4 rigs` /
    `4v4 random`), one selected at a time; default `support`. Selected state
    mirrors the existing `is-sel` side-button pattern.
-2. **Who acts first? row** — existing two buttons (`Your turn` / `Enemies turn`).
+2. **Who acts first? row**: existing two buttons (`Your turn` / `Enemies turn`).
    These now *launch* rather than each being a terminal action.
 3. **Launch** happens on clicking a who-acts-first button, passing the selected
    preset. Cancel returns to the collapsed state.
@@ -83,10 +83,10 @@ Local state: add `const [preset, setPreset] = useState<SeedPreset>("support")`.
 
 ### Wiring
 
-- `client/src/v2/screens/Join.tsx` — `Props.onSeed?: (first, preset) => void`.
-- `client/src/v2/V2App.tsx` — `onSeed` gains `preset`, forwards it in the seed
+- `client/src/v2/screens/Join.tsx`: `Props.onSeed?: (first, preset) => void`.
+- `client/src/v2/V2App.tsx`: `onSeed` gains `preset`, forwards it in the seed
   command attrs: `{ verb: "seed", attrs: { first, preset } }`.
-- `client/src/v2/hooks/useSeedBattle.ts` — `(first, preset)` → `send("seed", {
+- `client/src/v2/hooks/useSeedBattle.ts`: `(first, preset)` → `send("seed", {
   first, preset })`. (This hook is a secondary caller; keep it in sync.)
 
 A shared `SeedPreset` type (`"support" | "rigs4" | "random4"`) defined where the
@@ -94,7 +94,7 @@ seed UI lives (Join or a small local module) and reused by `V2App`.
 
 ## Error handling
 
-- Unknown/omitted `preset` degrades to the default roster (no throw) — matches
+- Unknown/omitted `preset` degrades to the default roster (no throw), matches
   how `first` already normalizes.
 - No new failure modes: the start gate, field lock, and `startGameSeeded` path
   are unchanged.
@@ -109,13 +109,13 @@ seed UI lives (Join or a small local module) and reused by `V2App`.
 - Explicit `attrs.roster` still overrides `preset`.
 
 **Client:**
-- `Join.test.tsx` — selecting a preset then a who-acts-first button calls
+- `Join.test.tsx`: selecting a preset then a who-acts-first button calls
   `onSeed(first, preset)`.
-- `useSeedBattle.test.tsx` — forwards `preset` in the command attrs.
+- `useSeedBattle.test.tsx`: forwards `preset` in the command attrs.
 
 ## Out of scope (YAGNI)
 
-- Arbitrary N-per-side / support toggles — not requested.
+- Arbitrary N-per-side / support toggles, not requested.
 - Randomized equipment/weapon-upgrades in `random4` (only chassis + prototype
   slot randomize; matches the "random rig prototypes" ask).
 - Persisting the last-used preset.

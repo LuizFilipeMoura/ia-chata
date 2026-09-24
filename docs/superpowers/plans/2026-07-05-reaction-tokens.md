@@ -12,17 +12,17 @@
 
 ## File structure
 
-- `shared/game-state.js` — preparation `faceUp`; `publicState` redaction; `pendingAnswer` gate; `pendingReaction`; interpose in `performAction`; `react` verb; helpers `resolveFire`, `eligibleForPrep`, `reactionRevealEntry`, `prepName`.
-- `shared/combat.js` — unchanged logic; Brace already applies `−2`. (No task — verified by a regression test in Task 4.)
-- `shared/battle-view.js` — secret-aware `rigModifiers`.
-- `client/src/state/types.ts` — `Preparation`, `faceUp`/`hidden`, `pendingAnswer`, `pendingReaction`.
-- `client/src/components/overlays/ReactionPicker.tsx` — new shared picker (+ test).
-- `client/src/state/BattleActionsContext.tsx` — `openPrepare`; `placeAnswer`; `sendReact`.
-- `client/src/components/battle/ActionConsole.tsx` — Prepare opens the picker.
-- `client/src/hooks/useBattleWatchers.ts` — answer-gate + pendingReaction watchers.
-- `client/src/components/overlays/RollConsole.tsx` + `client/src/styles/battle.css` — `reaction` flip mode + keyframes.
+- `shared/game-state.js`: preparation `faceUp`; `publicState` redaction; `pendingAnswer` gate; `pendingReaction`; interpose in `performAction`; `react` verb; helpers `resolveFire`, `eligibleForPrep`, `reactionRevealEntry`, `prepName`.
+- `shared/combat.js`: unchanged logic; Brace already applies `−2`. (No task, verified by a regression test in Task 4.)
+- `shared/battle-view.js`: secret-aware `rigModifiers`.
+- `client/src/state/types.ts`: `Preparation`, `faceUp`/`hidden`, `pendingAnswer`, `pendingReaction`.
+- `client/src/components/overlays/ReactionPicker.tsx`: new shared picker (+ test).
+- `client/src/state/BattleActionsContext.tsx`: `openPrepare`; `placeAnswer`; `sendReact`.
+- `client/src/components/battle/ActionConsole.tsx`: Prepare opens the picker.
+- `client/src/hooks/useBattleWatchers.ts`: answer-gate + pendingReaction watchers.
+- `client/src/components/overlays/RollConsole.tsx` + `client/src/styles/battle.css`: `reaction` flip mode + keyframes.
 
-Reaction `type` vocabulary is `"brace" | "evasive" | "return"` everywhere (server, view-model, client) — do not rename.
+Reaction `type` vocabulary is `"brace" | "evasive" | "return"` everywhere (server, view-model, client), do not rename.
 
 ---
 
@@ -57,7 +57,7 @@ test("answer token places a facedown reaction and spends a token", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `preparation` is `{ type, source }` with no `faceUp` key.
+Expected: FAIL, `preparation` is `{ type, source }` with no `faceUp` key.
 
 - [ ] **Step 3: Implement the flag**
 
@@ -157,7 +157,7 @@ test("publicState reveals a face-up reaction to everyone", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the foe currently sees `{ type: "return", ... }`.
+Expected: FAIL, the foe currently sees `{ type: "return", ... }`.
 
 - [ ] **Step 3: Implement redaction**
 
@@ -221,7 +221,7 @@ test("second player gets a blocking answer gate that clears when both tokens are
   applyCommand(r, { verb: "answer", attrs: { name: "a2", prep: "evasive", side: "a" } });
   assert.equal(r.game.pendingAnswer, null);
 
-  // Gate cleared — activation works again.
+  // Gate cleared, activation works again.
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
 });
@@ -230,7 +230,7 @@ test("second player gets a blocking answer gate that clears when both tokens are
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `pendingAnswer` is `undefined`, and `activate` is not gated.
+Expected: FAIL, `pendingAnswer` is `undefined`, and `activate` is not gated.
 
 - [ ] **Step 3: Implement the gate**
 
@@ -277,7 +277,7 @@ to:
         (rig.owner || "a") === t.side && !rig.destroyed && !rig.activated) {
 ```
 
-(The `pendingReaction` term is used in Task 5 — declaring it here is harmless since it is `undefined`/`null`.)
+(The `pendingReaction` term is used in Task 5, declaring it here is harmless since it is `undefined`/`null`.)
 
 In the `answer` verb branch, after `room.game.answerTokens[sideId] -= 1;`, decrement the gate:
 
@@ -305,7 +305,7 @@ git commit -m "feat(reactions): mandatory round-start Answer gate blocks activat
 
 ---
 
-## Task 4: Interpose — reveal on fire, apply Brace, park Return Fire
+## Task 4: Interpose, reveal on fire, apply Brace, park Return Fire
 
 **Files:**
 - Modify: `shared/game-state.js` (extract `resolveFire`, rework the `fire`/`aimed` branch, add `reactionRevealEntry`/`prepName`)
@@ -345,7 +345,7 @@ test("firing on a return-fire rig resolves the shot then parks a counter", () =>
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — no reveal, no `reaction` entry, no `pendingReaction`.
+Expected: FAIL, no reveal, no `reaction` entry, no `pendingReaction`.
 
 - [ ] **Step 3: Implement the interpose**
 
@@ -358,7 +358,7 @@ function prepName(type) {
   return "Brace for Incoming Fire";
 }
 function prepEffectLine(type) {
-  if (type === "evasive") return "Defender may move ½ Speed — the attack can miss entirely.";
+  if (type === "evasive") return "Defender may move ½ Speed, the attack can miss entirely.";
   if (type === "return") return "Defender answers with a counter-attack.";
   return "Front-arc impacts suffer −2.";
 }
@@ -509,7 +509,7 @@ test("react is ignored from the wrong side", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `react` verb does not exist; `pendingReaction` never clears.
+Expected: FAIL, `react` verb does not exist; `pendingReaction` never clears.
 
 - [ ] **Step 3: Implement the `react` verb**
 
@@ -559,7 +559,7 @@ Add the `react` branch. Place it right after the `answer` verb branch:
           room.game.turn.actionsUsed += cost;
           pushResolution(room, {
             kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
-            summary: `${reactor.name} evades — ${attacker.name}'s attack fails.`, effects: [],
+            summary: `${reactor.name} evades, ${attacker.name}'s attack fails.`, effects: [],
           });
         } else {
           resolveFire(room, attacker, reactor, pr.attack, pr.attack.act, options.random);
@@ -644,7 +644,7 @@ function baseRig() {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — a `{ hidden: true }` preparation currently calls `prepLabel(undefined)` → "Braced".
+Expected: FAIL, a `{ hidden: true }` preparation currently calls `prepLabel(undefined)` → "Braced".
 
 - [ ] **Step 3: Implement secret-aware chips**
 
@@ -766,7 +766,7 @@ test("renders the three reactions and reports the picked type", async () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/components/overlays/ReactionPicker.test.tsx`
-Expected: FAIL — module does not exist.
+Expected: FAIL, module does not exist.
 
 - [ ] **Step 3: Implement the component**
 
@@ -790,7 +790,7 @@ interface Props {
 }
 
 // The shared reaction chooser used by both the Answer-token gate and the
-// Prepare action. Presentational only — parents own the send.
+// Prepare action. Presentational only, parents own the send.
 export default function ReactionPicker({ value, onChange }: Props) {
   return (
     <div className="rx-picker">
@@ -861,7 +861,7 @@ import ReactionPicker from "../components/overlays/ReactionPicker";
 import type { Rig, PrepType } from "./types";
 ```
 
-(The file already imports `type { Rig }` — merge `PrepType` into that import instead of duplicating.)
+(The file already imports `type { Rig }`: merge `PrepType` into that import instead of duplicating.)
 
 2. Add `openPrepare` to the `BattleActionsApi` interface:
 
@@ -884,7 +884,7 @@ import type { Rig, PrepType } from "./types";
         </>
       );
       openDrawer({
-        title: `🛡️ Prepare — ${rig.name}`,
+        title: `🛡️ Prepare, ${rig.name}`,
         tone: "oil",
         render: build,
         actions: [
@@ -947,7 +947,7 @@ git commit -m "feat(reactions): Prepare action opens the reaction picker"
 
 - [ ] **Step 1: Add the gate watcher**
 
-In `client/src/hooks/useBattleWatchers.ts`, this hook already reads `useRoomState()` and `useDrawer()`. Add — after the resolution-log effect — an effect that opens the mandatory placement drawer when it is my gate:
+In `client/src/hooks/useBattleWatchers.ts`, this hook already reads `useRoomState()` and `useDrawer()`. Add, after the resolution-log effect, an effect that opens the mandatory placement drawer when it is my gate:
 
 ```tsx
   // ---- Answer-token gate: mandatory immediate placement ----
@@ -970,7 +970,7 @@ In `client/src/hooks/useBattleWatchers.ts`, this hook already reads `useRoomStat
     const build = () => (
       <div className="dwr-recap">
         <p className="dwr-hint">
-          Answer token — {gate.remaining} left. Choose a Rig, then a facedown reaction.
+          Answer token, {gate.remaining} left. Choose a Rig, then a facedown reaction.
         </p>
         <ChoiceField
           label="Rig"
@@ -982,7 +982,7 @@ In `client/src/hooks/useBattleWatchers.ts`, this hook already reads `useRoomStat
       </div>
     );
     openDrawer({
-      title: "⟡ Answer Tokens — prepare a reaction",
+      title: "⟡ Answer Tokens, prepare a reaction",
       tone: "oil",
       dismissable: false,
       render: build,
@@ -1013,7 +1013,7 @@ import type { Rig, Resolution, PrepType } from "../state/types";
 
 (Merge `PrepType` into the existing `types` import rather than duplicating; the file already imports `Rig, Resolution`.)
 
-Because this file now returns JSX from an effect, ensure its extension stays `.ts` only if it already uses `createElement`. It currently imports `createElement` and returns `ReactNode` — convert the two new inline JSX blocks to `createElement` calls **or** rename the file to `.tsx`. Simplest: rename `useBattleWatchers.ts` → `useBattleWatchers.tsx` and update its import in `client/src/App.tsx` (import path stays the same without extension, so no change needed) — then JSX is allowed.
+Because this file now returns JSX from an effect, ensure its extension stays `.ts` only if it already uses `createElement`. It currently imports `createElement` and returns `ReactNode`: convert the two new inline JSX blocks to `createElement` calls **or** rename the file to `.tsx`. Simplest: rename `useBattleWatchers.ts` → `useBattleWatchers.tsx` and update its import in `client/src/App.tsx` (import path stays the same without extension, so no change needed), then JSX is allowed.
 
 - [ ] **Step 2: Verify build + tests**
 
@@ -1103,7 +1103,7 @@ In `client/src/components/overlays/RollConsole.tsx`:
 In `client/src/styles/battle.css`, next to the dice styles:
 
 ```css
-/* ===== Reaction reveal — the facedown token flip ===== */
+/* ===== Reaction reveal, the facedown token flip ===== */
 .rx-reveal { display: flex; flex-direction: column; align-items: center; padding: .9rem .7rem .4rem; }
 .rx-token {
   --face: var(--oil);
@@ -1218,7 +1218,7 @@ In `client/src/hooks/useBattleWatchers.tsx`, add an effect after the answer-gate
 
     if (pr.kind === "evasive") {
       openDrawer({
-        title: `💨 Evasive — ${reactor.name}`,
+        title: `💨 Evasive, ${reactor.name}`,
         tone: "oil",
         dismissable: false,
         render: () => createElement(
@@ -1227,13 +1227,13 @@ In `client/src/hooks/useBattleWatchers.tsx`, add an effect after the answer-gate
           `Move ${reactor.name} up to ½ Speed on the table. Did it break ${attacker?.name || "the attacker"}'s line of sight or range?`,
         ),
         actions: [
-          { label: "No — resolve the shot", ghost: true, onClick: () => { closeDrawer(); sendReact({ evaded: false }); } },
-          { label: "Evaded — attack fails", primary: true, icon: "💨", onClick: () => { closeDrawer(); sendReact({ evaded: true }); } },
+          { label: "No, resolve the shot", ghost: true, onClick: () => { closeDrawer(); sendReact({ evaded: false }); } },
+          { label: "Evaded, attack fails", primary: true, icon: "💨", onClick: () => { closeDrawer(); sendReact({ evaded: true }); } },
         ],
       });
     } else if (pr.kind === "return" && attacker) {
       openDrawer({
-        title: `↩️ Return Fire — ${reactor.name}`,
+        title: `↩️ Return Fire, ${reactor.name}`,
         tone: "ember",
         dismissable: false,
         render: () => createElement(
@@ -1307,9 +1307,9 @@ git commit -m "feat(reactions): defender decision UI and attacker wait state"
 
 ## Final verification
 
-- [ ] Run the full shared suite: `node --test shared/*.test.js` — all green.
-- [ ] Run the client suite: `npx vitest run client/src` — all green.
-- [ ] Typecheck: `npx tsc -p tsconfig.json --noEmit` — clean.
+- [ ] Run the full shared suite: `node --test shared/*.test.js`: all green.
+- [ ] Run the client suite: `npx vitest run client/src`: all green.
+- [ ] Typecheck: `npx tsc -p tsconfig.json --noEmit`: clean.
 - [ ] Manual matrix (two sides, one room):
   - Round-start gate blocks the first player until the second places both tokens.
   - Facedown chip on the opponent's Rig reads "Reaction set" (not the type).

@@ -21,18 +21,18 @@
   `null` when a rig carries no weapons. **Rigs** carry `lr` + `melee`; **flat-pick**
   kinds (Tank/Walker) carry a single `unit` weapon and no equipment.
 - `shared/game-state.js` exports the data we need:
-  - `WEAPONS.longRange[name]` / `WEAPONS.melee[name]` — base `{ rof, str, sweet,
+  - `WEAPONS.longRange[name]` / `WEAPONS.melee[name]`: base `{ rof, str, sweet,
     minRange, maxRange, perks? }` (ranged) or `{ rof, str, acc, rng:[min,max],
     melee:true }` (melee).
-  - `UNIT_WEAPONS[name]` — same shape, for flat-pick weapons.
-  - `WEAPON_UPGRADES[name]` — array of `{ id, nature, name, tag, effect }`.
-  - `effectiveWeaponProfile(slot, weaponName, rig)` — returns the merged profile
+  - `UNIT_WEAPONS[name]`: same shape, for flat-pick weapons.
+  - `WEAPON_UPGRADES[name]`: array of `{ id, nature, name, tag, effect }`.
+  - `effectiveWeaponProfile(slot, weaponName, rig)`: returns the merged profile
     including `perks` (base + upgrade perks) and `upgradeEffect` (the raw
     `{ rof?, str?, range?, perks? }` deltas). For `slot === "unit"` it returns
     `upgradeEffect: {}`.
 - Display glyph/nature helpers live in `client/src/v2/lib/commissionData.ts`:
   `weaponGlyph(name)` and `natureLabel(nature)` (`field`→"Standard",
-  `tuned`→"Machined", `prototype`→"Prototype"). Keep these in the v2 layer — the
+  `tuned`→"Machined", `prototype`→"Prototype"). Keep these in the v2 layer, the
   `client/src/lib` view-model must NOT import from `client/src/v2` (wrong layering),
   so glyph/nature resolution happens in the component, not the view-model.
 - Run tests with: `npx vitest run <path>` (single file) from the repo root.
@@ -42,17 +42,17 @@
 
 ## File Structure
 
-- **Modify** `client/src/lib/loadout.ts` — extend `LoadoutWeapon` with stats/deltas;
+- **Modify** `client/src/lib/loadout.ts`: extend `LoadoutWeapon` with stats/deltas;
   change the private `weapon()` helper to take `(rig, slot)` and compute them.
-- **Modify** `client/src/lib/loadout.test.ts` — add a test for the new stat/delta
+- **Modify** `client/src/lib/loadout.test.ts`: add a test for the new stat/delta
   fields.
-- **Create** `client/src/v2/components/LoadoutView.tsx` — presentational card that
+- **Create** `client/src/v2/components/LoadoutView.tsx`: presentational card that
   renders the enriched loadout (weapon blocks + equipment block).
-- **Create** `client/src/v2/components/LoadoutView.test.tsx` — component tests.
-- **Modify** `client/src/v2/overlays/RigTerminal.tsx` — add the Status/Loadout tab
+- **Create** `client/src/v2/components/LoadoutView.test.tsx`: component tests.
+- **Modify** `client/src/v2/overlays/RigTerminal.tsx`: add the Status/Loadout tab
   state and swap the body.
-- **Modify** `client/src/v2/overlays/RigTerminal.test.tsx` — add toggle tests.
-- **Modify** `client/src/v2/styles/rig-terminal.css` — tab + card styles.
+- **Modify** `client/src/v2/overlays/RigTerminal.test.tsx`: add toggle tests.
+- **Modify** `client/src/v2/styles/rig-terminal.css`: tab + card styles.
 
 ---
 
@@ -93,7 +93,7 @@ Note: the `–` in `0–26"` is an en-dash (U+2013), matching the commission wiz
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/lib/loadout.test.ts`
-Expected: FAIL — `lo.lr.rof` is `undefined` (property does not exist yet).
+Expected: FAIL, `lo.lr.rof` is `undefined` (property does not exist yet).
 
 - [ ] **Step 3: Update the imports and `LoadoutWeapon` interface**
 
@@ -222,7 +222,7 @@ with:
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npx vitest run client/src/lib/loadout.test.ts`
-Expected: PASS — all tests, including the pre-existing "resolves weapon names…"
+Expected: PASS, all tests, including the pre-existing "resolves weapon names…"
 and "degrades gracefully…" cases (still non-breaking: `name`/`upName`/`upTag`
 remain).
 
@@ -282,14 +282,14 @@ test("flat-pick weapon: one block, no upgrade line, no equipment", () => {
   render(<LoadoutView loadout={buildLoadout(tank)!} />);
   expect(screen.getByText("Tank Cannon")).toBeInTheDocument();
   expect(screen.queryByText(/⬡/)).not.toBeInTheDocument();      // no upgrade line
-  expect(screen.queryByText(/Passive —/)).not.toBeInTheDocument(); // no equipment
+  expect(screen.queryByText(/Passive,/)).not.toBeInTheDocument(); // no equipment
 });
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/v2/components/LoadoutView.test.tsx`
-Expected: FAIL — cannot resolve `./LoadoutView` (module does not exist).
+Expected: FAIL, cannot resolve `./LoadoutView` (module does not exist).
 
 - [ ] **Step 3: Write the component**
 
@@ -362,9 +362,9 @@ export function LoadoutView({ loadout }: { loadout: Loadout }) {
             <span className="v2-rt-lo-name v2-title">{eq.label}</span>
             <span className="v2-rt-lo-equip-family v2-eyebrow">{eq.family}</span>
           </div>
-          <div className="v2-rt-lo-equip-line">Passive — {eq.passive}</div>
+          <div className="v2-rt-lo-equip-line">Passive, {eq.passive}</div>
           <div className="v2-rt-lo-equip-line">
-            Active — {eq.activeLabel} ({eq.activeHeat >= 0 ? "+" : ""}{eq.activeHeat} heat): {eq.activeText}
+            Active, {eq.activeLabel} ({eq.activeHeat >= 0 ? "+" : ""}{eq.activeHeat} heat): {eq.activeText}
           </div>
         </div>
       )}
@@ -381,7 +381,7 @@ STR mark because the `+N` mark is the span's entire text (the space sits outside
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run client/src/v2/components/LoadoutView.test.tsx`
-Expected: PASS — both tests.
+Expected: PASS, both tests.
 
 - [ ] **Step 5: Commit**
 
@@ -444,7 +444,7 @@ test("enemy rig still exposes the Loadout tab", async () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `npx vitest run client/src/v2/overlays/RigTerminal.test.tsx`
-Expected: FAIL — no `tab` role element named "Status"/"Loadout" exists yet.
+Expected: FAIL, no `tab` role element named "Status"/"Loadout" exists yet.
 
 - [ ] **Step 3: Add the imports, state, and toggle**
 
@@ -531,12 +531,12 @@ with:
 ```
 
 Rationale: when `lo` is `null` (a minimal rig with no weapons), no tablist renders
-and `view` stays `"status"`, so the body is exactly today's stack — non-breaking.
+and `view` stays `"status"`, so the body is exactly today's stack, non-breaking.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `npx vitest run client/src/v2/overlays/RigTerminal.test.tsx`
-Expected: PASS — new toggle tests plus all pre-existing tests (they assert on the
+Expected: PASS, new toggle tests plus all pre-existing tests (they assert on the
 default Status view).
 
 - [ ] **Step 6: Commit**
@@ -654,21 +654,21 @@ existing size token (e.g. `--v2-text-sm`).
 - [ ] **Step 2: Run the full V2 test suite to confirm nothing regressed**
 
 Run: `npx vitest run client/src/v2 client/src/lib/loadout.test.ts`
-Expected: PASS — no failures.
+Expected: PASS, no failures.
 
 - [ ] **Step 3: Verify live in the seeded app**
 
 The dev server (vite :5173 + node :8000) is running with a seeded 3v3 battle.
 In the browser preview, open rig **A1**'s terminal, then:
 
-1. `read_page` the open dialog — confirm a `tab` "Status" (selected) and a `tab`
+1. `read_page` the open dialog, confirm a `tab` "Status" (selected) and a `tab`
    "Loadout" appear under the header.
-2. Click the **Loadout** tab; `read_page` again — confirm the weapon name
-   (e.g. "Mortar"), a `ROF/STR/RANGE` stat row, and the equipment `Passive —` /
-   `Active —` lines are present, and that the `Hull/Arms/Legs/Engine` rows are gone.
+2. Click the **Loadout** tab; `read_page` again, confirm the weapon name
+   (e.g. "Mortar"), a `ROF/STR/RANGE` stat row, and the equipment `Passive,` /
+   `Active,` lines are present, and that the `Hull/Arms/Legs/Engine` rows are gone.
 3. Click **Status**; confirm the component rows and action console return.
 
-(Screenshots of this terminal hang on its ember/lamp animations — verify via the
+(Screenshots of this terminal hang on its ember/lamp animations, verify via the
 `read_page` accessibility tree, not a screenshot.)
 
 - [ ] **Step 4: Commit**

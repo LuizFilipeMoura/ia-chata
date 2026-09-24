@@ -1,4 +1,4 @@
-# Sprint heat floor — Reinforced Servos trades free sprint for reach
+# Sprint heat floor, Reinforced Servos trades free sprint for reach
 
 **Date:** 2026-07-14
 **Status:** Approved, ready for planning
@@ -10,7 +10,7 @@ Actuators) sets `sprintHeat: 0`, so a Rig carrying it repositions every
 activation for free.
 
 Free repositioning is not a decision. The heat cost is the entire tradeoff that
-makes Sprint interesting — spend heat now, carry the overheat risk into the rest
+makes Sprint interesting, spend heat now, carry the overheat risk into the rest
 of the activation. At 0 heat there is nothing to weigh: you always Sprint, every
 turn, forever. The action degenerates into a strictly-better Move.
 
@@ -34,10 +34,10 @@ floor at the single chokepoint every Sprint heat path already flows through
 the Move drawer). No future upgrade can re-introduce a 0-heat Sprint without
 deliberately removing the clamp.
 
-### Reinforced Servos' new identity — reach, not discount
+### Reinforced Servos' new identity, reach, not discount
 
 Zeroing the heat was the upgrade's whole value, so removing it leaves the Field
-slot empty. It cannot simply become "1 heat" — that is identical to base Servo
+slot empty. It cannot simply become "1 heat", that is identical to base Servo
 Actuators, a dead upgrade.
 
 Instead the upgrade sharpens the number it already owns: **Sprint reach**.
@@ -51,7 +51,7 @@ Instead the upgrade sharpens the number it already owns: **Sprint reach**.
 The heat cost stays on every tier, so the positioning decision survives. The
 upgrade pays out in distance instead of discount.
 
-This mirrors the established Field-upgrade grammar — `Twin Radiators` reads
+This mirrors the established Field-upgrade grammar, `Twin Radiators` reads
 "Purge vents −3, not −2". Same "sharpen the number you already have" shape, same
 tag phrasing.
 
@@ -98,7 +98,7 @@ clean: at Speed 8, reinforced Sprint is 16" vs 12".
 **`shared/rules.js`**
 - `reinforced-servos`: effect `{ sprintHeat: 0 }` → `{ sprintMult: 2 }`
 - tag: `"Sprint costs 0 heat"` → `"Sprint reaches 2× Speed, not 1½×"`
-  (tag is rendered verbatim by many surfaces — replace it, never trim it)
+  (tag is rendered verbatim by many surfaces, replace it, never trim it)
 
 **`shared/game-state.js`**
 - `equipmentSprintHeat`: clamp to `Math.max(1, …)`; servos branch returns a flat
@@ -108,7 +108,7 @@ clean: at Speed 8, reinforced Sprint is 16" vs 12".
 - update the Sprint comment at `2673-2674`
 
 **Clients**
-- `MoveBody.tsx`, `RigTerminal.tsx`, `BattleActionsContext.tsx` — read
+- `MoveBody.tsx`, `RigTerminal.tsx`, `BattleActionsContext.tsx`: read
   `rigEffects(rig).sprintMult`, drop the hardcoded `1.5`, fix the comments that
   claim Reinforced Servos → 0 heat
 
@@ -119,10 +119,10 @@ clean: at Speed 8, reinforced Sprint is 16" vs 12".
 ## Testing
 
 Flip existing:
-- `game-state.test.js:2029` — `equipmentSprintHeat("servo-actuators",
+- `game-state.test.js:2029`: `equipmentSprintHeat("servo-actuators",
   "reinforced-servos")` `0` → `1`; rename the test off "zeroes"
-- `game-state.test.js:2732` — the pipeline test asserting a 0-heat Sprint
-- `battle-view.test.js:70-74` — chips: bare 2, servo 1, reinforced **1**
+- `game-state.test.js:2732`: the pipeline test asserting a 0-heat Sprint
+- `battle-view.test.js:70-74`: chips: bare 2, servo 1, reinforced **1**
 
 Add:
 - `equipmentSprintHeat` never returns below 1, including a synthetic
@@ -135,7 +135,7 @@ Add:
 ## Risks
 
 - **Stale saves** carry `equipmentUpgrade: "reinforced-servos"` with the old
-  effect meaning. No migration needed — effects resolve live from the catalog,
+  effect meaning. No migration needed, effects resolve live from the catalog,
   never off a stamp on the rig (`rigEffects` reads `EQUIPMENT_UPGRADES` each
   call). A pre-existing save silently gains reach and loses the free Sprint,
   which is the intended balance change.

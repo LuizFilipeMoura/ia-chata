@@ -16,7 +16,7 @@
 
 - **Markup-parity contract (READ THIS FIRST):** For every component that ports an
   existing module, the cited source file + line range is the *authoritative spec*
-  for DOM structure, element order, text, `aria-*` attributes, and — critically —
+  for DOM structure, element order, text, `aria-*` attributes, and, critically,
   **CSS class names and element ids**. Reproduce them **exactly**; any drift breaks
   the verbatim CSS. When a task says "port markup from `tracker.js:283-437`", open
   that range and mirror its structure in JSX. This is a concrete instruction, not a
@@ -29,7 +29,7 @@
 
 ---
 
-## Phase 0 — Scaffold
+## Phase 0, Scaffold
 
 ### Task 1: Vite + React + TS scaffold that serves a blank page
 
@@ -178,7 +178,7 @@ export default defineConfig({
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-<title>Of Oil and Iron — Rig Control Terminal</title>
+<title>Of Oil and Iron, Rig Control Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -202,7 +202,7 @@ export default defineConfig({
 
 ```tsx
 export default function App() {
-  return <div>Oil &amp; Iron — React shell</div>;
+  return <div>Oil &amp; Iron, React shell</div>;
 }
 ```
 
@@ -234,7 +234,7 @@ node_modules
 
 Run: `npm install`
 Then run: `npx vite` (Ctrl-C after checking)
-Expected: Vite prints `Local: http://localhost:5173/`; opening it shows "Oil & Iron — React shell" with no console errors.
+Expected: Vite prints `Local: http://localhost:5173/`; opening it shows "Oil & Iron, React shell" with no console errors.
 
 - [ ] **Step 9: Commit**
 
@@ -287,7 +287,7 @@ git commit -m "test: add Vitest + Testing Library smoke test"
 
 ---
 
-## Phase 1 — Styles and pure-logic ports
+## Phase 1, Styles and pure-logic ports
 
 ### Task 3: Copy CSS verbatim
 
@@ -302,7 +302,7 @@ Copy the contents of each `public/css/*.css` file into the matching
 
 - [ ] **Step 2: Import them once, in load order, at the top of `client/src/main.tsx`**
 
-Add above the existing imports (order matters — tokens first, matching
+Add above the existing imports (order matters, tokens first, matching
 `public/index.html:10-16`):
 
 ```tsx
@@ -330,7 +330,7 @@ git commit -m "chore: port CSS verbatim into the React client"
 
 ---
 
-### Task 4: `shared.d.ts` — type the shared modules the client imports
+### Task 4: `shared.d.ts`: type the shared modules the client imports
 
 **Files:**
 - Create: `client/shared.d.ts`
@@ -386,7 +386,7 @@ declare module "/shared/glossary.js" {
 
 Run: `npx tsc -p tsconfig.json --noEmit`
 Expected: no errors referencing `/shared/*` modules. (Errors about missing
-`./src/state/types` are fixed in Task 5 — if you run this before Task 5, expect
+`./src/state/types` are fixed in Task 5, if you run this before Task 5, expect
 only that one unresolved-import error.)
 
 - [ ] **Step 3: Commit**
@@ -503,7 +503,7 @@ git commit -m "types: add client domain types (Rig, GameState, ServerState)"
 
 ---
 
-### Task 6: Port `markdown.ts` (TDD — port the existing test first)
+### Task 6: Port `markdown.ts` (TDD, port the existing test first)
 
 **Files:**
 - Create: `client/src/lib/markdown.ts`
@@ -537,14 +537,14 @@ test("markdownToHtml escapes raw HTML and unsafe links", () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/lib/markdown.test.ts`
-Expected: FAIL — cannot find module `./markdown`.
+Expected: FAIL, cannot find module `./markdown`.
 
 - [ ] **Step 3: Port the implementation**
 
 Copy `public/js/markdown.js` lines 1-122 verbatim into
 `client/src/lib/markdown.ts`, with two changes:
 1. Type the two exported signatures: `export function markdownToHtml(markdown: string): string`.
-2. **Drop** `renderMarkdown` (the DOM helper) — React renders HTML via
+2. **Drop** `renderMarkdown` (the DOM helper), React renders HTML via
    `dangerouslySetInnerHTML`, so it's unused. Keep everything else identical
    (`escapeHtml`, `sanitizeHref`, `stashToken`, `renderInline`, `isBlockStart`).
 
@@ -565,7 +565,7 @@ git commit -m "feat: port markdown renderer to TS with tests"
 
 ---
 
-### Task 7: Port `rigTags.ts` (parser only — no side effects)
+### Task 7: Port `rigTags.ts` (parser only, no side effects)
 
 **Files:**
 - Create: `client/src/lib/rigTags.ts`
@@ -596,7 +596,7 @@ test("stripRigTags removes complete and half-streamed tags", () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/lib/rigTags.test.ts`
-Expected: FAIL — cannot find module `./rigTags`.
+Expected: FAIL, cannot find module `./rigTags`.
 
 - [ ] **Step 3: Implement**
 
@@ -618,7 +618,7 @@ function parseAttrs(body: string): Record<string, string> {
   return attrs;
 }
 
-/** Parse every [[RIG ...]] command out of `text`. Pure — the caller dispatches. */
+/** Parse every [[RIG ...]] command out of `text`. Pure, the caller dispatches. */
 export function parseRigCommands(text: string): RigCommand[] {
   RIG_TAG_RE.lastIndex = 0;
   const out: RigCommand[] = [];
@@ -689,12 +689,12 @@ test("glossaryById resolves a term entry", () => {
 ```
 
 (If the exact terms `Heat`/`Hull` are not in `shared/glossary.js`, substitute two
-real terms — inspect `GLOSSARY[].match` first and adjust the assertion.)
+real terms, inspect `GLOSSARY[].match` first and adjust the assertion.)
 
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/lib/glossaryTerms.test.ts`
-Expected: FAIL — cannot find module `./glossaryTerms`.
+Expected: FAIL, cannot find module `./glossaryTerms`.
 
 - [ ] **Step 3: Implement**
 
@@ -747,7 +747,7 @@ git commit -m "feat: port glossary matching to a pure tokenizer"
 
 ---
 
-## Phase 2 — State and hooks
+## Phase 2, State and hooks
 
 ### Task 9: Room-state reducer + split contexts + session persistence
 
@@ -786,7 +786,7 @@ test("setSession stores the session", () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/state/roomReducer.test.ts`
-Expected: FAIL — cannot find module `./roomReducer`.
+Expected: FAIL, cannot find module `./roomReducer`.
 
 - [ ] **Step 3: Implement `session.ts`**
 
@@ -909,7 +909,7 @@ git commit -m "feat: room-state reducer with split value/dispatch contexts"
 - Create: `client/src/state/UiStateContext.tsx`
 
 Holds ephemeral local view state so WebSocket pushes never re-render it:
-`chatOpen`, `expandedRigs` (Set of ids), `activeRigId` (pre-battle heat preview) —
+`chatOpen`, `expandedRigs` (Set of ids), `activeRigId` (pre-battle heat preview),
 mirroring `tracker.js:22-24`.
 
 - [ ] **Step 1: Implement `UiStateContext.tsx`**
@@ -974,7 +974,7 @@ git commit -m "feat: ephemeral UI-state context"
 
 ---
 
-### Task 11: `useRoomSocket` — WebSocket push with reconnect backoff
+### Task 11: `useRoomSocket`: WebSocket push with reconnect backoff
 
 **Files:**
 - Create: `client/src/hooks/useRoomSocket.ts`
@@ -1030,7 +1030,7 @@ test("closes the socket on unmount", () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/hooks/useRoomSocket.test.tsx`
-Expected: FAIL — cannot find module `./useRoomSocket`.
+Expected: FAIL, cannot find module `./useRoomSocket`.
 
 - [ ] **Step 3: Implement**
 
@@ -1101,7 +1101,7 @@ git commit -m "feat: useRoomSocket hook with reconnect backoff and cleanup"
 
 ---
 
-### Task 12: `useCommands` — POST a mutation, optimistically adopt the response
+### Task 12: `useCommands`: POST a mutation, optimistically adopt the response
 
 **Files:**
 - Create: `client/src/hooks/useCommands.ts`
@@ -1152,7 +1152,7 @@ git commit -m "feat: useCommands hook (POST + optimistic apply)"
 
 ---
 
-### Task 13: `useViewportHeight` — keyboard-safe `--app-h`
+### Task 13: `useViewportHeight`: keyboard-safe `--app-h`
 
 **Files:**
 - Create: `client/src/hooks/useViewportHeight.ts`
@@ -1199,7 +1199,7 @@ git commit -m "feat: useViewportHeight hook for keyboard-safe layout"
 
 ---
 
-### Task 14: `useSpeech` — STT + TTS
+### Task 14: `useSpeech`: STT + TTS
 
 **Files:**
 - Create: `client/src/hooks/useSpeech.ts`
@@ -1293,7 +1293,7 @@ git commit -m "feat: useSpeech hook (STT + TTS)"
 
 ---
 
-## Phase 3 — Entry point and shell
+## Phase 3, Entry point and shell
 
 ### Task 15: `JoinGate`
 
@@ -1330,7 +1330,7 @@ test("enables Enter only after room + side chosen and calls onJoin uppercased", 
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/components/JoinGate.test.tsx`
-Expected: FAIL — cannot find module `./JoinGate`.
+Expected: FAIL, cannot find module `./JoinGate`.
 
 - [ ] **Step 3: Implement**
 
@@ -1351,7 +1351,7 @@ export function JoinGate({ onJoin, error }: Props) {
     if (!room.trim()) return "Enter a room code.";
     if (!name.trim()) return "Enter your name.";
     if (!side) return "Pick a side to continue.";
-    return "Ready — tap Enter room.";
+    return "Ready, tap Enter room.";
   }, [room, name, side]);
   const ready = Boolean(room.trim() && side);
 
@@ -1396,7 +1396,7 @@ git commit -m "feat: JoinGate component"
 
 ---
 
-### Task 16: App wiring — providers, join flow, socket, gate-vs-terminal
+### Task 16: App wiring, providers, join flow, socket, gate-vs-terminal
 
 **Files:**
 - Modify: `client/src/App.tsx`
@@ -1491,7 +1491,7 @@ Refresh: it should skip the gate (session persisted). Ctrl-C both.
 
 ```bash
 git add client/src/App.tsx client/src/main.tsx client/src/components/Terminal.tsx
-git commit -m "feat: app boot — providers, join flow, socket, gate/terminal switch"
+git commit -m "feat: app boot, providers, join flow, socket, gate/terminal switch"
 ```
 
 ---
@@ -1569,7 +1569,7 @@ git commit -m "feat: terminal shell (Topbar + Stage skeleton)"
 
 ---
 
-## Phase 4 — Tracker core
+## Phase 4, Tracker core
 
 ### Task 18: Rig-view helper functions (pure)
 
@@ -1618,7 +1618,7 @@ test("orderedRigs lists my side first", () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/lib/rigView.test.ts`
-Expected: FAIL — cannot find module `./rigView`.
+Expected: FAIL, cannot find module `./rigView`.
 
 - [ ] **Step 3: Implement**
 
@@ -1637,10 +1637,10 @@ export function barClass(c: Component): string {
 }
 
 export function rigStatus(rig: Rig): { text: string; cls: string } {
-  if (rig.destroyed) return { text: "⛔ System failure — destroyed", cls: "crit" };
+  if (rig.destroyed) return { text: "⛔ System failure, destroyed", cls: "crit" };
   if (LOCS.some((l) => rig[l].sp === 0)) return { text: "⚠ Catastrophic damage", cls: "crit" };
-  if (LOCS.some((l) => rig[l].sp / rig[l].max <= 0.34)) return { text: "▲ Heavy damage — operational", cls: "warn" };
-  if (LOCS.some((l) => rig[l].sp < rig[l].max)) return { text: "◆ Damaged — operational", cls: "warn" };
+  if (LOCS.some((l) => rig[l].sp / rig[l].max <= 0.34)) return { text: "▲ Heavy damage, operational", cls: "warn" };
+  if (LOCS.some((l) => rig[l].sp < rig[l].max)) return { text: "◆ Damaged, operational", cls: "warn" };
   return { text: "● All systems nominal", cls: "" };
 }
 
@@ -1742,7 +1742,7 @@ git commit -m "feat: CompRow and HeatGauge components"
 - Test: `client/src/components/rig/RigItem.test.tsx`
 
 Port `buildRigItem` (`tracker.js:283-437`). **Preserve** all classes: `rig-item`
-(+`is-destroyed/is-active/is-open`), `rig-head/rig-dot/rig-head-name/rig-badge/rig-heat-chip/rig-heat-chip-ic/rig-activate` (+`--readonly/on`), `rig-chev`, `rig-body/rig-body-inner/rig-status/rig-mods/rig-mod/rig-weapons/rig-equipment/rig-remove-row`. Uses `rigModifiers`, `EQUIPMENT`, `WEAPON_UPGRADES` from shared. Weapons/upgrades line from `tracker.js:404-418`. Activation logic (`tracker.js:326-360`): enemy rigs in battle get a read-only token; own rigs get a live button. Renders `CompRow ×4`, `HeatGauge`, and — when `game.started` — the `ActionConsole` (Task 29; until then leave a slot). "✕ Remove Rig" → `onCommand("remove", { name })`.
+(+`is-destroyed/is-active/is-open`), `rig-head/rig-dot/rig-head-name/rig-badge/rig-heat-chip/rig-heat-chip-ic/rig-activate` (+`--readonly/on`), `rig-chev`, `rig-body/rig-body-inner/rig-status/rig-mods/rig-mod/rig-weapons/rig-equipment/rig-remove-row`. Uses `rigModifiers`, `EQUIPMENT`, `WEAPON_UPGRADES` from shared. Weapons/upgrades line from `tracker.js:404-418`. Activation logic (`tracker.js:326-360`): enemy rigs in battle get a read-only token; own rigs get a live button. Renders `CompRow ×4`, `HeatGauge`, and, when `game.started`: the `ActionConsole` (Task 29; until then leave a slot). "✕ Remove Rig" → `onCommand("remove", { name })`.
 
 Props: `{ rig, isActive, isOpen, started, phase, myTurnSide, canActivateNow, onCommand, onToggle, onActivateLocal }`. Wrap the export in `React.memo`.
 
@@ -1776,7 +1776,7 @@ test("damage button issues a damage command", async () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/components/rig/RigItem.test.tsx`
-Expected: FAIL — cannot find module `./RigItem`.
+Expected: FAIL, cannot find module `./RigItem`.
 
 - [ ] **Step 3: Implement** `RigItem.tsx` porting `tracker.js:283-437`, header click / Enter / Space → `onToggle(rig.id)`; own-rig activate button → `onCommand("activate", {name})` in battle when `canActivateNow`, else `onActivateLocal(rig.id)` pre-battle. Leave a `{started && /* ActionConsole slot */}` comment where the console mounts.
 
@@ -1794,7 +1794,7 @@ git commit -m "feat: RigItem accordion component (memoized)"
 
 ---
 
-### Task 21: `RigDeck` — ordering, grouping, deck title, add screen slot
+### Task 21: `RigDeck`: ordering, grouping, deck title, add screen slot
 
 **Files:**
 - Create: `client/src/components/RigDeck.tsx`
@@ -1806,7 +1806,7 @@ Port `renderRigs` orchestration (`tracker.js:446-473`) + group headers
 `activeRigId`, `toggleExpanded`, `setActiveRig` from `useUi`; `sendCommand` from
 `useCommands`. Computes per-rig `isActive/isOpen/canActivateNow` from
 `tracker.js:288-329` and passes them to `RigItem`. Updates the `#rigDeckTitle` text
-(`tracker.js:471-472`) — lift that into a small effect or derive it in `Stage`.
+(`tracker.js:471-472`), lift that into a small effect or derive it in `Stage`.
 Renders `RigAddScreen` (Task 22) after the list.
 
 - [ ] **Step 1: Implement `RigDeck.tsx`**
@@ -1877,7 +1877,7 @@ const active = rigs.find((r) => r.id === activeRigId);
 
 - [ ] **Step 3: Verify against server**
 
-Run dev, join, commission is not built yet — so temporarily verify the deck renders
+Run dev, join, commission is not built yet, so temporarily verify the deck renders
 existing rigs if any exist in `data/rooms.json`; otherwise confirm no crash and an
 empty list with the add screen. (Full flow verified in Task 22.)
 
@@ -1890,13 +1890,13 @@ git commit -m "feat: RigDeck ordering, grouping, and deck title"
 
 ---
 
-### Task 22: `RigAddScreen` — commission CTA + availability
+### Task 22: `RigAddScreen`: commission CTA + availability
 
 **Files:**
 - Create: `client/src/components/RigAddScreen.tsx`
 
 Port markup `index.html:66-74` + availability logic `updateAddRigAvailability`
-(`tracker.js:66-87`) and `addLimitMessage` (60-64). **Preserve** `rig-add-card/rig-add/rig-add-title/rig-add-hint/rig-add-row/rig-add-btn` classes and the `rig-add-locked`/`is-empty` toggles and the `#rigAddScreen`/`#rigAddBtn` ids. Uses `canAddRigForSide`, `MAX_RIGS_TOTAL`, `MAX_RIGS_PER_SIDE` from shared. Clicking Commission opens the Rig wizard (Task 32) — until then, wire an `onCommission` prop / context hook and leave a `TODO(Task 32)` comment that calls it; for now have it call a no-op passed from `RigDeck`.
+(`tracker.js:66-87`) and `addLimitMessage` (60-64). **Preserve** `rig-add-card/rig-add/rig-add-title/rig-add-hint/rig-add-row/rig-add-btn` classes and the `rig-add-locked`/`is-empty` toggles and the `#rigAddScreen`/`#rigAddBtn` ids. Uses `canAddRigForSide`, `MAX_RIGS_TOTAL`, `MAX_RIGS_PER_SIDE` from shared. Clicking Commission opens the Rig wizard (Task 32), until then, wire an `onCommission` prop / context hook and leave a `TODO(Task 32)` comment that calls it; for now have it call a no-op passed from `RigDeck`.
 
 - [ ] **Step 1: Implement** reproducing the empty-state title/hint swaps from
   `tracker.js:76-86`. Read `rigs`, `game`, `session` from `useRoomState`.
@@ -1913,7 +1913,7 @@ git commit -m "feat: RigAddScreen with shared add-limit gating"
 
 ---
 
-### Task 23: `BattleSetup` — ready check, bounty, dice mode
+### Task 23: `BattleSetup`: ready check, bounty, dice mode
 
 **Files:**
 - Create: `client/src/components/BattleSetup.tsx`
@@ -1942,7 +1942,7 @@ git commit -m "feat: BattleSetup ready/bounty/dice controls"
 
 ---
 
-## Phase 5 — Battle HUD, banners, overlays, wizards
+## Phase 5, Battle HUD, banners, overlays, wizards
 
 ### Task 24: `BattleHud`
 
@@ -1981,7 +1981,7 @@ git commit -m "feat: BattleHud phase/round/turn/tokens"
 - Test: `client/src/lib/computeFocus.test.ts`
 - Modify: `client/src/components/Terminal.tsx`
 
-`computeFocus` (`battle.js:200-266`) is the guidance state machine — extract it as a
+`computeFocus` (`battle.js:200-266`) is the guidance state machine, extract it as a
 pure function `computeFocus(game, rigs, mySide): Focus | null` where `Focus.cta`
 carries a `kind` string (e.g. `"commission" | "ready" | "initiative" | "blast" | "score"`) instead of an inline DOM handler, so the component maps `kind → onClick`. The banner ports markup `index.html:20-27` + `renderFocus` (`battle.js:165-196`), including the `my-turn-glow` body class, the `--turn-banner-h` CSS var, and the change-flash. **Preserve** `turn-banner/tb-icon/tb-text/tb-primary/tb-secondary/tb-cta` classes and the `#turnBanner` id and `data-tone`.
 
@@ -2011,7 +2011,7 @@ test("finished phase yields no focus", () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/lib/computeFocus.test.ts`
-Expected: FAIL — cannot find module `./computeFocus`.
+Expected: FAIL, cannot find module `./computeFocus`.
 
 - [ ] **Step 3: Implement `computeFocus.ts`** porting `battle.js:200-266`, with
   `cta: { label, kind }` (kinds: `commission`, `ready`, `initiative`, `blast`,
@@ -2086,7 +2086,7 @@ a React portal + a context service. **Preserve** `dwr-scrim/dwr-card/dwr-title/d
   `render()` body, actions row) and `ChoiceField.tsx` (segmented control from
   `drawer.js:64-88`, controlled via `value`/`onChange`).
 
-- [ ] **Step 3: Wrap the app** — add `<DrawerProvider>` inside `<UiProvider>` in
+- [ ] **Step 3: Wrap the app**: add `<DrawerProvider>` inside `<UiProvider>` in
   `main.tsx`.
 
 - [ ] **Step 4: Type-check** → no errors.
@@ -2126,7 +2126,7 @@ component, driven by an imperative handle stored in `RollContext` (a ref-backed
   (`OK_REVEAL_MS = 900`, 220ms hide, 650ms flicker, effect stagger `0.5 + i*0.12`s)
   and the `KIND_TONE` map (`roll-dialog.js:21`).
 
-- [ ] **Step 3: Wrap the app** — add `<RollProvider>` in `main.tsx` (inside `DrawerProvider`).
+- [ ] **Step 3: Wrap the app**: add `<RollProvider>` in `main.tsx` (inside `DrawerProvider`).
 
 - [ ] **Step 4: Manual verify** deferred to Task 33 (needs a resolution to play).
   For now: `npx tsc -p tsconfig.json --noEmit` → no errors.
@@ -2169,7 +2169,7 @@ git commit -m "feat: ActionConsole with action budget and grid"
 
 ---
 
-### Task 30: Battle prompts — move/repair drawers, VP/blast, manual dice, end-activation
+### Task 30: Battle prompts, move/repair drawers, VP/blast, manual dice, end-activation
 
 **Files:**
 - Create: `client/src/state/BattleActionsContext.tsx`
@@ -2180,7 +2180,7 @@ the 5000ms timed hold + progress fill), `openRepairDrawer` (430-461),
 `openVpPrompt` (475-479), `openBlastPrompt` (480-485), `promptOneDie`/`promptTwoDice`
 (486-493), `endActivation` (463-468). Expose them via `useBattleActions()` so
 `ActionConsole` and `TurnBanner` call them. VP/blast keep `window.prompt` (parity
-with the original — `battle.js:476,481`). Move/repair use the Drawer service (Task
+with the original, `battle.js:476,481`). Move/repair use the Drawer service (Task
 27); manual dice use the Roll service (Task 28); `SPEED`/`MOVE_HOLD_MS` constants
 from `battle.js:340-341`.
 
@@ -2191,7 +2191,7 @@ from `battle.js:340-341`.
   bar animates over `MOVE_HOLD_MS`; use `useEffect`+`setInterval` inside a small
   `<MoveHold>` body component (the drawer `render` returns it).
 
-- [ ] **Step 2: Wrap the app** — add `<BattleActionsProvider>` in `main.tsx` (inside
+- [ ] **Step 2: Wrap the app**: add `<BattleActionsProvider>` in `main.tsx` (inside
   `RollProvider`).
 
 - [ ] **Step 3: Verify** dev in an active battle (or as far as state allows): Move
@@ -2224,7 +2224,7 @@ routes to manual dice via the Roll service. Keep the mode split (`fire`/`aimed`/
 
 - [ ] **Step 2: Implement `AttackWizard.tsx`** as a controlled multi-step component
   rendered through the Drawer service (or its own scrim if it uses distinct `aw-`
-  chrome — match the original's markup). Reproduce the exact command verbs/attrs.
+  chrome, match the original's markup). Reproduce the exact command verbs/attrs.
 
 - [ ] **Step 3: Wire `openAttack` into `BattleActionsContext`** and route
   `ActionConsole`'s `fire/aimed/ram` to it.
@@ -2264,7 +2264,7 @@ Port `rig-wizard.js` (`openRigWizard`, 249 lines). **Preserve** its `rig-wizard`
 - [ ] **Step 3: Wire** `RigAddScreen` Commission → `openWizard()`; `TurnBanner`
   `commission` CTA → `openWizard()`.
 
-- [ ] **Step 4: Wrap the app** — add `<WizardProvider>` in `main.tsx`.
+- [ ] **Step 4: Wrap the app**: add `<WizardProvider>` in `main.tsx`.
 
 - [ ] **Step 5: Verify** dev end-to-end: commission a Light and a Medium rig; they
   appear in the deck under "Your Squadron"; enemy option produces an Enemy rig.
@@ -2291,7 +2291,7 @@ after 6500ms. Both track "last seen" across renders with refs (mirroring the mod
 globals `lastSeenResolution`, `watchedActiveRig`, `activationBaselineId`,
 `summaryReady`). **Preserve** `dwr-recap/dwr-recap-row/dwr-recap-line/dwr-recap-eff/dwr-hint` classes in the recap body.
 
-- [ ] **Step 1: Implement `useBattleWatchers()`** — a hook that reads `game`/`rigs`
+- [ ] **Step 1: Implement `useBattleWatchers()`**: a hook that reads `game`/`rigs`
   from `useRoomState`, `useRoll`, `useDrawer`, and runs two effects keyed on
   `game?.resolutions` and `game?.turn?.activeRigId`. Guard the first render
   (`summaryReady`) so no spurious recap fires on load.
@@ -2311,7 +2311,7 @@ git commit -m "feat: resolution + activation-summary watchers"
 
 ---
 
-## Phase 6 — Chat
+## Phase 6, Chat
 
 ### Task 34: Chat state + `ChatFab` + `ChatPanel` shell
 
@@ -2329,12 +2329,12 @@ and the `has-unread` flag. **Preserve** markup `index.html:87-113` and classes
 
 - [ ] **Step 1: Implement `ChatContext.tsx`** (provider scoped in `ChatPanel`'s
   parent) with the local state above and actions `addMessage`, `setStreaming`, etc.
-  Keep it minimal — the streaming logic lands in Task 37.
+  Keep it minimal, the streaming logic lands in Task 37.
 
-- [ ] **Step 2: Implement `ChatFab.tsx`** — toggles `useUi().chatOpen`; shows
+- [ ] **Step 2: Implement `ChatFab.tsx`**: toggles `useUi().chatOpen`; shows
   `has-unread`; `aria-expanded` synced.
 
-- [ ] **Step 3: Implement `ChatPanel.tsx` shell** — head + tools row (buttons wired
+- [ ] **Step 3: Implement `ChatPanel.tsx` shell**: head + tools row (buttons wired
   in Tasks 37/39 as stubs for now), `status-row`, `<main id="messages">` (empty),
   and the input row (stub). Open/close driven by `chatOpen` (add/remove `open`
   class + `aria-hidden`), Escape closes (`chat.js:42-44`).
@@ -2360,10 +2360,10 @@ git commit -m "feat: chat panel shell + fab open/close"
 - Create: `client/src/components/chat/GlossaryText.tsx`
 - Test: `client/src/components/chat/GlossaryText.test.tsx`
 
-`Bubble` renders user/bot bubbles (`chat.js:50-61`) — **preserve** `bubble user/bot`,
+`Bubble` renders user/bot bubbles (`chat.js:50-61`), **preserve** `bubble user/bot`,
 `pending`, `think-block/think-text/answer-text` classes. Bot answers render markdown
 via `dangerouslySetInnerHTML={{ __html: markdownToHtml(text) }}` **then** wrap
-glossary terms — but since we can't post-process the injected HTML in React, render
+glossary terms, but since we can't post-process the injected HTML in React, render
 the answer through `GlossaryText`, which tokenizes the *plain* stripped text; for
 markdown-with-glossary, apply `GlossaryText` to text nodes only. Simplest faithful
 approach: `Bubble` renders bot markdown HTML, and `GlossaryText` handles
@@ -2392,11 +2392,11 @@ test("wraps recognized glossary terms in tappable spans", () => {
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run client/src/components/chat/GlossaryText.test.tsx`
-Expected: FAIL — cannot find module `./GlossaryText`.
+Expected: FAIL, cannot find module `./GlossaryText`.
 
 - [ ] **Step 3: Implement `GlossaryText.tsx`** using `tokenizeGlossary`; render text
   segments as strings and term segments as
-  `<span className="glossary-term" data-term={id} role="button" tabIndex={0} aria-label={`${term} — glossary term`} onClick={() => onOpen(id, el)}>`.
+  `<span className="glossary-term" data-term={id} role="button" tabIndex={0} aria-label={`${term}, glossary term`} onClick={() => onOpen(id, el)}>`.
 
 - [ ] **Step 4: Implement `Bubble.tsx`** (user = plain text via `GlossaryText`; bot =
   markdown HTML) and `MessageList.tsx` (maps `messages`, auto-scrolls to bottom via a
@@ -2461,7 +2461,7 @@ so voice transcripts send as messages (`main.js:13`); the seed bot bubble
   the reader loop and event handling (`chat.js:123-160`) faithfully, including the
   `think-block` open/close transitions represented in message state.
 
-- [ ] **Step 2: Wire it into `ChatPanel`** — connect `MessageList`, `ChatInput`
+- [ ] **Step 2: Wire it into `ChatPanel`**: connect `MessageList`, `ChatInput`
   (`onSend={send}`), `useSpeech`, and the seed greeting. Wire the mic button to
   `useSpeech.toggleMic`.
 
@@ -2543,7 +2543,7 @@ git commit -m "feat: chat toolbar (think/tts/lang/clear)"
 
 ---
 
-## Phase 7 — Cutover and cleanup
+## Phase 7, Cutover and cleanup
 
 ### Task 40: Serve the built client from Express
 
@@ -2615,7 +2615,7 @@ Expected: PASS.
 git rm -r public/js public/css public/index.html public/markdown.test.js public/ui-static.test.js
 ```
 
-(Keep any non-client files under `public/` if present — there are none in scope.)
+(Keep any non-client files under `public/` if present, there are none in scope.)
 
 - [ ] **Step 4: Confirm the shared/server tests still pass under `node --test`**
 
@@ -2628,7 +2628,7 @@ Expected: shared tests (`shared/*.test.js`) pass; no attempt to load the deleted
 Run: `npm test`
 Expected: Vitest passes (all client tests) **and** `node --test` passes.
 
-- [ ] **Step 6: Update `README.md`** — replace the "just open localhost:8000" dev
+- [ ] **Step 6: Update `README.md`**: replace the "just open localhost:8000" dev
   note with: dev = `npm run dev` (Vite on 5173 proxying to Express on 8000);
   production = `npm run build` then `npm start` (Express serves `client/dist`). Keep
   all Ollama/voice/tunnel sections unchanged.
@@ -2688,7 +2688,7 @@ git commit -m "chore: parity pass for React client conversion"
 - **Component-heavy tasks** (RigItem, HeatGauge, AttackWizard, RigWizard,
   RollConsole, GlossaryTip) intentionally cite exact source line ranges as the
   markup spec plus explicit class-name-parity requirements rather than reproducing
-  hundreds of lines of JSX — the source file is authoritative and must be mirrored
+  hundreds of lines of JSX, the source file is authoritative and must be mirrored
   exactly. This is a deliberate instruction, not a placeholder.
 - **Type/name consistency:** `sendCommand(verb, attrs)`, `applyServerState` action,
   `useRoomState/useRoomDispatch/useUi/useCommands/useDrawer/useRoll/useBattleActions/useWizard/useRoll` names are used consistently across tasks; the `{ version, state }`

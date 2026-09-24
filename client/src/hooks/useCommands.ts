@@ -28,7 +28,7 @@ export function useCommands() {
             try {
               const { reason } = await resp.json();
               if (reason) emitCommandRejected(reason);
-            } catch { /* no body — nothing to explain */ }
+            } catch { /* no body, nothing to explain */ }
           }
           return;
         }

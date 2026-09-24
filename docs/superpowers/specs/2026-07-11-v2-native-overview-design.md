@@ -1,4 +1,4 @@
-# V2 Native Overlays — Overview & Architecture (remove all interims)
+# V2 Native Overlays, Overview & Architecture (remove all interims)
 
 **Date:** 2026-07-11
 **Status:** Approved direction (user: "leave no interim, everything should be new")
@@ -8,7 +8,7 @@ remaining reused-from-V1 presentation surface with native V2 components.
 ## Why
 
 Phases A–D delivered a functional V2 that reuses several V1 presentation pieces as documented
-interims. The goal now: **zero interims** — every pixel the V2 user sees is native V2, under
+interims. The goal now: **zero interims**: every pixel the V2 user sees is native V2, under
 `.v2-root`, in the dieselpunk design system. V1 stays untouched and fully working behind the toggle.
 
 ## Interim inventory (what must become native)
@@ -31,7 +31,7 @@ interims. The goal now: **zero interims** — every pixel the V2 user sees is na
 The V1 overlay providers **bundle logic with V1 JSX** (`DrawerProvider` renders `<Drawer>`,
 `RollProvider` renders `<RollConsole>`, `WizardProvider` renders the wizards,
 `BattleActionsContext` builds V1 drawer bodies). So V2 cannot swap presentation by reusing those
-providers — it needs **parallel V2 providers**.
+providers, it needs **parallel V2 providers**.
 
 **Split of concerns (reuse vs. rebuild):**
 - **Reuse (pure state / logic, no V1 JSX):** `RoomStateContext`, `UiStateContext`,
@@ -39,7 +39,7 @@ providers — it needs **parallel V2 providers**.
   `useSpeech`, `useCommands`, `useMySide`, plus all `/shared/*.js` game logic
   (`availableActions`, `actionBudget`, `phaseSummary`, `computeFocus`, dice specs, distances, etc.).
 - **Rebuild (V1 presentation):** Drawer, RollConsole, the battle-action drawer bodies, the wizards,
-  field map, chat panel, glossary dialog/tip — as native V2 components + thin V2 providers.
+  field map, chat panel, glossary dialog/tip, as native V2 components + thin V2 providers.
 
 **`main.tsx` composition split.** Today both apps share `<AppProviders>`. Introduce a V2-specific
 composition so V1 is never touched and V2 never mounts idle V1 overlay providers:
@@ -57,7 +57,7 @@ V2BattleActionsProvider → V2WizardProvider → children`. It reuses `RoomProvi
 stays local to the V2 chat mount (Phase I) as today.
 
 **Hook indirection.** V2 components call **V2 hooks** (`useV2Drawer`, `useV2Roll`,
-`useV2BattleActions`, `useV2Wizard`, `useV2GlossaryTip`) — never the V1 ones. Phase F rewires the
+`useV2BattleActions`, `useV2Wizard`, `useV2GlossaryTip`), never the V1 ones. Phase F rewires the
 V2 `ActionConsole`, `TurnBanner`, `OutcomeBanner`, and RigTerminal to the V2 hooks; the shared
 game-logic imports stay identical.
 

@@ -58,7 +58,7 @@ export function setEnabled(v: boolean): void {
   enabled = v;
   try {
     localStorage.setItem(STORAGE_KEY, String(v));
-  } catch { /* storage unavailable — in-memory only */ }
+  } catch { /* storage unavailable, in-memory only */ }
   if (!v) stopIdle();
   notify();
 }
@@ -75,7 +75,7 @@ function getCtx(): AudioContext | null {
   try {
     ctx = deps.ctxFactory();
   } catch {
-    ctx = null; // no Web Audio support — feature silently off
+    ctx = null; // no Web Audio support, feature silently off
   }
   return ctx;
 }

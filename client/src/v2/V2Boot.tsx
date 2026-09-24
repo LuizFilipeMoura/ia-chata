@@ -49,7 +49,7 @@ class V2ErrorBoundary extends Component<{ children: ReactNode }, BoundaryState> 
   componentDidCatch(error: unknown) {
     // A failed dynamic import (stale chunk) is recoverable by a full reload, which
     // refetches the current bundle. Reload at most once so a genuine render bug
-    // doesn't loop — the guard is cleared on any successful boot (below).
+    // doesn't loop, the guard is cleared on any successful boot (below).
     const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     const isChunkError = /dynamically imported module|Importing a module|Failed to fetch|ChunkLoadError|error loading/i.test(msg);
     if (isChunkError && !sessionStorage.getItem(this.reloadKey)) {

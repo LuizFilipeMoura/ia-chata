@@ -1,10 +1,10 @@
-# Equipment Mechanics — Plan 0: Read-Model Refactor & Shared Plumbing
+# Equipment Mechanics, Plan 0: Read-Model Refactor & Shared Plumbing
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make `EQUIPMENT_UPGRADES` a single live source of truth read the same way everywhere, and scaffold the per-rig tracked-state block the mechanic plans (Groups 2-4) fill in.
 
-**Architecture:** Relocate `EQUIPMENT_UPGRADES` + a pure `equipmentUpgradeEffectOf(equipmentId, upgradeId)` lookup into `shared/rules.js` — the leaf module both `game-state.js` and `combat.js` already import — then delete the commission-time `equipmentUpgradeEffect` stamp and route every consumer through the lookup. Add an `equipState` block on the rig plus a `refreshEquipState(rig)` Recovery hook, both empty of mechanic logic here.
+**Architecture:** Relocate `EQUIPMENT_UPGRADES` + a pure `equipmentUpgradeEffectOf(equipmentId, upgradeId)` lookup into `shared/rules.js`: the leaf module both `game-state.js` and `combat.js` already import, then delete the commission-time `equipmentUpgradeEffect` stamp and route every consumer through the lookup. Add an `equipState` block on the rig plus a `refreshEquipState(rig)` Recovery hook, both empty of mechanic logic here.
 
 **Tech Stack:** Node ESM modules, `node:test` + `node:assert` (run with `node --test`).
 
@@ -15,16 +15,16 @@
 export const EQUIPMENT_UPGRADES = { /* the 24 rows, moved verbatim */ };
 export function equipmentUpgradeEffectOf(equipmentId, upgradeId) { /* → effect object or {} */ }
 
-// shared/game-state.js — per-rig tracked state, initialised in makeRig, backfilled in ensureRigShape
+// shared/game-state.js, per-rig tracked state, initialised in makeRig, backfilled in ensureRigShape
 rig.equipState = {
-  ablativeCharges: 0,                       // Ablative Cascade  — Group 3
-  cryo: 0,                                   // Cryo Reservoir    — Group 3
-  naniteStacks: [],                         // Nanite Swarm      — Group 3, items { loc, sp }
-  interceptors: 0,                          // Point-Defense     — Group 3
-  meltdownCharge: 0,                        // Meltdown Protocol — Group 3
-  solution: { targetId: null, count: 0 },   // Fire Solution Lock— Group 3
-  reactiveArmorLocs: [],                    // Reactive Armor    — Group 2
-  grapnelCooldown: 0,                       // Grapnel Launcher  — Group 4
+  ablativeCharges: 0,                       // Ablative Cascade , Group 3
+  cryo: 0,                                   // Cryo Reservoir   , Group 3
+  naniteStacks: [],                         // Nanite Swarm     , Group 3, items { loc, sp }
+  interceptors: 0,                          // Point-Defense    , Group 3
+  meltdownCharge: 0,                        // Meltdown Protocol, Group 3
+  solution: { targetId: null, count: 0 },   // Fire Solution Lock, Group 3
+  reactiveArmorLocs: [],                    // Reactive Armor   , Group 2
+  grapnelCooldown: 0,                       // Grapnel Launcher , Group 4
 };
 export function refreshEquipState(rig) { /* per-round refill/tick; empty until groups fill it */ }
 ```
@@ -59,7 +59,7 @@ Add `equipmentUpgradeEffectOf` to the import list at the top of `game-state.test
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `equipmentUpgradeEffectOf is not a function` / not exported.
+Expected: FAIL, `equipmentUpgradeEffectOf is not a function` / not exported.
 
 - [ ] **Step 3: Move the data and add the lookup**
 
@@ -87,13 +87,13 @@ export { EQUIPMENT_UPGRADES, equipmentUpgradeEffectOf } from "./rules.js";
 ```
 
 Confirm `game-state.js` still imports whatever else it needs from `rules.js`
-(the existing `import { … } from "./rules.js"` line) — leave it, the re-export is
+(the existing `import { … } from "./rules.js"` line), leave it, the re-export is
 a separate statement.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — including the existing `EQUIPMENT_UPGRADES` shape tests
+Expected: PASS, including the existing `EQUIPMENT_UPGRADES` shape tests
 (`game-state.test.js:1907+`), which resolve through the re-export unchanged.
 
 - [ ] **Step 5: Commit**
@@ -130,7 +130,7 @@ test("rigEffects derives combat/thermal tags from the catalog, not a stamp", () 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rigEffects` still reads `rig.equipmentUpgradeEffect`, now absent → returns the default, not 2.
+Expected: FAIL, `rigEffects` still reads `rig.equipmentUpgradeEffect`, now absent → returns the default, not 2.
 
 - [ ] **Step 3: Implement**
 
@@ -196,7 +196,7 @@ const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — reads of `attacker.equipmentUpgradeEffect` are now `undefined` → bonus 0 where 1/2 expected.
+Expected: FAIL, reads of `attacker.equipmentUpgradeEffect` are now `undefined` → bonus 0 where 1/2 expected.
 
 - [ ] **Step 3: Implement**
 
@@ -267,15 +267,15 @@ test("makeRig does not persist equipmentUpgradeEffect (catalog is the source)", 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `equipmentUpgradeEffect` is still assigned in `makeRig`, so `in` is true.
+Expected: FAIL, `equipmentUpgradeEffect` is still assigned in `makeRig`, so `in` is true.
 
 - [ ] **Step 3: Implement**
 
-- `game-state.js:951-955` — delete the `equipmentUpgradeRow` / `equipmentUpgradeEffect` locals.
-- `game-state.js:972` — delete the `equipmentUpgradeEffect,` field from the rig literal.
-- `game-state.js:1139` — delete the `equipmentUpgradeEffect: {},` field from `makeUnit`.
-- `game-state.js:787` — delete the `if (rig.equipmentUpgradeEffect === undefined) rig.equipmentUpgradeEffect = {};` backfill line.
-- `client/src/state/types.ts` — delete the `equipmentUpgradeEffect?: …` field.
+- `game-state.js:951-955`: delete the `equipmentUpgradeRow` / `equipmentUpgradeEffect` locals.
+- `game-state.js:972`: delete the `equipmentUpgradeEffect,` field from the rig literal.
+- `game-state.js:1139`: delete the `equipmentUpgradeEffect: {},` field from `makeUnit`.
+- `game-state.js:787`: delete the `if (rig.equipmentUpgradeEffect === undefined) rig.equipmentUpgradeEffect = {};` backfill line.
+- `client/src/state/types.ts`: delete the `equipmentUpgradeEffect?: …` field.
 
 - [ ] **Step 4: Run the full shared suite**
 
@@ -321,7 +321,7 @@ test("ensureRigShape backfills equipState on a legacy rig", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rig.equipState` is undefined.
+Expected: FAIL, `rig.equipState` is undefined.
 
 - [ ] **Step 3: Implement**
 
@@ -379,7 +379,7 @@ git commit -m "feat(v2): scaffold equipState block + refreshEquipState Recovery 
   `applyDefensiveReactions(target, hit, ctx)`. Later plans must use that exact
   name. Group 2 installs it at **both** the `hit.kind === "tohit"` (in
   `rollToHit`) and `hit.kind === "impact"` (in `rollImpacts`) stages, with
-  `ctx = { location, row, spendHeat }` — see the spec's "Reactive on-incoming-hit
+  `ctx = { location, row, spendHeat }`: see the spec's "Reactive on-incoming-hit
   hook" for the authoritative two-stage contract. Groups 3-4 add branches only.
 - After this plan, `grep -rn equipmentUpgradeEffect shared/ client/` must return
   zero hits outside test history. Run it as a final check before closing the plan.

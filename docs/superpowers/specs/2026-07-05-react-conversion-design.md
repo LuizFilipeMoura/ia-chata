@@ -1,4 +1,4 @@
-# React Conversion — Design
+# React Conversion, Design
 
 **Date:** 2026-07-05
 **Status:** Approved (design), pending implementation plan
@@ -7,7 +7,7 @@
 
 Convert the client UI from vanilla JS ES modules to React, so future work benefits
 from reusable components, a familiar ecosystem, and clearer structure. This is a
-long-term architecture investment, not a minimal patch — the setup should be
+long-term architecture investment, not a minimal patch, the setup should be
 idiomatic React.
 
 ## Decisions (locked)
@@ -26,7 +26,7 @@ Only the **client** is rewritten. `server/` and `shared/` stay untouched, with a
 **single exception**: one line in `server/index.js` changes the static root from
 `public/` to the built client output (`client/dist`).
 
-- `shared/*.js` stays **plain JS** — `node server/index.js` keeps running with no
+- `shared/*.js` stays **plain JS**: `node server/index.js` keeps running with no
   build step. A hand-written `client/shared.d.ts` gives the TS client full types
   when importing it. Vite bundles `shared` into the client for prod; the dev proxy
   serves it otherwise.
@@ -35,7 +35,7 @@ Only the **client** is rewritten. `server/` and `shared/` stay untouched, with a
   `battle`, `join`, `glossary`, `rig-wizard`) carry over unchanged, so the app is
   pixel-identical and CSS is not part of the risk surface. Components render the
   same markup structure the current CSS targets.
-- **WebSocket-only sync** (matching the actual `api.js` behavior — reconnect with
+- **WebSocket-only sync** (matching the actual `api.js` behavior, reconnect with
   1s→2s→4s backoff capped at 5s, no polling). The README's mention of 3s polling is
   stale; we build to the real code.
 
@@ -97,20 +97,20 @@ path line. Old `public/js` + `public/css` deleted at the end (git history preser
 Context + `useReducer`, engineered so a WebSocket push does not re-render the whole
 tree:
 
-- **RoomStateContext** — `{ rigs, game, stateVersion, session }`. Split into a
+- **RoomStateContext**: `{ rigs, game, stateVersion, session }`. Split into a
   **value context** and a **dispatch context** so action-only consumers don't
   re-render on state change. Fed by:
-  - `useRoomSocket` — WebSocket + reconnect backoff (ported from `api.js`
+  - `useRoomSocket`: WebSocket + reconnect backoff (ported from `api.js`
     `startSocket`), as an effect with correct StrictMode cleanup (no duplicate
     sockets on double-mount).
-  - `useCommands` — wraps `sendCommand(verb, attrs)`: POST to
+  - `useCommands`: wraps `sendCommand(verb, attrs)`: POST to
     `/api/game/<room>/command`, then optimistically `applyServerState` on the
     response to avoid a round-trip flicker (preserves current behavior). The
     WebSocket broadcast later delivers the same authoritative state.
-- **UiStateContext** — ephemeral state kept separate so server pushes never touch
+- **UiStateContext**: ephemeral state kept separate so server pushes never touch
   it: which panel is open, active wizard + step, roll animation, banner visibility.
 - **Chat state is component-local** to `<ChatPanel>` (messages, history, streaming
-  flag, think/tts/lang toggles) — not global. Streaming updates local state
+  flag, think/tts/lang toggles), not global. Streaming updates local state
   incrementally.
 - `<RigTerminal>` is `React.memo`'d per rig, so one rig's SP change re-renders only
   that terminal, not the whole deck.
@@ -164,17 +164,17 @@ tree:
 - No data-fetching library.
 - No CSS-in-JS or component library.
 - No changes to `server/` logic or `shared/` game logic.
-- No new features during the port — behavior parity only.
+- No new features during the port, behavior parity only.
 
 ## Risks / watch-items
 
-- **StrictMode double-mount** duplicating the WebSocket — effect cleanup must close
+- **StrictMode double-mount** duplicating the WebSocket, effect cleanup must close
   the socket and cancel the reconnect timer.
-- **Streaming re-render cost** — batch incremental chat updates; keep the streaming
+- **Streaming re-render cost**: batch incremental chat updates; keep the streaming
   buffer in a ref, commit to state at a sane cadence.
-- **Dice animation timing** — port the existing sequence faithfully inside
+- **Dice animation timing**: port the existing sequence faithfully inside
   `<RollConsole>`.
-- **Glossary rewrite** — moving from DOM-walking to tokenized `<Term>` spans must
+- **Glossary rewrite**: moving from DOM-walking to tokenized `<Term>` spans must
   reproduce the same match set and tooltip behavior.
-- **Exact class-name parity** — any drift breaks the verbatim CSS; verify markup
+- **Exact class-name parity**: any drift breaks the verbatim CSS; verify markup
   structure per component during the parity pass.

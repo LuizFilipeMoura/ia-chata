@@ -1,14 +1,14 @@
-# Wreck Screen — loud destruction + mandatory blast marking
+# Wreck Screen, loud destruction + mandatory blast marking
 
 **Date:** 2026-07-14
-**Status:** Design approved. **Parked** — blocked on the digital battlefield (see
+**Status:** Design approved. **Parked**: blocked on the digital battlefield (see
 Dependency below). Do not plan against this yet.
 
 ## Problem
 
 A Rig dying is the loudest thing that happens on the table and the quietest thing
-that happens in the app. Today destruction pushes a log line, rolls a D12, and — on
-a 4+ — sets `game.pendingBlast`, which surfaces as a small "Resolve blast" CTA in
+that happens in the app. Today destruction pushes a log line, rolls a D12, and, on
+a 4+, sets `game.pendingBlast`, which surfaces as a small "Resolve blast" CTA in
 the turn banner. The CTA is missable, the drawer behind it offers a ghost "None"
 button, and nothing stops play if both are ignored. Secondary blasts get skipped by
 accident, and the kill itself lands with no weight.
@@ -16,22 +16,22 @@ accident, and the kill itself lands with no weight.
 Two changes: destruction throws a loud, blocking, full-screen card; marking the
 blast radius becomes an obligation rather than a prompt.
 
-## Dependency — why this is parked
+## Dependency, why this is parked
 
 The digital battlefield (`docs/superpowers/specs/2026-07-14-digital-battlefield-design.md`)
 lands first, and it contests beat 2 of this design:
 
 - Its measurement table claims `blast radius (§8 cook-off, 4")` as a distance the
-  field **derives** from geometry. In a digital room nobody marks anything — the
+  field **derives** from geometry. In a digital room nobody marks anything, the
   server already knows who stands within 4".
 - "Wrecks vanish. A destroyed rig leaves the map entirely."
 
-Beat 1 — the kill card — survives untouched either way: a death should be loud in
+Beat 1, the kill card, survives untouched either way: a death should be loud in
 both room modes. Beat 2 is the open question, and it resolves into a `room.mode`
 branch this spec does not yet have:
 
-- **Physical rooms** — the marking body, as designed here.
-- **Digital rooms** — no marking step. The blast auto-resolves from geometry and the
+- **Physical rooms**: the marking body, as designed here.
+- **Digital rooms**: no marking step. The blast auto-resolves from geometry and the
   card *reports* the casualties instead of asking for them. Whether the card still
   blocks in this mode (there is no longer an obligation to discharge, only news to
   read) is undecided.
@@ -44,13 +44,13 @@ digital branch, then plan.
 | Question | Decision |
 |---|---|
 | Scope of "set the blast radius" | Radius stays a fixed 4". The change is that marking is mandatory and the moment is loud. No new blast mechanic. |
-| Trigger | Any destruction, whatever the cause — attack, meltdown, heat, or another wreck's blast. One death, one card. |
+| Trigger | Any destruction, whatever the cause, attack, meltdown, heat, or another wreck's blast. One death, one card. |
 | Audience | Both sides see the card. The victim's owner gets the "yours" framing; both cards carry the same working buttons. |
 | Enforcement | Hard server-side lock. While a wreck is pending, other commands are rejected. |
 | Cold deaths (D12 1-3) | Still loud. Same card, D12 result shown as the beat, single Acknowledge, no marking step. Also blocking. |
 | Beats | Two. Death lands first; the blast is dealt with second. |
 | Cascades | FIFO queue, resolved in death order, one card at a time. |
-| Who may resolve | Any side, at any time. The obligation is that *someone* resolves it, not that a specific someone does — this is the deadlock escape. |
+| Who may resolve | Any side, at any time. The obligation is that *someone* resolves it, not that a specific someone does, this is the deadlock escape. |
 | Visual voice | Kill card: blackout, ash-white slab type, ember only on the D12 stamp. Deliberately unlike the ember threat alarm. |
 | Audio | Reuse existing stems. No new assets. |
 
@@ -58,7 +58,7 @@ digital branch, then plan.
 
 ### State
 
-`game.pendingWrecks` — a FIFO array, replacing the single `game.pendingBlast`.
+`game.pendingWrecks`: a FIFO array, replacing the single `game.pendingBlast`.
 
 ```js
 { sourceId, owner, victimName, killerName, roll, exploded, acked }
@@ -81,10 +81,10 @@ shared/game-state.js:1416.
 
 ### Verbs
 
-**`acknowledge`** (new) — sets `acked: true` on the head. If `!exploded`, the entry
+**`acknowledge`** (new), sets `acked: true` on the head. If `!exploded`, the entry
 shifts off immediately. If `exploded`, it stays head, now in marking mode.
 
-**`blast`** (existing) — body unchanged (hit location on a D12, then a d10 wound roll
+**`blast`** (existing), body unchanged (hit location on a D12, then a d10 wound roll
 against that location's toughness: `BLAST_STR = 8`, `BLAST_D = 2`). Reads
 `sourceId` from the head rather than `pendingBlast`, and
 shifts the head on completion rather than nulling a flag. The "don't clobber a
@@ -107,9 +107,9 @@ open so a test room cannot brick.
 
 ### Client
 
-**`client/src/v2/overlays/WreckOverlay.tsx`** — new, sibling of `ThreatOverlay`.
+**`client/src/v2/overlays/WreckOverlay.tsx`**: new, sibling of `ThreatOverlay`.
 Portals to `document.body`, `role="alertdialog"`, `aria-live="assertive"`. Reads
-`game.pendingWrecks[0]` — head only. Because both verbs are server-authoritative,
+`game.pendingWrecks[0]`: head only. Because both verbs are server-authoritative,
 both devices advance together.
 
 No dismiss button, no `✕`, no `dismissed` state. Those are the three things
@@ -118,26 +118,26 @@ feature.
 
 `acked` on the head picks the body:
 
-- **`!acked`** — the kill card. Blackout; `DESTROYED` in ash slab type; victim name,
-  weight class, and whose it is; then the D12 stamp: `D12 · 9 — MUNITIONS ERUPT` or
-  `D12 · 2 — MUNITIONS COLD`. Button is `Mark the blast »` when hot, `Acknowledge`
+- **`!acked`**: the kill card. Blackout; `DESTROYED` in ash slab type; victim name,
+  weight class, and whose it is; then the D12 stamp: `D12 · 9, MUNITIONS ERUPT` or
+  `D12 · 2, MUNITIONS COLD`. Button is `Mark the blast »` when hot, `Acknowledge`
   when cold. Both dispatch `acknowledge`.
-- **`acked && exploded`** — the marking body swaps in place. Same blackout, no
+- **`acked && exploded`**: the marking body swaps in place. Same blackout, no
   drawer. `BlastBody` moves under `WreckOverlay` and keeps its checkbox list;
   candidates are every living rig minus the wreck, as today. The two actions change:
   the ghost `None` becomes `Nobody within 4"` (same dispatch, honest label) and
   `Resolve blast` carries a live count.
 
-**Audio** — on head arrival, `playHeatExplosion()` if `exploded`, else
+**Audio**: on head arrival, `playHeatExplosion()` if `exploded`, else
 `playDamage()`. Fired once per `sourceId` via a ref, the same guard `ThreatOverlay`
 uses on `attackerId`, so a re-render or the acknowledge swap cannot re-bang it.
 
-**Styling** — a new `.v2-wreck-*` block in `client/src/v2/styles/overlay.css`.
+**Styling**: a new `.v2-wreck-*` block in `client/src/v2/styles/overlay.css`.
 Hand-styled like the `.v2-threat-*` block and for the reason its comment already
 gives: the overlay portals outside `.v2-root`, so the `--v2-*` tokens do not resolve
 there. Honors `prefers-reduced-motion` by dropping the stamp's rotate-in.
 
-**Deletions** — `resolveBlast` in `V2BattleActionsContext.tsx` and its test; the
+**Deletions**: `resolveBlast` in `V2BattleActionsContext.tsx` and its test; the
 `blast` case in `TurnBanner.tsx:29`; the `pendingBlast` branch in
 `computeFocus.ts:72` and its test. The overlay replaces the banner CTA entirely.
 
@@ -158,14 +158,14 @@ Cold death stops after step 3: the entry shifts on `acknowledge`.
 ## Edge cases
 
 **Annihilation.** The last rig dying queues a wreck *and* ends the game. The lock
-must not swallow the outcome — `outcome` is computed as today; the card sits on top,
+must not swallow the outcome, `outcome` is computed as today; the card sits on top,
 and the victory screen lands once the queue drains.
 
 **Revival.** A wreck entry outlives the rig's `destroyed` flag. The card renders from
 the entry's own `victimName` and `roll`, never re-reading the rig, so a repair
 mid-queue cannot blank it.
 
-**Undo.** Restores `game` wholesale, so `pendingWrecks` rewinds with it — an undone
+**Undo.** Restores `game` wholesale, so `pendingWrecks` rewinds with it, an undone
 attack un-kills and un-queues in one move.
 
 **Chains.** A blast that kills rig B pushes B's entry to the tail during the head's
@@ -187,7 +187,7 @@ death order.
 - Annihilation: `outcome` is set *and* `pendingWrecks.length === 1`.
 - Round advance clears the queue.
 
-Every roll branch is deterministic via `opts.dice.destruction` — no `random` stubs.
+Every roll branch is deterministic via `opts.dice.destruction`: no `random` stubs.
 
 **client/src/v2/overlays/WreckOverlay.test.tsx**
 

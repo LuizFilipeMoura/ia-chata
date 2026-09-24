@@ -48,7 +48,7 @@ interface BattleActionsApi {
   clearMoveTarget: () => void;
 }
 
-// Meta for the three support-module actions (spec: Support Units) — Field
+// Meta for the three support-module actions (spec: Support Units), Field
 // Weld/Vent reach a friendly (self included), Paint reaches an enemy.
 const SUPPORT_META: Record<string, { title: string; icon: string; label: string; needsLoc: boolean }> = {
   fieldweld: { title: "Field Weld", icon: "🔧", label: "Weld", needsLoc: true },
@@ -80,7 +80,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
 
   // A blocking, dismissable dialog explaining why an action was refused. Fed both
   // by the preflight below (before a wizard opens) and, via the rejection bus, by
-  // a server 409 on submit (see useCommands) — so an illegal action is always
+  // a server 409 on submit (see useCommands), so an illegal action is always
   // explained, whichever layer catches it.
   const showRejection = useCallback(
     (reason: string) => {
@@ -151,7 +151,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
   const openMove = useCallback(
     (rig: Rig, key: string) => {
       void (async () => {
-      // Preflight before showing the wizard — an illegal move (engaged, pinned,
+      // Preflight before showing the wizard, an illegal move (engaged, pinned,
       // emplaced, no actions left, …) is explained up front instead of failing
       // silently after the player commits.
       if (!(await guardAction("action", { name: rig.name, action: key }))) return;
@@ -170,7 +170,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       );
       const state: { engage: string } = { engage: "" };
       openDrawer({
-        title: `${iconFor(key)} ${sprint ? "Sprint" : "Move"} — ${rig.name}`,
+        title: `${iconFor(key)} ${sprint ? "Sprint" : "Move"}, ${rig.name}`,
         tone: "oil",
         dismissable: false,
         render: () => (
@@ -213,7 +213,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
         />
       );
       openDrawer({
-        title: `${isPatch ? "🩹 Emergency Patch" : "🔧 Repair"} — ${rig.name}`,
+        title: `${isPatch ? "🩹 Emergency Patch" : "🔧 Repair"}, ${rig.name}`,
         tone: "cool",
         render: build,
         actions: [
@@ -263,7 +263,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
         />
       );
       openDrawer({
-        title: `🛡️ Prepare — ${rig.name}`,
+        title: `🛡️ Prepare, ${rig.name}`,
         tone: "oil",
         render: build,
         actions: [
@@ -281,9 +281,9 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       const meta = SUPPORT_META[action];
       if (!meta) return;
       const pool = (rigsRef.current || []).filter((r) => !r.destroyed);
-      // Paint marks an enemy; Field Weld/Vent reach a friendly — "self or ally"
+      // Paint marks an enemy; Field Weld/Vent reach a friendly, "self or ally"
       // per spec, so the acting unit stays in its own target list. Vent only
-      // helps a heat-tracking kind (a Rig — Tanks/Walkers run cold).
+      // helps a heat-tracking kind (a Rig, Tanks/Walkers run cold).
       const targets = action === "paint"
         ? pool.filter((r) => (r.owner || "a") !== (rig.owner || "a"))
         : pool.filter(
@@ -292,7 +292,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
           );
       if (!targets.length) return;
       // Preflight with the first candidate target so the module/turn gate is
-      // checked while a real target still satisfies the target guard — the player
+      // checked while a real target still satisfies the target guard, the player
       // refines the actual target in the wizard.
       if (!(await guardAction("action", { name: rig.name, action, target: targets[0].name }))) return;
 
@@ -302,7 +302,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
       };
 
       openDrawer({
-        title: `${meta.icon} ${meta.title} — ${rig.name}`,
+        title: `${meta.icon} ${meta.title}, ${rig.name}`,
         tone: "cool",
         render: () => (
           <SupportBody
@@ -341,7 +341,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const resolveBlast = useCallback(() => {
     const sourceId = (gameRef.current?.pendingBlast as { sourceId?: number } | null)?.sourceId;
-    // Every living Rig is a candidate — the controller ticks those within 4"
+    // Every living Rig is a candidate, the controller ticks those within 4"
     // of the wreck. Exclude the exploding wreck itself.
     const candidates = (rigsRef.current || []).filter(
       (r) => !r.destroyed && r.id !== sourceId,
@@ -352,7 +352,7 @@ export function V2BattleActionsProvider({ children }: { children: ReactNode }) {
     }
     const picked = new Set<string>();
     openDrawer({
-      title: '💥 Resolve blast — mark Rigs within 4"',
+      title: '💥 Resolve blast, mark Rigs within 4"',
       tone: "ember",
       render: () => <BlastBody candidates={candidates} picked={picked} />,
       actions: [

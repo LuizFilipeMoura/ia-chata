@@ -16,7 +16,7 @@ const ANSWER_COUNTERS: { value: PrepType; icon: string; label: string; rule: str
   { value: "sidestep", icon: "🌀", label: "Sidestep the Shooter",
     rule: "When shot, slip ½ Speed before it resolves; if you reach the shooter you may engage it." },
   { value: "exploit", icon: "🎯", label: "Exploit Opening",
-    rule: "When an overcommitted enemy attacks, pivot and land a free Aimed counter-shot — no aim penalty." },
+    rule: "When an overcommitted enemy attacks, pivot and land a free Aimed counter-shot, no aim penalty." },
 ];
 
 const SHIELD_REACTION: { value: PrepType; icon: string; label: string; rule: string } = {
@@ -31,7 +31,7 @@ interface Props {
   value: PrepType;
   onChange: (v: PrepType) => void;
   allowShield?: boolean; // true when the acting Rig carries a Bulwark Shield
-  answerMode?: boolean;  // true in the Answer-token gate — unlocks the three counters
+  answerMode?: boolean;  // true in the Answer-token gate, unlocks the three counters
   // When set, the confirm control renders inline as an expansion beneath the
   // selected reaction (instead of a footer button on the drawer).
   onConfirm?: () => void;
@@ -40,7 +40,7 @@ interface Props {
 }
 
 // Native V2 port of V1's ReactionPicker. The shared reaction chooser used by both
-// the Answer-token gate and the Prepare action. Presentational only — parents own
+// the Answer-token gate and the Prepare action. Presentational only, parents own
 // the send. Retagged with `v2-rx-*` classes so the V2 stylesheet owns it.
 // The three Answer counters (Riposte / Sidestep / Exploit Opening) are
 // Answer-exclusive and only render when `answerMode` is set.

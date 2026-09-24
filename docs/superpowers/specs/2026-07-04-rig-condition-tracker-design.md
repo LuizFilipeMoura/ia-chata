@@ -1,4 +1,4 @@
-# Rig Condition Tracker — Design
+# Rig Condition Tracker, Design
 
 Date: 2026-07-04
 

@@ -14,17 +14,17 @@
 
 ## Background you need
 
-The existing sweep (`scripts/balance/weapon-sweep.mjs`) takes a fresh `structuredClone` per trial so cadence state can't leak between samples. That is what makes it clean **and** what makes it blind: nothing accumulates, so nothing needing two rounds exists. Of the 85 upgrades it measures, **44 are worth +0.00 in both conditions** — Penetrator Rounds never reaches its 3rd volley, burn never ticks, Sunder's max-SP chipping never compounds.
+The existing sweep (`scripts/balance/weapon-sweep.mjs`) takes a fresh `structuredClone` per trial so cadence state can't leak between samples. That is what makes it clean **and** what makes it blind: nothing accumulates, so nothing needing two rounds exists. Of the 85 upgrades it measures, **44 are worth +0.00 in both conditions**: Penetrator Rounds never reaches its 3rd volley, burn never ticks, Sunder's max-SP chipping never compounds.
 
-This harness fixes exactly that one thing. It does **not** add positioning (arc and distance stay declared inputs) and it does **not** make decisions (no bot — that's step 2).
+This harness fixes exactly that one thing. It does **not** add positioning (arc and distance stay declared inputs) and it does **not** make decisions (no bot, that's step 2).
 
 ### The lifecycle, verified against the real engine
 
-Every step below was probed and confirmed. Do not trust it anyway — re-run the probe if something behaves differently.
+Every step below was probed and confirmed. Do not trust it anyway, re-run the probe if something behaves differently.
 
 1. `createRoom(code)` → phase `setup`
 2. `seed` with an explicit roster → force-starts, phase `activation`. **Requires ≥3 rigs per side** (`sideRigCount(room,"a") >= 3 && ... "b" >= 3`), which is why this is a 3v3 seed and not a 1v1.
-3. Each round the **second player gets exactly 1 Answer token** and `pendingAnswer` blocks `activate` until it is spent. **There is no decline path.** Spending it sets a `preparation` on a rig — and Brace is −2 STR on the front arc, so answering with a duellist would silently corrupt every number. **Spend it on a bystander.**
+3. Each round the **second player gets exactly 1 Answer token** and `pendingAnswer` blocks `activate` until it is spent. **There is no decline path.** Spending it sets a `preparation` on a rig, and Brace is −2 STR on the front arc, so answering with a duellist would silently corrupt every number. **Spend it on a bystander.**
 4. `activate` → `turn.actionsMax` becomes 3
 5. `action` / `endactivation`, alternating sides via `handoff`
 6. All rigs activated → phase `recovery`, `turn: null`
@@ -33,14 +33,14 @@ Every step below was probed and confirmed. Do not trust it anyway — re-run the
 
 ### Two traps that will bite you
 
-1. **`makeRig` without a `sp` override uses `RIG_DEFAULTS` — a medium hull is 7, not 14.** The existing sweep builds rigs this way, which is fine for a one-shot metric and *fatal* for a duel measuring rounds-to-wreck. The `seed` verb passes `sp: pb.sp` from the chassis, giving the real pools (medium hull 14). **Use `seed`.** Verified: `A1 hull max: 14`.
+1. **`makeRig` without a `sp` override uses `RIG_DEFAULTS`: a medium hull is 7, not 14.** The existing sweep builds rigs this way, which is fine for a one-shot metric and *fatal* for a duel measuring rounds-to-wreck. The `seed` verb passes `sp: pb.sp` from the chassis, giving the real pools (medium hull 14). **Use `seed`.** Verified: `A1 hull max: 14`.
 2. **Field is the floor.** `normalizeWeaponUpgrade` returns `upgrades[0].id` for a null id, so every rig always carries its field upgrade. There is no un-upgraded rig. The `none` tier is synthetic.
 
 ## File Structure
 
 | file | responsibility |
 |---|---|
-| `scripts/balance/policy.mjs` | `greedySafe` — decide one command. **Its own file because it is this harness's largest bias.** |
+| `scripts/balance/policy.mjs` | `greedySafe`: decide one command. **Its own file because it is this harness's largest bias.** |
 | `scripts/balance/duel-sim.mjs` | seed a room, drive 10 rounds, sweep the cells, emit JSON |
 | `scripts/balance/duel-report.mjs` | format SP@10 + wreck-rate |
 | `scripts/balance/policy.test.mjs` | node tests for the policy |
@@ -53,7 +53,7 @@ Every step below was probed and confirmed. Do not trust it anyway — re-run the
 **Files:**
 - Modify: `package.json` (the `test` script)
 
-The suite currently globs `shared/**` and `server/**` only, so a test under `scripts/` would silently never run — and a test that never runs is worse than no test.
+The suite currently globs `shared/**` and `server/**` only, so a test under `scripts/` would silently never run, and a test that never runs is worse than no test.
 
 - [ ] **Step 1: Read the current script**
 
@@ -71,7 +71,7 @@ Change the `test` script to:
 - [ ] **Step 3: Verify it still passes and picks up nothing yet**
 
 Run: `npm test`
-Expected: PASS. 739 node tests + 293 vitest, unchanged — there are no `scripts/**/*.test.mjs` files yet.
+Expected: PASS. 739 node tests + 293 vitest, unchanged, there are no `scripts/**/*.test.mjs` files yet.
 
 - [ ] **Step 4: Commit**
 
@@ -80,7 +80,7 @@ git add package.json
 git commit -m "chore(test): run scripts/**/*.test.mjs
 
 The duel harness's policy is pure and testable, but scripts/ was outside
-the glob — a test there would never have run."
+the glob, a test there would never have run."
 ```
 
 ---
@@ -91,7 +91,7 @@ the glob — a test there would never have run."
 - Create: `scripts/balance/policy.mjs`
 - Test: `scripts/balance/policy.test.mjs`
 
-The policy decides one command at a time. It **asks the engine what things cost** via `availableActions` rather than recomputing them — no second copy of the cost rules, and it dogfoods the same view-model the UI renders.
+The policy decides one command at a time. It **asks the engine what things cost** via `availableActions` rather than recomputing them, no second copy of the cost rules, and it dogfoods the same view-model the UI renders.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -131,7 +131,7 @@ test("greedySafe fires when heat allows", () => {
 test("greedySafe shuts down rather than exceed capacity", () => {
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
-  // Medium capacity is 5. At 5, one more heat is over — so it must vent, not fire.
+  // Medium capacity is 5. At 5, one more heat is over, so it must vent, not fire.
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass];
   const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
   assert.equal(cmd.attrs.action, "shutdown");
@@ -159,21 +159,21 @@ test("greedySafe returns null when nothing is worth doing", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test scripts/balance/policy.test.mjs`
-Expected: FAIL — `Cannot find module './policy.mjs'`.
+Expected: FAIL, `Cannot find module './policy.mjs'`.
 
 - [ ] **Step 3: Write the policy**
 
 Create `scripts/balance/policy.mjs`:
 
 ```js
-// The duel harness's decision function — deliberately its own file.
+// The duel harness's decision function, deliberately its own file.
 //
 // This is the harness's single largest source of bias, and the existing sweep's
 // fatal flaw was a measurement decision (structuredClone per trial) buried where
 // nobody thought to question it. Put the bias where it is visible and swappable.
 //
 // KNOWN BIAS: greedySafe never exceeds Heat Capacity. A real player does, when
-// the trade is worth it — so this systematically UNDER-rates high-heat weapons.
+// the trade is worth it, so this systematically UNDER-rates high-heat weapons.
 // Acceptable because it is consistent across weapons. Judgment is step 2's bot.
 //
 // It asks the engine what things cost (availableActions) rather than recomputing
@@ -190,7 +190,7 @@ export function greedySafe(room, rig, enemy) {
   const heat = rig.engine?.heat ?? 0;
 
   // Fire while the KNOWN cost keeps us at or under capacity. Weapon heat is
-  // partly random (fireModeHeat — dice showing 1 under Full Auto/Extended Belt),
+  // partly random (fireModeHeat, dice showing 1 under Full Auto/Extended Belt),
   // so this budgets against known cost and will sometimes overshoot. That is the
   // gamble a player actually takes; modelling it as certain would be the lie.
   if (fire?.enabled && heat + fire.heat <= cap) {
@@ -200,7 +200,7 @@ export function greedySafe(room, rig, enemy) {
     } };
   }
 
-  // Can't fire safely — vent. Shut Down cools min(5, 2 * actionsLeft), far more
+  // Can't fire safely, vent. Shut Down cools min(5, 2 * actionsLeft), far more
   // than Recovery's 1, so it is the correct play rather than merely passing.
   const shutdown = acts.find((x) => x.key === "shutdown");
   if (shutdown?.enabled) {
@@ -209,7 +209,7 @@ export function greedySafe(room, rig, enemy) {
   return null;
 }
 
-// Declared distance — physical mode, so arc/distance are inputs, never derived.
+// Declared distance, physical mode, so arc/distance are inputs, never derived.
 // Overwritten per cell by duel-sim.mjs.
 export let DUEL_DISTANCE = 16;
 export function setDuelDistance(d) { DUEL_DISTANCE = d; }
@@ -253,11 +253,11 @@ Create `scripts/balance/duel-sim.mjs`:
 // and what to record. The action budget, heat payment, second-shot surcharge,
 // Recovery cooling, overheat table and round advance all live in game-state.js.
 // A harness that models those itself is a second copy of the rules that drifts
-// from the first — and prints a tidy table about a game nobody is playing.
+// from the first, and prints a tidy table about a game nobody is playing.
 import { createRoom, applyCommand } from "../../shared/game-state.js";
 import { makeGreedySafe } from "./policy.mjs";
 
-export const DUEL_ROUNDS = 10; // MAX_ROUNDS — the real game length
+export const DUEL_ROUNDS = 10; // MAX_ROUNDS, the real game length
 
 // Deterministic RNG so a seed reproduces a duel exactly.
 export function mulberry32(a) {
@@ -278,7 +278,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed 
   const random = mulberry32(seed);
   // A factory, not a module-level setter: distance is required and throws if
   // missing. An unexplained default would silently become the answer for every
-  // cell a caller forgot to configure — the same buried-measurement-decision
+  // cell a caller forgot to configure, the same buried-measurement-decision
   // failure as the sweep's structuredClone.
   const greedySafe = makeGreedySafe({ distance });
   const room = createRoom("DUEL");
@@ -290,7 +290,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed 
   cmd("seed", { roster, first: "a" });
 
   // Swap the weapon under test onto A1. The chassis supplies real SP pools and
-  // speed (seed passes sp: pb.sp — makeRig alone would give RIG_DEFAULTS, a hull
+  // speed (seed passes sp: pb.sp, makeRig alone would give RIG_DEFAULTS, a hull
   // of 7 instead of 14); the weapon is the variable.
   const a1 = room.rigs.find((r) => r.name === "A1");
   a1.weapons.longRange = weaponA;
@@ -316,13 +316,13 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed 
     }
 
     // The second player gets exactly 1 Answer token per round and there is NO
-    // decline path — pendingAnswer blocks activate until it is spent. Spending
+    // decline path, pendingAnswer blocks activate until it is spent. Spending
     // sets a preparation, and Brace is -2 STR on the front arc, so it goes on a
     // bystander. Answering with a duellist would silently corrupt every number.
     if (g.pendingAnswer) {
       const bystander = g.pendingAnswer.side === "b" ? "B3" : "A3";
       const ok = cmd("answer", { name: bystander, side: g.pendingAnswer.side, prep: "brace" }, g.pendingAnswer.side);
-      if (room.game.pendingAnswer) break; // couldn't clear it — bail rather than spin
+      if (room.game.pendingAnswer) break; // couldn't clear it, bail rather than spin
       continue;
     }
 
@@ -346,8 +346,8 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, seed 
   }
 
   return {
-    spDealt: b1StartSp - totalSp(b1),   // A1's output — the primary signal
-    spTaken: a1StartSp - totalSp(a1),   // B1's output — free, and the only way denial shows
+    spDealt: b1StartSp - totalSp(b1),   // A1's output, the primary signal
+    spTaken: a1StartSp - totalSp(a1),   // B1's output, free, and the only way denial shows
     wrecked: !!b1.destroyed,
     rounds: room.game.round,
   };
@@ -365,7 +365,7 @@ import('./scripts/balance/duel-sim.mjs').then(async (m) => {
 });"
 ```
 
-Expected: an object with `spDealt` > 0, `spTaken` > 0, `rounds` at 10 or a wreck earlier. **If `spDealt` is 0, stop and debug** — the loop is not firing, and every downstream number would be fiction.
+Expected: an object with `spDealt` > 0, `spTaken` > 0, `rounds` at 10 or a wreck earlier. **If `spDealt` is 0, stop and debug**: the loop is not firing, and every downstream number would be fiction.
 
 - [ ] **Step 3: Commit**
 
@@ -376,7 +376,7 @@ git commit -m "feat(balance): drive a 10-round duel through the real command pat
 Seeds a 3v3 (the seed verb force-starts only at >=3 a side), swaps the
 weapon under test onto A1, and loops applyCommand for 10 rounds. Heat,
 cadence, DoT, chipping and cooling all carry because it is the real loop
-rather than a model of it — which is exactly what the single-shot sweep
+rather than a model of it, which is exactly what the single-shot sweep
 cannot do.
 
 B3 absorbs the mandatory Answer token so no duellist carries a Brace."
@@ -391,14 +391,14 @@ B3 absorbs the mandatory Answer token so no duellist carries a Brace."
 
 **This is the most important task in the plan.** A new instrument that disagrees with a trusted one is fiction. The current sweep never had such a check, which is exactly how it silently measured field twice on its first run and produced a report whose every conclusion was garbage.
 
-> **The two harnesses measure different quantities — this is why the calibration
+> **The two harnesses measure different quantities, this is why the calibration
 > is first-shot-only.** `weapon-sweep.mjs:35` stubs `applyDamage` as
-> `LEDGER.sp += amount` — it records **intended** damage and never truncates.
+> `LEDGER.sp += amount`: it records **intended** damage and never truncates.
 > The real `applyDamage` (`game-state.js`) walks SP down a point at a time
 > against actual pools, and spills into another location when one hits 0. Against
 > a **fresh** target nothing truncates and the two agree. Against a damaged one
 > they diverge by construction. So calibrate on the **first shot of round 1**,
-> where the target is untouched — comparing 10-round totals to a single-shot mean
+> where the target is untouched, comparing 10-round totals to a single-shot mean
 > would be comparing two different things and calling the mismatch a bug.
 
 - [ ] **Step 1: Expose the first shot for calibration**
@@ -441,7 +441,7 @@ test("a duel is deterministic for a given seed", () => {
   assert.deepEqual(runDuel(opts), runDuel(opts));
 });
 
-test("a duel actually fires — spDealt is non-zero and bounded", () => {
+test("a duel actually fires, spDealt is non-zero and bounded", () => {
   // Guards the failure that would make every downstream number fiction: a loop
   // that spins, never activates, and reports a tidy 0.
   const r = runDuel({ chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
@@ -450,7 +450,7 @@ test("a duel actually fires — spDealt is non-zero and bounded", () => {
   assert.ok(r.rounds > 1, `expected multiple rounds, got ${r.rounds}`);
 });
 
-test("both duellists fight — the control returns fire", () => {
+test("both duellists fight, the control returns fire", () => {
   // spTaken is the only way denial effects can ever show up. If B1 never fires,
   // that column is dead and we would not notice.
   const r = runDuel({ chassisA: "medium-lance-mortar", chassisB: "medium-lance-mortar",
@@ -458,7 +458,7 @@ test("both duellists fight — the control returns fire", () => {
   assert.ok(r.spTaken > 0, `expected the control to return fire, got ${r.spTaken}`);
 });
 
-test("CALIBRATION — the first shot matches weapon-sweep.mjs", () => {
+test("CALIBRATION, the first shot matches weapon-sweep.mjs", () => {
   // THE test. A new instrument that disagrees with a trusted one is fiction.
   //
   // Only the FIRST shot is comparable: the sweep records intended damage and
@@ -469,8 +469,8 @@ test("CALIBRATION — the first shot matches weapon-sweep.mjs", () => {
   // The reference is the committed 3000-trial post-Overmatch sweep
   // (scripts/balance/report-2026-07-15-overflow.txt): Autocannon's field tier
   // (Depleted Core) reads 6.06 SP/attack pooled over targets/arcs/classes at its
-  // best distance. This duel is one cell of that pool — medium vs medium, front
-  // arc, sweet spot — so it will not equal 6.06 exactly. It must land in the same
+  // best distance. This duel is one cell of that pool, medium vs medium, front
+  // arc, sweet spot, so it will not equal 6.06 exactly. It must land in the same
   // territory. A wide band on purpose: this catches "the harness is broken", not
   // "the harness is 4% off".
   let total = 0;
@@ -481,7 +481,7 @@ test("CALIBRATION — the first shot matches weapon-sweep.mjs", () => {
   }
   const mean = total / N;
   assert.ok(mean > 3 && mean < 9,
-    `first-shot SP ${mean.toFixed(2)} is nowhere near the sweep's 6.06 — the harness is wrong, not the sweep`);
+    `first-shot SP ${mean.toFixed(2)} is nowhere near the sweep's 6.06, the harness is wrong, not the sweep`);
 });
 ```
 
@@ -490,7 +490,7 @@ test("CALIBRATION — the first shot matches weapon-sweep.mjs", () => {
 Run: `node --test scripts/balance/duel-sim.test.mjs`
 Expected: PASS, 4/4.
 
-**If the calibration fails, stop.** Do not tune the band to make it pass — that is the instrument telling you it disagrees with 32.3M committed attacks, and the harness is the new thing. Debug the driver. If after debugging you believe the *sweep* is wrong, that is a finding worth more than this plan; raise it rather than editing the assertion.
+**If the calibration fails, stop.** Do not tune the band to make it pass, that is the instrument telling you it disagrees with 32.3M committed attacks, and the harness is the new thing. Debug the driver. If after debugging you believe the *sweep* is wrong, that is a finding worth more than this plan; raise it rather than editing the assertion.
 
 If "a duel actually fires" fails, the driver is broken. Do not proceed with a harness that reports zeros.
 
@@ -505,7 +505,7 @@ The last one guards the spTaken column, which is the only way denial
 effects can ever appear.
 
 A harness that spins and reports a tidy 0 is the failure mode that
-matters here — the current sweep silently measured field twice on its
+matters here, the current sweep silently measured field twice on its
 first run and every conclusion from it was garbage."
 ```
 
@@ -532,7 +532,7 @@ import { WEAPONS, WEAPON_UPGRADES } from "../../shared/game-state.js";
 
 const TRIALS = Number(process.env.TRIALS || 500);
 const CHASSIS_A = "medium-lance-mortar";
-const CHASSIS_B = "medium-lance-mortar"; // the CONTROL — a documented constant
+const CHASSIS_B = "medium-lance-mortar"; // the CONTROL, a documented constant
 
 function tiersFor(weapon) {
   const ups = WEAPON_UPGRADES[weapon] || [];
@@ -606,13 +606,13 @@ const f = (n, p = 2) => (Number.isFinite(n) ? n.toFixed(p) : "  -  ");
 
 console.log(`trials/cell=${j.trials} rounds=${j.rounds} control=${j.chassisB}`);
 console.log("");
-console.log("CAVEATS — read before tuning:");
+console.log("CAVEATS, read before tuning:");
 // Printed from policy.mjs's exported constant, NOT re-typed. Two copies of a
-// caveat drift, and a caveat that drifts is worse than none — the reader trusts
+// caveat drift, and a caveat that drifts is worse than none, the reader trusts
 // it. policy.mjs owns its own biases; this prints them.
 console.log(KNOWN_BIASES);
 console.log("  * The control rig is fixed; its loadout shapes every number.");
-console.log("  * Measures cadence, DoT, chipping and heat — NOT decisions.");
+console.log("  * Measures cadence, DoT, chipping and heat, NOT decisions.");
 console.log("    Fire Control Lock, Enfilade, Barrage and the spatial effects");
 console.log("    need a bot. If any of those show a value, this harness is lying.");
 console.log("");
@@ -637,7 +637,7 @@ for (const [w, rows] of Object.entries(byWeapon).sort((a, b) =>
 }
 
 console.log("");
-console.log("=== UPGRADE UPLIFT vs the weapon's field tier — a tier at ~0 is inert here ===");
+console.log("=== UPGRADE UPLIFT vs the weapon's field tier, a tier at ~0 is inert here ===");
 const lifts = [];
 for (const rows of Object.values(byWeapon)) {
   const base = rows.find((r) => r.tier === "field");
@@ -661,7 +661,7 @@ Expected: the caveat block, then a table with non-zero SP@10.
 
 ```bash
 git add scripts/balance/duel-report.mjs
-git commit -m "feat(balance): duel report — SP@10, wreck-rate, uplift
+git commit -m "feat(balance): duel report, SP@10, wreck-rate, uplift
 
 Leads with its own caveats because the number most likely to be misused
 is the one printed without them: greedySafe under-rates high-heat
@@ -690,7 +690,7 @@ DATA=duel.json node scripts/balance/duel-report.mjs > scripts/balance/duel-2026-
 cat scripts/balance/duel-2026-07-15.txt
 ```
 
-- [ ] **Step 3: Check the falsifiable prediction — this is the acceptance bar**
+- [ ] **Step 3: Check the falsifiable prediction, this is the acceptance bar**
 
 We know *why* the sweep is blind (`structuredClone` per trial), so we predicted exactly which upgrades this fixes. Check each:
 
@@ -698,12 +698,12 @@ This run is **longRange-only** (the main iterates `WEAPONS.longRange`), so melee
 
 | should now be non-zero | should still be ~0 |
 |---|---|
-| `penetrator-rounds` — fires on rounds 3, 6, 9 | `fire-control-lock` — needs a paint turn |
-| `ion-burn` (Arc Gun) — burn ticks across activations | `enfilade` — needs aimed shots |
-| `rivet-lock` (Rivet Gun) — needs repeated hits on one location | `barrage` (Mortar) — needs a zone commit |
-| `staple-burst` — if it lands enough hits to deny an action | `harpoon-winch` — spatial |
+| `penetrator-rounds`: fires on rounds 3, 6, 9 | `fire-control-lock`: needs a paint turn |
+| `ion-burn` (Arc Gun), burn ticks across activations | `enfilade`: needs aimed shots |
+| `rivet-lock` (Rivet Gun), needs repeated hits on one location | `barrage` (Mortar), needs a zone commit |
+| `staple-burst`: if it lands enough hits to deny an action | `harpoon-winch`: spatial |
 
-**If `fire-control-lock` shows a value, the harness is lying** — `greedySafe` never paints, so it cannot legitimately fire. Stop and find out why. The same goes for `enfilade` (the policy never takes an Aimed Shot) and `barrage`.
+**If `fire-control-lock` shows a value, the harness is lying**: `greedySafe` never paints, so it cannot legitimately fire. Stop and find out why. The same goes for `enfilade` (the policy never takes an Aimed Shot) and `barrage`.
 
 That right-hand column is not a wishlist; it is the falsifiable half of the prediction. A harness that reports value for an upgrade it provably cannot exercise has a bug, and this is the only place it gets caught.
 
@@ -717,7 +717,7 @@ git commit -m "chore(balance): first duel-harness run at 500 trials"
 
 - [ ] **Step 5: Record the finding**
 
-Update `docs/superpowers/specs/2026-07-15-weapon-balance-findings.md`: mark step 5 as landed, point at `scripts/balance/duel-2026-07-15.txt`, and state **how many of the 44 previously-invisible upgrades now measure non-zero**. That number is this whole project's result — write it down explicitly rather than leaving it implied.
+Update `docs/superpowers/specs/2026-07-15-weapon-balance-findings.md`: mark step 5 as landed, point at `scripts/balance/duel-2026-07-15.txt`, and state **how many of the 44 previously-invisible upgrades now measure non-zero**. That number is this whole project's result, write it down explicitly rather than leaving it implied.
 
 ```bash
 git add docs/superpowers/specs/2026-07-15-weapon-balance-findings.md
@@ -737,7 +737,7 @@ git commit -m "docs(balance): the duel harness lands; N of 44 upgrades now visib
 
 ## Out of scope
 
-- **Melee weapons** — the sweep main iterates `WEAPONS.longRange`. Extending to melee needs the policy to pick a slot; a follow-up.
-- **Defensive-upgrade valuation** — Tower Shield, Anvil Boss and Emplacement sit on the control, which doesn't vary.
+- **Melee weapons**: the sweep main iterates `WEAPONS.longRange`. Extending to melee needs the policy to pick a slot; a follow-up.
+- **Defensive-upgrade valuation**: Tower Shield, Anvil Boss and Emplacement sit on the control, which doesn't vary.
 - **Any tuning.** This builds the instrument. It changes no balance numbers.
-- **Bot-vs-bot** (step 2) — gated on the opponent brain. Run this first; its results say whether that is worth it.
+- **Bot-vs-bot** (step 2), gated on the opponent brain. Run this first; its results say whether that is worth it.

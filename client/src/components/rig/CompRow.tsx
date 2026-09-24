@@ -6,14 +6,14 @@ interface Props { rig: Rig; loc: Loc; onCommand: (verb: string, attrs: Record<st
 
 export function CompRow({ rig, loc, onCommand }: Props) {
   // `loc` is a part name (hull/arms/legs/engine, or tank/walker parts like
-  // tracks/turret/mount) — all share the Component shape { sp, max, destroyed }.
+  // tracks/turret/mount), all share the Component shape { sp, max, destroyed }.
   const c = rig[loc as keyof Rig] as Component;
   const label = loc.charAt(0).toUpperCase() + loc.slice(1);
   const text = c.destroyed ? "DESTROYED" : c.sp === 0 ? "CATASTROPHIC" : `${c.sp}/${c.max}`;
 
   // Remember the last structure so a change flashes the bar: a red shake on a
   // hit, a green pulse on a repair, with a floating ∓N so it's easy to track.
-  // Purely presentational — this reads server state, it never changes it.
+  // Purely presentational, this reads server state, it never changes it.
   const prevSp = useRef<number | null>(null);
   const prior = prevSp.current;
   useEffect(() => { prevSp.current = c.sp; });

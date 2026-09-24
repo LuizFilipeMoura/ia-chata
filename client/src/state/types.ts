@@ -89,7 +89,7 @@ export interface ResolutionTerm {
 /**
  * One resolution step. The panel walks these in order and renders each.
  *
- * A step is never omitted to signal "nothing happened" — a chain that stopped
+ * A step is never omitted to signal "nothing happened", a chain that stopped
  * early still emits the step that stopped it, with an `out` that says why.
  * An absent step and a failed step must never look the same to a player.
  */
@@ -100,12 +100,12 @@ export interface ResolutionStep {
   /** Wound step only: the effective Penetration and the struck location's Toughness. */
   pen?: number | null;
   toughness?: number | null;
-  /** Location step only. Null on an aimed shot — no d12 decided the part. */
+  /** Location step only. Null on an aimed shot, no d12 decided the part. */
   die?: number | null;
   /**
    * Every input that FIRED. A modifier resolving to 0 is omitted, EXCEPT
    * cancellers (e.g. "targeting computer (ignores cover)") which explain an
-   * absence — so the render must NOT filter zeros.
+   * absence, so the render must NOT filter zeros.
    */
   terms?: ResolutionTerm[];
   dice?: Array<{ value: number; ok: boolean }>;
@@ -116,11 +116,11 @@ export interface ResolutionStep {
 export interface ResolutionBreakdown {
   actor?: string;
   weapon?: string;
-  /** The target unit's NAME. Never a number — the wound TN lives on the wound step. */
+  /** The target unit's NAME. Never a number, the wound TN lives on the wound step. */
   target?: string;
   /** The ordered ledger, in the engine's resolution order: hit → location → wound → damage. */
   steps?: ResolutionStep[];
-  /** Structure points dealt — the headline, rendered large above the ledger. */
+  /** Structure points dealt, the headline, rendered large above the ledger. */
   sp?: number;
   location?: string;
 }

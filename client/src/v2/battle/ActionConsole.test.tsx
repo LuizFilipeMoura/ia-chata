@@ -36,7 +36,7 @@ test("renders empty for a non-active rig", () => {
   expect(container.querySelector(".v2-ac")?.children.length ?? 0).toBe(0);
 });
 
-// Field Weld / Vent / Paint (spec: Support Units) — a Recon-module rig's
+// Field Weld / Vent / Paint (spec: Support Units), a Recon-module rig's
 // Support tile opens the Paint target picker, which dispatches the command
 // once a target is confirmed.
 test("tapping Paint (Recon module) opens a target picker and dispatches the paint command", async () => {

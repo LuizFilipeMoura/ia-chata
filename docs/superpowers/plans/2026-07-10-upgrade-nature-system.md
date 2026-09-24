@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give every weapon three upgrades — one per **nature** (Field / Tuned / Prototype) — badge them in the commission wizard, and enforce "at most one Prototype per rig" client- and server-side. Wire only the upgrades whose effects already exist in the engine; new mechanics are a separate plan.
+**Goal:** Give every weapon three upgrades, one per **nature** (Field / Tuned / Prototype), badge them in the commission wizard, and enforce "at most one Prototype per rig" client- and server-side. Wire only the upgrades whose effects already exist in the engine; new mechanics are a separate plan.
 
-**Architecture:** Add a `nature` string to every `WEAPON_UPGRADES` entry and expand each weapon's list from 2 to 3 (keep/rename/add/drop per the spec). The wizard already renders `WEAPON_UPGRADES[name]` — add a nature badge and grey-out the second Prototype. The server add-guard (`server/routes/game.js`) already resolves chassis; extend it to reject a two-Prototype loadout and unknown upgrade ids. Placeholder-safe upgrade ids for new-mechanic Prototypes are added here (data only) but their effects land in the mechanics plan.
+**Architecture:** Add a `nature` string to every `WEAPON_UPGRADES` entry and expand each weapon's list from 2 to 3 (keep/rename/add/drop per the spec). The wizard already renders `WEAPON_UPGRADES[name]`: add a nature badge and grey-out the second Prototype. The server add-guard (`server/routes/game.js`) already resolves chassis; extend it to reject a two-Prototype loadout and unknown upgrade ids. Placeholder-safe upgrade ids for new-mechanic Prototypes are added here (data only) but their effects land in the mechanics plan.
 
 **Tech Stack:** Node ESM (`shared/*.js`), React + TypeScript (`client/src`), Vitest (client) + `node --test` (shared/server). Work directly on `main` (see AGENTS.md).
 
@@ -14,14 +14,14 @@
 
 ## File Structure
 
-- `shared/game-state.js` — `WEAPON_UPGRADES` gets `nature` on every entry + the new 3rd upgrades; add `NATURES` constant + `upgradeNature()` + `countPrototypes()` helpers.
-- `shared/game-state.test.js` — data-shape tests (3 per weapon, one of each nature) + helper tests.
-- `server/routes/game.js` — extend `enforceChassis` (rename to `enforceAdd`) to reject double-Prototype loadouts and unknown upgrade ids.
-- `server/chassis.test.js` — enforcement tests for the new rejections.
-- `client/shared.d.ts` — type `nature` on `WEAPON_UPGRADES`, declare the new helpers.
-- `client/src/components/wizards/UnitWizard.tsx` — nature badge per upgrade choice; disable the second Prototype.
-- `client/src/components/wizards/RigWizard.test.tsx` — wizard behaviour test for the badge + Prototype lock.
-- `rules.md` — document the nature system in the Weapon Upgrades section.
+- `shared/game-state.js`: `WEAPON_UPGRADES` gets `nature` on every entry + the new 3rd upgrades; add `NATURES` constant + `upgradeNature()` + `countPrototypes()` helpers.
+- `shared/game-state.test.js`: data-shape tests (3 per weapon, one of each nature) + helper tests.
+- `server/routes/game.js`: extend `enforceChassis` (rename to `enforceAdd`) to reject double-Prototype loadouts and unknown upgrade ids.
+- `server/chassis.test.js`: enforcement tests for the new rejections.
+- `client/shared.d.ts`: type `nature` on `WEAPON_UPGRADES`, declare the new helpers.
+- `client/src/components/wizards/UnitWizard.tsx`: nature badge per upgrade choice; disable the second Prototype.
+- `client/src/components/wizards/RigWizard.test.tsx`: wizard behaviour test for the badge + Prototype lock.
+- `rules.md`: document the nature system in the Weapon Upgrades section.
 
 New upgrade ids introduced here (data only; effects in the mechanics plan). Existing effects reused where noted.
 
@@ -56,7 +56,7 @@ test("every WEAPON_UPGRADES entry declares a valid nature", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `NATURES` is not exported / `u.nature` undefined.
+Expected: FAIL, `NATURES` is not exported / `u.nature` undefined.
 
 - [ ] **Step 3: Add the constant + helper**
 
@@ -112,14 +112,14 @@ Example (Autocannon block becomes):
   ],
 ```
 
-Leave the soon-to-be-dropped/renamed entries (e.g. Sniper `match-barrel`, Sword `keen-edge`, Siege Maul `extended-barrel`, Bulwark `boss-spike`, etc.) in place for now — Task 2 handles them. They still need a `nature` to satisfy the test; give each a `nature: "tuned"` temporarily (they are removed in Task 2). To avoid a temporary-value smell, do Task 1 and Task 2 as one commit.
+Leave the soon-to-be-dropped/renamed entries (e.g. Sniper `match-barrel`, Sword `keen-edge`, Siege Maul `extended-barrel`, Bulwark `boss-spike`, etc.) in place for now, Task 2 handles them. They still need a `nature` to satisfy the test; give each a `nature: "tuned"` temporarily (they are removed in Task 2). To avoid a temporary-value smell, do Task 1 and Task 2 as one commit.
 
 - [ ] **Step 5: Run to verify pass**
 
 Run: `node --test shared/game-state.test.js`
 Expected: PASS.
 
-- [ ] **Step 6: Commit** (fold Task 2 in — see note above; commit after Task 2).
+- [ ] **Step 6: Commit** (fold Task 2 in, see note above; commit after Task 2).
 
 ---
 
@@ -144,11 +144,11 @@ test("every weapon offers exactly one upgrade of each nature", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — weapons have 2 entries, no `prototype`.
+Expected: FAIL, weapons have 2 entries, no `prototype`.
 
 - [ ] **Step 3: Apply keep/rename/add/drop to each weapon**
 
-Rewrite `WEAPON_UPGRADES` so each of the 16 weapons has exactly `[field, tuned, prototype]`. Drop the entries marked *(drop)*, rename where noted, and add the Prototype (and any missing Field/Tuned). **New-mechanic effects are placeholders here** — give each new upgrade `effect: {}` and a `TODO(mechanics)` comment; the mechanics plan fills them. Full target set:
+Rewrite `WEAPON_UPGRADES` so each of the 16 weapons has exactly `[field, tuned, prototype]`. Drop the entries marked *(drop)*, rename where noted, and add the Prototype (and any missing Field/Tuned). **New-mechanic effects are placeholders here**: give each new upgrade `effect: {}` and a `TODO(mechanics)` comment; the mechanics plan fills them. Full target set:
 
 ```javascript
 export const WEAPON_UPGRADES = {
@@ -286,7 +286,7 @@ test("countPrototypes counts prototype picks across a rig's two upgrades", () =>
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `countPrototypes` not exported.
+Expected: FAIL, `countPrototypes` not exported.
 
 - [ ] **Step 3: Implement**
 
@@ -357,7 +357,7 @@ test("enforceChassis rejects an upgrade id that isn't valid for the weapon", () 
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `node --test server/chassis.test.js`
-Expected: FAIL — no error returned yet.
+Expected: FAIL, no error returned yet.
 
 - [ ] **Step 3: Extend `enforceChassis`**
 
@@ -420,7 +420,7 @@ In `client/shared.d.ts`, change the `WEAPON_UPGRADES` declaration and add three 
 - [ ] **Step 2: Typecheck**
 
 Run: `npx tsc --noEmit -p tsconfig.json`
-Expected: no NEW errors from `shared.d.ts`/`UnitWizard.tsx` (the pre-existing `CompRow.tsx` error is unrelated — ignore it).
+Expected: no NEW errors from `shared.d.ts`/`UnitWizard.tsx` (the pre-existing `CompRow.tsx` error is unrelated, ignore it).
 
 - [ ] **Step 3: Commit**
 
@@ -462,7 +462,7 @@ test("weapons step badges each upgrade with its nature", async () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run client/src/components/wizards/RigWizard.test.tsx`
-Expected: FAIL — no "Field"/"Prototype" badge text yet.
+Expected: FAIL, no "Field"/"Prototype" badge text yet.
 
 - [ ] **Step 3: Render the badge**
 
@@ -525,7 +525,7 @@ test("selecting a Prototype on one weapon disables Prototype on the other", asyn
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run client/src/components/wizards/RigWizard.test.tsx`
-Expected: FAIL — button not disabled.
+Expected: FAIL, button not disabled.
 
 - [ ] **Step 3: Implement the lock**
 
@@ -575,7 +575,7 @@ At the two call sites in the rig Weapons step, pass whether the *other* weapon's
 
 - [ ] **Step 4: Guard chassis re-selection**
 
-`selectChassis` resets both upgrades to `firstUpgradeId(...)`. First upgrades are all `field` nature (verify against Task 2 — the first entry per weapon is Field), so no double-Prototype can arise from a chassis switch. Add a one-line comment noting this invariant above `selectChassis`.
+`selectChassis` resets both upgrades to `firstUpgradeId(...)`. First upgrades are all `field` nature (verify against Task 2, the first entry per weapon is Field), so no double-Prototype can arise from a chassis switch. Add a one-line comment noting this invariant above `selectChassis`.
 
 - [ ] **Step 5: Run to verify pass**
 
@@ -637,9 +637,9 @@ After the existing "Perks are being reworked" note, add:
 
 ```markdown
 > **Upgrade natures.** Every weapon now offers **three** upgrades, one of each nature, and you pick **one per weapon**:
-> - **Field** — unconditional, always-on, reinforces the weapon's role. The safe default.
-> - **Tuned** — conditional: a trigger (target state, timing, positioning) that out-pays Field when set up.
-> - **Prototype** — systemic, tracked, high-payoff, and may carry a downside. **A rig may run at most one Prototype.**
+> - **Field**: unconditional, always-on, reinforces the weapon's role. The safe default.
+> - **Tuned**: conditional: a trigger (target state, timing, positioning) that out-pays Field when set up.
+> - **Prototype**: systemic, tracked, high-payoff, and may carry a downside. **A rig may run at most one Prototype.**
 ```
 
 - [ ] **Step 2: Commit**
@@ -653,8 +653,8 @@ git commit -m "docs(rules): document the Field/Tuned/Prototype upgrade natures"
 
 ## Self-review checklist (run after implementing)
 
-- **Coverage:** every SPEC Phase-4 requirement has a task — data model (T1–2), one-prototype helper (T3), server enforcement (T4), types (T5), wizard badge (T6) + lock (T7), styling (T8), docs (T9). ✅
-- **Placeholders:** new-mechanic upgrades intentionally ship `effect: {}` + `TODO(mechanics)` — that's a scoping boundary, not a plan gap (effects land in the mechanics plan). The `✅`-effect upgrades carry real effects.
+- **Coverage:** every SPEC Phase-4 requirement has a task, data model (T1–2), one-prototype helper (T3), server enforcement (T4), types (T5), wizard badge (T6) + lock (T7), styling (T8), docs (T9). ✅
+- **Placeholders:** new-mechanic upgrades intentionally ship `effect: {}` + `TODO(mechanics)`: that's a scoping boundary, not a plan gap (effects land in the mechanics plan). The `✅`-effect upgrades carry real effects.
 - **Type consistency:** `upgradeNature(weapon, id)`, `countPrototypes(weapons, upgrades)`, `nature: "field"|"tuned"|"prototype"` used identically in shared, server, `.d.ts`, and wizard.
 
 ## Handoff note

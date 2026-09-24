@@ -1,4 +1,4 @@
-# Equipment Depth — Nature Upgrades + Expanded Catalog — Implementation Plan
+# Equipment Depth, Nature Upgrades + Expanded Catalog, Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,22 +8,22 @@
 
 **Tech Stack:** Node ESM, `node:test` + `node:assert` (run via `npm test`), React + TypeScript (Vite) for the wizard, plain CSS.
 
-**Scope note (phasing, from the design spec):** This plan is **Phase 1** — the framework, the full 8-family catalog with working base pieces, the cap, the wizard, rules, and content. The conditional **Tuned** (8) and systemic **Prototype** (8) upgrade *mechanics* are explicitly **out of scope here**; they ship as inert data rows now and are implemented one-at-a-time in follow-on plans (see the Deferred Mechanics Backlog at the end). This matches how weapon Prototypes shipped (`effect: {}` + `TODO(mechanics)`).
+**Scope note (phasing, from the design spec):** This plan is **Phase 1**: the framework, the full 8-family catalog with working base pieces, the cap, the wizard, rules, and content. The conditional **Tuned** (8) and systemic **Prototype** (8) upgrade *mechanics* are explicitly **out of scope here**; they ship as inert data rows now and are implemented one-at-a-time in follow-on plans (see the Deferred Mechanics Backlog at the end). This matches how weapon Prototypes shipped (`effect: {}` + `TODO(mechanics)`).
 
 ---
 
 ## File Structure
 
-- `shared/game-state.js` — add 3 families to `EQUIPMENT`; add `EQUIPMENT_UPGRADES`; add helpers (`equipmentUpgradeNature`, `firstEquipmentUpgradeId`, `normalizeEquipmentUpgrade`); extend `countPrototypes`; thread `equipmentUpgrade` through `makeRig`/`makeUnit`; wire the 8 Field effects + 3 new base passives/actives.
-- `shared/combat.js` — read equipment/upgrade in `rollImpacts` (Reinforced Plating, Reactive Plating) and `computeModifiedAim`/`rollToHit` (Targeting Computer, Lock Sight); thread `targetSmoke` in `resolveAttack`.
-- `shared/game-state.test.js`, `shared/combat.test.js` — behavior tests.
-- `server/routes/game.js` — `enforceChassis` validates + counts the equipment upgrade.
-- `server/chassis.test.js` — suggestion pointing at a new family id.
-- `client/src/v2/overlays/CommissionWizard.tsx` — equipment nature sub-picker + cap cross-lock + default + command threading + confirm row.
-- `client/src/v2/lib/commissionData.ts` — `firstEquipmentUpgradeId` client helper.
-- `client/src/v2/styles/forge.css` — nature picker beside the suggestion highlight.
-- `rules.md` — §15 rewrite, §3 clause.
-- `content/chassis.json` — re-author suggestions toward new families.
+- `shared/game-state.js`: add 3 families to `EQUIPMENT`; add `EQUIPMENT_UPGRADES`; add helpers (`equipmentUpgradeNature`, `firstEquipmentUpgradeId`, `normalizeEquipmentUpgrade`); extend `countPrototypes`; thread `equipmentUpgrade` through `makeRig`/`makeUnit`; wire the 8 Field effects + 3 new base passives/actives.
+- `shared/combat.js`: read equipment/upgrade in `rollImpacts` (Reinforced Plating, Reactive Plating) and `computeModifiedAim`/`rollToHit` (Targeting Computer, Lock Sight); thread `targetSmoke` in `resolveAttack`.
+- `shared/game-state.test.js`, `shared/combat.test.js`: behavior tests.
+- `server/routes/game.js`: `enforceChassis` validates + counts the equipment upgrade.
+- `server/chassis.test.js`: suggestion pointing at a new family id.
+- `client/src/v2/overlays/CommissionWizard.tsx`: equipment nature sub-picker + cap cross-lock + default + command threading + confirm row.
+- `client/src/v2/lib/commissionData.ts`: `firstEquipmentUpgradeId` client helper.
+- `client/src/v2/styles/forge.css`: nature picker beside the suggestion highlight.
+- `rules.md`: §15 rewrite, §3 clause.
+- `content/chassis.json`: re-author suggestions toward new families.
 
 Naming locked (use verbatim across all tasks):
 - New EQUIPMENT ids: `blast-furnace-core`, `targeting-computer`, `reactive-plating`.
@@ -62,7 +62,7 @@ test("EQUIPMENT has 8 families including the 3 new ones", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — `Object.keys(EQUIPMENT).length` is 5, not 8.
+Expected: FAIL, `Object.keys(EQUIPMENT).length` is 5, not 8.
 
 - [ ] **Step 3: Add the 3 families**
 
@@ -134,14 +134,14 @@ test("equipment upgrade helpers resolve", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — `EQUIPMENT_UPGRADES` is undefined.
+Expected: FAIL, `EQUIPMENT_UPGRADES` is undefined.
 
 - [ ] **Step 3: Add the map + helpers**
 
 In `shared/game-state.js`, immediately after the `EQUIPMENT_ACTIVE_BY_KEY` definition (line ~190):
 
 ```js
-// Equipment upgrades — mirrors WEAPON_UPGRADES. Each family offers one upgrade
+// Equipment upgrades, mirrors WEAPON_UPGRADES. Each family offers one upgrade
 // of each nature (Field / Tuned / Prototype), picked at commission. The 8 Field
 // rows carry live effect tags (simple modifiers to existing hooks). The Tuned
 // and Prototype rows ship inert (`effect: {}`, TODO(mechanics)) and are wired in
@@ -150,7 +150,7 @@ export const EQUIPMENT_UPGRADES = {
   "ablative-plating": [
     { id: "reinforced-plating", nature: "field", name: "Reinforced Plating", tag: "Harden gives −2 impact, not −1", effect: { hardenImpact: 2 } },
     { id: "reactive-armor", nature: "tuned", name: "Reactive Armor", tag: "First hit each round hardens that location", effect: {} }, // TODO(mechanics)
-    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits — each costs heat", effect: {} }, // TODO(mechanics)
+    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits, each costs heat", effect: {} }, // TODO(mechanics)
   ],
   "radiator-array": [
     { id: "twin-radiators", nature: "field", name: "Twin Radiators", tag: "Purge vents −3, not −2", effect: { purgeHeat: -3 } },
@@ -160,17 +160,17 @@ export const EQUIPMENT_UPGRADES = {
   "servo-actuators": [
     { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint costs 0 heat", effect: { sprintHeat: 0 } },
     { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 STR", effect: {} }, // TODO(mechanics)
-    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", effect: {} }, // TODO(mechanics)
+    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in, heat + cooldown", effect: {} }, // TODO(mechanics)
   ],
   "overclock-core": [
     { id: "redundant-capacitors", nature: "field", name: "Redundant Capacitors", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
     { id: "adrenaline-surge", nature: "tuned", name: "Adrenaline Surge", tag: "Below half SP, Overclock grants +3 actions", effect: {} }, // TODO(mechanics)
-    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 STR — but overheat bonus doubles", effect: {} }, // TODO(mechanics)
+    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 STR, but overheat bonus doubles", effect: {} }, // TODO(mechanics)
   ],
   "field-repair-suite": [
     { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
     { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 3 SP on a destroyed location", effect: {} }, // TODO(mechanics)
-    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery — at a heat-cap cost", effect: {} }, // TODO(mechanics)
+    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery, at a heat-cap cost", effect: {} }, // TODO(mechanics)
   ],
   "blast-furnace-core": [
     { id: "insulated-core", nature: "field", name: "Insulated Core", tag: "Safe up to +2 over Capacity, not +1", effect: { thermalMargin: 2 } },
@@ -185,7 +185,7 @@ export const EQUIPMENT_UPGRADES = {
   "reactive-plating": [
     { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 STR, not −1", effect: { sideRearStr: -2 } },
     { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: {} }, // TODO(mechanics)
-    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", effect: {} }, // TODO(mechanics)
+    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls, at a heat cost", effect: {} }, // TODO(mechanics)
   ],
 };
 
@@ -258,7 +258,7 @@ test("countPrototypes counts an equipment Prototype", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — equipment prototype not counted (returns 1, not 2).
+Expected: FAIL, equipment prototype not counted (returns 1, not 2).
 
 - [ ] **Step 3: Extend the function**
 
@@ -314,7 +314,7 @@ test("makeRig stores a normalized equipmentUpgrade", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — `makeRig` takes 6 args; `equipmentUpgrade` is undefined.
+Expected: FAIL, `makeRig` takes 6 args; `equipmentUpgrade` is undefined.
 
 - [ ] **Step 3: Add the parameter**
 
@@ -336,7 +336,7 @@ In the returned rig object (near `equipment: equipmentId,` at ~652), add:
     equipmentUpgrade: equipmentUpgradeId,
 ```
 
-In `makeUnit` (the rig branch, ~761-764), pass it through — change the `makeRig(...)` call to forward `opts.equipmentUpgrade`:
+In `makeUnit` (the rig branch, ~761-764), pass it through, change the `makeRig(...)` call to forward `opts.equipmentUpgrade`:
 
 ```js
     return makeRig(opts.id, opts.name, opts.class, opts.owner, {
@@ -364,7 +364,7 @@ git commit -m "feat(equipment): thread equipmentUpgrade through makeRig/makeUnit
 
 ---
 
-## Task 5: Server — validate + cap the equipment upgrade in `enforceChassis`
+## Task 5: Server, validate + cap the equipment upgrade in `enforceChassis`
 
 **Files:**
 - Modify: `server/routes/game.js:1-2, 9-33`
@@ -402,12 +402,12 @@ test("enforceChassis rejects an unknown equipment upgrade id", () => {
 });
 ```
 
-> Note: `depleted-core` is the Autocannon Field upgrade and `vice-grip` is the Claw Tuned upgrade — neither is a Prototype, so the lone-equipment-Prototype case has exactly one Prototype total.
+> Note: `depleted-core` is the Autocannon Field upgrade and `vice-grip` is the Claw Tuned upgrade, neither is a Prototype, so the lone-equipment-Prototype case has exactly one Prototype total.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npm test -- server/chassis.test.js`
-Expected: FAIL — equipment upgrade neither validated nor counted.
+Expected: FAIL, equipment upgrade neither validated nor counted.
 
 - [ ] **Step 3: Wire validation + count**
 
@@ -467,7 +467,7 @@ git commit -m "feat(equipment): validate + cap the equipment upgrade server-side
 
 ---
 
-## Task 6: Field effect — Reinforced Plating (Harden −2)
+## Task 6: Field effect, Reinforced Plating (Harden −2)
 
 **Files:**
 - Modify: `shared/combat.js:261`
@@ -475,7 +475,7 @@ git commit -m "feat(equipment): validate + cap the equipment upgrade server-side
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `shared/combat.test.js` (follow the file's existing `rollImpacts` test style — fixed dice, two rigs). Minimal shape:
+Add to `shared/combat.test.js` (follow the file's existing `rollImpacts` test style, fixed dice, two rigs). Minimal shape:
 
 ```js
 import { rollImpacts } from "./combat.js";
@@ -502,11 +502,11 @@ test("Reinforced Plating deepens Harden to −2 impact", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/combat.test.js`
-Expected: FAIL — both totals equal (Reinforced Plating not read).
+Expected: FAIL, both totals equal (Reinforced Plating not read).
 
 - [ ] **Step 3: Implement**
 
-In `shared/combat.js`, import `EQUIPMENT_UPGRADES` at the top (add to the existing `game-state.js`/`rules.js` import group — check which file exports it; it's `game-state.js`, but combat.js must avoid an import cycle. `rollImpacts` already receives the `target` rig, so read the tag off the rig without importing the catalog: store the numeric modifier on the rig at commission instead).
+In `shared/combat.js`, import `EQUIPMENT_UPGRADES` at the top (add to the existing `game-state.js`/`rules.js` import group, check which file exports it; it's `game-state.js`, but combat.js must avoid an import cycle. `rollImpacts` already receives the `target` rig, so read the tag off the rig without importing the catalog: store the numeric modifier on the rig at commission instead).
 
 Simplest cycle-free approach: read `target.equipmentUpgrade` and the known id directly. Replace line 261:
 
@@ -531,7 +531,7 @@ git commit -m "feat(equipment): Reinforced Plating deepens Harden to -2"
 
 ---
 
-## Task 7: Field effects — Twin Radiators + Redundant Capacitors (equipment active heat)
+## Task 7: Field effects, Twin Radiators + Redundant Capacitors (equipment active heat)
 
 **Files:**
 - Modify: `shared/game-state.js:1771-1780` (equipment-active block)
@@ -559,7 +559,7 @@ test("Field upgrades override equipment active heat", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — `equipmentActiveHeat` undefined.
+Expected: FAIL, `equipmentActiveHeat` undefined.
 
 - [ ] **Step 3: Add the helper + use it**
 
@@ -596,7 +596,7 @@ git commit -m "feat(equipment): Twin Radiators / Redundant Capacitors adjust act
 
 ---
 
-## Task 8: Field effects — Master Toolkit (Repair +2) + Reinforced Servos (Sprint 0 heat)
+## Task 8: Field effects, Master Toolkit (Repair +2) + Reinforced Servos (Sprint 0 heat)
 
 **Files:**
 - Modify: `shared/game-state.js:2066` (repair), `:1884` (sprint heat)
@@ -625,7 +625,7 @@ test("Master Toolkit repairs +2, base suite +1, none +0", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — helpers undefined.
+Expected: FAIL, helpers undefined.
 
 - [ ] **Step 3: Add helpers + use them**
 
@@ -671,7 +671,7 @@ git commit -m "feat(equipment): Master Toolkit + Reinforced Servos Field effects
 
 ---
 
-## Task 9: New family — Reactive Plating passive + Angled Plates
+## Task 9: New family, Reactive Plating passive + Angled Plates
 
 **Files:**
 - Modify: `shared/combat.js` (`rollImpacts`, near line 261)
@@ -697,14 +697,14 @@ test("Reactive Plating docks side/rear attacker STR; Angled Plates doubles it", 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/combat.test.js`
-Expected: FAIL — no STR reduction on side arc.
+Expected: FAIL, no STR reduction on side arc.
 
 - [ ] **Step 3: Implement**
 
 In `shared/combat.js` `rollImpacts`, after the `hardened` line (edited in Task 6), add a Countermeasures term:
 
 ```js
-  // Reactive Plating (Countermeasures) — side/rear attacks lose STR. Angled
+  // Reactive Plating (Countermeasures), side/rear attacks lose STR. Angled
   // Plates (Field) doubles the dock to −2. Front arc is unaffected.
   let ctrm = 0;
   if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
@@ -732,7 +732,7 @@ git commit -m "feat(equipment): Reactive Plating side/rear STR dock + Angled Pla
 
 ---
 
-## Task 10: New family — Pop Smoke active (attacker −2 ACC vs the smoked rig)
+## Task 10: New family, Pop Smoke active (attacker −2 ACC vs the smoked rig)
 
 **Files:**
 - Modify: `shared/game-state.js` (equipment-active block ~1773; activation-start clear ~2384), `shared/combat.js` (`computeModifiedAim` ~51; `resolveAttack` ~348)
@@ -755,14 +755,14 @@ test("Pop Smoke worsens an attacker's modified Aim by 2", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/combat.test.js`
-Expected: FAIL — `targetSmoke` ignored.
+Expected: FAIL, `targetSmoke` ignored.
 
 - [ ] **Step 3a: Read smoke in `computeModifiedAim`**
 
 In `shared/combat.js`, inside `computeModifiedAim`, add a smoke penalty and fold it into `accTotal`:
 
 ```js
-  // Pop Smoke (Countermeasures active) — every attacker is at −2 ACC against a
+  // Pop Smoke (Countermeasures active), every attacker is at −2 ACC against a
   // rig hidden in its own smoke, until that rig's next activation.
   const smoke = opts.targetSmoke ? -2 : 0;
   const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty + paintBonus + smoke;
@@ -790,7 +790,7 @@ In `shared/game-state.js` equipment-active block (~1773), extend the `if (act ==
     }
 ```
 
-> If no `lockedBy` field exists yet, drop that line — the missile Lock lives on the *attacker* as `lockedTarget`; breaking it from the target side is a Phase-2 concern. Keep only `rig.smokeUntilNext = true;` for Phase 1.
+> If no `lockedBy` field exists yet, drop that line, the missile Lock lives on the *attacker* as `lockedTarget`; breaking it from the target side is a Phase-2 concern. Keep only `rig.smokeUntilNext = true;` for Phase 1.
 
 In the activation-start block (~2384), beside `rig.hardened = false;`, add:
 
@@ -808,12 +808,12 @@ Expected: PASS.
 
 ```bash
 git add shared/combat.js shared/game-state.js shared/combat.test.js
-git commit -m "feat(equipment): Pop Smoke — attackers -2 ACC vs the smoked rig"
+git commit -m "feat(equipment): Pop Smoke, attackers -2 ACC vs the smoked rig"
 ```
 
 ---
 
-## Task 11: New family — Blast Furnace Core passive (heat margin) + Insulated Core
+## Task 11: New family, Blast Furnace Core passive (heat margin) + Insulated Core
 
 **Files:**
 - Modify: `shared/game-state.js:858-873` (`heatMeter`)
@@ -842,14 +842,14 @@ test("Blast Furnace Core raises the safe heat margin", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — `over` is 1 for the Blast Furnace rig.
+Expected: FAIL, `over` is 1 for the Blast Furnace rig.
 
 - [ ] **Step 3: Implement the margin in `heatMeter`**
 
 In `shared/game-state.js` `heatMeter`, after `const cap = HEAT_CAPACITY[...] ?? 5;` (line 862), add the margin and apply it to an effective cap used by `over`/`bonus`/`zone`:
 
 ```js
-  // Blast Furnace Core (Thermal) — raises the safe threshold before the overheat
+  // Blast Furnace Core (Thermal), raises the safe threshold before the overheat
   // roll. Base margin +1; Insulated Core (Field) makes it +2.
   let margin = 0;
   if (rig?.equipment === "blast-furnace-core") {
@@ -890,7 +890,7 @@ git commit -m "feat(equipment): Blast Furnace Core heat margin + Insulated Core"
 
 ---
 
-## Task 12: New family — Heat Purge Wave active (vent + narrated AoE)
+## Task 12: New family, Heat Purge Wave active (vent + narrated AoE)
 
 **Files:**
 - Modify: `shared/game-state.js` (equipment-active block ~1773-1784)
@@ -917,7 +917,7 @@ test("Heat Purge Wave vents the rig to its cap and narrates an AoE", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- shared/game-state.test.js`
-Expected: FAIL — heat unchanged / no AoE narration.
+Expected: FAIL, heat unchanged / no AoE narration.
 
 - [ ] **Step 3: Implement**
 
@@ -930,7 +930,7 @@ In the equipment-active block, add a `heatpurgewave` branch alongside `harden`/`
     }
 ```
 
-The generic `pushResolution` at the end of the block already reports `active.text`, which contains the `3"` AoE instruction authored in Task 1 — so the narration requirement is met without special-casing the summary. Confirm `active.text` for `heatpurgewave` includes `3"` (it does).
+The generic `pushResolution` at the end of the block already reports `active.text`, which contains the `3"` AoE instruction authored in Task 1, so the narration requirement is met without special-casing the summary. Confirm `active.text` for `heatpurgewave` includes `3"` (it does).
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -946,7 +946,7 @@ git commit -m "feat(equipment): Heat Purge Wave vents to cap + narrates AoE"
 
 ---
 
-## Task 13: New family — Targeting Computer passive + Lock Sight + Ballistic Processor
+## Task 13: New family, Targeting Computer passive + Lock Sight + Ballistic Processor
 
 **Files:**
 - Modify: `shared/combat.js` (`computeModifiedAim` ~44-52; `rollToHit` rerolls ~98; `resolveAttack` ~348), `shared/game-state.js` (fire path sets/consumes the flags; Lock Sight active)
@@ -980,25 +980,25 @@ test("Targeting Computer passive: first shot ignores cover + engaged penalties",
 Run: `npm test -- shared/combat.test.js`
 Expected: FAIL.
 
-- [ ] **Step 3a: `computeModifiedAim` — Ballistic Processor + first-shot compensator**
+- [ ] **Step 3a: `computeModifiedAim`: Ballistic Processor + first-shot compensator**
 
 In `shared/combat.js` `computeModifiedAim`, compute a sweet-band accuracy bonus and let the first-shot compensator zero the positional penalties:
 
 ```js
-  // Targeting Computer passive — the first Fire this activation ignores cover
+  // Targeting Computer passive, the first Fire this activation ignores cover
   // and the engaged −2 (opts.fireControlFirst is set by the fire path, once).
   const coverEff = opts.fireControlFirst ? 0 : cover;
   const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
-  // Ballistic Processor (Field) — +1 ACC when the measured distance is in the
+  // Ballistic Processor (Field), +1 ACC when the measured distance is in the
   // weapon's sweet band (within its dropoff-zero window: |distance − sweet| ≤ 2).
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
   const ballistic = (attacker.equipment === "targeting-computer" && attacker.equipmentUpgrade === "ballistic-processor" && inSweetBand) ? 1 : 0;
   const accTotal = weaponAcc - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic;
 ```
 
-(Replace the earlier `accTotal` line from Task 10 with this one — it now includes `smoke` and `ballistic` and uses the `*Eff` penalties.)
+(Replace the earlier `accTotal` line from Task 10 with this one, it now includes `smoke` and `ballistic` and uses the `*Eff` penalties.)
 
-- [ ] **Step 3b: Lock Sight — reroll all misses on the next shot**
+- [ ] **Step 3b: Lock Sight, reroll all misses on the next shot**
 
 In `shared/combat.js` `rollToHit`, extend the `rerolls` line (~98) to include a full-volley reroll when `opts.lockSight`:
 
@@ -1050,14 +1050,14 @@ git commit -m "feat(equipment): Targeting Computer passive, Ballistic Processor,
 
 ---
 
-## Task 14: Wizard — equipment nature sub-picker + cap cross-lock
+## Task 14: Wizard, equipment nature sub-picker + cap cross-lock
 
 **Files:**
 - Modify: `client/src/v2/overlays/CommissionWizard.tsx` (state type ~35-37, defaults ~63-65/83-85, imports ~10, step-2 body ~340-378, confirm view ~389-396, command build ~146-148)
 - Modify: `client/src/v2/lib/commissionData.ts`
 - Modify: `client/src/v2/styles/forge.css`
 
-- [ ] **Step 1: Client helper — `firstEquipmentUpgradeId`**
+- [ ] **Step 1: Client helper, `firstEquipmentUpgradeId`**
 
 In `client/src/v2/lib/commissionData.ts`, extend the import and add a helper:
 
@@ -1069,7 +1069,7 @@ export function firstEquipmentUpgradeId(equipmentId: string): string | null {
 }
 ```
 
-- [ ] **Step 2: Wizard state — add `equipmentUpgrade`**
+- [ ] **Step 2: Wizard state, add `equipmentUpgrade`**
 
 In `CommissionWizard.tsx`:
 - Extend the state interface (after `equipment: string;` ~line 37): `equipmentUpgrade: string | null;`
@@ -1085,7 +1085,7 @@ The step-2 equipment grid (~348-376) renders one `<button>` per family. A button
 {Object.entries(EQUIPMENT).map(([id, e]) => {
   const suggestion = (content[state.chassis]?.suggestedEquipment || []).find((s) => s.id === id);
   const sel = id === state.equipment;
-  // One Prototype per rig — an equipment Prototype locks when a WEAPON already runs one.
+  // One Prototype per rig, an equipment Prototype locks when a WEAPON already runs one.
   const weaponPrototype =
     upgradeNature(state.longRange, state.longRangeUpgrade) === "prototype" ||
     upgradeNature(state.melee, state.meleeUpgrade) === "prototype";
@@ -1106,7 +1106,7 @@ The step-2 equipment grid (~348-376) renders one `<button>` per family. A button
         <div className="v2-fc-equip-label v2-title">{e.label}</div>
         <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
         <div className="v2-fc-equip-active">
-          Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
+          Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat), {e.active.text}
         </div>
       </button>
       {sel ? (
@@ -1184,7 +1184,7 @@ In `client/src/v2/styles/forge.css`, add layout so the nature path sits under th
 
 - [ ] **Step 6: Typecheck + build the client**
 
-Run: `npm run build` (or the project's typecheck script — check `package.json`)
+Run: `npm run build` (or the project's typecheck script, check `package.json`)
 Expected: no TS errors. Fix any type mismatch on `equipmentUpgrade` (it is `string | null`).
 
 - [ ] **Step 7: Verify in the running wizard**
@@ -1200,7 +1200,7 @@ git commit -m "feat(equipment): equipment nature sub-picker + 3-way Prototype ca
 
 ---
 
-## Task 15: rules.md — §15 rewrite + §3 clause
+## Task 15: rules.md, §15 rewrite + §3 clause
 
 **Files:**
 - Modify: `rules.md:120` (§3 Prototype clause), `rules.md:511-523` (§15 Equipment)
@@ -1257,7 +1257,7 @@ test("a suggestion pointing at a new family id merges + validates", () => {
 - [ ] **Step 2: Run test to verify it passes already or fails**
 
 Run: `npm test -- server/chassis.test.js`
-Expected: PASS — validation is against the `EQUIPMENT` map, which now includes the new id (Task 1). This test guards the coupling; if it FAILS, `server/chassis.js` imports a stale `EQUIPMENT` — confirm it imports from `../shared/game-state.js` and re-run.
+Expected: PASS, validation is against the `EQUIPMENT` map, which now includes the new id (Task 1). This test guards the coupling; if it FAILS, `server/chassis.js` imports a stale `EQUIPMENT`: confirm it imports from `../shared/game-state.js` and re-run.
 
 - [ ] **Step 3: Re-author suggestions in `content/chassis.json`**
 
@@ -1265,12 +1265,12 @@ Update these chassis to point at a new family where it fits the flavour (keep 1�
 
 | Chassis | New suggestion (index 0 or 1) | Why |
 |---|---|---|
-| medium-crossbow-talon | `targeting-computer` | Sweet-spot bolt hunter — sharpen the shot. |
+| medium-crossbow-talon | `targeting-computer` | Sweet-spot bolt hunter, sharpen the shot. |
 | medium-sniper-chainsaw | `targeting-computer` | One shot per activation; make it land. |
-| light-missile-flamethrower | `blast-furnace-core` | Already runs hot — weaponize the heat. |
+| light-missile-flamethrower | `blast-furnace-core` | Already runs hot, weaponize the heat. |
 | light-sword-arc | `blast-furnace-core` | Arc gun cooks; turn redline into a threat. |
-| light-wreckingball-double | `reactive-plating` | Flanker that gets flanked back — deny side/rear. |
-| medium-shield-siege | `reactive-plating` (2nd pick) | Objective anchor — punish flankers. |
+| light-wreckingball-double | `reactive-plating` | Flanker that gets flanked back, deny side/rear. |
+| medium-shield-siege | `reactive-plating` (2nd pick) | Objective anchor, punish flankers. |
 
 Keep the other chassis as-is. For each edited chassis, set the `reason` string to a short in-fiction nudge.
 
@@ -1294,13 +1294,13 @@ git commit -m "content(chassis): steer suggestions toward the new equipment fami
 
 ## Final verification
 
-- [ ] Run the full suite: `npm test` — expected: all green.
-- [ ] Build the client: `npm run build` — expected: no TS errors.
+- [ ] Run the full suite: `npm test`: expected: all green.
+- [ ] Build the client: `npm run build`: expected: no TS errors.
 - [ ] In the Browser pane, commission a rig end-to-end with a new family + a Prototype equipment, confirm the cap greys the weapon Prototypes, and screenshot the finished loadout for the user.
 
 ---
 
-## Deferred Mechanics Backlog (follow-on plans — NOT in this plan)
+## Deferred Mechanics Backlog (follow-on plans, NOT in this plan)
 
 Each ships its own TDD plan later, one row per plan or small batch, mirroring the weapon-mechanic rollout. Data rows already exist (inert `effect: {}`); each plan wires the effect + tests + a rules.md mechanics line.
 

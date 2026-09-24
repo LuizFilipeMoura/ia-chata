@@ -1,17 +1,17 @@
-# V2 Phase E — Overlay Primitives (Drawer + Roll Console + V2 provider stack)
+# V2 Phase E, Overlay Primitives (Drawer + Roll Console + V2 provider stack)
 
 **Date:** 2026-07-11 · **Status:** Approved · **Depends on:** A–D. See the native overview.
 
 ## Goal
 
-Build the two foundational V2 overlay primitives every battle flow needs — a bottom-sheet **Drawer**
-and the **RollConsole** dice theater — plus the **V2 provider stack** that hosts them, so later
+Build the two foundational V2 overlay primitives every battle flow needs, a bottom-sheet **Drawer**
+and the **RollConsole** dice theater, plus the **V2 provider stack** that hosts them, so later
 phases (F–H) render native V2 overlays instead of the V1 `DrawerProvider`/`RollProvider`.
 
 ## Replaces
 
 `client/src/components/overlays/Drawer.tsx` + `state/DrawerContext.tsx`;
-`client/src/components/overlays/RollConsole.tsx` + `state/RollContext.tsx` — for V2 only. V1 keeps its own.
+`client/src/components/overlays/RollConsole.tsx` + `state/RollContext.tsx`: for V2 only. V1 keeps its own.
 
 ## Architecture / components
 

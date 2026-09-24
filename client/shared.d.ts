@@ -148,7 +148,7 @@ declare module "/shared/unit-kinds.js" {
   export function hitPart(kindId: string, d12: number): string | undefined;
   // Toughness of a single part. `weightClass` is REQUIRED for `byWeight` kinds
   // (the Rig) and ignored otherwise. THROWS on an unresolvable lookup rather
-  // than returning null — callers get a loud failure, not a silent 0.
+  // than returning null, callers get a loud failure, not a silent 0.
   export function toughnessOf(
     kindId: string,
     partName: string,

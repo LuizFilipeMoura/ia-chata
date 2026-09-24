@@ -8,7 +8,7 @@ import { CHASSIS, UNIT_WEAPONS } from "../shared/game-state.js";
 // free-choosing a long-range and a melee weapon. Server add-enforcement rejects
 // any rig that isn't one of these combos.
 const CHASSIS_LINES = CHASSIS.map(
-  (p) => `  - ${p.class} — lr="${p.longRange}" melee="${p.melee}"`,
+  (p) => `  - ${p.class}, lr="${p.longRange}" melee="${p.melee}"`,
 ).join("\n");
 
 // Instructions that teach Gemma the rig-tracker command protocol. The browser
@@ -45,7 +45,7 @@ export const TRACKER_PROTOCOL = [
   "  which chassis (or which mini) and emit no `[[RIG add]]` tag yet.",
   "- Both sides must field the same number of Rigs in each weight class, the same",
   "  number of Tanks, and the same number of Walkers before either can ready. There",
-  "  is no fixed roster size and no cap — rosters just have to mirror each other.",
+  "  is no fixed roster size and no cap, rosters just have to mirror each other.",
   "- Kind-specific `loc` enums:",
   "  rig: hull|arms|legs|engine",
   "  tank: hull|tracks|turret|engine",
@@ -53,13 +53,13 @@ export const TRACKER_PROTOCOL = [
   "- If the player asks to add a Tank or Walker, use `kind=\"tank\"` or `kind=\"walker\"` and set exactly one `unit=\"…\"` field from the flat unit-weapon list. Tanks and Walkers have no class, no long-range/melee split, no equipment.",
   "- Valid Unit weapons (Tanks / Walkers): " + Object.keys(UNIT_WEAPONS).filter((w) => w !== "Sidearm").join(", ") + ".",
   "- Tanks and Walkers do not have Heat and cannot Overheat. Do not emit `heat` tags for them.",
-  "- Support units: a Tank or Walker may carry `modules=\"x,y\"` — exactly TWO distinct of: damage, repair, coolant, recon. Omit `modules` for a plain combat Tank/Walker.",
+  "- Support units: a Tank or Walker may carry `modules=\"x,y\"`: exactly TWO distinct of: damage, repair, coolant, recon. Omit `modules` for a plain combat Tank/Walker.",
   "  A Damage module uses the `unit` weapon; if there is no Damage module, omit `unit` (the unit carries a built-in weak Sidearm). Support units still have no Heat.",
   "  Module actions in play: repair→Field Weld (heal an ally's SP), coolant→Vent (cool a friendly Rig's heat), recon→Paint (mark an enemy so allied ranged fire ignores its cover and gains +1 Aim). Narrate these normally; the app resolves them.",
   "- Use the exact class/lr/melee from a chassis row in tags. You may map",
   "  imperfect player wording to the closest chassis loadout when the intent is",
   "  clear; if it is not clear, ask again and list the chassis loadouts.",
-  "- A Rig is Light or Medium. Heavy and Colossal are not part of the game — not",
+  "- A Rig is Light or Medium. Heavy and Colossal are not part of the game, not",
   "  unfinished, not planned. If the player asks for one, say so plainly and ask",
   "  them to choose Light or Medium. Do not promise them later.",
   "- On `add`, `owner` picks the side; if you omit it, the requesting player's",
@@ -94,7 +94,7 @@ export const PLAYER_START_GUIDE = [
   "player's side.",
   "",
   "For each missing own-side Rig, ask for the next physical mini. The minis",
-  "already have glued weapons, so the player does not choose a loadout — they",
+  "already have glued weapons, so the player does not choose a loadout, they",
   "identify which chassis the mini is. Ask the Rig name and which chassis",
   "loadout it matches (each is a fixed class + long-range + melee set). If the",
   "player describes the sculpt instead, map it to a chassis.",
@@ -114,7 +114,7 @@ export const PLAYER_START_GUIDE = [
   "",
   "If the player asks for Heavy or Colossal during guided start, explain that a",
   "Rig is Light or Medium and ask which of those to use. Do not say \"currently\"",
-  "or \"yet\" — those classes are not coming.",
+  "or \"yet\", those classes are not coming.",
   "If the sculpt has no perfect weapon match, say that and still offer the",
   "closest 2-3 legal matches.",
   "",
@@ -152,7 +152,7 @@ export async function loadRulebook(rootDir) {
   SYSTEM_PROMPT = [
     "You are the rules master for the board game 'Of Oil and Iron'.",
     "Answer questions about the rules strictly based on the rulebook text provided below.",
-    "The rulebook below is the current working ruleset (Markdown) and is the single source of truth — there is no other rulebook.",
+    "The rulebook below is the current working ruleset (Markdown) and is the single source of truth, there is no other rulebook.",
     "If the rulebook does not clearly cover a situation, say so explicitly instead of guessing or inventing a rule.",
     "Be concise and cite the relevant section (its § number or heading) from the rulebook when helpful.",
     "",

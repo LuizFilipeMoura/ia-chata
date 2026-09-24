@@ -4,13 +4,13 @@
 
 **Goal:** One action seeds a valid, already-started 3v3 v2 battle (from shared tests, an HTTP call, or a Join-screen button), and the seeding operator can act on the enemy's turn.
 
-**Architecture:** A new `seed` command verb in `shared/game-state.js` is the single source of truth — it wipes the room, adds 6 distinct-chassis rigs (3/side), locks the field, and force-starts deterministically with the chosen opening side. A `room.seeded` flag drops the (minimal) `publicState` redaction. On the client, a thin `useSeedBattle` helper and a Join CTA reach the verb; impersonation reuses the existing `ViewSideContext`/`useMySide` cascade made runtime-switchable. AGENTS.md gains a UI-work mandate and an agent UI-debugging section.
+**Architecture:** A new `seed` command verb in `shared/game-state.js` is the single source of truth, it wipes the room, adds 6 distinct-chassis rigs (3/side), locks the field, and force-starts deterministically with the chosen opening side. A `room.seeded` flag drops the (minimal) `publicState` redaction. On the client, a thin `useSeedBattle` helper and a Join CTA reach the verb; impersonation reuses the existing `ViewSideContext`/`useMySide` cascade made runtime-switchable. AGENTS.md gains a UI-work mandate and an agent UI-debugging section.
 
 **Tech Stack:** Node ESM (`shared/*.js`, `node:test`), React + TypeScript (`client/src/v2/**`), Vitest + Testing Library, Express (`server/routes/game.js`, unchanged).
 
 ---
 
-## Reference — verified facts (read before starting)
+## Reference, verified facts (read before starting)
 
 - `applyCommand(room, cmd, context, options)` lives in `shared/game-state.js` (verb dispatch starts ~line 1932). Add the `seed` branch alongside the others.
 - `makeUnit("rig", id, name, owner, opts)` builds a rig; opts used: `{ weightClass, longRange, melee, chassis, sp }` (see `shared/game-state.js:714`).
@@ -28,29 +28,29 @@
 - Client (one file): `npx vitest run client/src/v2/<path>`
 - Types: `npx tsc --noEmit`
 
-**Git:** Work on `main`. One commit per task. Plain messages. (Per AGENTS.md — no branches/worktrees.)
+**Git:** Work on `main`. One commit per task. Plain messages. (Per AGENTS.md, no branches/worktrees.)
 
 ---
 
 ## File Structure
 
-- `shared/game-state.js` — `SEED_ROSTER`, `resetGameShape` (extracted), `startGameSeeded`, `seed` verb, `room.seeded` in `createRoom`/`ensureGameShape`, `publicState` changes. *(Tasks 1–2)*
-- `shared/game-state.test.js` — seed + publicState tests. *(Tasks 1–2)*
-- `client/src/state/types.ts` — `seeded?: boolean` on `ServerState`. *(Task 3)*
-- `client/src/state/roomReducer.ts` — `seeded` on `RoomState`/initial/reducer. *(Task 3)*
-- `client/src/v2/hooks/useSeedBattle.ts` (+ `.test.tsx`) — helper. *(Task 4)*
-- `client/src/v2/screens/Join.tsx` (+ `.test.tsx`) — seed CTA + mini-wizard. *(Task 5)*
-- `client/src/v2/V2App.tsx` — `onSeed` handler (join + seed). *(Task 5)*
-- `client/src/v2/state/ImpersonationContext.tsx` — runtime `ViewSideContext` override. *(Task 6)*
-- `client/src/v2/state/V2Providers.tsx` — mount provider. *(Task 6)*
-- `client/src/v2/components/ImpersonateChip.tsx` (+ `.test.tsx`) — Acting-as A/B chip. *(Task 7)*
-- `client/src/v2/V2Terminal.tsx` — mount chip. *(Task 7)*
-- `client/src/v2/styles/*.css` — chip styles. *(Task 7)*
-- `AGENTS.md` — UI mandate + agent UI-debugging section. *(Task 8)*
+- `shared/game-state.js`: `SEED_ROSTER`, `resetGameShape` (extracted), `startGameSeeded`, `seed` verb, `room.seeded` in `createRoom`/`ensureGameShape`, `publicState` changes. *(Tasks 1–2)*
+- `shared/game-state.test.js`: seed + publicState tests. *(Tasks 1–2)*
+- `client/src/state/types.ts`: `seeded?: boolean` on `ServerState`. *(Task 3)*
+- `client/src/state/roomReducer.ts`: `seeded` on `RoomState`/initial/reducer. *(Task 3)*
+- `client/src/v2/hooks/useSeedBattle.ts` (+ `.test.tsx`), helper. *(Task 4)*
+- `client/src/v2/screens/Join.tsx` (+ `.test.tsx`), seed CTA + mini-wizard. *(Task 5)*
+- `client/src/v2/V2App.tsx`: `onSeed` handler (join + seed). *(Task 5)*
+- `client/src/v2/state/ImpersonationContext.tsx`: runtime `ViewSideContext` override. *(Task 6)*
+- `client/src/v2/state/V2Providers.tsx`: mount provider. *(Task 6)*
+- `client/src/v2/components/ImpersonateChip.tsx` (+ `.test.tsx`), Acting-as A/B chip. *(Task 7)*
+- `client/src/v2/V2Terminal.tsx`: mount chip. *(Task 7)*
+- `client/src/v2/styles/*.css`: chip styles. *(Task 7)*
+- `AGENTS.md`: UI mandate + agent UI-debugging section. *(Task 8)*
 
 ---
 
-## Task 1: `seed` verb — roster, deterministic start, `seeded` flag
+## Task 1: `seed` verb, roster, deterministic start, `seeded` flag
 
 **Files:**
 - Modify: `shared/game-state.js`
@@ -105,7 +105,7 @@ test("SEED_ROSTER is 6 entries, 3 per side, all chassis distinct", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `SEED_ROSTER` undefined / `r.seeded` undefined / no seed verb.
+Expected: FAIL, `SEED_ROSTER` undefined / `r.seeded` undefined / no seed verb.
 
 - [ ] **Step 3: Add `SEED_ROSTER` and `room.seeded` default**
 
@@ -113,7 +113,7 @@ In `shared/game-state.js`, near the `CHASSIS` export (after it), add:
 
 ```js
 // Fixed test roster for the `seed` verb: 6 distinct chassis, 3 per side. Varied
-// weight classes (3 medium / 3 light — the catalogue has no heavy). All chassis
+// weight classes (3 medium / 3 light, the catalogue has no heavy). All chassis
 // ids are unique, honouring the no-mirror-matchup invariant (AGENTS.md).
 export const SEED_ROSTER = [
   { name: "A1", owner: "a", chassis: "medium-lance-mortar" },
@@ -189,7 +189,7 @@ function startGameSeeded(room, first) {
   applyInitiative(room, [first, other], null);
   pushResolution(room, {
     kind: "initiative", actor: first, rigId: null, rolls: [],
-    summary: `Seeded battle — ${first} activates first`, effects: [],
+    summary: `Seeded battle, ${first} activates first`, effects: [],
   });
   return true;
 }
@@ -292,7 +292,7 @@ test("publicState still redacts enemy face-down prep in a normal room", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `asA.seeded` undefined; seeded room still redacts.
+Expected: FAIL, `asA.seeded` undefined; seeded room still redacts.
 
 - [ ] **Step 3: Update `publicState`**
 
@@ -368,7 +368,7 @@ test("seeded defaults to false when absent", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/state/roomReducer.test.ts`
-Expected: FAIL — `seeded` not on `RoomState` / not carried.
+Expected: FAIL, `seeded` not on `RoomState` / not carried.
 
 - [ ] **Step 3: Add `seeded?` to `ServerState`**
 
@@ -390,7 +390,7 @@ export interface ServerState {
 
 In `client/src/state/roomReducer.ts`:
 
-`RoomState` interface — add `seeded: boolean;`:
+`RoomState` interface, add `seeded: boolean;`:
 
 ```ts
 export interface RoomState {
@@ -404,7 +404,7 @@ export interface RoomState {
 }
 ```
 
-`initialRoomState` — add `seeded: false,`:
+`initialRoomState`: add `seeded: false,`:
 
 ```ts
 export const initialRoomState: RoomState = {
@@ -412,7 +412,7 @@ export const initialRoomState: RoomState = {
 };
 ```
 
-`applyServerState` case — add `seeded`:
+`applyServerState` case, add `seeded`:
 
 ```ts
       return {
@@ -471,7 +471,7 @@ test("sends the seed verb with the chosen first side", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/hooks/useSeedBattle.test.tsx`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement the hook**
 
@@ -539,7 +539,7 @@ test("seed 'Your turn' fires onSeed with a", async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/screens/Join.test.tsx`
-Expected: FAIL — `onSeed` prop / seed button don't exist.
+Expected: FAIL, `onSeed` prop / seed button don't exist.
 
 - [ ] **Step 3: Add the seed CTA + picker to `Join`**
 
@@ -663,7 +663,7 @@ Append to `client/src/v2/styles/join.css`:
 - [ ] **Step 6: Run test + typecheck**
 
 Run: `npx vitest run client/src/v2/screens/Join.test.tsx`
-Expected: PASS (existing Join tests still pass — `onSeed` is optional, so the old `<Join onJoin=... error=... />` calls compile).
+Expected: PASS (existing Join tests still pass, `onSeed` is optional, so the old `<Join onJoin=... error=... />` calls compile).
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
@@ -718,7 +718,7 @@ test("setActingSide drives ViewSideContext; default is undefined", async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/state/ImpersonationContext.test.tsx`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement the provider**
 
@@ -797,7 +797,7 @@ git commit -m "feat(client): runtime-switchable ViewSideContext for impersonatio
 
 ---
 
-## Task 7: `ImpersonateChip` — Acting-as A/B (seed rooms only)
+## Task 7: `ImpersonateChip`: Acting-as A/B (seed rooms only)
 
 **Files:**
 - Create: `client/src/v2/components/ImpersonateChip.tsx`
@@ -855,7 +855,7 @@ test("shows A/B toggles when seeded", async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/components/ImpersonateChip.test.tsx`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement the chip**
 
@@ -952,7 +952,7 @@ git commit -m "feat(client): impersonate chip to act as either side in seed room
 
 ---
 
-## Task 8: AGENTS.md — UI-work mandate + agent UI-debugging guide
+## Task 8: AGENTS.md, UI-work mandate + agent UI-debugging guide
 
 **Files:**
 - Modify: `AGENTS.md`
@@ -962,32 +962,32 @@ git commit -m "feat(client): impersonate chip to act as either side in seed room
 In `AGENTS.md`, after the `## Project nature` section (before `## Game design invariants`), insert:
 
 ```markdown
-## UI work — V2 only, everything
+## UI work, V2 only, everything
 
-**ALL UI work goes in V2. Everything.** Every user-facing UI change — new
-screens, components, overlays, wizards, styling, battle flows, chat, glossary —
+**ALL UI work goes in V2. Everything.** Every user-facing UI change, new
+screens, components, overlays, wizards, styling, battle flows, chat, glossary,
 lives under `client/src/v2/**` (with shared, non-UI state hooks under
 `client/src/hooks/**` and `client/src/state/**` where V2 already reuses them).
 
 - **Do not build new UI in the legacy V1 tree** (`client/src/components/**`). V1
   is frozen; treat it as read-only reference. If a feature needs a V1-only file
-  changed, stop and flag it — don't extend V1.
+  changed, stop and flag it, don't extend V1.
 - New UI files: create them in the matching `client/src/v2/` folder
   (`screens/`, `overlays/`, `components/`, `battle/`, `state/`, `hooks/`,
   `styles/`).
 - Reuse the V2 provider stack (`client/src/v2/state/V2Providers.tsx`) and V2
-  primitives (Drawer, wizards, Shell) — never import V1 overlay providers into
+  primitives (Drawer, wizards, Shell), never import V1 overlay providers into
   V2 (there's a `no-v1-imports.test.ts` guard; keep it green).
 
 ## Debugging the UI as an agent
 
-You can drive and inspect the running UI yourself — don't ask the user to click.
+You can drive and inspect the running UI yourself, don't ask the user to click.
 
 - **Seed a live battle instantly.** Instead of hand-commissioning 6 rigs, use the
   `seed` verb to get a valid, already-started 3v3:
   - **UI:** the Join screen's **"Seed Test Battle ▸"** button → pick *Your turn* /
     *Enemies turn*. Autogenerates a `SEED-XXXX` room and drops you into the battle.
-  - **HTTP (no browser):** join then seed —
+  - **HTTP (no browser):** join then seed,
     ```
     curl -XPOST localhost:5173/api/game/SEED-DBG1/join  -H 'content-type: application/json' -d '{"side":"a"}'
     curl -XPOST localhost:5173/api/game/SEED-DBG1/command -H 'content-type: application/json' \
@@ -995,11 +995,11 @@ You can drive and inspect the running UI yourself — don't ask the user to clic
     ```
     (`first`: `"a"` = your turn opens, `"b"` = the enemy's.)
   - **Unit test:** `applyCommand(room, { verb: "seed", attrs: { first } })` builds
-    the same state deterministically (no dice) — assert on `turn.side`, rig counts.
+    the same state deterministically (no dice), assert on `turn.side`, rig counts.
 - **Act on the enemy's turn (impersonate).** Seed rooms are flagged `seeded`, which
   drops `publicState` fog and shows an **"Acting as: A / B"** chip in the terminal.
   Toggle it to flip your acting side (view + every command's `side`). Over HTTP,
-  just send commands with the other side: `{"cmd":{...},"side":"b"}` — the server
+  just send commands with the other side: `{"cmd":{...},"side":"b"}`: the server
   doesn't auth `side`, so impersonation needs no special call.
 - **Inspect at runtime** with the browser preview tools (read the console, the
   DOM/accessibility tree, and network requests) rather than adding `console.log`

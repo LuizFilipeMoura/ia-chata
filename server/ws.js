@@ -1,6 +1,6 @@
 // Room broadcast hub: groups connected WebSocket clients by room code and
 // pushes state deltas after every server-side mutation. One-way
-// (server -> client) only — commands still arrive over HTTP POST in
+// (server -> client) only, commands still arrive over HTTP POST in
 // server/routes/game.js, which calls broadcast() after each mutation.
 import { publicState } from "../shared/game-state.js";
 

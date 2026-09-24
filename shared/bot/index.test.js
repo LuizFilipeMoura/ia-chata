@@ -16,7 +16,7 @@ function mulberry32(seed) {
 }
 
 // A digital room with a mover ("Atk") and an enemy ("Foe"), objectives down, the
-// a-side ready to activate Atk (turn open, no rig active yet — so runBotActivation
+// a-side ready to activate Atk (turn open, no rig active yet, so runBotActivation
 // issues the `activate` itself). Returns { room, atk, foe }.
 function botSetup() {
   const room = createRoom("BOT01");
@@ -54,7 +54,7 @@ test("chooseAction returns null when every candidate scores <= 0", () => {
   assert.equal(chooseAction(room, atk, PRESETS.balanced), null);
 });
 
-test("chooseAction is deterministic — same room, same weights, same command", () => {
+test("chooseAction is deterministic, same room, same weights, same command", () => {
   const { room, atk } = botSetup();
   room.game.turn.activeRigId = atk.id;
   room.game.turn.actionsMax = 3;
@@ -87,7 +87,7 @@ test("the guard stops a runaway loop", () => {
   // still OFFERS move (it only disables move when engaged/emplaced), but
   // performAction REJECTS it ("Pinned by Suppression"). So chooseAction keeps
   // returning the same always-positive hold, applyCommand keeps rejecting it, and
-  // state never advances — an infinite loop without the guard. Pre-activated with
+  // state never advances, an infinite loop without the guard. Pre-activated with
   // a budget past the guard, activeRigId set so runBotActivation skips activate().
   atk.suppressImmobile = true;
   room.game.turn = { side: "a", activeRigId: atk.id, actionsUsed: 0, actionsMax: 50 };
@@ -116,7 +116,7 @@ function deployedBoard(seed) {
 
 test("the bot never proposes a command the engine rejects", () => {
   // If the bot can never emit a command checkCommand rejects, an entire class of
-  // bug is gone — including any drift between the move candidates and E1's own
+  // bug is gone, including any drift between the move candidates and E1's own
   // validation. Any failure here is a real bug: fix the bot, never the assertion.
   // 60 seeds (not the spec's 200): checkCommand deep-clones the room per proposed
   // command, so this is already the suite's slowest test at ~12s. 60 boards ×

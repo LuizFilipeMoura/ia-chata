@@ -27,7 +27,7 @@ const FIELD_DESC: Record<string, string> = {
   arc: "Which of the target's facings you strike",
   range: "How far the target sits from you",
   cover: "Obstruction shielding the target",
-  location: "Component to hit — an Aimed Shot takes −2 Accuracy",
+  location: "Component to hit, an Aimed Shot takes −2 Accuracy",
 };
 const ARC_DESC: Record<string, string> = { front: "No Penetration bonus", side: "+2 Penetration", rear: "+3 Penetration" };
 const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 Accuracy", "2": "−2 Accuracy" };
@@ -90,7 +90,7 @@ interface AwState {
   weapon: WeaponSlot;
   arc: string;
   range: string;
-  /** Measured distance to target in inches — drives the range band. */
+  /** Measured distance to target in inches, drives the range band. */
   inches: number;
   cover: number;
   loc: string;
@@ -162,7 +162,7 @@ export function AttackWizard({
     return () => cancelAnimationFrame(id);
   }, []);
 
-  // No opposing, non-destroyed Rigs — there is nothing to attack (attack-wizard.js:45).
+  // No opposing, non-destroyed Rigs, there is nothing to attack (attack-wizard.js:45).
   const noEnemies = enemies.length === 0;
   useEffect(() => {
     if (noEnemies) onClose();
@@ -184,7 +184,7 @@ export function AttackWizard({
   const targetDesc = (name: string) => {
     const e = enemies.find((x) => x.name === name);
     if (!e) return "";
-    // Cold kinds have no weightClass — label them by their kind instead.
+    // Cold kinds have no weightClass, label them by their kind instead.
     return e.weightClass ? cap(e.weightClass) : (UNIT_KINDS[kindOf(e)]?.label || "");
   };
 
@@ -211,7 +211,7 @@ export function AttackWizard({
   };
 
   // Melee is a structural property of the weapon (the `melee` flag), not the
-  // slot — so a flat-pick melee unit weapon (Dozer Blade) hides arc/range like a
+  // slot, so a flat-pick melee unit weapon (Dozer Blade) hides arc/range like a
   // Rig's melee.
   const isMelee = !!profileOf(state.weapon)?.melee;
   useEffect(() => {
@@ -259,7 +259,7 @@ export function AttackWizard({
   const submit = async () => {
     // Return-Fire counter: send a `react` with an `attack` payload rather than a
     // normal `action`. The server resolves it as a plain fire on the attacker, so
-    // aimed doesn't apply here — collect weapon/arc/range/cover (+ manual dice).
+    // aimed doesn't apply here, collect weapon/arc/range/cover (+ manual dice).
     // The server resolves the weapon slot itself (flat kinds always fire "unit"),
     // but we send the right slot and size the manual-dice prompt from the profile.
     const slotSel: WeaponSlot = flat ? "unit" : state.weapon;
@@ -309,7 +309,7 @@ export function AttackWizard({
     close();
   };
 
-  // Effective-range readout + go button — mirrors update() in attack-wizard.js.
+  // Effective-range readout + go button, mirrors update() in attack-wizard.js.
   let rangeHtml: React.ReactNode = null;
   let rangeState = "ok";
   let goText = "Fire";
@@ -322,7 +322,7 @@ export function AttackWizard({
     const slot = state.weapon;
     const profile = profileOf(slot);
     // A spent ranged weapon (Rig longRange or cold-kind unit) can't fire: it must
-    // Reload first (§7 — no rushed shot). Fire is blocked until it's reloaded.
+    // Reload first (§7, no rushed shot). Fire is blocked until it's reloaded.
     const spent = (slot === "longRange" && rig.loaded?.longRange === false)
       || (slot === "unit" && rig.loaded?.unit === false);
     const cost = 1;
@@ -348,11 +348,11 @@ export function AttackWizard({
         penalty <= 0 ? `Sweet spot +${peak}` : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} · falloff`;
       const gate =
         state.inches < minRange
-          ? <span className="aw-range-warn">Too close — out of range</span>
+          ? <span className="aw-range-warn">Too close, out of range</span>
           : state.inches > maxRange
-            ? <span className="aw-range-warn">Target is out of range — this shot will fail</span>
+            ? <span className="aw-range-warn">Target is out of range, this shot will fail</span>
             : spent
-              ? <span className="aw-range-warn">Weapon spent — Reload before it can fire again</span>
+              ? <span className="aw-range-warn">Weapon spent, Reload before it can fire again</span>
               : null;
       rangeHtml = (
         <>
@@ -381,9 +381,9 @@ export function AttackWizard({
     const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;
     const equipmentLine = equipment ? `${equipment.label} passive remains active.` : "";
     const weaponName = weapons[state.weapon] || "";
-    // Cold kinds carry no weapon upgrades — just name the weapon.
+    // Cold kinds carry no weapon upgrades, just name the weapon.
     if (flat) {
-      return { main: `Firing ${weaponName} (flat Penetration — no weight-class scaling).`, equipment: equipmentLine };
+      return { main: `Firing ${weaponName} (flat Penetration, no weight-class scaling).`, equipment: equipmentLine };
     }
     const upgrade = selectedUpgrade(rig, state.weapon as "longRange" | "melee", weaponName);
     return {
@@ -396,9 +396,9 @@ export function AttackWizard({
 
   if (noEnemies) return null;
 
-  // Fire Control Lock (§13, Missile Barrage) — a minimal flow: pick the enemy
+  // Fire Control Lock (§13, Missile Barrage), a minimal flow: pick the enemy
   // to paint, dispatch, done. No weapon/arc/range/cover/location and no dice
-  // (the server-side `lock` verb never rolls — see game-state.js act==="lock").
+  // (the server-side `lock` verb never rolls, see game-state.js act==="lock").
   if (mode === "lock") {
     return (
       <div
@@ -410,7 +410,7 @@ export function AttackWizard({
         <div className="aw-card">
           <div className="aw-handle" />
           <div className="aw-title-row">
-            <div className="aw-title">🔒 Fire Control Lock — {rig.name}</div>
+            <div className="aw-title">🔒 Fire Control Lock, {rig.name}</div>
             <button type="button" className="sheet-gloss-chip" onClick={() => setGlossaryOpen(true)}>
               ⓘ Glossary
             </button>
@@ -452,7 +452,7 @@ export function AttackWizard({
       <div className="aw-card">
         <div className="aw-handle" />
         <div className="aw-title-row">
-          <div className="aw-title">{title} — {rig.name}</div>
+          <div className="aw-title">{title}, {rig.name}</div>
           <button type="button" className="sheet-gloss-chip" onClick={() => setGlossaryOpen(true)}>
             ⓘ Glossary
           </button>
@@ -479,12 +479,12 @@ export function AttackWizard({
                 flat ? (weapons.unit || "") : state.weapon === "melee" ? (weapons.melee || "") : (weapons.longRange || "")
               }
               onChange={(v) => {
-                if (flat) return; // single flat-pick weapon — nothing to switch
+                if (flat) return; // single flat-pick weapon, nothing to switch
                 patch({ weapon: v === weapons.melee ? "melee" : "longRange" });
               }}
               icon={FIELD_ICONS.weapon}
               optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
-              desc={flat ? "One flat-pick weapon — no weight-class Penetration scaling." : FIELD_DESC.weapon}
+              desc={flat ? "One flat-pick weapon, no weight-class Penetration scaling." : FIELD_DESC.weapon}
               optDesc={weaponDesc}
             />
             <Field

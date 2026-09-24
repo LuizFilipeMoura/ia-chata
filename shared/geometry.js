@@ -77,11 +77,11 @@ export function pointInPolygon(p, pts) {
 }
 
 // True when the segment crosses any edge of the polygon, OR lies wholly inside
-// it (no edge crossed, but both endpoints within — a rig standing in terrain).
+// it (no edge crossed, but both endpoints within, a rig standing in terrain).
 // Checking endpoint `a` alone is sufficient: if no edge of the polygon is
 // crossed by the segment, the segment cannot pass from inside to outside (or
 // vice versa) anywhere along its length, so both endpoints share the same
-// inside/outside status as `a` — testing one stands in for both.
+// inside/outside status as `a`: testing one stands in for both.
 export function segmentHitsPolygon(a, b, poly) {
   const pts = poly.points;
   for (let i = 0; i < pts.length; i++) {
@@ -96,13 +96,13 @@ export function segmentHitsPolygon(a, b, poly) {
 // perpendicular to it by each unit's OWN radius to get three parallel rays:
 // top->top, centre->centre, bottom->bottom. Offsetting perpendicular to the
 // shot (rather than along a fixed map axis) is what makes the read
-// rotation-invariant — a flanking shot and a frontal shot are graded alike.
+// rotation-invariant, a flanking shot and a frontal shot are graded alike.
 //
 // Bases differ in radius, so the outer rays converge or diverge slightly. That
 // is correct: a light rig shooting a medium gets a wider corridor at the target
 // end.
 //
-// Every ray is tested against EVERY terrain kind — kind matters in exactly one
+// Every ray is tested against EVERY terrain kind, kind matters in exactly one
 // place, the buildingRays check. That is the whole content of "everything is
 // solid; only buildings block sight". A 1in rock can never obstruct all three,
 // so small scatter naturally reads as cover 1 and a long barricade as cover 2.
@@ -111,7 +111,7 @@ export function sightCorridor(attacker, target, polys) {
   const dx = target.pos.x - attacker.pos.x;
   const dy = target.pos.y - attacker.pos.y;
   const len = Math.hypot(dx, dy);
-  // Coincident bases can't happen (rigs block each other) — degrade, don't throw.
+  // Coincident bases can't happen (rigs block each other), degrade, don't throw.
   if (len < 1e-9) return { obstructed: 0, buildingRays: 0, cover: 0, los: true };
 
   const nx = -dy / len; // unit perpendicular to the shot
@@ -142,7 +142,7 @@ export function sightCorridor(attacker, target, polys) {
 }
 
 // Base radii in inches, by weight class. Digital rooms are Rigs only, so these
-// two are the whole table. Lives here because base size is a SPATIAL fact — it
+// two are the whole table. Lives here because base size is a SPATIAL fact, it
 // is what makes rim gap differ from centre distance, and it is why melee and
 // objectives measure rim while everything else measures centre.
 export const BASE_RADIUS = { light: 1.18, medium: 1.48 }; // 60mm / 75mm
@@ -174,13 +174,13 @@ export function rimGap(a, b) {
   return distanceBetween(a, b) - a.radius - b.radius;
 }
 
-// §7 / §12 — melee carries a fixed Accuracy at its 2in reach. Lance's Couched Reach
+// §7 / §12, melee carries a fixed Accuracy at its 2in reach. Lance's Couched Reach
 // upgrade passes reach = 4.
 export function meleeInReach(a, b, reach = 2) {
   return rimGap(a, b) <= reach + 1e-9;
 }
 
-// §11 — a Rig controls a marker if it is within 2in. Markers are points, so
+// §11, a Rig controls a marker if it is within 2in. Markers are points, so
 // only the rig's own radius comes off.
 export function controlsObjective(rig, marker, reach = 2) {
   const gap = Math.hypot(rig.pos.x - marker.x, rig.pos.y - marker.y) - rig.radius;
@@ -189,7 +189,7 @@ export function controlsObjective(rig, marker, reach = 2) {
 
 // Distance from a point to a polygon: 0 if inside, else the nearest edge.
 // Lives here rather than in pathfind.js because BOTH the occupancy grid and
-// autoDeploy need "is this spot clear for a base of radius r" — and two copies
+// autoDeploy need "is this spot clear for a base of radius r", and two copies
 // of this would be two chances to disagree about what "clear" means.
 export function distToPolygon(p, pts) {
   if (pointInPolygon(p, pts)) return 0;

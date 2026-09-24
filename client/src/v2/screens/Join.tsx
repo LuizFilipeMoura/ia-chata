@@ -17,7 +17,7 @@ export function Join({ onJoin, error, onSeed }: Props) {
 
   const ready = room.trim().length > 0 && !!side;
   const status = ready
-    ? "◈ ALL SYSTEMS NOMINAL — READY TO ENLIST"
+    ? "◈ ALL SYSTEMS NOMINAL, READY TO ENLIST"
     : "Enter a room code to enlist.";
 
   const submit = () => {

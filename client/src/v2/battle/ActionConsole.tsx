@@ -30,7 +30,7 @@ interface Action {
 // mark, echoing the design-reference console (▶ fire / ⇢ move / ⚙ support).
 //
 // Disengage lives in the Move group on purpose: a rig locked in melee can't Move
-// until it Disengages, so the two occupy the same slot interchangeably — when
+// until it Disengages, so the two occupy the same slot interchangeably, when
 // engaged only Disengage is live (and the tile relabels to it); otherwise it's
 // hidden (see HIDE_WHEN_DISABLED) so Move/Sprint own the slot cleanly.
 const GROUPS: { id: string; label: string; tone: string; glyph: string; keys: string[] }[] = [
@@ -108,7 +108,7 @@ function AcPopover({
   return createPortal(
     // `v2-portal` keeps the scoped-token context (--v2-* + `.v2-root …` selectors)
     // WITHOUT the full-screen shell box: tokens.css makes a bare `.v2-root` a
-    // fixed, opaque, inset:0 layer — fine for full overlays, but on this small
+    // fixed, opaque, inset:0 layer, fine for full overlays, but on this small
     // floating popover it would black out the whole app behind it.
     <div className="v2-root v2-portal">
       <div className="v2-ac-pop-scrim" onClick={onClose} />
@@ -182,9 +182,9 @@ export function ActionConsole({ rig }: Props) {
 
   const b = actionBudget(rig, t);
   const actions = availableActions(rig, t, game?.round) as Action[];
-  // Cold kinds (Tank / Walker) don't track heat — suppress per-action heat tags.
+  // Cold kinds (Tank / Walker) don't track heat, suppress per-action heat tags.
   const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
-  // Overheated (heat past capacity) — Shut Down is worth flagging, not forcing.
+  // Overheated (heat past capacity), Shut Down is worth flagging, not forcing.
   const hot = !cold && rig.engine.heat > (HEAT_CAPACITY[rig.weightClass] ?? 5);
 
   const claimed = new Set(GROUPS.flatMap((g) => g.keys));
@@ -198,7 +198,7 @@ export function ActionConsole({ rig }: Props) {
     (g.id === "support"
       ? actions.filter((a) => !claimed.has(a.key) && a.key !== "shutdown")
       : g.id === "attack"
-        // Aimed is now a toggle inside the Fire drawer, not its own tile — so the
+        // Aimed is now a toggle inside the Fire drawer, not its own tile, so the
         // Attack group collapses to a lone Fire action. `aimed` stays in the group's
         // keys (claimed above) so it never leaks into the Support catch-all.
         ? actions.filter((a) => a.key === "fire")
@@ -300,7 +300,7 @@ export function ActionConsole({ rig }: Props) {
                         {a.note ? (
                           <span className="v2-ac-pop-note">{a.note}</span>
                         ) : hot && a.key === "shutdown" ? (
-                          <span className="v2-ac-pop-note">Cools 2 per slot left (max 5) — ends activation</span>
+                          <span className="v2-ac-pop-note">Cools 2 per slot left (max 5), ends activation</span>
                         ) : null}
                       </span>
                       {!cold && (

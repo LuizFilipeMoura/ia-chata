@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebuild the V2 dice-resolution console as a "Terminal Sibling" of the Rig Control Terminal — one unified amber frame with real depth, stacked labelled zones, and a flattened single-level breakdown.
+**Goal:** Rebuild the V2 dice-resolution console as a "Terminal Sibling" of the Rig Control Terminal, one unified amber frame with real depth, stacked labelled zones, and a flattened single-level breakdown.
 
 **Architecture:** Two coupled files. `overlay.css` gets its console section rewritten (frame depth fix, zone system, flattened breakdown well). `RollConsole.tsx` gets its `render()` reorganised into labelled zones + a bottom action bar for every state. All imperative logic (timers, flicker/settle RAF loop, token flip, reveal timing) is untouched. Everything stays scoped under `.v2-root`.
 
@@ -14,8 +14,8 @@
 
 ## File Structure
 
-- **Modify** `client/src/v2/styles/overlay.css` — replace the console section (current lines ~39–347) and the reduced-motion block (current lines ~435–444). The drawer section (lines 6–37) and everything from the drawer bodies onward (current lines ~349–434: `.v2-dwr-*`, `.v2-field`, `.v2-blast-*`, `.v2-rx-picker`, `.v2-rx-choice`) stay **untouched**.
-- **Modify** `client/src/v2/overlays/RollConsole.tsx` — replace only the returned JSX in `render()` (currently lines ~291–435). All hooks, refs, timers, and handler functions above the `return` stay **byte-for-byte identical**.
+- **Modify** `client/src/v2/styles/overlay.css`: replace the console section (current lines ~39–347) and the reduced-motion block (current lines ~435–444). The drawer section (lines 6–37) and everything from the drawer bodies onward (current lines ~349–434: `.v2-dwr-*`, `.v2-field`, `.v2-blast-*`, `.v2-rx-picker`, `.v2-rx-choice`) stay **untouched**.
+- **Modify** `client/src/v2/overlays/RollConsole.tsx`: replace only the returned JSX in `render()` (currently lines ~291–435). All hooks, refs, timers, and handler functions above the `return` stay **byte-for-byte identical**.
 
 No new files. No token changes. No changes to the provider/portal wiring.
 
@@ -28,10 +28,10 @@ No new files. No token changes. No changes to the provider/portal wiring.
 
 - [ ] **Step 1: Replace the console block**
 
-In `overlay.css`, find the block that starts with the comment `/* ===== Dice-resolution console — the "roll rig" ===...` (current line ~39) and ends at the `.v2-roll-ok { ... }` rule (current line ~347, just before `/* ===== Drawer bodies ...`). Replace that entire span with:
+In `overlay.css`, find the block that starts with the comment `/* ===== Dice-resolution console, the "roll rig" ===...` (current line ~39) and ends at the `.v2-roll-ok { ... }` rule (current line ~347, just before `/* ===== Drawer bodies ...`). Replace that entire span with:
 
 ```css
-/* ===== Dice-resolution console — "Terminal Sibling" =========================
+/* ===== Dice-resolution console, "Terminal Sibling" =========================
    A literal sibling of the Rig Control Terminal (rig-terminal.css): one unified
    amber frame, content split into stacked labelled zones divided by 1px rules,
    and the damage readout flattened to a single sunken strip with an inline
@@ -62,7 +62,7 @@ In `overlay.css`, find the block that starts with the comment `/* ===== Dice-res
   transition: transform .28s cubic-bezier(.2, .85, .25, 1), opacity .28s ease;
 }
 .v2-roll-scrim.show .v2-roll-console { transform: none; opacity: 1; }
-/* Breathing amber ring — opacity-animated overlay, so the seating box-shadow
+/* Breathing amber ring, opacity-animated overlay, so the seating box-shadow
    above is preserved (the whole point of the redesign). */
 .v2-root .v2-roll-console::after {
   content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
@@ -176,7 +176,7 @@ In `overlay.css`, find the block that starts with the comment `/* ===== Dice-res
   animation: v2-lampfast 1s ease-in-out infinite;
 }
 
-/* Damage readout — a SINGLE sunken strip holding an INLINE equation. No nested
+/* Damage readout, a SINGLE sunken strip holding an INLINE equation. No nested
    panel, no per-term boxes (the old box-in-box). Both the structured breakdown
    (.v2-rx-break) and the fallback summary (.v2-roll-summary) sit in this well. */
 .v2-root .v2-roll-strip,
@@ -195,7 +195,7 @@ In `overlay.css`, find the block that starts with the comment `/* ===== Dice-res
 .v2-root .v2-rx-weapon { color: var(--v2-oil-hi); font-weight: 700; }
 .v2-root .v2-rx-target { color: var(--v2-txt-dim); }
 
-/* Inline equation row — flat flex, terms are inline (no boxes), wraps if needed. */
+/* Inline equation row, flat flex, terms are inline (no boxes), wraps if needed. */
 .v2-root .v2-rx-break-eq {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .5rem;
   font-family: var(--v2-mono); font-size: var(--v2-text-base);
@@ -251,14 +251,14 @@ In `overlay.css`, find the block that starts with the comment `/* ===== Dice-res
   font-size: var(--v2-text-sm); letter-spacing: .1em; text-transform: uppercase; color: var(--v2-txt-dim);
 }
 
-/* Fallback summary sentence — plain text inside the same strip. */
+/* Fallback summary sentence, plain text inside the same strip. */
 .v2-root .v2-roll-summary {
   text-align: center; text-wrap: balance;
   font-family: var(--v2-disp); font-size: var(--v2-text-lg); font-weight: 600; line-height: 1.35;
   color: var(--v2-txt);
 }
 
-/* Effects log lines — mono ember lines with a staggered entrance. */
+/* Effects log lines, mono ember lines with a staggered entrance. */
 .v2-root .v2-roll-effects { display: flex; flex-direction: column; gap: .45rem; }
 .v2-root .v2-roll-effect {
   font-family: var(--v2-mono); font-size: var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-ember-hi);
@@ -268,7 +268,7 @@ In `overlay.css`, find the block that starts with the comment `/* ===== Dice-res
 }
 @keyframes v2-line-in { to { opacity: 1; transform: none; } }
 
-/* ===== Reaction-token flip reveal — a struck coin on an oil hatch back ===== */
+/* ===== Reaction-token flip reveal, a struck coin on an oil hatch back ===== */
 .v2-root .v2-rx-reveal {
   display: flex; flex-direction: column; align-items: center; gap: .5rem;
 }
@@ -306,7 +306,7 @@ In `overlay.css`, find the block that starts with the comment `/* ===== Dice-res
   100% { transform: rotateY(180deg) scale(1); }
 }
 
-/* ===== Manual dice-entry form — sunken iron input wells ===== */
+/* ===== Manual dice-entry form, sunken iron input wells ===== */
 .v2-root .v2-roll-form { display: flex; flex-direction: column; gap: .5rem; }
 .v2-root .v2-roll-form-row { display: flex; align-items: center; gap: .5rem; }
 .v2-root .v2-roll-form-row label { flex: 1; letter-spacing: .06em; color: var(--v2-txt-dim); }
@@ -319,7 +319,7 @@ In `overlay.css`, find the block that starts with the comment `/* ===== Dice-res
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, .7), 0 0 0 1px var(--v2-oil), 0 0 14px rgba(231, 154, 61, .3);
 }
 
-/* Action bar — every state ends with a consistent forged action row. */
+/* Action bar, every state ends with a consistent forged action row. */
 .v2-root .v2-roll-action {
   display: flex; gap: .6rem;
   padding: 16px 20px 18px; background: var(--v2-iron-950);
@@ -349,7 +349,7 @@ Find the `@media (prefers-reduced-motion: reduce)` block at the end of the conso
 - [ ] **Step 3: Sanity-check the CSS compiles**
 
 Run: `cd client && npx tsc --noEmit -p tsconfig.json`
-Expected: PASS (CSS isn't type-checked, but this confirms nothing else broke). Do not commit yet — the TSX in Task 2 references the new classes; commit both together at the end of Task 2.
+Expected: PASS (CSS isn't type-checked, but this confirms nothing else broke). Do not commit yet, the TSX in Task 2 references the new classes; commit both together at the end of Task 2.
 
 ---
 
@@ -557,7 +557,7 @@ Everything above `const rolling = ...` (the hooks, refs, timer helpers, `playRes
 export default RollConsole;
 ```
 
-Note: the old `OK`/`Confirm` buttons used the `hidden` attribute; they are now conditionally mounted inside `.v2-roll-action` instead. The `okHidden` / `formHidden` state still drives visibility exactly as before — only the mounting mechanism changed. Nothing else in the file changes.
+Note: the old `OK`/`Confirm` buttons used the `hidden` attribute; they are now conditionally mounted inside `.v2-roll-action` instead. The `okHidden` / `formHidden` state still drives visibility exactly as before, only the mounting mechanism changed. Nothing else in the file changes.
 
 - [ ] **Step 2: Type-check**
 
@@ -573,7 +573,7 @@ Expected: PASS, including `isolation.test.ts` (no `.v2-*` rules leak outside `.v
 
 ```bash
 git add client/src/v2/styles/overlay.css client/src/v2/overlays/RollConsole.tsx
-git commit -m "redesign(v2): RollConsole as Terminal Sibling — zones, unified frame, flat breakdown"
+git commit -m "redesign(v2): RollConsole as Terminal Sibling, zones, unified frame, flat breakdown"
 ```
 
 ---
@@ -589,11 +589,11 @@ Start the dev server (via the preview tooling / `.claude/launch.json`, not a raw
 - [ ] **Step 2: Trigger and eyeball each console state**
 
 Confirm each of these renders correctly:
-- **Resolution + breakdown** — Dice / Damage / Effects zones + OK. Breakdown is a single sunken strip with an inline equation (no per-term boxes, no panel-in-panel).
-- **Resolution, no breakdown** — Dice / Result (summary sentence) / Effects zones + OK.
-- **Reaction** — Reaction zone (flip token) / Effects + OK. No dice, no damage.
-- **Manual dice entry** — Enter dice zone with number inputs + a Confirm button in the action bar.
-- **Rolling** — dice flicker under the Dice label with "Rolling…"; later zones appear as data settles.
+- **Resolution + breakdown**: Dice / Damage / Effects zones + OK. Breakdown is a single sunken strip with an inline equation (no per-term boxes, no panel-in-panel).
+- **Resolution, no breakdown**: Dice / Result (summary sentence) / Effects zones + OK.
+- **Reaction**: Reaction zone (flip token) / Effects + OK. No dice, no damage.
+- **Manual dice entry**: Enter dice zone with number inputs + a Confirm button in the action bar.
+- **Rolling**: dice flicker under the Dice label with "Rolling…"; later zones appear as data settles.
 
 For each, verify: the console **seats with a visible drop shadow** (not floating flat); the **frame is one continuous amber outline** (no gray side borders); zone rhythm is even; the **hatch header stripe** is intact.
 
@@ -610,6 +610,6 @@ Take a screenshot of the resolution-with-breakdown state and share it. No commit
 ## Self-Review (completed by plan author)
 
 - **Spec coverage:** Frame depth fix (Task 1 §console + ::after glow) ✓; unified oil-ring border ✓; corner rivets as spans ✓; hatch header kept ✓; 480px width ✓; labelled zones + dividers + action bar ✓; all 5 states mapped (Task 2 conditionals) ✓; flattened inline breakdown strip ✓; Result/summary reuse of strip ✓; dice unchanged ✓; type/spacing scale ✓; reduced-motion preserved ✓; `.v2-root` scoping + isolation test ✓ (Task 2 §3); two-files-only + logic untouched ✓.
-- **Placeholder scan:** none — every step carries the full literal code or an exact command.
+- **Placeholder scan:** none, every step carries the full literal code or an exact command.
 - **Type/name consistency:** class names used in the TSX (`v2-roll-rivet`, `v2-roll-zone`, `v2-roll-zone-label`, `v2-roll-strip`, `v2-roll-summary`, `v2-roll-action`, `v2-roll-form-go`, `v2-roll-ok`, and all reused `v2-rx-*`/`v2-die*`) all have matching rules in the CSS. `showAction` guard matches the two button conditions. Reused data props (`breakdown.terms[].op/value/label/tone`, `breakdown.tier/total/sp/location`) are unchanged from the original render.
 ```

@@ -1,6 +1,6 @@
 import type { Rig, ServerState } from "../../state/types";
 
-// The single source of truth for "can this rig be activated right now" — shared
+// The single source of truth for "can this rig be activated right now", shared
 // by V2Terminal (RigTerminal activation) and BattleScreen (click-to-activate)
 // so the two gates can't drift.
 export function canRigActivate(

@@ -75,7 +75,7 @@ test("arming a move, placing a reachable destination, and confirming dispatches 
   const surface = await screen.findByTestId("field-surface");
   // Mock the FIELD-SURFACE box (not the whole canvas): the rect spans the field
   // region exactly, so for the 54×36 field its box ≈ fw×fh = 468×312. The tap
-  // fraction across it maps straight to field inches — this pins the conversion.
+  // fraction across it maps straight to field inches, this pins the conversion.
   surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 468, height: 312, right: 468, bottom: 312, x: 0, y: 0, toJSON() {} }) as DOMRect;
   // clientX = 12/54*468 ≈ 104, clientY = 10/36*312 ≈ 87 → dest ≈ {12,10}, ~2"
   // east of rig 1's {10,10} start, inside its Move budget (fallback Speed 5).

@@ -1,11 +1,11 @@
-# V2 Test Seed + Enemy Impersonation — Design
+# V2 Test Seed + Enemy Impersonation, Design
 
 **Date:** 2026-07-11
 **Status:** Approved, ready for planning
 
 ## Purpose
 
-Make v2 battles trivially testable — by hand and by agents. One action produces a
+Make v2 battles trivially testable, by hand and by agents. One action produces a
 valid, already-started 3v3 room; a second affordance lets the seeding operator act
 on the enemy's turn. Reachable three ways from one source of truth: shared unit
 tests, an HTTP call, and a UI button.
@@ -19,7 +19,7 @@ tests, an HTTP call, and a UI button.
   `ready` **and** each side has ≥3 rigs. Turn order derives from the order sides
   readied (`deploymentOrder`), with an initiative roll on start.
 - Commands hit `POST /api/game/:room/command` with `{ cmd:{verb,attrs}, side }`.
-  The server does **not** authenticate `side` — `context.side` is taken verbatim
+  The server does **not** authenticate `side`: `context.side` is taken verbatim
   from the body. Turn-gated verbs (`activate`, `action`, `react`, `answer`) gate on
   `rig.owner === turn.side`, **not** on who claimed the side.
 - Client view + command routing both flow through `useMySide()`, which already
@@ -38,7 +38,7 @@ These existing seams make both features small.
 
 ---
 
-## Feature 1 — `seed` command verb
+## Feature 1, `seed` command verb
 
 New verb in `applyCommand` (`shared/game-state.js`). Single source of truth reused
 by HTTP, the client helper, and shared tests.
@@ -55,7 +55,7 @@ applyCommand(room, { verb: "seed", attrs: { first, seed?, roster? } }, context)
 | `seed`   | `number`          | *(unused v1)*  | reserved for a future random-valid roster   |
 | `roster` | array (see below) | fixed default  | optional override of the 6 rigs             |
 
-**Behavior (idempotent — safe to call on an existing room):**
+**Behavior (idempotent, safe to call on an existing room):**
 
 1. Clear game + units: `room.rigs = []`, reset `nextRigId`, reset game shape
    (reuse existing reset paths; do not hand-roll).
@@ -65,10 +65,10 @@ applyCommand(room, { verb: "seed", attrs: { first, seed?, roster? } }, context)
 4. Force-start deterministically: set `started`, `phase:"activation"`, `round:1`,
    bounties, answer tokens, and `turn.side = first`, via a helper
    `startGameSeeded(room, first)` that calls `applyInitiative` with an **explicit**
-   order `[first, other]` — **no dice roll**, so tests can assert the exact turn.
+   order `[first, other]`: **no dice roll**, so tests can assert the exact turn.
 5. Set `room.seeded = true`.
 
-**Fixed default roster (all 6 chassis distinct; 3 medium / 3 light — no heavy
+**Fixed default roster (all 6 chassis distinct; 3 medium / 3 light, no heavy
 class exists in the catalogue, which is 7 light + 3 medium):**
 
 | name | owner | chassis                  |
@@ -85,16 +85,16 @@ legal loadout regardless of the `enforceChassis` guard (which only guards `add`,
 not `seed`).
 
 **Guard note:** `enforceChassis` in `server/routes/game.js` intercepts only
-`verb === "add"`. `seed` passes through untouched — intended.
+`verb === "add"`. `seed` passes through untouched, intended.
 
-## Feature 2 — `publicState` exposes `seeded`, drops redaction in seed rooms
+## Feature 2, `publicState` exposes `seeded`, drops redaction in seed rooms
 
 - Add `seeded: room.seeded ?? false` to the `publicState` return.
 - When `room.seeded` is true, skip the face-down-preparation and bounty redaction
   so an impersonator has full visibility of both sides.
 - Client `ServerState` type gains `seeded?: boolean`; reducer passes it through.
 
-## Feature 3 — Client seed helper
+## Feature 3, Client seed helper
 
 `client/src/v2/hooks/useSeedBattle.ts`
 
@@ -111,7 +111,7 @@ export function useSeedBattle() {
 Callable from component tests without a browser (mock `useCommands`, assert it
 sends `("seed", { first })`).
 
-## Feature 4 — Join UI: "Seed Test Battle"
+## Feature 4, Join UI: "Seed Test Battle"
 
 On the `Join` screen (`client/src/v2/screens/Join.tsx`), a secondary CTA below the
 existing "Enter The Yard" button: **"Seed Test Battle ▸"**.
@@ -132,7 +132,7 @@ Flow:
 Wiring: `Join` gains an optional `onSeed(first)` prop; `V2App` implements it
 (join, then `seed`). Keeps `Join` presentational.
 
-## Feature 5 — Enemy impersonation
+## Feature 5, Enemy impersonation
 
 Reuse the existing `ViewSideContext`/`useMySide` cascade; make the override
 runtime-switchable inside the terminal.
@@ -142,11 +142,11 @@ runtime-switchable inside the terminal.
   (= your real session side).
 - Wrap the terminal subtree in `<ViewSideContext.Provider value={actingSide}>`.
   Because `useMySide` already reads this context and the whole app routes view +
-  command `side` through `useMySide`, flipping it flips everything — rig
+  command `side` through `useMySide`, flipping it flips everything, rig
   ownership, which wizards open, and the `side` sent on every command.
 - Render an **"Acting as: [A] [B]"** chip **only when `state.seeded`**. Toggling
   sets `actingSide`. To act on the enemy's turn: switch to that side, then act.
-- **HTTP impersonation needs no new code** — `POST /command { cmd, side:"b" }`
+- **HTTP impersonation needs no new code**: `POST /command { cmd, side:"b" }`
   already acts as B. The only enabling change is Feature 2 (full visibility in
   seeded rooms), already covered.
 
@@ -198,14 +198,14 @@ Impersonate: ViewSideContext=actingSide → useMySide → command side + view pe
 
 ## Files touched
 
-- `shared/game-state.js` — `seed` verb, `startGameSeeded` helper, `seeded` flag,
+- `shared/game-state.js`: `seed` verb, `startGameSeeded` helper, `seeded` flag,
   `publicState` changes.
-- `shared/game-state.test.js` — seed + publicState tests.
-- `client/src/state/types.ts` (or wherever `ServerState` lives) — `seeded?` field.
+- `shared/game-state.test.js`: seed + publicState tests.
+- `client/src/state/types.ts` (or wherever `ServerState` lives), `seeded?` field.
 - `client/src/v2/hooks/useSeedBattle.ts` (+ test).
-- `client/src/v2/screens/Join.tsx` — seed CTA + mini wizard (+ test update).
-- `client/src/v2/V2App.tsx` — `onSeed` handler (join + seed).
-- `client/src/v2/V2Terminal.tsx` — `ViewSideContext.Provider` + impersonation chip
+- `client/src/v2/screens/Join.tsx`: seed CTA + mini wizard (+ test update).
+- `client/src/v2/V2App.tsx`: `onSeed` handler (join + seed).
+- `client/src/v2/V2Terminal.tsx`: `ViewSideContext.Provider` + impersonation chip
   (new small component, e.g. `ImpersonateChip.tsx`) (+ test).
 
 No changes to `server/routes/game.js` (the generic `/command` route already

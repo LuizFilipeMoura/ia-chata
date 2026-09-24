@@ -66,7 +66,7 @@ export function UpgradeLadder({ title, subtitle, glyph, tiers, selected, onSelec
           </div>
           <div className="v2-ul-col v2-ul-catch">
             <div className="v2-ul-col-hd v2-eyebrow">Catch {risk ? <span className="v2-ul-meter" aria-hidden="true">{pips("rsk", riskPips)}</span> : null}</div>
-            {risk ? <span>⚠ {risk}</span> : <span className="v2-ul-none">None — dependable.</span>}
+            {risk ? <span>⚠ {risk}</span> : <span className="v2-ul-none">None, dependable.</span>}
           </div>
         </div>
       </div>

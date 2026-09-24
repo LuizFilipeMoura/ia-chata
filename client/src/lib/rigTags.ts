@@ -13,7 +13,7 @@ function parseAttrs(body: string): Record<string, string> {
   return attrs;
 }
 
-/** Parse every [[RIG ...]] command out of `text`. Pure — the caller dispatches. */
+/** Parse every [[RIG ...]] command out of `text`. Pure, the caller dispatches. */
 export function parseRigCommands(text: string): RigCommand[] {
   RIG_TAG_RE.lastIndex = 0;
   const out: RigCommand[] = [];

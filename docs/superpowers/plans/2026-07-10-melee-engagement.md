@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a D&D-style melee engagement lock — a rig in melee cannot walk away, guns are hampered while locked, and breaking free takes a deliberate Disengage action.
+**Goal:** Add a D&D-style melee engagement lock, a rig in melee cannot walk away, guns are hampered while locked, and breaking free takes a deliberate Disengage action.
 
 **Architecture:** Engagement is explicit tracked state (the server has no positions). Each unit carries a symmetric `engagedWith: rigId|null` link, guarded by two helper functions so the symmetric one-to-one invariant is the only way state changes. A melee attack auto-forms the pair; a `move`+`engage` declaration also forms it. Movement is blocked while engaged; a new `disengage` action clears the pair. Damage that destroys or immobilises a rig auto-clears its link. Engagement persists across rounds.
 
@@ -15,12 +15,12 @@
 - Whole suite: `npm test`
 
 **Key file map:**
-- `shared/game-state.js` — state field, helpers, damage hooks, action handlers, ctx wiring
-- `shared/combat.js` — ranged penalty, melee auto-engage trigger
-- `shared/rules.js` — `ACTIONS.disengage` catalogue entry
-- `shared/battle-view.js` — action-list gating + status chip
-- `client/src/components/battle/ActionConsole.tsx` — action icon (disengage flows through existing groups)
-- `client/src/state/BattleActionsContext.tsx` — optional engage-target picker on Move
+- `shared/game-state.js`: state field, helpers, damage hooks, action handlers, ctx wiring
+- `shared/combat.js`: ranged penalty, melee auto-engage trigger
+- `shared/rules.js`: `ACTIONS.disengage` catalogue entry
+- `shared/battle-view.js`: action-list gating + status chip
+- `client/src/components/battle/ActionConsole.tsx`: action icon (disengage flows through existing groups)
+- `client/src/state/BattleActionsContext.tsx`: optional engage-target picker on Move
 
 ---
 
@@ -83,7 +83,7 @@ test("makeRig and makeUnit default engagedWith to null", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `__test.setEngagement is not a function`, and `engagedWith` is `undefined` not `null`.
+Expected: FAIL, `__test.setEngagement is not a function`, and `engagedWith` is `undefined` not `null`.
 
 - [ ] **Step 3: Add the state default in `ensureRigShape`**
 
@@ -198,7 +198,7 @@ test("immobilising an engaged rig clears the link", () => {
   const b = makeRig(2, "b1", "light", "b", W);
   room.rigs = [a, b];
   __test.setEngagement(a, b);
-  __test.setRigSp(b, "legs", 0);            // legs to 0 (first time — not yet immobile)
+  __test.setRigSp(b, "legs", 0);            // legs to 0 (first time, not yet immobile)
   __test.applyDamage(room, b, "legs", 1, {}); // additional damage to 0-SP legs → immobilised
   assert.equal(b.immobilised, true);
   assert.equal(b.engagedWith, null);
@@ -230,20 +230,20 @@ export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repa
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — after destroy/immobilise, `engagedWith` is still set (no clear hook yet). The Recovery test should already PASS (Recovery never touched engagement) — that's fine, it's a guard against regression.
+Expected: FAIL, after destroy/immobilise, `engagedWith` is still set (no clear hook yet). The Recovery test should already PASS (Recovery never touched engagement), that's fine, it's a guard against regression.
 
 - [ ] **Step 4: Add the auto-clear hook**
 
 In `shared/game-state.js`, in `onRigDamaged`, right before the closing `checkAnnihilation(room);` call (~743):
 
 ```js
-  // Engagement (§engagement) — a destroyed or immobilised rig can no longer hold
+  // Engagement (§engagement), a destroyed or immobilised rig can no longer hold
   // the melee lock; free both ends.
   if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
   checkAnnihilation(room);
 ```
 
-Do NOT add any engagement clearing to `runRecovery` — persistence across rounds is intentional.
+Do NOT add any engagement clearing to `runRecovery`: persistence across rounds is intentional.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -289,7 +289,7 @@ test("engaged penalty does not apply to melee weapons", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — `engaged` equals `base` for the ranged case (penalty not wired yet).
+Expected: FAIL, `engaged` equals `base` for the ranged case (penalty not wired yet).
 
 - [ ] **Step 3: Add the penalty term in `computeModifiedAim`**
 
@@ -302,7 +302,7 @@ export function computeModifiedAim(attacker, profile, opts) {
   const cover = profile.upgradeEffect?.ignoreCover ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
   const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") ? -2 : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
-  // §engagement — a rig locked in melee fires ranged weapons at −2 accuracy.
+  // §engagement, a rig locked in melee fires ranged weapons at −2 accuracy.
   const engagedPenalty = opts.engaged && !profile.melee ? -2 : 0;
   const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty;
   return base - accTotal;
@@ -341,8 +341,8 @@ git commit -m "feat(engagement): -2 ranged accuracy while engaged"
 ## Task 4: Melee attack auto-engages attacker and target
 
 **Files:**
-- Modify: `shared/combat.js` (`resolveAttack` — determine melee, call `ctx.engage`; ~126-194)
-- Modify: `shared/game-state.js` (`combatCtx` — add `engage`; ~883-892)
+- Modify: `shared/combat.js` (`resolveAttack`: determine melee, call `ctx.engage`; ~126-194)
+- Modify: `shared/game-state.js` (`combatCtx`: add `engage`; ~883-892)
 - Test: `shared/game-state.test.js`
 
 - [ ] **Step 1: Write the failing tests**
@@ -390,7 +390,7 @@ test("a ranged attack does not engage", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the melee attack leaves `engagedWith` null (no trigger wired).
+Expected: FAIL, the melee attack leaves `engagedWith` null (no trigger wired).
 
 - [ ] **Step 3: Add `engage` to the combat ctx**
 
@@ -415,7 +415,7 @@ function combatCtx() {
 In `shared/combat.js`, in `resolveAttack`, just before the final `return { ok: true, hits: th.hits, location, impacts, heat };` (~193), add:
 
 ```js
-  // §engagement — a legal melee blow (reached here = not out-of-range, weapon not
+  // §engagement, a legal melee blow (reached here = not out-of-range, weapon not
   // destroyed) locks attacker and target together. No-op if either is already
   // engaged (one-to-one) or same side.
   const isMelee = slot === "melee" || (slot === "unit" && profile.melee);
@@ -434,7 +434,7 @@ Expected: PASS (all three new tests green).
 - [ ] **Step 6: Run the combat suite to confirm no regression**
 
 Run: `node --test shared/combat.test.js`
-Expected: PASS (existing `resolveAttack` tests unaffected — `engage` is optional on their ctx).
+Expected: PASS (existing `resolveAttack` tests unaffected, `engage` is optional on their ctx).
 
 - [ ] **Step 7: Commit**
 
@@ -465,7 +465,7 @@ test("an engaged rig cannot Move or Sprint", () => {
   __test.setEngagement(b1, a1); // lock b1 to a1
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
-  assert.equal(r.game.turn.actionsUsed, 0);   // move rejected — no slot spent
+  assert.equal(r.game.turn.actionsUsed, 0);   // move rejected, no slot spent
   assert.equal(b1.engine.heat, heatBefore);   // no heat added
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
   assert.equal(r.game.turn.actionsUsed, 0);   // sprint rejected too
@@ -483,7 +483,7 @@ test("an unengaged rig moves normally", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the engaged rig's Move still spends a slot (`actionsUsed` becomes 1).
+Expected: FAIL, the engaged rig's Move still spends a slot (`actionsUsed` becomes 1).
 
 - [ ] **Step 3: Add the lock to the move/sprint branch**
 
@@ -491,11 +491,11 @@ In `shared/game-state.js`, `performAction`, replace the move/sprint branch (~992
 
 ```js
   if (act === "move" || act === "sprint") {
-    // §engagement — a rig locked in melee is pinned; it must Disengage before it
+    // §engagement, a rig locked in melee is pinned; it must Disengage before it
     // can reposition. (Repositioning while engaged is meaningless without a grid.)
     if (rig.engagedWith != null) return false;
     // Move / Sprint may repeat within an activation; each spends one slot and
-    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
+    // adds its heat. Sprint costs 2 heat, 1 with Servo Actuators (Mobility).
     const heat = act === "sprint" ? (rig.equipment === "servo-actuators" ? 1 : def.heat) : def.heat;
     t.actionsUsed += 1;
     bumpHeat(rig, heat);
@@ -521,7 +521,7 @@ git commit -m "feat(engagement): hard-lock movement while engaged"
 
 **Files:**
 - Modify: `shared/rules.js` (`ACTIONS` ~9-18)
-- Modify: `shared/game-state.js` (`performAction` — add disengage branch after move/sprint ~1000)
+- Modify: `shared/game-state.js` (`performAction`: add disengage branch after move/sprint ~1000)
 - Test: `shared/game-state.test.js`
 
 - [ ] **Step 1: Write the failing tests**
@@ -539,7 +539,7 @@ test("Disengage frees both rigs and costs 1 slot + 1 heat", () => {
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
   assert.equal(b1.engagedWith, null);
-  assert.equal(a1.engagedWith, null);          // mutual — partner freed
+  assert.equal(a1.engagedWith, null);          // mutual, partner freed
   assert.equal(r.game.turn.actionsUsed, 1);    // one slot
   assert.equal(b1.engine.heat, heatBefore + 1); // +1 heat
 });
@@ -567,7 +567,7 @@ test("Disengage is a no-op when the rig is not engaged", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `disengage` is not a known action, so nothing happens and the "frees both rigs" assertions fail.
+Expected: FAIL, `disengage` is not a known action, so nothing happens and the "frees both rigs" assertions fail.
 
 - [ ] **Step 3: Add the `disengage` action to the catalogue**
 
@@ -584,7 +584,7 @@ In `shared/game-state.js`, `performAction`, add a new branch immediately AFTER t
 
 ```js
   if (act === "disengage") {
-    // §engagement — break the melee lock. The budget/`def` guard above (the
+    // §engagement, break the melee lock. The budget/`def` guard above (the
     // `if (!def || t.actionsUsed >= t.actionsMax)` check) already ran, so a slot
     // is available. No-op if the rig isn't actually engaged.
     if (rig.engagedWith == null) return false;
@@ -618,7 +618,7 @@ git commit -m "feat(engagement): Disengage action clears the lock (1 slot + 1 he
 ## Task 7: Move-into engagement declaration
 
 **Files:**
-- Modify: `shared/game-state.js` (`performAction` move/sprint branch — read `a.engage`; add `maybeEngageByName` helper)
+- Modify: `shared/game-state.js` (`performAction` move/sprint branch, read `a.engage`; add `maybeEngageByName` helper)
 - Test: `shared/game-state.test.js`
 
 - [ ] **Step 1: Write the failing test**
@@ -652,7 +652,7 @@ test("Move engage declaration against a friendly is ignored but the move still h
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the first test's `engagedWith` stays null (the `engage` attr is ignored).
+Expected: FAIL, the first test's `engagedWith` stays null (the `engage` attr is ignored).
 
 - [ ] **Step 3: Add the `maybeEngageByName` helper**
 
@@ -673,7 +673,7 @@ In `shared/game-state.js`, `performAction`, update the move/sprint branch (from 
 
 ```js
   if (act === "move" || act === "sprint") {
-    // §engagement — a rig locked in melee is pinned; it must Disengage before it
+    // §engagement, a rig locked in melee is pinned; it must Disengage before it
     // can reposition. (Repositioning while engaged is meaningless without a grid.)
     if (rig.engagedWith != null) return false;
     // Optional move-into declaration: the player states they moved into base
@@ -700,7 +700,7 @@ git commit -m "feat(engagement): move-into engagement declaration"
 
 ---
 
-## Task 8: Client — action list gating, status chip, icon, engage picker
+## Task 8: Client, action list gating, status chip, icon, engage picker
 
 **Files:**
 - Modify: `shared/battle-view.js` (`availableActions` ~7-52, `rigModifiers` ~64-90)
@@ -709,7 +709,7 @@ git commit -m "feat(engagement): move-into engagement declaration"
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `shared/battle-view.test.js` (match the file's existing import/setup style — it already imports `availableActions`, `rigModifiers`, and builds rigs; reuse those. If a helper to build a rig+turn is not present, use the inline objects below):
+Add to `shared/battle-view.test.js` (match the file's existing import/setup style, it already imports `availableActions`, `rigModifiers`, and builds rigs; reuse those. If a helper to build a rig+turn is not present, use the inline objects below):
 
 ```js
 test("availableActions blocks Move/Sprint and enables Disengage while engaged", () => {
@@ -744,7 +744,7 @@ Ensure the test file imports `makeRig` from `./game-state.js` (add it to the exi
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — `disengage` is not in the action list; no `engaged` modifier.
+Expected: FAIL, `disengage` is not in the action list; no `engaged` modifier.
 
 - [ ] **Step 3: Add `disengage` to the action order and gate move/fire**
 
@@ -759,14 +759,14 @@ Then inside the `.map((key) => { ... })` of `availableActions`, after the existi
 ```js
       if ((key === "move" || key === "sprint") && rig.engagedWith != null) {
         enabled = false;
-        note = "Engaged — Disengage first";
+        note = "Engaged, Disengage first";
       }
       if (key === "disengage") {
         enabled = left > 0 && rig.engagedWith != null;
         if (rig.engagedWith == null) note = "Not engaged";
       }
       if ((key === "fire" || key === "aimed") && rig.engagedWith != null && !rangedSpent) {
-        note = note ? `${note} · Engaged −2 Aim` : "Engaged — ranged −2 Aim";
+        note = note ? `${note} · Engaged −2 Aim` : "Engaged, ranged −2 Aim";
       }
 ```
 
@@ -807,7 +807,7 @@ In `client/src/state/BattleActionsContext.tsx`, thread an enemy target into the 
       );
       const state: { engage: string } = { engage: "" };
       openDrawer({
-        title: `${iconFor(key)} ${sprint ? "Sprint" : "Move"} — ${rig.name}`,
+        title: `${iconFor(key)} ${sprint ? "Sprint" : "Move"}, ${rig.name}`,
         tone: "oil",
         dismissable: false,
         render: () => (
@@ -857,7 +857,7 @@ And, immediately before `<div className="dwr-actions">`:
             defaultValue=""
             onChange={(e) => onEngageChange(e.target.value)}
           >
-            <option value="">— none —</option>
+            <option value="">, none,</option>
             {enemies.map((e) => (
               <option key={e.id} value={e.name}>{e.name}</option>
             ))}
@@ -869,7 +869,7 @@ And, immediately before `<div className="dwr-actions">`:
 - [ ] **Step 8: Verify the client build/tests still pass**
 
 Run: `npm test`
-Expected: PASS — Vitest (client) and `node --test` (shared) both green. The Move drawer now shows an optional "Engage" picker; picking an enemy sends `engage` with the move.
+Expected: PASS, Vitest (client) and `node --test` (shared) both green. The Move drawer now shows an optional "Engage" picker; picking an enemy sends `engage` with the move.
 
 - [ ] **Step 9: Commit**
 
@@ -887,7 +887,7 @@ git commit -m "feat(engagement): client action gating, Engaged chip, Move engage
 - [ ] **Step 1: Run the entire test suite**
 
 Run: `npm test`
-Expected: PASS — all shared, server, and client tests green.
+Expected: PASS, all shared, server, and client tests green.
 
 - [ ] **Step 2: Manual smoke (optional, if a dev server is handy)**
 
@@ -906,7 +906,7 @@ git commit -m "chore(engagement): smoke-test fixes"
 
 ---
 
-## Self-review notes (author checklist — already applied)
+## Self-review notes (author checklist, already applied)
 
 - **Spec coverage:** state (T1) · triggers melee (T4) + move-into (T7) · hard lock (T5) · Disengage 1 slot+1 heat (T6) · −2 ranged (T3) · auto-clear kill/immobilise (T2) · persist across rounds (T2) · one-to-one (T1) · client badge/gating/picker (T8). All spec sections mapped.
 - **Type/name consistency:** `engagedWith` (id, nullable), `setEngagement(a,b)`, `clearEngagement(room,rig)`, `maybeEngage(room,a,b)`, `maybeEngageByName(room,rig,name)`, `findRigById(room,id)`, `ctx.engage(room,attacker,target)` used identically across tasks.

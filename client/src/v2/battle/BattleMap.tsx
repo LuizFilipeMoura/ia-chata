@@ -13,7 +13,7 @@ export interface BattleMapProps {
   onSelect: (rig: Rig) => void;
   onActivate: (rig: Rig) => void;
   activatable: (rig: Rig) => boolean;
-  /** L3 overlay slot — the move-target layer renders here when arming a move. */
+  /** L3 overlay slot, the move-target layer renders here when arming a move. */
   overlay?: ReactNode;
 }
 

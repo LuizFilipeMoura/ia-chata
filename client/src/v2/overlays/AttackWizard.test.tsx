@@ -54,7 +54,7 @@ function Seed({ rigs, children, autoResolve }: { rigs: Rig[]; children: ReactNod
 const MORTAR: Partial<Rig> = { weapons: { longRange: "Mortar", melee: "Claw" } } as Partial<Rig>;
 
 // Faces for a ROF-3 manual volley: hit dice 1/6/6 (die 0 MISSES, dice 1-2 land),
-// so the engine wants wounds[0] and wounds[1] — the first two wound dice, not
+// so the engine wants wounds[0] and wounds[1], the first two wound dice, not
 // the 2nd and 3rd. The asymmetry is the point: it catches a wizard that pairs
 // wound die i with hit die i.
 const FACES: Record<string, number> = { h0: 1, h1: 6, h2: 6, loc: 3, w0: 10, w1: 1, w2: 5 };

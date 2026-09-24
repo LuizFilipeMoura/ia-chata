@@ -17,7 +17,7 @@ describe("MoveBody sprint heat", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain("+1 heat");
   });
-  it("shows +1 for a Reinforced Servos rig — Sprint is never free", () => {
+  it("shows +1 for a Reinforced Servos rig, Sprint is never free", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain("+1 heat");
     expect(document.body.textContent).not.toContain("+0 heat");

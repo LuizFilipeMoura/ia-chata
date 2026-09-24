@@ -1,10 +1,10 @@
-# V2 Frontend — Phase A Implementation Plan
+# V2 Frontend, Phase A Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship a `?v2`-gated, fully isolated V2 frontend covering Shell + Join + Squadron + Rig Terminal, wired to the real room state — a presentation-layer swap over V1.
+**Goal:** Ship a `?v2`-gated, fully isolated V2 frontend covering Shell + Join + Squadron + Rig Terminal, wired to the real room state, a presentation-layer swap over V1.
 
-**Architecture:** New `client/src/v2/` tree mirrors the real structure. `main.tsx` branches on a `?v2` flag to render `<V2App/>` (else `<App/>`), both inside the unchanged `<AppProviders/>`. V2 reuses 100% of V1's state/hooks/commands; it only supplies presentation + view-model mapping. All CSS is scoped under `.v2-root` with `--v2-*` tokens — zero collision with V1's global CSS.
+**Architecture:** New `client/src/v2/` tree mirrors the real structure. `main.tsx` branches on a `?v2` flag to render `<V2App/>` (else `<App/>`), both inside the unchanged `<AppProviders/>`. V2 reuses 100% of V1's state/hooks/commands; it only supplies presentation + view-model mapping. All CSS is scoped under `.v2-root` with `--v2-*` tokens, zero collision with V1's global CSS.
 
 **Tech Stack:** React 18 + TypeScript, Vite, Vitest + @testing-library/react (jsdom), shared game modules under `/shared/*.js`.
 
@@ -28,7 +28,7 @@
 
 ```
 client/src/
-  main.tsx                       MODIFY — branch on shouldUseV2()
+  main.tsx                       MODIFY, branch on shouldUseV2()
   v2/
     V2App.tsx                    session branching (Join vs Terminal), socket + join flow
     V2Terminal.tsx               the shell host: holds openRigId state, renders Shell + Squadron + RigTerminal
@@ -102,7 +102,7 @@ test("returns false when absent", () => {
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/shouldUseV2.test.ts`
-Expected: FAIL — cannot find module `./shouldUseV2`.
+Expected: FAIL, cannot find module `./shouldUseV2`.
 
 - [ ] **Step 4: Implement the parser**
 
@@ -126,7 +126,7 @@ Expected: PASS (both tests).
 Create `client/src/v2/styles/tokens.css`. These are the mockup's tokens (mockup lines 15–25) but placed on `.v2-root` (NOT `:root`) and prefixed `--v2-`. This file also imports the fonts and defines the keyframes/scrollbar, all scoped.
 
 ```css
-/* V2 design tokens — scoped to .v2-root, never :root, to guarantee no collision
+/* V2 design tokens, scoped to .v2-root, never :root, to guarantee no collision
    with V1's global tokens.css. Every custom property is prefixed --v2-. */
 @import url("https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
@@ -163,11 +163,11 @@ Create `client/src/v2/styles/tokens.css`. These are the mockup's tokens (mockup 
 @media (prefers-reduced-motion:reduce){.v2-root *{animation:none!important}}
 ```
 
-Note: `.v2-root` carries the app-shell layout (fixed, flex column) itself, so `Shell` renders directly into it. The mockup set `html,body{overflow:hidden}` globally — do NOT replicate that on `body`; the fixed `.v2-root` already covers the viewport and V1 must stay unaffected.
+Note: `.v2-root` carries the app-shell layout (fixed, flex column) itself, so `Shell` renders directly into it. The mockup set `html,body{overflow:hidden}` globally, do NOT replicate that on `body`; the fixed `.v2-root` already covers the viewport and V1 must stay unaffected.
 
 - [ ] **Step 7: Wire the toggle in `main.tsx`**
 
-Modify `client/src/main.tsx` — keep V1 imports, add the branch. Replace the render call:
+Modify `client/src/main.tsx`: keep V1 imports, add the branch. Replace the render call:
 
 ```tsx
 import "./styles/tokens.css";
@@ -197,7 +197,7 @@ createRoot(document.getElementById("root")!).render(
 );
 ```
 
-`V2App` does not exist yet — Step 8 stubs it so the build stays green.
+`V2App` does not exist yet, Step 8 stubs it so the build stays green.
 
 - [ ] **Step 8: Stub V2App so the app compiles**
 
@@ -270,7 +270,7 @@ test("commissioned counts a side's rigs against the per-side cap", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/lib/viewModels.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement**
 
@@ -290,7 +290,7 @@ export function spColor(cur: number, max: number): string {
   return "linear-gradient(90deg,#4c9a5f,#6cc47f)";
 }
 
-// Cosmetic only — the game has no tonnage stat. Used for the Yard header flavor.
+// Cosmetic only, the game has no tonnage stat. Used for the Yard header flavor.
 const TONS: Record<string, number> = { light: 6, medium: 8, heavy: 10, colossal: 12 };
 export function tonnage(rigs: Rig[], side: string): number {
   return rigs
@@ -318,7 +318,7 @@ git commit -m "feat(v2): view-model helpers (spColor, tonnage, commissioned)"
 
 ---
 
-## Task 2: V2App — session branching + join flow
+## Task 2: V2App, session branching + join flow
 
 **Files:**
 - Modify: `client/src/v2/V2App.tsx`
@@ -362,7 +362,7 @@ test("renders the Terminal shell once a session exists", async () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/V2App.test.tsx`
-Expected: FAIL — Join/Terminal text not present (stub renders "V2 boot…").
+Expected: FAIL, Join/Terminal text not present (stub renders "V2 boot…").
 
 - [ ] **Step 3: Implement V2App + minimal Join/V2Terminal stubs**
 
@@ -452,7 +452,7 @@ git commit -m "feat(v2): V2App session branching + join flow"
 
 ---
 
-## Task 3: Shell — status strip, channel nav, command dock, CRT
+## Task 3: Shell, status strip, channel nav, command dock, CRT
 
 **Files:**
 - Create: `client/src/v2/components/Shell.tsx`
@@ -518,7 +518,7 @@ test("Revert is hidden unless the server allows undo", async () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/components/Shell.test.tsx`
-Expected: FAIL — `./Shell` not found.
+Expected: FAIL, `./Shell` not found.
 
 - [ ] **Step 3: Implement Shell**
 
@@ -557,7 +557,7 @@ export function Shell({ channel, children }: { channel: Channel; children: React
 
   return (
     <div className="v2-root">
-      {/* CRT / ambient overlays — mockup lines 45–50 */}
+      {/* CRT / ambient overlays, mockup lines 45–50 */}
       <div aria-hidden="true" className="v2-crt v2-crt--vignette" />
       <div aria-hidden="true" className="v2-crt v2-crt--scan" />
       <div aria-hidden="true" className="v2-crt v2-crt--grain" />
@@ -595,7 +595,7 @@ export function Shell({ channel, children }: { channel: Channel; children: React
       <footer className="v2-dock">
         <div className="v2-dock-label">CMD DOCK</div>
         <div className="v2-strip-spacer" />
-        <button type="button" className="v2-dock-btn" disabled title="Rulebook — coming soon">
+        <button type="button" className="v2-dock-btn" disabled title="Rulebook, coming soon">
           <span>🛠</span>Rulebook
         </button>
         {canUndo && (
@@ -675,7 +675,7 @@ Expected: PASS (V2App's "Terminal shell" test now finds "RIG CONTROL TERMINAL" v
 
 ```bash
 git add client/src/v2
-git commit -m "feat(v2): shell — status strip, channel nav, command dock, CRT"
+git commit -m "feat(v2): shell, status strip, channel nav, command dock, CRT"
 ```
 
 ---
@@ -724,7 +724,7 @@ Note the expected room is upper-cased on submit (matches V1 behavior). Side A is
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/screens/Join.test.tsx`
-Expected: FAIL — inputs/labels not present (stub).
+Expected: FAIL, inputs/labels not present (stub).
 
 - [ ] **Step 3: Implement Join**
 
@@ -746,7 +746,7 @@ export function Join({ onJoin, error }: Props) {
 
   const ready = room.trim().length > 0 && !!side;
   const status = ready
-    ? "◈ ALL SYSTEMS NOMINAL — READY TO ENLIST"
+    ? "◈ ALL SYSTEMS NOMINAL, READY TO ENLIST"
     : "Enter a room code to enlist.";
 
   const submit = () => { if (ready) onJoin(room.trim().toUpperCase(), name.trim(), side); };
@@ -864,7 +864,7 @@ test("renders name and four component bars and opens on click", async () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/components/RigRow.test.tsx`
-Expected: FAIL — `./RigRow` not found.
+Expected: FAIL, `./RigRow` not found.
 
 - [ ] **Step 3: Implement RigRow**
 
@@ -943,7 +943,7 @@ export function RigRow({ rig, hostile, onOpen }: { rig: Rig; hostile: boolean; o
 }
 ```
 
-Create `client/src/v2/styles/squadron.css` now (or defer to Task 6) — the RigRow classes live there; if deferring, RigRow renders unstyled in this task's test (fine, the test asserts content not pixels). To keep imports clean, import `../styles/squadron.css` at the top of RigRow.
+Create `client/src/v2/styles/squadron.css` now (or defer to Task 6), the RigRow classes live there; if deferring, RigRow renders unstyled in this task's test (fine, the test asserts content not pixels). To keep imports clean, import `../styles/squadron.css` at the top of RigRow.
 
 - [ ] **Step 4: Run to verify pass**
 
@@ -1022,7 +1022,7 @@ test("groups own vs hostile rigs and shows the commissioned count", async () => 
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/screens/Squadron.test.tsx`
-Expected: FAIL — `./Squadron` not found.
+Expected: FAIL, `./Squadron` not found.
 
 - [ ] **Step 3: Implement Squadron**
 
@@ -1094,7 +1094,7 @@ export function Squadron({ onOpenRig }: { onOpenRig: (id: number) => void }) {
         <button type="button" className="v2-yard-add" disabled={!canAdd}
           onClick={() => canAdd && openCommission()}>
           <span className="v2-yard-add-plus">＋</span>
-          {canAdd ? "Commission New Rig" : "Roster full — ready up"}
+          {canAdd ? "Commission New Rig" : "Roster full, ready up"}
         </button>
       )}
 
@@ -1159,7 +1159,7 @@ Expected: PASS.
 
 ```bash
 git add client/src/v2
-git commit -m "feat(v2): squadron screen — roster, add card, ready bar"
+git commit -m "feat(v2): squadron screen, roster, add card, ready bar"
 ```
 
 ---
@@ -1205,7 +1205,7 @@ test("shows CATASTROPHIC at 0 SP", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/components/CompRow.test.tsx`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement CompRow**
 
@@ -1284,7 +1284,7 @@ git commit -m "feat(v2): CompRow with wired damage/repair"
 - Modify: `client/src/v2/styles/rig-terminal.css`
 - Test: `client/src/v2/components/HeatGauge.test.tsx`
 
-Read-only segmented gauge. Reuse `heatMeter(rig)` and hide for cold kinds — same logic as V1's `HeatGauge`, re-styled. No stoke/vent (Phase C).
+Read-only segmented gauge. Reuse `heatMeter(rig)` and hide for cold kinds, same logic as V1's `HeatGauge`, re-styled. No stoke/vent (Phase C).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1322,7 +1322,7 @@ test("renders nothing for a cold kind", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/components/HeatGauge.test.tsx`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement HeatGauge**
 
@@ -1351,10 +1351,10 @@ export function HeatGauge({ rig }: { rig: Rig }) {
 
   const note =
     m.zone === "over" ? `⚠ misfire roll = D12 + ${m.bonus}`
-    : m.zone === "redline" ? "At redline — one more triggers a misfire check"
-    : m.zone === "cold" ? `Cold — full ${m.cap} of headroom`
-    : m.zone === "warm" ? `Running hot — ${m.cap - m.heat} to redline`
-    : `Nominal — ${m.cap - m.heat} to redline`;
+    : m.zone === "redline" ? "At redline, one more triggers a misfire check"
+    : m.zone === "cold" ? `Cold, full ${m.cap} of headroom`
+    : m.zone === "warm" ? `Running hot, ${m.cap - m.heat} to redline`
+    : `Nominal, ${m.cap - m.heat} to redline`;
 
   return (
     <div className="v2-heat" data-zone={m.zone}>
@@ -1447,7 +1447,7 @@ test("activate CTA disabled with a wait label when not activatable in battle", (
 - [ ] **Step 2: Run to verify failure**
 
 Run: `npx vitest run client/src/v2/overlays/RigTerminal.test.tsx`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement RigTerminal**
 
@@ -1536,7 +1536,7 @@ export function RigTerminal({ rig, canActivate, started, onCommand, onClose }: P
 }
 ```
 
-Note: the pre-battle case (`started === false`) leaves Activate disabled with the "Wait for your turn" label — Phase A does not expose the V1 pre-battle heat-preview toggle; activation is a battle concern surfaced fully in Phase C.
+Note: the pre-battle case (`started === false`) leaves Activate disabled with the "Wait for your turn" label, Phase A does not expose the V1 pre-battle heat-preview toggle; activation is a battle concern surfaced fully in Phase C.
 
 - [ ] **Step 4: Add overlay rules to rig-terminal.css**
 
@@ -1605,7 +1605,7 @@ git commit -m "feat(v2): rig terminal overlay wired into shell"
 **Files:**
 - Test: `client/src/v2/styles/isolation.test.ts`
 
-Assert no V2 stylesheet contains a bare `:root`, `html`, or `body` selector — the guarantee that V2 never touches V1's globals.
+Assert no V2 stylesheet contains a bare `:root`, `html`, or `body` selector, the guarantee that V2 never touches V1's globals.
 
 - [ ] **Step 1: Write the test**
 
@@ -1639,10 +1639,10 @@ test("every V2 stylesheet scopes all rules under .v2-root (no global selectors)"
 });
 ```
 
-- [ ] **Step 2: Run — expect PASS (or fix any offender)**
+- [ ] **Step 2: Run, expect PASS (or fix any offender)**
 
 Run: `npx vitest run client/src/v2/styles/isolation.test.ts`
-Expected: PASS. If it fails, the named file/line has a global selector — rewrite it as `.v2-root <selector>`.
+Expected: PASS. If it fails, the named file/line has a global selector, rewrite it as `.v2-root <selector>`.
 
 - [ ] **Step 3: Commit**
 
@@ -1689,6 +1689,6 @@ git commit -m "chore(v2): phase A verification fixes"
 
 ## Self-Review Notes (author)
 
-- **Spec coverage:** entry+toggle (T0), reuse boundary (T2), shell/channel/dock/CRT (T3), Join (T4), Squadron incl. add-card interim + ready bar (T5,T6), RigRow (T5), RigTerminal incl. mods/loadout/comp/heat/remove/activate-gate (T7,T8,T9), CSS isolation (T0 tokens + T10 guard), testing (every task). Tonnage cosmetic (T1). Heat read-only (T8) — matches corrected spec.
+- **Spec coverage:** entry+toggle (T0), reuse boundary (T2), shell/channel/dock/CRT (T3), Join (T4), Squadron incl. add-card interim + ready bar (T5,T6), RigRow (T5), RigTerminal incl. mods/loadout/comp/heat/remove/activate-gate (T7,T8,T9), CSS isolation (T0 tokens + T10 guard), testing (every task). Tonnage cosmetic (T1). Heat read-only (T8), matches corrected spec.
 - **Deferred per spec (not gaps):** action console + Fire overlay (Phase C), V2 commission wizard (Phase B, interim delegates to V1), chat/glossary (Phase D).
-- **Type consistency:** `sendCommand(verb, attrs)`, `CompRow` prop shape `{rigName, loc, comp, onCommand}`, `RigRow` `{rig, hostile, onOpen}`, `RigTerminal` `{rig, canActivate, started, onCommand, onClose}`, `commissioned → {count, max}` — used consistently across tasks.
+- **Type consistency:** `sendCommand(verb, attrs)`, `CompRow` prop shape `{rigName, loc, comp, onCommand}`, `RigRow` `{rig, hostile, onOpen}`, `RigTerminal` `{rig, canActivate, started, onCommand, onClose}`, `commissioned → {count, max}`: used consistently across tasks.

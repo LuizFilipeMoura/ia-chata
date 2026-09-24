@@ -112,7 +112,7 @@ test("shows the Activate CTA when it's my turn and this rig can activate", () =>
 
 test("never shows 'Wait for your turn' on my own turn", () => {
   // My turn, but this rig can't activate right now (e.g. another rig is mid-turn).
-  // The old code fell through to a disabled "Wait for your turn" — a lie on my turn.
+  // The old code fell through to a disabled "Wait for your turn", a lie on my turn.
   render(
     <V2Providers>
       <RigTerminal rig={rig} canActivate={false} started mine myTurn onCommand={vi.fn()} onClose={vi.fn()} />

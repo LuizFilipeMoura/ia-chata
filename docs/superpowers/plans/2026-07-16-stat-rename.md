@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rename the three weapon stats — `ACC`/`STR`/`D` become **Accuracy**/**Penetration**/**Damage** — across engine, client, scripts, glossary and `rules.md`, moving **no numbers**.
+**Goal:** Rename the three weapon stats, `ACC`/`STR`/`D` become **Accuracy**/**Penetration**/**Damage**: across engine, client, scripts, glossary and `rules.md`, moving **no numbers**.
 
-**Architecture:** One task per symbol, not per file. A field rename is atomic — you cannot rename `str` in `game-state.js` without breaking `combat.js` in the same commit — so each task sweeps one symbol across every file at once and ends with the full suite green. Steps within a task are per-file and bite-sized.
+**Architecture:** One task per symbol, not per file. A field rename is atomic, you cannot rename `str` in `game-state.js` without breaking `combat.js` in the same commit, so each task sweeps one symbol across every file at once and ends with the full suite green. Steps within a task are per-file and bite-sized.
 
 **Tech Stack:** Plain ESM JavaScript (`shared/`, `server/`, `scripts/`), React + TypeScript (`client/src/`), `node --test` + Vitest.
 
@@ -18,7 +18,7 @@
 
 > **The test suite must pass with the same counts, and no numeric literal may change anywhere in the diff.**
 
-Test files *will* be edited (there are 191 `STR` sites in `shared/combat.test.js` alone) — but only identifiers and strings, never expected values. Tasks 9–12 *are* real TDD: they add the first tests that have ever covered `rules.md`.
+Test files *will* be edited (there are 191 `STR` sites in `shared/combat.test.js` alone), but only identifiers and strings, never expected values. Tasks 9–12 *are* real TDD: they add the first tests that have ever covered `rules.md`.
 
 **The baseline, measured on `b0fa3e4` before writing this plan:**
 
@@ -28,7 +28,7 @@ Test Files  76 passed (76)
 ℹ tests 811 / ℹ pass 811 / ℹ fail 0   <- node --test
 ```
 
-**The gate command**, run before every commit in this plan. It compares the multiset of numeric literals leaving the diff against the multiset entering it. Rulebook section references (`§7.5`, `§12`) are stripped first — they are prose, not values, and leaving them in makes the gate cry wolf on every comment edit:
+**The gate command**, run before every commit in this plan. It compares the multiset of numeric literals leaving the diff against the multiset entering it. Rulebook section references (`§7.5`, `§12`) are stripped first, they are prose, not values, and leaving them in makes the gate cry wolf on every comment edit:
 
 ```bash
 nums() { git diff --cached -U0 | grep "^$1" | grep -v "^$1$1$1" | sed 's/§[0-9.]*//g' | grep -oE '\b[0-9]+\b' | sort; }
@@ -37,17 +37,17 @@ diff <(nums -) <(nums +)
 
 **Expected output: nothing.**
 
-**The gate is a tripwire, not a verdict.** If it fires, *inspect the hit* — do not assume it is a real change, and do not assume it is noise. Legitimate causes: a deleted comment that happened to contain a digit, a line-number reference in a comment. Illegitimate cause, the one this exists to catch: **a balance value edited to make a test pass.** If you cannot explain a hit in one sentence, report `BLOCKED` rather than waving it through. Task 1 fired on a `§2` inside a comment the task itself instructed be deleted — that is the shape of an acceptable hit, and it is why the `sed` above now exists.
+**The gate is a tripwire, not a verdict.** If it fires, *inspect the hit*: do not assume it is a real change, and do not assume it is noise. Legitimate causes: a deleted comment that happened to contain a digit, a line-number reference in a comment. Illegitimate cause, the one this exists to catch: **a balance value edited to make a test pass.** If you cannot explain a hit in one sentence, report `BLOCKED` rather than waving it through. Task 1 fired on a `§2` inside a comment the task itself instructed be deleted, that is the shape of an acceptable hit, and it is why the `sed` above now exists.
 
-## Traps — read all seven, each has already cost someone
+## Traps, read all seven, each has already cost someone
 
 1. **Do NOT rename `strOvermatchD`, `OVERMATCH_PER_D`, or `OVERMATCH_MAX_D`.** 31 sites. The **penetration rework deletes them wholesale**; renaming them is wasted work and a guaranteed merge conflict. After this plan lands they will sit in a `pen`-flavoured file still saying `str`. **That inconsistency is correct and temporary. Do not tidy it.**
 2. **Do NOT use `sed -i` on this repo.** It rewrites CRLF and leaves files dirty with an empty `git diff`. This is a 700-site mechanical rename and `sed -i` is exactly the tool you will reach for. Use your editor's rename, or `node -e` with explicit `\r\n` preservation, or edit by hand.
-3. **`grep -r str` is useless** — it matches `String`, `strict`, `construct`, `strip`. Always anchor: `\bstr\b`. (Verified: `strOvermatchD` does *not* match `\bstr\b`, because `O` is a word character. That is load-bearing for trap 1.)
-4. **`git add <file>` stages the whole file, and `git add -p` is unavailable here** (this environment is non-interactive). `package.json` and `package-lock.json` carry an **in-progress dependency upgrade belonging to the user** — this rename never touches them, so **never `git add -A`** and they stay clean. An earlier task swept them in and it had to be undone.
+3. **`grep -r str` is useless**: it matches `String`, `strict`, `construct`, `strip`. Always anchor: `\bstr\b`. (Verified: `strOvermatchD` does *not* match `\bstr\b`, because `O` is a word character. That is load-bearing for trap 1.)
+4. **`git add <file>` stages the whole file, and `git add -p` is unavailable here** (this environment is non-interactive). `package.json` and `package-lock.json` carry an **in-progress dependency upgrade belonging to the user**: this rename never touches them, so **never `git add -A`** and they stay clean. An earlier task swept them in and it had to be undone.
    **`client/shared.d.ts` is different:** it carries one uncommitted user line (`+ sprintMult: number;` in `rigEffects`) *and* the rename must edit it. The user has explicitly authorised that line to ride along in the rename's commit. **Say so in that commit message** rather than letting it look like a stray edit.
-5. **Search `client/`, never `client/src/`.** `client/shared.d.ts` sits one level *above* `client/src/` and is a real rename target (`rof: number; str: number; d: number;` at `:8` and `:14`, `acc?: number[]` at `:9`, `:15`, `:73`). Every grep in this plan scopes `client/` for exactly this reason. A `client/src/` scope silently misses the file **and the final verification passes anyway** — which is how this plan shipped with the bug until dispatch.
-6. **Another agent commits to this branch, and it is live.** It commits with a broad `git add`. HEAD moved twice while the spec was being written. **Re-check `git log --oneline -1` before every commit**, never trust `HEAD~1`, and stage only your own exact paths — a broad `git add` from either side is how a half-finished rename lands in someone else's commit.
+5. **Search `client/`, never `client/src/`.** `client/shared.d.ts` sits one level *above* `client/src/` and is a real rename target (`rof: number; str: number; d: number;` at `:8` and `:14`, `acc?: number[]` at `:9`, `:15`, `:73`). Every grep in this plan scopes `client/` for exactly this reason. A `client/src/` scope silently misses the file **and the final verification passes anyway**: which is how this plan shipped with the bug until dispatch.
+6. **Another agent commits to this branch, and it is live.** It commits with a broad `git add`. HEAD moved twice while the spec was being written. **Re-check `git log --oneline -1` before every commit**, never trust `HEAD~1`, and stage only your own exact paths, a broad `git add` from either side is how a half-finished rename lands in someone else's commit.
 7. **`Aim` is not `Accuracy` and must not be renamed.** `Aim` is the **D6 target number** (lower is better); `Accuracy` is the **stat** (higher is better). They invert. `combat.js:42` exists purely to protect that sign convention. `modAim`, `aimBreakdown`, `computeModifiedAim`, `aimTerms`, `"base aim"` and the `Aimed` **action** all stay exactly as they are.
 
 ## File Structure
@@ -61,10 +61,10 @@ No files are created or deleted except one new test file. Every change is in pla
 | `shared/combat.js` | 68 | `effStr`, aim terms, ledger labels, attack summary |
 | `shared/glossary.js` | 11 | the `str` / `acc` glossary entries and their `match` arrays |
 | `shared/*.test.js` | 250+ | identifier + string updates only |
-| `client/shared.d.ts` | 7 | the shared-module type decls (`str`/`d`/`acc`). **Above `client/src/` — see trap 5.** Carries one authorised user line. |
+| `client/shared.d.ts` | 7 | the shared-module type decls (`str`/`d`/`acc`). **Above `client/src/`: see trap 5.** Carries one authorised user line. |
 | `client/src/**` | ~45 | `types.ts`, wizards, `RollConsole`, `loadout`, CSS class names |
 | `scripts/balance/*.mjs` | 4 | harness reads of `.str` / `.d` |
-| `rules.md` | 86 | **runtime input** — the rules bot's system prompt |
+| `rules.md` | 86 | **runtime input**: the rules bot's system prompt |
 | `shared/rulebook.test.js` | **new** | the first test that has ever covered `rules.md` |
 
 ---
@@ -162,9 +162,9 @@ Expected: **15** hits.
 In `shared/game-state.js`, replace:
 
 ```js
-// §9 — a munition cook-off has no weapon profile, so its shot is these two
+// §9, a munition cook-off has no weapon profile, so its shot is these two
 // constants. STR 8 was rescaled with the weapon ladder (was 10 on the old 4..13
-// scale); D2 is Autocannon/Mortar-grade. vs a medium hull (T5) that is 3+ — a
+// scale); D2 is Autocannon/Mortar-grade. vs a medium hull (T5) that is 3+, a
 // cook-off should be nasty, not certain.
 export const BLAST_STR = 8;
 export const BLAST_D = 2;
@@ -173,10 +173,10 @@ export const BLAST_D = 2;
 with:
 
 ```js
-// §9 — a munition cook-off has no weapon profile, so its shot is these two
+// §9, a munition cook-off has no weapon profile, so its shot is these two
 // constants. Penetration 8 was rescaled with the weapon ladder (was 10 on the
 // old 4..13 scale); Damage 2 is Autocannon/Mortar-grade. vs a medium hull (T5)
-// that is 3+ — a cook-off should be nasty, not certain.
+// that is 3+, a cook-off should be nasty, not certain.
 export const BLAST_PEN = 8;
 export const BLAST_DMG = 2;
 ```
@@ -241,7 +241,7 @@ function woundRaw(pen, toughness) {
   const s = Math.floor(Number(pen) || 0);
 ```
 
-Inside the same function, update the comment that reads `STR may coerce — it fails toward TN 10 (10%) — but T must be real.` to `Penetration may coerce …`. **Leave the `typeof toughness` check and its whole comment block alone** — it is load-bearing and unrelated.
+Inside the same function, update the comment that reads `STR may coerce, it fails toward TN 10 (10%), but T must be real.` to `Penetration may coerce …`. **Leave the `typeof toughness` check and its whole comment block alone**: it is load-bearing and unrelated.
 
 - [ ] **Step 3: Rename `woundTarget`'s parameter**
 
@@ -255,7 +255,7 @@ Update its doc comment's `A shot's effective STR` → `A shot's effective Penetr
 
 - [ ] **Step 4: Leave `strOvermatchD` completely alone**
 
-It still reads `strOvermatchD(str, toughness)` and calls `woundRaw(str, toughness)`. That call still works — the parameter name changed, not the argument. **This is trap 1. Do not touch it.** The rework deletes it.
+It still reads `strOvermatchD(str, toughness)` and calls `woundRaw(str, toughness)`. That call still works, the parameter name changed, not the argument. **This is trap 1. Do not touch it.** The rework deletes it.
 
 - [ ] **Step 5: Rename `effStr` in `combat.js`**
 
@@ -265,7 +265,7 @@ At `shared/combat.js:532`:
 const effPen = pen + bonus + braced + hardened + reactive + shieldBlunt + cracked + sideRearDock;
 ```
 
-> `pen` on the right-hand side does not exist yet — it is `str` until Task 4. **Use `str` here for now** and let Task 4 sweep it. This task renames `effStr` only.
+> `pen` on the right-hand side does not exist yet, it is `str` until Task 4. **Use `str` here for now** and let Task 4 sweep it. This task renames `effStr` only.
 
 So the line for *this* task is:
 
@@ -301,11 +301,11 @@ git commit -m "refactor(combat): effStr -> effPen; woundTarget takes pen"
 
 ### Task 4: the weapon field `str` → `pen`
 
-The big one: 190 `\bstr\b` sites. Atomic — every definition and every reader in one commit.
+The big one: 190 `\bstr\b` sites. Atomic, every definition and every reader in one commit.
 
 **Files:**
-- Modify: `shared/game-state.js` — `WEAPONS`, `UNIT_WEAPONS`, `WEAPON_UPGRADES` `effect.str`, `normalizeWeapon`, `applyWeaponUpgrade`
-- Modify: `shared/combat.js` — every `profile.str` / `w.str` read, the attack `summary`
+- Modify: `shared/game-state.js`: `WEAPONS`, `UNIT_WEAPONS`, `WEAPON_UPGRADES` `effect.str`, `normalizeWeapon`, `applyWeaponUpgrade`
+- Modify: `shared/combat.js`: every `profile.str` / `w.str` read, the attack `summary`
 - Modify: `shared/*.test.js`, `client/src/**`, `scripts/balance/*.mjs`
 
 - [ ] **Step 1: Inventory**
@@ -314,22 +314,22 @@ The big one: 190 `\bstr\b` sites. Atomic — every definition and every reader i
 grep -rn '\bstr\b' shared/ server/ client/ scripts/ | grep -v strOvermatch
 ```
 
-Expected: **190** hits. Read the list before editing — confirm none are `String`/`strict`/`construct` (there are none in `shared/combat.js`; verified).
+Expected: **190** hits. Read the list before editing, confirm none are `String`/`strict`/`construct` (there are none in `shared/combat.js`; verified).
 
-- [ ] **Step 2: `shared/game-state.js` — weapon tables**
+- [ ] **Step 2: `shared/game-state.js`: weapon tables**
 
-Rename the `str:` key to `pen:` on every entry of `WEAPONS.longRange`, `WEAPONS.melee` and `UNIT_WEAPONS`. Values unchanged. Example — the first two lines become:
+Rename the `str:` key to `pen:` on every entry of `WEAPONS.longRange`, `WEAPONS.melee` and `UNIT_WEAPONS`. Values unchanged. Example, the first two lines become:
 
 ```js
     "Mini Gun":       { rof: 8, pen: 3,  d: 1, sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
     "Double MG":      { rof: 8, pen: 5,  d: 1, sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
 ```
 
-- [ ] **Step 3: `shared/game-state.js` — upgrade effects**
+- [ ] **Step 3: `shared/game-state.js`: upgrade effects**
 
-Rename `effect: { str: N }` → `effect: { pen: N }` on all five always-on entries (`honed-talons`, `depleted-core`, `reinforced-head`, `haymaker`, `fluked-head`). **Leave the `tag` strings alone — Task 8 does display.**
+Rename `effect: { str: N }` → `effect: { pen: N }` on all five always-on entries (`honed-talons`, `depleted-core`, `reinforced-head`, `haymaker`, `fluked-head`). **Leave the `tag` strings alone, Task 8 does display.**
 
-- [ ] **Step 4: `shared/game-state.js` — `applyWeaponUpgrade`**
+- [ ] **Step 4: `shared/game-state.js`: `applyWeaponUpgrade`**
 
 At the profile-build site (`game-state.js:706-707`):
 
@@ -338,9 +338,9 @@ At the profile-build site (`game-state.js:706-707`):
     pen: base.pen + (effect.pen || 0),
 ```
 
-- [ ] **Step 5: `shared/combat.js` — readers and the summary**
+- [ ] **Step 5: `shared/combat.js`: readers and the summary**
 
-Every `profile.str` becomes `profile.pen`. The attack summary's `(STR ${str})` becomes `(Pen ${pen})` — **this is a display string and it is fine to do here**, because the rest of the summary is already being edited for the identifier.
+Every `profile.str` becomes `profile.pen`. The attack summary's `(STR ${str})` becomes `(Pen ${pen})`: **this is a display string and it is fine to do here**, because the rest of the summary is already being edited for the identifier.
 
 - [ ] **Step 6: `client/src/**` and `scripts/balance/*.mjs`**
 
@@ -361,7 +361,7 @@ Sweep the remaining hits. `client/src/state/types.ts:95-96`:
     acc?: number[]; rng?: number[];
 ```
 
-> `d` → `dmg` and `acc` → `accuracy` here belong to Tasks 5 and 6; do only `str` → `pen` now. **The file also carries one uncommitted user line (`+ sprintMult: number;`) which the user has authorised to ride along — name it in the commit message (trap 4).**
+> `d` → `dmg` and `acc` → `accuracy` here belong to Tasks 5 and 6; do only `str` → `pen` now. **The file also carries one uncommitted user line (`+ sprintMult: number;`) which the user has authorised to ride along, name it in the commit message (trap 4).**
 
 - [ ] **Step 7: Verify**
 
@@ -377,7 +377,7 @@ Expected: **no output.**
 npm test
 ```
 
-Expected: 293 / 811, zero failures. **If a test fails here, you renamed a value, not an identifier — do not "fix" the test.** Revert the hunk and find the real edit.
+Expected: 293 / 811, zero failures. **If a test fails here, you renamed a value, not an identifier, do not "fix" the test.** Revert the hunk and find the real edit.
 
 - [ ] **Step 9: Stage, gate, commit**
 
@@ -389,9 +389,9 @@ git commit -m "refactor(weapons): the weapon stat str -> pen"
 
 ---
 
-### Task 4b: the camelCase `Str` compounds — the ~130 sites `\bstr\b` cannot see
+### Task 4b: the camelCase `Str` compounds, the ~130 sites `\bstr\b` cannot see
 
-**This task exists because the plan was wrong.** Every grep in Tasks 1–4 anchors on `\bstr\b`, which **cannot match `computeStr`, `strBreakdown`, `nextAttackStr`** or any other camelCase compound — the same word-boundary quirk that (deliberately) hides `strOvermatchD`. Task 12's final verification used the same anchor, so **the rename would have reported clean with 130 sites still saying `Str`.** Found only because Task 4's implementer read the meltdown comment and surfaced `nextAttackStr`.
+**This task exists because the plan was wrong.** Every grep in Tasks 1–4 anchors on `\bstr\b`, which **cannot match `computeStr`, `strBreakdown`, `nextAttackStr`** or any other camelCase compound, the same word-boundary quirk that (deliberately) hides `strOvermatchD`. Task 12's final verification used the same anchor, so **the rename would have reported clean with 130 sites still saying `Str`.** Found only because Task 4's implementer read the meltdown comment and surfaced `nextAttackStr`.
 
 **Files:**
 - Modify: `shared/combat.js`, `shared/game-state.js`, `shared/rules.js`, their tests, `client/shared.d.ts`, `client/src/**`
@@ -407,42 +407,42 @@ Expected, and the disposition of each:
 | identifier | sites | rename to |
 |---|---|---|
 | `computeStr` | 63 | **`computePen`** |
-| `strOvermatchD` | 31 | **LEAVE** — the rework deletes it (trap 1) |
+| `strOvermatchD` | 31 | **LEAVE**: the rework deletes it (trap 1) |
 | `strBreakdown` | 17 | **`penBreakdown`** |
-| `nextAttackStr` | 12 | **`nextAttackPen`** — see Step 3, this one is persisted |
+| `nextAttackStr` | 12 | **`nextAttackPen`**: see Step 3, this one is persisted |
 | `strOverride` | 11 | **`penOverride`** |
 | `riposteStr` | 9 | **`ripostePen`** |
 | `sideRearStr` | 7 | **`sideRearPen`** |
 | `nextStr` | 4 | **`nextPen`** |
-| `binaryStr` | 4 | **LEAVE** — a binary string in `client/src/assets/Robot Move standalone.html`, unrelated to this game's stats |
+| `binaryStr` | 4 | **LEAVE**: a binary string in `client/src/assets/Robot Move standalone.html`, unrelated to this game's stats |
 | `strBd` | 3 | **`penBd`** |
 | `backdraftStr` | 3 | **`backdraftPen`** |
 | `strTerm` | 2 | **`penTerm`** |
 
 - [ ] **Step 2: Rename them**
 
-`computeStr` is the public effective-Penetration entry point (`combat.js:389`) — `computeStr(attacker, profile, opts)` returns `strBreakdown(...).value`. Both rename together.
+`computeStr` is the public effective-Penetration entry point (`combat.js:389`), `computeStr(attacker, profile, opts)` returns `strBreakdown(...).value`. Both rename together.
 
-`riposteStr` is also an **upgrade effect key** (`{ id: "anvil-boss", effect: { riposteStr: 6 } }` in `rules.js`). Internal to the catalog, so renaming it is safe — but rename the key and its reader in the same edit or Anvil Boss silently stops countering.
+`riposteStr` is also an **upgrade effect key** (`{ id: "anvil-boss", effect: { riposteStr: 6 } }` in `rules.js`). Internal to the catalog, so renaming it is safe, but rename the key and its reader in the same edit or Anvil Boss silently stops countering.
 
-- [ ] **Step 3: `nextAttackStr` is PERSISTED STATE — read this before renaming it**
+- [ ] **Step 3: `nextAttackStr` is PERSISTED STATE, read this before renaming it**
 
 `server/store.js` serialises the whole rooms map to disk (`fs.writeFileSync(filePath, JSON.stringify(Object.fromEntries(rooms)))`) and reads it back with `JSON.parse`. `rig.equipState.nextAttackStr` is therefore a **saved key**, not a local.
 
-Renaming it means a room saved with a banked Meltdown Protocol charge loads into a server that reads `nextAttackPen` — `undefined` — and the bonus **silently vanishes**. It is transient (set at activation start, consumed in `resolveFire`, cleared in `endActivation`), so the blast radius is one in-flight room on a dev branch. **Accepted deliberately; do not add a migration shim for a transient field.**
+Renaming it means a room saved with a banked Meltdown Protocol charge loads into a server that reads `nextAttackPen`: `undefined`: and the bonus **silently vanishes**. It is transient (set at activation start, consumed in `resolveFire`, cleared in `endActivation`), so the blast radius is one in-flight room on a dev branch. **Accepted deliberately; do not add a migration shim for a transient field.**
 
-- [ ] **Step 4: `mode: "str"` — rename it, and know why it is safe**
+- [ ] **Step 4: `mode: "str"`: rename it, and know why it is safe**
 
-`game-state.js` Meltdown Protocol takes two modes: `"str"` (arm +N Penetration on this activation's attacks) and `"burst"` (a 4" AoE). It **crosses the wire** — `client/src/state/types.ts:191` declares `mode: string`.
+`game-state.js` Meltdown Protocol takes two modes: `"str"` (arm +N Penetration on this activation's attacks) and `"burst"` (a 4" AoE). It **crosses the wire**: `client/src/state/types.ts:191` declares `mode: string`.
 
 Rename it to `"pen"` on both sides. This is safe for a reason worth understanding: the server only ever compares `if (a.mode === "burst")`, so **every other string falls to the Penetration branch**. A stale cached client sending `"str"` still gets the right behaviour.
 
-**That same property is a trap.** Because nothing compares `"str"`, a *wrong* value also reaches the Penetration branch — so **a broken rename here passes every test silently.** Task 4's implementer flagged exactly this. Assert it explicitly:
+**That same property is a trap.** Because nothing compares `"str"`, a *wrong* value also reaches the Penetration branch, so **a broken rename here passes every test silently.** Task 4's implementer flagged exactly this. Assert it explicitly:
 
 ```js
 test("Meltdown Protocol's pen mode arms the next attack", () => {
   // `mode` is a wire value and only "burst" is ever compared, so any string
-  // reaches this branch — a broken rename here would pass silently. Pin it.
+  // reaches this branch, a broken rename here would pass silently. Pin it.
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -454,7 +454,7 @@ test("Meltdown Protocol's pen mode arms the next attack", () => {
 });
 ```
 
-> Check the real equipment/upgrade ids and the verb's attr names against `rules.js` and `game-state.js` before running this — the ids above are the shape, not verified strings. If the verb rejects, read the reject reason and fix the fixture, not the assertion.
+> Check the real equipment/upgrade ids and the verb's attr names against `rules.js` and `game-state.js` before running this, the ids above are the shape, not verified strings. If the verb rejects, read the reject reason and fix the fixture, not the assertion.
 
 - [ ] **Step 5: Verify**
 
@@ -470,7 +470,7 @@ Expected: **only `strOvermatchD` (31) and `binaryStr` (4).** Nothing else.
 npm test
 ```
 
-Expected: `293 passed`, `ℹ pass 812 / ℹ fail 0` — 811 plus the meltdown pin from Step 4.
+Expected: `293 passed`, `ℹ pass 812 / ℹ fail 0`: 811 plus the meltdown pin from Step 4.
 
 - [ ] **Step 7: Stage, gate, commit**
 
@@ -508,7 +508,7 @@ grep -rn '\bd\b' client/src/state/types.ts client/src/lib/loadout.ts
 
 Read every hit before editing. **This is the one task where a blind replace will destroy the file.**
 
-- [ ] **Step 2: `shared/game-state.js` — weapon tables**
+- [ ] **Step 2: `shared/game-state.js`: weapon tables**
 
 Rename `d:` → `dmg:` on every `WEAPONS` / `UNIT_WEAPONS` entry. Example:
 
@@ -516,7 +516,7 @@ Rename `d:` → `dmg:` on every `WEAPONS` / `UNIT_WEAPONS` entry. Example:
     "Mini Gun":       { rof: 8, pen: 3,  dmg: 1, sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
 ```
 
-- [ ] **Step 3: `shared/combat.js` — the damage sum**
+- [ ] **Step 3: `shared/combat.js`: the damage sum**
 
 At `combat.js:566`:
 
@@ -538,7 +538,7 @@ And the rider push at `combat.js:577`:
 
 > `overmatch` stays. The rework removes it (trap 1).
 
-- [ ] **Step 4: `shared/combat.js` — the ledger term**
+- [ ] **Step 4: `shared/combat.js`: the ledger term**
 
 At `combat.js:894`, the label is display and Task 8 owns it, but the **value** is this task's:
 
@@ -569,14 +569,14 @@ git commit -m "refactor(weapons): the weapon stat d -> dmg"
 **Files:**
 - Modify: `shared/game-state.js` (melee entries in `WEAPONS.melee`, `UNIT_WEAPONS`), `shared/combat.js:31`, tests, client
 
-- [ ] **Step 1: Inventory — BOTH forms**
+- [ ] **Step 1: Inventory, BOTH forms**
 
 ```bash
 grep -rn '\bacc\b' shared/ server/ client/ scripts/
 grep -rhoE '\b[A-Za-z]+Acc\b|\bacc[A-Z][A-Za-z]*\b' shared/ server/ client/src client/shared.d.ts scripts/ | sort | uniq -c | sort -rn
 ```
 
-Expected: **36** bare hits, plus **45** camelCase compounds `\bacc\b` cannot see — the same anchor bug that hid 130 `Str` compounds until Task 4b:
+Expected: **36** bare hits, plus **45** camelCase compounds `\bacc\b` cannot see, the same anchor bug that hid 130 `Str` compounds until Task 4b:
 
 | identifier | sites | rename to |
 |---|---|---|
@@ -588,7 +588,7 @@ Expected: **36** bare hits, plus **45** camelCase compounds `\bacc\b` cannot see
 | `accLabel` | 4 | `accuracyLabel` |
 | `weaponAcc` | 3 | `weaponAccuracy` |
 
-`acc` is melee-only as a *weapon field* — ranged weapons derive accuracy from `sweet`/`peak`/`dropoff`. The compounds above are the modifier-space plumbing and span both.
+`acc` is melee-only as a *weapon field*: ranged weapons derive accuracy from `sweet`/`peak`/`dropoff`. The compounds above are the modifier-space plumbing and span both.
 
 - [ ] **Step 2: Rename the melee entries**
 
@@ -622,10 +622,10 @@ git commit -m "refactor(weapons): the weapon stat acc -> accuracy"
 
 ---
 
-### Task 7: display strings — upgrade tags and the glossary
+### Task 7: display strings, upgrade tags and the glossary
 
 **Files:**
-- Modify: `shared/game-state.js` — `WEAPON_UPGRADES` / `EQUIPMENT_UPGRADES` `tag` strings
+- Modify: `shared/game-state.js`: `WEAPON_UPGRADES` / `EQUIPMENT_UPGRADES` `tag` strings
 - Modify: `shared/glossary.js:61-70`
 - Modify: `shared/glossary.test.js`
 
@@ -661,11 +661,11 @@ And the conditional ones:
     { id: "hydraulic-vice", nature: "prototype", name: "Hydraulic Vice", tag: "Pry a location's armour open (+2 impact from anyone)", catch: "Leaves you locked in melee while gripping", effect: { breachGrip: true } },
 ```
 
-> `hydraulic-vice` says "impact", not "STR" — a pre-existing inconsistency with its twin `breach-grip`. **Leave it as "impact".** Aligning it is a copy change, not a rename, and it is not this plan's business.
+> `hydraulic-vice` says "impact", not "STR", a pre-existing inconsistency with its twin `breach-grip`. **Leave it as "impact".** Aligning it is a copy change, not a rename, and it is not this plan's business.
 
 - [ ] **Step 3: Rewrite the glossary entries**
 
-`shared/glossary.js` — the `match` array is what the click-to-explain surface scans page text for. Rename `term`, `match` **and** `def` together, or the surface silently stops matching.
+`shared/glossary.js`: the `match` array is what the click-to-explain surface scans page text for. Rename `term`, `match` **and** `def` together, or the surface silently stops matching.
 
 ```js
     id: "accuracy", term: "Accuracy", match: ["Accuracy", "ACC"],
@@ -677,7 +677,7 @@ And the conditional ones:
 
 > `match: ["Accuracy", "ACC"]` keeps `ACC` deliberately: `rules.md` prose and existing battle text may still render the short form in places this plan does not reach. A stale match string is harmless; a missing one silently breaks the gloss.
 
-Then update every `def` that mentions the old names — lines 46, 78, 90, 110, 154, 162, 170, 202, 206:
+Then update every `def` that mentions the old names, lines 46, 78, 90, 110, 154, 162, 170, 202, 206:
 
 ```js
     def: "A Rig's base D6 target number to hit, modified by weapon Accuracy and cover (§2, §7).",
@@ -698,10 +698,10 @@ Then update every `def` that mentions the old names — lines 46, 78, 90, 110, 1
     def: "Weapon perk: may make an Aimed Shot without the usual −2 Accuracy penalty (§13).",
 ```
 ```js
-    def: "A facing zone to a Rig's flank — attacks gain +2 Penetration here (+3 with Raking Fire) (§7, §13).",
+    def: "A facing zone to a Rig's flank, attacks gain +2 Penetration here (+3 with Raking Fire) (§7, §13).",
 ```
 ```js
-    def: "The facing zone behind a Rig — attacks gain +3 Penetration here (+6 with Raking Fire). Melee climbs the same ladder as ranged (§7, §13).",
+    def: "The facing zone behind a Rig, attacks gain +3 Penetration here (+6 with Raking Fire). Melee climbs the same ladder as ranged (§7, §13).",
 ```
 
 > **Leave the `overmatch` entry (line 89-90) alone.** The rework deletes it (trap 1).
@@ -723,7 +723,7 @@ Then update every `def` that mentions the old names — lines 46, 78, 90, 110, 1
 grep -rn '\bSTR\b\|\bACC\b' client/src/
 ```
 
-Includes `CommissionWizard.tsx`, `UnitWizard.tsx`, `AttackWizard.tsx`, `LoadoutView.tsx`, `RollConsole.tsx`, `ReactionPicker.tsx`, `RigItem.tsx`, and CSS class names in `client/src/v2/styles/overlay.css` and `client/src/styles/battle.css`. **Skip `client/src/v2/design-reference/oil-iron-terminal.html`** — it is a frozen design reference, not live code.
+Includes `CommissionWizard.tsx`, `UnitWizard.tsx`, `AttackWizard.tsx`, `LoadoutView.tsx`, `RollConsole.tsx`, `ReactionPicker.tsx`, `RigItem.tsx`, and CSS class names in `client/src/v2/styles/overlay.css` and `client/src/styles/battle.css`. **Skip `client/src/v2/design-reference/oil-iron-terminal.html`**: it is a frozen design reference, not live code.
 
 - [ ] **Step 6: Run the full suite**
 
@@ -741,7 +741,7 @@ git commit -m "refactor(display): tags, glossary and ledger read Accuracy/Penetr
 
 ---
 
-### Task 8: the guard test — `rules.md` vocabulary (RED)
+### Task 8: the guard test, `rules.md` vocabulary (RED)
 
 **Nothing has ever tested `rules.md`.** It is baked verbatim into the rules bot's system prompt as "the single source of truth" (`server/config.js:6` → `server/prompt.js`), and it can drift from the engine silently. It already has. This task writes the first test that binds them.
 
@@ -795,7 +795,7 @@ git commit -m "test(rules): bind rules.md to the stat vocabulary (red)"
 
 ---
 
-### Task 9: `rules.md` — the vocabulary (GREEN)
+### Task 9: `rules.md`: the vocabulary (GREEN)
 
 **Files:**
 - Modify: `rules.md` (86 `STR` sites, ~30 `ACC` sites)
@@ -803,14 +803,14 @@ git commit -m "test(rules): bind rules.md to the stat vocabulary (red)"
 - [ ] **Step 1: Sweep the prose**
 
 Replace `STR` → `Penetration` and `ACC` → `Accuracy` throughout, including:
-- §2 the Aim definition (`:62`) — *"modified by weapon Accuracy and cover"*
+- §2 the Aim definition (`:62`), *"modified by weapon Accuracy and cover"*
 - §5 Aimed Shot (`:134`), §7 cover bands (`:228-230`), the to-hit step (`:230`), the sweet-spot rule (`:232`)
-- §7.5 the wound roll (`:245-249`) — *"D10 ≥ 6 + Toughness − effective Penetration"*
-- §9 the cook-off (`:282`) — *"a flat Penetration 8 / Damage 2 hit"*
-- §12 the weapon tables (`:359`, `:366`, `:386`) — the `| Weapon | ROF | STR | D | …` headers become `| Weapon | ROF | Pen | Dmg | …`
+- §7.5 the wound roll (`:245-249`), *"D10 ≥ 6 + Toughness − effective Penetration"*
+- §9 the cook-off (`:282`), *"a flat Penetration 8 / Damage 2 hit"*
+- §12 the weapon tables (`:359`, `:366`, `:386`), the `| Weapon | ROF | STR | D | …` headers become `| Weapon | ROF | Pen | Dmg | …`
 - §13 the upgrade tables (`:408-427`) and the conditional notes (`:433-437`)
 
-**Leave `Aim` and `Aimed Shot` alone** (trap 7). **Leave the Overmatch paragraph at `:253` and its mention at `:254` alone** — the rework deletes them (trap 1).
+**Leave `Aim` and `Aimed Shot` alone** (trap 7). **Leave the Overmatch paragraph at `:253` and its mention at `:254` alone**: the rework deletes them (trap 1).
 
 - [ ] **Step 2: Run the guard test**
 
@@ -826,7 +826,7 @@ Expected: **PASS**.
 npm test
 ```
 
-Expected: `Tests 293 passed (293)`, `ℹ pass 812 / ℹ fail 0`. **Node goes 811 → 812** — the one new guard test.
+Expected: `Tests 293 passed (293)`, `ℹ pass 812 / ℹ fail 0`. **Node goes 811 → 812**: the one new guard test.
 
 - [ ] **Step 4: Stage, gate, commit**
 
@@ -841,7 +841,7 @@ The gate matters here: `rules.md` is dense with magnitudes and a stray edit is i
 
 ---
 
-### Task 10: the second guard — `rules.md` agrees with the engine (RED)
+### Task 10: the second guard, `rules.md` agrees with the engine (RED)
 
 **This task fixes a real bug that predates both specs**, found while surveying. It moves no engine number: it aligns `rules.md` to what `rules.js` already does.
 
@@ -849,7 +849,7 @@ The gate matters here: `rules.md` is dense with magnitudes and a stray edit is i
 - `rules.md:344` teaches `| **STR modifier** | −1 | +0 | +1 | +2 |`
 - `rules.js:64` does `{ light: -1, medium: 0, heavy: 1, colossal: 2 }`
 
-Line 92 still teaches the **pre-halving ladder**. The bot has been telling players a rig scales Penetration twice as hard as the engine does. Line 346's worked example (*"a Sniper Cannon reads STR 9 on a Light"*) agrees with `:344` and the engine — so `:92` is the sole outlier.
+Line 92 still teaches the **pre-halving ladder**. The bot has been telling players a rig scales Penetration twice as hard as the engine does. Line 346's worked example (*"a Sniper Cannon reads STR 9 on a Light"*) agrees with `:344` and the engine, so `:92` is the sole outlier.
 
 **Files:**
 - Modify: `shared/rulebook.test.js`
@@ -871,7 +871,7 @@ test("rules.md's weight ladder matches WEIGHT_PEN_MOD", () => {
   const prose = [...RULEBOOK.matchAll(
     /Light\s*([+−-]\d)\s*\/\s*Medium\s*([+−-]\d)\s*\/\s*Heavy\s*([+−-]\d)\s*\/\s*Colossal\s*([+−-]\d)/g,
   )];
-  assert.ok(prose.length > 0, "no prose weight ladder found in rules.md — did the wording change?");
+  assert.ok(prose.length > 0, "no prose weight ladder found in rules.md, did the wording change?");
   for (const m of prose) {
     assert.deepEqual(m.slice(1, 5), expected, `rules.md prose ladder "${m[0]}" disagrees with WEIGHT_PEN_MOD`);
   }
@@ -884,7 +884,7 @@ test("rules.md's weight ladder matches WEIGHT_PEN_MOD", () => {
 node --test shared/rulebook.test.js
 ```
 
-Expected: **FAIL** — `rules.md prose ladder "Light −2 / Medium +0 / Heavy +2 / Colossal +4" disagrees with WEIGHT_PEN_MOD`.
+Expected: **FAIL**: `rules.md prose ladder "Light −2 / Medium +0 / Heavy +2 / Colossal +4" disagrees with WEIGHT_PEN_MOD`.
 
 That failure *is* the bug. Confirm the test is catching the real thing before fixing it.
 
@@ -942,7 +942,7 @@ git commit -m "fix(rules): rules.md taught the pre-halving weight ladder
 
 rules.md:92 said Light -2 / Medium +0 / Heavy +2 / Colossal +4. rules.js has
 done -1 / 0 / +1 / +2 since the ladder was halved, and rules.md:344's own table
-and :346's worked example both agree with the engine — :92 was the sole outlier.
+and :346's worked example both agree with the engine, :92 was the sole outlier.
 
 rules.md is baked verbatim into the rules bot's system prompt as the single
 source of truth, so the bot has been teaching players that a chassis scales
@@ -954,7 +954,7 @@ prompt to the engine. Now covered by shared/rulebook.test.js."
 
 ### Task 12: final verification
 
-- [ ] **Step 1: No legacy identifiers survive — bare forms**
+- [ ] **Step 1: No legacy identifiers survive, bare forms**
 
 ```bash
 grep -rn '\bstr\b\|\bacc\b\|effStr\|WEIGHT_STR_MOD\|BLAST_STR\|BLAST_D\b' \
@@ -962,12 +962,12 @@ grep -rn '\bstr\b\|\bacc\b\|effStr\|WEIGHT_STR_MOD\|BLAST_STR\|BLAST_D\b' \
 ```
 
 Expected: **exactly two hits, both correct:**
-- `shared/rules.js` — the `str` parameter inside `strOvermatchD`'s **body**. Trap 1 mandates leaving it; the rework deletes the function.
-- `shared/rules.js:93` — the comment `// See docs/superpowers/specs/2026-07-15-str-overflow-design.md.` **That is a real file on disk.** Renaming the reference breaks it.
+- `shared/rules.js`: the `str` parameter inside `strOvermatchD`'s **body**. Trap 1 mandates leaving it; the rework deletes the function.
+- `shared/rules.js:93`: the comment `// See docs/superpowers/specs/2026-07-15-str-overflow-design.md.` **That is a real file on disk.** Renaming the reference breaks it.
 
-> **This step used to say "no output", which was unreachable by construction** — it contradicted trap 1, since `strOvermatchD`'s body contains `str`. Task 4's implementer caught it. An expectation that cannot be met trains the reader to ignore the check.
+> **This step used to say "no output", which was unreachable by construction**: it contradicted trap 1, since `strOvermatchD`'s body contains `str`. Task 4's implementer caught it. An expectation that cannot be met trains the reader to ignore the check.
 
-- [ ] **Step 1b: No legacy identifiers survive — camelCase forms**
+- [ ] **Step 1b: No legacy identifiers survive, camelCase forms**
 
 **This is the check that actually matters**, and its absence is why the plan nearly shipped a half-done rename:
 
@@ -993,7 +993,7 @@ Expected: **no output.**
 grep -rc 'strOvermatchD\|OVERMATCH_PER_D\|OVERMATCH_MAX_D' shared/rules.js shared/combat.js shared/glossary.js rules.md
 ```
 
-Expected: non-zero in each. **If any is zero you deleted Overmatch — that is the rework's job, not this plan's.** Restore it.
+Expected: non-zero in each. **If any is zero you deleted Overmatch, that is the rework's job, not this plan's.** Restore it.
 
 - [ ] **Step 4: `Aim` survived**
 
@@ -1024,7 +1024,7 @@ Expected: `package.json`, `package-lock.json` still show ` M` (unstaged, the use
 
 ## Self-Review
 
-**Spec coverage** — every section of `2026-07-16-stat-rename-design.md` maps to a task:
+**Spec coverage**: every section of `2026-07-16-stat-rename-design.md` maps to a task:
 
 | spec requirement | task |
 |---|---|
@@ -1039,8 +1039,8 @@ Expected: `package.json`, `package-lock.json` still show ` M` (unstaged, the use
 | keep `modAim` / `Aim` / `Aimed` | trap 7, verified task 12 step 4 |
 | leave Overmatch symbols alone | trap 1, verified task 12 step 3 |
 | "no number moves" | the gate command, every task |
-| 811 node / 293 vitest green | task 12 step 5 (813 node — +2 new guards, justified) |
+| 811 node / 293 vitest green | task 12 step 5 (813 node, +2 new guards, justified) |
 
 **Beyond the spec, deliberately:** Tasks 8/10 add the first tests that have ever covered `rules.md`, and Task 11 fixes the `:92` ladder bug they expose. The spec calls `rules.md` "the single highest-value file in this diff" and it had zero coverage; adding the guard while renaming it is the cheap moment. Task 11 is the only number that moves in this plan, it moves *toward* the engine, and it ships as its own commit with its own reasoning.
 
-**Known gaps, deliberate:** `rules.md` documents Heavy and Colossal rigs at length (`:92`, `:344-346`) — classes `makeRig` cannot build (`SUPPORTED_RIG_CLASSES = ["light","medium"]`). The bot teaches two chassis classes that do not exist. **Out of scope for a rename**; worth its own decision (delete from the rulebook, or build the chassis).
+**Known gaps, deliberate:** `rules.md` documents Heavy and Colossal rigs at length (`:92`, `:344-346`), classes `makeRig` cannot build (`SUPPORTED_RIG_CLASSES = ["light","medium"]`). The bot teaches two chassis classes that do not exist. **Out of scope for a rename**; worth its own decision (delete from the rulebook, or build the chassis).

@@ -16,7 +16,7 @@ export function JoinGate({ onJoin, error, onOpenTest }: Props) {
     if (!room.trim()) return "Enter a room code.";
     if (!name.trim()) return "Enter your name.";
     if (!side) return "Pick a side to continue.";
-    return "Ready — tap Enter room.";
+    return "Ready, tap Enter room.";
   }, [room, name, side]);
   const ready = Boolean(room.trim() && side);
 

@@ -21,7 +21,7 @@ index d8539da..79ff50f 100644
    return Math.floor((random || Math.random)() * sides) + 1;
  }
  
- // §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
+ // §7.4, modified Aim (the D6 target number). Higher ACC lowers the number.
  export function computeModifiedAim(attacker, profile, opts) {
    const base = AIM[attacker.weightClass] ?? 4;
    const weaponAcc = profile.acc[opts.range === "far" ? 1 : 0] || 0;
@@ -33,7 +33,7 @@ index d8539da..79ff50f 100644
    return base - accTotal;
  }
  
- // §7.4 — roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
+ // §7.4, roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
  // (each 1 rolled under Full Auto / Charged Shot adds 1 heat, §6).
  export function rollToHit(attacker, profile, opts, providedDice, random) {
    const modAim = computeModifiedAim(attacker, profile, opts);
@@ -64,7 +64,7 @@ index d8539da..79ff50f 100644
    return { modAim, rof, hits, fireModeHeat, dice };
  }
  
- // §12/§7 — STR = weapon STR + weight modifier + Charged Shot.
+ // §12/§7, STR = weapon STR + weight modifier + Charged Shot.
  export function computeStr(attacker, profile, opts) {
    const charged = opts.charged && profile.perks.includes("Charged Shot") ? 2 : 0;
    return profile.str + (WEIGHT_STR_MOD[attacker.weightClass] || 0) + charged;
@@ -75,7 +75,7 @@ index d8539da..79ff50f 100644
    return out;
  }
  
- // §7 — full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
+ // §7, full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
  // a resolution descriptor (or { ok:false, reason } when the shot can't be made).
  // The weapon profile is resolved by the caller via ctx.profileFor(slot, name).
  export function resolveAttack(room, attacker, target, opts, random, ctx) {

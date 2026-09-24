@@ -35,7 +35,7 @@ export function V2Terminal() {
   const editRig = rigs.find((r) => r.id === editRigId) || null;
   const started = Boolean(game?.started);
   const digitalBattle = started && mode === "digital";
-  // Whether it's this player's activation turn at all — distinct from whether
+  // Whether it's this player's activation turn at all, distinct from whether
   // *this* rig can activate right now. "Wait for your turn" is only honest when
   // it is NOT my turn; on my turn a blocked rig shows no control instead.
   const myTurn = started && game?.phase === "activation" && game?.turn?.side === mySide;

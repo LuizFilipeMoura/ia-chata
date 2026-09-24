@@ -1,10 +1,10 @@
-# Score Objectives — VP Wizard Implementation Plan
+# Score Objectives, VP Wizard Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the raw `window.prompt` VP scoring during the Recovery Phase with a wizard that lists the three objective markers, tallies the VP a player controls, submits each side's per-objective claims, and blocks the round from advancing when both sides claim the same marker.
 
-**Architecture:** The `vp` command changes from a scalar `points` to a `claims: number[]` array of objective indices. The server stores each side's claims (`game.recoveryClaims`), and once both sides submit it either resolves scoring + advances the round, or — when the claim sets overlap — records the disputed indices in `game.recoveryConflict` and blocks. The client gets a new `VpWizard` modal (styled like `AttackWizard`) and three recovery focus states (score / waiting / disputed).
+**Architecture:** The `vp` command changes from a scalar `points` to a `claims: number[]` array of objective indices. The server stores each side's claims (`game.recoveryClaims`), and once both sides submit it either resolves scoring + advances the round, or, when the claim sets overlap, records the disputed indices in `game.recoveryConflict` and blocks. The client gets a new `VpWizard` modal (styled like `AttackWizard`) and three recovery focus states (score / waiting / disputed).
 
 **Tech Stack:** Node ESM shared game logic (`shared/game-state.js`, tested with `node --test`), React + TypeScript client (tested with Vitest + Testing Library).
 
@@ -14,22 +14,22 @@
 
 ## File Structure
 
-- **Modify** `shared/game-state.js` — swap `recoveryVp` for `recoveryClaims` + `recoveryConflict` at the four init/reset sites and in `runRecovery`; rewrite the `vp` command handler.
-- **Modify** `shared/game-state.test.js` — migrate existing `points` assertions to `claims`; add conflict/resubmit/validation tests.
-- **Modify** `client/src/state/types.ts` — replace `recoveryVp` field with `recoveryClaims` + `recoveryConflict`.
-- **Modify** `client/src/lib/computeFocus.ts` — three recovery states (score / waiting / disputed).
-- **Modify** `client/src/lib/computeFocus.test.ts` — cover the three recovery states.
-- **Create** `client/src/components/wizards/VpWizard.tsx` — the scoring modal.
-- **Create** `client/src/components/wizards/VpWizard.test.tsx` — render/tally/submit test.
-- **Create** `client/src/styles/vp-wizard.css` — marker-list styling.
-- **Modify** `client/src/main.tsx` — import `vp-wizard.css`.
-- **Modify** `client/src/state/WizardContext.tsx` — add `openScore()` + render `VpWizard`.
-- **Modify** `client/src/components/TurnBanner.tsx` — route the `score` CTA to `openScore()`.
-- **Modify** `client/src/state/BattleActionsContext.tsx` — delete the obsolete `scoreVp`/`mySide`/`sessionRef`.
+- **Modify** `shared/game-state.js`: swap `recoveryVp` for `recoveryClaims` + `recoveryConflict` at the four init/reset sites and in `runRecovery`; rewrite the `vp` command handler.
+- **Modify** `shared/game-state.test.js`: migrate existing `points` assertions to `claims`; add conflict/resubmit/validation tests.
+- **Modify** `client/src/state/types.ts`: replace `recoveryVp` field with `recoveryClaims` + `recoveryConflict`.
+- **Modify** `client/src/lib/computeFocus.ts`: three recovery states (score / waiting / disputed).
+- **Modify** `client/src/lib/computeFocus.test.ts`: cover the three recovery states.
+- **Create** `client/src/components/wizards/VpWizard.tsx`: the scoring modal.
+- **Create** `client/src/components/wizards/VpWizard.test.tsx`: render/tally/submit test.
+- **Create** `client/src/styles/vp-wizard.css`: marker-list styling.
+- **Modify** `client/src/main.tsx`: import `vp-wizard.css`.
+- **Modify** `client/src/state/WizardContext.tsx`: add `openScore()` + render `VpWizard`.
+- **Modify** `client/src/components/TurnBanner.tsx`: route the `score` CTA to `openScore()`.
+- **Modify** `client/src/state/BattleActionsContext.tsx`: delete the obsolete `scoreVp`/`mySide`/`sessionRef`.
 
 ---
 
-## Task 1: Backend — `vp` command accepts claims, resolves control, blocks on conflict
+## Task 1: Backend, `vp` command accepts claims, resolves control, blocks on conflict
 
 **Files:**
 - Modify: `shared/game-state.js` (init `~209`, ensureGameShape `~271`, runRecovery `~639`, reset `~917`, `vp` handler `~1014`)
@@ -45,14 +45,14 @@ test("VP claims score per-objective and block on a both-claimed marker", () => {
   runFullRound(r);
   assert.equal(r.game.phase, "recovery");
   // Objectives: index 0 = centre (2 VP), indices 1 & 2 = corners (1 VP each).
-  // Both claim the centre — conflict, no advance, no VP awarded.
+  // Both claim the centre, conflict, no advance, no VP awarded.
   applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [0] } });
   applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [0] } });
   assert.equal(r.game.phase, "recovery");
   assert.deepEqual(r.game.recoveryConflict, [0]);
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 0);
   assert.equal(r.game.round, 1);
-  // A backs off the centre and resubmits — conflict clears, round advances.
+  // A backs off the centre and resubmits, conflict clears, round advances.
   applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [1] } });
   assert.equal(r.game.phase, "initiative");
   assert.equal(r.game.round, 2);
@@ -74,7 +74,7 @@ test("VP claims ignore out-of-range and duplicate indices", () => {
 - [ ] **Step 2: Run the new tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the current handler reads `a.points` (ignores `claims`), so side `a` scores 0 and `recoveryConflict` is `undefined`.
+Expected: FAIL, the current handler reads `a.points` (ignores `claims`), so side `a` scores 0 and `recoveryConflict` is `undefined`.
 
 - [ ] **Step 3: Migrate the existing `points`-based assertions to `claims`**
 
@@ -88,7 +88,7 @@ At ~581–583 (inside `"both sides scoring VP advances…"`):
   applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [1] } });
 ```
 
-(Centre index 0 = 2 VP for a; corner index 1 = 1 VP for b — the existing `assert`s of `a.vp === 2` and `b.vp === 1` still hold.)
+(Centre index 0 = 2 VP for a; corner index 1 = 1 VP for b, the existing `assert`s of `a.vp === 2` and `b.vp === 1` still hold.)
 
 At ~595–596 (inside `"after round 5 the higher VP wins"`):
 
@@ -186,7 +186,7 @@ with:
           const cb = room.game.recoveryClaims[sb.id];
           const conflict = ca.filter((i) => cb.includes(i));
           if (conflict.length) {
-            // Both claimed the same marker — block and flag for re-check (§11).
+            // Both claimed the same marker, block and flag for re-check (§11).
             room.game.recoveryConflict = conflict;
           } else {
             room.game.recoveryConflict = null;
@@ -205,7 +205,7 @@ with:
 - [ ] **Step 6: Run the full shared test suite to verify it passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — new tests pass and all migrated tests still pass.
+Expected: PASS, new tests pass and all migrated tests still pass.
 
 - [ ] **Step 7: Commit**
 
@@ -257,7 +257,7 @@ test("recovery flags a disputed marker to both sides", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `cd client && npx vitest run src/lib/computeFocus.test.ts`
-Expected: FAIL — `recoveryClaims`/`recoveryConflict` are not valid `GameState` fields yet (type error) and the "disputed" branch does not exist.
+Expected: FAIL, `recoveryClaims`/`recoveryConflict` are not valid `GameState` fields yet (type error) and the "disputed" branch does not exist.
 
 - [ ] **Step 3: Update the `GameState` type**
 
@@ -293,7 +293,7 @@ with:
     if (conflict) {
       return {
         tone: "act", icon: "⚠️", primary: "Objectives disputed",
-        secondary: "You both claimed the same marker — re-check who holds it.",
+        secondary: "You both claimed the same marker, re-check who holds it.",
         cta: { label: "Re-check", kind: "score" },
       };
     }
@@ -380,7 +380,7 @@ test("tallies selected markers and submits their indices", async () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && npx vitest run src/components/wizards/VpWizard.test.tsx`
-Expected: FAIL — `./VpWizard` does not exist.
+Expected: FAIL, `./VpWizard` does not exist.
 
 - [ ] **Step 3: Create the component**
 
@@ -456,7 +456,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
       <div className="aw-card">
         <div className="aw-handle" />
         <div className="aw-title-row">
-          <div className="aw-title">⟡ Score Objectives — Round {round}</div>
+          <div className="aw-title">⟡ Score Objectives, Round {round}</div>
         </div>
         <p className="aw-field-desc">
           What points do you control? Tap each marker one of your Rigs holds
@@ -479,7 +479,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
                 <span className="vpw-name">{name}{hint ? ` · ${hint}` : ""}</span>
                 <span className="vpw-state">{sel ? "You hold it" : "Not yours"}</span>
                 {disputed ? (
-                  <span className="vpw-warn">Both of you claimed this — one must change.</span>
+                  <span className="vpw-warn">Both of you claimed this, one must change.</span>
                 ) : null}
               </button>
             );
@@ -554,7 +554,7 @@ git commit -m "feat(vp): add Score Objectives wizard"
 
 ---
 
-## Task 4: Wiring — open the wizard from the recovery CTA
+## Task 4: Wiring, open the wizard from the recovery CTA
 
 **Files:**
 - Modify: `client/src/state/WizardContext.tsx`
@@ -675,7 +675,7 @@ Remove `scoreVp` from the provider value (line ~304):
 - [ ] **Step 4: Typecheck and run the full client suite**
 
 Run: `cd client && npx tsc --noEmit && npx vitest run`
-Expected: PASS — no type errors (no dangling `scoreVp`/`session`/`mySide`/`useCallback`-unused references), all tests green.
+Expected: PASS, no type errors (no dangling `scoreVp`/`session`/`mySide`/`useCallback`-unused references), all tests green.
 
 Note: if `useCallback` is now unused in `BattleActionsContext.tsx`, remove it from the React import at the top of the file to satisfy the linter.
 
@@ -695,7 +695,7 @@ git commit -m "feat(vp): open Score Objectives wizard from the recovery CTA"
 - [ ] **Step 1: Run the entire test suite**
 
 Run: `npm test`
-Expected: PASS — Vitest (client) and `node --test` (shared + server) both green.
+Expected: PASS, Vitest (client) and `node --test` (shared + server) both green.
 
 - [ ] **Step 2: Manual smoke check (optional but recommended)**
 

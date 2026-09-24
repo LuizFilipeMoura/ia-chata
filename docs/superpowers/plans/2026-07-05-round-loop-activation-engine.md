@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Drive the rulebook round structure (§4) — Initiative → Activation → Recovery over 5 rounds — with alternating one-Rig-at-a-time activation, an action menu that spends an action budget and auto-adds heat (§5), automatic overheat resolution at End Activation (§6), and an auto/manual dice model, all server-authoritative and unit-tested.
+**Goal:** Drive the rulebook round structure (§4), Initiative → Activation → Recovery over 5 rounds, with alternating one-Rig-at-a-time activation, an action menu that spends an action budget and auto-adds heat (§5), automatic overheat resolution at End Activation (§6), and an auto/manual dice model, all server-authoritative and unit-tested.
 
 **Architecture:** All logic lives in the existing pure module `shared/game-state.js` plus a new static-data module `shared/rules.js`. Mutations continue to flow through `applyCommand(room, cmd, context, options)`, which already bumps `room.version` only on change and accepts an injectable `options.random`. Every dice roll uses caller-supplied values when present (manual mode) and falls back to `random` otherwise (auto mode), so `autoResolve` is only a client hint and the server stays branch-free and testable. Each dice event appends a capped entry to a shared `game.resolutions` log that the client will later animate. This plan is server + logic only; the UI is Plan 3.
 
@@ -12,15 +12,15 @@
 
 ## File Structure
 
-- **Create** `shared/rules.js` — static rulebook data + tiny pure lookups this plan needs: the action catalogue (`ACTIONS`) and the Heat Threshold Table (`HEAT_THRESHOLDS` + `heatThreshold`). Combat tables (impact/location/weapons) are added by Plan 2.
-- **Modify** `shared/game-state.js` — new `game`/`rig` state fields in `makeRig`/`ensureGameShape`; a shared roll + resolution-log helper; the round-loop helpers (initiative, activation, actions, overheat, recovery, VP, answer tokens, annihilation); new verbs in `applyCommand`; updates to `publicState` and `formatBattleState`.
-- **Modify** `shared/game-state.test.js` — tests for every task.
+- **Create** `shared/rules.js`: static rulebook data + tiny pure lookups this plan needs: the action catalogue (`ACTIONS`) and the Heat Threshold Table (`HEAT_THRESHOLDS` + `heatThreshold`). Combat tables (impact/location/weapons) are added by Plan 2.
+- **Modify** `shared/game-state.js`: new `game`/`rig` state fields in `makeRig`/`ensureGameShape`; a shared roll + resolution-log helper; the round-loop helpers (initiative, activation, actions, overheat, recovery, VP, answer tokens, annihilation); new verbs in `applyCommand`; updates to `publicState` and `formatBattleState`.
+- **Modify** `shared/game-state.test.js`: tests for every task.
 
 All existing tests must keep passing; run `npm test` after each task.
 
 ---
 
-### Task 1: Rulebook data module — actions & heat threshold table
+### Task 1: Rulebook data module, actions & heat threshold table
 
 **Files:**
 - Create: `shared/rules.js`
@@ -69,7 +69,7 @@ test("heatThreshold maps a D12+bonus total to the right band (§6)", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/rules.test.js`
-Expected: FAIL — cannot find module `./rules.js`.
+Expected: FAIL, cannot find module `./rules.js`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -77,7 +77,7 @@ Create `shared/rules.js`:
 
 ```js
 // Static rulebook data shared by the resolution engine (server) and the
-// battle UI (client). Pure data + tiny lookups — no state, no randomness.
+// battle UI (client). Pure data + tiny lookups, no state, no randomness.
 
 // Action catalogue (§5). `heat` is the base heat generated; `slot` is the
 // action-budget cost. Shut Down is special-cased by the engine (declared before
@@ -190,7 +190,7 @@ test("ensureGameShape backfills fields on a legacy room", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `autoResolve` undefined etc.
+Expected: FAIL, `autoResolve` undefined etc.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -336,7 +336,7 @@ test("starting the game seeds round 1 initiative from deploy order", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `setdice` unhandled; `phase` stays `"setup"`.
+Expected: FAIL, `setdice` unhandled; `phase` stays `"setup"`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -412,7 +412,7 @@ In `maybeStartGame`, after `room.game.started = true;` add:
   applyInitiative(room, deploymentOrder(room), null);
   pushResolution(room, {
     kind: "initiative", actor: room.game.turn.side, rigId: null, rolls: [],
-    summary: `Round 1 — ${room.game.initiative.order[0]} activates first`, effects: [],
+    summary: `Round 1, ${room.game.initiative.order[0]} activates first`, effects: [],
   });
 ```
 
@@ -483,7 +483,7 @@ test("initiative verb only runs during the initiative phase", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `initiative` unhandled.
+Expected: FAIL, `initiative` unhandled.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -502,7 +502,7 @@ Add the `initiative` verb branch to `applyCommand`:
         pushResolution(room, {
           kind: "initiative", actor: order[0], rigId: null,
           rolls: [{ sides: 12, value: ra, label: "Side A" }, { sides: 12, value: rb, label: "Side B" }],
-          summary: `Round ${room.game.round} initiative — ${order[0]} first (${ra} vs ${rb})`,
+          summary: `Round ${room.game.round} initiative, ${order[0]} first (${ra} vs ${rb})`,
           effects: [],
         });
         changed = true;
@@ -510,7 +510,7 @@ Add the `initiative` verb branch to `applyCommand`:
     }
 ```
 
-Note: a manual tie (`ra === rb` with supplied dice) is intentionally a no-op — the client re-submits new dice.
+Note: a manual tie (`ra === rb` with supplied dice) is intentionally a no-op, the client re-submits new dice.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -526,7 +526,7 @@ git commit -m "feat: roll initiative for rounds 2+"
 
 ---
 
-### Task 5: `activate` verb — open an activation, action budget, engine-0 skip
+### Task 5: `activate` verb, open an activation, action budget, engine-0 skip
 
 **Files:**
 - Modify: `shared/game-state.js` (`damageRig`/`setRigSp` set skip on engine-0; `handoff`/`eligible` helpers; `activate` verb)
@@ -581,7 +581,7 @@ test("activating a skip-flagged rig burns the activation and hands off", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `activate` unhandled; skip not set.
+Expected: FAIL, `activate` unhandled; skip not set.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -597,7 +597,7 @@ In `setRigSp`, after `recompute(rig);` guard the same transition:
   if (loc === "engine" && c.sp === 0) rig.skipNextActivation = true;
 ```
 
-Add eligibility + handoff helpers near the round-loop helpers (handoff calls `runRecovery`, defined in Task 7 — declare it now; JS hoists function declarations so ordering is fine):
+Add eligibility + handoff helpers near the round-loop helpers (handoff calls `runRecovery`, defined in Task 7, declare it now; JS hoists function declarations so ordering is fine):
 
 ```js
 function sideHasActivatable(room, sideId) {
@@ -643,7 +643,7 @@ Add the `activate` verb branch:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `runRecovery is not defined`. This is expected; Task 7 defines it. To keep this task green in isolation, add a temporary stub above `handoff` now and replace it in Task 7:
+Expected: FAIL, `runRecovery is not defined`. This is expected; Task 7 defines it. To keep this task green in isolation, add a temporary stub above `handoff` now and replace it in Task 7:
 
 ```js
 function runRecovery(room) { room.game.phase = "recovery"; }
@@ -661,7 +661,7 @@ git commit -m "feat: open activations with action budget and engine-0 skip"
 
 ---
 
-### Task 6: `action` verb — heat-generating actions, reload, repair, shut down
+### Task 6: `action` verb, heat-generating actions, reload, repair, shut down
 
 **Files:**
 - Modify: `shared/game-state.js` (import `ACTIONS` from `./rules.js`; `bumpHeat`, `performAction`, `endActivation`; `action` verb)
@@ -715,7 +715,7 @@ test("shut down before any action cools to the floor and ends the activation", (
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `action` unhandled.
+Expected: FAIL, `action` unhandled.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -776,7 +776,7 @@ function performAction(room, rig, act, a, random) {
     pushResolution(room, {
       kind: "repair", actor: rig.owner, rigId: rig.id,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name} repair — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
+      summary: `${rig.name} repair, rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
   } else if (act === "prepare") {
     rig.preparation = { type: String(a.prep || "brace"), source: "action" };
@@ -834,7 +834,7 @@ git commit -m "feat: resolve activation actions, reload, repair, shut down"
 
 ---
 
-### Task 7: `endactivation` verb — overheat resolution & handoff; real `runRecovery`
+### Task 7: `endactivation` verb, overheat resolution & handoff; real `runRecovery`
 
 **Files:**
 - Modify: `shared/game-state.js` (replace the `runRecovery` stub; add `endactivation` verb)
@@ -885,7 +885,7 @@ test("a full round of activations triggers Recovery cooldown and reset", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `endactivation` unhandled; Recovery is still the stub (no cooldown/reset).
+Expected: FAIL, `endactivation` unhandled; Recovery is still the stub (no cooldown/reset).
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -995,7 +995,7 @@ test("annihilation ends the game immediately", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `vp` unhandled; annihilation stub does nothing.
+Expected: FAIL, `vp` unhandled; annihilation stub does nothing.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1079,7 +1079,7 @@ git commit -m "feat: score recovery VP, advance rounds, resolve victory"
 
 ---
 
-### Task 9: `answer` verb — spend Answer tokens on free preparations
+### Task 9: `answer` verb, spend Answer tokens on free preparations
 
 **Files:**
 - Modify: `shared/game-state.js` (new `answer` verb)
@@ -1110,7 +1110,7 @@ test("answer token is rejected without tokens, off-side, or when already prepare
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `answer` unhandled.
+Expected: FAIL, `answer` unhandled.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1173,7 +1173,7 @@ test("formatBattleState reports phase and whose turn it is", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — no "Phase:" line.
+Expected: FAIL, no "Phase:" line.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1183,7 +1183,7 @@ In `formatBattleState`, after the `Battle started:` line add:
   lines.push(`Phase: ${g.phase}${g.outcome ? ` (winner: ${g.outcome.winner || "draw"})` : ""}`);
   if (g.turn) {
     const active = g.turn.activeRigId ? room.rigs.find((x) => x.id === g.turn.activeRigId) : null;
-    const acting = active ? ` — ${active.name} (${g.turn.actionsUsed}/${g.turn.actionsMax} actions)` : "";
+    const acting = active ? `: ${active.name} (${g.turn.actionsUsed}/${g.turn.actionsMax} actions)` : "";
     lines.push(`Turn: ${g.turn.side}${acting}`);
   }
 ```
@@ -1191,7 +1191,7 @@ In `formatBattleState`, after the `Battle started:` line add:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS. Then run the whole suite: `npm test` — all green.
+Expected: PASS. Then run the whole suite: `npm test`: all green.
 
 - [ ] **Step 5: Commit**
 

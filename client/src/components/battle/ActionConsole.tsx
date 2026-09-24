@@ -36,7 +36,7 @@ const heatText = (heat: number) =>
   heat > 0 ? `+${heat} heat` : heat < 0 ? `${heat} heat` : "free";
 
 // The popover is portaled to <body> so it escapes the rig card's clip-path
-// (dieselpunk.css:88) — an absolutely-positioned child stays inside that clip
+// (dieselpunk.css:88), an absolutely-positioned child stays inside that clip
 // and gets sliced at the card edge. Position is measured off the anchor tile,
 // opening above it and clamped to the viewport (mirrors GlossaryTip).
 function AcPopover({
@@ -145,7 +145,7 @@ export function ActionConsole({ rig }: Props) {
 
   const b = actionBudget(rig, t);
   const actions = availableActions(rig, t, game?.round) as Action[];
-  // Cold kinds (Tank / Walker) don't track heat — suppress per-action heat tags.
+  // Cold kinds (Tank / Walker) don't track heat, suppress per-action heat tags.
   const cold = !UNIT_KINDS[kindOf(rig)].hasHeat;
 
   const claimed = new Set(GROUPS.flatMap((g) => g.keys));

@@ -1,4 +1,4 @@
-/* V2 glossary suite — reserved-word highlighting, the definition popover, and
+/* V2 glossary suite, reserved-word highlighting, the definition popover, and
    the browse-all dialog. Ported from V1 styles/glossary.css and retokenised onto
    the --v2-* palette. Every rule is scoped under `.v2-root` so nothing leaks into
    V1's global stylesheet (guarded by isolation.test.ts). */
@@ -6,7 +6,7 @@
 /* The tip's portal wrapper carries `.v2-root` only so the --v2-* tokens resolve.
    Neutralised to `display:contents` via the shared `.v2-portal` primitive
    (tokens.css) so this always-mounted wrapper never paints the opaque
-   full-screen `.v2-root` background over the app — custom properties still
+   full-screen `.v2-root` background over the app, custom properties still
    inherit to the tip, which positions itself fixed. */
 
 /* ===== Reserved-word highlighting inside bot text ===== */
@@ -25,7 +25,7 @@
 }
 
 /* ===== Generic click-to-explain affordance for structured UI tokens ===== */
-/* Additive only — layers onto the host element's own look (chips, stat labels,
+/* Additive only, layers onto the host element's own look (chips, stat labels,
    part labels) without restyling it. Mirrors how .v2-gloss-term.is-open reads. */
 .v2-root .v2-info {
   cursor: pointer;
@@ -74,7 +74,7 @@
   color: var(--v2-txt);
 }
 /* Deliberately smaller than the canonical `.v2-close` (20px vs 30px, iron-750
-   vs iron-800) to suit the compact popover — kept as an override rather than
+   vs iron-800) to suit the compact popover, kept as an override rather than
    force-fit to the primitive's size. */
 .v2-root .v2-gloss-tip-close {
   position: absolute; top: .38rem; right: .38rem; width: 20px; height: 20px;

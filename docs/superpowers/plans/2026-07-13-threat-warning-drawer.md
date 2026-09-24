@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** When an enemy opens an attack on one of your Rigs, throw up a loud, blocking "INCOMING FIRE" overlay on the defender's screen — klaxon, shake, hazard bars, targeting reticle — that clears when the attacker fires or backs off.
+**Goal:** When an enemy opens an attack on one of your Rigs, throw up a loud, blocking "INCOMING FIRE" overlay on the defender's screen, klaxon, shake, hazard bars, targeting reticle, that clears when the attacker fires or backs off.
 
 **Architecture:** The attacker's device broadcasts a cosmetic `threat` command when the attack sheet opens (debounced) and clears it on fire/close. The server stores it as `game.pendingThreat` (whole game object ships to clients, so it auto-propagates) and sweeps it stale on any turn/activation/phase change. The defender's device renders a new state-driven `ThreatOverlay` when `pendingThreat.defender === mySide`.
 
@@ -14,17 +14,17 @@
 
 ## File Structure
 
-- `shared/game-state.js` — add `pendingThreat` field, the `threat` verb (declare/clear), a stale-sweep helper, and an explicit clear when an `action` shot resolves.
-- `shared/game-state.test.js` — server-side tests for the verb and sweeps.
-- `client/src/state/types.ts` — add `pendingThreat?` to `GameState`.
-- `client/src/v2/audio/actionAudio.ts` — add `playThreatAlarm()`.
-- `client/src/v2/audio/actionAudio.test.ts` — test the new stem list resolves.
-- `client/src/v2/overlays/ThreatOverlay.tsx` — **new** defender overlay (state-driven, blocking).
-- `client/src/v2/overlays/ThreatOverlay.test.tsx` — **new** overlay tests.
-- `client/src/v2/styles/overlay.css` — loud `v2-threat-*` styles + keyframes.
-- `client/src/v2/V2Terminal.tsx` — mount `<ThreatOverlay />`.
-- `client/src/v2/overlays/AttackWizard.tsx` — broadcast declare/clear.
-- `client/src/v2/overlays/AttackWizard.test.tsx` — test the broadcast (may already exist; extend it).
+- `shared/game-state.js`: add `pendingThreat` field, the `threat` verb (declare/clear), a stale-sweep helper, and an explicit clear when an `action` shot resolves.
+- `shared/game-state.test.js`: server-side tests for the verb and sweeps.
+- `client/src/state/types.ts`: add `pendingThreat?` to `GameState`.
+- `client/src/v2/audio/actionAudio.ts`: add `playThreatAlarm()`.
+- `client/src/v2/audio/actionAudio.test.ts`: test the new stem list resolves.
+- `client/src/v2/overlays/ThreatOverlay.tsx`: **new** defender overlay (state-driven, blocking).
+- `client/src/v2/overlays/ThreatOverlay.test.tsx`: **new** overlay tests.
+- `client/src/v2/styles/overlay.css`: loud `v2-threat-*` styles + keyframes.
+- `client/src/v2/V2Terminal.tsx`: mount `<ThreatOverlay />`.
+- `client/src/v2/overlays/AttackWizard.tsx`: broadcast declare/clear.
+- `client/src/v2/overlays/AttackWizard.test.tsx`: test the broadcast (may already exist; extend it).
 
 Run the full suite any time with: `npm test`
 Run only shared server tests: `node --test "shared/**/*.test.js"`
@@ -32,7 +32,7 @@ Run one Vitest file: `npx vitest run client/src/v2/overlays/ThreatOverlay.test.t
 
 ---
 
-## Task 1: Server — `pendingThreat` field
+## Task 1: Server, `pendingThreat` field
 
 **Files:**
 - Modify: `shared/game-state.js` (game factory ~line 646; `ensureGameShape` ~line 798)
@@ -60,7 +60,7 @@ test("ensureGameShape backfills pendingThreat on legacy rooms", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test "shared/game-state.test.js"`
-Expected: FAIL — `pendingThreat` is `undefined`, not `null`.
+Expected: FAIL, `pendingThreat` is `undefined`, not `null`.
 
 - [ ] **Step 3: Add the field + backfill**
 
@@ -92,13 +92,13 @@ git commit -m "feat(v2): add pendingThreat game field for attack telegraph"
 
 ---
 
-## Task 2: Server — `threat` verb (declare / clear)
+## Task 2: Server, `threat` verb (declare / clear)
 
 **Files:**
 - Modify: `shared/game-state.js` (add an else-if branch in `applyCommand`, just before `} else if (verb === "randomize") {` at ~line 3078)
 - Test: `shared/game-state.test.js`
 
-Reuse the existing `battleWithPreparedDefender` helper's shape — but write a smaller local helper that sets side A's rig mid-activation.
+Reuse the existing `battleWithPreparedDefender` helper's shape, but write a smaller local helper that sets side A's rig mid-activation.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -160,7 +160,7 @@ test("threat is not undoable", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test "shared/game-state.test.js"`
-Expected: FAIL — the `threat` verb is unhandled, so `pendingThreat` stays `null` on declare.
+Expected: FAIL, the `threat` verb is unhandled, so `pendingThreat` stays `null` on declare.
 
 - [ ] **Step 3: Add the verb branch**
 
@@ -214,7 +214,7 @@ git commit -m "feat(v2): threat verb declares/clears the attack telegraph"
 
 ---
 
-## Task 3: Server — auto-clear sweep + clear on resolved shot
+## Task 3: Server, auto-clear sweep + clear on resolved shot
 
 **Files:**
 - Modify: `shared/game-state.js` (stale sweep near top of `applyCommand` ~line 2542; explicit clear in the `action` branch ~line 2874)
@@ -244,7 +244,7 @@ test("pendingThreat clears once the shot resolves", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test "shared/game-state.test.js"`
-Expected: FAIL — nothing clears `pendingThreat` on endactivation or after the shot.
+Expected: FAIL, nothing clears `pendingThreat` on endactivation or after the shot.
 
 - [ ] **Step 3a: Add the stale-sweep helper**
 
@@ -267,10 +267,10 @@ function clearThreatIfStale(room) {
 
 - [ ] **Step 3b: Call the sweep at the END of `applyCommand`**
 
-The sweep must run *after* the verb has mutated state — otherwise `endactivation` (which nulls `activeRigId`) wouldn't be seen as stale until the *next* command. Place it immediately before the final commit block `if (changed) {` (~line 3105):
+The sweep must run *after* the verb has mutated state, otherwise `endactivation` (which nulls `activeRigId`) wouldn't be seen as stale until the *next* command. Place it immediately before the final commit block `if (changed) {` (~line 3105):
 
 ```js
-  // Post-command: clear a now-stale attack telegraph — activation ended, turn
+  // Post-command: clear a now-stale attack telegraph, activation ended, turn
   // flipped, or we left activation. A fresh `threat` declare is never stale here
   // (its attackerId is the still-active rig), so this is safe for every verb.
   changed = clearThreatIfStale(room) || changed;
@@ -278,14 +278,14 @@ The sweep must run *after* the verb has mutated state — otherwise `endactivati
   if (changed) {
 ```
 
-(Do not also add a copy at the top of the function — end placement is the only correct one.)
+(Do not also add a copy at the top of the function, end placement is the only correct one.)
 
 - [ ] **Step 3c: Explicitly clear when a shot resolves**
 
 In the `} else if (verb === "action") {` branch (~line 2874), after the action is dispatched/resolved (at the end of that branch body, before the next `} else if`), add:
 
 ```js
-    // The shot (or its declaration) is over — drop the telegraph so the
+    // The shot (or its declaration) is over, drop the telegraph so the
     // defender's overlay yields to the dice/recap.
     room.game.pendingThreat = null;
 ```
@@ -304,7 +304,7 @@ git commit -m "feat(v2): sweep the attack telegraph stale on turn/activation/sho
 
 ---
 
-## Task 4: Client — `playThreatAlarm` audio
+## Task 4: Client, `playThreatAlarm` audio
 
 **Files:**
 - Modify: `client/src/v2/audio/actionAudio.ts`
@@ -331,7 +331,7 @@ If the file uses a different import grouping, add `playThreatAlarm` to the exist
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/audio/actionAudio.test.ts`
-Expected: FAIL — `playThreatAlarm` is not exported.
+Expected: FAIL, `playThreatAlarm` is not exported.
 
 - [ ] **Step 3: Add the function**
 
@@ -360,7 +360,7 @@ git commit -m "feat(v2): playThreatAlarm klaxon for the attack telegraph"
 
 ---
 
-## Task 5: Client — `ThreatOverlay` component + type + styles
+## Task 5: Client, `ThreatOverlay` component + type + styles
 
 **Files:**
 - Modify: `client/src/state/types.ts` (add `pendingThreat?` to `GameState`)
@@ -447,7 +447,7 @@ test("hidden when there is no pendingThreat", () => {
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/overlays/ThreatOverlay.test.tsx`
-Expected: FAIL — module `./ThreatOverlay` does not exist.
+Expected: FAIL, module `./ThreatOverlay` does not exist.
 
 - [ ] **Step 4: Write the component**
 
@@ -463,14 +463,14 @@ import "../styles/overlay.css";
 
 // Loud, blocking "incoming fire" telegraph. Shown to the defender whose Rig an
 // enemy has just opened an attack on (game.pendingThreat.defender === mySide).
-// Cosmetic only — the defender takes no action here; reactions are pre-placed.
+// Cosmetic only, the defender takes no action here; reactions are pre-placed.
 export function ThreatOverlay() {
   const { rigs, game } = useRoomState();
   const mySide = useMySide();
   const th = game?.pendingThreat ?? null;
   const active = Boolean(th && th.defender === mySide);
 
-  // Klaxon once per threat session (keyed on attacker, not target — a live
+  // Klaxon once per threat session (keyed on attacker, not target, a live
   // re-point keeps the same attacker and must not re-fire the alarm).
   const alarmedFor = useRef<number | null>(null);
   useEffect(() => {
@@ -499,8 +499,8 @@ export function ThreatOverlay() {
   const targetName = (target?.name || "your Rig").toUpperCase();
   const painting = th.mode === "lock";
   const weaponLine = painting
-    ? "Fire Control Lock — painting for a strike"
-    : `${(th.weapon || "Weapon").toUpperCase()} — locked and ranging`;
+    ? "Fire Control Lock, painting for a strike"
+    : `${(th.weapon || "Weapon").toUpperCase()}, locked and ranging`;
 
   return createPortal(
     <div className="v2-threat" role="alertdialog" aria-live="assertive">
@@ -602,7 +602,7 @@ Append to `client/src/v2/styles/overlay.css`:
 }
 ```
 
-If `overlay.css` does not already define `--ember`, `--ember-hi`, `--oil-hi`, `--txt`, `--txt-dim`, `--line`, they come from `client/src/styles/tokens.css` (imported globally via `app.css`) — no action needed.
+If `overlay.css` does not already define `--ember`, `--ember-hi`, `--oil-hi`, `--txt`, `--txt-dim`, `--line`, they come from `client/src/styles/tokens.css` (imported globally via `app.css`), no action needed.
 
 - [ ] **Step 6: Run tests to verify they pass**
 
@@ -613,12 +613,12 @@ Expected: PASS (all three tests).
 
 ```bash
 git add client/src/state/types.ts client/src/v2/overlays/ThreatOverlay.tsx client/src/v2/overlays/ThreatOverlay.test.tsx client/src/v2/styles/overlay.css
-git commit -m "feat(v2): ThreatOverlay — loud blocking incoming-fire telegraph"
+git commit -m "feat(v2): ThreatOverlay, loud blocking incoming-fire telegraph"
 ```
 
 ---
 
-## Task 6: Client — mount `ThreatOverlay` in `V2Terminal`
+## Task 6: Client, mount `ThreatOverlay` in `V2Terminal`
 
 **Files:**
 - Modify: `client/src/v2/V2Terminal.tsx`
@@ -654,7 +654,7 @@ git commit -m "feat(v2): mount ThreatOverlay in the battle terminal"
 
 ---
 
-## Task 7: Client — `AttackWizard` broadcasts declare/clear
+## Task 7: Client, `AttackWizard` broadcasts declare/clear
 
 **Files:**
 - Modify: `client/src/v2/overlays/AttackWizard.tsx`
@@ -705,7 +705,7 @@ If the existing test file has no reusable `renderAttackWizard` helper, write a s
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/overlays/AttackWizard.test.tsx`
-Expected: FAIL — no `threat` command is sent.
+Expected: FAIL, no `threat` command is sent.
 
 - [ ] **Step 3: Add the broadcast effect**
 
@@ -746,7 +746,7 @@ Then add this effect after the existing open-animation effect (~after line 163),
   }, []);
 ```
 
-Note on timing: the first effect's 500ms timer is cleared and restarted whenever `state.target` or `state.weapon` changes — so switching target within 500ms re-points cleanly, and switching after re-declares (the server overwrites, same attacker → the overlay updates without re-klaxoning). The second effect's cleanup fires the `clear` when the wizard unmounts (the `close()` path calls `onClose` which unmounts it).
+Note on timing: the first effect's 500ms timer is cleared and restarted whenever `state.target` or `state.weapon` changes, so switching target within 500ms re-points cleanly, and switching after re-declares (the server overwrites, same attacker → the overlay updates without re-klaxoning). The second effect's cleanup fires the `clear` when the wizard unmounts (the `close()` path calls `onClose` which unmounts it).
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -782,8 +782,8 @@ Two browser tabs joined to one seed room as sides A and B. As A, activate a rig 
 
 ## Notes for the implementer
 
-- **Live tree is `client/src/v2/`** (main.tsx → V2Boot). The parallel `client/src/components/` tree is legacy — do **not** edit it.
+- **Live tree is `client/src/v2/`** (main.tsx → V2Boot). The parallel `client/src/components/` tree is legacy, do **not** edit it.
 - The whole `room.game` object is sent to clients via `publicState` (which spreads `...room.game`), so `pendingThreat` needs no serializer change.
 - `weapons[flat ? "unit" : state.weapon]` resolves the display weapon name; `state.weapon` is a slot key (`"longRange"`/`"melee"`), `weapons` maps slot→name.
-- Keep `threat` out of `UNDO_VERBS` — it must never snapshot history.
+- Keep `threat` out of `UNDO_VERBS`: it must never snapshot history.
 - If `AttackWizard.test.tsx` doesn't exist yet, create it with the harness described in Task 7 Step 1.

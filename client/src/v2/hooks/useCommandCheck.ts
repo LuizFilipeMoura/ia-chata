@@ -10,7 +10,7 @@ export interface CheckResult {
 // Preflight a command against the server WITHOUT applying it (POST /command/check).
 // Lets the UI block an illegal action before opening its wizard and explain why.
 // Fails open: a transport/parse error returns ok:true so a network hiccup never
-// wedges play — the real /command still guards with a 409 on submit.
+// wedges play, the real /command still guards with a 409 on submit.
 export function useCommandCheck() {
   const { session } = useRoomState();
   const side = useMySide();

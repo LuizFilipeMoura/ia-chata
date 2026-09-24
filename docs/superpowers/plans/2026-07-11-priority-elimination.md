@@ -1,4 +1,4 @@
-# Priority Elimination — Kill VP Implementation Plan
+# Priority Elimination, Kill VP Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -12,16 +12,16 @@
 
 ## File Structure
 
-- `shared/game-state.js` — add `KILL_VP` const; award VP + enrich the destruction resolution inside `onRigDamaged`.
-- `shared/game-state.test.js` — backend scoring tests.
-- `client/src/state/types.ts` — extend `Resolution` with `vp?` and `victimName?`.
-- `client/src/v2/components/BattleHud.tsx` — live VP readout + kill toast.
-- `client/src/v2/styles/battle.css` — VP readout + toast styles.
-- `client/src/v2/components/BattleHud.test.tsx` — HUD VP + toast tests.
+- `shared/game-state.js`: add `KILL_VP` const; award VP + enrich the destruction resolution inside `onRigDamaged`.
+- `shared/game-state.test.js`: backend scoring tests.
+- `client/src/state/types.ts`: extend `Resolution` with `vp?` and `victimName?`.
+- `client/src/v2/components/BattleHud.tsx`: live VP readout + kill toast.
+- `client/src/v2/styles/battle.css`: VP readout + toast styles.
+- `client/src/v2/components/BattleHud.test.tsx`: HUD VP + toast tests.
 
 ---
 
-## Task 1: Backend — award kill VP + enrich the destruction resolution
+## Task 1: Backend, award kill VP + enrich the destruction resolution
 
 **Files:**
 - Modify: `shared/game-state.js` (add `KILL_VP` const near the other exported constants; edit `onRigDamaged` ~line 1263)
@@ -38,7 +38,7 @@ function onRigDamaged(room, rig, opts) {
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
+      summary: `${rig.name} destroyed, ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
       effects: [],
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
@@ -93,14 +93,14 @@ test("kill VP is awarded once per rig, never twice", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `npm test --silent -- shared/game-state.test.js` (or `node --test shared/game-state.test.js`)
-Expected: the three new tests FAIL — `vp` is 0 and `kill.vp` is `undefined`.
+Expected: the three new tests FAIL, `vp` is 0 and `kill.vp` is `undefined`.
 
 - [ ] **Step 3: Add the `KILL_VP` constant**
 
 In `shared/game-state.js`, near the other top-level exported constants (e.g. beside `HEAT_CAPACITY`), add:
 
 ```js
-// Priority Elimination (§11) — flat VP the opposing side scores for wrecking an
+// Priority Elimination (§11), flat VP the opposing side scores for wrecking an
 // enemy unit, once per unit. See docs/superpowers/specs/2026-07-11-priority-elimination-design.md.
 export const KILL_VP = 2;
 ```
@@ -113,20 +113,20 @@ Replace the body of the `if (rig.destroyed && !rig._blastRolled) { ... }` block 
     rig._blastRolled = true;
     const roll = rollD(12, opts?.dice?.destruction, opts?.random);
     const exploded = roll >= 4;
-    // Priority Elimination — the side that does NOT own the wreck scores KILL_VP.
+    // Priority Elimination, the side that does NOT own the wreck scores KILL_VP.
     // Guarded by _blastRolled above, so a revived-then-rekilled unit never re-awards.
     const scorer = room.game.sides.find((s) => s.id !== rig.owner);
     const effects = [];
     if (scorer) {
       scorer.vp = (scorer.vp || 0) + KILL_VP;
-      effects.push(`+${KILL_VP} VP — Priority Elimination (${scorer.name})`);
+      effects.push(`+${KILL_VP} VP, Priority Elimination (${scorer.name})`);
     }
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       victimName: rig.name,
       vp: scorer ? { side: scorer.id, amount: KILL_VP } : undefined,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name} destroyed — ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
+      summary: `${rig.name} destroyed, ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
       effects,
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
@@ -141,12 +141,12 @@ Expected: the three new tests PASS, and the existing "destruction rolls a D12" /
 
 ```bash
 git add shared/game-state.js shared/game-state.test.js
-git commit -m "feat(vp): Priority Elimination — +2 VP to the opposing side on any kill"
+git commit -m "feat(vp): Priority Elimination, +2 VP to the opposing side on any kill"
 ```
 
 ---
 
-## Task 2: Types — extend `Resolution`
+## Task 2: Types, extend `Resolution`
 
 **Files:**
 - Modify: `client/src/state/types.ts:93-102`
@@ -186,7 +186,7 @@ git commit -m "types: Resolution carries a Priority Elimination vp award + victi
 
 ---
 
-## Task 3: HUD — live VP readout
+## Task 3: HUD, live VP readout
 
 **Files:**
 - Modify: `client/src/v2/components/BattleHud.tsx`
@@ -197,7 +197,7 @@ git commit -m "types: Resolution carries a Priority Elimination vp award + victi
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `client/src/v2/components/BattleHud.test.tsx` (mirror the existing render setup in that file — it already seeds a started game with two sides):
+Add to `client/src/v2/components/BattleHud.test.tsx` (mirror the existing render setup in that file, it already seeds a started game with two sides):
 
 ```tsx
 test("shows both sides' running VP, highlighting mine", () => {
@@ -220,7 +220,7 @@ If the test file has no shared render helper, render `BattleHud` inside `AppProv
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npm --prefix client test -- BattleHud`
-Expected: FAIL — no element with text `Kostov 4`.
+Expected: FAIL, no element with text `Kostov 4`.
 
 - [ ] **Step 3: Render the VP row**
 
@@ -267,7 +267,7 @@ git commit -m "feat(vp): live VP readout in the battle HUD"
 
 ---
 
-## Task 4: HUD — kill toast
+## Task 4: HUD, kill toast
 
 **Files:**
 - Modify: `client/src/v2/components/BattleHud.tsx`
@@ -302,12 +302,12 @@ test("pops a kill toast when a fresh destruction resolution carries a vp award",
 });
 ```
 
-Adapt `renderHud`/`rerender` to however the file dispatches successive `applyServerState` updates (the existing tests already re-render with new state — reuse that mechanism).
+Adapt `renderHud`/`rerender` to however the file dispatches successive `applyServerState` updates (the existing tests already re-render with new state, reuse that mechanism).
 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npm --prefix client test -- BattleHud`
-Expected: FAIL — no `Ravager wrecked · +2 VP` text.
+Expected: FAIL, no `Ravager wrecked · +2 VP` text.
 
 - [ ] **Step 3: Implement the toast**
 
@@ -324,7 +324,7 @@ In `BattleHud.tsx`, add imports `useEffect, useRef, useState` from React. Inside
     const latest = fresh[fresh.length - 1];
     lastKillId.current = log[log.length - 1].id;
     const scorer = (game?.sides || []).find((s) => s.id === latest.vp!.side);
-    setToast(`${scorer?.name ?? "?"} — ${latest.victimName ?? "a unit"} wrecked · +${latest.vp!.amount} VP`);
+    setToast(`${scorer?.name ?? "?"}, ${latest.victimName ?? "a unit"} wrecked · +${latest.vp!.amount} VP`);
     if (toastTimer.current != null) clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 4000);
   }, [game?.resolutions]);
@@ -347,7 +347,7 @@ Guard the high-water mark on first mount so a hydrated backlog doesn't toast: se
     const latest = fresh[fresh.length - 1];
     lastKillId.current = log[log.length - 1].id;
     const scorer = (game?.sides || []).find((s) => s.id === latest.vp!.side);
-    setToast(`${scorer?.name ?? "?"} — ${latest.victimName ?? "a unit"} wrecked · +${latest.vp!.amount} VP`);
+    setToast(`${scorer?.name ?? "?"}, ${latest.victimName ?? "a unit"} wrecked · +${latest.vp!.amount} VP`);
     if (toastTimer.current != null) clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 4000);
   }, [game?.resolutions]);

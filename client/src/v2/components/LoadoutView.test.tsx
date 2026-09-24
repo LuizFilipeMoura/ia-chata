@@ -40,7 +40,7 @@ test("flat-pick weapon: one block, no upgrade line, no equipment", () => {
   wrap(<LoadoutView loadout={buildLoadout(tank)!} />);
   expect(screen.getByText("Tank Cannon")).toBeInTheDocument();
   expect(screen.queryByText(/⬡/)).not.toBeInTheDocument();      // no upgrade line
-  expect(screen.queryByText(/Passive —/)).not.toBeInTheDocument(); // no equipment
+  expect(screen.queryByText(/Passive,/)).not.toBeInTheDocument(); // no equipment
 });
 
 it("shows upgrade-aware active heat and an equipment-upgrade line", () => {

@@ -23,11 +23,11 @@ approach. Everything else matches the spec.
 
 ## File structure
 
-- `shared/game-state.js` — data (`CHASSIS.speed`) + resolution (`makeRig`, `ensureRigShape`). One responsibility: game rules/state.
-- `client/src/state/types.ts` — `Rig.speed` type.
-- `client/src/v2/battle/MoveBody.tsx` — v2 Move drawer reads `rig.speed`.
-- `client/src/state/BattleActionsContext.tsx` — v1 Move drawer (duplicate) reads `rig.speed`.
-- `shared/game-state.test.js` — coverage for all of the above.
+- `shared/game-state.js`: data (`CHASSIS.speed`) + resolution (`makeRig`, `ensureRigShape`). One responsibility: game rules/state.
+- `client/src/state/types.ts`: `Rig.speed` type.
+- `client/src/v2/battle/MoveBody.tsx`: v2 Move drawer reads `rig.speed`.
+- `client/src/state/BattleActionsContext.tsx`: v1 Move drawer (duplicate) reads `rig.speed`.
+- `shared/game-state.test.js`: coverage for all of the above.
 
 The `SPEED`-by-class maps in `constants.ts` and `BattleActionsContext.tsx` are **retained** as fallbacks, not deleted.
 
@@ -81,7 +81,7 @@ test("chassis speeds match the tuned table", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the three new tests fail (`typeof c.speed` is `"undefined"`, `deepEqual` mismatch).
+Expected: FAIL, the three new tests fail (`typeof c.speed` is `"undefined"`, `deepEqual` mismatch).
 
 - [ ] **Step 3: Add the `speed` field to each CHASSIS entry**
 
@@ -106,7 +106,7 @@ export const CHASSIS = [
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — all three new tests green, no regressions in the file.
+Expected: PASS, all three new tests green, no regressions in the file.
 
 - [ ] **Step 5: Commit**
 
@@ -120,7 +120,7 @@ git commit -m "feat(chassis): per-chassis speed stat tuned to role"
 ## Task 2: Resolve `speed` onto the rig in `makeRig`
 
 **Files:**
-- Modify: `shared/game-state.js:615-649` (`makeRig` — add lookup + `speed` on the rig literal)
+- Modify: `shared/game-state.js:615-649` (`makeRig`: add lookup + `speed` on the rig literal)
 - Test: `shared/game-state.test.js`
 
 - [ ] **Step 1: Write the failing tests**
@@ -146,7 +146,7 @@ test("makeRig leaves speed null for a free combo with no chassis id", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rig.speed` is `undefined`, so both `assert.equal` calls fail.
+Expected: FAIL, `rig.speed` is `undefined`, so both `assert.equal` calls fail.
 
 - [ ] **Step 3: Resolve the chassis speed inside `makeRig`**
 
@@ -171,25 +171,25 @@ to:
 Then add `speed` to the `rig` object literal. Change the `chassis:` line (around line 653):
 
 ```js
-    chassis: weapons.chassis || null, // CHASSIS id it was commissioned from — drives its flavor description in the UI
+    chassis: weapons.chassis || null, // CHASSIS id it was commissioned from, drives its flavor description in the UI
 ```
 
 to:
 
 ```js
-    chassis: weapons.chassis || null, // CHASSIS id it was commissioned from — drives its flavor description in the UI
+    chassis: weapons.chassis || null, // CHASSIS id it was commissioned from, drives its flavor description in the UI
     speed: chassisSpeed,               // per-chassis Move distance (inches); null -> client uses SPEED[weightClass]
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — both new tests green.
+Expected: PASS, both new tests green.
 
 - [ ] **Step 5: Run the full shared/server suite to check for regressions**
 
 Run: `node --test "shared/**/*.test.js" "server/**/*.test.js"`
-Expected: PASS — no existing test broken (rig snapshots gain a `speed` field; no test asserts an exact whole-rig equality that would break — verify none fail).
+Expected: PASS, no existing test broken (rig snapshots gain a `speed` field; no test asserts an exact whole-rig equality that would break, verify none fail).
 
 - [ ] **Step 6: Commit**
 
@@ -227,7 +227,7 @@ test("ensureRigShape backfills speed from the chassis id on reload", () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `__test.ensureRigShape` is undefined (not yet exported) and/or `rig.speed` stays deleted.
+Expected: FAIL, `__test.ensureRigShape` is undefined (not yet exported) and/or `rig.speed` stays deleted.
 
 - [ ] **Step 3: Backfill in `ensureRigShape` and expose it for the test**
 
@@ -243,7 +243,7 @@ In `shared/game-state.js`, in `ensureRigShape`, after the existing chassis defau
 
 `ensureRigShape` is **already exported** on the `__test` object at
 `shared/game-state.js:2697` (`export const __test = { …, ensureRigShape, … }`), and the
-test file already imports `__test`. No export change is needed — the Step 1 test can call
+test file already imports `__test`. No export change is needed, the Step 1 test can call
 `__test.ensureRigShape` as written.
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -265,7 +265,7 @@ git commit -m "feat(chassis): backfill rig.speed on reload via ensureRigShape"
 **Files:**
 - Modify: `client/src/state/types.ts:38-49` (the `Rig` interface)
 
-No unit test — this is a type-only change verified by the type-checker in Task 5.
+No unit test, this is a type-only change verified by the type-checker in Task 5.
 
 - [ ] **Step 1: Add the field**
 
@@ -279,7 +279,7 @@ In `client/src/state/types.ts`, in the `Rig` type, next to `weightClass` / `chas
 - [ ] **Step 2: Type-check**
 
 Run: `npx tsc -p . --noEmit`
-Expected: PASS — no type errors from the new optional field.
+Expected: PASS, no type errors from the new optional field.
 
 - [ ] **Step 3: Commit**
 
@@ -352,7 +352,7 @@ git commit -m "feat(v2): Move drawers use per-chassis rig.speed"
 - [ ] **Step 1: Run the full shared/server test suite**
 
 Run: `node --test "shared/**/*.test.js" "server/**/*.test.js"`
-Expected: PASS — all tests green.
+Expected: PASS, all tests green.
 
 - [ ] **Step 2: Run the client tests + type-check**
 
@@ -386,4 +386,4 @@ git commit -m "chore: per-chassis speed verification fixes"
 - **Fallback:** `rig.speed ?? SPEED[weightClass] ?? 8` keeps support units and free-combo
   rigs working; `null` (not `undefined`) is what `makeRig`/`ensureRigShape` write, and `??`
   treats `null` as nullish, so the fallback fires correctly.
-- **No range changes** — movement Speed only, per spec non-goals.
+- **No range changes**: movement Speed only, per spec non-goals.

@@ -17,7 +17,7 @@ export const LOC_CHOICES = [
   { value: "engine", label: "Engine", icon: "🔩" },
 ];
 
-// §5 base Speed (inches) per weight class — the physical reach of a Move.
+// §5 base Speed (inches) per weight class, the physical reach of a Move.
 // House-rule tuning: whole-inch speeds so tabletop measuring stays clean.
 // Mediums bumped up a notch (were crawling) while keeping the light > medium
 // ladder.

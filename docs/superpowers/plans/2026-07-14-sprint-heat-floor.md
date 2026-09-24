@@ -4,14 +4,14 @@
 
 **Goal:** Sprint can never cost 0 heat; Reinforced Servos trades its free Sprint for 2× Speed reach.
 
-**Architecture:** `equipmentSprintHeat` in `shared/game-state.js` is the single chokepoint every Sprint heat path already flows through — clamp it to a minimum of 1 and the floor holds everywhere. Reinforced Servos' catalog effect changes from `sprintHeat: 0` to `sprintMult: 2`, resolved by a new atomic helper `equipmentSprintMult` and surfaced on the `rigEffects` read-model, which the three client sites that currently hardcode `1.5` then render.
+**Architecture:** `equipmentSprintHeat` in `shared/game-state.js` is the single chokepoint every Sprint heat path already flows through, clamp it to a minimum of 1 and the floor holds everywhere. Reinforced Servos' catalog effect changes from `sprintHeat: 0` to `sprintMult: 2`, resolved by a new atomic helper `equipmentSprintMult` and surfaced on the `rigEffects` read-model, which the three client sites that currently hardcode `1.5` then render.
 
 **Tech Stack:** Plain ES modules (`shared/`), React + TypeScript (`client/`), `node:test` + `assert` for shared tests, Vitest + Testing Library for client tests.
 
 **Spec:** `docs/superpowers/specs/2026-07-14-sprint-heat-floor-design.md`
 
 **Test commands:**
-- Shared only: `npx vitest run` is NOT needed — use `node --test "shared/**/*.test.js"`
+- Shared only: `npx vitest run` is NOT needed, use `node --test "shared/**/*.test.js"`
 - Single shared test by name: `node --test --test-name-pattern "<pattern>" "shared/**/*.test.js"`
 - Client only: `npx vitest run <path>`
 - Everything: `npm test`
@@ -42,7 +42,7 @@ test("Sprint heat floors at 1: Reinforced Servos is 1, base Servo is 1, none is 
 });
 
 test("Sprint heat can never be driven below 1, even by a 0-heat catalog tag", () => {
-  // The clamp — not the catalog — is the guarantee. Prove it holds against an
+  // The clamp, not the catalog, is the guarantee. Prove it holds against an
   // upgrade that explicitly asks for a free Sprint.
   const servos = EQUIPMENT_UPGRADES["servo-actuators"];
   const victim = servos.find((u) => u.id === "reinforced-servos");
@@ -58,7 +58,7 @@ test("Sprint heat can never be driven below 1, even by a 0-heat catalog tag", ()
 });
 ```
 
-`EQUIPMENT_UPGRADES` must be importable in this test file. Check the import block at the top of `shared/game-state.test.js` (around line 8) — if `EQUIPMENT_UPGRADES` is not already imported from `./game-state.js`, add it to that same import list. It is re-exported there; do not add a second import statement from `./rules.js`.
+`EQUIPMENT_UPGRADES` must be importable in this test file. Check the import block at the top of `shared/game-state.test.js` (around line 8), if `EQUIPMENT_UPGRADES` is not already imported from `./game-state.js`, add it to that same import list. It is re-exported there; do not add a second import statement from `./rules.js`.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -74,7 +74,7 @@ In `shared/rules.js`, replace line 121:
     { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint reaches 2× Speed, not 1½×", effect: { sprintMult: 2 } },
 ```
 
-The `tag` is rendered verbatim by many surfaces — this is a full replacement of the string, not an edit to part of it.
+The `tag` is rendered verbatim by many surfaces, this is a full replacement of the string, not an edit to part of it.
 
 - [ ] **Step 4: Clamp the helper**
 
@@ -82,7 +82,7 @@ In `shared/game-state.js`, replace lines 341-347 entirely:
 
 ```js
 // Sprint heat: base 2, and Servo Actuators (Mobility) brings it to 1. Hard floor
-// of 1 — a free Sprint is no decision at all, so no equipment, no upgrade, and no
+// of 1, a free Sprint is no decision at all, so no equipment, no upgrade, and no
 // caller-supplied base may drive this to 0. The clamp is the guarantee; do not
 // rely on the catalog to stay honest.
 export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 2) {
@@ -91,7 +91,7 @@ export function equipmentSprintHeat(equipmentId, equipmentUpgradeId, baseHeat = 
 }
 ```
 
-Note the signature keeps `equipmentUpgradeId` — callers pass it, and dropping the
+Note the signature keeps `equipmentUpgradeId`: callers pass it, and dropping the
 parameter would silently shift every call site's arguments. It is intentionally
 unused now: no servo upgrade modifies Sprint heat any more.
 
@@ -113,7 +113,7 @@ test("Reinforced Servos Sprint still costs 1 heat through the action pipeline", 
   const rig = findRig(r, "a1");
   rig.equipmentUpgrade = "reinforced-servos"; // Field upgrade: reach, not a heat discount
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint" } });
-  assert.equal(rig.engine.heat, 1); // the floor holds — never 0
+  assert.equal(rig.engine.heat, 1); // the floor holds, never 0
 });
 ```
 
@@ -125,7 +125,7 @@ In `shared/battle-view.test.js`, replace line 72 only:
   assert.equal(reinf.find((a) => a.key === "sprint").heat, 1);
 ```
 
-Leave lines 70 and 74 as they are (servo 1, bare 2 — both unchanged). Do not
+Leave lines 70 and 74 as they are (servo 1, bare 2, both unchanged). Do not
 touch the drift-guard test at line 83; it compares the chip to `rigEffects` and
 stays green on its own.
 
@@ -135,7 +135,7 @@ In `shared/game-state.js`, replace lines 2672-2674 (the comment block directly a
 
 ```js
     // Move / Sprint may repeat within an activation; each spends one slot and
-    // adds its heat. Sprint costs 2 heat — 1 with Servo Actuators (Mobility).
+    // adds its heat. Sprint costs 2 heat, 1 with Servo Actuators (Mobility).
     // It is never free: equipmentSprintHeat floors it at 1.
 ```
 
@@ -143,18 +143,18 @@ In `shared/game-state.js`, replace lines 2672-2674 (the comment block directly a
 
 Run: `node --test "shared/**/*.test.js"`
 
-Expected: PASS, 0 failures. If `battle-view.test.js:305` ("Move is hidden when Sprint costs no more than Move") fails, stop and report — the hide rule was verified as a no-op for this change and a failure means that analysis was wrong.
+Expected: PASS, 0 failures. If `battle-view.test.js:305` ("Move is hidden when Sprint costs no more than Move") fails, stop and report, the hide rule was verified as a no-op for this change and a failure means that analysis was wrong.
 
 - [ ] **Step 10: Commit**
 
 ```bash
 git add shared/rules.js shared/game-state.js shared/game-state.test.js shared/battle-view.test.js
-git commit -m "feat(v2): floor Sprint heat at 1 — no free repositioning
+git commit -m "feat(v2): floor Sprint heat at 1, no free repositioning
 
 Reinforced Servos set sprintHeat: 0, so a Rig carrying it repositioned every
 activation for free. Free movement is not a decision.
 
-equipmentSprintHeat now clamps to a minimum of 1 — the single chokepoint every
+equipmentSprintHeat now clamps to a minimum of 1, the single chokepoint every
 Sprint path already flows through, so the floor holds in performAction, the
 picker chip, and the Move drawer alike. Reinforced Servos' effect is now
 sprintMult: 2 (wired in the next commit).
@@ -210,7 +210,7 @@ Add `equipmentSprintMult` to the existing import list at the top of `shared/game
 
 Run: `node --test --test-name-pattern "sprintMult|reaches 2" "shared/**/*.test.js"`
 
-Expected: FAIL with `equipmentSprintMult is not defined` (or a SyntaxError about the missing export, depending on module resolution — either is the expected red).
+Expected: FAIL with `equipmentSprintMult is not defined` (or a SyntaxError about the missing export, depending on module resolution, either is the expected red).
 
 - [ ] **Step 3: Add the helper**
 
@@ -233,7 +233,7 @@ In `shared/game-state.js`, inside `rigEffects`, directly after the `actionHeat` 
 
 ```js
   // Sprint reach multiple (1½× Speed, 2× with Reinforced Servos). Clients render
-  // this — none of them may hardcode the multiplier.
+  // this, none of them may hardcode the multiplier.
   const sprintMult = equipmentSprintMult(equip, upId);
 ```
 
@@ -243,7 +243,7 @@ Then add `sprintMult` to the object `rigEffects` returns. Replace the single-lin
   return { actionHeat, sprintMult, repair: { bonusSp: equipmentRepairBonus(equip, upId) }, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers };
 ```
 
-`sprintMult` sits next to `actionHeat` — both are Sprint's pre-resolved cost and reach.
+`sprintMult` sits next to `actionHeat`: both are Sprint's pre-resolved cost and reach.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
@@ -295,7 +295,7 @@ describe("MoveBody sprint heat", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain("+1 heat");
   });
-  it("shows +1 for a Reinforced Servos rig — Sprint is never free", () => {
+  it("shows +1 for a Reinforced Servos rig, Sprint is never free", () => {
     render(<MoveBody rig={baseRig({ equipment: "servo-actuators", equipmentUpgrade: "reinforced-servos" })} actionKey="sprint" enemies={[]} onEngageChange={noop} onCancel={noop} onConfirm={noop} />);
     expect(document.body.textContent).toContain("+1 heat");
     expect(document.body.textContent).not.toContain("+0 heat");
@@ -336,7 +336,7 @@ In `client/src/v2/battle/MoveBody.tsx`, replace lines 26-31:
   // Sprint reach is loadout-derived (1½× Speed, 2× with the Reinforced Servos
   // Field upgrade), rounded to a whole inch so table measuring stays clean.
   const dist = sprint ? Math.round(base * rigEffects(rig).sprintMult) : base;
-  // Sprint heat is engine-derived (Servo Actuators → 1) and floored at 1 — never
+  // Sprint heat is engine-derived (Servo Actuators → 1) and floored at 1, never
   // free. Move is always +1. Reading rigEffects keeps this drawer identical to
   // the picker chip and to what resolution charges.
   const heat = sprint ? rigEffects(rig).actionHeat.sprint : 1;
@@ -360,7 +360,7 @@ Expected: PASS, 6 tests.
 In `client/src/v2/overlays/RigTerminal.tsx`, replace lines 47-51:
 
 ```tsx
-  // Movement stats now live on the chassis — surface Speed (a Move's reach) and
+  // Movement stats now live on the chassis, surface Speed (a Move's reach) and
   // its derived Sprint (1½× Speed, 2× with Reinforced Servos) so the status view
   // isn't silent on how far this Rig travels. Same resolution order as MoveBody:
   // chassis > class > 8.
@@ -368,7 +368,7 @@ In `client/src/v2/overlays/RigTerminal.tsx`, replace lines 47-51:
   const sprint = Math.round(speed * rigEffects(rig).sprintMult);
 ```
 
-`rigEffects(rig)` is already called at line 45 for `hullMaxBonus`. Leave that line as it is — do not refactor it into a shared local.
+`rigEffects(rig)` is already called at line 45 for `hullMaxBonus`. Leave that line as it is, do not refactor it into a shared local.
 
 - [ ] **Step 6: Fix `BattleActionsContext.tsx` (V1)**
 
@@ -405,7 +405,7 @@ Expected: PASS, 0 failures.
 Then run: `git grep -n "1\.5" -- client/src shared/*.js`
 
 Expected: no hit that multiplies a Speed value. If any of the three sites still
-has `base * 1.5` or `speed * 1.5`, it was missed — fix it before committing.
+has `base * 1.5` or `speed * 1.5`, it was missed, fix it before committing.
 
 - [ ] **Step 8: Commit**
 
@@ -417,7 +417,7 @@ Sprint reach was hardcoded as base * 1.5 in three places (MoveBody, RigTerminal,
 V1 BattleActionsContext). Reach is loadout-dependent now, so each was a live
 drift hazard the moment Reinforced Servos started granting 2x.
 
-Also routes V1's hand-rolled sprint heat through rigEffects — it checked
+Also routes V1's hand-rolled sprint heat through rigEffects, it checked
 rig.equipment directly and never knew upgrades existed.
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
@@ -437,7 +437,7 @@ The rulebook is the player-facing source of truth and currently promises a free 
 Replace line 155:
 
 ```markdown
-  - *Sprint:* you may extend a Move to up to **1½ × Speed** (**2 × Speed** with Reinforced Servos); a Sprinting Move generates **2 heat** instead of 1 (§6). Sprint is **never free** — its heat floors at 1 no matter the loadout.
+  - *Sprint:* you may extend a Move to up to **1½ × Speed** (**2 × Speed** with Reinforced Servos); a Sprinting Move generates **2 heat** instead of 1 (§6). Sprint is **never free**: its heat floors at 1 no matter the loadout.
 ```
 
 - [ ] **Step 2: Update the §6 heat table row**
@@ -445,17 +445,17 @@ Replace line 155:
 Replace line 205:
 
 ```markdown
-| Move — **Sprint** (up to 1½× Speed; 2× with Reinforced Servos) | 2 |
+| Move, **Sprint** (up to 1½× Speed; 2× with Reinforced Servos) | 2 |
 ```
 
 - [ ] **Step 3: Update the equipment table**
 
 Line 529's Servo Actuators passive ("Sprint costs 1 heat instead of 2") is still
-accurate — **leave it alone**. Read the line to confirm before moving on.
+accurate, **leave it alone**. Read the line to confirm before moving on.
 
 - [ ] **Step 4: Update the upgrade ladder**
 
-In line 544, replace only the Reinforced Servos cell text — the Kickstart Pistons and Grapnel Launcher cells on that row stay exactly as they are:
+In line 544, replace only the Reinforced Servos cell text, the Kickstart Pistons and Grapnel Launcher cells on that row stay exactly as they are:
 
 ```markdown
 | Servo Actuators | Reinforced Servos (Sprint reaches 2× Speed, not 1½×) | Kickstart Pistons (charge into contact → first melee after +2 STR) | Grapnel Launcher (yank free of a lock or reel an enemy in; heat + cooldown) |
@@ -466,7 +466,7 @@ In line 544, replace only the Reinforced Servos cell text — the Kickstart Pist
 Replace line 655:
 
 ```markdown
-- **Sprint** (§5/§6) — normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot. ⚙ TUNING: Sprint heat now **floors at 1** — Reinforced Servos used to zero it, which made repositioning free and turned Sprint into a strictly-better Move. The upgrade now grants **2× Speed reach** instead.
+- **Sprint** (§5/§6), normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot. ⚙ TUNING: Sprint heat now **floors at 1**: Reinforced Servos used to zero it, which made repositioning free and turned Sprint into a strictly-better Move. The upgrade now grants **2× Speed reach** instead.
 ```
 
 - [ ] **Step 6: Verify no stale promise of a free Sprint survives**
@@ -479,7 +479,7 @@ Expected: no hit referring to Sprint. If one remains, fix it.
 
 ```bash
 git add rules.md
-git commit -m "docs(v2): rules.md — Sprint heat floors at 1, Reinforced Servos grants 2x reach
+git commit -m "docs(v2): rules.md, Sprint heat floors at 1, Reinforced Servos grants 2x reach
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -513,7 +513,7 @@ servo-actuators - heat 1 mult 1.5
 servo-actuators reinforced-servos heat 1 mult 2
 ```
 
-If any heat reads 0, the floor is broken — stop and report.
+If any heat reads 0, the floor is broken, stop and report.
 
 - [ ] **Step 3: Report**
 

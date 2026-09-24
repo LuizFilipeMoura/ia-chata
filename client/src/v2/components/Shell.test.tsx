@@ -28,7 +28,7 @@ test("shows the room code and no channel nav", async () => {
   // survivors
   expect(await screen.findByText(/IRON-42/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Glossary/i })).toBeInTheDocument();
-  // removed chrome — strip is now a minimal utility line
+  // removed chrome, strip is now a minimal utility line
   expect(screen.queryByText(/OIL & IRON/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/MK·IV/)).not.toBeInTheDocument();
   expect(screen.queryByText(/^LINK$/)).not.toBeInTheDocument();

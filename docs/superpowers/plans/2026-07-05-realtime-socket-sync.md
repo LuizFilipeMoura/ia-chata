@@ -4,7 +4,7 @@
 
 **Goal:** Replace the client's 3-second `GET /api/game/:room` poll with a server-pushed WebSocket, so room-state updates (damage, heat, recovery, joins, etc.) reach every connected player immediately instead of after up to 3s of poll lag.
 
-**Architecture:** A `ws`-based hub (`server/ws.js`) tracks connected sockets grouped by room code and side. `server/index.js` attaches a `WebSocketServer` to the existing HTTP server at `/ws`. The two mutation routes (`/join`, `/command` in `server/routes/game.js`) call `hub.broadcast(room)` right after `store.persist()` — the exact point where `version` has already been bumped — so the hub is a pure notification fan-out with zero new mutation logic. The client (`public/js/api.js`) opens one `WebSocket` per session instead of polling, with reconnect-with-backoff on close; `public/js/join.js` starts it after a successful join.
+**Architecture:** A `ws`-based hub (`server/ws.js`) tracks connected sockets grouped by room code and side. `server/index.js` attaches a `WebSocketServer` to the existing HTTP server at `/ws`. The two mutation routes (`/join`, `/command` in `server/routes/game.js`) call `hub.broadcast(room)` right after `store.persist()`: the exact point where `version` has already been bumped, so the hub is a pure notification fan-out with zero new mutation logic. The client (`public/js/api.js`) opens one `WebSocket` per session instead of polling, with reconnect-with-backoff on close; `public/js/join.js` starts it after a successful join.
 
 **Tech Stack:** Node.js (`node:test`, `node:http`), Express, the `ws` npm package, vanilla browser `WebSocket` API (no client library).
 
@@ -36,7 +36,7 @@ git commit -m "chore: add ws dependency for realtime socket sync"
 
 ---
 
-### Task 2: `server/ws.js` — the room broadcast hub
+### Task 2: `server/ws.js`: the room broadcast hub
 
 **Files:**
 - Create: `server/ws.js`
@@ -141,14 +141,14 @@ test("broadcasting to a room with no connected sockets is a no-op", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test server/ws.test.js`
-Expected: FAIL — `Cannot find module './ws.js'` (or similar "module not found")
+Expected: FAIL, `Cannot find module './ws.js'` (or similar "module not found")
 
 - [ ] **Step 3: Implement `server/ws.js`**
 
 ```js
 // Room broadcast hub: groups connected WebSocket clients by room code and
 // pushes state deltas after every server-side mutation. One-way
-// (server -> client) only — commands still arrive over HTTP POST in
+// (server -> client) only, commands still arrive over HTTP POST in
 // server/routes/game.js, which calls broadcast() after each mutation.
 import { publicState } from "../shared/game-state.js";
 
@@ -269,7 +269,7 @@ start().catch((err) => {
 - [ ] **Step 2: Verify the existing test suite still passes**
 
 Run: `npm test`
-Expected: PASS — this task only touches `server/index.js`, which has no direct unit tests, so this confirms the rest of the suite (`shared/game-state.test.js`, `server/store.test.js`, `server/prompt.test.js`, `server/ws.test.js`) is unaffected.
+Expected: PASS, this task only touches `server/index.js`, which has no direct unit tests, so this confirms the rest of the suite (`shared/game-state.test.js`, `server/store.test.js`, `server/prompt.test.js`, `server/ws.test.js`) is unaffected.
 
 - [ ] **Step 3: Manually verify the server boots and the socket path is live**
 
@@ -342,12 +342,12 @@ export function createGameRouter(store, hub) {
 }
 ```
 
-Note: `GET /:room` is left in place unchanged — it's no longer polled by the client (Task 5 removes that), but keeping the route means a page load that hasn't opened its socket yet, or any future debugging, can still fetch state directly.
+Note: `GET /:room` is left in place unchanged, it's no longer polled by the client (Task 5 removes that), but keeping the route means a page load that hasn't opened its socket yet, or any future debugging, can still fetch state directly.
 
 - [ ] **Step 2: Run the full test suite**
 
 Run: `npm test`
-Expected: PASS — no test directly exercises this router (consistent with the existing codebase, where `shared/game-state.js` carries the unit tests and routes stay thin), so this step is a regression guard on everything else.
+Expected: PASS, no test directly exercises this router (consistent with the existing codebase, where `shared/game-state.js` carries the unit tests and routes stay thin), so this step is a regression guard on everything else.
 
 - [ ] **Step 3: Commit**
 
@@ -358,7 +358,7 @@ git commit -m "feat: broadcast room state after join/command mutations"
 
 ---
 
-### Task 5: Client — replace polling with the socket
+### Task 5: Client, replace polling with the socket
 
 **Files:**
 - Modify: `public/js/api.js`
@@ -441,7 +441,7 @@ And change the call at line 33 (inside `joinRoomFlow`):
 - [ ] **Step 3: Run the full test suite**
 
 Run: `npm test`
-Expected: PASS — these are browser modules with no Node-side unit tests (consistent with the rest of `public/js/`); this step just guards that nothing server-side broke.
+Expected: PASS, these are browser modules with no Node-side unit tests (consistent with the rest of `public/js/`); this step just guards that nothing server-side broke.
 
 - [ ] **Step 4: Commit**
 
@@ -462,7 +462,7 @@ Run: `npm start`
 
 - [ ] **Step 2: Two-tab realtime sync**
 
-Open the app in two browser tabs. Join the same room code in both, one as side A and one as side B (use the join gate's side picker). In tab A, trigger a command that changes state (e.g. damage a Rig, or tap the Recovery Phase button once both sides have added rigs and are ready). Confirm tab B's Rig panel / Battle section updates within roughly the network's round-trip time — no more up-to-3-second delay.
+Open the app in two browser tabs. Join the same room code in both, one as side A and one as side B (use the join gate's side picker). In tab A, trigger a command that changes state (e.g. damage a Rig, or tap the Recovery Phase button once both sides have added rigs and are ready). Confirm tab B's Rig panel / Battle section updates within roughly the network's round-trip time, no more up-to-3-second delay.
 
 - [ ] **Step 3: Reconnect after a server restart**
 
@@ -472,4 +472,4 @@ With both tabs still open and joined, stop the server (`Ctrl+C`) and start it ag
 
 Check the browser devtools console in both tabs during the above steps. Expected: no uncaught exceptions; WebSocket close/reopen during the restart step is expected and not an error.
 
-No commit for this task — it's verification only. If any step fails, return to the relevant task above, fix, and re-run this task's checklist from Step 1.
+No commit for this task, it's verification only. If any step fails, return to the relevant task above, fix, and re-run this task's checklist from Step 1.

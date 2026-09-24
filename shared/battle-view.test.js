@@ -251,14 +251,14 @@ test("Walker action console keeps prepare hidden, keeps other actions (regressio
   const keys = actions.map((a) => a.key);
   assert.ok(!keys.includes("prepare"));
   assert.ok(!keys.includes("shutdown"));
-  assert.ok(!keys.includes("sprint")); // cold kind — no heat to redline
+  assert.ok(!keys.includes("sprint")); // cold kind, no heat to redline
   assert.ok(keys.includes("move"));
   assert.ok(keys.includes("fire"));
 });
 
 test("Flat-pick fired: Fire stays live (drawer reload) and reload is not a tile", () => {
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
-  tank.loaded = { unit: false }; // just fired — a flat-pick clears loaded.unit (combat.js)
+  tank.loaded = { unit: false }; // just fired, a flat-pick clears loaded.unit (combat.js)
   const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 1, longRangeShots: 1 });
   const fire = actions.find((a) => a.key === "fire");
   assert.equal(fire.enabled, true);                  // opens the reload drawer

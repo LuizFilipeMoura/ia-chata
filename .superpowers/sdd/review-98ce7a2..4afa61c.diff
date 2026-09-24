@@ -23,25 +23,25 @@ index 7b0a1d0..be71aeb 100644
    return Object.keys(EQUIPMENT).includes(ref) ? ref : null;
  }
  
- // Weapon upgrades (Part 2 of the design) — every weapon's two fixed signature
+ // Weapon upgrades (Part 2 of the design), every weapon's two fixed signature
 -// upgrades, authored as flavor + a toolkit-effect tag. Combat-engine wiring for
 -// the brand-new mechanics (Reach, Scatter, Systems Overload, Sunder,
 -// Reroll-a-miss) is deferred per the design's "Readiness / phasing" section;
 -// this catalogue lets the wizard preview a weapon's identity today.
 +// upgrades, authored as flavor + a toolkit-effect tag.
  export const WEAPON_UPGRADES = {
--  "Mini Gun":      [{ name: "Extended Belt", tag: "+2 ROF (dice showing 1 add heat)" }, { name: "Suppressive Fire", tag: "Shock — Speed halved" }],
--  "Double MG":     [{ name: "Tracer Rounds", tag: "Incendiary — +1 target heat/hit" }, { name: "Gyro Mount", tag: "Reroll one missed die" }],
+-  "Mini Gun":      [{ name: "Extended Belt", tag: "+2 ROF (dice showing 1 add heat)" }, { name: "Suppressive Fire", tag: "Shock, Speed halved" }],
+-  "Double MG":     [{ name: "Tracer Rounds", tag: "Incendiary, +1 target heat/hit" }, { name: "Gyro Mount", tag: "Reroll one missed die" }],
 -  "Autocannon":    [{ name: "AP Shells", tag: "Armour Piercing" }, { name: "Depleted Core", tag: "+STR" }],
--  "Arc Gun":       [{ name: "Systems Overload", tag: "Target loses 1 action next activation" }, { name: "Ion Burn", tag: "Incendiary — +1 target heat/hit" }],
+-  "Arc Gun":       [{ name: "Systems Overload", tag: "Target loses 1 action next activation" }, { name: "Ion Burn", tag: "Incendiary, +1 target heat/hit" }],
 -  "Mortar":        [{ name: "Airburst Fuze", tag: "Ignores cover" }, { name: "Cluster Shells", tag: "Also chips a 2nd random location" }],
--  "Sniper Cannon": [{ name: "Match Barrel", tag: "No far-range penalty" }, { name: "Marksman Optics", tag: "Precision — Aimed Shot loses −2" }],
+-  "Sniper Cannon": [{ name: "Match Barrel", tag: "No far-range penalty" }, { name: "Marksman Optics", tag: "Precision, Aimed Shot loses −2" }],
 -  "Sword":         [{ name: "Duelist's Balance", tag: "Precision" }, { name: "Keen Edge", tag: "Rend" }],
 -  "Circular Saw":  [{ name: "Tempered Teeth", tag: "Armour Piercing" }, { name: "Sunder", tag: "−1 max SP to the struck location" }],
 -  "Chainsaw":      [{ name: "High-Rev Motor", tag: "+STR, but +1 heat per strike" }, { name: "Ripper Teeth", tag: "Rend" }],
--  "Claw":          [{ name: "Vice Grip", tag: "Impale — strong hit immobilises" }, { name: "Rending Talons", tag: "Rend" }],
--  "Lance":         [{ name: "Couched Reach", tag: "Reach — strike 1\" further / charge bonus" }, { name: "Spearpoint", tag: "Impale" }],
--  "Wrecking Ball": [{ name: "Haymaker", tag: "+STR, big" }, { name: "Wrecking Momentum", tag: "Staggering — knock back / pivot" }],
+-  "Claw":          [{ name: "Vice Grip", tag: "Impale, strong hit immobilises" }, { name: "Rending Talons", tag: "Rend" }],
+-  "Lance":         [{ name: "Couched Reach", tag: "Reach, strike 1\" further / charge bonus" }, { name: "Spearpoint", tag: "Impale" }],
+-  "Wrecking Ball": [{ name: "Haymaker", tag: "+STR, big" }, { name: "Wrecking Momentum", tag: "Staggering, knock back / pivot" }],
 +  "Mini Gun": [
 +    { id: "extended-belt", name: "Extended Belt", tag: "+2 ROF; dice showing 1 add heat", effect: { rof: 2, heatOnOnes: true } },
 +    { id: "suppressive-fire", name: "Suppressive Fire", tag: "Gains Shock", effect: { perks: ["Shock"] } },
@@ -162,7 +162,7 @@ index 7b0a1d0..be71aeb 100644
    const weightClass = normalizedClass;
    const d = RIG_DEFAULTS[weightClass];
    const equipmentId = normalizeEquipment(equipment);
-   // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
+   // Ablative Plating (Armor), passive +1 max SP to Hull, applied once at commission.
    const hullMax = d.hull + (equipmentId === "ablative-plating" ? 1 : 0);
    return {
      id,

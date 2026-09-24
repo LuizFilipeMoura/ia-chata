@@ -16,7 +16,7 @@ const Ctx = createContext<V2GlossaryTipApi | null>(null);
 // `.v2-root` so the scoped `--v2-*` tokens (and `.v2-gloss-*` rules) resolve,
 // but is neutralised to `display:contents` via the shared `.v2-portal` primitive
 // (tokens.css) so this always-mounted wrapper never paints the opaque full-screen
-// `.v2-root` background over the app — the tip is a non-modal popover, not a
+// `.v2-root` background over the app, the tip is a non-modal popover, not a
 // takeover like Drawer/RollConsole.
 export function V2GlossaryTipProvider({ children }: { children: ReactNode }) {
   const [termId, setTermId] = useState<string | null>(null);

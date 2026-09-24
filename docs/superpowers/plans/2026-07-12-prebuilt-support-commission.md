@@ -18,12 +18,12 @@
 
 ## File Structure
 
-- `shared/game-state.js` — add `SUPPORT_TEMPLATES` + `templ()` expander + `templateById()` + `templatesForKind()`; rebuild `SUPPORT_UNITS` and `SEED_SUPPORT` from the catalog. (Currently the rosters are hand-written literals at lines ~121–140.)
-- `shared/game-state.test.js` — new coverage for the catalog + lookups. (`SUPPORT_UNITS` shape is already guarded in `shared/support-units.test.js:224`; keep that green.)
-- `client/src/v2/lib/commissionData.ts` — add `MODULE_BLURB` map for the loadout cards.
-- `client/src/v2/lib/commissionData.test.ts` — assert `MODULE_BLURB` covers the ally-verb modules.
-- `client/src/v2/overlays/CommissionWizard.tsx` — replace `WizardState.unit` with `WizardState.template`; Tank/Walker step 1 becomes a template-card grid; submit + confirm read the template; delete the flat-pick grid.
-- `client/src/v2/styles/forge.css` — module-chip styling for the loadout cards (only if the reused chassis-card classes need a chip variant).
+- `shared/game-state.js`: add `SUPPORT_TEMPLATES` + `templ()` expander + `templateById()` + `templatesForKind()`; rebuild `SUPPORT_UNITS` and `SEED_SUPPORT` from the catalog. (Currently the rosters are hand-written literals at lines ~121–140.)
+- `shared/game-state.test.js`: new coverage for the catalog + lookups. (`SUPPORT_UNITS` shape is already guarded in `shared/support-units.test.js:224`; keep that green.)
+- `client/src/v2/lib/commissionData.ts`: add `MODULE_BLURB` map for the loadout cards.
+- `client/src/v2/lib/commissionData.test.ts`: assert `MODULE_BLURB` covers the ally-verb modules.
+- `client/src/v2/overlays/CommissionWizard.tsx`: replace `WizardState.unit` with `WizardState.template`; Tank/Walker step 1 becomes a template-card grid; submit + confirm read the template; delete the flat-pick grid.
+- `client/src/v2/styles/forge.css`: module-chip styling for the loadout cards (only if the reused chassis-card classes need a chip variant).
 
 ---
 
@@ -87,7 +87,7 @@ test("SUPPORT_UNITS and SEED_SUPPORT are rebuilt unchanged from the catalog", ()
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `SUPPORT_TEMPLATES`, `templateById`, `templatesForKind` are not exported (import resolves them to `undefined`).
+Expected: FAIL, `SUPPORT_TEMPLATES`, `templateById`, `templatesForKind` are not exported (import resolves them to `undefined`).
 
 - [ ] **Step 3: Implement the catalog, expander, lookups, and rebuilt rosters**
 
@@ -153,12 +153,12 @@ Also add the four new names (`SUPPORT_TEMPLATES, templateById, templatesForKind`
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js shared/support-units.test.js`
-Expected: PASS — new catalog tests pass and the existing `SUPPORT_UNITS defines the four shipped exemplars` test (support-units.test.js:224) still passes.
+Expected: PASS, new catalog tests pass and the existing `SUPPORT_UNITS defines the four shipped exemplars` test (support-units.test.js:224) still passes.
 
 - [ ] **Step 5: Run the full suite to confirm no roster consumer broke**
 
 Run: `npm test`
-Expected: PASS — every vitest + node test green (seed/add paths consume the rebuilt rosters unchanged).
+Expected: PASS, every vitest + node test green (seed/add paths consume the rebuilt rosters unchanged).
 
 - [ ] **Step 6: Commit**
 
@@ -196,7 +196,7 @@ test("MODULE_BLURB describes each ally-verb module", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/lib/commissionData.test.ts`
-Expected: FAIL — `MODULE_BLURB` is not exported.
+Expected: FAIL, `MODULE_BLURB` is not exported.
 
 - [ ] **Step 3: Implement the map**
 
@@ -207,9 +207,9 @@ Add to `client/src/v2/lib/commissionData.ts`:
 // commission loadout cards. Damage is represented by the gun itself, so it is
 // intentionally absent here.
 export const MODULE_BLURB: Record<string, string> = {
-  repair:  'Field Weld — heal an ally or self within 2".',
-  coolant: 'Vent — cool a friendly Rig within 2" by 2 heat.',
-  recon:   'Paint — mark an enemy; allies ignore its cover and gain +1 Aim.',
+  repair:  'Field Weld, heal an ally or self within 2".',
+  coolant: 'Vent, cool a friendly Rig within 2" by 2 heat.',
+  recon:   'Paint, mark an enemy; allies ignore its cover and gain +1 Aim.',
 };
 ```
 
@@ -238,7 +238,7 @@ This task has no unit test (the wizard is verified end-to-end in the browser in 
 
 In `client/src/v2/overlays/CommissionWizard.tsx`:
 
-Change the import from `/shared/game-state.js` to add `SUPPORT_TEMPLATES` and `templatesForKind`, and (optionally) drop `UNIT_WEAPONS` from the import only if it ends up unused — it is still used to render gun stats on the cards, so **keep `UNIT_WEAPONS`**.
+Change the import from `/shared/game-state.js` to add `SUPPORT_TEMPLATES` and `templatesForKind`, and (optionally) drop `UNIT_WEAPONS` from the import only if it ends up unused, it is still used to render gun stats on the cards, so **keep `UNIT_WEAPONS`**.
 
 Replace `stepsFor`:
 
@@ -297,7 +297,7 @@ Find the `else` branch of `state.step === 1` (the block rendering `Object.entrie
         <div className="v2-fw-body">
           <div className="v2-fc-cue">
             <span className="v2-fc-cue-lead">◈ Choose a loadout</span>
-            <span className="v2-fc-cue-sub v2-eyebrow">— gun &amp; two support modules are fixed by the frame</span>
+            <span className="v2-fc-cue-sub v2-eyebrow">, gun &amp; two support modules are fixed by the frame</span>
           </div>
           <div className="v2-fc-grid v2-grid-2">
             {templates.map((t) => {
@@ -315,13 +315,13 @@ Find the `else` branch of `state.step === 1` (the block rendering `Object.entrie
                   <div className="v2-fc-equip-passive">
                     {w
                       ? <>{weaponGlyph(t.unit!)} {t.unit} · STR {w.str} · ROF {w.rof}</>
-                      : <>⚙ Sidearm · STR 4 · ROF 2 — light plinker</>}
+                      : <>⚙ Sidearm · STR 4 · ROF 2, light plinker</>}
                   </div>
                   <div className="v2-fc-equip-active">
                     {t.modules.map((m) => (
                       <div key={m} className="v2-fc-module">
                         <b>{MODULES[m].label}</b>
-                        {MODULE_BLURB[m] ? <> — {MODULE_BLURB[m]}</> : null}
+                        {MODULE_BLURB[m] ? <>, {MODULE_BLURB[m]}</> : null}
                       </div>
                     ))}
                   </div>
@@ -348,7 +348,7 @@ Find the `else` branch of `state.step === 2` (the block that reads `const w = UN
       const w = t?.unit ? UNIT_WEAPONS[t.unit] : null;
       body = (
         <div className="v2-fw-body v2-fc-confirm">
-          <div className="v2-fc-confirm-name v2-title">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
+          <div className="v2-fc-confirm-name v2-title">{unitName()}, {UNIT_KINDS[state.kind].label}</div>
           <div className="v2-fc-confirm-row">
             {w
               ? <>{weaponGlyph(t!.unit!)} {t!.unit} · STR {w.str} · ROF {w.rof}</>

@@ -72,7 +72,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
         <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label="Score objectives">
           <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
           <div className="v2-aw-title-row">
-            <div className="v2-aw-title v2-title">⟡ Score Objectives — Round {round}</div>
+            <div className="v2-aw-title v2-title">⟡ Score Objectives, Round {round}</div>
             <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           </div>
           <p className="v2-aw-field-desc">
@@ -96,7 +96,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
                   <span className="v2-vpw-name">{name}{hint ? ` · ${hint}` : ""}</span>
                   <span className="v2-vpw-state">{sel ? "You hold it" : "Not yours"}</span>
                   {disputed ? (
-                    <span className="v2-vpw-warn">Both of you claimed this — one must change.</span>
+                    <span className="v2-vpw-warn">Both of you claimed this, one must change.</span>
                   ) : null}
                 </button>
               );

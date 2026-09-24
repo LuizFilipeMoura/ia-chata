@@ -1,4 +1,4 @@
-# Battle console fixes — design decisions
+# Battle console fixes, design decisions
 
 Date: 2026-07-06
 Branch: `feat/score-objectives-vp-wizard`
@@ -13,7 +13,7 @@ mutation, so every rule change lives server-side and the UI only reflects it.
 **Observed:** Player can Move more than once per activation (wanted), but heat
 does not go up.
 
-**Cause:** `performAction` gated Move/Sprint behind `t.movedThisActivation` — the
+**Cause:** `performAction` gated Move/Sprint behind `t.movedThisActivation`: the
 second Move returns `false`, so no slot spent and no heat added. UI closes the
 Move drawer regardless, so it *looks* like a free extra move with no heat.
 
@@ -22,13 +22,13 @@ slot and adds its heat (Move +1, Sprint +2 / +1 with Servo Actuators). Drop the
 `movedThisActivation` guard entirely (and the flag). Fix the Move drawer copy
 that wrongly said "no heat" and "2 actions" for sprint (sprint is 1 slot).
 
-## 2. Resolve Blast — checkbox list, not `window.prompt`
+## 2. Resolve Blast, checkbox list, not `window.prompt`
 
 **Observed:** Blast resolution uses `window.prompt` for comma-separated names.
 
 **Decision:** Replace with a drawer showing a checkbox list of every living Rig
 (the controller ticks those within 12" of the wreck). Send the checked names as
-`blast { targets }`. No server change — the `blast` verb already takes a name
+`blast { targets }`. No server change, the `blast` verb already takes a name
 array.
 
 ## 3. Move the Activate control out of the header
@@ -90,7 +90,7 @@ in inches. The band (near / far / out) is derived from the weapon's own
 slider still resolves to the `range` band string the server expects; inches are
 UI-only. Melee continues to hide the range control.
 
-## 8. Revert last action — floating button
+## 8. Revert last action, floating button
 
 **Observed:** No undo.
 

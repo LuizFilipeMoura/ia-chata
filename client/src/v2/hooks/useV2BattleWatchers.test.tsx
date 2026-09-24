@@ -45,7 +45,7 @@ test("opens the answer-token gate when the current side owes answer tokens", asy
     game: { round: 2, phase: "activation", started: true, sides: [{ id: "a", name: "K", vp: 0, ready: true }, { id: "b", name: "R", vp: 0, ready: true }],
       turn: { side: "b", activeRigId: 2, actionsUsed: 0, actionsMax: 3 }, pendingAnswer: { side: "a", remaining: 2 } } } as unknown as ServerState;
   render(wrap(<Harness state={state} />));
-  // The gate drawer title ported from V1 useBattleWatchers: "⟡ Answer Tokens — prepare a reaction".
+  // The gate drawer title ported from V1 useBattleWatchers: "⟡ Answer Tokens, prepare a reaction".
   expect(await screen.findByText(/answer tokens/i)).toBeInTheDocument();
 });
 

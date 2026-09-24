@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const shared = fileURLToPath(new URL("./shared", import.meta.url));
 
 // Vite core logs "ws proxy socket error" directly from its HTTP-upgrade
-// socket handler — not via the http-proxy `error` event — so it can't be
+// socket handler, not via the http-proxy `error` event, so it can't be
 // silenced through the proxy `configure` hook. A custom logger that drops
 // only the benign write-abort/reset churn (client reconnect, HMR reload,
 // React StrictMode double-mount) keeps real proxy errors visible.

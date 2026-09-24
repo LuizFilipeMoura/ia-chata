@@ -136,13 +136,13 @@ const TERRAIN_KINDS = [
 
 // The terrain vocabulary a digital room scatters. wood / crater / ruin are
 // excluded: the 3-ray cover model (geometry.js) grades by pure geometry, and
-// those three lie about themselves under it — a wood is a 3.4-5.4in blob that
+// those three lie about themselves under it, a wood is a 3.4-5.4in blob that
 // eats all three rays and reads as a WALL, and a crater is a hole that would do
 // the same. Every kind kept here reads correctly with no cover-class table.
-// A physical room is unaffected — you adjudicate a wood yourself at the table.
+// A physical room is unaffected, you adjudicate a wood yourself at the table.
 export const DIGITAL_TERRAIN_KINDS = new Set(["building", "barricade", "rock", "crate"]);
 
-// Signed perpendicular distance from `p` to the empty-corner diagonal — which
+// Signed perpendicular distance from `p` to the empty-corner diagonal, which
 // side of it a point falls on, and by how far. Digital terrain is scattered on
 // ONE side and mirrored to the other, so each player reads an identical board
 // from their own corner. That matters more than usual here: the digital field
@@ -153,7 +153,7 @@ function diagonalSide(field, p) {
   return ((e1.x - e0.x) * (p.y - e0.y) - (e1.y - e0.y) * (p.x - e0.x)) / Math.hypot(e1.x - e0.x, e1.y - e0.y);
 }
 
-// Dress the field with a varied terrain scatter — several shapes and sizes,
+// Dress the field with a varied terrain scatter, several shapes and sizes,
 // clear of objectives and the deployment corners, roughly wargame density.
 // Piece count scales with field area. Deterministic under `random` (matches rollD).
 // `opts.digital` restricts the vocabulary to DIGITAL_TERRAIN_KINDS (see above),
@@ -169,7 +169,7 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
   const objClear = 0.10 * hd;
   // Terrain must not spawn in a staging area. This used to be 0.18 * hd (~5.84in
   // on the reference table) while the deploy zone reaches 8in, so pieces intruded
-  // into the outer third of it — measured: the 4v4 seed roster's last rig found no
+  // into the outer third of it, measured: the 4v4 seed roster's last rig found no
   // legal spot on 0.6% of seeds. Physical rooms get this too; terrain in your own
   // corner is wrong on a real table as well.
   const cornerClear = deployRadius(field);
@@ -194,7 +194,7 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
   for (const piece of built) {
     const availX = field.width - 2 * (margin + piece.fp);
     const availY = field.height - 2 * (margin + piece.fp);
-    if (availX <= 1 || availY <= 1) continue; // too big for this field — drop it
+    if (availX <= 1 || availY <= 1) continue; // too big for this field, drop it
     for (let attempts = 0; attempts < 80; attempts++) {
       const p = {
         x: round2(margin + piece.fp + rand() * availX),
@@ -212,7 +212,7 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
   }
   // A half turn about the centre maps one deployment corner onto the other, so
   // each side reads the same board. `rot` survives the turn untouched because a
-  // rect is centrally symmetric — true only while digital terrain is rects only.
+  // rect is centrally symmetric, true only while digital terrain is rects only.
   const out = opts.digital
     ? placed.flatMap((p) => [p, { ...p, x: round2(field.width - p.x), y: round2(field.height - p.y) }])
     : placed;

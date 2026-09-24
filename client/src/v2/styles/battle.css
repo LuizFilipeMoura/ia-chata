@@ -1,4 +1,4 @@
-/* V2 Battle chrome — battle HUD phase strip (.v2-bh*) and turn banner card
+/* V2 Battle chrome, battle HUD phase strip (.v2-bh*) and turn banner card
    (.v2-tb*). Ported from V1's BattleHud.tsx / TurnBanner.tsx. EVERY selector is
    scoped under .v2-root so nothing leaks into V1's global stylesheet. Colors use
    --v2-* tokens only. */
@@ -201,7 +201,7 @@
   z-index: 8000;
 }
 
-/* ---- Action console (.v2-ac*) — ported from V1's ActionConsole.tsx and
+/* ---- Action console (.v2-ac*), ported from V1's ActionConsole.tsx and
    reworked as a live command deck: the moment a rig goes active its terminal
    lights green. A pulsing lamp + "Choose an Action" header carries the budget
    readout and pips; below it the three tactile groups (Attack/Move/Support)
@@ -293,7 +293,7 @@
   opacity: 0.5;
 }
 
-/* grouped action tiles — three in a row, matching V1's repeat(3,1fr) */
+/* grouped action tiles, three in a row, matching V1's repeat(3,1fr) */
 .v2-root .v2-ac-grid {
   --v2-gap: 10px;
 }
@@ -342,7 +342,7 @@
   color: var(--v2-low);
   text-shadow: 0 0 10px rgba(239, 148, 80, 0.55);
 }
-/* ember Attack tile — the one that fires */
+/* ember Attack tile, the one that fires */
 .v2-root .v2-ac-tile[data-tone="ember"] {
   background: var(--v2-grad-ember-well);
   border-color: var(--v2-ember-deep);
@@ -376,7 +376,7 @@
   color: var(--v2-txt-faint);
 }
 
-/* ---- Sub-action selector popover (.v2-ac-pop*) — portaled beside its tile.
+/* ---- Sub-action selector popover (.v2-ac-pop*), portaled beside its tile.
    Rethought as a stamped iron control module: a tone-keyed header strip, a
    downward pointer aimed back at the tile, selector rows that stagger in and
    light a tone accent bar on hover, and a heat gauge chip per row. `--tone`
@@ -425,7 +425,7 @@
   border-right: 1px solid var(--tone);
   border-bottom: 1px solid var(--tone);
 }
-/* entrance — only once measured/placed, so it never plays while off-screen */
+/* entrance, only once measured/placed, so it never plays while off-screen */
 .v2-root .v2-ac-pop.is-placed {
   animation: v2-ac-pop-in 0.16s ease both;
 }
@@ -434,7 +434,7 @@
   to { opacity: 1; transform: none; }
 }
 
-/* header strip — group name + SELECT tag */
+/* header strip, group name + SELECT tag */
 .v2-root .v2-ac-pop-head {
   display: flex;
   align-items: center;
@@ -484,7 +484,7 @@
   from { opacity: 0; transform: translateX(-6px); }
   to { opacity: 1; transform: none; }
 }
-/* left accent bar — lights in the group tone on hover */
+/* left accent bar, lights in the group tone on hover */
 .v2-root .v2-ac-pop-row::before {
   content: "";
   position: absolute;
@@ -543,7 +543,7 @@
   color: var(--v2-low);
 }
 
-/* heat gauge chip — cost (amber) / cooling (green) / free (green) */
+/* heat gauge chip, cost (amber) / cooling (green) / free (green) */
 .v2-root .v2-ac-pop-heat {
   flex: 0 0 auto;
   padding: 3px 7px;
@@ -582,7 +582,7 @@
   color: var(--v2-warn);
 }
 
-/* full-width Shut Down / End-Turn control — the activation's early-out */
+/* full-width Shut Down / End-Turn control, the activation's early-out */
 .v2-root .v2-ac-shutdown {
   align-self: stretch;
   display: flex;
@@ -621,7 +621,7 @@
   color: var(--v2-txt-dim);
 }
 
-/* ---- Outcome banner (.v2-outcome*) — full-screen victory/defeat scrim ported
+/* ---- Outcome banner (.v2-outcome*), full-screen victory/defeat scrim ported
    from the mockup's Outcome screen (oil-iron-terminal.html lines 477-496). A
    fixed radial-oil-glow scrim, a centered card, the big stencil headline
    (outcomeText content), and a ghost New Battle button. High z-index so it sits
@@ -669,7 +669,7 @@
   filter: brightness(1.08);
 }
 
-/* ---- Impersonate chip (.v2-impersonate*) — dev/test-only "Acting as: A / B"
+/* ---- Impersonate chip (.v2-impersonate*), dev/test-only "Acting as: A / B"
    toggle shown in seeded rooms, flips the app-wide impersonated side. ---- */
 .v2-root .v2-impersonate {
   display: flex;

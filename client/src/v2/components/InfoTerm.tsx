@@ -40,7 +40,7 @@ export function InfoTerm({ id, as: Tag = "span", className = "", dataTone, child
       data-tone={dataTone}
       role="button"
       tabIndex={0}
-      aria-label={`${entry.term} — what this means`}
+      aria-label={`${entry.term}, what this means`}
       onClick={(e: MouseEvent<HTMLElement>) => open(e.currentTarget)}
       onKeyDown={onKeyDown}
     >

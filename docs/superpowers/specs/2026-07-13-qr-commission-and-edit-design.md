@@ -12,7 +12,7 @@ changes remove the friction:
 
 1. **QR scan → instant Standard commission.** Each chassis has a pre-generated,
    printable QR. Scanning it commissions that chassis's Standard build for the
-   scanner's side in one action — no picker.
+   scanner's side in one action, no picker.
 2. **Post-commission loadout edit.** Because scanning always produces the Standard
    build, players need a way to tune weapons/equipment upgrades *after* a rig is
    already on the field, pre-battle. A committed rig can be reopened in the wizard
@@ -30,7 +30,7 @@ Both ship together.
 - Editing after the battle starts. Same pre-battle gate as Decommission.
 - Encoding owner/side in the QR. Owner is always the scanner's own side.
 
-## Feature 1 — Pre-generated chassis QR codes
+## Feature 1, Pre-generated chassis QR codes
 
 ### Payload format
 
@@ -54,13 +54,13 @@ decode.
 - For each chassis, encodes `rig:v1:<id>` to an SVG (and/or PNG) QR named
   `<chassis-id>.svg`, plus a printable contact sheet showing each code with its
   codename + weapon label (from the chassis `name` / `label` fields).
-- Output to `docs/qr/` (git-tracked) or a build-artifacts dir — TBD in plan.
+- Output to `docs/qr/` (git-tracked) or a build-artifacts dir, TBD in plan.
 - New chassis in the catalogue → re-run → new code. No hand-maintained id map.
 
 Uses a QR-encoding lib (e.g. `qrcode`) as a dev dependency; generation is offline,
 not shipped to the client.
 
-## Feature 2 — Scan → instant Standard commission
+## Feature 2, Scan → instant Standard commission
 
 ### Entry point
 
@@ -83,8 +83,7 @@ screen). Opens a camera view overlay.
 2. Guard the no-mirror invariant + side capacity: chassis already on the field
    (either side) or `!canAddRigForSide(state, mySide)` → reject with the reason
    (mirrors the wizard's own guards). Overlay stays open.
-3. Otherwise build the **Standard** attrs for that chassis **client-side** —
-   exactly what the wizard's Standard auto-commission path produces today:
+3. Otherwise build the **Standard** attrs for that chassis **client-side**: exactly what the wizard's Standard auto-commission path produces today:
    `chassis`, `class` = chassis class, `lr` = chassis `longRange`, `melee` =
    chassis `melee`, `longRangeUpgrade`/`meleeUpgrade` = `firstUpgradeId(...)`,
    default `equipment` + `firstEquipmentUpgradeId(...)`, `owner = mySide`, a
@@ -96,9 +95,9 @@ screen). Opens a camera view overlay.
 proven Standard path and leaves the server `add` verb untouched. Owner is set to
 `mySide` at dispatch and is never read from the QR.
 
-## Feature 3 — Post-commission loadout edit (pre-battle)
+## Feature 3, Post-commission loadout edit (pre-battle)
 
-### Server — new `reconfigure` verb
+### Server, new `reconfigure` verb
 
 Added to `applyCommand` in `shared/game-state.js`. Attrs: `{ name, equipment,
 equipmentUpgrade, longRangeUpgrade, meleeUpgrade }` (identify the rig by name, as
@@ -119,18 +118,18 @@ Behaviour:
   deploy/position fields (the rig may already be placed while `field.locked`).
   Combat-derived and loadout-derived state is rebuilt fresh from the new loadout.
 - Replace the rig in `room.rigs` at its existing index (stable ordering).
-- Call `resetReadyBeforeStart(room)` — a loadout change must re-confirm parity /
+- Call `resetReadyBeforeStart(room)`: a loadout change must re-confirm parity /
   ready, same as add/remove.
 - Set `changed = true`.
 
-### Client — wizard edit mode
+### Client, wizard edit mode
 
 The Commission wizard gains an **edit mode**, opened from a rig's `RigTerminal`
 via an **Edit loadout** control (same pre-battle + own-rig gate as Decommission).
 
 - Wizard state is pre-seeded from the existing rig: chassis, class, weapons,
   current upgrades, current equipment + equipment upgrade.
-- Kind and Chassis steps are **locked/skipped** — they are fixed for an existing
+- Kind and Chassis steps are **locked/skipped**: they are fixed for an existing
   rig. Entry lands on the Weapons step (first editable step). `stepsFor` /
   navigation skips Kind + Chassis in edit mode.
 - The one-Prototype-per-rig picker locking behaves exactly as in create mode.

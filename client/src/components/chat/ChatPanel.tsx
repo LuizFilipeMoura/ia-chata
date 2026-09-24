@@ -8,9 +8,9 @@ import { SuggestedPrompts } from "./SuggestedPrompts";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 
 const GREETING =
-  "Ask me anything about the Of Oil and Iron rulebook — by text or by tapping the mic.";
+  "Ask me anything about the Of Oil and Iron rulebook, by text or by tapping the mic.";
 const CLEARED =
-  "Context cleared — your tracked Rigs are kept. Narrate the battle or ask a rules question.";
+  "Context cleared, your tracked Rigs are kept. Narrate the battle or ask a rules question.";
 
 // The floating assistant panel (index.html:91-113 + chat.js open/close + tools).
 // `onBotMessage` fires whenever a bot bubble is appended while the panel is

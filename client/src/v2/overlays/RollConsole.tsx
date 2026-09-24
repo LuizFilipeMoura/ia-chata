@@ -38,7 +38,7 @@ const rollTone = (roll: { sides: number; tone?: string }): string =>
 //
 // The word is keyed off the DIE, not just its tone: the chain rolls d6 to hit
 // and d10 to wound, and both use tone "ok"/"miss". Keying on tone alone made a
-// successful wound die announce "HIT!" — to-hit vocabulary on a roll that
+// successful wound die announce "HIT!", to-hit vocabulary on a roll that
 // decided damage, which is precisely the confusion this panel exists to end.
 // Location (d12, tone "cool") and untoned dice get no word.
 const verdictLabel = (sides: number, tone: string): string | null => {
@@ -54,7 +54,7 @@ const verdictLabel = (sides: number, tone: string): string | null => {
   return null;
 };
 
-// The wound die's sides. Mirrors WOUND_DIE in shared/rules.js — the client
+// The wound die's sides. Mirrors WOUND_DIE in shared/rules.js, the client
 // reads resolutions off the wire, so it cannot import the engine constant.
 const WOUND_DIE = 10;
 
@@ -69,7 +69,7 @@ const STEP_LABEL: Record<ResolutionStep["kind"], string> = {
 
 // The dice a step is answerable for, normalised to one shape. The location step
 // carries a single `die` rather than a `dice[]` because a d12 has no pass/fail
-// verdict — it picks a part. `ok: null` renders it neutral rather than lying
+// verdict, it picks a part. `ok: null` renders it neutral rather than lying
 // about a success it never adjudicated.
 const stepDice = (
   step: ResolutionStep,
@@ -88,7 +88,7 @@ interface EffectState {
 // Native V2 port of V1's RollConsole (the dice theater). Same imperative handle
 // (playResolution / promptDice / closeRoll), same flicker→settle animation,
 // reaction-token flip, damage-equation breakdown, effect lines, and manual
-// dice-entry form — retagged with `v2-roll-*` classes. Portaled to <body> by
+// dice-entry form, retagged with `v2-roll-*` classes. Portaled to <body> by
 // the provider, so its root markup is wrapped in `.v2-root`.
 const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, ref) {
   const reduced =
@@ -391,12 +391,12 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                     >
                       {/* A rolling die's face is owned by the flicker interval, which
                           writes el.textContent directly (see `clearFlicker`'s timer).
-                          React must render "" here — NOT a random face.
+                          React must render "" here, NOT a random face.
 
                           If React rendered a face, its vdom would hold a value it does
                           not control. On settle, React diffs its OWN previous text
                           against the real value and skips the DOM write whenever the two
-                          happen to match — stranding the flicker's last face on screen.
+                          happen to match, stranding the flicker's last face on screen.
                           That showed the player a number the engine never rolled (~1 in
                           `sides` per die, so a 6-die volley lied more often than not).
 

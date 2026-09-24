@@ -1,28 +1,28 @@
-# Project Structure Split — Design Spec
+# Project Structure Split, Design Spec
 
 **Date:** 2026-07-04
-**Status:** Proposed (spec only — no implementation yet)
+**Status:** Proposed (spec only, no implementation yet)
 **Constraint:** No new dependencies, no build step, no bundler. Plain Node ESM on the server, native browser ES modules on the client. Everything must keep working with `npm start` / `npm test` exactly as today.
 
 ## Goal
 
-Split the two monoliths (`index.html`, `server.js`) into small, single-concern files with explicit boundaries, so that multiple agents (or humans) can work on different concerns in parallel without editing the same file — especially during Phases 1–5 of the battle-state plan, which currently funnel almost every change into `index.html` and `server.js`.
+Split the two monoliths (`index.html`, `server.js`) into small, single-concern files with explicit boundaries, so that multiple agents (or humans) can work on different concerns in parallel without editing the same file, especially during Phases 1–5 of the battle-state plan, which currently funnel almost every change into `index.html` and `server.js`.
 
-This is a **mechanical move, not a rewrite**: code is relocated and re-plumbed with `import`/`export`, but behavior, markup, styles, and logic are unchanged. Deduplication of the rig math (currently in three places) is explicitly **not** done here — the Phase 1 plan already deletes the client and server copies; this spec just gives each copy a clearly-owned home until then.
+This is a **mechanical move, not a rewrite**: code is relocated and re-plumbed with `import`/`export`, but behavior, markup, styles, and logic are unchanged. Deduplication of the rig math (currently in three places) is explicitly **not** done here, the Phase 1 plan already deletes the client and server copies; this spec just gives each copy a clearly-owned home until then.
 
 ## Problems today
 
 1. **`index.html` (1,162 lines)** holds ~410 lines of CSS, ~65 lines of markup, and ~670 lines of JS spanning six unrelated concerns: viewport handling, rig state + math + `localStorage`, the `[[RIG ...]]` tag protocol, the tracker sheet/deck UI, chat streaming, and speech (STT + TTS). Any two UI tasks conflict on this one file.
 2. **`server.js` (208 lines)** mixes env config, the tracker-protocol prompt text, rulebook loading, a duplicated `RIG_DEFAULTS`/`formatRigState`, the Ollama streaming proxy, and Express wiring. Phase 1 adds three more routes and a store into it.
-3. **`express.static(__dirname)` serves the whole repo** — including `server.js`, `rules.md`, `docs/`, and `package.json` — to any browser on the LAN. Moving client files into `public/` fixes this as a side effect.
+3. **`express.static(__dirname)` serves the whole repo**: including `server.js`, `rules.md`, `docs/`, and `package.json`: to any browser on the LAN. Moving client files into `public/` fixes this as a side effect.
 4. **Triple duplication** of `RIG_DEFAULTS` + rig math (`server.js`, `index.html`, `game-state.js`). Phase 1 resolves it; until then the copies at least get separate, clearly-labeled homes.
-5. **The Phase 1 plan targets the monolith paths.** Without this split, Tasks 5–9 (server routes, join gate, polling, command sender, ownership render) all edit `server.js` and `index.html` — serializing work that is conceptually parallel.
+5. **The Phase 1 plan targets the monolith paths.** Without this split, Tasks 5–9 (server routes, join gate, polling, command sender, ownership render) all edit `server.js` and `index.html`: serializing work that is conceptually parallel.
 
 ## Approaches considered
 
-- **A. Minimal split** — extract CSS and JS out of `index.html` into one file each; split `server.js` into two. Cheap, but `app.js` would still be a ~670-line grab-bag and Phase 1 tasks would still collide inside it.
-- **B. Concern-per-file layout with `server/`, `public/`, `shared/` (recommended)** — each concern gets its own module with an explicit dependency direction; `shared/` holds the pure game logic used by both sides (per the Phase 1 architecture). Matches the ownership boundaries agents actually need. No tooling required.
-- **C. Feature folders (`features/chat/`, `features/rigs/` each with own css/js/server slice)** — over-structured for a ~2,300-line project; deeper nesting without better isolation than B.
+- **A. Minimal split**: extract CSS and JS out of `index.html` into one file each; split `server.js` into two. Cheap, but `app.js` would still be a ~670-line grab-bag and Phase 1 tasks would still collide inside it.
+- **B. Concern-per-file layout with `server/`, `public/`, `shared/` (recommended)**: each concern gets its own module with an explicit dependency direction; `shared/` holds the pure game logic used by both sides (per the Phase 1 architecture). Matches the ownership boundaries agents actually need. No tooling required.
+- **C. Feature folders (`features/chat/`, `features/rigs/` each with own css/js/server slice)**: over-structured for a ~2,300-line project; deeper nesting without better isolation than B.
 
 **Decision: B.**
 
@@ -35,7 +35,7 @@ ia-regrinha/
 ├── README.md / CHANGELOG.md   # unchanged
 ├── docs/                      # unchanged
 │
-├── shared/                    # pure game logic — no I/O, no DOM, no fetch, no fs
+├── shared/                    # pure game logic, no I/O, no DOM, no fetch, no fs
 │   ├── game-state.js          # moved from ./game-state.js, content unchanged
 │   └── game-state.test.js     # moved from ./game-state.test.js, import path updated
 │
@@ -45,7 +45,7 @@ ia-regrinha/
 │   ├── prompt.js              # rulebook loading + SYSTEM_PROMPT, TRACKER_PROTOCOL,
 │   │                          #   legacy RIG_DEFAULTS + formatRigState (deleted by Phase 1 Task 5)
 │   ├── routes/
-│   │   ├── chat.js            # POST /api/chat — Ollama streaming proxy (express.Router)
+│   │   ├── chat.js            # POST /api/chat, Ollama streaming proxy (express.Router)
 │   │   └── game.js            # (created by Phase 1 Task 5) join / GET / command routes
 │   ├── store.js               # (created by Phase 1 Task 4) JSON-file room store
 │   └── store.test.js          # (created by Phase 1 Task 4)
@@ -60,16 +60,16 @@ ia-regrinha/
     └── js/                    # native ES modules, no build step
         ├── main.js            # entry: visualViewport sync, boot (loadRigs/renderRigs/greeting),
         │                      #   cross-module wiring (e.g. speech → chat callback)
-        ├── status.js          # setStatus() over #statusRow — leaf module, no imports
+        ├── status.js          # setStatus() over #statusRow, leaf module, no imports
         ├── rig-state.js       # RIG_DEFAULTS, LOCS, rigs array, localStorage load/save,
         │                      #   findRig/makeRig, damage/repair/set/heat/recompute
-        │                      #   (largely deleted by Phase 1 Task 7 — becomes server-state mirror)
+        │                      #   (largely deleted by Phase 1 Task 7, becomes server-state mirror)
         ├── rig-tags.js        # RIG_TAG_RE, parseAttrs, applyRigCommands, stripRigTags, rigSnapshot
         ├── rig-panel.js       # sheet open/close, swipe deck, pager dots, rig screens, add form
         ├── chat.js            # history, bubbles, autoResize, sendMessage streaming loop,
         │                      #   clear button, reasoning toggle
         ├── speech.js          # SpeechRecognition (mic, lang select) + speechSynthesis (TTS toggle, speak)
-        └── api.js             # (created by Phase 1) sendCommand, pollOnce/startPolling, join —
+        └── api.js             # (created by Phase 1) sendCommand, pollOnce/startPolling, join,
                                #   the single home for /api/game/* fetches
 ```
 
@@ -80,7 +80,7 @@ Estimated sizes after the split: every JS module lands between ~30 and ~200 line
 Rules that keep agents out of each other's files:
 
 - **`shared/game-state.js` is pure.** No `fs`, no `fetch`, no DOM, no `Date.now`. It is the only place server-authoritative rig math may live. Fully unit-tested.
-- **`server/routes/*` never build prompt text** — they import from `server/prompt.js`. `server/prompt.js` never touches `req`/`res`.
+- **`server/routes/*` never build prompt text**: they import from `server/prompt.js`. `server/prompt.js` never touches `req`/`res`.
 - **`server/config.js` is the only reader of `process.env`.**
 - **Client modules form a DAG** (no import cycles):
 
@@ -95,7 +95,7 @@ Rules that keep agents out of each other's files:
   | `main.js` | anything (composition root) |
 
   The one would-be cycle (speech's `onresult` needs `sendMessage`, chat needs `speak`) is broken by injection: `speech.js` exports `initSpeech({ onTranscript })` and `main.js` passes `chat.sendMessage` in. `chat.js` imports `speak` directly.
-- **Each module grabs its own DOM elements** (`document.getElementById`) at import time instead of receiving them from a central ref block — so adding a widget to one concern never edits another concern's file.
+- **Each module grabs its own DOM elements** (`document.getElementById`) at import time instead of receiving them from a central ref block, so adding a widget to one concern never edits another concern's file.
 - **`public/index.html` and `main.js` remain shared touchpoints.** Mitigation: markup changes are additive per feature block (each concern owns its own subtree: `.dock` toolbar buttons belong to the module that handles them; `#rigPanel` belongs to rig-panel), and `main.js` stays a thin composition root (~40 lines) so merge conflicts there are trivial.
 
 ## What moves where (line-level mapping)
@@ -148,7 +148,7 @@ The IIFE wrapper disappears (module scope replaces it). The Google Fonts `<link>
 }
 ```
 
-`node --test <dir>` recursively picks up `*.test.js`, so colocated tests keep working without config; a directory with no test files (as `server/` is until Phase 1 Task 4) exits green, but a *nonexistent* path errors — hence the two-stage script update in the migration plan below. (`.claude/launch.json` runs the npm script by name, so it needs no change.)
+`node --test <dir>` recursively picks up `*.test.js`, so colocated tests keep working without config; a directory with no test files (as `server/` is until Phase 1 Task 4) exits green, but a *nonexistent* path errors, hence the two-stage script update in the migration plan below. (`.claude/launch.json` runs the npm script by name, so it needs no change.)
 
 ## Interaction with the Phase 1 plan
 
@@ -157,13 +157,13 @@ The IIFE wrapper disappears (module scope replaces it). The Google Fonts `<link>
 | Phase 1 plan says | After restructure, target |
 |---|---|
 | Create `store.js`, `store.test.js` (Task 4) | `server/store.js`, `server/store.test.js` (import `../shared/game-state.js`) |
-| Modify `server.js` — imports, store, protocol text, `/api/chat`, new routes (Task 5) | store wiring in `server/index.js`; protocol/`owner` text in `server/prompt.js`; delete legacy `RIG_DEFAULTS`/`formatRigState` from `server/prompt.js`; chat changes in `server/routes/chat.js`; new routes in **new** `server/routes/game.js` |
-| Modify `index.html` — join gate (Task 6) | markup in `public/index.html`, styles in **new** `public/css/join.css`, logic in **new** `public/js/join.js` |
-| Modify `index.html` — polling, `applyServerState`, delete client math (Task 7) | **new** `public/js/api.js` (poll + `applyServerState` + later `sendCommand`); deletions land in `public/js/rig-state.js` |
-| Modify `index.html` — command sender, rewire buttons/tags (Task 8) | `sendCommand` in `public/js/api.js`; button rewires in `public/js/rig-panel.js`; tag rewire in `public/js/rig-tags.js` |
-| Modify `index.html` — ownership render (Task 9) | `public/js/rig-panel.js` + `public/css/rig-sheet.css` |
+| Modify `server.js`: imports, store, protocol text, `/api/chat`, new routes (Task 5) | store wiring in `server/index.js`; protocol/`owner` text in `server/prompt.js`; delete legacy `RIG_DEFAULTS`/`formatRigState` from `server/prompt.js`; chat changes in `server/routes/chat.js`; new routes in **new** `server/routes/game.js` |
+| Modify `index.html`: join gate (Task 6) | markup in `public/index.html`, styles in **new** `public/css/join.css`, logic in **new** `public/js/join.js` |
+| Modify `index.html`: polling, `applyServerState`, delete client math (Task 7) | **new** `public/js/api.js` (poll + `applyServerState` + later `sendCommand`); deletions land in `public/js/rig-state.js` |
+| Modify `index.html`: command sender, rewire buttons/tags (Task 8) | `sendCommand` in `public/js/api.js`; button rewires in `public/js/rig-panel.js`; tag rewire in `public/js/rig-tags.js` |
+| Modify `index.html`: ownership render (Task 9) | `public/js/rig-panel.js` + `public/css/rig-sheet.css` |
 
-Net effect: Phase 1's six client/server tasks touch six *different* files instead of two shared ones — they become parallelizable across agents (with only `public/index.html` markup and `main.js` wiring as small, additive merge points).
+Net effect: Phase 1's six client/server tasks touch six *different* files instead of two shared ones, they become parallelizable across agents (with only `public/index.html` markup and `main.js` wiring as small, additive merge points).
 
 ## Ownership map (who edits what)
 
@@ -179,7 +179,7 @@ Net effect: Phase 1's six client/server tasks touch six *different* files instea
 | `[[RIG]]` tag protocol (client side) | `public/js/rig-tags.js` |
 | Voice (STT/TTS) | `public/js/speech.js` |
 | Theming / global styles | `public/css/tokens.css`, `public/css/app.css` |
-| Markup / composition | `public/index.html`, `public/js/main.js` (shared — keep edits additive) |
+| Markup / composition | `public/index.html`, `public/js/main.js` (shared, keep edits additive) |
 
 ## Migration plan (each step independently verifiable and committable)
 
@@ -188,12 +188,12 @@ Net effect: Phase 1's six client/server tasks touch six *different* files instea
 3. **Move and de-inline the client.** Create `public/`, move `index.html` in, extract the three CSS files and the seven JS modules, switch to `<script type="module">`, switch server static mounts to `public/` (+ `/shared`). Verify with the preview tools: page renders identically, chat streams, rig sheet opens/adds/damages/persists across reload, `[[RIG ...]]` tags from the model still apply and are stripped from display/TTS, mic + TTS still work, and `GET /server.js` now 404s.
 4. **Housekeeping.** Add `.idea/` to `.gitignore`. Update README paths if any are referenced.
 
-Rollback at any step is `git revert` of that step's commit — no step leaves the app in a mixed state.
+Rollback at any step is `git revert` of that step's commit, no step leaves the app in a mixed state.
 
 ## Testing
 
 - **Automated:** existing `node:test` suites, relocated; `npm test` must pass after steps 1 and 2. No new tests are required by this spec (no logic changes), but the split makes the Phase-1 test targets (`shared/`, `server/`) natural homes.
-- **Manual (step 3):** the preview checklist above — the client has no automated tests today and this spec does not add a client test harness (that would require new tooling, which is out of scope).
+- **Manual (step 3):** the preview checklist above, the client has no automated tests today and this spec does not add a client test harness (that would require new tooling, which is out of scope).
 
 ## Out of scope
 

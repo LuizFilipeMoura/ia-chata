@@ -41,7 +41,7 @@ export function resolveScan(
   const used = new Set(state.rigs.map((r) => r.chassis).filter(Boolean));
   if (used.has(id)) return { ok: false, error: `${CHASSIS_NAME[id]} is already on the field` };
   // canAddRigForSide's ambient type wants a full Rig[]/GameState shape; resolveScan
-  // only needs the minimal { rigs, game } view (this is a stable-true predicate —
+  // only needs the minimal { rigs, game } view (this is a stable-true predicate,
   // see game-state.js), so the cast is a type-shape bridge, not a behavior change.
   if (!canAddRigForSide(state as never, mySide)) return { ok: false, error: "Your roster is full" };
   const validPick = typeof equipmentId === "string" && Object.keys(EQUIPMENT).includes(equipmentId);

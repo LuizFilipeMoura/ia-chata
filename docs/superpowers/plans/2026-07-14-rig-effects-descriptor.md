@@ -14,19 +14,19 @@
 
 ## File Structure
 
-- `shared/game-state.js` — add `rigEffects(rig)` (near the other equipment helpers, ~line 400) + export. One new pure function; no other logic changes.
-- `shared/game-state.test.js` — `rigEffects` unit tests.
-- `shared/battle-view.js` — `availableActions` reads the descriptor for sprint + active heat.
-- `shared/battle-view.test.js` — reroute assertions + drift guard.
-- `client/src/lib/loadout.ts` — equipment card active-heat via descriptor + upgrade fields.
-- `client/src/lib/loadout.test.ts` — (or existing) upgrade-aware card data.
-- `client/src/v2/components/LoadoutView.tsx` — render equipment-upgrade line.
-- `client/src/v2/battle/MoveBody.tsx` — read descriptor, drop hardcode.
-- `client/src/v2/battle/RepairBody.tsx` — bonused-SP copy via new prop.
-- `client/src/v2/state/V2BattleActionsContext.tsx` — `openRepair` passes `bonusSp`.
-- `client/src/v2/components/HeatGauge.tsx` — thermal-margin badge on capacity.
-- `client/src/v2/components/CompRow.tsx` — Hull `+N` max-SP badge via new prop.
-- `client/src/v2/overlays/RigTerminal.tsx` — thread Hull delta into `CompRow`.
+- `shared/game-state.js`: add `rigEffects(rig)` (near the other equipment helpers, ~line 400) + export. One new pure function; no other logic changes.
+- `shared/game-state.test.js`: `rigEffects` unit tests.
+- `shared/battle-view.js`: `availableActions` reads the descriptor for sprint + active heat.
+- `shared/battle-view.test.js`: reroute assertions + drift guard.
+- `client/src/lib/loadout.ts`: equipment card active-heat via descriptor + upgrade fields.
+- `client/src/lib/loadout.test.ts`: (or existing) upgrade-aware card data.
+- `client/src/v2/components/LoadoutView.tsx`: render equipment-upgrade line.
+- `client/src/v2/battle/MoveBody.tsx`: read descriptor, drop hardcode.
+- `client/src/v2/battle/RepairBody.tsx`: bonused-SP copy via new prop.
+- `client/src/v2/state/V2BattleActionsContext.tsx`: `openRepair` passes `bonusSp`.
+- `client/src/v2/components/HeatGauge.tsx`: thermal-margin badge on capacity.
+- `client/src/v2/components/CompRow.tsx`: Hull `+N` max-SP badge via new prop.
+- `client/src/v2/overlays/RigTerminal.tsx`: thread Hull delta into `CompRow`.
 
 **Assumed rig test object:** everywhere below, a "servo rig" means a rig with `equipment: "servo-actuators"` and (unless stated) `equipmentUpgrade: null`. A "reinforced-servos rig" adds `equipmentUpgrade: "reinforced-servos"`.
 
@@ -98,7 +98,7 @@ test("rigEffects: combat deltas carried for follow-on", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rigEffects is not a function` (or import error).
+Expected: FAIL, `rigEffects is not a function` (or import error).
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -107,7 +107,7 @@ Add to `shared/game-state.js` after `equipmentRepairBonus` (~line 400):
 ```js
 // Single read-model of every equipment/upgrade modifier a rig carries, each
 // pre-resolved to its FINAL value. Built on the atomic helpers above so it adds
-// no resolution logic — consumers (battle-view previews, drawers, loadout card,
+// no resolution logic, consumers (battle-view previews, drawers, loadout card,
 // heat gauge, SP badges) render these values and never recompute an effect.
 export function rigEffects(rig) {
   const equip = rig?.equipment || null;
@@ -201,7 +201,7 @@ import { makeRig, makeUnit, rigEffects } from "./game-state.js";
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — sprint chip is `2` for the servo rig (still static `def.heat`).
+Expected: FAIL, sprint chip is `2` for the servo rig (still static `def.heat`).
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -279,7 +279,7 @@ describe("MoveBody sprint heat", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/MoveBody.test.tsx`
-Expected: FAIL — reinforced-servos rig still shows `+1 heat` (hardcode returns 1 for any servo).
+Expected: FAIL, reinforced-servos rig still shows `+1 heat` (hardcode returns 1 for any servo).
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -306,7 +306,7 @@ Also correct the Sprint hint copy: Sprint gets the same free 90° pivot as Move,
 ```tsx
             ? `Reposition up to <b>${dist}"</b> (1½× Speed). Backpedal / side-step at half; pivot up to 90° free. Generates <b>+${heat} heat</b>.`
 ```
-(The `move` branch already carries "pivot up to 90° free" — this brings Sprint to parity. Matters because once Move is hidden for Servo Actuators rigs (Task 8), the Sprint drawer is the only reposition surface.)
+(The `move` branch already carries "pivot up to 90° free", this brings Sprint to parity. Matters because once Move is hidden for Servo Actuators rigs (Task 8), the Sprint drawer is the only reposition surface.)
 
 Add a test asserting the Sprint hint mentions the pivot:
 ```tsx
@@ -359,7 +359,7 @@ describe("RepairBody copy reflects repair bonus", () => {
     expect(document.body.textContent).toContain("7–9 restores 2 SP");
   });
   it("patch is a flat guaranteed 2 SP even with a suite bonus", () => {
-    // Emergency Patch resolution does repairRig(rig, loc, 2) — a FLAT 2, and does
+    // Emergency Patch resolution does repairRig(rig, loc, 2), a FLAT 2, and does
     // NOT add equipmentRepairBonus (locked by game-state.test.js ~:2412). The
     // suite bonus applies to the dice Repair only, never the guaranteed Patch.
     render(<RepairBody isPatch bonusSp={1} auto={false} onChange={noop} />);
@@ -368,12 +368,12 @@ describe("RepairBody copy reflects repair bonus", () => {
 });
 ```
 
-**Correctness note:** Emergency Patch is a flat guaranteed **2 SP** regardless of the suite — only the dice Repair (auto/manual) branches add `bonusSp`. In the implementation below, the patch branch must use the literal `2`, not `hi`.
+**Correctness note:** Emergency Patch is a flat guaranteed **2 SP** regardless of the suite, only the dice Repair (auto/manual) branches add `bonusSp`. In the implementation below, the patch branch must use the literal `2`, not `hi`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/RepairBody.test.tsx`
-Expected: FAIL — `bonusSp` is not a prop; copy is hardcoded "2 SP"/"1 SP".
+Expected: FAIL, `bonusSp` is not a prop; copy is hardcoded "2 SP"/"1 SP".
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -387,7 +387,7 @@ import "../styles/overlay.css";
 
 // Location picker for the two repair-family actions (battle.js:430-461). The dice
 // Repair figures include any Field Repair Suite bonus (bonusSp). Emergency Patch is
-// a flat guaranteed 2 SP — the engine does NOT add the suite bonus to the patch,
+// a flat guaranteed 2 SP, the engine does NOT add the suite bonus to the patch,
 // only to the dice Repair.
 export default function RepairBody({
   isPatch, auto, bonusSp, onChange,
@@ -404,7 +404,7 @@ export default function RepairBody({
     <>
       <p className="v2-dwr-hint">
         {isPatch
-          ? `Restores a guaranteed 2 SP to the chosen location — no dice.`
+          ? `Restores a guaranteed 2 SP to the chosen location, no dice.`
           : auto
             ? `Rolls a D12: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`
             : `You'll roll a D12 next: 10+ restores ${hi} SP, 7–9 restores ${lo} SP.`}
@@ -456,13 +456,13 @@ git commit -m "fix(v2): Repair drawer copy shows Field Repair Suite bonus SP"
 
 ---
 
-## Task 5: Loadout card — upgrade-aware active heat + upgrade line
+## Task 5: Loadout card, upgrade-aware active heat + upgrade line
 
 **Files:**
 - Modify: `client/src/lib/loadout.ts:23-24,79-81`, `client/src/v2/components/LoadoutView.tsx:77-89`
 - Test: `client/src/v2/components/LoadoutView.test.tsx` (existing)
 
-**Note:** the passive PROSE stays the base description (freeform text, not a template — no fragile string surgery). Upgrade accuracy is carried by (a) the active-heat number, now descriptor-sourced, and (b) the new upgrade line.
+**Note:** the passive PROSE stays the base description (freeform text, not a template, no fragile string surgery). Upgrade accuracy is carried by (a) the active-heat number, now descriptor-sourced, and (b) the new upgrade line.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -488,7 +488,7 @@ it("shows upgrade-aware active heat and an equipment-upgrade line", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/components/LoadoutView.test.tsx`
-Expected: FAIL — no upgrade line rendered; `upName`/`upTag` unknown on the equipment type.
+Expected: FAIL, no upgrade line rendered; `upName`/`upTag` unknown on the equipment type.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -529,7 +529,7 @@ In `client/src/v2/components/LoadoutView.tsx`, add the upgrade line inside the `
           )}
 ```
 
-(`natureLabel` is already imported at the top of `LoadoutView.tsx`. The `v2-rt-lo-up*` classes already exist — the weapon block reuses them.)
+(`natureLabel` is already imported at the top of `LoadoutView.tsx`. The `v2-rt-lo-up*` classes already exist, the weapon block reuses them.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -553,7 +553,7 @@ git commit -m "fix(v2): equipment card active heat is upgrade-aware + adds an up
 
 **Note:** `heatMeter(rig)` already returns `cap` = base + margin, so the redline position is correct today. The badge is explanatory: display the base capacity with a `+N` mark rather than a bare boosted number.
 
-**Also (single-source cleanup, from Task 1 review):** `heatMeter` in `shared/game-state.js` (~line 1198) still computes its `margin` by re-searching `EQUIPMENT_UPGRADES["blast-furnace-core"]` for the upgrade id — the exact catalog re-search that Task 1 eliminated from `rigEffects`. Change it to read the stamped SoT: `const margin = rig?.equipment === "blast-furnace-core" ? (rig?.equipmentUpgradeEffect?.thermalMargin ?? 1) : 0;` (drop the `EQUIPMENT_UPGRADES` lookup there). This guarantees the gauge's `m.cap` and `rigEffects(rig).thermalMargin` derive from the same field, so `baseCap = m.cap - margin` is always exact. Verify existing heat/overheat tests stay green (`node --test shared/game-state.test.js`); if any test built a blast-furnace rig without a stamped `equipmentUpgradeEffect`, stamp it in the fixture (mirrors the `combat.test.js` convention).
+**Also (single-source cleanup, from Task 1 review):** `heatMeter` in `shared/game-state.js` (~line 1198) still computes its `margin` by re-searching `EQUIPMENT_UPGRADES["blast-furnace-core"]` for the upgrade id, the exact catalog re-search that Task 1 eliminated from `rigEffects`. Change it to read the stamped SoT: `const margin = rig?.equipment === "blast-furnace-core" ? (rig?.equipmentUpgradeEffect?.thermalMargin ?? 1) : 0;` (drop the `EQUIPMENT_UPGRADES` lookup there). This guarantees the gauge's `m.cap` and `rigEffects(rig).thermalMargin` derive from the same field, so `baseCap = m.cap - margin` is always exact. Verify existing heat/overheat tests stay green (`node --test shared/game-state.test.js`); if any test built a blast-furnace rig without a stamped `equipmentUpgradeEffect`, stamp it in the fixture (mirrors the `combat.test.js` convention).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -573,7 +573,7 @@ If the test file has no `makeHeatRig` helper, build the rig inline with `engine:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/components/HeatGauge.test.tsx`
-Expected: FAIL — no `+1` in output; capacity renders as a bare `6`.
+Expected: FAIL, no `+1` in output; capacity renders as a bare `6`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -640,7 +640,7 @@ it("renders no badge when delta is 0", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/components/CompRow.test.tsx`
-Expected: FAIL — `delta` not a prop; no badge rendered.
+Expected: FAIL, `delta` not a prop; no badge rendered.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -688,7 +688,7 @@ git commit -m "feat(v2): Hull location shows Ablative +1 max-SP badge"
 - Modify: `shared/battle-view.js` (`availableActions`, just before `return list;`)
 - Test: `shared/battle-view.test.js`
 
-**Rationale:** with Servo Actuators, Sprint costs 1 heat (0 with Reinforced Servos) for 1½× Speed — same-or-less heat than Move (+1) for more distance, and Sprint gets the same free 90° pivot as Move (see Task 3 copy fix). Move is therefore strictly dominated. Drop it; the Move group tile then fires Sprint directly (the existing single-live-action collapse in `ActionConsole` handles the relabel). Rule is generalized to `sprintHeat <= moveHeat` so any future sprint-discount equipment behaves the same. Cold kinds (no Sprint) are unaffected — the guard requires a live Sprint in the list.
+**Rationale:** with Servo Actuators, Sprint costs 1 heat (0 with Reinforced Servos) for 1½× Speed, same-or-less heat than Move (+1) for more distance, and Sprint gets the same free 90° pivot as Move (see Task 3 copy fix). Move is therefore strictly dominated. Drop it; the Move group tile then fires Sprint directly (the existing single-live-action collapse in `ActionConsole` handles the relabel). Rule is generalized to `sprintHeat <= moveHeat` so any future sprint-discount equipment behaves the same. Cold kinds (no Sprint) are unaffected, the guard requires a live Sprint in the list.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -714,12 +714,12 @@ test("Move stays for cold kinds (no Sprint to dominate it)", () => {
 });
 ```
 
-(If `makeUnit`'s signature differs, build the simplest cold-kind object the existing cold-kind tests in this file already use — mirror them. The key assertion is the servo case.)
+(If `makeUnit`'s signature differs, build the simplest cold-kind object the existing cold-kind tests in this file already use, mirror them. The key assertion is the servo case.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — Move still present for the Servo Actuators rig.
+Expected: FAIL, Move still present for the Servo Actuators rig.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -728,7 +728,7 @@ In `shared/battle-view.js`, immediately before `return list;` at the end of `ava
 ```js
   // Servo Actuators (and its Reinforced Servos upgrade) drop Sprint's heat to
   // Move's or below. Same-or-less heat for 1½× the distance makes Move strictly
-  // dominated, so hide it — the Move group tile then fires Sprint directly.
+  // dominated, so hide it, the Move group tile then fires Sprint directly.
   const sprintAct = list.find((a) => a.key === "sprint");
   if (sprintAct && sprintAct.heat <= ACTIONS.move.heat) {
     const i = list.findIndex((a) => a.key === "move");
@@ -757,7 +757,7 @@ git commit -m "feat(v2): hide Move when Sprint costs no more (Servo Actuators do
 - [ ] **Step 1: Run the whole test suite**
 
 Run: `npm test`
-Expected: PASS — all Vitest + `node --test` suites green. No resolution test changed (Task 1 added only a new read-model; the atomic helpers and their call sites are untouched).
+Expected: PASS, all Vitest + `node --test` suites green. No resolution test changed (Task 1 added only a new read-model; the atomic helpers and their call sites are untouched).
 
 - [ ] **Step 2: Manual smoke via preview (optional but recommended)**
 
@@ -771,6 +771,6 @@ No commit if everything passed on the task commits above.
 
 ## Self-Review Notes
 
-- **Spec coverage:** descriptor (Task 1) · all 5 preview surfaces — picker (T2), Move (T3), Repair (T4), loadout card active-heat + upgrade line (T5) · both passive badges — thermal margin (T6), Hull SP (T7) · hide-Move-when-Sprint-dominates (T8, added post-spec per user) · guard test (T2) · no resolution change (verified T9). Combat deltas are carried in the descriptor but not rendered — matches the spec's "out of scope: wiring combat previews."
-- **Type consistency:** `rigEffects` returns `{ actionHeat, repair:{bonusSp}, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers }` — every consumer reads only these keys. `RepairBody` gains `bonusSp: number`; `CompRow` gains `delta?: number`; `LoadoutEquipment` gains `upName?/upNature?/upTag?`.
+- **Spec coverage:** descriptor (Task 1) · all 5 preview surfaces, picker (T2), Move (T3), Repair (T4), loadout card active-heat + upgrade line (T5) · both passive badges, thermal margin (T6), Hull SP (T7) · hide-Move-when-Sprint-dominates (T8, added post-spec per user) · guard test (T2) · no resolution change (verified T9). Combat deltas are carried in the descriptor but not rendered, matches the spec's "out of scope: wiring combat previews."
+- **Type consistency:** `rigEffects` returns `{ actionHeat, repair:{bonusSp}, thermalMargin, hullMaxBonus, recoveryCool, combat, modifiers }`: every consumer reads only these keys. `RepairBody` gains `bonusSp: number`; `CompRow` gains `delta?: number`; `LoadoutEquipment` gains `upName?/upNature?/upTag?`.
 - **Passive prose caveat (T5):** left as base text by design; the upgrade line carries the override. Documented in the task so an out-of-order reader doesn't "fix" it with string surgery.

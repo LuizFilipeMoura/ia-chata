@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give each ranged weapon a per-weapon sweet-spot distance where accuracy peaks and falls off with distance from it, so long-range weapons are bad up close and melee becomes relatively better — with no melee stat change.
+**Goal:** Give each ranged weapon a per-weapon sweet-spot distance where accuracy peaks and falls off with distance from it, so long-range weapons are bad up close and melee becomes relatively better, with no melee stat change.
 
 **Architecture:** Ranged weapon profiles drop the `acc[]`/`rng[]` band pair for `{ sweet, peak, dropoff, minRange, maxRange }`. A new `weaponAccAt(profile, distance)` in `shared/combat.js` computes accuracy = `peak − round(dropoff·|distance − sweet|)`; out-of-range is `distance < minRange || distance > maxRange`. The AttackWizard threads the measured inches (`distance`) through the attack command; when `distance` is absent (legacy/tests) accuracy falls back to `peak` and the range check is skipped. Melee weapons keep their existing shape and code path unchanged.
 
@@ -17,12 +17,12 @@
 
 ## File Structure
 
-- `shared/game-state.js` — ranged weapon data (`WEAPONS.longRange`, `UNIT_WEAPONS`) reshaped; melee data unchanged; `effectiveWeaponProfile` upgrade remap; `resolveFire` + return-fire thread `distance`.
-- `shared/combat.js` — `weaponAccAt`; `computeModifiedAim` uses it; distance-based out-of-range check in `resolveAttack`.
-- `shared/glossary.js` — RNG glossary entry text.
-- `client/shared.d.ts` — declare `/shared/combat.js` (`weaponAccAt`); widen `UNIT_WEAPONS` type.
-- `client/src/components/wizards/AttackWizard.tsx` — distance-driven accuracy, sweet-spot slider init, dropoff/efficiency readout, send `distance`.
-- `client/src/styles/battle.css` — `data-band` accuracy-tier variants.
+- `shared/game-state.js`: ranged weapon data (`WEAPONS.longRange`, `UNIT_WEAPONS`) reshaped; melee data unchanged; `effectiveWeaponProfile` upgrade remap; `resolveFire` + return-fire thread `distance`.
+- `shared/combat.js`: `weaponAccAt`; `computeModifiedAim` uses it; distance-based out-of-range check in `resolveAttack`.
+- `shared/glossary.js`: RNG glossary entry text.
+- `client/shared.d.ts`: declare `/shared/combat.js` (`weaponAccAt`); widen `UNIT_WEAPONS` type.
+- `client/src/components/wizards/AttackWizard.tsx`: distance-driven accuracy, sweet-spot slider init, dropoff/efficiency readout, send `distance`.
+- `client/src/styles/battle.css`: `data-band` accuracy-tier variants.
 - Tests: `shared/combat.test.js`, `shared/game-state.test.js`, `client/src/components/wizards/AttackWizard.test.tsx`.
 
 ---
@@ -79,7 +79,7 @@ In `"UNIT_WEAPONS holds the strawman flat catalogue"` (line 1818-1825), replace 
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `WEAPONS.longRange["Mini Gun"].sweet` is `undefined`, etc.
+Expected: FAIL, `WEAPONS.longRange["Mini Gun"].sweet` is `undefined`, etc.
 
 - [ ] **Step 3: Reshape the ranged weapon data**
 
@@ -112,7 +112,7 @@ Leave `Dozer Blade` / `Ram Spike` (lines 56-57) unchanged (melee).
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: the two shape tests PASS. Other tests in the file may still fail — those are fixed in Tasks 3-4. That is expected at this checkpoint.
+Expected: the two shape tests PASS. Other tests in the file may still fail, those are fixed in Tasks 3-4. That is expected at this checkpoint.
 
 - [ ] **Step 5: Commit**
 
@@ -176,17 +176,17 @@ Leave the two `claw` (melee) assertions on lines 25-26 and 32 unchanged.
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — `weaponAccAt is not exported` / assertion mismatches.
+Expected: FAIL, `weaponAccAt is not exported` / assertion mismatches.
 
 - [ ] **Step 3: Implement `weaponAccAt` and use it in `computeModifiedAim`**
 
 In `shared/combat.js`, add above `computeModifiedAim` (before line 25):
 
 ```js
-// §7.4 — ranged accuracy as a function of measured distance: peak at the sweet
+// §7.4, ranged accuracy as a function of measured distance: peak at the sweet
 // spot, falling off by `dropoff` per inch away from it. Melee weapons have a
 // fixed reach and keep their scalar `acc`. A missing distance (legacy callers /
-// tests) yields the peak — i.e. "at the sweet spot, in range".
+// tests) yields the peak, i.e. "at the sweet spot, in range".
 export function weaponAccAt(profile, distance) {
   if (profile.melee) return profile.acc?.[0] || 0;
   const d = Number(distance);
@@ -205,7 +205,7 @@ Then replace line 28 (`const weaponAcc = profile.acc[...] || 0;`) with:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test shared/combat.test.js`
-Expected: the new/updated accuracy tests PASS. `"effectiveWeaponProfile applies … far-penalty upgrades"` (line 161) and `"computeModifiedAim ignores cover when Airburst Fuze…"` (line 191) may still fail — fixed in Tasks 3-4.
+Expected: the new/updated accuracy tests PASS. `"effectiveWeaponProfile applies … far-penalty upgrades"` (line 161) and `"computeModifiedAim ignores cover when Airburst Fuze…"` (line 191) may still fail, fixed in Tasks 3-4.
 
 - [ ] **Step 5: Commit**
 
@@ -251,7 +251,7 @@ In `shared/game-state.test.js`, replace the Extended Barrel assertion (line 93-9
 - [ ] **Step 2: Run to verify failure**
 
 Run: `node --test shared/combat.test.js shared/game-state.test.js`
-Expected: FAIL — `dropoff` is `0.15`, `maxRange`/`sweet` unchanged.
+Expected: FAIL, `dropoff` is `0.15`, `maxRange`/`sweet` unchanged.
 
 - [ ] **Step 3: Rewrite the profile builder's band handling**
 
@@ -284,7 +284,7 @@ In `shared/game-state.js`, replace lines 254-266 (the `const profile = {…}` th
 - [ ] **Step 4: Run to verify pass**
 
 Run: `node --test shared/combat.test.js shared/game-state.test.js`
-Expected: the upgrade tests PASS. `"computeModifiedAim ignores cover when Airburst Fuze…"` still fails — Task 4.
+Expected: the upgrade tests PASS. `"computeModifiedAim ignores cover when Airburst Fuze…"` still fails, Task 4.
 
 - [ ] **Step 5: Commit**
 
@@ -312,7 +312,7 @@ In `shared/combat.test.js`, replace line 194 with (Mortar `sweet 18 / peak 1`, c
 - [ ] **Step 2: Run to verify failure**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — returns old value.
+Expected: FAIL, returns old value.
 
 - [ ] **Step 3: Distance-based out-of-range check**
 
@@ -348,7 +348,7 @@ In the return-fire branch (line 1380-1381), add `distance`:
 - [ ] **Step 5: Run the full shared suite and reconcile any drift**
 
 Run: `node --test shared/combat.test.js shared/game-state.test.js`
-Expected: PASS. Integration fires in `game-state.test.js` send `range: "near"` with no `distance`, so accuracy falls back to `peak` and range checks are skipped — those tests use forgiving dice (natural 6s hit regardless) and should pass unchanged. If any assertion on an exact hit count fails, its modified Aim shifted because the weapon's `peak` differs from its old near `acc[0]`; recompute `modAim = AIM.medium(4) − peak` for that weapon (Mini Gun peak 2 → 2; Double MG/Autocannon/Mortar/etc peak 1 → 3; Sniper/Tank Cannon/Coaxial/Mini peak 2 → 2) and adjust the expected hit count for the provided dice. Do not weaken assertions — recompute them.
+Expected: PASS. Integration fires in `game-state.test.js` send `range: "near"` with no `distance`, so accuracy falls back to `peak` and range checks are skipped, those tests use forgiving dice (natural 6s hit regardless) and should pass unchanged. If any assertion on an exact hit count fails, its modified Aim shifted because the weapon's `peak` differs from its old near `acc[0]`; recompute `modAim = AIM.medium(4) − peak` for that weapon (Mini Gun peak 2 → 2; Double MG/Autocannon/Mortar/etc peak 1 → 3; Sniper/Tank Cannon/Coaxial/Mini peak 2 → 2) and adjust the expected hit count for the provided dice. Do not weaken assertions, recompute them.
 
 - [ ] **Step 6: Commit**
 
@@ -402,7 +402,7 @@ git commit -m "chore(types): declare weaponAccAt and widen UNIT_WEAPONS type"
 
 ---
 
-## Task 6: AttackWizard — distance-driven accuracy, sweet-spot init, dropoff readout
+## Task 6: AttackWizard, distance-driven accuracy, sweet-spot init, dropoff readout
 
 **Files:**
 - Modify: `client/src/components/wizards/AttackWizard.tsx` (imports, lines 231-243, 315, 331-344, 439-458, submit payloads 257 & 277)
@@ -465,11 +465,11 @@ Replace the `} else if (profile) {` branch body (lines 331-344) with a sweet-spo
         penalty <= 0 ? `Sweet spot +${peak}` : `${accHere >= 0 ? "+" : ""}${accHere} · falloff`;
       const gate =
         state.inches < minRange
-          ? <span className="aw-range-warn">Too close — out of range</span>
+          ? <span className="aw-range-warn">Too close, out of range</span>
           : state.inches > maxRange
-            ? <span className="aw-range-warn">Target is out of range — this shot will fail</span>
+            ? <span className="aw-range-warn">Target is out of range, this shot will fail</span>
             : spent
-              ? <span className="aw-range-note">Weapon spent — a rushed reload folds into this shot (2 actions)</span>
+              ? <span className="aw-range-note">Weapon spent, a rushed reload folds into this shot (2 actions)</span>
               : null;
       rangeHtml = (
         <>
@@ -531,7 +531,7 @@ In `submit`, add `distance: state.inches` to the `attack` object (line 256-258) 
 - [ ] **Step 6: Typecheck + run existing wizard tests**
 
 Run: `npx vitest run client/src/components/wizards/AttackWizard.test.tsx`
-Expected: existing tests may reference the old range readout text ("Effective range — Near") — those assertions are updated in Task 7. At this step, confirm the file compiles (no TS errors) and the suite runs.
+Expected: existing tests may reference the old range readout text ("Effective range, Near"), those assertions are updated in Task 7. At this step, confirm the file compiles (no TS errors) and the suite runs.
 
 - [ ] **Step 7: Commit**
 
@@ -549,7 +549,7 @@ git commit -m "feat(wizard): sweet-spot slider init and distance falloff readout
 
 - [ ] **Step 1: Read the existing test to match its render/helpers**
 
-Run: open `client/src/components/wizards/AttackWizard.test.tsx` and note how it mounts the wizard (providers, the rig fixture, and any range-readout assertions using the old "Effective range — Near" / "Far ≤" text).
+Run: open `client/src/components/wizards/AttackWizard.test.tsx` and note how it mounts the wizard (providers, the rig fixture, and any range-readout assertions using the old "Effective range, Near" / "Far ≤" text).
 
 - [ ] **Step 2: Update stale range-text assertions and add sweet-spot tests**
 
@@ -639,13 +639,13 @@ git commit -m "feat(ui): accuracy-tier slider colours; update RNG glossary"
 - [ ] **Step 1: Run the entire test suite**
 
 Run: `npm test`
-Expected: all shared (`node --test`) and client (`vitest`) tests PASS. If anything fails, it is numeric drift from `peak ≠ old acc[0]` — recompute per the guidance in Task 4 Step 5; never weaken an assertion.
+Expected: all shared (`node --test`) and client (`vitest`) tests PASS. If anything fails, it is numeric drift from `peak ≠ old acc[0]`: recompute per the guidance in Task 4 Step 5; never weaken an assertion.
 
 - [ ] **Step 2: Manual smoke test in the app**
 
 Start the app (`npm run dev`), open a battle, and open the Fire wizard for a rig with a long-range weapon. Confirm:
 - The distance slider opens at the weapon's sweet-spot inches.
-- Dragging toward point-blank shows a growing negative "falloff" and, below `minRange` (e.g. Mortar), "Too close — out of range" with the Fire button disabled.
+- Dragging toward point-blank shows a growing negative "falloff" and, below `minRange` (e.g. Mortar), "Too close, out of range" with the Fire button disabled.
 - Dragging past `maxRange` disables Fire with the out-of-range warning.
 - A melee weapon still shows "Reach 2" and no falloff.
 
@@ -653,7 +653,7 @@ Start the app (`npm run dev`), open a battle, and open the Fire wizard for a rig
 
 ```bash
 git add -A
-git commit -m "chore: long-range sweet-spot falloff — final verification"
+git commit -m "chore: long-range sweet-spot falloff, final verification"
 ```
 
 ---
@@ -662,4 +662,4 @@ git commit -m "chore: long-range sweet-spot falloff — final verification"
 
 - **Spec coverage:** falloff model (Task 2), per-weapon params (Task 1), min/max out-of-range (Task 4), upgrade remap (Task 3), slider sweet-spot init + dropoff readout (Tasks 6-7), glossary/CSS (Task 8), melee untouched (verified in Tasks 1, 2, 4). ✓
 - **Type consistency:** `weaponAccAt(profile, distance)`, fields `sweet/peak/dropoff/minRange/maxRange` used identically across combat.js, game-state.js data, shared.d.ts, and AttackWizard. `accTier` values `sweet|good|poor|out` match the CSS `data-band` selectors in Task 8. ✓
-- **Fallback:** `distance` omitted → `peak` + range check skipped — keeps legacy integration tests green without weakening them.
+- **Fallback:** `distance` omitted → `peak` + range check skipped, keeps legacy integration tests green without weakening them.

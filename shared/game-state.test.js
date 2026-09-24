@@ -75,7 +75,7 @@ test("claimSide reclaims a requested side without consuming the other slot", () 
   const v = r.version;
   // Auto-rejoin as side a: same side back, no version churn, side b still free.
   assert.equal(claimSide(r, { name: "Ana", side: "a" }), "a");
-  assert.equal(r.version, v);                    // idempotent — no bump
+  assert.equal(r.version, v);                    // idempotent, no bump
   assert.equal(r.game.sides[1].claimed, false);  // side b untouched
   // Someone deliberately takes side b.
   assert.equal(claimSide(r, { name: "Bo", side: "b" }), "b");
@@ -242,7 +242,7 @@ test("a weapon upgrade can add Damage, not just Penetration and ROF", () => {
   // Reinforced Head IS the mechanism's first shipped user: before the penetration
   // rework, effectiveWeaponProfile had no `dmg` branch at all and an `effect.dmg`
   // would have silently done nothing. It is also the Siege Maul's field upgrade,
-  // so it is what makeRig fits by default — a rig with no upgrade is not a thing
+  // so it is what makeRig fits by default, a rig with no upgrade is not a thing
   // that can exist.
   assert.deepEqual(WEAPON_UPGRADES["Siege Maul"][0].effect, { dmg: 1 });
   const rig = makeRig(1, "Breaker", "medium", "a", { longRange: "Siege Maul", melee: "Sword" });
@@ -259,7 +259,7 @@ test("Swarm Warheads is +1 ROF, and its tag says so", () => {
   // Field means); the magnitude was the outlier.
   const swarm = WEAPON_UPGRADES["Missile Barrage"].find((u) => u.id === "swarm-warheads");
   assert.equal(swarm.effect.rof, 1);
-  // `tag` is rendered verbatim by the commission wizard and the loadout view —
+  // `tag` is rendered verbatim by the commission wizard and the loadout view,
   // it must move with the effect or the UI lies about what the upgrade does.
   assert.equal(swarm.tag, "+1 ROF");
   const rig = makeRig(1, "A", "light", "a", {
@@ -503,14 +503,14 @@ test("add dedupes a colliding name instead of silently dropping the rig", () => 
   assert.equal(findRig(r, "light 2").id, 2);
 });
 
-test("add without weapons is a no-op — no rig, no version bump, no id burn", () => {
+test("add without weapons is a no-op, no rig, no version bump, no id burn", () => {
   const r = createRoom("X");
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium" } });          // missing both
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", lr: "Mini Gun" } }); // missing melee
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", lr: "X", melee: "Y" } }); // invalid
   assert.equal(r.rigs.length, 0);
   assert.equal(r.version, 0);
-  // The next valid add still gets id 1 — a rejected add must not consume an id.
+  // The next valid add still gets id 1, a rejected add must not consume an id.
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", ...W } });
   assert.equal(findRig(r, "Warden").id, 1);
   assert.equal(r.version, 1);
@@ -674,7 +674,7 @@ test("public state only exposes the requesting side bounty", () => {
 test("rerollPriorityTargets picks a living enemy and skips destroyed rigs", () => {
   const r = startedRoom();
   const [b1, b2, b3] = ["b1", "b2", "b3"].map((id) => findRig(r, id));
-  b1.destroyed = true; // dead — must be skipped
+  b1.destroyed = true; // dead, must be skipped
   __test.rerollPriorityTargets(r, () => 0); // 0 picks the first LIVING enemy of "a"
   const targetA = r.game.priorityTargets.a;
   assert.ok(targetA === b2.id || targetA === b3.id, "target is a living enemy");
@@ -741,7 +741,7 @@ test("new rigs carry activation/heat-effect defaults", () => {
   assert.equal(rig.preparation, null);
   assert.deepEqual(rig.weaponsDestroyed, []);
   assert.equal(rig.immobilised, false);
-  // Enfilade (§13, Sniper Cannon) — per-rig aimed-shot cadence counter starts at 0.
+  // Enfilade (§13, Sniper Cannon), per-rig aimed-shot cadence counter starts at 0.
   assert.equal(rig.enfiladeShots, 0);
 });
 
@@ -825,7 +825,7 @@ test("second player gets a blocking answer gate that clears when the token is sp
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
   assert.equal(r.game.pendingAnswer, null);
 
-  // Gate cleared — activation works again.
+  // Gate cleared, activation works again.
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   assert.equal(r.game.turn.activeRigId, findRig(r, "b1").id);
 });
@@ -935,7 +935,7 @@ test("Sprint may repeat within an activation, each spending a slot and +2 heat",
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } }); // slot 2, +2 heat
   const b1 = findRig(r, "b1");
   assert.equal(r.game.turn.actionsUsed, 2);
-  assert.equal(b1.engine.heat, 4);            // 2 + 2 — heat corresponds to both Sprints
+  assert.equal(b1.engine.heat, 4);            // 2 + 2, heat corresponds to both Sprints
 });
 
 test("Sprint then Move stack heat and slots (mixed movement in one activation)", () => {
@@ -1095,7 +1095,7 @@ test("Piledriver Momentum caps at 3 across activations", () => {
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
   applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
-  assert.equal(b1.momentum, 3); // capped — never 4
+  assert.equal(b1.momentum, 3); // capped, never 4
 });
 
 test("a Piledriver rig that did not advance gains no Momentum", () => {
@@ -1122,7 +1122,7 @@ test("a Piledriver rig storing Momentum cannot Raise Shield (downgrades to Brace
   const r = siegeRoom("piledriver-protocol");
   clearPendingAnswer(r);
   const b1 = findRig(r, "b1");
-  b1.momentum = 2; // charged — all-in on the smash, no guard
+  b1.momentum = 2; // charged, all-in on the smash, no guard
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "prepare", prep: "raise-shield" } });
   assert.equal(b1.preparation.type, "brace"); // Raise Shield refused, downgraded to Brace
@@ -1145,7 +1145,7 @@ test("Ion Storm's active-lockout blocks an equipment active during the pinned ac
   const usedBefore = r.game.turn.actionsUsed;
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "purge" } });
-  assert.equal(r.game.turn.actionsUsed, usedBefore); // active refused — no slot spent
+  assert.equal(r.game.turn.actionsUsed, usedBefore); // active refused, no slot spent
   assert.equal(b1.engine.heat, heatBefore);          // and no heat vented
 });
 
@@ -1174,7 +1174,7 @@ test("Ion Storm's Arc Gun overload refuses the next Arc Gun shot, then clears (c
     dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
   } });
   const spAfter = a1.hull.sp + a1.arms.sp + a1.legs.sp + a1.engine.sp;
-  assert.equal(r.game.turn.actionsUsed, 0);  // shot refused — no slot spent
+  assert.equal(r.game.turn.actionsUsed, 0);  // shot refused, no slot spent
   assert.equal(spAfter, spBefore);           // target untouched
   assert.equal(b1.arcLockedNext, false);     // overload consumed by the blocked attempt
   // The lock is one-shot: the very next Arc Gun shot now goes through.
@@ -1208,7 +1208,7 @@ test("Fire Control Lock: only a rig carrying the upgrade can lock", () => {
   const usedBefore = r.game.turn.actionsUsed;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "lock", target: "a1" } });
   assert.equal(b1.lockedTarget, null);                 // no paint applied
-  assert.equal(r.game.turn.actionsUsed, usedBefore);   // refused — no slot spent
+  assert.equal(r.game.turn.actionsUsed, usedBefore);   // refused, no slot spent
 });
 
 test("Fire Control Lock: the painted Missile Barrage volley auto-hits and clears the lock", () => {
@@ -1219,13 +1219,13 @@ test("Fire Control Lock: the painted Missile Barrage volley auto-hits and clears
   b1.weaponUpgrades.longRange = "fire-control-lock";
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "lock", target: "a1" } });
-  // Every to-hit die is a 1 (would all miss) — the lock forces all four to land.
+  // Every to-hit die is a 1 (would all miss), the lock forces all four to land.
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
     dice: { toHit: [1, 1, 1, 1], location: 1, wounds: [10, 10, 10, 10], ap: [1, 1, 1, 1] },
   } });
   const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
-  assert.match(attack.summary, /4 hit\(s\)/); // unmissable — all shots landed
+  assert.match(attack.summary, /4 hit\(s\)/); // unmissable, all shots landed
   assert.equal(findRig(r, "b1").lockedTarget, null); // paint consumed
 });
 
@@ -1280,7 +1280,7 @@ test("undo reverts the acting side's last turn-scoped action", () => {
   assert.equal(findRig(r, "b1").engine.heat, heatBefore);
 });
 
-test("undo restores full state after an attack — damage, heat and slot reverted", () => {
+test("undo restores full state after an attack, damage, heat and slot reverted", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -1335,7 +1335,7 @@ test("a manual end with actions still in the budget stays its own undo step", ()
   applyCommand(r, { verb: "endactivation", attrs: { name: "b1" } });
   applyCommand(r, { verb: "undo", attrs: { side: "b" } });
   assert.equal(findRig(r, "b1").activated, false);
-  assert.equal(r.game.turn.actionsUsed, 1); // the move survives — only the end was reverted
+  assert.equal(r.game.turn.actionsUsed, 1); // the move survives, only the end was reverted
 });
 
 test("the activation that ends the round is still revertable from recovery", () => {
@@ -1527,7 +1527,7 @@ test("firing on a return-fire rig resolves the shot then parks a counter", () =>
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses — target survives so Return triggers
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses, target survives so Return triggers
   } });
   assert.equal(findRig(r, "a1").preparation.faceUp, true);
   assert.equal(r.game.pendingReaction.kind, "return");
@@ -1538,7 +1538,7 @@ test("firing on a return-fire rig resolves the shot then parks a counter", () =>
 // spends its Answer tokens. Test helpers that just want to drive activation
 // forward (not exercise the gate itself) call this to clear it immediately.
 function clearPendingAnswer(r) {
-  // Just lift the gate — do NOT place real preparations here. Placing facedown
+  // Just lift the gate, do NOT place real preparations here. Placing facedown
   // reactions on rigs would trigger the reveal/interpose when those rigs are
   // fired on in unrelated attack tests (see Tasks 4/5). Test-only state poke.
   r.game.pendingAnswer = null;
@@ -1576,14 +1576,14 @@ test("VP claims score per-objective and block on a both-claimed marker", () => {
   runFullRound(r);
   assert.equal(r.game.phase, "recovery");
   // Objectives: index 0 = centre (2 VP), indices 1 & 2 = corners (1 VP each).
-  // Both claim the centre — conflict, no advance, no VP awarded.
+  // Both claim the centre, conflict, no advance, no VP awarded.
   applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [0] } });
   applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [0] } });
   assert.equal(r.game.phase, "recovery");
   assert.deepEqual(r.game.recoveryConflict, [0]);
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 0);
   assert.equal(r.game.round, 1);
-  // A backs off the centre and resubmits — conflict clears, round advances.
+  // A backs off the centre and resubmits, conflict clears, round advances.
   applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [1] } });
   assert.equal(r.game.phase, "initiative");
   assert.equal(r.game.round, 2);
@@ -1723,7 +1723,7 @@ test("catastrophic spill retargets to Engine when Hull is already at 0", () => {
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
   rig.legs.sp = 0;
-  __test.setRigSp(rig, "hull", 0);         // Hull can't absorb — next living part
+  __test.setRigSp(rig, "hull", 0);         // Hull can't absorb, next living part
   const engine0 = rig.engine.sp;
   __test.applyDamage(room, rig, "legs", 1, {});
   assert.equal(rig.hull.sp, 0);            // dead Hull untouched (no destroyed cascade)
@@ -1742,7 +1742,7 @@ test("Kneecapper rake to a 0-SP legs immobilises but never spills (cripple, neve
   assert.equal(rig.engine.sp, engine0);
 });
 
-test("Kneecapper cripple ramp — a raked leg at <= half max flags speedHalvedNextRound", () => {
+test("Kneecapper cripple ramp, a raked leg at <= half max flags speedHalvedNextRound", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
@@ -1753,7 +1753,7 @@ test("Kneecapper cripple ramp — a raked leg at <= half max flags speedHalvedNe
   assert.equal(rig.speedHalvedNextRound, true);
 });
 
-test("Kneecapper cripple ramp — a raked arm at <= half max sets armsSuppressed", () => {
+test("Kneecapper cripple ramp, a raked arm at <= half max sets armsSuppressed", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
@@ -1764,11 +1764,11 @@ test("Kneecapper cripple ramp — a raked arm at <= half max sets armsSuppressed
   assert.equal(rig.armsSuppressed, true);
 });
 
-test("Kneecapper cripple ramp is SCOPED — the SAME limb ground to <= half by a non-Kneecapper weapon does NOT debuff", () => {
+test("Kneecapper cripple ramp is SCOPED, the SAME limb ground to <= half by a non-Kneecapper weapon does NOT debuff", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
-  // No kneecapped tag — ordinary damage grinds both limbs to exactly half.
+  // No kneecapped tag, ordinary damage grinds both limbs to exactly half.
   __test.applyDamage(room, rig, "legs", 3, {}); // 6 -> 3
   __test.applyDamage(room, rig, "arms", 3, { dice: { armsWeapon: 12 } }); // 6 -> 3
   assert.equal(rig.legs.sp, 3);
@@ -1777,7 +1777,7 @@ test("Kneecapper cripple ramp is SCOPED — the SAME limb ground to <= half by a
   assert.equal(rig.armsSuppressed, false);
 });
 
-test("Kneecapper cripple ramp — a raked limb above half applies nothing", () => {
+test("Kneecapper cripple ramp, a raked limb above half applies nothing", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
@@ -1790,7 +1790,7 @@ test("Kneecapper cripple ramp — a raked limb above half applies nothing", () =
   assert.equal(rig.armsSuppressed, false);
 });
 
-test("Kneecapper cripple ramp — repairing a raked limb above half clears its tag (switching-limbs reset)", () => {
+test("Kneecapper cripple ramp, repairing a raked limb above half clears its tag (switching-limbs reset)", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
@@ -1802,7 +1802,7 @@ test("Kneecapper cripple ramp — repairing a raked limb above half clears its t
   assert.equal(rig.kneecapped.arms, false);
 });
 
-test("Kneecapper cripple ramp — Recovery re-applies speedHalvedNextRound while a raked leg stays <= half", () => {
+test("Kneecapper cripple ramp, Recovery re-applies speedHalvedNextRound while a raked leg stays <= half", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
@@ -1813,7 +1813,7 @@ test("Kneecapper cripple ramp — Recovery re-applies speedHalvedNextRound while
   assert.equal(rig.speedHalvedNextRound, true); // still raked & <= half -> re-flagged
 });
 
-test("Kneecapper — a rake to 0 arms destroys the weapon but never spills into hull/engine (cripple, never kill)", () => {
+test("Kneecapper, a rake to 0 arms destroys the weapon but never spills into hull/engine (cripple, never kill)", () => {
   const room = createRoom("R", "u"); claimSide(room, "u", "a");
   const rig = makeRig(1, "Alpha", "medium", "a", { longRange: "Autocannon", melee: "Sword" }, null);
   room.rigs.push(rig);
@@ -1965,14 +1965,14 @@ test("fire action resolves an attack, applies damage and logs it", () => {
 test("a wound that zeroes a location from full says so in the roll console", () => {
   // The RollConsole renders entry.effects as staggered lines, so no client change.
   // Drives applyCommand (the real combatCtx) on purpose: combat.test.js's makeCtx
-  // stubs applyDamage — at :15 a total no-op, at :465 a clamp at 0 — so neither
+  // stubs applyDamage, at :15 a total no-op, at :465 a clamp at 0, so neither
   // ever fires the §8 cascade, and a drama test written against them would pass
   // while testing nothing.
   const { r, a1 } = swordDuel();
-  assert.equal(a1.legs.max, 5); // light class default — the Sword's D3 can't zero it from full
+  assert.equal(a1.legs.max, 5); // light class default, the Sword's D3 can't zero it from full
   // Test-only state poke: shrink the location to exactly the Sword's Damage so
   // one wound takes it full -> 0. Legs are `mobility`, so this stops at 0 and
-  // does not cascade to the §8 kill tier — the tier under test is the middle one.
+  // does not cascade to the §8 kill tier, the tier under test is the middle one.
   a1.legs.max = 3;
   a1.legs.sp = 3; // full
   const effects = fireSword(r, 8); // 8 -> legs
@@ -1992,7 +1992,7 @@ function swordDuel() {
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
   const a1 = findRig(r, "a1");
-  assert.equal(b1.weapons.melee, "Sword"); // Damage 3 — prove it, don't assume it
+  assert.equal(b1.weapons.melee, "Sword"); // Damage 3, prove it, don't assume it
   return { r, a1, b1 };
 }
 const lastAttack = (r) => r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
@@ -2032,24 +2032,24 @@ test("a wound that both guts a location and carries through says both", () => {
   assert.ok(effects.some((e) => /through and through \(2 SP spilled\)/.test(e)), JSON.stringify(effects));
 });
 
-test("the kill tier speaks once — a wreck does not also report its parts", () => {
+test("the kill tier speaks once, a wreck does not also report its parts", () => {
   const { r, a1 } = swordDuel();
   // Test-only state poke: engine full at 2/2, so the Sword's D3 both zeroes it
   // from FULL and spends a point past 0. Both the torn-open and the kill line
-  // qualify; only the kill may speak. `max` must move too — leaving it at 4
+  // qualify; only the kill may speak. `max` must move too, leaving it at 4
   // makes wasFull false and the competing line could never fire anyway.
   a1.engine.max = 2;
   a1.engine.sp = 2;
   const effects = fireSword(r, 11); // 11 -> engine (power)
   assert.equal(a1.destroyed, true);
-  assert.deepEqual(effects, ["Sword — a1 gutted in a single blow"]);
+  assert.deepEqual(effects, ["Sword, a1 gutted in a single blow"]);
 });
 
 test("a later wound on a wreck claims no spill it did not cause", () => {
   const { r, a1 } = swordDuel();
   // The Sword is ROF 2. Wound 1 kills via the hull's §8 clause; wound 2 then
   // lands on the wreck's 0-SP hull. Hull is structural, so §8 destroys rather
-  // than spills — and `gutted` can't re-fire on an already-dead rig, so an
+  // than spills, and `gutted` can't re-fire on an already-dead rig, so an
   // inferred spill would announce SP that never moved.
   a1.hull.sp = 2;
   const outside = () => a1.legs.sp + a1.arms.sp + a1.engine.sp;
@@ -2061,20 +2061,20 @@ test("a later wound on a wreck claims no spill it did not cause", () => {
 });
 
 // Munition cook-off (§8): a weapon part FIRST reaching 0 sends 1 SP to structural
-// and 1 to power — with no point spent past 0. It is SP leaving other parts that
+// and 1 to power, with no point spent past 0. It is SP leaving other parts that
 // is not a spill, and arms is 3 of the 12 hit-location bands.
-test("a wound the weapon part absorbs whole reports no spill — the cook-off is not one", () => {
+test("a wound the weapon part absorbs whole reports no spill, the cook-off is not one", () => {
   const { r, a1 } = swordDuel();
   a1.arms.max = 3;
   a1.arms.sp = 3; // Test-only state poke: exactly absorbs the Sword's D3.
   const hullBefore = a1.hull.sp, engineBefore = a1.engine.sp;
   const effects = fireSword(r, 5, { armsWeapon: 1 }); // 5 -> arms
   assert.equal(a1.arms.sp, 0);
-  // The cook-off really did move 2 SP — and none of it was pushed through by
+  // The cook-off really did move 2 SP, and none of it was pushed through by
   // this wound, which the arms absorbed to the point.
   assert.equal(a1.hull.sp, hullBefore - 1);
   assert.equal(a1.engine.sp, engineBefore - 1);
-  assert.deepEqual(effects, ["Sword — arms torn open in one blow"]);
+  assert.deepEqual(effects, ["Sword, arms torn open in one blow"]);
 });
 
 test("a spill through a weapon part counts the spill only, not the cook-off", () => {
@@ -2114,7 +2114,7 @@ test("no drama line ever claims more SP through than the wound's Damage", () => 
       if (!claimed) continue;
       assert.ok(
         Number(claimed[1]) <= SWORD_DAMAGE,
-        `${label}: claimed ${claimed[1]} SP through on a Damage-${SWORD_DAMAGE} wound — ${line}`,
+        `${label}: claimed ${claimed[1]} SP through on a Damage-${SWORD_DAMAGE} wound, ${line}`,
       );
     }
   }
@@ -2122,13 +2122,13 @@ test("no drama line ever claims more SP through than the wound's Damage", () => 
 
 // --- The one-shot kill (§8 power tier) --------------------------------------
 // Wrecking Ball + Haymaker is a top-tier heavy swing (the Ball's base Damage plus
-// Haymaker's +1). The weapon lives at `rig.weapons.melee` — a bare `b1.melee =`
+// Haymaker's +1). The weapon lives at `rig.weapons.melee`: a bare `b1.melee =`
 // writes a field nothing reads, and the rig keeps swinging `swordDuel`'s Sword at
 // Damage 3. `weaponUpgrades.melee` is re-pointed for explicitness, not necessity:
 // it still holds the Sword's id, and `normalizeWeaponUpgrade` would fall back to
 // Wrecking Ball's FIRST upgrade, which happens to be haymaker. Naming it means this
 // fixture keeps the boosted swing if that list is ever reordered. The dmg assertion
-// is the fixture proving itself — it is derived (base + Haymaker's +1), so a swing
+// is the fixture proving itself, it is derived (base + Haymaker's +1), so a swing
 // that silently landed at the bare base or on the Sword fallback would prove nothing,
 // while a Damage retune of the Ball can't red it.
 function haymakerDuel() {
@@ -2142,7 +2142,7 @@ function haymakerDuel() {
   return { r, a1, b1 };
 }
 // Hand-rolled rather than reusing `fireSword`, but NOT because its ROF-2 dice
-// arrays break a ROF-1 weapon — a swing consumes only the first element, and
+// arrays break a ROF-1 weapon, a swing consumes only the first element, and
 // fireSword was measured to drive this attack to the same result. The reason is
 // naming: `fireSword` and its "exactly one Sword D3" contract both describe a
 // Sword, and a one-die swing states exactly what a ROF-1 Wrecking Ball rolls.
@@ -2161,9 +2161,9 @@ function swingBall(r, loc) {
 // poked, not commissioned: this is the applyDamage rule, not a fact about any
 // chassis (the guard below is that). What it protects, measured by mutation: if
 // §8 is ever changed to kill on REACHING zero, raising Zebra's engine to 8 stops
-// buying anything — and the pure-data guard below still passes, because the
+// buying anything, and the pure-data guard below still passes, because the
 // catalogs would not have moved. Only this test fails.
-test("the §8 power kill needs a point spent past zero — Damage N kills a full max-(N-1) engine, not a max-N one", () => {
+test("the §8 power kill needs a point spent past zero, Damage N kills a full max-(N-1) engine, not a max-N one", () => {
   // N is the swing's Damage, derived so the boundary tracks the Ball's tunable Damage.
   const N = effectiveWeaponProfile("melee", "Wrecking Ball", haymakerDuel().b1).dmg;
   for (const [max, killed] of [[N - 1, true], [N, false]]) {
@@ -2182,7 +2182,7 @@ test("the §8 power kill needs a point spent past zero — Damage N kills a full
 //
 // BOTH catalogs are swept. WEAPONS is the rig catalog (upgradeable); UNIT_WEAPONS
 // is the support units' flat-pick catalog, which `effectiveWeaponProfile("unit",
-// …)` returns verbatim — no upgrades, no weight scaling. Sweeping only one would
+// …)` returns verbatim, no upgrades, no weight scaling. Sweeping only one would
 // make the wrong claim in both directions: a Rig shoots support units, so a
 // Walker's floor is the rig ceiling, not the flat-pick one; and a Tank shoots
 // Rigs, so a chassis's floor must clear the flat-pick ceiling too. The union is
@@ -2209,7 +2209,7 @@ function topWoundDamage() {
 // catalogs and compares them. Its live half is the pool loop: it fires if a chassis
 // structural/power pool is ever tidied back under the game's top per-wound Damage,
 // which is what would open a one-shot-from-full window. The ceiling is DERIVED via
-// `topWoundDamage()`, not pinned to a number — a weapon-Damage retune moves the
+// `topWoundDamage()`, not pinned to a number, a weapon-Damage retune moves the
 // ceiling and the loop re-checks against it rather than tripping a hard-coded value
 // (per the repo rule: tests assert the invariant, never a tunable Pen/Damage).
 //
@@ -2217,9 +2217,9 @@ function topWoundDamage() {
 // catalog. The kinds whose pools come from UNIT_KINDS.partSp instead (tank,
 // walker) are owned by the next test, which asserts the handoff rather than
 // assuming it.
-test("no chassis can be one-shot from full — every structural/power pool clears the catalog's top Damage", () => {
+test("no chassis can be one-shot from full, every structural/power pool clears the catalog's top Damage", () => {
   const { dmg: topDmg, name: topName } = topWoundDamage();
-  assert.ok(topDmg >= 1, `topWoundDamage returned ${topDmg} (${topName}) — expected a positive ceiling`);
+  assert.ok(topDmg >= 1, `topWoundDamage returned ${topDmg} (${topName}), expected a positive ceiling`);
 
   const vital = [...partsByRole("rig", "structural"), ...partsByRole("rig", "power")];
   assert.deepEqual(vital, ["hull", "engine"]); // the roles §8 kills on, not a guess
@@ -2227,14 +2227,14 @@ test("no chassis can be one-shot from full — every structural/power pool clear
     for (const part of vital) {
       assert.ok(
         c.sp[part] >= topDmg,
-        `${c.name} (${c.id}) has ${part} ${c.sp[part]} SP — ${topName} deals ${topDmg}, so one wound from full kills it outright`,
+        `${c.name} (${c.id}) has ${part} ${c.sp[part]} SP, ${topName} deals ${topDmg}, so one wound from full kills it outright`,
       );
     }
   }
 });
 
 // The universal. The test above says "no CHASSIS", which is a claim about the
-// commissioned rig catalog only — support units never touch CHASSIS, they build
+// commissioned rig catalog only, support units never touch CHASSIS, they build
 // from UNIT_KINDS.partSp, and all three of tank/engine 6, walker/hull 6 and
 // walker/engine 5 died to one wound from full until this test existed. So the
 // pair of tests, not either one, is what makes the universal true.
@@ -2243,7 +2243,7 @@ test("no chassis can be one-shot from full — every structural/power pool clear
 // stronger reading is false. A full volley from full can still kill: ROF and
 // Damage multiply, and Flamethrower + sticky-fuel (ROF 4 x Damage 3 = 12),
 // Mini Gun + extended-belt (10), Missile Barrage + swarm-warheads (10) and
-// Chainsaw + ripper-teeth (9) all exceed the smallest vital pool — measured, not
+// Chainsaw + ripper-teeth (9) all exceed the smallest vital pool, measured, not
 // assumed. That is intended: several wounds concentrating on one location is a
 // dice outcome the game is allowed to have. What §8 must not do is let ONE wound
 // take a unit from untouched to dead, which is what the per-wound Damage ceiling
@@ -2259,23 +2259,23 @@ test("no chassis can be one-shot from full — every structural/power pool clear
 //   - the kind list is walked from UNIT_KINDS, so a kind added later is covered
 //     the day it lands rather than the day someone remembers this file;
 //   - a kind with no partSp gets its pools from somewhere else, and the only
-//     such somewhere is CHASSIS. That is asserted, not assumed — a new kind with
+//     such somewhere is CHASSIS. That is asserted, not assumed, a new kind with
 //     neither partSp nor a chassis catalog would otherwise fall through BOTH
 //     guards and read as covered.
 //
 // Pools are read off a unit `makeUnit` actually built, not off partSp directly.
 // partSp is the input; unit[part].max is what applyDamage spends, and only the
 // second one is the claim.
-test("no unit of ANY kind dies to a SINGLE wound from full — every kind's structural/power pool clears the game's top per-wound Damage", () => {
+test("no unit of ANY kind dies to a SINGLE wound from full, every kind's structural/power pool clears the game's top per-wound Damage", () => {
   const { dmg: topDmg, name: topName } = topWoundDamage();
 
   const checked = [];
   for (const kindId of Object.keys(UNIT_KINDS)) {
     const vital = [...partsByRole(kindId, "structural"), ...partsByRole(kindId, "power")];
-    assert.ok(vital.length > 0, `${kindId} has no structural/power part — the §8 kill roles are missing`);
+    assert.ok(vital.length > 0, `${kindId} has no structural/power part, the §8 kill roles are missing`);
 
     if (!UNIT_KINDS[kindId].partSp) {
-      assert.equal(kindId, "rig", `kind "${kindId}" has no partSp and is not the rig — no guard covers its vital pools`);
+      assert.equal(kindId, "rig", `kind "${kindId}" has no partSp and is not the rig, no guard covers its vital pools`);
       assert.ok(UNIT_KINDS[kindId].byWeight, "the rig is the CHASSIS-fed kind, covered by the previous test");
       continue; // covered by the chassis guard above
     }
@@ -2286,7 +2286,7 @@ test("no unit of ANY kind dies to a SINGLE wound from full — every kind's stru
       assert.equal(typeof max, "number", `${kindId}/${part} has no numeric max SP`);
       assert.ok(
         max >= topDmg,
-        `${kindId}/${part} has ${max} SP — ${topName} deals ${topDmg}, so one wound from full kills it outright`,
+        `${kindId}/${part} has ${max} SP, ${topName} deals ${topDmg}, so one wound from full kills it outright`,
       );
       checked.push(`${kindId}/${part}`);
     }
@@ -2298,7 +2298,7 @@ test("no unit of ANY kind dies to a SINGLE wound from full — every kind's stru
 });
 
 // The universal, driven rather than read. The guard above is pure data; this
-// runs the real path end-to-end — makeUnit builds a Walker from partSp,
+// runs the real path end-to-end, makeUnit builds a Walker from partSp,
 // applyCommand routes a Rig's top-tier swing into its engine through the real
 // combatCtx, and §8 either fires or does not. It is not a duplicate of the
 // mechanism test: that one pokes a rig's SP pools to lock the applyDamage
@@ -2308,7 +2308,7 @@ test("no unit of ANY kind dies to a SINGLE wound from full — every kind's stru
 // dice arrays below carry a single die each.
 //
 // No `pos` is set on the Walker: the `fire` attrs carry arc/range/cover
-// explicitly, so the geometry path never runs. Measured — the test passes
+// explicitly, so the geometry path never runs. Measured, the test passes
 // identically with a position and without one, so setting one would be a prop
 // that implied it mattered.
 test("one top-tier wound does not destroy a full-health Walker's engine", () => {
@@ -2320,7 +2320,7 @@ test("one top-tier wound does not destroy a full-health Walker's engine", () => 
   // The fixture proving itself: full, and built from the kind table rather than poked.
   assert.equal(walker.engine.max, UNIT_KINDS.walker.partSp.engine);
   assert.equal(walker.engine.sp, walker.engine.max);
-  assert.ok(walker.engine.max >= dmg, `walker engine max ${walker.engine.max} < Damage ${dmg} — one wound would kill from full`);
+  assert.ok(walker.engine.max >= dmg, `walker engine max ${walker.engine.max} < Damage ${dmg}, one wound would kill from full`);
 
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "Sentinel", arc: "front", range: "near", cover: 0,
@@ -2339,7 +2339,7 @@ test("the wound die that guts a location is marked CRIT in the roll console", ()
   const { r, a1 } = swordDuel();
   // Test-only state poke: the Sword's Damage 3 meets the location exactly, so
   // wound 1 takes it full -> 0 and earns the tone. Legs are `mobility`, so this
-  // stops at 0 rather than killing — the tone must fire on this tier too.
+  // stops at 0 rather than killing, the tone must fire on this tier too.
   a1.legs.max = 3;
   a1.legs.sp = 3;
   fireSword(r, 8); // 8 -> legs
@@ -2354,7 +2354,7 @@ test("the wound die that guts a location is marked CRIT in the roll console", ()
 test("the wound die that kills outright also reads CRIT", () => {
   // The kill tier is a separate branch that `continue`s past the rest of the
   // loop, so it needs its own proof. Test-only state poke: engine is `power`,
-  // and the kill needs a point spent PAST 0 — zeroing it exactly from full only
+  // and the kill needs a point spent PAST 0, zeroing it exactly from full only
   // tears it open. Damage 3 into 2 SP spends 1 past 0, so this wrecks a1.
   const { r, a1 } = swordDuel();
   a1.engine.max = 5;
@@ -2380,12 +2380,12 @@ test("a Kneecapper rake past 0 spills nothing, so it claims nothing", () => {
     dice: { toHit: [6, 6, 6, 6, 6, 6, 6, 6], wounds: [10, 10, 10, 10, 10, 10, 10, 10], location: 8 },
   } });
   const effects = r.game.resolutions.filter((x) => x.kind === "attack").at(-1).effects;
-  // noSpill held — nothing carried through, so a spill line would be a lie.
+  // noSpill held, nothing carried through, so a spill line would be a lie.
   assert.equal(a1.hull.sp, hullBefore);
   assert.deepEqual(effects, []);
 });
 
-test("firing a spent ranged weapon is rejected — you must reload first", () => {
+test("firing a spent ranged weapon is rejected, you must reload first", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -2423,7 +2423,7 @@ test("a second ranged shot costs 1 slot but runs the barrel hot: +1 heat", () =>
   assert.equal(r.game.turn.actionsUsed, 2);                // fire + free reload + fire = 2 slots
 });
 
-test("ram action is removed — melee covers close combat, so it is a no-op", () => {
+test("ram action is removed, melee covers close combat, so it is a no-op", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -2435,7 +2435,7 @@ test("ram action is removed — melee covers close combat, so it is a no-op", ()
     name: "b1", action: "ram", target: "a1",
     dice: { self: { location: 1, impact: 6 }, target: { location: 1, impact: 6 } },
   } });
-  // No damage, no slot spent — ram no longer exists.
+  // No damage, no slot spent, ram no longer exists.
   assert.equal(a1.hull.sp, aBefore);
   assert.equal(b1.hull.sp, bBefore);
   assert.equal(r.game.turn.actionsUsed, 0);
@@ -2544,7 +2544,7 @@ test("equipmentUpgradeEffectOf resolves from the catalog by id", () => {
     equipmentUpgradeEffectOf("ablative-plating", "reinforced-plating"),
     { hardenImpact: 2 },
   );
-  // A permanently-unknown id (never a real catalog row) so this stays {} forever —
+  // A permanently-unknown id (never a real catalog row) so this stays {} forever,
   // unlike a real-but-still-inert row (e.g. ablative-cascade today), which stops
   // being {} the moment mechanics are wired for it.
   assert.deepEqual(equipmentUpgradeEffectOf("ablative-plating", "no-such-upgrade-xyz"), {});
@@ -2575,7 +2575,7 @@ test("Sprint heat floors at 1: Reinforced Servos is 1, base Servo is 1, none is 
 });
 
 test("Sprint heat can never be driven below 1, even by a 0-heat catalog tag", () => {
-  // The clamp — not the catalog — is the guarantee. Prove it holds against an
+  // The clamp, not the catalog, is the guarantee. Prove it holds against an
   // upgrade that explicitly asks for a free Sprint.
   const servos = EQUIPMENT_UPGRADES["servo-actuators"];
   const victim = servos.find((u) => u.id === "reinforced-servos");
@@ -2823,7 +2823,7 @@ test("Meltdown Protocol: while charged, Shut Down and Cooling are refused", () =
 });
 
 // `mode` is a wire value and only "burst" is ever compared, so every other
-// string falls through to this branch — meaning a BROKEN rename of the word
+// string falls through to this branch, meaning a BROKEN rename of the word
 // would pass just as green as a correct one. This test cannot detect that on its
 // own; it pins the intended spelling, and the burst test below pins the fork.
 test("Meltdown Protocol: spending N in pen mode arms +N Penetration and burns N charge", () => {
@@ -2905,7 +2905,7 @@ test("Fire Solution Lock: at count 3 the next shot auto-hits every die and gains
     name: "a1", action: "fire", weapon: "longRange", target: "b1", arc: "front", range: "near",
     dice: { toHit: [1, 1], location: 1, wounds: [10, 10], ap: [3, 3] } } }); // all-1 to-hit would miss without auto-hit
   const attack = r.game.resolutions.filter((x) => x.kind === "attack").at(-1);
-  assert.match(attack.summary, /8 hit\(s\)/);                    // Mini Gun's every die lands — unmissable payoff volley
+  assert.match(attack.summary, /8 hit\(s\)/);                    // Mini Gun's every die lands, unmissable payoff volley
   assert.equal(a1.equipState.solution.count, 0);                 // solution consumed
 });
 
@@ -3035,7 +3035,7 @@ test("Field Repair Suite adds +1 SP to the Repair action only", () => {
   assert.equal(medic.hull.sp, 6); // 3 + 2 (roll) + 1 (Field Repair Suite)
 });
 
-test("Field Repair Suite rides the lowest Repair roll — the D6 has no whiff", () => {
+test("Field Repair Suite rides the lowest Repair roll, the D6 has no whiff", () => {
   const r = createRoom("X");
   claimSide(r, { name: "Owner", side: "a" });
   applyCommand(r, { verb: "field", attrs: { action: "lock" } }, { side: "a" });
@@ -3115,7 +3115,7 @@ test("Nanite Swarm: seeding costs 1 slot + 1 heat and stacks a location (cap 3)"
   activate(r, "a1");
   const heatBefore = a1.engine.heat, usedBefore = r.game.turn.actionsUsed;
   // Pre-seed to 2 so the two live seeds below drive the location to the cap and
-  // then clamp — proving cap 3 while respecting the 3-action budget (the seed is
+  // then clamp, proving cap 3 while respecting the 3-action budget (the seed is
   // an ordinary equipment active: 1 slot + 1 heat each, and every other active
   // is budget-gated the same way).
   a1.equipState.naniteStacks = [{ loc: "hull", sp: 2 }];
@@ -3323,7 +3323,7 @@ test("Reinforced Servos Sprint still costs 1 heat through the action pipeline", 
   const rig = findRig(r, "a1");
   rig.equipmentUpgrade = "reinforced-servos"; // Field upgrade: reach, not a heat discount
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "sprint" } });
-  assert.equal(rig.engine.heat, 1); // the floor holds — never 0
+  assert.equal(rig.engine.heat, 1); // the floor holds, never 0
 });
 
 test("Sprinting into base contact sets the Kickstart charge, and it clears at activation end", () => {
@@ -3336,7 +3336,7 @@ test("Sprinting into base contact sets the Kickstart charge, and it clears at ac
   assert.equal(rig.engagedWith != null, true);      // the sprint declared the lock
   assert.equal(rig.chargedIntoContact, true);       // charge armed for the first melee
   applyCommand(r, { verb: "endactivation", attrs: { name: "a1" } });
-  assert.equal(rig.chargedIntoContact, false);      // cleared — no leak past the activation
+  assert.equal(rig.chargedIntoContact, false);      // cleared, no leak past the activation
   assert.equal(rig.kickstartUsed, false);
 });
 
@@ -3391,7 +3391,7 @@ test("Reactor Overdrive: this activation's overheat bonus is doubled, then the f
 
 test("Reactor Overdrive: the doubling breaches the normal overheat-bonus cap (deliberate all-in gamble)", () => {
   // Base overheat bonus caps at MAX_OVERHEAT_BONUS (10): min(10, 2*over). Reactor
-  // Overdrive doubles that ALREADY-CAPPED value, so it can exceed 10 — this is the
+  // Overdrive doubles that ALREADY-CAPPED value, so it can exceed 10, this is the
   // intended risk (plan: doubling applies after the cap). Lock it in so a future
   // balance pass that wants a re-clamp does so deliberately, not silently.
   const r = createRoom("X");
@@ -3568,7 +3568,7 @@ test("Grapnel Launcher refuses to fire while suppressed (suppressImmobile), both
   const heatBefore = a1.engine.heat;
   // Yank mode: refused before consuming a slot, heat, cooldown, or breaking the lock.
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
-  assert.equal(a1.engagedWith, b1.id);             // still locked — grapnel refused
+  assert.equal(a1.engagedWith, b1.id);             // still locked, grapnel refused
   assert.equal(a1.equipState.grapnelCooldown, 0);  // no cooldown armed
   assert.equal(a1.engine.heat, heatBefore);        // no heat spent
   assert.equal(r.game.turn.actionsUsed, usedBefore); // no slot spent
@@ -3612,7 +3612,7 @@ test("servo rig without the grapnel upgrade still gets plain Jump Jets", () => {
   activate(r, "a1");
   const usedBefore = r.game.turn.actionsUsed;
   applyCommand(r, { verb: "action", attrs: { name: "a1", action: "jumpjets" } });
-  assert.equal(a1.engagedWith, b1.id);             // still locked — Jump Jets refused
+  assert.equal(a1.engagedWith, b1.id);             // still locked, Jump Jets refused
   assert.equal(a1.equipState.grapnelCooldown, 0);  // no grapnel cooldown armed
   assert.equal(r.game.turn.actionsUsed, usedBefore);
 });
@@ -3811,7 +3811,7 @@ test("Ready is blocked until the owner locks the field", () => {
   for (const name of ["r1", "r2", "r3"]) {
     applyCommand(r, { verb: "add", attrs: { name, owner: "a", ...W2 } }, { side: "a" });
   }
-  // Mirror side b so parity holds — this test isolates the field-lock gate.
+  // Mirror side b so parity holds, this test isolates the field-lock gate.
   for (const name of ["s1", "s2", "s3"]) {
     applyCommand(r, { verb: "add", attrs: { name, owner: "b", ...W2 } }, { side: "a" });
   }
@@ -3857,7 +3857,7 @@ test("publicState reveals a face-up reaction to everyone", () => {
 });
 
 test("Riposte reveals only on a melee attack, arming a melee counter", () => {
-  // A RANGED attack must NOT trigger Riposte — token stays down, no pendingReaction.
+  // A RANGED attack must NOT trigger Riposte, token stays down, no pendingReaction.
   {
     const { room, b } = battleWithPreparedDefender("riposte");
     applyCommand(room, { verb: "action", attrs: {
@@ -3907,7 +3907,7 @@ test("Exploit reveals only when the attacker is overcommitted", () => {
   {
     const { room, a, b } = battleWithPreparedDefender("exploit");
     a.engine.heat = 999; // well past any Heat Capacity
-    room.game.turn.actionsUsed = 0; // plenty of actions left — not the final one
+    room.game.turn.actionsUsed = 0; // plenty of actions left, not the final one
     applyCommand(room, { verb: "action", attrs: {
       name: "Atk", action: "fire", target: "Def", weapon: "longRange", arc: "front", range: "near",
       dice: { toHit: [1], location: 1, wounds: [1] },
@@ -3970,7 +3970,7 @@ test("react resolves an Exploit counter as an aimed shot with no aim penalty", (
   const before = a.arms.sp;
   // The counter is an aimed Autocannon shot with natural-10 wound dice. woundTarget
   // is clamped to WOUND_DIE, so a 10 wounds whatever the Autocannon's Penetration
-  // is — this test turns on the counter resolving, not on the weapon's stats.
+  // is, this test turns on the counter resolving, not on the weapon's stats.
   // Damage on the arms proves both that the counter resolved AND that aimedLoc
   // routed the hit to the chosen location.
   applyCommand(room, { verb: "react", attrs: {
@@ -4020,7 +4020,7 @@ test("return-fire react lets the defender counter the attacker", () => {
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses — target survives so Return triggers
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses, target survives so Return triggers
   } });
   assert.equal(r.game.pendingReaction.kind, "return");
   const n = r.game.resolutions.length;
@@ -4039,10 +4039,10 @@ test("an engaged reactor can still return ranged fire (engaged penalty path runs
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
-    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses — target survives so Return triggers
+    dice: { toHit: [1, 1, 1, 1, 1, 1, 1, 1] }, // all misses, target survives so Return triggers
   } });
   assert.equal(r.game.pendingReaction.kind, "return");
-  // Lock the reactor in melee — its return ranged fire must take the -2 engaged path.
+  // Lock the reactor in melee, its return ranged fire must take the -2 engaged path.
   findRig(r, "a1").engagedWith = findRig(r, "b1").id;
   const n = r.game.resolutions.length;
   applyCommand(r, { verb: "react", attrs: {
@@ -4274,7 +4274,7 @@ test("makeUnit('walker', ...) uses the walker part table", () => {
 });
 
 test("activation reads actionBudget from the unit registry (rig = 3)", () => {
-  // There is no `start` verb in this codebase — the startedRoom() dance
+  // There is no `start` verb in this codebase, the startedRoom() dance
   // (claim + add rigs + field lock + both sides ready) is the setup that gets
   // the game into activation phase with a live turn. Regression-pin the
   // Rig's registry-derived budget of 3 by running an actual `activate`.
@@ -4346,7 +4346,7 @@ test("Tank endActivation skips the overheat roll (cold kind)", () => {
   // set the turn shape directly since Tank pre-battle setup isn't wired yet.
   room.game.phase = "activation";
   room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2, longRangeShots: 0 };
-  // Would have exploded if overheat routing ran — cold kinds must skip it.
+  // Would have exploded if overheat routing ran, cold kinds must skip it.
   applyCommand(room, { verb: "endactivation", attrs: { name: "Bulwark", dice: { overheat: 12 } } });
   assert.equal(tank.destroyed, false);
 });
@@ -4362,7 +4362,7 @@ test("Tank activation sets actionsMax = 2 (registry actionBudget)", () => {
   assert.equal(room.game.turn.actionsMax, 2);
 });
 
-test("a cold kind (Tank/Walker) can Move but not Sprint — no heat to redline", () => {
+test("a cold kind (Tank/Walker) can Move but not Sprint, no heat to redline", () => {
   const room = createRoom("Rmv"); claimSide(room, { name: "u", side: "a" });
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
   room.rigs.push(tank);
@@ -4385,7 +4385,7 @@ test("formatBattleState renders a Tank without heat and with a single unit weapo
   for (const [part, sp] of Object.entries(UNIT_KINDS.tank.partSp)) {
     assert.ok(view.includes(`${part} ${sp}/${sp}`), `expected "${part} ${sp}/${sp}" in:\n${view}`);
   }
-  // No "heat" suffix — cold kind. Anchored to the engine's real number so this
+  // No "heat" suffix, cold kind. Anchored to the engine's real number so this
   // keeps matching the rendered text rather than quietly matching nothing.
   const engineSp = UNIT_KINDS.tank.partSp.engine;
   assert.ok(view.includes(`engine ${engineSp}/${engineSp}`));
@@ -4530,7 +4530,7 @@ test("immobilising an engaged rig clears the link", () => {
   const b = makeRig(2, "b1", "light", "b", W);
   room.rigs = [a, b];
   __test.setEngagement(a, b);
-  __test.setRigSp(b, "legs", 0);            // legs to 0 (first time — not yet immobile)
+  __test.setRigSp(b, "legs", 0);            // legs to 0 (first time, not yet immobile)
   __test.applyDamage(room, b, "legs", 1, {}); // additional damage to 0-SP legs → immobilised
   assert.equal(b.immobilised, true);
   assert.equal(b.engagedWith, null);
@@ -4608,7 +4608,7 @@ test("an engaged rig cannot Move or Sprint", () => {
   __test.setEngagement(b1, a1); // lock b1 to a1
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "move" } });
-  assert.equal(r.game.turn.actionsUsed, 0);   // move rejected — no slot spent
+  assert.equal(r.game.turn.actionsUsed, 0);   // move rejected, no slot spent
   assert.equal(b1.engine.heat, heatBefore);   // no heat added
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "sprint" } });
   assert.equal(r.game.turn.actionsUsed, 0);   // sprint rejected too
@@ -4632,7 +4632,7 @@ test("Disengage frees both rigs and costs 1 slot + 1 heat", () => {
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "disengage" } });
   assert.equal(b1.engagedWith, null);
-  assert.equal(a1.engagedWith, null);          // mutual — partner freed
+  assert.equal(a1.engagedWith, null);          // mutual, partner freed
   assert.equal(r.game.turn.actionsUsed, 1);    // one slot
   assert.equal(b1.engine.heat, heatBefore + 1); // +1 heat
 });
@@ -4780,7 +4780,7 @@ test("an engaged rig cannot Jump Jets out (must Disengage first)", () => {
   __test.setEngagement(b1, findRig(r, "a1"));
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "jumpjets" } });
-  assert.equal(r.game.turn.actionsUsed, 0);   // rejected — no slot spent
+  assert.equal(r.game.turn.actionsUsed, 0);   // rejected, no slot spent
   assert.equal(b1.engine.heat, heatBefore);   // no heat
 });
 
@@ -4854,7 +4854,7 @@ test("a melee whiff (0 hits) provokes no riposte and does not consume the round"
   const r = anvilRoom("anvil-boss");
   findRig(r, "a1").preparation = raiseShield();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
-  fireMelee(r, meleeMiss);                          // misses — no hit landed
+  fireMelee(r, meleeMiss);                          // misses, no hit landed
   assert.equal(findRig(r, "a1").ripostedThisRound, false);
   assert.equal(countRiposte(r), 0);
   fireMelee(r, meleeLand);                          // a later attack that DOES land
@@ -4964,7 +4964,7 @@ test("a Lance-skewer hit marks the engaged target as skewered", () => {
 test("disengaging from a Skewer provokes a free Penetration-11 lance strike, then clears", () => {
   const r = skewerRoom();
   const a1 = findRig(r, "a1"); // the skewerer
-  const b1 = findRig(r, "b1"); // the victim — disengages on b's turn
+  const b1 = findRig(r, "b1"); // the victim, disengages on b's turn
   __test.setEngagement(b1, a1);
   b1.skeweredBy = a1.id;
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -5051,7 +5051,7 @@ test("Ground Anchor: a damaging Anchor hit marks the target; Disengage provokes 
 test("Ground Anchor: Disengaging off the anchor provokes a free Anchor strike then clears", () => {
   const r = groundAnchorRoom();
   const a1 = findRig(r, "a1"); // the anchorer
-  const b1 = findRig(r, "b1"); // the victim — disengages on b's turn
+  const b1 = findRig(r, "b1"); // the victim, disengages on b's turn
   __test.setEngagement(b1, a1);
   b1.anchoredBy = a1.id;
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -5077,7 +5077,7 @@ test("makeRig seeds cracked/crippled/noRepair maps and per-location origMax", ()
 test("ensureRigShape back-fills origMax and the Group-E maps on a legacy rig", () => {
   const rig = makeRig(1, "r", "medium", "a", W);
   delete rig.cracked; delete rig.crippled; delete rig.noRepair; delete rig.origMax;
-  rig.hull.max = 4; // legacy rig already sundered — origMax should track current max
+  rig.hull.max = 4; // legacy rig already sundered, origMax should track current max
   __test.ensureRigShape(rig);
   assert.deepEqual(rig.cracked, {});
   assert.deepEqual(rig.crippled, {});
@@ -5152,7 +5152,7 @@ test("Dismember on a weapon location destroys a weapon; on hull it blocks repair
 
 // --- Rivet Lock (§13, Rivet Gun prototype) -----------------------------------
 
-test("Rivet Lock: 3 volleys on one location seize it — no repair + long-range jammed", () => {
+test("Rivet Lock: 3 volleys on one location seize it, no repair + long-range jammed", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
   const a1 = findRig(r, "a1");
@@ -5247,7 +5247,7 @@ test("a rig can't re-emplace before its cooldown round", () => {
   const used = r.game.turn.actionsUsed;
   applyCommand(r, { verb: "action", attrs: { name: "b1", action: "emplace" } });
   assert.equal(b1.emplaced, false);              // still round 1 < cooldownUntil 4
-  assert.equal(r.game.turn.actionsUsed, used);   // refused — no slot spent
+  assert.equal(r.game.turn.actionsUsed, used);   // refused, no slot spent
 });
 
 test("an emplaced rig activates with a 2-action budget and a free raised shield", () => {
@@ -5289,7 +5289,7 @@ test("a shield rig without the emplacement upgrade can't emplace", () => {
   const b2 = findRig(r, "b2");
   applyCommand(r, { verb: "action", attrs: { name: "b2", action: "emplace" } });
   assert.equal(b2.emplaced, false);
-  assert.equal(r.game.turn.actionsUsed, 0); // refused — no slot spent
+  assert.equal(r.game.turn.actionsUsed, 0); // refused, no slot spent
 });
 
 // --- Barrage (§13, Mortar prototype) -----------------------------------------
@@ -5323,7 +5323,7 @@ test("barrage commits the tube for 2 rounds and emits the place instruction", ()
   const b1 = findRig(r, "b1");
   assert.equal(b1.barrageRoundsLeft, 2);
   assert.equal(r.game.turn.actionsUsed, 1); // barrage spent one slot
-  const placed = r.game.resolutions.find((x) => /Barrage — place a shelled-zone marker/.test(x.summary));
+  const placed = r.game.resolutions.find((x) => /Barrage, place a shelled-zone marker/.test(x.summary));
   assert.ok(placed, "expected the barrage place instruction in the log");
 });
 
@@ -5338,7 +5338,7 @@ test("a Mortar committed to a barrage can't fire a direct shot", () => {
     name: "b1", action: "fire", weapon: "longRange", target: "a1",
     arc: "front", range: "near", distance: 18, dice: { toHit: [6], wounds: [10], location: 1 },
   } });
-  assert.equal(r.game.turn.actionsUsed, used); // fire refused — mortar locked
+  assert.equal(r.game.turn.actionsUsed, used); // fire refused, mortar locked
   const a1b = findRig(r, "a1");
   assert.equal(a1b.hull.sp + a1b.arms.sp + a1b.legs.sp + a1b.engine.sp, spBefore); // target untouched
 });
@@ -5352,7 +5352,7 @@ test("Recovery applies +1 barrage upkeep heat, emits the apply-SP prompt, and co
   __test.runRecovery(r);
   assert.equal(b1.barrageRoundsLeft, 1);   // decremented
   assert.equal(b1.engine.heat, 1);         // +1 upkeep
-  const p1 = r.game.resolutions.find((x) => /Barrage active — apply 1 SP/.test(x.summary));
+  const p1 = r.game.resolutions.find((x) => /Barrage active, apply 1 SP/.test(x.summary));
   assert.ok(p1, "expected the per-round apply-SP prompt");
   assert.match(p1.summary, /2 round\(s\) left/); // count shown before the decrement
 
@@ -5369,7 +5369,7 @@ test("a Mortar whose barrage has finished can fire again", () => {
   const r = barrageRoom();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
-  b1.barrageRoundsLeft = 0; // barrage ended — tube unlocked
+  b1.barrageRoundsLeft = 0; // barrage ended, tube unlocked
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "longRange", target: "a1",
     arc: "front", range: "near", distance: 18, dice: { toHit: [6], wounds: [10], location: 1 },
@@ -5419,10 +5419,10 @@ test("a damaging Tow Chain hit flings, adds +2 heat, roots the attacker, and set
   assert.equal(b1.towChainCooldownUntil, 4);          // round 1 + 3
   assert.equal(b1.towedThisActivation, true);          // rooted for the rest of the activation
   assert.equal(b1.engine.heat - heatBefore, 3);        // +1 melee fire heat, +2 tow
-  const fling = r.game.resolutions.find((x) => /Tow Chain — fling/.test(x.summary));
+  const fling = r.game.resolutions.find((x) => /Tow Chain, fling/.test(x.summary));
   assert.ok(fling, "expected a Tow Chain fling instruction");
   assert.equal(fling.summary,
-    'Tow Chain — fling a1 up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.');
+    'Tow Chain, fling a1 up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.');
 });
 
 test("a rig rooted by a tow can't Move or Sprint for the rest of the activation", () => {
@@ -5444,13 +5444,13 @@ test("a second Tow Chain hit within 3 rounds doesn't fling or add the +2 heat", 
   const r = towRoom();
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const b1 = findRig(r, "b1");
-  b1.towChainCooldownUntil = 5; // recharging — current round (1) is below the cooldown
+  b1.towChainCooldownUntil = 5; // recharging, current round (1) is below the cooldown
   const heatBefore = b1.engine.heat;
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1",
     arc: "front", range: "near", dice: { toHit: [6], wounds: [10], location: 1 },
   } });
-  assert.ok(!r.game.resolutions.some((x) => /Tow Chain — fling/.test(x.summary))); // no fling
+  assert.ok(!r.game.resolutions.some((x) => /Tow Chain, fling/.test(x.summary))); // no fling
   assert.equal(b1.towedThisActivation, false);   // not rooted while recharging
   assert.equal(b1.engine.heat - heatBefore, 1);  // only the melee fire heat, no +2 tow
 });
@@ -6051,11 +6051,11 @@ test("Cryo Reservoir: spending N cools 2 heat each and arms +1 Penetration/cryo 
 });
 
 // ---------------------------------------------------------------------------
-// Digital rooms — room.mode plus pos/facing on digital rigs.
+// Digital rooms, room.mode plus pos/facing on digital rigs.
 // ---------------------------------------------------------------------------
 
 // A claimed 2-side room in digital mode. createRoom takes no options, so the
-// mode is stamped on afterwards — the normalise pass is what gives rigs their
+// mode is stamped on afterwards, the normalise pass is what gives rigs their
 // pos/facing, and it runs on the next applyCommand.
 function digitalRoom(code = "DIG001") {
   const room = createRoom(code);
@@ -6069,7 +6069,7 @@ test("a room defaults to physical mode", () => {
   assert.equal(createRoom("PHYS01").mode, "physical");
 });
 
-test("a digital room is rigs-only — adding a tank is refused", () => {
+test("a digital room is rigs-only, adding a tank is refused", () => {
   const room = digitalRoom();
   const res = checkCommand(room, { verb: "add", attrs: {
     name: "T1", kind: "tank", owner: "a", unit: "Autocannon",
@@ -6104,7 +6104,7 @@ test("rigs in a digital room carry pos and facing; physical rigs do not", () => 
 });
 
 // ---------------------------------------------------------------------------
-// autoDeploy — auto-scatter deployment for digital rooms.
+// autoDeploy, auto-scatter deployment for digital rooms.
 // ---------------------------------------------------------------------------
 
 // A digital room with terrain down and a mirrored 2-light-rig squadron per side
@@ -6186,7 +6186,7 @@ test("autoDeploy is deterministic under a seeded RNG", () => {
   assert.deepEqual(a.rigs.map((r) => r.facing), b.rigs.map((r) => r.facing));
 });
 
-// A rig left sitting on the origin means the sampler ran out of attempts — a
+// A rig left sitting on the origin means the sampler ran out of attempts, a
 // silent, and very real, bug. One seed proves nothing, so sweep enough of them
 // that a rare failure shows up, and re-check every legality rule on the STORED
 // position: a candidate validated before rounding can round a hundredth of an
@@ -6218,7 +6218,7 @@ test("autoDeploy places every rig legally, across many seeds", () => {
   }
 });
 
-// The stored position is rounded to 2dp, which can shift a base by ~0.007in —
+// The stored position is rounded to 2dp, which can shift a base by ~0.007in,
 // so a candidate judged legal BEFORE rounding can be stored illegal. Force every
 // candidate onto the exact rim of the deploy zone (distance roll of 1), where
 // that rounding is the only thing deciding legality, and the invariant has to
@@ -6228,7 +6228,7 @@ test("autoDeploy judges legality on the rounded position, not the raw one", () =
   let calls = 0;
   const rimRandom = () => {
     calls++;
-    // Odd call picks the angle, even call is the distance roll — 1 puts the
+    // Odd call picks the angle, even call is the distance roll, 1 puts the
     // candidate exactly `deployRadius` from the corner.
     return calls % 2 === 1 ? ((calls * 7) % 90) / 90 : 1;
   };
@@ -6269,7 +6269,7 @@ test("readying a physical room deploys nothing", () => {
 });
 
 // ---------------------------------------------------------------------------
-// deriveAttackGeometry — THE SEAM. A physical room takes distance/arc/cover from
+// deriveAttackGeometry, THE SEAM. A physical room takes distance/arc/cover from
 // the player's tape measure; a digital room derives the same three from the
 // simulated field and feeds them to the identical resolveAttack signature.
 // ---------------------------------------------------------------------------
@@ -6384,7 +6384,7 @@ test("Couched Reach doubles the derived melee reach", () => {
   a.weaponUpgrades = { ...a.weaponUpgrades, melee: "couched-reach" };
   assert.equal(meleeReachOf(a), 4, "2in base + Couched Reach's range:2");
   a.pos = { x: 10, y: 10 };
-  b.pos = { x: 15, y: 10 };                      // rim gap ~2.64in — past 2, inside 4
+  b.pos = { x: 15, y: 10 };                      // rim gap ~2.64in, past 2, inside 4
   assert.equal(deriveAttackGeometry(room, a, b).inMeleeReach, true);
 });
 
@@ -6405,7 +6405,7 @@ test("physical rooms still take the player's declared values verbatim", () => {
     arc: "rear", cover: 2, distance: 14,
     dice: { toHit: [6, 6], wounds: [10, 10], location: 1 },
   } });
-  assert.equal(res.ok, true, "no geometry, no refusal — the human measured it");
+  assert.equal(res.ok, true, "no geometry, no refusal, the human measured it");
 });
 
 test("F3-E: a volley that tears a location open AND kills marks BOTH dice CRIT", () => {
@@ -6458,11 +6458,11 @@ test("F3-E: one wound that both zeroes-from-full and kills marks exactly ONE die
   const woundRolls = attack.rolls.filter((roll) => /^wound /.test(roll.label));
   assert.equal(woundRolls.length, 1, "one landing wound");
   const crits = woundRolls.filter((roll) => roll.tone === "crit");
-  assert.equal(crits.length, 1, "exactly one CRIT die — not double-counted");
+  assert.equal(crits.length, 1, "exactly one CRIT die, not double-counted");
 });
 
 // ---------------------------------------------------------------------------
-// E1 — digital rooms apply a path-validated move (opponent-brain Phase E).
+// E1, digital rooms apply a path-validated move (opponent-brain Phase E).
 // Today the move/sprint action spends a slot + heat but never repositions the
 // rig; digital rooms must derive the move from a real path within Speed.
 // ---------------------------------------------------------------------------
@@ -6523,7 +6523,7 @@ test("a sprint reaches farther than a move", () => {
 
 test("a digital move pivoting more than 90° is rejected", () => {
   const { room, rig } = digitalMover({ x: 27, y: 18 }, 0);
-  const dest = { x: 27 + moveBudget(rig, "move") * 0.3, y: 18 };  // reachable — only the pivot is illegal
+  const dest = { x: 27 + moveBudget(rig, "move") * 0.3, y: 18 };  // reachable, only the pivot is illegal
   assert.equal(checkCommand(room, moveCmd(dest, 200)).ok, false);
 });
 
@@ -6548,7 +6548,7 @@ test("a physical-room move needs no dest and does not touch pos", () => {
 });
 
 // ---------------------------------------------------------------------------
-// E2 — digital objectives score from geometry at recovery (opponent-brain
+// E2, digital objectives score from geometry at recovery (opponent-brain
 // Phase E). Physical rooms keep the manual claim flow; digital rooms derive
 // control from controlsObjective and advance the round with no human claim.
 // ---------------------------------------------------------------------------
@@ -6585,13 +6585,13 @@ test("a marker both sides control is contested and scores nobody", () => {
   b.pos = { x: marker.x, y: marker.y };   // both on it
   const before = room.game.sides.map((s) => s.vp);
   __test.runRecovery(room);
-  assert.deepEqual(room.game.sides.map((s) => s.vp), before, "contested — nobody scores");
+  assert.deepEqual(room.game.sides.map((s) => s.vp), before, "contested, nobody scores");
 });
 
 test("a destroyed rig controls nothing", () => {
   const { room, a, b, marker } = digitalObjectiveRoom();
   a.pos = { x: marker.x, y: marker.y };
-  a.hull.destroyed = true;   // a real kill — recompute derives rig.destroyed from parts
+  a.hull.destroyed = true;   // a real kill, recompute derives rig.destroyed from parts
   b.pos = { x: 2, y: 2 };
   const before = room.game.sides.map((s) => s.vp);
   __test.runRecovery(room);

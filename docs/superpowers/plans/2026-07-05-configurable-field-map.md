@@ -6,25 +6,25 @@
 
 **Architecture:** A dependency-free `shared/field.js` module holds all battlefield geometry (deterministic objectives, re-rollable terrain). `shared/game-state.js` stores a per-room `field` + `ownerSide`, exposes a `field` command (owner-only, pre-start), and gates Ready on a locked field. The React client renders a read-only `FieldMap` SVG for both players and gives the owner a dedicated Field Setup drawer to change dimensions, flip the diagonal, re-roll terrain, and lock.
 
-**Tech Stack:** Node ESM, Express (generic command route — no route changes), `ws` broadcast, React 18 + TypeScript, Vitest (client) + `node:test` (shared/server), Vite with a `/shared` import alias.
+**Tech Stack:** Node ESM, Express (generic command route, no route changes), `ws` broadcast, React 18 + TypeScript, Vitest (client) + `node:test` (shared/server), Vite with a `/shared` import alias.
 
 ---
 
 ## File Structure
 
-- **Create** `shared/field.js` — pure geometry: bounds, `halfDiag`, `clampDimensions`, corner helpers, `computeObjectives`, `scatterTerrain`, `setback`.
-- **Create** `shared/field.test.js` — `node:test` unit tests for the geometry.
-- **Modify** `shared/game-state.js` — seed/backfill `room.ownerSide` + `room.field`; compute objectives; add the `field` command; set `ownerSide` in `claimSide`; gate `ready` on `field.locked`; expose `field` + `ownerSide` in `publicState`.
-- **Modify** `shared/game-state.test.js` — tests for owner assignment, the `field` command, and the Ready gate.
-- **Modify** `client/shared.d.ts` — type declarations for `/shared/field.js`.
-- **Modify** `tsconfig.json` — map `/shared/field.js` to the declaration file.
-- **Modify** `client/src/state/types.ts` — `FieldState`, `Objective`, `TerrainPiece`, extend `GameState` + `ServerState`.
-- **Create** `client/src/components/FieldMap.tsx` — read-only SVG map (props in, no data fetching).
-- **Create** `client/src/components/FieldMap.test.tsx` — render test.
-- **Create** `client/src/styles/field-map.css` — map + controls styling.
-- **Create** `client/src/components/FieldControls.tsx` — always-visible map + owner "Set field" trigger + the drawer body.
-- **Modify** `client/src/components/Stage.tsx` — render `FieldControls` during setup.
-- **Modify** `client/src/components/BattleSetup.tsx` — Ready hint/disable when field not locked.
+- **Create** `shared/field.js`: pure geometry: bounds, `halfDiag`, `clampDimensions`, corner helpers, `computeObjectives`, `scatterTerrain`, `setback`.
+- **Create** `shared/field.test.js`: `node:test` unit tests for the geometry.
+- **Modify** `shared/game-state.js`: seed/backfill `room.ownerSide` + `room.field`; compute objectives; add the `field` command; set `ownerSide` in `claimSide`; gate `ready` on `field.locked`; expose `field` + `ownerSide` in `publicState`.
+- **Modify** `shared/game-state.test.js`: tests for owner assignment, the `field` command, and the Ready gate.
+- **Modify** `client/shared.d.ts`: type declarations for `/shared/field.js`.
+- **Modify** `tsconfig.json`: map `/shared/field.js` to the declaration file.
+- **Modify** `client/src/state/types.ts`: `FieldState`, `Objective`, `TerrainPiece`, extend `GameState` + `ServerState`.
+- **Create** `client/src/components/FieldMap.tsx`: read-only SVG map (props in, no data fetching).
+- **Create** `client/src/components/FieldMap.test.tsx`: render test.
+- **Create** `client/src/styles/field-map.css`: map + controls styling.
+- **Create** `client/src/components/FieldControls.tsx`: always-visible map + owner "Set field" trigger + the drawer body.
+- **Modify** `client/src/components/Stage.tsx`: render `FieldControls` during setup.
+- **Modify** `client/src/components/BattleSetup.tsx`: Ready hint/disable when field not locked.
 
 No server route or `ws.js` changes: the existing `/api/game/:room/command` passes `{verb, attrs}` straight to `applyCommand`.
 
@@ -110,7 +110,7 @@ test("scatterTerrain places 4-6 pieces, deterministic and clear", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/field.test.js`
-Expected: FAIL — `Cannot find module './field.js'`.
+Expected: FAIL, `Cannot find module './field.js'`.
 
 - [ ] **Step 3: Write the module**
 
@@ -220,7 +220,7 @@ export function scatterTerrain(field, random = Math.random) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/field.test.js`
-Expected: PASS — 5 tests, 0 failures.
+Expected: PASS, 5 tests, 0 failures.
 
 - [ ] **Step 5: Commit**
 
@@ -274,7 +274,7 @@ test("publicState exposes field and ownerSide", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `r.field` is undefined / `view.ownerSide` is undefined.
+Expected: FAIL, `r.field` is undefined / `view.ownerSide` is undefined.
 
 - [ ] **Step 3: Implement the state wiring**
 
@@ -366,7 +366,7 @@ properties right after `version: room.version,`:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — all existing tests plus the 3 new ones pass.
+Expected: PASS, all existing tests plus the 3 new ones pass.
 
 - [ ] **Step 5: Commit**
 
@@ -451,7 +451,7 @@ test("Ready is blocked until the owner locks the field", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `field` verb is unhandled (dims unchanged) and Ready succeeds before lock.
+Expected: FAIL, `field` verb is unhandled (dims unchanged) and Ready succeeds before lock.
 
 - [ ] **Step 3: Implement the command + gate**
 
@@ -503,12 +503,12 @@ to:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — all tests including the 4 new command/gate tests.
+Expected: PASS, all tests including the 4 new command/gate tests.
 
 - [ ] **Step 5: Run the full backend suite (no regressions)**
 
 Run: `node --test "shared/**/*.test.js" "server/**/*.test.js"`
-Expected: PASS — all files green.
+Expected: PASS, all files green.
 
 - [ ] **Step 6: Commit**
 
@@ -591,7 +591,7 @@ In `tsconfig.json`, add an entry to `compilerOptions.paths` (after the
 - [ ] **Step 4: Verify the client still type-checks / builds**
 
 Run: `npx vitest run client/src/App.test.tsx`
-Expected: PASS — existing app test compiles and passes with the new types present.
+Expected: PASS, existing app test compiles and passes with the new types present.
 
 - [ ] **Step 5: Commit**
 
@@ -650,7 +650,7 @@ test("labels the viewer's own deployment zone", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/components/FieldMap.test.tsx`
-Expected: FAIL — `Cannot find module './FieldMap'`.
+Expected: FAIL, `Cannot find module './FieldMap'`.
 
 - [ ] **Step 3: Write the component**
 
@@ -759,7 +759,7 @@ export function FieldMap({ field, objectives, mySide, ownerSide }: Props) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run client/src/components/FieldMap.test.tsx`
-Expected: PASS — both tests green.
+Expected: PASS, both tests green.
 
 - [ ] **Step 5: Commit**
 
@@ -912,7 +912,7 @@ In the `applyServerState` case, carry them in the returned object (after
 ```
 
 Run: `npx vitest run client/src/state/roomReducer.test.ts`
-Expected: PASS — existing reducer tests stay green with the added fields.
+Expected: PASS, existing reducer tests stay green with the added fields.
 
 - [ ] **Step 3: Render FieldControls in Stage**
 
@@ -955,7 +955,7 @@ the field gate:
 - [ ] **Step 5: Run the full client suite**
 
 Run: `npx vitest run`
-Expected: PASS — all client tests green (FieldMap, App, RigWizard, etc.).
+Expected: PASS, all client tests green (FieldMap, App, RigWizard, etc.).
 
 - [ ] **Step 6: Commit**
 
@@ -971,7 +971,7 @@ git commit -m "feat: field setup drawer, Stage map, Ready lock gate"
 - [ ] **Step 1: Run the entire test suite**
 
 Run: `npm test`
-Expected: PASS — Vitest (client) and `node --test` (shared + server) both green.
+Expected: PASS, Vitest (client) and `node --test` (shared + server) both green.
 
 - [ ] **Step 2: Manual smoke test in the preview server**
 
@@ -1005,4 +1005,4 @@ git commit -m "test: verify configurable field map end-to-end"
   inset band along the diagonal. The v1 `FieldMap` conveys deployment zones with the two
   shaded halves + the dashed diagonal and does **not** draw the setback band. `setback()`
   is implemented and exported in `shared/field.js` for a later pass; drawing it would mean
-  offsetting the diagonal inward on both sides — a visual refinement, not core to setup.
+  offsetting the diagonal inward on both sides, a visual refinement, not core to setup.

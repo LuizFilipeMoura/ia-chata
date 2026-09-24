@@ -1,4 +1,4 @@
-# Hit → Wound → Location — combat resolution rewrite
+# Hit → Wound → Location, combat resolution rewrite
 
 **Status:** design approved, not yet planned
 **Date:** 2026-07-14
@@ -6,7 +6,7 @@
 
 ## Problem
 
-Damage today is an *impact total* — `d6 + STR + arc + modifiers` — compared against a
+Damage today is an *impact total*: `d6 + STR + arc + modifiers`: compared against a
 three-tier armour row per location per weight class (`direct/severe/critical` → 1/2/3 SP).
 
 Two things are wrong with it.
@@ -14,7 +14,7 @@ Two things are wrong with it.
 **It has 69 mathematically impossible matchups.** The impact total is capped at `6 + STR + arc`.
 Melee gets no arc bonus at all (`combat.js` `arcBonus` returns 0 for `profile.melee`), so a melee
 weapon's ceiling is `6 + STR`, forever. A light Circular Saw (STR 6, light weight mod −2 → 4)
-tops out at 10 against a medium hull's `direct: 11`. It cannot deal damage. Not "rarely" — never.
+tops out at 10 against a medium hull's `direct: 11`. It cannot deal damage. Not "rarely", never.
 An exhaustive sweep of every weapon × attacker class × target class × location found 69 such
 combos, every one of them melee except the Rivet Gun.
 
@@ -25,7 +25,7 @@ medium hull the saw is always 0 SP, so the rig's signature mechanic can never fi
 **It is unreadable at the table.** The impact dice are rolled inside `rollImpacts` but never
 pushed into the resolution's `rolls`, so the player sees "2 hits · 4 weapon STR → 0 SP" with no
 sight of the roll that decided it. The originating bug report for this work was a player asking
-"why 0 damage?" — and the UI gave them nothing to answer it with.
+"why 0 damage?", and the UI gave them nothing to answer it with.
 
 ## The model
 
@@ -34,7 +34,7 @@ Three dice, in resolution order:
 | Step | Die | Test |
 |---|---|---|
 | **Hit** | d6 | `≥ AIM` (unchanged; a natural 6 always hits) |
-| **Location** | d12 | unchanged — picks where the damage lands |
+| **Location** | d12 | unchanged, picks where the damage lands |
 | **Wound** | **d10** | `≥ 6 + T − S`, clamped to `2..10` |
 
 **Location precedes Wound, unavoidably.** Toughness is per-location (a medium hull is T5, its
@@ -59,20 +59,20 @@ With STR rescaled to 3..11 and T spanning 3..7, the gap runs −8..+4, and only 
 | **d10** | **`6 + T − S`** | **±4** | **10%** |
 | d12 | `7 + T − S` | ±5 | 8.3% |
 
-d6 is what causes the current compression — with only ±2 of live range, STR 8 through 13 all
+d6 is what causes the current compression, with only ±2 of live range, STR 8 through 13 all
 wound identically. d12 was tested and **reintroduces the same bug at the top**: Sniper Cannon,
 Siege Maul, Harpoon and Anchor all clamp to `2+` (92%) against every class. d10 is the only size
 where the whole roster stays distinct with no clamp at either end.
 
 Each point of STR is exactly 10%, so the wound roll is readable as a percentage with no lookup.
 
-**Cost: none in current play.** All dice are rolled in-app, so the die size is free — d10 was chosen
+**Cost: none in current play.** All dice are rolled in-app, so the die size is free, d10 was chosen
 purely because it is the only size that fits the ladder without clamping, not as a compromise
 against what players own.
 
 There is one latent exception. `game.autoResolve === false` puts the table into physical-dice mode
 and prompts the player to enter their own rolls (`AttackWizard.tsx`, ~line 423). That mode
-currently asks for **hit dice and a location d12 only** — it passes `impacts: toHit.map(() => undefined)`
+currently asks for **hit dice and a location d12 only**: it passes `impacts: toHit.map(() => undefined)`
 and lets the server roll the impacts. So a physical-dice player has never rolled the die that
 decides their damage, which is the same invisibility that produced the original bug report.
 
@@ -101,7 +101,7 @@ mirror the Rig ladder by role.
 
 ### No dead zones, structurally
 
-A wound roll's worst band is `6 + T − S` clamped to 10 — a 10% chance. It is impossible for a
+A wound roll's worst band is `6 + T − S` clamped to 10, a 10% chance. It is impossible for a
 matchup to be unwinnable, because the clamp guarantees a natural 10 always wounds. This is not a
 patch or a floor rule; it falls out of the model. All 69 dead zones vanish with no special case.
 
@@ -111,7 +111,7 @@ scales with the target.
 
 ### Saturation at the top is intended
 
-Siege Maul reads ~2.3 SP/volley against every weight class — it ignores armour entirely, because
+Siege Maul reads ~2.3 SP/volley against every weight class, it ignores armour entirely, because
 STR 8+ saturates at 90% against a light hull (T4). This is the mirror of the old bug but at the
 *good* end, and it is correct: against a **colossal** hull (T7) the full ladder is live, from
 Mini Gun at 10% to Siege Maul at 90%. Armour discriminates most exactly where it is thickest, and
@@ -120,7 +120,7 @@ a siege hammer flattening a light Rig regardless of the fine print is the right 
 ## Weapon stats
 
 STR rescales from 4..13 onto 3..11 (`round(3 + (str − 4) × 8/9)`). D is **hand-assigned per
-weapon** — deriving it from ROF was tested and collapsed all eleven ROF-1 weapons onto an
+weapon**: deriving it from ROF was tested and collapsed all eleven ROF-1 weapons onto an
 identical 1.8 SP/volley, which is exactly the differentiation failure D exists to prevent.
 
 Expected SP/volley assumes a 50% hit rate (AIM 4 on d6) against a medium hull, no upgrades, no arc.
@@ -152,7 +152,7 @@ Expected SP/volley assumes a 50% hit rate (AIM 4 on d6) against a medium hull, n
 | Pressure Claw | 2 | 9 → 7 | 3 | 2.1 |
 | Talon | 2 | 7 → 6 | 3 | 1.8 |
 
-### Unit weapons (`flatPick` — no weight modifier)
+### Unit weapons (`flatPick`: no weight modifier)
 
 | Weapon | ROF | STR old → new | D | SP/volley vs medium hull |
 |---|---|---|---|---|
@@ -164,31 +164,31 @@ Expected SP/volley assumes a 50% hit rate (AIM 4 on d6) against a medium hull, n
 | Ram Spike | 1 | 11 → 9 | 4 | 1.8 |
 | Sidearm | 2 | 4 → 3 | 1 | 0.3 |
 
-Spread against a medium hull: **0.8 → 2.8 SP/volley, median 1.8** (Sidearm's 0.3 is deliberate —
+Spread against a medium hull: **0.8 → 2.8 SP/volley, median 1.8** (Sidearm's 0.3 is deliberate,
 it is the built-in weak weapon every support unit carries until a Damage module replaces it).
 The ROF-1 club now spans 0.8 → 2.3 rather than collapsing onto one value.
 
 SP pools are **unchanged** (`RIG_DEFAULTS`: light 6/5/5/4 → colossal 9/8/8/7). At these numbers a
 medium hull takes 2.5 volleys to strip under the best weapon and 7.8 under the worst, across a
-10-round match. The pools also carry the per-location texture the T grid leans on — an engine is
+10-round match. The pools also carry the per-location texture the T grid leans on, an engine is
 fragile because its pool is 4, not because its row is soft.
 
 `WEIGHT_STR_MOD` compresses from `−2/0/+2/+4` to `−1/0/+1/+2`, matching the ×0.8 STR rescale.
 
 ## Modifier mapping
 
-Every existing `±N to the impact total` becomes **`±N to STR`** — same sign, same position in the
+Every existing `±N to the impact total` becomes **`±N to STR`**: same sign, same position in the
 formula, now worth a flat 10% each. This is a mechanical substitution for roughly 20 of the ~25
 live effects:
 
-All magnitudes below are the old value × 0.8, rounded — the same factor as the STR rescale, so a
+All magnitudes below are the old value × 0.8, rounded, the same factor as the STR rescale, so a
 modifier keeps its size *relative to* the STR scale it modifies. Values of 1–2 round back to
 themselves; only 3, 4 and 8 actually move.
 
 | Effect | Today | After |
 |---|---|---|
-| Arc — side / rear | +2 / +4 to total | +2 / +3 STR |
-| Raking Fire — side / rear | +4 / +8 to total | +3 / +6 STR |
+| Arc, side / rear | +2 / +4 to total | +2 / +3 STR |
+| Raking Fire, side / rear | +4 / +8 to total | +3 / +6 STR |
 | Brace (front arc) | −2 to total | −2 STR |
 | Harden / Ablative Plating | −1 / −2 to total | −1 / −2 STR |
 | Reactive Plating (side/rear) | −1 / −2 to total | −1 / −2 STR |
@@ -207,7 +207,7 @@ it should not survive the rewrite. The Raking Fire branch stays ahead of it (no 
 carries the perk).
 
 Modifier magnitudes are marked ×0.8 above to track the STR rescale, but they are **tuning values,
-not derived constants** — the plan should treat the table as a starting point and check the
+not derived constants**: the plan should treat the table as a starting point and check the
 resulting bands, not trust the arithmetic.
 
 ## Effects needing redesign
@@ -217,7 +217,7 @@ Five effects reference machinery that no longer exists. These are **decisions, n
 | Effect | Today | Proposed |
 |---|---|---|
 | Armour Piercing | +d3 to total on a natural 6 | **reroll failed wounds** |
-| Rend | +d3 to total on a 5+ | **reroll failed wounds** (weaker trigger — needs differentiating from AP) |
+| Rend | +d3 to total on a 5+ | **reroll failed wounds** (weaker trigger, needs differentiating from AP) |
 | Penetrator Rounds | every 3rd volley forces Severe | **auto-wound** (skip the wound roll) |
 | Evisceration | forces Critical on a half-SP location | **+1 D against a location at or below half SP** |
 | Ablative Cascade | softens one severity step, `direct → none` | **negate one wound per charge** |
@@ -228,9 +228,9 @@ rewrite must preserve: an *armour-row* zero was a bug; an *earned* zero (a raise
 charge, firing into a rake's blind arc) is a mechanic.
 
 **Obsolete outright:** the machine-gun crit cap (`sev.tier === "critical" && profile.machineGun`)
-has nothing to cap — volume weapons are now bounded by D1 instead.
+has nothing to cap, volume weapons are now bounded by D1 instead.
 
-## UI — the resolution ledger
+## UI, the resolution ledger
 
 **Requirement: the panel shows every input that fed the outcome.** Not a summary of it. The bug
 that started this work was a player looking at "2 hits · 4 weapon STR → 0 SP" with no way to
@@ -240,13 +240,13 @@ This is the largest single piece of the rewrite. It is not a tweak to the existi
 
 ### Why the current shape can't carry it
 
-`ResolutionBreakdown` is **one flat equation** — `terms[]`, one `total`, one `tier`, one `sp`
+`ResolutionBreakdown` is **one flat equation**: `terms[]`, one `total`, one `tier`, one `sp`
 (`client/src/state/types.ts`). The resolution it describes is actually four sequential steps, and
 each step has its own inputs, its own dice, and its own output. The flat shape can only ever show
 the last one, which is why the impact roll was invisible.
 
 The scale of what's being hidden: `computeModifiedAim` folds **eleven** inputs into a single
-`modAim` (`combat.js:75`) — base AIM by weight class, weapon ACC at the measured range, cover,
+`modAim` (`combat.js:75`), base AIM by weight class, weapon ACC at the measured range, cover,
 aimed penalty, wrecked-hull penalty, engagement penalty, recon paint, smoke, ballistic sweet-band,
 predictive tracking. Five more alter ROF (Full Auto, Bloodletter, Redline Governor, Penetrator
 slow-cycle). The player currently sees none of them.
@@ -268,7 +268,7 @@ breakdown: {
 }
 ```
 
-A `term` is `{ label, value, op?, tone? }` — reuse the existing `ResolutionTerm`.
+A `term` is `{ label, value, op?, tone? }`: reuse the existing `ResolutionTerm`.
 
 ### What each step must show
 
@@ -276,16 +276,16 @@ A `term` is `{ label, value, op?, tone? }` — reuse the existing `ResolutionTer
 |---|---|---|---|
 | **Hit** | `modAim` | base AIM (weight class), weapon ACC at distance, cover, aimed −2, wrecked hull −1, engaged −2, paint +1, smoke −2, ballistic sweet-band, predictive +2; ROF sources: base, Full Auto +2, Bloodletter, Redline, Penetrator slow | ROF × d6, pass/fail each; rerolls; 1s that added heat; Point-Defense rerolls |
 | **Wound** | `6 + T − S` | weapon base STR, weight mod, arc, every live STR upgrade (Cold Bore, charge, Opportunist, Taut Cable, Steady Aim, Reactor Overdrive, Piledriver momentum, Charged Shot), every defender modifier (Brace, Harden, Reactive Plating, shield blunt, Breach Grip crack); **effective STR and target T shown explicitly** | one d10 per landed hit, pass/fail; AP/Rend rerolls |
-| **Location** | — | aimed (no roll) vs rolled; Kneecapper remap when it fires | d12 |
-| **Damage** | — | wounds, weapon D, Evisceration +1 D, Ablative Cascade negations | — |
+| **Location** |, | aimed (no roll) vs rolled; Kneecapper remap when it fires | d12 |
+| **Damage** |, | wounds, weapon D, Evisceration +1 D, Ablative Cascade negations |, |
 
-**Show applied terms only.** A term that resolved to 0 is noise, not information — with ~30
+**Show applied terms only.** A term that resolved to 0 is noise, not information, with ~30
 possible modifiers, rendering every zero would bury the two that mattered. The exception is the
 step's target number and, on the wound step, effective STR and T: those always render, because
 they are the answer to "why".
 
 **Auto-fails are steps, not absences.** A negating shield or a Raking front-arc must render as a
-wound step that says so (`shield negates — no wound roll`). A step that silently vanishes is the
+wound step that says so (`shield negates, no wound roll`). A step that silently vanishes is the
 same failure as a hidden die.
 
 ### Constraints
@@ -294,7 +294,7 @@ same failure as a hidden die.
   each step needs a compact headline (target number + dice + outcome) with its terms as a wrapped
   chip row beneath. Long modifier lists must not push the OK button off-screen.
 - **Animation order is the teaching tool.** `RollConsole` settles dice sequentially already. Steps
-  should reveal in resolution order — hit, then location, then wound, then damage — so the panel
+  should reveal in resolution order, hit, then location, then wound, then damage, so the panel
   *narrates* the rule rather than presenting a finished sum.
 - **Manual-dice mode prompts for wound dice.** `AttackWizard`'s `autoResolve === false` path builds
   its `promptDice` specs from ROF and asks only for hit dice + location; it must also ask for a d10
@@ -302,7 +302,7 @@ same failure as a hidden die.
 
 ### Removals
 
-- `ResolutionBreakdown.tier`, `.total`, and the `direct/severe/critical` badge — there are no
+- `ResolutionBreakdown.tier`, `.total`, and the `direct/severe/critical` badge, there are no
   tiers. `RollConsole`'s `v2-rx-tier` and `v2-rx-total` render paths go with them.
 
 **Naming constraint carried over from Plan 1:** `ResolutionBreakdown.target` is the target unit's
@@ -315,12 +315,12 @@ silently won and a rig's name rendered as a die roll. Keep them distinct in the 
   wound roll.
 
 **The ledger is worth building for its own sake.** Every rule in this spec is inert to a player who
-cannot see it operate. The wound roll's readability — a flat 10% per STR point — only pays off if
+cannot see it operate. The wound roll's readability, a flat 10% per STR point, only pays off if
 the panel shows the STR, the T, and the number they produced.
 
 ## Testing
 
-- `woundTarget(S, T)` — clamps at both ends; `2..10`; a natural 10 always wounds; a natural 1
+- `woundTarget(S, T)`: clamps at both ends; `2..10`; a natural 10 always wounds; a natural 1
   never does.
 - No dead zones: sweep every weapon × attacker class × target class × location and assert every
   combo has a nonzero wound chance. This is the regression test for the original bug and should
@@ -329,7 +329,7 @@ the panel shows the STR, the T, and the number they produced.
 - Sunder / Dismember fire on a wound (they gate on damage > 0 and were unreachable before).
 - Earned zeroes still zero: shield negate and Raking front-arc deal nothing on a natural 10.
 - Per-weapon D is applied per wound, not per hit.
-- **Ledger completeness** — the highest-value test in the suite, because it is the one that fails
+- **Ledger completeness**: the highest-value test in the suite, because it is the one that fails
   when a future rule is added and forgotten. Resolve an attack with a modifier live at every step
   (cover + smoke on the hit, an arc + a STR upgrade + a braced target on the wound, Evisceration on
   the damage) and assert each appears as a term. A rule that moves a number but leaves no term is
@@ -348,18 +348,18 @@ assertion (there are wound dice now), plus every `impactSeverity` unit test.
 ## Migration
 
 `impactSeverity`, `RIG_IMPACT`, and the armour tables in `unit-kinds.js` are deleted, not
-deprecated. Three call sites read `impactSeverity` today — `combat.js` `rollImpacts`, the Reactive
+deprecated. Three call sites read `impactSeverity` today, `combat.js` `rollImpacts`, the Reactive
 Armor re-derive in `applyDefensiveReactions`, and the Blast branch in `game-state.js` (`D6 + STR 10`,
 which needs its own conversion to a wound roll). `client/shared.d.ts` mirrors these signatures.
 
-In-flight saved rigs carry no impact data, so there is no save migration — but `content/chassis.json`
+In-flight saved rigs carry no impact data, so there is no save migration, but `content/chassis.json`
 and `client/src/v2/lib/commissionData.ts` mirror weapon stats and must move with `WEAPONS`.
 
 ## Open questions
 
 - **Does a natural 10 do anything beyond wound?** A crit hook exists for free here (the die is
   already distinct) and could rehome some of the flavour lost with `critical`. Deliberately
-  unresolved — decide before the plan, not during it.
+  unresolved, decide before the plan, not during it.
 - **Rend vs Armour Piercing** both map to "reroll failed wounds", which makes them the same perk
   with different names. One needs a different mechanic.
 - **Tank / Walker toughness grids** are TBD.

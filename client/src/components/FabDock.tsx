@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * FabDock — a single corner launcher that expands into the floating actions
+ * FabDock, a single corner launcher that expands into the floating actions
  * (Rulebook / Revert / Leave). Collapsed it is one button; tapping it fans the
  * available actions upward. Revert only appears when the server allows an undo.
  */

@@ -2,21 +2,21 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the impact-total damage model with a d10 wound roll — `hit d6 → wound d10 → location d12`, damage = per-weapon D — killing the 69 mathematically-impossible matchups.
+**Goal:** Replace the impact-total damage model with a d10 wound roll, `hit d6 → wound d10 → location d12`, damage = per-weapon D, killing the 69 mathematically-impossible matchups.
 
-**Architecture:** The maths barely moves. Today: `die + STR + mods ≥ direct`. After: `d10 ≥ 6 + T − (STR + mods)`. Both are "effective STR against a threshold" — the modifier sum is *identical*, it just moves from the total's side to STR's side. So `computeStr` is untouched and all fifteen of its STR effects port for free. The real work is `rollImpacts` → `rollWounds`, a toughness grid replacing 48 armour numbers, and five effects that reference severity tiers that no longer exist.
+**Architecture:** The maths barely moves. Today: `die + STR + mods ≥ direct`. After: `d10 ≥ 6 + T − (STR + mods)`. Both are "effective STR against a threshold", the modifier sum is *identical*, it just moves from the total's side to STR's side. So `computeStr` is untouched and all fifteen of its STR effects port for free. The real work is `rollImpacts` → `rollWounds`, a toughness grid replacing 48 armour numbers, and five effects that reference severity tiers that no longer exist.
 
 **Tech Stack:** Plain ES modules (`"type": "module"`). Tests are `node:test` + `node:assert/strict`. Run with `node --test shared/<file>.test.js`. No build step for `shared/`.
 
 **Spec:** `docs/superpowers/specs/2026-07-14-hit-wound-location-design.md`
 
-**Scope:** This plan is the engine only (`shared/`). The resolution-ledger UI is Plan 2 — this plan keeps the existing panel *working* (a wound line instead of an impact total) but does not build the full ledger.
+**Scope:** This plan is the engine only (`shared/`). The resolution-ledger UI is Plan 2, this plan keeps the existing panel *working* (a wound line instead of an impact total) but does not build the full ledger.
 
 ---
 
 ## Background for the engineer
 
-### The working tree is dirty — this matters
+### The working tree is dirty, this matters
 
 There is **unrelated in-flight work uncommitted** across ~23 files (repair tuning in
 `shared/game-state.js`, budget auto-end, V2 client changes). It is not yours. It is green:
@@ -27,14 +27,14 @@ Three rules follow:
 1. **Never `git add` a directory.** Not `shared/`, not `client/`, not `.`. Stage only the files you
    edited, by name. A directory add commits someone else's work-in-progress.
 2. **`shared/game-state.js` and `shared/game-state.test.js` contain their changes and yours.**
-   Staging those files unavoidably includes their work. That is accepted and expected — do not try
+   Staging those files unavoidably includes their work. That is accepted and expected, do not try
    to split it, and do not revert anything you did not write.
 3. **Any test failure you see is yours.** The baseline is 0 failures. If something unrelated breaks,
-   you broke it — do not "fix" a test you do not understand.
+   you broke it, do not "fix" a test you do not understand.
 
 ### Three facts about this codebase
 
-**1. `shared/` is imported by both server and client.** `combat.js` is pure — it never imports `game-state.js` (that would be an import cycle). Anything it needs from game-state arrives via an injected `ctx` object or on the unit objects passed in. `combat.js` may import from `rules.js` and `unit-kinds.js` only. **Do not break this.**
+**1. `shared/` is imported by both server and client.** `combat.js` is pure, it never imports `game-state.js` (that would be an import cycle). Anything it needs from game-state arrives via an injected `ctx` object or on the unit objects passed in. `combat.js` may import from `rules.js` and `unit-kinds.js` only. **Do not break this.**
 
 **2. The damage pipeline** lives in `shared/combat.js` `resolveAttack` (~line 480):
 - `rollToHit` → counts landed hit dice against a d6 target number (`modAim`)
@@ -44,11 +44,11 @@ Three rules follow:
 
 You are replacing only the third step.
 
-**3. Dice are injectable.** Every roll goes through `rollD(sides, provided, random)` — if `provided` is a number it is used verbatim. Tests pass `opts.dice = { toHit: [...], impacts: [...], location: n }` to force outcomes. This is how you write deterministic tests. **Keep this pattern**; you are renaming `impacts` → `wounds` in that structure.
+**3. Dice are injectable.** Every roll goes through `rollD(sides, provided, random)`: if `provided` is a number it is used verbatim. Tests pass `opts.dice = { toHit: [...], impacts: [...], location: n }` to force outcomes. This is how you write deterministic tests. **Keep this pattern**; you are renaming `impacts` → `wounds` in that structure.
 
 ## Why this rewrite exists
 
-The impact total caps at `6 + STR + arc`. Melee gets no arc bonus at all, so its ceiling is `6 + STR` forever. A light Circular Saw (STR 6, light weight mod −2 → 4) tops out at 10 against a medium hull's `direct: 11`. It cannot deal damage — not rarely, *never*. An exhaustive sweep found 69 such combos.
+The impact total caps at `6 + STR + arc`. Melee gets no arc bonus at all, so its ceiling is `6 + STR` forever. A light Circular Saw (STR 6, light weight mod −2 → 4) tops out at 10 against a medium hull's `direct: 11`. It cannot deal damage, not rarely, *never*. An exhaustive sweep found 69 such combos.
 
 A wound roll cannot be unwinnable: the target number clamps at 10, so a natural 10 always wounds. All 69 vanish structurally, with no floor rule. **The clamp in `woundTarget` is the single most load-bearing line in this plan.**
 
@@ -75,13 +75,13 @@ A wound roll cannot be unwinnable: the target number clamps at 10, so a natural 
 Add to `shared/rules.test.js`:
 
 ```js
-test("woundTarget — TN is 6 + T - S", () => {
+test("woundTarget, TN is 6 + T - S", () => {
   assert.equal(woundTarget(5, 5), 6);  // even match
   assert.equal(woundTarget(7, 5), 4);  // stronger
   assert.equal(woundTarget(3, 5), 8);  // weaker
 });
 
-test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
+test("woundTarget, clamps to 2..10 so no matchup is ever hopeless", () => {
   // A natural 10 must ALWAYS wound. This is the guarantee that kills the
   // 69 dead zones of the impact-total model; do not relax it.
   assert.equal(woundTarget(1, 20), 10);
@@ -89,14 +89,14 @@ test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
   assert.equal(woundTarget(20, 1), 2);
 });
 
-test("woundTarget — the original bug case is possible, not impossible", () => {
+test("woundTarget, the original bug case is possible, not impossible", () => {
   // light Circular Saw: STR 5 base, light weight mod -1 => 4. Medium hull T5.
   // Under the old model this was mathematically 0 damage. Now it is 7+ (40%).
   assert.equal(woundTarget(4, 5), 7);
 });
 
-test("woundTarget — junk STR coerces (fails safe), junk toughness throws", () => {
-  assert.equal(woundTarget(undefined, 5), 10);          // 10% — safe direction
+test("woundTarget, junk STR coerces (fails safe), junk toughness throws", () => {
+  assert.equal(woundTarget(undefined, 5), 10);          // 10%, safe direction
   assert.throws(() => woundTarget(5, undefined), /toughness must be a number/);
 });
 ```
@@ -106,14 +106,14 @@ Add `woundTarget` to the existing import at the top of `shared/rules.test.js`.
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/rules.test.js`
-Expected: FAIL — `woundTarget is not a function` / `not exported`.
+Expected: FAIL, `woundTarget is not a function` / `not exported`.
 
 - [ ] **Step 3: Implement**
 
 In `shared/rules.js`, **delete** `impactSeverity` (lines 84-91, including its `// Impact Roll total vs a location row` comment) and put this in its place:
 
 ```js
-// §7.5 — the wound roll. A shot's effective STR is compared to the struck
+// §7.5, the wound roll. A shot's effective STR is compared to the struck
 // location's Toughness: roll a d10 against `6 + T - S`.
 //
 // The clamp is load-bearing. It guarantees a natural 10 always wounds and a
@@ -121,7 +121,7 @@ In `shared/rules.js`, **delete** `impactSeverity` (lines 84-91, including its `/
 // mathematically hopeless. That was the failure mode of the impact-total model
 // this replaces: its total capped at `6 + STR + arc`, leaving 69 combos that
 // could never deal damage at any roll. Do not remove the clamp to "let armour
-// really matter" — that reintroduces the bug.
+// really matter", that reintroduces the bug.
 //
 // Each point of STR is worth exactly 10%, so the roll is readable as a
 // percentage with no lookup table.
@@ -129,9 +129,9 @@ export const WOUND_DIE = 10;
 
 export function woundTarget(str, toughness) {
   const s = Math.floor(Number(str) || 0);
-  // Validate BEFORE coercing, and check the type — not just finiteness. A
+  // Validate BEFORE coercing, and check the type, not just finiteness. A
   // missing T coercing to 0 yields TN 2 (a 90% wound), the single most dangerous
-  // default in the system. STR may coerce — it fails toward TN 10 (10%) — but T
+  // default in the system. STR may coerce, it fails toward TN 10 (10%), but T
   // must already be a real number.
   if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
     throw new Error(`woundTarget: toughness must be a number, got ${toughness}`);
@@ -141,21 +141,21 @@ export function woundTarget(str, toughness) {
 ```
 
 **Do not "simplify" that guard to `!Number.isFinite(Number(toughness))`.** An earlier draft did, and
-it let `null`, `""`, `false` and `[]` straight through — all coerce to `0`, all finite, all yielding
+it let `null`, `""`, `false` and `[]` straight through, all coerce to `0`, all finite, all yielding
 TN 2. `null` is exactly what a failed lookup used to return, so the coercing guard would have left
 the motivating bug intact while the test asserted it fixed. Validate first, coerce second.
 
 **The asymmetry is the point.** Junk STR fails safe, junk Toughness fails maximally unsafe. An
 earlier draft of this plan coerced both and paired it with a `toughnessOf` that returned `null` on a
-failed lookup — together they silently made any mislooked-up location the softest thing on the
+failed lookup, together they silently made any mislooked-up location the softest thing on the
 table, which is the exact class of bug this rewrite exists to kill.
 
-Also delete `impactRow` (lines 80-82) and drop `impactRow as _impactRow` from the `./unit-kinds.js` import on line 4 — Task 2 replaces it.
+Also delete `impactRow` (lines 80-82) and drop `impactRow as _impactRow` from the `./unit-kinds.js` import on line 4, Task 2 replaces it.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test shared/rules.test.js`
-Expected: PASS. Other files will not resolve their imports yet — expected until Task 7 rewires `resolveAttack`.
+Expected: PASS. Other files will not resolve their imports yet, expected until Task 7 rewires `resolveAttack`.
 
 - [ ] **Step 5: Commit**
 
@@ -179,20 +179,20 @@ git commit -m "feat(combat): add the d10 wound roll, drop impactSeverity"
 Add to `shared/unit-kinds.test.js`:
 
 ```js
-test("toughnessOf — rig reads the weight-class grid", () => {
+test("toughnessOf, rig reads the weight-class grid", () => {
   assert.equal(toughnessOf("rig", "hull", "medium"), 5);
   assert.equal(toughnessOf("rig", "engine", "light"), 3);
   assert.equal(toughnessOf("rig", "hull", "colossal"), 7);
 });
 
-test("toughnessOf — flat kinds ignore weight class", () => {
+test("toughnessOf, flat kinds ignore weight class", () => {
   assert.equal(toughnessOf("tank", "hull"), 6);
   assert.equal(toughnessOf("tank", "tracks"), 5);
   assert.equal(toughnessOf("walker", "hull"), 5);
   assert.equal(toughnessOf("walker", "mount"), 4);
 });
 
-test("toughnessOf — every part of every kind has a value", () => {
+test("toughnessOf, every part of every kind has a value", () => {
   // A missing T would silently become 0 and make the part unwoundable-adjacent.
   for (const kind of ["tank", "walker"]) {
     for (const p of partNamesOf(kind)) {
@@ -206,9 +206,9 @@ test("toughnessOf — every part of every kind has a value", () => {
   }
 });
 
-test("toughnessOf — an unresolvable lookup throws, never a silent 0", () => {
+test("toughnessOf, an unresolvable lookup throws, never a silent 0", () => {
   // A sentinel return would coerce to 0 inside woundTarget and yield a 2+ wound
-  // (90%) — the failed lookup would make the location the softest on the table.
+  // (90%), the failed lookup would make the location the softest on the table.
   assert.throws(() => toughnessOf("nope", "hull", "medium"), /unknown kind/);
   assert.throws(() => toughnessOf("rig", "nope", "medium"), /no T for/);
   assert.throws(() => toughnessOf("rig", "hull"), /no T for/);  // rig needs a weightClass
@@ -220,14 +220,14 @@ Add `toughnessOf` and `partNamesOf` to the imports at the top of `shared/unit-ki
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `node --test shared/unit-kinds.test.js`
-Expected: FAIL — `toughnessOf is not a function`.
+Expected: FAIL, `toughnessOf is not a function`.
 
 - [ ] **Step 3: Implement**
 
 In `shared/unit-kinds.js`, replace `RIG_IMPACT` (lines 6-31) with:
 
 ```js
-// §7.5 — Toughness per part. Replaces the old 48-number impact grid: a shot's
+// §7.5, Toughness per part. Replaces the old 48-number impact grid: a shot's
 // effective STR is compared to these via `woundTarget` (rules.js).
 //
 // Designed, not derived. Converting the old armour rows mechanically
@@ -247,13 +247,13 @@ const RIG_TOUGHNESS = {
 
 Replace `armour: RIG_IMPACT,` on line 49 with `toughness: RIG_TOUGHNESS,`.
 
-Replace the tank `armour` block (lines 75-80) with — Strawman ⚙, mirrors the heavy Rig ladder:
+Replace the tank `armour` block (lines 75-80) with, Strawman ⚙, mirrors the heavy Rig ladder:
 
 ```js
     toughness: { hull: 6, tracks: 5, turret: 5, engine: 4 },
 ```
 
-Replace the walker `armour` block (lines 108-113) with — Strawman ⚙, mirrors the medium Rig ladder:
+Replace the walker `armour` block (lines 108-113) with, Strawman ⚙, mirrors the medium Rig ladder:
 
 ```js
     toughness: { hull: 5, legs: 4, mount: 4, engine: 3 },
@@ -265,7 +265,7 @@ Replace `impactRow` (lines 184-189) with:
 // Toughness for a part. Rig grids are keyed by weight class (`byWeight`);
 // Tank/Walker are flat. Throws rather than returning a sentinel: every caller
 // feeds this straight into woundTarget, where a non-numeric T would coerce to 0
-// and yield a 2+ wound (90%) — a lookup typo would silently make a location the
+// and yield a 2+ wound (90%), a lookup typo would silently make a location the
 // softest thing on the table. Fail loud instead.
 export function toughnessOf(kindId, partName, weightClass) {
   const kind = UNIT_KINDS[kindId];
@@ -280,7 +280,7 @@ export function toughnessOf(kindId, partName, weightClass) {
 ```
 
 Add `byWeight: true` to `UNIT_KINDS.rig` beside `toughness: RIG_TOUGHNESS`; omit it on tank/walker.
-**Declare the shape, don't probe for it** — this codebase decides rig-vs-flat explicitly everywhere
+**Declare the shape, don't probe for it**: this codebase decides rig-vs-flat explicitly everywhere
 else (`weaponMode`, `flatPick`, `hasHeat`), and probing conflates "rig called without a weightClass"
 with "unknown part".
 
@@ -316,7 +316,7 @@ git commit -m "feat(combat): toughness grids replace the 48-number armour tables
 - Modify: `shared/game-state.js:34-76`
 - Test: `shared/game-state.test.js`
 
-STR rescales 4..13 → 3..11 so it spans the d10 ladder without clamping at either end. `d` is **hand-assigned per weapon** — deriving it from ROF collapses all eleven ROF-1 weapons onto an identical output, which is the exact differentiation failure `d` exists to prevent.
+STR rescales 4..13 → 3..11 so it spans the d10 ladder without clamping at either end. `d` is **hand-assigned per weapon**: deriving it from ROF collapses all eleven ROF-1 weapons onto an identical output, which is the exact differentiation failure `d` exists to prevent.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -342,11 +342,11 @@ test("weapon STR sits on the rescaled 3..11 ladder", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `Mini Gun has no d`.
+Expected: FAIL, `Mini Gun has no d`.
 
 - [ ] **Step 3: Implement**
 
-Replace `WEAPONS` (lines 34-61) with — note `str` changed on every row and `d` is new:
+Replace `WEAPONS` (lines 34-61) with, note `str` changed on every row and `d` is new:
 
 ```js
 export const WEAPONS = {
@@ -404,7 +404,7 @@ export const WEIGHT_STR_MOD = { light: -1, medium: 0, heavy: 1, colossal: 2 };
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: the two new tests PASS. Others still fail — Task 8 migrates them.
+Expected: the two new tests PASS. Others still fail, Task 8 migrates them.
 
 - [ ] **Step 5: Commit**
 
@@ -428,14 +428,14 @@ Melee returning 0 from `arcBonus` is the root asymmetry that produced the dead z
 Add to `shared/combat.test.js`:
 
 ```js
-test("arcBonus — melee gets the same side/rear ladder as ranged", () => {
+test("arcBonus, melee gets the same side/rear ladder as ranged", () => {
   const melee = { melee: true, acc: [0, 0] };
   assert.equal(arcBonus(melee, "front"), 0);
   assert.equal(arcBonus(melee, "side"), 2);
   assert.equal(arcBonus(melee, "rear"), 3);
 });
 
-test("arcBonus — Raking Fire still replaces the ladder and auto-fails the front", () => {
+test("arcBonus, Raking Fire still replaces the ladder and auto-fails the front", () => {
   const rake = { perks: ["Raking Fire"] };
   assert.equal(arcBonus(rake, "front"), null);
   assert.equal(arcBonus(rake, "side"), 3);
@@ -446,20 +446,20 @@ test("arcBonus — Raking Fire still replaces the ladder and auto-fails the fron
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — melee side returns 0, not 2.
+Expected: FAIL, melee side returns 0, not 2.
 
 - [ ] **Step 3: Implement**
 
-Replace `arcBonus` (lines 262-274) — values are the old ones × 0.8, matching the STR rescale:
+Replace `arcBonus` (lines 262-274), values are the old ones × 0.8, matching the STR rescale:
 
 ```js
-// §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
+// §7.7 / §13, arc STR bonus. Raking Fire (machine guns) replaces the standard
 // side/rear values and cannot damage the front arc (returns null = auto-fail).
 //
 // Melee used to return 0 here. That was the root cause of the impact-total
 // model's 69 dead zones: ranged had a ladder to climb into heavy armour and
 // melee had none, so a melee total was capped at `6 + STR` forever. Melee now
-// falls through to the shared ladder. The Raking branch stays FIRST — no melee
+// falls through to the shared ladder. The Raking branch stays FIRST, no melee
 // weapon carries the perk, but ordering makes that explicit.
 export function arcBonus(profile, arc) {
   if (hasPerk(profile, "Raking Fire")) {
@@ -504,7 +504,7 @@ This is the core of the rewrite. Read the whole existing `rollImpacts` before ed
 Add to `shared/combat.test.js`:
 
 ```js
-test("rollWounds — a wound deals the weapon's D, not 1", () => {
+test("rollWounds, a wound deals the weapon's D, not 1", () => {
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "medium", "b", {});
   const profile = { ...WEAPONS.melee["Wrecking Ball"] };
@@ -515,16 +515,16 @@ test("rollWounds — a wound deals the weapon's D, not 1", () => {
   assert.equal(out[0].sp, 5); // Wrecking Ball d: 5
 });
 
-test("rollWounds — a natural 10 always wounds however hopeless the matchup", () => {
+test("rollWounds, a natural 10 always wounds however hopeless the matchup", () => {
   const attacker = makeRig(1, "A", "light", "a", { melee: "Circular Saw" });
   const target = makeRig(2, "B", "colossal", "b", {});
   const profile = { ...WEAPONS.melee["Circular Saw"] };
   const out = rollWounds(attacker, target, profile, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].sp, 2); // Circular Saw d: 2 — the old model gave 0, always
+  assert.equal(out[0].sp, 2); // Circular Saw d: 2, the old model gave 0, always
 });
 
-test("rollWounds — a natural 1 never wounds however lopsided", () => {
+test("rollWounds, a natural 1 never wounds however lopsided", () => {
   const attacker = makeRig(1, "A", "colossal", "a", { melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "light", "b", {});
   const profile = { ...WEAPONS.melee["Wrecking Ball"] };
@@ -533,7 +533,7 @@ test("rollWounds — a natural 1 never wounds however lopsided", () => {
   assert.equal(out[0].sp, 0);
 });
 
-test("rollWounds — a raised shield still negates on a natural 10 (earned zero)", () => {
+test("rollWounds, a raised shield still negates on a natural 10 (earned zero)", () => {
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { melee: "Bulwark Shield" });
   target.preparation = { type: "raise-shield" };
@@ -544,7 +544,7 @@ test("rollWounds — a raised shield still negates on a natural 10 (earned zero)
   assert.equal(out[0].negated, true);
 });
 
-test("rollWounds — Raking Fire front arc still auto-fails on a natural 10", () => {
+test("rollWounds, Raking Fire front arc still auto-fails on a natural 10", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun" });
   const target = makeRig(2, "B", "medium", "b", {});
   const profile = { ...WEAPONS.longRange["Mini Gun"] };
@@ -553,7 +553,7 @@ test("rollWounds — Raking Fire front arc still auto-fails on a natural 10", ()
   assert.equal(out[0].sp, 0);
 });
 
-test("rollWounds — defender modifiers reduce effective STR, not the roll", () => {
+test("rollWounds, defender modifiers reduce effective STR, not the roll", () => {
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", {});
   target.preparation = { type: "brace" };
@@ -571,20 +571,20 @@ Add `rollWounds` to the `./combat.js` import at the top of `shared/combat.test.j
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `node --test shared/combat.test.js -t "rollWounds"`
-Expected: FAIL — `rollWounds is not a function`.
+Expected: FAIL, `rollWounds is not a function`.
 
 - [ ] **Step 3: Implement**
 
-Rename the function and replace its body. Keep every existing comment block for the modifiers (Kneecapper, Brace, Harden, Reactive Plating, Breach Grip) — they explain *why* each number exists and are still accurate. Replace lines 296-374 with:
+Rename the function and replace its body. Keep every existing comment block for the modifiers (Kneecapper, Brace, Harden, Reactive Plating, Breach Grip), they explain *why* each number exists and are still accurate. Replace lines 296-374 with:
 
 ```js
 export function rollWounds(attacker, target, profile, location, opts, providedDice, random) {
   // Thread the real target rig into computeStr's opts (the caller's `opts`
-  // here may carry only a display name at `opts.target` — see resolveAttack)
+  // here may carry only a display name at `opts.target`: see resolveAttack)
   // so target-conditional STR upgrades (Cold Bore, Opportunist, §13) work.
   const str = computeStr(attacker, profile, { ...opts, target, location });
   let bonus = arcBonus(profile, opts.arc);
-  // Kneecapper — bypasses Raking Fire's front-arc auto-fail (arcBonus
+  // Kneecapper, bypasses Raking Fire's front-arc auto-fail (arcBonus
   // returning null) but ONLY when the struck location is a limb on the TARGET.
   if (bonus == null && profile.upgradeEffect?.kneecapper) {
     const role = roleOf(target.kind || "rig", location);
@@ -595,7 +595,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   // Harden (Ablative Plating active). Depth read from the upgrade's effect tag.
   const hardenDepth = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.hardenImpact ?? 1;
   const hardened = target.hardened ? -hardenDepth : 0;
-  // Reactive Plating (Countermeasures) — side/rear attacks lose STR.
+  // Reactive Plating (Countermeasures), side/rear attacks lose STR.
   let sideRearDock = 0;
   if (target.equipment === "reactive-plating" && (opts.arc === "side" || opts.arc === "rear")) {
     sideRearDock = equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.sideRearStr ?? -1;
@@ -603,7 +603,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
   const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -3 : 0;
-  // Breach Grip (§13, Claw) — a cracked location is easier to wound while the
+  // Breach Grip (§13, Claw), a cracked location is easier to wound while the
   // crack is live.
   const crackExpiry = target.cracked?.[location];
   const cracked = crackExpiry != null && opts.round != null && crackExpiry >= opts.round ? 2 : 0;
@@ -612,7 +612,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
   const out = [];
   for (let i = 0; i < opts.hits; i++) {
     const die = rollD(WOUND_DIE, providedDice?.wounds?.[i], random);
-    // Earned zeroes — a raised shield, or firing into a rake's blind arc. These
+    // Earned zeroes, a raised shield, or firing into a rake's blind arc. These
     // short-circuit before the roll is compared and stay hard zeroes even on a
     // natural 10. An ARMOUR zero was the bug this rewrite kills; an EARNED zero
     // is a mechanic and must survive.
@@ -622,19 +622,19 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
     }
     const effStr = str + bonus + braced + hardened + shieldBlunt + cracked + sideRearDock;
     const tn = woundTarget(effStr, toughness);
-    // Penetrator Rounds (§13) — every 3rd Autocannon volley skips the wound
+    // Penetrator Rounds (§13), every 3rd Autocannon volley skips the wound
     // roll entirely (was: forced Severe against the old armour row).
     let wounded = opts.penetrate || die >= tn;
-    // Armour Piercing — reroll a failed wound. Buys frequency, not depth.
+    // Armour Piercing, reroll a failed wound. Buys frequency, not depth.
     if (!wounded && hasPerk(profile, "Armour Piercing")) {
       const re = rollD(WOUND_DIE, providedDice?.ap?.[i], random);
       wounded = re >= tn;
     }
     let sp = 0;
     if (wounded) {
-      // Rend — +1 D per wound. Buys depth, not frequency (cf. AP above).
+      // Rend, +1 D per wound. Buys depth, not frequency (cf. AP above).
       const rend = hasPerk(profile, "Rend") ? 1 : 0;
-      // Evisceration (§13, Talon) — +1 D against a location already at or below
+      // Evisceration (§13, Talon), +1 D against a location already at or below
       // half its max SP (was: forced Critical).
       const evisc = profile.upgradeEffect?.eviscerate && target[location]
         && target[location].sp <= target[location].max / 2 ? 1 : 0;
@@ -676,21 +676,21 @@ git commit -m "feat(combat): rollImpacts becomes rollWounds on a d10"
 `applyDefensiveReactions` is the single seam where a defender may alter an incoming attack. Two of
 its branches are built on machinery Task 1 deleted:
 
-- **Reactive Armor** re-derives severity with `impactSeverity(hit.total - 2, ctx.row)` — there is no
+- **Reactive Armor** re-derives severity with `impactSeverity(hit.total - 2, ctx.row)`: there is no
   `total`, no `row`, and no `impactSeverity`.
-- **Ablative Cascade** softens one step through `ABLATIVE_SOFTEN` (`critical→severe→direct→none`) —
+- **Ablative Cascade** softens one step through `ABLATIVE_SOFTEN` (`critical→severe→direct→none`),
   there are no tiers.
 
 The `"tohit"` branch (Point-Defense) is untouched: it operates before wounds exist.
 
 **Design decisions, from the spec:** Reactive Armor's −2 becomes −2 effective STR, applied like
-Harden — so it re-rolls nothing and simply raises the target number. Ablative Cascade **negates one
+Harden, so it re-rolls nothing and simply raises the target number. Ablative Cascade **negates one
 wound per charge**, which is an *earned* zero and is allowed to zero a wound that landed.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```js
-test("Reactive Armor — docks 2 effective STR rather than re-deriving a tier", () => {
+test("Reactive Armor, docks 2 effective STR rather than re-deriving a tier", () => {
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", {});
   target.equipment = "ablative-plating";
@@ -704,7 +704,7 @@ test("Reactive Armor — docks 2 effective STR rather than re-deriving a tier", 
   assert.ok(target.equipState.reactiveArmorLocs.includes("hull"));
 });
 
-test("Ablative Cascade — a charge negates a wound outright (an earned zero)", () => {
+test("Ablative Cascade, a charge negates a wound outright (an earned zero)", () => {
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "medium", "b", {});
   target.equipment = "ablative-plating";
@@ -719,7 +719,7 @@ test("Ablative Cascade — a charge negates a wound outright (an earned zero)", 
   assert.equal(heat, 1);
 });
 
-test("Ablative Cascade — spends nothing on a wound that already failed", () => {
+test("Ablative Cascade, spends nothing on a wound that already failed", () => {
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", {});
   target.equipment = "ablative-plating";
@@ -735,16 +735,16 @@ test("Ablative Cascade — spends nothing on a wound that already failed", () =>
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `node --test shared/combat.test.js -t "Reactive Armor"`
-Expected: FAIL — the branch still reads `hit.kind === "impact"`.
+Expected: FAIL, the branch still reads `hit.kind === "impact"`.
 
 - [ ] **Step 3: Implement**
 
-Delete the `ABLATIVE_SOFTEN` map (lines 391-398) entirely — there are no tiers to step through.
+Delete the `ABLATIVE_SOFTEN` map (lines 391-398) entirely, there are no tiers to step through.
 
 Replace the Reactive Armor branch (lines 425-444) with:
 
 ```js
-  // Reactive Armor (Ablative Plating, Tuned) — the FIRST damaging wound each
+  // Reactive Armor (Ablative Plating, Tuned), the FIRST damaging wound each
   // round to a location hardens THAT location by -2 effective STR (Harden-
   // equivalent) until this rig's next activation; further wounds to a hardened
   // location are docked too. The per-round list is cleared in Recovery
@@ -764,7 +764,7 @@ Replace the Reactive Armor branch (lines 425-444) with:
 Then in `rollWounds` (Task 5), fold the dock into the effective-STR sum. Add beside `hardened`:
 
 ```js
-  // Reactive Armor — a location already hardened this round docks a further 2.
+  // Reactive Armor, a location already hardened this round docks a further 2.
   const reactive = target.equipState?.reactiveArmorLocs?.includes(location) ? -2 : 0;
 ```
 
@@ -773,11 +773,11 @@ and add `+ reactive` to the `effStr` sum.
 Replace the Ablative Cascade branch with:
 
 ```js
-  // Ablative Cascade (Ablative Plating, Prototype) — spend one charge to negate
+  // Ablative Cascade (Ablative Plating, Prototype), spend one charge to negate
   // a wound outright; each spend runs the defender +1 heat via ctx.spendHeat.
   // Charges refill to 2 each Recovery (game-state refreshEquipState).
   //
-  // This is an EARNED zero and is allowed to zero a landed wound — unlike the
+  // This is an EARNED zero and is allowed to zero a landed wound, unlike the
   // armour-row zeroes the wound model exists to eliminate, it costs a finite
   // resource. Gate on sp > 0 so a charge is never burnt on a wound that already
   // failed.
@@ -790,7 +790,7 @@ Replace the Ablative Cascade branch with:
   }
 ```
 
-Update the seam's doc comment (lines 376-390): the second stage is `"wound"`, not `"impact"`, and it carries `{ location }` — there is no `row`.
+Update the seam's doc comment (lines 376-390): the second stage is `"wound"`, not `"impact"`, and it carries `{ location }`: there is no `row`.
 
 - [ ] **Step 4: Run to verify they pass**
 
@@ -799,7 +799,7 @@ Expected: all three PASS.
 
 - [ ] **Step 5: Delete the machine-gun crit cap**
 
-It has nothing to cap — there are no tiers, and volume weapons are now bounded by `d: 1`. Confirm it is gone:
+It has nothing to cap, there are no tiers, and volume weapons are now bounded by `d: 1`. Confirm it is gone:
 
 Run: `grep -n "machineGun" shared/combat.js`
 Expected: no hit inside `rollWounds`. The `machineGun` flag itself stays on the weapons (Raking Fire and other rules read it).
@@ -819,14 +819,14 @@ git commit -m "feat(combat): migrate the defensive-reaction seam to wounds"
 - Modify: `shared/combat.js:539-630`
 - Test: `shared/combat.test.js`, `shared/rules.test.js`
 
-**Inherited from Task 1 — land the deferred derivation.** `shared/rules.test.js` carries a
+**Inherited from Task 1, land the deferred derivation.** `shared/rules.test.js` carries a
 `TODO(task-7)` on the bug-case test. It currently hardcodes `woundTarget(4, 5) === 7`, which cannot
 detect drift: retune the Saw's STR or the weight ladder and the test still passes while the real
-matchup silently goes dead — the exact regression it exists to catch.
+matchup silently goes dead, the exact regression it exists to catch.
 
 It was deferred for a real reason, not laziness. Deriving the operands needs `WEAPONS` from
 `game-state.js`, and `game-state.js:5` imports `combat.js`, which imported the symbols Task 1
-deleted — so the import chain killed the whole suite at load. **This task is what unblocks it**:
+deleted, so the import chain killed the whole suite at load. **This task is what unblocks it**:
 once `combat.js` no longer imports `impactRow`/`impactSeverity`, the chain resolves.
 
 After the `resolveAttack` work below is green, replace that test:
@@ -834,7 +834,7 @@ After the `resolveAttack` work below is green, replace that test:
 ```js
 import { WEAPONS } from "./game-state.js";
 
-test("woundTarget — the original bug case is possible, not impossible", () => {
+test("woundTarget, the original bug case is possible, not impossible", () => {
   // The light Circular Saw vs a medium hull is the matchup that motivated this
   // rewrite: under the impact-total model it was mathematically 0 damage at any
   // roll. Derived from the live stats, not hardcoded, so a future retune of the
@@ -844,13 +844,13 @@ test("woundTarget — the original bug case is possible, not impossible", () => 
 });
 ```
 
-This holds both before and after the Task 3 rescale (6−2 and 5−1 both give 4) — that invariance is
+This holds both before and after the Task 3 rescale (6−2 and 5−1 both give 4), that invariance is
 the point, not a coincidence. Delete the `TODO(task-7)` comment when it lands.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```js
-test("resolveAttack — wound dice are visible in rolls, one per landed hit", () => {
+test("resolveAttack, wound dice are visible in rolls, one per landed hit", () => {
   // The impact dice were rolled and discarded, which is why a player could not
   // answer "why 0 damage?". A wound die MUST reach the log.
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Sword" });
@@ -864,7 +864,7 @@ test("resolveAttack — wound dice are visible in rolls, one per landed hit", ()
   assert.equal(wounds[0].sides, 10);
 });
 
-test("resolveAttack — breakdown reports effective STR and toughness", () => {
+test("resolveAttack, breakdown reports effective STR and toughness", () => {
   const attacker = makeRig(1, "A", "medium", "a", { melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", {});
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -915,7 +915,7 @@ Replace the `pushResolution` breakdown (lines 620-627) with:
     },
 ```
 
-**The TN field is `woundTarget`, NOT `target`.** An earlier draft called it `target` — colliding with
+**The TN field is `woundTarget`, NOT `target`.** An earlier draft called it `target`: colliding with
 `target: target.name` in the same object literal, where the later key silently wins. `RollConsole`
 renders `→ {breakdown.target}`, so the target's *name* would have displayed as its wound TN ("→ 6"),
 breaking the very console this rewrite exists to fix. Plan 2 must read `breakdown.woundTarget`.
@@ -929,7 +929,7 @@ Update the summary string on line 619 to name the wound roll:
 - [ ] **Step 4: Run the whole combat suite**
 
 Run: `node --test shared/combat.test.js`
-Expected: the new tests PASS. **Pre-existing tests will fail** — that is expected and Task 8 handles them. Do not patch them here.
+Expected: the new tests PASS. **Pre-existing tests will fail**: that is expected and Task 8 handles them. Do not patch them here.
 
 - [ ] **Step 5: Commit**
 
@@ -945,12 +945,12 @@ git commit -m "feat(combat): resolveAttack rolls wounds and logs the dice"
 **Files:**
 - Modify: `shared/combat.test.js`, `shared/game-state.test.js`
 
-These tests encode the old model. They must be **rewritten, not patched** — a test asserting a severity tier is asserting a rule that no longer exists.
+These tests encode the old model. They must be **rewritten, not patched**: a test asserting a severity tier is asserting a rule that no longer exists.
 
 **Known loose end from Task 3.** `shared/support-units.test.js` asserts Sidearm `str: 4`; the
 rescale made it 3. Task 3 deliberately left the one-line fix **unstaged in the working tree** because
 that file also carries unrelated in-flight work (a Field Weld D12→D6 change) belonging to someone
-else. Check whether the fix is still sitting uncommitted before rewriting it — and stage
+else. Check whether the fix is still sitting uncommitted before rewriting it, and stage
 `support-units.test.js` only if you accept sweeping that foreign hunk along with it.
 
 - [ ] **Step 1: Inventory the failures**
@@ -958,7 +958,7 @@ else. Check whether the fix is still sitting uncommitted before rewriting it —
 Run: `node --test shared/combat.test.js shared/game-state.test.js 2>&1 | grep "not ok"`
 
 Expect roughly these classes:
-- `impacts:` in a `dice` fixture → rename to `wounds:`, and revalue (d6 faces → d10 faces; a `1` still fails, a `6` may no longer pass — use `10` to force a wound and `1` to force a failure)
+- `impacts:` in a `dice` fixture → rename to `wounds:`, and revalue (d6 faces → d10 faces; a `1` still fails, a `6` may no longer pass, use `10` to force a wound and `1` to force a failure)
 - `meleeLand` / `meleeMiss` fixtures (`game-state.test.js:4291-4292`) → `{ toHit: [6, 6], wounds: [10, 10], location: 1 }` and `{ toHit: [1, 1], wounds: [1, 1], location: 1 }`
 - assertions on `.tier` / `direct` / `severe` / `critical` → delete; assert `.sp` instead
 - `impactSeverity` unit tests in `rules.test.js` → delete (Task 1 replaced them)
@@ -996,7 +996,7 @@ Blast is the last caller of the old model (`D6 + STR 10` vs an armour row).
 
 - [ ] **Step 1: Write the failing test**
 
-There is no blast helper in the suite — build the room from the existing `makeRoom`/`makeRig`
+There is no blast helper in the suite, build the room from the existing `makeRoom`/`makeRig`
 helpers already used in `game-state.test.js`, and grep an existing blast test first to copy its
 setup shape:
 
@@ -1029,7 +1029,7 @@ Replace lines 3431-3439:
 
 ```js
         const loc = hitLocation(t.kind || "rig", rollD(12, a.dice?.location?.[name], options.random));
-        // §9 — Blast is a flat STR 8 shot (rescaled with the weapon ladder) at
+        // §9, Blast is a flat STR 8 shot (rescaled with the weapon ladder) at
         // D2, wounding on a d10 like any other attack.
         const die = rollD(WOUND_DIE, a.dice?.wounds?.[name], options.random);
         const tough = toughnessOf(t.kind || "rig", loc, t.weightClass);
@@ -1069,11 +1069,11 @@ git commit -m "feat(combat): blast resolves on the wound roll"
 - [ ] **Step 1: Write it**
 
 ```js
-test("no dead zones — every weapon can wound every location of every class", () => {
+test("no dead zones, every weapon can wound every location of every class", () => {
   // The impact-total model had 69 combos that could NEVER deal damage at any
   // roll: its total capped at `6 + STR + arc` and melee had no arc ladder. The
   // wound roll's TN clamps at 10, so a natural 10 always wounds. If this test
-  // ever fails, that guarantee has been broken — check woundTarget's clamp.
+  // ever fails, that guarantee has been broken, check woundTarget's clamp.
   const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
   const classes = ["light", "medium", "heavy", "colossal"];
   const dead = [];
@@ -1093,7 +1093,7 @@ test("no dead zones — every weapon can wound every location of every class", (
   assert.deepEqual(dead, []);
 });
 
-test("no dead zones — the light saw vs a medium hull, the case that started this", () => {
+test("no dead zones, the light saw vs a medium hull, the case that started this", () => {
   const w = WEAPONS.melee["Circular Saw"];
   const str = w.str + WEIGHT_STR_MOD.light;          // 5 - 1 = 4
   const t = toughnessOf("rig", "hull", "medium");    // 5
@@ -1147,7 +1147,7 @@ Apply the Task 3 table to any weapon stats duplicated in `content/chassis.json` 
 - [ ] **Step 4: Verify**
 
 Run: `npm test`
-Expected: PASS — both vitest and the node suite.
+Expected: PASS, both vitest and the node suite.
 
 - [ ] **Step 5: Commit**
 
@@ -1170,7 +1170,7 @@ Expected: PASS, no skips.
 
 - [ ] **Step 2: Drive the app**
 
-Use the `verify` skill, or: start the dev server, commission a light Rig with a Circular Saw, attack a medium Rig's hull, and confirm the panel shows a wound die and can deal damage. **This is the bug from the original report** — it must now be possible.
+Use the `verify` skill, or: start the dev server, commission a light Rig with a Circular Saw, attack a medium Rig's hull, and confirm the panel shows a wound die and can deal damage. **This is the bug from the original report**: it must now be possible.
 
 - [ ] **Step 3: Confirm no stale references**
 

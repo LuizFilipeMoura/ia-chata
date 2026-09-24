@@ -8,7 +8,7 @@ import { createStore } from "../store.js";
 import { createGameRouter } from "./game.js";
 import { CHASSIS, claimSide, applyCommand } from "../../shared/game-state.js";
 
-// Two real catalogue chassis — HTTP adds go through enforceChassis, which only
+// Two real catalogue chassis, HTTP adds go through enforceChassis, which only
 // admits canonical loadouts.
 const CH = CHASSIS[0];
 
@@ -70,7 +70,7 @@ test("POST /command applies a legal command with 200", async () => {
 
 test("POST /command returns 409 with a reason when the command isn't applied", async () => {
   await seedActivation("R409");
-  // Def is not the active unit — the action is a no-op and must be rejected.
+  // Def is not the active unit, the action is a no-op and must be rejected.
   const res = await post("/api/game/R409/command", { cmd: { verb: "action", attrs: { name: "Def", action: "move" } }, side: "a" });
   assert.equal(res.status, 409);
   const body = await res.json();
@@ -176,7 +176,7 @@ test("a human starts a match against a bot over HTTP and the bot plays out", asy
   assert.equal(botRigs.length, 2);
   assert.equal(body.state.game.started, true);
   // The human readied first, so side a is the SECOND activator and holds the
-  // opening Answer token. driveBots correctly stalls at that human-owned gate — no
+  // opening Answer token. driveBots correctly stalls at that human-owned gate, no
   // bot has activated yet. This documents why the next step is needed.
   assert.equal(body.state.game.pendingAnswer?.side, "a");
   assert.ok(body.state.rigs.filter((r) => (r.owner || "a") === "b").every((r) => !r.activated),
@@ -197,7 +197,7 @@ test("a human starts a match against a bot over HTTP and the bot plays out", asy
 
 test("a default physical room becomes digital via setbot and starts a digital game", async () => {
   const room = store.getOrCreateRoom("MODEHTTP");
-  // NOTE: room.mode is NOT set here — it defaults to physical.
+  // NOTE: room.mode is NOT set here, it defaults to physical.
   claimSide(room, { name: "Human", side: "a" });
   claimSide(room, { name: "Bot", side: "b" });
   const light = CHASSIS.filter((c) => c.class === "light");

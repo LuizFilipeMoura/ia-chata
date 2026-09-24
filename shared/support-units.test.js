@@ -63,7 +63,7 @@ test("A plain tank (no modules) is unchanged: single flat-pick weapon, empty mod
 test("Support units must carry exactly two distinct modules or fail to build", () => {
   assert.equal(makeUnit("tank", 4, "X", "a", { unit: "Tank Cannon", modules: ["damage"] }), null);
   assert.equal(makeUnit("tank", 5, "X", "a", { unit: "Tank Cannon", modules: ["damage", "repair", "recon"] }), null);
-  // A damage-less support unit with a bogus opts.unit still builds — it uses the Sidearm.
+  // A damage-less support unit with a bogus opts.unit still builds, it uses the Sidearm.
   assert.ok(makeUnit("walker", 6, "X", "a", { modules: ["repair", "coolant"], unit: "nonsense" }));
   // A damage support unit with an invalid gun fails (no weapon to fit).
   assert.equal(makeUnit("tank", 7, "X", "a", { modules: ["damage", "recon"], unit: "nonsense" }), null);
@@ -102,8 +102,8 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
   const before = room.rigs[1].hull.sp;
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
     target: "Ally", loc: "hull", dice: { weld: 4 } } }, {});
-  assert.equal(room.rigs[1].hull.sp, before); // no heal — module missing
-  assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
+  assert.equal(room.rigs[1].hull.sp, before); // no heal, module missing
+  assert.equal(room.game.turn.actionsUsed, 0); // rejected, no budget spent
   // Enemy target rejected even with the module:
   room.rigs[0].modules = ["repair", "recon"];
   room.rigs[1].owner = "b";
@@ -111,7 +111,7 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
     target: "Ally", loc: "hull", dice: { weld: 4 } } }, {});
   assert.equal(room.rigs[1].hull.sp, 3); // enemy not healed
-  assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
+  assert.equal(room.game.turn.actionsUsed, 0); // rejected, no budget spent
 });
 
 test("Field Weld can't resurrect a destroyed ally", () => {
@@ -122,9 +122,9 @@ test("Field Weld can't resurrect a destroyed ally", () => {
   applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "fieldweld",
     target: "Ally", loc: "hull", dice: { weld: 4 } } }, {});
-  assert.equal(ally.destroyed, true); // still dead — not revived
+  assert.equal(ally.destroyed, true); // still dead, not revived
   assert.equal(ally.hull.sp, 0); // no SP welded on
-  assert.equal(room.game.turn.actionsUsed, 0); // rejected — no budget spent
+  assert.equal(room.game.turn.actionsUsed, 0); // rejected, no budget spent
 });
 
 test("Vent drops 2 heat off an allied rig; refuses cold targets", () => {
@@ -162,7 +162,7 @@ test("Paint marks an enemy; mark records painter and clears on the painter's nex
   assert.deepEqual(enemy.painted, { by: "a", painterId: 1 });
   assert.equal(room.game.turn.actionsUsed, 1);
 
-  // End Welder's activation, reset the turn, re-activate it — the mark clears.
+  // End Welder's activation, reset the turn, re-activate it, the mark clears.
   room.rigs[0].activated = false;
   room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 0, longRangeShots: 0 };
   applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
@@ -182,10 +182,10 @@ test("Paint requires the recon module and refuses friendly targets", () => {
   applyCommand(friendly, { verb: "activate", attrs: { name: "Welder" } }, {});
   applyCommand(friendly, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Ally" } }, {});
   assert.equal(friendly.rigs[1].painted ?? null, null); // ally not marked
-  assert.equal(friendly.game.turn.actionsUsed, 0); // rejected — no budget spent
+  assert.equal(friendly.game.turn.actionsUsed, 0); // rejected, no budget spent
 });
 
-test("A Recon unit holds one mark — a new Paint replaces the painter's old mark", () => {
+test("A Recon unit holds one mark, a new Paint replaces the painter's old mark", () => {
   const room = twoAllyRoom();
   const foe1 = makeUnit("tank", 3, "Foe1", "b", { unit: "Tank Cannon" });
   const foe2 = makeUnit("tank", 4, "Foe2", "b", { unit: "Tank Cannon" });
@@ -193,7 +193,7 @@ test("A Recon unit holds one mark — a new Paint replaces the painter's old mar
   applyCommand(room, { verb: "activate", attrs: { name: "Welder" } }, {});
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Foe1" } }, {});
   assert.deepEqual(foe1.painted, { by: "a", painterId: 1 });
-  // Same activation, paint a second enemy — the first mark is dropped.
+  // Same activation, paint a second enemy, the first mark is dropped.
   applyCommand(room, { verb: "action", attrs: { name: "Welder", action: "paint", target: "Foe2" } }, {});
   assert.equal(foe1.painted, null);
   assert.deepEqual(foe2.painted, { by: "a", painterId: 1 });
@@ -203,7 +203,7 @@ test("a destroyed painter's mark stops helping allied guns", () => {
   // Threshold shot: Tank Cannon peak Accuracy 2, attacker BASE_AIM 4, cover 2, one to-hit
   // die of 2. Unpainted modAim = 4 (die 2 misses); a live paint cancels cover
   // and adds +1 Aim -> modAim 1 (die 2 lands). So the same die hits iff the
-  // paint is honoured — which it must NOT be once the painter (id 1) is dead.
+  // paint is honoured, which it must NOT be once the painter (id 1) is dead.
   function firePaintedFoe(painterDestroyed) {
     const room = twoAllyRoom(); // rigs[0]=Welder(id 1), rigs[1]=Ally(id 2), both owner "a"
     const foe = makeUnit("tank", 3, "Foe", "b", { unit: "Tank Cannon" });

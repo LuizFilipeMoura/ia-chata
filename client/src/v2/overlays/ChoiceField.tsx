@@ -10,7 +10,7 @@ interface ChoiceFieldProps {
   onChange: (v: string) => void;
 }
 
-// Native V2 port of V1's ChoiceField — a segmented option row. Built on the
+// Native V2 port of V1's ChoiceField, a segmented option row. Built on the
 // shared `.v2-field`/`.v2-field-seg`/`.v2-opt` primitives (primitives.css), so
 // the V2 overlay stylesheet only carries this field's unique padding/typography.
 export default function ChoiceField({ label, icon, options, value, onChange }: ChoiceFieldProps) {

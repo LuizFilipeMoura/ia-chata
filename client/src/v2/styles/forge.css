@@ -1,8 +1,8 @@
-/* Forge / Commission wizard — every selector scoped under .v2-root so V2 styles
+/* Forge / Commission wizard, every selector scoped under .v2-root so V2 styles
    never leak into V1. Ports oil-iron-terminal.html lines 224-308 (step rail, kind
    cards, chassis roster, upgrade bay, equipment grid, confirm rows, nav bar).
    Shell (scrim/card), eyebrow/title text, the CTA button, and selected-state
-   rings are built on primitives.css — see that file for the shared recipe. */
+   rings are built on primitives.css, see that file for the shared recipe. */
 
 /* ---- modal frame -------------------------------------------------------- */
 .v2-root .v2-fw-scrim {
@@ -37,7 +37,7 @@
 }
 /* .22em, not the .3em the other eyebrows carry: this tag is a fixed 27-character
    string sharing its line with the close button, and at .3em it can't fit beside
-   it on a phone — it wraps to an orphaned final letter. Tightened just enough to
+   it on a phone, it wraps to an orphaned final letter. Tightened just enough to
    hold one line down to the narrowest supported width. */
 .v2-root .v2-fw-order { letter-spacing: .22em; margin-bottom: 5px; }
 .v2-root .v2-fw-title { margin: 0 0 4px; font-size:var(--v2-text-2xl); }
@@ -137,7 +137,7 @@
   font-family: var(--v2-disp); font-size:var(--v2-text-sm); line-height: 1.5; color: var(--v2-txt-faint); margin-top: 2px;
 }
 
-/* right stat rail — machine dossier readout */
+/* right stat rail, machine dossier readout */
 .v2-root .v2-fc-rail {
   flex: 0 0 auto; display: flex; align-items: stretch;
   border-left: 1px solid var(--v2-line); background: rgba(0, 0, 0, .18);
@@ -158,7 +158,7 @@
   color: var(--v2-on-oil); background: var(--v2-oil); padding: 2px 6px;
 }
 
-/* Standard/Custom mode panel — expands under the selected chassis card and owns
+/* Standard/Custom mode panel, expands under the selected chassis card and owns
    advancement (footer carries Back only on this step). */
 .v2-root .v2-fc-mode-panel {
   display: flex; flex-direction: column; gap: 10px; padding: 12px;
@@ -264,7 +264,7 @@
   .v2-root .v2-fc-stat { flex: 1; }
 }
 
-/* Upgrade ladder — volatility slider + payoff/catch panel */
+/* Upgrade ladder, volatility slider + payoff/catch panel */
 .v2-root .v2-ul { padding: 14px 15px; }
 .v2-root .v2-ul + .v2-ul { border-top: 1px solid var(--v2-line-soft); }
 .v2-root .v2-ul-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }

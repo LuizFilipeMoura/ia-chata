@@ -1,4 +1,4 @@
-# V2 Phase I — Quartermaster Chat (native panel)
+# V2 Phase I, Quartermaster Chat (native panel)
 
 **Date:** 2026-07-11 · **Status:** Approved · **Depends on:** A–D; Phase J glossary for term highlighting (can land after with a plain-text fallback). See overview.
 
@@ -10,7 +10,7 @@ V1 chat **logic** (message store + streaming + speech) and rewriting only the pr
 ## Replaces
 
 `components/chat/ChatPanel.tsx` + `MessageList.tsx` + `Bubble.tsx` + `ChatInput.tsx` +
-`SuggestedPrompts.tsx` — for V2. **Reuses unchanged:** `chat/ChatContext.tsx` (`ChatProvider`,
+`SuggestedPrompts.tsx`: for V2. **Reuses unchanged:** `chat/ChatContext.tsx` (`ChatProvider`,
 `useChat`), `hooks/useChatStream.ts` (streams `/api/chat`, parses `[[RIG …]]` tags → real commands),
 `hooks/useSpeech.ts` (mic + TTS).
 
@@ -32,7 +32,7 @@ client/src/v2/
 - `V2ChatMount` (Phase D) swaps its `ChatPanel` import from V1 to `../chat/ChatPanel`; everything else
   (ChatProvider, unread flagging) stays.
 - Bot markdown via the existing `markdownToHtml`; bot plain seed bubbles use V2 `GlossaryText`
-  (Phase J) for term highlighting — until J lands, render plain text.
+  (Phase J) for term highlighting, until J lands, render plain text.
 
 ## Behavior
 

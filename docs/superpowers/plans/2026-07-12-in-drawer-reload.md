@@ -14,16 +14,16 @@
 
 ## File Structure
 
-- `shared/game-state.js` — `performAction`: new `reload` branch (free + d6 heat for heat kinds; 1 action for cold), placed before the budget gate; old reload clause removed.
-- `shared/game-state.test.js` — reload cost/heat tests; fix the one existing test that asserts the old 3-action count.
-- `shared/rules.js` — comment that `ACTIONS.reload` heat/slot are non-authoritative.
-- `rules.md` — §7 reload rule text.
-- `shared/battle-view.js` — unify spent to `loaded.longRange`; drop `reload` from `ACTION_ORDER`; keep `fire` enabled while spent, disable `aimed`; remove now-dead `meleeReady`/`reload` code.
-- `shared/battle-view.test.js` — update the reload/spent/flat-pick tests to the new behavior.
-- `client/src/v2/battle/ActionConsole.tsx` — remove `reload` from the Attack group keys + glyph map.
-- `client/src/v2/overlays/AttackWizard.tsx` — `Field` `optDisabled`; live-rig + `justReloaded`; `rangedSpent`; reload banner + CTA adaptation; manual-dice reload; picker disabling; auto-select on reload.
-- `client/src/v2/overlays/AttackWizard.test.tsx` — spent → disabled chip + Reload dispatch; no-melee → Reload CTA.
-- `client/src/v2/styles/wizards.css` — disabled weapon chip + reload banner/button.
+- `shared/game-state.js`: `performAction`: new `reload` branch (free + d6 heat for heat kinds; 1 action for cold), placed before the budget gate; old reload clause removed.
+- `shared/game-state.test.js`: reload cost/heat tests; fix the one existing test that asserts the old 3-action count.
+- `shared/rules.js`: comment that `ACTIONS.reload` heat/slot are non-authoritative.
+- `rules.md`: §7 reload rule text.
+- `shared/battle-view.js`: unify spent to `loaded.longRange`; drop `reload` from `ACTION_ORDER`; keep `fire` enabled while spent, disable `aimed`; remove now-dead `meleeReady`/`reload` code.
+- `shared/battle-view.test.js`: update the reload/spent/flat-pick tests to the new behavior.
+- `client/src/v2/battle/ActionConsole.tsx`: remove `reload` from the Attack group keys + glyph map.
+- `client/src/v2/overlays/AttackWizard.tsx`: `Field` `optDisabled`; live-rig + `justReloaded`; `rangedSpent`; reload banner + CTA adaptation; manual-dice reload; picker disabling; auto-select on reload.
+- `client/src/v2/overlays/AttackWizard.test.tsx`: spent → disabled chip + Reload dispatch; no-melee → Reload CTA.
+- `client/src/v2/styles/wizards.css`: disabled weapon chip + reload banner/button.
 
 ---
 
@@ -95,7 +95,7 @@ test("cold kinds pay 1 action to reload and take no heat", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test --test-name-pattern="reload is free for heat|reload heat is \+1|can reload with no actions|cold kinds pay 1 action" shared/game-state.test.js`
-Expected: FAIL — heat kinds currently spend an action (actionsUsed changes) and add only the flat `def.heat`; cold reload hits the budget-gated old path.
+Expected: FAIL, heat kinds currently spend an action (actionsUsed changes) and add only the flat `def.heat`; cold reload hits the budget-gated old path.
 
 - [ ] **Step 3: Insert the new reload branch before the budget gate**
 
@@ -113,8 +113,8 @@ Insert the reload branch between the closing `}` and `const def`:
 ```js
     return true;
   }
-  // Reload (§7) — arm the ranged weapon so it can fire again. RULE: reload no
-  // longer spends an action. Heat kinds pay heat instead — a d6 gamble (1-3 →
+  // Reload (§7), arm the ranged weapon so it can fire again. RULE: reload no
+  // longer spends an action. Heat kinds pay heat instead, a d6 gamble (1-3 →
   // +2, 4-6 → +1). Heatless cold kinds (Tank / Walker) can't be charged heat, so
   // they keep the old 1-action price. Sits BEFORE the budget gate below so a free
   // heat-kind reload works even at 0 actions left.
@@ -135,7 +135,7 @@ Insert the reload branch between the closing `}` and `const def`:
       kind: "reload", actor: rig.owner, rigId: rig.id,
       rolls: heatKind ? [{ sides: 6, value: roll, label: "D6" }] : [],
       summary: heatKind
-        ? `${rig.name} reloads — rolled ${roll} → +${heat} heat`
+        ? `${rig.name} reloads, rolled ${roll} → +${heat} heat`
         : `${rig.name} reloads (1 action).`,
       effects: [],
     });
@@ -183,7 +183,7 @@ Expected: PASS (5 tests).
 - [ ] **Step 7: Run the full game-state suite for regressions**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — no failures.
+Expected: PASS, no failures.
 
 - [ ] **Step 8: Commit**
 
@@ -243,7 +243,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ---
 
-## Task 3: battle-view — single reload path
+## Task 3: battle-view, single reload path
 
 **Files:**
 - Modify: `shared/battle-view.js` (lines ~7, ~14-22, ~40-55)
@@ -291,7 +291,7 @@ Replace `test("Flat-pick fired: 'reload' enabled, 'fire' disabled", ...)` with:
 ```js
 test("Flat-pick fired: Fire stays live (drawer reload) and reload is not a tile", () => {
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
-  tank.loaded = { longRange: false }; // just fired — spent signal is loaded.longRange
+  tank.loaded = { longRange: false }; // just fired, spent signal is loaded.longRange
   const actions = availableActions(tank, { actionsMax: 2, actionsUsed: 1, longRangeShots: 1 });
   const fire = actions.find((a) => a.key === "fire");
   assert.equal(fire.enabled, true);                  // opens the reload drawer
@@ -302,7 +302,7 @@ test("Flat-pick fired: Fire stays live (drawer reload) and reload is not a tile"
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — production still lists `reload`, still gates flat-pick spent on `loaded.unit`, and still disables `fire` when spent with no melee.
+Expected: FAIL, production still lists `reload`, still gates flat-pick spent on `loaded.unit`, and still disables `fire` when spent with no melee.
 
 - [ ] **Step 3: Drop `reload` from ACTION_ORDER**
 
@@ -328,7 +328,7 @@ Find (~line 14-22):
     ? rig.loaded?.unit === false
     : rig.loaded?.longRange === false;
   // Melee never reloads, so a spent ranged weapon still leaves a melee strike on
-  // the table — Fire stays live (flat-pick kinds carry no separate melee slot).
+  // the table, Fire stays live (flat-pick kinds carry no separate melee slot).
   const meleeReady = cfg.weaponMode !== "flat-pick"
     && !!rig.weapons?.melee
     && !(rig.weaponsDestroyed || []).includes(rig.weapons.melee);
@@ -367,7 +367,7 @@ Find (~line 47-55):
           if (!(key === "fire" && meleeReady)) enabled = false;
         } else if (firedRanged) {
           heat = def.heat + 1;
-          note = "Second shot — +1 heat"; // surcharge rule, not obvious from the total
+          note = "Second shot, +1 heat"; // surcharge rule, not obvious from the total
         }
       }
 ```
@@ -382,7 +382,7 @@ Replace with:
           if (key === "aimed") enabled = false;
         } else if (firedRanged) {
           heat = def.heat + 1;
-          note = "Second shot — +1 heat"; // surcharge rule, not obvious from the total
+          note = "Second shot, +1 heat"; // surcharge rule, not obvious from the total
         }
       }
 ```
@@ -530,7 +530,7 @@ Replace with:
 In `client/src/v2/styles/wizards.css`, append:
 
 ```css
-/* A spent weapon can't be picked until it's reloaded — read it as inert iron. */
+/* A spent weapon can't be picked until it's reloaded, read it as inert iron. */
 .v2-aw-opt.is-disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -542,7 +542,7 @@ In `client/src/v2/styles/wizards.css`, append:
 - [ ] **Step 4: Verify the wizard still renders**
 
 Run: `npx vitest run client/src/v2/overlays/AttackWizard.test.tsx`
-Expected: PASS (existing test unaffected — `optDisabled` is optional).
+Expected: PASS (existing test unaffected, `optDisabled` is optional).
 
 - [ ] **Step 5: Commit**
 
@@ -629,7 +629,7 @@ test("spent with no melee makes the primary CTA a Reload", async () => {
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `npx vitest run client/src/v2/overlays/AttackWizard.test.tsx`
-Expected: FAIL — no disabled Autocannon button and no Reload button yet (the drawer opens on melee, CTA reads "Fire").
+Expected: FAIL, no disabled Autocannon button and no Reload button yet (the drawer opens on melee, CTA reads "Fire").
 
 - [ ] **Step 3: Add live-rig, justReloaded, heatKind, rangedSpent**
 
@@ -695,7 +695,7 @@ Replace with (note `actionsLeft` now lives here from the move above):
   const rangedWeaponName = flat ? weapons.unit : weapons.longRange;
   const hasMelee = !flat && !!weapons.melee
     && !(rig.weaponsDestroyed || []).includes(weapons.melee as string);
-  // With no live melee, the drawer has nothing to fire — Reload becomes the CTA.
+  // With no live melee, the drawer has nothing to fire, Reload becomes the CTA.
   const reloadIsPrimary = rangedSpent && !hasMelee;
   const reloadEnabled = heatKind ? true : actionsLeft() > 0;
   const reloadLabel = heatKind
@@ -716,12 +716,12 @@ Replace with (note `actionsLeft` now lives here from the move above):
 
 - [ ] **Step 5: Replace the range/CTA computation block**
 
-Find the block that starts with `// Effective-range readout + go button — mirrors update()...` and ends at the close of the `{ ... }` scope (the block computing `rangeHtml`, `rangeState`, `goText`, `goDisabled`, `dicePreview` — through the line that sets `goText = outOfRange ? "Out of range" : spent ? "Reload first" : ...`). Replace the entire block with:
+Find the block that starts with `// Effective-range readout + go button, mirrors update()...` and ends at the close of the `{ ... }` scope (the block computing `rangeHtml`, `rangeState`, `goText`, `goDisabled`, `dicePreview`: through the line that sets `goText = outOfRange ? "Out of range" : spent ? "Reload first" : ...`). Replace the entire block with:
 
 ```jsx
   // Effective-range readout + go button. The spent ranged weapon can't be the
   // selected slot (it's disabled in the picker), so this only ever describes a
-  // live weapon — except the no-melee case, where the CTA becomes Reload.
+  // live weapon, except the no-melee case, where the CTA becomes Reload.
   let rangeHtml: React.ReactNode = null;
   let rangeState = "ok";
   let goText = "Fire";
@@ -739,7 +739,7 @@ Find the block that starts with `// Effective-range readout + go button — mirr
     const outOfRange = !isMelee && !inRange;
     const rof = profile?.rof || ROF_BY_NAME[weapons[slot] || ""] || 1;
     // A reloaded long-range shot is the activation's SECOND ranged shot, so it
-    // runs the barrel hot (+1 heat) — surfaced honestly on the dice line.
+    // runs the barrel hot (+1 heat), surfaced honestly on the dice line.
     const firedRanged = (game?.turn?.longRangeShots || 0) >= 1;
     const secondShot = !isMelee && firedRanged;
 
@@ -762,9 +762,9 @@ Find the block that starts with `// Effective-range readout + go button — mirr
         penalty <= 0 ? `Sweet spot +${peak}` : `${accHere >= 0 ? "+" : ""}${accHere} · falloff`;
       const gate =
         state.inches < minRange
-          ? <span className="v2-aw-range-warn">Too close — out of range</span>
+          ? <span className="v2-aw-range-warn">Too close, out of range</span>
           : state.inches > maxRange
-            ? <span className="v2-aw-range-warn">Target is out of range — this shot will fail</span>
+            ? <span className="v2-aw-range-warn">Target is out of range, this shot will fail</span>
             : null;
       rangeHtml = (
         <>
@@ -794,12 +794,12 @@ Find the block that starts with `// Effective-range readout + go button — mirr
 
 - [ ] **Step 6: Disable the spent option in the Weapon field**
 
-Find the Weapon `<Field ... />` (search for `label="Weapon"`). Add two props — `optDisabled` and a spent-aware `optDesc`. Change:
+Find the Weapon `<Field ... />` (search for `label="Weapon"`). Add two props, `optDisabled` and a spent-aware `optDesc`. Change:
 
 ```jsx
                 icon={FIELD_ICONS.weapon}
                 optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
-                desc={flat ? "One flat-pick weapon — no weight-class STR scaling." : FIELD_DESC.weapon}
+                desc={flat ? "One flat-pick weapon, no weight-class STR scaling." : FIELD_DESC.weapon}
                 optDesc={weaponDesc}
               />
 ```
@@ -809,7 +809,7 @@ to:
 ```jsx
                 icon={FIELD_ICONS.weapon}
                 optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
-                desc={flat ? "One flat-pick weapon — no weight-class STR scaling." : FIELD_DESC.weapon}
+                desc={flat ? "One flat-pick weapon, no weight-class STR scaling." : FIELD_DESC.weapon}
                 optDisabled={(opt) => rangedSpent && opt === rangedWeaponName}
                 optDesc={(opt) => (rangedSpent && opt === rangedWeaponName ? "Spent · reload" : weaponDesc(opt))}
               />
@@ -890,7 +890,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 Append to `client/src/v2/styles/wizards.css`:
 
 ```css
-/* Spent-weapon reload prompt — an ember-toned iron strip under the weapon picker. */
+/* Spent-weapon reload prompt, an ember-toned iron strip under the weapon picker. */
 .v2-aw-reload {
   display: flex;
   align-items: center;
@@ -925,7 +925,7 @@ Start the app and drive a rig to a spent ranged state:
 2. Open a battle, activate a Rig, Fire its long-range weapon once.
 3. Open Fire again. Confirm: the long-range weapon chip is greyed with `Spent · reload`; the ember reload banner shows `⟳ Reload · +1–2 heat`; the melee Fire CTA still works.
 4. Click Reload. Confirm the long-range chip re-enables and becomes selected, the banner disappears, and the CTA becomes the long-range Fire.
-5. `read_console_messages` (level error) — expect none related to the drawer.
+5. `read_console_messages` (level error), expect none related to the drawer.
 6. `computer {action: "screenshot"}` to capture the spent-and-reload state.
 
 - [ ] **Step 3: Commit**

@@ -1,7 +1,7 @@
-# Stat rename — Accuracy, Penetration, Damage
+# Stat rename, Accuracy, Penetration, Damage
 
 **Date:** 2026-07-16
-**Status:** approved, not implemented. **Handoff spec — written for an engineer with no prior context.**
+**Status:** approved, not implemented. **Handoff spec, written for an engineer with no prior context.**
 **Blocks:** `2026-07-16-penetration-rework-design.md`, which is written in this vocabulary.
 
 ---
@@ -34,14 +34,14 @@ Three reasons, in descending order of how much they will bite you.
 
 **1. The to-hit axis has three names and two of them are different things.**
 
-- **Aim** — the D6 target number. `modAim`, base 4. **Lower is better.**
-- **ACC** — the modifier space that moves it. **Higher is better.**
-- **Aimed** — the *action* (an aimed shot, at −2).
+- **Aim**: the D6 target number. `modAim`, base 4. **Lower is better.**
+- **ACC**: the modifier space that moves it. **Higher is better.**
+- **Aimed**: the *action* (an aimed shot, at −2).
 
 `combat.js:38` states it outright:
 
 ```js
-// §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
+// §7.4, modified Aim (the D6 target number). Higher ACC lowers the number.
 ```
 
 and `combat.js:42` exists purely to warn the next reader:
@@ -56,13 +56,13 @@ A comment that exists to protect a sign convention is a naming bug with a
 bandage on it.
 
 **2. `STR` is a fantasy-wargame name bolted onto an anti-armour rating.** The
-wound step is a penetration roll — `shared/rules.js` computes
+wound step is a penetration roll, `shared/rules.js` computes
 `clamp(2, 10, 6 + T − effStr)` and the balance docs already argue about it in
 World of Tanks vocabulary (pen vs alpha) while the code says STR vs D. The docs
 and the code disagree about what the game *is*.
 
 **3. `d` is a one-letter field name for one of the four numbers that define a
-weapon.** It is not a die — `combat.js:566` spends it as a flat integer:
+weapon.** It is not a die, `combat.js:566` spends it as a flat integer:
 
 ```js
 sp = (profile.d || 1) + rend + evisc + overmatch;
@@ -79,10 +79,10 @@ Every reader has to learn that `d` is not a d-something.
 | today | after | notes |
 |---|---|---|
 | `str` (weapon field) | `pen` | on `WEAPONS`, `UNIT_WEAPONS` |
-| `effStr` | `effPen` | `combat.js:532` — the sum of ~15 contributions |
+| `effStr` | `effPen` | `combat.js:532`: the sum of ~15 contributions |
 | `WEIGHT_STR_MOD` | `WEIGHT_PEN_MOD` | `rules.js:64` |
 | `BLAST_STR` | `BLAST_PEN` | `game-state.js` §9 cook-off |
-| `strOvermatchD` | — | **deleted** by the rework spec; see "Sequencing" |
+| `strOvermatchD` |, | **deleted** by the rework spec; see "Sequencing" |
 | `d` (weapon field) | `dmg` | on `WEAPONS`, `UNIT_WEAPONS` |
 | `BLAST_D` | `BLAST_DMG` | |
 | `acc` (weapon field) | `accuracy` | melee-only scalar pair; `combat.js:31` |
@@ -106,7 +106,7 @@ Every reader has to learn that `d` is not a d-something.
 ## What to touch
 
 `str`/`STR` appears across `shared/`, `server/`, `client/src/` and `scripts/`.
-Do not trust a bare `grep -r str` — it matches `String`, `strict`, `construct`
+Do not trust a bare `grep -r str`: it matches `String`, `strict`, `construct`
 and hundreds of unrelated identifiers. Anchor your search:
 
 ```bash
@@ -125,10 +125,9 @@ will teach players a vocabulary the game no longer uses.** It is the single
 highest-value file in this diff.
 
 **Upgrade `tag` strings are shared display.** `WEAPON_UPGRADES` and
-`EQUIPMENT_UPGRADES` entries carry a `tag` that many surfaces render **verbatim**
-— the commission wizard, the loadout view, the rig terminal, passive badges.
+`EQUIPMENT_UPGRADES` entries carry a `tag` that many surfaces render **verbatim**: the commission wizard, the loadout view, the rig terminal, passive badges.
 Roughly fifteen of them read `"+2 STR"`, `"+3 STR vs …"`. They must all become
-`"+2 Penetration"` etc. **Do not add metadata to `tag` or restructure it** — it
+`"+2 Penetration"` etc. **Do not add metadata to `tag` or restructure it**: it
 is a display string with many consumers. Change the words inside it, nothing else.
 
 **`shared/glossary.js`** has entries keyed on match strings (`match: ["Rend"]`,
@@ -137,9 +136,9 @@ needs its `term`, `match` and `def` updated together, or the click-to-explain
 surface silently stops matching. `glossary.test.js` will catch a partial job.
 
 **The resolution ledger** emits player-visible labels:
-- `combat.js:894` — `dmgTerms.push({ label: "weapon D", value: first.d })` → `"weapon Damage"`
-- `combat.js:89` — `terms.push({ label: "base aim", value: base })` → stays (it *is* the target number)
-- `combat.js:92` — `` `weapon ACC at ${opts.distance}"` `` → `"weapon Accuracy at …"`
+- `combat.js:894`: `dmgTerms.push({ label: "weapon D", value: first.d })` → `"weapon Damage"`
+- `combat.js:89`: `terms.push({ label: "base aim", value: base })` → stays (it *is* the target number)
+- `combat.js:92`: `` `weapon ACC at ${opts.distance}"` `` → `"weapon Accuracy at …"`
 - the attack `summary` string interpolates `(STR ${str})` → `(Pen ${pen})`
 
 **`client/shared.d.ts`** mirrors the shared types and **is currently dirty in the
@@ -172,7 +171,7 @@ inconsistency is correct and temporary. Do not tidy it.
 | Aim survived | `grep -n modAim shared/combat.js` | still there, still named Aim |
 
 **The sharpest test is that the test suite does not change.** If you find
-yourself editing an expected value, stop — you have made a balance change inside
+yourself editing an expected value, stop, you have made a balance change inside
 a rename, which is the one thing this spec exists to prevent.
 
 ---

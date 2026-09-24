@@ -1,4 +1,4 @@
-# Score Objectives — VP Wizard (design)
+# Score Objectives, VP Wizard (design)
 
 **Date:** 2026-07-05
 **Status:** Approved, ready for planning
@@ -8,7 +8,7 @@
 During the Recovery Phase (§4/§11), each side scores the VP value of every
 objective marker it controls. The backend already supports this: the `vp`
 command runs during the `recovery` phase, records a per-side score, and
-`advanceRound` fires only once **both** sides have submitted — so "only start
+`advanceRound` fires only once **both** sides have submitted, so "only start
 the next round after both players input" is already enforced, and the UI
 already shows *"Waiting for opponent to score…"*.
 
@@ -27,7 +27,7 @@ block on conflicts** (both sides claiming the same marker) before advancing.
 ## Input model (the key idea)
 
 The wizard lists the three markers from `game.objectives` (index 0 = centre,
-2 VP; indices 1–2 = the two empty-corner markers, 1 VP each — per
+2 VP; indices 1–2 = the two empty-corner markers, 1 VP each, per
 `computeObjectives` in `shared/field.js`):
 
 - **Centre · 2 VP**
@@ -45,15 +45,15 @@ The three §11 control outcomes then fall out for free:
   either way).
 - **Both** sides select it → genuine disagreement → **conflict, blocked**.
 
-Players never need a separate "contested" control — a contested marker is
+Players never need a separate "contested" control, a contested marker is
 simply one that *neither* side claims.
 
-## Backend — state shape & command (`shared/game-state.js`)
+## Backend, state shape & command (`shared/game-state.js`)
 
 - Replace the `recoveryVp` boolean map with
-  **`recoveryClaims: Record<side, number[]>`** — the objective indices each
+  **`recoveryClaims: Record<side, number[]>`**: the objective indices each
   side claims. Key-present = that side has submitted.
-- Add **`recoveryConflict: number[] | null`** — indices claimed by both sides,
+- Add **`recoveryConflict: number[] | null`**: indices claimed by both sides,
   set only when both have submitted *and* their claims overlap; `null`
   otherwise.
 - The `vp` command's attrs change from `{ side, points }` to
@@ -69,7 +69,7 @@ simply one that *neither* side claims.
 On each `vp` submit while `phase === "recovery"`:
 
 1. Resolve the acting side (`normalizeSide(a.side)` / context), validate and
-   store `recoveryClaims[side] = claims` — **overwriting** any prior claim so a
+   store `recoveryClaims[side] = claims`: **overwriting** any prior claim so a
    side can **resubmit to fix a conflict**.
 2. If **both** sides have now submitted (both keys present):
    - Compute the overlap of the two claim sets.
@@ -87,17 +87,17 @@ submits are accepted.
 Claims are not secret in a shared-table game, so `recoveryClaims` /
 `recoveryConflict` are visible to both sides in public state (no redaction).
 
-## Client — wizard + wiring
+## Client, wizard + wiring
 
 - **New `client/src/components/wizards/VpWizard.tsx`**, styled like
   `AttackWizard` (reuse the `aw-scrim` / `aw-card` modal shell or a sibling
   stylesheet). Contents:
-  - Title *"⟡ Score Objectives — Round N"*, prompt *"What points do you
+  - Title *"⟡ Score Objectives, Round N"*, prompt *"What points do you
     control?"*
   - The 3 markers as toggle buttons, each with a VP badge, label, and
     position hint matching the FieldMap.
   - Disputed markers (present in `recoveryConflict`) highlighted with a warning
-    (*"You and your opponent both claimed this — one of you must change."*).
+    (*"You and your opponent both claimed this, one of you must change."*).
   - Live total; primary button **"Score X VP"** →
     `sendCommand("vp", { side: mySide(), claims: selectedIndices })`, then
     close.
@@ -108,7 +108,7 @@ Claims are not secret in a shared-table game, so `recoveryClaims` /
 - **`BattleActionsContext.scoreVp`**: call `openScore()` instead of
   `window.prompt`.
 - **`computeFocus`** recovery branch becomes three states for "me":
-  - conflict present → `act` CTA *"Objectives disputed — re-check"*
+  - conflict present → `act` CTA *"Objectives disputed, re-check"*
     (`kind: "score"`, reopens the prefilled wizard with disputed markers
     flagged);
   - submitted, no conflict → `wait` *"Waiting for opponent to score…"*;
@@ -126,16 +126,16 @@ Claims are not secret in a shared-table game, so `recoveryClaims` /
   - resubmit that removes the overlap → advances with correct VP;
   - invalid / out-of-range / duplicate indices dropped; empty claim allowed.
 - **Client**:
-  - `VpWizard.test.tsx` — renders 3 toggles, tallies the total, submits the
+  - `VpWizard.test.tsx`: renders 3 toggles, tallies the total, submits the
     selected indices;
-  - `computeFocus` — the three recovery/conflict states.
+  - `computeFocus`: the three recovery/conflict states.
 
 ## Non-goals / notes
 
 - **Breaking contract change:** the `vp` command drops the scalar `points`
-  attr entirely in favour of `claims`. Acceptable — pre-release, and the only
+  attr entirely in favour of `claims`. Acceptable, pre-release, and the only
   caller is the current `scoreVp`.
 - **Ironclad Bounty** (§11 optional, +2 VP) is out of scope; it scores on rig
   destruction, not during recovery.
-- No AI/agentic involvement — this is a deterministic scoring UI over existing
+- No AI/agentic involvement, this is a deterministic scoring UI over existing
   state.

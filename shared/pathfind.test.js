@@ -28,8 +28,8 @@ test("buildGrid blocks other rigs, inflated by both radii", () => {
   const foe = { pos: { x: 10, y: 10 }, radius: 1.48 };
   const g = buildGrid(FIELD, [], [foe], 1.48);
   assert.equal(isBlocked(g, { x: 10, y: 10 }), true, "on top of it");
-  assert.equal(isBlocked(g, { x: 12.5, y: 10 }), true, "2.5in away — inside 2.96 combined");
-  assert.equal(isBlocked(g, { x: 14, y: 10 }), false, "4in away — clear");
+  assert.equal(isBlocked(g, { x: 12.5, y: 10 }), true, "2.5in away, inside 2.96 combined");
+  assert.equal(isBlocked(g, { x: 14, y: 10 }), false, "4in away, clear");
 });
 
 test("buildGrid blocks the field margin so a base can't hang off the table", () => {
@@ -38,7 +38,7 @@ test("buildGrid blocks the field margin so a base can't hang off the table", () 
   assert.equal(isBlocked(g, { x: 5, y: 10 }), false);
 });
 
-test("buildGrid does NOT block objectives — they are markers, not obstacles", () => {
+test("buildGrid does NOT block objectives, they are markers, not obstacles", () => {
   // Objectives are simply never passed in as polys or blockers. Guard the
   // contract: an empty obstacle set leaves the interior fully open.
   const g = buildGrid(FIELD, [], [], 0);
@@ -57,7 +57,7 @@ test("findPath returns a straight line across open ground", () => {
 test("findPath routes around a wall and costs more than the straight line", () => {
   const wall = { kind: "building", points: [[9, 0], [11, 0], [11, 14], [9, 14]] };
   const r = findPath(OPEN, [wall], [], 0, { x: 5, y: 5 }, { x: 15, y: 5 });
-  assert.ok(r, "reachable — the wall stops short of the far edge");
+  assert.ok(r, "reachable, the wall stops short of the far edge");
   assert.ok(r.length > 10, "must detour");
   assert.ok(r.path.length > 2, "has a corner");
   // Never cuts the corner: no waypoint sits inside the wall.
@@ -72,7 +72,7 @@ test("findPath returns null when the destination is walled off", () => {
 
 test("findPath returns null when the destination is open but sealed off", () => {
   // The two nulls above both short-circuit on a BLOCKED destination. This one
-  // has an open destination that simply cannot be reached — the case the
+  // has an open destination that simply cannot be reached, the case the
   // reachability check actually exists for.
   const room = [
     { kind: "building", points: [[8, 8], [12, 8], [12, 8.5], [8, 8.5]] },
@@ -99,7 +99,7 @@ test("findPath still returns a drawable 2-point path for a pivot in place", () =
   assert.equal(r.length, 0);
 });
 
-test("findPath is deterministic — same inputs, same path", () => {
+test("findPath is deterministic, same inputs, same path", () => {
   const wall = { kind: "building", points: [[9, 0], [11, 0], [11, 14], [9, 14]] };
   const a = findPath(OPEN, [wall], [], 0, { x: 5, y: 5 }, { x: 15, y: 5 });
   const b = findPath(OPEN, [wall], [], 0, { x: 5, y: 5 }, { x: 15, y: 5 });

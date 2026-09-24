@@ -1,10 +1,10 @@
-# Rig Control Terminal — Design Reconciliation Implementation Plan
+# Rig Control Terminal, Design Reconciliation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Bring the live Rig Control Terminal UI back in line with the refreshed `Rig Control Terminal.dc.html` design, fixing every genuine visual/layout/interaction drift while keeping the evolved multiplayer, rules engine, AI chat, and expanded glossary intact.
 
-**Architecture:** The live app is a React + Vite + TS client (`client/src/`) over an Express + WS server that owns authoritative room state (`shared/`, `server/`). This plan is 14 tasks across 9 workstreams from the spec. 12 tasks are client-only (styling + view logic). 2 tasks make **additive** server changes (per-die dice tones in `shared/combat.js`; a `reset` command in `shared/game-state.js`) — additive, never replacing engine behavior.
+**Architecture:** The live app is a React + Vite + TS client (`client/src/`) over an Express + WS server that owns authoritative room state (`shared/`, `server/`). This plan is 14 tasks across 9 workstreams from the spec. 12 tasks are client-only (styling + view logic). 2 tasks make **additive** server changes (per-die dice tones in `shared/combat.js`; a `reset` command in `shared/game-state.js`), additive, never replacing engine behavior.
 
 **Tech Stack:** React 18, TypeScript, Vite, Vitest (client), `node --test` (server/shared), plain CSS with design tokens in `client/src/styles/tokens.css`.
 
@@ -16,12 +16,12 @@
 - Run all tests with `npm test` (Vitest + node --test) unless a narrower command is given.
 - Commit after each task with the message shown. Commits go on the current branch `reconcile-rig-terminal-design`.
 - Design color tokens already exist in `tokens.css` (verified 1:1 by audit). Use the CSS variables (e.g. `var(--oil)` = `#e79a3d`, `var(--oil-hi)` = `#ffbf6a`, `var(--teal)`/`--hp-ok-a` = greens, `var(--ember)`/`--ember-hi`, `var(--rivet)` = `#3a424e`, `var(--line)` = `#2b323d`, `var(--txt-faint)` = `#616a76`). Grep `tokens.css` to confirm a variable name before using it.
-- **Styling steps have no unit test** — their verification is visual, via the preview server (`preview_start` → the app's dev config). Each such step ends with a **Verify** action and a **Commit**.
+- **Styling steps have no unit test**: their verification is visual, via the preview server (`preview_start` → the app's dev config). Each such step ends with a **Verify** action and a **Commit**.
 - **Keep live rulebook copy** (guardrail): do NOT reword accurate strings; only add missing lines / fix wrong labels where the task says so explicitly.
 
 ---
 
-## Task 1: Rig-card Loadout panel — extract `buildLoadout` helper
+## Task 1: Rig-card Loadout panel, extract `buildLoadout` helper
 
 **Workstream:** WS-1. **Files:**
 - Create: `client/src/lib/loadout.ts`
@@ -93,7 +93,7 @@ Run: `grep -nE "^\s*\"|id:|label:|passive:" shared/game-state.js | sed -n '1,80p
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run client/src/lib/loadout.test.ts`
-Expected: FAIL — "Failed to resolve import './loadout'".
+Expected: FAIL, "Failed to resolve import './loadout'".
 
 - [ ] **Step 3: Implement `buildLoadout`**
 
@@ -163,7 +163,7 @@ git commit -m "feat: buildLoadout helper resolving rig loadout for display"
 
 ---
 
-## Task 2: Rig-card Loadout panel — render it
+## Task 2: Rig-card Loadout panel, render it
 
 **Workstream:** WS-1. **Files:**
 - Modify: `client/src/components/rig/RigItem.tsx` (replace the flat `.rig-weapons`/`.rig-equipment` block, lines 88–143)
@@ -195,7 +195,7 @@ Then, where the removed block was (after the `.rig-mods` block, before the `LOCS
           <div className="rig-loadout-slot">Long Range</div>
           <div className="rig-loadout-name">{lo.lr.name}</div>
           <div className="rig-loadout-up">
-            Upgrade · {lo.lr.upName} — <GlossaryText text={lo.lr.upTag} />
+            Upgrade · {lo.lr.upName}, <GlossaryText text={lo.lr.upTag} />
           </div>
         </div>
       </div>
@@ -205,7 +205,7 @@ Then, where the removed block was (after the `.rig-mods` block, before the `LOCS
           <div className="rig-loadout-slot">Melee</div>
           <div className="rig-loadout-name">{lo.melee.name}</div>
           <div className="rig-loadout-up">
-            Upgrade · {lo.melee.upName} — <GlossaryText text={lo.melee.upTag} />
+            Upgrade · {lo.melee.upName}, <GlossaryText text={lo.melee.upTag} />
           </div>
         </div>
       </div>
@@ -220,7 +220,7 @@ Then, where the removed block was (after the `.rig-mods` block, before the `LOCS
             </div>
             <div className="rig-loadout-active">
               Active · {lo.equipment.activeLabel} ({lo.equipment.activeHeat >= 0 ? "+" : ""}
-              {lo.equipment.activeHeat} heat) — <GlossaryText text={lo.equipment.activeText} />
+              {lo.equipment.activeHeat} heat), <GlossaryText text={lo.equipment.activeText} />
             </div>
           </div>
         </div>
@@ -262,7 +262,7 @@ Confirm the font-family variable names (`--font-mono`, `--font-display`) by grep
 - [ ] **Step 3: Verify build + existing tests still pass**
 
 Run: `npx vitest run client/src/components/rig/RigItem.test.tsx`
-Expected: PASS (update the test if it asserted the old `.rig-weapons` text — replace those assertions with the new `.rig-loadout-name` content).
+Expected: PASS (update the test if it asserted the old `.rig-weapons` text, replace those assertions with the new `.rig-loadout-name` content).
 
 - [ ] **Step 4: Visual verify**
 
@@ -277,7 +277,7 @@ git commit -m "feat: rig-card Loadout panel (LR / Melee / Equipment) matching de
 
 ---
 
-## Task 3: Coach banner — computeFocus copy + missing "End turn" state
+## Task 3: Coach banner, computeFocus copy + missing "End turn" state
 
 **Workstream:** WS-3 (logic half). **Files:**
 - Modify: `client/src/lib/computeFocus.ts`
@@ -300,7 +300,7 @@ it("prompts End turn when the active rig has no actions left", () => {
   const f = computeFocus(game, [rig], "a")!;
   expect(f.tone).toBe("act");
   expect(f.primary).toBe("End Stalker's turn");
-  expect(f.secondary).toBe("No actions left — pass to the next Rig.");
+  expect(f.secondary).toBe("No actions left, pass to the next Rig.");
   expect(f.cta).toEqual({ label: "End turn", kind: "endTurn" });
 });
 
@@ -317,11 +317,11 @@ it("keeps the Fire/Move/Reload hint on the next-action line", () => {
 it("gives Roll initiative a secondary round line", () => {
   const game = mkGame({ started: true, phase: "initiative", round: 2 });
   const f = computeFocus(game, [], "a")!;
-  expect(f.secondary).toBe("Round 2 — decide who moves first.");
+  expect(f.secondary).toBe("Round 2, decide who moves first.");
 });
 ```
 
-Match `mkRig`/`mkGame` to the helpers already present in the test file (read the file first; the rig must be named "Stalker" and its `actionBudget` must return `left: 0` for the first test — set `turn.actionsUsed === turn.actionsMax`). If no factory helpers exist, build inline literals mirroring the `Rig`/`GameState` types.
+Match `mkRig`/`mkGame` to the helpers already present in the test file (read the file first; the rig must be named "Stalker" and its `actionBudget` must return `left: 0` for the first test, set `turn.actionsUsed === turn.actionsMax`). If no factory helpers exist, build inline literals mirroring the `Rig`/`GameState` types.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -342,7 +342,7 @@ Replace the `initiative` block (lines 65–70) with:
   if (g.phase === "initiative" && g.round >= 2) {
     return {
       tone: "act", icon: "🎲", primary: "Roll initiative",
-      secondary: `Round ${g.round} — decide who moves first.`,
+      secondary: `Round ${g.round}, decide who moves first.`,
       cta: { label: "Roll", kind: "initiative" },
     };
   }
@@ -357,7 +357,7 @@ Replace the `if (turn.activeRigId) { … }` block (lines 95–102) with:
       if (rig && b && b.left === 0) {
         return {
           tone: "act", icon: "✔", primary: `End ${rig.name}'s turn`,
-          secondary: "No actions left — pass to the next Rig.",
+          secondary: "No actions left, pass to the next Rig.",
           cta: { label: "End turn", kind: "endTurn" },
         };
       }
@@ -370,7 +370,7 @@ Replace the `if (turn.activeRigId) { … }` block (lines 95–102) with:
 
 - [ ] **Step 4: Wire the CTA in `TurnBanner.tsx`**
 
-The banner needs the active rig + `endActivation`. `useBattleActions()` already returns `endActivation` — add it to the destructure (line 17):
+The banner needs the active rig + `endActivation`. `useBattleActions()` already returns `endActivation`: add it to the destructure (line 17):
 
 ```tsx
   const { rollInitiative, resolveBlast, scoreVp, endActivation } = useBattleActions();
@@ -389,7 +389,7 @@ Add a case to the `onCta` switch (after the `score` case, line 68):
 - [ ] **Step 5: Run tests**
 
 Run: `npx vitest run client/src/lib/computeFocus.test.ts`
-Expected: PASS. Also run the full client suite: `npx vitest run` — expected all green.
+Expected: PASS. Also run the full client suite: `npx vitest run`: expected all green.
 
 - [ ] **Step 6: Commit**
 
@@ -400,7 +400,7 @@ git commit -m "feat: coach banner End-turn state + restored secondary lines"
 
 ---
 
-## Task 4: Coach banner — floating-card styling + pulsing glow
+## Task 4: Coach banner, floating-card styling + pulsing glow
 
 **Workstream:** WS-3 (styling half). **Files:**
 - Modify: `client/src/styles/battle.css` (`.turn-banner` and tone rules ~L93–137, `body.my-turn-glow::after` ~L148–153, `tb-flash` ~L141–144)
@@ -419,7 +419,7 @@ In `battle.css`, change `.turn-banner` so it is a centered card inside a full-wi
   padding: 52px 12px 0; box-sizing: border-box;
   pointer-events: none;
 }
-.turn-banner .tb-card { /* NEW wrapper element — see Step 2 */
+.turn-banner .tb-card { /* NEW wrapper element, see Step 2 */
   width: min(448px, 100%); box-sizing: border-box;
   display: flex; align-items: center; gap: .6rem;
   padding: .62rem .85rem; border-radius: 14px;
@@ -535,7 +535,7 @@ Replace the sheet/card rule:
 @keyframes oi-fade { from { opacity: 0; } to { opacity: 1; } }
 ```
 
-(Adjust the selector names `.rw-scrim`/`.rw-sheet` to the actual class names used in `RigWizard.tsx` — read the component first.) Set `.rw-body { min-height: 11rem; }` (was 12rem) and remove the `.rw-upgrade-choices { margin-top: -.25rem; }` negative margin.
+(Adjust the selector names `.rw-scrim`/`.rw-sheet` to the actual class names used in `RigWizard.tsx`: read the component first.) Set `.rw-body { min-height: 11rem; }` (was 12rem) and remove the `.rw-upgrade-choices { margin-top: -.25rem; }` negative margin.
 
 - [ ] **Step 2: Add the drag handle + move dots to their own row (`RigWizard.tsx`)**
 
@@ -563,7 +563,7 @@ where `sp` is resolved from the class defaults for the currently-selected `cls`.
 .rw-sp-preview { font-family: var(--font-mono); font-size: .62rem; color: var(--txt-faint); line-height: 1.4; }
 ```
 
-If the class→SP map isn't already available client-side, add a tiny local constant in `RigWizard.tsx` mirroring `RIG_DEFAULTS`/`HEAT_CAPACITY` (light: hull6 arms5 engine? — read the real values from `game-state.js` and use them exactly; do not invent numbers).
+If the class→SP map isn't already available client-side, add a tiny local constant in `RigWizard.tsx` mirroring `RIG_DEFAULTS`/`HEAT_CAPACITY` (light: hull6 arms5 engine?, read the real values from `game-state.js` and use them exactly; do not invent numbers).
 
 - [ ] **Step 4: Glossify + confirm-row emoji**
 
@@ -576,7 +576,7 @@ In `RigWizard.test.tsx`, add an assertion that the Identity step renders the SP 
 - [ ] **Step 6: Run tests + visual verify**
 
 Run: `npx vitest run client/src/components/wizards/RigWizard.test.tsx` → PASS.
-Preview: open the commission wizard — it should slide up from the bottom, show a drag handle, a full-width dots band, the SP preview under weight class, glossary-highlighted upgrade/equipment text, and emoji confirm rows.
+Preview: open the commission wizard, it should slide up from the bottom, show a drag handle, a full-width dots band, the SP preview under weight class, glossary-highlighted upgrade/equipment text, and emoji confirm rows.
 
 - [ ] **Step 7: Commit**
 
@@ -587,7 +587,7 @@ git commit -m "feat: commission wizard bottom-sheet, SP preview, glossify, confi
 
 ---
 
-## Task 6: Attack sheet — handle, dice-preview strip, blur, Go label
+## Task 6: Attack sheet, handle, dice-preview strip, blur, Go label
 
 **Workstream:** WS-5. **Files:**
 - Modify: `client/src/components/wizards/AttackWizard.tsx`
@@ -601,7 +601,7 @@ In `AttackWizard.tsx`, add `<div className="aw-handle" />` as the first child of
 
 - [ ] **Step 2: Add the dice-preview strip**
 
-Above the Go button, render the preview line (design L380). Compute it from the current selection — mirror `buildAttackView` L982–984: `🎲 Rolls N hit dice (d6)` (+ ` + 1 location die (d12)` when mode is Fire, + ` · +1 to hit` when Aimed). `N` = the weapon's ROF (already available via the profile the wizard uses for the range readout). Markup:
+Above the Go button, render the preview line (design L380). Compute it from the current selection, mirror `buildAttackView` L982–984: `🎲 Rolls N hit dice (d6)` (+ ` + 1 location die (d12)` when mode is Fire, + ` · +1 to hit` when Aimed). `N` = the weapon's ROF (already available via the profile the wizard uses for the range readout). Markup:
 
 ```tsx
 <div className="aw-dice-preview">{dicePreview}</div>
@@ -638,7 +638,7 @@ git commit -m "feat: attack sheet grab handle, dice-preview strip, blur, mode-aw
 
 ---
 
-## Task 7: Move/Sprint drawer — big countdown, READY state, cost note, 8s sprint
+## Task 7: Move/Sprint drawer, big countdown, READY state, cost note, 8s sprint
 
 **Workstream:** WS-2. **Files:**
 - Modify: `client/src/state/BattleActionsContext.tsx` (`MOVE_HOLD_MS`, `MoveBody`)
@@ -705,9 +705,9 @@ git commit -m "feat: move drawer big countdown + READY state + cost note; sprint
 
 ---
 
-## Task 8: Dice overlay — server emits per-die faces + tones
+## Task 8: Dice overlay, server emits per-die faces + tones
 
-**Workstream:** WS-6 (server half — additive). **Files:**
+**Workstream:** WS-6 (server half, additive). **Files:**
 - Modify: `shared/combat.js` (`resolveAttack`, `resolveRam`)
 - Modify: `shared/combat.test.js`
 
@@ -741,7 +741,7 @@ Adapt `makeCtx`, `room`, `attacker`, `target`, and the weapon so ROF is 3 and `m
 - [ ] **Step 2: Run to verify failure**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — current code pushes a single aggregate `{sides:6, value: hits}` roll, no per-die tones.
+Expected: FAIL, current code pushes a single aggregate `{sides:6, value: hits}` roll, no per-die tones.
 
 - [ ] **Step 3: Implement per-die rolls in `resolveAttack`**
 
@@ -776,7 +776,7 @@ Expected: FAIL — current code pushes a single aggregate `{sides:6, value: hits
   });
 ```
 
-Also add a `tone` to the ram roll (line 192): `rolls: [{ sides: 6, value: die, label: "D6", tone: "crit" }],` and, if the ram target die missed vs its severity, `tone: sev.sp > 0 ? "ok" : "miss"` — keep it simple: `tone: sev.sp > 0 ? "ok" : "miss"`.
+Also add a `tone` to the ram roll (line 192): `rolls: [{ sides: 6, value: die, label: "D6", tone: "crit" }],` and, if the ram target die missed vs its severity, `tone: sev.sp > 0 ? "ok" : "miss"`: keep it simple: `tone: sev.sp > 0 ? "ok" : "miss"`.
 
 - [ ] **Step 4: Add `tone` to the `Resolution` type**
 
@@ -788,7 +788,7 @@ In `client/src/state/types.ts`, extend the roll shape:
 
 - [ ] **Step 5: Run server tests + full suite**
 
-Run: `node --test shared/combat.test.js` → PASS. Then `npm test` → all green (fix any test that asserted the old single aggregate roll shape — update it to the new per-die shape).
+Run: `node --test shared/combat.test.js` → PASS. Then `npm test` → all green (fix any test that asserted the old single aggregate roll shape, update it to the new per-die shape).
 
 - [ ] **Step 6: Commit**
 
@@ -799,7 +799,7 @@ git commit -m "feat: combat resolver emits per-die faces + tones for the roll ov
 
 ---
 
-## Task 9: Dice overlay — client tones, Rolling… line, staggered settle
+## Task 9: Dice overlay, client tones, Rolling… line, staggered settle
 
 **Workstream:** WS-6 (client half). **Files:**
 - Modify: `client/src/components/overlays/RollConsole.tsx`
@@ -809,7 +809,7 @@ Consume the new `roll.tone`, add the "Rolling…" status line, tumble each die t
 
 - [ ] **Step 1: Tone each die from the resolution**
 
-In `RollConsole.tsx`, replace the tone logic (~L144–150) that force-toned by `kind`/`sides` with: prefer the per-die `roll.tone` when present; fall back to `sides === 12 ? "cool" : ""`. Ensure the four tone classes map to colors (crit=ember, cool=teal, ok=green, miss=faint) in `battle.css` — add any missing ones:
+In `RollConsole.tsx`, replace the tone logic (~L144–150) that force-toned by `kind`/`sides` with: prefer the per-die `roll.tone` when present; fall back to `sides === 12 ? "cool" : ""`. Ensure the four tone classes map to colors (crit=ember, cool=teal, ok=green, miss=faint) in `battle.css`: add any missing ones:
 
 ```css
 .die[data-tone="crit"] { border-color: var(--ember-hi); box-shadow: 0 0 14px 1px rgba(255,111,82,.6); }
@@ -889,7 +889,7 @@ Confirm the term labels ("Structure Points", "Victory Points") exist in `shared/
 - [ ] **Step 3: Run to verify failure**
 
 Run: `npx vitest run client/src/components/overlays/GlossaryDialog.test.tsx`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 4: Implement `GlossaryDialog.tsx`**
 
@@ -922,7 +922,7 @@ export function GlossaryDialog({ open, onClose }: Props) {
 }
 ```
 
-Confirm `shared/glossary.js` exports `GLOSSARY` (an array) and each entry's field names (`term`, `def`, maybe `full`). If the export name/shape differs, adapt the import + map. (The audit noted entries are `{id, term, match[], def}` with no `full` — so the `full` line simply won't render, which is fine.)
+Confirm `shared/glossary.js` exports `GLOSSARY` (an array) and each entry's field names (`term`, `def`, maybe `full`). If the export name/shape differs, adapt the import + map. (The audit noted entries are `{id, term, match[], def}` with no `full`: so the `full` line simply won't render, which is fine.)
 
 - [ ] **Step 5: Style the dialog (`glossary.css`)**
 
@@ -969,7 +969,7 @@ git commit -m "feat: full Glossary browse-dialog + UI open state"
 In `Topbar.tsx`, after the `RIG CONTROL TERMINAL` sub-label, add a button that opens the glossary via `useUi().setGlossaryOpen(true)`:
 
 ```tsx
-<button type="button" className="topbar-gloss" title="Glossary — what do SP, ROF, ACC mean?" onClick={() => setGlossaryOpen(true)}>ⓘ</button>
+<button type="button" className="topbar-gloss" title="Glossary, what do SP, ROF, ACC mean?" onClick={() => setGlossaryOpen(true)}>ⓘ</button>
 ```
 
 CSS (`app.css`):
@@ -996,7 +996,7 @@ Make each sheet header a `justify-content: space-between` flex row so the chip s
 
 - [ ] **Step 3: Visual verify**
 
-Preview: click the topbar ⓘ, the commission-sheet chip, and the attack-sheet chip — each opens the full Glossary dialog; the ✕ / backdrop closes it.
+Preview: click the topbar ⓘ, the commission-sheet chip, and the attack-sheet chip, each opens the full Glossary dialog; the ✕ / backdrop closes it.
 
 - [ ] **Step 4: Commit**
 
@@ -1007,7 +1007,7 @@ git commit -m "feat: glossary ⓘ triggers in topbar and both bottom-sheets"
 
 ---
 
-## Task 12: Outcome banner — reposition, width, oi-rise, New Battle button
+## Task 12: Outcome banner, reposition, width, oi-rise, New Battle button
 
 **Workstream:** WS-8. **Files:**
 - Modify: `client/src/components/OutcomeBanner.tsx`
@@ -1027,7 +1027,7 @@ Target design: L253–259. Center within the terminal (not the viewport), cap th
 @keyframes oi-rise { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 ```
 
-(Keep the existing border/shadow/colors — they match.) Note the `translateX(-50%)` must be preserved through the keyframes, hence the combined transform above.
+(Keep the existing border/shadow/colors, they match.) Note the `translateX(-50%)` must be preserved through the keyframes, hence the combined transform above.
 
 - [ ] **Step 2: Add the New Battle button (`OutcomeBanner.tsx`)**
 
@@ -1066,8 +1066,8 @@ git commit -m "style: outcome banner centered in terminal, width cap, oi-rise, N
 
 ## Task 13: `reset` battle command (server) + client action
 
-**Workstream:** WS-8 (server half — additive). **Files:**
-- Modify: `shared/game-state.js` (`applyCommand` — add a `reset` verb)
+**Workstream:** WS-8 (server half, additive). **Files:**
+- Modify: `shared/game-state.js` (`applyCommand`: add a `reset` verb)
 - Modify: `shared/game-state.test.js`
 - Modify: `client/src/state/BattleActionsContext.tsx` (add `resetBattle`)
 
@@ -1098,7 +1098,7 @@ Reuse the existing test helpers in the file for building a room / adding rigs / 
 - [ ] **Step 2: Run to verify failure**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `reset` verb is a no-op today.
+Expected: FAIL, `reset` verb is a no-op today.
 
 - [ ] **Step 3: Implement the `reset` verb in `applyCommand`**
 
@@ -1159,7 +1159,7 @@ git commit -m "feat: reset battle command (rematch) + client resetBattle action"
 
 ---
 
-## Task 14: Small-fidelity pass — icons, stage room tag, add-card copy, heat flame, FAB
+## Task 14: Small-fidelity pass, icons, stage room tag, add-card copy, heat flame, FAB
 
 **Workstream:** WS-8 + WS-9. **Files:**
 - Modify: `client/src/state/BattleActionsContext.tsx` (`ACTION_ICONS`)
@@ -1187,7 +1187,7 @@ Ensure `.stage-head` is `display:flex; align-items:baseline; justify-content:spa
 
 - [ ] **Step 3: Add-card locked copy (design L1327–1329)**
 
-In `RigAddScreen.tsx`, when the lineup is full, set the button label to `Ready up ↑` (was `Full`), the hint to `Full lineup of 3 committed — mark ready to deploy.`, keep the button clickable (remove `disabled`), and drop the `.rig-add-locked { opacity: .82 }` dimming in `rig-sheet.css` (keep the solid border).
+In `RigAddScreen.tsx`, when the lineup is full, set the button label to `Ready up ↑` (was `Full`), the hint to `Full lineup of 3 committed, mark ready to deploy.`, keep the button clickable (remove `disabled`), and drop the `.rig-add-locked { opacity: .82 }` dimming in `rig-sheet.css` (keep the solid border).
 
 - [ ] **Step 4: Full-color heat-chip flame (design L104)**
 
@@ -1214,14 +1214,14 @@ git commit -m "style: action icons, stage room tag, add-card copy, heat flame, F
 
 ## Final verification
 
-- [ ] **Run the full suite:** `npm test` — Vitest + `node --test` all green.
-- [ ] **Build:** `npm run build` — no type/build errors.
+- [ ] **Run the full suite:** `npm test`: Vitest + `node --test` all green.
+- [ ] **Build:** `npm run build`: no type/build errors.
 - [ ] **Manual pass:** with the preview server, walk each workstream against the design section-by-section (banner, rig card + loadout, commission sheet, attack sheet, move drawer, dice overlay, glossary dialog + triggers, outcome banner, icons/room-tag/add-card/flame/FAB).
 - [ ] **PR:** open a PR from `reconcile-rig-terminal-design` summarizing the reconciliation (link the spec).
 
 ## Self-review notes (author)
 
 - Spec coverage: WS-1→T1/T2, WS-2→T7, WS-3→T3/T4, WS-4→T5, WS-5→T6, WS-6→T8/T9, WS-7→T10/T11, WS-8→T12/T13 (+icons/room/add-card/flame/FAB in T14), WS-9→T14. All nine workstreams covered.
-- Cross-task type consistency: `buildLoadout` shape (T1) is consumed in T2; `resetBattle` (T13) is consumed by `OutcomeBanner` (T12) — T13 must land before T12's button works (noted); `Resolution.rolls[].tone` added in T8 is consumed in T9; `FocusCtaKind` gains `endTurn` in T3 and is handled in the same task's `TurnBanner` switch.
+- Cross-task type consistency: `buildLoadout` shape (T1) is consumed in T2; `resetBattle` (T13) is consumed by `OutcomeBanner` (T12), T13 must land before T12's button works (noted); `Resolution.rolls[].tone` added in T8 is consumed in T9; `FocusCtaKind` gains `endTurn` in T3 and is handled in the same task's `TurnBanner` switch.
 - Ordering: do T1→T7 (client, low-risk) then T8/T13 (server, additive) then T9/T12 (their client consumers) then T10/T11/T14. T12 depends on T13.
 - Known execution-time confirmations (called out inline): exact ids/keys in `shared/game-state.js`; exact class names in the CSS files; `GlossaryText` prop name; `GLOSSARY` export shape in `shared/glossary.js`; the `applyCommand` version-bump convention.

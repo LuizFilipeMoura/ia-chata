@@ -46,7 +46,7 @@ export function availableActions(rig, turn, round) {
           if (key === "aimed") enabled = false;
         } else if (firedRanged) {
           heat = def.heat + 1;
-          note = "Second shot — +1 heat"; // surcharge rule, not obvious from the total
+          note = "Second shot, +1 heat"; // surcharge rule, not obvious from the total
         }
       }
       if ((key === "move" || key === "sprint") && (rig.engagedWith != null || rig.emplaced)) {
@@ -59,7 +59,7 @@ export function availableActions(rig, turn, round) {
         enabled = left > 0 && (rig.burning || 0) > 0;
       }
       if ((key === "fire" || key === "aimed") && rig.engagedWith != null && !rangedSpent) {
-        note = note ? `${note} · Engaged −2 Aim` : "Engaged — ranged −2 Aim"; // penalty shown nowhere else
+        note = note ? `${note} · Engaged −2 Aim` : "Engaged, ranged −2 Aim"; // penalty shown nowhere else
       }
       // Barrage lockout (§13, Mortar) carries no note: the "Barrage N" status tag
       // already signals the tube is committed and firing falls back to melee.
@@ -73,7 +73,7 @@ export function availableActions(rig, turn, round) {
       enabled: left > 0 && !jjLocked, cost: 1, note: "", // jj lockout shown by "Engaged" tag
     });
   }
-  // Emplacement (§13, Bulwark Shield) — plant / un-plant the fortress stance.
+  // Emplacement (§13, Bulwark Shield), plant / un-plant the fortress stance.
   // Only surfaced for a rig carrying the upgrade (or already rooted).
   const hasEmplace = rig.weaponUpgrades?.melee === "emplacement";
   if (hasEmplace && !rig.emplaced) {
@@ -89,7 +89,7 @@ export function availableActions(rig, turn, round) {
       enabled: left > 0, cost: ACTIONS.unplant.slot, note: "", // heat chip shows +2
     });
   }
-  // Barrage (§13, Mortar) — surfaced only for a Mortar carrying the barrage
+  // Barrage (§13, Mortar), surfaced only for a Mortar carrying the barrage
   // upgrade. Enabled with budget left and no barrage already running; while a
   // barrage is active it's disabled and the tube is locked out of direct fire.
   const hasBarrage = rig.weapons?.longRange === "Mortar" && rig.weaponUpgrades?.longRange === "barrage";
@@ -100,7 +100,7 @@ export function availableActions(rig, turn, round) {
       enabled: left > 0 && !active, cost: ACTIONS.barrage.slot, note: "", // "Barrage N" tag shows it's running
     });
   }
-  // Fire Control Lock (§13, Missile Barrage) — paint a target for one auto-hit
+  // Fire Control Lock (§13, Missile Barrage), paint a target for one auto-hit
   // Armour-Piercing volley. Surfaced only for a Missile Barrage carrying it.
   const hasFireControl = rig.weapons?.longRange === "Missile Barrage" && rig.weaponUpgrades?.longRange === "fire-control-lock";
   if (hasFireControl) {
@@ -109,7 +109,7 @@ export function availableActions(rig, turn, round) {
       enabled: left > 0, cost: ACTIONS.lock.slot, note: "", // "Missiles locked" tag shows a lock is primed
     });
   }
-  // Support-unit module actions (spec: Support Units) — surfaced per module held.
+  // Support-unit module actions (spec: Support Units), surfaced per module held.
   const modules = rig.modules || [];
   if (modules.includes("repair")) {
     list.push({ key: "fieldweld", label: ACTIONS.fieldweld.label, heat: ACTIONS.fieldweld.heat,
@@ -123,9 +123,9 @@ export function availableActions(rig, turn, round) {
     list.push({ key: "paint", label: ACTIONS.paint.label, heat: ACTIONS.paint.heat,
       enabled: left > 0, cost: ACTIONS.paint.slot, note: "" });
   }
-  // Servo Actuators drops Sprint's heat to 1 — Move's own cost. Same heat for
+  // Servo Actuators drops Sprint's heat to 1, Move's own cost. Same heat for
   // 1½× the distance (2× with Reinforced Servos) makes Move strictly dominated,
-  // so hide it — the Move group tile then fires Sprint directly.
+  // so hide it, the Move group tile then fires Sprint directly.
   const sprintAct = list.find((a) => a.key === "sprint");
   if (sprintAct && sprintAct.heat <= ACTIONS.move.heat) {
     const i = list.findIndex((a) => a.key === "move");
@@ -172,8 +172,8 @@ export function rigModifiers(rig) {
   if (rig.lockedTarget != null) mods.push({ key: "locked", tag: "Missiles locked", tone: "prep", gloss: "missiles-locked" });
   if ((rig.actionPenaltyNextActivation || 0) > 0) mods.push({ key: "actionpen", tag: `−${rig.actionPenaltyNextActivation} action next`, tone: "warn", gloss: "action-penalty" });
   if (rig.noPrepNextActivation) mods.push({ key: "noprep", tag: "No Prepare next", tone: "warn", gloss: "no-prepare" });
-  if (rig.noDisengageNextActivation) mods.push({ key: "nodisengage", tag: "Anchored — no Disengage next", tone: "warn", gloss: "anchored" });
-  if (rig.anchoredBy != null) mods.push({ key: "anchored", tag: "Anchored — Disengage costs a hit", tone: "warn", gloss: "anchored" });
+  if (rig.noDisengageNextActivation) mods.push({ key: "nodisengage", tag: "Anchored, no Disengage next", tone: "warn", gloss: "anchored" });
+  if (rig.anchoredBy != null) mods.push({ key: "anchored", tag: "Anchored, Disengage costs a hit", tone: "warn", gloss: "anchored" });
   if (rig.noActivesNextActivation) mods.push({ key: "noactive", tag: "No actives next", tone: "warn", gloss: "no-actives" });
   if (rig.arcLockedNext) mods.push({ key: "arclock", tag: "Arc Gun locked", tone: "warn", gloss: "arc-locked" });
   if (rig.armsSuppressed) mods.push({ key: "armssup", tag: "Arms suppressed · ½ ROF", tone: "warn", gloss: "arms-suppressed" });
@@ -195,7 +195,7 @@ export function rigModifiers(rig) {
   }
   for (const w of rig.weaponsDestroyed || []) mods.push({ key: "weapon", tag: `Weapon lost: ${w}`, tone: "warn", gloss: "weapon-lost" });
   if (rig.loaded && rig.loaded.longRange === false) mods.push({ key: "unloaded", tag: "Ranged unloaded", tone: "warn", gloss: "ranged-unloaded" });
-  // Recon Paint mark (spec: Support Units) — visible so a marked enemy reads
+  // Recon Paint mark (spec: Support Units), visible so a marked enemy reads
   // at a glance (allied ranged attacks ignore its cover + gain +1 Aim).
   if (rig.painted) mods.push({ key: "painted", tag: "Painted", tone: "warn", gloss: "painted" });
   return mods;
@@ -229,7 +229,7 @@ export function phaseSummary(game, rigs) {
 
 export function outcomeText(outcome, sides) {
   if (!outcome) return "";
-  if (!outcome.winner) return "Draw — the wastes keep the scrap.";
+  if (!outcome.winner) return "Draw, the wastes keep the scrap.";
   const name = sides.find((s) => s.id === outcome.winner)?.name || outcome.winner;
   const why = outcome.reason === "annihilation" ? "by annihilation" : "on salvage";
   return `${name} wins ${why}.`;

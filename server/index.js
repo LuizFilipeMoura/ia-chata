@@ -53,7 +53,7 @@ const httpServer = http.createServer(app);
 // broadcasts the new state to every attached socket after each mutation. On
 // connect we immediately send the current snapshot so a reconnecting client
 // (page refresh, dropped socket) rehydrates without waiting for the next
-// mutation — the socket is the client's only state channel after join.
+// mutation, the socket is the client's only state channel after join.
 const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 wss.on("connection", (ws, req) => {
   const url = new URL(req.url, "http://localhost");

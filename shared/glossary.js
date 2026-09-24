@@ -7,7 +7,7 @@
 export const GLOSSARY = [
   {
     id: "rig", term: "Rig", match: ["Rig", "Rigs"],
-    def: "A dieselpunk war machine piloted by an Ironclad. Every Rig has four components — Hull, Arms, Legs, Engine — each with its own Structure Points (§2).",
+    def: "A dieselpunk war machine piloted by an Ironclad. Every Rig has four components, Hull, Arms, Legs, Engine, each with its own Structure Points (§2).",
   },
   {
     id: "ironclad", term: "Ironclad", match: ["Ironclad", "Ironclads"],
@@ -19,7 +19,7 @@ export const GLOSSARY = [
   },
   {
     id: "weight-class", term: "Weight class", match: ["Weight class", "Weight classes"],
-    def: "A Rig's chassis size — Light or Medium — which sets its base Structure Points, Speed, and Heat Capacity (§2).",
+    def: "A Rig's chassis size, Light or Medium, which sets its base Structure Points, Speed, and Heat Capacity (§2).",
   },
   {
     id: "sp", term: "Structure Points", match: ["Structure Points", "SP"],
@@ -55,7 +55,7 @@ export const GLOSSARY = [
   },
   {
     id: "heat-capacity", term: "Heat Capacity", match: ["Heat Capacity"],
-    def: "The heat a Rig can carry safely before an overheat check is required — 6/5/4/3 for Light/Medium/Heavy/Colossal (§6).",
+    def: "The heat a Rig can carry safely before an overheat check is required, 6/5/4/3 for Light/Medium/Heavy/Colossal (§6).",
   },
   {
     id: "accuracy", term: "Accuracy", match: ["Accuracy", "ACC"],
@@ -63,11 +63,11 @@ export const GLOSSARY = [
   },
   {
     id: "rof", term: "ROF", match: ["ROF"],
-    def: "Rate of Fire — the number of D6 a weapon rolls when firing (§12).",
+    def: "Rate of Fire, the number of D6 a weapon rolls when firing (§12).",
   },
   {
     id: "penetration", term: "Penetration", match: ["Penetration", "STR"],
-    def: "A weapon's strength, subtracted from the Wound Roll's target — each point makes wounding 10% likelier, until the roll bottoms out at 2+ and further Penetration is wasted (§7.5, §12).",
+    def: "A weapon's strength, subtracted from the Wound Roll's target, each point makes wounding 10% likelier, until the roll bottoms out at 2+ and further Penetration is wasted (§7.5, §12).",
   },
   {
     id: "rng", term: "RNG", match: ["RNG"],
@@ -75,15 +75,15 @@ export const GLOSSARY = [
   },
   {
     id: "wound-roll", term: "Wound Roll", match: ["Wound Roll", "Wound Rolls"],
-    def: "One D10 per landed hit, needing 6 + the location's Toughness − your effective Penetration (§7.5). Each wound deals the weapon's Damage. A natural 10 always wounds, so no target is ever immune; a natural 1 never does, so no shot is ever automatic — the target bottoms out at 2+ once your effective Penetration reaches the location's Toughness + 4, and Penetration past that is wasted.",
+    def: "One D10 per landed hit, needing 6 + the location's Toughness − your effective Penetration (§7.5). Each wound deals the weapon's Damage. A natural 10 always wounds, so no target is ever immune; a natural 1 never does, so no shot is ever automatic, the target bottoms out at 2+ once your effective Penetration reaches the location's Toughness + 4, and Penetration past that is wasted.",
   },
   {
     id: "toughness", term: "Toughness", match: ["Toughness"],
-    def: "How hard a location is to wound, set per component — a Medium Rig's Hull is T5, its Engine T3. Raises the Wound Roll target one-for-one (§2, §7.5).",
+    def: "How hard a location is to wound, set per component, a Medium Rig's Hull is T5, its Engine T3. Raises the Wound Roll target one-for-one (§2, §7.5).",
   },
   {
     id: "damage", term: "Damage", match: ["Damage"],
-    def: "A weapon's Structure Point loss per wound — every wound it lands deals this much, however the roll passed (§7.5, §12).",
+    def: "A weapon's Structure Point loss per wound, every wound it lands deals this much, however the roll passed (§7.5, §12).",
   },
   {
     id: "catastrophic-damage", term: "catastrophic damage", match: ["catastrophic damage"],
@@ -91,7 +91,7 @@ export const GLOSSARY = [
   },
   {
     id: "move", term: "Move", match: ["Move"],
-    def: "Action [1 heat]: reposition up to the Rig's full Speed — forward, backpedal, side-step, or pivot (§5).",
+    def: "Action [1 heat]: reposition up to the Rig's full Speed, forward, backpedal, side-step, or pivot (§5).",
   },
   {
     id: "sprint", term: "Sprint", match: ["Sprint", "Sprinting"],
@@ -111,7 +111,7 @@ export const GLOSSARY = [
   },
   {
     id: "repair", term: "Repair", match: ["Repair"],
-    def: "Action [0 heat]: roll 1 D6 — 1-2 repairs 1 SP to one location, 3-4 repairs 2 SP, 5-6 repairs 3 SP (§5).",
+    def: "Action [0 heat]: roll 1 D6, 1-2 repairs 1 SP to one location, 3-4 repairs 2 SP, 5-6 repairs 3 SP (§5).",
   },
   {
     id: "shut-down", term: "Shut Down", match: ["Shut Down"],
@@ -123,7 +123,7 @@ export const GLOSSARY = [
   },
   {
     id: "answer-tokens", term: "Answer tokens", match: ["Answer tokens", "Answer token"],
-    def: "Free preparations granted each round to the player who activates second — no action or heat cost (§4, §5).",
+    def: "Free preparations granted each round to the player who activates second, no action or heat cost (§4, §5).",
   },
   {
     id: "activation", term: "activation", match: ["activation", "activations"],
@@ -135,11 +135,11 @@ export const GLOSSARY = [
   },
   {
     id: "long-range", term: "Long Range", match: ["Long Range"],
-    def: "One of the two weapon types — fires at range and must be reloaded between shots in the same activation (§12).",
+    def: "One of the two weapon types, fires at range and must be reloaded between shots in the same activation (§12).",
   },
   {
     id: "melee", term: "Melee", match: ["Melee"],
-    def: "The other weapon type — usable only within 1.5\", and never needs reloading (§12).",
+    def: "The other weapon type, usable only within 1.5\", and never needs reloading (§12).",
   },
   {
     id: "full-auto", term: "Full Auto", match: ["Full Auto"],
@@ -159,7 +159,7 @@ export const GLOSSARY = [
   },
   {
     id: "armour-piercing", term: "Armour Piercing", match: ["Armour Piercing"],
-    def: "Weapon perk: reroll each failed Wound Roll — it lands more wounds rather than deeper ones (§13).",
+    def: "Weapon perk: reroll each failed Wound Roll, it lands more wounds rather than deeper ones (§13).",
   },
   {
     id: "precision", term: "Precision", match: ["Precision"],
@@ -171,7 +171,7 @@ export const GLOSSARY = [
   },
   {
     id: "rend", term: "Rend", match: ["Rend"],
-    def: "Weapon perk: each wound deals +1 Damage — it wounds deeper rather than more often (§13).",
+    def: "Weapon perk: each wound deals +1 Damage, it wounds deeper rather than more often (§13).",
   },
   {
     id: "shock", term: "Shock", match: ["Shock"],
@@ -179,7 +179,7 @@ export const GLOSSARY = [
   },
   {
     id: "impale", term: "Impale", match: ["Impale"],
-    def: "Weapon perk: on a successful hit, roll 1 D12 — on 8+ the target is immobilised until this Rig's next activation (§13).",
+    def: "Weapon perk: on a successful hit, roll 1 D12, on 8+ the target is immobilised until this Rig's next activation (§13).",
   },
   {
     id: "incendiary", term: "Incendiary", match: ["Incendiary"],
@@ -195,11 +195,11 @@ export const GLOSSARY = [
   },
   {
     id: "side-arc", term: "side arc", match: ["side arc"],
-    def: "A facing zone to a Rig's flank — attacks gain +2 Penetration here (+3 with Raking Fire) (§7, §13).",
+    def: "A facing zone to a Rig's flank, attacks gain +2 Penetration here (+3 with Raking Fire) (§7, §13).",
   },
   {
     id: "rear-arc", term: "rear arc", match: ["rear arc"],
-    def: "The facing zone behind a Rig — attacks gain +3 Penetration here (+6 with Raking Fire). Melee climbs the same ladder as ranged (§7, §13).",
+    def: "The facing zone behind a Rig, attacks gain +3 Penetration here (+6 with Raking Fire). Melee climbs the same ladder as ranged (§7, §13).",
   },
   {
     id: "salvage", term: "Salvage", match: ["Salvage"],
@@ -211,11 +211,11 @@ export const GLOSSARY = [
   },
   {
     id: "ironclad-bounty", term: "Ironclad Bounty", match: ["Ironclad Bounty"],
-    def: "Optional rule: each player secretly names one enemy Rig as their Priority Target — destroying it is worth +2 VP (§11).",
+    def: "Optional rule: each player secretly names one enemy Rig as their Priority Target, destroying it is worth +2 VP (§11).",
   },
   {
     id: "riposte", term: "Riposte", match: ["Riposte"],
-    def: "Answer counter (§5): when an enemy melees this Rig, it makes one free melee attack back — no action, no heat. Answer-token only.",
+    def: "Answer counter (§5): when an enemy melees this Rig, it makes one free melee attack back, no action, no heat. Answer-token only.",
   },
   {
     id: "sidestep", term: "Sidestep the Shooter", match: ["Sidestep the Shooter", "Sidestep"],
@@ -227,70 +227,70 @@ export const GLOSSARY = [
   },
   // ── Runtime states (rig terminal mod chips; id-only lookup) ────────────────
   { id: "immobilised", term: "Immobilised", match: [],
-    def: "Can't move at all until freed — from destroyed Legs or an Impale result. No repositioning or pivots (§8, §13)." },
+    def: "Can't move at all until freed, from destroyed Legs or an Impale result. No repositioning or pivots (§8, §13)." },
   { id: "pinned", term: "Pinned", match: [],
-    def: "Suppressing fire has pinned the Rig — it can't move this activation, though it isn't permanently immobilised." },
+    def: "Suppressing fire has pinned the Rig, it can't move this activation, though it isn't permanently immobilised." },
   { id: "emplaced", term: "Emplaced", match: [],
-    def: "Dug into a fixed firing position — trades mobility for a steadier platform." },
+    def: "Dug into a fixed firing position, trades mobility for a steadier platform." },
   { id: "barrage", term: "Barrage", match: [],
     def: "A sustained barrage is in flight; the number is how many more activations of fire it keeps up." },
   { id: "engaged", term: "Engaged", match: [],
     def: "Locked in melee with an enemy Rig. It must Disengage before it can Move (§5, §12)." },
   { id: "burning", term: "Burning", match: [],
-    def: "On fire — takes damage each activation until the flames go out; the number is rounds of burning left." },
+    def: "On fire, takes damage each activation until the flames go out; the number is rounds of burning left." },
   { id: "no-cooling", term: "No cooling", match: [],
-    def: "Cooling systems are offline — the Rig can't shed Heat this activation." },
+    def: "Cooling systems are offline, the Rig can't shed Heat this activation." },
   { id: "speed-halved", term: "Speed halved", match: [],
-    def: "Movement is halved (round down) next activation — usually from a Shock hit (§13)." },
+    def: "Movement is halved (round down) next activation, usually from a Shock hit (§13)." },
   { id: "skip-activation", term: "Skips next activation", match: [],
-    def: "Loses its next activation entirely — commonly from a wrecked Engine (§8)." },
+    def: "Loses its next activation entirely, commonly from a wrecked Engine (§8)." },
   { id: "momentum", term: "Momentum", match: [],
     def: "Built-up charge from a prototype upgrade; the number is the momentum stacks available to spend." },
   { id: "missiles-locked", term: "Missiles locked", match: [],
-    def: "A missile lock is held on a target — the next salvo fires with the lock's bonus." },
+    def: "A missile lock is held on a target, the next salvo fires with the lock's bonus." },
   { id: "action-penalty", term: "Action penalty", match: [],
-    def: "Starts its next activation short N actions — a lingering penalty from an enemy effect." },
+    def: "Starts its next activation short N actions, a lingering penalty from an enemy effect." },
   { id: "no-prepare", term: "No Prepare next", match: [],
     def: "Can't place a Prepare reaction on its next activation (§5)." },
   { id: "anchored", term: "Anchored", match: [],
-    def: "Held in place — Disengaging next activation costs a free hit, or is barred outright." },
+    def: "Held in place, Disengaging next activation costs a free hit, or is barred outright." },
   { id: "no-actives", term: "No actives next", match: [],
     def: "Can't use active equipment abilities on its next activation." },
   { id: "arc-locked", term: "Arc Gun locked", match: [],
     def: "The Arc Gun is locked out next activation and can't fire." },
   { id: "arms-suppressed", term: "Arms suppressed", match: [],
-    def: "Arms are suppressed — weapons fire at half ROF (round down)." },
+    def: "Arms are suppressed, weapons fire at half ROF (round down)." },
   { id: "belt-cycling", term: "Belt cycling", match: [],
-    def: "The autocannon belt is still cycling — half ROF on the next shot." },
+    def: "The autocannon belt is still cycling, half ROF on the next shot." },
   { id: "cracked", term: "Cracked", match: [],
-    def: "A component's armour is cracked — it takes extra damage there until repaired." },
+    def: "A component's armour is cracked, it takes extra damage there until repaired." },
   { id: "riveted", term: "Riveted", match: [],
-    def: "A component is rivet-seized — it can't be repaired until the seize is cleared." },
+    def: "A component is rivet-seized, it can't be repaired until the seize is cleared." },
   { id: "no-repair", term: "No repair", match: [],
-    def: "A component can't be repaired for now — damage there is locked in." },
+    def: "A component can't be repaired for now, damage there is locked in." },
   { id: "reaction-set", term: "Reaction set", match: [],
     def: "A facedown Prepare reaction is armed and triggers before this Rig's next activation (§5)." },
   { id: "braced", term: "Braced", match: [],
-    def: "Braced for Incoming Fire — an armed reaction that cuts incoming damage before the next activation (§5)." },
+    def: "Braced for Incoming Fire, an armed reaction that cuts incoming damage before the next activation (§5)." },
   { id: "evasive", term: "Evasive ready", match: [],
-    def: "Evasive Manoeuvre — an armed reaction that dodges before the next activation (§5)." },
+    def: "Evasive Manoeuvre, an armed reaction that dodges before the next activation (§5)." },
   { id: "return-fire", term: "Return fire ready", match: [],
-    def: "Return Fire — an armed reaction that shoots back before the next activation (§5)." },
+    def: "Return Fire, an armed reaction that shoots back before the next activation (§5)." },
   { id: "weapon-lost", term: "Weapon lost", match: [],
     def: "A weapon was destroyed (Arms at 0 SP) and can no longer be fired (§8)." },
   { id: "ranged-unloaded", term: "Ranged unloaded", match: [],
     def: "The Long Range weapon is spent and must Reload before firing again (§5, §12)." },
   { id: "painted", term: "Painted", match: [],
-    def: "Marked by a Recon Paint — allied ranged attacks ignore its cover and gain +1 Aim (Support Units)." },
+    def: "Marked by a Recon Paint, allied ranged attacks ignore its cover and gain +1 Aim (Support Units)." },
   // ── Status-chip states (id-only lookup) ────────────────────────────────────
   { id: "destroyed", term: "Destroyed", match: [],
     def: "The Rig is wrecked and out of the battle." },
   { id: "heavy-damage", term: "Heavy damage", match: [],
-    def: "A component is at a third of its structure or less — still operational but near catastrophic." },
+    def: "A component is at a third of its structure or less, still operational but near catastrophic." },
   { id: "damaged", term: "Damaged", match: [],
     def: "At least one component has taken damage; the Rig is still fully operational." },
   { id: "nominal", term: "All systems nominal", match: [],
-    def: "Every component is at full structure — no damage." },
+    def: "Every component is at full structure, no damage." },
   // ── Non-rig parts (Tank / Walker) ──────────────────────────────────────────
   { id: "tracks", term: "Tracks", match: [],
     def: "A Tank's mobility component. At 0 SP its movement is crippled." },

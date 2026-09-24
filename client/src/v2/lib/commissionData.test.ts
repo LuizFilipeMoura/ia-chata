@@ -34,8 +34,8 @@ test("upgradePips climbs reward and risk by nature", () => {
 });
 
 test("splitUpgradeTag strips the tag for payoff and prefers an authored catch", () => {
-  const t = { id: "x", nature: "prototype", name: "N", tag: "Ignores armour; belt cycles slow after", catch: "Belt cycles slow after — no fire next turn" };
-  expect(splitUpgradeTag(t)).toEqual({ payoff: "Ignores armour", catch: "Belt cycles slow after — no fire next turn" });
+  const t = { id: "x", nature: "prototype", name: "N", tag: "Ignores armour; belt cycles slow after", catch: "Belt cycles slow after, no fire next turn" };
+  expect(splitUpgradeTag(t)).toEqual({ payoff: "Ignores armour", catch: "Belt cycles slow after, no fire next turn" });
 });
 
 test("splitUpgradeTag with an authored catch and no delimiter keeps the whole tag as payoff", () => {
@@ -46,7 +46,7 @@ test("splitUpgradeTag with an authored catch and no delimiter keeps the whole ta
 test("splitUpgradeTag parses a delimited tag when no catch is authored", () => {
   const semi = { id: "a", nature: "prototype", name: "N", tag: "Ignores armour; belt cycles slow after" };
   expect(splitUpgradeTag(semi)).toEqual({ payoff: "Ignores armour", catch: "belt cycles slow after" });
-  const dash = { id: "b", nature: "prototype", name: "N", tag: "Reel a rig in — runs hot" };
+  const dash = { id: "b", nature: "prototype", name: "N", tag: "Reel a rig in - runs hot" };
   expect(splitUpgradeTag(dash)).toEqual({ payoff: "Reel a rig in", catch: "runs hot" });
 });
 

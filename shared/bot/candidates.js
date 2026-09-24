@@ -1,5 +1,5 @@
 // Candidate generation for the opponent bot. `availableActions` is the legality
-// GATE — it says which action KINDS are legal for the active rig this instant
+// GATE, it says which action KINDS are legal for the active rig this instant
 // (Fire is on, Aimed is off because the gun is spent, no budget left, …). It does
 // NOT say at whom or where. This module expands each enabled kind into concrete,
 // parameterised candidates the scorer can price: one Fire per shootable enemy per
@@ -18,7 +18,7 @@ import {
 
 const DEG = Math.PI / 180;
 
-// True when `target` sits in `attacker`'s front 90° arc — the arc a shot must
+// True when `target` sits in `attacker`'s front 90° arc, the arc a shot must
 // bear through (§7). NOTE the direction: arcOf(A, B) reports which of B's facings
 // A occupies, so to ask "is the target in MY front" we pass (target, attacker).
 // That is the mirror of deriveAttackGeometry's `arc`, which reports which of the
@@ -34,7 +34,7 @@ function inFrontArc(attacker, target) {
 // (+location for aimed); the rest carry their own parameter or none.
 export function candidatesFor(room, rig) {
   const turn = room.game.turn;
-  if (!turn) return [];   // no active turn — nothing is legal (defensive)
+  if (!turn) return [];   // no active turn, nothing is legal (defensive)
   const enabled = new Set(
     availableActions(rig, turn, room.game.round).filter((a) => a.enabled).map((a) => a.key),
   );
@@ -49,7 +49,7 @@ export function candidatesFor(room, rig) {
 
   for (const enemy of enemies) {
     const geo = deriveAttackGeometry(room, rig, enemy);   // distance, arc(of target), cover, los, inMeleeReach
-    if (!inFrontArc(rig, enemy)) continue;                 // can't bear on it — skip every attack
+    if (!inFrontArc(rig, enemy)) continue;                 // can't bear on it, skip every attack
     const shot = { target: enemy.name, arc: geo.arc, distance: geo.distance, cover: geo.cover };
 
     // Long-range Fire: needs LOS, a loaded gun, and a distance inside the band.
@@ -57,7 +57,7 @@ export function candidatesFor(room, rig) {
       out.push({ action: "fire", weapon: "longRange", ...shot });
     }
     // Melee Fire: needs the rim gap inside reach (deriveAttackGeometry measured it
-    // with this rig's own meleeReachOf). No LOS/band — it is contact.
+    // with this rig's own meleeReachOf). No LOS/band, it is contact.
     if (enabled.has("fire") && geo.inMeleeReach) {
       out.push({ action: "fire", weapon: "melee", ...shot });
     }
@@ -71,7 +71,7 @@ export function candidatesFor(room, rig) {
   }
 
   // Prepare × prep type. raise-shield is Bulwark-only (normalizePrep coerces it to
-  // brace otherwise), so offer it only when the rig actually carries the shield —
+  // brace otherwise), so offer it only when the rig actually carries the shield,
   // no point scoring a candidate that resolves to a duplicate brace.
   if (enabled.has("prepare")) {
     const preps = hasBulwarkShield(rig) ? [...PREP_TYPES, "raise-shield"] : PREP_TYPES;
@@ -88,7 +88,7 @@ export function candidatesFor(room, rig) {
     }
   }
 
-  // Reload — a real action the console hides (it is a drawer-only path), offered
+  // Reload, a real action the console hides (it is a drawer-only path), offered
   // when the ranged weapon is spent and there is budget. checkCommand is the final
   // arbiter (Task 4.2's invariant fuzz proves the bot never emits an illegal one).
   if (rig.loaded?.longRange === false && turn.actionsUsed < turn.actionsMax) {
@@ -98,7 +98,7 @@ export function candidatesFor(room, rig) {
   // Parameterless actions, straight through the legality gate. Shut Down is
   // deliberately omitted: it is enabled at ANY budget (even 0) and, scored by the
   // positional vp every stationary candidate carries, it reads as a free repeatable
-  // "action" — so the bot would burn its whole activation shutting down on an
+  // "action", so the bot would burn its whole activation shutting down on an
   // objective. The v1 sparring bot has no active heat-dump need (Recovery cools it),
   // so leaving it out both fixes that and keeps the action budget the real bound.
   // Shut Down: ends the activation venting heat. The scorer only values it when
@@ -138,8 +138,8 @@ export function candidatesFor(room, rig) {
 
 // --- Move candidates --------------------------------------------------------
 // Destinations are continuous: a Speed-6 rig has infinitely many legal spots. So
-// generate a SHORTLIST — semantic anchors (toward an objective, into a flank,
-// into melee, a retreat, a pivot-in-place) unioned with a reachable lattice — and
+// generate a SHORTLIST, semantic anchors (toward an objective, into a flank,
+// into melee, a retreat, a pivot-in-place) unioned with a reachable lattice, and
 // keep only those a real path reaches within the move budget. Anchors alone limit
 // the bot to spots we imagined; a lattice alone finds spots but explains nothing.
 // The union gives both. Every candidate is re-validated by findPath here with the
@@ -153,7 +153,7 @@ function pointAlong(from, target, dist) {
   return { x: from.x + (dx / len) * dist, y: from.y + (dy / len) * dist };
 }
 
-// Clamp a desired absolute facing to within ±90° of the current one — the pivot
+// Clamp a desired absolute facing to within ±90° of the current one, the pivot
 // cap a Move allows (§7), the same clamp E1 enforces on apply.
 function clampPivot(current, desired) {
   let delta = (((desired - current) % 360) + 540) % 360 - 180;   // (-180, 180]
@@ -167,7 +167,7 @@ function facingToward(from, target) {
 }
 
 // The facings worth trying at a destination: toward each enemy and each objective,
-// plus keeping the current heading — each clamped to the pivot cap and de-duped.
+// plus keeping the current heading, each clamped to the pivot cap and de-duped.
 function facingsAt(rig, dest, enemies, objectives) {
   const wanted = [rig.facing];
   for (const e of enemies) wanted.push(facingToward(dest, e.pos));
@@ -196,10 +196,10 @@ function moveCandidates(room, rig, enabled) {
   // probe. findPath rebuilds this whole grid per call; a rig generates dozens of
   // destination probes per activation, so the shared grid is the difference
   // between a snappy bot and a minutes-long tuning sweep. The grid depends only on
-  // (field, terrain, other rigs, this radius) — all fixed for one activation.
+  // (field, terrain, other rigs, this radius), all fixed for one activation.
   const grid = buildGrid(room.field, polys, blockers, radius);
 
-  // Semantic ideal points (may be far — each is capped to the budget below).
+  // Semantic ideal points (may be far, each is capped to the budget below).
   const ideals = [{ pt: { ...from }, reason: "hold and pivot" }];
   objectives.forEach((m, i) => ideals.push({ pt: { x: m.x, y: m.y }, reason: `contest objective ${i}` }));
   for (const e of enemies) {

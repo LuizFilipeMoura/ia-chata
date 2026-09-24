@@ -4,7 +4,7 @@ import { UNIT_KINDS, kindOf } from "/shared/unit-kinds.js";
 import type { Rig } from "../../state/types";
 import { InfoTerm } from "./InfoTerm";
 
-// Read-only segmented thermometer — cap safe cells plus 4 overheat cells, with
+// Read-only segmented thermometer, cap safe cells plus 4 overheat cells, with
 // the redline at the first danger cell. Mirrors V1's HeatGauge logic (heatMeter);
 // no stoke/vent controls (deferred). Hidden entirely for cold kinds.
 export function HeatGauge({ rig }: { rig: Rig }) {
@@ -26,10 +26,10 @@ export function HeatGauge({ rig }: { rig: Rig }) {
 
   const note =
     m.zone === "over" ? `⚠ misfire roll = D12 + ${m.bonus}`
-    : m.zone === "redline" ? "At redline — one more triggers a misfire check"
-    : m.zone === "cold" ? `Cold — full ${m.cap} of headroom`
-    : m.zone === "warm" ? `Running hot — ${m.cap - m.heat} to redline`
-    : `Nominal — ${m.cap - m.heat} to redline`;
+    : m.zone === "redline" ? "At redline, one more triggers a misfire check"
+    : m.zone === "cold" ? `Cold, full ${m.cap} of headroom`
+    : m.zone === "warm" ? `Running hot, ${m.cap - m.heat} to redline`
+    : `Nominal, ${m.cap - m.heat} to redline`;
 
   return (
     <div className="v2-heat" data-zone={m.zone}>

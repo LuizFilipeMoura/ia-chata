@@ -1,6 +1,6 @@
 // Movement routing for digital rooms. An occupancy grid over the field with
 // obstacles inflated by the mover's base radius, so the mover is a POINT
-// against fat obstacles — the standard trick, and it makes the swept-corridor
+// against fat obstacles, the standard trick, and it makes the swept-corridor
 // check free (a point that never enters an inflated obstacle is a circle that
 // never touches the real one).
 //
@@ -91,7 +91,7 @@ function clearLine(grid, a, b) {
 
 // Greedy string-pulling: keep the farthest waypoint still reachable in a
 // straight line. A raw 8-connected path zig-zags, and its length would
-// OVERSTATE the real travel — which matters, because length is what gets
+// OVERSTATE the real travel, which matters, because length is what gets
 // checked against Speed.
 function simplify(grid, pts) {
   if (pts.length <= 2) return pts;
@@ -122,7 +122,7 @@ const NEIGHBOURS = [
 // Route `from` -> `to` across an ALREADY-BUILT grid. Returns { path, length } in
 // inches, or null when the destination is unreachable or off the table. Split
 // out from findPath because the hover preview re-routes on every mousemove
-// against an unchanged grid — rebuilding ~31k cells each time would stutter.
+// against an unchanged grid, rebuilding ~31k cells each time would stutter.
 // Deterministic: the open set is drained in a fixed order, so ties always break
 // the same way.
 export function findPathOnGrid(grid, from, to) {

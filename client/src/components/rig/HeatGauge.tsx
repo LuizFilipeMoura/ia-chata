@@ -8,7 +8,7 @@ interface Props {
   isActive: boolean;
 }
 
-// The heat gauge — a read-only segmented thermometer that reads left-to-right up
+// The heat gauge, a read-only segmented thermometer that reads left-to-right up
 // to the Rig's Heat Capacity (the redline), then into a red overheat zone. When
 // hot, it spells out the exact misfire roll (§6) so the player knows precisely
 // what's at stake.
@@ -31,7 +31,7 @@ export function HeatGauge({ rig, isActive }: Props) {
   const cooled = decreased ? (prior as number) - m.heat : 0;
   // The blue "refresh" cool-down plays on ANY heat drop: the end-of-round
   // Recovery cools every rig at once, and a manual vent / shutdown / purge cools
-  // the active one — both deserve the same clear feedback. UI-only; reads state.
+  // the active one, both deserve the same clear feedback. UI-only; reads state.
 
   const cls = ["heat-gauge"];
   if (!isActive) cls.push("heat-gauge--idle");
@@ -71,7 +71,7 @@ export function HeatGauge({ rig, isActive }: Props) {
     statusBody = (
       <>
         <span className="heat-status-tag">Engine idle</span>
-        <span className="heat-status-sub">cold — full {m.cap} of headroom</span>
+        <span className="heat-status-sub">cold, full {m.cap} of headroom</span>
       </>
     );
   } else {

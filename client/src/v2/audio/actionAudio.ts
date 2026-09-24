@@ -18,13 +18,13 @@ function fadeFor(stems: string[]): number | undefined {
 
 const FIRE_BARKS = ["fire_firing", "fire_eat_this", "fire_rounds_downrange", "fire_light_em_up"];
 const MECH = ["massive_mechanical_1", "massive_mechanical_2", "massive_mechanical_3"];
-// Cannon boom variants — pick() rotates one per shot so repeated fire doesn't
+// Cannon boom variants, pick() rotates one per shot so repeated fire doesn't
 // sound identical.
 const CANNON_SFX = ["cannon_fire", "cannon_fire_2", "cannon_fire_3"];
-// Console beep bed — the two panel-beep clips rotated by pick() so the many
+// Console beep bed, the two panel-beep clips rotated by pick() so the many
 // beep-only actions (reload/prepare/shutdown/repair/patch) don't all sound alike.
 const BEEP_SFX = ["old_panel_beep", "beep_warning"];
-// Support module beds: console beep + a mech servo step (mech_step.mp3 — drop the
+// Support module beds: console beep + a mech servo step (mech_step.mp3, drop the
 // asset in to enable; absent stems are null-filtered so a beep still plays).
 const SUPPORT_SFX = [...BEEP_SFX, "mech_step"];
 
@@ -33,8 +33,8 @@ export const ACTION_AUDIO: Record<string, Layers> = {
   fire: { voices: FIRE_BARKS, sfx: CANNON_SFX }, // default; weapon-aware override below
   aimed: { voices: FIRE_BARKS, sfx: CANNON_SFX },
   overclock: { voices: ["overclock_redline_it"], sfx: MECH },
-  move: { voices: [], sfx: ["mech_running"] }, // walk — steady servo gait
-  sprint: { voices: [], sfx: ["giant_walking_fast"] }, // run — faster heavy stomp
+  move: { voices: [], sfx: ["mech_running"] }, // walk, steady servo gait
+  sprint: { voices: [], sfx: ["giant_walking_fast"] }, // run, faster heavy stomp
   disengage: { voices: ["disengage_fall_back", "disengage_breaking_off", "disengage_get_out"], sfx: [] },
   purge: { voices: ["purge_venting_clear", "purge_dumping_heat"], sfx: [] },
   reload: { voices: [], sfx: ["gun_reload"] },
@@ -42,7 +42,7 @@ export const ACTION_AUDIO: Record<string, Layers> = {
   shutdown: { voices: [], sfx: [] },
   repair: { voices: [], sfx: BEEP_SFX },
   emergencypatch: { voices: [], sfx: BEEP_SFX },
-  // Support-unit module actions (spec: Support Units) — a servo step under the
+  // Support-unit module actions (spec: Support Units), a servo step under the
   // console beep. `pick()` rotates between the two per action.
   fieldweld: { voices: [], sfx: SUPPORT_SFX },
   vent: { voices: [], sfx: SUPPORT_SFX },
@@ -83,7 +83,7 @@ export function playDamage(): void {
   play([], urls(DAMAGE_SFX));
 }
 
-// Ricochet crack cue when the answer-token gate opens — "brace for impact" for
+// Ricochet crack cue when the answer-token gate opens, "brace for impact" for
 // the incoming attack hidden behind the token.
 export function playBraceForImpact(): void {
   play([], urls(BRACE_SFX));
@@ -97,11 +97,11 @@ export function playThreatAlarm(): void {
 }
 
 export function playHeat(): void {
-  play([], urls(HEAT_SFX), SFX_GAIN / 3, fadeFor(HEAT_SFX)); // furnace is loud — a third volume
+  play([], urls(HEAT_SFX), SFX_GAIN / 3, fadeFor(HEAT_SFX)); // furnace is loud, a third volume
 }
 
 // Cinematic blast when an overheat check rolls a damaging threshold (any heatKey
-// but "safe"). Louder than the furnace crossing — this is the payoff.
+// but "safe"). Louder than the furnace crossing, this is the payoff.
 export function playHeatExplosion(): void {
   play([], urls(HEAT_EXPLOSION_SFX));
 }

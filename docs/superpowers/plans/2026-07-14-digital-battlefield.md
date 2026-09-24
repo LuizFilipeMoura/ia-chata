@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Put Rigs on a simulated field so distance, arc, and cover are derived from geometry instead of declared by the player — the prerequisite for an AI opponent.
+**Goal:** Put Rigs on a simulated field so distance, arc, and cover are derived from geometry instead of declared by the player, the prerequisite for an AI opponent.
 
 **Architecture:** Two new pure modules (`shared/geometry.js`, `shared/pathfind.js`) with zero room-state or dice dependencies, mirroring how `shared/field.js` is already built. `game-state.js` gains a `room.mode` flag; digital rooms compute `distance`/`arc`/`cover` and pass them into the *unchanged* `resolveAttack` signature. `FieldMap.tsx` grows from a static blueprint into the interactive board.
 
@@ -27,14 +27,14 @@
 
 - `shared/` is dependency-free ES modules imported by BOTH the Node server and the browser. Never import from `client/` there. `field.js` is the model to copy: pure functions, no state, no imports from `game-state.js`.
 - `shared/*.test.js` uses `node:test` + `node:assert/strict`, NOT Vitest. Client tests use Vitest. `npm test` runs both.
-- **Determinism matters.** `scatterTerrain(field, random)` takes an injected RNG so tests can seed it. Anything random you add MUST do the same. `shared/field.test.js` has a `seeded()` mulberry32 helper — copy it, don't invent one.
+- **Determinism matters.** `scatterTerrain(field, random)` takes an injected RNG so tests can seed it. Anything random you add MUST do the same. `shared/field.test.js` has a `seeded()` mulberry32 helper, copy it, don't invent one.
 - **`resolveAttack` must not change.** It already accepts `opts.distance`, `opts.arc`, `opts.cover`. Digital rooms fill those in; physical rooms keep taking them from the human. `shared/combat.test.js` (2178 lines) must stay green and untouched.
 - `reject(msg)` inside `game-state.js` is how an action refuses. `recompute(rig)` refreshes derived rig stats.
 - Inches are the unit everywhere. Field coords have origin at top-left, `x` right, `y` down.
 
-**Terrain shapes** (from `field.js` `TERRAIN_KINDS`): a piece is `{ kind, x, y, shape }` plus per-shape geometry — `poly` has `points: [[dx,dy],...]` relative to `(x,y)`; `rect` has `w`, `h`, `rot` (degrees); `ellipse` has `rx`, `ry`, `rot`. Digital rooms only use `building` (rect), `barricade` (rect), `rock` (poly), `crate` (rect).
+**Terrain shapes** (from `field.js` `TERRAIN_KINDS`): a piece is `{ kind, x, y, shape }` plus per-shape geometry, `poly` has `points: [[dx,dy],...]` relative to `(x,y)`; `rect` has `w`, `h`, `rot` (degrees); `ellipse` has `rx`, `ry`, `rot`. Digital rooms only use `building` (rect), `barricade` (rect), `rock` (poly), `crate` (rect).
 
-### The game-state API — get this right or every fixture fails
+### The game-state API, get this right or every fixture fails
 
 The task fixtures below were originally drafted against a guessed API. These are the **real**
 signatures, verified against the source. Use them:
@@ -46,7 +46,7 @@ const room = createRoom("CODE01");                    // NOT makeRoom(); takes n
 claimSide(room, { name: "A", side: "a" });
 claimSide(room, { name: "B", side: "b" });
 
-// Commands are { verb, attrs } — EVERYTHING lives under `attrs`, never flat:
+// Commands are { verb, attrs }, EVERYTHING lives under `attrs`, never flat:
 applyCommand(room, { verb: "add", attrs: {
   name: "Atk", class: "medium", owner: "a", longRange: "Mini Gun", melee: "Sword",
 } });
@@ -54,7 +54,7 @@ applyCommand(room, { verb: "add", attrs: {
 const rig = findRig(room, "Atk");
 ```
 
-**`applyCommand(room, cmd, context, options)` returns `room` — NOT `{ ok, reason }`.**
+**`applyCommand(room, cmd, context, options)` returns `room`: NOT `{ ok, reason }`.**
 To assert a rejection, use `checkCommand(room, cmd)`, which clones, applies, and reports:
 
 ```js
@@ -65,7 +65,7 @@ assert.match(res.reason, /Speed/);
 
 `lastRejectionReason()` takes **no argument**. `options.random` is how you inject a seeded RNG.
 
-To put a rig mid-activation, set the turn directly (this is what the existing tests do —
+To put a rig mid-activation, set the turn directly (this is what the existing tests do,
 copy `battleWithPreparedDefender` at the top of `shared/game-state.test.js`):
 
 ```js
@@ -74,30 +74,30 @@ room.game.turn = { side: "a", activeRigId: rig.id, actionsUsed: 0, actionsMax: 3
 rig.loaded = { longRange: true, melee: true };
 ```
 
-**Read the existing helpers before writing new ones** — `shared/game-state.test.js` already has
+**Read the existing helpers before writing new ones**: `shared/game-state.test.js` already has
 `battleWithPreparedDefender`, `startedRoom`, `readyThreeAndThree`, `activate`, `seededRandom`,
 `fireMelee`. Reuse them rather than inventing parallel fixtures.
 
-**Base radii:** light 1.18" (60mm), medium 1.48" (75mm). Digital rooms are Rigs only — no Tanks, no Walkers.
+**Base radii:** light 1.18" (60mm), medium 1.48" (75mm). Digital rooms are Rigs only, no Tanks, no Walkers.
 
 ---
 
 ## File Structure
 
 **Create:**
-- `shared/geometry.js` — pure spatial predicates. Polygon conversion, segment intersection, the 3-ray sight corridor, arc, distance, rim gap, objective control. No room state.
-- `shared/geometry.test.js` — node tests.
-- `shared/pathfind.js` — occupancy grid + A* + path simplification. Depends on `geometry.js` only.
-- `shared/pathfind.test.js` — node tests.
+- `shared/geometry.js`: pure spatial predicates. Polygon conversion, segment intersection, the 3-ray sight corridor, arc, distance, rim gap, objective control. No room state.
+- `shared/geometry.test.js`: node tests.
+- `shared/pathfind.js`: occupancy grid + A* + path simplification. Depends on `geometry.js` only.
+- `shared/pathfind.test.js`: node tests.
 
 **Modify:**
-- `shared/field.js` — digital terrain subset in `scatterTerrain`.
-- `shared/game-state.js` — `room.mode`, `pos`/`facing` on rigs, auto-deploy, the derivation seam, move-by-path, melee reach check, objective auto-control.
-- `client/src/state/types.ts` — types for the new state.
-- `client/src/v2/battle/FieldMap.tsx` — unit tokens, arc cones, path preview, click targets.
-- `client/src/v2/battle/MoveBody.tsx` — map interaction, drop the timed hold in digital rooms.
-- `client/src/v2/overlays/AttackWizard.tsx` — skip the derived steps in digital rooms.
-- `rules.md` — measurement, deploy, engagement.
+- `shared/field.js`: digital terrain subset in `scatterTerrain`.
+- `shared/game-state.js`: `room.mode`, `pos`/`facing` on rigs, auto-deploy, the derivation seam, move-by-path, melee reach check, objective auto-control.
+- `client/src/state/types.ts`: types for the new state.
+- `client/src/v2/battle/FieldMap.tsx`: unit tokens, arc cones, path preview, click targets.
+- `client/src/v2/battle/MoveBody.tsx`: map interaction, drop the timed hold in digital rooms.
+- `client/src/v2/overlays/AttackWizard.tsx`: skip the derived steps in digital rooms.
+- `rules.md`: measurement, deploy, engagement.
 
 **Dependency order:** geometry → pathfind → field → game-state → types → UI → rules. Each task is committable on its own.
 
@@ -151,7 +151,7 @@ test("terrainPolygons handles an empty or missing terrain list", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/geometry.test.js`
-Expected: FAIL — `Cannot find module './geometry.js'`
+Expected: FAIL, `Cannot find module './geometry.js'`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -255,7 +255,7 @@ test("segmentHitsPolygon is true when a segment lies wholly inside", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/geometry.test.js`
-Expected: FAIL — `segmentHitsPolygon is not a function`
+Expected: FAIL, `segmentHitsPolygon is not a function`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -300,7 +300,7 @@ export function pointInPolygon(p, pts) {
 }
 
 // True when the segment crosses any edge of the polygon, OR lies wholly inside
-// it (no edge crossed, but both endpoints within — a rig standing in terrain).
+// it (no edge crossed, but both endpoints within, a rig standing in terrain).
 export function segmentHitsPolygon(a, b, poly) {
   const pts = poly.points;
   for (let i = 0; i < pts.length; i++) {
@@ -328,7 +328,7 @@ git commit -m "feat(geometry): segment/polygon intersection primitives"
 
 ### Task 3: The 3-ray sight corridor
 
-The heart of the spec. Three PARALLEL rays — base top/centre/bottom, offset perpendicular to the centre line by each unit's own radius. Count obstructed rays. `cover = min(2, obstructed)`. Only `buildingRays === 3` denies the shot.
+The heart of the spec. Three PARALLEL rays, base top/centre/bottom, offset perpendicular to the centre line by each unit's own radius. Count obstructed rays. `cover = min(2, obstructed)`. Only `buildingRays === 3` denies the shot.
 
 The first three tests are the user's hand-drawn cases, verbatim.
 
@@ -384,11 +384,11 @@ test("a BARRICADE blocking all 3 rays is cover 2 and the shot is still legal", (
   const r = sightCorridor(A, B, [wall]);
   assert.equal(r.obstructed, 3);
   assert.equal(r.buildingRays, 0);
-  assert.equal(r.cover, 2, "cover clamps at 2 — only buildings deny the shot");
+  assert.equal(r.cover, 2, "cover clamps at 2, only buildings deny the shot");
   assert.equal(r.los, true);
 });
 
-test("the corridor is rotation-invariant — a diagonal shot reads the same", () => {
+test("the corridor is rotation-invariant, a diagonal shot reads the same", () => {
   const a = { pos: { x: 0, y: 0 }, radius: 1.48 };
   const b = { pos: { x: 14.142, y: 14.142 }, radius: 1.48 }; // 20in away, 45 deg
   // A 2in-square building dead on the centre line, big enough to eat only it.
@@ -408,7 +408,7 @@ test("two rigs on the same spot degrade safely instead of dividing by zero", () 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/geometry.test.js`
-Expected: FAIL — `sightCorridor is not a function`
+Expected: FAIL, `sightCorridor is not a function`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -419,13 +419,13 @@ Append to `shared/geometry.js`:
 // offset perpendicular to it by each unit's OWN radius to get three parallel
 // rays: top->top, centre->centre, bottom->bottom. Offsetting perpendicular to
 // the shot (rather than along a fixed map axis) is what makes the read
-// rotation-invariant — a flanking shot and a frontal shot are graded alike.
+// rotation-invariant, a flanking shot and a frontal shot are graded alike.
 //
 // Bases differ in radius, so the outer rays converge or diverge slightly. That
 // is correct: a light rig shooting a medium gets a wider corridor at the target
 // end.
 //
-// Every ray is tested against EVERY terrain kind — kind matters in exactly one
+// Every ray is tested against EVERY terrain kind, kind matters in exactly one
 // place, the buildingRays check. That is the whole content of "everything is
 // solid; only buildings block sight". A 1in rock can never obstruct all three,
 // so small scatter naturally reads as cover 1 and a long barricade as cover 2.
@@ -434,7 +434,7 @@ export function sightCorridor(attacker, target, polys) {
   const dx = target.pos.x - attacker.pos.x;
   const dy = target.pos.y - attacker.pos.y;
   const len = Math.hypot(dx, dy);
-  // Coincident bases can't happen (rigs block each other) — degrade, don't throw.
+  // Coincident bases can't happen (rigs block each other), degrade, don't throw.
   if (len < 1e-9) return { obstructed: 0, buildingRays: 0, cover: 0, los: true };
 
   const nx = -dy / len; // unit perpendicular to the shot
@@ -470,7 +470,7 @@ export function sightCorridor(attacker, target, polys) {
 Run: `node --test shared/geometry.test.js`
 Expected: PASS, 16 tests
 
-If the drawing 2/3 tests fail, print the ray y-values and check the bar's span against 8.52 / 10 / 11.48. Do NOT adjust the implementation to fit — adjust the test's `yc`, since the geometry is the spec and the fixture is just a fixture.
+If the drawing 2/3 tests fail, print the ray y-values and check the bar's span against 8.52 / 10 / 11.48. Do NOT adjust the implementation to fit, adjust the test's `yc`, since the geometry is the spec and the fixture is just a fixture.
 
 - [ ] **Step 5: Commit**
 
@@ -483,7 +483,7 @@ git commit -m "feat(geometry): 3-ray sight corridor derives cover and LOS"
 
 ### Task 4: Arc, distance, rim gap, objective control
 
-The remaining derived values. Note the split measurement model: distance is centre-to-centre; melee reach and objective control are RIM GAP. That's not an inconsistency — centre-measured melee is unreachable, because two mediums can never close inside 2.95".
+The remaining derived values. Note the split measurement model: distance is centre-to-centre; melee reach and objective control are RIM GAP. That's not an inconsistency, centre-measured melee is unreachable, because two mediums can never close inside 2.95".
 
 **Files:**
 - Modify: `shared/geometry.js`
@@ -513,7 +513,7 @@ const at = (x, y) => ({ pos: { x, y } });
 
 test("arcOf reads front / side / rear off the target's facing", () => {
   assert.equal(arcOf(at(10, 0), T), "front");   // dead ahead
-  assert.equal(arcOf(at(10, 9), T), "front");   // 42 deg — inside the 45 cone
+  assert.equal(arcOf(at(10, 9), T), "front");   // 42 deg, inside the 45 cone
   assert.equal(arcOf(at(0, 10), T), "side");    // 90 deg
   assert.equal(arcOf(at(0, -10), T), "side");   // -90 deg
   assert.equal(arcOf(at(-10, 0), T), "rear");   // behind
@@ -561,7 +561,7 @@ test("controlsObjective is rim gap within 2in of the marker", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/geometry.test.js`
-Expected: FAIL — `arcOf is not a function`
+Expected: FAIL, `arcOf is not a function`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -569,7 +569,7 @@ Append to `shared/geometry.js`:
 
 ```js
 // Base radii in inches, by weight class. Digital rooms are Rigs only, so these
-// two are the whole table. Lives here because base size is a SPATIAL fact —
+// two are the whole table. Lives here because base size is a SPATIAL fact,
 // it is what makes rim gap differ from centre distance, and it is why melee and
 // objectives measure rim while everything else measures centre.
 export const BASE_RADIUS = { light: 1.18, medium: 1.48 }; // 60mm / 75mm
@@ -601,13 +601,13 @@ export function rimGap(a, b) {
   return distanceBetween(a, b) - a.radius - b.radius;
 }
 
-// §7 / §12 — melee carries a fixed ACC at its 2in reach. Lance's Couched Reach
+// §7 / §12, melee carries a fixed ACC at its 2in reach. Lance's Couched Reach
 // upgrade passes reach = 4.
 export function meleeInReach(a, b, reach = 2) {
   return rimGap(a, b) <= reach + 1e-9;
 }
 
-// §11 — a Rig controls a marker if it is within 2in. Markers are points, so
+// §11, a Rig controls a marker if it is within 2in. Markers are points, so
 // only the rig's own radius comes off.
 export function controlsObjective(rig, marker, reach = 2) {
   const gap = Math.hypot(rig.pos.x - marker.x, rig.pos.y - marker.y) - rig.radius;
@@ -616,7 +616,7 @@ export function controlsObjective(rig, marker, reach = 2) {
 
 // Distance from a point to a polygon: 0 if inside, else the nearest edge.
 // Lives here rather than in pathfind.js because BOTH the occupancy grid and
-// autoDeploy need "is this spot clear for a base of radius r" — and two copies
+// autoDeploy need "is this spot clear for a base of radius r", and two copies
 // of this would be two chances to disagree about what "clear" means.
 export function distToPolygon(p, pts) {
   if (pointInPolygon(p, pts)) return 0;
@@ -673,7 +673,7 @@ git commit -m "feat(geometry): arc, distance, rim gap, objective control"
 
 ### Task 5: Digital terrain subset
 
-Digital rooms scatter only `building`, `barricade`, `rock`, `crate`. `wood`, `crater`, and `ruin` are dropped because pure ray-counting lies about them — a wood becomes a wall, a crater is a hole that reads as a wall.
+Digital rooms scatter only `building`, `barricade`, `rock`, `crate`. `wood`, `crater`, and `ruin` are dropped because pure ray-counting lies about them, a wood becomes a wall, a crater is a hole that reads as a wall.
 
 **Files:**
 - Modify: `shared/field.js` (`TERRAIN_KINDS` and `scatterTerrain`)
@@ -713,7 +713,7 @@ test("scatterTerrain stays deterministic under a seeded RNG in digital mode", ()
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/field.test.js`
-Expected: FAIL — `DIGITAL_TERRAIN_KINDS is not defined`
+Expected: FAIL, `DIGITAL_TERRAIN_KINDS is not defined`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -722,10 +722,10 @@ In `shared/field.js`, add above `scatterTerrain`:
 ```js
 // The terrain vocabulary a digital room scatters. wood / crater / ruin are
 // excluded: the 3-ray cover model (geometry.js) grades by pure geometry, and
-// those three lie about themselves under it — a wood is a 3.4-5.4in blob that
+// those three lie about themselves under it, a wood is a 3.4-5.4in blob that
 // eats all three rays and reads as a WALL, and a crater is a hole that would do
 // the same. Every kind kept here reads correctly with no cover-class table.
-// A physical room is unaffected — you adjudicate a wood yourself at the table.
+// A physical room is unaffected, you adjudicate a wood yourself at the table.
 export const DIGITAL_TERRAIN_KINDS = new Set(["building", "barricade", "rock", "crate"]);
 ```
 
@@ -748,7 +748,7 @@ Everything else in the function is untouched.
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/field.test.js`
-Expected: PASS — existing field tests still green (the new arg is optional and defaults to physical)
+Expected: PASS, existing field tests still green (the new arg is optional and defaults to physical)
 
 - [ ] **Step 5: Commit**
 
@@ -774,7 +774,7 @@ seed roster failing on 0.6% of seeds.
    `0.18 * hd` ≈ 5.84" on the reference table, but `deployRadius(field)` is 8". So terrain
    legally spawns in the outer third of the staging area. Measured: the shipped
    `SEED_ROSTER_4V4` (2 medium + 2 light per side) leaves its 4th rig undeployed on 23 of
-   4000 rigs across 500 seeds — always the last one added, because terrain ate the corner.
+   4000 rigs across 500 seeds, always the last one added, because terrain ate the corner.
    Change `cornerClear` to `deployRadius(field)`. This is not digital-only: terrain should
    not spawn in your staging area on a real table either.
 
@@ -788,7 +788,7 @@ seed roster failing on 0.6% of seeds.
 
    Geometry notes that matter:
    - The mirror of a piece at `(x, y)` is `(width - x, height - y)`.
-   - A **rect is centrally symmetric**, so `rot` is unchanged by a 180° turn — do NOT add 180
+   - A **rect is centrally symmetric**, so `rot` is unchanged by a 180° turn, do NOT add 180
      to it. (This is only true because of decision 2. If a poly ever returns, its points must
      be negated.)
    - A piece straddling the diagonal would overlap its own mirror. Require each candidate's
@@ -805,7 +805,7 @@ import { DIGITAL_TERRAIN_KINDS, deployRadius, scatterTerrain, FIELD_DEFAULT } fr
 const mirrorOf = (field, p) => ({ x: field.width - p.x, y: field.height - p.y });
 const near = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
 
-test("digital terrain is rectangles only — no poly blobs", () => {
+test("digital terrain is rectangles only, no poly blobs", () => {
   const field = { ...FIELD_DEFAULT, diagonal: "tlbr" };
   for (const p of scatterTerrain(field, seeded(4), { digital: true })) {
     assert.equal(p.shape, "rect", `${p.kind} is a ${p.shape}`);
@@ -856,7 +856,7 @@ test("digital scatter is still deterministic under a seeded RNG", () => {
 ```
 
 **Note:** the deploy-clearance test asserts `dist(corner, piece) >= rad` on the piece CENTRE.
-Whether it should be centre or footprint-edge is a judgement call — a big building whose
+Whether it should be centre or footprint-edge is a judgement call, a big building whose
 centre is 8.1" out still overhangs the zone. Decide, make the test say what you decided, and
 justify it in your report. Centre-based is the cheaper, looser choice; `dist >= rad + p.fp`
 is the strict one, but `fp` is stripped from the wire payload, so the test would need to
@@ -865,7 +865,7 @@ re-derive it.
 - [ ] **Step 2: Run to verify failure**
 
 Run: `node --test shared/field.test.js`
-Expected: FAIL — poly rocks present, no mirrored twins, pieces inside the deploy zone.
+Expected: FAIL, poly rocks present, no mirrored twins, pieces inside the deploy zone.
 
 - [ ] **Step 3: Implement**
 
@@ -874,7 +874,7 @@ In `shared/field.js`:
 ```js
 // Terrain must not spawn in a staging area. This used to be 0.18 * halfDiag
 // (~5.84in on the reference table) while the deploy zone reaches 8in, so pieces
-// intruded into the outer third of it — measured: the 4v4 seed roster's last rig
+// intruded into the outer third of it, measured: the 4v4 seed roster's last rig
 // found no legal spot on 0.6% of seeds. Physical rooms get this too; terrain in
 // your own corner is wrong on a real table as well.
 const cornerClear = deployRadius(field);
@@ -915,7 +915,7 @@ plus its twin:
 
 ```js
   // A 180 deg turn about the centre maps one deployment corner onto the other.
-  // A rect is centrally symmetric, so `rot` is unchanged by the turn — this is
+  // A rect is centrally symmetric, so `rot` is unchanged by the turn, this is
   // only true because digital terrain is rectangles only.
   const mirrored = placed.flatMap((p) => [p, { ...p, x: round2(field.width - p.x), y: round2(field.height - p.y) }]);
 ```
@@ -926,7 +926,7 @@ Halve the per-kind counts in digital mode so the mirrored board isn't twice as d
 
 Run: `node --test "shared/*.test.js"`
 Expected: PASS. Existing physical terrain tests must stay green EXCEPT any that assert the
-old corner clearance — if one breaks because terrain moved out of the deploy zone, that test
+old corner clearance, if one breaks because terrain moved out of the deploy zone, that test
 was encoding the bug; update it and say so.
 
 - [ ] **Step 5: Re-probe deployment**
@@ -948,7 +948,7 @@ git commit -m "feat(field): mirrored rect-only digital terrain, clear of deploy 
 
 ### Task 6: Occupancy grid
 
-A* needs a grid. Obstacles are inflated by the mover's radius so the mover is a POINT against fat obstacles — the standard trick, and it makes the swept-corridor check free.
+A* needs a grid. Obstacles are inflated by the mover's radius so the mover is a POINT against fat obstacles, the standard trick, and it makes the swept-corridor check free.
 
 **Files:**
 - Create: `shared/pathfind.js`
@@ -987,8 +987,8 @@ test("buildGrid blocks other rigs, inflated by both radii", () => {
   const foe = { pos: { x: 10, y: 10 }, radius: 1.48 };
   const g = buildGrid(FIELD, [], [foe], 1.48);
   assert.equal(isBlocked(g, { x: 10, y: 10 }), true, "on top of it");
-  assert.equal(isBlocked(g, { x: 12.5, y: 10 }), true, "2.5in away — inside 2.96 combined");
-  assert.equal(isBlocked(g, { x: 14, y: 10 }), false, "4in away — clear");
+  assert.equal(isBlocked(g, { x: 12.5, y: 10 }), true, "2.5in away, inside 2.96 combined");
+  assert.equal(isBlocked(g, { x: 14, y: 10 }), false, "4in away, clear");
 });
 
 test("buildGrid blocks the field margin so a base can't hang off the table", () => {
@@ -997,7 +997,7 @@ test("buildGrid blocks the field margin so a base can't hang off the table", () 
   assert.equal(isBlocked(g, { x: 5, y: 10 }), false);
 });
 
-test("buildGrid does NOT block objectives — they are markers, not obstacles", () => {
+test("buildGrid does NOT block objectives, they are markers, not obstacles", () => {
   // Objectives are simply never passed in as polys or blockers. Guard the
   // contract: an empty obstacle set leaves the interior fully open.
   const g = buildGrid(FIELD, [], [], 0);
@@ -1008,7 +1008,7 @@ test("buildGrid does NOT block objectives — they are markers, not obstacles", 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/pathfind.test.js`
-Expected: FAIL — `Cannot find module './pathfind.js'`
+Expected: FAIL, `Cannot find module './pathfind.js'`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1016,18 +1016,18 @@ Expected: FAIL — `Cannot find module './pathfind.js'`
 // shared/pathfind.js
 // Movement routing for digital rooms. A grid A* over the field with obstacles
 // inflated by the mover's base radius, so the mover is a POINT against fat
-// obstacles — the standard trick, and it makes the swept-corridor check free.
+// obstacles, the standard trick, and it makes the swept-corridor check free.
 //
 // Pure and deterministic: same inputs, same path, always. Depends only on
 // geometry.js. The client calls this for its hover preview and the server calls
-// it again to apply the move, so the two can never disagree — and the server
+// it again to apply the move, so the two can never disagree, and the server
 // never takes a client-supplied path on faith.
 import { distToPolygon } from "./geometry.js";
 
 export const CELL = 0.25; // inches per grid cell
 
 // An occupancy grid for ONE mover. `polys` are terrain (geometry.terrainPolygons),
-// `blockers` are the other rigs ({ pos, radius }) — the mover itself must not be
+// `blockers` are the other rigs ({ pos, radius }), the mover itself must not be
 // in that list. Objectives are never passed: they are markers, not obstacles.
 export function buildGrid(field, polys, blockers, radius) {
   const cols = Math.ceil(field.width / CELL) + 1;
@@ -1103,7 +1103,7 @@ test("findPath returns a straight line across open ground", () => {
 test("findPath routes around a wall and costs more than the straight line", () => {
   const wall = { kind: "building", points: [[9, 0], [11, 0], [11, 14], [9, 14]] };
   const r = findPath(OPEN, [wall], [], 0, { x: 5, y: 5 }, { x: 15, y: 5 });
-  assert.ok(r, "reachable — the wall stops short of the far edge");
+  assert.ok(r, "reachable, the wall stops short of the far edge");
   assert.ok(r.length > 10, "must detour");
   assert.ok(r.path.length > 2, "has a corner");
   // Never cuts the corner: no waypoint sits inside the wall.
@@ -1120,7 +1120,7 @@ test("findPath returns null when the destination is off the table", () => {
   assert.equal(findPath(OPEN, [], [], 1.48, { x: 5, y: 5 }, { x: 19.9, y: 10 }), null);
 });
 
-test("findPath is deterministic — same inputs, same path", () => {
+test("findPath is deterministic, same inputs, same path", () => {
   const wall = { kind: "building", points: [[9, 0], [11, 0], [11, 14], [9, 14]] };
   const a = findPath(OPEN, [wall], [], 0, { x: 5, y: 5 }, { x: 15, y: 5 });
   const b = findPath(OPEN, [wall], [], 0, { x: 5, y: 5 }, { x: 15, y: 5 });
@@ -1131,7 +1131,7 @@ test("findPath is deterministic — same inputs, same path", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/pathfind.test.js`
-Expected: FAIL — `findPath is not a function`
+Expected: FAIL, `findPath is not a function`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1151,7 +1151,7 @@ function clearLine(grid, a, b) {
 
 // Greedy string-pulling: keep the farthest waypoint still reachable in a
 // straight line. A raw 8-connected path zig-zags, and its length would
-// OVERSTATE the real travel — which matters, because length is what gets
+// OVERSTATE the real travel, which matters, because length is what gets
 // checked against Speed.
 function simplify(grid, pts) {
   if (pts.length <= 2) return pts;
@@ -1296,7 +1296,7 @@ Append to `shared/game-state.test.js`. Add this local helper next to the file's 
 
 ```js
 // A claimed 2-side room in digital mode. createRoom takes no options, so the
-// mode is stamped on afterwards — the normalise pass (ensureGameShape) is what
+// mode is stamped on afterwards, the normalise pass (ensureGameShape) is what
 // gives rigs their pos/facing, and it runs on the next applyCommand.
 function digitalRoom(code = "DIG001") {
   const room = createRoom(code);
@@ -1312,7 +1312,7 @@ test("a room defaults to physical mode", () => {
   assert.equal(createRoom("PHYS01").mode, "physical");
 });
 
-test("a digital room is rigs-only — adding a tank is refused", () => {
+test("a digital room is rigs-only, adding a tank is refused", () => {
   const room = digitalRoom();
   const res = checkCommand(room, { verb: "add", attrs: {
     name: "T1", kind: "tank", owner: "a", unit: "Autocannon",
@@ -1350,17 +1350,17 @@ test("rigs in a digital room carry pos and facing; physical rigs do not", () => 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `room.mode` is undefined
+Expected: FAIL, `room.mode` is undefined
 
 - [ ] **Step 3: Write minimal implementation**
 
-In `shared/game-state.js` room creation (both sites — ~line 723 and the `room.field` repair at ~line 900), add the mode flag:
+In `shared/game-state.js` room creation (both sites, ~line 723 and the `room.field` repair at ~line 900), add the mode flag:
 
 ```js
   // Physical rooms are the tabletop companion: the player declares distance /
   // arc / cover off a real table. Digital rooms simulate the field, so those
   // three are derived from geometry instead (spec: Room modes). Physical is the
-  // default — every pre-mode save loads as physical and behaves exactly as before.
+  // default, every pre-mode save loads as physical and behaves exactly as before.
   if (room.mode !== "digital") room.mode = "physical";
 ```
 
@@ -1368,7 +1368,7 @@ In the rig normalise block (near the other `if (rig.x === undefined)` defaults, 
 
 ```js
   // Simulated position, digital rooms only. Inches, field coords, CENTRE of
-  // base. A physical rig never gets these — there is no simulated field to
+  // base. A physical rig never gets these, there is no simulated field to
   // stand on, and an undefined pos is how the derivation seam tells the modes
   // apart.
   if (room.mode === "digital") {
@@ -1381,14 +1381,14 @@ In the `add` verb handler (~line 3047), before the kind is honoured:
 
 ```js
     if (room.mode === "digital" && kind !== "rig") {
-      reject("Digital battles are Rigs only — no Tanks or Walkers.");
+      reject("Digital battles are Rigs only, no Tanks or Walkers.");
     } else
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — and every pre-existing game-state test stays green (physical is the default)
+Expected: PASS, and every pre-existing game-state test stays green (physical is the default)
 
 - [ ] **Step 5: Commit**
 
@@ -1464,7 +1464,7 @@ Write `digitalRoomWithMirroredRigs()` as a local helper in the test file: a `mod
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `autoDeploy is not defined`
+Expected: FAIL, `autoDeploy is not defined`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1481,7 +1481,7 @@ Then add near the other room helpers:
 // legally inside their own corner; there is no deploy phase and no placement
 // UI. Deterministic under an injected RNG, exactly like scatterTerrain.
 //
-// The 8in zone is measured to the base CENTRE, not the nearest edge — the
+// The 8in zone is measured to the base CENTRE, not the nearest edge, the
 // measurement rebase (spec) made centre the default everywhere except melee
 // reach and objective control.
 export function autoDeploy(room, random = Math.random) {
@@ -1503,14 +1503,14 @@ export function autoDeploy(room, random = Math.random) {
       const d = Math.sqrt(rand()) * rad;
       const p = { x: corner.x + Math.cos(a) * d, y: corner.y + Math.sin(a) * d };
       if (p.x < r || p.y < r || p.x > room.field.width - r || p.y > room.field.height - r) continue;
-      // The whole base must clear the terrain, not just the centre point — the
+      // The whole base must clear the terrain, not just the centre point, the
       // same "clear for a base of radius r" test the occupancy grid uses, so a
       // rig can never be deployed somewhere it could not have walked to.
       if (!clearOfTerrain(p, r, polys)) continue;
       if (placed.some((q) => Math.hypot(q.pos.x - p.x, q.pos.y - p.y) < r + q.r)) continue;
       rig.pos = { x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 };
       // Squadrons start clustered in their corner and advance across the
-      // diagonal (§10) — so everyone starts looking at the contested centre.
+      // diagonal (§10), so everyone starts looking at the contested centre.
       rig.facing = Math.atan2(centre.y - rig.pos.y, centre.x - rig.pos.x) * 180 / Math.PI;
       placed.push({ pos: rig.pos, r });
       break;
@@ -1558,7 +1558,7 @@ git commit -m "feat(state): auto-scatter deployment for digital rooms"
 test("digital rooms derive distance/arc/cover and ignore what the client claimed", () => {
   const room = digitalRoomWithMirroredRigs();
   const [a, b] = room.rigs;
-  room.field.terrain = []; // clean field — no cover
+  room.field.terrain = []; // clean field, no cover
   a.pos = { x: 10, y: 10 }; a.facing = 0;
   b.pos = { x: 20, y: 10 }; b.facing = 0; // shot lands in b's REAR (b looks away)
   const derived = deriveAttackGeometry(room, a, b);
@@ -1617,16 +1617,16 @@ test("physical rooms still take the player's declared values verbatim", () => {
     verb: "action", name: a.name, action: "fire",
     attack: { weapon: "longRange", target: b.name, arc: "rear", cover: 2, distance: 14, dice: [6, 6] },
   });
-  assert.equal(res.ok, true, "no geometry, no refusal — the human measured it");
+  assert.equal(res.ok, true, "no geometry, no refusal, the human measured it");
 });
 ```
 
-`startActivationFor` and `physicalRoomWithMirroredRigs` are local test helpers — build them from the existing patterns in `shared/game-state.test.js`.
+`startActivationFor` and `physicalRoomWithMirroredRigs` are local test helpers, build them from the existing patterns in `shared/game-state.test.js`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `deriveAttackGeometry is not defined`
+Expected: FAIL, `deriveAttackGeometry is not defined`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1639,7 +1639,7 @@ Add `sightCorridor`, `arcOf`, `distanceBetween`, `meleeInReach` to the `geometry
 // the SAME resolveAttack signature. resolveAttack does not know which mode it
 // is in, and combat.test.js never has to change.
 //
-// A rig carries `radius` nowhere in state — it is derived from weight class, so
+// A rig carries `radius` nowhere in state, it is derived from weight class, so
 // bolt it on here for the geometry helpers, which want { pos, facing, radius }.
 function spatial(rig) {
   return { pos: rig.pos, facing: rig.facing, radius: radiusOf(rig) };
@@ -1682,12 +1682,12 @@ Inside `resolveFire`, immediately after `const slot = ...`:
   }
 ```
 
-**Careful:** `a` is a parameter — check whether `resolveFire` declares it `const`/reassigns it, and whether callers rely on mutation. If reassignment is awkward, mutate the three fields in place instead (`a.distance = geo.distance; ...`). Read the function before editing.
+**Careful:** `a` is a parameter, check whether `resolveFire` declares it `const`/reassigns it, and whether callers rely on mutation. If reassignment is awkward, mutate the three fields in place instead (`a.distance = geo.distance; ...`). Read the function before editing.
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/game-state.test.js && node --test shared/combat.test.js`
-Expected: PASS — and `combat.test.js` must be green with ZERO edits. If you had to touch it, the seam is wrong; revert and reconsider.
+Expected: PASS, and `combat.test.js` must be green with ZERO edits. If you had to touch it, the seam is wrong; revert and reconsider.
 
 - [ ] **Step 5: Commit**
 
@@ -1698,18 +1698,18 @@ git commit -m "feat(state): derive distance/arc/cover from geometry in digital r
 
 ---
 
-### Task 10b: The reaction paths bypass the seam (FOLLOW-UP — needs a design decision first)
+### Task 10b: The reaction paths bypass the seam (FOLLOW-UP, needs a design decision first)
 
 Found while implementing Task 10. Not a defect in it; a genuinely separate question.
 
 Five reaction paths call `resolveAttack`. Two route through `resolveFire` and inherit the
-seam for free — `game-state.js:3707` (evasive) and `:3747` (sidestep). **Three call
+seam for free, `game-state.js:3707` (evasive) and `:3747` (sidestep). **Three call
 `resolveAttack` directly and still read client-declared geometry verbatim** (`a.attack.arc`,
 `.range`, `.distance`, `.cover`):
 
-- `game-state.js:3715` — **Return Fire**
-- `game-state.js:3762` — **Riposte**
-- `game-state.js:3779` — **Exploit**
+- `game-state.js:3715`: **Return Fire**
+- `game-state.js:3762`: **Riposte**
+- `game-state.js:3779`: **Exploit**
 
 Also unrouted: `:2401`/`:2431` (brace retaliate, anvil riposte), `:2495` (ground anchor),
 `:2511` (skewer).
@@ -1717,7 +1717,7 @@ Also unrouted: `:2401`/`:2431` (brace retaliate, anvil riposte), `:2495` (ground
 **Why this was NOT folded into Task 10.** These are the *reactor* shooting back, so the
 geometry must be derived in the **reverse direction** (reactor → attacker), and the reactor
 may have moved or pivoted as part of the reaction itself. Exploit is explicitly a
-pivot-to-face with a **player-supplied arc** — deriving it would either delete that choice
+pivot-to-face with a **player-supplied arc**: deriving it would either delete that choice
 or need the post-pivot facing threaded in. That is a design decision, not a mechanical
 repeat of Task 10.
 
@@ -1790,7 +1790,7 @@ test("a Move may pivot up to 90 degrees and no further", () => {
   assert.match(tooFar.reason, /90/);
 });
 
-test("a 0-inch Move is legal — pivot in place, still costs the action and heat", () => {
+test("a 0-inch Move is legal, pivot in place, still costs the action and heat", () => {
   const room = digitalRoomWithMirroredRigs();
   const rig = room.rigs[0];
   room.field.terrain = [];
@@ -1819,7 +1819,7 @@ test("Sprint budgets 1.5x Speed and still caps the pivot at 90", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the rig doesn't move; `rig.pos.x` stays 10
+Expected: FAIL, the rig doesn't move; `rig.pos.x` stays 10
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1831,7 +1831,7 @@ import { findPath } from "./pathfind.js";
 
 **First, move the Speed fallback map into `shared/`.** It currently lives at
 `client/src/v2/battle/constants.ts:24` as
-`export const SPEED = { light: 5, medium: 4, heavy: 3, colossal: 2 }` — but it is a *rules*
+`export const SPEED = { light: 5, medium: 4, heavy: 3, colossal: 2 }`: but it is a *rules*
 constant, and `shared/` cannot import from `client/`. Duplicating it would let the engine
 and the drawer drift on how far a rig moves, which is exactly the bug this task exists to
 prevent.
@@ -1842,7 +1842,7 @@ In `shared/game-state.js`, export it beside `CHASSIS`:
 // Per-weight-class Speed fallback, in inches. A chassis with its own `speed`
 // wins (see the per-chassis speed rework); this catches free-combo rigs and
 // pre-speed saves. Lives in shared/ because BOTH the move drawer and the
-// engine's budget check read it — a client-side copy would let the number the
+// engine's budget check read it, a client-side copy would let the number the
 // player is shown drift from the number the engine enforces.
 export const SPEED_BY_CLASS = { light: 5, medium: 4, heavy: 3, colossal: 2 };
 ```
@@ -1858,7 +1858,7 @@ Now add the budget helper near `autoDeploy`:
 ```js
 // The inches a rig may cover with one Move / Sprint. Sprint reach is
 // loadout-derived (1.5x Speed, 2x with the Reinforced Servos field upgrade),
-// rounded to a whole inch — the same maths MoveBody.tsx already prints, read
+// rounded to a whole inch, the same maths MoveBody.tsx already prints, read
 // from the same rigEffects source so the drawer and the engine can't drift.
 export function moveBudget(rig, act) {
   const base = (rig.speed ?? SPEED_BY_CLASS[rig.weightClass] ?? 8) * (rig.speedHalvedNextRound ? 0.5 : 1);
@@ -1875,7 +1875,7 @@ In the `move`/`sprint` branch of `performAction`, after the existing engagement 
 
 ```js
     // Digital rooms actually walk the rig. The client sends only { dest, facing }
-    // — never a path — and the engine routes it again with the same pure module
+    //, never a path, and the engine routes it again with the same pure module
     // the client previewed with. Same inputs, same path, so the preview always
     // agrees, and a hostile client can't smuggle in a longer move.
     let digitalMove = null;
@@ -1886,19 +1886,19 @@ In the `move`/`sprint` branch of `performAction`, after the existing engagement 
       }
       const facing = Number.isFinite(Number(a.facing)) ? Number(a.facing) : rig.facing;
       // Pivot is part of the Move, up to 90 deg, at either end. A 180 is two
-      // Moves and two heat — which is what makes flanking lethal.
+      // Moves and two heat, which is what makes flanking lethal.
       const turn = pivotDelta(rig.facing, facing);
-      if (turn > 90 + 1e-9) return reject(`A Move may pivot at most 90° — that's ${Math.round(turn)}°.`);
+      if (turn > 90 + 1e-9) return reject(`A Move may pivot at most 90°, that's ${Math.round(turn)}°.`);
 
       const others = room.rigs.filter((x) => x.id !== rig.id && !x.destroyed).map(spatial);
       const routed = findPath(
         room.field, terrainPolygons(room.field), others, radiusOf(rig),
         rig.pos, { x: Number(dest.x), y: Number(dest.y) },
       );
-      if (!routed) return reject("Can't reach that spot — no route.");
+      if (!routed) return reject("Can't reach that spot, no route.");
       const budget = moveBudget(rig, act);
       if (routed.length > budget + 1e-6) {
-        return reject(`That's ${routed.length.toFixed(1)}″ — past this unit's ${budget}″ of ${act === "sprint" ? "Sprint" : "Move"}.`);
+        return reject(`That's ${routed.length.toFixed(1)}″, past this unit's ${budget}″ of ${act === "sprint" ? "Sprint" : "Move"}.`);
       }
       // A 0in Move is legal: a cornered rig has to be able to turn without
       // walking into fire. It still spends the slot and the heat below.
@@ -1934,7 +1934,7 @@ git commit -m "feat(state): digital Move routes by path with a 90-degree pivot"
 §5 loses its "Move into base contact and declare" clause. Engagement now only ever happens by making a melee attack, and Task 10 already verifies the reach.
 
 **Files:**
-- Modify: `shared/game-state.js` (wherever the `engage` command / `a.engage` flag on a move is handled — grep `setEngagement`, ~line 1617)
+- Modify: `shared/game-state.js` (wherever the `engage` command / `a.engage` flag on a move is handled, grep `setEngagement`, ~line 1617)
 - Test: `shared/game-state.test.js`
 
 - [ ] **Step 1: Write the failing test**
@@ -1948,7 +1948,7 @@ test("a digital move can no longer declare an engagement", () => {
   b.pos = { x: 13, y: 10 }; b.facing = 180; // touching-ish
   startActivationFor(room, a);
   applyCommand(room, { verb: "action", name: a.name, action: "move", dest: { x: 12.9, y: 10 }, facing: 0, engage: b.name });
-  assert.equal(a.engagedWith, null, "contact alone never locks — only a melee swing does");
+  assert.equal(a.engagedWith, null, "contact alone never locks, only a melee swing does");
 });
 
 test("a digital melee attack in reach still locks both rigs", () => {
@@ -1971,14 +1971,14 @@ test("a digital melee attack in reach still locks both rigs", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the move's `engage` flag still sets `engagedWith`
+Expected: FAIL, the move's `engage` flag still sets `engagedWith`
 
 - [ ] **Step 3: Write minimal implementation**
 
 In the `move`/`sprint` branch, guard the existing engage-on-move path:
 
 ```js
-    // §5 (spec: Engagement) — digital rooms drop the "Move into base contact and
+    // §5 (spec: Engagement), digital rooms drop the "Move into base contact and
     // declare" path entirely. Contact is now a checkable fact rather than a
     // claim, and letting a move lock would delete the choice to walk PAST an
     // enemy. Only a melee swing engages; resolveFire verifies the 2in rim reach.
@@ -1987,7 +1987,7 @@ In the `move`/`sprint` branch, guard the existing engage-on-move path:
     }
 ```
 
-Read the current code before editing — the engage-on-move handling may live in `performAction` or in the `action` verb. Wrap whatever exists rather than rewriting it.
+Read the current code before editing, the engage-on-move handling may live in `performAction` or in the `action` verb. Wrap whatever exists rather than rewriting it.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2028,7 +2028,7 @@ test("digital objective control is derived, uncontested", () => {
 
 test("digital objective control is contested when both sides are within 2in", () => {
   const room = digitalRoomWithMirroredRigs();
-  const [a, , foe] = room.rigs; // rigs[2] belongs to side b — check the fixture
+  const [a, , foe] = room.rigs; // rigs[2] belongs to side b, check the fixture
   const obj = room.game.objectives[0];
   a.pos = { x: obj.x + 3, y: obj.y };
   foe.pos = { x: obj.x - 3, y: obj.y };
@@ -2050,14 +2050,14 @@ test("a destroyed rig holds nothing", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `objectiveControl is not defined`
+Expected: FAIL, `objectiveControl is not defined`
 
 - [ ] **Step 3: Write minimal implementation**
 
 Add `controlsObjective` to the `geometry.js` import. Then:
 
 ```js
-// §11 control, derived. A Rig controls a marker if it is within 2in (RIM gap —
+// §11 control, derived. A Rig controls a marker if it is within 2in (RIM gap,
 // you stand ON the marker, so base size counts) and no enemy Rig is also within
 // 2in. A wreck holds nothing; digital rooms remove destroyed rigs outright, but
 // guard anyway so a mid-resolution call can't score a corpse.
@@ -2075,7 +2075,7 @@ export function objectiveControl(room) {
 }
 ```
 
-In the Recovery scoring path, branch on mode: a digital room scores straight off `objectiveControl(room)` and never waits on `recoveryClaims`. Read the existing `vp` verb and Recovery code first — the physical claim flow must keep working exactly as-is.
+In the Recovery scoring path, branch on mode: a digital room scores straight off `objectiveControl(room)` and never waits on `recoveryClaims`. Read the existing `vp` verb and Recovery code first, the physical claim flow must keep working exactly as-is.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2096,7 +2096,7 @@ git commit -m "feat(state): derive objective control in digital rooms"
 Spec: a destroyed rig leaves the map entirely. §11's wreck clause still holds for physical rooms; it just never fires in digital.
 
 **Files:**
-- Modify: `shared/game-state.js` (wherever `rig.destroyed = true` is set — grep it)
+- Modify: `shared/game-state.js` (wherever `rig.destroyed = true` is set, grep it)
 - Test: `shared/game-state.test.js`
 
 - [ ] **Step 1: Write the failing test**
@@ -2107,7 +2107,7 @@ test("a destroyed rig leaves the digital map", () => {
   const rig = room.rigs[0];
   rig.pos = { x: 10, y: 10 };
   destroyRig(room, rig); // whatever the existing destruction helper is called
-  assert.equal(rig.pos, null, "the wreck is gone — nothing to path around");
+  assert.equal(rig.pos, null, "the wreck is gone, nothing to path around");
 });
 
 test("a destroyed digital rig no longer blocks movement", () => {
@@ -2126,7 +2126,7 @@ test("a destroyed digital rig no longer blocks movement", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rig.pos` still holds its coordinates
+Expected: FAIL, `rig.pos` still holds its coordinates
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -2134,7 +2134,7 @@ Wherever destruction is finalised:
 
 ```js
   // Spec: Wrecks vanish. §11's "a wreck does not hold objectives" clause still
-  // governs a physical table, where the model physically stays put — but a
+  // governs a physical table, where the model physically stays put, but a
   // digital wreck is simply removed, so there is nothing to path around, target,
   // or score.
   if (room.mode === "digital") rig.pos = null;
@@ -2161,7 +2161,7 @@ git commit -m "feat(state): digital wrecks leave the map"
 **Files:**
 - Modify: `client/src/state/types.ts` (`TerrainKind` ~line 142, `FieldState` ~line 162, and the `Rig` interface)
 - Modify: `shared/game-state.js` (the wire-payload builder, ~line 3716)
-- Test: none — types only. `npm test` must typecheck clean.
+- Test: none, types only. `npm test` must typecheck clean.
 
 - [ ] **Step 1: Extend the types**
 
@@ -2186,7 +2186,7 @@ export interface FieldState {
 }
 ```
 
-(unchanged — mode lives on the room, not the field)
+(unchanged, mode lives on the room, not the field)
 
 Add to the `Rig` interface:
 
@@ -2210,7 +2210,7 @@ In `shared/game-state.js`'s payload builder (~line 3716), add `mode` alongside `
 - [ ] **Step 3: Verify it typechecks**
 
 Run: `npm test`
-Expected: PASS — Vitest green, no TS errors
+Expected: PASS, Vitest green, no TS errors
 
 - [ ] **Step 4: Commit**
 
@@ -2278,7 +2278,7 @@ describe("FieldMap units", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/FieldMap.test.tsx`
-Expected: FAIL — no `unit` testid; `units` isn't a prop
+Expected: FAIL, no `unit` testid; `units` isn't a prop
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -2293,7 +2293,7 @@ interface Props {
   objectives: Objective[];
   mySide: string;
   ownerSide: string | null;
-  /** Digital rooms only. Omitted in a physical room — the map stays a blueprint. */
+  /** Digital rooms only. Omitted in a physical room, the map stays a blueprint. */
   units?: Rig[];
 }
 ```
@@ -2307,7 +2307,7 @@ Render after the objectives block, so tokens sit on top:
         const r = (BASE_RADIUS[u.weightClass as "light" | "medium"] ?? BASE_RADIUS.medium) * scale;
         const mine = u.owner === mySide;
         // The front arc is facing +/-45 (§7). Drawn as a wedge out to 2 base
-        // radii — long enough to read the heading at a glance, short enough not
+        // radii, long enough to read the heading at a glance, short enough not
         // to clutter the board.
         const reach = r * 2;
         const wedge = [
@@ -2329,7 +2329,7 @@ Render after the objectives block, so tokens sit on top:
       })}
 ```
 
-Add matching classes to `client/src/v2/styles/field.css`, following the existing `v2-fm-*` conventions. **`no-raw-font-size.test.ts` exists in `client/src/v2/` — obey it: no literal font sizes.**
+Add matching classes to `client/src/v2/styles/field.css`, following the existing `v2-fm-*` conventions. **`no-raw-font-size.test.ts` exists in `client/src/v2/`: obey it: no literal font sizes.**
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2395,12 +2395,12 @@ describe("FieldMap move preview", () => {
 });
 ```
 
-**Note:** jsdom gives `getBoundingClientRect` all zeros, so screen→inch conversion can't be tested via real pixel maths. Convert using the SVG `viewBox` scale and the event's `clientX/clientY` minus the rect origin; in jsdom that lands at a deterministic (if arbitrary) inch coordinate, which is enough to assert legal/illegal/committed. Don't fight jsdom for pixel fidelity — that's what the pure `pathfind` tests are for.
+**Note:** jsdom gives `getBoundingClientRect` all zeros, so screen→inch conversion can't be tested via real pixel maths. Convert using the SVG `viewBox` scale and the event's `clientX/clientY` minus the rect origin; in jsdom that lands at a deterministic (if arbitrary) inch coordinate, which is enough to assert legal/illegal/committed. Don't fight jsdom for pixel fidelity, that's what the pure `pathfind` tests are for.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/FieldMap.test.tsx`
-Expected: FAIL — no `field-surface` testid
+Expected: FAIL, no `field-surface` testid
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -2410,7 +2410,7 @@ import { findPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf } from "/shared/geometry.js";
 
 // added to Props
-  /** Set while a Move/Sprint drawer is open. Omitted otherwise — no preview. */
+  /** Set while a Move/Sprint drawer is open. Omitted otherwise, no preview. */
   moving?: { unit: Rig; budget: number };
   onMove?: (dest: { x: number; y: number }) => void;
 ```
@@ -2422,7 +2422,7 @@ Inside the component:
 
   // The preview calls the SAME pure findPath the server will call to apply the
   // move. Identical module, identical inputs, so the route the player sees is
-  // exactly the route they get — and the client still sends only the
+  // exactly the route they get, and the client still sends only the
   // destination, never the path.
   const preview = useMemo(() => {
     if (!moving || !hover) return null;
@@ -2471,7 +2471,7 @@ Render a transparent surface UNDER the tokens but over the terrain, and the prev
 
 Add the `v2-fm-surface` / `v2-fm-move*` classes to `field.css`.
 
-**Perf note:** `findPath` rebuilds the whole occupancy grid per call, and this runs on every `mousemove`. If the preview stutters on a 96×72 field, memoise the grid on `[field, units, moving.unit.id]` and add a `findPathOnGrid(grid, from, to)` export that skips `buildGrid`. Don't pre-optimise — measure first.
+**Perf note:** `findPath` rebuilds the whole occupancy grid per call, and this runs on every `mousemove`. If the preview stutters on a 96×72 field, memoise the grid on `[field, units, moving.unit.id]` and add a `findPathOnGrid(grid, from, to)` export that skips `buildGrid`. Don't pre-optimise, measure first.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2489,7 +2489,7 @@ git commit -m "feat(v2): live path preview and destination picking on the field 
 
 ### Task 18: MoveBody drives the map
 
-In a physical room `MoveBody` holds the player on a timed Confirm — long enough to actually push the mini across the table. A digital room has no mini to push, so the hold goes away.
+In a physical room `MoveBody` holds the player on a timed Confirm, long enough to actually push the mini across the table. A digital room has no mini to push, so the hold goes away.
 
 **Files:**
 - Modify: `client/src/v2/battle/MoveBody.tsx`
@@ -2500,7 +2500,7 @@ In a physical room `MoveBody` holds the player on a timed Confirm — long enoug
 Append to `client/src/v2/battle/MoveBody.test.tsx`:
 
 ```tsx
-it("digital rooms skip the timed hold — Confirm is live immediately", () => {
+it("digital rooms skip the timed hold, Confirm is live immediately", () => {
   render(<MoveBody rig={rig} actionKey="move" enemies={[]} mode="digital" dest={{ x: 12, y: 10 }} onEngageChange={() => {}} onCancel={() => {}} onConfirm={() => {}} />);
   expect(screen.getByRole("button", { name: /confirm/i })).toBeEnabled();
 });
@@ -2521,7 +2521,7 @@ Read the existing `MoveBody.test.tsx` and reuse its `rig` fixture rather than ma
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/battle/MoveBody.test.tsx`
-Expected: FAIL — `mode` isn't a prop; the hold always applies
+Expected: FAIL, `mode` isn't a prop; the hold always applies
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -2546,7 +2546,7 @@ Then gate the hold:
 
 ```tsx
   // The timed hold exists because a physical Move resolves on the tabletop, not
-  // on the device — the console can't see the model shift, so it stalls the
+  // on the device, the console can't see the model shift, so it stalls the
   // player long enough to actually push the mini. A digital room moves the rig
   // itself, so there is nothing to wait for.
   const holdMs = digital ? 0 : holdMsFor(actionKey);
@@ -2558,7 +2558,7 @@ and the confirm gate:
   const confirmDisabled = digital ? !dest : locked;
 ```
 
-Hide the engage picker in digital rooms — engagement is melee-only now (Task 12):
+Hide the engage picker in digital rooms, engagement is melee-only now (Task 12):
 
 ```tsx
   {!digital && (/* ...existing engage picker... */)}
@@ -2567,7 +2567,7 @@ Hide the engage picker in digital rooms — engagement is melee-only now (Task 1
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run client/src/v2/battle/MoveBody.test.tsx`
-Expected: PASS — existing physical tests still green
+Expected: PASS, existing physical tests still green
 
 - [ ] **Step 5: Commit**
 
@@ -2580,7 +2580,7 @@ git commit -m "feat(v2): MoveBody drives map destinations in digital rooms"
 
 ### Task 19: AttackWizard skips the derived steps
 
-The wizard collects `arc`, `range`, `distance`, and `cover` from the player (`AttackWizard.tsx:398`, `:420`). In a digital room the engine measures all four, so asking is worse than useless — a wrong answer is silently overwritten by Task 10's seam.
+The wizard collects `arc`, `range`, `distance`, and `cover` from the player (`AttackWizard.tsx:398`, `:420`). In a digital room the engine measures all four, so asking is worse than useless, a wrong answer is silently overwritten by Task 10's seam.
 
 **Files:**
 - Modify: `client/src/v2/overlays/AttackWizard.tsx`
@@ -2614,7 +2614,7 @@ it("a digital attack dispatches without geometry fields", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/overlays/AttackWizard.test.tsx`
-Expected: FAIL — the wizard always asks
+Expected: FAIL, the wizard always asks
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -2637,7 +2637,7 @@ const DERIVED_STEPS = new Set(["arc", "range", "cover", "distance"]);
 
 and drop the four keys from the dispatch payload when `digital`.
 
-**Read the file first.** The wizard is a step machine with recall state (`skipRangedSeed`, seeded distance) — the step list may not be a plain array. Adapt to what's there; don't restructure it.
+**Read the file first.** The wizard is a step machine with recall state (`skipRangedSeed`, seeded distance), the step list may not be a plain array. Adapt to what's there; don't restructure it.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2655,7 +2655,7 @@ git commit -m "feat(v2): AttackWizard skips engine-derived steps in digital room
 
 ### Task 20: rules.md
 
-Prose only — no code. Every change gets a `*⚙ TUNING*` marker, matching the file's existing convention.
+Prose only, no code. Every change gets a `*⚙ TUNING*` marker, matching the file's existing convention.
 
 **Files:**
 - Modify: `rules.md`
@@ -2664,13 +2664,13 @@ Prose only — no code. Every change gets a `*⚙ TUNING*` marker, matching the 
 
 In §7 (~line 259) and §12 (~line 355), where melee's "2" reach" is defined, add the measurement convention:
 
-> **Measuring.** All distances are measured **centre of base to centre of base** — range, movement, and blast radius alike. The two exceptions are **melee reach** and **objective control**, which measure the **gap between base rims**: you are reaching across the gap, or standing on the marker, and base size is the whole point. *⚙ TUNING: replaced the old nearest-edge / front-rim-to-back-rim conventions with a single centre-based rule.*
+> **Measuring.** All distances are measured **centre of base to centre of base**: range, movement, and blast radius alike. The two exceptions are **melee reach** and **objective control**, which measure the **gap between base rims**: you are reaching across the gap, or standing on the marker, and base size is the whole point. *⚙ TUNING: replaced the old nearest-edge / front-rim-to-back-rim conventions with a single centre-based rule.*
 
 - [ ] **Step 2: Retune the ranges**
 
 Centre measurement adds roughly a base diameter (~2.4" light, ~3" medium) to every effective reach that used to be rim-measured. Walk the §12 weapon table and the Speed values and shift them so the *effective* numbers land where they did before. Mark the pass `*⚙ TUNING: rebased for centre-to-centre measurement.*`
 
-**This is a judgement pass, not a mechanical one — surface the proposed numbers for review before committing them.** It changes the balance of a game that has already been played.
+**This is a judgement pass, not a mechanical one, surface the proposed numbers for review before committing them.** It changes the balance of a game that has already been played.
 
 - [ ] **Step 3: Fix §10 deployment**
 
@@ -2682,7 +2682,7 @@ Change *"measured from the corner to the nearest edge of the base"* to:
 
 Replace the **Getting engaged** bullet (~line 189):
 
-> - **Getting engaged.** A Rig becomes **engaged** with an enemy by **making a melee attack** against it (in reach). The lock is **mutual** and **one-to-one** (a Rig already engaged can't be pulled into a second lock; you may still melee an already-engaged enemy, you just don't lock to it). *⚙ TUNING: removed the "move into base contact and declare" path — closing to contact no longer locks you, so you may walk past an enemy at your own risk.*
+> - **Getting engaged.** A Rig becomes **engaged** with an enemy by **making a melee attack** against it (in reach). The lock is **mutual** and **one-to-one** (a Rig already engaged can't be pulled into a second lock; you may still melee an already-engaged enemy, you just don't lock to it). *⚙ TUNING: removed the "move into base contact and declare" path, closing to contact no longer locks you, so you may walk past an enemy at your own risk.*
 
 - [ ] **Step 5: Document digital rooms**
 
@@ -2690,7 +2690,7 @@ Add a short §14 (or wherever the numbering lands):
 
 > ## Digital battles
 >
-> A **digital** battle is played entirely in the app — no table, no tape measure, no minis. The engine tracks every Rig's position and facing and measures range, arc, and cover itself.
+> A **digital** battle is played entirely in the app, no table, no tape measure, no minis. The engine tracks every Rig's position and facing and measures range, arc, and cover itself.
 >
 > Digital battles differ from the tabletop game in four ways:
 > - **Rigs only.** No Tanks or Walkers.
@@ -2698,7 +2698,7 @@ Add a short §14 (or wherever the numbering lands):
 > - **Auto-deployment.** The engine places both squadrons in their corners.
 > - **Wrecks are removed** from the field when a Rig dies.
 >
-> Everything else — heat, actions, the Impact Table, preparations, Answer tokens, objectives — is the same game.
+> Everything else, heat, actions, the Impact Table, preparations, Answer tokens, objectives, is the same game.
 
 - [ ] **Step 6: Commit**
 
@@ -2714,12 +2714,12 @@ git commit -m "docs(rules): centre-based measurement, melee-only engagement, dig
 - [ ] **Step 1: Run everything**
 
 Run: `npm test`
-Expected: PASS — Vitest and both node suites. `combat.test.js` must be green with zero edits.
+Expected: PASS, Vitest and both node suites. `combat.test.js` must be green with zero edits.
 
 - [ ] **Step 2: Verify the seam held**
 
 Run: `git diff main --stat -- shared/combat.js shared/combat.test.js`
-Expected: **empty**. If either file changed, the seam leaked — the whole design rests on `resolveAttack` not knowing which mode it's in.
+Expected: **empty**. If either file changed, the seam leaked, the whole design rests on `resolveAttack` not knowing which mode it's in.
 
 - [ ] **Step 3: Update the measurement-conventions memory**
 
@@ -2728,8 +2728,8 @@ The stored memory still says *range = nearest-edge gap, movement = front→back 
 - [ ] **Step 4: Commit**
 
 **Never `git add -A` in this repo.** The worktree is routinely dirty with unrelated
-in-progress work, and `git commit` commits the WHOLE INDEX — not just the paths you
-added — so a broad add silently buries someone else's staged changes under your commit
+in-progress work, and `git commit` commits the WHOLE INDEX, not just the paths you
+added, so a broad add silently buries someone else's staged changes under your commit
 message. Stage explicit paths, and check `git diff --cached --stat` before every commit:
 
 ```bash
@@ -2749,9 +2749,9 @@ which is the safe form when the index may already hold work that isn't yours.
 **Two spec items the plan deliberately does NOT implement**, both flagged out-of-scope in the spec itself: Piledriver's shove and Barrage's zone still emit their player instructions. The map makes them simulatable; they're a follow-up.
 
 **Two defects this review caught and fixed inline:**
-1. `autoDeploy` originally tested terrain clearance with a degenerate zero-length segment, which only checks the base *centre* — it would have deployed rigs half-inside buildings. Now both it and the occupancy grid share one exported `clearOfTerrain` / `distToPolygon`, so "clear for a base of radius r" has exactly one definition.
-2. `moveBudget` referenced `SPEED`, which lives in `client/src/v2/battle/constants.ts` — unimportable from `shared/`. Task 11 now moves it to `shared/` as `SPEED_BY_CLASS` and re-exports it clientside, rather than duplicating the map.
+1. `autoDeploy` originally tested terrain clearance with a degenerate zero-length segment, which only checks the base *centre*: it would have deployed rigs half-inside buildings. Now both it and the occupancy grid share one exported `clearOfTerrain` / `distToPolygon`, so "clear for a base of radius r" has exactly one definition.
+2. `moveBudget` referenced `SPEED`, which lives in `client/src/v2/battle/constants.ts`: unimportable from `shared/`. Task 11 now moves it to `shared/` as `SPEED_BY_CLASS` and re-exports it clientside, rather than duplicating the map.
 
-**Known risk — Task 20 Step 2 is the only non-mechanical step in the plan.** Retuning the weapon table for centre measurement is a balance judgement on a game that has already been played. It's flagged for review rather than specified, on purpose. If it stalls, the rest of the plan ships without it and the numbers stay slightly long.
+**Known risk, Task 20 Step 2 is the only non-mechanical step in the plan.** Retuning the weapon table for centre measurement is a balance judgement on a game that has already been played. It's flagged for review rather than specified, on purpose. If it stalls, the rest of the plan ships without it and the numbers stay slightly long.
 
 **Task 10 is the load-bearing one.** If `combat.test.js` needs edits, stop and reconsider rather than editing it.

@@ -6,10 +6,10 @@ import { useMySide } from "../../hooks/useMySide";
 import { computeFocus, type FocusCtaKind } from "../../lib/computeFocus";
 import "../styles/battle.css";
 
-// The one thing this player should do right now. V2 renders it in normal flow —
+// The one thing this player should do right now. V2 renders it in normal flow,
 // no fixed positioning, no document.body class toggling, no --turn-banner-h var
 // (the whole-screen my-turn glow is a scoped ::before instead). Commission has no
-// V2 wizard context — the parent (V2Terminal) owns that overlay, so it's a prop.
+// V2 wizard context, the parent (V2Terminal) owns that overlay, so it's a prop.
 export function TurnBanner({ onCommission }: { onCommission?: () => void }) {
   const { rigs, game } = useRoomState();
   const mySide = useMySide();

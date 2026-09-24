@@ -7,7 +7,7 @@ in `shared/rules.js`. Dated 2026-07-14. Findings ordered by impact.
 ## Movement cost baseline
 
 - **Move**: 1 heat, 1 slot, moves 1× Speed (`ACTIONS.move`, `rules.js:11`).
-- **Sprint**: 2 heat, 1 slot, moves 2× Speed — "move twice" (`game-state.js:2381`, `rules.js:12`).
+- **Sprint**: 2 heat, 1 slot, moves 2× Speed, "move twice" (`game-state.js:2381`, `rules.js:12`).
 
 Base game keeps Move relevant only because it matches Sprint's heat-per-inch
 (1 heat / 1× vs 2 heat / 2×). Any change to Sprint's heat breaks that parity.
@@ -30,7 +30,7 @@ Tuned = conditional. But Armour Piercing ships:
 - **Field** on Circular Saw (Tempered Teeth), Pressure Claw (Hardened Jaws)
 - **Tuned** on Autocannon (AP Shells), Missile Barrage (Shaped Charges)
 
-All four are unconditional perk grants. The two Tuned ones are miscategorized —
+All four are unconditional perk grants. The two Tuned ones are miscategorized,
 they belong at Field by the definition. Same effect at different natures
 undermines the risk/reward slider the commission wizard sells. Reclassify the
 unconditional AP grants to Field.
@@ -54,13 +54,13 @@ either gate those choices, label them clearly as inert, or ship the effects.
 A post-commission catalog rebalance updates Sprint but freezes the stamped
 values. One read-model, two resolution paths. Additionally, `equipmentActiveHeat`
 warns (line 377) that any new heat-override tag must add its own branch "or it
-drifts silently" — and `sprintHeat` already lives in a *separate* function, so
+drifts silently", and `sprintHeat` already lives in a *separate* function, so
 the two override paths can desync. Pick one resolution strategy (prefer stamped
 everywhere, or catalog everywhere) and route all overrides through it.
 
 ## Suggested follow-ups
 
-1. Hide/disable Move when Sprint dominates (Task 8) — already planned.
+1. Hide/disable Move when Sprint dominates (Task 8), already planned.
 2. Reclassify unconditional Armour Piercing grants from Tuned to Field (finding 2).
 3. Gate or label inert Prototype/Tuned equipment upgrades (finding 3).
 4. Unify `rigEffects` resolution to a single staleness model (finding 4).

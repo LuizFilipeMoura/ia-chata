@@ -1,8 +1,8 @@
-# Generic Unit System — Tanks & Walkers Implementation Plan
+# Generic Unit System, Tanks & Walkers Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement `docs/superpowers/specs/2026-07-06-unit-system-design.md` end to end — turn the single Rig into one instance of a generic unit registry, then add Tank and Walker as new registry entries, with heat/arcs/preparations/action-budget/weapon-domain differences flowing from data. Rig behavior remains byte-for-byte identical (regressioned by the existing `shared/*.test.js` suites).
+**Goal:** Implement `docs/superpowers/specs/2026-07-06-unit-system-design.md` end to end, turn the single Rig into one instance of a generic unit registry, then add Tank and Walker as new registry entries, with heat/arcs/preparations/action-budget/weapon-domain differences flowing from data. Rig behavior remains byte-for-byte identical (regressioned by the existing `shared/*.test.js` suites).
 
 **Architecture:** A new `shared/unit-kinds.js` module holds the registry (per-kind `parts`, `hitLocation`, `armour`, and every behavioral flag from the spec). `shared/rules.js` grows kind-aware `hitLocation` + `impactRow` helpers that read the registry. `shared/game-state.js` swaps its hardcoded `LOCS` / cascade names / `RIG_DEFAULTS` / 3-action budget for registry lookups, guarded by role and by `hasHeat` / `hasArcs` / `reactions` flags. `shared/combat.js` skips the weight-class STR modifier for units whose registry marks `weaponMode: "flat-pick"`. A new shared `UNIT_WEAPONS` catalogue holds the flat weapon list Tanks and Walkers pick from. `server/prompt.js` teaches the LLM the three unit kinds and their commission grammar. Client: `HeatGauge` guards on `hasHeat`, the accordion/`rigView.ts` reads parts from the registry, and a new **Unit Wizard** replaces the Rig-only wizard so users can commission Rigs, Tanks, or Walkers.
 
@@ -40,15 +40,15 @@
 
 ## Terminology
 
-Throughout the plan **kind** means one of the three registry entries (`"rig"`, `"tank"`, `"walker"`). **Part** is one of the four components on a unit — always four in this plan (the D12 hit table depends on it). **Role** is one of `"structural"`, `"power"`, `"mobility"`, `"weapon"`.
+Throughout the plan **kind** means one of the three registry entries (`"rig"`, `"tank"`, `"walker"`). **Part** is one of the four components on a unit, always four in this plan (the D12 hit table depends on it). **Role** is one of `"structural"`, `"power"`, `"mobility"`, `"weapon"`.
 
 ---
 
-## Phase A — Registry + role refactor (Rig behavior unchanged)
+## Phase A, Registry + role refactor (Rig behavior unchanged)
 
 Goal for Phase A: land `shared/unit-kinds.js`, rewrite every hardcoded `LOCS` / catastrophic-cascade / heat-routing branch to look up part-name via role, and prove nothing regressed by running the existing `shared/*.test.js` suites. After Phase A the code base has zero hardcoded `"hull"` / `"engine"` / `"arms"` / `"legs"` name-branches in cascades and heat routing, but only the Rig kind is exposed.
 
-**Shared exports needed by later tests.** `shared/game-state.js` already exposes `applyDamage` through the `__test` namespace (line ~1279: `export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig };`). `setRigSp` is file-private; add it to that same `__test` object. In every test block below that reads `applyDamage(...)` or `setRigSp(...)`, use `__test.applyDamage(...)` and `__test.setRigSp(...)` — matching the existing convention (see `shared/game-state.test.js:787`). `makeUnit`, `UNIT_WEAPONS`, `normalizeUnitWeapon`, and `partsByRole` are added as normal exports by later tasks; `applyCommand` is already exported.
+**Shared exports needed by later tests.** `shared/game-state.js` already exposes `applyDamage` through the `__test` namespace (line ~1279: `export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig };`). `setRigSp` is file-private; add it to that same `__test` object. In every test block below that reads `applyDamage(...)` or `setRigSp(...)`, use `__test.applyDamage(...)` and `__test.setRigSp(...)`: matching the existing convention (see `shared/game-state.test.js:787`). `makeUnit`, `UNIT_WEAPONS`, `normalizeUnitWeapon`, and `partsByRole` are added as normal exports by later tasks; `applyCommand` is already exported.
 
 As a one-shot housekeeping commit at the start of Phase A: extend the `__test` object literal to include `setRigSp`. That is the only pre-work.
 
@@ -142,7 +142,7 @@ test("kindOf(unit) returns the registry id, defaulting to 'rig' on legacy shape"
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/unit-kinds.test.js`
-Expected: FAIL — module does not exist.
+Expected: FAIL, module does not exist.
 
 - [ ] **Step 3: Create `shared/unit-kinds.js`**
 
@@ -150,7 +150,7 @@ Expected: FAIL — module does not exist.
 // Unit-type registry. Every unit kind (Rig / Tank / Walker) is one entry here;
 // cascade branches on role (not part-name), the activation loop reads
 // actionBudget per unit, and heat / arcs / preparations are guarded on flags.
-// Adding a new machine is a new registry entry — no engine changes.
+// Adding a new machine is a new registry entry, no engine changes.
 
 export const ROLES = ["structural", "power", "mobility", "weapon"];
 
@@ -193,7 +193,7 @@ export const UNIT_KINDS = {
       { name: "legs",   role: "mobility" },
       { name: "engine", role: "power" },
     ],
-    // D12 hit-location table — { min: inclusive D12 low bound, part: string }.
+    // D12 hit-location table, { min: inclusive D12 low bound, part: string }.
     hitLocation: [
       { min: 1,  part: "hull" },
       { min: 5,  part: "arms" },
@@ -256,7 +256,7 @@ export function impactRow(kindId, partName, weightClass) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/unit-kinds.test.js`
-Expected: PASS — 8 subtests.
+Expected: PASS, 8 subtests.
 
 - [ ] **Step 5: Commit**
 
@@ -275,7 +275,7 @@ git commit -m "feat(units): add unit-kind registry with Rig entry"
 
 - [ ] **Step 1: Write the failing test**
 
-Update `shared/rules.test.js` — replace the current `IMPACT` and `hitLocation` tests. Add these tests (importing from `rules.js`):
+Update `shared/rules.test.js`: replace the current `IMPACT` and `hitLocation` tests. Add these tests (importing from `rules.js`):
 
 ```javascript
 test("hitLocation(kindId, d12) resolves via the registry for rigs", () => {
@@ -298,7 +298,7 @@ Delete the tests that read from the old `IMPACT.medium.engine` object literal sh
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/rules.test.js`
-Expected: FAIL — `hitLocation` still has the D12-only signature.
+Expected: FAIL, `hitLocation` still has the D12-only signature.
 
 - [ ] **Step 3: Replace the Rig-only helpers in `shared/rules.js`**
 
@@ -318,14 +318,14 @@ export function impactRow(kindId, partName, weightClass) {
 }
 ```
 
-Leave `impactSeverity`, `HEAT_THRESHOLDS`, `heatThreshold`, `WEIGHT_STR_MOD`, `AIM`, `RAM_STR`, `shieldCoverage`, `ACTIONS` untouched — they are still Rig-tier concerns.
+Leave `impactSeverity`, `HEAT_THRESHOLDS`, `heatThreshold`, `WEIGHT_STR_MOD`, `AIM`, `RAM_STR`, `shieldCoverage`, `ACTIONS` untouched, they are still Rig-tier concerns.
 
 - [ ] **Step 4: Fix every caller**
 
 Grep the repo: `rg -n 'hitLocation\(|IMPACT\[' shared server client`. There are three call sites in `shared/combat.js` (`hitLocation(locDie)`, `hitLocation(rollD(...))` inside cleave, and inside `applyOnHitPerks` cluster) and one in `resolveRam` (`IMPACT[rig.weightClass][loc]`). Rewrite them to take a kind:
 
 ```javascript
-// combat.js — inside resolveAttack (~line 126)
+// combat.js, inside resolveAttack (~line 126)
 const kind = attacker.kind || "rig"; // legacy Rigs default
 location = opts.aimed ? opts.aimedLoc : hitLocation(kind, locDie);
 ```
@@ -349,7 +349,7 @@ const row = impactRow(kind, location, target.weightClass);
 - [ ] **Step 5: Run all shared tests**
 
 Run: `node --test shared/rules.test.js shared/combat.test.js shared/game-state.test.js shared/battle-view.test.js`
-Expected: PASS — Rig behavior byte-for-byte unchanged.
+Expected: PASS, Rig behavior byte-for-byte unchanged.
 
 - [ ] **Step 6: Commit**
 
@@ -397,7 +397,7 @@ test("weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1 (regressio
 - [ ] **Step 2: Run tests to verify they pass under the current (name-branched) code**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — these tests describe today's behavior; they exist to catch regressions when we swap the implementation to role-branched.
+Expected: PASS, these tests describe today's behavior; they exist to catch regressions when we swap the implementation to role-branched.
 
 - [ ] **Step 3: Rewrite the cascade to key on role**
 
@@ -406,12 +406,12 @@ Replace lines 529–555 of `shared/game-state.js` with:
 ```javascript
 import { kindOf, roleOf, partsByRole } from "./unit-kinds.js";
 
-// §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
+// §8, effect when a component first reaches 0 SP. May recurse via applyDamage.
 function catastrophicOnZero(room, rig, loc, opts) {
   const kind = kindOf(rig);
   const role = roleOf(kind, loc);
   if (role === "power") {
-    // Overclock Core (Rig only) — the first time the power part hits 0 SP,
+    // Overclock Core (Rig only), the first time the power part hits 0 SP,
     // the unit does not skip its next activation.
     if (rig.equipment === "overclock-core" && !rig.overclockCoreUsed) rig.overclockCoreUsed = true;
     else rig.skipNextActivation = true;
@@ -435,10 +435,10 @@ function catastrophicOnZero(room, rig, loc, opts) {
     if (powerPart) applyDamage(room, rig, powerPart, 1, opts);
   }
   // structural and mobility 0-SP effects are enforced where they apply
-  // (activation budget, combat modAim, movement) — no state to set here.
+  // (activation budget, combat modAim, movement), no state to set here.
 }
 
-// §8 — additional damage to an already 0-SP location.
+// §8, additional damage to an already 0-SP location.
 function catastrophicAdditional(room, rig, loc, opts) {
   const kind = kindOf(rig);
   const role = roleOf(kind, loc);
@@ -454,7 +454,7 @@ function catastrophicAdditional(room, rig, loc, opts) {
 - [ ] **Step 4: Run all shared tests**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — including the two new regression tests and every equipment / heat / weapon test already in the file.
+Expected: PASS, including the two new regression tests and every equipment / heat / weapon test already in the file.
 
 - [ ] **Step 5: Commit**
 
@@ -574,7 +574,7 @@ git commit -m "refactor(units): registry-drive recompute, applyOverheat, heatMet
 **Files:**
 - Modify: `shared/game-state.js` (`makeRig` / `ensureRigShape`)
 
-Motivation: Tanks name their parts `tracks` / `turret`. To avoid `rig.tracks` / `rig.turret` collisions with existing Rig code, every unit gets a `parts` map (`rig.parts.hull === rig.hull` on rigs — same object reference). Rig code keeps reading `rig.hull` / `rig.engine`; Tank/Walker code reads `rig.parts.<partName>`. `recompute` in Task 4 already handles both shapes.
+Motivation: Tanks name their parts `tracks` / `turret`. To avoid `rig.tracks` / `rig.turret` collisions with existing Rig code, every unit gets a `parts` map (`rig.parts.hull === rig.hull` on rigs, same object reference). Rig code keeps reading `rig.hull` / `rig.engine`; Tank/Walker code reads `rig.parts.<partName>`. `recompute` in Task 4 already handles both shapes.
 
 - [ ] **Step 1: Write a failing test**
 
@@ -593,7 +593,7 @@ test("makeRig exposes a parts map aliasing the four fixed component fields", () 
 - [ ] **Step 2: Run to confirm it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rig.parts is undefined`.
+Expected: FAIL, `rig.parts is undefined`.
 
 - [ ] **Step 3: Add the `parts` map inside `makeRig`**
 
@@ -603,7 +603,7 @@ Immediately before the `return { ... }` in `makeRig` (line 329), add:
 const parts = {}; // aliased below so rig.parts.hull === rig.hull
 ```
 
-And append `parts,` to the returned object literal at line 330. Then after `return`, wire the aliases — the cleanest way is to build the object first, then set `parts` fields:
+And append `parts,` to the returned object literal at line 330. Then after `return`, wire the aliases, the cleanest way is to build the object first, then set `parts` fields:
 
 ```javascript
 export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
@@ -678,7 +678,7 @@ test("makeUnit('rig', ...) returns a rig identical to makeRig", () => {
 - [ ] **Step 2: Run to confirm it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `makeUnit is not defined`.
+Expected: FAIL, `makeUnit is not defined`.
 
 - [ ] **Step 3: Add `makeUnit` and re-export it**
 
@@ -767,7 +767,7 @@ export function actionBudget(rig, turn) {
 - [ ] **Step 4: Run all shared tests**
 
 Run: `node --test shared/game-state.test.js shared/battle-view.test.js`
-Expected: PASS — 3 base + 2 structural penalty is byte-for-byte the old formula for Rigs.
+Expected: PASS, 3 base + 2 structural penalty is byte-for-byte the old formula for Rigs.
 
 - [ ] **Step 5: Commit**
 
@@ -847,7 +847,7 @@ git commit -m "refactor(units): derive modifier chips from role"
 
 ---
 
-### Task 9: Client — LOCS from the registry
+### Task 9: Client, LOCS from the registry
 
 **Files:**
 - Modify: `client/src/state/types.ts`
@@ -887,17 +887,17 @@ import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
 
 export function rigStatus(rig: Rig): { text: string; cls: string } {
   const parts = partNamesOf(kindOf(rig));
-  if (rig.destroyed) return { text: "⛔ System failure — destroyed", cls: "crit" };
+  if (rig.destroyed) return { text: "⛔ System failure, destroyed", cls: "crit" };
   if (parts.some((l) => (rig as any)[l]?.sp === 0)) return { text: "⚠ Catastrophic damage", cls: "crit" };
   if (parts.some((l) => (rig as any)[l]?.sp / (rig as any)[l]?.max <= 0.34))
-    return { text: "▲ Heavy damage — operational", cls: "warn" };
+    return { text: "▲ Heavy damage, operational", cls: "warn" };
   if (parts.some((l) => (rig as any)[l]?.sp < (rig as any)[l]?.max))
-    return { text: "◆ Damaged — operational", cls: "warn" };
+    return { text: "◆ Damaged, operational", cls: "warn" };
   return { text: "● All systems nominal", cls: "" };
 }
 ```
 
-`client/src/components/rig/RigItem.tsx` — replace `const LOCS: Loc[] = ["hull", "arms", "legs", "engine"];` (line 12) with:
+`client/src/components/rig/RigItem.tsx`: replace `const LOCS: Loc[] = ["hull", "arms", "legs", "engine"];` (line 12) with:
 
 ```typescript
 import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
@@ -930,7 +930,7 @@ git commit -m "refactor(units): read client part names from registry"
 
 ---
 
-## Phase B — Tank and Walker registry entries
+## Phase B, Tank and Walker registry entries
 
 Goal: expose two new kinds through the registry only. `makeUnit("tank", …)` and `makeUnit("walker", …)` return valid units; the engine handles them because Phase A already routes through role + flags.
 
@@ -945,7 +945,7 @@ Goal: expose two new kinds through the registry only. `makeUnit("tank", …)` an
 Add:
 
 ```javascript
-test("Tank entry — parts, roles, flags, strawman armour", () => {
+test("Tank entry, parts, roles, flags, strawman armour", () => {
   const t = UNIT_KINDS.tank;
   assert.ok(t);
   assert.deepEqual(t.parts.map((p) => p.name), ["hull", "tracks", "turret", "engine"]);
@@ -973,7 +973,7 @@ test("Tank entry — parts, roles, flags, strawman armour", () => {
   assert.equal(row.critical, 17);
 });
 
-test("Walker entry — parts, roles, flags, Sentinel strawman", () => {
+test("Walker entry, parts, roles, flags, Sentinel strawman", () => {
   const w = UNIT_KINDS.walker;
   assert.ok(w);
   assert.deepEqual(w.parts.map((p) => p.name), ["hull", "legs", "mount", "engine"]);
@@ -990,7 +990,7 @@ test("Walker entry — parts, roles, flags, Sentinel strawman", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `node --test shared/unit-kinds.test.js`
-Expected: FAIL — `UNIT_KINDS.tank is undefined`.
+Expected: FAIL, `UNIT_KINDS.tank is undefined`.
 
 - [ ] **Step 3: Add the two entries**
 
@@ -1012,14 +1012,14 @@ Append to `UNIT_KINDS` in `shared/unit-kinds.js`:
       { min: 8,  part: "turret" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — heavy-Rig-grade armour, tuned in playtest.
+    // Strawman ⚙, heavy-Rig-grade armour, tuned in playtest.
     armour: {
       hull:   { direct: 13, severe: 15, critical: 17 },
       tracks: { direct: 14, severe: 16, critical: 17 },
       turret: { direct: 12, severe: 14, critical: 16 },
       engine: { direct: 8,  severe: 11, critical: 13 },
     },
-    // Strawman ⚙ — starting SP (mirrored into makeUnit below).
+    // Strawman ⚙, starting SP (mirrored into makeUnit below).
     partSp: { hull: 8, tracks: 7, turret: 6, engine: 6 },
     hasHeat: false,
     hasArcs: true,
@@ -1047,7 +1047,7 @@ Append to `UNIT_KINDS` in `shared/unit-kinds.js`:
       { min: 8,  part: "mount" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — medium-Rig-grade armour.
+    // Strawman ⚙, medium-Rig-grade armour.
     armour: {
       hull:   { direct: 11, severe: 14, critical: 17 },
       legs:   { direct: 11, severe: 13, critical: 15 },
@@ -1122,7 +1122,7 @@ test("makeUnit('walker', ...) uses the walker part table", () => {
 - [ ] **Step 2: Run to verify FAIL**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `makeUnit("tank", …)` still returns `null`.
+Expected: FAIL, `makeUnit("tank", …)` still returns `null`.
 
 - [ ] **Step 3: Extend `makeUnit` with the cold-kind branch**
 
@@ -1138,7 +1138,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
       longRangeUpgrade: opts.longRangeUpgrade, meleeUpgrade: opts.meleeUpgrade,
     }, opts.equipment ?? null);
   }
-  // Cold single-model kinds (tank / walker) — flat-pick weapon, no equipment,
+  // Cold single-model kinds (tank / walker), flat-pick weapon, no equipment,
   // parts driven entirely by the registry entry.
   const weaponName = normalizeUnitWeapon(opts.unit);
   if (!weaponName) return null;
@@ -1172,7 +1172,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     destroyed: false,
   };
   // Also alias top-level part fields so existing Rig-shaped reads (rig.hull)
-  // resolve — they will simply not exist for a Tank (rig.hull === undefined).
+  // resolve, they will simply not exist for a Tank (rig.hull === undefined).
   for (const p of kind.parts) unit[p.name] = parts[p.name];
   return unit;
 }
@@ -1226,7 +1226,7 @@ test("normalizeUnitWeapon is case-insensitive and rejects unknown names", () => 
 - [ ] **Step 2: Run to verify FAIL**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `UNIT_WEAPONS` not defined.
+Expected: FAIL, `UNIT_WEAPONS` not defined.
 
 - [ ] **Step 3: Add the catalogue**
 
@@ -1235,7 +1235,7 @@ Insert immediately after `WEAPONS` (line 40) in `shared/game-state.js`:
 ```javascript
 // Flat unit-weapon list (spec §Weapons, "Unit-weapon list"). Tanks and Walkers
 // pick exactly one. Marked `flatPick: true` so combat.js skips the weight-class
-// STR modifier — the listed STR is the shot's STR on any chassis.
+// STR modifier, the listed STR is the shot's STR on any chassis.
 export const UNIT_WEAPONS = {
   "Tank Cannon":      { rof: 1, str: 12, acc: [0, -1], rng: [12, 24], perks: [],                         flatPick: true },
   "Autocannon Mount": { rof: 3, str: 8,  acc: [0, -1], rng: [12, 24], perks: ["Full Auto"],              flatPick: true },
@@ -1269,7 +1269,7 @@ git commit -m "feat(units): flat-pick weapon catalogue for Tanks and Walkers"
 ### Task 13: Combat resolution reads the correct weapon slot + skips weight-class STR for flat-pick
 
 **Files:**
-- Modify: `shared/game-state.js` (`effectiveWeaponProfile` at ~line 186 — needs to consult `UNIT_WEAPONS` when the unit is a flat-pick kind; `combatCtx`'s `profileFor` follows it)
+- Modify: `shared/game-state.js` (`effectiveWeaponProfile` at ~line 186, needs to consult `UNIT_WEAPONS` when the unit is a flat-pick kind; `combatCtx`'s `profileFor` follows it)
 - Modify: `shared/combat.js` (`computeStr`, `resolveAttack` slot lookup)
 - Modify: `shared/combat.test.js`
 
@@ -1311,7 +1311,7 @@ test("resolveAttack reads weapons.unit when the attacker is a Tank", () => {
 - [ ] **Step 2: Run to verify FAIL**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — slot lookup + weight-class skip not implemented.
+Expected: FAIL, slot lookup + weight-class skip not implemented.
 
 - [ ] **Step 3: Update `computeStr`**
 
@@ -1339,7 +1339,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };
 ```
 
-Also update the `attacker.loaded.longRange = false` line to `if (slot === "longRange") attacker.loaded.longRange = false;` (already conditional — verify) and add the flat-pick spent-flag update:
+Also update the `attacker.loaded.longRange = false` line to `if (slot === "longRange") attacker.loaded.longRange = false;` (already conditional, verify) and add the flat-pick spent-flag update:
 
 ```javascript
 if (slot === "unit" && UNIT_KINDS[attacker.kind]?.reloads) attacker.loaded.unit = false;
@@ -1404,7 +1404,7 @@ test('add command commissions a Walker', () => {
 - [ ] **Step 2: Run to verify FAIL**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `kind: "tank"` not honored.
+Expected: FAIL, `kind: "tank"` not honored.
 
 - [ ] **Step 3: Extend the `add` verb**
 
@@ -1482,7 +1482,7 @@ test("Tank endActivation skips the overheat roll", () => {
   const room = createRoomStub();
   const tank = makeUnit("tank", 1, "Bulwark", "a", { unit: "Tank Cannon" });
   room.rigs.push(tank);
-  // Would have exploded if overheat routing ran — cold kinds must skip it.
+  // Would have exploded if overheat routing ran, cold kinds must skip it.
   room.game.turn = { activeRigId: tank.id, side: "a", actionsUsed: 0, actionsMax: 2 };
   applyCommand(room, "endactivation", { name: "Bulwark", dice: { overheat: 12 } }, {});
   assert.equal(tank.destroyed, false);
@@ -1500,7 +1500,7 @@ test("Tank activation sets actionsMax = 2 (registry actionBudget)", () => {
 - [ ] **Step 2: Run and verify PASS**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS — the refactor from Phase A already delivers these behaviors; these tests lock them in.
+Expected: PASS, the refactor from Phase A already delivers these behaviors; these tests lock them in.
 
 - [ ] **Step 3: Commit**
 
@@ -1533,7 +1533,7 @@ test("Tank action console = 2 actions, no shutdown, no prepare, no equipment", (
 - [ ] **Step 2: Run to verify FAIL**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — `availableActions` still lists prepare and shutdown.
+Expected: FAIL, `availableActions` still lists prepare and shutdown.
 
 - [ ] **Step 3: Guard the list**
 
@@ -1576,7 +1576,7 @@ git commit -m "refactor(units): hide Rig-only actions for cold kinds"
 
 ---
 
-## Phase C — LLM + Client wiring
+## Phase C, LLM + Client wiring
 
 ### Task 17: Teach the LLM the three unit kinds
 
@@ -1585,7 +1585,7 @@ git commit -m "refactor(units): hide Rig-only actions for cold kinds"
 
 - [ ] **Step 1: Read the current tracker protocol section**
 
-`less server/prompt.js` — locate the block near line 20–35 that spells out the `add` / `activate` / `action` command grammar.
+`less server/prompt.js`: locate the block near line 20–35 that spells out the `add` / `activate` / `action` command grammar.
 
 - [ ] **Step 2: Extend the `add` grammar**
 
@@ -1645,7 +1645,7 @@ git commit -m "feat(units): teach LLM tracker protocol Tank and Walker kinds"
 
 ---
 
-### Task 18: Client — HeatGauge hides when the kind is cold
+### Task 18: Client, HeatGauge hides when the kind is cold
 
 **Files:**
 - Modify: `client/src/components/rig/HeatGauge.tsx`
@@ -1738,7 +1738,7 @@ git commit -m "feat(units): Unit Wizard commissions Rig, Tank, or Walker"
 
 ---
 
-## Phase D — End-to-end regression + docs
+## Phase D, End-to-end regression + docs
 
 ### Task 20: Full test sweep + rules.md update
 
@@ -1758,7 +1758,7 @@ Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weap
 May Prepare (§5). 3 actions per activation.
 
 ### Tank
-Four components (Hull / Tracks / Turret / Engine). Cold — no heat, no overheat rolls,
+Four components (Hull / Tracks / Turret / Engine). Cold, no heat, no overheat rolls,
 no Shut Down. One weapon from the shared unit-weapon list (flat STR, no weight-class
 scaling). No equipment, no Prepare. 2 actions per activation. Ram STR 9.
 
@@ -1770,7 +1770,7 @@ activation. Ram STR 8.
 ### Shared unit weapons
 Tank Cannon (12/1), Autocannon Mount (8/3 · Full Auto), Coaxial MG (5/6 · Full Auto ·
 Raking Fire), Rocket Pod (10/2 · Charged Shot), Dozer Blade (10/1 · Melee), Ram Spike
-(11/1 · Melee · Impale). STR is flat — no weight-class modifier.
+(11/1 · Melee · Impale). STR is flat, no weight-class modifier.
 ```
 
 - [ ] **Step 2: Run the full test suite**
@@ -1789,14 +1789,14 @@ git commit -m "docs(units): document Rig, Tank, Walker in rules.md §17"
 
 ## Deferred / Non-goals
 
-- **Infantry / multi-model squads** — not built. `hasArcs: false` and `destruction: "all-members"` are wired into the registry seams but no infantry entry lives there.
-- **Points-buy economy** — dropped for good (spec §Core shape). Matched composition only.
-- **Weight-class variants for Tanks / Walkers** — every Tank / Walker is one strawman entry today. Adding a Heavy Tank later is one more registry entry.
-- **Tuning** — every ⚙-flagged value in this plan is a strawman, to be adjusted in playtest.
+- **Infantry / multi-model squads**: not built. `hasArcs: false` and `destruction: "all-members"` are wired into the registry seams but no infantry entry lives there.
+- **Points-buy economy**: dropped for good (spec §Core shape). Matched composition only.
+- **Weight-class variants for Tanks / Walkers**: every Tank / Walker is one strawman entry today. Adding a Heavy Tank later is one more registry entry.
+- **Tuning**: every ⚙-flagged value in this plan is a strawman, to be adjusted in playtest.
 
 ## Open tuning follow-ups (deferred to playtest, not part of this build)
 
-1. Whether the `structural` 0-SP penalty (−2 actions) is proportionally too brutal on a 2-action Tank (drops to 0 actions) — options: role-relative penalty, floor cold units at 1 action, or accept. The plan wires the vanilla `−2` behavior; a follow-up plan can retune.
+1. Whether the `structural` 0-SP penalty (−2 actions) is proportionally too brutal on a 2-action Tank (drops to 0 actions), options: role-relative penalty, floor cold units at 1 action, or accept. The plan wires the vanilla `−2` behavior; a follow-up plan can retune.
 2. Balance of Tank 2 actions vs Rig 3 + heat risk.
 3. Contents + tuning of `UNIT_WEAPONS`.
 4. Whether Tanks / Walkers should keep reload rule or fire freely.

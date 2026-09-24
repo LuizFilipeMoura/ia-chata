@@ -33,7 +33,7 @@ test("renders the confirm expansion under the selected reaction only", () => {
   expect(btn).toBeInTheDocument();
   btn.click();
   expect(onConfirm).toHaveBeenCalledOnce();
-  // Selecting a different reaction moves the expansion — still exactly one.
+  // Selecting a different reaction moves the expansion, still exactly one.
   rerender(
     <ReactionPicker value="evasive" onChange={vi.fn()} onConfirm={onConfirm} confirmLabel="Set reaction" />,
   );

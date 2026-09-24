@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A deterministic scored engine that plays a side competently — flanks, uses cover, holds objectives, manages heat — with no LLM in the decision path.
+**Goal:** A deterministic scored engine that plays a side competently, flanks, uses cover, holds objectives, manages heat, with no LLM in the decision path.
 
 **Architecture:** One pure entry point `chooseAction(room, rig, weights)` returns ONE command at a time; a small driver applies it via `applyCommand` and re-asks. The bot never mutates state, so it cannot cheat or desync. Scoring uses the engine's own maths.
 
-**v1 scores HITS, not damage.** The damage calculations are being actively tuned, so `evaluate.js` uses only `ROF × P(hit)` — the half of the formula that is stable through every rebalance. The full damage term is **deferred** (see the last section), and its `combat.js` refactor is not implemented in v1.
+**v1 scores HITS, not damage.** The damage calculations are being actively tuned, so `evaluate.js` uses only `ROF × P(hit)`: the half of the formula that is stable through every rebalance. The full damage term is **deferred** (see the last section), and its `combat.js` refactor is not implemented in v1.
 
 **Tech Stack:** Plain ES modules. `shared/game-state.js` gains the engine seams (Phase E); the bot lives under `shared/bot/`. Tests: `node --test` (NOT Vitest).
 
@@ -24,15 +24,14 @@ combat was mid-Overmatch. Both moved:
 - **Combat rework (A).** Overmatch shipped then was **deleted**; the Penetration band was
   compressed to **3–7**; CRIT-every-decisive-die and catastrophic spill landed. **v1 is
   insulated**: it scores `ROF × P(hit)`, and the rework did not touch `P(hit)`. A only
-  rewrites the **deferred** damage seam — old Task 1's `effectiveStrAgainst`/Overmatch becomes
+  rewrites the **deferred** damage seam, old Task 1's `effectiveStrAgainst`/Overmatch becomes
   `effectivePenAgainst` (Penetration buys `P(wound)` only). That task is rewritten at the end
   and **still not implemented in v1**.
 - **Spec 1 is not finished (B).** Spec 1 shipped the pure geometry (`geometry.js`,
   `pathfind.js`, `autoDeploy`, the `resolveFire` derivation seam) but **not** the gameplay
   seams the bot rides on. Verified against the source on 2026-07-16:
-  - The `move`/`sprint` action spends a slot and heat and **never repositions the rig** —
-    `rig.pos`/`rig.facing` are only ever written by `autoDeploy`. There is no digital move.
-  - **`moveBudget` does not exist** in code — it appears only in these plan docs.
+  - The `move`/`sprint` action spends a slot and heat and **never repositions the rig**: `rig.pos`/`rig.facing` are only ever written by `autoDeploy`. There is no digital move.
+  - **`moveBudget` does not exist** in code, it appears only in these plan docs.
   - Objectives score by **manual player claim** (`verb: "vp"`), not geometry; a bot has no VP
     signal.
 
@@ -48,11 +47,11 @@ Start at **E1**.
 **Read the spec first.** Then:
 
 - `shared/` is dependency-free ES modules imported by BOTH Node and the browser. NEVER import from `client/`.
-- Tests use `node:test` + `node:assert/strict`. Run the suite with the **glob form**: `node --test "shared/*.test.js"` — bare `shared/` fails on Node 24. Bot tests live at `shared/bot/*.test.js`, so also run `node --test "shared/bot/*.test.js"`.
+- Tests use `node:test` + `node:assert/strict`. Run the suite with the **glob form**: `node --test "shared/*.test.js"`: bare `shared/` fails on Node 24. Bot tests live at `shared/bot/*.test.js`, so also run `node --test "shared/bot/*.test.js"`.
 - Style: pure functions, comments explain WHY not WHAT. Match `shared/geometry.js` and `shared/field.js`.
 - **Claims are not narration.** Every implementer on the last rework shipped a diff whose numbers were correct and whose *comment* was false. Write no comment you have not just re-verified against the code beside it.
 
-### Verified API facts — do not re-derive
+### Verified API facts, do not re-derive
 
 ```js
 import { createRoom, claimSide, applyCommand, checkCommand, findRig } from "./game-state.js";
@@ -63,7 +62,7 @@ applyCommand(room, { verb: "add", attrs: {         // EVERYTHING under `attrs`, 
 } });
 ```
 - `applyCommand(room, cmd, context, options)` returns **`room`**, NOT `{ok, reason}`. Assert rejections with **`checkCommand(room, cmd)`** → `{ ok, reason }`. `options.random` injects the RNG.
-- The `action` verb's attrs are **FLAT**: `{ name, action: "fire", weapon, target, arc, dice }` — `dice` is an **object** (`{ toHit, wounds, location }`), not an array. A `move` adds `dest`/`facing` (Phase E1).
+- The `action` verb's attrs are **FLAT**: `{ name, action: "fire", weapon, target, arc, dice }`: `dice` is an **object** (`{ toHit, wounds, location }`), not an array. A `move` adds `dest`/`facing` (Phase E1).
 - Existing helpers in `shared/game-state.test.js`: `digitalRoom(code)`, `digitalRoomWithMirroredRigs()`, `battleWithPreparedDefender`, `seededRandom(seed)`. **Read and reuse them.**
 - Mid-activation state is forced directly:
 ```js
@@ -72,30 +71,30 @@ room.game.turn = { side: "a", activeRigId: rig.id, actionsUsed: 0, actionsMax: 3
 rig.loaded = { longRange: true, melee: true };
 ```
 
-### What spec 1 already built (all green) — and what it did NOT
+### What spec 1 already built (all green), and what it did NOT
 
-**Built** (`geometry.js`): `sightCorridor(a, b, polys)` → `{ obstructed, buildingRays, cover, los }`; `arcOf(a, b)`; `distanceBetween`; `rimGap`; `meleeInReach(a, b, reach)`; `controlsObjective(rig, marker, reach)`; `terrainPolygons(field)`; `radiusOf(rig)`. **These take `{ pos, facing, radius }`, NOT a rig** — `game-state.js` has a private `spatial(rig)` adapter (line ~2223) that E1 exports.
+**Built** (`geometry.js`): `sightCorridor(a, b, polys)` → `{ obstructed, buildingRays, cover, los }`; `arcOf(a, b)`; `distanceBetween`; `rimGap`; `meleeInReach(a, b, reach)`; `controlsObjective(rig, marker, reach)`; `terrainPolygons(field)`; `radiusOf(rig)`. **These take `{ pos, facing, radius }`, NOT a rig**: `game-state.js` has a private `spatial(rig)` adapter (line ~2223) that E1 exports.
 
 **Built** (`pathfind.js`): `findPath(field, polys, blockers, radius, from, to)` → `{ path, length } | null`; `buildGrid`.
 
 **Built** (`game-state.js`): `room.mode` ("physical" default), digital rigs carry `pos`/`facing`, `autoDeploy(room, random)`, `deriveAttackGeometry(room, attacker, target)`, `resolveFire` (fully derives shot geometry in digital rooms), `meleeReachOf(rig)`, `rig.speed` (per-chassis Move reach), `rigEffects(rig)` → `{ sprintMult, ... }`.
 
-**Built** (`battle-view.js`): `availableActions(rig, turn, round)` → the legal action menu with `enabled`/`heat`/`cost`. **This is the legality gate, not a candidate list** — it says Fire is legal, not at whom.
+**Built** (`battle-view.js`): `availableActions(rig, turn, round)` → the legal action menu with `enabled`/`heat`/`cost`. **This is the legality gate, not a candidate list**: it says Fire is legal, not at whom.
 
 **Built** (`combat.js`): `computeModifiedAim`, `rollToHit`, `arcBonus`, `penBreakdown`. **`shieldCoverage`** lives in `rules.js`. All still exported and unchanged by the rework.
 
-**NOT built — this is Phase E:**
+**NOT built, this is Phase E:**
 - Digital **move application** (E1). The `move`/`sprint` branch in the action handler (~line 2872) never writes `rig.pos`/`rig.facing`.
 - **`moveBudget(rig, act)`** (E1). Does not exist.
 - Digital **objective scoring** (E2). `runRecovery` (line ~2034) resets claims; VP is awarded only by the manual `vp` verb (~line 3596).
 
-### THE FIXTURE TRAP — has already burned real work twice
+### THE FIXTURE TRAP, has already burned real work twice
 
 `normalizeWeaponUpgrade` returns `upgrades[0].id` (the **Field** upgrade) for a null/unknown id, so **`makeRig` cannot build an un-upgraded weapon**. Every legal rig carries its field upgrade. A bare-weapon fixture tests a loadout that cannot be commissioned.
 
-**Build fixtures through `applyCommand({verb:"add"})` or `makeRig` — never hand-assemble a weapon profile.**
+**Build fixtures through `applyCommand({verb:"add"})` or `makeRig`: never hand-assemble a weapon profile.**
 
-### COMMITTING — this repo has bitten us three times
+### COMMITTING, this repo has bitten us three times
 
 Dirty worktree; **another session commits to this branch concurrently using broad `git add`**. It has already swallowed a subagent's staged files into its own commit.
 - **NEVER `git add -A` / `git add .`.** `git commit` commits the WHOLE INDEX, not just what you added.
@@ -105,33 +104,33 @@ Dirty worktree; **another session commits to this branch concurrently using broa
 - Run `git diff --cached --stat` immediately before committing; confirm ONLY your files.
 - **Before touching a shared file: `git diff --stat -- <file>`.** If someone else has uncommitted work there, STOP and report.
 - NEVER rewrite history. NEVER stash. NEVER switch branches.
-- **`shared/combat.js` is not touched anywhere in v1.** It has held a zero diff through spec 1 and stays there. Any task that finds itself wanting to edit it has drifted into the deferred damage term — stop and report.
+- **`shared/combat.js` is not touched anywhere in v1.** It has held a zero diff through spec 1 and stays there. Any task that finds itself wanting to edit it has drifted into the deferred damage term, stop and report.
 
 ---
 
 ## File Structure
 
 **Modify:**
-- `shared/game-state.js` — E1 (digital move application, export `moveBudget` + `spatial`), E2 (digital objective scoring in/after `runRecovery`), and Phase 4 (`sideBotOf`, `room.game.sides[i].bot`).
+- `shared/game-state.js`: E1 (digital move application, export `moveBudget` + `spatial`), E2 (digital objective scoring in/after `runRecovery`), and Phase 4 (`sideBotOf`, `room.game.sides[i].bot`).
 
 **Create:**
-- `shared/bot/evaluate.js` — `expectedHits` (v1's offence metric). Depends on combat.js + game-state.js.
-- `shared/bot/candidates.js` — expand the action menu into parameterised candidates (non-move + move).
-- `shared/bot/score.js` — score one candidate; `PRESETS`.
-- `shared/bot/index.js` — `chooseAction`, `runBotActivation`.
+- `shared/bot/evaluate.js`: `expectedHits` (v1's offence metric). Depends on combat.js + game-state.js.
+- `shared/bot/candidates.js`: expand the action menu into parameterised candidates (non-move + move).
+- `shared/bot/score.js`: score one candidate; `PRESETS`.
+- `shared/bot/index.js`: `chooseAction`, `runBotActivation`.
 - Matching `*.test.js` for each.
 
-Split this way because `score.js` is where tuning churn lives and `evaluate.js` is where maths lives — they change for different reasons.
+Split this way because `score.js` is where tuning churn lives and `evaluate.js` is where maths lives, they change for different reasons.
 
 ---
 
-# Phase E — engine seams the bot rides on
+# Phase E, engine seams the bot rides on
 
 Pure `game-state.js` work. Every existing combat/game-state test must stay green.
 
 ---
 
-### Task E1: Digital rooms apply a move — `moveBudget`, `spatial`, path-validated reposition
+### Task E1: Digital rooms apply a move, `moveBudget`, `spatial`, path-validated reposition
 
 **Files:**
 - Modify: `shared/game-state.js`
@@ -140,7 +139,7 @@ Pure `game-state.js` work. Every existing combat/game-state test must stay green
 Today the `move`/`sprint` branch (~line 2872) spends a slot and heat, then returns without
 touching position. In a **digital** room the command must carry a destination and facing, be
 validated against a real path within the rig's reach, and reposition the rig. **Physical rooms
-are untouched** — no `dest`, no path check.
+are untouched**: no `dest`, no path check.
 
 **The reach helper (new, exported):**
 ```js
@@ -153,7 +152,7 @@ export function moveBudget(rig, act) {
 }
 ```
 
-**Export `spatial`** (currently private at ~line 2223) — the bot feeds it to the geometry
+**Export `spatial`** (currently private at ~line 2223), the bot feeds it to the geometry
 module.
 
 **In the `move`/`sprint` branch, digital only**, after the existing engagement/pin/emplace
@@ -212,7 +211,7 @@ test("moveBudget is Speed for a move and Speed×sprintMult for a sprint", () => 
 
 - [ ] **Step 3: Implement** (the helper, the export, the branch edits).
 
-- [ ] **Step 4: Full suite green.** `node --test "shared/*.test.js"` — baseline + your new tests, nothing red.
+- [ ] **Step 4: Full suite green.** `node --test "shared/*.test.js"`: baseline + your new tests, nothing red.
 
 - [ ] **Step 5: Commit**
 ```bash
@@ -234,13 +233,13 @@ directly and must, so the bot has a VP signal.
 
 **In `runRecovery` (line ~2034), digital only**, after the per-rig cooldown loop and after
 `room.game.phase = "recovery"` is set: derive each side's controlled markers from
-`controlsObjective`, award, and advance — bypassing the manual claim path.
+`controlsObjective`, award, and advance, bypassing the manual claim path.
 ```js
 if (room.mode === "digital") {
   const objs = room.game.objectives || [];
   // Which sides control each marker, from geometry. A marker controlled by
   // exactly one side scores it; a marker both sides control is CONTESTED and
-  // scores nobody — the faithful digital image of the physical §11 conflict.
+  // scores nobody, the faithful digital image of the physical §11 conflict.
   for (let i = 0; i < objs.length; i++) {
     const holders = room.game.sides.filter((s) =>
       room.rigs.some((r) => (r.owner || "a") === s.id && !r.destroyed
@@ -255,7 +254,7 @@ Confirm `advanceRound` is the right follow-on by reading how the `vp` verb resol
 clean (non-conflict) claim today (~line 3626 calls `advanceRound(room)`). Mirror that exactly;
 do not invent a second round-advance path.
 
-**`controlsObjective` takes a `{ pos, radius }`, not a rig** — feed it `spatial(r)`, the E1
+**`controlsObjective` takes a `{ pos, radius }`, not a rig**: feed it `spatial(r)`, the E1
 export.
 
 - [ ] **Step 1: Failing tests:**
@@ -274,7 +273,7 @@ test("physical recovery still waits for the manual vp claim", () => {
 });
 ```
 **No value-pinning:** assert *deltas and ordering* (this side scored, that one didn't), never a
-specific VP total — objective values are tuned.
+specific VP total, objective values are tuned.
 
 - [ ] **Step 2: Run to verify failure.**
 
@@ -289,26 +288,26 @@ git commit -m "feat(game-state): digital objectives score from geometry at recov
 
 ---
 
-### Task E3: Verify the headless digital game loop closes — DONE (2026-07-16)
+### Task E3: Verify the headless digital game loop closes, DONE (2026-07-16)
 
-**Files:** none — a throwaway driver, no engine change.
+**Files:** none, a throwaway driver, no engine change.
 
 **Verified.** A digital game runs to a terminal state headlessly, driven only by commands:
 `ready` both sides (→ `maybeStartGame` deploys + rolls initiative), then per round: clear the
 Answer gate → activate/endactivation each rig → `runRecovery` (E2 scores + `advanceRound`).
 Across seeds 1/2/3/7/42 with trivial activations it reaches `phase: "finished"`, round 11
 (MAX_ROUNDS 10 + one sudden-death round), `outcome: draw`, deterministically per seed. VP is
-0–0 only because trivial rigs sit in their deploy corners and never contest a marker — E2 runs
+0–0 only because trivial rigs sit in their deploy corners and never contest a marker, E2 runs
 every recovery, nobody controls anything.
 
-**THE FINDING — the driver must clear a MANDATORY gate each round (a requirement on Tasks 4.3
+**THE FINDING, the driver must clear a MANDATORY gate each round (a requirement on Tasks 4.3
 and 5.1, not an engine gap).** `applyInitiative` (game-state.js:1414) sets `room.game.pendingAnswer`
-for the **second** activator every round — the Answer-token opportunity. It is **mandatory**:
+for the **second** activator every round, the Answer-token opportunity. It is **mandatory**:
 `useV2BattleWatchers.tsx:101` calls it "mandatory facedown-reaction placement", the drawer is
 `dismissable: false`, and the **only** runtime path that clears it is the `answer` verb
-(game-state.js:3736) — there is **no decline**. `activate` is rejected with "Resolve the pending
-reaction first" (game-state.js:3578) until it clears. So any headless driver — the bot's game
-loop and the server bot wiring — MUST, at the top of each round, issue for the pending side:
+(game-state.js:3736), there is **no decline**. `activate` is rejected with "Resolve the pending
+reaction first" (game-state.js:3578) until it clears. So any headless driver, the bot's game
+loop and the server bot wiring, MUST, at the top of each round, issue for the pending side:
 ```js
 if (room.game.pendingAnswer) {
   const side = room.game.pendingAnswer.side;
@@ -316,15 +315,15 @@ if (room.game.pendingAnswer) {
   applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side } }, {}, options);
 }
 ```
-`prep: "brace"` is the minimal legal policy — spend the free token, never plan a reaction with
+`prep: "brace"` is the minimal legal policy, spend the free token, never plan a reaction with
 it. Drain `pendingReaction` (from attacks) and `pendingBlast` (from a destroyed engine) the
-same way — a trivial driver hits neither, but a shooting bot will. This is the "minimal answer
+same way, a trivial driver hits neither, but a shooting bot will. This is the "minimal answer
 policy" Tasks 4.3 and 5.1 reference; it is NOT the strategic reaction use that stays out of
 scope.
 
 ---
 
-# Phase 1 — the offence metric
+# Phase 1, the offence metric
 
 ---
 
@@ -340,18 +339,18 @@ half**, because everything right of `P(hit)` is mid-tuning and everything left o
 expectedHits = ROF × P(hit) × arcFactor(profile, arc)
 ```
 
-`P(hit)` is accuracy/cover/range-band maths — `computeModifiedAim` is exported and untouched by
+`P(hit)` is accuracy/cover/range-band maths, `computeModifiedAim` is exported and untouched by
 the rework. **No `combat.js` change is needed.**
 
 **`arcFactor` is v1's one invented number, and you must understand why it exists.** Arc modifies
-**Penetration**, not accuracy — so `ROF × P(hit)` is *identical* front, side, and rear. Without
+**Penetration**, not accuracy, so `ROF × P(hit)` is *identical* front, side, and rear. Without
 an explicit factor the bot has **no reason to flank at all**, which deletes the most important
 behaviour in the spec. `arcBonus(profile, arc)` is exported; read it as a preference:
 
 ```js
 // arcBonus is the WOUND step's arc modifier. v1 has no wound term, so it reads it
 // as a PREFERENCE: null is a hard veto, a bigger bonus is a better angle. This is
-// a heuristic bridge, not the real maths — it preserves the ORDERING (rear > side
+// a heuristic bridge, not the real maths, it preserves the ORDERING (rear > side
 // > front; rake-into-front = never) while the magnitudes are still being tuned.
 // The deferred damage term deletes this wholesale.
 function arcFactor(profile, arc) {
@@ -365,13 +364,13 @@ The `null` veto is exact and always right. The `1 + bonus/4` shaping is a guess.
 
 **Three ROF bonuses are invisible to v1.** `rollToHit` computes an *effective* ROF internally
 (`+2` Full Auto, `+Bloodletter` vs a damaged target, `+Redline Governor` from heat over cap).
-You cannot call `rollToHit` to read it — it also runs `applyDefensiveReactions`, which
+You cannot call `rollToHit` to read it, it also runs `applyDefensiveReactions`, which
 **mutates the target** (Point-Defense spend), and evaluating a candidate must never mutate. Use
 `profile.rof`. Document the bias in the module comment; it under-rates three conditional
 upgrades and is one-directional.
 
 **Shield veto.** A raised shield covering the arc is the other earned zero. Read
-`shieldCoverage(target)` from `rules.js` **exactly as `rollWounds` uses it** — it returns
+`shieldCoverage(target)` from `rules.js` **exactly as `rollWounds` uses it**: it returns
 `{ negate: [...arcs], blunt: [...arcs] }` and only fires when
 `target.preparation?.type === "raise-shield"`. Mirror that check; do not invent one.
 
@@ -385,7 +384,7 @@ import { makeRig } from "../game-state.js";
 const atk = (over = {}) => makeRig(1, "Atk", "a", { weightClass: "medium", longRange: "Autocannon", melee: "Sword", ...over });
 const def = () => makeRig(2, "Def", "b", { weightClass: "medium", longRange: "Autocannon", melee: "Sword" });
 
-test("expectedHits is zero for an earned zero — a rake into a front arc", () => {
+test("expectedHits is zero for an earned zero, a rake into a front arc", () => {
   const a = atk({ longRange: "Mini Gun" });   // Mini Gun carries Raking Fire
   assert.equal(expectedHits(a, def(), "longRange", { arc: "front", distance: 7, cover: 0, round: 1 }), 0);
 });
@@ -395,7 +394,7 @@ test("a rake still scores into the side and rear", () => {
   assert.ok(expectedHits(a, def(), "longRange", { ...opts, arc: "side" }) > 0);
   assert.ok(expectedHits(a, def(), "longRange", { ...opts, arc: "rear" }) > 0);
 });
-test("rear outscores side outscores front — the flanking ordering", () => {
+test("rear outscores side outscores front, the flanking ordering", () => {
   const a = atk();
   const opts = { distance: 12, cover: 0, round: 1 };
   const front = expectedHits(a, def(), "longRange", { ...opts, arc: "front" });
@@ -415,7 +414,7 @@ test("expectedHits drops with cover", () => {
   assert.ok(expectedHits(a, def(), "longRange", { ...opts, cover: 0 })
           > expectedHits(a, def(), "longRange", { ...opts, cover: 2 }));
 });
-test("a natural 6 always hits — expectedHits never falls to zero on a legal shot", () => {
+test("a natural 6 always hits, expectedHits never falls to zero on a legal shot", () => {
   const a = atk();
   const h = expectedHits(a, def(), "longRange", { arc: "front", distance: 26, cover: 2, round: 1 });
   assert.ok(h > 0);
@@ -453,23 +452,23 @@ git commit -m "feat(bot): analytic expected hits (v1 offence metric)" -- shared/
 target. `structuredClone` the target every trial, exactly as `scripts/balance/weapon-sweep.mjs`
 does.
 
-- [ ] **Step 1: Write the test** — sample ~5000 attacks with a seeded RNG across four fixtures
+- [ ] **Step 1: Write the test**: sample ~5000 attacks with a seeded RNG across four fixtures
   (`Autocannon side@12`, `Autocannon rear@24`, `Arc Gun side@20`, `Mini Gun rear@7`), and assert
   the analytic prediction matches the sampled mean within `max(0.08, observed*0.05)`.
 
   **Divide `arcFactor` out before comparing.** `expectedHits` carries `arcFactor`, which the
   engine does NOT apply to hits (it lives in the wound step). Compare
-  `expectedHits(...) / (1 + arcBonus(profile, arc)/4)` against the sampled mean — or, cleaner,
+  `expectedHits(...) / (1 + arcBonus(profile, arc)/4)` against the sampled mean, or, cleaner,
   export a raw `rof * pHit` as `rawExpectedHits` and validate THAT. If you take the cleaner
   route, say so.
 
-- [ ] **Step 2: Run it. It may FAIL first — that is the point.** `rollToHit` has Full Auto,
+- [ ] **Step 2: Run it. It may FAIL first, that is the point.** `rollToHit` has Full Auto,
   Bloodletter, Redline Governor, and a Point-Defense seam the analytic model omits. The
-  fixtures avoid all four (no Full Auto, undamaged target, cold attacker, no Point-Defense) —
+  fixtures avoid all four (no Full Auto, undamaged target, cold attacker, no Point-Defense),
   **verify that is actually true** rather than assuming.
 
   On failure, in order of preference: (1) fold the missing deterministic term into
-  `expectedHits`; (2) document it as a known bias and narrow the fixture — do NOT widen the
+  `expectedHits`; (2) document it as a known bias and narrow the fixture, do NOT widen the
   tolerance to hide a real error; (3) report DONE_WITH_CONCERNS with the numbers.
 
 - [ ] **Report the actual predicted-vs-sampled numbers for all four cases regardless of
@@ -482,11 +481,11 @@ git commit -m "test(bot): validate expected hits against the real engine" -- sha
 
 ---
 
-# Phase 2 — candidate generation
+# Phase 2, candidate generation
 
 ---
 
-### Task 2.1: Candidates — non-move actions
+### Task 2.1: Candidates, non-move actions
 
 **Files:** create `shared/bot/candidates.js`, `shared/bot/candidates.test.js`
 
@@ -501,7 +500,7 @@ keeps `enabled` entries, and expands:
 | `repair` | × damaged location |
 | `disengage`/`douse`/`shutdown`/`reload` | as-is |
 
-**Move/sprint are Task 2.2 — return nothing for them here.**
+**Move/sprint are Task 2.2, return nothing for them here.**
 
 **Careful about arc direction:** the target must be in the ATTACKER's front 90° arc to be
 shootable (§7), while `arcOf(attacker, target)` reports which of the TARGET's facings you
@@ -529,7 +528,7 @@ git commit -m "feat(bot): candidate generation for non-move actions" -- shared/b
 
 ---
 
-### Task 2.2: Move candidates — anchors, lattice, facings
+### Task 2.2: Move candidates, anchors, lattice, facings
 
 **Files:** modify `shared/bot/candidates.js` + its test.
 
@@ -537,31 +536,31 @@ Destinations are **continuous**. Generate a shortlist, each filtered by
 `findPath(...).length ≤ moveBudget(rig, act)` (both now real, from E1). Each candidate emits
 `{ action: "move"|"sprint", dest: {x,y}, facing, reason }`.
 
-**Anchors** (each carries a `reason` string — future narration reads it):
-- toward each objective — nearest point that would control it (`controlsObjective`)
+**Anchors** (each carries a `reason` string, future narration reads it):
+- toward each objective, nearest point that would control it (`controlsObjective`)
 - into cover from the biggest threat (a spot where `sightCorridor` from it reads 1–2)
 - into each enemy's **rear arc**, at a range its weapon wants (its `sweet`)
 - into melee reach of each enemy
 - out of LOS entirely (retreat)
-- stand still (a **0" Move is legal** and often right — it buys the pivot)
+- stand still (a **0" Move is legal** and often right, it buys the pivot)
 
 **Lattice:** reachable cells every ~1.5".
 
-**Facings:** NOT 360°. Toward each enemy, toward the objective — each clamped to the **±90°
+**Facings:** NOT 360°. Toward each enemy, toward the objective, each clamped to the **±90°
 pivot cap** (the same cap E1 enforces). Typically 3–5 per destination.
 
 - [ ] **Tests:**
 ```js
 test("every move candidate is reachable within the rig's move budget", () => {});
 test("every move candidate's facing is within 90° of the current facing", () => {});
-test("a 0-inch move candidate exists — pivot in place is legal", () => {});
+test("a 0-inch move candidate exists, pivot in place is legal", () => {});
 test("sprint candidates reach further than move candidates", () => {});
 test("no move candidate lands inside terrain or on another rig", () => {});
 test("move candidates are generated toward objectives", () => {
   // at least one candidate's reason mentions the objective
 });
 test("every emitted move candidate is accepted by the engine", () => {
-  // checkCommand(room, toCommand(c)) is ok for each move candidate — E1's own
+  // checkCommand(room, toCommand(c)) is ok for each move candidate, E1's own
   // validator is the oracle; if the bot proposes it, the engine must accept it
 });
 ```
@@ -575,7 +574,7 @@ git commit -m "feat(bot): move candidates from anchors and a reachable lattice" 
 
 ---
 
-# Phase 3 — scoring
+# Phase 3, scoring
 
 ---
 
@@ -593,31 +592,31 @@ score = w.vp        × objectiveVpDelta   // E2's geometry control: take / hold 
 ```
 
 **The 1-ply lookahead is the whole ballgame.** A move candidate scores as
-`positionValue + bestShotFromThere` — the best `fire`/`aimed` EV available *after* arriving,
+`positionValue + bestShotFromThere`: the best `fire`/`aimed` EV available *after* arriving,
 computed by re-deriving geometry at the candidate spot/facing. Without it the bot never learns
 why a flank is worth walking to.
 
-**`offence` and `exposure` are the same metric pointed in opposite directions** — both call
+**`offence` and `exposure` are the same metric pointed in opposite directions**: both call
 `evaluate.js`. That is what makes the deferred damage swap safe.
 
-**`exposure` assumes STATIC enemies** — each living enemy's best EV against the candidate spot
+**`exposure` assumes STATIC enemies**: each living enemy's best EV against the candidate spot
 **from where it stands now**. Documented blind spot; see the spec.
 
 **Why VP leads:** objectives score every Recovery (2 VP centre, 1 VP each flank, via E2).
 Priority Elimination is the ONLY kill-VP (+2). Everything else you destroy is worth zero VP
-*directly* — the `damage` term captures its instrumental value.
+*directly*: the `damage` term captures its instrumental value.
 
-- [ ] **Tests — these prove competence:**
+- [ ] **Tests, these prove competence:**
 ```js
 test("a rear-arc shot outscores the same shot into the front", () => {});
-test("a machine gun will not shoot a front arc at all — Raking Fire's veto", () => {
+test("a machine gun will not shoot a front arc at all, Raking Fire's veto", () => {
   // arcFactor returns 0 for arcBonus === null. Structural and exact.
 });
 test("standing on an uncontested objective outscores standing next to it", () => {});
 test("a contested objective scores below an uncontested one", () => {});
 test("killing the Priority Target outscores killing an identical non-priority rig", () => {});
 test("a move that enables a good shot outscores a move that doesn't", () => {
-  // the 1-ply lookahead, directly — the single most important test here
+  // the 1-ply lookahead, directly, the single most important test here
 });
 test("a move into cover lowers exposure", () => {});
 test("an action that would overheat scores below one that doesn't", () => {});
@@ -625,7 +624,7 @@ test("PRESETS.aggressive weights damage above vp; PRESETS.cagey the reverse", ()
 ```
 
 **Not here, deliberately:** a test claiming the flank *preference* is emergent. In v1 it is
-NOT — arc doesn't affect `P(hit)`, so the preference comes entirely from `arcFactor`'s invented
+NOT, arc doesn't affect `P(hit)`, so the preference comes entirely from `arcFactor`'s invented
 shaping. The *veto* (never shoot a front arc with a rake) IS structural and exact and IS tested.
 Do not assert emergent preference until the damage term lands.
 
@@ -637,7 +636,7 @@ git commit -m "feat(bot): candidate scoring with a 1-ply shot lookahead" -- shar
 
 ---
 
-# Phase 4 — the driver, the invariant, and bot-vs-bot
+# Phase 4, the driver, the invariant, and bot-vs-bot
 
 ---
 
@@ -672,13 +671,13 @@ export function runBotActivation(room, rig, options) {
 }
 ```
 
-**The tie-break must be deterministic** — break ties on a stable key (action name, then target
+**The tie-break must be deterministic**: break ties on a stable key (action name, then target
 name, then x, then y).
 
 - [ ] **Tests:**
 ```js
 test("chooseAction returns null when every candidate scores <= 0", () => {});
-test("chooseAction is deterministic — same room, same weights, same command", () => {});
+test("chooseAction is deterministic, same room, same weights, same command", () => {});
 test("runBotActivation always ends the activation", () => {});
 test("runBotActivation respects the action budget", () => {});
 test("the guard stops a runaway loop", () => {});
@@ -691,17 +690,17 @@ git commit -m "feat(bot): chooseAction and the activation driver" -- shared/bot/
 
 ---
 
-### Task 4.2: The invariant — the bot cannot propose an illegal command
+### Task 4.2: The invariant, the bot cannot propose an illegal command
 
 **Files:** `shared/bot/index.test.js`
 
-If the bot can never emit a command `checkCommand` rejects, an entire class of bug is gone —
+If the bot can never emit a command `checkCommand` rejects, an entire class of bug is gone,
 **including the E1 move validation**: every move the bot proposes must pass E1's own path/pivot
 check.
 
 - [ ] **Test:** fuzz over 200 seeded boards (`digitalRoomWithMirroredRigs` + scattered terrain +
   `autoDeploy`), drive each rig up to 4 actions, and assert `checkCommand(room, cmd).ok === true`
-  for every command `chooseAction` emits before applying it. Any failure is a real bug — fix the
+  for every command `chooseAction` emits before applying it. Any failure is a real bug, fix the
   bot, never the assertion.
 
 ```bash
@@ -732,7 +731,7 @@ test("a bot-vs-bot game is reproducible from a seed", () => {
   // same seed -> identical command logs
 });
 test("VP accrues over a game", () => {
-  // somebody scores — if nobody ever does, the bot ignores objectives (or E2 is wrong)
+  // somebody scores, if nobody ever does, the bot ignores objectives (or E2 is wrong)
 });
 ```
 
@@ -741,7 +740,7 @@ cell, and `findPath` rebuilds the full occupancy grid each call (~200ms per `can
 The 1-ply lookahead (Task 3.1) re-derives geometry per move candidate on top. A 200-game sweep
 may run minutes-to-hours. If it drags: build the grid once per activation and thread it through
 `findPath` (its guts already take a grid), and/or thin the lattice. Do this only if the sweep
-is actually too slow — measure first.
+is actually too slow, measure first.
 
 - [ ] **Tuning sweep** (throwaway script, do NOT commit): 200 games `aggressive` vs `cagey`.
   **Report** win rate, mean VP, mean game length in rounds, and how often a game hits the round
@@ -754,20 +753,20 @@ git commit -m "test(bot): bot-vs-bot games terminate and reproduce from a seed" 
 
 ---
 
-# Phase 5 — wiring
+# Phase 5, wiring
 
 ---
 
 ### Task 5.1: Wire the bot to the server
 
-**Files:** `server/routes/game.js` or `server/ws.js` — grep for where activations are driven.
+**Files:** `server/routes/game.js` or `server/ws.js`: grep for where activations are driven.
 
 **DONE (2026-07-16).** `driveBots(room)` (shared/bot/index.js) advances every bot side to the
 next human decision point; hooked into the command route (`server/routes/game.js`) after each
 applied command, digital rooms only. Tested at the module level (bot-vs-bot terminates, stops
 at a human's turn, physical no-op) and over HTTP (a human's ready starts the game and driveBots
 plays both bot sides to a terminal state). **Open follow-up:** `sides[i].bot` has no command
-verb — it is a lobby field, set directly for now. Exposing it (and a bot-vs-bot lobby) is a
+verb, it is a lobby field, set directly for now. Exposing it (and a bot-vs-bot lobby) is a
 small addition gated on the V2 battle UI, which is not built.
 
 When an activation opens for a side with `bot` set, run `runBotActivation`. Digital rooms only.
@@ -778,23 +777,23 @@ first eligible rig) so the round can start without a human. Same for a `pendingR
 `pendingBlast` owned by a bot side.
 
 - [ ] Read the existing activation flow first. If the wiring is awkward, report rather than
-  force it — the bot is fully usable from tests without it, and the V2 UI isn't built yet.
+  force it, the bot is fully usable from tests without it, and the V2 UI isn't built yet.
 
 ---
 
-## The damage term — SHIPPED 2026-07-16 (was deferred)
+## The damage term, SHIPPED 2026-07-16 (was deferred)
 
 > **DONE.** Extracted `effectivePenAgainst` from `rollWounds` as a PURE refactor (`combat.test.js`
 > zero edits, `ffc8ee0`); added `expectedDamage = ROF × P(hit) × P(wound) × D` averaged over the
 > D12 hit-location distribution, validated <1% against sampled `resolveAttack` SP (`0f44cf5`);
-> swapped the scorer from hits to damage and deleted `arcFactor`/`expectedHits` — arc is now
+> swapped the scorer from hits to damage and deleted `arcFactor`/`expectedHits`: arc is now
 > valued through real effective Penetration (`066430d`). No Overmatch (deleted). The historical
 > reasoning below is kept for the record.
 
 > **Do this when** the arsenal settles and the bot must tell a Wrecking Ball (Penetration 6,
 > Damage 8, ROF 1) from a Rivet Gun (Penetration 3, Damage 1, ROF 6). Until then, preferring
 > the Rivet Gun is *correct* (3.64 vs 3.24 SP at the field floor, `report-2026-07-16-penetration.txt`),
-> so v1's blindness costs nothing real. **`F2-B (price ROF in heat)` is shelved, not pending —
+> so v1's blindness costs nothing real. **`F2-B (price ROF in heat)` is shelved, not pending,
 > do not wait for it** (`2026-07-15-rof-heat-design.md`: the tax made weapon spread worse,
 > 3.0× → 3.9×). Nothing scheduled will settle the arsenal on its account; this stays deferred
 > until a human calls it.
@@ -820,13 +819,13 @@ Plating** (−1/−2 side/rear) · **Raise Shield** (negate, or −3) · **Breac
 `effectivePenAgainst(attacker, target, profile, location, opts)` out of `rollWounds`, returning
 everything `rollWounds` consumes below the seam (`effPen`, `toughness`, `d`, the `negated`/
 `noRoll` earned-zero distinction, and the `woundTerms` ledger in its exact push order). Both
-`rollWounds` and the bot then call it — one source of truth, no drift.
+`rollWounds` and the bot then call it, one source of truth, no drift.
 
 - **This is a PURE REFACTOR: `combat.test.js` (2178 lines) must pass with ZERO edits.** If you
-  need to touch it, you changed behaviour — stop and report BLOCKED.
+  need to touch it, you changed behaviour, stop and report BLOCKED.
 - **`bonus == null` is an EARNED ZERO** (Raking Fire into a front arc), not a missing value.
   `rollWounds` short-circuits `if (bonus == null || shieldNegates)` before the roll and emits
-  `noRoll`. The extracted function must preserve that distinction — "zero because armour" is a
+  `noRoll`. The extracted function must preserve that distinction, "zero because armour" is a
   bug the comments say a past rewrite caused; "zero because earned" is a mechanic.
 
 **Why not sample instead.** `resolveAttack` can be driven with a stub room + a `ctx` that taps
@@ -858,11 +857,11 @@ guess; the damage term deletes it.
 **1.2 may fail first.** That is its job. Report the predicted-vs-sampled numbers either way.
 
 **Do not tune the weight presets.** ROF *multiplies* v1's offence, and a rivet gun currently
-out-damages a wrecking ball — the bot preferring volume is *correct* until the ROF economy is
+out-damages a wrecking ball, the bot preferring volume is *correct* until the ROF economy is
 solved some other way (F2-B, which would have fixed it, is shelved). Presets tuned now encode a
 snapshot of a mid-rebalance arsenal. Run 4.3's harness to see the bot *works*; do not tune on
 what it reports.
 
 **Deliberately not in this plan:** Gemma narration (its own spec), search beyond 1 ply,
-reactions (blocked by spec 1's Task 10b — three reaction paths still take client geometry),
+reactions (blocked by spec 1's Task 10b, three reaction paths still take client geometry),
 deployment choices (`autoDeploy` handles them), the damage term (deferred above).

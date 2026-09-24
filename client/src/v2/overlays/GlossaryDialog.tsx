@@ -7,7 +7,7 @@ interface Props {
   onClose: () => void;
 }
 
-// Native V2 port of V1 overlays/GlossaryDialog — the browse-all modal listing
+// Native V2 port of V1 overlays/GlossaryDialog, the browse-all modal listing
 // every shared glossary entry. Rendered inside the Shell's `.v2-root`, so the
 // scoped `v2-gloss-*` styles apply directly (no portal wrapper needed).
 export function GlossaryDialog({ open, onClose }: Props) {

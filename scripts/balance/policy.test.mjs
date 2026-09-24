@@ -18,7 +18,7 @@ function seatedRoom(active = "A1") {
   const roster = ["A1", "A2", "A3"].map((n) => ({ name: n, owner: "a", chassis: "medium-lance-mortar" }))
     .concat(["B1", "B2", "B3"].map((n) => ({ name: n, owner: "b", chassis: "medium-lance-mortar" })));
   applyCommand(room, { verb: "seed", attrs: { roster, first: "a" } }, {}, { random: rnd });
-  // The second player MUST spend an Answer token before anyone can activate —
+  // The second player MUST spend an Answer token before anyone can activate,
   // there is no decline path. Spend it on a bystander so no duellist carries a
   // preparation (Brace is -2 Penetration on the front arc and would skew everything).
   const pa = room.game.pendingAnswer;
@@ -40,7 +40,7 @@ test("greedySafe fires when heat allows", () => {
 test("greedySafe shuts down rather than exceed capacity", () => {
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
-  // Medium capacity is 5. At 5, one more heat is over — so it must vent, not fire.
+  // Medium capacity is 5. At 5, one more heat is over, so it must vent, not fire.
   rig.engine.heat = HEAT_CAPACITY[rig.weightClass];
   const cmd = greedySafe(room, rig, room.rigs.find((r) => r.name === "B1"));
   assert.equal(cmd.attrs.action, "shutdown");
@@ -48,7 +48,7 @@ test("greedySafe shuts down rather than exceed capacity", () => {
 
 test("greedySafe prices the second-shot surcharge from availableActions", () => {
   // The file's whole architectural claim: ask the engine what things cost rather
-  // than recomputing them. The surcharge is the case that proves it — a second
+  // than recomputing them. The surcharge is the case that proves it, a second
   // ranged shot costs def.heat + 1 (battle-view.js), which no local recompute of
   // the base cost would see. At cap-1 the base cost still fits and the surcharged
   // one does not, so a policy hardcoding ACTIONS.fire.heat fires when it must vent.
@@ -64,8 +64,8 @@ test("greedySafe prices the second-shot surcharge from availableActions", () => 
 
 test("greedySafe never issues an action availableActions reports disabled", () => {
   // The whole point of reading availableActions is that the engine owns legality.
-  // Assert the POSITIVE property the name claims — resolve whatever action came
-  // back through availableActions and require that tile to be enabled — rather
+  // Assert the POSITIVE property the name claims, resolve whatever action came
+  // back through availableActions and require that tile to be enabled, rather
   // than merely "not fire", which a null or any wrong action would also satisfy.
   // Written to generalise: it still holds for any action the policy later learns.
   const room = seatedRoom();
@@ -82,7 +82,7 @@ test("greedySafe never issues an action availableActions reports disabled", () =
 test("greedySafe returns null rather than throwing when there is no turn", () => {
   // game.turn is genuinely null in recovery and initiative (game-state.js:2081,
   // :1448). The contract is "null when this rig cannot usefully act", so a caller
-  // that skips the phase check must get null — not a TypeError.
+  // that skips the phase check must get null, not a TypeError.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
   const enemy = room.rigs.find((r) => r.name === "B1");
@@ -100,7 +100,7 @@ test("greedySafe returns null when nothing is worth doing", () => {
 
 test("greedySafe reloads a spent weapon rather than emitting a dead fire", () => {
   // Firing a spent weapon is a silent no-op in the engine (game-state.js: "Firing
-  // a spent weapon is a no-op until the player spends a Reload") — yet the Fire
+  // a spent weapon is a no-op until the player spends a Reload"), yet the Fire
   // tile stays `enabled`, because Fire is what opens the reload drawer. A policy
   // that trusts `enabled` here emits fire forever and the duel never advances.
   const room = seatedRoom();
@@ -112,7 +112,7 @@ test("greedySafe reloads a spent weapon rather than emitting a dead fire", () =>
 
 test("greedySafe vents when a reload roll could break capacity", () => {
   // Reload costs heat kinds a d6 gamble: 1-3 -> +2 heat. Budget the worst case,
-  // since that bound is known — unlike weapon-side fireModeHeat.
+  // since that bound is known, unlike weapon-side fireModeHeat.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
   rig.loaded.longRange = false;
@@ -135,7 +135,7 @@ test("greedySafe stops deciding once the activation has ended", () => {
 test("greedySafe does not vent while a meltdown charge is banked", () => {
   // battle-view hardcodes the Shut Down tile to enabled, but the engine rejects
   // it outright while Meltdown Protocol holds a charge. Since greedySafe budgets
-  // only KNOWN heat it can overshoot capacity and bank one — and then it would
+  // only KNOWN heat it can overshoot capacity and bank one, and then it would
   // re-issue a shutdown the engine refuses, forever, hanging the driver.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
@@ -145,7 +145,7 @@ test("greedySafe does not vent while a meltdown charge is banked", () => {
 });
 
 test("greedySafe refuses a rig with no weight class instead of guessing medium", () => {
-  // The repo pins this: game-state has a test named "toughnessOf — a rig lookup
+  // The repo pins this: game-state has a test named "toughnessOf, a rig lookup
   // with no weight class throws, it does not fall back". A silent default-to-
   // medium is the same species as the buried structuredClone this file replaces.
   const room = seatedRoom();
@@ -157,7 +157,7 @@ test("greedySafe refuses a rig with no weight class instead of guessing medium",
 test("greedySafe passes rather than firing a weapon rolled dead by an Arms hit", () => {
   // An Arms hit at 0 SP rolls a weapon dead; combat.js then refuses the shot as
   // `weapon-destroyed` while the Fire tile stays enabled and performAction's
-  // `return !!res` swallows the reason — a doubly invisible no-op that hit live
+  // `return !!res` swallows the reason, a doubly invisible no-op that hit live
   // at round 7 of a real duel. weaponsDestroyed holds weapon NAMES, not slots.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
@@ -182,7 +182,7 @@ test("greedySafe does not reload a weapon it can never fire again", () => {
 test("greedySafe passes rather than firing a weapon riveted shut", () => {
   // Rivet Lock seizes a weapon-role location and the engine refuses the shot for
   // ~2 rounds while the Fire tile stays enabled. Unlike Ion Storm it does not
-  // clear on the refusal, so retrying never succeeds — it crashed the sweep on
+  // clear on the refusal, so retrying never succeeds, it crashed the sweep on
   // Rivet Gun / prototype at ~10% of trials.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
@@ -193,7 +193,7 @@ test("greedySafe passes rather than firing a weapon riveted shut", () => {
 });
 
 test("greedySafe still fires with a rivet on a NON-weapon location", () => {
-  // The engine only jams on a weapon-role location — for a rig that is `arms`
+  // The engine only jams on a weapon-role location, for a rig that is `arms`
   // alone. A rivet on legs leaves the gun firing normally, so a guard that vents
   // on any seize would pass a rig that can shoot: under-reporting the weapon
   // instead of crashing. Quieter, still wrong. This pins the role filter.
@@ -209,10 +209,10 @@ test("greedySafe still fires with a rivet on a NON-weapon location", () => {
 test("greedySafe treats a rivet as live by presence, not by expiry round", () => {
   // rivetSeized[loc] stores the expiry ROUND, which invites a `v > game.round`
   // test. That would be wrong: recovery DELETES seizes once past expiry, so a key
-  // that is still present is still live — which is why the engine's own check is
+  // that is still present is still live, which is why the engine's own check is
   // a bare `> 0`. On the seize's second round the value EQUALS game.round (the
   // sweep only deletes when value < round), so a round-aware guard reads false
-  // and fires into the refusal — handing back the very crash this guard removes.
+  // and fires into the refusal, handing back the very crash this guard removes.
   const room = seatedRoom();
   const rig = room.rigs.find((r) => r.name === "A1");
   rig.rivetSeized = { arms: room.game.round }; // second round of the lock, still live
@@ -258,7 +258,7 @@ test("makeGreedySafe demands a legal arc rather than defaulting to one", () => {
   assert.throws(() => makeGreedySafe({ distance: DUEL_DISTANCE, arc: null }), /arc/);
   assert.throws(() => makeGreedySafe({ distance: DUEL_DISTANCE, arc: "sideways" }), /arc/);
   assert.throws(() => makeGreedySafe({ distance: DUEL_DISTANCE, arc: "Side" }), /arc/);
-  // All three engine arcs are legal — "front" included. The parameter exists so
+  // All three engine arcs are legal, "front" included. The parameter exists so
   // the caller CHOOSES it, not so the harness forbids it.
   for (const arc of ["front", "side", "rear"]) {
     assert.ok(makeGreedySafe({ distance: DUEL_DISTANCE, arc }), `${arc} must be constructible`);
@@ -277,9 +277,9 @@ test("the fire command carries the declared arc verbatim", () => {
   }
 });
 
-test("Raking Fire on the front arc is a structural zero — why arc is not optional", () => {
+test("Raking Fire on the front arc is a structural zero, why arc is not optional", () => {
   // This is the reason the parameter is required rather than defaulted to a
-  // safe-looking "front". arcBonus returns null — not 0, not a failed roll — for
+  // safe-looking "front". arcBonus returns null, not 0, not a failed roll, for
   // Raking Fire on the front arc, so a front-on duel measures Mini Gun and Double
   // MG dealing nothing for all 10 rounds. F7: "all 504 zero-damage cells in the
   // sweep are Raking Fire's front arc". The sweep hides it by pooling arcs; a
@@ -291,7 +291,7 @@ test("Raking Fire on the front arc is a structural zero — why arc is not optio
   assert.equal(arcBonus(mini, "front"), null, "front is a hard zero, not a bonus of 0");
   assert.equal(arcBonus(mini, "side"), 3);
   assert.equal(arcBonus(dmg, "front"), null);
-  // A non-Raking weapon has no such cliff — which is exactly why the zero is easy
+  // A non-Raking weapon has no such cliff, which is exactly why the zero is easy
   // to miss when arcs are pooled.
   assert.equal(arcBonus(WEAPONS.longRange["Mortar"], "front"), 0);
 });

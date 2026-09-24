@@ -40,7 +40,7 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
     setPlaced(null);
   }, [moveTarget]);
   // Drop a stale target if the active rig changes (or clears) server-side while
-  // armed — otherwise the overlay could auto-arm when that rig re-activates later.
+  // armed, otherwise the overlay could auto-arm when that rig re-activates later.
   useEffect(() => {
     if (moveTarget && moveTarget.rigId !== activeRigId) clearMoveTarget();
   }, [activeRigId, moveTarget, clearMoveTarget]);

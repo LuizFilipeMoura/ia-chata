@@ -1,4 +1,4 @@
-# Threat Warning Drawer — design
+# Threat Warning Drawer, design
 
 **Date:** 2026-07-13
 **Branch:** frontend/v2-redesign
@@ -12,7 +12,7 @@ sliding hazard bars, a targeting reticle over the doomed Rig, and the line
 "Enemy IRONJAW targets your RIVETHEAD." It fires the moment the attacker opens
 the attack sheet on your Rig and clears when they fire or back off.
 
-Ordinary opponent turns are **not** changed — the existing top `TurnBanner`
+Ordinary opponent turns are **not** changed, the existing top `TurnBanner`
 wait-state already covers "hold, it's their move." This feature is *only* the
 attack telegraph.
 
@@ -21,11 +21,11 @@ target, and weapon; the styling delivers dieselpunk menace.
 
 ## Scope decisions (locked with the user)
 
-- **Signal source:** real declared-target state — broadcast when the attacker
+- **Signal source:** real declared-target state, broadcast when the attacker
   opens the attack sheet. Not proximity-inferred, not fire-only.
 - **Prominence:** quiet turn, loud threat. No drawer for a plain opponent turn;
   a big blocking overlay only for a declared attack.
-- **Loudness:** maximal — shake, siren wash, hazard bars, reticle, klaxon.
+- **Loudness:** maximal, shake, siren wash, hazard bars, reticle, klaxon.
 - **Sound:** on. Reuse shipped `beep_warning.mp3` + `brace_for_impact.mp3`.
 - **Blocking:** hard-block. The overlay swallows all input until the threat
   clears (with a 20s failsafe, below).
@@ -40,7 +40,7 @@ target, and weapon; the styling delivers dieselpunk menace.
 - No defender action from the overlay (reactions are pre-placed answer tokens).
 - No change to the ordinary opponent-turn banner or the activation recap drawer.
 
-## Data model (server — `shared/game-state.js`)
+## Data model (server, `shared/game-state.js`)
 
 New transient field on `room.game`, alongside `pendingReaction` / `pendingAnswer`
 / `pendingBlast`:
@@ -49,7 +49,7 @@ New transient field on `room.game`, alongside `pendingReaction` / `pendingAnswer
 game.pendingThreat = {
   attackerId,   // rig id of the declaring attacker (must be turn.activeRigId)
   targetId,     // rig id being targeted (an enemy of the attacker)
-  defender,     // side id that owns targetId — the side that sees the overlay
+  defender,     // side id that owns targetId, the side that sees the overlay
   mode,         // "fire" | "aimed" | "lock"
   weapon,       // display name, e.g. "Autocannon" or "Fire Control Lock"
 } | null
@@ -59,7 +59,7 @@ Initialize to `null` in the game factory (~line 646) and backfill in
 `ensureGameShape` (~line 798): `if (room.game.pendingThreat === undefined) room.game.pendingThreat = null;`.
 
 The whole `room.game` is snapshotted to clients, so no serializer change is
-needed — the field propagates automatically.
+needed, the field propagates automatically.
 
 ## Server verb: `threat`
 
@@ -72,11 +72,11 @@ selected by `a.action`:
     `room.game.turn.activeRigId` is set and owned by that side; `target` resolves
     to a non-destroyed enemy Rig. On any failure, no-op (return room unchanged).
   - Set `room.game.pendingThreat = { attackerId: activeRigId, targetId, defender: target.owner, mode, weapon }`, bump `room.version`.
-  - Re-declare (target switch) simply overwrites — same attacker, new targetId.
+  - Re-declare (target switch) simply overwrites, same attacker, new targetId.
 - **clear** (`{ verb: "threat", attrs: { action: "clear" } }`)
   - Only the active side may clear its own threat. Set `pendingThreat = null`.
 
-`threat` is **not** an UNDO_VERB and does **not** snapshot history — it is
+`threat` is **not** an UNDO_VERB and does **not** snapshot history, it is
 cosmetic and must never enter the undo stack.
 
 ## Auto-clear sweep
@@ -98,29 +98,29 @@ function clearThreatIfStale(room) {
 This clears on activation end, turn flip, and phase change (all move the active
 rig off the attacker). Additionally, **explicitly clear** `pendingThreat` inside
 the `action` branch after a fire/aimed/lock resolves (the attacker's rig stays
-active, so the sweep alone wouldn't catch a resolved shot — the "planning"
+active, so the sweep alone wouldn't catch a resolved shot, the "planning"
 moment is over once dice are thrown). Belt-and-suspenders: `endActivation` and
 the turn-advance path already move `activeRigId`, so the sweep covers them on the
 next command.
 
 Disconnect safety: if the attacker vanishes mid-threat, no further command
-arrives to run the sweep — the client-side 20s failsafe (below) covers it.
+arrives to run the sweep, the client-side 20s failsafe (below) covers it.
 
-## Client — attacker side (`client/src/v2/overlays/AttackWizard.tsx`)
+## Client, attacker side (`client/src/v2/overlays/AttackWizard.tsx`)
 
 - On mount (sheet opened) for a normal attack (`react !== true`): start a 500ms
   timer; when it fires, `sendCommand("threat", { action: "declare", target: state.target, mode, weapon: weapons[slot] || "", side: mySide })`.
 - On `state.target` change while open: re-send declare with the new target
-  (debounce not needed on switch — the sheet is already open and loud).
+  (debounce not needed on switch, the sheet is already open and loud).
 - On close and on submit: clear the timer; `sendCommand("threat", { action: "clear", side: mySide })`. (Submit also sends `action`, which server-clears; the explicit clear is harmless and covers the plain-close path.)
-- Skip entirely when `react === true` (return-fire reuse) — no threat overlay
+- Skip entirely when `react === true` (return-fire reuse), no threat overlay
   stacked on an already-loud reaction sequence.
 - `mode` = the wizard's `mode` prop (`fire`/`aimed`/`lock`). For `lock`,
   `weapon` = `"Fire Control Lock"`.
 
 `mySide` via `useMySide()`; `sendCommand` via `useCommands()`.
 
-## Client — defender side (new `client/src/v2/overlays/ThreatOverlay.tsx`)
+## Client, defender side (new `client/src/v2/overlays/ThreatOverlay.tsx`)
 
 State-driven, portal-mounted, hard-blocking, non-dismissable. Mounted once in
 `V2Terminal.tsx` (alongside `OutcomeBanner`).
@@ -131,12 +131,12 @@ State-driven, portal-mounted, hard-blocking, non-dismissable. Mounted once in
 - Resolves attacker rig (by `attackerId`) and target rig (by `targetId`) for the
   names; `mode`/`weapon` for the weapon line. Lock mode shows "is painting your
   {target} for a strike" instead of a weapon.
-- Visual: the approved loud mockup — shaking frame, red siren wash, sliding
+- Visual: the approved loud mockup, shaking frame, red siren wash, sliding
   hazard bars top & bottom, sweeping reticle on the targeted Rig card if visible
   (else a standalone reticle), blinking "⚠ INCOMING FIRE ⚠" klaxon,
   "Enemy {ATTACKER} targets your {TARGET}", weapon line, "◇ Brace for impact".
 - **Sound:** on mount of a *new* threat session (keyed on `attackerId`), call a
-  new `playThreatAlarm()` — plays `beep_warning` + `brace_for_impact` through the
+  new `playThreatAlarm()`: plays `beep_warning` + `brace_for_impact` through the
   mixer (respects the sound-off flag). Do **not** replay on live re-point (target
   switch keeps the same `attackerId`).
 - **Hard-block:** a full-viewport fixed layer with `pointer-events` capturing all
@@ -189,11 +189,11 @@ static loud styling).
 
 ## Files touched
 
-- `shared/game-state.js` — field, `threat` verb, stale sweep, `action` clear.
-- `shared/game-state.test.js` — server tests.
-- `client/src/v2/overlays/AttackWizard.tsx` — declare/clear broadcast.
-- `client/src/v2/overlays/ThreatOverlay.tsx` — **new** overlay.
-- `client/src/v2/V2Terminal.tsx` — mount the overlay.
-- `client/src/v2/audio/actionAudio.ts` — `playThreatAlarm`.
-- `client/src/v2/styles/overlay.css` (or new `threat.css`) — loud styles.
+- `shared/game-state.js`: field, `threat` verb, stale sweep, `action` clear.
+- `shared/game-state.test.js`: server tests.
+- `client/src/v2/overlays/AttackWizard.tsx`: declare/clear broadcast.
+- `client/src/v2/overlays/ThreatOverlay.tsx`: **new** overlay.
+- `client/src/v2/V2Terminal.tsx`: mount the overlay.
+- `client/src/v2/audio/actionAudio.ts`: `playThreatAlarm`.
+- `client/src/v2/styles/overlay.css` (or new `threat.css`), loud styles.
 - Client tests alongside the touched files.

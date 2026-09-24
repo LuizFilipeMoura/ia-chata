@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add support units — Tanks/Walkers that carry a light sidearm plus two role modules (Damage/Repair/Coolant/Recon), introducing the game's first ally-targeting actions (Field Weld, Vent, Paint).
+**Goal:** Add support units, Tanks/Walkers that carry a light sidearm plus two role modules (Damage/Repair/Coolant/Recon), introducing the game's first ally-targeting actions (Field Weld, Vent, Paint).
 
 **Architecture:** No new unit *kind*. A support unit is an existing `tank`/`walker` (from `shared/unit-kinds.js`) whose commission includes a `modules` array and a built-in `Sidearm` weapon. Three new action verbs (`fieldweld`/`vent`/`paint`) join the `ACTIONS` catalogue and are dispatched in `performAction`, gated on the acting unit owning the matching module. Paint writes a `painted` flag onto the *enemy* target (like the existing `cracked` status), read during to-hit assembly to cancel cover and add +1 Aim for allied ranged attacks, and swept when the painter next activates.
 
@@ -12,20 +12,20 @@
 
 ## File Structure
 
-**Engine (shared) — TDD, the risk surface:**
-- `shared/unit-kinds.js` — add `MODULES` registry + `normalizeModules()`. (Task 1)
-- `shared/game-state.js` — add `Sidearm` to `UNIT_WEAPONS`; extend `makeUnit` for modules; add `fieldweld`/`vent`/`paint` branches to `performAction`; sweep `painted` in the `activate` verb; add `painted: null` to the cold-unit shape; forward `painted` in `resolveFire`; generalize the `seed` handler; export `SUPPORT_UNITS`. (Tasks 1,2,4,5,6,7,9)
-- `shared/rules.js` — register 3 action verbs in `ACTIONS`. (Task 3)
-- `shared/combat.js` — cancel cover + add +1 Aim when `opts.painted` (ranged only). (Task 7)
-- `shared/battle-view.js` — surface the 3 module actions in `availableActions`. (Task 8)
+**Engine (shared), TDD, the risk surface:**
+- `shared/unit-kinds.js`: add `MODULES` registry + `normalizeModules()`. (Task 1)
+- `shared/game-state.js`: add `Sidearm` to `UNIT_WEAPONS`; extend `makeUnit` for modules; add `fieldweld`/`vent`/`paint` branches to `performAction`; sweep `painted` in the `activate` verb; add `painted: null` to the cold-unit shape; forward `painted` in `resolveFire`; generalize the `seed` handler; export `SUPPORT_UNITS`. (Tasks 1,2,4,5,6,7,9)
+- `shared/rules.js`: register 3 action verbs in `ACTIONS`. (Task 3)
+- `shared/combat.js`: cancel cover + add +1 Aim when `opts.painted` (ranged only). (Task 7)
+- `shared/battle-view.js`: surface the 3 module actions in `availableActions`. (Task 8)
 
-**Client (v2) — concrete edits + preview verification:**
-- `client/src/lib/loadout.ts` — extend `Loadout` types + `buildLoadout` for sidearm+modules. (Task 10)
-- `client/src/v2/components/LoadoutView.tsx` — render sidearm + module chips. (Task 11)
-- `client/src/v2/battle/ActionConsole.tsx` — glyphs + `onAction` routing for the 3 verbs. (Task 12)
+**Client (v2), concrete edits + preview verification:**
+- `client/src/lib/loadout.ts`: extend `Loadout` types + `buildLoadout` for sidearm+modules. (Task 10)
+- `client/src/v2/components/LoadoutView.tsx`: render sidearm + module chips. (Task 11)
+- `client/src/v2/battle/ActionConsole.tsx`: glyphs + `onAction` routing for the 3 verbs. (Task 12)
 
 **Protocol:**
-- `server/prompt.js` — teach the roster-add grammar the support-unit shape. (Task 13)
+- `server/prompt.js`: teach the roster-add grammar the support-unit shape. (Task 13)
 
 New test files: `shared/support-units.test.js` (Tasks 1,2,4,5,6,9), assertions added to `shared/combat.test.js` (Task 7) and `shared/battle-view.test.js` (Task 8).
 
@@ -77,7 +77,7 @@ test("Sidearm is a weak flat-pick ranged weapon in the unit list", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/support-units.test.js`
-Expected: FAIL — `MODULES`/`normalizeModules` not exported; `Sidearm` undefined.
+Expected: FAIL, `MODULES`/`normalizeModules` not exported; `Sidearm` undefined.
 
 - [ ] **Step 3: Add the MODULES registry to `shared/unit-kinds.js`**
 
@@ -172,7 +172,7 @@ test("A plain tank (no modules) is unchanged: single flat-pick weapon, empty mod
 test("Support units must carry exactly two distinct modules or fail to build", () => {
   assert.equal(makeUnit("tank", 4, "X", "a", { unit: "Tank Cannon", modules: ["damage"] }), null);
   assert.equal(makeUnit("tank", 5, "X", "a", { unit: "Tank Cannon", modules: ["damage", "repair", "recon"] }), null);
-  // A damage-less support unit with a bogus opts.unit still builds — it uses the Sidearm.
+  // A damage-less support unit with a bogus opts.unit still builds, it uses the Sidearm.
   assert.ok(makeUnit("walker", 6, "X", "a", { modules: ["repair", "coolant"], unit: "nonsense" }));
   // A damage support unit with an invalid gun fails (no weapon to fit).
   assert.equal(makeUnit("tank", 7, "X", "a", { modules: ["damage", "recon"], unit: "nonsense" }), null);
@@ -182,7 +182,7 @@ test("Support units must carry exactly two distinct modules or fail to build", (
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/support-units.test.js`
-Expected: FAIL — `u.modules` is `undefined`; Sidearm fallback not implemented.
+Expected: FAIL, `u.modules` is `undefined`; Sidearm fallback not implemented.
 
 - [ ] **Step 3: Add `normalizeModules` to the import line**
 
@@ -279,14 +279,14 @@ test("support module actions are registered, cold (0 heat), 1 slot each", () => 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/rules.test.js`
-Expected: FAIL — `ACTIONS.fieldweld` is undefined.
+Expected: FAIL, `ACTIONS.fieldweld` is undefined.
 
 - [ ] **Step 3: Add the three verbs to `ACTIONS`**
 
 In `shared/rules.js`, before the closing `};` of `ACTIONS` (line 29), add:
 
 ```js
-  // Support-unit module actions (spec: Support Units). Cold — 0 heat — since only
+  // Support-unit module actions (spec: Support Units). Cold, 0 heat, since only
   // Tanks/Walkers carry modules. Each spends one action slot.
   fieldweld:{ label: "Field Weld", heat: 0, slot: 1 },
   vent:     { label: "Vent",       heat: 0, slot: 1 },
@@ -310,7 +310,7 @@ git commit -m "feat(units): register field-weld/vent/paint action verbs"
 ### Task 4: Field Weld action (repair an ally)
 
 **Files:**
-- Modify: `shared/game-state.js` — add a branch in `performAction` after the `barrage` block (after line 1933, before `if (act === "reload")`)
+- Modify: `shared/game-state.js`: add a branch in `performAction` after the `barrage` block (after line 1933, before `if (act === "reload")`)
 - Test: `shared/support-units.test.js`
 
 Field Weld reuses the D12 7+/10+ curve of Repair (`shared/game-state.js:1936-1947`) and the `repairRig(target, loc, amt)` helper (`:1237`), but heals a *friendly* target looked up by name via `findRig` (`:838`).
@@ -355,7 +355,7 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
   const before = room.rigs[1].hull.sp;
   const changed = applyCommand(room, { verb: "action", name: "Welder", action: "fieldweld",
     target: "Ally", loc: "hull", dice: { weld: 11 } }, {});
-  assert.equal(room.rigs[1].hull.sp, before); // no heal — module missing
+  assert.equal(room.rigs[1].hull.sp, before); // no heal, module missing
   // Enemy target rejected even with the module:
   room.rigs[0].modules = ["repair", "recon"];
   room.rigs[1].owner = "b";
@@ -366,12 +366,12 @@ test("Field Weld requires the repair module and an ALLIED target", () => {
 });
 ```
 
-> Note: confirm the exact names of the room factory and command entry point while implementing (grep `export function createRoom` / `export function applyCommand` in `shared/game-state.js`). If `createRoom` needs different args, adjust `twoAllyRoom()` accordingly — the assertions are what matter.
+> Note: confirm the exact names of the room factory and command entry point while implementing (grep `export function createRoom` / `export function applyCommand` in `shared/game-state.js`). If `createRoom` needs different args, adjust `twoAllyRoom()` accordingly, the assertions are what matter.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/support-units.test.js`
-Expected: FAIL — `fieldweld` is not handled; ally SP unchanged.
+Expected: FAIL, `fieldweld` is not handled; ally SP unchanged.
 
 - [ ] **Step 3: Add the Field Weld branch to `performAction`**
 
@@ -379,7 +379,7 @@ In `shared/game-state.js`, immediately after the `barrage` branch's closing `}` 
 
 ```js
   if (act === "fieldweld") {
-    // Repair module (spec: Support Units) — weld SP onto a friendly unit.
+    // Repair module (spec: Support Units), weld SP onto a friendly unit.
     if (!(rig.modules || []).includes("repair")) return false;
     const target = findRig(room, a.target);
     if (!target || target.owner !== rig.owner) return false;
@@ -393,7 +393,7 @@ In `shared/game-state.js`, immediately after the `barrage` branch's closing `}` 
     pushResolution(room, {
       kind: "fieldweld", actor: rig.owner, rigId: rig.id,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name} field-welds ${target.name} — rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
+      summary: `${rig.name} field-welds ${target.name}, rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
     return true;
   }
@@ -408,7 +408,7 @@ Expected: PASS.
 
 ```bash
 git add shared/game-state.js shared/support-units.test.js
-git commit -m "feat(units): Field Weld — repair a friendly unit"
+git commit -m "feat(units): Field Weld, repair a friendly unit"
 ```
 
 ---
@@ -416,7 +416,7 @@ git commit -m "feat(units): Field Weld — repair a friendly unit"
 ### Task 5: Vent action (cool a friendly rig)
 
 **Files:**
-- Modify: `shared/game-state.js` — add a `vent` branch right after the `fieldweld` branch from Task 4
+- Modify: `shared/game-state.js`: add a `vent` branch right after the `fieldweld` branch from Task 4
 - Test: `shared/support-units.test.js`
 
 Vent reuses `bumpHeat(target, -2)` (the same primitive as the Purge equipment active, `shared/game-state.js:1709`). Only Rigs carry heat, so the target must have `hasHeat`.
@@ -448,7 +448,7 @@ test("Vent drops 2 heat off an allied rig; refuses cold targets", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/support-units.test.js`
-Expected: FAIL — `vent` unhandled; rig heat stays 5.
+Expected: FAIL, `vent` unhandled; rig heat stays 5.
 
 - [ ] **Step 3: Add the Vent branch**
 
@@ -456,7 +456,7 @@ In `shared/game-state.js`, immediately after the `fieldweld` branch's closing `}
 
 ```js
   if (act === "vent") {
-    // Coolant module (spec: Support Units) — vent 2 heat off a friendly Rig.
+    // Coolant module (spec: Support Units), vent 2 heat off a friendly Rig.
     if (!(rig.modules || []).includes("coolant")) return false;
     const target = findRig(room, a.target);
     if (!target || target.owner !== rig.owner) return false;
@@ -481,7 +481,7 @@ Expected: PASS.
 
 ```bash
 git add shared/game-state.js shared/support-units.test.js
-git commit -m "feat(units): Vent — cool a friendly rig"
+git commit -m "feat(units): Vent, cool a friendly rig"
 ```
 
 ---
@@ -489,7 +489,7 @@ git commit -m "feat(units): Vent — cool a friendly rig"
 ### Task 6: Paint action + expiry sweep
 
 **Files:**
-- Modify: `shared/game-state.js` — add a `paint` branch after `vent`; add a sweep in the `activate` verb (after line 2245)
+- Modify: `shared/game-state.js`: add a `paint` branch after `vent`; add a sweep in the `activate` verb (after line 2245)
 - Test: `shared/support-units.test.js`
 
 Paint writes `{ by, painterId }` onto the *enemy* target. The mark is swept when the painter next activates, implementing "until the painter's next activation."
@@ -508,7 +508,7 @@ test("Paint marks an enemy; the mark records the painter and clears on the paint
   assert.deepEqual(enemy.painted, { by: "a", painterId: 1 });
   assert.equal(room.game.turn.actionsUsed, 1);
 
-  // End Welder's activation, reset the turn, and re-activate it — the mark clears.
+  // End Welder's activation, reset the turn, and re-activate it, the mark clears.
   room.rigs[0].activated = false;
   room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 0, longRangeShots: 0 };
   applyCommand(room, { verb: "activate", name: "Welder" }, {});
@@ -527,7 +527,7 @@ test("Paint requires the recon module and refuses friendly targets", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/support-units.test.js`
-Expected: FAIL — `paint` unhandled; `enemy.painted` stays null.
+Expected: FAIL, `paint` unhandled; `enemy.painted` stays null.
 
 - [ ] **Step 3: Add the Paint branch**
 
@@ -535,7 +535,7 @@ In `shared/game-state.js`, immediately after the `vent` branch's closing `}`, in
 
 ```js
   if (act === "paint") {
-    // Recon module (spec: Support Units) — mark an enemy so allied ranged attacks
+    // Recon module (spec: Support Units), mark an enemy so allied ranged attacks
     // ignore its cover and gain +1 Aim until this unit's next activation.
     if (!(rig.modules || []).includes("recon")) return false;
     const target = findRig(room, a.target);
@@ -545,7 +545,7 @@ In `shared/game-state.js`, immediately after the `vent` branch's closing `}`, in
     t.actionsUsed += 1;
     pushResolution(room, {
       kind: "paint", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} paints ${target.name} — allied ranged attacks ignore its cover and gain +1 Aim until ${rig.name}'s next activation.`,
+      summary: `${rig.name} paints ${target.name}, allied ranged attacks ignore its cover and gain +1 Aim until ${rig.name}'s next activation.`,
       effects: [],
     });
     return true;
@@ -571,7 +571,7 @@ Expected: PASS.
 
 ```bash
 git add shared/game-state.js shared/support-units.test.js
-git commit -m "feat(units): Paint — mark an enemy for the gun line, clears next activation"
+git commit -m "feat(units): Paint, mark an enemy for the gun line, clears next activation"
 ```
 
 ---
@@ -579,8 +579,8 @@ git commit -m "feat(units): Paint — mark an enemy for the gun line, clears nex
 ### Task 7: Paint affects allied ranged to-hit
 
 **Files:**
-- Modify: `shared/game-state.js:1539-1546` (`resolveFire` — build `opts.painted`)
-- Modify: `shared/combat.js:38-49` (`computeModifiedAim` — cancel cover + +1 Aim)
+- Modify: `shared/game-state.js:1539-1546` (`resolveFire`: build `opts.painted`)
+- Modify: `shared/combat.js:38-49` (`computeModifiedAim`: cancel cover + +1 Aim)
 - Test: `shared/combat.test.js`
 
 A painted enemy is easier for its painter's allies to hit: cover is cancelled and Aim improves by 1, for **ranged** weapons only.
@@ -611,11 +611,11 @@ test("painted does not help melee weapons", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — `painted` ignored; `plain - painted === 0`.
+Expected: FAIL, `painted` ignored; `plain - painted === 0`.
 
 - [ ] **Step 3: Fold `painted` into `computeModifiedAim`**
 
-`shared/combat.js:43` (cover line) — add `painted` to the bypass condition:
+`shared/combat.js:43` (cover line), add `painted` to the bypass condition:
 
 ```js
   const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak || (opts.painted && !profile.melee)) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
@@ -624,7 +624,7 @@ Expected: FAIL — `painted` ignored; `plain - painted === 0`.
 Then, replace the `accTotal` line (`shared/combat.js:48`) with a paint-bonus version:
 
 ```js
-  // Recon paint (spec: Support Units) — allied ranged fire on a marked enemy
+  // Recon paint (spec: Support Units), allied ranged fire on a marked enemy
   // gains +1 Aim on top of the cover cancel above.
   const paintBonus = (opts.painted && !profile.melee) ? 1 : 0;
   const accTotal = weaponAcc - cover + aimedPenalty + hullPenalty + engagedPenalty + paintBonus;
@@ -632,7 +632,7 @@ Then, replace the `accTotal` line (`shared/combat.js:48`) with a paint-bonus ver
 
 - [ ] **Step 4: Forward the flag from `resolveFire`**
 
-`shared/game-state.js:1539-1546` — inside the `resolveAttack(room, rig, target, { ... }, ...)` opts literal, add a `painted` field (e.g. after the `engaged:` line at 1541):
+`shared/game-state.js:1539-1546`: inside the `resolveAttack(room, rig, target, { ... }, ...)` opts literal, add a `painted` field (e.g. after the `engaged:` line at 1541):
 
 ```js
     engaged: rig.engagedWith != null,
@@ -656,7 +656,7 @@ git commit -m "feat(units): painted enemies take +1 Aim and no cover from allied
 ### Task 8: Surface module actions in the battle view-model
 
 **Files:**
-- Modify: `shared/battle-view.js` — in `availableActions`, after the Fire Control Lock block (after line 112, before `return list;`)
+- Modify: `shared/battle-view.js`: in `availableActions`, after the Fire Control Lock block (after line 112, before `return list;`)
 - Test: `shared/battle-view.test.js`
 
 - [ ] **Step 1: Write the failing test**
@@ -681,14 +681,14 @@ test("module actions appear only for units carrying the matching module", () => 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — module keys absent.
+Expected: FAIL, module keys absent.
 
 - [ ] **Step 3: Push the module actions in `availableActions`**
 
 In `shared/battle-view.js`, after the `hasFireControl` block closes (after line 112) and before `return list;` (line 113), add:
 
 ```js
-  // Support-unit module actions (spec: Support Units) — surfaced per module held.
+  // Support-unit module actions (spec: Support Units), surfaced per module held.
   const modules = rig.modules || [];
   if (modules.includes("repair")) {
     list.push({ key: "fieldweld", label: ACTIONS.fieldweld.label, heat: ACTIONS.fieldweld.heat,
@@ -721,7 +721,7 @@ git commit -m "feat(units): surface module actions in the battle view-model"
 ### Task 9: Ship the four exemplars + generalize the seed handler
 
 **Files:**
-- Modify: `shared/game-state.js` — add `SUPPORT_UNITS` export (near `SEED_ROSTER`, ~line 105); generalize the `seed` verb loop (`:2173-2184`)
+- Modify: `shared/game-state.js`: add `SUPPORT_UNITS` export (near `SEED_ROSTER`, ~line 105); generalize the `seed` verb loop (`:2173-2184`)
 - Test: `shared/support-units.test.js`
 
 - [ ] **Step 1: Write the failing test**
@@ -757,7 +757,7 @@ test("seed builds support units from a custom roster with kind + modules", () =>
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/support-units.test.js`
-Expected: FAIL — `SUPPORT_UNITS` undefined; seed handler forces `makeUnit("rig", …)` and drops non-rig entries.
+Expected: FAIL, `SUPPORT_UNITS` undefined; seed handler forces `makeUnit("rig", …)` and drops non-rig entries.
 
 - [ ] **Step 3: Export `SUPPORT_UNITS`**
 
@@ -765,7 +765,7 @@ In `shared/game-state.js`, after the `SEED_ROSTER` array (line 105), add:
 
 ```js
 // The four shipped support-unit exemplars (spec: Support Units). Sidearm-only
-// entries omit `unit` — makeUnit fits the Sidearm automatically.
+// entries omit `unit`: makeUnit fits the Sidearm automatically.
 export const SUPPORT_UNITS = [
   { name: "Marksman Tank",  owner: "a", kind: "tank",   unit: "Tank Cannon", modules: ["damage", "recon"] },
   { name: "Radiator Walker", owner: "a", kind: "walker", unit: "Coaxial MG",  modules: ["damage", "coolant"] },
@@ -817,7 +817,7 @@ git commit -m "feat(units): ship four support exemplars + kind-aware seed"
 ### Task 10: Client loadout view-model
 
 **Files:**
-- Modify: `client/src/lib/loadout.ts` — `Loadout` interface (~lines 9-33) + `buildLoadout` (~line 74)
+- Modify: `client/src/lib/loadout.ts`: `Loadout` interface (~lines 9-33) + `buildLoadout` (~line 74)
 - Test: none new (typed helper; verified via LoadoutView in Task 11's preview)
 
 - [ ] **Step 1: Read the current shapes**
@@ -866,7 +866,7 @@ git commit -m "feat(units): expose modules + sidearm flag in client loadout"
 
 - [ ] **Step 1: Read the component**
 
-Read `client/src/v2/components/LoadoutView.tsx:1-80` — note `WeaponBlock` (line 15) and the `loadout.flat` branch (line 52).
+Read `client/src/v2/components/LoadoutView.tsx:1-80`: note `WeaponBlock` (line 15) and the `loadout.flat` branch (line 52).
 
 - [ ] **Step 2: Render a modules row and label the sidearm**
 
@@ -883,7 +883,7 @@ In the `loadout.flat` branch, below the single `WeaponBlock`, add a modules line
 )}
 ```
 
-And, where the weapon name/title renders inside `WeaponBlock` for a flat unit, append a `(Sidearm)` hint when `loadout.isSidearm` — or pass `isSidearm` into `WeaponBlock` and render a small muted tag. Keep styling consistent with the existing loadout chips (reuse an existing chip class if one exists rather than inventing new CSS).
+And, where the weapon name/title renders inside `WeaponBlock` for a flat unit, append a `(Sidearm)` hint when `loadout.isSidearm`: or pass `isSidearm` into `WeaponBlock` and render a small muted tag. Keep styling consistent with the existing loadout chips (reuse an existing chip class if one exists rather than inventing new CSS).
 
 - [ ] **Step 3: Verify in the browser**
 
@@ -903,14 +903,14 @@ git commit -m "feat(units): show sidearm + module chips in the loadout view"
 ### Task 12: Wire the three action buttons in ActionConsole
 
 **Files:**
-- Modify: `client/src/v2/battle/ActionConsole.tsx` — `ACTION_GLYPH` (~line 44), `onAction` routing (~lines 153-176)
+- Modify: `client/src/v2/battle/ActionConsole.tsx`: `ACTION_GLYPH` (~line 44), `onAction` routing (~lines 153-176)
 - Verify: browser preview
 
 The Support group (`⚙`, line 39) already catches unknown keys, so `fieldweld`/`vent`/`paint` render as buttons automatically once `availableActions` emits them (Task 8). This task adds glyphs and the click→command routing. `fieldweld`/`vent` need a friendly target; `paint` needs an enemy target.
 
 - [ ] **Step 1: Read the routing**
 
-Read `client/src/v2/battle/ActionConsole.tsx:139-200` — see how `onAction(key)` maps existing keys (esp. how `fire`/`lock` pick a target) to `send("action", { … })`.
+Read `client/src/v2/battle/ActionConsole.tsx:139-200`: see how `onAction(key)` maps existing keys (esp. how `fire`/`lock` pick a target) to `send("action", { … })`.
 
 - [ ] **Step 2: Add glyphs**
 
@@ -930,11 +930,11 @@ Follow the same target-selection pattern the `fire`/`lock` cases use. For `field
 send("action", { name: activeName, action: key, target: chosenTargetName, ...(key === "fieldweld" ? { loc: chosenLoc } : {}) });
 ```
 
-Reuse the existing target-picker component/wizard the fire flow uses rather than building a new one; if the fire flow's picker can't filter by side, add a `side`/`ownerFilter` prop to it. `fieldweld` also needs a location choice — reuse the location picker the `aimed`/`repair` flows use.
+Reuse the existing target-picker component/wizard the fire flow uses rather than building a new one; if the fire flow's picker can't filter by side, add a `side`/`ownerFilter` prop to it. `fieldweld` also needs a location choice, reuse the location picker the `aimed`/`repair` flows use.
 
 - [ ] **Step 4: Verify in the browser**
 
-With the dev server running and a support-unit battle seeded: activate the Field Welder, click **Field Weld**, pick a damaged ally + location, confirm SP rises. Click **Paint** on the Radiator Walker's target list, confirm an enemy gets a "painted" status chip (Task 8's `rigModifiers` may need a chip — see note) and that an allied ranged attack on it shows improved odds. Screenshot each.
+With the dev server running and a support-unit battle seeded: activate the Field Welder, click **Field Weld**, pick a damaged ally + location, confirm SP rises. Click **Paint** on the Radiator Walker's target list, confirm an enemy gets a "painted" status chip (Task 8's `rigModifiers` may need a chip, see note) and that an allied ranged attack on it shows improved odds. Screenshot each.
 
 > Optional polish: add a `painted` chip in `rigModifiers` (`shared/battle-view.js:126`) so the mark is visible on the target. Small, additive; include it here if the status isn't otherwise visible.
 
@@ -950,12 +950,12 @@ git commit -m "feat(units): wire Field Weld / Vent / Paint action buttons"
 ### Task 13: Teach the roster-add protocol the support shape
 
 **Files:**
-- Modify: `server/prompt.js` — `TRACKER_PROTOCOL` add grammar (~lines 27-54) and `PLAYER_START_GUIDE` (~line 77)
+- Modify: `server/prompt.js`: `TRACKER_PROTOCOL` add grammar (~lines 27-54) and `PLAYER_START_GUIDE` (~line 77)
 - Test: none (prompt text); sanity-check the server boots
 
 - [ ] **Step 1: Read the protocol**
 
-Read `server/prompt.js:18-90` — the `kind="tank"`/`kind="walker"` add tags (lines 27-29) and the `UNIT_WEAPONS` vocabulary injection (line 53).
+Read `server/prompt.js:18-90`: the `kind="tank"`/`kind="walker"` add tags (lines 27-29) and the `UNIT_WEAPONS` vocabulary injection (line 53).
 
 - [ ] **Step 2: Extend the add grammar**
 
@@ -980,11 +980,11 @@ git commit -m "docs(units): teach the add protocol the support-unit shape"
 - [ ] **Step 1: Run the whole test suite**
 
 Run: `npm test`
-Expected: PASS — Vitest (client) + `node --test` (all `shared/**` and `server/**`), including the new `shared/support-units.test.js` and the added assertions in `combat`/`rules`/`battle-view`.
+Expected: PASS, Vitest (client) + `node --test` (all `shared/**` and `server/**`), including the new `shared/support-units.test.js` and the added assertions in `combat`/`rules`/`battle-view`.
 
 - [ ] **Step 2: If anything fails, fix at the source and re-run**
 
-Do not edit tests to pass — diagnose the engine/client change. Re-run the failing file with `node --test shared/<file>.test.js` until green, then `npm test` again.
+Do not edit tests to pass, diagnose the engine/client change. Re-run the failing file with `node --test shared/<file>.test.js` until green, then `npm test` again.
 
 - [ ] **Step 3: Update `rules.md` §17 with the support-unit rules**
 
@@ -992,14 +992,14 @@ Add a "Support Units" subsection under §17 documenting: the sidearm profile, th
 
 ```bash
 git add rules.md
-git commit -m "docs: rules §17 — support units (sidearm + modules)"
+git commit -m "docs: rules §17, support units (sidearm + modules)"
 ```
 
 ---
 
 ## Notes for the implementer
 
-- **Geometry is player-adjudicated.** The engine simulates no board position — `arc`, `cover`, `distance`, and "within 2\"" reach are all caller-supplied inputs (see `resolveFire`). Field Weld / Vent therefore do **not** verify adjacency; the players are trusted to only weld/vent a unit that is actually in reach, exactly as the existing melee/attack flows trust `a.arc`/`a.distance`.
+- **Geometry is player-adjudicated.** The engine simulates no board position, `arc`, `cover`, `distance`, and "within 2\"" reach are all caller-supplied inputs (see `resolveFire`). Field Weld / Vent therefore do **not** verify adjacency; the players are trusted to only weld/vent a unit that is actually in reach, exactly as the existing melee/attack flows trust `a.arc`/`a.distance`.
 - **`painted` on the defender vs. the attacker.** The existing Fire Control Lock stores its paint on the *attacker* and keys one weapon. The Recon mark must benefit *any* allied attacker, so it lives on the *defender* (like `cracked`), storing the painting side (`by`) and the painter's id (`painterId`) for expiry.
 - **Cold units and heat.** `bumpHeat(rig, 0)` on a tank/walker is a safe no-op (the cold-kind power part carries `heat: 0`); the three verbs are registered `heat: 0` so they never touch the overheat path.
-- **Regression net.** The existing `shared/*.test.js` suite is the guard that the Rig and plain Tank/Walker behavior is byte-for-byte unchanged — run it after every engine task.
+- **Regression net.** The existing `shared/*.test.js` suite is the guard that the Rig and plain Tank/Walker behavior is byte-for-byte unchanged, run it after every engine task.

@@ -28,7 +28,7 @@ interface DrawerProps {
 // (outside the app's V2 root), the card is wrapped in `.v2-root` so the scoped
 // `--v2-*` tokens and `.v2-dwr-*` rules apply. That wrapper also needs
 // `.v2-portal-bare` (display:contents) so the always-fixed, full-screen `.v2-root`
-// box doesn't fill the viewport and drag the card to the top-left — with it gone,
+// box doesn't fill the viewport and drag the card to the top-left, with it gone,
 // the card is a direct grid child of the scrim and `place-items: center` centers it.
 export default function Drawer({ config, visible, onClose }: DrawerProps) {
   const dismissable = config.dismissable !== false;

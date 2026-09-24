@@ -1,10 +1,10 @@
-# QR-Scan Commission + Post-Commission Loadout Edit — Implementation Plan
+# QR-Scan Commission + Post-Commission Loadout Edit, Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let players commission a rig by scanning a pre-generated per-chassis QR code (instant Standard build), and reconfigure an already-committed rig's equipment/upgrades pre-battle.
 
-**Architecture:** A pure `qrCommission` module parses `rig:v1:<chassis-id>` payloads and resolves a scan into either an `add`-command attrs object or an error — all camera-independent and unit-tested. A thin camera overlay feeds decoded strings to it. A new server `reconfigure` verb rebuilds a pre-battle rig in place through the existing `makeUnit` path. The Commission wizard gains an edit mode that dispatches `reconfigure` instead of `add`.
+**Architecture:** A pure `qrCommission` module parses `rig:v1:<chassis-id>` payloads and resolves a scan into either an `add`-command attrs object or an error, all camera-independent and unit-tested. A thin camera overlay feeds decoded strings to it. A new server `reconfigure` verb rebuilds a pre-battle rig in place through the existing `makeUnit` path. The Commission wizard gains an edit mode that dispatches `reconfigure` instead of `add`.
 
 **Tech Stack:** React 18 + Vite + TypeScript (client), plain ESM JS (`shared/game-state.js`, Node test runner), Vitest (client tests), `jsQR` (decode fallback), `qrcode` (offline generation script), native `BarcodeDetector` where available.
 
@@ -13,19 +13,19 @@
 ## File Structure
 
 **Create:**
-- `client/src/v2/lib/qrCommission.ts` — payload parse/encode + `resolveScan` (pure).
-- `client/src/v2/lib/qrCommission.test.ts` — unit tests for the above.
-- `client/src/v2/overlays/ScanCommission.tsx` — camera overlay; decodes frames, calls `resolveScan`, dispatches `add`.
-- `scripts/gen-chassis-qr.mjs` — offline generator: one QR SVG per chassis + a contact sheet.
+- `client/src/v2/lib/qrCommission.ts`: payload parse/encode + `resolveScan` (pure).
+- `client/src/v2/lib/qrCommission.test.ts`: unit tests for the above.
+- `client/src/v2/overlays/ScanCommission.tsx`: camera overlay; decodes frames, calls `resolveScan`, dispatches `add`.
+- `scripts/gen-chassis-qr.mjs`: offline generator: one QR SVG per chassis + a contact sheet.
 
 **Modify:**
-- `shared/game-state.js` — add the `reconfigure` verb to `applyCommand` (after the `remove` branch, ~line 2611).
-- `shared/game-state.test.js` — tests for `reconfigure`.
-- `client/src/v2/overlays/CommissionWizard.tsx` — accept an optional `editRig`, seed from it, lock Kind/Chassis steps, dispatch `reconfigure` on submit.
-- `client/src/v2/overlays/CommissionWizard.test.tsx` — edit-mode tests.
-- `client/src/v2/overlays/RigTerminal.tsx` — "Edit loadout" button (pre-battle, own rig).
-- `client/src/v2/V2Terminal.tsx` — wire `editRigId`, open wizard in edit mode; add the Scan button + overlay.
-- `package.json` — add `jsqr` dep + `qrcode` devDep (via npm, below).
+- `shared/game-state.js`: add the `reconfigure` verb to `applyCommand` (after the `remove` branch, ~line 2611).
+- `shared/game-state.test.js`: tests for `reconfigure`.
+- `client/src/v2/overlays/CommissionWizard.tsx`: accept an optional `editRig`, seed from it, lock Kind/Chassis steps, dispatch `reconfigure` on submit.
+- `client/src/v2/overlays/CommissionWizard.test.tsx`: edit-mode tests.
+- `client/src/v2/overlays/RigTerminal.tsx`: "Edit loadout" button (pre-battle, own rig).
+- `client/src/v2/V2Terminal.tsx`: wire `editRigId`, open wizard in edit mode; add the Scan button + overlay.
+- `package.json`: add `jsqr` dep + `qrcode` devDep (via npm, below).
 
 ---
 
@@ -83,7 +83,7 @@ test("resolveScan rejects an already-fielded chassis and unknown codes", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/lib/qrCommission.test.ts`
-Expected: FAIL — cannot resolve `./qrCommission`.
+Expected: FAIL, cannot resolve `./qrCommission`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -213,7 +213,7 @@ test("reconfigure is a no-op after start, on a non-rig, and cross-side", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — reconfigure does nothing, assertions on equipment/hull fail.
+Expected: FAIL, reconfigure does nothing, assertions on equipment/hull fail.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -305,7 +305,7 @@ test("edit mode seeds the loadout, hides Kind/Chassis, and dispatches reconfigur
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/overlays/CommissionWizard.test.tsx -t "edit mode"`
-Expected: FAIL — `CommissionWizard` has no `editRig` prop; still dispatches `add`.
+Expected: FAIL, `CommissionWizard` has no `editRig` prop; still dispatches `add`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -327,7 +327,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
   const [state, setState] = useState<WizardState>(() => {
     if (editRig) {
       return {
-        step: 2, // Weapons — first editable step
+        step: 2, // Weapons, first editable step
         kind: "rig",
         cls: editRig.weightClass || "medium",
         owner: editRig.owner || "a",
@@ -377,7 +377,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
   };
 ```
 
-(e) Reconfigure is always submittable (the rig already exists — roster caps don't apply):
+(e) Reconfigure is always submittable (the rig already exists, roster caps don't apply):
 
 ```ts
   const canSubmit = editRig ? true : canAdd;
@@ -421,7 +421,7 @@ In the footer, gate + clamp Back on `minStep`:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run client/src/v2/overlays/CommissionWizard.test.tsx`
-Expected: PASS — the new edit-mode test plus all existing wizard tests still green.
+Expected: PASS, the new edit-mode test plus all existing wizard tests still green.
 
 - [ ] **Step 5: Commit**
 
@@ -460,7 +460,7 @@ test("pre-battle own rig shows Edit loadout and calls onEdit with the rig id", a
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/overlays/RigTerminal.test.tsx -t "Edit loadout"`
-Expected: FAIL — no Edit loadout button / no `onEdit` prop.
+Expected: FAIL, no Edit loadout button / no `onEdit` prop.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -533,11 +533,11 @@ Derive the rig to edit and pass `onEdit` to RigTerminal + `editRig` to the wizar
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run client/src/v2/overlays/RigTerminal.test.tsx`
-Expected: PASS — Edit-loadout test plus existing RigTerminal tests green.
+Expected: PASS, Edit-loadout test plus existing RigTerminal tests green.
 
 - [ ] **Step 5: Add the button style**
 
-Append to `client/src/v2/styles/rig-terminal.css` (mirror the `.v2-rt-remove` rule already there — reuse its box model, just a calmer accent):
+Append to `client/src/v2/styles/rig-terminal.css` (mirror the `.v2-rt-remove` rule already there, reuse its box model, just a calmer accent):
 
 ```css
 .v2-rt-edit {
@@ -635,7 +635,7 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
         if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play(); }
         raf = requestAnimationFrame(tick);
       })
-      .catch(() => setError("Camera unavailable — commission from the wizard instead."));
+      .catch(() => setError("Camera unavailable, commission from the wizard instead."));
 
     return () => { done = true; cancelAnimationFrame(raf); stream?.getTracks().forEach((t) => t.stop()); };
   }, [rigs, game, mySide, sendCommand, onClose]);
@@ -673,7 +673,7 @@ import { ScanCommission } from "./overlays/ScanCommission";
   const [scanOpen, setScanOpen] = useState(false);
 ```
 
-Render a Scan launcher and the overlay. Add the button next to the existing commission entry (place it in the same region the Commission control lives — the `Squadron`/`TurnBanner` already expose `onCommission`; add a sibling control). Minimal: mount the overlay and a floating button:
+Render a Scan launcher and the overlay. Add the button next to the existing commission entry (place it in the same region the Commission control lives, the `Squadron`/`TurnBanner` already expose `onCommission`; add a sibling control). Minimal: mount the overlay and a floating button:
 
 ```tsx
       {!started && (
@@ -687,7 +687,7 @@ Render a Scan launcher and the overlay. Add the button next to the existing comm
 - [ ] **Step 4: Typecheck + full suite**
 
 Run: `npx tsc -p client --noEmit` then `npm test`
-Expected: no type errors; all tests pass (the overlay has no unit test — its logic is covered by Task 1's `resolveScan` tests).
+Expected: no type errors; all tests pass (the overlay has no unit test, its logic is covered by Task 1's `resolveScan` tests).
 
 - [ ] **Step 5: Manual verification (preview)**
 
@@ -753,7 +753,7 @@ main();
 ```
 
 **Note on the `QR_PREFIX` import:** a `.mjs` Node script cannot import from a `.ts` client file directly. Choose ONE:
-- Simplest: inline `const QR_PREFIX = "rig:v1:";` at the top of the script (single constant, low duplication risk — it is format-versioned and rarely changes), and drop the cross-import.
+- Simplest: inline `const QR_PREFIX = "rig:v1:";` at the top of the script (single constant, low duplication risk, it is format-versioned and rarely changes), and drop the cross-import.
 Use the inline constant.
 
 - [ ] **Step 3: Run the generator**
@@ -763,7 +763,7 @@ Expected: `Wrote <N> codes + contact-sheet.html to .../docs/qr`, one `<chassis-i
 
 - [ ] **Step 4: Spot-check a code round-trips**
 
-Open `docs/qr/contact-sheet.html` in a browser, scan one code with a phone; the decoded text must read `rig:v1:<that-chassis-id>`. (Sanity check only — no automated test for generated art.)
+Open `docs/qr/contact-sheet.html` in a browser, scan one code with a phone; the decoded text must read `rig:v1:<that-chassis-id>`. (Sanity check only, no automated test for generated art.)
 
 - [ ] **Step 5: Commit**
 
@@ -776,8 +776,8 @@ git commit -m "chore: generate printable per-chassis commission QR codes"
 
 ## Final verification
 
-- [ ] Run the full suite: `npm test` — all client (Vitest) and server (node --test) tests pass.
-- [ ] Typecheck: `npx tsc -p client --noEmit` — clean.
+- [ ] Run the full suite: `npm test`: all client (Vitest) and server (node --test) tests pass.
+- [ ] Typecheck: `npx tsc -p client --noEmit`: clean.
 - [ ] Preview end-to-end: scan a generated code → Standard rig commissions for your side; open its terminal pre-battle → **Edit loadout** → change equipment/upgrade → Confirm → loadout updates and both sides' ready state resets.
 
 ## Spec coverage check

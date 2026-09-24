@@ -31,7 +31,7 @@ function defaults() {
 
 // A store that loads content/chassis.json, hot-reloads it on change, and seeds
 // it from the defaults when the file is missing. `all()`/`get()` return the
-// effective, merged entries (used only for display — enforcement uses the shared
+// effective, merged entries (used only for display, enforcement uses the shared
 // registry directly).
 export function createChassisStore(filePath) {
   let entries = defaults();
@@ -41,13 +41,13 @@ export function createChassisStore(filePath) {
     try {
       onDisk = JSON.parse(fs.readFileSync(filePath, "utf8"));
     } catch {
-      return; // missing or malformed — keep last-known-good entries
+      return; // missing or malformed, keep last-known-good entries
     }
     if (!Array.isArray(onDisk)) return;
     const byId = new Map(defaults().map((d) => [d.id, d]));
     for (const row of onDisk) {
       const base = byId.get(row?.id);
-      if (!base) continue; // unknown id — ignore, cannot introduce new combos
+      if (!base) continue; // unknown id, ignore, cannot introduce new combos
       byId.set(row.id, {
         ...base,
         label: typeof row.label === "string" && row.label.trim() ? row.label : base.label,
@@ -67,7 +67,7 @@ export function createChassisStore(filePath) {
     try {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, JSON.stringify(defaults(), null, 2) + "\n");
-    } catch { /* read-only fs — fall back to in-memory defaults */ }
+    } catch { /* read-only fs, fall back to in-memory defaults */ }
   }
 
   function watch() {

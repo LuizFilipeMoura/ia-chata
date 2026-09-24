@@ -4,8 +4,8 @@
 // Metric: mean SP dealt by ONE attack action, no cover, no aim.
 //
 // Two condition profiles bracket every conditional upgrade:
-//   cold   — fresh target, cold attacker, no charge  (Cold Bore lives here)
-//   primed — half-dead target, overheated/charging attacker, target pinned
+//   cold  , fresh target, cold attacker, no charge  (Cold Bore lives here)
+//   primed, half-dead target, overheated/charging attacker, target pinned
 //            (Evisceration / Exploit Wound / Bloodletter / Taut Cable /
 //             Opportunist / Redline / Superconductor / Full Tilt live here)
 
@@ -37,11 +37,11 @@ const STUBS = {
   sunderLocation() {}, crackLocation() {}, rivetHit() {}, dismemberLocation() {},
   breachHull() {}, engage() {},
 };
-// Real ctx — the profile a live rig actually fires.
+// Real ctx, the profile a live rig actually fires.
 const ctx = { ...STUBS, profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker) };
 // SYNTHETIC baseline ctx. normalizeWeaponUpgrade() falls back to upgrades[0] (the
 // FIELD upgrade) for a null id, so an un-upgraded rig is UNREACHABLE in the real
-// game — makeRig cannot build one. This bypasses that fallback to measure what
+// game, makeRig cannot build one. This bypasses that fallback to measure what
 // each tier is actually worth. Not a legal loadout; a measuring stick only.
 const baseCtx = {
   ...STUBS,
@@ -98,7 +98,7 @@ function makeAttacker(kind, weaponName, slot, upgradeId) {
   if (slot === "longRange") w.longRangeUpgrade = upgradeId;
   else w.meleeUpgrade = upgradeId;
   const rig = makeRig("a", "A", kind, "a", w);
-  // makeRig normalizes an unknown/absent upgrade to null — assert the tier we asked
+  // makeRig normalizes an unknown/absent upgrade to null, assert the tier we asked
   // for is the tier we got, so a typo can't silently degrade a whole tier to base.
   if (rig && upgradeId && rig.weaponUpgrades[slot] !== upgradeId)
     throw new Error(`upgrade ${upgradeId} rejected for ${weaponName}`);
@@ -151,7 +151,7 @@ function distancesFor(p) {
 }
 
 function tiersFor(weaponName) {
-  const out = [{ tier: "none", id: null }]; // synthetic — see baseCtx
+  const out = [{ tier: "none", id: null }]; // synthetic, see baseCtx
   for (const u of WEAPON_UPGRADES[weaponName] || []) out.push({ tier: u.nature, id: u.id });
   return out;
 }

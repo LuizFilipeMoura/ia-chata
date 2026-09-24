@@ -20,7 +20,7 @@ export function RigAddScreen({ onCommission }: Props) {
   const cardCls = "rig-add-card" + (isEmpty ? " is-empty" : "");
 
   const hint = isEmpty
-    ? "Commission your first Rig to begin — name it, pick a chassis and its weapon upgrades."
+    ? "Commission your first Rig to begin, name it, pick a chassis and its weapon upgrades."
     : "Name it, pick a chassis and weapon upgrades, then choose its equipment.";
 
   return (

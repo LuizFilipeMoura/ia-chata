@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { AnswerGateBody } from "./useBattleWatchers";
 import type { Rig, PrepType } from "../state/types";
 
-// Minimal Rig stubs — the gate body only reads `name` and `weapons.melee`.
+// Minimal Rig stubs, the gate body only reads `name` and `weapons.melee`.
 function rig(name: string, melee?: string): Rig {
   return { name, weapons: melee ? { melee } : {} } as unknown as Rig;
 }

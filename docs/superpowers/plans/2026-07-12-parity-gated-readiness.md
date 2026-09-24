@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the fixed 3-unit roster requirement with a composition-parity gate — neither side can ready until both field the same number of Rigs per weight class, the same number of Tanks, and the same number of Walkers (floor of 1 unit each).
+**Goal:** Replace the fixed 3-unit roster requirement with a composition-parity gate, neither side can ready until both field the same number of Rigs per weight class, the same number of Tanks, and the same number of Walkers (floor of 1 unit each).
 
 **Architecture:** A pure `sidesAtParity(room)` predicate (built on a `compositionOf` signature helper) replaces the three `sideRigCount >= 3` gates in `shared/game-state.js`. The `MAX_RIGS_PER_SIDE` / `MAX_RIGS_TOTAL` caps are removed so rosters can grow freely. A mirror `composition.ts` helper on the client feeds a parity-diff hint in `computeFocus.ts` and a parity indicator in the Yard screen. Rules doc updated to the mandatory mirror rule.
 
@@ -15,7 +15,7 @@
 - Client (one file): `npx vitest run client/src/lib/composition.test.ts`
 - Full suite: `npm test`
 
-**Shared test note:** existing shared tests define `const W = { longRange: "Mini Gun", melee: "Sword" }` (or `lr`/`melee`) as valid weapon attrs for `add`. Reuse the file's existing `W` spread — do not redefine it.
+**Shared test note:** existing shared tests define `const W = { longRange: "Mini Gun", melee: "Sword" }` (or `lr`/`melee`) as valid weapon attrs for `add`. Reuse the file's existing `W` spread, do not redefine it.
 
 ---
 
@@ -101,7 +101,7 @@ Note: the `add` verb must accept `kind`/`unit` attrs for tanks/walkers. If it do
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: the five new tests FAIL (parity not yet enforced — `ready` still succeeds on `>= 3` or fails for the wrong reason). Existing `ready requires at least three rigs` and `adding or removing rigs before start resets ready flags` tests will ALSO now be logically stale — they are rewritten in Step 5.
+Expected: the five new tests FAIL (parity not yet enforced, `ready` still succeeds on `>= 3` or fails for the wrong reason). Existing `ready requires at least three rigs` and `adding or removing rigs before start resets ready flags` tests will ALSO now be logically stale, they are rewritten in Step 5.
 
 - [ ] **Step 3: Add the parity helpers**
 
@@ -168,12 +168,12 @@ In the seed verb's `canStart` (~:2653): **leave it as `sideRigCount(room, "a") >
 deliberately non-mirrored (distinct chassis + a mechanic spread, per the AGENTS.md
 no-mirror-matchup invariant), so it is intentionally NOT subject to the parity gate.
 *(This reverses the original plan text, which wrongly assumed the seed roster was
-mirrored — routing it through `sidesAtParity` broke every seed test.)* Add a comment
+mirrored, routing it through `sidesAtParity` broke every seed test.)* Add a comment
 explaining why seed keeps its own gate.
 
 - [ ] **Step 5: Rewrite the two now-stale existing tests**
 
-Replace the existing `test("ready requires at least three rigs for that side", ...)` (~:448) entirely — its premise (3 rigs, empty opponent) is no longer valid. Delete it; its coverage is superseded by the Step 1 tests.
+Replace the existing `test("ready requires at least three rigs for that side", ...)` (~:448) entirely, its premise (3 rigs, empty opponent) is no longer valid. Delete it; its coverage is superseded by the Step 1 tests.
 
 Rewrite `test("adding or removing rigs before start resets ready flags", ...)` (~:462) so parity holds before readying:
 
@@ -270,7 +270,7 @@ export const MAX_RIGS_TOTAL = 6;
 Replace `canAddRigForSide` (~:1108) with:
 
 ```js
-// Adding is always allowed — parity (sidesAtParity), not a cap, governs when the
+// Adding is always allowed, parity (sidesAtParity), not a cap, governs when the
 // game can start. Kept as a stable predicate for call sites that still ask.
 export function canAddRigForSide(room, sideId) {
   return true;
@@ -323,7 +323,7 @@ Replace the two assertions (~:25-26) with one asserting the parity wording:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test server/prompt.test.js`
-Expected: FAIL — the parity phrase is not yet in the prompt (and the old import may now be unused).
+Expected: FAIL, the parity phrase is not yet in the prompt (and the old import may now be unused).
 
 - [ ] **Step 3: Update the prompt text**
 
@@ -343,7 +343,7 @@ with:
 ```js
   "- Both sides must field the same number of Rigs in each weight class, the same",
   "  number of Tanks, and the same number of Walkers before either can ready. There",
-  "  is no fixed roster size and no cap — rosters just have to mirror each other.",
+  "  is no fixed roster size and no cap, rosters just have to mirror each other.",
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -423,7 +423,7 @@ test("parityStatus prompts when the opponent has no units", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/lib/composition.test.ts`
-Expected: FAIL — module `./composition` does not exist.
+Expected: FAIL, module `./composition` does not exist.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -575,7 +575,7 @@ test("pre-battle at parity prompts Ready", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/lib/computeFocus.test.ts`
-Expected: FAIL — copy still says "Commission your first Rig" and there is no parity-diff branch.
+Expected: FAIL, copy still says "Commission your first Rig" and there is no parity-diff branch.
 
 - [ ] **Step 3: Rewrite the pre-battle branch**
 
@@ -611,7 +611,7 @@ Replace the entire `if (!g.started) { ... }` block (~:35-60) with:
     if (!sideReadyOf(mine)) {
       return {
         tone: "guide", icon: "✔", primary: "Mark ready when set",
-        secondary: "Rosters match — tap Ready to deploy.",
+        secondary: "Rosters match, tap Ready to deploy.",
         cta: { label: "Ready", kind: "ready" },
       };
     }
@@ -664,7 +664,7 @@ test("squadronStatus reports count and parity against the opponent", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/lib/viewModels.test.ts`
-Expected: FAIL — `squadronStatus` is not exported.
+Expected: FAIL, `squadronStatus` is not exported.
 
 - [ ] **Step 3: Replace `commissioned` with `squadronStatus`**
 
@@ -703,13 +703,13 @@ Replace the destructure (~:21):
   const { count, atParity, diffLabel } = squadronStatus(rigs, mySide);
 ```
 
-Replace the `readyDisabled` line (~:30) — parity replaces `count < max`:
+Replace the `readyDisabled` line (~:30), parity replaces `count < max`:
 
 ```tsx
   const readyDisabled = started || myReady || !atParity || !field?.locked;
 ```
 
-Replace the stats count display (~:41) — no fixed max any more; show count plus parity state:
+Replace the stats count display (~:41), no fixed max any more; show count plus parity state:
 
 ```tsx
           <div className="v2-yard-count">{count} COMMISSIONED{!started && !atParity && diffLabel ? ` · ${diffLabel}` : ""}</div>
@@ -764,7 +764,7 @@ export function RigAddScreen({ onCommission }: Props) {
   const cardCls = "rig-add-card" + (isEmpty ? " is-empty" : "");
 
   const hint = isEmpty
-    ? "Commission your first Rig to begin — name it, pick a chassis and its weapon upgrades."
+    ? "Commission your first Rig to begin, name it, pick a chassis and its weapon upgrades."
     : "Name it, pick a chassis and weapon upgrades, then choose its equipment.";
 
   return (
@@ -791,7 +791,7 @@ export function RigAddScreen({ onCommission }: Props) {
 - [ ] **Step 2: Verify it compiles / tests pass**
 
 Run: `npx vitest run client/src/components`
-Expected: PASS — no references to the removed `MAX_RIGS_*` imports or `canAddRigForSide`. If a test asserts the old "Roster full" / "Ready up ↑" copy, update it to the always-addable copy.
+Expected: PASS, no references to the removed `MAX_RIGS_*` imports or `canAddRigForSide`. If a test asserts the old "Roster full" / "Ready up ↑" copy, update it to the always-addable copy.
 
 - [ ] **Step 3: Commit**
 
@@ -816,7 +816,7 @@ Replace:
 ```
 with:
 ```
-**You need:** a matched force per side (see §3 — both sides field the same composition), D6 and D12 dice, a tape measure (inches), terrain, 3 objective markers, and tokens for preparations and catastrophic damage.
+**You need:** a matched force per side (see §3, both sides field the same composition), D6 and D12 dice, a tape measure (inches), terrain, 3 objective markers, and tokens for preparations and catastrophic damage.
 ```
 
 - [ ] **Step 2: Rewrite the §3 squadron-size list (~:114-115)**
@@ -824,12 +824,12 @@ with:
 Replace:
 
 ```
-1. **Squadron size** — agree on **3–5 Rigs** per side. Max **1 Colossal** per Squadron.
+1. **Squadron size**: agree on **3–5 Rigs** per side. Max **1 Colossal** per Squadron.
 2. **Choose each Rig's weight class** (§2).
 ```
 with:
 ```
-1. **Squadron size** — both sides field the **same composition**: the same number of Rigs in each weight class, the same number of Tanks, and the same number of Walkers. Any size (at least one unit per side); the two forces must mirror each other.
+1. **Squadron size**: both sides field the **same composition**: the same number of Rigs in each weight class, the same number of Tanks, and the same number of Walkers. Any size (at least one unit per side); the two forces must mirror each other.
 2. **Choose each Rig's weight class** (§2).
 ```
 
@@ -842,7 +842,7 @@ Replace:
 ```
 with:
 ```
-- **Mirror composition (required):** neither side may deploy until both forces match unit-for-unit by kind — and, for Rigs, by weight class. Readiness is locked until parity is met.
+- **Mirror composition (required):** neither side may deploy until both forces match unit-for-unit by kind, and, for Rigs, by weight class. Readiness is locked until parity is met.
 ```
 
 - [ ] **Step 4: Update the Alpha note (~:639)**

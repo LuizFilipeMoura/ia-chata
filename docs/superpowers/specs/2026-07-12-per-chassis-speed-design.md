@@ -14,7 +14,7 @@ focus. A short-range brawler and a long-range artillery piece of the same weight
 move identically, even though their roles demand different tempo.
 
 Speed should be a per-chassis stat, tuned so each chassis's mobility reinforces
-its intended role — while preserving the weight ladder (light faster than medium).
+its intended role, while preserving the weight ladder (light faster than medium).
 
 ## Measurement context (why the numbers land where they do)
 
@@ -23,7 +23,7 @@ All table measurement is **edge-to-edge (nearest gap between base rims)**:
 - **Range** = nearest-edge gap = `C - r_shooter - r_target` (C = center distance).
   The engine works entirely in this gap frame: players feed the measured gap as
   `opts.distance`, compared against the weapon's `minRange`/`maxRange`. Internally
-  consistent — no code change needed for range.
+  consistent, no code change needed for range.
 - **Movement** = front rim (start) to back rim (finish) of the moving base.
   Geometry: `measured = travel - diameter`, so **actual center travel = S + D**
   (D = base diameter). A move over-covers the printed Speed by one base diameter.
@@ -32,12 +32,12 @@ Base sizes (physical, fixed): **light = 60mm (2.36")**, **medium = 75mm (2.95")*
 
 Consequence: real per-move center travel = `S + D`. Bigger bases refund more
 movement, so the raw Speed ladder compresses at the table. The chosen numbers
-below account for this — the real-travel column keeps the ladder intact.
+below account for this, the real-travel column keeps the ladder intact.
 
 ## Decision: reinforce weight
 
 Speed reinforces the weight ladder as a **hard rule**: light strictly faster than
-medium. Bands do not overlap. Within a band, role tunes the value — brawlers /
+medium. Bands do not overlap. Within a band, role tunes the value, brawlers /
 short-range take the top of the band (they must close), long-range / static
 chassis take the floor (they hold and shoot).
 
@@ -69,7 +69,7 @@ Speeds are whole inches (house rule: clean tabletop measuring).
 - **Short-gun chassis move faster** to pay for their reach deficit; the big guns
   stay planted. Speed and range trade off within the weight-ladder constraint.
 - **Close-in lights → 6** (Rivet, Saw, Wrecking Ball): must hug the target.
-- **Mid/long lights → 5** (Claw, Harpoon, Sword, Missile): cannot drop to 4 — the
+- **Mid/long lights → 5** (Claw, Harpoon, Sword, Missile): cannot drop to 4, the
   floor guards the weight ladder. Their reach or tools (grapple, long gun) carry
   them; legs stay baseline.
 - **Skirmish mediums → 4** (Crossbow mobile hunter, Sniper repositioning marksman):
@@ -113,7 +113,7 @@ tier stays strictly above the medium tier.
 - **Movement convention unchanged.** We are not altering how movement is measured
   (still front-rim → back-rim, i.e. real travel = S + D). The Speed values are
   tuned with that convention in mind.
-- **Heavy / colossal** remain in the fallback `SPEED` map only — no such chassis
+- **Heavy / colossal** remain in the fallback `SPEED` map only, no such chassis
   exist yet.
 - **Support units** (tank/walker) keep their own `speed` on `unit-kinds.js`
   (tank 3, walker 4); this change does not touch that path.

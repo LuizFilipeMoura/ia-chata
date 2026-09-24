@@ -1,4 +1,4 @@
-/* V2 Join screen — ported from design-reference/oil-iron-terminal.html
+/* V2 Join screen, ported from design-reference/oil-iron-terminal.html
    lines 90-128. Every selector scoped under .v2-root; colors use --v2-* tokens. */
 
 .v2-root .v2-join {
@@ -36,7 +36,7 @@
   padding: 34px 30px 30px;
 }
 
-/* corner rivets — .v2-rivet primitive supplies the dot; this is its unique
+/* corner rivets, .v2-rivet primitive supplies the dot; this is its unique
    per-corner positioning. */
 .v2-root .v2-join-rivet {
   top: 8px;
@@ -44,7 +44,7 @@
 .v2-root .v2-join-rivet--l { left: 8px; }
 .v2-root .v2-join-rivet--r { right: 8px; }
 
-/* hazard stripe under the rivets — .v2-hazard primitive supplies the
+/* hazard stripe under the rivets, .v2-hazard primitive supplies the
    repeating diagonal; --v2-hazard-w/--v2-hazard-accent are tuned inline. */
 .v2-root .v2-join-hazard {
   height: 14px;
@@ -159,7 +159,7 @@
   color: var(--v2-txt-dim);
 }
 
-/* selected — .is-sel primitive supplies the oil border/ring/glow; the flat
+/* selected, .is-sel primitive supplies the oil border/ring/glow; the flat
    card gradient here is the mockup's own recipe (kept via the token). */
 .v2-root .v2-side.is-sel {
   background: var(--v2-grad-oil-sel);
@@ -204,7 +204,7 @@
   color: var(--v2-crit);
 }
 
-/* Seed preset toggle row — a horizontal band of preset buttons; selected uses
+/* Seed preset toggle row, a horizontal band of preset buttons; selected uses
    the shared .is-sel treatment. */
 .v2-root .v2-join-presets {
   display: flex;

@@ -37,7 +37,7 @@ test("emergency patch opens a drawer and dispatches the patch command", async ()
   expect(sendCommand).toHaveBeenCalledWith("action", expect.objectContaining({ name: "STALKER", action: "emergencypatch", loc: "hull" }));
 });
 
-// Field Weld / Vent / Paint (spec: Support Units) — openSupport picks a
+// Field Weld / Vent / Paint (spec: Support Units), openSupport picks a
 // target (friendly for Field Weld/Vent, enemy for Paint) via SupportBody,
 // then dispatches the module action.
 const foe: Rig = { ...rig, id: 2, owner: "b", name: "FOE" };
@@ -81,7 +81,7 @@ test("Field Weld defaults to a friendly target (self included) with a location",
   sendCommand.mockClear();
   render(wrapSeeded(<SupportHarness action="fieldweld" />));
   await user.click(screen.getByText("open"));
-  // The acting rig itself is first in the friendly pool — "self or ally" per spec.
+  // The acting rig itself is first in the friendly pool, "self or ally" per spec.
   expect(await screen.findByRole("button", { name: /STALKER/ })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /FOE/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: /ALLY/ }));
@@ -89,7 +89,7 @@ test("Field Weld defaults to a friendly target (self included) with a location",
   expect(sendCommand).toHaveBeenCalledWith("action", { name: "STALKER", action: "fieldweld", target: "ALLY", loc: "hull" });
 });
 
-// Preflight (spec: check before the action is shown) — when /command/check says
+// Preflight (spec: check before the action is shown), when /command/check says
 // the action is illegal, the wizard never opens; a blocking dialog explains why.
 function SessionSeed() {
   const d = useRoomDispatch();
@@ -109,7 +109,7 @@ test("a rejected preflight blocks the wizard and shows the reason", async () => 
   sendCommand.mockClear();
   vi.stubGlobal("fetch", vi.fn(async () => ({
     ok: true,
-    json: async () => ({ ok: false, reason: "Pinned by Suppression — can't move this round." }),
+    json: async () => ({ ok: false, reason: "Pinned by Suppression, can't move this round." }),
   })));
   render(wrapWithSession(<Harness />));
   await user.click(screen.getByText("patch"));

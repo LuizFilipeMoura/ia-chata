@@ -9,7 +9,7 @@ import type { AttackMode } from "./components/wizards/AttackWizard";
 import type { Rig, ServerState } from "./state/types";
 
 // The commission wizard is rendered by WizardProvider through a portal and shows
-// glossary terms. It must find GlossaryTipProvider as an ancestor — a regression
+// glossary terms. It must find GlossaryTipProvider as an ancestor, a regression
 // here previously crashed the whole app with "useGlossaryTip outside
 // GlossaryTipProvider".
 vi.mock("./hooks/useCommands", () => ({ useCommands: () => vi.fn() }));
@@ -31,7 +31,7 @@ test("opening the commission wizard resolves the glossary context", async () => 
     </AppProviders>,
   );
   await user.click(screen.getByText("open"));
-  // The Weapons step renders GlossaryText inside its upgrade choices — advancing
+  // The Weapons step renders GlossaryText inside its upgrade choices, advancing
   // to it is what previously crashed with "useGlossaryTip outside provider".
   // Rig flow is Kind -> Weapons (Rig is preselected on the Kind step).
   await user.click(screen.getByRole("button", { name: "Next" }));
@@ -40,7 +40,7 @@ test("opening the commission wizard resolves the glossary context", async () => 
 });
 
 // The AttackWizard is also portalled by WizardProvider, and it calls
-// useBattleActions(). So BattleActionsProvider must sit ABOVE WizardProvider —
+// useBattleActions(). So BattleActionsProvider must sit ABOVE WizardProvider,
 // a portal reads context from where it is created in the tree. A regression here
 // previously threw "useBattleActions outside BattleActionsProvider" the moment
 // Fire/Aimed/Ram was pressed, so no attack drawer ever appeared.
@@ -89,6 +89,6 @@ test("opening the attack wizard resolves the battle-actions context", async () =
   );
   await user.click(await screen.findByRole("button", { name: "attack" }));
   // The wizard mounts through WizardProvider's portal and immediately calls
-  // useBattleActions — reaching its title proves the provider order is right.
+  // useBattleActions, reaching its title proves the provider order is right.
   expect(await screen.findByText(/Fire Weapon/)).toBeInTheDocument();
 });

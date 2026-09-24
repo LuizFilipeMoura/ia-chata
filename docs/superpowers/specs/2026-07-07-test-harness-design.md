@@ -1,4 +1,4 @@
-# Test Harness (`/test`) — Design
+# Test Harness (`/test`), Design
 
 **Date:** 2026-07-07
 **Status:** Approved design, pre-implementation
@@ -18,14 +18,14 @@ A dev-only `/test` screen to exercise the full battle flow solo: control **both*
 
 ## Decisions (locked)
 
-1. **Side control:** Split view — both sides' consoles visible at once.
+1. **Side control:** Split view, both sides' consoles visible at once.
 2. **Randomize:** New `randomize` debug verb in the shared reducer (server-authoritative), not client remove+re-add.
 3. **Bootstrap:** Auto-seed a full match on load.
 4. **Seeded loadouts:** Random per rig (same reroll logic as the button).
 
 ## Design
 
-### 1. Entry — `App.tsx` path check
+### 1. Entry, `App.tsx` path check
 
 Add near the top of `App`:
 
@@ -46,19 +46,19 @@ if (import.meta.env.DEV && window.location.pathname === "/test") return <TestHar
 - Replace the ~8 `session?.side || "a"` reads with `useMySide()`. Behavior is identical in the normal app (no provider → falls back to session).
 
 **`TestHarness` component:**
-- Owns one shared room state + socket (same providers as normal app — one real room, both sides live in it).
+- Owns one shared room state + socket (same providers as normal app, one real room, both sides live in it).
 - On mount, ensures a session/room exists (seed step below).
-- Renders: `<DevToolbar/>` on top, then two columns. Each column = `<ViewSideContext value="a"|"b"><Stage/></ViewSideContext>`. Left = side A's perspective, right = side B's. Command posts from each column stamp that column's side (thread the override into `useCommands` too — see below).
+- Renders: `<DevToolbar/>` on top, then two columns. Each column = `<ViewSideContext value="a"|"b"><Stage/></ViewSideContext>`. Left = side A's perspective, right = side B's. Command posts from each column stamp that column's side (thread the override into `useCommands` too, see below).
 
 **`useCommands` side source:** currently stamps `session.side`. Change it to `useMySide()` so a column posts as its own side. Normal app unaffected (no override → session.side).
 
 ### 3. Auto-seed + full-capacity rig
 
-- Raw helper `postCmd(room, side, verb, attrs)` — a bare `fetch` to `/api/game/:room/command` with an **explicit** `side` (bypasses session), so the harness can drive both sides during setup.
-- Seed script on mount (idempotent — skip if room already seeded):
+- Raw helper `postCmd(room, side, verb, attrs)`: a bare `fetch` to `/api/game/:room/command` with an **explicit** `side` (bypasses session), so the harness can drive both sides during setup.
+- Seed script on mount (idempotent, skip if room already seeded):
   1. Pick/generate a fixed test room id (e.g. `"test"`), join as side A and side B via `/join`.
   2. For each side, `add` 3 rigs with a **random full loadout** each (client picks class `"medium"` + random weapons/upgrades/equipment, passes them as `add` attrs).
-  3. `lock` the field (whatever verb locks it — confirm during impl).
+  3. `lock` the field (whatever verb locks it, confirm during impl).
   4. `ready` both sides → `maybeStartGame` fires → lands in `activation`.
 - Loadout picker lives client-side in a shared helper (`randomLoadout()`) reused by both seeding and the reroll button's attrs. The actual reroll of an existing rig, though, is server-side (verb below) so state stays authoritative.
 
@@ -77,33 +77,33 @@ else if (verb === "randomize") {
 - Only meaningful for `kind:"rig"` (cold kinds ignored/no-op).
 - Uses `options.random` for reproducibility.
 - New pure helpers in the shared module: `randomRigWeapons(rng)` (random longRange+melee keys + an upgrade id for each) and `randomEquipment(rng)` (random `EQUIPMENT` key). Both drawn from the existing catalogs.
-- Rebuild via `makeRig` resets SP to max — acceptable for a test tool (fresh rig each reroll). Field placement is keyed by rig id, which is preserved, so placement survives.
+- Rebuild via `makeRig` resets SP to max, acceptable for a test tool (fresh rig each reroll). Field placement is keyed by rig id, which is preserved, so placement survives.
 
 ### 5. `DevToolbar`
 
 Buttons (each = one or more `postCmd` calls, explicit side):
-- **Reroll all** — `randomize` every rig.
-- **Add rig** (per side) — `add` a random full rig (respects `MAX_RIGS_PER_SIDE`; button disables at cap).
-- **Force phase** — jump to initiative / activation / recovery (via existing verbs; confirm exact verbs during impl).
-- **Switch turn side** — flip `turn.side` (handoff/existing verb).
-- **Hard reset** — `reset` verb.
-- **Re-seed** — tear down + rerun seed script.
+- **Reroll all**: `randomize` every rig.
+- **Add rig** (per side), `add` a random full rig (respects `MAX_RIGS_PER_SIDE`; button disables at cap).
+- **Force phase**: jump to initiative / activation / recovery (via existing verbs; confirm exact verbs during impl).
+- **Switch turn side**: flip `turn.side` (handoff/existing verb).
+- **Hard reset**: `reset` verb.
+- **Re-seed**: tear down + rerun seed script.
 
 ### 6. Safety
 
 - Dev-only mount gate (§1).
 - Reuses existing ungated debug verbs; the new `randomize` verb is same risk class (already ungated debug family).
-- No auth work — server already trusts `side`; out of scope for this tool.
+- No auth work, server already trusts `side`; out of scope for this tool.
 
 ## Files touched
 
 | File | Change |
 |------|--------|
 | `client/src/App.tsx` | dev-only `/test` path check |
-| `client/src/components/test/TestHarness.tsx` | **new** — split view + seed + providers |
-| `client/src/components/test/DevToolbar.tsx` | **new** — control buttons |
-| `client/src/state/ViewSideContext.tsx` | **new** — side override context |
-| `client/src/hooks/useMySide.ts` | **new** — override-or-session hook |
+| `client/src/components/test/TestHarness.tsx` | **new**: split view + seed + providers |
+| `client/src/components/test/DevToolbar.tsx` | **new**: control buttons |
+| `client/src/state/ViewSideContext.tsx` | **new**: side override context |
+| `client/src/hooks/useMySide.ts` | **new**: override-or-session hook |
 | ~8 components (BattleHud, RigDeck, TurnBanner, BattleSetup, BattleActionsContext, …) | swap `session?.side\|\|"a"` → `useMySide()` |
 | `client/src/hooks/useCommands.ts` | stamp `useMySide()` instead of `session.side` |
 | `client/src/lib/loadout.ts` (or new) | `randomLoadout()` client helper for seeding attrs |
@@ -113,4 +113,4 @@ Buttons (each = one or more `postCmd` calls, explicit side):
 
 - Auth / ownership enforcement on the server.
 - Persisting harness state across reloads (seed is idempotent, that's enough).
-- Testing cold kinds (tank/walker) loadouts — rigs only for now.
+- Testing cold kinds (tank/walker) loadouts, rigs only for now.

@@ -1,10 +1,9 @@
-# Digital-Room Entry Point — Design
+# Digital-Room Entry Point, Design
 
 **Date:** 2026-07-17
 **Status:** Approved design. Ready for an implementation plan.
 **Unblocks:** the live reachability of BOTH [[human-vs-bot]] and
-[[digital-battle-map]]. Both stacks are fully built and tested but **dark** —
-nothing in the running app sets `room.mode = "digital"` (it is assigned only in
+[[digital-battle-map]]. Both stacks are fully built and tested but **dark**: nothing in the running app sets `room.mode = "digital"` (it is assigned only in
 test code). This adds the missing switch.
 
 ## Problem
@@ -17,7 +16,7 @@ player can never reach a digital game through the UI.
 
 ## Decisions (from brainstorming)
 
-- **Default stays physical.** New/existing rooms are physical unless flipped —
+- **Default stays physical.** New/existing rooms are physical unless flipped,
   backward-compatible, digital is opt-in.
 - **Picking a bot opponent auto-forces digital.** Selecting a bot preset flips
   the room to digital in one step (bots require it), replacing the current
@@ -25,14 +24,14 @@ player can never reach a digital game through the UI.
 
 ## Components
 
-### 1. `mode` verb — `shared/game-state.js`
+### 1. `mode` verb, `shared/game-state.js`
 
 A new command verb, dispatched in `applyCommand`'s verb chain, modeled exactly
 on the existing `setdice` toggle (`shared/game-state.js` ~3619):
 
 - Shape: `{ verb: "mode", attrs: { mode: "digital" | "physical" } }`.
 - Pre-battle only: a no-op/guard when `room.game.started` (mode can't change
-  mid-game — positions and terrain are fixed at start).
+  mid-game, positions and terrain are fixed at start).
 - Validate the value: `"digital"` or `"physical"`; anything else is ignored
   (no change, no crash).
 - On a real change, set `room.mode` and `changed = true`. When the value equals
@@ -43,7 +42,7 @@ on the existing `setdice` toggle (`shared/game-state.js` ~3619):
 `publicState` already publishes `room.mode` (added during the battle-map work),
 so no serialization change is needed.
 
-### 2. `setbot` auto-forces digital — `shared/game-state.js`
+### 2. `setbot` auto-forces digital, `shared/game-state.js`
 
 The `setbot` verb currently rejects when `room.mode !== "digital"`
 (`"Bots play only in digital battles."`). Change: when a **non-null** preset is
@@ -57,10 +56,10 @@ verb:
   digital);
 - set `side.bot = preset`, `changed = true`.
 
-Clearing to Human (`preset: null`) leaves `room.mode` unchanged — the owner can
+Clearing to Human (`preset: null`) leaves `room.mode` unchanged, the owner can
 flip back to physical with the `mode` verb if they want.
 
-### 3. Lobby mode toggle — `client/src/v2/screens/Squadron.tsx`
+### 3. Lobby mode toggle, `client/src/v2/screens/Squadron.tsx`
 
 A Physical/Digital control in the pre-battle lobby, beside the existing dice
 toggle and the opponent selector (both already in the `!started` ready region).
@@ -107,7 +106,7 @@ human plays on the map; a bot opponent plays via driveBots
 - Switching to Physical while a bot opponent is selected: prevented in the UI
   (Physical disabled) and enforced engine-side. The `mode` verb refuses to leave
   digital while any side is bot-flagged (`room.game.sides.some((s) => s.bot)`), so
-  a hand-crafted `mode: physical` command can't create the contradiction either —
+  a hand-crafted `mode: physical` command can't create the contradiction either,
   the room stays digital until the bot flag is cleared. No corrupt state, and no
   path to a physical room with a passive, positionless bot.
 
@@ -121,7 +120,7 @@ human plays on the map; a bot opponent plays via driveBots
   leaves mode digital; the old "physical rejects" behavior is gone.
 - **Integration (route or engine):** starting from a **default (physical)** room,
   flip to digital (via `mode` OR `setbot`), commission a mirrored roster, lock
-  the field, ready — and assert a **started digital game** results (positions
+  the field, ready, and assert a **started digital game** results (positions
   assigned), proving the previously-dark path is now reachable end-to-end. Extend
   the existing human-vs-bot HTTP test rather than duplicating it.
 - **Lobby toggle (component):** the toggle dispatches `mode` with the chosen
@@ -132,6 +131,6 @@ human plays on the map; a bot opponent plays via driveBots
 ## Out of scope
 
 - Mid-game mode changes / migrating an in-progress physical game to digital.
-- Any new digital gameplay — this only exposes the existing digital stack.
-- Choosing mode at room *creation* (join) — a pre-battle lobby toggle covers the
+- Any new digital gameplay, this only exposes the existing digital stack.
+- Choosing mode at room *creation* (join), a pre-battle lobby toggle covers the
   need without touching the join/store layer; can be added later if wanted.

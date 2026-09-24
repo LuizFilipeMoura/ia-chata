@@ -1,8 +1,8 @@
-# Digital Battle Map (1c) — Design
+# Digital Battle Map (1c), Design
 
 **Date:** 2026-07-16
 **Status:** Approved design. Ready for an implementation plan.
-**Unblocks:** the human's digital **Move** — the deferred item 1c from
+**Unblocks:** the human's digital **Move**: the deferred item 1c from
 `docs/superpowers/specs/2026-07-16-human-vs-bot-design.md` (§5). See also
 [[human-vs-bot]] and [[digital-battlefield]].
 
@@ -18,7 +18,7 @@ activate it, and issues moves directly on the map.
 ## Scope boundary
 
 **Digital rooms only** (`room.mode === "digital"`). Physical rooms are untouched
-— they keep the existing roster list + timed-hold `MoveBody` drawer, because a
+, they keep the existing roster list + timed-hold `MoveBody` drawer, because a
 physical player slides a real model and the app only tracks the budget. All new
 UI in this design is gated on digital mode; no physical-room behavior changes.
 
@@ -29,28 +29,27 @@ When a digital game has started, the battle screen renders a new interactive
 bar, **replacing** the roster list for the duration of the battle. Pre-battle
 (commissioning, field lock, ready) keeps the existing `Squadron` yard screen.
 
-The client reuses the **same shared geometry the engine validates with** —
-`findPath` (`shared/pathfind.js`), `moveBudget`/`spatial` (`shared/game-state.js`),
-`terrainPolygons`/`radiusOf` (`shared/geometry.js`) — so the reach ring, routed
+The client reuses the **same shared geometry the engine validates with**: `findPath` (`shared/pathfind.js`), `moveBudget`/`spatial` (`shared/game-state.js`),
+`terrainPolygons`/`radiusOf` (`shared/geometry.js`), so the reach ring, routed
 path, and reach/pivot readout are computed with the exact code the server uses.
 Previews can't drift from validation. The server remains authoritative: it
-re-validates `dest`/`facing` on submit (the digital-move handler already does —
+re-validates `dest`/`facing` on submit (the digital-move handler already does,
 `shared/game-state.js` ~2998–3016) and rejects with a reason if anything is off.
 
-## The engine contract (already built — do not change)
+## The engine contract (already built, do not change)
 
 The digital-move handler in `applyCommand` (`act === "move" || "sprint"`,
 `shared/game-state.js` ~2975–3045) already accepts and validates:
 
-- `a.dest = { x, y }` — field coordinates in inches (centre of the rig).
-- `a.facing` — heading in degrees; omitted → keeps `rig.facing`.
+- `a.dest = { x, y }`: field coordinates in inches (centre of the rig).
+- `a.facing`: heading in degrees; omitted → keeps `rig.facing`.
 - **Pivot cap:** a move may turn at most ±90° from the current facing.
 - **Path/reach:** `findPath(field, terrainPolys, blockers, radiusOf(rig),
   rig.pos, dest)` re-routes around terrain and other living rigs; the routed
-  `route.length` must be ≤ `moveBudget(rig, act)` (a scalar — Speed for Move,
+  `route.length` must be ≤ `moveBudget(rig, act)` (a scalar, Speed for Move,
   the sprint reach for Sprint). Backward/side movement is **not** penalized in
   digital mode; only routed distance and the pivot cap gate a move.
-- `a.engage` — optional move-into-contact declaration (an enemy name).
+- `a.engage`: optional move-into-contact declaration (an enemy name).
 
 So this design is **UI-only on the client** plus a small V2Terminal mount
 change. No engine edits.
@@ -59,11 +58,11 @@ change. No engine edits.
 
 ## Layers (one spec, built and reviewed in order)
 
-### L1 — `BattleMap` render (read-only)
+### L1, `BattleMap` render (read-only)
 
 A new component, `client/src/v2/battle/BattleMap.tsx`, rendering an SVG
 battlefield. It reuses `FieldMap`'s coordinate projection (`PAD`, `CANVAS_W`,
-`scale`, `sx`/`sy` inches→px) — extract that projection into a shared helper
+`scale`, `sx`/`sy` inches→px), extract that projection into a shared helper
 (e.g. `client/src/v2/battle/fieldProjection.ts`) so `FieldMap` (pre-battle field
 preview) and `BattleMap` (battle surface) share one source of truth rather than
 duplicating the math.
@@ -78,12 +77,12 @@ Renders, on top of the field/terrain/objectives that `FieldMap` already draws:
   enemy gets a ring (`game.priorityTargets[mySide]`); destroyed rigs omitted.
 - A compact label per token (codename initial or short name).
 
-Pure presentational at this layer — no interaction yet. Component test: given a
+Pure presentational at this layer, no interaction yet. Component test: given a
 room state with positioned rigs, assert tokens render at the projected
 coordinates, facing arrows point the right way, and dim/priority/enemy classes
 apply.
 
-### L2 — Selection + activation
+### L2, Selection + activation
 
 - Tapping any rig **selects** it → its vitals (SP bars, heat, actions left)
   show in the docked active-rig bar; tapping empty field clears selection.
@@ -95,13 +94,13 @@ apply.
   predicate logic from `V2Terminal` so the gate matches today's behavior.
 - Tapping an enemy (or any non-activatable rig) selects it read-only.
 - The full `RigTerminal` overlay stays reachable on demand (e.g. a detail button
-  on the docked bar) for deep inspection/loadout — not required for the move
+  on the docked bar) for deep inspection/loadout, not required for the move
   flow, so keep it a secondary affordance.
 
 Component test: tapping an own idle rig on-turn dispatches `activate` with its
 name; tapping an enemy does not; tapping when a gate is pending does not.
 
-### L3 — Armed on-map Move / Sprint (the unblock)
+### L3, Armed on-map Move / Sprint (the unblock)
 
 The active rig's docked bar shows action chips derived from the existing
 `availableActions(rig, turn, round)`. Non-spatial actions (Fire/Repair/Prepare/
@@ -112,7 +111,7 @@ Support/End/Disengage/…) reuse the existing handlers and wizards from
 **Move/Sprint become on-map (digital only):**
 
 1. Tap the **Move** (or **Sprint**) chip → the map enters *move-target mode* for
-   the active rig (armed — per the chosen "arm Move first" interaction; the map
+   the active rig (armed, per the chosen "arm Move first" interaction; the map
    does not accept a destination until a chip is tapped).
 2. The **reach ring** is drawn: a circle of radius `moveBudget(rig, act)` around
    `rig.pos` as the coarse affordance. (A radius over-states reach where terrain/
@@ -136,14 +135,14 @@ Support/End/Disengage/…) reuse the existing handlers and wizards from
 
 **Engage (move-into-contact):** keep the existing optional `engage` attr. When
 the chosen `dest` sits adjacent to (base-contact with) an enemy, offer an
-"engage" toggle that passes that enemy's name. Low priority — a plain move with
+"engage" toggle that passes that enemy's name. Low priority, a plain move with
 no `engage` is the default and always valid.
 
 Component test: arming Move shows the reach ring; a tap beyond `moveBudget`
 places no ghost; a reachable tap places a ghost with a facing derived from the
 heading; dragging facing past ±90° clamps; Confirm dispatches `action` with
 `{name, action, dest, facing}`. Use the shared geometry helpers in the assertions
-(no value-pinning of specific inches — assert the reach-clamp *relationship* via
+(no value-pinning of specific inches, assert the reach-clamp *relationship* via
 `moveBudget`, not a hardcoded number).
 
 ---
@@ -155,7 +154,7 @@ child. Change: when `room.mode === "digital" && game.started`, render the new
 battle screen (BattleMap + docked bar) instead of `<Squadron>`. Pre-battle
 (`!started`) and all physical rooms keep `<Squadron>`. The `RigTerminal`,
 `OutcomeBanner`, `ThreatOverlay`, chat, and the pending-gate overlays
-(`ReactionPicker`, blast, answer prompts) continue to render alongside — they are
+(`ReactionPicker`, blast, answer prompts) continue to render alongside, they are
 not replaced.
 
 ## Data flow
@@ -184,7 +183,7 @@ read/act surface layered under them.
 ## Error handling
 
 - Out-of-reach / blocked destination: rejected client-side inline (no ghost) via
-  the shared geometry, and — as a backstop — the server rejects with a reason
+  the shared geometry, and, as a backstop, the server rejects with a reason
   surfaced through the existing `emitCommandRejected` 409 path if a stale/edge
   case slips through.
 - Activation when not allowed (not your turn, active rig exists, pending gate):
@@ -193,12 +192,12 @@ read/act surface layered under them.
 
 ## Testing
 
-- **L1:** `BattleMap` render — tokens at projected coordinates, facing arrows,
+- **L1:** `BattleMap` render, tokens at projected coordinates, facing arrows,
   own/enemy/dim/priority classes, terrain/objectives (reuse `FieldMap`'s tested
   projection).
-- **L2:** select + activate — own idle rig on-turn dispatches `activate {name}`;
+- **L2:** select + activate, own idle rig on-turn dispatches `activate {name}`;
   enemy/gate taps do not.
-- **L3:** move-target flow — reach ring on arm, out-of-reach tap places no ghost,
+- **L3:** move-target flow, reach ring on arm, out-of-reach tap places no ghost,
   reachable tap places a ghost with heading-derived facing, ±90° clamp, Confirm
   dispatches `action {name, action, dest, facing}`.
 - Assert geometry via the shared helpers, never hardcoded inch/stat values
@@ -210,10 +209,10 @@ read/act surface layered under them.
 ## Out of scope
 
 - Any physical-room change (the roster + timed-drawer flow stays).
-- On-map Fire-arc targeting — Fire keeps its existing `AttackWizard`; moving it
+- On-map Fire-arc targeting, Fire keeps its existing `AttackWizard`; moving it
   onto the map is a later, separate design.
-- Fog of war — the digital game shows full information (both sides' positions).
-- Rich animation / interpolation of moves — a state push snaps tokens to their
+- Fog of war, the digital game shows full information (both sides' positions).
+- Rich animation / interpolation of moves, a state push snaps tokens to their
   new positions; easing is a polish follow-up, not required here.
 - Bot *planning* of reactions and secondary-blast targeting (tracked elsewhere in
   the opponent-brain backlog).

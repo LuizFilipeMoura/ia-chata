@@ -7,14 +7,14 @@ import "../styles/overlay.css";
 
 // Loud, blocking "incoming fire" telegraph. Shown to the defender whose Rig an
 // enemy has just opened an attack on (game.pendingThreat.defender === mySide).
-// Cosmetic only — the defender takes no action here; reactions are pre-placed.
+// Cosmetic only, the defender takes no action here; reactions are pre-placed.
 export function ThreatOverlay() {
   const { rigs, game } = useRoomState();
   const mySide = useMySide();
   const th = game?.pendingThreat ?? null;
   const active = Boolean(th && th.defender === mySide);
 
-  // Klaxon once per threat session (keyed on attacker, not target — a live
+  // Klaxon once per threat session (keyed on attacker, not target, a live
   // re-point keeps the same attacker and must not re-fire the alarm).
   const alarmedFor = useRef<number | null>(null);
   useEffect(() => {
@@ -38,8 +38,8 @@ export function ThreatOverlay() {
   const targetName = (target?.name || "your Rig").toUpperCase();
   const painting = th.mode === "lock";
   const weaponLine = painting
-    ? "Fire Control Lock — painting for a strike"
-    : `${(th.weapon || "Weapon").toUpperCase()} — locked and ranging`;
+    ? "Fire Control Lock, painting for a strike"
+    : `${(th.weapon || "Weapon").toUpperCase()}, locked and ranging`;
 
   return createPortal(
     <div className="v2-threat" role="alertdialog" aria-live="assertive">

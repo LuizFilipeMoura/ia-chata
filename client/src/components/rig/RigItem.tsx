@@ -35,7 +35,7 @@ export const RigItem = React.memo(function RigItem({
   const isMine = (rig.owner || "a") === mySide;
   const kind = kindOf(rig);
   const LOCS: string[] = partNamesOf(kind);
-  // Cold kinds (Tank / Walker) don't track heat — hide heat UI, and label the
+  // Cold kinds (Tank / Walker) don't track heat, hide heat UI, and label the
   // header by kind since they carry no weight class.
   const cold = !UNIT_KINDS[kind].hasHeat;
   const badge = rig.weightClass || UNIT_KINDS[kind].label;
@@ -84,7 +84,7 @@ export const RigItem = React.memo(function RigItem({
   // starts it toggles a local heat-gauge preview; during battle it activates.
   // Only render the body control when it's actionable/informative: an idle own
   // Rig during battle (activate CTA or a "wait" hint), or the pre-battle preview
-  // toggle. Once active or done, the header status chip already says so — no
+  // toggle. Once active or done, the header status chip already says so, no
   // need for a redundant full-width bar.
   let activateControl: React.ReactNode = null;
   if (isMine && !(started && (isActive || rig.activated))) {
@@ -172,7 +172,7 @@ export const RigItem = React.memo(function RigItem({
                         <div className="rig-loadout-slot">Long Range</div>
                         <div className="rig-loadout-name">{lo.lr?.name}</div>
                         <div className="rig-loadout-up">
-                          Upgrade · {lo.lr?.upName} — <GlossaryText text={lo.lr?.upTag ?? ""} />
+                          Upgrade · {lo.lr?.upName}, <GlossaryText text={lo.lr?.upTag ?? ""} />
                         </div>
                       </div>
                     </div>
@@ -182,7 +182,7 @@ export const RigItem = React.memo(function RigItem({
                         <div className="rig-loadout-slot">Melee</div>
                         <div className="rig-loadout-name">{lo.melee?.name}</div>
                         <div className="rig-loadout-up">
-                          Upgrade · {lo.melee?.upName} — <GlossaryText text={lo.melee?.upTag ?? ""} />
+                          Upgrade · {lo.melee?.upName}, <GlossaryText text={lo.melee?.upTag ?? ""} />
                         </div>
                       </div>
                     </div>
@@ -199,7 +199,7 @@ export const RigItem = React.memo(function RigItem({
                       </div>
                       <div className="rig-loadout-active">
                         Active · {lo.equipment.activeLabel} ({lo.equipment.activeHeat >= 0 ? "+" : ""}
-                        {lo.equipment.activeHeat} heat) — <GlossaryText text={lo.equipment.activeText} />
+                        {lo.equipment.activeHeat} heat), <GlossaryText text={lo.equipment.activeText} />
                       </div>
                     </div>
                   </div>

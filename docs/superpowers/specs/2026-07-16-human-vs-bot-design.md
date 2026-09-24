@@ -1,8 +1,8 @@
-# Human vs Bot — Design
+# Human vs Bot, Design
 
 **Date:** 2026-07-16
 **Status:** Approved design. Ready for an implementation plan.
-**Source:** Thread 1 ("Make it playable — human vs bot") of
+**Source:** Thread 1 ("Make it playable, human vs bot") of
 `docs/superpowers/specs/2026-07-16-opponent-brain-next-steps.md`.
 
 The deterministic opponent bot is feature-complete and already plays itself out
@@ -22,7 +22,7 @@ force that **mirrors the human's composition** at random Standard loadouts.
 
 ## Decisions (from brainstorming)
 
-- **Bot roster:** random, matching the human's composition — same rig count per
+- **Bot roster:** random, matching the human's composition, same rig count per
   weight class, same tank/walker counts. Not a copy of the human's exact rigs.
 - **Uniqueness:** no duplicate chassis anywhere in the battle. The V2 commission
   wizard already enforces this for humans (`CommissionWizard.tsx`:
@@ -33,7 +33,7 @@ force that **mirrors the human's composition** at random Standard loadouts.
   scorer, not from gear.
 - **Trigger:** lazy generation. `setbot` only flags the side; the bot's force is
   built and readied when the human readies (Approach A). This guarantees the
-  mirror matches the human's *final* composition — the human can edit their
+  mirror matches the human's *final* composition, the human can edit their
   roster freely up to the moment they ready.
 
 ## Constraints discovered
@@ -54,7 +54,7 @@ force that **mirrors the human's composition** at random Standard loadouts.
 
 ## Components
 
-### 1. `setbot` verb — `shared/game-state.js`
+### 1. `setbot` verb, `shared/game-state.js`
 
 New command verb, dispatched alongside the existing verbs in `applyCommand`.
 
@@ -67,13 +67,13 @@ New command verb, dispatched alongside the existing verbs in `applyCommand`.
   - `room.mode !== "digital"` (bots require simulated positions),
   - `room.game.started` (flag is a pre-battle setting only),
   - `preset` not in `PRESETS` and not `null`.
-- On success sets `changed = true`. Flags only — no roster, no ready flag, no
+- On success sets `changed = true`. Flags only, no roster, no ready flag, no
   game start here. `sideBotOf` (`shared/bot/index.js`) already reads
   `sides[i].bot`, so no bot-side change is needed.
 
 Testable without any UI: a route test can POST `setbot` and assert the flag.
 
-### 2. Mirror-gen + auto-ready — `shared/game-state.js` (ready / `maybeStartGame` path)
+### 2. Mirror-gen + auto-ready, `shared/game-state.js` (ready / `maybeStartGame` path)
 
 The single place that turns a flagged-but-empty bot side into a matched,
 readied force. Triggered from the human's own `ready` verb, before the parity
@@ -87,7 +87,7 @@ Generation, driven by the injectable `options.random` (deterministic in tests):
 1. Read the human's `compositionOf` signature.
 2. For each `rig:<class>` count, pick that many **distinct unused** chassis of
    that weight class and build each with its Standard loadout (default Field
-   weapon upgrades + suggested equipment — reuse the same construction the
+   weapon upgrades + suggested equipment, reuse the same construction the
    scan/QR "Standard" commission uses, via `makeUnit` + `resolveChassis`).
 3. For each `tank` / `walker` count, build that many support units, each with
    two random distinct modules from {damage, repair, coolant, recon} (`makeUnit`
@@ -101,13 +101,13 @@ Generation, driven by the injectable `options.random` (deterministic in tests):
 **Infeasible guard.** If any weight class needs more distinct chassis than remain
 unused in the pool, do **not** generate a partial or duplicated force. Reject the
 human's `ready` with a clear, actionable reason, e.g. *"Not enough distinct
-chassis remain for the bot to field a matching force — drop a medium rig."* The
+chassis remain for the bot to field a matching force, drop a medium rig."* The
 human roster and bot flag stay intact so the human can adjust and retry.
 
 Determinism: all random picks flow through `options.random`; a seeded run
 produces the same bot force. No `Math.random` in this path.
 
-### 3. Client READY gate — `client/src/v2/screens/Squadron.tsx`
+### 3. Client READY gate, `client/src/v2/screens/Squadron.tsx`
 
 Today `readyDisabled = started || myReady || !atParity || !field?.locked`. The
 `!atParity` term blocks readying because a flagged bot side is still empty
@@ -120,7 +120,7 @@ pre-generation.
   server's job, not a client gate.
 - Non-bot (human-vs-human) games keep the existing parity gate unchanged.
 
-### 4. Lobby opponent control — `client/src/v2/screens/Squadron.tsx`
+### 4. Lobby opponent control, `client/src/v2/screens/Squadron.tsx`
 
 A pre-battle **Opponent** selector near the READY row.
 
@@ -133,11 +133,11 @@ A pre-battle **Opponent** selector near the READY row.
 - Sub-copy: the bot mirrors your force at a random Standard loadout; difficulty
   is the preset.
 
-### 5. Digital move targeting (1c) — DEFERRED to its own spec
+### 5. Digital move targeting (1c), DEFERRED to its own spec
 
 **Discovery during planning:** the V2 client has **no digital move-targeting
 UI**. `MoveBody` is a physical timed-confirm drawer ("move the model on the
-table, then confirm") — it never emits `{ dest, facing }`, and no other V2 path
+table, then confirm"), it never emits `{ dest, facing }`, and no other V2 path
 does either. So 1c is not a verification pass over an existing seam; it is a real
 feature: tap the `FieldMap` to choose a destination, pick a facing, and send
 `{ dest, facing }` on the `move`/`sprint` action so E1's path validation runs.
@@ -201,7 +201,7 @@ Human issues a command  -> command route -> applyCommand
   generated bot force reproduces the `compositionOf` signature exactly; all
   chassis in the battle are distinct; support units carry two distinct modules;
   the force is Standard-built. Assert *composition and uniqueness*, never
-  specific chassis ids, per the [[no-value-pinning-tests]] rule — the pool and
+  specific chassis ids, per the [[no-value-pinning-tests]] rule, the pool and
   loadouts get tuned.
 - **Infeasible guard (unit):** a human roster that exhausts a class pool makes
   `ready` reject with the actionable reason and starts no game.
@@ -218,11 +218,11 @@ Human issues a command  -> command route -> applyCommand
 
 ## Out of scope
 
-- Preset tuning (thread 2 — blocked on the arsenal rebalance,
+- Preset tuning (thread 2, blocked on the arsenal rebalance,
   [[penetration-band-3-7]]).
 - The bot *planning* reactions (thread 4a) and secondary blast targeting (4b).
 - Gemma narration and any LLM-in-the-loop opponent (excluded per current
   direction).
-- **Digital move-targeting UI (1c)** — deferred to its own spec (see §5). Its
+- **Digital move-targeting UI (1c)**: deferred to its own spec (see §5). Its
   absence is a known, documented consequence: the human can start and the bot
   plays, but the human's Move action isn't yet issuable in a digital room.

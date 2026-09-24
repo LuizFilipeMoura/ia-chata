@@ -10,18 +10,18 @@
 
 **Design:** `docs/superpowers/specs/2026-07-17-digital-room-entry-point-design.md`
 
-**Scope:** Adds the switch only — no new digital gameplay. Default stays physical; existing rooms/tests unaffected except the one `setbot` test whose physical-reject assertion is now obsolete (Task 2).
+**Scope:** Adds the switch only, no new digital gameplay. Default stays physical; existing rooms/tests unaffected except the one `setbot` test whose physical-reject assertion is now obsolete (Task 2).
 
 ---
 
 ## File Structure
 
-- `shared/game-state.js` — **modify.** Add the `mode` verb (next to `setdice`); change `setbot` to auto-force digital instead of rejecting physical rooms.
-- `shared/game-state.test.js` — **modify.** Unit tests for `mode`; new `setbot` auto-force tests; **rewrite** the obsolete physical-reject test.
-- `server/routes/game.test.js` — **modify.** One integration test: a default (physical) room becomes digital via `setbot` and reaches a started digital game.
-- `client/src/v2/screens/Squadron.tsx` — **modify.** The lobby Physical/Digital toggle.
-- `client/src/v2/screens/Squadron.test.tsx` — **modify.** Toggle dispatch + bot-pins-digital tests.
-- `client/src/v2/styles/squadron.css` — **modify.** Toggle styles (reuse the opponent-selector rules).
+- `shared/game-state.js`: **modify.** Add the `mode` verb (next to `setdice`); change `setbot` to auto-force digital instead of rejecting physical rooms.
+- `shared/game-state.test.js`: **modify.** Unit tests for `mode`; new `setbot` auto-force tests; **rewrite** the obsolete physical-reject test.
+- `server/routes/game.test.js`: **modify.** One integration test: a default (physical) room becomes digital via `setbot` and reaches a started digital game.
+- `client/src/v2/screens/Squadron.tsx`: **modify.** The lobby Physical/Digital toggle.
+- `client/src/v2/screens/Squadron.test.tsx`: **modify.** Toggle dispatch + bot-pins-digital tests.
+- `client/src/v2/styles/squadron.css`: **modify.** Toggle styles (reuse the opponent-selector rules).
 
 ---
 
@@ -65,7 +65,7 @@ test("mode verb ignores an unknown value", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `mode` is an unknown verb, so `room.mode` never becomes `"digital"`.
+Expected: FAIL, `mode` is an unknown verb, so `room.mode` never becomes `"digital"`.
 
 - [ ] **Step 3: Add the `mode` verb branch**
 
@@ -156,7 +156,7 @@ test("clearing a bot to Human leaves the room digital", () => {
 - [ ] **Step 2: Run the tests to verify the new ones fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `SETBOT5` (mode stays physical) and the rewritten `SETBOT3` (setbot still rejects a physical room) fail against the current code.
+Expected: FAIL, `SETBOT5` (mode stays physical) and the rewritten `SETBOT3` (setbot still rejects a physical room) fail against the current code.
 
 - [ ] **Step 3: Change the `setbot` branch to auto-force digital**
 
@@ -180,7 +180,7 @@ The remaining guards (unknown side, started game, unknown preset) stay unchanged
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS. The human-vs-bot tests (`VSBOT1`..`VSBOT3`, which set `room.mode="digital"` directly then call setbot) remain green — setbot's force is idempotent when already digital.
+Expected: PASS. The human-vs-bot tests (`VSBOT1`..`VSBOT3`, which set `room.mode="digital"` directly then call setbot) remain green, setbot's force is idempotent when already digital.
 
 - [ ] **Step 5: Commit**
 
@@ -238,7 +238,7 @@ test("Physical mode is disabled when a bot opponent is selected", async () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `npx vitest run client/src/v2/screens/Squadron.test.tsx`
-Expected: FAIL — no Physical/Digital buttons exist yet.
+Expected: FAIL, no Physical/Digital buttons exist yet.
 
 - [ ] **Step 3: Add `mode` to the Squadron room-state read**
 
@@ -252,7 +252,7 @@ to:
   const { rigs, game, field, mode } = useRoomState();
 ```
 
-(`mode` was added to `RoomState`/the reducer during the battle-map work; confirm by grepping `client/src/state/roomReducer.ts` for `mode`. If `useRoomState`'s return type doesn't expose `mode`, it's on the same `RoomState` object — read it there.)
+(`mode` was added to `RoomState`/the reducer during the battle-map work; confirm by grepping `client/src/state/roomReducer.ts` for `mode`. If `useRoomState`'s return type doesn't expose `mode`, it's on the same `RoomState` object, read it there.)
 
 Then derive, near the other locals (after `enemyBot`, ~line 17):
 
@@ -291,8 +291,8 @@ In `Squadron.tsx`, add this block inside the `!started` region, immediately ABOV
             {enemyBot
               ? "Bots require digital."
               : isDigital
-                ? "Simulated positions — play on the map."
-                : "Tabletop companion — you track the physical table."}
+                ? "Simulated positions, play on the map."
+                : "Tabletop companion, you track the physical table."}
           </div>
         </div>
       )}
@@ -305,7 +305,7 @@ Expected: PASS (the two new tests + the existing Squadron tests, which don't set
 
 - [ ] **Step 6: Add toggle styles**
 
-In `client/src/v2/styles/squadron.css`, append (reuse the same `.v2-root`-scoped token conventions as the opponent-selector rules — grep the file for `.v2-yard-opponent` and mirror it):
+In `client/src/v2/styles/squadron.css`, append (reuse the same `.v2-root`-scoped token conventions as the opponent-selector rules, grep the file for `.v2-yard-opponent` and mirror it):
 
 ```css
 .v2-root .v2-yard-mode { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
@@ -338,14 +338,14 @@ git commit -m "feat(mode): lobby Physical/Digital toggle (pinned to digital unde
 **Files:**
 - Test: `server/routes/game.test.js` (add one test near the existing human-vs-bot HTTP tests)
 
-Proves the whole point: from a **default physical** room, picking a bot flips it digital and a started digital game results — the previously-dark path is now reachable over HTTP.
+Proves the whole point: from a **default physical** room, picking a bot flips it digital and a started digital game results, the previously-dark path is now reachable over HTTP.
 
 - [ ] **Step 1: Write the failing test**
 
 ```js
 test("a default physical room becomes digital via setbot and starts a digital game", async () => {
   const room = store.getOrCreateRoom("MODEHTTP");
-  // NOTE: room.mode is NOT set here — it defaults to physical.
+  // NOTE: room.mode is NOT set here, it defaults to physical.
   claimSide(room, { name: "Human", side: "a" });
   claimSide(room, { name: "Bot", side: "b" });
   const light = CHASSIS.filter((c) => c.class === "light");
@@ -376,7 +376,7 @@ test("a default physical room becomes digital via setbot and starts a digital ga
 - [ ] **Step 2: Run the test to verify it passes**
 
 Run: `node --test server/routes/game.test.js`
-Expected: PASS after Tasks 1-2 are committed (no route change needed — `setbot`/`ready` flow through the existing `/command` handler + `driveBots`). If it FAILS because `mode` isn't `"digital"`, Task 2's auto-force isn't wired — stop and check.
+Expected: PASS after Tasks 1-2 are committed (no route change needed, `setbot`/`ready` flow through the existing `/command` handler + `driveBots`). If it FAILS because `mode` isn't `"digital"`, Task 2's auto-force isn't wired, stop and check.
 
 - [ ] **Step 3: Commit**
 
@@ -396,9 +396,9 @@ git commit -m "test(mode): default room reaches a started digital game via setbo
 Run: `npm test` then `npm run build`
 Expected: Vitest (client) + `node --test` (shared/server/scripts) all green; production bundle builds.
 
-- [ ] **Step 2: Live smoke — the whole digital stack, end to end**
+- [ ] **Step 2: Live smoke, the whole digital stack, end to end**
 
-This is now possible for the first time. Start the dev servers (preview_start `vite-client` on 5173 and `oil-iron-server` on 8000, or `npm run dev`). In the V2 app: join/create a room, in the lobby toggle **Digital** (or pick a Balanced Bot — which auto-flips to Digital and mirrors your force), commission 2-3 Rigs, lock the field, hit READY. Confirm:
+This is now possible for the first time. Start the dev servers (preview_start `vite-client` on 5173 and `oil-iron-server` on 8000, or `npm run dev`). In the V2 app: join/create a room, in the lobby toggle **Digital** (or pick a Balanced Bot, which auto-flips to Digital and mirrors your force), commission 2-3 Rigs, lock the field, hit READY. Confirm:
 - the room starts and the **battle map** renders with every unit at a real position;
 - clicking your rig on your turn activates it (reach ring appears);
 - Move → tap a reachable cell → ghost + facing handle + readout → Confirm moves the token;
@@ -413,7 +413,7 @@ git add <specific files you fixed>
 git commit -m "fix(mode): <describe the smoke-test fix>"
 ```
 
-(Never `git add -A` — concurrent committer; stage only files you touched.)
+(Never `git add -A`: concurrent committer; stage only files you touched.)
 
 ---
 

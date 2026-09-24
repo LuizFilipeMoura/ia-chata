@@ -51,7 +51,7 @@ export function computeFocus(
     if (!sideReadyOf(mine)) {
       return {
         tone: "guide", icon: "✔", primary: "Mark ready when set",
-        secondary: "Rosters match — tap Ready to deploy.",
+        secondary: "Rosters match, tap Ready to deploy.",
         cta: { label: "Ready", kind: "ready" },
       };
     }
@@ -64,7 +64,7 @@ export function computeFocus(
   if (g.phase === "initiative" && g.round >= 2) {
     return {
       tone: "act", icon: "🎲", primary: "Roll initiative",
-      secondary: `Round ${g.round} — decide who moves first.`,
+      secondary: `Round ${g.round}, decide who moves first.`,
       cta: { label: "Roll", kind: "initiative" },
     };
   }
@@ -83,7 +83,7 @@ export function computeFocus(
     if (conflict) {
       return {
         tone: "act", icon: "⚠️", primary: "Objectives disputed",
-        secondary: "You both claimed the same marker — re-check who holds it.",
+        secondary: "You both claimed the same marker, re-check who holds it.",
         cta: { label: "Re-check", kind: "score" },
       };
     }
@@ -124,7 +124,7 @@ export function computeFocus(
       if (rig && b && b.left === 0) {
         return {
           tone: "act", icon: "✔", primary: `End ${rig.name}'s turn`,
-          secondary: "No actions left — pass to the next Rig.",
+          secondary: "No actions left, pass to the next Rig.",
           cta: { label: "End turn", kind: "endTurn" },
         };
       }

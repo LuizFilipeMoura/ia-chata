@@ -52,7 +52,7 @@ const FIELD_DESC: Record<string, string> = {
   arc: "Which of the enemy's facings you strike",
   range: "How far the enemy sits from you",
   cover: "Obstruction shielding the enemy",
-  location: "Component to hit — an Aimed Shot takes −2 Accuracy",
+  location: "Component to hit, an Aimed Shot takes −2 Accuracy",
 };
 const ARC_DESC: Record<string, string> = { front: "No Penetration bonus", side: "+2 Penetration", rear: "+3 Penetration" };
 const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 Accuracy", "2": "−2 Accuracy" };
@@ -76,7 +76,7 @@ function Field({
   optDesc?: IconMap;
   hidden?: boolean;
   optDisabled?: (opt: string) => boolean;
-  // Per-option colour (target Rigs are tinted by chassis) — adds a swatch and
+  // Per-option colour (target Rigs are tinted by chassis), adds a swatch and
   // tints the label. Return null for options with no colour.
   optColor?: (opt: string) => RigColor | null;
 }) {
@@ -137,7 +137,7 @@ interface AwState {
   weapon: WeaponSlot;
   arc: string;
   range: string;
-  /** Measured distance to target in inches — drives the range band. */
+  /** Measured distance to target in inches, drives the range band. */
   inches: number;
   cover: number;
   loc: string;
@@ -171,12 +171,12 @@ const ordinal = (n: number) => {
 // location d12 (an aimed shot picks its part instead), then ROF wound d10s.
 //
 // Wound dice are asked for up front, one per POTENTIAL hit, rather than in a
-// second prompt once the hits are known — the same bargain the hit dice already
+// second prompt once the hits are known, the same bargain the hit dice already
 // strike, where all ROF are entered regardless of how many land. The engine
 // (combat.js rollWounds) loops `for (let i = 0; i < opts.hits; i++)` reading
 // `wounds[i]`, so it consumes them from the front and ignores the surplus off
 // the end. That indexing is by LANDED-hit order, not by which hit die landed:
-// faces [1, 6, 6] land two hits and take wounds[0] and wounds[1] — the first two
+// faces [1, 6, 6] land two hits and take wounds[0] and wounds[1], the first two
 // wound dice, not the 2nd and 3rd.
 //
 // Hence the labels. "Wound die 1" sitting under "Hit die 1" would claim a
@@ -193,7 +193,7 @@ const attackDiceSpecs = (rof: number, withLocation: boolean): DiceSpec[] => {
 };
 
 // Fold the entered faces into the wire shape the engine reads. `wounds` replaces
-// the old `impacts: toHit.map(() => undefined)` — an array of holes that told the
+// the old `impacts: toHit.map(() => undefined)`: an array of holes that told the
 // server to roll the wound dice itself, unseen, which is how a physical-dice
 // player ended up never rolling the die that decided their own damage.
 const attackDice = (rof: number, d: Record<string, number>): Record<string, unknown> => {
@@ -303,7 +303,7 @@ export function AttackWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // No opposing, non-destroyed Rigs — there is nothing to attack (attack-wizard.js:45).
+  // No opposing, non-destroyed Rigs, there is nothing to attack (attack-wizard.js:45).
   const noEnemies = enemies.length === 0;
   useEffect(() => {
     if (noEnemies) onClose();
@@ -334,7 +334,7 @@ export function AttackWizard({
   const rangedWeaponName = flat ? weapons.unit : weapons.longRange;
   const hasMelee = !flat && !!weapons.melee
     && !(rig.weaponsDestroyed || []).includes(weapons.melee as string);
-  // With no live melee, the drawer has nothing to fire — Reload becomes the CTA.
+  // With no live melee, the drawer has nothing to fire, Reload becomes the CTA.
   const reloadIsPrimary = rangedSpent && !hasMelee;
   const reloadEnabled = heatKind ? true : actionsLeft() > 0;
   const reloadLabel = heatKind
@@ -356,7 +356,7 @@ export function AttackWizard({
   const targetDesc = (name: string) => {
     const e = enemies.find((x) => x.name === name);
     if (!e) return "";
-    // Cold kinds have no weightClass — label them by their kind instead.
+    // Cold kinds have no weightClass, label them by their kind instead.
     return e.weightClass ? cap(e.weightClass) : (UNIT_KINDS[kindOf(e)]?.label || "");
   };
 
@@ -378,12 +378,12 @@ export function AttackWizard({
   };
 
   // Melee is a structural property of the weapon (the `melee` flag), not the
-  // slot — so a flat-pick melee unit weapon (Dozer Blade) hides arc/range like a
+  // slot, so a flat-pick melee unit weapon (Dozer Blade) hides arc/range like a
   // Rig's melee.
   const isMelee = !!profileOf(state.weapon)?.melee;
   useEffect(() => {
     if (isMelee && state.range === "out") patch({ range: "near" });
-    // Aimed Shot is ranged-only — a melee weapon forces the shot back to Fire.
+    // Aimed Shot is ranged-only, a melee weapon forces the shot back to Fire.
     if (isMelee && aimed) setAimed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMelee]);
@@ -433,7 +433,7 @@ export function AttackWizard({
   const submit = async () => {
     // Return-Fire counter: send a `react` with an `attack` payload rather than a
     // normal `action`. The server resolves it as a plain fire on the attacker, so
-    // aimed doesn't apply here — collect weapon/arc/range/cover (+ manual dice).
+    // aimed doesn't apply here, collect weapon/arc/range/cover (+ manual dice).
     // The server resolves the weapon slot itself (flat kinds always fire "unit"),
     // but we send the right slot and size the manual-dice prompt from the profile.
     const slotSel: WeaponSlot = flat ? "unit" : state.weapon;
@@ -462,7 +462,7 @@ export function AttackWizard({
     };
     if (aimed) attrs.loc = state.loc;
     if (game?.autoResolve === false) {
-      // An aimed shot names its location, so it rolls no d12 — the wound dice
+      // An aimed shot names its location, so it rolls no d12, the wound dice
       // still ride, since the T they test against comes from the chosen part.
       const d = await promptDice(attackDiceSpecs(rof, !aimed), `${weaponName} dice`);
       attrs.dice = attackDice(rof, d);
@@ -474,7 +474,7 @@ export function AttackWizard({
 
   // Effective-range readout + go button. The spent ranged weapon can't be the
   // selected slot (it's disabled in the picker), so this only ever describes a
-  // live weapon — except the no-melee case, where the CTA becomes Reload.
+  // live weapon, except the no-melee case, where the CTA becomes Reload.
   let rangeHtml: React.ReactNode = null;
   let rangeState = "ok";
   let goText = "Fire";
@@ -492,7 +492,7 @@ export function AttackWizard({
     const outOfRange = !isMelee && !inRange;
     const rof = profile?.rof || ROF_BY_NAME[weapons[slot] || ""] || 1;
     // A reloaded long-range shot is the activation's SECOND ranged shot, so it
-    // runs the barrel hot (+1 heat) — surfaced honestly on the dice line.
+    // runs the barrel hot (+1 heat), surfaced honestly on the dice line.
     const firedRanged = (game?.turn?.longRangeShots || 0) >= 1;
     const secondShot = !isMelee && firedRanged;
 
@@ -519,9 +519,9 @@ export function AttackWizard({
         penalty <= 0 ? `Sweet spot +${peak}` : `${accuracyHere >= 0 ? "+" : ""}${accuracyHere} · falloff`;
       const gate =
         state.inches < minRange
-          ? <span className="v2-aw-range-warn">Too close — out of range</span>
+          ? <span className="v2-aw-range-warn">Too close, out of range</span>
           : state.inches > maxRange
-            ? <span className="v2-aw-range-warn">Target is out of range — this shot will fail</span>
+            ? <span className="v2-aw-range-warn">Target is out of range, this shot will fail</span>
             : null;
       rangeHtml = (
         <>
@@ -554,9 +554,9 @@ export function AttackWizard({
     const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;
     const equipmentLine = equipment ? `${equipment.label} passive remains active.` : "";
     const weaponName = weapons[state.weapon] || "";
-    // Cold kinds carry no weapon upgrades — just name the weapon.
+    // Cold kinds carry no weapon upgrades, just name the weapon.
     if (flat) {
-      return { main: `Firing ${weaponName} (flat Penetration — no weight-class scaling).`, equipment: equipmentLine };
+      return { main: `Firing ${weaponName} (flat Penetration, no weight-class scaling).`, equipment: equipmentLine };
     }
     const upgrade = selectedUpgrade(rig, state.weapon as "longRange" | "melee", weaponName);
     return {
@@ -569,9 +569,9 @@ export function AttackWizard({
 
   if (noEnemies) return null;
 
-  // Fire Control Lock (§13, Missile Barrage) — a minimal flow: pick the enemy
+  // Fire Control Lock (§13, Missile Barrage), a minimal flow: pick the enemy
   // to paint, dispatch, done. No weapon/arc/range/cover/location and no dice
-  // (the server-side `lock` verb never rolls — see game-state.js act==="lock").
+  // (the server-side `lock` verb never rolls, see game-state.js act==="lock").
   if (mode === "lock") {
     return (
       <div className="v2-root">
@@ -581,10 +581,10 @@ export function AttackWizard({
             if (e.target === e.currentTarget) close();
           }}
         >
-          <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`Fire control lock — ${rig.name}`}>
+          <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`Fire control lock, ${rig.name}`}>
             <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
             <div className="v2-aw-title-row">
-              <div className="v2-aw-title v2-title">🔒 Fire Control Lock — <RigName rig={rig} /></div>
+              <div className="v2-aw-title v2-title">🔒 Fire Control Lock, <RigName rig={rig} /></div>
               <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
             </div>
 
@@ -627,10 +627,10 @@ export function AttackWizard({
           if (e.target === e.currentTarget) close();
         }}
       >
-        <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`${title} — ${rig.name}`}>
+        <div className="v2-aw-card v2-panel" role="dialog" aria-modal="true" aria-label={`${title}, ${rig.name}`}>
           <div className="v2-aw-handle v2-hazard" style={{ "--v2-hazard-w": "11px" } as CSSProperties} />
           <div className="v2-aw-title-row">
-            <div className="v2-aw-title v2-title">{title} — <RigName rig={rig} /></div>
+            <div className="v2-aw-title v2-title">{title}, <RigName rig={rig} /></div>
             <button type="button" className="v2-aw-close v2-close" aria-label="Close" onClick={close}>✕</button>
           </div>
 
@@ -676,12 +676,12 @@ export function AttackWizard({
                   flat ? (weapons.unit || "") : state.weapon === "melee" ? (weapons.melee || "") : (weapons.longRange || "")
                 }
                 onChange={(v) => {
-                  if (flat) return; // single flat-pick weapon — nothing to switch
+                  if (flat) return; // single flat-pick weapon, nothing to switch
                   patch({ weapon: v === weapons.melee ? "melee" : "longRange" });
                 }}
                 icon={FIELD_ICONS.weapon}
                 optIcon={(opt) => (isMelee || opt === weapons.melee ? "🗡️" : "🎯")}
-                desc={flat ? "One flat-pick weapon — no weight-class Penetration scaling." : FIELD_DESC.weapon}
+                desc={flat ? "One flat-pick weapon, no weight-class Penetration scaling." : FIELD_DESC.weapon}
                 optDisabled={(opt) => rangedSpent && opt === rangedWeaponName}
                 optDesc={(opt) => (rangedSpent && opt === rangedWeaponName ? "Spent · reload" : weaponDesc(opt))}
               />

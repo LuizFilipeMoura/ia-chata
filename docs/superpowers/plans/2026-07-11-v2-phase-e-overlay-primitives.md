@@ -1,8 +1,8 @@
-# V2 Phase E — Overlay Primitives Implementation Plan
+# V2 Phase E, Overlay Primitives Implementation Plan
 
 > **For agentic workers:** Use superpowers:subagent-driven-development. Steps use `- [ ]`.
 
-**Goal:** Build the native V2 Drawer + RollConsole primitives and their V2 contexts, as isolated tested units. No app wiring yet (the switchover happens in Phase G once V2BattleActions + V2Wizard exist — the V1 Drawer/Roll/BattleActions/Wizard providers are context-coupled and must swap together).
+**Goal:** Build the native V2 Drawer + RollConsole primitives and their V2 contexts, as isolated tested units. No app wiring yet (the switchover happens in Phase G once V2BattleActions + V2Wizard exist, the V1 Drawer/Roll/BattleActions/Wizard providers are context-coupled and must swap together).
 
 **Architecture:** V2 mirrors V1's `DrawerContext`/`RollContext` (thin providers portaling one overlay component). Behavior sources: `client/src/components/overlays/Drawer.tsx`, `client/src/components/overlays/RollConsole.tsx`, `client/src/state/DrawerContext.tsx`, `client/src/state/RollContext.tsx`.
 
@@ -16,7 +16,7 @@
 
 **Files:** Create `client/src/v2/overlays/Drawer.tsx`, `client/src/v2/state/V2DrawerContext.tsx`, `client/src/v2/styles/overlay.css`, tests `client/src/v2/state/V2DrawerContext.test.tsx`.
 
-- [ ] **Step 1** — failing test `client/src/v2/state/V2DrawerContext.test.tsx`:
+- [ ] **Step 1**: failing test `client/src/v2/state/V2DrawerContext.test.tsx`:
 ```tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -40,8 +40,8 @@ test("opens a drawer with title/body/action and fires the action", async () => {
 });
 ```
 
-- [ ] **Step 2** — run → FAIL.
-- [ ] **Step 3** — implement `client/src/v2/overlays/Drawer.tsx` (port V1 `Drawer.tsx`, V2 classes `v2-dwr-*`, re-export `DrawerConfig`/`DrawerAction` types):
+- [ ] **Step 2**: run → FAIL.
+- [ ] **Step 3**: implement `client/src/v2/overlays/Drawer.tsx` (port V1 `Drawer.tsx`, V2 classes `v2-dwr-*`, re-export `DrawerConfig`/`DrawerAction` types):
 ```tsx
 import type { ReactNode } from "react";
 export interface DrawerAction { label: string; icon?: string; primary?: boolean; ghost?: boolean; onClick?: () => void; disabled?: boolean; }
@@ -70,7 +70,7 @@ export default function Drawer({ config, visible, onClose }: { config: DrawerCon
 ```
 Note: the scrim is portaled to `document.body`, so the `.v2-root` wrapper inside is what scopes the styles.
 
-- [ ] **Step 4** — implement `client/src/v2/state/V2DrawerContext.tsx` (port V1 `DrawerContext.tsx` enter/leave logic; import the V2 `Drawer`):
+- [ ] **Step 4**: implement `client/src/v2/state/V2DrawerContext.tsx` (port V1 `DrawerContext.tsx` enter/leave logic; import the V2 `Drawer`):
 ```tsx
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -108,9 +108,9 @@ export function V2DrawerProvider({ children }: { children: ReactNode }) {
 export function useV2Drawer(): DrawerApi { const v = useContext(Ctx); if (!v) throw new Error("useV2Drawer outside V2DrawerProvider"); return v; }
 ```
 
-- [ ] **Step 5** — create `client/src/v2/styles/overlay.css` with `.v2-dwr-*` rules under `.v2-root` (bottom-sheet scrim, card, title tones ember/oil/cool, action buttons primary/ghost). Port V1 drawer visuals into the dieselpunk V2 palette.
-- [ ] **Step 6** — run test → PASS. `npx tsc -p . --noEmit` clean. isolation test still green.
-- [ ] **Step 7** — commit: `git add client/src/v2 && git commit -m "feat(v2): native Drawer + V2DrawerContext"`
+- [ ] **Step 5**: create `client/src/v2/styles/overlay.css` with `.v2-dwr-*` rules under `.v2-root` (bottom-sheet scrim, card, title tones ember/oil/cool, action buttons primary/ghost). Port V1 drawer visuals into the dieselpunk V2 palette.
+- [ ] **Step 6**: run test → PASS. `npx tsc -p . --noEmit` clean. isolation test still green.
+- [ ] **Step 7**: commit: `git add client/src/v2 && git commit -m "feat(v2): native Drawer + V2DrawerContext"`
 
 ---
 
@@ -118,9 +118,9 @@ export function useV2Drawer(): DrawerApi { const v = useContext(Ctx); if (!v) th
 
 **Files:** Create `client/src/v2/overlays/RollConsole.tsx`, `client/src/v2/state/V2RollContext.tsx`, tests `client/src/v2/state/V2RollContext.test.tsx`; append `.v2-roll*` to `overlay.css`.
 
-Port V1 `client/src/components/overlays/RollConsole.tsx` (416 lines — READ it) to V2. Keep the imperative handle (`playResolution`, `promptDice`, `closeRoll`) via `forwardRef`+`useImperativeHandle`, the `DiceSpec` type, dice flicker→settle animation, reaction-token flip reveal, damage-equation breakdown (terms/total/tier/sp/location), effect lines, and the manual-dice entry form. V2 classes `v2-roll-*`. `Resolution`/`DiceSpec` types: reuse `Resolution` from `client/src/state/types`; re-declare `DiceSpec` in the V2 RollConsole.
+Port V1 `client/src/components/overlays/RollConsole.tsx` (416 lines, READ it) to V2. Keep the imperative handle (`playResolution`, `promptDice`, `closeRoll`) via `forwardRef`+`useImperativeHandle`, the `DiceSpec` type, dice flicker→settle animation, reaction-token flip reveal, damage-equation breakdown (terms/total/tier/sp/location), effect lines, and the manual-dice entry form. V2 classes `v2-roll-*`. `Resolution`/`DiceSpec` types: reuse `Resolution` from `client/src/state/types`; re-declare `DiceSpec` in the V2 RollConsole.
 
-- [ ] **Step 1** — failing test `client/src/v2/state/V2RollContext.test.tsx`:
+- [ ] **Step 1**: failing test `client/src/v2/state/V2RollContext.test.tsx`:
 ```tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -146,8 +146,8 @@ test("promptDice collects a manual die and resolves", async () => {
 ```
 (Adjust the confirm-button name + input label to match the V1 RollConsole's manual-entry markup you port.)
 
-- [ ] **Step 2** — run → FAIL.
-- [ ] **Step 3** — implement `client/src/v2/overlays/RollConsole.tsx` (port from V1; V2 classes) and `client/src/v2/state/V2RollContext.tsx` (port V1 `RollContext.tsx`, importing the V2 RollConsole; `useV2Roll` hook):
+- [ ] **Step 2**: run → FAIL.
+- [ ] **Step 3**: implement `client/src/v2/overlays/RollConsole.tsx` (port from V1; V2 classes) and `client/src/v2/state/V2RollContext.tsx` (port V1 `RollContext.tsx`, importing the V2 RollConsole; `useV2Roll` hook):
 ```tsx
 // V2RollContext.tsx
 import { createContext, useContext, useRef, useCallback, type ReactNode } from "react";
@@ -166,9 +166,9 @@ export function V2RollProvider({ children }: { children: ReactNode }) {
 export function useV2Roll(): RollApi { const v = useContext(Ctx); if (!v) throw new Error("useV2Roll outside V2RollProvider"); return v; }
 ```
 
-- [ ] **Step 4** — append `.v2-roll*` rules to `overlay.css` (dice faces, flip reveal, breakdown equation, manual form) under `.v2-root`. The RollConsole portals to body → wrap its root in `<div className="v2-root">`.
-- [ ] **Step 5** — run test → PASS. `npx tsc -p . --noEmit` clean. isolation green.
-- [ ] **Step 6** — commit: `git add client/src/v2 && git commit -m "feat(v2): native RollConsole + V2RollContext"`
+- [ ] **Step 4**: append `.v2-roll*` rules to `overlay.css` (dice faces, flip reveal, breakdown equation, manual form) under `.v2-root`. The RollConsole portals to body → wrap its root in `<div className="v2-root">`.
+- [ ] **Step 5**: run test → PASS. `npx tsc -p . --noEmit` clean. isolation green.
+- [ ] **Step 6**: commit: `git add client/src/v2 && git commit -m "feat(v2): native RollConsole + V2RollContext"`
 
 ---
 

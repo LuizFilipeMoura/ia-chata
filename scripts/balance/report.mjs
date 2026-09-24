@@ -18,7 +18,7 @@ function bestDist(rs) {
 }
 
 // ─────────────────────────────────────────────────────────── 1. tier ladder
-console.log("\n=== TIER LADDER — SP/attack at best distance, pooled targets+arcs+classes ===");
+console.log("\n=== TIER LADDER, SP/attack at best distance, pooled targets+arcs+classes ===");
 console.log("weapon".padEnd(17), "slot".padEnd(10), "| none  field  tuned  proto | cold→primed swing (best tier)");
 const ladder = [];
 for (const k of WEAPONS) {
@@ -41,7 +41,7 @@ for (const r of ladder) {
 }
 
 // ────────────────────────────────────────────── 2. cold vs primed per tier
-console.log("\n=== CONDITIONAL UPGRADES — cold vs primed (SP/attack, best dist) ===");
+console.log("\n=== CONDITIONAL UPGRADES, cold vs primed (SP/attack, best dist) ===");
 console.log("weapon".padEnd(17), "tier".padEnd(10), "upgrade".padEnd(22), "cold", "primed", "delta");
 const condRows = [];
 for (const k of WEAPONS) {
@@ -58,7 +58,7 @@ for (const r of condRows.sort((a, b) => b.delta - a.delta).slice(0, 22))
   console.log(r.weapon.padEnd(17), r.tier.padEnd(10), r.upgrade.padEnd(22), f(r.cold), f(r.primed), (r.delta >= 0 ? "+" : "") + f(r.delta));
 
 // ────────────────────────────────────── 3. upgrade uplift over base (cold)
-console.log("\n=== UPGRADE UPLIFT vs BASE (cold, best dist) — a tier at ~0 is inert ===");
+console.log("\n=== UPGRADE UPLIFT vs BASE (cold, best dist), a tier at ~0 is inert ===");
 console.log("weapon".padEnd(17), "tier".padEnd(10), "upgrade".padEnd(22), "base", "tier", "uplift");
 const uplift = [];
 for (const k of WEAPONS) {

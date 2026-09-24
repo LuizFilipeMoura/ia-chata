@@ -1,4 +1,4 @@
-# V2 Phase H — Battlefield (Field Map + Field Controls)
+# V2 Phase H, Battlefield (Field Map + Field Controls)
 
 **Date:** 2026-07-11 · **Status:** Approved · **Depends on:** Phase E (V2 Drawer for the set-field sheet). See overview.
 
@@ -10,7 +10,7 @@ fresh in the dieselpunk system while matching V1's data + behavior.
 
 ## Replaces
 
-`components/FieldMap.tsx` (171 lines), `components/FieldControls.tsx` (115 lines) — for V2.
+`components/FieldMap.tsx` (171 lines), `components/FieldControls.tsx` (115 lines), for V2.
 
 ## Architecture / components
 
@@ -27,7 +27,7 @@ client/src/v2/
 ```
 
 - Reuse the shared `FieldState`/`TerrainPiece`/`Objective` types and the same field commands V1 sends
-  (`field` set/flip/reroll/lock — read the exact verbs/attrs from V1 `FieldControls.tsx`). Behavior +
+  (`field` set/flip/reroll/lock, read the exact verbs/attrs from V1 `FieldControls.tsx`). Behavior +
   geometry source is the V1 `FieldMap.tsx`/`FieldControls.tsx`.
 - Deploy-zone perspective flips by `mySide` exactly as V1.
 - The set-field sheet uses `useV2Drawer` (Phase E).

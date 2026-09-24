@@ -22,7 +22,7 @@ const ledger = (steps: ResolutionStep[], sp = 0, location = "hull"): Resolution 
 });
 
 // The original bug report, as a ledger: a light Circular Saw into a medium
-// hull. Two hits, both wound rolls fail against T5 — "why 0 damage?"
+// hull. Two hits, both wound rolls fail against T5, "why 0 damage?"
 const BUG_CASE: ResolutionStep[] = [
   {
     kind: "hit",
@@ -51,7 +51,7 @@ test("renders every step of the ledger in order", async () => {
 
   const steps = await screen.findAllByTestId("v2-roll-step");
   expect(steps).toHaveLength(4);
-  // The engine's order — location precedes wound because toughness is
+  // The engine's order, location precedes wound because toughness is
   // per-location, so the d12 supplies the T the wound roll tests against.
   expect(steps.map((s) => s.getAttribute("data-kind"))).toEqual([
     "hit", "location", "wound", "damage",
@@ -63,7 +63,7 @@ test("shows the wound step's Penetration against toughness and the resulting tar
   render(<RollConsole ref={ref} />);
   await ref.current!.playResolution(ledger(BUG_CASE));
 
-  // This is the line that answers "why 0 damage?" — the reason this plan exists.
+  // This is the line that answers "why 0 damage?", the reason this plan exists.
   const wound = await screen.findByTestId("v2-roll-step-wound");
   expect(wound).toHaveTextContent("4");
   expect(wound).toHaveTextContent("5");
@@ -78,7 +78,7 @@ test("renders an auto-fail step rather than omitting it", async () => {
   await ref.current!.playResolution(ledger([
     { kind: "hit", target: 4, terms: [{ label: "base aim", value: 4 }], dice: [{ value: 5, ok: true }], out: "1 of 1 hit" },
     { kind: "location", die: 9, out: "hull" },
-    { kind: "wound", target: null, pen: null, toughness: null, terms: [], dice: [], out: "shield negates — no wound roll" },
+    { kind: "wound", target: null, pen: null, toughness: null, terms: [], dice: [], out: "shield negates, no wound roll" },
   ]));
 
   const wound = await screen.findByTestId("v2-roll-step-wound");
@@ -137,7 +137,7 @@ test("the ledger headline names actor, weapon and target unit", async () => {
 
   expect(await screen.findByText("Shrike")).toBeInTheDocument();
   expect(screen.getByText("Circular Saw")).toBeInTheDocument();
-  // `breakdown.target` is the unit's NAME — never the wound TN.
+  // `breakdown.target` is the unit's NAME, never the wound TN.
   expect(screen.getByText("→ Reaver")).toBeInTheDocument();
 });
 
@@ -172,7 +172,7 @@ test("settled to-hit dice show HIT!/FAILED!/CRIT! verdicts by tone", async () =>
   expect(screen.queryAllByText(/HIT!|FAILED!|CRIT!/)).toHaveLength(3);
 });
 
-test("a settled wound die says WOUND!/NO WOUND — not the to-hit vocabulary", async () => {
+test("a settled wound die says WOUND!/NO WOUND, not the to-hit vocabulary", async () => {
   const ref = createRef<RollConsoleHandle>();
   render(<RollConsole ref={ref} />);
   await ref.current!.playResolution({
@@ -193,7 +193,7 @@ test("a settled wound die says WOUND!/NO WOUND — not the to-hit vocabulary", a
 
 // A rolling die's face is written by the flicker interval straight to the DOM
 // (el.textContent), which React knows nothing about. If React ALSO rendered a
-// random face, its vdom would hold a face it does not control — and when the die
+// random face, its vdom would hold a face it does not control, and when the die
 // settles, React diffs its own previous text against the real value and skips the
 // DOM write whenever they happen to match, stranding the flicker's last face on
 // screen. That shows the player a number the engine never rolled: the panel

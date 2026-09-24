@@ -1,5 +1,5 @@
 /* =============================================================================
-   Dieselpunk skeuomorphic layer — the "Iron Works 3a" pass.
+   Dieselpunk skeuomorphic layer, the "Iron Works 3a" pass.
 
    Layers over the existing terminal look with three physical primitives:
      .dp-riv4    → four corner rivets on the target element
@@ -83,7 +83,7 @@
 .rig-item {
   position: relative;
   border-radius: 0 !important;
-  /* IronPanel: cut (chamfered) corners — kept small so short collapsed rows
+  /* IronPanel: cut (chamfered) corners, kept small so short collapsed rows
      don't lose their whole corner to the cut. */
   clip-path: polygon(
     9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px),
@@ -91,7 +91,7 @@
   /* Brass FRAME colour. An inset box-shadow ring can't follow the diagonal cut
      edges, so instead the parent is the brass and the ::after fill (inset 1px,
      clipped to a 1px-smaller octagon) reveals the brass as a border that traces
-     every edge — chamfers included. Same two-layer clip as <IronPanel>. */
+     every edge, chamfers included. Same two-layer clip as <IronPanel>. */
   background:
     linear-gradient(135deg, #7a5c26, #3c2c12 30%, #2e2210 68%, #5a441e) !important;
   border: none !important;
@@ -105,7 +105,7 @@
   clip-path: polygon(
     8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
     calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
-  /* Brushed-steel iron face — same material as the action tiles. */
+  /* Brushed-steel iron face, same material as the action tiles. */
   background:
     repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, rgba(0,0,0,.05) 1px 3px),
     radial-gradient(150% 130% at 50% 32%, #2c3139, #1a1e25 55%, #0e1116);
@@ -204,7 +204,7 @@
   text-shadow: 0 0 6px rgba(229,83,58,.7);
   pointer-events: none;
 }
-/* Redline needle — a bright bar at the redline position. */
+/* Redline needle, a bright bar at the redline position. */
 .heat-track::after {
   content: "";
   position: absolute;
@@ -222,7 +222,7 @@
 /* ---- Action console → tactile Fire (pushbutton) / Move (joystick) / Reload (knob) ----
    Each button gets a data-kind so we can render its chrome via ::before, with the
    text label sitting below. Applies to fire, aimed, move, sprint, reload, repair,
-   prepare — everything else falls back to the base .ac-btn styling. */
+   prepare, everything else falls back to the base .ac-btn styling. */
 .ac-grid { gap: .5rem !important; }
 .ac-btn {
   position: relative; overflow: hidden;
@@ -247,7 +247,7 @@
     0 2px 4px rgba(0,0,0,.6);
 }
 .ac-btn[data-kind] .ac-ic { display: none; }
-/* Fire — a red pushbutton with a brass collar. */
+/* Fire, a red pushbutton with a brass collar. */
 .ac-btn[data-kind="fire"],
 .ac-btn[data-kind="aimed"] {
   background: linear-gradient(180deg, #5c2a1c, #38160f) !important;
@@ -275,7 +275,7 @@
 }
 .ac-btn[data-kind="fire"] .ac-heat,
 .ac-btn[data-kind="aimed"] .ac-heat { color: #ff9a86 !important; }
-/* Move / Sprint — a joystick. */
+/* Move / Sprint, a joystick. */
 .ac-btn[data-kind="move"]::before,
 .ac-btn[data-kind="sprint"]::before {
   background: transparent;
@@ -304,7 +304,7 @@
   box-shadow: inset 0 1px 2px rgba(255,255,255,.35), 0 2px 4px rgba(0,0,0,.65);
   pointer-events: none;
 }
-/* Reload — rotary knob with an indicator dot. */
+/* Reload, rotary knob with an indicator dot. */
 .ac-btn[data-kind="reload"]::before {
   background: radial-gradient(circle at 42% 30%, #4f5862, #1a1f26 74%);
   border: 2px solid #0e1218;
@@ -324,13 +324,13 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.75);
   pointer-events: none;
 }
-/* Repair — a wrench-shaped knob in green. */
+/* Repair, a wrench-shaped knob in green. */
 .ac-btn[data-kind="repair"]::before,
 .ac-btn[data-kind="emergencypatch"]::before {
   background: radial-gradient(circle at 42% 30%, #8ec38f, #33481f 74%);
   border: 2px solid #6b8548;
 }
-/* Prepare — teal indicator. */
+/* Prepare, teal indicator. */
 .ac-btn[data-kind="prepare"]::before {
   background: radial-gradient(circle at 42% 30%, #a6e2d9, #1e5451 74%);
   border: 2px solid #2f7a75;
@@ -361,7 +361,7 @@
 .ac-cell > .ac-btn .ac-heat { font-size: .56rem; }
 .ac-btn.is-open { border-color: #b98a4e !important; }
 
-/* Indicator lamp on the Attack tile — lit ember pip, top-right. */
+/* Indicator lamp on the Attack tile, lit ember pip, top-right. */
 .ac-lamp {
   position: absolute; top: .5rem; right: .55rem;
   width: 11px; height: 11px; border-radius: 50%;
@@ -372,7 +372,7 @@
     inset 0 -1px 2px rgba(0,0,0,.5);
 }
 
-/* Sub-action popover — recessed brass-edged panel above the tile. */
+/* Sub-action popover, recessed brass-edged panel above the tile. */
 .ac-pop-scrim { position: fixed; inset: 0; z-index: 60; }
 /* Portaled to <body> (ActionConsole AcPopover) to escape the rig card clip-path;
    left/top are set inline from the anchor tile's rect. */
@@ -411,7 +411,7 @@
 }
 .ac-pop-heat[data-heat="0"] { color: var(--txt-faint); }
 
-/* End turn — brass IronPanel bar (chamfer + bevel ring + corner bolts). */
+/* End turn, brass IronPanel bar (chamfer + bevel ring + corner bolts). */
 .ac-end.bh-btn {
   position: relative;
   display: block; width: 100%; margin-top: .6rem;
@@ -521,11 +521,11 @@
 }
 
 /* =============================================================================
-   Iron Works 3b — pull the last flat panels into the machine.
+   Iron Works 3b, pull the last flat panels into the machine.
 
    The hero controls (action tiles, End-Turn bar, rig heads) already read as
    stamped brass over iron; these lagged behind in the flat terminal look. Each
-   is brought into the SAME material vocabulary at its correct TIER — not brass
+   is brought into the SAME material vocabulary at its correct TIER, not brass
    everywhere, but the right primitive for its job:
      · pinned turn banner   → stamped steel plaque (brass reserved for GO)
      · battle-HUD strip      → engraved frame + corner rivets (topbar's sibling)
@@ -737,7 +737,7 @@
 }
 
 /* =============================================================================
-   Iron Works 3c — the dice-resolution dialog joins the machine.
+   Iron Works 3c, the dice-resolution dialog joins the machine.
 
    Same vocabulary as the battle screen: the console is a cut-corner engraved
    steel plate (IronPanel two-layer + corner bolts), the header a brass band,
@@ -833,7 +833,7 @@
 }
 
 /* =============================================================================
-   CRT tube overlay — scanlines + edge vignette so the whole screen
+   CRT tube overlay, scanlines + edge vignette so the whole screen
    reads like a scuffed old cathode-ray monitor. Sits above every layer of
    the device shell but eats no pointer events.
    ============================================================================= */
@@ -862,7 +862,7 @@
   mix-blend-mode: multiply;
   animation: crtFlicker 5.5s steps(60) infinite;
 }
-/* Faint tube brightness jitter — subtle, kept off for reduced-motion users. */
+/* Faint tube brightness jitter, subtle, kept off for reduced-motion users. */
 @keyframes crtFlicker {
   0%, 100% { opacity: 1; }
   47%      { opacity: .97; }

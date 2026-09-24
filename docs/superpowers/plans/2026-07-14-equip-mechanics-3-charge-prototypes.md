@@ -1,16 +1,16 @@
-# Equipment Mechanics — Plan 3: Charge / Bank Prototypes (Group 3)
+# Equipment Mechanics, Plan 3: Charge / Bank Prototypes (Group 3)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Wire the six **Prototype** equipment upgrades that each carry per-round tracked state, a spend (active or reactive), and a real downside — Ablative Cascade, Cryo Reservoir, Nanite Swarm, Point-Defense System, Meltdown Protocol, Fire Solution Lock. Each replaces an inert `effect: {}` / `TODO(mechanics)` row with a live camelCase tag read through `equipmentUpgradeEffectOf`, fills its `refreshEquipState` Recovery branch, and enforces its downside.
+**Goal:** Wire the six **Prototype** equipment upgrades that each carry per-round tracked state, a spend (active or reactive), and a real downside, Ablative Cascade, Cryo Reservoir, Nanite Swarm, Point-Defense System, Meltdown Protocol, Fire Solution Lock. Each replaces an inert `effect: {}` / `TODO(mechanics)` row with a live camelCase tag read through `equipmentUpgradeEffectOf`, fills its `refreshEquipState` Recovery branch, and enforces its downside.
 
 **Architecture:** These build directly on the shared plumbing shipped by the earlier plans in this rollout:
 
 - **Plan 0** relocated `EQUIPMENT_UPGRADES` + `equipmentUpgradeEffectOf(equipmentId, upgradeId)` into `shared/rules.js`, deleted the commission-time `equipmentUpgradeEffect` stamp, and scaffolded `rig.equipState` + the empty `refreshEquipState(rig)` hook called from `runRecovery`. This plan fills the mechanic branches those left blank.
   - Pinned `equipState` shape (Plan 0): `{ ablativeCharges, cryo, naniteStacks:[], interceptors, meltdownCharge, solution:{ targetId, count }, reactiveArmorLocs:[], grapnelCooldown }`. Group 3 owns `ablativeCharges`, `cryo`, `naniteStacks`, `interceptors`, `meltdownCharge`, `solution`.
-- **Plan 2** created the reactive on-incoming-hit seam **`applyDefensiveReactions(target, hit, ctx)`** in `shared/combat.js` (first consumed by Reactive Armor + Chaff Burst). Ablative Cascade and Point-Defense System are **additional users of THAT exact seam** — they add branches, they do not create a parallel hook.
+- **Plan 2** created the reactive on-incoming-hit seam **`applyDefensiveReactions(target, hit, ctx)`** in `shared/combat.js` (first consumed by Reactive Armor + Chaff Burst). Ablative Cascade and Point-Defense System are **additional users of THAT exact seam**: they add branches, they do not create a parallel hook.
 
-**Read path:** every mechanic gates on `equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.<tag>` — never re-search the catalog, never read a stamp (the stamp is gone). `combat.js` may import **only** from `rules.js`; `equipmentUpgradeEffectOf` is already imported there (Plan 0, Task 3).
+**Read path:** every mechanic gates on `equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.<tag>`: never re-search the catalog, never read a stamp (the stamp is gone). `combat.js` may import **only** from `rules.js`; `equipmentUpgradeEffectOf` is already imported there (Plan 0, Task 3).
 
 **Tags introduced by this plan** (replace the six `effect: {}` rows in `EQUIPMENT_UPGRADES`, now in `shared/rules.js`):
 
@@ -25,11 +25,11 @@
 
 **Rules are VERBATIM** from the 2026-07-12 equipment-depth design (lines 105-137). This plan does not re-derive them; it fixes the engine hook, the state field, and the test surface.
 
-**Spatial convention (AGENTS.md):** the app is a tabletop assistant — the minis are physical. A spatial effect (Meltdown 4" burst) **narrates a player instruction** via `pushResolution`; the engine tracks state (charge spent), the player moves models and adjudicates who is in range.
+**Spatial convention (AGENTS.md):** the app is a tabletop assistant, the minis are physical. A spatial effect (Meltdown 4" burst) **narrates a player instruction** via `pushResolution`; the engine tracks state (charge spent), the player moves models and adjudicates who is in range.
 
 **Tech Stack:** Node ESM modules, `node:test` + `node:assert` (run with `node --test`). Test helpers already in `shared/game-state.test.js`: `startedRoom()`, `readyThreeAndThree(r, equipmentByName)`, `activate(r, name)`, `findRig`, `makeRig`, `applyCommand`, `createRoom`, `claimSide`, and the `__test` harness (`__test.runRecovery(room)`). `shared/combat.test.js` drives `resolveAttack` fixtures directly.
 
-**Shared helper (add once, Task 1) —** a terse accessor used by every task:
+**Shared helper (add once, Task 1),** a terse accessor used by every task:
 
 ```js
 // game-state.js, near rigEffects: the live effect tag for a rig's equipment upgrade.
@@ -42,14 +42,14 @@ function equipTag(rig) { return equipmentUpgradeEffectOf(rig?.equipment, rig?.eq
 
 ---
 
-### Task 1: Ablative Cascade (Armor) — 2 charges/round, spend to soften a hit, +1 heat/spend
+### Task 1: Ablative Cascade (Armor), 2 charges/round, spend to soften a hit, +1 heat/spend
 
 **Rule (2026-07-12):** 2 ablative charges/round; each incoming damaging hit may spend 1 to soften it one step (Critical→Severe→Direct→negated). Each spend runs **+1 heat**. Refresh to 2 in Recovery. Uses `applyDefensiveReactions`.
 
 **Files:**
-- Modify: `shared/rules.js` — the `ablative-plating` prototype row (`ablative-cascade`), replace `effect: {}` with `effect: { ablativeCascade: true }`.
-- Modify: `shared/game-state.js` — `refreshEquipState` (added by Plan 0, ~near `runRecovery` at line 1835): add the refill branch; add the `equipTag` helper near `rigEffects` (~416).
-- Modify: `shared/combat.js` — extend Plan 2's `applyDefensiveReactions(target, hit, ctx)` with the Ablative branch; ensure it is invoked per damaging impact in `rollImpacts` (post-`impactSeverity`, ~line 320-327).
+- Modify: `shared/rules.js`: the `ablative-plating` prototype row (`ablative-cascade`), replace `effect: {}` with `effect: { ablativeCascade: true }`.
+- Modify: `shared/game-state.js`: `refreshEquipState` (added by Plan 0, ~near `runRecovery` at line 1835): add the refill branch; add the `equipTag` helper near `rigEffects` (~416).
+- Modify: `shared/combat.js`: extend Plan 2's `applyDefensiveReactions(target, hit, ctx)` with the Ablative branch; ensure it is invoked per damaging impact in `rollImpacts` (post-`impactSeverity`, ~line 320-327).
 - Test: `shared/game-state.test.js`, `shared/combat.test.js`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -110,27 +110,27 @@ Ensure `applyDefensiveReactions` is in the `combat.test.js` import list and `__t
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js shared/combat.test.js`
-Expected: FAIL — `refreshEquipState` has no ablative branch (charges stay 0); `applyDefensiveReactions` has no `ablativeCascade` branch (impact untouched, heat 0).
+Expected: FAIL, `refreshEquipState` has no ablative branch (charges stay 0); `applyDefensiveReactions` has no `ablativeCascade` branch (impact untouched, heat 0).
 
 - [ ] **Step 3: Implement**
 
-`shared/rules.js` — the row:
+`shared/rules.js`: the row:
 
 ```js
-{ id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits — each costs heat", catch: "Each charge costs heat", effect: { ablativeCascade: true } },
+{ id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits, each costs heat", catch: "Each charge costs heat", effect: { ablativeCascade: true } },
 ```
 
-`shared/game-state.js` — in `refreshEquipState(rig)`:
+`shared/game-state.js`: in `refreshEquipState(rig)`:
 
 ```js
 const eff = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade);
-if (eff.ablativeCascade) s.ablativeCharges = 2; // Ablative Cascade — refill 2/round
+if (eff.ablativeCascade) s.ablativeCharges = 2; // Ablative Cascade, refill 2/round
 ```
 
-`shared/combat.js` — add the branch to `applyDefensiveReactions(target, hit, ctx)` and invoke it per damaging impact. The severity ladder (one step gentler): `critical→severe→direct→none`.
+`shared/combat.js`: add the branch to `applyDefensiveReactions(target, hit, ctx)` and invoke it per damaging impact. The severity ladder (one step gentler): `critical→severe→direct→none`.
 
 ```js
-// Ablative Cascade (Armor Prototype) — spend one ablative charge to soften a
+// Ablative Cascade (Armor Prototype), spend one ablative charge to soften a
 // damaging impact by exactly one severity step; each spend runs the defender +1
 // heat. Charges refill to 2 each Recovery (game-state refreshEquipState).
 const ABLATIVE_SOFTEN = { critical: { tier: "severe", sp: 2 }, severe: { tier: "direct", sp: 1 }, direct: { tier: "none", sp: 0 } };
@@ -169,19 +169,19 @@ Expected: PASS.
 
 ```bash
 git add shared/rules.js shared/game-state.js shared/combat.js shared/game-state.test.js shared/combat.test.js
-git commit -m "feat(v2): wire Ablative Cascade — 2 charges/round soften a hit at +1 heat"
+git commit -m "feat(v2): wire Ablative Cascade, 2 charges/round soften a hit at +1 heat"
 ```
 
 ---
 
-### Task 2: Cryo Reservoir (Cooling) — bank cold (cap 3), spend for cooling + STR spike; Radiator downside
+### Task 2: Cryo Reservoir (Cooling), bank cold (cap 3), spend for cooling + STR spike; Radiator downside
 
 **Rule (2026-07-12):** each Recovery you cool, bank 1 cryo (cap 3). At activation start spend N: **−2 heat each** and **+1 STR to your next attack per cryo spent**. Downside: while cryo > 0, the Radiator passive drops to cooling 1 per Recovery (hoarding, not dissipating).
 
 **Files:**
-- Modify: `shared/rules.js` — the `radiator-array` `cryo-reservoir` row → `effect: { cryoReservoir: true }`.
-- Modify: `shared/game-state.js` — `refreshEquipState` (bank cryo, cap 3); `runRecovery` cooling calc ~1839-1841 (downside: cool 1 while cryo>0); a `cryo` spend action in `performAction`; `computeStr` reads `nextAttackStr`; `resolveFire`/`endActivation` clear it.
-- Modify: `shared/combat.js` — `computeStr` (~152) adds `attacker.equipState?.nextAttackStr ?? 0`.
+- Modify: `shared/rules.js`: the `radiator-array` `cryo-reservoir` row → `effect: { cryoReservoir: true }`.
+- Modify: `shared/game-state.js`: `refreshEquipState` (bank cryo, cap 3); `runRecovery` cooling calc ~1839-1841 (downside: cool 1 while cryo>0); a `cryo` spend action in `performAction`; `computeStr` reads `nextAttackStr`; `resolveFire`/`endActivation` clear it.
+- Modify: `shared/combat.js`: `computeStr` (~152) adds `attacker.equipState?.nextAttackStr ?? 0`.
 - Test: `shared/game-state.test.js`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -222,7 +222,7 @@ test("Cryo Reservoir: spending N cools 2 heat each and arms +1 STR/cryo on the n
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — no cryo bank in `refreshEquipState`; Radiator still cools 2; `cryo` action rejected as unknown.
+Expected: FAIL, no cryo bank in `refreshEquipState`; Radiator still cools 2; `cryo` action rejected as unknown.
 
 - [ ] **Step 3: Implement**
 
@@ -232,23 +232,23 @@ Expected: FAIL — no cryo bank in `refreshEquipState`; Radiator still cools 2; 
 { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a STR spike", catch: "Must charge it up first", effect: { cryoReservoir: true } },
 ```
 
-`shared/game-state.js` — `runRecovery` cooling (replace lines 1839-1841 body):
+`shared/game-state.js`: `runRecovery` cooling (replace lines 1839-1841 body):
 
 ```js
-// Radiator Array (Cooling) — cools 2 heat instead of 1. Cryo Reservoir downside:
+// Radiator Array (Cooling), cools 2 heat instead of 1. Cryo Reservoir downside:
 // while cryo is banked the passive hoards, cooling only 1.
 let cooling = equipmentRecoveryCool(rig.equipment);
 if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir && (rig.equipState?.cryo || 0) > 0) cooling = 1;
 rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
 ```
 
-`refreshEquipState` — bank AFTER the cooling read above (so the downside checks the pre-bank cryo count):
+`refreshEquipState`: bank AFTER the cooling read above (so the downside checks the pre-bank cryo count):
 
 ```js
-if (eff.cryoReservoir) s.cryo = Math.min(3, s.cryo + 1); // Cryo Reservoir — bank 1/Recovery, cap 3
+if (eff.cryoReservoir) s.cryo = Math.min(3, s.cryo + 1); // Cryo Reservoir, bank 1/Recovery, cap 3
 ```
 
-`performAction` — a `cryo` spend action. Add before the `ACTIONS[act]` gate (like `reload`), guarded by the tag; spend `min(n, cryo)`:
+`performAction`: a `cryo` spend action. Add before the `ACTIONS[act]` gate (like `reload`), guarded by the tag; spend `min(n, cryo)`:
 
 ```js
 if (act === "cryo") {
@@ -259,20 +259,20 @@ if (act === "cryo") {
   bumpHeat(rig, -2 * spend);
   rig.equipState.nextAttackStr = (rig.equipState.nextAttackStr || 0) + spend;
   pushResolution(room, { kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-    summary: `${rig.name} vents cryo ×${spend} — −${2 * spend} heat, +${spend} STR to the next attack.`, effects: [] });
+    summary: `${rig.name} vents cryo ×${spend}, −${2 * spend} heat, +${spend} STR to the next attack.`, effects: [] });
   return true;
 }
 ```
 
-`shared/combat.js` — `computeStr`, add the transient to the return (near line 220):
+`shared/combat.js`: `computeStr`, add the transient to the return (near line 220):
 
 ```js
-// Cryo Reservoir / Meltdown Protocol — a spent charge arms +STR on the next attack.
+// Cryo Reservoir / Meltdown Protocol, a spent charge arms +STR on the next attack.
 const nextStr = attacker.equipState?.nextAttackStr || 0;
 return profile.str + weightMod + charged + bonus + nextStr;
 ```
 
-`shared/game-state.js` — consume it once the shot resolves. In `resolveFire`, after `t.actionsUsed += cost;` (~line 2015):
+`shared/game-state.js`: consume it once the shot resolves. In `resolveFire`, after `t.actionsUsed += cost;` (~line 2015):
 
 ```js
 if (rig.equipState?.nextAttackStr) rig.equipState.nextAttackStr = 0; // one-shot STR spike consumed
@@ -293,20 +293,20 @@ Expected: PASS.
 
 ```bash
 git add shared/rules.js shared/game-state.js shared/combat.js shared/game-state.test.js
-git commit -m "feat(v2): wire Cryo Reservoir — bank cold, spend for cooling + a STR spike"
+git commit -m "feat(v2): wire Cryo Reservoir, bank cold, spend for cooling + a STR spike"
 ```
 
 ---
 
-### Task 3: Nanite Swarm (Utility) — active seeds stacks that heal each Recovery; Heat Capacity −1 downside
+### Task 3: Nanite Swarm (Utility), active seeds stacks that heal each Recovery; Heat Capacity −1 downside
 
 **Rule (2026-07-12):** active (1 slot, +1 heat): seed a nanite stack on a location (self or ally in reach). Each Recovery every stack heals 1 SP there, then decays 1. Cap 3/location. Downside: while any stack rides this Rig, its **Heat Capacity −1**.
 
-**Model.** The stack lives on the **healed** rig's `equipState.naniteStacks` as `{ loc, sp }` (Plan 0's pinned item shape) where `sp` is the stack's remaining charges (cap 3). Self-seeding is the common case; "ally in reach" is a player-adjudicated target named on the action (resolved by name, like `maybeEngageByName`) — the engine seeds the named ally's own `equipState`, the player confirms reach. The "+1 heat / 1 slot" is paid by the **seeding** rig; the "Heat Capacity −1" downside rides the **hosting** (healed) rig — which coincide on a self-seed.
+**Model.** The stack lives on the **healed** rig's `equipState.naniteStacks` as `{ loc, sp }` (Plan 0's pinned item shape) where `sp` is the stack's remaining charges (cap 3). Self-seeding is the common case; "ally in reach" is a player-adjudicated target named on the action (resolved by name, like `maybeEngageByName`), the engine seeds the named ally's own `equipState`, the player confirms reach. The "+1 heat / 1 slot" is paid by the **seeding** rig; the "Heat Capacity −1" downside rides the **hosting** (healed) rig, which coincide on a self-seed.
 
 **Files:**
-- Modify: `shared/rules.js` — the `field-repair-suite` `nanite-swarm` row → `effect: { naniteSwarm: true }`.
-- Modify: `shared/game-state.js` — `refreshEquipState` (heal+decay each stack); a `nanite` seed action in `performAction`; `heatMeter` (~1189) applies the cap −1 while stacks ride.
+- Modify: `shared/rules.js`: the `field-repair-suite` `nanite-swarm` row → `effect: { naniteSwarm: true }`.
+- Modify: `shared/game-state.js`: `refreshEquipState` (heal+decay each stack); a `nanite` seed action in `performAction`; `heatMeter` (~1189) applies the cap −1 while stacks ride.
 - Test: `shared/game-state.test.js`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -357,17 +357,17 @@ test("Nanite Swarm downside: Heat Capacity −1 while a stack rides", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `nanite` action unknown; stacks neither heal nor decay; `heatMeter.cap` unchanged by stacks.
+Expected: FAIL, `nanite` action unknown; stacks neither heal nor decay; `heatMeter.cap` unchanged by stacks.
 
 - [ ] **Step 3: Implement**
 
 `shared/rules.js`:
 
 ```js
-{ id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery — at a heat-cap cost", catch: "Costs heat-cap", effect: { naniteSwarm: true } },
+{ id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery, at a heat-cap cost", catch: "Costs heat-cap", effect: { naniteSwarm: true } },
 ```
 
-`shared/game-state.js` — `performAction`, a `nanite` seed action (before the `ACTIONS[act]` gate, guarded by the tag; 1 slot + 1 heat; targets self or a named ally in reach):
+`shared/game-state.js`: `performAction`, a `nanite` seed action (before the `ACTIONS[act]` gate, guarded by the tag; 1 slot + 1 heat; targets self or a named ally in reach):
 
 ```js
 if (act === "nanite") {
@@ -387,7 +387,7 @@ if (act === "nanite") {
 }
 ```
 
-`refreshEquipState` — heal then decay each stack (runs per rig in `runRecovery`):
+`refreshEquipState`: heal then decay each stack (runs per rig in `runRecovery`):
 
 ```js
 if (s.naniteStacks.length) {
@@ -396,7 +396,7 @@ if (s.naniteStacks.length) {
 }
 ```
 
-`heatMeter` — cap −1 while stacks ride (fold into the existing `effCap`, ~1201):
+`heatMeter`: cap −1 while stacks ride (fold into the existing `effCap`, ~1201):
 
 ```js
 const naniteDock = (rig?.equipState?.naniteStacks?.length || 0) > 0 ? 1 : 0;
@@ -412,19 +412,19 @@ Expected: PASS.
 
 ```bash
 git add shared/rules.js shared/game-state.js shared/game-state.test.js
-git commit -m "feat(v2): wire Nanite Swarm — seed self-repairing stacks at a Heat Capacity cost"
+git commit -m "feat(v2): wire Nanite Swarm, seed self-repairing stacks at a Heat Capacity cost"
 ```
 
 ---
 
-### Task 4: Point-Defense System (Countermeasures) — 2 interceptors/round, reroll a ranged hit; +1 heat + fire-lockout downsides
+### Task 4: Point-Defense System (Countermeasures), 2 interceptors/round, reroll a ranged hit; +1 heat + fire-lockout downsides
 
 **Rule (2026-07-12):** 2 interceptor charges/round; when hit by a **ranged** attack, spend 1 to force the attacker to reroll all successful hit dice. Refresh 2 in Recovery. Downside: +1 heat per charge spent; PD is unusable the round after *you* fired your own ranged weapon. Uses `applyDefensiveReactions`.
 
 **Files:**
-- Modify: `shared/rules.js` — the `reactive-plating` `point-defense-system` row → `effect: { pointDefense: true }`.
-- Modify: `shared/game-state.js` — `refreshEquipState` (refill interceptors to 2; roll the fired-ranged lockout forward); `resolveFire` (~2018) flags `firedRangedThisRound` on a ranged shot.
-- Modify: `shared/combat.js` — extend `applyDefensiveReactions` with the Point-Defense branch at the **pre-impact** (`hit.kind === "tohit"`) seam site.
+- Modify: `shared/rules.js`: the `reactive-plating` `point-defense-system` row → `effect: { pointDefense: true }`.
+- Modify: `shared/game-state.js`: `refreshEquipState` (refill interceptors to 2; roll the fired-ranged lockout forward); `resolveFire` (~2018) flags `firedRangedThisRound` on a ranged shot.
+- Modify: `shared/combat.js`: extend `applyDefensiveReactions` with the Point-Defense branch at the **pre-impact** (`hit.kind === "tohit"`) seam site.
 - Test: `shared/game-state.test.js`, `shared/combat.test.js`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -477,17 +477,17 @@ test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js shared/combat.test.js`
-Expected: FAIL — interceptors stay 0; `applyDefensiveReactions` has no `pointDefense` branch.
+Expected: FAIL, interceptors stay 0; `applyDefensiveReactions` has no `pointDefense` branch.
 
 - [ ] **Step 3: Implement**
 
 `shared/rules.js`:
 
 ```js
-{ id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
+{ id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls, at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
 ```
 
-`shared/game-state.js` — `refreshEquipState`:
+`shared/game-state.js`: `refreshEquipState`:
 
 ```js
 if (eff.pointDefense) {
@@ -497,7 +497,7 @@ if (eff.pointDefense) {
 }
 ```
 
-`resolveFire` — after a `longRange` shot resolves (near the `secondShot`/`t.longRangeShots` bookkeeping, ~2018), flag the fire so next Recovery arms the lockout:
+`resolveFire`: after a `longRange` shot resolves (near the `secondShot`/`t.longRangeShots` bookkeeping, ~2018), flag the fire so next Recovery arms the lockout:
 
 ```js
 if (slot === "longRange" && rig.equipState && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.pointDefense) {
@@ -505,10 +505,10 @@ if (slot === "longRange" && rig.equipState && equipmentUpgradeEffectOf(rig.equip
 }
 ```
 
-`shared/combat.js` — the Point-Defense branch in `applyDefensiveReactions`, at the pre-impact `hit.kind === "tohit"` site (spend an interceptor, force the reroll, +1 heat):
+`shared/combat.js`: the Point-Defense branch in `applyDefensiveReactions`, at the pre-impact `hit.kind === "tohit"` site (spend an interceptor, force the reroll, +1 heat):
 
 ```js
-// Point-Defense System (Countermeasures Prototype) — a ranged hit may be met by
+// Point-Defense System (Countermeasures Prototype), a ranged hit may be met by
 // one interceptor charge, forcing the attacker to reroll every landed hit die.
 // +1 heat per charge; unusable the round after this rig fired its own ranged
 // weapon (equipState.pdLocked, rolled forward in refreshEquipState).
@@ -522,7 +522,7 @@ if (hit.kind === "tohit" && hit.ranged
 }
 ```
 
-Wire the `tohit` seam + reroll in `resolveAttack`: after `rollToHit` returns `th` (~line 386-398), call `applyDefensiveReactions(target, { kind: "tohit", ranged: !profile.melee, rerollHits: false }, ctx)`; if it flags `rerollHits`, re-roll `th`'s successful hit dice once (reuse the module's existing reroll helper that Lock Sight / Fire Control already use — reroll only dice `>= th.modAim`, keeping the rest) and recompute `th.hits`. Place this **before** the `if (th.hits > 0)` location/impact block so the softened hit count drives everything downstream. If Plan 2 already invokes the `tohit` seam for Reactive Armor/Chaff, add the reroll handling there rather than a second call.
+Wire the `tohit` seam + reroll in `resolveAttack`: after `rollToHit` returns `th` (~line 386-398), call `applyDefensiveReactions(target, { kind: "tohit", ranged: !profile.melee, rerollHits: false }, ctx)`; if it flags `rerollHits`, re-roll `th`'s successful hit dice once (reuse the module's existing reroll helper that Lock Sight / Fire Control already use, reroll only dice `>= th.modAim`, keeping the rest) and recompute `th.hits`. Place this **before** the `if (th.hits > 0)` location/impact block so the softened hit count drives everything downstream. If Plan 2 already invokes the `tohit` seam for Reactive Armor/Chaff, add the reroll handling there rather than a second call.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -533,18 +533,18 @@ Expected: PASS.
 
 ```bash
 git add shared/rules.js shared/game-state.js shared/combat.js shared/game-state.test.js shared/combat.test.js
-git commit -m "feat(v2): wire Point-Defense System — intercept ranged hits, force rerolls, fire-lockout"
+git commit -m "feat(v2): wire Point-Defense System, intercept ranged hits, force rerolls, fire-lockout"
 ```
 
 ---
 
-### Task 5: Meltdown Protocol (Thermal) — bank over-capacity heat as charge; spend for STR or a burst; no-cooling + detonate downsides
+### Task 5: Meltdown Protocol (Thermal), bank over-capacity heat as charge; spend for STR or a burst; no-cooling + detonate downsides
 
 **Rule (2026-07-12):** heat over Capacity at activation end converts to **meltdown charge** (cap 6) instead of rolling overheat. Spend N at activation start: **+N STR** split across attacks, or a **4" burst** (N heat-damage to enemies in range). Downside: while charge > 0 you can't Shut Down or use Cooling actions; an Engine destroyed while charged detonates the charge on yourself.
 
 **Files:**
-- Modify: `shared/rules.js` — the `blast-furnace-core` `meltdown-protocol` row → `effect: { meltdownProtocol: true }`.
-- Modify: `shared/game-state.js` — `endActivation` overheat branch (~1889-1903: convert over-capacity heat to charge instead of rolling); a `meltdown` spend action in `performAction`; `shutdown` (~2204) + cooling actives (`purge`/`heatpurgewave`, ~2252) blocked while charged; `onRigDamaged` (~1653) self-detonation when the engine dies charged.
+- Modify: `shared/rules.js`: the `blast-furnace-core` `meltdown-protocol` row → `effect: { meltdownProtocol: true }`.
+- Modify: `shared/game-state.js`: `endActivation` overheat branch (~1889-1903: convert over-capacity heat to charge instead of rolling); a `meltdown` spend action in `performAction`; `shutdown` (~2204) + cooling actives (`purge`/`heatpurgewave`, ~2252) blocked while charged; `onRigDamaged` (~1653) self-detonation when the engine dies charged.
 - Test: `shared/game-state.test.js`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -623,12 +623,12 @@ test("Meltdown Protocol: an engine destroyed while charged detonates the charge 
 });
 ```
 
-(The cap test's `__test.endActivation` fallback keeps it green whether or not `endActivation` is exposed; prefer exposing it in `__test` — see Step 3 — and dropping the fallback.)
+(The cap test's `__test.endActivation` fallback keeps it green whether or not `endActivation` is exposed; prefer exposing it in `__test`: see Step 3, and dropping the fallback.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — over-capacity heat still rolls overheat; `meltdown` action unknown; shutdown/cooling not gated; no self-detonation.
+Expected: FAIL, over-capacity heat still rolls overheat; `meltdown` action unknown; shutdown/cooling not gated; no self-detonation.
 
 - [ ] **Step 3: Implement**
 
@@ -638,7 +638,7 @@ Expected: FAIL — over-capacity heat still rolls overheat; `meltdown` action un
 { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for STR or a burst", catch: "Only banks while overheated", effect: { meltdownProtocol: true } },
 ```
 
-`shared/game-state.js` — `endActivation`, replace the `if (m.over > 0) { …overheat roll… }` block (1891-1903) so a Meltdown rig banks instead of rolling:
+`shared/game-state.js`: `endActivation`, replace the `if (m.over > 0) { …overheat roll… }` block (1891-1903) so a Meltdown rig banks instead of rolling:
 
 ```js
 const m = heatMeter(rig);
@@ -646,7 +646,7 @@ if (m.over > 0) {
   if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.meltdownProtocol) {
     rig.equipState.meltdownCharge = Math.min(6, (rig.equipState.meltdownCharge || 0) + m.over);
     pushResolution(room, { kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} banks ${m.over} meltdown charge (now ${rig.equipState.meltdownCharge}/6) — no overheat roll.`, effects: [] });
+      summary: `${rig.name} banks ${m.over} meltdown charge (now ${rig.equipState.meltdownCharge}/6), no overheat roll.`, effects: [] });
   } else {
     const roll = rollD(12, dice?.overheat, random);
     const total = roll + m.bonus;
@@ -659,7 +659,7 @@ if (m.over > 0) {
 }
 ```
 
-`performAction` — a `meltdown` spend action (before the `ACTIONS[act]` gate; STR mode arms `nextAttackStr`, burst mode narrates the 4" spatial instruction):
+`performAction`: a `meltdown` spend action (before the `ACTIONS[act]` gate; STR mode arms `nextAttackStr`, burst mode narrates the 4" spatial instruction):
 
 ```js
 if (act === "meltdown") {
@@ -669,17 +669,17 @@ if (act === "meltdown") {
   rig.equipState.meltdownCharge -= spend;
   if (a.mode === "burst") {
     pushResolution(room, { kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} vents a meltdown burst — deal ${spend} heat-damage to every enemy within 4" (players adjudicate the AoE).`, effects: [] });
+      summary: `${rig.name} vents a meltdown burst, deal ${spend} heat-damage to every enemy within 4" (players adjudicate the AoE).`, effects: [] });
   } else {
     rig.equipState.nextAttackStr = (rig.equipState.nextAttackStr || 0) + spend;
     pushResolution(room, { kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} overloads — +${spend} STR to its attacks this activation.`, effects: [] });
+      summary: `${rig.name} overloads, +${spend} STR to its attacks this activation.`, effects: [] });
   }
   return true;
 }
 ```
 
-`performAction` — the no-cooling downside. Guard the `shutdown` branch (~2204) and the cooling actives (`purge`, `heatpurgewave`) while charged:
+`performAction`: the no-cooling downside. Guard the `shutdown` branch (~2204) and the cooling actives (`purge`, `heatpurgewave`) while charged:
 
 ```js
 // at the top of the shutdown branch:
@@ -688,17 +688,17 @@ if ((rig.equipState?.meltdownCharge || 0) > 0) return reject("Can't Shut Down wh
 if ((act === "purge" || act === "heatpurgewave") && (rig.equipState?.meltdownCharge || 0) > 0) return reject("Can't vent heat while a meltdown charge is banked.");
 ```
 
-`onRigDamaged` — self-detonation when the engine dies charged. Add near the top (after the `_blastRolled` block, before `checkAnnihilation`):
+`onRigDamaged`: self-detonation when the engine dies charged. Add near the top (after the `_blastRolled` block, before `checkAnnihilation`):
 
 ```js
-// Meltdown Protocol — an Engine destroyed with charge banked cooks off on self.
+// Meltdown Protocol, an Engine destroyed with charge banked cooks off on self.
 if (rig.engine?.sp === 0 && (rig.equipState?.meltdownCharge || 0) > 0 && !rig._meltdownDetonated) {
   rig._meltdownDetonated = true;
   const n = rig.equipState.meltdownCharge;
   rig.equipState.meltdownCharge = 0;
   applyDamage(room, rig, "hull", n, opts);
   pushResolution(room, { kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-    summary: `${rig.name}'s meltdown charge detonates — ${n} damage to its own Hull.`, effects: [] });
+    summary: `${rig.name}'s meltdown charge detonates, ${n} damage to its own Hull.`, effects: [] });
 }
 ```
 
@@ -717,19 +717,19 @@ Expected: PASS. (Drop the `__test.endActivation ? … : …` fallback in the cap
 
 ```bash
 git add shared/rules.js shared/game-state.js shared/game-state.test.js
-git commit -m "feat(v2): wire Meltdown Protocol — bank overheat as charge, spend for STR or a burst"
+git commit -m "feat(v2): wire Meltdown Protocol, bank overheat as charge, spend for STR or a burst"
 ```
 
 ---
 
-### Task 6: Fire Solution Lock (Fire Control) — stack a solution on one target, cash it for an auto-hit AP volley; move/heat downsides
+### Task 6: Fire Solution Lock (Fire Control), stack a solution on one target, cash it for an auto-hit AP volley; move/heat downsides
 
 **Rule (2026-07-12):** each Fire Weapon vs the *same* target +1 solution (cap 3, reset on target switch). At 3, next attack **auto-hits all dice + Armour Piercing**. Downside: **Moving loses the solution** (must hold still); each solution-building shot runs +1 heat.
 
 **Files:**
-- Modify: `shared/rules.js` — the `targeting-computer` `fire-solution-lock` row → `effect: { fireSolutionLock: true }`.
-- Modify: `shared/game-state.js` — `resolveFire` (~1982): build/reset the solution, mark the payoff shot, +1 heat on a building shot; `move`/`sprint` action (~2379): moving clears the solution.
-- Modify: `shared/combat.js` — `resolveAttack`: an `opts.solutionPayoff` shot auto-hits all dice and injects Armour Piercing (mirror the existing `fireControlLock` handling at ~366-371, 386).
+- Modify: `shared/rules.js`: the `targeting-computer` `fire-solution-lock` row → `effect: { fireSolutionLock: true }`.
+- Modify: `shared/game-state.js`: `resolveFire` (~1982): build/reset the solution, mark the payoff shot, +1 heat on a building shot; `move`/`sprint` action (~2379): moving clears the solution.
+- Modify: `shared/combat.js`: `resolveAttack`: an `opts.solutionPayoff` shot auto-hits all dice and injects Armour Piercing (mirror the existing `fireControlLock` handling at ~366-371, 386).
 - Test: `shared/game-state.test.js`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -791,7 +791,7 @@ test("Fire Solution Lock: moving loses the solution", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — solution never changes; a count-3 all-1 volley misses; moving leaves it intact.
+Expected: FAIL, solution never changes; a count-3 all-1 volley misses; moving leaves it intact.
 
 - [ ] **Step 3: Implement**
 
@@ -801,7 +801,7 @@ Expected: FAIL — solution never changes; a count-3 all-1 volley misses; moving
 { id: "fire-solution-lock", nature: "prototype", name: "Fire Solution Lock", tag: "Hold still and stack a solution → an auto-hit AP volley", catch: "Must hold still to charge it", effect: { fireSolutionLock: true } },
 ```
 
-`shared/game-state.js` — `resolveFire`, resolve the solution around the `resolveAttack` call. Before building the `resolveAttack` opts (~2000):
+`shared/game-state.js`: `resolveFire`, resolve the solution around the `resolveAttack` call. Before building the `resolveAttack` opts (~2000):
 
 ```js
 const fsl = slot === "longRange" && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.fireSolutionLock;
@@ -823,7 +823,7 @@ if (fsl) {
 }
 ```
 
-`shared/combat.js` — `resolveAttack`, treat `opts.solutionPayoff` exactly like `fireControlLock` (auto-hit + Armour Piercing). Extend the AP-injection guard (~366-371) and the `autoHit` flag (~386):
+`shared/combat.js`: `resolveAttack`, treat `opts.solutionPayoff` exactly like `fireControlLock` (auto-hit + Armour Piercing). Extend the AP-injection guard (~366-371) and the `autoHit` flag (~386):
 
 ```js
 const solutionPayoff = !!opts.solutionPayoff;
@@ -834,11 +834,11 @@ if (fireControlLock || solutionPayoff) {
 const th = rollToHit(attacker, profile, { ...opts, target, autoHit: fireControlLock || solutionPayoff, /* …unchanged… */ }, opts.dice?.toHit, random);
 ```
 
-`shared/game-state.js` — `move`/`sprint` action (~2379), moving loses the solution (gated on the tag so it doesn't clobber other rigs):
+`shared/game-state.js`: `move`/`sprint` action (~2379), moving loses the solution (gated on the tag so it doesn't clobber other rigs):
 
 ```js
 if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.fireSolutionLock) {
-  rig.equipState.solution = { targetId: null, count: 0 }; // Fire Solution Lock — moving breaks the firing solution
+  rig.equipState.solution = { targetId: null, count: 0 }; // Fire Solution Lock, moving breaks the firing solution
 }
 ```
 
@@ -853,14 +853,14 @@ Expected: PASS.
 
 ```bash
 git add shared/rules.js shared/game-state.js shared/combat.js shared/game-state.test.js
-git commit -m "feat(v2): wire Fire Solution Lock — stack a solution for an auto-hit AP volley"
+git commit -m "feat(v2): wire Fire Solution Lock, stack a solution for an auto-hit AP volley"
 ```
 
 ---
 
-### Task 7: Prototype-cap regression — a wired equipment Prototype still counts against the one-per-rig cap
+### Task 7: Prototype-cap regression, a wired equipment Prototype still counts against the one-per-rig cap
 
-The six rows are already `nature: "prototype"` and already counted by `countPrototypes` (via `equipmentUpgradeNature`). Wiring an effect tag must **not** change that — a rig may still run at most one Prototype across its two picks (AGENTS.md). This task adds the guard test.
+The six rows are already `nature: "prototype"` and already counted by `countPrototypes` (via `equipmentUpgradeNature`). Wiring an effect tag must **not** change that, a rig may still run at most one Prototype across its two picks (AGENTS.md). This task adds the guard test.
 
 **Files:**
 - Test only: `shared/game-state.test.js`.
@@ -901,7 +901,7 @@ Confirm `countPrototypes` and `equipmentUpgradeNature` are in the `game-state.te
 - [ ] **Step 2: Run test to verify it fails/passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS immediately if `nature` was preserved by every prior task (the intended outcome — this is a regression lock, not a red-first mechanic). If it FAILS, a Task-1..6 edit accidentally dropped a `nature: "prototype"` — fix that row before continuing.
+Expected: PASS immediately if `nature` was preserved by every prior task (the intended outcome, this is a regression lock, not a red-first mechanic). If it FAILS, a Task-1..6 edit accidentally dropped a `nature: "prototype"`: fix that row before continuing.
 
 - [ ] **Step 3: Implement**
 
@@ -923,10 +923,10 @@ git commit -m "test(v2): lock the one-Prototype-per-rig cap for wired equipment 
 
 ## Self-review notes
 
-- **Read path is uniform.** Every mechanic gates on `equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.<tag>` — no stamp (removed in Plan 0), no catalog re-search. `combat.js` reads the same lookup it already imports from `rules.js` (import-cycle-safe).
-- **Reactive mechanics share Plan 2's seam.** Ablative Cascade (`hit.kind === "impact"`, post-severity) and Point-Defense (`hit.kind === "tohit"`, pre-impact) both add branches to `applyDefensiveReactions(target, hit, ctx)` — the exact name Plan 2 introduced. If Plan 2 wired only one call site, add the other (Ablative post-impact in `rollImpacts`; PD pre-impact in `resolveAttack`) as noted in Tasks 1 and 4.
+- **Read path is uniform.** Every mechanic gates on `equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.<tag>`: no stamp (removed in Plan 0), no catalog re-search. `combat.js` reads the same lookup it already imports from `rules.js` (import-cycle-safe).
+- **Reactive mechanics share Plan 2's seam.** Ablative Cascade (`hit.kind === "impact"`, post-severity) and Point-Defense (`hit.kind === "tohit"`, pre-impact) both add branches to `applyDefensiveReactions(target, hit, ctx)`: the exact name Plan 2 introduced. If Plan 2 wired only one call site, add the other (Ablative post-impact in `rollImpacts`; PD pre-impact in `resolveAttack`) as noted in Tasks 1 and 4.
 - **One shared transient for the STR spike.** Cryo Reservoir and Meltdown Protocol both write `rig.equipState.nextAttackStr`; `computeStr` reads it, `resolveFire` zeroes it after an attack, `endActivation` clears any leftover. It is intentionally **not** in `freshEquipState`, so Plan 0's `deepEqual` scaffold test stays green.
 - **Recovery upkeep in one place.** `refreshEquipState` gains four branches (ablative refill, interceptor refill + fire-lockout roll-forward, cryo bank, nanite heal/decay); Cryo's Radiator downside lives in `runRecovery`'s cooling calc; Meltdown's charge persists across Recovery untouched.
-- **Spatial → narrated.** Meltdown's 4" burst emits a `pushResolution` player instruction (heat-damage to enemies within 4", players adjudicate the AoE) — the engine only tracks the charge spend, per the AGENTS.md tabletop convention. No other Group-3 mechanic is spatial.
-- **rules.md.** Fill the "Tuned / Prototype Equipment Mechanics" subsection under §15 for each Prototype as it ships (same cadence as the weapon-Prototype rollout) — fold the doc edit into each task's commit if kept in lockstep.
+- **Spatial → narrated.** Meltdown's 4" burst emits a `pushResolution` player instruction (heat-damage to enemies within 4", players adjudicate the AoE), the engine only tracks the charge spend, per the AGENTS.md tabletop convention. No other Group-3 mechanic is spatial.
+- **rules.md.** Fill the "Tuned / Prototype Equipment Mechanics" subsection under §15 for each Prototype as it ships (same cadence as the weapon-Prototype rollout), fold the doc edit into each task's commit if kept in lockstep.
 - **Final sweep.** After Task 7, run `node --test shared/game-state.test.js shared/combat.test.js` once more; all six `effect: {}` / `TODO(mechanics)` markers for these rows must be gone from `shared/rules.js`.

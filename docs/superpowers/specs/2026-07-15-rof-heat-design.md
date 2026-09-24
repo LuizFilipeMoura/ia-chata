@@ -1,7 +1,7 @@
-# Rate of fire runs the barrel hot — design
+# Rate of fire runs the barrel hot, design
 
 **Date:** 2026-07-15
-**Status:** **SHELVED — do not implement.** The design is sound; its premise is
+**Status:** **SHELVED, do not implement.** The design is sound; its premise is
 false. Kept as a record of why, and of the two findings the work turned up.
 **Source:** `docs/superpowers/specs/2026-07-15-weapon-balance-findings.md` (F2-B)
 **Baseline:** `scripts/balance/report-2026-07-15-overflow.txt` (3000 trials, post-Overmatch)
@@ -16,7 +16,7 @@ committed 3000-trial data:
 | SP/heat spread | |
 |---|---|
 | today (heat is flat 1) | **3.0×** |
-| taxed by ROF, as this spec designs | **3.9×** — worse than shipping nothing |
+| taxed by ROF, as this spec designs | **3.9×**: worse than shipping nothing |
 | taxed by raw output (ROF × D) | 2.6× |
 
 The reason is that **F2's premise does not survive its own re-measurement.**
@@ -48,7 +48,7 @@ per-weapon, not a lever asymmetry.
 `game-state.js:41` says `d` exists to differentiate the ROF-1 weapons; it cannot,
 because D5 × 1 = 5 against D2 × 4 = 8. This is F2-C's territory and it is one
 systematic gap in one column, not the whack-a-mole the findings doc called it. It
-may well be intentional — heavies trade output for reliability, wounding ~90%
+may well be intentional, heavies trade output for reliability, wounding ~90%
 where STR 3 wounds ~40%. Recorded so the option is chosen rather than forgotten.
 
 **2. The harness cannot see half the catalog, which is why no tuning follows from
@@ -68,8 +68,8 @@ a Siege Maul's single charge pays less. Coherent fiction, and it improves the
 spread (2.6×) rather than degrading it. But it would be a **lore feature with a
 balance side-benefit**, not a balance fix, and should be argued as such.
 
-The design below is left intact and unedited. Everything in it — the seam, the
-cold-kind trap, the display requirement, the anti-drift test — remains correct if
+The design below is left intact and unedited. Everything in it, the seam, the
+cold-kind trap, the display requirement, the anti-drift test, remains correct if
 the premise is ever revisited.
 
 ---
@@ -87,7 +87,7 @@ against nothing.
 
 Overmatch was supposed to fix this indirectly. It didn't, and the reason is
 structural: expected damage is `ROF × P(hit) × P(wound) × D`, and Overmatch adds
-to **D** — the term ROF *multiplies*. A high-ROF weapon banks the bonus once per
+to **D**: the term ROF *multiplies*. A high-ROF weapon banks the bonus once per
 shot in its volley. Measured at 3000 trials, post-Overmatch:
 
 | weapon | profile | SP/attack |
@@ -117,7 +117,7 @@ Everything in the game has raw output 6–8 **except the ROF-1 weapons, at 3–5
 could, because D5 × 1 = 5 while D2 × 4 = 8.
 
 This is F2-C's territory (raise D on the ROF-1 weapons), and the data says it is
-not the "whack-a-mole" the findings doc called it — it is one systematic gap in
+not the "whack-a-mole" the findings doc called it, it is one systematic gap in
 one column. **It is deliberately not this design.** The gap is arguably intended:
 heavies trade output for reliability (STR 10–11 wounds ~90% where STR 3 wounds
 ~40%). Recorded here so the option stays visible and is chosen, not forgotten.
@@ -126,7 +126,7 @@ heavies trade output for reliability (STR 10–11 wounds ~90% where STR 3 wounds
 
 | decision | choice | rejected |
 |---|---|---|
-| how we validate | extend the sweep to report **SP/heat** | turn-level harness (right answer, much bigger — still queued as findings step 5); ship on judgment (unmeasured) |
+| how we validate | extend the sweep to report **SP/heat** | turn-level harness (right answer, much bigger, still queued as findings step 5); ship on judgment (unmeasured) |
 | the lever | **price ROF in heat** (F2-B) | F2-C raise D (papers the symptom, leaves ROF free); both (over-corrects) |
 | the shape | **deterministic band**, `fire heat = 1 + floor(ROF/3)` | universalise heat-on-1s |
 | cold kinds | **exempt**, explicitly in code | give tanks/walkers heat (redesigns what "cold kind" means); price them in another currency (new mechanic, no evidence they need it) |
@@ -134,11 +134,11 @@ heavies trade output for reliability (STR 10–11 wounds ~90% where STR 3 wounds
 **Why not universalise heat-on-1s.** It was attractive: `heatOnOnes` already
 exists at `combat.js:216`, expected heat would scale continuously as `ROF/6`, and
 Full Auto's and Extended Belt's catch ("each die that rolls a 1 adds 1 heat")
-would become *emergent* — +2 ROF is +2 dice is more 1s — deleting three special
+would become *emergent*: +2 ROF is +2 dice is more 1s, deleting three special
 cases instead of adding a rule.
 
 It was rejected because it **guts Charged Shot**. Full Auto self-prices because it
-adds dice; Charged Shot is +2 **STR** — same dice — so universalising turns its
+adds dice; Charged Shot is +2 **STR**: same dice, so universalising turns its
 only catch into nothing and makes it free upside. That is a fire-mode redesign
 this change has no business doing.
 
@@ -153,7 +153,7 @@ than polish.**
 Lives in `rules.js` beside `HEAT_CAPACITY` and `ACTIONS`.
 
 ```js
-// §6 — rate of fire runs the barrel hot. A volley's heat scales with the rounds
+// §6, rate of fire runs the barrel hot. A volley's heat scales with the rounds
 // it puts downrange, so ROF trades against the heat economy instead of being
 // pure upside. See docs/superpowers/specs/2026-07-15-rof-heat-design.md.
 export const ROF_HEAT_PER = 3;
@@ -182,17 +182,17 @@ Gun firing twice in one activation pays `1 + 2 + 1 = 4` heat against a capacity 
 5. Sustained high-ROF fire becoming expensive is the point; this is also the
 interaction most likely to prove too harsh.
 
-The fiction is already in the rulebook — `rules.md:132` says a repeat shot "runs
+The fiction is already in the rulebook, `rules.md:132` says a repeat shot "runs
 the barrel hot". This is the same idea applied to rate rather than repetition, and
 should use the same language.
 
-### Cold kinds are exempt — and it must be explicit
+### Cold kinds are exempt, and it must be explicit
 
 Tanks and Walkers are heatless (`unit-kinds.js`, `hasHeat: false`;
 `battle-view.js:25` gates Sprint on it because they have no heat to burn).
 
 **The exemption cannot be left implicit.** `bumpHeat` (`game-state.js:2087`)
-writes `rig.engine.heat` unconditionally, and cold kinds *do* have engine parts —
+writes `rig.engine.heat` unconditionally, and cold kinds *do* have engine parts,
 so charging them would silently accumulate a value `heatMeter` deliberately
 reports as 0. That is "charged but invisible", not "exempt", and it is dead state
 waiting to become a bug the first time someone reads `engine.heat` directly. No
@@ -205,7 +205,7 @@ const cold = !UNIT_KINDS[attacker.kind || "rig"].hasHeat;
 ```
 
 This means ROF 6 on a Tank (Coaxial MG) stays free while ROF 6 on a Rig costs 3.
-**Accepted, and thematic** — a tank is the stable gun platform. It is coherent
+**Accepted, and thematic**: a tank is the stable gun platform. It is coherent
 because support units draw from a separate weapon list (`UNIT_WEAPONS`, zero
 overlap with rig weapons), carry role modules rather than upgrades, and answer a
 different design question. The sweep that found F2 was rigs-vs-rigs only.
@@ -233,8 +233,8 @@ const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat
 
 **Edit 4 is not polish.** The band was chosen over heat-on-1s *because* the cost
 is knowable in advance; if the action console doesn't show it, that rationale is
-void. `battle-view.js` already carries the precedent verbatim —
-`note = "Second shot — +1 heat"`, commented "surcharge rule, not obvious from the
+void. `battle-view.js` already carries the precedent verbatim,
+`note = "Second shot, +1 heat"`, commented "surcharge rule, not obvious from the
 total". A ROF surcharge is exactly as non-obvious. It needs the effective profile,
 so `battle-view.js` calls `effectiveWeaponProfile` and then the same `rofHeat` the
 charge site calls.
@@ -248,15 +248,15 @@ Overmatch work shipped exactly this defect and a reviewer caught it.
 
 ## Testing
 
-**Correctness — unit tests, exact.** `rofHeat` is pure.
+**Correctness, unit tests, exact.** `rofHeat` is pure.
 
-- `rules.test.js` — band boundaries (1→0, 2→0, 3→1, 4→1, 6→2, 8→2); Extended
+- `rules.test.js`: band boundaries (1→0, 2→0, 3→1, 4→1, 6→2, 8→2); Extended
   Belt's ROF 10 → 3; junk → 0.
-- `combat.test.js` — `resolveAttack` charges the right total; it reads the
+- `combat.test.js`: `resolveAttack` charges the right total; it reads the
   **effective** ROF (Swarm Warheads self-prices); a **cold kind is charged zero**.
-  Mutation-test that last one by removing the guard — this spec's first draft
+  Mutation-test that last one by removing the guard, this spec's first draft
   asserted the exemption was automatic and it was not.
-- `battle-view.test.js` — the fire/aimed tile shows the ROF cost and its note.
+- `battle-view.test.js`: the fire/aimed tile shows the ROF cost and its note.
 
 **The anti-drift test, and the most important one here:** what
 `availableActions` *displays* equals what `resolveAttack` *charges*, table-driven
@@ -265,8 +265,8 @@ across every weapon in the catalog. Two call sites reading one function is the
 does. If the console says 3 and the engine charges 4, this design has built a
 liar. Table-driven so a new weapon cannot quietly desync them.
 
-**Balance — the sweep, extended.** `weapon-sweep.mjs:36` currently stubs
-`bumpHeat() {}`. It becomes a recorder, keyed on identity — `combat.js:722` wires
+**Balance, the sweep, extended.** `weapon-sweep.mjs:36` currently stubs
+`bumpHeat() {}`. It becomes a recorder, keyed on identity, `combat.js:722` wires
 `spendHeat` to `ctx.bumpHeat(target, n)` for defensive reactions, so attacker heat
 and target heat must not be conflated. It records the **full action cost**
 (`ACTIONS.fire.heat` + weapon heat), because `resolveAttack` only charges the
@@ -294,12 +294,12 @@ Today's committed 3000-trial SP/attack, divided by the heat this design charges:
 | Rivet Gun | 3.64 | 3 | 1.21 |
 | Mini Gun | 4.37 | 4 | **1.09** |
 
-**This does not narrow the gap — it inverts it.** Siege Maul goes from mid-table
+**This does not narrow the gap, it inverts it.** Siege Maul goes from mid-table
 to first, Mini Gun from fourth to last, and the spread stays ~3.7× pointing the
 other way. That is F2 mirrored, which is what F1's option D was rejected for.
 
 So: **`ROF_HEAT_PER = 3` is a starting hypothesis, not a settled number.** `/4` is
-the fallback (Mini Gun 3 not 4, Rivet Gun 2 not 3 — gentler, less inversion). The
+the fallback (Mini Gun 3 not 4, Rivet Gun 2 not 3, gentler, less inversion). The
 first sweep decides. This projection is arithmetic on committed data, not a
 simulation: trust its direction, not its magnitude.
 
@@ -312,7 +312,7 @@ where. Optimising SP/heat to 1.0 would be tuning against a metric we know is
 partial.
 
 Concretely: **if a weapon is top-3 on one metric and bottom-3 on the other, the
-rate is wrong.** Today Mini Gun would be 4th on SP/attack and last on SP/heat —
+rate is wrong.** Today Mini Gun would be 4th on SP/attack and last on SP/heat,
 that is the signal to try `/4`.
 
 | question | instrument | bar |
@@ -324,13 +324,13 @@ that is the signal to try `/4`.
 
 ## Out of scope
 
-- **F2-C** (raise D on the ROF-1 weapons) — the `ROF × D` gap above is real and
+- **F2-C** (raise D on the ROF-1 weapons), the `ROF × D` gap above is real and
   now documented. A separate decision, deliberately not bundled.
-- **Turn-level harness** (findings step 5) — the instrument that could actually
+- **Turn-level harness** (findings step 5), the instrument that could actually
   settle the SP/attack-vs-SP/heat question, and value the ~20 upgrades no
   single-shot metric can see.
-- **Giving cold kinds heat** — would make the tax uniform; redesigns Tank/Walker
+- **Giving cold kinds heat**: would make the tax uniform; redesigns Tank/Walker
   identity.
-- **Charged Shot's catch** — untouched here, and the reason heat-on-1s was
+- **Charged Shot's catch**: untouched here, and the reason heat-on-1s was
   rejected.
-- **F4-C, F5-C** — unchanged by this work.
+- **F4-C, F5-C**: unchanged by this work.

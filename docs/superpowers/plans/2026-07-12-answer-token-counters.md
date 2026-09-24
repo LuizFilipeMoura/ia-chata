@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn Answer tokens into a signature second-player mechanic — three Answer-exclusive counters (Riposte / Sidestep the Shooter / Exploit Opening) plus real agency on Return Fire (free pivot-to-face) and Brace (immovable + retaliate).
+**Goal:** Turn Answer tokens into a signature second-player mechanic, three Answer-exclusive counters (Riposte / Sidestep the Shooter / Exploit Opening) plus real agency on Return Fire (free pivot-to-face) and Brace (immovable + retaliate).
 
-**Architecture:** The engine is a headless rules core in `shared/` (`game-state.js` drives turns/preps; `combat.js` resolves attacks). The board has **no coordinates** — arcs and movement are player-supplied per attack and spatial effects are narrated as log instructions, not simulated. So "pivot to face" is a rules/reveal-copy change, "immovable" means *suppressing* combat's knockback instructions, and "move ½ Speed" stays a player-judged `evaded` boolean. New preps are new `preparation.type` values plus branches in the existing facedown-reveal / `react`-verb machinery. The V2 React client (`client/src/v2/`) surfaces them.
+**Architecture:** The engine is a headless rules core in `shared/` (`game-state.js` drives turns/preps; `combat.js` resolves attacks). The board has **no coordinates**: arcs and movement are player-supplied per attack and spatial effects are narrated as log instructions, not simulated. So "pivot to face" is a rules/reveal-copy change, "immovable" means *suppressing* combat's knockback instructions, and "move ½ Speed" stays a player-judged `evaded` boolean. New preps are new `preparation.type` values plus branches in the existing facedown-reveal / `react`-verb machinery. The V2 React client (`client/src/v2/`) surfaces them.
 
 **Tech Stack:** Vanilla ES modules (`shared/`), Node built-in test runner (`node --test`) for engine, React + Vitest for the client.
 
@@ -15,29 +15,29 @@
 - Everything: `npm test`
 
 **Design constants (decided in the spec):**
-- `BRACE_RIPOSTE_STR = 6` (flat, ⚙ TUNING — mirrors Anvil Boss).
+- `BRACE_RIPOSTE_STR = 6` (flat, ⚙ TUNING, mirrors Anvil Boss).
 - Exploit "overcommitted" = attacker spends its **final** action on this shot (`t.actionsUsed + 1 >= t.actionsMax`) **or** attacker heat ≥ its Heat Capacity.
-- Immovable v1 negates the pure knockback/stagger riders (Momentum Swing, Piledriver, Staggering). Tow Chain / Harpoon Winch (fling/reel with their own heat+root economy) are **out of scope** — documented, not silently skipped.
+- Immovable v1 negates the pure knockback/stagger riders (Momentum Swing, Piledriver, Staggering). Tow Chain / Harpoon Winch (fling/reel with their own heat+root economy) are **out of scope**: documented, not silently skipped.
 
 ---
 
 ## File Structure
 
 **Engine (`shared/`)**
-- `game-state.js` — new prep constants + `normalizeAnswerPrep`; `prepName`/`prepEffectLine` entries; `maybeBraceRetaliate` + `braceRetaliatedThisRound` lifecycle; the facedown-trigger predicate + restructure; `answer`/`react` verb branches.
-- `combat.js` — aim-penalty waiver (`waiveAimPenalty`); brace immovability guards on knockback instructions.
-- `game-state.test.js`, `combat.test.js` — mirrored tests.
-- `battle-view.js` (+ `.test.js`) — `prepLabel`/gloss entries for the new types.
-- `glossary.js` (+ `.test.js`) — three new glossary entries.
+- `game-state.js`: new prep constants + `normalizeAnswerPrep`; `prepName`/`prepEffectLine` entries; `maybeBraceRetaliate` + `braceRetaliatedThisRound` lifecycle; the facedown-trigger predicate + restructure; `answer`/`react` verb branches.
+- `combat.js`: aim-penalty waiver (`waiveAimPenalty`); brace immovability guards on knockback instructions.
+- `game-state.test.js`, `combat.test.js`: mirrored tests.
+- `battle-view.js` (+ `.test.js`), `prepLabel`/gloss entries for the new types.
+- `glossary.js` (+ `.test.js`), three new glossary entries.
 
 **Client (`client/src/`)**
-- `state/types.ts` — extend `PrepType`.
-- `v2/overlays/ReactionPicker.tsx` (+ new `.test.tsx`) — `answerMode` prop showing the three counters.
-- `v2/hooks/useV2BattleWatchers.tsx` — pass `answerMode` in the Answer gate.
-- `lib/glossaryTerms.ts` (+ `.test.ts`) — mirror glossary entries.
+- `state/types.ts`: extend `PrepType`.
+- `v2/overlays/ReactionPicker.tsx` (+ new `.test.tsx`), `answerMode` prop showing the three counters.
+- `v2/hooks/useV2BattleWatchers.tsx`: pass `answerMode` in the Answer gate.
+- `lib/glossaryTerms.ts` (+ `.test.ts`), mirror glossary entries.
 
 **Docs**
-- `rules.md` §5 — Return Fire pivot, Brace rewrite, Answer-counters subsection.
+- `rules.md` §5, Return Fire pivot, Brace rewrite, Answer-counters subsection.
 
 ---
 
@@ -74,7 +74,7 @@ test("normalizeAnswerPrep accepts the three Answer counters; normalizePrep rejec
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="normalizeAnswerPrep" shared/game-state.test.js`
-Expected: FAIL — `normalizeAnswerPrep`/`ANSWER_COUNTERS` are not exported (import is `undefined`).
+Expected: FAIL, `normalizeAnswerPrep`/`ANSWER_COUNTERS` are not exported (import is `undefined`).
 
 - [ ] **Step 3: Add the constants and normalizer**
 
@@ -85,7 +85,7 @@ In `shared/game-state.js`, replace the `PREP_TYPES` block (line ~320) with:
 // missing input falls back to brace.
 export const PREP_TYPES = ["brace", "evasive", "return"];
 
-// Answer-exclusive counters (§5) — placeable ONLY by spending an Answer token,
+// Answer-exclusive counters (§5), placeable ONLY by spending an Answer token,
 // never by the Prepare action. Each reads what the enemy just did.
 export const ANSWER_COUNTERS = ["riposte", "sidestep", "exploit"];
 ```
@@ -131,13 +131,13 @@ function prepName(type) {
   return "Brace for Incoming Fire";
 }
 function prepEffectLine(type) {
-  if (type === "evasive") return "Defender may move ½ Speed — the attack can miss entirely.";
+  if (type === "evasive") return "Defender may move ½ Speed, the attack can miss entirely.";
   if (type === "return") return "Defender pivots to face the attacker, then answers with a counter-attack.";
   if (type === "raise-shield") return "Front-arc attack negated; side/rear impacts suffer −4.";
   if (type === "riposte") return "Defender answers the melee attacker with a free melee counter.";
   if (type === "sidestep") return "Defender slips ½ Speed and may engage the shooter.";
   if (type === "exploit") return "Defender pivots and lands a free Aimed counter-shot (no aim penalty).";
-  return "Front-arc impacts suffer −2 — and the braced Rig is immovable and counters melee that fails to breach.";
+  return "Front-arc impacts suffer −2, and the braced Rig is immovable and counters melee that fails to breach.";
 }
 ```
 
@@ -180,7 +180,7 @@ test("computeModifiedAim waives the aim penalty when waiveAimPenalty is set", ()
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="waives the aim penalty" shared/combat.test.js`
-Expected: FAIL — returns 5, expected 3 (opt ignored).
+Expected: FAIL, returns 5, expected 3 (opt ignored).
 
 - [ ] **Step 3: Honor the waiver**
 
@@ -243,14 +243,14 @@ test("Brace immovability suppresses the Momentum Swing knockback", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="Brace immovability" shared/combat.test.js`
-Expected: FAIL — knockback instruction still emitted, no immovable note.
+Expected: FAIL, knockback instruction still emitted, no immovable note.
 
 - [ ] **Step 3: Guard the knockback instructions**
 
 In `shared/combat.js` `resolveAttack`, just after the `pushInstruction` definition (line ~485) add:
 
 ```js
-  // §5 Brace — a braced Rig is IMMOVABLE: pure knockback/stagger riders are
+  // §5 Brace, a braced Rig is IMMOVABLE: pure knockback/stagger riders are
   // narrated as no-ops. (Tow Chain / Harpoon fling+reel, which carry their own
   // heat/root economy, are intentionally out of scope for v1.)
   const targetImmovable = target.preparation?.type === "brace";
@@ -261,8 +261,8 @@ Replace the Momentum Swing block (line ~489):
 ```js
   if (profile.upgrade?.id === "momentum-swing" && attacker.movedThisActivation && landedDamage) {
     pushInstruction(targetImmovable
-      ? `Momentum Swing — ${target.name} is braced (immovable): no knockback.`
-      : `Momentum Swing — knock ${target.name} back 3" (move the mini).`);
+      ? `Momentum Swing, ${target.name} is braced (immovable): no knockback.`
+      : `Momentum Swing, knock ${target.name} back 3" (move the mini).`);
   }
 ```
 
@@ -271,8 +271,8 @@ Replace the Piledriver block (line ~494):
 ```js
   if (piledriverSpend > 0 && landedDamage) {
     pushInstruction(targetImmovable
-      ? `Piledriver — ${target.name} is braced (immovable): no shove.`
-      : `Piledriver — shove ${target.name} back 3" (move the mini).`);
+      ? `Piledriver, ${target.name} is braced (immovable): no shove.`
+      : `Piledriver, shove ${target.name} back 3" (move the mini).`);
   }
 ```
 
@@ -283,11 +283,11 @@ In `shared/combat.js` `applyOnHitPerks`, replace the Staggering block (line ~555
 ```js
   if (perks.includes("Staggering")) {
     if (target.preparation?.type === "brace") {
-      effects.push("Staggering — braced (immovable): no displacement");
+      effects.push("Staggering, braced (immovable): no displacement");
     } else {
       const roll = rollD(6, opts.dice?.stagger, random);
       const note = roll <= 2 ? "pivot left" : roll <= 4 ? 'pushed 3"' : "pivot right";
-      effects.push(`Staggering ${roll} — ${note} (positional)`);
+      effects.push(`Staggering ${roll}, ${note} (positional)`);
     }
   }
 ```
@@ -350,14 +350,14 @@ test("__test.maybeBraceRetaliate counters a withstood front melee once per round
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="maybeBraceRetaliate" shared/game-state.test.js`
-Expected: FAIL — `__test.maybeBraceRetaliate` is undefined.
+Expected: FAIL, `__test.maybeBraceRetaliate` is undefined.
 
 - [ ] **Step 3: Add the helper**
 
 In `shared/game-state.js`, immediately after `maybeAnvilRiposte` (ends line ~1844), add:
 
 ```js
-// §5 Brace retaliation — a melee attacker that swings at a braced FRONT and
+// §5 Brace retaliation, a melee attacker that swings at a braced FRONT and
 // fails to breach it (deals no SP) eats a free flat-STR melee counter. Once per
 // round (braceRetaliatedThisRound). Needs a melee weapon to answer with. Reuses
 // the same resolveAttack/strOverride path as Anvil Boss and `return`.
@@ -376,8 +376,8 @@ function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingA
   defender.braceRetaliatedThisRound = true;
   pushResolution(room, {
     kind: "riposte", actor: defender.owner, rigId: defender.id, rolls: [],
-    summary: `${defender.name} holds the brace and counters ${attacker.name} — free STR ${BRACE_RIPOSTE_STR} melee.`,
-    effects: [`Brace — free STR ${BRACE_RIPOSTE_STR} melee counter (attack failed to breach)`],
+    summary: `${defender.name} holds the brace and counters ${attacker.name}, free STR ${BRACE_RIPOSTE_STR} melee.`,
+    effects: [`Brace, free STR ${BRACE_RIPOSTE_STR} melee counter (attack failed to breach)`],
   });
   resolveAttack(room, defender, attacker, {
     weapon: "melee", target: attacker.name,
@@ -402,7 +402,7 @@ Then export it for tests: in the `__test` object (line ~2888) add `maybeBraceRet
 export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, maybeBraceRetaliate, runRecovery, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };
 ```
 
-(`braceRetaliatedThisRound` needs no explicit init — it reads falsy until set, and `runRecovery` normalizes it each round. No shape change required.)
+(`braceRetaliatedThisRound` needs no explicit init, it reads falsy until set, and `runRecovery` normalizes it each round. No shape change required.)
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -450,7 +450,7 @@ function battleWithPreparedDefender(defenderPrep) {
 }
 
 test("Riposte reveals only on a melee attack, arming a melee counter", () => {
-  // A RANGED attack must NOT trigger Riposte — token stays down, no pendingReaction.
+  // A RANGED attack must NOT trigger Riposte, token stays down, no pendingReaction.
   {
     const { room, a, b } = battleWithPreparedDefender("riposte");
     applyCommand(room, { verb: "action", name: "Atk", action: "fire",
@@ -515,23 +515,23 @@ test("Sidestep defers a ranged attack but ignores melee", () => {
 });
 ```
 
-> **Note on `applyCommand` shape:** the tests above pass the action fields flat inside the command object. If the local `applyCommand` signature differs (e.g. `applyCommand(room, verb, attrs, ctx)`), match the pattern already used by the existing fire/attack tests in this file — search for `action: "fire"` and copy that call shape exactly. Keep the `dice` overrides so rolls are deterministic.
+> **Note on `applyCommand` shape:** the tests above pass the action fields flat inside the command object. If the local `applyCommand` signature differs (e.g. `applyCommand(room, verb, attrs, ctx)`), match the pattern already used by the existing fire/attack tests in this file, search for `action: "fire"` and copy that call shape exactly. Keep the `dice` overrides so rolls are deterministic.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="Riposte reveals|Exploit reveals|Sidestep defers" shared/game-state.test.js`
-Expected: FAIL — counters currently fall through `normalizePrep`/reveal as `brace`-like or don't arm reactions.
+Expected: FAIL, counters currently fall through `normalizePrep`/reveal as `brace`-like or don't arm reactions.
 
 - [ ] **Step 3: Add the trigger predicate**
 
 In `shared/game-state.js`, just above `performAction` (line ~1926), add:
 
 ```js
-// §5 — does a facedown preparation FIRE against this incoming attack? The three
+// §5, does a facedown preparation FIRE against this incoming attack? The three
 // generic preps trigger on any attack; the Answer counters are conditional:
-//  • riposte  — melee attacks only
-//  • sidestep — ranged attacks only
-//  • exploit  — attacker is overcommitted: this shot spends its final action, or
+//  • riposte , melee attacks only
+//  • sidestep, ranged attacks only
+//  • exploit , attacker is overcommitted: this shot spends its final action, or
 //               its heat is at/over its Heat Capacity.
 // A non-triggering counter stays facedown and the attack resolves normally.
 function prepTriggeredBy(prep, weapon, attacker, t) {
@@ -565,7 +565,7 @@ In `shared/game-state.js` `performAction`, replace the whole facedown block (lin
       const cost = 1;
       if (t.actionsUsed + cost > t.actionsMax) return false;
 
-      // Pre-resolution dodges — Evasive and Sidestep — defer the WHOLE attack to
+      // Pre-resolution dodges, Evasive and Sidestep, defer the WHOLE attack to
       // the `react` verb (the defender declares whether it broke LoS/range).
       if (prep.type === "evasive" || prep.type === "sidestep") {
         prep.faceUp = true;
@@ -590,19 +590,19 @@ In `shared/game-state.js` `performAction`, replace the whole facedown block (lin
       }
       // Brace answers a withstood front melee.
       if (prep.type === "brace") maybeBraceRetaliate(room, rig, target, a.weapon, a.arc, res, random);
-      // Anvil Boss — a raised shield answers the first melee attacker to land a hit.
+      // Anvil Boss, a raised shield answers the first melee attacker to land a hit.
       maybeAnvilRiposte(room, rig, target, a.weapon, res.hits, random);
-      // Skewer — a damaging Lance blow impales the target it just locked.
+      // Skewer, a damaging Lance blow impales the target it just locked.
       maybeSkewer(room, rig, target, a.weapon, res);
-      // Dead Weight — a damaging Anchor blow pins the target's next Disengage.
+      // Dead Weight, a damaging Anchor blow pins the target's next Disengage.
       maybeDeadWeight(room, rig, target, a.weapon, res);
-      // Ground Anchor — a damaging Anchor blow drives the anchor into the target it just locked.
+      // Ground Anchor, a damaging Anchor blow drives the anchor into the target it just locked.
       maybeGroundAnchor(room, rig, target, a.weapon, res);
       return true;
     }
 ```
 
-Everything below (the non-facedown `const res = resolveFire(...)` path) is unchanged — a facedown-but-untriggered counter now falls through to it, resolving the attack without revealing the token.
+Everything below (the non-facedown `const res = resolveFire(...)` path) is unchanged, a facedown-but-untriggered counter now falls through to it, resolving the attack without revealing the token.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -618,7 +618,7 @@ git commit -m "feat(preps): conditional facedown triggers for Answer counters"
 
 ---
 
-## Task 6: `react` verb — resolve the three counters (game-state.js)
+## Task 6: `react` verb, resolve the three counters (game-state.js)
 
 Handle the `pendingReaction` kinds `sidestep`, `riposte`, and `exploit`.
 
@@ -676,7 +676,7 @@ test("react resolves a Sidestep: evaded fails the shot and may engage the shoote
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="react resolves a Riposte|react resolves an Exploit|react resolves a Sidestep" shared/game-state.test.js`
-Expected: FAIL — `react` has no branch for these kinds, so `pendingReaction` never clears.
+Expected: FAIL, `react` has no branch for these kinds, so `pendingReaction` never clears.
 
 - [ ] **Step 3: Add the three react branches**
 
@@ -699,7 +699,7 @@ In `shared/game-state.js` `react` verb, immediately after the `else if (pr.kind 
           if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;
           pushResolution(room, {
             kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
-            summary: `${reactor.name} sidesteps — ${attacker.name}'s shot fails.`, effects: [],
+            summary: `${reactor.name} sidesteps, ${attacker.name}'s shot fails.`, effects: [],
           });
         } else {
           resolveFire(room, attacker, reactor, pr.attack, pr.attack.act, options.random);
@@ -787,12 +787,12 @@ test("prepLabel names the Answer counters", () => {
 });
 ```
 
-> **Note:** `shared/battle-view.test.js` already exercises `preparation` (see its line ~141 `type: "return"` test). Copy that exact test's accessor/assertion style — assert that a rig with `preparation.type: "riposte"` surfaces the tag `"Riposte ready"`, `"sidestep"` → `"Sidestep ready"`, `"exploit"` → `"Exploit ready"`. Replace the placeholder above with that concrete assertion before running.
+> **Note:** `shared/battle-view.test.js` already exercises `preparation` (see its line ~141 `type: "return"` test). Copy that exact test's accessor/assertion style, assert that a rig with `preparation.type: "riposte"` surfaces the tag `"Riposte ready"`, `"sidestep"` → `"Sidestep ready"`, `"exploit"` → `"Exploit ready"`. Replace the placeholder above with that concrete assertion before running.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="prepLabel names" shared/battle-view.test.js`
-Expected: FAIL — the new types fall through to `"Braced"`.
+Expected: FAIL, the new types fall through to `"Braced"`.
 
 - [ ] **Step 3: Extend `prepLabel` and the gloss map**
 
@@ -842,7 +842,7 @@ git commit -m "feat(battle-view): labels + gloss keys for Answer counters"
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `shared/glossary.test.js` (match the file's existing lookup helper — it already tests `def`/`term` entries):
+Add to `shared/glossary.test.js` (match the file's existing lookup helper, it already tests `def`/`term` entries):
 
 ```js
 test("glossary defines the three Answer counters", () => {
@@ -854,12 +854,12 @@ test("glossary defines the three Answer counters", () => {
 });
 ```
 
-> Match the existing import/accessor in `shared/glossary.test.js` (it references glossary entries already — copy that pattern rather than assuming `GLOSSARY`).
+> Match the existing import/accessor in `shared/glossary.test.js` (it references glossary entries already, copy that pattern rather than assuming `GLOSSARY`).
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test --test-name-pattern="three Answer counters" shared/glossary.test.js`
-Expected: FAIL — entries missing.
+Expected: FAIL, entries missing.
 
 - [ ] **Step 3: Add the entries**
 
@@ -867,7 +867,7 @@ In `shared/glossary.js`, add three entries following the existing shape (`{ id, 
 
 ```js
   { id: "riposte", term: "Riposte", match: ["riposte"],
-    def: "Answer counter (§5): when an enemy melees this Rig, it makes one free melee attack back — no action, no heat. Answer-token only." },
+    def: "Answer counter (§5): when an enemy melees this Rig, it makes one free melee attack back, no action, no heat. Answer-token only." },
   { id: "sidestep", term: "Sidestep the Shooter", match: ["sidestep", "sidestep the shooter"],
     def: "Answer counter (§5): when an enemy shoots this Rig, slip up to ½ Speed before the shot resolves; if the move reaches the shooter you may engage it. Answer-token only." },
   { id: "exploit", term: "Exploit Opening", match: ["exploit", "exploit opening"],
@@ -956,7 +956,7 @@ describe("ReactionPicker", () => {
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/overlays/ReactionPicker.test.tsx`
-Expected: FAIL — `answerMode` unknown, counters not rendered.
+Expected: FAIL, `answerMode` unknown, counters not rendered.
 
 - [ ] **Step 4: Add `answerMode` + the counter list**
 
@@ -981,7 +981,7 @@ const ANSWER_COUNTERS: { value: PrepType; icon: string; label: string; rule: str
   { value: "sidestep", icon: "🌀", label: "Sidestep the Shooter",
     rule: "When shot, slip ½ Speed before it resolves; if you reach the shooter you may engage it." },
   { value: "exploit", icon: "🎯", label: "Exploit Opening",
-    rule: "When an overcommitted enemy attacks, pivot and land a free Aimed counter-shot — no aim penalty." },
+    rule: "When an overcommitted enemy attacks, pivot and land a free Aimed counter-shot, no aim penalty." },
 ];
 
 const SHIELD_REACTION: { value: PrepType; icon: string; label: string; rule: string } = {
@@ -996,11 +996,11 @@ interface Props {
   value: PrepType;
   onChange: (v: PrepType) => void;
   allowShield?: boolean;  // true when the acting Rig carries a Bulwark Shield
-  answerMode?: boolean;   // true in the Answer-token gate — unlocks the counters
+  answerMode?: boolean;   // true in the Answer-token gate, unlocks the counters
 }
 
 // Shared reaction chooser used by both the Answer-token gate and the Prepare
-// action. Presentational only — parents own the send. The three Answer counters
+// action. Presentational only, parents own the send. The three Answer counters
 // appear only when answerMode is set (they are Answer-exclusive).
 export default function ReactionPicker({ value, onChange, allowShield = false, answerMode = false }: Props) {
   const options = [
@@ -1042,7 +1042,7 @@ In `client/src/v2/hooks/useV2BattleWatchers.tsx`, find the `<ReactionPicker` in 
       />
 ```
 
-(Leave the Prepare-action call site in `client/src/v2/state/V2BattleActionsContext.tsx` unchanged — no `answerMode`, so it stays generic-only.)
+(Leave the Prepare-action call site in `client/src/v2/state/V2BattleActionsContext.tsx` unchanged, no `answerMode`, so it stays generic-only.)
 
 - [ ] **Step 6: Run tests to verify they pass**
 
@@ -1070,13 +1070,13 @@ git commit -m "feat(v2): Answer-mode ReactionPicker exposes the three counters"
 In `rules.md`, replace the Return Fire bullet (line ~171):
 
 ```md
-  - *Return Fire* — after an enemy Rig attacks this Rig, **pivot for free to face that enemy** (this is not a Move — a pinned Rig may still do it), then choose 1 weapon and make an attack against it.
+  - *Return Fire*: after an enemy Rig attacks this Rig, **pivot for free to face that enemy** (this is not a Move, a pinned Rig may still do it), then choose 1 weapon and make an attack against it.
 ```
 
 Replace the Brace bullet (line ~172):
 
 ```md
-  - *Brace for Incoming Fire* — attacks against this Rig's **front arc** suffer **−2 to their Impact Rolls** until the next round. While braced the Rig is **immovable** — it cannot be pushed, shoved, or staggered by weapon perks — and a **melee** attacker that swings at its front and **fails to breach** (deals no SP) eats a **free STR 6 melee counter** (once per round). *⚙ TUNING: counter STR 6.*
+  - *Brace for Incoming Fire*: attacks against this Rig's **front arc** suffer **−2 to their Impact Rolls** until the next round. While braced the Rig is **immovable**: it cannot be pushed, shoved, or staggered by weapon perks, and a **melee** attacker that swings at its front and **fails to breach** (deals no SP) eats a **free STR 6 melee counter** (once per round). *⚙ TUNING: counter STR 6.*
 ```
 
 - [ ] **Step 2: Add the Answer-counters subsection**
@@ -1084,10 +1084,10 @@ Replace the Brace bullet (line ~172):
 In `rules.md`, immediately after the Answer Tokens paragraph (line ~174), add:
 
 ```md
-- **Answer Counters (Answer-token only).** Instead of a generic preparation, an Answer token may place one of three **counters** — reactions the Prepare action cannot buy, the reward for activating second and watching the enemy commit. Each is facedown, revealed on its trigger, one per Rig, and fires only when its condition is met (otherwise it stays down for a later attack):
-  - *Riposte* — when an enemy makes a **melee** attack against this Rig, after it resolves this Rig makes **one free melee attack** back at that attacker (no action, no heat).
-  - *Sidestep the Shooter* — when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**.
-  - *Exploit Opening* — when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-shot** at the location you choose, with **no aim penalty**.
+- **Answer Counters (Answer-token only).** Instead of a generic preparation, an Answer token may place one of three **counters**: reactions the Prepare action cannot buy, the reward for activating second and watching the enemy commit. Each is facedown, revealed on its trigger, one per Rig, and fires only when its condition is met (otherwise it stays down for a later attack):
+  - *Riposte*: when an enemy makes a **melee** attack against this Rig, after it resolves this Rig makes **one free melee attack** back at that attacker (no action, no heat).
+  - *Sidestep the Shooter*: when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**.
+  - *Exploit Opening*: when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-shot** at the location you choose, with **no aim penalty**.
 ```
 
 - [ ] **Step 3: Verify the doc reads cleanly**
@@ -1110,7 +1110,7 @@ git commit -m "docs(rules): §5 Return Fire pivot, Brace rework, Answer counters
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS — all Vitest + `node --test` suites green.
+Expected: PASS, all Vitest + `node --test` suites green.
 
 - [ ] **Step 2: Manual smoke (optional but recommended)**
 
@@ -1129,7 +1129,7 @@ Invoke the `superpowers:finishing-a-development-branch` skill to choose merge/PR
 ## Self-Review
 
 **Spec coverage:**
-- Return Fire pivot-to-face → Task 1 (reveal copy) + Task 10 (rules). ✓ (Engine needs no logic change — arc is player-supplied; the counter already accepts `a.attack.arc`.)
+- Return Fire pivot-to-face → Task 1 (reveal copy) + Task 10 (rules). ✓ (Engine needs no logic change, arc is player-supplied; the counter already accepts `a.attack.arc`.)
 - Brace immovable → Task 3. ✓  Brace retaliate → Task 4 + wired in Task 5. ✓
 - Riposte / Sidestep / Exploit (place, conditional trigger, resolve) → Tasks 1, 5, 6. ✓
 - Exploit aimed-no-penalty → Task 2 + Task 6. ✓
@@ -1139,6 +1139,6 @@ Invoke the `superpowers:finishing-a-development-branch` skill to choose merge/PR
 - Tests mirror existing prep tests → every engine task. ✓
 - Deferred (bank/escalate, >1 token) → not implemented, per spec. ✓
 
-**Placeholder scan:** Two tasks (7 battle-view, 8 glossary) intentionally direct the engineer to match an existing accessor in the target test file rather than guessing its internal helper name — the concrete assertion text (`"Riposte ready"`, entry ids) is specified. All code steps show real code.
+**Placeholder scan:** Two tasks (7 battle-view, 8 glossary) intentionally direct the engineer to match an existing accessor in the target test file rather than guessing its internal helper name, the concrete assertion text (`"Riposte ready"`, entry ids) is specified. All code steps show real code.
 
 **Type consistency:** `preparation.type` string values `riposte`/`sidestep`/`exploit` are identical across `ANSWER_COUNTERS`, `prepTriggeredBy`, the facedown block, the `react` branches, `prepName`/`prepEffectLine`, `prepLabel`, glossary ids, and the client `PrepType`. `pendingReaction.kind` reuses those same strings. `waiveAimPenalty` opt name matches between Task 2 (combat) and Task 6 (react). `braceRetaliatedThisRound` matches between Task 4 helper and recovery reset. `BRACE_RIPOSTE_STR = 6` matches Task 4 and the rules text in Task 10.

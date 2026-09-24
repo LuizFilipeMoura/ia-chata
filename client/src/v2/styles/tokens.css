@@ -1,4 +1,4 @@
-/* V2 design tokens — scoped to .v2-root, never :root, to guarantee no collision
+/* V2 design tokens, scoped to .v2-root, never :root, to guarantee no collision
    with V1's global tokens.css. Every custom property is prefixed --v2-. */
 @import url("https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
 

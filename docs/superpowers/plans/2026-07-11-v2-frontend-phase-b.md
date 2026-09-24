@@ -1,4 +1,4 @@
-# V2 Frontend — Phase B Implementation Plan (Commission Wizard / Forge)
+# V2 Frontend, Phase B Implementation Plan (Commission Wizard / Forge)
 
 > **For agentic workers:** Use superpowers:subagent-driven-development. Steps use `- [ ]`.
 
@@ -24,7 +24,7 @@
 
 **Files:** Create `client/src/v2/lib/commissionData.ts`, `client/src/v2/lib/commissionData.test.ts`.
 
-- [ ] **Step 1** — failing test `client/src/v2/lib/commissionData.test.ts`:
+- [ ] **Step 1**: failing test `client/src/v2/lib/commissionData.test.ts`:
 ```ts
 import { expect, test } from "vitest";
 import { CHASSIS_NAME, weaponGlyph, natureLabel, firstUpgradeId } from "./commissionData";
@@ -48,13 +48,13 @@ test("firstUpgradeId returns the first upgrade id for a weapon or null", () => {
 });
 ```
 
-- [ ] **Step 2** — run `npx vitest run client/src/v2/lib/commissionData.test.ts` → FAIL.
+- [ ] **Step 2**: run `npx vitest run client/src/v2/lib/commissionData.test.ts` → FAIL.
 
-- [ ] **Step 3** — implement `client/src/v2/lib/commissionData.ts`:
+- [ ] **Step 3**: implement `client/src/v2/lib/commissionData.ts`:
 ```ts
 import { WEAPON_UPGRADES } from "/shared/game-state.js";
 
-// Dieselpunk chassis codenames — ported from V1 UnitWizard.
+// Dieselpunk chassis codenames, ported from V1 UnitWizard.
 export const CHASSIS_NAME: Record<string, string> = {
   "light-claw-autocannon": "Ironjaw",
   "light-missile-flamethrower": "Cinderwalk",
@@ -84,8 +84,8 @@ export function firstUpgradeId(name: string): string | null {
 }
 ```
 
-- [ ] **Step 4** — run test → PASS. `npx tsc -p . --noEmit` clean.
-- [ ] **Step 5** — commit: `git add client/src/v2/lib && git commit -m "feat(v2): commission display data + helpers"`
+- [ ] **Step 4**: run test → PASS. `npx tsc -p . --noEmit` clean.
+- [ ] **Step 5**: commit: `git add client/src/v2/lib && git commit -m "feat(v2): commission display data + helpers"`
 
 ---
 
@@ -94,12 +94,12 @@ export function firstUpgradeId(name: string): string | null {
 **Files:** Create `client/src/v2/overlays/CommissionWizard.tsx`, `client/src/v2/overlays/CommissionWizard.test.tsx`, `client/src/v2/styles/forge.css`.
 
 This is a faithful port of `client/src/components/wizards/UnitWizard.tsx` into V2 classes + the mockup's Forge look. **Read the V1 file** and replicate: `WizardState`, `stepsFor`, `selectChassis`, `upgradePath` (with the one-Prototype lock via `otherIsPrototype`), `upgradeBay`, the step bodies (kind cards / chassis roster / equipment grid / unit-weapon grid / confirm), and `submit`. Differences from V1:
-- Props: `{ onClose: () => void }`. Uses `useRoomState`, `useCommands`, `useMySide` (same as V1) but NOT `useUi`/GlossaryText (glossary is Phase D — render upgrade/equipment tag text as plain text).
+- Props: `{ onClose: () => void }`. Uses `useRoomState`, `useCommands`, `useMySide` (same as V1) but NOT `useUi`/GlossaryText (glossary is Phase D, render upgrade/equipment tag text as plain text).
 - Class names are V2 (`v2-fw-*`), styled in `forge.css`.
 - Same `add` field sets and `canAddRigForSide` gating.
-- Keep the `/api/chassis` flavor fetch (optional, falls back to built-ins) — same as V1.
+- Keep the `/api/chassis` flavor fetch (optional, falls back to built-ins), same as V1.
 
-- [ ] **Step 1** — failing test `client/src/v2/overlays/CommissionWizard.test.tsx`:
+- [ ] **Step 1**: failing test `client/src/v2/overlays/CommissionWizard.test.tsx`:
 ```tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -155,10 +155,10 @@ test("commissioning a rig dispatches add with the rig field set", async () => {
 });
 ```
 
-- [ ] **Step 2** — run `npx vitest run client/src/v2/overlays/CommissionWizard.test.tsx` → FAIL.
+- [ ] **Step 2**: run `npx vitest run client/src/v2/overlays/CommissionWizard.test.tsx` → FAIL.
 
-- [ ] **Step 3** — implement `client/src/v2/overlays/CommissionWizard.tsx` by porting V1 `UnitWizard.tsx` (see the file for the full structure). Key requirements the tests pin:
-  - Step rail renders the labels from `stepsFor(kind)` (rig: `["Kind","Chassis","Equipment","Confirm"]`, tank/walker: `["Kind","Weapon","Confirm"]`). NOTE: V1 labels the rig step-1 "Weapons"; use "Chassis" here to match the spec/mockup step rail — but the important test hook is the presence/absence of "Equipment".
+- [ ] **Step 3**: implement `client/src/v2/overlays/CommissionWizard.tsx` by porting V1 `UnitWizard.tsx` (see the file for the full structure). Key requirements the tests pin:
+  - Step rail renders the labels from `stepsFor(kind)` (rig: `["Kind","Chassis","Equipment","Confirm"]`, tank/walker: `["Kind","Weapon","Confirm"]`). NOTE: V1 labels the rig step-1 "Weapons"; use "Chassis" here to match the spec/mockup step rail, but the important test hook is the presence/absence of "Equipment".
   - Kind cards labelled RIG/TANK/WALKER (the clickable card text must include "Tank" so the test can click it).
   - `Next`/`Back` nav; final step button labelled "Commission" (or "Roster full" when `!canAddRigForSide`).
   - Chassis step defaults to `CHASSIS[0]` selected so a straight Next→Next→Next→Commission produces a valid rig `add` with `chassis/lr/melee/equipment` set.
@@ -166,10 +166,10 @@ test("commissioning a rig dispatches add with the rig field set", async () => {
   - Import `firstUpgradeId, CHASSIS_NAME, weaponGlyph, natureLabel, NODE_MARK` from `../lib/commissionData`.
   Use plain text (no GlossaryText) for `.tag`/`.passive`/`.active.text`.
 
-- [ ] **Step 4** — create `client/src/v2/styles/forge.css`, all selectors under `.v2-root`, porting mockup lines 224–308 (scrim + sheet, step rail with numbered chips, kind cards, chassis roster grid cards with emblem/pips/stats, upgrade bay with weapon head + 3-node path where Prototype node is hazard-lit and `.locked` dimmed, equipment grid, confirm rows, Back/Next/Commission nav). Include a `.v2-fw-scrim`/`.v2-fw-card` modal frame.
+- [ ] **Step 4**: create `client/src/v2/styles/forge.css`, all selectors under `.v2-root`, porting mockup lines 224–308 (scrim + sheet, step rail with numbered chips, kind cards, chassis roster grid cards with emblem/pips/stats, upgrade bay with weapon head + 3-node path where Prototype node is hazard-lit and `.locked` dimmed, equipment grid, confirm rows, Back/Next/Commission nav). Include a `.v2-fw-scrim`/`.v2-fw-card` modal frame.
 
-- [ ] **Step 5** — run the test → PASS (2 tests). `npx tsc -p . --noEmit` clean.
-- [ ] **Step 6** — commit: `git add client/src/v2 && git commit -m "feat(v2): commission wizard (rig/tank/walker)"`
+- [ ] **Step 5**: run the test → PASS (2 tests). `npx tsc -p . --noEmit` clean.
+- [ ] **Step 6**: commit: `git add client/src/v2 && git commit -m "feat(v2): commission wizard (rig/tank/walker)"`
 
 ---
 
@@ -177,17 +177,17 @@ test("commissioning a rig dispatches add with the rig field set", async () => {
 
 **Files:** Modify `client/src/v2/V2Terminal.tsx`, `client/src/v2/screens/Squadron.tsx`, `client/src/v2/components/Shell.tsx`, `client/src/v2/screens/Squadron.test.tsx` (update).
 
-- [ ] **Step 1** — Update `Squadron` to call an `onCommission` prop instead of `useWizard().openCommission()`:
+- [ ] **Step 1**: Update `Squadron` to call an `onCommission` prop instead of `useWizard().openCommission()`:
   - Add `onCommission: () => void` to `Squadron`'s props.
   - Replace `const { openCommission } = useWizard();` usage: the add-card `onClick` becomes `() => canAdd && onCommission()`. Remove the `useWizard` import.
   - Update `Squadron.test.tsx`: render `<Squadron onOpenRig={vi.fn()} onCommission={vi.fn()} />`.
 
-- [ ] **Step 2** — Update `Shell` to enable the Forge channel and accept an `onForge` handler:
+- [ ] **Step 2**: Update `Shell` to enable the Forge channel and accept an `onForge` handler:
   - Add optional prop `onForge?: () => void`.
   - In the channel list, make `commission` (Forge) `enabled: true` and, when clicked, call `onForge?.()`. Keep `aria-current` on the active `channel` prop. (Yard stays the active channel; Forge is a button that opens the overlay, not a route.)
   - Update `Shell.test.tsx`'s "only Yard active" assertion: Forge is now **enabled** (a button) but not `aria-current`. Change the test to assert Forge is enabled and `Rules`/`Verdict` remain disabled.
 
-- [ ] **Step 3** — Update `V2Terminal` to own `commissionOpen` and render the wizard:
+- [ ] **Step 3**: Update `V2Terminal` to own `commissionOpen` and render the wizard:
 ```tsx
 import { useState } from "react";
 import { Shell } from "./components/Shell";
@@ -226,9 +226,9 @@ export function V2Terminal() {
 }
 ```
 
-- [ ] **Step 4** — run `npx vitest run client/src/v2` — all green. `npx tsc -p . --noEmit` clean.
-- [ ] **Step 5** — Browser verify (dev server on 5173, backend on 8000): open `/?v2`, join, click "Commission New Rig" → V2 Forge opens; step through Kind→Chassis (pick a chassis, see upgrade bay, select a Prototype, confirm the other weapon's Prototype locks)→Equipment→Confirm→Commission; the new rig appears in the V2 roster. Also click the Forge channel button — opens the same wizard. Confirm no console errors.
-- [ ] **Step 6** — commit: `git add client/src/v2 && git commit -m "feat(v2): wire commission wizard into shell, squadron, forge channel"`
+- [ ] **Step 4**: run `npx vitest run client/src/v2`: all green. `npx tsc -p . --noEmit` clean.
+- [ ] **Step 5**: Browser verify (dev server on 5173, backend on 8000): open `/?v2`, join, click "Commission New Rig" → V2 Forge opens; step through Kind→Chassis (pick a chassis, see upgrade bay, select a Prototype, confirm the other weapon's Prototype locks)→Equipment→Confirm→Commission; the new rig appears in the V2 roster. Also click the Forge channel button, opens the same wizard. Confirm no console errors.
+- [ ] **Step 6**: commit: `git add client/src/v2 && git commit -m "feat(v2): wire commission wizard into shell, squadron, forge channel"`
 
 ---
 

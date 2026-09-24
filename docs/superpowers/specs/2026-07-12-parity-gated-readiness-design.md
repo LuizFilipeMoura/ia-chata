@@ -22,7 +22,7 @@ mark ready until full parity is met.
 - Parity granularity: same number of **Rigs per weight class** (light/medium/heavy/colossal),
   same number of **Tanks**, same number of **Walkers**.
 - Floor of **1 unit** per side (empty rosters can never start).
-- Drop the "Max 1 Colossal per Squadron" rule — parity alone governs composition.
+- Drop the "Max 1 Colossal per Squadron" rule, parity alone governs composition.
 - Surface the mismatch to each player so they know what to add or remove to reach parity.
 
 ## Non-Goals
@@ -101,12 +101,12 @@ parity-breaking edit by the opponent.
 - `canAddRigForSide` returns `true` (adding is always allowed; parity, not a cap,
   governs when the game can start). Keep the function for call-site stability.
 - Update referrers:
-  - `client/shared.d.ts` — drop the two `export const` decls.
-  - `client/src/v2/lib/viewModels.ts` — the `{ count, max }` shape loses its `max`
+  - `client/shared.d.ts`: drop the two `export const` decls.
+  - `client/src/v2/lib/viewModels.ts`: the `{ count, max }` shape loses its `max`
     source. Repurpose to a parity indicator (see below).
-  - `client/src/components/RigAddScreen.tsx` — remove the "Roster full" / "Side full"
+  - `client/src/components/RigAddScreen.tsx`: remove the "Roster full" / "Side full"
     messages tied to the caps.
-  - `server/prompt.js` (~:46) — replace the "at most N Rigs per side / N total" line
+  - `server/prompt.js` (~:46), replace the "at most N Rigs per side / N total" line
     with the parity rule.
 
 ### Client hint engine (client/src/lib/computeFocus.ts)
@@ -141,20 +141,20 @@ surface) to show parity status instead of an "N / max" meter.
   + "Balanced game (recommended)" text with the mandatory mirror rule: both sides field
   the **same number of Rigs in each weight class, the same number of Tanks, and the same
   number of Walkers**. At least one unit per side.
-- **§Alpha note (~:639)** "Squadrons balance by matching composition (§3)" — reword from
+- **§Alpha note (~:639)** "Squadrons balance by matching composition (§3)", reword from
   optional balancing to the enforced parity rule.
 
 ## Testing
 
-- `shared/game-state.test.js` — rewrite the fixed-3 ready/start tests:
+- `shared/game-state.test.js`: rewrite the fixed-3 ready/start tests:
   - Mismatched composition (e.g. 2 light vs 1 light + 1 medium) blocks `ready` and start.
   - Mirrored composition allows both to ready and starts the game.
   - Extra Tank / Walker on one side blocks parity even when Rig counts match.
   - Empty side never reaches parity (floor of 1).
   - Removing a unit from a ready side clears both sides' `ready`.
-- `server/prompt.test.js` — update assertions that reference `MAX_RIGS_PER_SIDE` /
+- `server/prompt.test.js`: update assertions that reference `MAX_RIGS_PER_SIDE` /
   `MAX_RIGS_TOTAL` in the tracker-protocol text to the parity wording.
-- `client/src/lib/computeFocus.test.ts` (if present) — add parity-diff hint cases.
+- `client/src/lib/computeFocus.test.ts` (if present), add parity-diff hint cases.
 
 ## Risk / edge cases
 

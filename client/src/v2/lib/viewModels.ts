@@ -11,7 +11,7 @@ export function spColor(cur: number, max: number): string {
   return "linear-gradient(90deg,#4c9a5f,#6cc47f)";
 }
 
-// Cosmetic only — the game has no tonnage stat. Used for the Yard header flavor.
+// Cosmetic only, the game has no tonnage stat. Used for the Yard header flavor.
 const TONS: Record<string, number> = { light: 6, medium: 8 };
 export function tonnage(rigs: Rig[], side: string): number {
   return rigs

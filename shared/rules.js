@@ -1,5 +1,5 @@
 // Static rulebook data shared by the resolution engine (server) and the
-// battle UI (client). Pure data + tiny lookups — no state, no randomness.
+// battle UI (client). Pure data + tiny lookups, no state, no randomness.
 
 import { hitPart } from "./unit-kinds.js";
 
@@ -28,7 +28,7 @@ export const ACTIONS = {
   // Barrage (§13, Mortar). Commits the tube to a 2-round shelled zone. The
   // per-round +1 heat is upkeep added in Recovery, not on this placing action.
   barrage:  { label: "Barrage",     heat: 0, slot: 1 },
-  // Support-unit module actions (spec: Support Units). Cold — 0 heat — since only
+  // Support-unit module actions (spec: Support Units). Cold, 0 heat, since only
   // Tanks/Walkers carry modules. Each spends one action slot.
   fieldweld:{ label: "Field Weld", heat: 0, slot: 1 },
   vent:     { label: "Vent",       heat: 0, slot: 1 },
@@ -62,11 +62,11 @@ export function heatThreshold(total) {
 // Weight-class Penetration modifier applied to every Wound Roll (§12).
 export const WEIGHT_PEN_MOD = { light: -1, medium: 0 };
 
-// §2/§7.4 — the base D6 target number to hit, before weapon Accuracy and the
+// §2/§7.4, the base D6 target number to hit, before weapon Accuracy and the
 // situation move it. FLAT: the chassis does not decide whether you hit.
 //
 // This was a weight-class map, `{ light: 4, medium: 4, heavy: 3, colossal: 3 }`.
-// combat.js read it as `AIM[attacker.weightClass] ?? 4` — and Tanks and Walkers
+// combat.js read it as `AIM[attacker.weightClass] ?? 4`: and Tanks and Walkers
 // have no weightClass, so they always took the fallback. Once Heavy and Colossal
 // were deleted (2026-07-16) the 3s were unreachable and every unit in the game
 // resolved to 4. The map had stopped being a map.
@@ -74,8 +74,8 @@ export const BASE_AIM = 4;
 
 // Heat Capacity by weight class (rules §6). A Rig is safe at or below this
 // value; each point beyond it adds +2 (capped +10) to the misfire roll.
-// Lives here (not game-state.js) so combat.js — which imports ONLY from
-// rules.js to avoid a cycle with game-state.js — can read it for
+// Lives here (not game-state.js) so combat.js, which imports ONLY from
+// rules.js to avoid a cycle with game-state.js, can read it for
 // conditional Penetration effects (e.g. Opportunist §13).
 export const HEAT_CAPACITY = { light: 6, medium: 5 };
 
@@ -87,12 +87,12 @@ export function hitLocation(kindId, d12) {
 // The wound roll is a d10 (§7.5).
 export const WOUND_DIE = 10;
 
-// The wound roll's floor — the rail that saturates. From effective Penetration
+// The wound roll's floor, the rail that saturates. From effective Penetration
 // T + 4 onward this IS the target number, and further Penetration buys nothing.
 // See `woundTarget`'s floor paragraph for why that is a property and not a bug.
 const WOUND_TN_FLOOR = 2;
 
-// §7.5 — the wound roll. A shot's effective Penetration is compared to the
+// §7.5, the wound roll. A shot's effective Penetration is compared to the
 // struck location's Toughness: roll a d10 against `6 + T - P`, clamped to
 // WOUND_TN_FLOOR..WOUND_DIE. Between the rails each point of Penetration is
 // worth exactly 10%, so the roll reads as a percentage with no lookup table.
@@ -104,7 +104,7 @@ const WOUND_TN_FLOOR = 2;
 // wounds, so no weapon/target/location matchup can be mathematically hopeless.
 // That was the failure mode of the impact-total model this replaces: its base
 // total capped at `6 + Penetration + arc`, leaving 69 combos that could never
-// deal damage at any roll. Do not remove it to "let armour really matter" —
+// deal damage at any roll. Do not remove it to "let armour really matter",
 // that reintroduces the bug. But it is a STANDING guarantee rather than a live
 // one: since Heavy and Colossal were deleted, no matchup's raw TN exceeds the
 // die, so nothing currently leans on this rail. combat.test.js's "the clamp is
@@ -113,21 +113,21 @@ const WOUND_TN_FLOOR = 2;
 //
 // The FLOOR (WOUND_TN_FLOOR) is the live rail, and it guarantees the OPPOSITE
 // thing: a natural 1 never wounds, so no matchup is ever automatic either. Its
-// cost is what the penetration rework exists to address — the TN is pinned at 2
+// cost is what the penetration rework exists to address, the TN is pinned at 2
 // from P = T + 4 onward, so Penetration past T + 4 is spent on nothing. That
 // saturation is a property of the floor, not a defect in it: it is the price of
 // "no matchup is ever automatic".
 // See docs/superpowers/specs/2026-07-14-hit-wound-location-design.md.
 export function woundTarget(pen, toughness) {
   // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
-  // the single most dangerous default in the system. Penetration may coerce — it
-  // fails toward TN 10 (10%) — but T must be real. The guard runs BEFORE the `p`
+  // the single most dangerous default in the system. Penetration may coerce, it
+  // fails toward TN 10 (10%), but T must be real. The guard runs BEFORE the `p`
   // coercion below, so the asymmetry it exists for reads in one glance: T is
   // validated, then P is coerced.
   //
   // The check is `typeof`, not `Number.isFinite(Number(t))`: coercing first
   // reopens the exact hole it means to close, because Number(null), Number(""),
-  // Number(false) and Number([]) are all 0 — and `null` is precisely what a
+  // Number(false) and Number([]) are all 0, and `null` is precisely what a
   // failed lookup used to hand us. Only a real number may pass.
   if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
     throw new Error(`wound roll: toughness must be a number, got ${toughness}`);
@@ -136,10 +136,10 @@ export function woundTarget(pen, toughness) {
   return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, 6 + Math.floor(toughness) - p));
 }
 
-// Toughness of a struck location — the `toughness` argument to `woundTarget`.
+// Toughness of a struck location, the `toughness` argument to `woundTarget`.
 export { toughnessOf } from "./unit-kinds.js";
 
-// §13 Bulwark / Raise Shield — which arcs a raised shield covers. Base: negate
+// §13 Bulwark / Raise Shield, which arcs a raised shield covers. Base: negate
 // the front, blunt (−4) side/rear. Tower Shield upgrade: negation extends to the
 // side arc; only the rear is blunted. Lives here so combat.js can use it without
 // importing game-state.js (which would create a cycle).
@@ -150,7 +150,7 @@ export function shieldCoverage(rig) {
     : { negate: ["front"], blunt: ["side", "rear"] };
 }
 
-// Equipment upgrades — mirrors WEAPON_UPGRADES. Each family offers one upgrade
+// Equipment upgrades, mirrors WEAPON_UPGRADES. Each family offers one upgrade
 // of each nature (Field / Tuned / Prototype), picked at commission. The 8 Field
 // rows carry live effect tags (simple modifiers to existing hooks). The Tuned
 // and Prototype rows ship inert (`effect: {}`, TODO(mechanics)) and are wired in
@@ -159,7 +159,7 @@ export const EQUIPMENT_UPGRADES = {
   "ablative-plating": [
     { id: "reinforced-plating", nature: "field", name: "Reinforced Plating", tag: "Harden gives −2 impact, not −1", effect: { hardenImpact: 2 } },
     { id: "reactive-armor", nature: "tuned", name: "Reactive Armor", tag: "First hit each round hardens that location", effect: { reactiveArmor: true } },
-    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits — each costs heat", catch: "Each charge costs heat", effect: { ablativeCascade: true } },
+    { id: "ablative-cascade", nature: "prototype", name: "Ablative Cascade", tag: "Spend ablative charges to soften incoming hits; each costs heat", catch: "Each charge costs heat", effect: { ablativeCascade: true } },
   ],
   "radiator-array": [
     { id: "twin-radiators", nature: "field", name: "Twin Radiators", tag: "Purge vents −3, not −2", effect: { purgeHeat: -3 } },
@@ -169,17 +169,17 @@ export const EQUIPMENT_UPGRADES = {
   "servo-actuators": [
     { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint reaches 2× Speed, not 1½×", effect: { sprintMult: 2 } },
     { id: "kickstart-pistons", nature: "tuned", name: "Kickstart Pistons", tag: "Charge into contact → first melee after +2 Penetration", effect: { kickstartPistons: true } },
-    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in — heat + cooldown", catch: "Heat and a cooldown", effect: { grapnelLauncher: true } },
+    { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in; heat + cooldown", catch: "Heat and a cooldown", effect: { grapnelLauncher: true } },
   ],
   "overclock-core": [
     { id: "redundant-capacitors", nature: "field", name: "Redundant Capacitors", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
     { id: "adrenaline-surge", nature: "tuned", name: "Adrenaline Surge", tag: "Below half SP, Overclock grants +3 actions", effect: { adrenalineSurge: true } },
-    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 Penetration — but overheat bonus doubles", catch: "Overheat bonus doubles", effect: { reactorOverdrive: true } },
+    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 Penetration; but overheat bonus doubles", catch: "Overheat bonus doubles", effect: { reactorOverdrive: true } },
   ],
   "field-repair-suite": [
     { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
     { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 5 SP on a destroyed location", effect: { battlefieldTriage: true } },
-    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery — at a heat-cap cost", catch: "Costs heat-cap", effect: { naniteSwarm: true } },
+    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery; at a heat-cap cost", catch: "Costs heat-cap", effect: { naniteSwarm: true } },
   ],
   "blast-furnace-core": [
     { id: "insulated-core", nature: "field", name: "Insulated Core", tag: "Safe up to +2 over Capacity, not +1", effect: { thermalMargin: 2 } },
@@ -194,7 +194,7 @@ export const EQUIPMENT_UPGRADES = {
   "reactive-plating": [
     { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 Penetration, not −1", effect: { sideRearPen: -2 } },
     { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: { chaffBurst: true } },
-    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls — at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
+    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls; at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
   ],
 };
 

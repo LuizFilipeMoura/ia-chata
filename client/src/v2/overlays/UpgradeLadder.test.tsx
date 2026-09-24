@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 import { UpgradeLadder } from "./UpgradeLadder";
 import type { UpgradeTier } from "../lib/commissionData";
 
-// Deliberately synthetic — NOT a copy of any catalog row. UpgradeLadder renders
+// Deliberately synthetic, NOT a copy of any catalog row. UpgradeLadder renders
 // whatever it is handed, so every value here is arbitrary to these tests. This
 // fixture used to mirror the real Autocannon ladder verbatim, which made it a
 // second, un-asserted copy of the catalog that nothing could keep honest: it
@@ -35,7 +35,7 @@ test("selected prototype shows payoff, catch and the gate badge", () => {
 
 test("a safe tier reports no catch", () => {
   render(<UpgradeLadder title="Test Weapon" tiers={TIERS} selected="t-field" onSelect={vi.fn()} lockPrototype={false} />);
-  expect(screen.getByText(/None — dependable/i)).toBeInTheDocument();
+  expect(screen.getByText(/None, dependable/i)).toBeInTheDocument();
 });
 
 test("locking the prototype disables its segment", () => {

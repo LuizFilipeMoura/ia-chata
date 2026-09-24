@@ -24,7 +24,7 @@ interface Props {
 }
 
 // The shared reaction chooser used by both the Answer-token gate and the
-// Prepare action. Presentational only — parents own the send.
+// Prepare action. Presentational only, parents own the send.
 export default function ReactionPicker({ value, onChange, allowShield = false }: Props) {
   const options = allowShield ? [...BASE_REACTIONS, SHIELD_REACTION] : BASE_REACTIONS;
   return (

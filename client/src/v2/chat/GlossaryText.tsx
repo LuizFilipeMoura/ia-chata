@@ -26,7 +26,7 @@ export function GlossaryText({ text }: { text: string }) {
             data-term={seg.id}
             role="button"
             tabIndex={0}
-            aria-label={`${seg.term} — glossary term`}
+            aria-label={`${seg.term}, glossary term`}
             onClick={(e) => showTip(seg.id!, e.currentTarget)}
             onKeyDown={onKeyDown(seg.id)}
           >

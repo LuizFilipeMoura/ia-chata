@@ -4,7 +4,7 @@ import { rigEffects } from "/shared/game-state.js";
 import { SPEED, holdMsFor } from "./constants";
 import "../styles/overlay.css";
 
-// Move and Sprint resolve on the tabletop, not on the device — the console can't
+// Move and Sprint resolve on the tabletop, not on the device, the console can't
 // see the model shift. So instead of firing the action the instant it's tapped,
 // we hold the player on a timed drawer: the Confirm button stays locked for
 // MOVE_HOLD_MS (long enough to actually push the Rig) before it unlocks. Cancel
@@ -28,10 +28,10 @@ export default function MoveBody({
   // Field upgrade), rounded to a whole inch so table measuring stays clean.
   const mult = eff.sprintMult;
   const dist = sprint ? Math.round(base * mult) : base;
-  // The reach label rides the same value as the distance — printing a literal
+  // The reach label rides the same value as the distance, printing a literal
   // "1½×" next to a 2×-derived number is how "16" (1½× Speed)" ships.
   const reachLabel = mult === 1.5 ? "1½× Speed" : `${mult}× Speed`;
-  // Sprint heat is engine-derived (Servo Actuators → 1) and floored at 1 — never
+  // Sprint heat is engine-derived (Servo Actuators → 1) and floored at 1, never
   // free. Move is always +1. Reading rigEffects keeps this drawer identical to
   // the picker chip and to what resolution charges.
   const heat = sprint ? eff.actionHeat.sprint : 1;
@@ -87,7 +87,7 @@ export default function MoveBody({
             defaultValue=""
             onChange={(e) => onEngageChange(e.target.value)}
           >
-            <option value="">— none —</option>
+            <option value="">, none,</option>
             {enemies.map((e) => (
               <option key={e.id} value={e.name}>{e.name}</option>
             ))}
@@ -99,7 +99,7 @@ export default function MoveBody({
           <span>Cancel</span>
         </button>
         <button type="button" className="v2-dwr-btn primary" disabled={!done} onClick={onConfirm}>
-          <span>{done ? "Done — moved" : `Moving… ${remaining}s`}</span>
+          <span>{done ? "Done, moved" : `Moving… ${remaining}s`}</span>
         </button>
       </div>
     </>

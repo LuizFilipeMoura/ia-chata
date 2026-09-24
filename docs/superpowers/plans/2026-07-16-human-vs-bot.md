@@ -10,19 +10,19 @@
 
 **Design:** `docs/superpowers/specs/2026-07-16-human-vs-bot-design.md`
 
-**Scope note:** 1c (digital move-targeting UI) is **deferred to its own spec** — see design §5. After this plan, a human can start a match and the bot plays its whole turn, but the human's digital *Move* action isn't issuable until that follow-up ships. Every other task below is fully in scope.
+**Scope note:** 1c (digital move-targeting UI) is **deferred to its own spec**: see design §5. After this plan, a human can start a match and the bot plays its whole turn, but the human's digital *Move* action isn't issuable until that follow-up ships. Every other task below is fully in scope.
 
 ---
 
 ## File Structure
 
-- `shared/game-state.js` — **modify.** Add the `setbot` verb, the `BOT_PRESETS` export, and two module-private helpers (`generateBotOpponent`, `fillBotOpponentIfNeeded`); wire the helper into the `ready` verb. This is the authoritative engine; the flag/generation must live here so both the HTTP route and tests exercise identical logic.
-- `shared/game-state.test.js` — **modify.** Unit-level behaviour tests for `setbot` and the lazy mirror-gen/auto-ready via `applyCommand`.
-- `server/routes/game.test.js` — **modify.** One end-to-end HTTP test: a human starts vs a bot and the `driveBots` hook plays the bot out.
-- `client/src/v2/screens/Squadron.tsx` — **modify.** Opponent selector (fires `setbot`) and a bot-aware READY gate.
-- `client/src/v2/screens/Squadron.test.tsx` — **modify.** Component tests for the selector and the relaxed gate.
+- `shared/game-state.js`: **modify.** Add the `setbot` verb, the `BOT_PRESETS` export, and two module-private helpers (`generateBotOpponent`, `fillBotOpponentIfNeeded`); wire the helper into the `ready` verb. This is the authoritative engine; the flag/generation must live here so both the HTTP route and tests exercise identical logic.
+- `shared/game-state.test.js`: **modify.** Unit-level behaviour tests for `setbot` and the lazy mirror-gen/auto-ready via `applyCommand`.
+- `server/routes/game.test.js`: **modify.** One end-to-end HTTP test: a human starts vs a bot and the `driveBots` hook plays the bot out.
+- `client/src/v2/screens/Squadron.tsx`: **modify.** Opponent selector (fires `setbot`) and a bot-aware READY gate.
+- `client/src/v2/screens/Squadron.test.tsx`: **modify.** Component tests for the selector and the relaxed gate.
 
-No new files — every change extends an existing, focused module.
+No new files, every change extends an existing, focused module.
 
 ---
 
@@ -81,7 +81,7 @@ test("BOT_PRESETS lists exactly the three tunable presets", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `BOT_PRESETS` is not exported, and `setbot` is an unknown verb so the flag never changes.
+Expected: FAIL, `BOT_PRESETS` is not exported, and `setbot` is an unknown verb so the flag never changes.
 
 - [ ] **Step 3: Add the `BOT_PRESETS` export**
 
@@ -137,7 +137,7 @@ git commit -m "feat(bot): setbot verb flags a side + BOT_PRESETS export"
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `shared/game-state.test.js`. These assert *composition and uniqueness*, never specific chassis ids — per the repo rule that chassis/loadouts get tuned (memory: no-value-pinning-tests). A small deterministic PRNG makes the random draw reproducible.
+Add to `shared/game-state.test.js`. These assert *composition and uniqueness*, never specific chassis ids, per the repo rule that chassis/loadouts get tuned (memory: no-value-pinning-tests). A small deterministic PRNG makes the random draw reproducible.
 
 ```js
 // A tiny deterministic PRNG so a bot-force draw is reproducible in tests.
@@ -190,7 +190,7 @@ test("readying against a bot builds a mirrored, distinct-chassis force and start
   assert.equal(new Set(chassis).size, chassis.length, "no chassis repeats across the battle");
 
   // Standard build: bot rigs carry their chassis's primary suggested equipment
-  // and default (Field) weapon upgrades — no Prototype.
+  // and default (Field) weapon upgrades, no Prototype.
   for (const r of bot) {
     assert.equal(r.equipment, CHASSIS_PRIMARY_EQUIPMENT[r.chassis] ?? null);
   }
@@ -241,7 +241,7 @@ test("human-vs-human ready is unchanged by the bot fill (no bot flag = no-op)", 
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — the bot side stays empty (no generation exists), so `started` is false / composition assertions fail.
+Expected: FAIL, the bot side stays empty (no generation exists), so `started` is false / composition assertions fail.
 
 - [ ] **Step 3: Add the generation helpers**
 
@@ -249,12 +249,12 @@ In `shared/game-state.js`, just after `sidesAtParity` (near line 1342), add:
 
 ```js
 // Build a random force for a bot opponent that mirrors the human side's rig
-// composition — same count per weight class — at Standard loadouts, keeping the
+// composition, same count per weight class, at Standard loadouts, keeping the
 // battle-wide "one chassis per battle" invariant (no chassis repeats across
 // either side). Digital rooms are Rigs-only, so only rig weight-class counts
 // matter. Deterministic under an injected `random`. Returns { ok: true }, or
 // { error } when a weight class can't be filled from the remaining distinct
-// chassis — the caller rejects the ready so nothing partial is committed.
+// chassis, the caller rejects the ready so nothing partial is committed.
 function generateBotOpponent(room, humanSideId, botSideId, random = Math.random) {
   const used = new Set(room.rigs.map((r) => r.chassis).filter(Boolean));
   const need = {};
@@ -267,7 +267,7 @@ function generateBotOpponent(room, humanSideId, botSideId, random = Math.random)
   for (const [cls, count] of Object.entries(need)) {
     const pool = CHASSIS.filter((c) => c.class === cls && !used.has(c.id));
     if (pool.length < count) {
-      return { error: `Not enough distinct ${cls} chassis remain for the bot to match your force — field fewer ${cls} Rigs.` };
+      return { error: `Not enough distinct ${cls} chassis remain for the bot to match your force, field fewer ${cls} Rigs.` };
     }
     // Fisher-Yates shuffle under the injected random, then take `count`.
     for (let i = pool.length - 1; i > 0; i--) {
@@ -278,7 +278,7 @@ function generateBotOpponent(room, humanSideId, botSideId, random = Math.random)
   }
   for (const pb of picks) {
     // Standard build: default (Field) weapon upgrades + the chassis's primary
-    // suggested equipment — the same construction the seed verb uses.
+    // suggested equipment, the same construction the seed verb uses.
     const unit = makeUnit("rig", room.nextRigId, uniqueRigName(room, pb.name), botSideId, {
       weightClass: pb.class, longRange: pb.longRange, melee: pb.melee,
       chassis: pb.id, sp: pb.sp,
@@ -338,7 +338,7 @@ Replace the existing `ready` branch body (near line 3382). The change: move the 
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS (the five new tests plus the whole existing file). If a pre-existing ready test regresses, it will show here — the branch is behaviour-preserving for human-vs-human, so investigate any failure rather than editing the test.
+Expected: PASS (the five new tests plus the whole existing file). If a pre-existing ready test regresses, it will show here, the branch is behaviour-preserving for human-vs-human, so investigate any failure rather than editing the test.
 
 - [ ] **Step 6: Commit**
 
@@ -354,7 +354,7 @@ git commit -m "feat(bot): lazy mirror-force gen + auto-ready on human ready vs b
 **Files:**
 - Test: `server/routes/game.test.js` (add one test alongside the existing `driveBots hook` test near line 123; the file already imports `CHASSIS`, `claimSide`, `applyCommand` and has the `post`/`store` harness)
 
-This proves the whole route path: a human sets the bot flag and readies over HTTP, the server generates the bot force, starts the game, and the `driveBots` hook plays the bot out — all through `createGameRouter`.
+This proves the whole route path: a human sets the bot flag and readies over HTTP, the server generates the bot force, starts the game, and the `driveBots` hook plays the bot out, all through `createGameRouter`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -400,7 +400,7 @@ Expected: FAIL before Tasks 1–2 exist. (Run it after Tasks 1–2 are committed
 
 - [ ] **Step 3: No route code change needed**
 
-`server/routes/game.js` already runs `driveBots(room)` after every applied command and forwards `publicState`. The `setbot` and `ready` verbs added in Tasks 1–2 flow through the existing `/command` handler untouched. Confirm by reading `server/routes/game.js:77-103` — no edit required.
+`server/routes/game.js` already runs `driveBots(room)` after every applied command and forwards `publicState`. The `setbot` and `ready` verbs added in Tasks 1–2 flow through the existing `/command` handler untouched. Confirm by reading `server/routes/game.js:77-103`: no edit required.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -473,7 +473,7 @@ Add `bot?: string | null` to the side shape used in `ServerState` if the type do
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `npx vitest run client/src/v2/screens/Squadron.test.tsx`
-Expected: FAIL — no opponent buttons exist, and with the current gate the READY button is disabled because `!atParity` (enemy side empty).
+Expected: FAIL, no opponent buttons exist, and with the current gate the READY button is disabled because `!atParity` (enemy side empty).
 
 - [ ] **Step 3: Allow `bot` on the side type**
 
@@ -503,12 +503,12 @@ Replace the `readyDisabled` line:
 
 ```tsx
   // A bot opponent is generated server-side on ready, so its side needn't be at
-  // parity yet — gate on your own roster being non-empty and the field locked.
+  // parity yet, gate on your own roster being non-empty and the field locked.
   const rosterReady = enemyBot ? count >= 1 : atParity;
   const readyDisabled = started || myReady || !rosterReady || !field?.locked;
 ```
 
-Add the opponent selector inside the `{!started && ( ... )}` lobby block — place it just above the `v2-yard-ready` block (after the `Commission New Rig` button):
+Add the opponent selector inside the `{!started && ( ... )}` lobby block, place it just above the `v2-yard-ready` block (after the `Commission New Rig` button):
 
 ```tsx
       {!started && (
@@ -552,7 +552,7 @@ Expected: PASS (both new tests plus the two existing Squadron tests).
 In `client/src/v2/styles/squadron.css`, append lightweight styles so the control isn't unstyled. Match the file's existing token/class conventions:
 
 ```css
-/* Pre-battle opponent selector — Human vs a difficulty-preset bot. */
+/* Pre-battle opponent selector, Human vs a difficulty-preset bot. */
 .v2-yard-opponent { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
 .v2-yard-opponent-opts { display: flex; flex-wrap: wrap; gap: 6px; }
 .v2-yard-opp-btn {
@@ -563,7 +563,7 @@ In `client/src/v2/styles/squadron.css`, append lightweight styles so the control
 .v2-yard-opponent-sub { font-size: 11px; opacity: 0.7; }
 ```
 
-(If those CSS variables aren't defined in this codebase, use the literal fallbacks shown — grep `squadron.css` for an existing `--v2-` token to confirm the right names.)
+(If those CSS variables aren't defined in this codebase, use the literal fallbacks shown, grep `squadron.css` for an existing `--v2-` token to confirm the right names.)
 
 - [ ] **Step 7: Run the full client suite to confirm nothing else broke**
 
@@ -586,11 +586,11 @@ git commit -m "feat(bot): lobby opponent selector + bot-aware ready gate"
 - [ ] **Step 1: Run the whole test suite**
 
 Run: `npm test`
-Expected: PASS — Vitest (client) and `node --test` (shared + server + scripts) both green.
+Expected: PASS, Vitest (client) and `node --test` (shared + server + scripts) both green.
 
 - [ ] **Step 2: Manual smoke via the preview**
 
-Start the dev server (preview_start with the dev config), open the V2 lobby in a fresh digital room, commission 2–3 rigs on your side, lock the field, pick "Balanced Bot", tap READY. Confirm: the match starts, the enemy roster appears mirrored to your composition with distinct chassis, and the bot takes its turn (state arrives resolved after your first command). Note: you cannot issue your own digital *Move* yet — that is the deferred 1c targeting UI.
+Start the dev server (preview_start with the dev config), open the V2 lobby in a fresh digital room, commission 2–3 rigs on your side, lock the field, pick "Balanced Bot", tap READY. Confirm: the match starts, the enemy roster appears mirrored to your composition with distinct chassis, and the bot takes its turn (state arrives resolved after your first command). Note: you cannot issue your own digital *Move* yet, that is the deferred 1c targeting UI.
 
 - [ ] **Step 3: Commit any smoke-fix (only if needed)**
 
@@ -599,7 +599,7 @@ git add -A
 git commit -m "fix(bot): <describe the smoke-test fix>"
 ```
 
-(Skip if the smoke test was clean. Never `git add -A` blindly if unrelated changes are staged — this repo has a concurrent committer; stage only files you touched.)
+(Skip if the smoke test was clean. Never `git add -A` blindly if unrelated changes are staged, this repo has a concurrent committer; stage only files you touched.)
 
 ---
 
@@ -614,6 +614,6 @@ git commit -m "fix(bot): <describe the smoke-test fix>"
 - Design "Testing" list → Tasks 1–4 test steps + Task 3 full loop. ✓
 - Design constraints (7 light / 4 medium pool, parity signature, sides always exist, digital = Rigs-only) → encoded in Task 2's helper + the infeasible-guard test. ✓
 
-**Placeholder scan:** none — every code step shows complete code; the one conditional ("if those CSS vars aren't defined") gives literal fallbacks.
+**Placeholder scan:** none, every code step shows complete code; the one conditional ("if those CSS vars aren't defined") gives literal fallbacks.
 
 **Type/name consistency:** `generateBotOpponent` and `fillBotOpponentIfNeeded` are defined in Task 2 and referenced only there; `BOT_PRESETS` is exported in Task 1 and consumed in Task 4; `setbot`/`ready` verb names and the `{ side, preset }` attrs match across Tasks 1, 3, 4; `enemyBot`/`rosterReady`/`readyDisabled` are consistent within Task 4.

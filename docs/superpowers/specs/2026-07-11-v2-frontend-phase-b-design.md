@@ -1,4 +1,4 @@
-# V2 Frontend — Phase B Design (Commission Wizard / Forge)
+# V2 Frontend, Phase B Design (Commission Wizard / Forge)
 
 **Date:** 2026-07-11
 **Status:** Approved (pre-approved by user for all 4 phases)
@@ -15,13 +15,13 @@ per-weapon upgrade paths with the one-Prototype-per-rig rule, equipment, and con
 
 - New overlay `client/src/v2/overlays/CommissionWizard.tsx`, opened from the Yard's
   "Commission New Rig" button (and the now-enabled **Forge** channel button). It is a
-  modal sheet inside `.v2-root` — same overlay pattern as `RigTerminal`. (The mockup draws
+  modal sheet inside `.v2-root`: same overlay pattern as `RigTerminal`. (The mockup draws
   Forge as a full channel screen; we render it as a modal sheet to match V1's portal model
   and Phase A's overlay infrastructure. Visuals still follow mockup lines 224–308.)
 - V2Terminal owns `commissionOpen` state (replaces the interim `useWizard().openCommission()`).
   Squadron gets an `onCommission` prop. The Shell's channel nav enables **Forge**, which
   toggles the same overlay.
-- Reuses 100% of shared data + the `add` command — no game logic. Same fields V1 sends
+- Reuses 100% of shared data + the `add` command, no game logic. Same fields V1 sends
   (verified from `client/src/components/wizards/UnitWizard.tsx`):
   - Rig: `add { name, kind:"rig", chassis, class, owner, lr, melee, longRangeUpgrade, meleeUpgrade, equipment }`
   - Tank/Walker: `add { name, kind, owner, unit }`
@@ -29,7 +29,7 @@ per-weapon upgrade paths with the one-Prototype-per-rig rule, equipment, and con
   WEAPON_UPGRADES, RIG_DEFAULTS, HEAT_CAPACITY, UNIT_WEAPONS, CHASSIS, upgradeNature`.
   `UNIT_KINDS` from `/shared/unit-kinds.js`. Chassis codenames + weapon glyphs + nature
   labels are display maps ported from V1's wizard.
-- Chassis flavor text is fetched from `/api/chassis` (optional; falls back to built-ins) —
+- Chassis flavor text is fetched from `/api/chassis` (optional; falls back to built-ins),
   ported from V1.
 
 ## Components / files
@@ -39,9 +39,9 @@ client/src/v2/
   overlays/CommissionWizard.tsx     the wizard (kind → chassis/upgrade bay → equipment → confirm; tank/walker: kind → weapon → confirm)
   lib/commissionData.ts             ported display maps (CHASSIS_NAME, WEAPON_GLYPH, NATURE_LABEL) + firstUpgradeId helper
   styles/forge.css                  scoped Forge styling (step rail, kind cards, chassis grid, upgrade bay, equipment grid, confirm)
-  V2Terminal.tsx                    MODIFY — own commissionOpen; render wizard
-  screens/Squadron.tsx              MODIFY — add-card calls onCommission (not V1 openCommission)
-  components/Shell.tsx              MODIFY — enable Forge channel, accept onForge handler
+  V2Terminal.tsx                    MODIFY, own commissionOpen; render wizard
+  screens/Squadron.tsx              MODIFY, add-card calls onCommission (not V1 openCommission)
+  components/Shell.tsx              MODIFY, enable Forge channel, accept onForge handler
 ```
 
 ## Behavior / data flow

@@ -101,7 +101,7 @@ export function ScanCommission({ onClose }: { onClose: () => void }) {
         if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play(); }
         raf = requestAnimationFrame(tick);
       })
-      .catch(() => setError("Camera unavailable — commission from the wizard instead."));
+      .catch(() => setError("Camera unavailable, commission from the wizard instead."));
 
     return () => { done = true; cancelAnimationFrame(raf); stream?.getTracks().forEach((t) => t.stop()); };
     // eslint-disable-next-line react-hooks/exhaustive-deps

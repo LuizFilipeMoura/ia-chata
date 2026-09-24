@@ -70,7 +70,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
     if (editRig) {
       const eq = editRig.equipment ?? Object.keys(EQUIPMENT)[0];
       return {
-        step: 2, // Weapons — first editable step
+        step: 2, // Weapons, first editable step
         kind: "rig",
         cls: editRig.weightClass || "medium",
         owner: editRig.owner || "a",
@@ -257,7 +257,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
       <div className="v2-fw-body">
         <div className="v2-fc-cue">
           <span className="v2-fc-cue-lead">◈ Choose your chassis</span>
-          <span className="v2-fc-cue-sub v2-eyebrow">— weapons &amp; weight class are fixed by the frame</span>
+          <span className="v2-fc-cue-sub v2-eyebrow">, weapons &amp; weight class are fixed by the frame</span>
         </div>
         <div className="v2-fc-roster">
           {availableChassis.map((pb) => {
@@ -330,11 +330,11 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
             );
           })}
           {availableChassis.length === 0 && (
-            <div className="v2-fw-hint">Every chassis is already commissioned — remove a Rig to free one.</div>
+            <div className="v2-fw-hint">Every chassis is already commissioned, remove a Rig to free one.</div>
           )}
         </div>
         <div className="v2-fw-hint">
-          Weapons and weight class are fixed by the chassis. Pick a frame — you'll tune its weapons next.
+          Weapons and weight class are fixed by the chassis. Pick a frame, you'll tune its weapons next.
         </div>
       </div>
     );
@@ -344,7 +344,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
       <div className="v2-fw-body">
         <div className="v2-fc-cue">
           <span className="v2-fc-cue-lead">◈ Choose a loadout</span>
-          <span className="v2-fc-cue-sub v2-eyebrow">— gun &amp; two support modules are fixed by the frame</span>
+          <span className="v2-fc-cue-sub v2-eyebrow">, gun &amp; two support modules are fixed by the frame</span>
         </div>
         <div className="v2-fc-grid v2-grid-2">
           {templates.map((t) => {
@@ -362,13 +362,13 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
                 <div className="v2-fc-equip-passive">
                   {w
                     ? <>{weaponGlyph(t.unit!)} {t.unit} · Penetration {w.pen} · ROF {w.rof}</>
-                    : <>⚙ Sidearm · Penetration 4 · ROF 2 — light plinker</>}
+                    : <>⚙ Sidearm · Penetration 4 · ROF 2, light plinker</>}
                 </div>
                 <div className="v2-fc-equip-active">
                   {t.modules.map((m) => (
                     <div key={m} className="v2-fc-module">
                       <b>{MODULES[m].label}</b>
-                      {MODULE_BLURB[m] ? <> — {MODULE_BLURB[m]}</> : null}
+                      {MODULE_BLURB[m] ? <>, {MODULE_BLURB[m]}</> : null}
                     </div>
                   ))}
                 </div>
@@ -385,7 +385,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
       <div className="v2-fw-body">
         <div className="v2-fc-cue">
           <span className="v2-fc-cue-lead">◈ Tune your weapons</span>
-          <span className="v2-fc-cue-sub v2-eyebrow">— climb each track; one Prototype per rig</span>
+          <span className="v2-fc-cue-sub v2-eyebrow">, climb each track; one Prototype per rig</span>
         </div>
         <UpgradeLadder
           title={state.longRange}
@@ -412,7 +412,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
     const w = t?.unit ? UNIT_WEAPONS[t.unit] : null;
     body = (
       <div className="v2-fw-body v2-fc-confirm">
-        <div className="v2-fc-confirm-name v2-title">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
+        <div className="v2-fc-confirm-name v2-title">{unitName()}, {UNIT_KINDS[state.kind].label}</div>
         <div className="v2-fc-confirm-row">
           {w
             ? <>{weaponGlyph(t!.unit!)} {t!.unit} · Penetration {w.pen} · ROF {w.rof}</>
@@ -428,7 +428,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
       <div className="v2-fw-body">
         <div className="v2-fc-cue">
           <span className="v2-fc-cue-lead">◈ Fit equipment</span>
-          <span className="v2-fc-cue-sub v2-eyebrow">— one slot per rig</span>
+          <span className="v2-fc-cue-sub v2-eyebrow">, one slot per rig</span>
         </div>
         <div className="v2-fc-grid v2-grid-2">
           {Object.entries(EQUIPMENT).map(([id, e]) => {
@@ -451,7 +451,7 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
                   <div className="v2-fc-equip-label v2-title">{e.label}</div>
                   <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
                   <div className="v2-fc-equip-active">
-                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
+                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat), {e.active.text}
                   </div>
                 </button>
                 {sel ? (
@@ -474,10 +474,10 @@ export function CommissionWizard({ onClose, editRig }: { onClose: () => void; ed
     const lrUpgrade = (WEAPON_UPGRADES[state.longRange] || []).find((u) => u.id === state.longRangeUpgrade);
     const meleeUpgrade = (WEAPON_UPGRADES[state.melee] || []).find((u) => u.id === state.meleeUpgrade);
     const equipUpgrade = (EQUIPMENT_UPGRADES[state.equipment] || []).find((u) => u.id === state.equipmentUpgrade);
-    // state.step === 4 && state.kind === "rig" — rig Confirm (the only combo left)
+    // state.step === 4 && state.kind === "rig", rig Confirm (the only combo left)
     body = (
       <div className="v2-fw-body v2-fc-confirm">
-        <div className="v2-fc-confirm-name v2-title">{unitName()} — {state.cls}</div>
+        <div className="v2-fc-confirm-name v2-title">{unitName()}, {state.cls}</div>
         <div className="v2-fc-confirm-row">{weaponGlyph(state.longRange)} {state.longRange} · {lrUpgrade?.name || "Upgrade ?"}</div>
         <div className="v2-fc-confirm-row">{weaponGlyph(state.melee)} {state.melee} · {meleeUpgrade?.name || "Upgrade ?"}</div>
         <div className="v2-fc-confirm-row">🛠 {e.label} · {equipUpgrade?.name || "Upgrade ?"}</div>

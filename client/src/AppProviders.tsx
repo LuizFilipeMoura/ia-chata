@@ -10,7 +10,7 @@ import { GlossaryTipProvider } from "./state/GlossaryTipContext";
 // The app's provider composition, shared by main.tsx and provider-integration
 // tests. GlossaryTipProvider sits ABOVE DrawerProvider and WizardProvider so the
 // glossary terms rendered inside their portalled overlays (drawers, wizards) can
-// resolve useGlossaryTip — a portal inherits context from where it is created in
+// resolve useGlossaryTip, a portal inherits context from where it is created in
 // the React tree, not from where it mounts in the DOM.
 //
 // BattleActionsProvider must sit ABOVE WizardProvider: WizardProvider portals the

@@ -1,4 +1,4 @@
-# V2 RollConsole redesign — "Terminal Sibling"
+# V2 RollConsole redesign, "Terminal Sibling"
 
 **Date:** 2026-07-11
 **Status:** Approved, ready for implementation
@@ -15,7 +15,7 @@ of the V2 dieselpunk system. Confirmed pain points:
 2. **Frame fights itself.** An oil top edge (`--v2-oil-deep`), gray rivet side borders
    (`--v2-rivet`), and the animated amber ring are three competing border treatments.
 3. **Cramped box-in-box.** The damage breakdown nests a panel inside the console inside
-   per-term chip wells, at 400px width — dense and busy.
+   per-term chip wells, at 400px width, dense and busy.
 4. Fonts, spacing, and CSS overall feel off-system relative to calmer panels (Forge,
    Drawer, Rig Terminal).
 
@@ -23,7 +23,7 @@ The header hatch stripe is liked and must be kept.
 
 ## Chosen direction
 
-**C1 — Terminal Sibling with labelled zones.** Make the console a literal sibling of the
+**C1, Terminal Sibling with labelled zones.** Make the console a literal sibling of the
 Rig Control Terminal (`rig-terminal.css` / `RigTerminal.tsx`): same frame idiom, content
 split into stacked labelled zones separated by 1px dividers, breakdown flattened to a
 single inline equation in one sunken well. The two overlays should read as one family.
@@ -35,7 +35,7 @@ single inline equation in one sunken well. The two overlays should read as one f
 - Base classes stay `v2-panel v2-panel--sharp` (composed from primitives, not
   reimplemented).
 - Override `border-color: var(--v2-oil-ring)` so the whole outline is one unified amber
-  frame — matches the glow, removes the oil-top / gray-side / animated-ring mismatch.
+  frame, matches the glow, removes the oil-top / gray-side / animated-ring mismatch.
 - **Depth fix:** keep a *static* deep drop shadow on `.v2-roll-console`'s `box-shadow`
   (`inset 0 1px 0 …, 0 26px 60px rgba(0,0,0,.75)`). Move the breathing glow to a
   `.v2-roll-console::after` ring overlay that animates **opacity** (`glowbreath`
@@ -50,7 +50,7 @@ single inline equation in one sunken well. The two overlays should read as one f
 - Header (`.v2-roll-head`) kept verbatim, including the redline hatch background.
 - Width `min(480px, 100%)` (up from 400px).
 
-### Layout — stacked labelled zones
+### Layout, stacked labelled zones
 
 A repeating `.v2-roll-zone` block: `padding: 16px 20px`, `border-bottom: 1px solid
 var(--v2-line)`; last zone drops the border. Each zone opens with a mono micro-label
@@ -76,7 +76,7 @@ flicker→settle→land animation, `data-tone` glow rings (crit/ok/cool/miss), t
 verdict word (CRIT!/HIT!/FAILED!), and the die label. Dice were not flagged. They live
 inside a `.v2-roll-zone` now, under a "Dice" label.
 
-### Damage zone — flatten the box-in-box
+### Damage zone, flatten the box-in-box
 
 Replace the nested `.v2-rx-break` panel + per-term `.v2-rx-term` chips with **one inline
 mono equation** inside a single sunken well (`.v2-roll-strip`: `background: var(--v2-well)`,
@@ -86,7 +86,7 @@ mono equation** inside a single sunken well (`.v2-roll-strip`: `background: var(
   mono uppercase.
 - Equation row (`.v2-roll-eq`): inline mono terms, e.g. `5 D6  +  3 Crit  +  2 AP  =  10`.
   Value numerals in `--v2-txt`; operators + unit labels in `--v2-txt-faint`; modifier
-  terms in `--v2-oil-hi` (via a `mod` class/tone). One flat flex row, wraps if needed —
+  terms in `--v2-oil-hi` (via a `mod` class/tone). One flat flex row, wraps if needed,
   no per-term boxes.
 - Out row (`.v2-roll-out`): dashed top divider, a tier pill (`.v2-roll-tier`, tone-keyed:
   direct/severe/critical/none) and the SP hero: stencil number (`--v2-oil-hi`, glow) with

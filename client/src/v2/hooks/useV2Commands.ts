@@ -3,7 +3,7 @@ import { useCommands } from "../../hooks/useCommands";
 import { playAction } from "../audio/actionAudio";
 
 // Actions whose audio is cued when the player SELECTS them (the move wizard
-// opens), not when the command dispatches — so the engine spools up as you
+// opens), not when the command dispatches, so the engine spools up as you
 // choose to move, not after the move resolves. Their selection cue lives in
 // V2BattleActionsContext.openMove; skip the dispatch-time cue here to avoid
 // double-playing.

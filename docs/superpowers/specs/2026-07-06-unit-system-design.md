@@ -1,4 +1,4 @@
-# Generic Unit System — Tanks & Walkers — Design
+# Generic Unit System, Tanks & Walkers, Design
 
 Date: 2026-07-06
 
@@ -9,7 +9,7 @@ Extends:
 
 ## Goal
 
-Today the game has exactly one unit: the **Rig** — a single model with four fixed
+Today the game has exactly one unit: the **Rig**: a single model with four fixed
 components (Hull / Arms / Legs / Engine), heat on the Engine. This design turns "Rig"
 into one instance of a **generic unit system** so the game can field **Tanks** and
 **Walkers** alongside Rigs, and can grow new machines as *data* rather than code.
@@ -19,23 +19,23 @@ command/tag protocol, prompt changes, where the registry lives) is deliberately 
 of scope** here and picked up in a later plan. The Blast radius section maps *where*
 it lands only to bound the eventual plan.
 
-**Multi-model infantry/squads are explicitly deferred** — their rules are fully mapped
+**Multi-model infantry/squads are explicitly deferred**: their rules are fully mapped
 in memory (`infantry-unit-design-deferred`) and summarized under Deferred below, but
 they are **not** part of this build.
 
 ⚙ **All numeric values below are TUNING strawmen** (SP, armour rows, ROF/STR, ram STR,
-speed) — placeholders to make the spec complete, to be set in playtesting.
+speed), placeholders to make the spec complete, to be set in playtesting.
 
 ## Core shape
 
 - A **unit slot** is the atomic thing for balance, army size, and activation:
   **1 slot = 1 count = 1 activation**, regardless of unit kind.
-- **Balance is matched composition only** — both sides mirror their unit types
+- **Balance is matched composition only**: both sides mirror their unit types
   (extends today's "same number of Rigs per weight class", rules §3). **There is no
   points economy** (the removed Alpha "Oil" currency stays removed). Matched counts are
   what keep strict-alternation activation fair, so **the activation loop is unchanged**.
 - Every unit, whatever its kind, is still *"a thing with a budget of actions that ends
-  its activation"* — which is all the activation engine already assumes.
+  its activation"*: which is all the activation engine already assumes.
 
 ### Two design tiers that emerged
 
@@ -59,12 +59,12 @@ parts map onto shared behavior:
 | `weapon` (Arms-like) | The mounted weapon is destroyed; munitions cook off (1 to a `structural` + 1 to a `power` part) | +3 to a `structural` part; weapon gone for the game |
 
 Role mappings:
-- **Rig** — hull→`structural`, arms→`weapon`, legs→`mobility`, engine→`power`. **Behavior
+- **Rig**: hull→`structural`, arms→`weapon`, legs→`mobility`, engine→`power`. **Behavior
   is byte-for-byte unchanged**; the existing `shared/*.test.js` suites are the regression
   net for this refactor.
-- **Tank** — hull→`structural`, turret→`weapon`, tracks→`mobility`, engine→`power`.
+- **Tank**: hull→`structural`, turret→`weapon`, tracks→`mobility`, engine→`power`.
 
-Because a Tank keeps **four** parts, the D12 hit-location table keeps its shape — only
+Because a Tank keeps **four** parts, the D12 hit-location table keeps its shape, only
 the labels change (`1–4 Hull, 5–7 Tracks, 8–10 Turret, 11–12 Engine`). Units with a
 different part count would need their own hit table; none in this build do.
 
@@ -87,7 +87,7 @@ Each unit kind is one registry entry describing:
 | `ramStr` | STR used when it Rams (rules §5) |
 | `destruction` | Rule for "unit dead": `single-model` (Hull or Engine destroyed, or all parts 0) or `all-members` (infantry only, deferred) |
 
-Adding a new Walker later is **only a new registry entry** — no engine changes.
+Adding a new Walker later is **only a new registry entry**: no engine changes.
 
 ## The kinds
 
@@ -113,7 +113,7 @@ Parts + strawman SP ⚙:
 | Turret | weapon | 6 |
 | Engine | power | 6 |
 
-Strawman armour (IMPACT thresholds, direct / severe / critical) ⚙ — roughly Heavy-Rig grade:
+Strawman armour (IMPACT thresholds, direct / severe / critical) ⚙, roughly Heavy-Rig grade:
 
 | Part | Direct | Severe | Critical |
 |---|:--:|:--:|:--:|
@@ -128,7 +128,7 @@ Engine`. Turret at 0 SP jams the tank's only gun → it can still **Ram** until 
 
 ### Walker
 
-A legged war machine in the simple tier — `hasHeat: false`, `hasArcs: true`,
+A legged war machine in the simple tier, `hasHeat: false`, `hasArcs: true`,
 `weaponMode: flat-pick`, `hasEquipment: false`, `reactions: false`,
 `destruction: single-model`. Everything else is registry data; a Walker is faster and
 lighter than a Tank. One strawman entry to prove the shape ⚙ ("Sentinel"):
@@ -143,17 +143,17 @@ lighter than a Tank. One strawman entry to prove the shape ⚙ ("Sentinel"):
 Strawman ⚙: `actionBudget: 3`, `ramStr: 8`, Speed 4"; armour ≈ Medium-Rig grade; hit
 table `1–4 Hull / 5–7 Legs / 8–10 Mount / 11–12 Engine`.
 
-## Weapons — two domains
+## Weapons, two domains
 
-**Rig catalogue** — unchanged: Long Range + Melee slots, two fixed upgrades per weapon,
+**Rig catalogue**: unchanged: Long Range + Melee slots, two fixed upgrades per weapon,
 weight-class STR scaling (rules §12). **Rigs only.**
 
-**Unit-weapon list** — one shared **flat** list for Tanks / Walkers / (later) Squads.
-A unit picks **exactly one** weapon from it — ranged *or* melee. Key differences from
+**Unit-weapon list**: one shared **flat** list for Tanks / Walkers / (later) Squads.
+A unit picks **exactly one** weapon from it, ranged *or* melee. Key differences from
 the Rig catalogue:
-- **Flat STR** — no weight-class modifier; the listed STR is what it hits for on any
+- **Flat STR**: no weight-class modifier; the listed STR is what it hits for on any
   chassis.
-- **No slots, no upgrades** — perks are innate to the list entry.
+- **No slots, no upgrades**: perks are innate to the list entry.
 - Same profile shape (ROF / STR / ACC / RNG / perks) so combat resolution never cares
   which domain a weapon came from.
 
@@ -161,7 +161,7 @@ Strawman list ⚙ (near/far ACC; RNG near/far in inches):
 
 | Weapon | Type | ROF | STR | ACC | RNG | Perks |
 |---|---|:--:|:--:|:--:|:--:|---|
-| Tank Cannon | ranged | 1 | 12 | 0 / −1 | 12 / 24 | — |
+| Tank Cannon | ranged | 1 | 12 | 0 / −1 | 12 / 24 |, |
 | Autocannon Mount | ranged | 3 | 8 | 0 / −1 | 12 / 24 | Full Auto |
 | Coaxial MG | ranged | 6 | 5 | +1 / −1 | 9 / 18 | Full Auto, Raking Fire |
 | Rocket Pod | ranged | 2 | 10 | 0 / 0 | 15 / 30 | Charged Shot |
@@ -176,12 +176,12 @@ combat; a unit that picks a melee weapon fights in melee directly.
 With Tanks and Walkers cold (and Squads later too), heat/overheat is a **Rig-only**
 system. For any `hasHeat: false` unit: actions generate no heat, `endActivation` skips
 the overheat roll, `Shut Down` is inert, and the heat gauge is hidden. Cold units are
-throttled instead by their **smaller action budget** — the tank's 2 actions replace
+throttled instead by their **smaller action budget**: the tank's 2 actions replace
 heat as the "how hard can I push" ceiling.
 
 ## Arcs, facing & movement
 
-Facing/arcs belong to **single-model** units. Rigs, Tanks, and Walkers all have arcs —
+Facing/arcs belong to **single-model** units. Rigs, Tanks, and Walkers all have arcs,
 attacks into their side arc get +2 STR, rear +4 STR (rules §7), and they use the full
 facing-movement rules (forward / backpedal / side-step / pivot with the >90° penalty).
 This is the `hasArcs: true` path; nothing changes for them.
@@ -197,13 +197,13 @@ works normally against Rigs, Tanks, and Walkers.
 - **Preparations and Answer tokens stay Rig-only** (`reactions: false` for the simple
   tier). Two of the four preps are wired to the Rig layer (Brace is arc-based, Raise
   Shield is Bulwark gear), so they don't belong on cold, simple units. Tanks and Walkers
-  don't prepare — they act.
+  don't prepare, they act.
 - **Activation is unchanged.** Units alternate one at a time in initiative order; each
   spends its own `actionBudget`; matched composition keeps the alternation fair. The
   only per-unit differences the loop sees are the action count and the skipped overheat
   step for cold units.
 
-## Blast radius (to bound the later plan — not built here)
+## Blast radius (to bound the later plan, not built here)
 
 Where the four-component / heat assumption is hardcoded today and will need to read from
 the registry / branch on role:
@@ -220,14 +220,14 @@ the registry / branch on role:
 
 ## Scope / non-goals
 
-- **Infantry / multi-model squads** — deferred (see Deferred below). Not built.
-- **Points-buy** — dropped for good; balance is matched composition.
-- **Implementation** — data model, registry location, UI, tag protocol, prompt edits are
+- **Infantry / multi-model squads**: deferred (see Deferred below). Not built.
+- **Points-buy**: dropped for good; balance is matched composition.
+- **Implementation**: data model, registry location, UI, tag protocol, prompt edits are
   the later plan's job, not this design's.
-- **Equipment / upgrades for the simple tier** — Tanks and Walkers have neither; both are
+- **Equipment / upgrades for the simple tier**: Tanks and Walkers have neither; both are
   Rig-layer features.
 
-## Deferred — infantry (mapped, not built)
+## Deferred, infantry (mapped, not built)
 
 Summary of the banked design (full detail in memory `infantry-unit-design-deferred`):
 a squad is **one slot / one count / one activation** holding **multiple minis**. In the
@@ -241,16 +241,16 @@ the seams it plugs into.
 
 ## Open tuning questions (deferred to playtest)
 
-1. All strawman numbers — Tank/Walker SP and armour rows, the flat-weapon profiles, ram
+1. All strawman numbers, Tank/Walker SP and armour rows, the flat-weapon profiles, ram
    STR, speeds.
 2. Is a Tank's **2 actions** the right throttle against a Rig's 3 (+ heat risk), or does
    it need 1 / a different lever?
-3. Contents of the flat unit-weapon list — how many entries, and the ranged/melee mix.
+3. Contents of the flat unit-weapon list, how many entries, and the ranged/melee mix.
 4. Do **Tanks/Walkers keep the reload rule** (`reloads: true` strawman), or should cold
    single-gun machines fire freely like infantry will?
 5. Whether Walkers want any distinguishing quirk beyond "faster, lighter Tank," or stay
    pure data.
 6. The `structural` 0-SP penalty (−2 max actions) is proportionally brutal on a
-   2-action Tank — it drops to **0 actions** and can't Repair its way out (death-spiral).
+   2-action Tank, it drops to **0 actions** and can't Repair its way out (death-spiral).
    Options: make the penalty a role-relative value, floor cold units at 1 action, or
    accept it. Needs a call before build.

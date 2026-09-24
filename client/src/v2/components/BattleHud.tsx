@@ -27,7 +27,7 @@ export function BattleHud() {
     if (!fresh.length) return;
     const latest = fresh[fresh.length - 1];
     lastKillId.current = log[log.length - 1].id;
-    setToast(`🎯 Target eliminated — ${latest.victimName ?? "a unit"} · +${latest.vp!.amount} VP`);
+    setToast(`🎯 Target eliminated, ${latest.victimName ?? "a unit"} · +${latest.vp!.amount} VP`);
     if (toastTimer.current != null) clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 4000);
   }, [game]);
@@ -49,7 +49,7 @@ export function BattleHud() {
         <span className="v2-bh-round">R{sum.round}</span>
       </div>
       <div className="v2-bh-turn">
-        {sum.turnSide ? (<>Turn: <b className={sum.turnSide === mySide ? "v2-bh-mine" : "v2-bh-foe"}>{sum.turnName}</b>{sum.activeName ? ` — ${sum.activeName}` : ""}</>) : ""}
+        {sum.turnSide ? (<>Turn: <b className={sum.turnSide === mySide ? "v2-bh-mine" : "v2-bh-foe"}>{sum.turnName}</b>{sum.activeName ? `: ${sum.activeName}` : ""}</>) : ""}
       </div>
       <div className="v2-bh-vp">
         {mine && <span className="v2-bh-mine">{mine.name} {mine.vp ?? 0}</span>}

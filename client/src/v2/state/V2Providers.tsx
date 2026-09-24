@@ -8,7 +8,7 @@ import { V2RollProvider } from "./V2RollContext";
 import { V2BattleActionsProvider } from "./V2BattleActionsContext";
 import { V2WizardProvider } from "./V2WizardContext";
 
-// V2's own provider stack — it never mounts the V1 overlay providers. Pure Room/Ui
+// V2's own provider stack, it never mounts the V1 overlay providers. Pure Room/Ui
 // state is reused; every overlay (GlossaryTip/Drawer/Roll/BattleActions/Wizard) is
 // native V2. Order matters: V2WizardProvider portals AttackWizard, which calls
 // useV2BattleActions, so BattleActions must be its ancestor (mirrors AppProviders).

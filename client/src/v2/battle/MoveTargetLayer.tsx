@@ -24,7 +24,7 @@ function clampToPivot(target: number, cur: number): { facing: number; pivot: num
 
 // Convert a DOM pointer position into field inches. The surface <rect> spans the
 // field region EXACTLY, so the fraction across it is the fraction across the
-// field in inches — no canvas padding is involved (subtracting `pad` here, as an
+// field in inches, no canvas padding is involved (subtracting `pad` here, as an
 // earlier version did via proj.toInches on a canvas-scaled point, double-counted
 // it: 0" error at centre, ±3" at the edges). Ratio-based, so it's CSS-scale
 // invariant.
@@ -59,7 +59,7 @@ export function MoveTargetOverlay({ proj, field, rigs, rig, action, placed, onPl
   const place = (e: ReactMouseEvent<SVGRectElement>) => {
     const dest = pointToInches(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect(), field);
     const preview = computeMovePreview(field, rigs, rig, action, dest);
-    if (!preview.reachable) return; // out of reach / blocked — ignore the tap
+    if (!preview.reachable) return; // out of reach / blocked, ignore the tap
     const { facing, pivot } = clampToPivot(preview.facing, rig.facing ?? 0);
     onPlaced({ dest, facing, pivot, length: preview.length, path: preview.path });
   };

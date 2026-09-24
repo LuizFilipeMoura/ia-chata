@@ -33,7 +33,7 @@ const LOC_CHOICES = [
   { value: "engine", label: "Engine", icon: "🔩" },
 ];
 
-// §5 base Speed (inches) per weight class — the physical reach of a Move.
+// §5 base Speed (inches) per weight class, the physical reach of a Move.
 // House-rule tuning: whole-inch speeds so tabletop measuring stays clean.
 // Mediums bumped up a notch (were crawling) while keeping the light > medium
 // ladder.
@@ -55,7 +55,7 @@ interface BattleActionsApi {
 
 const Ctx = createContext<BattleActionsApi | null>(null);
 
-// Move and Sprint resolve on the tabletop, not on the device — the console can't
+// Move and Sprint resolve on the tabletop, not on the device, the console can't
 // see the model shift. So instead of firing the action the instant it's tapped,
 // we hold the player on a timed drawer: the Confirm button stays locked for
 // MOVE_HOLD_MS (long enough to actually push the Rig) before it unlocks. Cancel
@@ -79,7 +79,7 @@ function MoveBody({
   const eff = rigEffects(rig);
   const mult = eff.sprintMult;
   const dist = sprint ? Math.round(base * mult) : base;
-  // The reach label rides the same value as the distance — printing a literal
+  // The reach label rides the same value as the distance, printing a literal
   // "1½×" next to a 2×-derived number is how "16" (1½× Speed)" ships.
   const reachLabel = mult === 1.5 ? "1½× Speed" : `${mult}× Speed`;
   const heat = sprint ? eff.actionHeat.sprint : 1;
@@ -135,7 +135,7 @@ function MoveBody({
             defaultValue=""
             onChange={(e) => onEngageChange(e.target.value)}
           >
-            <option value="">— none —</option>
+            <option value="">, none,</option>
             {enemies.map((e) => (
               <option key={e.id} value={e.name}>{e.name}</option>
             ))}
@@ -147,7 +147,7 @@ function MoveBody({
           <span>Cancel</span>
         </button>
         <button type="button" className="dwr-btn primary" disabled={!done} onClick={onConfirm}>
-          <span>{done ? "Done — moved" : `Moving… ${remaining}s`}</span>
+          <span>{done ? "Done, moved" : `Moving… ${remaining}s`}</span>
         </button>
       </div>
     </>
@@ -200,7 +200,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
       );
       const state: { engage: string } = { engage: "" };
       openDrawer({
-        title: `${iconFor(key)} ${sprint ? "Sprint" : "Move"} — ${rig.name}`,
+        title: `${iconFor(key)} ${sprint ? "Sprint" : "Move"}, ${rig.name}`,
         tone: "oil",
         dismissable: false,
         render: () => (
@@ -238,7 +238,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
         />
       );
       openDrawer({
-        title: `${isPatch ? "🩹 Emergency Patch" : "🔧 Repair"} — ${rig.name}`,
+        title: `${isPatch ? "🩹 Emergency Patch" : "🔧 Repair"}, ${rig.name}`,
         tone: "cool",
         render: build,
         actions: [
@@ -281,7 +281,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
         />
       );
       openDrawer({
-        title: `🛡️ Prepare — ${rig.name}`,
+        title: `🛡️ Prepare, ${rig.name}`,
         tone: "oil",
         render: build,
         actions: [
@@ -308,7 +308,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
 
   const resolveBlast = useCallback(() => {
     const sourceId = (gameRef.current?.pendingBlast as { sourceId?: number } | null)?.sourceId;
-    // Every living Rig is a candidate — the controller ticks those within 4"
+    // Every living Rig is a candidate, the controller ticks those within 4"
     // of the wreck. Exclude the exploding wreck itself.
     const candidates = (rigsRef.current || []).filter(
       (r) => !r.destroyed && r.id !== sourceId,
@@ -319,7 +319,7 @@ export function BattleActionsProvider({ children }: { children: ReactNode }) {
     }
     const picked = new Set<string>();
     openDrawer({
-      title: '💥 Resolve blast — mark Rigs within 4"',
+      title: '💥 Resolve blast, mark Rigs within 4"',
       tone: "ember",
       render: () => <BlastBody candidates={candidates} picked={picked} />,
       actions: [
@@ -416,7 +416,7 @@ function BlastBody({
   return (
     <>
       <p className="dwr-hint">
-        Select every Rig within 4" of the wreck — each takes a D6 + Penetration 10 blast hit.
+        Select every Rig within 4" of the wreck, each takes a D6 + Penetration 10 blast hit.
       </p>
       <div className="blast-list">
         {candidates.map((r) => {
@@ -457,7 +457,7 @@ function RepairBody({
     <>
       <p className="dwr-hint">
         {isPatch
-          ? "Restores a guaranteed 4 SP to the chosen location — no dice."
+          ? "Restores a guaranteed 4 SP to the chosen location, no dice."
           : auto
             ? "Rolls a D6: 1–2 restores 1 SP, 3–4 restores 2 SP, 5–6 restores 3 SP."
             : "You'll roll a D6 next: 1–2 restores 1 SP, 3–4 restores 2 SP, 5–6 restores 3 SP."}

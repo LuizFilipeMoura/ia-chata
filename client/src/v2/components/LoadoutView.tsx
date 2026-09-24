@@ -81,9 +81,9 @@ export function LoadoutView({ loadout }: { loadout: Loadout }) {
             <span className="v2-rt-lo-name v2-title">{eq.label}</span>
             <span className="v2-rt-lo-equip-family v2-eyebrow">{eq.family}</span>
           </div>
-          <div className="v2-rt-lo-equip-line">Passive — {eq.passive}</div>
+          <div className="v2-rt-lo-equip-line">Passive, {eq.passive}</div>
           <div className="v2-rt-lo-equip-line">
-            Active — {eq.activeLabel} ({eq.activeHeat >= 0 ? "+" : ""}{eq.activeHeat} heat): {eq.activeText}
+            Active, {eq.activeLabel} ({eq.activeHeat >= 0 ? "+" : ""}{eq.activeHeat} heat): {eq.activeText}
           </div>
           {eq.upName && (
             <div className="v2-rt-lo-up">

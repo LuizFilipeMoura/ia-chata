@@ -1,15 +1,15 @@
-/* V2 type scale — the ONLY source of font sizes in V2.
+/* V2 type scale, the ONLY source of font sizes in V2.
    Fixed px, 12px floor (min readable on mobile). No em/rem/raw-px font-size
    anywhere else in V2; a guard test (no-raw-font-size.test.ts) enforces it.
    Each step is both a --v2-text-* var (for component CSS) and a .v2-text-*
-   utility class (for JSX className) — same value, use whichever fits. */
+   utility class (for JSX className), same value, use whichever fits. */
 .v2-root {
   /* Scale default: any element that declares no size resolves to this, never
      the document/UA default (16px / 13.333px buttons). Keeps EVERY text node
      on the scale. */
   font-size:var(--v2-text-base);
 
-  --v2-text-sm:12px;   /* micro labels, eyebrows, chips — the mobile floor */
+  --v2-text-sm:12px;   /* micro labels, eyebrows, chips, the mobile floor */
   --v2-text-base:14px; /* body / default */
   --v2-text-lg:16px;   /* emphasized body, small headings */
   --v2-text-xl:20px;   /* section titles */

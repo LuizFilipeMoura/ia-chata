@@ -38,7 +38,7 @@ export interface Loadout {
 // Resolve one weapon slot into display-ready base stats + upgrade deltas.
 // Base numbers come straight from the weapon table; deltas and added perks
 // come from the STRICTLY-resolved upgrade's `effect`. Unknown weapon/upgrade
-// names degrade to zeros/"" — we do NOT use effectiveWeaponProfile here, since
+// names degrade to zeros/"", we do NOT use effectiveWeaponProfile here, since
 // it silently falls back to the weapon's first upgrade for an unknown id and
 // would produce phantom deltas/perks with no matching upgrade line.
 function weapon(rig: Rig, slot: Slot): LoadoutWeapon {

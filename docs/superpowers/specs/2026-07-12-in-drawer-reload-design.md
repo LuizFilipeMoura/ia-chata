@@ -1,4 +1,4 @@
-# In-Drawer Reload — design
+# In-Drawer Reload, design
 
 Date: 2026-07-12
 Branch: frontend/v2-redesign
@@ -23,16 +23,15 @@ without leaving the drawer.
    Attack group is removed. The Fire drawer is the only place reload is surfaced. To keep
    this reachable for units with no melee fallback, the Fire tile stays enabled whenever
    the ranged weapon is spent-but-reloadable (it opens a drawer that offers Reload).
-3. **Reload cost — RULE CHANGE:** reload no longer spends an action. Instead:
-   - **Heat kinds (Rigs):** reload costs **0 actions** and rolls a **d6 for heat** —
-     `1-3 → +2 heat`, `4-6 → +1 heat`. Low rolls bite harder.
+3. **Reload cost, RULE CHANGE:** reload no longer spends an action. Instead:
+   - **Heat kinds (Rigs):** reload costs **0 actions** and rolls a **d6 for heat**: `1-3 → +2 heat`, `4-6 → +1 heat`. Low rolls bite harder.
    - **Cold kinds (Tank/Walker, no heat track):** can't be charged heat, so they keep the
-     old price — **1 action, 0 heat**.
+     old price, **1 action, 0 heat**.
    This turns reload into a heat gamble rather than a tempo tax. Sustained ranged fire
    (fire → reload → fire …) is now limited by the action budget of the *shots* plus the
    heat the reloads pile on.
 4. **Second-shot heat still applies:** the post-reload shot is the activation's second
-   ranged shot, so it also runs `+1 heat` (existing rule — `reload` doesn't reset
+   ranged shot, so it also runs `+1 heat` (existing rule, `reload` doesn't reset
    `turn.longRangeShots`). So a reload-then-fire stacks the reload roll (+1/+2) *and* the
    second-shot surcharge (+1). The drawer surfaces both honestly.
 
@@ -40,14 +39,14 @@ without leaving the drawer.
 
 The authoritative fire resolution is `shared/combat.js` `resolveAttack`: a Rig's long-range
 shot clears `loaded.longRange` (combat.js:383) and a flat-pick cold-kind "unit" weapon clears
-`loaded.unit` (combat.js:384). Each kind only ever writes its own slot — a Rig never gets a
+`loaded.unit` (combat.js:384). Each kind only ever writes its own slot, a Rig never gets a
 `loaded.unit` key, and a flat-pick never gets `loaded.longRange` set false.
 
-**Spent check:** detect a spent ranged weapon on **either** slot — `loaded.longRange === false
+**Spent check:** detect a spent ranged weapon on **either** slot, `loaded.longRange === false
 || loaded.unit === false`. Because the two slots are mutually exclusive by kind, this single
 OR is exact for both Rigs and cold kinds; it needs no `weaponMode` branch. Use it in
 `battle-view.js` `availableActions` and in the drawer's spent computation. (An earlier draft
-proposed collapsing to `loaded.longRange` only — that is wrong: it never trips for flat-pick
+proposed collapsing to `loaded.longRange` only, that is wrong: it never trips for flat-pick
 kinds, which clear `loaded.unit`.)
 
 The `reload` verb (server branch below) arms `loaded = { longRange: true, melee: true }`;
@@ -65,13 +64,13 @@ separate path.)
   sub-label; it can't be selected. The drawer keeps auto-opening on the melee weapon (existing
   behavior), so a melee strike stays fully usable.
 - **Reload affordance** (label reflects the cost by kind):
-  - Heat kind: `⟳ Reload · +1–2 heat` — always enabled when spent (heat has no budget gate;
+  - Heat kind: `⟳ Reload · +1–2 heat`: always enabled when spent (heat has no budget gate;
     overheating is allowed and is the whole risk).
-  - Cold kind: `⟳ Reload · 1 action` — disabled with a `Need 1 action` note when no actions
+  - Cold kind: `⟳ Reload · 1 action`: disabled with a `Need 1 action` note when no actions
     remain.
   - If a live weapon is selectable (melee present): a reload banner sits under the Weapon
-    field — *"Ranged weapon spent — Reload is mandatory before it can fire again."* plus the
-    cost line — with the `⟳ Reload` button. The bottom CTA stays the melee Fire.
+    field, *"Ranged weapon spent, Reload is mandatory before it can fire again."* plus the
+    cost line, with the `⟳ Reload` button. The bottom CTA stays the melee Fire.
   - If no live weapon (no/destroyed melee, or flat-pick with only the spent ranged weapon):
     the big ember CTA itself becomes the `⟳ Reload`.
 
@@ -126,7 +125,7 @@ if (act === "reload") {
     kind: "reload", actor: rig.owner, rigId: rig.id,
     rolls: heatKind ? [{ sides: 6, value: roll, label: "D6" }] : [],
     summary: heatKind
-      ? `${rig.name} reloads — rolled ${roll} → +${heat} heat`
+      ? `${rig.name} reloads, rolled ${roll} → +${heat} heat`
       : `${rig.name} reloads (1 action)`,
     effects: [],
   });
@@ -139,7 +138,7 @@ handler (reload is free for them). Confirm and adjust that gate so a 0-action he
 still reload.
 
 `rules.js`: `ACTIONS.reload` keeps its entry for the label, but its `heat`/`slot` are no
-longer authoritative for reload — the branch above owns the cost. Leave a comment noting so.
+longer authoritative for reload, the branch above owns the cost. Leave a comment noting so.
 
 `rules.md`: update §7 (reload) to the new cost model.
 
@@ -157,7 +156,7 @@ longer authoritative for reload — the branch above owns the cost. Leave a comm
   into the drawer.
 
 The `reload` verb in `game-state.js` (rewritten per **Server reload branch**) and
-`ACTIONS.reload` in `rules.js` stay — the drawer dispatches the action directly.
+`ACTIONS.reload` in `rules.js` stay, the drawer dispatches the action directly.
 
 ## Components / units
 
@@ -170,39 +169,39 @@ The `reload` verb in `game-state.js` (rewritten per **Server reload branch**) an
 
 ## Files
 
-- `shared/game-state.js` — dedicated `reload` branch: arm all slots; heat kinds roll d6
+- `shared/game-state.js`: dedicated `reload` branch: arm all slots; heat kinds roll d6
   (1-3→+2, 4-6→+1 heat), 0 actions; cold kinds 1 action, 0 heat; free-reload exempt from
   the no-actions gate. Unify spend/gate reads on `loaded.longRange`.
-- `shared/game-state.test.js` — reload heat roll + no action cost (heat kinds); cold-kind
+- `shared/game-state.test.js`: reload heat roll + no action cost (heat kinds); cold-kind
   reload costs 1 action; reload arms the weapon.
-- `shared/rules.js` — comment that `ACTIONS.reload` heat/slot are non-authoritative.
-- `shared/battle-view.js` — spent-signal unification (`loaded.longRange`); drop `reload`
+- `shared/rules.js`: comment that `ACTIONS.reload` heat/slot are non-authoritative.
+- `shared/battle-view.js`: spent-signal unification (`loaded.longRange`); drop `reload`
   from `ACTION_ORDER`; keep `fire` enabled while spent, disable `aimed`.
-- `shared/battle-view.test.js` — reload no longer listed; fire enabled when spent; flat-pick
+- `shared/battle-view.test.js`: reload no longer listed; fire enabled when spent; flat-pick
   spent now registers.
-- `rules.md` — §7 reload: new cost model (free action + d6 heat; cold kinds 1 action).
-- `client/src/v2/battle/ActionConsole.tsx` — remove reload from Attack group + glyph map.
-- `client/src/v2/battle/ActionConsole.test.tsx` — drop reload-tile assertions if present.
-- `client/src/v2/overlays/AttackWizard.tsx` — `Field` `optDisabled`; live rig; `justReloaded`;
+- `rules.md`: §7 reload: new cost model (free action + d6 heat; cold kinds 1 action).
+- `client/src/v2/battle/ActionConsole.tsx`: remove reload from Attack group + glyph map.
+- `client/src/v2/battle/ActionConsole.test.tsx`: drop reload-tile assertions if present.
+- `client/src/v2/overlays/AttackWizard.tsx`: `Field` `optDisabled`; live rig; `justReloaded`;
   reload banner/CTA (heat vs action label by kind); manual-dice reload prompt; picker
   disabling; spent check on `loaded.longRange`.
-- `client/src/v2/overlays/AttackWizard.test.tsx` — spent → long-range chip disabled + banner;
+- `client/src/v2/overlays/AttackWizard.test.tsx`: spent → long-range chip disabled + banner;
   tap Reload → dispatches `reload`, long-range armed + auto-selected; heat-kind reload has no
   action gate; cold-kind reload gated on actions; no-melee → CTA is Reload.
-- `client/src/v2/styles/wizards.css` — disabled weapon chip + reload banner/button (ember tone).
+- `client/src/v2/styles/wizards.css`: disabled weapon chip + reload banner/button (ember tone).
 
 ## Testing
 
-- **Server** — heat kind: `reload` arms the weapon, spends 0 actions, and adds +2 heat on a
+- **Server**: heat kind: `reload` arms the weapon, spends 0 actions, and adds +2 heat on a
   d6 of 1-3 / +1 on 4-6 (seed the die via `a.dice.reload`). Cold kind: `reload` arms the
   weapon, spends 1 action, adds 0 heat. Heat-kind reload works at 0 actions left.
-- **Drawer** — Rig, long-range spent, melee present: long-range chip disabled (`Spent ·
+- **Drawer**: Rig, long-range spent, melee present: long-range chip disabled (`Spent ·
   reload`); banner shown; reload button reads `+1–2 heat`; bottom CTA is melee Fire.
 - Tap Reload → dispatches `action: reload`; after flip, long-range chip enabled + selected,
   banner gone, CTA is long-range Fire.
 - Rig, long-range spent, no melee: big CTA is `⟳ Reload`; after reload it flips to Fire.
 - Cold kind, spent, 0 actions: reload disabled with `Need 1 action`.
-- **battle-view** — flat-pick spent registers as `rangedSpent`; `fire` stays enabled while
+- **battle-view**: flat-pick spent registers as `rangedSpent`; `fire` stays enabled while
   spent; `aimed` disabled; `reload` absent from the action list.
 
 ## Out of scope

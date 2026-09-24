@@ -1,29 +1,29 @@
 # Battle UI & Dice Animation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. This is the frontend pass — follow the frontend-design skill's aesthetic discipline throughout.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. This is the frontend pass, follow the frontend-design skill's aesthetic discipline throughout.
 
-**Goal:** Give the round loop (Plan 1) and combat (Plan 2) a client: a battle HUD (phase / round / whose turn / answer tokens), an action console on the active Rig showing the legal actions, their heat cost, and the remaining action budget; an End Activation control; an attack wizard for Fire/Aimed/Ram; a Recovery VP prompt; always-visible modifier chips; and a dice-resolution overlay that animates every server roll — with a pre-battle Auto/Manual dice toggle that switches the overlay between animated auto-rolls and manual dice entry.
+**Goal:** Give the round loop (Plan 1) and combat (Plan 2) a client: a battle HUD (phase / round / whose turn / answer tokens), an action console on the active Rig showing the legal actions, their heat cost, and the remaining action budget; an End Activation control; an attack wizard for Fire/Aimed/Ram; a Recovery VP prompt; always-visible modifier chips; and a dice-resolution overlay that animates every server roll, with a pre-battle Auto/Manual dice toggle that switches the overlay between animated auto-rolls and manual dice entry.
 
-**Architecture:** Pure, DOM-free view-model helpers live in `shared/battle-view.js` (unit-tested with `node:test`, imported by the browser via the existing `/shared` static mount). The DOM layer is three new browser modules — `roll-dialog.js` (the animated overlay + manual dice prompt), `battle.js` (HUD, action console, prompts, command wiring), `attack-wizard.js` (attack input flow) — plus additions to `tracker.js` (modifier chips) and one new stylesheet `battle.css`. All server writes reuse the existing `sendCommand(verb, attrs)` from `api.js`; all rendering hangs off the single `onServerStateChange` hook in `main.js`.
+**Architecture:** Pure, DOM-free view-model helpers live in `shared/battle-view.js` (unit-tested with `node:test`, imported by the browser via the existing `/shared` static mount). The DOM layer is three new browser modules, `roll-dialog.js` (the animated overlay + manual dice prompt), `battle.js` (HUD, action console, prompts, command wiring), `attack-wizard.js` (attack input flow), plus additions to `tracker.js` (modifier chips) and one new stylesheet `battle.css`. All server writes reuse the existing `sendCommand(verb, attrs)` from `api.js`; all rendering hangs off the single `onServerStateChange` hook in `main.js`.
 
-**Aesthetic direction (frontend-design):** This is a *dieselpunk boiler-room control terminal* — the codebase already commits to it (iron greys `--iron-*`, oil-amber `--oil*`, ember-red `--ember*`, Chakra Petch display + JetBrains Mono, segmented boiler gauges, rivets, the `--stripe` hazard band, alarm pulses, the spring easing `cubic-bezier(.2,.85,.25,1)`). Every new surface is instrumentation on that same machine: the phase rail is a segmented gauge like the heat track; action buttons are stamped console keys with a heat-cost decal; modifier chips are riveted warning tags; the dice overlay is a **resolution readout** — dice as stamped-metal tokens that tumble (a fast face-flicker + jitter) then land with a clack-pop and a zone-coloured glow, followed by a staggered breakdown ticker. Damage reads ember, cooling/safe reads teal, rolls read oil-amber. Honour `prefers-reduced-motion` (skip the tumble, snap to the result). No new fonts, no new palette — depth comes from execution.
+**Aesthetic direction (frontend-design):** This is a *dieselpunk boiler-room control terminal*: the codebase already commits to it (iron greys `--iron-*`, oil-amber `--oil*`, ember-red `--ember*`, Chakra Petch display + JetBrains Mono, segmented boiler gauges, rivets, the `--stripe` hazard band, alarm pulses, the spring easing `cubic-bezier(.2,.85,.25,1)`). Every new surface is instrumentation on that same machine: the phase rail is a segmented gauge like the heat track; action buttons are stamped console keys with a heat-cost decal; modifier chips are riveted warning tags; the dice overlay is a **resolution readout**: dice as stamped-metal tokens that tumble (a fast face-flicker + jitter) then land with a clack-pop and a zone-coloured glow, followed by a staggered breakdown ticker. Damage reads ember, cooling/safe reads teal, rolls read oil-amber. Honour `prefers-reduced-motion` (skip the tumble, snap to the result). No new fonts, no new palette, depth comes from execution.
 
-**Tech Stack:** Vanilla ES modules, CSS animations (no libraries), `node:test` for the shared helpers. Preview via `npm run preview` (port 8123) — no Ollama needed for static + `/api/game` routes.
+**Tech Stack:** Vanilla ES modules, CSS animations (no libraries), `node:test` for the shared helpers. Preview via `npm run preview` (port 8123), no Ollama needed for static + `/api/game` routes.
 
 ---
 
 ## File Structure
 
-- **Create** `shared/battle-view.js` — pure helpers: `availableActions`, `actionBudget`, `rigModifiers`, `phaseSummary`, `outcomeText`. DOM-free, unit-tested.
-- **Create** `shared/battle-view.test.js` — tests for the above.
-- **Create** `public/js/roll-dialog.js` — the overlay: `playResolution(entry)` (auto animation) and `promptDice(specs)` (manual entry, returns a Promise).
-- **Create** `public/js/battle.js` — `renderBattle()`: HUD/phase rail, action console + budget, End Activation, initiative/recovery/VP prompts, answer tokens; watches the resolution log and drives `roll-dialog`.
-- **Create** `public/js/attack-wizard.js` — `openAttackWizard(rig, mode)` collecting target/weapon/arc/range/cover/fire-mode (+manual dice) and posting the action.
-- **Create** `public/css/battle.css` — all new styling, extending `tokens.css`.
-- **Modify** `public/index.html` — link `battle.css`; add the HUD bar, action-console mount, dice-mode toggle, roll-dialog overlay root, outcome banner.
-- **Modify** `public/js/tracker.js` — render modifier chips; gate the legacy manual heat controls once the battle has started.
-- **Modify** `public/js/main.js` — register `renderBattle` and the resolution watcher alongside `renderRigs`.
-- **Modify** `.claude/launch.json` — add a `preview` server entry (create the file if absent).
+- **Create** `shared/battle-view.js`: pure helpers: `availableActions`, `actionBudget`, `rigModifiers`, `phaseSummary`, `outcomeText`. DOM-free, unit-tested.
+- **Create** `shared/battle-view.test.js`: tests for the above.
+- **Create** `public/js/roll-dialog.js`: the overlay: `playResolution(entry)` (auto animation) and `promptDice(specs)` (manual entry, returns a Promise).
+- **Create** `public/js/battle.js`: `renderBattle()`: HUD/phase rail, action console + budget, End Activation, initiative/recovery/VP prompts, answer tokens; watches the resolution log and drives `roll-dialog`.
+- **Create** `public/js/attack-wizard.js`: `openAttackWizard(rig, mode)` collecting target/weapon/arc/range/cover/fire-mode (+manual dice) and posting the action.
+- **Create** `public/css/battle.css`: all new styling, extending `tokens.css`.
+- **Modify** `public/index.html`: link `battle.css`; add the HUD bar, action-console mount, dice-mode toggle, roll-dialog overlay root, outcome banner.
+- **Modify** `public/js/tracker.js`: render modifier chips; gate the legacy manual heat controls once the battle has started.
+- **Modify** `public/js/main.js`: register `renderBattle` and the resolution watcher alongside `renderRigs`.
+- **Modify** `.claude/launch.json`: add a `preview` server entry (create the file if absent).
 
 ---
 
@@ -146,7 +146,7 @@ test("outcomeText names the winner or a draw", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — module missing.
+Expected: FAIL, module missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -221,14 +221,14 @@ export function phaseSummary(game, rigs) {
 
 export function outcomeText(outcome, sides) {
   if (!outcome) return "";
-  if (!outcome.winner) return "Draw — the wastes keep the scrap.";
+  if (!outcome.winner) return "Draw, the wastes keep the scrap.";
   const name = sides.find((s) => s.id === outcome.winner)?.name || outcome.winner;
   const why = outcome.reason === "annihilation" ? "by annihilation" : "on salvage";
   return `${name} wins ${why}.`;
 }
 ```
 
-Note: `heatMeter` is imported for downstream use by the DOM layer via re-export convenience; if the linter flags it as unused here, drop the import — it is already exported from `game-state.js` and the DOM modules import it directly.
+Note: `heatMeter` is imported for downstream use by the DOM layer via re-export convenience; if the linter flags it as unused here, drop the import, it is already exported from `game-state.js` and the DOM modules import it directly.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -278,7 +278,7 @@ Before `<script type="module" src="/js/main.js">`, add the overlay root and outc
 - [ ] **Step 2: Create `public/css/battle.css` with the overlay + dice animation**
 
 ```css
-/* ===== Dice-resolution overlay — the "resolution readout" ===== */
+/* ===== Dice-resolution overlay, the "resolution readout" ===== */
 .roll-scrim {
   position: fixed; inset: 0; z-index: 80;
   display: grid; place-items: center;
@@ -364,7 +364,7 @@ Before `<script type="module" src="/js/main.js">`, add the overlay root and outc
 // The dice-resolution overlay. In auto mode it animates a server resolution-log
 // entry: dice flicker + jitter, then land on their real values with a zone glow,
 // then the summary/effects stagger in. Math.random here only drives the cosmetic
-// flicker — the landed values always come from the server entry.
+// flicker, the landed values always come from the server entry.
 const scrim = document.getElementById("rollScrim");
 const consoleEl = document.getElementById("rollConsole");
 const kindEl = document.getElementById("rollKind");
@@ -576,7 +576,7 @@ export function renderBattle() {
   bhPhase.textContent = sum.label;
   bhRound.textContent = `R${sum.round}`;
   bhTurn.innerHTML = sum.turnName
-    ? `Turn: <b>${sum.turnName}</b>${sum.activeName ? ` — ${sum.activeName}` : ""}`
+    ? `Turn: <b>${sum.turnName}</b>${sum.activeName ? `: ${sum.activeName}` : ""}`
     : "";
   const tok = sum.answerTokens[mySide()] || 0;
   bhTokens.textContent = tok ? `⟡ ${tok} Answer` : "";
@@ -695,12 +695,12 @@ function openBlastPrompt() {
   sendCommand("blast", { targets });
 }
 function promptOneDie(label, cb) {
-  const v = parseInt(window.prompt(`${label} — enter your roll:`, ""), 10);
+  const v = parseInt(window.prompt(`${label}, enter your roll:`, ""), 10);
   if (Number.isFinite(v)) cb(v);
 }
 function promptTwoDice(label, cb) {
-  const a = parseInt(window.prompt(`${label} — Side A roll:`, ""), 10);
-  const b = parseInt(window.prompt(`${label} — Side B roll:`, ""), 10);
+  const a = parseInt(window.prompt(`${label}, Side A roll:`, ""), 10);
+  const b = parseInt(window.prompt(`${label}, Side B roll:`, ""), 10);
   if (Number.isFinite(a) && Number.isFinite(b)) cb(a, b);
 }
 function mkBtn(text, onClick) {
@@ -794,7 +794,7 @@ export function openAttackWizard(rig, mode) {
   scrim.className = "aw-scrim";
   const card = document.createElement("div");
   card.className = "aw-card";
-  card.innerHTML = `<div class="aw-title">${mode === "ram" ? "Ram" : mode === "aimed" ? "Aimed Shot" : "Fire Weapon"} — ${rig.name}</div>`;
+  card.innerHTML = `<div class="aw-title">${mode === "ram" ? "Ram" : mode === "aimed" ? "Aimed Shot" : "Fire Weapon"}, ${rig.name}</div>`;
   card.appendChild(field("Target", enemies.map((e) => e.name), state.target, (v) => (state.target = v)));
   if (mode !== "ram") {
     card.appendChild(field("Weapon", [rig.weapons.longRange, rig.weapons.melee], rig.weapons.longRange,
@@ -929,7 +929,7 @@ Inject the action console just before the Remove button. After `inner.appendChil
   if (S.game?.started) inner.appendChild(buildActionConsole(rig));
 ```
 
-Gate the legacy manual heat buttons once the battle starts — in `buildHeatGauge`, change the control disable condition so heat buttons are only live pre-battle (the action console now drives heat):
+Gate the legacy manual heat buttons once the battle starts, in `buildHeatGauge`, change the control disable condition so heat buttons are only live pre-battle (the action console now drives heat):
 
 ```js
     b.disabled = !isActive || Boolean(S.game?.started);
@@ -1177,6 +1177,6 @@ git commit -m "feat: styled manual dice entry in the resolution overlay"
 
 **Placeholder scan:** No TODO/TBD. The `window.prompt` fallbacks for VP totals and blast target *names* are intentional and appropriate (free-text lists, not dice) and are called out; manual *dice* are upgraded to the styled form in Task 7. The manual impact-dice batching simplification is documented at its call site.
 
-**Type consistency:** view-model shapes — action `{ key, label, heat, enabled }`, budget `{ used, max, left, reduced }`, modifier `{ key, tag, tone }`, phase `{ label, phase, round, turnSide, turnName, activeName, answerTokens }` — are produced in `battle-view.js` and consumed identically in `battle.js`/`tracker.js`. Commands posted match the server verbs from Plans 1–2 exactly: `setdice`, `initiative` (`dice:{a,b}`), `activate`, `action` (`fire`/`aimed`/`ram`/`repair`/`move`/… with the documented attrs), `endactivation` (`dice:{overheat}`), `vp` (`side`,`points`), `blast` (`targets`). `roll-dialog.js` exports `playResolution`, `promptDice`, `closeRoll`; `battle.js` exports `renderBattle`, `buildActionConsole`, `syncResolutions`; `attack-wizard.js` exports `openAttackWizard`.
+**Type consistency:** view-model shapes, action `{ key, label, heat, enabled }`, budget `{ used, max, left, reduced }`, modifier `{ key, tag, tone }`, phase `{ label, phase, round, turnSide, turnName, activeName, answerTokens }`: are produced in `battle-view.js` and consumed identically in `battle.js`/`tracker.js`. Commands posted match the server verbs from Plans 1–2 exactly: `setdice`, `initiative` (`dice:{a,b}`), `activate`, `action` (`fire`/`aimed`/`ram`/`repair`/`move`/… with the documented attrs), `endactivation` (`dice:{overheat}`), `vp` (`side`,`points`), `blast` (`targets`). `roll-dialog.js` exports `playResolution`, `promptDice`, `closeRoll`; `battle.js` exports `renderBattle`, `buildActionConsole`, `syncResolutions`; `attack-wizard.js` exports `openAttackWizard`.
 
-**Cross-plan note:** `battle.js` imports `buildActionConsole` used by `tracker.js`, and `tracker.js` imports `rigModifiers`/`buildActionConsole` — no cycle, because `battle.js` does not import `tracker.js` (main.js orchestrates both). Verify no circular import warning in the preview console.
+**Cross-plan note:** `battle.js` imports `buildActionConsole` used by `tracker.js`, and `tracker.js` imports `rigModifiers`/`buildActionConsole`: no cycle, because `battle.js` does not import `tracker.js` (main.js orchestrates both). Verify no circular import warning in the preview console.

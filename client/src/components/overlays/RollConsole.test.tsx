@@ -14,7 +14,7 @@ test("reaction resolution reveals the reaction label", async () => {
 });
 
 // The equation/tier assertions that used to live here pinned `breakdown.terms`,
-// `.total` and `.tier` — fields the d10 wound rewrite deleted from the engine and
+// `.total` and `.tier`: fields the d10 wound rewrite deleted from the engine and
 // Plan 2 removed from ResolutionBreakdown. They were a false green: they proved
 // dead markup rendered dead fields the game can no longer produce. The live
 // behaviour (the resolution ledger) is tested against the live component, in

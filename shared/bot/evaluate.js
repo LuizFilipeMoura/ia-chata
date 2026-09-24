@@ -4,8 +4,8 @@
 //
 //     expectedDamage = ROF × P(hit) × P(wound) × Damage
 //
-// It reads the wound step through effectivePenAgainst — the exact arithmetic
-// rollWounds resolves with — so arc, Brace, Harden, shields, plating and every
+// It reads the wound step through effectivePenAgainst, the exact arithmetic
+// rollWounds resolves with, so arc, Brace, Harden, shields, plating and every
 // other defender modifier are valued automatically. There is no arc HEURISTIC:
 // rear wounds harder because it carries more effective Penetration, not because a
 // hand-tuned factor said so. (An earlier hits-only metric multiplied by an
@@ -18,7 +18,7 @@
 //
 // 1. Effective-ROF blindness. rollToHit computes an EFFECTIVE rof internally
 //    (+2 Full Auto, +Bloodletter vs a damaged target, +Redline Governor from heat
-//    over cap). We cannot read it — rollToHit also runs applyDefensiveReactions,
+//    over cap). We cannot read it, rollToHit also runs applyDefensiveReactions,
 //    which MUTATES the target (Point-Defense spend), and evaluating a candidate
 //    must never mutate. So we use profile.rof and under-rate those three upgrades.
 // 2. Armour Piercing's failed-wound reroll raises P(wound) and is not modelled, so
@@ -35,7 +35,7 @@ function pHit(aim) {
 }
 
 // The RAW hit expectation, ROF × P(hit), with NO arc term. This is the quantity
-// the engine's own to-hit step produces — rollToHit ignores arc (arc is a
+// the engine's own to-hit step produces, rollToHit ignores arc (arc is a
 // wound-step modifier). Exported so the sampling validation can compare it to the
 // real engine's mean hit count, and reused as the left half of expectedDamage.
 export function rawExpectedHits(attacker, target, slot, opts) {
@@ -73,7 +73,7 @@ function locationDist(kind) {
 //
 // Earned zeroes (a rake into a front arc, or a shield negating the arc) fall out
 // naturally: effectivePenAgainst reports `negated`, and those locations
-// contribute nothing. Damage is the weapon's `d` plus its per-wound riders —
+// contribute nothing. Damage is the weapon's `d` plus its per-wound riders,
 // Rend (+1) and Evisceration (+1 vs a location already at/below half). There is
 // NO Penetration term in Damage: Overmatch was deleted (2026-07-16); Penetration
 // buys P(wound) and nothing else.
@@ -87,7 +87,7 @@ export function expectedDamage(attacker, target, slot, opts) {
   let woundDmg = 0;
   for (const { loc, p } of locs) {
     const ep = effectivePenAgainst(attacker, target, profile, loc, opts);
-    if (ep.negated || ep.effPen == null) continue;   // earned zero — a rake/shield blind arc
+    if (ep.negated || ep.effPen == null) continue;   // earned zero, a rake/shield blind arc
     // P(wound) = P(d10 ≥ TN). woundTarget clamps TN to ≤ WOUND_DIE, so the floor
     // (a natural 10 always wounds) is already baked in.
     const p1 = (WOUND_DIE - woundTarget(ep.effPen, ep.toughness) + 1) / WOUND_DIE;

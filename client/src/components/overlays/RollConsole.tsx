@@ -341,7 +341,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
             )}
             {/* The flat equation (`terms`) and the impact-total/tier readout
                 (`total`, `tier`) used to render here. Those fields died with the
-                d10 wound rewrite — nothing in shared/ emits them — and Plan 2
+                d10 wound rewrite, nothing in shared/ emits them, and Plan 2
                 removed them from ResolutionBreakdown, so the markup that read
                 them is gone. This component is itself unreachable (main.tsx
                 renders only V2Boot); the live ledger render is

@@ -1,8 +1,8 @@
-# V2 Status Strip — Minimal Utility Line — Implementation Plan
+# V2 Status Strip, Minimal Utility Line, Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reduce the V2 top status strip to a thin utility line — badge + room code + glossary only, dropping the wordmark, MK·IV plate, and LINK/LOCAL telemetry.
+**Goal:** Reduce the V2 top status strip to a thin utility line, badge + room code + glossary only, dropping the wordmark, MK·IV plate, and LINK/LOCAL telemetry.
 
 **Architecture:** Pure presentation change in the `Shell` component and its stylesheet. Remove chrome elements from the strip markup, scale the badge down, trim the now-dead CSS selectors, and add one small room-code style. Shared primitives (`.v2-lamp--ok`, `.v2-badge`) stay untouched.
 
@@ -12,9 +12,9 @@
 
 ## File Structure
 
-- `client/src/v2/components/Shell.tsx` — strip markup (`<header className="v2-strip">`) and the `react` import line.
-- `client/src/v2/styles/shell.css` — `.v2-strip` block rules (~lines 13–32).
-- `client/src/v2/components/Shell.test.tsx` — regression guards for the two survivors + new negative assertions.
+- `client/src/v2/components/Shell.tsx`: strip markup (`<header className="v2-strip">`) and the `react` import line.
+- `client/src/v2/styles/shell.css`: `.v2-strip` block rules (~lines 13–32).
+- `client/src/v2/components/Shell.test.tsx`: regression guards for the two survivors + new negative assertions.
 
 Reference: spec at `docs/superpowers/specs/2026-07-11-v2-strip-minimal-design.md`.
 
@@ -35,7 +35,7 @@ test("shows the room code and only the Yard channel active", async () => {
   // survivors
   expect(await screen.findByText(/IRON-42/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Glossary/i })).toBeInTheDocument();
-  // removed chrome — strip is now a minimal utility line
+  // removed chrome, strip is now a minimal utility line
   expect(screen.queryByText(/OIL & IRON/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/MK·IV/)).not.toBeInTheDocument();
   expect(screen.queryByText(/^LINK$/)).not.toBeInTheDocument();
@@ -52,7 +52,7 @@ test("shows the room code and only the Yard channel active", async () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && npx vitest run src/v2/components/Shell.test.tsx -t "shows the room code"`
-Expected: FAIL — the `queryByText(/OIL & IRON/i)` (and MK·IV / LINK / LOCAL) assertions fail because the current strip still renders that chrome.
+Expected: FAIL, the `queryByText(/OIL & IRON/i)` (and MK·IV / LINK / LOCAL) assertions fail because the current strip still renders that chrome.
 
 ---
 
@@ -95,12 +95,12 @@ This removes `.v2-brand-name` (wordmark), `.v2-brand-mk` (plate), and the whole 
 - [ ] **Step 3: Run the test to verify it passes**
 
 Run: `cd client && npx vitest run src/v2/components/Shell.test.tsx -t "shows the room code"`
-Expected: PASS — chrome gone, room code + glossary still present.
+Expected: PASS, chrome gone, room code + glossary still present.
 
 - [ ] **Step 4: Run the full Shell test file**
 
 Run: `cd client && npx vitest run src/v2/components/Shell.test.tsx`
-Expected: PASS — all tests (glossary handler, leave dialog, revert) still green.
+Expected: PASS, all tests (glossary handler, leave dialog, revert) still green.
 
 ---
 
@@ -114,7 +114,7 @@ Expected: PASS — all tests (glossary handler, leave dialog, revert) still gree
 Replace the current block (from `.v2-root .v2-strip{` through `.v2-root .v2-gloss-btn:hover{...}`, ~lines 14–32) with the following. Note: `.v2-brand-name`, `.v2-brand-mk`, `.v2-telemetry`, `.v2-tele`, `.v2-tele-key`, `.v2-tele-val`, `.v2-tele-sep` are deleted; `.v2-lamp--ok` is KEPT (used by `chat/ChatPanel.tsx`); the badge is scaled down; `.v2-strip-rm` is added.
 
 ```css
-/* ---- Status strip (mockup 55-71) — minimal utility line ---- */
+/* ---- Status strip (mockup 55-71), minimal utility line ---- */
 .v2-root .v2-strip{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:6px 14px;background:linear-gradient(180deg,var(--v2-iron-850),#0b0e13);border-bottom:2px solid #000;box-shadow:inset 0 -1px 0 rgba(231,154,61,.14),0 3px 10px rgba(0,0,0,.6);}
 .v2-root .v2-strip-spacer{flex:1;}
 
@@ -122,7 +122,7 @@ Replace the current block (from `.v2-root .v2-strip{` through `.v2-root .v2-glos
 .v2-root .v2-brand-badge{width:20px;height:20px;border:2px solid var(--v2-oil-deep);box-shadow:inset 0 0 8px rgba(0,0,0,.7);position:relative;}
 .v2-root .v2-brand-core{width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffbf6a,#a8641c 60%,#3a220a);box-shadow:0 0 8px rgba(231,154,61,.6);}
 
-/* room code readout — mono key + oil-hi value */
+/* room code readout, mono key + oil-hi value */
 .v2-root .v2-strip-rm{font-family:var(--v2-mono);font-size:var(--v2-text-sm);letter-spacing:.14em;color:var(--v2-txt-faint);}
 .v2-root .v2-strip-rm span{color:var(--v2-oil-hi);}
 
@@ -151,7 +151,7 @@ Expected: PASS (CSS changes don't affect assertions; this confirms nothing regre
 
 Start the dev server and open the in-room view. Confirm:
 - Strip is a single thin line (~30px), noticeably shorter than before.
-- Left: small iron badge only — no "OIL & IRON" wordmark, no "MK·IV" plate.
+- Left: small iron badge only, no "OIL & IRON" wordmark, no "MK·IV" plate.
 - Right: `RM <room>` in mono + the `ⓘ` glossary button. No green lamp, no "LINK LOCAL".
 - The screen/content area below gained vertical space.
 
@@ -164,7 +164,7 @@ Expected: PASS.
 
 ```bash
 git add client/src/v2/components/Shell.tsx client/src/v2/components/Shell.test.tsx client/src/v2/styles/shell.css
-git commit -m "refactor(v2): minimal status strip — badge + room code only
+git commit -m "refactor(v2): minimal status strip, badge + room code only
 
 Drop wordmark, MK·IV plate, and LINK/LOCAL telemetry from the top strip;
 scale the badge down and thin the bar. Room code + glossary kept."

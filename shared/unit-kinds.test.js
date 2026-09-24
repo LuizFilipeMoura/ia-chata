@@ -54,20 +54,20 @@ test("hitPart returns the D12 → part-name for a kind", () => {
   assert.equal(hitPart("rig", 12), "engine");
 });
 
-test("toughnessOf — rig reads the weight-class grid", () => {
+test("toughnessOf, rig reads the weight-class grid", () => {
   assert.equal(toughnessOf("rig", "hull", "medium"), 5);
   assert.equal(toughnessOf("rig", "engine", "light"), 3);
   assert.equal(toughnessOf("rig", "hull", "light"), 4);
 });
 
-test("toughnessOf — flat kinds ignore weight class", () => {
+test("toughnessOf, flat kinds ignore weight class", () => {
   assert.equal(toughnessOf("tank", "hull"), 6);
   assert.equal(toughnessOf("tank", "tracks"), 5);
   assert.equal(toughnessOf("walker", "hull"), 5);
   assert.equal(toughnessOf("walker", "mount"), 4);
 });
 
-test("toughnessOf — every part of every kind has a value", () => {
+test("toughnessOf, every part of every kind has a value", () => {
   // A missing T would silently become 0 and make the part trivially woundable.
   for (const kind of ["tank", "walker"]) {
     for (const p of partNamesOf(kind)) {
@@ -85,7 +85,7 @@ test("toughnessOf — every part of every kind has a value", () => {
 
 test("the rig toughness grid carries exactly the buildable classes", () => {
   // Heavy and Colossal were deleted 2026-07-16. toughnessOf THROWS on an unknown
-  // class rather than returning 0, so a stale grid entry is not merely dead — it
+  // class rather than returning 0, so a stale grid entry is not merely dead, it
   // is a T7 board that reads as real. It did: a penetration-rework spec and its
   // reviewer both balanced against toughness values no chassis could field.
   for (const wc of ["heavy", "colossal"]) {
@@ -93,15 +93,15 @@ test("the rig toughness grid carries exactly the buildable classes", () => {
   }
 });
 
-test("toughnessOf — a failed lookup throws, never a silent 0", () => {
+test("toughnessOf, a failed lookup throws, never a silent 0", () => {
   // Returning a sentinel here would not stay a sentinel: woundTarget coerces,
-  // and Number(null) === 0 yields TN 2 — a 90% wound. A bad lookup must abort,
+  // and Number(null) === 0 yields TN 2, a 90% wound. A bad lookup must abort,
   // not quietly produce the softest location in the game.
   assert.throws(() => toughnessOf("nope", "hull", "medium"), /unknown kind/);
   assert.throws(() => toughnessOf("rig", "nope", "medium"), /no T for/);
 });
 
-test("toughnessOf — a rig lookup with no weight class throws, it does not fall back", () => {
+test("toughnessOf, a rig lookup with no weight class throws, it does not fall back", () => {
   // The trap the flat/by-weight probe used to hide: `toughness` for a rig is a
   // grid of grids, so an omitted weightClass found no number and returned null.
   // `byWeight` makes "rig needs a weight class" distinct from "unknown part".
@@ -109,7 +109,7 @@ test("toughnessOf — a rig lookup with no weight class throws, it does not fall
   assert.throws(() => toughnessOf("rig", "hull", "nope"), /no T for rig\/nope\/hull/);
 });
 
-test("toughnessOf — flat kinds reject a part that is only a rig part", () => {
+test("toughnessOf, flat kinds reject a part that is only a rig part", () => {
   // "arms" is a rig part; a tank must not resolve it via some shared fallback.
   assert.throws(() => toughnessOf("tank", "arms"), /no T for tank\/flat\/arms/);
 });
@@ -120,7 +120,7 @@ test("kindOf(unit) returns the registry id, defaulting to 'rig' on legacy shape"
   assert.equal(kindOf(null), "rig");
 });
 
-test("Tank entry — parts, roles, flags, strawman toughness", () => {
+test("Tank entry, parts, roles, flags, strawman toughness", () => {
   const t = UNIT_KINDS.tank;
   assert.ok(t);
   assert.deepEqual(t.parts.map((p) => p.name), ["hull", "tracks", "turret", "engine"]);
@@ -145,7 +145,7 @@ test("Tank entry — parts, roles, flags, strawman toughness", () => {
   assert.equal(toughnessOf("tank", "engine"), 4);
 });
 
-test("Walker entry — parts, roles, flags, Sentinel strawman", () => {
+test("Walker entry, parts, roles, flags, Sentinel strawman", () => {
   const w = UNIT_KINDS.walker;
   assert.ok(w);
   assert.deepEqual(w.parts.map((p) => p.name), ["hull", "legs", "mount", "engine"]);

@@ -24,7 +24,7 @@ export function BattleHud() {
           <>
             Turn:{" "}
             <b className={sum.turnSide === mySide ? "bh-mine" : "bh-foe"}>{sum.turnName}</b>
-            {sum.activeName ? ` — ${sum.activeName}` : ""}
+            {sum.activeName ? `: ${sum.activeName}` : ""}
           </>
         ) : (
           ""

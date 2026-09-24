@@ -1,4 +1,4 @@
-# V2 Phase G — Targeting & Scoring Wizards (Attack + VP)
+# V2 Phase G, Targeting & Scoring Wizards (Attack + VP)
 
 **Date:** 2026-07-11 · **Status:** Approved · **Depends on:** Phase E (Drawer/Roll). See overview.
 
@@ -11,7 +11,7 @@ Control overlay (lines 419–451) to the real attack flow.
 ## Replaces
 
 `components/wizards/AttackWizard.tsx` (570 lines), `components/wizards/VpWizard.tsx`,
-`state/WizardContext.tsx` (openAttack/openScore) — for V2. (Commission is already native, Phase B.)
+`state/WizardContext.tsx` (openAttack/openScore), for V2. (Commission is already native, Phase B.)
 
 ## Architecture / components
 

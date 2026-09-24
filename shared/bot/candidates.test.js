@@ -28,7 +28,7 @@ function fireSetup(atkPos, atkFacing, foePos, foeFacing = 180) {
 }
 
 test("a long-range fire candidate is generated per enemy with LOS, in range, in the front arc", () => {
-  // Atk at (10,10) facing east (0); Foe 12in dead ahead — in band, in front, LOS clear.
+  // Atk at (10,10) facing east (0); Foe 12in dead ahead, in band, in front, LOS clear.
   const { room } = fireSetup({ x: 10, y: 10 }, 0, { x: 22, y: 10 });
   const fires = candidatesFor(room, findRig(room, "Atk"))
     .filter((c) => c.action === "fire" && c.weapon === "longRange");
@@ -125,7 +125,7 @@ test("every move candidate's facing is within 90° of the current facing", () =>
   }
 });
 
-test("a 0-inch move candidate exists — pivot in place is legal", () => {
+test("a 0-inch move candidate exists, pivot in place is legal", () => {
   const { room, atk } = moveSetup();
   const holds = movesOf(room, atk).filter((c) => Math.hypot(c.dest.x - atk.pos.x, c.dest.y - atk.pos.y) < 1e-6);
   assert.ok(holds.length > 0, "standing still and pivoting is a legal move");

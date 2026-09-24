@@ -9,12 +9,12 @@ import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import "../styles/chat.css";
 
 const GREETING =
-  "Ask me anything about the Of Oil and Iron rulebook — by text or by tapping the mic.";
+  "Ask me anything about the Of Oil and Iron rulebook, by text or by tapping the mic.";
 const CLEARED =
-  "Context cleared — your tracked Rigs are kept. Narrate the battle or ask a rules question.";
+  "Context cleared, your tracked Rigs are kept. Narrate the battle or ask a rules question.";
 
 // The native V2 Quartermaster panel. Reuses V1 chat LOGIC (ChatContext,
-// useChatStream, useSpeech) unchanged — only the presentation is rewritten to
+// useChatStream, useSpeech) unchanged, only the presentation is rewritten to
 // the dieselpunk terminal look (mockup oil-iron-terminal.html:453-475).
 // `onBotMessage` fires whenever a bot bubble is appended while the panel is
 // closed, so the parent can flag the fab as unread.

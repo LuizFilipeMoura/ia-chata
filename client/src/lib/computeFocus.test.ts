@@ -72,7 +72,7 @@ test("prompts End turn when the active rig has no actions left", () => {
   const f = computeFocus(g, [activeRig], "a");
   expect(f?.tone).toBe("act");
   expect(f?.primary).toBe(`End ${activeRig.name}'s turn`);
-  expect(f?.secondary).toBe("No actions left — pass to the next Rig.");
+  expect(f?.secondary).toBe("No actions left, pass to the next Rig.");
   expect(f?.cta).toEqual({ label: "End turn", kind: "endTurn" });
 });
 
@@ -105,7 +105,7 @@ test("waits when opponent must spend answer tokens before activation", () => {
 test("gives Roll initiative a secondary round line", () => {
   const g = base({ started: true, phase: "initiative", round: 2 });
   const f = computeFocus(g, [], "a");
-  expect(f?.secondary).toBe("Round 2 — decide who moves first.");
+  expect(f?.secondary).toBe("Round 2, decide who moves first.");
 });
 
 test("recovery prompts scoring when I haven't submitted", () => {

@@ -99,11 +99,11 @@ test("a BARRICADE blocking all 3 rays is cover 2 and the shot is still legal", (
   const r = sightCorridor(A, B, [wall]);
   assert.equal(r.obstructed, 3);
   assert.equal(r.buildingRays, 0);
-  assert.equal(r.cover, 2, "cover clamps at 2 — only buildings deny the shot");
+  assert.equal(r.cover, 2, "cover clamps at 2, only buildings deny the shot");
   assert.equal(r.los, true);
 });
 
-test("the corridor is rotation-invariant — a diagonal shot reads the same", () => {
+test("the corridor is rotation-invariant, a diagonal shot reads the same", () => {
   const a = { pos: { x: 0, y: 0 }, radius: 1.48 };
   const b = { pos: { x: 14.142, y: 14.142 }, radius: 1.48 }; // 20in away, 45 deg
   // A small building dead on the centre line, sized to eat only the centre ray.
@@ -136,7 +136,7 @@ const at = (x, y) => ({ pos: { x, y } });
 
 test("arcOf reads front / side / rear off the target's facing", () => {
   assert.equal(arcOf(at(10, 0), T), "front");   // dead ahead
-  assert.equal(arcOf(at(10, 9), T), "front");   // 42 deg — inside the 45 cone
+  assert.equal(arcOf(at(10, 9), T), "front");   // 42 deg, inside the 45 cone
   assert.equal(arcOf(at(0, 10), T), "side");    // 90 deg
   assert.equal(arcOf(at(0, -10), T), "side");   // -90 deg
   assert.equal(arcOf(at(-10, 0), T), "rear");   // behind

@@ -1,4 +1,4 @@
-# V2 Frontend — Phase A Design (Shell + Join + Squadron + Rig Terminal)
+# V2 Frontend, Phase A Design (Shell + Join + Squadron + Rig Terminal)
 
 **Date:** 2026-07-11
 **Status:** Approved design, ready for implementation plan
@@ -24,7 +24,7 @@ Those gaps are re-implemented in the V2 design language across later phases.
 
 - **Phase A (this doc):** Shell + Join + Squadron + Rig Terminal, fully wired.
 - **Phase B:** Commission wizard (Rig/Tank/Walker, chassis, upgrades, equipment, confirm).
-- **Phase C:** Battle system — new Battle screen (field map, HUD, turn banner,
+- **Phase C:** Battle system, new Battle screen (field map, HUD, turn banner,
   action console), move/repair/prepare drawers, roll console, reactions, answer
   tokens, blast, VP scoring, Attack overlay, Outcome.
 - **Phase D:** Chat/Quartermaster + glossary + remaining cross-cutting.
@@ -34,18 +34,18 @@ Those gaps are re-implemented in the V2 design language across later phases.
 1. V2 renders behind a `?v2` toggle, isolated from V1 in both JS and CSS.
 2. A user can join a room, see the squadron roster (own + enemy), open a rig's
    Control Terminal, damage/repair components, view the engine heat gauge, remove
-   a rig, toggle dice mode, and mark ready — all wired to the real server state.
+   a rig, toggle dice mode, and mark ready, all wired to the real server state.
 3. Establish the reusable V2 patterns (shell, CSS scoping, state-to-viewmodel
    mapping, command dispatch, tests) that later phases follow.
 
 ## Non-Goals (Phase A)
 
-- No live-battle UI (action console, Fire overlay, field map, roll console) —
+- No live-battle UI (action console, Fire overlay, field map, roll console),
   Phase C.
-- No V2 commission wizard — the Yard's "Commission" action delegates to the
+- No V2 commission wizard, the Yard's "Commission" action delegates to the
   **existing V1 commission wizard** (a wired portal overlay) as an interim until
   Phase B.
-- No V2 chat/Quartermaster or glossary — Phase D. The Rulebook dock button is
+- No V2 chat/Quartermaster or glossary, Phase D. The Rulebook dock button is
   rendered disabled.
 - No changes to V1 files beyond the single `main.tsx` toggle branch.
 
@@ -104,11 +104,11 @@ Wraps children in `<div class="v2-root">` and lays out:
   is active and selectable in Phase A. Forge / Rules / Verdict render in a
   disabled "stand by" state (no navigation). No Battle channel yet.
 - **Command dock (footer):**
-  - **Leave** — wired: confirm dialog, then `localStorage.clear()` + `clearSession`
+  - **Leave**: wired: confirm dialog, then `localStorage.clear()` + `clearSession`
     (same behavior as V1 FabDock leave).
-  - **Revert** — wired: shown only when `game.canUndo`; sends the `undo` command.
-  - **Rulebook** — rendered disabled (Phase D).
-  - Settings ⚙ button — visual only in Phase A.
+  - **Revert**: wired: shown only when `game.canUndo`; sends the `undo` command.
+  - **Rulebook**: rendered disabled (Phase D).
+  - Settings ⚙ button, visual only in Phase A.
 - **CRT / ambient overlays:** fixed, `pointer-events:none`, `aria-hidden`. All
   animations gated by `@media (prefers-reduced-motion:reduce)`.
 
@@ -126,17 +126,17 @@ Mockup join card, wired to the real join flow:
 - Primary CTA "Enter The Yard" → POST `/api/game/:room/join` with `{name, side}`;
   on success store session + apply initial server state; on failure show the
   error line (e.g. "Room is full.").
-- Live status line ("ALL SYSTEMS NOMINAL — READY TO ENLIST" vs guidance when
+- Live status line ("ALL SYSTEMS NOMINAL, READY TO ENLIST" vs guidance when
   fields are incomplete). CTA disabled until room + side are chosen.
 
 ### Squadron / Yard (`v2/screens/Squadron.tsx`)
 
 - **Header:** "THE YARD", `N / 3 COMMISSIONED` (from roster count and the real
-  `MAX_RIGS_PER_SIDE` cap), and **tonnage** — a **display-only** figure (no server
+  `MAX_RIGS_PER_SIDE` cap), and **tonnage**: a **display-only** figure (no server
   truth) summed from a cosmetic weight-class→tons map defined in V2.
 - **Your Squadron** section: one `RigRow` per own rig, own-first ordering.
 - **Hostile Forces** section: enemy rigs, read-only hostile styling.
-- **Commission add card:** interim — opens the existing V1 commission wizard via
+- **Commission add card:** interim, opens the existing V1 commission wizard via
   `WizardContext.openCommission`. Honors the same roster-full / per-side caps
   (renders locked "Ready up" state when full), matching V1's `RigAddScreen`.
 - **Ready bar:** ready-status text per side, a dice **AUTO / MANUAL** toggle
@@ -150,7 +150,7 @@ ACTIVE badge (when applicable), loadout summary, four component mini-bars
 (H/A/L/E) using real `sp/max` and the mockup's `spColor` thresholds, and a
 status dot/label. Cold kinds (tank/walker) show a kind label instead of a heat
 chip and a single flat weapon. Clicking opens the Rig Terminal overlay for that
-rig (via `UiState` expanded/active-rig or a local overlay state — implementation
+rig (via `UiState` expanded/active-rig or a local overlay state, implementation
 detail resolved in the plan).
 
 ### Rig Terminal overlay (`v2/overlays/RigTerminal.tsx`)
@@ -170,12 +170,12 @@ Terminal, for the selected rig:
   buttons wired to the real `damage` / `repair` commands, with a floating ∓N
   delta flash (red on hit, green on heal) as in V1.
 - **Engine heat gauge (`v2/components/HeatGauge.tsx`):** a **read-only** port of
-  V1's segmented thermometer — real heat vs cap, zone coloring, redline/over
+  V1's segmented thermometer, real heat vs cap, zone coloring, redline/over
   states, misfire readout. Hidden entirely for cold kinds. (V1 has no standalone
   stoke/vent command; heat only changes through battle actions like Purge, so the
   mockup's STOKE/VENT buttons are **deferred to Phase C** and not rendered here.)
 - **Remove Rig:** wired remove command.
-- **Activate CTA:** present, but honors the real `canActivateNow` gate — shows
+- **Activate CTA:** present, but honors the real `canActivateNow` gate, shows
   "Wait for your turn" outside your activation. The **action console and Fire
   overlay are deferred to Phase C** and are not rendered in Phase A.
 - Close via scrim click / ✕ / Escape.
@@ -230,4 +230,4 @@ TDD per component, using V1's existing vitest + testing-library setup:
   setdice (read from V1's `BattleActionsContext` / command layer during TDD).
 - Tonnage and weight-class → tonnage mapping (read from V1's roster/shared logic).
 - Rig-terminal open/close state channel (local vs `UiStateContext.activeRigId`).
-- The `?v2` flag parsing detail (query param vs hash) — pick one in the plan.
+- The `?v2` flag parsing detail (query param vs hash), pick one in the plan.

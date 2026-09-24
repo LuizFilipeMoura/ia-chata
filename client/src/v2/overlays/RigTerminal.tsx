@@ -44,7 +44,7 @@ export function RigTerminal({ rig, canActivate, started, mine, myTurn, onCommand
   const mods = rigModifiers(rig);
   const hullBonus = rigEffects(rig).hullMaxBonus;
   const lo = buildLoadout(rig);
-  // Movement stats now live on the chassis — surface Speed (a Move's reach) and
+  // Movement stats now live on the chassis, surface Speed (a Move's reach) and
   // its derived Sprint (1½× Speed, 2× with Reinforced Servos) so the status view
   // isn't silent on how far this Rig travels. Same resolution order as MoveBody:
   // chassis > class > 8.

@@ -1,10 +1,10 @@
-# V2 Rig Terminal — Click-to-Explain Implementation Plan
+# V2 Rig Terminal, Click-to-Explain Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Every informational token in the V2 Rig Terminal (mod chips, status, component rows, heat gauge, loadout stats/perks/modules) pops a definition when clicked, reusing the existing glossary tip.
 
-**Architecture:** One reusable `InfoTerm` wrapper drives the existing `showTip(id, anchor)` API — no changes to the tip component or context. Definitions live in `shared/glossary.js` (id-only lookup, `match: []` so runtime states don't leak into chat highlighting). View-model producers (`rigModifiers`, `rigStatus`) gain a `gloss` id pointer; render sites wrap tokens in `InfoTerm`. Action controls are excluded (a button can't click-to-act and click-to-explain).
+**Architecture:** One reusable `InfoTerm` wrapper drives the existing `showTip(id, anchor)` API, no changes to the tip component or context. Definitions live in `shared/glossary.js` (id-only lookup, `match: []` so runtime states don't leak into chat highlighting). View-model producers (`rigModifiers`, `rigStatus`) gain a `gloss` id pointer; render sites wrap tokens in `InfoTerm`. Action controls are excluded (a button can't click-to-act and click-to-explain).
 
 **Tech Stack:** React + TypeScript (client, Vitest + @testing-library/react), plain ESM JS in `/shared` (node:test). Glossary tip machinery already exists in `client/src/v2`.
 
@@ -12,22 +12,22 @@
 
 ## File Structure
 
-- **Modify** `client/src/lib/glossaryTerms.ts` — export `matchGlossary(text)`.
-- **Modify** `client/src/lib/glossaryTerms.test.ts` — cover it.
-- **Modify** `shared/glossary.js` — add ~35 entries (runtime states, status, tank/walker parts, modules).
-- **Create** `shared/glossary.test.js` — assert new ids resolve. *(No glossary test exists today.)*
-- **Create** `client/src/v2/components/InfoTerm.tsx` — the wrapper.
-- **Create** `client/src/v2/components/InfoTerm.test.tsx` — wrapper behaviour.
-- **Modify** `client/src/v2/styles/glossary.css` — `.v2-info` affordance.
-- **Modify** `shared/battle-view.js` — `gloss` on every `rigModifiers` mod.
-- **Modify** `shared/battle-view.test.js` — assert every mod's `gloss` resolves.
-- **Modify** `client/src/lib/rigView.ts` — `gloss` on `rigStatus` return.
-- **Modify** `client/src/lib/rigView.test.ts` — assert each status branch's `gloss` resolves.
-- **Modify** `client/src/v2/overlays/RigTerminal.tsx` — wrap mods, status, weight badge.
-- **Modify** `client/src/v2/components/CompRow.tsx` — wrap the part label.
-- **Modify** `client/src/v2/components/HeatGauge.tsx` — wrap "ENGINE HEAT" + cap.
-- **Modify** `client/src/v2/components/LoadoutView.tsx` — wrap stat labels, perks, modules.
-- **Create** `client/src/v2/overlays/RigTerminal.infotip.test.tsx` — coverage guard: every rendered `[data-info]` resolves.
+- **Modify** `client/src/lib/glossaryTerms.ts`: export `matchGlossary(text)`.
+- **Modify** `client/src/lib/glossaryTerms.test.ts`: cover it.
+- **Modify** `shared/glossary.js`: add ~35 entries (runtime states, status, tank/walker parts, modules).
+- **Create** `shared/glossary.test.js`: assert new ids resolve. *(No glossary test exists today.)*
+- **Create** `client/src/v2/components/InfoTerm.tsx`: the wrapper.
+- **Create** `client/src/v2/components/InfoTerm.test.tsx`: wrapper behaviour.
+- **Modify** `client/src/v2/styles/glossary.css`: `.v2-info` affordance.
+- **Modify** `shared/battle-view.js`: `gloss` on every `rigModifiers` mod.
+- **Modify** `shared/battle-view.test.js`: assert every mod's `gloss` resolves.
+- **Modify** `client/src/lib/rigView.ts`: `gloss` on `rigStatus` return.
+- **Modify** `client/src/lib/rigView.test.ts`: assert each status branch's `gloss` resolves.
+- **Modify** `client/src/v2/overlays/RigTerminal.tsx`: wrap mods, status, weight badge.
+- **Modify** `client/src/v2/components/CompRow.tsx`: wrap the part label.
+- **Modify** `client/src/v2/components/HeatGauge.tsx`: wrap "ENGINE HEAT" + cap.
+- **Modify** `client/src/v2/components/LoadoutView.tsx`: wrap stat labels, perks, modules.
+- **Create** `client/src/v2/overlays/RigTerminal.infotip.test.tsx`: coverage guard: every rendered `[data-info]` resolves.
 
 **Test commands:**
 - Client (one file): `npx vitest run <path>`
@@ -62,7 +62,7 @@ test("matchGlossary returns undefined for an unknown string", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/lib/glossaryTerms.test.ts`
-Expected: FAIL — `matchGlossary is not a function` / import error.
+Expected: FAIL, `matchGlossary is not a function` / import error.
 
 - [ ] **Step 3: Add the export**
 
@@ -84,7 +84,7 @@ Expected: PASS.
 
 ```bash
 git add client/src/lib/glossaryTerms.ts client/src/lib/glossaryTerms.test.ts
-git commit -m "feat(v2): matchGlossary — resolve an exact term string to a glossary id"
+git commit -m "feat(v2): matchGlossary, resolve an exact term string to a glossary id"
 ```
 
 ---
@@ -141,7 +141,7 @@ test("every entry has a non-empty def", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/glossary.test.js`
-Expected: FAIL — "missing glossary id: immobilised".
+Expected: FAIL, "missing glossary id: immobilised".
 
 - [ ] **Step 3: Add the entries**
 
@@ -150,70 +150,70 @@ In `shared/glossary.js`, insert these objects into the `GLOSSARY` array, just be
 ```js
   // ── Runtime states (rig terminal mod chips; id-only lookup) ────────────────
   { id: "immobilised", term: "Immobilised", match: [],
-    def: "Can't move at all until freed — from destroyed Legs or an Impale result. No repositioning or pivots (§8, §13)." },
+    def: "Can't move at all until freed, from destroyed Legs or an Impale result. No repositioning or pivots (§8, §13)." },
   { id: "pinned", term: "Pinned", match: [],
-    def: "Suppressing fire has pinned the Rig — it can't move this activation, though it isn't permanently immobilised." },
+    def: "Suppressing fire has pinned the Rig, it can't move this activation, though it isn't permanently immobilised." },
   { id: "emplaced", term: "Emplaced", match: [],
-    def: "Dug into a fixed firing position — trades mobility for a steadier platform." },
+    def: "Dug into a fixed firing position, trades mobility for a steadier platform." },
   { id: "barrage", term: "Barrage", match: [],
     def: "A sustained barrage is in flight; the number is how many more activations of fire it keeps up." },
   { id: "engaged", term: "Engaged", match: [],
     def: "Locked in melee with an enemy Rig. It must Disengage before it can Move (§5, §12)." },
   { id: "burning", term: "Burning", match: [],
-    def: "On fire — takes damage each activation until the flames go out; the number is rounds of burning left." },
+    def: "On fire, takes damage each activation until the flames go out; the number is rounds of burning left." },
   { id: "no-cooling", term: "No cooling", match: [],
-    def: "Cooling systems are offline — the Rig can't shed Heat this activation." },
+    def: "Cooling systems are offline, the Rig can't shed Heat this activation." },
   { id: "speed-halved", term: "Speed halved", match: [],
-    def: "Movement is halved (round down) next activation — usually from a Shock hit (§13)." },
+    def: "Movement is halved (round down) next activation, usually from a Shock hit (§13)." },
   { id: "skip-activation", term: "Skips next activation", match: [],
-    def: "Loses its next activation entirely — commonly from a wrecked Engine (§8)." },
+    def: "Loses its next activation entirely, commonly from a wrecked Engine (§8)." },
   { id: "momentum", term: "Momentum", match: [],
     def: "Built-up charge from a prototype upgrade; the number is the momentum stacks available to spend." },
   { id: "missiles-locked", term: "Missiles locked", match: [],
-    def: "A missile lock is held on a target — the next salvo fires with the lock's bonus." },
+    def: "A missile lock is held on a target, the next salvo fires with the lock's bonus." },
   { id: "action-penalty", term: "Action penalty", match: [],
-    def: "Starts its next activation short N actions — a lingering penalty from an enemy effect." },
+    def: "Starts its next activation short N actions, a lingering penalty from an enemy effect." },
   { id: "no-prepare", term: "No Prepare next", match: [],
     def: "Can't place a Prepare reaction on its next activation (§5)." },
   { id: "anchored", term: "Anchored", match: [],
-    def: "Held in place — Disengaging next activation costs a free hit, or is barred outright." },
+    def: "Held in place, Disengaging next activation costs a free hit, or is barred outright." },
   { id: "no-actives", term: "No actives next", match: [],
     def: "Can't use active equipment abilities on its next activation." },
   { id: "arc-locked", term: "Arc Gun locked", match: [],
     def: "The Arc Gun is locked out next activation and can't fire." },
   { id: "arms-suppressed", term: "Arms suppressed", match: [],
-    def: "Arms are suppressed — weapons fire at half ROF (round down)." },
+    def: "Arms are suppressed, weapons fire at half ROF (round down)." },
   { id: "belt-cycling", term: "Belt cycling", match: [],
-    def: "The autocannon belt is still cycling — half ROF on the next shot." },
+    def: "The autocannon belt is still cycling, half ROF on the next shot." },
   { id: "cracked", term: "Cracked", match: [],
-    def: "A component's armour is cracked — it takes extra damage there until repaired." },
+    def: "A component's armour is cracked, it takes extra damage there until repaired." },
   { id: "riveted", term: "Riveted", match: [],
-    def: "A component is rivet-seized — it can't be repaired until the seize is cleared." },
+    def: "A component is rivet-seized, it can't be repaired until the seize is cleared." },
   { id: "no-repair", term: "No repair", match: [],
-    def: "A component can't be repaired for now — damage there is locked in." },
+    def: "A component can't be repaired for now, damage there is locked in." },
   { id: "reaction-set", term: "Reaction set", match: [],
     def: "A facedown Prepare reaction is armed and triggers before this Rig's next activation (§5)." },
   { id: "braced", term: "Braced", match: [],
-    def: "Braced for Incoming Fire — an armed reaction that cuts incoming damage before the next activation (§5)." },
+    def: "Braced for Incoming Fire, an armed reaction that cuts incoming damage before the next activation (§5)." },
   { id: "evasive", term: "Evasive ready", match: [],
-    def: "Evasive Manoeuvre — an armed reaction that dodges before the next activation (§5)." },
+    def: "Evasive Manoeuvre, an armed reaction that dodges before the next activation (§5)." },
   { id: "return-fire", term: "Return fire ready", match: [],
-    def: "Return Fire — an armed reaction that shoots back before the next activation (§5)." },
+    def: "Return Fire, an armed reaction that shoots back before the next activation (§5)." },
   { id: "weapon-lost", term: "Weapon lost", match: [],
     def: "A weapon was destroyed (Arms at 0 SP) and can no longer be fired (§8)." },
   { id: "ranged-unloaded", term: "Ranged unloaded", match: [],
     def: "The Long Range weapon is spent and must Reload before firing again (§5, §12)." },
   { id: "painted", term: "Painted", match: [],
-    def: "Marked by a Recon Paint — allied ranged attacks ignore its cover and gain +1 Aim (Support Units)." },
+    def: "Marked by a Recon Paint, allied ranged attacks ignore its cover and gain +1 Aim (Support Units)." },
   // ── Status-chip states (id-only lookup) ────────────────────────────────────
   { id: "destroyed", term: "Destroyed", match: [],
     def: "The Rig is wrecked and out of the battle." },
   { id: "heavy-damage", term: "Heavy damage", match: [],
-    def: "A component is at a third of its structure or less — still operational but near catastrophic." },
+    def: "A component is at a third of its structure or less, still operational but near catastrophic." },
   { id: "damaged", term: "Damaged", match: [],
     def: "At least one component has taken damage; the Rig is still fully operational." },
   { id: "nominal", term: "All systems nominal", match: [],
-    def: "Every component is at full structure — no damage." },
+    def: "Every component is at full structure, no damage." },
   // ── Non-rig parts (Tank / Walker) ──────────────────────────────────────────
   { id: "tracks", term: "Tracks", match: [],
     def: "A Tank's mobility component. At 0 SP its movement is crippled." },
@@ -240,7 +240,7 @@ Expected: PASS (3 tests).
 - [ ] **Step 5: Run the existing glossary consumer test to confirm no regression**
 
 Run: `npx vitest run client/src/lib/glossaryTerms.test.ts`
-Expected: PASS — empty `match` arrays add no new tokenised terms.
+Expected: PASS, empty `match` arrays add no new tokenised terms.
 
 - [ ] **Step 6: Commit**
 
@@ -308,7 +308,7 @@ test("keeps the host className alongside v2-info", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/components/InfoTerm.test.tsx`
-Expected: FAIL — cannot find `./InfoTerm`.
+Expected: FAIL, cannot find `./InfoTerm`.
 
 - [ ] **Step 3: Write `InfoTerm`**
 
@@ -354,7 +354,7 @@ export function InfoTerm({ id, as: Tag = "span", className = "", children }: Pro
       data-info={id}
       role="button"
       tabIndex={0}
-      aria-label={`${entry.term} — what this means`}
+      aria-label={`${entry.term}, what this means`}
       onClick={(e: MouseEvent<HTMLElement>) => open(e.currentTarget)}
       onKeyDown={onKeyDown}
     >
@@ -370,7 +370,7 @@ In `client/src/v2/styles/glossary.css`, after the `.v2-gloss-term` block (ends a
 
 ```css
 /* ===== Generic click-to-explain affordance for structured UI tokens ===== */
-/* Additive only — layers onto the host element's own look (chips, stat labels,
+/* Additive only, layers onto the host element's own look (chips, stat labels,
    part labels) without restyling it. Mirrors how .v2-gloss-term.is-open reads. */
 .v2-root .v2-info {
   cursor: pointer;
@@ -396,7 +396,7 @@ Expected: PASS (4 tests).
 
 ```bash
 git add client/src/v2/components/InfoTerm.tsx client/src/v2/components/InfoTerm.test.tsx client/src/v2/styles/glossary.css
-git commit -m "feat(v2): InfoTerm — click-to-explain wrapper for structured terminal tokens"
+git commit -m "feat(v2): InfoTerm, click-to-explain wrapper for structured terminal tokens"
 ```
 
 ---
@@ -448,7 +448,7 @@ test("a hidden reaction points at reaction-set; a revealed one names the type", 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — "mod ... has no gloss".
+Expected: FAIL, "mod ... has no gloss".
 
 - [ ] **Step 3: Add `gloss` to each mod push**
 
@@ -474,8 +474,8 @@ In `shared/battle-view.js`, edit `rigModifiers` (lines 143-191). Add a `gloss:` 
   if (rig.lockedTarget != null) mods.push({ key: "locked", tag: "Missiles locked", tone: "prep", gloss: "missiles-locked" });
   if ((rig.actionPenaltyNextActivation || 0) > 0) mods.push({ key: "actionpen", tag: `−${rig.actionPenaltyNextActivation} action next`, tone: "warn", gloss: "action-penalty" });
   if (rig.noPrepNextActivation) mods.push({ key: "noprep", tag: "No Prepare next", tone: "warn", gloss: "no-prepare" });
-  if (rig.noDisengageNextActivation) mods.push({ key: "nodisengage", tag: "Anchored — no Disengage next", tone: "warn", gloss: "anchored" });
-  if (rig.anchoredBy != null) mods.push({ key: "anchored", tag: "Anchored — Disengage costs a hit", tone: "warn", gloss: "anchored" });
+  if (rig.noDisengageNextActivation) mods.push({ key: "nodisengage", tag: "Anchored, no Disengage next", tone: "warn", gloss: "anchored" });
+  if (rig.anchoredBy != null) mods.push({ key: "anchored", tag: "Anchored, Disengage costs a hit", tone: "warn", gloss: "anchored" });
   if (rig.noActivesNextActivation) mods.push({ key: "noactive", tag: "No actives next", tone: "warn", gloss: "no-actives" });
   if (rig.arcLockedNext) mods.push({ key: "arclock", tag: "Arc Gun locked", tone: "warn", gloss: "arc-locked" });
   if (rig.armsSuppressed) mods.push({ key: "armssup", tag: "Arms suppressed · ½ ROF", tone: "warn", gloss: "arms-suppressed" });
@@ -495,7 +495,7 @@ In `shared/battle-view.js`, edit `rigModifiers` (lines 143-191). Add a `gloss:` 
   if (rig.painted) mods.push({ key: "painted", tag: "Painted", tone: "warn", gloss: "painted" });
 ```
 
-Note: `structPart`/`powerPart`/`mobPart` are the actual part names (`hull`/`engine`/`legs` for a rig; `hull`/`engine`/`tracks` for a tank; `hull`/`engine`/`legs` for a walker) — all of which are glossary ids after Task 2, so `gloss: structPart` resolves for every kind.
+Note: `structPart`/`powerPart`/`mobPart` are the actual part names (`hull`/`engine`/`legs` for a rig; `hull`/`engine`/`tracks` for a tank; `hull`/`engine`/`legs` for a walker), all of which are glossary ids after Task 2, so `gloss: structPart` resolves for every kind.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -548,7 +548,7 @@ If `rig`/`comp` helpers in this file don't already produce a full-SP default rig
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/lib/rigView.test.ts`
-Expected: FAIL — `gloss` is `undefined`.
+Expected: FAIL, `gloss` is `undefined`.
 
 - [ ] **Step 3: Add `gloss` to each return**
 
@@ -557,13 +557,13 @@ In `client/src/lib/rigView.ts`, change the `rigStatus` return type and each bran
 ```ts
 export function rigStatus(rig: Rig): { text: string; cls: string; gloss: string } {
   const parts = partNamesOf(kindOf(rig));
-  if (rig.destroyed) return { text: "⛔ System failure — destroyed", cls: "crit", gloss: "destroyed" };
+  if (rig.destroyed) return { text: "⛔ System failure, destroyed", cls: "crit", gloss: "destroyed" };
   if (parts.some((l: string) => (rig as any)[l]?.sp === 0))
     return { text: "⚠ Catastrophic damage", cls: "crit", gloss: "catastrophic-damage" };
   if (parts.some((l: string) => (rig as any)[l]?.sp / (rig as any)[l]?.max <= 0.34))
-    return { text: "▲ Heavy damage — operational", cls: "warn", gloss: "heavy-damage" };
+    return { text: "▲ Heavy damage, operational", cls: "warn", gloss: "heavy-damage" };
   if (parts.some((l: string) => (rig as any)[l]?.sp < (rig as any)[l]?.max))
-    return { text: "◆ Damaged — operational", cls: "warn", gloss: "damaged" };
+    return { text: "◆ Damaged, operational", cls: "warn", gloss: "damaged" };
   return { text: "● All systems nominal", cls: "", gloss: "nominal" };
 }
 ```
@@ -621,7 +621,7 @@ with:
         )}
 ```
 
-Note: the chip's `data-tone` styling lives on `.v2-rt-mod[data-tone=...]`. Keep `data-tone` on the styled element — move it to the `InfoTerm` host so the CSS still matches. Use this exact form instead:
+Note: the chip's `data-tone` styling lives on `.v2-rt-mod[data-tone=...]`. Keep `data-tone` on the styled element, move it to the `InfoTerm` host so the CSS still matches. Use this exact form instead:
 
 ```tsx
         {mods.length > 0 && (
@@ -635,7 +635,7 @@ Note: the chip's `data-tone` styling lives on `.v2-rt-mod[data-tone=...]`. Keep 
         )}
 ```
 
-Wait — `InfoTerm`'s Props don't accept arbitrary DOM attributes. To keep `data-tone` on the styled host without widening `InfoTerm`'s API, render the tone via a child span the CSS also targets. Update the `.v2-rt-mod[data-tone]` selectors are on `.v2-rt-mod` itself, so the tone attribute must sit on the element carrying `.v2-rt-mod`. Choose the clean path: **add an optional `dataTone` prop to `InfoTerm`**.
+Wait, `InfoTerm`'s Props don't accept arbitrary DOM attributes. To keep `data-tone` on the styled host without widening `InfoTerm`'s API, render the tone via a child span the CSS also targets. Update the `.v2-rt-mod[data-tone]` selectors are on `.v2-rt-mod` itself, so the tone attribute must sit on the element carrying `.v2-rt-mod`. Choose the clean path: **add an optional `dataTone` prop to `InfoTerm`**.
 
 - [ ] **Step 3: Add a `dataTone` pass-through to `InfoTerm`**
 
@@ -660,7 +660,7 @@ Plain branch:
   }
 ```
 
-Interactive branch — add `data-tone={dataTone}` to the `<Tag>` props. Destructure `dataTone` in the function signature.
+Interactive branch, add `data-tone={dataTone}` to the `<Tag>` props. Destructure `dataTone` in the function signature.
 
 Then in `InfoTerm.test.tsx` add:
 
@@ -671,7 +671,7 @@ test("forwards data-tone to the host element", () => {
 });
 ```
 
-Run: `npx vitest run client/src/v2/components/InfoTerm.test.tsx` — Expected: PASS.
+Run: `npx vitest run client/src/v2/components/InfoTerm.test.tsx`: Expected: PASS.
 
 - [ ] **Step 4: Use `dataTone` in the mods block**
 
@@ -713,7 +713,7 @@ The sub-line (line 80) renders `{badge}{loadoutText ? …}`. Wrap just the badge
 
 - [ ] **Step 7: Typecheck + run the terminal's own tests if any**
 
-Run: `npx tsc --noEmit -p client/tsconfig.json` (or the repo's typecheck script — check `package.json` scripts; if it's `npm run build`/`tsc -b`, use that).
+Run: `npx tsc --noEmit -p client/tsconfig.json` (or the repo's typecheck script, check `package.json` scripts; if it's `npm run build`/`tsc -b`, use that).
 Expected: no new type errors.
 
 - [ ] **Step 8: Commit**
@@ -830,7 +830,7 @@ import { InfoTerm } from "./InfoTerm";
 import { matchGlossary } from "../../lib/loadoutGloss";
 ```
 
-Wait — `matchGlossary` lives in `client/src/lib/glossaryTerms.ts` (Task 1). Import it from there:
+Wait, `matchGlossary` lives in `client/src/lib/glossaryTerms.ts` (Task 1). Import it from there:
 
 ```tsx
 import { InfoTerm } from "./InfoTerm";
@@ -930,12 +930,12 @@ git commit -m "feat(v2): loadout stats, perks, and modules are click-to-explain"
 
 ---
 
-## Task 10: Coverage guard — every rendered token resolves
+## Task 10: Coverage guard, every rendered token resolves
 
 **Files:**
 - Create: `client/src/v2/overlays/RigTerminal.infotip.test.tsx`
 
-Rendering `RigTerminal` with `started={false}` and `mine={false}` skips `ActionConsole` (gated on `started`) and the activation control (gated on `mine && started`), so no battle-context providers are needed — only `V2GlossaryTipProvider`. This exercises mods, status, weight badge, component rows, and the heat gauge in one render.
+Rendering `RigTerminal` with `started={false}` and `mine={false}` skips `ActionConsole` (gated on `started`) and the activation control (gated on `mine && started`), so no battle-context providers are needed, only `V2GlossaryTipProvider`. This exercises mods, status, weight badge, component rows, and the heat gauge in one render.
 
 - [ ] **Step 1: Write the test**
 
@@ -985,15 +985,15 @@ test("every click-to-explain token in the terminal resolves to a glossary def", 
 - [ ] **Step 2: Run the test**
 
 Run: `npx vitest run client/src/v2/overlays/RigTerminal.infotip.test.tsx`
-Expected: PASS — at least the status chip, weight badge, three+ mod chips, four component labels, and the two heat tokens carry `data-info`, all resolving.
+Expected: PASS, at least the status chip, weight badge, three+ mod chips, four component labels, and the two heat tokens carry `data-info`, all resolving.
 
-If the render throws on a missing import/context, the culprit is an eagerly-instantiated hook — confirm `ActionConsole` and the activation control are truly gated out with `started={false}`; they are, per `RigTerminal.tsx:51` and `:116`.
+If the render throws on a missing import/context, the culprit is an eagerly-instantiated hook, confirm `ActionConsole` and the activation control are truly gated out with `started={false}`; they are, per `RigTerminal.tsx:51` and `:116`.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add client/src/v2/overlays/RigTerminal.infotip.test.tsx
-git commit -m "test(v2): coverage guard — every terminal info token resolves to a def"
+git commit -m "test(v2): coverage guard, every terminal info token resolves to a def"
 ```
 
 ---
@@ -1012,7 +1012,7 @@ Start the dev server (via the preview tool / `.claude/launch.json`), open a batt
 - clicking a component label (Hull/Engine/…) pops its def,
 - clicking "ENGINE HEAT" and the capacity number pops Heat / Heat Capacity,
 - switching to the Loadout tab, clicking a stat label (ROF/STR/RNG) and a perk pops their defs,
-- action tiles / Activate / ± steppers still act (no tip) — controls unchanged,
+- action tiles / Activate / ± steppers still act (no tip), controls unchanged,
 - tip closes on outside-click, Escape, and scroll (existing behaviour).
 
 - [ ] **Step 3: Final commit if any smoke fixes were needed**
@@ -1027,6 +1027,6 @@ git commit -m "fix(v2): click-to-explain smoke-test adjustments"
 ## Self-Review Notes
 
 - **Spec coverage:** mechanism (Task 3), fold-into-GLOSSARY (Task 2), matchGlossary (Task 1), mods (Task 4+6), status (Task 5+6), badge (6), comp rows (7), heat (8), loadout stats/perks/modules (9), coverage guard (10), controls excluded (never wired). All spec sections mapped.
-- **Chat-leakage risk (spec open risk):** resolved — runtime/status/part/module entries use `match: []`, so they resolve by id but never highlight in prose.
+- **Chat-leakage risk (spec open risk):** resolved, runtime/status/part/module entries use `match: []`, so they resolve by id but never highlight in prose.
 - **Type consistency:** `gloss` field name is identical across `rigModifiers` (Task 4), `rigStatus` (Task 5), and every `InfoTerm id={...}` site. `matchGlossary` signature `(text: string) => string | undefined` matches its uses in Task 9. `InfoTerm` `dataTone` added in Task 6 before first use.
 - **Id-name check:** `heat`, `heat-capacity`, `rof`, `str`, `rng`, `weight-class`, `catastrophic-damage`, and the part ids `hull/arms/legs/engine` all pre-exist in `shared/glossary.js`; `tracks/turret/mount` and all runtime/status/module ids are added in Task 2. No collisions (`module-*` namespacing avoids the existing `repair` action id).

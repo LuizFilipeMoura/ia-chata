@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add three launch presets to the V2 "Seed Test Battle" flow — Full spread (today's default), 4v4 rigs-only (curated), and 4v4 random rig prototypes.
+**Goal:** Add three launch presets to the V2 "Seed Test Battle" flow, Full spread (today's default), 4v4 rigs-only (curated), and 4v4 random rig prototypes.
 
 **Architecture:** Server-side. The `seed` verb gains an `attrs.preset` selector that chooses the roster before its existing default fallback. Preset rosters live beside `SEED_ROSTER` in `shared/game-state.js` (`SEED_ROSTER_4V4` constant + `randomSeedRoster(random)` helper using the seedable RNG). The Join-screen seed picker becomes one panel: a preset toggle row + the existing who-acts-first row, which launches with the selected preset.
 
@@ -14,15 +14,15 @@
 
 ## File Structure
 
-- `shared/game-state.js` — add `SEED_ROSTER_4V4`, `randomSeedRoster()`, and the `preset` branch in the `seed` verb. (Modify)
-- `shared/game-state.test.js` — preset coverage tests. (Modify)
-- `client/src/v2/screens/seedPreset.ts` — `SeedPreset` type + `SEED_PRESETS` render list, shared by Join/V2App/hook. (Create)
-- `client/src/v2/hooks/useSeedBattle.ts` — forward `preset`. (Modify)
-- `client/src/v2/hooks/useSeedBattle.test.tsx` — assert forwarded `preset`. (Modify)
-- `client/src/v2/V2App.tsx` — `onSeed(first, preset)`, send `preset` in attrs. (Modify)
-- `client/src/v2/screens/Join.tsx` — one-panel picker + preset state. (Modify)
-- `client/src/v2/screens/Join.test.tsx` — updated seed-flow expectations. (Modify)
-- `client/src/v2/styles/join.css` — preset row styles. (Modify)
+- `shared/game-state.js`: add `SEED_ROSTER_4V4`, `randomSeedRoster()`, and the `preset` branch in the `seed` verb. (Modify)
+- `shared/game-state.test.js`: preset coverage tests. (Modify)
+- `client/src/v2/screens/seedPreset.ts`: `SeedPreset` type + `SEED_PRESETS` render list, shared by Join/V2App/hook. (Create)
+- `client/src/v2/hooks/useSeedBattle.ts`: forward `preset`. (Modify)
+- `client/src/v2/hooks/useSeedBattle.test.tsx`: assert forwarded `preset`. (Modify)
+- `client/src/v2/V2App.tsx`: `onSeed(first, preset)`, send `preset` in attrs. (Modify)
+- `client/src/v2/screens/Join.tsx`: one-panel picker + preset state. (Modify)
+- `client/src/v2/screens/Join.test.tsx`: updated seed-flow expectations. (Modify)
+- `client/src/v2/styles/join.css`: preset row styles. (Modify)
 
 ---
 
@@ -95,7 +95,7 @@ Add `SEED_ROSTER_4V4` and `randomSeedRoster` to the import block at the top of `
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test "shared/game-state.test.js"`
-Expected: FAIL — `SEED_ROSTER_4V4`/`randomSeedRoster` are undefined; the `rigs4`/`random4` seeds currently fall through to the default roster (support.length would be 6, not 0).
+Expected: FAIL, `SEED_ROSTER_4V4`/`randomSeedRoster` are undefined; the `rigs4`/`random4` seeds currently fall through to the default roster (support.length would be 6, not 0).
 
 - [ ] **Step 3: Add `SEED_ROSTER_4V4`**
 
@@ -135,7 +135,7 @@ export function randomSeedRoster(random = Math.random) {
 }
 ```
 
-(`randomPick` and `CHASSIS` are module-scoped and resolved at call time — safe despite `randomPick` being declared lower in the file.)
+(`randomPick` and `CHASSIS` are module-scoped and resolved at call time, safe despite `randomPick` being declared lower in the file.)
 
 - [ ] **Step 5: Add the `preset` branch in the `seed` verb**
 
@@ -165,13 +165,13 @@ with:
 - [ ] **Step 6: Run tests to verify they pass**
 
 Run: `node --test "shared/game-state.test.js"`
-Expected: PASS — all new tests plus the existing seed tests (default `support` behavior unchanged).
+Expected: PASS, all new tests plus the existing seed tests (default `support` behavior unchanged).
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add shared/game-state.js shared/game-state.test.js
-git commit -m "feat(v2): seed preset rosters — rigs4 + random4 alongside default"
+git commit -m "feat(v2): seed preset rosters, rigs4 + random4 alongside default"
 ```
 
 ---
@@ -223,7 +223,7 @@ test("sends the seed verb with the chosen first side and preset", () => {
 - [ ] **Step 3: Run the hook test to verify it fails**
 
 Run: `npx vitest run client/src/v2/hooks/useSeedBattle.test.tsx`
-Expected: FAIL — `useSeedBattle`'s callback takes one arg and sends `{ first }` only.
+Expected: FAIL, `useSeedBattle`'s callback takes one arg and sends `{ first }` only.
 
 - [ ] **Step 4: Update `useSeedBattle`**
 
@@ -282,7 +282,7 @@ to:
 - [ ] **Step 7: Run the hook test + typecheck**
 
 Run: `npx vitest run client/src/v2/hooks/useSeedBattle.test.tsx && npx tsc --noEmit -p client`
-Expected: hook test PASS. `tsc` will report an error in `Join.tsx`/`V2App` wiring for `onSeed` arity — that is fixed in Task 3. If `tsc` passes here (because Join isn't yet retyped), that's fine too; proceed.
+Expected: hook test PASS. `tsc` will report an error in `Join.tsx`/`V2App` wiring for `onSeed` arity, that is fixed in Task 3. If `tsc` passes here (because Join isn't yet retyped), that's fine too; proceed.
 
 - [ ] **Step 8: Commit**
 
@@ -302,7 +302,7 @@ git commit -m "feat(v2): thread seed preset through useSeedBattle + V2App"
 
 - [ ] **Step 1: Update the failing Join tests**
 
-Replace the three seed-related tests in `client/src/v2/screens/Join.test.tsx` (the `seed CTA opens…`, `seed 'Your turn'…` tests — keep the first two non-seed tests untouched) with:
+Replace the three seed-related tests in `client/src/v2/screens/Join.test.tsx` (the `seed CTA opens…`, `seed 'Your turn'…` tests, keep the first two non-seed tests untouched) with:
 
 ```tsx
 test("seed defaults to the 'support' preset and fires onSeed(first, preset)", async () => {
@@ -332,7 +332,7 @@ test("seed forwards the chosen preset and 'Your turn'", async () => {
 - [ ] **Step 2: Run the Join tests to verify they fail**
 
 Run: `npx vitest run client/src/v2/screens/Join.test.tsx`
-Expected: FAIL — no `4v4 random` button exists and `onSeed` is called with one arg.
+Expected: FAIL, no `4v4 random` button exists and `onSeed` is called with one arg.
 
 - [ ] **Step 3: Update `Join.tsx`**
 
@@ -399,7 +399,7 @@ Expected: PASS (all four Join tests).
 Append to `client/src/v2/styles/join.css`:
 
 ```css
-/* Seed preset toggle row — a horizontal band of preset buttons; selected uses
+/* Seed preset toggle row, a horizontal band of preset buttons; selected uses
    the shared .is-sel treatment. */
 .v2-root .v2-join-presets {
   display: flex;
@@ -418,7 +418,7 @@ Append to `client/src/v2/styles/join.css`:
 - [ ] **Step 6: Full client typecheck + client test suite**
 
 Run: `npx tsc --noEmit -p client && npx vitest run client/src/v2`
-Expected: PASS — no arity errors; all v2 tests green.
+Expected: PASS, no arity errors; all v2 tests green.
 
 - [ ] **Step 7: Commit**
 
@@ -436,7 +436,7 @@ git commit -m "feat(v2): one-panel seed picker with roster preset toggles"
 - [ ] **Step 1: Run the full test suite**
 
 Run: `npm test`
-Expected: PASS — Vitest (client) and `node:test` (shared + server) all green.
+Expected: PASS, Vitest (client) and `node:test` (shared + server) all green.
 
 - [ ] **Step 2: Browser smoke (verification workflow)**
 

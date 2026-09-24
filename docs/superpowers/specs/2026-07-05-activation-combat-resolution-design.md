@@ -1,4 +1,4 @@
-# Activation, Recovery & Combat Resolution — Design
+# Activation, Recovery & Combat Resolution, Design
 
 Date: 2026-07-05
 
@@ -10,8 +10,8 @@ structure (§4): Initiative → Activation → Recovery, over 5 rounds. Players
 alternate activating one Rig at a time via an explicit **End Activation** button.
 During an activation the app lists the legal actions with their action-budget
 cost, adds each action's heat automatically, and fully resolves dice-driven
-outcomes — attacks (§7), overheat checks (§6), catastrophic cascades (§8),
-destruction (§9), repairs — either by rolling server-side (with on-screen dice
+outcomes, attacks (§7), overheat checks (§6), catastrophic cascades (§8),
+destruction (§9), repairs, either by rolling server-side (with on-screen dice
 animation) or by taking manually entered dice, chosen by a pre-start toggle.
 Every value-changing modifier is made obvious in the UI.
 
@@ -35,7 +35,7 @@ The client never decides an outcome. It:
 
 Every resolution is recorded as an entry in a capped `game.resolutions` log in
 shared state, so the opponent sees the same dice and effect dialog on their next
-poll — not only the acting player.
+poll, not only the acting player.
 
 ## State model
 
@@ -73,7 +73,7 @@ A resolution entry:
 |---|---|---|
 | `activated` | boolean | Has activated this round. Reset each Recovery. |
 | `skipNextActivation` | boolean | Engine-0 penalty; consumed (and cleared) when its turn to activate comes. |
-| `noCool` | boolean | Engine Failure / Catastrophic Failure — heat can never decrease again. |
+| `noCool` | boolean | Engine Failure / Catastrophic Failure, heat can never decrease again. |
 | `speedHalvedNextRound` | boolean | Hydraulic Blowout / Shock; shown as a chip, cleared at Recovery. |
 | `aimPenalty` | number | Accumulated Aim penalty (Hull-0 −1). Derived where possible, but surfaced. |
 | `loaded` | `{ longRange:bool, melee:bool }` | Reload tracking; all true at activation start. |
@@ -117,8 +117,8 @@ In rulebook order (§4):
 1. Each Rig reduces heat by 2 unless `noCool` (respecting the engine-0 floor).
 2. Clear `activated`, `speedHalvedNextRound`, and expiring per-round flags.
 3. Remove unspent preparations and Answer tokens.
-4. **VP prompt:** each side is asked which markers it controls — centre (2 VP),
-   each empty-corner marker (1 VP) — and the totals are added to `side.vp`
+4. **VP prompt:** each side is asked which markers it controls, centre (2 VP),
+   each empty-corner marker (1 VP), and the totals are added to `side.vp`
    (§11). A side may report none.
 5. `round++`; return to Initiative.
 
@@ -147,7 +147,7 @@ its heat and spends a slot.
 | Shut Down | 0 | Only if `actionsUsed === 0`; forfeits the activation, heat → 0. |
 | Prepare | 1 | Place one facedown preparation (one per Rig). |
 
-Fire-mode perks — Full Auto (+2 ROF), Charged Shot (+2 STR), Hot-push — add 1
+Fire-mode perks, Full Auto (+2 ROF), Charged Shot (+2 STR), Hot-push, add 1
 heat per attack die that rolls a 1, applied after the attack resolves.
 
 ## Overheat auto-resolution (End Activation)
@@ -159,12 +159,12 @@ On End Activation, if `heat > capacity`, the server rolls
 | Result | Effect (all applied automatically) |
 |:--:|---|
 | 1–5 | Nothing. |
-| 6–7 | System Stall — 1 damage to Engine. |
-| 8–9 | Ammunition Detonation — 2 damage to Arms. |
-| 10–11 | Hydraulic Blowout — 2 damage to Legs; `speedHalvedNextRound`. |
-| 12–13 | Structural Buckling — 1 damage to each of Hull/Engine/Arms/Legs. |
-| 14–16 | Engine Failure — 2 damage to Engine; `noCool = true`. |
-| 17+ | Catastrophic Failure — all components to 0 SP (§8); `noCool = true`. |
+| 6–7 | System Stall, 1 damage to Engine. |
+| 8–9 | Ammunition Detonation, 2 damage to Arms. |
+| 10–11 | Hydraulic Blowout, 2 damage to Legs; `speedHalvedNextRound`. |
+| 12–13 | Structural Buckling, 1 damage to each of Hull/Engine/Arms/Legs. |
+| 14–16 | Engine Failure, 2 damage to Engine; `noCool = true`. |
+| 17+ | Catastrophic Failure, all components to 0 SP (§8); `noCool = true`. |
 
 Damage flows through the cascade pipeline below. Logs an `overheat` resolution;
 client animates the D12 and shows the effect dialog.
@@ -174,7 +174,7 @@ client animates the D12 and shows the effect dialog.
 Damage is applied through a **cascade pipeline** because a location reaching 0 SP
 can damage other locations. When a component first reaches 0 SP:
 
-- **Legs:** move −3", pivots cost double, no backpedal (positional — shown as a
+- **Legs:** move −3", pivots cost double, no backpedal (positional, shown as a
   chip). Additional damage → `immobilised`.
 - **Hull:** −2 to `actionsMax`, −1 Aim (both enforced). Additional damage →
   total system failure (destroyed).
@@ -194,7 +194,7 @@ rolls its own location/impact). Each sub-roll is logged and animated.
 A client **attack wizard** always gathers the facts the app cannot see, then the
 server resolves and logs each step:
 
-Wizard inputs: target Rig, arc (front/side/rear), range band (near/far/out —
+Wizard inputs: target Rig, arc (front/side/rear), range band (near/far/out,
 out → the attack fails), cover (none / ≤25% −1 ACC / ≤50% −2 ACC), fire-mode
 (Full Auto / Charged / Hot-push / Aimed location).
 
@@ -212,12 +212,12 @@ Server resolution:
    Impact Table row → Direct −1 / Severe −2 / Critical −3 / nothing.
 5. Apply damage via the cascade pipeline, then perks: Incendiary (+1 target
    heat), Shock (`speedHalvedNextRound`), Cleave (extra target within 1.5"),
-   Impale (D12 8+ immobilise), Staggering (D6 push/pivot — positional, shown as
+   Impale (D12 8+ immobilise), Staggering (D6 push/pivot, positional, shown as
    a reminder).
 
 Damage overflow (a hit on a 0-SP location) and the Evasive preparation are
 defender/positional choices. In **auto** mode they resolve with a documented
-default — overflow moves to the defender's highest-SP live location — surfaced in
+default, overflow moves to the defender's highest-SP live location, surfaced in
 the dialog. In manual mode the acting player is prompted to record the
 defender's choice.
 
@@ -226,7 +226,7 @@ defender's choice.
 The second activator receives 2 Answer tokens each round. A Prepare action or an
 Answer token places a facedown `preparation` (Evasive Manoeuvre / Return Fire /
 Brace for Incoming Fire), one per Rig. Mechanical effects are enforced during
-resolution — **Brace** applies −2 to front-arc impact rolls; **Return Fire** and
+resolution, **Brace** applies −2 to front-arc impact rolls; **Return Fire** and
 **Evasive** surface as prompts when the enemy attacks. Unspent tokens and
 preparations are cleared in Recovery.
 
@@ -236,13 +236,13 @@ preparations are cleared in Recovery.
   visible to both players and locked once the battle starts. Either side may set
   it before start; the value is a room setting.
 - A reusable roll-dialog overlay: dice tumble then land on their values (auto),
-  or present input fields (manual), alongside a breakdown — each die, every
+  or present input fields (manual), alongside a breakdown, each die, every
   modifier with its source, the outcome, and the effect text. It is driven off
   new entries in `game.resolutions`, so both players see it.
 
 ## Modifier visibility (explicit requirement)
 
-Every active value-changing modifier is shown **on the Rig it applies to** — as
+Every active value-changing modifier is shown **on the Rig it applies to**: as
 header chips and inline tags next to the affected stat:
 
 - `Hull 0 · −2 actions −1 Aim`

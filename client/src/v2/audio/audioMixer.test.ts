@@ -92,7 +92,7 @@ test("startIdle plays a non-looping clip with a fade envelope, idempotent", asyn
   expect(ramps).toContain(0.3); // fade in to idle gain
   expect(ramps).toContain(0);   // fade out
   startIdle(["e"]); await flush();
-  expect(ctx.sources.length).toBe(1); // idempotent — no second clip
+  expect(ctx.sources.length).toBe(1); // idempotent, no second clip
 });
 
 test("stopIdle stops the current clip and allows a fresh start", async () => {

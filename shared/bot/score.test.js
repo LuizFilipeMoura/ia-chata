@@ -39,7 +39,7 @@ test("a rear-arc shot outscores the same shot into the front", () => {
   assert.ok(rear > front, `rear ${rear} should beat front ${front}`);
 });
 
-test("a machine gun will not shoot a front arc at all — Raking Fire's veto", () => {
+test("a machine gun will not shoot a front arc at all, Raking Fire's veto", () => {
   const { room, atk } = scoreSetup({ lr: "Mini Gun" });
   const base = { action: "fire", weapon: "longRange", target: "Foe", distance: 7, cover: 0 };
   const front = scoreCandidate(room, atk, { ...base, arc: "front" }, PRESETS.aggressive);
@@ -81,7 +81,7 @@ test("killing the Priority Target outscores killing an identical non-priority ri
 
 test("a move that enables a good shot outscores a move that doesn't", () => {
   const { room, atk, foe } = scoreSetup();
-  foe.facing = 0;   // enemy faces away, so it can't fire back — isolates offence from exposure
+  foe.facing = 0;   // enemy faces away, so it can't fire back, isolates offence from exposure
   const toward = { action: "move", dest: { x: 26, y: 18 }, facing: 0 };    // closes and faces the enemy → a shot
   const away   = { action: "move", dest: { x: 16, y: 18 }, facing: 180 };  // faces away → no shot
   const s1 = scoreCandidate(room, atk, toward, PRESETS.aggressive);
@@ -92,7 +92,7 @@ test("a move that enables a good shot outscores a move that doesn't", () => {
 test("a move into cover lowers exposure", () => {
   const { room, atk, foe } = scoreSetup();
   foe.pos = { x: 40, y: 18 }; foe.facing = 180;   // faces the approach
-  room.game.objectives = [];   // isolate the exposure term — no marker to muddy it
+  room.game.objectives = [];   // isolate the exposure term, no marker to muddy it
   // A building that blocks the enemy's sight to the covered spot but not the open one.
   room.field.terrain = [{ kind: "building", x: 33, y: 11, shape: "rect", w: 8, h: 6 }];  // spans y 8–14
   const open  = { action: "move", dest: { x: 26, y: 18 }, facing: 90 };   // faces south → Atk itself can't fire; isolates exposure

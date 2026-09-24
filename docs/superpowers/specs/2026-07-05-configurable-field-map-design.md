@@ -1,8 +1,8 @@
-# Configurable Field Map — Design Spec
+# Configurable Field Map, Design Spec
 
 **Date:** 2026-07-05
 **Author:** Luiz (with Claude)
-**Status:** Draft — awaiting review
+**Status:** Draft, awaiting review
 
 ## Purpose
 
@@ -12,7 +12,7 @@ populated, and there is no terrain or spatial data anywhere.
 
 This feature makes the field **configurable per room**. The first player to join a room
 (the **owner**) sets the table dimensions in inches; the app then derives a battlefield
-map — deployment halves, objective markers, and scattered terrain — and renders it
+map, deployment halves, objective markers, and scattered terrain, and renders it
 on-screen for both players. Both players see one canonical, server-authoritative map.
 
 ## Vision (agreed with user)
@@ -28,7 +28,7 @@ on-screen for both players. Both players see one canonical, server-authoritative
 ## Decisions
 
 1. **Owner = first player to claim the room.** `JoinGate` lets a player pick side A *or*
-   B, so ownership is *not* tied to a side — it is whoever claims first.
+   B, so ownership is *not* tied to a side, it is whoever claims first.
 2. **Ready is gated on a locked field.** Neither side can mark Ready until the owner locks
    the field. This enforces the "ask the first player" setup flow.
 3. **Proportional placement.** Objective distance and the deployment setback scale with
@@ -41,9 +41,9 @@ on-screen for both players. Both players see one canonical, server-authoritative
 
 ## Out of scope
 
-- Placing **Rigs** on the map — the app tracks Rig state, not board position. The map is a
+- Placing **Rigs** on the map, the app tracks Rig state, not board position. The map is a
   static terrain/objective reference, not a virtual tabletop.
-- Deployment variants (Pitched / Ambush, `rules.md` §10) — the map models the default
+- Deployment variants (Pitched / Ambush, `rules.md` §10), the map models the default
   diagonal deployment only. Variants noted for a future iteration.
 - Editing objectives directly (they are deterministic). Owner controls are limited to
   dimensions, diagonal flip, terrain re-roll, and lock.
@@ -59,7 +59,7 @@ All coordinates are in **inches**, origin `(0,0)` at the top-left corner of the 
 ### Diagonal & corners
 
 The **no-deploy diagonal** connects two opposite corners; its endpoints are the two
-**empty corners** (no one deploys there — objectives sit toward them). The other two
+**empty corners** (no one deploys there, objectives sit toward them). The other two
 corners are the **deployment corners**.
 
 - `diagonal: "tlbr"` → empty corners = TL `(0,0)` and BR `(W,H)`; deployment corners =
@@ -112,13 +112,13 @@ setback is a visual/reference guide; the app does not enforce Rig positions.)
 ### Terrain scatter (server-authoritative, re-rollable)
 
 - **Count:** random integer in `[4, 6]` (rulebook §10.1).
-- **Region:** the central band of the field — reject candidates within
+- **Region:** the central band of the field, reject candidates within
   `objClearance = 0.12·halfDiag(W,H)` of any objective, and within a deployment-corner
   keep-out radius so terrain doesn't smother a start zone.
 - **Placement:** rejection-sample points uniformly inside the field, discarding those that
   violate the clearances above or land within `minTerrainGap` of an already-placed piece;
   cap attempts and accept fewer pieces if the field is too small to fit the target count
-  (log/return the count actually placed — never silently claim 6 when 4 fit).
+  (log/return the count actually placed, never silently claim 6 when 4 fit).
 - **Size:** each piece gets a `size` of `"sm" | "md"` (random), for display only.
 - **RNG:** use the existing injectable `random` (as `rollD` does) so tests are
   deterministic and both clients receive the same server-generated array.
@@ -169,10 +169,10 @@ New `field` verb in `applyCommand`, alongside `setdice` / `ready`. **Owner-only*
 
 `attrs.action`:
 
-- `"set"` — read `width`, `height`, optional `diagonal`; clamp; recompute
+- `"set"`: read `width`, `height`, optional `diagonal`; clamp; recompute
   `game.objectives` **and** re-scatter `field.terrain`. Ignored if `field.locked`.
-- `"reroll"` — re-scatter `field.terrain` only. Ignored if `field.locked`.
-- `"lock"` — set `field.locked = true`. (A future `"unlock"` could clear it; not in v1.)
+- `"reroll"`: re-scatter `field.terrain` only. Ignored if `field.locked`.
+- `"lock"`: set `field.locked = true`. (A future `"unlock"` could clear it; not in v1.)
 
 Setting `ownerSide`: in `claimSide`, when the claim succeeds and `room.ownerSide` is null,
 set `room.ownerSide` to the claimed side.
@@ -181,7 +181,7 @@ Ready gate: in the `ready` verb, additionally require `room.field.locked === tru
 
 ## Rendering
 
-- **New `client/src/components/FieldMap.tsx`** — SVG top-down map: field rectangle scaled
+- **New `client/src/components/FieldMap.tsx`**: SVG top-down map: field rectangle scaled
   to `width`×`height`, the two shaded deployment halves split by the dashed no-deploy
   diagonal, the setback band, three objective markers (centre = 2 VP emphasized), and the
   terrain pieces. Inch→pixel scaling from `field.width/height`. Dark-mode safe, matches the
@@ -193,15 +193,15 @@ Ready gate: in the `ready` verb, additionally require `room.field.locked === tru
   (follows the existing `DrawerContext` / `overlays/Drawer.tsx` pattern). The owner opens
   it from a "Set field" trigger in the setup area (owner + not started only). The drawer
   contains: width/height number inputs, *flip diagonal*, *re-roll terrain* (with a live
-  preview `FieldMap`), and *Lock field* — each dispatches the `field` command. Locking
+  preview `FieldMap`), and *Lock field*: each dispatches the `field` command. Locking
   closes the drawer.
 - **Enemy view:** read-only `FieldMap` only; no controls and no drawer trigger. Before the
   owner locks, it shows the defaulted map with a "waiting for the owner to set the field"
   note.
 - **Default when unset:** a freshly created room already carries the 54×36 default field
   (see Data model), so the map always renders something sensible before the owner touches
-  it — there is no empty "not set" state.
-- **`BattleSetup`:** reflect the gate — when `!field.locked`, the Ready button shows a
+  it, there is no empty "not set" state.
+- **`BattleSetup`:** reflect the gate, when `!field.locked`, the Ready button shows a
   hint ("Owner must lock the field first") and stays disabled.
 
 ## Shared placement module
@@ -234,8 +234,8 @@ New pure `shared/field.js` (no imports from `game-state.js`), unit-tested:
 
 ## Resolved decisions
 
-1. **Owner controls placement** — a **dedicated Field Setup drawer** (not inline). The
+1. **Owner controls placement**: a **dedicated Field Setup drawer** (not inline). The
    read-only map still renders in `Stage`; only the editing controls live in the drawer.
-2. **Default field for an unconfigured room** — **render the 54×36 default immediately**.
+2. **Default field for an unconfigured room**: **render the 54×36 default immediately**.
    No empty "not set yet" state.
-3. **Diagonal flip** — **kept as an owner toggle.**
+3. **Diagonal flip**: **kept as an owner toggle.**

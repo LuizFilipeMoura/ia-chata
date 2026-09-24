@@ -1,4 +1,4 @@
-# Equipment Mechanics Rollout — Design
+# Equipment Mechanics Rollout, Design
 
 **Date:** 2026-07-14
 **Status:** Approved, pending implementation plans
@@ -23,18 +23,18 @@ Two findings from the [equipment & upgrade audit](../../design/equipment-upgrade
 - **Ship all 16 mechanics** (8 Tuned + 8 Prototype). The behavior of each is
   already approved in the 2026-07-12 equipment-depth design (Prototypes at
   lines 105-137, Tuned in the upgrade table). This spec does **not** re-derive
-  those rules — it owns implementation order, shared plumbing, per-mechanic
+  those rules, it owns implementation order, shared plumbing, per-mechanic
   engine hook + state field + test, and the read-model refactor.
 - **Catalog-everywhere** for finding 4, via **relocating the catalog** (Option
   A). `EQUIPMENT_UPGRADES` and a pure `equipmentUpgradeEffectOf` lookup move into
-  `rules.js` — the leaf module both `game-state.js` and `combat.js` already
+  `rules.js`: the leaf module both `game-state.js` and `combat.js` already
   import. All equipment modifiers re-derive live from the catalog by id; the
   stamped `equipmentUpgradeEffect` is removed. A catalog rebalance then applies
   to live rigs with no recommission; the catalog is the single source of truth.
 
   **Why relocate.** `combat.js` deliberately imports *only* from `rules.js` to
   stay import-cycle-free (its header, lines 2-3). It cannot reach a catalog that
-  lives in `game-state.js` — which is the whole reason the effect is stamped onto
+  lives in `game-state.js`: which is the whole reason the effect is stamped onto
   the rig today. Moving the catalog to the shared leaf lets both modules read it
   directly, so the stamp is no longer needed. `rules.js` stays a leaf:
   `EQUIPMENT_UPGRADES` is pure data + a tiny lookup, matching what already lives
@@ -47,9 +47,9 @@ Two findings from the [equipment & upgrade audit](../../design/equipment-upgrade
 - No new mechanic rules beyond what the 2026-07-12 design already approved.
 - No changes to the 8 live Field upgrades (they already ship correct effects).
 - No weapon-upgrade changes; no new equipment families or slots.
-- No AP nature reclassification (audit finding 2 — out of scope this pass).
+- No AP nature reclassification (audit finding 2, out of scope this pass).
 
-## Part 1 — Read-model refactor (catalog-everywhere)
+## Part 1, Read-model refactor (catalog-everywhere)
 
 Do this **first**, before any mechanic. The 16 new mechanics all read effect
 tags; a single resolution path prevents desync, and the removed stamp keeps rig
@@ -70,13 +70,13 @@ snapshots smaller.
 Move the catalog data and one lookup into `rules.js`:
 
 ```js
-// rules.js — EQUIPMENT_UPGRADES relocated here (pure data) so both game-state.js
+// rules.js, EQUIPMENT_UPGRADES relocated here (pure data) so both game-state.js
 // and combat.js can import it without the game-state import cycle combat.js
 // forbids. Behavior of the 24 rows is unchanged by the move.
 export const EQUIPMENT_UPGRADES = { /* …the existing 24 rows, moved verbatim… */ };
 
 // The single source for every equipment-upgrade effect tag. Resolves the chosen
-// upgrade's `effect` object live from the catalog by id — the one path all
+// upgrade's `effect` object live from the catalog by id, the one path all
 // consumers (rigEffects, heatModel, combat) read, so a rebalance of
 // EQUIPMENT_UPGRADES applies to live rigs with no recommission.
 export function equipmentUpgradeEffectOf(equipmentId, upgradeId) {
@@ -86,40 +86,40 @@ export function equipmentUpgradeEffectOf(equipmentId, upgradeId) {
 }
 ```
 
-- **`game-state.js`** — re-export the relocated symbols for existing callers,
+- **`game-state.js`**: re-export the relocated symbols for existing callers,
   exactly as it already does for `shieldCoverage`
   (`export { EQUIPMENT_UPGRADES, equipmentUpgradeEffectOf } from "./rules.js";`).
   The nature/heat helpers (`equipmentUpgradeNature`, `equipmentActiveHeat`,
   `equipmentSprintHeat`, `equipmentRepairBonus`, `firstEquipmentUpgradeId`,
   `normalizeEquipmentUpgrade`) stay in `game-state.js` and read the imported data.
-- **`rigEffects`** — resolve `const eff = equipmentUpgradeEffectOf(equip, upId)`
+- **`rigEffects`**: resolve `const eff = equipmentUpgradeEffectOf(equip, upId)`
   once, then read `eff.thermalMargin`, `eff.hardenImpact`, `eff.sweetBandAcc`,
   `eff.sideRearStr` from it. Keep the existing `equip === "…"` family guards and
   the same defaults, so behavior is identical for the 8 Field rows.
-- **`heatModel`** — replace the `rig?.equipmentUpgradeEffect?.thermalMargin`
+- **`heatModel`**: replace the `rig?.equipmentUpgradeEffect?.thermalMargin`
   read with `equipmentUpgradeEffectOf(rig?.equipment, rig?.equipmentUpgrade)?.thermalMargin`.
-- **`combat.js`** — import `equipmentUpgradeEffectOf` from `rules.js`. In
+- **`combat.js`**: import `equipmentUpgradeEffectOf` from `rules.js`. In
   `computeModifiedAim` (line 66) and impact resolution (lines 283, 292), swap the
   three `x.equipmentUpgradeEffect?.…` reads for
   `equipmentUpgradeEffectOf(x.equipment, x.equipmentUpgrade)?.…`.
-- **Remove the stamp** — delete the `equipmentUpgradeEffect` assignment in
+- **Remove the stamp**: delete the `equipmentUpgradeEffect` assignment in
   `makeRig` (955, 972), the `{}` in `makeUnit` (1139), and the field init at
   `game-state.js:787`. Drop the field from `client/src/state/types.ts`.
 
 ### Refactor tests
 
-- `game-state.test.js` — retarget the tests that pass an inline
+- `game-state.test.js`: retarget the tests that pass an inline
   `equipmentUpgradeEffect` (lines 135-144, 4781-4793) to drive off
   `{ equipment, equipmentUpgrade }` ids instead. Add a direct
   `equipmentUpgradeEffectOf` unit test (known id → effect; unknown/empty → `{}`).
-- `combat.test.js` — the fixtures at 122, 137, 400-411 already carry the ids;
+- `combat.test.js`: the fixtures at 122, 137, 400-411 already carry the ids;
   drop their inline `equipmentUpgradeEffect` and confirm the derived path gives
   the same modifiers.
-- `HeatGauge.test.tsx` — update the client fixture to the id-derived model.
+- `HeatGauge.test.tsx`: update the client fixture to the id-derived model.
 
-This is Plan 0 — the prerequisite.
+This is Plan 0, the prerequisite.
 
-## Part 2 — Mechanics, four groups
+## Part 2, Mechanics, four groups
 
 Each group is one implementation plan (TDD), built in order. Rules for each
 mechanic are the 2026-07-12 design; this section fixes the engine hook, the
@@ -137,14 +137,14 @@ state field, and the test surface.
   Nanite, Meltdown), and clear per-round Tuned flags (Reactive Armor).
 - **Reactive on-incoming-hit hook.** A single seam, `applyDefensiveReactions(target, hit, ctx)`,
   where a defender may alter an incoming attack. It runs at **two** pipeline
-  stages, discriminated by `hit.kind` — so **Group 2 installs both call sites**
+  stages, discriminated by `hit.kind`: so **Group 2 installs both call sites**
   when it creates the seam (even though its own consumers use only the impact
   one); later groups add branches, never new call sites.
 
-  - `hit.kind === "tohit"` — called in `rollToHit` after successful dice are
+  - `hit.kind === "tohit"`: called in `rollToHit` after successful dice are
     counted, before impacts. Consumer: **Point-Defense System** (sets
     `hit.rerollHits = true`). Only ranged hits carry `hit.ranged === true`.
-  - `hit.kind === "impact"` — called in `rollImpacts` after `impactSeverity`.
+  - `hit.kind === "impact"`: called in `rollImpacts` after `impactSeverity`.
     Consumers: **Reactive Armor**, **Ablative Cascade** (soften one severity step).
 
   `ctx` shape is `{ location, row, spendHeat }`. `spendHeat(n)` is an **injected
@@ -154,7 +154,7 @@ state field, and the test surface.
   Both call sites must construct the full `ctx` (the impact site adds `location`/
   `row`, the to-hit site passes them `null`).
 
-### Group 1 — Simple conditional Tuned (no new tracked state)
+### Group 1, Simple conditional Tuned (no new tracked state)
 
 Combat modifiers or active-resolution tweaks; each reads a target/heat/flag
 already present.
@@ -167,14 +167,14 @@ already present.
 | Battlefield Triage | Utility | Emergency Patch active | heals 3 SP when the target location is at 0 |
 | Coolant Injection | Cooling | activation-end / overheat | −2 heat before the overheat roll when over Capacity |
 
-### Group 2 — Reactive / per-round Tuned (new tracked state)
+### Group 2, Reactive / per-round Tuned (new tracked state)
 
 | Upgrade | Family | Hook | State |
 |---|---|---|---|
 | Reactive Armor | Armor | reactive on-incoming-hit seam | per-round "first damaging hit hardened that location" flag |
 | Chaff Burst | Countermeasures | targeted-while-smoke seam | free half-Speed side-step; **spatial → narrated player instruction** |
 
-### Group 3 — Charge / bank Prototypes
+### Group 3, Charge / bank Prototypes
 
 Each carries tracked state, a spend action or reactive spend, and a downside.
 
@@ -187,7 +187,7 @@ Each carries tracked state, a spend action or reactive spend, and a downside.
 | Meltdown Protocol | Thermal | meltdown charge (cap 6) | no Shut Down / Cooling while charged; engine-kill detonates |
 | Fire Solution Lock | Fire Control | solution counter (cap 3) | moving loses it; +1 heat per building shot |
 
-### Group 4 — Systemic / spatial Prototypes
+### Group 4, Systemic / spatial Prototypes
 
 | Prototype | Family | Hook | Notes |
 |---|---|---|---|
@@ -209,24 +209,24 @@ Each carries tracked state, a spend action or reactive spend, and a downside.
 ## rules.md
 
 Fill in the "Tuned / Prototype Equipment Mechanics" subsection under §15
-(scaffolded by the 2026-07-12 change) as each group ships — same cadence as the
+(scaffolded by the 2026-07-12 change) as each group ships, same cadence as the
 weapon-Prototype rollout.
 
 ## Files touched
 
-- `shared/game-state.js` — `equipmentUpgradeEffectOf` helper; remove the stamp;
+- `shared/game-state.js`: `equipmentUpgradeEffectOf` helper; remove the stamp;
   `equipState` block + Recovery refresh; Tuned/Prototype resolution.
-- `shared/combat.js` — id-derived effect reads; reactive on-incoming-hit seam;
+- `shared/combat.js`: id-derived effect reads; reactive on-incoming-hit seam;
   Group 1/2 combat modifiers.
-- `client/src/state/types.ts` — drop `equipmentUpgradeEffect`.
-- `client/src/v2/components/HeatGauge.test.tsx` — id-derived fixture.
-- `shared/game-state.test.js`, `shared/combat.test.js` — refactor + per-mechanic.
-- `rules.md` — §15 mechanics subsection, filled per group.
+- `client/src/state/types.ts`: drop `equipmentUpgradeEffect`.
+- `client/src/v2/components/HeatGauge.test.tsx`: id-derived fixture.
+- `shared/game-state.test.js`, `shared/combat.test.js`: refactor + per-mechanic.
+- `rules.md`: §15 mechanics subsection, filled per group.
 
 ## Plan sequence
 
-0. Read-model refactor (catalog-everywhere) — prerequisite.
-1. Group 1 — simple conditional Tuned.
-2. Group 2 — reactive / per-round Tuned + shared reactive-hit seam.
-3. Group 3 — charge / bank Prototypes + shared tracked-state block & Recovery refresh.
-4. Group 4 — systemic / spatial Prototypes.
+0. Read-model refactor (catalog-everywhere), prerequisite.
+1. Group 1, simple conditional Tuned.
+2. Group 2, reactive / per-round Tuned + shared reactive-hit seam.
+3. Group 3, charge / bank Prototypes + shared tracked-state block & Recovery refresh.
+4. Group 4, systemic / spatial Prototypes.

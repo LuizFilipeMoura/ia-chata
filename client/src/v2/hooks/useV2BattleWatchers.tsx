@@ -29,7 +29,7 @@ function RecapBody({ lines }: { lines: RecapLine[] }): ReactNode {
       createElement(
         "p",
         { className: "v2-dwr-hint" },
-        "No combat actions this activation — repositioning only.",
+        "No combat actions this activation, repositioning only.",
       ),
     );
   }
@@ -66,7 +66,7 @@ export function AnswerGateBody({
   return (
     <div className="v2-dwr-recap">
       <p className="v2-dwr-hint">
-        Answer token — {remaining} left. Choose a Rig, then a facedown reaction.
+        Answer token, {remaining} left. Choose a Rig, then a facedown reaction.
       </p>
       <ChoiceField
         label="Rig"
@@ -97,10 +97,10 @@ function totalSp(rig: Rig): number {
 /**
  * Native V2 port of V1's useBattleWatchers (battle.js:47-120). Runs the four
  * battle overlay watchers as effects, driving the V2 overlay stack:
- *   1. Resolution watcher — plays the newest fresh resolution log entry.
- *   2. Answer-token gate — mandatory facedown-reaction placement.
- *   3. Reaction watcher — defender resolves a triggered facedown reaction.
- *   4. Activation-summary watcher — recaps a Rig's activation when it ends.
+ *   1. Resolution watcher, plays the newest fresh resolution log entry.
+ *   2. Answer-token gate, mandatory facedown-reaction placement.
+ *   3. Reaction watcher, defender resolves a triggered facedown reaction.
+ *   4. Activation-summary watcher, recaps a Rig's activation when it ends.
  * Also drives two audio effects: damage SFX on any SP drop, and the engine
  * idle loop while it's the local player's turn during activation.
  * Renders nothing; drives the V2 roll/drawer overlay services. Call once.
@@ -231,7 +231,7 @@ export function useV2BattleWatchers(): void {
 
     const pick = { rigName: eligible[0].name, prep: "brace" as PrepType };
     openDrawer({
-      title: "⟡ Answer Tokens — prepare a reaction",
+      title: "⟡ Answer Tokens, prepare a reaction",
       tone: "oil",
       dismissable: false,
       render: () => (
@@ -269,7 +269,7 @@ export function useV2BattleWatchers(): void {
 
     if (pr.kind === "evasive") {
       openDrawer({
-        title: `💨 Evasive — ${reactor.name}`,
+        title: `💨 Evasive, ${reactor.name}`,
         tone: "oil",
         dismissable: false,
         render: () =>
@@ -280,12 +280,12 @@ export function useV2BattleWatchers(): void {
           ),
         actions: [
           {
-            label: "No — resolve the shot",
+            label: "No, resolve the shot",
             ghost: true,
             onClick: () => { closeDrawer(); sendReact({ evaded: false }); },
           },
           {
-            label: "Evaded — attack fails",
+            label: "Evaded, attack fails",
             primary: true,
             icon: "💨",
             onClick: () => { closeDrawer(); sendReact({ evaded: true }); },
@@ -294,7 +294,7 @@ export function useV2BattleWatchers(): void {
       });
     } else if (pr.kind === "return" && attacker) {
       openDrawer({
-        title: `↩️ Return Fire — ${reactor.name}`,
+        title: `↩️ Return Fire, ${reactor.name}`,
         tone: "ember",
         dismissable: false,
         render: () =>
@@ -323,7 +323,7 @@ export function useV2BattleWatchers(): void {
         ],
       });
     } else {
-      // Return-Fire but the attacker is gone (destroyed) — nothing to answer.
+      // Return-Fire but the attacker is gone (destroyed), nothing to answer.
       sendReact({ decline: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -334,7 +334,7 @@ export function useV2BattleWatchers(): void {
   const activationBaselineId = useRef(0); // highest resolution id when it started
   const summaryReady = useRef(false); // suppress a spurious recap on first load
   // Monotonic token: a recap auto-close timer only fires if no newer recap has
-  // opened since — approximates battle.js's `card?.isConnected` guard.
+  // opened since, approximates battle.js's `card?.isConnected` guard.
   const recapToken = useRef(0);
   const closeTimer = useRef<number | null>(null);
 
@@ -347,7 +347,7 @@ export function useV2BattleWatchers(): void {
   rigsRef.current = rigs;
   const sessionRef = useRef(session);
   sessionRef.current = session;
-  // The side "I" am acting as — impersonation-aware (ViewSideContext override wins
+  // The side "I" am acting as, impersonation-aware (ViewSideContext override wins
   // over session.side). Mandatory gates key off this so seed-room testers acting
   // as either side still get the answer/reaction drawer. See useMySide.
   const mySideRef = useRef(mySide);
@@ -387,7 +387,7 @@ export function useV2BattleWatchers(): void {
       if (e.summary) lines.push({ text: e.summary, effects: e.effects || [] });
     }
     openDrawer({
-      title: `${mine ? "🛠️ Your Rig" : "⚔️ Enemy"} · ${rig.name} — activation ended`,
+      title: `${mine ? "🛠️ Your Rig" : "⚔️ Enemy"} · ${rig.name}, activation ended`,
       tone: mine ? "oil" : "ember",
       render: () => createElement(RecapBody, { lines }),
       actions: [{ label: "Continue", primary: true, onClick: () => closeDrawer() }],

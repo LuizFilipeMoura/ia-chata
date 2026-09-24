@@ -118,7 +118,7 @@ test("slider opens at the weapon's sweet-spot distance", async () => {
     "Distance to target in inches",
   )) as HTMLInputElement;
   expect(slider.value).toBe("7");
-  // The band chip's exact copy — disambiguated from the "Sweet spot +N"
+  // The band chip's exact copy, disambiguated from the "Sweet spot +N"
   // wording used in the effective-range paragraph below the slider.
   expect(screen.getByText("🎯 sweet spot")).toBeInTheDocument();
 });

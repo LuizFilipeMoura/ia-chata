@@ -8,10 +8,10 @@
 
 **Tech Stack:** Node ES modules, `node:test` + `node:assert/strict`, no new dependencies. Requires Plan 1 (round-loop engine) already merged.
 
-**Rules note — §7/§8 contradiction:** The rulebook gives both a generic "overflow to another location" (§7) and specific "additional damage" clauses per component (§8). This plan enforces the **§8 additional-damage clauses** (Hull/Engine → destroyed, Arms → +3 Hull & weapon gone, Legs → immobilised) as the more specific rule; generic §7 overflow is not implemented.
+**Rules note, §7/§8 contradiction:** The rulebook gives both a generic "overflow to another location" (§7) and specific "additional damage" clauses per component (§8). This plan enforces the **§8 additional-damage clauses** (Hull/Engine → destroyed, Arms → +3 Hull & weapon gone, Legs → immobilised) as the more specific rule; generic §7 overflow is not implemented.
 
 **REVISION (weapon data source):** Since this plan was written, `WEAPONS` in `shared/game-state.js` was restructured into a keyed lookup carrying full combat profiles (`WEAPONS.longRange["Mini Gun"] = { rof, str, acc:[near,far], rng:[near,far], perks }`, with `0` as the single "–" ACC sentinel). This **supersedes the separate `WEAPON_PROFILES`** originally planned for `rules.js`. Concretely, everywhere below that says `WEAPON_PROFILES[name]`:
-> - `rules.js` (Task 1) adds ONLY the non-weapon tables (`IMPACT`, `AIM`, `WEIGHT_STR_MOD`, `RAM_STR`, `hitLocation`, `impactSeverity`) — NOT `WEAPON_PROFILES`.
+> - `rules.js` (Task 1) adds ONLY the non-weapon tables (`IMPACT`, `AIM`, `WEIGHT_STR_MOD`, `RAM_STR`, `hitLocation`, `impactSeverity`), NOT `WEAPON_PROFILES`.
 > - `combat.js` imports only those from `rules.js` (never `game-state.js`, preserving the no-cycle rule). Its pure functions still take a `profile` object param whose shape (`{rof,str,acc,rng,perks}`) matches a `WEAPONS` entry exactly.
 > - `resolveAttack` resolves its profile via an injected `ctx.profileFor(slot, name)` (game-state's `combatCtx` provides `profileFor: (slot, name) => WEAPONS[slot]?.[name]`), NOT a direct `WEAPON_PROFILES` lookup.
 > - Test files (`combat.test.js`) import `WEAPONS` from `./game-state.js` and use `WEAPONS.melee["Claw"]` etc. as profile fixtures.
@@ -21,10 +21,10 @@
 
 ## File Structure
 
-- **Modify** `shared/rules.js` — add `IMPACT`, `AIM`, `WEIGHT_STR_MOD`, `RAM_STR`, `hitLocation`, `impactSeverity` (weapon profiles already live in `game-state.js`'s `WEAPONS`; see REVISION above).
-- **Create** `shared/combat.js` — `resolveAttack`, `resolveRam`, `computeModifiedAim`, all pure except through the injected `ctx`.
-- **Modify** `shared/game-state.js` — `applyDamage` (cascade + destruction), a `combatCtx`, wire `action` verb `fire`/`aimed`/`ram`, add `blast` verb, replace raw `damageRig` calls in `applyOverheat` with `applyDamage`.
-- **Modify** `shared/game-state.test.js`, **create** `shared/combat.test.js` — tests.
+- **Modify** `shared/rules.js`: add `IMPACT`, `AIM`, `WEIGHT_STR_MOD`, `RAM_STR`, `hitLocation`, `impactSeverity` (weapon profiles already live in `game-state.js`'s `WEAPONS`; see REVISION above).
+- **Create** `shared/combat.js`: `resolveAttack`, `resolveRam`, `computeModifiedAim`, all pure except through the injected `ctx`.
+- **Modify** `shared/game-state.js`: `applyDamage` (cascade + destruction), a `combatCtx`, wire `action` verb `fire`/`aimed`/`ram`, add `blast` verb, replace raw `damageRig` calls in `applyOverheat` with `applyDamage`.
+- **Modify** `shared/game-state.test.js`, **create** `shared/combat.test.js`: tests.
 
 ---
 
@@ -77,7 +77,7 @@ test("impactSeverity reads a class/location row (§2)", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/rules.test.js`
-Expected: FAIL — exports undefined.
+Expected: FAIL, exports undefined.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -217,7 +217,7 @@ test("rollToHit counts hits (>= modAim or natural 6) and fire-mode heat", () => 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — module missing.
+Expected: FAIL, module missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -239,7 +239,7 @@ function rollD(sides, provided, random) {
   return Math.floor((random || Math.random)() * sides) + 1;
 }
 
-// §7.4 — modified Aim (the D6 target number). Higher ACC lowers the number.
+// §7.4, modified Aim (the D6 target number). Higher ACC lowers the number.
 export function computeModifiedAim(attacker, profile, opts) {
   const base = AIM[attacker.weightClass] ?? 4;
   const weaponAcc = profile.acc[opts.range === "far" ? 1 : 0] || 0;
@@ -250,7 +250,7 @@ export function computeModifiedAim(attacker, profile, opts) {
   return base - accTotal;
 }
 
-// §7.4 — roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
+// §7.4, roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
 // (each 1 rolled under Full Auto / Charged Shot adds 1 heat, §6).
 export function rollToHit(attacker, profile, opts, providedDice, random) {
   const modAim = computeModifiedAim(attacker, profile, opts);
@@ -290,7 +290,7 @@ git commit -m "feat: to-hit resolution with ACC modifiers and fire-mode heat"
 - Modify: `shared/combat.js` (`computeStr`, `arcBonus`, `rollImpacts`)
 - Test: `shared/combat.test.js`
 
-`rollImpacts` returns the list of `{ die, total, severity, sp }` for each hit against a chosen location — pure, applying no damage yet.
+`rollImpacts` returns the list of `{ die, total, severity, sp }` for each hit against a chosen location, pure, applying no damage yet.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -336,20 +336,20 @@ test("Raking Fire against the front arc deals no damage", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — exports missing.
+Expected: FAIL, exports missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
 Append to `shared/combat.js`:
 
 ```js
-// §12/§7 — STR = weapon STR + weight modifier + Charged Shot.
+// §12/§7, STR = weapon STR + weight modifier + Charged Shot.
 export function computeStr(attacker, profile, opts) {
   const charged = opts.charged && profile.perks.includes("Charged Shot") ? 2 : 0;
   return profile.str + (WEIGHT_STR_MOD[attacker.weightClass] || 0) + charged;
 }
 
-// §7.7 / §13 — arc STR bonus. Raking Fire (machine guns) replaces the standard
+// §7.7 / §13, arc STR bonus. Raking Fire (machine guns) replaces the standard
 // side/rear values and cannot damage the front arc (returns null = auto-fail).
 export function arcBonus(profile, arc) {
   if (profile.perks.includes("Raking Fire")) {
@@ -363,7 +363,7 @@ export function arcBonus(profile, arc) {
   return 0;
 }
 
-// §7.7-8 — one Impact Roll per hit. Adds AP (+D3 per raw 6) and Rend (+D3 per
+// §7.7-8, one Impact Roll per hit. Adds AP (+D3 per raw 6) and Rend (+D3 per
 // raw 5-6). Brace subtracts 2 on the target's front arc (§5 preparation).
 export function rollImpacts(attacker, target, profile, location, opts, providedDice, random) {
   const str = computeStr(attacker, profile, opts);
@@ -417,12 +417,12 @@ test("applyDamage fires Arms-at-0: destroys a weapon and spills to hull and engi
   // (D12 4 -> left/longRange) and spills 1 hull + 1 engine.
   applyCommand(r, { verb: "damage", attrs: { name: "b1", loc: "arms", amount: "4" } }); // arms 1
   // Use the engine's applyDamage via a fresh overheat-free path: one more manual point.
-  applyCommand(r, { verb: "damage", attrs: { name: "b1", loc: "arms", amount: "1" } }); // arms 0 (existing damageRig — no cascade yet)
+  applyCommand(r, { verb: "damage", attrs: { name: "b1", loc: "arms", amount: "1" } }); // arms 0 (existing damageRig, no cascade yet)
   assert.equal(b1.arms.sp, 0);
 });
 ```
 
-Note: the existing manual `damage` verb uses `damageRig` (no cascade) — Task 6 re-points it. This task tests `applyDamage` directly via a tiny test hook. Add to the test file:
+Note: the existing manual `damage` verb uses `damageRig` (no cascade), Task 6 re-points it. This task tests `applyDamage` directly via a tiny test hook. Add to the test file:
 
 ```js
 import { __test } from "./game-state.js";
@@ -448,14 +448,14 @@ Correct the expectation: engine went 4→3, not 0, so `skipNextActivation` stays
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `__test`/`applyDamage` undefined.
+Expected: FAIL, `__test`/`applyDamage` undefined.
 
 - [ ] **Step 3: Write minimal implementation**
 
 Add `applyDamage` and the §8 helper to `shared/game-state.js`:
 
 ```js
-// §8 — effect when a component first reaches 0 SP. May recurse via applyDamage.
+// §8, effect when a component first reaches 0 SP. May recurse via applyDamage.
 function catastrophicOnZero(room, rig, loc, opts) {
   if (loc === "engine") { rig.skipNextActivation = true; rig.engine.heat = Math.max(rig.engine.heat, 3); }
   else if (loc === "arms") {
@@ -467,10 +467,10 @@ function catastrophicOnZero(room, rig, loc, opts) {
     applyDamage(room, rig, "engine", 1, opts);
   }
   // Legs at 0 (move penalties) and Hull at 0 (−2 actions / −1 Aim) are enforced
-  // where they apply (Task 5 activate budget, combat modAim) — no state to set here.
+  // where they apply (Task 5 activate budget, combat modAim), no state to set here.
 }
 
-// §8 — additional damage to an already 0-SP location.
+// §8, additional damage to an already 0-SP location.
 function catastrophicAdditional(room, rig, loc, opts) {
   if (loc === "hull" || loc === "engine") rig[loc].destroyed = true;
   else if (loc === "legs") rig.immobilised = true;
@@ -499,7 +499,7 @@ function applyDamage(room, rig, loc, amount, opts) {
 function onRigDamaged(room, rig, opts) { checkAnnihilation(room); }
 ```
 
-Route overheat through the cascade — in `applyOverheat`, replace each `damageRig(...)` with `applyDamage(room, rig, ...)`, and thread `opts`:
+Route overheat through the cascade, in `applyOverheat`, replace each `damageRig(...)` with `applyDamage(room, rig, ...)`, and thread `opts`:
 
 ```js
 function applyOverheat(room, rig, total, opts) {
@@ -571,7 +571,7 @@ test("blast applies D6 + STR 10 to each named rig and clears the pending blast",
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `pendingBlast`/`blast` unhandled.
+Expected: FAIL, `pendingBlast`/`blast` unhandled.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -587,7 +587,7 @@ Add `pendingBlast` to `createRoom`'s `game` literal and `ensureGameShape`:
 Replace `onRigDamaged`:
 
 ```js
-// §9 — on the transition to destroyed, roll a D12; 4+ erupts. Record a pending
+// §9, on the transition to destroyed, roll a D12; 4+ erupts. Record a pending
 // blast the controller resolves by naming Rigs within 12" (see the `blast` verb).
 function onRigDamaged(room, rig, opts) {
   if (rig.destroyed && !rig._blastRolled) {
@@ -597,7 +597,7 @@ function onRigDamaged(room, rig, opts) {
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
-      summary: `${rig.name} destroyed — ${exploded ? "munitions erupt (mark rigs within 12\")" : "no secondary blast"}`,
+      summary: `${rig.name} destroyed, ${exploded ? "munitions erupt (mark rigs within 12\")" : "no secondary blast"}`,
       effects: [],
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
@@ -693,14 +693,14 @@ test("firing an unloaded ranged weapon is rejected until reloaded", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — fire action still just adds heat (Plan 1 behaviour).
+Expected: FAIL, fire action still just adds heat (Plan 1 behaviour).
 
 - [ ] **Step 3: Write minimal implementation**
 
 Append the orchestrator to `shared/combat.js`:
 
 ```js
-// §7 — full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
+// §7, full attack. Mutates through ctx.applyDamage / ctx.bumpHeat and returns
 // a resolution descriptor (or { ok:false, reason } when the shot can't be made).
 export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const slot = opts.weapon === "melee" ? "melee" : "longRange";
@@ -763,7 +763,7 @@ Extend `performAction` to handle `fire`/`aimed` (replace the "nothing extra" com
       charged: a.charged === true || a.charged === "true",
       dice: a.dice,
     }, random, combatCtx());
-    if (!res.ok) return false;         // invalid shot — no budget spent
+    if (!res.ok) return false;         // invalid shot, no budget spent
     t.actionsUsed += 1;
     bumpHeat(rig, def.heat);           // base 1 (Hot / fire-mode heat added inside resolveAttack)
     return true;
@@ -776,7 +776,7 @@ Re-point the manual `damage` verb to the cascade so late-battle manual edits als
       if (verb === "damage") { applyDamage(room, rig, (a.loc || "").toLowerCase(), a.amount, { random: options.random }); changed = true; }
 ```
 
-(Remove the now-redundant separate `checkAnnihilation` call there — `applyDamage` calls it via `onRigDamaged`.)
+(Remove the now-redundant separate `checkAnnihilation` call there, `applyDamage` calls it via `onRigDamaged`.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -820,14 +820,14 @@ test("ram deals a D6 + ram-STR hit to both rigs", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — ram still just adds heat.
+Expected: FAIL, ram still just adds heat.
 
 - [ ] **Step 3: Write minimal implementation**
 
 Append `resolveRam` to `shared/combat.js`:
 
 ```js
-// §5 Ram — both Rigs take one D6 + their own weight-class ram STR hit.
+// §5 Ram, both Rigs take one D6 + their own weight-class ram STR hit.
 export function resolveRam(room, attacker, target, opts, random, ctx) {
   for (const [rig, who] of [[attacker, "self"], [target, "target"]]) {
     const d = opts.dice?.[who] || {};
@@ -873,7 +873,7 @@ git commit -m "feat: ram action resolution"
 
 ---
 
-### Task 8: On-hit perks — Incendiary, Shock, Impale, Staggering, Cleave
+### Task 8: On-hit perks, Incendiary, Shock, Impale, Staggering, Cleave
 
 **Files:**
 - Modify: `shared/combat.js` (real `applyOnHitPerks`)
@@ -889,7 +889,7 @@ test("Incendiary adds target heat; Shock halves target speed next round", () => 
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   const a1 = findRig(r, "a1");
   const heatBefore = a1.engine.heat;
-  // Fire the Sword (Shock) — melee, 2 hits guaranteed.
+  // Fire the Sword (Shock), melee, 2 hits guaranteed.
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "fire", weapon: "melee", target: "a1", arc: "front", range: "near",
     dice: { toHit: [6, 6], impacts: [6, 6], location: 1 },
@@ -916,26 +916,26 @@ test("Impale immobilises on a D12 of 8+", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — perks are a no-op.
+Expected: FAIL, perks are a no-op.
 
 - [ ] **Step 3: Write minimal implementation**
 
 Replace the `applyOnHitPerks` stub in `shared/combat.js`:
 
 ```js
-// §13 — post-hit perk effects (only reached when at least one hit landed).
+// §13, post-hit perk effects (only reached when at least one hit landed).
 function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
   const perks = profile.perks;
   const effects = [];
   if (perks.includes("Incendiary")) { ctx.bumpHeat(target, 1); effects.push("Incendiary +1 heat"); }
-  if (perks.includes("Shock")) { target.speedHalvedNextRound = true; effects.push("Shock — speed halved"); }
+  if (perks.includes("Shock")) { target.speedHalvedNextRound = true; effects.push("Shock, speed halved"); }
   if (perks.includes("Impale")) {
     const roll = rollD(12, opts.dice?.impale, random);
-    if (roll >= 8) { target.immobilised = true; effects.push(`Impale ${roll} — immobilised`); }
+    if (roll >= 8) { target.immobilised = true; effects.push(`Impale ${roll}, immobilised`); }
   }
   if (perks.includes("Staggering")) {
     const roll = rollD(6, opts.dice?.stagger, random);
-    effects.push(`Staggering ${roll} — ${roll <= 2 ? "pivot left" : roll <= 4 ? "pushed 3\"" : "pivot right"} (positional)`);
+    effects.push(`Staggering ${roll}, ${roll <= 2 ? "pivot left" : roll <= 4 ? "pushed 3\"" : "pivot right"} (positional)`);
   }
   if (perks.includes("Cleave") && opts.cleaveTarget) {
     const extra = room.rigs.find((x) => x.name.toLowerCase() === String(opts.cleaveTarget).toLowerCase());
@@ -955,13 +955,13 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/game-state.test.js` then `node --test shared/combat.test.js`
-Expected: PASS. Then `npm test` — full suite green.
+Expected: PASS. Then `npm test`: full suite green.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add shared/combat.js shared/game-state.js shared/game-state.test.js shared/combat.test.js
-git commit -m "feat: on-hit perks — incendiary, shock, impale, staggering, cleave"
+git commit -m "feat: on-hit perks, incendiary, shock, impale, staggering, cleave"
 ```
 
 ---
@@ -978,7 +978,7 @@ git commit -m "feat: on-hit perks — incendiary, shock, impale, staggering, cle
 - Ram → Task 7. ✓
 - On-hit perks (Incendiary/Shock/Impale/Staggering/Cleave) → Task 8. ✓
 - Hull-0 −2 actions / engine-0 skip already enforced in Plan 1 (Task 5); Hull-0 −1 Aim enforced in `computeModifiedAim` (Task 2). ✓
-- **Positional facts** (arc, range, cover, cleave/blast targets, Evasive) remain player-supplied via command attrs — the app cannot see the table. Staggering/Legs-move penalties are surfaced as reminders, not auto-moved.
+- **Positional facts** (arc, range, cover, cleave/blast targets, Evasive) remain player-supplied via command attrs, the app cannot see the table. Staggering/Legs-move penalties are surfaced as reminders, not auto-moved.
 
 **Placeholder scan:** `applyOnHitPerks` (Task 6) and `onRigDamaged` (Task 4) are intentional forward-declarations, each replaced in a named later task (8 and 5) whose test fails until replaced. No other placeholders.
 

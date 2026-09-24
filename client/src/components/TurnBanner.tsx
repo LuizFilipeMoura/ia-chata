@@ -7,7 +7,7 @@ import { useMySide } from "../hooks/useMySide";
 import { computeFocus, type FocusCtaKind } from "../lib/computeFocus";
 
 // The one thing this player should do right now, pinned above everything and
-// independent of scroll — plus a whole-screen border while it's actually their
+// independent of scroll, plus a whole-screen border while it's actually their
 // move (battle.js:165-196).
 export function TurnBanner() {
   const { rigs, game } = useRoomState();
@@ -50,7 +50,7 @@ export function TurnBanner() {
 
   // Publish the floating card's height so the layout can offset for it
   // (battle.js:195). The outer .turn-banner is just a centering wrapper with
-  // top padding for the floating offset, so we measure the card itself —
+  // top padding for the floating offset, so we measure the card itself,
   // otherwise the stage would be pushed down by the offset twice over.
   useLayoutEffect(() => {
     if (focus && cardRef.current) {

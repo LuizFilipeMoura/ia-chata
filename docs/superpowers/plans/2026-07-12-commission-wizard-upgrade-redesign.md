@@ -12,11 +12,11 @@
 
 ## File Structure
 
-- `client/src/v2/lib/commissionData.ts` — add `upgradePips(nature)` and `splitUpgradeTag(tier)` pure helpers (unit tested). Existing exports unchanged.
-- `client/src/v2/overlays/UpgradeLadder.tsx` *(new)* — the slider + Payoff/Catch component. One responsibility: render one upgrade track and report selection.
-- `client/src/v2/overlays/CommissionWizard.tsx` — restructure rig steps; consume `UpgradeLadder`; delete inline `upgradeBay`/`upgradePath` helpers.
-- `client/src/v2/styles/forge.css` — add `.v2-ul-*` rules; remove dead `.v2-fc-bay`, `.v2-fc-weapon*`, `.v2-fc-path`, `.v2-fc-node*`, `.v2-fc-warn` rules.
-- `shared/game-state.js` — author optional `catch` strings on Prototype rows (and Tuned rows that carry a real cost). Data-only, additive.
+- `client/src/v2/lib/commissionData.ts`: add `upgradePips(nature)` and `splitUpgradeTag(tier)` pure helpers (unit tested). Existing exports unchanged.
+- `client/src/v2/overlays/UpgradeLadder.tsx` *(new)*: the slider + Payoff/Catch component. One responsibility: render one upgrade track and report selection.
+- `client/src/v2/overlays/CommissionWizard.tsx`: restructure rig steps; consume `UpgradeLadder`; delete inline `upgradeBay`/`upgradePath` helpers.
+- `client/src/v2/styles/forge.css`: add `.v2-ul-*` rules; remove dead `.v2-fc-bay`, `.v2-fc-weapon*`, `.v2-fc-path`, `.v2-fc-node*`, `.v2-fc-warn` rules.
+- `shared/game-state.js`: author optional `catch` strings on Prototype rows (and Tuned rows that carry a real cost). Data-only, additive.
 
 Nature → token map used throughout: `field → --v2-ok` (green/safe), `tuned → --v2-oil` (amber), `prototype → --v2-ember` (red/volatile).
 
@@ -50,7 +50,7 @@ test("splitUpgradeTag prefers an authored catch", () => {
 test("splitUpgradeTag parses a delimited tag when no catch is authored", () => {
   const semi = { id: "a", nature: "prototype", name: "N", tag: "Ignores armour; belt cycles slow after" };
   expect(splitUpgradeTag(semi)).toEqual({ payoff: "Ignores armour", catch: "belt cycles slow after" });
-  const dash = { id: "b", nature: "prototype", name: "N", tag: "Reel a rig in — runs hot" };
+  const dash = { id: "b", nature: "prototype", name: "N", tag: "Reel a rig in, runs hot" };
   expect(splitUpgradeTag(dash)).toEqual({ payoff: "Reel a rig in", catch: "runs hot" });
 });
 
@@ -63,7 +63,7 @@ test("splitUpgradeTag reports no catch for a clean safe upgrade", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run client/src/v2/lib/commissionData.test.ts`
-Expected: FAIL — `upgradePips is not a function` / `splitUpgradeTag is not a function`.
+Expected: FAIL, `upgradePips is not a function` / `splitUpgradeTag is not a function`.
 
 - [ ] **Step 3: Implement the helpers**
 
@@ -91,11 +91,11 @@ export function upgradePips(nature: string): { reward: number; risk: number } {
 }
 
 // Payoff vs Catch text for a tier. Prefer an authored `catch`; otherwise split
-// the tag on the first cost delimiter (" — " or ";"). A tag with no delimiter is
+// the tag on the first cost delimiter (", " or ";"). A tag with no delimiter is
 // all payoff and has no catch.
 export function splitUpgradeTag(tier: UpgradeTier): { payoff: string; catch: string | null } {
   if (tier.catch) return { payoff: tier.tag, catch: tier.catch };
-  const m = tier.tag.match(/^(.*?)(?:\s+—\s+|;\s+)(.*)$/);
+  const m = tier.tag.match(/^(.*?)(?:\s+-\s+|;\s+)(.*)$/);
   if (m) return { payoff: m[1].trim(), catch: m[2].trim() };
   return { payoff: tier.tag, catch: null };
 }
@@ -155,7 +155,7 @@ test("selected prototype shows payoff, catch and the gate badge", () => {
 
 test("a safe tier reports no catch", () => {
   render(<UpgradeLadder title="Autocannon" tiers={TIERS} selected="dep" onSelect={vi.fn()} lockPrototype={false} />);
-  expect(screen.getByText(/None — dependable/i)).toBeInTheDocument();
+  expect(screen.getByText(/None, dependable/i)).toBeInTheDocument();
 });
 
 test("locking the prototype disables its segment", () => {
@@ -167,7 +167,7 @@ test("locking the prototype disables its segment", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run client/src/v2/overlays/UpgradeLadder.test.tsx`
-Expected: FAIL — cannot resolve `./UpgradeLadder`.
+Expected: FAIL, cannot resolve `./UpgradeLadder`.
 
 - [ ] **Step 3: Implement the component**
 
@@ -240,7 +240,7 @@ export function UpgradeLadder({ title, subtitle, glyph, tiers, selected, onSelec
           </div>
           <div className="v2-ul-col v2-ul-catch">
             <div className="v2-ul-col-hd v2-eyebrow">Catch {risk ? <span className="v2-ul-meter">{pips("rsk", riskPips)}</span> : null}</div>
-            {risk ? <span>⚠ {risk}</span> : <span className="v2-ul-none">None — dependable.</span>}
+            {risk ? <span>⚠ {risk}</span> : <span className="v2-ul-none">None, dependable.</span>}
           </div>
         </div>
       </div>
@@ -273,7 +273,7 @@ git commit -m "feat(v2): UpgradeLadder slider + payoff/catch component"
 Append to `client/src/v2/styles/forge.css`:
 
 ```css
-/* Upgrade ladder — volatility slider + payoff/catch panel */
+/* Upgrade ladder, volatility slider + payoff/catch panel */
 .v2-root .v2-ul { padding: 14px 15px; }
 .v2-root .v2-ul + .v2-ul { border-top: 1px solid var(--v2-line-soft); }
 .v2-root .v2-ul-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -322,7 +322,7 @@ Delete these now-unused rule blocks from `client/src/v2/styles/forge.css` (the i
 - [ ] **Step 3: Verify the stylesheet still parses and nothing references removed classes**
 
 Run: `npx vitest run client/src/v2/overlays/CommissionWizard.test.tsx`
-Expected: build succeeds (tests may fail on step wording — fixed in Task 4). Then:
+Expected: build succeeds (tests may fail on step wording, fixed in Task 4). Then:
 Run: `grep -rn "v2-fc-bay\|v2-fc-node\|v2-fc-path\|v2-fc-warn\|v2-fc-weapon" client/src`
 Expected: no matches once Task 4 lands; at this point only `CommissionWizard.tsx` may still reference them.
 
@@ -392,7 +392,7 @@ test("choosing a Prototype on one weapon locks the other weapon's Prototype", as
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run client/src/v2/overlays/CommissionWizard.test.tsx`
-Expected: FAIL — no "Weapons" step text; rig test stops one step short.
+Expected: FAIL, no "Weapons" step text; rig test stops one step short.
 
 - [ ] **Step 3: Update `stepsFor` and the header import**
 
@@ -417,7 +417,7 @@ In the `state.step === 1` rig branch, remove the `{sel ? upgradeBay() : null}` l
 
 ```tsx
 <div className="v2-fw-hint">
-  Weapons and weight class are fixed by the chassis. Pick a frame — you'll tune its weapons next.
+  Weapons and weight class are fixed by the chassis. Pick a frame, you'll tune its weapons next.
 </div>
 ```
 
@@ -445,7 +445,7 @@ The rig branches shift down by one step. Insert a Weapons body and renumber the 
       <div className="v2-fw-body">
         <div className="v2-fc-cue">
           <span className="v2-fc-cue-lead">◈ Tune your weapons</span>
-          <span className="v2-fc-cue-sub v2-eyebrow">— climb each track; one Prototype per rig</span>
+          <span className="v2-fc-cue-sub v2-eyebrow">, climb each track; one Prototype per rig</span>
         </div>
         <UpgradeLadder
           title={state.longRange}
@@ -479,7 +479,7 @@ The rig branches shift down by one step. Insert a Weapons body and renumber the 
       <div className="v2-fw-body">
         <div className="v2-fc-cue">
           <span className="v2-fc-cue-lead">◈ Fit equipment</span>
-          <span className="v2-fc-cue-sub v2-eyebrow">— one slot per rig</span>
+          <span className="v2-fc-cue-sub v2-eyebrow">, one slot per rig</span>
         </div>
         <div className="v2-fc-grid v2-grid-2">
           {Object.entries(EQUIPMENT).map(([id, e]) => {
@@ -502,7 +502,7 @@ The rig branches shift down by one step. Insert a Weapons body and renumber the 
                   <div className="v2-fc-equip-label v2-title">{e.label}</div>
                   <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
                   <div className="v2-fc-equip-active">
-                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
+                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat), {e.active.text}
                   </div>
                 </button>
                 {sel ? (
@@ -525,12 +525,12 @@ The rig branches shift down by one step. Insert a Weapons body and renumber the 
   }
 ```
 
-When filling the `/* …unchanged… */ ` slots, copy the exact JSX from the current file's corresponding branches — Kind body (lines 248–272), rig Chassis roster (275–324, dropping only the `{sel ? upgradeBay() : null}` line), tank/walker Loadout (327–365), tank/walker Confirm (420–434), and rig Confirm (436–451). Do not paraphrase them.
+When filling the `/* …unchanged… */ ` slots, copy the exact JSX from the current file's corresponding branches, Kind body (lines 248–272), rig Chassis roster (275–324, dropping only the `{sel ? upgradeBay() : null}` line), tank/walker Loadout (327–365), tank/walker Confirm (420–434), and rig Confirm (436–451). Do not paraphrase them.
 
 - [ ] **Step 6: Run tests to verify they pass**
 
 Run: `npx vitest run client/src/v2/overlays/CommissionWizard.test.tsx`
-Expected: PASS — including the two new step-order/gate tests and the updated four-Next rig test. Tank/walker tests unchanged and still pass.
+Expected: PASS, including the two new step-order/gate tests and the updated four-Next rig test. Tank/walker tests unchanged and still pass.
 
 - [ ] **Step 7: Verify no dead references remain**
 
@@ -573,20 +573,20 @@ test("every weapon Prototype row carries an authored catch", () => {
 });
 ```
 
-> Note: `shared/game-state.js` is ESM (`export const`). If `require` fails in this repo's node test setup, use a dynamic `await import("./game-state.js")` inside the test instead — check a sibling `shared/*.test.js` for the established import style and match it.
+> Note: `shared/game-state.js` is ESM (`export const`). If `require` fails in this repo's node test setup, use a dynamic `await import("./game-state.js")` inside the test instead, check a sibling `shared/*.test.js` for the established import style and match it.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/upgrade-catch.test.js`
-Expected: FAIL — prototype rows have no `catch`.
+Expected: FAIL, prototype rows have no `catch`.
 
 - [ ] **Step 3: Author the `catch` field on each Prototype row**
 
-For each `prototype` entry in `WEAPON_UPGRADES`, add a `catch` string naming its downside. Where the tag already states a cost after `;` or ` — `, mirror that phrase; where it's implied, make it explicit. Examples (apply the same pattern to all rows):
+For each `prototype` entry in `WEAPON_UPGRADES`, add a `catch` string naming its downside. Where the tag already states a cost after `;` or `: `, mirror that phrase; where it's implied, make it explicit. Examples (apply the same pattern to all rows):
 
 ```js
 // Autocannon
-{ id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour", catch: "Belt cycles slow after — no fire next turn", effect: { penetrator: true } },
+{ id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour", catch: "Belt cycles slow after, no fire next turn", effect: { penetrator: true } },
 // Crossbow
 { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn", catch: "Runs +2 heat", effect: { pinningBolt: true } },
 // Arc Gun
@@ -618,7 +618,7 @@ git commit -m "content: authored risk 'catch' copy on weapon Prototype upgrades"
 - [ ] **Step 1: Run the whole test suite**
 
 Run: `npm test`
-Expected: PASS — vitest suite (including the new component, helper, and wizard tests) and the node `shared/**` / `server/**` tests all green.
+Expected: PASS, vitest suite (including the new component, helper, and wizard tests) and the node `shared/**` / `server/**` tests all green.
 
 - [ ] **Step 2: Manually drive the wizard in the browser**
 
@@ -635,6 +635,6 @@ git commit -m "chore(v2): commission wizard redesign polish"
 
 ## Self-Review Notes
 
-- **Spec coverage:** two-page split (Task 4), reusable risk×reward ladder for weapons (Task 4) and equipment (Task 4), pip/payoff-catch logic (Task 1), component (Task 2), styles + dead-CSS removal (Task 3), optional additive `catch` data (Task 5), gate logic preserved and relocated (Task 4 tests), tests + manual verify (Tasks 1–6). No server/command change — matches non-goals.
+- **Spec coverage:** two-page split (Task 4), reusable risk×reward ladder for weapons (Task 4) and equipment (Task 4), pip/payoff-catch logic (Task 1), component (Task 2), styles + dead-CSS removal (Task 3), optional additive `catch` data (Task 5), gate logic preserved and relocated (Task 4 tests), tests + manual verify (Tasks 1–6). No server/command change, matches non-goals.
 - **Type consistency:** `UpgradeTier` defined in Task 1, imported by Task 2 and used as the `tiers` prop; `upgradePips`/`splitUpgradeTag` names match across tasks; `lockPrototype`, `weaponProto`, `equipProto` used consistently in Task 4.
-- **Gate note:** both weapon ladders and the equipment ladder derive `lockPrototype` from shared wizard state, so a Prototype chosen on any track locks the Prototype segment on the others — the existing "one Prototype per rig" rule, unchanged.
+- **Gate note:** both weapon ladders and the equipment ladder derive `lockPrototype` from shared wizard state, so a Prototype chosen on any track locks the Prototype segment on the others, the existing "one Prototype per rig" rule, unchanged.

@@ -3,7 +3,7 @@ import { MODEL, OLLAMA_URL, NUM_CTX } from "../config.js";
 import { getSystemPrompt, TRACKER_PROTOCOL, PLAYER_START_GUIDE } from "../prompt.js";
 import { formatBattleState } from "../../shared/game-state.js";
 
-// POST /api/chat — proxy the conversation to Ollama and stream the reply back
+// POST /api/chat, proxy the conversation to Ollama and stream the reply back
 // as newline-delimited { type, text } events. Injects the rulebook system
 // prompt, the tracker protocol, and (when a room is given) its battle state.
 export function createChatRouter(store) {

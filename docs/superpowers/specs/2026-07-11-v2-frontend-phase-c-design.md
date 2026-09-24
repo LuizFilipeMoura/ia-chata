@@ -1,4 +1,4 @@
-# V2 Frontend — Phase C Design (Battle System)
+# V2 Frontend, Phase C Design (Battle System)
 
 **Date:** 2026-07-11
 **Status:** Approved (pre-approved for all 4 phases)
@@ -18,7 +18,7 @@ Every battle interaction already flows through **shared providers mounted in `Ap
 - `useWizard()` → `openAttack(rig, mode), openScore()` (shared `AttackWizard`/`VpWizard` portals).
 - `useCommands()` → `sendCommand("action"|"activate"|...)`.
 - View fns: `phaseSummary(game, rigs)`, `computeFocus(game, rigs, mySide)`, `availableActions(rig, turn, round)`, `actionBudget(rig, turn)`, `outcomeText(outcome, sides)`.
-- `useBattleWatchers()` — the hook that opens the answer-token gate, reaction-resolution,
+- `useBattleWatchers()`: the hook that opens the answer-token gate, reaction-resolution,
   activation recap, and plays the roll console. **V2 must call this** so those flows work.
 
 Therefore V2 ports only the **chrome** and reuses the rest.
@@ -26,15 +26,15 @@ Therefore V2 ports only the **chrome** and reuses the rest.
 ## Scope
 
 **Ported to V2 styling (this phase):**
-- **TurnBanner** — the pinned "one thing to do now" card driven by `computeFocus`; CTAs call the
+- **TurnBanner**: the pinned "one thing to do now" card driven by `computeFocus`; CTAs call the
   shared actions. Whole-screen `my-turn-glow` while it's your move.
-- **BattleHud** — phase-label + round + turn + answer-token count + "opponent reacting" line
+- **BattleHud**: phase-label + round + turn + answer-token count + "opponent reacting" line
   (`phaseSummary`).
-- **ActionConsole** (inside the V2 RigTerminal, active rig only) — action budget pips + the three
+- **ActionConsole** (inside the V2 RigTerminal, active rig only), action budget pips + the three
   tactile groups (Attack/Move/Support) with a popover of enabled sub-actions; routes to
   `openAttack`/`openMove`/`openRepair`/`openPrepare`/`sendCommand`/`endActivation`. Uses
   `availableActions`/`actionBudget`.
-- **OutcomeBanner** — V2 victory/defeat screen (mockup lines 477–496) when `phase==="finished"`,
+- **OutcomeBanner**: V2 victory/defeat screen (mockup lines 477–496) when `phase==="finished"`,
   with `outcomeText` and a "New Battle" button (`resetBattle`).
 - **BattleSetup readiness** already lives in the Yard ready bar (Phase A); no change needed beyond
   it working once a field is locked.
@@ -42,19 +42,19 @@ Therefore V2 ports only the **chrome** and reuses the rest.
 **Reused from V1 as interim (V1-styled, mounted inside `.v2-root`; restyle deferred):**
 - Field map + field editor: reuse V1 `FieldMap` + `FieldControls` components directly.
 - Roll console (dice theater), move/repair/prepare drawers, Attack wizard, VP wizard, reaction
-  picker, answer-token gate, activation recap — all reached via the shared contexts /
+  picker, answer-token gate, activation recap, all reached via the shared contexts /
   `useBattleWatchers`. No V2 reimplementation this phase.
 
 ## Components / files
 
 ```
 client/src/v2/
-  V2Terminal.tsx            MODIFY — call useBattleWatchers(); render TurnBanner + BattleHud + (battle) FieldMap/FieldControls; OutcomeBanner when finished
+  V2Terminal.tsx            MODIFY, call useBattleWatchers(); render TurnBanner + BattleHud + (battle) FieldMap/FieldControls; OutcomeBanner when finished
   components/BattleHud.tsx   V2 phase strip
   components/TurnBanner.tsx  V2 focus banner (ported)
   battle/ActionConsole.tsx   V2 action console (ported; used by RigTerminal)
   overlays/OutcomeBanner.tsx V2 outcome screen
-  overlays/RigTerminal.tsx   MODIFY — render <ActionConsole rig=…/> when started
+  overlays/RigTerminal.tsx   MODIFY, render <ActionConsole rig=…/> when started
   styles/battle.css          scoped chrome styles (hud, turn banner, action console, outcome)
 ```
 
@@ -85,5 +85,5 @@ client/src/v2/
 
 ## Non-goals (Phase C)
 
-- No V2 restyle of the roll console, drawers, attack/VP wizards, field map (reused V1 — interim).
+- No V2 restyle of the roll console, drawers, attack/VP wizards, field map (reused V1, interim).
 - No new battle mechanics; presentation only.

@@ -7,7 +7,7 @@ import {
 } from "react";
 
 /**
- * IronPanel — heavy dieselpunk skeuomorphic plate.
+ * IronPanel, heavy dieselpunk skeuomorphic plate.
  *
  * A dark brushed-gunmetal panel with a tarnished-brass chamfered frame, corner
  * + edge bolts, grime vignette, and a recessed inner well that hosts `children`.
@@ -28,7 +28,7 @@ const octagon = (c: number) =>
   `0 calc(100% - ${c}px),0 ${c}px)`;
 
 export interface IronPanelProps {
-  /** Element to render as — e.g. "div" (default) or "button". */
+  /** Element to render as, e.g. "div" (default) or "button". */
   as?: ElementType;
   /** Panel width. number → px, or any CSS length. Default 360. */
   width?: number | string;
@@ -166,7 +166,7 @@ export const IronPanel = forwardRef(function IronPanel(
           }}
         />
 
-        {/* recessed well — content sits here */}
+        {/* recessed well, content sits here */}
         <span
           style={{
             position: "absolute",

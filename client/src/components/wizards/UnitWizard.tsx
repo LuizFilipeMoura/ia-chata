@@ -19,7 +19,7 @@ function firstUpgradeId(name: string): string | null {
   return (WEAPON_UPGRADES[name] || [])[0]?.id || null;
 }
 
-// Dieselpunk chassis codenames — each cues its weapon pair + weight class, so a
+// Dieselpunk chassis codenames, each cues its weapon pair + weight class, so a
 // rig commissions with a name already attached (the manual name step is gone).
 // Derived from the CHASSIS catalogue's `name` field: a new chassis is named the
 // moment it's added there, no map to maintain here.
@@ -38,7 +38,7 @@ const WEAPON_GLYPH: Record<string, string> = {
 const glyph = (weapon: string) => WEAPON_GLYPH[weapon] || "⚙";
 const NODE_MARK = ["I", "II", "III"]; // path rank for each nature step
 
-// Dieselpunk ordnance stamp per upgrade nature (display only — the underlying
+// Dieselpunk ordnance stamp per upgrade nature (display only, the underlying
 // `nature` id still drives the one-Wildcat-per-rig rule). Field = mass-issue,
 // Tuned = bench-worked, Prototype = unsanctioned/experimental.
 const NATURE_LABEL: Record<string, string> = {
@@ -334,7 +334,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="rw-hint">
-            Weapons and weight class are fixed by the chassis. Open a chassis and follow each weapon's path to one upgrade — equipment comes next.
+            Weapons and weight class are fixed by the chassis. Open a chassis and follow each weapon's path to one upgrade, equipment comes next.
           </div>
         </div>
       );
@@ -359,7 +359,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
                     ROF {w.rof} · Penetration {w.pen} · {w.melee ? `RNG ${w.rng[0]}/${w.rng[1]}"` : `Sweet ${w.sweet}" · ${w.minRange}–${w.maxRange}"`}
                   </div>
                   <div className="rw-equip-active">
-                    {w.perks?.length ? w.perks.join(", ") : "—"}
+                    {w.perks?.length ? w.perks.join(", ") : "-"}
                   </div>
                 </button>
               ))}
@@ -370,7 +370,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
     }
   } else if (state.step === 2) {
     if (state.kind === "rig") {
-      // Equipment — its own step again (upgrades moved into the chassis bay).
+      // Equipment, its own step again (upgrades moved into the chassis bay).
       body = (
         <div className="rw-body">
           <div className="rw-equip-grid">
@@ -385,7 +385,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
                 <div className="rw-equip-label">{e.label}</div>
                 <div className="rw-equip-passive">Passive · <GlossaryText text={e.passive} /></div>
                 <div className="rw-equip-active">
-                  Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — <GlossaryText text={e.active.text} />
+                  Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat), <GlossaryText text={e.active.text} />
                 </div>
               </button>
             ))}
@@ -396,7 +396,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
       const w = UNIT_WEAPONS[state.unit];
       body = (
         <div className="rw-body rw-confirm">
-          <div className="rw-confirm-name">{unitName()} — {UNIT_KINDS[state.kind].label}</div>
+          <div className="rw-confirm-name">{unitName()}, {UNIT_KINDS[state.kind].label}</div>
           <div className="rw-confirm-row">🎯 {state.unit} · Penetration {w.pen} · ROF {w.rof}</div>
         </div>
       );
@@ -411,7 +411,7 @@ export function UnitWizard({ onClose }: { onClose: () => void }) {
     );
     body = (
       <div className="rw-body rw-confirm">
-        <div className="rw-confirm-name">{unitName()} — {state.cls}</div>
+        <div className="rw-confirm-name">{unitName()}, {state.cls}</div>
         <div className="rw-confirm-row">🎯 {state.longRange} · {lrUpgrade?.name || "Upgrade ?"}</div>
         <div className="rw-confirm-row">🗡️ {state.melee} · {meleeUpgrade?.name || "Upgrade ?"}</div>
         <div className="rw-confirm-row">🛠 {e.label} · {e.passive}</div>

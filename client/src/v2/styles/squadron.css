@@ -1,4 +1,4 @@
-/* V2 Squadron screen styles — ported from design-reference/oil-iron-terminal.html
+/* V2 Squadron screen styles, ported from design-reference/oil-iron-terminal.html
    lines 150-178 (own rig row) and 186-205 (hostile row). EVERY selector is scoped
    under .v2-root so nothing leaks into V1's global styles. Colors use --v2-* tokens.
 
@@ -380,7 +380,7 @@
   font-size:var(--v2-text-base);
 }
 
-/* Pre-battle opponent selector — Human vs a difficulty-preset bot. */
+/* Pre-battle opponent selector, Human vs a difficulty-preset bot. */
 .v2-root .v2-yard-opponent { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
 .v2-root .v2-yard-opponent-opts { display: flex; flex-wrap: wrap; gap: 6px; }
 .v2-root .v2-yard-opp-btn {
@@ -395,7 +395,7 @@
   letter-spacing: 0.1em; color: var(--v2-txt-faint);
 }
 
-/* Pre-battle battle-mode toggle — Physical (tabletop companion) vs Digital (map). */
+/* Pre-battle battle-mode toggle, Physical (tabletop companion) vs Digital (map). */
 .v2-root .v2-yard-mode { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
 .v2-root .v2-yard-mode-opts { display: flex; gap: 6px; }
 .v2-root .v2-yard-mode-btn {

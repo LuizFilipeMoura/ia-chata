@@ -6,12 +6,12 @@ import { rollToHit, resolveAttack } from "../combat.js";
 
 // Rigs MUST be built through makeRig(id, name, cls, owner, weapons).
 // normalizeWeaponUpgrade forces the field upgrade for a null id, so a
-// hand-assembled weapon is a loadout the game cannot commission — a fixture
+// hand-assembled weapon is a loadout the game cannot commission, a fixture
 // built that way tests something that does not exist.
 const atk = (lr = "Autocannon") => makeRig(1, "Atk", "medium", "a", { longRange: lr, melee: "Sword" });
 const def = () => makeRig(2, "Def", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
 
-test("expectedDamage is zero for an earned zero — a rake into a front arc", () => {
+test("expectedDamage is zero for an earned zero, a rake into a front arc", () => {
   const a = atk("Mini Gun");   // Mini Gun carries Raking Fire
   assert.equal(expectedDamage(a, def(), "longRange", { arc: "front", distance: 7, cover: 0, round: 1 }), 0);
 });
@@ -23,7 +23,7 @@ test("a rake still scores into the side and rear", () => {
   assert.ok(expectedDamage(a, def(), "longRange", { ...opts, arc: "rear" }) > 0);
 });
 
-test("flanking beats a frontal shot — rear ≥ side ≥ front, rear > front", () => {
+test("flanking beats a frontal shot, rear ≥ side ≥ front, rear > front", () => {
   const a = atk();
   const opts = { distance: 12, cover: 0, round: 1 };
   const front = expectedDamage(a, def(), "longRange", { ...opts, arc: "front" });
@@ -49,7 +49,7 @@ test("expectedDamage drops with cover", () => {
           > expectedDamage(a, def(), "longRange", { ...opts, cover: 2 }));
 });
 
-test("a natural 6 always hits — expectedDamage never falls to zero on a legal shot", () => {
+test("a natural 6 always hits, expectedDamage never falls to zero on a legal shot", () => {
   const a = atk();
   // Absurd penalties: max cover at a terrible range. A natural 6 still lands.
   const h = expectedDamage(a, def(), "longRange", { arc: "front", distance: 26, cover: 2, round: 1 });
@@ -70,7 +70,7 @@ test("a raised shield that negates the arc is an earned zero", () => {
 // --- Validation against the real engine (Task 1.2) --------------------------
 // A green analytic score that never touches the dice is a score that is asserted,
 // not verified. Sample rollToHit and confirm rawExpectedHits (ROF × P(hit), no
-// arc preference — the engine's to-hit step ignores arc) matches its mean.
+// arc preference, the engine's to-hit step ignores arc) matches its mean.
 
 function mulberry32(seed) {
   let a = seed >>> 0;

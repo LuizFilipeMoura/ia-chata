@@ -9,7 +9,7 @@ const CLASS_GLYPH: Record<string, [string, string, string]> = {
   light: ["◆", "LGT", "#8fbcff"], medium: ["◈", "MED", "#e8bd57"],
 };
 
-// Cold kinds (Tank, Walker) have no weight class — key the class column off the
+// Cold kinds (Tank, Walker) have no weight class, key the class column off the
 // unit kind so the row shows TNK/WLK instead of falling back to LGT.
 const KIND_GLYPH: Record<string, [string, string, string]> = {
   tank: ["⬛", "TNK", "#b6c26a"], walker: ["⬟", "WLK", "#6ac2b6"],

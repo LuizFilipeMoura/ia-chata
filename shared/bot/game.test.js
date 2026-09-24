@@ -36,8 +36,8 @@ function mirroredRoom(botA, botB) {
 
 // Drive a whole game by command. Besides activations, the loop must clear the two
 // mandatory gates a headless driver owns (E3's finding): the per-round Answer
-// token (brace the first eligible rig — the bot plans no reaction) and a §9
-// munition cook-off's pendingBlast (cleared with empty targets — the bot skips
+// token (brace the first eligible rig, the bot plans no reaction) and a §9
+// munition cook-off's pendingBlast (cleared with empty targets, the bot skips
 // secondary blast, whose targeting is Task-10b geometry, out of scope for v1).
 function playGame(seed, botA, botB) {
   const opts = { random: mulberry32(seed) };
@@ -69,7 +69,7 @@ function playGame(seed, botA, botB) {
   return room;
 }
 
-// A deterministic fingerprint of the finished game — everything a replay must
+// A deterministic fingerprint of the finished game, everything a replay must
 // reproduce exactly from the same seed.
 function snapshot(room) {
   return {

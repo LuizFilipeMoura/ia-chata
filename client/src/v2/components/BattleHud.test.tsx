@@ -60,7 +60,7 @@ test("pops a kill toast when a fresh destruction resolution carries a vp award",
   await screen.findByText(/Kostov 0/);
   expect(screen.queryByText(/Ravager/)).toBeNull();
   rerender(<AppProviders><Seed state={killed}/><BattleHud/></AppProviders>);
-  expect(await screen.findByText(/🎯 Target eliminated — Ravager · \+2 VP/)).toBeInTheDocument();
+  expect(await screen.findByText(/🎯 Target eliminated, Ravager · \+2 VP/)).toBeInTheDocument();
 });
 test("shows the local side's Priority Target", async () => {
   const state = { version:1, ownerSide:"a", field:null,

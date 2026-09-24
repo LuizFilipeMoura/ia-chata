@@ -68,7 +68,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
       <div className="aw-card">
         <div className="aw-handle" />
         <div className="aw-title-row">
-          <div className="aw-title">⟡ Score Objectives — Round {round}</div>
+          <div className="aw-title">⟡ Score Objectives, Round {round}</div>
         </div>
         <p className="aw-field-desc">
           What points do you control? Tap each marker one of your Rigs holds
@@ -91,7 +91,7 @@ export function VpWizard({ onClose }: { onClose: () => void }) {
                 <span className="vpw-name">{name}{hint ? ` · ${hint}` : ""}</span>
                 <span className="vpw-state">{sel ? "You hold it" : "Not yours"}</span>
                 {disputed ? (
-                  <span className="vpw-warn">Both of you claimed this — one must change.</span>
+                  <span className="vpw-warn">Both of you claimed this, one must change.</span>
                 ) : null}
               </button>
             );

@@ -1,4 +1,4 @@
-/* ---- Accordion list of Rigs — the main event, laid out inline in the stage ---- */
+/* ---- Accordion list of Rigs, the main event, laid out inline in the stage ---- */
 .rig-list {
   display: flex; flex-direction: column; gap: .5rem;
 }
@@ -56,7 +56,7 @@
   padding: .12rem .38rem; background: rgba(231,154,61,.08); flex: 0 0 auto;
 }
 
-/* Heat glance chip — legible without expanding, reacts to the danger zone */
+/* Heat glance chip, legible without expanding, reacts to the danger zone */
 .rig-heat-chip {
   flex: 0 0 auto; display: inline-flex; align-items: center; gap: .18rem;
   font-family: var(--font-mono); font-size: .72rem; font-weight: 700;
@@ -91,7 +91,7 @@
 }
 .rig-activate:disabled { opacity: .45; cursor: not-allowed; }
 .rig-activate:disabled:hover { color: var(--txt-dim); border-color: var(--line); }
-/* Enemy Rigs: a status token, not a control — no hover affordance. */
+/* Enemy Rigs: a status token, not a control, no hover affordance. */
 .rig-activate--readonly, .rig-activate--readonly:hover {
   cursor: default; background: transparent; border-style: dashed;
   color: var(--txt-faint); border-color: var(--line-soft);
@@ -127,7 +127,7 @@
 }
 .rig-status.warn { color: var(--oil-hi); }
 .rig-status.crit { color: var(--ember-hi); }
-/* Chassis flavor blurb — a quiet italic line under the header. */
+/* Chassis flavor blurb, a quiet italic line under the header. */
 .rig-desc {
   font-size: .72rem; line-height: 1.4; font-style: italic;
   color: var(--txt-faint); margin: 0 0 .5rem;
@@ -258,7 +258,7 @@
 }
 
 /* ---- Cool-down: the blue "refresh" ----
-   Fires whenever heat actually drops — end-of-round Recovery (every rig at once)
+   Fires whenever heat actually drops, end-of-round Recovery (every rig at once)
    or a manual vent / shutdown / purge. A frost bloom on the shell, a light sweep
    across the thermometer, and a blue flash on the read-out. Purely presentational. */
 .heat-gauge--refresh {

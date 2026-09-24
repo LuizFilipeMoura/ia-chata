@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add two new weapons — the **Bulwark Shield** (defensive Melee weapon with a *Raise Shield* reaction) and the **Siege Maul** (short-range, high-STR anti-bunker Long Range cannon) — to the universal weapon list, expanding it to 7 Long Range + 7 Melee.
+**Goal:** Add two new weapons, the **Bulwark Shield** (defensive Melee weapon with a *Raise Shield* reaction) and the **Siege Maul** (short-range, high-STR anti-bunker Long Range cannon), to the universal weapon list, expanding it to 7 Long Range + 7 Melee.
 
 **Architecture:** Weapons and upgrades are plain data in `shared/game-state.js` (`WEAPONS`, `WEAPON_UPGRADES`), applied by `effectiveWeaponProfile`. Combat resolves in `shared/combat.js` (`rollImpacts`, `resolveAttack`). Two effects need new engine code: the *Raise Shield* preparation (a per-arc impact modifier, parallel to the existing `brace` and `hardened` modifiers in `rollImpacts`) and *Breaching Round* (a Hull repair-lock, parallel to the existing `sunder` `onDamage` hook). Everything else (Boss Spike → Staggering, Extended Barrel → range) reuses existing effect plumbing. `rules.md` is the human-readable source of truth and is updated alongside the data.
 
@@ -13,7 +13,7 @@
 **Conventions:**
 - Shared tests run with: `node --test shared/<file>.test.js`
 - Client tests run with: `npx vitest run <path>`
-- Commit after each task. Keep commits scoped to the task's files only (the working tree has unrelated in-progress changes — never `git add -A`).
+- Commit after each task. Keep commits scoped to the task's files only (the working tree has unrelated in-progress changes, never `git add -A`).
 
 ---
 
@@ -45,7 +45,7 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `Siege Maul` is `undefined`, so `assert.deepEqual` throws.
+Expected: FAIL, `Siege Maul` is `undefined`, so `assert.deepEqual` throws.
 
 - [ ] **Step 3: Add the two profiles**
 
@@ -85,7 +85,7 @@ Under **### Melee Weapons**, add a row after the Wrecking Ball row:
 Add one sentence of flavour under the Cannons table (after the existing table) so the short range reads as intentional:
 
 ```markdown
-> The **Siege Maul** is a close-in demolition gun: the highest STR on the board and Armour Piercing, but the shortest range of any ranged weapon and it runs Hot — you must get dangerously close to fire it.
+> The **Siege Maul** is a close-in demolition gun: the highest STR on the board and Armour Piercing, but the shortest range of any ranged weapon and it runs Hot, you must get dangerously close to fire it.
 ```
 
 - [ ] **Step 6: Commit**
@@ -151,7 +151,7 @@ import {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `WEAPON_UPGRADES["Siege Maul"]` is `undefined`.
+Expected: FAIL, `WEAPON_UPGRADES["Siege Maul"]` is `undefined`.
 
 - [ ] **Step 3: Add the upgrade entries**
 
@@ -241,7 +241,7 @@ test("shieldCoverage depends on the Tower Shield upgrade", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `normalizePrep is not a function` / `shieldCoverage is not defined` (they aren't exported/created yet).
+Expected: FAIL, `normalizePrep is not a function` / `shieldCoverage is not defined` (they aren't exported/created yet).
 
 - [ ] **Step 3: Add helpers and gate normalizePrep**
 
@@ -295,7 +295,7 @@ function prepName(type) {
   return "Brace for Incoming Fire";
 }
 function prepEffectLine(type) {
-  if (type === "evasive") return "Defender may move ½ Speed — the attack can miss entirely.";
+  if (type === "evasive") return "Defender may move ½ Speed, the attack can miss entirely.";
   if (type === "return") return "Defender answers with a counter-attack.";
   if (type === "raise-shield") return "Front-arc attack negated; side/rear impacts suffer −4.";
   return "Front-arc impacts suffer −2.";
@@ -371,7 +371,7 @@ test("Tower Shield extends Raise Shield negation to the side arc", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — no shield handling yet, so the front hits deal damage / totals are unblunted.
+Expected: FAIL, no shield handling yet, so the front hits deal damage / totals are unblunted.
 
 - [ ] **Step 3: Import the helper**
 
@@ -437,7 +437,7 @@ git commit -m "feat(shield): Raise Shield negates/blunts impacts by arc in rollI
 
 ## Task 5: Wire raise-shield into the two prep-arming call sites
 
-Thread the acting rig into `normalizePrep` so a shield Rig can actually arm Raise Shield via the Prepare action and via an Answer token. Because `resolveFire` already reads `target.preparation.type` in `rollImpacts`, no change to the reveal path is needed — Raise Shield resolves through the same generic (non-evasive, non-return) branch as Brace.
+Thread the acting rig into `normalizePrep` so a shield Rig can actually arm Raise Shield via the Prepare action and via an Answer token. Because `resolveFire` already reads `target.preparation.type` in `rollImpacts`, no change to the reveal path is needed, Raise Shield resolves through the same generic (non-evasive, non-return) branch as Brace.
 
 **Files:**
 - Modify: `shared/game-state.js` (prepare action ~line 812; answer-token arming ~line 1084)
@@ -466,7 +466,7 @@ test("a Bulwark Shield rig can arm Raise Shield; others fall back to brace", () 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `Guard.preparation.type` is `"brace"` because `normalizePrep(a.prep)` is called without the rig, so raise-shield falls back.
+Expected: FAIL, `Guard.preparation.type` is `"brace"` because `normalizePrep(a.prep)` is called without the rig, so raise-shield falls back.
 
 - [ ] **Step 3: Pass the rig into both call sites**
 
@@ -503,15 +503,15 @@ git commit -m "feat(shield): arm Raise Shield via Prepare action and Answer toke
 When a Siege Maul with the Breaching Round upgrade damages a target's Hull, lock Hull repairs for the current round and the next. Model the lock as a countdown (`hullRepairLock`) that ticks down each Recovery Phase; centralize the guard in `repairRig` so both the Repair action and Emergency Patch respect it.
 
 **Files:**
-- Modify: `shared/game-state.js` — `ensureRigShape` (~line 221), `makeRig` return (~line 306), `repairRig` (~line 567), `runRecovery` (~line 625), `combatCtx` (~line 686), `reset` verb (~line 896)
-- Modify: `shared/combat.js` — `resolveAttack` `onDamage` handling (~line 128)
+- Modify: `shared/game-state.js`: `ensureRigShape` (~line 221), `makeRig` return (~line 306), `repairRig` (~line 567), `runRecovery` (~line 625), `combatCtx` (~line 686), `reset` verb (~line 896)
+- Modify: `shared/combat.js`: `resolveAttack` `onDamage` handling (~line 128)
 - Test: `shared/game-state.test.js`
 
 - [ ] **Step 1: Write the failing test**
 
 Add to `shared/game-state.test.js`:
 
-The test file already imports `__test` at the top (see the import block in Task 2). Task 6 Step 3 adds `breachHull`, `tickBreach`, and `repairRig` to that existing bag, so the test uses the top-level `__test` binding directly — no dynamic import, no `async`:
+The test file already imports `__test` at the top (see the import block in Task 2). Task 6 Step 3 adds `breachHull`, `tickBreach`, and `repairRig` to that existing bag, so the test uses the top-level `__test` binding directly, no dynamic import, no `async`:
 
 ```js
 test("Breaching Round locks Hull repair for two Recovery Phases", () => {
@@ -542,7 +542,7 @@ test("Breaching Round locks Hull repair for two Recovery Phases", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `breachHull` is undefined.
+Expected: FAIL, `breachHull` is undefined.
 
 - [ ] **Step 3: Add the lock state, breach/tick helpers, and repair guard**
 
@@ -566,7 +566,7 @@ In `shared/game-state.js`:
 function repairRig(rig, loc, amount) {
   const c = rig[loc];
   if (!c) return;
-  // Breaching Round (§12) — a breached Hull can't be repaired until the lock clears.
+  // Breaching Round (§12), a breached Hull can't be repaired until the lock clears.
   if (loc === "hull" && (rig.hullRepairLock || 0) > 0) return;
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   c.sp = Math.min(c.max, c.sp + n);
@@ -578,7 +578,7 @@ function repairRig(rig, loc, amount) {
 **(d)** Add the breach + tick helpers next to `repairRig`:
 
 ```js
-// Breaching Round — deny Hull repair for this round and the next (two Recovery
+// Breaching Round, deny Hull repair for this round and the next (two Recovery
 // ticks). Called from combat when a Siege Maul with the upgrade damages the Hull.
 function breachHull(rig) {
   if (rig) rig.hullRepairLock = 2;
@@ -641,7 +641,7 @@ In `shared/combat.js`, in `resolveAttack`, right after the existing `sunder` blo
 
 - [ ] **Step 5: Add an integration test for the combat trigger**
 
-Add to `shared/combat.test.js` (uses `makeRig` + a minimal ctx like other resolveAttack tests — mirror the existing resolveAttack test setup in that file for `room`, `ctx`, and forced dice):
+Add to `shared/combat.test.js` (uses `makeRig` + a minimal ctx like other resolveAttack tests, mirror the existing resolveAttack test setup in that file for `room`, `ctx`, and forced dice):
 
 ```js
 test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () => {
@@ -667,7 +667,7 @@ test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () =
 });
 ```
 
-Ensure `shared/combat.test.js` imports `makeRig` and `effectiveWeaponProfile` (it already imports `WEAPONS, makeRig, effectiveWeaponProfile` per line 4 — confirm and add any missing name).
+Ensure `shared/combat.test.js` imports `makeRig` and `effectiveWeaponProfile` (it already imports `WEAPONS, makeRig, effectiveWeaponProfile` per line 4, confirm and add any missing name).
 
 - [ ] **Step 6: Run tests to verify they pass**
 
@@ -722,7 +722,7 @@ test("Raise Shield only appears when allowShield is set", () => {
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run client/src/components/overlays/ReactionPicker.test.tsx`
-Expected: FAIL — `allowShield` isn't a prop and Raise Shield isn't rendered.
+Expected: FAIL, `allowShield` isn't a prop and Raise Shield isn't rendered.
 
 - [ ] **Step 4: Extend the PrepType union**
 
@@ -763,7 +763,7 @@ interface Props {
 }
 
 // The shared reaction chooser used by both the Answer-token gate and the
-// Prepare action. Presentational only — parents own the send.
+// Prepare action. Presentational only, parents own the send.
 export default function ReactionPicker({ value, onChange, allowShield = false }: Props) {
   const options = allowShield ? [...BASE_REACTIONS, SHIELD_REACTION] : BASE_REACTIONS;
   return (
@@ -789,7 +789,7 @@ export default function ReactionPicker({ value, onChange, allowShield = false }:
 
 - [ ] **Step 6: Pass allowShield at the call sites**
 
-At each `<ReactionPicker ... />` usage found in Step 1, add `allowShield={selectedRig?.weapons?.melee === "Bulwark Shield"}` (use whatever variable names that component already has for the acting/selected Rig). Do NOT invent new state — read the rig object already in scope.
+At each `<ReactionPicker ... />` usage found in Step 1, add `allowShield={selectedRig?.weapons?.melee === "Bulwark Shield"}` (use whatever variable names that component already has for the acting/selected Rig). Do NOT invent new state, read the rig object already in scope.
 
 - [ ] **Step 7: Run test to verify it passes**
 
@@ -812,18 +812,18 @@ git commit -m "feat(shield): offer Raise Shield in the reaction picker for shiel
 - [ ] **Step 1: Run the entire test suite**
 
 Run: `npm test`
-Expected: Vitest client tests PASS and `node --test` shared/server tests PASS. If anything fails, fix before proceeding — a common miss is a call site from Task 5 or 7 that still passes the old arity.
+Expected: Vitest client tests PASS and `node --test` shared/server tests PASS. If anything fails, fix before proceeding, a common miss is a call site from Task 5 or 7 that still passes the old arity.
 
 - [ ] **Step 2: Sanity-check the rules doc**
 
-Confirm `rules.md` shows: Siege Maul in the Cannons table, Bulwark Shield in the Melee table, both upgrade rows in the Weapon Upgrades table, "seven weapons of each type", and a §13 **Bulwark** perk entry (add it now if Task 1 didn't — see Step 3).
+Confirm `rules.md` shows: Siege Maul in the Cannons table, Bulwark Shield in the Melee table, both upgrade rows in the Weapon Upgrades table, "seven weapons of each type", and a §13 **Bulwark** perk entry (add it now if Task 1 didn't, see Step 3).
 
 - [ ] **Step 3: Add the Bulwark perk to §13 (if not already present)**
 
 In `rules.md` §13 Weapon Perks, add (alphabetically, after "Armour Piercing"):
 
 ```markdown
-- **Bulwark** — the Rig may arm a fourth preparation, **Raise Shield** (Prepare [1 heat], §5). When attacked while it is active: a **front-arc** attack is negated (all Impact Rolls fail); a **side/rear-arc** attack has every Impact Roll at **−4**. Protects regardless of the attacker's range. An Answer token may place Raise Shield only on a Bulwark-Shield Rig.
+- **Bulwark**: the Rig may arm a fourth preparation, **Raise Shield** (Prepare [1 heat], §5). When attacked while it is active: a **front-arc** attack is negated (all Impact Rolls fail); a **side/rear-arc** attack has every Impact Roll at **−4**. Protects regardless of the attacker's range. An Answer token may place Raise Shield only on a Bulwark-Shield Rig.
 ```
 
 - [ ] **Step 4: Commit any doc fixes**
@@ -837,6 +837,6 @@ git commit -m "docs(rules): document the Bulwark perk"
 
 ## Notes / Out of Scope
 
-- **Glossary tooltips** (`shared/glossary.js`, `client/src/components/overlays/GlossaryTip.tsx`) are not covered here. If the glossary is keyed by perk/weapon name, add entries for "Bulwark", "Bulwark Shield", and "Siege Maul" mirroring existing entries — but that is a cosmetic follow-up, not required for the mechanics to work.
-- **Staggering / Extended Barrel** need no new engine code — they ride existing `perks` and `range` effect handling (verified in Task 2).
-- **Design decision carried from the spec:** a front-arc Raise Shield negates *damage* but the shot still "hits", so hit-only effects (Incendiary heat, Shock) still apply — this matches the existing Raking Fire precedent and needs no special handling.
+- **Glossary tooltips** (`shared/glossary.js`, `client/src/components/overlays/GlossaryTip.tsx`) are not covered here. If the glossary is keyed by perk/weapon name, add entries for "Bulwark", "Bulwark Shield", and "Siege Maul" mirroring existing entries, but that is a cosmetic follow-up, not required for the mechanics to work.
+- **Staggering / Extended Barrel** need no new engine code, they ride existing `perks` and `range` effect handling (verified in Task 2).
+- **Design decision carried from the spec:** a front-arc Raise Shield negates *damage* but the shot still "hits", so hit-only effects (Incendiary heat, Shock) still apply, this matches the existing Raking Fire precedent and needs no special handling.

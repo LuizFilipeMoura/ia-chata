@@ -3,7 +3,7 @@
 
 export const ROLES = ["structural", "power", "mobility", "weapon"];
 
-// §7.5 — Toughness per part. Replaces the old 48-number impact grid: a shot's
+// §7.5, Toughness per part. Replaces the old 48-number impact grid: a shot's
 // effective Penetration is compared to these via `woundTarget` (rules.js).
 //
 // Designed, not derived. Converting the old armour rows mechanically
@@ -22,12 +22,12 @@ const RIG_TOUGHNESS = {
 // landing PAST zero on a structural or power part fires `catastrophicAdditional`
 // (game-state.js), which destroys the part and so the unit. A point landing
 // exactly ON zero does not. So a structural/power pool smaller than the
-// catalog's top per-wound Damage is not a pool at all — it is a coin flip, and
+// catalog's top per-wound Damage is not a pool at all, it is a coin flip, and
 // the unit dies from full to one wound.
 //
 // That makes the floor structural, not a balance dial: every structural/power
 // `partSp` below must be >= the top Damage in the game (currently 6: Wrecking
-// Ball + Haymaker, tied with Siege Maul + Reinforced Head). Mobility/weapon pools are exempt —
+// Ball + Haymaker, tied with Siege Maul + Reinforced Head). Mobility/weapon pools are exempt,
 // §8 does not kill on those roles, so they carry the fragility instead.
 //
 // Support-unit fragility therefore lives in `toughness` (below) and in the
@@ -79,7 +79,7 @@ export const UNIT_KINDS = {
       { min: 8,  part: "turret" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — heavy-Rig-grade toughness, tuned in playtest.
+    // Strawman ⚙, heavy-Rig-grade toughness, tuned in playtest.
     toughness: { hull: 6, tracks: 5, turret: 5, engine: 4 },
     // engine 8, not 6: the §8 vital floor above. tracks/turret stay small.
     partSp: { hull: 8, tracks: 7, turret: 6, engine: 8 },
@@ -108,9 +108,9 @@ export const UNIT_KINDS = {
       { min: 8,  part: "mount" },
       { min: 11, part: "engine" },
     ],
-    // Strawman ⚙ — medium-Rig-grade toughness.
+    // Strawman ⚙, medium-Rig-grade toughness.
     toughness: { hull: 5, legs: 4, mount: 4, engine: 3 },
-    // hull/engine 8, not 6/5: the §8 vital floor above. legs/mount stay small —
+    // hull/engine 8, not 6/5: the §8 vital floor above. legs/mount stay small,
     // that is where the Walker is still the most fragile thing fielded.
     partSp: { hull: 8, legs: 6, mount: 5, engine: 8 },
     hasHeat: false,
@@ -183,7 +183,7 @@ export function hitPart(kindId, d12) {
 // Toughness for a part. Rig grids are keyed by weight class (`byWeight`);
 // Tank/Walker are flat. Throws rather than returning a sentinel: every caller
 // feeds this straight into woundTarget, where a non-numeric T coerces to 0 and
-// yields a 2+ wound (90%) — i.e. a lookup typo would silently make a location
+// yields a 2+ wound (90%), i.e. a lookup typo would silently make a location
 // the softest thing on the table. Fail loud instead.
 export function toughnessOf(kindId, partName, weightClass) {
   const kind = UNIT_KINDS[kindId];

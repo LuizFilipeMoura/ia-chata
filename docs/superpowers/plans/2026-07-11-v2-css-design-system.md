@@ -4,9 +4,9 @@
 
 **Goal:** Consolidate all duplicated v2 CSS into a layered design system (expanded tokens → shared primitives → lean component files), applied in TSX, cutting ~30–35% of v2 CSS with one source of truth per pattern.
 
-**Architecture:** Three CSS layers imported in order — `tokens.css` (design tokens), `primitives.css` (shared classes built on tokens), and per-component files holding only unique structure. Primitive classes are applied directly in v2 `.tsx` files, replacing per-component duplicate rules. Inconsistencies collapse to one canonical value each (consistency prioritized over preserving current pixels).
+**Architecture:** Three CSS layers imported in order, `tokens.css` (design tokens), `primitives.css` (shared classes built on tokens), and per-component files holding only unique structure. Primitive classes are applied directly in v2 `.tsx` files, replacing per-component duplicate rules. Inconsistencies collapse to one canonical value each (consistency prioritized over preserving current pixels).
 
-**Tech Stack:** Vite + React (CSS imported via ES `import` per component). No CSS preprocessor — plain CSS custom properties. Verification is browser preview (Browser pane tools) + `grep`, not unit tests.
+**Tech Stack:** Vite + React (CSS imported via ES `import` per component). No CSS preprocessor, plain CSS custom properties. Verification is browser preview (Browser pane tools) + `grep`, not unit tests.
 
 **Reference:** Spec at `docs/superpowers/specs/2026-07-11-v2-css-design-system-design.md`. Duplication pattern letters (A–P) referenced below map to that analysis.
 
@@ -27,13 +27,13 @@ Commit after every task.
 ## File Structure
 
 **Created:**
-- `client/src/v2/styles/primitives.css` — all shared classes.
+- `client/src/v2/styles/primitives.css`: all shared classes.
 
 **Modified:**
-- `client/src/v2/styles/tokens.css` — expanded token set.
-- `client/src/v2/V2App.tsx` — import `primitives.css` after `tokens.css`.
-- All 11 v2 component CSS files — duplicated rules deleted.
-- Their matching v2 `.tsx` files — primitive classes applied.
+- `client/src/v2/styles/tokens.css`: expanded token set.
+- `client/src/v2/V2App.tsx`: import `primitives.css` after `tokens.css`.
+- All 11 v2 component CSS files, duplicated rules deleted.
+- Their matching v2 `.tsx` files, primitive classes applied.
 
 ---
 
@@ -103,7 +103,7 @@ git commit -m "feat(v2): expand design tokens (surfaces, gradients, alphas, scri
 - [ ] **Step 1: Write primitives.css**
 
 ```css
-/* V2 primitives — shared classes built on tokens.css.
+/* V2 primitives, shared classes built on tokens.css.
    Imported once after tokens.css. Component files MUST NOT redefine these. */
 
 /* layout utils */
@@ -254,10 +254,10 @@ Every migration task follows the SAME five steps. Only the target file and its s
 1. **Open the component's screen in preview** and screenshot it (the "before" reference).
 2. **Edit the CSS file:** for each duplicated rule listed in the task, delete the duplicated declarations and either (a) replace them with a token reference, or (b) remove the rule entirely because a primitive now covers it.
 3. **Edit the matching `.tsx`:** add the primitive class(es) to the JSX elements that previously carried the deleted rules. Keep component-unique structural classes.
-4. **Verify preview:** reload, re-open the screen, screenshot. Compare to the before reference — must match intent (unified values may shift slightly; layout/legibility must not regress). Check `read_console_messages` for errors.
+4. **Verify preview:** reload, re-open the screen, screenshot. Compare to the before reference, must match intent (unified values may shift slightly; layout/legibility must not regress). Check `read_console_messages` for errors.
 5. **Grep + commit** (commands per task).
 
-For any leftover component-specific color/shadow/duration literal, replace with the nearest token from Task 1. If no token fits and the value is truly one-off (used once), it may stay — note it. The bar: no literal that already has a token, and no re-implementation of an A–P pattern.
+For any leftover component-specific color/shadow/duration literal, replace with the nearest token from Task 1. If no token fits and the value is truly one-off (used once), it may stay, note it. The bar: no literal that already has a token, and no re-implementation of an A–P pattern.
 
 ---
 
@@ -280,7 +280,7 @@ For any leftover component-specific color/shadow/duration literal, replace with 
 
 - [ ] **Step 3: Apply the classes in Shell.tsx** (`.v2-scrim`, `.v2-panel`, `.v2-badge`, `.v2-eyebrow`, `.v2-title`, `.v2-lamp`) on the corresponding elements.
 
-- [ ] **Step 4: Verify preview** — reload, screenshot, compare, check console clean.
+- [ ] **Step 4: Verify preview**: reload, screenshot, compare, check console clean.
 
 - [ ] **Step 5: Grep + commit**
 
@@ -303,7 +303,7 @@ git commit -m "refactor(v2): migrate shell to primitives + tokens"
 
 - [ ] **Step 2: Replace in glossary.css**
   - `.v2-gloss-dialog-scrim` → `.v2-scrim` in TSX.
-  - `.v2-gloss-dialog` surface → `.v2-panel` (keep tip-arrow logic, term-highlight — unique).
+  - `.v2-gloss-dialog` surface → `.v2-panel` (keep tip-arrow logic, term-highlight, unique).
   - `.v2-gloss-tip` surface → `.v2-panel--sharp` or `.v2-panel` (keep arrow); unify its `iron-800/900` to `var(--v2-surface)`.
   - close buttons `.v2-gloss-*-close` → `.v2-close` in TSX.
   - eyebrow-style labels → `.v2-eyebrow`.
@@ -333,10 +333,10 @@ git commit -m "refactor(v2): migrate glossary to primitives + tokens"
 - [ ] **Step 1: Screenshot the field map screen.**
 
 - [ ] **Step 2: Replace in field.css**
-  - Keep the blueprint SVG (`.v2-fm*`) and legend — unique.
+  - Keep the blueprint SVG (`.v2-fm*`) and legend, unique.
   - `.v2-fs-cap`, `.v2-fs-label`, `.v2-fs-leg` mono-uppercase → `.v2-eyebrow`.
   - inputs/hero-button overlapping forge/overlay → apply `.v2-cta`/`.v2-well` where they match; keep unique sizing.
-  - transitions already use `var(--v2-dur-fast,.14s)` — change to bare `var(--v2-dur-fast)`.
+  - transitions already use `var(--v2-dur-fast,.14s)`: change to bare `var(--v2-dur-fast)`.
   - stray hex → tokens.
 
 - [ ] **Step 3: Apply classes in field TSX.**
@@ -370,7 +370,7 @@ git commit -m "refactor(v2): migrate field to primitives + tokens"
   - `.v2-aw-close` → `.v2-close`.
   - `.v2-aw-handle` hazard → `.v2-hazard` with `--v2-hazard-w:11px` via style/local.
   - selected-amber `#160f06` variant → drop; `.is-sel` covers it.
-  - Keep range slider/band, dice preview — unique.
+  - Keep range slider/band, dice preview, unique.
 
 - [ ] **Step 3: Apply classes + rename `.sel`→`.is-sel` in wizard TSX.**
 
@@ -436,7 +436,7 @@ git commit -m "refactor(v2): migrate join to primitives + tokens"
   - `.v2-qm-sub`, think-summary eyebrows → `.v2-eyebrow`.
   - lamp dots (2s / 1s recording) → `.v2-lamp` with `--v2-lamp-speed` per state.
   - amber-user bg → `var(--v2-grad-oil-sel)`.
-  - Keep message bubbles, markdown, think block — unique.
+  - Keep message bubbles, markdown, think block, unique.
 
 - [ ] **Step 3: Apply classes in chat TSX.**
 
@@ -470,7 +470,7 @@ git commit -m "refactor(v2): migrate chat to primitives + tokens"
   - stencil (`.v2-fw-title`, `.kind-label`, `.codename`) → `.v2-title`.
   - `#05070a` bottom edges → `var(--v2-edge-dark)`; `.sel`→`.is-sel` in TSX.
   - `grid-template-columns` skeletons → `.v2-grid-2`/`.v2-grid-3` where they match.
-  - Keep step rail, chassis dossier, upgrade tree — unique.
+  - Keep step rail, chassis dossier, upgrade tree, unique.
 
 - [ ] **Step 3: Apply classes in forge TSX (rename `.sel`→`.is-sel`).**
 
@@ -502,8 +502,8 @@ git commit -m "refactor(v2): migrate forge to primitives + tokens"
   - `.v2-yard-title`, `.v2-rigrow-name` → `.v2-title`.
   - `.v2-rigrow--hostile-stripe` hazard → `.v2-hazard` (`--v2-hazard-w:8px`).
   - class-bg `#0a0d11` (4×) → `var(--v2-well)`; bevels → `var(--v2-bevel-top)`; edges → `var(--v2-edge-dark)`.
-  - `.v2-yard-add` dashed tape — keep unique or tokenize colors.
-  - Keep rigrow anatomy, heat bars, yard bands — unique.
+  - `.v2-yard-add` dashed tape, keep unique or tokenize colors.
+  - Keep rigrow anatomy, heat bars, yard bands, unique.
 
 - [ ] **Step 3: Apply classes in squadron TSX.**
 
@@ -536,9 +536,9 @@ git commit -m "refactor(v2): migrate squadron to primitives + tokens"
   - `.v2-comp-bar`, `.v2-heat-seg` wells → `.v2-well`; `border:1px solid #000` → `var(--v2-well-line)`.
   - `.v2-comp-step--dmg` ember tile → `var(--v2-grad-ember-well)` + `var(--v2-ember-deep)` border.
   - `.v2-comp-step--rep`/`.v2-rt-activate` green → `var(--v2-grad-green-well)` + `var(--v2-verdigris)`.
-  - `.v2-heat-label`, `.v2-rt-mod` → `.v2-eyebrow`; `.v2-rt-name`, `.glyph` → `.v2-title` (glyph keeps `#8fbcff` — one-off, OK).
+  - `.v2-heat-label`, `.v2-rt-mod` → `.v2-eyebrow`; `.v2-rt-name`, `.glyph` → `.v2-title` (glyph keeps `#8fbcff`: one-off, OK).
   - `#12161d` → `var(--v2-iron-850)`; `#0a0d11` → `var(--v2-well)`; oil-hatch head → keep, colors via `var(--v2-oil-deep)`.
-  - Keep comp-bar hatch, hit/heal anims, heat gauge — unique.
+  - Keep comp-bar hatch, hit/heal anims, heat gauge, unique.
 
 - [ ] **Step 3: Apply classes in rig-terminal TSX.**
 
@@ -559,7 +559,7 @@ git commit -m "refactor(v2): migrate rig-terminal to primitives + tokens"
 ## Task 12: Migrate overlay.css
 
 **Files:**
-- Modify: `client/src/v2/styles/overlay.css` + overlay component(s) (`grep -rl "v2-dwr\|v2-roll\|v2-rx" client/src/v2 --include=*.tsx` — Drawer, RollConsole, ReactionPicker, ChoiceField, battle bodies).
+- Modify: `client/src/v2/styles/overlay.css` + overlay component(s) (`grep -rl "v2-dwr\|v2-roll\|v2-rx" client/src/v2 --include=*.tsx`: Drawer, RollConsole, ReactionPicker, ChoiceField, battle bodies).
 
 - [ ] **Step 1: Screenshot each overlay (drawer, roll console, reaction picker).**
 
@@ -574,7 +574,7 @@ git commit -m "refactor(v2): migrate rig-terminal to primitives + tokens"
   - eyebrow labels (many dwr/roll/rx) → `.v2-eyebrow`; `.v2-roll-kind` → `.v2-title`.
   - `#05070a` edges → token; top-bevel `.04`/`.05` → `var(--v2-bevel-top)`.
   - `grid`/`repeat(3,1fr)` → `.v2-grid-3` where matching.
-  - Keep dice tokens+anims, rx-break equation, flip coin — unique.
+  - Keep dice tokens+anims, rx-break equation, flip coin, unique.
 
 - [ ] **Step 3: Apply classes across overlay TSX files (rename `.sel`→`.is-sel`).**
 
@@ -595,7 +595,7 @@ git commit -m "refactor(v2): migrate overlay to primitives + tokens"
 ## Task 13: Migrate battle.css
 
 **Files:**
-- Modify: `client/src/v2/styles/battle.css` + battle component(s) (`grep -rl "v2-tb\|v2-ac\|v2-bh\|v2-outcome" client/src/v2 --include=*.tsx` — BattleHud, TurnBanner, OutcomeBanner, ActionConsole).
+- Modify: `client/src/v2/styles/battle.css` + battle component(s) (`grep -rl "v2-tb\|v2-ac\|v2-bh\|v2-outcome" client/src/v2 --include=*.tsx`: BattleHud, TurnBanner, OutcomeBanner, ActionConsole).
 
 - [ ] **Step 1: Screenshot the battle HUD, turn banner, action console, outcome banner.**
 
@@ -605,7 +605,7 @@ git commit -m "refactor(v2): migrate overlay to primitives + tokens"
   - `.v2-bh-label`, `.impersonate` eyebrows → `.v2-eyebrow`; `.v2-outcome-text` → `.v2-title`.
   - CTAs → `.v2-cta`/`--ember`; bottom edges `#05070a`/`#120503` → `var(--v2-edge-dark)`.
   - top-bevel `.03` → `var(--v2-bevel-top)`; `.v2-ac-grid`/`repeat(3,1fr)` → `.v2-grid-3`.
-  - Keep action-console deck, popover pointer, pips — unique.
+  - Keep action-console deck, popover pointer, pips, unique.
 
 - [ ] **Step 3: Apply classes in battle TSX.**
 
@@ -657,7 +657,7 @@ Open every v2 screen in sequence: join, forge/commission, squadron, battle (HUD/
 
 ```bash
 git add client/src/v2/styles
-git commit -m "refactor(v2): final CSS sweep — no raw literals, patterns unified"
+git commit -m "refactor(v2): final CSS sweep, no raw literals, patterns unified"
 ```
 
 ---

@@ -1,4 +1,4 @@
-// The scorer — one weighted sum per candidate, and the PRESETS that make a bot a
+// The scorer, one weighted sum per candidate, and the PRESETS that make a bot a
 // personality. This is where the tuning churn lives, kept apart from evaluate.js
 // (the maths) because the two change for different reasons.
 //
@@ -9,8 +9,8 @@
 //         − w.heat      × overheatRisk        // heat pushed past the class cap
 //         − w.fragile   × exposureOfWeak      // exposure, weighted up when a part is nearly dead
 //
-// offence and exposure are the SAME metric pointed in opposite directions — both
-// call evaluate.js — so the deferred damage swap upgrades attack and defence
+// offence and exposure are the SAME metric pointed in opposite directions, both
+// call evaluate.js, so the deferred damage swap upgrades attack and defence
 // together and the bot can never value its own shots by one yardstick and the
 // enemy's by another.
 //
@@ -19,7 +19,7 @@
 // destination), so "move to the rear arc, then shoot" emerges from the maths
 // instead of being special-cased.
 //
-// exposure assumes STATIC enemies — each living enemy's best shot from where it
+// exposure assumes STATIC enemies, each living enemy's best shot from where it
 // stands NOW. It does not model the enemy closing first. Documented blind spot
 // (see the spec); the cheap partial fix, if the bot proves bait-able, is to
 // inflate each enemy's threat range by its moveBudget rather than to search.
@@ -37,9 +37,9 @@ import { META } from "./meta.js";
 export const PRESETS = {
   // vp leads, offence and defence balanced.
   balanced:   { vp: 3, priority: 2, damage: 1,   threat: 1,   heat: 1,   fragile: 1,   tactics: 1 },
-  // damage over vp, and it will trade hits it shouldn't — a brawler.
+  // damage over vp, and it will trade hits it shouldn't, a brawler.
   aggressive: { vp: 2, priority: 2, damage: 3,   threat: 0.5, heat: 0.5, fragile: 0.5, tactics: 0.7 },
-  // vp and self-preservation over damage — sits on markers, refuses its rear.
+  // vp and self-preservation over damage, sits on markers, refuses its rear.
   cagey:      { vp: 4, priority: 1, damage: 0.5, threat: 2,   heat: 1.5, fragile: 2,   tactics: 1.3 },
   // Difficulty tiers (the solo-play opponent). Easy is short-sighted about heat
   // and objectives and blunders (see TIERS); Normal is the balanced pilot; Hard
@@ -74,7 +74,7 @@ function resultingPose(rig, cand) {
 // tPos/tFacing): its best expectedDamage with whichever weapon bears, or 0 if the
 // target is not in the attacker's front arc / not in LOS+band / not in reach.
 // The single primitive behind BOTH offence (my best shot) and exposure (the
-// enemy's best shot at me) — same yardstick, opposite ends.
+// enemy's best shot at me), same yardstick, opposite ends.
 function shotValue(room, attacker, aPos, aFacing, target, tPos, tFacing) {
   const A = { pos: aPos, facing: aFacing, radius: radiusOf(attacker) };
   const T = { pos: tPos, facing: tFacing, radius: radiusOf(target) };
@@ -96,7 +96,7 @@ function shotValue(room, attacker, aPos, aFacing, target, tPos, tFacing) {
   return best;
 }
 
-// My best shot from a pose — the leaf the 1-ply move lookahead evaluates.
+// My best shot from a pose, the leaf the 1-ply move lookahead evaluates.
 function bestShotFrom(room, rig, pos, facing) {
   let best = 0;
   for (const e of livingEnemies(room, rig)) {
@@ -144,7 +144,7 @@ function objectiveVpAt(room, rig, pos) {
 // A distance PULL toward the nearest marker the rig does not yet control. Binary
 // control (objectiveVpAt) gives no gradient until you are already on the marker,
 // so without this a rig stranded a full move away from every objective scores 0
-// for advancing and simply stands still — which is exactly what bot-vs-bot caught.
+// for advancing and simply stands still, which is exactly what bot-vs-bot caught.
 // The pull is vp/(1+gap): always well under a real control (gap ≥ 0 ⇒ ≤ vp), and
 // growing as the rig closes, so "walk to the objective, then hold it" emerges.
 function objectiveApproach(room, rig, pos) {
@@ -182,7 +182,7 @@ function candidateHeat(rig, turn, round, cand) {
   return 0;
 }
 
-// Risk of pushing past the class heat cap — a linear penalty for heat over the
+// Risk of pushing past the class heat cap, a linear penalty for heat over the
 // cap after the action. Below the cap it is free; a misfire only threatens once
 // the engine is redlined.
 function overheatRisk(room, rig, turn, cand) {

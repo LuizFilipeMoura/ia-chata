@@ -1,4 +1,4 @@
-# Pre-built Tank & Walker Commissioning — Design
+# Pre-built Tank & Walker Commissioning, Design
 
 **Date:** 2026-07-12
 **Branch:** `frontend/v2-redesign`
@@ -8,15 +8,15 @@
 
 Tanks and Walkers are commissioned in `CommissionWizard.tsx` by flat-picking a
 single weapon from `UNIT_WEAPONS`. This treats them as bare "models" and ignores
-the shipped support-unit system (a Tank/Walker carries two distinct modules —
-Damage / Repair / Coolant / Recon — where Damage grants a real gun and the other
+the shipped support-unit system (a Tank/Walker carries two distinct modules,
+Damage / Repair / Coolant / Recon, where Damage grants a real gun and the other
 three grant ally-targeting verbs; sidearm fills in when there is no Damage
 module). The wizard never lets a player choose modules, so every commissioned
 Tank/Walker is a naked weapon with no support identity.
 
 Rigs already commission the right way: the player picks one **pre-built chassis**
 card (weapons + weight class fixed by the frame) rather than assembling parts.
-Tanks and Walkers should mirror this — pick one **pre-built template** that
+Tanks and Walkers should mirror this, pick one **pre-built template** that
 encapsulates the whole damage + support loadout, no per-weapon selection.
 
 ## Goals
@@ -25,7 +25,7 @@ encapsulates the whole damage + support loadout, no per-weapon selection.
   a Rig picks a chassis.
 - A template fully encapsulates the unit: kind, gun (or Sidearm), and its two
   modules.
-- No combat or server-logic changes — the `add` verb already accepts `modules`
+- No combat or server-logic changes, the `add` verb already accepts `modules`
   and `unit`.
 
 ## Non-goals
@@ -36,7 +36,7 @@ encapsulates the whole damage + support loadout, no per-weapon selection.
 
 ## Design
 
-### 1. Data layer — `shared/game-state.js`
+### 1. Data layer, `shared/game-state.js`
 
 Introduce one owner-neutral catalog as the single source of truth:
 
@@ -55,7 +55,7 @@ export const SUPPORT_TEMPLATES = [
 - `unit: null` means sidearm-only (a Repair/Coolant/Recon-only unit). The
   expander omits `unit` entirely for these so `makeUnit` fits the Sidearm.
 - Twins `field-welder` and `medic-walker` share a loadout (walker /
-  repair+recon / sidearm) but are distinct named identities. Both stay — they
+  repair+recon / sidearm) but are distinct named identities. Both stay, they
   are harmless flavor variants and are needed to rebuild the existing rosters
   without renaming shipped units.
 
@@ -65,7 +65,7 @@ Rebuild the two owner-tagged rosters from the catalog with a small expander:
 function templ(id, owner) {
   const t = SUPPORT_TEMPLATES.find((x) => x.id === id);
   const out = { name: t.name, owner, kind: t.kind, modules: t.modules };
-  if (t.unit) out.unit = t.unit; // omit when sidearm-only — matches prior literals
+  if (t.unit) out.unit = t.unit; // omit when sidearm-only, matches prior literals
   return out;
 }
 
@@ -90,7 +90,7 @@ export function templateById(id) { /* case-insensitive find, or null */ }
 export function templatesForKind(kind) { /* SUPPORT_TEMPLATES filtered by kind */ }
 ```
 
-### 2. Wizard — `client/src/v2/overlays/CommissionWizard.tsx`
+### 2. Wizard, `client/src/v2/overlays/CommissionWizard.tsx`
 
 - `stepsFor("tank"|"walker")` → `["Kind", "Loadout", "Confirm"]`. The Kind step
   stays the current 3-way rig/tank/walker selector, unchanged.
@@ -102,7 +102,7 @@ export function templatesForKind(kind) { /* SUPPORT_TEMPLATES filtered by kind *
   as a card grid. Each card shows:
   - template name (title),
   - gun line: `weaponGlyph(unit) + name + STR/ROF/range` from `UNIT_WEAPONS`, or
-    a "Sidearm — light plinker" line when `unit` is null,
+    a "Sidearm, light plinker" line when `unit` is null,
   - two module chips, each label + one-line blurb.
   - Reuses the rig chassis card visual family (`v2-fc-card`/`v2-fc-slot`), minus
     the upgrade bay. No new CSS system; extend `forge.css` with a compact module
@@ -123,16 +123,16 @@ export function templatesForKind(kind) { /* SUPPORT_TEMPLATES filtered by kind *
 - Delete the old `UNIT_WEAPONS` flat-pick grid (step 1) and its confirm branch.
   Keep the `UNIT_WEAPONS` import only for rendering gun stats on the cards.
 
-### 3. Module blurbs — `client/src/v2/lib/commissionData.ts`
+### 3. Module blurbs, `client/src/v2/lib/commissionData.ts`
 
 Add a small map for the loadout cards (Damage is represented by the gun itself,
 so it needs no blurb):
 
 ```ts
 export const MODULE_BLURB: Record<string, string> = {
-  repair:  "Field Weld — heal an ally/self ≤2\".",
-  coolant: "Vent — cool a friendly Rig ≤2\" by 2 heat.",
-  recon:   "Paint — mark an enemy; allies ignore its cover, +1 Aim.",
+  repair:  "Field Weld, heal an ally/self ≤2\".",
+  coolant: "Vent, cool a friendly Rig ≤2\" by 2 heat.",
+  recon:   "Paint, mark an enemy; allies ignore its cover, +1 Aim.",
 };
 ```
 
@@ -165,10 +165,10 @@ exactly as the seed path already does.
 
 ## Files touched
 
-- `shared/game-state.js` — add `SUPPORT_TEMPLATES` + lookups; rebuild
+- `shared/game-state.js`: add `SUPPORT_TEMPLATES` + lookups; rebuild
   `SUPPORT_UNITS` / `SEED_SUPPORT`.
-- `client/src/v2/overlays/CommissionWizard.tsx` — template state + Loadout card
+- `client/src/v2/overlays/CommissionWizard.tsx`: template state + Loadout card
   grid + submit rewire; remove flat-pick grid.
-- `client/src/v2/lib/commissionData.ts` — `MODULE_BLURB`.
-- `client/src/v2/styles/forge.css` — module chip styling if needed.
-- `shared/game-state.test.js` — coverage above.
+- `client/src/v2/lib/commissionData.ts`: `MODULE_BLURB`.
+- `client/src/v2/styles/forge.css`: module chip styling if needed.
+- `shared/game-state.test.js`: coverage above.

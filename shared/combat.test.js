@@ -5,7 +5,7 @@ import { WEAPONS, makeRig, makeUnit, UNIT_WEAPONS, effectiveWeaponProfile, HEAT_
 import { WEIGHT_PEN_MOD, WOUND_DIE, woundTarget, toughnessOf } from "./rules.js";
 import { partNamesOf } from "./unit-kinds.js";
 
-// Minimal ctx double for resolveAttack/resolveRam — mirrors the shape
+// Minimal ctx double for resolveAttack/resolveRam, mirrors the shape
 // game-state.js's combatCtx() injects (§"Mutation primitives" in combat.js),
 // but only records calls instead of mutating real Rig state.
 function makeCtx() {
@@ -59,7 +59,7 @@ test("computeModifiedAim uses distance-based accuracy for ranged weapons", () =>
   assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
 });
 
-test("aimBreakdown — reports the base aim and the weapon's Accuracy at range", () => {
+test("aimBreakdown, reports the base aim and the weapon's Accuracy at range", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
   assert.deepEqual(b.terms, [
@@ -69,7 +69,7 @@ test("aimBreakdown — reports the base aim and the weapon's Accuracy at range",
   assert.equal(b.value, 3);
 });
 
-test("aimBreakdown — cover and smoke each emit a named term", () => {
+test("aimBreakdown, cover and smoke each emit a named term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, cover: 2, targetSmoke: true });
@@ -77,22 +77,22 @@ test("aimBreakdown — cover and smoke each emit a named term", () => {
   assert.ok(b.terms.some((t) => t.label === "target in smoke" && t.value === -2));
 });
 
-test("aimBreakdown — a modifier that does not fire emits no term", () => {
+test("aimBreakdown, a modifier that does not fire emits no term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
   assert.ok(!b.terms.some((t) => t.label === "cover"));
 });
 
-test("computeModifiedAim — still returns a bare number, callers unchanged", () => {
+test("computeModifiedAim, still returns a bare number, callers unchanged", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   assert.equal(computeModifiedAim(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 }), 3);
 });
 
 // The cancellation seam. A cancelled penalty must NOT appear (there is no cover
-// penalty — it was ignored), but the CANCELLER must, as a zero-valued term: it
+// penalty, it was ignored), but the CANCELLER must, as a zero-valued term: it
 // is the only thing explaining why a player looking at real cover on the table
 // sees no cover term. See the matching comment in aimBreakdown.
-test("aimBreakdown — targeting computer's first fire cancels cover and says so", () => {
+test("aimBreakdown, targeting computer's first fire cancels cover and says so", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, cover: 2, fireControlFirst: true });
@@ -101,14 +101,14 @@ test("aimBreakdown — targeting computer's first fire cancels cover and says so
   assert.equal(b.value, 3); // cover never reached the maths
 });
 
-test("aimBreakdown — a canceller stays silent when there was no cover to cancel", () => {
+test("aimBreakdown, a canceller stays silent when there was no cover to cancel", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, cover: 0, fireControlFirst: true });
   assert.ok(!b.terms.some((t) => t.label.startsWith("targeting computer")));
 });
 
-test("aimBreakdown — first fire cancels the melee-lock penalty and says so", () => {
+test("aimBreakdown, first fire cancels the melee-lock penalty and says so", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const engaged = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, engaged: true });
@@ -119,7 +119,7 @@ test("aimBreakdown — first fire cancels the melee-lock penalty and says so", (
   assert.ok(first.terms.some((t) => t.label === "targeting computer (ignores melee lock)" && t.value === 0));
 });
 
-test("aimBreakdown — Airburst Fuze and a Piledriver guard-break each name their cover cancel", () => {
+test("aimBreakdown, Airburst Fuze and a Piledriver guard-break each name their cover cancel", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const fuze = aimBreakdown(attacker,
     { ...WEAPONS.longRange["Autocannon"], upgradeEffect: { ignoreCover: true } },
@@ -133,9 +133,9 @@ test("aimBreakdown — Airburst Fuze and a Piledriver guard-break each name thei
 });
 
 // Recon paint and Predictive Tracking each do TWO things: cancel cover AND grant
-// Accuracy. Both facts get their own term — the bonus is not a substitute for the
+// Accuracy. Both facts get their own term, the bonus is not a substitute for the
 // explanation of the missing cover.
-test("aimBreakdown — recon paint emits both its bonus and its cover cancel", () => {
+test("aimBreakdown, recon paint emits both its bonus and its cover cancel", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, cover: 2, painted: true });
@@ -145,7 +145,7 @@ test("aimBreakdown — recon paint emits both its bonus and its cover cancel", (
   assert.equal(b.value, 2); // 4 - (1 + 1)
 });
 
-test("aimBreakdown — predictive tracking emits its bonus and its cover cancel", () => {
+test("aimBreakdown, predictive tracking emits its bonus and its cover cancel", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" },
     "targeting-computer", "predictive-tracking");
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
@@ -155,7 +155,7 @@ test("aimBreakdown — predictive tracking emits its bonus and its cover cancel"
   assert.ok(!b.terms.some((t) => t.label === "cover"));
 });
 
-test("aimBreakdown — aimed shot, wrecked hull and ballistic processor each name themselves", () => {
+test("aimBreakdown, aimed shot, wrecked hull and ballistic processor each name themselves", () => {
   const aimed = aimBreakdown({ weightClass: "medium", hull: { sp: 7 } },
     { ...WEAPONS.longRange["Autocannon"] }, { distance: 12, aimed: true });
   assert.ok(aimed.terms.some((t) => t.label === "aimed shot" && t.value === -2));
@@ -170,7 +170,7 @@ test("aimBreakdown — aimed shot, wrecked hull and ballistic processor each nam
 
 // The terms are a LEDGER, not decoration: they must always reconcile to the
 // value the engine actually used, or the panel lies about the shot it explains.
-test("aimBreakdown — the terms always sum back to the reported target number", () => {
+test("aimBreakdown, the terms always sum back to the reported target number", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" },
     "targeting-computer", "ballistic-processor");
   for (const opts of [
@@ -199,7 +199,7 @@ test("Predictive Tracking: +2 Accuracy and ignores cover vs a pinned target", ()
   const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "predictive-tracking" };
   const mg = WEAPONS.longRange["Mini Gun"];
   // distance:12 is chosen (not the plan's distance:7) because Mini Gun's own
-  // `sweet` is 7 — at that distance Ballistic Processor's unrelated sweetBandAccuracy
+  // `sweet` is 7, at that distance Ballistic Processor's unrelated sweetBandAccuracy
   // bonus would also fire and confound the "wrong upgrade" check below. 12 is
   // outside Mini Gun's sweet band (|12-7| > 2), isolating Predictive Tracking.
   const openField = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: false });
@@ -243,7 +243,7 @@ test("rollWounds is byte-unchanged by the wound seam for a plain target", () => 
   const plain = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
-  assert.equal(out[0].pen, 6); // 6(Penetration) + 0(front) — no dock, seam is a no-op
+  assert.equal(out[0].pen, 6); // 6(Penetration) + 0(front), no dock, seam is a no-op
   assert.equal(out[0].target, 5); // 6 + 5(medium hull T) - 6
   assert.equal(out[0].sp, 2); // Autocannon D2
   assert.equal(out[0].kind, "wound"); // seam stamps the discriminator
@@ -265,7 +265,7 @@ test("computePen applies weight and Charged Shot", () => {
   assert.equal(computePen({ weightClass: "medium" }, arcGun, { charged: true }), 9); // 7+0(medium)+2(charged)
 });
 
-test("penBreakdown — reports the base weapon Penetration and the weight modifier", () => {
+test("penBreakdown, reports the base weapon Penetration and the weight modifier", () => {
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
   assert.equal(b.value, 4);                       // Sword 5, light -1
@@ -275,15 +275,15 @@ test("penBreakdown — reports the base weapon Penetration and the weight modifi
   ]);
 });
 
-test("penBreakdown — a modifier that does not fire emits no term", () => {
+test("penBreakdown, a modifier that does not fire emits no term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
-  // medium weight mod is 0 — it must not appear as a term at all.
+  // medium weight mod is 0, it must not appear as a term at all.
   assert.deepEqual(b.terms, [{ label: "weapon Penetration", value: 5 }]);
   assert.equal(b.value, 5);
 });
 
-test("penBreakdown — a live upgrade emits a named term", () => {
+test("penBreakdown, a live upgrade emits a named term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   attacker.reactorOverdriveActive = true;
   const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
@@ -291,7 +291,7 @@ test("penBreakdown — a live upgrade emits a named term", () => {
   assert.ok(b.terms.some((t) => t.label === "Reactor Overdrive" && t.value === 2));
 });
 
-test("computePen — still returns a bare number, callers unchanged", () => {
+test("computePen, still returns a bare number, callers unchanged", () => {
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Autocannon", melee: "Sword" });
   assert.equal(computePen(attacker, { ...WEAPONS.melee["Sword"] }, {}), 4);
 });
@@ -319,7 +319,7 @@ test("arcBonus: ranged +0/+2/+3, Raking Fire overrides", () => {
   assert.equal(arcBonus(mini, "rear"), 6);
 });
 
-test("arcBonus — melee gets the same side/rear ladder as ranged", () => {
+test("arcBonus, melee gets the same side/rear ladder as ranged", () => {
   // Melee returning 0 here was the root cause of the old model's 69 dead zones:
   // ranged could climb into heavy armour and melee could not.
   const melee = { melee: true, accuracy: [0, 0] };
@@ -328,7 +328,7 @@ test("arcBonus — melee gets the same side/rear ladder as ranged", () => {
   assert.equal(arcBonus(melee, "rear"), 3);
 });
 
-test("arcBonus — Raking Fire still replaces the ladder and auto-fails the front", () => {
+test("arcBonus, Raking Fire still replaces the ladder and auto-fails the front", () => {
   const rake = { perks: ["Raking Fire"] };
   assert.equal(arcBonus(rake, "front"), null);
   assert.equal(arcBonus(rake, "side"), 3);
@@ -359,7 +359,7 @@ test("rollWounds applies Harden's -1 Penetration alongside Brace, stacking", () 
   const out2 = rollWounds({ weightClass: "medium" }, both, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out2[0].pen, 3); // 6 - 2(brace) - 1(harden)
-  assert.equal(out2[0].target, 8); // 6 + 5 - 3 — the dock moves the TN, not the roll
+  assert.equal(out2[0].target, 8); // 6 + 5 - 3, the dock moves the TN, not the roll
 });
 
 test("Reinforced Plating deepens Harden to −2 effective Penetration", () => {
@@ -426,7 +426,7 @@ test("Raise Shield negates the front arc and blunts side/rear by 3", () => {
     preparation: { type: "raise-shield" },
   };
 
-  // Front: fully negated regardless of the roll — natural 10s included.
+  // Front: fully negated regardless of the roll, natural 10s included.
   const front = rollWounds({ weightClass: "medium" }, base, auto, "hull",
     { arc: "front", hits: 2 }, { wounds: [10, 10] }, () => 0);
   assert.equal(front.every((h) => h.sp === 0 && h.negated === true), true);
@@ -436,7 +436,7 @@ test("Raise Shield negates the front arc and blunts side/rear by 3", () => {
     { arc: "side", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(side[0].pen, 5);
   assert.equal(side[0].target, 6);
-  assert.equal(side[0].sp, 2); // Autocannon D2 — blunted, not negated
+  assert.equal(side[0].sp, 2); // Autocannon D2, blunted, not negated
 });
 
 test("Tower Shield extends Raise Shield negation to the side arc", () => {
@@ -455,7 +455,7 @@ test("Tower Shield extends Raise Shield negation to the side arc", () => {
   const rear = rollWounds({ weightClass: "medium" }, tower, auto, "hull",
     { arc: "rear", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(rear[0].pen, 6);
-  assert.equal(rear[0].sp, 2); // blunted only — the rear still wounds
+  assert.equal(rear[0].sp, 2); // blunted only, the rear still wounds
 });
 
 test("Siege Maul with Breaching Round locks the target Hull on a Hull hit", () => {
@@ -486,7 +486,7 @@ test("effectiveWeaponProfile applies selected ROF, Penetration, perk, and range 
 
   const auto = makeRig(2, "Core", "medium", "a", { longRange: "Autocannon", melee: "Sword", longRangeUpgrade: "depleted-core" });
   // Assert the upgrade's +1 Pen DELTA over the catalog base (medium weight mod 0),
-  // so tuning Autocannon's Pen can't red this — the mechanic is the +1, not the total.
+  // so tuning Autocannon's Pen can't red this, the mechanic is the +1, not the total.
   assert.equal(
     computePen(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}) - WEAPONS.longRange["Autocannon"].pen,
     1,
@@ -543,7 +543,7 @@ test("resolveAttack emits a per-die roll for each hit-die plus a location d12, e
   // attacker, full hull, near range, front arc, cover 0, fire (not aimed) ->
   // modAim = BASE_AIM(4) - (accuracy[0]=0 - cover=0 + aimedPenalty=0 + hullPenalty=0) = 4.
   // ap-shells (tuned) carries no Penetration bonus, so the expected Penetration below stays the
-  // bare base+weight-class value — the default upgrade (depleted-core, field)
+  // bare base+weight-class value, the default upgrade (depleted-core, field)
   // would add +1 Penetration and throw off the comparison.
   const attacker = makeRig(1, "Warden", "medium", "a", { longRange: "Autocannon", melee: "Claw", longRangeUpgrade: "ap-shells" });
   const target = makeRig(2, "Foe", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -759,7 +759,7 @@ test("Evisceration downside: -1 Penetration against a fully-undamaged struck loc
 test("Full Tilt adds +3 Penetration only when the attacker moved this activation", () => {
   const lance = makeRig(1, "L", "medium", "a", { longRange: "Mini Gun", melee: "Lance", meleeUpgrade: "full-tilt" });
   const p = effectiveWeaponProfile("melee", "Lance", lance);
-  assert.equal(computePen(lance, p, {}), p.pen); // stationary — no bonus
+  assert.equal(computePen(lance, p, {}), p.pen); // stationary, no bonus
   lance.movedThisActivation = true;
   assert.equal(computePen(lance, p, {}), p.pen + 3);
 });
@@ -767,7 +767,7 @@ test("Full Tilt adds +3 Penetration only when the attacker moved this activation
 test("Momentum Swing reuses the charge gate for +2 Penetration (generalised charge key)", () => {
   const ball = makeRig(1, "WB", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
   const p = effectiveWeaponProfile("melee", "Wrecking Ball", ball);
-  assert.equal(computePen(ball, p, {}), p.pen); // stationary — no bonus
+  assert.equal(computePen(ball, p, {}), p.pen); // stationary, no bonus
   ball.movedThisActivation = true;
   assert.equal(computePen(ball, p, {}), p.pen + 2);
 });
@@ -785,7 +785,7 @@ test("Piledriver Protocol spends Momentum for +Penetration and ignores a braced 
   // These assert effective Penetration, NOT the wound TN, deliberately. `pen` is
   // the quantity the guard-break manipulates (skip the brace's -2, add +3); the
   // TN re-encodes it lossily. The smash side is effPen 14 into a T5 hull, and
-  // 6 + 5 - 14 clamps to the floor — TN reads 2 for ANY effPen >= 9, so a TN
+  // 6 + 5 - 14 clamps to the floor, TN reads 2 for ANY effPen >= 9, so a TN
   // assertion there stays green if the +3 ever arrives as a +2.
   // Without a guard-break, the brace's -2 applies: 11 + 0(front) - 2 = 9.
   const normal = rollWounds(ram, wall, p, "hull",
@@ -835,7 +835,7 @@ test("Bloodletter adds +1 to-hit die vs a target missing SP anywhere", () => {
   const fresh = makeRig(2, "F", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const hurt = makeRig(3, "H", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   hurt.legs.sp -= 1;
-  const dice = [1, 1, 1, 1]; // all misses — only ROF (dice count) matters here
+  const dice = [1, 1, 1, 1]; // all misses, only ROF (dice count) matters here
   const freshRoll = rollToHit(chainsawRig, p, { range: "near", cover: 0, target: fresh }, dice, () => 0);
   const hurtRoll = rollToHit(chainsawRig, p, { range: "near", cover: 0, target: hurt }, dice, () => 0);
   assert.equal(freshRoll.rof, 3);
@@ -843,14 +843,14 @@ test("Bloodletter adds +1 to-hit die vs a target missing SP anywhere", () => {
 });
 
 test("Cold Bore / Bloodletter read the target's real parts (Tank: no arms/legs)", () => {
-  // A pristine Tank is hull/tracks/turret/engine — it has no `arms`/`legs`.
+  // A pristine Tank is hull/tracks/turret/engine, it has no `arms`/`legs`.
   // The undamaged/damaged checks must walk the target's actual anatomy, or
   // Bloodletter over-fires and Cold Bore under-fires against units.
   const pristineTank = makeUnit("tank", 9, "Panzer", "b", { unit: "Coaxial MG" });
 
   const chainsawRig = makeRig(1, "C", "medium", "a", { longRange: "Mini Gun", melee: "Chainsaw", meleeUpgrade: "bloodletter" });
   const bl = effectiveWeaponProfile("melee", "Chainsaw", chainsawRig);
-  const dice = [1, 1, 1, 1]; // all misses — only ROF (dice count) matters
+  const dice = [1, 1, 1, 1]; // all misses, only ROF (dice count) matters
   const roll = rollToHit(chainsawRig, bl, { range: "near", cover: 0, target: pristineTank }, dice, () => 0);
   assert.equal(roll.rof, 3); // full-SP tank is NOT damaged → no extra die
 
@@ -886,7 +886,7 @@ test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret,
     // Inject the cluster-shells upgrade AND keep flatPick so combat.js takes cold-kind paths.
     profileFor: (_s, name) => ({ ...UNIT_WEAPONS[name], upgradeEffect: { onHit: "cluster-shells" }, flatPick: true }),
   };
-  // Aim at "turret" and force the cluster D12 to 9 → hitLocation("tank", 9) === "turret" — matches primary, must cycle.
+  // Aim at "turret" and force the cluster D12 to 9 → hitLocation("tank", 9) === "turret", matches primary, must cycle.
   // Force to-hit dice to 6 so the shot always hits regardless of modAim.
   resolveAttack(room, attacker, target, {
     weapon: "unit", target: "Enemy", arc: "front", range: "near", cover: 0, aimed: true, aimedLoc: "turret",
@@ -895,7 +895,7 @@ test("Cluster Shells cycles the target's own part list (Tank uses tracks/turret,
   // Cluster-shells runs AFTER the primary aimed hit. The cluster loc must be a Tank part, never a Rig-only name.
   const clusterLoc = hits.find((loc) => loc !== "turret") ?? hits[hits.length - 1];
   const tankParts = ["hull", "tracks", "turret", "engine"];
-  assert.ok(tankParts.includes(clusterLoc), `cluster fell on ${clusterLoc} — not a Tank part`);
+  assert.ok(tankParts.includes(clusterLoc), `cluster fell on ${clusterLoc}, not a Tank part`);
   assert.ok(clusterLoc !== "arms" && clusterLoc !== "legs", `cluster leaked a Rig-only part name: ${clusterLoc}`);
 });
 
@@ -1016,13 +1016,13 @@ test("Penetrator Rounds forces the 3rd Autocannon volley's hits to wound, bypass
   const room = { rigs: [attacker, target] };
   const ctx = makeCtx();
   const miss = { weapon: "longRange", arc: "front", range: "near", cover: 0, dice: { toHit: [1, 1, 1, 1] } };
-  resolveAttack(room, attacker, target, miss, () => 0, ctx); // 1st volley — all miss, counter -> 1
+  resolveAttack(room, attacker, target, miss, () => 0, ctx); // 1st volley, all miss, counter -> 1
   attacker.loaded.longRange = true; // simulate the reload a new activation grants
-  resolveAttack(room, attacker, target, miss, () => 0, ctx); // 2nd volley — all miss, counter -> 2
+  resolveAttack(room, attacker, target, miss, () => 0, ctx); // 2nd volley, all miss, counter -> 2
   assert.equal(attacker.autocannonShots, 2);
   assert.equal(attacker.autocannonSlowNext, false);
   attacker.loaded.longRange = true;
-  // 3rd volley: 1 landed hit (die 6). The wound die is a natural 1 — Autocannon
+  // 3rd volley: 1 landed hit (die 6). The wound die is a natural 1, Autocannon
   // Penetration 7 vs a medium hull (T5) is TN 4, so that die would FAIL on its own. The
   // upgrade skips the wound roll entirely, so it still deals the weapon's D2.
   // A failing die is the point: a 10 here would wound with or without the upgrade.
@@ -1033,7 +1033,7 @@ test("Penetrator Rounds forces the 3rd Autocannon volley's hits to wound, bypass
   assert.equal(attacker.autocannonShots, 3);
   assert.equal(res.impacts.length, 1);
   assert.equal(res.impacts[0].die, 1);
-  assert.equal(res.impacts[0].sp, 2); // wounded anyway — the roll was bypassed
+  assert.equal(res.impacts[0].sp, 2); // wounded anyway, the roll was bypassed
   assert.equal(attacker.autocannonSlowNext, true); // downside armed for the very next attack
 });
 
@@ -1044,7 +1044,7 @@ test("Penetrator Rounds halves ROF on the attack immediately after it fires", ()
   const third = rollToHit(attacker, profile, { range: "near", cover: 0 }, [1, 1, 1, 1], () => 0);
   assert.equal(attacker.autocannonShots, 3);
   assert.equal(third.penetratorShot, true);
-  assert.equal(third.rof, 4); // full ROF — the slow-belt downside hasn't landed yet
+  assert.equal(third.rof, 4); // full ROF, the slow-belt downside hasn't landed yet
   assert.equal(attacker.autocannonSlowNext, true);
   const fourth = rollToHit(attacker, profile, { range: "near", cover: 0 }, [1, 1], () => 0);
   assert.equal(fourth.rof, 2); // halved: belt cycles slow the attack right after a penetrator shot
@@ -1084,10 +1084,10 @@ test("Suppression Lock ramps consecutive same-target hits: speed -> action penal
   assert.equal(target.noPrepNextActivation, true);
 
   attacker.loaded.longRange = true;
-  resolveAttack(room, attacker, target, SUPPRESS_SHOT, () => 0, ctx); // 4th hit — stacks cap at 3
+  resolveAttack(room, attacker, target, SUPPRESS_SHOT, () => 0, ctx); // 4th hit, stacks cap at 3
   assert.equal(attacker.suppressStacks, 3);
 
-  // The attacker runs hot every attack while the lock is active — one +1 heat
+  // The attacker runs hot every attack while the lock is active, one +1 heat
   // bump per landed hit above.
   assert.deepEqual(
     heatBumps.filter(([id]) => id === attacker.id),
@@ -1113,7 +1113,7 @@ test("Suppression Lock resets to 1 stack (speed only) when the attacker switches
   assert.equal(attacker.suppressTarget, targetB.id);
   assert.equal(attacker.suppressStacks, 1); // reset by the target switch
   assert.equal(targetB.speedHalvedNextRound, true);
-  assert.equal(targetB.actionPenaltyNextActivation || 0, 0); // only 1 stack — speed only
+  assert.equal(targetB.actionPenaltyNextActivation || 0, 0); // only 1 stack, speed only
 });
 
 test("Ion Storm EMPs the struck target and overloads the attacker's own Arc Gun", () => {
@@ -1160,7 +1160,7 @@ test("Fire Control Lock's painted Missile Barrage volley auto-hits with Armour P
   const ctx = makeCtx();
   attacker.lockedTarget = target.id;
   attacker.lockExpiresRound = 2; // fresh paint (round 1 <= 2)
-  // rof 4; every to-hit die is a 1 (would all miss at modAim 3) — the lock forces
+  // rof 4; every to-hit die is a 1 (would all miss at modAim 3), the lock forces
   // all four to land. Every WOUND die is a natural 1 (Missile Barrage Penetration 7 vs a
   // medium hull T5 is TN 4, so all four fail outright); only the AP reroll can
   // save them. Rerolling 10/1/1/1 proves Armour Piercing is applied per-die, not
@@ -1169,7 +1169,7 @@ test("Fire Control Lock's painted Missile Barrage volley auto-hits with Armour P
     weapon: "longRange", arc: "front", range: "near", cover: 0,
     dice: { toHit: [1, 1, 1, 1], location: 1, wounds: [1, 1, 1, 1], ap: [10, 1, 1, 1] },
   }, () => 0, ctx);
-  assert.equal(res.hits, 4);                    // unmissable volley — all shots land
+  assert.equal(res.hits, 4);                    // unmissable volley, all shots land
   assert.equal(res.impacts[0].sp, 2);           // AP reroll turned a failed wound into a D2
   assert.equal(res.impacts.filter((h) => h.sp > 0).length, 1); // only the rerolled 10 landed
   assert.equal(attacker.lockedTarget, null);    // paint consumed by the volley
@@ -1184,7 +1184,7 @@ test("Fire Control Lock ignores a stale paint (expired round) and clears it", ()
   attacker.lockExpiresRound = 2; // stale: round 3 > 2
   const res = resolveAttack(room, attacker, target, {
     weapon: "longRange", arc: "front", range: "near", cover: 0,
-    dice: { toHit: [1, 1, 1, 1], location: 1 }, // all miss — no auto-hit
+    dice: { toHit: [1, 1, 1, 1], location: 1 }, // all miss, no auto-hit
   }, () => 0, ctx);
   assert.equal(res.hits, 0);                 // no lock -> the misses stand
   assert.equal(attacker.lockedTarget, null); // stale paint dropped
@@ -1207,7 +1207,7 @@ test("Fire Control Lock only fires vs the exact painted target", () => {
   assert.equal(attacker.lockedTarget, painted.id); // paint still saved for the real target
 });
 
-test("Breach Grip — a cracked location adds +2 effective Penetration over its 2-round window, gone by N+2", () => {
+test("Breach Grip, a cracked location adds +2 effective Penetration over its 2-round window, gone by N+2", () => {
   const auto = { pen: 6, dmg: 2 }; // synthetic stand-in (Pen 6, D2): value-immune to Autocannon tuning
   // Applied at round N=4 stores expiry N+1=5: live at rounds 4 and 5, gone at 6.
   const cracked = { weightClass: "medium", cracked: { hull: 5 } };
@@ -1228,7 +1228,7 @@ test("Breach Grip — a cracked location adds +2 effective Penetration over its 
   assert.equal(stale[0].pen, 6);
 });
 
-test("Breach Grip — a damaging Claw hit routes through ctx.crackLocation", () => {
+test("Breach Grip, a damaging Claw hit routes through ctx.crackLocation", () => {
   const attacker = makeRig(1, "Pry", "medium", "a", { longRange: "Autocannon", melee: "Claw", meleeUpgrade: "breach-grip" });
   const target = makeRig(2, "Wall", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 4 } };
@@ -1269,7 +1269,7 @@ test("Pinning Bolt immobilises the target and adds +2 self-heat on a damaging hi
   assert.deepEqual(heatBumps, [["atk", 2]]); // only the pinning heat (base fire heat is 0 here)
 });
 
-test("Dismember — a damaging Circular Saw hit routes through ctx.dismemberLocation", () => {
+test("Dismember, a damaging Circular Saw hit routes through ctx.dismemberLocation", () => {
   const attacker = makeRig(1, "Grind", "medium", "a", { longRange: "Autocannon", melee: "Circular Saw", meleeUpgrade: "dismember" });
   const target = makeRig(2, "Slab", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -1286,7 +1286,7 @@ test("Dismember — a damaging Circular Saw hit routes through ctx.dismemberLoca
   assert.deepEqual(calls, [[2, "hull"]]);
 });
 
-test("Kneecapper — a front-arc limb hit lands (Raking Fire would otherwise auto-fail)", () => {
+test("Kneecapper, a front-arc limb hit lands (Raking Fire would otherwise auto-fail)", () => {
   const attacker = makeRig(1, "K", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target] };
@@ -1302,7 +1302,7 @@ test("Kneecapper — a front-arc limb hit lands (Raking Fire would otherwise aut
   assert.ok(target.legs.sp < target.legs.max);
 });
 
-test("Kneecapper — hull and engine are never valid targets, aimed or not", () => {
+test("Kneecapper, hull and engine are never valid targets, aimed or not", () => {
   const attacker = makeRig(1, "K2", "medium", "a", { longRange: "Double MG", melee: "Sword", longRangeUpgrade: "kneecapper" });
   for (const badAim of ["hull", "engine"]) {
     const target = makeRig(2, "T2", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -1335,7 +1335,7 @@ test("Kneecapper — hull and engine are never valid targets, aimed or not", () 
   assert.equal(target3.engine.sp, target3.engine.max);
 });
 
-test("Kneecapper cripple ramp — armsSuppressed halves ROF for every weapon", () => {
+test("Kneecapper cripple ramp, armsSuppressed halves ROF for every weapon", () => {
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Autocannon", melee: "Chainsaw" });
   const profile = effectiveWeaponProfile("longRange", "Autocannon", rig); // base rof 4
   const dice = [1, 1, 1, 1];
@@ -1344,13 +1344,13 @@ test("Kneecapper cripple ramp — armsSuppressed halves ROF for every weapon", (
   rig.armsSuppressed = true;
   const suppressed = rollToHit(rig, profile, { range: "near", cover: 0 }, dice, () => 0);
   assert.equal(suppressed.rof, 2); // halved, floor division
-  // Melee is suppressed too — it's the rig's own weapon limb, not a per-weapon flag.
+  // Melee is suppressed too, it's the rig's own weapon limb, not a per-weapon flag.
   const melee = effectiveWeaponProfile("melee", "Chainsaw", rig); // base rof 3
   const meleeRes = rollToHit(rig, melee, { range: "near", cover: 0 }, [1, 1, 1], () => 0);
   assert.equal(meleeRes.rof, 1); // floor(3/2)
 });
 
-test("armsSuppressed never silences a ROF-1 weapon — it floors at 1 die (#4)", () => {
+test("armsSuppressed never silences a ROF-1 weapon, it floors at 1 die (#4)", () => {
   const rig = makeRig(1, "R", "medium", "a", { longRange: "Sniper Cannon", melee: "Lance" });
   rig.armsSuppressed = true;
   const sniper = effectiveWeaponProfile("longRange", "Sniper Cannon", rig); // base rof 1
@@ -1361,7 +1361,7 @@ test("armsSuppressed never silences a ROF-1 weapon — it floors at 1 die (#4)",
   assert.equal(lres.rof, 1);
 });
 
-// Group G — spatial upgrade effects. The engine has no grid, so forced movement
+// Group G, spatial upgrade effects. The engine has no grid, so forced movement
 // / ricochets surface as player-facing instructions in the resolution log. These
 // tests assert the pushed instruction text and its gating, not any coordinates.
 
@@ -1374,16 +1374,16 @@ test("Momentum Swing emits a knockback instruction only on a landed charging swi
   const t1 = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const ctx1 = makeCtx();
   resolveAttack({ rigs: [ball, t1] }, ball, t1, { ...opts, target: t1.name }, () => 0, ctx1);
-  const kb = ctx1.resolutions.find((r) => /Momentum Swing — knock/.test(r.summary));
+  const kb = ctx1.resolutions.find((r) => /Momentum Swing, knock/.test(r.summary));
   assert.ok(kb, "expected a knockback instruction");
-  assert.equal(kb.summary, 'Momentum Swing — knock T back 3" (move the mini).');
+  assert.equal(kb.summary, 'Momentum Swing, knock T back 3" (move the mini).');
 
   // Did NOT move → the charge never triggered, so no knockback even on a hit.
   const still = makeRig(3, "WB2", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
   const t2 = makeRig(4, "T2", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const ctx2 = makeCtx();
   resolveAttack({ rigs: [still, t2] }, still, t2, { ...opts, target: t2.name }, () => 0, ctx2);
-  assert.ok(!ctx2.resolutions.some((r) => /Momentum Swing — knock/.test(r.summary)));
+  assert.ok(!ctx2.resolutions.some((r) => /Momentum Swing, knock/.test(r.summary)));
 
   // Moved but whiffed (no damaging hit) → no knockback.
   const miss = makeRig(5, "WB3", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball", meleeUpgrade: "momentum-swing" });
@@ -1392,7 +1392,7 @@ test("Momentum Swing emits a knockback instruction only on a landed charging swi
   const ctx3 = makeCtx();
   resolveAttack({ rigs: [miss, t3] }, miss, t3,
     { weapon: "melee", target: t3.name, arc: "front", range: "near", dice: { toHit: [1], location: 1 } }, () => 0, ctx3);
-  assert.ok(!ctx3.resolutions.some((r) => /Momentum Swing — knock/.test(r.summary)));
+  assert.ok(!ctx3.resolutions.some((r) => /Momentum Swing, knock/.test(r.summary)));
 });
 
 test("Piledriver emits a shove instruction only when Momentum was spent on a landed hit", () => {
@@ -1405,9 +1405,9 @@ test("Piledriver emits a shove instruction only when Momentum was spent on a lan
   const ctx = makeCtx();
   const res = resolveAttack({ rigs: [ram, wall], game: { round: 1 } }, ram, wall, { ...shot, target: wall.name }, () => 0, ctx);
   assert.ok(res.hits >= 1);
-  const shove = ctx.resolutions.find((r) => /Piledriver — shove/.test(r.summary));
+  const shove = ctx.resolutions.find((r) => /Piledriver, shove/.test(r.summary));
   assert.ok(shove, "expected a shove instruction");
-  assert.equal(shove.summary, 'Piledriver — shove Wall back 3" (move the mini).');
+  assert.equal(shove.summary, 'Piledriver, shove Wall back 3" (move the mini).');
 
   // No stored Momentum → no shove even on a landed hit.
   const ram2 = makeRig(3, "Ram2", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
@@ -1415,7 +1415,7 @@ test("Piledriver emits a shove instruction only when Momentum was spent on a lan
   const wall2 = makeRig(4, "Wall2", "medium", "b", { longRange: "Autocannon", melee: "Sword" });
   const ctx2 = makeCtx();
   resolveAttack({ rigs: [ram2, wall2], game: { round: 1 } }, ram2, wall2, { ...shot, target: wall2.name }, () => 0, ctx2);
-  assert.ok(!ctx2.resolutions.some((r) => /Piledriver — shove/.test(r.summary)));
+  assert.ok(!ctx2.resolutions.some((r) => /Piledriver, shove/.test(r.summary)));
 
   // Momentum spent but the smash misses → no shove.
   const ram3 = makeRig(5, "Ram3", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield", lrUpgrade: "piledriver-protocol" });
@@ -1424,7 +1424,7 @@ test("Piledriver emits a shove instruction only when Momentum was spent on a lan
   const ctx3 = makeCtx();
   resolveAttack({ rigs: [ram3, wall3], game: { round: 1 } }, ram3, wall3,
     { weapon: "longRange", target: wall3.name, arc: "front", range: "near", cover: 0, dice: { toHit: [1], location: 1 } }, () => 0, ctx3);
-  assert.ok(!ctx3.resolutions.some((r) => /Piledriver — shove/.test(r.summary)));
+  assert.ok(!ctx3.resolutions.some((r) => /Piledriver, shove/.test(r.summary)));
 });
 
 test("Brace immovability suppresses the Momentum Swing knockback", () => {
@@ -1458,26 +1458,26 @@ test("Enfilade emits the ricochet instruction on every 3rd aimed shot; non-aimed
 
   const c1 = fire(aimed);
   assert.equal(sniper.enfiladeShots, 1);
-  assert.ok(!c1.resolutions.some((r) => /Enfilade — ricochet/.test(r.summary)));
+  assert.ok(!c1.resolutions.some((r) => /Enfilade, ricochet/.test(r.summary)));
 
   const c2 = fire(aimed);
   assert.equal(sniper.enfiladeShots, 2);
-  assert.ok(!c2.resolutions.some((r) => /Enfilade — ricochet/.test(r.summary)));
+  assert.ok(!c2.resolutions.some((r) => /Enfilade, ricochet/.test(r.summary)));
 
   const c3 = fire(aimed);
   assert.equal(sniper.enfiladeShots, 3);
-  const ric = c3.resolutions.find((r) => /Enfilade — ricochet/.test(r.summary));
+  const ric = c3.resolutions.find((r) => /Enfilade, ricochet/.test(r.summary));
   assert.ok(ric, "expected a ricochet instruction on the 3rd aimed shot");
   assert.equal(ric.summary,
-    "Enfilade — ricochet! Resolve a +2 Penetration hit on the next rig in line of sight behind T (player's choice).");
+    "Enfilade, ricochet! Resolve a +2 Penetration hit on the next rig in line of sight behind T (player's choice).");
 
   // A non-aimed shot fires but must NOT advance the aimed-shot cadence.
   const c4 = fire({ ...aimed, aimed: false, aimedLoc: undefined });
   assert.equal(sniper.enfiladeShots, 3); // unchanged by the non-aimed shot
-  assert.ok(!c4.resolutions.some((r) => /Enfilade — ricochet/.test(r.summary)));
+  assert.ok(!c4.resolutions.some((r) => /Enfilade, ricochet/.test(r.summary)));
 });
 
-test("Tow Chain emits the fling instruction, adds +2 heat, roots the attacker, and sets the cooldown — then no fling while recharging", () => {
+test("Tow Chain emits the fling instruction, adds +2 heat, roots the attacker, and sets the cooldown, then no fling while recharging", () => {
   const opts = { weapon: "melee", arc: "front", range: "near", dice: { toHit: [6], location: 1, wounds: [10] } };
 
   // Charged chain (round >= cooldown) + a landed damaging hit → fling + state.
@@ -1486,9 +1486,9 @@ test("Tow Chain emits the fling instruction, adds +2 heat, roots the attacker, a
   let heat = 0;
   const ctx1 = { ...makeCtx(), bumpHeat: (rig, n) => { if (rig === ball) heat += n; } };
   resolveAttack({ rigs: [ball, t1], game: { round: 1 } }, ball, t1, { ...opts, target: t1.name }, () => 0, ctx1);
-  const fling = ctx1.resolutions.find((r) => /Tow Chain — fling/.test(r.summary));
+  const fling = ctx1.resolutions.find((r) => /Tow Chain, fling/.test(r.summary));
   assert.ok(fling, "expected a Tow Chain fling instruction");
-  assert.equal(fling.summary, 'Tow Chain — fling T up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.');
+  assert.equal(fling.summary, 'Tow Chain, fling T up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat.');
   assert.equal(heat, 2);                       // +2 tow heat
   assert.equal(ball.towedThisActivation, true); // rooted
   assert.equal(ball.towChainCooldownUntil, 4);  // round 1 + 3
@@ -1500,7 +1500,7 @@ test("Tow Chain emits the fling instruction, adds +2 heat, roots the attacker, a
   let heat2 = 0;
   const ctx2 = { ...makeCtx(), bumpHeat: (rig, n) => { if (rig === ball2) heat2 += n; } };
   resolveAttack({ rigs: [ball2, t2], game: { round: 1 } }, ball2, t2, { ...opts, target: t2.name }, () => 0, ctx2);
-  assert.ok(!ctx2.resolutions.some((r) => /Tow Chain — fling/.test(r.summary)));
+  assert.ok(!ctx2.resolutions.some((r) => /Tow Chain, fling/.test(r.summary)));
   assert.equal(heat2, 0);
   assert.equal(ball2.towedThisActivation, false);
 
@@ -1510,7 +1510,7 @@ test("Tow Chain emits the fling instruction, adds +2 heat, roots the attacker, a
   const ctx3 = makeCtx();
   resolveAttack({ rigs: [ball3, t3], game: { round: 1 } }, ball3, t3,
     { weapon: "melee", target: t3.name, arc: "front", range: "near", dice: { toHit: [1], location: 1 } }, () => 0, ctx3);
-  assert.ok(!ctx3.resolutions.some((r) => /Tow Chain — fling/.test(r.summary)));
+  assert.ok(!ctx3.resolutions.some((r) => /Tow Chain, fling/.test(r.summary)));
   assert.equal(ball3.towChainCooldownUntil, 0); // never charged/spent
 });
 
@@ -1574,7 +1574,7 @@ test("Reactive Armor hardens the struck location on the first damaging hit each 
     equipment: "ablative-plating", equipmentUpgrade: "reactive-armor",
     equipState: { reactiveArmorLocs: [] },
   };
-  // The FIRST hit is not yet docked — the list is empty when its Penetration is computed;
+  // The FIRST hit is not yet docked, the list is empty when its Penetration is computed;
   // the seam records "hull" only after that wound resolves. So both sides read
   // Penetration 6 here, and the dock shows up on the SECOND volley below.
   const outPlain = rollWounds({ weightClass: "medium" }, plain, auto, "hull",
@@ -1607,7 +1607,7 @@ test("Reactive Armor independently hardens a second, different location (reactiv
   assert.deepEqual(reactive.equipState.reactiveArmorLocs, ["hull"]);
 
   // A first damaging hit to a DIFFERENT location ("legs") is recorded
-  // independently — proves reactiveArmorLocs is a per-location list, not a single
+  // independently, proves reactiveArmorLocs is a per-location list, not a single
   // "already reacted this round" flag. Legs are undocked on this first hit (Penetration 6)
   // even though hull is already hardened.
   const firstLegs = rollWounds({ weightClass: "medium" }, reactive, auto, "legs",
@@ -1634,7 +1634,7 @@ test("Reactive Armor does not fire for a rig carrying only the base Ablative Pla
   rollWounds({ weightClass: "medium" }, base, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.deepEqual(base.equipState.reactiveArmorLocs, []);  // nothing hardened
-  // A second hit is still undocked — nothing was ever recorded to dock against.
+  // A second hit is still undocked, nothing was ever recorded to dock against.
   const out = rollWounds({ weightClass: "medium" }, base, auto, "hull",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
   assert.equal(out[0].pen, 6); // no reactive dock
@@ -1643,7 +1643,7 @@ test("Reactive Armor does not fire for a rig carrying only the base Ablative Pla
 // Ablative Cascade (Ablative Plating, Prototype). The seam is flat
 // (`hit.sp`/`kind:"wound"`) and injects heat via `ctx.spendHeat(n)`. Under the
 // wound model a charge negates a wound OUTRIGHT rather than softening it one
-// severity step — there are no steps left to soften. The negate-outright and
+// severity step, there are no steps left to soften. The negate-outright and
 // failed-wound cases are covered end-to-end through rollWounds in the §7.5 block
 // below; these two exercise the seam directly.
 test("Ablative Cascade: with no charges left, the wound lands full", () => {
@@ -1702,7 +1702,7 @@ test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-
     kind: "rig", weightClass: "medium", equipment: "reactive-plating",
     equipmentUpgrade: "point-defense-system", engine: { heat: 0 },
   };
-  // pd reroll faces of all 1s would zero the tally IF a reroll fired — so an
+  // pd reroll faces of all 1s would zero the tally IF a reroll fired, so an
   // unchanged hits===2 proves the branch did NOT engage.
   const mkCtx = () => ({ location: null, row: null, spendHeat: () => {}, random: () => 0, providedDice: { pd: [1, 1, 1] } });
 
@@ -1722,7 +1722,7 @@ test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-
 });
 
 // ── §7.5 the wound roll (d10) ────────────────────────────────────────────────
-// Fixture note: makeRig returns null unless BOTH weapon slots are filled — so the
+// Fixture note: makeRig returns null unless BOTH weapon slots are filled, so the
 // cases below use bare `{ weightClass }` doubles for the side whose class is the
 // point, matching the plain-object style the older rollWounds tests in this file
 // already use. rollWounds reads only weightClass/kind off those sides, so the
@@ -1734,11 +1734,11 @@ test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-
 // to keep testing the extreme they claim to, rather than swapping the class and
 // quietly testing a mid-table matchup under an extreme-sounding name.
 
-test("rollWounds — a wound deals the weapon's D, not 1", () => {
+test("rollWounds, a wound deals the weapon's D, not 1", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   // Synthetic profile (Pen 6, D3): the mechanic is that a wound deals the weapon's
-  // D (3 here), not a flat 1 — a fixed D keeps that immune to any weapon retune.
+  // D (3 here), not a flat 1, a fixed D keeps that immune to any weapon retune.
   const profile = { pen: 6, dmg: 3 };
   // Penetration 6 + medium 0 + front 0 = 6 vs medium hull T5 => TN 6+5-6 = 5. A 9 wounds.
   const out = rollWounds(attacker, target, profile, "hull",
@@ -1748,7 +1748,7 @@ test("rollWounds — a wound deals the weapon's D, not 1", () => {
   assert.notEqual(profile.dmg, 1);      // ...and D is meaningfully greater than 1
 });
 
-test("rollWounds — a natural 10 always wounds however hopeless the matchup", () => {
+test("rollWounds, a natural 10 always wounds however hopeless the matchup", () => {
   // The guarantee the whole rewrite exists for. The old model gave 0 here, always.
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Rivet Gun", melee: "Circular Saw" });
   const target = { weightClass: "medium" };
@@ -1760,10 +1760,10 @@ test("rollWounds — a natural 10 always wounds however hopeless the matchup", (
   assert.equal(out[0].sp, 1); // Rivet Gun dmg: 1
 });
 
-test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wounds", () => {
+test("rollWounds, the wound test is `die >= TN`: rolling exactly the TN wounds", () => {
   // Pins the boundary itself. Every other fixture in this file rolls a 10 or a 1
   // to force an outcome, so an off-by-one here (`>` for `>=`) passes the whole
-  // suite otherwise — verified by mutation. The TN is 10% per point of Penetration only
+  // suite otherwise, verified by mutation. The TN is 10% per point of Penetration only
   // if the TN face itself is a hit.
   const attacker = makeRig(1, "A", "light", "a", { longRange: "Rivet Gun", melee: "Circular Saw" });
   const target = { weightClass: "medium" };
@@ -1779,13 +1779,13 @@ test("rollWounds — the wound test is `die >= TN`: rolling exactly the TN wound
   assert.equal(belowTn[0].sp, 0); // 8 < 9 does not
 });
 
-test("rollWounds — a natural 1 never wounds however lopsided", () => {
+test("rollWounds, a natural 1 never wounds however lopsided", () => {
   const attacker = { weightClass: "medium" };
   const target = makeRig(2, "B", "light", "b", { longRange: "Autocannon", melee: "Claw" });
   // pen is pinned locally so a future Wrecking Ball Pen retune can't disturb this
   // fixture: clamping the TN to the floor of 2 on a light hull (T4) takes effPen
   // >= 8, and pinning pen at 10 (front-arc, no upgrade) puts effPen at exactly 10.
-  // At the floor TN of 2 the natural 1 is the SOLE failing face — the whole point,
+  // At the floor TN of 2 the natural 1 is the SOLE failing face, the whole point,
   // which a higher unclamped TN would blur.
   const profile = { ...WEAPONS.melee["Wrecking Ball"], pen: 10 };
   // Penetration 10 + medium 0 + front 0 = 10 vs light hull T4 => TN 6+4-10 = 0 -> clamp 2.
@@ -1795,7 +1795,7 @@ test("rollWounds — a natural 1 never wounds however lopsided", () => {
   assert.equal(out[0].sp, 0);
 });
 
-test("rollWounds — a raised shield still negates on a natural 10 (earned zero)", () => {
+test("rollWounds, a raised shield still negates on a natural 10 (earned zero)", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Bulwark Shield" });
   target.preparation = { type: "raise-shield" };
@@ -1806,7 +1806,7 @@ test("rollWounds — a raised shield still negates on a natural 10 (earned zero)
   assert.equal(out[0].negated, true);
 });
 
-test("rollWounds — Raking Fire front arc still auto-fails on a natural 10", () => {
+test("rollWounds, Raking Fire front arc still auto-fails on a natural 10", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   // Base weapons carry no perks; Raking Fire rides the Mini Gun profile itself.
@@ -1817,7 +1817,7 @@ test("rollWounds — Raking Fire front arc still auto-fails on a natural 10", ()
   assert.equal(out[0].negated, true);
 });
 
-test("rollWounds — defender modifiers reduce effective Penetration, not the roll", () => {
+test("rollWounds, defender modifiers reduce effective Penetration, not the roll", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   target.preparation = { type: "brace" };
@@ -1831,17 +1831,17 @@ test("rollWounds — defender modifiers reduce effective Penetration, not the ro
   assert.equal(out[0].pen, 3);
 });
 
-test("rollWounds — toughness comes from the target's kind, not a rig weight band", () => {
+test("rollWounds, toughness comes from the target's kind, not a rig weight band", () => {
   // A Tank hull's Toughness is read off the tank's own grid rather than a rig
   // weight class, and rollWounds needs no per-kind knowledge to do it: it passes
   // whatever toughnessOf returns for the TARGET's kind. This pins that dispatch.
   //
-  // (T6 is not "off the scale" — a tank hull is T6. It is simply not reachable on
+  // (T6 is not "off the scale", a tank hull is T6. It is simply not reachable on
   // a rig: T3-T5 is the whole rig board now that Heavy and Colossal are gone.)
   //
   // Both TNs are derived from the profile's Pen, not hand-copied. The profile is a
   // synthetic mid-Pen stand-in (NOT the catalog Maul) whose Pen stays inside the
-  // clamp against BOTH toughnesses — a catalog weapon that out-penetrates both grids
+  // clamp against BOTH toughnesses, a catalog weapon that out-penetrates both grids
   // saturates both raw TNs to the floor and the two Toughnesses stop reading as two
   // different target numbers, which is the dispatch this test is named for. Front arc
   // keeps the raw TNs unclamped by arc.
@@ -1865,13 +1865,13 @@ test("rollWounds — toughness comes from the target's kind, not a rig weight ba
   assert.equal(vsRig[0].target, woundTarget(maul.pen, rigT));
   // Softer target, easier wound. Would go red if the synthetic Pen above were raised
   // enough to saturate BOTH shots to the floor and collapse the difference this test
-  // is named for — so the message says that rather than "expected truthy".
+  // is named for, so the message says that rather than "expected truthy".
   assert.ok(vsRig[0].target < out[0].target,
     `T${rigT} must be an easier wound than T${tankT}, got TN ${vsRig[0].target} vs ${out[0].target} `
     + `(both at the floor? the Maul's pen ${maul.pen} now saturates T${rigT} at pen ${rigT + 4})`);
 });
 
-test("Reactive Armor — records the location; the dock lands in rollWounds", () => {
+test("Reactive Armor, records the location; the dock lands in rollWounds", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   target.equipment = "ablative-plating";
@@ -1886,7 +1886,7 @@ test("Reactive Armor — records the location; the dock lands in rollWounds", ()
   assert.equal(out[0].target, 8);
 });
 
-test("Ablative Cascade — a charge negates a wound outright (an earned zero)", () => {
+test("Ablative Cascade, a charge negates a wound outright (an earned zero)", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   target.equipment = "ablative-plating";
@@ -1901,7 +1901,7 @@ test("Ablative Cascade — a charge negates a wound outright (an earned zero)", 
   assert.equal(heat, 1);
 });
 
-test("Ablative Cascade — spends nothing on a wound that already failed", () => {
+test("Ablative Cascade, spends nothing on a wound that already failed", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Mini Gun", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   target.equipment = "ablative-plating";
@@ -1913,7 +1913,7 @@ test("Ablative Cascade — spends nothing on a wound that already failed", () =>
   assert.equal(target.equipState.ablativeCharges, 2);
 });
 
-test("resolveAttack — wound dice are visible in rolls, one per landed hit", () => {
+test("resolveAttack, wound dice are visible in rolls, one per landed hit", () => {
   // The impact dice were rolled and DISCARDED, which is why a player could not
   // answer "why 0 damage?". A wound die must reach the log.
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
@@ -1933,7 +1933,7 @@ test("resolveAttack — wound dice are visible in rolls, one per landed hit", ()
 
 // ---------------------------------------------------------------------------
 // The resolution ledger (Plan 2). The flat one-equation breakdown could not
-// answer "why 0 damage?" — it showed hits and Penetration and nothing about the die
+// answer "why 0 damage?", it showed hits and Penetration and nothing about the die
 // that actually decided it. `breakdown.steps` is the whole chain, in order,
 // with every step's inputs, dice and outcome.
 //
@@ -1942,7 +1942,7 @@ test("resolveAttack — wound dice are visible in rolls, one per landed hit", ()
 // will drift, and a ledger that lies is worse than no ledger at all. See the
 // reconciliation tests at the end of this block.
 
-test("ledger — every step appears in resolution order", () => {
+test("ledger, every step appears in resolution order", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -1952,7 +1952,7 @@ test("ledger — every step appears in resolution order", () => {
     () => 0, ctx);
   const bd = ctx.resolutions.find((r) => r.kind === "attack").breakdown;
   // The ENGINE's order, which is the real one: the d12 lands before the wound
-  // roll because Toughness is per-location — the struck part is what supplies
+  // roll because Toughness is per-location, the struck part is what supplies
   // the T the wound roll tests against. Not the hit/wound/location sequence
   // 40k-style games use.
   assert.deepEqual(bd.steps.map((s) => s.kind), ["hit", "location", "wound", "damage"]);
@@ -1968,7 +1968,7 @@ test("ledger — every step appears in resolution order", () => {
   assert.equal(bd.target, "B");
 });
 
-test("ledger — the hit step shows the inputs that made the target number", () => {
+test("ledger, the hit step shows the inputs that made the target number", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -1985,7 +1985,7 @@ test("ledger — the hit step shows the inputs that made the target number", () 
   assert.match(hit.out, /4 of 4 hit/);
 });
 
-test("ledger — the wound step shows effective Penetration against toughness", () => {
+test("ledger, the wound step shows effective Penetration against toughness", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2000,7 +2000,7 @@ test("ledger — the wound step shows effective Penetration against toughness", 
   assert.deepEqual(w.dice, [{ value: 9, ok: true }]);
 });
 
-test("ledger — an earned zero is a step that says so, not a missing step", () => {
+test("ledger, an earned zero is a step that says so, not a missing step", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Bulwark Shield" });
   target.preparation = { type: "raise-shield" };
@@ -2015,7 +2015,7 @@ test("ledger — an earned zero is a step that says so, not a missing step", () 
   assert.match(w.out, /shield/i);
 });
 
-test("ledger — an earned zero still reports what the weapon would have dealt", () => {
+test("ledger, an earned zero still reports what the weapon would have dealt", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Bulwark Shield" });
   target.preparation = { type: "raise-shield" };
@@ -2026,7 +2026,7 @@ test("ledger — an earned zero still reports what the weapon would have dealt",
     () => 0, ctx);
   const d = ctx.resolutions.find((r) => r.kind === "attack").breakdown.steps[3];
   // Regression: the negated path skips the damage branch, so it must still
-  // carry the weapon's D — this rendered as a blank "weapon Damage" term with no
+  // carry the weapon's D, this rendered as a blank "weapon Damage" term with no
   // value, which is exactly the kind of hole this ledger exists to close.
   assert.deepEqual(d.terms, [
     { label: "wounds", value: 0 },
@@ -2035,7 +2035,7 @@ test("ledger — an earned zero still reports what the weapon would have dealt",
   assert.match(d.out, /0 SP/);
 });
 
-test("ledger — a volley that lands no hits still emits a wound step", () => {
+test("ledger, a volley that lands no hits still emits a wound step", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2049,7 +2049,7 @@ test("ledger — a volley that lands no hits still emits a wound step", () => {
   assert.match(w.out, /no hits/i);
 });
 
-test("ledger — the damage step multiplies wounds by the weapon's D", () => {
+test("ledger, the damage step multiplies wounds by the weapon's D", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Wrecking Ball" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2066,7 +2066,7 @@ test("ledger — the damage step multiplies wounds by the weapon's D", () => {
   assert.match(d.out, new RegExp(`\\b${wbD} SP\\b`));
 });
 
-test("ledger — the location step carries the d12 that picked the part", () => {
+test("ledger, the location step carries the d12 that picked the part", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2079,7 +2079,7 @@ test("ledger — the location step carries the d12 that picked the part", () => 
   assert.equal(loc.out, "arms");
 });
 
-test("ledger — arc and defender modifiers each earn a named wound term", () => {
+test("ledger, arc and defender modifiers each earn a named wound term", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   target.preparation = { type: "brace" };
@@ -2096,12 +2096,12 @@ test("ledger — arc and defender modifiers each earn a named wound term", () =>
   assert.equal(w.target, 3);       // 6 + 5 - 8
 });
 
-// Reconciliation — the ledger must be the engine's own arithmetic, not a
+// Reconciliation, the ledger must be the engine's own arithmetic, not a
 // parallel re-derivation of it. Each step's terms must ADD UP to the number
 // the step reports, using the same composition rule the engine used. If
 // anyone ever recomputes a step for display, these fail.
 
-test("ledger — the hit step's terms reconcile to its target number", () => {
+test("ledger, the hit step's terms reconcile to its target number", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2119,7 +2119,7 @@ test("ledger — the hit step's terms reconcile to its target number", () => {
     { distance: 12, cover: 2, aimed: true }));
 });
 
-test("ledger — the wound step's terms reconcile to its effective Penetration", () => {
+test("ledger, the wound step's terms reconcile to its effective Penetration", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2132,7 +2132,7 @@ test("ledger — the wound step's terms reconcile to its effective Penetration",
   assert.equal(w.target, woundTarget(w.pen, w.toughness));
 });
 
-test("ledger — the damage step's terms reconcile to the SP dealt", () => {
+test("ledger, the damage step's terms reconcile to the SP dealt", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const target = makeRig(2, "B", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -2151,23 +2151,23 @@ test("ledger — the damage step's terms reconcile to the SP dealt", () => {
 });
 
 // ---------------------------------------------------------------------------
-// No dead zones — the reason the combat model was rewritten.
+// No dead zones, the reason the combat model was rewritten.
 //
 // The impact-total model had 69 combos that could NEVER deal damage at any
 // roll: its total capped at `6 + Penetration + arc`, and melee had no arc ladder, so a
 // light Circular Saw (effective Penetration 4) topped out at 10 against a medium hull
 // needing 11. The wound roll replaces it: d10 >= `clamp(6 + T - S, 2, 10)`.
 //
-// NOTE ON HOW THESE TESTS ARE BUILT. The obvious test — sweep the matrix and
-// assert `woundTarget(...) > 10` never happens — is VACUOUS. woundTarget ends
+// NOTE ON HOW THESE TESTS ARE BUILT. The obvious test, sweep the matrix and
+// assert `woundTarget(...) > 10` never happens, is VACUOUS. woundTarget ends
 // in `Math.min(WOUND_DIE, ...)`, so its output cannot exceed 10 by
 // construction; the assertion is unreachable and would hold even if every stat
 // in the game were retuned to nonsense. A test that cannot fail is worse than
 // no test: it advertises a guarantee it never checks.
 //
 // So the guarantee is pinned as a PAIR:
-//   1. the probability floor, off the clamped TN — the player-facing promise;
-//   2. the RAW, unclamped `6 + T - S` gap stays in a sane band — the mechanism.
+//   1. the probability floor, off the clamped TN, the player-facing promise;
+//   2. the RAW, unclamped `6 + T - S` gap stays in a sane band, the mechanism.
 // (2) is the one with teeth. It is what fails if a stat retune drives a real
 // matchup so far past the die that the clamp stops being a floor and starts
 // being a crutch that hides a balance bug.
@@ -2176,7 +2176,7 @@ test("ledger — the damage step's terms reconcile to the SP dealt", () => {
 // The arc a weapon is WORST off attacking from, counting only arcs it may
 // legally use. Read off the real arcBonus ladder rather than hardcoded, so a
 // change to the ladder reaches these tests. Raking Fire returns null on the
-// front (auto-fail), so its worst usable arc is the side — a subtlety that
+// front (auto-fail), so its worst usable arc is the side, a subtlety that
 // matters: assuming a flat front +0 for every weapon wrongly paints machine
 // guns as the harshest matchup in the game when they cannot use that arc.
 function worstUsableArc(profile) {
@@ -2187,7 +2187,7 @@ function worstUsableArc(profile) {
 }
 
 // Every weapon (base profile, no upgrades) x attacker class x target class x
-// location, at the worst arc it can legally use — the true floor of the game.
+// location, at the worst arc it can legally use, the true floor of the game.
 function woundMatrix() {
   const all = { ...WEAPONS.longRange, ...WEAPONS.melee, ...UNIT_WEAPONS };
   // Derived, never hardcoded: this list read ["light","medium","heavy","colossal"]
@@ -2215,10 +2215,10 @@ function woundMatrix() {
   return rows;
 }
 
-test("no dead zones — every weapon can wound every location of every class", () => {
+test("no dead zones, every weapon can wound every location of every class", () => {
   // The player-facing guarantee: no matchup is mathematically hopeless. Stated
   // as a probability so the failure message is in the units a player cares
-  // about. Backed by the clamp, so it is guarded by the raw-gap test below —
+  // about. Backed by the clamp, so it is guarded by the raw-gap test below,
   // read the two together.
   const hopeless = woundMatrix()
     .map((r) => ({ ...r, chance: (WOUND_DIE - r.tn + 1) / WOUND_DIE }))
@@ -2227,7 +2227,7 @@ test("no dead zones — every weapon can wound every location of every class", (
   assert.deepEqual(hopeless, []);
 });
 
-test("no dead zones — the clamp is a floor, not a crutch: raw TN stays in band", () => {
+test("no dead zones, the clamp is a floor, not a crutch: raw TN stays in band", () => {
   // The test with teeth. `6 + T - S` unclamped, for every real matchup. The
   // clamp guarantees a natural 10 always wounds no matter how bad this gets,
   // which is exactly why it must be checked separately: if a retune pushed the
@@ -2239,17 +2239,17 @@ test("no dead zones — the clamp is a floor, not a crutch: raw TN stays in band
   assert.ok(worst.raw <= WOUND_DIE + 1, `raw TN ${worst.raw} leans on the clamp`);
 });
 
-test("no dead zones — nothing needs the clamp's upper rail any more", () => {
+test("no dead zones, nothing needs the clamp's upper rail any more", () => {
   // This test used to assert the opposite, and the flip is the interesting part.
   //
-  // Exactly one matchup in the game was hopeless unclamped — Rivet Gun/light vs
+  // Exactly one matchup in the game was hopeless unclamped, Rivet Gun/light vs
   // a COLOSSAL hull, raw TN 11, unrollable on a d10. Deleting Heavy and Colossal
   // (2026-07-16) deleted that matchup. The worst raw TN is now 9, inside the die,
   // so `a natural 10 always wounds` is currently a guarantee about nothing: no
   // matchup is hopeless even with the clamp switched off.
   //
   // That is a STRONGER guarantee than the one this test used to make, so it is
-  // asserted as such rather than deleted. Do NOT read it as "the clamp is dead" —
+  // asserted as such rather than deleted. Do NOT read it as "the clamp is dead",
   // its other rail (TN floored at 2, the saturation ceiling) is very much live and
   // is what the penetration rework exists to address. Only the upper rail is idle.
   //
@@ -2266,7 +2266,7 @@ test("no dead zones — nothing needs the clamp's upper rail any more", () => {
   assert.equal(woundTarget(pen, t), 9);       // clamped: unchanged, the rail is idle
 });
 
-test("no dead zones — the light saw vs a medium hull, the case that started this", () => {
+test("no dead zones, the light saw vs a medium hull, the case that started this", () => {
   // The combo that proved the impact-total model broken: it could never deal
   // damage at any roll. TN 7 sits clear of both clamp rails, so this exercises
   // the arithmetic rather than passing on a clamped edge.
@@ -2300,8 +2300,8 @@ test("hit location comes from the target's kind, not the attacker's", () => {
   assert.equal(shot(walker, rig, 9).location, "legs");
 });
 
-test("ledger — a rider that did not fire is absent from the damage step", () => {
-  // A term worth 0 must push nothing — same rule as penBreakdown. With ~15
+test("ledger, a rider that did not fire is absent from the damage step", () => {
+  // A term worth 0 must push nothing, same rule as penBreakdown. With ~15
   // possible contributions, rendering the dead ones buries the live ones.
   // Sword grants no Rend, and Duelist's Balance grants Precision rather than
   // Evisceration, so both riders resolve to 0 here and neither may render.
@@ -2324,10 +2324,10 @@ test("ledger — a rider that did not fire is absent from the damage step", () =
   ]);
 });
 
-test("ledger — riders survive a volley whose first wound die missed", () => {
+test("ledger, riders survive a volley whose first wound die missed", () => {
   // Riders are assigned only inside `if (wounded)`, so impacts[0] carries them as
   // 0 when the first die misses. Reading it blind renders `wounds 2, weapon Damage 2`
-  // against an out of 8 SP — terms reconciling to 4. The `find` is what prevents it.
+  // against an out of 8 SP, terms reconciling to 4. The `find` is what prevents it.
   // Chainsaw (ROF 3, Penetration 7, D2) + Ripper Teeth (Rend) + rear arc 3 = effPen 10 vs
   // a medium engine's T3 → wound TN 2, so only a natural 1 misses. Each landed
   // wound deals 2 + 1 = 3.

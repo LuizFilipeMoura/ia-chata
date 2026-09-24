@@ -10,7 +10,7 @@ export function createStore(filePath) {
       const obj = JSON.parse(fs.readFileSync(filePath, "utf8"));
       for (const [code, room] of Object.entries(obj)) rooms.set(code, room);
     } catch {
-      // No file yet, or unreadable — start empty.
+      // No file yet, or unreadable, start empty.
     }
   }
 

@@ -4,13 +4,13 @@
 // and what to record. The action budget, heat payment, second-shot surcharge,
 // Recovery cooling, overheat table and round advance all live in game-state.js.
 // A harness that models those itself is a second copy of the rules that drifts
-// from the first — and prints a tidy table about a game nobody is playing.
+// from the first, and prints a tidy table about a game nobody is playing.
 import {
   createRoom, applyCommand, lastRejectionReason, effectiveWeaponProfile, MAX_ROUNDS,
 } from "../../shared/game-state.js";
 import { makeGreedySafe } from "./policy.mjs";
 
-export const DUEL_ROUNDS = MAX_ROUNDS; // the real game length — imported, never re-typed
+export const DUEL_ROUNDS = MAX_ROUNDS; // the real game length, imported, never re-typed
 
 // Deterministic RNG so a seed reproduces a duel exactly.
 export function mulberry32(a) {
@@ -32,10 +32,10 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
   const random = mulberry32(seed);
   // A factory, not a module-level setter: distance and arc are BOTH required and
   // throw if missing. An unexplained default would silently become the answer for
-  // every cell a caller forgot to configure — and for arc that is not theoretical.
+  // every cell a caller forgot to configure, and for arc that is not theoretical.
   // "front" looks like the harmless default and is the one value that must never
   // be implicit: arcBonus (combat.js:401) returns null for Raking Fire on the
-  // front arc — a structural zero by rule, not a failed roll — so Mini Gun and
+  // front arc, a structural zero by rule, not a failed roll, so Mini Gun and
   // Double MG measure 0 SP across all 10 rounds there. The old sweep hides this by
   // pooling arcs; a single-arc duel cannot. The caller declares where the shooter
   // stands and owns what it costs those two weapons.
@@ -46,7 +46,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
 
   // A rejected command returns the room UNCHANGED and says nothing unless asked:
   // applyCommand bumps room.version only when something actually happened. Read
-  // that delta rather than trusting the call — without it a dropped fire is an
+  // that delta rather than trusting the call, without it a dropped fire is an
   // infinite retry that eventually reports a tidy, fictional zero, which is the
   // exact failure availableActions' `enabled` flag invites (see policy.mjs).
   const at = () => `round ${room.game.round}, phase ${room.game.phase}`;
@@ -60,7 +60,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
   const cmd = (verb, attrs, side) => {
     if (!apply(verb, attrs, side)) {
       throw new Error(
-        `duel-sim: "${verb}" was dropped (${lastRejectionReason() || "no reason recorded"}) — `
+        `duel-sim: "${verb}" was dropped (${lastRejectionReason() || "no reason recorded"}), `
         + `${at()}, attrs ${JSON.stringify(attrs)}`,
       );
     }
@@ -70,7 +70,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
 
   // Demand the tier EXPLICITLY. normalizeWeaponUpgrade falls back to the FIELD
   // upgrade for a null or unknown id (weapon-sweep.mjs documents the same trap),
-  // so `upgradeA: null` does not mean "no upgrade" — it silently means "field
+  // so `upgradeA: null` does not mean "no upgrade", it silently means "field
   // tier", and a whole cell would report one tier's numbers under another's name.
   // There is no un-upgraded rig in the real game, so make the caller name the id.
   if (typeof upgradeA !== "string" || !upgradeA) {
@@ -83,18 +83,18 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
   a1.weapons.longRange = weaponA;
   a1.weaponUpgrades.longRange = upgradeA;
   a1.loaded.longRange = true;
-  // Assert the tier we asked for is the tier we got — a typo would otherwise
+  // Assert the tier we asked for is the tier we got, a typo would otherwise
   // degrade the cell to a different weapon-tier without a word.
   const prof = effectiveWeaponProfile("longRange", weaponA, a1);
   if (!prof) throw new Error(`duel-sim: no long-range profile for weapon "${weaponA}".`);
   if (prof.upgrade?.id !== upgradeA) {
-    throw new Error(`duel-sim: upgrade "${upgradeA}" rejected for "${weaponA}" — profile carries "${prof.upgrade?.id ?? null}".`);
+    throw new Error(`duel-sim: upgrade "${upgradeA}" rejected for "${weaponA}", profile carries "${prof.upgrade?.id ?? null}".`);
   }
 
   const b1 = room.rigs.find((r) => r.name === "B1");
 
   // Both duellists are one policy bound to one distance, and combat.js:673 refuses
-  // an out-of-range shot as `{ ok: false, reason: "range" }` — which performAction
+  // an out-of-range shot as `{ ok: false, reason: "range" }`: which performAction
   // swallows via `return !!res` with no reason recorded, while the Fire tile stays
   // `enabled` (availableActions is given no distance and cannot know). Caught live:
   // a Siege Maul control at the Sniper Cannon's 20" sweet spot fired into the void
@@ -124,10 +124,10 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
 
   let guard = 0;
   while (!room.game.outcome && room.game.round <= DUEL_ROUNDS) {
-    if (guard++ >= 3000) throw new Error("duel-sim: loop guard tripped — the driver is spinning.");
+    if (guard++ >= 3000) throw new Error("duel-sim: loop guard tripped, the driver is spinning.");
     const g = room.game;
     // Recorded HERE, inside the loop, rather than read off room.game.round at the
-    // end — that would report a round nobody played. We claim no objectives, so VP
+    // end, that would report a round nobody played. We claim no objectives, so VP
     // ends 0-0 unless a Priority Elimination kill breaks it, and advanceRound
     // answers a tie at MAX_ROUNDS by opening Sudden Death: round becomes 11 and the
     // loop exits on its bound. A `break` (a wreck) likewise wants the round it
@@ -140,7 +140,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
     if (g.phase === "recovery") {
       // Resolves only once BOTH sides have submitted. No claims: objectives are
       // out of scope, and a VP claim would change what we are measuring. Re-check
-      // the phase between submissions — the second one advances the round, and a
+      // the phase between submissions, the second one advances the round, and a
       // third `vp` into the next phase would be a dropped command.
       for (const s of ["a", "b"]) {
         if (room.game.phase !== "recovery") break;
@@ -150,7 +150,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
     }
 
     // The second player gets exactly 1 Answer token per round and there is NO
-    // decline path — pendingAnswer blocks activate until it is spent. Spending
+    // decline path, pendingAnswer blocks activate until it is spent. Spending
     // sets a preparation, and Brace is -2 Penetration on the front arc, so it goes on a
     // bystander. Answering with a duellist would silently corrupt every number.
     // (Recovery clears every preparation, so the same bystander is eligible again
@@ -177,7 +177,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
     // An Arms hit at 0 SP rolls a weapon dead (game-state.js:1679) and
     // combat.js:668 then refuses the shot as `weapon-destroyed`, which
     // performAction's `return !!res` swallows with no reason recorded. policy.mjs
-    // owns that refusal now (b068fca — its fourth documented blind spot): a
+    // owns that refusal now (b068fca, its fourth documented blind spot): a
     // gunless rig vents instead of firing into the void, so this is no longer
     // load-bearing for keeping the loop alive.
     //
@@ -197,13 +197,13 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
       // sweep records INTENDED damage and never truncates; the real applyDamage
       // walks SP down against actual pools. On a fresh target they agree; on a
       // damaged one they diverge by construction. Measure the delta ACROSS THIS
-      // COMMAND, and only while B1 is untouched — B1 can self-damage first
+      // COMMAND, and only while B1 is untouched, B1 can self-damage first
       // (overheat, burning), which would otherwise be booked as A1's output.
       const isFirstShot = firstShotSp == null && rig.name === "A1"
         && next.attrs.action === "fire" && totalSp(b1) === b1StartSp;
       // A policy command is NOT held to the lifecycle verbs' standard, because a
       // refusal here can be the rules talking. Ion Storm (§13, Arc Gun) refuses
-      // the shot after a discharge and CONSUMES the lock doing it — the engine
+      // the shot after a discharge and CONSUMES the lock doing it, the engine
       // changed nothing the version counter can see, yet the retry succeeds. So
       // re-ask the policy instead of throwing, and count consecutive no-ops: a
       // refusal that clears itself moves on, a genuine spin trips the guard with
@@ -214,7 +214,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
       } else if (++noops >= 3) {
         throw new Error(
           `duel-sim: "${next.attrs.action}" no-opped ${noops}x in a row `
-          + `(${lastRejectionReason() || "no reason recorded"}) — ${at()}, `
+          + `(${lastRejectionReason() || "no reason recorded"}), ${at()}, `
           + `attrs ${JSON.stringify(next.attrs)}`,
         );
       }
@@ -227,10 +227,10 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
   }
 
   return {
-    spDealt: b1StartSp - totalSp(b1),   // A1's output — the primary signal
-    spTaken: a1StartSp - totalSp(a1),   // B1's output — free, and the only way denial shows
+    spDealt: b1StartSp - totalSp(b1),   // A1's output, the primary signal
+    spTaken: a1StartSp - totalSp(a1),   // B1's output, free, and the only way denial shows
     wrecked: !!b1.destroyed,
-    weaponLost,                         // A1's gun was shot off — spDealt is capped, not measured
+    weaponLost,                         // A1's gun was shot off, spDealt is capped, not measured
     rounds: roundsPlayed,
     firstShotSp,
   };
@@ -246,7 +246,7 @@ import { WEAPONS, WEAPON_UPGRADES } from "../../shared/game-state.js";
 
 const TRIALS = Number(process.env.TRIALS || 500);
 const CHASSIS_A = "medium-lance-mortar";
-const CHASSIS_B = "medium-lance-mortar"; // the CONTROL — a documented constant
+const CHASSIS_B = "medium-lance-mortar"; // the CONTROL, a documented constant
 // Side, not front: arcBonus returns null for Raking Fire on the front arc, so a
 // front sweep measures Mini Gun and Double MG as a structural zero (F7).
 const ARC = "side";
@@ -266,18 +266,18 @@ async function main() {
     // No `?? 12` fallback. A silent default distance is exactly the buried
     // measurement decision this harness exists to stop: the cell would still
     // print a tidy number, just for a range nobody chose. Today every long-range
-    // weapon carries a sweet spot, so this throw is unreachable — it is here for
+    // weapon carries a sweet spot, so this throw is unreachable, it is here for
     // the day someone adds one that does not.
     if (!Number.isFinite(prof.sweet)) {
-      throw new Error(`duel-sim sweep: "${weapon}" has no numeric sweet spot (got ${prof.sweet}) — the sweep must not guess a distance for it.`);
+      throw new Error(`duel-sim sweep: "${weapon}" has no numeric sweet spot (got ${prof.sweet}), the sweep must not guess a distance for it.`);
     }
     const distance = prof.sweet; // sweet spot only
     // A weapon with no upgrade list would contribute zero rows and the sweep
-    // would under-report it in silence — the reader counts 30 rows and never
+    // would under-report it in silence, the reader counts 30 rows and never
     // learns which weapon went missing. Throw instead.
     const upgrades = WEAPON_UPGRADES[weapon];
     if (!upgrades?.length) {
-      throw new Error(`duel-sim sweep: no WEAPON_UPGRADES for "${weapon}" — it would vanish from the sweep without a word.`);
+      throw new Error(`duel-sim sweep: no WEAPON_UPGRADES for "${weapon}", it would vanish from the sweep without a word.`);
     }
     for (const u of upgrades) {
       let spDealt = 0, spTaken = 0, wrecks = 0, rounds = 0, lost = 0, n = 0;

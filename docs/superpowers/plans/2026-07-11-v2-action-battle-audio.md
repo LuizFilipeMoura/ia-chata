@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Play layered screamed-voice + SFX on player actions, a damage SFX when a rig loses Structure Points, and a looping engine idle bed during your turn — all in the native V2 frontend, driven client-side with no AI model.
+**Goal:** Play layered screamed-voice + SFX on player actions, a damage SFX when a rig loses Structure Points, and a looping engine idle bed during your turn, all in the native V2 frontend, driven client-side with no AI model.
 
 **Architecture:** Three pure-ish audio modules under `client/src/v2/audio/` (asset loader, Web Audio mixer singleton, action registry), a `useV2Commands` wrapper that fires audio on `verb:"action"`, a `useBattleAudio` hook bound to the mixer's external store, plus small edits to `useV2BattleWatchers` (damage + engine loop) and `BattleHud` (mute toggle). All new imports are V2-internal or allowed shared logic/assets, so `no-v1-imports.test.ts` stays green.
 
@@ -17,18 +17,18 @@
 - **Run one test file:** `npx vitest run <path-substring>` (e.g. `npx vitest run soundAssets`).
 - **Run the whole suite:** `npm test`.
 - Tests are colocated (`foo.ts` → `foo.test.ts[x]`), use `expect/test/vi` from `vitest`.
-- jsdom has **no** `AudioContext` and **no** `fetch` for audio — the mixer takes injected dependencies via `configureAudio(...)` so tests never touch real audio.
+- jsdom has **no** `AudioContext` and **no** `fetch` for audio, the mixer takes injected dependencies via `configureAudio(...)` so tests never touch real audio.
 
 ## File Structure
 
-- Create `client/src/v2/audio/soundAssets.ts` — stem → bundled URL resolver.
-- Create `client/src/v2/audio/audioMixer.ts` — Web Audio singleton: enabled store, `play`, `startLoop`/`stopLoop`.
-- Create `client/src/v2/audio/actionAudio.ts` — registry + `playAction`/`playDamage`/`startEngineLoop`/`stopEngineLoop`.
-- Create `client/src/v2/audio/useBattleAudio.ts` — `{ on, toggle }` hook via `useSyncExternalStore`.
-- Create `client/src/v2/hooks/useV2Commands.ts` — command wrapper firing `playAction`.
-- Modify `client/src/v2/battle/ActionConsole.tsx`, `client/src/v2/state/V2BattleActionsContext.tsx`, `client/src/v2/overlays/AttackWizard.tsx` — swap `useCommands` → `useV2Commands`.
-- Modify `client/src/v2/hooks/useV2BattleWatchers.tsx` — damage effect + engine-loop effect.
-- Modify `client/src/v2/components/BattleHud.tsx` — mute button.
+- Create `client/src/v2/audio/soundAssets.ts`: stem → bundled URL resolver.
+- Create `client/src/v2/audio/audioMixer.ts`: Web Audio singleton: enabled store, `play`, `startLoop`/`stopLoop`.
+- Create `client/src/v2/audio/actionAudio.ts`: registry + `playAction`/`playDamage`/`startEngineLoop`/`stopEngineLoop`.
+- Create `client/src/v2/audio/useBattleAudio.ts`: `{ on, toggle }` hook via `useSyncExternalStore`.
+- Create `client/src/v2/hooks/useV2Commands.ts`: command wrapper firing `playAction`.
+- Modify `client/src/v2/battle/ActionConsole.tsx`, `client/src/v2/state/V2BattleActionsContext.tsx`, `client/src/v2/overlays/AttackWizard.tsx`: swap `useCommands` → `useV2Commands`.
+- Modify `client/src/v2/hooks/useV2BattleWatchers.tsx`: damage effect + engine-loop effect.
+- Modify `client/src/v2/components/BattleHud.tsx`: mute button.
 - Rename the two engine `.mp3` assets.
 
 ---
@@ -39,7 +39,7 @@
 - Rename: `client/src/assets/sounds/old_tank_engine_runn_#4-1783782719259.mp3` → `engine_idle_1.mp3`
 - Rename: `client/src/assets/sounds/old_tank_engine_runn_#2-1783782725509.mp3` → `engine_idle_2.mp3`
 
-The `#` is a URL-fragment char and the timestamp is volatile — both break `import.meta.glob` `?url` and stable stems.
+The `#` is a URL-fragment char and the timestamp is volatile, both break `import.meta.glob` `?url` and stable stems.
 
 - [ ] **Step 1: Rename via git**
 
@@ -93,7 +93,7 @@ test("returns null for an unknown stem", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run soundAssets`
-Expected: FAIL — cannot resolve `./soundAssets`.
+Expected: FAIL, cannot resolve `./soundAssets`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -133,7 +133,7 @@ git commit -m "feat(v2): sound asset stem->URL loader"
 
 ---
 
-## Task 2: Mixer — enabled store + persistence
+## Task 2: Mixer, enabled store + persistence
 
 **Files:**
 - Create: `client/src/v2/audio/audioMixer.ts`
@@ -165,7 +165,7 @@ test("setEnabled persists and notifies subscribers", () => {
   expect(localStorage.getItem("v2BattleAudioOn")).toBe("false");
   unsub();
   setEnabled(true);
-  expect(cb).toHaveBeenCalledTimes(1); // unsubscribed — no further calls
+  expect(cb).toHaveBeenCalledTimes(1); // unsubscribed, no further calls
 });
 
 test("reads persisted false on reset", () => {
@@ -178,7 +178,7 @@ test("reads persisted false on reset", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run audioMixer`
-Expected: FAIL — cannot resolve `./audioMixer`.
+Expected: FAIL, cannot resolve `./audioMixer`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -214,7 +214,7 @@ export function setEnabled(v: boolean): void {
   enabled = v;
   try {
     localStorage.setItem(STORAGE_KEY, String(v));
-  } catch { /* storage unavailable — in-memory only */ }
+  } catch { /* storage unavailable, in-memory only */ }
   if (!v) stopLoop();
   notify();
 }
@@ -244,7 +244,7 @@ git commit -m "feat(v2): audio mixer enabled store + persistence"
 
 ---
 
-## Task 3: Mixer — layered `play`
+## Task 3: Mixer, layered `play`
 
 **Files:**
 - Modify: `client/src/v2/audio/audioMixer.ts`
@@ -339,7 +339,7 @@ function mkSeqRng() {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run audioMixer`
-Expected: FAIL — `configureAudio`/`play` not exported.
+Expected: FAIL, `configureAudio`/`play` not exported.
 
 - [ ] **Step 3: Extend the implementation**
 
@@ -375,7 +375,7 @@ function getCtx(): AudioContext | null {
   try {
     ctx = deps.ctxFactory();
   } catch {
-    ctx = null; // no Web Audio support — feature silently off
+    ctx = null; // no Web Audio support, feature silently off
   }
   return ctx;
 }
@@ -465,7 +465,7 @@ git commit -m "feat(v2): audio mixer layered play with no-repeat + gains"
 
 ---
 
-## Task 4: Mixer — engine loop channel
+## Task 4: Mixer, engine loop channel
 
 **Files:**
 - Modify: `client/src/v2/audio/audioMixer.ts`
@@ -484,7 +484,7 @@ test("startLoop plays a looping source at low gain and is idempotent", async () 
   expect(ctx.sources.length).toBe(1);
   expect(ctx.sources[0].loop).toBe(true);
   expect(ctx.gains[0].gain.value).toBe(0.3);
-  startLoop(["e1", "e2"]); // already looping — no new source
+  startLoop(["e1", "e2"]); // already looping, no new source
   await flush();
   expect(ctx.sources.length).toBe(1);
 });
@@ -514,7 +514,7 @@ test("setEnabled(false) stops the loop", async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run audioMixer`
-Expected: FAIL — `startLoop` not exported / no-op behavior.
+Expected: FAIL, `startLoop` not exported / no-op behavior.
 
 - [ ] **Step 3: Extend the implementation**
 
@@ -649,7 +649,7 @@ test("registry covers the 10 v1 action keys", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run actionAudio`
-Expected: FAIL — cannot resolve `./actionAudio`.
+Expected: FAIL, cannot resolve `./actionAudio`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -756,7 +756,7 @@ test("does not fire playAction for non-action verbs", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run useV2Commands`
-Expected: FAIL — cannot resolve `./useV2Commands`.
+Expected: FAIL, cannot resolve `./useV2Commands`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -802,7 +802,7 @@ git commit -m "feat(v2): useV2Commands wrapper firing action audio"
 - Modify: `client/src/v2/state/V2BattleActionsContext.tsx:12`
 - Modify: `client/src/v2/overlays/AttackWizard.tsx` (its `useCommands` import + call)
 
-No behavior change beyond audio — existing tests must stay green. Each site currently does `import { useCommands } from "../../hooks/useCommands";` (or `"../../hooks/useCommands"` relative to its folder) and `const sendCommand = useCommands();`.
+No behavior change beyond audio, existing tests must stay green. Each site currently does `import { useCommands } from "../../hooks/useCommands";` (or `"../../hooks/useCommands"` relative to its folder) and `const sendCommand = useCommands();`.
 
 - [ ] **Step 1: Update ActionConsole**
 
@@ -847,12 +847,12 @@ and replace `const sendCommand = useCommands();` with `const sendCommand = useV2
 
 Run: `grep -n "useCommands" client/src/v2/overlays/AttackWizard.tsx`
 Expected: no remaining reference to `hooks/useCommands`; one import of `../hooks/useV2Commands`.
-(If AttackWizard also destructures `sendReact` from `useV2BattleActions`, leave that untouched — only the `useCommands` line changes.)
+(If AttackWizard also destructures `sendReact` from `useV2BattleActions`, leave that untouched, only the `useCommands` line changes.)
 
 - [ ] **Step 5: Run the affected suites + guard**
 
 Run: `npx vitest run ActionConsole V2BattleActionsContext AttackWizard no-v1-imports`
-Expected: PASS — behavior unchanged; guard still green (new import is V2-internal).
+Expected: PASS, behavior unchanged; guard still green (new import is V2-internal).
 
 - [ ] **Step 6: Commit**
 
@@ -891,7 +891,7 @@ test("reflects mixer enabled state and toggles it", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run useBattleAudio`
-Expected: FAIL — cannot resolve `./useBattleAudio`.
+Expected: FAIL, cannot resolve `./useBattleAudio`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -950,7 +950,7 @@ test("audio mute button toggles battle audio", async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run BattleHud`
-Expected: FAIL — no button matching `/audio/i`.
+Expected: FAIL, no button matching `/audio/i`.
 
 - [ ] **Step 3: Update BattleHud**
 
@@ -1035,7 +1035,7 @@ test("plays damage sfx when a rig's total SP drops", async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run useV2BattleWatchers`
-Expected: FAIL — `playDamage` not called (effect absent).
+Expected: FAIL, `playDamage` not called (effect absent).
 
 - [ ] **Step 3: Add the effect**
 
@@ -1100,7 +1100,7 @@ git commit -m "feat(v2): damage sfx on structure-point loss"
 
 Loop while it's the local player's turn during the activation phase; stop otherwise and on unmount. "Your turn" = `phaseSummary(game, rigs).turnSide === mySide`.
 
-The `startEngineLoop`/`stopEngineLoop` mocks and `waitFor`/`gameBase` from Task 10 are already in this file — reuse them.
+The `startEngineLoop`/`stopEngineLoop` mocks and `waitFor`/`gameBase` from Task 10 are already in this file, reuse them.
 
 - [ ] **Step 1: Write the failing test (append)**
 
@@ -1122,7 +1122,7 @@ test("starts engine loop on your turn, stops on opponent turn", async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run useV2BattleWatchers`
-Expected: FAIL — engine loop functions never called.
+Expected: FAIL, engine loop functions never called.
 
 - [ ] **Step 3: Add the effect**
 
@@ -1176,7 +1176,7 @@ git commit -m "feat(v2): looping engine idle bed on your turn"
 - [ ] **Step 1: Run the whole client suite + guard**
 
 Run: `npx vitest run`
-Expected: PASS — all V2 audio suites plus existing suites; `no-v1-imports` green.
+Expected: PASS, all V2 audio suites plus existing suites; `no-v1-imports` green.
 
 - [ ] **Step 2: Run the full project test script**
 
@@ -1207,5 +1207,5 @@ git commit -m "chore(v2): battle audio verification pass"
 
 ## Notes / known gaps (from the spec)
 
-- Return-Fire dispatches `sendReact` (`verb:"react"`), so it does not bark in v1 — intentional.
+- Return-Fire dispatches `sendReact` (`verb:"react"`), so it does not bark in v1, intentional.
 - Weapon-ability barks (Harpoon Winch, Rivet Lock, …), per-rig voice variation, spatial audio, and opponent-action audio are out of scope; the registry grows to add them later.

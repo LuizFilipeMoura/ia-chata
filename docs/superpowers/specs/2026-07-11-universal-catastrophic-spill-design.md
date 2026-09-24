@@ -41,7 +41,7 @@ New helper `spillTarget(rig, sourceLoc)` picks the recipient:
 1. Prefer the **structural** part (Hull) if it has SP > 0.
 2. Else the first part with SP > 0 in role order **power → mobility → weapon**,
    excluding `sourceLoc`.
-3. Else (no living part — unit is already all-zero and thus destroyed) fall back
+3. Else (no living part, unit is already all-zero and thus destroyed) fall back
    to the structural part; its own §8 additional clause then fires. Edge case.
 
 Spill routes through `applyDamage`, so hitting a target that drops to 0 fires
@@ -52,7 +52,7 @@ This is an **auto-target**, not the §7 defender-choice. `rules.md` §7 keeps it
 
 ## Kneecapper (§13) guard
 
-`opts.noSpill` continues to block the spill — now for **both** weapon and
+`opts.noSpill` continues to block the spill, now for **both** weapon and
 mobility. A Kneecapper limbs-only rake immobilises / kills the limb but never
 bleeds damage into the Hull. "Cripples, never kills" preserved.
 
@@ -69,8 +69,8 @@ bleeds damage into the Hull. "Cripples, never kills" preserved.
 
 ### Changes
 
-1. **`shared/game-state.js` — new `spillTarget(rig, sourceLoc)` helper.**
-2. **`shared/game-state.js` — `catastrophicAdditional`:**
+1. **`shared/game-state.js`: new `spillTarget(rig, sourceLoc)` helper.**
+2. **`shared/game-state.js`: `catastrophicAdditional`:**
    - `mobility` branch: set `immobilised`, then (unless `opts.noSpill`) spill 1
      SP to `spillTarget`.
    - `weapon` branch: spill 1 SP (was 3) to `spillTarget` (unless `opts.noSpill`).
@@ -78,7 +78,7 @@ bleeds damage into the Hull. "Cripples, never kills" preserved.
    - §8 Legs "Additional" cell → immobilised; **1 damage spills to Hull**.
    - §8 Arms "Additional" cell → **1 damage to Hull** (overflow); weapon already
      gone.
-   - §7 — add a note that the engine auto-targets Hull (else next living part),
+   - §7, add a note that the engine auto-targets Hull (else next living part),
      not defender-choice.
 
 ## Behavior after
@@ -105,4 +105,4 @@ bleeds damage into the Hull. "Cripples, never kills" preserved.
     (first-zero cook-off).
   - `weapon-role zero rolls the weapon-destroy D12 and cooks off 1+1`.
   - Hull/Engine additional = destroyed.
-  - `Kneecapper — a rake to 0 arms ... never spills into hull/engine`.
+  - `Kneecapper, a rake to 0 arms ... never spills into hull/engine`.

@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 // V2's whole isolation guarantee is that every rule lives under `.v2-root`, so
 // nothing can leak into V1's global stylesheet. A bare `:root`, `html`, or
 // `body` selector at the start of a rule would break that. This guards it by
-// reading every V2 stylesheet as raw text (via Vite's glob import — no node fs,
+// reading every V2 stylesheet as raw text (via Vite's glob import, no node fs,
 // so it stays typed under the client tsconfig).
 const sheets = import.meta.glob("./*.css", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 

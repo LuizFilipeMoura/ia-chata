@@ -1,4 +1,4 @@
-/* ===== Dice-resolution overlay — the "resolution readout" ===== */
+/* ===== Dice-resolution overlay, the "resolution readout" ===== */
 .roll-scrim {
   position: fixed; inset: 0; z-index: 85;
   display: grid; place-items: center;
@@ -69,7 +69,7 @@
   font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--txt);
   opacity: 0; transform: translateY(4px); animation: line-in .35s ease .45s forwards;
 }
-/* Structured damage readout — the equation form of the summary line.
+/* Structured damage readout, the equation form of the summary line.
    Makes the inputs (hits, weapon/ram Penetration) and where each modifier comes from
    explicit, instead of a flat sentence. */
 .rx-break {
@@ -120,7 +120,7 @@
   font-size: .48rem; letter-spacing: .08em; text-transform: uppercase; color: var(--txt-faint);
   white-space: nowrap;
 }
-/* The Penetration / modifier term is where the "+9" comes from — light it amber so the
+/* The Penetration / modifier term is where the "+9" comes from, light it amber so the
    player's eye lands on the source of the bonus. */
 .rx-term[data-tone="mod"] {
   border-color: rgba(231,154,61,.5);
@@ -224,7 +224,7 @@
 .tb-cta:empty { display: none; }
 .tb-cta .btn { padding: .4rem .7rem; font-size: .68rem; }
 
-/* tone: your move — go */
+/* tone: your move, go */
 .turn-banner[data-tone="act"] .tb-card {
   background: linear-gradient(180deg, #1e4029, #142a1c);
   border-color: #6cc47f;
@@ -233,7 +233,7 @@
 .turn-banner[data-tone="act"] .tb-icon { color: var(--act-hi); filter: drop-shadow(0 0 5px #6cc47f); }
 .turn-banner[data-tone="act"] .tb-primary { color: var(--act-hi); }
 
-/* tone: setup / optional — guide (oil) */
+/* tone: setup / optional, guide (oil) */
 .turn-banner[data-tone="guide"] .tb-card {
   background: linear-gradient(180deg, #2a2113, #1a1408);
   border-color: var(--oil);
@@ -242,7 +242,7 @@
 .turn-banner[data-tone="guide"] .tb-icon { color: var(--guide-hi); filter: drop-shadow(0 0 5px var(--oil)); }
 .turn-banner[data-tone="guide"] .tb-primary { color: var(--guide-hi); }
 
-/* tone: waiting on opponent — muted */
+/* tone: waiting on opponent, muted */
 .turn-banner[data-tone="wait"] .tb-card {
   background: var(--iron-900);
   border-color: var(--line);
@@ -542,7 +542,7 @@ body.my-turn-glow::after {
 .dwr-btn:not(:disabled):active { transform: translateY(1px); }
 .dwr-btn:disabled { opacity: .4; }
 
-/* Timed Move / Sprint hold — the Confirm button unlocks only once this bar fills */
+/* Timed Move / Sprint hold, the Confirm button unlocks only once this bar fills */
 .dwr-move-call { color: var(--oil-hi); font-weight: 600; }
 .dwr-move-call.is-ready { color: #6cc47f; }
 .dwr-cost { font-family: var(--font-mono); font-size: .62rem; letter-spacing: .04em; color: var(--txt-faint); margin-top: .15rem; text-align: center; }
@@ -572,7 +572,7 @@ body.my-turn-glow::after {
 .rx-choice-label { font-family: var(--font-display); font-weight: 700; font-size: .82rem; }
 .rx-choice-rule { font-family: var(--font-mono); font-size: .58rem; color: var(--txt-dim); line-height: 1.3; }
 
-/* ===== Reaction reveal — the facedown token flip ===== */
+/* ===== Reaction reveal, the facedown token flip ===== */
 .rx-reveal { display: flex; flex-direction: column; align-items: center; padding: .9rem .7rem .4rem; }
 .rx-token {
   --face: var(--oil);

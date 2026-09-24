@@ -48,7 +48,7 @@ test("the glossary teaches the wound roll, not the deleted impact table", () => 
 // penetration rework. The scan matters more than the id assert: a doc pass is
 // exactly how deleted vocabulary leaks back into a def. rules.md has since been
 // stripped too, and carries its own Overmatch guard (rulebook.test.js's `legacy`
-// list) — both surfaces are bound, so neither can quietly re-teach the rule.
+// list), both surfaces are bound, so neither can quietly re-teach the rule.
 test("the glossary does not teach Overmatch, deleted with the penetration rework", () => {
   assert.ok(!GLOSSARY.some((g) => g.id === "overmatch"), "overmatch entry must be gone");
   for (const g of GLOSSARY) {
@@ -61,7 +61,7 @@ test("the glossary does not teach Overmatch, deleted with the penetration rework
 // Both rails of the wound clamp are player-facing rules, and the entry that used
 // to teach the floor half ("Penetration past Toughness + 4 is wasted") was the
 // deleted `overmatch` one. Deleting a correction while leaving the claim it
-// corrected is a regression, so the floor half lives here now — see rules.js's
+// corrected is a regression, so the floor half lives here now, see rules.js's
 // woundTarget, which attributes each rail to its own job.
 test("the glossary teaches both rails of the wound roll, not just the ceiling", () => {
   const def = GLOSSARY.find((g) => g.id === "wound-roll").def;

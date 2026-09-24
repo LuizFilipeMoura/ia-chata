@@ -45,9 +45,9 @@ export function firstEquipmentUpgradeId(equipmentId: string): string | null {
 // commission loadout cards. Damage is represented by the gun itself, so it is
 // intentionally absent here.
 export const MODULE_BLURB: Record<string, string> = {
-  repair:  'Field Weld — heal an ally or self within 2".',
-  coolant: 'Vent — cool a friendly Rig within 2" by 2 heat.',
-  recon:   'Paint — mark an enemy; allies ignore its cover and gain +1 Aim.',
+  repair:  'Field Weld, heal an ally or self within 2".',
+  coolant: 'Vent, cool a friendly Rig within 2" by 2 heat.',
+  recon:   'Paint, mark an enemy; allies ignore its cover and gain +1 Aim.',
 };
 
 export interface UpgradeTier {
@@ -71,10 +71,10 @@ export function upgradePips(nature: string): { reward: number; risk: number } {
 }
 
 // Payoff vs Catch text for a tier. Prefer an authored `catch`; otherwise split
-// the tag on the first cost delimiter (" — " or ";"). A tag with no delimiter is
+// the tag on the first cost delimiter (", " or ";"). A tag with no delimiter is
 // all payoff and has no catch.
 export function splitUpgradeTag(tier: UpgradeTier): { payoff: string; catch: string | null } {
-  const m = tier.tag.match(/^(.*?)(?:\s+—\s+|;\s+)(.*)$/);
+  const m = tier.tag.match(/^(.*?)(?:\s+-\s+|;\s+)(.*)$/);
   const payoff = m ? m[1].trim() : tier.tag;
   const parsed = m ? m[2].trim() : null;
   return { payoff, catch: tier.catch ?? parsed };

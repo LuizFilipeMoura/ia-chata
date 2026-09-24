@@ -1,5 +1,5 @@
 // The opponent bot's public entry point. chooseAction generates every legal
-// candidate, scores each, and returns the single best command — or null to end
+// candidate, scores each, and returns the single best command, or null to end
 // the activation. The bot never mutates state itself: it hands one command at a
 // time to applyCommand, so it goes through the same validation, rejection, and
 // resolution a human does and can neither cheat nor desync.
@@ -49,7 +49,7 @@ function toCommand(cand, rig) {
 
 // A total order over candidates for tie-breaking. Array sort is not stable across
 // engines for large inputs, so two candidates with equal scores must resolve the
-// same way every run — otherwise a bot-vs-bot game stops being reproducible from
+// same way every run, otherwise a bot-vs-bot game stops being reproducible from
 // its seed. Order by the fields a candidate actually carries.
 function cmpStable(a, b) {
   return (a.action || "").localeCompare(b.action || "")
@@ -113,7 +113,7 @@ function candLabel(c) {
 
 // Drive one rig's whole activation: activate it, then feed commands to
 // applyCommand until chooseAction passes, then end the activation. The guard is a
-// safety net — chooseAction reads live state, so a scoring bug that kept returning
+// safety net, chooseAction reads live state, so a scoring bug that kept returning
 // an accepted-but-pointless command would otherwise spin; 12 is more actions than
 // any rig can take. `options.random` threads the seeded RNG through every roll, so
 // a whole game is reproducible.
@@ -130,13 +130,13 @@ export function runBotActivation(room, rig, options = {}) {
   const log = [];
   // Active only while this rig genuinely holds the floor. A pendingReaction (a
   // target's Evasive/Return we just tripped) or pendingBlast (a §9 cook-off we
-  // just caused) parks the activation until it is resolved — stop cleanly so the
+  // just caused) parks the activation until it is resolved, stop cleanly so the
   // driver (driveBots) can clear it, then resume this same rig on the next pass.
   const active = () => room.game.turn?.activeRigId === rig.id
     && room.game.phase === "activation"
     && !room.game.pendingReaction && !room.game.pendingBlast;
   for (let guard = 0; guard < 12; guard++) {
-    // A command can end the activation out from under us — a kill that annihilates
+    // A command can end the activation out from under us, a kill that annihilates
     // the enemy side ends the game and nulls the turn, a destroyed engine parks a
     // pendingBlast. Stop the moment this rig is no longer the one acting.
     if (!active()) break;
@@ -166,7 +166,7 @@ export function driveBots(room, options = {}) {
   for (let guard = 0; guard < 2000; guard++) {
     const g = room.game;
     if (g.phase === "finished" || g.outcome) return;
-    // Mandatory Answer-token gate — only clear it for a bot side (minimal brace).
+    // Mandatory Answer-token gate, only clear it for a bot side (minimal brace).
     if (g.pendingAnswer) {
       if (!isBot(g.pendingAnswer.side)) return;   // a human still owes their answer
       const side = g.pendingAnswer.side;
@@ -175,7 +175,7 @@ export function driveBots(room, options = {}) {
       applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side } }, {}, options);
       continue;
     }
-    // §9 munition cook-off — clear it (empty targets, no secondary blast) only
+    // §9 munition cook-off, clear it (empty targets, no secondary blast) only
     // when a bot caused it; a human declares their own blast.
     if (g.pendingBlast) {
       const src = room.rigs.find((r) => r.id === g.pendingBlast.sourceId);
@@ -186,7 +186,7 @@ export function driveBots(room, options = {}) {
     // A pending reaction is always a defender's decision; bots never arm the
     // pre-resolution preps that create one, so this is a human's to resolve.
     if (g.pendingReaction) return;
-    // Initiative is a mutual dice roll with no decision — roll it whenever a bot
+    // Initiative is a mutual dice roll with no decision, roll it whenever a bot
     // is in the game so a bot side never stalls waiting on the human to click it.
     if (g.phase === "initiative") {
       if (!room.game.sides.some((s) => s.bot)) return;
@@ -195,7 +195,7 @@ export function driveBots(room, options = {}) {
     }
     if (g.phase === "activation") {
       const t = g.turn;
-      if (!t || !isBot(t.side)) return;           // a human's turn — hand control back
+      if (!t || !isBot(t.side)) return;           // a human's turn, hand control back
       const rig = room.rigs.find((r) => (r.owner || "a") === t.side && !r.destroyed && !r.activated);
       if (!rig) return;
       runBotActivation(room, rig, options);

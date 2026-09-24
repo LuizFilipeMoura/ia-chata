@@ -1,7 +1,7 @@
-# V2 Client Audit — Equipment Mechanics Surfacing
+# V2 Client Audit, Equipment Mechanics Surfacing
 
 **Date:** 2026-07-14
-**Status:** Audit only — no code changed. Ready for an implementing agent.
+**Status:** Audit only, no code changed. Ready for an implementing agent.
 **Scope:** The 16 Tuned/Prototype equipment mechanics wired into the engine on
 `frontend/v2-redesign` (spec `docs/superpowers/specs/2026-07-14-equipment-mechanics-rollout-design.md`)
 are complete and tested **server-side** (587/587 shared tests). This document
@@ -10,22 +10,22 @@ lists the gaps to close. Engine behavior is out of scope here.
 
 V1 is retired (`client/src/main.tsx:12-21` mounts only V2; the comment there says
 V1 is "no longer reachable"). Ignore `client/src/components/**` legacy render
-paths and `client/src/hooks/useBattleWatchers.tsx` — audit and implement against
+paths and `client/src/hooks/useBattleWatchers.tsx`: audit and implement against
 V2 (`client/src/v2/**`).
 
 ## Verdict at a glance
 
 | Capability | State | Severity |
 |---|---|---|
-| Fire `cryo` / `nanite` / `meltdown` actives | **Impossible** — no button, no param UI | Blocker |
-| Fire Grapnel **reel** mode | **Impossible** — button always yanks self | Blocker |
-| See charges / cooldowns / counters (`equipState`) | **Invisible** — zero client reads | High |
+| Fire `cryo` / `nanite` / `meltdown` actives | **Impossible**: no button, no param UI | Blocker |
+| Fire Grapnel **reel** mode | **Impossible**: button always yanks self | Blocker |
+| See charges / cooldowns / counters (`equipState`) | **Invisible**: zero client reads | High |
 | Client `Rig` type declares the new fields | **Missing** | Medium (enables the above) |
-| Narrated effects (Chaff/Grapnel/Meltdown/Backdraft) render | **Works** (generic renderer) — two edge caveats | Low |
+| Narrated effects (Chaff/Grapnel/Meltdown/Backdraft) render | **Works** (generic renderer), two edge caveats | Low |
 
 The data is already on the wire: `publicState` (`shared/game-state.js:3634-3666`)
 serializes the whole rig unchanged, so `equipState` + `reactorOverdriveActive`
-reach the client via `roomReducer` and are readable today — nothing is displayed.
+reach the client via `roomReducer` and are readable today, nothing is displayed.
 This is a pure **display + input + typing** gap, not a transport gap.
 
 ---
@@ -52,14 +52,14 @@ This is a pure **display + input + typing** gap, not a transport gap.
   - `prepare` → sends `prep` (`:231`)
   - support `paint`/`fieldweld`/`vent` → sends `target` (+`loc`) (`:295-297`)
   - `lock` → `AttackWizard.tsx:573` sends `target`
-  There is **no generic param mechanism** — a new active only gets params if a
+  There is **no generic param mechanism**: a new active only gets params if a
   branch is written for it.
 
 ---
 
 ## Gaps and implementation guidance
 
-### G1 — `cryo` / `nanite` / `meltdown` are unfireable (Blocker)
+### G1, `cryo` / `nanite` / `meltdown` are unfireable (Blocker)
 
 These are **not** `EQUIPMENT[].active` keys; they are upgrade-gated bespoke engine
 branches (`shared/game-state.js:2503` cryo, `:2524` nanite, `:2547` meltdown),
@@ -68,16 +68,16 @@ reachable only when the rig carries the matching Prototype upgrade. Because
 buttons, and the param-free fall-through could not supply their inputs anyway.
 
 Engine inputs each needs (read from `a.*` in the branch):
-- `cryo` — `a.n` (how many cryo to spend). Bounded by `rig.equipState.cryo` (0-3).
-- `nanite` — `a.target` (ally rig name; defaults to self) and `a.loc` (which
+- `cryo`: `a.n` (how many cryo to spend). Bounded by `rig.equipState.cryo` (0-3).
+- `nanite`: `a.target` (ally rig name; defaults to self) and `a.loc` (which
   location to seed). Costs 1 action + 1 heat; caps 3/location.
-- `meltdown` — `a.mode` (`"str"` | `"burst"`) and `a.n` (charge to spend, bounded
+- `meltdown`: `a.mode` (`"str"` | `"burst"`) and `a.n` (charge to spend, bounded
   by `rig.equipState.meltdownCharge`, 0-6).
 
 Work required:
 1. **Surface the buttons (shared).** Extend `availableActions` in
    `shared/battle-view.js` to also push these actives when the rig carries the
-   gating upgrade — read the upgrade via `equipmentUpgradeEffectOf(rig.equipment,
+   gating upgrade, read the upgrade via `equipmentUpgradeEffectOf(rig.equipment,
    rig.equipmentUpgrade)` (already imported in the engine). Give each a `key`,
    `label`, `heat`, and `enabled` (e.g. `meltdown`/`cryo` disabled when the
    relevant `equipState` count is 0). This is the single source the console reads,
@@ -94,7 +94,7 @@ Work required:
 3. Verify the drawer only appears for a rig actually carrying the upgrade (the
    shared `availableActions` gate already ensures the button only shows then).
 
-### G2 — Grapnel Launcher reel mode is unreachable (Blocker)
+### G2, Grapnel Launcher reel mode is unreachable (Blocker)
 
 A grapnel rig still shows the plain **"Jump Jets"** button (its active key is
 `jumpjets`, pushed by `battle-view.js:71-74`). `jumpjets` is not special-cased in
@@ -105,18 +105,18 @@ never be triggered.
 
 Work required:
 1. Detect a grapnel rig on the client (the rig carries `servo-actuators` +
-   `grapnel-launcher`; expose it via `availableActions` — e.g. relabel the active
+   `grapnel-launcher`; expose it via `availableActions`: e.g. relabel the active
    "Grapnel" and/or add a flag on the action entry so the console knows to open a
    picker instead of firing directly).
 2. Add an `onAction` branch that opens a mode picker: **Yank self** (sends
    `{ action: "jumpjets" }`, no extra) vs **Reel** (sends `{ action: "jumpjets",
-   mode: "reel", engage: <enemyName> }` with an enemy-target picker — reuse the
+   mode: "reel", engage: <enemyName> }` with an enemy-target picker, reuse the
    attack/support target-picker pattern).
 3. Optionally surface `rig.equipState.grapnelCooldown` so the button shows
-   "recharging — N round(s)" and is disabled while > 0 (the engine already rejects
-   it; the UI should reflect that — ties into G3).
+   "recharging, N round(s)" and is disabled while > 0 (the engine already rejects
+   it; the UI should reflect that, ties into G3).
 
-### G3 — Charges / cooldowns / counters are invisible (High)
+### G3, Charges / cooldowns / counters are invisible (High)
 
 No client code reads `equipState` or `reactorOverdriveActive` (confirmed zero
 hits). Players cannot see any of: `ablativeCharges` (0-2), `interceptors` (0-2),
@@ -133,7 +133,7 @@ rendered in `RigTerminal.tsx:96-105` (primary rig-detail surface) and
 
 Work required:
 1. Extend `rigModifiers` (shared) with chips for the live `equipState` counters
-   and `reactorOverdriveActive` — e.g. "Ablative ×2", "Cryo 3/3", "Meltdown 4/6",
+   and `reactorOverdriveActive`: e.g. "Ablative ×2", "Cryo 3/3", "Meltdown 4/6",
    "Solution 2/3", "PD ×2" (or "PD locked"), "Grapnel CD 2", "Nanites: legs ×2",
    "Overdrive". Choose `tone` to match existing chip conventions. Show a chip only
    when the counter is meaningful (non-zero / relevant equipment present).
@@ -145,7 +145,7 @@ Work required:
    grapnel cooldown, PD lockout), reflect the disabled/labelled state on the
    action button too (feeds back into G1/G2 via `availableActions` `enabled`).
 
-### G4 — Client `Rig` type omits the new fields (Medium — enabler)
+### G4, Client `Rig` type omits the new fields (Medium, enabler)
 
 `client/src/state/types.ts:36-60` declares none of `equipState`,
 `reactorOverdriveActive`, nor many existing transient fields `rigModifiers`
@@ -158,9 +158,9 @@ Work required: add an `equipState` interface (all 11 fields + optional
 Optionally backfill the other transient fields `rigModifiers` reads, but that's
 not required for this work.
 
-### G5 — Narration mostly works; two edge caveats (Low)
+### G5, Narration mostly works; two edge caveats (Low)
 
-The V2 roll console is **generic over `kind`** — it never whitelists or drops
+The V2 roll console is **generic over `kind`**: it never whitelists or drops
 unknown kinds, and renders both `summary` and the full `effects[]` array
 (`client/src/v2/overlays/RollConsole.tsx:128-233`, effects at `:420-435`; consumer
 `client/src/v2/hooks/useV2BattleWatchers.tsx:116-139`). So Chaff Burst (`perk`),
@@ -178,7 +178,7 @@ render as-is. No work needed for basic visibility. Two real caveats worth a chec
    `summary`. An effects-only narration with an empty `summary`, or one with no
    `rigId`, renders live but is **dropped from the recap**. Ensure each new
    narrated resolution sets `rigId` (the acting/affected rig) and a non-empty
-   `summary` — an engine-side check, verify per mechanic.
+   `summary`: an engine-side check, verify per mechanic.
 
 Cosmetic (optional): `equipment`/`perk` narrations show a generic uppercased kind
 header and no bespoke icon/SFX (`RollConsole.tsx:312-313`). They are fully
@@ -188,15 +188,15 @@ visible; only styling is bare. A per-kind icon/SFX map is a nice-to-have.
 
 ## Suggested order
 
-1. **G4** (types) — small, unblocks the `.tsx` work.
-2. **G1 + G2** (make the mechanics fireable) — the actual blockers; do the shared
+1. **G4** (types), small, unblocks the `.tsx` work.
+2. **G1 + G2** (make the mechanics fireable), the actual blockers; do the shared
    `availableActions` change first (it gates the buttons), then the client drawers.
-3. **G3** (surface the state) — high player value; extends `rigModifiers`.
-4. **G5** (narration caveats) — verify per mechanic; mostly confirmation.
+3. **G3** (surface the state), high player value; extends `rigModifiers`.
+4. **G5** (narration caveats), verify per mechanic; mostly confirmation.
 
 ## Verification checklist (for the implementing agent)
 
-Drive the running app (V2), not just unit tests — this is UI. For each:
+Drive the running app (V2), not just unit tests, this is UI. For each:
 - Commission a rig with the relevant upgrade; confirm the active's button appears
   only for that rig, with correct label/enabled state.
 - Fire each new active and confirm: (a) the command reaches the engine with the
@@ -212,7 +212,7 @@ Drive the running app (V2), not just unit tests — this is UI. For each:
 ## Out of scope (tracked elsewhere)
 
 - Two engine design decisions (Reactive Armor vs forced-severity; Reactor Overdrive
-  overheat-cap breach) — see the rollout memory / spec.
+  overheat-cap breach), see the rollout memory / spec.
 - Cross-mechanic interaction bugs (e.g. Point-Defense rerolling a nominally
-  unmissable Fire-Solution/Fire-Control volley) — separate integration-test effort.
+  unmissable Fire-Solution/Fire-Control volley), separate integration-test effort.
 - Kickstart Pistons Jump-into-contact follow-up (engine).

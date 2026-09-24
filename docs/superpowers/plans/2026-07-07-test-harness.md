@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A dev-only `/test` screen that auto-seeds a full two-side match, shows both sides' consoles at once (split view), and rerolls any rig's loadout on demand — so one person can walk every battle flow solo.
+**Goal:** A dev-only `/test` screen that auto-seeds a full two-side match, shows both sides' consoles at once (split view), and rerolls any rig's loadout on demand, so one person can walk every battle flow solo.
 
 **Architecture:** Server-authoritative reroll via a new `randomize` verb in the shared reducer. Split view via a `ViewSideContext` override that a new `useMySide()` hook reads, replacing ~9 scattered `session.side` reads. `TestHarness` seeds a real room by posting commands as both sides, then renders two `Stage`s each pinned to a side.
 
@@ -16,27 +16,27 @@
 
 | File | Responsibility |
 |------|----------------|
-| `shared/game-state.js` | **modify** — export `randomRigWeapons`/`randomEquipment`; add `randomize` verb |
-| `shared/game-state.test.js` | **modify** — tests for the above |
-| `client/src/state/ViewSideContext.tsx` | **new** — React context holding an optional side override |
-| `client/src/hooks/useMySide.ts` | **new** — returns override else `session.side` else `"a"` |
+| `shared/game-state.js` | **modify**: export `randomRigWeapons`/`randomEquipment`; add `randomize` verb |
+| `shared/game-state.test.js` | **modify**: tests for the above |
+| `client/src/state/ViewSideContext.tsx` | **new**: React context holding an optional side override |
+| `client/src/hooks/useMySide.ts` | **new**: returns override else `session.side` else `"a"` |
 | `client/src/hooks/useMySide.test.tsx` | **new** |
-| `client/src/lib/loadout.ts` | **modify** — add `randomAddAttrs()` |
+| `client/src/lib/loadout.ts` | **modify**: add `randomAddAttrs()` |
 | `client/src/lib/loadout.test.ts` | **modify** |
-| `client/src/hooks/useCommands.ts` | **modify** — stamp `useMySide()` not `session.side` |
-| 9 components (see Task 4) | **modify** — swap `session.side` derivation → `useMySide()` |
-| `client/src/components/test/seed.ts` | **new** — pure `buildSeedCommands()` |
+| `client/src/hooks/useCommands.ts` | **modify**: stamp `useMySide()` not `session.side` |
+| 9 components (see Task 4) | **modify**: swap `session.side` derivation → `useMySide()` |
+| `client/src/components/test/seed.ts` | **new**: pure `buildSeedCommands()` |
 | `client/src/components/test/seed.test.ts` | **new** |
-| `client/src/components/test/TestHarness.tsx` | **new** — split view + seed effect |
-| `client/src/components/test/DevToolbar.tsx` | **new** — control buttons |
-| `client/src/App.tsx` | **modify** — dev-only `/test` branch |
+| `client/src/components/test/TestHarness.tsx` | **new**: split view + seed effect |
+| `client/src/components/test/DevToolbar.tsx` | **new**: control buttons |
+| `client/src/App.tsx` | **modify**: dev-only `/test` branch |
 
 **Reference facts (verified):**
 - `applyCommand(room, { verb, attrs }, context = {}, options = {})`. `context.side` is the acting side; `options.random` is the RNG.
-- `makeRig(id, name, cls, owner, weapons, equipment)` — `weapons` = `{ longRange, melee, longRangeUpgrade, meleeUpgrade }`. Returns `null` unless class ∈ `["light","medium"]` and both weapons present.
+- `makeRig(id, name, cls, owner, weapons, equipment)`: `weapons` = `{ longRange, melee, longRangeUpgrade, meleeUpgrade }`. Returns `null` unless class ∈ `["light","medium"]` and both weapons present.
 - Exported from `shared/game-state.js`: `WEAPONS` (`{longRange:{...}, melee:{...}}`), `EQUIPMENT` (`{key:{...}}`), `WEAPON_UPGRADES` (`{weaponName: [{id,...}]}`), `upgradeForWeapon`, `findRig`, `kindOf`, `makeRig`.
 - Command body shape (POST `/api/game/:room/command`): `{ cmd: { verb, attrs }, side }`.
-- Field lock: `{ verb:"field", attrs:{ action:"lock" } }` — only works when posted by `room.ownerSide` (the first side to join) and game not started.
+- Field lock: `{ verb:"field", attrs:{ action:"lock" } }`: only works when posted by `room.ownerSide` (the first side to join) and game not started.
 - Ready gate: a side needs ≥3 rigs + field locked, then `{ verb:"ready", attrs:{ side } }`; both ready → game starts, phase `activation`.
 
 ---
@@ -89,10 +89,10 @@ test("randomize verb rebuilds a rig in place, preserving id/name/owner", () => {
 });
 ```
 
-- [ ] **Step 2: Run — verify FAIL**
+- [ ] **Step 2: Run, verify FAIL**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `randomRigWeapons is not a function` / `randomEquipment is not a function`.
+Expected: FAIL, `randomRigWeapons is not a function` / `randomEquipment is not a function`.
 
 - [ ] **Step 3: Add helpers**
 
@@ -144,7 +144,7 @@ In `applyCommand`, immediately before the final `} else {` that handles `damage`
 
 (Note: this adds a new `else if` link; the existing `} else {` debug block that follows is unchanged.)
 
-- [ ] **Step 5: Run — verify PASS**
+- [ ] **Step 5: Run, verify PASS**
 
 Run: `node --test shared/game-state.test.js`
 Expected: PASS (all tests, including pre-existing).
@@ -197,10 +197,10 @@ describe("useMySide", () => {
 
 > Before writing, confirm the provider export name in `client/src/state/RoomStateContext.tsx` (it exposes `useRoomState`). If the provider is named differently than `RoomStateProvider`, use the actual exported provider component in the test wrapper.
 
-- [ ] **Step 2: Run — verify FAIL**
+- [ ] **Step 2: Run, verify FAIL**
 
 Run: `cd client && npx vitest run src/hooks/useMySide.test.tsx`
-Expected: FAIL — cannot resolve `../state/ViewSideContext` / `./useMySide`.
+Expected: FAIL, cannot resolve `../state/ViewSideContext` / `./useMySide`.
 
 - [ ] **Step 3: Create the context**
 
@@ -209,7 +209,7 @@ Create `client/src/state/ViewSideContext.tsx`:
 ```tsx
 import { createContext } from "react";
 
-/** When set, overrides the session's side for the subtree — used by the /test
+/** When set, overrides the session's side for the subtree, used by the /test
  *  split view to render one side's perspective per column. Undefined in the
  *  normal app, so consumers fall back to session.side. */
 export const ViewSideContext = createContext<string | undefined>(undefined);
@@ -233,7 +233,7 @@ export function useMySide(): string {
 }
 ```
 
-- [ ] **Step 5: Run — verify PASS**
+- [ ] **Step 5: Run, verify PASS**
 
 Run: `cd client && npx vitest run src/hooks/useMySide.test.tsx`
 Expected: PASS (both cases).
@@ -285,10 +285,10 @@ export function useCommands() {
 }
 ```
 
-- [ ] **Step 2: Run the full client suite — verify still green**
+- [ ] **Step 2: Run the full client suite, verify still green**
 
 Run: `cd client && npx vitest run`
-Expected: PASS. In the normal app there is no `ViewSideContext` provider, so `side` === `session.side` — behavior unchanged.
+Expected: PASS. In the normal app there is no `ViewSideContext` provider, so `side` === `session.side`: behavior unchanged.
 
 - [ ] **Step 3: Commit**
 
@@ -321,7 +321,7 @@ Import path note: from `components/` use `"../hooks/useMySide"`; from `component
 
 - [ ] **Step 1: Apply all nine edits** (add import + swap derivation per the table).
 
-- [ ] **Step 2: Typecheck + full suite — verify green**
+- [ ] **Step 2: Typecheck + full suite, verify green**
 
 Run: `cd client && npx tsc --noEmit && npx vitest run`
 Expected: PASS. No `ViewSideContext` provider exists in these components' normal render tree, so `useMySide()` returns `session.side` exactly as before.
@@ -359,10 +359,10 @@ it("randomAddAttrs produces valid medium-rig add attrs", () => {
 });
 ```
 
-- [ ] **Step 2: Run — verify FAIL**
+- [ ] **Step 2: Run, verify FAIL**
 
 Run: `cd client && npx vitest run src/lib/loadout.test.ts`
-Expected: FAIL — `randomAddAttrs` not exported.
+Expected: FAIL, `randomAddAttrs` not exported.
 
 - [ ] **Step 3: Implement**
 
@@ -384,7 +384,7 @@ export function randomAddAttrs(): Record<string, unknown> {
 
 > If `client/shared.d.ts` declares the `/shared/game-state.js` module with an explicit export list (rather than `any`), add `randomRigWeapons` and `randomEquipment` to that declaration so `tsc` resolves them.
 
-- [ ] **Step 4: Run — verify PASS**
+- [ ] **Step 4: Run, verify PASS**
 
 Run: `cd client && npx vitest run src/lib/loadout.test.ts`
 Expected: PASS.
@@ -440,10 +440,10 @@ describe("buildSeedCommands", () => {
 });
 ```
 
-- [ ] **Step 2: Run — verify FAIL**
+- [ ] **Step 2: Run, verify FAIL**
 
 Run: `cd client && npx vitest run src/components/test/seed.test.ts`
-Expected: FAIL — cannot resolve `./seed`.
+Expected: FAIL, cannot resolve `./seed`.
 
 - [ ] **Step 3: Implement**
 
@@ -474,7 +474,7 @@ export function buildSeedCommands(): SeedCommand[] {
 }
 ```
 
-- [ ] **Step 4: Run — verify PASS**
+- [ ] **Step 4: Run, verify PASS**
 
 Run: `cd client && npx vitest run src/components/test/seed.test.ts`
 Expected: PASS.
@@ -495,7 +495,7 @@ git commit -m "feat(test-harness): pure seed-command builder"
 - Create: `client/src/components/test/DevToolbar.tsx`
 - Modify: `client/src/App.tsx`
 
-This task is UI wiring; verify it by driving the preview (no unit test — the pure logic it depends on is already covered by Tasks 1/5/6).
+This task is UI wiring; verify it by driving the preview (no unit test, the pure logic it depends on is already covered by Tasks 1/5/6).
 
 - [ ] **Step 1: `postCmd` + seed runner + split view**
 
@@ -604,8 +604,8 @@ export function DevToolbar({ room, status }: { room: string; status: string }) {
   return (
     <div className="dev-toolbar" style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", padding: ".5rem", background: "#1a1a1a", position: "sticky", top: 0, zIndex: 10 }}>
       <strong>/test</strong>
-      <span>phase: {game?.phase ?? "—"}</span>
-      <span>turn: {game?.turn?.side ?? "—"}</span>
+      <span>phase: {game?.phase ?? "-"}</span>
+      <span>turn: {game?.turn?.side ?? "-"}</span>
       <button onClick={rerollAll}>🎲 Reroll all</button>
       <button onClick={() => addRig("a")}>+ Rig A</button>
       <button onClick={() => addRig("b")}>+ Rig B</button>
@@ -666,5 +666,5 @@ git commit -m "feat(test-harness): /test split-view screen + dev toolbar"
 
 - **Spec coverage:** split view (Task 2/4/7), act as both players (Task 3 + explicit-side `postCmd`, Task 7), auto-seed full match (Task 5/6/7), random loadouts (Task 1/5), randomize on demand (Task 1 verb + Task 7 toolbar), dev-only gate (Task 7 Step 3). All spec sections mapped.
 - **Type consistency:** `randomRigWeapons`/`randomEquipment` (shared) reused by `randomAddAttrs` (Task 5) and the `randomize` verb (Task 1); `buildSeedCommands` shape `{side,verb,attrs}` consumed unchanged by `TestHarness` seed loop; `postCmd` defined in `TestHarness` and imported by `DevToolbar`.
-- **Assumptions to confirm during impl (flagged inline):** `RoomStateContext` provider/export names, `Stage` export + props, `client/shared.d.ts` export list, exact client `game`/`rigs` field names. These are lookups, not design gaps — the surrounding tasks show the intended shape.
+- **Assumptions to confirm during impl (flagged inline):** `RoomStateContext` provider/export names, `Stage` export + props, `client/shared.d.ts` export list, exact client `game`/`rigs` field names. These are lookups, not design gaps, the surrounding tasks show the intended shape.
 ```

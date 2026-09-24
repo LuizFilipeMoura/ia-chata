@@ -1,4 +1,4 @@
-/* V2 battlefield blueprint — native port of V1 field-map.css. Every selector is
+/* V2 battlefield blueprint, native port of V1 field-map.css. Every selector is
    scoped under .v2-root and the palette is keyed off the --v2-* tokens (with the
    blueprint's own literal hues kept where V1 used them, so the recon look is
    identical). Two blocks: the SVG map (.v2-fm*) and the field-setup drawer body
@@ -11,7 +11,7 @@
 .v2-root .v2-fm-tick { stroke: var(--v2-oil); stroke-opacity: .55; stroke-width: 1.5; }
 .v2-root .v2-fm-half-mine { fill: #1d9e75; fill-opacity: 0.2; }
 .v2-root .v2-fm-half-foe { fill: #d85a30; fill-opacity: 0.2; }
-/* Legal deployment zone — an 8" quarter-circle at each corner (§10). */
+/* Legal deployment zone, an 8" quarter-circle at each corner (§10). */
 .v2-root .v2-fm-deploy { fill-opacity: 0.32; stroke-width: 1; stroke-dasharray: 4 3; }
 .v2-root .v2-fm-deploy--mine { fill: #1d9e75; stroke: #46e3ad; }
 .v2-root .v2-fm-deploy--foe { fill: #d85a30; stroke: #ff9366; }
@@ -66,7 +66,7 @@
     var(--v2-iron-950);
 }
 
-/* Legend — decodes the two deploy-zone tints + the objective marker. */
+/* Legend, decodes the two deploy-zone tints + the objective marker. */
 .v2-root .v2-fs-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; }
 .v2-root .v2-fs-leg {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -125,11 +125,11 @@
 .v2-root .v2-fs-apply:hover { background: var(--v2-iron-750); border-color: var(--v2-oil); color: var(--v2-oil-hi); }
 .v2-root .v2-fs-apply:active { transform: translateY(1px); }
 
-/* Secondary "tweak" actions — equal, quiet ghost buttons. */
+/* Secondary "tweak" actions, equal, quiet ghost buttons. */
 .v2-root .v2-fs-actions { display: flex; gap: .5rem; }
 .v2-root .v2-fs-actions .v2-dwr-btn { flex: 1 1 0; }
 
-/* The single commit action — the hero of the screen. .v2-cta supplies the face. */
+/* The single commit action, the hero of the screen. .v2-cta supplies the face. */
 .v2-root .v2-fs-lock {
   position: relative; width: 100%; padding: .8rem; margin-top: .1rem;
   border-radius: 12px; font-size:var(--v2-text-base); overflow: hidden;

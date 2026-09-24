@@ -4,7 +4,7 @@
 
 **Goal:** Implement Part 1 (Rig equipment, 5 pieces) of `docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md` end-to-end (data, engine wiring, UI), add the weapon-upgrade catalogue from Part 2 as authored/display-only data (per the spec's own "Readiness / phasing" section, combat-engine wiring for the five brand-new upgrade mechanics is future work), and build a multi-step wizard that replaces the flat "Commission a Rig" form so players pick a Rig's equipment (and preview its weapons' fixed upgrades) when creating it.
 
-**Architecture:** `shared/game-state.js` gains an `EQUIPMENT` catalogue and a `WEAPON_UPGRADES` catalogue (pure data, same module as `WEAPONS`). Equipment passives hook into the four places they change existing math (`makeRig`, `runRecovery`, `catastrophicOnZero`, the `repair` action). Equipment actives are new `action` keys handled inside `performAction`, gated to the Rig that owns the matching equipment, spending the existing action-slot budget and heat — no new resource. `shared/combat.js` gains one addition (Harden's −1 to incoming impact rolls). The client gets one new module, `public/js/rig-wizard.js`, following the existing `public/js/attack-wizard.js` scrim/card modal pattern, plus a new stylesheet `public/css/rig-wizard.css` matching the established dieselpunk tokens in `public/css/tokens.css`. `public/js/tracker.js` and `public/js/battle.js` get small, additive changes to open the wizard and to handle the five new active-ability action keys.
+**Architecture:** `shared/game-state.js` gains an `EQUIPMENT` catalogue and a `WEAPON_UPGRADES` catalogue (pure data, same module as `WEAPONS`). Equipment passives hook into the four places they change existing math (`makeRig`, `runRecovery`, `catastrophicOnZero`, the `repair` action). Equipment actives are new `action` keys handled inside `performAction`, gated to the Rig that owns the matching equipment, spending the existing action-slot budget and heat, no new resource. `shared/combat.js` gains one addition (Harden's −1 to incoming impact rolls). The client gets one new module, `public/js/rig-wizard.js`, following the existing `public/js/attack-wizard.js` scrim/card modal pattern, plus a new stylesheet `public/css/rig-wizard.css` matching the established dieselpunk tokens in `public/css/tokens.css`. `public/js/tracker.js` and `public/js/battle.js` get small, additive changes to open the wizard and to handle the five new active-ability action keys.
 
 **Tech Stack:** Vanilla ES modules (client + `shared/`), Node's built-in `node:test` + `node:assert/strict` for unit tests, Express + `ws` server (unchanged by this plan).
 
@@ -37,7 +37,7 @@
 
 - [ ] **Step 1: Write the failing test**
 
-Add to the bottom of `shared/game-state.test.js` (it already imports `test`, `assert`, and several named exports from `./game-state.js` — add `EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES` to that existing import list):
+Add to the bottom of `shared/game-state.test.js` (it already imports `test`, `assert`, and several named exports from `./game-state.js`: add `EQUIPMENT, normalizeEquipment, WEAPON_UPGRADES` to that existing import list):
 
 ```javascript
 test("EQUIPMENT has the 5 catalogue pieces with passive + active shape", () => {
@@ -78,7 +78,7 @@ test("WEAPON_UPGRADES has exactly 2 upgrades for all 12 weapons", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `EQUIPMENT is not defined` (or similar import error).
+Expected: FAIL, `EQUIPMENT is not defined` (or similar import error).
 
 - [ ] **Step 3: Add the catalogues to `shared/game-state.js`**
 
@@ -88,7 +88,7 @@ Insert immediately after the closing `};` of the existing `export const WEAPONS 
 // Rig equipment loadout (docs/superpowers/specs/2026-07-05-rig-equipment-loadout-design.md,
 // Part 1). One slot per Rig. Passives hook into existing systems (see makeRig /
 // runRecovery / catastrophicOnZero / performAction below); actives are ordinary
-// actions gated to the Rig carrying the matching equipment — unlimited use,
+// actions gated to the Rig carrying the matching equipment, unlimited use,
 // leashed only by the 5-slot action budget and the heat they generate.
 export const EQUIPMENT = {
   "ablative-plating": {
@@ -128,24 +128,24 @@ export function normalizeEquipment(id) {
   return Object.keys(EQUIPMENT).includes(ref) ? ref : null;
 }
 
-// Weapon upgrades (Part 2 of the design) — every weapon's two fixed signature
+// Weapon upgrades (Part 2 of the design), every weapon's two fixed signature
 // upgrades, authored as flavor + a toolkit-effect tag. Combat-engine wiring for
 // the brand-new mechanics (Reach, Scatter, Systems Overload, Sunder,
 // Reroll-a-miss) is deferred per the design's "Readiness / phasing" section;
 // this catalogue lets the wizard preview a weapon's identity today.
 export const WEAPON_UPGRADES = {
-  "Mini Gun":      [{ name: "Extended Belt", tag: "+2 ROF (dice showing 1 add heat)" }, { name: "Suppressive Fire", tag: "Shock — Speed halved" }],
-  "Double MG":     [{ name: "Tracer Rounds", tag: "Incendiary — +1 target heat/hit" }, { name: "Gyro Mount", tag: "Reroll one missed die" }],
+  "Mini Gun":      [{ name: "Extended Belt", tag: "+2 ROF (dice showing 1 add heat)" }, { name: "Suppressive Fire", tag: "Shock, Speed halved" }],
+  "Double MG":     [{ name: "Tracer Rounds", tag: "Incendiary, +1 target heat/hit" }, { name: "Gyro Mount", tag: "Reroll one missed die" }],
   "Autocannon":    [{ name: "AP Shells", tag: "Armour Piercing" }, { name: "Depleted Core", tag: "+STR" }],
-  "Arc Gun":       [{ name: "Systems Overload", tag: "Target loses 1 action next activation" }, { name: "Ion Burn", tag: "Incendiary — +1 target heat/hit" }],
+  "Arc Gun":       [{ name: "Systems Overload", tag: "Target loses 1 action next activation" }, { name: "Ion Burn", tag: "Incendiary, +1 target heat/hit" }],
   "Mortar":        [{ name: "Airburst Fuze", tag: "Ignores cover" }, { name: "Cluster Shells", tag: "Also chips a 2nd random location" }],
-  "Sniper Cannon": [{ name: "Match Barrel", tag: "No far-range penalty" }, { name: "Marksman Optics", tag: "Precision — Aimed Shot loses −2" }],
+  "Sniper Cannon": [{ name: "Match Barrel", tag: "No far-range penalty" }, { name: "Marksman Optics", tag: "Precision, Aimed Shot loses −2" }],
   "Sword":         [{ name: "Duelist's Balance", tag: "Precision" }, { name: "Keen Edge", tag: "Rend" }],
   "Circular Saw":  [{ name: "Tempered Teeth", tag: "Armour Piercing" }, { name: "Sunder", tag: "−1 max SP to the struck location" }],
   "Chainsaw":      [{ name: "High-Rev Motor", tag: "+STR, but +1 heat per strike" }, { name: "Ripper Teeth", tag: "Rend" }],
-  "Claw":          [{ name: "Vice Grip", tag: "Impale — strong hit immobilises" }, { name: "Rending Talons", tag: "Rend" }],
-  "Lance":         [{ name: "Couched Reach", tag: "Reach — strike 1\" further / charge bonus" }, { name: "Spearpoint", tag: "Impale" }],
-  "Wrecking Ball": [{ name: "Haymaker", tag: "+STR, big" }, { name: "Wrecking Momentum", tag: "Staggering — knock back / pivot" }],
+  "Claw":          [{ name: "Vice Grip", tag: "Impale, strong hit immobilises" }, { name: "Rending Talons", tag: "Rend" }],
+  "Lance":         [{ name: "Couched Reach", tag: "Reach, strike 1\" further / charge bonus" }, { name: "Spearpoint", tag: "Impale" }],
+  "Wrecking Ball": [{ name: "Haymaker", tag: "+STR, big" }, { name: "Wrecking Momentum", tag: "Staggering, knock back / pivot" }],
 };
 ```
 
@@ -193,7 +193,7 @@ test("makeRig rejects an invalid equipment id by falling back to no equipment", 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `armored.equipment` is `undefined`, `armored.hull.max` is `7` not `8`.
+Expected: FAIL, `armored.equipment` is `undefined`, `armored.hull.max` is `7` not `8`.
 
 - [ ] **Step 3: Implement**
 
@@ -210,7 +210,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
   const weightClass = normalizedClass;
   const d = RIG_DEFAULTS[weightClass];
   const equipmentId = normalizeEquipment(equipment);
-  // Ablative Plating (Armor) — passive +1 max SP to Hull, applied once at commission.
+  // Ablative Plating (Armor), passive +1 max SP to Hull, applied once at commission.
   const hullMax = d.hull + (equipmentId === "ablative-plating" ? 1 : 0);
   return {
     id,
@@ -242,7 +242,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS (including the pre-existing `makeRig` tests at the top of the file — they don't pass an equipment arg, so `equipmentId` resolves to `null` and `hullMax` is unchanged for them).
+Expected: PASS (including the pre-existing `makeRig` tests at the top of the file, they don't pass an equipment arg, so `equipmentId` resolves to `null` and `hullMax` is unchanged for them).
 
 - [ ] **Step 5: Commit**
 
@@ -284,7 +284,7 @@ test("ensureRigShape backfills equipment/hardened/overclockCoreUsed on legacy ri
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rig.equipment` is `undefined` after the `add` command (the verb handler doesn't forward `a.equipment` yet), and the backfill test fails the same way.
+Expected: FAIL, `rig.equipment` is `undefined` after the `add` command (the verb handler doesn't forward `a.equipment` yet), and the backfill test fails the same way.
 
 - [ ] **Step 3: Implement**
 
@@ -338,7 +338,7 @@ git commit -m "feat: add-command forwards equipment; backfill legacy rig shape"
 
 ---
 
-## Task 4: Radiator Array — Recovery cools 3 instead of 2
+## Task 4: Radiator Array, Recovery cools 3 instead of 2
 
 **Files:**
 - Modify: `shared/game-state.js`
@@ -378,7 +378,7 @@ test("Radiator Array cools 3 heat in Recovery instead of the usual 2", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `cooled.engine.heat` is `3`, not `2` (both rigs cool by the flat 2).
+Expected: FAIL, `cooled.engine.heat` is `3`, not `2` (both rigs cool by the flat 2).
 
 - [ ] **Step 3: Implement**
 
@@ -400,7 +400,7 @@ function runRecovery(room) {
   for (const rig of room.rigs) {
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
-      // Radiator Array (Cooling) — cools 3 heat instead of the usual 2.
+      // Radiator Array (Cooling), cools 3 heat instead of the usual 2.
       const cooling = rig.equipment === "radiator-array" ? 3 : 2;
       rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
@@ -420,7 +420,7 @@ git commit -m "feat: wire Radiator Array's Recovery cooling passive"
 
 ---
 
-## Task 5: Servo Actuators — Sprint costs 1 heat instead of 2
+## Task 5: Servo Actuators, Sprint costs 1 heat instead of 2
 
 **Files:**
 - Modify: `shared/game-state.js`
@@ -456,7 +456,7 @@ test("Servo Actuators makes Sprint cost 1 heat instead of 2", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `servo.engine.heat` is `2`.
+Expected: FAIL, `servo.engine.heat` is `2`.
 
 - [ ] **Step 3: Implement**
 
@@ -472,7 +472,7 @@ Insert a `sprint` branch immediately above it, and adjust the final heat applica
 
 ```javascript
   if (act === "sprint" && rig.equipment === "servo-actuators") {
-    // Servo Actuators (Mobility) — Sprint costs 1 heat instead of 2.
+    // Servo Actuators (Mobility), Sprint costs 1 heat instead of 2.
     t.actionsUsed += 1;
     bumpHeat(rig, 1);
     return true;
@@ -496,7 +496,7 @@ git commit -m "feat: wire Servo Actuators' cheaper Sprint passive"
 
 ---
 
-## Task 6: Overclock Core — first Engine-0 doesn't skip the next activation
+## Task 6: Overclock Core, first Engine-0 doesn't skip the next activation
 
 **Files:**
 - Modify: `shared/game-state.js`
@@ -524,7 +524,7 @@ test("Overclock Core skips the skip-next-activation penalty the first time Engin
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `rig.skipNextActivation` is `true` after the first hit (Overclock Core isn't checked yet).
+Expected: FAIL, `rig.skipNextActivation` is `true` after the first hit (Overclock Core isn't checked yet).
 
 - [ ] **Step 3: Implement**
 
@@ -540,7 +540,7 @@ with:
 ```javascript
 function catastrophicOnZero(room, rig, loc, opts) {
   if (loc === "engine") {
-    // Overclock Core (Power) — the first time the Engine hits 0 SP, the Rig
+    // Overclock Core (Power), the first time the Engine hits 0 SP, the Rig
     // does not skip its next activation. Every time after that, normal rules apply.
     if (rig.equipment === "overclock-core" && !rig.overclockCoreUsed) rig.overclockCoreUsed = true;
     else rig.skipNextActivation = true;
@@ -562,7 +562,7 @@ git commit -m "feat: wire Overclock Core's first-engine-zero passive"
 
 ---
 
-## Task 7: Field Repair Suite — Repair action restores +1 additional SP
+## Task 7: Field Repair Suite, Repair action restores +1 additional SP
 
 **Files:**
 - Modify: `shared/game-state.js`
@@ -599,7 +599,7 @@ test("Field Repair Suite adds +1 SP to the Repair action only", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `medic.hull.sp` is `5`, not `6`.
+Expected: FAIL, `medic.hull.sp` is `5`, not `6`.
 
 - [ ] **Step 3: Implement**
 
@@ -619,7 +619,7 @@ Change it to:
   } else if (act === "repair") {
     const roll = rollD(12, a.dice?.repair, random);
     let amt = roll >= 10 ? 2 : roll >= 7 ? 1 : 0;
-    // Field Repair Suite (Utility) — the Repair action restores +1 additional SP.
+    // Field Repair Suite (Utility), the Repair action restores +1 additional SP.
     if (amt > 0 && rig.equipment === "field-repair-suite") amt += 1;
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
     if (amt > 0) repairRig(rig, loc, amt);
@@ -755,11 +755,11 @@ test("a rig's next activation clears its own Harden", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `performAction` doesn't recognize `harden`/`purge`/`jumpjets`/`overclock`/`emergencypatch` as actions yet (they fall through to the generic `else if` chain and do nothing, or throw on the missing `ACTIONS[act]` lookup returning `undefined` for `def`).
+Expected: FAIL, `performAction` doesn't recognize `harden`/`purge`/`jumpjets`/`overclock`/`emergencypatch` as actions yet (they fall through to the generic `else if` chain and do nothing, or throw on the missing `ACTIONS[act]` lookup returning `undefined` for `def`).
 
 - [ ] **Step 3: Implement**
 
-Add an import of `EQUIPMENT` at the top of `performAction`'s containing scope — `EQUIPMENT` is already defined earlier in the same file (Task 1), so no new import is needed. Add this block inside `performAction`, right after the `shutdown` special case and before `const def = ACTIONS[act];`:
+Add an import of `EQUIPMENT` at the top of `performAction`'s containing scope, `EQUIPMENT` is already defined earlier in the same file (Task 1), so no new import is needed. Add this block inside `performAction`, right after the `shutdown` special case and before `const def = ACTIONS[act];`:
 
 ```javascript
 function performAction(room, rig, act, a, random) {
@@ -816,12 +816,12 @@ and add `rig.hardened = false;` right after the `if (rig && t && ...)` guard ope
       if (rig.skipNextActivation) {
 ```
 
-Finally, apply Harden's −1 during impact resolution. This spans into `shared/combat.js` — see Task 9 below (do that task next; the two are one logical change but kept separate because they touch different files/tests).
+Finally, apply Harden's −1 during impact resolution. This spans into `shared/combat.js`: see Task 9 below (do that task next; the two are one logical change but kept separate because they touch different files/tests).
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS for every test except none — all of Task 8's tests only assert engine/state/action-budget effects, which are fully covered by this step (Harden's actual impact-roll effect is verified in Task 9's `combat.test.js`, not here).
+Expected: PASS for every test except none, all of Task 8's tests only assert engine/state/action-budget effects, which are fully covered by this step (Harden's actual impact-roll effect is verified in Task 9's `combat.test.js`, not here).
 
 - [ ] **Step 5: Commit**
 
@@ -832,7 +832,7 @@ git commit -m "feat: wire the 5 equipment active abilities as gated actions"
 
 ---
 
-## Task 9: Harden — −1 to incoming impact rolls
+## Task 9: Harden, −1 to incoming impact rolls
 
 **Files:**
 - Modify: `shared/combat.js`
@@ -861,7 +861,7 @@ test("rollImpacts applies Harden's -1 alongside Brace, stacking", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — `out[0].total` is `13` (Harden not applied yet).
+Expected: FAIL, `out[0].total` is `13` (Harden not applied yet).
 
 - [ ] **Step 3: Implement**
 
@@ -920,7 +920,7 @@ Expected: PASS.
 - [ ] **Step 5: Run the full shared test suite to check for regressions**
 
 Run: `node --test shared/`
-Expected: PASS — every file under `shared/` (`rules.test.js`, `game-state.test.js`, `combat.test.js`, `battle-view.test.js`) passes.
+Expected: PASS, every file under `shared/` (`rules.test.js`, `game-state.test.js`, `combat.test.js`, `battle-view.test.js`) passes.
 
 - [ ] **Step 6: Commit**
 
@@ -939,7 +939,7 @@ git commit -m "feat: Harden reduces incoming impact rolls by 1"
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `shared/battle-view.test.js` (it already has a `rig(over = {})` helper — reuse it):
+Add to `shared/battle-view.test.js` (it already has a `rig(over = {})` helper, reuse it):
 
 ```javascript
 test("availableActions appends the Rig's equipment active, gated by budget", () => {
@@ -961,7 +961,7 @@ test("availableActions appends the Rig's equipment active, gated by budget", () 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/battle-view.test.js`
-Expected: FAIL — `armored.find((a) => a.key === "harden")` is `undefined`.
+Expected: FAIL, `armored.find((a) => a.key === "harden")` is `undefined`.
 
 - [ ] **Step 3: Implement**
 
@@ -1030,9 +1030,9 @@ Insert a new `## 15. Equipment` section between the existing `## 14. Factions` s
 ```markdown
 ## 15. Equipment
 
-Every Rig has **one** equipment slot, chosen at commission. Each piece is a **passive** (always on) plus a **1-slot active** — the active costs one of the Rig's 5 action-slots per activation (−2 if Hull is at 0) plus the listed heat, with no charges or cooldowns; the action budget and the overheat table are the only limiters.
+Every Rig has **one** equipment slot, chosen at commission. Each piece is a **passive** (always on) plus a **1-slot active**: the active costs one of the Rig's 5 action-slots per activation (−2 if Hull is at 0) plus the listed heat, with no charges or cooldowns; the action budget and the overheat table are the only limiters.
 
-| Family | Equipment | Passive (always on) | Active — *costs 1 slot* |
+| Family | Equipment | Passive (always on) | Active, *costs 1 slot* |
 |---|---|---|---|
 | **Armor** | **Ablative Plating** | +1 max SP to Hull | **Harden** (+1 heat): until this Rig's next activation, all impact rolls against it are at −1 |
 | **Cooling** | **Radiator Array** | Cools **3** heat in Recovery instead of 2 | **Purge** (−2 heat): vent on demand |
@@ -1052,7 +1052,7 @@ git commit -m "docs: add §15 Equipment to the rulebook"
 
 ---
 
-## Task 12: `rig-wizard.js` — the equipment/weapon-upgrade wizard module
+## Task 12: `rig-wizard.js`: the equipment/weapon-upgrade wizard module
 
 **Files:**
 - Create: `public/js/rig-wizard.js`
@@ -1190,7 +1190,7 @@ function stepWeapons(state, card) {
   body.appendChild(upgradeTags(state.melee));
   const hint = document.createElement("div");
   hint.className = "rw-hint";
-  hint.textContent = "Every weapon carries two fixed signature upgrades — they are its identity, not a choice.";
+  hint.textContent = "Every weapon carries two fixed signature upgrades, they are its identity, not a choice.";
   body.appendChild(hint);
   return body;
 }
@@ -1208,7 +1208,7 @@ function stepEquipment(state, card) {
       <div class="rw-equip-family">${e.family}</div>
       <div class="rw-equip-label">${e.label}</div>
       <div class="rw-equip-passive">${e.passive}</div>
-      <div class="rw-equip-active"><b>${e.active.label}</b> (${e.active.heat >= 0 ? "+" : ""}${e.active.heat} heat) — ${e.active.text}</div>
+      <div class="rw-equip-active"><b>${e.active.label}</b> (${e.active.heat >= 0 ? "+" : ""}${e.active.heat} heat), ${e.active.text}</div>
     `;
     opt.addEventListener("click", () => { state.equipment = id; render(card, state); });
     grid.appendChild(opt);
@@ -1222,9 +1222,9 @@ function stepConfirm(state) {
   body.className = "rw-body rw-confirm";
   const e = EQUIPMENT[state.equipment];
   body.innerHTML = `
-    <div class="rw-confirm-name">${state.name || "(unnamed)"} — ${state.cls}</div>
+    <div class="rw-confirm-name">${state.name || "(unnamed)"}, ${state.cls}</div>
     <div class="rw-confirm-row">${state.longRange} / ${state.melee}</div>
-    <div class="rw-confirm-row">${e.label} — ${e.passive}</div>
+    <div class="rw-confirm-row">${e.label}, ${e.passive}</div>
   `;
   return body;
 }
@@ -1503,9 +1503,9 @@ populateWeaponSelect(rigLongRangeSelect, Object.keys(WEAPONS.longRange));
 populateWeaponSelect(rigMeleeSelect, Object.keys(WEAPONS.melee));
 ```
 
-(simply delete these lines — nothing replaces them, the wizard module owns its own selects).
+(simply delete these lines, nothing replaces them, the wizard module owns its own selects).
 
-Delete `syncOwnerOptions` (no longer used — it referenced `rigOwnerSelect`, which no longer exists):
+Delete `syncOwnerOptions` (no longer used, it referenced `rigOwnerSelect`, which no longer exists):
 
 ```javascript
 function ownerLabel(owner) {
@@ -1523,7 +1523,7 @@ function syncOwnerOptions() {
 }
 ```
 
-Keep `ownerLabel` (still used elsewhere to group the accordion) — delete only `syncOwnerOptions`. Search the rest of `tracker.js` for `syncOwnerOptions()` call sites and remove them too (there is a call inside the render pipeline — remove that single call line wherever it appears; it has no other side effect).
+Keep `ownerLabel` (still used elsewhere to group the accordion), delete only `syncOwnerOptions`. Search the rest of `tracker.js` for `syncOwnerOptions()` call sites and remove them too (there is a call inside the render pipeline, remove that single call line wherever it appears; it has no other side effect).
 
 Replace `updateAddRigAvailability` (currently disables 5 form fields) with a version that only concerns the single button:
 
@@ -1581,7 +1581,7 @@ rigAddBtn.addEventListener("click", () => {
 onRigWizardDone(() => setStatus(""));
 ```
 
-`findRig` duplicate-name checking now happens implicitly server-side (`applyCommand`'s `add` verb already no-ops when `findRig(room, a.name)` already exists) — no client-side check is lost, only its pre-emptive early exit, which was a minor UX nicety, not a correctness guard.
+`findRig` duplicate-name checking now happens implicitly server-side (`applyCommand`'s `add` verb already no-ops when `findRig(room, a.name)` already exists), no client-side check is lost, only its pre-emptive early exit, which was a minor UX nicety, not a correctness guard.
 
 - [ ] **Step 3: Show equipment and weapon upgrades in the accordion body**
 
@@ -1609,12 +1609,12 @@ Change it to also list each weapon's fixed upgrades, and append an equipment lin
       const eq = EQUIPMENT[rig.equipment];
       const equipEl = document.createElement("div");
       equipEl.className = "rig-equipment";
-      equipEl.innerHTML = `<b>${eq.label}</b> — ${eq.passive}`;
+      equipEl.innerHTML = `<b>${eq.label}</b>, ${eq.passive}`;
       inner.appendChild(equipEl);
     }
 ```
 
-(the rest of that `if (rig.weapons)` block — closing brace and whatever followed — is unchanged).
+(the rest of that `if (rig.weapons)` block, closing brace and whatever followed, is unchanged).
 
 - [ ] **Step 4: Add the `.rig-equipment` style**
 
@@ -1629,9 +1629,9 @@ Append to `public/css/rig-sheet.css`, right after the existing `.rig-weapons` ru
 
 - [ ] **Step 5: Manual verification**
 
-This step touches DOM structure the automated `shared/` test suite doesn't cover — verify by hand:
+This step touches DOM structure the automated `shared/` test suite doesn't cover, verify by hand:
 
-1. Start the dev server with the `preview_start` tool (see the project's `.claude/launch.json`; if it doesn't exist yet, create it with `{"configurations":[{"name":"dev","runtimeExecutable":"npm","runtimeArgs":["run","dev"],"port":<the app's configured port>}]}` — check `package.json`'s `scripts` block and `server/index.js`/`.env` for the actual port before writing this).
+1. Start the dev server with the `preview_start` tool (see the project's `.claude/launch.json`; if it doesn't exist yet, create it with `{"configurations":[{"name":"dev","runtimeExecutable":"npm","runtimeArgs":["run","dev"],"port":<the app's configured port>}]}`: check `package.json`'s `scripts` block and `server/index.js`/`.env` for the actual port before writing this).
 2. Open the preview, join a room, click "+ Commission".
 3. Confirm the wizard opens, steps through Identity → Weapons (upgrade tags visible and change when you switch weapons) → Equipment (5 selectable cards, one highlighted) → Confirm, and clicking "Commission" adds the Rig and closes the modal.
 4. Expand the new Rig's accordion row and confirm the equipment line and weapon-upgrade tags render.
@@ -1693,7 +1693,7 @@ function onAction(rig, key) {
 }
 ```
 
-`harden`, `purge`, `jumpjets`, and `overclock` need no extra client-side input — they fall through to the existing generic `sendCommand("action", { name: rig.name, action: key })` at the bottom, exactly like `move` or `reload` do today.
+`harden`, `purge`, `jumpjets`, and `overclock` need no extra client-side input, they fall through to the existing generic `sendCommand("action", { name: rig.name, action: key })` at the bottom, exactly like `move` or `reload` do today.
 
 - [ ] **Step 2: Manual verification**
 
@@ -1718,12 +1718,12 @@ git commit -m "feat: handle equipment active-ability actions in the battle conso
 - [ ] **Step 1: Run the entire shared test suite**
 
 Run: `node --test shared/`
-Expected: PASS — every test file (`rules.test.js`, `game-state.test.js`, `combat.test.js`, `battle-view.test.js`) passes with no failures.
+Expected: PASS, every test file (`rules.test.js`, `game-state.test.js`, `combat.test.js`, `battle-view.test.js`) passes with no failures.
 
 - [ ] **Step 2: Run the server test suite**
 
 Run: `node --test server/`
-Expected: PASS — `server/ws.test.js`, `server/prompt.test.js`, `server/store.test.js` are unaffected by this plan's changes (equipment flows entirely through `applyCommand`'s existing `add`/`action` verbs, which those tests don't stub differently), so they should pass unchanged. If any fail, investigate before proceeding — do not silence failures.
+Expected: PASS, `server/ws.test.js`, `server/prompt.test.js`, `server/store.test.js` are unaffected by this plan's changes (equipment flows entirely through `applyCommand`'s existing `add`/`action` verbs, which those tests don't stub differently), so they should pass unchanged. If any fail, investigate before proceeding, do not silence failures.
 
 - [ ] **Step 3: Manual end-to-end smoke test in the browser**
 
@@ -1737,7 +1737,7 @@ If manual testing found and fixed any issues, commit them individually with a `f
 
 ## Self-Review Notes
 
-- **Spec coverage:** Part 1 (all 5 equipment pieces: passive + active) is fully implemented and tested (Tasks 1–10). Part 2 (weapon upgrades) is delivered as the authored catalogue the spec's own "Readiness / phasing" section describes as the correct scope today (`WEAPON_UPGRADES`, previewed in the wizard and the Rig accordion) — the five brand-new combat mechanics it lists (Reach, Scatter, Systems Overload, Sunder, Reroll-a-miss) are explicitly called out in this plan and in the new `rules.md` §15 as future work, not silently dropped. The "Two families that were cut" and "Overlap notes" sections of the spec are pure design rationale with nothing further to implement.
-- **Wizard requirement:** Task 12 + 13 deliver the multi-step "pick equipment" wizard the user asked for, opened from the existing Commission-a-Rig card. Weapon upgrades are previewed (read-only tags), not "picked," because the spec is explicit that upgrades are fixed per weapon, not a player choice — Task 12's UI copy states this directly so it isn't mistaken for a missing feature.
+- **Spec coverage:** Part 1 (all 5 equipment pieces: passive + active) is fully implemented and tested (Tasks 1–10). Part 2 (weapon upgrades) is delivered as the authored catalogue the spec's own "Readiness / phasing" section describes as the correct scope today (`WEAPON_UPGRADES`, previewed in the wizard and the Rig accordion), the five brand-new combat mechanics it lists (Reach, Scatter, Systems Overload, Sunder, Reroll-a-miss) are explicitly called out in this plan and in the new `rules.md` §15 as future work, not silently dropped. The "Two families that were cut" and "Overlap notes" sections of the spec are pure design rationale with nothing further to implement.
+- **Wizard requirement:** Task 12 + 13 deliver the multi-step "pick equipment" wizard the user asked for, opened from the existing Commission-a-Rig card. Weapon upgrades are previewed (read-only tags), not "picked," because the spec is explicit that upgrades are fixed per weapon, not a player choice, Task 12's UI copy states this directly so it isn't mistaken for a missing feature.
 - **No placeholders:** every step has literal file contents or literal shell commands; nothing says "TBD" or "add appropriate handling."
 - **Type/name consistency check:** `EQUIPMENT`, `EQUIPMENT_ACTIVE_BY_KEY`, `normalizeEquipment`, `WEAPON_UPGRADES` are defined once in Task 1 and referenced with those exact names in every later task (`shared/battle-view.js`, `public/js/rig-wizard.js`, `public/js/tracker.js`). The rig fields `equipment`, `hardened`, `overclockCoreUsed` are introduced in Task 2/3 and used with those exact names in Tasks 4–10. Action keys `harden`, `purge`, `jumpjets`, `overclock`, `emergencypatch` are defined once (as `EQUIPMENT[...].active.key`) and referenced identically in `performAction` (Task 8), `battle-view.js` (Task 10), and `battle.js` (Task 14).

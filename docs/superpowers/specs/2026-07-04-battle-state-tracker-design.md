@@ -1,4 +1,4 @@
-# Battle State Tracker + Shared Multiplayer — Design
+# Battle State Tracker + Shared Multiplayer, Design
 
 Date: 2026-07-04
 
@@ -32,7 +32,7 @@ Two drivers:
   (`rules.md:320`).
 - A catastrophic Engine's heat cannot be cooled below **3** (`engineHeatFloor`).
 
-## Architecture — shared state via polling (no sockets)
+## Architecture, shared state via polling (no sockets)
 
 **Server owns authoritative state.** Game + Rig state moves out of the browser's
 `localStorage` and into the server, keyed by **room code**. The browser keeps
@@ -42,7 +42,7 @@ only the player's *identity* (`{ room, side }`).
 `IRON42`) and claim one of two sides. Multiple concurrent games can exist.
 
 **Command-based sync (the correctness cornerstone).** Clients never overwrite the
-whole state — two players would clobber each other. Instead every change (a manual
+whole state, two players would clobber each other. Instead every change (a manual
 button tap *or* a tag Gemma emitted) is POSTed as a **command** (`damage`, `heat`,
 `recovery`, `vp`, …) that the server applies to authoritative state, bumping a
 monotonic `version`. Commands are deltas, so two players editing different Rigs
@@ -62,11 +62,11 @@ without waiting.
 - **Named room codes** for shared games (not a single global game).
 - **Rig ownership is now in scope** (was a non-goal): each Rig has `owner`; the
   viewer sees their own side's Rigs as "yours", the other side's as "enemy".
-- **Track weapons for real** — first-class data (Rig field + tag + UI).
+- **Track weapons for real**: first-class data (Rig field + tag + UI).
 - **Weapon validation:** Gemma matches a named weapon against the Weapon Profiles
   in the rulebook (in the system prompt). Match (case-insensitive / close) → use
   the canonical name; no match → accept it as a custom weapon. (Heavy/Colossal
-  always take the "create" path until profiles exist — consistent, not a bug.)
+  always take the "create" path until profiles exist, consistent, not a bug.)
 - **Two named sides** for VP/objectives; objectives are `{label, vp, controller}`
   markers.
 
@@ -123,7 +123,7 @@ POST /api/chat                   { room, messages, think }    # unchanged shape 
       Gemma's reply. Gemma's emitted tags are parsed client-side and re-sent as
       /command calls (chat stays per-client; mutations stay server-authoritative).
 ```
-`cmd` is a normalized `{ verb, attrs }` — the same verbs as the tags below.
+`cmd` is a normalized `{ verb, attrs }`: the same verbs as the tags below.
 Node is single-threaded, so applying a command + bumping version + flushing is
 atomic without locks. Unknown/invalid commands are ignored (return current state).
 
@@ -174,7 +174,7 @@ one-line summary in the player's language and never reads the tag aloud.
 > A Rig is only complete with a **name** and its **weapons**. Light/Medium/Heavy
 > carry **2** weapons; Colossal carries **3** (2 + 1 Hull-mounted). If the player
 > asks to add a Rig without giving the name and/or all its weapons, do **NOT**
-> emit `[[RIG add]]` yet — ask (in the player's language) for what's missing, then
+> emit `[[RIG add]]` yet, ask (in the player's language) for what's missing, then
 > emit the add once you have the name and all weapons.
 
 ### Weapon validation
@@ -190,7 +190,7 @@ one-line summary in the player's language and never reads the tag aloud.
   and injects its state.
 
 ## Client changes (`index.html`)
-- **Join flow:** a small gate before the terminal — enter room code, display
+- **Join flow:** a small gate before the terminal, enter room code, display
   name, pick a free side; persist `{ room, side }` to `localStorage`; auto-rejoin
   on refresh.
 - **Polling loop:** `setInterval` GET every 3 s; diff on `version`; re-render Rig
@@ -201,7 +201,7 @@ one-line summary in the player's language and never reads the tag aloud.
   The old local mutation functions become thin command builders; authoritative
   math lives on the server.
 - **Rendering "yours vs enemy":** Rig list splits by `owner` relative to the
-  player's `side` — a "Your Squadron" group and an "Enemy" group (enemy cards
+  player's `side`: a "Your Squadron" group and an "Enemy" group (enemy cards
   read-only for damage buttons is optional; default allow editing since it's a
   shared tabletop aid).
 - **Battle section** (top of the Squadron Status sheet): round pill (1–5), both
@@ -224,28 +224,28 @@ one-line summary in the player's language and never reads the tag aloud.
   docs.
 
 ## Implementation phases (each its own plan)
-1. **Shared-state foundation** — server-authoritative rooms, `join` / poll /
+1. **Shared-state foundation**: server-authoritative rooms, `join` / poll /
    `command` endpoints, `data/rooms.json` durability, move existing Rig-condition
    math server-side, client join gate + 3 s polling + command sender, Rig
    ownership + "yours vs enemy" rendering, `/api/chat` room injection. *Delivers
    shared multiplayer for the features that exist today.*
-2. **Weapons + agentic gather** — Rig `weapons`, `add`/`weapons` verbs, gather +
+2. **Weapons + agentic gather**: Rig `weapons`, `add`/`weapons` verbs, gather +
    validation prompt rules, card Weapons line, manual weapons input. *Resolves the
    originally reported issue.*
-3. **Round counter + Recovery Phase** — `game.round`, `recovery` command (steps
+3. **Round counter + Recovery Phase**: `game.round`, `recovery` command (steps
    1 & 4), `round set`, round pill + Recovery button.
-4. **Prepare tokens** — Rig `prepare`, `prepare` verb, card indicator; wire into
+4. **Prepare tokens**: Rig `prepare`, `prepare` verb, card indicator; wire into
    Recovery step 2.
-5. **VP / objectives** — `game.sides` VP + `game.objectives`, `vp` and
+5. **VP / objectives**: `game.sides` VP + `game.objectives`, `vp` and
    `objective` verbs, Battle-section UI; wire into Recovery step 3.
 
 ## Testing
-- **Server unit-ish:** `applyCommand` — damage/repair/set/heat honor the SP model
+- **Server unit-ish:** `applyCommand`: damage/repair/set/heat honor the SP model
   and heat floor; `recovery` cools by 2 without breaching the floor, zeroes
   Prepare, scores controlled objectives to the right side, caps round at 5;
   `add` assigns `owner`; `join` claims the first free side and creates rooms;
   `version` increments once per mutation; unknown commands are no-ops.
-- **Sync:** two clients on one room — a command from A appears in B's next poll;
+- **Sync:** two clients on one room, a command from A appears in B's next poll;
   `version` gates re-render; a restart reloads `rooms.json` intact.
 - **Prompt/behavior (manual):** "add a heavy rig" → Gemma asks for name + weapons,
   emits no tag; supplying both → one `[[RIG add … weapons=…]]`. "do a recovery

@@ -4,7 +4,7 @@ import fireAsset from "../../assets/fire_button_asset.png";
 import leverAsset from "../../assets/move_lever_asset.png";
 
 /**
- * IronActionTile — an IronPanel rendered as a battle-action button.
+ * IronActionTile, an IronPanel rendered as a battle-action button.
  *
  * `asset="fire"` shows the red fire push-button (warm frame); any other tile
  * shows the lever asset on the default gunmetal frame. Content (image + label +

@@ -29,7 +29,7 @@ async function main() {
   const cards = [];
   for (const c of CHASSIS) {
     const payload = `${QR_PREFIX}${c.id}`;
-    const label = `${c.name} — ${c.longRange} · ${c.melee}`;
+    const label = `${c.name}, ${c.longRange} · ${c.melee}`;
     const file = `${safeName(`${c.name} - ${c.longRange} ${c.melee}`)}.png`;
     const pngPath = join(OUT, file);
     await QRCode.toFile(pngPath, payload, { type: "png", width: 512, margin: 1 });

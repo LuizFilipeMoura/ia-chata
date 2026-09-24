@@ -36,7 +36,7 @@ test("broadcast sends the current version to every socket in the room", () => {
 
 test("sendState pushes the current room snapshot to a single socket on connect", () => {
   // A reconnecting client (page refresh, dropped socket) attaches without any
-  // mutation happening — it must still receive the current state immediately,
+  // mutation happening, it must still receive the current state immediately,
   // not wait for the next broadcast.
   const hub = createWsHub();
   const room = createRoom("IRON42");

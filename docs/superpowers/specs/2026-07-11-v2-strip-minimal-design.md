@@ -1,4 +1,4 @@
-# V2 Status Strip — Minimal Utility Line
+# V2 Status Strip, Minimal Utility Line
 
 **Date:** 2026-07-11
 **Status:** Approved design
@@ -25,11 +25,11 @@ Direction chosen during brainstorming: **D (minimal) → V3 (badge only)**.
 
 Left → right, single row:
 
-1. **Badge** — the stamped iron square with glowing core, shrunk. Decorative,
+1. **Badge**: the stamped iron square with glowing core, shrunk. Decorative,
    no wordmark beside it.
-2. **Spacer** — pushes the rest right.
-3. **Room code** — `RM IRON-42`, mono, faint key + oil-hi value.
-4. **Glossary** — the `ⓘ` button, unchanged behavior.
+2. **Spacer**: pushes the rest right.
+3. **Room code**: `RM IRON-42`, mono, faint key + oil-hi value.
+4. **Glossary**: the `ⓘ` button, unchanged behavior.
 
 Removed: `.v2-brand-name` wordmark, `.v2-brand-mk` plate, the entire
 `.v2-telemetry` block (green lamp, "LINK", "LOCAL", hairline separator).
@@ -61,7 +61,7 @@ Removed: `.v2-brand-name` wordmark, `.v2-brand-mk` plate, the entire
 ### `client/src/v2/components/Shell.test.tsx`
 
 Existing tests already assert the room code (`/IRON-42/`) renders and the
-glossary handler fires — these must keep passing (regression guard for the two
+glossary handler fires, these must keep passing (regression guard for the two
 survivors). Add assertions that the removed chrome is gone:
 
 - `screen.queryByText(/OIL & IRON/i)` is `null` (wordmark removed).

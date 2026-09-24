@@ -9,7 +9,7 @@ test("ACTIONS carry the rulebook heat and slot costs (§5)", () => {
   assert.equal(ACTIONS.sprint.heat, 2);
   assert.equal(ACTIONS.fire.heat, 1);
   assert.equal(ACTIONS.aimed.heat, 1);
-  assert.equal(ACTIONS.ram, undefined); // ram removed — melee covers close combat
+  assert.equal(ACTIONS.ram, undefined); // ram removed, melee covers close combat
   assert.equal(ACTIONS.prepare.heat, 1);
   assert.equal(ACTIONS.reload.heat, 1);
   assert.equal(ACTIONS.repair.heat, 1);
@@ -69,20 +69,20 @@ test("weight-class and aim scalars are correct (§2)", () => {
 test("the weight-class maps carry exactly the buildable classes", () => {
   // Heavy and Colossal were deleted 2026-07-16. makeRig had always rejected them
   // (SUPPORTED_RIG_CLASSES), so every heavy/colossal branch in these maps existed
-  // only to be read as if it were real — and it was, twice, by a spec author and
+  // only to be read as if it were real, and it was, twice, by a spec author and
   // its reviewer during the penetration rework.
   for (const [name, map] of Object.entries({ WEIGHT_PEN_MOD, HEAT_CAPACITY })) {
     assert.deepEqual(Object.keys(map), [...SUPPORTED_RIG_CLASSES], `${name} drifted from SUPPORTED_RIG_CLASSES`);
   }
 });
 
-test("woundTarget — TN is 6 + T - S", () => {
+test("woundTarget, TN is 6 + T - S", () => {
   assert.equal(woundTarget(5, 5), 6);  // even match
   assert.equal(woundTarget(7, 5), 4);  // stronger
   assert.equal(woundTarget(3, 5), 8);  // weaker
 });
 
-test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
+test("woundTarget, clamps to 2..10 so no matchup is ever hopeless", () => {
   // A natural 10 must ALWAYS wound. This is the guarantee that kills the
   // 69 dead zones of the impact-total model; do not relax it.
   assert.equal(woundTarget(1, 20), 10);
@@ -90,7 +90,7 @@ test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
   assert.equal(woundTarget(20, 1), 2);
 
   // The clamp must engage on real inputs, not just absurd ones. NOTE: T7 was a
-  // colossal hull, and Heavy/Colossal were deleted 2026-07-16 — so this is now a
+  // colossal hull, and Heavy/Colossal were deleted 2026-07-16, so this is now a
   // unit test of woundTarget's arithmetic, not an in-domain matchup. No rig board
   // reaches T7 any more; see combat.test.js's "nothing needs the clamp's upper
   // rail any more", which pins that the whole game's worst raw TN is 9.
@@ -101,7 +101,7 @@ test("woundTarget — clamps to 2..10 so no matchup is ever hopeless", () => {
   assert.equal(woundTarget(5, 1), 2);    // raw 2,  NOT clamped
 });
 
-test("woundTarget — the original bug case is possible, not impossible", () => {
+test("woundTarget, the original bug case is possible, not impossible", () => {
   // The light Circular Saw vs a medium hull is the matchup that motivated this
   // rewrite: under the impact-total model it was mathematically 0 damage at any
   // roll. Derived from the live stats, not hardcoded, so a future retune of the
@@ -110,10 +110,10 @@ test("woundTarget — the original bug case is possible, not impossible", () => 
   assert.equal(woundTarget(pen, 5), 7); // medium hull T5 => 40%
 });
 
-test("woundTarget — junk Penetration coerces (fails safe), junk T throws (fails loud)", () => {
+test("woundTarget, junk Penetration coerces (fails safe), junk T throws (fails loud)", () => {
   // The asymmetry is the point. A junk Penetration floors to 0 and drives the TN toward
-  // 10 — a 10% wound, the safe direction. A junk T would coerce to 0 and drive
-  // the TN to 2 — a 90% wound, making the location the softest thing on the
+  // 10, a 10% wound, the safe direction. A junk T would coerce to 0 and drive
+  // the TN to 2, a 90% wound, making the location the softest thing on the
   // table. That is the mathematically-wrong matchup this whole rewrite exists
   // to eliminate, so T must never be guessed at.
   assert.equal(woundTarget(undefined, 5), 10);
@@ -121,7 +121,7 @@ test("woundTarget — junk Penetration coerces (fails safe), junk T throws (fail
   // Every one of these must throw. The five falsy non-numbers are the sharp
   // ones: Number(null), Number(""), Number(false) and Number([]) are all 0, so
   // a guard that coerces before checking (`Number.isFinite(Number(t))`) lets
-  // them through to TN 2 and reintroduces the bug. `null` matters most — it is
+  // them through to TN 2 and reintroduces the bug. `null` matters most, it is
   // what a failed toughnessOf lookup used to return.
   for (const junk of [undefined, null, "", " ", false, [], {}, NaN, Infinity, "soft", "5"]) {
     assert.throws(

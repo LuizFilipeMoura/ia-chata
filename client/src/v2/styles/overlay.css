@@ -1,4 +1,4 @@
-/* V2 overlay primitives — Drawer (bottom sheet) + RollConsole (dice theater).
+/* V2 overlay primitives, Drawer (bottom sheet) + RollConsole (dice theater).
    Every rule is scoped under `.v2-root` so nothing leaks into V1's global
    stylesheet (guarded by isolation.test.ts). Ported from V1
    battle.css/dieselpunk.css, retokenised onto the --v2-* palette. */
@@ -41,7 +41,7 @@
 .v2-root .v2-dwr-btn:not(:disabled):active { transform: translateY(1px); }
 .v2-root .v2-dwr-btn:disabled { opacity: .4; }
 
-/* ===== Dice-resolution console — "Terminal Sibling" =========================
+/* ===== Dice-resolution console, "Terminal Sibling" =========================
    A literal sibling of the Rig Control Terminal (rig-terminal.css): one unified
    amber frame, content split into stacked labelled zones divided by 1px rules,
    and the damage readout flattened to a single sunken strip with an inline
@@ -78,7 +78,7 @@
   transition: transform .28s cubic-bezier(.2, .85, .25, 1), opacity .28s ease;
 }
 .v2-roll-scrim.show .v2-roll-console { transform: none; opacity: 1; }
-/* Breathing amber ring — opacity-animated overlay, so the seating box-shadow
+/* Breathing amber ring, opacity-animated overlay, so the seating box-shadow
    above is preserved (the whole point of the redesign). */
 .v2-root .v2-roll-console::after {
   content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
@@ -201,7 +201,7 @@
   animation: v2-lampfast 1s ease-in-out infinite;
 }
 
-/* Resolution ledger — a sunken well holding one row PER STEP of the chain
+/* Resolution ledger, a sunken well holding one row PER STEP of the chain
    (hit → location → wound → damage), not a single flat equation. The old
    inline-equation model could not say which die decided the damage, which is
    the whole reason the ledger exists. Both the ledger (.v2-rx-break) and the
@@ -237,7 +237,7 @@
 }
 .v2-root .v2-rx-step:first-child { padding-top: .1rem; }
 .v2-root .v2-rx-step:last-child { padding-bottom: .1rem; }
-/* Node on the rail, tinted per stage — the eye can find "wound" without reading. */
+/* Node on the rail, tinted per stage, the eye can find "wound" without reading. */
 .v2-root .v2-rx-step::before {
   content: ""; position: absolute; left: -5px; top: .75rem;
   width: 8px; height: 8px; border-radius: 50%;
@@ -263,7 +263,7 @@
   color: var(--v2-oil-hi); text-shadow: 0 0 10px rgba(231, 154, 61, .35);
 }
 
-/* "Penetration 4 vs T5 → 7+" — THE line that answers "why 0 damage?". Given its own
+/* "Penetration 4 vs T5 → 7+", THE line that answers "why 0 damage?". Given its own
    weight: this is the sentence the whole ledger exists to print. */
 .v2-root .v2-rx-step-math {
   display: inline-flex; align-items: baseline; gap: .28rem; flex-wrap: wrap;
@@ -275,11 +275,11 @@
   color: var(--v2-txt);
 }
 .v2-root .v2-rx-step-math i { font-style: normal; color: var(--v2-txt-faint); }
-/* "T5" is one token, not "T" next to "5" — the flex gap must not split it. */
+/* "T5" is one token, not "T" next to "5", the flex gap must not split it. */
 .v2-root .v2-rx-step-pair { display: inline-flex; align-items: baseline; gap: 0; }
 .v2-root .v2-rx-step-math .v2-rx-step-tn { font-size: var(--v2-text-lg); }
 
-/* Per-step dice — small stamped pips, not the 3rem theater tokens above. */
+/* Per-step dice, small stamped pips, not the 3rem theater tokens above. */
 .v2-root .v2-rx-step-dice { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
 .v2-root .v2-rx-pip {
   min-width: 1.4rem; padding: .05rem .25rem;
@@ -302,7 +302,7 @@
 }
 .v2-root .v2-rx-step[data-kind="damage"] .v2-rx-step-out { color: var(--v2-ember-hi); }
 
-/* Terms — wrapped chips. Four stacked term LISTS would not fit a 390px phone;
+/* Terms, wrapped chips. Four stacked term LISTS would not fit a 390px phone;
    chips reflow instead of overflowing. */
 .v2-root .v2-rx-step-terms {
   display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .4rem;
@@ -324,7 +324,7 @@
 }
 .v2-root .v2-rx-chip[data-sign="pos"] b { color: var(--v2-oil-hi); }
 .v2-root .v2-rx-chip[data-sign="neg"] b { color: var(--v2-crit); }
-/* A zero term is a CANCELLER — it explains an absence, so it is rendered
+/* A zero term is a CANCELLER, it explains an absence, so it is rendered
    muted but never hidden. */
 .v2-root .v2-rx-chip[data-sign="zero"] { border-style: dashed; }
 .v2-root .v2-rx-chip[data-sign="zero"] b { color: var(--v2-txt-faint); }
@@ -344,7 +344,7 @@
   font-size: var(--v2-text-sm); letter-spacing: .1em; text-transform: uppercase; color: var(--v2-txt-dim);
 }
 
-/* Fallback summary sentence — mono readout voice, matching the equation strip
+/* Fallback summary sentence, mono readout voice, matching the equation strip
    it stands in for (the rest of the console is stencil/mono, never Oswald). */
 .v2-root .v2-roll-summary {
   text-align: center; text-wrap: balance;
@@ -352,7 +352,7 @@
   letter-spacing: .01em; color: var(--v2-txt);
 }
 
-/* Effects log lines — mono ember lines with a staggered entrance. */
+/* Effects log lines, mono ember lines with a staggered entrance. */
 .v2-root .v2-roll-effects { display: flex; flex-direction: column; gap: .45rem; }
 .v2-root .v2-roll-effect {
   font-family: var(--v2-mono); font-size: var(--v2-text-sm); letter-spacing: .02em; color: var(--v2-ember-hi);
@@ -362,7 +362,7 @@
 }
 @keyframes v2-line-in { to { opacity: 1; transform: none; } }
 
-/* ===== Reaction-token flip reveal — a struck coin on an oil hatch back ===== */
+/* ===== Reaction-token flip reveal, a struck coin on an oil hatch back ===== */
 .v2-root .v2-rx-reveal {
   display: flex; flex-direction: column; align-items: center; gap: .5rem;
 }
@@ -400,7 +400,7 @@
   100% { transform: rotateY(180deg) scale(1); }
 }
 
-/* ===== Manual dice-entry form — sunken iron input wells ===== */
+/* ===== Manual dice-entry form, sunken iron input wells ===== */
 .v2-root .v2-roll-form { display: flex; flex-direction: column; gap: .5rem; }
 .v2-root .v2-roll-form-row { display: flex; align-items: center; gap: .5rem; }
 .v2-root .v2-roll-form-row label { flex: 1; letter-spacing: .06em; color: var(--v2-txt-dim); }
@@ -413,7 +413,7 @@
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, .7), 0 0 0 1px var(--v2-oil), 0 0 14px rgba(231, 154, 61, .3);
 }
 
-/* Action bar — every state ends with a consistent forged action row. */
+/* Action bar, every state ends with a consistent forged action row. */
 .v2-root .v2-roll-action {
   display: flex; gap: .6rem;
   padding: 16px 20px 18px; background: var(--v2-iron-950);
@@ -439,7 +439,7 @@
   margin-top: .15rem; font-family: var(--v2-mono); font-size:var(--v2-text-sm); color: var(--v2-ember-hi);
 }
 
-/* Repair location — segmented choice field (v2-field/v2-field-seg/v2-opt primitives) */
+/* Repair location, segmented choice field (v2-field/v2-field-seg/v2-opt primitives) */
 .v2-root .v2-field { margin: .5rem 0; }
 .v2-root .v2-field > label { letter-spacing: .12em; color: var(--v2-txt-dim); }
 .v2-root .v2-field-ic { margin-right: .35rem; }
@@ -447,7 +447,7 @@
 .v2-root .v2-opt-ic { margin-right: .25rem; }
 .v2-root .v2-opt.is-sel { color: var(--v2-oil-hi); }
 
-/* Timed Move / Sprint hold — the Confirm button unlocks only once this bar fills */
+/* Timed Move / Sprint hold, the Confirm button unlocks only once this bar fills */
 .v2-root .v2-dwr-move-call { color: var(--v2-oil-hi); font-weight: 600; }
 .v2-root .v2-dwr-move-call.is-ready { color: #6cc47f; }
 .v2-root .v2-dwr-cost {
@@ -481,7 +481,7 @@
   outline: none; border-color: var(--v2-oil); box-shadow: 0 0 0 1px var(--v2-oil);
 }
 
-/* Blast resolution — checkbox list of Rigs within 4" of the wreck */
+/* Blast resolution, checkbox list of Rigs within 4" of the wreck */
 .v2-root .v2-blast-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .3rem; }
 .v2-root .v2-blast-opt {
   display: flex; align-items: center; gap: .5rem; width: 100%;
@@ -509,7 +509,7 @@
 .v2-root .v2-rx-choice-label { font-family: var(--v2-disp); font-weight: 700; font-size:var(--v2-text-base); }
 .v2-root .v2-rx-choice-rule { font-family: var(--v2-mono); font-size:var(--v2-text-sm); color: var(--v2-txt-dim); line-height: 1.3; }
 .v2-root .v2-rx-choice { width: 100%; cursor: pointer; }
-/* Confirm expansion — tucks under the selected choice as one connected panel. */
+/* Confirm expansion, tucks under the selected choice as one connected panel. */
 .v2-root .v2-rx-item.is-open .v2-rx-choice { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .v2-root .v2-rx-confirm {
   overflow: hidden;
@@ -582,7 +582,7 @@
 .v2-threat-reticle .h, .v2-threat-reticle .v { position: absolute; background: var(--ember-hi); opacity: .85; }
 .v2-threat-reticle .h { left: 0; right: 0; top: 50%; height: 1px; }
 .v2-threat-reticle .v { top: 0; bottom: 0; left: 50%; width: 1px; }
-/* Square ✕ in the card's top-right — a quieter sibling of the ember Dismiss CTA.
+/* Square ✕ in the card's top-right, a quieter sibling of the ember Dismiss CTA.
    Hand-styled rather than reusing `.v2-close`: this overlay portals to body with
    no `.v2-root` wrapper, so the `--v2-*` tokens that primitive relies on don't
    resolve here. Same V1 palette the rest of the telegraph uses. */

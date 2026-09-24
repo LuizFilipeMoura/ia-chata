@@ -1,4 +1,4 @@
-# Phase 1 — Shared-State Foundation Implementation Plan
+# Phase 1, Shared-State Foundation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,19 +8,19 @@
 
 **Tech Stack:** Node 18+ (ESM), Express, built-in `node:test` runner, vanilla browser JS. No new dependencies.
 
-**Scope note:** This is Phase 1 of the battle-state spec ([2026-07-04-battle-state-tracker-design.md](../specs/2026-07-04-battle-state-tracker-design.md)). It ships shared multiplayer for the Rig-condition features that exist today (SP, heat, add/remove) plus ownership. Weapons, Prepare tokens, Round/Recovery, and VP/objectives are Phases 2–5 and are intentionally out of scope here — but the persisted state shape includes their fields (initialized empty) so later phases add behavior, not migrations.
+**Scope note:** This is Phase 1 of the battle-state spec ([2026-07-04-battle-state-tracker-design.md](../specs/2026-07-04-battle-state-tracker-design.md)). It ships shared multiplayer for the Rig-condition features that exist today (SP, heat, add/remove) plus ownership. Weapons, Prepare tokens, Round/Recovery, and VP/objectives are Phases 2–5 and are intentionally out of scope here, but the persisted state shape includes their fields (initialized empty) so later phases add behavior, not migrations.
 
 ---
 
 ## File Structure
 
-- **Create `game-state.js`** — pure functions: state shape (`createRoom`, `makeRig`), side claiming (`claimSide`, `normalizeSide`), Rig math (`engineHeatFloor`, `recompute`, `damageRig`, `repairRig`, `setRigSp`, `heatRig`, `findRig`), the command dispatcher (`applyCommand`), the public view (`publicState`), and the prompt dump (`formatBattleState`). No I/O. Fully unit-tested.
-- **Create `store.js`** — `createStore(filePath)` returning `{ getRoom, getOrCreateRoom, persist }` over a `Map` persisted to JSON. Only I/O lives here. Unit-tested against a temp file.
-- **Create `game-state.test.js`, `store.test.js`** — `node:test` suites.
-- **Modify `server.js`** — import the store + game-state; add `POST /api/game/:room/join`, `GET /api/game/:room`, `POST /api/game/:room/command`; make `/api/chat` room-aware via `formatBattleState`; document the optional `owner` attribute on `[[RIG add]]`.
-- **Modify `index.html`** — join gate (room code + name + side), polling loop, command sender, ownership-aware rendering (Your Squadron vs Enemy). The Rig math functions are deleted from the client (now server-owned); the client renders server state and builds commands.
-- **Modify `package.json`** — add `"test": "node --test"`.
-- **Create `.gitignore`** — ignore `node_modules/` and `data/`.
+- **Create `game-state.js`**: pure functions: state shape (`createRoom`, `makeRig`), side claiming (`claimSide`, `normalizeSide`), Rig math (`engineHeatFloor`, `recompute`, `damageRig`, `repairRig`, `setRigSp`, `heatRig`, `findRig`), the command dispatcher (`applyCommand`), the public view (`publicState`), and the prompt dump (`formatBattleState`). No I/O. Fully unit-tested.
+- **Create `store.js`**: `createStore(filePath)` returning `{ getRoom, getOrCreateRoom, persist }` over a `Map` persisted to JSON. Only I/O lives here. Unit-tested against a temp file.
+- **Create `game-state.test.js`, `store.test.js`**: `node:test` suites.
+- **Modify `server.js`**: import the store + game-state; add `POST /api/game/:room/join`, `GET /api/game/:room`, `POST /api/game/:room/command`; make `/api/chat` room-aware via `formatBattleState`; document the optional `owner` attribute on `[[RIG add]]`.
+- **Modify `index.html`**: join gate (room code + name + side), polling loop, command sender, ownership-aware rendering (Your Squadron vs Enemy). The Rig math functions are deleted from the client (now server-owned); the client renders server state and builds commands.
+- **Modify `package.json`**: add `"test": "node --test"`.
+- **Create `.gitignore`**: ignore `node_modules/` and `data/`.
 
 ---
 
@@ -72,7 +72,7 @@ git commit -m "chore: add node:test runner and gitignore"
 
 ---
 
-## Task 2: `game-state.js` — room + Rig state (pure logic)
+## Task 2: `game-state.js`: room + Rig state (pure logic)
 
 **Files:**
 - Create: `game-state.js`
@@ -144,7 +144,7 @@ test("unknown verb and unknown rig are no-ops (no version bump)", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test game-state.test.js`
-Expected: FAIL — `Cannot find module './game-state.js'`.
+Expected: FAIL, `Cannot find module './game-state.js'`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -299,7 +299,7 @@ export function applyCommand(room, cmd) {
   return room;
 }
 
-// The room view sent to clients — omit internal bookkeeping.
+// The room view sent to clients, omit internal bookkeeping.
 export function publicState(room) {
   return { code: room.code, version: room.version, game: room.game, rigs: room.rigs };
 }
@@ -333,7 +333,7 @@ export function formatBattleState(room) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test game-state.test.js`
-Expected: PASS — all 5 tests green.
+Expected: PASS, all 5 tests green.
 
 - [ ] **Step 5: Commit**
 
@@ -389,7 +389,7 @@ git commit -m "test: lock formatBattleState and publicState output"
 
 ---
 
-## Task 4: `store.js` — room persistence over a JSON file
+## Task 4: `store.js`: room persistence over a JSON file
 
 **Files:**
 - Create: `store.js`
@@ -436,7 +436,7 @@ test("missing file loads to an empty store without throwing", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test store.test.js`
-Expected: FAIL — `Cannot find module './store.js'`.
+Expected: FAIL, `Cannot find module './store.js'`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -454,7 +454,7 @@ export function createStore(filePath) {
       const obj = JSON.parse(fs.readFileSync(filePath, "utf8"));
       for (const [code, room] of Object.entries(obj)) rooms.set(code, room);
     } catch {
-      // No file yet, or unreadable — start empty.
+      // No file yet, or unreadable, start empty.
     }
   }
 
@@ -485,12 +485,12 @@ export function createStore(filePath) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node --test store.test.js`
-Expected: PASS — both tests green.
+Expected: PASS, both tests green.
 
 - [ ] **Step 5: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS — all files, 0 failures.
+Expected: PASS, all files, 0 failures.
 
 - [ ] **Step 6: Commit**
 
@@ -601,7 +601,7 @@ Then `GET`:
 ```js
 await fetch("/api/game/IRON42").then((r) => r.json());
 ```
-Expected: `version: 2` with the Warden rig present. Confirm `data/rooms.json` now exists via `preview_logs` (no error) — persistence happened.
+Expected: `version: 2` with the Warden rig present. Confirm `data/rooms.json` now exists via `preview_logs` (no error), persistence happened.
 
 - [ ] **Step 7: Commit**
 
@@ -732,11 +732,11 @@ In `index.html`, replace the final three lines of the IIFE:
   loadRigs();
   renderRigs();
 
-  addBubble("bot", "Ask me anything about the Of Oil and Iron rulebook — by text or by tapping the mic. Tap 🛠 Rigs to track your squadron's condition; I can update it when you narrate hits, repairs, or heat.");
+  addBubble("bot", "Ask me anything about the Of Oil and Iron rulebook, by text or by tapping the mic. Tap 🛠 Rigs to track your squadron's condition; I can update it when you narrate hits, repairs, or heat.");
 ```
 with:
 ```js
-  addBubble("bot", "Ask me anything about the Of Oil and Iron rulebook — by text or by tapping the mic. Tap 🛠 Rigs to see your squadron and the enemy's.");
+  addBubble("bot", "Ask me anything about the Of Oil and Iron rulebook, by text or by tapping the mic. Tap 🛠 Rigs to see your squadron and the enemy's.");
 
   if (session?.room) {
     joinRoomFlow(session.room, session.name, session.side)
@@ -745,12 +745,12 @@ with:
     joinGate.classList.remove("hidden");
   }
 ```
-(Note: `loadRigs()` / `renderRigs()` from `localStorage` are removed here — Task 7 replaces the Rig data source with server state.)
+(Note: `loadRigs()` / `renderRigs()` from `localStorage` are removed here, Task 7 replaces the Rig data source with server state.)
 
 - [ ] **Step 5: Verify the gate renders**
 
 With the server running (`preview_start` → `oil-iron-preview`), reload the page (`preview_eval`: `location.reload()`), then `preview_snapshot`.
-Expected: the join gate is visible with room/name inputs and two side buttons; the terminal behind it is covered. (It will not yet advance — `applyServerState`/`startPolling` land in Task 7. Confirm no console errors other than those two being undefined, which Task 7 resolves.)
+Expected: the join gate is visible with room/name inputs and two side buttons; the terminal behind it is covered. (It will not yet advance, `applyServerState`/`startPolling` land in Task 7. Confirm no console errors other than those two being undefined, which Task 7 resolves.)
 
 - [ ] **Step 6: Commit**
 
@@ -785,7 +785,7 @@ In `index.html`, replace the block from `const RIG_STORE_KEY = "ooi-rigs-v1";` t
 
 - [ ] **Step 2: Delete the now-dead local mutation helpers**
 
-Remove these functions from `index.html` (they now live on the server): `makeRig`, `engineHeatFloor`, `recompute`, `damageRig`, `repairRig`, `setRigSp`, `heatRig`, `loadRigs` (lines ~501–566 plus the `loadRigs` definition). Keep `findRig` (still used for rendering lookups) — it already reads the `rigs` mirror. Keep `LOCS` (used by the `renderRigs` component loop). Remove `RIG_DEFAULTS` too — the server now computes SP, so the client no longer needs it.
+Remove these functions from `index.html` (they now live on the server): `makeRig`, `engineHeatFloor`, `recompute`, `damageRig`, `repairRig`, `setRigSp`, `heatRig`, `loadRigs` (lines ~501–566 plus the `loadRigs` definition). Keep `findRig` (still used for rendering lookups), it already reads the `rigs` mirror. Keep `LOCS` (used by the `renderRigs` component loop). Remove `RIG_DEFAULTS` too, the server now computes SP, so the client no longer needs it.
 
 - [ ] **Step 3: Rewrite `rigSnapshot` → nothing; chat sends the room**
 
@@ -842,7 +842,7 @@ git commit -m "feat: client polls server state every 3s and renders it"
 
 ---
 
-## Task 8: Client command sender — rewire manual buttons + Gemma tags (`index.html`)
+## Task 8: Client command sender, rewire manual buttons + Gemma tags (`index.html`)
 
 **Files:**
 - Modify: `index.html` (`sendCommand`; `applyRigCommands`; component `−/＋`, heat, remove, add-form handlers)
@@ -877,7 +877,7 @@ In `index.html`, replace the whole `applyRigCommands` function (lines ~580–606
     while ((match = RIG_TAG_RE.exec(text))) {
       const body = match[1].trim();
       const verb = (body.split(/\s+/)[0] || "").toLowerCase();
-      const a = parseAttrs(body);   // { name, loc, amount, ... } — verb word is not an attr
+      const a = parseAttrs(body);   // { name, loc, amount, ... }, verb word is not an attr
       sendCommand(verb, a);
     }
   }
@@ -946,7 +946,7 @@ Then replace `addRigFromForm` (lines ~746–754) with:
 - [ ] **Step 6: Verify a manual edit round-trips through the server**
 
 Server running, joined as Ana. Add a rig "Warden" (heavy) via the form, then click Hull `−` twice. `preview_snapshot`.
-Expected: Warden's Hull reads `6/8` (server applied two damage commands). Reload the page — Warden persists at `6/8` (state is server-side now, not `localStorage`). Check `preview_network` shows `POST /api/game/IRON42/command` calls returning 200.
+Expected: Warden's Hull reads `6/8` (server applied two damage commands). Reload the page, Warden persists at `6/8` (state is server-side now, not `localStorage`). Check `preview_network` shows `POST /api/game/IRON42/command` calls returning 200.
 
 - [ ] **Step 7: Commit**
 
@@ -957,7 +957,7 @@ git commit -m "feat: route manual edits and Gemma tags through server commands"
 
 ---
 
-## Task 9: Ownership rendering — Your Squadron vs Enemy (`index.html`)
+## Task 9: Ownership rendering, Your Squadron vs Enemy (`index.html`)
 
 **Files:**
 - Modify: `index.html` (`renderRigs` grouping + owner badge; add-form owner selector)
@@ -999,7 +999,7 @@ In `index.html`, replace the body of `renderRigs` after the empty-state check (t
       for (const rig of owned) rigList.appendChild(renderRigCard(rig));
     }
 ```
-Then extract the existing per-card DOM building (the code that built `card`, `head`, bars, etc.) into a new function `renderRigCard(rig)` that returns the `card` element. Keep all its internals identical — only its wrapper changes from inline loop to a function returning `card`.
+Then extract the existing per-card DOM building (the code that built `card`, `head`, bars, etc.) into a new function `renderRigCard(rig)` that returns the `card` element. Keep all its internals identical, only its wrapper changes from inline loop to a function returning `card`.
 
 - [ ] **Step 3: Add the group-heading CSS**
 
@@ -1043,7 +1043,7 @@ Expected: both clients converge on identical state within one poll interval; `da
 - [ ] **Step 3: Restart durability**
 
 Stop the server (`preview_stop`), restart (`preview_start`). Reload A. 
-Expected: Warden + Reaver still present with the same SP — state survived restart via `data/rooms.json`.
+Expected: Warden + Reaver still present with the same SP, state survived restart via `data/rooms.json`.
 
 - [ ] **Step 4: Update the README**
 
@@ -1054,7 +1054,7 @@ In `README.md`, under "## Usage", add a subsection:
 Two players share a battle by entering the **same room code** on the join screen
 and picking opposite sides (You / Enemy). State lives on the server (in
 `data/rooms.json`), and each browser polls `GET /api/game/<room>` every 3 seconds,
-so both see the same Rigs — yours and the enemy's — updating live. Every change
+so both see the same Rigs, yours and the enemy's, updating live. Every change
 (a manual tap or one narrated through Gemma) is sent to the server as a command,
 so the two clients never overwrite each other.
 ```

@@ -1,10 +1,10 @@
-# Mark Every Decisive Die CRIT — Implementation Plan
+# Mark Every Decisive Die CRIT, Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** When one volley both tears a location open and kills the unit, promote *both* the tear-open die and the kill die to `tone: "crit"`, instead of last-write-wins keeping only the kill die.
 
-**Architecture:** In `shared/combat.js` `resolveAttack`, replace the single `let critWound` with a `const critWounds = []` list that both the kill branch and the tear-open branch push to, then promote every die in the list after the damage loop. No client change — `RollConsole` already keys CRIT per-die. One test file changes (`shared/game-state.test.js`), driving the real `applyDamage` through `applyCommand`.
+**Architecture:** In `shared/combat.js` `resolveAttack`, replace the single `let critWound` with a `const critWounds = []` list that both the kill branch and the tear-open branch push to, then promote every die in the list after the damage loop. No client change, `RollConsole` already keys CRIT per-die. One test file changes (`shared/game-state.test.js`), driving the real `applyDamage` through `applyCommand`.
 
 **Tech Stack:** Node built-in test runner (`node:test` + `node:assert`), plain JS. Run tests with `npm test` (or the file directly with `node --test`).
 
@@ -14,8 +14,8 @@
 
 ## File Structure
 
-- `shared/combat.js` — `resolveAttack`. The only production change. Three tiny edits (declaration, two push sites, one promotion loop) plus two comment rewrites.
-- `shared/game-state.test.js` — one new `test(...)` block with two cases. Drives `applyCommand` so the real `game-state.js` `applyDamage` (destroy + catastrophic logic) runs; `combat.test.js` cannot host this because its `makeCtx` stubs `applyDamage` (no-op or plain SP-subtract that never sets `target.destroyed`).
+- `shared/combat.js`: `resolveAttack`. The only production change. Three tiny edits (declaration, two push sites, one promotion loop) plus two comment rewrites.
+- `shared/game-state.test.js`: one new `test(...)` block with two cases. Drives `applyCommand` so the real `game-state.js` `applyDamage` (destroy + catastrophic logic) runs; `combat.test.js` cannot host this because its `makeCtx` stubs `applyDamage` (no-op or plain SP-subtract that never sets `target.destroyed`).
 
 No new files. No client files touched.
 
@@ -24,8 +24,8 @@ No new files. No client files touched.
 ## Background an implementer needs
 
 **Why last-write-wins loses a die.** `resolveAttack` promotes a wound die to CRIT on two tiers:
-- **gutted / kill** — `wasAlive && target.destroyed` (~line 817), assigns `critWound = h`, then `continue`.
-- **torn open** — `wasFull && after === 0` (~line 823), assigns `critWound = h`.
+- **gutted / kill**: `wasAlive && target.destroyed` (~line 817), assigns `critWound = h`, then `continue`.
+- **torn open**: `wasFull && after === 0` (~line 823), assigns `critWound = h`.
 
 A single read after the loop (~line 844) promotes exactly one die. When wound 1 tears the location
 open (`critWound = h1`) and wound 2 kills (`critWound = h2`), the final read promotes h2 only; h1
@@ -34,7 +34,7 @@ stays `tone: "ok"` even though its own `effects` line (`… torn open in one blo
 **Bounded at ≤ 2 CRIT dice.** All impacts in a volley hit the same `location`, so once torn open
 `wasFull` is false and once destroyed `wasAlive` is false: at most one tear-open + one kill. A
 single wound that both zeroes-from-full and kills enters the kill branch, whose `continue` skips
-the tear-open branch — so one wound is counted once, not twice.
+the tear-open branch, so one wound is counted once, not twice.
 
 **How the test controls the outcome deterministically:**
 - Weapon damage: Claw (Damage 3) + `rending-talons` (grants Rend, `+1` Damage) → each *wounding*
@@ -98,13 +98,12 @@ test("F3-E: a volley that tears a location open AND kills marks BOTH dice CRIT",
 });
 ```
 
-- [ ] **Step 2: Run the test — verify it FAILS on the CRIT count**
+- [ ] **Step 2: Run the test, verify it FAILS on the CRIT count**
 
 Run: `node --test shared/game-state.test.js` (or `npm test`).
 
-Expected: the new test FAILS at `assert.equal(crits.length, 2, ...)` with `crits.length === 1` —
-the current last-write-wins code marks only the kill die. The two `effects` sanity asserts must
-PASS (if either fails, the fixture drifted — the engine pool no longer produces a tear-open-then-
+Expected: the new test FAILS at `assert.equal(crits.length, 2, ...)` with `crits.length === 1`: the current last-write-wins code marks only the kill die. The two `effects` sanity asserts must
+PASS (if either fails, the fixture drifted, the engine pool no longer produces a tear-open-then-
 kill volley; fix the fixture before proceeding, do not weaken the asserts).
 
 - [ ] **Step 3: Change the declaration**
@@ -114,7 +113,7 @@ In `shared/combat.js`, replace the `critWound` declaration and its comment.
 Find (~lines 725-730):
 
 ```js
-  // Drama (§7 spill / §8 kill tier) — player-facing lines for the resolution's
+  // Drama (§7 spill / §8 kill tier), player-facing lines for the resolution's
   // `effects`. `critWound` records the wound that tore a location open or killed
   // the rig, so that once the damage loop below has run, that die's tone can be
   // promoted to `crit`.
@@ -125,7 +124,7 @@ Find (~lines 725-730):
 Replace with:
 
 ```js
-  // Drama (§7 spill / §8 kill tier) — player-facing lines for the resolution's
+  // Drama (§7 spill / §8 kill tier), player-facing lines for the resolution's
   // `effects`. `critWounds` collects EVERY wound that tore a location open or
   // killed the rig, so that once the damage loop below has run, each of those
   // dice can be promoted to `crit`. A volley can do both (tear a location open,
@@ -141,7 +140,7 @@ Find (~lines 817-822):
 ```js
         if (wasAlive && target.destroyed) {
           // A wreck doesn't also report its parts.
-          drama.push(`${weaponName} — ${target.name} gutted in a single blow`);
+          drama.push(`${weaponName}, ${target.name} gutted in a single blow`);
           critWound = h;
           continue;
         }
@@ -152,7 +151,7 @@ Replace `critWound = h;` with `critWounds.push(h);` (keep the comment and the `c
 ```js
         if (wasAlive && target.destroyed) {
           // A wreck doesn't also report its parts.
-          drama.push(`${weaponName} — ${target.name} gutted in a single blow`);
+          drama.push(`${weaponName}, ${target.name} gutted in a single blow`);
           critWounds.push(h);
           continue;
         }
@@ -164,7 +163,7 @@ Find (~lines 823-826):
 
 ```js
         if (wasFull && after === 0) {
-          drama.push(`${weaponName} — ${location} torn open in one blow`);
+          drama.push(`${weaponName}, ${location} torn open in one blow`);
           critWound = h;
         }
 ```
@@ -173,7 +172,7 @@ Replace with:
 
 ```js
         if (wasFull && after === 0) {
-          drama.push(`${weaponName} — ${location} torn open in one blow`);
+          drama.push(`${weaponName}, ${location} torn open in one blow`);
           critWounds.push(h);
         }
 ```
@@ -183,7 +182,7 @@ Replace with:
 Find (~lines 835-844):
 
 ```js
-      // The die that tore a location open — or killed the rig outright — earns
+      // The die that tore a location open, or killed the rig outright, earns
       // CRIT. The wound rolls were pushed above, before applyDamage ran, so they
       // could not know then; hence the promotion here.
       // This must stay OUTSIDE the damage loop, for two reasons:
@@ -198,28 +197,28 @@ Find (~lines 835-844):
 Replace with:
 
 ```js
-      // Every die that tore a location open — or killed the rig outright — earns
+      // Every die that tore a location open, or killed the rig outright, earns
       // CRIT. The wound rolls were pushed above, before applyDamage ran, so they
       // could not know then; hence the promotion here.
       // This must stay OUTSIDE the damage loop: the kill branch `continue`s past
       // the loop tail, so promoting inline would never fire on a kill. Promoting
       // the whole list here also means a volley that tears a location open on one
-      // wound and kills on a later one lights up BOTH dice — one per `effects`
-      // line — instead of last-write-wins keeping only the kill die. The list
+      // wound and kills on a later one lights up BOTH dice, one per `effects`
+      // line, instead of last-write-wins keeping only the kill die. The list
       // holds at most two entries (one tear-open + one kill; the kill branch's
       // `continue` keeps a single wound that does both from being counted twice).
       for (const h of critWounds) woundRolls[impacts.indexOf(h)].tone = "crit";
 ```
 
-- [ ] **Step 7: Run the test — verify it PASSES**
+- [ ] **Step 7: Run the test, verify it PASSES**
 
 Run: `node --test shared/game-state.test.js`
 
-Expected: the F3-E test PASSES — `crits.length === 2`.
+Expected: the F3-E test PASSES, `crits.length === 2`.
 
 - [ ] **Step 8: Add the single-wound guard case**
 
-Append a second test (guards that a single wound doing both tiers is counted once, not twice — the
+Append a second test (guards that a single wound doing both tiers is counted once, not twice, the
 `continue` path). Add after the test from Step 1.
 
 ```js
@@ -246,16 +245,16 @@ test("F3-E: one wound that both zeroes-from-full and kills marks exactly ONE die
   const woundRolls = attack.rolls.filter((roll) => /^wound /.test(roll.label));
   assert.equal(woundRolls.length, 1, "one landing wound");
   const crits = woundRolls.filter((roll) => roll.tone === "crit");
-  assert.equal(crits.length, 1, "exactly one CRIT die — not double-counted");
+  assert.equal(crits.length, 1, "exactly one CRIT die, not double-counted");
 });
 ```
 
-- [ ] **Step 9: Run the test file — verify BOTH cases pass**
+- [ ] **Step 9: Run the test file, verify BOTH cases pass**
 
 Run: `node --test shared/game-state.test.js`
 
 Expected: both F3-E tests PASS. If the second test's `gutted` sanity assert fails, the single-wound
-fixture did not reach the kill tier (engine max wrong for the Rend total) — fix the fixture, not the
+fixture did not reach the kill tier (engine max wrong for the Rend total), fix the fixture, not the
 assert.
 
 - [ ] **Step 10: Run the full suite**
@@ -264,7 +263,7 @@ Run: `npm test`
 
 Expected: the whole suite is green (the change only adds CRIT tone to a die that was `ok`; no
 existing assertion depends on the tear-open die being un-CRIT). If any pre-existing test asserted a
-wound die's `tone` on a tear-open-then-kill volley, reconcile it — but none is expected.
+wound die's `tone` on a tear-open-then-kill volley, reconcile it, but none is expected.
 
 - [ ] **Step 11: Commit**
 
@@ -291,7 +290,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - **Spec coverage:** the change (list + two pushes + loop), the comment rewrites, the no-client-
   change note, and the two test cases (tear-open-then-kill → 2 CRIT; single-wound-both → 1 CRIT)
   each map to a step. Out-of-scope items in the spec stay untouched.
-- **Placeholder scan:** none — every edit shows exact find/replace text and every test shows full code.
+- **Placeholder scan:** none, every edit shows exact find/replace text and every test shows full code.
 - **Type consistency:** `critWounds` (array) is declared in Step 3, pushed in Steps 4-5, and read in
   Step 6 with `for (const h of critWounds)`; `impacts.indexOf(h)` matches the existing index-into-
   `woundRolls` shape. Test reads `attack.rolls` / `attack.effects`, which match the resolution object
@@ -300,4 +299,4 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ## Notes on line numbers
 
 All `~line` references are against HEAD at plan time; the catalog and file may have shifted. Locate
-each edit by its quoted text, not its number — the find/replace blocks are the source of truth.
+each edit by its quoted text, not its number, the find/replace blocks are the source of truth.

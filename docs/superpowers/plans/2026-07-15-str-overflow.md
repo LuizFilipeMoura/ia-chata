@@ -31,7 +31,7 @@ Overflow is the wasted amount: `over = 2 - (6 + T - str)`, floored at 0. Equival
 | `rules.md` | **the live rulebook** | Swarm Warheads `(+2 ROF)` → `(+1 ROF)` |
 | `docs/design/light-missile-flamethrower.md` | chassis design note | same magnitude, stale |
 
-> **`rules.md` is not a document — it is a runtime input.** `server/config.js:6`
+> **`rules.md` is not a document, it is a runtime input.** `server/config.js:6`
 > sets `RULEBOOK_MD = "rules.md"`, and `server/prompt.js:147-159` bakes the whole
 > file into the AI rules master's system prompt as "the single source of truth".
 > A stale line there is a lie told to a player who asks what an upgrade does,
@@ -58,22 +58,22 @@ import { AIM, WEIGHT_STR_MOD, hitLocation, woundTarget, strOverflowD } from "./r
 Then append these tests:
 
 ```js
-test("strOverflowD — STR that only just reaches the TN-2 floor wastes nothing", () => {
+test("strOverflowD, STR that only just reaches the TN-2 floor wastes nothing", () => {
   // The floor is reached at str = T + 4 (raw 6+T-str == 2). Reaching it is not
   // waste: that point bought the last 10% of wound chance. Only points PAST it
   // are discarded by the clamp, and only those convert.
-  assert.equal(strOverflowD(8, 4), 0);   // raw 2 — exactly the floor
-  assert.equal(strOverflowD(9, 4), 0);   // raw 1 — 1 wasted, under the 3-point rate
-  assert.equal(strOverflowD(10, 4), 0);  // raw 0 — 2 wasted, still under
+  assert.equal(strOverflowD(8, 4), 0);   // raw 2, exactly the floor
+  assert.equal(strOverflowD(9, 4), 0);   // raw 1, 1 wasted, under the 3-point rate
+  assert.equal(strOverflowD(10, 4), 0);  // raw 0, 2 wasted, still under
 });
 
-test("strOverflowD — converts at +1 D per 3 wasted points", () => {
+test("strOverflowD, converts at +1 D per 3 wasted points", () => {
   assert.equal(strOverflowD(11, 4), 1);  // 3 wasted
-  assert.equal(strOverflowD(13, 4), 1);  // 5 wasted — floors, no partial credit
+  assert.equal(strOverflowD(13, 4), 1);  // 5 wasted, floors, no partial credit
   assert.equal(strOverflowD(14, 4), 2);  // 6 wasted
 });
 
-test("strOverflowD — caps at +2 D", () => {
+test("strOverflowD, caps at +2 D", () => {
   // Uncapped, a rear-arc Siege Maul (effStr 16) into an engine (T3) would add
   // +3 to a D5 weapon = D8 against an engine SP pool of 8-11: a one-shot kill,
   // which would make the engine the only rational aim point (see unit-kinds.js:11).
@@ -81,12 +81,12 @@ test("strOverflowD — caps at +2 D", () => {
   assert.equal(strOverflowD(30, 3), 2);  // absurd STR still capped
 });
 
-test("strOverflowD — weak weapons never overflow", () => {
+test("strOverflowD, weak weapons never overflow", () => {
   // Rivet Gun STR 3 against every rig toughness in the game.
   for (const t of [3, 4, 5]) assert.equal(strOverflowD(3, t), 0);
 });
 
-test("strOverflowD — junk T throws, exactly as woundTarget does", () => {
+test("strOverflowD, junk T throws, exactly as woundTarget does", () => {
   // Same guard, same reason, opposite direction of the same hazard: a null T
   // coercing to 0 reads as MAXIMUM overflow here. It must never be guessed at.
   for (const junk of [undefined, null, "", false, [], {}, NaN, Infinity, "5"]) {
@@ -98,18 +98,18 @@ test("strOverflowD — junk T throws, exactly as woundTarget does", () => {
   }
 });
 
-test("strOverflowD — the design's worked examples", () => {
+test("strOverflowD, the design's worked examples", () => {
   assert.equal(strOverflowD(10, 4), 0);  // Wrecking Ball, front arc, arms
   assert.equal(strOverflowD(13, 4), 1);  // Wrecking Ball, rear arc (+3), arms
   assert.equal(strOverflowD(16, 3), 2);  // Siege Maul + Reinforced Head, rear, engine (capped from 3)
-  assert.equal(strOverflowD(7, 5), 0);   // Autocannon, front, hull — never overflows
+  assert.equal(strOverflowD(7, 5), 0);   // Autocannon, front, hull, never overflows
 });
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/rules.test.js`
-Expected: FAIL — `strOverflowD is not a function` (it is not exported yet).
+Expected: FAIL, `strOverflowD is not a function` (it is not exported yet).
 
 - [ ] **Step 3: Refactor `woundTarget` onto a shared helper and add the rule**
 
@@ -121,7 +121,7 @@ In `shared/rules.js`, replace the whole `woundTarget` function (lines 95-110, ke
 // and it would drift the first time someone touches the wound formula.
 export const WOUND_TN_FLOOR = 2;
 
-// Overflow conversion (§7.5) — STR past the floor is wasted by the clamp, which
+// Overflow conversion (§7.5), STR past the floor is wasted by the clamp, which
 // is why arc, WEIGHT_STR_MOD and every +STR upgrade measure as literally dead on
 // STR >= 9 weapons. Excess converts to damage instead.
 // See docs/superpowers/specs/2026-07-15-str-overflow-design.md.
@@ -132,17 +132,17 @@ export const OVERFLOW_MAX_D = 2;
 // `strOverflowD` measures how far past the floor it went. One expression, so the
 // two can never disagree about where the floor is.
 //
-// `caller` only names the thrower in the error message — a guard that fires
+// `caller` only names the thrower in the error message, a guard that fires
 // deserves to say which public function the caller actually used.
 function woundRaw(str, toughness, caller) {
   const s = Math.floor(Number(str) || 0);
   // T is NOT coerced, deliberately: a missing T coercing to 0 yields TN 2 (90%),
-  // the single most dangerous default in the system. STR may coerce — it fails
-  // toward TN 10 (10%) — but T must be real.
+  // the single most dangerous default in the system. STR may coerce, it fails
+  // toward TN 10 (10%), but T must be real.
   //
   // The check is `typeof`, not `Number.isFinite(Number(t))`: coercing first
   // reopens the exact hole it means to close, because Number(null), Number(""),
-  // Number(false) and Number([]) are all 0 — and `null` is precisely what a
+  // Number(false) and Number([]) are all 0, and `null` is precisely what a
   // failed lookup used to hand us. Only a real number may pass.
   if (typeof toughness !== "number" || !Number.isFinite(toughness)) {
     throw new Error(`${caller}: toughness must be a number, got ${toughness}`);
@@ -154,7 +154,7 @@ export function woundTarget(str, toughness) {
   return Math.max(WOUND_TN_FLOOR, Math.min(WOUND_DIE, woundRaw(str, toughness, "woundTarget")));
 }
 
-// §7.5 — bonus D from STR the clamp would otherwise discard. Reaching the floor
+// §7.5, bonus D from STR the clamp would otherwise discard. Reaching the floor
 // wastes nothing (that point bought the last 10% of wound chance); only points
 // beyond it convert, at OVERFLOW_PER_D each, capped at OVERFLOW_MAX_D.
 export function strOverflowD(str, toughness) {
@@ -163,12 +163,12 @@ export function strOverflowD(str, toughness) {
 }
 ```
 
-Note the comment that used to sit *inside* `woundTarget` about T-not-coerced moves into `woundRaw` with it — that is where the guard now lives.
+Note the comment that used to sit *inside* `woundTarget` about T-not-coerced moves into `woundRaw` with it, that is where the guard now lives.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `node --test shared/rules.test.js`
-Expected: PASS — all tests, including the pre-existing `woundTarget` tests (the refactor must not change its behaviour or its error message, which the existing test at `rules.test.js:113` matches with `/toughness must be a number/`).
+Expected: PASS, all tests, including the pre-existing `woundTarget` tests (the refactor must not change its behaviour or its error message, which the existing test at `rules.test.js:113` matches with `/toughness must be a number/`).
 
 - [ ] **Step 5: Commit**
 
@@ -197,10 +197,10 @@ woundRaw with woundTarget so the floor cannot drift from the clamp."
 Add to `shared/combat.test.js`:
 
 ```js
-test("rollWounds — overflow converts wasted STR into damage", () => {
+test("rollWounds, overflow converts wasted STR into damage", () => {
   const wb = WEAPONS.melee["Wrecking Ball"]; // STR 10, D5, ROF 1
   const target = { weightClass: "medium", hardened: false, preparation: null };
-  // medium arms are T4, so the floor is str 8. STR 10 wastes 2 — under the
+  // medium arms are T4, so the floor is str 8. STR 10 wastes 2, under the
   // 3-point rate, so a front-arc hit is still a plain D5.
   const front = rollWounds({ weightClass: "medium" }, target, wb, "arms",
     { arc: "front", hits: 1 }, { wounds: [10] }, () => 0);
@@ -210,7 +210,7 @@ test("rollWounds — overflow converts wasted STR into damage", () => {
   assert.equal(front[0].sp, 5);          // D5, nothing added
 });
 
-test("rollWounds — overflow revives the arc bonus on a saturated weapon", () => {
+test("rollWounds, overflow revives the arc bonus on a saturated weapon", () => {
   // THE POINT OF THE WHOLE CHANGE. Before overflow, these two shots were
   // byte-identical: both clamped to TN 2, both dealt exactly D5, so flanking a
   // Wrecking Ball rig was worth literally nothing (sweep: rear/front ratio x1.00).
@@ -226,7 +226,7 @@ test("rollWounds — overflow revives the arc bonus on a saturated weapon", () =
   assert.equal(rear[0].sp - front[0].sp, 1);
 });
 
-test("rollWounds — overflow revives WEIGHT_STR_MOD on a saturated weapon", () => {
+test("rollWounds, overflow revives WEIGHT_STR_MOD on a saturated weapon", () => {
   // Sweep measured the light↔medium delta as Δ0.00 for this weapon: both classes
   // clamped to TN 2, so the -1 was discarded entirely.
   //
@@ -247,9 +247,9 @@ test("rollWounds — overflow revives WEIGHT_STR_MOD on a saturated weapon", () 
   assert.equal(med[0].sp - light[0].sp, 1);
 });
 
-test("rollWounds — overflow stacks with Rend and respects its own cap", () => {
+test("rollWounds, overflow stacks with Rend and respects its own cap", () => {
   // Overflow, Rend and Evisceration all land in `sp`. The cap is on overflow
-  // alone, not on the total — a Rend weapon still gets its +1 on top.
+  // alone, not on the total, a Rend weapon still gets its +1 on top.
   const maul = { ...WEAPONS.longRange["Siege Maul"], perks: ["Rend"] };
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, target, maul, "engine",
@@ -259,7 +259,7 @@ test("rollWounds — overflow stacks with Rend and respects its own cap", () => 
   assert.equal(out[0].sp, 8); // D5 + 2 overflow + 1 rend
 });
 
-test("rollWounds — a weak weapon never overflows", () => {
+test("rollWounds, a weak weapon never overflows", () => {
   const rivet = WEAPONS.longRange["Rivet Gun"]; // STR 3, D1
   const target = { weightClass: "medium", hardened: false, preparation: null };
   const out = rollWounds({ weightClass: "medium" }, target, rivet, "engine",
@@ -268,7 +268,7 @@ test("rollWounds — a weak weapon never overflows", () => {
   assert.equal(out[0].sp, 1); // D1, untouched
 });
 
-test("rollWounds — the negated path carries overflow: 0", () => {
+test("rollWounds, the negated path carries overflow: 0", () => {
   // Shape parity with rend/evisc. A shield-negated shot resolves no overflow,
   // but the rider must still expose the field the ledger reads.
   const wb = WEAPONS.melee["Wrecking Ball"];
@@ -288,7 +288,7 @@ test("rollWounds — the negated path carries overflow: 0", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — `overflow` is `undefined`, so `assert.equal(front[0].overflow, 0)` fails with `undefined !== 0`.
+Expected: FAIL, `overflow` is `undefined`, so `assert.equal(front[0].overflow, 0)` fails with `undefined !== 0`.
 
 - [ ] **Step 3: Wire it in**
 
@@ -313,19 +313,19 @@ import {
     let sp = 0;
     // Rend / Evisceration / Overmatch are threaded out per wound, not just folded
     // into `sp`: the ledger's damage step names them, and re-deriving Evisceration
-    // there is impossible anyway — it reads the location's SP BEFORE this
+    // there is impossible anyway, it reads the location's SP BEFORE this
     // volley's damage was applied.
     let rend = 0;
     let evisc = 0;
     let overflow = 0;
     if (wounded) {
-      // Rend — +1 D per wound. Buys depth, not frequency (cf. AP above).
+      // Rend, +1 D per wound. Buys depth, not frequency (cf. AP above).
       rend = hasPerk(profile, "Rend") ? 1 : 0;
-      // Evisceration (§13, Talon) — +1 D against a location already at or below
+      // Evisceration (§13, Talon), +1 D against a location already at or below
       // half its max SP (was: forced Critical).
       evisc = profile.upgradeEffect?.eviscerate && target[location]
         && target[location].sp <= target[location].max / 2 ? 1 : 0;
-      // Overmatch (§7.5) — STR the wound clamp discarded, converted to depth.
+      // Overmatch (§7.5), STR the wound clamp discarded, converted to depth.
       // Reads `effStr`, NOT the nominal STR: that is what makes one rule revive
       // the arc bonus, WEIGHT_STR_MOD and every +STR upgrade at once, since all
       // of them are already summed into it above.
@@ -352,7 +352,7 @@ git add shared/combat.js shared/combat.test.js
 git commit -m "feat(combat): apply Overmatch in the wound step
 
 Overflow rides effStr, so it inherits arc, weight class, Haymaker, Brace
-and shield blunt from the sum at combat.js:532 — one rule reconnects
+and shield blunt from the sum at combat.js:532, one rule reconnects
 every lever the clamp had killed. Threaded as a named rider beside
 rend/evisc, per the ledger rule at combat.js:543."
 ```
@@ -379,7 +379,7 @@ Add to `shared/combat.test.js`:
 > implementer caught both. See "Those examples use base STR" in the spec.
 
 ```js
-test("ledger — Overmatch is named in the damage step when it fires", () => {
+test("ledger, Overmatch is named in the damage step when it fires", () => {
   // A crushing hit rendering "weapon D 5" with an unexplained +2 in the total is
   // exactly the readability failure this ledger exists to close.
   //
@@ -399,7 +399,7 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
   const dmg = ctx.resolutions.find((r) => r.kind === "attack")
     .breakdown.steps.find((s) => s.kind === "damage");
   // The literal 2 is deliberate. Computing it via strOverflowD(16, 4) would make
-  // the assertion self-referential — it would pass even if strOverflowD returned
+  // the assertion self-referential, it would pass even if strOverflowD returned
   // garbage, since both sides would move together. The rate and cap behind the 2
   // are rules.test.js's to pin; this test owns only the wiring and the label.
   assert.deepEqual(dmg.terms, [
@@ -409,7 +409,7 @@ test("ledger — Overmatch is named in the damage step when it fires", () => {
   ]);
 });
 
-test("ledger — Overmatch is absent when it did not fire", () => {
+test("ledger, Overmatch is absent when it did not fire", () => {
   // A term worth 0 must push nothing (same rule as strBreakdown) or the entries
   // that decided the shot get buried.
   //
@@ -439,7 +439,7 @@ test("ledger — Overmatch is absent when it did not fire", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/combat.test.js`
-Expected: FAIL — the first test's `dmg.terms` is missing the `Overmatch` entry.
+Expected: FAIL, the first test's `dmg.terms` is missing the `Overmatch` entry.
 
 - [ ] **Step 3: Emit the term**
 
@@ -454,24 +454,24 @@ At `shared/combat.js:888-889`, after the Evisceration line, add:
 Also update the comment at `combat.js:885-886` so it names all three riders.
 
 > **Corrected after implementation.** This plan originally suggested "report the
-> ones that actually fired on a wound that dealt damage" — which is false in the
+> ones that actually fired on a wound that dealt damage", which is false in the
 > `|| first` branch, where the rider is sourced from a wound that dealt nothing.
 > A reviewer proved it by execution: against a target with Ablative Cascade, the
 > ledger renders `wounds 0, weapon D 5, Overmatch 2` next to `0 SP → arms`. The
 > comment must describe **both** branches of the `||`, and lead with the reason
-> the `find` exists at all — which the original omitted entirely: a wound that
+> the `find` exists at all, which the original omitted entirely: a wound that
 > failed its roll carries all three riders as 0 (they are only assigned inside
 > `if (wounded)`), so `impacts[0]` alone would silently drop the terms whenever
 > the first die missed.
 >
-> This same defect class — a comment asserting a rule the code does not hold to —
+> This same defect class, a comment asserting a rule the code does not hold to,
 > shipped in all three code tasks of this plan and was caught in review each time.
 > The plan text was the upstream source every time. Write the comment against the
 > code's actual branches, not against the rule you wish it followed.
 
 ```js
       // Rend/Evisceration/Overmatch are per-wound riders. Prefer a wound that
-      // actually dealt damage — a wound that failed its roll carries all three
+      // actually dealt damage, a wound that failed its roll carries all three
       // as 0 and would under-report. When none dealt damage (every wound zeroed
       // by Ablative Cascade), `first` still reports what the shot WOULD have
       // added, matching the negated path's `weapon D`. A rider worth 0 pushes
@@ -498,7 +498,7 @@ git commit -m "feat(combat): name Overmatch in the damage ledger"
 - Modify: `shared/glossary.js:172-175`
 - Test: `shared/glossary.test.js`
 
-`shared/glossary.test.js` asserts structural invariants over the whole `GLOSSARY` array — unique ids, and that every id named in its `REQUIRED` list resolves. A new entry is covered by the uniqueness check automatically, and "Overmatch" is not a terminal token, so it does not belong in `REQUIRED`. No new test is needed here; the entry is data.
+`shared/glossary.test.js` asserts structural invariants over the whole `GLOSSARY` array, unique ids, and that every id named in its `REQUIRED` list resolves. A new entry is covered by the uniqueness check automatically, and "Overmatch" is not a terminal token, so it does not belong in `REQUIRED`. No new test is needed here; the entry is data.
 
 - [ ] **Step 1: Add the entry**
 
@@ -543,7 +543,7 @@ test("Swarm Warheads is +1 ROF, and its tag says so", () => {
   // Field means); the magnitude was the outlier.
   const swarm = WEAPON_UPGRADES["Missile Barrage"].find((u) => u.id === "swarm-warheads");
   assert.equal(swarm.effect.rof, 1);
-  // `tag` is rendered verbatim by the commission wizard and the loadout view —
+  // `tag` is rendered verbatim by the commission wizard and the loadout view,
   // it must move with the effect or the UI lies about what the upgrade does.
   assert.equal(swarm.tag, "+1 ROF");
   const rig = makeRig(1, "A", "light", "a", {
@@ -553,12 +553,12 @@ test("Swarm Warheads is +1 ROF, and its tag says so", () => {
 });
 ```
 
-`WEAPON_UPGRADES`, `makeRig` and `effectiveWeaponProfile` are already imported at the top of `shared/game-state.test.js` — no import change needed.
+`WEAPON_UPGRADES`, `makeRig` and `effectiveWeaponProfile` are already imported at the top of `shared/game-state.test.js`: no import change needed.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `node --test shared/game-state.test.js`
-Expected: FAIL — `effect.rof` is 2, tag is `"+2 ROF"`, profile rof is 6.
+Expected: FAIL, `effect.rof` is 2, tag is `"+2 ROF"`, profile rof is 6.
 
 - [ ] **Step 3: Make the change**
 
@@ -571,7 +571,7 @@ At `shared/game-state.js:571`:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `node --test shared/game-state.test.js`
-Expected: PASS. Then run the full suite — other tests may pin the old ROF 6:
+Expected: PASS. Then run the full suite, other tests may pin the old ROF 6:
 
 Run: `npm test`
 Expected: PASS. Any failure asserting `rof === 6` for a swarm-warheads Missile Barrage is this change being caught correctly; update that assertion to 5.
@@ -599,7 +599,7 @@ not the tier."
 - Run: `scripts/balance/weapon-sweep.mjs`, `scripts/balance/report.mjs`
 - Create: `scripts/balance/report-2026-07-15-overflow.txt`
 
-This task is a measurement, not a code change. It has no tests — the correctness of the rule was settled in Tasks 1-3, deterministically and for free. The sweep answers only what unit tests cannot: did the ranking move, and roughly how far.
+This task is a measurement, not a code change. It has no tests, the correctness of the rule was settled in Tasks 1-3, deterministically and for free. The sweep answers only what unit tests cannot: did the ranking move, and roughly how far.
 
 - [ ] **Step 1: Confirm the whole suite is green first**
 
@@ -614,7 +614,7 @@ DATA=full.json node scripts/balance/report.mjs > scripts/balance/report-2026-07-
 cat scripts/balance/report-2026-07-15-overflow.txt
 ```
 
-The harness asserts its own tier ladder on startup. If it throws, stop — that is the field-is-the-floor trap (`normalizeWeaponUpgrade` at `game-state.js:651` returns `upgrades[0].id` for an unknown id, so `makeRig` cannot build an un-upgraded rig) and any numbers produced past it are garbage.
+The harness asserts its own tier ladder on startup. If it throws, stop, that is the field-is-the-floor trap (`normalizeWeaponUpgrade` at `game-state.js:651` returns `upgrades[0].id` for an unknown id, so `makeRig` cannot build an un-upgraded rig) and any numbers produced past it are garbage.
 
 - [ ] **Step 3: Compare against the baseline**
 
@@ -623,13 +623,13 @@ Baseline: `scripts/balance/report-2026-07-15.txt` (3000 trials).
 | question | bar |
 |---|---|
 | arc bonus reconnected? | rear/front ratio for Siege Maul / Sniper / Harpoon / Wrecking Ball / Anchor moves off ×1.00 |
-| weight class reconnected? | light↔medium delta for those six moves off Δ0.00, but stays **small** — the per-3 rate means a ±1 mod only bites at rate boundaries (see "Known limit of the per-3 rate" in the spec). A small delta is the expected result, not a failure. |
+| weight class reconnected? | light↔medium delta for those six moves off Δ0.00, but stays **small**: the per-3 rate means a ±1 mod only bites at rate boundaries (see "Known limit of the per-3 rate" in the spec). A small delta is the expected result, not a failure. |
 | +STR upgrades reconnected? | haymaker / reinforced-head / cold-bore / full-tilt move off +0.00 |
 | Missile Barrage off the top? | ~6.9 → ~5.5–6.0 |
 | ROF-1 heavies climbed? | Wrecking Ball ~2.25 → ~2.8–3.2 |
 | spread narrowed? | directional only, was 6.2× |
 
-**Do not re-tune off this run.** At 500 trials ratio noise is roughly ±0.045 — enough to see the structural zeros move, not enough to justify adjusting numbers. If the spread still looks wrong, that is the trigger to spend 12 minutes on `TRIALS=3000`, not to start tuning against noise. This is the findings doc's step 2: measure before tuning.
+**Do not re-tune off this run.** At 500 trials ratio noise is roughly ±0.045, enough to see the structural zeros move, not enough to justify adjusting numbers. If the spread still looks wrong, that is the trigger to spend 12 minutes on `TRIALS=3000`, not to start tuning against noise. This is the findings doc's step 2: measure before tuning.
 
 - [ ] **Step 4: Commit the report**
 
@@ -643,7 +643,7 @@ git commit -m "chore(balance): post-overflow sweep at 500 trials"
 
 Two corrections in `docs/superpowers/specs/2026-07-15-weapon-balance-findings.md`:
 
-1. The "Bug found and fixed during this work" section says the `combat.js:728` hit-location fix is **"Uncommitted, in the working tree."** That is stale — it is committed, with its regression test in `combat.test.js`. Change that line to say it landed.
+1. The "Bug found and fixed during this work" section says the `combat.js:728` hit-location fix is **"Uncommitted, in the working tree."** That is stale, it is committed, with its regression test in `combat.test.js`. Change that line to say it landed.
 2. Under "Suggested order of work", mark steps 1-3 done and point at the new report.
 
 ```bash
@@ -657,7 +657,7 @@ git commit -m "docs(balance): findings steps 1-3 landed; fix stale bug-status no
 
 - `npm test` green.
 - `strOverflowD` pinned in `rules.test.js`: floor boundary, rate, cap, junk-T guard, weak weapons.
-- `rollWounds` proves the arc bonus now changes the damage of a Wrecking Ball shot — the single fact the whole change exists to produce.
+- `rollWounds` proves the arc bonus now changes the damage of a Wrecking Ball shot, the single fact the whole change exists to produce.
 - "Overmatch" appears in the damage ledger only when it fired, and in the glossary.
 - Swarm Warheads is `+1 ROF` in **three** places: `effect`, `tag`, and `rules.md`.
   The first two are the coupling rule; the third is the one this plan forgot, and
@@ -670,7 +670,7 @@ Recorded because they are about the plan, not the code, and the next plan in thi
 repo will hit them.
 
 1. **A comment asserting a rule the code doesn't hold to shipped in every code
-   task** — three tasks, four separate instances, caught in review every time. The
+   task**: three tasks, four separate instances, caught in review every time. The
    plan text was the upstream source each time: implementers transcribed my
    comments faithfully. Write comments against the code's real branches, not the
    rule you wish it followed. The `|| first` fallback is the canonical example: the
@@ -679,7 +679,7 @@ repo will hit them.
 2. **Two tests didn't test what their names claimed**, and both were found by
    *mutation*, not by reading: the cap test stayed green with the cap raised, and
    the `find` stayed green when deleted entirely. If a test's name asserts a
-   mechanism, break the mechanism and watch it fail — otherwise the name is a
+   mechanism, break the mechanism and watch it fail, otherwise the name is a
    guess.
 3. **"Field is the floor" bites every calculation.** `normalizeWeaponUpgrade`
    returns `upgrades[0].id` for a null id, so no legal rig has base stats. Every

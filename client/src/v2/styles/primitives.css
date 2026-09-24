@@ -1,4 +1,4 @@
-/* V2 primitives — shared classes built on tokens.css.
+/* V2 primitives, shared classes built on tokens.css.
    Imported once after tokens.css. Component files MUST NOT redefine these. */
 
 /* layout utils */
@@ -40,7 +40,7 @@
   text-shadow:0 2px 0 rgba(0,0,0,.6);
 }
 
-/* CTA button (I/J) — canonical "forged hero" oil action: stencil face, oil
+/* CTA button (I/J), canonical "forged hero" oil action: stencil face, oil
    gradient, deep bottom edge, amber bloom. One source of truth for every
    primary button (forge commit, field lock, roll confirm, join, chat, etc.). */
 .v2-cta{

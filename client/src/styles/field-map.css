@@ -4,7 +4,7 @@
 .field-map .fm-tick { stroke: var(--oil, #e79a3d); stroke-opacity: .55; stroke-width: 1.5; }
 .field-map .fm-half-mine { fill: #1d9e75; fill-opacity: 0.2; }
 .field-map .fm-half-foe { fill: #d85a30; fill-opacity: 0.2; }
-/* Legal deployment zone — an 8" quarter-circle at each corner (§10). */
+/* Legal deployment zone, an 8" quarter-circle at each corner (§10). */
 .field-map .fm-deploy { fill-opacity: 0.32; stroke-width: 1; stroke-dasharray: 4 3; }
 .field-map .fm-deploy--mine { fill: #1d9e75; stroke: #46e3ad; }
 .field-map .fm-deploy--foe { fill: #d85a30; stroke: #ff9366; }
@@ -39,7 +39,7 @@
     var(--iron-950, #0a0c0f);
 }
 
-/* Legend — decodes the two deploy-zone tints + the objective marker. */
+/* Legend, decodes the two deploy-zone tints + the objective marker. */
 .fs-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; }
 .fs-leg {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -101,11 +101,11 @@
 .fs-apply:hover { background: var(--iron-750); border-color: var(--oil); color: var(--oil-hi); }
 .fs-apply:active { transform: translateY(1px); }
 
-/* Secondary "tweak" actions — equal, quiet ghost buttons. */
+/* Secondary "tweak" actions, equal, quiet ghost buttons. */
 .fs-actions { display: flex; gap: .5rem; }
 .fs-actions .dwr-btn { flex: 1 1 0; }
 
-/* The single commit action — the hero of the screen. */
+/* The single commit action, the hero of the screen. */
 .fs-lock {
   position: relative; width: 100%; padding: .8rem; margin-top: .1rem;
   border: 1px solid rgba(231,154,61,.7); border-radius: 12px;

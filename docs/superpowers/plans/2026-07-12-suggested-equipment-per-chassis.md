@@ -4,7 +4,7 @@
 
 **Goal:** Give each rig chassis 1–2 suggested equipment picks, highlighted in the Commission Wizard's Equipment step, with the top pick auto-selected when the chassis is chosen.
 
-**Architecture:** Suggestions are authored per chassis in `content/chassis.json`, validated and capped server-side in the hot-reloaded chassis store, and served through the existing `/api/chassis` endpoint. The V2 Commission Wizard consumes them to highlight matching equipment cards (badge + reason) and auto-preselect the top pick. UI + content only — no combat-rule change.
+**Architecture:** Suggestions are authored per chassis in `content/chassis.json`, validated and capped server-side in the hot-reloaded chassis store, and served through the existing `/api/chassis` endpoint. The V2 Commission Wizard consumes them to highlight matching equipment cards (badge + reason) and auto-preselect the top pick. UI + content only, no combat-rule change.
 
 **Tech Stack:** Node.js ESM (server + shared game-state), React + TypeScript (V2 wizard), plain CSS (forge.css), `node:test` for server tests, Vitest for client.
 
@@ -12,18 +12,18 @@
 
 ## File structure
 
-- `server/chassis.js` — chassis store; add `suggestedEquipment` to defaults + a validated array-merge branch. **Responsibility:** turn on-disk content into safe, merged catalogue entries.
-- `server/chassis.test.js` — add coverage for the new merge branch.
-- `content/chassis.json` — author 1–2 suggestions per rig chassis. **Responsibility:** the editable suggestion data.
-- `client/src/v2/overlays/CommissionWizard.tsx` — type, fetch mapping, highlight/badge/reason render, auto-preselect. **Responsibility:** surface + apply suggestions in the wizard.
-- `client/src/v2/styles/forge.css` — `is-suggested` card state + badge/reason styling. **Responsibility:** the visual highlight.
+- `server/chassis.js`: chassis store; add `suggestedEquipment` to defaults + a validated array-merge branch. **Responsibility:** turn on-disk content into safe, merged catalogue entries.
+- `server/chassis.test.js`: add coverage for the new merge branch.
+- `content/chassis.json`: author 1–2 suggestions per rig chassis. **Responsibility:** the editable suggestion data.
+- `client/src/v2/overlays/CommissionWizard.tsx`: type, fetch mapping, highlight/badge/reason render, auto-preselect. **Responsibility:** surface + apply suggestions in the wizard.
+- `client/src/v2/styles/forge.css`: `is-suggested` card state + badge/reason styling. **Responsibility:** the visual highlight.
 
 Equipment ids (canonical `EQUIPMENT` keys, for reference in every task):
 `ablative-plating`, `radiator-array`, `servo-actuators`, `overclock-core`, `field-repair-suite`.
 
 ---
 
-### Task 1: Server — validate & merge `suggestedEquipment`
+### Task 1: Server, validate & merge `suggestedEquipment`
 
 **Files:**
 - Modify: `server/chassis.js`
@@ -150,7 +150,7 @@ git commit -m "feat(chassis): serve validated per-chassis suggestedEquipment"
 
 ---
 
-### Task 2: Content — author suggestions for all 11 rig chassis
+### Task 2: Content, author suggestions for all 11 rig chassis
 
 **Files:**
 - Modify: `content/chassis.json`
@@ -163,13 +163,13 @@ Insert a `"suggestedEquipment"` key into every object in `content/chassis.json`
 ```jsonc
 // light-claw-autocannon
 "suggestedEquipment": [
-  { "id": "ablative-plating", "reason": "Duels heavies at close range — survive the trade." },
+  { "id": "ablative-plating", "reason": "Duels heavies at close range, survive the trade." },
   { "id": "field-repair-suite", "reason": "Patch the plate the claw-work costs you." }
 ]
 
 // light-missile-flamethrower
 "suggestedEquipment": [
-  { "id": "radiator-array", "reason": "Volleys and flame stack heat fast — vent harder." }
+  { "id": "radiator-array", "reason": "Volleys and flame stack heat fast, vent harder." }
 ]
 
 // light-saw-minigun
@@ -245,7 +245,7 @@ git commit -m "content(chassis): author suggested equipment per rig chassis"
 
 ---
 
-### Task 3: Client — consume, highlight, and auto-preselect
+### Task 3: Client, consume, highlight, and auto-preselect
 
 **Files:**
 - Modify: `client/src/v2/overlays/CommissionWizard.tsx`
@@ -287,7 +287,7 @@ apply the current chassis's top suggestion (covers the initial default chassis):
 ```
 
 Note: `state.chassis` here is the value captured at mount (the default chassis),
-which is correct — this only fires once on load.
+which is correct, this only fires once on load.
 
 - [ ] **Step 4: Auto-preselect the top pick when a chassis is selected**
 
@@ -341,7 +341,7 @@ Replace the equipment `.map(...)` button block
                   <div className="v2-fc-equip-label v2-title">{e.label}</div>
                   <div className="v2-fc-equip-passive">Passive · {e.passive}</div>
                   <div className="v2-fc-equip-active">
-                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat) — {e.active.text}
+                    Active · <b>{e.active.label}</b> ({e.active.heat >= 0 ? "+" : ""}{e.active.heat} heat), {e.active.text}
                   </div>
                 </button>
               );
@@ -362,7 +362,7 @@ git commit -m "feat(v2): highlight + auto-preselect suggested equipment per chas
 
 ---
 
-### Task 4: Styling — the suggested-card highlight
+### Task 4: Styling, the suggested-card highlight
 
 **Files:**
 - Modify: `client/src/v2/styles/forge.css`
@@ -397,7 +397,7 @@ Equipment step. Confirm: the chassis's suggested card(s) show the accent
 border/glow + "◈ Suggested" badge + reason line, and the top suggestion is
 already selected. Switch chassis and confirm the highlight + preselect follow.
 
-(Use the preview/verification workflow — `preview_start` the dev server, drive
+(Use the preview/verification workflow, `preview_start` the dev server, drive
 the wizard, screenshot the Equipment step.)
 
 - [ ] **Step 3: Commit**
@@ -412,6 +412,6 @@ git commit -m "style(v2): accent + badge for suggested equipment cards"
 ## Self-review notes
 
 - **Spec coverage:** data model → Task 1 (server) + Task 2 (content); server validation/cap → Task 1; auto-preselect → Task 3 steps 3–4; highlight/badge/reason → Task 3 step 5 + Task 4; styling → Task 4; tests → Task 1. All spec sections mapped.
-- **Types consistent:** `EquipSuggestion { id, reason }` defined in Task 3 step 1 and used verbatim in steps 3–5; server emits `{ id, reason }` (Task 1 `cleanSuggestions`) — shapes match.
+- **Types consistent:** `EquipSuggestion { id, reason }` defined in Task 3 step 1 and used verbatim in steps 3–5; server emits `{ id, reason }` (Task 1 `cleanSuggestions`), shapes match.
 - **No placeholders:** every code step is complete; content strings are final wording.
 - **Cross-task naming:** `suggestedEquipment` key identical across chassis.js, chassis.json, fetch mapping, and render. `is-suggested` / `v2-fc-equip-suggest*` class names identical in TSX (Task 3 step 5) and CSS (Task 4 step 1).

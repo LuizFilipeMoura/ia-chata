@@ -29,7 +29,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
   const sideReady = (id: string) => Boolean(game?.sides?.find((s) => s.id === id)?.ready);
   const myReady = sideReady(mySide);
   // A bot opponent is generated server-side on ready, so its side needn't be at
-  // parity yet — gate on your own roster being non-empty and the field locked.
+  // parity yet, gate on your own roster being non-empty and the field locked.
   const rosterReady = enemyBot ? count >= 1 : atParity;
   const readyDisabled = started || myReady || !rosterReady || !field?.locked;
 
@@ -65,7 +65,7 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
         </>
       )}
 
-      {/* Battlefield: shown pre-battle too — the owner sets & locks the field here
+      {/* Battlefield: shown pre-battle too, the owner sets & locks the field here
           (a prerequisite to readying up), matching V1. FieldControls self-gates. */}
       <FieldControls />
 
@@ -100,10 +100,10 @@ export function Squadron({ onOpenRig, onCommission }: { onOpenRig: (id: number) 
           </div>
           <div className="v2-yard-mode-sub">
             {enemyBot
-              ? "Bots require digital — set opponent to Human for a physical game."
+              ? "Bots require digital, set opponent to Human for a physical game."
               : isDigital
-                ? "Simulated positions — play on the map."
-                : "Tabletop companion — you track the physical table."}
+                ? "Simulated positions, play on the map."
+                : "Tabletop companion, you track the physical table."}
           </div>
         </div>
       )}
