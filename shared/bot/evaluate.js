@@ -11,7 +11,10 @@
 // hand-tuned factor said so. (An earlier hits-only metric multiplied by an
 // invented `1 + arcBonus/4`; the damage term deleted it wholesale.)
 //
-// KNOWN BIASES, all deliberate, all small and one-directional:
+// ROF bonuses (Full Auto, Bloodletter, Redline, slow belt, Kneecapper) come from
+// combat.effectiveRof — the same function the engine rolls with — and rerolls
+// (Lock Sight, reroll-misses, Armour Piercing) are priced as 1−(1−p)².
+// The notes below are the ORIGINAL biases, now closed:
 //
 // 1. Effective-ROF blindness. rollToHit computes an EFFECTIVE rof internally
 //    (+2 Full Auto, +Bloodletter vs a damaged target, +Redline Governor from heat
@@ -20,7 +23,7 @@
 //    must never mutate. So we use profile.rof and under-rate those three upgrades.
 // 2. Armour Piercing's failed-wound reroll raises P(wound) and is not modelled, so
 //    an AP weapon is slightly under-rated.
-import { computeModifiedAim, effectivePenAgainst } from "../combat.js";
+import { computeModifiedAim, effectivePenAgainst, effectiveRof } from "../combat.js";
 import { effectiveWeaponProfile } from "../game-state.js";
 import { woundTarget, WOUND_DIE, hitLocation } from "../rules.js";
 
@@ -38,8 +41,15 @@ function pHit(aim) {
 export function rawExpectedHits(attacker, target, slot, opts) {
   const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
   if (!profile) return 0;
-  const aim = computeModifiedAim(attacker, profile, { ...opts, target });
-  return (profile.rof || 1) * pHit(aim);
+  const o = { ...opts, target };
+  const aim = computeModifiedAim(attacker, profile, o);
+  // The real dice count (Full Auto / Bloodletter / Redline / halvings) — the same
+  // function rollToHit uses. Rerolled misses (Lock Sight's primed volley, or a
+  // reroll-misses upgrade) turn p into 1−(1−p)² for the dice that get one.
+  const rof = effectiveRof(attacker, profile, o) || 1;
+  const p = pHit(aim);
+  const rerolls = Math.min(rof, Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (attacker.lockSightNext ? rof : 0));
+  return (rof - rerolls) * p + rerolls * (1 - (1 - p) ** 2);
 }
 
 // The hit-location distribution of a non-aimed shot: the D12 hit table folded to
@@ -80,7 +90,9 @@ export function expectedDamage(attacker, target, slot, opts) {
     if (ep.negated || ep.effPen == null) continue;   // earned zero — a rake/shield blind arc
     // P(wound) = P(d10 ≥ TN). woundTarget clamps TN to ≤ WOUND_DIE, so the floor
     // (a natural 10 always wounds) is already baked in.
-    const pWound = (WOUND_DIE - woundTarget(ep.effPen, ep.toughness) + 1) / WOUND_DIE;
+    const p1 = (WOUND_DIE - woundTarget(ep.effPen, ep.toughness) + 1) / WOUND_DIE;
+    // Armour Piercing rerolls a failed wound: 1−(1−p)².
+    const pWound = profile.perks?.includes("Armour Piercing") ? 1 - (1 - p1) ** 2 : p1;
     const eviscD = profile.upgradeEffect?.eviscerate
       && target[loc] && target[loc].sp <= target[loc].max / 2 ? 1 : 0;
     woundDmg += p * pWound * (ep.d + rendD + eviscD);

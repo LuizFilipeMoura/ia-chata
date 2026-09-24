@@ -13,9 +13,13 @@ const upgradeName = (id) => {
   }
   return id;
 };
-const label = (kind, id) => kind === "chassis" ? (CHASSIS.find((c) => c.id === id)?.name ?? id) + " · " + (CHASSIS.find((c) => c.id === id)?.label ?? "")
+const label = (kind, id) => kind === "comp" ? id.replace("M", " medium + ").replace("L", " light") : kind === "table" ? id : kind.startsWith("chassis") ? (CHASSIS.find((c) => c.id === id)?.name ?? id) + " · " + (CHASSIS.find((c) => c.id === id)?.label ?? "")
   : kind === "equip" ? (EQUIPMENT[id]?.label ?? id) : upgradeName(id);
-const KIND_TITLE = { chassis: "Chassis", lr: "Long-range upgrades", melee: "Melee upgrades", equip: "Equipment", equipUp: "Equipment mods" };
+const KIND_TITLE = {
+  comp: "Squad makeup", table: "Table size", chassis: "Chassis (all tables)",
+  "chassis@standard": "Chassis · Standard 54×36", "chassis@skirmish": "Chassis · Skirmish 42×28",
+  lr: "Long-range upgrades", melee: "Melee upgrades", equip: "Equipment", equipUp: "Equipment mods",
+};
 
 function chart(canvas, history) {
   const g = canvas.getContext("2d");
@@ -36,7 +40,7 @@ function chart(canvas, history) {
 
 export function labScreen(root, { onBack, onLibrary }) {
   let job = null, timer = null;
-  const params = { population: 12, generations: 6, gamesPer: 2, mutationRate: 0.25 };
+  const params = { population: 16, generations: 6, gamesPer: 4, mutationRate: 0.25, fresh: false };
   const statsEl = el("div", { class: "lab-stats" });
   const replaysEl = el("div", { class: "lab-replays" });
   const statusEl = el("div", { class: "lab-status" });
@@ -54,6 +58,13 @@ export function labScreen(root, { onBack, onLibrary }) {
   };
 
   const pickerEl = el("div", { class: "lab-picker" });
+  // Rules fingerprint + gene pool status.
+  const metaEl = el("div", { class: "lab-meta" });
+  api.sim.meta().then((m) => {
+    fill(metaEl,
+      m.stale ? el("div", { class: "warn-banner" }, `⚠ The rules changed since the Hard bot's meta was evolved (meta ${m.meta.rulesHash} → rules ${m.rulesHash}). Run an evolution and adopt it to re-tune.`) : null,
+      el("span", { class: "muted small" }, `Rules ${m.rulesHash} · gene pool: ${m.genePool} genomes — new runs continue from them (tick "Fresh start" to ignore).`));
+  }).catch(() => {});
   let allJobs = [];
   const renderPicker = () => {
     const ga = allJobs.filter((j) => j.kind === "ga");
@@ -62,19 +73,25 @@ export function labScreen(root, { onBack, onLibrary }) {
   };
   const draw = () => {
     renderPicker();
-    statusEl.textContent = job ? `Run ${job.id}: ${job.status} · generation ${job.generation + 1}/${job.params.generations}${job.games ? ` · ${job.done}/${job.games} simulated games` : ""}${job.error ? " · " + job.error : ""}` : "No run yet.";
+    statusEl.textContent = job ? `Run ${job.id}${job.seeded ? ` (seeded ${job.seeded} from the gene pool)` : ""}: ${job.status} · generation ${job.generation + 1}/${job.params.generations}${job.games ? ` · ${job.done}/${job.games} simulated games` : ""}${job.error ? " · " + job.error : ""}` : "No run yet.";
     chart(canvas, job?.history || []);
     clear(statsEl);
     const byKind = {};
     for (const s of job?.stats || []) (byKind[s.kind] ||= []).push(s);
-    for (const kind of ["chassis", "lr", "melee", "equip", "equipUp"]) {
+    for (const kind of ["comp", "table", "chassis", "chassis@standard", "chassis@skirmish", "lr", "melee", "equip", "equipUp"]) {
       const rows = (byKind[kind] || []).sort((a, b) => b.winRate - a.winRate);
       if (!rows.length) continue;
       statsEl.append(el("div", { class: "stat-block" }, el("h3", {}, KIND_TITLE[kind]),
         el("table", {}, el("tr", {}, el("th", {}, "Pick"), el("th", {}, "Win%"), el("th", {}, "Games"), el("th", {}, "Dmg/g")),
           rows.map((r) => el("tr", { class: r.winRate > 0.6 ? "hot" : r.winRate < 0.4 ? "cold" : "" },
             el("td", {}, label(kind, r.id)),
-            el("td", {}, el("div", { class: "wr" }, el("i", { style: { width: `${r.winRate * 100}%` } }), el("span", {}, `${(r.winRate * 100).toFixed(0)}%`))),
+            // Bar = win rate; the bracket = 95% confidence range. A range that
+            // crosses 50% hasn't proven anything yet — play more games.
+            el("td", { title: r.ciLow != null ? `95% range ${(r.ciLow * 100).toFixed(0)}–${(r.ciHigh * 100).toFixed(0)}%` : "" },
+              el("div", { class: `wr ${r.ciLow > 0.5 ? "sig-hi" : r.ciHigh < 0.5 ? "sig-lo" : ""}` },
+                el("i", { style: { width: `${r.winRate * 100}%` } }),
+                r.ciLow != null ? el("b", { class: "ci", style: { left: `${r.ciLow * 100}%`, width: `${(r.ciHigh - r.ciLow) * 100}%` } }) : null,
+                el("span", {}, `${(r.winRate * 100).toFixed(0)}%${r.ciLow != null ? ` ±${(((r.ciHigh - r.ciLow) / 2) * 100).toFixed(0)}` : ""}`))),
             el("td", {}, String(r.games)), el("td", {}, r.avgDmg.toFixed(1)))))));
     }
     // Every match of the run is a saved simulated game — browse them.
@@ -107,12 +124,13 @@ export function labScreen(root, { onBack, onLibrary }) {
     el("div", { class: "b-head" }, el("button", { class: "btn ghost", onClick: () => { clearTimeout(timer); onBack(); } }, "← Back"), el("h1", {}, "🧬 Balance Lab"), el("span", { class: "muted" }, "Genetic meta-search: squads + upgrades + pilot weights evolve by playing each other.")),
     el("div", { class: "lab-controls" },
       field("population", "Population"), field("generations", "Generations"), field("gamesPer", "Games / genome"), field("mutationRate", "Mutation", 0.05),
+      el("label", { title: "Ignore the gene pool and start from random genomes" }, "Fresh start", el("input", { type: "checkbox", onChange: (e) => { params.fresh = e.target.checked; } })),
       el("button", { class: "btn primary", onClick: start }, "▶ Evolve"),
       el("button", { class: "btn", onClick: async () => { if (job) { await api.sim.stop(job.id); toast("Stopping after this generation…"); } } }, "■ Stop"),
       el("button", { class: "btn", onClick: async () => { toast("Calibrating tiers — a few minutes…"); try { const r = await api.sim.calibrate({ games: 12, job: job?.status === "done" ? job.id : undefined }); renderCal(r.calibration, r.against === "evolved" ? "evolved builds" : "average builds"); } catch (e) { toast(e.message, "bad"); } } }, "⚖ Calibrate tiers"),
       el("button", { class: "btn", onClick: async () => { if (!job) return; try { await api.sim.adopt(job.id); toast("Adopted — the Hard bot now plays this meta.", "good"); } catch (e) { toast(e.message, "bad"); } } }, "🏆 Adopt as Hard bot"),
     ),
-    pickerEl, statusEl,
+    metaEl, pickerEl, statusEl,
     el("div", { class: "lab-main" }, el("div", { class: "lab-left" }, canvas, el("div", { class: "legend" }, el("span", { class: "l-best" }, "best"), el("span", { class: "l-mean" }, "mean")), bestEl, replaysEl, calEl), statsEl),
   ));
   // Resume the newest job if one exists, else show the last saved meta report.

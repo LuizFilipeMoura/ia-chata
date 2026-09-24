@@ -138,6 +138,32 @@ export function computeModifiedAim(attacker, profile, opts) {
   return aimBreakdown(attacker, profile, opts).value;
 }
 
+// The number of to-hit dice a shot actually rolls — pure, no mutation, so the bot
+// evaluator prices exactly what rollToHit will roll. Full Auto +2, Bloodletter vs
+// a damaged target, Redline Governor from heat over the class cap; halved (floor
+// 1) by a slow Penetrator belt or Kneecapper-suppressed arms. `slowBelt` is the
+// Penetrator flag rollToHit consumes; a read-only caller passes
+// attacker.autocannonSlowNext.
+export function effectiveRof(attacker, profile, opts = {}, slowBelt = !!attacker.autocannonSlowNext && !!profile.upgradeEffect?.penetrator) {
+  const fullAuto = opts.fullAuto && hasPerk(profile, "Full Auto");
+  const bloodletterRof = opts.target && profile.upgradeEffect?.vsDamaged?.rof && !isUndamaged(opts.target)
+    ? profile.upgradeEffect.vsDamaged.rof : 0;
+  let redlineRof = 0;
+  if (profile.upgradeEffect?.redline) {
+    const cap = HEAT_CAPACITY[attacker.weightClass];
+    const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
+    redlineRof = Math.min(3, over);
+  }
+  let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
+  // Every ROF-halving downside floors at 1 die — a suppressed / slow-belt
+  // weapon fires at reduced volume, it is not silenced (a ROF-1 gun stays 1).
+  if (slowBelt) rof = Math.max(1, Math.floor(rof / 2));
+  // Kneecapper progressive cripple (§13, Double MG): a rig whose weapon limb was
+  // raked to <= half fires every weapon at half ROF (armsSuppressed, game-state).
+  if (attacker.armsSuppressed) rof = Math.max(1, Math.floor(rof / 2));
+  return rof;
+}
+
 // §7.4 — roll ROF (+2 for Full Auto) D6, count hits, tally fire-mode heat
 // (each 1 rolled under Full Auto / Charged Shot adds 1 heat, §6).
 export function rollToHit(attacker, profile, opts, providedDice, random) {
@@ -147,17 +173,6 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   const aim = aimBreakdown(attacker, profile, opts);
   const modAim = aim.value;
   const fullAuto = opts.fullAuto && hasPerk(profile, "Full Auto");
-  // Bloodletter — an extra to-hit die vs a target missing SP anywhere.
-  const bloodletterRof = opts.target && profile.upgradeEffect?.vsDamaged?.rof && !isUndamaged(opts.target)
-    ? profile.upgradeEffect.vsDamaged.rof : 0;
-  // Redline Governor — extra to-hit dice from attacker heat over its class
-  // cap, mirroring the Penetration bonus in computePen (capped at +3).
-  let redlineRof = 0;
-  if (profile.upgradeEffect?.redline) {
-    const cap = HEAT_CAPACITY[attacker.weightClass];
-    const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
-    redlineRof = Math.min(3, over);
-  }
   // Penetrator Rounds — every 3rd Autocannon volley skips the wound roll
   // (forced in rollWounds below); the belt then cycles slow for exactly the
   // next attack, halving that attack's ROF. `autocannonSlowNext` is a
@@ -173,16 +188,9 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     penetratorShot = attacker.autocannonShots % 3 === 0;
     if (penetratorShot) attacker.autocannonSlowNext = true;
   }
-  let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
-  // Every ROF-halving downside floors at 1 die — a suppressed / slow-belt
-  // weapon fires at reduced volume, it is not silenced (a ROF-1 gun stays 1).
-  if (penetratorSlow) rof = Math.max(1, Math.floor(rof / 2));
-  // Kneecapper progressive cripple (§13, Double MG) — a rig whose own weapon
-  // limb (Rig arms, or the weapon-role part on Tank/Walker) has been raked by
-  // a Kneecapper down to <= half max SP fires every weapon, long-range or
-  // melee, at half ROF. `armsSuppressed` is derived in game-state.js
-  // (recompute), scoped to limbs a Kneecapper actually tagged.
-  if (attacker.armsSuppressed) rof = Math.max(1, Math.floor(rof / 2));
+  // Extra dice (Full Auto, Bloodletter, Redline Governor) and halvings (slow
+  // belt, Kneecapper) — shared with the bot evaluator via effectiveRof.
+  const rof = effectiveRof(attacker, profile, opts, penetratorSlow);
   const charged = opts.charged && hasPerk(profile, "Charged Shot");
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   // Lock Sight (Fire Control active) — the next shot this activation rerolls

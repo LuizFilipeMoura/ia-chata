@@ -1,12 +1,13 @@
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import { evolve, randomGenome } from "../../shared/sim/genetic.js";
+import { evolve, randomGenome, summarise } from "../../shared/sim/genetic.js";
 import { calibrationJobs, tierWinRate, TIER_NAMES, tierSquad } from "../../shared/sim/tiers.js";
 import { playbookFrom, metaSource } from "../../shared/sim/playbook.js";
 import { META } from "../../shared/bot/meta.js";
 import { mulberry32 } from "../../shared/sim/match.js";
 import { BOT_PRESETS } from "../../shared/game-state.js";
+import { createGenePool, rulesHash } from "../genepool.js";
 
 // /api/sim — simulated play. Every game here is a real bot-vs-bot room played
 // through the live engine path (shared/sim/match.js → driveBots) on a worker
@@ -19,7 +20,7 @@ import { BOT_PRESETS } from "../../shared/game-state.js";
 //   - tier demos (/match) and calibration runs.
 // Job summaries are written to data/sim-jobs so a run can be reviewed after a
 // restart; replays live in data/replays (see server/replays.js).
-export function createSimRouter({ pool, rootDir, replays, store = null }) {
+export function createSimRouter({ pool, rootDir, replays, store = null, genePool = createGenePool(path.join(rootDir, "data", "gene-pool.json")) }) {
   const router = Router();
   const jobs = new Map();
   const jobsDir = path.join(rootDir, "data", "sim-jobs");
@@ -32,8 +33,15 @@ export function createSimRouter({ pool, rootDir, replays, store = null }) {
     try { const j = JSON.parse(fs.readFileSync(path.join(jobsDir, f), "utf8")); if (j.status === "running") j.status = "interrupted"; jobs.set(j.id, j); } catch {}
   }
 
+  // An empty pool inherits the best genomes of past runs saved on disk.
+  if (!genePool.all().length) {
+    for (const j of [...jobs.values()].filter((x) => x.kind === "ga" && x.ranked?.length)) {
+      genePool.deposit(j.ranked.map((r) => ({ g: { squad: r.squad, weights: r.weights }, fitness: r.fitness })), { job: j.id, rulesHash: j.rulesHash ?? null });
+    }
+  }
+
   const view = (job) => ({
-    id: job.id, kind: job.kind, status: job.status, error: job.error ?? null, params: job.params,
+    id: job.id, kind: job.kind, status: job.status, rulesHash: job.rulesHash, seeded: job.seeded, error: job.error ?? null, params: job.params,
     generation: job.generation, history: job.history, stats: job.stats, ranked: job.ranked,
     games: job.games, done: job.done, calibration: job.calibration,
     startedAt: job.startedAt, finishedAt: job.finishedAt ?? null, playbook: job.playbook ?? null,
@@ -62,33 +70,43 @@ export function createSimRouter({ pool, rootDir, replays, store = null }) {
     const b = req.body || {};
     const params = {
       population: clamp(b.population, 4, 40, 12), generations: clamp(b.generations, 1, 50, 6),
-      gamesPer: clamp(b.gamesPer, 1, 8, 2), seed: clamp(b.seed, 1, 1e9, Date.now() % 1e6),
+      gamesPer: clamp(b.gamesPer, 1, 12, 4), seed: clamp(b.seed, 1, 1e9, Date.now() % 1e6),
       mutationRate: clamp(b.mutationRate, 0, 1, 0.25),
+      // Squad makeups to explore and tables to play on (see genetic.js).
+      compositions: b.compositions === "fixed" ? null : "all",
+      tables: Array.isArray(b.tables) && b.tables.length ? b.tables.filter((t) => t === "standard" || t === "skirmish") : ["standard", "skirmish"],
+      // Continue from the gene pool (the last runs' best genomes) unless asked
+      // for a fresh start.
+      fresh: b.fresh === true,
     };
-    const job = { id: newId(), kind: "ga", status: "running", params, generation: -1, history: [], stats: [], ranked: [], games: 0, done: 0, calibration: null, startedAt: Date.now(), stop: false };
+    const seedPopulation = params.fresh ? [] : genePool.seeds(params.population);
+    const rh = rulesHash(rootDir);
+    const job = { id: newId(), kind: "ga", status: "running", params, rulesHash: rh, seeded: seedPopulation.length, generation: -1, history: [], stats: [], ranked: [], games: 0, done: 0, calibration: null, startedAt: Date.now(), stop: false };
     jobs.set(job.id, job);
     persistJob(job);
     let gen = 0;
     const evaluate = (list) => {
       const g = gen++;
       job.games += list.length;
-      return Promise.all(list.map((j) => simulate(j, { source: "ga", job: job.id, generation: g, label: `GA ${job.id} · gen ${g + 1}` }).then((r) => { job.done++; return r; })));
+      // A game the server refuses (e.g. a gene that's illegal under the current
+      // rules) scores nobody instead of killing the run.
+      return Promise.all(list.map((j) => simulate(j, { source: "ga", job: job.id, generation: g, label: `GA ${job.id} · gen ${g + 1}` })
+        .catch((e) => ({ error: String(e?.message || e), winner: null, vp: [0, 0] }))
+        .then((r) => { job.done++; return r; })));
     };
     evolve({
-      ...params, evaluate, shouldStop: () => job.stop,
+      ...params, seedPopulation, evaluate, shouldStop: () => job.stop,
       onGeneration: ({ generation, ranked, history, stats }) => {
         job.generation = generation;
         job.history = history;
-        job.stats = Object.entries(stats).map(([key, s]) => {
-          const [kind, id] = key.split(":");
-          return { key, kind, id, games: s.games, winRate: (s.wins + s.draws * 0.5) / s.games, avgDmg: s.dmg / s.games };
-        });
+        job.stats = summarise(stats);
         job.ranked = ranked.slice(0, 8).map((r) => ({ fitness: r.fitness, squad: r.g.squad, weights: r.g.weights }));
         persistJob(job);
       },
     }).then((result) => {
       job.result = result;
-      job.playbook = playbookFrom(result);
+      job.playbook = { ...playbookFrom(result), rulesHash: rh, job: job.id };
+      genePool.deposit(result.finalRanked, { job: job.id, rulesHash: rh });
       job.status = job.stop ? "stopped" : "done";
       job.finishedAt = Date.now();
       persistJob(job);
@@ -215,8 +233,12 @@ export function createSimRouter({ pool, rootDir, replays, store = null }) {
   router.get("/meta", (req, res) => {
     let report = null;
     try { report = JSON.parse(fs.readFileSync(path.join(rootDir, "data", "meta-report.json"), "utf8")); } catch {}
-    res.json({ meta: META, report });
+    const current = rulesHash(rootDir);
+    res.json({ meta: META, report, rulesHash: current, stale: !!META.rulesHash && META.rulesHash !== current, genePool: genePool.all().length });
   });
+
+  router.get("/genepool", (req, res) => res.json({ rulesHash: rulesHash(rootDir), genes: genePool.all() }));
+  router.delete("/genepool", (req, res) => { genePool.clear(); res.json({ ok: true }); });
 
   return router;
 }

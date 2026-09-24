@@ -10,6 +10,7 @@ import { evolve } from "../shared/sim/genetic.js";
 import { calibrationJobs, tierWinRate, TIER_NAMES } from "../shared/sim/tiers.js";
 import { createPool } from "../server/sim/pool.js";
 import { createReplayStore } from "../server/replays.js";
+import { createGenePool, rulesHash } from "../server/genepool.js";
 import { META } from "../shared/bot/meta.js";
 import { playbookFrom, metaSource } from "../shared/sim/playbook.js";
 
@@ -26,15 +27,22 @@ let gen = 0;
 const evaluate = (jobs) => {
   const g = gen++;
   return Promise.all(jobs.map((j) => pool.run({ ...j, record: true }).then((r) => {
-    replays.save(r, j.squads, { source: "ga", job: jobId, generation: g, label: `GA ${jobId} · gen ${g + 1}`, seed: j.seed });
+    replays.save(r, j.squads, { source: "ga", job: jobId, generation: g, label: `GA ${jobId} · gen ${g + 1}`, seed: j.seed, table: j.table ?? null });
     delete r.frames;
     return r;
-  })));
+  }, (e) => ({ error: String(e?.message || e), winner: null, vp: [0, 0] }))));
 };
 const evaluatePlain = (jobs) => Promise.all(jobs.map((j) => pool.run(j)));
 const t0 = Date.now();
 
+// Continue from the gene pool (the previous runs' best genomes) unless --fresh.
+const root0 = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const genePool = createGenePool(path.join(root0, "data", "gene-pool.json"));
+const rh = rulesHash(root0);
+const seedPopulation = args.fresh ? [] : genePool.seeds(num("pop", 12));
+console.log(`seeded ${seedPopulation.length} genomes from the gene pool · rules ${rh}`);
 const res = await evolve({
+  seedPopulation, compositions: args["fixed-comp"] ? null : "all", tables: args.skirmish ? ["standard", "skirmish"] : null,
   population: num("pop", 12), generations: num("gens", 8), gamesPer: num("games", 2), seed: num("seed", 1), evaluate,
   onGeneration: ({ generation, history }) => {
     const h = history.at(-1);
@@ -62,7 +70,8 @@ for (const g of top) {
   console.log(`gauntlet ${g.squad.map((u) => u.chassis).join(", ")}: ${(rate * 100).toFixed(0)}% over ${jobs.length}`);
   if (rate > bestRate) { bestRate = rate; champion = g; }
 }
-const meta = playbookFrom(res, champion);
+const meta = { ...playbookFrom(res, champion), rulesHash: rh };
+genePool.deposit(res.finalRanked, { job: jobId, rulesHash: rh });
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 if (!args["no-write"]) {

@@ -4,7 +4,7 @@
 // time to applyCommand, so it goes through the same validation, rejection, and
 // resolution a human does and can neither cheat nor desync.
 import { candidatesFor } from "./candidates.js";
-import { scoreCandidate, scoreParts, PRESETS, TIERS } from "./score.js";
+import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS } from "./score.js";
 import { applyCommand as applyRaw } from "../game-state.js";
 
 // Every bot command funnels through here so a caller can observe the bot's turn
@@ -93,7 +93,7 @@ export function chooseAction(room, rig, weights, noise = null) {
     noise.explain.top = distinct.slice(0, 4).map((x) => {
       const parts = scoreParts(room, rig, x.c);
       return { label: candLabel(x.c), score: +x.s.toFixed(2), picked: key(x.c) === key(best.c),
-        parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, +((weights[k] ?? (k === "tactics" ? 1 : 0)) * v).toFixed(2)])) };
+        parts: { ...Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, +((weights[k] ?? (k === "tactics" ? 1 : 0)) * v).toFixed(2)])), bias: +(weights[`b_${actionFamily(x.c.action)}`] || 0).toFixed(2) } };
     });
     if (best && !noise.explain.top.some((t) => t.picked)) noise.explain.top.push({ label: candLabel(best.c), score: +best.s.toFixed(2), picked: true, parts: {}, blunder: true });
     noise.explain.passed = !best || best.s <= 0;

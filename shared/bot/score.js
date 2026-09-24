@@ -270,6 +270,17 @@ export function scoreParts(room, rig, cand) {
   };
 }
 
+// Action-preference genes: a flat bias per action family, evolved by the GA
+// (weights.b_<family>, default 0). They let evolution tune how much a pilot
+// likes to Prepare, Shut Down, Sprint, use specials… against the real rules,
+// even where the hand-written terms above price an action crudely.
+export const BIAS_FAMILIES = ["move", "sprint", "fire", "aimed", "prepare", "repair", "shutdown", "special"];
+export function actionFamily(action) {
+  if (BIAS_FAMILIES.includes(action) && action !== "special") return action;
+  if (action === "reload" || action === "disengage" || action === "douse") return "move";
+  return "special";
+}
+
 // Score one candidate under a weight vector. Higher is better; the caller picks
 // the argmax, and returns null rather than act when the best is ≤ 0.
 export function scoreCandidate(room, rig, cand, weights) {
@@ -281,5 +292,6 @@ export function scoreCandidate(room, rig, cand, weights) {
     + (w.threat || 0) * p.threat
     + (w.heat || 0) * p.heat
     + (w.fragile || 0) * p.fragile
-    + (w.tactics ?? 1) * p.tactics;
+    + (w.tactics ?? 1) * p.tactics
+    + (w[`b_${actionFamily(cand.action)}`] || 0);
 }

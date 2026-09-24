@@ -69,10 +69,13 @@ export class Replay {
       const max = Math.max(1, ...keys.flatMap((k) => [p.a?.[k] ?? 0, p.b?.[k] ?? 0]));
       this.brain.append(el("div", { class: "pilots" }, ["a", "b"].map((s) => el("div", { class: `pilot p-${s}` },
         el("b", {}, `${s === "a" ? "Cyan" : "Red"} pilot${p.tiers?.[s] && p.tiers[s] !== "balanced" ? " · " + p.tiers[s] : ""}`),
-        keys.map((k) => el("div", { class: "wrow", title: WEIGHT_HELP[k] }, el("span", {}, k), el("div", { class: "wbar" }, el("i", { style: { width: `${((p[s]?.[k] ?? 0) / max) * 100}%` } })), el("em", {}, String(p[s]?.[k] ?? "–"))))))));
+        keys.map((k) => el("div", { class: "wrow", title: WEIGHT_HELP[k] }, el("span", {}, k), el("div", { class: "wbar" }, el("i", { style: { width: `${((p[s]?.[k] ?? 0) / max) * 100}%` } })), el("em", {}, String(p[s]?.[k] ?? "–")))),
+        // Evolved action preferences (b_*): + likes, − avoids.
+        Object.keys(p[s] || {}).some((k) => k.startsWith("b_")) ? el("div", { class: "biases", title: "Evolved action preferences: + favours, − avoids" },
+          Object.entries(p[s]).filter(([k, v]) => k.startsWith("b_") && Math.abs(v) >= 0.05).map(([k, v]) => el("span", { class: v > 0 ? "pos" : "neg" }, `${k.slice(2)} ${v > 0 ? "+" : ""}${v}`))) : null))));
     }
     if (thought?.top?.length) {
-      const terms = ["vp", "priority", "damage", "tactics", "threat", "heat", "fragile"];
+      const terms = ["vp", "priority", "damage", "tactics", "bias", "threat", "heat", "fragile"];
       const scale = Math.max(0.5, ...thought.top.map((t) => terms.reduce((a, k) => a + Math.abs(t.parts[k] || 0), 0)));
       this.brain.append(el("div", { class: `thought p-${thought.side}` },
         el("b", {}, `🧠 ${thought.rig} weighs its options`),

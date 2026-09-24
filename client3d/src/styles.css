@@ -143,7 +143,7 @@ table.mini { font-size: 12px; border-collapse: collapse; margin-top: 6px; } tabl
 .stat-block table { width: 100%; border-collapse: collapse; font-size: 12px; } .stat-block th { text-align: left; color: var(--muted); font-weight: 600; }
 .stat-block td { padding: 3px 4px; border-top: 1px solid rgba(255,255,255,.05); }
 .stat-block tr.hot td:first-child { color: #ff8a5c; } .stat-block tr.cold td:first-child { color: #7fb3ff; }
-.wr { position: relative; width: 80px; height: 14px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
+.wr { position: relative; width: 110px; height: 14px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
 .wr i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #7fb3ff, #ffd35a, #ff6a3d); opacity: .6; } .wr span { position: relative; padding-left: 4px; font-size: 12px; }
 .cal-row { display: flex; gap: 8px; } .cal { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; }
 .cal b { font-family: var(--display); } .cal span { font: 700 26px var(--display); } .cal small { color: var(--muted); font-size: 12px; }
@@ -188,3 +188,10 @@ table.lib td { padding: 5px 4px; border-top: 1px solid rgba(255,255,255,.05); }
 .src { font-size: 12px; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.1); }
 .s-ga { background: rgba(185,139,255,.25); } .s-sim { background: rgba(51,214,255,.2); } .s-demo { background: rgba(255,211,90,.2); }
 .w-a { color: var(--cyan); } .w-b { color: var(--red); }
+.wr .ci { position: absolute; top: 2px; bottom: 2px; border: 1px solid rgba(255,255,255,.7); border-radius: 2px; }
+.wr.sig-hi span { color: #ff8a5c; font-weight: 700; } .wr.sig-lo span { color: #7fb3ff; font-weight: 700; }
+.warn-banner { background: rgba(255,106,61,.15); border: 1px solid #ff6a3d; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
+.lab-meta { margin-bottom: 6px; }
+.biases { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; } .biases span { font-size: 12px; padding: 0 4px; border-radius: 3px; }
+.biases .pos { background: rgba(88,214,141,.2); } .biases .neg { background: rgba(231,76,60,.2); }
+.t-bias { background: #e0e0e0; }

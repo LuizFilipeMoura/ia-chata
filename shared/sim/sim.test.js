@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { playMatch, mulberry32 } from "./match.js";
-import { randomGenome, evolve, summarise, WEIGHT_KEYS } from "./genetic.js";
+import { randomGenome, evolve, summarise, wilson, compKey, WEIGHT_KEYS, BIAS_KEYS } from "./genetic.js";
 import { CHASSIS, WEAPON_UPGRADES } from "../game-state.js";
 import { EQUIPMENT_UPGRADES } from "../rules.js";
 
@@ -36,7 +36,7 @@ test("random genomes honour composition, distinct chassis and one-Prototype", ()
         nat(EQUIPMENT_UPGRADES[u.equipment], u.equipmentUpgrade)].filter((n) => n === "prototype").length;
       assert.ok(protos <= 1);
     }
-    assert.deepEqual(Object.keys(g.weights), WEIGHT_KEYS);
+    assert.deepEqual(Object.keys(g.weights), [...WEIGHT_KEYS, ...BIAS_KEYS]);
   }
 });
 
@@ -59,5 +59,30 @@ test("evolve runs generations, only pairs disjoint squads, and reports balance s
 
 test("summarise turns tallies into win-rate rows", () => {
   const rows = summarise({ "chassis:x": { games: 4, wins: 3, draws: 0, dmg: 8 } });
-  assert.deepEqual(rows[0], { key: "chassis:x", kind: "chassis", id: "x", games: 4, winRate: 0.75, avgDmg: 2 });
+  const { ciLow, ciHigh, ...rest } = rows[0];
+  assert.deepEqual(rest, { key: "chassis:x", kind: "chassis", id: "x", games: 4, winRate: 0.75, avgDmg: 2 });
+  assert.ok(ciLow < 0.75 && ciHigh > 0.75 && ciLow > 0 && ciHigh <= 1, "4 games is a wide interval");
+  const [lo, hi] = wilson(0.75, 400);
+  assert.ok(hi - lo < 0.1, "400 games is a tight one");
+});
+
+test("simulated rooms go through the server's commissioning guard", () => {
+  // Two Prototypes on one rig is illegal for a player — and for the GA.
+  const bad = { a: [{ chassis: "medium-lance-mortar", longRangeUpgrade: "barrage", meleeUpgrade: WEAPON_UPGRADES["Lance"].find((u) => u.nature === "prototype").id }, { chassis: "light-claw-autocannon" }, { chassis: "light-sword-arc" }], b: squads.b };
+  assert.throws(() => playMatch({ squads: bad, seed: 1 }), /Prototype/);
+  assert.throws(() => playMatch({ squads: { a: [{ chassis: "medium-lance-mortar", meleeUpgrade: "not-a-real-upgrade" }, ...squads.a.slice(1)], b: squads.b }, seed: 1 }), /upgrade/);
+});
+
+test("the GA explores squad makeups and tables, pairing only mirrored makeups", async () => {
+  const seen = new Set();
+  const evaluate = async (jobs) => jobs.map((j) => {
+    const cls = (sq) => sq.map((u) => CHASSIS.find((c) => c.id === u.chassis).class).sort().join();
+    assert.equal(cls(j.squads.a), cls(j.squads.b), "server parity: weight classes mirror");
+    assert.ok(j.table && j.tableId, "each match is on a table");
+    seen.add(compKey({ squad: j.squads.a }));
+    return { winner: "a", vp: [1, 0], stats: {} };
+  });
+  const res = await evolve({ population: 12, generations: 2, gamesPer: 2, seed: 3, evaluate, compositions: "all", tables: ["standard", "skirmish"] });
+  assert.ok(seen.size >= 2, `several makeups played (${[...seen]})`);
+  assert.ok(res.stats.some((s) => s.kind === "comp") && res.stats.some((s) => s.kind === "chassis@skirmish") && res.stats.some((s) => s.kind === "table"));
 });

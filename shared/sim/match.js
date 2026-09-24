@@ -7,6 +7,7 @@
 // replays. Deterministic from `seed`.
 import { createRoom, claimSide, applyCommand, chassisById, lastRejectionReason, LOCS, MAX_ROUNDS, BOT_PRESETS } from "../game-state.js";
 import { driveBots } from "../bot/index.js";
+import { enforceChassis } from "../commission.js";
 import { PRESETS } from "../bot/score.js";
 
 export function mulberry32(seed) {
@@ -32,9 +33,15 @@ function pilotAttrs(pilot) {
 export function createSimRoom({ code = "SIM", squads, weights, table, random = Math.random }) {
   const room = createRoom(code);
   const opts = { random };
+  // Every setup command goes through the same server guard a player's HTTP
+  // command does (enforceChassis → applyCommand): the GA can only field what a
+  // player could, and the engine enforces every rule after that.
+  let guardError = null;
   const cmd = (verb, attrs, side = "a") => {
+    const guarded = enforceChassis({ verb, attrs });
+    if (guarded.error) { guardError = guarded.error; return false; }
     const v = room.version;
-    applyCommand(room, { verb, attrs }, { side }, opts);
+    applyCommand(room, guarded.cmd, { side }, opts);
     return room.version !== v;
   };
   claimSide(room, { name: "Cyan", side: "a" });
@@ -47,13 +54,14 @@ export function createSimRoom({ code = "SIM", squads, weights, table, random = M
     for (const u of squads[owner]) {
       const ch = chassisById(u.chassis);
       if (!ch) throw new Error(`unknown chassis ${u.chassis}`);
+      // Only what a player sends: chassis id + picks. The guard stamps weapons,
+      // class and SP from the catalogue and rejects illegal combos.
       const ok = cmd("add", {
-        name: ch.name, kind: "rig", owner, chassis: ch.id, class: ch.class,
-        longRange: ch.longRange, melee: ch.melee, sp: ch.sp,
+        name: ch.name, kind: "rig", owner, chassis: ch.id,
         longRangeUpgrade: u.longRangeUpgrade, meleeUpgrade: u.meleeUpgrade,
-        equipment: u.equipment ?? null, equipmentUpgrade: u.equipmentUpgrade ?? null,
+        equipment: u.equipment ?? null, equipmentUpgrade: u.equipmentUpgrade ?? undefined,
       }, owner);
-      if (!ok) throw new Error(`could not commission ${ch.id}: ${lastRejectionReason()}`);
+      if (!ok) throw new Error(`could not commission ${ch.id}: ${guardError || lastRejectionReason()}`);
     }
   }
   cmd("field", { action: "lock" });
