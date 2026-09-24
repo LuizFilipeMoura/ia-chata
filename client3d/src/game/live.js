@@ -6,20 +6,21 @@
 import * as THREE from "three";
 import { api, connect } from "../api.js";
 import { Director, frameFromState, chassisOf } from "./director.js";
-import { availableActions } from "/shared/battle-view.js";
+import { availableActions, overheatOdds } from "/shared/battle-view.js";
 import { candidatesFor } from "/shared/bot/candidates.js";
 import { chooseAction } from "/shared/bot/index.js";
 import { scoreCandidate, scoreParts, PRESETS } from "/shared/bot/score.js";
 import { expectedDamage } from "/shared/bot/evaluate.js";
 import { findPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween } from "/shared/geometry.js";
-import { spatial, moveBudget, effectiveWeaponProfile, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf } from "/shared/game-state.js";
+import { spatial, moveBudget, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
-import { sfx } from "../audio.js";
+import { sfx, ambience } from "../audio.js";
 import { settings } from "../settings.js";
 import { Nameplates } from "../ui/nameplates.js";
+import { Wires } from "../ui/tips.js";
 
 const DEG = Math.PI / 180;
 const ICON = { move: "🦿", sprint: "💨", fire: "🎯", aimed: "🔭", prepare: "🛡️", repair: "🔧", shutdown: "❄️", disengage: "↩️", douse: "🧯", reload: "🔄", lock: "📡", emplace: "⚓", unplant: "⛏️", barrage: "💥", harden: "🧱", purge: "♨️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹", heatpurgewave: "🔥", locksight: "🎯", popsmoke: "🌫️", cryo: "🧊" };
@@ -32,6 +33,32 @@ const HELP = {
   repair: "Patch a damaged location.",
   shutdown: "End activation now and vent 2 heat per unused action (max 5).",
 };
+
+// Brass pressure dial: needle at current heat, red sector past capacity.
+function heatGauge(heat, cap) {
+  const max = cap + 6;
+  const ang = (v) => Math.PI * (1 - Math.min(max, v) / max);
+  const pt = (v, r) => [40 + Math.cos(ang(v)) * r, 40 - Math.sin(ang(v)) * r];
+  const arc = (a, b, r) => { const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r); return `M${x1},${y1} A${r},${r} 0 0 1 ${x2},${y2}`; };
+  const [nx, ny] = pt(heat, 30);
+  const ticks = Array.from({ length: max + 1 }, (_, i) => { const [a1, b1] = pt(i, 34), [a2, b2] = pt(i, 38); return `<line x1="${a1}" y1="${b1}" x2="${a2}" y2="${b2}" stroke="#c9a14a" stroke-width="1.2"/>`; }).join("");
+  const wrap = el("div", { class: "gauge", title: `Heat ${heat} / capacity ${cap}` });
+  wrap.innerHTML = `<svg viewBox="0 0 80 44">
+    <path d="${arc(0, max, 36)}" stroke="#2a241a" stroke-width="8" fill="none"/>
+    <path d="${arc(0, cap, 36)}" stroke="#7a8a4a" stroke-width="5" fill="none"/>
+    <path d="${arc(cap, max, 36)}" stroke="#c8412f" stroke-width="5" fill="none"/>
+    ${ticks}
+    <line x1="40" y1="40" x2="${nx}" y2="${ny}" stroke="#f0cf7a" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="40" cy="40" r="4" fill="#c9a14a" stroke="#3a2a10"/></svg>`;
+  wrap.append(el("div", { class: "gl" }, `${heat}/${cap}`));
+  return wrap;
+}
+
+// Tooltip line: what ending after this action would risk.
+function oddsLine(rig, extra) {
+  const o = overheatOdds(rig, extra);
+  return o.pBad ? `\n⚠ Ending after this: ${Math.round(o.pBad * 100)}% overheat damage${o.pSevere ? ` (${Math.round(o.pSevere * 100)}% severe)` : ""}` : "\n✓ Stays under capacity";
+}
 
 export class LiveMatch {
   constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null }) {
@@ -54,6 +81,7 @@ export class LiveMatch {
     this.advisorWeights = PRESETS.hard;
     this.director.speed = settings.get("speed") || 1;
     this.plates = new Nameplates(hud.root, world, this.director);
+    this.wires = tutorial ? null : new Wires(hud.root, this);
     this.minimap = new Minimap(hud.root, world);
   }
 
@@ -63,6 +91,7 @@ export class LiveMatch {
     const joined = await api.join(this.room, this.side);
     this.apply(joined.state, true);
     this.disconnect = connect(this.room, this.side, (s) => this.apply(s));
+    ambience.start();
   }
 
   destroy() {
@@ -72,6 +101,8 @@ export class LiveMatch {
     this.director.reset();
     this.minimap.destroy();
     this.plates.destroy();
+    this.wires?.destroy();
+    ambience.stop();
     this.world.clearOverlay();
     this.world.onShiftWheel = null;
   }
@@ -101,7 +132,7 @@ export class LiveMatch {
       // from orbit. Rejoining a game in progress just snaps.
       const fresh = state.game.round <= 1 && !(state.game.resolutions || []).some((r) => r.kind === "attack" || r.kind === "move");
       if (fresh && state.rigs.some((r) => r.pos)) {
-        this.hud.banner("DROP ZONE", "round");
+        this.hud.banner("RAIL DROP — SQUADRONS INBOUND", "round");
         this.director.busy++;
         this.director.queue = this.director.dropIn(frameFromState(state)).finally(() => { this.director.busy--; });
       } else this.director.snap(frameFromState(state));
@@ -145,11 +176,12 @@ export class LiveMatch {
     const g = this.game;
     // A chime when the floor comes back to you.
     const mine = this.myTurn;
-    if (mine && !this.wasMine) { sfx.turn(true); this.hud.banner("YOUR TURN", "turn"); }
+    if (mine && !this.wasMine) { sfx.turn(true); this.hud.banner("YOUR MOVE, IRONCLAD", "turn"); }
     this.wasMine = mine;
     this.hud.top(this.state, this.side);
     this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId);
     this.plates.set(this.state.rigs, { activeId: g.turn?.activeRigId, priorityIds: Object.values(g.priorityTargets || {}) });
+    this.wires?.check();
     this.hud.roster(this.state, this.side, this.selected, (id) => this.select(id));
     // Objective control tint.
     const ctrl = (g.objectives || []).map((m) => {
@@ -217,7 +249,7 @@ export class LiveMatch {
     bar.append(el("div", { class: "act-head" },
       el("div", { class: "act-name" }, `${rig.name}`, el("span", { class: "sub" }, ` ${chassisOf(rig)?.label || ""}`)),
       el("div", { class: "pips" }, Array.from({ length: turn.actionsMax }, (_, i) => el("span", { class: `pip ${i < left ? "on" : ""}` }))),
-      el("div", { class: "heatline" }, `Heat ${rig.engine?.heat ?? 0}/${cap}`),
+      heatGauge(rig.engine?.heat ?? 0, heatMeter(rig).cap || cap),
     ));
     if (!commandable) {
       bar.append(el("div", { class: "hint" }, rig.owner !== this.side ? "Enemy rig — hover to inspect." : rig.activated ? "Already activated this round." : this.myTurn ? "" : "Not your turn."));
@@ -230,7 +262,7 @@ export class LiveMatch {
       const hot = projected > cap;
       const btn = el("button", {
         class: `act ${hot ? "hot" : ""} ${this.mode?.key === a.key ? "on" : ""}`, disabled: !commandable || !a.enabled,
-        title: `${a.label} — ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}`,
+        title: `${a.label} — ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}${oddsLine(rig, Number(heat) || 0)}`,
         "data-act": a.key,
         onClick: () => this.beginAction(rig, a.key),
       }, el("span", { class: "ico" }, ICON[a.key] || "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, `${heat}🔥`));
@@ -242,10 +274,20 @@ export class LiveMatch {
         el("span", {},
           el("button", { class: "btn ghost", "data-act": "advisor", onClick: () => this.advise(rig) }, "💡 Advisor"),
           g.canUndo ? el("button", { class: "btn ghost", title: "Take back your last action (Ctrl+Z)", onClick: () => this.undo() }, "↶ Undo") : null),
-        g.turn.activeRigId === rig.id ? el("button", { class: "btn primary", "data-act": "end", onClick: () => this.endActivation(rig) }, "End activation ⏎") : null,
+        g.turn.activeRigId === rig.id ? (() => {
+          const o = overheatOdds(rig, 0);
+          return el("button", { class: `btn ${o.pBad ? "danger" : "primary"}`, "data-act": "end", title: o.pBad ? "Ending here triggers the overheat roll" : "Pass to the enemy",
+            onClick: () => this.endActivation(rig) }, o.pBad ? `End — ${Math.round(o.pBad * 100)}% overheat ⚠` : "End activation ⏎");
+        })() : null,
       );
       bar.append(foot);
-      if ((rig.engine?.heat ?? 0) > cap) bar.append(el("div", { class: "warn" }, `⚠ Over capacity: ending now rolls D12+${Math.min(10, 2 * ((rig.engine?.heat ?? 0) - cap))} on the overheat table. Shut Down vents heat.`));
+      // Plain-numbers overheat warning: what ending now actually risks.
+      const o = overheatOdds(rig, 0);
+      if (o.pBad) {
+        const worst = o.rows.filter((r) => r.key !== "safe").sort((x, y) => y.p - x.p)[0];
+        bar.append(el("div", { class: "warn" }, `⚠ Boiler over pressure: ending now is a ${Math.round(o.pBad * 100)}% chance of damage`,
+          o.pSevere ? ` (${Math.round(o.pSevere * 100)}% severe)` : "", ` — most likely ${worst?.label}. `, el("b", {}, "Shut Down"), " vents 2 heat per unused action."));
+      }
     }
   }
 
@@ -378,7 +420,7 @@ export class LiveMatch {
     if (!r || r.destroyed || !r.pos || this.mode) return;
     const lr = effectiveWeaponProfile("longRange", r.weapons?.longRange, r);
     const max = Math.min(60, lr?.maxRange ?? 24);
-    const col = r.owner === this.side ? 0x33d6ff : 0xff4a3d;
+    const col = r.owner === this.side ? 0x5fd3c0 : 0xe0533d;
     this.reachMeshes.push(
       this.world.wedge(r.pos.x, r.pos.y, max, r.facing - 45, r.facing + 45, col, 0.07),
       this.world.ring(r.pos.x, r.pos.y, max, col, 0.35),

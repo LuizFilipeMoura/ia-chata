@@ -37,7 +37,7 @@ export class Minimap {
       const m = this.world.mechRoots?.find((x) => x.userData.mechId === r.id);
       const x = m ? m.position.x : r.pos?.x, y = m ? m.position.z : r.pos?.y;
       if (x == null) continue;
-      g.fillStyle = r.destroyed ? "#555" : r.owner === "a" ? "#33d6ff" : "#ff4a3d";
+      g.fillStyle = r.destroyed ? "#555" : r.owner === "a" ? "#5fd3c0" : "#e0533d";
       g.beginPath(); g.arc(x * sx, y * sy, 4, 0, 7);
       if (r.activated && !r.destroyed) { g.strokeStyle = g.fillStyle; g.lineWidth = 2; g.stroke(); } else g.fill();
       if (r.id === this.activeId) { g.strokeStyle = "#ffd35a"; g.lineWidth = 2; g.beginPath(); g.arc(x * sx, y * sy, 7, 0, 7); g.stroke(); }

@@ -61,14 +61,26 @@ export class Nameplates {
     if (!show) return;
     const cam = this.world.camera, W = window.innerWidth, H = window.innerHeight;
     const v = new THREE.Vector3();
+    const placed = [];
+    const items = [];
     for (const [id, c] of this.cards) {
       const m = this.director.mechs.get(id);
       if (!m) { c.root.style.display = "none"; continue; }
       m.labelAnchor.getWorldPosition(v);
       v.project(cam);
       if (v.z > 1) { c.root.style.display = "none"; continue; }
-      c.root.style.display = "";
-      c.root.style.transform = `translate(${((v.x + 1) / 2) * W}px, ${((1 - v.y) / 2) * H}px) translate(-50%, -100%)`;
+      items.push({ c, x: ((v.x + 1) / 2) * W, y: ((1 - v.y) / 2) * H });
+    }
+    // Declutter: nearer plates (lower on screen) keep their spot; the rest
+    // step upward until they stop overlapping.
+    items.sort((a, b) => b.y - a.y);
+    const PW = 84, PH = 32;
+    for (const it of items) {
+      let y = it.y;
+      for (let guard = 0; guard < 6 && placed.some((p) => Math.abs(p.x - it.x) < PW && Math.abs(p.y - y) < PH); guard++) y -= PH;
+      placed.push({ x: it.x, y });
+      it.c.root.style.display = "";
+      it.c.root.style.transform = `translate(${it.x}px, ${y}px) translate(-50%, -100%)`;
     }
   }
 

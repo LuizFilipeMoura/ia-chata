@@ -135,7 +135,7 @@ export class FX {
   }
 
   // A comic speech bubble that bobs over a mech for a couple of seconds.
-  bubble(pos, str, accent = "#33d6ff") {
+  bubble(pos, str, accent = "#5fd3c0") {
     const c = document.createElement("canvas");
     const g = c.getContext("2d");
     const font = "600 30px Rajdhani, Arial, sans-serif";

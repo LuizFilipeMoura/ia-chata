@@ -123,7 +123,7 @@ export class Director {
     if (this.quiet || this.skipping || !m || !settings.get("barks")) return;
     const line = barkFor(m.name, event);
     if (!line) return;
-    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 4.6, 0)), line, m.owner === "a" ? "#33d6ff" : "#ff4a3d");
+    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 4.6, 0)), line, m.owner === "a" ? "#5fd3c0" : "#e0533d");
     sfx.bark();
   }
 

@@ -16,7 +16,7 @@ const TIER_TEXT = {
 export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims }) {
   fill(root, el("div", { class: "title" },
     el("div", { class: "logo" }, el("span", {}, "OIL"), el("i", {}, "&"), el("span", {}, "IRON"), el("small", {}, "TACTICS · 3D")),
-    el("p", { class: "tag" }, "Dieselpunk war machines on a real tabletop — now in three dimensions."),
+    el("p", { class: "tag" }, "Oil-soaked war rigs, brass-bound Ironclads, and a table of rubble to fight over."),
     el("div", { class: "menu" },
       el("button", { class: "btn big primary", onClick: onTutorial }, "🎓  Tutorial — learn by playing"),
       el("button", { class: "btn big", onClick: onPlay }, "⚔️  Skirmish vs Bot"),
@@ -53,7 +53,7 @@ export async function squadBuilder(root, { onStart, onBack }) {
   const render = () => {
     const mediums = squad.filter((u) => CHASSIS.find((c) => c.id === u.chassis).class === "medium").length;
     fill(root, el("div", { class: "builder" },
-      el("div", { class: "b-head" }, el("button", { class: "btn ghost", onClick: onBack }, "← Back"), el("h1", {}, "Commission your squad"), el("span", { class: "muted" }, `${squad.length}/3 rigs · the bot mirrors your weight classes`)),
+      el("div", { class: "b-head" }, el("button", { class: "btn ghost", onClick: onBack }, "← Back"), el("h1", {}, "Commission your squadron"), el("span", { class: "muted" }, `${squad.length}/3 rigs · the bot mirrors your weight classes`)),
       el("div", { class: "tiers" }, ["easy", "normal", "hard"].map((t) => el("button", { class: `tier ${t === tier ? "on" : ""} t-${t}`, onClick: () => { tier = t; render(); } }, el("b", {}, t.toUpperCase()), el("span", {}, TIER_TEXT[t])))),
       el("div", { class: "tables" }, el("span", { class: "muted" }, "Table:"), Object.entries(TABLES).map(([k, t]) => el("button", { class: `btn ${table === k ? "primary" : "ghost"}`, title: t.hint, onClick: () => { table = k; render(); } }, t.label))),
       el("div", { class: "b-grid" }, CHASSIS.map((ch) => {

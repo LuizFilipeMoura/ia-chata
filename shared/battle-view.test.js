@@ -368,3 +368,20 @@ test("a revealed riposte/sidestep/exploit chip carries a gloss id that resolves"
     assert.ok(GLOSS_IDS.has(chip.gloss), `${type} gloss "${chip.gloss}" not in glossary`);
   }
 });
+
+test("overheatOdds: safe under capacity, D12 odds past it", async () => {
+  const { overheatOdds } = await import("./battle-view.js");
+  const { makeRig } = await import("./game-state.js");
+  const rig = makeRig(1, "T", "light", "a", { longRange: "Autocannon", melee: "Claw" });
+  rig.engine.heat = 6; // light cap 6 → no roll
+  assert.equal(overheatOdds(rig).pBad, 0);
+  // +1 heat → D12 + 2: bad on a 4+ (6+ total) → 9/12
+  const o = overheatOdds(rig, 1);
+  assert.equal(o.bonus, 2);
+  assert.equal(o.pBad, 9 / 12);
+  assert.ok(o.rows.reduce((a, r) => a + r.p, 0) > 0.999);
+  // way over → capped +10: 17+ Catastrophic on a 7+
+  const hot = overheatOdds(rig, 10);
+  assert.equal(hot.bonus, 10);
+  assert.equal(hot.rows.find((r) => r.key === "catastrophic").p, 6 / 12);
+});

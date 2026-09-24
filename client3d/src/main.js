@@ -14,6 +14,7 @@ import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
 import { sfx, isMuted, setMuted } from "./audio.js";
 import { settings } from "./settings.js";
+import { resetWires } from "./ui/tips.js";
 
 function muteButton() {
   const b = el("button", { class: "btn ghost", title: "Sound on/off" }, isMuted() ? "🔇" : "🔊");
@@ -149,6 +150,8 @@ function settingsPanel() {
       toggle("barks", "Pilot speech bubbles"),
       toggle("dangerPreview", "Show danger when placing a move"),
       toggle("edgePan", "Pan the camera at screen edges"),
+      toggle("wires", "Wires from HQ (situational tips)"),
+      el("button", { class: "btn ghost", onClick: () => { resetWires(); toast("All HQ wires will be sent again.", "good"); } }, "Replay all tips"),
       el("label", { class: "set-row" }, "Volume ", el("input", { type: "range", min: 0, max: 1, step: 0.05, value: settings.get("volume"), onInput: (e) => settings.set("volume", Number(e.target.value)) })),
       el("label", { class: "set-row" }, "Animation speed ", el("select", { onChange: (e) => { settings.set("speed", Number(e.target.value)); if (active?.director) active.director.speed = Number(e.target.value); } }, [1, 2, 4].map((v) => el("option", { value: v, selected: settings.get("speed") === v }, `${v}×`))))),
     actions: [{ label: "Done", primary: true }],

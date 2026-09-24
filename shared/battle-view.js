@@ -1,7 +1,7 @@
 // Pure, DOM-free view-model derived from room state. Shared so it can be unit
 // tested in node and imported by the browser (via the /shared static mount).
-import { ACTIONS } from "./rules.js";
-import { EQUIPMENT, rigEffects } from "./game-state.js";
+import { ACTIONS, heatThreshold } from "./rules.js";
+import { EQUIPMENT, rigEffects, heatMeter } from "./game-state.js";
 import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
 
 const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "repair", "douse", "prepare", "shutdown"];
@@ -233,4 +233,24 @@ export function outcomeText(outcome, sides) {
   const name = sides.find((s) => s.id === outcome.winner)?.name || outcome.winner;
   const why = outcome.reason === "annihilation" ? "by annihilation" : "on salvage";
   return `${name} wins ${why}.`;
+}
+
+// What ending the activation at this heat would risk (§6): the Heat Threshold
+// Table folded over the D12. `extraHeat` previews an action before you take it.
+// Returns { over, bonus, pBad (any damage), pSevere (Buckling or worse), rows }.
+export function overheatOdds(rig, extraHeat = 0) {
+  const m = heatMeter({ ...rig, engine: { ...rig.engine, heat: (rig.engine?.heat || 0) + extraHeat } });
+  if (!m.over) return { over: 0, bonus: 0, pBad: 0, pSevere: 0, rows: [] };
+  const counts = new Map();
+  for (let d = 1; d <= 12; d++) {
+    const row = heatThreshold(d + m.bonus);
+    counts.set(row.key, { key: row.key, label: row.label, n: (counts.get(row.key)?.n || 0) + 1 });
+  }
+  const rows = [...counts.values()].map((r) => ({ key: r.key, label: r.label, p: r.n / 12 }));
+  const pOf = (keys) => rows.filter((r) => keys.includes(r.key)).reduce((a, r) => a + r.p, 0);
+  return {
+    over: m.over, bonus: m.bonus, rows,
+    pBad: rows.filter((r) => r.key !== "safe").reduce((a, r) => a + r.p * 12, 0) / 12,
+    pSevere: pOf(["buckling", "engine-failure", "catastrophic"]) * 12 / 12,
+  };
 }

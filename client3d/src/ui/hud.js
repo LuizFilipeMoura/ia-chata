@@ -24,6 +24,23 @@ export class Hud {
 
   destroy() { clear(this.root); }
 
+  // Who still has to act this round, in alternation from the side on the floor.
+  turnOrder(state) {
+    const g = state.game;
+    const live = (s) => state.rigs.filter((r) => (r.owner || "a") === s && !r.destroyed);
+    const first = g.turn?.side || "a", second = first === "a" ? "b" : "a";
+    const wait = { [first]: live(first).filter((r) => !r.activated), [second]: live(second).filter((r) => !r.activated) };
+    const done = [...live("a"), ...live("b")].filter((r) => r.activated);
+    const seq = [];
+    for (let i = 0; wait[first].length || wait[second].length; i++) {
+      const s = i % 2 ? second : first;
+      const r = wait[s].shift() || wait[s === first ? second : first].shift();
+      if (r) seq.push(r);
+    }
+    return el("div", { class: "turnorder", title: "Activations left this round (dim = already acted)" },
+      seq.map((r) => el("i", { class: r.owner || "a", title: r.name })), done.map((r) => el("i", { class: `${r.owner || "a"} done`, title: `${r.name} (acted)` })));
+  }
+
   // `spectator` (replays): neutral Cyan/Red labels instead of you/enemy.
   top(state, side, spectator = this.spectator) {
     const g = state.game;
@@ -32,15 +49,15 @@ export class Hud {
       const va = g.sides.find((s) => s.id === "a")?.vp ?? 0, vb = g.sides.find((s) => s.id === "b")?.vp ?? 0;
       fill(this.topEl,
         el("div", { class: "vp a" }, el("span", { class: "k" }, "CYAN"), el("b", {}, String(va))),
-        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…")),
+        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…"), this.turnOrder(state)),
         el("div", { class: "vp b" }, el("b", {}, String(vb)), el("span", { class: "k" }, "RED")));
       return;
     }
-    const who = g.phase === "finished" ? "Battle over" : g.phase === "initiative" ? "Rolling initiative…" : g.pendingAnswer ? (g.pendingAnswer.side === side ? "Place your Answer token" : "Enemy placing Answer…") : turn === side ? "YOUR TURN" : "ENEMY TURN";
+    const who = g.phase === "finished" ? "Battle over" : g.phase === "initiative" ? "Rolling initiative…" : g.pendingAnswer ? (g.pendingAnswer.side === side ? "Place your Answer token" : "Enemy placing Answer…") : turn === side ? "YOUR MOVE, IRONCLAD" : "ENEMY ADVANCING";
     fill(this.topEl, 
-      el("div", { class: "vp a" }, el("span", { class: "k" }, "YOU"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0)), el("span", { class: "k" }, "VP")),
-      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10${g.suddenDeath ? " · SUDDEN DEATH" : ""}`), el("div", { class: "who" }, who)),
-      el("div", { class: "vp b" }, el("span", { class: "k" }, "VP"), el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot ? `BOT · ${g.sides.find((s) => s.id !== side).bot.toUpperCase()}` : "ENEMY")),
+      el("div", { class: "vp a", title: "Victory points — salvage held + priority kills" }, el("span", { class: "k" }, "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0))),
+      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10${g.suddenDeath ? " · SUDDEN DEATH" : ""}`), el("div", { class: "who" }, who), this.turnOrder(state)),
+      el("div", { class: "vp b", title: "Enemy victory points" }, el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : "ENEMY")),
     );
   }
 
@@ -63,7 +80,7 @@ export class Hud {
   }
 
   roster(state, side, selectedId, onPick) {
-    fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Cyan" : "Your squad"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
+    fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Cyan" : "Your squadron"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
     fill(this.enemyEl, el("div", { class: "rh" }, this.spectator ? "Red" : "Enemy"), state.rigs.filter((r) => r.owner !== side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
   }
 

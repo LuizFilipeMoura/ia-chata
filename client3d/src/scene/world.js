@@ -12,7 +12,18 @@ const DEG = Math.PI / 180;
 function groundTexture(w, h) {
   const c = document.createElement("canvas"); c.width = 1024; c.height = Math.round(1024 * h / w);
   const g = c.getContext("2d");
-  g.fillStyle = "#5b5140"; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = "#4a3c2b"; g.fillRect(0, 0, c.width, c.height);
+  // Rust blooms and soot smears.
+  for (let i = 0; i < 60; i++) {
+    const x = Math.random() * c.width, y = Math.random() * c.height, r = 20 + Math.random() * 70;
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, Math.random() < 0.5 ? "rgba(120,60,25,0.22)" : "rgba(10,8,6,0.25)"); grd.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // A disused rail spur across the table.
+  g.strokeStyle = "rgba(60,50,40,.7)"; g.lineWidth = 5;
+  const ry = c.height * 0.82;
+  for (const off of [-9, 9]) { g.beginPath(); g.moveTo(0, ry + off); g.bezierCurveTo(c.width * 0.3, ry + off - 60, c.width * 0.6, ry + off + 40, c.width, ry + off - 30); g.stroke(); }
   for (let i = 0; i < 9000; i++) {
     const v = 70 + Math.random() * 40;
     g.fillStyle = `rgba(${v + 20},${v + 8},${v - 10},${Math.random() * 0.25})`;
@@ -46,6 +57,19 @@ function windowTexture() {
   return t;
 }
 
+// A big inverted sphere painted with a smoggy dusk gradient.
+function skyDome() {
+  const c = document.createElement("canvas"); c.width = 16; c.height = 256;
+  const g = c.getContext("2d");
+  const grd = g.createLinearGradient(0, 0, 0, 256);
+  grd.addColorStop(0, "#0c0a08"); grd.addColorStop(0.45, "#2b1c10"); grd.addColorStop(0.62, "#6e4220"); grd.addColorStop(0.7, "#a8662a"); grd.addColorStop(0.78, "#3a2614"); grd.addColorStop(1, "#140e09");
+  g.fillStyle = grd; g.fillRect(0, 0, 16, 256);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false }));
+  m.position.set(27, -40, 18);
+  return m;
+}
+
 export class World {
   constructor(container) {
     this.container = container;
@@ -58,13 +82,16 @@ export class World {
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x14161b);
-    this.scene.fog = new THREE.Fog(0x14161b, 80, 170);
+    // Smog-choked dieselpunk dusk: an amber horizon fading to soot overhead,
+    // and warm sepia fog that swallows the distance.
+    this.scene.background = new THREE.Color(0x1a130c);
+    this.scene.fog = new THREE.Fog(0x2a1d10, 70, 160);
+    this.scene.add(skyDome());
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
     this.fx = new FX(this.scene, this.camera);
 
-    const hemi = new THREE.HemisphereLight(0xbfd6ff, 0x3a2e22, 0.9); this.scene.add(hemi);
-    this.sun = new THREE.DirectionalLight(0xffe2b8, 2.4);
+    const hemi = new THREE.HemisphereLight(0xd8b88a, 0x2a1c10, 0.85); this.scene.add(hemi);
+    this.sun = new THREE.DirectionalLight(0xffc27a, 2.6);
     this.sun.position.set(-30, 60, -20); this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera; sc.left = -50; sc.right = 50; sc.top = 50; sc.bottom = -50; sc.far = 200;
@@ -180,13 +207,30 @@ export class World {
   // ---- Battlefield ----
   buildField(field, objectives = []) {
     this.tableGroup.clear();
+    this.chimneys = [];
     this.field = field;
     const { width: w, height: h } = field;
     // Surrounding ground + table edge.
     const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 1 }));
     outer.rotation.x = -Math.PI / 2; outer.position.set(w / 2, -0.8, h / 2); outer.receiveShadow = true; this.tableGroup.add(outer);
-    const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 0.8, h + 2), new THREE.MeshStandardMaterial({ color: 0x3b2a1b, roughness: 0.7 }));
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 0.8, h + 2), new THREE.MeshStandardMaterial({ color: 0x2e2116, roughness: 0.7 }));
     rim.position.set(w / 2, -0.41, h / 2); rim.receiveShadow = true; this.tableGroup.add(rim);
+    // Brass trim + rivets around the table edge — it's a war-room table.
+    const brass = new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.9, roughness: 0.3 });
+    for (const [x, z, sx, sz] of [[w / 2, -1, w + 2.2, 0.25], [w / 2, h + 1, w + 2.2, 0.25], [-1, h / 2, 0.25, h + 2.2], [w + 1, h / 2, 0.25, h + 2.2]]) {
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.18, sz), brass); trim.position.set(x, 0.02, z); this.tableGroup.add(trim);
+    }
+    for (let i = 0; i <= 12; i++) for (const z of [-1, h + 1]) {
+      const r = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), brass); r.position.set(-1 + (i / 12) * (w + 2), 0.13, z); this.tableGroup.add(r);
+    }
+    // Oil slicks: glossy black stains that catch the searchlights.
+    const oil = new THREE.MeshStandardMaterial({ color: 0x050403, roughness: 0.05, metalness: 0.6, transparent: true, opacity: 0.85 });
+    for (let i = 0; i < 7; i++) {
+      const m = new THREE.Mesh(new THREE.CircleGeometry(0.8 + ((i * 37) % 10) / 7, 20), oil);
+      m.rotation.x = -Math.PI / 2; m.scale.set(1, 0.6 + ((i * 13) % 5) / 10, 1);
+      m.position.set(((i * 53) % 100) / 100 * w, 0.015, ((i * 71) % 100) / 100 * h); this.tableGroup.add(m);
+    }
+    this.buildSearchlights(w, h);
     const table = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: groundTexture(w, h), roughness: 0.95 }));
     table.rotation.x = -Math.PI / 2; table.position.set(w / 2, 0, h / 2); table.receiveShadow = true; this.tableGroup.add(table);
     this.cam.target.set(w / 2, 0, h / 2);
@@ -198,7 +242,7 @@ export class World {
     // Deployment zones — tinted quarter-discs in each deployment corner.
     if (field.deployCorners) {
       field.deployCorners.forEach((c, i) => {
-        const m = new THREE.Mesh(new THREE.CircleGeometry(field.deployRadius || 8, 40), new THREE.MeshBasicMaterial({ color: i ? 0xff4a3d : 0x33d6ff, transparent: true, opacity: 0.07, depthWrite: false }));
+        const m = new THREE.Mesh(new THREE.CircleGeometry(field.deployRadius || 8, 40), new THREE.MeshBasicMaterial({ color: i ? 0xe0533d : 0x5fd3c0, transparent: true, opacity: 0.07, depthWrite: false }));
         m.rotation.x = -Math.PI / 2; m.position.set(c.x, 0.02, c.y); this.tableGroup.add(m);
       });
     }
@@ -220,6 +264,14 @@ export class World {
         roof.position.y = hgt + 0.15; g.add(roof);
         const tank = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0x7a5a3a, metalness: 0.5 })));
         tank.position.set(t.w * 0.25, hgt + 0.9, 0); g.add(tank);
+        // A factory smokestack with a soot band — it belches smoke (see frame()).
+        const stackH = 3 + (t.w % 2);
+        const stack = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, stackH, 10), new THREE.MeshStandardMaterial({ color: 0x6b3a26, roughness: 0.9 })));
+        stack.position.set(-t.w * 0.28, hgt + stackH / 2, -t.h * 0.2); g.add(stack);
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0x1a1512 }));
+        band.position.set(stack.position.x, hgt + stackH - 0.2, stack.position.z); g.add(band);
+        const mouth = new THREE.Object3D(); mouth.position.set(stack.position.x, hgt + stackH + 0.2, stack.position.z); g.add(mouth);
+        (this.chimneys ||= []).push(mouth);
       } else if (t.kind === "barricade") {
         const wall = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, 1.1, t.h), new THREE.MeshStandardMaterial({ color: 0x8b8578, roughness: 0.9 })));
         wall.position.y = 0.55; g.add(wall);
@@ -269,9 +321,25 @@ export class World {
     });
   }
 
+  // Two searchlights on gantries at the empty corners, sweeping the table.
+  buildSearchlights(w, h) {
+    for (const s of this.searchlights || []) { this.scene.remove(s); this.scene.remove(s.target); }
+    this.searchlights = [];
+    for (const [x, z] of [[-4, -4], [w + 4, h + 4]]) {
+      const sl = new THREE.SpotLight(0xfff0c8, 60, 90, 0.16, 0.5, 1.2);
+      sl.position.set(x, 26, z);
+      this.scene.add(sl); this.scene.add(sl.target);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 26, 8), new THREE.MeshStandardMaterial({ color: 0x2a241c, metalness: 0.7 }));
+      pole.position.set(x, 13, z); this.tableGroup.add(pole);
+      const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.6, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0xc9a14a, emissive: 0xfff0c8, emissiveIntensity: 0.6, metalness: 0.8 }));
+      lamp.position.set(x, 26, z); this.tableGroup.add(lamp);
+      this.searchlights.push(sl);
+    }
+  }
+
   // Tint each objective by who controls it: "a" | "b" | "contested" | null.
   setObjectiveControl(list) {
-    const col = { a: 0x33d6ff, b: 0xff4a3d, contested: 0xffffff };
+    const col = { a: 0x5fd3c0, b: 0xe0533d, contested: 0xffffff };
     this.objectiveMeshes.forEach((m, i) => {
       const c = col[list[i]] ?? 0xffd35a;
       m.ringMat.color.setHex(c); m.pylonMat.emissive.setHex(c); m.light.color.setHex(c);
@@ -280,7 +348,7 @@ export class World {
 
   // ---- Overlays ----
   clearOverlay() { this.overlay.clear(); }
-  ring(x, y, r, color = 0x33d6ff, opacity = 0.5) {
+  ring(x, y, r, color = 0x5fd3c0, opacity = 0.5) {
     const m = new THREE.Mesh(new THREE.RingGeometry(r - 0.08, r + 0.08, 96), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.06, y); this.overlay.add(m); return m;
   }
@@ -330,6 +398,18 @@ export class World {
     if (this.fx.shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(this.fx.shake * 0.6));
     this.camera.lookAt(c.target);
     this.objectiveMeshes.forEach((m, i) => { m.gem.rotation.y += dt; m.gem.position.y += Math.sin(this.clock.elapsedTime * 2 + i) * 0.004; });
+    // Chimney smoke and sweeping searchlights.
+    for (const c of this.chimneys || []) {
+      if (Math.random() < dt * 5) {
+        const p = c.getWorldPosition(new THREE.Vector3());
+        this.fx.particle(p, { color: 0x3a3028, size: 1.2, life: 4, grow: 4, additive: false, opacity: 0.45, vel: new THREE.Vector3(0.6 + Math.random() * 0.4, 1.4 + Math.random(), 0.2) });
+      }
+    }
+    const t = this.clock.elapsedTime;
+    (this.searchlights || []).forEach((sl, i) => {
+      const a = t * 0.25 + i * 2.3;
+      sl.target.position.set(this.field.width / 2 + Math.cos(a) * this.field.width * 0.4, 0, this.field.height / 2 + Math.sin(a * 1.3) * this.field.height * 0.4);
+    });
     this.fx.update(dt);
     for (const t of this.tickers) t(dt);
     this.renderer.render(this.scene, this.camera);

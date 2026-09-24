@@ -111,12 +111,35 @@ export const sfx = {
     const notes = mine ? [523, 659, 784] : [392, 330];
     notes.forEach((f, i) => tone(t + i * 0.09, 0.18, { freq: f, type: "triangle", peak: 0.15 }));
   },
-  bark() { if (!init() || muted) return; const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone(t + i * 0.06, 0.05, { freq: jit(500, 0.4), type: "square", peak: 0.04 }); },
+  // Radio chatter: a burst of band-passed static with a squelch click.
+  bark() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 0.35, { freq: 1800, type: "bandpass", q: 4, peak: 0.08, attack: 0.01 }); tone(t, 0.03, { freq: 2400, type: "square", peak: 0.05 }); tone(t + 0.34, 0.03, { freq: 1900, type: "square", peak: 0.05 }); },
   thrusters() { if (!init() || muted) return; noise(ctx.currentTime, 1.6, { freq: 400, sweepTo: 1500, type: "bandpass", q: 1, peak: 0.35, attack: 0.3 }); },
   fanfare(win) {
     if (!init() || muted) return;
     const t = ctx.currentTime;
     const seq = win ? [[523, 0], [659, 0.15], [784, 0.3], [1047, 0.45], [784, 0.7], [1047, 0.85]] : [[392, 0], [349, 0.3], [311, 0.6], [262, 0.9]];
     for (const [f, d] of seq) { tone(t + d, win ? 0.3 : 0.45, { freq: f, type: "triangle", peak: 0.2 }); tone(t + d, win ? 0.3 : 0.45, { freq: f / 2, type: "square", peak: 0.05 }); }
+  },
+};
+
+// The battlefield idles: two detuned diesel oscillators through a low-pass,
+// throbbing on a slow LFO. Very quiet — it's texture, not a soundtrack.
+let amb = null;
+export const ambience = {
+  start() {
+    if (!init() || amb) return;
+    const out = ctx.createGain(); out.gain.value = 0.0001; out.connect(master);
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 180; lp.connect(out);
+    const oscs = [42, 43.3, 84.5].map((f, i) => { const o = ctx.createOscillator(); o.type = i === 2 ? "triangle" : "sawtooth"; o.frequency.value = f; const g = ctx.createGain(); g.gain.value = i === 2 ? 0.2 : 0.5; o.connect(g).connect(lp); o.start(); return o; });
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 3.1; const lg = ctx.createGain(); lg.gain.value = 0.02; lfo.connect(lg).connect(out.gain); lfo.start();
+    out.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 3);
+    amb = { out, oscs, lfo };
+  },
+  stop() {
+    if (!amb) return;
+    const a = amb; amb = null;
+    a.out.gain.cancelScheduledValues(ctx.currentTime);
+    a.out.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.4);
+    setTimeout(() => { a.oscs.forEach((o) => o.stop()); a.lfo.stop(); a.out.disconnect(); }, 1500);
   },
 };

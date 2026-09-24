@@ -11,7 +11,7 @@ export const PAINT = {
   Gold: 0xd4a017, Blue: 0x2f6fd6, Purple: 0x7b3fb8, Pumpkin: 0xe8731c, Zebra: 0xe9e6dc,
   Turquoise: 0x1fb5a8, Green: 0x3f9a3a, Copper: 0xb8703a, Black: 0x2a2a30, Red: 0xc0282d, Silver: 0xb9c0c8,
 };
-export const TEAM = { a: 0x33d6ff, b: 0xff4a3d };
+export const TEAM = { a: 0x5fd3c0, b: 0xe0533d };
 
 const matCache = new Map();
 function mat(color, opts = {}) {
@@ -246,7 +246,7 @@ export class Mech {
 
     this.torso = new THREE.Group(); this.torso.position.y = heavy ? 0.75 : 0.6; this.pelvis.add(this.torso);
     const chest = box(heavy ? 1.5 : 1.1, heavy ? 1.1 : 0.85, heavy ? 1.5 : 1.1, paint); this.torso.add(chest);
-    const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, mat(0x99e0ff, { emissive: 0x2288aa, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.1 }));
+    const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, mat(0xffcf7a, { emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 }));
     cockpit.position.set(heavy ? 0.6 : 0.45, 0.15, 0); this.torso.add(cockpit);
     if (heavy) this.torso.add(at(box(1.2, 0.2, 1.7, STEEL()), -0.1, 0.62, 0));
     // Exhaust stacks — they glow and smoke with heat.
