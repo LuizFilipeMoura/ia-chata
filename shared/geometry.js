@@ -162,6 +162,13 @@ export function arcOf(attacker, target) {
   return "rear";
 }
 
+// Is the target inside the ATTACKER's front 90 deg arc (rules.md §7: "The
+// target must be in the attacker's front 90 deg arc")? The mirror of arcOf:
+// which of the attacker's own facings the target stands in.
+export function inFrontArc(attacker, target) {
+  return arcOf(target, attacker) === "front";
+}
+
 // Centre to centre. Drives opts.distance and the sweet-spot falloff (§7).
 export function distanceBetween(a, b) {
   return Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y);

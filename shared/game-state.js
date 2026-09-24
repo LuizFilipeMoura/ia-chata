@@ -11,7 +11,7 @@ import {
 } from "./field.js";
 import {
   radiusOf, terrainPolygons, clearOfTerrain,
-  sightCorridor, arcOf, distanceBetween, meleeInReach, controlsObjective,
+  inFrontArc, sightCorridor, arcOf, distanceBetween, meleeInReach, controlsObjective,
 } from "./geometry.js";
 import { findPath } from "./pathfind.js";
 import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
@@ -2366,6 +2366,7 @@ export function deriveAttackGeometry(room, attacker, target) {
     cover: corridor.cover,
     los: corridor.los,
     inMeleeReach: meleeInReach(a, b, meleeReachOf(attacker)),
+    inFrontArc: inFrontArc(a, b),
   };
 }
 
@@ -2386,6 +2387,8 @@ function resolveFire(room, rig, target, a, act, random) {
   // be exactly the trust we are removing.
   if (room.mode === "digital") {
     const geo = deriveAttackGeometry(room, rig, target);
+    // §7: the target must be in the attacker's front 90 deg arc, gun or blade.
+    if (!geo.inFrontArc) return reject(`${target.name} is outside ${rig.name}'s front arc: turn to face it first.`);
     if (slot === "melee") {
       if (!geo.inMeleeReach) return reject(`${target.name} is out of melee reach.`);
       // Melee is the one attack resolveAttack still gates on the legacy `range`

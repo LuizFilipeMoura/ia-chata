@@ -36,11 +36,13 @@ test("fire: the dummy is in the front arc and in range", () => {
   assert.ok(kinds(room).includes("attack"), lastRejectionReason(room));
 });
 
-test("arcs: shooting from the start hits the dummy's front; from behind, its rear", () => {
+test("arcs: the dummy starts outside your front arc; from behind, you hit its rear", () => {
   const room = build("arcs");
   applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
   act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
-  assert.match(room.game.resolutions.at(-1).summary, /Dummy/);
+  assert.ok(!kinds(room).includes("attack"));
+  room.rigs[0].facing = 0;
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
   const flank = build("arcs");
   flank.rigs[0].pos = { x: 34, y: 18 }; flank.rigs[0].facing = 180;
   applyCommand(flank, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
@@ -77,4 +79,26 @@ test("reactions: enemy goes first and you hold the Answer token", () => {
   const room = build("reactions");
   assert.equal(room.game.turn.side, "b");
   assert.equal(room.game.pendingAnswer?.side, "a");
+});
+
+test("front arc (§7): a target behind the attacker can't be shot; face it and you can", () => {
+  const room = build("fire");
+  room.rigs[0].facing = 180; // Copper turns its back on the dummy
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  assert.ok(!kinds(room).includes("attack"));
+  assert.match(lastRejectionReason(room) || "", /front arc/i);
+  act(room, { action: "aimed", weapon: "longRange", target: "Dummy", loc: "hull" });
+  assert.ok(!kinds(room).includes("attack"));
+  room.rigs[0].facing = 40; // 40 deg off: still inside the 90 deg front arc
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  assert.ok(kinds(room).includes("attack"));
+});
+
+test("front arc applies to melee too", () => {
+  const room = build("melee");
+  room.rigs[0].facing = 90;
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "fire", weapon: "melee", target: "Dummy" });
+  assert.ok(!kinds(room).includes("attack"));
 });

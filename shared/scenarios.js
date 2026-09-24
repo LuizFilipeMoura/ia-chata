@@ -35,10 +35,11 @@ export const SCENARIOS = {
     objectives: [],
   },
   arcs: {
-    title: "Flanking",
+    title: "Arcs and flanking",
     rigs: [
-      // The dummy faces you: its front is its best armour. Walk round it.
-      { name: "Copper", owner: "a", chassis: ME, x: 14, y: 18, facing: 0 },
+      // The dummy faces you, but you look away (south): it sits outside your
+      // front arc, so you can't shoot until you turn. Walk round and hit its back.
+      { name: "Copper", owner: "a", chassis: ME, x: 14, y: 18, facing: 90 },
       { name: "Dummy", owner: "b", chassis: TARGET, x: 24, y: 18, facing: 180 },
     ],
     objectives: [],
