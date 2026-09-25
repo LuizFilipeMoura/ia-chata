@@ -28,7 +28,7 @@ import { Nameplates } from "../ui/nameplates.js";
 import { Wires } from "../ui/tips.js";
 
 const DEG = Math.PI / 180;
-const ICON = { move: "🦿", sprint: "💨", fire: "🎯", aimed: "🔭", prepare: "🛡️", repair: "🔧", shutdown: "❄️", disengage: "↩️", douse: "🧯", reload: "🔄", lock: "📡", emplace: "⚓", unplant: "⛏️", barrage: "💥", harden: "🧱", purge: "♨️", jumpjets: "🚀", overclock: "⚡", emergencypatch: "🩹", heatpurgewave: "🔥", locksight: "🎯", popsmoke: "🌫️", cryo: "🧊" };
+const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "heat", locksight: "aimed", popsmoke: "smoke", cryo: "cryo" };
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
   sprint: "Run up to 1½× Speed. 2 heat: fast but hot.",
@@ -317,14 +317,14 @@ export class LiveMatch {
         title: `${a.label}: ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}${!this.allowed("act", a.key) ? "\n⚠ Tutorial: not part of this step yet" : !commandable ? "\n⚠ Not available: this rig can't act right now" : !a.enabled ? "\n⚠ Not available right now (no actions left, or the situation doesn't allow it)" : oddsLine(rig, Number(heat) || 0)}`,
         "data-act": a.key,
         onClick: () => { if (!commandable || !a.enabled) return sfx.bad(); this.beginAction(rig, a.key); },
-      }, el("span", { class: "ico" }, ICON[a.key] || "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, String(heat), icon("heat")));
+      }, el("span", { class: "ico" }, ICON[a.key] ? icon(ICON[a.key]) : "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, String(heat), icon("heat")));
       row.append(btn);
     }
     bar.append(row);
     if (commandable) {
       const foot = el("div", { class: "act-foot" },
         el("span", {},
-          el("button", { class: "btn ghost", "data-act": "advisor", disabled: !this.allowed("advisor"), onClick: () => this.advise(rig) }, "💡 Advisor"),
+          el("button", { class: "btn ghost", "data-act": "advisor", disabled: !this.allowed("advisor"), onClick: () => this.advise(rig) }, icon("advisor"), "Advisor"),
           g.canUndo && !this.gate ? el("button", { class: "btn ghost", title: "Take back your last action (Ctrl+Z)", onClick: () => this.undo() }, "↶ Undo") : null),
         g.turn.activeRigId === rig.id ? (() => {
           const o = overheatOdds(rig, 0);

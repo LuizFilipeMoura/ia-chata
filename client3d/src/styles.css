@@ -616,3 +616,14 @@ body { font-size: 18px; }
 .in-loc > span:first-child { white-space: nowrap; display: inline-flex; align-items: center; }
 .inspector h4 .si { width: 18px; height: 18px; }
 .in-legend { font-size: 15px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin: -4px 0 4px; } .in-legend .si { width: 16px; height: 16px; }
+/* Drawn icons in place of emoji */
+.act .ico .si { width: 30px; height: 30px; margin: 0; color: var(--brass-hi, #e0b95c); }
+.act.off .ico .si, .act[aria-disabled="true"] .ico .si { color: #7a6a50; }
+[data-act="advisor"] .si { width: 20px; height: 20px; color: #f5d27a; }
+.rc-sp .ln { display: inline-flex; width: 18px; } .rc-sp .ln .si { width: 18px; height: 18px; margin: 0; color: #cdbb93; }
+.l-ic .si { width: 34px; height: 34px; margin: 0; color: var(--brass-hi, #e0b95c); }
+.coach-h b .si { width: 24px; height: 24px; color: var(--brass-hi, #e0b95c); }
+.part-ic .si { width: 24px; height: 24px; margin: 0; color: var(--brass-hi, #e0b95c); }
+.pipe-ic .si { width: 28px; height: 28px; margin: 0; }
+.rl-ic .si { width: 22px; height: 22px; margin: 0; }
+.part-d12 { display: inline-flex; align-items: center; gap: 3px; } .part-d12 .si { width: 18px; height: 18px; margin: 0; }

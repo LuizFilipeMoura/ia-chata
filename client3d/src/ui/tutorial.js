@@ -6,6 +6,7 @@ import { el, clear, fill } from "./dom.js";
 import { heatTable } from "./hud.js";
 import { exampleCard, woundInfo } from "./examples.js";
 import { rich } from "./glossary.js";
+import { icon } from "./icons.js";
 
 const res = (m) => m.state?.game?.resolutions || [];
 const myAttack = (m, test = () => true) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Copper" && test(r));
@@ -17,31 +18,31 @@ const picked = (m) => { const r = m.rig(m.selected); return r && r.owner === m.s
 // The four components, illustrated: where each sits on the rig, how often the
 // D12 lands there, and what losing it does (rules.md §7, §8).
 const PARTS = [
-  { k: "hull", n: "Hull", d12: "1-4", icon: "🛡", role: "The armoured body. Toughest part, hit most often.", zero: "−2 actions per turn and −1 Aim.", more: "Hit again at 0: the rig is destroyed." },
-  { k: "arms", n: "Arms", d12: "5-7", icon: "🦾", role: "Carry both weapons.", zero: "A weapon is torn off and its ammo blows: 1 damage to Hull and 1 to Engine.", more: "Further hits spill into the Hull." },
-  { k: "legs", n: "Legs", d12: "8-10", icon: "🦿", role: "Speed and turning.", zero: "Move −3\", turning costs double, no backing up.", more: "Hit again: immobilised for the game, 1 damage spills to Hull." },
-  { k: "engine", n: "Engine", d12: "11-12", icon: "⚙", role: "The boiler. Least armoured, rarely hit.", zero: "Skips its next activation; heat can't drop below 3.", more: "Hit again at 0: the rig is destroyed." },
+  { k: "hull", n: "Hull", d12: "1-4", icon: "hull", role: "The armoured body. Toughest part, hit most often.", zero: "−2 actions per turn and −1 Aim.", more: "Hit again at 0: the rig is destroyed." },
+  { k: "arms", n: "Arms", d12: "5-7", icon: "arms", role: "Carry both weapons.", zero: "A weapon is torn off and its ammo blows: 1 damage to Hull and 1 to Engine.", more: "Further hits spill into the Hull." },
+  { k: "legs", n: "Legs", d12: "8-10", icon: "legs", role: "Speed and turning.", zero: "Move −3\", turning costs double, no backing up.", more: "Hit again: immobilised for the game, 1 damage spills to Hull." },
+  { k: "engine", n: "Engine", d12: "11-12", icon: "engine", role: "The boiler. Least armoured, rarely hit.", zero: "Skips its next activation; heat can't drop below 3.", more: "Hit again at 0: the rig is destroyed." },
 ];
 const partsChart = (focus) => el("div", { class: "parts" }, PARTS.filter((p) => !focus || focus.includes(p.k)).map((p) =>
   el("div", { class: `part p-${p.k}` },
-    el("div", { class: "part-h" }, el("span", { class: "part-ic" }, p.icon), el("b", {}, p.n), el("span", { class: "part-d12", title: "D12 hit-location roll" }, `🎲 ${p.d12}`)),
+    el("div", { class: "part-h" }, el("span", { class: "part-ic" }, icon(p.icon)), el("b", {}, p.n), el("span", { class: "part-d12", title: "D12 hit-location roll" }, icon("dice"), p.d12)),
     el("div", { class: "part-role" }, rich(p.role)),
     el("div", { class: "part-zero" }, el("i", {}, "At 0 SP: "), rich(p.zero)),
     el("div", { class: "part-more" }, rich(p.more)))));
 
 // The attack pipeline at a glance: four rolls, each can stop the attack.
 const pipeline = (on) => el("div", { class: "pipe" }, [
-  ["1", "🎯", "To hit", "D6 per shot vs your Aim"],
-  ["2", "🎲", "Location", "D12: which part"],
-  ["3", "🔩", "Wound", "D10 per hit vs armour"],
-  ["4", "💥", "Damage", "SP off that part"],
-].map(([n, ic, t, d]) => el("div", { class: `pipe-s ${on === n ? "on" : ""}` }, el("span", { class: "pipe-n" }, n), el("span", { class: "pipe-ic" }, ic), el("b", {}, t), el("span", {}, rich(d)))));
+  ["1", "aim", "To hit", "D6 per shot vs your Aim"],
+  ["2", "dice", "Location", "D12: which part"],
+  ["3", "pen", "Wound", "D10 per hit vs armour"],
+  ["4", "dmg", "Damage", "SP off that part"],
+].map(([n, ic, t, d]) => el("div", { class: `pipe-s ${on === n ? "on" : ""}` }, el("span", { class: "pipe-n" }, n), el("span", { class: "pipe-ic" }, icon(ic)), el("b", {}, t), el("span", {}, rich(d)))));
 
 const PICK = { title: "Select Copper", allow: { select: true }, text: "Click your rig on the table, or its card on the left. Selecting a rig shows its actions along the bottom.", highlight: ".hud-roster:not(.enemy)", done: picked };
 const DONE = (text) => ({ title: "Lesson complete ✓", allow: null, text, next: true, last: true });
 
 export const LESSONS = [
-  { id: "move", icon: "🦿", title: "Move and Sprint", blurb: "Walk, run, and what each costs.",
+  { id: "move", icon: "move", title: "Move and Sprint", blurb: "Walk, run, and what each costs.",
     steps: [
       { title: "The table", text: "This is a quiet corner of the proving ground: just you (Copper) and a practice dummy far away. Pan with WASD or drag, rotate with Q/E, zoom with the wheel.", next: true },
       PICK,
@@ -50,7 +51,7 @@ export const LESSONS = [
       { title: "Sprint", allow: { select: true, acts: ["sprint"] }, text: "Sprint goes further but costs 2 heat instead of 1. Press Sprint and dash on toward the beacon.", highlight: '[data-act="sprint"]', done: (m, ev) => ev.sprinted },
       DONE("Moving spends actions and stokes heat. Sprint when distance matters; walk when heat does."),
     ] },
-  { id: "beacon", icon: "📡", title: "Claim a beacon", blurb: "How you actually score points.",
+  { id: "beacon", icon: "beacon", title: "Claim a beacon", blurb: "How you actually score points.",
     steps: [
       { title: "Beacons win games", text: "The glowing beacon ahead is worth 2 victory points each round to whoever holds it alone. Most points after 10 rounds wins.", next: true },
       PICK,
@@ -59,7 +60,7 @@ export const LESSONS = [
       { title: "Points!", text: "Your salvage counter went up (top right). An enemy on the same beacon cancels you out: nobody scores it until one of you leaves or is wrecked.", highlight: ".hud-top", next: true },
       DONE("Hold beacons, contest theirs. Kills matter because they stop the enemy scoring."),
     ] },
-  { id: "anatomy", icon: "🩻", title: "Rig anatomy", blurb: "Hull, Arms, Legs, Engine: what breaks, and what then.",
+  { id: "anatomy", icon: "hull", title: "Rig anatomy", blurb: "Hull, Arms, Legs, Engine: what breaks, and what then.",
     steps: [
       { title: "Four parts, four health bars", text: "A rig has no single health pool. It has four components, each with its own Structure Points (SP). Those are the four bars on every rig card: H, A, L, E.", highlight: ".hud-roster:not(.enemy) .rc-sp", next: true },
       { title: "Where a hit lands", text: "Every attack rolls one D12 for where the volley lands, unless it's an Aimed Shot. The Hull is hit most; the Engine least. Each part also has its own armour (Toughness): the Hull is hardest to wound, the Engine easiest.", extra: () => partsChart(), next: true },
@@ -79,7 +80,7 @@ export const LESSONS = [
         }, highlight: ".clog", next: true },
       DONE("Focus fire on a weak part. Engine and Hull kill; Arms and Legs cripple. Protect your own weak spots."),
     ] },
-  { id: "attackrules", scenario: "attackdemo", icon: "📐", title: "How an attack works", blurb: "To hit, location, wound, damage. With real examples.",
+  { id: "attackrules", scenario: "attackdemo", icon: "dice", title: "How an attack works", blurb: "To hit, location, wound, damage. With real examples.",
     steps: [
       { title: "Four rolls", text: "Every attack runs the same four steps. Any of them can stop it. The next pages show each one, with real results from the rules engine.", extra: () => pipeline(), next: true },
       { title: "1. To hit", text: "Roll one D6 per shot (the weapon's Shots stat). Each die that meets your Aim target hits; a natural 6 always hits. Aim gets worse off the weapon's sweet spot, behind cover, or on an Aimed Shot.", extra: () => [pipeline("1"), exampleCard("miss", "A sniper fired point-blank, far off its sweet spot: the one die misses. Nothing else happens.")], next: true },
@@ -91,7 +92,7 @@ export const LESSONS = [
       { title: "Breaking a part", text: "Take a part to 0 and it breaks, with the effects you saw in Rig anatomy.", extra: () => exampleCard("breaks", "An Aimed Shot at an Engine on 2 SP: one wound breaks it, and that rig skips its next activation."), next: true },
       DONE("Aim → location → wound → damage. Hover (or click) any Combat log line in a match to see all four for real. Next: take the shot yourself."),
     ] },
-  { id: "fire", icon: "🎯", title: "Open fire", blurb: "Shooting, dice and damage.",
+  { id: "fire", icon: "fire", title: "Open fire", blurb: "Shooting, dice and damage.",
     steps: [
       { title: "A sitting duck", text: "The dummy is 12 inches ahead, right at your Autocannon's sweet spot, and facing away from you.", next: true },
       PICK,
@@ -100,7 +101,7 @@ export const LESSONS = [
       { title: "Aimed Shot", allow: { select: true, acts: ["aimed"] }, text: "Aimed Shot fires fewer dice but lets you pick the hit location. Aim for the Engine: at 0 the rig skips its next turn.", highlight: '[data-act="aimed"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2, skippable: true },
       DONE("Distance matters: each gun has a sweet spot. The Combat log always explains the roll."),
     ] },
-  { id: "arcs", icon: "↪", title: "Arcs and flanking", blurb: "Face your target, then hit it where it's soft.",
+  { id: "arcs", icon: "arc", title: "Arcs and flanking", blurb: "Face your target, then hit it where it's soft.",
     steps: [
       { title: "Your front arc", text: "A rig can only attack what's in its front 90°: the green wedge in front of it. Copper is looking away, so the dummy is outside the wedge. You can't shoot it yet.", next: true },
       PICK,
@@ -109,7 +110,7 @@ export const LESSONS = [
       { title: "Hit it where it's soft", allow: { select: true, acts: ["fire", "move", "sprint"] }, text: "Now Fire. If the dummy isn't offered as a target, it's still outside your wedge: move again. A side or rear bonus in the log means you nailed it.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => arcOf(r) !== "front") },
       DONE("Facing works both ways: turn to bring enemies into your wedge, and keep your own front toward them."),
     ] },
-  { id: "cover", icon: "🧱", title: "Cover and line of sight", blurb: "Shooting past terrain, and hiding behind it.",
+  { id: "cover", icon: "cover", title: "Cover and line of sight", blurb: "Shooting past terrain, and hiding behind it.",
     steps: [
       { title: "Something in the way", text: "Terrain between a shooter and its target gives cover: the To hit roll gets harder (light cover 1 harder, heavy 2). A building can block line of sight completely: no shot at all.", next: true },
       PICK,
@@ -120,7 +121,7 @@ export const LESSONS = [
       { title: "Walls work both ways", text: "The building to the north blocks sight entirely. Park behind terrain when you're hurt or reloading, and make enemies walk into the open to reach you.", next: true },
       DONE("Shoot from clean angles; stand behind cover when you're the target."),
     ] },
-  { id: "melee", icon: "🗡", title: "Melee", blurb: "Brawling and getting locked in.",
+  { id: "melee", icon: "melee", title: "Melee", blurb: "Brawling and getting locked in.",
     steps: [
       { title: "Too close to shoot straight", text: "The dummy is right in your face: inside your Claw's reach (the orange ring).", next: true },
       PICK,
@@ -128,7 +129,7 @@ export const LESSONS = [
       { title: "Engaged", text: "Rigs in melee are locked together: to walk away you must spend an action to Disengage. Brawlers love that; snipers hate it.", next: true },
       DONE("Melee skips range bands and line of sight. Charge the shooters, keep your own gunners clear."),
     ] },
-  { id: "heat", icon: "🔥", title: "Heat and Shut Down", blurb: "Push too hard and the boiler bites.",
+  { id: "heat", icon: "heat", title: "Heat and Shut Down", blurb: "Push too hard and the boiler bites.",
     steps: [
       { title: "Already running hot", text: "Copper starts at 5 heat; a light rig's capacity is 6. The brass dial on its card shows it.", highlight: ".hud-roster:not(.enemy)", next: true },
       PICK,
@@ -138,7 +139,7 @@ export const LESSONS = [
       { title: "Shut Down", allow: { acts: ["shutdown"] }, text: "Shut Down ends the activation and vents heat instead of risking the roll. Press it.", highlight: '[data-act="shutdown"]', done: (m, ev) => ev.ended },
       DONE("Every action heats you. A third action is powerful but risky; Shut Down when you've overdone it."),
     ] },
-  { id: "equipment", icon: "⚙", title: "Equipment", blurb: "Each rig's special gadget.",
+  { id: "equipment", icon: "sp", title: "Equipment", blurb: "Each rig's special gadget.",
     steps: [
       { title: "A new rig", text: "This time you pilot a medium sniper fitted with a Targeting Computer. Equipment gives an always-on bonus plus one special action.", next: true },
       PICK,
@@ -147,7 +148,7 @@ export const LESSONS = [
       { title: "Now shoot", allow: { select: true, acts: ["fire"] }, text: "Fire at the dummy and check the log: the lock shows up as an accuracy bonus.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       DONE("Every chassis carries a different gadget: armour, vents, jump jets, repairs, smoke. Learn yours."),
     ] },
-  { id: "reactions", icon: "🛡", title: "Reactions", blurb: "The Answer token and preparing for hits.",
+  { id: "reactions", icon: "prepare", title: "Reactions", blurb: "The Answer token and preparing for hits.",
     steps: [
       { title: "They move first", text: "A raider is about to open fire on you. Whoever acts second each round gets a free Answer token: a face-down reaction placed before the enemy moves.", next: true },
       { title: "Place your Answer", allow: {}, text: "Pick Copper and a reaction in the popup. Brace is the safe choice: it softens the next hit.", done: (m) => !m.state?.game?.pendingAnswer },
@@ -265,7 +266,7 @@ export class Coach {
     if (s.highlight) document.querySelectorAll(s.highlight).forEach((n) => n.classList.add("coach-hl"));
     const waiting = s.done && !s.next && s.waitText && !s.done(this.match, this.ev);
     fill(this.panel, 
-      el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, `${this.lesson.icon} ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
+      el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, icon(this.lesson.icon), ` ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
       el("p", {}, rich(s.text)),
       s.extra ? s.extra(this.match) : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,

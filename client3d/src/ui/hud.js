@@ -1,5 +1,6 @@
 // In-battle HUD: top bar (round / VP / whose turn), squad roster with per-location
 // SP + heat, action bar, battle log, banners, cursor tips and a hover card.
+import { icon } from "./icons.js";
 import { el, clear, fill } from "./dom.js";
 import { LOCS } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
@@ -74,7 +75,7 @@ export class Hud {
       el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""),
       el("div", { class: "rc-sp" }, LOCS.map((l) => {
         const p = r[l]; const f = p ? p.sp / p.max : 0;
-        return el("div", { class: "loc", title: `${l}: ${p?.sp}/${p?.max}` }, el("span", { class: "ln" }, l[0].toUpperCase()), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } })));
+        return el("div", { class: "loc", title: `${l}: ${p?.sp}/${p?.max}` }, el("span", { class: "ln" }, icon(l)), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } })));
       })),
       el("div", { class: "rc-heat", title: `Heat ${heat}/${cap}. Over capacity rolls on the overheat table at end of activation` },
         Array.from({ length: Math.max(cap + 4, heat) }, (_, i) => el("i", { class: i < heat ? (i >= cap ? "over" : "on") : i >= cap ? "danger" : "" }))),

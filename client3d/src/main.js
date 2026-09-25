@@ -14,6 +14,7 @@ import { simCenter } from "./ui/simcenter.js";
 import { Coach, LESSONS } from "./ui/tutorial.js";
 import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
+import { icon } from "./ui/icons.js";
 import { sfx, isMuted, setMuted } from "./audio.js";
 import { settings } from "./settings.js";
 import { resetWires } from "./ui/tips.js";
@@ -176,7 +177,7 @@ function tutorial() {
     el("h1", {}, "Training Grounds"),
     el("p", { class: "muted" }, "One mechanic per lesson, in a set-up situation against a practice dummy. A few minutes each; take them in order or jump to what you need."),
     el("div", { class: "lessons" }, LESSONS.map((l, i) => el("button", { class: `lesson ${done.includes(l.id) ? "done" : ""}`, onClick: () => startLesson(l) },
-      el("span", { class: "l-n" }, String(i + 1)), el("span", { class: "l-ic" }, l.icon),
+      el("span", { class: "l-n" }, String(i + 1)), el("span", { class: "l-ic" }, icon(l.icon)),
       el("div", {}, el("b", {}, l.title), el("div", { class: "muted" }, l.blurb)),
       done.includes(l.id) ? el("span", { class: "l-ok", title: "Completed" }, "✓") : null))),
     el("button", { class: "btn ghost", onClick: home }, "‹ Back")));

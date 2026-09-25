@@ -5,6 +5,8 @@
 import { el, fill } from "./dom.js";
 import { openInspector } from "./inspector.js";
 import { icon, STAT_ICON } from "./icons.js";
+const iconSvg = icon;
+const ICONS_RL = { "🎯": "aim", "🎲": "dice", "🔩": "pen", "💥": "dmg", "⚡": "overclock" };
 
 // name -> rig (plus optional loadout) for the ledger's clickable stats. The live
 // match / replay registers one; examples pass their own.
@@ -117,7 +119,7 @@ const ARC_PEN = { front: 0, side: 2, rear: 3 };
 const LOC_D12 = { hull: "1-4", arms: "5-7", legs: "8-10", engine: "11-12" };
 const die = (sides, value, ok) => el("span", { class: `die d${sides} ${ok ? "ok" : "no"}`, title: `D${sides} rolled ${value}: ${ok ? "success" : "fail"}` }, el("b", {}, String(value)), el("i", {}, ok ? "✓" : "✗"));
 const roll = (icon, name, sides, need, why, dice, out, good) => el("div", { class: "rl" },
-  el("div", { class: "rl-h" }, el("span", { class: "rl-ic" }, icon), el("b", {}, name),
+  el("div", { class: "rl-h" }, el("span", { class: "rl-ic" }, ICONS_RL[icon] ? iconSvg(ICONS_RL[icon]) : icon), el("b", {}, name),
     sides ? el("span", { class: `rl-die d${sides}` }, `D${sides}`) : null,
     need != null ? el("span", { class: "rl-need", title: "Each die must roll this or higher" }, `NEED ${need}+`) : null,
     el("span", { class: `rl-out ${good ? "good" : "bad"}` }, out)),
