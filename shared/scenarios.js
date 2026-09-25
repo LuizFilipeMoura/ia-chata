@@ -80,6 +80,27 @@ export const SCENARIOS = {
     ],
     objectives: [],
   },
+  // Weapon keywords: a Mini Gun (Raking Fire; Field upgrade Suppressive Fire
+  // gives Shock) staring at the dummy's FRONT, where Raking Fire can't wound.
+  keywords: {
+    title: "Weapon keywords",
+    rigs: [
+      { name: "Copper", owner: "a", chassis: "light-saw-minigun", lrUp: "suppressive-fire", x: 17, y: 18, facing: 0 },
+      { name: "Dummy", owner: "b", chassis: TARGET, x: 24, y: 18, facing: 180 },
+    ],
+    objectives: [],
+  },
+  // Upgrades: the Autocannon's Prototype, Penetrator Rounds (every 3rd volley
+  // skips the wound roll; the belt then cycles slow).
+  prototype: {
+    title: "Upgrades: Field, Tuned, Prototype",
+    rigs: [
+      // Two volleys already down the belt: the next one is the 3rd.
+      { name: "Copper", owner: "a", chassis: ME, lrUp: "penetrator-rounds", x: 12, y: 18, facing: 0, set: { autocannonShots: 2 } },
+      { name: "Dummy", owner: "b", chassis: TARGET, x: 24, y: 18, facing: 180 },
+    ],
+    objectives: [],
+  },
   melee: {
     title: "Melee and engagement",
     rigs: [

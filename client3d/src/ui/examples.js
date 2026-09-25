@@ -29,6 +29,9 @@ const CASES = {
   wound: { scenario: "attackdemo", attrs: FIRE, test: (b) => { const w = step(b, "wound"); return b.sp > 0 && w?.dice?.some((d) => !d.ok) && !w.dice.some((d) => d.value === 10); } },
   lucky: { scenario: "attackdemo", attrs: FIRE, test: (b) => { const w = step(b, "wound"); return w && w.target >= 8 && w.dice.filter((d) => d.ok).length === 1 && w.dice.some((d) => d.value === 10 && d.ok); } },
   flank: { scenario: "fire", attrs: FIRE, test: (b) => b.sp > 0 },
+  rakeFront: { scenario: "keywords", attrs: FIRE, test: (b) => hits(b) > 0 && !b.sp },
+  rakeRear: { scenario: "keywords", attrs: FIRE, tweak: (r) => { r.rigs[0].pos = { x: 31, y: 18 }; r.rigs[0].facing = 180; }, test: (b) => b.sp > 0 },
+  penetrator: { scenario: "prototype", attrs: FIRE, test: (b) => hits(b) >= 3 },
   breaks: { scenario: "anatomy", attrs: { action: "aimed", weapon: "longRange", target: "Dummy", loc: "engine" }, test: (b, room) => room.rigs.find((x) => x.name === "Dummy").engine.sp <= 0 },
 };
 

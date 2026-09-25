@@ -644,3 +644,13 @@ body { font-size: 18px; }
 .si.fam-pierce { color: var(--fam-pierce) !important; }
 .coach.docked { width: 330px !important; }
 .coach .phase { margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--fam-move); background: rgba(79,214,192,.1); font-size: 16px; } .coach .phase b { color: var(--fam-move); margin-right: 6px; }
+.kw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.kw, .nat { border: 1px solid #5a4629; border-radius: 8px; padding: 8px 10px; background: rgba(20,17,13,.6); display: flex; flex-direction: column; gap: 4px; }
+.kw-h, .nat-h { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 19px; } .kw-h .si { width: 22px; height: 22px; margin: 0; }
+.kw-fam { margin-left: auto; font: 600 13px var(--label); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.kw-t { font-size: 16px; color: #d9ccae; } .kw-t i { font-style: normal; color: var(--muted); }
+.kw-on { font-size: 14px; color: var(--muted); }
+.nat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; }
+.nat-catch { font-size: 15px; color: #ff8a6a; }
+.coach:has(.kw-grid), .coach:has(.nat-grid) { width: min(760px, calc(100vw - 32px)); }
+@media (max-width: 800px) { .kw-grid, .nat-grid { grid-template-columns: 1fr; } }

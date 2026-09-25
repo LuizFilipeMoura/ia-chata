@@ -7,6 +7,7 @@ import { CHASSIS, WEAPONS, WEAPON_UPGRADES, EQUIPMENT, LOCS } from "/shared/game
 import { EQUIPMENT_UPGRADES, HEAT_CAPACITY } from "/shared/rules.js";
 import { toughnessOf } from "/shared/unit-kinds.js";
 import { icon } from "./icons.js";
+import { rich } from "./glossary.js";
 
 const NATURE = { field: ["Field", "always on"], tuned: ["Tuned", "pays off in the right situation"], prototype: ["Prototype", "powerful, with a catch"] };
 const LOC_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
@@ -22,7 +23,7 @@ function upgrade(list, id) {
   if (!u) return null;
   const [n, help] = NATURE[u.nature] || [u.nature, ""];
   return el("div", { class: "in-up" }, el("div", {}, el("b", {}, u.name), el("span", { class: `in-nat n-${u.nature}`, title: `${n}: ${help}` }, n)),
-    el("div", { class: "muted" }, u.tag), u.catch ? el("div", { class: "in-catch" }, `Catch: ${u.catch}`) : null);
+    el("div", { class: "muted" }, rich(u.tag)), u.catch ? el("div", { class: "in-catch" }, `Catch: ${u.catch}`) : null);
 }
 
 function weapon(slot, name, upId) {
@@ -36,7 +37,7 @@ function weapon(slot, name, upId) {
       el("span", { title: "Penetration: how easily a hit wounds (vs the target's Toughness)" }, el("i", {}, icon("pen"), "Pen"), w.pen),
       el("span", { title: "Damage per wound" }, el("i", {}, icon("dmg"), "Dmg"), w.dmg),
       el("span", { title: slot === "melee" ? "Melee reach from base edge" : "Firing range; accuracy is best near the sweet spot" }, el("i", {}, icon(slot === "melee" ? "reach" : "range"), slot === "melee" ? "Reach" : "Range"), range)),
-    (w.perks || []).length ? el("div", { class: "muted small" }, `Perks: ${w.perks.join(", ")}`) : null,
+    (w.perks || []).length ? el("div", { class: "muted small" }, "Keywords: ", rich(w.perks.join(", "))) : null,
     upgrade(WEAPON_UPGRADES[name], upId));
 }
 

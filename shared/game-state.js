@@ -3664,6 +3664,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         const unit = makeUnit("rig", room.nextRigId++, e.name, e.owner, {
           weightClass: pb.class, longRange: pb.longRange, melee: pb.melee, chassis: pb.id, sp: pb.sp,
           equipment: e.equipment ?? CHASSIS_PRIMARY_EQUIPMENT[pb.id] ?? null,
+          longRangeUpgrade: e.lrUp, meleeUpgrade: e.meUp,
         });
         room.rigs.push(unit);
       }
@@ -3674,6 +3675,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         r.facing = e.facing;
         if (e.heat) r.engine.heat = e.heat;
         for (const [loc, v] of Object.entries(e.sp || {})) r[loc].sp = v;
+        Object.assign(r, e.set || {});
       });
       room.game.objectives = sc.objectives.map((o) => ({ ...o }));
       room.game.sides.find((s) => s.id === "b").bot = sc.enemyBot || "dummy";

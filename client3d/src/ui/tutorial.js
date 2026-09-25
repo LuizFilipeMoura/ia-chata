@@ -6,6 +6,7 @@ import { el, clear, fill } from "./dom.js";
 import { heatTable } from "./hud.js";
 import { exampleCard, woundInfo } from "./examples.js";
 import { rich } from "./glossary.js";
+import { keywordCards, natureCards, equipmentCards } from "./cards.js";
 import { icon } from "./icons.js";
 
 const res = (m) => m.state?.game?.resolutions || [];
@@ -130,6 +131,25 @@ export const LESSONS = [
       { title: "Engaged", text: "Rigs in melee are locked together: to walk away you must spend an action to Disengage. Brawlers love that; snipers hate it.", next: true },
       DONE("Melee skips range bands and line of sight. Charge the shooters, keep your own gunners clear."),
     ] },
+  { id: "keywords", icon: "fire", title: "Weapon keywords", blurb: "Raking Fire, Rend, Precision... the special rules on guns.",
+    steps: [
+      { title: "Keywords", text: "Some weapons carry a keyword: a special rule on top of the normal attack. A weapon has them built in, or gains them from an upgrade. These are the ones in the game:", extra: () => keywordCards(), next: true },
+      { title: "Raking Fire, up close", text: "Machine guns rake. Against a front arc every wound roll fails automatically, however many hits land. Against the rear it gets +6 Penetration.", extra: () => [exampleCard("rakeFront", "Mini Gun into the dummy's FRONT: plenty of hits, zero wounds."), exampleCard("rakeRear", "Same gun from BEHIND: +6 Penetration, it shreds.")], next: true },
+      PICK,
+      { title: "Try the front", allow: { select: true, acts: ["fire"] }, text: "Copper carries a Mini Gun (Raking Fire), and its Field upgrade adds Shock. The dummy faces you. Fire anyway and watch the wound step.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      { title: "Now flank it", allow: { select: true, acts: ["move", "sprint", "fire"] }, text: "Walk around to its side or rear, face it, and fire again. That's where Raking Fire earns its keep.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m) => myAttack(m, (r) => r.breakdown?.sp > 0) },
+      DONE("Read your keywords before you pick a fight. Hover any keyword on a rig sheet to see its rule."),
+    ] },
+  { id: "upgrades", scenario: "prototype", icon: "overclock", title: "Upgrades: Field, Tuned, Prototype", blurb: "Each weapon's three upgrade choices, and the gamble.",
+    steps: [
+      { title: "Three choices per weapon", text: "When you build a rig you pick one upgrade for each weapon. Every weapon offers exactly three, one of each nature. Here are the Autocannon's:", extra: () => natureCards("Autocannon"), next: true },
+      { title: "One Prototype per rig", text: "Prototypes are powerful but demand attention, so a rig may carry at most one across its two weapons. A rig of only Field picks is still a solid rig.", next: true },
+      { title: "A Prototype in action", text: "Copper's Autocannon has Penetrator Rounds. Every 3rd volley skips the wound roll entirely: every hit wounds, whatever the armour. Two volleys are already down the belt, so the next is the 3rd.", extra: () => exampleCard("penetrator", "The 3rd volley: no wound roll at all. Every hit deals damage."), next: true },
+      PICK,
+      { title: "Fire the 3rd volley", allow: { select: true, acts: ["fire"] }, text: "Fire at the dummy and check the wound step in the log.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      { title: "The catch", text: "After a Penetrator volley the belt cycles slow: the next volley fires half the dice. That's the Prototype's price. Field and Tuned upgrades never have a downside.", next: true },
+      DONE("Field = reliable, Tuned = situational, Prototype = gamble. Pick one gamble per rig at most."),
+    ] },
   { id: "heat", icon: "heat", title: "Heat and Shut Down", blurb: "Push too hard and the boiler bites.",
     steps: [
       { title: "Already running hot", text: "Copper starts at 5 heat; a light rig's capacity is 6. The brass dial on its card shows it.", highlight: ".hud-roster:not(.enemy)", next: true },
@@ -140,14 +160,16 @@ export const LESSONS = [
       { title: "Shut Down", allow: { acts: ["shutdown"] }, text: "Shut Down ends the activation and vents heat instead of risking the roll. Press it.", highlight: '[data-act="shutdown"]', done: (m, ev) => ev.ended },
       DONE("Every action heats you. A third action is powerful but risky; Shut Down when you've overdone it."),
     ] },
-  { id: "equipment", icon: "sp", title: "Equipment", blurb: "Each rig's special gadget.",
+  { id: "equipment", icon: "sp", title: "Equipment", blurb: "Each rig's gadget: always-on bonus plus one action.",
     steps: [
-      { title: "A new rig", text: "This time you pilot a medium sniper fitted with a Targeting Computer. Equipment gives an always-on bonus plus one special action.", next: true },
+      { title: "Eight gadgets", text: "Every rig fits one piece of equipment: an always-on bonus plus one special action with its own heat cost. Here are all eight:", extra: () => equipmentCards(), next: true },
+      { title: "Upgrades here too", text: "Equipment also takes one upgrade: Field, Tuned or Prototype, same rules as weapons (still max one Prototype per rig). Check them in the rig builder.", next: true },
+      { title: "A new rig", text: "This time you pilot a medium sniper fitted with a Targeting Computer.", next: true },
       PICK,
       { title: "Inspect it", allow: { select: true }, text: "Click Copper on the table to open its full sheet: weapons, upgrades, and equipment with both effects.", highlight: ".hud-roster:not(.enemy)", next: true },
-      { title: "Lock Sight", allow: { select: true, acts: ["locksight"] }, text: "Press Lock Sight (the equipment action) to steady your aim for the next shot.", highlight: '[data-act="locksight"]', done: (m, ev) => ev.equip },
-      { title: "Now shoot", allow: { select: true, acts: ["fire"] }, text: "Fire at the dummy and check the log: the lock shows up as an accuracy bonus.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
-      DONE("Every chassis carries a different gadget: armour, vents, jump jets, repairs, smoke. Learn yours."),
+      { title: "Lock Sight", allow: { select: true, acts: ["locksight"] }, text: "Press Lock Sight (the equipment action, 1 heat): your next shot this activation rerolls all its missed to-hit dice.", highlight: '[data-act="locksight"]', done: (m, ev) => ev.equip },
+      { title: "Now shoot", allow: { select: true, acts: ["fire"] }, text: "Fire at the dummy. With Lock Sight up, every to-hit die that misses is rerolled once: check the To hit roll in the log.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      DONE("Know your gadget: some save you (Harden, Purge, Pop Smoke), some push you (Overclock, Jump Jets)."),
     ] },
   { id: "reactions", icon: "prepare", title: "Reactions", blurb: "The Answer token and preparing for hits.",
     steps: [

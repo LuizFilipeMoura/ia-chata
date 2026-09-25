@@ -126,3 +126,30 @@ test("cover: the barricade gives cover from the start; a clear angle has none; t
   dummy.pos = { x: 16, y: 15 };
   assert.equal(deriveAttackGeometry(room, me, dummy).los, false);
 });
+
+test("keywords: Raking Fire can't wound the dummy's front; from its rear it wounds", () => {
+  const room = build("keywords");
+  assert.equal(room.rigs[0].weaponUpgrades.longRange, "suppressive-fire");
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  const front = room.game.resolutions.at(-1).breakdown;
+  assert.equal(front.sp, 0);
+  assert.match(front.steps.find((s) => s.kind === "wound").out, /raking|no hits/);
+  const rear = build("keywords");
+  rear.rigs[0].pos = { x: 31, y: 18 }; rear.rigs[0].facing = 180;
+  applyCommand(rear, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(rear, { action: "fire", weapon: "longRange", target: "Dummy" });
+  assert.ok(kinds(rear).includes("attack"), lastRejectionReason(rear));
+});
+
+test("prototype: the belt starts on 2, so the first volley is a Penetrator shot (every hit wounds)", () => {
+  const room = build("prototype");
+  assert.equal(room.rigs[0].weaponUpgrades.longRange, "penetrator-rounds");
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  const b = room.game.resolutions.filter((r) => r.kind === "attack").at(-1).breakdown;
+  const hits = b.steps.find((s) => s.kind === "hit").dice.filter((d) => d.ok).length;
+  const wound = b.steps.find((s) => s.kind === "wound");
+  if (hits) assert.equal(wound.dice.filter((d) => d.ok).length, hits, JSON.stringify(wound));
+  assert.equal(room.rigs[0].autocannonSlowNext, true);
+});
