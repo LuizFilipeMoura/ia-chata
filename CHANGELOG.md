@@ -5,6 +5,15 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.16, Campaign missions, every equipment fully digital
+
+### Added
+- **Campaign missions (§18):** the `mission` command builds a started digital battle from two squads, side modifiers, and a contract type (Beacon Hold, Skirmish, Assassination, Breakthrough, Last Stand, Salvage Run, Boss). Short round limits, commanders and Warlords, the Extract action, reinforcements, salvage crates, perk kits, and bare (upgrade-less) weapons.
+- **Digital equipment (§15):** Jump Jets and the Grapnel (yank / reel) move Rigs; the Heat Purge Wave and meltdown burst hit every enemy in reach; Chaff Burst side-steps the Rig and can lose the shot; Nanite Swarm checks its 3" reach. Physical rooms keep the narration.
+- Bots spend Cryo, Meltdown charge and Nanites, price the Heat Purge Wave by the enemies in reach, and may reel enemies in with the Grapnel.
+
+---
+
 ## wr-0.15, Gritted attacks, the trailing kill bounty, flat beacons
 
 ### Added

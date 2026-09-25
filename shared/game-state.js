@@ -12,7 +12,7 @@ import {
 } from "./field.js";
 import {
   radiusOf, terrainPolygons, clearOfTerrain,
-  inFrontArc, sightCorridor, arcOf, distanceBetween, meleeInReach, controlsObjective,
+  inFrontArc, sightCorridor, arcOf, distanceBetween, meleeInReach, controlsObjective, rimGap,
 } from "./geometry.js";
 import { findPath } from "./pathfind.js";
 import { UNIT_KINDS, kindOf, roleOf, partsByRole, partNamesOf, normalizeModules } from "./unit-kinds.js";
@@ -665,6 +665,8 @@ export function normalizeWeaponUpgrade(weaponName, upgradeId) {
   const upgrades = WEAPON_UPGRADES[weaponName];
   if (!Array.isArray(upgrades) || upgrades.length === 0) return null;
   const ref = String(upgradeId || "").trim().toLowerCase();
+  // "none" is a bare weapon: campaign rigs are commissioned without upgrades.
+  if (ref === "none") return "none";
   return upgrades.find((u) => u.id.toLowerCase() === ref)?.id || upgrades[0].id;
 }
 
@@ -718,10 +720,13 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     rof: base.rof + (effect.rof || 0),
     pen: base.pen + (effect.pen || 0),
     dmg: base.dmg + (effect.dmg || 0),
-    perks: uniquePerks(base.perks, effect.perks),
+    perks: uniquePerks(uniquePerks(base.perks, effect.perks), rig?.perkKits?.[slot] ? [rig.perkKits[slot]] : []),
     upgrade: upgrade || null,
     upgradeEffect: effect,
   };
+  // Campaign side modifiers (relics / faction perks): flat Penetration per slot.
+  const modPen = rig?.mods?.pen?.[base.melee ? "melee" : "ranged"];
+  if (modPen) profile.pen += modPen;
   if (base.melee) {
     profile.accuracy = [...base.accuracy];
     profile.rng = [...base.rng];
@@ -952,7 +957,8 @@ function ensureGameShape(room) {
   for (const side of room.game.sides) {
     if (typeof side.ready !== "boolean") side.ready = false;
   }
-  if (!Array.isArray(room.game.objectives) || room.game.objectives.length === 0) {
+  // A campaign mission owns its objectives (none, or salvage crates that run out).
+  if (!Array.isArray(room.game.objectives) || (room.game.objectives.length === 0 && !room.campaign)) {
     room.game.objectives = computeObjectives(room.field);
   }
   if (typeof room.game.started !== "boolean") room.game.started = false;
@@ -1265,7 +1271,7 @@ export function heatMeter(rig) {
   // Nanite Swarm (Utility Prototype), while any nanite stack rides this rig,
   // its Heat Capacity is −1 (the downside for the free self-repair each Recovery).
   const naniteDock = (rig?.equipState?.naniteStacks?.length || 0) > 0 ? 1 : 0;
-  const effCap = cap + margin - naniteDock;
+  const effCap = cap + margin - naniteDock + (rig?.mods?.heatCap || 0);
   const over = Math.max(0, heat - effCap);
   const bonus = over > 0 ? Math.min(MAX_OVERHEAT_BONUS, 2 * over) : 0;
   let zone;
@@ -1559,6 +1565,8 @@ function applyInitiative(room, order, rolls) {
   room.game.initiative = { rolls: rolls || null, order: [first, second], second };
   room.game.answerTokens = { a: 0, b: 0 };
   room.game.answerTokens[second] = 1;
+  // Campaign side modifiers (Veteran Crews relic, a Warlord): extra Answer tokens every round.
+  for (const id of ["a", "b"]) room.game.answerTokens[id] += room.campaign?.mods?.[id]?.answer || 0;
   grantGrit(room);
   refreshAnswerGate(room, [second, first]);
   room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
@@ -2022,6 +2030,7 @@ function onRigDamaged(room, rig, opts) {
   // Engagement (§engagement), a destroyed or immobilised rig can no longer hold
   // the melee lock; free both ends.
   if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
+  checkCommander(room, rig);
   checkAnnihilation(room);
 }
 
@@ -2248,6 +2257,7 @@ function runRecovery(room, random) {
       let cooling = equipmentRecoveryCool(rig.equipment);
       if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir
           && (rig.equipState?.cryo || 0) > 0) cooling = 1;
+      cooling += rig.mods?.cool || 0; // campaign Heat Sinks relic
       rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
     rig.activated = false;
@@ -2297,6 +2307,7 @@ function runRecovery(room, random) {
   // clean-claim path does, a digital room never rests in recovery.
   if (room.mode === "digital") {
     for (const [index, marker] of (room.game.objectives || []).entries()) {
+      if (marker.crate) continue; // salvage crates are claimed, never held
       const holders = room.game.sides.filter((s) =>
         room.rigs.some((r) => (r.owner || "a") === s.id && !r.destroyed
           && r.pos && controlsObjective(spatial(r), marker)));
@@ -2411,6 +2422,7 @@ function endActivation(room, rig, dice, random) {
   // Cryo Reservoir / Meltdown Protocol, clear any leftover +Penetration spike so an
   // armed-but-unspent bonus can't leak past this activation.
   if (rig.equipState) rig.equipState.nextAttackPen = 0;
+  claimCrates(room, rig);
   room.game.turn.activeRigId = null;
   handoff(room, random);
 }
@@ -2597,7 +2609,34 @@ function resolveFire(room, rig, target, a, act, random) {
   // take a free half-Speed side-step before the attack resolves. Spatial → narrate
   // the instruction; the player moves the model (AGENTS.md "narrate, don't
   // simulate"). Free whenever Smoke is up, so there is no cadence to track.
-  if (target.smokeNextActivation
+  if (target.smokeNextActivation && room.mode === "digital"
+      && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.chaffBurst) {
+    // Digital: the engine takes the side-step itself, perpendicular to the shot,
+    // first clear side. If it breaks sight or the arc, the shot is lost.
+    const from = { ...target.pos };
+    const to = chaffStep(room, rig, target);
+    if (to) {
+      target.pos = to;
+      const geo = deriveAttackGeometry(room, rig, target);
+      const lost = !geo.inFrontArc || (slot === "melee" ? !geo.inMeleeReach : !geo.los);
+      pushResolution(room, {
+        kind: "perk", actor: target.owner, rigId: target.id, rolls: [], chaff: { from, to, lost },
+        summary: `Chaff Burst, ${target.name} side-steps under smoke${lost ? ": the shot loses it" : ""}.`,
+        effects: ["Chaff Burst, free side-step under smoke"],
+      });
+      if (lost) {
+        // Same bill as a dodged shot: the weapon discharged and ran hot.
+        const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
+        if (slot === "longRange") { rig.loaded.longRange = false; t.longRangeShots = (t.longRangeShots || 0) + 1; }
+        const profile = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig);
+        bumpHeat(rig, (ACTIONS[act]?.heat || 1) + (profile?.perks?.includes("Hot") ? 1 : 0) + (secondShot ? 1 : 0));
+        t.actionsUsed += 1;
+        spendAttackGrit(room, rig, a);
+        return { ok: true, hits: 0, chaffed: true };
+      }
+      a.distance = geo.distance; a.arc = geo.arc; a.cover = geo.cover;
+    }
+  } else if (target.smokeNextActivation
       && equipmentUpgradeEffectOf(target.equipment, target.equipmentUpgrade)?.chaffBurst) {
     const step = Number.isFinite(target.speed) ? `${Math.floor(target.speed / 2)}" ` : "half-Speed ";
     pushResolution(room, {
@@ -2869,6 +2908,10 @@ function performAction(room, rig, act, a, random) {
     endActivation(room, rig, null, random);
     return true;
   }
+  // Extract (campaign Breakthrough): a rig inside the exit zone spends an action
+  // to leave the table. It's lifted out of play (not wrecked) and kept on
+  // room.campaign.extracted so the debrief still sees its SP.
+  if (act === "extract") return extractRig(room, rig, random);
   const equipId = EQUIPMENT_ACTIVE_BY_KEY[act];
   if (equipId) {
     // Grapnel Launcher (§13, Servo Actuators Prototype), REPLACES Jump Jets for a
@@ -2888,23 +2931,51 @@ function performAction(room, rig, act, a, random) {
       if (rig.emplaced) return reject("Grapnel Launcher can't fire while emplaced, un-plant first.");
       if ((rig.equipState?.grapnelCooldown || 0) > 0) return reject(`Grapnel is recharging, ${rig.equipState.grapnelCooldown} round(s) left.`);
       if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
-      t.actionsUsed += 1;
       const reel = a.mode === "reel";
+      // Digital rooms simulate the cable: a yank is a straight 4" hop, a reel
+      // drags a named enemy (8", line of sight, front arc) into base contact.
+      let hop = null, dragged = null;
+      if (room.mode === "digital") {
+        if (reel) {
+          const target = findRig(room, a.target || a.engage);
+          if (!target || target.destroyed || (target.owner || "a") === (rig.owner || "a")) return reject("Reel in an enemy rig.");
+          const geo = deriveAttackGeometry(room, rig, target);
+          if (!geo.inFrontArc) return reject(`${target.name} is outside ${rig.name}'s front arc.`);
+          if (!geo.los) return reject(`No line of sight to ${target.name}.`);
+          if (rimGap(spatial(rig), spatial(target)) > GRAPNEL_REEL + 1e-6) return reject(`${target.name} is beyond the grapnel's 8" range.`);
+          if (target.emplaced) return reject(`${target.name} is emplaced and won't budge.`);
+          const spot = contactSpot(room, rig, target);
+          if (!spot) return reject(`There's no room to drag ${target.name} in.`);
+          dragged = { target, from: { ...target.pos }, to: spot };
+        } else {
+          const err = hopCheck(room, rig, a, GRAPNEL_YANK);
+          if (err) return reject(err);
+          hop = { from: { ...rig.pos }, to: { x: a.dest.x, y: a.dest.y }, facing: typeof a.facing === "number" ? a.facing : rig.facing };
+        }
+      }
+      t.actionsUsed += 1;
       if (reel) {
         // Reel an enemy into base contact and form the lock. Invalid/friendly
         // names are ignored by maybeEngageByName (no throw); the shot still fires.
-        if (a.engage) maybeEngageByName(room, rig, a.engage);
+        if (dragged) {
+          dragged.target.pos = dragged.to;
+          if (rig.engagedWith == null) maybeEngage(room, rig, dragged.target);
+        } else if (a.engage) maybeEngageByName(room, rig, a.engage);
       } else if (rig.engagedWith != null) {
         // Yank self free, break the melee lock the rig is pinned in.
         clearEngagement(room, rig);
       }
+      if (hop) { rig.pos = hop.to; rig.facing = hop.facing; }
       rig.towedThisActivation = true;                 // rooted: no Move/Sprint after (reuses the tow root)
       if (rig.equipState) rig.equipState.grapnelCooldown = 3; // 3-round cooldown, ticked in Recovery
       bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade)); // +2 heat (Jump Jets base)
       pushResolution(room, {
-        kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-        summary: `${rig.name} fires the Grapnel Launcher.`,
-        effects: [reel
+        kind: "equipment", active: "grapnel", mode: reel ? "reel" : "yank", actor: rig.owner, rigId: rig.id, rolls: [],
+        ...(hop ? { from: hop.from, to: hop.to } : {}),
+        ...(dragged ? { victims: [dragged.target.id], from: dragged.from, to: dragged.to } : {}),
+        summary: dragged ? `${rig.name} reels ${dragged.target.name} in with the grapnel and locks it in melee.`
+          : hop ? `${rig.name} yanks itself clear on the grapnel.` : `${rig.name} fires the Grapnel Launcher.`,
+        effects: room.mode === "digital" ? [] : [reel
           ? `Reel the target into base contact and engage it, move the minis (up to 4").`
           : `Yank ${rig.name} up to 4" (ignore terrain and any melee lock), move the mini.`],
       });
@@ -2931,9 +3002,19 @@ function performAction(room, rig, act, a, random) {
       return reject("Can't vent heat while a meltdown charge is banked.");
     }
     if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
+    // Digital Jump Jets: a straight hop up to base Speed over terrain and rigs,
+    // landing on clear ground. Validated before the spend, applied after it.
+    let hop = null;
+    if (act === "jumpjets" && room.mode === "digital") {
+      const err = hopCheck(room, rig, a, Number.isFinite(rig.speed) ? rig.speed : moveBudget(rig, "move"));
+      if (err) return reject(err);
+      hop = { from: { ...rig.pos }, to: { x: a.dest.x, y: a.dest.y }, facing: typeof a.facing === "number" ? a.facing : rig.facing };
+    }
     const active = EQUIPMENT[equipId].active;
     const extra = []; // extra per-active narration lines (e.g. Backdraft Penetration bonus)
+    let waveVictims = null;
     t.actionsUsed += 1;
+    if (hop) { rig.pos = hop.to; rig.facing = hop.facing; }
     if (act === "harden") rig.hardened = true;
     else if (act === "overclock") {
       // Adrenaline Surge (Power Tuned), while the rig is strictly below half its
@@ -2982,12 +3063,30 @@ function performAction(room, rig, act, a, random) {
         ? Math.floor(overCap / 2) : 0;
       if (backdraftPen > 0) extra.push(`Backdraft, +${backdraftPen} Penetration to the 3" wave (banked heat over Capacity).`);
       rig.engine.heat = Math.min(rig.engine.heat, rawCap);
+      // Digital: the engine scalds the enemies in reach itself.
+      if (room.mode === "digital") {
+        waveVictims = enemiesWithin(room, rig, PURGE_WAVE_REACH);
+        for (const v of waveVictims) {
+          bumpHeat(v, PURGE_WAVE_HEAT);
+          const loc = hitLocation(v.kind || "rig", rollD(12, a.dice?.location?.[v.name], random));
+          const die = rollD(WOUND_DIE, a.dice?.wounds?.[v.name], random);
+          const tough = toughnessOf(v.kind || "rig", loc, v.weightClass);
+          const tn = woundTarget(PURGE_WAVE_PEN + backdraftPen, tough);
+          const sp = die >= tn ? PURGE_WAVE_DMG : 0;
+          extra.push(`${v.name}: +${PURGE_WAVE_HEAT} heat, wound ${die} vs ${tn}+ → ${sp} SP to ${loc}`);
+          if (sp > 0) applyDamage(room, v, loc, sp, { random });
+        }
+      }
     }
     // purge / jumpjets need no extra state beyond the heat cost below.
     bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade));
+    const digitalText = room.mode === "digital" && (act === "jumpjets" || act === "heatpurgewave");
     pushResolution(room, {
-      kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} uses ${active.label}.`, effects: [active.text, ...extra],
+      kind: "equipment", active: act, actor: rig.owner, rigId: rig.id, rolls: [],
+      ...(hop ? { from: hop.from, to: hop.to } : {}),
+      ...(waveVictims ? { victims: waveVictims.map((v) => v.id) } : {}),
+      summary: `${rig.name} uses ${active.label}.`,
+      effects: digitalText ? extra : [active.text, ...extra],
     });
     return true;
   }
@@ -3031,7 +3130,7 @@ function performAction(room, rig, act, a, random) {
     bumpHeat(rig, -2 * spend);
     rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
     pushResolution(room, {
-      kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+      kind: "equipment", active: "cryo", actor: rig.owner, rigId: rig.id, rolls: [],
       summary: `${rig.name} vents cryo ×${spend}, −${2 * spend} heat, +${spend} Penetration to the next attack.`, effects: [],
     });
     return true;
@@ -3049,6 +3148,9 @@ function performAction(room, rig, act, a, random) {
     if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
     const host = a.target ? findRig(room, a.target) : rig; // self, or an ally in reach (player-adjudicated)
     if (!host || (host.owner || "a") !== (rig.owner || "a")) return reject("Seed the swarm on yourself or a friendly unit in reach.");
+    if (room.mode === "digital" && host !== rig && rimGap(spatial(rig), spatial(host)) > NANITE_REACH + 1e-6) {
+      return reject(`${host.name} is out of reach: nanites carry 3".`);
+    }
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? String(a.loc).toLowerCase() : "hull";
     const stacks = host.equipState.naniteStacks;
     const st = stacks.find((x) => x.loc === loc);
@@ -3056,7 +3158,7 @@ function performAction(room, rig, act, a, random) {
     t.actionsUsed += 1;
     bumpHeat(rig, 1);
     pushResolution(room, {
-      kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+      kind: "equipment", active: "nanite", actor: rig.owner, rigId: rig.id, victims: [host.id], rolls: [],
       summary: `${rig.name} seeds a nanite stack on ${host.name}'s ${loc}.`, effects: [],
     });
     return true;
@@ -3073,14 +3175,23 @@ function performAction(room, rig, act, a, random) {
     if (spend === 0) return reject("No meltdown charge to spend.");
     rig.equipState.meltdownCharge -= spend;
     if (a.mode === "burst") {
+      if (room.mode === "digital") {
+        const victims = enemiesWithin(room, rig, MELTDOWN_REACH);
+        for (const v of victims) bumpHeat(v, spend);
+        pushResolution(room, {
+          kind: "equipment", active: "meltdown", mode: "burst", actor: rig.owner, rigId: rig.id, victims: victims.map((v) => v.id), rolls: [],
+          summary: `${rig.name} vents a meltdown burst: +${spend} heat to ${victims.length ? victims.map((v) => v.name).join(", ") : "nobody in reach"}.`, effects: [],
+        });
+        return true;
+      }
       pushResolution(room, {
-        kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+        kind: "equipment", active: "meltdown", mode: "burst", actor: rig.owner, rigId: rig.id, rolls: [],
         summary: `${rig.name} vents a meltdown burst, deal ${spend} heat-damage to every enemy within 4" (players adjudicate the AoE).`, effects: [],
       });
     } else {
       rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
       pushResolution(room, {
-        kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
+        kind: "equipment", active: "meltdown", mode: "pen", actor: rig.owner, rigId: rig.id, rolls: [],
         summary: `${rig.name} overloads, +${spend} Penetration to its attacks this activation.`, effects: [],
       });
     }
@@ -3416,7 +3527,7 @@ function performAction(room, rig, act, a, random) {
     const roll = rollD(6, a.dice?.repair, random);
     // Field Repair Suite (Utility), the Repair action restores +1 additional SP.
     // The roll can't whiff, so the suite bonus now rides on every repair.
-    const amt = repairSpFor(roll) + equipmentRepairBonus(rig.equipment, rig.equipmentUpgrade);
+    const amt = repairSpFor(roll) + equipmentRepairBonus(rig.equipment, rig.equipmentUpgrade) + (rig.mods?.repair || 0);
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? a.loc.toLowerCase() : "hull";
     repairRig(rig, loc, amt);
     pushResolution(room, {
@@ -3466,7 +3577,8 @@ function checkAnnihilation(room) {
 // points, enter one Sudden Death round on a tie, or declare a draw if still tied.
 function advanceRound(room, random) {
   const [sa, sb] = room.game.sides;
-  const lastRound = room.game.suddenDeath || room.game.round >= MAX_ROUNDS;
+  const lastRound = room.game.suddenDeath || room.game.round >= maxRoundsOf(room);
+  if (lastRound && missionTimeout(room)) return;
   if (lastRound) {
     if (sa.vp !== sb.vp) {
       room.game.outcome = { winner: sa.vp > sb.vp ? sa.id : sb.id, reason: "points" };
@@ -3485,8 +3597,320 @@ function advanceRound(room, random) {
     room.game.round += 1;
     room.game.phase = "initiative";
     room.game.initiative = null;
+    spawnReinforcements(room, random);
     rerollPriorityTargets(room, random);
   }
+}
+
+// ── Digital equipment geometry (docs/design/campaign.md) ────────────────────
+const GRAPNEL_YANK = 4;
+const GRAPNEL_REEL = 8;
+const PURGE_WAVE_REACH = 3;
+const PURGE_WAVE_HEAT = 2;
+const PURGE_WAVE_PEN = 4;
+const PURGE_WAVE_DMG = 1;
+const MELTDOWN_REACH = 4;
+const NANITE_REACH = 3;
+
+function enemiesWithin(room, rig, reach) {
+  const me = spatial(rig);
+  return room.rigs.filter((r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed && r.pos
+    && rimGap(me, spatial(r)) <= reach + 1e-6);
+}
+
+// Can this base stand at p? On the table, clear of terrain, off every other base.
+function landingClear(room, rig, p) {
+  const r = radiusOf(rig);
+  const { width: w, height: h } = room.field;
+  if (p.x < r || p.y < r || p.x > w - r || p.y > h - r) return false;
+  if (!clearOfTerrain(p, r, terrainPolygons(room.field))) return false;
+  return !room.rigs.some((o) => o !== rig && !o.destroyed && o.pos
+    && Math.hypot(o.pos.x - p.x, o.pos.y - p.y) < r + radiusOf(o) - 1e-6);
+}
+
+// A straight-line hop (Jump Jets, Grapnel yank): only the reach and the
+// landing matter; whatever it flies over doesn't. Returns an error or null.
+function hopCheck(room, rig, a, reach) {
+  if (!a.dest || typeof a.dest.x !== "number" || typeof a.dest.y !== "number") return "A digital hop needs a destination.";
+  if (Math.hypot(a.dest.x - rig.pos.x, a.dest.y - rig.pos.y) > reach + 1e-6) return `That's out of reach: ${reach}" at most.`;
+  if (!landingClear(room, rig, a.dest)) return "Can't land there: pick clear ground.";
+  return null;
+}
+
+// Where a reeled target ends up: base contact on the line to the puller,
+// sliding back toward its start until the ground is clear.
+function contactSpot(room, rig, target) {
+  const dx = target.pos.x - rig.pos.x, dy = target.pos.y - rig.pos.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const touch = radiusOf(rig) + radiusOf(target) + 0.05;
+  for (let d = touch; d <= len + 1e-6; d += 0.25) {
+    const p = { x: Math.round((rig.pos.x + dx / len * d) * 100) / 100, y: Math.round((rig.pos.y + dy / len * d) * 100) / 100 };
+    if (landingClear(room, target, p)) return p;
+  }
+  return null;
+}
+
+// Chaff Burst side-step: half Speed, perpendicular to the attacker, left then right.
+function chaffStep(room, attacker, target) {
+  const dx = target.pos.x - attacker.pos.x, dy = target.pos.y - attacker.pos.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const step = Math.max(1, Math.floor((Number.isFinite(target.speed) ? target.speed : 4) / 2));
+  for (const side of [1, -1]) {
+    const p = { x: Math.round((target.pos.x - dy / len * step * side) * 100) / 100, y: Math.round((target.pos.y + dx / len * step * side) * 100) / 100 };
+    if (landingClear(room, target, p)) return p;
+  }
+  return null;
+}
+
+// ── Campaign missions (docs/design/campaign.md) ─────────────────────────────
+export const MISSION_TYPES = ["beacons", "skirmish", "assassinate", "breakthrough", "laststand", "salvage", "boss"];
+const CRATE_VP = 2;
+const CRATE_REACH = 2;
+
+// Tiny seeded PRNG so a mission's table + deployment replay from its seed.
+function seededRandom(seed) {
+  let t = (Number(seed) >>> 0) || 1;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function maxRoundsOf(room) {
+  return room.game.maxRounds || MAX_ROUNDS;
+}
+
+function endBattle(room, winner, reason) {
+  room.game.outcome = { winner, reason };
+  room.game.phase = "finished";
+  room.game.turn = null;
+}
+
+// One campaign squad entry → a built rig (not yet placed), or an error string.
+function buildMissionRig(room, e, owner, mods) {
+  const pb = resolveChassis({ chassis: e?.chassis });
+  if (!pb) return `Unknown chassis "${e?.chassis}".`;
+  const lrUp = e.longRangeUpgrade || "none";
+  const meUp = e.meleeUpgrade || "none";
+  if (lrUp !== "none" && !upgradeNature(pb.longRange, lrUp)) return `Unknown upgrade "${lrUp}" for the ${pb.longRange}.`;
+  if (meUp !== "none" && !upgradeNature(pb.melee, meUp)) return `Unknown upgrade "${meUp}" for the ${pb.melee}.`;
+  const equipment = e.equipment ? normalizeEquipment(e.equipment) : null;
+  if (e.equipment && !equipment) return `Unknown equipment "${e.equipment}".`;
+  const equipUp = e.equipmentUpgrade || null;
+  if (equipUp && !equipmentUpgradeNature(equipment, equipUp)) return `Unknown upgrade "${equipUp}" for the ${equipment}.`;
+  if (countPrototypes({ longRange: pb.longRange, melee: pb.melee }, { longRange: lrUp, melee: meUp }, equipment, equipUp) > 1) {
+    return `${e.name || pb.name} runs more than one Prototype upgrade.`;
+  }
+  const mult = Number(e.spMult) > 0 ? Number(e.spMult) : 1;
+  const bonus = mods?.sp || {};
+  const sp = {};
+  for (const loc of LOCS) sp[loc] = Math.round(pb.sp[loc] * mult) + (bonus[loc] || 0);
+  const rig = makeUnit("rig", room.nextRigId++, uniqueRigName(room, e.name || pb.name), owner, {
+    weightClass: pb.class, longRange: pb.longRange, melee: pb.melee, chassis: pb.id, sp,
+    equipment, equipmentUpgrade: equipUp, longRangeUpgrade: lrUp, meleeUpgrade: meUp,
+  });
+  if (!rig) return `Couldn't build ${e.name || pb.name}.`;
+  ensureRigShape(rig, "digital");
+  // Carried campaign damage: current SP from the roster (plus this fight's SP mods).
+  if (e.sp) {
+    for (const loc of LOCS) {
+      if (Number.isFinite(e.sp[loc])) rig[loc].sp = Math.max(0, Math.min(rig[loc].max, e.sp[loc] + (bonus[loc] || 0)));
+    }
+  }
+  if (e.perkKits) rig.perkKits = { longRange: e.perkKits.longRange || null, melee: e.perkKits.melee || null };
+  if (e.uid != null) rig.campaignUid = e.uid;
+  if (e.commander) rig.commander = true;
+  rig.mods = { ...(mods || {}) };
+  if (Number.isFinite(rig.speed) && mods?.speed) rig.speed += mods.speed;
+  if (mods?.startHeat) rig.engine.heat = mods.startHeat;
+  recompute(rig);
+  return rig;
+}
+
+// Find a legal spot for a late arrival near a corner: on the table, clear of
+// terrain and of every living base. Lattice sweep, corner outwards.
+function placeNearCorner(room, rig, corner) {
+  const polys = terrainPolygons(room.field);
+  const r = radiusOf(rig);
+  const { width: w, height: h } = room.field;
+  const living = room.rigs.filter((x) => x !== rig && !x.destroyed && x.pos);
+  const cells = [];
+  for (let ix = 0; ix <= 40; ix++) {
+    for (let iy = 0; iy <= 40; iy++) {
+      const p = { x: Math.round((corner.x + (corner.x < w / 2 ? 1 : -1) * ix * 0.5) * 100) / 100,
+        y: Math.round((corner.y + (corner.y < h / 2 ? 1 : -1) * iy * 0.5) * 100) / 100 };
+      cells.push({ p, d: Math.hypot(p.x - corner.x, p.y - corner.y) });
+    }
+  }
+  cells.sort((m, n) => m.d - n.d);
+  const spot = cells.find(({ p }) => p.x >= r && p.y >= r && p.x <= w - r && p.y <= h - r
+    && clearOfTerrain(p, r, polys)
+    && !living.some((x) => Math.hypot(x.pos.x - p.x, x.pos.y - p.y) < r + radiusOf(x)));
+  if (!spot) return false;
+  rig.pos = spot.p;
+  rig.facing = Math.atan2(h / 2 - spot.p.y, w / 2 - spot.p.x) * 180 / Math.PI;
+  return true;
+}
+
+// Salvage crates: spread across the middle band, clear of terrain, apart.
+function scatterCrates(room, n, rand) {
+  const polys = terrainPolygons(room.field);
+  const { width: w, height: h } = room.field;
+  const crates = [];
+  for (let tries = 0; crates.length < n && tries < 600; tries++) {
+    const p = { x: Math.round((w * 0.2 + rand() * w * 0.6) * 10) / 10, y: Math.round((h * 0.15 + rand() * h * 0.7) * 10) / 10 };
+    if (!clearOfTerrain(p, 1, polys)) continue;
+    if (crates.some((c) => Math.hypot(c.x - p.x, c.y - p.y) < 7)) continue;
+    crates.push({ ...p, vp: CRATE_VP, crate: true });
+  }
+  return crates;
+}
+
+// Build a campaign mission room. Returns an error string, or null on success.
+function buildMission(room, a, random) {
+  const type = String(a.type || "").toLowerCase();
+  if (!MISSION_TYPES.includes(type)) return `Unknown mission type "${a.type}".`;
+  const sq = a.squads || {};
+  if (!Array.isArray(sq.a) || !sq.a.length || !Array.isArray(sq.b) || !sq.b.length) return "A mission needs both squads.";
+  const rand = a.seed != null ? seededRandom(a.seed) : (random || Math.random);
+  const mods = { a: { ...(a.mods?.a || {}) }, b: { ...(a.mods?.b || {}) } };
+
+  // Build everything first, commit only when every entry is valid.
+  const staged = { ...room, rigs: [], nextRigId: 1 };
+  const rigs = [];
+  for (const side of ["a", "b"]) {
+    for (const e of sq[side]) {
+      const rig = buildMissionRig(staged, e, side, mods[side]);
+      if (typeof rig === "string") return rig;
+      staged.rigs.push(rig);
+      rigs.push(rig);
+    }
+  }
+  const reinforcements = [];
+  for (const rf of Array.isArray(a.reinforcements) ? a.reinforcements : []) {
+    const rig = buildMissionRig(staged, rf.unit, "b", mods.b);
+    if (typeof rig === "string") return rig;
+    staged.rigs.push(rig);
+    reinforcements.push({ round: Math.max(2, Math.floor(Number(rf.round) || 2)), rig });
+  }
+
+  room.mode = "digital";
+  room.rigs = rigs;
+  room.nextRigId = staged.nextRigId;
+  resetGameShape(room);
+  const dims = clampDimensions(a.width ?? 42, a.height ?? 28);
+  room.field = { ...room.field, ...dims, terrain: [], locked: true };
+  room.field.terrain = scatterTerrain(room.field, rand, { digital: true });
+  autoDeploy(room, rand);
+  const [ownerC, foeC] = deploymentCorners(room.field);
+  const enemyCorner = room.game.sides[0].id === "a" ? foeC : ownerC;
+  room.game.objectives = type === "beacons" ? computeObjectives(room.field)
+    : type === "salvage" ? scatterCrates(room, Math.max(1, Math.floor(Number(a.crates) || 3)), rand)
+    : [];
+  room.game.maxRounds = Math.max(1, Math.floor(Number(a.maxRounds) || MAX_ROUNDS));
+  for (const s of room.game.sides) s.bot = s.id === "b" ? (BOT_PRESETS.includes(a.enemyBot) ? a.enemyBot : "normal") : null;
+  const commander = rigs.find((r) => r.owner === "b" && r.commander);
+  room.campaign = {
+    type, mods,
+    commanderId: (type === "assassinate" || type === "boss") ? (commander || rigs.find((r) => r.owner === "b")).id : null,
+    exit: type === "breakthrough" ? { x: enemyCorner.x, y: enemyCorner.y, r: Math.round(deployRadius(room.field) * 10) / 10 } : null,
+    extractGoal: type === "breakthrough" ? Math.max(1, Math.min(sq.a.length, Math.floor(Number(a.extractGoal) || 2))) : 0,
+    extracted: { a: [] },
+    crates: { a: 0, b: 0 },
+    reinforcements,
+    enemyCorner: { x: enemyCorner.x, y: enemyCorner.y },
+  };
+  if (room.campaign.commanderId != null) {
+    const c = rigs.find((r) => r.id === room.campaign.commanderId);
+    c.commander = true;
+  }
+  room.training = null;
+  startGameSeeded(room, a.first === "b" ? "b" : "a");
+  // Grit mods (Grit and Gears relic, Freegear banner) seed tokens for round 1.
+  for (const id of ["a", "b"]) room.game.gritTokens[id] += mods[id].grit || 0;
+  refreshAnswerGate(room, [room.game.initiative.second, room.game.initiative.order[0]]);
+  return null;
+}
+
+// Assassinate / Boss: the marked enemy commander going down ends it at once.
+function checkCommander(room, rig) {
+  const c = room.campaign;
+  if (!c || c.commanderId == null || room.game.outcome || !room.game.started) return;
+  if (rig.id === c.commanderId && rig.destroyed) endBattle(room, "a", "commander");
+}
+
+// At the round limit: mission types with their own clock decide the outcome.
+// Returns true when it ended the battle.
+function missionTimeout(room) {
+  const c = room.campaign;
+  if (!c || room.game.outcome) return false;
+  if (c.type === "laststand") { endBattle(room, "a", "survived"); return true; }
+  if (c.type === "assassinate" || c.type === "boss" || c.type === "breakthrough") { endBattle(room, "b", "timeout"); return true; }
+  return false;
+}
+
+// Last Stand: scheduled enemy rigs drop in at the enemy corner.
+function spawnReinforcements(room) {
+  const c = room.campaign;
+  if (!c?.reinforcements?.length) return;
+  for (const rf of c.reinforcements) {
+    if (rf.arrived || rf.round !== room.game.round) continue;
+    rf.arrived = true;
+    const rig = rf.rig;
+    room.rigs.push(rig);
+    if (!placeNearCorner(room, rig, c.enemyCorner)) { room.rigs.pop(); continue; }
+    pushResolution(room, {
+      kind: "reinforcement", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `Enemy reinforcements: ${rig.name} drops in.`, effects: [],
+    });
+  }
+}
+
+// Salvage Run: ending an activation within reach of a crate claims it.
+function claimCrates(room, rig) {
+  const c = room.campaign;
+  if (c?.type !== "salvage" || rig.destroyed || !rig.pos) return;
+  const side = room.game.sides.find((s) => s.id === (rig.owner || "a"));
+  room.game.objectives = (room.game.objectives || []).filter((o) => {
+    if (!o.crate || !controlsObjective(spatial(rig), o, CRATE_REACH)) return true;
+    side.vp += o.vp;
+    c.crates[side.id] = (c.crates[side.id] || 0) + 1;
+    pushResolution(room, {
+      kind: "crate", actor: side.id, side: side.id, rigId: rig.id, vp: o.vp, x: o.x, y: o.y, rolls: [],
+      summary: `${rig.name} hauls a salvage crate: +${o.vp} VP`, effects: [],
+    });
+    return false;
+  });
+}
+
+export function inExitZone(rig, exit) {
+  return !!(exit && rig?.pos && Math.hypot(rig.pos.x - exit.x, rig.pos.y - exit.y) <= exit.r);
+}
+
+function extractRig(room, rig, random) {
+  const c = room.campaign;
+  const t = room.game.turn;
+  if (c?.type !== "breakthrough" || !c.exit) return reject("There's nowhere to extract to in this battle.");
+  if ((rig.owner || "a") !== "a") return reject("Only the breakthrough side can extract.");
+  if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
+  if (!inExitZone(rig, c.exit)) return reject("Move into the extraction zone first.");
+  if (rig.engagedWith != null) return reject("Can't extract while locked in melee, Disengage first.");
+  t.actionsUsed += 1;
+  rig.activated = true;
+  rig.extracted = true;
+  room.rigs = room.rigs.filter((r) => r !== rig);
+  c.extracted.a.push(rig);
+  t.activeRigId = null;
+  pushResolution(room, {
+    kind: "extract", actor: rig.owner, rigId: rig.id, x: rig.pos.x, y: rig.pos.y, rolls: [],
+    summary: `${rig.name} breaks through and extracts (${c.extracted.a.length}/${c.extractGoal}).`, effects: [],
+  });
+  if (c.extracted.a.length >= c.extractGoal) endBattle(room, "a", "extraction");
+  else if (!room.rigs.some((r) => (r.owner || "a") === "a" && !r.destroyed)) endBattle(room, "b", "stranded");
+  else handoff(room, random);
+  return true;
 }
 
 // §9 cook-off radius in a digital room: every non-destroyed rig with a
@@ -3864,6 +4288,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       startGameSeeded(room, first);
     }
     changed = true;
+  } else if (verb === "mission") {
+    // Campaign contract (docs/design/campaign.md): both squads, side modifiers
+    // and a contract type in one go; starts at once, side b is the bot.
+    const err = buildMission(room, a, options.random);
+    if (err) reject(err);
+    else changed = true;
   } else if (verb === "scenario") {
     // Training Grounds (shared/scenarios.js): a hand-built digital situation
     // for one lesson. Fixed rigs, positions, headings, heat and beacons; bare
@@ -4007,6 +4437,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         // Emplacement (§13, Bulwark Shield), a rooted rig trades one action for
         // its permanent guard: budget drops by 1 (floored at 1).
         if (rig.emplaced) actionsMax = Math.max(1, actionsMax - 1);
+        // Campaign Cracked Reactor relic: a burst of extra actions on round 1.
+        if (room.game.round === 1) actionsMax += rig.mods?.actionsR1 || 0;
         t.actionsMax = actionsMax;
         rig.actionPenaltyNextActivation = 0;
         rig.movedThisActivation = false; // Full Tilt/Momentum Swing charge flag (§13)
@@ -4427,6 +4859,19 @@ export function publicState(room, side) {
     // Transient: the bot's step-by-step frames for the latest turn (set by the
     // command route), only while they're still the newest state.
     botFrames: room.botFrames?.version === room.version ? room.botFrames.frames : null,
+    campaign: campaignView(room.campaign),
+  };
+}
+
+// The client's slice of a campaign mission: objective state, never the
+// not-yet-arrived reinforcement rigs themselves.
+function campaignView(c) {
+  if (!c) return null;
+  return {
+    type: c.type, commanderId: c.commanderId, exit: c.exit, extractGoal: c.extractGoal,
+    extracted: (c.extracted?.a || []).map((r) => ({ id: r.id, name: r.name, chassis: r.chassis })),
+    crates: { ...c.crates }, mods: c.mods,
+    reinforcements: (c.reinforcements || []).map((rf) => ({ round: rf.round, name: rf.rig?.name, arrived: !!rf.arrived })),
   };
 }
 
@@ -4435,7 +4880,7 @@ export function formatBattleState(room, side) {
   ensureGameShape(room);
   const g = room.game;
   const lines = ["", "=== CURRENT BATTLE STATE ==="];
-  lines.push(`Round ${g.round}/${MAX_ROUNDS}${g.suddenDeath ? " (Sudden Death)" : ""}, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}`);
+  lines.push(`Round ${g.round}/${g.maxRounds || MAX_ROUNDS}${g.suddenDeath ? " (Sudden Death)" : ""}, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}`);
   lines.push(`Sides: ${g.sides.map((s) => `${s.name} (${s.id}) VP ${s.vp}${s.ready ? " READY" : ""}`).join(" | ")}`);
   lines.push(`Battle started: ${g.started ? "yes" : "no"}`);
   lines.push(`Phase: ${g.phase}${g.outcome ? ` (winner: ${g.outcome.winner || "draw"})` : ""}`);

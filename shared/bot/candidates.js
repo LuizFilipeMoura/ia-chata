@@ -15,6 +15,7 @@ import {
   spatial, deriveAttackGeometry, effectiveWeaponProfile, hasBulwarkShield,
   moveBudget, PREP_TYPES, LOCS,
 } from "../game-state.js";
+import { equipmentUpgradeEffectOf } from "../rules.js";
 
 const DEG = Math.PI / 180;
 
@@ -119,6 +120,31 @@ export function candidatesFor(room, rig) {
   // and the move generator already covers repositioning.
   for (const key of ["emplace", "unplant", "barrage", "harden", "purge", "overclock", "locksight", "popsmoke", "heatpurgewave"]) {
     if (enabled.has(key)) out.push({ action: key });
+  }
+  // Prototype equipment spends and the digital Grapnel reel. These ride the
+  // equipment's own tracked state, not the action bar, so gate them here.
+  const eq = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade);
+  const st = rig.equipState || {};
+  const left = turn.actionsMax - turn.actionsUsed;
+  if (!rig.noActivesNextActivation) {
+    if (eq.cryoReservoir && (st.cryo || 0) > 0) out.push({ action: "cryo", n: st.cryo });
+    if (eq.meltdownProtocol && (st.meltdownCharge || 0) > 0) {
+      out.push({ action: "meltdown", n: st.meltdownCharge, mode: "pen" });
+      out.push({ action: "meltdown", n: st.meltdownCharge, mode: "burst" });
+    }
+    if (eq.naniteSwarm && left > 0) {
+      const weakest = LOCS.filter((l) => rig[l] && !rig[l].destroyed && rig[l].sp < rig[l].max)
+        .sort((x, y) => rig[x].sp / rig[x].max - rig[y].sp / rig[y].max)[0];
+      if (weakest) out.push({ action: "nanite", location: weakest });
+    }
+    if (eq.grapnelLauncher && room.mode === "digital" && left > 0 && !(st.grapnelCooldown > 0)
+        && rig.engagedWith == null && !rig.emplaced && !rig.suppressImmobile) {
+      for (const e of enemies) {
+        const geo = deriveAttackGeometry(room, rig, e);
+        const gap = geo.distance - radiusOf(rig) - radiusOf(e);
+        if (geo.inFrontArc && geo.los && gap <= 8 && gap > 2 && !e.emplaced) out.push({ action: "jumpjets", mode: "reel", target: e.name });
+      }
+    }
   }
   if (enabled.has("emergencypatch")) {
     const weakest = LOCS.filter((l) => rig[l] && !rig[l].destroyed)

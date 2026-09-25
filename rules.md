@@ -28,6 +28,8 @@
 14. [Factions](#14-factions)
 15. [Equipment](#15-equipment)
 16. [Design Notes & Open Items](#16-design-notes--open-items)
+17. [Units](#17-units)
+18. [Campaign Missions (digital)](#18-campaign-missions-digital)
 
 ---
 
@@ -547,7 +549,18 @@ Each piece of equipment offers **three upgrades, one of each nature** (see *Upgr
 
 #### Tuned / Prototype Upgrade Mechanics
 
-As with weapons (§12), equipment Tuned/Prototype mechanics are implemented incrementally: the **Field** effects above, and the three new families' base **passives/actives** (Blast Furnace Core, Targeting Computer, Reactive Plating), are live in the engine now; the Tuned and Prototype effects for all eight equipment lines land over follow-on updates.
+All eight equipment lines are live: every passive, active, and Field / Tuned / Prototype upgrade.
+
+#### Digital battles: equipment moves the minis itself
+
+On a physical table the players adjudicate the spatial half of an equipment effect. In a **digital** battle there is no hand on the table, so the app resolves it:
+
+- **Jump Jets:** a straight hop up to base Speed, over terrain and Rigs; the landing spot must be clear ground (on the table, off terrain, off every base). Any facing.
+- **Grapnel Launcher:** *Yank*: the same hop, up to **4"**, breaking any melee lock. *Reel*: an enemy within **8"** (rim to rim), in line of sight and your front arc, is dragged into base contact and engaged. An emplaced Rig won't budge.
+- **Heat Purge Wave:** every enemy Rig within **3"** (rim to rim) takes **+2 heat** and one hit at **Penetration 4** (+ Backdraft), **1 damage**, to a rolled location.
+- **Meltdown burst:** every enemy Rig within **4"** (rim to rim) takes **+N heat** (N = charge spent).
+- **Chaff Burst:** when a smoked Rig is fired on, it side-steps half its Speed perpendicular to the shot (first clear side). If the step breaks line of sight, the arc, or melee reach, the shot is lost (the attacker still pays the action, heat and reload, like a dodged shot).
+- **Nanite Swarm:** the host must be the Rig itself or an ally within **3"** (rim to rim).
 
 ---
 
@@ -667,3 +680,27 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 - Machine-gun Penetration/arc values under Raking Fire, watch that they're "strong not silly" on the flanks.
 - Alpha-strike swing at 3v3, high-Penetration crits can gut a Rig in one activation; see if crits need softening.
 - Whether composition-matching is enough balance, or a lightweight cost system is needed.
+
+---
+
+## 18. Campaign Missions (digital)
+
+The single-player campaign (see `docs/design/campaign.md`) plays **contracts**: digital battles against the bot, shorter than a standard game (**6 rounds**, the Warlord **7**). Side A is the player. Each contract type changes the win condition:
+
+| Contract | Win | Lose |
+|---|---|---|
+| **Beacon Hold** | more VP at the round limit (standard beacons) | fewer VP, or annihilation |
+| **Skirmish** | more VP at the round limit (no beacons: kills score) | the reverse |
+| **Assassination** | wreck the marked **Commander** (the instant it goes down) | the round limit passes, or annihilation |
+| **Breakthrough** | **Extract** the goal number of Rigs through the enemy corner | the round limit passes, annihilation, or no Rig left to extract |
+| **Last Stand** | have any Rig standing at the round limit | annihilation |
+| **Salvage Run** | more VP at the round limit | fewer VP |
+| **Boss** | wreck the faction **Warlord** | the round limit passes, or annihilation |
+
+- **Extract** (Breakthrough only, 1 action): a Rig whose centre is inside the **extraction zone** (the enemy's deployment quarter-circle) and not locked in melee leaves the table. It isn't wrecked and keeps its SP.
+- **Reinforcements** (Last Stand): scheduled enemy Rigs drop in at the enemy corner at the start of their round.
+- **Salvage crates** (Salvage Run): a Rig that **ends its activation** within **2"** (rim) of a crate hauls it: **+2 VP** for its side, and the crate is gone. Crates never score in Recovery. The bot goes for them too.
+- **Commander / Warlord:** an elite enemy Rig with extra SP (+25% / +50%).
+- **Side modifiers:** relics and faction perks apply flat modifiers to a whole side: max SP per location, Heat Capacity, starting heat, Speed, ranged / melee Penetration, Accuracy, extra cooling in Recovery, extra SP on Repair, extra Answer tokens every round, Grit tokens at the start, extra actions on round 1.
+- **Perk kits:** a weapon may carry one grafted perk from §13 (Armour Piercing, Incendiary, Shock, Rend, Impale) on top of its own.
+- **Bare weapons:** campaign Rigs start with no weapon upgrades; upgrades are found along the way.

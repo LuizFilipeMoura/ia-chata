@@ -13,6 +13,8 @@ import { createWsHub } from "./ws.js";
 import { createSimRouter } from "./routes/sim.js";
 import { createPool } from "./sim/pool.js";
 import { createReplayStore } from "./replays.js";
+import { createCampaignStore } from "./campaign-store.js";
+import { createCampaignRouter } from "./routes/campaign.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, "..");
@@ -40,6 +42,8 @@ app.get("/api/chassis", (req, res) => res.json({ chassis: chassisStore.all() }))
 
 app.use("/api", createChatRouter(store));
 app.use("/api/game", createGameRouter(store, hub));
+// Single-player campaign (docs/design/campaign.md): HQ profile + the live run.
+app.use("/api/campaign", createCampaignRouter(store, createCampaignStore(path.join(rootDir, "data", "campaign.json"))));
 // Balance lab: genetic meta-search + recorded bot-vs-bot replays (worker pool).
 app.use("/api/sim", createSimRouter({ pool: createPool(), rootDir, store, replays: createReplayStore(path.join(rootDir, "data", "replays")) }));
 

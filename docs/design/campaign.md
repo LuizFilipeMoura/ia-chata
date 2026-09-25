@@ -141,7 +141,7 @@ only by meta unlocks. The one-Prototype-per-rig cap holds: installing a second
 Prototype on a rig asks which one to drop.
 
 **Perk kits** (one per weapon; stacks with the weapon's own perks, duplicates
-are not offered): Armour Piercing, Incendiary, Shock, Rend, Impale, Staggering.
+are not offered): Armour Piercing, Incendiary, Shock, Rend, Impale. (Staggering / Cleave stay out: their push and second target are still narrated.)
 Engine: `rig.perkKits[slot]` merges into the weapon profile's perks.
 
 ### Relics ⚙
@@ -324,6 +324,17 @@ All under `/api/campaign`, one profile (single player):
 | `POST /run/abandon` | | `{ profile, run:null, summary }` |
 
 Run `status`: `"map" | "battle" | "debrief" | "reward" | "depot" | "over"`.
+
+## Decisions made while building
+
+- A **boss win** ends the run at once (no reward screen). A **lost contract** pays nothing, kills included.
+- **Repairs / recovery** work on the map, debrief and reward screens at field prices, at the Depot at Depot prices. **Respec** is Depot-only.
+- **No deployable rig** ends the run only if you can't afford (or have no free) recovery.
+- Enemy **faction perk**: Notoriety 0–1 only on the Warlord; 2+ on every contract. The Warlord also gets +1 Answer token each round.
+- **Enemy upgrades by Notoriety:** L0 bare (Field from step 3); L1 primary equipment + Field; L2 Tuned from step 3; L3 meta builds from step 3; L4–5 meta builds everywhere, +1 SP per location; L5 also one enemy relic.
+- **Depots:** step 4 always offers one; steps 2, 3, 5 have a 25% chance per node (max one).
+- Carried SP is clamped to the chassis max: bonus SP from mods or Ablative Plating doesn't carry between fights.
+- The player always activates first in a contract.
 
 ## Out of scope (for now)
 

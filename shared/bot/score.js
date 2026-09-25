@@ -261,6 +261,14 @@ function fragility(rig) {
   return 1 - minFrac;
 }
 
+// Living enemies whose base rim sits within `reach` of this rig's rim.
+function enemiesNear(room, rig, reach) {
+  if (!rig.pos) return [];
+  const me = spatial(rig);
+  return livingEnemies(room, rig).filter((e) => e.pos
+    && Math.hypot(e.pos.x - me.pos.x, e.pos.y - me.pos.y) - me.radius - spatial(e).radius <= reach);
+}
+
 // Rough worth of a signature action (Prototype stance / equipment active). These
 // don't deal damage this instant, so offence prices them at 0; this heuristic is
 // what lets the bot, and therefore the GA, actually play them. Deliberately
@@ -278,7 +286,25 @@ function tacticalValue(room, rig, cand, exposure) {
     // One-shot buffs: a second use this activation does nothing.
     case "harden": return rig.hardened ? 0 : exposure * 0.6;
     case "popsmoke": return rig.smokeNextActivation ? 0 : exposure * 0.6;
-    case "purge": case "heatpurgewave": return heat >= cap - 2 ? 2 : 0;
+    case "purge": return heat >= cap - 2 ? 2 : 0;
+    // Digital wave: vents AND scalds whoever stands within 3".
+    case "heatpurgewave": return (heat >= cap - 2 ? 2 : 0) + enemiesNear(room, rig, 3).length * 0.8;
+    case "cryo": {
+      if (heat >= cap - 1) return 2;
+      const canShoot = livingEnemies(room, rig).some((e) => shotValue(room, rig, rig.pos, rig.facing, e, e.pos, e.facing) > 0);
+      return canShoot ? 0.4 * cand.n : 0;
+    }
+    case "meltdown": {
+      if (cand.mode === "burst") return enemiesNear(room, rig, 4).length * cand.n * 0.5;
+      const canShoot = livingEnemies(room, rig).some((e) => shotValue(room, rig, rig.pos, rig.facing, e, e.pos, e.facing) > 0);
+      return canShoot ? 0.5 * cand.n : 0;
+    }
+    case "nanite": {
+      const stack = rig.equipState?.naniteStacks?.find((x) => x.loc === cand.location);
+      return (stack?.sp || 0) >= 3 ? 0 : 0.4 + fragility(rig) * 3;
+    }
+    // Grapnel reel: drag a victim into this rig's blade.
+    case "jumpjets": return cand.mode === "reel" ? 9 : 0;
     case "overclock": return left >= 2 && heat + 3 < cap ? 1.4 : 0;
     case "locksight": {
       // Only worth it primed for a shot this activation, and only once.

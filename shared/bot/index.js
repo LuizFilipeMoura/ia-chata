@@ -42,8 +42,14 @@ function toCommand(cand, rig) {
     attrs.prep = cand.prep;
   } else if (cand.action === "lock") {
     attrs.target = cand.target;
-  } else if (cand.action === "repair" || cand.action === "emergencypatch") {
+  } else if (cand.action === "repair" || cand.action === "emergencypatch" || cand.action === "nanite") {
     attrs.loc = cand.location;
+  } else if (cand.action === "cryo" || cand.action === "meltdown") {
+    attrs.n = cand.n;
+    if (cand.mode) attrs.mode = cand.mode;
+  } else if (cand.action === "jumpjets" && cand.mode === "reel") {
+    attrs.mode = "reel";
+    attrs.target = cand.target;
   }
   return { verb: "action", attrs };
 }

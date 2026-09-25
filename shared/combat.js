@@ -92,7 +92,9 @@ export function aimBreakdown(attacker, profile, opts) {
   // other targeting-computer upgrades resolve to 0.
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
   const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAccuracy ?? 0) : 0;
-  const accuracyTotal = weaponAccuracy - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAccuracy + staggerPenalty;
+  // Campaign side modifiers (Gyro Stabilisers relic): flat Accuracy on every attack.
+  const modAcc = attacker.mods?.acc || 0;
+  const accuracyTotal = weaponAccuracy - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAccuracy + staggerPenalty + modAcc;
 
   // The two headline inputs are ALWAYS terms, even at 0, exactly as penBreakdown
   // always pushes "weapon Penetration": they are what every modifier below is measured
@@ -140,6 +142,7 @@ export function aimBreakdown(attacker, profile, opts) {
   if (ballistic) terms.push({ label: "ballistic processor", value: ballistic });
   if (predictiveAccuracy) terms.push({ label: "predictive tracking", value: predictiveAccuracy });
   if (staggerPenalty) terms.push({ label: "staggered", value: staggerPenalty });
+  if (modAcc) terms.push({ label: "campaign kit", value: modAcc });
 
   return { value: base - accuracyTotal, terms };
 }
