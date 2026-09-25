@@ -186,6 +186,7 @@ export class LiveMatch {
       else if (l.kind === "destruction") lines.push({ icon: "dmg", tone: "bad", text: l.summary.split(",")[0] });
       else if (l.kind === "overheat" && !/Nothing happens/.test(l.summary || "")) lines.push({ icon: "heat", text: l.summary.split("(")[0] });
       else if (l.kind === "score" && !l.contested) lines.push({ icon: "beacon", tone: l.side === this.side ? "good" : "", text: `${l.side === this.side ? "You" : "Enemy"} scored a beacon: +${l.vp} VP` });
+      else if (l.kind === "grit") lines.push({ icon: "grit", tone: l.side === this.side ? "good" : "", text: l.summary });
       else if (l.kind === "reaction" || l.kind === "prepare") lines.push({ icon: "prepare", text: l.summary });
     }
     this.hud.digest(lines);
@@ -916,22 +917,46 @@ export class LiveMatch {
     const g = this.game;
     if (this.gateOpen) return;
     if (g.pendingAnswer?.side === this.side) {
-      const eligible = this.state.rigs.filter((r) => r.owner === this.side && !r.destroyed && r.preparation == null);
-      if (!eligible.length) return;
+      // Answer token: a free face-down reaction. Grit token (you're 2+ VP
+      // behind): the same, but Improved, and it may instead upgrade a
+      // reaction a rig already holds.
+      const answers = g.pendingAnswer.remaining ?? g.answerTokens?.[this.side] ?? 0;
+      const grit = g.pendingAnswer.grit ?? g.gritTokens?.[this.side] ?? 0;
+      const mine = this.state.rigs.filter((r) => r.owner === this.side && !r.destroyed);
+      const free = mine.filter((r) => r.preparation == null);
+      const upgradable = mine.filter((r) => r.preparation != null && !r.preparation.improved);
+      const useGrit = grit > 0 && (free.length || upgradable.length);
+      if (!useGrit && !(answers > 0 && free.length)) return;
       this.gateOpen = true;
-      const pick = { rig: eligible[0].name, prep: "brace" };
+      const pick = { grit: !!useGrit && !(answers > 0 && free.length), rig: null, prep: "brace" };
       const preps = ["brace", "evasive", "return", ...ANSWER_COUNTERS];
-      const rigsEl = el("div", { class: "rx-rigs" }), cardsEl = el("div", { class: "rx-grid" });
+      const eligible = () => (pick.grit ? [...free, ...upgradable] : free);
+      if (!eligible().some((r) => r.name === pick.rig)) pick.rig = eligible()[0]?.name;
+      const tokenEl = el("div", { class: "rx-tokens" }), rigsEl = el("div", { class: "rx-rigs" }), cardsEl = el("div", { class: "rx-grid" }), leadEl = el("p", { class: "rx-lead" });
       const draw = () => {
-        fill(rigsEl, eligible.map((r) => rigPortrait(r, { selected: r.name === pick.rig, onClick: () => { pick.rig = r.name; draw(); } })));
-        fill(cardsEl, preps.map((p) => reactionCard(p, { selected: p === pick.prep, onClick: () => { pick.prep = p; draw(); } })));
+        if (!eligible().some((r) => r.name === pick.rig)) pick.rig = eligible()[0]?.name;
+        const rig = mine.find((r) => r.name === pick.rig);
+        const upgrade = pick.grit && rig?.preparation != null;
+        fill(tokenEl, answers > 0 && free.length ? el("button", { class: `btn ${pick.grit ? "ghost" : "primary"}`, onClick: () => { pick.grit = false; draw(); } }, `Answer token ×${answers}`) : null,
+          useGrit ? el("button", { class: `btn ${pick.grit ? "primary" : "ghost"}`, onClick: () => { pick.grit = true; draw(); } }, icon("grit"), `Grit token ×${grit} (Improved)`) : null);
+        fill(leadEl, pick.grit
+          ? "You're behind, so HQ sent a Grit token: place an Improved reaction face-down, or upgrade one a rig already holds. The enemy won't know which."
+          : "A new round gives you a free reaction. Place it face-down on one rig: it springs the next time that rig is attacked. The enemy won't know which trick it is.");
+        fill(rigsEl, eligible().map((r) => rigPortrait(r, { selected: r.name === pick.rig, onClick: () => { pick.rig = r.name; draw(); } })));
+        fill(cardsEl, upgrade
+          ? [el("p", { class: "muted" }, `${rig.name} already holds a face-down reaction. The Grit token upgrades it:`), reactionCard(rig.preparation.type, { selected: true, improved: true })]
+          : preps.map((p) => reactionCard(p, { selected: p === pick.prep, improved: pick.grit, onClick: () => { pick.prep = p; draw(); } })));
       };
       draw();
-      const body = el("div", { class: "rx" },
-        el("p", { class: "rx-lead" }, "🎁 A new round gives you a free reaction. Place it face-down on one rig: it springs the next time that rig is attacked. The enemy won't know which trick it is."),
+      const body = el("div", { class: "rx" }, tokenEl, leadEl,
         el("h4", {}, "1. Choose a rig"), rigsEl,
         el("h4", {}, "2. Choose its reaction"), cardsEl);
-      modal({ title: "Answer token", cls: "wide", body, dismissable: false, actions: [{ label: "Place reaction", primary: true, onClick: async () => { await this.send("answer", { name: pick.rig, prep: pick.prep, side: this.side }); this.gateOpen = false; this.refresh(); } }] });
+      modal({ title: useGrit ? "Answer · Grit" : "Answer token", cls: "wide", body, dismissable: false, actions: [{ label: "Place reaction", primary: true, onClick: async () => {
+        const rig = mine.find((r) => r.name === pick.rig);
+        const attrs = { name: pick.rig, prep: pick.prep, side: this.side };
+        if (pick.grit) { attrs.grit = true; if (rig?.preparation != null) attrs.upgrade = true; }
+        await this.send("answer", attrs); this.gateOpen = false; this.refresh();
+      } }] });
       return;
     }
     const pr = g.pendingReaction;

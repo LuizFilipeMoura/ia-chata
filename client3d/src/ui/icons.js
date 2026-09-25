@@ -60,6 +60,8 @@ const P = {
   book: `<path d="M32 16 C24 10 14 10 8 12 V52 C14 50 24 50 32 56 C40 50 50 50 56 52 V12 C50 10 40 10 32 16 Z"/><path d="M32 16 V56"/>`,
   // Enemy fire zones: a wedge with a warning eye.
   threat: `<path d="M32 56 L10 16 A40 40 0 0 1 54 16 Z"/><circle cx="32" cy="28" r="6"/><path d="M22 28 C26 22 38 22 42 28 C38 34 26 34 22 28 Z"/>`,
+  // Grit: a clenched gauntlet (knuckles over a cuff).
+  grit: `<path d="M16 30 V20 C16 16 22 16 22 20 V28 M22 20 V16 C22 12 28 12 28 16 V28 M28 17 C28 13 34 13 34 17 V28 M34 19 C34 15 40 15 40 19 V32"/><path d="M16 28 C12 30 12 38 18 42 L24 48 H40 L44 40 V30 C44 26 40 26 40 30"/><path d="M22 48 V56 H42 V48"/>`,
   // Stagger: a ringing plate with shock lines.
   stagger: `<circle cx="32" cy="34" r="14"/><path d="M32 6 V14 M12 14 L18 20 M52 14 L46 20 M6 34 H12 M52 34 H58"/><path d="M28 30 L34 36 L30 40" />`,
 };
@@ -81,6 +83,6 @@ const FAMILY = {
   heat: ["heat", "engine", "overclock"],
   cool: ["shutdown", "purge", "douse", "cryo"],
   repair: ["repair", "patch", "sp"],
-  info: ["advisor", "beacon", "dice", "arms", "star", "sound", "mute", "check", "active", "book"],
+  info: ["advisor", "beacon", "dice", "arms", "star", "grit", "sound", "mute", "check", "active", "book"],
 };
 export const FAMILY_OF = Object.fromEntries(Object.entries(FAMILY).flatMap(([f, ns]) => ns.map((n) => [n, f])));

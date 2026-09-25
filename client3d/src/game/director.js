@@ -386,13 +386,18 @@ export class Director {
       const t = this.mechs.get(l.rigId);
       if (t) { fx.explosion(up(t, 1), false); this.sound(() => sfx.explosion(false)); }
       await wait(250 / this.speed);
+    } else if (l.kind === "grit") {
+      // The side that's behind digs in: a Grit token arrives.
+      this.onBanner(`GRIT · ${l.side === this.side ? "YOU DIG IN" : "THE ENEMY DIGS IN"}`, "grit");
+      this.sound(() => sfx.score(l.side === this.side));
+      await wait(400 / this.speed);
     } else if (l.kind === "initiative") {
       this.onBanner(l.summary, "info");
     } else if (actor && l.summary) {
       if (l.rolls?.length && l.kind === "reaction" && this.onDice && !this.skipping && !this.quiet) this.onDice(l);
       // Preparations, reactions, equipment, reloads… a short tag over the rig.
       const short = { prepare: "PREPARED", reload: "RELOAD", repair: "REPAIR", reaction: "REACTION!", equipment: "SYSTEM", lock: "LOCK", emplace: "EMPLACED", barrage: "BARRAGE", shutdown: "SHUT DOWN", perk: null }[l.kind];
-      if (short) fx.text(up(actor, 3.4), short, "#9fd8ff");
+      if (short) fx.text(up(actor, 3.4), l.improved && short === "REACTION!" ? "IMPROVED REACTION!" : short, l.improved ? "#f0cf7a" : "#9fd8ff");
       if (l.kind === "barrage") fx.explosion(up(actor, 1.5), false);
       await wait(150 / this.speed);
     }

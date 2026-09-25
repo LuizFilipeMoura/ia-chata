@@ -26,14 +26,26 @@ export const REACTIONS = {
   "raise-shield": { name: "Raise Shield", when: "The next hit from the front.", does: "The Bulwark takes the blow instead of the rig.", pick: "Only the shield rig. Excellent against a frontal assault." },
 };
 
-export function reactionCard(key, { selected = false, onClick } = {}) {
+// What an Improved (Grit) version adds, per reaction.
+export const IMPROVED = {
+  brace: "−3 Penetration on front hits (instead of −2).",
+  "raise-shield": "Side and rear hits at −4 Penetration (instead of −3).",
+  evasive: "Dodges on 3+ (instead of 4+).",
+  sidestep: "Slips away on 3+ (instead of 4+).",
+  return: "Its counter-attack gets +2 Penetration.",
+  riposte: "Its counter-strike gets +2 Penetration.",
+  exploit: "Its counter-shot gets +2 Penetration.",
+};
+
+export function reactionCard(key, { selected = false, improved = false, onClick } = {}) {
   const r = REACTIONS[key] || { name: key, when: "", does: "", pick: "" };
   const art = el("div", { class: "rx-art" });
   art.innerHTML = `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${ART[key] || ART.brace}</svg>`;
-  return el("button", { class: `rx-card ${selected ? "on" : ""}`, onClick },
+  return el("button", { class: `rx-card ${selected ? "on" : ""} ${improved ? "improved" : ""}`, onClick },
     art,
     el("div", { class: "rx-body" },
-      el("div", { class: "rx-name" }, r.name),
+      el("div", { class: "rx-name" }, improved ? el("span", { class: "rx-imp" }, "IMPROVED ") : null, r.name),
+      improved && IMPROVED[key] ? el("div", { class: "rx-row rx-imp-row" }, el("span", { class: "rx-k" }, "Grit"), el("span", {}, IMPROVED[key])) : null,
       el("div", { class: "rx-row" }, el("span", { class: "rx-k" }, "Triggers"), el("span", {}, r.when)),
       el("div", { class: "rx-row" }, el("span", { class: "rx-k" }, "Effect"), el("span", {}, r.does)),
       el("div", { class: "rx-tip" }, r.pick)));

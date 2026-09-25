@@ -58,10 +58,13 @@ export class Hud {
       return;
     }
     const who = g.phase === "finished" ? "Battle over" : g.phase === "initiative" ? "Rolling initiative…" : g.pendingAnswer ? (g.pendingAnswer.side === side ? "Place your Answer token" : "Enemy placing Answer…") : turn === side ? "YOUR MOVE, IRONCLAD" : "ENEMY ADVANCING";
+    // Grit tokens held (the side that's 2+ VP behind gets one each round).
+    const grit = (id) => { const n = g.gritTokens?.[id] || 0; return n ? el("span", { class: "grit-chip", title: `${n} Grit token${n > 1 ? "s" : ""}: an Improved free reaction (the side 2+ VP behind gets one each round)` }, icon("grit"), `×${n}`) : null; };
+    const theirs = g.sides.find((s) => s.id !== side)?.id;
     fill(this.topEl, 
-      el("div", { class: "vp a", title: "Victory points: salvage held + priority kills" }, el("span", { class: "k" }, "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0))),
+      el("div", { class: "vp a", title: "Victory points: salvage held + priority kills" }, el("span", { class: "k" }, "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0)), grit(side)),
       el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10${g.suddenDeath ? " · SUDDEN DEATH" : ""}`), el("div", { class: "who" }, who), this.turnOrder(state)),
-      el("div", { class: "vp b", title: "Enemy victory points" }, el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : "ENEMY")),
+      el("div", { class: "vp b", title: "Enemy victory points" }, grit(theirs), el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : "ENEMY")),
     );
   }
 
@@ -71,7 +74,7 @@ export class Hud {
     const pri = Object.values(state.game.priorityTargets || {}).includes(r.id);
     return el("div", { class: `rig-card ${r.destroyed ? "dead" : ""} ${r.activated ? "spent" : ""} ${selected ? "sel" : ""} ${state.game.turn?.activeRigId === r.id ? "active" : ""}`, onClick: () => onPick?.(r.id) },
       el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), pri ? el("span", { class: "tag pri", title: "Priority target: +3 VP for the kill (+1 like any wreck, +2 bonus)" }, icon("star")) : null,
-        r.preparation ? el("span", { class: "tag", title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : "prepare"), r.preparation.hidden ? "" : r.preparation.type) : null,
+        r.preparation ? el("span", { class: `tag ${r.preparation.improved ? "imp" : ""}`, title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.improved ? "Improved " : ""}${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare"), r.preparation.hidden ? "" : `${r.preparation.improved ? "+" : ""}${r.preparation.type}`) : null,
         r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee: must Disengage to move" }, icon("melee")) : null),
       el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""),
       el("div", { class: "rc-sp" }, LOCS.map((l) => {

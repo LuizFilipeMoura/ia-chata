@@ -693,3 +693,12 @@ body { font-size: 18px; }
 .db-table th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); padding: 4px 6px; }
 .db-table td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.05); }
 @media (max-width: 800px) { .dicetray { bottom: 260px; min-width: 0; width: calc(100% - 32px); } .dt-l { min-width: 100px; } .digest { top: auto; bottom: 170px; left: 10px; right: 10px; width: auto; } }
+/* Grit tokens: the comeback reaction. */
+.grit-chip { display: inline-flex; align-items: center; gap: 2px; font: 600 15px var(--body); color: var(--brass-hi, #f0cf7a); background: rgba(240,207,122,.12); border: 1px solid rgba(240,207,122,.4); border-radius: 10px; padding: 0 6px; }
+.grit-chip .si { width: 16px; height: 16px; margin: 0; }
+.banner.grit { color: var(--brass-hi, #f0cf7a); font-size: 36px; }
+.tag.imp { color: var(--brass-hi, #f0cf7a); }
+.rx-tokens { display: flex; gap: 8px; margin-bottom: 6px; }
+.rx-card.improved { border-color: var(--brass-hi, #f0cf7a) !important; box-shadow: 0 0 12px rgba(240,207,122,.25); }
+.rx-imp { color: var(--brass-hi, #f0cf7a); font-size: 13px; letter-spacing: .08em; }
+.rx-imp-row { color: var(--brass-hi, #f0cf7a); }

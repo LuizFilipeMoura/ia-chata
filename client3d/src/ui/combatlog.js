@@ -14,7 +14,7 @@ let rigSource = () => null;
 export function setRigSource(fn) { rigSource = fn || (() => null); }
 
 const LOC = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
-const ICON = { attack: "⚔", overheat: "🔥", destruction: "💥", initiative: "⚑", reaction: "🛡", prepare: "🛡", repair: "🔧", reload: "🔄", equipment: "⚙", blast: "💥", perk: "✦", lock: "📡", barrage: "💣", emplace: "⚓", shutdown: "❄" };
+const ICON = { attack: "⚔", overheat: "🔥", destruction: "💥", initiative: "⚑", reaction: "🛡", prepare: "🛡", repair: "🔧", reload: "🔄", equipment: "⚙", blast: "💥", perk: "✦", lock: "📡", barrage: "💣", emplace: "⚓", shutdown: "❄", grit: "✊" };
 const signed = (v) => (v > 0 ? `+${v}` : `${v}`);
 
 export class CombatLog {

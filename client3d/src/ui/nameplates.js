@@ -47,7 +47,7 @@ export class Nameplates {
       const icons = [];
       if (r.id === activeId) icons.push(["active", "Acting now"]);
       if (priorityIds.includes(r.id)) icons.push(["star", "Priority target"]);
-      if (r.preparation) icons.push([r.preparation.hidden ? "hidden" : "prepare", "Prepared reaction"]);
+      if (r.preparation) icons.push([r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare", r.preparation.improved ? "Improved reaction (Grit)" : "Prepared reaction"]);
       if (r.engagedWith != null) icons.push(["melee", "Locked in melee"]);
       if (r.staggered) icons.push(["stagger", "Staggered: −1 Aim on its next attack"]);
       if (r.activated) icons.push(["check", "Already acted this round"]);
