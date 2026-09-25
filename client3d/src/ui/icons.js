@@ -64,7 +64,8 @@ export function icon(name, cls = "") {
 
 // Colour families: the same colour means the same kind of thing everywhere.
 const FAMILY = {
-  attack: ["fire", "aimed", "pen", "dmg", "shots", "aim", "melee", "barrage", "lock"],
+  pierce: ["pen"],
+  attack: ["fire", "aimed", "dmg", "shots", "aim", "melee", "barrage", "lock"],
   move: ["move", "sprint", "disengage", "jumpjets", "legs", "range", "reach", "arc"],
   defence: ["prepare", "harden", "smoke", "tough", "hull", "cover", "anchor", "hidden"],
   heat: ["heat", "engine", "overclock"],

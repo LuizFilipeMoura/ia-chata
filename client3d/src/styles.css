@@ -640,3 +640,5 @@ body { font-size: 18px; }
 .act.off .ico .si, .act[aria-disabled="true"] .ico .si { opacity: .8 !important; }
 .ah-weps .si, .in-wh .si { width: 20px; height: 20px; margin: 0 3px 0 0; }
 .gl { white-space: nowrap; display: inline-flex; align-items: baseline; } .gl .si { align-self: center; }
+:root { --fam-pierce: #c58bff; }
+.si.fam-pierce { color: var(--fam-pierce) !important; }
