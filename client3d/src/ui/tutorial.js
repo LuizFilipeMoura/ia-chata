@@ -239,9 +239,13 @@ export class Coach {
     // not on top of its header.
     const box = lit.map((n) => n.closest(".hud-actions, .hud-roster")).find(Boolean);
     this.placePanel(box ? [box.getBoundingClientRect()] : holes);
-    const key = `${path}|${onBoard}`;
+    // Picking a spot or target on the table (move ring, fire targeting): the
+    // table IS the thing to look at, so no veil at all.
+    const onTable = !!this.match.mode;
+    const key = `${path}|${onBoard}|${onTable}`;
     if (key === this.veilKey) return;
     this.veilKey = key;
+    this.veil.style.display = onTable ? "none" : "";
     this.veil.setAttribute("viewBox", `0 0 ${w} ${h}`);
     this.veil.innerHTML = `<path pointer-events="none" fill-rule="evenodd" d="${path}" fill="rgba(12,10,8,${onBoard ? 0.35 : 0.62})"/>`;
   }
