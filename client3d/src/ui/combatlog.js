@@ -102,26 +102,59 @@ export class CombatLog {
   destroy() { document.removeEventListener("keydown", this.onKey); this.root.remove(); this.card.remove(); }
 }
 
-// The hover card's content for one log entry: every roll and term the engine
-// recorded. Shared with the Training Grounds' worked examples.
+// The hover card's content for one log entry, laid out as the four rolls of
+// an attack. Each roll says which die, the number to meet ("NEED 9+") and
+// WHY (the sum that built it), then shows every die as its own shape, marked
+// pass/fail, and the outcome. Shared with the Training Grounds examples.
+const ARC_PEN = { front: 0, side: 2, rear: 3 };
+const LOC_D12 = { hull: "1-4", arms: "5-7", legs: "8-10", engine: "11-12" };
+const die = (sides, value, ok) => el("span", { class: `die d${sides} ${ok ? "ok" : "no"}`, title: `D${sides} rolled ${value}: ${ok ? "success" : "fail"}` }, el("b", {}, String(value)), el("i", {}, ok ? "✓" : "✗"));
+const roll = (icon, name, sides, need, why, dice, out, good) => el("div", { class: "rl" },
+  el("div", { class: "rl-h" }, el("span", { class: "rl-ic" }, icon), el("b", {}, name),
+    sides ? el("span", { class: `rl-die d${sides}` }, `D${sides}`) : null,
+    need != null ? el("span", { class: "rl-need", title: "Each die must roll this or higher" }, `NEED ${need}+`) : null,
+    el("span", { class: `rl-out ${good ? "good" : "bad"}` }, out)),
+  why ? el("div", { class: "rl-why" }, why) : null,
+  dice?.length ? el("div", { class: "rl-dice" }, dice) : null);
+
 export function breakdownBody(l) {
-    const b = l.breakdown;
-  const dice = (arr) => el("span", { class: "dice" }, (arr || []).map((d) => el("i", { class: d.ok ? "ok" : "no" }, String(d.value))));
-  const terms = (arr) => (arr || []).map((t) => el("div", { class: "term" }, el("span", {}, t.label), el("span", {}, signed(t.value))));
+  const b = l.breakdown;
   let body;
   if (l.kind === "attack" && b) {
     body = [el("div", { class: "cc-title" }, `${b.actor} → ${b.target}`, el("span", { class: "muted" }, ` · ${b.weapon}`))];
     for (const s of b.steps || []) {
-      if (s.kind === "hit") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, `To hit: ${s.target}+ on D6`, el("span", { class: "out" }, s.out)), terms(s.terms), dice(s.dice)));
-      else if (s.kind === "location") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Location", el("span", { class: "out" }, s.out)), s.die != null ? dice([{ value: s.die, ok: true }]) : null));
-      else if (s.kind === "wound") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, s.target != null ? `Wound: ${s.target}+ on D10` : "Wound", el("span", { class: "out" }, s.out || "")),
-        s.pen != null ? el("div", { class: "muted small" }, `Penetration ${s.pen} vs Toughness ${s.toughness}`) : null, terms(s.terms), dice(s.dice)));
-      else if (s.kind === "damage") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Damage", el("span", { class: "out" }, s.out)), terms(s.terms)));
+      if (s.kind === "hit") {
+        const base = s.terms?.find((t) => t.label === "base aim")?.value ?? s.target;
+        const mods = (s.terms || []).filter((t) => t.label !== "base aim" && t.value);
+        const why = el("span", {}, `One D6 per shot. Start at ${base}+`,
+          mods.map((t) => ` · ${t.label} ${t.value > 0 ? `${t.value} easier` : `${-t.value} harder`}`), `. A 6 always hits.`);
+        const hits = (s.dice || []).filter((d) => d.ok).length;
+        body.push(roll("🎯", "To hit", 6, s.target, why, (s.dice || []).map((d) => die(6, d.value, d.ok)), s.out, hits > 0));
+      } else if (s.kind === "location") {
+        const loc = String(s.out).split(" ")[0];
+        body.push(roll("🎲", "Location", s.die != null ? 12 : null, null,
+          s.die != null ? `One D12 for the whole volley: Hull 1-4 · Arms 5-7 · Legs 8-10 · Engine 11-12. Rolled ${s.die}: ${LOC_D12[loc] ? loc : s.out}.` : "Aimed Shot: no roll, the shooter chose the part.",
+          s.die != null ? [die(12, s.die, true)] : null, `→ ${s.out}`, true));
+      } else if (s.kind === "wound") {
+        if (s.target == null) { body.push(roll("🔩", "Wound", null, null, null, null, s.out, false)); continue; }
+        const arc = b.arc || "front";
+        const penParts = (s.terms || []).map((t) => `${t.label} ${t.value > 0 ? "+" : ""}${t.value}`);
+        if (!(s.terms || []).some((t) => /arc/.test(t.label))) penParts.push(`${arc} arc +${ARC_PEN[arc] ?? 0}`);
+        const why = el("div", {},
+          el("div", {}, `One D10 per hit. Need 6 + Toughness ${s.toughness} − Penetration ${s.pen} = ${s.target}+`),
+          el("div", { class: "rl-sub" }, `Penetration ${s.pen}: ${penParts.join(", ")}. The hit arc matters: side +2, rear +3. 10 always wounds, 1 never.`));
+        const w = (s.dice || []).filter((d) => d.ok).length;
+        body.push(roll("🔩", "Wound", 10, s.target, why, (s.dice || []).map((d) => die(10, d.value, d.ok)), s.out, w > 0));
+      } else if (s.kind === "damage") {
+        const wounds = s.terms?.find((t) => t.label === "wounds")?.value ?? 0;
+        const extras = (s.terms || []).filter((t) => t.label !== "wounds");
+        body.push(roll("💥", "Damage", null, null, `${wounds} wound${wounds === 1 ? "" : "s"} × ${extras.map((t) => `${t.label} ${t.value}`).join(" + ") || "damage"}`, null, s.out, b.sp > 0));
+      }
     }
   } else {
     body = [el("div", { class: "cc-title" }, l.summary || l.kind),
-      (l.rolls || []).length ? el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Rolls"), el("span", { class: "dice" }, l.rolls.map((r) => el("i", { class: r.tone === "miss" ? "no" : "ok", title: `${r.label} (d${r.sides})` }, String(r.value))))) : null];
+      (l.rolls || []).length ? el("div", { class: "rl" }, el("div", { class: "rl-h" }, el("b", {}, "Rolls")), el("div", { class: "rl-dice" }, l.rolls.map((r) => el("span", { class: "rl-lab" }, die(r.sides, r.value, r.tone !== "miss"), el("small", {}, r.label))))) : null];
   }
-  if (l.effects?.length) body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Effects"), l.effects.map((x) => el("div", { class: "fx" }, `• ${x}`))));
+  if (l.effects?.length) body.push(el("div", { class: "rl" }, el("div", { class: "rl-h" }, el("span", { class: "rl-ic" }, "⚡"), el("b", {}, "Effects")), l.effects.map((x) => el("div", { class: "fx" }, `• ${x}`))));
   return body;
 }

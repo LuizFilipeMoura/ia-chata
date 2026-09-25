@@ -492,8 +492,8 @@ body { font-size: 18px; }
 .ah-stat { min-width: 110px; }
 .clog { bottom: 10px; }
 @media (max-width: 1500px) { .clog { height: 200px; width: 360px; } }
-.coach { position: fixed !important; transition: left .25s ease, top .25s ease; }
-.coach-a, .coach-end { flex-wrap: nowrap; } .coach .btn { white-space: nowrap; }
+.coach { position: fixed !important; }
+.coach-a, .coach-end { flex-wrap: wrap; justify-content: flex-end; gap: 8px; } .coach .btn { white-space: nowrap; }
 /* Attack briefing */
 .atk { display: flex; flex-direction: column; gap: 10px; min-width: min(760px, 86vw); }
 .atk-sec { margin: 4px 0 0; font: 600 16px var(--label); letter-spacing: .16em; text-transform: uppercase; color: var(--brass); border-bottom: 1px solid rgba(201,161,74,.25); padding-bottom: 6px; }
@@ -553,3 +553,33 @@ body { font-size: 18px; }
 .ex-card { position: static !important; display: block !important; width: auto !important; pointer-events: auto; }
 .coach:has(.ex), .coach:has(.pipe) { width: 620px; }
 .coach { max-height: calc(100vh - 24px); overflow-y: auto; }
+.menu { width: min(620px, calc(100vw - 32px)) !important; }
+.menu .btn.big { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(17px, 3.6vw, 25px) !important; }
+.gl { color: var(--brass-hi, #e0b95c); border-bottom: 1px dotted currentColor; cursor: help; font-weight: 600; }
+.gl:hover { color: #fff3cf; background: rgba(214,164,74,.15); border-radius: 2px; }
+.part-zero .gl, .atk-card .gl { color: inherit; }
+@media (max-width: 480px) { .menu .btn.big { font-size: 15px !important; padding: 12px 12px !important; letter-spacing: .02em; } }
+/* Roll ledger (combat log card + tutorial examples) */
+.clog-card { width: 440px !important; }
+.rl { padding: 10px 0; border-top: 1px solid rgba(201,161,74,.2); display: flex; flex-direction: column; gap: 6px; }
+.rl-h { display: flex; align-items: center; gap: 8px; } .rl-h b { font-family: var(--display); font-size: 19px; }
+.rl-ic { font-size: 19px; }
+.rl-die { font: 700 13px var(--label); padding: 2px 7px; border-radius: 4px; background: #3a3022; color: #e9dcc0; border: 1px solid #6a5634; }
+.rl-need { font: 700 15px var(--label); letter-spacing: .06em; padding: 2px 9px; border-radius: 12px; background: var(--brass-hi, #e0b95c); color: #1b150c; }
+.rl-out { margin-left: auto; font: 700 16px var(--label); } .rl-out.good { color: #9be07f; } .rl-out.bad { color: #ff8a6a; }
+.rl-why { font-size: 15px; color: #d9ccae; line-height: 1.4; } .rl-sub { color: var(--muted); margin-top: 2px; }
+.rl-dice { display: flex; flex-wrap: wrap; gap: 8px; }
+.die { position: relative; width: 38px; height: 38px; display: grid; place-items: center; font: 700 17px var(--label); color: #1b150c; }
+.die b { position: relative; z-index: 1; } .die i { position: absolute; bottom: -6px; right: -4px; font-style: normal; font-size: 13px; font-weight: 800; z-index: 2; }
+.die::before { content: ""; position: absolute; inset: 0; background: #e9dcc0; }
+.die.ok::before { background: linear-gradient(160deg, #b9f09a, #6fbf4f); } .die.ok i { color: #9be07f; }
+.die.no::before { background: #5a4a38; } .die.no { color: #c9b89a; } .die.no i { color: #ff8a6a; }
+.die.d6::before { border-radius: 7px; }
+.die.d10::before { clip-path: polygon(50% 0, 100% 42%, 50% 100%, 0 42%); }
+.die.d12::before { clip-path: polygon(50% 0, 97% 35%, 79% 95%, 21% 95%, 3% 35%); }
+.die.d10 b, .die.d12 b { margin-top: 3px; }
+.rl-lab { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; } .rl-lab small { font-size: 13px; color: var(--muted); }
+.coach { overflow-x: hidden !important; }
+.coach-a { row-gap: 8px; } .coach-end { margin-left: auto; }
+.ex-card.clog-card { width: auto !important; }
+.coach:has(.ex) { width: min(720px, calc(100vw - 32px)); }

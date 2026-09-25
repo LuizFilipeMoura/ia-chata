@@ -4,6 +4,7 @@
 // does, weapon stats, expected damage, heat).
 import { el } from "./dom.js";
 import { effectiveWeaponProfile } from "/shared/game-state.js";
+import { rich } from "./glossary.js";
 
 const ARC = {
   front: { pen: 0, text: "Front: its toughest armour. No bonus.", col: "#c8412f" },
@@ -71,7 +72,7 @@ function coverArt(cover) {
 }
 
 const tile = (art, label, value, col, meaning) => el("div", { class: "atk-tile", style: { borderColor: col } },
-  art, el("div", { class: "atk-k" }, label), el("b", { class: "atk-v", style: { color: col } }, value), el("div", { class: "atk-mean" }, meaning));
+  art, el("div", { class: "atk-k" }, label), el("b", { class: "atk-v", style: { color: col } }, value), el("div", { class: "atk-mean" }, rich(meaning)));
 
 const D12 = { hull: "1-4 (33%)", arms: "5-7 (25%)", legs: "8-10 (25%)", engine: "11-12 (17%)" };
 const PART_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
@@ -135,7 +136,7 @@ export function attackBriefing(rig, target, rows, onPick) {
       svg(ICON[kind], "atk-ic"),
       el("div", { class: "atk-body" },
         el("div", { class: "atk-title" }, title, i === 0 ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null),
-        el("div", { class: "atk-what" }, what),
+        el("div", { class: "atk-what" }, rich(what)),
         el("div", { class: "atk-stats" },
           el("span", { title: "Shots: dice rolled to hit" }, el("i", {}, "Shots"), String(p.rof ?? "?")),
           el("span", { title: "Penetration: how easily a hit wounds" }, el("i", {}, "Pen"), `${p.pen ?? "?"}${arc.pen ? ` +${arc.pen}` : ""}`),
@@ -147,6 +148,6 @@ export function attackBriefing(rig, target, rows, onPick) {
     el("h4", { class: "atk-sec" }, "The situation"), tiles,
     cards.length ? el("h4", { class: "atk-sec" }, "Choose your attack") : null, cards.length ? el("div", { class: "atk-cards" }, cards) : null,
     aimed.length ? el("h4", { class: "atk-sec" }, "Aimed Shot: choose where it hits") : null,
-    aimed.length ? el("p", { class: "atk-lead" }, `Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −2 Aim (fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`) : null,
+    aimed.length ? el("p", { class: "atk-lead" }, rich(`Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −2 Aim (fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`)) : null,
     aimed.length ? aimedPicker(target, aimed, onPick) : null);
 }

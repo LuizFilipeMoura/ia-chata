@@ -6,6 +6,7 @@ import { el } from "./dom.js";
 import { createRoom, applyCommand } from "/shared/game-state.js";
 import { mulberry32 } from "/shared/sim/match.js";
 import { breakdownBody } from "./combatlog.js";
+import { rich } from "./glossary.js";
 
 function shoot(scenario, seed, attrs, tweak) {
   const room = createRoom("EX");
@@ -48,6 +49,6 @@ export const woundInfo = (b) => { const w = step(b, "wound"); return w ? `Pen ${
 export function exampleCard(kind, caption) {
   const r = attackExample(kind);
   return el("div", { class: "ex" },
-    el("div", { class: "ex-cap" }, typeof caption === "function" ? (r ? caption(r.breakdown) : "") : caption),
+    el("div", { class: "ex-cap" }, rich(typeof caption === "function" ? (r ? caption(r.breakdown) : "") : caption)),
     r ? el("div", { class: "ex-card clog-card" }, breakdownBody(r)) : el("p", { class: "muted" }, "(no example found)"));
 }

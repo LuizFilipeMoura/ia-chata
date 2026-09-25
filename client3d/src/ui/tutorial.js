@@ -5,6 +5,7 @@
 import { el, clear, fill } from "./dom.js";
 import { heatTable } from "./hud.js";
 import { exampleCard, woundInfo } from "./examples.js";
+import { rich } from "./glossary.js";
 
 const res = (m) => m.state?.game?.resolutions || [];
 const myAttack = (m, test = () => true) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Copper" && test(r));
@@ -23,9 +24,9 @@ const PARTS = [
 const partsChart = (focus) => el("div", { class: "parts" }, PARTS.filter((p) => !focus || focus.includes(p.k)).map((p) =>
   el("div", { class: `part p-${p.k}` },
     el("div", { class: "part-h" }, el("span", { class: "part-ic" }, p.icon), el("b", {}, p.n), el("span", { class: "part-d12", title: "D12 hit-location roll" }, `🎲 ${p.d12}`)),
-    el("div", { class: "part-role" }, p.role),
-    el("div", { class: "part-zero" }, el("i", {}, "At 0 SP: "), p.zero),
-    el("div", { class: "part-more" }, p.more))));
+    el("div", { class: "part-role" }, rich(p.role)),
+    el("div", { class: "part-zero" }, el("i", {}, "At 0 SP: "), rich(p.zero)),
+    el("div", { class: "part-more" }, rich(p.more)))));
 
 // The attack pipeline at a glance: four rolls, each can stop the attack.
 const pipeline = (on) => el("div", { class: "pipe" }, [
@@ -33,7 +34,7 @@ const pipeline = (on) => el("div", { class: "pipe" }, [
   ["2", "🎲", "Location", "D12: which part"],
   ["3", "🔩", "Wound", "D10 per hit vs armour"],
   ["4", "💥", "Damage", "SP off that part"],
-].map(([n, ic, t, d]) => el("div", { class: `pipe-s ${on === n ? "on" : ""}` }, el("span", { class: "pipe-n" }, n), el("span", { class: "pipe-ic" }, ic), el("b", {}, t), el("span", {}, d))));
+].map(([n, ic, t, d]) => el("div", { class: `pipe-s ${on === n ? "on" : ""}` }, el("span", { class: "pipe-n" }, n), el("span", { class: "pipe-ic" }, ic), el("b", {}, t), el("span", {}, rich(d)))));
 
 const PICK = { title: "Select Copper", allow: { select: true }, text: "Click your rig on the table, or its card on the left. Selecting a rig shows its actions along the bottom.", highlight: ".hud-roster:not(.enemy)", done: picked };
 const DONE = (text) => ({ title: "Lesson complete ✓", allow: null, text, next: true, last: true });
@@ -74,7 +75,7 @@ export const LESSONS = [
       { title: "Four rolls", text: "Every attack runs the same four steps. Any of them can stop it. The next pages show each one, with real results from the rules engine.", extra: () => pipeline(), next: true },
       { title: "1. To hit", text: "Roll one D6 per shot (the weapon's Shots stat). Each die that meets your Aim target hits; a natural 6 always hits. Aim gets worse off the weapon's sweet spot, behind cover, or on an Aimed Shot.", extra: () => [pipeline("1"), exampleCard("miss", "A sniper fired point-blank, far off its sweet spot: the one die misses. Nothing else happens.")], next: true },
       { title: "2. Location", text: "One D12 decides which part the whole volley strikes: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12. That part's armour (Toughness) is what you must beat next.", extra: () => pipeline("2"), next: true },
-      { title: "3. Wound", text: "Each hit rolls a D10. It wounds on 6 + Toughness − Penetration or more. Heavy armour and a weak gun mean a high target number.", extra: () => [pipeline("3"), exampleCard("bounce", (b) => `A Rivet Gun (Pen 3, −1 on a light rig) into a medium's front. ${woundInfo(b)}. Hits land, but every wound roll fails: no damage.`)], next: true },
+      { title: "3. Wound", text: "Each hit rolls a D10. It wounds on 6 + Toughness − Penetration or more. Penetration depends on the hit arc: front +0, side +2, rear +3. So the same gun wounds far more easily from behind.", extra: () => [pipeline("3"), exampleCard("bounce", (b) => `A Rivet Gun (Pen 3, −1 on a light rig) into a medium's FRONT arc (+0). ${woundInfo(b)}. Hits land, but every wound roll fails: no damage.`)], next: true },
       { title: "Penetration is king", text: "Penetration lowers the wound target: each point is +10%. A flank adds +2, the rear +3. Toughness raises it. The target never goes below 2 or above 10.", extra: () => exampleCard("wound", (b) => `Same gun into the ${b.location}. ${woundInfo(b)}. A few dice make it, and only those deal damage.`), next: true },
       { title: "Lucky dice", text: "A natural 10 on the wound die ALWAYS wounds, and a natural 1 never does. No armour is immune, and no gun is guaranteed.", extra: () => exampleCard("lucky", (b) => `${woundInfo(b)}. Everything else fails, but a natural 10 punches through anyway.`), next: true },
       { title: "4. Damage", text: "Each wound takes the weapon's Damage stat off that part's SP. A strong gun from the rear barely needs luck.", extra: () => [pipeline("4"), exampleCard("flank", (b) => `An Autocannon into a medium's rear (+3 Pen). ${woundInfo(b)}: almost every hit wounds, each for its full Damage.`)], next: true },
@@ -228,6 +229,13 @@ export class Coach {
 
   render(already = false) {
     const s = this.steps[this.i];
+    // Events fire constantly (state, select, camera). Rebuilding the panel on
+    // each one swapped the buttons out mid-click, so clicks got lost. Only
+    // rebuild when what the panel shows actually changes.
+    const waitingNow = !!(s.done && !s.next && s.waitText && !s.done(this.match, this.ev));
+    const key = `${this.i}|${already}|${waitingNow}`;
+    if (key === this.renderKey) return;
+    this.renderKey = key;
     // Lock the game to what this step teaches (null = free play). Steps that
     // only explain allow nothing but the camera.
     this.match.gate = "allow" in s ? s.allow : {};
@@ -238,7 +246,7 @@ export class Coach {
     const waiting = s.done && !s.next && s.waitText && !s.done(this.match, this.ev);
     fill(this.panel, 
       el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, `${this.lesson.icon} ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
-      el("p", {}, s.text),
+      el("p", {}, rich(s.text)),
       s.extra ? s.extra() : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,
       already ? el("p", { class: "done-tick" }, "✓ Already done. Nice!") : null,

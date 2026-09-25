@@ -1020,7 +1020,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       // declares it `target?: string` and RollConsole renders it as "→ B". The
       // wound TN is a different number and lives on the wound step, as
       // `steps[i].target`. Do not merge them back into one key.
-      sp: total, location,
+      sp: total, location, arc: opts.arc || null,
     },
     effects: drama,
   });
