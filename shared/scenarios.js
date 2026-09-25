@@ -25,6 +25,15 @@ export const SCENARIOS = {
     ],
     objectives: [{ x: 27, y: 18, vp: 2 }],
   },
+  anatomy: {
+    title: "Rig anatomy",
+    rigs: [
+      { name: "Copper", owner: "a", chassis: ME, x: 12, y: 18, facing: 0 },
+      // Engine on its last point: one good Aimed Shot knocks it out.
+      { name: "Dummy", owner: "b", chassis: TARGET, x: 22, y: 18, facing: 180, sp: { engine: 1 } },
+    ],
+    objectives: [],
+  },
   fire: {
     title: "Open fire",
     rigs: [

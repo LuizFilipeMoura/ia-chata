@@ -11,6 +11,21 @@ const arcOf = (r) => /(side|rear) arc/.exec(JSON.stringify(r.breakdown || {}))?.
 const vpA = (m) => m.state?.game?.sides?.find((s) => s.id === "a")?.vp || 0;
 const picked = (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; };
 
+// The four components, illustrated: where each sits on the rig, how often the
+// D12 lands there, and what losing it does (rules.md §7, §8).
+const PARTS = [
+  { k: "hull", n: "Hull", d12: "1-4", icon: "🛡", role: "The armoured body. Toughest part, hit most often.", zero: "−2 actions per turn and −1 Aim.", more: "Hit again at 0: the rig is destroyed." },
+  { k: "arms", n: "Arms", d12: "5-7", icon: "🦾", role: "Carry both weapons.", zero: "A weapon is torn off and its ammo blows: 1 damage to Hull and 1 to Engine.", more: "Further hits spill into the Hull." },
+  { k: "legs", n: "Legs", d12: "8-10", icon: "🦿", role: "Speed and turning.", zero: "Move −3\", turning costs double, no backing up.", more: "Hit again: immobilised for the game, 1 damage spills to Hull." },
+  { k: "engine", n: "Engine", d12: "11-12", icon: "⚙", role: "The boiler. Least armoured, rarely hit.", zero: "Skips its next activation; heat can't drop below 3.", more: "Hit again at 0: the rig is destroyed." },
+];
+const partsChart = (focus) => el("div", { class: "parts" }, PARTS.filter((p) => !focus || focus.includes(p.k)).map((p) =>
+  el("div", { class: `part p-${p.k}` },
+    el("div", { class: "part-h" }, el("span", { class: "part-ic" }, p.icon), el("b", {}, p.n), el("span", { class: "part-d12", title: "D12 hit-location roll" }, `🎲 ${p.d12}`)),
+    el("div", { class: "part-role" }, p.role),
+    el("div", { class: "part-zero" }, el("i", {}, "At 0 SP: "), p.zero),
+    el("div", { class: "part-more" }, p.more))));
+
 const PICK = { title: "Select Copper", allow: { select: true }, text: "Click your rig on the table, or its card on the left. Selecting a rig shows its actions along the bottom.", highlight: ".hud-roster:not(.enemy)", done: picked };
 const DONE = (text) => ({ title: "Lesson complete ✓", allow: null, text, next: true, last: true });
 
@@ -32,6 +47,18 @@ export const LESSONS = [
       { title: "End the activation", allow: { end: true }, text: "Press End activation. At the end of the round every beacon you hold alone pays out.", highlight: '[data-act="end"]', done: (m) => vpA(m) > 0, waitText: "Waiting for the round to end…" },
       { title: "Points!", text: "Your salvage counter went up (top right). An enemy on the same beacon cancels you out: nobody scores it until one of you leaves or is wrecked.", highlight: ".hud-top", next: true },
       DONE("Hold beacons, contest theirs. Kills matter because they stop the enemy scoring."),
+    ] },
+  { id: "anatomy", icon: "🩻", title: "Rig anatomy", blurb: "Hull, Arms, Legs, Engine: what breaks, and what then.",
+    steps: [
+      { title: "Four parts, four health bars", text: "A rig has no single health pool. It has four components, each with its own Structure Points (SP). Those are the four bars on every rig card: H, A, L, E.", highlight: ".hud-roster:not(.enemy) .rc-sp", next: true },
+      { title: "Where a hit lands", text: "Every hit rolls a D12 for location, unless it's an Aimed Shot. The Hull is hit most; the Engine least. Each part also has its own armour (Toughness): the Hull is hardest to wound, the Engine easiest.", extra: () => partsChart(), next: true },
+      { title: "Losing a part", text: "When a part hits 0 SP it breaks, with a lasting effect. Hit a broken part again and it gets worse, and for Hull or Engine that means the rig is destroyed.", extra: () => partsChart(["hull", "engine"]), next: true },
+      { title: "Limbs", text: "Arms and Legs don't kill a rig on their own, but they cripple it. Extra damage to a broken limb spills into the Hull.", extra: () => partsChart(["arms", "legs"]), next: true },
+      { title: "Read the enemy", text: "Look at the dummy's card: its Engine bar (E) is almost empty. 1 SP left. Click the dummy for its full sheet any time.", highlight: ".hud-roster.enemy .rc-sp", next: true },
+      PICK,
+      { title: "Aim for the Engine", allow: { select: true, acts: ["aimed"] }, text: "Press Aimed Shot, click the dummy, and pick the Engine. Aimed Shots choose the location but aim worse (−2), so it may take a couple of tries.", highlight: '[data-act="aimed"]', done: (m) => (m.state?.rigs?.find((r) => r.name === "Dummy")?.engine?.sp ?? 1) <= 0 || res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 3 },
+      { title: "What happened?", text: "Hover the attack in the Combat log for the rolls. If the Engine hit 0, the dummy now skips its next activation. One more Engine hit would destroy it.", highlight: ".clog", next: true },
+      DONE("Focus fire on a weak part. Engine and Hull kill; Arms and Legs cripple. Protect your own weak spots."),
     ] },
   { id: "fire", icon: "🎯", title: "Open fire", blurb: "Shooting, dice and damage.",
     steps: [
@@ -140,13 +167,35 @@ export class Coach {
     setTimeout(() => this.check(), 50);
   }
 
+  // Park the coach next to what it's pointing at (above, below, then beside),
+  // clamped on screen. No highlight: its default spot top-left.
+  placePanel(holes) {
+    const p = this.panel, pw = p.offsetWidth, ph = p.offsetHeight, m = 16;
+    let x, y;
+    if (!holes.length) { p.style.left = ""; p.style.top = ""; p.style.right = ""; p.style.bottom = ""; return; }
+    const r = holes.reduce((a, b) => ({ left: Math.min(a.left, b.left), top: Math.min(a.top, b.top), right: Math.max(a.right, b.right), bottom: Math.max(a.bottom, b.bottom) }));
+    const cx = (r.left + r.right) / 2;
+    if (r.top - ph - m > 8) { x = cx - pw / 2; y = r.top - ph - m; }
+    else if (r.bottom + ph + m < innerHeight - 8) { x = cx - pw / 2; y = r.bottom + m; }
+    else if (r.right + pw + m < innerWidth - 8) { x = r.right + m; y = r.top; }
+    else { x = r.left - pw - m; y = r.top; }
+    x = Math.max(8, Math.min(innerWidth - pw - 8, x));
+    y = Math.max(8, Math.min(innerHeight - ph - 8, y));
+    p.style.left = `${Math.round(x)}px`; p.style.top = `${Math.round(y)}px`; p.style.right = "auto"; p.style.bottom = "auto";
+  }
+
   drawVeil() {
     const s = this.steps[this.i] || {};
     // Steps played on the board keep it readable: lighter veil.
     const onBoard = s.allow && (s.allow.select || s.allow.acts);
-    const holes = [...document.querySelectorAll(".coach-hl")].map((n) => n.getBoundingClientRect()).filter((r) => r.width && r.height);
+    const lit = [...document.querySelectorAll(".coach-hl")];
+    const holes = lit.map((n) => n.getBoundingClientRect()).filter((r) => r.width && r.height);
     const w = innerWidth, h = innerHeight, pad = 6;
     const path = `M0 0H${w}V${h}H0Z` + holes.map((r) => `M${r.left - pad} ${r.top - pad}v${r.height + pad * 2}h${r.width + pad * 2}v${-(r.height + pad * 2)}Z`).join("");
+    // A button inside a panel (the action bar): sit beside the whole panel,
+    // not on top of its header.
+    const box = lit.map((n) => n.closest(".hud-actions, .hud-roster")).find(Boolean);
+    this.placePanel(box ? [box.getBoundingClientRect()] : holes);
     const key = `${path}|${onBoard}`;
     if (key === this.veilKey) return;
     this.veilKey = key;

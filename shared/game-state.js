@@ -3673,6 +3673,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         r.pos = { x: e.x, y: e.y };
         r.facing = e.facing;
         if (e.heat) r.engine.heat = e.heat;
+        for (const [loc, v] of Object.entries(e.sp || {})) r[loc].sp = v;
       });
       room.game.objectives = sc.objectives.map((o) => ({ ...o }));
       room.game.sides.find((s) => s.id === "b").bot = sc.enemyBot || "dummy";

@@ -19,6 +19,7 @@ import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { reactionCard, rigPortrait } from "../ui/reactions.js";
 import { openInspector } from "../ui/inspector.js";
+import { attackBriefing } from "../ui/attack.js";
 import { sfx, ambience } from "../audio.js";
 import { settings } from "../settings.js";
 import { Nameplates } from "../ui/nameplates.js";
@@ -522,13 +523,9 @@ export class LiveMatch {
       return { c, ed, score };
     }).sort((a, b) => b.score - a.score);
     const w = (c) => c.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange;
-    modal({
-      title: `Attack ${target.name}`,
-      body: el("div", { class: "attack-list" },
-        el("p", { class: "muted" }, `Arc: ${list[0].arc} · ${list[0].distance.toFixed(1)}" · cover: ${list[0].cover || "none"}. Rear arcs hit harder, so flank!`),
-        rows.map((r, i) => el("button", { class: `attack-opt ${i === 0 ? "best" : ""}`, onClick: () => { document.querySelector(".modal-back")?.remove(); this.act(rig, { action: r.c.action, weapon: r.c.weapon, target: target.name, loc: r.c.location }).then(() => this.cancelMode()); } },
-          el("b", {}, `${r.c.action === "aimed" ? "Aimed · " + r.c.location : "Fire"}: ${w(r.c)}`),
-          el("span", {}, `≈${r.ed.toFixed(1)} SP expected${i === 0 ? " · advisor pick" : ""}`)))),
+    const m = modal({
+      title: `Attack ${target.name}`, cls: "wide",
+      body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location }).then(() => this.cancelMode()); }),
       actions: [{ label: "Cancel", ghost: true }],
     });
   }
