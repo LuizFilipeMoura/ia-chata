@@ -12,7 +12,7 @@ import { chooseAction } from "/shared/bot/index.js";
 import { scoreCandidate, scoreParts, PRESETS } from "/shared/bot/score.js";
 import { expectedDamage } from "/shared/bot/evaluate.js";
 import { findPath } from "/shared/pathfind.js";
-import { terrainPolygons, radiusOf, controlsObjective, distanceBetween } from "/shared/geometry.js";
+import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf } from "/shared/geometry.js";
 import { spatial, moveBudget, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
@@ -78,7 +78,7 @@ export class LiveMatch {
     });
     this.unsub = [
       world.on("click", (h, e) => this.onClick(h, e)),
-      world.on("rclick", () => this.cancelMode()),
+      world.on("rclick", () => this.backOut()),
       world.on("move", (h) => this.onHover(h)),
     ];
     world.onShiftWheel = (dy) => { const used = this.wheelTurn(dy); if (used && world.pointerWorld) this.onHover(world.pick()); return used; };
@@ -421,7 +421,14 @@ export class LiveMatch {
     this.ghost = null;
     this.hud.tip(null);
     for (const m of this.director.mechs.values()) m.aimAt(null);
+    this.emit("movephase", "idle");
     this.renderActions();
+  }
+
+  // Right-click / Esc: from "turning" go back to picking a spot; else cancel.
+  backOut() {
+    if (this.mode?.locked) { this.mode.locked = null; this.hud.tip("Click a spot inside the ring · Right-click to cancel"); this.emit("movephase", "dest"); return; }
+    this.cancelMode();
   }
 
   // ---- Move ----
@@ -439,8 +446,9 @@ export class LiveMatch {
     arc.rotation.x = -Math.PI / 2; arc.position.y = 0.05; g.add(arc);
     this.ghost = g; this.ghostMat = ringMesh.material;
     this.world.scene.add(g);
-    this.hud.tip("Click to move · Shift+wheel to turn · Right-click to cancel");
+    this.hud.tip("1) Click a spot inside the ring · 2) then turn · Right-click to cancel");
     this.renderActions();
+    this.emit("movephase", "dest");
   }
 
   movePreview(field) {
@@ -581,6 +589,27 @@ export class LiveMatch {
 
   // ---- Input ----
   onHover(hit) {
+    if (this.mode?.locked && hit.field && this.ghost) {
+      // Phase 2: the spot is set; the ghost turns to face the cursor (±90°
+      // from where the rig faces now). Near the ghost: keep the travel facing.
+      const L = this.mode.locked, rig = this.mode.rig;
+      let f = L.travelFacing;
+      if (Math.hypot(hit.field.x - L.dest.x, hit.field.y - L.dest.y) > radiusOf(rig) + 0.5) f = Math.atan2(hit.field.y - L.dest.y, hit.field.x - L.dest.x) / DEG;
+      const d = ((f - rig.facing + 540) % 360) - 180;
+      const clamped = Math.abs(d) > 90;
+      L.facing = rig.facing + Math.max(-90, Math.min(90, d));
+      this.ghost.rotation.y = -L.facing * DEG;
+      this.ghostMat.color.setHex(clamped ? 0xffd35a : 0x33ff99);
+      // Keep your front to the enemy: warn about anyone who'd be on your side
+      // or rear after this move (they hit harder there, and you can't shoot them).
+      const me = { pos: L.dest, facing: L.facing };
+      const exposed = this.state.rigs.filter((e) => e.owner !== rig.owner && !e.destroyed && e.pos)
+        .map((e) => ({ e, arc: arcOf({ pos: e.pos }, me) })).filter((x) => x.arc !== "front")
+        .sort((a, b) => (a.arc === "rear" ? -1 : 1));
+      const warn = exposed.length ? ` · ⚠ ${exposed[0].e.name} would hit your ${exposed[0].arc} (${exposed[0].arc === "rear" ? "+3" : "+2"} Pen) and you couldn't shoot it` : " · ✓ enemies in front";
+      this.hud.tip(`Facing ${Math.round(((L.facing % 360) + 360) % 360)}°${clamped ? " · max turn is 90° each way" : ""}${warn} · Click to confirm`);
+      return;
+    }
     if (this.mode && (this.mode.key === "move" || this.mode.key === "sprint" || this.mode.key === "jumpjets") && hit.field && this.ghost) {
       const p = this.movePreview(hit.field);
       this.ghost.position.set(hit.field.x, 0, hit.field.y);
@@ -611,10 +640,20 @@ export class LiveMatch {
 
   onClick(hit) {
     if (this.mode && (this.mode.key === "move" || this.mode.key === "sprint" || this.mode.key === "jumpjets")) {
-      const p = this.mode.preview;
-      if (!p) return;
-      if (!p.ok) { toast("Out of reach. Pick a spot inside the ring.", "warn"); return; }
       const rig = this.mode.rig;
+      if (!this.mode.locked) {
+        // Phase 1: lock the destination, then let the player turn.
+        const p0 = this.mode.preview;
+        if (!p0) return;
+        if (!p0.ok) { toast("Out of reach. Pick a spot inside the ring.", "warn"); return; }
+        this.mode.locked = { ...p0, travelFacing: p0.facing, facing: p0.facing };
+        this.hud.tip("Now move the mouse to turn · Click to confirm · Right-click to pick another spot");
+        this.emit("movephase", "face");
+        return;
+      }
+      const L = this.mode.locked;
+      const p = { ...L, facing: L.facing };
+      if (Math.abs(((L.facing - L.travelFacing + 540) % 360) - 180) > 10) this.emit("turned", L.facing);
       const attrs = this.mode.key === "jumpjets"
         ? { action: "jumpjets", dest: { x: +p.dest.x.toFixed(2), y: +p.dest.y.toFixed(2) }, facing: Math.round(p.facing) }
         : { action: this.mode.key, dest: { x: +p.dest.x.toFixed(2), y: +p.dest.y.toFixed(2) }, facing: Math.round(p.facing) };
@@ -636,7 +675,7 @@ export class LiveMatch {
 
   onKey(e) {
     if (e.target.closest?.("input,textarea")) return;
-    if (e.key === "Escape") this.cancelMode();
+    if (e.key === "Escape") this.backOut();
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); this.undo(); return; }
     if (e.key === " " && !this.director.idle) { e.preventDefault(); this.director.skip(); }
     if (e.key === "Enter" && this.activeRig && this.activeRig.owner === this.side) this.endActivation(this.activeRig);

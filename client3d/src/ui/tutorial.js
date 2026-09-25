@@ -47,7 +47,8 @@ export const LESSONS = [
       { title: "The table", text: "This is a quiet corner of the proving ground: just you (Copper) and a practice dummy far away. Pan with WASD or drag, rotate with Q/E, zoom with the wheel.", next: true },
       PICK,
       { title: "Actions and heat", text: "Each activation a rig gets 3 actions. Every button shows its cost: the flame number is heat added to the boiler.", highlight: ".hud-actions", next: true },
-      { title: "Move", allow: { select: true, acts: ["move"] }, text: "Press Move. The green ring is how far you can walk. Click inside it, toward the glowing beacon.", highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
+      { title: "Move", allow: { select: true, acts: ["move"] }, text: "Press Move. The green ring is how far you can walk. A move takes two clicks: first where to go, then which way to face.", phases: true, highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
+      { title: "Move and turn", allow: { select: true, acts: ["move"] }, text: "Move again, but this time turn before you confirm. Rule of thumb: end every move with your front arc toward the enemy. The front is your toughest armour and the only direction you can shoot; the hint at the top warns you if someone would end up on your side or rear. A move can turn up to 90° either way (the ghost goes yellow at the limit).", phases: true, highlight: '[data-act="move"]', done: (m, ev) => ev.turned },
       { title: "Sprint", allow: { select: true, acts: ["sprint"] }, text: "Sprint goes further but costs 2 heat instead of 1. Press Sprint and dash on toward the beacon.", highlight: '[data-act="sprint"]', done: (m, ev) => ev.sprinted },
       DONE("Moving spends actions and stokes heat. Sprint when distance matters; walk when heat does."),
     ] },
@@ -180,6 +181,8 @@ export class Coach {
       if (verb === "endactivation" || attrs?.action === "shutdown") this.ev.ended = true;
     });
     on("advisor", () => { this.ev.advised = true; });
+    on("turned", () => { this.ev.turned = true; });
+    on("movephase", () => {});
     on("state", () => {});
     on("select", () => {});
     this.camTimer = setInterval(() => { if (match.world.moved) { this.ev.camera = true; this.check(); } }, 400);
@@ -270,7 +273,8 @@ export class Coach {
     // each one swapped the buttons out mid-click, so clicks got lost. Only
     // rebuild when what the panel shows actually changes.
     const waitingNow = !!(s.done && !s.next && s.waitText && !s.done(this.match, this.ev));
-    const key = `${this.i}|${already}|${waitingNow}`;
+    const phase = s.phases ? (this.match.mode?.locked ? "face" : this.match.mode ? "dest" : "idle") : "";
+    const key = `${this.i}|${already}|${waitingNow}|${phase}`;
     if (key === this.renderKey) return;
     this.renderKey = key;
     // Lock the game to what this step teaches (null = free play). Steps that
@@ -284,6 +288,8 @@ export class Coach {
     fill(this.panel, 
       el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, icon(this.lesson.icon), ` ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
       el("p", {}, rich(s.text)),
+      phase === "dest" ? el("div", { class: "phase" }, el("b", {}, "Step 1 of 2"), " Click a spot inside the green ring.") : null,
+      phase === "face" ? el("div", { class: "phase" }, el("b", {}, "Step 2 of 2"), " Move the mouse to turn the ghost, then click to confirm. Right-click picks another spot.") : null,
       s.extra ? s.extra(this.match) : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,
       already ? el("p", { class: "done-tick" }, "✓ Already done. Nice!") : null,

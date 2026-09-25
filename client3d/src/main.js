@@ -118,7 +118,7 @@ async function play(room, { tutorial = false, lesson = null, cfg = null, side = 
   const hud = new Hud(hudRoot);
   const rematch = cfg ? async () => { fill(screen, el("div", { class: "loading" }, "Rematch: deploying…")); screen.style.display = ""; try { play(await createBotRoom(cfg), { cfg }); } catch (e) { toast(e.message, "bad"); home(); } } : null;
   const match = new LiveMatch(world, hud, { room, side, hotseat, tutorial: !!lesson, onExit: home, onRematch: rematch });
-  active = match;
+  active = match; if (window.__oi3d) window.__oi3d.match = match;
   hudRoot.append(el("div", { class: "hud-menu" },
     el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server. "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
     el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, "📖"),

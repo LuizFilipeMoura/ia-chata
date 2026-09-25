@@ -643,3 +643,4 @@ body { font-size: 18px; }
 :root { --fam-pierce: #c58bff; }
 .si.fam-pierce { color: var(--fam-pierce) !important; }
 .coach.docked { width: 330px !important; }
+.coach .phase { margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--fam-move); background: rgba(79,214,192,.1); font-size: 16px; } .coach .phase b { color: var(--fam-move); margin-right: 6px; }
