@@ -13,12 +13,13 @@ const TIER_TEXT = {
   hard: "GA-evolved champion: the meta's best builds and tactics.",
 };
 
-export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims, onVersus }) {
+export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims, onVersus, onCampaign }) {
   fill(root, el("div", { class: "title" },
     el("div", { class: "logo" }, el("span", {}, "OIL"), el("i", {}, "&"), el("span", {}, "IRON"), el("small", {}, "TACTICS · 3D")),
     el("p", { class: "tag" }, "Oil-soaked war rigs, brass-bound Ironclads, and a table of rubble to fight over."),
     el("div", { class: "menu" },
       el("button", { class: "btn big primary", onClick: onTutorial }, "🎓  Tutorial: learn by playing"),
+      onCampaign ? el("button", { class: "btn big", onClick: onCampaign }, "🗺  Campaign: mercenary contracts") : null,
       el("button", { class: "btn big", onClick: onPlay }, "⚔️  Skirmish vs Bot"),
       el("button", { class: "btn big", onClick: onVersus }, "🤝  Versus: 2 players"),
       el("button", { class: "btn big", onClick: onWatch }, "🍿  Watch Bots Fight"),

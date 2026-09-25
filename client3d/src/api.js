@@ -13,6 +13,23 @@ export const api = {
   command: (room, side, verb, attrs = {}) => req("POST", `/api/game/${room}/command`, { cmd: { verb, attrs }, side }),
   check: (room, side, verb, attrs = {}) => req("POST", `/api/game/${room}/command/check`, { cmd: { verb, attrs }, side }),
   chassis: () => req("GET", "/api/chassis"),
+  // Single-player campaign (server authoritative). Every call returns
+  // { profile, pools, run, last, ...extra }; errors carry e.data ({ error, ... }).
+  campaign: {
+    get: () => req("GET", "/api/campaign"),
+    unlock: (id) => req("POST", "/api/campaign/unlock", { id }),
+    start: (body) => req("POST", "/api/campaign/run", body),
+    node: (nodeId) => req("POST", "/api/campaign/run/node", { nodeId }),
+    resolve: () => req("POST", "/api/campaign/run/resolve", {}),
+    repair: (uid, loc = "all") => req("POST", "/api/campaign/run/repair", { uid, loc }),
+    recover: (uid) => req("POST", "/api/campaign/run/recover", { uid }),
+    reward: (body) => req("POST", "/api/campaign/run/reward", body),
+    buy: (index, target) => req("POST", "/api/campaign/run/buy", { index, target }),
+    respec: (body) => req("POST", "/api/campaign/run/respec", body),
+    continue: () => req("POST", "/api/campaign/run/continue", {}),
+    abandon: () => req("POST", "/api/campaign/run/abandon", {}),
+    close: () => req("POST", "/api/campaign/run/close", {}),
+  },
   sim: {
     evolve: (params) => req("POST", "/api/sim/evolve", params),
     job: (id) => req("GET", `/api/sim/jobs/${id}`),

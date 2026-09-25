@@ -11,6 +11,7 @@ import { Hud } from "./ui/hud.js";
 import { titleScreen, squadBuilder, createBotRoom, createVersusRoom, addSquad, opponentOf, readyUntilStarted, TABLES } from "./ui/menu.js";
 import { labScreen } from "./ui/lab.js";
 import { simCenter } from "./ui/simcenter.js";
+import { campaignScreen } from "./ui/campaign.js";
 import { Coach, LESSONS } from "./ui/tutorial.js";
 import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
@@ -89,6 +90,7 @@ function home() {
     onSims: () => sims(),
     onVersus: () => versus(),
     onWatch: () => watch(),
+    onCampaign: () => campaign(),
   });
   screen.append(el("div", { class: "title-mute" }, el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"), muteButton()));
   lastBattle().then((last) => {
@@ -131,6 +133,46 @@ async function play(room, { tutorial = false, lesson = null, cfg = null, side = 
     const next = LESSONS[LESSONS.indexOf(lesson) + 1];
     match.coach = new Coach(hudRoot, match, lesson, { onMenu: tutorial, onNext: next ? () => startLesson(next) : null });
   }
+}
+
+// ---- Campaign (single player, server-authoritative run) ----
+function campaign(opts = {}) {
+  teardown();
+  attract = attractMode();
+  campaignScreen(screen, { onHome: home, onDeploy: (room) => playCampaign(room), ...opts });
+}
+
+// A campaign battle: like play(), but no "Continue battle" save, no rematch,
+// no outcome modal; when it ends the server reads the room (/run/resolve) and
+// the Debrief takes over.
+async function playCampaign(room) {
+  teardown();
+  screen.style.display = "none";
+  const hud = new Hud(hudRoot);
+  const back = () => campaign();
+  const match = new LiveMatch(world, hud, { room, side: "a", onExit: back, onRematch: null, noOutcomeModal: true });
+  active = match; if (window.__oi3d) window.__oi3d.match = match;
+  let resolving = false;
+  const resolve = async () => {
+    if (resolving || active !== match) return;
+    resolving = true;
+    try { campaign({ view: await api.campaign.resolve(), fresh: "debrief" }); }
+    catch (e) { toast(e.message, "bad"); campaign(); }
+  };
+  match.events.addEventListener("finished", (e) => {
+    const won = e.detail?.winner === "a";
+    hudRoot.append(el("div", { class: `cp-battle-end ${won ? "won" : "lost"}` },
+      el("div", { class: "cp-stamp big anim " + (won ? "win" : "loss") }, won ? "Victory" : e.detail?.winner == null ? "Draw" : "Defeat"),
+      el("button", { class: "btn big primary", onClick: resolve }, "Debrief ▸")));
+    setTimeout(resolve, 4500);
+  });
+  hudRoot.append(el("div", { class: "hud-menu" },
+    el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, "The contract stays live on the server: \"Continue run\" at HQ brings you back to this battle."), actions: [{ label: "Resume", primary: true }, { label: "Back to HQ", ghost: true, onClick: back }] }) }, "☰"),
+    el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, icon("book")),
+    el("button", { class: "btn ghost", title: "Hotkeys (?)", onClick: hotkeys }, "⌨"),
+    el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"),
+    muteButton()));
+  try { await match.start(); } catch (e) { toast(e.message, "bad"); return campaign(); }
 }
 
 // Resume the last battle if the server still has it and it isn't over.
