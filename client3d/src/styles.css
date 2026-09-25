@@ -703,3 +703,7 @@ body { font-size: 18px; }
 .rx-imp { color: var(--brass-hi, #f0cf7a); font-size: 13px; letter-spacing: .08em; }
 .rx-imp-row { color: var(--brass-hi, #f0cf7a); }
 .hud-top .round .mult { color: var(--brass-hi, #f0cf7a); }
+/* Gritted attacks. */
+.atk-grit { margin-bottom: 8px; }
+.atk .ed-grit { display: none; } .atk.grit-on .ed-plain { display: none; } .atk.grit-on .ed-grit { display: inline; color: var(--brass-hi, #f0cf7a); }
+.dt-die.rr { box-shadow: 0 0 0 2px var(--brass-hi, #f0cf7a), 0 0 10px rgba(240,207,122,.5); }

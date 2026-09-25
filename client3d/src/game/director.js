@@ -286,6 +286,7 @@ export class Director {
       this.onCamera({ x: (actor.root.position.x + target.root.position.x) / 2, y: (actor.root.position.z + target.root.position.z) / 2 }, { owner: actor.owner });
       actor.aimAt(target.root.position.clone().setY(2));
       await wait(250 / this.speed);
+      if (l.grit) fx.text(up(actor, 3.8), "GRIT!", "#f0cf7a");
       if (this.onDice && !this.skipping && !this.quiet) await this.onDice(l);
       const m = /=\s*(\d+)\s*SP(?: to (\w+))?/.exec(l.summary || "");
       const sp = m ? Number(m[1]) : 0;
@@ -366,7 +367,7 @@ export class Director {
     } else if (l.kind === "destruction") {
       // The explosion is the status pass's (on the destroyed flag); the kill's VP is shown here.
       if (l.vp?.amount && actor) {
-        setTimeout(() => fx.text(up(actor, 4.6), `+${l.vp.amount} VP`, l.vp.side === "a" ? "#5fd3c0" : "#e0533d"), 900 / this.speed);
+        setTimeout(() => fx.text(up(actor, 4.6), `+${l.vp.amount} VP${l.vp.bounty ? " BOUNTY" : ""}`, l.vp.side === "a" ? "#5fd3c0" : "#e0533d"), 900 / this.speed);
         this.onScore(l);
       }
     } else if (l.kind === "score") {

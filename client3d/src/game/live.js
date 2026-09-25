@@ -710,15 +710,18 @@ export class LiveMatch {
   chooseAttack(rig, target, list) {
     if (this.mode?.key === "lock") return this.act(rig, { action: "lock", target: target.name }).then(() => this.cancelMode());
     const room = this.previewRoom(rig);
+    const grit = this.game.gritTokens?.[this.side] || 0;
     const rows = list.map((c) => {
-      const ed = expectedDamage(rig, target, c.weapon, { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round, aimed: c.action === "aimed", aimedLoc: c.location });
+      const o = { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round, aimed: c.action === "aimed", aimedLoc: c.location };
+      const ed = expectedDamage(rig, target, c.weapon, o);
+      const edGrit = grit ? expectedDamage(rig, target, c.weapon, { ...o, grit: true }) : null;
       const score = scoreCandidate(room, rig, c, this.advisorWeights);
-      return { c, ed, score };
+      return { c, ed, edGrit, score };
     }).sort((a, b) => b.score - a.score);
     const w = (c) => c.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange;
     const m = modal({
       title: `Attack ${target.name}`, cls: "wide",
-      body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location }).then(() => this.cancelMode()); }),
+      body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit }),
       actions: [{ label: "Cancel", ghost: true }],
     });
   }
@@ -947,7 +950,7 @@ export class LiveMatch {
         fill(tokenEl, answers > 0 && free.length ? el("button", { class: `btn ${pick.grit ? "ghost" : "primary"}`, onClick: () => { pick.grit = false; draw(); } }, `Answer token ×${answers}`) : null,
           useGrit ? el("button", { class: `btn ${pick.grit ? "primary" : "ghost"}`, onClick: () => { pick.grit = true; draw(); } }, icon("grit"), `Grit token ×${grit} (Improved)`) : null);
         fill(leadEl, pick.grit
-          ? "You're behind, so HQ sent a Grit token: place an Improved reaction face-down, or upgrade one a rig already holds. The enemy won't know which."
+          ? "You're behind, so HQ sent Grit: place an Improved reaction face-down, upgrade one a rig already holds, or keep the tokens to reroll missed shots this round. The enemy won't know which."
           : "A new round gives you a free reaction. Place it face-down on one rig: it springs the next time that rig is attacked. The enemy won't know which trick it is.");
         fill(rigsEl, eligible().map((r) => rigPortrait(r, { selected: r.name === pick.rig, onClick: () => { pick.rig = r.name; draw(); } })));
         fill(cardsEl, upgrade
@@ -958,12 +961,14 @@ export class LiveMatch {
       const body = el("div", { class: "rx" }, tokenEl, leadEl,
         el("h4", {}, "1. Choose a rig"), rigsEl,
         el("h4", {}, "2. Choose its reaction"), cardsEl);
-      modal({ title: useGrit ? "Answer · Grit" : "Answer token", cls: "wide", body, dismissable: false, actions: [{ label: "Place reaction", primary: true, onClick: async () => {
+      modal({ title: useGrit ? "Answer · Grit" : "Answer token", cls: "wide", body, dismissable: false, actions: [
+        useGrit ? { label: "Keep Grit for attacks", ghost: true, onClick: async () => { await this.send("answer", { side: this.side, keep: true }); this.gateOpen = false; this.refresh(); } } : null,
+        { label: "Place reaction", primary: true, onClick: async () => {
         const rig = mine.find((r) => r.name === pick.rig);
         const attrs = { name: pick.rig, prep: pick.prep, side: this.side };
         if (pick.grit) { attrs.grit = true; if (rig?.preparation != null) attrs.upgrade = true; }
         await this.send("answer", attrs); this.gateOpen = false; this.refresh();
-      } }] });
+      } }].filter(Boolean) });
       return;
     }
     const pr = g.pendingReaction;

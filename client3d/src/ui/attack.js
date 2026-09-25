@@ -101,20 +101,27 @@ function aimedPicker(target, rows, onPick) {
   const opts = ["hull", "arms", "legs", "engine"].filter((l) => byLoc[l]).map((l) => {
     const r = byLoc[l], sp = target[l]?.sp ?? 0, max = target[l]?.max ?? 0;
     const breaks = sp > 0 && r.ed >= sp;
-    return el("button", { class: `atk-loc ${l === best ? "best" : ""} ${sp <= 0 ? "broken" : ""}`, onClick: () => onPick(r.c),
+    return el("button", { class: `atk-loc ${l === best ? "best" : ""} ${sp <= 0 ? "broken" : ""}`, onClick: () => onPick(r.c, pickOpts()),
       onMouseenter: () => pic.replaceChild(rigSchematic(target, l), pic.firstChild) },
       el("div", { class: "atk-title" }, PART_NAME[l],
         breaks ? el("span", { class: "atk-break" }, "💥 BREAKS IT") : null,
         l === best ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null),
       el("div", { class: "atk-lsp" }, el("div", { class: "bar" }, el("i", { style: { width: `${max ? (sp / max) * 100 : 0}%` } })), `${sp}/${max} SP`),
       el("div", { class: "atk-what" }, sp <= 0 ? `Already broken. ${LOC[l].split(". ")[0]} again: ${l === "hull" || l === "engine" ? "DESTROYS the rig." : "damage spills to the Hull."}` : `At 0: ${LOC[l].split("At 0 ")[1] || LOC[l]}`),
-      el("div", { class: "atk-ed small" }, el("b", {}, icon("dmg"), `≈${r.ed.toFixed(1)}`), el("span", {}, "SP expected")));
+      el("div", { class: "atk-ed small" }, edNum(r), el("span", {}, "SP expected")));
   });
   return el("div", { class: "atk-aim" }, pic, el("div", { class: "atk-locs" }, opts));
 }
 
-// rows: [{ c: candidate, ed: expected SP, name: weapon name }], best first.
-export function attackBriefing(rig, target, rows, onPick) {
+// Expected SP, plain and with a Gritted reroll (the toggle shows one or the other).
+const edNum = (r) => el("b", {}, icon("dmg"), el("span", { class: "ed-plain" }, `≈${r.ed.toFixed(1)}`), r.edGrit != null ? el("span", { class: "ed-grit" }, `≈${r.edGrit.toFixed(1)}`) : null);
+let pickOpts = () => ({});
+
+// rows: [{ c: candidate, ed: expected SP, edGrit?: with Grit, name: weapon name }], best first.
+// opts.grit: Grit tokens the attacker's side holds (0 hides the toggle).
+export function attackBriefing(rig, target, rows, onPick, { grit = 0 } = {}) {
+  let gritOn = false;
+  pickOpts = () => (gritOn ? { grit: true } : {});
   const first = rows[0].c;
   const arc = ARC[first.arc] || ARC.front;
   const lr = effectiveWeaponProfile("longRange", rig.weapons.longRange, rig);
@@ -133,7 +140,7 @@ export function attackBriefing(rig, target, rows, onPick) {
     const kind = melee ? "melee" : r.c.action === "aimed" ? "aimed" : "fire";
     const title = kind === "aimed" ? `Aimed Shot at the ${r.c.location}` : melee ? `Strike with ${r.name}` : `Fire ${r.name}`;
     const what = melee ? "Swing the melee weapon. Locks you both in melee afterwards. One D12 picks the part it all lands on." : "Full volley. One D12 picks the part it all lands on: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
-    return el("button", { class: `atk-card ${i === 0 ? "best" : ""}`, onClick: () => onPick(r.c) },
+    return el("button", { class: `atk-card ${i === 0 ? "best" : ""}`, onClick: () => onPick(r.c, pickOpts()) },
       svg(ICON[kind], "atk-ic"),
       el("div", { class: "atk-body" },
         el("div", { class: "atk-title" }, title, i === 0 ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null),
@@ -143,12 +150,17 @@ export function attackBriefing(rig, target, rows, onPick) {
           el("span", { title: "Penetration: how easily a hit wounds" }, el("i", {}, icon("pen"), "Pen"), `${p.pen ?? "?"}${arc.pen ? ` +${arc.pen}` : ""}`),
           el("span", { title: "Damage per wound" }, el("i", {}, icon("dmg"), "Dmg"), String(p.dmg ?? "?")),
           el("span", { title: "Heat added to the boiler" }, el("i", {}, icon("heat"), "Heat"), "1"))),
-      el("div", { class: "atk-ed" }, el("b", {}, icon("dmg"), `≈${r.ed.toFixed(1)}`), el("span", {}, "SP expected")));
+      el("div", { class: "atk-ed" }, edNum(r), el("span", {}, "SP expected")));
   });
-  return el("div", { class: "atk" },
+  const wrap = el("div", { class: "atk" });
+  const toggle = grit > 0 ? el("button", { class: "btn ghost atk-grit", title: "Spend 1 Grit token: every missed to-hit die is rolled again once", onClick: () => {
+    gritOn = !gritOn; wrap.classList.toggle("grit-on", gritOn); toggle.classList.toggle("primary", gritOn); toggle.classList.toggle("ghost", !gritOn);
+  } }, icon("grit"), `Spend Grit: reroll misses (×${grit} left)`) : null;
+  wrap.append(...[toggle,
     el("h4", { class: "atk-sec" }, "The situation"), tiles,
     cards.length ? el("h4", { class: "atk-sec" }, "Choose your attack") : null, cards.length ? el("div", { class: "atk-cards" }, cards) : null,
     aimed.length ? el("h4", { class: "atk-sec" }, "Aimed Shot: choose where it hits") : null,
     aimed.length ? el("p", { class: "atk-lead" }, rich(`Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −3 Aim (far fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`)) : null,
-    aimed.length ? aimedPicker(target, aimed, onPick) : null);
+    aimed.length ? aimedPicker(target, aimed, onPick) : null].filter(Boolean));
+  return wrap;
 }

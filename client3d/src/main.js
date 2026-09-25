@@ -313,7 +313,7 @@ function cheatSheet() {
       el("p", {}, el("b", {}, "Heat: "), "every action adds heat; only 1 bleeds off per round. End an activation over capacity (light 6, medium 5) and you roll D12 + 2×excess on the overheat table. Shut Down vents 2 per unused action."),
       el("p", {}, el("b", {}, "Attacks: "), "only into your front 90° arc. Side/rear hits are deadlier. Long-range needs line of sight and range band; melee needs base reach."),
       el("p", {}, el("b", {}, "Scoring: "), "hold objectives (within 2\", uncontested) at round end: centre 2 VP, others 1, multiplied ×1 in rounds 1-3, ×2 in 4-7, ×3 in 8-10. Every kill: +1 VP; the ★ priority target pays +2 more."),
-      el("p", {}, el("b", {}, "Grit: "), "the side behind gets Grit tokens each round (1 at 2+ VP behind, 2 at 5+, 3 at 8+): a free Improved reaction (Brace −3 Pen, dodges on 3+, counters +2 Pen), or an upgrade to one already placed."),
+      el("p", {}, el("b", {}, "Grit: "), "the side behind gets Grit tokens each round (1 at 2+ VP behind, 2 at 5+, 3 at 8+): a free Improved reaction (Brace −3 Pen, dodges on 3+, counters +2 Pen), an upgrade to one already placed, or spent on an attack to reroll its misses. While behind, every kill pays a +2 VP bounty."),
       el("p", {}, el("b", {}, "Stagger: "), "an attack that deals no damage still rattles its target: +1 heat and −1 Aim on its next attack."),
       el("p", {}, el("b", {}, "Reactions: "), "Prepare a face-down Brace / Evasive / Return Fire; Answer tokens give free ones."),
     ),

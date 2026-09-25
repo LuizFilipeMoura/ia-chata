@@ -23,7 +23,7 @@ export class DiceTray {
     if (l.kind === "attack" && b?.steps) {
       const out = [];
       for (const s of b.steps) {
-        if (s.kind === "hit" && s.dice?.length) out.push({ label: "To hit", sides: 6, need: s.target, dice: s.dice.map((d) => ({ value: d.value, ok: d.ok })) });
+        if (s.kind === "hit" && s.dice?.length) out.push({ label: s.grit ? "To hit (Grit)" : "To hit", sides: 6, need: s.target, dice: s.dice.map((d) => ({ value: d.value, ok: d.ok, from: d.rerolledFrom })) });
         else if (s.kind === "location") out.push(s.die != null
           ? { label: "Location", sides: 12, dice: [{ value: s.die, ok: true }], out: LOC[String(s.out).split(" ")[0]] || s.out }
           : { label: "Location", sides: null, dice: [], out: `${LOC[String(s.out).split(" ")[0]] || s.out} (aimed)` });
@@ -57,7 +57,20 @@ export class DiceTray {
         dice.forEach((d) => { d.textContent = String(1 + Math.floor(Math.random() * row.sides)); });
         await wait(45);
       }
-      row.dice.forEach((r, i) => { dice[i].textContent = String(r.value); dice[i].classList.add(r.ok ? "ok" : "no"); });
+      // Grit: misses land first, then roll again and settle with a gold rim.
+      row.dice.forEach((r, i) => { dice[i].textContent = String(r.from ?? r.value); dice[i].classList.add(r.from != null ? "no" : r.ok ? "ok" : "no"); });
+      const again = row.dice.map((r, i) => (r.from != null ? i : -1)).filter((i) => i >= 0);
+      if (!again.length) return;
+      await wait(300 / speed);
+      if (token !== this.token) return;
+      sfx.dice(again.length);
+      const t1 = performance.now();
+      while (performance.now() - t1 < dur * 0.7) {
+        if (token !== this.token) return;
+        again.forEach((i) => { dice[i].classList.remove("no"); dice[i].textContent = String(1 + Math.floor(Math.random() * row.sides)); });
+        await wait(45);
+      }
+      again.forEach((i) => { const r = row.dice[i]; dice[i].textContent = String(r.value); dice[i].classList.add("rr", r.ok ? "ok" : "no"); dice[i].title = `Grit reroll: ${r.from} → ${r.value}`; });
     };
     await roll(rows[0]);
     // The rest roll while the shot flies.
