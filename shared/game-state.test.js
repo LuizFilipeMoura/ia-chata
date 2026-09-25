@@ -1876,30 +1876,30 @@ test("destruction rolls a D12; 4+ records a pending blast", () => {
   assert.equal(r.game.pendingBlast.exploded, true);
 });
 
-test("destroying your Priority Target scores +2 VP", () => {
+test("destroying your Priority Target scores the kill VP plus the +2 Priority bonus", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");
   r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
   b1.hull.sp = 1;
   __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 9 } });
   assert.equal(b1.destroyed, true);
-  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 3);
   const kill = r.game.resolutions.find((e) => e.kind === "destruction" && e.rigId === b1.id);
-  assert.deepEqual(kill.vp, { side: "a", amount: 2 });
+  assert.deepEqual(kill.vp, { side: "a", amount: 3 });
   assert.equal(kill.victimName, b1.name);
   assert.ok(kill.effects.some((e) => /Priority Elimination/.test(e)));
 });
 
-test("destroying a NON-target enemy scores nothing", () => {
+test("destroying a NON-target enemy scores just the kill VP", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1"); const b2 = findRig(r, "b2");
   r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id }; // a hunts b1, not b2
   b2.hull.sp = 1;
   __test.applyDamage(r, b2, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(b2.destroyed, true);
-  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 0);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 1);
   const kill = r.game.resolutions.find((e) => e.kind === "destruction" && e.rigId === b2.id);
-  assert.equal(kill.vp, undefined);
+  assert.deepEqual(kill.vp, { side: "a", amount: 1 });
 });
 
 test("a Priority Target lost to its own cause still scores for its hunter", () => {
@@ -1909,7 +1909,7 @@ test("a Priority Target lost to its own cause still scores for its hunter", () =
   a1.hull.sp = 1;
   __test.applyDamage(r, a1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(a1.destroyed, true);
-  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 2);
+  assert.equal(r.game.sides.find((s) => s.id === "b").vp, 3);
 });
 
 test("Priority Target kill VP is awarded once, never twice", () => {
@@ -1918,12 +1918,12 @@ test("Priority Target kill VP is awarded once, never twice", () => {
   r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
   b1.hull.sp = 1;
   __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
-  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2);
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 3);
   __test.setRigSp(b1, "hull", 5);     // "revive" the hull; _blastRolled stays set
   assert.equal(b1.destroyed, false);
   __test.applyDamage(r, b1, "hull", 9, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(b1.destroyed, true);
-  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 2); // still 2, not 4
+  assert.equal(r.game.sides.find((s) => s.id === "a").vp, 3); // still 3, not 6
 });
 
 test("blast wounds on a d10 against the struck location's toughness", () => {
@@ -2456,7 +2456,8 @@ test("Incendiary (via Ion Burn) adds 1 heat to the target", () => {
     name: "b1", action: "fire", weapon: "longRange", target: "a1", arc: "front", range: "near",
     dice: { toHit: [6, 6], wounds: [1, 1], location: 1 },
   } });
-  assert.equal(a1.engine.heat, heatBefore + 1);
+  // Incendiary +1; the volley wounded nothing, so Stagger (0 SP) adds +1 too.
+  assert.equal(a1.engine.heat, heatBefore + 2);
 });
 
 test("Shock (via Suppressive Fire) halves target speed next round", () => {

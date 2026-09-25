@@ -17,7 +17,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
-| **Field** | Fletched Bolts | Gains Precision, aimed shots ignore the −2 aim penalty. Reliable accuracy, the core hold-the-band pick. | `Aimed shots ignore the aim penalty` | ✅ coded (Precision perk) |
+| **Field** | Fletched Bolts | Gains Precision, aimed shots ignore the −3 aim penalty. Reliable accuracy, the core hold-the-band pick. | `Aimed shots ignore the aim penalty` | ✅ coded (Precision perk) |
 | **Tuned** | Steady Aim | +3 STR (10 → 13) when the measured firing distance is within 2″ of the Crossbow's sweet spot (the **16–20″** band). Rewards holding the optimal range instead of chasing. | `+3 STR when firing from the sweet spot (±2")` | ✅ implemented (`steadyAim` distance-to-sweet check) |
 | **Prototype** | Pinning Bolt | A damaging bolt (≥1 hit dealing SP) **immobilises** the target until the firer's next activation, guaranteed, **no roll** (it may still pivot). Downside: the firer runs **+2 heat** per attack. The pin that lets the talon catch up. | `Pin a rig in place until your next turn, runs +2 heat` | ✅ implemented (`pinningBolt` guaranteed immobilise + self-heat) |
 
@@ -45,7 +45,7 @@ Prebuilt chassis ship **equipment-less**. The `CHASSIS` registry entry for `medi
 - Crossbow: ROF **1**, STR **10**, sweet **18″**, peak **+3**, dropoff **−0.25/in**, range **0–24″**.
 - Talon: melee, ROF **2**, STR **7**, ACC **+1**, reach **2″**.
 - Chassis commissioned SP: Hull **12** / Arms **11** / Legs **12** / Engine **9** (Medium base Hull 7 / Arms 6 / Legs 6 / Engine 5, heat cap 5, 3 actions).
-- Fletched Bolts: **Precision** (aimed shots ignore the −2 aim penalty).
+- Fletched Bolts: **Precision** (aimed shots ignore the −3 aim penalty).
 - Steady Aim: **+3 STR** when firing distance is within **2″** of the sweet spot (16–20″ band).
 - Pinning Bolt: **guaranteed, no-roll immobilise** until the firer's next activation (may still pivot); **+2 self-heat** per attack.
 - Honed Talons: **+2 STR**.

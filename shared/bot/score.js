@@ -3,7 +3,7 @@
 // (the maths) because the two change for different reasons.
 //
 //   score = w.vp       × objectiveVpDelta   // take / hold / contest a marker (E2 control)
-//         + w.priority  × priorityProgress   // the game's only kill-VP (+2)
+//         + w.priority  × killProgress       // kill VP: +1 any wreck, +2 more on the Priority Target
 //         + w.damage    × offence            // expectedDamage me→them
 //         − w.threat    × exposure           // the SAME metric, every enemy's best against me
 //         − w.heat      × overheatRisk        // heat pushed past the class cap
@@ -29,7 +29,7 @@ import {
   arcOf, sightCorridor, distanceBetween, meleeInReach, controlsObjective,
   radiusOf, terrainPolygons,
 } from "../geometry.js";
-import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS } from "../game-state.js";
+import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS, ANY_KILL_VP, KILL_VP } from "../game-state.js";
 import { HEAT_CAPACITY } from "../rules.js";
 
 import { META } from "./meta.js";
@@ -114,18 +114,33 @@ function exposureAt(room, rig, pos, facing) {
   return total;
 }
 
+// A declared shot's expectedDamage. An Aimed Shot is priced as what it is: the
+// aim penalty (computeModifiedAim reads `aimed`) at the chosen location.
+function declaredShot(room, rig, cand, target) {
+  return expectedDamage(rig, target, cand.weapon, {
+    arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round,
+    ...(cand.action === "aimed" ? { aimed: true, location: cand.location } : {}),
+  });
+}
+
 // This candidate's offence: a declared shot's expectedDamage, or a move's best shot
 // after arriving (the 1-ply lookahead), or 0 for a non-attacking action.
-function offenceAt(room, rig, cand, pos, facing) {
+function offenceAt(room, rig, cand, pos, facing, shots) {
   if (cand.action === "fire" || cand.action === "aimed") {
     const target = findRig(room, cand.target);
     if (!target) return 0;
-    return expectedDamage(rig, target, cand.weapon, { arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round });
+    return declaredShot(room, rig, cand, target);
   }
   if (cand.action === "move" || cand.action === "sprint") {
-    return bestShotFrom(room, rig, pos, facing);
+    return shots ? Math.max(0, ...shots.map((s) => s.v)) : bestShotFrom(room, rig, pos, facing);
   }
   return 0;
+}
+
+// A move's shot at every living enemy from its destination, swept once and
+// shared by offence and killProgress.
+function shotsFrom(room, rig, pos, facing) {
+  return livingEnemies(room, rig).map((e) => ({ e, v: shotValue(room, rig, pos, facing, e, e.pos, e.facing) }));
 }
 
 // VP I would score from objectives at `pos`: a marker I control that no living
@@ -158,18 +173,31 @@ function objectiveApproach(room, rig, pos) {
   return best;
 }
 
-// Progress toward the +2 Priority Elimination kill: offence aimed specifically at
-// my assigned Priority Target (a declared shot at it, or a move's best shot at it).
-function priorityProgress(room, rig, cand, pos, facing) {
+// Kill VP a wreck of `target` would pay my side, relative to the richest kill
+// (the Priority Target, ANY_KILL_VP + KILL_VP), so the Priority Target keeps the
+// scale the evolved weights were tuned on and any other enemy is worth its share
+// (1/3). Doubled toward a target with a part near 0: damage there is closer to
+// actually landing the kill.
+function killWeight(room, rig, target) {
   const pid = room.game.priorityTargets?.[rig.owner || "a"];
-  if (pid == null) return 0;
-  const pt = room.rigs.find((r) => r.id === pid && !r.destroyed && r.pos);
-  if (!pt) return 0;
-  if ((cand.action === "fire" || cand.action === "aimed") && cand.target === pt.name) {
-    return expectedDamage(rig, pt, cand.weapon, { arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round });
+  const vp = ANY_KILL_VP + (target.id === pid ? KILL_VP : 0);
+  return (vp / (ANY_KILL_VP + KILL_VP)) * (1 + fragility(target));
+}
+
+// Progress toward kill VP: offence at an enemy scaled by what its wreck pays
+// (a declared shot at it, or a move's best kill-weighted shot on arrival).
+function killProgress(room, rig, cand, pos, facing, shots) {
+  if (cand.action === "fire" || cand.action === "aimed") {
+    const target = findRig(room, cand.target);
+    if (!target || target.destroyed) return 0;
+    return declaredShot(room, rig, cand, target) * killWeight(room, rig, target);
   }
   if (cand.action === "move" || cand.action === "sprint") {
-    return shotValue(room, rig, pos, facing, pt, pt.pos, pt.facing);
+    let best = 0;
+    for (const { e, v } of shots || shotsFrom(room, rig, pos, facing)) {
+      if (v > 0) best = Math.max(best, v * killWeight(room, rig, e));
+    }
+    return best;
   }
   return 0;
 }
@@ -259,10 +287,11 @@ export function scoreParts(room, rig, cand) {
   const { pos, facing } = resultingPose(rig, cand);
   const turn = room.game.turn;
   const exposure = exposureAt(room, rig, pos, facing);
+  const shots = cand.action === "move" || cand.action === "sprint" ? shotsFrom(room, rig, pos, facing) : null;
   return {
     vp: objectiveVpAt(room, rig, pos) + objectiveApproach(room, rig, pos),
-    priority: priorityProgress(room, rig, cand, pos, facing),
-    damage: offenceAt(room, rig, cand, pos, facing),
+    priority: killProgress(room, rig, cand, pos, facing, shots),
+    damage: offenceAt(room, rig, cand, pos, facing, shots),
     threat: -exposure,
     heat: -overheatRisk(room, rig, turn, cand),
     fragile: -exposure * fragility(rig),

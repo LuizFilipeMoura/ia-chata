@@ -113,6 +113,34 @@ export const sfx = {
   },
   // Radio chatter: a burst of band-passed static with a squelch click.
   bark() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 0.35, { freq: 1800, type: "bandpass", q: 4, peak: 0.08, attack: 0.01 }); tone(t, 0.03, { freq: 2400, type: "square", peak: 0.05 }); tone(t + 0.34, 0.03, { freq: 1900, type: "square", peak: 0.05 }); },
+  // Beacon payout: a bright cash-register ding (lower and darker for the enemy).
+  score(mine = true) {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    (mine ? [784, 1175, 1568] : [392, 311]).forEach((f, i) => tone(t + i * 0.07, 0.35, { freq: f, type: "triangle", peak: 0.18 }));
+    noise(t, 0.08, { freq: 6000, type: "highpass", peak: 0.15 });
+  },
+  // A part gives way: tearing metal and a heavy clunk.
+  breakPart() {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    noise(t, 0.5, { freq: 3000, sweepTo: 300, type: "bandpass", q: 3, peak: 0.6, attack: 0.01 });
+    tone(t + 0.05, 0.5, { freq: 140, to: 35, type: "square", peak: 0.35 });
+    tone(t + 0.3, 0.2, { freq: 90, to: 50, type: "triangle", peak: 0.3 });
+  },
+  // Dice tumbling in a tin tray.
+  dice(n = 3) {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    for (let i = 0; i < Math.min(8, n + 2); i++) noise(t + i * 0.045 + Math.random() * 0.02, 0.03, { freq: jit(3500, 0.4), type: "bandpass", q: 6, peak: 0.18 });
+  },
+  // Stagger: a shot rings the armour like a bell.
+  stagger() {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    tone(t, 0.6, { freq: jit(520), to: 480, type: "sine", peak: 0.15 });
+    tone(t, 0.4, { freq: jit(1330), to: 1200, type: "sine", peak: 0.07 });
+  },
   thrusters() { if (!init() || muted) return; noise(ctx.currentTime, 1.6, { freq: 400, sweepTo: 1500, type: "bandpass", q: 1, peak: 0.35, attack: 0.3 }); },
   fanfare(win) {
     if (!init() || muted) return;

@@ -5,6 +5,22 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.12, Kills score, harsher Aimed Shot, Stagger
+
+### Changed
+- **Every kill scores +1 VP (§11)** for the side that doesn't own the wreck, whatever destroyed it (a Catastrophic overheat included). The Priority Elimination bonus stacks on top, so a Priority kill is worth 3.
+- **Aimed Shot is −3 Aim (was −2).** Precision still waives it.
+
+### Added
+- **Stagger (§7):** an attack that resolves and deals 0 SP rattles its target: +1 heat, and −1 Aim on its next attack. The flag clears on that attack, or at the end of the rig's next activation.
+- **Digital rooms:** the server rolls the Evasive/Sidestep D6 (4+ dodges) and picks the cook-off blast victims (within 4"). Round-end beacon payouts are logged.
+- **Undo never crosses engine dice:** once the engine rolls, earlier steps are locked in.
+
+### Notes
+- Sims (Normal vs Normal, 42×28): kills per game went from 0.8 to 2.75, 0-SP attacks from 31% to 22%, and Fire vs Aimed per game from 7.2/16.5 to 17.2/6.2. The aimed:fire flip is mostly a bot scoring fix. The early leader still usually wins; that's the next lever.
+
+---
+
 ## wr-0.11, Ram STR trimmed
 
 ### Changed

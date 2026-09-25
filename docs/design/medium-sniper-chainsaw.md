@@ -16,7 +16,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
-| **Field** | Marksman Optics | Gains Precision, aimed shots ignore the −2 aim penalty. Reliable accuracy, the core sniper pick. | `Aimed shots ignore the aim penalty` | ✅ coded (Precision perk) |
+| **Field** | Marksman Optics | Gains Precision, aimed shots ignore the −3 aim penalty. Reliable accuracy, the core sniper pick. | `Aimed shots ignore the aim penalty` | ✅ coded (Precision perk) |
 | **Tuned** | Cold Bore | +3 STR (12 → 15) vs a target whose **every location** (Hull/Arms/Legs/Engine) is at max SP (undamaged). Rewards opening on fresh targets; nothing once they're hurt. | `+3 STR vs undamaged targets` | ✅ implemented (`coldBore` all-locations-max-SP check) |
 | **Prototype** | Enfilade | Only **aimed** Sniper Cannon shots feed a per-rig counter; on every **3rd** aimed shot, the engine emits a player instruction, *"Enfilade, ricochet! Resolve a +2 STR hit on the next rig in line of sight behind &lt;target&gt; (player's choice)."* The player picks the rig behind the target (they know line of sight) and applies the +2 STR hit via the normal attack/damage controls. Only the aimed-shot cadence is tracked in state, the ricochet itself is narrated, not auto-resolved. No positioning requirement, the every-3rd cadence is the whole cost. | `Every 3rd aimed shot ricochets to a rig the target can see (you resolve the hit)` | ✅ implemented (`enfiladeShots` cadence counter; the ricochet is a player instruction) |
 

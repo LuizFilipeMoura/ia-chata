@@ -1,6 +1,6 @@
 # Of Oil and Iron, Rules (Working Edition)
 
-**Version:** wr-0.10 · **Base:** standalone working ruleset
+**Version:** wr-0.12 · **Base:** standalone working ruleset
 **Scale:** distances are written for the models this ruleset uses, **Light on 60 mm bases, Medium on 75 mm bases**. Measure in inches, base-to-base (closest points).
 **Dice:** six-sided (**D6**), ten-sided (**D10**), and twelve-sided (**D12**).
 
@@ -120,7 +120,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Fire Weapon [1]**: attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first, for a Rig this costs **no action**, paid in heat instead (§5), a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
 
-- **Aimed Shot [1]**: a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−2 Accuracy**.
+- **Aimed Shot [1]**: a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−3 Accuracy**. *⚙ TUNING: was −2; picking the part was worth more than the penalty, so Aimed crowded out plain Fire.*
 
 - **Reload**: Reloading a spent ranged weapon no longer costs an action. Instead a Rig rolls
   a d6 for heat when it reloads: **1-3 → +2 heat, 4-6 → +1 heat**. Cold units
@@ -133,7 +133,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 - **Shut Down [0]**: end the activation and vent heat. May be declared **at any point** in the activation; cooling is **proportional** to how much of the activation is spent shutting down, declared first (no actions used) it vents all heat to the floor, and the more slots already spent, the less it sheds. *⚙ TUNING: was first-action-only + full vent.*
 
 - **Prepare [1]**: generate 1 heat and place a facedown preparation token by the Rig, choosing one reaction below. It lasts until this Rig's next activation; reveal it when its trigger occurs. A Rig may hold **only one** preparation at a time.
-  - *Evasive Manoeuvre*: when targeted by an attack on an enemy's turn, **before** the attack resolves, move up to **half Speed** in any direction. If this puts the Rig out of range or line of sight, the attack fails. *Digital (3D client): with no hand to move the mini, the dodge is rolled, **D6, 4+ the attack fails**.*
+  - *Evasive Manoeuvre*: when targeted by an attack on an enemy's turn, **before** the attack resolves, move up to **half Speed** in any direction. If this puts the Rig out of range or line of sight, the attack fails. *Digital: with no hand to move the mini, the engine rolls the dodge, **D6, 4+ the attack fails** (logged with the die); a player may still declare the outcome outright.*
   - *Return Fire*: after an enemy Rig attacks this Rig, **pivot for free to face that enemy** (this is not a Move, a pinned Rig may still do it), then choose 1 weapon and make an attack against it.
   - *Brace for Incoming Fire*: attacks against this Rig's **front arc** suffer **−2 Penetration on their Wound Rolls** until the next round. While braced the Rig is **immovable**: it cannot be pushed, shoved, or staggered by weapon perks, and a **melee** attacker that swings at its front and **fails to breach** (deals no SP) eats a **free Penetration 6 melee counter** (once per round). *⚙ TUNING: counter Penetration 6.*
 
@@ -141,7 +141,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Answer Counters (Answer-token only).** Instead of a generic preparation, an Answer token may place one of three **counters**: reactions the Prepare action cannot buy, the reward for activating second and watching the enemy commit. Each is facedown, revealed on its trigger, one per Rig, and fires only when its condition is met (otherwise it stays down for a later attack):
   - *Riposte*: when an enemy makes a **melee** attack against this Rig, after it resolves this Rig makes **one free melee attack** back at that attacker (no action, no heat).
-  - *Sidestep the Shooter*: when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**.
+  - *Sidestep the Shooter*: when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**. *Digital: the engine rolls the slip like Evasive, **D6, 4+ the attack fails**.*
   - *Exploit Opening*: when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-shot** at the location you choose, with **no aim penalty**.
 
 ### Engagement (melee lock)
@@ -239,6 +239,7 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 
    **Saturation.** Once your effective Penetration reaches the location's **Toughness + 4**, the target number is sitting on its floor of 2 and any further Penetration is thrown away, against a saturated location the arc bonus, the weight-class modifier and every +Penetration upgrade measure literally zero. Every Toughness on the board is **T3–T6** (§2, §17), so a weapon at Penetration 7 already saturates T3 and one at Penetration 9 saturates everything a Rig has. That is why the tables in §12 stop at Penetration **7**: it is the standard band, not a heavy-gun perk, and the guns above it were not stronger, they were merely wasting the difference. **A weapon buys its menace in Damage, not in Penetration.** *⚙ TUNING: past the clamp the ladder is a cliff, not a gradient, so Penetration was compressed into 3–7 and the heavies were paid back in Damage.*
 8. **Apply damage.** Each wound costs the location the weapon's **Damage (D)** stat in SP (§12), plus any per-wound riders such as **Rend** (§13). A hit that fails to wound does nothing.
+9. **Stagger.** An attack that **resolved** (its dice were rolled, it wasn't evaded or sidestepped) but dealt the target **0 SP** still rattles it: the target is **Staggered**. It gains **+1 heat** at once and suffers **−1 Aim on its next attack**. Staggered clears when that Rig makes an attack (after the −1 applies), or at the **end of its next activation** if it never attacks. A Rig staggered **during its own activation** (a Return Fire, Riposte or Brace counter that whiffed on it) keeps the status through the end of its **next** activation, not the current one. A destroyed target isn't staggered. (Not to be confused with the **Staggering** weapon perk's shove, §13; Brace's immovability stops the shove, not the Stagger.) *⚙ TUNING: about a third of attacks dealt nothing, which felt like a wasted turn; a whiff now still costs the target.*
 
 **Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage. *(Engine note: the digital tracker auto-routes overflow to the Hull, or the next location with SP remaining if the Hull is already at 0.)*
 
@@ -265,7 +266,7 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 
 ## 9. Rig Destruction
 
-When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **4"** suffer a flat **Penetration 8 / D2** hit, wounding on a D10 like any other attack (§7.5), the destroyed Rig's controller rolls the wound; each affected Rig's controller rolls its own hit location.
+When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All Rigs within **4"** suffer a flat **Penetration 8 / D2** hit, wounding on a D10 like any other attack (§7.5), the destroyed Rig's controller rolls the wound; each affected Rig's controller rolls its own hit location. *Digital: the engine measures the ring itself, every living Rig whose base comes within 4" of the wreck's centre is hit.* A wreck from any cause, an overheat cook-off included, rolls for the blast and scores kill VP (§11).
 
 ---
 
@@ -305,12 +306,14 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 - A destroyed Rig's wreck does **not** hold objectives (remove it from control).
 
 ### Scoring & winning
-- During each **Recovery Phase**, each player scores the VP value of every marker they control.
+- During each **Recovery Phase**, each player scores the VP value of every marker they control. *(Digital: the engine scores it and logs each held marker, "&lt;side&gt; holds the beacon: +N VP", and each contested one, "Beacon contested: nobody scores".)*
 - **Annihilation:** if a player has **no Rigs left** at any point, their opponent **wins immediately**.
 - **On points:** after **10 rounds**, **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
 
-### Priority Elimination
-At the start of every round each squadron is assigned a single **Priority Target**: one random enemy Rig, known only to the hunting side. Destroy **your** Priority Target and you score **+2 VP**; wrecking any other enemy Rig scores nothing. The target is re-rolled each round, so the pressure moves from machine to machine. This is the game's only kill reward, it pays to hunt the mark, not just trade blows.
+### Kills & Priority Elimination
+**Every kill scores.** Whenever a Rig is destroyed, **by any cause** (enemy fire, a blast, its own overheat), the side that doesn't own it scores **+1 VP**. A wreck is a wreck.
+
+**Priority Elimination.** At the start of every round each squadron is assigned a single **Priority Target**: one random enemy Rig, known only to the hunting side. Destroy **your** Priority Target and you score **+2 VP more**, on top of the kill's +1 (**3 VP** in all). The target is re-rolled each round, so the pressure moves from machine to machine: it pays to hunt the mark, not just trade blows. Kill VP is awarded the moment the Rig falls, once per Rig; it is never claimed in Recovery. *⚙ TUNING: kills used to score only on the Priority Target, so most games saw no kill reward at all.*
 
 ---
 
@@ -464,7 +467,7 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Impale**: on a successful hit, roll 1 D12; on **8+** the target is impaled, immobilised until this Rig's next activation (it may still pivot).
 - **Incendiary**: a successful hit increases the target's heat by 1 (needs only to hit).
 - **Melee**: usable only within **2"**; never needs reloading.
-- **Precision**: may make an Aimed Shot **without** the −2 Accuracy penalty.
+- **Precision**: may make an Aimed Shot **without** the −3 Accuracy penalty.
 - **Raking Fire**: this weapon **cannot damage a target's front arc**: resolve the attack normally, but every Wound Roll against a front-arc target automatically fails. Against the **side arc** the weapon gains **+3 Penetration**, and against the **rear arc +6 Penetration**: these **replace** the standard +2 / +3 side/rear bonuses (§7). Machine guns rip apart exposed flanks but glance off frontal armour.
 - **Rend**: the chain grinds deeper: each wound deals **+1 Damage**. It buys *depth*, not frequency (cf. Armour Piercing above).
 - **Shock**: on a successful hit, the target's movement is halved (round down) during its next activation.
@@ -625,7 +628,9 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 - **Raking Fire** (§13), machine guns do no frontal damage but hit far harder (+3 side / +6 rear).
 - **Answer tokens** (§5), the player going second each round gets 1 free preparation, or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.
 - **Weight-based heat** (§6), Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
-- **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win.
+- **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win, +1 VP per kill (+2 more for the Priority Target).
+- **Stagger** (§7), an attack that resolves for 0 SP gives its target +1 heat and −1 Aim on its next attack, so a whiff still counts.
+- **Undo never re-rolls** (app), Revert steps back through dice-free actions (moves, pivots, preparations…), but a command that made the app roll dice for you (an attack, an overheat check, a dodge…) can't be undone, and neither can anything before it. Dice you type in yourself don't lock Undo.
 
 **Open questions / TBD:**
 - Weapon profiles are **universal** (one shared list of 7 Long Range + 7 Melee) with a **weight-class Penetration modifier** (Light −1 vs the Medium baseline, §12); the game has two classes. Playtest the 1-per-step spread, it may need widening/narrowing per weapon later.

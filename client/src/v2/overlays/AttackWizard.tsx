@@ -52,7 +52,7 @@ const FIELD_DESC: Record<string, string> = {
   arc: "Which of the enemy's facings you strike",
   range: "How far the enemy sits from you",
   cover: "Obstruction shielding the enemy",
-  location: "Component to hit, an Aimed Shot takes −2 Accuracy",
+  location: "Component to hit, an Aimed Shot takes −3 Accuracy",
 };
 const ARC_DESC: Record<string, string> = { front: "No Penetration bonus", side: "+2 Penetration", rear: "+3 Penetration" };
 const COVER_DESC: Record<string, string> = { "0": "No cover", "1": "−1 Accuracy", "2": "−2 Accuracy" };
@@ -503,7 +503,7 @@ export function AttackWizard({
       `🎲 Rolls ${rof} hit ${rof === 1 ? "die" : "dice"} (d6)` +
       (!aimed ? " + 1 location die (d12)" : "") +
       ` + up to ${rof} wound ${rof === 1 ? "die" : "dice"} (d10, one per hit that lands)` +
-      (aimed ? " · −2 to hit (pick location)" : "") +
+      (aimed ? " · −3 to hit (pick location)" : "") +
       (secondShot ? " · +1 heat (second shot)" : "");
 
     if (isMelee) {

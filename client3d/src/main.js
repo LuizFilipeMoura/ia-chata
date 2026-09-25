@@ -20,8 +20,8 @@ import { settings } from "./settings.js";
 import { resetWires } from "./ui/tips.js";
 
 function muteButton() {
-  const b = el("button", { class: "btn ghost", title: "Sound on/off" }, isMuted() ? "🔇" : "🔊");
-  b.addEventListener("click", () => { setMuted(!isMuted()); b.textContent = isMuted() ? "🔇" : "🔊"; });
+  const b = el("button", { class: "btn ghost", title: "Sound on/off" }, icon(isMuted() ? "mute" : "sound"));
+  b.addEventListener("click", () => { setMuted(!isMuted()); b.replaceChildren(icon(isMuted() ? "mute" : "sound")); });
   return b;
 }
 // Every button clicks.
@@ -117,11 +117,12 @@ async function play(room, { tutorial = false, lesson = null, cfg = null, side = 
   if (!lesson) try { localStorage.setItem("oi3d-last", JSON.stringify({ room, cfg, tutorial, side, hotseat, at: Date.now() })); } catch {}
   const hud = new Hud(hudRoot);
   const rematch = cfg ? async () => { fill(screen, el("div", { class: "loading" }, "Rematch: deploying…")); screen.style.display = ""; try { play(await createBotRoom(cfg), { cfg }); } catch (e) { toast(e.message, "bad"); home(); } } : null;
-  const match = new LiveMatch(world, hud, { room, side, hotseat, tutorial: !!lesson, onExit: home, onRematch: rematch });
+  const back = () => home();
+  const match = new LiveMatch(world, hud, { room, side, hotseat, tutorial: !!lesson, onExit: home, onRematch: rematch, onReplay: (r) => replay(r, back) });
   active = match; if (window.__oi3d) window.__oi3d.match = match;
   hudRoot.append(el("div", { class: "hud-menu" },
     el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server. "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
-    el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, "📖"),
+    el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, icon("book")),
     el("button", { class: "btn ghost", title: "Hotkeys (?)", onClick: hotkeys }, "⌨"),
     el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"),
     muteButton()));
@@ -145,7 +146,7 @@ async function lastBattle() {
 }
 
 function hotkeys() {
-  const rows = [["WASD / arrows", "pan camera"], ["Q / E, right-drag", "rotate camera"], ["Wheel", "zoom"], ["Tab", "next ready rig"], ["1 · 2 · 3 · 4 · 5 · 6", "Move · Sprint · Fire · Aimed · Prepare · Shut Down"], ["Shift + wheel", "turn while placing a move"], ["Enter", "end activation"], ["Esc / right-click", "cancel"], ["Ctrl+Z", "undo last action"], ["Space", "skip animation"], ["?", "this list"]];
+  const rows = [["WASD / arrows", "pan camera"], ["Q / E, right-drag", "rotate camera"], ["Wheel", "zoom"], ["Two fingers", "pinch zoom · twist rotate · drag pan"], ["Tab", "next ready rig"], ["1 · 2 · 3 · 4 · 5 · 6", "Move · Sprint · Fire · Aimed · Prepare · Shut Down"], ["Press, drag, release", "move: pick the spot, drag to face, release to confirm"], ["Shift + wheel", "turn while placing a move"], ["Right-click enemy", "quick attack (best plain option)"], ["Long-press a rig", "full rig sheet"], ["T", "threat map on/off"], ["Enter", "end activation"], ["Esc / right-click", "cancel"], ["Ctrl+Z", "undo (dice-free steps only)"], ["Space", "skip animation"], ["?", "this list"]];
   modal({ title: "⌨ Hotkeys", body: el("table", { class: "keys" }, rows.map(([k, v]) => el("tr", {}, el("td", {}, el("kbd", {}, k)), el("td", {}, v)))), actions: [{ label: "Close", primary: true }] });
 }
 window.addEventListener("keydown", (e) => { if (e.key === "?" && !e.target.closest?.("input,textarea")) hotkeys(); });
@@ -158,6 +159,9 @@ function settingsPanel() {
       toggle("nameplates", "Nameplates over mechs"),
       toggle("barks", "Pilot speech bubbles"),
       toggle("dangerPreview", "Show danger when placing a move"),
+      toggle("followCam", "Camera follows the enemy's actions (and punches in on kills)"),
+      toggle("diceTray", "Roll the dice on screen"),
+      toggle("threat", "Threat map (enemy fire zones, T)"),
       toggle("edgePan", "Pan the camera at screen edges"),
       toggle("wires", "Wires from HQ (situational tips)"),
       el("button", { class: "btn ghost", onClick: () => { resetWires(); toast("All HQ wires will be sent again.", "good"); } }, "Replay all tips"),
@@ -308,7 +312,8 @@ function cheatSheet() {
       el("p", {}, el("b", {}, "Turns: "), "sides alternate activating one rig; each rig acts once per round with 3 actions. 10 rounds."),
       el("p", {}, el("b", {}, "Heat: "), "every action adds heat; only 1 bleeds off per round. End an activation over capacity (light 6, medium 5) and you roll D12 + 2×excess on the overheat table. Shut Down vents 2 per unused action."),
       el("p", {}, el("b", {}, "Attacks: "), "only into your front 90° arc. Side/rear hits are deadlier. Long-range needs line of sight and range band; melee needs base reach."),
-      el("p", {}, el("b", {}, "Scoring: "), "hold objectives (within 2\", uncontested) at round end: centre 2 VP, others 1. Killing the ★ priority target: +2."),
+      el("p", {}, el("b", {}, "Scoring: "), "hold objectives (within 2\", uncontested) at round end: centre 2 VP, others 1. Every kill: +1 VP; the ★ priority target pays +2 more."),
+      el("p", {}, el("b", {}, "Stagger: "), "an attack that deals no damage still rattles its target: +1 heat and −1 Aim on its next attack."),
       el("p", {}, el("b", {}, "Reactions: "), "Prepare a face-down Brace / Evasive / Return Fire; Answer tokens give free ones."),
     ),
     actions: [{ label: "Got it", primary: true }],

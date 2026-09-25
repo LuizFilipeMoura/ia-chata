@@ -5,7 +5,8 @@
 // resolution a human does and can neither cheat nor desync.
 import { candidatesFor } from "./candidates.js";
 import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS } from "./score.js";
-import { applyCommand as applyRaw } from "../game-state.js";
+import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, LOCS } from "../game-state.js";
+import { expectedDamage } from "./evaluate.js";
 
 // Every bot command funnels through here so a caller can observe the bot's turn
 // step by step (options.onStep), the 3D client animates those frames instead of
@@ -158,6 +159,38 @@ export function runBotActivation(room, rig, options = {}) {
   return log;
 }
 
+// A bot defender's answer to its own tripped reaction. Evasive / Sidestep send
+// no `evaded` flag, so the digital engine rolls the D6 dodge. Return Fire,
+// Riposte and Exploit take whichever legal counter scores the most expected
+// damage (geometry measured off the field, as resolveFire would), or decline.
+function botReaction(room, pr) {
+  const attrs = { side: pr.defender };
+  if (pr.kind === "evasive" || pr.kind === "sidestep") return attrs;
+  const reactor = room.rigs.find((r) => r.id === pr.targetId);
+  const attacker = room.rigs.find((r) => r.id === pr.attackerId);
+  if (!reactor?.pos || !attacker?.pos || reactor.destroyed || attacker.destroyed) return { ...attrs, decline: true };
+  const geo = deriveAttackGeometry(room, reactor, attacker);
+  const shot = { arc: geo.arc, distance: geo.distance, cover: geo.cover, round: room.game.round };
+  const lr = effectiveWeaponProfile("longRange", reactor.weapons?.longRange, reactor);
+  const gunBears = pr.kind !== "riposte" && geo.los && lr && reactor.loaded?.longRange !== false
+    && geo.distance >= (lr.minRange ?? 0) && geo.distance <= (lr.maxRange ?? Infinity);
+  const opts = [];
+  if (pr.kind === "exploit") {
+    if (gunBears) for (const loc of LOCS) {
+      opts.push({ weapon: "longRange", loc, v: expectedDamage(reactor, attacker, "longRange", { ...shot, aimed: true, waiveAimPenalty: true, location: loc }) });
+    }
+  } else {
+    if (gunBears) opts.push({ weapon: "longRange", v: expectedDamage(reactor, attacker, "longRange", shot) });
+    if (geo.inMeleeReach) opts.push({ weapon: "melee", v: expectedDamage(reactor, attacker, "melee", shot) });
+  }
+  const best = opts.sort((x, y) => y.v - x.v)[0];
+  if (!best || best.v <= 0) return { ...attrs, decline: true };
+  return { ...attrs, attack: {
+    weapon: best.weapon, arc: geo.arc, distance: geo.distance, cover: geo.cover,
+    range: "near", ...(best.loc ? { loc: best.loc } : {}),
+  } };
+}
+
 // Advance the game as far as the BOTS can carry it, then stop at the next point
 // that needs a human (or a terminal state). Called after every applied command
 // (server-side) so a bot side plays itself out without a human clicking through
@@ -180,17 +213,22 @@ export function driveBots(room, options = {}) {
       applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side } }, {}, options);
       continue;
     }
-    // §9 munition cook-off, clear it (empty targets, no secondary blast) only
-    // when a bot caused it; a human declares their own blast.
+    // §9 munition cook-off caused by a bot's wreck: send no target list, the
+    // digital engine measures the 4" ring itself. A human declares their own.
     if (g.pendingBlast) {
       const src = room.rigs.find((r) => r.id === g.pendingBlast.sourceId);
       if (!src || !isBot(src.owner)) return;
-      applyCommand(room, { verb: "blast", attrs: { targets: [] } }, {}, options);
+      applyCommand(room, { verb: "blast", attrs: {} }, {}, options);
       continue;
     }
-    // A pending reaction is always a defender's decision; bots never arm the
-    // pre-resolution preps that create one, so this is a human's to resolve.
-    if (g.pendingReaction) return;
+    // A pending reaction is the defender's decision: a human's is theirs to
+    // make; a bot defender resolves its own (dodges roll on the server,
+    // counters take the best shot that bears, or decline).
+    if (g.pendingReaction) {
+      if (!isBot(g.pendingReaction.defender)) return;
+      applyCommand(room, { verb: "react", attrs: botReaction(room, g.pendingReaction) }, {}, options);
+      continue;
+    }
     // Initiative is a mutual dice roll with no decision, roll it whenever a bot
     // is in the game so a bot side never stalls waiting on the human to click it.
     if (g.phase === "initiative") {
@@ -201,7 +239,10 @@ export function driveBots(room, options = {}) {
     if (g.phase === "activation") {
       const t = g.turn;
       if (!t || !isBot(t.side)) return;           // a human's turn, hand control back
-      const rig = room.rigs.find((r) => (r.owner || "a") === t.side && !r.destroyed && !r.activated);
+      // Resume the rig already holding the floor (a reaction or blast parked it
+      // mid-activation) before picking a fresh one.
+      const held = t.activeRigId != null ? room.rigs.find((r) => r.id === t.activeRigId && !r.destroyed) : null;
+      const rig = held || room.rigs.find((r) => (r.owner || "a") === t.side && !r.destroyed && !r.activated);
       if (!rig) return;
       runBotActivation(room, rig, options);
       continue;

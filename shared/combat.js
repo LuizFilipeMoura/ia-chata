@@ -1,11 +1,13 @@
 // Pure combat math (§7). State mutation happens only through the `ctx` the
 // caller (game-state.js) injects, so this module has no import cycle and is
-// unit-testable in isolation. It imports ONLY from rules.js.
+// unit-testable in isolation. It imports only leaf modules (rules.js,
+// unit-kinds.js, rng.js).
 import {
   BASE_AIM, WEIGHT_PEN_MOD, hitLocation, shieldCoverage, HEAT_CAPACITY,
   equipmentUpgradeEffectOf, toughnessOf, woundTarget, WOUND_DIE,
 } from "./rules.js";
 import { partNamesOf, roleOf, partsByRole } from "./unit-kinds.js";
+import { markRng } from "./rng.js";
 
 // Perks now come solely from the chosen weapon upgrade; a base weapon (or a
 // profile built straight from WEAPONS/UNIT_WEAPONS) may carry no perks array at
@@ -20,8 +22,15 @@ function rollD(sides, provided, random) {
     const v = Math.floor(Number(provided));
     if (Number.isFinite(v) && v >= 1 && v <= sides) return v;
   }
+  markRng(); // engine dice: this command can no longer be undone (rng.js)
   return Math.floor((random || Math.random)() * sides) + 1;
 }
+
+// §7, an Aimed Shot picks its hit location at this Accuracy penalty (waived by
+// the Precision perk and by Exploit Opening's counter-shot).
+export const AIMED_SHOT_PENALTY = -3;
+// §7 Stagger, the Aim penalty a Staggered rig carries into its next attack.
+export const STAGGER_AIM = -1;
 
 // §7.4, ranged accuracy as a function of measured distance: peak at the sweet
 // spot, falling off by `dropoff` per inch away from it. Melee weapons have a
@@ -50,7 +59,10 @@ export function aimBreakdown(attacker, profile, opts) {
   // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
   // guard-break (opts.guardBreak, §13 Siege Maul), both reuse the same path.
   const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak || (opts.painted && !profile.melee)) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
-  const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") && !opts.waiveAimPenalty ? -2 : 0;
+  const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") && !opts.waiveAimPenalty ? AIMED_SHOT_PENALTY : 0;
+  // Stagger (§7), an attacker whose last incoming attack whiffed on it (0 SP) is
+  // still rattled: −1 Aim on its next attack, then the flag is spent.
+  const staggerPenalty = attacker.staggered ? STAGGER_AIM : 0;
   const hullPenalty = attacker.hull.sp === 0 ? -1 : 0;
   // §engagement, a rig locked in melee fires ranged weapons at −2 accuracy.
   const engagedPenalty = opts.engaged && !profile.melee ? -2 : 0;
@@ -80,7 +92,7 @@ export function aimBreakdown(attacker, profile, opts) {
   // other targeting-computer upgrades resolve to 0.
   const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
   const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAccuracy ?? 0) : 0;
-  const accuracyTotal = weaponAccuracy - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAccuracy;
+  const accuracyTotal = weaponAccuracy - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAccuracy + staggerPenalty;
 
   // The two headline inputs are ALWAYS terms, even at 0, exactly as penBreakdown
   // always pushes "weapon Penetration": they are what every modifier below is measured
@@ -127,6 +139,7 @@ export function aimBreakdown(attacker, profile, opts) {
   if (smoke) terms.push({ label: "target in smoke", value: smoke });
   if (ballistic) terms.push({ label: "ballistic processor", value: ballistic });
   if (predictiveAccuracy) terms.push({ label: "predictive tracking", value: predictiveAccuracy });
+  if (staggerPenalty) terms.push({ label: "staggered", value: staggerPenalty });
 
   return { value: base - accuracyTotal, terms };
 }
@@ -739,6 +752,8 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const spendHeat = (n) => ctx.bumpHeat(target, n);
   const th = rollToHit(attacker, profile, { ...opts, target, spendHeat, autoHit: fireControlLock || solutionPayoff, guardBreak, targetSmoke: !!target.smokeNextActivation, lockSight: !!attacker.lockSightNext, fireControlFirst: opts.fireControlFirst }, opts.dice?.toHit, random);
   if (fireControlLock) attacker.lockedTarget = null; // painted volley consumed
+  // Stagger (§7) is spent on the attack that paid the −1 Aim (rolled above).
+  if (attacker.staggered) { attacker.staggered = false; attacker.staggerKeep = false; }
   const heat = (hasPerk(profile, "Hot") ? 1 : 0) + th.fireModeHeat + (profile.upgradeEffect?.heat || 0);
   if (slot === "longRange") attacker.loaded.longRange = false;
   if (slot === "unit") attacker.loaded.unit = false;
@@ -1004,8 +1019,17 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     steps.push({ kind: "damage", terms: dmgTerms, out: `${total} SP → ${location}` });
   }
 
+  // Stagger (§7): an attack that resolved (dice rolled, not dodged) but dealt
+  // 0 SP rattles its target, +1 heat and −1 Aim on its next attack. A wreck
+  // isn't staggered. ctx.stagger owns the flag bookkeeping (game-state.js).
+  const stagger = total === 0 && !target.destroyed && !!ctx.stagger;
+  if (stagger) {
+    ctx.stagger(room, target);
+    drama.push("Staggered: +1 heat, −1 Aim on its next attack");
+  }
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, targetId: target.id, weapon: weaponName, rolls,
+    ...(stagger ? { stagger: true } : {}),
     summary: `${attacker.name} → ${target.name} with ${weaponName} (Pen ${pen}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,
     breakdown: {
       actor: attacker.name, weapon: weaponName, target: target.name,

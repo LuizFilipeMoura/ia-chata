@@ -7,6 +7,7 @@ import { el } from "./dom.js";
 import { LOCS } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { settings } from "../settings.js";
+import { icon } from "./icons.js";
 
 export class Nameplates {
   constructor(parent, world, director) {
@@ -44,12 +45,14 @@ export class Nameplates {
       const heat = r.heat ?? r.engine?.heat ?? 0;
       c.heat.replaceChildren(...Array.from({ length: Math.max(cap, heat) }, (_, i) => el("s", { class: i < heat ? (i >= cap ? "over" : "on") : "" })));
       const icons = [];
-      if (r.id === activeId) icons.push("▶");
-      if (priorityIds.includes(r.id)) icons.push("★");
-      if (r.preparation) icons.push("🛡");
-      if (r.engagedWith != null) icons.push("⚔");
-      if (r.activated) icons.push("✓");
-      c.icons.textContent = icons.join("");
+      if (r.id === activeId) icons.push(["active", "Acting now"]);
+      if (priorityIds.includes(r.id)) icons.push(["star", "Priority target"]);
+      if (r.preparation) icons.push([r.preparation.hidden ? "hidden" : "prepare", "Prepared reaction"]);
+      if (r.engagedWith != null) icons.push(["melee", "Locked in melee"]);
+      if (r.staggered) icons.push(["stagger", "Staggered: −1 Aim on its next attack"]);
+      if (r.activated) icons.push(["check", "Already acted this round"]);
+      const sig = icons.map((i) => i[0]).join(",");
+      if (c.sig !== sig) { c.sig = sig; c.icons.replaceChildren(...icons.map(([n, t]) => { const i = icon(n); i.title = t; return i; })); }
       c.root.classList.toggle("dead", !!r.destroyed);
       c.root.classList.toggle("active", r.id === activeId);
     }

@@ -26,6 +26,8 @@ import { sfx, ambience } from "../audio.js";
 import { settings } from "../settings.js";
 import { Nameplates } from "../ui/nameplates.js";
 import { Wires } from "../ui/tips.js";
+import { DiceTray } from "../ui/dicetray.js";
+import { MatchStats, debrief } from "../ui/outcome.js";
 
 const DEG = Math.PI / 180;
 const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "heat", locksight: "aimed", popsmoke: "smoke", cryo: "cryo" };
@@ -65,22 +67,46 @@ function oddsLine(rig, extra) {
 }
 
 export class LiveMatch {
-  constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null, hotseat = false }) {
-    this.hotseat = hotseat;
+  constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null, onReplay = null, hotseat = false }) {
+    this.hotseat = hotseat; this.onReplay = onReplay;
     this.world = world; this.hud = hud; this.room = room; this.side = side; this.onExit = onExit; this.onRematch = onRematch;
     this.state = null; this.selected = null; this.mode = null; this.lastRes = -1; this.lastVersion = -1;
     this.tutorial = tutorial;
     setRigSource((n) => this.state?.rigs?.find((r) => r.name === n));
     this.events = new EventTarget();
+    this.stats = new MatchStats();
+    this.frames = [];          // everything the Director played, for the post-battle replay
+    this.digestLog = null;     // enemy-turn entries collected while it isn't our move
+    this.tray = new DiceTray(hud.root);
     this.director = new Director(world, {
-      onLog: (l, round) => this.hud.log(l, round),
+      side,
+      onLog: (l, round) => this.onLog(l, round),
       onBanner: (t, k) => this.hud.banner(t, k),
+      // Follow the enemy's moves and shots; punch in on kills and broken parts
+      // (ours too). Our own actions happen where we're already looking.
+      onCamera: (p, { punch, owner, score } = {}) => {
+        if (!settings.get("followCam") || !p) return;
+        if (punch) {
+          // Remember the player's zoom from before any punch still in progress.
+          if (this.zoomBack == null) this.zoomBack = this.world.cam.dist;
+          this.world.focus(p.x, p.y, Math.min(this.zoomBack, 26));
+          clearTimeout(this.punchT);
+          this.punchT = setTimeout(() => { this.world.focus(p.x, p.y, this.zoomBack); this.zoomBack = null; }, 1400 / this.director.speed);
+        } else if (owner !== this.side || score) this.world.focus(p.x, p.y);
+      },
+      onDice: (l) => (settings.get("diceTray") ? this.tray.show(l, { speed: this.director.speed, title: this.diceTitle(l) }) : null),
+      onScore: (l) => { const side = l.kind === "score" ? l.side : l.vp?.side; const amt = l.kind === "score" ? l.vp : l.vp?.amount; if (side && amt) this.hud.scoreFlash(side, amt); },
     });
     this.unsub = [
       world.on("click", (h, e) => this.onClick(h, e)),
-      world.on("rclick", () => this.backOut()),
+      world.on("rclick", (h) => this.onRightClick(h)),
       world.on("move", (h) => this.onHover(h)),
+      world.on("longpress", (h) => { const r = h.mechId != null ? this.rig(h.mechId) : null; if (r) openInspector(r); }),
     ];
+    world.onDragStart = (h) => this.dragStart(h);
+    world.onDrag = (h) => this.onHover(h);
+    world.onDragEnd = (h, moved) => this.dragEnd(h, moved);
+    world.onDragCancel = () => { if (this.mode?.locked) this.backOut(); };
     world.onShiftWheel = (dy) => { const used = this.wheelTurn(dy); if (used && world.pointerWorld) this.onHover(world.pick()); return used; };
     this.keyHandler = (e) => this.onKey(e);
     window.addEventListener("keydown", this.keyHandler);
@@ -111,8 +137,73 @@ export class LiveMatch {
     this.wires?.destroy();
     ambience.stop();
     this.world.clearOverlay();
+    this.world.setThreat(null);
     this.world.onShiftWheel = null;
+    this.world.onDragStart = this.world.onDrag = this.world.onDragEnd = this.world.onDragCancel = null;
+    this.tray.destroy();
+    clearTimeout(this.punchT);
     this.curtain?.remove();
+  }
+
+  // Every log entry the Director plays: the combat log, the debrief stats, and
+  // (while the enemy has the floor) the "while you waited" digest.
+  onLog(l, round) {
+    this.hud.log(l, round);
+    const ownerOf = (n) => this.state?.rigs.find((r) => r.name === n)?.owner;
+    this.stats.add(l, round, ownerOf);
+    if (this.digestLog) this.digestLog.push(l);
+  }
+
+  diceTitle(l) {
+    const b = l.breakdown;
+    if (l.kind === "attack" && b) return `${b.actor} → ${b.target} · ${b.weapon}`;
+    return l.summary?.split(/[:,(]/)[0] || "";
+  }
+
+  // The floor passed to the enemy: remember where their rigs stood.
+  startDigest(rigs) {
+    this.digestLog = [];
+    this.digestFrom = new Map(rigs.map((r) => [r.id, r.pos && { ...r.pos }]));
+  }
+
+  // The floor came back: sum up what they did.
+  showDigest() {
+    const log = this.digestLog, from = this.digestFrom;
+    this.digestLog = null;
+    if (!log || this.hotseat || this.tutorial) return;
+    const mine = (n) => this.state.rigs.find((r) => r.name === n)?.owner === this.side;
+    const lines = [];
+    for (const r of this.state.rigs) {
+      const p = from?.get(r.id);
+      if (r.owner === this.side || !p || !r.pos || r.destroyed) continue;
+      const d = Math.hypot(r.pos.x - p.x, r.pos.y - p.y);
+      if (d > 0.5) lines.push({ icon: "move", text: `${r.name} moved ${d.toFixed(1)}″` });
+    }
+    for (const l of log) {
+      const b = l.breakdown;
+      if (l.kind === "attack" && b) lines.push({ icon: b.sp ? "dmg" : "fire", tone: b.sp && mine(b.target) ? "bad" : "", text: b.sp ? `${b.actor} hit ${b.target} with ${b.weapon}: ${b.sp} SP to ${b.location}` : `${b.actor} ${l.stagger ? "staggered" : "missed"} ${b.target}${l.stagger ? " (no damage)" : ""}` });
+      else if (l.kind === "attack") lines.push({ icon: "fire", text: l.summary });
+      else if (l.kind === "destruction") lines.push({ icon: "dmg", tone: "bad", text: l.summary.split(",")[0] });
+      else if (l.kind === "overheat" && !/Nothing happens/.test(l.summary || "")) lines.push({ icon: "heat", text: l.summary.split("(")[0] });
+      else if (l.kind === "score" && !l.contested) lines.push({ icon: "beacon", tone: l.side === this.side ? "good" : "", text: `${l.side === this.side ? "You" : "Enemy"} scored a beacon: +${l.vp} VP` });
+      else if (l.kind === "reaction" || l.kind === "prepare") lines.push({ icon: "prepare", text: l.summary });
+    }
+    this.hud.digest(lines);
+  }
+
+  // Threat map: every enemy's front arc out to its gun's reach, plus melee reach.
+  toggleThreat(on = !settings.get("threat")) {
+    settings.set("threat", on);
+    this.drawThreat();
+    this.renderActions();
+    toast(on ? "Threat map on: shaded wedges are where each enemy can shoot (T)" : "Threat map off (T)", "info", 1800);
+  }
+  drawThreat() {
+    if (!settings.get("threat") || !this.state) return this.world.setThreat(null);
+    this.world.setThreat(this.state.rigs.filter((r) => r.owner !== this.side && !r.destroyed && r.pos).map((r) => {
+      const lr = r.loaded?.longRange === false ? null : effectiveWeaponProfile("longRange", r.weapons?.longRange, r);
+      return { x: r.pos.x, y: r.pos.y, facing: r.facing ?? 0, range: Math.min(60, lr?.maxRange ?? 0) || radiusOf(r) + meleeReachOf(r), reach: radiusOf(r) + meleeReachOf(r) };
+    }));
   }
 
   nameOf(id) { return this.state?.rigs.find((r) => r.id === id)?.name; }
@@ -135,6 +226,7 @@ export class LiveMatch {
       if (mine.length) { const c = mine.reduce((a, r) => ({ x: a.x + r.pos.x / mine.length, y: a.y + r.pos.y / mine.length }), { x: 0, y: 0 }); this.world.focus(c.x, c.y, 42); }
     }
     const maxRes = Math.max(-1, ...(state.game.resolutions || []).map((r) => r.id));
+    this.stats.noteVp(state.game.round, state.game.sides);
     if (first || !prevState) {
       // Fresh battle (round 1, nothing logged beyond setup): drop the squads in
       // from orbit. Rejoining a game in progress just snaps.
@@ -142,8 +234,9 @@ export class LiveMatch {
       if (fresh && state.rigs.some((r) => r.pos)) {
         this.hud.banner("RAIL DROP · SQUADRONS INBOUND", "round");
         this.director.busy++;
+        this.frames.push(frameFromState(state));
         this.director.queue = this.director.dropIn(frameFromState(state)).finally(() => { this.director.busy--; });
-      } else this.director.snap(frameFromState(state));
+      } else { this.frames.push(frameFromState(state)); this.director.snap(frameFromState(state)); }
       this.lastRes = maxRes;
     } else {
       // A bot turn arrives as step frames: first play the human command's own
@@ -155,10 +248,14 @@ export class LiveMatch {
         const botIds = frames.flatMap((f) => f.log.map((l) => l.id));
         const firstBot = botIds.length ? Math.min(...botIds) : Infinity;
         const mineLog = humanFrame.log.filter((l) => l.id < firstBot);
-        this.director.play({ ...humanFrame, log: mineLog, rigs: this.rigsBeforeBot(prevState, frames[0]) });
-        frames.forEach((f) => this.director.play(f));
-        this.director.play({ ...humanFrame, log: [] });
+        const first = { ...humanFrame, log: mineLog, rigs: this.rigsBeforeBot(prevState, frames[0]) };
+        this.frames.push(first); this.director.play(first);
+        // The bot's whole turn plays in one go: collect it for the digest.
+        this.director.queue = this.director.queue.then(() => this.startDigest(first.rigs));
+        [...frames, { ...humanFrame, log: [] }].forEach((f) => { this.frames.push(f); this.director.play(f); });
+        this.director.queue = this.director.queue.then(() => { try { if (this.myTurn) this.showDigest(); } catch (e) { console.error(e); } });
       } else {
+        this.frames.push(humanFrame);
         this.director.play(humanFrame);
       }
       this.lastRes = maxRes;
@@ -193,7 +290,7 @@ export class LiveMatch {
         el("h2", { class: want === "a" ? "c-a" : "c-b" }, want === "a" ? "Cyan commander" : "Red commander"),
         el("p", {}, "Your opponent looks away. Press when you're ready."),
         el("button", { class: "btn big primary", onClick: async () => {
-          this.side = want; this.selected = null; this.hud.clog.side = want;
+          this.side = want; this.selected = null; this.hud.clog.side = want; this.director.side = want;
           this.disconnect?.();
           this.disconnect = connect(this.room, this.side, (st) => this.apply(st));
           try { const r = await api.state(this.room, this.side); this.state = r.state; this.lastVersion = r.state.version; } catch {}
@@ -210,8 +307,10 @@ export class LiveMatch {
     const g = this.game;
     // A chime when the floor comes back to you.
     const mine = this.myTurn;
-    if (mine && !this.wasMine) { sfx.turn(true); this.hud.banner("YOUR MOVE, IRONCLAD", "turn"); }
+    if (mine && !this.wasMine) { sfx.turn(true); this.hud.banner("YOUR MOVE, IRONCLAD", "turn"); this.showDigest(); }
+    if (!mine && this.wasMine && !this.digestLog && g.phase !== "finished") this.startDigest(this.state.rigs);
     this.wasMine = mine;
+    this.drawThreat();
     this.hud.top(this.state, this.side);
     this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId);
     this.plates.set(this.state.rigs, { activeId: g.turn?.activeRigId, priorityIds: Object.values(g.priorityTargets || {}) });
@@ -324,8 +423,10 @@ export class LiveMatch {
     if (commandable) {
       const foot = el("div", { class: "act-foot" },
         el("span", {},
+          this.mode ? el("button", { class: "btn danger", title: "Cancel (Esc or right-click)", onClick: () => this.backOut() }, this.mode.locked ? "✕ Pick another spot" : "✕ Cancel") : null,
           el("button", { class: "btn ghost", "data-act": "advisor", disabled: !this.allowed("advisor"), onClick: () => this.advise(rig) }, icon("advisor"), "Advisor"),
-          g.canUndo && !this.gate ? el("button", { class: "btn ghost", title: "Take back your last action (Ctrl+Z)", onClick: () => this.undo() }, "↶ Undo") : null),
+          el("button", { class: `btn ${settings.get("threat") ? "primary" : "ghost"}`, title: "Threat map: shade where each enemy can shoot (T)", onClick: () => this.toggleThreat() }, icon("threat"), "Threat"),
+          g.canUndo && !this.gate ? el("button", { class: "btn ghost", title: "Take back your last action (Ctrl+Z). Only dice-free steps: once dice are rolled, everything before is locked in.", onClick: () => this.undo() }, "↶ Undo") : null),
         g.turn.activeRigId === rig.id ? (() => {
           const o = overheatOdds(rig, 0);
           return el("button", { class: `btn ${o.pBad ? "danger" : "primary"}`, "data-act": "end", disabled: !this.allowed("end"), title: o.pBad ? "Ending here triggers the overheat roll" : "Pass to the enemy",
@@ -393,9 +494,27 @@ export class LiveMatch {
   }
   locked() { toast("Tutorial: follow the current step first (see the coach panel).", "warn", 2200); }
 
-  async endActivation(rig) {
+  async endActivation(rig, { force = false } = {}) {
     if (!this.allowed("end")) return this.locked();
     this.cancelMode();
+    const t = this.game.turn;
+    const left = t ? t.actionsMax - t.actionsUsed : 0;
+    // Actions left on the table: offer Shut Down (vents heat) before wasting them.
+    if (!force && !this.tutorial && left > 0 && t.activeRigId === rig.id) {
+      const canShut = availableActions(rig, t, this.game.round).some((a) => a.key === "shutdown" && a.enabled);
+      const vent = Math.min(5, left * 2), heat = rig.engine?.heat ?? 0;
+      modal({
+        title: `${left} action${left > 1 ? "s" : ""} unused`,
+        body: el("p", {}, `${rig.name} still has ${left} action${left > 1 ? "s" : ""}. Ending now wastes ${left > 1 ? "them" : "it"}.`,
+          canShut && heat > 0 ? [" ", el("b", {}, "Shut Down"), ` instead would vent ${Math.min(vent, heat)} heat (${heat} → ${Math.max(0, heat - vent)}).`] : ""),
+        actions: [
+          { label: "Cancel", ghost: true },
+          canShut && heat > 0 ? { label: `Shut Down (vent ${Math.min(vent, heat)})`, onClick: () => this.act(rig, { action: "shutdown" }) } : null,
+          { label: "End anyway", primary: !(canShut && heat > 0), onClick: () => this.endActivation(rig, { force: true }) },
+        ].filter(Boolean),
+      });
+      return;
+    }
     await this.send("endactivation", { name: rig.name });
   }
 
@@ -414,6 +533,7 @@ export class LiveMatch {
   }
 
   cancelMode() {
+    this.clearSight();
     this.mode = null;
     this.reachFor = undefined; this.reachMeshes = [];
     this.world.clearOverlay();
@@ -465,7 +585,7 @@ export class LiveMatch {
     facing += this.mode.facingOffset;
     // Pivot cap ±90° from current facing.
     const d = ((facing - rig.facing + 540) % 360) - 180;
-    facing = rig.facing + Math.max(-90, Math.min(90, d));
+    facing = rig.facing + Math.max(-89, Math.min(89, d));
     // Danger preview: the bot's own exposure metric at the destination, how
     // much every enemy could expect to deal to you standing there, as posed.
     // Throttled to real cursor movement; it traces LOS for each enemy.
@@ -483,6 +603,60 @@ export class LiveMatch {
     return { route, ok, facing, danger };
   }
 
+  // Standing at `dest` facing `facing`: which enemies could I attack (green
+  // lines + expected SP), and which could attack me (red lines)? Pure preview
+  // from the shared geometry the server measures with; cached per spot.
+  sightlines(rig, dest, facing) {
+    const k = `${dest.x.toFixed(1)},${dest.y.toFixed(1)},${Math.round(facing)}`;
+    if (this.sightKey !== k) {
+      this.sightKey = k;
+      const me = { ...rig, pos: { x: dest.x, y: dest.y }, facing };
+      const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+      const shots = [], threats = [];
+      for (const e of this.state.rigs) {
+        if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
+        const g = deriveAttackGeometry(this.state, me, e);
+        let slot = null;
+        if (g.inFrontArc && g.inMeleeReach) slot = "melee";
+        else if (g.inFrontArc && g.los && lr && rig.loaded?.longRange !== false && g.distance <= (lr.maxRange ?? 24) && g.distance >= (lr.minRange || 0)) slot = "longRange";
+        if (slot) shots.push({ e, slot, arc: g.arc, ed: expectedDamage(me, e, slot, { arc: g.arc, distance: g.distance, cover: g.cover, round: this.game.round }) });
+        const t = deriveAttackGeometry(this.state, e, me);
+        const elr = e.loaded?.longRange === false ? null : effectiveWeaponProfile("longRange", e.weapons?.longRange, e);
+        if (t.inFrontArc && (t.inMeleeReach || (t.los && elr && t.distance <= (elr.maxRange ?? 24) && t.distance >= (elr.minRange || 0)))) threats.push({ e, arc: t.arc });
+      }
+      this.sight = { shots: shots.sort((a, b) => b.ed - a.ed), threats };
+    }
+    for (const m of this.sightMeshes || []) this.world.overlay.remove(m);
+    this.sightMeshes = [];
+    const at = new THREE.Vector3(dest.x, 1.4, dest.y);
+    for (const s of this.sight.shots) this.sightMeshes.push(this.world.line(at, new THREE.Vector3(s.e.pos.x, 1.4, s.e.pos.y), 0x33ff99));
+    for (const t of this.sight.threats) this.sightMeshes.push(this.world.line(new THREE.Vector3(t.e.pos.x, 1.2, t.e.pos.y), at.clone().setY(1.2), 0xff4433));
+    const left = this.previewRoom(rig).game.turn;
+    const later = left.actionsMax - left.actionsUsed <= 1 ? " (next activation)" : "";
+    const best = this.sight.shots[0];
+    return best ? ` · can hit ${best.e.name}${later}: ${best.arc}, ≈${best.ed.toFixed(1)} SP${this.sight.shots.length > 1 ? ` (+${this.sight.shots.length - 1} more)` : ""}` : " · no target from here";
+  }
+  clearSight() { for (const m of this.sightMeshes || []) this.world.overlay.remove(m); this.sightMeshes = []; this.sightKey = null; }
+
+  // ---- Drag to face: press on the spot, drag toward where to look, release ----
+  isMoveMode() { return this.mode && ["move", "sprint", "jumpjets"].includes(this.mode.key); }
+  dragStart(hit) {
+    if (!this.isMoveMode() || !hit.field) return false;
+    if (this.mode.locked) { this.dragFromLocked = true; return true; }
+    this.onHover(hit);
+    const p0 = this.mode.preview;
+    if (!p0?.ok) return false;
+    this.mode.locked = { ...p0, travelFacing: p0.facing, facing: p0.facing };
+    this.dragFromLocked = false;
+    this.hud.tip("Drag toward where it should face · release to confirm (or tap again) · right-click / ✕ to pick another spot");
+    this.emit("movephase", "face");
+    return true;
+  }
+  dragEnd(hit, moved) {
+    if (!this.mode?.locked) return;
+    // A real drag, or a second press after the spot was set: confirm the move.
+    if (moved >= 10 || this.dragFromLocked) { if (hit.field) this.onHover(hit); this.confirmMove(); }
+  }
   // Hovering an enemy: its front arc, gun reach and melee reach on the table.
   showReach(r) {
     if (this.reachFor === r?.id) return;
@@ -562,6 +736,9 @@ export class LiveMatch {
     });
   }
 
+  // The Advisor's pick as a command (also a handle for automated checks).
+  botPick(rig) { return chooseAction(this.previewRoom(rig), rig, this.advisorWeights); }
+
   // ---- Advisor: the Hard bot's brain, pointed at your rig ----
   advise(rig) {
     if (!this.allowed("advisor")) return this.locked();
@@ -571,7 +748,7 @@ export class LiveMatch {
     if (!cmd) { toast("Advisor: nothing here beats standing still. End the activation.", "info", 4000); return; }
     const a = cmd.attrs;
     const what = {
-      move: `move to (${a.dest?.x.toFixed(1)}, ${a.dest?.y.toFixed(1)})`, sprint: `sprint to (${a.dest?.x.toFixed(1)}, ${a.dest?.y.toFixed(1)})`,
+      move: `move ${this.describeSpot(rig, a.dest)}`, sprint: `sprint ${this.describeSpot(rig, a.dest)}`,
       fire: `fire ${a.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange} at ${a.target}`, aimed: `aimed shot at ${a.target}'s ${a.loc}`,
       prepare: `prepare ${a.prep}`, repair: `repair ${a.loc}`, shutdown: "Shut Down to vent heat",
     }[a.action] || a.action;
@@ -587,6 +764,24 @@ export class LiveMatch {
     });
   }
 
+  // "onto the centre beacon, behind the building" instead of coordinates.
+  describeSpot(rig, dest) {
+    if (!dest) return "";
+    const parts = [];
+    const objs = this.game.objectives || [];
+    const obj = objs.map((o, i) => ({ o, i, d: Math.hypot(o.x - dest.x, o.y - dest.y) })).sort((a, b) => a.d - b.d)[0];
+    const W = this.state.field.width, H = this.state.field.height;
+    const where = (x, y) => { const cx = Math.abs(x - W / 2) < W / 6, cy = Math.abs(y - H / 2) < H / 6; return cx && cy ? "centre" : `${y < H / 3 ? "north" : y > (2 * H) / 3 ? "south" : ""}${x < W / 3 ? "west" : x > (2 * W) / 3 ? "east" : ""}` || "centre"; };
+    if (obj && obj.d <= 2.2) parts.push(`onto the ${where(obj.o.x, obj.o.y)} beacon (${obj.o.vp} VP)`);
+    else if (obj && obj.d <= 6) parts.push(`toward the ${where(obj.o.x, obj.o.y)} beacon`);
+    const terr = (this.state.field.terrain || []).map((t) => ({ t, d: Math.hypot(t.x - dest.x, t.y - dest.y) - Math.max(t.w || t.rx || 1, t.h || t.ry || 1) / 2 })).sort((a, b) => a.d - b.d)[0];
+    if (terr && terr.d <= 2.5) parts.push(`${parts.length ? "tucked " : ""}${["building", "barricade", "rock", "crate"].includes(terr.t.kind) ? "behind the" : "by the"} ${terr.t.kind === "wood" ? "woods" : terr.t.kind || "cover"}`);
+    const foe = this.state.rigs.filter((e) => e.owner !== rig.owner && !e.destroyed && e.pos).map((e) => ({ e, d: Math.hypot(e.pos.x - dest.x, e.pos.y - dest.y) })).sort((a, b) => a.d - b.d)[0];
+    if (!parts.length && foe) parts.push(foe.d < Math.hypot(foe.e.pos.x - rig.pos.x, foe.e.pos.y - rig.pos.y) ? `toward ${foe.e.name}` : `away from ${foe.e.name}`);
+    const dist = Math.hypot(dest.x - rig.pos.x, dest.y - rig.pos.y);
+    return `${dist.toFixed(1)}″ ${parts.join(", ")} (gold ring)`;
+  }
+
   // ---- Input ----
   onHover(hit) {
     if (this.mode?.locked && hit.field && this.ghost) {
@@ -597,7 +792,7 @@ export class LiveMatch {
       if (Math.hypot(hit.field.x - L.dest.x, hit.field.y - L.dest.y) > radiusOf(rig) + 0.5) f = Math.atan2(hit.field.y - L.dest.y, hit.field.x - L.dest.x) / DEG;
       const d = ((f - rig.facing + 540) % 360) - 180;
       const clamped = Math.abs(d) > 90;
-      L.facing = rig.facing + Math.max(-90, Math.min(90, d));
+      L.facing = rig.facing + Math.max(-89, Math.min(89, d));
       this.ghost.rotation.y = -L.facing * DEG;
       this.ghostMat.color.setHex(clamped ? 0xffd35a : 0x33ff99);
       // Keep your front to the enemy: warn about anyone who'd be on your side
@@ -607,7 +802,8 @@ export class LiveMatch {
         .map((e) => ({ e, arc: arcOf({ pos: e.pos }, me) })).filter((x) => x.arc !== "front")
         .sort((a, b) => (a.arc === "rear" ? -1 : 1));
       const warn = exposed.length ? ` · ⚠ ${exposed[0].e.name} would hit your ${exposed[0].arc} (${exposed[0].arc === "rear" ? "+3" : "+2"} Pen) and you couldn't shoot it` : " · ✓ enemies in front";
-      this.hud.tip(`Facing ${Math.round(((L.facing % 360) + 360) % 360)}°${clamped ? " · max turn is 90° each way" : ""}${warn} · Click to confirm`);
+      const shots = this.sightlines(rig, L.dest, L.facing);
+      this.hud.tip(`Facing ${Math.round(((L.facing % 360) + 360) % 360)}°${clamped ? " · max turn is 90° each way" : ""}${warn}${shots} · Click to confirm`);
       return;
     }
     if (this.mode && (this.mode.key === "move" || this.mode.key === "sprint" || this.mode.key === "jumpjets") && hit.field && this.ghost) {
@@ -619,7 +815,8 @@ export class LiveMatch {
       if (p.route) this.pathLine = this.world.path(p.route.path, p.ok ? 0x33ff99 : 0xff4433);
       const dz = p.danger == null ? "" : p.danger < 0.3 ? " · ✅ safe spot" : ` · ⚠ ≈${p.danger.toFixed(1)} SP incoming here`;
       if (p.ok && p.danger != null) this.ghostMat.color.setHex(p.danger < 0.3 ? 0x33ff99 : p.danger < 2 ? 0xffd35a : 0xff8a3d);
-      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}" · facing ${Math.round(p.facing)}°${p.ok ? dz : " · out of reach"} · Shift+wheel to turn` : "No path there");
+      const shots = p.ok ? this.sightlines(this.mode.rig, hit.field, p.facing) : (this.clearSight(), "");
+      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}" · facing ${Math.round(p.facing)}°${p.ok ? dz : " · out of reach"}${shots} · Shift+wheel to turn` : "No path there");
       this.mode.preview = { ...p, dest: hit.field };
       return;
     }
@@ -639,8 +836,9 @@ export class LiveMatch {
   }
 
   onClick(hit) {
-    if (this.mode && (this.mode.key === "move" || this.mode.key === "sprint" || this.mode.key === "jumpjets")) {
-      const rig = this.mode.rig;
+    if (this.isMoveMode()) {
+      // Touch has no hover: aim the ghost at the tapped point first.
+      if (hit.field) this.onHover(hit);
       if (!this.mode.locked) {
         // Phase 1: lock the destination, then let the player turn.
         const p0 = this.mode.preview;
@@ -651,17 +849,7 @@ export class LiveMatch {
         this.emit("movephase", "face");
         return;
       }
-      const L = this.mode.locked;
-      const p = { ...L, facing: L.facing };
-      if (Math.abs(((L.facing - L.travelFacing + 540) % 360) - 180) > 10) this.emit("turned", L.facing);
-      const attrs = this.mode.key === "jumpjets"
-        ? { action: "jumpjets", dest: { x: +p.dest.x.toFixed(2), y: +p.dest.y.toFixed(2) }, facing: Math.round(p.facing) }
-        : { action: this.mode.key, dest: { x: +p.dest.x.toFixed(2), y: +p.dest.y.toFixed(2) }, facing: Math.round(p.facing) };
-      // Auto-declare engagement when ending in base contact with an enemy.
-      const foe = this.state.rigs.find((e) => e.owner !== rig.owner && !e.destroyed && e.pos && Math.hypot(e.pos.x - p.dest.x, e.pos.y - p.dest.y) - radiusOf(e) - radiusOf(rig) < 0.3);
-      if (foe) attrs.engage = foe.name;
-      this.cancelMode();
-      this.act(rig, attrs);
+      this.confirmMove();
       return;
     }
     if (this.mode?.byTarget && hit.mechId != null) {
@@ -673,9 +861,37 @@ export class LiveMatch {
     if (this.mode) this.cancelMode();
   }
 
+  confirmMove() {
+    const rig = this.mode.rig, L = this.mode.locked;
+    if (Math.abs(((L.facing - L.travelFacing + 540) % 360) - 180) > 10) this.emit("turned", L.facing);
+    const attrs = { action: this.mode.key, dest: { x: +L.dest.x.toFixed(2), y: +L.dest.y.toFixed(2) }, facing: Math.round(L.facing) };
+    // Auto-declare engagement when ending in base contact with an enemy.
+    const foe = this.state.rigs.find((e) => e.owner !== rig.owner && !e.destroyed && e.pos && Math.hypot(e.pos.x - L.dest.x, e.pos.y - L.dest.y) - radiusOf(e) - radiusOf(rig) < 0.3);
+    if (foe) attrs.engage = foe.name;
+    this.cancelMode();
+    this.act(rig, attrs);
+  }
+
+  // Right-click: back out of a mode; on an enemy with no mode open, attack it
+  // with the Advisor's best plain option (no dialog).
+  onRightClick(hit) {
+    if (this.mode) return this.backOut();
+    const target = hit.mechId != null ? this.rig(hit.mechId) : null;
+    const rig = this.rig(this.selected);
+    if (!target || target.owner === this.side || target.destroyed || !this.canCommand(rig)) return;
+    if (!this.allowed("act", "fire")) return this.locked();
+    const room = this.previewRoom(rig);
+    const list = candidatesFor(room, rig).filter((c) => c.action === "fire" && c.target === target.name);
+    if (!list.length) return toast(`${rig.name} can't hit ${target.name} from here (front arc, range, line of sight).`, "warn", 3000);
+    const best = list.map((c) => ({ c, s: scoreCandidate(room, rig, c, this.advisorWeights) })).sort((a, b) => b.s - a.s)[0].c;
+    toast(`${rig.name} fires ${best.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange} at ${target.name}`, "info", 1600);
+    this.act(rig, { action: "fire", weapon: best.weapon, target: target.name });
+  }
+
   onKey(e) {
     if (e.target.closest?.("input,textarea")) return;
     if (e.key === "Escape") this.backOut();
+    if (e.key.toLowerCase() === "t" && !e.ctrlKey && !e.metaKey) this.toggleThreat();
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); this.undo(); return; }
     if (e.key === " " && !this.director.idle) { e.preventDefault(); this.director.skip(); }
     if (e.key === "Enter" && this.activeRig && this.activeRig.owner === this.side) this.endActivation(this.activeRig);
@@ -722,12 +938,9 @@ export class LiveMatch {
     if (pr && pr.defender === this.side) {
       this.gateOpen = true;
       const reactor = this.rig(pr.targetId), attacker = this.rig(pr.attackerId);
-      if (pr.kind === "evasive") {
-        // Digital adjudication: the manoeuvre breaks the shot on a 4+ (rules.md §5, digital note).
-        const roll = 1 + Math.floor(Math.random() * 6);
-        const evaded = roll >= 4;
-        toast(`💨 ${reactor?.name} evades… rolled ${roll}: ${evaded ? "dodged!" : "caught!"}`, evaded ? "good" : "bad", 3500);
-        this.send("react", { evaded, side: this.side }).then(() => { this.gateOpen = false; });
+      if (pr.kind === "evasive" || pr.kind === "sidestep") {
+        // Digital adjudication: the server rolls the D6 (4+ breaks the shot).
+        this.send("react", { side: this.side }).then(() => { this.gateOpen = false; });
       } else if (pr.kind === "return" && attacker && reactor) {
         const geo = deriveAttackGeometry(this.state, reactor, attacker);
         const inReach = geo.inMeleeReach;
@@ -751,9 +964,8 @@ export class LiveMatch {
       const src = this.rig(pb.sourceId);
       if (src && src.owner === this.side) {
         this.gateOpen = true;
-        // Digital: the cook-off hits every rig within 4" of the wreck.
-        const targets = this.state.rigs.filter((r) => r.id !== src.id && !r.destroyed && r.pos && src.pos && distanceBetween(spatial(r), spatial(src)) <= 4 + radiusOf(r)).map((r) => r.name);
-        this.send("blast", { targets }).then(() => { this.gateOpen = false; });
+        // Digital: the server finds every rig within 4" of the wreck.
+        this.send("blast", {}).then(() => { this.gateOpen = false; });
       }
     }
     if (g.phase === "initiative" && !this.gateOpen && !g.sides.some((s) => s.bot)) {
@@ -773,12 +985,17 @@ export class LiveMatch {
       this.emit("finished", o);
       // Training Grounds: the coach owns the ending; no game-over screen.
       if (this.tutorial) return;
+      const g = this.game;
+      const replay = { frames: this.frames, field: this.state.field, objectives: g.objectives, winner: o?.winner ?? null, vp: g.sides.map((s) => s.vp) };
       modal({
         title: o?.winner == null ? "Draw" : won ? "🏆 Victory" : "💀 Defeat",
-        cls: won ? "victory" : "defeat",
-        body: el("div", {},
-          el("p", {}, `Reason: ${o?.reason || "-"} · VP ${this.game.sides.map((s) => `${s.id.toUpperCase()} ${s.vp}`).join(" – ")} · Round ${this.game.round}`)),
-        actions: [this.onRematch ? { label: "⚔ Rematch", primary: true, onClick: () => this.onRematch() } : null, { label: "Main menu", primary: !this.onRematch, ghost: !!this.onRematch, onClick: () => this.onExit?.() }].filter(Boolean),
+        cls: `wide ${won ? "victory" : "defeat"}`,
+        body: debrief(this.stats, { game: g, side: this.side, reason: o?.reason }),
+        actions: [
+          this.onRematch ? { label: "⚔ Rematch", primary: true, onClick: () => this.onRematch() } : null,
+          this.onReplay && this.frames.length > 1 ? { label: "▶ Watch replay", ghost: true, onClick: () => this.onReplay(replay) } : null,
+          { label: "Main menu", primary: !this.onRematch, ghost: !!this.onRematch, onClick: () => this.onExit?.() },
+        ].filter(Boolean),
         dismissable: false,
       });
     });

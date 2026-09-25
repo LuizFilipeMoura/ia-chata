@@ -46,6 +46,7 @@ export class Hud {
 
   // `spectator` (replays): neutral Cyan/Red labels instead of you/enemy.
   top(state, side, spectator = this.spectator) {
+    this.side = side;
     const g = state.game;
     const turn = g.turn?.side;
     if (spectator) {
@@ -69,7 +70,7 @@ export class Hud {
     const heat = r.engine?.heat ?? 0;
     const pri = Object.values(state.game.priorityTargets || {}).includes(r.id);
     return el("div", { class: `rig-card ${r.destroyed ? "dead" : ""} ${r.activated ? "spent" : ""} ${selected ? "sel" : ""} ${state.game.turn?.activeRigId === r.id ? "active" : ""}`, onClick: () => onPick?.(r.id) },
-      el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), pri ? el("span", { class: "tag pri", title: "Priority target: +2 VP for the kill" }, icon("star")) : null,
+      el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), pri ? el("span", { class: "tag pri", title: "Priority target: +3 VP for the kill (+1 like any wreck, +2 bonus)" }, icon("star")) : null,
         r.preparation ? el("span", { class: "tag", title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : "prepare"), r.preparation.hidden ? "" : r.preparation.type) : null,
         r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee: must Disengage to move" }, icon("melee")) : null),
       el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""),
@@ -95,8 +96,33 @@ export class Hud {
   banner(text, kind = "info") {
     const b = el("div", { class: `banner ${kind}` }, text);
     this.bannerEl.append(b);
-    setTimeout(() => b.classList.add("out"), 1600);
-    setTimeout(() => b.remove(), 2100);
+    const hold = kind === "stinger" ? 1900 : 1600;
+    setTimeout(() => b.classList.add("out"), hold);
+    setTimeout(() => b.remove(), hold + 500);
+  }
+
+  // A side just scored: its counter ticks up with a pop and a floating "+N".
+  scoreFlash(scorer, amount) {
+    const left = this.spectator ? scorer === "a" : scorer === this.side;
+    const box = this.topEl.querySelector(left ? ".vp.a" : ".vp.b");
+    const num = box?.querySelector("b");
+    if (!box || !num) return;
+    num.textContent = String((Number(num.textContent) || 0) + amount);
+    box.classList.remove("bump"); void box.offsetWidth; box.classList.add("bump");
+    const f = el("span", { class: `vp-float ${left ? "l" : "r"}` }, `+${amount}`);
+    box.append(f); setTimeout(() => f.remove(), 1400);
+  }
+
+  // What the enemy just did, in a few lines: shown when the floor comes back.
+  digest(lines) {
+    this.digestEl?.remove();
+    if (!lines.length) return;
+    const card = el("div", { class: "digest" },
+      el("div", { class: "digest-h" }, "While you waited", el("button", { class: "cc-x", title: "Dismiss", onClick: () => card.remove() }, "✕")),
+      lines.slice(-8).map((l) => el("div", { class: `dg-line ${l.tone || ""}` }, l.icon ? icon(l.icon) : null, l.text)));
+    this.digestEl = card;
+    this.root.append(card);
+    setTimeout(() => { card.classList.add("out"); setTimeout(() => card.remove(), 500); }, 12000);
   }
 
   tip(text) { this.tipEl.textContent = text || ""; this.tipEl.style.display = text ? "block" : "none"; }
@@ -107,8 +133,9 @@ export class Hud {
     const cap = HEAT_CAPACITY[r.weightClass] ?? 6;
     fill(this.hoverEl, 
       el("b", {}, `${r.name} `), el("span", { class: "muted" }, `${ch?.class || ""} · speed ${r.speed ?? ch?.speed ?? "?"}"`),
-      el("div", {}, `🔫 ${r.weapons?.longRange}  ·  🗡 ${r.weapons?.melee}`),
-      el("div", {}, `Heat ${r.engine?.heat ?? 0}/${cap}${r.equipment ? ` · ⚙ ${r.equipment}` : ""}`),
+      el("div", {}, icon("fire"), ` ${r.weapons?.longRange}  ·  `, icon("melee"), ` ${r.weapons?.melee}`),
+      el("div", {}, icon("heat"), ` Heat ${r.engine?.heat ?? 0}/${cap}${r.equipment ? ` · ${r.equipment}` : ""}`),
+      r.staggered ? el("div", { class: "warn-t" }, icon("stagger"), " Staggered: −1 Aim on its next attack") : null,
       r.destroyed ? el("div", { class: "bad" }, "DESTROYED") : null,
     );
     this.hoverEl.style.display = "block";

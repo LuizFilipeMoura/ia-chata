@@ -106,3 +106,13 @@ test("rules.md §13 names WEAPON_UPGRADES' upgrades in Field/Tuned/Prototype ord
     });
   }
 });
+
+test("rules.md quotes the engine's Aimed Shot penalty and kill VP", async () => {
+  const { AIMED_SHOT_PENALTY } = await import("./combat.js");
+  const { ANY_KILL_VP, KILL_VP } = await import("./game-state.js");
+  const n = Math.abs(AIMED_SHOT_PENALTY);
+  assert.match(RULEBOOK, new RegExp(`Aimed Shot \\[1\\]\\*\\*: .*at \\*\\*−${n} Accuracy\\*\\*`));
+  assert.match(RULEBOOK, new RegExp(`Precision\\*\\*: may make an Aimed Shot \\*\\*without\\*\\* the −${n} Accuracy penalty`));
+  assert.match(RULEBOOK, new RegExp(`scores \\*\\*\\+${ANY_KILL_VP} VP\\*\\*`));
+  assert.match(RULEBOOK, new RegExp(`\\*\\*\\+${KILL_VP} VP more\\*\\*`));
+});

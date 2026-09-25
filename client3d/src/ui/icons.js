@@ -52,6 +52,16 @@ const P = {
   cover: `<path d="M6 54 H58"/><path d="M26 54 V26 H40 V54"/><path d="M26 34 H40 M26 44 H40" opacity=".6"/><circle cx="12" cy="40" r="5"/><path d="M48 30 L58 20" stroke-dasharray="3 3"/>`,
   melee: `<path d="M14 50 L44 20 M44 20 L52 12 M38 16 L48 26"/><path d="M50 50 L20 20 M20 20 L12 12 M26 16 L16 26"/>`,
   reach: `<path d="M12 52 L40 24 M40 24 L50 14 M34 20 L44 30"/><path d="M50 50 A20 20 0 0 0 30 30" stroke-dasharray="3 3" opacity=".7"/>`,
+  // A brass horn speaker, with sound waves / struck through.
+  sound: `<path d="M8 24 H20 L34 12 V52 L20 40 H8 Z"/><path d="M42 24 C46 28 46 36 42 40 M48 18 C56 26 56 38 48 46"/>`,
+  mute: `<path d="M8 24 H20 L34 12 V52 L20 40 H8 Z"/><path d="M42 24 L56 40 M56 24 L42 40"/>`,
+  check: `<path d="M12 34 L26 48 L52 16"/>`,
+  active: `<path d="M18 12 L50 32 L18 52 Z"/>`,
+  book: `<path d="M32 16 C24 10 14 10 8 12 V52 C14 50 24 50 32 56 C40 50 50 50 56 52 V12 C50 10 40 10 32 16 Z"/><path d="M32 16 V56"/>`,
+  // Enemy fire zones: a wedge with a warning eye.
+  threat: `<path d="M32 56 L10 16 A40 40 0 0 1 54 16 Z"/><circle cx="32" cy="28" r="6"/><path d="M22 28 C26 22 38 22 42 28 C38 34 26 34 22 28 Z"/>`,
+  // Stagger: a ringing plate with shock lines.
+  stagger: `<circle cx="32" cy="34" r="14"/><path d="M32 6 V14 M12 14 L18 20 M52 14 L46 20 M6 34 H12 M52 34 H58"/><path d="M28 30 L34 36 L30 40" />`,
 };
 
 export const STAT_ICON = { Penetration: "pen", Pen: "pen", Damage: "dmg", Dmg: "dmg", Toughness: "tough", Shots: "shots", Aim: "aim", Heat: "heat", heat: "heat", SP: "sp", "Structure Points": "sp", Range: "range", Reach: "reach" };
@@ -65,12 +75,12 @@ export function icon(name, cls = "") {
 // Colour families: the same colour means the same kind of thing everywhere.
 const FAMILY = {
   pierce: ["pen"],
-  attack: ["fire", "aimed", "dmg", "shots", "aim", "melee", "barrage", "lock"],
+  attack: ["fire", "aimed", "dmg", "shots", "aim", "melee", "barrage", "lock", "threat", "stagger"],
   move: ["move", "sprint", "disengage", "jumpjets", "legs", "range", "reach", "arc"],
   defence: ["prepare", "harden", "smoke", "tough", "hull", "cover", "anchor", "hidden"],
   heat: ["heat", "engine", "overclock"],
   cool: ["shutdown", "purge", "douse", "cryo"],
   repair: ["repair", "patch", "sp"],
-  info: ["advisor", "beacon", "dice", "arms", "star"],
+  info: ["advisor", "beacon", "dice", "arms", "star", "sound", "mute", "check", "active", "book"],
 };
 export const FAMILY_OF = Object.fromEntries(Object.entries(FAMILY).flatMap(([f, ns]) => ns.map((n) => [n, f])));

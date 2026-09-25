@@ -19,7 +19,7 @@ export function resetWires() { seen = new Set(); try { localStorage.removeItem(S
 
 // Each: id, when(ctx) → truthy (or a string to interpolate), text(ctx, hit).
 const WIRES = [
-  { id: "priority", when: (c) => c.myTarget, text: (c) => `HQ has marked ${c.myTarget.name} (★). Scrap it for +2 victory points. It's the only kill that scores.` },
+  { id: "priority", when: (c) => c.myTarget, text: (c) => `HQ has marked ${c.myTarget.name} (★). Every wreck is worth +1 victory point; scrapping this one pays +2 more.` },
   { id: "activation", when: (c) => c.rig && c.myTurn && c.rig.owner === c.side, text: () => `Each rig acts once per round: up to 3 actions, then the enemy answers with one of theirs. Pick your rig carefully.` },
   { id: "heat-near", when: (c) => c.rig && c.meter && c.meter.heat >= c.meter.cap - 1 && c.meter.heat > 0, text: (c) => `${c.rig.name}'s boiler is near the red. Every action adds heat and only 1 bleeds off per round. Past the line, ending the turn rolls on the overheat table. Or Shut Down to vent.` },
   { id: "rear-shot", when: (c) => c.cands?.find((x) => (x.action === "fire" || x.action === "aimed") && x.arc === "rear"), text: (c, x) => `${x.target} is showing you its back! Rear-arc hits carry extra Penetration, so they wound far more often.` },
@@ -29,6 +29,7 @@ const WIRES = [
   { id: "out-of-actions", when: (c) => c.turn?.activeRigId === c.rig?.id && c.turn.actionsUsed >= c.turn.actionsMax && c.rig.owner === c.side, text: () => `Out of actions. End the activation and let the enemy move.` },
   { id: "hidden-prep", when: (c) => c.state.rigs.find((r) => r.owner !== c.side && r.preparation?.hidden), text: (c, r) => `${r.name} has a face-down reaction (🛡). Attack it and it may Brace, dodge, or shoot back. Sometimes it's worth hitting something else first.` },
   { id: "contested", when: (c) => c.contested, text: () => `A beacon is contested: both sides are in range, so nobody scores it. Clear it or out-last them.` },
+  { id: "stagger", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && r.staggered), text: (c, r) => `${r.name} is Staggered: a shot rang its armour without doing damage. +1 heat, and −1 Aim on its next attack. Misses aren't wasted, they rattle the target.` },
   { id: "hurt", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && ["hull", "arms", "legs", "engine"].some((l) => r[l] && r[l].sp > 0 && r[l].sp <= r[l].max / 3)), text: (c, r) => `${r.name} is badly damaged. A location at 0 SP cripples it (arms drop weapons, legs slow it, engine stalls it). Repair costs an action, or pull it back.` },
 ];
 

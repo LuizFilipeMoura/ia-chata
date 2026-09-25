@@ -82,11 +82,17 @@ export function frameOf(room, cmd, fromResolutionId) {
       id: r.id, name: r.name, owner: r.owner || "a", chassis: r.chassis ?? null,
       pos: r.pos ? { x: +r.pos.x.toFixed(2), y: +r.pos.y.toFixed(2) } : null,
       facing: r.facing ?? 0, destroyed: !!r.destroyed,
-      heat: r.engine?.heat ?? 0,
+      heat: r.engine?.heat ?? 0, staggered: !!r.staggered,
       sp: Object.fromEntries(LOCS.map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
     log: (g.resolutions || []).filter((x) => x.id >= fromResolutionId)
-      .map((x) => ({ id: x.id, kind: x.kind, actor: x.actor, rigId: x.rigId, targetId: x.targetId, weapon: x.weapon, summary: x.summary, effects: x.effects || [], rolls: x.rolls, breakdown: x.breakdown })),
+      .map((x) => ({
+        id: x.id, kind: x.kind, actor: x.actor, rigId: x.rigId, targetId: x.targetId, weapon: x.weapon,
+        summary: x.summary, effects: x.effects || [], rolls: x.rolls, breakdown: x.breakdown,
+        // score / destruction / stagger / reaction extras (undefined when absent)
+        side: x.side, objective: x.objective, x: x.x, y: x.y, vp: x.vp, contested: x.contested,
+        stagger: x.stagger, victimName: x.victimName, prep: x.prep,
+      })),
   };
 }
 

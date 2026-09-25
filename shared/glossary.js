@@ -103,7 +103,7 @@ export const GLOSSARY = [
   },
   {
     id: "aimed-shot", term: "Aimed Shot", match: ["Aimed Shot"],
-    def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −2 Accuracy (Precision removes the penalty) (§5, §13).",
+    def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −3 Accuracy (Precision removes the penalty) (§5, §13).",
   },
   {
     id: "reload", term: "Reload", match: ["Reload"],
@@ -163,7 +163,7 @@ export const GLOSSARY = [
   },
   {
     id: "precision", term: "Precision", match: ["Precision"],
-    def: "Weapon perk: may make an Aimed Shot without the usual −2 Accuracy penalty (§13).",
+    def: "Weapon perk: may make an Aimed Shot without the usual −3 Accuracy penalty (§13).",
   },
   {
     id: "cleave", term: "Cleave", match: ["Cleave"],
@@ -207,7 +207,7 @@ export const GLOSSARY = [
   },
   {
     id: "vp", term: "Victory Points", match: ["Victory Points", "VP"],
-    def: "Points scored each Recovery Phase for controlling objective markers; most VP after 10 rounds wins (§11).",
+    def: "Points scored each Recovery Phase for controlling objective markers, +1 for every enemy Rig wrecked (+2 more for your Priority Target); most VP after 10 rounds wins (§11).",
   },
   {
     id: "ironclad-bounty", term: "Ironclad Bounty", match: ["Ironclad Bounty"],
@@ -242,6 +242,8 @@ export const GLOSSARY = [
     def: "Cooling systems are offline, the Rig can't shed Heat this activation." },
   { id: "speed-halved", term: "Speed halved", match: [],
     def: "Movement is halved (round down) next activation, usually from a Shock hit (§13)." },
+  { id: "staggered", term: "Staggered", match: ["Staggered"],
+    def: "An attack resolved against this Rig but dealt 0 SP: it took +1 heat and suffers −1 Aim on its next attack. Clears after that attack, or at the end of its next activation (§7)." },
   { id: "skip-activation", term: "Skips next activation", match: [],
     def: "Loses its next activation entirely, commonly from a wrecked Engine (§8)." },
   { id: "momentum", term: "Momentum", match: [],

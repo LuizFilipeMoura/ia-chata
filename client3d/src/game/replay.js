@@ -8,6 +8,8 @@ import { Nameplates } from "../ui/nameplates.js";
 import { openInspector } from "../ui/inspector.js";
 import { setRigSource } from "../ui/combatlog.js";
 import { CHASSIS } from "/shared/game-state.js";
+import { DiceTray } from "../ui/dicetray.js";
+import { settings } from "../settings.js";
 
 // Plain-language pilot vocabulary, shared by the summary and the full menu.
 const TRAITS = {
@@ -35,7 +37,13 @@ export class Replay {
     this.world = world; this.replay = replay; this.frames = replay.frames || []; this.i = 0; this.playing = true; this.onExit = onExit;
     this.hud = new Hud(hudRoot);
     this.hud.spectator = true;
-    this.director = new Director(world, { onLog: (l, round) => this.hud.log(l, round), onBanner: (t, k) => this.hud.banner(t, k) });
+    this.tray = new DiceTray(hudRoot);
+    this.director = new Director(world, {
+      onLog: (l, round) => this.hud.log(l, round), onBanner: (t, k) => this.hud.banner(t, k),
+      onCamera: (p, { punch } = {}) => { if (this.follow && p) this.world.focus(p.x, p.y, punch ? Math.min(this.world.cam.dist, 26) : undefined); },
+      onDice: (l) => (settings.get("diceTray") ? this.tray.show(l, { speed: this.director.speed }) : null),
+      onScore: (l) => { const side = l.kind === "score" ? l.side : l.vp?.side; const amt = l.kind === "score" ? l.vp : l.vp?.amount; if (side && amt) this.hud.scoreFlash(side, amt); },
+    });
     const f0 = this.frames[0];
     world.buildField(replay.field || { width: 54, height: 36, terrain: replay.terrain || [] }, replay.objectives || []);
     this.director.snap(f0);
@@ -190,5 +198,5 @@ export class Replay {
   }
 
   exit() { this.destroy(); this.onExit?.(); }
-  destroy() { this.unclick?.(); document.querySelector(".inspector")?.remove(); this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.dispose(); this.hud.destroy(); }
+  destroy() { this.tray.destroy(); this.unclick?.(); document.querySelector(".inspector")?.remove(); this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.dispose(); this.hud.destroy(); }
 }

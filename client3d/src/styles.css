@@ -654,3 +654,42 @@ body { font-size: 18px; }
 .nat-catch { font-size: 15px; color: #ff8a6a; }
 .coach:has(.kw-grid), .coach:has(.nat-grid) { width: min(760px, calc(100vw - 32px)); }
 @media (max-width: 800px) { .kw-grid, .nat-grid { grid-template-columns: 1fr; } }
+
+/* ---- Juice & playability pass ---- */
+/* Dice tray: the real rolls, tumbling above the action bar. */
+.dicetray { position: absolute; bottom: 230px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; display: none; pointer-events: none; transition: opacity .4s; min-width: 280px; z-index: 5; }
+.dicetray.out { opacity: 0; }
+.dt-title { font: 600 15px var(--body); color: var(--muted); margin-bottom: 4px; }
+.dt-row { display: flex; align-items: center; gap: 10px; margin: 3px 0; font-size: 16px; }
+.dt-l { min-width: 150px; } .dt-l small { font-size: 13px; color: var(--muted); } .dt-need { color: var(--gold) !important; }
+.dt-dice { display: flex; gap: 5px; flex-wrap: wrap; }
+.dt-die { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 6px; background: #efe6cf; color: #1c1710; font: 700 17px var(--body); border: 2px solid #6e5424; }
+.dt-die.d12 { border-radius: 50%; } .dt-die.d10 { border-radius: 4px 14px; }
+.dt-die.ok { background: #7fcf6a; border-color: #2f6b22; } .dt-die.no { background: #c8412f; color: #fff; border-color: #6b1a10; opacity: .8; }
+.dt-out { color: var(--brass-hi, #f0cf7a); font-weight: 600; }
+/* Big dramatic banners for kills and broken parts. */
+.banner.stinger { color: #ff5a3c; font-size: 46px; letter-spacing: .08em; }
+/* VP counter pops when a side scores. */
+.hud-top .vp { position: relative; }
+.hud-top .vp.bump b { animation: vpBump .6s ease-out; }
+@keyframes vpBump { 0% { transform: scale(1); } 30% { transform: scale(1.6); color: var(--gold); } 100% { transform: scale(1); } }
+.vp-float { position: absolute; top: 100%; font: 700 24px var(--display); color: var(--gold); animation: vpFloat 1.4s ease-out forwards; pointer-events: none; }
+.vp-float.l { left: 14px; } .vp-float.r { right: 14px; }
+@keyframes vpFloat { from { transform: translateY(0); opacity: 1; } to { transform: translateY(28px); opacity: 0; } }
+/* "While you waited": the enemy's turn in a few lines. */
+.digest { position: absolute; top: 120px; right: 12px; width: 340px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--red); border-radius: 8px; padding: 8px 12px; font-size: 15px; transition: opacity .5s; z-index: 4; }
+.digest.out { opacity: 0; }
+.digest-h { display: flex; justify-content: space-between; align-items: center; font: 600 16px var(--display); letter-spacing: .05em; margin-bottom: 4px; }
+.dg-line { margin: 3px 0; } .dg-line.bad { color: #ff8a6a; } .dg-line.good { color: var(--good); }
+/* Nameplate status icons. */
+.plate .pi { display: flex; gap: 1px; } .plate .pi .si { width: 14px; height: 14px; margin: 0; }
+/* Debrief. */
+.debrief .db-lead { color: var(--muted); font-size: 17px; margin-top: 0; }
+.db-facts { display: grid; gap: 6px; margin: 10px 0; font-size: 17px; }
+.vp-chart svg { width: 100%; max-width: 560px; display: block; }
+.vp-legend { display: flex; gap: 16px; font-size: 14px; color: var(--muted); margin-top: 8px; }
+.vp-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.db-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
+.db-table th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+.db-table td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.05); }
+@media (max-width: 800px) { .dicetray { bottom: 260px; min-width: 0; width: calc(100% - 32px); } .dt-l { min-width: 100px; } .digest { top: auto; bottom: 170px; left: 10px; right: 10px; width: auto; } }

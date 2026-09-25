@@ -30,15 +30,15 @@ test("computeModifiedAim applies weapon Accuracy, cover, aim and hull penalties"
   const sniper = { ...WEAPONS.longRange["Sniper Cannon"], perks: ["Precision"] };
   assert.equal(computeModifiedAim(attacker, sniper, { distance: 22, cover: 0, aimed: true }), 2); // peak waived-penalty
   const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
-  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, cover: 0, aimed: true }), 5); // 4 - (1 - 2)
+  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, cover: 0, aimed: true }), 6); // 4 - (1 - 3)
   assert.equal(computeModifiedAim({ weightClass: "medium", hull: { sp: 0 } }, claw, { range: "near", cover: 0 }), 4);
 });
 
 test("computeModifiedAim waives the aim penalty when waiveAimPenalty is set", () => {
   const autocannon = WEAPONS.longRange["Autocannon"]; // no Precision
-  // Baseline: aimed shot eats the -2 → target number 5.
-  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, aimed: true }), 5);
-  // Waived: no -2 → 4 - 1 = 3.
+  // Baseline: aimed shot eats the -3 → target number 6.
+  assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, aimed: true }), 6);
+  // Waived: no -3 → 4 - 1 = 3.
   assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, aimed: true, waiveAimPenalty: true }), 3);
 });
 
@@ -158,7 +158,7 @@ test("aimBreakdown, predictive tracking emits its bonus and its cover cancel", (
 test("aimBreakdown, aimed shot, wrecked hull and ballistic processor each name themselves", () => {
   const aimed = aimBreakdown({ weightClass: "medium", hull: { sp: 7 } },
     { ...WEAPONS.longRange["Autocannon"] }, { distance: 12, aimed: true });
-  assert.ok(aimed.terms.some((t) => t.label === "aimed shot" && t.value === -2));
+  assert.ok(aimed.terms.some((t) => t.label === "aimed shot" && t.value === -3));
   const wrecked = aimBreakdown({ weightClass: "medium", hull: { sp: 0 } },
     { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
   assert.ok(wrecked.terms.some((t) => t.label === "hull wrecked" && t.value === -1));

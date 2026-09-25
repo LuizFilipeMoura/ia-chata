@@ -62,6 +62,22 @@ test("pops a kill toast when a fresh destruction resolution carries a vp award",
   rerender(<AppProviders><Seed state={killed}/><BattleHud/></AppProviders>);
   expect(await screen.findByText(/🎯 Target eliminated, Ravager · \+2 VP/)).toBeInTheDocument();
 });
+test("a plain (non-priority) kill toasts as a wreck worth +1 VP", async () => {
+  const base: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:0,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[] } };
+  const killed: ServerState = { version:2, ownerSide:"a", field:null, rigs:[],
+    game:{ round:3, phase:"activation", started:true,
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 },
+      sides:[{id:"a",name:"Kostov",vp:1,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      resolutions:[{ id:5, kind:"destruction", rigId:9, victimName:"Ravager", vp:{ side:"a", amount:1 }, effects:[] }] } };
+  const { rerender } = render(<AppProviders><Seed state={base}/><BattleHud/></AppProviders>);
+  await screen.findByText(/Kostov 0/);
+  rerender(<AppProviders><Seed state={killed}/><BattleHud/></AppProviders>);
+  expect(await screen.findByText(/💥 Ravager wrecked · \+1 VP/)).toBeInTheDocument();
+});
 test("shows the local side's Priority Target", async () => {
   const state = { version:1, ownerSide:"a", field:null,
     rigs:[{ id:9, name:"Ravager", owner:"b", weightClass:"light",

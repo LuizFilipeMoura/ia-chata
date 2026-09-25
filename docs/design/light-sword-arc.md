@@ -22,7 +22,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
-| **Field** | Duelist's Balance | Gains Precision, aimed cuts ignore the −2 penalty. Reliable finesse; pick your location. | `Aimed cuts ignore the aim penalty` | ✅ coded (Precision) |
+| **Field** | Duelist's Balance | Gains Precision, aimed cuts ignore the −3 penalty. Reliable finesse; pick your location. | `Aimed cuts ignore the aim penalty` | ✅ coded (Precision) |
 | **Tuned** | Opportunist | +3 STR vs a target that's **overheated (heat over its class's Heat Capacity) or carrying an action penalty into its next activation**: the sword executes what the Arc Gun broke. Dead vs a healthy target. | `+3 STR vs disrupted / overheated targets` | ✅ implemented (`vsDisrupted` check) |
 | **Prototype** | Superconductor Edge | The blade is wired to the Arc capacitors. While you're **over half your class's heat cap**: +2 STR, and **once per attack** (not per hit) **1 heat transfers from you to the target** (vent through the blade). Turns your own overheating into *theirs*. **Downside:** only works while you run hot (sitting near your own misfire threshold), and you must be in melee (fragile light). | `Run hot and dump your heat into them through the blade` | ✅ implemented (`superconductor` heat-transfer check) |
 

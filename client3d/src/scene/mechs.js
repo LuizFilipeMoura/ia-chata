@@ -245,7 +245,7 @@ export class Mech {
     this.pelvis.add(box(heavy ? 0.8 : 0.6, 0.3, heavy ? 1.1 : 0.8, DARK()));
 
     this.torso = new THREE.Group(); this.torso.position.y = heavy ? 0.75 : 0.6; this.pelvis.add(this.torso);
-    const chest = box(heavy ? 1.5 : 1.1, heavy ? 1.1 : 0.85, heavy ? 1.5 : 1.1, paint); this.torso.add(chest);
+    const chest = box(heavy ? 1.5 : 1.1, heavy ? 1.1 : 0.85, heavy ? 1.5 : 1.1, paint); this.torso.add(chest); this.chest = chest;
     const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, mat(0xffcf7a, { emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 }));
     cockpit.position.set(heavy ? 0.6 : 0.45, 0.15, 0); this.torso.add(cockpit);
     if (heavy) this.torso.add(at(box(1.2, 0.2, 1.7, STEEL()), -0.1, 0.62, 0));
@@ -292,6 +292,20 @@ export class Mech {
   setHeat(frac) { this.heatFrac = Math.max(0, Math.min(1.6, frac)); }
   setHurt(frac) { this.hurt = frac; }
 
+  // Broken parts show on the model: a torn-off gun arm hangs dead, broken legs
+  // limp, a dead engine's stacks go cold and sputter, a gutted hull is scorched.
+  // Idempotent: called with the full { hull, arms, legs, engine } broken map.
+  setParts(broken = {}) {
+    this.broken = broken;
+    const char = (root, on) => root.traverse((o) => {
+      if (!o.isMesh || !o.material?.color) return;
+      if (on && !o.userData.clean) { o.userData.clean = o.material; o.material = o.material.clone(); o.material.color.multiplyScalar(0.3); }
+      else if (!on && o.userData.clean) { o.material = o.userData.clean; o.userData.clean = null; }
+    });
+    char(this.armR, !!broken.arms);
+    char(this.chest, !!broken.hull);
+  }
+
   // Aim the torso at a world point (twists up to ±60°, the rest is the feet).
   aimAt(world) {
     if (!world) { this.aimYaw = 0; return; }
@@ -335,8 +349,9 @@ export class Mech {
     this.torso.rotation.y += ((this.aimYaw) - this.torso.rotation.y) * Math.min(1, dt * 6);
     this.recoil = Math.max(0, this.recoil - dt * 3.5);
     this.strike = Math.max(0, this.strike - dt * 2.2);
+    const b = this.broken || {};
     this.armR.position.x = -this.recoil * 0.35;
-    this.armR.rotation.z = this.recoil * 0.25;
+    this.armR.rotation.z = b.arms ? -1.25 + Math.sin(this.t * 3) * 0.05 : this.recoil * 0.25;
     const s = Math.sin((1 - this.strike) * Math.PI);
     this.armL.position.x = s * 0.9 * (this.strike > 0 ? 1 : 0);
     this.armL.rotation.y = -s * 0.5;
@@ -347,13 +362,13 @@ export class Mech {
     if (this.me.spin) this.me.spin.rotation.z += (this.strike > 0 ? 30 : 2) * dt;
     // Heat glow on the stacks; over capacity it pulses.
     const over = this.heatFrac > 1;
-    this.ventMat.emissiveIntensity = this.heatFrac * 1.8 + (over ? Math.sin(this.t * 10) * 0.8 + 0.8 : 0);
+    this.ventMat.emissiveIntensity = b.engine ? (Math.sin(this.t * 13) > 0.85 ? 0.6 : 0) : this.heatFrac * 1.8 + (over ? Math.sin(this.t * 10) * 0.8 + 0.8 : 0);
     // Damage lean.
     if (this.destroyed) {
       this.body.rotation.z += (-0.5 - this.body.rotation.z) * Math.min(1, dt * 2);
       this.body.position.y += (-0.6 - this.body.position.y) * Math.min(1, dt * 2);
     } else {
-      this.body.rotation.x = Math.sin(this.t * 0.9) * 0.02 + this.hurt * 0.08;
+      this.body.rotation.x = Math.sin(this.t * 0.9) * 0.02 + this.hurt * 0.08 + (b.legs ? 0.12 + Math.abs(Math.sin(this.walkPhase)) * 0.12 * this.walking : 0);
     }
     // Turn toward targetFacing smoothly.
     let d = ((this.targetFacing - this.facing + 540) % 360) - 180;

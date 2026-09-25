@@ -70,7 +70,7 @@ export const LESSONS = [
       { title: "Limbs", text: "Arms and Legs don't kill a rig on their own, but they cripple it. Extra damage to a broken limb spills into the Hull.", extra: () => partsChart(["arms", "legs"]), next: true },
       { title: "Read the enemy", text: "Look at the dummy's card: its Engine bar (E) is nearly empty, 2 SP left. Your Autocannon deals 2 damage per wound. Click the dummy for its full sheet any time.", highlight: ".hud-roster.enemy .rc-sp", next: true },
       PICK,
-      { title: "Aim for the Engine", allow: { select: true, acts: ["aimed"] }, text: "Press Aimed Shot, click the dummy, and pick the Engine. Aimed Shots choose the location but aim worse (−2), so it may take a couple of tries.", highlight: '[data-act="aimed"]', done: (m) => { const d = m.state?.rigs?.find((r) => r.name === "Dummy"); return !d || d.destroyed || (d.engine?.sp ?? 2) <= 0 || res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 3; } },
+      { title: "Aim for the Engine", allow: { select: true, acts: ["aimed"] }, text: "Press Aimed Shot, click the dummy, and pick the Engine. Aimed Shots choose the location but aim worse (−3), so it may take a few tries.", highlight: '[data-act="aimed"]', done: (m) => { const d = m.state?.rigs?.find((r) => r.name === "Dummy"); return !d || d.destroyed || (d.engine?.sp ?? 2) <= 0 || res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 3; } },
       { title: "What happened?", text: "", extra: (m) => {
           const d = m.state?.rigs?.find((r) => r.name === "Dummy");
           const say = !d || d.destroyed
@@ -100,7 +100,7 @@ export const LESSONS = [
       PICK,
       { title: "Fire", allow: { select: true, acts: ["fire"] }, text: "Press Fire, then click the dummy. You can only target what's inside your front 90° (the green wedge).", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       { title: "Read the result", text: "Hover the newest line in the Combat log: every die, the to-hit target and why, the hit location and the damage are all there.", highlight: ".clog", next: true },
-      { title: "Aimed Shot", allow: { select: true, acts: ["aimed"] }, text: "Aimed Shot fires fewer dice but lets you pick the hit location. Aim for the Engine: at 0 the rig skips its next turn.", highlight: '[data-act="aimed"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2, skippable: true },
+      { title: "Aimed Shot", allow: { select: true, acts: ["aimed"] }, text: "Aimed Shot rolls the same dice at −3 Aim, but lets you pick the hit location. Aim for the Engine: at 0 the rig skips its next turn.", highlight: '[data-act="aimed"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2, skippable: true },
       DONE("Distance matters: each gun has a sweet spot. The Combat log always explains the roll."),
     ] },
   { id: "arcs", icon: "arc", title: "Arcs and flanking", blurb: "Face your target, then hit it where it's soft.",

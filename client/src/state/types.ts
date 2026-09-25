@@ -136,10 +136,21 @@ export interface Resolution {
   breakdown?: ResolutionBreakdown;
   effects?: string[];
   rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
-  /** Priority Elimination award attached to a `destruction` entry. */
-  vp?: { side: string; amount: number };
+  /** Kill VP on a `destruction` entry: `{ side, amount }`, the TOTAL awarded
+   *  (any-kill VP + the Priority Elimination bonus). On a `score` entry: the
+   *  marker's VP scored (0 when contested). */
+  vp?: number | { side: string; amount: number };
   /** Name of the wrecked unit, captured before it may be removed. */
   victimName?: string;
+  /** `score` entries: the scoring side, the objective index and its position. */
+  side?: string;
+  objective?: number;
+  x?: number;
+  y?: number;
+  /** `score` entry for a marker both sides held: nobody scored. */
+  contested?: boolean;
+  /** `attack` entry that dealt 0 SP: the target is Staggered. */
+  stagger?: boolean;
 }
 
 export type Diagonal = "tlbr" | "trbl";

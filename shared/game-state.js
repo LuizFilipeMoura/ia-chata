@@ -3,6 +3,7 @@ import {
   EQUIPMENT_UPGRADES, equipmentUpgradeEffectOf,
 } from "./rules.js";
 import { resolveAttack } from "./combat.js";
+import { markRng, resetRng, rngWasUsed } from "./rng.js";
 import { META } from "./bot/meta.js";
 import { SCENARIOS } from "./scenarios.js";
 import {
@@ -29,6 +30,9 @@ export const MAX_OVERHEAT_BONUS = 10;
 // Priority Elimination (§11), flat VP the opposing side scores for wrecking an
 // enemy unit, once per unit. See docs/superpowers/specs/2026-07-11-priority-elimination-design.md.
 export const KILL_VP = 2;
+// Any kill (§11): every enemy wreck, whatever destroyed it, scores this for the
+// side that doesn't own it. Priority Elimination (KILL_VP) stacks on top.
+export const ANY_KILL_VP = 1;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 // The objective game runs this many rounds before victory resolves on points
 // (§11). Doubled from the original 5 to pair with the ~2× per-rig SP scaling,
@@ -1436,6 +1440,7 @@ function rollD(sides, provided, random = Math.random) {
     const v = Math.floor(Number(provided));
     if (Number.isFinite(v) && v >= 1 && v <= sides) return v;
   }
+  markRng(); // engine dice: this command can no longer be undone (rng.js)
   return Math.floor((random || Math.random)() * sides) + 1;
 }
 
@@ -1496,6 +1501,7 @@ function applyInitiative(room, order, rolls) {
 
 function randomPick(items, random = Math.random) {
   if (!items.length) return null;
+  markRng();
   const index = Math.min(items.length - 1, Math.floor(random() * items.length));
   return items[index];
 }
@@ -1505,6 +1511,7 @@ function randomPick(items, random = Math.random) {
 // falsy arg, matching the fallback idiom used across this module.
 function shuffleInPlace(arr, random = Math.random) {
   const rand = random || Math.random;
+  if (arr.length > 1) markRng();
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -1585,6 +1592,7 @@ function startGameSeeded(room, first) {
 // objective control.
 export function autoDeploy(room, random = Math.random) {
   const rand = typeof random === "function" ? random : Math.random;
+  markRng();
   const [ownerC, foeC] = deploymentCorners(room.field);
   const rad = deployRadius(room.field);
   const polys = terrainPolygons(room.field);
@@ -1891,21 +1899,29 @@ function onRigDamaged(room, rig, opts) {
     rig._blastRolled = true;
     const roll = rollD(12, opts?.dice?.destruction, opts?.random);
     const exploded = roll >= 4;
-    // Priority Elimination, the side whose Priority Target this wreck is scores
-    // KILL_VP. Any other kill scores nothing. Guarded by _blastRolled above, so a
-    // revived-then-rekilled target never re-awards.
-    const scorer = room.game.sides.find(
-      (s) => room.game.priorityTargets?.[s.id] === rig.id,
-    );
+    // Kill VP (§11): every wreck scores ANY_KILL_VP for the side that doesn't
+    // own it, whatever the cause (an overheat cook-off included, a wreck is a
+    // wreck). Priority Elimination stacks KILL_VP on top when the wreck is that
+    // side's Priority Target. Guarded by _blastRolled above, so a
+    // revived-then-rekilled rig never re-awards. Only once the battle is live.
+    const owner = rig.owner || "a";
+    const scorer = room.game.started
+      ? room.game.sides.find((s) => s.id !== owner) : null;
     const effects = [];
+    let amount = 0;
     if (scorer) {
-      scorer.vp = (scorer.vp || 0) + KILL_VP;
-      effects.push(`+${KILL_VP} VP, Priority Elimination (${scorer.name})`);
+      amount += ANY_KILL_VP;
+      effects.push(`+${ANY_KILL_VP} VP, kill (${scorer.name})`);
+      if (room.game.priorityTargets?.[scorer.id] === rig.id) {
+        amount += KILL_VP;
+        effects.push(`+${KILL_VP} VP, Priority Elimination (${scorer.name})`);
+      }
+      scorer.vp = (scorer.vp || 0) + amount;
     }
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       victimName: rig.name,
-      vp: scorer ? { side: scorer.id, amount: KILL_VP } : undefined,
+      vp: amount ? { side: scorer.id, amount } : undefined,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name} destroyed, ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
       effects,
@@ -2175,11 +2191,24 @@ function runRecovery(room, random) {
   // physical conflict rule. Then advance immediately, exactly as the vp verb's
   // clean-claim path does, a digital room never rests in recovery.
   if (room.mode === "digital") {
-    for (const marker of room.game.objectives || []) {
+    for (const [index, marker] of (room.game.objectives || []).entries()) {
       const holders = room.game.sides.filter((s) =>
         room.rigs.some((r) => (r.owner || "a") === s.id && !r.destroyed
           && r.pos && controlsObjective(spatial(r), marker)));
-      if (holders.length === 1) holders[0].vp += (marker.vp || 0);
+      const at = { objective: index, x: marker.x, y: marker.y };
+      if (holders.length === 1) {
+        const [s] = holders;
+        s.vp += (marker.vp || 0);
+        pushResolution(room, {
+          kind: "score", actor: s.id, side: s.id, vp: marker.vp || 0, ...at, rolls: [],
+          summary: `${s.name} holds the beacon: +${marker.vp || 0} VP`, effects: [],
+        });
+      } else if (holders.length > 1) {
+        pushResolution(room, {
+          kind: "score", contested: true, vp: 0, ...at, rolls: [],
+          summary: "Beacon contested: nobody scores", effects: [],
+        });
+      }
     }
     advanceRound(room, random);
   }
@@ -2234,6 +2263,9 @@ function endActivation(room, rig, dice, random) {
     }
   }
   rig.activated = true;
+  // Stagger (§7) lapses at the end of the rig's next activation if it never
+  // attacked; one staggered mid-activation keeps it one activation longer.
+  lapseStagger(rig);
   // Piledriver Protocol (§13, Siege Maul), a rig carrying the piledriver
   // upgrade gains +1 Momentum (cap 3) for any activation it advanced. Read
   // movedThisActivation HERE, before the clear below zeroes it, endActivation is
@@ -2290,7 +2322,13 @@ function applyOverheat(room, rig, total, opts) {
   else if (row.key === "blowout") { applyDamage(room, rig, mobPart, 2, opts); rig.speedHalvedNextRound = true; }
   else if (row.key === "buckling") for (const l of all) applyDamage(room, rig, l, 1, opts);
   else if (row.key === "engine-failure") { applyDamage(room, rig, powerPart, 2, opts); rig.noCool = true; }
-  else if (row.key === "catastrophic") { for (const l of all) setRigSp(rig, l, 0); rig.noCool = true; }
+  else if (row.key === "catastrophic") {
+    for (const l of all) setRigSp(rig, l, 0);
+    rig.noCool = true;
+    // setRigSp bypasses the damage cascade; route the wreck through §9 so a
+    // cook-off still rolls its D12 blast and scores kill VP like any other.
+    onRigDamaged(room, rig, opts);
+  }
   // Engagement (§engagement), a catastrophic overheat destroys via setRigSp,
   // which bypasses onRigDamaged; clear the melee lock here too.
   if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
@@ -2311,7 +2349,26 @@ function combatCtx() {
     breachHull,
     profileFor: (slot, name, attacker) => effectiveWeaponProfile(slot, name, attacker),
     engage: (room, attacker, target) => maybeEngage(room, attacker, target),
+    stagger: staggerRig,
   };
+}
+
+// Stagger (§7), a resolved attack that dealt 0 SP rattles its target: +1 heat
+// now, −1 Aim on its next attack (combat.js aimBreakdown reads rig.staggered and
+// resolveAttack spends it). Otherwise it lapses at the end of the rig's next
+// activation. A rig staggered DURING its own activation (a Return Fire / Brace
+// counter that whiffed) keeps it through the end of its NEXT activation, not
+// this one, `staggerKeep` marks that so endActivation skips one clear.
+function staggerRig(room, rig) {
+  if (!rig || rig.destroyed) return;
+  if (UNIT_KINDS[kindOf(rig)]?.hasHeat) bumpHeat(rig, 1);
+  rig.staggered = true;
+  rig.staggerKeep = room.game?.turn?.activeRigId === rig.id;
+}
+function lapseStagger(rig) {
+  if (!rig.staggered) return;
+  if (rig.staggerKeep) rig.staggerKeep = false;
+  else rig.staggered = false;
 }
 
 // THE SEAM. In a physical room the player reads distance / arc / cover off a
@@ -3308,6 +3365,35 @@ function advanceRound(room, random) {
   }
 }
 
+// §9 cook-off radius in a digital room: every non-destroyed rig with a
+// position whose base reaches within BLAST_RADIUS of the wreck's centre.
+const BLAST_RADIUS = 4;
+function blastVictims(room, source) {
+  const src = spatial(source);
+  return room.rigs.filter((r) => r !== source && !r.destroyed && r.pos
+    && distanceBetween(spatial(r), src) <= BLAST_RADIUS + radiusOf(r));
+}
+
+// Evasive / Sidestep (§5): did the pre-resolution dodge break the shot? An
+// explicit `evaded` flag always wins (a physical table adjudicated the move).
+// With no flag, a digital room has no hand to move the mini, so the engine rolls
+// a D6 and the attack fails on 4+ (logged as a reaction with the die); a
+// physical room without the flag reads "not evaded", as before.
+function resolveDodge(room, pr, reactor, a, random) {
+  if (a.evaded != null) return a.evaded === true || a.evaded === "true";
+  if (room.mode !== "digital") return false;
+  const die = rollD(6, null, random);
+  const dodged = die >= 4;
+  const verb = pr.kind === "sidestep" ? "sidestep" : "evade";
+  pushResolution(room, {
+    kind: "reaction", actor: reactor.owner, rigId: reactor.id, prep: pr.kind,
+    rolls: [{ sides: 6, value: die, label: verb, tone: dodged ? "ok" : "miss" }],
+    summary: `${reactor.name} tries to ${verb}: rolled ${die}, ${dodged ? "dodged!" : "caught"}`,
+    effects: [dodged ? "4+ on the D6, the attack fails" : "Under 4, the attack resolves"],
+  });
+  return dodged;
+}
+
 // Turn-scoped verbs whose effect the acting side may revert with `undo`.
 const UNDO_VERBS = new Set(["action", "endactivation", "activate", "blast", "react", "answer"]);
 const UNDO_LIMIT = 12; // bounded so the serialized room stays small
@@ -3355,10 +3441,13 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   // state leaves this stale value, but callers only read it when version didn't
   // move (see checkCommand / the /command 409).
   _rejectionReason = null;
+  // Engine-dice tracking (rng.js): read back at the end, a command that drew
+  // from the RNG can't be undone and wipes everything before it too.
+  resetRng();
 
   // Revert: pop the last turn-scoped snapshot, but only for the side that made
-  // it (the acting side). Restores rigs + game wholesale; dice already rolled
-  // are undone with it.
+  // it (the acting side). Restores rigs + game wholesale. Never crosses an
+  // engine dice roll: a command that rolled clears the history (below).
   if (verb === "undo") {
     const top = room._history?.[room._history.length - 1];
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
@@ -3774,6 +3863,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       if (rig.skipNextActivation) {
         rig.skipNextActivation = false;
         rig.activated = true;
+        lapseStagger(rig); // a lost activation still counts as its next one
         pushResolution(room, { kind: "skip", actor: rig.owner, rigId: rig.id, rolls: [],
           summary: `${rig.name} loses this activation (engine offline).`, effects: [] });
         handoff(room, options.random);
@@ -3879,7 +3969,12 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       const pending = room.game.pendingBlast;
       const source = room.rigs.find((x) => x.id === pending.sourceId);
       const actor = source ? (source.owner || "a") : null;
-      const names = Array.isArray(a.targets) ? a.targets : [];
+      // Digital rooms measure the 4" ring themselves when no list is given
+      // (every living positioned rig whose base is within 4" of the wreck's
+      // centre); an explicit list (even empty) is the players' call.
+      const names = Array.isArray(a.targets) ? a.targets
+        : room.mode === "digital" && source?.pos ? blastVictims(room, source).map((r) => r.name)
+        : [];
       for (const name of names) {
         const t = findRig(room, name);
         if (!t || t.destroyed) continue;
@@ -3930,7 +4025,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       const reactor = room.rigs.find((x) => x.id === pr.targetId);   // the prepared rig
       const attacker = room.rigs.find((x) => x.id === pr.attackerId);
       if (pr.kind === "evasive" && reactor && attacker) {
-        const evaded = a.evaded === true || a.evaded === "true";
+        const evaded = resolveDodge(room, pr, reactor, a, options.random);
         if (evaded) {
           // The shot was fired but dodged: weapon discharged, attacker still runs
           // hot and spends the action, but no to-hit / no damage.
@@ -3973,7 +4068,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       } else if (pr.kind === "sidestep" && reactor && attacker) {
         // Anti-ranged dodge: like evasive, plus an optional free engage when the
         // ½-Speed slip reaches the shooter (player asserts the reach).
-        const evaded = a.evaded === true || a.evaded === "true";
+        const evaded = resolveDodge(room, pr, reactor, a, options.random);
         if (evaded) {
           const slot = pr.attack.weapon === "melee" ? "melee" : "longRange";
           const rt = room.game.turn;
@@ -4098,7 +4193,10 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   changed = clearThreatIfStale(room) || changed;
 
   if (changed) {
-    if (undoSnapshot) {
+    // Rolled engine dice (not player-typed ones): nothing at or before the roll
+    // may be reverted, or a player could undo a bad roll and roll again.
+    if (rngWasUsed()) room._history = [];
+    else if (undoSnapshot) {
       room._history.push(undoSnapshot);
       while (room._history.length > UNDO_LIMIT) room._history.shift();
     }
@@ -4226,4 +4324,4 @@ export function formatBattleState(room, side) {
   return lines.join("\n");
 }
 
-export const __test = { applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, maybeBraceRetaliate, runRecovery, endActivation, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };
+export const __test = { staggerRig, applyDamage, applyOverheat, breachHull, tickBreach, repairRig, setRigSp, ensureRigShape, setEngagement, clearEngagement, maybeEngage, maybeBraceRetaliate, runRecovery, endActivation, crackLocation, dismemberLocation, rivetHit, rerollPriorityTargets, advanceRound };

@@ -117,6 +117,8 @@ export class World {
 
     this.tableGroup = new THREE.Group(); this.scene.add(this.tableGroup);
     this.overlay = new THREE.Group(); this.scene.add(this.overlay);
+    // Its own layer so the threat map survives clearOverlay() between modes.
+    this.threat = new THREE.Group(); this.scene.add(this.threat);
     this.objectiveMeshes = [];
 
     // Camera rig state.
@@ -126,7 +128,7 @@ export class World {
     this.mouse = new THREE.Vector2();
     this.pointerWorld = null;
     this.edgePan = true;
-    this.listeners = { click: [], move: [], rclick: [] };
+    this.listeners = { click: [], move: [], rclick: [], longpress: [] };
     this.bindInput();
     this.resize();
     window.addEventListener("resize", () => this.resize());
@@ -145,25 +147,86 @@ export class World {
   bindInput() {
     const el = this.renderer.domElement;
     let drag = null;
+    // Touch: every active pointer, so two fingers pinch-zoom / twist / pan.
+    const touches = new Map();
+    let pinch = null, longPress = null;
+    const cancelLong = () => { clearTimeout(longPress); longPress = null; };
+    el.style.touchAction = "none";
     el.addEventListener("contextmenu", (e) => e.preventDefault());
     el.addEventListener("pointerdown", (e) => {
-      drag = { x: e.clientX, y: e.clientY, button: e.button, moved: 0 };
+      if (e.pointerType === "touch") {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size === 2) {
+          // Second finger: a camera gesture, not a click or a placement drag.
+          cancelLong();
+          if (drag?.captured) this.onDragCancel?.();
+          drag = null;
+          const [a, b] = [...touches.values()];
+          pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+          return;
+        }
+      }
+      if (touches.size > 1) return;
+      this.updateMouse(e);
+      drag = { x: e.clientX, y: e.clientY, button: e.button, moved: 0, touch: e.pointerType === "touch" };
+      const hit = this.pick();
+      // A screen (live battle) can claim a left-press as a drag of its own:
+      // press on the spot, drag to set facing, release to confirm.
+      if (e.button === 0 && this.onDragStart?.(hit, e)) drag.captured = true;
+      // Long-press (touch or mouse, held still) inspects what's under it. Not
+      // while the press is placing a move: holding still there is just aiming.
+      cancelLong();
+      if (e.button === 0 && !drag.captured) longPress = setTimeout(() => {
+        longPress = null;
+        if (!drag || drag.moved > 8 || touches.size > 1) return;
+        drag.long = true;
+        this.listeners.longpress.forEach((f) => f(hit, e));
+      }, 550);
     });
-    window.addEventListener("pointerup", (e) => {
-      if (drag && drag.moved < 6 && e.target === el) {
+    const release = (e) => {
+      if (e.pointerType === "touch") {
+        touches.delete(e.pointerId);
+        if (touches.size < 2) pinch = null;
+        if (touches.size) return;
+      }
+      cancelLong();
+      if (drag?.captured) {
+        this.updateMouse(e);
+        this.onDragEnd?.(this.pick(), drag.moved, e);
+      } else if (drag && !drag.long && drag.moved < (drag.touch ? 12 : 6) && e.target === el) {
         this.updateMouse(e);
         const hit = this.pick();
+        this.pointerWorld = hit.point;
         (drag.button === 2 ? this.listeners.rclick : this.listeners.click).forEach((f) => f(hit, e));
       }
       drag = null;
-    });
+    };
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
     el.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch" && touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && touches.size === 2) {
+        const [a, b] = [...touches.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        this.cam.dist = Math.max(12, Math.min(110, this.cam.dist * (pinch.d / Math.max(1, d))));
+        this.cam.yaw += ang - pinch.ang;
+        this.panBy(-(mid.x - pinch.mid.x) * this.cam.dist * 0.0018, -(mid.y - pinch.mid.y) * this.cam.dist * 0.0018);
+        pinch = { d, ang, mid };
+        return;
+      }
       this.updateMouse(e);
-      this.lastPointer = { x: e.clientX, y: e.clientY };
+      this.lastPointer = e.pointerType === "touch" ? null : { x: e.clientX, y: e.clientY };
       if (drag) {
         const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         drag.moved += Math.abs(dx) + Math.abs(dy);
         drag.x = e.clientX; drag.y = e.clientY;
+        if (drag.moved > 8) cancelLong();
+        if (drag.captured) {
+          const hit = this.pick();
+          this.pointerWorld = hit.point;
+          this.onDrag?.(hit, drag.moved, e);
+          return;
+        }
         if (drag.button === 2 || (drag.button === 0 && e.altKey)) {
           this.cam.yaw += dx * 0.006; this.cam.pitch = Math.max(20 * DEG, Math.min(85 * DEG, this.cam.pitch + dy * 0.004));
         } else if (drag.button === 1 || (drag.button === 0 && drag.moved > 6)) {
@@ -365,6 +428,24 @@ export class World {
     });
   }
 
+  // Round-end payout: the beacon flares in the scorer's colour.
+  pulseObjective(i, color = 0xffd35a) {
+    const m = this.objectiveMeshes[i];
+    if (m) m.pulse = { t: 0, color };
+  }
+
+  // Enemy fire coverage painted on the table: each enemy's front arc out to its
+  // gun's range, plus its melee reach. `zones`: [{ x, y, facing, range, reach }].
+  setThreat(zones) {
+    this.threat.clear();
+    for (const z of zones || []) {
+      const w = new THREE.Mesh(new THREE.CircleGeometry(z.range, 48, (z.facing - 45) * DEG, 90 * DEG), new THREE.MeshBasicMaterial({ color: 0xe0533d, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide }));
+      w.rotation.x = Math.PI / 2; w.position.set(z.x, 0.035, z.y); this.threat.add(w);
+      const r = new THREE.Mesh(new THREE.CircleGeometry(z.reach, 40), new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true, opacity: 0.12, depthWrite: false }));
+      r.rotation.x = -Math.PI / 2; r.position.set(z.x, 0.036, z.y); this.threat.add(r);
+    }
+  }
+
   // ---- Overlays ----
   clearOverlay() { this.overlay.clear(); }
   ring(x, y, r, color = 0x5fd3c0, opacity = 0.5) {
@@ -416,7 +497,18 @@ export class World {
     this.camera.position.copy(c.target).add(off);
     if (this.fx.shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(this.fx.shake * 0.6));
     this.camera.lookAt(c.target);
-    this.objectiveMeshes.forEach((m, i) => { m.gem.rotation.y += dt; m.gem.position.y += Math.sin(this.clock.elapsedTime * 2 + i) * 0.004; });
+    this.objectiveMeshes.forEach((m, i) => {
+      m.gem.rotation.y += dt; m.gem.position.y += Math.sin(this.clock.elapsedTime * 2 + i) * 0.004;
+      if (m.pulse) {
+        const p = m.pulse; p.t += dt;
+        const k = Math.max(0, 1 - p.t / 1.6);
+        m.gem.scale.setScalar(1 + k * 1.6);
+        m.light.intensity = 6 + k * 60;
+        if (p.t < 0.05) { m.light.color.setHex(p.color); m.pylonMat.emissive.setHex(p.color); }
+        if (p.t < 1 && Math.random() < dt * 30) this.fx.particle(m.gem.getWorldPosition(new THREE.Vector3()), { color: p.color, size: 0.7, life: 0.9, grow: 2, vel: new THREE.Vector3((Math.random() - 0.5) * 4, 3 + Math.random() * 3, (Math.random() - 0.5) * 4) });
+        if (k <= 0) { m.pulse = null; m.gem.scale.setScalar(1); m.light.intensity = 6; }
+      }
+    });
     // Chimney smoke and sweeping searchlights.
     for (const c of this.chimneys || []) {
       if (Math.random() < dt * 5) {

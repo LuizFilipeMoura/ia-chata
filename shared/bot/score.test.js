@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { scoreCandidate, PRESETS } from "./score.js";
+import { scoreCandidate, scoreParts, PRESETS } from "./score.js";
 import { createRoom, claimSide, applyCommand, findRig } from "../game-state.js";
 import { computeObjectives } from "../field.js";
 import { HEAT_CAPACITY } from "../rules.js";
@@ -117,4 +117,21 @@ test("an action that would overheat scores below one that doesn't", () => {
 test("PRESETS.aggressive weights damage above vp; PRESETS.cagey the reverse", () => {
   assert.ok(PRESETS.aggressive.damage > PRESETS.aggressive.vp, "aggressive prizes damage");
   assert.ok(PRESETS.cagey.vp > PRESETS.cagey.damage, "cagey prizes vp");
+});
+
+test("any kill has value: a non-priority target still earns kill progress, a third of the priority's", () => {
+  const { room, atk } = scoreSetup({ twoFoes: true });   // priority = Foe
+  const base = { action: "fire", weapon: "longRange", arc: "side", distance: 12, cover: 0 };
+  const on = scoreParts(room, atk, { ...base, target: "Foe" }).priority;
+  const off = scoreParts(room, atk, { ...base, target: "Foe2" }).priority;
+  assert.ok(off > 0, "wrecking any enemy is worth VP now");
+  assert.ok(Math.abs(off * 3 - on) < 1e-9, `non-priority ${off} should be 1/3 of priority ${on}`);
+});
+
+test("an Aimed Shot is priced with its aim penalty, not as a free Fire", () => {
+  const { room, atk } = scoreSetup();
+  const base = { weapon: "longRange", target: "Foe", arc: "front", distance: 12, cover: 0 };
+  const fire = scoreParts(room, atk, { ...base, action: "fire" }).damage;
+  const aimedHull = scoreParts(room, atk, { ...base, action: "aimed", location: "hull" }).damage;
+  assert.ok(aimedHull < fire, `aimed at the hull ${aimedHull} should trail a plain Fire ${fire}`);
 });

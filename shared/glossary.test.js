@@ -12,7 +12,7 @@ const REQUIRED = [
   "action-penalty", "no-prepare", "anchored", "no-actives", "arc-locked",
   "arms-suppressed", "belt-cycling", "cracked", "riveted", "no-repair",
   "reaction-set", "braced", "evasive", "return-fire", "weapon-lost",
-  "ranged-unloaded", "painted",
+  "ranged-unloaded", "painted", "staggered",
   // status
   "destroyed", "heavy-damage", "damaged", "nominal",
   // non-rig parts

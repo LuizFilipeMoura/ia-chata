@@ -92,7 +92,7 @@ function rigSchematic(target, on) {
   return d;
 }
 
-// Aimed Shot: pick the spot. Same dice, -2 Aim, no location roll.
+// Aimed Shot: pick the spot. Same dice, −3 Aim, no location roll.
 function aimedPicker(target, rows, onPick) {
   const byLoc = Object.fromEntries(rows.map((r) => [r.c.location, r]));
   const best = rows[0].c.location;
@@ -149,6 +149,6 @@ export function attackBriefing(rig, target, rows, onPick) {
     el("h4", { class: "atk-sec" }, "The situation"), tiles,
     cards.length ? el("h4", { class: "atk-sec" }, "Choose your attack") : null, cards.length ? el("div", { class: "atk-cards" }, cards) : null,
     aimed.length ? el("h4", { class: "atk-sec" }, "Aimed Shot: choose where it hits") : null,
-    aimed.length ? el("p", { class: "atk-lead" }, rich(`Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −2 Aim (fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`)) : null,
+    aimed.length ? el("p", { class: "atk-lead" }, rich(`Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −3 Aim (far fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`)) : null,
     aimed.length ? aimedPicker(target, aimed, onPick) : null);
 }

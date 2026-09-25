@@ -23,11 +23,17 @@ export function BattleHud() {
     }
     // Only the newest kill in a batched update toasts; lastKillId jumps past all
     // fresh entries so earlier ones are intentionally dropped.
-    const fresh = log.filter((e) => e.id > lastKillId.current && e.vp);
+    // Kill VP rides a `destruction` entry as { side, amount } (score entries
+    // carry a plain number and don't toast here). Every kill scores; one worth
+    // more than a plain kill was the Priority Target.
+    const fresh = log.filter((e) => e.id > lastKillId.current && e.kind === "destruction"
+      && typeof e.vp === "object" && e.vp);
     if (!fresh.length) return;
     const latest = fresh[fresh.length - 1];
+    const vp = latest.vp as { side: string; amount: number };
     lastKillId.current = log[log.length - 1].id;
-    setToast(`🎯 Target eliminated, ${latest.victimName ?? "a unit"} · +${latest.vp!.amount} VP`);
+    const who = latest.victimName ?? "a unit";
+    setToast(vp.amount > 1 ? `🎯 Target eliminated, ${who} · +${vp.amount} VP` : `💥 ${who} wrecked · +${vp.amount} VP`);
     if (toastTimer.current != null) clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 4000);
   }, [game]);

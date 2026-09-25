@@ -9,7 +9,7 @@ export const KEYWORDS = [
   { k: "Raking Fire", ic: "fire", on: "Mini Gun, Double MG", t: "Can't wound a target's front arc at all. Side hits get +3 Penetration, rear +6 (instead of +2/+3). Flank or waste the shot." },
   { k: "Armour Piercing", ic: "pen", on: "AP Shells, Shaped Charges, some melee Field upgrades", t: "Reroll every failed wound roll. More wounds land; each still deals normal Damage." },
   { k: "Rend", ic: "dmg", on: "Chainsaw, Claw, Flamethrower (Field upgrades)", t: "Each wound deals +1 Damage. Depth, not frequency." },
-  { k: "Precision", ic: "aimed", on: "Crossbow, Sniper Cannon, Sword (Field upgrades)", t: "Aimed Shots without the −2 Aim penalty: pick the part for free." },
+  { k: "Precision", ic: "aimed", on: "Crossbow, Sniper Cannon, Sword (Field upgrades)", t: "Aimed Shots without the −3 Aim penalty: pick the part for free." },
   { k: "Shock", ic: "legs", on: "Mini Gun (Suppressive Fire)", t: "On a hit, the target's movement is halved on its next activation." },
   { k: "Incendiary", ic: "heat", on: "Arc Gun (Ion Burn)", t: "On a hit, the target gains 1 heat. Push them toward an overheat." },
   { k: "Impale", ic: "anchor", on: "Harpoon, Claw (Vice Grip)", t: "On a hit roll a D12: on 8+ the target is pinned in place until your next activation (it can still turn)." },

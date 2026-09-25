@@ -166,6 +166,7 @@ export function rigModifiers(rig) {
   if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit", gloss: "burning" });
   if (rig.noCool) mods.push({ key: "nocool", tag: "No cooling", tone: "crit", gloss: "no-cooling" });
   if (rig.speedHalvedNextRound) mods.push({ key: "speed", tag: "Speed halved", tone: "warn", gloss: "speed-halved" });
+  if (rig.staggered) mods.push({ key: "staggered", tag: "Staggered · −1 Aim next attack", tone: "warn", gloss: "staggered" });
   if (rig.skipNextActivation) mods.push({ key: "skip", tag: "Skips next activation", tone: "warn", gloss: "skip-activation" });
   // Prototype-upgrade states so the player can track them at a glance.
   if ((rig.momentum || 0) > 0) mods.push({ key: "momentum", tag: `Momentum ${rig.momentum}`, tone: "prep", gloss: "momentum" });
