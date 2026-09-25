@@ -245,6 +245,10 @@ export function AttackWizard({
   // seeds the initial state. Lock keeps its own minimal flow further below.
   const [aimed, setAimed] = useState(mode === "aimed");
   const effMode: AttackMode = mode === "lock" ? "lock" : aimed ? "aimed" : "fire";
+  // Gritted attack (§5): spend one of the side's Grit tokens to reroll every
+  // missed to-hit die once. Offered only while the side holds a token.
+  const gritLeft = game?.gritTokens?.[rig.owner || "a"] ?? 0;
+  const [gritted, setGritted] = useState(false);
 
   const enemies = rigs.filter(
     (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed,
@@ -461,6 +465,7 @@ export function AttackWizard({
       weapon: slotSel, weaponName, arc: state.arc, range: state.range, distance: state.inches, cover: state.cover,
     };
     if (aimed) attrs.loc = state.loc;
+    if (gritted && gritLeft > 0) attrs.grit = true;
     if (game?.autoResolve === false) {
       // An aimed shot names its location, so it rolls no d12, the wound dice
       // still ride, since the T they test against comes from the chosen part.
@@ -646,6 +651,23 @@ export function AttackWizard({
               <span className="v2-aw-aim-text">
                 <span className="v2-aw-aim-label">Aimed Shot</span>
                 <span className="v2-aw-aim-hint">Hit a chosen part · −2 to hit</span>
+              </span>
+              <span className="v2-aw-aim-switch" aria-hidden="true" />
+            </button>
+          )}
+
+          {!react && gritLeft > 0 && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={gritted}
+              className={"v2-aw-aim" + (gritted ? " is-on" : "")}
+              onClick={() => setGritted((g) => !g)}
+            >
+              <span className="v2-aw-aim-glyph" aria-hidden="true">✊</span>
+              <span className="v2-aw-aim-text">
+                <span className="v2-aw-aim-label">Grit ×{gritLeft}</span>
+                <span className="v2-aw-aim-hint">Spend 1 · reroll every missed hit die once</span>
               </span>
               <span className="v2-aw-aim-switch" aria-hidden="true" />
             </button>

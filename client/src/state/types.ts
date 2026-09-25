@@ -26,7 +26,8 @@ export interface PendingAnswer {
   side: string;
   /** Answer tokens the gated side still holds. */
   remaining: number;
-  /** Grit tokens the gated side still holds (§5, the side 2+ VP behind). */
+  /** Grit tokens the gated side still owes a spend for (§5, the side 2+ VP behind).
+   *  0 once the side chose to Keep its Grit for attacks this round. */
   grit?: number;
 }
 
@@ -113,7 +114,11 @@ export interface ResolutionStep {
    * absence, so the render must NOT filter zeros.
    */
   terms?: ResolutionTerm[];
-  dice?: Array<{ value: number; ok: boolean }>;
+  /** `rerolledFrom`: the face a reroll replaced (Gritted attack, Lock Sight…);
+   *  `value`/`ok` are the reroll's. */
+  dice?: Array<{ value: number; ok: boolean; rerolledFrom?: number }>;
+  /** Hit step of a Gritted attack (§5): missed dice were rerolled once. */
+  grit?: boolean;
   /** Human-readable outcome, e.g. "2 of 3 hit". Always present. */
   out: string;
 }
@@ -142,9 +147,10 @@ export interface Resolution {
   effects?: string[];
   rolls?: Array<{ sides: number; value: number; label?: string; tone?: string }>;
   /** Kill VP on a `destruction` entry: `{ side, amount }`, the TOTAL awarded
-   *  (any-kill VP + the Priority Elimination bonus). On a `score` entry: the
+   *  (any-kill VP + the Priority Elimination bonus + the trailing kill bounty,
+   *  `bounty` set when the scorer was behind). On a `score` entry: the
    *  marker's VP scored (0 when contested). */
-  vp?: number | { side: string; amount: number };
+  vp?: number | { side: string; amount: number; bounty?: number };
   /** Name of the wrecked unit, captured before it may be removed. */
   victimName?: string;
   /** `score` entries: the scoring side, the objective index and its position. */
@@ -160,6 +166,8 @@ export interface Resolution {
   amount?: number;
   /** `reaction` entry revealed/rolled by an Improved (Grit) preparation. */
   improved?: boolean;
+  /** `attack` entry of a Gritted attack (a Grit token rerolled its misses). */
+  grit?: boolean;
 }
 
 export type Diagonal = "tlbr" | "trbl";
@@ -208,6 +216,8 @@ export interface GameState {
   pendingBlast?: unknown;
   answerTokens?: Record<string, number>;
   gritTokens?: Record<string, number>;
+  /** Sides that kept this round's Grit for Gritted attacks (the gate stops asking). */
+  gritKept?: Record<string, boolean>;
   /** Objective VP multiplier for the current round (§11 escalating beacons). */
   beaconMultiplier?: number;
   suddenDeath?: boolean;

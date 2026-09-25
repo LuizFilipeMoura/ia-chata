@@ -48,7 +48,8 @@ export function rawExpectedHits(attacker, target, slot, opts) {
   // reroll-misses upgrade) turn p into 1−(1−p)² for the dice that get one.
   const rof = effectiveRof(attacker, profile, o) || 1;
   const p = pHit(aim);
-  const rerolls = Math.min(rof, Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (attacker.lockSightNext ? rof : 0));
+  // `opts.grit` prices a Gritted attack (§5): every missed die rerolled once.
+  const rerolls = Math.min(rof, Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (attacker.lockSightNext ? rof : 0) + (opts?.grit ? rof : 0));
   return (rof - rerolls) * p + rerolls * (1 - (1 - p) ** 2);
 }
 
@@ -67,7 +68,8 @@ function locationDist(kind) {
 
 // Expected damage for one shot from `attacker` at `target` with weapon `slot`
 // ("longRange" | "melee"), given the derived geometry in `opts` ({ arc, distance,
-// cover, round }, plus an optional fixed `location` for an aimed shot). This is
+// cover, round }, plus an optional fixed `location` for an aimed shot, and
+// `grit: true` to price it as a Gritted attack). This is
 // the number the scorer consumes behind its `w.damage` weight, for BOTH the
 // bot's own shots (offence) and every enemy's best shot at it (exposure).
 //

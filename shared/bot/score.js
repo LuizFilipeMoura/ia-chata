@@ -29,7 +29,7 @@ import {
   arcOf, sightCorridor, distanceBetween, meleeInReach, controlsObjective,
   radiusOf, terrainPolygons,
 } from "../geometry.js";
-import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS, ANY_KILL_VP, KILL_VP, beaconMultiplier } from "../game-state.js";
+import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS, ANY_KILL_VP, KILL_VP, TRAILING_KILL_BOUNTY, beaconMultiplier } from "../game-state.js";
 import { HEAT_CAPACITY } from "../rules.js";
 
 import { META } from "./meta.js";
@@ -189,11 +189,15 @@ function objectiveApproach(room, rig, pos) {
 // Kill VP a wreck of `target` would pay my side, relative to the richest kill
 // (the Priority Target, ANY_KILL_VP + KILL_VP), so the Priority Target keeps the
 // scale the evolved weights were tuned on and any other enemy is worth its share
-// (1/3). Doubled toward a target with a part near 0: damage there is closer to
-// actually landing the kill.
+// (1/3). A side strictly behind the target's owner also collects the trailing
+// kill bounty (§11), so its kills weigh more. Doubled toward a target with a
+// part near 0: damage there is closer to actually landing the kill.
 function killWeight(room, rig, target) {
-  const pid = room.game.priorityTargets?.[rig.owner || "a"];
-  const vp = ANY_KILL_VP + (target.id === pid ? KILL_VP : 0);
+  const mine = rig.owner || "a";
+  const pid = room.game.priorityTargets?.[mine];
+  const vpOf = (id) => room.game.sides.find((s) => s.id === id)?.vp || 0;
+  const behind = vpOf(mine) < vpOf(target.owner || "a");
+  const vp = ANY_KILL_VP + (target.id === pid ? KILL_VP : 0) + (behind ? TRAILING_KILL_BOUNTY : 0);
   return (vp / (ANY_KILL_VP + KILL_VP)) * (1 + fragility(target));
 }
 

@@ -1,7 +1,9 @@
-// Escalating beacons (§11, wr-0.14): objective VP is multiplied by the round's
-// phase, ×1 in rounds 1-3, ×2 in 4-7, ×3 in 8-10 and Sudden Death. Kill VP is
-// never multiplied.
-import { test } from "node:test";
+// Escalating beacons (§11): objective VP is multiplied by the round's phase,
+// read from the BEACON_ESCALATION table. wr-0.14 shipped ×1/×2/×3 (rounds
+// 1/4/8); wr-0.15 ships the flat table (×1 every round) after the sims, so the
+// mechanism tests below run under an explicit ×1/×2/×3 table. Kill VP is never
+// multiplied.
+import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import {
   createRoom, claimSide, applyCommand, findRig, publicState, __test,
@@ -51,19 +53,28 @@ function digitalRoom(round) {
 // The table
 // ---------------------------------------------------------------------------
 
+test("the shipped table is flat: beacons pay ×1 every round, Sudden Death too", () => {
+  assert.deepEqual(BEACON_ESCALATION, [{ from: 1, mult: 1 }]);
+  assert.deepEqual([1, 4, 8, 10, 11].map((r) => beaconMultiplier(r)), [1, 1, 1, 1, 1]);
+  assert.equal(beaconMultiplier(11, true), 1);
+});
+
+const ESCALATED = [{ from: 1, mult: 1 }, { from: 4, mult: 2 }, { from: 8, mult: 3 }];
+const SHIPPED = BEACON_ESCALATION.map((x) => ({ ...x }));
+
+describe("with an escalation table (×1 / ×2 / ×3 from rounds 1 / 4 / 8)", () => {
+before(() => { BEACON_ESCALATION.splice(0, BEACON_ESCALATION.length, ...ESCALATED.map((x) => ({ ...x }))); });
+after(() => { BEACON_ESCALATION.splice(0, BEACON_ESCALATION.length, ...SHIPPED); });
+
 test("beaconMultiplier: ×1 rounds 1-3, ×2 rounds 4-7, ×3 rounds 8-10", () => {
   const got = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => beaconMultiplier(r));
   assert.deepEqual(got, [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]);
 });
 
-test("beaconMultiplier: Sudden Death pays ×3", () => {
+test("beaconMultiplier: Sudden Death pays the last step", () => {
   assert.equal(beaconMultiplier(11), 3);
   assert.equal(beaconMultiplier(11, true), 3);
   assert.equal(beaconMultiplier(2, true), 3, "the flag alone is enough");
-});
-
-test("BEACON_ESCALATION is the tuning table the helper reads", () => {
-  assert.deepEqual(BEACON_ESCALATION, [{ from: 1, mult: 1 }, { from: 4, mult: 2 }, { from: 8, mult: 3 }]);
 });
 
 test("publicState exposes the current beacon multiplier", () => {
@@ -202,4 +213,5 @@ test("bot's pull toward a far beacon reads the upcoming multiplier at a phase bo
   // Round 3 is ×1 now, but a rig that far off only arrives for round 4's ×2.
   assert.ok(Math.abs(pull(3) - pull(4)) < 1e-9);
   assert.ok(Math.abs(pull(3) - 2 * pull(1)) < 1e-9);
+});
 });

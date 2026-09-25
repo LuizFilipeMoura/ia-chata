@@ -56,7 +56,7 @@ export function BattleHud() {
         <span className="v2-bh-label v2-title">{sum.label}</span>
         <span className="v2-bh-round">R{sum.round}</span>
         {(game.beaconMultiplier || 1) > 1 && (
-          <span className="v2-bh-round" title="Beacon VP is multiplied this round (×2 rounds 4-7, ×3 rounds 8-10)">Beacons ×{game.beaconMultiplier}</span>
+          <span className="v2-bh-round" title="Beacon VP is multiplied this round">Beacons ×{game.beaconMultiplier}</span>
         )}
       </div>
       <div className="v2-bh-turn">

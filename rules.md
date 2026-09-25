@@ -1,6 +1,6 @@
 # Of Oil and Iron, Rules (Working Edition)
 
-**Version:** wr-0.14 · **Base:** standalone working ruleset
+**Version:** wr-0.15 · **Base:** standalone working ruleset
 **Scale:** distances are written for the models this ruleset uses, **Light on 60 mm bases, Medium on 75 mm bases**. Measure in inches, base-to-base (closest points).
 **Dice:** six-sided (**D6**), ten-sided (**D10**), and twelve-sided (**D12**).
 
@@ -98,7 +98,7 @@ A game lasts **10 rounds** (§11). Each round has three phases.
 **Recovery Phase.** In this order:
 1. Each Rig reduces its heat by **1** (unless an effect forbids cooling). *⚙ TUNING: cut to 1 so heat lingers between rounds.*
 2. Remove all unspent preparation, Answer and Grit tokens.
-3. **Score objectives** (§11), at the round's beacon multiplier (×1 rounds 1–3, ×2 rounds 4–7, ×3 rounds 8–10 and Sudden Death).
+3. **Score objectives** (§11), at the round's beacon multiplier (currently ×1 every round, see §11).
 4. Resolve any other end-of-round effects.
 
 The game then returns to the Initiative Phase of the next round, unless a player has already won.
@@ -153,9 +153,11 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   | 5–7 | **2** |
   | 8+ | **3** (the cap) |
 
-  A player may hold an Answer token and Grit tokens in the same round. Each Grit token is spent separately (so 3 tokens can improve all three Rigs). Unspent Grit tokens are removed in the Recovery Phase. *⚙ TUNING: 2 / 5 / 8 VP steps, cap 3.*
+  The grant is also capped at the player's **living Rigs** (two Rigs left, at most 2 tokens). A player may hold an Answer token and Grit tokens in the same round. Each Grit token is spent separately (so 3 tokens can improve all three Rigs). Unspent Grit tokens are removed in the Recovery Phase. *⚙ TUNING: 2 / 5 / 8 VP steps, cap 3 (and the living-Rig count).*
   - **Spend.** Exactly like an Answer token (free: no action, no heat, facedown, any time an Answer token could be spent), placing any preparation or Answer counter an Answer token could, but it is **Improved**.
   - **Upgrade.** Instead, a Grit token may **upgrade** a preparation a Rig already holds to Improved (it keeps its type and stays facedown). So the one-preparation-per-Rig limit never wastes the token.
+  - **Gritted attack.** Or keep the token for your own turn: when a Rig makes a **Fire** (ranged or melee) or an **Aimed Shot**, you may spend 1 Grit token to make it a **Gritted attack**: after rolling to hit, **reroll every to-hit die that missed, once**. The reroll stands (a natural 6 still hits, a die is never rerolled twice). Declare it with the attack; the token is spent even if an Evasive or Sidestep dodges the attack.
+  - **Keep for attacks.** At the start of the round you are not obliged to place your Grit: declare you are **keeping** it, and it waits for Gritted attacks this round (Answer tokens must still be placed). *(Digital: the Answer prompt offers "Keep Grit for attacks" and stops asking for Grit that round.)* Kept tokens are still removed in the Recovery Phase.
   - The opponent sees how many Grit tokens you hold, but not which facedown preparation is Improved.
 
   | Improved preparation | Effect |
@@ -328,20 +330,14 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 
 ### Scoring & winning
 - During each **Recovery Phase**, each player scores the VP value of every marker they control, **multiplied by the round's beacon multiplier**. *(Digital: the engine scores it and logs each held marker, "&lt;side&gt; holds the beacon: +N VP" (with "(base ×mult)" once escalated), and each contested one, "Beacon contested: nobody scores".)*
-- **Escalating beacons.** The scrap gets richer as the battle drags on:
-
-  | Rounds | Beacon multiplier | Centre / corner pays |
-  |---|---|---|
-  | 1–3 | ×1 | 2 / 1 VP |
-  | 4–7 | ×2 | 4 / 2 VP |
-  | 8–10, Sudden Death | ×3 | 6 / 3 VP |
-
-  An early lead built on beacons stays catchable: a late push is worth more than the opening grab. **Kill VP (below) is never multiplied.** *⚙ TUNING: ×1 / ×2 / ×3 from rounds 1 / 4 / 8.*
+- **Beacon multiplier.** Beacons pay their face value (**×1**) every round, Sudden Death included: centre 2 VP, corners 1 VP. **Kill VP (below) is never multiplied.** *⚙ TUNING: the multiplier is a table by round (the engine's `BEACON_ESCALATION`). wr-0.14 escalated it ×1 / ×2 / ×3 from rounds 1 / 4 / 8; with the Gritted attack and the trailing kill bounty in (wr-0.15), 100-seed bot sims gave the flat table the most lead changes (0.56 per game vs 0.45 for ×1/×2/×3; ×1/×1/×2 tied the flat table), so the gentlest one ships. A table with a step above ×1 shows "Beacons ×N" in the app and logs "(base ×mult)" on each payout.*
 - **Annihilation:** if a player has **no Rigs left** at any point, their opponent **wins immediately**.
 - **On points:** after **10 rounds**, **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
 
 ### Kills & Priority Elimination
 **Every kill scores.** Whenever a Rig is destroyed, **by any cause** (enemy fire, a blast, its own overheat), the side that doesn't own it scores **+1 VP**. A wreck is a wreck.
+
+**Trailing kill bounty.** If the side scoring a kill was **strictly behind** the wreck's owner in VP (read before this kill's VP is added), it scores **+2 VP more** (the bounty). A tie pays no bounty. The bounty stacks with Priority Elimination and is never multiplied by the beacon multiplier. *(Digital: the log adds "+2 VP, bounty (was behind)".)* *⚙ TUNING: the kill's catch-up lever, a trailing side that trades Rigs claws back ground faster.*
 
 **Priority Elimination.** At the start of every round each squadron is assigned a single **Priority Target**: one random enemy Rig, known only to the hunting side. Destroy **your** Priority Target and you score **+2 VP more**, on top of the kill's +1 (**3 VP** in all). The target is re-rolled each round, so the pressure moves from machine to machine: it pays to hunt the mark, not just trade blows. Kill VP is awarded the moment the Rig falls, once per Rig; it is never claimed in Recovery. *⚙ TUNING: kills used to score only on the Priority Target, so most games saw no kill reward at all.*
 
@@ -657,10 +653,11 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 - **Engagement / melee lock** (§5), a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 Accuracy. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13), machine guns do no frontal damage but hit far harder (+3 side / +6 rear).
 - **Answer tokens** (§5), the player going second each round gets 1 free preparation, or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.
-- **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1–3 per round (scaled by the gap), each a free **Improved** preparation (or an upgrade to one already placed).
-- **Escalating beacons** (§11), objective VP ×1 in rounds 1–3, ×2 in 4–7, ×3 in 8–10 and Sudden Death; kill VP stays flat. Keeps early leads catchable.
+- **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1–3 per round (scaled by the gap, capped at their living Rigs), each a free **Improved** preparation (or an upgrade to one already placed), or kept for a **Gritted attack** (reroll every missed to-hit die once).
+- **Trailing kill bounty** (§11), a kill by the side that is behind pays +2 VP more.
+- **Beacon multiplier** (§11), a per-round table for objective VP; ships flat (×1) after escalation (×1/×2/×3) tested worse for lead changes; kill VP is never multiplied.
 - **Weight-based heat** (§6), Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
-- **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win, +1 VP per kill (+2 more for the Priority Target).
+- **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win, +1 VP per kill (+2 more for the Priority Target, +2 more when behind).
 - **Stagger** (§7), an attack that resolves for 0 SP gives its target +1 heat and −1 Aim on its next attack, so a whiff still counts.
 - **Undo never re-rolls** (app), Revert steps back through dice-free actions (moves, pivots, preparations…), but a command that made the app roll dice for you (an attack, an overheat check, a dodge…) can't be undone, and neither can anything before it. Dice you type in yourself don't lock Undo.
 

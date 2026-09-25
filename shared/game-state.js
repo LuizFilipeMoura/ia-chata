@@ -33,6 +33,10 @@ export const KILL_VP = 2;
 // Any kill (§11): every enemy wreck, whatever destroyed it, scores this for the
 // side that doesn't own it. Priority Elimination (KILL_VP) stacks on top.
 export const ANY_KILL_VP = 1;
+// Trailing kill bounty (§11, wr-0.15): a wreck scored by the side strictly
+// BEHIND the wreck's owner (read before this kill's VP lands) pays this much on
+// top. Never multiplied by beacon escalation. ⚙ TUNING
+export const TRAILING_KILL_BOUNTY = 2;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 // The objective game runs this many rounds before victory resolves on points
 // (§11). Doubled from the original 5 to pair with the ~2× per-rig SP scaling,
@@ -762,6 +766,7 @@ export function createRoom(code) {
       initiative: null,
       answerTokens: { a: 0, b: 0 },
       gritTokens: { a: 0, b: 0 },
+      gritKept: { a: false, b: false },
       turn: null,
       resolutions: [],
       nextResolutionId: 1,
@@ -959,6 +964,7 @@ function ensureGameShape(room) {
   if (room.game.initiative === undefined) room.game.initiative = null;
   room.game.answerTokens ||= { a: 0, b: 0 };
   room.game.gritTokens ||= { a: 0, b: 0 };
+  room.game.gritKept ||= { a: false, b: false };
   if (room.game.turn === undefined) room.game.turn = null;
   room.game.resolutions ||= [];
   room.game.nextResolutionId ||= 1;
@@ -1510,14 +1516,14 @@ export function gritFor(gap) {
   return tokens;
 }
 
-// Escalating beacons (§11): objective VP is multiplied by the round's phase, so
-// a late hold outweighs an early one and a lead built on beacons stays catchable.
+// Escalating beacons (§11): objective VP is multiplied by the round's phase.
 // Each step `{ from, mult }` applies from that round on; Sudden Death pays the
-// last step. Kill VP is never multiplied. ⚙ TUNING. Mutable in place for sims.
+// last step. Kill VP is never multiplied. wr-0.15 ships it FLAT (×1 every
+// round): with offensive Grit and the kill bounty in, the 100-seed sims gave no
+// escalation the most lead changes (×1/×1/×2 tied, ×1/×2/×3 fewer), so the
+// gentlest table won. ⚙ TUNING. Mutable in place for sims.
 export const BEACON_ESCALATION = [
   { from: 1, mult: 1 },
-  { from: 4, mult: 2 },
-  { from: 8, mult: 3 },
 ];
 export function beaconMultiplier(round, suddenDeath = false) {
   if (suddenDeath) return BEACON_ESCALATION[BEACON_ESCALATION.length - 1]?.mult ?? 1;
@@ -1526,14 +1532,18 @@ export function beaconMultiplier(round, suddenDeath = false) {
   return mult;
 }
 
-// Grant Grit to whichever side trails, gritFor(gap) tokens. At most one side can.
+// Grant Grit to whichever side trails, gritFor(gap) tokens, capped at that
+// side's living rigs (wr-0.15). At most one side can. A fresh grant also clears
+// last round's "keep for attacks" choice.
 function grantGrit(room) {
   room.game.gritTokens = { a: 0, b: 0 };
+  room.game.gritKept = { a: false, b: false };
   const [sa, sb] = room.game.sides;
   const gap = Math.abs((sa.vp || 0) - (sb.vp || 0));
-  const amount = gritFor(gap);
-  if (amount <= 0) return;
   const behind = (sa.vp || 0) < (sb.vp || 0) ? sa : sb;
+  const living = room.rigs.filter((r) => (r.owner || "a") === behind.id && !r.destroyed).length;
+  const amount = Math.min(gritFor(gap), living);
+  if (amount <= 0) return;
   room.game.gritTokens[behind.id] = amount;
   pushResolution(room, {
     kind: "grit", actor: behind.id, side: behind.id, amount, rigId: null, rolls: [],
@@ -1606,6 +1616,7 @@ function resetGameShape(room) {
   room.game.pendingReaction = null;
   room.game.answerTokens = { a: 0, b: 0 };
   room.game.gritTokens = { a: 0, b: 0 };
+  room.game.gritKept = { a: false, b: false };
   room.game.suddenDeath = false;
   room.game.deployOrder = [];
   room.game.initiative = null;
@@ -1966,6 +1977,7 @@ function onRigDamaged(room, rig, opts) {
       ? room.game.sides.find((s) => s.id !== owner) : null;
     const effects = [];
     let amount = 0;
+    let bounty = 0;
     if (scorer) {
       amount += ANY_KILL_VP;
       effects.push(`+${ANY_KILL_VP} VP, kill (${scorer.name})`);
@@ -1973,12 +1985,20 @@ function onRigDamaged(room, rig, opts) {
         amount += KILL_VP;
         effects.push(`+${KILL_VP} VP, Priority Elimination (${scorer.name})`);
       }
+      // Trailing kill bounty: the scorer was strictly behind the wreck's owner
+      // before this kill's VP.
+      const ownerSide = room.game.sides.find((s) => s.id === owner);
+      if ((scorer.vp || 0) < (ownerSide?.vp || 0)) {
+        bounty = TRAILING_KILL_BOUNTY;
+        amount += bounty;
+        effects.push(`+${bounty} VP, bounty (was behind)`);
+      }
       scorer.vp = (scorer.vp || 0) + amount;
     }
     pushResolution(room, {
       kind: "destruction", actor: rig.owner, rigId: rig.id,
       victimName: rig.name,
-      vp: amount ? { side: scorer.id, amount } : undefined,
+      vp: amount ? { side: scorer.id, amount, ...(bounty ? { bounty } : {}) } : undefined,
       rolls: [{ sides: 12, value: roll, label: "D12" }],
       summary: `${rig.name} destroyed, ${exploded ? 'munitions erupt (mark rigs within 4")' : "no secondary blast"}`,
       effects,
@@ -2153,12 +2173,14 @@ function eligibleForGrit(room, sideId) {
 
 // The mandatory round-start Answer gate: the first side in `order` that still
 // owes a token spend (an Answer token with an unprepared rig, or a Grit token
-// with an eligible rig) holds it; nobody owing one clears it.
+// with an eligible rig) holds it; nobody owing one clears it. A side that chose
+// to Keep its Grit for attacks this round owes no Grit spend (its gate `grit`
+// reads 0), though its tokens stay in gritTokens until Recovery.
 function refreshAnswerGate(room, order) {
   const g = room.game;
   for (const sideId of order) {
     const answer = g.answerTokens[sideId] || 0;
-    const grit = g.gritTokens?.[sideId] || 0;
+    const grit = g.gritKept?.[sideId] ? 0 : (g.gritTokens?.[sideId] || 0);
     if ((answer > 0 && eligibleForPrep(room, sideId).length > 0)
         || (grit > 0 && eligibleForGrit(room, sideId).length > 0)) {
       g.pendingAnswer = { side: sideId, remaining: answer, grit };
@@ -2263,6 +2285,7 @@ function runRecovery(room, random) {
   }
   room.game.answerTokens = { a: 0, b: 0 };
   room.game.gritTokens = { a: 0, b: 0 };
+  room.game.gritKept = { a: false, b: false };
   room.game.turn = null;
   room.game.phase = "recovery";
   room.game.recoveryClaims = {};
@@ -2512,6 +2535,16 @@ export function deriveAttackGeometry(room, attacker, target) {
   };
 }
 
+// A Gritted attack (§5, wr-0.15): the Fire/Aimed command carries `grit: true`.
+const isGritted = (a) => a?.grit === true || a?.grit === "true";
+// Spend the attacker side's Grit token for a Gritted attack that went off
+// (resolved, or was dodged by an Evasive/Sidestep after it was declared).
+function spendAttackGrit(room, rig, a) {
+  if (!isGritted(a)) return;
+  const sideId = rig.owner || "a";
+  room.game.gritTokens[sideId] = Math.max(0, (room.game.gritTokens[sideId] || 0) - 1);
+}
+
 // Resolve one Fire/Aimed shot end-to-end (to-hit, heat, budget). Returns the
 // resolveAttack result ({ ok, hits, ... }, always truthy) when the shot was made,
 // or false when it couldn't be. Callers that only need "did it fire?" treat the
@@ -2599,9 +2632,11 @@ function resolveFire(room, rig, target, a, act, random) {
     // Predictive Tracking (Fire Control Tuned), the target counts as pinned when
     // it is immobilised, suppression-pinned, held in a melee lock, or emplaced.
     targetPinned: !!(target.immobilised || target.suppressImmobile || target.engagedWith != null || target.emplaced),
+    grit: isGritted(a),
     dice: a.dice,
   }, random, combatCtx());
   if (!res.ok) return false;
+  spendAttackGrit(room, rig, a);
   // Mark the first-shot compensator spent, and consume any Lock Sight reroll
   // (both are per-activation, one-shot flags on the acting rig).
   if (fireControlFirst) rig.fireControlUsed = true;
@@ -3057,6 +3092,7 @@ function performAction(room, rig, act, a, random) {
   if (act === "fire" || act === "aimed") {
     const target = findRig(room, a.target);
     if (!target) return reject("Choose a target to fire on.");
+    if (isGritted(a) && !(room.game.gritTokens?.[rig.owner || "a"] > 0)) return reject("No Grit tokens left.");
     // Ion Storm (§13, Arc Gun), the discharge overloads the attacker's own gun:
     // its next Arc Gun shot is refused and the lock is consumed on that blocked
     // attempt (mirrors the autocannonSlowNext one-shot downside). Gating here,
@@ -4095,11 +4131,23 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     // `grit: true` spends a Grit token instead of an Answer token (§5): the prep
     // it places is Improved. With `upgrade: true` it instead improves the
     // preparation the rig already holds (type and face-down state kept).
+    // `keep: true` (wr-0.15) places nothing: the side keeps its Grit for
+    // Gritted attacks, and the gate stops asking it for a Grit spend this round.
     const rig = findRig(room, a.name);
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
     const grit = a.grit === true || a.grit === "true";
     const upgrade = a.upgrade === true || a.upgrade === "true";
-    if (!rig || !sideId) reject("No such unit.");
+    const keep = a.keep === true || a.keep === "true";
+    if (keep) {
+      if (!sideId) reject("No such side.");
+      else if (!(room.game.gritTokens[sideId] > 0)) reject("No Grit tokens to keep.");
+      else {
+        room.game.gritKept[sideId] = true;
+        const gate = room.game.pendingAnswer;
+        if (gate) refreshAnswerGate(room, [gate.side, gate.side === "a" ? "b" : "a"]);
+        changed = true;
+      }
+    } else if (!rig || !sideId) reject("No such unit.");
     else if ((rig.owner || "a") !== sideId) reject("You can only Answer with your own rig.");
     else if (upgrade && !grit) reject("Only a Grit token can upgrade a preparation.");
     else if (grit && !(room.game.gritTokens[sideId] > 0)) reject("No Grit tokens left.");
@@ -4146,6 +4194,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot + (secondShot ? 1 : 0));
           rt.actionsUsed += cost;
           if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;
+          spendAttackGrit(room, attacker, pr.attack);
           pushResolution(room, {
             kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
             summary: `${reactor.name} evades, ${attacker.name}'s attack fails.`, effects: [],
@@ -4187,6 +4236,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           bumpHeat(attacker, (ACTIONS[pr.attack.act]?.heat || 1) + hot + (secondShot ? 1 : 0));
           rt.actionsUsed += 1;
           if (slot === "longRange") rt.longRangeShots = (rt.longRangeShots || 0) + 1;
+          spendAttackGrit(room, attacker, pr.attack);
           pushResolution(room, {
             kind: "attack", actor: attacker.owner, rigId: reactor.id, rolls: [],
             summary: `${reactor.name} sidesteps, ${attacker.name}'s shot fails.`, effects: [],

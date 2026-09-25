@@ -40,12 +40,12 @@ const mk = (id: number, owner: "a" | "b", over: Partial<Rig> = {}): Rig => ({ id
   engine: { sp: 4, max: 4, destroyed: false, heat: 0 }, weapons: { longRange: "Autocannon", melee: "Claw" },
   weaponUpgrades: { longRange: "field", melee: "field" }, equipment: "ablative-plating", activated: false, destroyed: false, loaded: { longRange: true, melee: true }, ...over } as unknown as Rig);
 
-function Seed({ rigs, children, autoResolve }: { rigs: Rig[]; children: ReactNode; autoResolve?: boolean }) {
+function Seed({ rigs, children, autoResolve, grit }: { rigs: Rig[]; children: ReactNode; autoResolve?: boolean; grit?: number }) {
   const d = useRoomDispatch();
   useEffect(() => {
     d({ type: "setSession", session: { room: "IR", side: "a", name: "K" } });
-    d({ type: "applyServerState", state: { version: 1, ownerSide: "a", field: null, rigs, game: { round: 1, phase: "activation", started: true, autoResolve, sides: [{ id: "a", name: "K", vp: 0, ready: true }, { id: "b", name: "R", vp: 0, ready: true }], turn: { side: "a", activeRigId: rigs[0].id, actionsUsed: 0, actionsMax: 3 } } } as unknown as ServerState });
-  }, [d, rigs, autoResolve]);
+    d({ type: "applyServerState", state: { version: 1, ownerSide: "a", field: null, rigs, game: { round: 1, phase: "activation", started: true, autoResolve, gritTokens: { a: grit ?? 0, b: 0 }, sides: [{ id: "a", name: "K", vp: 0, ready: true }, { id: "b", name: "R", vp: 0, ready: true }], turn: { side: "a", activeRigId: rigs[0].id, actionsUsed: 0, actionsMax: 3 } } } as unknown as ServerState });
+  }, [d, rigs, autoResolve, grit]);
   return <>{children}</>;
 }
 
@@ -102,6 +102,31 @@ test("Aimed Shot toggle reveals the location field and fires an aimed action", a
   expect(await screen.findByText(/Component to hit/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Aimed Shot/i }));
   expect(sent).toHaveBeenCalledWith("action", expect.objectContaining({ action: "aimed", loc: expect.any(String) }));
+});
+
+test("Grit toggle appears only with Grit tokens and sends a Gritted attack", async () => {
+  sent.mockClear();
+  const rigs = [mk(1, "a"), mk(2, "b")];
+  const tree = (grit: number) => (
+    <AppProviders>
+      <V2DrawerProvider><V2RollProvider><V2BattleActionsProvider>
+        <Seed rigs={rigs} grit={grit}>
+          <AttackWizard rig={rigs[0]} mode="fire" onClose={vi.fn()} />
+        </Seed>
+      </V2BattleActionsProvider></V2RollProvider></V2DrawerProvider>
+    </AppProviders>
+  );
+  const { unmount } = render(tree(0));
+  await screen.findByRole("switch", { name: /Aimed Shot/i });
+  expect(screen.queryByRole("switch", { name: /Grit/i })).not.toBeInTheDocument();
+  unmount();
+  render(tree(2));
+  const grit = await screen.findByRole("switch", { name: /Grit ×2/i });
+  expect(grit).toHaveAttribute("aria-checked", "false");
+  fireEvent.click(grit);
+  expect(grit).toHaveAttribute("aria-checked", "true");
+  fireEvent.click(screen.getByRole("button", { name: /^Fire$/i }));
+  expect(sent).toHaveBeenCalledWith("action", expect.objectContaining({ action: "fire", grit: true }));
 });
 
 test("reopening recalls the last target and shot distance per rig", async () => {

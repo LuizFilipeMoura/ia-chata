@@ -63,7 +63,7 @@ export class Hud {
     const theirs = g.sides.find((s) => s.id !== side)?.id;
     fill(this.topEl, 
       el("div", { class: "vp a", title: "Victory points: salvage held + priority kills" }, el("span", { class: "k" }, "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0)), grit(side)),
-      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round", title: "Beacons pay more as the battle goes on: ×1 in rounds 1-3, ×2 in 4-7, ×3 in 8-10" }, `ROUND ${g.round || 1} / 10${g.suddenDeath ? " · SUDDEN DEATH" : ""}`, (g.beaconMultiplier || 1) > 1 ? el("span", { class: "mult" }, ` · BEACONS ×${g.beaconMultiplier}`) : null), el("div", { class: "who" }, who), this.turnOrder(state)),
+      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round", title: "Beacon payout multiplier this round" }, `ROUND ${g.round || 1} / 10${g.suddenDeath ? " · SUDDEN DEATH" : ""}`, (g.beaconMultiplier || 1) > 1 ? el("span", { class: "mult" }, ` · BEACONS ×${g.beaconMultiplier}`) : null), el("div", { class: "who" }, who), this.turnOrder(state)),
       el("div", { class: "vp b", title: "Enemy victory points" }, grit(theirs), el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : "ENEMY")),
     );
   }

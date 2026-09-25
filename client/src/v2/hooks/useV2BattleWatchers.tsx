@@ -55,9 +55,10 @@ export interface AnswerPick { rigName: string; prep: PrepType; grit: boolean }
 // so the ChoiceField/ReactionPicker actually re-render on each pick; mirrors them
 // into the caller's `pick` ref for the "Set reaction" handler (matches
 // PrepareBody's pattern). A Grit token (side 2+ VP behind) places an Improved
-// reaction, or upgrades one a Rig already holds.
+// reaction, or upgrades one a Rig already holds; or the side Keeps its Grit for
+// Gritted attacks (`onKeep`), and the gate stops asking for it this round.
 export function AnswerGateBody({
-  remaining, grit = 0, free, upgradable = [], pick, onConfirm,
+  remaining, grit = 0, free, upgradable = [], pick, onConfirm, onKeep,
 }: {
   remaining: number;
   grit?: number;
@@ -65,6 +66,7 @@ export function AnswerGateBody({
   upgradable?: Rig[];
   pick: AnswerPick;
   onConfirm: () => void;
+  onKeep?: () => void;
 }) {
   const canAnswer = remaining > 0 && free.length > 0;
   const canGrit = grit > 0 && free.length + upgradable.length > 0;
@@ -121,6 +123,14 @@ export function AnswerGateBody({
           onChange={(v) => { setPrep(v); pick.prep = v; }}
         />
       )}
+      {useGrit && onKeep ? (
+        <div className="v2-rx-confirm">
+          <button type="button" className="v2-rx-confirm-btn" onClick={onKeep}>
+            <span className="v2-rx-confirm-ic" aria-hidden="true">🎯</span>
+            <span>Keep Grit for attacks</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -292,6 +302,7 @@ export function useV2BattleWatchers(): void {
             if (pick.grit) { attrs.grit = true; if (rig?.preparation != null) attrs.upgrade = true; }
             sendCommand("answer", attrs);
           }}
+          onKeep={canGrit ? () => { closeDrawer(); sendCommand("answer", { side: mine, keep: true }); } : undefined}
         />
       ),
     });

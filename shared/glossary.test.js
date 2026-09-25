@@ -101,8 +101,15 @@ test("glossary defines Grit tokens and the Improved preparation", () => {
   assert.match(byId.get("improved-prep")?.def || "", /3\+/);
 });
 
+test("glossary defines the Gritted attack and the trailing kill bounty", () => {
+  const byId = new Map(GLOSSARY.map((e) => [e.id, e]));
+  assert.match(byId.get("gritted-attack")?.def || "", /rerolled once/);
+  assert.match(byId.get("kill-bounty")?.def || "", /\+2 VP/);
+  assert.match(byId.get("grit-tokens")?.def || "", /living Rigs/);
+});
+
 test("glossary defines the beacon multiplier", () => {
   const def = GLOSSARY.find((g) => g.id === "beacon-escalation")?.def || "";
-  assert.match(def, /×2 in 4-7/);
+  assert.match(def, /×1 every round/);
   assert.match(def, /never multiplied/);
 });

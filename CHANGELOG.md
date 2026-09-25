@@ -5,6 +5,32 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.15, Gritted attacks, the trailing kill bounty, flat beacons
+
+### Added
+- **Gritted attack (§5):** a Fire (ranged or melee) or Aimed Shot may spend 1 Grit token: every to-hit die that missed is rerolled once (the reroll stands; a natural 6 still hits). Rejected with no token. The token is spent even if an Evasive/Sidestep dodges the attack. The log shows each rerolled die ("1→5") and "Grit: rerolled N missed dice".
+- **Keep Grit for attacks (§5):** at the round-start Answer prompt a side may keep its Grit instead of placing it; the prompt stops asking for Grit that round (Answer tokens still prompt). Kept tokens still go in Recovery.
+- **Trailing kill bounty (§11):** a kill scored by the side strictly behind the wreck's owner (before the kill's VP) pays **+2 VP** more. Ties pay nothing; stacks with Priority Elimination; never multiplied.
+
+### Changed
+- **Grit cap (§5):** the grant is capped at the trailing side's living Rigs.
+- **Beacons pay ×1 every round (§11):** the escalation table ships flat. The mechanism stays as a tuning table.
+- Bots keep most Grit for attacks (with 2+ tokens and no Improved prep yet, one goes on an Improved Brace/upgrade), spend it on shots the reroll improves by 1+ expected SP (any shot once they hold a token per Rig still to act), and value kills more when behind.
+
+### Notes
+- Sims (Normal vs Normal, 42×28, 100 seeds; ± is the standard error):
+
+  | Variant | Lead changes / game | No-change games | Round-4 leader won | Leader locked in (round) | VP margin | Wrecks | Grit granted / defensive / offensive | Bounty kills |
+  |---|---|---|---|---|---|---|---|---|
+  | wr-0.14 (HEAD: no Gritted attack, no bounty, no cap, ×1/×2/×3) | 0.32 ± 0.05 | 72 | 68/91 | 3.87 | 27.6 ± 1.5 | 2.09 | 17.3 / 14.0 / 0 | 0 |
+  | wr-0.15 rules, ×1/×2/×3 | 0.45 ± 0.06 | 63 | 71/91 | 3.69 | 24.5 ± 1.4 | 2.87 | 11.2 / 3.3 / 5.2 | 1.27 |
+  | wr-0.15 rules, ×1/×1/×2 (×2 from round 8) | 0.56 ± 0.08 | 60 | 64/90 | 3.94 | 13.9 ± 0.9 | 3.04 | 9.7 / 2.5 / 4.5 | 1.37 |
+  | **wr-0.15 rules, flat ×1 (ships)** | **0.56 ± 0.08** | **59** | **60/90** | **3.97** | **10.7 ± 0.6** | 3.05 | 9.6 / 2.4 / 4.5 | 1.37 |
+
+  Flat and ×1/×1/×2 tie on lead changes (their games only split after round 8), so the gentler table ships; ×1/×2/×3 trails by about one standard error. Against wr-0.14 lead changes rise 0.32 → 0.56, no-change games fall 72 → 59, and Rigs wrecked per game rise 2.1 → 3.0 (Gritted shots finish Rigs; about 45% of wrecks now pay the bounty). Wrecks count every destruction entry, not only the kills the sim credits to an attacker. Runaway leads are rarer, not gone. ⚙ TUNING.
+
+---
+
 ## wr-0.14, Escalating beacons, Grit scales with the gap
 
 ### Changed

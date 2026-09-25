@@ -73,7 +73,7 @@ const STEP_LABEL: Record<ResolutionStep["kind"], string> = {
 // about a success it never adjudicated.
 const stepDice = (
   step: ResolutionStep,
-): Array<{ value: number; ok: boolean | null }> => {
+): Array<{ value: number; ok: boolean | null; rerolledFrom?: number }> => {
   if (step.kind === "location") {
     return step.die != null ? [{ value: step.die, ok: null }] : [];
   }
@@ -445,7 +445,7 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                     >
                       <div className="v2-rx-step-in" data-testid={`v2-roll-step-${s.kind}`}>
                         <div className="v2-rx-step-hd">
-                          <span className="v2-rx-step-kind v2-eyebrow">{STEP_LABEL[s.kind]}</span>
+                          <span className="v2-rx-step-kind v2-eyebrow">{STEP_LABEL[s.kind]}{s.grit ? " · ✊ Grit" : ""}</span>
                           {/* The money shot. "Penetration 4 vs T5 → 7+" is the single
                               line that answers "why 0 damage?". */}
                           {s.kind === "wound" && s.pen != null && s.toughness != null ? (
@@ -467,8 +467,9 @@ const RollConsole = forwardRef<RollConsoleHandle>(function RollConsole(_props, r
                                 className="v2-rx-pip"
                                 key={j}
                                 data-ok={d.ok == null ? undefined : String(d.ok)}
+                                title={d.rerolledFrom != null ? `Rerolled from ${d.rerolledFrom}` : undefined}
                               >
-                                {d.value}
+                                {d.rerolledFrom != null ? `${d.rerolledFrom}→${d.value}` : d.value}
                               </span>
                             ))}
                           </div>

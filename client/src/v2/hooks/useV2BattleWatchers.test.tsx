@@ -72,6 +72,17 @@ test("opens the gate for a Grit-only side and upgrades an existing reaction", as
   await waitFor(() => expect(sent).toHaveBeenCalledWith("answer", { name: "MINE1", prep: "brace", side: "a", grit: true, upgrade: true }));
 });
 
+test("the Grit gate offers Keep Grit for attacks", async () => {
+  sent.mockClear();
+  const state = { version: 1, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")],
+    game: { round: 3, phase: "activation", started: true, sides: [{ id: "a", name: "K", vp: 0, ready: true }, { id: "b", name: "R", vp: 3, ready: true }],
+      gritTokens: { a: 1, b: 0 },
+      turn: { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 0 }, pendingAnswer: { side: "a", remaining: 0, grit: 1 } } } as unknown as ServerState;
+  render(wrap(<Harness state={state} />));
+  (await screen.findByText("Keep Grit for attacks")).click();
+  await waitFor(() => expect(sent).toHaveBeenCalledWith("answer", { side: "a", keep: true }));
+});
+
 test("plays damage sfx when a rig's total SP drops", async () => {
   vi.mocked(playDamage).mockClear();
   const full = { version: 1, ownerSide: "a", field: null, rigs: [mk(1, "a"), mk(2, "b")], game: gameBase } as unknown as ServerState;

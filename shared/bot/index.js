@@ -5,7 +5,7 @@
 // resolution a human does and can neither cheat nor desync.
 import { candidatesFor } from "./candidates.js";
 import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS, exposureOf } from "./score.js";
-import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, LOCS } from "../game-state.js";
+import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, findRig, LOCS } from "../game-state.js";
 import { expectedDamage } from "./evaluate.js";
 
 // Every bot command funnels through here so a caller can observe the bot's turn
@@ -100,7 +100,34 @@ export function chooseAction(room, rig, weights, noise = null) {
     noise.explain.passed = !best || best.s <= 0;
   }
   if (!best || best.s <= 0) return null;
-  return toCommand(best.c, rig);
+  const cmd = toCommand(best.c, rig);
+  if (wantsGrit(room, rig, best.c)) cmd.attrs.grit = true;
+  return cmd;
+}
+
+// A Gritted attack (§5) is worth a token when it adds at least this much
+// expected SP. ⚙ TUNING
+export const GRIT_SHOT_MIN_GAIN = 1;
+
+// Spend a Grit token on this shot? Only when the reroll adds expected damage:
+// at least GRIT_SHOT_MIN_GAIN of it, or any at all once the side holds a token
+// for every rig still to act this round (Grit expires at Recovery, so a token
+// saved past the last shot is a token wasted).
+function wantsGrit(room, rig, cand) {
+  if (cand.action !== "fire" && cand.action !== "aimed") return false;
+  const sideId = rig.owner || "a";
+  const tokens = room.game.gritTokens?.[sideId] || 0;
+  if (tokens <= 0) return false;
+  const target = findRig(room, cand.target);
+  if (!target) return false;
+  const shot = {
+    arc: cand.arc, distance: cand.distance, cover: cand.cover, round: room.game.round,
+    ...(cand.action === "aimed" ? { aimed: true, location: cand.location } : {}),
+  };
+  const gain = expectedDamage(rig, target, cand.weapon, { ...shot, grit: true }) - expectedDamage(rig, target, cand.weapon, shot);
+  if (gain <= 1e-9) return false;
+  const toAct = room.rigs.filter((r) => (r.owner || "a") === sideId && !r.destroyed && (!r.activated || r.id === rig.id)).length;
+  return tokens >= toAct || gain >= GRIT_SHOT_MIN_GAIN;
 }
 
 function candLabel(c) {
@@ -192,9 +219,10 @@ function botReaction(room, pr) {
 }
 
 // A bot side's next token spend at the Answer gate. An Answer token goes on the
-// first unprepared rig as a Brace (minimal and safe). A Grit token does the same
-// but Improved; with every rig already prepared, it upgrades the preparation on
-// the rig the enemy can hurt most from where it stands.
+// first unprepared rig as a Brace (minimal and safe). Grit is mostly kept for
+// Gritted attacks: with 2+ tokens and no Improved prep yet, ONE goes on defence
+// (an Improved Brace on an unprepared rig, else an upgrade to the preparation on
+// the rig the enemy can hurt most from where it stands); the rest are kept.
 function botAnswer(room, gate) {
   const side = gate.side;
   const mine = room.rigs.filter((r) => (r.owner || "a") === side && !r.destroyed);
@@ -203,9 +231,11 @@ function botAnswer(room, gate) {
     return { verb: "answer", attrs: { name: free.name, prep: "brace", side } };
   }
   if ((gate.grit || 0) > 0) {
+    const defended = mine.some((r) => r.preparation?.improved);
+    if (gate.grit < 2 || defended) return { verb: "answer", attrs: { side, keep: true } };
     if (free) return { verb: "answer", attrs: { name: free.name, prep: "brace", side, grit: true } };
     const upgradable = mine.filter((r) => r.preparation && !r.preparation.improved);
-    if (!upgradable.length) return null;
+    if (!upgradable.length) return { verb: "answer", attrs: { side, keep: true } };
     const best = upgradable
       .map((r) => ({ r, e: exposureOf(room, r) }))
       .reduce((x, y) => (y.e > x.e ? y : x));

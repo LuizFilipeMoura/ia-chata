@@ -208,7 +208,10 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   const heatOnOnes = fullAuto || charged || profile.upgradeEffect?.heatOnOnes;
   // Lock Sight (Fire Control active), the next shot this activation rerolls
   // all its missed to-hit dice, i.e. up to a full volley of rerolls (opts.lockSight).
-  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (opts.lockSight ? rof : 0);
+  // A Gritted attack (§5 Grit tokens, opts.grit) rerolls every missed die once,
+  // i.e. a full volley of rerolls; a die is never rerolled twice, so it stacks
+  // with nothing (Lock Sight + Grit is still one reroll per die).
+  const rerolls = Math.max(0, Math.floor(profile.upgradeEffect?.rerollMisses || 0)) + (opts.lockSight ? rof : 0) + (opts.grit ? rof : 0);
   const dice = [];
   // The ledger's per-die view. `dice` stays a bare face array (its consumers,
   // the `rolls` log, predate the ledger); `hitDice` records the face WITH the
@@ -226,13 +229,17 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     // every die counts as a hit regardless of face. Dice are still rolled (so
     // heat-on-ones and the per-die log stay honest) but the to-hit test is skipped.
     let hit = opts.autoHit || d >= modAim || d === 6;
+    let rerolledFrom = null;
     if (!hit && rerollsUsed < rerolls) {
       rerollsUsed += 1;
+      rerolledFrom = d;
       d = rollD(6, providedDice?.rerolls?.[rerollsUsed - 1], random);
       hit = d >= modAim || d === 6;
     }
     dice.push(d);
-    hitDice.push({ value: d, ok: hit });
+    // A rerolled die reports the reroll's face and verdict, plus the face it
+    // replaced, so the ledger can show "1 → 5".
+    hitDice.push(rerolledFrom == null ? { value: d, ok: hit } : { value: d, ok: hit, rerolledFrom });
     if (hit) hits += 1;
     if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
@@ -254,7 +261,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   // with the count of `ok` flags. The ledger reports `hits`, and the PD spend
   // gets its own resolution entry, so the disagreement is explained on screen
   // rather than hidden.
-  return { modAim, rof, hits, fireModeHeat, dice, hitDice, aimTerms: aim.terms, penetratorShot };
+  return { modAim, rof, hits, fireModeHeat, dice, hitDice, aimTerms: aim.terms, penetratorShot, rerolled: rerollsUsed };
 }
 
 // §13, every one of the target's real locations is at max SP, i.e. the target
@@ -953,7 +960,10 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     terms: th.aimTerms,
     dice: th.hitDice,
     out: `${th.hits} of ${th.hitDice.length} hit`,
+    ...(opts.grit ? { grit: true } : {}),
   });
+  // A Gritted attack says what the token bought.
+  if (opts.grit) drama.unshift(`Grit: rerolled ${th.rerolled} missed ${th.rerolled === 1 ? "die" : "dice"}`);
 
   // The location step rides on whether a d12 was ROLLED, not on whether it
   // yielded a part: a Kneecapper remap onto a kind with no limbs picks nothing,
@@ -1039,6 +1049,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, targetId: target.id, weapon: weaponName, rolls,
     ...(stagger ? { stagger: true } : {}),
+    ...(opts.grit ? { grit: true } : {}),
     summary: `${attacker.name} → ${target.name} with ${weaponName} (Pen ${pen}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,
     breakdown: {
       actor: attacker.name, weapon: weaponName, target: target.name,
