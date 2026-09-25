@@ -428,6 +428,11 @@ export class World {
     });
   }
 
+  // Escalation: beacons grow and burn brighter as they pay more (×1/×2/×3).
+  setBeaconMultiplier(mult = 1) {
+    for (const m of this.objectiveMeshes) { m.mult = mult; m.gem.scale.setScalar(1 + (mult - 1) * 0.35); m.light.intensity = 6 + (mult - 1) * 5; }
+  }
+
   // Round-end payout: the beacon flares in the scorer's colour.
   pulseObjective(i, color = 0xffd35a) {
     const m = this.objectiveMeshes[i];
@@ -502,11 +507,11 @@ export class World {
       if (m.pulse) {
         const p = m.pulse; p.t += dt;
         const k = Math.max(0, 1 - p.t / 1.6);
-        m.gem.scale.setScalar(1 + k * 1.6);
+        m.gem.scale.setScalar(1 + ((m.mult || 1) - 1) * 0.35 + k * 1.6);
         m.light.intensity = 6 + k * 60;
         if (p.t < 0.05) { m.light.color.setHex(p.color); m.pylonMat.emissive.setHex(p.color); }
         if (p.t < 1 && Math.random() < dt * 30) this.fx.particle(m.gem.getWorldPosition(new THREE.Vector3()), { color: p.color, size: 0.7, life: 0.9, grow: 2, vel: new THREE.Vector3((Math.random() - 0.5) * 4, 3 + Math.random() * 3, (Math.random() - 0.5) * 4) });
-        if (k <= 0) { m.pulse = null; m.gem.scale.setScalar(1); m.light.intensity = 6; }
+        if (k <= 0) { m.pulse = null; m.gem.scale.setScalar(1 + ((m.mult || 1) - 1) * 0.35); m.light.intensity = 6 + ((m.mult || 1) - 1) * 5; }
       }
     });
     // Chimney smoke and sweeping searchlights.

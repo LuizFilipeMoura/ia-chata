@@ -702,3 +702,4 @@ body { font-size: 18px; }
 .rx-card.improved { border-color: var(--brass-hi, #f0cf7a) !important; box-shadow: 0 0 12px rgba(240,207,122,.25); }
 .rx-imp { color: var(--brass-hi, #f0cf7a); font-size: 13px; letter-spacing: .08em; }
 .rx-imp-row { color: var(--brass-hi, #f0cf7a); }
+.hud-top .round .mult { color: var(--brass-hi, #f0cf7a); }

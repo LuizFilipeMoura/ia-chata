@@ -16,7 +16,7 @@ export const GLOSSARY = {
   "Penetration": "How well a weapon punches through armour. Each point lowers the wound roll target by 1 (+10%). Side hits +2, rear +3.",
   "Pen": "Penetration: lowers the wound roll target. Side hits +2, rear +3.",
   "Aimed Shot": "A Fire action at −3 Aim where you choose the part hit instead of rolling the D12.",
-  "Grit token": "The side 2+ VP behind gets one each round: a free face-down reaction that's Improved (Brace −3 Pen, Raise Shield −4, dodges on 3+, counter-attacks +2 Penetration), or an upgrade to one already placed.",
+  "Grit token": "The side behind gets them each round (1 at 2+ VP behind, 2 at 5+, 3 at 8+): a free face-down reaction that's Improved (Brace −3 Pen, Raise Shield −4, dodges on 3+, counter-attacks +2 Penetration), or an upgrade to one already placed.",
   "Staggered": "An attack that dealt no damage still rattles its target: +1 heat, and −1 Aim on its next attack.",
   "Aim": "Your to-hit target on the D6. Worse off the weapon's sweet spot, behind cover, or on an Aimed Shot.",
   "sweet spot": "The distance a gun shoots best at. Accuracy drops for every inch closer or further.",

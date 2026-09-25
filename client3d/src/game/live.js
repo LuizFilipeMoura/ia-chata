@@ -185,7 +185,7 @@ export class LiveMatch {
       else if (l.kind === "attack") lines.push({ icon: "fire", text: l.summary });
       else if (l.kind === "destruction") lines.push({ icon: "dmg", tone: "bad", text: l.summary.split(",")[0] });
       else if (l.kind === "overheat" && !/Nothing happens/.test(l.summary || "")) lines.push({ icon: "heat", text: l.summary.split("(")[0] });
-      else if (l.kind === "score" && !l.contested) lines.push({ icon: "beacon", tone: l.side === this.side ? "good" : "", text: `${l.side === this.side ? "You" : "Enemy"} scored a beacon: +${l.vp} VP` });
+      else if (l.kind === "score" && !l.contested) lines.push({ icon: "beacon", tone: l.side === this.side ? "good" : "", text: `${l.side === this.side ? "You" : "Enemy"} scored a beacon: +${l.vp} VP${(l.mult || 1) > 1 ? ` (×${l.mult})` : ""}` });
       else if (l.kind === "grit") lines.push({ icon: "grit", tone: l.side === this.side ? "good" : "", text: l.summary });
       else if (l.kind === "reaction" || l.kind === "prepare") lines.push({ icon: "prepare", text: l.summary });
     }
@@ -312,6 +312,13 @@ export class LiveMatch {
     if (!mine && this.wasMine && !this.digestLog && g.phase !== "finished") this.startDigest(this.state.rigs);
     this.wasMine = mine;
     this.drawThreat();
+    // Escalation: beacons pay more from rounds 4 and 8. Announce the step up.
+    const mult = g.beaconMultiplier || 1;
+    if (mult !== this.lastMult) {
+      this.world.setBeaconMultiplier(mult);
+      if (this.lastMult != null && mult > this.lastMult) { this.hud.banner(`BEACONS NOW PAY ×${mult}`, "grit"); sfx.score(true); }
+      this.lastMult = mult;
+    }
     this.hud.top(this.state, this.side);
     this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId);
     this.plates.set(this.state.rigs, { activeId: g.turn?.activeRigId, priorityIds: Object.values(g.priorityTargets || {}) });

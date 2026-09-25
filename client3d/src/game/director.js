@@ -376,7 +376,7 @@ export class Director {
       else {
         const col = l.side === "a" ? 0x5fd3c0 : 0xe0533d;
         this.world.pulseObjective(l.objective, col);
-        fx.text(at, `+${l.vp} VP`, l.side === "a" ? "#5fd3c0" : "#e0533d");
+        fx.text(at, (l.mult || 1) > 1 ? `+${l.vp} VP (×${l.mult})` : `+${l.vp} VP`, l.side === "a" ? "#5fd3c0" : "#e0533d");
         this.sound(() => sfx.score(l.side === this.side));
         this.onCamera({ x: l.x, y: l.y }, { owner: l.side, score: true });
         this.onScore(l);
