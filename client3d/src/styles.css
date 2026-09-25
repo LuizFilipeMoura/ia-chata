@@ -595,3 +595,24 @@ body { font-size: 18px; }
 .rl-wound .rl-eq { flex: 1; }
 .rl-arcbox { display: flex; align-items: center; gap: 6px; font-size: 14px; text-transform: capitalize; }
 .rl-arc { width: 64px; height: 64px; } .rl-arc svg { width: 100%; height: 100%; }
+/* Stat icons */
+.si { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.16em; margin-right: 4px; color: currentColor; }
+.si svg { width: 100%; height: 100%; display: block; }
+.si-pen { color: #7fd1ff; } .si-dmg { color: #ff9a5c; } .si-tough { color: #cdbb93; } .si-heat { color: #ff7a3d; }
+.si-shots { color: #e0b95c; } .si-aim { color: #9be07f; } .si-sp { color: #9be07f; } .si-range, .si-reach { color: #d9ccae; }
+.gl-ico { width: .95em; height: .95em; margin-right: 2px; }
+.in-stats i, .atk-stats i { display: inline-flex; align-items: center; gap: 2px; }
+.in-t { display: inline-flex; align-items: center; justify-content: center; gap: 1px; background: #2a241a !important; color: #e9dcc0 !important; border: 1px solid #6a5634; }
+.in-t .si { margin-right: 1px; width: 14px; height: 14px; }
+.in-loc { grid-template-columns: 58px 44px 1fr 48px !important; }
+.rl-chip .si { width: 16px; height: 16px; }
+.gl-ico { width: 1.1em !important; height: 1.1em !important; }
+.in-t .si, .rl-chip .si { width: 18px !important; height: 18px !important; }
+.in-stats .si, .atk-stats .si { width: 20px; height: 20px; }
+.act .cost { display: inline-flex; align-items: center; gap: 2px; } .act .cost .si { width: 16px; height: 16px; margin: 0; }
+.atk-ed .si { width: 22px; height: 22px; }
+.in-loc { grid-template-columns: 84px 48px 1fr 56px !important; }
+.in-loc:not(:has(.in-t)) { grid-template-columns: 84px 1fr 56px !important; }
+.in-loc > span:first-child { white-space: nowrap; display: inline-flex; align-items: center; }
+.inspector h4 .si { width: 18px; height: 18px; }
+.in-legend { font-size: 15px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin: -4px 0 4px; } .in-legend .si { width: 16px; height: 16px; }

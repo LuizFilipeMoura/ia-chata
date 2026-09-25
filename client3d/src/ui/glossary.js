@@ -3,6 +3,7 @@
 // rich(text) turns a plain string into nodes with each term's FIRST mention
 // wrapped; longest terms match first so "Aimed Shot" beats "Aim".
 import { el } from "./dom.js";
+import { icon, STAT_ICON } from "./icons.js";
 
 export const GLOSSARY = {
   "Structure Points": "Health of one part of a rig. Each of the four parts has its own pool. At 0 SP the part breaks.",
@@ -60,7 +61,7 @@ const canon = Object.fromEntries(TERMS.map((t) => [t.toLowerCase(), t]));
 
 export function term(word, key = word) {
   const k = canon[key.toLowerCase()] || key;
-  return el("span", { class: "gl", "data-tip": `${k}: ${GLOSSARY[k]}` }, word);
+  return el("span", { class: "gl", "data-tip": `${k}: ${GLOSSARY[k]}` }, STAT_ICON[k] ? icon(STAT_ICON[k], "gl-ico") : null, word);
 }
 
 // Plain text -> nodes with glossary terms wrapped (first mention of each).

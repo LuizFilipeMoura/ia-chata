@@ -20,6 +20,7 @@ import { Minimap } from "../ui/minimap.js";
 import { reactionCard, rigPortrait } from "../ui/reactions.js";
 import { openInspector } from "../ui/inspector.js";
 import { setRigSource } from "../ui/combatlog.js";
+import { icon } from "../ui/icons.js";
 import { attackBriefing } from "../ui/attack.js";
 import { sfx, ambience } from "../audio.js";
 import { settings } from "../settings.js";
@@ -296,7 +297,7 @@ export class LiveMatch {
         el("div", { class: "pips" }, Array.from({ length: turn.actionsMax }, (_, i) => el("span", { class: `pip ${i < left ? "on" : ""}` }))),
         el("div", { class: "ah-v" }, `${left} of ${turn.actionsMax}`)),
       el("div", { class: "ah-stat", title: "Boiler heat. Every action adds heat; only 1 cools per round. End a turn past capacity (the red zone) and you roll for engine damage." },
-        el("div", { class: "ah-k" }, "Boiler heat"),
+        el("div", { class: "ah-k" }, icon("heat"), "Boiler heat"),
         heatGauge(rig.engine?.heat ?? 0, hm.cap || cap),
         el("div", { class: `ah-v ${hm.over ? "bad" : hm.zone === "redline" ? "warn-t" : ""}` }, hm.over ? `${hm.heat} / ${hm.cap} · OVER` : `${hm.heat} / ${hm.cap} safe`)),
     ));
@@ -316,7 +317,7 @@ export class LiveMatch {
         title: `${a.label}: ${HELP[a.key] || EQUIPMENT[rig.equipment]?.active?.text || ""}${a.note ? " · " + a.note : ""}${!this.allowed("act", a.key) ? "\n⚠ Tutorial: not part of this step yet" : !commandable ? "\n⚠ Not available: this rig can't act right now" : !a.enabled ? "\n⚠ Not available right now (no actions left, or the situation doesn't allow it)" : oddsLine(rig, Number(heat) || 0)}`,
         "data-act": a.key,
         onClick: () => { if (!commandable || !a.enabled) return sfx.bad(); this.beginAction(rig, a.key); },
-      }, el("span", { class: "ico" }, ICON[a.key] || "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, `${heat}🔥`));
+      }, el("span", { class: "ico" }, ICON[a.key] || "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, String(heat), icon("heat")));
       row.append(btn);
     }
     bar.append(row);

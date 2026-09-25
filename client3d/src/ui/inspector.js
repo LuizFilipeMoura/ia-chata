@@ -6,6 +6,7 @@ import { el, fill } from "./dom.js";
 import { CHASSIS, WEAPONS, WEAPON_UPGRADES, EQUIPMENT, LOCS } from "/shared/game-state.js";
 import { EQUIPMENT_UPGRADES, HEAT_CAPACITY } from "/shared/rules.js";
 import { toughnessOf } from "/shared/unit-kinds.js";
+import { icon } from "./icons.js";
 
 const NATURE = { field: ["Field", "always on"], tuned: ["Tuned", "pays off in the right situation"], prototype: ["Prototype", "powerful, with a catch"] };
 const LOC_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
@@ -31,10 +32,10 @@ function weapon(slot, name, upId) {
   return el("div", { class: "in-wep" },
     el("div", { class: "in-wh" }, el("span", {}, slot === "melee" ? "🗡" : "🔫"), el("b", {}, name), el("span", { class: "muted" }, slot === "melee" ? " melee" : " long-range")),
     el("div", { class: "in-stats" },
-      el("span", { title: "Shots: dice rolled to hit per attack" }, el("i", {}, "Shots"), w.rof),
-      el("span", { title: "Penetration: how easily a hit wounds (vs the target's Toughness)" }, el("i", {}, "Pen"), w.pen),
-      el("span", { title: "Damage per wound" }, el("i", {}, "Dmg"), w.dmg),
-      el("span", { title: slot === "melee" ? "Melee reach from base edge" : "Firing range; accuracy is best near the sweet spot" }, el("i", {}, slot === "melee" ? "Reach" : "Range"), range)),
+      el("span", { title: "Shots: dice rolled to hit per attack" }, el("i", {}, icon("shots"), "Shots"), w.rof),
+      el("span", { title: "Penetration: how easily a hit wounds (vs the target's Toughness)" }, el("i", {}, icon("pen"), "Pen"), w.pen),
+      el("span", { title: "Damage per wound" }, el("i", {}, icon("dmg"), "Dmg"), w.dmg),
+      el("span", { title: slot === "melee" ? "Melee reach from base edge" : "Firing range; accuracy is best near the sweet spot" }, el("i", {}, icon(slot === "melee" ? "reach" : "range"), slot === "melee" ? "Reach" : "Range"), range)),
     (w.perks || []).length ? el("div", { class: "muted small" }, `Perks: ${w.perks.join(", ")}`) : null,
     upgrade(WEAPON_UPGRADES[name], upId));
 }
@@ -64,14 +65,15 @@ export function openInspector(rig, { loadout = null, onClose } = {}) {
       el("div", {}, el("h2", {}, rig.name), el("div", { class: "muted" }, `${ch.class === "medium" ? "Medium" : "Light"} rig · speed ${ch.speed ?? "?"}" · ${rig.owner === "a" ? "Cyan" : "Red"} side`)),
       el("button", { class: "btn ghost in-x", onClick: () => { panel.remove(); onClose?.(); } }, "✕")),
     status.length ? el("div", { class: "in-status" }, status.map((t) => el("div", {}, t))) : null,
-    el("h4", {}, "Structure"),
+    el("h4", {}, icon("sp"), "Structure"),
+    el("div", { class: "in-legend" }, icon("tough"), "Toughness (armour) · bar = SP left"),
     el("div", { class: "in-sp" }, LOCS.map((l) => {
       const [v, m] = sp(l); const f = m ? v / m : 0;
       return el("div", { class: "in-loc", title: `${LOC_NAME[l]}: ${v} of ${m} structure points\n${LOC_HELP[l]}` },
-        el("span", {}, LOC_NAME[l]), el("span", { class: "in-t", title: `Toughness (armour): wound rolls need 6 + ${toughnessOf("rig", l, ch.class)} − Penetration` }, `T${toughnessOf("rig", l, ch.class)}`), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#7fcf6a" : f > 0.3 ? "#f5b041" : "#e0533d" } })), el("b", {}, `${v}/${m}`));
+        el("span", {}, LOC_NAME[l]), el("span", { class: "in-t", title: `Toughness (armour): wound rolls need 6 + ${toughnessOf("rig", l, ch.class)} − Penetration` }, icon("tough"), `${toughnessOf("rig", l, ch.class)}`), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#7fcf6a" : f > 0.3 ? "#f5b041" : "#e0533d" } })), el("b", {}, `${v}/${m}`));
     })),
     el("div", { class: "in-loc", title: "Boiler heat\nEvery action adds heat; 1 cools per round. Ending a turn past capacity risks engine damage." },
-      el("span", {}, "Heat"), el("div", { class: "bar" }, el("i", { style: { width: `${Math.min(100, (heat / (cap + 4)) * 100)}%`, background: heat > cap ? "#ff3d1f" : "#f5b041" } })), el("b", {}, `${heat}/${cap}`)),
+      el("span", {}, icon("heat"), "Heat"), el("div", { class: "bar" }, el("i", { style: { width: `${Math.min(100, (heat / (cap + 4)) * 100)}%`, background: heat > cap ? "#ff3d1f" : "#f5b041" } })), el("b", {}, `${heat}/${cap}`)),
     el("h4", {}, "Weapons"),
     weapon("longRange", lr, lrUp),
     weapon("melee", me, meUp),

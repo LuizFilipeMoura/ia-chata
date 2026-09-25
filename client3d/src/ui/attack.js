@@ -5,6 +5,7 @@
 import { el } from "./dom.js";
 import { effectiveWeaponProfile } from "/shared/game-state.js";
 import { rich } from "./glossary.js";
+import { icon } from "./icons.js";
 
 const ARC = {
   front: { pen: 0, text: "Front: its toughest armour. No bonus.", col: "#c8412f" },
@@ -107,7 +108,7 @@ function aimedPicker(target, rows, onPick) {
         l === best ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null),
       el("div", { class: "atk-lsp" }, el("div", { class: "bar" }, el("i", { style: { width: `${max ? (sp / max) * 100 : 0}%` } })), `${sp}/${max} SP`),
       el("div", { class: "atk-what" }, sp <= 0 ? `Already broken. ${LOC[l].split(". ")[0]} again: ${l === "hull" || l === "engine" ? "DESTROYS the rig." : "damage spills to the Hull."}` : `At 0: ${LOC[l].split("At 0 ")[1] || LOC[l]}`),
-      el("div", { class: "atk-ed small" }, el("b", {}, `≈${r.ed.toFixed(1)}`), el("span", {}, "SP expected")));
+      el("div", { class: "atk-ed small" }, el("b", {}, icon("dmg"), `≈${r.ed.toFixed(1)}`), el("span", {}, "SP expected")));
   });
   return el("div", { class: "atk-aim" }, pic, el("div", { class: "atk-locs" }, opts));
 }
@@ -138,11 +139,11 @@ export function attackBriefing(rig, target, rows, onPick) {
         el("div", { class: "atk-title" }, title, i === 0 ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null),
         el("div", { class: "atk-what" }, rich(what)),
         el("div", { class: "atk-stats" },
-          el("span", { title: "Shots: dice rolled to hit" }, el("i", {}, "Shots"), String(p.rof ?? "?")),
-          el("span", { title: "Penetration: how easily a hit wounds" }, el("i", {}, "Pen"), `${p.pen ?? "?"}${arc.pen ? ` +${arc.pen}` : ""}`),
-          el("span", { title: "Damage per wound" }, el("i", {}, "Dmg"), String(p.dmg ?? "?")),
-          el("span", { title: "Heat added to the boiler" }, el("i", {}, "Heat"), "1🔥"))),
-      el("div", { class: "atk-ed" }, el("b", {}, `≈${r.ed.toFixed(1)}`), el("span", {}, "SP expected")));
+          el("span", { title: "Shots: dice rolled to hit" }, el("i", {}, icon("shots"), "Shots"), String(p.rof ?? "?")),
+          el("span", { title: "Penetration: how easily a hit wounds" }, el("i", {}, icon("pen"), "Pen"), `${p.pen ?? "?"}${arc.pen ? ` +${arc.pen}` : ""}`),
+          el("span", { title: "Damage per wound" }, el("i", {}, icon("dmg"), "Dmg"), String(p.dmg ?? "?")),
+          el("span", { title: "Heat added to the boiler" }, el("i", {}, icon("heat"), "Heat"), "1"))),
+      el("div", { class: "atk-ed" }, el("b", {}, icon("dmg"), `≈${r.ed.toFixed(1)}`), el("span", {}, "SP expected")));
   });
   return el("div", { class: "atk" },
     el("h4", { class: "atk-sec" }, "The situation"), tiles,

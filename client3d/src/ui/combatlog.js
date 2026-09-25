@@ -4,6 +4,7 @@
 // that built it, every die, location, wound roll, damage riders, side effects).
 import { el, fill } from "./dom.js";
 import { openInspector } from "./inspector.js";
+import { icon, STAT_ICON } from "./icons.js";
 
 // name -> rig (plus optional loadout) for the ledger's clickable stats. The live
 // match / replay registers one; examples pass their own.
@@ -77,7 +78,7 @@ export class CombatLog {
       const hit = b.steps?.find((s) => s.kind === "hit");
       const hits = hit?.dice?.filter((d) => d.ok).length ?? 0;
       if (!b.sp) return el("span", {}, this.who(b.actor), hits ? " struck " : " missed ", this.who(b.target), el("span", { class: "muted" }, ` with ${b.weapon}`), hits ? el("span", { class: "muted" }, ": no damage") : null);
-      return el("span", {}, this.who(b.actor), " hit ", this.who(b.target), el("span", { class: "muted" }, ` with ${b.weapon}: `), el("b", { class: "dmg" }, `${b.sp} damage`), el("span", { class: "muted" }, ` to ${LOC[b.location] || b.location}`));
+      return el("span", {}, this.who(b.actor), " hit ", this.who(b.target), el("span", { class: "muted" }, ` with ${b.weapon}: `), el("b", { class: "dmg" }, icon("dmg"), `${b.sp} damage`), el("span", { class: "muted" }, ` to ${LOC[b.location] || b.location}`));
     }
     if (l.kind === "overheat") {
       const m = /^(.*?):\s*(.*?)\s*\(/.exec(l.summary || "");
@@ -138,7 +139,7 @@ function arcMini(arc) {
 // A stat that opens the rig it belongs to.
 function statChip(label, value, rigName, find, tip) {
   const open = () => { const hit = find(rigName); if (hit) openInspector(hit.rig || hit, { loadout: hit.loadout }); };
-  return el("button", { class: "rl-chip", title: `${tip}\nClick: open ${rigName}'s sheet`, onClick: open }, `${label} ${value}`);
+  return el("button", { class: "rl-chip", title: `${tip}\nClick: open ${rigName}'s sheet`, onClick: open }, STAT_ICON[label] ? icon(STAT_ICON[label]) : null, `${label} ${value}`);
 }
 
 export function breakdownBody(l, find = rigSource) {

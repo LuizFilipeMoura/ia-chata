@@ -45,7 +45,7 @@ export const LESSONS = [
     steps: [
       { title: "The table", text: "This is a quiet corner of the proving ground: just you (Copper) and a practice dummy far away. Pan with WASD or drag, rotate with Q/E, zoom with the wheel.", next: true },
       PICK,
-      { title: "Actions and heat", text: "Each activation a rig gets 3 actions. Every button shows its cost: the 🔥 number is heat added to the boiler.", highlight: ".hud-actions", next: true },
+      { title: "Actions and heat", text: "Each activation a rig gets 3 actions. Every button shows its cost: the flame number is heat added to the boiler.", highlight: ".hud-actions", next: true },
       { title: "Move", allow: { select: true, acts: ["move"] }, text: "Press Move. The green ring is how far you can walk. Click inside it, toward the glowing beacon.", highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
       { title: "Sprint", allow: { select: true, acts: ["sprint"] }, text: "Sprint goes further but costs 2 heat instead of 1. Press Sprint and dash on toward the beacon.", highlight: '[data-act="sprint"]', done: (m, ev) => ev.sprinted },
       DONE("Moving spends actions and stokes heat. Sprint when distance matters; walk when heat does."),
