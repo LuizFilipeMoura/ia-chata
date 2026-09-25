@@ -102,10 +102,12 @@ test("front arc applies to melee too", () => {
   assert.ok(!kinds(room).includes("attack"));
 });
 
-test("anatomy: the dummy's engine starts on 1 SP; an Aimed Shot can target it", () => {
+test("anatomy: the dummy's engine starts on 2 SP; an Aimed Shot can target it; a kill doesn't end the game", () => {
   const room = build("anatomy");
   const dummy = room.rigs.find((r) => r.name === "Dummy");
-  assert.equal(dummy.engine.sp, 1);
+  assert.equal(dummy.engine.sp, 2);
+  dummy.destroyed = true;
+  assert.ok(room.rigs.some((r) => r.owner === "b" && !r.destroyed));
   applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
   act(room, { action: "aimed", weapon: "longRange", target: "Dummy", loc: "engine" });
   assert.ok(kinds(room).includes("attack"), lastRejectionReason(room));

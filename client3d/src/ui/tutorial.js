@@ -65,10 +65,18 @@ export const LESSONS = [
       { title: "Where a hit lands", text: "Every attack rolls one D12 for where the volley lands, unless it's an Aimed Shot. The Hull is hit most; the Engine least. Each part also has its own armour (Toughness): the Hull is hardest to wound, the Engine easiest.", extra: () => partsChart(), next: true },
       { title: "Losing a part", text: "When a part hits 0 SP it breaks, with a lasting effect. Hit a broken part again and it gets worse, and for Hull or Engine that means the rig is destroyed.", extra: () => partsChart(["hull", "engine"]), next: true },
       { title: "Limbs", text: "Arms and Legs don't kill a rig on their own, but they cripple it. Extra damage to a broken limb spills into the Hull.", extra: () => partsChart(["arms", "legs"]), next: true },
-      { title: "Read the enemy", text: "Look at the dummy's card: its Engine bar (E) is almost empty. 1 SP left. Click the dummy for its full sheet any time.", highlight: ".hud-roster.enemy .rc-sp", next: true },
+      { title: "Read the enemy", text: "Look at the dummy's card: its Engine bar (E) is nearly empty, 2 SP left. Your Autocannon deals 2 damage per wound. Click the dummy for its full sheet any time.", highlight: ".hud-roster.enemy .rc-sp", next: true },
       PICK,
-      { title: "Aim for the Engine", allow: { select: true, acts: ["aimed"] }, text: "Press Aimed Shot, click the dummy, and pick the Engine. Aimed Shots choose the location but aim worse (−2), so it may take a couple of tries.", highlight: '[data-act="aimed"]', done: (m) => (m.state?.rigs?.find((r) => r.name === "Dummy")?.engine?.sp ?? 1) <= 0 || res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 3 },
-      { title: "What happened?", text: "Hover the attack in the Combat log for the rolls. If the Engine hit 0, the dummy now skips its next activation. One more Engine hit would destroy it.", highlight: ".clog", next: true },
+      { title: "Aim for the Engine", allow: { select: true, acts: ["aimed"] }, text: "Press Aimed Shot, click the dummy, and pick the Engine. Aimed Shots choose the location but aim worse (−2), so it may take a couple of tries.", highlight: '[data-act="aimed"]', done: (m) => { const d = m.state?.rigs?.find((r) => r.name === "Dummy"); return !d || d.destroyed || (d.engine?.sp ?? 2) <= 0 || res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 3; } },
+      { title: "What happened?", text: "", extra: (m) => {
+          const d = m.state?.rigs?.find((r) => r.name === "Dummy");
+          const say = !d || d.destroyed
+            ? "More than one wound hit the Engine: the first took it to 0 (broken), the rest counted as hits on a broken Engine, and that destroys a rig. Wrecked!"
+            : (d.engine?.sp ?? 1) <= 0
+              ? "Exactly one wound: the Engine hit 0 and broke. The dummy skips its next activation, and one more Engine hit would destroy it."
+              : "The Engine held this time: the shots missed or went elsewhere. Aimed Shots trade accuracy for control.";
+          return el("p", {}, rich(say + " Hover the attack in the Combat log for every roll."));
+        }, highlight: ".clog", next: true },
       DONE("Focus fire on a weak part. Engine and Hull kill; Arms and Legs cripple. Protect your own weak spots."),
     ] },
   { id: "attackrules", scenario: "attackdemo", icon: "📐", title: "How an attack works", blurb: "To hit, location, wound, damage. With real examples.",
@@ -80,7 +88,7 @@ export const LESSONS = [
       { title: "Penetration is king", text: "Penetration lowers the wound target: each point is +10%. A flank adds +2, the rear +3. Toughness raises it. The target never goes below 2 or above 10.", extra: () => exampleCard("wound", (b) => `Same gun into the ${b.location}. ${woundInfo(b)}. A few dice make it, and only those deal damage.`), next: true },
       { title: "Lucky dice", text: "A natural 10 on the wound die ALWAYS wounds, and a natural 1 never does. No armour is immune, and no gun is guaranteed.", extra: () => exampleCard("lucky", (b) => `${woundInfo(b)}. Everything else fails, but a natural 10 punches through anyway.`), next: true },
       { title: "4. Damage", text: "Each wound takes the weapon's Damage stat off that part's SP. A strong gun from the rear barely needs luck.", extra: () => [pipeline("4"), exampleCard("flank", (b) => `An Autocannon into a medium's rear (+3 Pen). ${woundInfo(b)}: almost every hit wounds, each for its full Damage.`)], next: true },
-      { title: "Breaking a part", text: "Take a part to 0 and it breaks, with the effects you saw in Rig anatomy.", extra: () => exampleCard("breaks", "An Aimed Shot at an Engine on 1 SP: it breaks, and that rig skips its next activation."), next: true },
+      { title: "Breaking a part", text: "Take a part to 0 and it breaks, with the effects you saw in Rig anatomy.", extra: () => exampleCard("breaks", "An Aimed Shot at an Engine on 2 SP: one wound breaks it, and that rig skips its next activation."), next: true },
       DONE("Aim → location → wound → damage. Hover (or click) any Combat log line in a match to see all four for real. Next: take the shot yourself."),
     ] },
   { id: "fire", icon: "🎯", title: "Open fire", blurb: "Shooting, dice and damage.",
@@ -259,7 +267,7 @@ export class Coach {
     fill(this.panel, 
       el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, `${this.lesson.icon} ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
       el("p", {}, rich(s.text)),
-      s.extra ? s.extra() : null,
+      s.extra ? s.extra(this.match) : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,
       already ? el("p", { class: "done-tick" }, "✓ Already done. Nice!") : null,
       el("div", { class: "coach-a" },

@@ -729,6 +729,8 @@ export class LiveMatch {
       sfx.fanfare(won);
       if (won) for (let i = 0; i < 6; i++) setTimeout(() => this.world.fx.explosion(new THREE.Vector3(10 + Math.random() * 34, 6 + Math.random() * 6, 6 + Math.random() * 24), false), i * 300);
       this.emit("finished", o);
+      // Training Grounds: the coach owns the ending; no game-over screen.
+      if (this.tutorial) return;
       modal({
         title: o?.winner == null ? "Draw" : won ? "🏆 Victory" : "💀 Defeat",
         cls: won ? "victory" : "defeat",

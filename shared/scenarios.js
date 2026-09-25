@@ -29,8 +29,11 @@ export const SCENARIOS = {
     title: "Rig anatomy",
     rigs: [
       { name: "Copper", owner: "a", chassis: ME, x: 12, y: 18, facing: 0 },
-      // Engine on its last point: one good Aimed Shot knocks it out.
-      { name: "Dummy", owner: "b", chassis: TARGET, x: 22, y: 18, facing: 180, sp: { engine: 1 } },
+      // Engine on 2 SP: one Autocannon wound (2 damage) breaks it exactly.
+      // More wounds spill past 0, and a broken Engine hit again is destroyed.
+      { name: "Dummy", owner: "b", chassis: TARGET, x: 22, y: 18, facing: 180, sp: { engine: 2 } },
+      // Parked far away so wrecking the dummy doesn't end the game (annihilation).
+      { name: "Spare", owner: "b", chassis: "light-harpoon-anchor", x: 50, y: 33, facing: 180 },
     ],
     objectives: [],
   },
