@@ -5,6 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createRoom, claimSide, applyCommand, findRig, publicState, lastRejectionReason, __test,
+  gritFor, GRIT_SCALE,
 } from "./game-state.js";
 import { effectivePenAgainst } from "./combat.js";
 import { effectiveWeaponProfile } from "./game-state.js";
@@ -73,12 +74,36 @@ test("2 VP behind: the trailing side gains 1 Grit token and it is logged", () =>
   assert.equal(e.summary, "Cyan is behind by 2 VP: +1 Grit token");
 });
 
-test("a side can hold an Answer token and a Grit token in the same round", () => {
+test("gritFor: 0 under 2, 1 for 2-4, 2 for 5-7, 3 for 8+", () => {
+  const got = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 40].map(gritFor);
+  assert.deepEqual(got, [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3]);
+  assert.deepEqual(GRIT_SCALE, [{ gap: 2, tokens: 1 }, { gap: 5, tokens: 2 }, { gap: 8, tokens: 3 }]);
+});
+
+test("5 VP behind: 2 Grit tokens, logged with the amount", () => {
+  const r = startedRoom();
+  nextRound(r, { a: 5, b: 0 });
+  assert.deepEqual(r.game.gritTokens, { a: 0, b: 2 });
+  const e = lastOf(r, "grit");
+  assert.equal(e.side, "b");
+  assert.equal(e.amount, 2);
+  assert.equal(e.summary, "Gold is behind by 5 VP: +2 Grit tokens");
+});
+
+test("8+ VP behind: 3 Grit tokens (the cap)", () => {
+  const r = startedRoom();
+  nextRound(r, { a: 1, b: 13 });
+  assert.deepEqual(r.game.gritTokens, { a: 3, b: 0 });
+  assert.equal(lastOf(r, "grit").amount, 3);
+  assert.equal(lastOf(r, "grit").summary, "Cyan is behind by 12 VP: +3 Grit tokens");
+});
+
+test("a side can hold an Answer token and Grit tokens in the same round", () => {
   const r = startedRoom();
   nextRound(r, { a: 5, b: 0 }, "a"); // b is behind AND activates second
   assert.deepEqual(r.game.answerTokens, { a: 0, b: 1 });
-  assert.deepEqual(r.game.gritTokens, { a: 0, b: 1 });
-  assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 1, grit: 1 });
+  assert.deepEqual(r.game.gritTokens, { a: 0, b: 2 });
+  assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 1, grit: 2 });
 });
 
 test("unspent Grit is removed in Recovery", () => {
@@ -95,7 +120,7 @@ test("unspent Grit is removed in Recovery", () => {
 
 test("spending Grit places an Improved face-down preparation and leaves Answer tokens alone", () => {
   const r = startedRoom();
-  nextRound(r, { a: 5, b: 0 }, "a");
+  nextRound(r, { a: 3, b: 0 }, "a");
   applyCommand(r, { verb: "answer", attrs: { name: "b1", prep: "riposte", side: "b", grit: true } });
   assert.deepEqual(findRig(r, "b1").preparation, { type: "riposte", source: "grit", improved: true, faceUp: false });
   assert.equal(r.game.gritTokens.b, 0);
@@ -173,6 +198,36 @@ test("gate: one side holding both tokens clears only when both are spent", () =>
   assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 0, grit: 1 });
   applyCommand(r, { verb: "answer", attrs: { name: "b1", side: "b", grit: true, upgrade: true } });
   assert.equal(r.game.pendingAnswer, null);
+});
+
+test("gate: several Grit tokens keep the gate open until each is spent", () => {
+  const r = startedRoom();
+  nextRound(r, { a: 9, b: 1 }, "a"); // b trails by 8: 3 Grit, plus the Answer token
+  assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 1, grit: 3 });
+  applyCommand(r, { verb: "answer", attrs: { name: "b1", prep: "brace", side: "b" } });
+  assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 0, grit: 3 });
+  applyCommand(r, { verb: "answer", attrs: { name: "b2", prep: "evasive", side: "b", grit: true } });
+  assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 0, grit: 2 });
+  applyCommand(r, { verb: "answer", attrs: { name: "b3", prep: "return", side: "b", grit: true } });
+  assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 0, grit: 1 });
+  applyCommand(r, { verb: "activate", attrs: { name: "a1" } });
+  assert.equal(r.game.turn.activeRigId, null, "still gated with a Grit token left");
+  applyCommand(r, { verb: "answer", attrs: { name: "b1", side: "b", grit: true, upgrade: true } });
+  assert.equal(r.game.pendingAnswer, null);
+  assert.equal(r.game.gritTokens.b, 0);
+  assert.ok(["b1", "b2", "b3"].every((n) => findRig(r, n).preparation.improved));
+});
+
+test("gate: leftover Grit with nothing left to improve releases the gate", () => {
+  const r = startedRoom();
+  nextRound(r, { a: 8, b: 0 }, "a"); // 3 Grit
+  findRig(r, "b3").destroyed = true;
+  applyCommand(r, { verb: "answer", attrs: { name: "b1", prep: "brace", side: "b" } });
+  applyCommand(r, { verb: "answer", attrs: { name: "b1", side: "b", grit: true, upgrade: true } });
+  assert.deepEqual(r.game.pendingAnswer, { side: "b", remaining: 0, grit: 2 });
+  applyCommand(r, { verb: "answer", attrs: { name: "b2", prep: "brace", side: "b", grit: true } });
+  assert.equal(r.game.gritTokens.b, 1, "one token left over");
+  assert.equal(r.game.pendingAnswer, null, "but no rig can take it");
 });
 
 test("gate: Grit with nothing eligible (every rig already improved) opens no gate", () => {
@@ -366,7 +421,7 @@ test("an upgraded face-down prep stays masked for the opponent", () => {
 // Bots
 // ---------------------------------------------------------------------------
 
-function botGate({ prepared }) {
+function botGate({ prepared, grit = 1 }) {
   const { room } = digitalFirefight();
   for (const [n, x, y] of [["b2", 5, 25], ["b3", 2, 2]]) {
     applyCommand(room, { verb: "add", attrs: { name: n, class: "light", owner: "b", longRange: "Autocannon", melee: "Claw" } });
@@ -376,8 +431,8 @@ function botGate({ prepared }) {
   const bs = room.rigs.filter((r) => r.owner === "b");
   if (prepared) for (const rig of bs) rig.preparation = { type: "brace", source: "action", faceUp: false };
   room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 0 };
-  room.game.gritTokens = { a: 0, b: 1 };
-  room.game.pendingAnswer = { side: "b", remaining: 0, grit: 1 };
+  room.game.gritTokens = { a: 0, b: grit };
+  room.game.pendingAnswer = { side: "b", remaining: 0, grit };
   return { room, bs };
 }
 
@@ -400,6 +455,25 @@ test("bot with every rig prepared upgrades the most threatened one", () => {
   assert.equal(imp[0].name, "b1", "b1 sits in a1's sights; b2/b3 are out of its arc");
 });
 
+test("bot spends every Grit token: Improved preps on all unprepared rigs", () => {
+  const { room, bs } = botGate({ prepared: false, grit: 3 });
+  driveBots(room, { random: () => 0.5 });
+  assert.equal(room.game.pendingAnswer, null);
+  assert.equal(room.game.gritTokens.b, 0);
+  assert.ok(bs.every((r) => r.preparation?.improved && r.preparation.source === "grit"));
+});
+
+test("bot places Grit on unprepared rigs first, then upgrades by exposure", () => {
+  const { room, bs } = botGate({ prepared: true, grit: 2 });
+  const b3 = bs.find((r) => r.name === "b3");
+  b3.preparation = null;
+  driveBots(room, { random: () => 0.5 });
+  assert.equal(room.game.gritTokens.b, 0);
+  assert.deepEqual(b3.preparation, { type: "brace", source: "grit", improved: true, faceUp: false });
+  const upgraded = bs.filter((r) => r.preparation?.improved && r.preparation.source === "action");
+  assert.deepEqual(upgraded.map((r) => r.name), ["b1"], "the exposed rig takes the upgrade");
+});
+
 test("a bot-vs-bot game with a VP gap spends Grit and doesn't stall", async () => {
   const { playMatch, mulberry32 } = await import("./sim/match.js");
   const { tierSquad } = await import("./sim/tiers.js");
@@ -412,10 +486,13 @@ test("a bot-vs-bot game with a VP gap spends Grit and doesn't stall", async () =
     if (res.finished) finished++;
     for (const f of res.frames) {
       if (f.cmd?.verb === "answer" && f.cmd.attrs?.grit) spent++;
-      for (const l of f.log || []) if (l.kind === "grit") granted++;
+      // A token needs a living rig to land on: spendable = min(granted, alive).
+      for (const l of f.log || []) {
+        if (l.kind === "grit") granted += Math.min(l.amount, f.rigs.filter((r) => r.owner === l.side && !r.destroyed).length);
+      }
     }
   }
   assert.equal(finished, 3);
   assert.ok(granted > 0, "some Grit was granted");
-  assert.equal(spent, granted, "every Grit granted to a bot gets spent (the gate forces it)");
+  assert.equal(spent, granted, "every spendable Grit granted to a bot gets spent (the gate forces it)");
 });

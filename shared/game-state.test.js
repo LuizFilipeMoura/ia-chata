@@ -714,7 +714,7 @@ test("formatBattleState reports round, sides and owned rigs with weapons", () =>
   applyCommand(r, { verb: "add", attrs: { name: "Warden", class: "medium", owner: "a", ...W } });
   const out = formatBattleState(r);
   assert.match(out, /CURRENT BATTLE STATE/);
-  assert.match(out, /Round 1\/5/);
+  assert.match(out, /Round 1\/10, beacons pay ×1/);
   assert.match(out, /Ana \(a\) VP 0/);
   assert.match(out, /Warden \(medium, owner a\).*hull 7\/7/);
   assert.match(out, /Mini Gun/);

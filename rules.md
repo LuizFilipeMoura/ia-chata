@@ -1,6 +1,6 @@
 # Of Oil and Iron, Rules (Working Edition)
 
-**Version:** wr-0.13 · **Base:** standalone working ruleset
+**Version:** wr-0.14 · **Base:** standalone working ruleset
 **Scale:** distances are written for the models this ruleset uses, **Light on 60 mm bases, Medium on 75 mm bases**. Measure in inches, base-to-base (closest points).
 **Dice:** six-sided (**D6**), ten-sided (**D10**), and twelve-sided (**D12**).
 
@@ -91,14 +91,14 @@ Toughness varies **by location, not just by chassis**: within a single Rig the H
 
 A game lasts **10 rounds** (§11). Each round has three phases.
 
-**Initiative Phase.** Both players roll 1 D12; highest activates first this round (reroll ties). The player who activates **second** this round gains free **Answer tokens** (§5), and a player **2 or more VP behind** gains a **Grit token** (§5). *(Round 1 is the exception, initiative there is set by deployment order, not rolled: §10.)*
+**Initiative Phase.** Both players roll 1 D12; highest activates first this round (reroll ties). The player who activates **second** this round gains free **Answer tokens** (§5), and a player **2 or more VP behind** gains **Grit tokens** (§5), more the further behind they are. *(Round 1 is the exception, initiative there is set by deployment order, not rolled: §10.)*
 
 **Activation Phase.** Players alternate activating **one Rig at a time**, following initiative order. A Rig completes all its actions before the next Rig activates. If one player has no Rigs left to activate, the other player activates their remaining Rigs back-to-back.
 
 **Recovery Phase.** In this order:
 1. Each Rig reduces its heat by **1** (unless an effect forbids cooling). *⚙ TUNING: cut to 1 so heat lingers between rounds.*
 2. Remove all unspent preparation, Answer and Grit tokens.
-3. **Score objectives** (§11).
+3. **Score objectives** (§11), at the round's beacon multiplier (×1 rounds 1–3, ×2 rounds 4–7, ×3 rounds 8–10 and Sudden Death).
 4. Resolve any other end-of-round effects.
 
 The game then returns to the Initiative Phase of the next round, unless a player has already won.
@@ -144,7 +144,16 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   - *Sidestep the Shooter*: when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**. *Digital: the engine rolls the slip like Evasive, **D6, 4+ the attack fails**.*
   - *Exploit Opening*: when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-shot** at the location you choose, with **no aim penalty**.
 
-- **Grit Tokens (for the player behind).** At the start of each round (in the Initiative Phase, alongside the Answer token), a player whose VP is **2 or more below** the opponent's gains **1 Grit token**. At 0–0, or 1 VP apart, nobody does. A player may hold an Answer token and a Grit token in the same round. Unspent Grit tokens are removed in the Recovery Phase. *⚙ TUNING: 2 VP gap, 1 token per round.*
+- **Grit Tokens (for the player behind).** At the start of each round (in the Initiative Phase, alongside the Answer token), a player whose VP is **2 or more below** the opponent's gains Grit tokens scaled by the gap:
+
+  | VP behind | Grit tokens |
+  |---|---|
+  | 0–1 | none |
+  | 2–4 | **1** |
+  | 5–7 | **2** |
+  | 8+ | **3** (the cap) |
+
+  A player may hold an Answer token and Grit tokens in the same round. Each Grit token is spent separately (so 3 tokens can improve all three Rigs). Unspent Grit tokens are removed in the Recovery Phase. *⚙ TUNING: 2 / 5 / 8 VP steps, cap 3.*
   - **Spend.** Exactly like an Answer token (free: no action, no heat, facedown, any time an Answer token could be spent), placing any preparation or Answer counter an Answer token could, but it is **Improved**.
   - **Upgrade.** Instead, a Grit token may **upgrade** a preparation a Rig already holds to Improved (it keeps its type and stays facedown). So the one-preparation-per-Rig limit never wastes the token.
   - The opponent sees how many Grit tokens you hold, but not which facedown preparation is Improved.
@@ -318,7 +327,16 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 - A destroyed Rig's wreck does **not** hold objectives (remove it from control).
 
 ### Scoring & winning
-- During each **Recovery Phase**, each player scores the VP value of every marker they control. *(Digital: the engine scores it and logs each held marker, "&lt;side&gt; holds the beacon: +N VP", and each contested one, "Beacon contested: nobody scores".)*
+- During each **Recovery Phase**, each player scores the VP value of every marker they control, **multiplied by the round's beacon multiplier**. *(Digital: the engine scores it and logs each held marker, "&lt;side&gt; holds the beacon: +N VP" (with "(base ×mult)" once escalated), and each contested one, "Beacon contested: nobody scores".)*
+- **Escalating beacons.** The scrap gets richer as the battle drags on:
+
+  | Rounds | Beacon multiplier | Centre / corner pays |
+  |---|---|---|
+  | 1–3 | ×1 | 2 / 1 VP |
+  | 4–7 | ×2 | 4 / 2 VP |
+  | 8–10, Sudden Death | ×3 | 6 / 3 VP |
+
+  An early lead built on beacons stays catchable: a late push is worth more than the opening grab. **Kill VP (below) is never multiplied.** *⚙ TUNING: ×1 / ×2 / ×3 from rounds 1 / 4 / 8.*
 - **Annihilation:** if a player has **no Rigs left** at any point, their opponent **wins immediately**.
 - **On points:** after **10 rounds**, **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
 
@@ -639,7 +657,8 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 - **Engagement / melee lock** (§5), a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 Accuracy. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13), machine guns do no frontal damage but hit far harder (+3 side / +6 rear).
 - **Answer tokens** (§5), the player going second each round gets 1 free preparation, or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.
-- **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1 per round, a free **Improved** preparation (or an upgrade to one already placed).
+- **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1–3 per round (scaled by the gap), each a free **Improved** preparation (or an upgrade to one already placed).
+- **Escalating beacons** (§11), objective VP ×1 in rounds 1–3, ×2 in 4–7, ×3 in 8–10 and Sudden Death; kill VP stays flat. Keeps early leads catchable.
 - **Weight-based heat** (§6), Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
 - **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win, +1 VP per kill (+2 more for the Priority Target).
 - **Stagger** (§7), an attack that resolves for 0 SP gives its target +1 heat and −1 Aim on its next attack, so a whiff still counts.

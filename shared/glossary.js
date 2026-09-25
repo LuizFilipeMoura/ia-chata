@@ -127,7 +127,7 @@ export const GLOSSARY = [
   },
   {
     id: "grit-tokens", term: "Grit tokens", match: ["Grit tokens", "Grit token"],
-    def: "Comeback tokens (§5): a side 2+ VP behind at the start of a round gains 1. Spent like an Answer token (free, facedown) but the preparation is Improved, or it upgrades one a Rig already holds. Removed in Recovery.",
+    def: "Comeback tokens (§5): a side 2+ VP behind at the start of a round gains 1 (2-4 behind), 2 (5-7) or 3 (8+). Each is spent like an Answer token (free, facedown) but the preparation is Improved, or it upgrades one a Rig already holds. Removed in Recovery.",
   },
   {
     id: "improved-prep", term: "Improved preparation", match: ["Improved preparation", "Improved preparations"],
@@ -215,7 +215,11 @@ export const GLOSSARY = [
   },
   {
     id: "vp", term: "Victory Points", match: ["Victory Points", "VP"],
-    def: "Points scored each Recovery Phase for controlling objective markers, +1 for every enemy Rig wrecked (+2 more for your Priority Target); most VP after 10 rounds wins (§11).",
+    def: "Points scored each Recovery Phase for controlling objective markers (at the round's beacon multiplier), +1 for every enemy Rig wrecked (+2 more for your Priority Target); most VP after 10 rounds wins (§11).",
+  },
+  {
+    id: "beacon-escalation", term: "beacon multiplier", match: ["beacon multiplier", "Escalating beacons", "escalating beacons"],
+    def: "Objective VP scales with the round (§11): ×1 in rounds 1-3, ×2 in 4-7, ×3 in 8-10 and Sudden Death. Kill VP is never multiplied.",
   },
   {
     id: "ironclad-bounty", term: "Ironclad Bounty", match: ["Ironclad Bounty"],

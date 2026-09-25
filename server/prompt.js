@@ -131,7 +131,9 @@ export const PLAYER_START_GUIDE = [
   "Answer tokens.",
   "",
   "After deployment, explain the goal briefly: score objectives during Recovery",
-  "over 10 rounds, or win immediately by destroying all enemy Rigs. During play,",
+  "over 10 rounds (beacon VP is doubled in rounds 4-7 and tripled in rounds 8-10",
+  "and Sudden Death; kill VP is never multiplied), or win immediately by",
+  "destroying all enemy Rigs. During play,",
   "continue giving the current player the next concrete thing to do, in order,",
   "based strictly on the rulebook and CURRENT BATTLE STATE.",
 ].join("\n");

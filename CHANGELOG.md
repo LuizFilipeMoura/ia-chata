@@ -5,6 +5,18 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.14, Escalating beacons, Grit scales with the gap
+
+### Changed
+- **Escalating beacons (§4, §11):** objective VP is multiplied by the round's phase: ×1 in rounds 1–3, ×2 in rounds 4–7, ×3 in rounds 8–10 and Sudden Death (centre 2/4/6, corners 1/2/3). Applies to digital scoring (the log reads "+4 VP (2 ×2)") and physical Recovery claims alike. **Kill VP is never multiplied.** The current multiplier is public so clients can show "Beacons ×2".
+- **Grit scales with the gap (§5):** the trailing side gains 1 Grit token at 2–4 VP behind, 2 at 5–7, 3 at 8+ (cap 3, one per Rig). The Answer gate keeps prompting until every token is spent or nothing is left to improve.
+- Bots price beacons at the current multiplier (and head for a beacon about to escalate), and spend every Grit token: Improved preps on unprepared Rigs first, then upgrades on the most exposed.
+
+### Notes
+- Sims (Normal vs Normal, 42×28, 40 seeds), wr-0.13 → wr-0.14: lead changes per game 0.33 → 0.30, games with no lead change 28 → 30, round-4 leader won 23/36 → 28/36, final leader took the lead in round 4.0 → 3.7, VP margin 13.9 → 27.2 (inflated by the multiplier), kills 1.4 → 1.4, Grit granted/spent per game 7.1/7.1 → 17.3/14.2 (tokens beyond the living Rig count can't land). Escalation alone and scaled Grit alone each moved lead changes by less than the seed noise; ×1/×1/×2 escalation read slightly better (0.38 lead changes, 26 no-change games), still within noise. Neither lever breaks runaway leads in bot play: the side ahead on beacons is usually also ahead on Rigs, so it holds the richer late beacons too. ⚙ TUNING.
+
+---
+
 ## wr-0.13, Grit tokens
 
 ### Added

@@ -208,6 +208,9 @@ export interface GameState {
   pendingBlast?: unknown;
   answerTokens?: Record<string, number>;
   gritTokens?: Record<string, number>;
+  /** Objective VP multiplier for the current round (§11 escalating beacons). */
+  beaconMultiplier?: number;
+  suddenDeath?: boolean;
   pendingAnswer?: PendingAnswer | null;
   pendingReaction?: PendingReaction | null;
   pendingThreat?: {

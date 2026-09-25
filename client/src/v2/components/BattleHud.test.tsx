@@ -28,6 +28,23 @@ test("renders phase and round when started", async () => {
   expect(await screen.findByText(/R2/)).toBeInTheDocument();
   expect(screen.getByText("Kostov")).toBeInTheDocument();
 });
+test("shows the beacon multiplier once beacons escalate", async () => {
+  const state: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:5, phase:"activation", started:true, beaconMultiplier:2,
+      sides:[{id:"a",name:"Kostov",vp:0,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 } } };
+  render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
+  expect(await screen.findByText("Beacons ×2")).toBeInTheDocument();
+});
+test("hides the beacon multiplier at ×1", async () => {
+  const state: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
+    game:{ round:2, phase:"activation", started:true, beaconMultiplier:1,
+      sides:[{id:"a",name:"Kostov",vp:0,ready:true},{id:"b",name:"Rival",vp:0,ready:true}],
+      turn:{ side:"a", activeRigId:null, actionsUsed:0, actionsMax:0 } } };
+  render(<AppProviders><Seed state={state}/><BattleHud/></AppProviders>);
+  await screen.findByText(/R2/);
+  expect(screen.queryByText(/Beacons ×/)).toBeNull();
+});
 test("renders nothing pre-battle", () => {
   const state: ServerState = { version:1, ownerSide:"a", field:null, rigs:[],
     game:{ round:1, phase:"setup", started:false, sides:[] } };

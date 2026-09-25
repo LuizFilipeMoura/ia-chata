@@ -97,5 +97,12 @@ test("glossary defines the three Answer counters", () => {
 test("glossary defines Grit tokens and the Improved preparation", () => {
   const byId = new Map(GLOSSARY.map((e) => [e.id, e]));
   assert.match(byId.get("grit-tokens")?.def || "", /2\+ VP behind/);
+  assert.match(byId.get("grit-tokens")?.def || "", /3 \(8\+\)/);
   assert.match(byId.get("improved-prep")?.def || "", /3\+/);
+});
+
+test("glossary defines the beacon multiplier", () => {
+  const def = GLOSSARY.find((g) => g.id === "beacon-escalation")?.def || "";
+  assert.match(def, /×2 in 4-7/);
+  assert.match(def, /never multiplied/);
 });

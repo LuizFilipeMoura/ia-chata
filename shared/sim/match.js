@@ -90,7 +90,7 @@ export function frameOf(room, cmd, fromResolutionId) {
         id: x.id, kind: x.kind, actor: x.actor, rigId: x.rigId, targetId: x.targetId, weapon: x.weapon,
         summary: x.summary, effects: x.effects || [], rolls: x.rolls, breakdown: x.breakdown,
         // score / destruction / stagger / reaction extras (undefined when absent)
-        side: x.side, objective: x.objective, x: x.x, y: x.y, vp: x.vp, contested: x.contested,
+        side: x.side, objective: x.objective, x: x.x, y: x.y, vp: x.vp, base: x.base, mult: x.mult, contested: x.contested,
         stagger: x.stagger, victimName: x.victimName, prep: x.prep, amount: x.amount, improved: x.improved,
       })),
   };

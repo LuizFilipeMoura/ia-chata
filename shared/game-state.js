@@ -1495,21 +1495,49 @@ function deploymentOrder(room) {
   return [first, second];
 }
 
-// Grit tokens (§5), the comeback mechanic: a side this many VP (or more) behind
-// the other at the start of a round gains 1 Grit token. ⚙ TUNING
-export const GRIT_GAP = 2;
+// Grit tokens (§5), the comeback mechanic: at the start of a round the side
+// behind gains Grit scaled by the VP gap, each step `{ gap, tokens }` applying
+// from that gap up. Capped at 3: three rigs, each can take one Improved prep.
+// ⚙ TUNING. Mutable in place so sims can swap the table.
+export const GRIT_SCALE = [
+  { gap: 2, tokens: 1 },
+  { gap: 5, tokens: 2 },
+  { gap: 8, tokens: 3 },
+];
+export function gritFor(gap) {
+  let tokens = 0;
+  for (const step of GRIT_SCALE) if (gap >= step.gap) tokens = step.tokens;
+  return tokens;
+}
 
-// Grant Grit to whichever side trails by GRIT_GAP or more. At most one side can.
+// Escalating beacons (§11): objective VP is multiplied by the round's phase, so
+// a late hold outweighs an early one and a lead built on beacons stays catchable.
+// Each step `{ from, mult }` applies from that round on; Sudden Death pays the
+// last step. Kill VP is never multiplied. ⚙ TUNING. Mutable in place for sims.
+export const BEACON_ESCALATION = [
+  { from: 1, mult: 1 },
+  { from: 4, mult: 2 },
+  { from: 8, mult: 3 },
+];
+export function beaconMultiplier(round, suddenDeath = false) {
+  if (suddenDeath) return BEACON_ESCALATION[BEACON_ESCALATION.length - 1]?.mult ?? 1;
+  let mult = 1;
+  for (const step of BEACON_ESCALATION) if ((round || 1) >= step.from) mult = step.mult;
+  return mult;
+}
+
+// Grant Grit to whichever side trails, gritFor(gap) tokens. At most one side can.
 function grantGrit(room) {
   room.game.gritTokens = { a: 0, b: 0 };
   const [sa, sb] = room.game.sides;
   const gap = Math.abs((sa.vp || 0) - (sb.vp || 0));
-  if (gap < GRIT_GAP) return;
+  const amount = gritFor(gap);
+  if (amount <= 0) return;
   const behind = (sa.vp || 0) < (sb.vp || 0) ? sa : sb;
-  room.game.gritTokens[behind.id] = 1;
+  room.game.gritTokens[behind.id] = amount;
   pushResolution(room, {
-    kind: "grit", actor: behind.id, side: behind.id, amount: 1, rigId: null, rolls: [],
-    summary: `${behind.name} is behind by ${gap} VP: +1 Grit token`, effects: [],
+    kind: "grit", actor: behind.id, side: behind.id, amount, rigId: null, rolls: [],
+    summary: `${behind.name} is behind by ${gap} VP: +${amount} Grit token${amount === 1 ? "" : "s"}`, effects: [],
   });
 }
 
@@ -2250,16 +2278,19 @@ function runRecovery(room, random) {
         room.rigs.some((r) => (r.owner || "a") === s.id && !r.destroyed
           && r.pos && controlsObjective(spatial(r), marker)));
       const at = { objective: index, x: marker.x, y: marker.y };
+      const base = marker.vp || 0;
+      const mult = beaconMultiplier(room.game.round, room.game.suddenDeath);
       if (holders.length === 1) {
         const [s] = holders;
-        s.vp += (marker.vp || 0);
+        const vp = base * mult;
+        s.vp += vp;
         pushResolution(room, {
-          kind: "score", actor: s.id, side: s.id, vp: marker.vp || 0, ...at, rolls: [],
-          summary: `${s.name} holds the beacon: +${marker.vp || 0} VP`, effects: [],
+          kind: "score", actor: s.id, side: s.id, vp, base, mult, ...at, rolls: [],
+          summary: `${s.name} holds the beacon: +${vp} VP${mult > 1 ? ` (${base} ×${mult})` : ""}`, effects: [],
         });
       } else if (holders.length > 1) {
         pushResolution(room, {
-          kind: "score", contested: true, vp: 0, ...at, rolls: [],
+          kind: "score", contested: true, vp: 0, base, mult, ...at, rolls: [],
           summary: "Beacon contested: nobody scores", effects: [],
         });
       }
@@ -4016,8 +4047,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
             room.game.recoveryConflict = conflict;
           } else {
             room.game.recoveryConflict = null;
+            const mult = beaconMultiplier(room.game.round, room.game.suddenDeath);
             for (const s of room.game.sides) {
-              s.vp += room.game.recoveryClaims[s.id]
+              s.vp += mult * room.game.recoveryClaims[s.id]
                 .reduce((sum, i) => sum + (objs[i]?.vp || 0), 0);
             }
             advanceRound(room, options.random);
@@ -4339,6 +4371,7 @@ export function publicState(room, side) {
       objectives: room.game.objectives.map((objective) => ({ ...objective })),
       priorityTargets,
       canUndo,
+      beaconMultiplier: beaconMultiplier(room.game.round, room.game.suddenDeath),
     },
     rigs,
     // Transient: the bot's step-by-step frames for the latest turn (set by the
@@ -4352,7 +4385,7 @@ export function formatBattleState(room, side) {
   ensureGameShape(room);
   const g = room.game;
   const lines = ["", "=== CURRENT BATTLE STATE ==="];
-  lines.push(`Round ${g.round}/5`);
+  lines.push(`Round ${g.round}/${MAX_ROUNDS}${g.suddenDeath ? " (Sudden Death)" : ""}, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}`);
   lines.push(`Sides: ${g.sides.map((s) => `${s.name} (${s.id}) VP ${s.vp}${s.ready ? " READY" : ""}`).join(" | ")}`);
   lines.push(`Battle started: ${g.started ? "yes" : "no"}`);
   lines.push(`Phase: ${g.phase}${g.outcome ? ` (winner: ${g.outcome.winner || "draw"})` : ""}`);

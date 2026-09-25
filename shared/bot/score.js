@@ -29,7 +29,7 @@ import {
   arcOf, sightCorridor, distanceBetween, meleeInReach, controlsObjective,
   radiusOf, terrainPolygons,
 } from "../geometry.js";
-import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS, ANY_KILL_VP, KILL_VP } from "../game-state.js";
+import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS, ANY_KILL_VP, KILL_VP, beaconMultiplier } from "../game-state.js";
 import { HEAT_CAPACITY } from "../rules.js";
 
 import { META } from "./meta.js";
@@ -150,14 +150,16 @@ function shotsFrom(room, rig, pos, facing) {
 }
 
 // VP I would score from objectives at `pos`: a marker I control that no living
-// enemy also controls (E2's contested-scores-nobody rule, read forward).
+// enemy also controls (E2's contested-scores-nobody rule, read forward), at this
+// round's beacon multiplier (§11 escalation), since it pays at this Recovery.
 function objectiveVpAt(room, rig, pos) {
   const me = { pos, radius: radiusOf(rig) };
+  const mult = beaconMultiplier(room.game.round, room.game.suddenDeath);
   let vp = 0;
   for (const m of room.game.objectives || []) {
     if (!controlsObjective(me, m)) continue;
     const contested = livingEnemies(room, rig).some((e) => controlsObjective(spatial(e), m));
-    if (!contested) vp += (m.vp || 0);
+    if (!contested) vp += (m.vp || 0) * mult;
   }
   return vp;
 }
@@ -168,13 +170,18 @@ function objectiveVpAt(room, rig, pos) {
 // for advancing and simply stands still, which is exactly what bot-vs-bot caught.
 // The pull is vp/(1+gap): always well under a real control (gap ≥ 0 ⇒ ≤ vp), and
 // growing as the rig closes, so "walk to the objective, then hold it" emerges.
+// Priced at the richer of this round's and next round's multiplier: a rig still
+// walking in usually scores at a later Recovery, so it heads for a beacon that is
+// about to escalate.
 function objectiveApproach(room, rig, pos) {
   const me = { pos, radius: radiusOf(rig) };
+  const g = room.game;
+  const mult = Math.max(beaconMultiplier(g.round, g.suddenDeath), beaconMultiplier((g.round || 1) + 1, g.suddenDeath));
   let best = 0;
-  for (const m of room.game.objectives || []) {
+  for (const m of g.objectives || []) {
     if (controlsObjective(me, m)) continue;   // already priced by objectiveVpAt
     const gap = Math.hypot(pos.x - m.x, pos.y - m.y);
-    best = Math.max(best, (m.vp || 0) / (1 + gap));
+    best = Math.max(best, ((m.vp || 0) * mult) / (1 + gap));
   }
   return best;
 }
