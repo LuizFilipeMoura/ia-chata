@@ -1106,6 +1106,14 @@ export class LiveMatch {
   // ---- Gates the human owes ----
   handleGates() {
     const g = this.game;
+    // The Answer gate can close without this modal (the battle ended, or the
+    // token was spent elsewhere): drop the stale modal instead of leaving it
+    // over the next screen.
+    if (this.answerModal && (g.phase === "finished" || g.outcome || g.pendingAnswer?.side !== this.side)) {
+      this.answerModal.close();
+      this.answerModal = null;
+      this.gateOpen = false;
+    }
     if (this.gateOpen) return;
     if (g.pendingAnswer?.side === this.side) {
       // Answer token: a free face-down reaction. Grit token (you're 2+ VP
@@ -1142,12 +1150,13 @@ export class LiveMatch {
       const body = el("div", { class: "rx" }, tokenEl, leadEl,
         el("h4", {}, "1. Choose a rig"), rigsEl,
         el("h4", {}, "2. Choose its reaction"), cardsEl);
-      modal({ title: useGrit ? "Answer · Grit" : "Answer token", cls: "wide", body, dismissable: false, actions: [
-        useGrit ? { label: "Keep Grit for attacks", ghost: true, onClick: async () => { await this.send("answer", { side: this.side, keep: true }); this.gateOpen = false; this.refresh(); } } : null,
+      this.answerModal = modal({ title: useGrit ? "Answer · Grit" : "Answer token", cls: "wide", body, dismissable: false, actions: [
+        useGrit ? { label: "Keep Grit for attacks", ghost: true, onClick: async () => { this.answerModal = null; await this.send("answer", { side: this.side, keep: true }); this.gateOpen = false; this.refresh(); } } : null,
         { label: "Place reaction", primary: true, onClick: async () => {
         const rig = mine.find((r) => r.name === pick.rig);
         const attrs = { name: pick.rig, prep: pick.prep, side: this.side };
         if (pick.grit) { attrs.grit = true; if (rig?.preparation != null) attrs.upgrade = true; }
+        this.answerModal = null;
         await this.send("answer", attrs); this.gateOpen = false; this.refresh();
       } }].filter(Boolean) });
       return;
