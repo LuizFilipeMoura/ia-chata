@@ -185,8 +185,12 @@ export function rigModifiers(rig) {
   if (cfg.reactions && rig.preparation) {
     const p = rig.preparation;
     const hidden = p.hidden || p.faceUp === false;
-    const tag = hidden ? "Reaction set" : prepLabel(p.type);
-    const gloss = hidden ? "reaction-set" : (
+    // An Improved (Grit) prep: the owner always sees it named. The opponent's
+    // copy of a face-down one is redacted to { hidden: true } by publicState, so
+    // it never reaches this branch.
+    const improved = p.improved && !p.hidden;
+    const tag = improved ? `Improved ${prepShortName(p.type)}` : hidden ? "Reaction set" : prepLabel(p.type);
+    const gloss = improved ? "improved-prep" : hidden ? "reaction-set" : (
       p.type === "evasive" ? "evasive" :
       p.type === "return" ? "return-fire" :
       p.type === "riposte" ? "riposte" :
@@ -200,6 +204,16 @@ export function rigModifiers(rig) {
   // at a glance (allied ranged attacks ignore its cover + gain +1 Aim).
   if (rig.painted) mods.push({ key: "painted", tag: "Painted", tone: "warn", gloss: "painted" });
   return mods;
+}
+
+function prepShortName(type) {
+  if (type === "evasive") return "Evasive";
+  if (type === "return") return "Return Fire";
+  if (type === "raise-shield") return "Raise Shield";
+  if (type === "riposte") return "Riposte";
+  if (type === "sidestep") return "Sidestep";
+  if (type === "exploit") return "Exploit";
+  return "Brace";
 }
 
 function prepLabel(type) {
@@ -225,6 +239,7 @@ export function phaseSummary(game, rigs) {
     turnName: side?.name || null,
     activeName: active?.name || null,
     answerTokens: game.answerTokens || { a: 0, b: 0 },
+    gritTokens: game.gritTokens || { a: 0, b: 0 },
   };
 }
 

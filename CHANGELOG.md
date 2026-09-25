@@ -5,6 +5,17 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.13, Grit tokens
+
+### Added
+- **Grit tokens (§4, §5):** at the start of each round, a side **2+ VP behind** gains 1 Grit token (removed in Recovery if unspent). Spent like an Answer token, free and facedown, but the preparation is **Improved**, or it upgrades a preparation a Rig already holds. Improved: Brace −3 Penetration (was −2), Raise Shield side/rear −4 (was −3), Evasive/Sidestep move full Speed and dodge on 3+ in digital, Return Fire/Riposte/Exploit counters +2 Penetration.
+- The opponent sees the Grit count, never which facedown preparation is Improved.
+
+### Notes
+- Sims (Normal vs Normal, 42×28, 40 seeds): a side held Grit in ~7 of ~9.5 rounds per game, ~2.6 Improved reactions revealed per game. Lead changes per game 0.23 → 0.33, games with no lead change 31 → 28, round-4 leader won 24 → 23 of 40, VP margin 13.0 → 13.9. A small nudge, not a fix for runaway leads: games open up double-digit gaps early, so a 2 VP threshold fires almost every round. ⚙ TUNING: next levers are a bigger payoff per token or scaling tokens with the gap, not a higher threshold.
+
+---
+
 ## wr-0.12, Kills score, harsher Aimed Shot, Stagger
 
 ### Changed

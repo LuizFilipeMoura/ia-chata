@@ -385,3 +385,11 @@ test("overheatOdds: safe under capacity, D12 odds past it", async () => {
   assert.equal(hot.bonus, 10);
   assert.equal(hot.rows.find((r) => r.key === "catastrophic").p, 6 / 12);
 });
+
+test("an Improved (Grit) prep is named for its owner and its gloss resolves", () => {
+  const chip = rigModifiers(rig({ preparation: { type: "brace", source: "grit", improved: true, faceUp: false } })).find((m) => m.key === "prep");
+  assert.equal(chip.tag, "Improved Brace");
+  assert.ok(GLOSS_IDS.has(chip.gloss));
+  // The opponent's redacted copy stays generic.
+  assert.equal(rigModifiers(rig({ preparation: { hidden: true } })).find((m) => m.key === "prep").tag, "Reaction set");
+});

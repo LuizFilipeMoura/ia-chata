@@ -400,6 +400,12 @@ export function penBreakdown(attacker, profile, opts) {
   // resolveFire and cleared in endActivation so it can't leak past its activation.
   const nextPen = attacker.equipState?.nextAttackPen || 0;
   if (nextPen) terms.push({ label: "primed charge", value: nextPen });
+  // Improved counter-attack (§5 Grit tokens), an Improved Return Fire / Riposte
+  // / Exploit Opening counter hits harder. Threaded in by the `react` verb.
+  if (opts.improvedPen) {
+    bonus += opts.improvedPen;
+    terms.push({ label: "improved", value: opts.improvedPen });
+  }
   return { value: profile.pen + weightMod + charged + bonus + nextPen, terms };
 }
 
@@ -489,7 +495,9 @@ export function effectivePenAgainst(attacker, target, profile, location, opts) {
   }
   // Brace's front-arc -2 is skipped by a Piledriver Protocol guard-break
   // (opts.guardBreak, §13 Siege Maul), the smash ignores the target's Brace.
-  const braced = !opts.guardBreak && target.preparation?.type === "brace" && opts.arc === "front" ? -2 : 0;
+  // An Improved (Grit, §5) Brace docks −3 instead of −2.
+  const braceDepth = target.preparation?.improved ? 3 : 2;
+  const braced = !opts.guardBreak && target.preparation?.type === "brace" && opts.arc === "front" ? -braceDepth : 0;
   // Harden (Ablative Plating active). The depth magnitude is read from the
   // equipment upgrade's effect tag (`hardenImpact`) via equipmentUpgradeEffectOf
   //, the catalog lives in rules.js, importable by combat.js without a
@@ -511,7 +519,8 @@ export function effectivePenAgainst(attacker, target, profile, location, opts) {
   }
   const shield = target.preparation?.type === "raise-shield" ? shieldCoverage(target) : null;
   const shieldNegates = !!shield && shield.negate.includes(opts.arc);
-  const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? -3 : 0;
+  // An Improved (Grit, §5) Raise Shield blunts the uncovered arcs by −4, not −3.
+  const shieldBlunt = shield && shield.blunt.includes(opts.arc) ? (target.preparation?.improved ? -4 : -3) : 0;
   // Breach Grip (§13, Claw), a cracked location is easier to wound while the
   // crack is live (its stored expiry round is at or past the current round).
   // `opts.round` is threaded in from resolveAttack.
@@ -791,7 +800,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     // than crashing on a missing part.
     if (location) {
       impacts = rollWounds(attacker, target, profile, location,
-        { arc: opts.arc, hits: th.hits, charged: opts.charged, penOverride: opts.penOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat },
+        { arc: opts.arc, hits: th.hits, charged: opts.charged, penOverride: opts.penOverride, penetrate: th.penetratorShot, round: room?.game?.round || 0, momentum: piledriverSpend, guardBreak, distance: opts.distance, spendHeat, improvedPen: opts.improvedPen },
         opts.dice, random);
       // The wound die is the one that decides damage, so it MUST reach the log.
       // Under the impact-total model these were rolled and discarded, leaving a

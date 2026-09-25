@@ -816,7 +816,7 @@ test("starting the game seeds round 1 initiative from deploy order", () => {
 
 test("second player gets a blocking answer gate that clears when the token is spent", () => {
   const r = startedRoom(); // "a" is second and holds 1 token; turn.side === "b"
-  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1 });
+  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1, grit: 0 });
 
   // First player cannot start activating while the gate is up.
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
@@ -1360,7 +1360,7 @@ test("the activation that ends the round is still revertable from recovery", () 
 
 test("answer-token placement is undoable by the answering side, not the turn side", () => {
   const r = startedRoom(); // turn.side === "b"; "a" holds the answer gate
-  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1 });
+  assert.deepEqual(r.game.pendingAnswer, { side: "a", remaining: 1, grit: 0 });
   applyCommand(r, { verb: "answer", attrs: { name: "a1", prep: "brace", side: "a" } });
   // The reacting side (a) owns the undo, not the turn side (b).
   assert.equal(publicState(r, "a").game.canUndo, true);

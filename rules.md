@@ -1,6 +1,6 @@
 # Of Oil and Iron, Rules (Working Edition)
 
-**Version:** wr-0.12 · **Base:** standalone working ruleset
+**Version:** wr-0.13 · **Base:** standalone working ruleset
 **Scale:** distances are written for the models this ruleset uses, **Light on 60 mm bases, Medium on 75 mm bases**. Measure in inches, base-to-base (closest points).
 **Dice:** six-sided (**D6**), ten-sided (**D10**), and twelve-sided (**D12**).
 
@@ -91,13 +91,13 @@ Toughness varies **by location, not just by chassis**: within a single Rig the H
 
 A game lasts **10 rounds** (§11). Each round has three phases.
 
-**Initiative Phase.** Both players roll 1 D12; highest activates first this round (reroll ties). The player who activates **second** this round gains free **Answer tokens** (§5). *(Round 1 is the exception, initiative there is set by deployment order, not rolled: §10.)*
+**Initiative Phase.** Both players roll 1 D12; highest activates first this round (reroll ties). The player who activates **second** this round gains free **Answer tokens** (§5), and a player **2 or more VP behind** gains a **Grit token** (§5). *(Round 1 is the exception, initiative there is set by deployment order, not rolled: §10.)*
 
 **Activation Phase.** Players alternate activating **one Rig at a time**, following initiative order. A Rig completes all its actions before the next Rig activates. If one player has no Rigs left to activate, the other player activates their remaining Rigs back-to-back.
 
 **Recovery Phase.** In this order:
 1. Each Rig reduces its heat by **1** (unless an effect forbids cooling). *⚙ TUNING: cut to 1 so heat lingers between rounds.*
-2. Remove all unspent preparation and Answer tokens.
+2. Remove all unspent preparation, Answer and Grit tokens.
 3. **Score objectives** (§11).
 4. Resolve any other end-of-round effects.
 
@@ -143,6 +143,18 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   - *Riposte*: when an enemy makes a **melee** attack against this Rig, after it resolves this Rig makes **one free melee attack** back at that attacker (no action, no heat).
   - *Sidestep the Shooter*: when an enemy makes a **ranged** attack against this Rig, **before** it resolves move up to **½ Speed** (the attack fails if this breaks range or line of sight); if the move reaches the shooter you may **engage it for free**. *Digital: the engine rolls the slip like Evasive, **D6, 4+ the attack fails**.*
   - *Exploit Opening*: when an **overcommitted** enemy attacks this Rig (it spent its **final action** on the attack, or is **overheated**), **pivot to face** it and make a **free Aimed counter-shot** at the location you choose, with **no aim penalty**.
+
+- **Grit Tokens (for the player behind).** At the start of each round (in the Initiative Phase, alongside the Answer token), a player whose VP is **2 or more below** the opponent's gains **1 Grit token**. At 0–0, or 1 VP apart, nobody does. A player may hold an Answer token and a Grit token in the same round. Unspent Grit tokens are removed in the Recovery Phase. *⚙ TUNING: 2 VP gap, 1 token per round.*
+  - **Spend.** Exactly like an Answer token (free: no action, no heat, facedown, any time an Answer token could be spent), placing any preparation or Answer counter an Answer token could, but it is **Improved**.
+  - **Upgrade.** Instead, a Grit token may **upgrade** a preparation a Rig already holds to Improved (it keeps its type and stays facedown). So the one-preparation-per-Rig limit never wastes the token.
+  - The opponent sees how many Grit tokens you hold, but not which facedown preparation is Improved.
+
+  | Improved preparation | Effect |
+  |---|---|
+  | *Brace for Incoming Fire* | front-arc attacks at **−3 Penetration** (instead of −2); the melee counter is unchanged |
+  | *Raise Shield* | side/rear attacks at **−4 Penetration** (instead of −3) |
+  | *Evasive Manoeuvre* / *Sidestep the Shooter* | move up to **full Speed** (instead of ½); *Digital: the dodge succeeds on **D6 3+** (instead of 4+)* |
+  | *Return Fire* / *Riposte* / *Exploit Opening* | the counter-attack gets **+2 Penetration** |
 
 ### Engagement (melee lock)
 
@@ -627,6 +639,7 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 - **Engagement / melee lock** (§5), a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 Accuracy. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13), machine guns do no frontal damage but hit far harder (+3 side / +6 rear).
 - **Answer tokens** (§5), the player going second each round gets 1 free preparation, or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.
+- **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1 per round, a free **Improved** preparation (or an upgrade to one already placed).
 - **Weight-based heat** (§6), Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
 - **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win, +1 VP per kill (+2 more for the Priority Target).
 - **Stagger** (§7), an attack that resolves for 0 SP gives its target +1 heat and −1 Aim on its next attack, so a whiff still counts.

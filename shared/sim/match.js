@@ -91,7 +91,7 @@ export function frameOf(room, cmd, fromResolutionId) {
         summary: x.summary, effects: x.effects || [], rolls: x.rolls, breakdown: x.breakdown,
         // score / destruction / stagger / reaction extras (undefined when absent)
         side: x.side, objective: x.objective, x: x.x, y: x.y, vp: x.vp, contested: x.contested,
-        stagger: x.stagger, victimName: x.victimName, prep: x.prep,
+        stagger: x.stagger, victimName: x.victimName, prep: x.prep, amount: x.amount, improved: x.improved,
       })),
   };
 }

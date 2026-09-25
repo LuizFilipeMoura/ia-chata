@@ -114,6 +114,12 @@ function exposureAt(room, rig, pos, facing) {
   return total;
 }
 
+// How much damage the enemy can pour into this rig from where everyone stands
+// now: the round-start Grit spend reads it to pick which prep to upgrade.
+export function exposureOf(room, rig) {
+  return rig?.pos ? exposureAt(room, rig, rig.pos, rig.facing) : 0;
+}
+
 // A declared shot's expectedDamage. An Aimed Shot is priced as what it is: the
 // aim penalty (computeModifiedAim reads `aimed`) at the chosen location.
 function declaredShot(room, rig, cand, target) {

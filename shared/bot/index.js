@@ -4,7 +4,7 @@
 // time to applyCommand, so it goes through the same validation, rejection, and
 // resolution a human does and can neither cheat nor desync.
 import { candidatesFor } from "./candidates.js";
-import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS } from "./score.js";
+import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS, exposureOf } from "./score.js";
 import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, LOCS } from "../game-state.js";
 import { expectedDamage } from "./evaluate.js";
 
@@ -191,6 +191,29 @@ function botReaction(room, pr) {
   } };
 }
 
+// A bot side's next token spend at the Answer gate. An Answer token goes on the
+// first unprepared rig as a Brace (minimal and safe). A Grit token does the same
+// but Improved; with every rig already prepared, it upgrades the preparation on
+// the rig the enemy can hurt most from where it stands.
+function botAnswer(room, gate) {
+  const side = gate.side;
+  const mine = room.rigs.filter((r) => (r.owner || "a") === side && !r.destroyed);
+  const free = mine.find((r) => r.preparation == null);
+  if ((gate.remaining || 0) > 0 && free) {
+    return { verb: "answer", attrs: { name: free.name, prep: "brace", side } };
+  }
+  if ((gate.grit || 0) > 0) {
+    if (free) return { verb: "answer", attrs: { name: free.name, prep: "brace", side, grit: true } };
+    const upgradable = mine.filter((r) => r.preparation && !r.preparation.improved);
+    if (!upgradable.length) return null;
+    const best = upgradable
+      .map((r) => ({ r, e: exposureOf(room, r) }))
+      .reduce((x, y) => (y.e > x.e ? y : x));
+    return { verb: "answer", attrs: { name: best.r.name, side, grit: true, upgrade: true } };
+  }
+  return null;
+}
+
 // Advance the game as far as the BOTS can carry it, then stop at the next point
 // that needs a human (or a terminal state). Called after every applied command
 // (server-side) so a bot side plays itself out without a human clicking through
@@ -204,13 +227,15 @@ export function driveBots(room, options = {}) {
   for (let guard = 0; guard < 2000; guard++) {
     const g = room.game;
     if (g.phase === "finished" || g.outcome) return;
-    // Mandatory Answer-token gate, only clear it for a bot side (minimal brace).
+    // Mandatory Answer-token gate (Answer and Grit tokens), only clear it for a
+    // bot side. Bail if the spend didn't land, so a bad pick can't spin.
     if (g.pendingAnswer) {
       if (!isBot(g.pendingAnswer.side)) return;   // a human still owes their answer
-      const side = g.pendingAnswer.side;
-      const rig = room.rigs.find((r) => (r.owner || "a") === side && !r.destroyed && r.preparation == null);
-      if (!rig) return;
-      applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side } }, {}, options);
+      const cmd = botAnswer(room, g.pendingAnswer);
+      if (!cmd) return;
+      const v = room.version;
+      applyCommand(room, cmd, {}, options);
+      if (room.version === v) return;
       continue;
     }
     // §9 munition cook-off caused by a bot's wreck: send no target list, the

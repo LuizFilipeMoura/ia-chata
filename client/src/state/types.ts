@@ -15,14 +15,19 @@ export type PrepType =
 
 export interface Preparation {
   type?: PrepType;
-  source?: "answer" | "action";
+  source?: "answer" | "action" | "grit" | "emplace";
   faceUp?: boolean;
+  /** Improved by a Grit token (§5). Redacted with the rest for the opponent while face-down. */
+  improved?: boolean;
   hidden?: boolean; // set by publicState redaction for the opponent
 }
 
 export interface PendingAnswer {
   side: string;
+  /** Answer tokens the gated side still holds. */
   remaining: number;
+  /** Grit tokens the gated side still holds (§5, the side 2+ VP behind). */
+  grit?: number;
 }
 
 export interface PendingReaction {
@@ -151,6 +156,10 @@ export interface Resolution {
   contested?: boolean;
   /** `attack` entry that dealt 0 SP: the target is Staggered. */
   stagger?: boolean;
+  /** `grit` entry: tokens granted to `side`. */
+  amount?: number;
+  /** `reaction` entry revealed/rolled by an Improved (Grit) preparation. */
+  improved?: boolean;
 }
 
 export type Diagonal = "tlbr" | "trbl";
@@ -198,6 +207,7 @@ export interface GameState {
   recoveryConflict?: number[] | null;
   pendingBlast?: unknown;
   answerTokens?: Record<string, number>;
+  gritTokens?: Record<string, number>;
   pendingAnswer?: PendingAnswer | null;
   pendingReaction?: PendingReaction | null;
   pendingThreat?: {

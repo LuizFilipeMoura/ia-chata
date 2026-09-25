@@ -49,9 +49,14 @@ function playGame(seed, botA, botB) {
     const g = room.game;
     if (g.pendingAnswer) {
       const side = g.pendingAnswer.side;
-      const rig = room.rigs.find((r) => (r.owner || "a") === side && !r.destroyed && r.preparation == null);
+      const own = room.rigs.filter((r) => (r.owner || "a") === side && !r.destroyed);
+      const free = own.find((r) => r.preparation == null);
+      // Answer tokens first; a Grit token (the side 2+ VP behind) places an
+      // Improved prep, or upgrades one when every rig is already prepared.
+      const grit = !(g.pendingAnswer.remaining > 0 && free);
+      const rig = free || own.find((r) => !r.preparation.improved);
       if (!rig) break;
-      applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side } }, {}, opts);
+      applyCommand(room, { verb: "answer", attrs: { name: rig.name, prep: "brace", side, grit, upgrade: grit && !free } }, {}, opts);
       continue;
     }
     if (g.pendingBlast) { applyCommand(room, { verb: "blast", attrs: { targets: [] } }, {}, opts); continue; }

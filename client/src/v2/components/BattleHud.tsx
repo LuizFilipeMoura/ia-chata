@@ -41,6 +41,8 @@ export function BattleHud() {
   if (!game?.started) return null;
   const sum = phaseSummary(game, rigs);
   const tok = sum.answerTokens[mySide] || 0;
+  const grit = sum.gritTokens?.[mySide] || 0;
+  const foeGrit = Object.entries(sum.gritTokens || {}).find(([id]) => id !== mySide)?.[1] || 0;
   const pr = game.pendingReaction;
   const opponentReacting = Boolean(pr && pr.defender !== mySide);
   const sides = game.sides || [];
@@ -65,7 +67,9 @@ export function BattleHud() {
       {targetRig && (
         <div className="v2-bh-target">🎯 Target: {targetRig.name}{targetRig.destroyed ? " ✓" : ""}</div>
       )}
-      <div className="v2-bh-tokens">{tok ? `⟡ ${tok} Answer` : ""}</div>
+      <div className="v2-bh-tokens">
+        {[tok ? `⟡ ${tok} Answer` : "", grit ? `✊ ${grit} Grit` : "", foeGrit ? `Foe ✊ ${foeGrit} Grit` : ""].filter(Boolean).join(" · ")}
+      </div>
       {opponentReacting && <div className="v2-bh-reacting">↩️ Opponent is reacting…</div>}
       {toast && <div className="v2-bh-killtoast" role="status">{toast}</div>}
       <button

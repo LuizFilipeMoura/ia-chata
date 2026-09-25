@@ -49,39 +49,78 @@ function RecapBody({ lines }: { lines: RecapLine[] }): ReactNode {
   );
 }
 
-// Answer-token gate body. Owns the Rig + reaction selection in local state so the
-// ChoiceField/ReactionPicker actually re-render on each pick; mirrors both into the
-// caller's `pick` ref for the "Set reaction" handler (matches PrepareBody's pattern).
+export interface AnswerPick { rigName: string; prep: PrepType; grit: boolean }
+
+// Answer-token gate body. Owns the token + Rig + reaction selection in local state
+// so the ChoiceField/ReactionPicker actually re-render on each pick; mirrors them
+// into the caller's `pick` ref for the "Set reaction" handler (matches
+// PrepareBody's pattern). A Grit token (side 2+ VP behind) places an Improved
+// reaction, or upgrades one a Rig already holds.
 export function AnswerGateBody({
-  remaining, eligible, pick, onConfirm,
+  remaining, grit = 0, free, upgradable = [], pick, onConfirm,
 }: {
   remaining: number;
-  eligible: Rig[];
-  pick: { rigName: string; prep: PrepType };
+  grit?: number;
+  free: Rig[];
+  upgradable?: Rig[];
+  pick: AnswerPick;
   onConfirm: () => void;
 }) {
+  const canAnswer = remaining > 0 && free.length > 0;
+  const canGrit = grit > 0 && free.length + upgradable.length > 0;
+  const [useGrit, setUseGrit] = useState(pick.grit);
+  const eligible = useGrit ? [...free, ...upgradable] : free;
   const [rigName, setRigName] = useState(pick.rigName);
   const [prep, setPrep] = useState<PrepType>(pick.prep);
   const sel = eligible.find((r) => r.name === rigName) || eligible[0];
+  const upgrading = useGrit && sel?.preparation != null;
+  const pickToken = (g: boolean) => {
+    setUseGrit(g); pick.grit = g;
+    const list = g ? [...free, ...upgradable] : free;
+    if (!list.some((r) => r.name === pick.rigName) && list[0]) { setRigName(list[0].name); pick.rigName = list[0].name; }
+  };
   return (
     <div className="v2-dwr-recap">
+      {canAnswer && canGrit ? (
+        <ChoiceField
+          label="Token"
+          options={[
+            { value: "answer", label: `Answer ×${remaining}` },
+            { value: "grit", label: `Grit ×${grit} (Improved)` },
+          ]}
+          value={useGrit ? "grit" : "answer"}
+          onChange={(v) => pickToken(v === "grit")}
+        />
+      ) : null}
       <p className="v2-dwr-hint">
-        Answer token, {remaining} left. Choose a Rig, then a facedown reaction.
+        {useGrit
+          ? `Grit token, ${grit} left: you're behind, so this reaction is Improved. Place one facedown, or upgrade a Rig's existing reaction.`
+          : `Answer token, ${remaining} left. Choose a Rig, then a facedown reaction.`}
       </p>
       <ChoiceField
         label="Rig"
-        options={eligible.map((r) => ({ value: r.name, label: r.name }))}
-        value={rigName}
+        options={eligible.map((r) => ({ value: r.name, label: r.preparation != null ? `${r.name} (upgrade)` : r.name }))}
+        value={sel?.name ?? rigName}
         onChange={(v) => { setRigName(v); pick.rigName = v; }}
       />
-      <ReactionPicker
-        value={prep}
-        allowShield={sel?.weapons?.melee === "Bulwark Shield"}
-        answerMode
-        onConfirm={onConfirm}
-        confirmIcon="⟡"
-        onChange={(v) => { setPrep(v); pick.prep = v; }}
-      />
+      {upgrading ? (
+        <div className="v2-rx-confirm">
+          <button type="button" className="v2-rx-confirm-btn" onClick={onConfirm}>
+            <span className="v2-rx-confirm-ic" aria-hidden="true">✊</span>
+            <span>Upgrade to Improved</span>
+          </button>
+        </div>
+      ) : (
+        <ReactionPicker
+          value={prep}
+          allowShield={sel?.weapons?.melee === "Bulwark Shield"}
+          answerMode
+          onConfirm={onConfirm}
+          confirmIcon={useGrit ? "✊" : "⟡"}
+          confirmLabel={useGrit ? "Set Improved reaction" : "Set reaction"}
+          onChange={(v) => { setPrep(v); pick.prep = v; }}
+        />
+      )}
     </div>
   );
 }
@@ -213,41 +252,51 @@ export function useV2BattleWatchers(): void {
 
   // ---- Answer-token gate: mandatory immediate placement ----
   const sendCommand = useCommands();
-  const answerShownFor = useRef<number>(-1); // remaining count last shown
+  const answerShownFor = useRef<string>(""); // "remaining/grit" last shown
   useEffect(() => {
     const g = gameRef.current;
     const mine = mySideRef.current;
     const gate = g?.pendingAnswer;
-    if (!gate || gate.side !== mine) { answerShownFor.current = -1; return; }
-    if (answerShownFor.current === gate.remaining) return; // already prompting this step
-    answerShownFor.current = gate.remaining;
+    if (!gate || gate.side !== mine) { answerShownFor.current = ""; return; }
+    const step = `${gate.remaining}/${gate.grit ?? 0}`;
+    if (answerShownFor.current === step) return; // already prompting this step
+    answerShownFor.current = step;
 
-    const eligible = (rigsRef.current || []).filter(
-      (r) => (r.owner || "a") === mine && !r.destroyed && r.preparation == null,
-    );
-    if (!eligible.length) return; // server clears the gate on its own
+    const own = (rigsRef.current || []).filter((r) => (r.owner || "a") === mine && !r.destroyed);
+    const free = own.filter((r) => r.preparation == null);
+    const upgradable = own.filter((r) => r.preparation != null && !r.preparation.improved);
+    const grit = gate.grit ?? 0;
+    const canAnswer = gate.remaining > 0 && free.length > 0;
+    const canGrit = grit > 0 && free.length + upgradable.length > 0;
+    if (!canAnswer && !canGrit) return; // server clears the gate on its own
 
     playBraceForImpact(); // ricochet crack as the answer-token gate opens
 
-    const pick = { rigName: eligible[0].name, prep: "brace" as PrepType };
+    const first = (canAnswer ? free : [...free, ...upgradable])[0];
+    const pick: AnswerPick = { rigName: first.name, prep: "brace", grit: !canAnswer };
     openDrawer({
-      title: "⟡ Answer Tokens, prepare a reaction",
+      title: canGrit ? "✊ Answer · Grit, prepare a reaction" : "⟡ Answer Tokens, prepare a reaction",
       tone: "oil",
       dismissable: false,
       render: () => (
         <AnswerGateBody
           remaining={gate.remaining}
-          eligible={eligible}
+          grit={grit}
+          free={free}
+          upgradable={upgradable}
           pick={pick}
           onConfirm={() => {
             closeDrawer();
-            sendCommand("answer", { name: pick.rigName, prep: pick.prep, side: mine });
+            const rig = own.find((r) => r.name === pick.rigName);
+            const attrs: Record<string, unknown> = { name: pick.rigName, prep: pick.prep, side: mine };
+            if (pick.grit) { attrs.grit = true; if (rig?.preparation != null) attrs.upgrade = true; }
+            sendCommand("answer", attrs);
           }}
         />
       ),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.side, mySide]);
+  }, [game?.pendingAnswer?.remaining, game?.pendingAnswer?.grit, game?.pendingAnswer?.side, mySide]);
 
   // ---- Reaction watcher: defender resolves a triggered facedown reaction ----
   // When an incoming attack reveals an Evasive/Return-Fire prep, the server parks

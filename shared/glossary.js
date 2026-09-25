@@ -126,6 +126,14 @@ export const GLOSSARY = [
     def: "Free preparations granted each round to the player who activates second, no action or heat cost (§4, §5).",
   },
   {
+    id: "grit-tokens", term: "Grit tokens", match: ["Grit tokens", "Grit token"],
+    def: "Comeback tokens (§5): a side 2+ VP behind at the start of a round gains 1. Spent like an Answer token (free, facedown) but the preparation is Improved, or it upgrades one a Rig already holds. Removed in Recovery.",
+  },
+  {
+    id: "improved-prep", term: "Improved preparation", match: ["Improved preparation", "Improved preparations"],
+    def: "A Grit-token preparation (§5): Brace −3 Penetration (not −2), Raise Shield side/rear −4 (not −3), Evasive/Sidestep dodge on 3+ and move up to full Speed (not ½), Return Fire/Riposte/Exploit counters +2 Penetration.",
+  },
+  {
     id: "activation", term: "activation", match: ["activation", "activations"],
     def: "A Rig's full turn: it takes up to 5 actions before the next Rig activates (§4).",
   },

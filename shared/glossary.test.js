@@ -93,3 +93,9 @@ test("glossary defines the three Answer counters", () => {
     assert.ok(entry.def.length > 0);
   }
 });
+
+test("glossary defines Grit tokens and the Improved preparation", () => {
+  const byId = new Map(GLOSSARY.map((e) => [e.id, e]));
+  assert.match(byId.get("grit-tokens")?.def || "", /2\+ VP behind/);
+  assert.match(byId.get("improved-prep")?.def || "", /3\+/);
+});

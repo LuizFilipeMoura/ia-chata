@@ -761,6 +761,7 @@ export function createRoom(code) {
       deployOrder: [],
       initiative: null,
       answerTokens: { a: 0, b: 0 },
+      gritTokens: { a: 0, b: 0 },
       turn: null,
       resolutions: [],
       nextResolutionId: 1,
@@ -957,6 +958,7 @@ function ensureGameShape(room) {
   room.game.deployOrder ||= [];
   if (room.game.initiative === undefined) room.game.initiative = null;
   room.game.answerTokens ||= { a: 0, b: 0 };
+  room.game.gritTokens ||= { a: 0, b: 0 };
   if (room.game.turn === undefined) room.game.turn = null;
   room.game.resolutions ||= [];
   room.game.nextResolutionId ||= 1;
@@ -1460,19 +1462,28 @@ function prepName(type) {
   if (type === "exploit") return "Exploit Opening";
   return "Brace for Incoming Fire";
 }
-function prepEffectLine(type) {
+function prepEffectLine(type, improved = false) {
+  if (improved) {
+    if (type === "evasive") return "Improved: defender may move up to full Speed (digital dodge on 3+), the attack can miss entirely.";
+    if (type === "sidestep") return "Improved: defender slips up to full Speed (digital dodge on 3+) and may engage the shooter.";
+    if (type === "raise-shield") return "Improved: front-arc attack negated; side/rear impacts suffer −4 Penetration (instead of −3).";
+    if (type === "brace") return "Improved: front-arc impacts suffer −3, and the braced Rig is immovable and counters melee that fails to breach.";
+    if (type === "return" || type === "riposte" || type === "exploit") return `Improved: ${prepEffectLine(type)} The counter-attack gets +2 Penetration.`;
+  }
   if (type === "evasive") return "Defender may move ½ Speed, the attack can miss entirely.";
   if (type === "return") return "Defender pivots to face the attacker, then answers with a counter-attack.";
-  if (type === "raise-shield") return "Front-arc attack negated; side/rear impacts suffer −4.";
+  if (type === "raise-shield") return "Front-arc attack negated; side/rear impacts suffer −3 Penetration.";
   if (type === "riposte") return "Defender answers the melee attacker with a free melee counter.";
   if (type === "sidestep") return "Defender slips ½ Speed and may engage the shooter.";
   if (type === "exploit") return "Defender pivots and lands a free Aimed counter-shot (no aim penalty).";
   return "Front-arc impacts suffer −2, and the braced Rig is immovable and counters melee that fails to breach.";
 }
 function reactionRevealEntry(rig, type) {
+  const improved = !!rig.preparation?.improved;
   return {
     kind: "reaction", actor: rig.owner, rigId: rig.id, rolls: [], prep: type,
-    summary: `${rig.name} reveals ${prepName(type)}!`, effects: [prepEffectLine(type)],
+    ...(improved ? { improved: true } : {}),
+    summary: `${rig.name} reveals ${improved ? "Improved " : ""}${prepName(type)}!`, effects: [prepEffectLine(type, improved)],
   };
 }
 
@@ -1484,17 +1495,34 @@ function deploymentOrder(room) {
   return [first, second];
 }
 
+// Grit tokens (§5), the comeback mechanic: a side this many VP (or more) behind
+// the other at the start of a round gains 1 Grit token. ⚙ TUNING
+export const GRIT_GAP = 2;
+
+// Grant Grit to whichever side trails by GRIT_GAP or more. At most one side can.
+function grantGrit(room) {
+  room.game.gritTokens = { a: 0, b: 0 };
+  const [sa, sb] = room.game.sides;
+  const gap = Math.abs((sa.vp || 0) - (sb.vp || 0));
+  if (gap < GRIT_GAP) return;
+  const behind = (sa.vp || 0) < (sb.vp || 0) ? sa : sb;
+  room.game.gritTokens[behind.id] = 1;
+  pushResolution(room, {
+    kind: "grit", actor: behind.id, side: behind.id, amount: 1, rigId: null, rolls: [],
+    summary: `${behind.name} is behind by ${gap} VP: +1 Grit token`, effects: [],
+  });
+}
+
 // Record an initiative result: set activation order, grant the second activator
-// 1 Answer token, open the turn, and enter the activation phase.
+// 1 Answer token (and the trailing side its Grit), open the turn, and enter the
+// activation phase.
 function applyInitiative(room, order, rolls) {
   const [first, second] = order;
   room.game.initiative = { rolls: rolls || null, order: [first, second], second };
   room.game.answerTokens = { a: 0, b: 0 };
   room.game.answerTokens[second] = 1;
-  room.game.pendingAnswer =
-    room.game.answerTokens[second] > 0 && eligibleForPrep(room, second).length > 0
-      ? { side: second, remaining: room.game.answerTokens[second] }
-      : null;
+  grantGrit(room);
+  refreshAnswerGate(room, [second, first]);
   room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
   room.game.phase = "activation";
 }
@@ -1549,6 +1577,7 @@ function resetGameShape(room) {
   room.game.pendingAnswer = null;
   room.game.pendingReaction = null;
   room.game.answerTokens = { a: 0, b: 0 };
+  room.game.gritTokens = { a: 0, b: 0 };
   room.game.suddenDeath = false;
   room.game.deployOrder = [];
   room.game.initiative = null;
@@ -2087,6 +2116,30 @@ function eligibleForPrep(room, sideId) {
   return room.rigs.filter((r) => (r.owner || "a") === sideId && !r.destroyed && r.preparation == null);
 }
 
+// Rigs a Grit token can still reach: unprepared (place an Improved prep) or
+// holding a preparation that isn't Improved yet (upgrade it).
+function eligibleForGrit(room, sideId) {
+  return room.rigs.filter((r) => (r.owner || "a") === sideId && !r.destroyed
+    && (r.preparation == null || !r.preparation.improved));
+}
+
+// The mandatory round-start Answer gate: the first side in `order` that still
+// owes a token spend (an Answer token with an unprepared rig, or a Grit token
+// with an eligible rig) holds it; nobody owing one clears it.
+function refreshAnswerGate(room, order) {
+  const g = room.game;
+  for (const sideId of order) {
+    const answer = g.answerTokens[sideId] || 0;
+    const grit = g.gritTokens?.[sideId] || 0;
+    if ((answer > 0 && eligibleForPrep(room, sideId).length > 0)
+        || (grit > 0 && eligibleForGrit(room, sideId).length > 0)) {
+      g.pendingAnswer = { side: sideId, remaining: answer, grit };
+      return;
+    }
+  }
+  g.pendingAnswer = null;
+}
+
 // After a rig finishes, pass to the other side if it can still act; otherwise
 // the same side continues back-to-back; if neither can act, run Recovery (§4).
 function handoff(room, random) {
@@ -2181,6 +2234,7 @@ function runRecovery(room, random) {
     recompute(rig);
   }
   room.game.answerTokens = { a: 0, b: 0 };
+  room.game.gritTokens = { a: 0, b: 0 };
   room.game.turn = null;
   room.game.phase = "recovery";
   room.game.recoveryClaims = {};
@@ -2589,6 +2643,9 @@ function maybeAnvilRiposte(room, attacker, defender, incomingWeapon, hits, rando
 // round (braceRetaliatedThisRound). Needs a melee weapon to answer with. Reuses
 // the same resolveAttack/penOverride path as Anvil Boss and `return`.
 const BRACE_RIPOSTE_PEN = 6; // ⚙ TUNING
+// An Improved (Grit) Return Fire / Riposte / Exploit Opening counter-attack
+// gets this much extra Penetration (a wound term labelled "improved"). ⚙ TUNING
+const IMPROVED_COUNTER_PEN = 2;
 function maybeBraceRetaliate(room, attacker, defender, incomingWeapon, incomingArc, res, random) {
   if (incomingWeapon !== "melee") return false;
   if (incomingArc !== "front") return false;
@@ -3382,14 +3439,18 @@ function blastVictims(room, source) {
 function resolveDodge(room, pr, reactor, a, random) {
   if (a.evaded != null) return a.evaded === true || a.evaded === "true";
   if (room.mode !== "digital") return false;
+  // An Improved (Grit) dodge succeeds on 3+ instead of 4+.
+  const improved = !!reactor.preparation?.improved;
+  const tn = improved ? 3 : 4;
   const die = rollD(6, null, random);
-  const dodged = die >= 4;
+  const dodged = die >= tn;
   const verb = pr.kind === "sidestep" ? "sidestep" : "evade";
   pushResolution(room, {
     kind: "reaction", actor: reactor.owner, rigId: reactor.id, prep: pr.kind,
+    ...(improved ? { improved: true } : {}),
     rolls: [{ sides: 6, value: die, label: verb, tone: dodged ? "ok" : "miss" }],
-    summary: `${reactor.name} tries to ${verb}: rolled ${die}, ${dodged ? "dodged!" : "caught"}`,
-    effects: [dodged ? "4+ on the D6, the attack fails" : "Under 4, the attack resolves"],
+    summary: `${reactor.name} tries to ${verb}${improved ? " (Improved, 3+)" : ""}: rolled ${die}, ${dodged ? "dodged!" : "caught"}`,
+    effects: [dodged ? `${tn}+ on the D6, the attack fails` : `Under ${tn}, the attack resolves`],
   });
   return dodged;
 }
@@ -3772,7 +3833,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.training = String(a.id);
       startGameSeeded(room, sc.first || "a");
       // The Answer token is only taught in its own lesson.
-      if (!sc.first) { room.game.answerTokens = { a: 0, b: 0 }; room.game.pendingAnswer = null; }
+      if (!sc.first) { room.game.answerTokens = { a: 0, b: 0 }; room.game.gritTokens = { a: 0, b: 0 }; room.game.pendingAnswer = null; }
     }
     changed = true;
   } else if (verb === "setdice") {
@@ -3999,21 +4060,35 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       changed = true;
     }
   } else if (verb === "answer") {
+    // `grit: true` spends a Grit token instead of an Answer token (§5): the prep
+    // it places is Improved. With `upgrade: true` it instead improves the
+    // preparation the rig already holds (type and face-down state kept).
     const rig = findRig(room, a.name);
     const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    const grit = a.grit === true || a.grit === "true";
+    const upgrade = a.upgrade === true || a.upgrade === "true";
     if (!rig || !sideId) reject("No such unit.");
     else if ((rig.owner || "a") !== sideId) reject("You can only Answer with your own rig.");
-    else if (!(room.game.answerTokens[sideId] > 0)) reject("No Answer tokens left.");
-    else if (rig.preparation != null) reject(`${rig.name} is already prepared.`);
+    else if (upgrade && !grit) reject("Only a Grit token can upgrade a preparation.");
+    else if (grit && !(room.game.gritTokens[sideId] > 0)) reject("No Grit tokens left.");
+    else if (!grit && !(room.game.answerTokens[sideId] > 0)) reject("No Answer tokens left.");
+    else if (upgrade && rig.preparation == null) reject(`${rig.name} has no preparation to upgrade.`);
+    else if (upgrade && rig.preparation.improved) reject(`${rig.name}'s preparation is already improved.`);
+    else if (!upgrade && rig.preparation != null) reject(`${rig.name} is already prepared.`);
     else {
-      rig.preparation = { type: normalizeAnswerPrep(a.prep, rig), source: "answer", faceUp: false };
-      room.game.answerTokens[sideId] -= 1;
-      if (room.game.pendingAnswer && room.game.pendingAnswer.side === sideId) {
-        room.game.pendingAnswer.remaining -= 1;
-        if (room.game.pendingAnswer.remaining <= 0 || eligibleForPrep(room, sideId).length === 0) {
-          room.game.pendingAnswer = null;
-        }
+      if (upgrade) {
+        rig.preparation = { ...rig.preparation, improved: true };
+      } else if (grit) {
+        rig.preparation = { type: normalizeAnswerPrep(a.prep, rig), source: "grit", improved: true, faceUp: false };
+      } else {
+        rig.preparation = { type: normalizeAnswerPrep(a.prep, rig), source: "answer", faceUp: false };
       }
+      if (grit) room.game.gritTokens[sideId] -= 1;
+      else room.game.answerTokens[sideId] -= 1;
+      // Re-evaluate an open gate: it stays with its side while that side still
+      // owes a spend, then passes to the other side if IT owes one, else clears.
+      const gate = room.game.pendingAnswer;
+      if (gate) refreshAnswerGate(room, [gate.side, gate.side === "a" ? "b" : "a"]);
       changed = true;
     }
   } else if (verb === "react") {
@@ -4060,6 +4135,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
             fullAuto: a.attack.fullAuto === true || a.attack.fullAuto === "true",
             charged: a.attack.charged === true || a.attack.charged === "true",
             autoReload: false, dice: a.attack.dice,
+            improvedPen: reactor.preparation?.improved ? IMPROVED_COUNTER_PEN : 0,
           }, options.random, combatCtx());
         }
         reactor.preparation = null;
@@ -4106,6 +4182,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
             aimed: false, aimedLoc: "hull",
             charged: a.attack.charged === true || a.attack.charged === "true",
             dice: a.attack.dice,
+            improvedPen: reactor.preparation?.improved ? IMPROVED_COUNTER_PEN : 0,
           }, options.random, combatCtx());
         }
         reactor.preparation = null;
@@ -4124,6 +4201,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
             waiveAimPenalty: true,
             charged: a.attack.charged === true || a.attack.charged === "true",
             dice: a.attack.dice,
+            improvedPen: reactor.preparation?.improved ? IMPROVED_COUNTER_PEN : 0,
           }, options.random, combatCtx());
         }
         reactor.preparation = null;

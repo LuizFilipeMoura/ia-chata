@@ -21,7 +21,7 @@ const ANSWER_COUNTERS: { value: PrepType; icon: string; label: string; rule: str
 
 const SHIELD_REACTION: { value: PrepType; icon: string; label: string; rule: string } = {
   value: "raise-shield", icon: "🛡", label: "Raise Shield",
-  rule: "Negates the next front-arc attack; side/rear impacts take −4 (Tower Shield also negates the side).",
+  rule: "Negates the next front-arc attack; side/rear impacts take −3 Penetration (Tower Shield also negates the side).",
 };
 
 // Exported for call sites / tests that need the base list.

@@ -107,7 +107,7 @@ declare module "/shared/battle-view.js" {
   export function rigModifiers(rig: Rig): Array<{ key: string; tag: string; tone: string; gloss: string }>;
   export function phaseSummary(game: GameState, rigs: Rig[]): {
     label: string; round: number; turnSide?: string | null; turnName?: string;
-    activeName?: string; answerTokens: Record<string, number>;
+    activeName?: string; answerTokens: Record<string, number>; gritTokens: Record<string, number>;
   };
   export function outcomeText(outcome: unknown, sides: unknown): string;
 }

@@ -155,9 +155,17 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
     // bystander. Answering with a duellist would silently corrupt every number.
     // (Recovery clears every preparation, so the same bystander is eligible again
     // each round.)
+    // A Grit token (the side 2+ VP behind, §5) goes on the same bystander: as
+    // an Improved Brace, or upgrading the Brace the Answer token just put there.
     if (g.pendingAnswer) {
-      const bystander = g.pendingAnswer.side === "b" ? "B3" : "A3";
-      cmd("answer", { name: bystander, side: g.pendingAnswer.side, prep: "brace" }, g.pendingAnswer.side);
+      const side = g.pendingAnswer.side;
+      const bystander = side === "b" ? "B3" : "A3";
+      const by = room.rigs.find((r) => r.name === bystander);
+      if (g.pendingAnswer.remaining > 0 && by?.preparation == null) {
+        cmd("answer", { name: bystander, side, prep: "brace" }, side);
+      } else {
+        cmd("answer", { name: bystander, side, prep: "brace", grit: true, ...(by?.preparation ? { upgrade: true } : {}) }, side);
+      }
       continue;
     }
 
