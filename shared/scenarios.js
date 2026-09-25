@@ -34,6 +34,16 @@ export const SCENARIOS = {
     ],
     objectives: [],
   },
+  // Worked examples for "How an attack works": a weak gun (Rivet Gun, Pen 3)
+  // into a medium's front armour, so misses, bounces and lucky 10s all happen.
+  attackdemo: {
+    title: "How an attack works",
+    rigs: [
+      { name: "Copper", owner: "a", chassis: "light-rivet-pressureclaw", x: 14, y: 18, facing: 0 },
+      { name: "Dummy", owner: "b", chassis: TARGET, x: 20, y: 18, facing: 180 },
+    ],
+    objectives: [],
+  },
   fire: {
     title: "Open fire",
     rigs: [

@@ -130,7 +130,7 @@ export function attackBriefing(rig, target, rows, onPick) {
     const p = effectiveWeaponProfile(melee ? "melee" : "longRange", r.name, rig) || {};
     const kind = melee ? "melee" : r.c.action === "aimed" ? "aimed" : "fire";
     const title = kind === "aimed" ? `Aimed Shot at the ${r.c.location}` : melee ? `Strike with ${r.name}` : `Fire ${r.name}`;
-    const what = melee ? "Swing the melee weapon. Locks you both in melee afterwards. Each hit rolls a D12 for where it lands." : "Full volley. Each hit rolls a D12 for where it lands: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
+    const what = melee ? "Swing the melee weapon. Locks you both in melee afterwards. One D12 picks the part it all lands on." : "Full volley. One D12 picks the part it all lands on: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
     return el("button", { class: `atk-card ${i === 0 ? "best" : ""}`, onClick: () => onPick(r.c) },
       svg(ICON[kind], "atk-ic"),
       el("div", { class: "atk-body" },
@@ -147,6 +147,6 @@ export function attackBriefing(rig, target, rows, onPick) {
     el("h4", { class: "atk-sec" }, "The situation"), tiles,
     cards.length ? el("h4", { class: "atk-sec" }, "Choose your attack") : null, cards.length ? el("div", { class: "atk-cards" }, cards) : null,
     aimed.length ? el("h4", { class: "atk-sec" }, "Aimed Shot: choose where it hits") : null,
-    aimed.length ? el("p", { class: "atk-lead" }, `Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −2 Aim (fewer hits land). In exchange there's no D12 roll: every hit goes where you choose. Worth it to finish a weak part.`) : null,
+    aimed.length ? el("p", { class: "atk-lead" }, `Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −2 Aim (fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`) : null,
     aimed.length ? aimedPicker(target, aimed, onPick) : null);
 }

@@ -188,7 +188,7 @@ async function startLesson(lesson) {
   try {
     const room = `TRAIN-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
     await api.join(room, "a");
-    await api.command(room, "a", "scenario", { id: lesson.id });
+    await api.command(room, "a", "scenario", { id: lesson.scenario || lesson.id });
     play(room, { lesson });
   } catch (e) { toast(e.message, "bad", 5000); tutorial(); }
 }

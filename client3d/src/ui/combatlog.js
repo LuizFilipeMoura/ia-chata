@@ -87,25 +87,7 @@ export class CombatLog {
 
   // ---- Hover card ----
   show(l, e) {
-    const b = l.breakdown;
-    const dice = (arr) => el("span", { class: "dice" }, (arr || []).map((d) => el("i", { class: d.ok ? "ok" : "no" }, String(d.value))));
-    const terms = (arr) => (arr || []).map((t) => el("div", { class: "term" }, el("span", {}, t.label), el("span", {}, signed(t.value))));
-    let body;
-    if (l.kind === "attack" && b) {
-      body = [el("div", { class: "cc-title" }, `${b.actor} → ${b.target}`, el("span", { class: "muted" }, ` · ${b.weapon}`))];
-      for (const s of b.steps || []) {
-        if (s.kind === "hit") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, `To hit: ${s.target}+ on D6`, el("span", { class: "out" }, s.out)), terms(s.terms), dice(s.dice)));
-        else if (s.kind === "location") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Location", el("span", { class: "out" }, s.out)), s.die != null ? dice([{ value: s.die, ok: true }]) : null));
-        else if (s.kind === "wound") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, s.target != null ? `Wound: ${s.target}+ on D10` : "Wound", el("span", { class: "out" }, s.out || "")),
-          s.pen != null ? el("div", { class: "muted small" }, `Penetration ${s.pen} vs Toughness ${s.toughness}`) : null, terms(s.terms), dice(s.dice)));
-        else if (s.kind === "damage") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Damage", el("span", { class: "out" }, s.out)), terms(s.terms)));
-      }
-    } else {
-      body = [el("div", { class: "cc-title" }, l.summary || l.kind),
-        (l.rolls || []).length ? el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Rolls"), el("span", { class: "dice" }, l.rolls.map((r) => el("i", { class: r.tone === "miss" ? "no" : "ok", title: `${r.label} (d${r.sides})` }, String(r.value))))) : null];
-    }
-    if (l.effects?.length) body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Effects"), l.effects.map((x) => el("div", { class: "fx" }, `• ${x}`))));
-    fill(this.card, body);
+    fill(this.card, breakdownBody(l));
     this.card.style.display = "block";
     this.place(e);
   }
@@ -118,4 +100,28 @@ export class CombatLog {
   }
 
   destroy() { document.removeEventListener("keydown", this.onKey); this.root.remove(); this.card.remove(); }
+}
+
+// The hover card's content for one log entry: every roll and term the engine
+// recorded. Shared with the Training Grounds' worked examples.
+export function breakdownBody(l) {
+    const b = l.breakdown;
+  const dice = (arr) => el("span", { class: "dice" }, (arr || []).map((d) => el("i", { class: d.ok ? "ok" : "no" }, String(d.value))));
+  const terms = (arr) => (arr || []).map((t) => el("div", { class: "term" }, el("span", {}, t.label), el("span", {}, signed(t.value))));
+  let body;
+  if (l.kind === "attack" && b) {
+    body = [el("div", { class: "cc-title" }, `${b.actor} → ${b.target}`, el("span", { class: "muted" }, ` · ${b.weapon}`))];
+    for (const s of b.steps || []) {
+      if (s.kind === "hit") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, `To hit: ${s.target}+ on D6`, el("span", { class: "out" }, s.out)), terms(s.terms), dice(s.dice)));
+      else if (s.kind === "location") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Location", el("span", { class: "out" }, s.out)), s.die != null ? dice([{ value: s.die, ok: true }]) : null));
+      else if (s.kind === "wound") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, s.target != null ? `Wound: ${s.target}+ on D10` : "Wound", el("span", { class: "out" }, s.out || "")),
+        s.pen != null ? el("div", { class: "muted small" }, `Penetration ${s.pen} vs Toughness ${s.toughness}`) : null, terms(s.terms), dice(s.dice)));
+      else if (s.kind === "damage") body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Damage", el("span", { class: "out" }, s.out)), terms(s.terms)));
+    }
+  } else {
+    body = [el("div", { class: "cc-title" }, l.summary || l.kind),
+      (l.rolls || []).length ? el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Rolls"), el("span", { class: "dice" }, l.rolls.map((r) => el("i", { class: r.tone === "miss" ? "no" : "ok", title: `${r.label} (d${r.sides})` }, String(r.value))))) : null];
+  }
+  if (l.effects?.length) body.push(el("div", { class: "cc-step" }, el("div", { class: "cc-sh" }, "Effects"), l.effects.map((x) => el("div", { class: "fx" }, `• ${x}`))));
+  return body;
 }
