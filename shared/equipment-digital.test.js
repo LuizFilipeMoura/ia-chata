@@ -164,3 +164,29 @@ test("Chaff Burst loses the shot when the side-step breaks reach", () => {
   assert.equal(room.game.turn.actionsUsed, 1);
   assert.ok(gold.engine.heat >= 1);
 });
+
+test("Point-Defense and Ablative Cascade spends ride on the attack resolution", () => {
+  const room = table({}, { equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade" }, { Red: [16, 10, 180] });
+  const red = findRig(room, "Red");
+  red.equipState.ablativeCharges = 2;
+  turn(room, "Gold");
+  for (let i = 0; i < 6 && !room.game.resolutions.some((r) => r.defense); i++) {
+    room.game.turn.actionsUsed = 0;
+    findRig(room, "Gold").loaded.longRange = true;
+    red.equipState.ablativeCharges = 2;
+    act(room, "Gold", { action: "fire", target: "Red", weapon: "longRange" });
+  }
+  const res = room.game.resolutions.find((r) => r.defense);
+  assert.ok(res, "some volley should draw an ablative charge");
+  assert.ok(res.defense.ablative >= 1);
+  assert.equal(red._defenseTally, undefined);
+});
+
+test("Overclock flags the rig until its activation ends", () => {
+  const room = table({ equipment: "overclock-core" });
+  const gold = turn(room, "Gold");
+  act(room, "Gold", { action: "overclock" });
+  assert.equal(gold.overclocked, true);
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Gold" } }, { side: "a" });
+  assert.equal(gold.overclocked, false);
+});

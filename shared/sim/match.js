@@ -83,6 +83,7 @@ export function frameOf(room, cmd, fromResolutionId) {
       pos: r.pos ? { x: +r.pos.x.toFixed(2), y: +r.pos.y.toFixed(2) } : null,
       facing: r.facing ?? 0, destroyed: !!r.destroyed,
       heat: r.engine?.heat ?? 0, staggered: !!r.staggered,
+      smoked: !!r.smokeNextActivation, hardened: !!r.hardened,
       sp: Object.fromEntries(LOCS.map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
     log: (g.resolutions || []).filter((x) => x.id >= fromResolutionId)
@@ -92,6 +93,8 @@ export function frameOf(room, cmd, fromResolutionId) {
         // score / destruction / stagger / reaction extras (undefined when absent)
         side: x.side, objective: x.objective, x: x.x, y: x.y, vp: x.vp, base: x.base, mult: x.mult, contested: x.contested,
         stagger: x.stagger, victimName: x.victimName, prep: x.prep, amount: x.amount, improved: x.improved,
+        // equipment FX extras (digital equipment): which active, AoE victims, hop ends
+        active: x.active, mode: x.mode, victims: x.victims, from: x.from, to: x.to, chaff: x.chaff, defense: x.defense,
       })),
   };
 }

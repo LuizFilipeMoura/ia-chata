@@ -2418,6 +2418,7 @@ function endActivation(room, rig, dice, random) {
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
   rig.noActivesNextActivation = false;
   rig.lockSightNext = false; // Lock Sight (Targeting Computer), a shot not taken doesn't carry into a reactive shot
+  rig.overclocked = false;
   rig.reactorOverdriveActive = false; // Reactor Overdrive (§13), the Penetration boost + doubled overheat is scoped to this one activation
   // Cryo Reservoir / Meltdown Protocol, clear any leftover +Penetration spike so an
   // armed-but-unspent bonus can't leak past this activation.
@@ -3025,6 +3026,7 @@ function performAction(room, rig, act, a, random) {
       let curSp = 0, maxSp = 0;
       for (const loc of LOCS) { curSp += rig[loc].sp; maxSp += rig[loc].max; }
       t.actionsMax += (surge && curSp * 2 < maxSp) ? 3 : 2;
+      rig.overclocked = true; // client chip; cleared at activation end
       // Reactor Overdrive (§13, Power Prototype), Overclocking also arms +2 Penetration to
       // every attack this activation (read in combat.js computePen) at the cost of a
       // doubled overheat bonus this activation (endActivation). All-in push.
@@ -3599,6 +3601,7 @@ function advanceRound(room, random) {
     room.game.initiative = null;
     spawnReinforcements(room, random);
     rerollPriorityTargets(room, random);
+    pinCommander(room);
   }
 }
 
@@ -3685,7 +3688,6 @@ export function maxRoundsOf(room) {
 function endBattle(room, winner, reason) {
   room.game.outcome = { winner, reason };
   room.game.phase = "finished";
-  room.game.turn = null;
 }
 
 // One campaign squad entry → a built rig (not yet placed), or an error string.
@@ -3806,8 +3808,15 @@ function buildMission(room, a, random) {
   autoDeploy(room, rand);
   const [ownerC, foeC] = deploymentCorners(room.field);
   const enemyCorner = room.game.sides[0].id === "a" ? foeC : ownerC;
+  // Objectives give both pilots something to fight over: Skirmish holds one
+  // centre beacon; Last Stand's relay sits in front of the player's corner, so
+  // the attackers have to come to you.
+  const homeCorner = room.game.sides[0].id === "a" ? ownerC : foeC;
+  const centre = { x: room.field.width / 2, y: room.field.height / 2 };
   room.game.objectives = type === "beacons" ? computeObjectives(room.field)
     : type === "salvage" ? scatterCrates(room, Math.max(1, Math.floor(Number(a.crates) || 3)), rand)
+    : type === "skirmish" ? [{ x: centre.x, y: centre.y, vp: 2 }]
+    : type === "laststand" ? [{ x: Math.round((homeCorner.x * 0.7 + centre.x * 0.3) * 10) / 10, y: Math.round((homeCorner.y * 0.7 + centre.y * 0.3) * 10) / 10, vp: 2, relay: true }]
     : [];
   room.game.maxRounds = Math.max(1, Math.floor(Number(a.maxRounds) || MAX_ROUNDS));
   for (const s of room.game.sides) s.bot = s.id === "b" ? (BOT_PRESETS.includes(a.enemyBot) ? a.enemyBot : "normal") : null;
@@ -3815,7 +3824,7 @@ function buildMission(room, a, random) {
   room.campaign = {
     type, mods,
     commanderId: (type === "assassinate" || type === "boss") ? (commander || rigs.find((r) => r.owner === "b")).id : null,
-    exit: type === "breakthrough" ? { x: enemyCorner.x, y: enemyCorner.y, r: Math.round(deployRadius(room.field) * 10) / 10 } : null,
+    exit: type === "breakthrough" ? { x: enemyCorner.x, y: enemyCorner.y, r: Math.round(deployRadius(room.field) * 1.6 * 10) / 10 } : null,
     extractGoal: type === "breakthrough" ? Math.max(1, Math.min(sq.a.length, Math.floor(Number(a.extractGoal) || 2))) : 0,
     extracted: { a: [] },
     crates: { a: 0, b: 0 },
@@ -3828,10 +3837,19 @@ function buildMission(room, a, random) {
   }
   room.training = null;
   startGameSeeded(room, a.first === "b" ? "b" : "a");
+  pinCommander(room);
   // Grit mods (Grit and Gears relic, Freegear banner) seed tokens for round 1.
   for (const id of ["a", "b"]) room.game.gritTokens[id] += mods[id].grit || 0;
   refreshAnswerGate(room, [room.game.initiative.second, room.game.initiative.order[0]]);
   return null;
+}
+
+// Assassinate / Boss: the commander is side A's Priority Target for the whole
+// battle (never rerolled while it stands).
+function pinCommander(room) {
+  const id = room.campaign?.commanderId;
+  const c = id != null ? room.rigs.find((r) => r.id === id) : null;
+  if (c && !c.destroyed) room.game.priorityTargets = { ...room.game.priorityTargets, a: id };
 }
 
 // Assassinate / Boss: the marked enemy commander going down ends it at once.

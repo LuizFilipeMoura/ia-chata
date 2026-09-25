@@ -41,6 +41,22 @@ const P = {
   patch: `<rect x="10" y="22" width="44" height="20" rx="10" transform="rotate(-35 32 32)"/><path d="M28 28 L36 36 M36 28 L28 36"/>`,
   smoke: `<circle cx="22" cy="36" r="12"/><circle cx="40" cy="30" r="14"/><circle cx="34" cy="46" r="10"/>`,
   cryo: `<path d="M32 6 V58 M9 19 L55 45 M9 45 L55 19"/><path d="M26 10 L32 16 L38 10 M26 54 L32 48 L38 54" opacity=".7"/>`,
+  // Nanite Swarm: a honeycomb of hex cells with a repair cross.
+  nanite: `<path d="M22 10 L32 16 V28 L22 34 L12 28 V16 Z"/><path d="M42 10 L52 16 V28 L42 34 L32 28 V16 Z" opacity=".7"/><path d="M32 30 L42 36 V48 L32 54 L22 48 V36 Z"/><path d="M32 38 V46 M28 42 H36"/>`,
+  // Meltdown: a core with radiating heat wedges.
+  meltdown: `<circle cx="32" cy="32" r="8"/><path d="M32 22 L24 8 H40 Z M40.7 37 L56.5 42 L48.5 55.8 Z M23.3 37 L15.5 55.8 L7.5 42 Z"/><circle cx="32" cy="32" r="26" stroke-dasharray="4 5" opacity=".6"/>`,
+  // Grapnel: a three-prong hook on a cable.
+  grapnel: `<path d="M32 6 V40"/><path d="M32 40 C32 52 20 54 16 44 M32 40 C32 52 44 54 48 44 M32 40 V56"/><path d="M16 44 L12 40 M48 44 L52 40"/><circle cx="32" cy="8" r="3"/>`,
+  // Grapnel yank: hook lifting the rig clear.
+  yank: `<path d="M32 30 V58"/><path d="M32 30 C32 20 22 18 20 26 M32 30 C32 20 42 18 44 26"/><path d="M22 14 L32 4 L42 14"/><path d="M10 58 H54" opacity=".6"/>`,
+  // Grapnel reel: hook dragging something in.
+  reel: `<circle cx="14" cy="32" r="8"/><path d="M22 32 H44" stroke-dasharray="4 3"/><path d="M44 32 C54 32 56 22 48 20 M44 32 C54 32 56 42 48 44"/><path d="M30 24 L22 32 L30 40"/>`,
+  // Heat Purge Wave: concentric shock rings from a core.
+  wave: `<circle cx="32" cy="32" r="6" fill="currentColor"/><circle cx="32" cy="32" r="15"/><circle cx="32" cy="32" r="25" stroke-dasharray="6 4" opacity=".7"/>`,
+  // Chaff: a scatter of foil diamonds.
+  chaff: `<path d="M14 14 L18 20 L14 26 L10 20 Z M40 8 L44 14 L40 20 L36 14 Z M50 34 L54 40 L50 46 L46 40 Z M24 38 L28 44 L24 50 L20 44 Z"/><path d="M30 26 L34 30 M44 54 L48 58 M8 44 L10 48" opacity=".7"/>`,
+  // Point-defense / intercept: a shield with a burst on its face.
+  intercept: `<path d="M32 6 L54 14 V30 C54 44 44 54 32 58 C20 54 10 44 10 30 V14 Z"/><path d="M32 20 L35 28 L43 28 L37 33 L39 41 L32 36 L25 41 L27 33 L21 28 L29 28 Z"/>`,
   advisor: `<path d="M22 40 C14 34 14 18 26 12 C36 8 48 14 48 26 C48 32 44 36 42 40 V46 H22 Z"/><path d="M24 52 H40 M26 58 H38"/>`,
   // Tags.
   star: `<path d="M32 6 L39 24 L58 24 L43 36 L49 56 L32 44 L15 56 L21 36 L6 24 L25 24 Z"/>`,
@@ -78,11 +94,11 @@ export function icon(name, cls = "") {
 const FAMILY = {
   pierce: ["pen"],
   attack: ["fire", "aimed", "dmg", "shots", "aim", "melee", "barrage", "lock", "threat", "stagger"],
-  move: ["move", "sprint", "disengage", "jumpjets", "legs", "range", "reach", "arc"],
-  defence: ["prepare", "harden", "smoke", "tough", "hull", "cover", "anchor", "hidden"],
-  heat: ["heat", "engine", "overclock"],
+  move: ["move", "sprint", "disengage", "jumpjets", "grapnel", "yank", "reel", "legs", "range", "reach", "arc"],
+  defence: ["prepare", "harden", "smoke", "chaff", "intercept", "tough", "hull", "cover", "anchor", "hidden"],
+  heat: ["heat", "engine", "overclock", "meltdown", "wave"],
   cool: ["shutdown", "purge", "douse", "cryo"],
-  repair: ["repair", "patch", "sp"],
+  repair: ["repair", "patch", "sp", "nanite"],
   info: ["advisor", "beacon", "dice", "arms", "star", "grit", "sound", "mute", "check", "active", "book"],
 };
 export const FAMILY_OF = Object.fromEntries(Object.entries(FAMILY).flatMap(([f, ns]) => ns.map((n) => [n, f])));

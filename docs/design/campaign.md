@@ -31,7 +31,7 @@ Step 6: Boss contract → Run summary → Renown → HQ
 - **Strikes:** losing a contract gives a Strike and no payout. **2 Strikes, or
   losing the Boss, ends the run** (a loss, with partial Renown). Having no
   deployable rig at a contract also ends it.
-- **Rounds:** campaign battles are shorter: 6 rounds (boss: 7). The room carries
+- **Rounds:** campaign battles are shorter: 6 rounds (Assassination, Breakthrough, Boss: 8). The room carries
   `game.maxRounds`.
 
 ## Roster and carried state
@@ -77,10 +77,10 @@ from the node's seed; deployment corners as usual.
 | Type | Win | Lose | Engine |
 |---|---|---|---|
 | **Beacon Hold** | more VP at the round limit | fewer VP / annihilation | existing objectives game |
-| **Skirmish** | annihilate the enemy, or more VP (kills) at the limit | the reverse | existing game, no beacons |
+| **Skirmish** | annihilate the enemy, or more VP at the limit | the reverse | one centre beacon, kills score |
 | **Assassination** | wreck the marked **Commander** | round limit passes / annihilation | Commander = elite enemy (+25% SP, meta build); win stamped the instant it wrecks |
-| **Breakthrough** | extract **2 rigs** (or all living, if fewer) through the enemy edge | round limit / annihilation | new **Extract** action: a rig inside the 4" exit band leaves the field |
-| **Last Stand** | keep ≥1 rig alive to the round limit | annihilation | enemy **reinforcements** spawn at the enemy edge at the start of rounds 3 and 5 |
+| **Breakthrough** | extract **2 rigs** (or all living, if fewer) at the enemy corner | round limit / annihilation | new **Extract** action: a rig inside the 10" exit quarter-circle leaves the field |
+| **Last Stand** | keep ≥1 rig alive to the round limit | annihilation | enemy **reinforcements** spawn at the enemy corner at the start of rounds 3 and 5; a relay beacon in front of your corner draws the attack |
 | **Salvage Run** | more VP at the limit (crates are worth VP) | fewer VP | crates are one-shot beacons: a rig ending an activation within 2" claims it (+2 VP, +6 salvage); bots go for them too |
 | **Boss** | wreck the faction **Warlord** | round limit / annihilation | Assassination with a Warlord: hard-tier build, +50% SP, the faction perk, +1 Answer token each round |
 

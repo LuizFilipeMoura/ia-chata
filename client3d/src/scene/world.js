@@ -471,6 +471,13 @@ export class World {
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color, dashSize: 0.5, gapSize: 0.3 }));
     line.computeLineDistances(); this.overlay.add(line); return line;
   }
+  // A dashed ballistic arc from a to b (table points {x,y}) peaking at `height`:
+  // the flight line of a jump-jet hop.
+  arcPath(a, b, height = 3, color = 0xffd27a) {
+    const pts = Array.from({ length: 25 }, (_, i) => { const t = i / 24; return new THREE.Vector3(a.x + (b.x - a.x) * t, 0.15 + Math.sin(Math.PI * t) * height, a.y + (b.y - a.y) * t); });
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color, dashSize: 0.5, gapSize: 0.3 }));
+    line.computeLineDistances(); this.overlay.add(line); return line;
+  }
   line(a, b, color = 0xff5544) {
     const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.8 }));
     this.overlay.add(l); return l;

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { availableActions, actionBudget, rigModifiers, phaseSummary, outcomeText } from "./battle-view.js";
+import { availableActions, actionBudget, rigModifiers, phaseSummary, outcomeText, equipmentSpends, equipmentChips, hopLanding, aoeVictims, reelTargets, naniteHosts } from "./battle-view.js";
 import { makeRig, makeUnit, rigEffects } from "./game-state.js";
 import { GLOSSARY } from "./glossary.js";
 
@@ -392,4 +392,119 @@ test("an Improved (Grit) prep is named for its owner and its gloss resolves", ()
   assert.ok(GLOSS_IDS.has(chip.gloss));
   // The opponent's redacted copy stays generic.
   assert.equal(rigModifiers(rig({ preparation: { hidden: true } })).find((m) => m.key === "prep").tag, "Reaction set");
+});
+
+// ---- Digital equipment (campaign.md "Every equipment, fully digital") ----
+
+const eqTurn = { activeRigId: 1, actionsUsed: 0, actionsMax: 3 };
+
+test("Grapnel replaces Jump Jets: live while engaged, off during its cooldown", () => {
+  const base = { equipment: "servo-actuators", equipmentUpgrade: "grapnel-launcher" };
+  const engaged = availableActions(rig({ ...base, engagedWith: 2, equipState: { grapnelCooldown: 0 } }), eqTurn).find((a) => a.key === "jumpjets");
+  assert.equal(engaged.label, "Grapnel");
+  assert.equal(engaged.grapnel, true);
+  assert.equal(engaged.enabled, true);
+  const cooling = availableActions(rig({ ...base, equipState: { grapnelCooldown: 2 } }), eqTurn).find((a) => a.key === "jumpjets");
+  assert.equal(cooling.enabled, false);
+  assert.match(cooling.why, /2 rounds/);
+  assert.equal(cooling.note, "", "greyed-tile reasons stay off the hint line");
+  // Plain Jump Jets still lock while engaged.
+  const jj = availableActions(rig({ equipment: "servo-actuators", engagedWith: 2 }), eqTurn).find((a) => a.key === "jumpjets");
+  assert.equal(jj.label, "Jump Jets");
+  assert.equal(jj.enabled, false);
+});
+
+test("equipment actives go dark under EMP; a banked meltdown blocks the purge wave", () => {
+  const emp = availableActions(rig({ equipment: "ablative-plating", noActivesNextActivation: true }), eqTurn).find((a) => a.key === "harden");
+  assert.equal(emp.enabled, false);
+  const wave = availableActions(rig({ equipment: "blast-furnace-core", equipmentUpgrade: "meltdown-protocol", equipState: { meltdownCharge: 2 } }), eqTurn)
+    .find((a) => a.key === "heatpurgewave");
+  assert.equal(wave.enabled, false);
+  const shut = availableActions(rig({ equipment: "blast-furnace-core", equipmentUpgrade: "meltdown-protocol", equipState: { meltdownCharge: 2 } }), eqTurn)
+    .find((a) => a.key === "shutdown");
+  assert.equal(shut.enabled, false);
+  assert.match(shut.why, /meltdown/);
+});
+
+test("equipmentSpends offers Cryo / Meltdown / Nanite only to the matching Prototype", () => {
+  assert.deepEqual(equipmentSpends(rig({ equipment: "radiator-array", equipmentUpgrade: "twin-radiators" }), eqTurn), []);
+  const cryo = equipmentSpends(rig({ equipment: "radiator-array", equipmentUpgrade: "cryo-reservoir", equipState: { cryo: 2 } }), eqTurn);
+  assert.deepEqual(cryo.map((a) => [a.key, a.max, a.enabled, a.cost]), [["cryo", 2, true, 0]]);
+  const dry = equipmentSpends(rig({ equipment: "radiator-array", equipmentUpgrade: "cryo-reservoir", equipState: { cryo: 0 } }), eqTurn);
+  assert.equal(dry[0].enabled, false);
+  const melt = equipmentSpends(rig({ equipment: "blast-furnace-core", equipmentUpgrade: "meltdown-protocol", equipState: { meltdownCharge: 4 } }), eqTurn);
+  assert.deepEqual(melt.map((a) => [a.key, a.max, a.enabled]), [["meltdown", 4, true]]);
+  const nan = equipmentSpends(rig({ equipment: "field-repair-suite", equipmentUpgrade: "nanite-swarm" }), eqTurn);
+  assert.deepEqual(nan.map((a) => [a.key, a.cost, a.enabled]), [["nanite", 1, true]]);
+  const nanCapped = equipmentSpends(rig({ equipment: "field-repair-suite", equipmentUpgrade: "nanite-swarm" }), { actionsUsed: 3, actionsMax: 3 });
+  assert.equal(nanCapped[0].enabled, false);
+});
+
+test("equipmentChips tracks every equipment state, and rigModifiers folds them in with resolving glosses", () => {
+  const cases = [
+    [{ hardened: true }, "hardened"],
+    [{ smokeNextActivation: true }, "smoke"],
+    [{ lockSightNext: true }, "locksight"],
+    [{ reactorOverdriveActive: true }, "overdrive"],
+    [{ equipState: { nextAttackPen: 2 } }, "nextpen"],
+    [{ equipment: "radiator-array", equipmentUpgrade: "cryo-reservoir", equipState: { cryo: 2 } }, "cryo"],
+    [{ equipment: "blast-furnace-core", equipmentUpgrade: "meltdown-protocol", equipState: { meltdownCharge: 3 } }, "meltdown"],
+    [{ equipState: { naniteStacks: [{ loc: "hull", sp: 2 }] } }, "nanite-hull"],
+    [{ equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade", equipState: { ablativeCharges: 1 } }, "ablative"],
+    [{ equipment: "reactive-plating", equipmentUpgrade: "point-defense-system", equipState: { interceptors: 2 } }, "pd"],
+    [{ equipment: "targeting-computer", equipmentUpgrade: "fire-solution-lock", equipState: { solution: { targetId: 2, count: 2 } } }, "solution"],
+    [{ equipment: "servo-actuators", equipmentUpgrade: "grapnel-launcher", equipState: { grapnelCooldown: 3 } }, "grapnel"],
+  ];
+  for (const [over, key] of cases) {
+    const r = rig(over);
+    const chip = equipmentChips(r).find((c) => c.key === key);
+    assert.ok(chip, `chip ${key}`);
+    assert.ok(chip.icon && chip.tip && chip.label, `chip ${key} is complete`);
+    const mod = rigModifiers(r).find((m) => m.key === `eq-${key}`);
+    assert.ok(mod, `modifier eq-${key}`);
+    assert.ok(GLOSS_IDS.has(mod.gloss), `gloss ${mod.gloss} resolves`);
+  }
+  assert.equal(equipmentChips(rig()).length, 0);
+  // A spent counter still shows its value (the chip says "cryo 2" as a number).
+  assert.equal(equipmentChips(rig(cases[5][0])).find((c) => c.key === "cryo").value, 2);
+});
+
+test("hopLanding: reach, table edge, terrain and other bases", () => {
+  const me = rig({ id: 1, pos: { x: 10, y: 10 } });
+  const other = rig({ id: 2, name: "Zed", owner: "b", pos: { x: 15, y: 10 } });
+  const state = { field: { width: 40, height: 30, terrain: [{ shape: "rect", kind: "building", x: 10, y: 20, w: 4, h: 4 }] }, rigs: [me, other] };
+  assert.equal(hopLanding(state, me, { x: 13, y: 14 }, 6).ok, true);
+  assert.equal(hopLanding(state, me, { x: 20, y: 10 }, 6).reason, "out of reach");
+  assert.equal(hopLanding(state, me, { x: 10, y: 17.2 }, 8).reason, "landing on terrain");
+  assert.match(hopLanding(state, me, { x: 14, y: 10 }, 6).reason, /Zed/);
+  assert.equal(hopLanding(state, me, { x: 5, y: 0.5 }, 12).reason, "off the table");
+});
+
+test("aoeVictims measures rim to rim and skips allies and wrecks", () => {
+  const me = rig({ id: 1, pos: { x: 10, y: 10 } }); // light, r 1.18
+  const near = rig({ id: 2, owner: "b", pos: { x: 15.3, y: 10 } }); // rim gap 5.3-2.36 = 2.94
+  const far = rig({ id: 3, owner: "b", pos: { x: 16, y: 10 } });   // 3.64
+  const ally = rig({ id: 4, owner: "a", pos: { x: 12, y: 10 } });
+  const wreck = rig({ id: 5, owner: "b", pos: { x: 11, y: 12 }, destroyed: true });
+  const ids = (reach) => aoeVictims([me, near, far, ally, wreck], me, reach).map((r) => r.id);
+  assert.deepEqual(ids(3), [2]);
+  assert.deepEqual(ids(4), [2, 3]);
+});
+
+test("reelTargets: enemies within 8\" (rim) in LOS and the front arc", () => {
+  const me = rig({ id: 1, pos: { x: 10, y: 10 }, facing: 0 });
+  const front = rig({ id: 2, owner: "b", pos: { x: 20, y: 10 } });   // rim 10-2.36 = 7.64
+  const tooFar = rig({ id: 3, owner: "b", pos: { x: 20.5, y: 11 } }); // rim ≈ 8.19
+  const behind = rig({ id: 4, owner: "b", pos: { x: 4, y: 10 } });
+  const state = { field: { width: 40, height: 30, terrain: [] }, rigs: [me, front, tooFar, behind] };
+  assert.deepEqual(reelTargets(state, me).map((r) => r.id), [2]);
+});
+
+test("naniteHosts: self always, allies only within 3\" rim", () => {
+  const me = rig({ id: 1, pos: { x: 10, y: 10 } });
+  const close = rig({ id: 2, pos: { x: 14, y: 10 } });   // rim 1.64
+  const away = rig({ id: 3, pos: { x: 20, y: 10 } });
+  const foe = rig({ id: 4, owner: "b", pos: { x: 11, y: 12 } });
+  const hosts = naniteHosts([me, close, away, foe], me);
+  assert.deepEqual(hosts.map((h) => [h.rig.id, h.self, h.inReach]), [[1, true, true], [2, false, true], [3, false, false]]);
 });

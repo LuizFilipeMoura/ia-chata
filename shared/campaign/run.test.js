@@ -7,7 +7,7 @@ import {
   newRun, offersFor, missionAttrs, pickNode, debrief, rewardCards, applyReward, buy, repair, recover,
   respec, continueRun, abandon, runSummary, deployable, prototypeSlots, mergeMods,
 } from "./run.js";
-import { PRICES, NOTORIETY, factionById } from "./catalog.js";
+import { PRICES, NOTORIETY, ROUNDS, factionById } from "./catalog.js";
 
 const ROSTER = ["light-claw-autocannon", "medium-lance-mortar", "light-harpoon-anchor"];
 const richProfile = (ids = []) => {
@@ -102,7 +102,7 @@ test("offers per step: step 4 always has a depot, step 6 is the boss", () => {
         assert.equal(offers.length, 1);
         assert.equal(offers[0].kind, "boss");
         assert.equal(offers[0].faction, run.bossFaction);
-        assert.equal(offers[0].maxRounds, 7);
+        assert.equal(offers[0].maxRounds, ROUNDS.boss);
         assert.equal(offers[0].payout, 40);
       } else {
         assert.equal(offers.length, 3);
@@ -113,7 +113,7 @@ test("offers per step: step 4 always has a depot, step 6 is the boss", () => {
       }
       for (const n of offers.filter((n) => n.kind === "contract")) {
         assert.equal(n.payout, 12 + 4 * step);
-        assert.equal(n.maxRounds, 6);
+        assert.equal(n.maxRounds, ROUNDS[n.type] ?? ROUNDS.contract);
       }
     }
   }
@@ -179,7 +179,7 @@ test("missionAttrs: squads, names, mods, bot", () => {
   assert.equal(a.type, node.type);
   assert.equal(a.width, 42);
   assert.equal(a.height, 28);
-  assert.equal(a.maxRounds, 6);
+  assert.equal(a.maxRounds, node.maxRounds);
   assert.equal(a.enemyBot, "hard");
   assert.equal(a.seed, node.seed);
   assert.deepEqual(a.squads.a.map((u) => u.uid), ["r1", "r2", "r3"]);

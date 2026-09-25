@@ -233,7 +233,7 @@ function contractNode(run, type, step, index, faction) {
     step,
     seed: seedFor(run.seed, "mission", step, index),
     payout: boss ? PRICES.bossPayout : PRICES.payoutBase + PRICES.payoutPerStep * step,
-    maxRounds: boss ? ROUNDS.boss : ROUNDS.contract,
+    maxRounds: ROUNDS[boss ? "boss" : type] ?? ROUNDS.contract,
     threat: Math.min(5, Math.ceil(step / 2) + (["assassinate", "laststand", "boss"].includes(type) ? 1 : 0) + (run.notoriety >= 3 ? 1 : 0)),
     enemy,
   };

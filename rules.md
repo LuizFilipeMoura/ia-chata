@@ -685,19 +685,19 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 
 ## 18. Campaign Missions (digital)
 
-The single-player campaign (see `docs/design/campaign.md`) plays **contracts**: digital battles against the bot, shorter than a standard game (**6 rounds**, the Warlord **7**). Side A is the player. Each contract type changes the win condition:
+The single-player campaign (see `docs/design/campaign.md`) plays **contracts**: digital battles against the bot, shorter than a standard game (**6 rounds**; Assassination, Breakthrough and the Warlord **8**). Side A is the player. Each contract type changes the win condition:
 
 | Contract | Win | Lose |
 |---|---|---|
 | **Beacon Hold** | more VP at the round limit (standard beacons) | fewer VP, or annihilation |
-| **Skirmish** | more VP at the round limit (no beacons: kills score) | the reverse |
+| **Skirmish** | more VP at the round limit (one centre beacon; kills score) | the reverse |
 | **Assassination** | wreck the marked **Commander** (the instant it goes down) | the round limit passes, or annihilation |
 | **Breakthrough** | **Extract** the goal number of Rigs through the enemy corner | the round limit passes, annihilation, or no Rig left to extract |
-| **Last Stand** | have any Rig standing at the round limit | annihilation |
+| **Last Stand** | have any Rig standing at the round limit (a relay beacon sits in front of your corner: the attackers come for it) | annihilation |
 | **Salvage Run** | more VP at the round limit | fewer VP |
 | **Boss** | wreck the faction **Warlord** | the round limit passes, or annihilation |
 
-- **Extract** (Breakthrough only, 1 action): a Rig whose centre is inside the **extraction zone** (the enemy's deployment quarter-circle) and not locked in melee leaves the table. It isn't wrecked and keeps its SP.
+- **Extract** (Breakthrough only, 1 action): a Rig whose centre is inside the **extraction zone** (a quarter-circle around the enemy's corner, 1.6× the deployment radius: 10" on the 42"×28" campaign table) and not locked in melee leaves the table. It isn't wrecked and keeps its SP.
 - **Reinforcements** (Last Stand): scheduled enemy Rigs drop in at the enemy corner at the start of their round.
 - **Salvage crates** (Salvage Run): a Rig that **ends its activation** within **2"** (rim) of a crate hauls it: **+2 VP** for its side, and the crate is gone. Crates never score in Recovery. The bot goes for them too.
 - **Commander / Warlord:** an elite enemy Rig with extra SP (+25% / +50%).

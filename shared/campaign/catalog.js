@@ -154,7 +154,8 @@ export const OPENING_POOL = ["beacons", "skirmish"];
 export const RUN_STEPS = 5; // regular steps; step 6 is the boss
 export const BOSS_STEP = RUN_STEPS + 1;
 export const MAX_STRIKES = 2;
-export const ROUNDS = { contract: 6, boss: 7 };
+// Hunting a commander or crossing the whole table needs a little longer. ⚙ TUNING
+export const ROUNDS = { contract: 6, assassinate: 8, breakthrough: 8, boss: 8 };
 export const TABLE = { width: 42, height: 28 };
 export const COMMANDER_SP = { assassinate: 1.25, boss: 1.5 };
 

@@ -146,6 +146,10 @@ export function candidatesFor(room, rig) {
       }
     }
   }
+  // Campaign Breakthrough: extract the moment the rig stands in the zone.
+  const exit = room.campaign?.type === "breakthrough" && (rig.owner || "a") === "a" ? room.campaign.exit : null;
+  if (exit && left > 0 && rig.engagedWith == null && rig.pos
+      && Math.hypot(rig.pos.x - exit.x, rig.pos.y - exit.y) <= exit.r) out.push({ action: "extract" });
   if (enabled.has("emergencypatch")) {
     const weakest = LOCS.filter((l) => rig[l] && !rig[l].destroyed)
       .sort((x, y) => rig[x].sp / rig[x].max - rig[y].sp / rig[y].max)[0];

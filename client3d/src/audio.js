@@ -142,6 +142,65 @@ export const sfx = {
     tone(t, 0.4, { freq: jit(1330), to: 1200, type: "sine", peak: 0.07 });
   },
   thrusters() { if (!init() || muted) return; noise(ctx.currentTime, 1.6, { freq: 400, sweepTo: 1500, type: "bandpass", q: 1, peak: 0.35, attack: 0.3 }); },
+  // ---- Equipment ----
+  // Harden: plates slam shut, two heavy clanks and a ring.
+  clank() {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    for (const d of [0, 0.12]) { tone(t + d, 0.18, { freq: jit(180), to: 70, type: "square", peak: 0.25 }); noise(t + d, 0.08, { freq: 2600, type: "bandpass", q: 4, peak: 0.35 }); }
+    tone(t + 0.12, 0.7, { freq: jit(760), to: 720, type: "sine", peak: 0.08 });
+  },
+  // Purge / steam venting: a long high hiss.
+  hiss(long = false) { if (!init() || muted) return; noise(ctx.currentTime, long ? 1.6 : 1.0, { freq: 6000, sweepTo: 2500, type: "highpass", peak: 0.4, attack: 0.03 }); },
+  // Jump jets / grapnel yank: a short thruster roar and a landing thump.
+  jet() {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    noise(t, 0.8, { freq: 500, sweepTo: 2200, type: "bandpass", q: 0.8, peak: 0.45, attack: 0.05 });
+    tone(t, 0.7, { freq: 90, to: 160, type: "sawtooth", peak: 0.08 });
+  },
+  land() { if (!init() || muted) return; const t = ctx.currentTime; tone(t, 0.25, { freq: 80, to: 35, type: "triangle", peak: 0.45 }); noise(t, 0.3, { freq: 700, sweepTo: 150, peak: 0.35 }); },
+  // Grapnel: the hook's crack, then a ratcheting winch.
+  grapnel() {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    noise(t, 0.1, { freq: 2200, type: "bandpass", q: 4, peak: 0.4 });
+    tone(t, 0.3, { freq: 900, to: 250, type: "triangle", peak: 0.18 });
+    for (let i = 0; i < 9; i++) noise(t + 0.3 + i * 0.07, 0.03, { freq: jit(3000, 0.2), type: "bandpass", q: 8, peak: 0.25 });
+    tone(t + 0.3, 0.7, { freq: 110, to: 190, type: "sawtooth", peak: 0.06 });
+  },
+  // Overclock: a rising whine with a pulse.
+  overclock() {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    tone(t, 0.8, { freq: 200, to: 1400, type: "sawtooth", peak: 0.09, attack: 0.05 });
+    for (let i = 0; i < 4; i++) tone(t + 0.1 + i * 0.16, 0.08, { freq: 120, type: "square", peak: 0.15 });
+  },
+  // Welding / nanites: crackling arc buzz.
+  weld() {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    for (let i = 0; i < 10; i++) noise(t + i * 0.06 + Math.random() * 0.03, 0.04, { freq: jit(4200, 0.3), type: "bandpass", q: 3, peak: 0.2 });
+    tone(t, 0.6, { freq: 120, type: "sawtooth", peak: 0.04 });
+  },
+  // Heat Purge Wave / Meltdown burst: a deep whoomp and a rolling roar.
+  wave(big = false) {
+    if (!init() || muted) return;
+    const t = ctx.currentTime;
+    tone(t, big ? 1.1 : 0.7, { freq: 110, to: 30, type: "sine", peak: 0.8 });
+    noise(t, big ? 1.4 : 1.0, { freq: 300, sweepTo: 2400, type: "bandpass", q: 0.7, peak: 0.5, attack: 0.04 });
+    if (big) for (let i = 0; i < 3; i++) tone(t + 0.2 + i * 0.22, 0.12, { freq: 520, type: "square", peak: 0.08 });
+  },
+  // Lock Sight: rising target-acquired beeps.
+  lockon() { if (!init() || muted) return; const t = ctx.currentTime; [880, 1175, 1568].forEach((f, i) => tone(t + i * 0.1, 0.08, { freq: f, type: "square", peak: 0.08 })); tone(t + 0.32, 0.3, { freq: 1760, type: "sine", peak: 0.1 }); },
+  // Pop Smoke: launcher thump, then the canister's hiss.
+  smoke() { if (!init() || muted) return; const t = ctx.currentTime; tone(t, 0.18, { freq: 140, to: 60, type: "triangle", peak: 0.4 }); noise(t + 0.1, 1.2, { freq: 1800, type: "bandpass", q: 0.6, peak: 0.25, attack: 0.1 }); },
+  // Chaff: a burst of tinkling foil.
+  chaff() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 0.12, { freq: 1200, peak: 0.3 }); for (let i = 0; i < 8; i++) tone(t + 0.05 + Math.random() * 0.4, 0.06, { freq: jit(3500, 0.4), type: "sine", peak: 0.05 }); },
+  // Cryo: a frosty crackle over a glassy chime.
+  cryo() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 0.9, { freq: 7000, type: "highpass", peak: 0.3, attack: 0.02 }); tone(t, 0.6, { freq: 1980, to: 1760, type: "sine", peak: 0.08 }); tone(t + 0.08, 0.5, { freq: 2640, type: "sine", peak: 0.05 }); },
+  // Point-defense / ablative intercept: a sharp ping and zap.
+  intercept() { if (!init() || muted) return; const t = ctx.currentTime; tone(t, 0.12, { freq: 2600, to: 1200, type: "square", peak: 0.08 }); noise(t, 0.08, { freq: 5000, type: "highpass", peak: 0.3 }); },
   fanfare(win) {
     if (!init() || muted) return;
     const t = ctx.currentTime;

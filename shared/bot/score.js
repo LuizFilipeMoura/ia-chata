@@ -183,8 +183,22 @@ function objectiveApproach(room, rig, pos) {
     const gap = Math.hypot(pos.x - m.x, pos.y - m.y);
     best = Math.max(best, ((m.vp || 0) * mult) / (1 + gap));
   }
+  // Campaign Breakthrough: the breaking side is pulled hard toward the exit zone.
+  const exit = room.campaign?.type === "breakthrough" && (rig.owner || "a") === "a" ? room.campaign.exit : null;
+  if (exit) {
+    const gap = Math.max(0, Math.hypot(pos.x - exit.x, pos.y - exit.y) - exit.r);
+    best = Math.max(best, EXIT_PULL / (1 + gap * 0.25));
+  }
+  // Campaign Assassination / Boss: hunt the commander down.
+  const cid = (rig.owner || "a") === "a" ? room.campaign?.commanderId : null;
+  const commander = cid != null ? room.rigs.find((r) => r.id === cid && !r.destroyed && r.pos) : null;
+  if (commander) {
+    const gap = Math.max(0, Math.hypot(pos.x - commander.pos.x, pos.y - commander.pos.y) - 6);
+    best = Math.max(best, EXIT_PULL / (1 + gap * 0.25));
+  }
   return best;
 }
+const EXIT_PULL = 10;
 
 // Kill VP a wreck of `target` would pay my side, relative to the richest kill
 // (the Priority Target, ANY_KILL_VP + KILL_VP), so the Priority Target keeps the
@@ -197,7 +211,9 @@ function killWeight(room, rig, target) {
   const pid = room.game.priorityTargets?.[mine];
   const vpOf = (id) => room.game.sides.find((s) => s.id === id)?.vp || 0;
   const behind = vpOf(mine) < vpOf(target.owner || "a");
-  const vp = ANY_KILL_VP + (target.id === pid ? KILL_VP : 0) + (behind ? TRAILING_KILL_BOUNTY : 0);
+  // A campaign commander ends the battle: worth far more than any VP.
+  const commander = room.campaign?.commanderId === target.id && mine === "a" ? 6 : 0;
+  const vp = ANY_KILL_VP + (target.id === pid ? KILL_VP : 0) + (behind ? TRAILING_KILL_BOUNTY : 0) + commander;
   return (vp / (ANY_KILL_VP + KILL_VP)) * (1 + fragility(target));
 }
 
@@ -305,6 +321,7 @@ function tacticalValue(room, rig, cand, exposure) {
     }
     // Grapnel reel: drag a victim into this rig's blade.
     case "jumpjets": return cand.mode === "reel" ? 9 : 0;
+    case "extract": return 50;
     case "overclock": return left >= 2 && heat + 3 < cap ? 1.4 : 0;
     case "locksight": {
       // Only worth it primed for a shot this activation, and only once.

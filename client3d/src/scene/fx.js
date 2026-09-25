@@ -22,6 +22,14 @@ export class FX {
     this.texts = [];
     this.shake = 0;
     this.lights = [];
+    this.ephemerals = []; // timed meshes (rings, shells, reticles, tethers), each with its own step(k)
+  }
+
+  // A timed scene object: step(k, obj) runs every frame with k = 0..1, then it's removed.
+  timed(obj, dur, step) {
+    this.scene.add(obj);
+    this.ephemerals.push({ obj, t: 0, dur, step });
+    return obj;
   }
 
   particle(pos, { color = 0xffaa33, size = 0.6, life = 0.6, vel = new THREE.Vector3(), grav = 0, grow = 1, additive = true, opacity = 1 } = {}) {
@@ -72,7 +80,80 @@ export class FX {
     this.shake = Math.max(this.shake, big ? 1.2 : 0.5);
   }
 
-  sparks(pos, n = 12) { this.burst(pos, n, { color: 0xffdd88, size: 0.25, life: 0.4, spread: 6, grav: -14 }); }
+  sparks(pos, n = 12, color = 0xffdd88) { this.burst(pos, n, { color, size: 0.25, life: 0.4, spread: 6, grav: -14 }); }
+
+  // ---- Equipment effects ----
+
+  // A flat ring racing out across the table to `radius` (Heat Purge Wave,
+  // Meltdown burst): a bright rim over a faint scorched disc.
+  shockwave(pos, radius, color = 0xff7a2a, dur = 0.9) {
+    const rim = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 72), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    rim.rotation.x = -Math.PI / 2; rim.position.set(pos.x, 0.2, pos.z);
+    this.timed(rim, dur, (k, o) => { const e = 1 - Math.pow(1 - k, 3); o.scale.setScalar(0.2 + e * radius); o.material.opacity = 0.95 * (1 - k); });
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.25, depthWrite: false, blending: THREE.AdditiveBlending }));
+    disc.rotation.x = -Math.PI / 2; disc.position.set(pos.x, 0.12, pos.z);
+    this.timed(disc, dur * 1.4, (k, o) => { o.scale.setScalar(0.2 + Math.min(1, k * 1.6) * radius); o.material.opacity = 0.25 * (1 - k); });
+    this.flash(pos.clone().setY(1.5), color, 60, radius * 2.5);
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2;
+      this.particle(pos.clone().setY(0.4), { color, size: 0.7, life: dur, vel: new THREE.Vector3(Math.cos(a) * radius / dur, 0.6, Math.sin(a) * radius / dur), grow: 2 });
+    }
+  }
+
+  // A translucent shell around a mech that flares and fades: Harden (steel
+  // shimmer), Overclock (red pulse).
+  shell(pos, radius, height, color = 0x9fc8ff, dur = 0.8, pulses = 1) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 32, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.position.set(pos.x, height / 2, pos.z);
+    this.timed(m, dur, (k, o) => { o.material.opacity = 0.45 * Math.abs(Math.sin(k * Math.PI * pulses)) * (1 - k * 0.5); o.scale.set(1 + k * 0.15, 1, 1 + k * 0.15); });
+  }
+
+  // Lock Sight: targeting brackets that spin down onto a point, then blink.
+  reticle(pos, color = "#ff5a3c", dur = 1.2) {
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const g = c.getContext("2d");
+    g.strokeStyle = color; g.lineWidth = 7; g.lineCap = "round";
+    g.beginPath(); g.arc(64, 64, 40, 0, Math.PI * 2); g.stroke();
+    for (const a of [0, 1, 2, 3]) { g.save(); g.translate(64, 64); g.rotate(a * Math.PI / 2); g.beginPath(); g.moveTo(0, -58); g.lineTo(0, -30); g.stroke(); g.restore(); }
+    g.fillStyle = color; g.beginPath(); g.arc(64, 64, 6, 0, Math.PI * 2); g.fill();
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+    s.position.copy(pos); s.renderOrder = 9;
+    this.timed(s, dur, (k, o) => { const z = k < 0.5 ? 4 - k * 2 * 2.6 : 1.4; o.scale.setScalar(z); o.material.rotation = (1 - Math.min(1, k * 2)) * Math.PI; o.material.opacity = k < 0.5 ? 1 : (Math.sin(k * 40) > 0 ? 1 : 0.3) * (1 - k) * 2; });
+  }
+
+  // A cable between two moving points (grapnel): getA/getB return Vector3s.
+  // A thin cylinder (GL lines are 1px), re-aimed every frame.
+  tether(getA, getB, color = 0x9a8a60, dur = 1.2) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1, 6, 1, true).translate(0, 0.5, 0).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 }));
+    const aim = (o) => { const a = getA(), b = getB(); o.position.copy(a); o.lookAt(b); o.scale.set(1, 1, Math.max(0.01, a.distanceTo(b))); };
+    aim(m);
+    this.timed(m, dur, (k, o) => { aim(o); o.material.opacity = k > 0.8 ? (1 - k) * 5 : 1; });
+  }
+
+  // Cryo: a cold white-blue puff with ice glints.
+  frost(pos, n = 18) {
+    for (let i = 0; i < n; i++) this.particle(pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)), {
+      color: Math.random() < 0.5 ? 0xdff6ff : 0x9fdcff, size: 0.7, life: 1.2 + Math.random() * 0.6, grow: 3, additive: false, opacity: 0.55,
+      vel: new THREE.Vector3((Math.random() - 0.5) * 2.4, 0.4 + Math.random() * 1.2, (Math.random() - 0.5) * 2.4),
+    });
+    this.burst(pos, 14, { color: 0xc8f0ff, size: 0.18, life: 0.8, spread: 3, grav: -3 });
+    this.flash(pos, 0x9fdcff, 25, 8);
+  }
+
+  // Chaff: a cloud of flickering foil flakes drifting down.
+  glitter(pos, n = 36) {
+    for (let i = 0; i < n; i++) this.particle(pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.5, (Math.random() - 0.5) * 2)), {
+      color: [0xffffff, 0xd8d8e8, 0xf0cf7a][i % 3], size: 0.16 + Math.random() * 0.12, life: 1.2 + Math.random() * 0.8, grav: -1.2,
+      vel: new THREE.Vector3((Math.random() - 0.5) * 4, 1 + Math.random() * 2, (Math.random() - 0.5) * 4),
+    });
+  }
+
+  // Welding: green-white sparks and a flicker (Emergency Patch, Nanite Swarm).
+  weld(pos, n = 18) {
+    this.burst(pos, n, { color: 0x8dff7a, size: 0.22, life: 0.5, spread: 5, grav: -12 });
+    this.burst(pos, 6, { color: 0xeaffea, size: 0.5, life: 0.18, spread: 1.2 });
+    this.flash(pos, 0x7fff6a, 30, 8);
+  }
 
   // A projectile flying from → to. `kind` shapes its path and trail.
   shoot(from, to, kind, onHit) {
@@ -131,6 +212,8 @@ export class FX {
     for (const b of this.beams) this.scene.remove(b.line);
     for (const t of this.texts) this.scene.remove(t.s);
     for (const l of this.lights) this.scene.remove(l.l);
+    for (const e of this.ephemerals) this.scene.remove(e.obj);
+    this.ephemerals = [];
     this.particles = []; this.projectiles = []; this.beams = []; this.texts = []; this.lights = [];
   }
 
@@ -199,6 +282,12 @@ export class FX {
       if (t.still) t.s.position.y = t.base + Math.sin((t.max - t.life) * 6) * 0.08 + Math.min(0.3, (t.max - t.life) * 2);
       else t.s.position.y += dt * 1.2;
       t.s.material.opacity = t.still ? Math.min(1, t.life * 3) : Math.min(1, t.life / (t.max * 0.5));
+    }
+    for (let i = this.ephemerals.length - 1; i >= 0; i--) {
+      const e = this.ephemerals[i]; e.t += dt;
+      const k = Math.min(1, e.t / e.dur);
+      e.step(k, e.obj);
+      if (k >= 1) { this.scene.remove(e.obj); e.obj.geometry?.dispose(); e.obj.material?.map?.dispose(); e.obj.material?.dispose(); this.ephemerals.splice(i, 1); }
     }
     this.shake = Math.max(0, this.shake - dt * 2.5);
   }

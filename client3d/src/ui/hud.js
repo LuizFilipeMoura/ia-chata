@@ -5,6 +5,14 @@ import { el, clear, fill } from "./dom.js";
 import { LOCS } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { chassisOf } from "../game/director.js";
+import { equipmentChips } from "/shared/battle-view.js";
+
+// Compact equipment-state chips (icon + number), full text on hover.
+export function equipChipRow(r, cls = "rc-eq") {
+  const chips = equipmentChips(r);
+  if (!chips.length) return null;
+  return el("div", { class: cls }, chips.map((c) => el("span", { class: `eqc t-${c.tone}`, title: `${c.label}\n${c.tip}` }, icon(c.icon), c.value != null ? el("b", {}, String(c.value)) : null)));
+}
 import { CombatLog } from "./combatlog.js";
 
 export class Hud {
@@ -77,6 +85,7 @@ export class Hud {
         r.preparation ? el("span", { class: `tag ${r.preparation.improved ? "imp" : ""}`, title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.improved ? "Improved " : ""}${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare"), r.preparation.hidden ? "" : `${r.preparation.improved ? "+" : ""}${r.preparation.type}`) : null,
         r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee: must Disengage to move" }, icon("melee")) : null),
       el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""),
+      r.destroyed ? null : equipChipRow(r),
       el("div", { class: "rc-sp" }, LOCS.map((l) => {
         const p = r[l]; const f = p ? p.sp / p.max : 0;
         return el("div", { class: "loc", title: `${l}: ${p?.sp}/${p?.max}` }, el("span", { class: "ln" }, icon(l)), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } })));

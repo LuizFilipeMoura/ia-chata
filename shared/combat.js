@@ -648,6 +648,13 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
 // defender with no reactive gear falls through every branch and the hit is
 // returned unchanged.
 
+// A transient per-attack tally of defensive spends, read (and cleared) when the
+// attack's resolution is pushed.
+function tallyDefense(target, key) {
+  target._defenseTally ||= { pd: 0, ablative: 0 };
+  target._defenseTally[key] += 1;
+}
+
 export function applyDefensiveReactions(target, hit, ctx) {
   // Point-Defense System (Reactive Plating, Prototype), a ranged hit may be met
   // by one interceptor charge, forcing the attacker to reroll every landed hit
@@ -666,6 +673,7 @@ export function applyDefensiveReactions(target, hit, ctx) {
       && !target.equipState?.pdLocked) {
     target.equipState.interceptors -= 1;
     ctx.spendHeat(1);
+    tallyDefense(target, "pd");
     let newHits = 0;
     for (let i = 0; i < hit.hits; i++) {
       const d = rollD(6, ctx.providedDice?.pd?.[i], ctx.random);
@@ -699,6 +707,7 @@ export function applyDefensiveReactions(target, hit, ctx) {
       && (target.equipState?.ablativeCharges || 0) > 0) {
     target.equipState.ablativeCharges -= 1;
     ctx.spendHeat(1);
+    tallyDefense(target, "ablative");
     return { ...hit, sp: 0, negated: true };
   }
   return hit;
@@ -716,6 +725,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   const weaponName = attacker.weapons?.[slot];
   let profile = ctx.profileFor(slot, weaponName, attacker);
   if (!profile) return { ok: false, reason: "no-weapon" };
+  if (target) delete target._defenseTally;
   if (attacker.weaponsDestroyed.includes(weaponName)) return { ok: false, reason: "weapon-destroyed" };
   // Out of range is now distance-driven for ranged weapons; melee keeps the
   // legacy band flag. A missing distance (older callers) is treated as in range.
@@ -1049,8 +1059,12 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     ctx.stagger(room, target);
     drama.push("Staggered: +1 heat, −1 Aim on its next attack");
   }
+  // Point-Defense / Ablative Cascade spends this attack drew, for the client FX.
+  const defense = target._defenseTally;
+  delete target._defenseTally;
   ctx.pushResolution(room, {
     kind: "attack", actor: attacker.owner, rigId: attacker.id, targetId: target.id, weapon: weaponName, rolls,
+    ...(defense ? { defense } : {}),
     ...(stagger ? { stagger: true } : {}),
     ...(opts.grit ? { grit: true } : {}),
     summary: `${attacker.name} → ${target.name} with ${weaponName} (Pen ${pen}): ${th.hits} hit(s), ${impacts.filter((w) => w.sp > 0).length} wound(s) = ${total} SP${location ? ` to ${location}` : ""}`,

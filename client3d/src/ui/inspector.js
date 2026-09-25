@@ -6,6 +6,7 @@ import { el, fill } from "./dom.js";
 import { CHASSIS, WEAPONS, WEAPON_UPGRADES, EQUIPMENT, LOCS } from "/shared/game-state.js";
 import { EQUIPMENT_UPGRADES, HEAT_CAPACITY } from "/shared/rules.js";
 import { toughnessOf } from "/shared/unit-kinds.js";
+import { equipmentChips } from "/shared/battle-view.js";
 import { icon } from "./icons.js";
 import { rich } from "./glossary.js";
 
@@ -83,7 +84,13 @@ export function openInspector(rig, { loadout = null, onClose } = {}) {
       el("div", { class: "in-wh" }, el("span", {}, "⚙"), el("b", {}, EQUIPMENT[eq].label), el("span", { class: "muted" }, ` ${EQUIPMENT[eq].family || ""}`)),
       el("div", {}, el("i", { class: "muted" }, "Always: "), EQUIPMENT[eq].passive),
       el("div", {}, el("i", { class: "muted" }, `Action "${EQUIPMENT[eq].active.label}" (${EQUIPMENT[eq].active.heat} heat): `), EQUIPMENT[eq].active.text),
-      upgrade(EQUIPMENT_UPGRADES[eq], eqUp)) : el("p", { class: "muted" }, "None fitted."));
+      upgrade(EQUIPMENT_UPGRADES[eq], eqUp)) : el("p", { class: "muted" }, "None fitted."),
+    // Live equipment state: charges, banks, stacks, cooldowns, one-shot flags.
+    (() => {
+      const chips = rig.destroyed ? [] : equipmentChips(rig);
+      return chips.length ? el("div", { class: "in-eqstate" }, el("h4", {}, "Equipment state"), chips.map((c) =>
+        el("div", { class: `in-eqc t-${c.tone}`, title: c.tip }, icon(c.icon), el("b", {}, c.label), el("span", { class: "muted" }, c.tip)))) : null;
+    })());
   document.body.append(panel);
   return panel;
 }

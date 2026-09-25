@@ -52,7 +52,7 @@ test("mission builds a started digital room with both squads deployed", () => {
   assert.equal(room.game.sides.find((s) => s.id === "a").bot, null);
   assert.equal(room.campaign.type, "skirmish");
   assert.equal(findRig(room, "Gold").campaignUid, "u1");
-  assert.deepEqual(room.game.objectives, []);
+  assert.deepEqual(room.game.objectives, [{ x: 21, y: 14, vp: 2 }]); // skirmish: one centre beacon
 });
 
 test("beacons keeps the standard objectives; same seed → same table", () => {
