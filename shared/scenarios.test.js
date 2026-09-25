@@ -17,7 +17,6 @@ test("every scenario builds a started digital room with fixed positions", () => 
     const room = build(id);
     assert.equal(room.game.started, true, id);
     assert.equal(room.mode, "digital");
-    assert.equal(room.field.terrain.length, 0);
     assert.ok(room.rigs.every((r) => r.pos && typeof r.facing === "number"));
     assert.equal(room.training, id);
   }
@@ -110,4 +109,18 @@ test("anatomy: the dummy's engine starts on 1 SP; an Aimed Shot can target it", 
   applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
   act(room, { action: "aimed", weapon: "longRange", target: "Dummy", loc: "engine" });
   assert.ok(kinds(room).includes("attack"), lastRejectionReason(room));
+});
+
+test("cover: the barricade gives cover from the start; a clear angle has none; the building blocks sight", async () => {
+  const { deriveAttackGeometry } = await import("./game-state.js");
+  const room = build("cover");
+  const [me, dummy] = room.rigs;
+  const start = deriveAttackGeometry(room, me, dummy);
+  assert.ok(start.los);
+  assert.ok(start.cover > 0, `cover ${start.cover}`);
+  me.pos = { x: 14, y: 25 }; me.facing = Math.atan2(18 - 25, 22 - 14) * 180 / Math.PI;
+  assert.equal(deriveAttackGeometry(room, me, dummy).cover, 0);
+  me.pos = { x: 16, y: 3 }; me.facing = Math.atan2(18 - 3, 22 - 16) * 180 / Math.PI;
+  dummy.pos = { x: 16, y: 15 };
+  assert.equal(deriveAttackGeometry(room, me, dummy).los, false);
 });

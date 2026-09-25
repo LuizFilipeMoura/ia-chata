@@ -3658,7 +3658,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.rigs = [];
       room.nextRigId = 1;
       resetGameShape(room);
-      room.field = { ...room.field, terrain: [], locked: true };
+      room.field = { ...room.field, terrain: (sc.terrain || []).map((t) => ({ ...t })), locked: true };
       for (const e of sc.rigs) {
         const pb = resolveChassis({ chassis: e.chassis });
         const unit = makeUnit("rig", room.nextRigId++, e.name, e.owner, {

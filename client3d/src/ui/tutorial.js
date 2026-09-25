@@ -10,6 +10,7 @@ import { rich } from "./glossary.js";
 const res = (m) => m.state?.game?.resolutions || [];
 const myAttack = (m, test = () => true) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Copper" && test(r));
 const arcOf = (r) => /(side|rear) arc/.exec(JSON.stringify(r.breakdown || {}))?.[1] || "front";
+const hasCover = (r) => (r.breakdown?.steps?.find((s) => s.kind === "hit")?.terms || []).some((t) => /cover/.test(t.label) && t.value);
 const vpA = (m) => m.state?.game?.sides?.find((s) => s.id === "a")?.vp || 0;
 const picked = (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; };
 
@@ -99,6 +100,17 @@ export const LESSONS = [
       { title: "Walk around and turn", allow: { select: true, acts: ["move", "sprint"] }, text: "Move (or Sprint) past the dummy toward its back. A move turns you the way you walk; Shift+wheel adjusts your final facing. End up facing the dummy.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
       { title: "Hit it where it's soft", allow: { select: true, acts: ["fire", "move", "sprint"] }, text: "Now Fire. If the dummy isn't offered as a target, it's still outside your wedge: move again. A side or rear bonus in the log means you nailed it.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => arcOf(r) !== "front") },
       DONE("Facing works both ways: turn to bring enemies into your wedge, and keep your own front toward them."),
+    ] },
+  { id: "cover", icon: "🧱", title: "Cover and line of sight", blurb: "Shooting past terrain, and hiding behind it.",
+    steps: [
+      { title: "Something in the way", text: "Terrain between a shooter and its target gives cover: the To hit roll gets harder (light cover 1 harder, heavy 2). A building can block line of sight completely: no shot at all.", next: true },
+      PICK,
+      { title: "Shoot through the barricade", allow: { select: true, acts: ["fire"] }, text: "A barricade stands between you and the dummy. Fire anyway, then look at the To hit roll.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, hasCover) },
+      { title: "Read the penalty", text: "Hover the new Combat log line: the To hit roll lists cover as harder, so more dice miss.", highlight: ".clog", next: true },
+      { title: "Find a clean angle", allow: { select: true, acts: ["move", "sprint"] }, text: "Walk out to the side (south) until the barricade is no longer between you, and face the dummy.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
+      { title: "Fire clean", allow: { select: true, acts: ["fire", "move"] }, text: "Fire again. If the To hit roll has no cover line, you found a clean shot.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => !hasCover(r)), skippable: true },
+      { title: "Walls work both ways", text: "The building to the north blocks sight entirely. Park behind terrain when you're hurt or reloading, and make enemies walk into the open to reach you.", next: true },
+      DONE("Shoot from clean angles; stand behind cover when you're the target."),
     ] },
   { id: "melee", icon: "🗡", title: "Melee", blurb: "Brawling and getting locked in.",
     steps: [

@@ -63,6 +63,20 @@ export const SCENARIOS = {
     ],
     objectives: [],
   },
+  cover: {
+    title: "Cover and line of sight",
+    rigs: [
+      { name: "Copper", owner: "a", chassis: ME, x: 10, y: 18, facing: 0 },
+      { name: "Dummy", owner: "b", chassis: TARGET, x: 22, y: 18, facing: 180 },
+    ],
+    // A low barricade across the line of fire (cover), and a building up north
+    // that walls off a whole approach (no line of sight at all).
+    terrain: [
+      { kind: "barricade", shape: "rect", x: 16, y: 18, w: 1, h: 2.4, rot: 0 },
+      { kind: "building", shape: "rect", x: 16, y: 9, w: 5, h: 6, rot: 0 },
+    ],
+    objectives: [],
+  },
   melee: {
     title: "Melee and engagement",
     rigs: [

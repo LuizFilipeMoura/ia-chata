@@ -30,6 +30,7 @@ export const GLOSSARY = {
   "front 90°": "The rig's front arc: it can only attack what's inside this cone.",
   "rear": "Behind the target (beyond ±135°). Hits there get +3 Penetration.",
   "side": "The target's flank (45° to 135° off its facing). Hits there get +2 Penetration.",
+  "line of sight": "A clear view from shooter to target. Buildings block it: no line of sight, no shot. Low terrain only gives cover.",
   "cover": "Terrain between you and the target. Light cover -1 Aim, heavy -2.",
   "heat": "Every action stokes the boiler. Past the rig's capacity at the end of a turn, you roll on the overheat table.",
   "capacity": "Heat a rig can hold safely: light 6, medium 5. Ending a turn above it risks an overheat roll.",
