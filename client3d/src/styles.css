@@ -583,3 +583,5 @@ body { font-size: 18px; }
 .coach-a { row-gap: 8px; } .coach-end { margin-left: auto; }
 .ex-card.clog-card { width: auto !important; }
 .coach:has(.ex) { width: min(720px, calc(100vw - 32px)); }
+.atk-ed.small { gap: 8px !important; margin-top: 4px; } .atk-ed.small span { margin-left: 2px; }
+.atk-ed { gap: 4px; }
