@@ -639,3 +639,4 @@ body { font-size: 18px; }
 .rc-head .tag { display: inline-flex; align-items: center; gap: 3px; } .rc-head .tag .si { width: 16px; height: 16px; margin: 0; }
 .act.off .ico .si, .act[aria-disabled="true"] .ico .si { opacity: .8 !important; }
 .ah-weps .si, .in-wh .si { width: 20px; height: 20px; margin: 0 3px 0 0; }
+.gl { white-space: nowrap; display: inline-flex; align-items: baseline; } .gl .si { align-self: center; }
