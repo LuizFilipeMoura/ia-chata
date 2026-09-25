@@ -69,9 +69,9 @@ export class Hud {
     const heat = r.engine?.heat ?? 0;
     const pri = Object.values(state.game.priorityTargets || {}).includes(r.id);
     return el("div", { class: `rig-card ${r.destroyed ? "dead" : ""} ${r.activated ? "spent" : ""} ${selected ? "sel" : ""} ${state.game.turn?.activeRigId === r.id ? "active" : ""}`, onClick: () => onPick?.(r.id) },
-      el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), pri ? el("span", { class: "tag pri", title: "Priority target: +2 VP for the kill" }, "★") : null,
-        r.preparation ? el("span", { class: "tag", title: "Prepared reaction" }, r.preparation.hidden ? "?" : r.preparation.type) : null,
-        r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee" }, "⚔") : null),
+      el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), pri ? el("span", { class: "tag pri", title: "Priority target: +2 VP for the kill" }, icon("star")) : null,
+        r.preparation ? el("span", { class: "tag", title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : "prepare"), r.preparation.hidden ? "" : r.preparation.type) : null,
+        r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee: must Disengage to move" }, icon("melee")) : null),
       el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""),
       el("div", { class: "rc-sp" }, LOCS.map((l) => {
         const p = r[l]; const f = p ? p.sp / p.max : 0;

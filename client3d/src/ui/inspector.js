@@ -30,7 +30,7 @@ function weapon(slot, name, upId) {
   if (!w) return null;
   const range = slot === "melee" ? `reach ${w.rng?.[0] ?? 2}"` : `range ${w.minRange ? `${w.minRange}-` : ""}${w.maxRange}", best at ${w.sweet}"`;
   return el("div", { class: "in-wep" },
-    el("div", { class: "in-wh" }, el("span", {}, slot === "melee" ? "🗡" : "🔫"), el("b", {}, name), el("span", { class: "muted" }, slot === "melee" ? " melee" : " long-range")),
+    el("div", { class: "in-wh" }, icon(slot === "melee" ? "melee" : "fire"), el("b", {}, name), el("span", { class: "muted" }, slot === "melee" ? " melee" : " long-range")),
     el("div", { class: "in-stats" },
       el("span", { title: "Shots: dice rolled to hit per attack" }, el("i", {}, icon("shots"), "Shots"), w.rof),
       el("span", { title: "Penetration: how easily a hit wounds (vs the target's Toughness)" }, el("i", {}, icon("pen"), "Pen"), w.pen),

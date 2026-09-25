@@ -291,7 +291,7 @@ export class LiveMatch {
         el("span", { class: `swatch big sw-${rig.name}` }),
         el("button", { class: "btn ghost in-open", title: "Full details: weapons, upgrades, equipment, damage", onClick: () => openInspector(rig) }, "ⓘ"),
         el("div", {}, el("div", { class: "act-name" }, rig.name),
-          el("div", { class: "ah-weps" }, el("span", { title: "Long-range weapon" }, `🔫 ${rig.weapons?.longRange}`), el("span", { title: "Melee weapon" }, `🗡 ${rig.weapons?.melee}`)))),
+          el("div", { class: "ah-weps" }, el("span", { title: "Long-range weapon" }, icon("fire"), rig.weapons?.longRange), el("span", { title: "Melee weapon" }, icon("melee"), rig.weapons?.melee)))),
       el("div", { class: "ah-stat", title: "Actions left this activation. Most actions use one." },
         el("div", { class: "ah-k" }, "Actions left"),
         el("div", { class: "pips" }, Array.from({ length: turn.actionsMax }, (_, i) => el("span", { class: `pip ${i < left ? "on" : ""}` }))),

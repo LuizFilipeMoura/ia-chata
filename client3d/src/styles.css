@@ -627,3 +627,15 @@ body { font-size: 18px; }
 .pipe-ic .si { width: 28px; height: 28px; margin: 0; }
 .rl-ic .si { width: 22px; height: 22px; margin: 0; }
 .part-d12 { display: inline-flex; align-items: center; gap: 3px; } .part-d12 .si { width: 18px; height: 18px; margin: 0; }
+/* Colour-coded icon families (override any per-context icon colour) */
+:root { --fam-attack: #ff6b4a; --fam-move: #4fd6c0; --fam-defence: #7fa8ff; --fam-heat: #ff9a2e; --fam-cool: #8fe3ff; --fam-repair: #7fdc6a; --fam-info: #e8c268; }
+.si.fam-attack { color: var(--fam-attack) !important; } .si.fam-move { color: var(--fam-move) !important; }
+.si.fam-defence { color: var(--fam-defence) !important; } .si.fam-heat { color: var(--fam-heat) !important; }
+.si.fam-cool { color: var(--fam-cool) !important; } .si.fam-repair { color: var(--fam-repair) !important; }
+.si.fam-info { color: var(--fam-info) !important; }
+.act.off .ico .si, .act[aria-disabled="true"] .ico .si { opacity: .45; }
+.act .ico .si { filter: drop-shadow(0 0 4px currentColor); }
+.act.off .ico .si, .act[aria-disabled="true"] .ico .si { filter: none; }
+.rc-head .tag { display: inline-flex; align-items: center; gap: 3px; } .rc-head .tag .si { width: 16px; height: 16px; margin: 0; }
+.act.off .ico .si, .act[aria-disabled="true"] .ico .si { opacity: .8 !important; }
+.ah-weps .si, .in-wh .si { width: 20px; height: 20px; margin: 0 3px 0 0; }

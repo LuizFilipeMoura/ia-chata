@@ -42,6 +42,9 @@ const P = {
   smoke: `<circle cx="22" cy="36" r="12"/><circle cx="40" cy="30" r="14"/><circle cx="34" cy="46" r="10"/>`,
   cryo: `<path d="M32 6 V58 M9 19 L55 45 M9 45 L55 19"/><path d="M26 10 L32 16 L38 10 M26 54 L32 48 L38 54" opacity=".7"/>`,
   advisor: `<path d="M22 40 C14 34 14 18 26 12 C36 8 48 14 48 26 C48 32 44 36 42 40 V46 H22 Z"/><path d="M24 52 H40 M26 58 H38"/>`,
+  // Tags.
+  star: `<path d="M32 6 L39 24 L58 24 L43 36 L49 56 L32 44 L15 56 L21 36 L6 24 L25 24 Z"/>`,
+  hidden: `<path d="M32 6 L54 14 V30 C54 44 44 54 32 58 C20 54 10 44 10 30 V14 Z"/><path d="M26 24 C26 18 38 18 38 25 C38 30 32 31 32 36"/><circle cx="32" cy="44" r="2" fill="currentColor"/>`,
   // Lessons.
   beacon: `<path d="M32 58 V30"/><circle cx="32" cy="24" r="6"/><path d="M20 12 A16 16 0 0 0 20 36 M44 12 A16 16 0 0 1 44 36 M12 6 A26 26 0 0 0 12 42 M52 6 A26 26 0 0 1 52 42" opacity=".7"/><path d="M20 58 H44"/>`,
   dice: `<rect x="8" y="16" width="30" height="30" rx="5"/><circle cx="16" cy="24" r="2" fill="currentColor"/><circle cx="30" cy="38" r="2" fill="currentColor"/><circle cx="23" cy="31" r="2" fill="currentColor"/><path d="M44 10 L58 22 L52 40 L36 40 L30 22 Z"/>`,
@@ -54,7 +57,19 @@ const P = {
 export const STAT_ICON = { Penetration: "pen", Pen: "pen", Damage: "dmg", Dmg: "dmg", Toughness: "tough", Shots: "shots", Aim: "aim", Heat: "heat", heat: "heat", SP: "sp", "Structure Points": "sp", Range: "range", Reach: "reach" };
 
 export function icon(name, cls = "") {
-  const d = el("span", { class: `si si-${name} ${cls}` });
+  const d = el("span", { class: `si si-${name} fam-${FAMILY_OF[name] || "info"} ${cls}` });
   d.innerHTML = `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${P[name] || ""}</svg>`;
   return d;
 }
+
+// Colour families: the same colour means the same kind of thing everywhere.
+const FAMILY = {
+  attack: ["fire", "aimed", "pen", "dmg", "shots", "aim", "melee", "barrage", "lock"],
+  move: ["move", "sprint", "disengage", "jumpjets", "legs", "range", "reach", "arc"],
+  defence: ["prepare", "harden", "smoke", "tough", "hull", "cover", "anchor", "hidden"],
+  heat: ["heat", "engine", "overclock"],
+  cool: ["shutdown", "purge", "douse", "cryo"],
+  repair: ["repair", "patch", "sp"],
+  info: ["advisor", "beacon", "dice", "arms", "star"],
+};
+export const FAMILY_OF = Object.fromEntries(Object.entries(FAMILY).flatMap(([f, ns]) => ns.map((n) => [n, f])));
