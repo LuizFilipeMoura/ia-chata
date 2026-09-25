@@ -540,3 +540,7 @@ body { font-size: 18px; }
 .atk-tile .atk-v { font-size: 22px; } .atk-tile .atk-mean { font-size: 15px; }
 .modal:has(.atk) { max-height: calc(100vh - 40px); overflow-y: auto; }
 .atk-rig { width: 130px; height: 160px; } .atk-aim { grid-template-columns: 140px 1fr; }
+.clog-line { cursor: pointer; } .clog-line.pinned { background: rgba(214,164,74,.18); outline: 1px solid var(--brass); border-radius: 4px; }
+.clog-card.pinned { pointer-events: auto; border-color: var(--brass-hi, #e0b95c) !important; box-shadow: 0 0 0 1px var(--brass), 0 10px 30px rgba(0,0,0,.6); user-select: text; }
+.cc-pin { display: flex; align-items: center; justify-content: space-between; font: 600 15px var(--label); letter-spacing: .1em; color: var(--brass-hi, #e0b95c); margin-bottom: 6px; }
+.cc-x { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 16px; padding: 2px 8px; }

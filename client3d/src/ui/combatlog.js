@@ -19,6 +19,15 @@ export class CombatLog {
     parent.append(this.root);
     document.body.append(this.card);
     this.round = null;
+    this.onKey = (e) => { if (e.key === "Escape" && this.pinned) this.unpin(); };
+    document.addEventListener("keydown", this.onKey);
+  }
+
+  unpin() {
+    this.pinned?.classList.remove("pinned");
+    this.pinned = null;
+    this.card.classList.remove("pinned");
+    this.card.style.display = "none";
   }
 
   // A rig name, coloured by its side.
@@ -33,9 +42,23 @@ export class CombatLog {
       this.list.append(el("div", { class: "clog-round" }, `Round ${round}`));
     }
     const line = el("div", { class: `clog-line k-${l.kind}` }, el("span", { class: "ic" }, ICON[l.kind] || "•"), this.text(l));
-    line.addEventListener("mouseenter", (e) => this.show(l, e));
-    line.addEventListener("mousemove", (e) => this.place(e));
-    line.addEventListener("mouseleave", () => { this.card.style.display = "none"; });
+    line.title = ""; // no native tip; our card is the tip
+    line.addEventListener("mouseenter", (e) => { if (!this.pinned) this.show(l, e); });
+    line.addEventListener("mousemove", (e) => { if (!this.pinned) this.place(e); });
+    line.addEventListener("mouseleave", () => { if (!this.pinned) this.card.style.display = "none"; });
+    // Click: lock this entry's card open to study it (click again / ✕ / Esc to release).
+    line.addEventListener("click", (e) => {
+      if (this.pinned === line) return this.unpin();
+      this.unpin();
+      this.show(l, e);
+      this.pinned = line;
+      line.classList.add("pinned");
+      this.card.classList.add("pinned");
+      this.card.prepend(el("div", { class: "cc-pin" }, "📌 Pinned", el("button", { class: "cc-x", title: "Release (Esc)", onClick: () => this.unpin() }, "✕")));
+      const r = this.root.getBoundingClientRect(), c = this.card.getBoundingClientRect();
+      this.card.style.left = `${Math.max(8, r.left - c.width - 12)}px`;
+      this.card.style.top = `${Math.max(8, Math.min(innerHeight - c.height - 8, r.bottom - c.height))}px`;
+    });
     const stick = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 30;
     this.list.append(line);
     while (this.list.children.length > 200) this.list.firstChild.remove();
@@ -94,5 +117,5 @@ export class CombatLog {
     this.card.style.left = `${x}px`; this.card.style.top = `${y}px`;
   }
 
-  destroy() { this.root.remove(); this.card.remove(); }
+  destroy() { document.removeEventListener("keydown", this.onKey); this.root.remove(); this.card.remove(); }
 }
