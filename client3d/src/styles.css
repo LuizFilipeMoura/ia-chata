@@ -585,3 +585,13 @@ body { font-size: 18px; }
 .coach:has(.ex) { width: min(720px, calc(100vw - 32px)); }
 .atk-ed.small { gap: 8px !important; margin-top: 4px; } .atk-ed.small span { margin-left: 2px; }
 .atk-ed { gap: 4px; }
+.in-loc { grid-template-columns: 58px 34px 1fr 48px !important; }
+.in-heat, .in-loc:not(:has(.in-t)) { grid-template-columns: 58px 1fr 48px !important; }
+.in-t { font: 700 14px var(--label); color: #1b150c; background: #cdbb93; border-radius: 4px; text-align: center; padding: 1px 0; cursor: help; }
+.rl-chip { font: 700 15px var(--label); color: var(--brass-hi, #e0b95c); background: rgba(214,164,74,.12); border: 1px solid var(--brass, #b58a3c); border-radius: 12px; padding: 1px 9px; cursor: pointer; margin: 0 2px; }
+.rl-chip:hover { background: rgba(214,164,74,.3); color: #fff3cf; }
+.rl-eq { line-height: 1.9; }
+.rl-wound { display: flex; align-items: center; gap: 12px; }
+.rl-wound .rl-eq { flex: 1; }
+.rl-arcbox { display: flex; align-items: center; gap: 6px; font-size: 14px; text-transform: capitalize; }
+.rl-arc { width: 64px; height: 64px; } .rl-arc svg { width: 100%; height: 100%; }

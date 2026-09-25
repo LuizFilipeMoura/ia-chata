@@ -6,6 +6,7 @@ import { el, clear, fill, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { Nameplates } from "../ui/nameplates.js";
 import { openInspector } from "../ui/inspector.js";
+import { setRigSource } from "../ui/combatlog.js";
 import { CHASSIS } from "/shared/game-state.js";
 
 // Plain-language pilot vocabulary, shared by the summary and the full menu.
@@ -30,6 +31,7 @@ const TERM_TEXT = { vp: "objectives", priority: "★ target", damage: "damage", 
 
 export class Replay {
   constructor(world, hudRoot, replay, { onExit }) {
+    setRigSource((n) => this.rigByName(n));
     this.world = world; this.replay = replay; this.frames = replay.frames || []; this.i = 0; this.playing = true; this.onExit = onExit;
     this.hud = new Hud(hudRoot);
     this.hud.spectator = true;
@@ -138,6 +140,14 @@ export class Replay {
     });
   }
 
+
+  // Ledger chips (Toughness / Penetration / Damage) open rigs by name.
+  rigByName(n) {
+    const f = this.frames?.[this.i]; if (!f) return null;
+    const r = this.stateLike(f).rigs.find((x) => x.name === n); if (!r) return null;
+    const sq = this.replay.squadsFull || this.replay.squads || {};
+    return { rig: r, loadout: [...(sq.a || []), ...(sq.b || [])].find((u) => u && u.chassis === r.chassis) || null };
+  }
 
   inspect(id) {
     const f = this.frames[this.i];

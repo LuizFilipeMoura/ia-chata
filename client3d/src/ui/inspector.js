@@ -5,6 +5,7 @@
 import { el, fill } from "./dom.js";
 import { CHASSIS, WEAPONS, WEAPON_UPGRADES, EQUIPMENT, LOCS } from "/shared/game-state.js";
 import { EQUIPMENT_UPGRADES, HEAT_CAPACITY } from "/shared/rules.js";
+import { toughnessOf } from "/shared/unit-kinds.js";
 
 const NATURE = { field: ["Field", "always on"], tuned: ["Tuned", "pays off in the right situation"], prototype: ["Prototype", "powerful, with a catch"] };
 const LOC_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
@@ -67,7 +68,7 @@ export function openInspector(rig, { loadout = null, onClose } = {}) {
     el("div", { class: "in-sp" }, LOCS.map((l) => {
       const [v, m] = sp(l); const f = m ? v / m : 0;
       return el("div", { class: "in-loc", title: `${LOC_NAME[l]}: ${v} of ${m} structure points\n${LOC_HELP[l]}` },
-        el("span", {}, LOC_NAME[l]), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#7fcf6a" : f > 0.3 ? "#f5b041" : "#e0533d" } })), el("b", {}, `${v}/${m}`));
+        el("span", {}, LOC_NAME[l]), el("span", { class: "in-t", title: `Toughness (armour): wound rolls need 6 + ${toughnessOf("rig", l, ch.class)} − Penetration` }, `T${toughnessOf("rig", l, ch.class)}`), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#7fcf6a" : f > 0.3 ? "#f5b041" : "#e0533d" } })), el("b", {}, `${v}/${m}`));
     })),
     el("div", { class: "in-loc", title: "Boiler heat\nEvery action adds heat; 1 cools per round. Ending a turn past capacity risks engine damage." },
       el("span", {}, "Heat"), el("div", { class: "bar" }, el("i", { style: { width: `${Math.min(100, (heat / (cap + 4)) * 100)}%`, background: heat > cap ? "#ff3d1f" : "#f5b041" } })), el("b", {}, `${heat}/${cap}`)),

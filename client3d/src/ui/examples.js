@@ -38,7 +38,7 @@ export function attackExample(kind) {
   const c = CASES[kind];
   for (let seed = 1; seed < 3000; seed++) {
     const { res, room } = shoot(c.scenario, seed, c.attrs, c.tweak);
-    if (res?.breakdown && c.test(res.breakdown, room)) return (cache[kind] = res);
+    if (res?.breakdown && c.test(res.breakdown, room)) return (cache[kind] = { ...res, _room: room });
   }
   return null;
 }
@@ -50,5 +50,5 @@ export function exampleCard(kind, caption) {
   const r = attackExample(kind);
   return el("div", { class: "ex" },
     el("div", { class: "ex-cap" }, rich(typeof caption === "function" ? (r ? caption(r.breakdown) : "") : caption)),
-    r ? el("div", { class: "ex-card clog-card" }, breakdownBody(r)) : el("p", { class: "muted" }, "(no example found)"));
+    r ? el("div", { class: "ex-card clog-card" }, breakdownBody(r, (n) => r._room.rigs.find((x) => x.name === n))) : el("p", { class: "muted" }, "(no example found)"));
 }

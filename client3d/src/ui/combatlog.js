@@ -3,6 +3,12 @@
 // with the full roll breakdown the engine recorded (to-hit target and the terms
 // that built it, every die, location, wound roll, damage riders, side effects).
 import { el, fill } from "./dom.js";
+import { openInspector } from "./inspector.js";
+
+// name -> rig (plus optional loadout) for the ledger's clickable stats. The live
+// match / replay registers one; examples pass their own.
+let rigSource = () => null;
+export function setRigSource(fn) { rigSource = fn || (() => null); }
 
 const LOC = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
 const ICON = { attack: "⚔", overheat: "🔥", destruction: "💥", initiative: "⚑", reaction: "🛡", prepare: "🛡", repair: "🔧", reload: "🔄", equipment: "⚙", blast: "💥", perk: "✦", lock: "📡", barrage: "💣", emplace: "⚓", shutdown: "❄" };
@@ -117,7 +123,25 @@ const roll = (icon, name, sides, need, why, dice, out, good) => el("div", { clas
   why ? el("div", { class: "rl-why" }, why) : null,
   dice?.length ? el("div", { class: "rl-dice" }, dice) : null);
 
-export function breakdownBody(l) {
+// Mini top-down of the target: its three arcs, the struck one lit with its bonus.
+function arcMini(arc) {
+  const d = el("div", { class: "rl-arc", title: `Struck its ${arc} arc: ${arc === "rear" ? "+3" : arc === "side" ? "+2" : "+0"} Penetration` });
+  const C = 34, R = 30, q = Math.PI / 4, f = -Math.PI / 2; // facing up
+  const w = (a0, a1, col, on) => { const p = (a) => `${C + R * Math.cos(f + a)},${C + R * Math.sin(f + a)}`; return `<path d="M${C},${C} L${p(a0)} A${R},${R} 0 0 1 ${p(a1)} Z" fill="${col}" fill-opacity="${on ? 0.6 : 0.12}" stroke="${col}" stroke-opacity=".6"/>`; };
+  const lab = (a, t, on) => `<text x="${C + 20 * Math.cos(f + a)}" y="${C + 20 * Math.sin(f + a) + 4}" text-anchor="middle" font-size="10" font-weight="700" fill="${on ? "#fff" : "#a8997a"}">${t}</text>`;
+  d.innerHTML = `<svg viewBox="0 0 68 68">${w(-q, q, "#c8412f", arc === "front")}${w(q, 3 * q, "#f5b041", arc === "side")}${w(-3 * q, -q, "#f5b041", arc === "side")}${w(3 * q, 5 * q, "#7fcf6a", arc === "rear")}
+    <circle cx="${C}" cy="${C}" r="6" fill="#2a241a" stroke="#e9dcc0" stroke-width="1.5"/><path d="M${C},${C} V${C - 11}" stroke="#e9dcc0" stroke-width="2"/>
+    ${lab(0, "+0", arc === "front")}${lab(Math.PI / 2, "+2", arc === "side")}${lab(Math.PI, "+3", arc === "rear")}</svg>`;
+  return el("div", { class: "rl-arcbox" }, d, el("div", {}, el("b", {}, `${arc} arc`), el("div", { class: "muted" }, "facing ↑")));
+}
+
+// A stat that opens the rig it belongs to.
+function statChip(label, value, rigName, find, tip) {
+  const open = () => { const hit = find(rigName); if (hit) openInspector(hit.rig || hit, { loadout: hit.loadout }); };
+  return el("button", { class: "rl-chip", title: `${tip}\nClick: open ${rigName}'s sheet`, onClick: open }, `${label} ${value}`);
+}
+
+export function breakdownBody(l, find = rigSource) {
   const b = l.breakdown;
   let body;
   if (l.kind === "attack" && b) {
@@ -138,17 +162,22 @@ export function breakdownBody(l) {
       } else if (s.kind === "wound") {
         if (s.target == null) { body.push(roll("🔩", "Wound", null, null, null, null, s.out, false)); continue; }
         const arc = b.arc || "front";
-        const penParts = (s.terms || []).map((t) => `${t.label} ${t.value > 0 ? "+" : ""}${t.value}`);
-        if (!(s.terms || []).some((t) => /arc/.test(t.label))) penParts.push(`${arc} arc +${ARC_PEN[arc] ?? 0}`);
-        const why = el("div", {},
-          el("div", {}, `One D10 per hit. Need 6 + Toughness ${s.toughness} − Penetration ${s.pen} = ${s.target}+`),
-          el("div", { class: "rl-sub" }, `Penetration ${s.pen}: ${penParts.join(", ")}. The hit arc matters: side +2, rear +3. 10 always wounds, 1 never.`));
+        const why = el("div", { class: "rl-wound" },
+          el("div", { class: "rl-eq" }, "One D10 per hit. Need 6 + ",
+            statChip("Toughness", s.toughness, b.target, find, `${b.target}'s ${b.location || "part"} armour`), " − ",
+            statChip("Penetration", s.pen, b.actor, find, `${b.weapon}: ${(s.terms || []).map((t) => `${t.label} ${t.value > 0 ? "+" : ""}${t.value}`).join(", ")}`),
+            ` = ${s.target}+`),
+          arcMini(arc));
         const w = (s.dice || []).filter((d) => d.ok).length;
         body.push(roll("🔩", "Wound", 10, s.target, why, (s.dice || []).map((d) => die(10, d.value, d.ok)), s.out, w > 0));
       } else if (s.kind === "damage") {
         const wounds = s.terms?.find((t) => t.label === "wounds")?.value ?? 0;
         const extras = (s.terms || []).filter((t) => t.label !== "wounds");
-        body.push(roll("💥", "Damage", null, null, `${wounds} wound${wounds === 1 ? "" : "s"} × ${extras.map((t) => `${t.label} ${t.value}`).join(" + ") || "damage"}`, null, s.out, b.sp > 0));
+        const dmgWhy = el("div", { class: "rl-eq" }, `${wounds} wound${wounds === 1 ? "" : "s"} × `,
+          extras.length ? extras.map((t, i) => [i ? " + " : "", t.label === "weapon Damage"
+            ? statChip("Damage", t.value, b.actor, find, `${b.weapon}'s Damage: SP removed per wound`)
+            : `${t.label} ${t.value}`]) : "damage");
+        body.push(roll("💥", "Damage", null, null, dmgWhy, null, s.out, b.sp > 0));
       }
     }
   } else {

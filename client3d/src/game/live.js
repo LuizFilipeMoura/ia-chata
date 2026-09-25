@@ -19,6 +19,7 @@ import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { reactionCard, rigPortrait } from "../ui/reactions.js";
 import { openInspector } from "../ui/inspector.js";
+import { setRigSource } from "../ui/combatlog.js";
 import { attackBriefing } from "../ui/attack.js";
 import { sfx, ambience } from "../audio.js";
 import { settings } from "../settings.js";
@@ -68,6 +69,7 @@ export class LiveMatch {
     this.world = world; this.hud = hud; this.room = room; this.side = side; this.onExit = onExit; this.onRematch = onRematch;
     this.state = null; this.selected = null; this.mode = null; this.lastRes = -1; this.lastVersion = -1;
     this.tutorial = tutorial;
+    setRigSource((n) => this.state?.rigs?.find((r) => r.name === n));
     this.events = new EventTarget();
     this.director = new Director(world, {
       onLog: (l, round) => this.hud.log(l, round),
