@@ -56,7 +56,7 @@ delete GLOSSARY["Toughness 5"];
 
 const TERMS = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const RX = new RegExp(`(?<![\\w-])(${TERMS.map(esc).join("|")})(?![\\w])`, "gi");
+const RX = new RegExp(`(?<![\\w-])(${TERMS.map(esc).join("|")})(s?)(?![\\w])`, "gi");
 const canon = Object.fromEntries(TERMS.map((t) => [t.toLowerCase(), t]));
 
 export function term(word, key = word) {
@@ -73,8 +73,8 @@ export function rich(text, seen = new Set()) {
     // "SP" and "Pen" only as whole capitalised words; skip repeats.
     if (seen.has(k) || (k.length <= 3 && m[1] !== k)) continue;
     seen.add(k);
-    out.push(text.slice(last, m.index), term(m[1], k));
-    last = m.index + m[1].length;
+    out.push(text.slice(last, m.index), term(m[1] + m[2], k));
+    last = m.index + m[0].length;
   }
   out.push(text.slice(last));
   return out;

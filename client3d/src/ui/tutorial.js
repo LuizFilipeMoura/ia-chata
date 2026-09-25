@@ -212,7 +212,18 @@ export class Coach {
 
   // Park the coach next to what it's pointing at (above, below, then beside),
   // clamped on screen. No highlight: its default spot top-left.
+  // While you pick something on the table: out of the way, top-left under
+  // your squad cards (the middle of the screen is where you're clicking).
+  dockPanel() {
+    const p = this.panel, roster = document.querySelector(".hud-roster:not(.enemy)");
+    const top = roster ? roster.getBoundingClientRect().bottom + 12 : 100;
+    p.classList.add("docked");
+    p.style.left = "12px"; p.style.right = "auto"; p.style.bottom = "auto";
+    p.style.top = `${Math.max(8, Math.min(innerHeight - p.offsetHeight - 8, top))}px`;
+  }
+
   placePanel(holes) {
+    this.panel.classList.remove("docked");
     const p = this.panel, pw = p.offsetWidth, ph = p.offsetHeight, m = 16;
     let x, y;
     if (!holes.length) { p.style.left = ""; p.style.right = ""; p.style.bottom = ""; p.style.top = `${Math.max(8, Math.min(120, innerHeight - ph - 8))}px`; return; }
@@ -238,7 +249,8 @@ export class Coach {
     // A button inside a panel (the action bar): sit beside the whole panel,
     // not on top of its header.
     const box = lit.map((n) => n.closest(".hud-actions, .hud-roster")).find(Boolean);
-    this.placePanel(box ? [box.getBoundingClientRect()] : holes);
+    if (this.match.mode) this.dockPanel();
+    else this.placePanel(box ? [box.getBoundingClientRect()] : holes);
     // Picking a spot or target on the table (move ring, fire targeting): the
     // table IS the thing to look at, so no veil at all.
     const onTable = !!this.match.mode;

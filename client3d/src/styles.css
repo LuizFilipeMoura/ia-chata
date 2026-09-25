@@ -642,3 +642,4 @@ body { font-size: 18px; }
 .gl { white-space: nowrap; display: inline-flex; align-items: baseline; } .gl .si { align-self: center; }
 :root { --fam-pierce: #c58bff; }
 .si.fam-pierce { color: var(--fam-pierce) !important; }
+.coach.docked { width: 330px !important; }
