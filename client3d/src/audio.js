@@ -142,6 +142,10 @@ export const sfx = {
     tone(t, 0.4, { freq: jit(1330), to: 1200, type: "sine", peak: 0.07 });
   },
   thrusters() { if (!init() || muted) return; noise(ctx.currentTime, 1.6, { freq: 400, sweepTo: 1500, type: "bandpass", q: 1, peak: 0.35, attack: 0.3 }); },
+  // Campaign: the reinforcement klaxon (two falling whoops) and the extraction
+  // lift-off (a rising thruster roar).
+  alarm() { if (!init() || muted) return; const t = ctx.currentTime; for (let i = 0; i < 2; i++) { tone(t + i * 0.45, 0.4, { freq: 760, to: 420, type: "sawtooth", peak: 0.12 }); tone(t + i * 0.45, 0.4, { freq: 1140, to: 630, type: "square", peak: 0.04 }); } },
+  liftoff() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 2.2, { freq: 250, sweepTo: 2200, type: "bandpass", q: 0.8, peak: 0.4, attack: 0.5 }); tone(t, 2, { freq: 60, to: 140, type: "sawtooth", peak: 0.12, attack: 0.4 }); },
   // ---- Equipment ----
   // Harden: plates slam shut, two heavy clanks and a ring.
   clank() {

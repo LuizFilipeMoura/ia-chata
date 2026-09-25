@@ -1029,3 +1029,43 @@ body { font-size: 18px; }
 }
 /* Primary brass buttons keep their brass (and dark text) on hover. */
 .btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #fff0b8, var(--brass-hi) 45%, #a07a30); color: #20170a; }
+
+/* ---- Campaign mission layer (in battle) ---- */
+.hud-mission-slot { position: absolute; top: 108px; left: calc(50% + 90px); transform: translateX(-50%); pointer-events: none; z-index: 4; }
+.hud-mission { pointer-events: auto; min-width: 420px; max-width: min(620px, calc(100vw - 560px)); background: var(--panel); border: 1px solid var(--brass-lo); border-left: 3px solid var(--brass-hi); border-radius: 6px; padding: 6px 12px 8px; box-shadow: 0 6px 20px rgba(0,0,0,.45); font-family: var(--label); animation: cpIn .4s ease-out; }
+.hud-mission .ms-head { display: flex; align-items: center; gap: 8px; font: 700 18px var(--label); letter-spacing: .12em; text-transform: uppercase; color: var(--brass-hi); }
+.hud-mission .ms-head .si { width: 22px; height: 22px; }
+.hud-mission .ms-fac { font: 400 14px var(--label); letter-spacing: .06em; color: var(--muted); text-transform: none; }
+.hud-mission .ms-round { margin-left: auto; font: 600 14px var(--label); letter-spacing: .1em; color: var(--muted); }
+.hud-mission .ms-obj { font: 15px var(--type); color: var(--text); margin: 2px 0 4px; line-height: 1.3; }
+.hud-mission .ms-row { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-top: 3px; flex-wrap: wrap; }
+.hud-mission .ms-row .si { width: 18px; height: 18px; color: var(--brass-hi); }
+.hud-mission .ms-row b { font-weight: 600; }
+.hud-mission .ms-row.soon { color: #ff9a80; } .hud-mission .ms-row.soon .si { color: #ff7a5a; animation: msBlink 1s steps(2) infinite; }
+.hud-mission .ms-num { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.hud-mission .ms-state { font: 700 13px var(--label); letter-spacing: .14em; text-transform: uppercase; padding: 0 6px; border-radius: 3px; }
+.hud-mission .ms-state.alive { color: #ff9a80; border: 1px solid #ff5a3c; } .hud-mission .ms-state.down { color: #9be07f; border: 1px solid #7fcf6a; }
+.hud-mission .ms-bar { width: 110px; height: 7px; background: rgba(255,255,255,.1); border-radius: 3px; overflow: hidden; } .hud-mission .ms-bar i { display: block; height: 100%; background: var(--red); transition: width .5s; }
+.hud-mission .ms-pips { display: inline-flex; gap: 4px; } .hud-mission .ms-pips i { width: 14px; height: 14px; border: 2px solid #4fffc8; border-radius: 50%; } .hud-mission .ms-pips i.on { background: #4fffc8; box-shadow: 0 0 8px #4fffc8; }
+.hud-mission .ms-hint { font-size: 14px; color: #9fe8d4; margin-top: 3px; } .hud-mission .ms-hint.warn { color: #ffb070; }
+.hud-mission .c-a { color: var(--cyan); } .hud-mission .c-b { color: var(--red); }
+.hud-mission.t-breakthrough { border-left-color: #4fffc8; } .hud-mission.t-assassinate, .hud-mission.t-boss { border-left-color: var(--gold); } .hud-mission.t-laststand { border-left-color: var(--cyan); }
+@keyframes msBlink { 50% { opacity: .35; } }
+.has-mission .hud-tip { top: 214px; }
+@media (max-width: 1100px) { .hud-mission-slot { left: 50%; top: 100px; } .hud-mission { min-width: 0; max-width: calc(100vw - 20px); } }
+/* Extract action: glows when the rig can leave. */
+.act.mission:not(.off) { border-color: #4fffc8 !important; box-shadow: 0 0 0 1px #4fffc8, 0 0 16px rgba(79,255,200,.45) !important; animation: msGlow 1.4s ease-in-out infinite; }
+.act.mission .ico { color: #4fffc8; }
+@keyframes msGlow { 50% { box-shadow: 0 0 0 1px #4fffc8, 0 0 4px rgba(79,255,200,.2); } }
+/* Roster: extracted rigs and the crowned commander. */
+.rig-card.extracted { opacity: .8; border-left-color: #4fffc8 !important; }
+.tag.ext { color: #4fffc8; display: inline-flex; align-items: center; gap: 3px; margin-left: auto; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.tag.ext .si, .tag.cmd .si { width: 16px; height: 16px; }
+.tag.cmd { color: var(--gold); }
+.plate .ptag { display: none; }
+.plate.cmd .ptag { display: flex; align-items: center; gap: 3px; font: 700 12px var(--label); letter-spacing: .14em; color: var(--gold); }
+.plate.cmd .ptag .si { width: 14px; height: 14px; }
+.plate.cmd { box-shadow: 0 0 0 1px rgba(240,192,90,.6), 0 0 10px rgba(240,192,90,.35); }
+/* End stamp: why it ended. */
+.cp-end-why { font: 700 30px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--brass-hi); text-shadow: 0 2px 0 #000, 0 0 20px rgba(0,0,0,.7); animation: cpIn .6s .35s ease-out both; }
+.cp-end-why.win { color: #b8f0a0; } .cp-end-why.loss { color: #ff9a80; }

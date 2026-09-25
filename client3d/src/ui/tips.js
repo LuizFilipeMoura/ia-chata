@@ -5,7 +5,7 @@
 // off in Settings.
 import { el } from "./dom.js";
 import { settings } from "../settings.js";
-import { heatMeter } from "/shared/game-state.js";
+import { heatMeter, inExitZone } from "/shared/game-state.js";
 import { candidatesFor } from "/shared/bot/candidates.js";
 import { controlsObjective } from "/shared/geometry.js";
 import { spatial } from "/shared/game-state.js";
@@ -32,6 +32,10 @@ const WIRES = [
   { id: "escalation", when: (c) => (c.state.game.beaconMultiplier || 1) > 1, text: (c) => `Beacons pay ×${c.state.game.beaconMultiplier} this round, so a late push can overturn an early lead. Don't coast.` },
   { id: "grit", when: (c) => (c.state.game.gritTokens?.[c.side] || 0) > 0, text: () => `You're behind, so HQ sends Grit tokens each round (1 at 2+ VP behind, 2 at 5+, 3 at 8+): a free face-down reaction that's Improved (tougher Brace, surer dodges, harder counter-hits), an upgrade to one you already placed, or keep it to reroll every missed shot on one attack. Kills while you're behind also pay a +2 VP bounty. Use it to break their hold.` },
   { id: "stagger", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && r.staggered), text: (c, r) => `${r.name} is Staggered: a shot rang its armour without doing damage. +1 heat, and −1 Aim on its next attack. Misses aren't wasted, they rattle the target.` },
+  // Campaign contracts.
+  { id: "extract-zone", when: (c) => c.state.campaign?.type === "breakthrough" && c.myTurn && c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && !r.activated && inExitZone(r, c.state.campaign.exit)), text: (c, r) => `${r.name} is inside the extraction zone. Extract (1 action) lifts it off the table for good: it counts toward the goal and keeps its SP, but it can't fight again this battle.` },
+  { id: "crates", when: (c) => c.state.campaign?.type === "salvage" && (c.state.game.objectives || []).some((o) => o.crate), text: () => `Salvage crates don't score like beacons: END a rig's activation within 2" of one and it hauls the crate away, +2 VP on the spot. The enemy grabs them too.` },
+  { id: "reinforcements", when: (c) => c.state.campaign?.reinforcements?.some((rf) => rf.arrived), text: () => `Enemy reinforcements land in their corner at the start of the listed rounds (see the contract strip). Survive to the round limit: you don't have to win the brawl, just keep one rig standing.` },
   { id: "hurt", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && ["hull", "arms", "legs", "engine"].some((l) => r[l] && r[l].sp > 0 && r[l].sp <= r[l].max / 3)), text: (c, r) => `${r.name} is badly damaged. A location at 0 SP cripples it (arms drop weapons, legs slow it, engine stalls it). Repair costs an action, or pull it back.` },
 ];
 

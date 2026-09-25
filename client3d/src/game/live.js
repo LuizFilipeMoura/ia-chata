@@ -13,7 +13,7 @@ import { scoreCandidate, scoreParts, PRESETS } from "/shared/bot/score.js";
 import { expectedDamage } from "/shared/bot/evaluate.js";
 import { findPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf } from "/shared/geometry.js";
-import { spatial, moveBudget, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf } from "/shared/game-state.js";
+import { spatial, moveBudget, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
@@ -28,9 +28,10 @@ import { Nameplates } from "../ui/nameplates.js";
 import { Wires } from "../ui/tips.js";
 import { DiceTray } from "../ui/dicetray.js";
 import { MatchStats, debrief } from "../ui/outcome.js";
+import { commanderTitle } from "../ui/mission.js";
 
 const DEG = Math.PI / 180;
-const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "repair", vent: "purge", paint: "lock" };
+const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "repair", vent: "purge", paint: "lock", extract: "extract" };
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
   sprint: "Run up to 1½× Speed. 2 heat: fast but hot.",
@@ -40,6 +41,7 @@ const HELP = {
   repair: "Patch a damaged location.",
   shutdown: "End activation now and vent 2 heat per unused action (max 5).",
   disengage: "Break the melee lock and step clear of the enemy.",
+  extract: "Breakthrough: leave the table through the exit zone at the enemy corner. 1 action, no heat. The rig isn't wrecked and keeps its SP; it can't come back this battle.",
   douse: "Put out the flames: clears Burning.",
   reload: "Reload the long-range gun. No action, but a D6 heat gamble: 1-3 → +2 heat, 4-6 → +1.",
   lock: "Fire Control Lock: paint an enemy. Your next Missile Barrage volley at it auto-hits, Armour Piercing.",
@@ -87,7 +89,8 @@ function oddsLine(rig, extra) {
 }
 
 export class LiveMatch {
-  constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null, onReplay = null, hotseat = false, noOutcomeModal = false }) {
+  constructor(world, hud, { room, side = "a", tutorial = null, onExit, onRematch = null, onReplay = null, hotseat = false, noOutcomeModal = false, contract = null }) {
+    hud.missionMeta = contract; // campaign: { faction } for the contract strip
     this.hotseat = hotseat; this.onReplay = onReplay;
     this.world = world; this.hud = hud; this.room = room; this.side = side; this.onExit = onExit; this.onRematch = onRematch;
     this.state = null; this.selected = null; this.mode = null; this.lastRes = -1; this.lastVersion = -1;
@@ -116,7 +119,7 @@ export class LiveMatch {
         } else if (owner !== this.side || score) this.world.focus(p.x, p.y);
       },
       onDice: (l) => (settings.get("diceTray") ? this.tray.show(l, { speed: this.director.speed, title: this.diceTitle(l) }) : null),
-      onScore: (l) => { const side = l.kind === "score" ? l.side : l.vp?.side; const amt = l.kind === "score" ? l.vp : l.vp?.amount; if (side && amt) this.hud.scoreFlash(side, amt); },
+      onScore: (l) => { const flat = l.kind === "score" || l.kind === "crate"; const side = flat ? l.side : l.vp?.side; const amt = flat ? l.vp : l.vp?.amount; if (side && amt) this.hud.scoreFlash(side, amt); },
     });
     this.unsub = [
       world.on("click", (h, e) => this.onClick(h, e)),
@@ -211,6 +214,9 @@ export class LiveMatch {
       else if (l.kind === "reaction" || l.kind === "prepare") lines.push({ icon: "prepare", text: l.summary });
       else if (l.kind === "equipment" && l.summary) { const k = equipmentActiveOf(l); lines.push({ icon: ICON[k === "grapnel" ? "grapnel-yank" : k] || "sp", text: l.summary }); }
       else if (l.chaff) lines.push({ icon: "chaff", text: l.summary });
+      else if (l.kind === "crate") lines.push({ icon: "crate", tone: l.side === this.side ? "good" : "bad", text: l.summary });
+      else if (l.kind === "reinforcement") lines.push({ icon: "drop", tone: "bad", text: l.summary });
+      else if (l.kind === "extract") lines.push({ icon: "extract", tone: "good", text: l.summary });
     }
     this.hud.digest(lines);
   }
@@ -244,8 +250,10 @@ export class LiveMatch {
     const firstField = !this.state || first;
     const prevState = this.state;
     this.state = state;
+    this.director.commanderId = state.campaign?.commanderId ?? null;
     if (firstField && state.field) {
       this.world.buildField({ ...state.field }, state.game.objectives || []);
+      this.world.setMission(state.campaign || null);
       const mine = state.rigs.filter((r) => r.owner === this.side && r.pos);
       if (mine.length) { const c = mine.reduce((a, r) => ({ x: a.x + r.pos.x / mine.length, y: a.y + r.pos.y / mine.length }), { x: 0, y: 0 }); this.world.focus(c.x, c.y, 42); }
     }
@@ -343,8 +351,11 @@ export class LiveMatch {
       this.lastMult = mult;
     }
     this.hud.top(this.state, this.side);
-    this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId);
-    this.plates.set(this.state.rigs, { activeId: g.turn?.activeRigId, priorityIds: Object.values(g.priorityTargets || {}) });
+    this.hud.mission(this.state, this.side);
+    this.world.syncObjectives(g.objectives || []);
+    const cp = this.state.campaign;
+    this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId, cp);
+    this.plates.set(this.state.rigs, { activeId: g.turn?.activeRigId, priorityIds: Object.values(g.priorityTargets || {}), commanderId: cp?.commanderId ?? null, commanderTitle: commanderTitle(cp) });
     this.wires?.check();
     this.hud.roster(this.state, this.side, this.selected, (id) => this.select(id));
     // Objective control tint.
@@ -417,6 +428,14 @@ export class LiveMatch {
     const special = new Set(acts.map((a) => a.key));
     for (const k of ["lock", "emplace", "unplant", "barrage"]) if (!special.has(k) && this.hasAction(rig, k)) extra.push({ key: k, label: k[0].toUpperCase() + k.slice(1), heat: k === "unplant" ? 2 : k === "lock" ? 1 : 0, enabled: turn.actionsUsed < turn.actionsMax });
     if (rig.loaded?.longRange === false) extra.push({ key: "reload", label: "Reload", heat: "d6", enabled: turn.actionsUsed < turn.actionsMax });
+    // Campaign Breakthrough: leave the table from the exit zone.
+    const cp = this.state.campaign;
+    if (cp?.type === "breakthrough" && cp.exit && rig.owner === "a" && rig.pos) {
+      const inZone = inExitZone(rig, cp.exit), engaged = rig.engagedWith != null, hasAct = turn.actionsUsed < turn.actionsMax;
+      const far = Math.max(0, Math.hypot(rig.pos.x - cp.exit.x, rig.pos.y - cp.exit.y) - cp.exit.r);
+      extra.push({ key: "extract", label: "Extract", heat: 0, mission: true, enabled: inZone && !engaged && hasAct,
+        why: !inZone ? `Outside the extraction zone: move ${far.toFixed(1)}″ closer to the glowing enemy corner` : engaged ? "Locked in melee: Disengage first" : "No actions left this activation" });
+    }
     const commandable = this.canCommand(rig);
     const left = turn.actionsMax - turn.actionsUsed;
     // Every readout is labelled: who this is, what it carries, actions left,
@@ -449,7 +468,7 @@ export class LiveMatch {
       const hot = projected > cap;
       const btn = el("button", {
         // Looks disabled but stays hoverable, so its tooltip explains why.
-        class: `act ${hot ? "hot" : ""} ${this.mode?.key === a.key || (this.mode?.key === "yank" && a.key === "grapnel-yank") || (this.mode?.key === "reel" && a.key === "grapnel-reel") ? "on" : ""} ${off ? "off" : ""}`,
+        class: `act ${hot ? "hot" : ""} ${a.mission ? "mission" : ""} ${this.mode?.key === a.key || (this.mode?.key === "yank" && a.key === "grapnel-yank") || (this.mode?.key === "reel" && a.key === "grapnel-reel") ? "on" : ""} ${off ? "off" : ""}`,
         "aria-disabled": off ? "true" : null,
         title: `${a.label}: ${helpFor(a.key)}${a.cost === 0 && ["cryo", "meltdown"].includes(a.key) ? "\nFree: no action slot." : ""}${a.note && a.enabled ? " · " + a.note : ""}${!this.allowed("act", a.key) ? "\n⚠ Tutorial: not part of this step yet" : !commandable ? "\n⚠ Not available: this rig can't act right now" : !a.enabled ? `\n⚠ Not available right now: ${a.why || a.note || "no actions left, or the situation doesn't allow it"}` : oddsLine(rig, Number(heat) || 0)}`,
         "data-act": a.key,

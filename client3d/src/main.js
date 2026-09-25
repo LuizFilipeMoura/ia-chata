@@ -19,6 +19,7 @@ import { icon } from "./ui/icons.js";
 import { sfx, isMuted, setMuted } from "./audio.js";
 import { settings } from "./settings.js";
 import { resetWires } from "./ui/tips.js";
+import { outcomeWords } from "./ui/mission.js";
 
 function muteButton() {
   const b = el("button", { class: "btn ghost", title: "Sound on/off" }, icon(isMuted() ? "mute" : "sound"));
@@ -139,18 +140,18 @@ async function play(room, { tutorial = false, lesson = null, cfg = null, side = 
 function campaign(opts = {}) {
   teardown();
   attract = attractMode();
-  campaignScreen(screen, { onHome: home, onDeploy: (room) => playCampaign(room), ...opts });
+  campaignScreen(screen, { onHome: home, onDeploy: (room, contract) => playCampaign(room, contract), ...opts });
 }
 
 // A campaign battle: like play(), but no "Continue battle" save, no rematch,
 // no outcome modal; when it ends the server reads the room (/run/resolve) and
 // the Debrief takes over.
-async function playCampaign(room) {
+async function playCampaign(room, contract = null) {
   teardown();
   screen.style.display = "none";
   const hud = new Hud(hudRoot);
   const back = () => campaign();
-  const match = new LiveMatch(world, hud, { room, side: "a", onExit: back, onRematch: null, noOutcomeModal: true });
+  const match = new LiveMatch(world, hud, { room, side: "a", onExit: back, onRematch: null, noOutcomeModal: true, contract });
   active = match; if (window.__oi3d) window.__oi3d.match = match;
   let resolving = false;
   const resolve = async () => {
@@ -161,8 +162,10 @@ async function playCampaign(room) {
   };
   match.events.addEventListener("finished", (e) => {
     const won = e.detail?.winner === "a";
+    const why = outcomeWords(e.detail, match.state?.campaign);
     hudRoot.append(el("div", { class: `cp-battle-end ${won ? "won" : "lost"}` },
       el("div", { class: "cp-stamp big anim " + (won ? "win" : "loss") }, won ? "Victory" : e.detail?.winner == null ? "Draw" : "Defeat"),
+      why ? el("div", { class: `cp-end-why ${won ? "win" : "loss"}` }, why) : null,
       el("button", { class: "btn big primary", onClick: resolve }, "Debrief ▸")));
     setTimeout(resolve, 4500);
   });
@@ -351,7 +354,7 @@ function cheatSheet() {
   modal({
     title: "📖 Quick rules",
     body: el("div", { class: "cheat" },
-      el("p", {}, el("b", {}, "Turns: "), "sides alternate activating one rig; each rig acts once per round with 3 actions. 10 rounds."),
+      el("p", {}, el("b", {}, "Turns: "), `sides alternate activating one rig; each rig acts once per round with 3 actions. ${active?.game?.maxRounds || 10} rounds.`),
       el("p", {}, el("b", {}, "Heat: "), "every action adds heat; only 1 bleeds off per round. End an activation over capacity (light 6, medium 5) and you roll D12 + 2×excess on the overheat table. Shut Down vents 2 per unused action."),
       el("p", {}, el("b", {}, "Attacks: "), "only into your front 90° arc. Side/rear hits are deadlier. Long-range needs line of sight and range band; melee needs base reach."),
       el("p", {}, el("b", {}, "Scoring: "), "hold objectives (within 2\", uncontested) at round end: centre 2 VP, others 1. Every kill: +1 VP; the ★ priority target pays +2 more."),
@@ -362,6 +365,9 @@ function cheatSheet() {
     actions: [{ label: "Got it", primary: true }],
   });
 }
+
+// Debug handles for automated checks: mount a battle / campaign battle directly.
+Object.assign(window.__oi3d, { play: (room, opts) => play(room, opts), playCampaign: (room, contract) => playCampaign(room, contract) });
 
 // A shared link (?join=CODE) goes straight to joining.
 const joinCode = new URLSearchParams(location.search).get("join");

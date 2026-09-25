@@ -14,6 +14,7 @@ export function equipChipRow(r, cls = "rc-eq") {
   return el("div", { class: cls }, chips.map((c) => el("span", { class: `eqc t-${c.tone}`, title: `${c.label}\n${c.tip}` }, icon(c.icon), c.value != null ? el("b", {}, String(c.value)) : null)));
 }
 import { CombatLog } from "./combatlog.js";
+import { missionPanel, maxRoundsOf, commanderTitle } from "./mission.js";
 
 export class Hud {
   constructor(root) {
@@ -29,11 +30,20 @@ export class Hud {
     this.hoverEl = el("div", { class: "hud-hover" });
     this.bannerEl = el("div", { class: "hud-banner" });
     this.extra = el("div", { class: "hud-extra" });
-    root.append(this.topEl, this.rosterEl, this.enemyEl, this.actions, this.tipEl, this.hoverEl, this.bannerEl, this.extra);
+    this.missionEl = el("div", { class: "hud-mission-slot" });
+    root.classList.remove("has-mission");
+    root.append(this.missionEl, this.topEl, this.rosterEl, this.enemyEl, this.actions, this.tipEl, this.hoverEl, this.bannerEl, this.extra);
     this.logLines = [];
   }
 
-  destroy() { this.clog.destroy(); clear(this.root); }
+  destroy() { this.clog.destroy(); this.root.classList.remove("has-mission"); clear(this.root); }
+
+  // Campaign contract strip under the top bar (nothing outside the campaign).
+  mission(state, side, meta = this.missionMeta) {
+    const panel = state.campaign ? missionPanel(state, side, meta) : null;
+    this.root.classList.toggle("has-mission", !!panel);
+    fill(this.missionEl, panel);
+  }
 
   // Who still has to act this round, in alternation from the side on the floor.
   turnOrder(state) {
@@ -61,7 +71,7 @@ export class Hud {
       const va = g.sides.find((s) => s.id === "a")?.vp ?? 0, vb = g.sides.find((s) => s.id === "b")?.vp ?? 0;
       fill(this.topEl,
         el("div", { class: "vp a" }, el("span", { class: "k" }, "CYAN"), el("b", {}, String(va))),
-        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / 10`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…"), this.turnOrder(state)),
+        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / ${maxRoundsOf(g)}`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…"), this.turnOrder(state)),
         el("div", { class: "vp b" }, el("b", {}, String(vb)), el("span", { class: "k" }, "RED")));
       return;
     }
@@ -70,9 +80,9 @@ export class Hud {
     const grit = (id) => { const n = g.gritTokens?.[id] || 0; return n ? el("span", { class: "grit-chip", title: `${n} Grit token${n > 1 ? "s" : ""}: an Improved free reaction (the side 2+ VP behind gets one each round)` }, icon("grit"), `×${n}`) : null; };
     const theirs = g.sides.find((s) => s.id !== side)?.id;
     fill(this.topEl, 
-      el("div", { class: "vp a", title: "Victory points: salvage held + priority kills" }, el("span", { class: "k" }, "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0)), grit(side)),
-      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round", title: "Beacon payout multiplier this round" }, `ROUND ${g.round || 1} / 10${g.suddenDeath ? " · SUDDEN DEATH" : ""}`, (g.beaconMultiplier || 1) > 1 ? el("span", { class: "mult" }, ` · BEACONS ×${g.beaconMultiplier}`) : null), el("div", { class: "who" }, who), this.turnOrder(state)),
-      el("div", { class: "vp b", title: "Enemy victory points" }, grit(theirs), el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : "ENEMY")),
+      el("div", { class: "vp a", title: "Victory points: salvage held + priority kills" }, el("span", { class: "k" }, state.campaign ? "YOUR VP" : "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0)), grit(side)),
+      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round", title: "Beacon payout multiplier this round" }, `ROUND ${g.round || 1} / ${maxRoundsOf(g)}${g.suddenDeath ? " · SUDDEN DEATH" : ""}`, (g.beaconMultiplier || 1) > 1 ? el("span", { class: "mult" }, ` · BEACONS ×${g.beaconMultiplier}`) : null), el("div", { class: "who" }, who), this.turnOrder(state)),
+      el("div", { class: "vp b", title: "Enemy victory points" }, grit(theirs), el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot && !state.campaign ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : state.campaign ? "ENEMY VP" : "ENEMY")),
     );
   }
 
@@ -80,8 +90,11 @@ export class Hud {
     const cap = HEAT_CAPACITY[r.weightClass] ?? 6;
     const heat = r.engine?.heat ?? 0;
     const pri = Object.values(state.game.priorityTargets || {}).includes(r.id);
+    const cmd = state.campaign?.commanderId === r.id;
     return el("div", { class: `rig-card ${r.destroyed ? "dead" : ""} ${r.activated ? "spent" : ""} ${selected ? "sel" : ""} ${state.game.turn?.activeRigId === r.id ? "active" : ""}`, onClick: () => onPick?.(r.id) },
-      el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), pri ? el("span", { class: "tag pri", title: "Priority target: +3 VP for the kill (+1 like any wreck, +2 bonus)" }, icon("star")) : null,
+      el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name),
+        cmd ? el("span", { class: "tag cmd", title: `${commanderTitle(state.campaign)}: wreck it to win the contract` }, icon("crown")) : null,
+        pri && !cmd ? el("span", { class: "tag pri", title: "Priority target: +3 VP for the kill (+1 like any wreck, +2 bonus)" }, icon("star")) : null,
         r.preparation ? el("span", { class: `tag ${r.preparation.improved ? "imp" : ""}`, title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.improved ? "Improved " : ""}${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare"), r.preparation.hidden ? "" : `${r.preparation.improved ? "+" : ""}${r.preparation.type}`) : null,
         r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee: must Disengage to move" }, icon("melee")) : null),
       el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""),
@@ -98,7 +111,12 @@ export class Hud {
   roster(state, side, selectedId, onPick) {
     this.names = new Map(state.rigs.map((r) => [r.name, r.owner || "a"]));
     this.clog.side = side;
-    fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Cyan" : "Your squadron"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
+    // Breakthrough: rigs that left the table are gone from state.rigs; list them.
+    const out = side === "a" ? state.campaign?.extracted || [] : [];
+    fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Cyan" : "Your squadron"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)),
+      out.map((r) => el("div", { class: "rig-card extracted", title: `${r.name} broke through and left the table (keeps its SP)` },
+        el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), el("span", { class: "tag ext" }, icon("extract"), "Extracted")),
+        el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""))));
     fill(this.enemyEl, el("div", { class: "rh" }, this.spectator ? "Red" : "Enemy"), state.rigs.filter((r) => r.owner !== side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)));
   }
 

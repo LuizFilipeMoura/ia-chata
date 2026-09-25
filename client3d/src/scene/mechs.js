@@ -326,8 +326,42 @@ export class Mech {
     if (w.spin) this.spinSpeed = 40;
   }
 
+  // Campaign: a gold crown floating over the enemy Commander / Warlord.
+  setCrown(on) {
+    if (!on) { if (this.crown) this.crown.visible = false; return; }
+    if (!this.crown) {
+      const gold = new THREE.MeshStandardMaterial({ color: 0xf0c05a, emissive: 0xb07818, emissiveIntensity: 0.9, metalness: 0.9, roughness: 0.25, side: THREE.DoubleSide });
+      const ruby = new THREE.MeshStandardMaterial({ color: 0xff3a2a, emissive: 0xff2010, emissiveIntensity: 1.4 });
+      const c = new THREE.Group();
+      c.add(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.38, 0.24, 20, 1, true), gold));
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.36, 4), gold); spike.position.set(Math.cos(a) * 0.4, 0.29, Math.sin(a) * 0.4); c.add(spike);
+        const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), gold); pearl.position.set(Math.cos(a) * 0.4, 0.5, Math.sin(a) * 0.4); c.add(pearl);
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.07), ruby); gem.position.set(Math.cos(a + 0.63) * 0.42, 0, Math.sin(a + 0.63) * 0.42); c.add(gem);
+      }
+      c.scale.setScalar(1.5);
+      this.crownY = this.labelAnchor.position.y - 0.1;
+      c.position.y = this.crownY;
+      this.root.add(c);
+      this.crown = c;
+    }
+    this.crown.visible = true;
+  }
+
+  // Fade the whole model (extraction lift-off). Materials are cloned once so
+  // the shared chassis paints stay opaque on every other mech.
+  setOpacity(f) {
+    if (!this.faded) {
+      this.faded = true;
+      this.root.traverse((o) => { if (o.isMesh && o.material) { o.material = o.material.clone(); o.material.transparent = true; o.userData.baseOpacity = o.material.opacity; } });
+    }
+    this.root.traverse((o) => { if (o.isMesh && o.material) o.material.opacity = (o.userData.baseOpacity ?? 1) * f; });
+  }
+
   destroy() {
     this.destroyed = true;
+    this.setCrown(false);
     this.ringMat.color.setHex(0x444444);
     this.body.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.color?.multiplyScalar(0.25); if (o.material.emissive) o.material.emissiveIntensity = 0; } });
   }
@@ -375,5 +409,6 @@ export class Mech {
     this.facing += d * Math.min(1, dt * 8);
     this.root.rotation.y = -this.facing * DEG;
     this.halo.rotation.z += dt * 0.8;
+    if (this.crown?.visible) { this.crown.rotation.y = this.t * 1.1; this.crown.position.y = this.crownY + Math.sin(this.t * 2) * 0.12; }
   }
 }

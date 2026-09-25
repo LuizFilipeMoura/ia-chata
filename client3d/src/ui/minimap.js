@@ -16,7 +16,8 @@ export class Minimap {
     world.tickers.add(this.tick);
   }
 
-  set(field, objectives, rigs, activeId) { this.field = field; this.objectives = objectives || []; this.rigs = rigs || []; this.activeId = activeId; }
+  // campaign (optional): publicState's state.campaign: exit zone + commander.
+  set(field, objectives, rigs, activeId, campaign = null) { this.field = field; this.objectives = objectives || []; this.rigs = rigs || []; this.activeId = activeId; this.campaign = campaign; }
 
   draw() {
     const f = this.field; if (!f) return;
@@ -31,7 +32,17 @@ export class Minimap {
       else if (t.points) { g.beginPath(); t.points.forEach(([x, y], i) => (i ? g.lineTo(x * sx, y * sy) : g.moveTo(x * sx, y * sy))); g.fill(); }
       g.restore();
     }
-    for (const o of this.objectives) { g.strokeStyle = "#ffd35a"; g.lineWidth = 2; g.beginPath(); g.arc(o.x * sx, o.y * sy, 2 * sx, 0, 7); g.stroke(); }
+    const ex = this.campaign?.exit;
+    if (ex) {
+      // Breakthrough exit: the zone around the enemy corner (the canvas clips it to a quarter).
+      const pulse = 0.22 + 0.12 * Math.sin(performance.now() / 300);
+      g.fillStyle = `rgba(79,255,200,${pulse})`; g.beginPath(); g.moveTo(ex.x * sx, ex.y * sy); g.arc(ex.x * sx, ex.y * sy, ex.r * sx, 0, 7); g.fill();
+      g.strokeStyle = "#4fffc8"; g.lineWidth = 1.5; g.beginPath(); g.arc(ex.x * sx, ex.y * sy, ex.r * sx, 0, 7); g.stroke();
+    }
+    for (const o of this.objectives) {
+      if (o.crate) { g.fillStyle = "#c98a3a"; g.strokeStyle = "#ffd35a"; g.lineWidth = 1; g.fillRect(o.x * sx - 3, o.y * sy - 3, 6, 6); g.strokeRect(o.x * sx - 3, o.y * sy - 3, 6, 6); continue; }
+      g.strokeStyle = o.relay ? "#5fd3c0" : "#ffd35a"; g.lineWidth = 2; g.beginPath(); g.arc(o.x * sx, o.y * sy, 2 * sx, 0, 7); g.stroke();
+    }
     // Live mech positions (animated) when the director has them.
     for (const r of this.rigs) {
       const m = this.world.mechRoots?.find((x) => x.userData.mechId === r.id);
@@ -40,6 +51,7 @@ export class Minimap {
       g.fillStyle = r.destroyed ? "#555" : r.owner === "a" ? "#5fd3c0" : "#e0533d";
       g.beginPath(); g.arc(x * sx, y * sy, 4, 0, 7);
       if (r.activated && !r.destroyed) { g.strokeStyle = g.fillStyle; g.lineWidth = 2; g.stroke(); } else g.fill();
+      if (r.id === this.campaign?.commanderId && !r.destroyed) { g.strokeStyle = "#f0c05a"; g.lineWidth = 2; g.beginPath(); g.arc(x * sx, y * sy, 6, 0, 7); g.stroke(); }
       if (r.id === this.activeId) { g.strokeStyle = "#ffd35a"; g.lineWidth = 2; g.beginPath(); g.arc(x * sx, y * sy, 7, 0, 7); g.stroke(); }
     }
     const c = this.world.cam.target;

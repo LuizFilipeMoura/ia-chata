@@ -562,7 +562,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
     const level = NOTORIETY[run.notoriety];
     const perkLive = node.kind === "boss" || level.factionAlways;
     const t = CONTRACT_TYPES[node.type];
-    let deploy = () => { sfx.servo(); onDeploy(run.room); };
+    let deploy = () => { sfx.servo(); onDeploy(run.room, { faction: f?.name }); };
     const deployBtn = el("button", { class: "btn big primary cp-deploy", onClick: () => deploy() }, "Deploy ▸");
     show(el("div", { class: `cp cp-brief ${node.kind}` },
       runBar(run, { onHq: () => hq() }),

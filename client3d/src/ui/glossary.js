@@ -53,7 +53,7 @@ export const GLOSSARY = {
   "Shut Down": "Ends the activation and vents heat instead of risking the overheat roll.",
   "overheat": "Ending a turn past heat capacity: roll for effects, from nothing to engine damage.",
   "beacon": "Salvage objective. Holding one alone at round end scores its victory points.",
-  "victory points": "Score. Most after 10 rounds wins; wrecking the whole enemy squad wins outright.",
+  "victory points": "Score. Most after the last round wins (10 in a standard battle, 6 to 8 in a campaign contract); wrecking the whole enemy squad wins outright.",
   "activation": "One rig's turn: up to 3 actions, then play passes to the other side.",
   "actions": "What a rig does in its activation: Move, Fire, Prepare... usually 3, each costs heat.",
   "Answer token": "The side acting second each round gets one: place a free face-down reaction before the enemy moves.",

@@ -20,8 +20,9 @@ export class Nameplates {
     world.tickers.add(this.tick);
   }
 
-  // rigs: publicState-ish rigs (or replay frame rigs); extra: { activeId, priorityIds }
-  set(rigs, { activeId = null, priorityIds = [] } = {}) {
+  // rigs: publicState-ish rigs (or replay frame rigs); extra: { activeId,
+  // priorityIds, commanderId, commanderTitle } (campaign: the crowned enemy).
+  set(rigs, { activeId = null, priorityIds = [], commanderId = null, commanderTitle = "Commander" } = {}) {
     this.info = new Map(rigs.map((r) => [r.id, r]));
     this.activeId = activeId; this.priorityIds = priorityIds;
     for (const [id, c] of this.cards) if (!this.info.has(id)) { c.root.remove(); this.cards.delete(id); }
@@ -29,9 +30,9 @@ export class Nameplates {
       let c = this.cards.get(r.id);
       if (!c) {
         c = { root: el("div", { class: `plate o-${r.owner || "a"}` }) };
-        c.name = el("b"); c.icons = el("span", { class: "pi" });
+        c.name = el("b"); c.icons = el("span", { class: "pi" }); c.tag = el("div", { class: "ptag" });
         c.hp = el("i"); c.heat = el("div", { class: "ph" });
-        c.root.append(el("div", { class: "pt" }, c.name, c.icons), el("div", { class: "pb" }, c.hp), c.heat);
+        c.root.append(c.tag, el("div", { class: "pt" }, c.name, c.icons), el("div", { class: "pb" }, c.hp), c.heat);
         this.layer.append(c.root);
         this.cards.set(r.id, c);
       }
@@ -46,7 +47,9 @@ export class Nameplates {
       c.heat.replaceChildren(...Array.from({ length: Math.max(cap, heat) }, (_, i) => el("s", { class: i < heat ? (i >= cap ? "over" : "on") : "" })));
       const icons = [];
       if (r.id === activeId) icons.push(["active", "Acting now"]);
-      if (priorityIds.includes(r.id)) icons.push(["star", "Priority target"]);
+      const cmd = r.id === commanderId && !r.destroyed;
+      if (priorityIds.includes(r.id) && !cmd) icons.push(["star", "Priority target"]);
+      if (c.cmd !== cmd) { c.cmd = cmd; c.tag.replaceChildren(...(cmd ? [icon("crown"), commanderTitle.toUpperCase()] : [])); c.root.classList.toggle("cmd", cmd); }
       if (r.preparation) icons.push([r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare", r.preparation.improved ? "Improved reaction (Grit)" : "Prepared reaction"]);
       if (r.engagedWith != null) icons.push(["melee", "Locked in melee"]);
       if (r.staggered) icons.push(["stagger", "Staggered: −1 Aim on its next attack"]);
@@ -68,7 +71,7 @@ export class Nameplates {
     const items = [];
     for (const [id, c] of this.cards) {
       const m = this.director.mechs.get(id);
-      if (!m) { c.root.style.display = "none"; continue; }
+      if (!m || !m.root.visible) { c.root.style.display = "none"; continue; }
       m.labelAnchor.getWorldPosition(v);
       v.project(cam);
       if (v.z > 1) { c.root.style.display = "none"; continue; }

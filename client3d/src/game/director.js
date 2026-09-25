@@ -81,6 +81,8 @@ export class Director {
     this.current = null;
     this.busy = 0;
     this.walkers = new Set();
+    this.lifts = new Set();      // extracting mechs rising off the table
+    this.commanderId = null;     // campaign: the crowned enemy rig
     this.tickFn = (dt) => this.tick(dt);
     world.tickers.add(this.tickFn);
   }
@@ -102,7 +104,10 @@ export class Director {
     this.epoch = (this.epoch || 0) + 1;
     for (const w of this.walkers) w.resolve();
     this.walkers.clear();
+    for (const d of this.drops) d.done?.();
     this.drops.clear();
+    for (const L of this.lifts) L.done?.();
+    this.lifts.clear();
     this.dropDone?.();
     for (const m of this.mechs.values()) this.world.scene.remove(m.root);
     this.mechs.clear();
@@ -128,14 +133,31 @@ export class Director {
     return m;
   }
 
+  // A rig left the table for good (Breakthrough extraction): drop its mech.
+  removeMech(id) {
+    const m = this.mechs.get(id);
+    if (!m) return;
+    this.world.scene.remove(m.root);
+    this.mechs.delete(id);
+    this.world.mechRoots = [...this.mechs.values()].map((x) => x.root);
+  }
+
+  // Mechs whose rig is gone from the frame (extracted) leave with it.
+  prune(frame) {
+    const ids = new Set(frame.rigs.map((r) => r.id));
+    for (const id of [...this.mechs.keys()]) if (!ids.has(id) && ![...this.lifts].some((L) => L.m.id === id)) this.removeMech(id);
+  }
+
   // Snap to a frame with no animation (initial load, replay scrubbing).
   snap(frame) {
     for (const r of frame.rigs) {
       const m = this.ensureMech(r);
+      m.pendingDrop = false; m.root.visible = true;
       if (r.pos) m.setPose(r.pos, r.facing);
       this.applyStatus(m, r);
       if (r.destroyed && !m.destroyed) m.destroy();
     }
+    this.prune(frame);
     this.current = frame;
   }
 
@@ -145,6 +167,7 @@ export class Director {
     const tot = LOCS.reduce((a, l) => a + (r.sp[l]?.[0] || 0), 0), max = LOCS.reduce((a, l) => a + (r.sp[l]?.[1] || 0), 0);
     m.setHurt(max ? 1 - tot / max : 0);
     m.setParts?.(Object.fromEntries(LOCS.map((l) => [l, (r.sp[l]?.[1] || 0) > 0 && (r.sp[l]?.[0] || 0) <= 0])));
+    m.setCrown?.(this.commanderId != null && r.id === this.commanderId && !r.destroyed);
     m.data = r;
   }
 
@@ -188,7 +211,11 @@ export class Director {
     if (!prev) { this.snap(frame); frame.log?.forEach((l) => this.onLog(l, frame.round)); return; }
     if (this.skipping) {
       this.snap(frame);
-      frame.log?.forEach((l) => this.onLog(l, frame.round));
+      frame.log?.forEach((l) => {
+        this.onLog(l, frame.round);
+        if (l.kind === "crate") { this.world.claimCrate(l.x, l.y); this.onScore(l); }
+        if (l.kind === "reinforcement") this.onBanner("Enemy reinforcements!", "stinger");
+      });
       for (const r of frame.rigs) { const m = this.mechs.get(r.id); if (r.destroyed && m && !m.destroyed) m.destroy(); }
       return;
     }
@@ -207,7 +234,11 @@ export class Director {
     }
     const walks = [];
     for (const r of frame.rigs) {
+      // A rig we've never seen mid-battle (Last Stand reinforcements) waits
+      // hidden in orbit until its drop plays.
+      const fresh = !this.mechs.has(r.id) && !byId.has(r.id);
       const m = this.ensureMech(r);
+      if (fresh && r.pos && !this.detached) { m.root.visible = false; m.pendingDrop = true; }
       const p = byId.get(r.id);
       if (deferred.has(r.id)) continue;
       if (r.pos && p?.pos && (Math.hypot(r.pos.x - p.pos.x, r.pos.y - p.pos.y) > 0.05)) {
@@ -231,6 +262,7 @@ export class Director {
     }
     for (const r of frame.rigs) {
       const m = this.ensureMech(r);
+      if (m.pendingDrop) await this.dropOne(m, r);
       if (r.pos && !this.walkers.size) m.setPose(r.pos, r.facing);
       this.applyStatus(m, r);
       if (r.destroyed && !m.destroyed) {
@@ -243,8 +275,35 @@ export class Director {
         await wait(900 / this.speed);
       }
     }
+    this.prune(frame);
     this.current = frame;
     await wait(120 / this.speed);
+  }
+
+  // One mech falls in from orbit on thrusters and slams down (reinforcements).
+  async dropOne(m, r) {
+    m.pendingDrop = false;
+    if (r?.pos) m.setPose(r.pos, r.facing);
+    m.root.visible = true;
+    if (this.skipping || this.detached) { m.root.position.y = 0; return; }
+    this.onCamera({ x: m.root.position.x, y: m.root.position.z }, { owner: m.owner, score: true });
+    m.root.position.y = 38;
+    this.sound(() => sfx.thrusters());
+    await new Promise((done) => this.drops.add({ m, v: 0, delay: 0.15, landed: false, done }));
+    const fx = this.world.fx, at = m.root.position.clone();
+    fx.shockwave(at.clone().setY(0.1), m.radius + 3, m.owner === "a" ? 0x5fd3c0 : 0xe0533d, 0.7);
+    fx.burst(at.clone().add(new THREE.Vector3(0, 0.4, 0)), 26, { color: 0x9a8a70, size: 1, life: 1.1, spread: 7, additive: false, opacity: 0.6, up: 0.5 });
+    fx.sparks(at.clone().add(new THREE.Vector3(0, 0.3, 0)), 18);
+    this.world.fx.shake = Math.max(this.world.fx.shake, 0.55);
+    this.sound(() => sfx.land());
+    await wait(350 / this.speed);
+  }
+
+  // Extraction: thrusters spool, the mech rises off the table and fades out,
+  // then it's gone from the scene.
+  liftOff(m) {
+    if (this.skipping || this.detached) { this.removeMech(m.id); return Promise.resolve(); }
+    return new Promise((done) => this.lifts.add({ m, t: 0, puff: 0, done }));
   }
 
   walk(m, from, to, facing, limping = false) {
@@ -284,8 +343,26 @@ export class Director {
         this.world.fx.burst(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 18, { color: 0x9a8a70, size: 0.8, life: 0.8, spread: 5, additive: false, opacity: 0.6, up: 0.3 });
         this.world.fx.shake = Math.max(this.world.fx.shake, 0.35);
         this.sound(() => sfx.step(true));
+        d.done?.();
         if (!this.drops.size) setTimeout(() => this.dropDone?.(), 400);
       }
+    }
+    for (const L of this.lifts) {
+      const m = L.m;
+      L.t += dt * this.speed;
+      const rise = Math.max(0, L.t - 0.45);
+      m.root.position.y = rise * rise * 9;
+      m.root.rotation.y += dt * Math.min(1.5, rise) * 0.6;
+      m.walking = 0;
+      L.puff += dt;
+      if (L.puff > 0.03) {
+        L.puff = 0;
+        const at = m.root.position.clone();
+        this.world.fx.particle(at.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6)), { color: Math.random() < 0.5 ? 0xff9933 : 0xffe07a, size: 1, life: 0.35, vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, -7, (Math.random() - 0.5) * 1.5), grow: 1.8 });
+        if (m.root.position.y < 3) this.world.fx.particle(new THREE.Vector3(at.x + (Math.random() - 0.5) * 3, 0.3, at.z + (Math.random() - 0.5) * 3), { color: 0x8a7a60, size: 1, life: 1, grow: 3, additive: false, opacity: 0.45, vel: new THREE.Vector3((Math.random() - 0.5) * 4, 0.6, (Math.random() - 0.5) * 4) });
+      }
+      if (m.root.position.y > 5) m.setOpacity(Math.max(0, 1 - (m.root.position.y - 5) / 20));
+      if (m.root.position.y > 25 || L.t > 3.2) { this.lifts.delete(L); this.removeMech(m.id); L.done(); }
     }
     for (const w of this.walkers) {
       w.t += (dt * this.speed) / w.dur;
@@ -471,6 +548,37 @@ export class Director {
         this.onScore(l);
       }
       await wait(650 / this.speed);
+    } else if (l.kind === "crate") {
+      // Salvage Run: the crate is hauled off: a golden burst and the VP.
+      const at = new THREE.Vector3(l.x ?? 0, 1.1, l.y ?? 0);
+      const tint = l.side === "a" ? 0x5fd3c0 : 0xe0533d;
+      this.onCamera({ x: l.x, y: l.y }, { owner: l.side, score: true });
+      this.world.claimCrate(l.x, l.y);
+      fx.flash(at, 0xffd35a, 45, 9);
+      fx.burst(at, 28, { color: 0xffd35a, size: 0.55, life: 0.9, spread: 6, up: 1.2 });
+      fx.burst(at, 12, { color: tint, size: 0.7, life: 0.7, spread: 4, up: 1 });
+      fx.text(at.clone().setY(3.4), `+${l.vp} VP`, l.side === "a" ? "#5fd3c0" : "#e0533d");
+      setTimeout(() => fx.text(at.clone().setY(4.4), "SALVAGE", "#f0cf7a"), 200 / this.speed);
+      this.sound(() => sfx.score(l.side === this.side));
+      this.onScore(l);
+      await wait(700 / this.speed);
+    } else if (l.kind === "extract" && actor) {
+      // Breakthrough: the rig lifts off out of the enemy corner.
+      this.onCamera({ x: actor.root.position.x, y: actor.root.position.z }, { owner: actor.owner, score: true });
+      fx.text(up(actor, 3.8), "EXTRACTED", "#4fffc8");
+      fx.shell(actor.root.position.clone(), actor.radius * 1.1, 3.4, 0x4fffc8, 0.9, 2);
+      this.sound(() => sfx.liftoff());
+      this.onBanner(`${actor.name} BROKE THROUGH`, "turn");
+      await this.liftOff(actor);
+      this.sound(() => sfx.score(actor.owner === this.side));
+    } else if (l.kind === "reinforcement") {
+      const m = this.mechs.get(l.rigId);
+      this.onBanner("Enemy reinforcements!", "stinger");
+      this.sound(() => sfx.alarm());
+      if (m?.pendingDrop) {
+        await this.dropOne(m, frame.rigs.find((r) => r.id === l.rigId));
+        fx.text(up(m, 3.8), "REINFORCEMENTS", "#ff7a5a");
+      }
     } else if (l.kind === "blast") {
       const t = this.mechs.get(l.rigId);
       if (t) { fx.explosion(up(t, 1), false); this.sound(() => sfx.explosion(false)); }

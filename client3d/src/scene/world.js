@@ -287,6 +287,7 @@ export class World {
   // ---- Battlefield ----
   buildField(field, objectives = []) {
     this.tableGroup.clear();
+    this.missionGroup = null; this.missionAnim = null; this.pickups = []; this.lastMult = 1;
     this.chimneys = [];
     this.field = field;
     const { width: w, height: h } = field;
@@ -394,13 +395,144 @@ export class World {
       const group = new THREE.Group(); group.position.set(o.x, 0, o.y);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd35a, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false });
       const ring = new THREE.Mesh(new THREE.RingGeometry(1.8, 2.0, 48), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; group.add(ring);
-      const pylonMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xffd35a, emissiveIntensity: 1.2, metalness: 0.6 });
-      const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.35, 1.6 + o.vp * 0.6, 6), pylonMat); pylon.position.y = (1.6 + o.vp * 0.6) / 2; pylon.castShadow = true; group.add(pylon);
-      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), pylonMat); gem.position.y = 2.2 + o.vp * 0.6; group.add(gem);
-      const light = new THREE.PointLight(0xffd35a, 6, 8); light.position.y = 2; group.add(light);
+      const kind = o.crate ? "crate" : o.relay ? "relay" : "beacon";
+      const built = kind === "crate" ? this.crateProp(group) : kind === "relay" ? this.relayMast(group) : this.beaconPylon(group, o);
       this.tableGroup.add(group);
-      this.objectiveMeshes.push({ group, ringMat, pylonMat, gem, light, o });
+      this.objectiveMeshes.push({ group, ringMat, kind, o, ...built });
     });
+  }
+
+  beaconPylon(group, o) {
+    const pylonMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xffd35a, emissiveIntensity: 1.2, metalness: 0.6 });
+    const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.35, 1.6 + o.vp * 0.6, 6), pylonMat); pylon.position.y = (1.6 + o.vp * 0.6) / 2; pylon.castShadow = true; group.add(pylon);
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), pylonMat); gem.position.y = 2.2 + o.vp * 0.6; group.add(gem);
+    const light = new THREE.PointLight(0xffd35a, 6, 8); light.position.y = 2; group.add(light);
+    return { pylonMat, gem, light };
+  }
+
+  // Salvage crate: a banded cargo crate with a glowing brass lamp strap and a
+  // small pickup marker bobbing over it (not a beacon pylon: it can't be held).
+  crateProp(group) {
+    const body = new THREE.Group(); group.add(body);
+    const wood = new THREE.MeshStandardMaterial({ color: 0xb07a40, roughness: 0.8 });
+    const iron = new THREE.MeshStandardMaterial({ color: 0x3a3632, metalness: 0.7, roughness: 0.4 });
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 0.95), wood); box.position.y = 0.45; box.castShadow = box.receiveShadow = true; body.add(box);
+    for (const x of [-0.5, 0.5]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.94, 0.99), iron); b.position.set(x, 0.45, 0); body.add(b); }
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.1, 1.01), iron); lid.position.y = 0.92; body.add(lid);
+    const pylonMat = new THREE.MeshStandardMaterial({ color: 0x2a2010, emissive: 0xffd35a, emissiveIntensity: 1.4, metalness: 0.5 });
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.12, 0.2), pylonMat); strap.position.y = 0.62; body.add(strap);
+    body.rotation.y = Math.random() * Math.PI;
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), pylonMat); gem.position.y = 1.9; gem.scale.set(1, 1.4, 1); group.add(gem);
+    const light = new THREE.PointLight(0xffd35a, 4, 6); light.position.y = 1.6; group.add(light);
+    return { pylonMat, gem, light, body };
+  }
+
+  // Last Stand relay: a lattice radio mast with a turning dish and a blinking
+  // cyan lamp, the thing the attackers come for.
+  relayMast(group) {
+    const steel = new THREE.MeshStandardMaterial({ color: 0x4a4640, metalness: 0.8, roughness: 0.35 });
+    const H = 4.6;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, H, 5), steel);
+      leg.position.set(Math.cos(a) * 0.35, H / 2, Math.sin(a) * 0.35); leg.rotation.z = Math.cos(a) * 0.07; leg.rotation.x = -Math.sin(a) * 0.07; leg.castShadow = true; group.add(leg);
+    }
+    for (let y = 0.6; y < H; y += 0.8) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4 - y * 0.03, 0.035, 4, 12), steel); r.rotation.x = Math.PI / 2; r.position.y = y; group.add(r); }
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.05, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x2a2622, metalness: 0.6 })); base.position.y = 0.15; base.receiveShadow = base.castShadow = true; group.add(base);
+    const pylonMat = new THREE.MeshStandardMaterial({ color: 0x103030, emissive: 0x5fd3c0, emissiveIntensity: 1.6, metalness: 0.4 });
+    const dish = new THREE.Group(); dish.position.y = H * 0.72; group.add(dish);
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.9, roughness: 0.3, side: THREE.DoubleSide }));
+    bowl.rotation.z = Math.PI / 2; bowl.position.x = 0.35; dish.add(bowl);
+    const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6, 5), steel); horn.rotation.z = Math.PI / 2; horn.position.x = 0.1; dish.add(horn);
+    const gem = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), pylonMat); gem.position.y = H + 0.2; group.add(gem);
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.05, 6, 24), pylonMat); halo.rotation.x = Math.PI / 2; halo.position.y = H + 0.2; group.add(halo);
+    const light = new THREE.PointLight(0x5fd3c0, 7, 10); light.position.y = H; group.add(light);
+    return { pylonMat, gem, light, dish, halo };
+  }
+
+  // Objectives changed under us (a crate claimed off-screen, a skip): rebuild
+  // when the set differs from what's on the table.
+  syncObjectives(objectives = []) {
+    const sig = (list) => list.map((o) => `${o.x},${o.y},${o.crate ? "c" : o.relay ? "r" : "b"}`).join("|");
+    if (sig(this.objectiveMeshes.map((m) => m.o)) === sig(objectives)) return false;
+    this.buildObjectives(objectives);
+    if (this.lastMult) this.setBeaconMultiplier(this.lastMult);
+    return true;
+  }
+
+  // Salvage: the crate at (x, y) is hauled away: it hops, spins and shrinks
+  // out; the table forgets it (the caller adds the burst + "+2 VP").
+  claimCrate(x, y) {
+    const i = this.objectiveMeshes.findIndex((m) => m.kind === "crate" && Math.hypot(m.o.x - x, m.o.y - y) < 0.05);
+    if (i < 0) return false;
+    const [m] = this.objectiveMeshes.splice(i, 1);
+    (this.pickups ||= []).push({ m, t: 0 });
+    return true;
+  }
+
+  // Campaign table dressing: the Breakthrough exit zone (a glowing quarter-disc
+  // around the enemy corner, chevrons flowing into it, a flare at the corner).
+  // `mission` = publicState's state.campaign, or null to clear.
+  setMission(mission) {
+    if (this.missionGroup) { this.tableGroup.remove(this.missionGroup); this.missionGroup = null; this.missionAnim = null; }
+    const ex = mission?.exit;
+    if (!ex || !this.field) return;
+    const { width: w, height: h } = this.field;
+    const g = new THREE.Group(); g.position.set(ex.x, 0, ex.y);
+    const COL = 0x4fffc8;
+    // Into the table: the corner's own quadrant (engine angles, world XZ).
+    const mid = Math.atan2(ex.y < h / 2 ? 1 : -1, ex.x < w / 2 ? 1 : -1);
+    const from = mid - Math.PI / 4;
+    const flat = (m, y) => { m.rotation.x = Math.PI / 2; m.position.y = y; return m; };
+    const tex = (() => {
+      const c = document.createElement("canvas"); c.width = c.height = 256;
+      const x = c.getContext("2d"), grd = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+      grd.addColorStop(0, "rgba(79,255,200,.55)"); grd.addColorStop(0.7, "rgba(79,255,200,.16)"); grd.addColorStop(0.97, "rgba(79,255,200,.34)"); grd.addColorStop(1, "rgba(79,255,200,0)");
+      x.fillStyle = grd; x.fillRect(0, 0, 256, 256);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+    })();
+    const fillMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+    g.add(flat(new THREE.Mesh(new THREE.CircleGeometry(ex.r, 48, from, Math.PI / 2), fillMat), 0.03));
+    const edgeMat = new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
+    g.add(flat(new THREE.Mesh(new THREE.RingGeometry(ex.r - 0.18, ex.r + 0.06, 64, 1, from, Math.PI / 2), edgeMat), 0.05));
+    // A sweeping wave: a ring that shrinks from the rim into the corner.
+    const waveMat = new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+    const wave = flat(new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 48, 1, from, Math.PI / 2), waveMat), 0.045); g.add(wave);
+    // Chevrons flowing toward the corner along three lanes.
+    const chev = new THREE.Shape([[-0.5, -0.55], [0.1, 0], [-0.5, 0.55], [-0.25, 0.55], [0.35, 0], [-0.25, -0.55]].map(([a, b]) => new THREE.Vector2(a, b)));
+    const chevGeo = new THREE.ShapeGeometry(chev);
+    const chevrons = [];
+    for (const lane of [-0.42, 0, 0.42]) {
+      const a = mid + lane;
+      for (let k = 0; k < 3; k++) {
+        const d = ex.r * (0.35 + k * 0.22);
+        const mat = new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+        const m = new THREE.Mesh(chevGeo, mat);
+        m.rotation.x = Math.PI / 2; m.rotation.z = a + Math.PI; // point back at the corner
+        m.position.set(Math.cos(a) * d, 0.06, Math.sin(a) * d); m.scale.setScalar(0.9);
+        g.add(m); chevrons.push({ m, k });
+      }
+    }
+    // Evac flare: a beacon pole in the corner with a light column.
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 3, 6), new THREE.MeshStandardMaterial({ color: 0x3a3632, metalness: 0.7 }));
+    const inset = 0.9;
+    pole.position.set(Math.cos(mid) * inset, 1.5, Math.sin(mid) * inset); g.add(pole);
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0x103028, emissive: COL, emissiveIntensity: 2 });
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), lampMat); lamp.position.set(pole.position.x, 3.1, pole.position.z); g.add(lamp);
+    const beamMat = new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.9, 14, 16, 1, true), beamMat); beam.position.set(pole.position.x, 7, pole.position.z); g.add(beam);
+    const light = new THREE.PointLight(COL, 10, ex.r * 1.4); light.position.set(Math.cos(mid) * ex.r * 0.35, 2.5, Math.sin(mid) * ex.r * 0.35); g.add(light);
+    this.tableGroup.add(g);
+    this.missionGroup = g;
+    this.missionAnim = (dt, t) => {
+      const k = (t * 0.45) % 1;
+      wave.scale.setScalar(Math.max(0.02, (1 - k) * ex.r)); waveMat.opacity = 0.55 * Math.sin(Math.PI * k);
+      edgeMat.opacity = 0.65 + 0.3 * Math.sin(t * 3);
+      for (const c of chevrons) c.m.material.opacity = 0.18 + 0.7 * Math.max(0, Math.sin(t * 4 + c.k * 1.4));
+      lampMat.emissiveIntensity = 1.2 + 1.4 * Math.max(0, Math.sin(t * 5));
+      beamMat.opacity = 0.08 + 0.06 * Math.sin(t * 2);
+      light.intensity = 8 + 4 * Math.sin(t * 3);
+    };
   }
 
   // Two searchlights on gantries at the empty corners, sweeping the table.
@@ -423,14 +555,15 @@ export class World {
   setObjectiveControl(list) {
     const col = { a: 0x5fd3c0, b: 0xe0533d, contested: 0xffffff };
     this.objectiveMeshes.forEach((m, i) => {
-      const c = col[list[i]] ?? 0xffd35a;
+      const c = col[list[i]] ?? (m.kind === "relay" ? 0x5fd3c0 : 0xffd35a);
       m.ringMat.color.setHex(c); m.pylonMat.emissive.setHex(c); m.light.color.setHex(c);
     });
   }
 
   // Escalation: beacons grow and burn brighter as they pay more (×1/×2/×3).
   setBeaconMultiplier(mult = 1) {
-    for (const m of this.objectiveMeshes) { m.mult = mult; m.gem.scale.setScalar(1 + (mult - 1) * 0.35); m.light.intensity = 6 + (mult - 1) * 5; }
+    this.lastMult = mult;
+    for (const m of this.objectiveMeshes) { if (m.kind !== "beacon") continue; m.mult = mult; m.gem.scale.setScalar(1 + (mult - 1) * 0.35); m.light.intensity = 6 + (mult - 1) * 5; }
   }
 
   // Round-end payout: the beacon flares in the scorer's colour.
@@ -509,8 +642,11 @@ export class World {
     this.camera.position.copy(c.target).add(off);
     if (this.fx.shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(this.fx.shake * 0.6));
     this.camera.lookAt(c.target);
+    const now = this.clock.elapsedTime;
     this.objectiveMeshes.forEach((m, i) => {
-      m.gem.rotation.y += dt; m.gem.position.y += Math.sin(this.clock.elapsedTime * 2 + i) * 0.004;
+      m.gem.rotation.y += dt; m.gem.position.y += Math.sin(now * 2 + i) * 0.004;
+      if (m.dish) { m.dish.rotation.y += dt * 0.8; m.halo.scale.setScalar(1 + 0.25 * Math.sin(now * 4)); m.pylonMat.emissiveIntensity = 1.1 + 0.9 * Math.max(0, Math.sin(now * 5)); }
+      if (m.body) m.pylonMat.emissiveIntensity = 1.1 + 0.6 * Math.sin(now * 3 + i);
       if (m.pulse) {
         const p = m.pulse; p.t += dt;
         const k = Math.max(0, 1 - p.t / 1.6);
@@ -520,6 +656,18 @@ export class World {
         if (p.t < 1 && Math.random() < dt * 30) this.fx.particle(m.gem.getWorldPosition(new THREE.Vector3()), { color: p.color, size: 0.7, life: 0.9, grow: 2, vel: new THREE.Vector3((Math.random() - 0.5) * 4, 3 + Math.random() * 3, (Math.random() - 0.5) * 4) });
         if (k <= 0) { m.pulse = null; m.gem.scale.setScalar(1 + ((m.mult || 1) - 1) * 0.35); m.light.intensity = 6 + ((m.mult || 1) - 1) * 5; }
       }
+    });
+    this.missionAnim?.(dt, now);
+    // Claimed crates: a hop, a spin, gone.
+    this.pickups = (this.pickups || []).filter((p) => {
+      p.t += dt;
+      const k = Math.min(1, p.t / 0.7);
+      p.m.group.position.y = Math.sin(Math.PI * Math.min(1, k * 1.2)) * 1.6 + k * 1.2;
+      p.m.group.rotation.y += dt * 12;
+      p.m.group.scale.setScalar(Math.max(0.01, 1 - k * k));
+      p.m.light.intensity = 4 + (1 - k) * 30;
+      if (k >= 1) { this.tableGroup.remove(p.m.group); return false; }
+      return true;
     });
     // Chimney smoke and sweeping searchlights.
     for (const c of this.chimneys || []) {

@@ -3,6 +3,7 @@
 // button to watch the whole battle back in the replay theatre.
 import { el } from "./dom.js";
 import { icon } from "./icons.js";
+import { outcomeWords } from "./mission.js";
 
 // Validated chart pair on the dark panel (dataviz validator: lightness, CVD,
 // contrast all pass). Identity is also carried by the legend + end labels.
@@ -105,7 +106,7 @@ export function debrief(stats, { game, side, reason }) {
   const mvp = stats.mvp();
   const rows = [...stats.rigs.values()].sort((x, y) => (x.owner === side ? -1 : 1) - (y.owner === side ? -1 : 1) || y.dmg - x.dmg);
   return el("div", { class: "debrief" },
-    el("p", { class: "db-lead" }, `${reason === "annihilation" ? "Squadron wiped out" : reason === "draw" ? "Dead even" : "Decided on victory points"} · ${vpTxt} · round ${game.round}`),
+    el("p", { class: "db-lead" }, `${outcomeWords({ ...game.outcome, reason: reason ?? game.outcome?.reason }, null, side) || "Decided on victory points"} · ${vpTxt} · round ${game.round}`),
     el("div", { class: "db-facts" },
       mvp ? el("div", { class: "db-fact" }, icon("star"), el("b", {}, "MVP "), el("span", { class: mvp.owner === "b" ? "c-b" : "c-a" }, mvp.name), ` · ${mvp.dmg} SP dealt${mvp.kills ? `, ${mvp.kills} kill${mvp.kills > 1 ? "s" : ""}` : ""}`) : null,
       stats.best ? el("div", { class: "db-fact" }, icon("dmg"), el("b", {}, "Best shot "), `${stats.best.actor} → ${stats.best.target}, ${stats.best.weapon}: ${stats.best.sp} SP (round ${stats.best.round})`) : null,

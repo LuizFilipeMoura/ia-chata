@@ -78,6 +78,13 @@ const P = {
   threat: `<path d="M32 56 L10 16 A40 40 0 0 1 54 16 Z"/><circle cx="32" cy="28" r="6"/><path d="M22 28 C26 22 38 22 42 28 C38 34 26 34 22 28 Z"/>`,
   // Grit: a clenched gauntlet (knuckles over a cuff).
   grit: `<path d="M16 30 V20 C16 16 22 16 22 20 V28 M22 20 V16 C22 12 28 12 28 16 V28 M28 17 C28 13 34 13 34 17 V28 M34 19 C34 15 40 15 40 19 V32"/><path d="M16 28 C12 30 12 38 18 42 L24 48 H40 L44 40 V30 C44 26 40 26 40 30"/><path d="M22 48 V56 H42 V48"/>`,
+  // Campaign missions: the Commander's crown, a salvage crate, the extraction
+  // arrow out through a corner, the Last Stand relay mast, an orbital drop.
+  crown: `<path d="M8 48 L12 18 L24 32 L32 12 L40 32 L52 18 L56 48 Z"/><path d="M8 55 H56"/><circle cx="32" cy="38" r="3" fill="currentColor"/>`,
+  crate: `<path d="M10 20 L32 10 L54 20 V46 L32 56 L10 46 Z"/><path d="M10 20 L32 30 L54 20 M32 30 V56"/><path d="M21 15 L43 25" opacity=".6"/>`,
+  extract: `<path d="M8 56 H40 V24"/><path d="M20 44 L52 12"/><path d="M34 12 H52 V30"/><path d="M14 30 L22 22 M26 50 L34 42" opacity=".6"/>`,
+  relay: `<path d="M32 58 L22 58 L32 22 L42 58 Z"/><path d="M26 44 H38 M28 34 H36" opacity=".7"/><circle cx="32" cy="16" r="4" fill="currentColor"/><path d="M20 8 A16 16 0 0 0 20 24 M44 8 A16 16 0 0 1 44 24"/>`,
+  drop: `<path d="M32 6 V38"/><path d="M22 28 L32 40 L42 28"/><path d="M14 50 C20 44 26 46 32 50 C38 46 44 44 50 50"/><path d="M8 58 H56"/><path d="M22 8 L26 16 M42 8 L38 16" opacity=".6"/>`,
   // Stagger: a ringing plate with shock lines.
   stagger: `<circle cx="32" cy="34" r="14"/><path d="M32 6 V14 M12 14 L18 20 M52 14 L46 20 M6 34 H12 M52 34 H58"/><path d="M28 30 L34 36 L30 40" />`,
 };
@@ -99,6 +106,6 @@ const FAMILY = {
   heat: ["heat", "engine", "overclock", "meltdown", "wave"],
   cool: ["shutdown", "purge", "douse", "cryo"],
   repair: ["repair", "patch", "sp", "nanite"],
-  info: ["advisor", "beacon", "dice", "arms", "star", "grit", "sound", "mute", "check", "active", "book"],
+  info: ["advisor", "beacon", "crown", "crate", "extract", "relay", "drop", "dice", "arms", "star", "grit", "sound", "mute", "check", "active", "book"],
 };
 export const FAMILY_OF = Object.fromEntries(Object.entries(FAMILY).flatMap(([f, ns]) => ns.map((n) => [n, f])));
