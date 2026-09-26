@@ -340,6 +340,7 @@ export class World {
   glide(x, y) { this.cam.goal = { target: new THREE.Vector3(x, 0, y), dist: null }; }
   // The camera is on its way somewhere, or the player just steered it.
   cameraBusy() { return !!this.cam.goal || performance.now() - (this.manualAt || 0) < 700; }
+  userSteering() { return performance.now() - (this.manualAt || 0) < 700; }
 
   updateMouse(e) {
     const r = this.renderer.domElement.getBoundingClientRect();
