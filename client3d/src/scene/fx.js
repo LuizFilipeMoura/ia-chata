@@ -9,6 +9,15 @@ import { Debris } from "./debris.js";
 import { Decals } from "./decals.js";
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+// Lights come from a fixed pool that never leaves the scene: three.js
+// recompiles every material's shader whenever the number of lights changes,
+// which stalled the frame for up to ~650 ms on a burst of hits.
+const LIGHTS = 8;
+const WRECK_LIGHTS = 3;      // of the pool, burning wrecks may hold this many
+// Heavy effects (wounding impacts, explosions) in flight at once: past the
+// budget within the window, extras play a cheap version (glare + sparks).
+const HEAVY_BUDGET = 6;
+const HEAVY_WINDOW = 0.35;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // A random unit vector, optionally biased upward (bias 0..1).
 function randDir(up = 0) {
@@ -26,7 +35,12 @@ export class FX {
     this.beams = [];
     this.texts = [];
     this.shake = 0;
-    this.lights = [];
+    this.lights = Array.from({ length: LIGHTS }, () => {
+      const l = new THREE.PointLight(0xffffff, 0, 10);
+      scene.add(l);
+      return { l, life: 0, max: 1, intensity: 0, wreck: false };
+    });
+    this.now = 0; this.heavy = [];
     this.ephemerals = []; // timed meshes (rings, shells, reticles, tethers), each with its own step(k)
     this.emitters = new Set(); // persistent: step(dt, t) until stopped (burning wrecks)
   }
@@ -51,10 +65,26 @@ export class FX {
     }
   }
 
+  // A brief light pop, from the pool: a free slot, else the dimmest flash.
   flash(pos, color = 0xffcc66, intensity = 30, dist = 10) {
-    const l = new THREE.PointLight(color, intensity, dist);
-    l.position.copy(pos); this.scene.add(l);
-    this.lights.push({ l, life: 0.15, max: 0.15, intensity });
+    let slot = null;
+    for (const s of this.lights) {
+      if (s.wreck) continue;
+      if (s.life <= 0) { slot = s; break; }
+      if (!slot || s.intensity * s.life < slot.intensity * slot.life) slot = s;
+    }
+    if (!slot) return;
+    slot.l.color.set(color); slot.l.distance = dist; slot.l.position.copy(pos);
+    slot.l.intensity = intensity;
+    Object.assign(slot, { life: 0.15, max: 0.15, intensity });
+  }
+
+  // Reserve room for a heavy effect; false when too many are already playing.
+  heavySlot(cost = 1) {
+    this.heavy = this.heavy.filter((t) => this.now - t < HEAVY_WINDOW);
+    if (this.heavy.length + cost > HEAVY_BUDGET) return false;
+    for (let i = 0; i < cost; i++) this.heavy.push(this.now);
+    return true;
   }
 
   // A brief star-shaped glare (muzzles, impacts, blasts).
@@ -123,6 +153,7 @@ export class FX {
   impact(pos, sp, { from = null, color = 0x3a3632 } = {}) {
     const back = from ? from.clone().sub(pos).normalize() : V(0, 0.5, 0);
     this.glare(pos, 0.9 + sp * 0.12, 0xfff2c8, 0.09);
+    if (!this.heavySlot(sp >= 5 ? 2 : 1)) { this.sparks(pos, 6, 0xffdd88, { speed: 6, dir: back, up: 0.5 }); return; }
     this.sparks(pos, 10 + sp * 3, 0xffdd88, { speed: 7 + sp * 0.5, dir: back, up: 0.5 });
     this.flash(pos, 0xffaa44, 20 + sp * 8, 8);
     this.debris.burst(pos, Math.min(7, 1 + Math.floor(sp / 1.5)), { color, speed: 3, up: 4, scale: 0.18 + sp * 0.015, dir: back, hot: sp >= 4 ? 1.2 : 0, linger: 7 });
@@ -135,6 +166,7 @@ export class FX {
   // A shot that struck plating and didn't wound: a glancing spray and a chip.
   ricochet(pos, from = null) {
     const back = from ? from.clone().sub(pos).normalize() : V(0, 0.5, 0);
+    if (!this.heavySlot(1)) { this.sparks(pos, 4, 0xfff4d0, { speed: 8, dir: back, up: 0.2 }); return; }
     const glance = V(-back.z, 0.4, back.x).multiplyScalar(Math.random() < 0.5 ? -1 : 1).add(back.multiplyScalar(0.4)).normalize();
     this.particle(pos, { tile: "star", color: 0xe0e8ff, size: 0.6, life: 0.06, glow: 2.5 });
     this.sparks(pos, 7, 0xfff4d0, { speed: 9, dir: glance, up: 0.2 });
@@ -151,9 +183,11 @@ export class FX {
     }
   }
 
-  explosion(pos, big = false) {
+  // force: always play in full (a kill), still counted against the budget.
+  explosion(pos, big = false, force = big) {
     const k = big ? 2 : 1;
     this.glare(pos, 1.6 * k, 0xfff2c0, 0.12);
+    if (!this.heavySlot(k) && !force) { this.fireball(pos, 0.7, 5); this.sparks(pos, 8); return; }
     this.fireball(pos, big ? 1.5 : 1, big ? 16 : 10);
     this.sparks(pos, 18 * k, 0xffdd88, { speed: 9 * k, up: 0.7 });
     for (let i = 0; i < 8 * k; i++) {
@@ -191,14 +225,16 @@ export class FX {
   // A burning wreck: flame tongues, embers, a black smoke column and a
   // flickering glow. Fierce at first, then burns low. Returns { stop() }.
   wreckFire(getPos, scale = 1) {
-    const light = new THREE.PointLight(0xff7a2a, 0, 9 * scale);
-    this.scene.add(light);
+    // Borrow a pool light if one is spare; later wrecks burn unlit.
+    const slot = this.lights.filter((s) => s.wreck).length < WRECK_LIGHTS ? this.lights.find((s) => !s.wreck) : null;
+    if (slot) { Object.assign(slot, { wreck: true, life: 0 }); slot.l.color.set(0xff7a2a); slot.l.distance = 9 * scale; }
+    const light = slot?.l;
     const acc = { f: 0, t: 0, e: 0, s: 0 };
     return this.emitter((dt, t) => {
       const at = getPos();
       const fierce = t < 14 ? 1 : 0.45;
-      light.position.copy(at).add(V(0, 1.4, 0));
-      light.intensity = (10 + 8 * fierce) * scale * (0.75 + 0.25 * Math.sin(t * 17) * Math.sin(t * 7.3) + Math.random() * 0.2);
+      if (light) light.position.copy(at).add(V(0, 1.4, 0));
+      if (light) light.intensity = (10 + 8 * fierce) * scale * (0.75 + 0.25 * Math.sin(t * 17) * Math.sin(t * 7.3) + Math.random() * 0.2);
       acc.f += dt * 20 * fierce * scale; acc.t += dt * 9 * fierce * scale; acc.e += dt * 5 * fierce; acc.s += dt * (4 + 3 * fierce);
       // The body of the fire: tumbling puffs that shrink as they rise.
       for (; acc.f >= 1; acc.f--) {
@@ -218,7 +254,7 @@ export class FX {
           additive: false, color: 0x4a4540, color2: 0x8a847c, opacity: 0.6, size: 0.9 * scale, grow: 4, life: rnd(3, 4.5), vel: V(0.5, rnd(1.4, 2), 0.15), turb: 1,
         });
       }
-    }, () => this.scene.remove(light));
+    }, () => { if (slot) { slot.wreck = false; slot.l.intensity = 0; } });
   }
 
   // A persistent effect: step(dt, t) every frame until stop(). onStop cleans up.
@@ -406,10 +442,11 @@ export class FX {
     for (const p of this.projectiles) this.scene.remove(p.mesh);
     for (const b of this.beams) this.scene.remove(b.line);
     for (const t of this.texts) this.scene.remove(t.s);
-    for (const l of this.lights) this.scene.remove(l.l);
+    for (const s of this.lights) { s.l.intensity = 0; s.life = 0; s.wreck = false; }
+    this.heavy = [];
     for (const e of this.ephemerals) this.scene.remove(e.obj);
     this.ephemerals = [];
-    this.projectiles = []; this.beams = []; this.texts = []; this.lights = [];
+    this.projectiles = []; this.beams = []; this.texts = [];
   }
 
   // A pilot's radio line over their mech: a dark riveted panel, the speaker
@@ -463,6 +500,7 @@ export class FX {
   }
 
   update(dt) {
+    this.now += dt;
     this.ps.update(dt, this.camera);
     this.debris.update(dt);
     this.decals.update(dt);
@@ -489,10 +527,10 @@ export class FX {
       if (b.life <= 0) { this.scene.remove(b.line); this.beams.splice(i, 1); continue; }
       b.line.material.opacity = b.life / b.max;
     }
-    for (let i = this.lights.length - 1; i >= 0; i--) {
-      const l = this.lights[i]; l.life -= dt;
-      if (l.life <= 0) { this.scene.remove(l.l); this.lights.splice(i, 1); continue; }
-      l.l.intensity = l.intensity * (l.life / l.max);
+    for (const s of this.lights) {
+      if (s.wreck || s.life <= 0) continue;
+      s.life -= dt;
+      s.l.intensity = s.life > 0 ? s.intensity * (s.life / s.max) : 0;
     }
     for (let i = this.texts.length - 1; i >= 0; i--) {
       const t = this.texts[i]; t.life -= dt;
