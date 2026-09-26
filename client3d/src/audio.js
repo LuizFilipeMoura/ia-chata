@@ -145,6 +145,8 @@ export const sfx = {
   // Campaign: the reinforcement klaxon (two falling whoops) and the extraction
   // lift-off (a rising thruster roar).
   alarm() { if (!init() || muted) return; const t = ctx.currentTime; for (let i = 0; i < 2; i++) { tone(t + i * 0.45, 0.4, { freq: 760, to: 420, type: "sawtooth", peak: 0.12 }); tone(t + i * 0.45, 0.4, { freq: 1140, to: 630, type: "square", peak: 0.04 }); } },
+  // Integrity Critical (§8a): a fast warbling master-caution, three short pulses.
+  critical() { if (!init() || muted) return; const t = ctx.currentTime; for (let i = 0; i < 3; i++) { tone(t + i * 0.22, 0.16, { freq: 980, to: 1240, type: "square", peak: 0.1 }); tone(t + i * 0.22 + 0.08, 0.08, { freq: 620, type: "sawtooth", peak: 0.06 }); } },
   liftoff() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 2.2, { freq: 250, sweepTo: 2200, type: "bandpass", q: 0.8, peak: 0.4, attack: 0.5 }); tone(t, 2, { freq: 60, to: 140, type: "sawtooth", peak: 0.12, attack: 0.4 }); },
   // ---- Equipment ----
   // Harden: plates slam shut, two heavy clanks and a ring.

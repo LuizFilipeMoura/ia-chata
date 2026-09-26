@@ -165,6 +165,7 @@
 }
 
 /* 4-up mini component bars */
+.v2-root .v2-rigrow-int { display: block; margin-top: 8px; }
 .v2-root .v2-rigrow-bars {
   display: flex;
   gap: 5px;

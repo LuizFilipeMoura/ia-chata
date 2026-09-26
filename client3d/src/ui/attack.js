@@ -93,6 +93,7 @@ function rigSchematic(target, on) {
 }
 
 // Aimed Shot: pick the spot. Same dice, −3 Aim, no location roll.
+let aimedHover = () => {};
 function aimedPicker(target, rows, onPick) {
   const byLoc = Object.fromEntries(rows.map((r) => [r.c.location, r]));
   const best = rows[0].c.location;
@@ -102,15 +103,48 @@ function aimedPicker(target, rows, onPick) {
     const r = byLoc[l], sp = target[l]?.sp ?? 0, max = target[l]?.max ?? 0;
     const breaks = sp > 0 && r.ed >= sp;
     return el("button", { class: `atk-loc ${l === best ? "best" : ""} ${sp <= 0 ? "broken" : ""}`, onClick: () => onPick(r.c, pickOpts()),
-      onMouseenter: () => pic.replaceChild(rigSchematic(target, l), pic.firstChild) },
+      onMouseenter: () => { pic.replaceChild(rigSchematic(target, l), pic.firstChild); aimedHover(r); } },
       el("div", { class: "atk-title" }, PART_NAME[l],
         breaks ? el("span", { class: "atk-break" }, "💥 BREAKS IT") : null,
         l === best ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null),
       el("div", { class: "atk-lsp" }, el("div", { class: "bar" }, el("i", { style: { width: `${max ? (sp / max) * 100 : 0}%` } })), `${sp}/${max} SP`),
-      el("div", { class: "atk-what" }, sp <= 0 ? `Already broken. ${LOC[l].split(". ")[0]} again: ${l === "hull" || l === "engine" ? "DESTROYS the rig." : "damage spills to the Hull."}` : `At 0: ${LOC[l].split("At 0 ")[1] || LOC[l]}`),
+      el("div", { class: "atk-what" }, sp <= 0 ? `Already broken. ${LOC[l].split(". ")[0]} again: ${l === "hull" || l === "engine" ? "every point tears 2 Integrity." : "damage spills to the Hull."}` : `At 0: ${LOC[l].split("At 0 ")[1] || LOC[l]}`),
+      killBadge(r, target),
       el("div", { class: "atk-ed small" }, edNum(r), el("span", {}, "SP expected")));
   });
   return el("div", { class: "atk-aim" }, pic, el("div", { class: "atk-locs" }, opts));
+}
+
+// Integrity (§8a): can this attack wreck the target? LETHAL = its best case
+// empties the pool; LIKELY KILL = even the average does.
+const canKill = (r, target) => Number.isFinite(target.integrity) && r.max > 0 && r.max >= target.integrity;
+function killBadge(r, target) {
+  if (!canKill(r, target)) return null;
+  const likely = r.ed >= target.integrity;
+  return el("span", { class: `atk-lethal ${likely ? "likely" : ""}`, title: likely ? "Even an average roll wrecks it." : `A good roll wrecks it: up to ${r.max} damage vs ${target.integrity} Integrity left.` }, likely ? "☠ LIKELY KILL" : "☠ LETHAL");
+}
+
+// The target's Integrity bar with this attack ghosted onto it: the pale band is
+// the expected loss, the tick is the most it could take. Hovering an option
+// re-draws it for that option.
+function integrityStrip(target, row) {
+  const wrap = el("div", { class: "atk-int" });
+  const draw = (r) => {
+    const cur = Math.max(0, target.integrity), max = target.integrityMax || 1;
+    const pct = (v) => `${Math.max(0, Math.min(1, v / max)) * 100}%`;
+    const ed = Math.min(cur, r.ed), top = Math.min(cur, r.max);
+    const bar = el("div", { class: "atk-intbar" },
+      el("i", { class: "cur", style: { width: pct(cur) } }),
+      el("i", { class: "ghost", style: { left: pct(cur - ed), width: pct(ed) } }),
+      top > 0 ? el("i", { class: "tick", style: { left: pct(cur - top) } }) : null);
+    wrap.replaceChildren(
+      el("div", { class: "atk-k" }, `${target.name}'s Integrity`, killBadge(r, target)),
+      bar,
+      el("div", { class: "atk-mean" }, `${cur} / ${max} left · this attack ≈${r.ed.toFixed(1)}, up to ${r.max}. At 0 it's wrecked.`));
+  };
+  draw(row);
+  wrap.draw = draw;
+  return wrap;
 }
 
 // Expected SP, plain and with a Gritted reroll (the toggle shows one or the other).
@@ -135,16 +169,17 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
     tile(coverArt(first.cover), "Cover", first.cover ? (first.cover === 2 ? "Heavy" : "Light") : "None", first.cover ? "#f5b041" : "#7fcf6a",
       first.cover ? `Terrain in the way: harder to hit.${coverWhy ? ` ${coverWhy[0].toUpperCase()}${coverWhy.slice(1)}; see the dots on the board.` : ""}` : "Clean line of fire."));
   const aimed = rows.filter((r) => r.c.action === "aimed"), plain = rows.filter((r) => r.c.action !== "aimed");
+  const strip = Number.isFinite(target.integrity) ? integrityStrip(target, rows[0]) : null;
   const cards = plain.map((r, i) => {
     const melee = r.c.weapon === "melee";
     const p = effectiveWeaponProfile(melee ? "melee" : "longRange", r.name, rig) || {};
     const kind = melee ? "melee" : r.c.action === "aimed" ? "aimed" : "fire";
     const title = kind === "aimed" ? `Aimed Shot at the ${r.c.location}` : melee ? `Strike with ${r.name}` : `Fire ${r.name}`;
     const what = melee ? "Swing the melee weapon. Locks you both in melee afterwards. One D12 picks the part it all lands on." : "Full volley. One D12 picks the part it all lands on: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
-    return el("button", { class: `atk-card ${i === 0 ? "best" : ""}`, onClick: () => onPick(r.c, pickOpts()) },
+    return el("button", { class: `atk-card ${i === 0 ? "best" : ""}`, onClick: () => onPick(r.c, pickOpts()), onMouseenter: () => strip?.draw(r) },
       svg(ICON[kind], "atk-ic"),
       el("div", { class: "atk-body" },
-        el("div", { class: "atk-title" }, title, i === 0 ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null),
+        el("div", { class: "atk-title" }, title, i === 0 ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null, killBadge(r, target)),
         el("div", { class: "atk-what" }, rich(what)),
         el("div", { class: "atk-stats" },
           el("span", { title: "Shots: dice rolled to hit" }, el("i", {}, icon("shots"), "Shots"), String(p.rof ?? "?")),
@@ -158,10 +193,11 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
     gritOn = !gritOn; wrap.classList.toggle("grit-on", gritOn); toggle.classList.toggle("primary", gritOn); toggle.classList.toggle("ghost", !gritOn);
   } }, icon("grit"), `Spend Grit: reroll misses (×${grit} left)`) : null;
   wrap.append(...[toggle,
-    el("h4", { class: "atk-sec" }, "The situation"), tiles,
+    strip, el("h4", { class: "atk-sec" }, "The situation"), tiles,
     cards.length ? el("h4", { class: "atk-sec" }, "Choose your attack") : null, cards.length ? el("div", { class: "atk-cards" }, cards) : null,
     aimed.length ? el("h4", { class: "atk-sec" }, "Aimed Shot: choose where it hits") : null,
     aimed.length ? el("p", { class: "atk-lead" }, rich(`Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −3 Aim (far fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`)) : null,
     aimed.length ? aimedPicker(target, aimed, onPick) : null].filter(Boolean));
+  aimedHover = (r) => strip?.draw(r);
   return wrap;
 }

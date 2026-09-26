@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS } from "/shared/game-state.js";
+import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS, UNIT_WEAPONS, integrityTier } from "/shared/game-state.js";
 import { UNIT_KINDS, kindOf, partNamesOf } from "/shared/unit-kinds.js";
 import { weaponAccuracyAt } from "/shared/combat.js";
 import { WOUND_DIE } from "/shared/rules.js";
+import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
+import { IntegrityBar } from "../components/IntegrityBar";
 import { useRoomState } from "../../state/RoomStateContext";
 import { useMySide } from "../../hooks/useMySide";
 import { useV2Commands } from "../hooks/useV2Commands";
@@ -361,7 +363,11 @@ export function AttackWizard({
     const e = enemies.find((x) => x.name === name);
     if (!e) return "";
     // Cold kinds have no weightClass, label them by their kind instead.
-    return e.weightClass ? cap(e.weightClass) : (UNIT_KINDS[kindOf(e)]?.label || "");
+    const kind = e.weightClass ? cap(e.weightClass) : (UNIT_KINDS[kindOf(e)]?.label || "");
+    // Integrity (§8a) at a glance, so the nearly-dead target stands out.
+    if (!Number.isFinite(e.integrity)) return kind;
+    const tier = integrityTier(e);
+    return `${kind} · ${e.integrity}/${e.integrityMax}${tier === "critical" ? " CRITICAL" : tier === "bloodied" ? " BLOODIED" : ""}`;
   };
 
   // Resolve a slot's weapon profile from the right catalogue: the shared unit
@@ -396,6 +402,21 @@ export function AttackWizard({
   // target's kind (Tank: hull/tracks/turret/engine; Walker: hull/legs/mount/engine).
   const targetRig = enemies.find((x) => x.name === state.target);
   const targetLocs = partNamesOf(kindOf(targetRig || rig));
+  // Integrity (§8a) ghost: what this attack, as currently set up, is expected
+  // to take off the target's pool, and the most it could. Drives the LETHAL badge.
+  const ghost = (() => {
+    if (!targetRig || !Number.isFinite(targetRig.integrity)) return null;
+    const slot = flat ? "unit" : state.weapon;
+    const geo = {
+      arc: state.arc, distance: state.inches, cover: Number(state.cover) || 0, round: game?.round ?? 1,
+      location: aimed ? state.loc : undefined,
+    };
+    try {
+      return { ed: expectedDamage(rig, targetRig, slot, geo), max: maxDamage(rig, targetRig, slot, geo) };
+    } catch {
+      return null;
+    }
+  })();
   useEffect(() => {
     if (!targetLocs.includes(state.loc)) patch({ loc: targetLocs[0] || "hull" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -688,6 +709,11 @@ export function AttackWizard({
             }}
             hidden={react}
           />
+          {!react && targetRig && (
+            <div className="v2-aw-int">
+              <IntegrityBar rig={targetRig} ghost={ghost} label={`${targetRig.name}'s Integrity`} />
+            </div>
+          )}
 
           {(
             <>

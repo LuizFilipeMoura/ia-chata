@@ -96,6 +96,13 @@ export function playThreatAlarm(): void {
   play([], urls(THREAT_SFX));
 }
 
+// Integrity (§8a): a rig just dropped to Critical. The warning beep, twice.
+const CRITICAL_SFX = ["beep_warning"];
+export function playCritical(): void {
+  play([], urls(CRITICAL_SFX));
+  window.setTimeout(() => play([], urls(CRITICAL_SFX)), 260);
+}
+
 export function playHeat(): void {
   play([], urls(HEAT_SFX), SFX_GAIN / 3, fadeFor(HEAT_SFX)); // furnace is loud, a third volume
 }

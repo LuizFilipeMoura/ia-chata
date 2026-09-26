@@ -84,6 +84,7 @@ export function frameOf(room, cmd, fromResolutionId) {
       facing: r.facing ?? 0, destroyed: !!r.destroyed,
       heat: r.engine?.heat ?? 0, staggered: !!r.staggered,
       smoked: !!r.smokeNextActivation, hardened: !!r.hardened,
+      integrity: r.integrity ?? null, integrityMax: r.integrityMax ?? null,
       sp: Object.fromEntries(LOCS.map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
     log: (g.resolutions || []).filter((x) => x.id >= fromResolutionId)

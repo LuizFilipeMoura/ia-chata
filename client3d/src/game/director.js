@@ -5,7 +5,7 @@
 // queue, so a whole bot turn plays out move by move.
 import * as THREE from "three";
 import { Mech } from "../scene/mechs.js";
-import { CHASSIS, LOCS, EQUIPMENT, WEAPONS } from "/shared/game-state.js";
+import { CHASSIS, LOCS, EQUIPMENT, WEAPONS, integrityTier } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 import { sfx } from "../audio.js";
@@ -33,6 +33,7 @@ export function frameFromState(state, sinceResolutionId = -1) {
       id: r.id, name: r.name, owner: r.owner || "a", chassis: r.chassis ?? null, pos: r.pos, facing: r.facing ?? 0,
       destroyed: !!r.destroyed, heat: r.engine?.heat ?? 0,
       smoked: !!r.smokeNextActivation, hardened: !!r.hardened,
+      integrity: r.integrity ?? null, integrityMax: r.integrityMax ?? null,
       sp: Object.fromEntries(LOCS.map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
     log: (g.resolutions || []).filter((x) => x.id > sinceResolutionId),
@@ -164,8 +165,12 @@ export class Director {
   applyStatus(m, r) {
     const cap = HEAT_CAPACITY[m.weightClass] ?? 6;
     m.setHeat(r.heat / cap);
-    const tot = LOCS.reduce((a, l) => a + (r.sp[l]?.[0] || 0), 0), max = LOCS.reduce((a, l) => a + (r.sp[l]?.[1] || 0), 0);
+    // Integrity (§8a) drives the damage look; frames without it fall back to total SP.
+    const hasInt = Number.isFinite(r.integrity) && r.integrityMax > 0;
+    const tot = hasInt ? r.integrity : LOCS.reduce((a, l) => a + (r.sp[l]?.[0] || 0), 0);
+    const max = hasInt ? r.integrityMax : LOCS.reduce((a, l) => a + (r.sp[l]?.[1] || 0), 0);
     m.setHurt(max ? 1 - tot / max : 0);
+    m.tier = hasInt ? integrityTier(r) : "ok";
     m.setParts?.(Object.fromEntries(LOCS.map((l) => [l, (r.sp[l]?.[1] || 0) > 0 && (r.sp[l]?.[0] || 0) <= 0])));
     m.setCrown?.(this.commanderId != null && r.id === this.commanderId && !r.destroyed);
     m.data = r;
@@ -262,6 +267,7 @@ export class Director {
     for (const r of frame.rigs) {
       const p = byId.get(r.id);
       if (p && !r.destroyed) for (const loc of LOCS) this.announceBreak(r, p, loc);
+      if (p && !r.destroyed) this.announceTier(r, p);
     }
     for (const r of frame.rigs) {
       const m = this.ensureMech(r);
@@ -424,7 +430,17 @@ export class Director {
         const s = m.stacks[Math.floor(Math.random() * m.stacks.length)];
         this.world.fx.steam(s.getWorldPosition(new THREE.Vector3()));
       }
-      if (m.hurt > 0.45 && !m.destroyed && Math.random() < dt * m.hurt * 3) {
+      // Integrity tiers (§8a) read from across the table: Bloodied trails thin
+      // grey smoke, Critical pours black smoke, throws sparks and flickers fire.
+      if (m.tier === "bloodied" && !m.destroyed && Math.random() < dt * 2.5) {
+        this.world.fx.smoke(m.root.position.clone().add(new THREE.Vector3(0, 2.2, 0)), 1, false);
+      }
+      if (m.tier === "critical" && !m.destroyed) {
+        const top = m.root.position.clone().add(new THREE.Vector3(0, 2, 0));
+        if (Math.random() < dt * 7) this.world.fx.smoke(top, 1, true);
+        if (Math.random() < dt * 1.6) this.world.fx.sparks(top.clone().add(new THREE.Vector3((Math.random() - 0.5) * m.radius, -0.4, (Math.random() - 0.5) * m.radius)), 6);
+        if (Math.random() < dt * 5) this.world.fx.particle(top.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.6, -0.3, (Math.random() - 0.5) * 0.6)), { color: Math.random() < 0.5 ? 0xff5a1a : 0xffb030, size: 0.5, life: 0.45, grow: 0.8, vel: new THREE.Vector3(0, 1.4, 0) });
+      } else if (m.tier !== "bloodied" && m.hurt > 0.45 && !m.destroyed && Math.random() < dt * m.hurt * 3) {
         this.world.fx.smoke(m.root.position.clone().add(new THREE.Vector3(0, 2.2, 0)), 1, true);
       }
       if (m.broken?.engine && !m.destroyed && Math.random() < dt * 3) this.world.fx.smoke(m.stacks[0].getWorldPosition(new THREE.Vector3()), 1, true);
@@ -844,6 +860,24 @@ export class Director {
   }
 
   // A part just hit 0: a stinger banner, a red tag over the rig, a crunch.
+  // Integrity (§8a): a rig dropping into Bloodied / Critical gets a callout;
+  // Critical also sounds the master-caution and its pilot says so.
+  announceTier(r, prev) {
+    if (!Number.isFinite(r.integrity) || !Number.isFinite(prev.integrity)) return;
+    const RANK = { ok: 0, bloodied: 1, critical: 2, wrecked: 3 };
+    const now = integrityTier(r), was = integrityTier(prev);
+    if (RANK[now] <= RANK[was] || now === "wrecked") return;
+    const m = this.mechs.get(r.id);
+    if (!m) return;
+    const crit = now === "critical";
+    this.world.fx.text(m.root.position.clone().add(new THREE.Vector3(0, 5.8, 0)), crit ? "CRITICAL" : "BLOODIED", crit ? "#ff3d1f" : "#f5b041");
+    if (crit) {
+      this.sound(() => sfx.critical());
+      this.world.fx.sparks(m.root.position.clone().add(new THREE.Vector3(0, 2, 0)), 24, 0xff6a3a);
+      setTimeout(() => this.bark(m, "critical"), 500 / this.speed);
+    }
+  }
+
   announceBreak(r, prev, loc) {
     const key = `${r.id}:${loc}`;
     if (this.announced?.has(key)) return;

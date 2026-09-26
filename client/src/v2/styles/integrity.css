@@ -1,0 +1,52 @@
+/* Integrity (§8a): the whole-rig kill pool bar, danger tiers, attack ghost. */
+.v2-root .v2-int { display: block; }
+.v2-root .v2-int-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--v2-text-sm);
+}
+.v2-root .v2-int-num { margin-left: auto; }
+.v2-root .v2-int-track {
+  position: relative;
+  display: block;
+  height: 8px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+.v2-root .v2-int--compact .v2-int-track { height: 6px; }
+.v2-root .v2-int-fill,
+.v2-root .v2-int-ghost,
+.v2-root .v2-int-tick { position: absolute; top: 0; bottom: 0; display: block; }
+.v2-root .v2-int-fill { left: 0; background: linear-gradient(90deg, #4c9a5f, #6cc47f); transition: width .4s; }
+.v2-root .v2-int[data-tier="bloodied"] .v2-int-fill { background: linear-gradient(90deg, #c99327, #e8bd57); }
+.v2-root .v2-int[data-tier="critical"] .v2-int-fill { background: linear-gradient(90deg, #8f2f22, #f26a50); animation: v2-int-pulse .8s ease-in-out infinite alternate; }
+.v2-root .v2-int[data-tier="wrecked"] .v2-int-fill { background: #5a2a20; }
+.v2-root .v2-int-ghost { background: repeating-linear-gradient(45deg, rgba(255,207,74,.9) 0 4px, rgba(255,207,74,.45) 4px 8px); }
+.v2-root .v2-int-tick { width: 2px; background: #ff3d1f; box-shadow: 0 0 4px #ff3d1f; }
+.v2-root .v2-int-tag { color: #e8bd57; letter-spacing: .08em; }
+.v2-root .v2-int-tag--crit { color: #f26a50; animation: v2-int-pulse .8s ease-in-out infinite alternate; }
+.v2-root .v2-int-lethal {
+  color: #ffb09c;
+  background: rgba(200, 50, 30, .3);
+  border: 1px solid #e74c3c;
+  border-radius: 4px;
+  padding: 0 4px;
+  letter-spacing: .06em;
+}
+.v2-root .v2-int-lethal--likely { color: #fff; background: #c8412f; animation: v2-int-pulse .8s ease-in-out infinite alternate; }
+.v2-root .v2-int-note { display: block; margin-top: 3px; opacity: .8; }
+@keyframes v2-int-pulse { from { opacity: 1; } to { opacity: .45; } }
+
+/* Your own rig at Critical: the battle screen's edge burns red. */
+.v2-root .v2-crit-vignette::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: inset 0 0 120px 24px rgba(220, 40, 20, .45);
+  animation: v2-int-pulse 1.2s ease-in-out infinite alternate;
+}
+.v2-root .v2-battle-hull .v2-int { min-width: 140px; }
+.v2-root .v2-aw-int { display: block; margin: 4px 0 12px; }

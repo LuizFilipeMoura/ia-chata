@@ -62,6 +62,9 @@ export interface Rig {
   preparation?: Preparation | null;
   activated: boolean;
   destroyed: boolean;
+  /** Integrity (§8a): the whole-rig kill pool; every SP lost drains it, 0 = wrecked. */
+  integrity?: number;
+  integrityMax?: number;
   engagedWith?: number | null;
   /** Simulated position in field inches (centre of the rig); digital rooms only. */
   pos?: { x: number; y: number } | null;

@@ -12,8 +12,8 @@ import type { Rig, Resolution, PrepType } from "../../state/types";
 import { partNamesOf, kindOf } from "/shared/unit-kinds.js";
 import { phaseSummary, actionBudget } from "/shared/battle-view.js";
 import { useMySide } from "../../hooks/useMySide";
-import { HEAT_CAPACITY } from "/shared/game-state.js";
-import { playDamage, playHeat, playEngineStart, playBraceForImpact, playHeatExplosion, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
+import { HEAT_CAPACITY, integrityTier } from "/shared/game-state.js";
+import { playCritical, playDamage, playHeat, playEngineStart, playBraceForImpact, playHeatExplosion, startEngineLoop, stopEngineLoop } from "../audio/actionAudio";
 
 interface RecapLine {
   text: string;
@@ -200,6 +200,21 @@ export function useV2BattleWatchers(): void {
     }
     spBaseline.current = next;
     if (prev && dropped) playDamage(); // skip the first render (prev === null)
+  }, [rigs]);
+
+  // ---- Integrity SFX (§8a): warning beep when any rig drops to Critical ----
+  const tierBaseline = useRef<Map<number, string> | null>(null);
+  useEffect(() => {
+    const prev = tierBaseline.current;
+    const next = new Map<number, string>();
+    let crit = false;
+    for (const r of rigs) {
+      const tier = integrityTier(r);
+      next.set(r.id, tier);
+      if (prev && prev.has(r.id) && prev.get(r.id) !== "critical" && prev.get(r.id) !== "wrecked" && tier === "critical") crit = true;
+    }
+    tierBaseline.current = next;
+    if (prev && crit) playCritical();
   }, [rigs]);
 
   // ---- Heat SFX: furnace roar when a rig crosses into overheat ----

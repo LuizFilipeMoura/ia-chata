@@ -3,6 +3,7 @@ import { heatMeter } from "/shared/game-state.js";
 import { kindOf, partNamesOf, UNIT_KINDS } from "/shared/unit-kinds.js";
 import { buildLoadout } from "../../lib/loadout";
 import { spColor } from "../lib/viewModels";
+import { IntegrityBar } from "./IntegrityBar";
 import type { Rig, Component } from "../../state/types";
 
 const CLASS_GLYPH: Record<string, [string, string, string]> = {
@@ -50,6 +51,7 @@ export function RigRow({ rig, hostile, active, target, onOpen }: { rig: Rig; hos
           {!cold && m && <span className="v2-rigrow-heat" data-zone={m.zone}>🔥{m.heat}</span>}
         </span>
         <span className="v2-rigrow-loadout">{loadoutText(rig)}</span>
+        {!rig.destroyed && <span className="v2-rigrow-int"><IntegrityBar rig={rig} compact /></span>}
         <span className="v2-rigrow-bars">
           {locs.map((loc) => {
             const c = (rig as unknown as Record<string, Component | undefined>)[loc];

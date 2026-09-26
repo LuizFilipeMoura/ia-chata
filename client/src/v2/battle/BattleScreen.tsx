@@ -10,6 +10,8 @@ import { MoveTargetOverlay, MoveTargetControls, type Placed } from "./MoveTarget
 import { ActionConsole } from "./ActionConsole";
 import { BattleHud } from "../components/BattleHud";
 import { canRigActivate } from "./activation";
+import { IntegrityBar } from "../components/IntegrityBar";
+import { integrityTier } from "/shared/game-state.js";
 import "../styles/field.css";
 
 export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void } = {}) {
@@ -76,7 +78,7 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
   };
 
   return (
-    <section className="v2-battle">
+    <section className={"v2-battle" + (selected && selected.owner === mySide && integrityTier(selected) === "critical" ? " v2-crit-vignette" : "")}>
       <BattleHud />
       <BattleMap
         field={field}
@@ -94,7 +96,9 @@ export function BattleScreen({ onOpenRig }: { onOpenRig?: (id: number) => void }
         {selected && (
           <div className="v2-battle-vitals">
             <span className="v2-battle-name">{selected.name}</span>
-            <span className="v2-battle-hull">HULL {selected.hull.sp}/{selected.hull.max}</span>
+            {Number.isFinite(selected.integrity)
+              ? <span className="v2-battle-hull"><IntegrityBar rig={selected} compact /></span>
+              : <span className="v2-battle-hull">HULL {selected.hull.sp}/{selected.hull.max}</span>}
             {t && activeRig?.id === selected.id && (
               <span className="v2-battle-actions">{t.actionsMax - t.actionsUsed} actions left</span>
             )}

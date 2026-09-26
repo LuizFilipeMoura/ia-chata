@@ -220,3 +220,19 @@ test("campaign: carried damage and the commander multiplier carry into Integrity
   assert.equal(red.integrityMax, Math.round(28 * 66 / 43));
   assert.equal(red.integrity, red.integrityMax);
 });
+
+test("maxDamage: the most Integrity one attack could take, for the Lethal badge", async () => {
+  const { maxDamage } = await import("./bot/evaluate.js");
+  const { effectiveWeaponProfile } = await import("./game-state.js");
+  const atk = chassisRig("medium-shield-siege", "a");
+  const tgt = chassisRig("light-sword-arc", "b");
+  const p = effectiveWeaponProfile("longRange", atk.weapons.longRange, atk);
+  const geo = { arc: "rear", distance: 2, cover: 0, round: 1 };
+  assert.equal(maxDamage(atk, tgt, "longRange", geo), p.rof * (p.dmg + (p.perks?.includes("Rend") ? 1 : 0)));
+  assert.equal(maxDamage(atk, tgt, "longRange", { ...geo, distance: 999 }), 0, "out of range can't hurt");
+  // Kneecapper never kills: its ceiling stops one short of the pool.
+  const mg = chassisRig("light-wreckingball-double", "a");
+  mg.weaponUpgrades.longRange = "kneecapper";
+  tgt.integrity = 1;
+  assert.equal(maxDamage(mg, tgt, "longRange", { arc: "side", distance: 6, cover: 0, round: 1 }), 0);
+});

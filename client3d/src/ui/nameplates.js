@@ -1,13 +1,16 @@
-// Floating nameplates: a tiny HTML card over every mech, name, total SP bar,
+// Floating nameplates: a tiny HTML card over every mech, name, Integrity bar
+// (§8a, the kill clock, coloured by danger tier with a CRITICAL flag),
 // heat pips (red past capacity), and status icons (active, activated, prepared,
 // engaged, priority). Positioned by projecting each mech's label anchor to the
 // screen every frame, so it tracks walks, camera moves and replays alike.
 import * as THREE from "three";
 import { el } from "./dom.js";
-import { LOCS } from "/shared/game-state.js";
+import { LOCS, integrityTier } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { settings } from "../settings.js";
 import { icon } from "./icons.js";
+
+const TIER_COLOR = { ok: "#58d68d", bloodied: "#f5b041", critical: "#e74c3c", wrecked: "#5a2a20" };
 
 export class Nameplates {
   constructor(parent, world, director) {
@@ -31,17 +34,24 @@ export class Nameplates {
       if (!c) {
         c = { root: el("div", { class: `plate o-${r.owner || "a"}` }) };
         c.name = el("b"); c.icons = el("span", { class: "pi" }); c.tag = el("div", { class: "ptag" });
-        c.hp = el("i"); c.heat = el("div", { class: "ph" });
-        c.root.append(c.tag, el("div", { class: "pt" }, c.name, c.icons), el("div", { class: "pb" }, c.hp), c.heat);
+        c.hp = el("i"); c.heat = el("div", { class: "ph" }); c.num = el("em", { class: "pn" });
+        c.root.append(c.tag, el("div", { class: "pt" }, c.name, c.icons), el("div", { class: "pbw" }, el("div", { class: "pb" }, c.hp), c.num), c.heat);
         this.layer.append(c.root);
         this.cards.set(r.id, c);
       }
+      // Integrity (§8a) is what kills, so it's the bar. Replay frames that
+      // predate it fall back to total SP.
       const sp = (l) => (Array.isArray(r.sp?.[l]) ? r.sp[l] : [r[l]?.sp ?? 0, r[l]?.max ?? 0]);
-      const tot = LOCS.reduce((a, l) => a + sp(l)[0], 0), max = LOCS.reduce((a, l) => a + sp(l)[1], 0) || 1;
-      const f = tot / max;
+      const hasInt = Number.isFinite(r.integrity) && r.integrityMax > 0;
+      const tot = hasInt ? r.integrity : LOCS.reduce((a, l) => a + sp(l)[0], 0);
+      const max = (hasInt ? r.integrityMax : LOCS.reduce((a, l) => a + sp(l)[1], 0)) || 1;
+      const tier = hasInt ? integrityTier(r) : (r.destroyed ? "wrecked" : "ok");
       c.name.textContent = r.name;
-      c.hp.style.width = `${f * 100}%`;
-      c.hp.style.background = f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c";
+      c.hp.style.width = `${Math.max(0, tot / max) * 100}%`;
+      c.hp.style.background = TIER_COLOR[tier];
+      c.num.textContent = hasInt && !r.destroyed ? String(tot) : "";
+      c.root.classList.toggle("bloodied", tier === "bloodied");
+      c.root.classList.toggle("critical", tier === "critical");
       const cap = HEAT_CAPACITY[r.weightClass] ?? (r.chassis?.startsWith("medium") ? 5 : 6);
       const heat = r.heat ?? r.engine?.heat ?? 0;
       c.heat.replaceChildren(...Array.from({ length: Math.max(cap, heat) }, (_, i) => el("s", { class: i < heat ? (i >= cap ? "over" : "on") : "" })));
@@ -49,7 +59,12 @@ export class Nameplates {
       if (r.id === activeId) icons.push(["active", "Acting now"]);
       const cmd = r.id === commanderId && !r.destroyed;
       if (priorityIds.includes(r.id) && !cmd) icons.push(["star", "Priority target"]);
-      if (c.cmd !== cmd) { c.cmd = cmd; c.tag.replaceChildren(...(cmd ? [icon("crown"), commanderTitle.toUpperCase()] : [])); c.root.classList.toggle("cmd", cmd); }
+      const crit = tier === "critical";
+      if (c.cmd !== cmd || c.crit !== crit) {
+        c.cmd = cmd; c.crit = crit;
+        c.tag.replaceChildren(...(cmd ? [icon("crown"), commanderTitle.toUpperCase()] : []), ...(crit ? [el("span", { class: "pcrit" }, "CRITICAL")] : []));
+        c.root.classList.toggle("cmd", cmd);
+      }
       if (r.preparation) icons.push([r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare", r.preparation.improved ? "Improved reaction (Grit)" : "Prepared reaction"]);
       if (r.engagedWith != null) icons.push(["melee", "Locked in melee"]);
       if (r.staggered) icons.push(["stagger", "Staggered: −1 Aim on its next attack"]);

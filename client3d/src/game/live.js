@@ -10,10 +10,10 @@ import { availableActions, overheatOdds, equipmentSpends, hopLanding, aoeVictims
 import { candidatesFor } from "/shared/bot/candidates.js";
 import { chooseAction } from "/shared/bot/index.js";
 import { scoreCandidate, scoreParts, PRESETS } from "/shared/bot/score.js";
-import { expectedDamage } from "/shared/bot/evaluate.js";
+import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
 import { findPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
-import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone } from "/shared/game-state.js";
+import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
@@ -410,6 +410,7 @@ export class LiveMatch {
     const rig = this.rig(this.selected);
     const bar = this.hud.actions;
     clear(bar);
+    document.body.classList.remove("crit-vignette");
     if (this.hoverPreview) { this.hoverPreview = false; this.clearPreview(); } // its button is gone
     if (!this.director.idle) {
       bar.append(el("div", { class: "act-foot" },
@@ -445,12 +446,21 @@ export class LiveMatch {
     // Every readout is labelled: who this is, what it carries, actions left,
     // boiler heat against capacity.
     const hm = heatMeter(rig);
+    // Integrity (§8a): the kill clock, with its danger tier. Your own rig at
+    // Critical also rings the screen edge red.
+    const tier = integrityTier(rig);
+    const intPct = rig.integrityMax ? Math.max(0, rig.integrity / rig.integrityMax) * 100 : 0;
+    document.body.classList.toggle("crit-vignette", tier === "critical" && rig.owner === this.side);
     bar.append(el("div", { class: "act-head" },
       el("div", { class: "ah-id" },
         el("span", { class: `swatch big sw-${rig.name}` }),
         el("button", { class: "btn ghost in-open", title: "Full details: weapons, upgrades, equipment, damage", onClick: () => openInspector(rig) }, "ⓘ"),
         el("div", {}, el("div", { class: "act-name" }, rig.name),
           el("div", { class: "ah-weps" }, el("span", { title: "Long-range weapon" }, icon("fire"), rig.weapons?.longRange), el("span", { title: "Melee weapon" }, icon("melee"), rig.weapons?.melee)))),
+      Number.isFinite(rig.integrity) ? el("div", { class: `ah-stat ah-int t-${tier}`, title: "Integrity: every SP lost anywhere drains it; at 0 the rig is destroyed. Repair never restores it." },
+        el("div", { class: "ah-k" }, "Integrity"),
+        el("div", { class: "ah-intbar" }, el("i", { style: { width: `${intPct}%` } })),
+        el("div", { class: "ah-v" }, `${rig.integrity} / ${rig.integrityMax}${tier === "bloodied" ? " · BLOODIED" : tier === "critical" ? " · CRITICAL" : ""}`)) : null,
       el("div", { class: "ah-stat", title: "Actions left this activation. Most actions use one." },
         el("div", { class: "ah-k" }, "Actions left"),
         el("div", { class: "pips" }, Array.from({ length: turn.actionsMax }, (_, i) => el("span", { class: `pip ${i < left ? "on" : ""}` }))),
@@ -869,9 +879,10 @@ export class LiveMatch {
     const rows = list.map((c) => {
       const o = { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round, aimed: c.action === "aimed", aimedLoc: c.location };
       const ed = expectedDamage(rig, target, c.weapon, o);
+      const max = maxDamage(rig, target, c.weapon, { ...o, location: c.action === "aimed" ? c.location : undefined });
       const edGrit = grit ? expectedDamage(rig, target, c.weapon, { ...o, grit: true }) : null;
       const score = scoreCandidate(room, rig, c, this.advisorWeights);
-      return { c, ed, edGrit, score };
+      return { c, ed, edGrit, max, score };
     }).sort((a, b) => b.score - a.score);
     const w = (c) => c.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange;
     // Keep the sight rays on the board while the briefing is up.
@@ -1087,9 +1098,12 @@ export class LiveMatch {
       this.world.ring(a.dest.x, a.dest.y, radiusOf(rig), 0xffd35a, 0.9);
       this.world.path([rig.pos, a.dest], 0xffd35a);
     }
+    const crit = integrityTier(rig) === "critical";
     modal({
       title: "💡 Advisor",
-      body: el("p", {}, `Best option by the Hard bot's evaluation: `, el("b", {}, what), "."),
+      body: el("div", {},
+        crit ? el("p", { class: "adv-crit" }, `⚠ ${rig.name} is CRITICAL (${rig.integrity}/${rig.integrityMax} Integrity). Repair won't bring Integrity back: break line of sight, Disengage, or make this activation count.`) : null,
+        el("p", {}, `Best option by the Hard bot's evaluation: `, el("b", {}, what), ".")),
       actions: [{ label: "Do it", primary: true, onClick: () => this.act(rig, a).then(() => this.cancelMode()) }, { label: "Thanks", ghost: true }],
     });
   }

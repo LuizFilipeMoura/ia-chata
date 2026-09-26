@@ -103,3 +103,29 @@ export function expectedDamage(attacker, target, slot, opts) {
   }
   return hits * woundDmg;
 }
+
+// The most Integrity (§8a) one attack could take if every die hits and wounds:
+// dice × (Damage + Rend + Evisceration). Out of range, or every location an
+// earned zero (a rake into the front arc), it can't hurt. Kneecapper cripples
+// but never kills, so its ceiling stops one short of the target's pool. Drives
+// the Lethal badge: `maxDamage >= target.integrity` means this attack CAN wreck it.
+// (It ignores the ×2 for a point past 0 on a gutted Hull/Engine, so it never
+// overstates.)
+export function maxDamage(attacker, target, slot, opts) {
+  const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
+  if (!profile) return 0;
+  const dist = opts?.distance;
+  if (Number.isFinite(dist) && ((profile.maxRange != null && dist > profile.maxRange) || (profile.minRange && dist < profile.minRange))) return 0;
+  const locs = opts?.location ? [opts.location] : locationDist(target.kind || "rig").map((l) => l.loc);
+  const live = locs.filter((loc) => {
+    const ep = effectivePenAgainst(attacker, target, profile, loc, opts || {});
+    return !ep.negated && ep.effPen != null;
+  });
+  if (!live.length) return 0;
+  const rof = effectiveRof(attacker, profile, { engaged: attacker.engagedWith != null, ...opts, target }) || 1;
+  const rend = profile.perks?.includes("Rend") ? 1 : 0;
+  const evisc = profile.upgradeEffect?.eviscerate && live.some((loc) => target[loc] && target[loc].sp <= target[loc].max / 2) ? 1 : 0;
+  const max = rof * (profile.dmg + rend + evisc);
+  if (profile.upgradeEffect?.kneecapper) return Math.max(0, Math.min(max, (target.integrity ?? max + 1) - 1));
+  return max;
+}

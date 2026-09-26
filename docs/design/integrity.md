@@ -53,6 +53,21 @@ Emergency Patch +1, `set <rig> integrity N` correction, tier log lines (ride on
 the causing resolution, else a standalone `integrity` resolution), Bloodied /
 Critical chip, bot fragility reads the pool.
 
+## UI
+
+- **3D client:** nameplate bar = Integrity (tier colour, number, pulsing
+  CRITICAL tag); action bar Integrity meter; Bloodied trails grey smoke,
+  Critical pours black smoke + sparks + fire; crossing a tier floats
+  BLOODIED / CRITICAL, Critical sounds a master-caution and the pilot barks
+  (`critical` line per pilot); own active rig at Critical → red screen-edge
+  vignette; Advisor warns that Repair won't restore Integrity; attack briefing
+  shows the target's Integrity with the expected loss ghosted and the max tick,
+  plus ☠ LETHAL / LIKELY KILL badges (`maxDamage` in `shared/bot/evaluate.js`).
+- **V2:** `IntegrityBar` on every rig row and the battle dock; Attack wizard
+  shows the target's bar with the ghost + Lethal badge and tier in the target
+  picker; own selected rig at Critical → vignette; warning beep on any rig
+  dropping to Critical.
+
 ## Ideas parked
 
 - Tuned triggers keyed off tiers (Cold Bore → pool full, Bloodletter → pool

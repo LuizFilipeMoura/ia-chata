@@ -25,7 +25,8 @@
       "/shared/combat.js": ["./client/shared.d.ts"],
       "/shared/rules.js": ["./client/shared.d.ts"],
       "/shared/pathfind.js": ["./client/shared.d.ts"],
-      "/shared/geometry.js": ["./client/shared.d.ts"]
+      "/shared/geometry.js": ["./client/shared.d.ts"],
+      "/shared/bot/evaluate.js": ["./client/shared.d.ts"]
     }
   },
   "include": ["client/src", "client/shared.d.ts"],

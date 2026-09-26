@@ -43,6 +43,9 @@ declare module "/shared/game-state.js" {
   export const RIG_DEFAULTS: Record<string, { hull: number; arms: number; legs: number; engine: number }>;
   export const HEAT_CAPACITY: Record<string, number>;
   export function canAddRigForSide(room: { rigs: Rig[]; game?: GameState | null }, sideId: string): boolean;
+  export type IntegrityTier = "ok" | "bloodied" | "critical" | "wrecked";
+  export function integrityTier(rig: Rig | null | undefined): IntegrityTier;
+  export const INTEGRITY_RATIO: Record<string, number>;
   export function heatMeter(rig: Rig): {
     heat: number; cap: number; floor: number; over: number; bonus: number;
     zone: "cold" | "cool" | "warm" | "redline" | "over";
@@ -176,4 +179,12 @@ declare module "/shared/field.js" {
     w?: number; h?: number; rx?: number; ry?: number; rot?: number;
     points?: Array<[number, number]>;
   }>;
+}
+
+declare module "/shared/bot/evaluate.js" {
+  type Geo = { arc?: string; distance?: number; cover?: number; round?: number; location?: string; grit?: boolean };
+  /** Mean SP (= Integrity) one attack takes. */
+  export function expectedDamage(attacker: Rig, target: Rig, slot: string, opts: Geo): number;
+  /** The most Integrity one attack could take (every die hits and wounds). */
+  export function maxDamage(attacker: Rig, target: Rig, slot: string, opts: Geo): number;
 }
