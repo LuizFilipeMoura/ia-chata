@@ -1069,3 +1069,15 @@ body { font-size: 18px; }
 /* End stamp: why it ended. */
 .cp-end-why { font: 700 30px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--brass-hi); text-shadow: 0 2px 0 #000, 0 0 20px rgba(0,0,0,.7); animation: cpIn .6s .35s ease-out both; }
 .cp-end-why.win { color: #b8f0a0; } .cp-end-why.loss { color: #ff9a80; }
+
+/* Coach footer: Back left, forward right; last step = full-width next lesson. */
+.coach .coach-a { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(201,161,74,.25); }
+.coach .coach-a .go { margin-left: auto; }
+.coach .coach-a .back, .coach .coach-a .all { font-size: 14px; padding: 6px 12px; }
+.coach .coach-a.last { display: grid; grid-template-columns: 1fr 1fr; }
+.coach .coach-a.last .back { grid-column: 1; justify-self: start; }
+.coach .coach-a.last .all { grid-column: 2; justify-self: end; }
+.coach .coach-a.last .go { grid-column: 1 / -1; margin-left: 0; width: 100%; justify-content: center; text-align: center; }
+/* Phones: the coach hugs its content above the action bar (a later desktop
+   `top` rule used to pin both edges and stretch it over the whole table). */
+@media (max-width: 800px) { .coach { top: auto; } }

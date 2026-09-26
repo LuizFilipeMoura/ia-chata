@@ -251,7 +251,13 @@ export class Coach {
     this.panel.classList.remove("docked");
     const p = this.panel, pw = p.offsetWidth, ph = p.offsetHeight, m = 16;
     let x, y;
-    if (!holes.length) { p.style.left = ""; p.style.right = ""; p.style.bottom = ""; p.style.top = `${Math.max(8, Math.min(120, innerHeight - ph - 8))}px`; return; }
+    if (!holes.length) {
+      p.style.left = ""; p.style.right = ""; p.style.bottom = "";
+      // Phones: the stylesheet parks it above the action bar; pinning a top
+      // here as well stretched it over the whole table.
+      p.style.top = innerWidth <= 800 ? "" : `${Math.max(8, Math.min(120, innerHeight - ph - 8))}px`;
+      return;
+    }
     const r = holes.reduce((a, b) => ({ left: Math.min(a.left, b.left), top: Math.min(a.top, b.top), right: Math.max(a.right, b.right), bottom: Math.max(a.bottom, b.bottom) }));
     const cx = (r.left + r.right) / 2;
     if (r.top - ph - m > 8) { x = cx - pw / 2; y = r.top - ph - m; }
@@ -315,12 +321,15 @@ export class Coach {
       s.extra ? s.extra(this.match) : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,
       already ? el("p", { class: "done-tick" }, "✓ Already done. Nice!") : null,
-      el("div", { class: "coach-a" },
-        this.i > 0 ? el("button", { class: "btn ghost", onClick: () => { this.i--; this.render(); } }, "‹ Back") : null,
-        s.last ? el("div", { class: "coach-end" },
-          el("button", { class: "btn ghost", onClick: () => this.onMenu?.() }, "All lessons"),
-          this.onNext ? el("button", { class: "btn primary", onClick: () => this.onNext() }, "Next lesson ›") : el("button", { class: "btn primary", onClick: () => this.onMenu?.() }, "Done")) :
-        s.next || s.skippable ? el("button", { class: "btn primary", onClick: () => this.advance() }, s.skippable ? "Skip ›" : "Next ›") : el("span", { class: "muted" }, "Do it to continue…")),
+      // Footer: Back on the left, the way forward on the right. The last step
+      // puts the next lesson full-width underneath, so it never wraps oddly.
+      el("div", { class: `coach-a${s.last ? " last" : ""}` },
+        this.i > 0 ? el("button", { class: "btn ghost back", onClick: () => { this.i--; this.render(); } }, "‹ Back") : null,
+        s.last ? [
+          el("button", { class: "btn ghost all", onClick: () => this.onMenu?.() }, "All lessons"),
+          this.onNext ? el("button", { class: "btn primary go", onClick: () => this.onNext() }, "Next lesson ›") : el("button", { class: "btn primary go", onClick: () => this.onMenu?.() }, "Done ✓"),
+        ] :
+        s.next || s.skippable ? el("button", { class: "btn primary go", onClick: () => this.advance() }, s.skippable ? "Skip ›" : "Next ›") : el("span", { class: "muted go" }, "Do it to continue…")),
     );
     // Keep the highlight on elements that re-render (the action bar rebuilds).
     clearInterval(this.hlTimer);
