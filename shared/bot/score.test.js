@@ -163,3 +163,18 @@ test("outside campaigns there is no hunt pull (objectives drive the bot)", () =>
   room.game.turn = { side: "b", activeRigId: foe.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
   assert.equal(scoreParts(room, foe, { action: "move", dest: foe.pos, facing: 180 }).vp, 0);
 });
+
+// Per-enemy threat breakdown for the move preview (danger map + badges): the
+// same yardstick as the bot's exposure, split by who deals it.
+test("threatsAt splits exposure by enemy and sums to exposureOf", async () => {
+  const { threatsAt, exposureOf } = await import("./score.js");
+  const { room, atk, foe } = scoreSetup();
+  foe.facing = 180;                                        // looking straight at Atk
+  const list = threatsAt(room, atk, atk.pos, atk.facing);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].e, foe);
+  assert.ok(list[0].v > 0, "the foe can hit Atk here");
+  assert.ok(Math.abs(list.reduce((s, t) => s + t.v, 0) - exposureOf(room, atk)) < 1e-9);
+  foe.facing = 0;                                          // turned away: nothing
+  assert.equal(threatsAt(room, atk, atk.pos, atk.facing)[0].v, 0);
+});

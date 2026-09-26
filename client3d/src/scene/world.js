@@ -689,6 +689,36 @@ export class World {
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color, dashSize: 0.5, gapSize: 0.3 }));
     line.computeLineDistances(); this.overlay.add(line); return line;
   }
+  // A small floating tag over a point: rows of { text, color } on a dark
+  // riveted chip (threat / shot badges in the move preview).
+  badge(x, y, h, rows) {
+    const c = document.createElement("canvas"), g = c.getContext("2d");
+    const font = "700 26px Rajdhani, Arial, sans-serif";
+    g.font = font;
+    const w = Math.ceil(Math.max(...rows.map((r) => g.measureText(r.text).width))) + 28, rh = 32;
+    c.width = w; c.height = rows.length * rh + 12;
+    g.fillStyle = "rgba(20,16,12,0.9)"; g.strokeStyle = rows[0].color; g.lineWidth = 3;
+    g.beginPath(); g.roundRect(2, 2, w - 4, c.height - 4, 8); g.fill(); g.stroke();
+    g.font = font; g.textAlign = "center"; g.textBaseline = "middle";
+    rows.forEach((r, i) => { g.fillStyle = r.color; g.fillText(r.text, w / 2, 6 + rh / 2 + i * rh); });
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    const k = 0.026; sp.scale.set(c.width * k, c.height * k, 1); sp.position.set(x, h, y); sp.renderOrder = 12;
+    this.overlay.add(sp); return sp;
+  }
+
+  // Tinted 1" squares on the table, one per { x, y, color } (the danger map).
+  tiles(cells, size = 1, opacity = 0.22) {
+    const m = new THREE.InstancedMesh(new THREE.PlaneGeometry(size * 0.94, size * 0.94), new THREE.MeshBasicMaterial({ transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }), Math.max(1, cells.length));
+    const o = new THREE.Object3D(), col = new THREE.Color();
+    cells.forEach((c, i) => {
+      o.position.set(c.x, 0.04, c.y); o.rotation.set(-Math.PI / 2, 0, 0); o.updateMatrix();
+      m.setMatrixAt(i, o.matrix); m.setColorAt(i, col.setHex(c.color));
+    });
+    m.count = cells.length;
+    this.overlay.add(m); return m;
+  }
+
   // A laser beam from a to b (world points): a bright core, a soft glow, and
   // pulses racing along it (animated in frame()).
   line(a, b, color = 0xff5544) {

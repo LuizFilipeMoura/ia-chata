@@ -9,9 +9,9 @@ import { Director, frameFromState, chassisOf, equipmentActiveOf } from "./direct
 import { availableActions, overheatOdds, equipmentSpends, hopLanding, aoeVictims, reelTargets, naniteHosts, GRAPNEL_YANK_RANGE, GRAPNEL_REEL_RANGE, NANITE_REACH } from "/shared/battle-view.js";
 import { candidatesFor } from "/shared/bot/candidates.js";
 import { chooseAction } from "/shared/bot/index.js";
-import { scoreCandidate, scoreParts, PRESETS } from "/shared/bot/score.js";
+import { scoreCandidate, scoreParts, PRESETS, threatsAt } from "/shared/bot/score.js";
 import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
-import { findPath } from "/shared/pathfind.js";
+import { findPath, buildGrid, isStopBlocked } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
 import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
@@ -654,6 +654,8 @@ export class LiveMatch {
     const col = key === "sprint" ? 0xffaa33 : this.isHop(key) ? 0xffd27a : 0x33ff99;
     this.world.disc(rig.pos.x, rig.pos.y, budget + radiusOf(rig), col, 0.08);
     this.world.ring(rig.pos.x, rig.pos.y, budget, col, 0.6);
+    this.drawEnemyCones(rig);
+    this.drawDangerMap(rig, budget, this.isHop(key));
     const g = new THREE.Group();
     const ringMesh = new THREE.Mesh(new THREE.RingGeometry(radiusOf(rig) - 0.1, radiusOf(rig), 40), new THREE.MeshBasicMaterial({ color: 0x33ff99, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
     ringMesh.rotation.x = -Math.PI / 2; ringMesh.position.y = 0.1; g.add(ringMesh);
@@ -667,6 +669,42 @@ export class LiveMatch {
       : "1) Click a spot inside the ring · 2) then turn · Right-click to cancel");
     this.renderActions();
     this.emit("movephase", "dest");
+  }
+
+  // Every enemy's front arc (where it can shoot), out to its reach: stand
+  // outside all of them and nobody can hit you.
+  drawEnemyCones(rig) {
+    for (const e of this.state.rigs) {
+      if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
+      const lr = e.loaded?.longRange === false ? null : effectiveWeaponProfile("longRange", e.weapons?.longRange, e);
+      const reach = Math.min(30, Math.max(lr?.maxRange ?? 0, radiusOf(e) + meleeReachOf(e) + 1));
+      this.world.wedge(e.pos.x, e.pos.y, reach, e.facing - 45, e.facing + 45, 0xff3b30, 0.07);
+    }
+  }
+
+  // The danger map: every 1" spot inside the reach, tinted by how much damage
+  // the enemy could put into this rig standing there (the bot's own exposure
+  // yardstick), facing the way it would arrive.
+  drawDangerMap(rig, budget, hop) {
+    if (!rig.pos) return;
+    const room = this.previewRoom(rig);
+    const polys = terrainPolygons(this.state.field);
+    const grid = buildGrid(this.state.field, polys, moveBlockers(this.state.rigs, rig), radiusOf(rig), rig.pos);
+    const cells = [];
+    const r = Math.ceil(budget);
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dy = -r; dy <= r; dy++) {
+        if (Math.hypot(dx, dy) > budget) continue;
+        const p = { x: Math.round(rig.pos.x) + dx, y: Math.round(rig.pos.y) + dy };
+        if (Math.hypot(p.x - rig.pos.x, p.y - rig.pos.y) > budget || (!hop && isStopBlocked(grid, p))) continue;
+        let f = Math.atan2(p.y - rig.pos.y, p.x - rig.pos.x) / DEG;
+        const d = ((f - rig.facing + 540) % 360) - 180;
+        if (!hop) f = rig.facing + Math.max(-89, Math.min(89, d));
+        const v = threatsAt(room, rig, p, f).reduce((sum, t) => sum + t.v, 0);
+        cells.push({ x: p.x, y: p.y, color: v < 0.3 ? 0x2ecc71 : v < 1 ? 0xffd35a : v < 2 ? 0xff8a3d : 0xff3333 });
+      }
+    }
+    if (cells.length) this.world.tiles(cells, 1, 0.2);
   }
 
   movePreview(field) {
@@ -729,7 +767,7 @@ export class LiveMatch {
       this.sightKey = k;
       const me = { ...rig, pos: { x: dest.x, y: dest.y }, facing };
       const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
-      const shots = [], threats = [];
+      const shots = [];
       for (const e of this.state.rigs) {
         if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
         const g = deriveAttackGeometry(this.state, me, e);
@@ -737,17 +775,19 @@ export class LiveMatch {
         if (g.inFrontArc && g.inMeleeReach) slot = "melee";
         else if (g.inFrontArc && g.los && lr && rig.loaded?.longRange !== false && g.distance <= (lr.maxRange ?? 24) && g.distance >= (lr.minRange || 0)) slot = "longRange";
         if (slot) shots.push({ e, slot, arc: g.arc, ed: expectedDamage(me, e, slot, { arc: g.arc, distance: g.distance, cover: g.cover, round: this.game.round }) });
-        const t = deriveAttackGeometry(this.state, e, me);
-        const elr = e.loaded?.longRange === false ? null : effectiveWeaponProfile("longRange", e.weapons?.longRange, e);
-        if (t.inFrontArc && (t.inMeleeReach || (t.los && elr && t.distance <= (elr.maxRange ?? 24) && t.distance >= (elr.minRange || 0)))) threats.push({ e, arc: t.arc });
       }
+      const threats = threatsAt(this.previewRoom(rig), rig, dest, facing).filter((t) => t.v > 0);
       this.sight = { shots: shots.sort((a, b) => b.ed - a.ed), threats };
     }
     for (const m of this.sightMeshes || []) this.world.overlay.remove(m);
     this.sightMeshes = [];
-    const at = new THREE.Vector3(dest.x, 1.4, dest.y);
-    for (const s of this.sight.shots) this.sightMeshes.push(this.world.line(at, new THREE.Vector3(s.e.pos.x, 1.4, s.e.pos.y), 0x33ff99));
-    for (const t of this.sight.threats) this.sightMeshes.push(this.world.line(new THREE.Vector3(t.e.pos.x, 1.2, t.e.pos.y), at.clone().setY(1.2), 0xff4433));
+    // Badges over the enemies instead of lines: red = it can hit you here
+    // (≈SP), green = you can hit it from here (≈SP, and the arc if it's soft).
+    const byEnemy = new Map();
+    const row = (e) => { if (!byEnemy.has(e)) byEnemy.set(e, []); return byEnemy.get(e); };
+    for (const t of this.sight.threats) if (t.v > 0.05) row(t.e).push({ text: `⚠ ≈${t.v.toFixed(1)} SP${t.arc !== "front" ? ` on your ${t.arc}` : ""}`, color: "#ff5a4a" });
+    for (const s of this.sight.shots) row(s.e).push({ text: `◎ ≈${s.ed.toFixed(1)} SP${s.arc !== "front" ? ` · ${s.arc.toUpperCase()}` : ""}`, color: "#4fffa0" });
+    for (const [e, rows] of byEnemy) this.sightMeshes.push(this.world.badge(e.pos.x, e.pos.y, 5.2, rows));
     const left = this.previewRoom(rig).game.turn;
     const later = left.actionsMax - left.actionsUsed <= 1 ? " (next activation)" : "";
     const best = this.sight.shots[0];

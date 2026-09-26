@@ -117,6 +117,15 @@ function exposureAt(room, rig, pos, facing) {
   return total;
 }
 
+// The same, per enemy: [{ e, v, arc }] where arc is which of MY facings it
+// strikes. Feeds the 3D move preview's danger map and threat badges.
+export function threatsAt(room, rig, pos, facing) {
+  return livingEnemies(room, rig).map((e) => ({
+    e, v: shotValue(room, e, e.pos, e.facing, rig, pos, facing),
+    arc: arcOf({ pos: e.pos }, { pos, facing }),
+  }));
+}
+
 // How much damage the enemy can pour into this rig from where everyone stands
 // now: the round-start Grit spend reads it to pick which prep to upgrade.
 export function exposureOf(room, rig) {
