@@ -302,8 +302,32 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
   }
 
   // ---- HQ ------------------------------------------------------------------
+  // Tabbed so it reads at a glance: Deploy (default) · Armory (unlocks) ·
+  // Banners · Record. The header (title, Renown, the run call to action) sits
+  // above the tabs on every one of them. The last tab is remembered per browser.
+  const HQ_TAB_KEY = "oi3d-hq-tab";
+  const HQ_TABS = [["deploy", "Deploy"], ["armory", "Armory"], ["banners", "Banners"], ["record", "Record"]];
+  const ARMORY = [
+    ["chassis", "Chassis", "New war rigs to commission."],
+    ["nature", "Upgrades", "Deeper upgrade natures enter the loot pool."],
+    ["equipment", "Equipment", "More gear enters the loot pool."],
+    ["perkkits", "Perk kits", "Graft combat perks onto weapons."],
+    ["relics", "Relics", "Squad-wide passives for the run."],
+    ["workshop", "Workshop", "Small permanent perks."],
+  ];
+  let hqTab = "deploy";
+  try { const t = localStorage.getItem(HQ_TAB_KEY); if (HQ_TABS.some(([k]) => k === t)) hqTab = t; } catch {}
+  let armoryGroup = null;        // chosen Armory sub-group (null → first affordable)
   let renownShown = null;
-  function hq({ bought = null } = {}) {
+
+  function abandonRun() {
+    modal({
+      title: "Abandon the run?", body: el("p", {}, "The run ends now as a loss. You keep the Renown it has earned so far."),
+      actions: [{ label: "Keep going", ghost: true }, { label: "Abandon", primary: true, onClick: () => act(() => api.campaign.abandon(), { ok: () => runOver() }) }],
+    });
+  }
+
+  function hq({ bought = null, still = false } = {}) {
     const { profile, pools, run, last } = S;
     const live = run && run.status !== "over";
     if (notoriety == null || notoriety > profile.notorietyMax) notoriety = profile.notorietyMax;
@@ -312,77 +336,177 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
     renownShown = profile.renown;
 
     const has = (id) => profile.unlocks.includes(id);
-    const groups = [
-      ["chassis", "Chassis", "New war rigs to commission."],
-      ["nature", "Upgrade natures", "Deeper upgrades enter the loot pool."],
-      ["equipment", "Equipment", "More gear enters the loot pool."],
-      ["perkkits", "Perk kits", "Graft combat perks onto weapons."],
-      ["relics", "Relic packs", "Squad-wide passives for the run."],
-      ["workshop", "Workshop", "Small permanent perks."],
-    ];
+    const stateOf = (u) => (has(u.id) ? "owned" : u.requires && !has(u.requires) ? "blocked" : profile.renown < u.cost ? "poor" : "open");
+    const affordable = UNLOCKS.filter((u) => stateOf(u) === "open");
+    const canBuyIn = (kind) => affordable.some((u) => u.kind === kind);
+    if (!armoryGroup) armoryGroup = ARMORY.find(([k]) => canBuyIn(k))?.[0] || "chassis";
+    const rerender = () => hq({ still: true });
+
+    // ---- header + call to action (every tab)
+    const standing = live ? run.roster.filter((r) => !r.wrecked).length : 0;
+    const cta = live
+      ? el("div", { class: "hq-cta live" },
+        el("div", { class: "hq-cta-t" }, el("b", {}, run.status === "battle" ? "Battle in progress" : "Run in progress"),
+          el("span", { class: "muted cp-small" }, `Step ${Math.min(run.step + 1, BOSS_STEP)}/${BOSS_STEP} · ${run.salvage} ${SALVAGE} · ${run.strikes}/${MAX_STRIKES} strikes · ${standing}/${run.roster.length} rigs standing`)),
+        el("div", { class: "hq-cta-b" },
+          el("button", { class: "btn ghost hq-abandon", onClick: abandonRun, title: "End the run now as a loss" }, "Abandon"),
+          el("button", { class: "btn big primary", onClick: () => route() }, run.status === "battle" ? "▶  Rejoin battle" : "▶  Continue run")))
+      : el("div", { class: "hq-cta" },
+        el("div", { class: "hq-cta-t" }, el("b", {}, "New contract chain"),
+          el("span", { class: "muted cp-small" }, `Notoriety ${notoriety}: ${NOTORIETY[notoriety]?.text}`)),
+        el("div", { class: "hq-cta-b" }, el("button", { class: "btn big primary", onClick: () => commission() }, "⚔  New run ▸")));
+
+    // ---- Deploy
+    const deployPanel = () => {
+      const brief = live
+        ? el("section", { class: "cp-sec hq-brief" },
+          el("h2", {}, "Your outfit"),
+          el("div", { class: "hq-run-stats" },
+            el("div", { class: "cp-stat salvage" }, el("span", {}, SALVAGE), el("b", {}, String(run.salvage)), el("small", {}, "salvage")),
+            el("div", { class: "cp-stat" }, pips(run.strikes, MAX_STRIKES, "strikes"), el("small", {}, "strikes")),
+            el("div", { class: "cp-stat" }, el("b", {}, `${Math.min(run.step + 1, BOSS_STEP)}/${BOSS_STEP}`), el("small", {}, "step")),
+            el("div", { class: "cp-stat" }, el("b", {}, `N${run.notoriety}`), el("small", {}, "notoriety"))),
+          el("div", { class: "hq-roster" }, run.roster.map((r) => {
+            const ch = chassisOf(r.chassis);
+            const frac = spTotal(r.sp) / spTotal(ch.sp);
+            return el("div", { class: `hq-rig ${r.wrecked ? "wrecked" : ""}` }, el("span", { class: `swatch big sw-${ch.name}` }),
+              el("div", {}, el("b", {}, r.name), el("span", { class: "muted cp-small" }, ch.label)),
+              r.wrecked ? el("span", { class: "cp-tag hq-wreck" }, "Wrecked") : el("span", { class: "cp-tag", style: { color: spColor(frac) } }, `${spTotal(r.sp)}/${spTotal(ch.sp)} SP`));
+          })))
+        : el("section", { class: "cp-sec hq-brief" },
+          el("h2", {}, "The contract chain"),
+          el("ol", { class: "hq-how" },
+            el("li", {}, el("b", {}, "Commission"), " three bare rigs (max 2 medium)."),
+            el("li", {}, el("b", {}, "Fly"), " a banner and set your Notoriety."),
+            el("li", {}, el("b", {}, `Take ${BOSS_STEP - 1} jobs`), ", then face the faction Warlord."),
+            el("li", {}, el("b", {}, "Damage carries"), ", salvage pays, Renown stays.")),
+          el("p", { class: "muted cp-small" }, `Loot pool: ${pools.chassis.length} chassis · ${pools.equipment.length} equipment · ${pools.natures.map((n) => NATURE_TAG[n]).join("/")} upgrades · ${pools.relics.length} relics.`));
+      return el("div", { class: `hq-deploy ${live ? "live" : ""}` },
+        brief,
+        live ? null : el("section", { class: "cp-sec" }, notorietyRow(profile, rerender)),
+        last ? lastRunCard(last) : null);
+    };
+
+    // ---- Armory
     const detail = (u) => {
-      if (u.kind === "chassis") { const c = chassisOf(u.target); return `${c.class} · speed ${c.speed}" · ${spTotal(c.sp)} SP`; }
+      if (u.kind === "chassis") { const c = chassisOf(u.target); return [`🔫 ${c.longRange} · 🗡 ${c.melee}`, el("br"), `${c.class} · speed ${c.speed}" · ${spTotal(c.sp)} SP`]; }
       if (u.kind === "nature") return u.target === "tuned" ? "Conditional upgrades that out-pay Field when set up." : "Systemic upgrades: big ceiling, real bookkeeping.";
       if (u.kind === "equipment") return EQUIPMENT[u.target]?.passive;
       if (u.kind === "perkkits") return PERK_KITS.map((k) => k.perk).join(" · ");
       if (u.kind === "relics") return RELICS.filter((r) => r.pack === u.target).map((r) => r.name).join(" · ");
       return null;
     };
-    const title = (u) => (u.kind === "relics" ? `Relic pack ${u.target}` : u.kind === "chassis" ? chassisOf(u.target).label : u.label);
+    const title = (u) => (u.kind === "relics" ? `Relic pack ${u.target}` : u.kind === "chassis" ? chassisOf(u.target).name : u.label);
     const unlockCard = (u) => {
-      const owned = has(u.id);
-      const blocked = u.requires && !has(u.requires);
-      const poor = profile.renown < u.cost;
-      return el("div", { class: `cp-unlock ${owned ? "owned" : blocked ? "blocked" : poor ? "poor" : "open"} ${bought === u.id ? "just" : ""}` },
-        u.kind === "chassis" ? el("span", { class: `swatch big sw-${chassisOf(u.target).name}` }) : null,
-        el("div", { class: "cp-unlock-t" }, el("b", {}, title(u)), detail(u) ? el("span", { class: "muted cp-small" }, detail(u)) : null,
-          blocked ? el("span", { class: "cp-small cp-req" }, `Needs: ${unlockById(u.requires)?.label}`) : null),
-        owned ? stamp("Owned", "owned")
-          : el("button", { class: "btn cp-buy", disabled: blocked || poor, title: `${u.cost} Renown`, onClick: async () => {
-            const before = S.profile.renown;
-            const v = await act(() => api.campaign.unlock(u.id));
-            if (v) { renownShown = before; sfx.clank?.(); sfx.score(true); toast(`Unlocked: ${title(u)}`, "good"); hq({ bought: u.id }); }
-          } }, `${u.cost} ${RENOWN}`));
+      const st = stateOf(u);
+      const d = detail(u);
+      return el("div", { class: `hq-card cp-unlock ${st} ${bought === u.id ? "just" : ""}` },
+        el("div", { class: "hq-card-h" },
+          u.kind === "chassis" ? el("span", { class: `swatch big sw-${chassisOf(u.target).name}` }) : null,
+          el("b", {}, title(u))),
+        d ? el("p", { class: "cp-small hq-card-t" }, d) : null,
+        st === "blocked" ? el("span", { class: "cp-small cp-req hq-card-n" }, `Needs: ${unlockById(u.requires)?.label}`)
+          : st === "poor" ? el("span", { class: "cp-small muted hq-card-n" }, `${u.cost - profile.renown} ${RENOWN} short`) : null,
+        el("div", { class: "hq-card-f" },
+          st === "owned" ? stamp("Owned", "owned")
+            : el("button", { class: `btn cp-buy ${st === "open" ? "primary" : ""}`, disabled: st !== "open", title: `${u.cost} Renown`, onClick: async () => {
+              const before = S.profile.renown;
+              const v = await act(() => api.campaign.unlock(u.id));
+              if (v) { renownShown = before; sfx.clank?.(); sfx.score(true); toast(`Unlocked: ${title(u)}`, "good"); hq({ bought: u.id, still: true }); }
+            } }, `${u.cost} ${RENOWN}`)));
+    };
+    const armoryPanel = () => {
+      const box = el("div", { class: "hq-armory" });
+      const paint = () => {
+        const [kind, , blurb] = ARMORY.find(([k]) => k === armoryGroup) || ARMORY[0];
+        const list = UNLOCKS.filter((u) => u.kind === kind);
+        fill(box,
+          el("div", { class: "hq-chips" }, ARMORY.map(([k, name]) => {
+            const all = UNLOCKS.filter((u) => u.kind === k);
+            const own = all.filter((u) => has(u.id)).length;
+            const can = canBuyIn(k);
+            return el("button", { class: `hq-chip ${k === armoryGroup ? "on" : ""} ${own === all.length ? "done" : ""}`, "aria-pressed": k === armoryGroup ? "true" : "false",
+              title: can ? `${name}: something here is affordable` : name, onClick: () => { armoryGroup = k; sfx.click?.(); paint(); } },
+            name, el("small", {}, `${own}/${all.length}`), can ? el("i", { class: "hq-dot" }) : null);
+          })),
+          el("p", { class: "muted cp-small hq-blurb" }, blurb),
+          el("div", { class: "hq-grid" }, list.map(unlockCard)));
+      };
+      paint();
+      return box;
     };
 
-    const notorietyPicker = notorietyRow(profile, () => hq());
+    // ---- Banners
+    const bannersPanel = () => el("section", { class: "cp-sec" },
+      el("p", { class: "muted cp-small" }, `Beat a faction's Warlord to fly its banner: one faction perk for your squad at run start. Earned ${profile.factionPerks.length}/${FACTIONS.length}.`),
+      el("div", { class: "cp-banners hq-banners" }, FACTIONS.map((f) => {
+        const got = profile.factionPerks.includes(f.id);
+        return el("div", { class: `cp-banner ${got ? "got" : ""}`, title: `${f.name}\n${f.perk}: ${f.text}` }, crest(f.id, "lg"),
+          el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`), el("span", { class: "muted cp-small" }, got ? "Banner earned" : `Beat the ${f.short} Warlord`)));
+      })));
 
-    show(el("div", { class: "cp cp-hq" },
-      el("header", { class: "cp-head" },
+    // ---- Record
+    const recordPanel = () => {
+      const hist = profile.history || [];
+      const wins = hist.filter((h) => h.won).length;
+      return el("section", { class: "cp-sec" },
+        el("div", { class: "hq-rec-stats" },
+          el("div", { class: "cp-stat" }, el("b", {}, String(profile.runs || hist.length)), el("small", {}, "runs")),
+          el("div", { class: "cp-stat" }, el("b", {}, String(wins)), el("small", {}, "chains won")),
+          el("div", { class: "cp-stat" }, el("b", {}, `${profile.totalRenown || 0}`), el("small", {}, "Renown earned")),
+          el("div", { class: "cp-stat" }, el("b", {}, `N${profile.notorietyMax}`), el("small", {}, "top notoriety"))),
+        hist.length
+          ? el("div", { class: "cp-history" }, [...hist].reverse().map((h) => el("div", { class: `cp-hist ${h.won ? "won" : "lost"}` },
+            el("b", {}, h.won ? "Won" : h.abandoned ? "Abandoned" : "Lost"),
+            el("span", {}, `N${h.notoriety} · ${h.contractsWon} contracts · ${h.kills} kills · ${h.salvageEarned} ${SALVAGE}`),
+            el("span", { class: "cp-gold" }, `+${h.renown} ${RENOWN}`))))
+          : el("p", { class: "muted" }, "No runs on the books yet. Take a contract chain from the Deploy tab."));
+    };
+
+    const PANELS = { deploy: deployPanel, armory: armoryPanel, banners: bannersPanel, record: recordPanel };
+    const panel = el("div", { class: "hq-panel", id: "hq-panel", role: "tabpanel" });
+    const tabBtns = {};
+    const select = (k, { focus = false } = {}) => {
+      hqTab = k;
+      try { localStorage.setItem(HQ_TAB_KEY, k); } catch {}
+      for (const [key, b] of Object.entries(tabBtns)) {
+        const on = key === k;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+        b.tabIndex = on ? 0 : -1;
+      }
+      panel.setAttribute("aria-labelledby", `hq-tab-${k}`);
+      fill(panel, PANELS[k]());
+      if (focus) { tabBtns[k].focus(); tabBtns[k].scrollIntoView({ block: "nearest", inline: "nearest" }); }
+    };
+    const extra = {
+      armory: affordable.length ? el("span", { class: "hq-badge", title: `${affordable.length} unlock${affordable.length > 1 ? "s" : ""} you can afford` }, String(affordable.length)) : null,
+      banners: el("small", {}, `${profile.factionPerks.length}/${FACTIONS.length}`),
+      record: profile.history?.length ? el("small", {}, String(profile.history.length)) : null,
+    };
+    const tabs = el("div", { class: "hq-tabs", role: "tablist", "aria-label": "HQ sections", onKeydown: (e) => {
+      const keys = HQ_TABS.map(([k]) => k);
+      const i = keys.indexOf(hqTab);
+      const to = e.key === "ArrowRight" ? keys[(i + 1) % keys.length] : e.key === "ArrowLeft" ? keys[(i - 1 + keys.length) % keys.length]
+        : e.key === "Home" ? keys[0] : e.key === "End" ? keys[keys.length - 1] : null;
+      if (!to) return;
+      e.preventDefault();
+      sfx.click?.();
+      select(to, { focus: true });
+    } }, HQ_TABS.map(([k, name]) => (tabBtns[k] = el("button", { class: `hq-tab t-${k}`, role: "tab", id: `hq-tab-${k}`, "aria-controls": "hq-panel",
+      onClick: () => { if (hqTab !== k) { sfx.click?.(); select(k); } } }, name, extra[k]))));
+
+    const y = root.scrollTop;
+    show(el("div", { class: `cp cp-hq ${still ? "hq-still" : ""}` },
+      el("header", { class: "cp-head hq-head" },
         el("button", { class: "btn ghost", onClick: onHome }, "‹ Title"),
-        el("div", {}, el("h1", {}, "Mercenary HQ"), el("p", { class: "muted cp-type" }, "Five contracts, one Warlord. Damage carries, salvage pays, Renown stays.")),
-        el("div", { class: "cp-renown", title: `Renown: spend it on unlocks. Earned all-time: ${profile.totalRenown || 0}` }, el("span", {}, RENOWN), renown, el("small", {}, "Renown"))),
-      el("section", { class: "cp-hero" },
-        live ? el("div", { class: "cp-live" },
-          el("div", {}, el("h3", {}, "Run in progress"), el("p", { class: "muted" }, `Step ${Math.min(run.step + 1, BOSS_STEP)}/${BOSS_STEP} · ${run.salvage} ${SALVAGE} · ${run.strikes}/${MAX_STRIKES} strikes · ${run.roster.filter((r) => !r.wrecked).length}/3 rigs standing`)),
-          el("div", { class: "cp-live-b" },
-            el("button", { class: "btn big primary", onClick: () => route() }, run.status === "battle" ? "▶  Rejoin battle" : "▶  Continue run"),
-            el("button", { class: "btn ghost", onClick: () => modal({ title: "Abandon the run?", body: el("p", {}, "The run ends now as a loss. You keep the Renown it has earned so far."), actions: [{ label: "Keep going", ghost: true }, { label: "Abandon", primary: true, onClick: () => act(() => api.campaign.abandon(), { ok: () => runOver() }) }] }) }, "Abandon run")))
-          : el("div", { class: "cp-live" },
-            el("div", {}, el("h3", {}, "New contract chain"), el("p", { class: "muted" }, "Commission three bare rigs, pick a Notoriety, and take the first job.")),
-            el("button", { class: "btn big primary", onClick: () => commission() }, "⚔  New run ▸")),
-        live ? null : notorietyPicker),
-      last ? lastRunCard(last) : null,
-      el("section", { class: "cp-sec" }, el("h2", {}, "Faction banners"),
-        el("p", { class: "muted cp-small" }, "Beat a faction's Warlord to fly its banner: one faction perk for your squad at run start."),
-        el("div", { class: "cp-banners" }, FACTIONS.map((f) => {
-          const got = profile.factionPerks.includes(f.id);
-          return el("div", { class: `cp-banner ${got ? "got" : ""}`, title: `${f.name}\n${f.perk}: ${f.text}` }, crest(f.id, "lg"),
-            el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`), el("span", { class: "muted cp-small" }, got ? "Banner earned" : `Beat the ${f.short} Warlord`)));
-        }))),
-      el("section", { class: "cp-sec" }, el("h2", {}, "Unlocks"),
-        el("p", { class: "muted cp-small" }, `Your loot pool: ${pools.chassis.length} chassis, ${pools.equipment.length} equipment, ${pools.natures.map((n) => NATURE_TAG[n]).join("/")} upgrades, ${pools.relics.length} relics.`),
-        el("div", { class: "cp-tree" }, groups.map(([kind, name, blurb]) => {
-          const list = UNLOCKS.filter((u) => u.kind === kind);
-          const own = list.filter((u) => has(u.id)).length;
-          return el("div", { class: "cp-group" }, el("div", { class: "cp-group-h" }, el("h3", {}, name), el("span", { class: "muted cp-small" }, `${own}/${list.length}`)),
-            el("p", { class: "muted cp-small" }, blurb), list.map(unlockCard));
-        }))),
-      profile.history?.length ? el("section", { class: "cp-sec" }, el("h2", {}, "Service record"),
-        el("div", { class: "cp-history" }, [...profile.history].reverse().slice(0, 8).map((h) => el("div", { class: `cp-hist ${h.won ? "won" : "lost"}` },
-          el("b", {}, h.won ? "Won" : h.abandoned ? "Abandoned" : "Lost"),
-          el("span", {}, `N${h.notoriety} · ${h.contractsWon} contracts · ${h.kills} kills · ${h.salvageEarned} ${SALVAGE}`),
-          el("span", { class: "cp-gold" }, `+${h.renown} ${RENOWN}`))))) : null));
+        el("div", {}, el("h1", {}, "Mercenary HQ"), el("p", { class: "muted cp-type" }, "Five contracts, one Warlord.")),
+        el("div", { class: "cp-renown", title: `Renown: spend it in the Armory. Earned all-time: ${profile.totalRenown || 0}` }, el("span", {}, RENOWN), renown, el("small", {}, "Renown"))),
+      cta,
+      tabs,
+      panel));
+    select(hqTab);
+    if (still) root.scrollTop = y;
   }
 
   function notorietyRow(profile, rerender) {
@@ -414,51 +538,120 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
   }
 
   // ---- Commission ------------------------------------------------------------
+  // Three steps: 1. pick rigs, 2. banner + Notoriety, 3. confirm and start.
   async function commission() {
     const { profile, pools } = S;
     let content = {};
     try { (await api.chassis()).chassis.forEach((c) => { content[c.id] = c; }); } catch {}
     const picked = [];
     let banner = null;
-    const render = () => {
-      const mediums = picked.filter((id) => chassisOf(id).class === "medium").length;
-      show(el("div", { class: "cp cp-commission" },
+    let step = 1;
+    const STEPS = ["Pick rigs", "Banner & Notoriety", "Confirm"];
+    const mediumsIn = (ids) => ids.filter((id) => chassisOf(id).class === "medium").length;
+
+    const randomize = () => {
+      picked.length = 0;
+      const pool = [...pools.chassis].sort(() => Math.random() - 0.5);
+      for (const id of pool) {
+        if (picked.length >= 3) break;
+        if (chassisOf(id).class === "medium" && mediumsIn(picked) >= 2) continue;
+        picked.push(id);
+      }
+      sfx.dice?.(3);
+      render({ still: true });
+    };
+    const go = (to) => { step = to; sfx.servo(); render(); };
+
+    const rigsStep = () => {
+      const mediums = mediumsIn(picked);
+      return el("div", { class: "cp-chassis" }, pools.chassis.map((id) => {
+        const c = chassisOf(id);
+        const on = picked.includes(id);
+        const full = !on && (picked.length >= 3 || (c.class === "medium" && mediums >= 2));
+        const txt = content[id]?.focus || content[id]?.description;
+        return el("button", { class: `cp-ch ${on ? "on" : ""}`, disabled: full, onClick: () => {
+          if (on) picked.splice(picked.indexOf(id), 1); else picked.push(id);
+          sfx.servo(); render({ still: true });
+        } },
+        el("div", { class: "cp-ch-h" }, el("span", { class: `swatch big sw-${c.name}` }),
+          el("div", {}, el("b", {}, c.name), el("div", { class: "muted cp-small" }, `${c.label}`)),
+          el("span", { class: `cp-class c-${c.class}` }, c.class)),
+        el("div", { class: "cp-ch-stats" },
+          el("span", { title: "Speed" }, icon("move"), `${c.speed}"`),
+          LOCS.map((l) => el("span", { title: LOC_NAME[l] }, icon(l), c.sp[l]))),
+        el("div", { class: "cp-ch-w" }, `🔫 ${c.longRange} · 🗡 ${c.melee}`),
+        txt ? el("p", { class: "cp-small" }, txt) : null,
+        on ? stamp("Signed", "owned") : null);
+      }));
+    };
+
+    const colorsStep = () => el("div", { class: "cm-colors" },
+      el("section", { class: "cp-sec" }, el("h2", {}, "Banner"),
+        pools.banners.length ? el("div", { class: "cp-banners pick" },
+          el("button", { class: `cp-banner ${banner == null ? "on got" : ""}`, onClick: () => { banner = null; render({ still: true }); } }, el("div", {}, el("b", {}, "No banner"), el("span", { class: "muted cp-small" }, "Fly your own colours."))),
+          pools.banners.map((id) => { const f = factionById(id); return el("button", { class: `cp-banner got ${banner === id ? "on" : ""}`, onClick: () => { banner = id; sfx.servo(); render({ still: true }); } }, crest(id, "lg"), el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`))); }))
+          : el("p", { class: "muted cp-small" }, "No banners yet: beat a faction's Warlord to fly its colours (one faction perk for your squad).")),
+      el("section", { class: "cp-sec" }, notorietyRow(profile, () => render({ still: true }))));
+
+    const confirmStep = () => {
+      const f = factionById(banner);
+      const perks = [
+        pools.workshop.fieldStart ? "A Field upgrade on each weapon" : "No upgrades, no equipment",
+        pools.workshop.freeRecovery ? "One free wreck recovery" : null,
+        pools.workshop.cards > 3 ? `${pools.workshop.cards} reward cards per win` : null,
+      ].filter(Boolean);
+      return el("div", { class: "cm-confirm" },
+        el("section", { class: "cp-sec cm-outfit" }, el("h3", {}, "Outfit"),
+          picked.map((id) => {
+            const c = chassisOf(id);
+            return el("div", { class: "cm-rig" }, el("span", { class: `swatch big sw-${c.name}` }),
+              el("div", {}, el("b", {}, c.name), el("span", { class: "muted cp-small" }, `${c.label} · ${spTotal(c.sp)} SP · ${c.speed}"`)),
+              el("span", { class: `cp-class c-${c.class}` }, c.class));
+          })),
+        el("section", { class: "cp-sec" }, el("h3", {}, "Banner"),
+          f ? el("div", { class: "cp-node-f" }, crest(f.id, "lg"), el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`)))
+            : el("p", { class: "muted" }, "No banner: your own colours.")),
+        el("section", { class: "cp-sec" }, el("h3", {}, "Notoriety"),
+          el("div", { class: "cm-noto" }, el("b", {}, `N${notoriety}`), pips(Math.min(notoriety, MAX_NOTORIETY), MAX_NOTORIETY, "skulls")),
+          el("p", { class: "cp-noto-t" }, NOTORIETY[notoriety]?.text)),
+        el("section", { class: "cp-sec" }, el("h3", {}, "Starting kit"),
+          el("div", { class: "cm-noto" }, el("b", { class: "cp-gold" }, `${PRICES.startSalvage + pools.workshop.startSalvage} ${SALVAGE}`), el("span", { class: "muted cp-small" }, "salvage")),
+          perks.map((p) => el("p", { class: "cp-small" }, p))));
+    };
+
+    const render = ({ still = false } = {}) => {
+      const ready = picked.length === 3;
+      const y = root.scrollTop;
+      const indicator = el("ol", { class: "cm-steps" }, STEPS.map((name, i) => {
+        const n = i + 1;
+        const reachable = n <= step || ready;
+        return el("li", { class: `cm-step ${n === step ? "now" : n < step ? "done" : ""}` },
+          el("button", { disabled: !reachable || n === step, "aria-current": n === step ? "step" : null, onClick: () => go(n) },
+            el("i", {}, n < step ? "✓" : String(n)), el("span", {}, name)));
+      }));
+      const body = step === 1 ? rigsStep() : step === 2 ? colorsStep() : confirmStep();
+      const lead = step === 1 ? "Three bare rigs, no upgrades, no equipment. Everything else is found on the job."
+        : step === 2 ? "Fly a banner you've earned and set how hard the job fights back."
+        : "Check the paperwork, then sign.";
+      show(el("div", { class: `cp cp-commission ${still ? "hq-still" : ""}` },
         el("header", { class: "cp-head" },
           el("button", { class: "btn ghost", onClick: () => hq() }, "‹ HQ"),
-          el("div", {}, el("h1", {}, "Commission your outfit"), el("p", { class: "muted cp-type" }, "Three bare rigs, no upgrades, no equipment. Everything else is found on the job.")),
+          el("div", {}, el("h1", {}, "Commission your outfit"), el("p", { class: "muted cp-type" }, lead)),
           el("div", { class: "cp-count" }, el("b", {}, `${picked.length}/3`), el("small", {}, "max 2 medium"))),
-        el("div", { class: "cp-chassis" }, pools.chassis.map((id) => {
-          const c = chassisOf(id);
-          const on = picked.includes(id);
-          const full = !on && (picked.length >= 3 || (c.class === "medium" && mediums >= 2));
-          const txt = content[id]?.focus || content[id]?.description;
-          return el("button", { class: `cp-ch ${on ? "on" : ""}`, disabled: full, onClick: () => {
-            if (on) picked.splice(picked.indexOf(id), 1); else picked.push(id);
-            sfx.servo(); render();
-          } },
-            el("div", { class: "cp-ch-h" }, el("span", { class: `swatch big sw-${c.name}` }),
-              el("div", {}, el("b", {}, c.name), el("div", { class: "muted cp-small" }, `${c.label}`)),
-              el("span", { class: `cp-class c-${c.class}` }, c.class)),
-            el("div", { class: "cp-ch-stats" },
-              el("span", { title: "Speed" }, icon("move"), `${c.speed}"`),
-              LOCS.map((l) => el("span", { title: LOC_NAME[l] }, icon(l), c.sp[l]))),
-            el("div", { class: "cp-ch-w" }, `🔫 ${c.longRange} · 🗡 ${c.melee}`),
-            txt ? el("p", { class: "cp-small" }, txt) : null,
-            on ? stamp("Signed", "owned") : null);
-        })),
-        el("section", { class: "cp-sec" }, el("h2", {}, "Banner"),
-          pools.banners.length ? el("div", { class: "cp-banners pick" },
-            el("button", { class: `cp-banner ${banner == null ? "on got" : ""}`, onClick: () => { banner = null; render(); } }, el("div", {}, el("b", {}, "No banner"), el("span", { class: "muted cp-small" }, "Fly your own colours."))),
-            pools.banners.map((id) => { const f = factionById(id); return el("button", { class: `cp-banner got ${banner === id ? "on" : ""}`, onClick: () => { banner = id; sfx.servo(); render(); } }, crest(id, "lg"), el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`))); }))
-            : el("p", { class: "muted cp-small" }, "No banners yet: beat a faction's Warlord to fly its colours (one faction perk for your squad).")),
-        el("section", { class: "cp-sec" }, notorietyRow(profile, render)),
-        el("div", { class: "cp-foot" },
-          el("button", { class: "btn ghost", onClick: () => { picked.length = 0; const pool = [...pools.chassis].sort(() => Math.random() - 0.5); for (const id of pool) { if (picked.length >= 3) break; if (chassisOf(id).class === "medium" && picked.filter((x) => chassisOf(x).class === "medium").length >= 2) continue; picked.push(id); } render(); } }, "🎲 Random"),
-          el("button", { class: "btn big primary", disabled: picked.length !== 3, onClick: async () => {
-            loading("Signing the contracts…");
-            const v = await act(() => api.campaign.start({ chassis: picked, notoriety, banner }));
-            if (v) { sfx.fanfare?.(true); map(); } else render();
-          } }, "Start run ▸"))));
+        indicator,
+        body,
+        el("div", { class: "cp-foot cm-foot" },
+          step === 1
+            ? el("button", { class: "btn ghost", onClick: randomize }, "🎲 Random")
+            : el("button", { class: "btn ghost", onClick: () => go(step - 1) }, "‹ Back"),
+          step < 3
+            ? el("button", { class: "btn big primary", disabled: !ready, title: ready ? "" : "Sign three rigs first", onClick: () => go(step + 1) }, ready || step > 1 ? "Next ▸" : `Pick ${3 - picked.length} more`)
+            : el("button", { class: "btn big primary", disabled: !ready, onClick: async () => {
+              loading("Signing the contracts…");
+              const v = await act(() => api.campaign.start({ chassis: picked, notoriety, banner }));
+              if (v) { sfx.fanfare?.(true); map(); } else render();
+            } }, "Start run ▸"))));
+      if (still) root.scrollTop = y;
     };
     render();
   }
