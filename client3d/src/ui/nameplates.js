@@ -21,26 +21,60 @@ export class Nameplates {
     this.info = new Map();
     this.tick = () => this.update();
     world.tickers.add(this.tick);
-    // Pilot barks dock on top of the speaker's plate (see say()).
-    this.sayHook = (id, line, accent, pilot) => this.say(id, line, accent, pilot);
-    director.say = this.sayHook;
+    // Pilot barks and combat callouts stack on top of the rig's plate.
+    this.hooks = { say: (id, line, accent, pilot) => this.say(id, line, accent, pilot), pop: (id, str, color) => this.pop(id, str, color) };
+    Object.assign(director, this.hooks);
   }
 
-  // A radio line in a bubble docked right above the rig's plate, so it rides
-  // along with it and never covers the name. False when there's no plate to
-  // dock on (plates off, rig unknown); the caller falls back to a 3D bubble.
+  // A radio line in a bubble, pushed onto the rig's stack. False when there's
+  // no plate to dock on (plates off, rig unknown); the caller falls back to a
+  // 3D bubble.
   say(id, line, accent, pilot) {
-    const c = this.cards.get(id);
-    if (!c || !settings.get("nameplates")) return false;
-    c.bark?.remove();
-    clearTimeout(c.barkTimer);
-    c.bark = el("div", { class: "bark", style: `--accent: ${accent}` },
+    const c = this.card(id);
+    if (!c) return false;
+    // One line per pilot on the air: a new one retires the last.
+    if (c.bark) this.retire(c, c.bark);
+    c.bark = this.push(c, el("div", { class: "bark", style: `--accent: ${accent}` },
       pilot ? el("div", { class: "bk-who" }, `▸ ${pilot.toUpperCase()}`) : null,
-      el("div", { class: "bk-line" }, line));
-    c.root.append(c.bark);
-    c.root.classList.add("talking");
-    c.barkTimer = setTimeout(() => { c.bark?.remove(); c.bark = null; c.root.classList.remove("talking"); }, 2800);
+      el("div", { class: "bk-line" }, line)), 2800);
     return true;
+  }
+
+  // A combat callout ("STAGGERED", "-3 ARMS") on the same stack.
+  pop(id, str, color) {
+    const c = this.card(id);
+    if (!c) return false;
+    this.push(c, el("div", { class: "pop", style: `--c: ${color}` }, str), 1900);
+    return true;
+  }
+
+  card(id) {
+    return settings.get("nameplates") ? this.cards.get(id) : null;
+  }
+
+  // A vertical list over the plate: newest at the bottom, older entries slide
+  // up as new ones grow in, and each fades and collapses when its time is up.
+  push(c, node, ms) {
+    if (!c.stack) { c.stack = el("div", { class: "pstack" }); c.root.append(c.stack); }
+    c.stack.append(node);
+    const live = [...c.stack.children].filter((n) => !n.classList.contains("out"));
+    for (const n of live.slice(0, Math.max(0, live.length - 4))) this.retire(c, n);
+    node.timer = setTimeout(() => this.retire(c, node), ms);
+    c.root.classList.add("talking");
+    return node;
+  }
+
+  retire(c, node) {
+    if (node.classList.contains("out")) return;
+    clearTimeout(node.timer);
+    if (c.bark === node) c.bark = null;
+    // Pin the current height so max-height can animate down to 0.
+    node.style.maxHeight = `${node.offsetHeight}px`;
+    requestAnimationFrame(() => node.classList.add("out"));
+    setTimeout(() => {
+      node.remove();
+      if (c.stack && !c.stack.children.length) c.root.classList.remove("talking");
+    }, 450);
   }
 
   // rigs: publicState-ish rigs (or replay frame rigs); extra: { activeId,
@@ -130,8 +164,8 @@ export class Nameplates {
 
   destroy() {
     this.world.tickers.delete(this.tick);
-    for (const c of this.cards.values()) clearTimeout(c.barkTimer);
-    if (this.director.say === this.sayHook) this.director.say = null;
+    for (const c of this.cards.values()) for (const n of c.stack?.children || []) clearTimeout(n.timer);
+    for (const [k, fn] of Object.entries(this.hooks)) if (this.director[k] === fn) this.director[k] = null;
     this.layer.remove();
   }
 }

@@ -219,6 +219,14 @@ export class Director {
     return best;
   }
 
+  // A combat callout over a mech: onto its nameplate stack when there is one
+  // (so callouts list up instead of piling on each other), else a 3D float
+  // `h` above it.
+  popText(m, h, str, color) {
+    if (!m?.root) return;
+    if (!this.pop?.(m.id, str, color)) this.world.fx.text(m.root.position.clone().add(new THREE.Vector3(0, h, 0)), str, color);
+  }
+
   // A pilot on the radio. `other` = the machine they're talking about,
   // `part` = the part that got hit. No line repeats within a battle.
   bark(m, event, { other = null, part = null } = {}) {
@@ -556,7 +564,7 @@ export class Director {
       this.onCamera({ x: (actor.root.position.x + target.root.position.x) / 2, y: (actor.root.position.z + target.root.position.z) / 2 }, { owner: actor.owner });
       actor.aimAt(target.root.position.clone().setY(2));
       await wait(250 / this.speed);
-      if (l.grit) fx.text(up(actor, 3.8), "GRIT!", "#f0cf7a");
+      if (l.grit) this.popText(actor, 3.8, "GRIT!", "#f0cf7a");
       if (this.onDice && !this.skipping && !this.quiet) await this.onDice(l);
       const m = /=\s*(\d+)\s*SP(?: to (\w+))?/.exec(l.summary || "");
       const sp = m ? Number(m[1]) : 0;
@@ -625,13 +633,13 @@ export class Director {
       if (pd || abl) {
         this.sound(() => sfx.intercept());
         const face = tpos.clone().lerp(actor.root.position.clone().setY(1.8), Math.min(0.5, 2 / Math.max(1, tpos.distanceTo(actor.root.position))));
-        if (pd) { fx.sparks(face, 16, 0x9fe8ff); fx.flash(face, 0x9fe8ff, 30, 6); fx.text(up(target, 4.4), pd > 1 ? `INTERCEPTED ×${pd}` : "INTERCEPTED", "#9fe8ff"); }
-        if (abl) { fx.sparks(tpos, 14, 0xcfe6ff); fx.shell(target.root.position.clone(), target.radius * 1.05, 3.2, 0x9fc8ff, 0.6, 1); fx.text(up(target, pd ? 5.2 : 4.4), abl > 1 ? `ABLATIVE ×${abl}` : "ABLATIVE", "#bfe0ff"); }
+        if (pd) { fx.sparks(face, 16, 0x9fe8ff); fx.flash(face, 0x9fe8ff, 30, 6); this.popText(target, 4.4, pd > 1 ? `INTERCEPTED ×${pd}` : "INTERCEPTED", "#9fe8ff"); }
+        if (abl) { fx.sparks(tpos, 14, 0xcfe6ff); fx.shell(target.root.position.clone(), target.radius * 1.05, 3.2, 0x9fc8ff, 0.6, 1); this.popText(target, pd ? 5.2 : 4.4, abl > 1 ? `ABLATIVE ×${abl}` : "ABLATIVE", "#bfe0ff"); }
       }
-      fx.text(up(target, 3.4), sp > 0 ? `-${sp} ${loc ? loc.toUpperCase() : "SP"}` : hitCount ? "DEFLECTED" : "MISS", sp > 0 ? "#ffcf4a" : "#bbbbbb");
+      this.popText(target, 3.4, sp > 0 ? `-${sp} ${loc ? loc.toUpperCase() : "SP"}` : hitCount ? "DEFLECTED" : "MISS", sp > 0 ? "#ffcf4a" : "#bbbbbb");
       // Stagger: a shot that did no damage still rattles the target.
       if (l.stagger) {
-        setTimeout(() => fx.text(up(target, 4.4), "STAGGERED", "#b58cff"), 300 / this.speed);
+        setTimeout(() => this.popText(target, 4.4, "STAGGERED", "#b58cff"), 300 / this.speed);
         this.sound(() => sfx.stagger());
         target.body.rotation.z = 0.25; setTimeout(() => { target.body.rotation.z = -0.12; }, 120); setTimeout(() => { target.body.rotation.z = 0; }, 260);
       }
@@ -654,12 +662,12 @@ export class Director {
       this.sound(() => sfx.overheat(bad));
       if (bad) this.bark(actor, "heat");
       if (bad) { fx.sparks(up(actor, 2), 16); fx.flash(up(actor), 0xff4400, 40, 8); }
-      fx.text(up(actor, 3.6), bad ? (l.summary.split(":")[1] || "OVERHEAT").split("(")[0].trim().toUpperCase() : "HEAT OK", bad ? "#ff6a3d" : "#9ee29e");
+      this.popText(actor, 3.6, bad ? (l.summary.split(":")[1] || "OVERHEAT").split("(")[0].trim().toUpperCase() : "HEAT OK", bad ? "#ff6a3d" : "#9ee29e");
       await wait(500 / this.speed);
     } else if (l.kind === "destruction") {
       // The explosion is the status pass's (on the destroyed flag); the kill's VP is shown here.
       if (l.vp?.amount && actor) {
-        setTimeout(() => fx.text(up(actor, 4.6), `+${l.vp.amount} VP${l.vp.bounty ? " BOUNTY" : ""}`, l.vp.side === "a" ? "#5fd3c0" : "#e0533d"), 900 / this.speed);
+        setTimeout(() => this.popText(actor, 4.6, `+${l.vp.amount} VP${l.vp.bounty ? " BOUNTY" : ""}`, l.vp.side === "a" ? "#5fd3c0" : "#e0533d"), 900 / this.speed);
         this.onScore(l);
       }
     } else if (l.kind === "score") {
@@ -692,7 +700,7 @@ export class Director {
     } else if (l.kind === "extract" && actor) {
       // Breakthrough: the rig lifts off out of the enemy corner.
       this.onCamera({ x: actor.root.position.x, y: actor.root.position.z }, { owner: actor.owner, score: true });
-      fx.text(up(actor, 3.8), "EXTRACTED", "#4fffc8");
+      this.popText(actor, 3.8, "EXTRACTED", "#4fffc8");
       fx.shell(actor.root.position.clone(), actor.radius * 1.1, 3.4, 0x4fffc8, 0.9, 2);
       this.sound(() => sfx.liftoff());
       this.onBanner(`${actor.name} BROKE THROUGH`, "turn");
@@ -708,14 +716,14 @@ export class Director {
       }
       if (m?.pendingDrop) {
         await this.dropOne(m, frame.rigs.find((r) => r.id === l.rigId));
-        fx.text(up(m, 3.8), l.drone ? "DRONE" : "REINFORCEMENTS", "#ff7a5a");
+        this.popText(m, 3.8, l.drone ? "DRONE" : "REINFORCEMENTS", "#ff7a5a");
       }
     } else if (l.kind === "detonate" && actor) {
       // Sapper: the charge goes off where it stands.
       this.onCamera({ x: actor.root.position.x, y: actor.root.position.z }, { punch: true, owner: actor.owner });
       this.splashBlast(actor.root.position.clone(), { radius: l.radius || 2.5, pen: 1 });
       this.sound(() => sfx.explosion(true));
-      fx.text(up(actor, 4), "KABOOM", "#ff7a3a");
+      this.popText(actor, 4, "KABOOM", "#ff7a3a");
       await wait(350 / this.speed);
     } else if ((l.kind === "fieldweld" || l.kind === "vent") && actor) {
       // Support walker at work on a friend: welding sparks, or a coolant gush.
@@ -724,8 +732,8 @@ export class Director {
       actor.fire("melee");
       if (t !== actor) fx.tether(() => actor.muzzleWorld("melee"), () => up(t, 1.4), l.kind === "vent" ? 0x6ab8e0 : 0x9fe8ff, 0.8);
       await wait(250 / this.speed);
-      if (l.kind === "vent") { for (let i = 0; i < 12; i++) fx.steam(up(t, 1.5 + Math.random())); fx.text(up(t, 3.6), "VENTED −2", "#9fd8ff"); this.sound(() => sfx.shot("steam")); }
-      else { fx.weld(up(t, 1.4)); const n = /→\s*(\d+)\s*SP/.exec(l.summary || "")?.[1]; fx.text(up(t, 3.6), n ? `+${n} SP` : "WELDED", "#7fcf6a"); }
+      if (l.kind === "vent") { for (let i = 0; i < 12; i++) fx.steam(up(t, 1.5 + Math.random())); this.popText(t, 3.6, "VENTED −2", "#9fd8ff"); this.sound(() => sfx.shot("steam")); }
+      else { fx.weld(up(t, 1.4)); const n = /→\s*(\d+)\s*SP/.exec(l.summary || "")?.[1]; this.popText(t, 3.6, n ? `+${n} SP` : "WELDED", "#7fcf6a"); }
       actor.aimAt(null);
       await wait(200 / this.speed);
     } else if (l.kind === "paint" && actor) {
@@ -733,7 +741,7 @@ export class Director {
       if (t) {
         fx.beam(up(actor, 2), up(t, 1.6), 0xff4a2a, 0.5);
         fx.flash(up(t, 3), 0xff4a2a, 30, 10);
-        fx.text(up(t, 4), "PAINTED", "#ff8a5a");
+        this.popText(t, 4, "PAINTED", "#ff8a5a");
       }
       await wait(180 / this.speed);
     } else if (l.kind === "blast") {
@@ -746,7 +754,7 @@ export class Director {
       if (t) {
         const flame = /heat/.test(l.summary || "") && !/SP to/.test(l.summary || "");
         if (flame) fx.burst(up(t, 1), 18, { color: 0xff6a22, size: 0.8, life: 0.5, spread: 3 }); else fx.explosion(up(t, 1), false);
-        fx.text(up(t, 3.4), /friendly fire/.test(l.summary || "") ? "FRIENDLY FIRE" : "SPLASH", "#ffb35a");
+        this.popText(t, 3.4, /friendly fire/.test(l.summary || "") ? "FRIENDLY FIRE" : "SPLASH", "#ffb35a");
         this.sound(() => sfx.explosion(false));
       }
       await wait(220 / this.speed);
@@ -760,7 +768,7 @@ export class Director {
         await this.hop(actor, from, to, actor.targetFacing ?? 0, { drag: true, dur: 0.45 });
         if (slam) { fx.sparks(up(actor, 1.2), 22); fx.flash(up(actor, 1.2), 0xffaa44, 30, 8); fx.shake = Math.max(fx.shake, 0.35); this.sound(() => sfx.hit(2)); }
       }
-      fx.text(up(actor, 3.8), slam ? "SLAMMED" : "SHOVED", "#f2efe8");
+      this.popText(actor, 3.8, slam ? "SLAMMED" : "SHOVED", "#f2efe8");
       await wait(200 / this.speed);
     } else if (l.kind === "chain") {
       // Tesla Coil: the arc jumps from the struck rig to the next one.
@@ -771,12 +779,12 @@ export class Director {
         fx.sparks(b, 14, 0x9fe8ff); fx.flash(b, 0x66ccff, 30, 8);
         this.sound(() => sfx.shot("arc"));
       }
-      if (to) fx.text(up(to, 3.6), /friendly fire/.test(l.summary || "") ? "ARC · FRIENDLY" : "ARC", "#9fe8ff");
+      if (to) this.popText(to, 3.6, /friendly fire/.test(l.summary || "") ? "ARC · FRIENDLY" : "ARC", "#9fe8ff");
       await wait(250 / this.speed);
     } else if (l.kind === "mark" && actor) {
       fx.flash(up(actor, 3), 0xff4a2a, 30, 10);
       fx.burst(up(actor, 3), 14, { color: 0xff6a3a, size: 0.4, life: 0.8, spread: 3, up: 0.5 });
-      fx.text(up(actor, 4), "MARKED", "#ff8a5a");
+      this.popText(actor, 4, "MARKED", "#ff8a5a");
       await wait(180 / this.speed);
     } else if (l.kind === "grit") {
       // The side that's behind digs in: a Grit token arrives.
@@ -793,7 +801,7 @@ export class Director {
       if (l.rolls?.length && l.kind === "reaction" && this.onDice && !this.skipping && !this.quiet) this.onDice(l);
       // Preparations, reactions, equipment, reloads… a short tag over the rig.
       const short = { prepare: "PREPARED", reload: "RELOAD", repair: "REPAIR", reaction: "REACTION!", equipment: "SYSTEM", lock: "LOCK", emplace: "EMPLACED", barrage: "BARRAGE", shutdown: "SHUT DOWN", perk: null }[l.kind];
-      if (short) fx.text(up(actor, 3.4), l.improved && short === "REACTION!" ? "IMPROVED REACTION!" : short, l.improved ? "#f0cf7a" : "#9fd8ff");
+      if (short) this.popText(actor, 3.4, l.improved && short === "REACTION!" ? "IMPROVED REACTION!" : short, l.improved ? "#f0cf7a" : "#9fd8ff");
       if (l.kind === "barrage") fx.explosion(up(actor, 1.5), false);
       await wait(150 / this.speed);
     }
@@ -811,7 +819,7 @@ export class Director {
     const fx = this.world.fx;
     const up = (mm, h = 2.5) => mm.root.position.clone().add(new THREE.Vector3(0, h, 0));
     const base = (mm) => mm.root.position.clone();
-    const tag = (text, color = "#9fd8ff", mm = m) => fx.text(up(mm, 3.6), text, color);
+    const tag = (text, color = "#9fd8ff", mm = m) => this.popText(mm, 3.6, text, color);
     const victims = (l.victims || []).map((id) => this.mechs.get(id)).filter(Boolean);
     const stacks = () => m.stacks.map((s) => s.getWorldPosition(new THREE.Vector3()));
     const W = (ms) => wait(ms / this.speed);
@@ -856,7 +864,7 @@ export class Director {
             fx.sparks(up(v, 1.6), 10);
             const { from, to, facing } = this.endpoints(v.id, frame, prev);
             if (from && to) await this.hop(v, from, to, facing, { drag: true, dur: 0.7 });
-            fx.text(up(v, 3.6), "REELED IN", "#e0c080");
+            this.popText(v, 3.6, "REELED IN", "#e0c080");
             m.aimAt(null);
           }
         } else {
@@ -898,7 +906,7 @@ export class Director {
           fx.particle(base(host).add(new THREE.Vector3(Math.cos(a) * host.radius, 0.3, Math.sin(a) * host.radius)), { color: 0x7fff6a, size: 0.25, life: 1.1, vel: new THREE.Vector3(-Math.cos(a) * 0.6, 1.6, -Math.sin(a) * 0.6) });
         }, i * 25);
         fx.weld(up(host, 1.5), 10);
-        fx.text(up(host, 3.6), "NANITES", "#8dff7a");
+        this.popText(host, 3.6, "NANITES", "#8dff7a");
         await W(600);
         break;
       }
@@ -912,7 +920,7 @@ export class Director {
         for (const v of victims) {
           fx.burst(up(v, 1.4), 18, { color: 0xff6a1a, size: 0.7, life: 0.6, spread: 3 });
           for (let i = 0; i < 6; i++) fx.steam(up(v, 2));
-          fx.text(up(v, 3.4), "SCALDED +2 HEAT", "#ff8a3d");
+          this.popText(v, 3.4, "SCALDED +2 HEAT", "#ff8a3d");
         }
         await W(450);
         break;
@@ -927,7 +935,7 @@ export class Director {
           fx.shake = Math.max(fx.shake, 0.5);
           tag("MELTDOWN BURST", "#ff7a2a");
           await W(500);
-          for (const v of victims) { fx.burst(up(v, 1.4), 16, { color: 0xff5a10, size: 0.7, life: 0.6, spread: 3 }); fx.text(up(v, 3.4), n ? `+${n} HEAT` : "HEAT", "#ff8a3d"); }
+          for (const v of victims) { fx.burst(up(v, 1.4), 16, { color: 0xff5a10, size: 0.7, life: 0.6, spread: 3 }); this.popText(v, 3.4, n ? `+${n} HEAT` : "HEAT", "#ff8a3d"); }
           await W(350);
         } else {
           this.sound(() => sfx.overclock());
@@ -983,7 +991,7 @@ export class Director {
     const f = l.chaff?.from || from, t = l.chaff?.to || to;
     this.sound(() => sfx.chaff());
     fx.glitter(m.root.position.clone().add(new THREE.Vector3(0, 1.8, 0)));
-    fx.text(m.root.position.clone().add(new THREE.Vector3(0, 3.6, 0)), "CHAFF", "#e8e8f0");
+    this.popText(m, 3.6, "CHAFF", "#e8e8f0");
     if (f && t && Math.hypot(t.x - f.x, t.y - f.y) > 0.05) await this.hop(m, f, t, facing, { height: 0.5, dur: 0.4, strafe: true });
     else await wait(250 / this.speed);
     // Hold the pose: a sidestep is a strafe, not a turn.
@@ -1008,7 +1016,7 @@ export class Director {
     const m = this.mechs.get(r.id);
     if (!m) return;
     const crit = now === "critical";
-    this.world.fx.text(m.root.position.clone().add(new THREE.Vector3(0, 5.8, 0)), crit ? "CRITICAL" : "BLOODIED", crit ? "#ff3d1f" : "#f5b041");
+    this.popText(m, 5.8, crit ? "CRITICAL" : "BLOODIED", crit ? "#ff3d1f" : "#f5b041");
     if (crit) {
       this.sound(() => sfx.critical());
       this.world.fx.sparks(m.root.position.clone().add(new THREE.Vector3(0, 2, 0)), 24, 0xff6a3a);
@@ -1027,7 +1035,7 @@ export class Director {
     // A drone losing a limb isn't news.
     if (r.kind === "drone") return;
     if (m) {
-      this.world.fx.text(m.root.position.clone().add(new THREE.Vector3(0, 5, 0)), text, "#ff5a3c");
+      this.popText(m, 5, text, "#ff5a3c");
       this.world.fx.sparks(m.root.position.clone().add(new THREE.Vector3(0, 2, 0)), 30);
       this.onCamera({ x: m.root.position.x, y: m.root.position.z }, { punch: true, owner: r.owner });
     }

@@ -1280,13 +1280,21 @@ body.crit-vignette::after { content: ""; position: fixed; inset: 0; pointer-even
 .cursor-tag.t-aim { background: #5aa8ff; }
 .cursor-tag.t-bad { background: #ff5a4a; color: #fff; }
 
-/* Pilot barks: a radio bubble docked on top of the speaker's nameplate. */
+/* Over each nameplate, a vertical list of what just happened to that rig:
+   pilot barks and combat callouts. Newest at the bottom; older ones slide up as
+   new ones grow in, then fade and collapse. */
 .plate.talking { z-index: 3; }
-.plate .bark { position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); width: max-content; max-width: 300px;
-  background: rgba(22,18,14,.94); border: 2px solid var(--accent, var(--cyan)); border-radius: 8px; padding: 4px 10px 5px; text-align: center;
-  box-shadow: 0 4px 14px rgba(0,0,0,.5); animation: bark-in .18s ease-out, bark-out .4s ease-in 2.4s forwards; }
+.plate .pstack { position: absolute; left: 50%; bottom: calc(100% + 7px); transform: translateX(-50%); width: max-content; max-width: 300px;
+  display: flex; flex-direction: column; align-items: center; }
+.plate .pstack > * { max-height: 140px; margin-top: 3px; animation: stack-in .28s ease-out;
+  transition: opacity .4s ease, max-height .4s ease, margin-top .4s ease, transform .4s ease; }
+.plate .pstack > .out { opacity: 0; max-height: 0 !important; margin-top: 0; transform: translateY(-6px); }
+.plate .pop { font: 700 20px/1.2 Rajdhani, Arial, sans-serif; letter-spacing: .04em; color: var(--c, #ffdd55); white-space: nowrap; overflow: hidden;
+  text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 8px rgba(0,0,0,.8); }
+.plate .bark { position: relative; margin-bottom: 8px; background: rgba(22,18,14,.94); border: 2px solid var(--accent, var(--cyan)); border-radius: 8px;
+  padding: 4px 10px 5px; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+.plate .pstack > .bark.out { margin-bottom: 0; }
 .plate .bark::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 7px solid transparent; border-top-color: var(--accent, var(--cyan)); }
 .plate .bark .bk-who { font: 700 12px var(--label); letter-spacing: .12em; color: var(--accent, var(--cyan)); }
 .plate .bark .bk-line { font: 600 16px/1.25 Rajdhani, Arial, sans-serif; color: #f3e9d2; }
-@keyframes bark-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
-@keyframes bark-out { to { opacity: 0; } }
+@keyframes stack-in { from { opacity: 0; max-height: 0; transform: translateY(8px); } to { opacity: 1; max-height: 140px; transform: none; } }
