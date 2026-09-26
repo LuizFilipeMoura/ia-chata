@@ -288,6 +288,7 @@ export function missionAttrs(run, node) {
   }));
   const attrs = {
     type: node.type,
+    faction: node.faction || null,
     seed: node.seed,
     width: TABLE.width,
     height: TABLE.height,

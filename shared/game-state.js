@@ -3999,6 +3999,7 @@ function buildMission(room, a, random) {
   const commander = rigs.find((r) => r.owner === "b" && r.commander);
   room.campaign = {
     type, mods,
+    faction: typeof a.faction === "string" ? a.faction : null,   // the enemy's faction id (flavour: operator voices)
     commanderId: (type === "assassinate" || type === "boss") ? (commander || rigs.find((r) => r.owner === "b")).id : null,
     exit: type === "breakthrough" ? { x: enemyCorner.x, y: enemyCorner.y, r: Math.round(deployRadius(room.field) * 1.6 * 10) / 10 } : null,
     extractGoal: type === "breakthrough" ? Math.max(1, Math.min(sq.a.length, Math.floor(Number(a.extractGoal) || 2))) : 0,

@@ -162,10 +162,49 @@ const SLANG = {
 const PART = { hull: "hull", arms: "arm", legs: "legs", engine: "boiler" };
 const GENERIC = { name: "Pilot", lines: { hit: ["Hit."], miss: ["Missed."], kill: ["Got it."], hurt: ["We're hit!"], critical: ["She's coming apart!"], heat: ["Running hot."], eject: ["Ejecting!"], move: ["Moving."] } };
 
+// Campaign enemies. Faction operators are extras: a few dry company lines,
+// and they talk less than your pilots. The Warlord is the one enemy star.
+const OPERATORS = {
+  krim: { name: "Krim Operator", lines: {
+    hit: ["Asset depreciated.", "Hit. Logged."], miss: ["Variance noted."], kill: ["Hostile {it} written off."],
+    hurt: ["Damage within budget.", "Filing a claim."], eject: ["Operator exiting. Unit is a write-off."], heat: ["Thermal overrun."], move: ["Repositioning asset."] } },
+  nox: { name: "Nox Operator", lines: {
+    hit: ["Output: adequate.", "Hit."], miss: ["Quota missed."], kill: ["{It} removed. Quota met."],
+    hurt: ["Hull breach. Continuing shift."], eject: ["Shift over."], heat: ["Furnace hot."], move: ["Advancing."] } },
+  arcus: { name: "Arcus Pilot", lines: {
+    hit: ["Beta test: successful.", "Nice."], miss: ["Known issue."], kill: ["{It} deprecated.", "Please rate your defeat."],
+    hurt: ["That's… not in the roadmap."], eject: ["Rolling back!"], heat: ["Thermals trending up."], move: ["Iterating."] } },
+  triton: { name: "Triton Crewman", lines: {
+    hit: ["Hull integrity is a privilege.", "Struck."], miss: ["Heavy seas."], kill: ["{It} scuttled."],
+    hurt: ["Resistance voids your warranty!"], eject: ["Man overboard!"], heat: ["Coolant low."], move: ["Making way."] } },
+  freegear: { name: "Freegear Cutter", lines: {
+    hit: ["Solidarity!", "Got a piece!"], miss: ["Scrap sights. Figures."], kill: ["{It}'s salvage now, comrade."],
+    hurt: ["Ow! Union rules!"], eject: ["I'm out! Somebody grab my spanner!"], heat: ["She's cooking."], move: ["Onward, comrades."] } },
+};
+const WARLORDS = { krim: "Chairman Voss", nox: "Foreman-General Brandt", arcus: "Visionary Kess", triton: "Admiral Oyel", freegear: "Boss Mo Cutter" };
+const WARLORD_LINES = {
+  hit: ["Kneel.", "{It}'s {part}. A souvenir for my trophy wall.", "Is this the best your paymasters could afford?"],
+  miss: ["I MEANT that.", "Guards, adjust my aim.", "Beneath me."],
+  kill: ["{It} is scrap. As are you all.", "Next.", "Mount its {part} on my wall."],
+  hurt: ["You dare scratch MY paint?", "Insolence!", "You'll pay for that. Literally.", "Guards! Hold my coat."],
+  heat: ["My engine runs hot with RAGE.", "Vent the boiler. And the help."],
+  eject: ["This isn't over! It's merely… postponed!", "Retreat is a strategy! A very expensive one!"],
+  move: ["Make way for your better.", "I am coming for you."],
+};
+
 // Chance a bark fires per event: kills and ejections always talk.
 const CHANCE = { hit: 0.45, miss: 0.35, kill: 1, hurt: 0.4, critical: 1, heat: 0.8, eject: 1, die: 1, move: 0.08 };
 
 export function pilotOf(mech) { return PILOTS[mech?.longRange] || GENERIC; }
+
+// Who's in this seat. `campaign` = the room's campaign block (null outside one):
+// its enemy side is faction operators, and a boss contract's commander is the Warlord.
+export function voiceOf(mech, campaign) {
+  if (!campaign || mech.owner !== "b") return { ...pilotOf(mech), chance: 1 };
+  const fac = campaign.faction;
+  if (campaign.type === "boss" && mech.id === campaign.commanderId) return { name: WARLORDS[fac] || "The Warlord", lines: WARLORD_LINES, chance: 1.6, warlord: true };
+  return { ...(OPERATORS[fac] || { name: "Enemy pilot", lines: GENERIC.lines }), chance: 0.45 };
+}
 
 // The crew's name for `mech`, fixed per machine for the battle.
 export function slangFor(mech) {
@@ -176,10 +215,10 @@ export function slangFor(mech) {
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // `used` (a Set) keeps a battle from repeating a line. Returns { pilot, line } or null.
-export function barkFor(mech, event, { other = null, part = null, used = null } = {}) {
+export function barkFor(mech, event, { other = null, part = null, used = null, campaign = null } = {}) {
   if (event === "die") event = "eject";
-  if (Math.random() > (CHANCE[event] ?? 0.3)) return null;
-  const pilot = pilotOf(mech);
+  const pilot = voiceOf(mech, campaign);
+  if (Math.random() > (CHANCE[event] ?? 0.3) * pilot.chance) return null;
   const it = other ? slangFor(other) : null;
   const pool = (pilot.lines[event] || GENERIC.lines[event] || []).filter((l) =>
     (it || !/\{it\}/i.test(l)) && (part || !l.includes("{part}")) && !used?.has(l));
@@ -187,5 +226,5 @@ export function barkFor(mech, event, { other = null, part = null, used = null } 
   const raw = pool[Math.floor(Math.random() * pool.length)];
   used?.add(raw);
   const line = raw.replaceAll("{It}", it ? cap(it) : "").replaceAll("{it}", it || "").replaceAll("{part}", PART[part] || part || "");
-  return { pilot: pilot.name, line };
+  return { pilot: pilot.name, line, warlord: !!pilot.warlord };
 }

@@ -9,7 +9,10 @@ const build = (id) => {
   applyCommand(room, { verb: "scenario", attrs: { id } });
   return room;
 };
-const act = (room, attrs) => applyCommand(room, { verb: "action", attrs: { name: "Copper", ...attrs } }, { side: "a" });
+const act = (room, attrs, options = {}) => applyCommand(room, { verb: "action", attrs: { name: "Copper", ...attrs } }, { side: "a" }, options);
+// Dice pinned high: the lesson tests read the wound step's arc, and a volley
+// that misses with every die (~5% of the time) never reaches it.
+const HIT = { random: () => 0.9 };
 const kinds = (room) => room.game.resolutions.map((r) => r.kind);
 
 test("every scenario builds a started digital room with fixed positions", () => {
@@ -167,7 +170,7 @@ test("arcs: a single Move reaches the dummy's side, and the shot lands on the si
   const dest = { x: 22.5, y: 12.5 };
   act(room, { action: "move", dest, facing: faceFrom(dest, dummy.pos) });
   assert.deepEqual(me.pos, dest, lastRejectionReason());
-  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, HIT);
   assert.match(arcHit(room), /side arc/, lastRejectionReason());
 });
 
@@ -175,12 +178,12 @@ test("keywords: after the front shot, one Sprint reaches the side and the Mini G
   const room = build("keywords");
   const me = room.rigs.find((r) => r.name === "Copper"), dummy = room.rigs.find((r) => r.name === "Dummy");
   applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
-  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, HIT);
   assert.match(arcHit(room), /front|raking/i);
   act(room, { action: "reload" });
   const dest = { x: 24, y: 24 };
   act(room, { action: "sprint", dest, facing: faceFrom(dest, dummy.pos) });
   assert.deepEqual(me.pos, dest, lastRejectionReason());
-  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, HIT);
   assert.match(arcHit(room), /side arc/, lastRejectionReason());
 });

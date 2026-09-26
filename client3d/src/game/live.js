@@ -250,6 +250,7 @@ export class LiveMatch {
     const firstField = !this.state || first;
     const prevState = this.state;
     this.state = state;
+    this.director.campaign = state.campaign || null; // enemy voices: faction operators, the Warlord
     this.director.commanderId = state.campaign?.commanderId ?? null;
     if (firstField && state.field) {
       this.world.buildField({ ...state.field }, state.game.objectives || []);

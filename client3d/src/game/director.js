@@ -199,9 +199,9 @@ export class Director {
   bark(m, event, { other = null, part = null } = {}) {
     if (this.quiet || this.skipping || !m || !settings.get("barks")) return;
     this.barksUsed ||= new Set();
-    const b = barkFor(m, event, { other, part, used: this.barksUsed });
+    const b = barkFor(m, event, { other, part, used: this.barksUsed, campaign: this.campaign });
     if (!b) return;
-    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, m.owner === "a" ? "#5fd3c0" : "#e0533d", b.pilot);
+    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, b.warlord ? "#f0cf7a" : m.owner === "a" ? "#5fd3c0" : "#e0533d", b.pilot);
     sfx.bark();
   }
 
