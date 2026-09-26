@@ -689,6 +689,12 @@ export class World {
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color, dashSize: 0.5, gapSize: 0.3 }));
     line.computeLineDistances(); this.overlay.add(line); return line;
   }
+  // A flat annulus on the table (a gun's sweet band, a dead zone).
+  annulus(x, y, r0, r1, color, opacity = 0.14) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(Math.max(0.01, r0), r1, 96), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, 0.05, y); this.overlay.add(m); return m;
+  }
+
   // A small floating tag over a point: rows of { text, color } on a dark
   // riveted chip (threat / shot badges in the move preview).
   badge(x, y, h, rows) {

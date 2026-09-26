@@ -96,9 +96,8 @@ test("WEAPONS carries full combat profiles keyed by canonical name", () => {
   assert.equal(Object.keys(WEAPONS.melee).length, 11);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].pen, 3);
-  assert.equal(WEAPONS.longRange["Mini Gun"].sweet, 7);
-  assert.equal(WEAPONS.longRange["Mini Gun"].peak, 2);
-  assert.equal(WEAPONS.longRange["Mini Gun"].dropoff, 0.35);
+  assert.deepEqual(WEAPONS.longRange["Mini Gun"].band, [0, 8]);
+  assert.equal(WEAPONS.longRange["Mini Gun"].bandAcc, 2);
   assert.equal(WEAPONS.longRange["Mini Gun"].minRange, 0);
   assert.equal(WEAPONS.longRange["Mini Gun"].maxRange, 18);
   assert.equal(WEAPONS.longRange["Mini Gun"].accuracy, undefined);
@@ -182,7 +181,7 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   // Shape, not values: the Siege Maul is present with a full ranged combat profile.
   // Its Pen/Damage are tunable, so they're checked for type, not pinned to numbers.
   const maul = WEAPONS.longRange["Siege Maul"];
-  for (const k of ["rof", "pen", "dmg", "sweet", "peak", "dropoff", "minRange", "maxRange"]) {
+  for (const k of ["rof", "pen", "dmg", "sweet", "peak", "bandAcc", "minRange", "maxRange"]) {
     assert.equal(typeof maul[k], "number", `Siege Maul missing ${k}`);
   }
 
@@ -198,7 +197,7 @@ test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles
   // Shape, not values: Harpoon and Anchor are present with full profiles; their
   // Pen/Damage are tunable, so they're checked for type rather than pinned.
   const harpoon = WEAPONS.longRange["Harpoon"];
-  for (const k of ["rof", "pen", "dmg", "sweet", "peak", "dropoff", "minRange", "maxRange"]) {
+  for (const k of ["rof", "pen", "dmg", "sweet", "peak", "bandAcc", "minRange", "maxRange"]) {
     assert.equal(typeof harpoon[k], "number", `Harpoon missing ${k}`);
   }
   const anchor = WEAPONS.melee["Anchor"];
@@ -207,7 +206,7 @@ test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles
   assert.deepEqual(anchor.accuracy, [0, 0]);
   assert.deepEqual(anchor.rng, [2, 2]);
   assert.deepEqual(WEAPONS.longRange["Rivet Gun"],
-    { rof: 6, pen: 3, dmg: 1, sweet: 6, peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 });
+    { rof: 6, pen: 3, dmg: 1, band: [0, 6], bandAcc: 2, sweet: 3, peak: 2, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
     { rof: 2, pen: 7, dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true });
   assert.equal(Object.keys(WEAPONS.longRange).length, 11);
@@ -4200,7 +4199,7 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
     } else {
       assert.equal(typeof w.sweet, "number", `${name} has sweet`);
       assert.equal(typeof w.peak, "number", `${name} has peak`);
-      assert.equal(typeof w.dropoff, "number", `${name} has dropoff`);
+      assert.ok(Array.isArray(w.band) || typeof w.dropoff === "number", `${name} has a band (or a legacy falloff)`);
       assert.equal(typeof w.minRange, "number", `${name} has minRange`);
       assert.equal(typeof w.maxRange, "number", `${name} has maxRange`);
     }

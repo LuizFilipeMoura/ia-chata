@@ -32,13 +32,29 @@ export const AIMED_SHOT_PENALTY = -3;
 // §7 Stagger, the Aim penalty a Staggered rig carries into its next attack.
 export const STAGGER_AIM = -1;
 
-// §7.4, ranged accuracy as a function of measured distance: peak at the sweet
-// spot, falling off by `dropoff` per inch away from it. Melee weapons have a
-// fixed reach and keep their scalar `accuracy`. A missing distance (legacy
-// callers / tests) yields the peak, i.e. "at the sweet spot, in range".
+// Is `distance` inside the weapon's sweet band? Guns with a `band` use it;
+// legacy profiles (unit weapons) read "within 2 inches of the sweet spot".
+export function inSweetBand(profile, distance) {
+  const d = Number(distance);
+  if (profile.melee || !Number.isFinite(d)) return false;
+  if (profile.band) return d >= profile.band[0] && d <= profile.band[1];
+  return Math.abs(d - (profile.sweet ?? 0)) <= 2;
+}
+
+// §7.4, ranged accuracy by measured distance. A gun with a sweet `band` is
+// flat (0) anywhere in range, +bandAcc inside the band, and close.acc under
+// close.under (marksmen). Legacy profiles (unit weapons) keep the old curve:
+// peak at the sweet spot, `dropoff` lost per inch away. Melee weapons keep their
+// scalar `accuracy`. A missing distance yields the best case.
 export function weaponAccuracyAt(profile, distance) {
   if (profile.melee) return profile.accuracy?.[0] || 0;
   const d = Number(distance);
+  if (profile.band) {
+    if (!Number.isFinite(d)) return profile.bandAcc || 0;
+    if (inSweetBand(profile, d)) return profile.bandAcc || 0;
+    if (profile.close && d < profile.close.under) return profile.close.acc;
+    return 0;
+  }
   if (!Number.isFinite(d)) return profile.peak || 0;
   const penalty = Math.round((profile.dropoff || 0) * Math.abs(d - profile.sweet));
   return (profile.peak || 0) - penalty;
@@ -90,8 +106,8 @@ export function aimBreakdown(attacker, profile, opts) {
   // equipmentUpgradeEffectOf, the catalog lives in rules.js, which combat.js may
   // import without a game-state cycle. Only ballistic-processor carries the tag;
   // other targeting-computer upgrades resolve to 0.
-  const inSweetBand = !profile.melee && opts.distance != null && Math.abs(opts.distance - (profile.sweet ?? 0)) <= 2;
-  const ballistic = (attacker.equipment === "targeting-computer" && inSweetBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAccuracy ?? 0) : 0;
+  const inBand = opts.distance != null && inSweetBand(profile, opts.distance);
+  const ballistic = (attacker.equipment === "targeting-computer" && inBand) ? (equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.sweetBandAccuracy ?? 0) : 0;
   // Campaign side modifiers (Gyro Stabilisers relic): flat Accuracy on every attack.
   const modAcc = attacker.mods?.acc || 0;
   const accuracyTotal = weaponAccuracy - coverEff + aimedPenalty + hullPenalty + engagedEff + paintBonus + smoke + ballistic + predictiveAccuracy + staggerPenalty + modAcc;
@@ -103,7 +119,12 @@ export function aimBreakdown(attacker, profile, opts) {
   terms.push({ label: "base aim", value: base });
   terms.push({
     label: !profile.melee && Number.isFinite(Number(opts.distance))
-      ? `weapon Accuracy at ${opts.distance}"` : "weapon Accuracy",
+      ? (profile.band
+        ? (inSweetBand(profile, opts.distance) ? `in the sweet band (${profile.band[0]}–${profile.band[1]}")`
+          : profile.close && Number(opts.distance) < profile.close.under ? `too close (under ${profile.close.under}")`
+          : `outside the sweet band (${profile.band[0]}–${profile.band[1]}")`)
+        : `weapon Accuracy at ${opts.distance}"`)
+      : "weapon Accuracy",
     value: weaponAccuracy,
   });
   // Cover, and the cancels. `rawCover` is what the target ACTUALLY had on the
@@ -343,7 +364,7 @@ export function penBreakdown(attacker, profile, opts) {
   // Steady Aim (§13, Crossbow), +3 Penetration when the measured firing distance is
   // within 2" of the weapon's sweet spot. Needs the distance threaded in via opts.
   if (profile.upgradeEffect?.steadyAim && opts.distance != null
-      && Math.abs(opts.distance - profile.sweet) <= 2) {
+      && inSweetBand(profile, opts.distance)) {
     bonus += 3;
     terms.push({ label: "Steady Aim", value: 3 });
   }

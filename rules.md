@@ -241,9 +241,9 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 3. **Verify line of sight.** At least **50%** of the target must be visible.
    - Up to **25% obscured** → **−1 Accuracy**.
    - Up to **50% obscured** → **−2 Accuracy**.
-4. **Roll to hit.** Roll **ROF** D6. Apply Accuracy modifiers (weapon + cover) to the Rig's **Aim**; each die that **meets or beats** the modified Aim is a hit. A natural **6 always hits**. A ranged weapon's **Accuracy depends on the measured distance**: see the **sweet-spot** rule below.
+4. **Roll to hit.** Roll **ROF** D6. Apply Accuracy modifiers (weapon + cover) to the Rig's **Aim**; each die that **meets or beats** the modified Aim is a hit. A natural **6 always hits**. A ranged weapon's **Accuracy depends on the measured distance**: see the **sweet-band** rule below.
 
-**Sweet spot (ranged Accuracy by distance).** A ranged weapon fires most accurately at its **sweet spot** (an optimal distance in inches), where it delivers its **peak Accuracy**. The farther the measured distance is from the sweet spot, **closer *or* farther**: the more accuracy bleeds off: subtract the weapon's **falloff** (Accuracy lost per inch) times the number of inches away from the sweet spot. So a long-range gun is sloppy in your face *and* at extreme range, sharpest in its band. **Melee** weapons ignore this, they carry a single fixed Accuracy at their **2" reach**. *⚙ TUNING: replaced the old flat near/far Accuracy bands with a continuous sweet-spot falloff.*
+**Sweet band (ranged Accuracy by distance).** A ranged weapon has **flat Accuracy 0** anywhere inside its range, and a **bonus** (its *band Accuracy*) while the measured distance is inside its **sweet band**. Where the band sits depends on the gun's role: **brawlers** (Mini Gun, Double MG, Rivet Gun, Siege Maul) are sharpest point-blank, **marksmen** (Sniper Cannon, Crossbow, Arc Gun) are sharpest at long range and take a **close penalty** when the target is nearer than their close limit, **artillery** (Mortar, Missile Barrage) has a wide band and keeps its minimum-range dead zone. **Melee** weapons ignore this, they carry a single fixed Accuracy at their **2" reach**. *⚙ TUNING: replaced the continuous per-inch falloff (invisible rounding, hard to measure at the table) with one band per gun: you're either in it or you're not.*
 5. **Apply weapon perks** (§13).
 6. **Determine impact location.** Unless it was an **Aimed Shot**, the *defender* rolls 1 D12:
 
@@ -369,7 +369,7 @@ Every weapon is one of **two types**, and every Rig equips **one of each** (§3)
 - **Long Range**: any weapon **without** the Melee perk. Fires at range; once spent it must be **reloaded** between shots in the same activation. The second such shot in an activation costs **+1 heat** (§5).
 - **Melee**: any weapon with the **Melee** perk (RNG 2"). Usable only within 2" and never needs reloading.
 
-Any weapon may be fitted to a Rig of **any weight class** and **any faction**. Ranged weapons use the **sweet-spot** model (§7): **Sweet** is the optimal distance (inches), **Peak** is the Accuracy at that distance, **Falloff** is the Accuracy lost per inch away from the sweet spot (in either direction), and **Range** is the min–max band the weapon can fire within. **Melee** weapons instead carry a single fixed Accuracy at a **2" reach**.
+Any weapon may be fitted to a Rig of **any weight class** and **any faction**. Ranged weapons use the **sweet-band** model (§7): **Band** is the distance range (inches) where the gun is sharpest, **Band Acc** is the Accuracy bonus inside it (Accuracy is 0 elsewhere in range), **Close** is a marksman's penalty when the target is nearer than that limit, and **Range** is the min–max distance the weapon can fire within. **Melee** weapons instead carry a single fixed Accuracy at a **2" reach**.
 
 **Weight-class Penetration.** The **Penetration** listed below is the **Medium** baseline. A weapon's Penetration shifts with the chassis carrying it, heavier Rigs drive it harder, lighter Rigs can't. Everything else (ROF, Accuracy, RNG, perks) is unchanged:
 
@@ -390,30 +390,30 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 
 **Machine Guns**: fast-firing, low-Penetration flanking specialists.
 
-| Weapon | ROF | Sweet | Peak | Falloff/in | Range |
+| Weapon | ROF | Sweet band | Band Acc | Close | Range |
 |---|:--:|:--:|:--:|:--:|:--:|
-| Mini Gun | 8 | 7" | +2 | −0.35 | 0–18" |
-| Double MG | 8 | 9" | +1 | −0.25 | 0–20" |
+| Mini Gun | 8 | 0–8" | +2 | – | 0–18" |
+| Double MG | 8 | 0–10" | +1 | – | 0–20" |
 
 **Cannons & Artillery**: front-capable firepower.
 
-| Weapon | ROF | Sweet | Peak | Falloff/in | Range |
+| Weapon | ROF | Sweet band | Band Acc | Close | Range |
 |---|:--:|:--:|:--:|:--:|:--:|
-| Autocannon | 4 | 12" | +1 | −0.22 | 0–26" |
-| Arc Gun | 2 | 20" | +1 | −0.18 | 0–32" |
-| Mortar | 3 | 18" | +1 | −0.15 | 6–34" |
-| Sniper Cannon | 1 | 22" | +2 | −0.15 | 0–28" |
-| Siege Maul | 1 | 8" | +1 | −0.30 | 0–16" |
-| Missile Barrage | 4 | 20" | +1 | −0.15 | 6–34" |
-| Harpoon | 1 | 14" | +2 | −0.28 | 0–22" |
-| Rivet Gun | 6 | 6" | +2 | −0.40 | 0–14" |
-| Crossbow | 1 | 18" | +3 | −0.25 | 0–24" |
+| Autocannon | 4 | 8–16" | +1 | – | 0–26" |
+| Arc Gun | 2 | 14–26" | +1 | −1 under 6" | 0–32" |
+| Mortar | 3 | 12–28" | +1 | – | 6–34" |
+| Sniper Cannon | 1 | 18–28" | +2 | −2 under 8" | 0–28" |
+| Siege Maul | 1 | 0–8" | +1 | – | 0–16" |
+| Missile Barrage | 4 | 14–30" | +1 | – | 6–34" |
+| Harpoon | 1 | 10–18" | +2 | – | 0–22" |
+| Rivet Gun | 6 | 0–6" | +2 | – | 0–14" |
+| Crossbow | 1 | 15–22" | +3 | −1 under 6" | 0–24" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose Accuracy up close.
 
 > The **Siege Maul** is a close-in demolition gun: standard Penetration, the heaviest Damage **in this table** after the Sniper Cannon (the Harpoon matches it), and the shortest range here bar the Rivet Gun. It is not frightening because it penetrates better, it penetrates the same as a Mortar. It is frightening because of what each wound costs.
 
-> The **Harpoon** is a heavy line-thrower: the Siege Maul's payload on a longer leash, trading the Sniper Cannon's reach and alpha for a mid-board sweet spot. The **Rivet Gun** is a rapid, low-Penetration fastener gun with the shortest max range of any weapon in the table, volume, not punch.
+> The **Harpoon** is a heavy line-thrower: the Siege Maul's payload on a longer leash, trading the Sniper Cannon's reach and alpha for a mid-board sweet band. The **Rivet Gun** is a rapid, low-Penetration fastener gun with the shortest max range of any weapon in the table, volume, not punch.
 
 ### Melee Weapons
 
@@ -498,7 +498,7 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Emplacement** (Bulwark Shield, Prototype), the **Emplace** action (1 slot, 0 heat) roots the Rig into a fortress stance: its Raise Shield becomes permanent (auto-raised free at each activation start, no Prepare action, no Answer token), its action budget drops from 3 to 2, and it can no longer Move, Sprint, or Jump Jets. The **Un-plant** action (1 slot) lifts the stance and costs +2 heat. Emplacing is on a 3-round cooldown measured from when it was entered (re-enter no earlier than the round you emplaced + 3).
 - **Piledriver Protocol** (Siege Maul, Prototype), a **Momentum** system. The Rig gains **+1 Momentum** for any activation it **advanced** (Moved or Sprinted), capped at 3; Momentum persists between activations. A Siege Maul shot spends **all** stored Momentum: the hit ignores the target's **Brace** (no −2) and **cover**, and gains **+1 Penetration per Momentum** spent (Momentum then resets to 0 whether or not the shot connected). **Downside:** while storing Momentum (> 0) the Rig **cannot Raise Shield**: a requested Raise Shield downgrades to Brace (all-in on the charge, no guard). When a Momentum-spending smash lands ≥1 damaging hit, the engine emits a player instruction, *"Piledriver, shove &lt;target&gt; back 3" (move the mini)."*: for the players to resolve on the board (no coordinates are simulated).
 - **Enfilade** (Sniper Cannon, Prototype), a spatial ricochet, narrated rather than simulated. Only **aimed** Sniper Cannon shots feed a per-rig counter; on every **3rd** aimed shot the engine emits a player instruction, *"Enfilade, ricochet! Resolve a +2 Penetration hit on the next rig in line of sight behind &lt;target&gt; (player's choice)."* The player picks the rig behind the target (they know line of sight) and applies the +2 Penetration hit via the normal attack/damage controls. Only the aimed-shot cadence is tracked in state.
-- **Steady Aim** (Crossbow, Tuned), +3 Penetration when the measured firing distance is within 2" of the Crossbow's sweet spot (16–20").
+- **Steady Aim** (Crossbow, Tuned), +3 Penetration when the measured firing distance is inside the Crossbow's sweet band (15–22").
 - **Exploit Wound** (Talon, Tuned), +3 Penetration against a struck location already below its max SP.
 - **Evisceration** (Talon, Prototype), a **wound** on a location at or below half its max SP deals **+1 Damage**; downside: −1 Penetration against a fully-undamaged struck location.
 - **Pinning Bolt** (Crossbow, Prototype), a damaging bolt immobilises the target until the firer's next activation (guaranteed, no roll, may still pivot); the firer runs +2 heat.
@@ -573,7 +573,7 @@ Each piece of equipment offers **three upgrades, one of each nature** (see *Upgr
 | Overclock Core | Redundant Capacitors (Overclock costs +2 heat) | Adrenaline Surge (below half SP, Overclock grants +3 actions) | Reactor Overdrive (Overclock also +2 Penetration; overheat bonus doubles) |
 | Field Repair Suite | Master Toolkit (Repair heals +2 SP) | Battlefield Triage (Emergency Patch heals 5 SP on a destroyed location) | Nanite Swarm (seed nanites that heal each Recovery; −1 Heat Capacity while active) |
 | Blast Furnace Core | Insulated Core (safe up to +2 over Capacity) | Backdraft (Heat Purge Wave +1 Penetration per 2 heat over Capacity) | Meltdown Protocol (bank overheat as charge; spend for Penetration or a burst) |
-| Targeting Computer | Ballistic Processor (+1 accuracy vs a target in your sweet-spot band) | Predictive Tracking (vs a static/pinned target: +2 accuracy, ignore cover) | Fire Solution Lock (hold still, stack a solution → an auto-hit AP volley) |
+| Targeting Computer | Ballistic Processor (+1 accuracy vs a target in your sweet band) | Predictive Tracking (vs a static/pinned target: +2 accuracy, ignore cover) | Fire Solution Lock (hold still, stack a solution → an auto-hit AP volley) |
 | Reactive Plating | Angled Plates (side/rear attacks −2 Penetration) | Chaff Burst (under smoke, free half-Speed side-step when targeted) | Point-Defense System (intercept incoming fire, force rerolls; heat cost) |
 
 #### Tuned / Prototype Upgrade Mechanics
@@ -691,7 +691,7 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 - **Shut Down anywhere** (§5), Shut Down may be declared at any point in the activation; heat vented scales with how much of the activation is spent shutting down (first-action = full vent, later = proportionally less).
 - **Whole-inch speeds** (§2), base Speed 5 / 4 / 3 / 2 by weight class; all distances round to whole inches.
 - **Sprint** (§5/§6), normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot. ⚙ TUNING: Sprint heat now **floors at 1**: Reinforced Servos used to zero it, which made repositioning free and turned Sprint into a strictly-better Move. The upgrade now grants **2× Speed reach** instead.
-- **Sweet-spot ranged Accuracy** (§7), ranged weapons peak at a sweet-spot distance and lose Accuracy per inch away in either direction, within a min–max band. Replaces the flat near/far Accuracy bands so positioning matters at range.
+- **Sweet-band ranged Accuracy** (§7), ranged weapons get a flat Accuracy bonus inside a role-shaped sweet band (point-blank brawlers, long-range marksmen with a close penalty, wide artillery), flat 0 elsewhere in range. Replaced the per-inch falloff, which rounded invisibly and couldn't be measured at the table.
 - **Engagement / melee lock** (§5), a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 Accuracy. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13), machine guns do no frontal damage but hit far harder (+3 side / +6 rear).
 - **Answer tokens** (§5), the player going second each round gets 1 free preparation, or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.

@@ -95,7 +95,7 @@ test("a Gritted Aimed Shot: the natural-6 rule applies to the reroll", () => {
   const { room } = duel(1);
   // Aimed: 4+ base, −3 aim penalty → needs 7, so only natural 6s land.
   applyCommand(room, { verb: "action", attrs: {
-    name: "Atk", action: "aimed", target: "Def", weapon: "longRange", loc: "arms", arc: "front", distance: 8, grit: true,
+    name: "Atk", action: "aimed", target: "Def", weapon: "longRange", loc: "arms", arc: "front", distance: 20, grit: true,
     dice: { toHit: { 0: 6, 1: 5, 2: 1, 3: 2, rerolls: [6, 5, 5] }, wounds: [1, 1, 1, 1] },
   } });
   const step = hitStep(room);
@@ -265,13 +265,14 @@ test("the cap doesn't bite with every rig alive", () => {
 // ---------------------------------------------------------------------------
 
 // A digital room where bot side a has one rig (a1) facing b1 at 10", mid-activation.
-function botShooter(grit) {
+function botShooter(grit, lr = "Autocannon", melee = "Claw") {
   const room = createRoom("GRITB");
   room.mode = "digital";
   claimSide(room, { name: "A", side: "a" });
   claimSide(room, { name: "B", side: "b" });
   for (const owner of ["a", "b"]) {
-    applyCommand(room, { verb: "add", attrs: { name: `${owner}1`, class: "light", owner, longRange: "Autocannon", melee: "Claw" } });
+    const [l, m] = owner === "a" ? [lr, melee] : ["Autocannon", "Claw"];
+    applyCommand(room, { verb: "add", attrs: { name: `${owner}1`, class: "light", owner, longRange: l, melee: m } });
   }
   room.field.terrain = [];
   room.game.started = true;
@@ -297,8 +298,8 @@ test("bot: its last rig spends a Grit token on its shot", () => {
 });
 
 test("bot: with more rigs to act than tokens, only a high-gain shot spends the token", () => {
-  const at = (x) => {
-    const { room, a, b } = botShooter(1);
+  const at = (x, lr, melee) => {
+    const { room, a, b } = botShooter(1, lr, melee);
     for (const n of ["a2", "a3"]) {
       applyCommand(room, { verb: "add", attrs: { name: n, class: "light", owner: "a", longRange: "Mini Gun", melee: "Sword" } });
       findRig(room, n).pos = { x: 2, y: 25 };
@@ -310,12 +311,12 @@ test("bot: with more rigs to act than tokens, only a high-gain shot spends the t
     const gain = expectedDamage(a, b, "longRange", { ...shot, grit: true }) - expectedDamage(a, b, "longRange", shot);
     return { gain, grit: cmd.attrs.grit === true };
   };
-  const near = at(18); // 8": the Autocannon's sweet spot
-  assert.ok(near.gain >= GRIT_SHOT_MIN_GAIN);
-  assert.equal(near.grit, true);
-  const far = at(34); // 24": long range, few dice worth rerolling
-  assert.ok(far.gain < GRIT_SHOT_MIN_GAIN);
-  assert.equal(far.grit, false);
+  const volley = at(22); // 12": a 4-die Autocannon volley, plenty to reroll
+  assert.ok(volley.gain >= GRIT_SHOT_MIN_GAIN);
+  assert.equal(volley.grit, true);
+  const single = at(30, "Sniper Cannon", "Chainsaw"); // 20": one die, little to reroll
+  assert.ok(single.gain < GRIT_SHOT_MIN_GAIN);
+  assert.equal(single.grit, false);
 });
 
 test("bot: no Grit tokens, no Gritted shot", () => {

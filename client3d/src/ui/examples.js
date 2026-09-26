@@ -22,7 +22,7 @@ const hits = (b) => (step(b, "hit")?.dice || []).filter((d) => d.ok).length;
 
 const FIRE = { action: "fire", weapon: "longRange", target: "Dummy" };
 const CASES = {
-  // Sniper Cannon (1 die) fired point-blank, 16" off its sweet spot: often a clean miss.
+  // Sniper Cannon (1 die) fired point-blank, inside its close penalty: often a clean miss.
   miss: { scenario: "equipment", attrs: FIRE, tweak: (r) => { r.rigs[0].pos = { x: 24, y: 18 }; }, test: (b) => hits(b) === 0 },
   // Rivet Gun (Pen 3) into a medium's front armour: hits that don't get through.
   bounce: { scenario: "attackdemo", attrs: FIRE, test: (b) => hits(b) > 0 && !b.sp },

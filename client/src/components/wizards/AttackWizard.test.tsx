@@ -112,12 +112,12 @@ test("attack drawer warns about the selected weapon upgrade before the attack bu
 });
 
 test("slider opens at the weapon's sweet-spot distance", async () => {
-  // Mini Gun (the default rig fixture's longRange weapon) has sweet: 7.
+  // Mini Gun (the default rig fixture's longRange weapon): sweet band 0-8", middle 4.
   render(<AttackWizard rig={state.rigs[0]} mode="fire" onClose={() => {}} />);
   const slider = (await screen.findByLabelText(
     "Distance to target in inches",
   )) as HTMLInputElement;
-  expect(slider.value).toBe("7");
+  expect(slider.value).toBe("4");
   // The band chip's exact copy, disambiguated from the "Sweet spot +N"
   // wording used in the effective-range paragraph below the slider.
   expect(screen.getByText("🎯 sweet spot")).toBeInTheDocument();
@@ -128,9 +128,9 @@ test("dragging off the sweet spot shows the accuracy falloff", async () => {
   const slider = (await screen.findByLabelText(
     "Distance to target in inches",
   )) as HTMLInputElement;
-  // |18 - 7| * 0.35 = 3.85 -> round to 4 penalty -> accuracy = peak(2) - 4 = -2.
+  // 18" is outside the Mini Gun's 0-8" sweet band: flat Accuracy 0 (no band bonus).
   fireEvent.change(slider, { target: { value: "18" } });
-  expect(screen.getByText("-2 falloff")).toBeInTheDocument();
+  expect(screen.getByText("+0 falloff")).toBeInTheDocument();
 });
 
 test("lock mode shows only a target picker and dispatches a lock command with no dice prompt", async () => {

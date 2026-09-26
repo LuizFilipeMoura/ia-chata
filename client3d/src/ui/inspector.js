@@ -30,14 +30,14 @@ function upgrade(list, id) {
 function weapon(slot, name, upId) {
   const w = WEAPONS[slot]?.[name];
   if (!w) return null;
-  const range = slot === "melee" ? `reach ${w.rng?.[0] ?? 2}"` : `range ${w.minRange ? `${w.minRange}-` : ""}${w.maxRange}", best at ${w.sweet}"`;
+  const range = slot === "melee" ? `reach ${w.rng?.[0] ?? 2}"` : `range ${w.minRange ? `${w.minRange}-` : ""}${w.maxRange}", sweet band ${w.band ? `${w.band[0]}–${w.band[1]}" (+${w.bandAcc})` : `~${w.sweet}"`}${w.close ? `, −${-w.close.acc} under ${w.close.under}"` : ""}`;
   return el("div", { class: "in-wep" },
     el("div", { class: "in-wh" }, icon(slot === "melee" ? "melee" : "fire"), el("b", {}, name), el("span", { class: "muted" }, slot === "melee" ? " melee" : " long-range")),
     el("div", { class: "in-stats" },
       el("span", { title: "Shots: dice rolled to hit per attack" }, el("i", {}, icon("shots"), "Shots"), w.rof),
       el("span", { title: "Penetration: how easily a hit wounds (vs the target's Toughness)" }, el("i", {}, icon("pen"), "Pen"), w.pen),
       el("span", { title: "Damage per wound" }, el("i", {}, icon("dmg"), "Dmg"), w.dmg),
-      el("span", { title: slot === "melee" ? "Melee reach from base edge" : "Firing range; accuracy is best near the sweet spot" }, el("i", {}, icon(slot === "melee" ? "reach" : "range"), slot === "melee" ? "Reach" : "Range"), range)),
+      el("span", { title: slot === "melee" ? "Melee reach from base edge" : "Firing range; +Accuracy inside the sweet band, flat elsewhere" }, el("i", {}, icon(slot === "melee" ? "reach" : "range"), slot === "melee" ? "Reach" : "Range"), range)),
     (w.perks || []).length ? el("div", { class: "muted small" }, "Keywords: ", rich(w.perks.join(", "))) : null,
     upgrade(WEAPON_UPGRADES[name], upId));
 }

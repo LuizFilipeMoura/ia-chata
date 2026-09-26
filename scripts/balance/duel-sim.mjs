@@ -163,6 +163,10 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
       const by = room.rigs.find((r) => r.name === bystander);
       if (g.pendingAnswer.remaining > 0 && by?.preparation == null) {
         cmd("answer", { name: bystander, side, prep: "brace" }, side);
+      } else if (by?.preparation?.improved) {
+        // A second Grit token has nowhere to go (the bystander is already
+        // Improved): keep it for attacks.
+        cmd("answer", { side, keep: true }, side);
       } else {
         cmd("answer", { name: bystander, side, prep: "brace", grit: true, ...(by?.preparation ? { upgrade: true } : {}) }, side);
       }

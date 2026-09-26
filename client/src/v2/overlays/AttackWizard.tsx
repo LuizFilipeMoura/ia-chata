@@ -384,7 +384,7 @@ export function AttackWizard({
     if (!p) return "";
     return p.melee
       ? `Reach ${p.rng[0]}" · ROF ${p.rof}`
-      : `Sweet ${p.sweet}" · usable ${p.minRange}"–${p.maxRange}" · ROF ${p.rof}`;
+      : `${p.band ? `Sweet band ${p.band[0]}–${p.band[1]}" (+${p.bandAcc})` : `Sweet ${p.sweet}"`}${p.close ? ` · −${-p.close.acc} under ${p.close.under}"` : ""} · usable ${p.minRange}"–${p.maxRange}" · ROF ${p.rof}`;
   };
 
   // Melee is a structural property of the weapon (the `melee` flag), not the

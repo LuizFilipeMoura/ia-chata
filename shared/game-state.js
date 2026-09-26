@@ -65,19 +65,24 @@ export const BLAST_DMG = 2;
 // from ROF: deriving it collapsed all eleven ROF-1 weapons onto identical output,
 // which is the differentiation D exists to provide. Penetration decides WHETHER you wound
 // (via woundTarget); `d` decides HOW MUCH.
+// Ranged guns (§7): flat Accuracy anywhere in range, +bandAcc inside the
+// weapon's sweet band, and marksman guns take `close.acc` under `close.under`.
+// The band sits where the gun's role wants you: point-blank for brawlers, long
+// for marksmen, wide for artillery (which keeps its minimum-range dead zone).
+// `sweet` (band middle) and `peak` (= bandAcc) are kept for readers.
 export const WEAPONS = {
   longRange: {
-    "Mini Gun":       { rof: 8, pen: 3,  dmg: 1, sweet: 7,  peak: 2, dropoff: 0.35, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
-    "Double MG":      { rof: 8, pen: 5,  dmg: 1, sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
-    "Autocannon":     { rof: 4, pen: 7,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
-    "Arc Gun":        { rof: 2, pen: 8,  dmg: 3, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
-    "Mortar":         { rof: 3, pen: 7,  dmg: 2, sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34, splash: { radius: 2, pen: 5, dmg: 1 } },
-    "Sniper Cannon":  { rof: 1, pen: 10, dmg: 4, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
-    "Siege Maul":     { rof: 1, pen: 11, dmg: 5, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
-    "Missile Barrage":{ rof: 4, pen: 7,  dmg: 2, sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34, splash: { radius: 1.5, pen: 4, dmg: 1 } },
-    "Harpoon":        { rof: 1, pen: 10, dmg: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
-    "Rivet Gun":      { rof: 6, pen: 3,  dmg: 1, sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
-    "Crossbow":       { rof: 1, pen: 8,  dmg: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
+    "Mini Gun":       { rof: 8, pen: 3,  dmg: 1, band: [0, 8], bandAcc: 2, sweet: 4, peak: 2, minRange: 0, maxRange: 18, perks: ["Raking Fire"], machineGun: true },
+    "Double MG":      { rof: 8, pen: 5,  dmg: 1, band: [0, 10], bandAcc: 1, sweet: 5, peak: 1, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
+    "Autocannon":     { rof: 4, pen: 7,  dmg: 2, band: [8, 16], bandAcc: 1, sweet: 12, peak: 1, minRange: 0, maxRange: 26 },
+    "Arc Gun":        { rof: 2, pen: 8,  dmg: 3, band: [14, 26], bandAcc: 1, close: { under: 6, acc: -1 }, sweet: 20, peak: 1, minRange: 0, maxRange: 32 },
+    "Mortar":         { rof: 3, pen: 7,  dmg: 2, band: [12, 28], bandAcc: 1, sweet: 20, peak: 1, minRange: 6, maxRange: 34, splash: { radius: 2, pen: 5, dmg: 1 } },
+    "Sniper Cannon":  { rof: 1, pen: 10, dmg: 4, band: [18, 28], bandAcc: 2, close: { under: 8, acc: -2 }, sweet: 23, peak: 2, minRange: 0, maxRange: 28 },
+    "Siege Maul":     { rof: 1, pen: 11, dmg: 5, band: [0, 8], bandAcc: 1, sweet: 4, peak: 1, minRange: 0, maxRange: 16 },
+    "Missile Barrage":{ rof: 4, pen: 7,  dmg: 2, band: [14, 30], bandAcc: 1, sweet: 22, peak: 1, minRange: 6, maxRange: 34, splash: { radius: 1.5, pen: 4, dmg: 1 } },
+    "Harpoon":        { rof: 1, pen: 10, dmg: 3, band: [10, 18], bandAcc: 2, sweet: 14, peak: 2, minRange: 0, maxRange: 22 },
+    "Rivet Gun":      { rof: 6, pen: 3,  dmg: 1, band: [0, 6], bandAcc: 2, sweet: 3, peak: 2, minRange: 0, maxRange: 14 },
+    "Crossbow":       { rof: 1, pen: 8,  dmg: 4, band: [15, 22], bandAcc: 3, close: { under: 6, acc: -1 }, sweet: 18.5, peak: 3, minRange: 0, maxRange: 24 },
   },
   melee: {
     "Sword":         { rof: 2, pen: 5,  dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true },
@@ -744,10 +749,11 @@ export function effectiveWeaponProfile(slot, weaponName, rig) {
     profile.rng = [...base.rng];
     if (effect.range) profile.rng = profile.rng.map((n) => n + effect.range);
   } else {
-    // Ranged: `...base` already copied sweet/peak/dropoff/minRange/maxRange.
+    // Ranged: `...base` already copied band/sweet/peak/minRange/maxRange.
     if (effect.range) {
       profile.maxRange = base.maxRange + effect.range;
-      profile.sweet = base.sweet + Math.round(effect.range / 2);
+      if (base.band) profile.band = [base.band[0], base.band[1] + effect.range];
+      profile.sweet = base.band ? (profile.band[0] + profile.band[1]) / 2 : base.sweet + Math.round(effect.range / 2);
     }
     if (effect.noFarPenalty) profile.dropoff = base.dropoff * 0.5;
   }

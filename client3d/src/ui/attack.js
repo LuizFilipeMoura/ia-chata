@@ -4,6 +4,7 @@
 // does, weapon stats, expected damage, heat).
 import { el } from "./dom.js";
 import { effectiveWeaponProfile } from "/shared/game-state.js";
+import { weaponAccuracyAt, inSweetBand } from "/shared/combat.js";
 import { rich } from "./glossary.js";
 import { icon } from "./icons.js";
 
@@ -48,16 +49,20 @@ function arcDiagram(rig, target, arc) {
   return d;
 }
 
-// Range: a ruler from you to max range with the sweet spot marked.
+// Range: a ruler from you to max range: the sweet band in green, the dead zone
+// (minimum range) and a marksman's close zone in red, you as the marker.
 function rangeArt(profile, distance, melee) {
   const d = el("div", { class: "atk-map" });
   if (melee) { d.innerHTML = `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="34" fill="#f5b041" fill-opacity=".15" stroke="#f5b041" stroke-dasharray="5 4"/><circle cx="48" cy="60" r="9" fill="#5fd3c0"/><circle cx="74" cy="60" r="9" fill="#2a241a" stroke="#e9dcc0" stroke-width="2"/></svg>`; return d; }
-  const max = profile?.maxRange || 24, sweet = profile?.sweet || max / 2, min = profile?.minRange || 0;
+  const max = profile?.maxRange || 24, min = profile?.minRange || 0;
+  const band = profile?.band || [Math.max(0, (profile?.sweet ?? max / 2) - 2), (profile?.sweet ?? max / 2) + 2];
+  const close = profile?.close?.under || 0;
   const x = (v) => 10 + Math.min(1, v / max) * 100;
   d.innerHTML = `<svg viewBox="0 0 120 120">
     <rect x="10" y="52" width="100" height="16" rx="3" fill="#2a241a" stroke="#6a5634"/>
-    ${min ? `<rect x="10" y="52" width="${x(min) - 10}" height="16" fill="#c8412f" fill-opacity=".4"/>` : ""}
-    <rect x="${x(sweet) - 8}" y="52" width="16" height="16" fill="#7fcf6a" fill-opacity=".55"/>
+    ${close ? `<rect x="10" y="52" width="${x(close) - 10}" height="16" fill="#c8412f" fill-opacity=".3"/>` : ""}
+    ${min ? `<rect x="10" y="52" width="${x(min) - 10}" height="16" fill="#c8412f" fill-opacity=".55"/>` : ""}
+    <rect x="${x(band[0])}" y="52" width="${Math.max(3, x(band[1]) - x(band[0]))}" height="16" fill="#7fcf6a" fill-opacity=".6"/>
     <path d="M${x(distance)},40 L${x(distance) - 6},30 L${x(distance) + 6},30 Z" fill="#5fd3c0"/>
     <line x1="${x(distance)}" y1="40" x2="${x(distance)}" y2="72" stroke="#5fd3c0" stroke-width="2.5"/>
     <text x="10" y="90" fill="#a8997a" font-size="11">0"</text><text x="110" y="90" fill="#a8997a" font-size="11" text-anchor="end">${max}"</text>
@@ -161,11 +166,19 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
   const arc = ARC[first.arc] || ARC.front;
   const lr = effectiveWeaponProfile("longRange", rig.weapons.longRange, rig);
   const melee = rows.every((r) => r.c.weapon === "melee");
-  const sweet = lr?.sweet || 12, off = Math.abs(first.distance - sweet);
+  // The sweet band in plain numbers: what you hit on here, and in the band.
+  const inBand = !melee && lr && inSweetBand(lr, first.distance);
+  const tooClose = !melee && lr?.close && first.distance < lr.close.under;
+  const need = (acc) => Math.min(6, Math.max(2, 4 - acc));
+  const hereNeed = lr ? need(weaponAccuracyAt(lr, first.distance)) : 4, bandNeed = lr ? need(lr.bandAcc ?? lr.peak ?? 0) : 4;
+  const bandTxt = lr?.band ? `${lr.band[0]}–${lr.band[1]}"` : "";
   const tiles = el("div", { class: "atk-tiles" },
     tile(arcDiagram(rig, target, first.arc), "Striking its", `${first.arc} arc`, arc.col, arc.text),
-    tile(rangeArt(lr, first.distance, melee), "Range", melee ? "In reach" : `${first.distance.toFixed(1)}"`, melee || off < 2 ? "#7fcf6a" : "#f5b041",
-      melee ? "Blades ignore range and line of sight." : off < 2 ? `Sweet spot (best at ${sweet}"): full accuracy.` : `Best at ${sweet}". Off the sweet spot, aim suffers.`),
+    tile(rangeArt(lr, first.distance, melee), "Range", melee ? "In reach" : `${first.distance.toFixed(1)}"`, melee || inBand ? "#7fcf6a" : tooClose ? "#e0533d" : "#f5b041",
+      melee ? "Blades ignore range and line of sight."
+        : inBand ? `In the sweet band (${bandTxt}): hits on ${hereNeed}+.`
+        : tooClose ? `Too close (under ${lr.close.under}"): hits on ${hereNeed}+. In the band (${bandTxt}): ${bandNeed}+.`
+        : `Hits on ${hereNeed}+ here, ${bandNeed}+ in the sweet band (${bandTxt}).`),
     tile(coverArt(first.cover), "Cover", first.cover ? (first.cover === 2 ? "Heavy" : "Light") : "None", first.cover ? "#f5b041" : "#7fcf6a",
       first.cover ? `Terrain in the way: harder to hit.${coverWhy ? ` ${coverWhy[0].toUpperCase()}${coverWhy.slice(1)}; see the dots on the board.` : ""}` : "Clean line of fire."));
   const aimed = rows.filter((r) => r.c.action === "aimed"), plain = rows.filter((r) => r.c.action !== "aimed");

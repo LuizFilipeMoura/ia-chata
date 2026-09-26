@@ -42,21 +42,26 @@ test("computeModifiedAim waives the aim penalty when waiveAimPenalty is set", ()
   assert.equal(computeModifiedAim(attacker, autocannon, { distance: 12, aimed: true, waiveAimPenalty: true }), 3);
 });
 
-test("weaponAccuracyAt peaks at the sweet spot and falls off with distance", () => {
-  const mg = WEAPONS.longRange["Mini Gun"]; // sweet 7, peak 2, dropoff 0.35
-  assert.equal(weaponAccuracyAt(mg, 7), 2);            // at sweet spot
-  assert.equal(weaponAccuracyAt(mg, 2), 0);            // |2-7|*0.35 = 1.75 -> 2 penalty
-  assert.equal(weaponAccuracyAt(mg, 18), -2);          // |18-7|*0.35 = 3.85 -> 4 penalty
-  assert.equal(weaponAccuracyAt(mg, undefined), 2);    // no distance -> peak (legacy fallback)
+test("weaponAccuracyAt: flat outside the sweet band, the band bonus inside it", () => {
+  const mg = WEAPONS.longRange["Mini Gun"];            // brawler: band 0-8", +2
+  assert.equal(weaponAccuracyAt(mg, 2), 2);            // point-blank: in band
+  assert.equal(weaponAccuracyAt(mg, 8), 2);            // band edge
+  assert.equal(weaponAccuracyAt(mg, 9), 0);            // outside: flat 0, no falloff
+  assert.equal(weaponAccuracyAt(mg, 18), 0);           // max range: still flat
+  assert.equal(weaponAccuracyAt(mg, undefined), 2);    // no distance -> the band bonus (legacy fallback)
+  const sniper = WEAPONS.longRange["Sniper Cannon"];   // marksman: band 18-28" +2, -2 under 8"
+  assert.equal(weaponAccuracyAt(sniper, 20), 2);
+  assert.equal(weaponAccuracyAt(sniper, 12), 0);
+  assert.equal(weaponAccuracyAt(sniper, 5), -2);       // too close
   const claw = WEAPONS.melee["Claw"];                  // melee: scalar accuracy, distance-independent
   assert.equal(weaponAccuracyAt(claw, 99), 1);
 });
 
 test("computeModifiedAim uses distance-based accuracy for ranged weapons", () => {
   const mg = WEAPONS.longRange["Mini Gun"];
-  assert.equal(computeModifiedAim(attacker, mg, { distance: 7, cover: 0 }), 2);  // 4 - 2
-  assert.equal(computeModifiedAim(attacker, mg, { distance: 2, cover: 0 }), 4);  // 4 - 0
-  assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 6); // 4 - (-2)
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 7, cover: 0 }), 2);  // 4 - 2 (in band)
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 2, cover: 0 }), 2);  // 4 - 2 (in band)
+  assert.equal(computeModifiedAim(attacker, mg, { distance: 18, cover: 0 }), 4); // 4 - 0 (outside)
 });
 
 test("aimBreakdown, reports the base aim and the weapon's Accuracy at range", () => {
@@ -64,7 +69,7 @@ test("aimBreakdown, reports the base aim and the weapon's Accuracy at range", ()
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
   assert.deepEqual(b.terms, [
     { label: "base aim", value: 4 },
-    { label: "weapon Accuracy at 12\"", value: 1 },
+    { label: "in the sweet band (8–16\")", value: 1 },
   ]);
   assert.equal(b.value, 3);
 });
@@ -656,13 +661,13 @@ test("Ballistic Processor: +1 Accuracy in the sweet band (lower modAim)", () => 
   const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
   const plain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet });
   assert.equal(plain - inBand, 1);
-  // Band predicate is |distance − sweet| ≤ 2: the +1 holds at the edge
-  // (sweet + 2) but drops just outside it (sweet + 3).
-  const edge = computeModifiedAim(attacker, profile, { distance: profile.sweet + 2 });
-  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 2 });
+  // The band is the weapon's own sweet band: the +1 holds at its far edge
+  // and drops just outside it.
+  const edge = computeModifiedAim(attacker, profile, { distance: profile.band[1] });
+  const edgePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.band[1] });
   assert.equal(edgePlain - edge, 1);
-  const outside = computeModifiedAim(attacker, profile, { distance: profile.sweet + 3 });
-  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.sweet + 3 });
+  const outside = computeModifiedAim(attacker, profile, { distance: profile.band[1] + 1 });
+  const outsidePlain = computeModifiedAim({ ...attacker, equipmentUpgrade: null }, profile, { distance: profile.band[1] + 1 });
   assert.equal(outsidePlain - outside, 0);
 });
 
@@ -2349,4 +2354,24 @@ test("ledger, riders survive a volley whose first wound die missed", () => {
   // must still reconcile to the SP it reports (2 wounds x (2+1) = 6).
   const perWound = d.terms.slice(1).reduce((n, t) => n + t.value, 0);
   assert.equal(d.out, `${d.terms[0].value * perWound} SP → engine`);
+});
+
+test("Steady Aim uses the Crossbow's sweet band when it has one", () => {
+  const rig = { weightClass: "medium" };
+  const prof = { pen: 6, dmg: 4, band: [15, 22], bandAcc: 3, sweet: 18.5, perks: [], upgradeEffect: { steadyAim: true } };
+  assert.equal(computePen(rig, prof, { distance: 15 }), 6 + 3);
+  assert.equal(computePen(rig, prof, { distance: 22 }), 6 + 3);
+  assert.equal(computePen(rig, prof, { distance: 23 }), 6);
+  assert.equal(computePen(rig, prof, { distance: 14 }), 6);
+});
+
+test("every rig gun has a sweet band inside its range; marksmen are the only ones with a close penalty", () => {
+  const marksmen = new Set(["Sniper Cannon", "Crossbow", "Arc Gun"]);
+  for (const [name, w] of Object.entries(WEAPONS.longRange)) {
+    assert.ok(Array.isArray(w.band) && w.band[0] < w.band[1], `${name} band`);
+    assert.ok(w.band[0] >= w.minRange && w.band[1] <= w.maxRange, `${name} band inside range`);
+    assert.equal(w.peak, w.bandAcc, `${name} peak is the band bonus`);
+    assert.equal(w.sweet, (w.band[0] + w.band[1]) / 2, `${name} sweet is the band's middle`);
+    assert.equal(!!w.close, marksmen.has(name), `${name} close penalty only for marksmen`);
+  }
 });

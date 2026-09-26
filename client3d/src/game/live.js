@@ -29,6 +29,7 @@ import { Wires } from "../ui/tips.js";
 import { DiceTray } from "../ui/dicetray.js";
 import { MatchStats, debrief } from "../ui/outcome.js";
 import { commanderTitle } from "../ui/mission.js";
+import { inSweetBand } from "/shared/combat.js";
 
 const DEG = Math.PI / 180;
 const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "repair", vent: "purge", paint: "lock", extract: "extract" };
@@ -625,6 +626,7 @@ export class LiveMatch {
 
   cancelMode() {
     this.clearSight();
+    this.moveBands = null;
     this.previewMeshes = [];
     this.mode = null;
     this.reachFor = undefined; this.reachMeshes = [];
@@ -656,6 +658,7 @@ export class LiveMatch {
     this.world.ring(rig.pos.x, rig.pos.y, budget, col, 0.6);
     this.drawEnemyCones(rig);
     this.drawDangerMap(rig, budget, this.isHop(key));
+    this.moveBands = this.drawGunBands(rig, rig.pos);
     const g = new THREE.Group();
     const ringMesh = new THREE.Mesh(new THREE.RingGeometry(radiusOf(rig) - 0.1, radiusOf(rig), 40), new THREE.MeshBasicMaterial({ color: 0x33ff99, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
     ringMesh.rotation.x = -Math.PI / 2; ringMesh.position.y = 0.1; g.add(ringMesh);
@@ -669,6 +672,26 @@ export class LiveMatch {
       : "1) Click a spot inside the ring · 2) then turn · Right-click to cancel");
     this.renderActions();
     this.emit("movephase", "dest");
+  }
+
+  // The gun's sweet band as rings on the table around `at`: the band in green,
+  // the dead zone (minimum range) and a marksman's close zone in red, the max
+  // range as a thin ring. One group, so the move ghost can carry it.
+  drawGunBands(rig, at) {
+    const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    if (!lr || !at) return null;
+    const g = new THREE.Group();
+    const add = (m) => { this.world.overlay.remove(m); m.position.x = 0; m.position.z = 0; g.add(m); return m; };
+    const band = lr.band || [Math.max(0, lr.sweet - 2), lr.sweet + 2];
+    add(this.world.annulus(0, 0, band[0], band[1], 0x7fcf6a, 0.13));
+    if (band[0] > 0.5) add(this.world.ring(0, 0, band[0], 0x7fcf6a, 0.55));
+    add(this.world.ring(0, 0, band[1], 0x7fcf6a, 0.55));
+    const red = Math.max(lr.minRange || 0, lr.close?.under || 0);
+    if (red) add(this.world.annulus(0, 0, radiusOf(rig), red, 0xe0533d, lr.minRange ? 0.16 : 0.09));
+    add(this.world.ring(0, 0, lr.maxRange, 0xc9a14a, 0.35));
+    g.position.set(at.x, 0, at.y);
+    this.world.overlay.add(g);
+    return g;
   }
 
   // Every enemy's front arc (where it can shoot), out to its reach: stand
@@ -774,7 +797,8 @@ export class LiveMatch {
         let slot = null;
         if (g.inFrontArc && g.inMeleeReach) slot = "melee";
         else if (g.inFrontArc && g.los && lr && rig.loaded?.longRange !== false && g.distance <= (lr.maxRange ?? 24) && g.distance >= (lr.minRange || 0)) slot = "longRange";
-        if (slot) shots.push({ e, slot, arc: g.arc, ed: expectedDamage(me, e, slot, { arc: g.arc, distance: g.distance, cover: g.cover, round: this.game.round }) });
+        const band = slot === "longRange" ? (inSweetBand(lr, g.distance) ? "✓ band" : lr.close && g.distance < lr.close.under ? "too close" : "") : "";
+        if (slot) shots.push({ e, slot, arc: g.arc, band, ed: expectedDamage(me, e, slot, { arc: g.arc, distance: g.distance, cover: g.cover, round: this.game.round }) });
       }
       const threats = threatsAt(this.previewRoom(rig), rig, dest, facing).filter((t) => t.v > 0);
       this.sight = { shots: shots.sort((a, b) => b.ed - a.ed), threats };
@@ -786,7 +810,7 @@ export class LiveMatch {
     const byEnemy = new Map();
     const row = (e) => { if (!byEnemy.has(e)) byEnemy.set(e, []); return byEnemy.get(e); };
     for (const t of this.sight.threats) if (t.v > 0.05) row(t.e).push({ text: `⚠ ≈${t.v.toFixed(1)} SP${t.arc !== "front" ? ` on your ${t.arc}` : ""}`, color: "#ff5a4a" });
-    for (const s of this.sight.shots) row(s.e).push({ text: `◎ ≈${s.ed.toFixed(1)} SP${s.arc !== "front" ? ` · ${s.arc.toUpperCase()}` : ""}`, color: "#4fffa0" });
+    for (const s of this.sight.shots) row(s.e).push({ text: `◎ ≈${s.ed.toFixed(1)} SP${s.band ? ` · ${s.band}` : ""}${s.arc !== "front" ? ` · ${s.arc.toUpperCase()}` : ""}`, color: s.band === "too close" ? "#f5b041" : "#4fffa0" });
     for (const [e, rows] of byEnemy) this.sightMeshes.push(this.world.badge(e.pos.x, e.pos.y, 5.2, rows));
     const left = this.previewRoom(rig).game.turn;
     const later = left.actionsMax - left.actionsUsed <= 1 ? " (next activation)" : "";
@@ -847,6 +871,7 @@ export class LiveMatch {
     // Front arc wedge + reach bands.
     const lrMax = 36;
     this.world.wedge(rig.pos.x, rig.pos.y, lrMax, rig.facing - 45, rig.facing + 45, 0xff5544, 0.06);
+    if (key !== "lock") this.drawGunBands(rig, rig.pos);
     this.world.ring(rig.pos.x, rig.pos.y, radiusOf(rig) + meleeReachOf(rig), 0xffaa33, 0.5);
     for (const e of this.state.rigs) {
       if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
@@ -1200,6 +1225,7 @@ export class LiveMatch {
       const p = this.movePreview(hit.field);
       const at = p.dest;
       this.ghost.position.set(at.x, 0, at.y);
+      this.moveBands?.position.set(at.x, 0, at.y);
       this.ghost.rotation.y = -p.facing * DEG;
       // Red is only ever "can't go there"; danger on a legal spot is amber.
       this.ghostMat.color.setHex(p.ok ? 0x33ff99 : 0xff2233);
