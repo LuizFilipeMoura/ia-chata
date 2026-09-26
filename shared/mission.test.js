@@ -10,6 +10,7 @@ import {
 import { aimBreakdown } from "./combat.js";
 import { driveBots } from "./bot/index.js";
 import { mulberry32 } from "./sim/match.js";
+import { radiusOf } from "./geometry.js";
 
 const A = [
   { uid: "u1", name: "Gold", chassis: "light-claw-autocannon" },
@@ -246,5 +247,31 @@ test("bots fly every Prototype equipment through a whole digital mission", () =>
     room.game.sides.find((s) => s.id === "a").bot = "hard";
     driveBots(room, { random: mulberry32(seed) });
     assert.equal(room.game.phase, "finished", `seed ${seed} stalled in round ${room.game.round}`);
+  }
+});
+
+// A full campaign squad (three rigs + the support walker) is more than the
+// 42x28 table's deploy quarter-disc can always hold once the darts fragment it.
+// Every unit must still land on the table: a unit left without a position can't
+// move, can't be activated, and stalls the turn.
+test("mission deploys every unit, walker included, even when the zone is crowded", () => {
+  const squadA = [
+    { uid: "u1", name: "Black", chassis: "medium-lance-mortar" },
+    { uid: "u2", name: "Copper", chassis: "medium-sniper-chainsaw" },
+    { uid: "u3", name: "Gold", chassis: "light-claw-autocannon" },
+  ];
+  const squadB = [
+    { name: "Brass", chassis: "medium-steam-piston" },
+    { name: "Red", chassis: "medium-shield-siege" },
+    { name: "Pumpkin", chassis: "light-missile-flamethrower" },
+  ];
+  for (let seed = 1; seed <= 60; seed++) {
+    const room = mission({ type: "beacons", width: 42, height: 28, squads: { a: squadA, b: squadB }, support: [{ template: "medic-walker" }] }, seed);
+    assert.ok(room.game.started, lastRejectionReason() || "mission started");
+    for (const u of room.rigs) {
+      assert.ok(u.pos && !(u.pos.x === 0 && u.pos.y === 0), `${u.name} undeployed on seed ${seed}`);
+      const r = radiusOf(u);
+      assert.ok(u.pos.x >= r && u.pos.y >= r && u.pos.x <= 42 - r && u.pos.y <= 28 - r, `${u.name} off the table on seed ${seed}`);
+    }
   }
 });

@@ -1888,9 +1888,23 @@ export function autoDeploy(room, random = Math.random) {
     }
     cells.sort((m, n) => m.d - n.d || m.p.x - n.p.x || m.p.y - n.p.y);
     const spot = cells.find((c) => legal(c.p, r, corner));
-    if (spot) put(rig, spot.p, r);
-    // No legal cell at all, the zone is genuinely full (a small field with a
-    // big squadron). Leave the rig where it is rather than stack it illegally.
+    if (spot) { put(rig, spot.p, r); continue; }
+    // The zone is full (a campaign squad of three rigs plus a walker on the
+    // small table can pack it solid). A unit with no position can never act and
+    // stalls the turn, so spill onto the nearest legal spot just past the rim,
+    // same corner-outwards sweep with the zone limit lifted. Digital terrain
+    // keeps well clear of the corners, so there is always room out there.
+    const wide = rad * 2;
+    const spill = [];
+    for (let ix = 0; ix <= 64; ix++) {
+      for (let iy = 0; iy <= 64; iy++) {
+        const p = { x: round2(corner.x + sx * ix * wide / 64), y: round2(corner.y + sy * iy * wide / 64) };
+        spill.push({ p, d: Math.hypot(p.x - corner.x, p.y - corner.y) });
+      }
+    }
+    spill.sort((m, n) => m.d - n.d || m.p.x - n.p.x || m.p.y - n.p.y);
+    const out = spill.find((c) => c.d <= wide && legal(c.p, r, { x: c.p.x, y: c.p.y }));
+    if (out) put(rig, out.p, r);
   }
 }
 
