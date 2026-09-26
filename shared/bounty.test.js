@@ -31,9 +31,9 @@ function startedRoom() {
   return r;
 }
 
-// Wreck `name` outright (Hull to 0, then one more).
+// Wreck `name` outright (Integrity to 1, then one more point of damage).
 function wreck(r, name) {
-  applyCommand(r, { verb: "set", attrs: { name, loc: "hull", sp: "0" } });
+  applyCommand(r, { verb: "set", attrs: { name, loc: "integrity", sp: "1" } });
   applyCommand(r, { verb: "damage", attrs: { name, loc: "hull", amount: "1" } });
   assert.equal(findRig(r, name).destroyed, true);
 }

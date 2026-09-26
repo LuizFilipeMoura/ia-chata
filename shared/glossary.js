@@ -26,8 +26,12 @@ export const GLOSSARY = [
     def: "Durability tracked per component (Hull, Arms, Legs, Engine). A component at 0 SP suffers catastrophic damage (§2, §8).",
   },
   {
+    id: "integrity", term: "Integrity", match: ["Integrity"],
+    def: "A Rig's whole-body pool. Every SP any component loses also drains Integrity; at 0 the Rig is destroyed, however the damage was spread. Repair never restores it (§8a).",
+  },
+  {
     id: "hull", term: "Hull", match: ["Hull"],
-    def: "One of a Rig's four components. At 0 SP: −2 max actions and −1 Aim; further damage destroys the Rig (§8).",
+    def: "One of a Rig's four components. At 0 SP: −2 max actions and −1 Aim; each further point of damage costs 2 Integrity (§8).",
   },
   {
     id: "arms", term: "Arms", match: ["Arms"],
@@ -332,6 +336,10 @@ export const GLOSSARY = [
   { id: "grapnel", term: "Grapnel cooldown", match: [],
     def: "Grapnel Launcher recharging: rounds left until it can yank or reel again." },
   // ── Status-chip states (id-only lookup) ────────────────────────────────────
+  { id: "bloodied", term: "Bloodied", match: ["Bloodied", "BLOODIED"],
+    def: "Integrity is at half or less (§8a). The Rig is taking real damage." },
+  { id: "critical", term: "Critical", match: ["CRITICAL"],
+    def: "Integrity is at a quarter or less, rounded up (§8a). One or two good hits from a wreck." },
   { id: "destroyed", term: "Destroyed", match: [],
     def: "The Rig is wrecked and out of the battle." },
   { id: "heavy-damage", term: "Heavy damage", match: [],

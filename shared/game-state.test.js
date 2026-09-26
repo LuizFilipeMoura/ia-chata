@@ -1618,10 +1618,8 @@ test("after the final round (10) the higher VP wins", () => {
 test("annihilation ends the game immediately", () => {
   const r = startedRoom();
   for (const name of ["b1", "b2", "b3"]) {
-    for (const loc of ["hull", "engine"]) {
-      applyCommand(r, { verb: "set", attrs: { name, loc, sp: "0" } });
-      applyCommand(r, { verb: "damage", attrs: { name, loc, amount: "1" } }); // destroy
-    }
+    applyCommand(r, { verb: "set", attrs: { name, loc: "integrity", sp: "1" } });
+    applyCommand(r, { verb: "damage", attrs: { name, loc: "hull", amount: "1" } }); // destroy
   }
   assert.equal(r.game.outcome.winner, "a");
   assert.equal(r.game.outcome.reason, "annihilation");
@@ -1828,15 +1826,16 @@ test("Kneecapper, a rake to 0 arms destroys the weapon but never spills into hul
   assert.equal(rig.destroyed, false);        // cripple, never kill
 });
 
-test("applyDamage: first hit to 0 SP hull does not destroy; additional damage destroys the rig", () => {
+test("applyDamage: first hit to 0 SP hull does not destroy; additional damage tears 2 Integrity (§8a)", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");
+  b1.integrityMax = b1.integrity = 40;
   __test.applyDamage(r, b1, "hull", 6, { random: () => 0 }); // 6 -> 0 (first-time, no destroy)
   assert.equal(b1.hull.sp, 0);
-  assert.equal(b1.hull.destroyed, false);
-  __test.applyDamage(r, b1, "hull", 1, { random: () => 0 }); // additional -> destroyed
-  assert.equal(b1.hull.destroyed, true);
-  assert.equal(b1.destroyed, true);
+  assert.equal(b1.destroyed, false);
+  __test.applyDamage(r, b1, "hull", 1, { random: () => 0 }); // additional -> 2 Integrity, no instant kill
+  assert.equal(b1.integrity, 40 - 6 - 2);
+  assert.equal(b1.destroyed, false);
 });
 
 test("applyOverheat still routes through the cascade (engine failure sets noCool)", () => {
@@ -1869,7 +1868,7 @@ test("recompute leaves the unit alive while any part has SP (regression)", () =>
 test("destruction rolls a D12; 4+ records a pending blast", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");
-  b1.hull.sp = 1;
+  b1.hull.sp = 1; b1.integrity = 1;
   __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 9 } }); // hull past 0 -> destroyed
   assert.equal(b1.destroyed, true);
   assert.equal(r.game.pendingBlast.sourceId, b1.id);
@@ -1880,7 +1879,7 @@ test("destroying your Priority Target scores the kill VP plus the +2 Priority bo
   const r = startedRoom();
   const b1 = findRig(r, "b1");
   r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
-  b1.hull.sp = 1;
+  b1.hull.sp = 1; b1.integrity = 1;
   __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 9 } });
   assert.equal(b1.destroyed, true);
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 3);
@@ -1894,7 +1893,7 @@ test("destroying a NON-target enemy scores just the kill VP", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1"); const b2 = findRig(r, "b2");
   r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id }; // a hunts b1, not b2
-  b2.hull.sp = 1;
+  b2.hull.sp = 1; b2.integrity = 1;
   __test.applyDamage(r, b2, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(b2.destroyed, true);
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 1);
@@ -1906,7 +1905,7 @@ test("a Priority Target lost to its own cause still scores for its hunter", () =
   const r = startedRoom();
   const a1 = findRig(r, "a1");
   r.game.priorityTargets = { a: findRig(r, "b1").id, b: a1.id }; // b hunts a1
-  a1.hull.sp = 1;
+  a1.hull.sp = 1; a1.integrity = 1;
   __test.applyDamage(r, a1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(a1.destroyed, true);
   assert.equal(r.game.sides.find((s) => s.id === "b").vp, 3);
@@ -1916,10 +1915,11 @@ test("Priority Target kill VP is awarded once, never twice", () => {
   const r = startedRoom();
   const b1 = findRig(r, "b1");
   r.game.priorityTargets = { a: b1.id, b: findRig(r, "a1").id };
-  b1.hull.sp = 1;
+  b1.hull.sp = 1; b1.integrity = 1;
   __test.applyDamage(r, b1, "hull", 5, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(r.game.sides.find((s) => s.id === "a").vp, 3);
   __test.setRigSp(b1, "hull", 5);     // "revive" the hull; _blastRolled stays set
+  __test.setRigSp(b1, "integrity", 3);
   assert.equal(b1.destroyed, false);
   __test.applyDamage(r, b1, "hull", 9, { random: () => 0, dice: { destruction: 1 } });
   assert.equal(b1.destroyed, true);
@@ -2040,6 +2040,7 @@ test("the kill tier speaks once, a wreck does not also report its parts", () => 
   // makes wasFull false and the competing line could never fire anyway.
   a1.engine.max = 2;
   a1.engine.sp = 2;
+  a1.integrity = 4; // 2 SP to zero + 1 point past 0 on a power part (2 Integrity, §8a) empties it
   const effects = fireSword(r, 11); // 11 -> engine (power)
   assert.equal(a1.destroyed, true);
   assert.deepEqual(effects, ["Sword, a1 gutted in a single blow"]);
@@ -2067,6 +2068,7 @@ test("a wound the weapon part absorbs whole reports no spill, the cook-off is no
   const { r, a1 } = swordDuel();
   a1.arms.max = 3;
   a1.arms.sp = 3; // Test-only state poke: exactly absorbs the Sword's D3.
+  a1.integrityMax = a1.integrity = 40; // keep the Integrity tier line (§8a) out of the effects
   const hullBefore = a1.hull.sp, engineBefore = a1.engine.sp;
   const effects = fireSword(r, 5, { armsWeapon: 1 }); // 5 -> arms
   assert.equal(a1.arms.sp, 0);
@@ -2163,15 +2165,19 @@ function swingBall(r, loc) {
 // §8 is ever changed to kill on REACHING zero, raising Zebra's engine to 8 stops
 // buying anything, and the pure-data guard below still passes, because the
 // catalogs would not have moved. Only this test fails.
-test("the §8 power kill needs a point spent past zero, Damage N kills a full max-(N-1) engine, not a max-N one", () => {
+test("the §8 power tier needs a point spent past zero, Damage N into a full max-(N-1) engine costs N+1 Integrity, max-N costs N", () => {
   // N is the swing's Damage, derived so the boundary tracks the Ball's tunable Damage.
+  // Past zero, a power part no longer kills outright: each extra point tears 2
+  // Integrity (§8a) instead of 1.
   const N = effectiveWeaponProfile("melee", "Wrecking Ball", haymakerDuel().b1).dmg;
-  for (const [max, killed] of [[N - 1, true], [N, false]]) {
+  for (const [max, cost] of [[N - 1, N + 1], [N, N]]) {
     const { r, a1 } = haymakerDuel();
+    a1.integrityMax = a1.integrity = 40;
     a1.engine.max = max; a1.engine.sp = max; // full, so no earlier wound is in play
     swingBall(r, 11); // 11 -> engine (power)
     assert.equal(a1.engine.sp, 0, `max ${max}: the swing zeroes the engine either way`);
-    assert.equal(a1.destroyed, killed, `Damage ${N} into a full max-${max} engine: destroyed should be ${killed}`);
+    assert.equal(a1.integrity, 40 - cost, `Damage ${N} into a full max-${max} engine costs ${cost} Integrity`);
+    assert.equal(a1.destroyed, false);
   }
 });
 
@@ -2359,6 +2365,7 @@ test("the wound die that kills outright also reads CRIT", () => {
   const { r, a1 } = swordDuel();
   a1.engine.max = 5;
   a1.engine.sp = 2;
+  a1.integrity = 4; // 2 to zero + 1 past 0 at 2 Integrity (§8a) empties the pool
   fireSword(r, 11); // 11 -> engine (power)
   assert.equal(a1.destroyed, true); // the tier under test is the kill, not the tear-open
   const woundRolls = lastAttack(r).rolls.filter((x) => /^wound /.test(x.label));
@@ -6446,6 +6453,7 @@ test("F3-E: one wound that both zeroes-from-full and kills marks exactly ONE die
   // one point past 0 (kill). The kill branch `continue`s past the tear-open push,
   // so the die is collected once.
   a1.engine = { sp: 3, max: 3, destroyed: false, heat: 0 };
+  a1.integrity = 5; // 3 to zero + 1 past 0 at 2 Integrity (§8a) empties the pool
   applyCommand(r, { verb: "activate", attrs: { name: "b1" } });
   applyCommand(r, { verb: "action", attrs: {
     name: "b1", action: "aimed", weapon: "melee", target: "a1",

@@ -5,6 +5,19 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.18, Integrity
+
+### Added
+- **Integrity (§8a):** one whole-Rig pool. Every SP any component loses also costs 1 Integrity; at 0 the Rig is destroyed, however the damage was spread. Per chassis, about 50% of total SP for Lights and 65% for Mediums (Zebra 19 … Black 34). ⚙ TUNING
+- **Bloodied / Critical:** danger tiers at ≤ half and ≤ a quarter (rounded up) Integrity; the log calls each crossing.
+
+### Changed
+- **Hull / Engine additional damage (§8):** each point past 0 now tears **2 Integrity** instead of destroying the Rig outright.
+- **Repair** restores component SP only, never Integrity. **Emergency Patch** also restores 1 Integrity.
+- **Kneecapper** can't take Integrity below 1 (still cripples, never kills).
+
+---
+
 ## wr-0.17, Boiler blew
 
 ### Added
