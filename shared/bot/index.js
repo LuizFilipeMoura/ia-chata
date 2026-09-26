@@ -5,7 +5,8 @@
 // resolution a human does and can neither cheat nor desync.
 import { candidatesFor } from "./candidates.js";
 import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS, exposureOf } from "./score.js";
-import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, findRig, heatMeter, LOCS } from "../game-state.js";
+import { partNamesOf, kindOf } from "../unit-kinds.js";
+import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, findRig, heatMeter } from "../game-state.js";
 import { availableActions } from "../battle-view.js";
 import { expectedDamage } from "./evaluate.js";
 
@@ -41,8 +42,11 @@ function toCommand(cand, rig) {
     attrs.facing = cand.facing;
   } else if (cand.action === "prepare") {
     attrs.prep = cand.prep;
-  } else if (cand.action === "lock") {
+  } else if (cand.action === "lock" || cand.action === "paint" || cand.action === "vent") {
     attrs.target = cand.target;
+  } else if (cand.action === "fieldweld") {
+    attrs.target = cand.target;
+    attrs.loc = cand.loc;
   } else if (cand.action === "repair" || cand.action === "emergencypatch" || cand.action === "nanite") {
     attrs.loc = cand.location;
   } else if (cand.action === "cryo" || cand.action === "meltdown") {
@@ -210,8 +214,11 @@ export function runBotActivation(room, rig, options = {}) {
     const cmd = chooseAction(room, rig, weights, explain ? { ...(noise || {}), random: options.random, explain } : noise);
     if (explain) options.onThought(rig, explain);
     if (!cmd) break;
+    const v = room.version;
     applyCommand(room, cmd, {}, options);
     log.push(cmd);
+    // A refused pick would just be picked again: stop rather than spin.
+    if (room.version === v) break;
   }
   // Only end the activation if it is still ours to end.
   if (active()) applyCommand(room, { verb: "endactivation", attrs: { name: rig.name } }, {}, options);
@@ -235,7 +242,7 @@ function botReaction(room, pr) {
     && geo.distance >= (lr.minRange ?? 0) && geo.distance <= (lr.maxRange ?? Infinity);
   const opts = [];
   if (pr.kind === "exploit") {
-    if (gunBears) for (const loc of LOCS) {
+    if (gunBears) for (const loc of partNamesOf(kindOf(attacker))) {
       opts.push({ weapon: "longRange", loc, v: expectedDamage(reactor, attacker, "longRange", { ...shot, aimed: true, waiveAimPenalty: true, location: loc }) });
     }
   } else {

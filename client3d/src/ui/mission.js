@@ -4,7 +4,8 @@
 // publicState's `state.campaign` (null outside the campaign: nothing renders).
 import { el } from "./dom.js";
 import { icon } from "./icons.js";
-import { LOCS, MAX_ROUNDS } from "/shared/game-state.js";
+import { MAX_ROUNDS } from "/shared/game-state.js";
+import { partsOf } from "../game/units.js";
 import { CONTRACT_TYPES } from "/shared/campaign/catalog.js";
 
 // 0 = no round limit (the Warlord fight): Infinity, shown without a " / N".
@@ -16,7 +17,7 @@ export const commanderTitle = (c) => (c?.type === "boss" ? "Warlord" : "Commande
 
 const CONTRACT_ICON = { beacons: "beacon", skirmish: "melee", assassinate: "crown", breakthrough: "extract", laststand: "relay", salvage: "crate", boss: "crown" };
 
-const spOf = (r) => LOCS.reduce((a, l) => [a[0] + (r?.[l]?.sp ?? 0), a[1] + (r?.[l]?.max ?? 0)], [0, 0]);
+const spOf = (r) => partsOf(r || {}).reduce((a, l) => [a[0] + (r?.[l]?.sp ?? 0), a[1] + (r?.[l]?.max ?? 0)], [0, 0]);
 
 // The next Last Stand drop still to come: { round, name } | null.
 export function nextReinforcement(c) {

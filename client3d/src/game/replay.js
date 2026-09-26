@@ -65,8 +65,9 @@ export class Replay {
     // Enough of a publicState for the HUD cards.
     const rigs = f.rigs.map((r) => {
       const ch = CHASSIS.find((c) => c.id === r.chassis) || {};
-      return { ...r, weightClass: ch.class, weapons: { longRange: ch.longRange, melee: ch.melee }, engine: { heat: r.heat, ...(r.sp.engine ? { sp: r.sp.engine[0], max: r.sp.engine[1] } : {}) },
-        hull: { sp: r.sp.hull[0], max: r.sp.hull[1] }, arms: { sp: r.sp.arms[0], max: r.sp.arms[1] }, legs: { sp: r.sp.legs[0], max: r.sp.legs[1] } };
+      const parts = Object.fromEntries(Object.entries(r.sp || {}).map(([l, [sp, max]]) => [l, { sp, max }]));
+      const weapons = r.unit ? { unit: r.unit } : { longRange: ch.longRange, melee: ch.melee };
+      return { ...r, ...parts, weightClass: ch.class, weapons, engine: { heat: r.heat, ...(parts.engine || {}) } };
     });
     return { rigs, game: { round: f.round, phase: f.phase, turn: f.turn, sides: [{ id: "a", vp: f.vp[0], bot: "A" }, { id: "b", vp: f.vp[1], bot: "B" }], priorityTargets: {} } };
   }

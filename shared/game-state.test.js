@@ -2299,7 +2299,7 @@ test("no unit of ANY kind dies to a SINGLE wound from full, every kind's structu
   // The enumeration behind the universal, spelled out: if a kind is ever added
   // or a part re-roled, this list moves and the mismatch is visible in the diff
   // rather than silently shrinking the domain the loop above ran over.
-  assert.deepEqual(checked, ["tank/hull", "tank/engine", "walker/hull", "walker/engine"]);
+  assert.deepEqual(checked, ["tank/hull", "tank/engine", "walker/hull", "walker/engine", "drone/hull", "drone/engine"]);
 });
 
 // The universal, driven rather than read. The guard above is pure data; this
@@ -4188,7 +4188,7 @@ test("makeUnit rejects unknown kinds", () => {
 test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   const ids = Object.keys(UNIT_WEAPONS).sort();
   assert.deepEqual(ids, [
-    "Autocannon Mount", "Coaxial MG", "Dozer Blade", "Ram Spike", "Rocket Pod", "Sidearm", "Tank Cannon",
+    "Autocannon Mount", "Coaxial MG", "Demo Charge", "Dozer Blade", "Drone Carbine", "Ram Spike", "Rocket Pod", "Sidearm", "Tank Cannon",
   ]);
   for (const [name, w] of Object.entries(UNIT_WEAPONS)) {
     assert.equal(typeof w.rof, "number");
@@ -6078,13 +6078,13 @@ test("a room defaults to physical mode", () => {
   assert.equal(createRoom("PHYS01").mode, "physical");
 });
 
-test("a digital room is rigs-only, adding a tank is refused", () => {
+test("a digital room fields no tanks, adding one is refused", () => {
   const room = digitalRoom();
   const res = checkCommand(room, { verb: "add", attrs: {
     name: "T1", kind: "tank", owner: "a", unit: "Autocannon",
   } });
   assert.equal(res.ok, false);
-  assert.match(res.reason, /Rigs only/i);
+  assert.match(res.reason, /Tanks/i);
 });
 
 test("a digital room still accepts a rig", () => {

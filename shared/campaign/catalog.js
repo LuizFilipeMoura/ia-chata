@@ -6,7 +6,7 @@
 // repair, answer, grit, actionsR1. Economy-only relic keys live in `econ` and
 // never reach the engine.
 
-import { CHASSIS, EQUIPMENT } from "../game-state.js";
+import { CHASSIS, EQUIPMENT, templateById } from "../game-state.js";
 
 export const FACTIONS = [
   { id: "krim", name: "Krim Corporation", short: "Krim", perk: "Overwhelming Fire",
@@ -82,7 +82,12 @@ export const STARTING = {
   chassis: ["light-claw-autocannon", "light-harpoon-anchor", "medium-lance-mortar", "medium-shield-siege"],
   equipment: ["ablative-plating", "radiator-array", "servo-actuators", "field-repair-suite"],
   relics: RELICS.filter((r) => r.pack === 0).map((r) => r.id),
+  // Support walkers a run may bring along (one per run, picked at the start).
+  walkers: ["medic-walker"],
 };
+
+// The support walkers a squad can bring (SUPPORT_TEMPLATES ids, all walkers).
+export const WALKERS = ["medic-walker", "radiator-walker", "gun-walker", "rocket-walker"];
 
 // HQ unlock table. `kind` groups the tree; `target` is the chassis / equipment
 // id or pack number it opens; `requires` names another unlock id.
@@ -94,6 +99,9 @@ export const UNLOCKS = [
   { id: "nature:prototype", kind: "nature", target: "prototype", cost: 10, label: "Prototype upgrades", requires: "nature:tuned" },
   ...Object.keys(EQUIPMENT).filter((e) => !STARTING.equipment.includes(e)).map((e) => ({
     id: `equipment:${e}`, kind: "equipment", target: e, cost: 3, label: EQUIPMENT[e].label,
+  })),
+  ...WALKERS.filter((w) => !STARTING.walkers.includes(w)).map((w) => ({
+    id: `walker:${w}`, kind: "walker", target: w, cost: 3, label: templateById(w).name,
   })),
   { id: "perkkits", kind: "perkkits", cost: 6, label: "Perk kits" },
   ...[1, 2, 3].map((p) => ({

@@ -3,7 +3,16 @@
 // the bot at the chosen difficulty.
 import { el, clear, fill, toast } from "./dom.js";
 import { api } from "../api.js";
-import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT, CHASSIS_PRIMARY_EQUIPMENT } from "/shared/game-state.js";
+import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT, CHASSIS_PRIMARY_EQUIPMENT, templateById } from "/shared/game-state.js";
+import { icon } from "./icons.js";
+
+// The support walkers a squad may bring (one), with what each is for.
+export const WALKER_PICKS = [
+  { id: "medic-walker", text: "Weld: patches an ally within 3\". Carries a pistol." },
+  { id: "radiator-walker", text: "Vent: pulls 2 heat off an ally within 3\". Coaxial MG." },
+  { id: "gun-walker", text: "Autocannon Mount, plus Vent for a hot ally." },
+  { id: "rocket-walker", text: "Rocket Pod, plus Paint: marks an enemy for your guns." },
+];
 import { EQUIPMENT_UPGRADES } from "/shared/rules.js";
 
 const NATURE = { field: "FIELD", tuned: "TUNED", prototype: "PROTO" };
@@ -55,6 +64,7 @@ export async function squadBuilder(root, { onStart, onBack, mode = "bot", taken 
   const squad = [];
   let tier = "normal";
   let table = "skirmish";
+  let walker = null;
   const needMet = () => !need || ["medium", "light"].every((cls) => squad.filter((u) => CHASSIS.find((c) => c.id === u.chassis).class === cls).length === (need[cls] || 0));
   const render = () => {
     const mediums = squad.filter((u) => CHASSIS.find((c) => c.id === u.chassis).class === "medium").length;
@@ -62,6 +72,9 @@ export async function squadBuilder(root, { onStart, onBack, mode = "bot", taken 
       el("div", { class: "b-head" }, el("button", { class: "btn ghost", onClick: onBack }, "← Back"), el("h1", {}, title || "Commission your squadron"), el("span", { class: "muted" }, mode === "bot" ? `${squad.length}/3 rigs · the bot mirrors your weight classes` : `${squad.length}/3 rigs`)),
       need ? el("div", { class: `need ${needMet() ? "ok" : ""}` }, `Your opponent fielded ${need.medium} medium + ${need.light} light. Both sides must field the same weight classes: pick exactly that.`, needMet() ? " ✓" : "") : null,
       mode !== "bot" ? null : el("div", { class: "tiers" }, ["easy", "normal", "hard"].map((t) => el("button", { class: `tier ${t === tier ? "on" : ""} t-${t}`, onClick: () => { tier = t; render(); } }, el("b", {}, t.toUpperCase()), el("span", {}, TIER_TEXT[t])))),
+      mode !== "bot" ? null : el("div", { class: "tables walkers" }, el("span", { class: "muted", title: `A support walker rides with your squad: a slow pod on stilts with one gun and support modules. The bot brings one too. It doesn't hold the line: lose every rig and you lose.` }, icon("walker"), "Support walker:"),
+        el("button", { class: `btn ${!walker ? "primary" : "ghost"}`, onClick: () => { walker = null; render(); } }, "None"),
+        WALKER_PICKS.map((w) => el("button", { class: `btn ${walker === w.id ? "primary" : "ghost"}`, title: w.text, onClick: () => { walker = w.id; render(); } }, templateById(w.id).name))),
       !hostTable ? null : el("div", { class: "tables" }, el("span", { class: "muted" }, "Table:"), Object.entries(TABLES).map(([k, t]) => el("button", { class: `btn ${table === k ? "primary" : "ghost"}`, title: t.hint, onClick: () => { table = k; render(); } }, t.label))),
       el("div", { class: "b-grid" }, CHASSIS.map((ch) => {
         const picked = squad.find((u) => u.chassis === ch.id);
@@ -87,7 +100,7 @@ export async function squadBuilder(root, { onStart, onBack, mode = "bot", taken 
           for (const cls of ["medium", "light"]) pool.filter((c) => c.class === cls).slice(0, want[cls] || 0).forEach((c) => squad.push(unitDefaults(c)));
           render();
         } }, "🎲 Random squad"),
-        el("button", { class: "btn big primary", disabled: squad.length < 1 || (need && !needMet()), onClick: () => onStart({ squad, tier, table }) }, cta || `Deploy vs ${tier.toUpperCase()} bot ▸`)),
+        el("button", { class: "btn big primary", disabled: squad.length < 1 || (need && !needMet()), onClick: () => onStart({ squad, tier, table, walker }) }, cta || `Deploy vs ${tier.toUpperCase()} bot ▸`)),
     ));
   };
   render();
@@ -121,7 +134,7 @@ export const TABLES = {
   standard: { label: "Standard 54×36", width: 54, height: 36, hint: "The rulebook table, more manoeuvring" },
 };
 
-export async function createBotRoom({ squad, tier, table = "skirmish" }) {
+export async function createBotRoom({ squad, tier, table = "skirmish", walker = null }) {
   const room = `3D-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
   await api.join(room, "a");
   await api.command(room, "a", "setbot", { side: "b", preset: tier });
@@ -131,6 +144,8 @@ export async function createBotRoom({ squad, tier, table = "skirmish" }) {
     const ch = CHASSIS.find((c) => c.id === u.chassis);
     await api.command(room, "a", "add", { kind: "rig", owner: "a", name: ch.name, chassis: ch.id, longRangeUpgrade: u.longRangeUpgrade, meleeUpgrade: u.meleeUpgrade, equipment: u.equipment, equipmentUpgrade: u.equipmentUpgrade || undefined });
   }
+  const t2 = templateById(walker);
+  if (t2) await api.command(room, "a", "add", { kind: "walker", owner: "a", name: t2.name, unit: t2.unit || undefined, modules: t2.modules, template: t2.id });
   try { await api.command(room, "a", "field", { action: "lock" }); } catch {}
   try { await api.command(room, "a", "ready", {}); } catch (e) { toast(e.message, "bad", 5000); throw e; }
   return room;

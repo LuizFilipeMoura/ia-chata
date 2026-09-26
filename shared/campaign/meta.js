@@ -37,6 +37,7 @@ export function unlockedPools(profile) {
   return {
     chassis: [...STARTING.chassis, ...bought("chassis")],
     equipment: [...STARTING.equipment, ...bought("equipment")],
+    walkers: [...STARTING.walkers, ...bought("walker")],
     natures: ["field", ...(has("nature:tuned") ? ["tuned"] : []), ...(has("nature:prototype") ? ["prototype"] : [])],
     relics: RELICS.filter((r) => r.pack === 0 || packs.includes(r.pack)).map((r) => r.id),
     perkKits: has("perkkits"),

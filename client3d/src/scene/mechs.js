@@ -240,18 +240,73 @@ const MELEE = {
   },
 };
 
+// ---- Support-unit kit (walkers + drones): the one flat-pick gun rides the
+// right arm; the left arm carries the module tool (or nothing, on a drone).
+const UNIT_GUNS = {
+  "Coaxial MG": (p) => LR["Double MG"](p),
+  "Autocannon Mount": (p) => LR["Autocannon"](p),
+  "Rocket Pod": (p) => LR["Missile Barrage"](p),
+  "Tank Cannon": (p) => LR["Siege Maul"](p),
+  "Sidearm"(p) {
+    const g = new THREE.Group(); g.add(box(0.35, 0.22, 0.2, p));
+    const b = barrel(0.05, 0.45, STEEL()); b.position.x = 0.15; g.add(b);
+    return { group: g, muzzleX: 0.65 };
+  },
+  "Drone Carbine"(p) {
+    const g = new THREE.Group(); g.add(box(0.5, 0.2, 0.22, p));
+    for (const z of [-0.06, 0.06]) { const b = barrel(0.04, 0.7, DARK()); b.position.set(0.2, 0, z); g.add(b); }
+    return { group: g, muzzleX: 0.95 };
+  },
+  "Demo Charge"() {
+    const g = new THREE.Group();
+    const keg = cyl(0.32, 0.32, 0.6, mat(0x7a2a1a, { roughness: 0.8 }), 12); keg.rotation.z = Math.PI / 2; g.add(keg);
+    for (const x of [-0.2, 0.2]) g.add(at(cyl(0.34, 0.34, 0.06, BRASS(), 12), x, 0, 0, Math.PI / 2));
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), new THREE.MeshStandardMaterial({ color: 0xff2a1a, emissive: 0xff2010, emissiveIntensity: 2 }));
+    lamp.position.set(0, 0.36, 0); g.add(lamp);
+    return { group: g, muzzleX: 0.3, glow: lamp, blink: true };
+  },
+};
+const MODULE_TOOLS = {
+  repair() {
+    const g = new THREE.Group(); g.add(box(0.3, 0.2, 0.2, STEEL()));
+    const arm = barrel(0.05, 0.7, BRASS()); arm.position.x = 0.1; g.add(arm);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x66ccff, emissiveIntensity: 1.5 }));
+    tip.rotation.z = -Math.PI / 2; tip.position.x = 0.9; g.add(tip);
+    return { group: g, tip: 1.0, glow: tip };
+  },
+  coolant() {
+    const g = new THREE.Group();
+    const tank = cyl(0.2, 0.2, 0.6, mat(0x4a8aa8, { metalness: 0.6 }), 12); tank.rotation.z = Math.PI / 2; g.add(tank);
+    const hose = barrel(0.05, 0.5, DARK()); hose.position.x = 0.3; g.add(hose);
+    return { group: g, tip: 0.8 };
+  },
+  recon() {
+    const g = new THREE.Group();
+    const mast = cyl(0.03, 0.03, 0.9, STEEL()); mast.position.y = 0.45; g.add(mast);
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2.4), mat(0xd8d2c0, { side: THREE.DoubleSide }));
+    dish.rotation.z = -Math.PI / 2 - 0.4; dish.position.set(0.1, 0.9, 0); g.add(dish);
+    const lens = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xff5a3a, emissive: 0xff3a1a, emissiveIntensity: 1.5 }));
+    lens.position.set(0.3, 0.95, 0); g.add(lens);
+    return { group: g, tip: 0.5, glow: lens };
+  },
+  none() { return { group: new THREE.Group(), tip: 0.4 }; },
+};
+export const UNIT_PAINT = { walker: 0x7d875c, drone: 0x8a6448 };
+
 // A leg: hip pivot → thigh → knee pivot → shin → foot. Lights are digitigrade
 // (knee bends backwards), mediums are stocky pillars with wide feet.
 function makeLeg(cls, paint) {
   const hip = new THREE.Group();
   const heavy = cls === "medium";
-  const thighLen = heavy ? 1.0 : 1.1;
-  const shinLen = heavy ? 1.0 : 1.2;
-  const thigh = box(heavy ? 0.42 : 0.28, thighLen, heavy ? 0.46 : 0.3, paint);
+  // Walkers stalk on long spindly stilts; drones scuttle on short ones.
+  const stilt = cls === "walker", tiny = cls === "drone";
+  const thighLen = heavy ? 1.0 : stilt ? 1.5 : tiny ? 0.7 : 1.1;
+  const shinLen = heavy ? 1.0 : stilt ? 1.7 : tiny ? 0.8 : 1.2;
+  const thigh = box(heavy ? 0.42 : stilt ? 0.16 : 0.28, thighLen, heavy ? 0.46 : stilt ? 0.18 : 0.3, paint);
   thigh.position.y = -thighLen / 2; hip.add(thigh);
   const knee = new THREE.Group(); knee.position.y = -thighLen; hip.add(knee);
   knee.add(sph(heavy ? 0.26 : 0.18, STEEL()));
-  const shin = box(heavy ? 0.36 : 0.22, shinLen, heavy ? 0.4 : 0.24, DARK());
+  const shin = box(heavy ? 0.36 : stilt ? 0.12 : 0.22, shinLen, heavy ? 0.4 : stilt ? 0.14 : 0.24, DARK());
   shin.position.y = -shinLen / 2; knee.add(shin);
   const foot = box(heavy ? 0.9 : 0.75, 0.18, heavy ? 0.7 : 0.35, STEEL());
   foot.position.set(0.12, -shinLen, 0); knee.add(foot);
@@ -283,14 +338,17 @@ function makeSpentToken() {
 }
 
 export class Mech {
-  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius }) {
+  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius, kind = "rig", unit = null, modules = [], drone = null }) {
     this.id = id; this.name = name; this.owner = owner; this.weightClass = weightClass || "light";
     this.longRange = longRange; this.melee = melee; this.radius = radius || 1.2;
-    const color = PAINT[name] ?? 0x888888;
+    this.kind = kind; this.drone = drone;
+    const support = kind === "walker" || kind === "drone";
+    const color = support ? UNIT_PAINT[kind] : PAINT[name] ?? 0x888888;
     const paint = name === "Zebra"
       ? new THREE.MeshStandardMaterial({ map: stripeTexture("#ecebe4", "#18181a"), roughness: 0.6, metalness: 0.3 })
       : mat(color);
     const heavy = this.weightClass === "medium";
+    const legCls = support ? kind : this.weightClass;
     this.root = new THREE.Group();
     this.root.userData.mechId = id;
 
@@ -304,12 +362,13 @@ export class Mech {
     const notch = cone(0.18, 0.4, this.ringMat, 3); notch.rotation.z = -Math.PI / 2; notch.position.set(this.radius + 0.1, 0.18, 0); this.root.add(notch);
 
     this.body = new THREE.Group(); this.root.add(this.body);
-    this.legs = [makeLeg(this.weightClass, paint), makeLeg(this.weightClass, paint)];
+    this.legs = [makeLeg(legCls, paint), makeLeg(legCls, paint)];
     const hipH = this.legs[0].height * (heavy ? 1 : 0.85) + 0.3;
     this.hipH = hipH;
     this.pelvis = new THREE.Group(); this.pelvis.position.y = hipH; this.body.add(this.pelvis);
     this.legs.forEach((l, i) => { l.hip.position.z = (i ? -1 : 1) * (heavy ? 0.5 : 0.35); this.pelvis.add(l.hip); });
     this.pelvis.add(box(heavy ? 0.8 : 0.6, 0.3, heavy ? 1.1 : 0.8, DARK()));
+    if (support) { this.buildSupport(kind, paint, unit, modules, drone); return; }
 
     this.torso = new THREE.Group(); this.torso.position.y = heavy ? 0.75 : 0.6; this.pelvis.add(this.torso);
     const chest = box(heavy ? 1.5 : 1.1, heavy ? 1.1 : 0.85, heavy ? 1.5 : 1.1, paint); this.torso.add(chest); this.chest = chest;
@@ -355,6 +414,49 @@ export class Mech {
     this.root.add(this.token);
     this.spent = false; this.spentT = 0;
 
+    this.t = Math.random() * 10; this.walkPhase = 0; this.walking = 0; this.heatFrac = 0;
+    this.recoil = 0; this.strike = 0; this.spinSpeed = 0; this.destroyed = false; this.hurt = 0;
+    this.facing = 0; this.targetFacing = 0; this.aimYaw = 0;
+  }
+
+  // Walkers and drones: a pod on stilts carrying one gun and a module tool.
+  // Reuses the rig skeleton (pelvis / torso / arms / stacks) so every
+  // animation and status effect keeps working.
+  buildSupport(kind, paint, unit, modules, drone) {
+    const tiny = kind === "drone";
+    this.torso = new THREE.Group(); this.torso.position.y = tiny ? 0.4 : 0.55; this.pelvis.add(this.torso);
+    const pod = tiny ? sph(0.55, paint, 14) : cyl(0.6, 0.7, 1.0, paint, 14);
+    if (tiny) pod.scale.set(1.2, 0.75, 1); else pod.rotation.z = Math.PI / 2;
+    this.torso.add(pod); this.chest = pod;
+    if (!tiny) for (const x of [-0.35, 0.35]) this.torso.add(at(cyl(0.72, 0.72, 0.07, BRASS(), 14), x, 0, 0, Math.PI / 2));
+    // The eye: a crew porthole on a walker, a red sensor on a drone.
+    this.cockpitMat = new THREE.MeshStandardMaterial(tiny
+      ? { color: 0xff4a2a, emissive: 0xff2010, emissiveIntensity: 1.4 }
+      : { color: 0xffcf7a, emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 });
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(tiny ? 0.16 : 0.22, 12, 10), this.cockpitMat);
+    eye.position.set(tiny ? 0.58 : 0.62, 0.08, 0); this.torso.add(eye);
+    this.ventMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xff3300, emissiveIntensity: 0, metalness: 0.7, roughness: 0.4 });
+    this.stacks = [];
+    const s = cyl(0.08, 0.1, tiny ? 0.4 : 0.7, this.ventMat); s.position.set(-0.45, tiny ? 0.45 : 0.6, 0); this.torso.add(s); this.stacks.push(s);
+    const shoulderZ = tiny ? 0.55 : 0.75;
+    this.armR = new THREE.Group(); this.armR.position.set(0, tiny ? 0 : 0.1, -shoulderZ); this.torso.add(this.armR);
+    this.armL = new THREE.Group(); this.armL.position.set(0, tiny ? 0 : 0.1, shoulderZ); this.torso.add(this.armL);
+    const gun = (UNIT_GUNS[unit] || UNIT_GUNS.Sidearm)(paint);
+    this.lr = gun; gun.group.position.set(0.05, -0.05, -0.05);
+    if (unit === "Demo Charge") { gun.group.position.set(0, 0.5, 0.55); this.torso.add(gun.group); } else this.armR.add(gun.group);
+    const tool = modules.includes("repair") ? "repair" : modules.includes("coolant") ? "coolant" : modules.includes("recon") ? "recon" : "none";
+    this.me = MODULE_TOOLS[tool](); this.me.group.position.set(0.05, -0.05, 0.05); this.armL.add(this.me.group);
+    this.baseScale = tiny ? 0.5 : 0.6;
+    this.body.scale.setScalar(this.baseScale);
+    this.halo = new THREE.Mesh(new THREE.RingGeometry(this.radius * 1.15, this.radius * 1.35, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+    this.halo.rotation.x = -Math.PI / 2; this.halo.position.y = 0.05; this.root.add(this.halo);
+    this.labelAnchor = new THREE.Object3D(); this.labelAnchor.position.y = this.hipH * this.baseScale + 1.2; this.root.add(this.labelAnchor);
+    this.token = makeSpentToken();
+    this.token.scale.setScalar(0.7);
+    this.token.position.set(-this.radius * 0.95, 0.9, this.radius * 0.95);
+    this.token.visible = false;
+    this.root.add(this.token);
+    this.spent = false; this.spentT = 0;
     this.t = Math.random() * 10; this.walkPhase = 0; this.walking = 0; this.heatFrac = 0;
     this.recoil = 0; this.strike = 0; this.spinSpeed = 0; this.destroyed = false; this.hurt = 0;
     this.facing = 0; this.targetFacing = 0; this.aimYaw = 0;
@@ -492,7 +594,7 @@ export class Mech {
     this.cockpitMat.emissiveIntensity += (idleDim - this.cockpitMat.emissiveIntensity) * Math.min(1, dt * 3);
     const heavy = this.weightClass === "medium";
     // Walk cycle while moving, idle sway otherwise.
-    if (this.walking > 0) this.walkPhase += dt * (heavy ? 6 : 9);
+    if (this.walking > 0) this.walkPhase += dt * (heavy ? 6 : this.kind === "drone" ? 14 : this.kind === "walker" ? 5 : 9);
     const w = this.walking;
     this.legs.forEach((l, i) => {
       const ph = this.walkPhase + i * Math.PI;
@@ -513,7 +615,7 @@ export class Mech {
     this.armL.rotation.y = -s * 0.5;
     if (this.me.swing) this.me.swing.position.x = 0.3 + s * 1.2;
     if (this.me.ram) this.me.ram.position.x = 0.55 + s * 0.7;
-    for (const w of [this.lr, this.me]) if (w.glow) w.glow.material.emissiveIntensity = 1 + Math.sin(this.t * 7 + (w === this.me ? 1.3 : 0)) * 0.5 + Math.max(this.recoil, this.strike) * 3;
+    for (const w of [this.lr, this.me]) if (w.glow) w.glow.material.emissiveIntensity = w.blink ? (Math.sin(this.t * 9) > 0 ? 2.5 : 0.2) : 1 + Math.sin(this.t * 7 + (w === this.me ? 1.3 : 0)) * 0.5 + Math.max(this.recoil, this.strike) * 3;
     if (this.me.jaws) { this.me.jaws[0].rotation.z = -0.3 + s * 0.3; this.me.jaws[1].rotation.z = 0.3 - s * 0.3; }
     this.spinSpeed = Math.max(this.me.spin && this.strike > 0 ? 30 : 0, this.spinSpeed - dt * 30);
     if (this.lr.spin) this.lr.spin.rotation.x += this.spinSpeed * dt * (this.recoil > 0 ? 1 : 0.1);

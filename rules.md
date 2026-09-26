@@ -706,6 +706,21 @@ Four shipped exemplars ⚙ (strawman):
 
 Balance unchanged, a support unit is still one slot / one count / one activation (§3).
 
+### Walkers and Drones in the digital game
+
+Digital battles field **Rigs, support Walkers and Drones**, never Tanks.
+
+- **Support walker.** A squad may bring one support Walker (Medic, Radiator, Gun or Rocket Walker). Against the bot, the bot brings one too (walkers count by kind for composition parity). In a digital battle the module actions have a **reach**: **Field Weld** and **Vent** need the two bases within **3"** (rim to rim); **Paint** needs line of sight within **24"**. A walker **doesn't hold the line**: a side whose last Rig falls loses, whatever walkers it still has. A walker kill still scores like any wreck. In the campaign a walker rides along fully repaired every contract.
+- **Drones.** Small enemy walkers (40 mm base) that land in **waves** on set rounds at the enemy corner (campaign contracts; the Warlord always fields them). **2 actions** per activation, Speed **5"**, no heat, a small Integrity pool (about 40% of their SP). A drone wreck scores **no VP** and drones never keep their side in the fight.
+  - **Hunter**: a Drone Carbine (ROF 3, Penetration 5 / 1, 0–14").
+  - **Sapper**: a **Demo Charge** (melee, Penetration 8 / 3). After the blow lands (or misses), the charge **detonates**: every other unit, friend or foe, whose base is within **2.5"** of the Sapper takes a Penetration 6 / 2 hit, and the Sapper is destroyed.
+  - **Spotter**: a Sidearm plus a Recon module (Paint).
+
+| Drone weapon | Type | ROF | Penetration / Damage | Range |
+|---|---|:--:|:--:|:--:|
+| Drone Carbine | ranged | 3 | 5 / 1 | 0–14" |
+| Demo Charge | melee | 1 | 8 / 3 (then a 2.5" Penetration 6 / 2 blast) | 2" |
+
 ---
 
 ## 16. Design Notes & Open Items

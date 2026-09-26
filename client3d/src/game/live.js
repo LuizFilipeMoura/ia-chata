@@ -13,7 +13,7 @@ import { scoreCandidate, scoreParts, PRESETS, threatsAt } from "/shared/bot/scor
 import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
 import { findPath, buildGrid, isStopBlocked } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
-import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier } from "/shared/game-state.js";
+import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
@@ -30,9 +30,10 @@ import { DiceTray } from "../ui/dicetray.js";
 import { MatchStats, debrief } from "../ui/outcome.js";
 import { commanderTitle } from "../ui/mission.js";
 import { inSweetBand } from "/shared/combat.js";
+import { weaponName, rangedProfile, rangedLoaded, kitLine, partsOf, isRig } from "./units.js";
 
 const DEG = Math.PI / 180;
-const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "repair", vent: "purge", paint: "lock", extract: "extract" };
+const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract" };
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
   sprint: "Run up to 1½× Speed. 2 heat: fast but hot.",
@@ -49,9 +50,9 @@ const HELP = {
   barrage: "Mortar Barrage: shell a zone for 2 rounds. While it runs the tube can't fire direct (you fall back to melee).",
   emplace: "Plant the Bulwark: a rooted fortress stance with the shield raised. No moving until you Un-plant.",
   unplant: "Pull up the Bulwark emplacement so the rig can move again. +2 heat.",
-  fieldweld: "Field Weld: repair an allied unit in reach.",
-  vent: "Vent: shed an ally's heat.",
-  paint: "Recon Paint: mark an enemy. Allied ranged attacks ignore its cover and gain +1 Aim.",
+  fieldweld: `Field Weld: repair an ally within ${SUPPORT_REACH}" (rim to rim): D6 SP onto the part you pick.`,
+  vent: `Vent: pull 2 heat off an allied rig within ${SUPPORT_REACH}" (rim to rim).`,
+  paint: `Recon Paint: mark an enemy you can see within ${PAINT_RANGE}". Your side ignores its cover and gets +1 Aim on it until this unit's next activation.`,
   jumpjets: "Hop in a straight line up to base Speed, over terrain and rigs, ignoring leg damage. The landing spot must be clear. Land facing any way.",
   heatpurgewave: "Vent down to Heat Capacity and scald every enemy within 3\" (rim): +2 heat and a Penetration 4 hit each.",
   "grapnel-yank": `Hop up to ${GRAPNEL_YANK_RANGE}" in a straight line, over terrain, tearing free of any melee lock. Works while engaged. Then 3 rounds to recharge.`,
@@ -232,7 +233,7 @@ export class LiveMatch {
   drawThreat() {
     if (!settings.get("threat") || !this.state) return this.world.setThreat(null);
     this.world.setThreat(this.state.rigs.filter((r) => r.owner !== this.side && !r.destroyed && r.pos).map((r) => {
-      const lr = r.loaded?.longRange === false ? null : effectiveWeaponProfile("longRange", r.weapons?.longRange, r);
+      const lr = rangedLoaded(r) ? rangedProfile(r) : null;
       return { x: r.pos.x, y: r.pos.y, facing: r.facing ?? 0, range: Math.min(60, lr?.maxRange ?? 0) || radiusOf(r) + meleeReachOf(r), reach: radiusOf(r) + meleeReachOf(r) };
     }));
   }
@@ -434,7 +435,7 @@ export class LiveMatch {
     for (const sp of equipmentSpends(rig, turn)) extra.push(sp.key === "cryo" ? { ...sp, heatText: sp.max ? `−2×` : "0" } : sp);
     const special = new Set(acts.map((a) => a.key));
     for (const k of ["lock", "emplace", "unplant", "barrage"]) if (!special.has(k) && this.hasAction(rig, k)) extra.push({ key: k, label: k[0].toUpperCase() + k.slice(1), heat: k === "unplant" ? 2 : k === "lock" ? 1 : 0, enabled: turn.actionsUsed < turn.actionsMax });
-    if (rig.loaded?.longRange === false) extra.push({ key: "reload", label: "Reload", heat: "d6", enabled: true, why: "" });
+    if (!rangedLoaded(rig) && rangedProfile(rig)) extra.push({ key: "reload", label: "Reload", heat: isRig(rig) ? "d6" : 0, enabled: true, why: "" });
     // Campaign Breakthrough: leave the table from the exit zone.
     const cp = this.state.campaign;
     if (cp?.type === "breakthrough" && cp.exit && rig.owner === "a" && rig.pos) {
@@ -455,10 +456,11 @@ export class LiveMatch {
     document.body.classList.toggle("crit-vignette", tier === "critical" && rig.owner === this.side);
     bar.append(el("div", { class: "act-head" },
       el("div", { class: "ah-id" },
-        el("span", { class: `swatch big sw-${rig.name}` }),
+        isRig(rig) ? el("span", { class: `swatch big sw-${rig.name}` }) : icon(rig.kind === "drone" ? "drone" : "walker", "big"),
         el("button", { class: "btn ghost in-open", title: "Full details: weapons, upgrades, equipment, damage", onClick: () => openInspector(rig) }, "ⓘ"),
         el("div", {}, el("div", { class: "act-name" }, rig.name),
-          el("div", { class: "ah-weps" }, el("span", { title: "Long-range weapon" }, icon("fire"), rig.weapons?.longRange), el("span", { title: "Melee weapon" }, icon("melee"), rig.weapons?.melee)))),
+          isRig(rig) ? el("div", { class: "ah-weps" }, el("span", { title: "Long-range weapon" }, icon("fire"), rig.weapons?.longRange), el("span", { title: "Melee weapon" }, icon("melee"), rig.weapons?.melee))
+            : el("div", { class: "ah-weps" }, el("span", { title: "Weapon and support modules" }, icon(rig.kind === "drone" ? "drone" : "walker"), kitLine(rig))))),
       Number.isFinite(rig.integrity) ? el("div", { class: `ah-stat ah-int t-${tier}`, title: "Integrity: every SP lost anywhere drains it; at 0 the rig is destroyed. Repair never restores it." },
         el("div", { class: "ah-k" }, "Integrity"),
         el("div", { class: "ah-intbar" }, el("i", { style: { width: `${intPct}%` } })),
@@ -467,7 +469,7 @@ export class LiveMatch {
         el("div", { class: "ah-k" }, "Actions left"),
         el("div", { class: "pips" }, Array.from({ length: turn.actionsMax }, (_, i) => el("span", { class: `pip ${i < left ? "on" : ""}` }))),
         el("div", { class: "ah-v" }, `${left} of ${turn.actionsMax}`)),
-      el("div", { class: "ah-stat", title: "Boiler heat. Every action adds heat; only 1 cools per round. End a turn past capacity (the red zone) and you roll for engine damage." },
+      hm.zone === "none" ? null : el("div", { class: "ah-stat", title: "Boiler heat. Every action adds heat; only 1 cools per round. End a turn past capacity (the red zone) and you roll for engine damage." },
         el("div", { class: "ah-k" }, icon("heat"), "Boiler heat"),
         heatGauge(rig.engine?.heat ?? 0, hm.cap || cap),
         el("div", { class: `ah-v ${hm.over ? "bad" : hm.zone === "redline" ? "warn-t" : ""}` }, hm.over ? `${hm.heat} / ${hm.cap} · OVER` : `${hm.heat} / ${hm.cap} safe`)),
@@ -497,7 +499,7 @@ export class LiveMatch {
         // Area actives: show the zone on the table while hovering the button.
         onMouseenter: () => { if (!this.mode && a.key === "heatpurgewave") { this.previewAoe(rig, 3, 0xff7a2a); this.hoverPreview = true; } },
         onMouseleave: () => { if (this.hoverPreview) { this.hoverPreview = false; this.clearPreview(); this.hud.tip(null); } },
-      }, el("span", { class: "ico" }, ICON[a.key] ? icon(ICON[a.key]) : "•"), el("span", { class: "lbl" }, a.label), el("span", { class: "cost" }, a.heatText ?? String(heat), icon("heat")));
+      }, el("span", { class: "ico" }, ICON[a.key] ? icon(ICON[a.key]) : "•"), el("span", { class: "lbl" }, a.label), hm.zone === "none" ? null : el("span", { class: "cost" }, a.heatText ?? String(heat), icon("heat")));
       row.append(btn);
     }
     bar.append(row);
@@ -614,6 +616,7 @@ export class LiveMatch {
     if (key === "repair") return this.pickLocation(rig, "Repair which location?", (loc) => this.act(rig, { action: "repair", loc }));
     if (key === "emergencypatch") return this.pickLocation(rig, "Patch which location?", (loc) => this.act(rig, { action: key, loc }));
     if (key === "lock") return this.startTarget(rig, "lock");
+    if (key === "fieldweld" || key === "vent" || key === "paint") return this.startSupport(rig, key);
     if (key === "jumpjets") return this.startMove(rig, "jumpjets");
     if (key === "grapnel-yank") return this.startMove(rig, "yank");
     if (key === "grapnel-reel") return this.startReel(rig);
@@ -679,7 +682,7 @@ export class LiveMatch {
   // the dead zone (minimum range) and a marksman's close zone in red, the max
   // range as a thin ring. One group, so the move ghost can carry it.
   drawGunBands(rig, at) {
-    const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    const lr = rangedProfile(rig);
     if (!lr || !at) return null;
     const g = new THREE.Group();
     const add = (m) => { this.world.overlay.remove(m); m.position.x = 0; m.position.z = 0; g.add(m); return m; };
@@ -700,7 +703,7 @@ export class LiveMatch {
   drawEnemyCones(rig) {
     for (const e of this.state.rigs) {
       if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
-      const lr = e.loaded?.longRange === false ? null : effectiveWeaponProfile("longRange", e.weapons?.longRange, e);
+      const lr = rangedLoaded(e) ? rangedProfile(e) : null;
       const reach = Math.min(30, Math.max(lr?.maxRange ?? 0, radiusOf(e) + meleeReachOf(e) + 1));
       this.world.wedge(e.pos.x, e.pos.y, reach, e.facing - 45, e.facing + 45, 0xff3b30, 0.07);
     }
@@ -790,14 +793,14 @@ export class LiveMatch {
     if (this.sightKey !== k) {
       this.sightKey = k;
       const me = { ...rig, pos: { x: dest.x, y: dest.y }, facing };
-      const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+      const lr = rangedProfile(rig);
       const shots = [];
       for (const e of this.state.rigs) {
         if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
         const g = deriveAttackGeometry(this.state, me, e);
         let slot = null;
         if (g.inFrontArc && g.inMeleeReach) slot = "melee";
-        else if (g.inFrontArc && g.los && lr && rig.loaded?.longRange !== false && g.distance <= (lr.maxRange ?? 24) && g.distance >= (lr.minRange || 0)) slot = "longRange";
+        else if (g.inFrontArc && g.los && lr && rangedLoaded(rig) && g.distance <= (lr.maxRange ?? 24) && g.distance >= (lr.minRange || 0)) slot = "longRange";
         const band = slot === "longRange" ? (inSweetBand(lr, g.distance) ? "✓ band" : lr.close && g.distance < lr.close.under ? "too close" : "") : "";
         if (slot) shots.push({ e, slot, arc: g.arc, band, ed: expectedDamage(me, e, slot, { arc: g.arc, distance: g.distance, cover: g.cover, round: this.game.round }) });
       }
@@ -846,7 +849,7 @@ export class LiveMatch {
     for (const m of this.reachMeshes || []) this.world.overlay.remove(m);
     this.reachMeshes = [];
     if (!r || r.destroyed || !r.pos || this.mode) return;
-    const lr = effectiveWeaponProfile("longRange", r.weapons?.longRange, r);
+    const lr = rangedProfile(r);
     const max = Math.min(60, lr?.maxRange ?? 24);
     const col = r.owner === this.side ? 0x5fd3c0 : 0xe0533d;
     this.reachMeshes.push(
@@ -891,36 +894,87 @@ export class LiveMatch {
     this.renderActions();
   }
 
+  // Support modules: Weld / Vent pick a friend within reach, Paint an enemy in
+  // sight. Same click-a-ringed-unit flow as an attack.
+  startSupport(rig, key) {
+    rig = this.rig(rig.id) || rig;
+    const friendly = key !== "paint";
+    const ok = (u) => {
+      if (u.destroyed || !u.pos) return false;
+      if (friendly) {
+        if (u.owner !== rig.owner || !supportInReach(this.state, rig, u)) return false;
+        return key === "vent" ? (u.engine?.heat || 0) > 0 && isRig(u) : partsOf(u).some((l) => u[l] && u[l].sp < u[l].max);
+      }
+      if (u.owner === rig.owner) return false;
+      const g = deriveAttackGeometry(this.state, rig, u);
+      return g.los && g.distance <= PAINT_RANGE;
+    };
+    const byTarget = new Map(this.state.rigs.filter(ok).map((u) => [u.name, [{ action: key, target: u.name }]]));
+    this.mode = { key, rig, byTarget, support: true };
+    this.world.clearOverlay();
+    const col = key === "paint" ? 0xff4a2a : key === "vent" ? 0x6ab8e0 : 0x7fcf6a;
+    const reach = friendly ? radiusOf(rig) + SUPPORT_REACH : PAINT_RANGE;
+    this.world.disc(rig.pos.x, rig.pos.y, reach, col, 0.06);
+    this.world.ring(rig.pos.x, rig.pos.y, reach, col, 0.6);
+    for (const u of this.state.rigs) {
+      if (u.destroyed || !u.pos || u.id === rig.id || (friendly ? u.owner !== rig.owner : u.owner === rig.owner)) continue;
+      const on = byTarget.has(u.name);
+      this.world.ring(u.pos.x, u.pos.y, radiusOf(u) + 0.35, on ? col : 0x555555, on ? 0.95 : 0.4);
+      if (on) this.world.line(new THREE.Vector3(rig.pos.x, 1.5, rig.pos.y), new THREE.Vector3(u.pos.x, 1.5, u.pos.y), col);
+    }
+    if (!byTarget.size) {
+      this.cancelMode();
+      return toast(key === "fieldweld" ? `No damaged ally within ${SUPPORT_REACH}" of ${rig.name}. Walk up to one first.`
+        : key === "vent" ? `No allied rig running hot within ${SUPPORT_REACH}" of ${rig.name}.`
+        : `No enemy in sight within ${PAINT_RANGE}".`, "warn", 3500);
+    }
+    this.hud.tip(`${HELP[key]} · Click a highlighted ${friendly ? "ally" : "enemy"} · Right-click to cancel`);
+    this.renderActions();
+  }
+
+  // Weld: which part of the ally gets the torch.
+  pickWeld(rig, target) {
+    const parts = partsOf(target).filter((l) => target[l] && target[l].sp < target[l].max).sort((a, b) => target[a].sp / target[a].max - target[b].sp / target[b].max);
+    const m = modal({
+      title: `Field Weld: ${target.name}`,
+      body: el("div", {}, el("p", { class: "rx-lead" }, "1 action. Roll a D6 for the SP it puts back on the part you pick."),
+        el("div", { class: "attack-list" }, parts.map((l, i) => el("button", { class: `attack-opt ${i === 0 ? "best" : ""}`, onClick: () => { m.close(); this.act(rig, { action: "fieldweld", target: target.name, loc: l }).then(() => this.cancelMode()); } },
+          el("b", {}, icon(l === "mount" ? "arms" : l), ` ${l}`), el("span", {}, `${target[l].sp}/${target[l].max} SP`))))),
+      actions: [{ label: "Cancel", ghost: true, onClick: () => this.cancelMode() }],
+    });
+  }
+
   // Nothing to shoot: say exactly why, instead of a generic "move or pivot".
   // A spent gun is the common case (the ranged weapon fires once, then needs a
   // Reload), so offer the Reload right here.
   explainNoTarget(rig, key) {
-    const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    const lr = rangedProfile(rig);
+    const W = { longRange: weaponName(rig, "longRange") || "gun", melee: weaponName(rig, "melee") || "fists" };
     const enemies = this.state.rigs.filter((e) => e.owner !== rig.owner && !e.destroyed && e.pos)
       .map((e) => ({ e, geo: deriveAttackGeometry(this.state, rig, e) }))
       .sort((a, b) => a.geo.distance - b.geo.distance);
     const inBand = (d) => lr && d >= (lr.minRange ?? 0) && d <= (lr.maxRange ?? Infinity);
     const gunWouldBear = enemies.some(({ geo }) => geo.inFrontArc && geo.los && inBand(geo.distance));
-    const spent = rig.loaded?.longRange === false;
+    const spent = !!lr && !rangedLoaded(rig);
     if (spent && gunWouldBear && key !== "aimed" || spent && key === "fire" && enemies.some(({ geo }) => geo.inFrontArc)) {
       this.cancelMode();
       // Reload spends no action (heat only), so it's open even at 0 actions left.
       const canReload = this.allowed("act", "reload");
       modal({
-        title: `${rig.weapons.longRange} is spent`,
+        title: `${W.longRange} is spent`,
         body: el("div", {},
           el("div", { class: "modal-illus" },
             el("div", { class: "mi-art" }, icon("reload")),
             el("div", { class: "mi-odds" },
               el("span", { class: "mi-roll" }, icon("dice"), "D6 1–3", icon("heat"), "+2 heat"),
               el("span", { class: "mi-roll" }, icon("dice"), "D6 4–6", icon("heat"), "+1 heat"))),
-          el("p", {}, `Your ${rig.weapons.longRange} fired already and must Reload before it can shoot again. Reloading costs no action, just heat.`,
-            enemies.some(({ geo }) => geo.inMeleeReach && geo.inFrontArc) ? "" : ` Your ${rig.weapons.melee} can't reach anyone from here either.`)),
+          el("p", {}, `Your ${W.longRange} fired already and must Reload before it can shoot again. Reloading costs no action, just heat.`,
+            enemies.some(({ geo }) => geo.inMeleeReach && geo.inFrontArc) ? "" : ` Your ${W.melee} can't reach anyone from here either.`)),
         actions: [
           { label: "Not now", ghost: true },
           { label: "Reload, then aim", primary: true, disabled: !canReload, onClick: async () => {
             const live = this.rig(rig.id) || rig;
-            if (live.loaded?.longRange === false && !(await this.act(live, { action: "reload" }))) return;
+            if (!rangedLoaded(live) && !(await this.act(live, { action: "reload" }))) return;
             this.startTarget(this.rig(rig.id) || live, key);
           } },
         ],
@@ -933,17 +987,19 @@ export class LiveMatch {
       const { e, geo } = near;
       const d = geo.distance.toFixed(1);
       if (!geo.inFrontArc) why = `${e.name} is outside ${rig.name}'s front arc: pivot to face it (a Move can turn up to 90°).`;
-      else if (spent && !geo.inMeleeReach) why = `${rig.weapons.longRange} is spent (Reload it) and ${e.name} is out of ${rig.weapons.melee} reach.`;
+      else if (spent && !geo.inMeleeReach) why = `${W.longRange} is spent (Reload it) and ${e.name} is out of ${W.melee} reach.`;
       else if (!geo.los) why = `No line of sight to ${e.name}: a building blocks every line. Move to see past it.`;
-      else if (lr && geo.distance > (lr.maxRange ?? Infinity)) why = `${e.name} is ${d}" away, beyond the ${rig.weapons.longRange}'s ${lr.maxRange}" range. Close in.`;
-      else if (lr && geo.distance < (lr.minRange ?? 0)) why = `${e.name} is ${d}" away, inside the ${rig.weapons.longRange}'s ${lr.minRange}" minimum range. Back off or use the ${rig.weapons.melee}.`;
-      else if (key === "aimed" && spent) why = `${rig.weapons.longRange} is spent: Reload before an Aimed Shot.`;
+      else if (lr && geo.distance > (lr.maxRange ?? Infinity)) why = `${e.name} is ${d}" away, beyond the ${W.longRange}'s ${lr.maxRange}" range. Close in.`;
+      else if (lr && geo.distance < (lr.minRange ?? 0)) why = `${e.name} is ${d}" away, inside the ${W.longRange}'s ${lr.minRange}" minimum range. Back off or use the ${W.melee}.`;
+      else if (key === "aimed" && spent) why = `${W.longRange} is spent: Reload before an Aimed Shot.`;
     }
     this.cancelMode();
     toast(why, "warn", 4500);
   }
 
   chooseAttack(rig, target, list) {
+    if (this.mode?.key === "fieldweld") return this.pickWeld(rig, target);
+    if (this.mode?.key === "vent" || this.mode?.key === "paint") return this.act(rig, { action: this.mode.key, target: target.name }).then(() => this.cancelMode());
     if (this.mode?.key === "lock") return this.act(rig, { action: "lock", target: target.name }).then(() => this.cancelMode());
     if (this.mode?.key === "reel") return this.act(rig, { action: "jumpjets", mode: "reel", target: target.name, engage: target.name }).then(() => this.cancelMode());
     const room = this.previewRoom(rig);
@@ -956,7 +1012,7 @@ export class LiveMatch {
       const score = scoreCandidate(room, rig, c, this.advisorWeights);
       return { c, ed, edGrit, max, score };
     }).sort((a, b) => b.score - a.score);
-    const w = (c) => c.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange;
+    const w = (c) => weaponName(rig, c.weapon);
     // Keep the sight rays on the board while the briefing is up.
     const sight = this.previewSight(rig, target);
     this.previewSplash(rig, target, this.splashOf(rig, list)?.weapon);
@@ -1180,7 +1236,7 @@ export class LiveMatch {
   pickLocation(rig, title, fn) {
     modal({
       title,
-      body: el("div", { class: "attack-list" }, LOCS.filter((l) => rig[l] && !rig[l].destroyed).map((l) => el("button", { class: "attack-opt", onClick: () => { document.querySelector(".modal-back")?.remove(); fn(l); } }, el("b", {}, l), el("span", {}, `${rig[l].sp}/${rig[l].max} SP`)))),
+      body: el("div", { class: "attack-list" }, LOCS.filter((l) => partsOf(rig).includes(l) && rig[l] && !rig[l].destroyed).map((l) => el("button", { class: "attack-opt", onClick: () => { document.querySelector(".modal-back")?.remove(); fn(l); } }, el("b", {}, l), el("span", {}, `${rig[l].sp}/${rig[l].max} SP`)))),
       actions: [{ label: "Cancel", ghost: true }],
     });
   }
@@ -1198,7 +1254,8 @@ export class LiveMatch {
     const a = cmd.attrs;
     const what = {
       move: `move ${this.describeSpot(rig, a.dest)}`, sprint: `sprint ${this.describeSpot(rig, a.dest)}`,
-      fire: `fire ${a.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange} at ${a.target}`, aimed: `aimed shot at ${a.target}'s ${a.loc}`,
+      fire: `fire ${weaponName(rig, a.weapon)} at ${a.target}`, aimed: `aimed shot at ${a.target}'s ${a.loc}`,
+      fieldweld: `weld ${a.target}'s ${a.loc}`, vent: `vent ${a.target}'s boiler`, paint: `paint ${a.target} for your guns`,
       prepare: `prepare ${a.prep}`, repair: `repair ${a.loc}`, shutdown: "Shut Down to vent heat",
     }[a.action] || a.action;
     if (a.dest) {
@@ -1284,6 +1341,17 @@ export class LiveMatch {
     this.showReach(r);
     // Sight rays follow the hovered target; off it, they go.
     if (this.mode?.byTarget && !this.mode.byTarget.has(r?.name)) this.clearPreview();
+    if (this.mode?.support && r) {
+      const on = this.mode.byTarget.has(r.name);
+      const k = this.mode.key;
+      if (on) {
+        const hurt = partsOf(r).filter((l) => r[l] && r[l].sp < r[l].max).map((l) => `${l} ${r[l].sp}/${r[l].max}`).join(", ");
+        this.hud.tip(k === "fieldweld" ? `Weld ${r.name}: ${hurt} · click to pick the part`
+          : k === "vent" ? `Vent ${r.name}: heat ${r.engine?.heat ?? 0} → ${Math.max(0, (r.engine?.heat ?? 0) - 2)} · click to vent`
+          : `Paint ${r.name}: your side ignores its cover and gets +1 Aim on it · click to paint`);
+      } else if (r.id !== this.mode.rig.id) this.hud.tip(`${r.name}: ${k === "paint" ? (r.owner === this.mode.rig.owner ? "paint marks enemies" : `not in sight within ${PAINT_RANGE}"`) : r.owner !== this.mode.rig.owner ? "that's an enemy" : !supportInReach(this.state, this.mode.rig, r) ? `out of reach: walk within ${SUPPORT_REACH}"` : k === "vent" ? "not running hot" : "not damaged"}`);
+      return;
+    }
     if (this.mode?.byTarget && r) {
       const list = this.mode.byTarget.get(r.name);
       if (list) {
@@ -1309,13 +1377,15 @@ export class LiveMatch {
   // Why `rig` can't attack `e` right now (front arc first: it gates both weapons).
   cantAttackWhy(rig, e) {
     const geo = deriveAttackGeometry(this.state, rig, e);
-    const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    const lr = rangedProfile(rig);
     if (!geo.inFrontArc) return `outside ${rig.name}'s front arc. Pivot to face it first (a 0" Move turns up to 90°)`;
     const why = [];
-    if (!geo.inMeleeReach) why.push(`out of ${rig.weapons.melee} reach`);
-    if (rig.loaded?.longRange === false) why.push(`${rig.weapons.longRange} is spent (Reload)`);
+    const W = { longRange: weaponName(rig, "longRange"), melee: weaponName(rig, "melee") };
+    if (W.melee && !geo.inMeleeReach) why.push(`out of ${W.melee} reach`);
+    if (!lr) { if (!why.length) why.push("no gun to shoot with"); return why.join(" · "); }
+    if (!rangedLoaded(rig)) why.push(`${W.longRange} is spent (Reload)`);
     else if (!geo.los) why.push("no line of sight for the gun");
-    else if (lr && (geo.distance < (lr.minRange ?? 0) || geo.distance > (lr.maxRange ?? Infinity))) why.push(`${geo.distance.toFixed(1)}" is outside the ${rig.weapons.longRange}'s ${lr.minRange ?? 0}–${lr.maxRange}" band`);
+    else if (lr && (geo.distance < (lr.minRange ?? 0) || geo.distance > (lr.maxRange ?? Infinity))) why.push(`${geo.distance.toFixed(1)}" is outside the ${W.longRange}'s ${lr.minRange ?? 0}–${lr.maxRange}" band`);
     return why.length ? why.join(" · ") : "can't be attacked with this action";
   }
 
@@ -1370,7 +1440,7 @@ export class LiveMatch {
     const list = candidatesFor(room, rig).filter((c) => c.action === "fire" && c.target === target.name);
     if (!list.length) return toast(`${rig.name} can't hit ${target.name} from here (front arc, range, line of sight).`, "warn", 3000);
     const best = list.map((c) => ({ c, s: scoreCandidate(room, rig, c, this.advisorWeights) })).sort((a, b) => b.s - a.s)[0].c;
-    toast(`${rig.name} fires ${best.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange} at ${target.name}`, "info", 1600);
+    toast(`${rig.name} fires ${weaponName(rig, best.weapon)} at ${target.name}`, "info", 1600);
     this.act(rig, { action: "fire", weapon: best.weapon, target: target.name });
   }
 
@@ -1483,7 +1553,7 @@ export class LiveMatch {
         const weapon = inReach ? "melee" : "longRange";
         modal({
           title: `↩️ Return Fire: ${reactor.name}`,
-          body: el("p", {}, `${attacker.name} attacked. Shoot back with ${inReach ? reactor.weapons.melee : reactor.weapons.longRange}? (${geo.distance.toFixed(1)}", ${geo.los ? "clear line" : "no line of sight"})`),
+          body: el("p", {}, `${attacker.name} attacked. Shoot back with ${weaponName(reactor, inReach ? "melee" : "longRange")}? (${geo.distance.toFixed(1)}", ${geo.los ? "clear line" : "no line of sight"})`),
           dismissable: false,
           actions: [
             { label: "Skip", ghost: true, onClick: () => this.send("react", { decline: true, side: this.side }).then(() => { this.gateOpen = false; }) },

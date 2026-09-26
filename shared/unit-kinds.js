@@ -123,6 +123,36 @@ export const UNIT_KINDS = {
     destruction: "single-model",
     speed: 4,
   },
+  // Drones (3D campaign waves): small, fast, disposable walkers. Vital pools sit
+  // exactly on the §8 floor; the fragility lives in soft toughness, tiny
+  // mobility/weapon pools and a small Integrity (INTEGRITY_RATIO.drone).
+  drone: {
+    id: "drone",
+    label: "Drone",
+    parts: [
+      { name: "hull",   role: "structural" },
+      { name: "legs",   role: "mobility" },
+      { name: "mount",  role: "weapon" },
+      { name: "engine", role: "power" },
+    ],
+    hitLocation: [
+      { min: 1,  part: "hull" },
+      { min: 5,  part: "legs" },
+      { min: 8,  part: "mount" },
+      { min: 11, part: "engine" },
+    ],
+    toughness: { hull: 3, legs: 2, mount: 2, engine: 2 },
+    partSp: { hull: 6, legs: 3, mount: 3, engine: 6 },
+    hasHeat: false,
+    hasArcs: true,
+    actionBudget: 2,
+    weaponMode: "flat-pick",
+    reloads: true,
+    hasEquipment: false,
+    reactions: false,
+    destruction: "single-model",
+    speed: 5,
+  },
 };
 
 // Support-unit role modules (spec: Support Units). A support unit is a Tank or

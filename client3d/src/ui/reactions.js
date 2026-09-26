@@ -3,7 +3,7 @@
 // and WHEN to pick it, with an engraved-brass emblem so the choice reads at a
 // glance. Rigs are picked from portrait cards, not a dropdown.
 import { el } from "./dom.js";
-import { LOCS } from "/shared/game-state.js";
+import { partsOf, kitLine } from "../game/units.js";
 
 // Emblems: simple engraved-line drawings (stroke = currentColor).
 const ART = {
@@ -52,9 +52,9 @@ export function reactionCard(key, { selected = false, improved = false, onClick 
 }
 
 export function rigPortrait(rig, { selected = false, onClick } = {}) {
-  const tot = LOCS.reduce((a, l) => a + (rig[l]?.sp || 0), 0), max = LOCS.reduce((a, l) => a + (rig[l]?.max || 0), 0) || 1;
+  const tot = partsOf(rig).reduce((a, l) => a + (rig[l]?.sp || 0), 0), max = partsOf(rig).reduce((a, l) => a + (rig[l]?.max || 0), 0) || 1;
   return el("button", { class: `rx-rig ${selected ? "on" : ""}`, onClick },
     el("span", { class: `swatch big sw-${rig.name}` }),
-    el("div", {}, el("div", { class: "rx-name" }, rig.name), el("div", { class: "muted small" }, `${rig.weapons?.longRange} · ${rig.weapons?.melee}`),
+    el("div", {}, el("div", { class: "rx-name" }, rig.name), el("div", { class: "muted small" }, kitLine(rig)),
       el("div", { class: "bar" }, el("i", { style: { width: `${(tot / max) * 100}%`, background: tot / max > 0.6 ? "#7fcf6a" : tot / max > 0.3 ? "#f5b041" : "#e0533d" } }))));
 }

@@ -13,8 +13,9 @@ import { arcOf, radiusOf, terrainPolygons } from "../geometry.js";
 import { buildGrid, findPathOnGrid, walkPath } from "../pathfind.js";
 import {
   spatial, deriveAttackGeometry, effectiveWeaponProfile, hasBulwarkShield,
-  moveBudget, moveBlockers, PREP_TYPES, LOCS,
+  moveBudget, moveBlockers, PREP_TYPES, LOCS, UNIT_WEAPONS, supportInReach, PAINT_RANGE,
 } from "../game-state.js";
+import { partNamesOf, kindOf, UNIT_KINDS } from "../unit-kinds.js";
 import { equipmentUpgradeEffectOf } from "../rules.js";
 
 const DEG = Math.PI / 180;
@@ -44,8 +45,12 @@ export function candidatesFor(room, rig) {
   );
   const out = [];
 
-  const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
-  const lrLoaded = rig.loaded?.longRange !== false;
+  // A flat-pick unit (walker, drone) carries ONE weapon: a gun rides the
+  // long-range gates, a blade the melee ones.
+  const unitW = rig.weapons?.unit != null ? UNIT_WEAPONS[rig.weapons.unit] : null;
+  const lr = unitW ? (unitW.melee ? null : unitW) : effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+  const hasMelee = unitW ? !!unitW.melee : true;
+  const lrLoaded = unitW ? rig.loaded?.unit !== false : rig.loaded?.longRange !== false;
   const inBand = (d) => lr && d >= (lr.minRange ?? 0) && d <= (lr.maxRange ?? Infinity);
 
   for (const enemy of enemies) {
@@ -61,13 +66,13 @@ export function candidatesFor(room, rig) {
     }
     // Melee Fire: needs the rim gap inside reach (deriveAttackGeometry measured it
     // with this rig's own meleeReachOf). No LOS/band, it is contact.
-    if (enabled.has("fire") && geo.inMeleeReach) {
+    if (enabled.has("fire") && hasMelee && geo.inMeleeReach) {
       out.push({ action: "fire", weapon: "melee", ...shot });
     }
     // Aimed is ranged-only (availableActions shuts it off when the gun is spent),
     // so it rides the same LOS + band gate as a long-range Fire, once per location.
     if (front && enabled.has("aimed") && geo.los && inBand(geo.distance)) {
-      for (const location of LOCS) {
+      for (const location of partNamesOf(kindOf(enemy))) {
         out.push({ action: "aimed", weapon: "longRange", location, ...shot });
       }
     }
@@ -83,7 +88,7 @@ export function candidatesFor(room, rig) {
 
   // Repair × a location that is damaged but not destroyed.
   if (enabled.has("repair")) {
-    for (const location of LOCS) {
+    for (const location of LOCS.filter((l) => partNamesOf(kindOf(rig)).includes(l))) {
       const part = rig[location];
       if (part && !part.destroyed && part.sp < part.max) {
         out.push({ action: "repair", location });
@@ -94,7 +99,7 @@ export function candidatesFor(room, rig) {
   // Reload, a real action the console hides (it is a drawer-only path), offered
   // when the ranged weapon is spent and there is budget. checkCommand is the final
   // arbiter (Task 4.2's invariant fuzz proves the bot never emits an illegal one).
-  if (rig.loaded?.longRange === false && turn.actionsUsed < turn.actionsMax) {
+  if ((rig.loaded?.longRange === false || rig.loaded?.unit === false) && turn.actionsUsed < turn.actionsMax) {
     out.push({ action: "reload" });
   }
 
@@ -156,6 +161,30 @@ export function candidatesFor(room, rig) {
     const weakest = LOCS.filter((l) => rig[l] && !rig[l].destroyed)
       .sort((x, y) => rig[x].sp / rig[x].max - rig[y].sp / rig[y].max)[0];
     if (weakest) out.push({ action: "emergencypatch", location: weakest });
+  }
+  // Support modules: weld the most-hurt part of a friend in reach, vent a hot
+  // friendly rig in reach, paint an enemy in sight.
+  const friends = room.rigs.filter((r) => (r.owner || "a") === (rig.owner || "a") && !r.destroyed && r.pos);
+  if (enabled.has("fieldweld")) {
+    for (const f of friends) {
+      if (!supportInReach(room, rig, f)) continue;
+      const hurt = partNamesOf(kindOf(f)).filter((l) => f[l] && !f[l].destroyed && f[l].sp < f[l].max)
+        .sort((x, y) => f[x].sp / f[x].max - f[y].sp / f[y].max)[0];
+      if (hurt) out.push({ action: "fieldweld", target: f.name, loc: hurt });
+    }
+  }
+  if (enabled.has("vent")) {
+    for (const f of friends) {
+      if (UNIT_KINDS[kindOf(f)]?.hasHeat && (f.engine?.heat || 0) > 0 && supportInReach(room, rig, f)) out.push({ action: "vent", target: f.name });
+    }
+  }
+  // One live mark per painter: a second Paint just moves it.
+  if (enabled.has("paint") && !room.rigs.some((r) => r.painted?.painterId === rig.id && !r.destroyed)) {
+    for (const e of enemies) {
+      if (e.painted?.by === (rig.owner || "a")) continue;
+      const geo = deriveAttackGeometry(room, rig, e);
+      if (geo.los && geo.distance <= PAINT_RANGE) out.push({ action: "paint", target: e.name });
+    }
   }
   if (enabled.has("lock")) {
     for (const e of room.rigs) {

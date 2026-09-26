@@ -7,7 +7,8 @@ import { el, fill, toast, modal } from "./dom.js";
 import { icon } from "./icons.js";
 import { api } from "../api.js";
 import { sfx } from "../audio.js";
-import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT, EQUIPMENT_UPGRADES, LOCS } from "/shared/game-state.js";
+import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT, EQUIPMENT_UPGRADES, LOCS, templateById, DRONE_TYPES } from "/shared/game-state.js";
+import { WALKER_PICKS } from "./menu.js";
 import {
   FACTIONS, RELICS, UNLOCKS, NOTORIETY, MAX_NOTORIETY, CONTRACT_TYPES, PRICES, PERK_KITS, BOSS_STEP, MAX_STRIKES,
   factionById, relicById, unlockById, repairPrice, recoveryPrice,
@@ -394,6 +395,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
       if (u.kind === "equipment") return EQUIPMENT[u.target]?.passive;
       if (u.kind === "perkkits") return PERK_KITS.map((k) => k.perk).join(" · ");
       if (u.kind === "relics") return RELICS.filter((r) => r.pack === u.target).map((r) => r.name).join(" · ");
+      if (u.kind === "walker") return `Support walker: ${WALKER_PICKS.find((w) => w.id === u.target)?.text || ""}`;
       return null;
     };
     const title = (u) => (u.kind === "relics" ? `Relic pack ${u.target}` : u.kind === "chassis" ? chassisOf(u.target).name : u.label);
@@ -545,6 +547,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
     try { (await api.chassis()).chassis.forEach((c) => { content[c.id] = c; }); } catch {}
     const picked = [];
     let banner = null;
+    let walker = null;
     let step = 1;
     const STEPS = ["Pick rigs", "Banner & Notoriety", "Confirm"];
     const mediumsIn = (ids) => ids.filter((id) => chassisOf(id).class === "medium").length;
@@ -591,6 +594,12 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
           el("button", { class: `cp-banner ${banner == null ? "on got" : ""}`, onClick: () => { banner = null; render({ still: true }); } }, el("div", {}, el("b", {}, "No banner"), el("span", { class: "muted cp-small" }, "Fly your own colours."))),
           pools.banners.map((id) => { const f = factionById(id); return el("button", { class: `cp-banner got ${banner === id ? "on" : ""}`, onClick: () => { banner = id; sfx.servo(); render({ still: true }); } }, crest(id, "lg"), el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`))); }))
           : el("p", { class: "muted cp-small" }, "No banners yet: beat a faction's Warlord to fly its colours (one faction perk for your squad).")),
+      el("section", { class: "cp-sec" }, el("h2", {}, "Support walker"),
+        el("p", { class: "muted cp-small" }, "One support walker can ride with the outfit: a slow pod on stilts, fully repaired for every contract. It doesn't hold the line (lose every rig and the contract is lost). Unlock more at the Armory."),
+        el("div", { class: "cp-banners pick" },
+          el("button", { class: `cp-banner ${walker == null ? "on got" : ""}`, onClick: () => { walker = null; render({ still: true }); } }, el("div", {}, el("b", {}, "No walker"), el("span", { class: "muted cp-small" }, "Three rigs, nothing else."))),
+          (pools.walkers || []).map((id) => el("button", { class: `cp-banner got ${walker === id ? "on" : ""}`, onClick: () => { walker = id; sfx.servo(); render({ still: true }); } },
+            icon("walker"), el("div", {}, el("b", {}, templateById(id).name), el("span", { class: "cp-small" }, WALKER_PICKS.find((w) => w.id === id)?.text || "")))))),
       el("section", { class: "cp-sec" }, notorietyRow(profile, () => render({ still: true }))));
 
     const confirmStep = () => {
@@ -608,6 +617,9 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
               el("div", {}, el("b", {}, c.name), el("span", { class: "muted cp-small" }, `${c.label} · ${spTotal(c.sp)} SP · ${c.speed}"`)),
               el("span", { class: `cp-class c-${c.class}` }, c.class));
           })),
+        el("section", { class: "cp-sec" }, el("h3", {}, "Support walker"),
+          walker ? el("div", { class: "cp-node-f" }, icon("walker"), el("div", {}, el("b", {}, templateById(walker).name), el("span", { class: "cp-small" }, WALKER_PICKS.find((w) => w.id === walker)?.text || "")))
+            : el("p", { class: "muted" }, "None.")),
         el("section", { class: "cp-sec" }, el("h3", {}, "Banner"),
           f ? el("div", { class: "cp-node-f" }, crest(f.id, "lg"), el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`)))
             : el("p", { class: "muted" }, "No banner: your own colours.")),
@@ -648,7 +660,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
             ? el("button", { class: "btn big primary", disabled: !ready, title: ready ? "" : "Sign three rigs first", onClick: () => go(step + 1) }, ready || step > 1 ? "Next ▸" : `Pick ${3 - picked.length} more`)
             : el("button", { class: "btn big primary", disabled: !ready, onClick: async () => {
               loading("Signing the contracts…");
-              const v = await act(() => api.campaign.start({ chassis: picked, notoriety, banner }));
+              const v = await act(() => api.campaign.start({ chassis: picked, notoriety, banner, walker }));
               if (v) { sfx.fanfare?.(true); map(); } else render();
             } }, "Start run ▸"))));
       if (still) root.scrollTop = y;
@@ -685,6 +697,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
           u.commander ? cicon("crown", "crown") : null, el("span", { class: `swatch sw-${c.name}` }), c.label);
       })),
       node.reinforcements ? el("div", { class: "cp-node-x" }, `⚠ Reinforcements on rounds ${node.reinforcements.map((r) => r.round).join(" & ")}`) : null,
+      node.drones ? el("div", { class: "cp-node-x" }, icon("drone"), ` Drone waves: ${droneText(node.drones)}`) : null,
       node.crates ? el("div", { class: "cp-node-x" }, `📦 ${node.crates} salvage crates (+${PRICES.crate} ${SALVAGE} each)`) : null,
       node.extractGoal ? el("div", { class: "cp-node-x" }, `➜ Extract ${node.extractGoal} rig${node.extractGoal > 1 ? "s" : ""} through the enemy edge`) : null,
       onPick ? el("button", { class: "btn primary", onClick: onPick }, node.kind === "boss" ? "Face the Warlord ▸" : "Take contract ▸") : null);
@@ -781,9 +794,11 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
                   el("div", { class: "cp-loadout" }, kit.map((k) => upChip(k.nature, k.name, `${k.name}: ${k.tag}`)),
                     u.equipment ? upChip(null, `⚙ ${EQUIPMENT[u.equipment]?.label}`) : null)));
             })),
-            node.reinforcements ? el("div", { class: "cp-node-x" }, "⚠ Reinforcements: ", node.reinforcements.map((r) => `round ${r.round}: ${chassisOf(r.unit.chassis).label}`).join(" · ")) : null),
+            node.reinforcements ? el("div", { class: "cp-node-x" }, "⚠ Reinforcements: ", node.reinforcements.map((r) => `round ${r.round}: ${chassisOf(r.unit.chassis).label}`).join(" · ")) : null,
+            node.drones ? el("div", { class: "cp-node-x" }, icon("drone"), " Drone waves: ", droneText(node.drones), ". Hunters rush and shoot, Sappers blow up in contact (2.5\" blast), Spotters paint you for the enemy.") : null),
           el("div", { class: "cp-ours" }, el("h3", {}, "Deploying"),
             el("div", { class: "cp-rigs" }, run.roster.filter((r) => !r.wrecked).map((r) => rigCard(run, r, { compact: true }))),
+            run.walker ? el("p", { class: "cp-small" }, icon("walker"), ` ${templateById(run.walker).name} rides along (fully repaired).`) : null,
             run.roster.some((r) => r.wrecked) ? el("p", { class: "cp-small muted" }, `Left behind (wrecked): ${run.roster.filter((r) => r.wrecked).map((r) => r.name).join(", ")}`) : null)),
         el("div", { class: "cp-foot in" }, deployBtn))));
     // A battle that already ended (reload during the finish) goes straight to the debrief.
@@ -1029,4 +1044,9 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
   }
   renownShown = S.profile.renown;
   if (fresh === "debrief" || S.run?.status === "over") route(); else hq();
+}
+
+// "round 2: 2 Hunters · round 4: 1 Sapper"
+function droneText(waves) {
+  return waves.map((w) => `round ${w.round}: ${w.count} ${DRONE_TYPES[w.type]?.label || w.type}${w.count > 1 ? "s" : ""}`).join(" · ");
 }

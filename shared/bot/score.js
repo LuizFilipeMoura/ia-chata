@@ -23,16 +23,16 @@
 // stands NOW. It does not model the enemy closing first. Documented blind spot
 // (see the spec); the cheap partial fix, if the bot proves bait-able, is to
 // inflate each enemy's threat range by its moveBudget rather than to search.
-import { expectedDamage } from "./evaluate.js";
+import { expectedDamage, slotFor } from "./evaluate.js";
 import { pathDistance } from "../pathfind.js";
 import { availableActions } from "../battle-view.js";
 import {
   arcOf, sightCorridor, distanceBetween, meleeInReach, controlsObjective,
   radiusOf, terrainPolygons,
 } from "../geometry.js";
-import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS, ANY_KILL_VP, KILL_VP, TRAILING_KILL_BOUNTY, beaconMultiplier } from "../game-state.js";
+import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, ANY_KILL_VP, KILL_VP, TRAILING_KILL_BOUNTY, beaconMultiplier, UNIT_WEAPONS, supportInReach } from "../game-state.js";
 import { HEAT_CAPACITY, woundTarget } from "../rules.js";
-import { toughnessOf } from "../unit-kinds.js";
+import { toughnessOf, partNamesOf, kindOf, UNIT_KINDS } from "../unit-kinds.js";
 
 import { META } from "./meta.js";
 
@@ -88,12 +88,15 @@ function shotValue(room, attacker, aPos, aFacing, target, tPos, tFacing) {
   const distance = distanceBetween(A, T);
   const opts = { arc, distance, cover: corridor.cover, round: room.game.round };
   let best = 0;
-  const lr = effectiveWeaponProfile("longRange", attacker.weapons?.longRange, attacker);
-  if (corridor.los && lr && attacker.loaded?.longRange !== false
+  // A flat-pick unit's single weapon is either its gun or its blade.
+  const unitW = attacker.weapons?.unit != null ? UNIT_WEAPONS[attacker.weapons.unit] : null;
+  const lr = unitW ? (unitW.melee ? null : unitW) : effectiveWeaponProfile("longRange", attacker.weapons?.longRange, attacker);
+  const loaded = unitW ? attacker.loaded?.unit !== false : attacker.loaded?.longRange !== false;
+  if (corridor.los && lr && loaded
       && distance >= (lr.minRange ?? 0) && distance <= (lr.maxRange ?? Infinity)) {
     best = Math.max(best, expectedDamage(attacker, target, "longRange", opts));
   }
-  if (meleeInReach(A, T, meleeReachOf(attacker))) {
+  if ((!unitW || unitW.melee) && meleeInReach(A, T, meleeReachOf(attacker))) {
     best = Math.max(best, expectedDamage(attacker, target, "melee", opts));
   }
   return best;
@@ -147,7 +150,7 @@ function offenceAt(room, rig, cand, pos, facing, shots) {
   if (cand.action === "fire" || cand.action === "aimed") {
     const target = findRig(room, cand.target);
     if (!target) return 0;
-    return declaredShot(room, rig, cand, target) + splashValue(room, rig, cand.weapon, target);
+    return declaredShot(room, rig, cand, target) + splashValue(room, rig, cand.weapon, target) + detonateValue(room, rig, target);
   }
   if (cand.action === "move" || cand.action === "sprint") {
     return shots ? Math.max(0, ...shots.map((s) => s.v)) : bestShotFrom(room, rig, pos, facing);
@@ -160,7 +163,7 @@ function offenceAt(room, rig, cand, pos, facing, shots) {
 // your own brawler), plus a little for heat washed onto enemies.
 const FRIENDLY_FIRE = 1.5;
 function splashValue(room, rig, weapon, target) {
-  const slot = weapon === "melee" ? "melee" : "longRange";
+  const slot = slotFor(rig, weapon === "melee" ? "melee" : "longRange");
   const sp = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig)?.splash;
   if (!sp || !target.pos) return 0;
   const centre = spatial(target);
@@ -170,6 +173,23 @@ function splashValue(room, rig, weapon, target) {
     if (distanceBetween(spatial(r), centre) > sp.radius + radiusOf(r)) continue;
     let each = sp.heat ? sp.heat * 0.3 : 0;
     if (sp.pen) each += sp.dmg * Math.max(0, Math.min(1, (11 - woundTarget(sp.pen, toughnessOf(r.kind || "rig", "hull", r.weightClass))) / 10));
+    v += (r.owner || "a") === (rig.owner || "a") ? -FRIENDLY_FIRE * each : each;
+  }
+  return v;
+}
+
+// A Sapper's Demo Charge: the blast around the drone itself, friends counted
+// against it (the drone's own loss is free: it scores nothing and was built to
+// go off).
+function detonateValue(room, rig, target) {
+  const d = rig.weapons?.unit != null ? UNIT_WEAPONS[rig.weapons.unit]?.detonate : null;
+  if (!d || !rig.pos) return 0;
+  const centre = spatial(rig);
+  let v = 0;
+  for (const r of room.rigs) {
+    if (r === target || r === rig || r.destroyed || !r.pos) continue;
+    if (distanceBetween(spatial(r), centre) > d.radius + radiusOf(r)) continue;
+    const each = d.dmg * Math.max(0, Math.min(1, (11 - woundTarget(d.pen, toughnessOf(kindOf(r), "hull", r.weightClass))) / 10));
     v += (r.owner || "a") === (rig.owner || "a") ? -FRIENDLY_FIRE * each : each;
   }
   return v;
@@ -248,6 +268,13 @@ function objectiveApproach(room, rig, pos) {
     const gap = Math.max(0, travel(room, rig, pos, commander.pos) - 6);
     best = Math.max(best, EXIT_PULL / (1 + gap * 0.25));
   }
+  // Support walker: stay by the friend that needs the module most.
+  const help = supportNeed(room, rig);
+  if (help.length) {
+    let gap = Infinity;
+    for (const f of help) gap = Math.min(gap, Math.max(0, travel(room, rig, pos, f.pos) - radiusOf(rig) - radiusOf(f) - 2));
+    if (gap < Infinity) best = Math.max(best, SUPPORT_PULL / (1 + gap * 0.25));
+  }
   // Campaign enemy: hunt. A contract's side b has no exit and often no marker
   // it wants, so without this it idles at deploy until the player walks into
   // range. Pull it toward the nearest player rig, by the real route, until
@@ -262,11 +289,21 @@ function objectiveApproach(room, rig, pos) {
   return best;
 }
 const EXIT_PULL = 10;
+const SUPPORT_PULL = 3;
+// Friends a Repair / Coolant module could help right now: hurt, or running hot.
+function supportNeed(room, rig) {
+  const m = rig.modules || [];
+  if (!m.includes("repair") && !m.includes("coolant")) return [];
+  return room.rigs.filter((f) => f !== rig && (f.owner || "a") === (rig.owner || "a") && !f.destroyed && f.pos
+    && ((m.includes("repair") && partNamesOf(kindOf(f)).some((l) => f[l] && f[l].sp < f[l].max))
+      || (m.includes("coolant") && (f.engine?.heat || 0) >= 2 && UNIT_KINDS[kindOf(f)]?.hasHeat)));
+}
 const HUNT_PULL = 4;
 // How close a hunter wants to get: well inside its gun's band (capped, a
 // sniper still has to see you), or base contact for a melee-only rig.
 function huntReach(rig) {
-  const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+  const unitW = rig.weapons?.unit != null ? UNIT_WEAPONS[rig.weapons.unit] : null;
+  const lr = unitW ? (unitW.melee ? null : unitW) : effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
   return lr?.maxRange ? Math.min(lr.maxRange, 16) * 0.75 : radiusOf(rig) * 2 + 1;
 }
 
@@ -283,7 +320,9 @@ function killWeight(room, rig, target) {
   const behind = vpOf(mine) < vpOf(target.owner || "a");
   // A campaign commander ends the battle: worth far more than any VP.
   const commander = room.campaign?.commanderId === target.id && mine === "a" ? 6 : 0;
-  const vp = ANY_KILL_VP + (target.id === pid ? KILL_VP : 0) + (behind ? TRAILING_KILL_BOUNTY : 0) + commander;
+  // A drone scores nothing, but it still shoots: half a kill for clearing it.
+  const vp = kindOf(target) === "drone" ? ANY_KILL_VP * 0.5
+    : ANY_KILL_VP + (target.id === pid ? KILL_VP : 0) + (behind ? TRAILING_KILL_BOUNTY : 0) + commander;
   return (vp / (ANY_KILL_VP + KILL_VP)) * (1 + fragility(target));
 }
 
@@ -348,7 +387,7 @@ function overheatRisk(room, rig, turn, cand) {
 // fresh one, and (via killWeight) pulls fire onto a rig whose pool (§8a) is low.
 function fragility(rig) {
   let minFrac = 1;
-  for (const loc of LOCS) {
+  for (const loc of partNamesOf(kindOf(rig))) {
     const p = rig[loc];
     if (p && p.max > 0 && !p.destroyed) minFrac = Math.min(minFrac, p.sp / p.max);
   }
@@ -409,6 +448,27 @@ function tacticalValue(room, rig, cand, exposure) {
       return canShoot ? 0.6 : 0;
     }
     case "emergencypatch": return fragility(rig) * 3;
+    // Support modules: a weld is worth the SP it puts back, more on a friend
+    // near the edge; a vent pays when the friend is at or over its cap; a paint
+    // pays when a friend can actually shoot the painted rig.
+    case "fieldweld": {
+      const f = findRig(room, cand.target);
+      const part = f?.[cand.loc];
+      if (!part || !supportInReach(room, rig, f)) return 0;
+      return Math.min(3, part.max - part.sp) * (1 + fragility(f));
+    }
+    case "vent": {
+      const f = findRig(room, cand.target);
+      const h = f?.engine?.heat || 0, c = HEAT_CAPACITY[f?.weightClass] ?? 8;
+      return h >= c - 1 ? 3 : h * 0.3;
+    }
+    case "paint": {
+      const e = findRig(room, cand.target);
+      if (!e) return 0;
+      const shooters = room.rigs.filter((f) => f !== rig && (f.owner || "a") === (rig.owner || "a") && !f.destroyed && f.pos
+        && shotValue(room, f, f.pos, f.facing, e, e.pos, e.facing) > 0).length;
+      return shooters ? 0.8 + 0.4 * shooters : 0.2;
+    }
     // Shut Down vents 2 heat per unused action and ends the activation, worth it
     // exactly when the rig is about to roll on the overheat table (or close to).
     case "shutdown": {
@@ -425,7 +485,9 @@ function tacticalValue(room, rig, cand, exposure) {
 export function scoreParts(room, rig, cand) {
   const { pos, facing } = resultingPose(rig, cand);
   const turn = room.game.turn;
-  const exposure = exposureAt(room, rig, pos, facing);
+  // A Sapper that goes off isn't there to be shot back.
+  const goesOff = cand.action === "fire" && !!(rig.weapons?.unit != null && UNIT_WEAPONS[rig.weapons.unit]?.detonate);
+  const exposure = goesOff ? 0 : exposureAt(room, rig, pos, facing);
   const shots = cand.action === "move" || cand.action === "sprint" ? shotsFrom(room, rig, pos, facing) : null;
   return {
     vp: objectiveVpAt(room, rig, pos) + objectiveApproach(room, rig, pos),

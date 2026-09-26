@@ -26,7 +26,7 @@ export const LOCS = ["hull", "arms", "legs", "engine"];
 // class / cold kind. Chassis carry an explicit `integrity`; this ratio covers
 // free-combo rigs and Tanks/Walkers. Lights pay for their speed with a thinner
 // pool than mediums.
-export const INTEGRITY_RATIO = { light: 0.5, medium: 0.65, tank: 0.65, walker: 0.5 };
+export const INTEGRITY_RATIO = { light: 0.5, medium: 0.65, tank: 0.65, walker: 0.5, drone: 0.4 };
 // HEAT_CAPACITY now lives in rules.js (combat.js needs it and imports only
 // from rules.js); re-exported here so existing callers (client, tests) keep
 // importing it from game-state.js.
@@ -122,6 +122,19 @@ export const UNIT_WEAPONS = {
   // Built-in weak weapon every support unit carries; replaced by a Damage
   // module. peak 0 + dropoff 0 = a flat Accuracy 0 at any distance (spec §Sidearm).
   "Sidearm":          { rof: 2, pen: 3,  dmg: 1, sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
+  // Drone kit (3D campaign waves). The Demo Charge is a Sapper's one-shot: the
+  // blow lands, then the charge `detonate`s on every other unit in the radius
+  // and takes the Sapper with it.
+  "Drone Carbine":    { rof: 3, pen: 5,  dmg: 1, sweet: 7,  peak: 1, dropoff: 0.2,  minRange: 0, maxRange: 14, flatPick: true },
+  "Demo Charge":      { rof: 1, pen: 8,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true, flatPick: true, detonate: { radius: 2.5, pen: 6, dmg: 2 } },
+};
+
+// Drone types (3D campaign waves). Hunters rush and chip, Sappers blow up in
+// base contact, Spotters hang back and paint targets for their side.
+export const DRONE_TYPES = {
+  hunter:  { id: "hunter",  label: "Hunter",  unit: "Drone Carbine", modules: [] },
+  sapper:  { id: "sapper",  label: "Sapper",  unit: "Demo Charge",   modules: [] },
+  spotter: { id: "spotter", label: "Spotter", unit: "Sidearm",       modules: ["recon"] },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -1263,9 +1276,13 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
   // Support units carry exactly two distinct modules; a bare tank/walker carries
   // none. A Damage module fits the chosen unit-weapon; without one the unit falls
   // back to the built-in Sidearm.
-  const modules = normalizeModules(opts.modules);
-  if (modules.length > 0 && modules.length !== 2) return null;
-  const weaponName = modules.length > 0
+  // Drones are built from their DRONE_TYPES entry: fixed weapon + modules,
+  // outside the two-module support-unit rule.
+  const drone = kindId === "drone" ? DRONE_TYPES[String(opts.drone || "hunter").toLowerCase()] : null;
+  if (kindId === "drone" && !drone) return null;
+  const modules = drone ? [...drone.modules] : normalizeModules(opts.modules);
+  if (!drone && modules.length > 0 && modules.length !== 2) return null;
+  const weaponName = drone ? drone.unit : modules.length > 0
     ? (modules.includes("damage") ? normalizeUnitWeapon(opts.unit) : "Sidearm")
     : normalizeUnitWeapon(opts.unit);
   if (!weaponName) return null;
@@ -1289,6 +1306,8 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     painted: null,
     equipment: null,
     chassis: null, // cold kinds (tank / walker) aren't commissioned from a chassis
+    ...(drone ? { drone: drone.id } : {}),
+    ...(opts.template ? { template: opts.template } : {}),
     speed: Number.isFinite(kind.speed) ? kind.speed : null, // Move distance from the kind registry (tank 3 / walker 4)
     activated: false,
     skipNextActivation: false,
@@ -1517,6 +1536,16 @@ function generateBotOpponent(room, humanSideId, botSideId, random = Math.random)
     if (!unit) return { error: "The bot could not build a matching force." };
     built.push(unit);
   }
+  // A support walker on the human side gets answered by one of the bot's own
+  // (a random walker template; parity counts walkers by kind).
+  const walkers = room.rigs.filter((r) => (r.owner || "a") === humanSideId && kindOf(r) === "walker").length;
+  const pool = SUPPORT_TEMPLATES.filter((t) => t.kind === "walker" && t.id !== "field-welder");
+  for (let i = 0; i < walkers; i++) {
+    const t = pool[Math.floor(random() * pool.length)];
+    const unit = makeUnit("walker", room.nextRigId + built.length, uniqueRigName(room, t.name), botSideId, { unit: t.unit, modules: t.modules, template: t.id });
+    if (!unit) return { error: "The bot could not build a matching force." };
+    built.push(unit);
+  }
   for (const unit of built) { room.rigs.push(unit); room.nextRigId++; }
   return { ok: true };
 }
@@ -1711,7 +1740,7 @@ function shuffleInPlace(arr, random = Math.random) {
 function rerollPriorityTargets(room, random = Math.random) {
   const targets = {};
   for (const side of room.game.sides) {
-    const enemies = room.rigs.filter((r) => (r.owner || "a") !== side.id && !r.destroyed);
+    const enemies = room.rigs.filter((r) => (r.owner || "a") !== side.id && !r.destroyed && holdsLine(room, r));
     const pick = randomPick(enemies, random);
     if (pick) targets[side.id] = pick.id;
   }
@@ -1751,7 +1780,8 @@ function startGameSeeded(room, first) {
   const other = first === "b" ? "a" : "b";
   const priorityTargets = {};
   for (const side of room.game.sides) {
-    const target = room.rigs.find((rig) => (rig.owner || "a") !== side.id);
+    const target = room.rigs.find((rig) => (rig.owner || "a") !== side.id && holdsLine(room, rig))
+      || room.rigs.find((rig) => (rig.owner || "a") !== side.id);
     if (!target) return false;
     priorityTargets[side.id] = target.id;
   }
@@ -2129,14 +2159,15 @@ function onRigDamaged(room, rig, opts) {
   if (rig.destroyed && !rig._blastRolled) {
     rig._blastRolled = true;
     const roll = rollD(12, opts?.dice?.destruction, opts?.random);
-    const exploded = roll >= 4;
+    const exploded = roll >= 4 && kindOf(rig) !== "drone"; // drones are too small to cook off
     // Kill VP (§11): every wreck scores ANY_KILL_VP for the side that doesn't
     // own it, whatever the cause (an overheat cook-off included, a wreck is a
     // wreck). Priority Elimination stacks KILL_VP on top when the wreck is that
     // side's Priority Target. Guarded by _blastRolled above, so a
     // revived-then-rekilled rig never re-awards. Only once the battle is live.
     const owner = rig.owner || "a";
-    const scorer = room.game.started
+    // Drones are disposable: wrecking one scores nothing.
+    const scorer = room.game.started && kindOf(rig) !== "drone"
       ? room.game.sides.find((s) => s.id !== owner) : null;
     const effects = [];
     let amount = 0;
@@ -2791,7 +2822,11 @@ function resolveSplash(room, rig, target, slot, random) {
 
 function resolveFire(room, rig, target, a, act, random) {
   const t = room.game.turn;
-  const slot = a.weapon === "melee" ? "melee" : "longRange";
+  // Flat-pick units (walkers, drones) carry one "unit" weapon: its own melee
+  // flag decides whether the strike is a contact blow or a shot.
+  const unitProf = rig.weapons?.unit != null ? UNIT_WEAPONS[rig.weapons.unit] : null;
+  const slot = unitProf ? (unitProf.melee ? "melee" : "longRange") : a.weapon === "melee" ? "melee" : "longRange";
+  if (unitProf) a.weapon = slot;
   // Digital rooms overwrite whatever the client claimed. The client is never
   // trusted for geometry: it has the same pure modules and can preview with
   // them, but the engine measures for itself. The three fields are written back
@@ -2942,7 +2977,56 @@ function resolveFire(room, rig, target, a, act, random) {
     rig.equipState.firedRangedThisRound = true;
   }
   resolveRiders(room, rig, target, slot, res, random, heat0);
+  if (unitProf?.detonate) detonate(room, rig, target, unitProf.detonate, random);
   return res;
+}
+
+// Support-module reach in a digital battle: Weld and Vent need the two bases
+// within SUPPORT_REACH (rim to rim); Paint needs sight within PAINT_RANGE.
+// A physical table adjudicates these itself.
+export const SUPPORT_REACH = 3;
+export const PAINT_RANGE = 24;
+export function supportInReach(room, rig, target) {
+  if (room.mode !== "digital" || !rig.pos || !target.pos || rig === target) return true;
+  return rimGap(spatial(rig), spatial(target)) <= SUPPORT_REACH + 1e-6;
+}
+
+// Sapper Demo Charge: after the blow, the charge goes off on every other unit
+// (friend or foe) whose base is within `radius` of the Sapper, then the Sapper
+// is gone. Digital measures; a physical table gets the instruction.
+function detonate(room, rig, target, d, random) {
+  if (room.mode !== "digital" || !rig.pos) {
+    pushResolution(room, {
+      kind: "splash", actor: rig.owner, rigId: rig.id, rolls: [],
+      summary: `Demo Charge: every other unit within ${d.radius}" of ${rig.name} takes a Penetration ${d.pen} / ${d.dmg} hit; remove ${rig.name}.`, effects: [],
+    });
+  } else {
+    const centre = spatial(rig);
+    const caught = room.rigs.filter((r) => r !== rig && r !== target && !r.destroyed && r.pos
+      && distanceBetween(spatial(r), centre) <= d.radius + radiusOf(r));
+    for (const v of caught) {
+      const loc = hitLocation(kindOf(v), rollD(12, null, random));
+      const die = rollD(WOUND_DIE, null, random);
+      const tn = woundTarget(d.pen, toughnessOf(kindOf(v), loc, v.weightClass));
+      const dmg = die >= tn ? d.dmg : 0;
+      if (dmg > 0) applyDamage(room, v, loc, dmg, { random });
+      pushResolution(room, {
+        kind: "splash", actor: rig.owner, rigId: v.id, rolls: [{ sides: WOUND_DIE, value: die, label: "wound", tone: dmg > 0 ? "ok" : "miss" }],
+        summary: `Demo Charge blast catches ${v.name}${v.owner === rig.owner ? " (friendly fire)" : ""}: ${die} vs ${tn}+ → ${dmg} SP to ${loc}`, effects: [],
+      });
+    }
+  }
+  if (rig.destroyed) return;
+  rig.destroyed = true;
+  rig.detonated = true;
+  rig._blastRolled = true;
+  rig.integrity = 0;
+  if (rig.engagedWith != null) clearEngagement(room, rig);
+  pushResolution(room, {
+    kind: "detonate", actor: rig.owner, rigId: rig.id, rolls: [], radius: d.radius,
+    summary: `${rig.name} detonates its Demo Charge.`, effects: [],
+  });
+  checkAnnihilation(room);
 }
 
 // On-hit riders of the Brass / Ivory / Jade kits, run once the attack (and its
@@ -3548,6 +3632,8 @@ function performAction(room, rig, act, a, random) {
   if (act === "fire" || act === "aimed") {
     const target = findRig(room, a.target);
     if (!target) return reject("Choose a target to fire on.");
+    // A flat-pick unit's one weapon decides melee vs shot, whatever was sent.
+    if (rig.weapons?.unit != null) a.weapon = UNIT_WEAPONS[rig.weapons.unit]?.melee ? "melee" : "longRange";
     if (isGritted(a) && !(room.game.gritTokens?.[rig.owner || "a"] > 0)) return reject("No Grit tokens left.");
     // Ion Storm (§13, Arc Gun), the discharge overloads the attacker's own gun:
     // its next Arc Gun shot is refused and the lock is consumed on that blocked
@@ -3819,6 +3905,7 @@ function performAction(room, rig, act, a, random) {
     if (!(rig.modules || []).includes("repair")) return reject("This unit has no Repair module.");
     const target = findRig(room, a.target);
     if (!target || target.owner !== rig.owner || target.destroyed) return reject("Choose a friendly, undestroyed unit to weld.");
+    if (!supportInReach(room, rig, target)) return reject(`${target.name} is out of reach: weld within ${SUPPORT_REACH}".`);
     const roll = rollD(6, a.dice?.weld, random);
     const amt = repairSpFor(roll);
     const names = partNamesOf(kindOf(target));
@@ -3827,7 +3914,7 @@ function performAction(room, rig, act, a, random) {
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
     pushResolution(room, {
-      kind: "fieldweld", actor: rig.owner, rigId: rig.id,
+      kind: "fieldweld", actor: rig.owner, rigId: rig.id, targetId: target.id,
       rolls: [{ sides: 6, value: roll, label: "D6" }],
       summary: `${rig.name} field-welds ${target.name}, rolled ${roll} → ${amt} SP to ${loc}`, effects: [],
     });
@@ -3838,12 +3925,13 @@ function performAction(room, rig, act, a, random) {
     if (!(rig.modules || []).includes("coolant")) return reject("This unit has no Coolant module.");
     const target = findRig(room, a.target);
     if (!target || target.owner !== rig.owner || target.destroyed) return reject("Choose a friendly, undestroyed unit to vent.");
+    if (!supportInReach(room, rig, target)) return reject(`${target.name} is out of reach: vent within ${SUPPORT_REACH}".`);
     if (!UNIT_KINDS[kindOf(target)]?.hasHeat) return reject("That unit doesn't track heat."); // only Rigs run hot
     bumpHeat(target, -2);
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
     pushResolution(room, {
-      kind: "vent", actor: rig.owner, rigId: rig.id, rolls: [],
+      kind: "vent", actor: rig.owner, rigId: rig.id, targetId: target.id, rolls: [],
       summary: `${rig.name} vents 2 heat off ${target.name}.`, effects: [],
     });
     return true;
@@ -3854,13 +3942,17 @@ function performAction(room, rig, act, a, random) {
     if (!(rig.modules || []).includes("recon")) return reject("This unit has no Recon module.");
     const target = findRig(room, a.target);
     if (!target || target.owner === rig.owner || target.destroyed) return reject("Choose an enemy, undestroyed unit to paint."); // enemies only
+    if (room.mode === "digital" && rig.pos && target.pos) {
+      const geo = deriveAttackGeometry(room, rig, target);
+      if (!geo.los || geo.distance > PAINT_RANGE) return reject(`No clear sight on ${target.name} within ${PAINT_RANGE}".`);
+    }
     // One mark per Recon unit, a new Paint replaces this painter's old mark.
     for (const r of room.rigs) if (r.painted && r.painted.painterId === rig.id) r.painted = null;
     target.painted = { by: rig.owner, painterId: rig.id };
     bumpHeat(rig, def.heat);
     t.actionsUsed += 1;
     pushResolution(room, {
-      kind: "paint", actor: rig.owner, rigId: rig.id, rolls: [],
+      kind: "paint", actor: rig.owner, rigId: rig.id, targetId: target.id, rolls: [],
       summary: `${rig.name} paints ${target.name}, allied ranged attacks ignore its cover and gain +1 Aim until ${rig.name}'s next activation.`,
       effects: [],
     });
@@ -3901,12 +3993,20 @@ function performAction(room, rig, act, a, random) {
   return true;
 }
 
+// Support units don't hold the line: drones never keep a side in the fight, and
+// in a digital battle neither does a support walker, only rigs do.
+export function holdsLine(room, r) {
+  const k = kindOf(r);
+  if (k === "drone") return false;
+  return k === "rig" || room.mode !== "digital";
+}
+
 // A side that owns rigs but has none left standing loses immediately (§4).
 function checkAnnihilation(room) {
   if (!room.game.started || room.game.outcome) return;
   for (const side of room.game.sides) {
-    const owns = room.rigs.some((r) => (r.owner || "a") === side.id);
-    const alive = room.rigs.some((r) => (r.owner || "a") === side.id && !r.destroyed);
+    const owns = room.rigs.some((r) => (r.owner || "a") === side.id && holdsLine(room, r));
+    const alive = room.rigs.some((r) => (r.owner || "a") === side.id && !r.destroyed && holdsLine(room, r));
     if (owns && !alive) {
       room.game.outcome = { winner: side.id === "a" ? "b" : "a", reason: "annihilation" };
       room.game.phase = "finished";
@@ -4138,12 +4238,35 @@ function buildMission(room, a, random) {
       rigs.push(rig);
     }
   }
+  // Support walkers ride with the player's squad (one template id each).
+  for (const sup of Array.isArray(a.support) ? a.support : []) {
+    const t = templateById(sup?.template);
+    if (!t || t.kind !== "walker") return `Unknown support walker "${sup?.template}".`;
+    const unit = makeUnit("walker", staged.nextRigId++, uniqueRigName(staged, t.name), "a", { unit: t.unit, modules: t.modules, template: t.id });
+    if (!unit) return `Couldn't build ${t.name}.`;
+    staged.rigs.push(unit);
+    rigs.push(unit);
+  }
   const reinforcements = [];
   for (const rf of Array.isArray(a.reinforcements) ? a.reinforcements : []) {
     const rig = buildMissionRig(staged, rf.unit, "b", mods.b);
     if (typeof rig === "string") return rig;
     staged.rigs.push(rig);
     reinforcements.push({ round: Math.max(2, Math.floor(Number(rf.round) || 2)), rig });
+  }
+  // Drone waves: `count` drones of `type` land at the enemy corner on `round`.
+  const tally = {};
+  for (const w of Array.isArray(a.drones) ? a.drones : []) {
+    const type = DRONE_TYPES[String(w?.type || "").toLowerCase()];
+    if (!type) return `Unknown drone type "${w?.type}".`;
+    const round = Math.max(1, Math.floor(Number(w.round) || 1));
+    for (let i = 0; i < Math.max(1, Math.min(6, Math.floor(Number(w.count) || 1))); i++) {
+      tally[type.id] = (tally[type.id] || 0) + 1;
+      const rig = makeUnit("drone", staged.nextRigId++, `${type.label} ${tally[type.id]}`, "b", { drone: type.id });
+      staged.rigs.push(rig);
+      if (round <= 1) rigs.push(rig);
+      else reinforcements.push({ round, rig, drone: true });
+    }
   }
 
   room.mode = "digital";
@@ -4229,8 +4352,8 @@ function spawnReinforcements(room) {
     room.rigs.push(rig);
     if (!placeNearCorner(room, rig, c.enemyCorner)) { room.rigs.pop(); continue; }
     pushResolution(room, {
-      kind: "reinforcement", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `Enemy reinforcements: ${rig.name} drops in.`, effects: [],
+      kind: "reinforcement", actor: rig.owner, rigId: rig.id, rolls: [], ...(rf.drone ? { drone: true } : {}),
+      summary: rf.drone ? `Drone wave: ${rig.name} walks in.` : `Enemy reinforcements: ${rig.name} drops in.`, effects: [],
     });
   }
 }
@@ -4398,10 +4521,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     else {
       const kindId = String(a.kind || "rig").toLowerCase();
       if (!UNIT_KINDS[kindId]) { reject("Unknown unit kind."); return room; }
-      // Digital battles drop support modules, flat unit weapons and the cold-kind
-      // branches, so the simulated engine only ever reasons about one unit shape.
-      if (room.mode === "digital" && kindId !== "rig") {
-        reject("Digital battles are Rigs only, no Tanks or Walkers.");
+      // Digital battles field Rigs, support Walkers and Drones; no Tanks.
+      if (room.mode === "digital" && kindId === "tank") {
+        reject("Digital battles don't field Tanks.");
         return room;
       }
       const owner = normalizeSide(room, a.owner) || normalizeSide(room, context.side) || "a";
@@ -4420,6 +4542,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           chassis: a.chassis,
           // Flat-pick options
           unit: a.unit,
+          drone: a.drone,
+          template: templateById(a.template)?.id,
           // Support-unit modules, accept a comma string (from the LLM tag) or an array.
           modules: typeof a.modules === "string"
             ? a.modules.split(",").map((s) => s.trim()).filter(Boolean)
@@ -4623,9 +4747,11 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     for (const entry of roster) {
       const owner = normalizeSide(room, entry.owner) || "a";
       let unit;
-      if (entry.kind === "tank" || entry.kind === "walker") {
+      // Digital battles field walkers and drones, never tanks.
+      if (entry.kind === "tank" && room.mode === "digital") continue;
+      if (entry.kind === "tank" || entry.kind === "walker" || entry.kind === "drone") {
         unit = makeUnit(entry.kind, room.nextRigId, entry.name, owner, {
-          unit: entry.unit, modules: entry.modules,
+          unit: entry.unit, modules: entry.modules, drone: entry.drone,
         });
       } else {
         const pb = resolveChassis({ chassis: entry.chassis });

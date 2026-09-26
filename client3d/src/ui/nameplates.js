@@ -45,6 +45,7 @@ export class Nameplates {
       const hasInt = Number.isFinite(r.integrity) && r.integrityMax > 0;
       const tot = hasInt ? r.integrity : LOCS.reduce((a, l) => a + sp(l)[0], 0);
       const max = (hasInt ? r.integrityMax : LOCS.reduce((a, l) => a + sp(l)[1], 0)) || 1;
+      c.root.classList.toggle("unit", (r.kind || "rig") !== "rig");
       const tier = hasInt ? integrityTier(r) : (r.destroyed ? "wrecked" : "ok");
       c.name.textContent = r.name;
       c.hp.style.width = `${Math.max(0, tot / max) * 100}%`;
@@ -54,7 +55,9 @@ export class Nameplates {
       c.root.classList.toggle("critical", tier === "critical");
       const cap = HEAT_CAPACITY[r.weightClass] ?? (r.chassis?.startsWith("medium") ? 5 : 6);
       const heat = r.heat ?? r.engine?.heat ?? 0;
-      c.heat.replaceChildren(...Array.from({ length: Math.max(cap, heat) }, (_, i) => el("s", { class: i < heat ? (i >= cap ? "over" : "on") : "" })));
+      // Walkers and drones have no boiler: no heat pips.
+      if ((r.kind || "rig") !== "rig") c.heat.replaceChildren();
+      else c.heat.replaceChildren(...Array.from({ length: Math.max(cap, heat) }, (_, i) => el("s", { class: i < heat ? (i >= cap ? "over" : "on") : "" })));
       const icons = [];
       if (r.id === activeId) icons.push(["active", "Acting now"]);
       const cmd = r.id === commanderId && !r.destroyed;

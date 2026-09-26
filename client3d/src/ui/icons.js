@@ -87,6 +87,16 @@ const P = {
   drop: `<path d="M32 6 V38"/><path d="M22 28 L32 40 L42 28"/><path d="M14 50 C20 44 26 46 32 50 C38 46 44 44 50 50"/><path d="M8 58 H56"/><path d="M22 8 L26 16 M42 8 L38 16" opacity=".6"/>`,
   // Stagger: a ringing plate with shock lines.
   stagger: `<circle cx="32" cy="34" r="14"/><path d="M32 6 V14 M12 14 L18 20 M52 14 L46 20 M6 34 H12 M52 34 H58"/><path d="M28 30 L34 36 L30 40" />`,
+  // A drone: a round body on two scuttling legs, one red eye.
+  drone: `<ellipse cx="32" cy="26" rx="16" ry="11"/><circle cx="42" cy="25" r="3" fill="currentColor"/><path d="M24 36 L18 48 L24 56 M40 36 L46 48 L40 56"/>`,
+  // A walker: a pod on two long stilts.
+  walker: `<rect x="18" y="8" width="28" height="18" rx="8"/><circle cx="40" cy="17" r="3"/><path d="M24 26 L16 42 L22 58 M40 26 L48 42 L42 58"/>`,
+  // Weld: a torch with a spark.
+  fieldweld: `<path d="M10 54 L34 30"/><path d="M34 30 L42 22 L48 28 L40 36 Z"/><path d="M50 14 L54 10 M52 20 L58 20 M46 10 L46 4" opacity=".8"/>`,
+  // Vent: a valve blowing steam.
+  vent: `<rect x="10" y="36" width="24" height="16" rx="3"/><path d="M34 44 H44"/><path d="M46 36 C42 28 50 24 46 16 M54 38 C50 30 58 26 54 18" opacity=".8"/>`,
+  // Paint: a spotlight beam on a target.
+  paint: `<circle cx="14" cy="18" r="6"/><path d="M19 22 L46 44 M16 26 L40 52" opacity=".7"/><circle cx="48" cy="48" r="8"/><circle cx="48" cy="48" r="2" fill="currentColor"/>`,
 };
 
 export const STAT_ICON = { Penetration: "pen", Pen: "pen", Damage: "dmg", Dmg: "dmg", Toughness: "tough", Shots: "shots", Aim: "aim", Heat: "heat", heat: "heat", SP: "sp", "Structure Points": "sp", Range: "range", Reach: "reach" };
@@ -100,12 +110,12 @@ export function icon(name, cls = "") {
 // Colour families: the same colour means the same kind of thing everywhere.
 const FAMILY = {
   pierce: ["pen"],
-  attack: ["fire", "aimed", "dmg", "shots", "aim", "melee", "barrage", "lock", "threat", "stagger"],
+  attack: ["fire", "aimed", "dmg", "shots", "aim", "melee", "barrage", "lock", "threat", "stagger", "paint", "drone"],
   move: ["move", "sprint", "disengage", "jumpjets", "grapnel", "yank", "reel", "legs", "range", "reach", "arc"],
   defence: ["prepare", "harden", "smoke", "chaff", "intercept", "tough", "hull", "cover", "anchor", "hidden"],
   heat: ["heat", "engine", "overclock", "meltdown", "wave"],
-  cool: ["shutdown", "purge", "douse", "cryo"],
-  repair: ["repair", "patch", "sp", "nanite"],
+  cool: ["shutdown", "purge", "douse", "cryo", "vent"],
+  repair: ["repair", "patch", "sp", "nanite", "fieldweld", "walker"],
   info: ["advisor", "beacon", "crown", "crate", "extract", "relay", "drop", "dice", "arms", "star", "grit", "sound", "mute", "check", "active", "book"],
 };
 export const FAMILY_OF = Object.fromEntries(Object.entries(FAMILY).flatMap(([f, ns]) => ns.map((n) => [n, f])));

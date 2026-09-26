@@ -169,10 +169,10 @@ export function sightCorridor(attacker, target, polys) {
 // two are the whole table. Lives here because base size is a SPATIAL fact, it
 // is what makes rim gap differ from centre distance, and it is why melee and
 // objectives measure rim while everything else measures centre.
-export const BASE_RADIUS = { light: 1.18, medium: 1.48 }; // 60mm / 75mm
+export const BASE_RADIUS = { light: 1.18, medium: 1.48, walker: 1.18, drone: 0.8 }; // 60mm / 75mm / 60mm / 40mm
 
 export function radiusOf(rig) {
-  return BASE_RADIUS[rig.weightClass] ?? BASE_RADIUS.medium;
+  return BASE_RADIUS[rig.weightClass] ?? BASE_RADIUS[rig.kind] ?? BASE_RADIUS.medium;
 }
 
 // Which of the target's facings the attacker strikes (rules.md §7). Front is

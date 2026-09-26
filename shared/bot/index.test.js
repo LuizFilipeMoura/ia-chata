@@ -92,7 +92,7 @@ test("the guard stops a runaway loop", () => {
   atk.suppressImmobile = true;
   room.game.turn = { side: "a", activeRigId: atk.id, actionsUsed: 0, actionsMax: 50 };
   const log = runBotActivation(room, atk, { random: () => 0.5 });
-  assert.equal(log.length, 12, "the guard caps the loop at 12 iterations");
+  assert.equal(log.length, 1, "a refused pick ends the activation instead of spinning");
 });
 
 // A deployed digital board with a mirrored 2-light squadron per side, terrain

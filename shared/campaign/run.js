@@ -116,7 +116,7 @@ export function mergeMods(...list) {
 // ---------------------------------------------------------------------------
 // New run
 
-export function newRun(profile, { chassis = [], notoriety = 0, banner = null } = {}, seed = Date.now() >>> 0) {
+export function newRun(profile, { chassis = [], notoriety = 0, banner = null, walker = null } = {}, seed = Date.now() >>> 0) {
   const pools = unlockedPools(profile);
   if (!Array.isArray(chassis) || chassis.length !== 3) return { error: "roster-size" };
   if (new Set(chassis).size !== 3) return { error: "roster-duplicate" };
@@ -126,6 +126,7 @@ export function newRun(profile, { chassis = [], notoriety = 0, banner = null } =
   if (defs.filter((c) => c.class === "medium").length > 2) return { error: "too-many-mediums" };
   if (!Number.isInteger(notoriety) || notoriety < 0 || notoriety > profile.notorietyMax) return { error: "notoriety" };
   if (banner != null && !pools.banners.includes(banner)) return { error: "banner" };
+  if (walker != null && !(pools.walkers || []).includes(walker)) return { error: "locked-walker" };
 
   const rng = rngFor(seed, "run");
   const level = NOTORIETY[notoriety];
@@ -151,6 +152,7 @@ export function newRun(profile, { chassis = [], notoriety = 0, banner = null } =
     seed,
     notoriety,
     banner,
+    walker,                // support walker template riding with the squad (or null)
     bossFaction,
     enemyRelics,
     pools,                 // unlock snapshot at run start (cards, depot, natures)
@@ -240,9 +242,26 @@ function contractNode(run, type, step, index, faction) {
   if (type === "laststand") {
     node.reinforcements = [3, 5].map((round) => ({ round, unit: enemyUnit(pickEnemyChassis(used, null, rng), level, step) }));
   }
+  const drones = droneWaves(type, step, run.notoriety, rng);
+  if (drones.length) node.drones = drones;
   if (type === "salvage") node.crates = 3;
   if (type === "breakthrough") node.extractGoal = Math.min(2, Math.max(1, deployable(run).length));
   return node;
+}
+
+// Enemy drone waves for a contract: the Warlord always fields them, Last Stand
+// gets two waves, and from step 2 on any other contract may bring one (more
+// likely and bigger as the run and the Notoriety climb).
+function droneWaves(type, step, notoriety, rng) {
+  if (type === "boss") {
+    return [{ round: 2, type: "hunter", count: 2 }, { round: 3, type: "spotter", count: 1 },
+      { round: 4, type: "sapper", count: 2 }, { round: 6, type: "hunter", count: 2 }, { round: 8, type: "sapper", count: 2 }];
+  }
+  if (type === "laststand") return [{ round: 2, type: "hunter", count: 2 }, { round: 4, type: "sapper", count: 2 }];
+  if (step < 2 || rng() >= 0.35 + 0.1 * notoriety) return [];
+  const waves = [{ round: 2, type: pick(["hunter", "sapper"], rng), count: step >= 4 ? 2 : 1 }];
+  if (rng() < 0.5) waves.push({ round: 4, type: pick(["hunter", "sapper", "spotter"], rng), count: 1 });
+  return waves;
 }
 
 // Map nodes for the NEXT step (run.step + 1). Deterministic from the run seed;
@@ -306,6 +325,8 @@ export function missionAttrs(run, node) {
     },
   };
   if (node.reinforcements) attrs.reinforcements = clone(node.reinforcements);
+  if (node.drones) attrs.drones = clone(node.drones);
+  if (run.walker) attrs.support = [{ template: run.walker }];
   if (node.crates) attrs.crates = node.crates;
   if (node.extractGoal) attrs.extractGoal = Math.min(node.extractGoal, squadA.length);
   return attrs;
@@ -479,7 +500,8 @@ export function debrief(run, room) {
 
   const extracted = room.campaign?.extracted?.a || [];
   const extractedIds = new Set(extracted.map((x) => x.id));
-  const sideA = [...(room.rigs || []).filter((x) => x.owner === "a"), ...extracted];
+  // Rigs only: the support walker is a hired hand, not part of the roster.
+  const sideA = [...(room.rigs || []).filter((x) => x.owner === "a" && (x.kind || "rig") === "rig"), ...extracted];
   const deployed = deployable(r);
   const unmatched = [...sideA];
   const take = (fn) => { const i = unmatched.findIndex(fn); return i < 0 ? null : unmatched.splice(i, 1)[0]; };
@@ -513,13 +535,16 @@ export function debrief(run, room) {
     if (row) { row.crews = healed; row.sp = { ...rig.sp }; }
   }
 
-  const kills = (room.rigs || []).filter((x) => x.owner === "b" && x.destroyed).length;
+  const kills = (room.rigs || []).filter((x) => x.owner === "b" && x.destroyed && x.kind !== "drone").length;
+  // Drones scrap for 1 salvage apiece (a Sapper that blew itself up leaves nothing).
+  const drones = (room.rigs || []).filter((x) => x.owner === "b" && x.destroyed && x.kind === "drone" && !x.detonated).length;
   const crates = room.campaign?.crates?.a || 0;
   const perKill = PRICES.kill + relicEcon(r, "salvagePerKill").reduce((s, n) => s + n, 0);
   const lines = [];
   if (won) {
     lines.push({ label: boss ? "Warlord bounty" : "Contract payout", amount: node.payout });
     if (kills) lines.push({ label: `Kills ×${kills}`, amount: kills * perKill });
+    if (drones) lines.push({ label: `Drone scrap ×${drones}`, amount: drones });
     if (crates) lines.push({ label: `Crates ×${crates}`, amount: crates * PRICES.crate });
   }
   const gained = lines.reduce((s, l) => s + l.amount, 0);

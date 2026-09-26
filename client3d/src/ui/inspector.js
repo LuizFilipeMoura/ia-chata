@@ -3,7 +3,8 @@
 // both weapons with their stats, the upgrades it carries (type + effect),
 // equipment, and what's affecting it right now.
 import { el, fill } from "./dom.js";
-import { CHASSIS, WEAPONS, WEAPON_UPGRADES, EQUIPMENT, LOCS } from "/shared/game-state.js";
+import { CHASSIS, WEAPONS, WEAPON_UPGRADES, EQUIPMENT, LOCS, UNIT_WEAPONS, SUPPORT_REACH, PAINT_RANGE } from "/shared/game-state.js";
+import { isRig, partsOf, unitLabel } from "../game/units.js";
 import { EQUIPMENT_UPGRADES, HEAT_CAPACITY } from "/shared/rules.js";
 import { toughnessOf } from "/shared/unit-kinds.js";
 import { equipmentChips } from "/shared/battle-view.js";
@@ -11,12 +12,18 @@ import { icon } from "./icons.js";
 import { rich } from "./glossary.js";
 
 const NATURE = { field: ["Field", "always on"], tuned: ["Tuned", "pays off in the right situation"], prototype: ["Prototype", "powerful, with a catch"] };
-const LOC_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
+const LOC_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine", mount: "Gun mount" };
 const LOC_HELP = {
   hull: "At 0: the rig loses 2 actions and aims worse.",
   arms: "At 0: a weapon is torn off.",
   legs: "At 0: movement is crippled.",
   engine: "At 0: the rig skips its next activation.",
+  mount: "At 0: its gun is wrecked.",
+};
+const MODULE_HELP = {
+  repair: `Field Weld: repair an ally within ${SUPPORT_REACH}" (D6 SP onto one part).`,
+  coolant: `Vent: pull 2 heat off an allied rig within ${SUPPORT_REACH}".`,
+  recon: `Paint: mark an enemy in sight within ${PAINT_RANGE}" (allies ignore its cover, +1 Aim).`,
 };
 
 function upgrade(list, id) {
@@ -28,7 +35,7 @@ function upgrade(list, id) {
 }
 
 function weapon(slot, name, upId) {
-  const w = WEAPONS[slot]?.[name];
+  const w = WEAPONS[slot]?.[name] || UNIT_WEAPONS[name];
   if (!w) return null;
   const range = slot === "melee" ? `reach ${w.rng?.[0] ?? 2}"` : `range ${w.minRange ? `${w.minRange}-` : ""}${w.maxRange}", sweet band ${w.band ? `${w.band[0]}–${w.band[1]}" (+${w.bandAcc})` : `~${w.sweet}"`}${w.close ? `, −${-w.close.acc} under ${w.close.under}"` : ""}`;
   return el("div", { class: "in-wep" },
@@ -45,6 +52,7 @@ function weapon(slot, name, upId) {
 // rig: a publicState rig, or a replay frame rig plus its `loadout` (squad entry).
 export function openInspector(rig, { loadout = null, onClose } = {}) {
   document.querySelector(".inspector")?.remove();
+  if (!isRig(rig)) return openUnitInspector(rig, { onClose });
   const ch = CHASSIS.find((c) => c.id === rig.chassis) || {};
   const lr = rig.weapons?.longRange ?? ch.longRange, me = rig.weapons?.melee ?? ch.melee;
   const lrUp = rig.weaponUpgrades?.longRange ?? loadout?.longRangeUpgrade ?? WEAPON_UPGRADES[lr]?.[0]?.id;
@@ -91,6 +99,33 @@ export function openInspector(rig, { loadout = null, onClose } = {}) {
       return chips.length ? el("div", { class: "in-eqstate" }, el("h4", {}, "Equipment state"), chips.map((c) =>
         el("div", { class: `in-eqc t-${c.tone}`, title: c.tip }, icon(c.icon), el("b", {}, c.label), el("span", { class: "muted" }, c.tip)))) : null;
     })());
+  document.body.append(panel);
+  return panel;
+}
+
+// Walkers and drones: parts, the one weapon, the support modules.
+function openUnitInspector(rig, { onClose } = {}) {
+  const sp = (l) => (Array.isArray(rig.sp?.[l]) ? rig.sp[l] : [rig[l]?.sp ?? 0, rig[l]?.max ?? 0]);
+  const kind = rig.kind || "walker";
+  const u = rig.weapons?.unit ?? rig.unit;
+  const mods = (rig.modules || []).filter((m) => MODULE_HELP[m]);
+  const panel = el("div", { class: "inspector" },
+    el("div", { class: "in-head" }, icon(kind === "drone" ? "drone" : "walker"),
+      el("div", {}, el("h2", {}, rig.name), el("div", { class: "muted" }, `${unitLabel(rig)} · speed ${rig.speed ?? "?"}" · ${rig.owner === "a" ? "Cyan" : "Red"} side · no boiler, never runs hot`)),
+      el("button", { class: "btn ghost in-x", onClick: () => { panel.remove(); onClose?.(); } }, "✕")),
+    rig.destroyed ? el("div", { class: "in-status" }, el("div", {}, "💥 Destroyed")) : null,
+    kind === "drone" ? el("p", { class: "muted" }, "A drone: wrecking it scores no VP, and it never keeps its side in the fight.") : null,
+    el("h4", {}, icon("sp"), "Structure"),
+    el("div", { class: "in-sp" }, partsOf(rig).map((l) => {
+      const [v, m] = sp(l); const f = m ? v / m : 0;
+      return el("div", { class: "in-loc", title: `${LOC_NAME[l] || l}: ${v} of ${m} structure points\n${LOC_HELP[l] || ""}` },
+        el("span", {}, LOC_NAME[l] || l), el("span", { class: "in-t" }, icon("tough"), `${toughnessOf(kind, l)}`), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#7fcf6a" : f > 0.3 ? "#f5b041" : "#e0533d" } })), el("b", {}, `${v}/${m}`));
+    })),
+    el("h4", {}, "Weapon"),
+    u ? weapon(UNIT_WEAPONS[u]?.melee ? "melee" : "longRange", u, null) : el("p", { class: "muted" }, "Unarmed."),
+    UNIT_WEAPONS[u]?.detonate ? el("p", {}, `Demo Charge: after the blow it blasts every other unit within ${UNIT_WEAPONS[u].detonate.radius}" (Penetration ${UNIT_WEAPONS[u].detonate.pen} / ${UNIT_WEAPONS[u].detonate.dmg}) and the drone is gone.`) : null,
+    mods.length ? el("h4", {}, "Support modules") : null,
+    mods.map((m) => el("div", { class: "in-wep" }, el("div", {}, icon(m === "repair" ? "fieldweld" : m === "coolant" ? "vent" : "paint"), " ", MODULE_HELP[m]))));
   document.body.append(panel);
   return panel;
 }

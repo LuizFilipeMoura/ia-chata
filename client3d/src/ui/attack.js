@@ -3,7 +3,8 @@
 // against the weapon's sweet spot, cover, and one card per option (what it
 // does, weapon stats, expected damage, heat).
 import { el } from "./dom.js";
-import { effectiveWeaponProfile } from "/shared/game-state.js";
+import { effectiveWeaponProfile, UNIT_WEAPONS } from "/shared/game-state.js";
+import { rangedProfile } from "../game/units.js";
 import { weaponAccuracyAt, inSweetBand } from "/shared/combat.js";
 import { rich } from "./glossary.js";
 import { icon } from "./icons.js";
@@ -18,6 +19,7 @@ const LOC = {
   arms: "Arms. At 0 a weapon is torn off.",
   legs: "Legs. At 0 movement is crippled.",
   engine: "Engine. At 0 the rig skips its next activation.",
+  mount: "Gun mount. At 0 its gun is wrecked.",
 };
 const ICON = {
   fire: `<circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="6"/><path d="M32 6 V18 M32 46 V58 M6 32 H18 M46 32 H58"/>`,
@@ -80,8 +82,8 @@ function coverArt(cover) {
 const tile = (art, label, value, col, meaning) => el("div", { class: "atk-tile", style: { borderColor: col } },
   art, el("div", { class: "atk-k" }, label), el("b", { class: "atk-v", style: { color: col } }, value), el("div", { class: "atk-mean" }, rich(meaning)));
 
-const D12 = { hull: "1-4 (33%)", arms: "5-7 (25%)", legs: "8-10 (25%)", engine: "11-12 (17%)" };
-const PART_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine" };
+const D12 = { hull: "1-4 (33%)", arms: "5-7 (25%)", legs: "8-10 (25%)", engine: "11-12 (17%)", mount: "8-10 (25%)" };
+const PART_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine", mount: "Gun mount" };
 
 // Side-on rig schematic with the four parts; `on` highlights one.
 function rigSchematic(target, on) {
@@ -90,7 +92,7 @@ function rigSchematic(target, on) {
   const st = (l) => `fill="${f(l)}" stroke="${on === l ? "#5fd3c0" : "#1b150c"}" stroke-width="${on === l ? 4 : 2}"`;
   d.innerHTML = `<svg viewBox="0 0 120 150">
     <rect x="40" y="96" width="14" height="46" rx="3" ${st("legs")}/><rect x="66" y="96" width="14" height="46" rx="3" ${st("legs")}/>
-    <rect x="14" y="40" width="16" height="50" rx="4" ${st("arms")}/><rect x="90" y="40" width="16" height="50" rx="4" ${st("arms")}/>
+    <rect x="14" y="40" width="16" height="50" rx="4" ${st(target.mount ? "mount" : "arms")}/><rect x="90" y="40" width="16" height="50" rx="4" ${st(target.mount ? "mount" : "arms")}/>
     <rect x="32" y="30" width="56" height="64" rx="8" ${st("hull")}/>
     <rect x="46" y="8" width="28" height="22" rx="4" ${st("engine")}/>
   </svg>`;
@@ -104,7 +106,7 @@ function aimedPicker(target, rows, onPick) {
   const best = rows[0].c.location;
   const pic = el("div", { class: "atk-aimpic" }, rigSchematic(target, best),
     el("div", { class: "atk-mean" }, "Colour = its current state: green healthy, amber hurt, red critical."));
-  const opts = ["hull", "arms", "legs", "engine"].filter((l) => byLoc[l]).map((l) => {
+  const opts = ["hull", "arms", "mount", "legs", "engine"].filter((l) => byLoc[l]).map((l) => {
     const r = byLoc[l], sp = target[l]?.sp ?? 0, max = target[l]?.max ?? 0;
     const breaks = sp > 0 && r.ed >= sp;
     return el("button", { class: `atk-loc ${l === best ? "best" : ""} ${sp <= 0 ? "broken" : ""}`, onClick: () => onPick(r.c, pickOpts()),
@@ -164,7 +166,7 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
   pickOpts = () => (gritOn ? { grit: true } : {});
   const first = rows[0].c;
   const arc = ARC[first.arc] || ARC.front;
-  const lr = effectiveWeaponProfile("longRange", rig.weapons.longRange, rig);
+  const lr = rangedProfile(rig);
   const melee = rows.every((r) => r.c.weapon === "melee");
   // The sweet band in plain numbers: what you hit on here, and in the band.
   const inBand = !melee && lr && inSweetBand(lr, first.distance);
@@ -185,10 +187,10 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
   const strip = Number.isFinite(target.integrity) ? integrityStrip(target, rows[0]) : null;
   const cards = plain.map((r, i) => {
     const melee = r.c.weapon === "melee";
-    const p = effectiveWeaponProfile(melee ? "melee" : "longRange", r.name, rig) || {};
+    const p = effectiveWeaponProfile(melee ? "melee" : "longRange", r.name, rig) || UNIT_WEAPONS[r.name] || {};
     const kind = melee ? "melee" : r.c.action === "aimed" ? "aimed" : "fire";
     const title = kind === "aimed" ? `Aimed Shot at the ${r.c.location}` : melee ? `Strike with ${r.name}` : `Fire ${r.name}`;
-    const what = melee ? "Swing the melee weapon. Locks you both in melee afterwards. One D12 picks the part it all lands on." : "Full volley. One D12 picks the part it all lands on: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
+    const what = p.detonate ? `Detonate: the charge hits ${"it"}, then blasts every other unit within ${p.detonate.radius}" (friends too). The drone is gone.` : melee ? "Swing the melee weapon. Locks you both in melee afterwards. One D12 picks the part it all lands on." : "Full volley. One D12 picks the part it all lands on: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
     return el("button", { class: `atk-card ${i === 0 ? "best" : ""}`, onClick: () => onPick(r.c, pickOpts()), onMouseenter: () => strip?.draw(r) },
       svg(ICON[kind], "atk-ic"),
       el("div", { class: "atk-body" },
@@ -210,7 +212,7 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
     strip, el("h4", { class: "atk-sec" }, "The situation"), tiles,
     cards.length ? el("h4", { class: "atk-sec" }, "Choose your attack") : null, cards.length ? el("div", { class: "atk-cards" }, cards) : null,
     aimed.length ? el("h4", { class: "atk-sec" }, "Aimed Shot: choose where it hits") : null,
-    aimed.length ? el("p", { class: "atk-lead" }, rich(`Same ${effectiveWeaponProfile("longRange", rig.weapons.longRange, rig)?.rof ?? ""} dice as a normal volley, but −3 Aim (far fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`)) : null,
+    aimed.length ? el("p", { class: "atk-lead" }, rich(`Same ${rangedProfile(rig)?.rof ?? ""} dice as a normal volley, but −3 Aim (far fewer hits land). In exchange there's no D12 roll: the volley lands where you choose. Worth it to finish a weak part.`)) : null,
     aimed.length ? aimedPicker(target, aimed, onPick) : null].filter(Boolean));
   aimedHover = (r) => strip?.draw(r);
   return wrap;

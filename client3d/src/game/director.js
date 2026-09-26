@@ -5,11 +5,12 @@
 // queue, so a whole bot turn plays out move by move.
 import * as THREE from "three";
 import { Mech } from "../scene/mechs.js";
-import { CHASSIS, LOCS, EQUIPMENT, WEAPONS, integrityTier } from "/shared/game-state.js";
+import { CHASSIS, EQUIPMENT, WEAPONS, UNIT_WEAPONS, integrityTier } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 import { sfx } from "../audio.js";
 import { barkFor } from "./barks.js";
+import { partsOf } from "./units.js";
 import { settings } from "../settings.js";
 
 const PROJECTILE = {
@@ -17,8 +18,10 @@ const PROJECTILE = {
   "Arc Gun": "arc", "Harpoon": "harpoon", "Rivet Gun": "rivet", "Mortar": "lob", "Siege Maul": "cannon",
   "Sniper Cannon": "rail", "Crossbow": "bolt", "Steam Cannon": "steam", "Flare Launcher": "flare", "Tesla Coil": "arc",
 };
-const BURST = { "Mini Gun": 6, "Double MG": 4, "Missile Barrage": 4, "Autocannon": 2, "Rivet Gun": 3, "Tesla Coil": 3, "Steam Cannon": 2 };
-const MELEE_NAMES = new Set(CHASSIS.map((c) => c.melee));
+const BURST = { "Mini Gun": 6, "Double MG": 4, "Missile Barrage": 4, "Autocannon": 2, "Rivet Gun": 3, "Tesla Coil": 3, "Steam Cannon": 2,
+  "Coaxial MG": 4, "Drone Carbine": 3, "Autocannon Mount": 2, "Rocket Pod": 2, "Sidearm": 2 };
+Object.assign(PROJECTILE, { "Coaxial MG": "bullet", "Drone Carbine": "bullet", "Autocannon Mount": "cannon", "Rocket Pod": "missile", "Sidearm": "bullet", "Tank Cannon": "cannon" });
+const MELEE_NAMES = new Set([...CHASSIS.map((c) => c.melee), ...Object.keys(UNIT_WEAPONS).filter((w) => UNIT_WEAPONS[w].melee)]);
 
 export function chassisOf(r) { return CHASSIS.find((c) => c.id === r.chassis) || null; }
 
@@ -31,10 +34,11 @@ export function frameFromState(state, sinceResolutionId = -1) {
     vp: g.sides.map((s) => s.vp || 0),
     rigs: state.rigs.map((r) => ({
       id: r.id, name: r.name, owner: r.owner || "a", chassis: r.chassis ?? null, pos: r.pos, facing: r.facing ?? 0,
+      kind: r.kind || "rig", drone: r.drone ?? null, template: r.template ?? null, unit: r.weapons?.unit ?? null, modules: r.modules || [],
       destroyed: !!r.destroyed, heat: r.engine?.heat ?? 0,
       smoked: !!r.smokeNextActivation, hardened: !!r.hardened, marked: !!r.painted,
       integrity: r.integrity ?? null, integrityMax: r.integrityMax ?? null,
-      sp: Object.fromEntries(LOCS.map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
+      sp: Object.fromEntries(partsOf(r).map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
     log: (g.resolutions || []).filter((x) => x.id > sinceResolutionId),
   };
@@ -124,12 +128,15 @@ export class Director {
     if (m) return m;
     if (this.detached) return { root: new THREE.Object3D(), update() {}, setPose() {}, setHeat() {}, setHurt() {}, setParts() {}, destroy() {}, aimAt() {}, fire() {}, stacks: [], legs: [] };
     const ch = chassisOf(r) || {};
+    const kind = r.kind || "rig";
     m = new Mech({
       id: r.id, name: r.name, owner: r.owner, chassis: r.chassis,
-      weightClass: ch.class || "light", longRange: ch.longRange, melee: ch.melee,
-      radius: BASE_RADIUS[ch.class || "light"],
+      weightClass: ch.class || (kind === "rig" ? "light" : kind), longRange: ch.longRange, melee: ch.melee,
+      radius: kind === "rig" ? BASE_RADIUS[ch.class || "light"] : BASE_RADIUS[kind],
+      kind, unit: r.unit ?? r.weapons?.unit ?? null, modules: r.modules || [], drone: r.drone ?? null,
     });
     m.chassisDef = ch;
+    m.template = r.template ?? null;
     if (r.pos) m.setPose(r.pos, r.facing);
     this.world.scene.add(m.root);
     this.mechs.set(r.id, m);
@@ -170,11 +177,14 @@ export class Director {
     m.setHeat(r.heat / cap);
     // Integrity (§8a) drives the damage look; frames without it fall back to total SP.
     const hasInt = Number.isFinite(r.integrity) && r.integrityMax > 0;
-    const tot = hasInt ? r.integrity : LOCS.reduce((a, l) => a + (r.sp[l]?.[0] || 0), 0);
-    const max = hasInt ? r.integrityMax : LOCS.reduce((a, l) => a + (r.sp[l]?.[1] || 0), 0);
+    const parts = Object.keys(r.sp || {});
+    const tot = hasInt ? r.integrity : parts.reduce((a, l) => a + (r.sp[l]?.[0] || 0), 0);
+    const max = hasInt ? r.integrityMax : parts.reduce((a, l) => a + (r.sp[l]?.[1] || 0), 0);
     m.setHurt(max ? 1 - tot / max : 0);
     m.tier = hasInt ? integrityTier(r) : "ok";
-    m.setParts?.(Object.fromEntries(LOCS.map((l) => [l, (r.sp[l]?.[1] || 0) > 0 && (r.sp[l]?.[0] || 0) <= 0])));
+    // A walker's gun mount breaks like a rig's gun arm.
+    const broke = (l) => (r.sp[l]?.[1] || 0) > 0 && (r.sp[l]?.[0] || 0) <= 0;
+    m.setParts?.({ hull: broke("hull"), arms: broke("arms") || broke("mount"), legs: broke("legs"), engine: broke("engine") });
     m.setCrown?.(this.commanderId != null && r.id === this.commanderId && !r.destroyed);
     m.data = r;
   }
@@ -250,7 +260,7 @@ export class Director {
       frame.log?.forEach((l) => {
         this.onLog(l, frame.round);
         if (l.kind === "crate") { this.world.claimCrate(l.x, l.y); this.onScore(l); }
-        if (l.kind === "reinforcement") this.onBanner("Enemy reinforcements!", "stinger");
+        if (l.kind === "reinforcement") this.onBanner(l.drone ? "Drone wave!" : "Enemy reinforcements!", "stinger");
       });
       for (const r of frame.rigs) { const m = this.mechs.get(r.id); if (r.destroyed && m && !m.destroyed) m.destroy(); }
       return;
@@ -294,7 +304,7 @@ export class Director {
     // 3. Status (and any part that broke off-screen of an attack: overheat, blasts).
     for (const r of frame.rigs) {
       const p = byId.get(r.id);
-      if (p && !r.destroyed) for (const loc of LOCS) this.announceBreak(r, p, loc);
+      if (p && !r.destroyed) for (const loc of Object.keys(r.sp || {})) this.announceBreak(r, p, loc);
       if (p && !r.destroyed) this.announceTier(r, p);
     }
     for (const r of frame.rigs) {
@@ -302,7 +312,12 @@ export class Director {
       if (m.pendingDrop) await this.dropOne(m, r);
       if (r.pos && !this.walkers.size) m.setPose(r.pos, r.facing);
       this.applyStatus(m, r);
-      if (r.destroyed && !m.destroyed) {
+      if (r.destroyed && !m.destroyed && r.kind === "drone") {
+        // Drones pop, they don't get a eulogy.
+        this.world.fx.explosion(m.root.position.clone().add(new THREE.Vector3(0, 0.8, 0)), false);
+        this.sound(() => sfx.explosion(false));
+        m.destroy();
+      } else if (r.destroyed && !m.destroyed) {
         // Kill shot: punch the camera in and hold a beat on the wreck.
         this.onCamera({ x: m.root.position.x, y: m.root.position.z }, { punch: true, owner: r.owner });
         this.world.fx.explosion(m.root.position.clone().add(new THREE.Vector3(0, 1.5, 0)), true);
@@ -652,12 +667,42 @@ export class Director {
       this.sound(() => sfx.score(actor.owner === this.side));
     } else if (l.kind === "reinforcement") {
       const m = this.mechs.get(l.rigId);
-      this.onBanner("Enemy reinforcements!", "stinger");
-      this.sound(() => sfx.alarm());
+      // A drone wave lands several at once: one banner, one alarm.
+      if (!l.drone || this.waveFrame !== frame) {
+        this.waveFrame = frame;
+        this.onBanner(l.drone ? "Drone wave!" : "Enemy reinforcements!", "stinger");
+        this.sound(() => sfx.alarm());
+      }
       if (m?.pendingDrop) {
         await this.dropOne(m, frame.rigs.find((r) => r.id === l.rigId));
-        fx.text(up(m, 3.8), "REINFORCEMENTS", "#ff7a5a");
+        fx.text(up(m, 3.8), l.drone ? "DRONE" : "REINFORCEMENTS", "#ff7a5a");
       }
+    } else if (l.kind === "detonate" && actor) {
+      // Sapper: the charge goes off where it stands.
+      this.onCamera({ x: actor.root.position.x, y: actor.root.position.z }, { punch: true, owner: actor.owner });
+      this.splashBlast(actor.root.position.clone(), { radius: l.radius || 2.5, pen: 1 });
+      this.sound(() => sfx.explosion(true));
+      fx.text(up(actor, 4), "KABOOM", "#ff7a3a");
+      await wait(350 / this.speed);
+    } else if ((l.kind === "fieldweld" || l.kind === "vent") && actor) {
+      // Support walker at work on a friend: welding sparks, or a coolant gush.
+      const t = this.mechs.get(l.targetId) || actor;
+      actor.aimAt(t.root.position.clone().setY(1.5));
+      actor.fire("melee");
+      if (t !== actor) fx.tether(() => actor.muzzleWorld("melee"), () => up(t, 1.4), l.kind === "vent" ? 0x6ab8e0 : 0x9fe8ff, 0.8);
+      await wait(250 / this.speed);
+      if (l.kind === "vent") { for (let i = 0; i < 12; i++) fx.steam(up(t, 1.5 + Math.random())); fx.text(up(t, 3.6), "VENTED −2", "#9fd8ff"); this.sound(() => sfx.shot("steam")); }
+      else { fx.weld(up(t, 1.4)); const n = /→\s*(\d+)\s*SP/.exec(l.summary || "")?.[1]; fx.text(up(t, 3.6), n ? `+${n} SP` : "WELDED", "#7fcf6a"); }
+      actor.aimAt(null);
+      await wait(200 / this.speed);
+    } else if (l.kind === "paint" && actor) {
+      const t = this.mechs.get(l.targetId);
+      if (t) {
+        fx.beam(up(actor, 2), up(t, 1.6), 0xff4a2a, 0.5);
+        fx.flash(up(t, 3), 0xff4a2a, 30, 10);
+        fx.text(up(t, 4), "PAINTED", "#ff8a5a");
+      }
+      await wait(180 / this.speed);
     } else if (l.kind === "blast") {
       const t = this.mechs.get(l.rigId);
       if (t) { fx.explosion(up(t, 1), false); this.sound(() => sfx.explosion(false)); }
@@ -945,7 +990,9 @@ export class Director {
     if (!now || !was || !(now[1] > 0) || !(was[0] > 0) || now[0] > 0) return;
     this.announced?.add(key);
     const m = this.mechs.get(r.id);
-    const text = { arms: "ARM TORN OFF", legs: "LEGS CRIPPLED", engine: "ENGINE STALLED", hull: "HULL BREACHED" }[loc] || `${loc.toUpperCase()} BROKEN`;
+    const text = { arms: "ARM TORN OFF", mount: "GUN MOUNT WRECKED", legs: "LEGS CRIPPLED", engine: "ENGINE STALLED", hull: "HULL BREACHED" }[loc] || `${loc.toUpperCase()} BROKEN`;
+    // A drone losing a limb isn't news.
+    if (r.kind === "drone") return;
     if (m) {
       this.world.fx.text(m.root.position.clone().add(new THREE.Vector3(0, 5, 0)), text, "#ff5a3c");
       this.world.fx.sparks(m.root.position.clone().add(new THREE.Vector3(0, 2, 0)), 30);

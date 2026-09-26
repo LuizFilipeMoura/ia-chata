@@ -307,14 +307,90 @@ const WARLORD_LINES = {
   move: ["Make way for your better.", "I am coming for you."],
 };
 
+// Support walker crews: two people in a tin can on stilts, there to keep the
+// rigs running. Keyed by the walker's template.
+const WALKER_CREW = {
+  "medic-walker": {
+    name: "Doc", lines: {
+      hit: ["Even the medic bites.", "Stitch that.", "{It} needs a doctor. Not me."],
+      miss: ["I fix them, I don't aim them.", "Welder's not a rifle."],
+      kill: ["Time of death: now.", "Can't patch that one."],
+      hurt: ["Hey! Red cross! Red cross!", "Who shoots the ambulance?", "The stilts, not the stilts!"],
+      critical: ["We're wobbling. We are WOBBLING.", "Somebody weld ME."],
+      eject: ["Abandon stilts!", "Medic down, heal yourselves!"],
+      move: ["Hold still, I'm coming to you.", "Who's leaking?", "Line up for the torch.", "Walking. Carefully."],
+      re: ["Stay in one piece, please.", "Noted.", "I'll bring the torch."],
+      re_hurt: ["Hold on, I'm coming!", "Don't move, I'll weld it.", "Keep her upright, I'm on my way."],
+      re_eject: ["…I'll fetch what's left.", "Out of my hands."],
+      re_kill: ["Good. Less to patch.", "Nicely done."],
+    },
+  },
+  "radiator-walker": {
+    name: "Frost", lines: {
+      hit: ["Cool it.", "{It} got the cold shoulder.", "Chattering away."],
+      miss: ["Frosty barrel.", "Condensation."],
+      kill: ["Chilled.", "Put {it} on ice."],
+      hurt: ["Mind the coolant tank!", "We're leaking blue!"],
+      critical: ["Tank's cracked, it's snowing in here!"],
+      eject: ["Out! Out before she freezes!"],
+      move: ["Who's running hot?", "Coolant on the way.", "Stay near me, sweaty."],
+      re: ["Chill.", "Mm.", "Deep breaths, everyone."],
+      re_hurt: ["I'll cool you off, hang on.", "Steam's pouring off you, get here."],
+      re_eject: ["She was running too hot anyway."],
+      re_kill: ["Cool.", "Very cool."],
+    },
+  },
+  "gun-walker": {
+    name: "Rook", lines: {
+      hit: ["Pop pop.", "{It} felt that one.", "Mount's warm!"],
+      miss: ["Stilts wobble.", "Hard to aim on a pogo stick."],
+      kill: ["Scrap for the pile.", "Down it goes."],
+      hurt: ["The legs! Watch the legs!", "We're swaying!"],
+      critical: ["She's tipping, she's TIPPING!"],
+      eject: ["Timber!", "Jumping!"],
+      move: ["Covering the big ones.", "Stilts moving up.", "Where do you want the gun?"],
+      re: ["Copy.", "Yep.", "On it."],
+      re_hurt: ["Covering you!", "Back off {it}, I've got the gun on it."],
+      re_eject: ["Bad luck."],
+      re_kill: ["Ha! Good one."],
+    },
+  },
+  "rocket-walker": {
+    name: "Pip", lines: {
+      hit: ["Whoosh.", "Rocket mail for {it}.", "Delivered."],
+      miss: ["Return to sender.", "Rocket's gone sightseeing."],
+      kill: ["Signed for.", "{It}'s been posted."],
+      hurt: ["Not the pods!", "We're swaying, stop shooting the stilts!"],
+      critical: ["Pods are leaking fuel, uh oh."],
+      eject: ["Bail! Before the pods go!"],
+      move: ["Painting targets, heavies.", "I see them, you hit them.", "Stilts up, eyes out."],
+      re: ["Roger.", "Lit.", "Watching."],
+      re_hurt: ["Marking whoever did that.", "Hang on, I'll light them up."],
+      re_eject: ["Marking the spot."],
+      re_kill: ["Confirmed.", "Nice."],
+    },
+  },
+};
+// Drones don't talk: they chirp.
+const DRONE_VOICE = { name: "Drone", lines: {
+  hit: ["*chirp*", "TARGET STRUCK.", "*whirr-click*"], miss: ["*bzzt*", "RECALIBRATING."], kill: ["TARGET RETIRED.", "*happy chirp*"],
+  hurt: ["*screech*", "DAMAGE.", "*clank*"], critical: ["*rattle* *rattle*"], eject: ["*fzzt*…"], move: ["*tick-tick-tick*", "ADVANCING.", "*whirr*"],
+  re: ["*chirp*"],
+} };
+
 // Chance a bark fires per event: kills and ejections always talk.
 const CHANCE = { hit: 0.45, miss: 0.35, kill: 1, hurt: 0.4, critical: 1, heat: 0.8, eject: 1, die: 1, move: 0.08 };
 
-export function pilotOf(mech) { return PILOTS[mech?.longRange] || GENERIC; }
+export function pilotOf(mech) {
+  if (mech?.kind === "drone") return DRONE_VOICE;
+  if (mech?.kind === "walker") return WALKER_CREW[mech.template] || WALKER_CREW["gun-walker"];
+  return PILOTS[mech?.longRange] || GENERIC;
+}
 
 // Who's in this seat. `campaign` = the room's campaign block (null outside one):
 // its enemy side is faction operators, and a boss contract's commander is the Warlord.
 export function voiceOf(mech, campaign) {
+  if (mech.kind === "drone") return { ...DRONE_VOICE, chance: 0.35 };
   if (!campaign || mech.owner !== "b") return { ...pilotOf(mech), chance: 1 };
   const fac = campaign.faction;
   if (campaign.type === "boss" && mech.id === campaign.commanderId) return { name: WARLORDS[fac] || "The Warlord", lines: WARLORD_LINES, chance: 1.6, warlord: true };
@@ -323,6 +399,8 @@ export function voiceOf(mech, campaign) {
 
 // The crew's name for `mech`, fixed per machine for the battle.
 export function slangFor(mech) {
+  if (mech.kind === "drone") return { sapper: "the bomb on legs", spotter: "the peeper" }[mech.drone] || "the tin dog";
+  if (mech.kind === "walker") return ["the stilts", "the tin heron"][(mech.id ?? 0) % 2];
   const opts = [SLANG[mech.longRange], SLANG[mech.melee], mech.weightClass === "medium" ? "the heavy" : "the little one"].filter(Boolean);
   return opts[(mech.id ?? 0) % opts.length];
 }

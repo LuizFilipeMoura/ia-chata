@@ -27,6 +27,10 @@ import { computeModifiedAim, effectivePenAgainst, effectiveRof } from "../combat
 import { effectiveWeaponProfile } from "../game-state.js";
 import { woundTarget, WOUND_DIE, hitLocation } from "../rules.js";
 
+// Flat-pick units (walkers, drones) carry one weapon in the "unit" slot,
+// whatever slot the caller named.
+export const slotFor = (attacker, slot) => (attacker?.weapons?.unit != null ? "unit" : slot);
+
 // A D6 hits on `aim` or better; a natural 6 ALWAYS hits (rollToHit: `d >= modAim
 // || d === 6`), so the floor is 1/6 no matter how bad the modifiers get, and the
 // ceiling is 1 (aim ≤ 1).
@@ -39,6 +43,7 @@ function pHit(aim) {
 // wound-step modifier). Exported so the sampling validation can compare it to the
 // real engine's mean hit count, and reused as the left half of expectedDamage.
 export function rawExpectedHits(attacker, target, slot, opts) {
+  slot = slotFor(attacker, slot);
   const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
   if (!profile) return 0;
   // The melee lock's −2 on a gun (§5) is read off the attacker unless the
@@ -82,6 +87,7 @@ function locationDist(kind) {
 // NO Penetration term in Damage: Overmatch was deleted (2026-07-16); Penetration
 // buys P(wound) and nothing else.
 export function expectedDamage(attacker, target, slot, opts) {
+  slot = slotFor(attacker, slot);
   const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
   if (!profile) return 0;
   const hits = rawExpectedHits(attacker, target, slot, opts);
@@ -112,6 +118,7 @@ export function expectedDamage(attacker, target, slot, opts) {
 // (It ignores the ×2 for a point past 0 on a gutted Hull/Engine, so it never
 // overstates.)
 export function maxDamage(attacker, target, slot, opts) {
+  slot = slotFor(attacker, slot);
   const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
   if (!profile) return 0;
   const dist = opts?.distance;

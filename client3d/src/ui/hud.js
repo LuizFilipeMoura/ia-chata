@@ -2,7 +2,7 @@
 // SP + heat, action bar, battle log, banners, cursor tips and a hover card.
 import { icon } from "./icons.js";
 import { el, clear, fill } from "./dom.js";
-import { LOCS } from "/shared/game-state.js";
+import { isRig, partsOf, unitLabel, kitLine } from "../game/units.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { chassisOf } from "../game/director.js";
 import { equipmentChips } from "/shared/battle-view.js";
@@ -87,6 +87,13 @@ export class Hud {
   }
 
   rigCard(r, state, selected, onPick) {
+    // Drones get one compact line: they come in packs.
+    if (r.kind === "drone") {
+      const f = r.integrityMax ? Math.max(0, r.integrity) / r.integrityMax : 1;
+      return el("div", { class: `rig-card drone ${r.destroyed ? "dead" : ""} ${r.activated ? "spent" : ""} ${selected ? "sel" : ""} ${state.game.turn?.activeRigId === r.id ? "active" : ""}`, title: `${unitLabel(r)}: ${kitLine(r)}`, onClick: () => onPick?.(r.id) },
+        el("div", { class: "rc-head" }, icon("drone"), el("b", {}, r.name),
+          el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } }))));
+    }
     const cap = HEAT_CAPACITY[r.weightClass] ?? 6;
     const heat = r.engine?.heat ?? 0;
     const pri = Object.values(state.game.priorityTargets || {}).includes(r.id);
@@ -97,14 +104,14 @@ export class Hud {
         pri && !cmd ? el("span", { class: "tag pri", title: "Priority target: +3 VP for the kill (+1 like any wreck, +2 bonus)" }, icon("star")) : null,
         r.preparation ? el("span", { class: `tag ${r.preparation.improved ? "imp" : ""}`, title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.improved ? "Improved " : ""}${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare"), r.preparation.hidden ? "" : `${r.preparation.improved ? "+" : ""}${r.preparation.type}`) : null,
         r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee: must Disengage to move" }, icon("melee")) : null),
-      el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""),
-      r.destroyed ? null : equipChipRow(r),
-      el("div", { class: "rc-sp" }, LOCS.map((l) => {
+      el("div", { class: "rc-sub" }, isRig(r) ? chassisOf(r)?.label || "" : unitLabel(r) === r.name ? kitLine(r) : `${unitLabel(r)} · ${kitLine(r)}`),
+      r.destroyed || !isRig(r) ? null : equipChipRow(r),
+      el("div", { class: "rc-sp" }, partsOf(r).map((l) => {
         const p = r[l]; const f = p ? p.sp / p.max : 0;
-        return el("div", { class: "loc", title: `${l}: ${p?.sp}/${p?.max}` }, el("span", { class: "ln" }, icon(l)), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } })));
+        return el("div", { class: "loc", title: `${l}: ${p?.sp}/${p?.max}` }, el("span", { class: "ln" }, icon(l === "mount" ? "arms" : l)), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } })));
       })),
-      el("div", { class: "rc-heat", title: `Heat ${heat}/${cap}. Over capacity rolls on the overheat table at end of activation` },
-        Array.from({ length: Math.max(cap + 4, heat) }, (_, i) => el("i", { class: i < heat ? (i >= cap ? "over" : "on") : i >= cap ? "danger" : "" }))),
+      isRig(r) ? el("div", { class: "rc-heat", title: `Heat ${heat}/${cap}. Over capacity rolls on the overheat table at end of activation` },
+        Array.from({ length: Math.max(cap + 4, heat) }, (_, i) => el("i", { class: i < heat ? (i >= cap ? "over" : "on") : i >= cap ? "danger" : "" }))) : null,
     );
   }
 
@@ -162,9 +169,9 @@ export class Hud {
     const ch = chassisOf(r);
     const cap = HEAT_CAPACITY[r.weightClass] ?? 6;
     fill(this.hoverEl, 
-      el("b", {}, `${r.name} `), el("span", { class: "muted" }, `${ch?.class || ""} · speed ${r.speed ?? ch?.speed ?? "?"}"`),
-      el("div", {}, icon("fire"), ` ${r.weapons?.longRange}  ·  `, icon("melee"), ` ${r.weapons?.melee}`),
-      el("div", {}, icon("heat"), ` Heat ${r.engine?.heat ?? 0}/${cap}${r.equipment ? ` · ${r.equipment}` : ""}`),
+      el("b", {}, `${r.name} `), el("span", { class: "muted" }, `${isRig(r) ? ch?.class || "" : unitLabel(r)} · speed ${r.speed ?? ch?.speed ?? "?"}"`),
+      isRig(r) ? el("div", {}, icon("fire"), ` ${r.weapons?.longRange}  ·  `, icon("melee"), ` ${r.weapons?.melee}`) : el("div", {}, icon("fire"), ` ${kitLine(r)}`),
+      isRig(r) ? el("div", {}, icon("heat"), ` Heat ${r.engine?.heat ?? 0}/${cap}${r.equipment ? ` · ${r.equipment}` : ""}`) : null,
       r.staggered ? el("div", { class: "warn-t" }, icon("stagger"), " Staggered: −1 Aim on its next attack") : null,
       r.destroyed ? el("div", { class: "bad" }, "DESTROYED") : null,
     );
