@@ -1190,8 +1190,24 @@ export class LiveMatch {
         const splash = this.previewSplash(this.mode.rig, r, this.splashOf(this.mode.rig, list)?.weapon);
         this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP${splash ? ` · ${splash}` : ""}${sight ? ` · ${sight.why}` : ""} · click to choose weapon`);
         this.director.mechs.get(this.mode.rig.id)?.aimAt(new THREE.Vector3(r.pos.x, 2, r.pos.y));
+      } else if (r.owner !== this.mode.rig.owner && !r.destroyed && this.mode.key !== "lock") {
+        // An enemy you can't attack: say why instead of leaving it dark.
+        this.hud.tip(`${r.name}: ${this.cantAttackWhy(this.mode.rig, r)}`);
       }
     }
+  }
+
+  // Why `rig` can't attack `e` right now (front arc first: it gates both weapons).
+  cantAttackWhy(rig, e) {
+    const geo = deriveAttackGeometry(this.state, rig, e);
+    const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    if (!geo.inFrontArc) return `outside ${rig.name}'s front arc. Pivot to face it first (a 0" Move turns up to 90°)`;
+    const why = [];
+    if (!geo.inMeleeReach) why.push(`out of ${rig.weapons.melee} reach`);
+    if (rig.loaded?.longRange === false) why.push(`${rig.weapons.longRange} is spent (Reload)`);
+    else if (!geo.los) why.push("no line of sight for the gun");
+    else if (lr && (geo.distance < (lr.minRange ?? 0) || geo.distance > (lr.maxRange ?? Infinity))) why.push(`${geo.distance.toFixed(1)}" is outside the ${rig.weapons.longRange}'s ${lr.minRange ?? 0}–${lr.maxRange}" band`);
+    return why.length ? why.join(" · ") : "can't be attacked with this action";
   }
 
   onClick(hit) {
