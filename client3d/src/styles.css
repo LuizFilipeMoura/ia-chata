@@ -57,6 +57,7 @@ select, input { background: #1b1e25; color: var(--text); border: 1px solid var(-
 .sw-Gold { background: #d4a017; } .sw-Blue { background: #2f6fd6; } .sw-Purple { background: #7b3fb8; } .sw-Pumpkin { background: #e8731c; }
 .sw-Zebra { background: repeating-linear-gradient(45deg, #ecebe4 0 5px, #18181a 5px 9px); } .sw-Turquoise { background: #1fb5a8; } .sw-Green { background: #3f9a3a; }
 .sw-Copper { background: #b8703a; } .sw-Black { background: #2a2a30; } .sw-Red { background: #c0282d; } .sw-Silver { background: #b9c0c8; }
+.sw-Brass { background: #a8822e; } .sw-Ivory { background: #e6dcc0; } .sw-Jade { background: #2f8f62; }
 
 /* HUD */
 .hud-top { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: stretch; }
