@@ -44,7 +44,7 @@ export const PRESETS = {
   // Difficulty tiers (the solo-play opponent). Easy is short-sighted about heat
   // and objectives and blunders (see TIERS); Normal is the balanced pilot; Hard
   // flies the GA champion's weights (meta.js).
-  easy:       { vp: 0.6, priority: 0.3, damage: 1.5, threat: 0,   heat: 0.15, fragile: 0,  tactics: 0.2 },
+  easy:       { vp: 0.6, priority: 0.3, damage: 1.5, threat: 0,   heat: 0.15, fragile: 0,  tactics: 0.2, reckless: true },
   normal:     { vp: 3, priority: 2, damage: 1,   threat: 1,   heat: 1,   fragile: 1,   tactics: 1 },
   hard:       META.weights,
 };
@@ -243,6 +243,10 @@ function candidateHeat(rig, turn, round, cand) {
   return 0;
 }
 
+export const HEAT_CROSS = 6;
+export const HEAT_STEP = 3;
+export const HEAT_DEBT = 1.2;
+export const HEAT_WEIGHT_FLOOR = 1;
 // Risk of pushing past the class heat cap, a linear penalty for heat over the
 // cap after the action. Below the cap it is free; a misfire only threatens once
 // the engine is redlined.
@@ -258,11 +262,14 @@ function overheatRisk(room, rig, turn, cand) {
   // extra (it turns a free activation into a roll). Only the heat this action
   // adds is charged: heat already banked is sunk.
   const over = (h) => Math.max(0, h - cap);
-  const cost = (x) => (x > 0 ? 1.5 + x * x : 0);
+  // ⚙ Heat discipline: bots were ending ~40% of activations over Capacity.
+  // Crossing the line is priced as a real gamble now, and each step past it
+  // costs steeply more.
+  const cost = (x) => (x > 0 ? HEAT_CROSS + HEAT_STEP * x * x : 0);
   // Heat debt: every point banked now is a point that has to be vented before
   // the next activation can act freely, so even under-cap heat carries a small
   // price once the engine is past half Capacity.
-  const debt = Math.max(0, projected - Math.max(heatNow, cap / 2)) * 0.35;
+  const debt = Math.max(0, projected - Math.max(heatNow, cap / 2)) * HEAT_DEBT;
   return cost(over(projected)) - cost(over(heatNow)) + debt;
 }
 
@@ -379,7 +386,10 @@ export function scoreCandidate(room, rig, cand, weights) {
     + (w.priority || 0) * p.priority
     + (w.damage || 0) * p.damage
     + (w.threat || 0) * p.threat
-    + (w.heat || 0) * p.heat
+    // Heat discipline has a floor: evolved weight sets priced heat low and
+    // their bots cooked themselves. Only the deliberately reckless Easy pilot
+    // gets to ignore it.
+    + (w.reckless ? (w.heat || 0) : Math.max(w.heat || 0, HEAT_WEIGHT_FLOOR)) * p.heat
     + (w.fragile || 0) * p.fragile
     + (w.tactics ?? 1) * p.tactics
     + (w[`b_${actionFamily(cand.action)}`] || 0);

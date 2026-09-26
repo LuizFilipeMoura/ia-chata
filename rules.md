@@ -339,6 +339,8 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 ### Kills & Priority Elimination
 **Every kill scores.** Whenever a Rig is destroyed, **by any cause** (enemy fire, a blast, its own overheat), the side that doesn't own it scores **+1 VP**. A wreck is a wreck.
 
+**Boiler blew.** A Rig destroyed by **its own overheat roll** (§6) pays the other side **+2 VP more**, on top of the kill's +1 (and any bounty or Priority Elimination). Running the boiler past Capacity gambles the score, not just the Rig. *(Digital: the log adds "+2 VP, boiler blew".)* *⚙ TUNING*
+
 **Trailing kill bounty.** If the side scoring a kill was **strictly behind** the wreck's owner in VP (read before this kill's VP is added), it scores **+2 VP more** (the bounty). A tie pays no bounty. The bounty stacks with Priority Elimination and is never multiplied by the beacon multiplier. *(Digital: the log adds "+2 VP, bounty (was behind)".)* *⚙ TUNING: the kill's catch-up lever, a trailing side that trades Rigs claws back ground faster.*
 
 **Priority Elimination.** At the start of every round each squadron is assigned a single **Priority Target**: one random enemy Rig, known only to the hunting side. Destroy **your** Priority Target and you score **+2 VP more**, on top of the kill's +1 (**3 VP** in all). The target is re-rolled each round, so the pressure moves from machine to machine: it pays to hunt the mark, not just trade blows. Kill VP is awarded the moment the Rig falls, once per Rig; it is never claimed in Recovery. *⚙ TUNING: kills used to score only on the Priority Target, so most games saw no kill reward at all.*
@@ -668,6 +670,7 @@ Balance unchanged, a support unit is still one slot / one count / one activation
 - **Answer tokens** (§5), the player going second each round gets 1 free preparation, or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.
 - **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1–3 per round (scaled by the gap, capped at their living Rigs), each a free **Improved** preparation (or an upgrade to one already placed), or kept for a **Gritted attack** (reroll every missed to-hit die once).
 - **Trailing kill bounty** (§11), a kill by the side that is behind pays +2 VP more.
+- **Boiler blew** (§11), a Rig wrecked by its own overheat pays the enemy +2 VP more.
 - **Beacon multiplier** (§11), a per-round table for objective VP; ships flat (×1) after escalation (×1/×2/×3) tested worse for lead changes; kill VP is never multiplied.
 - **Weight-based heat** (§6), Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
 - **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win, +1 VP per kill (+2 more for the Priority Target, +2 more when behind).

@@ -5,6 +5,16 @@ Versions use the `wr-x.y` scheme (working rules). Bump **y** for tweaks/tuning, 
 
 ---
 
+## wr-0.17, Boiler blew
+
+### Added
+- **Boiler blew (§11):** a Rig destroyed by its own overheat roll pays the other side **+2 VP** on top of the kill's +1. ⚙ TUNING
+
+### Notes
+- Bots price heat harder: crossing Capacity and every step past it cost much more, and every pilot but the reckless Easy one has a minimum heat weight. Bot-vs-bot overheat rolls per game (42×28, 30 seeds): Normal 12.1 → 5.5, Hard 13.5 → 7.2.
+
+---
+
 ## wr-0.16, Campaign missions, every equipment fully digital
 
 ### Added
