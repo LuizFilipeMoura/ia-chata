@@ -131,11 +131,22 @@ export class Hud {
 
 
   banner(text, kind = "info") {
+    // A vertical list: newest at the bottom, older ones slide up as it grows
+    // in, each fades and collapses when its time is up. At most three.
     const b = el("div", { class: `banner ${kind}` }, text);
     this.bannerEl.append(b);
-    const hold = kind === "stinger" ? 1900 : 1600;
-    setTimeout(() => b.classList.add("out"), hold);
-    setTimeout(() => b.remove(), hold + 500);
+    const live = [...this.bannerEl.children].filter((n) => !n.classList.contains("out"));
+    for (const n of live.slice(0, Math.max(0, live.length - 3))) this.retireBanner(n);
+    b.timer = setTimeout(() => this.retireBanner(b), kind === "stinger" ? 1900 : 1600);
+  }
+
+  retireBanner(b) {
+    if (b.classList.contains("out")) return;
+    clearTimeout(b.timer);
+    // Pin the current height so max-height can animate down to 0.
+    b.style.maxHeight = `${b.offsetHeight}px`;
+    requestAnimationFrame(() => b.classList.add("out"));
+    setTimeout(() => b.remove(), 550);
   }
 
   // A side just scored: its counter ticks up with a pop and a floating "+N".

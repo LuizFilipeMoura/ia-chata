@@ -105,10 +105,10 @@ select, input { background: #1b1e25; color: var(--text); border: 1px solid var(-
 .ll.k-attack { color: #ffd9a0; } .ll.k-overheat { color: #ff8a5c; } .ll.k-destruction { color: var(--red); font-weight: 600; } .ll.k-initiative { color: var(--cyan); }
 .hud-tip { position: absolute; top: 78px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.75); padding: 6px 12px; border-radius: 8px; display: none; pointer-events: none !important; }
 .hud-hover { position: absolute; top: 118px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: none; pointer-events: none !important; font-size: 17px; }
-.hud-banner { position: absolute; top: 35%; left: 0; right: 0; text-align: center; pointer-events: none !important; }
-.banner { display: inline-block; font: 700 55px var(--display); letter-spacing: .1em; padding: 6px 30px; background: linear-gradient(90deg, transparent, rgba(0,0,0,.7), transparent); animation: bannerIn .35s ease-out; transition: opacity .5s; margin: 4px; }
-.banner.info { font-size: 26px; } .banner.out { opacity: 0; }
-@keyframes bannerIn { from { transform: scale(1.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.hud-banner { position: absolute; top: 30%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; pointer-events: none !important; }
+.banner { font: 700 55px var(--display); letter-spacing: .1em; padding: 6px 30px; background: linear-gradient(90deg, transparent, rgba(0,0,0,.7), transparent); white-space: nowrap; overflow: hidden; max-height: 120px; margin-top: 4px; animation: bannerIn .35s ease-out; transition: opacity .45s ease, max-height .45s ease, margin-top .45s ease, padding .45s ease, transform .45s ease; }
+.banner.info { font-size: 26px; } .banner.out { opacity: 0; max-height: 0 !important; margin-top: 0; padding-top: 0; padding-bottom: 0; transform: translateY(-10px); }
+@keyframes bannerIn { from { transform: scale(1.25); opacity: 0; max-height: 0; } to { transform: scale(1); opacity: 1; max-height: 120px; } }
 .hud-menu { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; }
 #toasts { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 50; pointer-events: none; }
 .toast { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--cyan); padding: 8px 14px; border-radius: 8px; transition: opacity .4s; }
