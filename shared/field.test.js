@@ -207,3 +207,35 @@ test("digital scatter never leaves a gap narrower than the biggest base", async 
     }
   }
 });
+
+// The lane rule, read the way it matters: a medium base (the biggest) can
+// reach every open spot on a digital table. One connected free region on the
+// pathfinder's own grid, or some lane is too tight to drive.
+test("a medium base can reach every open spot of a digital scatter", async () => {
+  const { terrainPolygons, BASE_RADIUS } = await import("./geometry.js");
+  const { buildGrid } = await import("./pathfind.js");
+  for (const dims of [{ width: 42, height: 28 }, { width: 54, height: 36 }, { width: 30, height: 22 }]) {
+    for (let seed = 1; seed <= 40; seed++) {
+      const field = { ...dims, diagonal: "tlbr", terrain: [] };
+      field.terrain = scatterTerrain(field, seeded(seed), { digital: true });
+      const g = buildGrid(field, terrainPolygons(field), [], BASE_RADIUS.medium);
+      const seen = new Uint8Array(g.cols * g.rows);
+      let regions = 0;
+      for (let i = 0; i < seen.length; i++) {
+        if (g.blocked[i] || seen[i]) continue;
+        regions++;
+        const stack = [i]; seen[i] = 1;
+        while (stack.length) {
+          const k = stack.pop(), c = k % g.cols, r = (k - c) / g.cols;
+          for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nc = c + dc, nr = r + dr;
+            if (nc < 0 || nr < 0 || nc >= g.cols || nr >= g.rows) continue;
+            const ni = nr * g.cols + nc;
+            if (!g.blocked[ni] && !seen[ni]) { seen[ni] = 1; stack.push(ni); }
+          }
+        }
+      }
+      assert.equal(regions, 1, `${dims.width}x${dims.height} seed ${seed}: ${regions} separate regions for a medium`);
+    }
+  }
+});
