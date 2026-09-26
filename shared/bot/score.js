@@ -45,14 +45,14 @@ export const PRESETS = {
   // Difficulty tiers (the solo-play opponent). Easy is short-sighted about heat
   // and objectives and blunders (see TIERS); Normal is the balanced pilot; Hard
   // flies the GA champion's weights (meta.js).
-  easy:       { vp: 0.6, priority: 0.3, damage: 1.5, threat: 0,   heat: 0.15, fragile: 0,  tactics: 0.2 },
+  easy:       { vp: 0.6, priority: 0.3, damage: 1.5, threat: 0,   heat: 0.15, fragile: 0,  tactics: 0.2, noOverheat: true },
   normal:     { vp: 3, priority: 2, damage: 1,   threat: 1,   heat: 1,   fragile: 1,   tactics: 1 },
   hard:       META.weights,
 };
 
 // Easy is a reckless brawler: chases damage, shrugs at exposure, barely
-// notices objectives. It still minds the boiler (the heat floor applies to every
-// pilot): an Easy bot cooking itself every few turns read as a bug, not a style. Per-tier decision noise: `blunder` is the chance an action is picked at random
+// notices objectives. It never boils over (noOverheat, enforced in chooseAction):
+// no pick may end over Heat Capacity, and over it the only way out is Shut Down. Per-tier decision noise: `blunder` is the chance an action is picked at random
 // from the top few (a plausible-but-wrong call rather than a nonsense one).
 export const TIERS = {
   easy:   { blunder: 0.55, topK: 8 },

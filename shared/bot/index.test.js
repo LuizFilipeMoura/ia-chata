@@ -186,3 +186,36 @@ test("driveBots is a no-op in a physical room", () => {
   driveBots(room);
   assert.equal(JSON.stringify(room.game), before, "physical rooms are never driven");
 });
+
+// Easy pilots may never push their own engine over Heat Capacity: every pick
+// must end under the cap (worst-case dice), and a rig already over it may only
+// Shut Down.
+test("easy never picks an action that takes it over Heat Capacity", async () => {
+  const { heatMeter } = await import("../game-state.js");
+  for (let seed = 1; seed <= 20; seed++) {
+    const { room, atk } = botSetup();
+    room.game.sides[0].bot = "easy";
+    applyCommand(room, { verb: "activate", attrs: { name: "Atk" } });
+    const m = heatMeter(atk);
+    atk.engine.heat = m.cap - 1 - (seed % 2);          // one or two below the cap
+    for (let step = 0; step < 4; step++) {
+      const cmd = chooseAction(room, atk, PRESETS.easy, { blunder: 0.55, topK: 8, random: mulberry32(seed * 10 + step) });
+      if (!cmd) break;
+      applyCommand(room, cmd, {}, { random: mulberry32(seed) });
+      assert.ok(heatMeter(atk).over <= 0, `seed ${seed}: ${cmd.attrs.action} took heat to ${atk.engine.heat}/${heatMeter(atk).cap}`);
+      if (room.game.turn.activeRigId !== atk.id) break;
+    }
+  }
+});
+
+test("easy over Heat Capacity can only Shut Down", async () => {
+  const { heatMeter } = await import("../game-state.js");
+  const { room, atk } = botSetup();
+  room.game.sides[0].bot = "easy";
+  applyCommand(room, { verb: "activate", attrs: { name: "Atk" } });
+  atk.engine.heat = heatMeter(atk).cap + 1;             // scalded by an enemy flamer
+  for (let i = 0; i < 10; i++) {
+    const cmd = chooseAction(room, atk, PRESETS.easy, { blunder: 0.55, topK: 8, random: mulberry32(i) });
+    assert.equal(cmd?.attrs.action, "shutdown");
+  }
+});

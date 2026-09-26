@@ -5,7 +5,8 @@
 // resolution a human does and can neither cheat nor desync.
 import { candidatesFor } from "./candidates.js";
 import { scoreCandidate, scoreParts, actionFamily, PRESETS, TIERS, exposureOf } from "./score.js";
-import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, findRig, LOCS } from "../game-state.js";
+import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, findRig, heatMeter, LOCS } from "../game-state.js";
+import { availableActions } from "../battle-view.js";
 import { expectedDamage } from "./evaluate.js";
 
 // Every bot command funnels through here so a caller can observe the bot's turn
@@ -79,7 +80,11 @@ function cmpStable(a, b) {
 export function chooseAction(room, rig, weights, noise = null) {
   // Only the unit holding the floor may act (a Shut Down ends the activation).
   if (room.game.turn?.activeRigId !== rig.id) return null;
-  const scored = candidatesFor(room, rig)
+  let cands = candidatesFor(room, rig);
+  // Easy's hard rule: never boil over. Only moves that end under Heat Capacity
+  // (worst case); once over it (an enemy scalded it), Shut Down is all it has.
+  if (weights.noOverheat) cands = cands.filter((c) => staysCool(room, rig, c));
+  const scored = cands
     .map((c) => ({ c, s: scoreCandidate(room, rig, c, weights) }))
     .sort((x, y) => y.s - x.s || cmpStable(x.c, y.c));
   let best = scored[0];
@@ -109,6 +114,27 @@ export function chooseAction(room, rig, weights, noise = null) {
   const cmd = toCommand(best.c, rig);
   if (wantsGrit(room, rig, best.c)) cmd.attrs.grit = true;
   return cmd;
+}
+
+// True when `cand` leaves `rig` at or under Heat Capacity whatever the dice do.
+// Listed heat settles the plain cases (moves, preps); anything that might add
+// more (reload's D6, Hot weapons, upgrade heat) is trial-run on a copy of the
+// room with the dice pinned low and high, and must stay cool both ways.
+function staysCool(room, rig, cand) {
+  if (cand.action === "shutdown") return true;
+  const m = heatMeter(rig);
+  if (m.over > 0) return false;
+  const turn = room.game.turn;
+  const listed = availableActions(rig, turn, room.game.round).find((a) => a.key === cand.action)?.heat || 0;
+  if (cand.action === "move" || cand.action === "sprint") return m.heat + listed <= m.cap;
+  const cmd = toCommand(cand, rig);
+  for (const pin of [0, 0.999]) {
+    const sim = JSON.parse(JSON.stringify(room));
+    applyRaw(sim, cmd, {}, { random: () => pin });
+    const me = findRig(sim, rig.name);
+    if (me && heatMeter(me).over > 0) return false;
+  }
+  return true;
 }
 
 // A Gritted attack (§5) is worth a token when it adds at least this much
