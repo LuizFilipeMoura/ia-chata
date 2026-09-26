@@ -299,8 +299,11 @@ export class World {
         }
         if (drag.button === 2 || (drag.button === 0 && e.altKey)) {
           this.cam.yaw += dx * 0.006; this.cam.pitch = Math.max(20 * DEG, Math.min(85 * DEG, this.cam.pitch + dy * 0.004));
+          this.manualAt = performance.now();
         } else if (drag.button === 1 || (drag.button === 0 && drag.moved > 6)) {
-          this.panBy(-dx * this.cam.dist * 0.0018, -dy * this.cam.dist * 0.0018);
+          // Middle-button (wheel) drag pans 40% slower than a left drag.
+          const k = this.cam.dist * (drag.button === 1 ? 0.00108 : 0.0018);
+          this.panBy(-dx * k, -dy * k);
         }
       }
       const hit = this.pick();
@@ -312,6 +315,7 @@ export class World {
       e.preventDefault();
       if (e.shiftKey && this.onShiftWheel?.(e.deltaY || e.deltaX)) return;
       this.cam.dist = Math.max(12, Math.min(110, this.cam.dist * (1 + Math.sign(e.deltaY) * 0.1)));
+      this.manualAt = performance.now();
     }, { passive: false });
     window.addEventListener("keydown", (e) => { if (!e.target.closest?.("input,textarea,select")) this.keys.add(e.key.toLowerCase()); });
     window.addEventListener("keyup", (e) => this.keys.delete(e.key.toLowerCase()));
@@ -328,9 +332,14 @@ export class World {
     }
     this.cam.goal = null;
     this.moved = true;
+    this.manualAt = performance.now();
   }
 
   focus(x, y, dist) { this.cam.goal = { target: new THREE.Vector3(x, 0, y), dist: dist ?? this.cam.dist }; }
+  // Slide the view to (x, y) without touching the zoom.
+  glide(x, y) { this.cam.goal = { target: new THREE.Vector3(x, 0, y), dist: null }; }
+  // The camera is on its way somewhere, or the player just steered it.
+  cameraBusy() { return !!this.cam.goal || performance.now() - (this.manualAt || 0) < 700; }
 
   updateMouse(e) {
     const r = this.renderer.domElement.getBoundingClientRect();
@@ -668,6 +677,43 @@ export class World {
     const m = new THREE.Mesh(new THREE.RingGeometry(r - 0.08, r + 0.08, 96), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.06, y); this.overlay.add(m); return m;
   }
+  // Text written around a circle, just outside radius `r`, repeated to fill
+  // the loop and drifting slowly round it. Letters stand on the outer edge,
+  // so the name reads along the ring from above. Semi-transparent.
+  ringLabel(x, y, r, text, color = "#e8dcc0", opacity = 0.75) {
+    const band = Math.max(0.75, Math.min(1.6, r * 0.07)), r0 = r + 0.14, r1 = r0 + band, seg = Math.max(48, Math.round(r * 10));
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= seg; i++) {
+      const a = (i / seg) * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+      pos.push(c * r0, 0, sn * r0, c * r1, 0, sn * r1);
+      uv.push(i / seg, 0, i / seg, 1);
+      if (i < seg) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    const label = ` ${text.toUpperCase()}  ·`;
+    const cv = document.createElement("canvas"), g = cv.getContext("2d");
+    const font = "600 44px Rajdhani, Arial, sans-serif";
+    g.font = font;
+    cv.width = Math.ceil(g.measureText(label).width) + 8; cv.height = 64;
+    g.font = font; g.textBaseline = "middle"; g.fillStyle = color;
+    g.strokeStyle = "rgba(0,0,0,.7)"; g.lineWidth = 5;
+    g.strokeText(label, 4, 34); g.fillText(label, 4, 34);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    // Keep the glyphs' aspect: one tile spans (width/height × band) inches.
+    tex.repeat.x = Math.max(1, Math.round((2 * Math.PI * (r0 + r1) / 2) / ((cv.width / cv.height) * band)));
+    tex.anisotropy = 4;
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }));
+    m.position.set(x, 0.07, y);
+    m.userData.spin = 0.04 / Math.max(1, r * 0.25);
+    this.overlay.add(m);
+    (this.ringLabels ||= []).push(m);
+    return m;
+  }
   disc(x, y, r, color, opacity = 0.12) {
     const m = new THREE.Mesh(new THREE.CircleGeometry(r, 64), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, y); this.overlay.add(m); return m;
@@ -761,7 +807,7 @@ export class World {
     }
     if (this.cam.goal) {
       this.cam.target.lerp(this.cam.goal.target, Math.min(1, dt * 3));
-      this.cam.dist += (this.cam.goal.dist - this.cam.dist) * Math.min(1, dt * 3);
+      if (this.cam.goal.dist != null) this.cam.dist += (this.cam.goal.dist - this.cam.dist) * Math.min(1, dt * 3);
       if (this.cam.target.distanceTo(this.cam.goal.target) < 0.05) this.cam.goal = null;
     }
     const c = this.cam;
@@ -805,6 +851,12 @@ export class World {
       }
     }
     for (const a of this.animators || []) a(dt, now);
+    // Ring labels drift round their circles; drop the ones the overlay shed.
+    if (this.ringLabels?.length) this.ringLabels = this.ringLabels.filter((m) => {
+      if (!m.parent) { m.material.map?.dispose(); m.geometry.dispose(); return false; }
+      m.rotation.y -= dt * m.userData.spin;
+      return true;
+    });
     // Laser beams: pulses race along, the core shimmers. Drop removed ones.
     if (this.beams?.length) this.beams = this.beams.filter((bm) => {
       if (!bm.g.parent) { bm.tex.dispose(); return false; }

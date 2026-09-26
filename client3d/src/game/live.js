@@ -11,7 +11,7 @@ import { candidatesFor } from "/shared/bot/candidates.js";
 import { chooseAction } from "/shared/bot/index.js";
 import { scoreCandidate, scoreParts, PRESETS, threatsAt } from "/shared/bot/score.js";
 import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
-import { findPath, buildGrid, isStopBlocked } from "/shared/pathfind.js";
+import { findPath, buildGrid, isStopBlocked, walkPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
 import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
@@ -34,6 +34,7 @@ import { weaponName, rangedProfile, rangedLoaded, kitLine, partsOf, isRig } from
 
 const DEG = Math.PI / 180;
 const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract" };
+const AIM_BLUE = 0x5aa8ff;
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
   sprint: "Run up to 1½× Speed. 2 heat: fast but hot.",
@@ -153,6 +154,7 @@ export class LiveMatch {
   }
 
   destroy() {
+    this.tagEl?.remove();
     this.disconnect?.();
     this.unsub.forEach((f) => f());
     window.removeEventListener("keydown", this.keyHandler);
@@ -347,6 +349,14 @@ export class LiveMatch {
     if (mine && !this.wasMine) { sfx.turn(true); this.hud.banner("YOUR MOVE, IRONCLAD", "turn"); this.showDigest(); }
     if (!mine && this.wasMine && !this.digestLog && g.phase !== "finished") this.startDigest(this.state.rigs);
     this.wasMine = mine;
+    // An activation starts or ends: glide to that unit (position only, never
+    // the zoom), unless the camera is already on the move or being steered.
+    const act = g.turn?.activeRigId ?? null;
+    if (act !== this.lastActive) {
+      const r = this.rig(act ?? this.lastActive);
+      if (this.lastActive !== undefined && r?.pos && settings.get("followCam") && !this.world.cameraBusy()) this.world.glide(r.pos.x, r.pos.y);
+      this.lastActive = act;
+    }
     this.drawThreat();
     // Escalation: beacons pay more from rounds 4 and 8. Announce the step up.
     const mult = g.beaconMultiplier || 1;
@@ -628,6 +638,7 @@ export class LiveMatch {
   }
 
   cancelMode() {
+    this.cursorTag(null);
     this.atkModal?.close(); this.atkModal = null;
     this.clearSight();
     this.moveBands = null;
@@ -643,9 +654,21 @@ export class LiveMatch {
     this.renderActions();
   }
 
+  // A small label that rides the mouse while placing a move: what the next
+  // click does. `null` hides it; touch (no pointer) never shows it.
+  cursorTag(text, tone = "dest") {
+    const p = this.world.lastPointer;
+    if (!text || !p) { if (this.tagEl) this.tagEl.style.display = "none"; return; }
+    if (!this.tagEl) { this.tagEl = el("div", { class: "cursor-tag" }); document.body.append(this.tagEl); }
+    this.tagEl.textContent = text;
+    this.tagEl.className = `cursor-tag t-${tone}`;
+    this.tagEl.style.display = "block";
+    this.tagEl.style.transform = `translate(${p.x + 18}px, ${p.y + 16}px)`;
+  }
+
   // Right-click / Esc: from "turning" go back to picking a spot; else cancel.
   backOut() {
-    if (this.mode?.locked) { this.mode.locked = null; this.hud.tip("Click a spot inside the ring · Right-click to cancel"); this.emit("movephase", "dest"); return; }
+    if (this.mode?.locked) { this.mode.locked = null; this.ghostMat?.color.setHex(0x33ff99); this.cursorTag("Click to set the destination"); this.hud.tip("Click a spot inside the ring · Right-click to cancel"); this.emit("movephase", "dest"); return; }
     this.cancelMode();
   }
 
@@ -660,6 +683,7 @@ export class LiveMatch {
     const col = key === "sprint" ? 0xffaa33 : this.isHop(key) ? 0xffd27a : 0x33ff99;
     this.world.disc(rig.pos.x, rig.pos.y, budget + radiusOf(rig), col, 0.08);
     this.world.ring(rig.pos.x, rig.pos.y, budget, col, 0.6);
+    this.world.ringLabel(rig.pos.x, rig.pos.y, budget, `${key === "sprint" ? "Sprint" : key === "jumpjets" ? "Jump" : key === "yank" ? "Grapnel" : "Move"} ${budget.toFixed(1)}″ · squares: red = enemy fire, green = safe`, "#" + col.toString(16).padStart(6, "0"));
     this.drawEnemyCones(rig);
     this.drawDangerMap(rig, budget, this.isHop(key));
     this.moveBands = this.drawGunBands(rig, rig.pos);
@@ -693,6 +717,15 @@ export class LiveMatch {
     const red = Math.max(lr.minRange || 0, lr.close?.under || 0);
     if (red) add(this.world.annulus(0, 0, radiusOf(rig), red, 0xe0533d, lr.minRange ? 0.16 : 0.09));
     add(this.world.ring(0, 0, lr.maxRange, 0xc9a14a, 0.35));
+    // Name each ring on the ring itself.
+    const gun = weaponName(rig, "longRange") || "gun";
+    const bandTxt = `sweet band ${band[0]}–${band[1]}″${lr.bandAcc ?? lr.peak ? ` · +${lr.bandAcc ?? lr.peak} aim` : ""}`;
+    if (Math.abs(band[1] - lr.maxRange) < 1.2) add(this.world.ringLabel(0, 0, lr.maxRange, `${gun} · ${bandTxt} · max range`, "#9fe08a"));
+    else {
+      add(this.world.ringLabel(0, 0, band[1], bandTxt, "#9fe08a"));
+      add(this.world.ringLabel(0, 0, lr.maxRange, `${gun} max range ${lr.maxRange}″`, "#e0c070"));
+    }
+    if (red > radiusOf(rig) + 1) add(this.world.ringLabel(0, 0, red, lr.minRange ? `dead zone: can't fire under ${lr.minRange}″` : `too close: ${lr.close.acc} aim`, "#ff8a7a"));
     g.position.set(at.x, 0, at.y);
     this.world.overlay.add(g);
     return g;
@@ -756,7 +789,16 @@ export class LiveMatch {
       }
     }
     const landing = hop ? hopLanding(this.state, rig, field, budget) : null;
-    const route = hop ? { path: [rig.pos, field], length: landing.dist } : findPath(this.state.field, polys, blockers, radiusOf(rig), rig.pos, field);
+    let route = hop ? { path: [rig.pos, field], length: landing.dist } : findPath(this.state.field, polys, blockers, radiusOf(rig), rig.pos, field);
+    // Pointing past the reach: stop the ghost at the furthest spot along the
+    // same route instead of refusing (back off a little if that spot is taken).
+    if (!hop && route && route.length > budget + 1e-6) {
+      for (let back = 0.02; back < 2.5; back += 0.25) {
+        const p = walkPath(route.path, budget - back);
+        const r2 = findPath(this.state.field, polys, blockers, radiusOf(rig), rig.pos, p);
+        if (r2 && r2.length <= budget + 1e-6) { field = p; route = r2; note = note || "as far as it can go"; break; }
+      }
+    }
     const ok = hop ? landing.ok : route && route.length <= budget + 1e-6;
     let facing = rig.facing;
     if (route && route.path.length >= 2) {
@@ -855,6 +897,7 @@ export class LiveMatch {
     this.reachMeshes.push(
       this.world.wedge(r.pos.x, r.pos.y, max, r.facing - 45, r.facing + 45, col, 0.07),
       this.world.ring(r.pos.x, r.pos.y, max, col, 0.35),
+      this.world.ringLabel(r.pos.x, r.pos.y, max, `${r.name}: ${weaponName(r, "longRange") || "gun"} range ${max}″`, r.owner === this.side ? "#8fe3d4" : "#ff9a88", 0.5),
       this.world.ring(r.pos.x, r.pos.y, radiusOf(r) + meleeReachOf(r), 0xffaa33, 0.7),
     );
   }
@@ -877,6 +920,7 @@ export class LiveMatch {
     this.world.wedge(rig.pos.x, rig.pos.y, lrMax, rig.facing - 45, rig.facing + 45, 0xff5544, 0.06);
     if (key !== "lock") this.drawGunBands(rig, rig.pos);
     this.world.ring(rig.pos.x, rig.pos.y, radiusOf(rig) + meleeReachOf(rig), 0xffaa33, 0.5);
+    if (weaponName(rig, "melee")) this.world.ringLabel(rig.pos.x, rig.pos.y, radiusOf(rig) + meleeReachOf(rig), `${weaponName(rig, "melee")} reach`, "#ffc070");
     for (const e of this.state.rigs) {
       if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
       const ok = byTarget.has(e.name);
@@ -916,6 +960,7 @@ export class LiveMatch {
     const reach = friendly ? radiusOf(rig) + SUPPORT_REACH : PAINT_RANGE;
     this.world.disc(rig.pos.x, rig.pos.y, reach, col, 0.06);
     this.world.ring(rig.pos.x, rig.pos.y, reach, col, 0.6);
+    this.world.ringLabel(rig.pos.x, rig.pos.y, reach, friendly ? `${key === "vent" ? "vent" : "weld"} reach ${SUPPORT_REACH}″` : `paint range ${PAINT_RANGE}″`, "#" + col.toString(16).padStart(6, "0"));
     for (const u of this.state.rigs) {
       if (u.destroyed || !u.pos || u.id === rig.id || (friendly ? u.owner !== rig.owner : u.owner === rig.owner)) continue;
       const on = byTarget.has(u.name);
@@ -1101,7 +1146,8 @@ export class LiveMatch {
     const sp = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig)?.splash;
     if (!sp || !target.pos) return null;
     const pm = this.previewMeshes;
-    pm.push(this.world.disc(target.pos.x, target.pos.y, sp.radius, 0xff8a3a, 0.12), this.world.ring(target.pos.x, target.pos.y, sp.radius, 0xff8a3a, 0.8));
+    pm.push(this.world.disc(target.pos.x, target.pos.y, sp.radius, 0xff8a3a, 0.12), this.world.ring(target.pos.x, target.pos.y, sp.radius, 0xff8a3a, 0.8),
+      this.world.ringLabel(target.pos.x, target.pos.y, sp.radius, `splash ${sp.radius}″ · friends too`, "#ffb070"));
     const caught = this.state.rigs.filter((r) => r.id !== target.id && r.id !== rig.id && !r.destroyed && r.pos
       && Math.hypot(r.pos.x - target.pos.x, r.pos.y - target.pos.y) <= sp.radius + radiusOf(r));
     for (const r of caught) pm.push(this.world.ring(r.pos.x, r.pos.y, radiusOf(r) + 0.35, r.owner === rig.owner ? 0xf5b041 : 0xff4433, 0.95));
@@ -1126,7 +1172,7 @@ export class LiveMatch {
     }
     if (prof?.chain) {
       const reach = prof.chain + (fx.chainRadius || 0);
-      pm.push(this.world.ring(target.pos.x, target.pos.y, reach, 0x66ccff, 0.7));
+      pm.push(this.world.ring(target.pos.x, target.pos.y, reach, 0x66ccff, 0.7), this.world.ringLabel(target.pos.x, target.pos.y, reach, `arc jumps ${reach}″`, "#9fe0ff"));
       const next = others.filter((r) => gap(r) <= reach).sort((a, b) => gap(a) - gap(b))[0];
       if (next) pm.push(this.world.ring(next.pos.x, next.pos.y, radiusOf(next) + 0.35, next.owner === rig.owner ? 0xf5b041 : 0x66ccff, 0.95));
       return `on a hit: arcs ${reach}" to ${next ? `${next.name}${next.owner === rig.owner ? " ⚠ friendly" : ""}` : "nobody"}`;
@@ -1134,7 +1180,7 @@ export class LiveMatch {
     if (prof?.marks) {
       const burst = fx.markRadius || 0;
       if (!burst) return "on a hit: marked (allies ignore cover, +1 Aim)";
-      pm.push(this.world.disc(target.pos.x, target.pos.y, burst, 0xff4a2a, 0.08), this.world.ring(target.pos.x, target.pos.y, burst, 0xff4a2a, 0.7));
+      pm.push(this.world.disc(target.pos.x, target.pos.y, burst, 0xff4a2a, 0.08), this.world.ring(target.pos.x, target.pos.y, burst, 0xff4a2a, 0.7), this.world.ringLabel(target.pos.x, target.pos.y, burst, `flare burst ${burst}″`, "#ff9a7a"));
       const lit = others.filter((r) => r.owner !== rig.owner && gap(r) <= burst);
       for (const r of lit) pm.push(this.world.ring(r.pos.x, r.pos.y, radiusOf(r) + 0.35, 0xff4a2a, 0.95));
       return `on a hit: marks ${[target, ...lit].map((r) => r.name).join(", ")}`;
@@ -1303,7 +1349,9 @@ export class LiveMatch {
       const clamped = !this.isHop() && Math.abs(d) > 90;
       L.facing = this.isHop() ? f : rig.facing + Math.max(-89, Math.min(89, d));
       this.ghost.rotation.y = -L.facing * DEG;
-      this.ghostMat.color.setHex(clamped ? 0xffd35a : 0x33ff99);
+      // Aiming phase reads blue: the spot is set, now you're choosing a facing.
+      this.ghostMat.color.setHex(clamped ? 0xffd35a : AIM_BLUE);
+      this.cursorTag("Click to confirm · move the mouse to face", "aim");
       // Keep your front to the enemy: warn about anyone who'd be on your side
       // or rear after this move (they hit harder there, and you can't shoot them).
       const me = { pos: L.dest, facing: L.facing };
@@ -1323,6 +1371,7 @@ export class LiveMatch {
       this.ghost.rotation.y = -p.facing * DEG;
       // Red is only ever "can't go there"; danger on a legal spot is amber.
       this.ghostMat.color.setHex(p.ok ? 0x33ff99 : 0xff2233);
+      this.cursorTag(p.ok ? "Click to set the destination" : "Can't go here", p.ok ? "dest" : "bad");
       if (this.pathLine) this.world.overlay.remove(this.pathLine);
       if (p.route) this.pathLine = this.isHop()
         ? this.world.arcPath(this.mode.rig.pos, at, Math.min(4, 1 + p.route.length * 0.4), p.ok ? 0xffd27a : 0xff2233)
@@ -1330,8 +1379,10 @@ export class LiveMatch {
       const dz = p.danger == null ? "" : p.danger < 0.3 ? " · ✅ safe spot" : ` · ⚠ ≈${p.danger.toFixed(1)} SP incoming here`;
       if (p.ok && p.danger != null) this.ghostMat.color.setHex(p.danger < 0.3 ? 0x33ff99 : p.danger < 2 ? 0xffd35a : 0xffa020);
       const shots = p.ok ? this.sightlines(this.mode.rig, at, p.facing) : (this.clearSight(), "");
-      const note = p.note ? ` · ${p.note}` : "";
-      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}"${note} · facing ${Math.round(p.facing)}°${p.ok ? dz : ` · ✖ ${p.why}`}${shots} · Shift+wheel to turn` : `✖ Can't go there: ${p.why}`);
+      const note = p.note ? ` (${p.note})` : "";
+      const turn = Math.round(Math.abs(((p.facing - this.mode.rig.facing + 540) % 360) - 180));
+      this.hud.tip(!p.route ? `✖ Can't go there: ${p.why}` : !p.ok ? `✖ ${p.why}`
+        : `Move ${p.route.length.toFixed(1)}″ of ${this.mode.budget.toFixed(1)}″${note} · ${turn ? `turn ${turn}°` : "no turn"}${dz}${shots}`);
       this.mode.preview = { ...p, dest: at };
       return;
     }
@@ -1399,6 +1450,8 @@ export class LiveMatch {
         if (!p0) return;
         if (!p0.ok) { toast(p0.why ? `Can't land there: ${p0.why}.` : "Out of reach. Pick a spot inside the ring.", "warn"); return; }
         this.mode.locked = { ...p0, travelFacing: p0.facing, facing: p0.facing };
+        this.ghostMat.color.setHex(AIM_BLUE);
+        this.cursorTag("Click to confirm · move the mouse to face", "aim");
         this.hud.tip("Now move the mouse to turn · Click to confirm · Right-click to pick another spot");
         this.emit("movephase", "face");
         return;

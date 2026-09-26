@@ -1267,3 +1267,15 @@ body.crit-vignette::after { content: ""; position: fixed; inset: 0; pointer-even
   .modal-back.dock { place-items: end center; }
   .modal-back.dock .modal { width: 100%; max-height: 55vh; margin: 0; }
 }
+
+/* Action bar: always one row; buttons share the width instead of wrapping. */
+.hud-actions { width: max-content; }
+.act-row { flex-wrap: nowrap !important; gap: 8px !important; }
+.act { width: auto !important; flex: 1 1 auto; min-width: 82px; max-width: 124px; padding: 10px 6px 8px !important; }
+.act .lbl { font-size: 15px !important; overflow-wrap: normal; word-break: keep-all; white-space: nowrap; }
+
+/* Move placement: the label riding the mouse says what the next click does. */
+.cursor-tag { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; padding: 4px 10px; border-radius: 4px; font: 600 14px var(--body, sans-serif); color: #0c0e12; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+.cursor-tag.t-dest { background: #33ff99; }
+.cursor-tag.t-aim { background: #5aa8ff; }
+.cursor-tag.t-bad { background: #ff5a4a; color: #fff; }
