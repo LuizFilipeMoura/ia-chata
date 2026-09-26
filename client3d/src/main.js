@@ -45,6 +45,9 @@ function teardown() {
   active = null;
   attract?.destroy(); attract = null;
   clear(hudRoot); clear(screen);
+  // A prompt left open by the old screen (an Answer gate, a reaction) must not
+  // follow you into the next one.
+  document.querySelectorAll(".modal-back").forEach((n) => n.remove());
   world.clearOverlay();
   world.fx.clear();
   screen.style.display = "";

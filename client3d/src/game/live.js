@@ -280,7 +280,9 @@ export class LiveMatch {
         const botIds = frames.flatMap((f) => f.log.map((l) => l.id));
         const firstBot = botIds.length ? Math.min(...botIds) : Infinity;
         const mineLog = humanFrame.log.filter((l) => l.id < firstBot);
-        const first = { ...humanFrame, log: mineLog, rigs: this.rigsBeforeBot(prevState, frames[0]) };
+        // Still the round the human acted in: the final state's round would
+        // announce "Round N+1" before the bot's own turn plays back.
+        const first = { ...humanFrame, round: prevState?.game?.round ?? frames[0].round, log: mineLog, rigs: this.rigsBeforeBot(prevState, frames[0]) };
         this.frames.push(first); this.director.play(first);
         // The bot's whole turn plays in one go: collect it for the digest.
         this.director.queue = this.director.queue.then(() => this.startDigest(first.rigs));
@@ -768,9 +770,55 @@ export class LiveMatch {
       this.world.ring(e.pos.x, e.pos.y, radiusOf(e) + 0.35, ok ? 0xff4433 : 0x555555, ok ? 0.9 : 0.4);
       if (ok) this.world.line(new THREE.Vector3(rig.pos.x, 1.5, rig.pos.y), new THREE.Vector3(e.pos.x, 1.5, e.pos.y), 0xff5544);
     }
-    if (!byTarget.size) toast(key === "lock" ? "No enemies to lock." : "No enemy in your front arc with line of sight/range. Move or pivot first.", "warn", 3500);
+    if (!byTarget.size) {
+      if (key === "lock") toast("No enemies to lock.", "warn", 3500);
+      else return this.explainNoTarget(rig, key);
+    }
     this.hud.tip("Click a highlighted enemy · Right-click to cancel");
     this.renderActions();
+  }
+
+  // Nothing to shoot: say exactly why, instead of a generic "move or pivot".
+  // A spent gun is the common case (the ranged weapon fires once, then needs a
+  // Reload), so offer the Reload right here.
+  explainNoTarget(rig, key) {
+    const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    const enemies = this.state.rigs.filter((e) => e.owner !== rig.owner && !e.destroyed && e.pos)
+      .map((e) => ({ e, geo: deriveAttackGeometry(this.state, rig, e) }))
+      .sort((a, b) => a.geo.distance - b.geo.distance);
+    const inBand = (d) => lr && d >= (lr.minRange ?? 0) && d <= (lr.maxRange ?? Infinity);
+    const gunWouldBear = enemies.some(({ geo }) => geo.inFrontArc && geo.los && inBand(geo.distance));
+    const spent = rig.loaded?.longRange === false;
+    if (spent && gunWouldBear && key !== "aimed" || spent && key === "fire" && enemies.some(({ geo }) => geo.inFrontArc)) {
+      this.cancelMode();
+      const canReload = this.allowed("act", "reload") && this.game.turn?.actionsUsed < this.game.turn?.actionsMax;
+      modal({
+        title: `${rig.weapons.longRange} is spent`,
+        body: el("p", {}, `Your ${rig.weapons.longRange} fired already and must Reload before it can shoot again. Reloading costs no action, just heat: roll a D6, 1–3 → +2 heat, 4–6 → +1.`,
+          enemies.some(({ geo }) => geo.inMeleeReach && geo.inFrontArc) ? "" : ` Your ${rig.weapons.melee} can't reach anyone from here either.`),
+        actions: [
+          { label: "Not now", ghost: true },
+          { label: "Reload, then aim", primary: true, disabled: !canReload, onClick: async () => {
+            if (await this.act(rig, { action: "reload" })) this.startTarget(this.rig(rig.id) || rig, key);
+          } },
+        ],
+      });
+      return;
+    }
+    const near = enemies[0];
+    let why = "No enemy to shoot at.";
+    if (near) {
+      const { e, geo } = near;
+      const d = geo.distance.toFixed(1);
+      if (!geo.inFrontArc) why = `${e.name} is outside ${rig.name}'s front arc: pivot to face it (a Move can turn up to 90°).`;
+      else if (spent && !geo.inMeleeReach) why = `${rig.weapons.longRange} is spent (Reload it) and ${e.name} is out of ${rig.weapons.melee} reach.`;
+      else if (!geo.los) why = `No line of sight to ${e.name}: a building blocks every line. Move to see past it.`;
+      else if (lr && geo.distance > (lr.maxRange ?? Infinity)) why = `${e.name} is ${d}" away, beyond the ${rig.weapons.longRange}'s ${lr.maxRange}" range. Close in.`;
+      else if (lr && geo.distance < (lr.minRange ?? 0)) why = `${e.name} is ${d}" away, inside the ${rig.weapons.longRange}'s ${lr.minRange}" minimum range. Back off or use the ${rig.weapons.melee}.`;
+      else if (key === "aimed" && spent) why = `${rig.weapons.longRange} is spent: Reload before an Aimed Shot.`;
+    }
+    this.cancelMode();
+    toast(why, "warn", 4500);
   }
 
   chooseAttack(rig, target, list) {
@@ -1131,25 +1179,38 @@ export class LiveMatch {
       const preps = ["brace", "evasive", "return", ...ANSWER_COUNTERS];
       const eligible = () => (pick.grit ? [...free, ...upgradable] : free);
       if (!eligible().some((r) => r.name === pick.rig)) pick.rig = eligible()[0]?.name;
+      let placeBtn = null;
+      const stepEl = el("h4", {}, "2. Choose its reaction");
       const tokenEl = el("div", { class: "rx-tokens" }), rigsEl = el("div", { class: "rx-rigs" }), cardsEl = el("div", { class: "rx-grid" }), leadEl = el("p", { class: "rx-lead" });
       const draw = () => {
         if (!eligible().some((r) => r.name === pick.rig)) pick.rig = eligible()[0]?.name;
         const rig = mine.find((r) => r.name === pick.rig);
         const upgrade = pick.grit && rig?.preparation != null;
-        fill(tokenEl, answers > 0 && free.length ? el("button", { class: `btn ${pick.grit ? "ghost" : "primary"}`, onClick: () => { pick.grit = false; draw(); } }, `Answer token ×${answers}`) : null,
-          useGrit ? el("button", { class: `btn ${pick.grit ? "primary" : "ghost"}`, onClick: () => { pick.grit = true; draw(); } }, icon("grit"), `Grit token ×${grit} (Improved)`) : null);
+        // One kind of token: a plain chip. Both: a two-way switch.
+        const hasAnswer = answers > 0 && free.length > 0;
+        const chip = (grt) => grt ? [icon("grit"), ` Grit ×${grit} · Improved`] : [`Answer ×${answers}`];
+        fill(tokenEl, hasAnswer && useGrit
+          ? el("div", { class: "rx-seg" },
+            el("button", { class: `seg ${pick.grit ? "" : "on"}`, onClick: () => { pick.grit = false; draw(); } }, chip(false)),
+            el("button", { class: `seg ${pick.grit ? "on" : ""}`, onClick: () => { pick.grit = true; draw(); } }, chip(true)))
+          : el("span", { class: `rx-chip ${pick.grit ? "grit" : ""}` }, chip(pick.grit)));
         fill(leadEl, pick.grit
-          ? "You're behind, so HQ sent Grit: place an Improved reaction face-down, upgrade one a rig already holds, or keep the tokens to reroll missed shots this round. The enemy won't know which."
-          : "A new round gives you a free reaction. Place it face-down on one rig: it springs the next time that rig is attacked. The enemy won't know which trick it is.");
+          ? "You're 2+ VP behind, so HQ sent Grit: an Improved reaction, placed face-down. Or keep it to reroll missed shots this round."
+          : "A free reaction for the new round, placed face-down: it springs the next time that rig is attacked. The enemy won't know which trick it is.");
         fill(rigsEl, eligible().map((r) => rigPortrait(r, { selected: r.name === pick.rig, onClick: () => { pick.rig = r.name; draw(); } })));
+        cardsEl.classList.toggle("single", upgrade);
+        fill(stepEl, upgrade ? "2. Upgrade its reaction" : "2. Choose its reaction");
         fill(cardsEl, upgrade
-          ? [el("p", { class: "muted" }, `${rig.name} already holds a face-down reaction. The Grit token upgrades it:`), reactionCard(rig.preparation.type, { selected: true, improved: true })]
+          ? el("div", { class: "rx-upg" },
+            el("p", { class: "rx-upg-note" }, `${rig.name} already holds this reaction face-down. Grit makes it Improved:`),
+            reactionCard(rig.preparation.type, { selected: true, improved: true }))
           : preps.map((p) => reactionCard(p, { selected: p === pick.prep, improved: pick.grit, onClick: () => { pick.prep = p; draw(); } })));
+        placeBtn && (placeBtn.textContent = upgrade ? "Upgrade reaction" : "Place reaction");
       };
       draw();
       const body = el("div", { class: "rx" }, tokenEl, leadEl,
         el("h4", {}, "1. Choose a rig"), rigsEl,
-        el("h4", {}, "2. Choose its reaction"), cardsEl);
+        stepEl, cardsEl);
       this.answerModal = modal({ title: useGrit ? "Answer · Grit" : "Answer token", cls: "wide", body, dismissable: false, actions: [
         useGrit ? { label: "Keep Grit for attacks", ghost: true, onClick: async () => { this.answerModal = null; await this.send("answer", { side: this.side, keep: true }); this.gateOpen = false; this.refresh(); } } : null,
         { label: "Place reaction", primary: true, onClick: async () => {
@@ -1159,6 +1220,8 @@ export class LiveMatch {
         this.answerModal = null;
         await this.send("answer", attrs); this.gateOpen = false; this.refresh();
       } }].filter(Boolean) });
+      placeBtn = [...this.answerModal.box.querySelectorAll("button")].find((b) => /reaction/i.test(b.textContent));
+      draw();
       return;
     }
     const pr = g.pendingReaction;

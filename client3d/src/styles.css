@@ -1081,3 +1081,16 @@ body { font-size: 18px; }
 /* Phones: the coach hugs its content above the action bar (a later desktop
    `top` rule used to pin both edges and stretch it over the whole table). */
 @media (max-width: 800px) { .coach { top: auto; } }
+
+/* Answer / Grit prompt: token chip or switch, single-card upgrade layout. */
+.rx-tokens { margin-bottom: 10px; }
+.rx-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 1px solid var(--brass); border-radius: 999px; font: 600 14px var(--label); letter-spacing: .08em; text-transform: uppercase; color: var(--brass-hi, #e0b95c); background: rgba(201,161,74,.1); }
+.rx-chip .si { width: 18px; height: 18px; }
+.rx-seg { display: inline-flex; border: 1px solid var(--brass); border-radius: 999px; overflow: hidden; }
+.rx-seg .seg { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 0; cursor: pointer; font: 600 14px var(--label); letter-spacing: .08em; text-transform: uppercase; color: #c9b894; }
+.rx-seg .seg.on { background: var(--brass); color: #20170a; }
+.rx-seg .seg .si { width: 18px; height: 18px; }
+.rx-lead { font-size: 18px !important; }
+.rx-grid.single { grid-template-columns: 1fr !important; }
+.rx-upg { display: flex; flex-direction: column; gap: 10px; max-width: 520px; }
+.rx-upg-note { margin: 0; color: #c9b894; font-size: 16px; }
