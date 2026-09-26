@@ -117,7 +117,7 @@ export class Director {
     for (const L of this.lifts) L.done?.();
     this.lifts.clear();
     this.dropDone?.();
-    for (const m of this.mechs.values()) { m.fire?.stop(); this.world.scene.remove(m.root); }
+    for (const m of this.mechs.values()) { m.wreckFire?.stop(); this.world.scene.remove(m.root); }
     this.mechs.clear();
     this.current = null;
     this.world.mechRoots = [];
@@ -148,7 +148,7 @@ export class Director {
   removeMech(id) {
     const m = this.mechs.get(id);
     if (!m) return;
-    m.fire?.stop();
+    m.wreckFire?.stop();
     this.world.scene.remove(m.root);
     this.mechs.delete(id);
     this.world.mechRoots = [...this.mechs.values()].map((x) => x.root);
@@ -501,7 +501,7 @@ export class Director {
         this.world.fx.heatHaze(m.stacks[Math.floor(Math.random() * m.stacks.length)].getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.3, 0)), m.heatFrac);
       }
       // Wrecks burn (drones just smoulder).
-      if (m.destroyed && m.kind !== "drone" && !m.fire && m.root.visible) m.fire = this.world.fx.wreckFire(() => m.root.position, m.weightClass === "medium" ? 1.2 : 1);
+      if (m.destroyed && m.kind !== "drone" && !m.wreckFire && m.root.visible) m.wreckFire = this.world.fx.wreckFire(() => m.root.position, m.weightClass === "medium" ? 1.2 : 1);
       if (m.destroyed && m.kind === "drone" && Math.random() < dt * 2) this.world.fx.smoke(m.root.position.clone().add(new THREE.Vector3(0, 0.8, 0)), 1, true);
     }
   }
