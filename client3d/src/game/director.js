@@ -5,7 +5,7 @@
 // queue, so a whole bot turn plays out move by move.
 import * as THREE from "three";
 import { Mech } from "../scene/mechs.js";
-import { CHASSIS, LOCS, EQUIPMENT } from "/shared/game-state.js";
+import { CHASSIS, LOCS, EQUIPMENT, WEAPONS } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 import { sfx } from "../audio.js";
@@ -429,6 +429,30 @@ export class Director {
     }
   }
 
+  // An area weapon's blast drawn at its true radius (inches = world units).
+  splashBlast(pos, splash) {
+    const fx = this.world.fx, R = splash.radius;
+    const fire = !!splash.heat && !splash.pen;
+    const col = fire ? 0xff5a1a : 0xffa040;
+    fx.shockwave(pos, R, col, 0.8);
+    if (!fire) fx.explosion(pos.clone().setY(1), R >= 2);
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * R;
+      fx.particle(pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0.3, Math.sin(a) * r)), fire
+        ? { color: Math.random() < 0.5 ? 0xff7a2a : 0xffc050, size: 0.9, life: 0.9, grow: 1.8, vel: new THREE.Vector3(0, 2 + Math.random() * 2, 0) }
+        : { color: 0x5a4a3a, size: 1.2, life: 1.6, grow: 2.5, additive: false, opacity: 0.55, vel: new THREE.Vector3(0, 1.2 + Math.random(), 0) });
+    }
+    // The footprint: a scorch disc and a bright rim at exactly R, fading out.
+    const rim = new THREE.Mesh(new THREE.RingGeometry(R - 0.12, R, 72), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+    rim.rotation.x = -Math.PI / 2; rim.position.set(pos.x, 0.08, pos.z);
+    fx.timed(rim, 2.6 / this.speed, (k, o) => { o.material.opacity = 0.9 * (1 - k * k); });
+    const scorch = new THREE.Mesh(new THREE.CircleGeometry(R, 64), new THREE.MeshBasicMaterial({ color: fire ? 0x3a1206 : 0x140e08, transparent: true, opacity: 0.55, depthWrite: false }));
+    scorch.rotation.x = -Math.PI / 2; scorch.position.set(pos.x, 0.05, pos.z);
+    fx.timed(scorch, 2.6 / this.speed, (k, o) => { o.material.opacity = 0.55 * (1 - k); });
+    fx.text(pos.clone().setY(4.8), `SPLASH ${R}"`, fire ? "#ff8a3a" : "#ffb35a");
+    fx.shake = Math.max(fx.shake, fire ? 0.15 : 0.35);
+  }
+
   async event(l, frame, prev) {
     const fx = this.world.fx;
     const actor = this.mechs.get(l.rigId);
@@ -512,6 +536,10 @@ export class Director {
         this.sound(() => sfx.stagger());
         target.body.rotation.z = 0.25; setTimeout(() => { target.body.rotation.z = -0.12; }, 120); setTimeout(() => { target.body.rotation.z = 0; }, 260);
       }
+      // Area weapons: the blast fills its real splash radius, shockwave out to
+      // the rim, and a scorch ring that lingers so you can read the area.
+      const splash = (WEAPONS.longRange[l.weapon] || WEAPONS.melee[l.weapon])?.splash;
+      if (splash) this.splashBlast(target.root.position.clone(), splash);
       const tr = frame.rigs.find((r) => r.id === target.id), trPrev = prev.rigs.find((r) => r.id === target.id);
       if (tr && trPrev && !tr.destroyed && loc) this.announceBreak(tr, trPrev, loc);
       const killed = frame.rigs.find((r) => r.id === target.id)?.destroyed && !target.destroyed;

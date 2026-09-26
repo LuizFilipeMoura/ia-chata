@@ -797,6 +797,9 @@ export class LiveMatch {
       const ok = byTarget.has(e.name);
       this.world.ring(e.pos.x, e.pos.y, radiusOf(e) + 0.35, ok ? 0xff4433 : 0x555555, ok ? 0.9 : 0.4);
       if (ok) this.world.line(new THREE.Vector3(rig.pos.x, 1.5, rig.pos.y), new THREE.Vector3(e.pos.x, 1.5, e.pos.y), 0xff5544);
+      // Area weapon: its splash footprint around every target it can reach.
+      const sp = ok ? this.splashOf(rig, byTarget.get(e.name)) : null;
+      if (sp) { this.world.disc(e.pos.x, e.pos.y, sp.radius, 0xff8a3a, 0.07); this.world.ring(e.pos.x, e.pos.y, sp.radius, 0xff8a3a, 0.45); }
     }
     if (!byTarget.size) {
       if (key === "lock") toast("No enemies to lock.", "warn", 3500);
@@ -873,7 +876,7 @@ export class LiveMatch {
     const w = (c) => c.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange;
     // Keep the sight rays on the board while the briefing is up.
     const sight = this.previewSight(rig, target);
-    this.previewSplash(rig, target, list[0]?.weapon);
+    this.previewSplash(rig, target, this.splashOf(rig, list)?.weapon);
     const m = modal({
       title: `Attack ${target.name}`, cls: "wide",
       body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit, coverWhy: sight?.why }),
@@ -939,9 +942,19 @@ export class LiveMatch {
       : `${cor.obstructed} of 3 sight lines cross the ${kinds.join(", ")}: ${cor.cover === 2 ? "heavy" : "light"} cover${cor.buildingRays ? ` (${cor.buildingRays} through a building${cor.los ? "" : ": no line of sight"})` : ""}`;
     return { ...cor, why };
   }
+  // The splash of the first area weapon among `cands` (attack candidates), or null.
+  splashOf(rig, cands = []) {
+    for (const c of cands) {
+      const slot = c.weapon === "melee" ? "melee" : "longRange";
+      const sp = c.weapon && effectiveWeaponProfile(slot, rig.weapons?.[slot], rig)?.splash;
+      if (sp) return { ...sp, weapon: c.weapon };
+    }
+    return null;
+  }
   // An area weapon's splash around `target`: the ring, every rig it would catch
   // (red enemy, amber friend). Adds to the preview meshes; returns a tip line.
   previewSplash(rig, target, weapon) {
+    if (!weapon) return null;
     const slot = weapon === "melee" ? "melee" : "longRange";
     const sp = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig)?.splash;
     if (!sp || !target.pos) return null;
@@ -1159,7 +1172,7 @@ export class LiveMatch {
         }
         const ed = c.weapon ? expectedDamage(this.mode.rig, r, c.weapon, { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round }) : 0;
         const sight = c.weapon === "longRange" ? this.previewSight(this.mode.rig, r) : (this.clearPreview(), null);
-        const splash = this.previewSplash(this.mode.rig, r, c.weapon);
+        const splash = this.previewSplash(this.mode.rig, r, this.splashOf(this.mode.rig, list)?.weapon);
         this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP${splash ? ` · ${splash}` : ""}${sight ? ` · ${sight.why}` : ""} · click to choose weapon`);
         this.director.mechs.get(this.mode.rig.id)?.aimAt(new THREE.Vector3(r.pos.x, 2, r.pos.y));
       }
