@@ -100,7 +100,7 @@ test("carried SP, commander multiplier and SP mods are baked into the rigs", () 
 test("side mods: speed, start heat, heat capacity, penetration, accuracy", () => {
   const room = mission({ mods: { a: { speed: 1, startHeat: 2, heatCap: 1, pen: { ranged: 1, melee: 2 }, acc: 1 }, b: {} } });
   const gold = findRig(room, "Gold");
-  assert.equal(gold.speed, 5);   // light Claw/Autocannon 4 + 1
+  assert.equal(gold.speed, 5.5);   // light Claw/Autocannon 4.5 + 1
   assert.equal(gold.engine.heat, 2);
   assert.equal(heatMeter(gold).cap, 7);    // light 6 + 1
   assert.equal(effectiveWeaponProfile("longRange", "Autocannon", gold).pen, 8);

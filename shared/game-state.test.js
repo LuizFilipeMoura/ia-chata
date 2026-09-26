@@ -458,7 +458,7 @@ test("ensureRigShape backfills speed from the chassis id on reload", () => {
   const room = createRoom("r");
   room.rigs.push(rig);
   __test.ensureRigShape(rig);
-  assert.equal(rig.speed, 5);
+  assert.equal(rig.speed, 4.5);
 });
 
 test("makeUnit sets speed from the kind for cold single-model units", () => {
@@ -2660,7 +2660,7 @@ test("makeRig resolves speed from the chassis id", () => {
   const rig = makeRig(1, "Shrike", "medium", "a", {
     longRange: "Crossbow", melee: "Talon", chassis: "medium-crossbow-talon",
   });
-  assert.equal(rig.speed, 5);
+  assert.equal(rig.speed, 4.5);
 });
 
 test("makeRig leaves speed null for a free combo with no chassis id", () => {
@@ -4202,34 +4202,35 @@ test("UNIT_WEAPONS holds the strawman flat catalogue", () => {
   }
 });
 
-test("every chassis carries a whole-inch speed", () => {
+test("every chassis carries a speed in half-inch steps", () => {
   for (const c of CHASSIS) {
     assert.equal(typeof c.speed, "number", `${c.id} has speed`);
-    assert.ok(Number.isInteger(c.speed), `${c.id} speed is a whole inch`);
+    assert.ok(Number.isInteger(c.speed * 2), `${c.id} speed is a half-inch step`);
   }
 });
 
-// Mediums +1", Lights -1" (2026-09): both classes now share the 4-5" band, so
-// the heavy frames can close the distance on a digital table. Weight shows in
-// SP and toughness, not in foot speed.
-test("speed bands: lights and mediums share the 4-5 inch band", () => {
-  for (const c of CHASSIS) assert.ok(c.speed >= 4 && c.speed <= 5, `${c.id} at ${c.speed}"`);
+// Mediums +½", Lights −½" (2026-09): the bands now touch at 4½", but a Medium
+// still never outruns a Light.
+test("speed bands reinforce the weight ladder (fastest medium <= slowest light)", () => {
+  const lights = CHASSIS.filter((c) => c.class === "light").map((c) => c.speed);
+  const mediums = CHASSIS.filter((c) => c.class === "medium").map((c) => c.speed);
+  assert.ok(Math.max(...mediums) <= Math.min(...lights), "a medium must never outrun a light");
 });
 
 test("chassis speeds match the tuned table", () => {
   const byId = Object.fromEntries(CHASSIS.map((c) => [c.id, c.speed]));
   assert.deepEqual(byId, {
-    "light-claw-autocannon": 4,
-    "light-missile-flamethrower": 4,
-    "light-saw-minigun": 5,
-    "light-wreckingball-double": 5,
-    "light-sword-arc": 4,
-    "light-harpoon-anchor": 4,
-    "light-rivet-pressureclaw": 5,
-    "medium-lance-mortar": 4,
-    "medium-shield-siege": 4,
-    "medium-sniper-chainsaw": 5,
-    "medium-crossbow-talon": 5,
+    "light-claw-autocannon": 4.5,
+    "light-missile-flamethrower": 4.5,
+    "light-saw-minigun": 5.5,
+    "light-wreckingball-double": 5.5,
+    "light-sword-arc": 4.5,
+    "light-harpoon-anchor": 4.5,
+    "light-rivet-pressureclaw": 5.5,
+    "medium-lance-mortar": 3.5,
+    "medium-shield-siege": 3.5,
+    "medium-sniper-chainsaw": 4.5,
+    "medium-crossbow-talon": 4.5,
   });
 });
 

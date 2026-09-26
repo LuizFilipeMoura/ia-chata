@@ -37,7 +37,7 @@ const LOC_CHOICES = [
 // House-rule tuning: whole-inch speeds so tabletop measuring stays clean.
 // Mediums bumped up a notch (were crawling) while keeping the light > medium
 // ladder.
-const SPEED: Record<string, number> = { light: 4, medium: 5 };
+const SPEED: Record<string, number> = { light: 4.5, medium: 4.5 };
 const MOVE_HOLD_MS = 5000;
 const SPRINT_HOLD_MS = 8000;
 const holdMsFor = (key: string) => (key === "sprint" ? SPRINT_HOLD_MS : MOVE_HOLD_MS);

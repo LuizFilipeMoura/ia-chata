@@ -122,17 +122,17 @@ export function normalizeUnitWeapon(name) {
 // named the moment it's added to this array). `label` stays the weapon-combo
 // string used as a secondary descriptor.
 export const CHASSIS = [
-  { id: "light-claw-autocannon",      name: "Gold",       label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 4, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-missile-flamethrower", name: "Blue",       label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 4, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
-  { id: "light-saw-minigun",          name: "Purple",     label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-wreckingball-double",  name: "Pumpkin",    label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 5, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
-  { id: "light-sword-arc",            name: "Zebra",      label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 4, sp: { hull: 11, arms: 9,  legs: 10, engine: 8 } },
-  { id: "light-harpoon-anchor",       name: "Turquoise",  label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
-  { id: "light-rivet-pressureclaw",   name: "Green",      label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 5, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
-  { id: "medium-lance-mortar",        name: "Copper",     label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 4, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
-  { id: "medium-shield-siege",        name: "Black",      label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 4, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
-  { id: "medium-sniper-chainsaw",     name: "Red",        label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
-  { id: "medium-crossbow-talon",      name: "Silver",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 5, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
+  { id: "light-claw-autocannon",      name: "Gold",       label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 4.5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-missile-flamethrower", name: "Blue",       label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 4.5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
+  { id: "light-saw-minigun",          name: "Purple",     label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 5.5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
+  { id: "light-wreckingball-double",  name: "Pumpkin",    label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 5.5, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
+  { id: "light-sword-arc",            name: "Zebra",      label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 4.5, sp: { hull: 11, arms: 9,  legs: 10, engine: 8 } },
+  { id: "light-harpoon-anchor",       name: "Turquoise",  label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 4.5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
+  { id: "light-rivet-pressureclaw",   name: "Green",      label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 5.5, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
+  { id: "medium-lance-mortar",        name: "Copper",     label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3.5, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
+  { id: "medium-shield-siege",        name: "Black",      label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3.5, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
+  { id: "medium-sniper-chainsaw",     name: "Red",        label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4.5, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
+  { id: "medium-crossbow-talon",      name: "Silver",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4.5, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
 ];
 
 // Each chassis's primary suggested equipment, mirrors content/chassis.json
@@ -2538,7 +2538,7 @@ export function moveBlockers(rigs, mover) {
 // null server-side speed, so this keeps the engine's reach identical to what the
 // player previews. When the client maps are unified into shared/ this constant
 // is the single source of truth.
-const SPEED_FALLBACK = { light: 4, medium: 5 };
+const SPEED_FALLBACK = { light: 4.5, medium: 4.5 };
 
 // Move reach in inches for a digital move validation. A plain Move covers the
 // chassis Speed (or the weight-class fallback); a Sprint multiplies it by

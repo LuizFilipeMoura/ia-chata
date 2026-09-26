@@ -41,7 +41,7 @@ test("Jump Jets hop to a clear spot within base Speed, over anything", () => {
   act(room, "Gold", { action: "jumpjets" });
   assert.match(lastRejectionReason(), /destination/i);
   act(room, "Gold", { action: "jumpjets", dest: { x: 15, y: 10 }, facing: 0 });
-  assert.match(lastRejectionReason(), /reach/i);          // 5" > Speed 4
+  assert.match(lastRejectionReason(), /reach/i);          // 5" > Speed 4.5
   act(room, "Gold", { action: "jumpjets", dest: { x: 14, y: 10 }, facing: 45 });
   assert.deepEqual(gold.pos, { x: 14, y: 10 });
   assert.equal(gold.facing, 45);
