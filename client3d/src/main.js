@@ -1,5 +1,6 @@
 // App shell: one persistent 3D World, screens swapped over it (title, squad
 // builder, live battle, tutorial, replay theatre, balance lab).
+import { THEMES } from "./scene/themes.js";
 import "./styles.css";
 import { installTooltips } from "./ui/tooltip.js";
 installTooltips();
@@ -214,6 +215,9 @@ function settingsPanel() {
       toggle("wires", "Wires from HQ (situational tips)"),
       el("button", { class: "btn ghost", onClick: () => { resetWires(); toast("All HQ wires will be sent again.", "good"); } }, "Replay all tips"),
       el("label", { class: "set-row" }, "Volume ", el("input", { type: "range", min: 0, max: 1, step: 0.05, value: settings.get("volume"), onInput: (e) => settings.set("volume", Number(e.target.value)) })),
+      el("label", { class: "set-row" }, "Battlefield ", el("select", { onChange: (e) => settings.set("theme", e.target.value) },
+        [["auto", "Auto (from the map)"], ...Object.values(THEMES).map((t) => [t.id, t.name])].map(([v, n]) => el("option", { value: v, selected: settings.get("theme") === v }, n))),
+        el("span", { class: "muted small" }, " next battle")),
       el("label", { class: "set-row" }, "Animation speed ", el("select", { onChange: (e) => { settings.set("speed", Number(e.target.value)); if (active?.director) active.director.speed = Number(e.target.value); } }, [1, 2, 4].map((v) => el("option", { value: v, selected: settings.get("speed") === v }, `${v}×`))))),
     actions: [{ label: "Done", primary: true }],
   });

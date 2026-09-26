@@ -6,27 +6,52 @@
 import * as THREE from "three";
 import { FX } from "./fx.js";
 import { settings } from "../settings.js";
+import { themeFor, dressRandom, layoutHash } from "./themes.js";
+import { buildingProp, barricadeProp, crateProp, rubbleProp, backdrop } from "./props.js";
 
 const DEG = Math.PI / 180;
 
-function groundTexture(w, h) {
+// The table's paint job, per theme (`gd` = theme.ground): base colour, blooms,
+// specks, rail spurs, riveted deck plates, hazard stripes, glowing cracks.
+function groundTexture(w, h, gd) {
   const c = document.createElement("canvas"); c.width = 1024; c.height = Math.round(1024 * h / w);
   const g = c.getContext("2d");
-  g.fillStyle = "#4a3c2b"; g.fillRect(0, 0, c.width, c.height);
-  // Rust blooms and soot smears.
+  g.fillStyle = gd.base; g.fillRect(0, 0, c.width, c.height);
+  if (gd.plates) {
+    // Riveted deck plates.
+    const px = c.width / w * 6;
+    for (let x = 0; x < c.width; x += px) for (let y = 0; y < c.height; y += px) {
+      g.fillStyle = `rgba(${Math.random() < 0.5 ? "255,230,190" : "0,0,0"},${0.03 + Math.random() * 0.05})`; g.fillRect(x + 2, y + 2, px - 4, px - 4);
+      g.fillStyle = "rgba(20,14,8,0.5)"; for (const [dx, dy] of [[6, 6], [px - 6, 6], [6, px - 6], [px - 6, px - 6]]) { g.beginPath(); g.arc(x + dx, y + dy, 2.2, 0, 7); g.fill(); }
+    }
+  }
+  // Blooms and smears.
   for (let i = 0; i < 60; i++) {
     const x = Math.random() * c.width, y = Math.random() * c.height, r = 20 + Math.random() * 70;
     const grd = g.createRadialGradient(x, y, 0, x, y, r);
-    grd.addColorStop(0, Math.random() < 0.5 ? "rgba(120,60,25,0.22)" : "rgba(10,8,6,0.25)"); grd.addColorStop(1, "rgba(0,0,0,0)");
+    grd.addColorStop(0, Math.random() < 0.5 ? gd.blooms[0] : gd.blooms[1]); grd.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
-  // A disused rail spur across the table.
-  g.strokeStyle = "rgba(60,50,40,.7)"; g.lineWidth = 5;
-  const ry = c.height * 0.82;
-  for (const off of [-9, 9]) { g.beginPath(); g.moveTo(0, ry + off); g.bezierCurveTo(c.width * 0.3, ry + off - 60, c.width * 0.6, ry + off + 40, c.width, ry + off - 30); g.stroke(); }
+  // Rail spurs across the table (a whole yard of them in the Rail Yard).
+  for (let k = 0; k < gd.rails; k++) {
+    const ry = c.height * (gd.rails === 1 ? 0.82 : 0.18 + (k / Math.max(1, gd.rails - 1)) * 0.64);
+    const bend = (k % 2 ? 1 : -1) * 40;
+    g.strokeStyle = "rgba(40,32,26,.55)"; g.lineWidth = 3;
+    for (let x = 0; x < c.width; x += 14) { g.beginPath(); g.moveTo(x, ry - 16 + bend * Math.sin(x / c.width * 3)); g.lineTo(x, ry + 16 + bend * Math.sin(x / c.width * 3)); g.stroke(); }
+    g.strokeStyle = "rgba(150,140,125,.6)"; g.lineWidth = 3;
+    for (const off of [-9, 9]) { g.beginPath(); for (let x = 0; x <= c.width; x += 16) { const y = ry + off + bend * Math.sin(x / c.width * 3); x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+  }
+  if (gd.stripes) {
+    // Hazard-striped service lanes.
+    for (const yy of [0.33, 0.67]) {
+      const y0 = c.height * yy;
+      for (let x = 0; x < c.width; x += 28) { g.fillStyle = (x / 28) % 2 ? "rgba(216,162,28,0.35)" : "rgba(10,10,10,0.35)"; g.beginPath(); g.moveTo(x, y0); g.lineTo(x + 28, y0); g.lineTo(x + 14, y0 + 12); g.lineTo(x - 14, y0 + 12); g.fill(); }
+    }
+  }
   for (let i = 0; i < 9000; i++) {
-    const v = 70 + Math.random() * 40;
-    g.fillStyle = `rgba(${v + 20},${v + 8},${v - 10},${Math.random() * 0.25})`;
+    const v = Math.random() * 40;
+    const [sr, sg, sb] = gd.speck;
+    g.fillStyle = `rgba(${sr + v},${sg + v},${sb + v},${Math.random() * 0.25})`;
     const r = Math.random() * 6;
     g.beginPath(); g.arc(Math.random() * c.width, Math.random() * c.height, r, 0, 7); g.fill();
   }
@@ -35,6 +60,17 @@ function groundTexture(w, h) {
     g.beginPath(); let x = Math.random() * c.width, y = Math.random() * c.height; g.moveTo(x, y);
     for (let k = 0; k < 8; k++) { x += (Math.random() - 0.5) * 60; y += (Math.random() - 0.5) * 60; g.lineTo(x, y); }
     g.stroke();
+  }
+  if (gd.cracks) {
+    // Glowing seams in the ash: the ground is still hot underneath.
+    g.strokeStyle = gd.cracks; g.shadowColor = gd.cracks; g.shadowBlur = 8;
+    for (let i = 0; i < 26; i++) {
+      g.lineWidth = 1 + Math.random() * 2;
+      g.beginPath(); let x = Math.random() * c.width, y = Math.random() * c.height; g.moveTo(x, y);
+      for (let k = 0; k < 6; k++) { x += (Math.random() - 0.5) * 70; y += (Math.random() - 0.5) * 70; g.lineTo(x, y); }
+      g.stroke();
+    }
+    g.shadowBlur = 0;
   }
   // 6" grid, faint, it's a tabletop, after all.
   g.strokeStyle = "rgba(255,240,200,0.07)"; g.lineWidth = 1;
@@ -45,12 +81,12 @@ function groundTexture(w, h) {
   return t;
 }
 
-function windowTexture() {
+function windowTexture(lit = "#ffcf6b") {
   const c = document.createElement("canvas"); c.width = c.height = 128;
   const g = c.getContext("2d");
   g.fillStyle = "#6d6a63"; g.fillRect(0, 0, 128, 128);
   for (let y = 10; y < 128; y += 30) for (let x = 8; x < 128; x += 24) {
-    g.fillStyle = Math.random() < 0.25 ? "#ffcf6b" : "#1d2026"; g.fillRect(x, y, 12, 16);
+    g.fillStyle = Math.random() < 0.25 ? lit : "#1d2026"; g.fillRect(x, y, 12, 16);
   }
   g.fillStyle = "rgba(0,0,0,0.25)"; for (let i = 0; i < 30; i++) g.fillRect(Math.random() * 128, Math.random() * 128, 20, 3);
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
@@ -74,14 +110,20 @@ function oilTexture() {
   return t;
 }
 
-// A big inverted sphere painted with a smoggy dusk gradient.
-function skyDome() {
+// The sky's gradient texture: zenith, upper, glow, horizon, haze, ground.
+function skyTexture(stops) {
   const c = document.createElement("canvas"); c.width = 16; c.height = 256;
   const g = c.getContext("2d");
   const grd = g.createLinearGradient(0, 0, 0, 256);
-  grd.addColorStop(0, "#0c0a08"); grd.addColorStop(0.45, "#2b1c10"); grd.addColorStop(0.62, "#6e4220"); grd.addColorStop(0.7, "#a8662a"); grd.addColorStop(0.78, "#3a2614"); grd.addColorStop(1, "#140e09");
+  [0, 0.45, 0.62, 0.7, 0.78, 1].forEach((at, i) => grd.addColorStop(at, stops[i]));
   g.fillStyle = grd; g.fillRect(0, 0, 16, 256);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// A big inverted sphere painted with a smoggy dusk gradient.
+function skyDome() {
+  const tex = skyTexture(["#0c0a08", "#2b1c10", "#6e4220", "#a8662a", "#3a2614", "#140e09"]);
   const m = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false }));
   m.position.set(27, -40, 18);
   return m;
@@ -103,13 +145,13 @@ export class World {
     // and warm sepia fog that swallows the distance.
     this.scene.background = new THREE.Color(0x1a130c);
     this.scene.fog = new THREE.Fog(0x2a1d10, 70, 160);
-    this.scene.add(skyDome());
+    this.sky = skyDome(); this.scene.add(this.sky);
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
     this.fx = new FX(this.scene, this.camera);
 
     // High contrast: a weak fill keeps the shade dark, a hard bright key makes
     // the lit faces pop. Raise the fill and the whole table goes muddy again.
-    const hemi = new THREE.HemisphereLight(0xd8b88a, 0x140d06, 0.5); this.scene.add(hemi);
+    const hemi = new THREE.HemisphereLight(0xd8b88a, 0x140d06, 0.5); this.scene.add(hemi); this.hemi = hemi;
     this.sun = new THREE.DirectionalLight(0xffe0b0, 8);
     this.sun.position.set(-30, 60, -20); this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -287,14 +329,36 @@ export class World {
   }
 
   // ---- Battlefield ----
+  // Sky, fog, light colours and searchlights for a theme (themes.js).
+  applyTheme(theme, w, h) {
+    this.theme = theme;
+    this.scene.background = new THREE.Color(theme.bg);
+    this.scene.fog.color.setHex(theme.fog.color); this.scene.fog.near = theme.fog.near; this.scene.fog.far = theme.fog.far;
+    this.hemi.color.setHex(theme.hemi.sky); this.hemi.groundColor.setHex(theme.hemi.ground); this.hemi.intensity = theme.hemi.i;
+    this.sun.color.setHex(theme.sun.color); this.sun.intensity = theme.sun.i;
+    this.sky.material.map?.dispose(); this.sky.material.map = skyTexture(theme.sky); this.sky.material.needsUpdate = true;
+    this.sky.position.set(w / 2, -40, h / 2);
+  }
+
   buildField(field, objectives = []) {
     this.tableGroup.clear();
     this.missionGroup = null; this.missionAnim = null; this.pickups = []; this.lastMult = 1;
     this.chimneys = [];
+    this.animators = [];
     this.field = field;
     const { width: w, height: h } = field;
+    const theme = themeFor(field, settings.get("theme"));
+    this.applyTheme(theme, w, h);
+    // Dressing context: props register idle animators through it.
+    const rand = dressRandom(layoutHash(field));
+    const ctx = {
+      theme, fx: this.fx, rand,
+      win: windowTexture(`#${new THREE.Color(theme.lamp).getHexString()}`),
+      anim: (fn) => this.animators.push(fn),
+      chimney: (obj, opts = {}) => this.chimneys.push(Object.assign(obj, { big: !!opts.big })),
+    };
     // Surrounding ground + table edge.
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 1 }));
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: theme.outer, roughness: 1 }));
     outer.rotation.x = -Math.PI / 2; outer.position.set(w / 2, -0.8, h / 2); outer.receiveShadow = true; this.tableGroup.add(outer);
     const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 0.8, h + 2), new THREE.MeshStandardMaterial({ color: 0x2e2116, roughness: 0.7 }));
     rim.position.set(w / 2, -0.41, h / 2); rim.receiveShadow = true; this.tableGroup.add(rim);
@@ -316,13 +380,16 @@ export class World {
       m.position.set(((i * 53) % 100) / 100 * w, 0.015, ((i * 71) % 100) / 100 * h); this.tableGroup.add(m);
     }
     this.buildSearchlights(w, h);
-    const table = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: groundTexture(w, h), roughness: 0.95 }));
+    const table = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: groundTexture(w, h, theme.ground), roughness: 0.95 }));
     table.rotation.x = -Math.PI / 2; table.position.set(w / 2, 0, h / 2); table.receiveShadow = true; this.tableGroup.add(table);
     this.cam.target.set(w / 2, 0, h / 2);
     this.sun.target.position.set(w / 2, 0, h / 2);
 
-    const win = windowTexture();
-    for (const t of field.terrain || []) this.tableGroup.add(this.terrainMesh(t, win));
+    for (const t of field.terrain || []) this.tableGroup.add(this.terrainMesh(t, ctx));
+    // Set-pieces beyond the table edge.
+    // Beyond the camera's reach (it zooms out to 110"), so nothing ever blocks the table.
+    const centre = new THREE.Vector3(w / 2, 0, h / 2), R = Math.max(125, Math.hypot(w, h) / 2 + 90);
+    theme.backdrop.forEach((kind, i) => this.tableGroup.add(backdrop(kind, i, centre, R, ctx)));
 
     // Deployment zones, tinted quarter-discs in each deployment corner.
     if (field.deployCorners) {
@@ -334,47 +401,13 @@ export class World {
     this.buildObjectives(objectives);
   }
 
-  terrainMesh(t, winTex) {
+  terrainMesh(t, ctx) {
     const g = new THREE.Group();
     const rot = -(t.rot || 0) * DEG;
     const shadow = (m) => { m.castShadow = m.receiveShadow = true; return m; };
     if (t.shape === "rect") {
-      if (t.kind === "building") {
-        const hgt = 4 + ((t.w * 7 + t.h * 3) % 3);
-        const walls = [];
-        const tex = winTex.clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, t.w / 3), Math.max(1, hgt / 3));
-        const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 });
-        const b = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, hgt, t.h), m)); b.position.y = hgt / 2; g.add(b); walls.push(b);
-        const roof = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w + 0.3, 0.3, t.h + 0.3), new THREE.MeshStandardMaterial({ color: 0x3a3a3f })));
-        roof.position.y = hgt + 0.15; g.add(roof);
-        const tank = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0x7a5a3a, metalness: 0.5 })));
-        tank.position.set(t.w * 0.25, hgt + 0.9, 0); g.add(tank);
-        // A factory smokestack with a soot band, it belches smoke (see frame()).
-        const stackH = 3 + (t.w % 2);
-        const stack = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, stackH, 10), new THREE.MeshStandardMaterial({ color: 0x6b3a26, roughness: 0.9 })));
-        stack.position.set(-t.w * 0.28, hgt + stackH / 2, -t.h * 0.2); g.add(stack);
-        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0x1a1512 }));
-        band.position.set(stack.position.x, hgt + stackH - 0.2, stack.position.z); g.add(band);
-        const mouth = new THREE.Object3D(); mouth.position.set(stack.position.x, hgt + stackH + 0.2, stack.position.z); g.add(mouth);
-        (this.chimneys ||= []).push(mouth);
-      } else if (t.kind === "barricade") {
-        const wall = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, 1.1, t.h), new THREE.MeshStandardMaterial({ color: 0x8b8578, roughness: 0.9 })));
-        wall.position.y = 0.55; g.add(wall);
-        for (let x = -t.w / 2 + 0.5; x < t.w / 2; x += 1.2) {
-          const post = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.5, 0.15), new THREE.MeshStandardMaterial({ color: 0x4d3b28 })));
-          post.position.set(x, 0.75, t.h / 2 + 0.1); g.add(post);
-        }
-      } else if (t.kind === "crate") {
-        const c = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, Math.min(t.w, t.h) * 0.8, t.h), new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.8 })));
-        c.position.y = Math.min(t.w, t.h) * 0.4; g.add(c);
-        const band = new THREE.Mesh(new THREE.BoxGeometry(t.w + 0.02, 0.12, t.h + 0.02), new THREE.MeshStandardMaterial({ color: 0x3a3a3a, metalness: 0.6 }));
-        band.position.y = Math.min(t.w, t.h) * 0.4; g.add(band);
-      } else {
-        // rock (squared off in digital)
-        const geo = new THREE.DodecahedronGeometry(1, 0); geo.scale(t.w / 2, Math.min(t.w, t.h) * 0.45, t.h / 2);
-        const r = shadow(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x6f6a62, roughness: 1, flatShading: true })));
-        r.position.y = Math.min(t.w, t.h) * 0.3; g.add(r);
-      }
+      const prop = t.kind === "building" ? buildingProp(t, ctx) : t.kind === "barricade" ? barricadeProp(t, ctx) : t.kind === "crate" ? crateProp(t, ctx) : rubbleProp(t, ctx);
+      g.add(prop);
       g.position.set(t.x, 0, t.y); g.rotation.y = rot;
     } else if (t.shape === "ellipse") {
       const m = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshStandardMaterial({ color: 0x3a3226, roughness: 1 }));
@@ -542,7 +575,7 @@ export class World {
     for (const s of this.searchlights || []) { this.scene.remove(s); this.scene.remove(s.target); }
     this.searchlights = [];
     for (const [x, z] of [[-4, -4], [w + 4, h + 4]]) {
-      const sl = new THREE.SpotLight(0xfff0c8, 60, 90, 0.16, 0.5, 1.2);
+      const sl = new THREE.SpotLight(this.theme?.search ?? 0xfff0c8, 60, 90, 0.16, 0.5, 1.2);
       sl.position.set(x, 26, z);
       this.scene.add(sl); this.scene.add(sl.target);
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 26, 8), new THREE.MeshStandardMaterial({ color: 0x2a241c, metalness: 0.7 }));
@@ -587,6 +620,19 @@ export class World {
   }
 
   // ---- Overlays ----
+  // The air itself: soot flakes, rising embers, low steam or drifting dust over
+  // the table, per theme.
+  ambient(dt) {
+    const f = this.field, kind = this.theme?.ambient;
+    if (!f || !kind || Math.random() > dt * 7) return;
+    const V3 = THREE.Vector3;
+    const x = Math.random() * f.width, z = Math.random() * f.height;
+    if (kind === "soot") this.fx.particle(new V3(x, 9 + Math.random() * 4, z), { color: 0x2a2420, size: 0.18, life: 6, additive: false, opacity: 0.8, vel: new V3(0.6, -1.4, 0.2) });
+    else if (kind === "embers") this.fx.particle(new V3(x, 0.3, z), { color: Math.random() < 0.5 ? 0xff7a2a : 0xffb050, size: 0.16, life: 3.5, vel: new V3((Math.random() - 0.5) * 0.6, 1.4 + Math.random(), (Math.random() - 0.5) * 0.6) });
+    else if (kind === "steam") this.fx.particle(new V3(x, 0.4, z), { color: 0xdedad2, size: 1.6, life: 4, grow: 2.5, additive: false, opacity: 0.12, vel: new V3(0.5, 0.25, 0.1) });
+    else if (kind === "dust") this.fx.particle(new V3(x, 1 + Math.random() * 5, z), { color: 0xd8c29a, size: 0.14, life: 5, opacity: 0.7, vel: new V3(1.6, 0.1, 0.4) });
+  }
+
   clearOverlay() { this.overlay.clear(); }
   ring(x, y, r, color = 0x5fd3c0, opacity = 0.5) {
     const m = new THREE.Mesh(new THREE.RingGeometry(r - 0.08, r + 0.08, 96), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }));
@@ -673,11 +719,14 @@ export class World {
     });
     // Chimney smoke and sweeping searchlights.
     for (const c of this.chimneys || []) {
-      if (Math.random() < dt * 5) {
+      if (Math.random() < dt * (c.big ? 3 : 5)) {
         const p = c.getWorldPosition(new THREE.Vector3());
-        this.fx.particle(p, { color: 0x3a3028, size: 1.2, life: 4, grow: 4, additive: false, opacity: 0.45, vel: new THREE.Vector3(0.6 + Math.random() * 0.4, 1.4 + Math.random(), 0.2) });
+        const k = c.big ? 3 : 1;
+        this.fx.particle(p, { color: 0x3a3028, size: 1.2 * k, life: 4 * (c.big ? 1.6 : 1), grow: 4, additive: false, opacity: 0.45, vel: new THREE.Vector3((0.6 + Math.random() * 0.4) * k, (1.4 + Math.random()) * k * 0.8, 0.2) });
       }
     }
+    for (const a of this.animators || []) a(dt, now);
+    this.ambient(dt);
     const t = this.clock.elapsedTime;
     (this.searchlights || []).forEach((sl, i) => {
       const a = t * 0.25 + i * 2.3;
