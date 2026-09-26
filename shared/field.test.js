@@ -239,3 +239,24 @@ test("a medium base can reach every open spot of a digital scatter", async () =>
     }
   }
 });
+
+// Spawn room: on a digital table no debris sits within SPAWN_CLEAR × the
+// deploy radius of either deployment corner, so a squad drops in with space
+// to spread out.
+test("digital scatter keeps a wide debris-free zone around both spawns", async () => {
+  const { terrainPolygons } = await import("./geometry.js");
+  const { SPAWN_CLEAR } = await import("./field.js");
+  assert.ok(SPAWN_CLEAR >= 1.6, "well past the deploy radius itself");
+  for (const dims of [{ width: 42, height: 28 }, { width: 54, height: 36 }]) {
+    for (let seed = 1; seed <= 30; seed++) {
+      const field = { ...dims, diagonal: "tlbr", terrain: [] };
+      field.terrain = scatterTerrain(field, seeded(seed), { digital: true });
+      const clear = deployRadius(field) * SPAWN_CLEAR;
+      for (const poly of terrainPolygons(field)) {
+        for (const c of deploymentCorners(field)) {
+          for (const [x, y] of poly.points) assert.ok(Math.hypot(x - c.x, y - c.y) >= clear - 1e-6, `seed ${seed}: debris ${Math.hypot(x - c.x, y - c.y).toFixed(1)}" from a spawn corner`);
+        }
+      }
+    }
+  }
+});

@@ -151,6 +151,7 @@ export const DIGITAL_TERRAIN_KINDS = new Set(["building", "barricade", "rock", "
 // or just draw the better table?" unanswerable.
 // Narrowest lane a digital scatter may leave: the biggest base (a medium's
 // 75mm) plus a little slack, so the pathfinder's grid never pinches it shut.
+export const SPAWN_CLEAR = 1.7;
 export const TERRAIN_PASSAGE = 2 * Math.max(...Object.values(BASE_RADIUS)) + 0.75;
 
 function pieceOutline(piece) {
@@ -207,7 +208,10 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
   // into the outer third of it, measured: the 4v4 seed roster's last rig found no
   // legal spot on 0.6% of seeds. Physical rooms get this too; terrain in your own
   // corner is wrong on a real table as well.
-  const cornerClear = deployRadius(field);
+  // Digital tables keep a much wider debris-free apron around each spawn
+  // (SPAWN_CLEAR × the deploy radius): room to drop in and spread out.
+  // Density pays for it, by design.
+  const cornerClear = deployRadius(field) * (opts.digital ? SPAWN_CLEAR : 1);
   const minGap = 0.03 * hd;
   const margin = Math.min(field.width, field.height) * 0.05;
   const areaMul = Math.sqrt((field.width * field.height) / (REF.width * REF.height));
@@ -237,6 +241,7 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
       };
       if (objectives.some((o) => distp(o, p) < objClear + piece.fp)) continue;
       if (dcorners.some((c) => distp(c, p) < cornerClear + piece.fp)) continue;
+      if (opts.digital && dcorners.some((c) => pieceOutline({ ...piece, ...p }).some(([x, y]) => Math.hypot(x - c.x, y - c.y) < cornerClear))) continue;
       if (placed.some((q) => distp(q, p) < minGap + piece.fp + q.fp)) continue;
       // Stay one footprint clear of the diagonal, or the piece would overlap its
       // own mirror image across it.
