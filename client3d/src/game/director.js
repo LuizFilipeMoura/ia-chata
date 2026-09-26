@@ -60,6 +60,9 @@ export function equipmentActiveOf(l) {
 // Grapnel reel drags the victim; yank hops the grappler.
 const isReel = (l) => l.mode === "reel" || (l.mode == null && (l.victims?.length > 0 || /Reel/i.test((l.effects || []).join(" "))));
 
+// How often a squadmate answers a bark, by what was said.
+const REPLY_CHANCE = { kill: 0.5, die: 0.7, eject: 0.7, critical: 0.5, hurt: 0.3, miss: 0.25, hit: 0.15, heat: 0.2, move: 0.1 };
+
 export class Director {
   // Hooks (all optional): onLog(entry, round), onBanner(text, kind),
   // onCamera(point, { punch, owner }) to follow the action, onDice(entry) → a
@@ -203,6 +206,14 @@ export class Director {
     if (!b) return;
     this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, b.warlord ? "#f0cf7a" : m.owner === "a" ? "#5fd3c0" : "#e0533d", b.pilot);
     sfx.bark();
+    // A squadmate answers on the radio now and then (never a reply to a reply,
+    // and not the campaign's faction extras).
+    if (!event.startsWith("re") && !(this.campaign && m.owner === "b") && Math.random() < REPLY_CHANCE[event] ) {
+      const mates = [...this.mechs.values()].filter((o) => o !== m && o.owner === m.owner && !o.destroyed);
+      const mate = mates[Math.floor(Math.random() * mates.length)];
+      const re = { kill: "re_kill", hurt: "re_hurt", critical: "re_hurt", die: "re_eject", eject: "re_eject", miss: "re_miss" }[event] || "re";
+      if (mate) setTimeout(() => this.bark(mate, re, { other, part }), (1100 + Math.random() * 500) / this.speed);
+    }
   }
 
   // Opening drop: every mech falls from the sky on thrusters and slams down.

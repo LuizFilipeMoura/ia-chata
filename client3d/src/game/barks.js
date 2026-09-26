@@ -4,6 +4,9 @@
 // it ("the torch", "the long gun", "the heavy"), like a tank crew in a war.
 // Pure flavour; the rules never read these.
 //
+// Replies: after a pilot talks, a squadmate may answer (re_kill / re_hurt /
+// re_eject / re_miss, else re). Silence ("…") is a line too.
+//
 // Tokens: {it} / {It} = crew slang for the other machine (sentence-case with
 // {It}); {part} = the part that got hit. A line with a token is only used when
 // the moment has one.
@@ -21,18 +24,28 @@ const PILOTS = {
       heat: ["Is it supposed to smell like that?", "Pilot light's on. It's always on.", "Hot. Hot. Hot.", "Toasty in here. Toastier.", "Old girl's sweating kerosene.", "I've got hair left, right?"],
       eject: ["Ejecting! Somebody call the adjuster!", "I'm out. Tell them it was the wiring."],
       move: ["Burn for mama.", "Moving. Mind the fuel line.", "Keep the rack pointed away from me, darling.", "Off we pop."],
+      re: ["Can we keep it down? Some of us are on fire.", "Mm-hm.", "*static*"],
+      re_kill: ["Show-off.", "Ooh, can I set it on fire anyway?", "Nice! Is that covered by anyone?"],
+      re_hurt: ["That's going to leave a mark.", "You all right in there?", "Want me to burn whoever did that?"],
+      re_eject: ["Grab their insurance papers!", "Somebody tell me that's covered!"],
+      re_miss: ["Wind, right? It's always the wind.", "I'd have set it on fire."],
     },
   },
   "Harpoon": {
     name: "Jonah", lines: {
       hit: ["Aye.", "Hooked.", "Got its {part}.", "{It} hauls like a drowned cow.", "Line's taut.", "Hook's set.", "Reel it.", "{It} felt that one.", "Harpoon's home."],
-      miss: ["Sea's in a mood.", "Slipped the line.", "Seen worse.", "Hm.", "Line's slack.", "Current took it.", "Patience. Fish don't hurry."],
+      miss: ["Sea's in a mood.", "Slipped the line.", "Seen worse.", "Hm.", "Line's slack.", "Current took it.", "Patience. Fish don't hurry.", "…"],
       kill: ["Another fish.", "{It}'s done swimming.", "Aye. That'll do.", "Landed.", "{It} won't float.", "Bring the gaff.", "Quiet now."],
       hurt: ["She's leaking. Like my old ship.", "Taking water.", "Easy, girl…", "Hull's weeping.", "{It} bites.", "Hold together, girl."],
       critical: ["She's going under. Not yet, girl.", "Water to the gunwales. Hold."],
       heat: ["Boiler's bubbling.", "Warm below decks.", "Boiler's singing sea shanties.", "Needs a cold wave over the bow."],
       eject: ["Abandoning ship. Again.", "Just drop me in the harbour.", "Swim for it, Jonah."],
       move: ["Easy, girl.", "Casting off.", "Steady as she goes.", "Heading in.", "Mind the anchor chain."],
+      re: ["Aye.", "…", "Mm. Seen it before."],
+      re_kill: ["Good catch.", "Aye. Nice work.", "That'll feed the village."],
+      re_hurt: ["Bail, lad. Keep bailing.", "Hold together.", "She'll float. Probably."],
+      re_eject: ["Man overboard.", "…Rest easy."],
+      re_miss: ["Sea's in a mood today.", "Next cast."],
     },
   },
   "Arc Gun": {
@@ -45,6 +58,11 @@ const PILOTS = {
       heat: ["Coils are glowing. That's new.", "She's humming. Not the good hum.", "Smell that? Ozone.", "Insulation's melting. Again.", "Twenty years on the lines and never this hot."],
       eject: ["Grounding myself. Permanently.", "I'm out. Unplug her."],
       move: ["Come on, girl.", "Mind the cable.", "Keep the grip dry, keep the grip dry…", "Moving. Don't touch anything metal."],
+      re: ["Copy.", "Channel's noisy. Somebody's shorting.", "*click*"],
+      re_kill: ["Lights out. Nice.", "Pulled its plug for it. Good."],
+      re_hurt: ["You're sparking. Want me to look at that? No? Fine.", "Keep your hands off the metal."],
+      re_eject: ["Another one off the grid.", "Grounded. Poor sod."],
+      re_miss: ["Recalibrate. Or pray.", "Arc would've found it."],
     },
   },
   "Autocannon": {
@@ -57,18 +75,28 @@ const PILOTS = {
       heat: ["The manual says red is 'aspirational'.", "Requesting permission to panic.", "Is the temperature gauge supposed to spin?", "I don't remember this in training."],
       eject: ["Filing an incident report from the ditch!", "Ejecting. Per procedure. I think."],
       move: ["Advancing, per protocol.", "Moving up.", "Proceeding. Cautiously.", "Advancing on schedule. Roughly."],
+      re: ["Noted!", "Should I be writing this down?", "Copy. I think."],
+      re_kill: ["Excellent work! Very… lethal!", "I'll mention you in my report!"],
+      re_hurt: ["Is that covered?", "Oh dear. Oh dear oh dear."],
+      re_eject: ["We've lost an asset! Who fills in the form?", "Oh no. Paperwork."],
+      re_miss: ["That's… fine. Totally fine.", "I didn't see that. Officially."],
     },
   },
   "Mini Gun": {
     name: "Marguerite", lines: {
       hit: ["Brrrt.", "How frightfully common, bleeding oil.", "{It}'s {part}. Ghastly.", "Do keep up.", "Rat-a-tat, darling.", "Perforated.", "{It} looks like lace now.", "How vulgar of it to stand there."],
-      miss: ["I'll have that sent back.", "The barrels are family silver. Melted down.", "Tedious.", "The barrels disagree with me.", "Hm.", "One doesn't aim. One sprays."],
+      miss: ["I'll have that sent back.", "The barrels are family silver. Melted down.", "Tedious.", "The barrels disagree with me.", "Hm.", "One doesn't aim. One sprays.", "*sigh*"],
       kill: ["{It} is bolted together with nails. Was.", "Scrap. Send the bill to its mother.", "Dismissed.", "Tidied.", "{It} has been excused from the evening.", "Pity."],
       hurt: ["Do you know who my grandfather was?!", "My paintwork!", "Unforgivable.", "How dare you.", "This chassis is older than your company!"],
       critical: ["Grandfather would weep.", "I refuse to die in this paint."],
       heat: ["It's positively tropical in here.", "Someone open a window.", "Barrels are glowing. How gauche.", "Fetch me ice. And gin."],
       eject: ["The family will sell the name.", "I'm leaving. This is beneath me."],
       move: ["Make way.", "Onward, I suppose.", "Don't dawdle.", "Let's not linger."],
+      re: ["Must you?", "Fascinating. Truly.", "…"],
+      re_kill: ["Adequate.", "Well. Someone's trying."],
+      re_hurt: ["Do try not to bleed on the gravel.", "Dreadful. Carry on."],
+      re_eject: ["How undignified.", "One fewer at dinner."],
+      re_miss: ["Oh, bravo.", "Charming aim."],
     },
   },
   "Double MG": {
@@ -81,6 +109,11 @@ const PILOTS = {
       heat: ["Ball's a full ton. Engine's feeling it.", "Needs a tea break.", "Engine's steaming like my kettle.", "Somebody check the pressure. Not me."],
       eject: ["Clocking out early!", "I want that in writing!", "I'm off! Somebody finish the job!"],
       move: ["Rolling in.", "Wide load coming through.", "Mind your backs!", "Heavy load, clear the lane!"],
+      re: ["Oi, tea break soon?", "Righto.", "Heard."],
+      re_kill: ["Nice one, that's a bonus!", "Down it goes! Lovely!"],
+      re_hurt: ["Walk it off!", "Put it on the injury board!"],
+      re_eject: ["Somebody clock them out!", "Man down! Finish the job!"],
+      re_miss: ["Swing and a miss!", "Ball would've got it."],
     },
   },
   "Rivet Gun": {
@@ -88,11 +121,16 @@ const PILOTS = {
       hit: ["Pinned.", "Now THAT's a proper joint.", "{It}'s {part} was held on with tape. Was.", "Riveted.", "Click-bang.", "Fastened.", "Nailed its {part} shut.", "See? Precision.", "{It}'s tolerances are awful. Were."],
       miss: ["Jammed. Always jams.", "Tolerances. Nobody respects tolerances.", "…grinding again.", "Misfeed.", "Why do I bother?", "Rivet in the dirt. Waste.", "Hopper's sticking. Knew it would."],
       kill: ["Who welded {it}? A goose?", "Unbolted.", "{It} needed a mechanic. Or a priest.", "Scrapped.", "{It}'s parts now. Decent parts, some of them.", "Should've maintained it."],
-      hurt: ["Don't you DARE seize on me.", "That's not in the blueprint!", "I can hear her grinding.", "Mind the pistons!", "That's a whole weekend of repairs.", "Ow. Also, rude."],
+      hurt: ["Don't you DARE seize on me.", "That's not in the blueprint!", "I can hear her grinding.", "Mind the pistons!", "That's a whole weekend of repairs.", "Ow. Also, rude.", "*grinding noise*"],
       critical: ["Every rivet's screaming.", "Frame's buckling. I built her better than this."],
       heat: ["Pressure's at one-forty.", "She's grinding. I can HEAR her grinding.", "Gauges are lying. They're always lying.", "Seals won't take much more."],
       eject: ["I TOLD them about the gasket!", "Out. Someone fix her properly this time."],
       move: ["Easy on the knees, girl.", "Moving.", "Knees are clicking again.", "Gently, gently."],
+      re: ["Sure.", "…", "Wonderful. More noise."],
+      re_kill: ["Clean work. For once.", "At least somebody's precise."],
+      re_hurt: ["I'm not fixing that for free.", "What did you DO?"],
+      re_eject: ["That rig was fine last week. FINE.", "Salvage it. Please."],
+      re_miss: ["Calibrate your sights. I told you.", "Tolerances!"],
     },
   },
   "Mortar": {
@@ -105,6 +143,11 @@ const PILOTS = {
       heat: ["Tube's overheating. Per the manual, pray.", "Boiler past regulation.", "Barrel's glowing. Most unregulated."],
       eject: ["Cause of ejection: paperwork.", "Abandoning the gun. Under protest."],
       move: ["Displacing the battery.", "Relocating the tube.", "Battery displacing. Stay in formation."],
+      re: ["Acknowledged.", "Copy, over.", "Maintain radio discipline."],
+      re_kill: ["Confirmed. Well done.", "Logged."],
+      re_hurt: ["Report your status.", "Hold the line."],
+      re_eject: ["Casualty noted.", "Crew out. Mark the position."],
+      re_miss: ["Adjust and refire.", "Correction required."],
     },
   },
   "Siege Maul": {
@@ -112,11 +155,16 @@ const PILOTS = {
       hit: ["Mm.", "{It} kneels.", "Struck.", "Down.", "Hm."],
       miss: ["…Mm.", "Patience."],
       kill: ["{It} rests.", "Forgiven. And broken.", "Amen.", "Peace.", "Sleep."],
-      hurt: ["Scratch.", "She holds.", "Mm.", "Still here."],
+      hurt: ["Scratch.", "She holds.", "Mm.", "Still here.", "…"],
       critical: ["Plating's gone. Still standing.", "Hm. Close."],
-      heat: ["Warm.", "Breathe, girl."],
+      heat: ["Warm.", "Breathe, girl.", "…"],
       eject: ["Tell the shield it did good.", "…"],
       move: ["Onward.", "Slowly.", "Step."],
+      re: ["…", "Mm.", "*mic click*"],
+      re_kill: ["Mm.", "Good."],
+      re_hurt: ["Hold.", "…"],
+      re_eject: ["…", "Go with grace."],
+      re_miss: ["…"],
     },
   },
   "Sniper Cannon": {
@@ -124,11 +172,16 @@ const PILOTS = {
       hit: ["Billed.", "{It}: itemised.", "{It}'s {part}. Invoiced.", "Clean.", "{It}: charged."],
       miss: ["That one's pro bono.", "Wind.", "Repricing.", "Irrelevant."],
       kill: ["Paid in full.", "{It}: closed account.", "Confirmed.", "Settled."],
-      hurt: ["You'll be itemised for that.", "Noted.", "Tch."],
+      hurt: ["You'll be itemised for that.", "Noted.", "Tch.", "…"],
       critical: ["One more and they have me. They won't.", "Frame's gone. Hands aren't."],
       heat: ["Barrel's hot. Rates go up.", "Warm barrel. Clean conscience.", "Tolerable."],
       eject: ["Unpaid invoice.", "Out. Send the bill."],
-      move: ["Relocating.", "New angle."],
+      move: ["Relocating.", "New angle.", "…"],
+      re: ["…", "Irrelevant."],
+      re_kill: ["Sloppy. But paid.", "Fine."],
+      re_hurt: ["Get to cover."],
+      re_eject: ["One less split."],
+      re_miss: ["Amateur.", "…"],
     },
   },
   "Crossbow": {
@@ -141,6 +194,11 @@ const PILOTS = {
       heat: ["I'm glowing, and not the flattering kind.", "Is it hot, or is it me?", "I'm melting, darlings."],
       eject: ["Don't let them see me like this!", "I'm out. Send a car."],
       move: ["Swooping in.", "Coming through, darlings.", "Fashionably late, as always."],
+      re: ["Oh, darling.", "Gossip later?", "Mm, tell me more."],
+      re_kill: ["Divine!", "Oh, bravo, darling!"],
+      re_hurt: ["Oh no, your FINISH.", "Poor thing!"],
+      re_eject: ["Somebody send them flowers.", "Oh, how dreadful. Anyway."],
+      re_miss: ["It's the lighting, darling.", "Happens to the best of us. Not me, but."],
     },
   },
 };
@@ -218,10 +276,11 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export function barkFor(mech, event, { other = null, part = null, used = null, campaign = null } = {}) {
   if (event === "die") event = "eject";
   const pilot = voiceOf(mech, campaign);
-  if (Math.random() > (CHANCE[event] ?? 0.3) * pilot.chance) return null;
+  if (!event.startsWith("re") && Math.random() > (CHANCE[event] ?? 0.3) * pilot.chance) return null;
   const it = other ? slangFor(other) : null;
-  const pool = (pilot.lines[event] || GENERIC.lines[event] || []).filter((l) =>
-    (it || !/\{it\}/i.test(l)) && (part || !l.includes("{part}")) && !used?.has(l));
+  const reply = event.startsWith("re");
+  const pool = (pilot.lines[event] || (reply ? pilot.lines.re : null) || (reply ? [] : GENERIC.lines[event]) || []).filter((l) =>
+    (it || !/\{it\}/i.test(l)) && (part || !l.includes("{part}")) && (!used?.has(l) || l.length <= 4 || l.startsWith("*")));
   if (!pool.length) return null;
   const raw = pool[Math.floor(Math.random() * pool.length)];
   used?.add(raw);
