@@ -161,5 +161,50 @@
       { "id": "targeting-computer", "reason": "Sharpen the shot, a sweet-spot bolt hunter needs the first hit to count." },
       { "id": "servo-actuators", "reason": "Reposition to the band, then pounce." }
     ]
+  },
+  {
+    "id": "medium-steam-piston",
+    "label": "Steam Cannon · Piston Hammer",
+    "class": "medium",
+    "longRange": "Steam Cannon",
+    "melee": "Piston Hammer",
+    "description": "Brass, a boiler-plated bully. It blows rigs off their spot with a gout of live steam, then walks up and drives a piston through whatever it knocked loose.",
+    "focus": "Push & punish: shove enemies off objectives, out of cover and into rocks, then finish them with one heavy blow. The only rig that moves the enemy for you.",
+    "balance": "Toughest medium hull, slow (4\"). The Steam Cannon is short-reach and middling Penetration; the Hammer is one heavy swing (Pen 10 / 4). Every shove that stops short slams for extra SP, so terrain is its ammunition.",
+    "personality": "Bossy, loud, protective. Stands in front of its friends and moves everyone else out of the way.",
+    "suggestedEquipment": [
+      { "id": "ablative-plating", "reason": "It walks into the fight first; give it the plates." },
+      { "id": "radiator-array", "reason": "Pressure Dump and Boiler Blast both run on heat; vent the rest." }
+    ]
+  },
+  {
+    "id": "medium-flare-bayonet",
+    "label": "Flare Launcher · Bayonet",
+    "class": "medium",
+    "longRange": "Flare Launcher",
+    "melee": "Bayonet",
+    "description": "Ivory, the spotter. Its flares barely scratch paint, but every rig they land on lights up for the rest of the squad: no cover, easier shots.",
+    "focus": "Mark & enable: hang back at 10–24\", mark the target your heavy hitters want, and punish anything that closes with a bayonet that loves a lit target.",
+    "balance": "Weakest direct damage of any medium (Pen 4 / 1 flare). Its value is the mark: allies ignore cover and get +1 Aim on anything it lights. Useless alone, the squad's best friend.",
+    "personality": "Protective, precise, a little smug. Calls the shots and lets the others take them.",
+    "suggestedEquipment": [
+      { "id": "targeting-computer", "reason": "The first flare of the turn must land: it's the whole job." },
+      { "id": "servo-actuators", "reason": "Find the angle, fire, get out of sight." }
+    ]
+  },
+  {
+    "id": "medium-tesla-shockglove",
+    "label": "Tesla Coil · Shock Glove",
+    "class": "medium",
+    "longRange": "Tesla Coil",
+    "melee": "Shock Glove",
+    "description": "Jade, a walking substation. The coil's arc jumps between packed rigs, and the glove pumps heat into whatever it grabs until the enemy's own boiler does the work.",
+    "focus": "Heat control: cook enemies past their Heat Capacity with the glove, then cash in with Hot Contact / Short Circuit. Punishes clumped formations with the chain.",
+    "balance": "Many weak dice (ROF 3, Pen 5 / 1) at short range; the chain doesn't care whose side the next rig is on. The glove's heat is the real damage, and Overload/Discharge trade its own SP for tempo.",
+    "personality": "Bossy, crackling, impatient. Wants everyone close, including the people it shouldn't.",
+    "suggestedEquipment": [
+      { "id": "blast-furnace-core", "reason": "It lives hot; let the core make that a weapon." },
+      { "id": "radiator-array", "reason": "Overload wants heat on the gauge, not over it." }
+    ]
   }
 ]

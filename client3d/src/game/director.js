@@ -15,9 +15,9 @@ import { settings } from "../settings.js";
 const PROJECTILE = {
   "Autocannon": "cannon", "Missile Barrage": "missile", "Mini Gun": "bullet", "Double MG": "bullet",
   "Arc Gun": "arc", "Harpoon": "harpoon", "Rivet Gun": "rivet", "Mortar": "lob", "Siege Maul": "cannon",
-  "Sniper Cannon": "rail", "Crossbow": "bolt",
+  "Sniper Cannon": "rail", "Crossbow": "bolt", "Steam Cannon": "steam", "Flare Launcher": "flare", "Tesla Coil": "arc",
 };
-const BURST = { "Mini Gun": 6, "Double MG": 4, "Missile Barrage": 4, "Autocannon": 2, "Rivet Gun": 3 };
+const BURST = { "Mini Gun": 6, "Double MG": 4, "Missile Barrage": 4, "Autocannon": 2, "Rivet Gun": 3, "Tesla Coil": 3, "Steam Cannon": 2 };
 const MELEE_NAMES = new Set(CHASSIS.map((c) => c.melee));
 
 export function chassisOf(r) { return CHASSIS.find((c) => c.id === r.chassis) || null; }
@@ -32,7 +32,7 @@ export function frameFromState(state, sinceResolutionId = -1) {
     rigs: state.rigs.map((r) => ({
       id: r.id, name: r.name, owner: r.owner || "a", chassis: r.chassis ?? null, pos: r.pos, facing: r.facing ?? 0,
       destroyed: !!r.destroyed, heat: r.engine?.heat ?? 0,
-      smoked: !!r.smokeNextActivation, hardened: !!r.hardened,
+      smoked: !!r.smokeNextActivation, hardened: !!r.hardened, marked: !!r.painted,
       integrity: r.integrity ?? null, integrityMax: r.integrityMax ?? null,
       sp: Object.fromEntries(LOCS.map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
@@ -454,6 +454,10 @@ export class Director {
         const a = Math.random() * Math.PI * 2;
         this.world.fx.particle(m.root.position.clone().add(new THREE.Vector3(Math.cos(a) * m.radius * 0.7, 0.8 + Math.random() * 1.4, Math.sin(a) * m.radius * 0.7)), { color: 0xbfe0ff, size: 0.35, life: 0.35, grow: 0.5 });
       }
+      // Marked (flare / Recon Paint): a sputtering red flare hangs over the rig.
+      if (m.data?.marked && !m.destroyed && Math.random() < dt * 8) {
+        this.world.fx.particle(m.root.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 4.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.4)), { color: Math.random() < 0.6 ? 0xff4a2a : 0xffb070, size: 0.35, life: 0.5, grow: 0.4, vel: new THREE.Vector3(0, -0.6, 0) });
+      }
       if (m.heatFrac > 1 && !m.destroyed && Math.random() < dt * 6) {
         const s = m.stacks[Math.floor(Math.random() * m.stacks.length)];
         this.world.fx.steam(s.getWorldPosition(new THREE.Vector3()));
@@ -668,6 +672,34 @@ export class Director {
         this.sound(() => sfx.explosion(false));
       }
       await wait(220 / this.speed);
+    } else if (l.kind === "shove" && actor) {
+      // Steam Cannon: the victim is blown back along the shot; a stop short slams.
+      const slam = /slam/i.test(l.summary || "");
+      if (l.shove) {
+        const { from, to } = l.shove;
+        for (let i = 0; i < 16; i++) fx.particle(up(actor, 1 + Math.random() * 1.5), { color: 0xeeeae2, size: 1, life: 0.9, grow: 3, additive: false, opacity: 0.5, vel: new THREE.Vector3(to.x - from.x, 0.6, to.y - from.y).multiplyScalar(1.2).add(new THREE.Vector3((Math.random() - 0.5) * 2, Math.random(), (Math.random() - 0.5) * 2)) });
+        this.sound(() => sfx.jet());
+        await this.hop(actor, from, to, actor.targetFacing ?? 0, { drag: true, dur: 0.45 });
+        if (slam) { fx.sparks(up(actor, 1.2), 22); fx.flash(up(actor, 1.2), 0xffaa44, 30, 8); fx.shake = Math.max(fx.shake, 0.35); this.sound(() => sfx.hit(2)); }
+      }
+      fx.text(up(actor, 3.8), slam ? "SLAMMED" : "SHOVED", "#f2efe8");
+      await wait(200 / this.speed);
+    } else if (l.kind === "chain") {
+      // Tesla Coil: the arc jumps from the struck rig to the next one.
+      const to = this.mechs.get(l.chain?.to ?? l.rigId), src = this.mechs.get(l.chain?.from);
+      if (to && src) {
+        const a = up(src, 1.8), b = up(to, 1.8);
+        fx.beam(a, b, 0x88ddff, 0.45, true); fx.beam(a, b, 0xffffff, 0.25, true);
+        fx.sparks(b, 14, 0x9fe8ff); fx.flash(b, 0x66ccff, 30, 8);
+        this.sound(() => sfx.shot("arc"));
+      }
+      if (to) fx.text(up(to, 3.6), /friendly fire/.test(l.summary || "") ? "ARC · FRIENDLY" : "ARC", "#9fe8ff");
+      await wait(250 / this.speed);
+    } else if (l.kind === "mark" && actor) {
+      fx.flash(up(actor, 3), 0xff4a2a, 30, 10);
+      fx.burst(up(actor, 3), 14, { color: 0xff6a3a, size: 0.4, life: 0.8, spread: 3, up: 0.5 });
+      fx.text(up(actor, 4), "MARKED", "#ff8a5a");
+      await wait(180 / this.speed);
     } else if (l.kind === "grit") {
       // The side that's behind digs in: a Grit token arrives.
       this.onBanner(`GRIT · ${l.side === this.side ? "YOU DIG IN" : "THE ENEMY DIGS IN"}`, "grit");

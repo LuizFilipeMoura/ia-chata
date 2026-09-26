@@ -204,6 +204,57 @@ const PILOTS = {
       re_miss: ["It's the lighting, darling.", "Happens to the best of us."],
     },
   },
+  "Steam Cannon": {
+    name: "Mags", lines: {
+      hit: ["Out of my way!", "Move it!", "Shift, you!", "{It} can have a lie down.", "Blew its {part} clean off the rivets.", "Full pressure!", "Scoot.", "Found you a new spot, {it}.", "Hah! Budge up!"],
+      miss: ["Wasted steam.", "Valve's sticking again.", "Kettle coughed.", "Blast. Reheat.", "All hiss, no push."],
+      kill: ["Cleared.", "{It}'s off the job.", "Scrap it.", "That's what you get for standing there.", "Shift's over, {it}."],
+      hurt: ["Oi! That's company plate!", "She's taken worse.", "Is that all?", "You'll pay for that {part}.", "Dented. Not stopped."],
+      critical: ["Boiler's cracking, keep her together!", "Gauge is all red and I don't care!"],
+      heat: ["Pressure's up. Good.", "Gauges in the red, where they belong.", "Save it for the hammer.", "She's whistling. Let her."],
+      eject: ["Abandon kettle!", "I'm off the clock!"],
+      move: ["Everybody behind me.", "Stay in my shadow, little ones.", "Coming through, mind your feet.", "Line up, line up!", "Nobody touches the lights but me.", "Forward. Now.", "I'll make a hole."],
+      re: ["Less talk.", "Stay behind me.", "Heard.", "Keep moving!", "Did I say stop?"],
+      re_kill: ["About time.", "Good. Next.", "That's the job."],
+      re_hurt: ["Get behind me!", "Who touched my light? WHO?", "Back off {it}, I'm coming.", "Hold on, I'm on my way."],
+      re_eject: ["We'll get you a new one.", "I'll flatten whoever did that."],
+      re_miss: ["Aim, for pity's sake.", "Closer. Always closer.", "Again!"],
+    },
+  },
+  "Flare Launcher": {
+    name: "Hollis", lines: {
+      hit: ["Marked.", "Lit.", "Target painted. You're welcome.", "{It} is now very visible.", "Red on {it}, fire at will.", "There. Can't hide now.", "Flare up. Everyone shoot the glowing one."],
+      miss: ["Flare's gone for a walk.", "Pretty, though.", "Illuminated the sky. Useful for someone.", "Wide.", "Lit the scenery."],
+      kill: ["Lights out, {it}.", "Mark cleared.", "Spotter's credit, please.", "Put that in the log under 'assisted'."],
+      hurt: ["They've found the spotter.", "Hey. I'm the support.", "My {part}! I'm not built for this!", "Rude. I was helping."],
+      critical: ["Spotter's going down, spotter's going down!", "Somebody else can hold the torch!"],
+      heat: ["Magazine's warm. Flares don't like warm.", "Cooking in here.", "Don't want to light myself up."],
+      eject: ["Popping my own flare, come find me!", "I'm out. Mark my spot."],
+      move: ["Finding an angle.", "Hang back, let me light them up.", "Heavies up front, lights on the flanks.", "Wait for my mark.", "I'll call them, you drop them.", "Relocating. Don't shoot the flare."],
+      re: ["Copy.", "Noted.", "Wait for the mark.", "On it.", "Keep it tidy, people."],
+      re_kill: ["Confirmed.", "Nicely done.", "Told you it'd glow."],
+      re_hurt: ["Pull back, I'll light what hit you.", "Get behind the big one.", "Marking your attacker. Hold on."],
+      re_eject: ["Flare's up over them.", "Get them out of there."],
+      re_miss: ["It was glowing. It was literally glowing.", "Shoot the red one.", "Follow the flare."],
+    },
+  },
+  "Tesla Coil": {
+    name: "Nettie", lines: {
+      hit: ["Zap.", "Bzzt!", "{It} felt that in the fillings.", "Its {part} is humming now.", "Ground THAT.", "Oh, it's twitching!", "Current's flowing!", "Sparks!"],
+      miss: ["Arced into the dirt.", "Humidity.", "Wasted amps.", "The dirt's charged now. Congratulations, dirt."],
+      kill: ["Fused.", "{It}'s a lamp now.", "Circuit closed.", "Short. Permanent.", "It's smoking. The good kind."],
+      hurt: ["Hey! Insulation!", "Something just popped.", "She's arcing inside. Don't mind that.", "Ow. Ow. My {part}."],
+      critical: ["Everything's sparking and not on purpose!", "Coil's loose, coil's LOOSE!"],
+      heat: ["Coil's glowing. Perfect.", "More heat, more zap.", "My hair's standing up.", "Brushes are singing."],
+      eject: ["Pulling the breaker!", "Ungrounded, ejecting!"],
+      move: ["Keep three inches off me, it jumps.", "Everyone stay clear of my target.", "Bunch them up for me.", "I want them close.", "Closer. Coil's short-sighted.", "Nobody stand next to the enemy, I'm serious."],
+      re: ["Crackle.", "Mm-hm.", "*static*", "Keep clear of my arc.", "Sure, sure."],
+      re_kill: ["Ooh.", "Could've been zappier.", "Nice."],
+      re_hurt: ["Hold still, I'll cook what hit you.", "Get clear, I'm arcing in.", "Behind me, I'm charged."],
+      re_eject: ["Breaker's tripped on them.", "Poor thing. I'll fry it for you."],
+      re_miss: ["Get closer, it helps.", "Try electricity."],
+    },
+  },
 };
 
 // What a crew calls an enemy machine: by what it carries, or its size.
@@ -219,6 +270,9 @@ const SLANG = {
   "Siege Maul": "the hammer", "Bulwark Shield": "the wall",
   "Sniper Cannon": "the long gun", "Chainsaw": "the butcher",
   "Crossbow": "the bolt-thrower", "Talon": "the bird",
+  "Steam Cannon": "the kettle", "Piston Hammer": "the piston",
+  "Flare Launcher": "the lamplighter", "Bayonet": "the pigsticker",
+  "Tesla Coil": "the lightning rod", "Shock Glove": "the live wire",
 };
 const PART = { hull: "hull", arms: "arm", legs: "legs", engine: "boiler" };
 const GENERIC = { name: "Pilot", lines: { hit: ["Hit."], miss: ["Missed."], kill: ["Got it."], hurt: ["We're hit!"], critical: ["She's coming apart!"], heat: ["Running hot."], eject: ["Ejecting!"], move: ["Moving."] } };

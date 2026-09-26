@@ -159,11 +159,11 @@ export class FX {
   shoot(from, to, kind, onHit) {
     const dist = from.distanceTo(to);
     const k = kind || "bullet";
-    const speed = { bullet: 70, cannon: 45, missile: 24, lob: 20, bolt: 55, harpoon: 40, rail: 160, rivet: 50 }[k] ?? 60;
+    const speed = { bullet: 70, cannon: 45, missile: 24, lob: 20, bolt: 55, harpoon: 40, rail: 160, rivet: 50, steam: 26, flare: 22 }[k] ?? 60;
     const geo = k === "missile" || k === "harpoon" || k === "bolt"
       ? new THREE.CylinderGeometry(0.06, 0.1, 0.6, 6).rotateZ(Math.PI / 2)
-      : new THREE.SphereGeometry(k === "cannon" || k === "lob" ? 0.18 : 0.09, 8, 8);
-    const color = { missile: 0xdddddd, harpoon: 0xb08d3c, bolt: 0xb08d3c, rail: 0x99ddff }[k] ?? 0xffdd66;
+      : new THREE.SphereGeometry(k === "cannon" || k === "lob" || k === "steam" ? 0.18 : k === "flare" ? 0.12 : 0.09, 8, 8);
+    const color = { missile: 0xdddddd, harpoon: 0xb08d3c, bolt: 0xb08d3c, rail: 0x99ddff, steam: 0xf2efe8, flare: 0xff5a3a }[k] ?? 0xffdd66;
     const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color }));
     mesh.position.copy(from); this.scene.add(mesh);
     const wobble = k === "missile" ? new THREE.Vector3((Math.random() - 0.5) * 6, 3 + Math.random() * 3, (Math.random() - 0.5) * 6) : null;
@@ -262,11 +262,13 @@ export class FX {
       p.t += dt / p.dur;
       const t = Math.min(1, p.t);
       const pos = p.from.clone().lerp(p.to, t);
-      if (p.kind === "lob") pos.y += Math.sin(t * Math.PI) * p.from.distanceTo(p.to) * 0.45;
+      if (p.kind === "lob" || p.kind === "flare") pos.y += Math.sin(t * Math.PI) * p.from.distanceTo(p.to) * (p.kind === "flare" ? 0.2 : 0.45);
       if (p.wobble) pos.addScaledVector(p.wobble, Math.sin(t * Math.PI) * 0.6);
       const prev = p.mesh.position.clone();
       p.mesh.position.copy(pos);
       if (pos.distanceToSquared(prev) > 1e-6) p.mesh.lookAt(pos.clone().add(pos.clone().sub(prev)));
+      if (p.kind === "steam") { p.trail += dt; if (p.trail > 0.015) { p.trail = 0; this.particle(pos, { color: 0xeeeae2, size: 0.9, life: 0.7, grow: 3.5, additive: false, opacity: 0.55, vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, 0.8, (Math.random() - 0.5) * 1.5) }); } }
+      if (p.kind === "flare") { p.trail += dt; if (p.trail > 0.02) { p.trail = 0; this.particle(pos, { color: Math.random() < 0.5 ? 0xff5a3a : 0xffb070, size: 0.35, life: 0.6, grow: 1.5 }); this.particle(pos, { color: 0x9a8a80, size: 0.4, life: 1, grow: 3, additive: false, opacity: 0.35 }); } }
       if (p.kind === "missile" || p.kind === "lob") { p.trail += dt; if (p.trail > 0.02) { p.trail = 0; this.particle(pos, { color: 0x999999, size: 0.4, life: 0.8, grow: 3, additive: false, opacity: 0.5 }); } }
       if (t >= 1) {
         this.scene.remove(p.mesh);

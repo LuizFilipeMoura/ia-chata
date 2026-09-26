@@ -87,13 +87,13 @@ test("normalizeWeapon resolves case-insensitively and rejects unknown", () => {
   assert.equal(normalizeWeapon("longRange", "Sword"), null);   // wrong category
   assert.equal(normalizeWeapon("melee", "Death Ray"), null);   // not a weapon
   assert.equal(normalizeWeapon("longRange", ""), null);
-  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
-  assert.equal(Object.keys(WEAPONS.melee).length, 11);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 14);
+  assert.equal(Object.keys(WEAPONS.melee).length, 14);
 });
 
 test("WEAPONS carries full combat profiles keyed by canonical name", () => {
-  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
-  assert.equal(Object.keys(WEAPONS.melee).length, 11);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 14);
+  assert.equal(Object.keys(WEAPONS.melee).length, 14);
   assert.equal(WEAPONS.longRange["Mini Gun"].rof, 8);
   assert.equal(WEAPONS.longRange["Mini Gun"].pen, 3);
   assert.deepEqual(WEAPONS.longRange["Mini Gun"].band, [0, 8]);
@@ -189,8 +189,8 @@ test("new weapons: Siege Maul and Bulwark Shield are in the universal list", () 
   assert.deepEqual(shield, { rof: 1, pen: 5, dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true });
 
   // The list is now 10 + 10.
-  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
-  assert.equal(Object.keys(WEAPONS.melee).length, 11);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 14);
+  assert.equal(Object.keys(WEAPONS.melee).length, 14);
 });
 
 test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles", () => {
@@ -209,8 +209,8 @@ test("new weapons: Harpoon, Anchor, Rivet Gun, Pressure Claw carry full profiles
     { rof: 6, pen: 3, dmg: 1, band: [0, 6], bandAcc: 2, sweet: 3, peak: 2, minRange: 0, maxRange: 14 });
   assert.deepEqual(WEAPONS.melee["Pressure Claw"],
     { rof: 2, pen: 7, dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true });
-  assert.equal(Object.keys(WEAPONS.longRange).length, 11);
-  assert.equal(Object.keys(WEAPONS.melee).length, 11);
+  assert.equal(Object.keys(WEAPONS.longRange).length, 14);
+  assert.equal(Object.keys(WEAPONS.melee).length, 14);
 });
 
 test("new weapon upgrades resolve through effectiveWeaponProfile", () => {
@@ -2637,9 +2637,9 @@ test("makeRig stores a normalized equipmentUpgrade", () => {
   assert.equal(bad.equipmentUpgrade, null);
 });
 
-test("WEAPON_UPGRADES has exactly 3 upgrades for all 20 weapons", () => {
+test("WEAPON_UPGRADES has exactly 3 upgrades for all 28 weapons", () => {
   const all = [...Object.keys(WEAPONS.longRange), ...Object.keys(WEAPONS.melee)];
-  assert.equal(all.length, 22);
+  assert.equal(all.length, 28);
   for (const name of all) {
     const ups = WEAPON_UPGRADES[name];
     assert.equal(Array.isArray(ups), true, `${name} missing upgrades`);
@@ -4237,6 +4237,9 @@ test("chassis speeds match the tuned table", () => {
     "medium-shield-siege": 3.5,
     "medium-sniper-chainsaw": 4.5,
     "medium-crossbow-talon": 4.5,
+    "medium-steam-piston": 4,
+    "medium-flare-bayonet": 4.5,
+    "medium-tesla-shockglove": 4,
   });
 });
 

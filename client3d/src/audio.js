@@ -65,6 +65,8 @@ export const sfx = {
       case "arc": for (let i = 0; i < 5; i++) tone(t + i * 0.03, 0.05, { freq: jit(900, 0.5), to: jit(2000, 0.5), type: "sawtooth", peak: 0.12 }); noise(t, 0.25, { freq: 4000, type: "highpass", peak: 0.2 }); break;
       case "harpoon": case "bolt": noise(t, 0.12, { freq: 2000, type: "bandpass", q: 4, peak: 0.3 }); tone(t, 0.25, { freq: 700, to: 200, type: "triangle", peak: 0.2 }); break;
       case "rivet": noise(t, 0.05, { freq: 2500, type: "bandpass", q: 6, peak: 0.4 }); tone(t, 0.06, { freq: 1200, type: "square", peak: 0.08 }); break;
+      case "steam": noise(t, 0.7, { freq: 3500, sweepTo: 1200, type: "highpass", peak: 0.45, attack: 0.02 }); tone(t, 0.25, { freq: jit(90), to: 45, type: "triangle", peak: 0.45 }); break;
+      case "flare": tone(t, 0.08, { freq: jit(300), to: 120, type: "square", peak: 0.2 }); noise(t + 0.05, 0.6, { freq: 5000, type: "highpass", peak: 0.18, attack: 0.05 }); break;
       case "flame": noise(t, 0.9, { freq: 700, type: "bandpass", q: 0.7, peak: 0.45, attack: 0.1 }); break;
       default: noise(t, 0.08, { freq: 2000, peak: 0.3 });
     }

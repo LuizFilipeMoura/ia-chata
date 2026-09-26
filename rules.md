@@ -408,6 +408,9 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 | Harpoon | 1 | 10–18" | +2 | – | 0–22" |
 | Rivet Gun | 6 | 0–6" | +2 | – | 0–14" |
 | Crossbow | 1 | 15–22" | +3 | −1 under 6" | 0–24" |
+| Steam Cannon | 2 | 0–8" | +1 | – | 0–14" |
+| Flare Launcher | 1 | 10–24" | +2 | – | 0–30" |
+| Tesla Coil | 3 | 3–10" | +2 | – | 0–14" |
 
 > The **Missile Barrage** is a long-reach, high-volume salvo launcher with loose Accuracy up close.
 
@@ -430,6 +433,9 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 | Anchor | 1 | – | 2 |
 | Pressure Claw | 2 | +1 | 2 |
 | Talon | 2 | +1 | 2 |
+| Piston Hammer | 1 | – | 2 |
+| Bayonet | 2 | +1 | 2 |
+| Shock Glove | 2 | – | 2 |
 
 ### Splash (area weapons)
 
@@ -442,6 +448,17 @@ Three weapons are **area weapons**: every attack they make also catches every **
 | Flamethrower | 2" | **+1 heat** |
 
 Shelling an enemy locked in melee with your own Rig hits your Rig too. *(Digital: the engine measures the ring and rolls each hit; a physical table reads the instruction in the log and resolves it.)*
+
+### On-hit riders (Brass, Ivory, Jade)
+
+Three weapons do something extra whenever the attack lands **at least one hit**:
+
+- **Steam Cannon (Shove 2").** The target is blown **2" straight back**, along the line from the attacker through the target. If terrain, another Rig or the table edge stops it short, it **slams** for **1 SP** to a random location. A shoved Rig carried out of reach of its melee partner breaks the lock.
+- **Flare Launcher (Mark).** The target is **marked** for the firer's side until the firer's next activation: the firer's allies ignore its cover and get **+1 Aim** against it (same mark as Recon Paint).
+- **Tesla Coil (Chain 3").** The arc jumps to the **nearest other Rig, friend or foe**, whose base is within 3" of the target: it takes a flat hit at the Coil's Penetration / Damage (random location, wound roll as normal).
+- **Shock Glove (Heat).** Every landed hit adds **+1 heat** to the target.
+
+*(Digital: the engine moves the shoved mini, finds the flare's and the arc's victims, and rolls; a physical table reads the instruction in the log and resolves it.)*
 
 ### Weapon Upgrades
 
@@ -471,6 +488,12 @@ Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures*
 | Pressure Claw | Hardened Jaws (Armour Piercing) | Crush Grip (−1 max SP) | Hydraulic Vice |
 | Crossbow | Fletched Bolts (Precision) | Steady Aim (grants Penetration in sweet band) | Pinning Bolt |
 | Talon | Honed Talons (grants Penetration) | Exploit Wound (grants Penetration vs damaged location) | Evisceration |
+| Steam Cannon | High-Pressure Valve (+1" shove) | Flush Them Out (grants Penetration vs cover) | Boiler Blast |
+| Piston Hammer | Heavy Head (grants Damage) | Follow-Through (grants Penetration vs a Rig you shoved) | Pressure Dump |
+| Flare Launcher | Wide Burst (marks 1.5" around) | Stripping Flare (strips Brace) | Star Shell |
+| Bayonet | Fixed Bayonet (grants Penetration) | Spotter's Thrust (grants Penetration vs marked) | Flare Bayonet |
+| Tesla Coil | Long Arc (+1" chain) | Hot Contact (grants Penetration vs overheated) | Overload |
+| Shock Glove | Live Wire (+1 heat per hit) | Short Circuit (grants Penetration vs overheated) | Discharge |
 
 #### Tuned / Prototype Upgrade Mechanics
 
@@ -509,6 +532,18 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Harpoon Winch** (Harpoon, Prototype), a spatial reel, narrated rather than simulated. On a damaging Harpoon hit, if charged (`round ≥ harpoonWinchCooldownUntil`), the engine emits a player instruction to reel the target up to 4" toward the attacker. The attacker takes +2 heat, is rooted for the rest of this activation, and the reel goes on a 3-round cooldown. While recharging, the harpoon fires normally with no reel.
 - **Dead Weight** (Anchor, Tuned), a damaging Anchor blow pins the struck target under the anchor: it cannot Disengage on its next activation (scoped to that one activation).
 - **Ground Anchor** (Anchor, Prototype), a damaging Anchor blow that leaves the target locked to the anchorer drives the anchor in. If that target Disengages, it first eats a free Anchor strike (the Anchor's natural Penetration) as it tears free, then the lock breaks. The mark clears with the lock.
+- **Flush Them Out** (Steam Cannon, Tuned), +2 Penetration against a target in any cover.
+- **Boiler Blast** (Steam Cannon, Prototype), the shove goes **4"** and a slam costs **2 SP**; downside: every shot runs **+1 heat**.
+- **Follow-Through** (Piston Hammer, Tuned), +2 Penetration against a Rig this Rig shoved this round (clears in Recovery).
+- **Pressure Dump** (Piston Hammer, Prototype), the blow gains **+1 Penetration per 2 heat** the Rig carries (max +3) and vents all of that heat once it resolves (the strike's own heat stays); downside: the Rig is **rooted** for the rest of the activation (no Move/Sprint after).
+- **Stripping Flare** (Flare Launcher, Tuned), a Braced target the flare marks loses its Brace.
+- **Star Shell** (Flare Launcher, Prototype), the flare also marks every enemy within **4"** of the target; downside: the firer is marked for the **enemy** until its own next activation.
+- **Spotter's Thrust** (Bayonet, Tuned), +2 Penetration against a target your side has marked.
+- **Flare Bayonet** (Bayonet, Prototype), a thrust that lands marks the target, like a flare; downside: every strike runs **+1 heat**.
+- **Hot Contact** (Tesla Coil, Tuned), +2 Penetration against a target over its Heat Capacity.
+- **Overload** (Tesla Coil, Prototype), **+1 die per 2 heat** the Rig carries (max +3); downside: every shot burns **1 SP** off the Rig's own Engine.
+- **Short Circuit** (Shock Glove, Tuned), +3 Penetration against a target over its Heat Capacity.
+- **Discharge** (Shock Glove, Prototype), a blow that lands moves up to **2** of the Rig's own heat onto the target; downside: the glove shorts the Rig's Arms for **1 SP** every time it lands.
 - **Rivet Lock** (Rivet Gun, Prototype), consecutive damaging volleys on the *same* location stack rivets; switching target or location resets to 1. At 3 rivets the location seizes: its SP can't be repaired, and a weapon-role location (a rig's Arms) jams the rig's long-range weapon for a round. Seizes expire in Recovery (round N and N+1). The attacker runs +1 heat every rivet volley while stacking. Fully non-spatial.
 
 ---

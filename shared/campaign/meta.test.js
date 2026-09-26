@@ -17,8 +17,8 @@ test("new profile starts with the starting pools", () => {
   assert.deepEqual(pools.banners, []);
 });
 
-test("unlock table: 7 chassis, 4 equipment, 3 relic packs", () => {
-  assert.equal(UNLOCKS.filter((u) => u.kind === "chassis").length, 7);
+test("unlock table: 10 chassis, 4 equipment, 3 relic packs", () => {
+  assert.equal(UNLOCKS.filter((u) => u.kind === "chassis").length, 10);
   assert.equal(UNLOCKS.filter((u) => u.kind === "equipment").length, 4);
   assert.equal(UNLOCKS.filter((u) => u.kind === "relics").length, 3);
 });

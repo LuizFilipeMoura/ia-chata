@@ -83,6 +83,12 @@ export const WEAPONS = {
     "Harpoon":        { rof: 1, pen: 10, dmg: 3, band: [10, 18], bandAcc: 2, sweet: 14, peak: 2, minRange: 0, maxRange: 22 },
     "Rivet Gun":      { rof: 6, pen: 3,  dmg: 1, band: [0, 6], bandAcc: 2, sweet: 3, peak: 2, minRange: 0, maxRange: 14 },
     "Crossbow":       { rof: 1, pen: 8,  dmg: 4, band: [15, 22], bandAcc: 3, close: { under: 6, acc: -1 }, sweet: 18.5, peak: 3, minRange: 0, maxRange: 24 },
+    // Brass: a hit shoves the target `shove` inches straight back (digital moves it).
+    "Steam Cannon":   { rof: 2, pen: 8,  dmg: 3, band: [0, 8], bandAcc: 1, sweet: 4, peak: 1, minRange: 0, maxRange: 14, shove: 2 },
+    // Ivory: a hit marks the target (the Recon Paint mark: allies ignore its cover, +1 Aim).
+    "Flare Launcher": { rof: 1, pen: 4,  dmg: 1, band: [10, 24], bandAcc: 2, sweet: 17, peak: 2, minRange: 0, maxRange: 30, marks: true },
+    // Jade: a hit arcs to the nearest other rig within `chain` inches of the target.
+    "Tesla Coil":     { rof: 3, pen: 5,  dmg: 1, band: [3, 10], bandAcc: 2, sweet: 6.5, peak: 2, minRange: 0, maxRange: 14, chain: 3 },
   },
   melee: {
     "Sword":         { rof: 2, pen: 5,  dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true },
@@ -96,6 +102,10 @@ export const WEAPONS = {
     "Anchor":        { rof: 1, pen: 10, dmg: 4, accuracy: [0, 0], rng: [2, 2], melee: true },
     "Pressure Claw": { rof: 2, pen: 7,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
     "Talon":         { rof: 2, pen: 6,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
+    "Piston Hammer":  { rof: 1, pen: 10, dmg: 4, accuracy: [0, 0], rng: [2, 2], melee: true },
+    "Bayonet":        { rof: 2, pen: 6,  dmg: 2, accuracy: [1, 1], rng: [2, 2], melee: true },
+    // Jade: every landed hit adds `heatOnHit` heat to the target.
+    "Shock Glove":    { rof: 2, pen: 6,  dmg: 2, accuracy: [0, 0], rng: [2, 2], melee: true, heatOnHit: 1 },
   },
 };
 
@@ -146,6 +156,9 @@ export const CHASSIS = [
   { id: "medium-shield-siege",        name: "Black",      label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3.5, sp: { hull: 16, arms: 13, legs: 12, engine: 11 }, integrity: 34 },
   { id: "medium-sniper-chainsaw",     name: "Red",        label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4.5, sp: { hull: 12, arms: 11, legs: 11, engine: 9 }, integrity: 28 },
   { id: "medium-crossbow-talon",      name: "Silver",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4.5, sp: { hull: 12, arms: 11, legs: 12, engine: 9 }, integrity: 29 },
+  { id: "medium-steam-piston",        name: "Brass",      label: "Steam Cannon · Piston Hammer", class: "medium", longRange: "Steam Cannon", melee: "Piston Hammer", speed: 4,   sp: { hull: 15, arms: 13, legs: 12, engine: 10 }, integrity: 33 },
+  { id: "medium-flare-bayonet",       name: "Ivory",      label: "Flare Launcher · Bayonet",    class: "medium", longRange: "Flare Launcher",  melee: "Bayonet",       speed: 4.5, sp: { hull: 12, arms: 11, legs: 11, engine: 10 }, integrity: 29 },
+  { id: "medium-tesla-shockglove",    name: "Jade",       label: "Tesla Coil · Shock Glove",    class: "medium", longRange: "Tesla Coil",      melee: "Shock Glove",   speed: 4,   sp: { hull: 13, arms: 12, legs: 11, engine: 11 }, integrity: 31 },
 ];
 
 // Each chassis's primary suggested equipment, mirrors content/chassis.json
@@ -165,6 +178,9 @@ export const CHASSIS_PRIMARY_EQUIPMENT = {
   "medium-shield-siege": "ablative-plating",
   "medium-sniper-chainsaw": "targeting-computer",
   "medium-crossbow-talon": "targeting-computer",
+  "medium-steam-piston": "ablative-plating",
+  "medium-flare-bayonet": "targeting-computer",
+  "medium-tesla-shockglove": "blast-furnace-core",
 };
 
 // The presets a bot side can run. This mirrors the keys of PRESETS in
@@ -556,8 +572,38 @@ export function countPrototypes(weapons = {}, upgrades = {}, equipment, equipmen
 export const WEAPON_UPGRADES = {
   "Crossbow": [
     { id: "fletched-bolts", nature: "field", name: "Fletched Bolts", tag: "Aimed shots ignore the aim penalty", effect: { perks: ["Precision"] } },
-    { id: "steady-aim", nature: "tuned", name: "Steady Aim", tag: "+3 Penetration when firing from the sweet spot (±2\")", effect: { steadyAim: true } },
+    { id: "steady-aim", nature: "tuned", name: "Steady Aim", tag: "+3 Penetration when firing from inside the sweet band", effect: { steadyAim: true } },
     { id: "pinning-bolt", nature: "prototype", name: "Pinning Bolt", tag: "Pin a rig in place until your next turn; runs +2 heat", catch: "Runs +2 heat", effect: { pinningBolt: true } },
+  ],
+  "Steam Cannon": [
+    { id: "high-pressure-valve", nature: "field", name: "High-Pressure Valve", tag: "Shoves 1\" further", effect: { shove: 1 } },
+    { id: "flush-them-out", nature: "tuned", name: "Flush Them Out", tag: "+2 Penetration vs a target in cover", effect: { vsCover: 2 } },
+    { id: "boiler-blast", nature: "prototype", name: "Boiler Blast", tag: "Shoves 2\" further and slams harder (+1 SP); runs +1 heat a shot", catch: "Runs +1 heat a shot", effect: { shove: 2, slam: 1, shotHeat: 1 } },
+  ],
+  "Piston Hammer": [
+    { id: "heavy-head", nature: "field", name: "Heavy Head", tag: "+1 Damage", effect: { dmg: 1 } },
+    { id: "follow-through", nature: "tuned", name: "Follow-Through", tag: "+2 Penetration vs a rig you shoved this round", effect: { vsShoved: 2 } },
+    { id: "pressure-dump", nature: "prototype", name: "Pressure Dump", tag: "+1 Penetration per 2 heat you carry (max +3), vented by the blow; you're rooted for the rest of the activation", catch: "Rooted after the blow", effect: { pressureDump: true } },
+  ],
+  "Flare Launcher": [
+    { id: "wide-burst", nature: "field", name: "Wide Burst", tag: "The flare also marks every enemy within 1.5\" of the target", effect: { markRadius: 1.5 } },
+    { id: "stripping-flare", nature: "tuned", name: "Stripping Flare", tag: "A marked target that's Braced loses the Brace", effect: { stripBrace: true } },
+    { id: "star-shell", nature: "prototype", name: "Star Shell", tag: "Marks every enemy within 4\" of the target; lights you up for the enemy too", catch: "You're marked until your next activation", effect: { markRadius: 4, selfMark: true } },
+  ],
+  "Bayonet": [
+    { id: "fixed-bayonet", nature: "field", name: "Fixed Bayonet", tag: "+1 Penetration", effect: { pen: 1 } },
+    { id: "spotters-thrust", nature: "tuned", name: "Spotter's Thrust", tag: "+2 Penetration vs a marked target", effect: { vsPainted: 2 } },
+    { id: "flare-bayonet", nature: "prototype", name: "Flare Bayonet", tag: "A landed thrust marks the target; runs +1 heat a strike", catch: "Runs +1 heat a strike", effect: { bayonetMark: true, shotHeat: 1 } },
+  ],
+  "Tesla Coil": [
+    { id: "long-arc", nature: "field", name: "Long Arc", tag: "The chain jumps 1\" further", effect: { chainRadius: 1 } },
+    { id: "hot-contact", nature: "tuned", name: "Hot Contact", tag: "+2 Penetration vs a target over its Heat Capacity", effect: { vsHot: 2 } },
+    { id: "overload", nature: "prototype", name: "Overload", tag: "+1 die per 2 heat you carry (max +3); each shot burns 1 SP off your own boiler", catch: "1 SP to your Engine a shot", effect: { overload: true } },
+  ],
+  "Shock Glove": [
+    { id: "live-wire", nature: "field", name: "Live Wire", tag: "Each hit adds 1 more heat to the target", effect: { heatOnHit: 1 } },
+    { id: "short-circuit", nature: "tuned", name: "Short Circuit", tag: "+3 Penetration vs a target over its Heat Capacity", effect: { vsHot: 3 } },
+    { id: "discharge", nature: "prototype", name: "Discharge", tag: "A landed blow dumps 2 of your heat into the target; the glove shorts your arm (1 SP)", catch: "1 SP to your Arms", effect: { discharge: 2 } },
   ],
   "Talon": [
     { id: "honed-talons", nature: "field", name: "Honed Talons", tag: "+1 Penetration", effect: { pen: 1 } },
@@ -894,6 +940,7 @@ function ensureRigShape(rig, mode = "physical") {
   if (typeof rig.towChainCooldownUntil !== "number") rig.towChainCooldownUntil = 0;
   if (typeof rig.harpoonWinchCooldownUntil !== "number") rig.harpoonWinchCooldownUntil = 0;
   if (typeof rig.towedThisActivation !== "boolean") rig.towedThisActivation = false;
+  if (typeof rig.rootedThisActivation !== "boolean") rig.rootedThisActivation = false;
   if (rig.suppressTarget === undefined) rig.suppressTarget = null;
   if (typeof rig.suppressStacks !== "number") rig.suppressStacks = 0;
   // Rivet Lock (§13, Rivet Gun), which target+location this rig is riveting
@@ -2369,6 +2416,7 @@ function refreshEquipState(rig) {
 
 function runRecovery(room, random) {
   for (const rig of room.rigs) {
+    rig.shovedBy = null; // Follow-Through reads "shoved this round"
     if (!rig.noCool) {
       const floor = engineHeatFloor(rig);
       // Radiator Array (Cooling), cools 2 heat instead of the usual 1. Cryo
@@ -2528,7 +2576,7 @@ function endActivation(room, rig, dice, random) {
   rig.kickstartUsed = false;
   // Tow Chain (§13, Wrecking Ball), clear the per-activation root flag at
   // activation end too, so a stale root can't leak past this activation.
-  rig.towedThisActivation = false;
+  rig.towedThisActivation = false; rig.rootedThisActivation = false;
   // Suppression Lock's Prepare block (§13) is scoped to exactly the one
   // activation it landed on, clear it here so it doesn't leak into the rig's
   // activation after next.
@@ -2843,6 +2891,7 @@ function resolveFire(room, rig, target, a, act, random) {
     if (sol.targetId !== target.id) { sol.targetId = target.id; sol.count = 0; } // reset on switch
     solutionPayoff = sol.count >= 3; // a full solution cashes on this shot
   }
+  const heat0 = rig.engine?.heat || 0;
   const res = resolveAttack(room, rig, target, {
     weapon: a.weapon, target: a.target, arc: a.arc, range: a.range, distance: a.distance, cover: a.cover,
     engaged: rig.engagedWith != null,
@@ -2892,7 +2941,114 @@ function resolveFire(room, rig, target, a, act, random) {
       && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.pointDefense) {
     rig.equipState.firedRangedThisRound = true;
   }
+  resolveRiders(room, rig, target, slot, res, random, heat0);
   return res;
+}
+
+// On-hit riders of the Brass / Ivory / Jade kits, run once the attack (and its
+// heat) has resolved. Digital rooms measure the spatial part (shove, flare
+// burst, chain); physical rooms get the instruction. `heat0` is the heat the
+// attacker carried into the attack (what Pressure Dump / Discharge spend).
+function resolveRiders(room, rig, target, slot, res, random, heat0) {
+  const prof = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig);
+  if (!prof) return;
+  const fx = prof.upgradeEffect || {};
+  const hits = res?.hits || 0;
+  const digital = room.mode === "digital" && !!target.pos && !!rig.pos;
+  const say = (kind, who, summary, extra = {}) => pushResolution(room, { kind, actor: rig.owner, rigId: who.id, rolls: [], summary, effects: [], ...extra });
+  const enemyOf = (r) => (r.owner || "a") !== (rig.owner || "a");
+  // Prototype running costs: they're paid on every attack, landed or not.
+  if (fx.shotHeat) bumpHeat(rig, fx.shotHeat);
+  if (fx.overload && rig.engine) rig.engine.sp = Math.max(0, rig.engine.sp - 1);
+  if (fx.pressureDump) {
+    rig.engine.heat = Math.max(0, rig.engine.heat - heat0);
+    rig.rootedThisActivation = true;
+    say("perk", rig, `Pressure Dump: ${rig.name} vents ${heat0} heat into the blow and is rooted for the rest of the activation.`);
+  }
+  if (fx.selfMark) rig.painted = { by: rig.owner === "a" ? "b" : "a", painterId: rig.id };
+  if (!(hits > 0) || target.destroyed) return;
+  // Shock Glove: every landed hit cooks the target. Discharge: dump your heat on it.
+  const heatOnHit = (prof.heatOnHit || 0) + (fx.heatOnHit || 0);
+  if (heatOnHit) {
+    bumpHeat(target, heatOnHit * hits);
+    say("perk", target, `${rig.weapons[slot]}: ${target.name} takes +${heatOnHit * hits} heat.`);
+  }
+  if (fx.discharge) {
+    const moved = Math.min(fx.discharge, heat0);
+    if (moved) { rig.engine.heat = Math.max(0, rig.engine.heat - moved); bumpHeat(target, moved); }
+    rig.arms.sp = Math.max(0, rig.arms.sp - 1);
+    say("perk", target, `Discharge: ${rig.name} dumps ${moved} heat into ${target.name}; the glove shorts its arm (1 SP).`);
+  }
+  // Flares: mark the target (and anything caught in the burst) for your side.
+  const marks = !!prof.marks || !!fx.bayonetMark;
+  if (marks) {
+    const burst = fx.markRadius || 0;
+    const lit = [target];
+    if (burst && digital) {
+      for (const r of room.rigs) if (r !== target && enemyOf(r) && !r.destroyed && r.pos
+        && distanceBetween(spatial(r), spatial(target)) <= burst + radiusOf(r)) lit.push(r);
+    }
+    for (const r of lit) {
+      r.painted = { by: rig.owner, painterId: rig.id };
+      if (fx.stripBrace && r.preparation?.type === "brace") r.preparation = null;
+    }
+    const others = lit.length - 1;
+    say("mark", target, burst && !digital
+      ? `Flare: ${target.name} is marked; mark every enemy within ${burst}" of it too.`
+      : `Flare: ${target.name}${others ? ` and ${others} more` : ""} marked: allies ignore cover and get +1 Aim until ${rig.name}'s next activation.`);
+  }
+  // Tesla Coil: the arc jumps to the nearest other rig (friend or foe) near the target.
+  if (prof.chain) {
+    const reach = prof.chain + (fx.chainRadius || 0);
+    if (!digital) {
+      say("chain", target, `Chain: the arc jumps to the nearest other rig within ${reach}" of ${target.name} (friend or foe): it takes a Penetration ${prof.pen} / ${prof.dmg} hit.`);
+    } else {
+      const next = room.rigs.filter((r) => r !== target && r !== rig && !r.destroyed && r.pos)
+        .map((r) => ({ r, d: distanceBetween(spatial(r), spatial(target)) - radiusOf(r) }))
+        .filter((c) => c.d <= reach).sort((x, y) => x.d - y.d)[0]?.r;
+      if (next) {
+        const loc = hitLocation(next.kind || "rig", rollD(12, null, random));
+        const die = rollD(WOUND_DIE, null, random);
+        const tn = woundTarget(prof.pen, toughnessOf(next.kind || "rig", loc, next.weightClass));
+        const dmg = die >= tn ? prof.dmg : 0;
+        if (dmg > 0) applyDamage(room, next, loc, dmg, { random });
+        say("chain", next, `Chain: the arc jumps from ${target.name} to ${next.name}${enemyOf(next) ? "" : " (friendly fire)"}: ${die} vs ${tn}+ → ${dmg} SP to ${loc}.`,
+          { rolls: [{ sides: WOUND_DIE, value: die, label: "wound", tone: dmg > 0 ? "ok" : "miss" }], chain: { from: target.id, to: next.id } });
+      }
+    }
+  }
+  // Steam Cannon: shove the target straight back along the line of fire.
+  const shove = (prof.shove || 0) + (fx.shove || 0);
+  if (shove && !target.destroyed) {
+    const slam = 1 + (fx.slam || 0);
+    if (!digital) {
+      say("shove", target, `Shove: push ${target.name} ${shove}" straight back from ${rig.name} (move the mini). If terrain or a rig stops it short, it takes ${slam} SP.`);
+      return;
+    }
+    const dx = target.pos.x - rig.pos.x, dy = target.pos.y - rig.pos.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const from = { ...target.pos };
+    let to = from, moved = 0;
+    for (let d = 0.1; d <= shove + 1e-6; d += 0.1) {
+      const p = { x: Math.round((from.x + dx / len * d) * 100) / 100, y: Math.round((from.y + dy / len * d) * 100) / 100 };
+      if (!landingClear(room, target, p)) break;
+      to = p; moved = d;
+    }
+    const short = moved < shove - 0.05;
+    target.pos = to;
+    target.shovedBy = rig.id;
+    if (target.engagedWith != null) {
+      const partner = findRigById(room, target.engagedWith);
+      if (partner?.pos && rimGap(spatial(partner), spatial(target)) > 2.05) clearEngagement(room, target);
+    }
+    let bit = "";
+    if (short) {
+      const loc = hitLocation(target.kind || "rig", rollD(12, null, random));
+      applyDamage(room, target, loc, slam, { random });
+      bit = `: slams into cover for ${slam} SP to ${loc}`;
+    }
+    say("shove", target, `Shove: ${target.name} is blown ${Math.round(moved * 10) / 10}" back${bit}.`, { shove: { from, to } });
+  }
 }
 
 // Anvil Boss (§13 Bulwark), a reactive riposte. When a rig holding Raise Shield
@@ -3488,6 +3644,7 @@ function performAction(room, rig, act, a, random) {
     // Tow Chain (§13, Wrecking Ball), hauling a rig in with the chain roots the
     // attacker for the rest of this activation: no Move/Sprint after a tow.
     if (rig.towedThisActivation) return reject("Rooted after the tow, no move left this activation.");
+    if (rig.rootedThisActivation) return reject("Rooted after the Pressure Dump, no move left this activation.");
     // Digital rooms MAKE the move spatial: a physical player slides the model on
     // the table and the app only tracks the budget, but a digital room has no
     // hand. Validate a real path within Speed and the ±90° pivot cap, then apply
@@ -4400,7 +4557,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.barrageRoundsLeft = 0;      // Barrage (§13), clear a committed tube
       rig.towChainCooldownUntil = 0;  // Tow Chain (§13), clear the fling cooldown
       rig.harpoonWinchCooldownUntil = 0; // Harpoon Winch (§13), clear the reel cooldown
-      rig.towedThisActivation = false;
+      rig.towedThisActivation = false; rig.rootedThisActivation = false;
       rig.noDisengageNextActivation = false; // Dead Weight (§13), clear the Disengage pin on reset
       // Melee-lock marks (§13), a reset rebuilds each rig pristine and drops
       // engagedWith directly (bypassing clearEngagement), so clear the free-strike
@@ -4654,7 +4811,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         t.actionsMax = actionsMax;
         rig.actionPenaltyNextActivation = 0;
         rig.movedThisActivation = false; // Full Tilt/Momentum Swing charge flag (§13)
-        rig.towedThisActivation = false; // Tow Chain root flag (§13), fresh each activation
+        rig.towedThisActivation = false; rig.rootedThisActivation = false; // Tow Chain root flag (§13), fresh each activation
         rig.loaded = { longRange: true, melee: true };
         // Emplacement (§13), the fortress shield is permanent: re-establish
         // Raise Shield for free each activation (no Prepare, no Answer token),

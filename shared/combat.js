@@ -191,7 +191,9 @@ export function effectiveRof(attacker, profile, opts = {}, slowBelt = !!attacker
     const over = cap != null ? Math.max(0, (attacker.engine?.heat || 0) - cap) : 0;
     redlineRof = Math.min(3, over);
   }
-  let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof;
+  // Overload (Tesla Coil), +1 die per 2 heat the attacker carries, capped at +3.
+  const overloadRof = profile.upgradeEffect?.overload ? Math.min(3, Math.floor((attacker.engine?.heat || 0) / 2)) : 0;
+  let rof = profile.rof + (fullAuto ? 2 : 0) + bloodletterRof + redlineRof + overloadRof;
   // Every ROF-halving downside floors at 1 die, a suppressed / slow-belt
   // weapon fires at reduced volume, it is not silenced (a ROF-1 gun stays 1).
   if (slowBelt) rof = Math.max(1, Math.floor(rof / 2));
@@ -367,6 +369,36 @@ export function penBreakdown(attacker, profile, opts) {
       && inSweetBand(profile, opts.distance)) {
     bonus += 3;
     terms.push({ label: "Steady Aim", value: 3 });
+  }
+  // Flush Them Out (Steam Cannon), +Penetration vs a target in any cover.
+  if (profile.upgradeEffect?.vsCover && (opts.cover || 0) > 0) {
+    bonus += profile.upgradeEffect.vsCover;
+    terms.push({ label: "Flush Them Out", value: profile.upgradeEffect.vsCover });
+  }
+  // Follow-Through (Piston Hammer), +Penetration vs a rig this attacker shoved this round.
+  if (opts.target && profile.upgradeEffect?.vsShoved && attacker.id != null && opts.target.shovedBy === attacker.id) {
+    bonus += profile.upgradeEffect.vsShoved;
+    terms.push({ label: "Follow-Through", value: profile.upgradeEffect.vsShoved });
+  }
+  // Spotter's Thrust (Bayonet), +Penetration vs a target your side has marked.
+  if (opts.target && profile.upgradeEffect?.vsPainted && opts.target.painted && opts.target.painted.by === (attacker.owner || "a")) {
+    bonus += profile.upgradeEffect.vsPainted;
+    terms.push({ label: "Spotter's Thrust", value: profile.upgradeEffect.vsPainted });
+  }
+  // Hot Contact / Short Circuit (Tesla Coil / Shock Glove), +Penetration vs a
+  // target running over its own Heat Capacity.
+  if (opts.target && profile.upgradeEffect?.vsHot) {
+    const cap = HEAT_CAPACITY[opts.target.weightClass];
+    if (cap != null && (opts.target.engine?.heat || 0) > cap) {
+      bonus += profile.upgradeEffect.vsHot;
+      terms.push({ label: profile.melee ? "Short Circuit" : "Hot Contact", value: profile.upgradeEffect.vsHot });
+    }
+  }
+  // Pressure Dump (Piston Hammer), +1 Penetration per 2 heat carried (max +3);
+  // resolveFire vents that heat once the blow lands.
+  if (profile.upgradeEffect?.pressureDump) {
+    const dump = Math.min(3, Math.floor((attacker.engine?.heat || 0) / 2));
+    if (dump) { bonus += dump; terms.push({ label: "Pressure Dump", value: dump }); }
   }
   // Exploit Wound (§13, Talon), +3 Penetration against a struck location already below
   // its max SP. Needs the struck location threaded in via opts.location.

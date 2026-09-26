@@ -960,10 +960,11 @@ export class LiveMatch {
     // Keep the sight rays on the board while the briefing is up.
     const sight = this.previewSight(rig, target);
     this.previewSplash(rig, target, this.splashOf(rig, list)?.weapon);
+    const rider = this.previewRider(rig, target, list);
     this.atkModal?.close();
     const m = this.atkModal = modal({
       title: `Attack ${target.name}`, cls: "atk-dock", dock: true,
-      body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit, coverWhy: sight?.why }),
+      body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit, coverWhy: sight?.why, rider }),
       actions: [{ label: "Cancel", ghost: true }],
     });
     // Only if no newer briefing replaced it (clicking another target swaps them).
@@ -1050,6 +1051,39 @@ export class LiveMatch {
     for (const r of caught) pm.push(this.world.ring(r.pos.x, r.pos.y, radiusOf(r) + 0.35, r.owner === rig.owner ? 0xf5b041 : 0xff4433, 0.95));
     const friends = caught.filter((r) => r.owner === rig.owner), foes = caught.filter((r) => r.owner !== rig.owner);
     return `splash ${sp.radius}": ${caught.length ? [foes.length ? `catches ${foes.map((r) => r.name).join(", ")}` : null, friends.length ? `⚠ friendly fire on ${friends.map((r) => r.name).join(", ")}` : null].filter(Boolean).join(" · ") : "nobody else in it"}`;
+  }
+  // On-hit riders (Steam Cannon shove, Flare mark burst, Tesla chain) for the
+  // gun among `cands`: drawn on the table, returns a tip line (null if none).
+  previewRider(rig, target, cands = []) {
+    if (!target.pos || !rig.pos || !cands.some((c) => c.weapon === "longRange")) return null;
+    const prof = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+    const fx = prof?.upgradeEffect || {};
+    const pm = this.previewMeshes;
+    const others = this.state.rigs.filter((r) => r.id !== target.id && r.id !== rig.id && !r.destroyed && r.pos);
+    const gap = (r) => Math.hypot(r.pos.x - target.pos.x, r.pos.y - target.pos.y) - radiusOf(r);
+    const shove = (prof?.shove || 0) + (fx.shove || 0);
+    if (shove) {
+      const dx = target.pos.x - rig.pos.x, dy = target.pos.y - rig.pos.y, len = Math.hypot(dx, dy) || 1;
+      const to = { x: target.pos.x + dx / len * shove, y: target.pos.y + dy / len * shove };
+      pm.push(this.world.line(new THREE.Vector3(target.pos.x, 0.4, target.pos.y), new THREE.Vector3(to.x, 0.4, to.y), 0xf2efe8), this.world.ring(to.x, to.y, radiusOf(target), 0xf2efe8, 0.6));
+      return `on a hit: shoved ${shove}" back (slams for ${1 + (fx.slam || 0)} SP if it hits something)`;
+    }
+    if (prof?.chain) {
+      const reach = prof.chain + (fx.chainRadius || 0);
+      pm.push(this.world.ring(target.pos.x, target.pos.y, reach, 0x66ccff, 0.7));
+      const next = others.filter((r) => gap(r) <= reach).sort((a, b) => gap(a) - gap(b))[0];
+      if (next) pm.push(this.world.ring(next.pos.x, next.pos.y, radiusOf(next) + 0.35, next.owner === rig.owner ? 0xf5b041 : 0x66ccff, 0.95));
+      return `on a hit: arcs ${reach}" to ${next ? `${next.name}${next.owner === rig.owner ? " ⚠ friendly" : ""}` : "nobody"}`;
+    }
+    if (prof?.marks) {
+      const burst = fx.markRadius || 0;
+      if (!burst) return "on a hit: marked (allies ignore cover, +1 Aim)";
+      pm.push(this.world.disc(target.pos.x, target.pos.y, burst, 0xff4a2a, 0.08), this.world.ring(target.pos.x, target.pos.y, burst, 0xff4a2a, 0.7));
+      const lit = others.filter((r) => r.owner !== rig.owner && gap(r) <= burst);
+      for (const r of lit) pm.push(this.world.ring(r.pos.x, r.pos.y, radiusOf(r) + 0.35, 0xff4a2a, 0.95));
+      return `on a hit: marks ${[target, ...lit].map((r) => r.name).join(", ")}`;
+    }
+    return null;
   }
   // An area ring `reach` inches out from the rig's rim, with the enemies it catches.
   previewAoe(rig, reach, color) {
@@ -1262,7 +1296,8 @@ export class LiveMatch {
         const ed = c.weapon ? expectedDamage(this.mode.rig, r, c.weapon, { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round }) : 0;
         const sight = c.weapon === "longRange" ? this.previewSight(this.mode.rig, r) : (this.clearPreview(), null);
         const splash = this.previewSplash(this.mode.rig, r, this.splashOf(this.mode.rig, list)?.weapon);
-        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP${splash ? ` · ${splash}` : ""}${sight ? ` · ${sight.why}` : ""} · click to choose weapon`);
+        const rider = this.previewRider(this.mode.rig, r, list);
+        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP${splash ? ` · ${splash}` : ""}${rider ? ` · ${rider}` : ""}${sight ? ` · ${sight.why}` : ""} · click to choose weapon`);
         this.director.mechs.get(this.mode.rig.id)?.aimAt(new THREE.Vector3(r.pos.x, 2, r.pos.y));
       } else if (r.owner !== this.mode.rig.owner && !r.destroyed && this.mode.key !== "lock") {
         // An enemy you can't attack: say why instead of leaving it dark.

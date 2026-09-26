@@ -159,7 +159,7 @@ let pickOpts = () => ({});
 // rows: [{ c: candidate, ed: expected SP, edGrit?: with Grit, name: weapon name }], best first.
 // opts.grit: Grit tokens the attacker's side holds (0 hides the toggle).
 // opts.coverWhy: the sight-ray reading behind the Cover tile (drawn on the board too).
-export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy = null } = {}) {
+export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy = null, rider = null } = {}) {
   let gritOn = false;
   pickOpts = () => (gritOn ? { grit: true } : {});
   const first = rows[0].c;
@@ -194,6 +194,7 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
       el("div", { class: "atk-body" },
         el("div", { class: "atk-title" }, title, i === 0 ? el("span", { class: "atk-pick" }, "💡 Advisor pick") : null, killBadge(r, target)),
         el("div", { class: "atk-what" }, rich(what)),
+        !melee && rider ? el("div", { class: "atk-what" }, `⚡ ${rider[0].toUpperCase()}${rider.slice(1)}.`) : null,
         el("div", { class: "atk-stats" },
           el("span", { title: "Shots: dice rolled to hit" }, el("i", {}, icon("shots"), "Shots"), String(p.rof ?? "?")),
           el("span", { title: "Penetration: how easily a hit wounds" }, el("i", {}, icon("pen"), "Pen"), `${p.pen ?? "?"}${arc.pen ? ` +${arc.pen}` : ""}`),

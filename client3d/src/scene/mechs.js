@@ -1,7 +1,7 @@
 // Procedural mech models. Every chassis gets its own paint (the codenames ARE
 // colours, Gold, Pumpkin, Zebra…), its weight class sets the frame (lights
 // stalk on reverse-jointed legs, mediums plant on stocky pillars), and each of
-// the 22 weapons has its own model hung off the arms. Built from primitives at
+// the 28 weapons has its own model hung off the arms. Built from primitives at
 // runtime: no asset pipeline, and every part is a named pivot we can animate.
 import * as THREE from "three";
 
@@ -10,6 +10,7 @@ const DEG = Math.PI / 180;
 export const PAINT = {
   Gold: 0xd4a017, Blue: 0x2f6fd6, Purple: 0x7b3fb8, Pumpkin: 0xe8731c, Zebra: 0xe9e6dc,
   Turquoise: 0x1fb5a8, Green: 0x3f9a3a, Copper: 0xb8703a, Black: 0x2a2a30, Red: 0xc0282d, Silver: 0xb9c0c8,
+  Brass: 0xa8822e, Ivory: 0xe6dcc0, Jade: 0x2f8f62,
 };
 export const TEAM = { a: 0x5fd3c0, b: 0xe0533d };
 
@@ -121,6 +122,29 @@ const LR = {
     const bolt = barrel(0.035, 1.0, BRASS()); bolt.position.set(0.3, 0.14, 0); g.add(bolt);
     return { group: g, muzzleX: 1.3, bolt: true };
   },
+  "Steam Cannon"(p) {
+    const g = new THREE.Group();
+    const boiler = cyl(0.34, 0.34, 0.8, p, 16); boiler.rotation.z = Math.PI / 2; g.add(boiler);
+    for (const x of [-0.25, 0.25]) g.add(at(cyl(0.36, 0.36, 0.06, BRASS(), 16), x, 0, 0, Math.PI / 2));
+    const b = cyl(0.16, 0.28, 0.9, DARK(), 14); b.rotation.z = -Math.PI / 2; b.position.x = 0.85; g.add(b);
+    g.add(at(cyl(0.05, 0.05, 0.4, BRASS()), -0.1, 0.45, 0));
+    return { group: g, muzzleX: 1.3, heavy: true };
+  },
+  "Flare Launcher"(p) {
+    const g = new THREE.Group(); g.add(box(0.6, 0.3, 0.4, p));
+    for (const z of [-0.12, 0.12]) { const t = barrel(0.1, 0.9, DARK()); t.position.set(0.45, 0.12, z); t.rotation.z = -Math.PI / 2 + 0.3; g.add(t); }
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), new THREE.MeshStandardMaterial({ color: 0xff5a3a, emissive: 0xff3a1a, emissiveIntensity: 1.5 }));
+    tip.position.set(0.9, 0.3, 0); g.add(tip);
+    return { group: g, muzzleX: 1.0, muzzleY: 0.3, glow: tip };
+  },
+  "Tesla Coil"(p) {
+    const g = new THREE.Group(); g.add(box(0.6, 0.35, 0.35, p));
+    const rod = barrel(0.06, 1.1, STEEL()); rod.position.x = 0.3; g.add(rod);
+    for (let i = 0; i < 4; i++) g.add(at(new THREE.Mesh(new THREE.TorusGeometry(0.16 - i * 0.02, 0.035, 6, 14), BRASS()), 0.45 + i * 0.22, 0, 0, 0).rotateY(Math.PI / 2));
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x66ccff, emissiveIntensity: 1.5 }));
+    orb.position.x = 1.45; g.add(orb);
+    return { group: g, muzzleX: 1.5, glow: orb };
+  },
 };
 
 // ---- Melee weapons: return { group, tip, spin? }
@@ -192,6 +216,27 @@ const MELEE = {
       t.position.set(0.2, 0.6, z); t.rotation.z = -Math.PI * 0.55; g.add(t);
     }
     return { group: g, tip: 1.0 };
+  },
+  "Piston Hammer"(p) {
+    const g = new THREE.Group();
+    const housing = cyl(0.22, 0.22, 0.7, p, 14); housing.rotation.z = Math.PI / 2; housing.position.x = 0.2; g.add(housing);
+    const ram = new THREE.Group(); ram.position.x = 0.55; g.add(ram);
+    const rod = barrel(0.08, 0.5, STEEL()); ram.add(rod);
+    ram.add(at(cyl(0.3, 0.3, 0.35, DARK(), 14), 0.6, 0, 0, Math.PI / 2));
+    return { group: g, tip: 1.1, ram };
+  },
+  "Bayonet"(p) {
+    const g = new THREE.Group(); g.add(box(0.5, 0.25, 0.25, p));
+    const blade = cone(0.09, 1.3, mat(0xdfe6ee, { metalness: 1, roughness: 0.15 }), 4); blade.rotation.z = -Math.PI / 2; blade.position.x = 0.9; g.add(blade);
+    g.add(at(box(0.08, 0.3, 0.3, BRASS()), 0.27, 0, 0));
+    return { group: g, tip: 1.6 };
+  },
+  "Shock Glove"(p) {
+    const g = new THREE.Group(); g.add(box(0.5, 0.45, 0.45, p));
+    for (let i = 0; i < 4; i++) g.add(at(box(0.3, 0.1, 0.09, STEEL()), 0.4, 0.14 - (i % 2) * 0.1, -0.15 + i * 0.1));
+    const coil = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.04, 6, 16), new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x66ccff, emissiveIntensity: 1.2 }));
+    coil.rotation.y = Math.PI / 2; coil.position.x = 0.05; g.add(coil);
+    return { group: g, tip: 0.7, glow: coil };
   },
 };
 
@@ -467,6 +512,8 @@ export class Mech {
     this.armL.position.x = s * 0.9 * (this.strike > 0 ? 1 : 0);
     this.armL.rotation.y = -s * 0.5;
     if (this.me.swing) this.me.swing.position.x = 0.3 + s * 1.2;
+    if (this.me.ram) this.me.ram.position.x = 0.55 + s * 0.7;
+    for (const w of [this.lr, this.me]) if (w.glow) w.glow.material.emissiveIntensity = 1 + Math.sin(this.t * 7 + (w === this.me ? 1.3 : 0)) * 0.5 + Math.max(this.recoil, this.strike) * 3;
     if (this.me.jaws) { this.me.jaws[0].rotation.z = -0.3 + s * 0.3; this.me.jaws[1].rotation.z = 0.3 - s * 0.3; }
     this.spinSpeed = Math.max(this.me.spin && this.strike > 0 ? 30 : 0, this.spinSpeed - dt * 30);
     if (this.lr.spin) this.lr.spin.rotation.x += this.spinSpeed * dt * (this.recoil > 0 ? 1 : 0.1);
