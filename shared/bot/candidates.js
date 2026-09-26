@@ -50,11 +50,13 @@ export function candidatesFor(room, rig) {
 
   for (const enemy of enemies) {
     const geo = deriveAttackGeometry(room, rig, enemy);   // distance, arc(of target), cover, los, inMeleeReach
-    if (!inFrontArc(rig, enemy)) continue;                 // can't bear on it, skip every attack
+    const front = inFrontArc(rig, enemy);
+    // Outside the arc only a melee strike in base contact is possible (free pivot).
+    if (!front && !geo.inBaseContact) continue;
     const shot = { target: enemy.name, arc: geo.arc, distance: geo.distance, cover: geo.cover };
 
     // Long-range Fire: needs LOS, a loaded gun, and a distance inside the band.
-    if (enabled.has("fire") && geo.los && lrLoaded && inBand(geo.distance)) {
+    if (front && enabled.has("fire") && geo.los && lrLoaded && inBand(geo.distance)) {
       out.push({ action: "fire", weapon: "longRange", ...shot });
     }
     // Melee Fire: needs the rim gap inside reach (deriveAttackGeometry measured it
@@ -64,7 +66,7 @@ export function candidatesFor(room, rig) {
     }
     // Aimed is ranged-only (availableActions shuts it off when the gun is spent),
     // so it rides the same LOS + band gate as a long-range Fire, once per location.
-    if (enabled.has("aimed") && geo.los && inBand(geo.distance)) {
+    if (front && enabled.has("aimed") && geo.los && inBand(geo.distance)) {
       for (const location of LOCS) {
         out.push({ action: "aimed", weapon: "longRange", location, ...shot });
       }

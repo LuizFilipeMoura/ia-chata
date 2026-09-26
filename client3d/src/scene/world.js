@@ -101,6 +101,18 @@ function windowTexture(lit = "#ffcf6b") {
   return t;
 }
 
+// Pulses for laser beams: bright bands on a dark strip, repeating along v.
+function beamTexture() {
+  const c = document.createElement("canvas"); c.width = 4; c.height = 64;
+  const g = c.getContext("2d");
+  const grd = g.createLinearGradient(0, 0, 0, 64);
+  grd.addColorStop(0, "rgba(255,255,255,0.15)"); grd.addColorStop(0.42, "rgba(255,255,255,0.15)");
+  grd.addColorStop(0.5, "rgba(255,255,255,1)"); grd.addColorStop(0.58, "rgba(255,255,255,0.15)"); grd.addColorStop(1, "rgba(255,255,255,0.15)");
+  g.fillStyle = grd; g.fillRect(0, 0, 4, 64);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
 // A blotchy oil stain: dark core, soft ragged edge, thin rainbow sheen.
 function oilTexture() {
   const c = document.createElement("canvas"); c.width = c.height = 128;
@@ -667,9 +679,22 @@ export class World {
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color, dashSize: 0.5, gapSize: 0.3 }));
     line.computeLineDistances(); this.overlay.add(line); return line;
   }
+  // A laser beam from a to b (world points): a bright core, a soft glow, and
+  // pulses racing along it (animated in frame()).
   line(a, b, color = 0xff5544) {
-    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.8 }));
-    this.overlay.add(l); return l;
+    const len = a.distanceTo(b);
+    const g = new THREE.Group();
+    g.position.copy(a).add(b).multiplyScalar(0.5);
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, len, 6, 1, true),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+    g.add(core);
+    const tex = (this.beamTex ||= beamTexture()).clone(); tex.needsUpdate = true;
+    tex.repeat.set(1, Math.max(1, len / 2.5));
+    const glowMat = new THREE.MeshBasicMaterial({ color, map: tex, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, len, 8, 1, true), glowMat));
+    (this.beams ||= []).push({ g, tex, glowMat, core: core.material, phase: Math.random() * 6 });
+    this.overlay.add(g); return g;
   }
 
   frame() {
@@ -734,6 +759,14 @@ export class World {
       }
     }
     for (const a of this.animators || []) a(dt, now);
+    // Laser beams: pulses race along, the core shimmers. Drop removed ones.
+    if (this.beams?.length) this.beams = this.beams.filter((bm) => {
+      if (!bm.g.parent) { bm.tex.dispose(); return false; }
+      bm.tex.offset.y -= dt * 1.6;
+      bm.core.opacity = 0.8 + 0.2 * Math.sin(now * 9 + bm.phase);
+      bm.glowMat.opacity = 0.45 + 0.15 * Math.sin(now * 4 + bm.phase);
+      return true;
+    });
     this.ambient(dt);
     const t = this.clock.elapsedTime;
     (this.searchlights || []).forEach((sl, i) => {

@@ -472,8 +472,13 @@ export class LiveMatch {
         el("div", { class: `ah-v ${hm.over ? "bad" : hm.zone === "redline" ? "warn-t" : ""}` }, hm.over ? `${hm.heat} / ${hm.cap} · OVER` : `${hm.heat} / ${hm.cap} safe`)),
     ));
     if (!commandable) {
-      bar.append(el("div", { class: "hint" }, rig.owner !== this.side ? "Enemy rig. Hover to inspect." : rig.activated ? "Already activated this round." : this.myTurn ? "" : "Not your turn."));
-      if (rig.owner !== this.side || !this.myTurn) return;
+      // No button grid unless this rig can act now: another friendly rig
+      // mid-activation owns the turn until it ends.
+      const busy = this.myTurn && g.turn?.activeRigId != null && g.turn.activeRigId !== rig.id ? this.rig(g.turn.activeRigId) : null;
+      bar.append(el("div", { class: "hint" }, rig.owner !== this.side ? "Enemy rig. Hover to inspect."
+        : busy ? `${busy.name} is mid-activation. End it before activating ${rig.name}.`
+        : rig.activated ? "Already activated this round." : this.myTurn ? "This rig can't act right now." : "Not your turn."));
+      return;
     }
     const row = el("div", { class: "act-row" });
     for (const a of [...acts, ...extra]) {

@@ -2674,8 +2674,12 @@ export function deriveAttackGeometry(room, attacker, target) {
     los: corridor.los,
     inMeleeReach: meleeInReach(a, b, meleeReachOf(attacker)),
     inFrontArc: inFrontArc(a, b),
+    // §7: in base contact, a melee strike pivots for free (no front-arc gate).
+    inBaseContact: rimGap(a, b) <= BASE_CONTACT,
   };
 }
+// Rim gap (inches) that counts as base contact.
+export const BASE_CONTACT = 0.25;
 
 // A Gritted attack (§5, wr-0.15): the Fire/Aimed command carries `grit: true`.
 const isGritted = (a) => a?.grit === true || a?.grit === "true";
@@ -2743,8 +2747,13 @@ function resolveFire(room, rig, target, a, act, random) {
   // be exactly the trust we are removing.
   if (room.mode === "digital") {
     const geo = deriveAttackGeometry(room, rig, target);
-    // §7: the target must be in the attacker's front 90 deg arc, gun or blade.
-    if (!geo.inFrontArc) return reject(`${target.name} is outside ${rig.name}'s front arc: turn to face it first.`);
+    // §7: the target must be in the attacker's front 90 deg arc, gun or blade,
+    // except a melee strike on a rig in base contact: the attacker pivots to
+    // face it for free.
+    if (!geo.inFrontArc) {
+      if (slot !== "melee" || !geo.inBaseContact) return reject(`${target.name} is outside ${rig.name}'s front arc: turn to face it first.`);
+      rig.facing = Math.round(((Math.atan2(target.pos.y - rig.pos.y, target.pos.x - rig.pos.x) * 180 / Math.PI) + 360) % 360);
+    }
     if (slot === "melee") {
       if (!geo.inMeleeReach) return reject(`${target.name} is out of melee reach.`);
       // Melee is the one attack resolveAttack still gates on the legacy `range`

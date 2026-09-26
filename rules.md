@@ -236,7 +236,7 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 
 ## 7. Attacking & Damage
 
-1. **Declare attacker & target.** The target must be in the attacker's **front 90° arc**. Declare before measuring.
+1. **Declare attacker & target.** The target must be in the attacker's **front 90° arc**. Declare before measuring. **Exception, melee in base contact:** a Rig in base contact with an enemy may strike it with its **melee** weapon wherever it stands, pivoting for free to face it first (not a Move; a pinned or engaged Rig may still do it). Ranged attacks always need the front arc.
 2. **Check range.** Measure base-to-base; the distance must fall within the weapon's **min–max range band**. Out of range → the attack fails. (Do not pre-measure before declaring.)
 3. **Verify line of sight.** At least **50%** of the target must be visible.
    - Up to **25% obscured** → **−1 Accuracy**.
