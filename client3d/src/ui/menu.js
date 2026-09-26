@@ -22,7 +22,7 @@ const TIER_TEXT = {
   hard: "GA-evolved champion: the meta's best builds and tactics.",
 };
 
-export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims, onVersus, onCampaign }) {
+export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims, onVersus, onCampaign, onDev }) {
   fill(root, el("div", { class: "title" },
     el("div", { class: "logo" }, el("span", {}, "OIL"), el("i", {}, "&"), el("span", {}, "IRON"), el("small", {}, "TACTICS · 3D")),
     el("p", { class: "tag" }, "Oil-soaked war rigs, brass-bound Ironclads, and a table of rubble to fight over."),
@@ -34,6 +34,7 @@ export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims, 
       el("button", { class: "btn big", onClick: onWatch }, "🍿  Watch Bots Fight"),
       el("button", { class: "btn big", onClick: onSims }, "🛰  Sim Center: simulate & replay"),
       el("button", { class: "btn big", onClick: onLab }, "🧬  Balance Lab (genetic meta)"),
+      onDev ? el("button", { class: "btn big", onClick: onDev }, "🛠  Dev Room: every 3D asset") : null,
     ),
     el("p", { class: "muted small" }, "WASD / arrows pan · Q/E or right-drag rotate · wheel zoom · Tab cycles rigs · 1–6 hotkeys · Enter ends activation"),
   ));

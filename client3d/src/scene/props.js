@@ -211,6 +211,10 @@ function mast(t, ctx) {
 }
 
 const BUILDINGS = { factory, tank, watertower, shed, cooling, mast };
+export const BUILDING_KINDS = Object.keys(BUILDINGS);
+export const BACKDROP_KINDS = ["skyline", "zeppelin", "crane", "flares", "cooling"];
+// One specific building variant (the dev room), footprint t.w × t.h.
+export function buildingVariant(kind, t, ctx) { return (BUILDINGS[kind] || factory)(t, ctx); }
 
 export function buildingProp(t, ctx) {
   const list = ctx.theme.buildings;

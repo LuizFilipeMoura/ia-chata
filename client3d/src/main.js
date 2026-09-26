@@ -13,6 +13,7 @@ import { titleScreen, squadBuilder, createBotRoom, createVersusRoom, addSquad, o
 import { labScreen } from "./ui/lab.js";
 import { simCenter } from "./ui/simcenter.js";
 import { campaignScreen } from "./ui/campaign.js";
+import { DevRoom } from "./ui/devroom.js";
 import { Coach, LESSONS } from "./ui/tutorial.js";
 import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
@@ -96,6 +97,7 @@ function home() {
     onVersus: () => versus(),
     onWatch: () => watch(),
     onCampaign: () => campaign(),
+    onDev: () => devRoom(),
   });
   screen.append(el("div", { class: "title-mute" }, el("button", { class: "btn ghost", title: "Settings", onClick: settingsPanel }, "⚙"), muteButton()));
   lastBattle().then((last) => {
@@ -251,6 +253,15 @@ async function startLesson(lesson) {
   } catch (e) { toast(e.message, "bad", 5000); tutorial(); }
 }
 
+// Dev Room: every 3D asset on one floor, labelled, to point at in design requests.
+function devRoom({ theme = null, focus = null } = {}) {
+  teardown();
+  screen.style.display = "none";
+  const room = new DevRoom(world, hudRoot, { onBack: home, theme, focus });
+  room.onTheme = (id) => devRoom({ theme: id, focus: room.sel?.id });
+  active = room;
+}
+
 function lab() {
   teardown();
   labScreen(screen, { onBack: home, onLibrary: (filter) => sims(filter) });
@@ -378,5 +389,9 @@ function cheatSheet() {
 Object.assign(window.__oi3d, { play: (room, opts) => play(room, opts), playCampaign: (room, contract) => playCampaign(room, contract) });
 
 // A shared link (?join=CODE) goes straight to joining.
+// #dev (or #dev=<asset id>) opens the Dev Room directly.
 const joinCode = new URLSearchParams(location.search).get("join");
-if (joinCode) { history.replaceState(null, "", location.pathname); joinVersus(joinCode.toUpperCase()); } else home();
+const devHash = /^#dev(?:=(.*))?$/.exec(location.hash);
+if (joinCode) { history.replaceState(null, "", location.pathname); joinVersus(joinCode.toUpperCase()); }
+else if (devHash) devRoom({ focus: devHash[1] ? decodeURIComponent(devHash[1]) : null });
+else home();

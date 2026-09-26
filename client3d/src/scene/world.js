@@ -396,6 +396,7 @@ export class World {
       anim: (fn) => this.animators.push(fn),
       chimney: (obj, opts = {}) => this.chimneys.push(Object.assign(obj, { big: !!opts.big })),
     };
+    this.dressCtx = ctx; // the dev room dresses its own props with it
     // Surrounding ground + table edge.
     const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: theme.outer, roughness: 1 }));
     outer.rotation.x = -Math.PI / 2; outer.position.set(w / 2, -0.8, h / 2); outer.receiveShadow = true; this.tableGroup.add(outer);

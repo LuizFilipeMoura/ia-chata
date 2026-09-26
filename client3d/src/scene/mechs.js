@@ -293,6 +293,13 @@ const MODULE_TOOLS = {
 };
 export const UNIT_PAINT = { walker: 0x7d875c, drone: 0x8a6448 };
 
+// Loose weapon models (the dev room): slot = longRange | melee | unit | tool.
+export const WEAPON_MODELS = { longRange: Object.keys(LR), melee: Object.keys(MELEE), unit: Object.keys(UNIT_GUNS), tool: Object.keys(MODULE_TOOLS) };
+export function weaponModel(slot, name, color = 0x888888) {
+  const table = { longRange: LR, melee: MELEE, unit: UNIT_GUNS, tool: MODULE_TOOLS }[slot];
+  return table?.[name]?.(mat(color)) ?? null;
+}
+
 // A leg: hip pivot → thigh → knee pivot → shin → foot. Lights are digitigrade
 // (knee bends backwards), mediums are stocky pillars with wide feet.
 function makeLeg(cls, paint) {
