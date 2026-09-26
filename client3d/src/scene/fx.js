@@ -217,25 +217,33 @@ export class FX {
     this.particles = []; this.projectiles = []; this.beams = []; this.texts = []; this.lights = [];
   }
 
-  // A comic speech bubble that bobs over a mech for a couple of seconds.
-  bubble(pos, str, accent = "#5fd3c0") {
+  // A pilot's radio line over their mech: a dark riveted panel, the speaker
+  // in the side's colour ("▸ OTTILIE"), the words in cream underneath.
+  bubble(pos, str, accent = "#5fd3c0", speaker = null) {
     const c = document.createElement("canvas");
     const g = c.getContext("2d");
-    const font = "600 30px Rajdhani, Arial, sans-serif";
-    g.font = font;
-    const w = Math.min(560, Math.ceil(g.measureText(str).width) + 40), h = 64;
-    c.width = w; c.height = h + 18;
-    g.font = font;
-    g.fillStyle = "rgba(250,248,240,0.96)"; g.strokeStyle = accent; g.lineWidth = 4;
-    g.beginPath(); g.roundRect(2, 2, w - 4, h - 4, 18); g.fill(); g.stroke();
-    g.beginPath(); g.moveTo(w / 2 - 12, h - 3); g.lineTo(w / 2, h + 14); g.lineTo(w / 2 + 12, h - 3); g.closePath(); g.fill();
-    g.beginPath(); g.moveTo(w / 2 - 12, h - 2); g.lineTo(w / 2, h + 14); g.lineTo(w / 2 + 12, h - 2); g.stroke();
-    g.fillStyle = "#1a1a1a"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(str, w / 2, h / 2);
+    const body = "600 30px Rajdhani, Arial, sans-serif", head = "700 20px Rajdhani, Arial, sans-serif";
+    g.font = body;
+    const tw = g.measureText(str).width;
+    g.font = head;
+    const hw = speaker ? g.measureText(`▸ ${speaker.toUpperCase()}`).width : 0;
+    const w = Math.min(620, Math.ceil(Math.max(tw, hw)) + 44), top = speaker ? 26 : 0, h = 58 + top;
+    c.width = w; c.height = h + 16;
+    g.fillStyle = "rgba(22,18,14,0.94)"; g.strokeStyle = accent; g.lineWidth = 3;
+    g.beginPath(); g.roundRect(2, 2, w - 4, h - 4, 10); g.fill(); g.stroke();
+    // A tail down to the machine.
+    g.beginPath(); g.moveTo(w / 2 - 10, h - 3); g.lineTo(w / 2, h + 13); g.lineTo(w / 2 + 10, h - 3); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(w / 2 - 10, h - 2); g.lineTo(w / 2, h + 13); g.lineTo(w / 2 + 10, h - 2); g.stroke();
+    // Brass rivets in the corners.
+    g.fillStyle = "#c9a14a"; for (const [x, y] of [[9, 9], [w - 9, 9], [9, h - 9], [w - 9, h - 9]]) { g.beginPath(); g.arc(x, y, 2.2, 0, 7); g.fill(); }
+    g.textAlign = "center"; g.textBaseline = "middle";
+    if (speaker) { g.font = head; g.fillStyle = accent; g.fillText(`▸ ${speaker.toUpperCase()}`, w / 2, 20); }
+    g.font = body; g.fillStyle = "#f3e9d2"; g.fillText(str, w / 2, top + (h - top) / 2);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
     const k = 0.028; s.scale.set(c.width * k, c.height * k, 1); s.position.copy(pos); s.renderOrder = 11;
     this.scene.add(s);
-    this.texts.push({ s, life: 2.6, max: 2.6, still: true, base: pos.y });
+    this.texts.push({ s, life: 2.8, max: 2.8, still: true, base: pos.y });
   }
 
   update(dt) {

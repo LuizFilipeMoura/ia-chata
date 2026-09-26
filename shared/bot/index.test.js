@@ -203,7 +203,7 @@ test("easy never picks an action that takes it over Heat Capacity", async () => 
       if (!cmd) break;
       applyCommand(room, cmd, {}, { random: mulberry32(seed) });
       assert.ok(heatMeter(atk).over <= 0, `seed ${seed}: ${cmd.attrs.action} took heat to ${atk.engine.heat}/${heatMeter(atk).cap}`);
-      if (room.game.turn.activeRigId !== atk.id) break;
+      if (room.game.turn?.activeRigId !== atk.id) break;   // activation over (or the game: a kill)
     }
   }
 });

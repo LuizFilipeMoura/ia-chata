@@ -189,11 +189,14 @@ export class Director {
 
   sound(fn) { if (!this.quiet && !this.skipping) fn(); }
 
-  bark(m, event) {
+  // A pilot on the radio. `other` = the machine they're talking about,
+  // `part` = the part that got hit. No line repeats within a battle.
+  bark(m, event, { other = null, part = null } = {}) {
     if (this.quiet || this.skipping || !m || !settings.get("barks")) return;
-    const line = barkFor(m.name, event);
-    if (!line) return;
-    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), line, m.owner === "a" ? "#5fd3c0" : "#e0533d");
+    this.barksUsed ||= new Set();
+    const b = barkFor(m, event, { other, part, used: this.barksUsed });
+    if (!b) return;
+    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, m.owner === "a" ? "#5fd3c0" : "#e0533d", b.pilot);
     sfx.bark();
   }
 
@@ -543,9 +546,9 @@ export class Director {
       const tr = frame.rigs.find((r) => r.id === target.id), trPrev = prev.rigs.find((r) => r.id === target.id);
       if (tr && trPrev && !tr.destroyed && loc) this.announceBreak(tr, trPrev, loc);
       const killed = frame.rigs.find((r) => r.id === target.id)?.destroyed && !target.destroyed;
-      if (killed) { this.bark(actor, "kill"); setTimeout(() => this.bark(target, "die"), 350); }
-      else if (sp >= 3) { this.bark(Math.random() < 0.5 ? actor : target, Math.random() < 0.5 ? "hit" : "hurt"); }
-      else this.bark(actor, sp > 0 ? "hit" : "miss");
+      if (killed) { this.bark(actor, "kill", { other: target }); setTimeout(() => this.bark(target, "die", { other: actor }), 350); }
+      else if (sp >= 3) { if (Math.random() < 0.5) this.bark(actor, "hit", { other: target, part: loc }); else this.bark(target, "hurt", { other: actor, part: loc }); }
+      else this.bark(actor, sp > 0 ? "hit" : "miss", { other: target, part: sp > 0 ? loc : null });
       await wait(350 / this.speed);
       actor.aimAt(null);
     } else if (l.kind === "overheat" && actor) {
