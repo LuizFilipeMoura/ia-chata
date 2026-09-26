@@ -280,6 +280,7 @@ export class LiveMatch {
       // results (log entries older than the bot's first), then each bot step,
       // then settle on the final state.
       const frames = state.botFrames || [];
+      if (frames.length) this.enemyPlayed = true; // refresh() glides to your rigs once it has played
       const humanFrame = frameFromState(state, this.lastRes);
       if (frames.length) {
         const botIds = frames.flatMap((f) => f.log.map((l) => l.id));
@@ -346,16 +347,27 @@ export class LiveMatch {
     const g = this.game;
     // A chime when the floor comes back to you.
     const mine = this.myTurn;
-    if (mine && !this.wasMine) { sfx.turn(true); this.hud.banner("YOUR MOVE, IRONCLAD", "turn"); this.showDigest(); }
+    const floorBack = mine && !this.wasMine;
+    const firstLook = this.wasMine === undefined; // the opening view is set by apply()
+    if (floorBack) { sfx.turn(true); this.hud.banner("YOUR MOVE, IRONCLAD", "turn"); this.showDigest(); }
     if (!mine && this.wasMine && !this.digestLog && g.phase !== "finished") this.startDigest(this.state.rigs);
     this.wasMine = mine;
     // An activation starts or ends: glide to that unit (position only, never
     // the zoom), unless the camera is already on the move or being steered.
     const act = g.turn?.activeRigId ?? null;
-    if (act !== this.lastActive) {
+    if (act !== this.lastActive && !floorBack && !(mine && this.enemyPlayed)) {
       const r = this.rig(act ?? this.lastActive);
       if (this.lastActive !== undefined && r?.pos && settings.get("followCam") && !this.world.cameraBusy()) this.world.glide(r.pos.x, r.pos.y);
-      this.lastActive = act;
+    }
+    this.lastActive = act;
+    // The enemy just finished: glide to the rigs you can still activate (their
+    // centre), position only. It overrides the follow-cam's last shot, but not
+    // a camera the player is steering right now.
+    const enemyDone = (floorBack && !firstLook) || (mine && this.enemyPlayed);
+    if (mine) this.enemyPlayed = false;
+    if (enemyDone && settings.get("followCam") && !this.world.userSteering()) {
+      const ready = this.state.rigs.filter((r) => r.owner === this.side && !r.destroyed && !r.activated && r.pos);
+      if (ready.length) this.world.glide(ready.reduce((a, r) => a + r.pos.x, 0) / ready.length, ready.reduce((a, r) => a + r.pos.y, 0) / ready.length);
     }
     this.drawThreat();
     // Escalation: beacons pay more from rounds 4 and 8. Announce the step up.
