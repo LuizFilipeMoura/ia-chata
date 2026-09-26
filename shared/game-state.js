@@ -22,6 +22,11 @@ export const RIG_DEFAULTS = {
   medium:   { hull: 7, arms: 6, legs: 6, engine: 5 },
 };
 export const LOCS = ["hull", "arms", "legs", "engine"];
+// Integrity (§8a), the whole-rig pool as a share of total max SP, by weight
+// class / cold kind. Chassis carry an explicit `integrity`; this ratio covers
+// free-combo rigs and Tanks/Walkers. Lights pay for their speed with a thinner
+// pool than mediums.
+export const INTEGRITY_RATIO = { light: 0.5, medium: 0.65, tank: 0.65, walker: 0.5 };
 // HEAT_CAPACITY now lives in rules.js (combat.js needs it and imports only
 // from rules.js); re-exported here so existing callers (client, tests) keep
 // importing it from game-state.js.
@@ -120,19 +125,22 @@ export function normalizeUnitWeapon(name) {
 // `name` is the chassis codename, the single source of truth surfaced by the
 // commission UI (client derives its id→name map from here, so a new chassis is
 // named the moment it's added to this array). `label` stays the weapon-combo
-// string used as a secondary descriptor.
+// string used as a secondary descriptor. `integrity` is the whole-rig pool
+// (§8a): every SP any location loses also drains it, and at 0 the rig is
+// wrecked. It's a separate durability knob from `sp` (sp = how fast it gets
+// crippled, integrity = how fast it dies); start near INTEGRITY_RATIO × total SP.
 export const CHASSIS = [
-  { id: "light-claw-autocannon",      name: "Gold",       label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-missile-flamethrower", name: "Blue",       label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 } },
-  { id: "light-saw-minigun",          name: "Purple",     label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 } },
-  { id: "light-wreckingball-double",  name: "Pumpkin",    label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 } },
-  { id: "light-sword-arc",            name: "Zebra",      label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 8 } },
-  { id: "light-harpoon-anchor",       name: "Turquoise",  label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 } },
-  { id: "light-rivet-pressureclaw",   name: "Green",      label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 } },
-  { id: "medium-lance-mortar",        name: "Copper",     label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 } },
-  { id: "medium-shield-siege",        name: "Black",      label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 } },
-  { id: "medium-sniper-chainsaw",     name: "Red",        label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 } },
-  { id: "medium-crossbow-talon",      name: "Silver",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 } },
+  { id: "light-claw-autocannon",      name: "Gold",       label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 }, integrity: 22 },
+  { id: "light-missile-flamethrower", name: "Blue",       label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 }, integrity: 20 },
+  { id: "light-saw-minigun",          name: "Purple",     label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 6, sp: { hull: 13, arms: 11, legs: 11, engine: 9 }, integrity: 22 },
+  { id: "light-wreckingball-double",  name: "Pumpkin",    label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 6, sp: { hull: 12, arms: 10, legs: 11, engine: 8 }, integrity: 21 },
+  { id: "light-sword-arc",            name: "Zebra",      label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 5, sp: { hull: 11, arms: 9,  legs: 10, engine: 8 }, integrity: 19 },
+  { id: "light-harpoon-anchor",       name: "Turquoise",  label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 }, integrity: 21 },
+  { id: "light-rivet-pressureclaw",   name: "Green",      label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 6, sp: { hull: 13, arms: 11, legs: 10, engine: 9 }, integrity: 22 },
+  { id: "medium-lance-mortar",        name: "Copper",     label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3, sp: { hull: 14, arms: 12, legs: 12, engine: 10 }, integrity: 31 },
+  { id: "medium-shield-siege",        name: "Black",      label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3, sp: { hull: 16, arms: 13, legs: 12, engine: 11 }, integrity: 34 },
+  { id: "medium-sniper-chainsaw",     name: "Red",        label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4, sp: { hull: 12, arms: 11, legs: 11, engine: 9 }, integrity: 28 },
+  { id: "medium-crossbow-talon",      name: "Silver",     label: "Crossbow · Talon",            class: "medium", longRange: "Crossbow",        melee: "Talon",         speed: 4, sp: { hull: 12, arms: 11, legs: 12, engine: 9 }, integrity: 29 },
 ];
 
 // Each chassis's primary suggested equipment, mirrors content/chassis.json
@@ -811,6 +819,9 @@ function freshEquipState() {
 // holding a bare rig (and every pre-mode save) gets today's shape unchanged.
 function ensureRigShape(rig, mode = "physical") {
   if (typeof rig.activated !== "boolean") rig.activated = false;
+  // Integrity (§8a), a hand-built / older rig gets its pool derived on load.
+  if (!Number.isFinite(rig.integrityMax) && rig.hull) rig.integrityMax = integrityMaxFor(rig);
+  if (!Number.isFinite(rig.integrity) && Number.isFinite(rig.integrityMax)) rig.integrity = rig.integrityMax;
   if (typeof rig.skipNextActivation !== "boolean") rig.skipNextActivation = false;
   if (typeof rig.noCool !== "boolean") rig.noCool = false;
   if (typeof rig.speedHalvedNextRound !== "boolean") rig.speedHalvedNextRound = false;
@@ -1148,7 +1159,36 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
   // Dismember (§13), each location's commissioned max SP, the yardstick for the
   // "ground to <= half" cripple check (Sunder chips away at the live max).
   rig.origMax = { hull: rig.hull.max, arms: rig.arms.max, legs: rig.legs.max, engine: rig.engine.max };
+  rig.integrityMax = rig.integrity = integrityMaxFor(rig);
   return rig;
+}
+
+// Integrity (§8a), the whole-rig pool's max for a built unit. A chassis rig
+// scales its authored `integrity` by how far its live max SP drifted from the
+// chassis sheet (Ablative Plating, campaign SP mods, a Commander's multiplier),
+// so extra SP buys proportional pool. Anything else uses its class ratio.
+function integrityMaxFor(rig) {
+  const totalMax = partNamesOf(kindOf(rig)).reduce((s, n) => s + (rig[n]?.max || 0), 0);
+  const cd = chassisById(rig.chassis);
+  if (cd && Number.isFinite(cd.integrity)) {
+    const sheet = LOCS.reduce((s, l) => s + (cd.sp?.[l] || 0), 0) || totalMax;
+    return Math.max(1, Math.round(cd.integrity * totalMax / sheet));
+  }
+  const ratio = INTEGRITY_RATIO[kindOf(rig) === "rig" ? rig.weightClass : kindOf(rig)] ?? 0.6;
+  return Math.max(1, Math.round(totalMax * ratio));
+}
+
+// The danger tier a rig's Integrity sits in, shared by every client so the
+// nameplate, rig row and log all agree: ok > half, bloodied <= half, critical
+// <= a quarter (rounded up), wrecked at 0 / destroyed.
+export function integrityTier(rig) {
+  if (!rig) return "ok";
+  const cur = rig.integrity, max = rig.integrityMax;
+  if (rig.destroyed || (Number.isFinite(cur) && cur <= 0)) return "wrecked";
+  if (!Number.isFinite(cur) || !Number.isFinite(max) || max <= 0) return "ok";
+  if (cur <= Math.ceil(max / 4)) return "critical";
+  if (cur * 2 <= max) return "bloodied";
+  return "ok";
 }
 
 // Registry-driven unit factory. Rigs still go through makeRig (which handles
@@ -1254,6 +1294,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
   // Dismember (§13), commissioned max SP per part for the cripple yardstick.
   unit.origMax = {};
   for (const p of kind.parts) unit.origMax[p.name] = parts[p.name].max;
+  unit.integrityMax = unit.integrity = integrityMaxFor(unit);
   return unit;
 }
 
@@ -1465,6 +1506,13 @@ function rollD(sides, provided, random = Math.random) {
 
 // Append a dice/effect entry to the capped shared log the client animates.
 function pushResolution(room, entry) {
+  // Integrity (§8a) tier crossings ride on the resolution that caused them.
+  const notes = room.game.integrityNotes;
+  if (notes?.length && entry.kind !== "integrity") {
+    const live = notes.filter((n) => !room.rigs.find((r) => r.id === n.rigId)?.destroyed);
+    room.game.integrityNotes = [];
+    if (live.length) entry.effects = [...(entry.effects || []), ...live.map((n) => n.text)];
+  }
   entry.id = room.game.nextResolutionId++;
   room.game.resolutions.push(entry);
   while (room.game.resolutions.length > 12) room.game.resolutions.shift();
@@ -1803,7 +1851,11 @@ function engineHeatFloor(rig) {
 function recompute(rig) {
   const kind = kindOf(rig);
   const names = partNamesOf(kind);
-  rig.destroyed = names.some((n) => rig[n]?.destroyed) ||
+  // Integrity (§8a) is the kill clock: an empty pool wrecks the rig however
+  // the damage was spread. Every-part-at-0 stays as a backstop (a hand-set
+  // wreck), and a part flagged destroyed still counts for legacy state.
+  rig.destroyed = (Number.isFinite(rig.integrity) && rig.integrity <= 0) ||
+    names.some((n) => rig[n]?.destroyed) ||
     names.every((n) => rig[n]?.sp === 0);
   const floor = engineHeatFloor(rig);
   if (rig.engine && rig.engine.heat < floor) rig.engine.heat = floor;
@@ -1902,9 +1954,9 @@ function spillTarget(rig, sourceLoc) {
 function catastrophicAdditional(room, rig, loc, opts) {
   const kind = kindOf(rig);
   const role = roleOf(kind, loc);
-  // Structural (Hull) / power (Engine): the §8 kill tier, an extra hit is
-  // total system failure. Instant-kill, no spill.
-  if (role === "structural" || role === "power") { rig[loc].destroyed = true; return; }
+  // Structural (Hull) / power (Engine): an extra hit on a gutted core tears at
+  // the frame, 2 Integrity (§8a) instead of the old instant kill. No spill.
+  if (role === "structural" || role === "power") { drainIntegrity(rig, 2, opts); return; }
   // Mobility (Legs/Tracks): still immobilises; the numeric overflow is conserved
   // below rather than evaporating.
   if (role === "mobility") rig.immobilised = true;
@@ -1970,13 +2022,52 @@ function applyDamage(room, rig, loc, amount, opts) {
   while (n-- > 0) {
     if (c.sp > 0) {
       c.sp -= 1;
+      drainIntegrity(rig, 1, opts);
       if (c.sp === 0) { recompute(rig); catastrophicOnZero(room, rig, loc, opts); }
     } else {
       catastrophicAdditional(room, rig, loc, opts);
     }
   }
   recompute(rig);
+  noteIntegrityTier(room, rig);
   onRigDamaged(room, rig, opts);
+}
+
+// Integrity (§8a), drain the whole-rig pool. Kneecapper hits (opts.noSpill)
+// "cripple, never kill": they can't take the pool below 1.
+function drainIntegrity(rig, n, opts) {
+  if (!Number.isFinite(rig.integrity)) return;
+  const floor = opts?.noSpill ? Math.min(1, rig.integrity) : 0;
+  rig.integrity = Math.max(floor, rig.integrity - n);
+}
+
+const TIER_RANK = { ok: 0, bloodied: 1, critical: 2, wrecked: 3 };
+// Queue a log line when a rig drops into a worse danger tier (Bloodied /
+// Critical). The next resolution pushed carries it in its effects; a command
+// that pushes none gets a standalone "integrity" entry (flushIntegrityNotes).
+// `_tier` remembers the last tier seen, so a rig healed back up (set verb)
+// re-announces when it falls again, and nested applyDamage calls don't double up.
+function noteIntegrityTier(room, rig) {
+  const t = integrityTier(rig);
+  const prev = rig._tier || "ok";
+  rig._tier = t;
+  if (TIER_RANK[t] <= TIER_RANK[prev] || t === "wrecked" || !room?.game) return;
+  const notes = room.game.integrityNotes || (room.game.integrityNotes = []);
+  notes.push({ rigId: rig.id, owner: rig.owner, text: `${rig.name} is ${t.toUpperCase()} (${rig.integrity}/${rig.integrityMax})` });
+}
+
+function flushIntegrityNotes(room) {
+  const notes = room.game?.integrityNotes;
+  if (!notes?.length) return false;
+  room.game.integrityNotes = [];
+  // A wreck later in the same command already has its own destruction line.
+  const live = notes.filter((n) => !room.rigs.find((r) => r.id === n.rigId)?.destroyed);
+  if (!live.length) return false;
+  pushResolution(room, {
+    kind: "integrity", actor: live[0].owner, rigId: live[0].rigId, rolls: [],
+    summary: live.map((n) => n.text).join("; "), effects: [],
+  });
+  return true;
 }
 
 // §9, on the transition to destroyed, roll a D12; 4+ erupts. Record a pending
@@ -2160,6 +2251,14 @@ function dismemberLocation(room, target, loc, opts) {
 }
 
 function setRigSp(rig, loc, sp) {
+  // Integrity (§8a), a manual correction of the pool; can revive a wreck.
+  if (loc === "integrity") {
+    if (!Number.isFinite(rig.integrityMax)) return;
+    rig.integrity = Math.max(0, Math.min(rig.integrityMax, Math.floor(Number(sp) || 0)));
+    recompute(rig);
+    rig._tier = integrityTier(rig);
+    return;
+  }
   const c = rig[loc];
   if (!c) return;
   const v = Math.max(0, Math.min(c.max, Math.floor(Number(sp) || 0)));
@@ -2463,6 +2562,8 @@ function applyOverheat(room, rig, total, opts) {
   else if (row.key === "engine-failure") { applyDamage(room, rig, powerPart, 2, opts); rig.noCool = true; }
   else if (row.key === "catastrophic") {
     for (const l of all) setRigSp(rig, l, 0);
+    rig.integrity = 0;
+    recompute(rig);
     rig.noCool = true;
     // setRigSp bypasses the damage cascade; route the wreck through §9 so a
     // cook-off still rolls its D12 blast and scores kill VP like any other.
@@ -3107,6 +3208,9 @@ function performAction(room, rig, act, a, random) {
       const triage = !!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.battlefieldTriage;
       const amount = (triage && rig[loc] && rig[loc].sp === 0) ? 5 : 4;
       repairRig(rig, loc, amount);
+      // The one repair that touches the frame: +1 Integrity (§8a).
+      if (Number.isFinite(rig.integrity)) rig.integrity = Math.min(rig.integrityMax, rig.integrity + 1);
+      rig._tier = integrityTier(rig);
     }
     else if (act === "locksight") {
       // Lock Sight (Fire Control active), arm the next shot this activation to
@@ -3787,6 +3891,11 @@ function buildMissionRig(room, e, owner, mods) {
     for (const loc of LOCS) {
       if (Number.isFinite(e.sp[loc])) rig[loc].sp = Math.max(0, Math.min(rig[loc].max, e.sp[loc] + (bonus[loc] || 0)));
     }
+    // Integrity (§8a), carried location damage is carried frame damage: the
+    // pool starts short by every SP still missing (never below 1).
+    const missing = LOCS.reduce((s, l) => s + (rig[l].max - rig[l].sp), 0);
+    rig.integrity = Math.max(1, rig.integrityMax - missing);
+    rig._tier = integrityTier(rig);
   }
   if (e.perkKits) rig.perkKits = { longRange: e.perkKits.longRange || null, melee: e.perkKits.melee || null };
   if (e.uid != null) rig.campaignUid = e.uid;
@@ -4247,6 +4356,8 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   } else if (verb === "reset") {
     for (const rig of room.rigs) {
       for (const loc of LOCS) { rig[loc].sp = rig[loc].max; rig[loc].destroyed = false; }
+      if (Number.isFinite(rig.integrityMax)) rig.integrity = rig.integrityMax;
+      rig._tier = "ok";
       rig.engine.heat = 0;
       rig.activated = false;
       rig.destroyed = false;
@@ -4868,6 +4979,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
   // flipped, or we left activation. A fresh `threat` declare is never stale here
   // (its attackerId is the still-active rig), so this is safe for every verb.
   changed = clearThreatIfStale(room) || changed;
+  changed = flushIntegrityNotes(room) || changed;
 
   if (changed) {
     // Rolled engine dice (not player-typed ones): nothing at or before the roll
@@ -5005,7 +5117,11 @@ export function formatBattleState(room, side) {
         const painter = findRigById(room, rig.painted.painterId);
         if (painter && !painter.destroyed) extra += " [PAINTED]";
       }
-      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${parts.join(", ")}${weapons}${extra}`);
+      const tier = integrityTier(rig);
+      const integ = Number.isFinite(rig.integrity)
+        ? `integrity ${rig.integrity}/${rig.integrityMax}${tier === "bloodied" || tier === "critical" ? ` (${tier.toUpperCase()})` : ""}; `
+        : "";
+      lines.push(`- ${rig.name} (${chassis}, owner ${rig.owner})${status}: ${integ}${parts.join(", ")}${weapons}${extra}`);
     }
   }
   const sideId = normalizeSide(room, side);

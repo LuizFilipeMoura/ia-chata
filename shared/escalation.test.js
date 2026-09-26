@@ -179,10 +179,8 @@ test("kill VP is not multiplied, even in round 9", () => {
   r.game.pendingAnswer = null;
   const b1 = findRig(r, "b1");
   const priority = r.game.priorityTargets.a === b1.id;
-  for (const loc of ["hull"]) {
-    applyCommand(r, { verb: "set", attrs: { name: "b1", loc, sp: "0" } });
-    applyCommand(r, { verb: "damage", attrs: { name: "b1", loc, amount: "1" } });
-  }
+  applyCommand(r, { verb: "set", attrs: { name: "b1", loc: "integrity", sp: "1" } });
+  applyCommand(r, { verb: "damage", attrs: { name: "b1", loc: "hull", amount: "1" } });
   assert.equal(b1.destroyed, true);
   assert.equal(side(r, "a").vp, ANY_KILL_VP + (priority ? KILL_VP : 0));
 });

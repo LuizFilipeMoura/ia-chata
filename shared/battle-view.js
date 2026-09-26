@@ -1,7 +1,7 @@
 // Pure, DOM-free view-model derived from room state. Shared so it can be unit
 // tested in node and imported by the browser (via the /shared static mount).
 import { ACTIONS, heatThreshold, equipmentUpgradeEffectOf } from "./rules.js";
-import { EQUIPMENT, rigEffects, heatMeter, deriveAttackGeometry } from "./game-state.js";
+import { EQUIPMENT, rigEffects, heatMeter, deriveAttackGeometry, integrityTier } from "./game-state.js";
 import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
 import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
 
@@ -300,6 +300,10 @@ export function rigModifiers(rig) {
   const [mobPart]    = partsByRole(kind, "mobility");
   const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
   const mods = [];
+  // Integrity (§8a) danger tier, first so it leads the chip row.
+  const tier = integrityTier(rig);
+  if (tier === "bloodied") mods.push({ key: "integrity", tag: `Bloodied · ${rig.integrity}/${rig.integrityMax}`, tone: "warn", gloss: "bloodied" });
+  else if (tier === "critical") mods.push({ key: "integrity", tag: `Critical · ${rig.integrity}/${rig.integrityMax}`, tone: "crit", gloss: "critical" });
   if (structPart && rig[structPart].sp === 0 && !rig[structPart].destroyed)
     mods.push({ key: `${structPart}0`, tag: `${cap(structPart)} 0 · −2 actions −1 Aim`, tone: "crit", gloss: structPart });
   if (cfg.hasHeat && powerPart && rig[powerPart].sp === 0 && !rig[powerPart].destroyed)

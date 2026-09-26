@@ -334,14 +334,16 @@ function overheatRisk(room, rig, turn, cand) {
   return cost(over(projected)) - cost(over(heatNow)) + debt;
 }
 
-// 0 (all parts fresh) .. →1 (a part at 0 SP). Scales exposure so a rig already
-// hurt guards its weak side harder than a fresh one.
+// 0 (all parts fresh) .. →1 (a part at 0 SP, or Integrity nearly gone).
+// Scales exposure so a rig already hurt guards its weak side harder than a
+// fresh one, and (via killWeight) pulls fire onto a rig whose pool (§8a) is low.
 function fragility(rig) {
   let minFrac = 1;
   for (const loc of LOCS) {
     const p = rig[loc];
     if (p && p.max > 0 && !p.destroyed) minFrac = Math.min(minFrac, p.sp / p.max);
   }
+  if (Number.isFinite(rig.integrity) && rig.integrityMax > 0) minFrac = Math.min(minFrac, rig.integrity / rig.integrityMax);
   return 1 - minFrac;
 }
 

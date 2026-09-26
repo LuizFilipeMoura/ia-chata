@@ -37,7 +37,7 @@
 
 A skirmish wargame of dieselpunk war machines (**Rigs**) piloted by **Ironclads**. Each player commands a **Squadron** of war machines on a **54"×36"** table, both sides fielding a mirrored composition (§3). Players alternate activating Rigs; each Rig manages **heat** as it moves and fights, risking overheating. The game is won by controlling **salvage objectives** (§11).
 
-Each Rig has four components, **Hull, Arms, Legs, Engine**: each with its own **Structure Points (SP)**. Reduce a component to 0 SP and it suffers **catastrophic damage**; destroy the key components and the Rig dies.
+Each Rig has four components, **Hull, Arms, Legs, Engine**: each with its own **Structure Points (SP)**. Reduce a component to 0 SP and it suffers **catastrophic damage**. Every SP lost anywhere also drains the Rig's **Integrity**, one whole-body pool; empty it and the Rig dies (§8a).
 
 **You need:** a matched force per side (see §3, both sides field the same composition), D6 and D12 dice, a tape measure (inches), terrain, 3 objective markers, and tokens for preparations and catastrophic damage.
 
@@ -60,7 +60,8 @@ Each Rig also carries **Structure Points (SP)** per component (Hull, Arms, Legs,
 - **Speed**: max move distance in inches. *⚙ TUNING: whole-inch speeds (5/4); Mediums bumped back up from an earlier over-nerf.*
 - **Aim**: base D6 target number to hit: **4+**, the same for every Rig (modified by weapon Accuracy and cover). *⚙ TUNING: Aim was a weight-class stat (4+/4+/3+/3+) until Heavy and Colossal were removed, at which point every remaining value was 4+. The chassis does not decide whether you hit; weapon Accuracy and the situation do.*
 - **Weapon slots**: how many weapons the Rig may carry: one Long Range and one Melee.
-- **Structure Points (SP)**: durability per component. At 0 SP → catastrophic damage (§8).
+- **Structure Points (SP)**: durability per component. At 0 SP → catastrophic damage (§8). SP decides **what breaks**.
+- **Integrity**: the whole-Rig pool, set per chassis (roughly **half** its total SP for a Light, **two-thirds** for a Medium). Every SP any component loses also costs 1 Integrity; at 0 the Rig is destroyed (§8a). Integrity decides **when it dies**.
 
 ### Toughness (armour)
 
@@ -131,7 +132,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   reloaded shot is still the activation's second ranged shot, so it also runs
   **+1 heat** hot.
 
-- **Repair [1]**: roll 1 D6 and repair that many SP to any one location: **1-2 → 1 SP**, **3-4 → 2 SP**, **5-6 → 3 SP**. A Repair never whiffs. *⚙ TUNING: now generates 1 heat; was a D12 that failed below 7.*
+- **Repair [1]**: roll 1 D6 and repair that many SP to any one location: **1-2 → 1 SP**, **3-4 → 2 SP**, **5-6 → 3 SP**. A Repair never whiffs. Repair restores a location's **function**, never **Integrity** (§8a). *⚙ TUNING: now generates 1 heat; was a D12 that failed below 7.*
 
 - **Shut Down [0]**: end the activation and vent heat. May be declared **at any point** in the activation; cooling is **proportional** to how much of the activation is spent shutting down, declared first (no actions used) it vents all heat to the floor, and the more slots already spent, the less it sheds. *⚙ TUNING: was first-action-only + full vent.*
 
@@ -269,7 +270,7 @@ Heat is reduced by **1** each Recovery Phase (§4); the **Shut Down** action (§
 
 **Damage overflow.** If a hit strikes a location already at 0 SP, the **defender** chooses another non-destroyed location to take that damage. *(Engine note: the digital tracker auto-routes overflow to the Hull, or the next location with SP remaining if the Hull is already at 0.)*
 
-A Rig is **destroyed** when all four components are at 0 SP, or by the Hull/Engine rules in §8.
+A Rig is **destroyed** when its **Integrity** reaches 0 (§8a), or when all four components are at 0 SP.
 
 ---
 
@@ -280,13 +281,26 @@ When a location hits **0 SP**, apply its effect. Further damage to that same loc
 | Location | At 0 SP | Additional damage |
 |---|---|---|
 | **Legs** | Move −3"; pivots cost double movement; cannot backpedal. | Rig is **immobilised** for the game (may still pivot); **1 damage spills to Hull** (overflow). |
-| **Hull** | −2 to maximum actions per activation; −1 Aim. | Rig suffers **total system failure, destroyed**. |
+| **Hull** | −2 to maximum actions per activation; −1 Aim. | Each point tears **2 Integrity** (§8a) instead of 1. No spill. |
 | **Arms** | Roll D12 for which weapon is destroyed (see below); its munitions explode: **1 damage to Hull and 1 to Engine**. | Same weapon: **1 damage to Hull** (overflow); weapon already gone. |
-| **Engine** | Rig **loses its next activation**; heat cannot drop below 3 (raise to 3 if lower). | Rig suffers **total system failure, destroyed**. |
+| **Engine** | Rig **loses its next activation**; heat cannot drop below 3 (raise to 3 if lower). | Each point tears **2 Integrity** (§8a) instead of 1. No spill. |
 
 **Arms, which weapon?**
 
 **1–6 Left**, **7–12 Right**.
+
+### 8a. Integrity
+
+Hit locations are random, so damage spreads. **Integrity** makes every point count: it is one pool for the whole Rig, and it is what kills.
+
+- **Every SP counts.** Each SP a component loses (a wound, overflow, a munitions cook-off, burning, a blast, overheat damage) also costs **1 Integrity**. Extra damage to a Hull or Engine already at 0 costs **2 Integrity** per point.
+- **At 0 Integrity the Rig is destroyed**, however many components are still standing. It rolls for the §9 blast and scores kill VP (§11) like any wreck.
+- **Nothing gives it back.** Repair, Field Weld and Nanite Swarm restore component SP (function) but never Integrity. The one exception: **Emergency Patch** also restores **1 Integrity**.
+- **Kneecapper** (Double MG, §13) cripples but never kills: it can't take Integrity below 1.
+- **Size.** Each chassis sets its own Integrity, tuned in the unit catalog. As a guide, Lights carry about **50%** of their total SP and Mediums about **65%**: Lights pay for their speed with a thinner pool. Extra max SP (Ablative Plating, relics, a Commander's bonus) raises Integrity in proportion.
+- **Danger tiers.** At **half** Integrity or less a Rig is **Bloodied**; at a **quarter** or less (rounded up) it is **Critical**. The tiers change no numbers: they tell both players how close the kill is. *(Digital: the log calls each crossing, e.g. "Black is BLOODIED (17/34)".)*
+
+*⚙ TUNING: before Integrity, a Rig only died when a Hull or Engine took a point past 0 or every component hit 0, so damage spread over Arms and Legs mostly never added up to a kill.*
 
 ---
 
@@ -490,7 +504,7 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Pinning Bolt** (Crossbow, Prototype), a damaging bolt immobilises the target until the firer's next activation (guaranteed, no roll, may still pivot); the firer runs +2 heat.
 - **Barrage** (Mortar, Prototype), the **Barrage** action (1 slot) commits the Mortar to a shelled zone. The engine emits a player instruction, *"Barrage, place a shelled-zone marker within 6–34" of this Rig; it shells a 3" zone for 2 rounds. Each round, apply 1 SP to every rig in the zone (players adjudicate who's inside)."*: and sets `barrageRoundsLeft = 2`. While a barrage is active the Mortar is **locked** (it can't fire a direct shot; melee is unaffected), and each **Recovery** the Rig takes **+1 heat** (upkeep) and emits the per-round apply-SP prompt before counting down. After 2 Recoveries the barrage ends and the Mortar unlocks. A Rig can't start a new Barrage while one is still running, and only a Mortar carrying this upgrade can Barrage.
 - **Tow Chain** (Wrecking Ball, Prototype), a spatial fling, narrated rather than simulated. On a damaging Wrecking Ball hit, if the chain is charged (`round ≥ towChainCooldownUntil`), the engine emits a player instruction, *"Tow Chain, fling &lt;target&gt; up to 4" in a direction you choose (move the mini). You are rooted until end of activation; +2 heat."* The attacker takes **+2 heat**, is **rooted for the rest of this activation** (no Move/Sprint after the tow), and the fling goes on a **3-round cooldown** (`towChainCooldownUntil = round + 3`). While recharging, the Wrecking Ball hits normally with no fling.
-- **Kneecapper** (Double MG, Prototype), this Double MG only ever strikes limbs (Arms or Legs, whatever the hit location resolves to is remapped onto one if it isn't already): Hull and Engine can **never** be damaged by it, on any arc, not even the §8 cook-off/cascade from a limb hitting 0 SP spills into them (it *cripples, never kills*). Against limbs it also bypasses its own Raking Fire front-arc auto-fail, at the standard side-arc value (+2 Penetration); side/rear keep their normal Raking Fire bonuses. A limb a Kneecapper has raked to **≤ half** max SP is progressively crippled: a raked Leg keeps re-flagging Speed halved next round for as long as it stays at or below half, and a raked Arm halves that Rig's own ROF (**all** weapons) until repaired back above half. Only limbs a Kneecapper actually hit ramp, ordinary weapons impose no half-limb debuff, and a raked limb repaired above half is re-armable, so **switching limbs resets the ramp**.
+- **Kneecapper** (Double MG, Prototype), this Double MG only ever strikes limbs (Arms or Legs, whatever the hit location resolves to is remapped onto one if it isn't already): Hull and Engine can **never** be damaged by it, on any arc, not even the §8 cook-off/cascade from a limb hitting 0 SP spills into them, and it can't take Integrity below 1 (§8a) (it *cripples, never kills*). Against limbs it also bypasses its own Raking Fire front-arc auto-fail, at the standard side-arc value (+2 Penetration); side/rear keep their normal Raking Fire bonuses. A limb a Kneecapper has raked to **≤ half** max SP is progressively crippled: a raked Leg keeps re-flagging Speed halved next round for as long as it stays at or below half, and a raked Arm halves that Rig's own ROF (**all** weapons) until repaired back above half. Only limbs a Kneecapper actually hit ramp, ordinary weapons impose no half-limb debuff, and a raked limb repaired above half is re-armable, so **switching limbs resets the ramp**.
 - **Taut Cable** (Harpoon, Tuned), +3 Penetration against a target already pinned down: immobilised, or held in a melee lock (engaged).
 - **Harpoon Winch** (Harpoon, Prototype), a spatial reel, narrated rather than simulated. On a damaging Harpoon hit, if charged (`round ≥ harpoonWinchCooldownUntil`), the engine emits a player instruction to reel the target up to 4" toward the attacker. The attacker takes +2 heat, is rooted for the rest of this activation, and the reel goes on a 3-round cooldown. While recharging, the harpoon fires normally with no reel.
 - **Dead Weight** (Anchor, Tuned), a damaging Anchor blow pins the struck target under the anchor: it cannot Disengage on its next activation (scoped to that one activation).
@@ -542,7 +556,7 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 | **Cooling** | **Radiator Array** | Cools **2** heat in Recovery instead of 1 | **Purge** (−2 heat): vent on demand |
 | **Mobility** | **Servo Actuators** | Sprint costs 1 heat instead of 2 | **Jump Jets** (+2 heat): move up to **base Speed**, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties |
 | **Power** | **Overclock Core** | The first time this Rig's Engine reaches 0 SP, it does **not** skip its next activation | **Overclock** (+3 heat): +2 actions this activation (net +1 after the slot) |
-| **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 4 SP to one location, no D6 roll |
+| **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 4 SP to one location, no D6 roll, and restore **1 Integrity** (§8a) |
 | **Thermal** | **Blast Furnace Core** | Safe up to **+1** over Heat Capacity before the overheat roll | **Heat Purge Wave** (0 heat): dump banked heat, vent to Heat Capacity and scald every enemy within 3" (players adjudicate the AoE) |
 | **Fire Control** | **Targeting Computer** | The first **Fire** each activation ignores its cover and engaged accuracy penalties | **Lock Sight** (+1 heat): your next shot this activation rerolls all its missed to-hit dice |
 | **Countermeasures** | **Reactive Plating** | Side/rear-arc attacks against this Rig take **−1 Penetration** | **Pop Smoke** (0 heat): until this Rig's next activation, every attacker is at **−2 accuracy** against it (and any missile Lock on it is broken) |
@@ -585,7 +599,7 @@ The game fields three unit **kinds**. Every kind is one **slot** = one **count**
 
 ### Rig
 
-Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weapon slots (long-range + melee) with fixed upgrades (§12). Weight-class Penetration scaling (§12). Equipment slot (§15). May Prepare (§5). **3 actions** per activation. Structural (Hull) 0 SP → −2 actions −1 Aim; power (Engine) 0 SP → skip next activation; weapon (Arms) 0 SP → destroy one weapon + 1 SP to Hull + 1 SP to Engine; mobility (Legs) 0 SP → move penalty.
+Four components (Hull / Arms / Legs / Engine). Heat and overheat (§6). Two weapon slots (long-range + melee) with fixed upgrades (§12). Weight-class Penetration scaling (§12). Equipment slot (§15). May Prepare (§5). **3 actions** per activation. Structural (Hull) 0 SP → −2 actions −1 Aim; power (Engine) 0 SP → skip next activation; weapon (Arms) 0 SP → destroy one weapon + 1 SP to Hull + 1 SP to Engine; mobility (Legs) 0 SP → move penalty. **Integrity** per chassis (§8a).
 
 ### Tank
 
@@ -594,13 +608,13 @@ Four components (Hull / Tracks / Turret / Engine). **Cold**: no heat, no overhea
 Hit table (D12): 1–4 Hull · 5–7 Tracks · 8–10 Turret · 11–12 Engine.
 Toughness ⚙ is per-location (Hull · Tracks · Turret · Engine), tuned in the catalog.
 
-At 0 SP on Turret: the Tank's single gun is destroyed, a Tank armed only with a ranged weapon has no attack until repaired (a melee-armed Tank can still strike). Cascade at 0 on any part follows §8 by role: structural / power / mobility / weapon effects match the Rig set.
+At 0 SP on Turret: the Tank's single gun is destroyed, a Tank armed only with a ranged weapon has no attack until repaired (a melee-armed Tank can still strike). Cascade at 0 on any part follows §8 by role: structural / power / mobility / weapon effects match the Rig set. Integrity (§8a) is about **65%** of total SP.
 
 ### Walker
 
 Four components (Hull / Legs / Mount / Engine). Cold like a Tank, faster and lighter. **One weapon** from the shared unit-weapon list. No equipment, no Prepare. **3 actions** per activation. Speed **4"** ⚙.
 
-Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Toughness ⚙ is per-location (Hull · Legs · Mount · Engine), Medium-Rig grade, tuned in the catalog.
+Hit table (D12): 1–4 Hull · 5–7 Legs · 8–10 Mount · 11–12 Engine. Toughness ⚙ is per-location (Hull · Legs · Mount · Engine), Medium-Rig grade, tuned in the catalog. Integrity (§8a) is about **50%** of total SP.
 
 ### Shared unit weapons (Tanks + Walkers only) ⚙
 
