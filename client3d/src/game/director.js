@@ -226,7 +226,9 @@ export class Director {
     this.barksUsed ||= new Set();
     const b = barkFor(m, event, { other, part, used: this.barksUsed, campaign: this.campaign });
     if (!b) return;
-    this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, b.warlord ? "#f0cf7a" : m.owner === "a" ? "#5fd3c0" : "#e0533d", b.pilot);
+    const accent = b.warlord ? "#f0cf7a" : m.owner === "a" ? "#5fd3c0" : "#e0533d";
+    // Docked above the nameplate when there is one; a 3D bubble otherwise.
+    if (!this.say?.(m.id, b.line, accent, b.pilot)) this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, accent, b.pilot);
     sfx.bark();
     // A squadmate answers on the radio now and then (never a reply to a reply,
     // and not the campaign's faction extras).

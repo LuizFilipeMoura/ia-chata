@@ -21,6 +21,26 @@ export class Nameplates {
     this.info = new Map();
     this.tick = () => this.update();
     world.tickers.add(this.tick);
+    // Pilot barks dock on top of the speaker's plate (see say()).
+    this.sayHook = (id, line, accent, pilot) => this.say(id, line, accent, pilot);
+    director.say = this.sayHook;
+  }
+
+  // A radio line in a bubble docked right above the rig's plate, so it rides
+  // along with it and never covers the name. False when there's no plate to
+  // dock on (plates off, rig unknown); the caller falls back to a 3D bubble.
+  say(id, line, accent, pilot) {
+    const c = this.cards.get(id);
+    if (!c || !settings.get("nameplates")) return false;
+    c.bark?.remove();
+    clearTimeout(c.barkTimer);
+    c.bark = el("div", { class: "bark", style: `--accent: ${accent}` },
+      pilot ? el("div", { class: "bk-who" }, `▸ ${pilot.toUpperCase()}`) : null,
+      el("div", { class: "bk-line" }, line));
+    c.root.append(c.bark);
+    c.root.classList.add("talking");
+    c.barkTimer = setTimeout(() => { c.bark?.remove(); c.bark = null; c.root.classList.remove("talking"); }, 2800);
+    return true;
   }
 
   // rigs: publicState-ish rigs (or replay frame rigs); extra: { activeId,
@@ -108,5 +128,10 @@ export class Nameplates {
     }
   }
 
-  destroy() { this.world.tickers.delete(this.tick); this.layer.remove(); }
+  destroy() {
+    this.world.tickers.delete(this.tick);
+    for (const c of this.cards.values()) clearTimeout(c.barkTimer);
+    if (this.director.say === this.sayHook) this.director.say = null;
+    this.layer.remove();
+  }
 }

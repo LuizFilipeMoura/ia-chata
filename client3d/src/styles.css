@@ -1279,3 +1279,14 @@ body.crit-vignette::after { content: ""; position: fixed; inset: 0; pointer-even
 .cursor-tag.t-dest { background: #33ff99; }
 .cursor-tag.t-aim { background: #5aa8ff; }
 .cursor-tag.t-bad { background: #ff5a4a; color: #fff; }
+
+/* Pilot barks: a radio bubble docked on top of the speaker's nameplate. */
+.plate.talking { z-index: 3; }
+.plate .bark { position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); width: max-content; max-width: 300px;
+  background: rgba(22,18,14,.94); border: 2px solid var(--accent, var(--cyan)); border-radius: 8px; padding: 4px 10px 5px; text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,.5); animation: bark-in .18s ease-out, bark-out .4s ease-in 2.4s forwards; }
+.plate .bark::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 7px solid transparent; border-top-color: var(--accent, var(--cyan)); }
+.plate .bark .bk-who { font: 700 12px var(--label); letter-spacing: .12em; color: var(--accent, var(--cyan)); }
+.plate .bark .bk-line { font: 600 16px/1.25 Rajdhani, Arial, sans-serif; color: #f3e9d2; }
+@keyframes bark-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes bark-out { to { opacity: 0; } }
