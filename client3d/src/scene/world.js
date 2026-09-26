@@ -693,11 +693,13 @@ export class World {
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
     geo.setIndex(idx);
-    const label = ` ${text.toUpperCase()}  ·`;
+    const label = text.toUpperCase();
     const cv = document.createElement("canvas"), g = cv.getContext("2d");
     const font = "600 44px Rajdhani, Arial, sans-serif";
     g.font = font;
-    cv.width = Math.ceil(g.measureText(label).width) + 8; cv.height = 64;
+    // Each tile is the text plus a long empty run, so repetitions sit well apart.
+    const tw = Math.ceil(g.measureText(label).width);
+    cv.width = Math.ceil(tw * 2.4) + 8; cv.height = 64;
     g.font = font; g.textBaseline = "middle"; g.fillStyle = color;
     g.strokeStyle = "rgba(0,0,0,.7)"; g.lineWidth = 5;
     g.strokeText(label, 4, 34); g.fillText(label, 4, 34);
