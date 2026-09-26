@@ -135,7 +135,7 @@ async function play(room, { tutorial = false, lesson = null, cfg = null, side = 
   try { await match.start(); } catch (e) { toast(e.message, "bad"); return home(); }
   if (lesson) {
     const next = LESSONS[LESSONS.indexOf(lesson) + 1];
-    match.coach = new Coach(hudRoot, match, lesson, { onMenu: tutorial, onNext: next ? () => startLesson(next) : null });
+    match.coach = new Coach(hudRoot, match, lesson, { onMenu: tutorial, onNext: next ? () => startLesson(next) : null, onRestart: () => startLesson(lesson) });
   }
 }
 

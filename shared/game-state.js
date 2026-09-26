@@ -37,6 +37,10 @@ export const ANY_KILL_VP = 1;
 // BEHIND the wreck's owner (read before this kill's VP lands) pays this much on
 // top. Never multiplied by beacon escalation. ⚙ TUNING
 export const TRAILING_KILL_BOUNTY = 2;
+// Boiler blew (§6, §11, wr-0.17): a rig wrecked by its own overheat roll pays
+// the other side this much on top of the normal kill VP. Pushing heat is a
+// gamble with the score, not just with the rig. ⚙ TUNING
+export const OVERHEAT_WRECK_VP = 2;
 export const SUPPORTED_RIG_CLASSES = ["light", "medium"];
 // The objective game runs this many rounds before victory resolves on points
 // (§11). Doubled from the original 5 to pair with the ~2× per-rig SP scaling,
@@ -958,7 +962,8 @@ function ensureGameShape(room) {
     if (typeof side.ready !== "boolean") side.ready = false;
   }
   // A campaign mission owns its objectives (none, or salvage crates that run out).
-  if (!Array.isArray(room.game.objectives) || (room.game.objectives.length === 0 && !room.campaign)) {
+  // A Training Grounds table is bare unless its scenario places a beacon.
+  if (!Array.isArray(room.game.objectives) || (room.game.objectives.length === 0 && !room.campaign && !room.training)) {
     room.game.objectives = computeObjectives(room.field);
   }
   if (typeof room.game.started !== "boolean") room.game.started = false;
@@ -1567,7 +1572,13 @@ function applyInitiative(room, order, rolls) {
   room.game.answerTokens[second] = 1;
   // Campaign side modifiers (Veteran Crews relic, a Warlord): extra Answer tokens every round.
   for (const id of ["a", "b"]) room.game.answerTokens[id] += room.campaign?.mods?.[id]?.answer || 0;
-  grantGrit(room);
+  // Training Grounds: Answer / Grit tokens belong to the Reactions lesson only
+  // (a scenario with a scripted `first`); elsewhere a surprise prompt in round 2
+  // would derail the lesson.
+  if (room.training && !SCENARIOS[room.training]?.first) {
+    room.game.answerTokens = { a: 0, b: 0 };
+    room.game.gritTokens = { a: 0, b: 0 };
+  } else grantGrit(room);
   refreshAnswerGate(room, [second, first]);
   room.game.turn = { side: first, activeRigId: null, actionsUsed: 0, actionsMax: 0 };
   room.game.phase = "activation";
@@ -2001,6 +2012,10 @@ function onRigDamaged(room, rig, opts) {
         amount += bounty;
         effects.push(`+${bounty} VP, bounty (was behind)`);
       }
+      if (opts?.cause === "overheat") {
+        amount += OVERHEAT_WRECK_VP;
+        effects.push(`+${OVERHEAT_WRECK_VP} VP, boiler blew (${scorer.name})`);
+      }
       scorer.vp = (scorer.vp || 0) + amount;
     }
     pushResolution(room, {
@@ -2258,6 +2273,9 @@ function runRecovery(room, random) {
       if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir
           && (rig.equipState?.cryo || 0) > 0) cooling = 1;
       cooling += rig.mods?.cool || 0; // campaign Heat Sinks relic
+      // Training Grounds: every round starts cold, so a lesson played slowly
+      // can't boil a rig to death across rounds (the heat lesson is one activation).
+      if (room.training) cooling = rig.engine.heat;
       rig.engine.heat = Math.max(floor, rig.engine.heat - cooling);
     }
     rig.activated = false;
@@ -2370,7 +2388,7 @@ function endActivation(room, rig, dice, random) {
       // one roll; other m.bonus consumers (rigEffects preview) read the raw meter.
       const bonus = rig.reactorOverdriveActive ? m.bonus * 2 : m.bonus;
       const total = roll + bonus;
-      const row = applyOverheat(room, rig, total, { random });
+      const row = applyOverheat(room, rig, total, { random, cause: "overheat" });
       pushResolution(room, {
         kind: "overheat", actor: rig.owner, rigId: rig.id,
         heatKey: row.key, // "safe" = engine held; any other key dealt damage (client SFX)

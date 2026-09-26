@@ -429,7 +429,7 @@ export class LiveMatch {
     for (const sp of equipmentSpends(rig, turn)) extra.push(sp.key === "cryo" ? { ...sp, heatText: sp.max ? `−2×` : "0" } : sp);
     const special = new Set(acts.map((a) => a.key));
     for (const k of ["lock", "emplace", "unplant", "barrage"]) if (!special.has(k) && this.hasAction(rig, k)) extra.push({ key: k, label: k[0].toUpperCase() + k.slice(1), heat: k === "unplant" ? 2 : k === "lock" ? 1 : 0, enabled: turn.actionsUsed < turn.actionsMax });
-    if (rig.loaded?.longRange === false) extra.push({ key: "reload", label: "Reload", heat: "d6", enabled: turn.actionsUsed < turn.actionsMax });
+    if (rig.loaded?.longRange === false) extra.push({ key: "reload", label: "Reload", heat: "d6", enabled: true, why: "" });
     // Campaign Breakthrough: leave the table from the exit zone.
     const cp = this.state.campaign;
     if (cp?.type === "breakthrough" && cp.exit && rig.owner === "a" && rig.pos) {
@@ -548,10 +548,16 @@ export class LiveMatch {
 
   // Tutorial lock: when the coach sets `this.gate` ({ acts: [...], select,
   // end, advisor }), only what the current step teaches is allowed.
+  // Two escape hatches are always open while a step lets you act, so bad dice
+  // or a wasted action can never strand you: Reload whenever the step shoots
+  // (a gun fires once, then needs one), and End activation (the dummy waits,
+  // and the next round hands you three fresh actions).
   allowed(kind, key) {
     const g = this.gate;
     if (!g) return true;
-    if (kind === "act") return (g.acts || []).includes(key);
+    const acts = g.acts || [];
+    if (kind === "act") return acts.includes(key) || (key === "reload" && (acts.includes("fire") || acts.includes("aimed")));
+    if (kind === "end") return !!g.end || acts.length > 0;
     return !!g[kind];
   }
   locked() { toast("Tutorial: follow the current step first (see the coach panel).", "warn", 2200); }
@@ -752,6 +758,9 @@ export class LiveMatch {
 
   // ---- Targeting ----
   startTarget(rig, key) {
+    // Buttons can hold the rig as it was when the bar was drawn (a round may
+    // have ended since, reloading the gun): always aim with the live one.
+    rig = this.rig(rig.id) || rig;
     const room = this.previewRoom(rig);
     const cands = key === "lock"
       ? this.state.rigs.filter((r) => r.owner !== rig.owner && !r.destroyed).map((r) => ({ action: "lock", target: r.name }))
@@ -791,7 +800,8 @@ export class LiveMatch {
     const spent = rig.loaded?.longRange === false;
     if (spent && gunWouldBear && key !== "aimed" || spent && key === "fire" && enemies.some(({ geo }) => geo.inFrontArc)) {
       this.cancelMode();
-      const canReload = this.allowed("act", "reload") && this.game.turn?.actionsUsed < this.game.turn?.actionsMax;
+      // Reload spends no action (heat only), so it's open even at 0 actions left.
+      const canReload = this.allowed("act", "reload");
       modal({
         title: `${rig.weapons.longRange} is spent`,
         body: el("p", {}, `Your ${rig.weapons.longRange} fired already and must Reload before it can shoot again. Reloading costs no action, just heat: roll a D6, 1–3 → +2 heat, 4–6 → +1.`,
@@ -799,7 +809,9 @@ export class LiveMatch {
         actions: [
           { label: "Not now", ghost: true },
           { label: "Reload, then aim", primary: true, disabled: !canReload, onClick: async () => {
-            if (await this.act(rig, { action: "reload" })) this.startTarget(this.rig(rig.id) || rig, key);
+            const live = this.rig(rig.id) || rig;
+            if (live.loaded?.longRange === false && !(await this.act(live, { action: "reload" }))) return;
+            this.startTarget(this.rig(rig.id) || live, key);
           } },
         ],
       });

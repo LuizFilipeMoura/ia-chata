@@ -8,12 +8,15 @@ import { exampleCard, woundInfo } from "./examples.js";
 import { rich } from "./glossary.js";
 import { keywordCards, natureCards, equipmentCards } from "./cards.js";
 import { icon } from "./icons.js";
+import { controlsObjective, radiusOf } from "/shared/geometry.js";
 
 const res = (m) => m.state?.game?.resolutions || [];
 const myAttack = (m, test = () => true) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Copper" && test(r));
 const arcOf = (r) => /(side|rear) arc/.exec(JSON.stringify(r.breakdown || {}))?.[1] || "front";
 const hasCover = (r) => (r.breakdown?.steps?.find((s) => s.kind === "hit")?.terms || []).some((t) => /cover/.test(t.label) && t.value);
 const vpA = (m) => m.state?.game?.sides?.find((s) => s.id === "a")?.vp || 0;
+const onBeacon = (m) => (m.state?.rigs || []).some((r) => r.owner === m.side && !r.destroyed && r.pos
+  && (m.state.game.objectives || []).some((o) => controlsObjective({ pos: r.pos, radius: radiusOf(r) }, o)));
 const picked = (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; };
 
 // The four components, illustrated: where each sits on the rig, how often the
@@ -57,7 +60,7 @@ export const LESSONS = [
     steps: [
       { title: "Beacons win games", text: "The glowing beacon ahead is worth 2 victory points each round to whoever holds it alone. Most points after 10 rounds wins.", next: true },
       PICK,
-      { title: "Stand on it", allow: { select: true, acts: ["move"] }, text: "Move so your rig is on the beacon's ring.", highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
+      { title: "Stand on it", allow: { select: true, acts: ["move"] }, text: "Move so your rig is on the beacon's ring.", highlight: '[data-act="move"]', done: onBeacon, skipAfterRounds: 2, waitText: "Get the rig's base onto the beacon's ring (move again if you fell short)." },
       { title: "End the activation", allow: { end: true }, text: "Press End activation. At the end of the round every beacon you hold alone pays out.", highlight: '[data-act="end"]', done: (m) => vpA(m) > 0, waitText: "Waiting for the round to end…" },
       { title: "Points!", text: "Your salvage counter went up (top right). An enemy on the same beacon cancels you out: nobody scores it until one of you leaves or is wrecked.", highlight: ".hud-top", next: true },
       DONE("Hold beacons, contest theirs. Kills matter because they stop the enemy scoring."),
@@ -109,7 +112,7 @@ export const LESSONS = [
       PICK,
       { title: "Their armour faces forward", text: "The dummy's front is its toughest side. Hitting its side adds +2 Penetration, its rear +3. Hover the dummy to see its arcs drawn on the table.", next: true },
       { title: "Walk around and turn", allow: { select: true, acts: ["move", "sprint"] }, text: "Move (or Sprint) past the dummy toward its back. A move turns you the way you walk; Shift+wheel adjusts your final facing. End up facing the dummy.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
-      { title: "Hit it where it's soft", allow: { select: true, acts: ["fire", "move", "sprint"] }, text: "Now Fire. If the dummy isn't offered as a target, it's still outside your wedge: move again. A side or rear bonus in the log means you nailed it.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => arcOf(r) !== "front") },
+      { title: "Hit it where it's soft", allow: { select: true, acts: ["fire", "move", "sprint"] }, text: "Now Fire. If the dummy isn't offered as a target, it's still outside your wedge: move again. A side or rear bonus in the log means you nailed it.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => arcOf(r) !== "front"), skipAfterRounds: 2 },
       DONE("Facing works both ways: turn to bring enemies into your wedge, and keep your own front toward them."),
     ] },
   { id: "cover", icon: "cover", title: "Cover and line of sight", blurb: "Shooting past terrain, and hiding behind it.",
@@ -127,7 +130,7 @@ export const LESSONS = [
     steps: [
       { title: "Too close to shoot straight", text: "The dummy is right in your face: inside your Claw's reach (the orange ring).", next: true },
       PICK,
-      { title: "Strike", allow: { select: true, acts: ["fire"] }, text: "Press Fire and click the dummy. In reach, Fire swings your melee weapon instead of the gun.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => r.breakdown?.weapon === "Claw") },
+      { title: "Strike", allow: { select: true, acts: ["fire"] }, text: "Press Fire and click the dummy. In reach, Fire swings your melee weapon instead of the gun.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       { title: "Engaged", text: "Rigs in melee are locked together: to walk away you must spend an action to Disengage. Brawlers love that; snipers hate it.", next: true },
       DONE("Melee skips range bands and line of sight. Charge the shooters, keep your own gunners clear."),
     ] },
@@ -137,7 +140,7 @@ export const LESSONS = [
       { title: "Raking Fire, up close", text: "Machine guns rake. Against a front arc every wound roll fails automatically, however many hits land. Against the rear it gets +6 Penetration.", extra: () => [exampleCard("rakeFront", "Mini Gun into the dummy's FRONT: plenty of hits, zero wounds."), exampleCard("rakeRear", "Same gun from BEHIND: +6 Penetration, it shreds.")], next: true },
       PICK,
       { title: "Try the front", allow: { select: true, acts: ["fire"] }, text: "Copper carries a Mini Gun (Raking Fire), and its Field upgrade adds Shock. The dummy faces you. Fire anyway and watch the wound step.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
-      { title: "Now flank it", allow: { select: true, acts: ["move", "sprint", "fire"] }, text: "Walk around to its side or rear, face it, and fire again. That's where Raking Fire earns its keep.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m) => myAttack(m, (r) => r.breakdown?.sp > 0) },
+      { title: "Now flank it", allow: { select: true, acts: ["move", "sprint", "fire"] }, text: "Walk around to its side or rear, face it, and fire again. That's where Raking Fire earns its keep.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m) => myAttack(m, (r) => arcOf(r) !== "front"), skipAfterRounds: 2 },
       DONE("Read your keywords before you pick a fight. Hover any keyword on a rig sheet to see its rule."),
     ] },
   { id: "upgrades", scenario: "prototype", icon: "overclock", title: "Upgrades: Field, Tuned, Prototype", blurb: "Each weapon's three upgrade choices, and the gamble.",
@@ -175,15 +178,15 @@ export const LESSONS = [
     steps: [
       { title: "They move first", text: "A raider is about to open fire on you. Whoever acts second each round gets a free Answer token: a face-down reaction placed before the enemy moves.", next: true },
       { title: "Place your Answer", allow: {}, text: "Pick Copper and a reaction in the popup. Brace is the safe choice: it softens the next hit.", done: (m) => !m.state?.game?.pendingAnswer },
-      { title: "Incoming!", text: "Watch the raider's turn. When it attacks, your reaction triggers.", done: (m) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Raider"), waitText: "The raider is lining up…", next: false },
+      { title: "Incoming!", text: "Watch the raider's turn. When it attacks, your reaction triggers.", done: (m) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Raider") || !!m.state?.rigs?.find((r) => r.name === "Raider")?.activated, waitText: "The raider is lining up…", next: false },
       { title: "Prepare", text: "On your own turn, Prepare (1 heat) places another reaction: Brace, Evasive, Return Fire and more. Hover each card to see when it triggers.", next: true },
       DONE("Reactions are hidden until they trigger: keep your opponent guessing."),
     ] },
 ];
 
 export class Coach {
-  constructor(root, match, lesson, { onNext, onMenu } = {}) {
-    this.root = root; this.match = match; this.i = 0; this.lesson = lesson; this.steps = lesson.steps; this.ev = {}; this.onNext = onNext; this.onMenu = onMenu;
+  constructor(root, match, lesson, { onNext, onMenu, onRestart } = {}) {
+    this.root = root; this.match = match; this.i = 0; this.lesson = lesson; this.steps = lesson.steps; this.ev = {}; this.onNext = onNext; this.onMenu = onMenu; this.onRestart = onRestart;
     this.panel = el("div", { class: "coach" });
     // Spotlight: a grey veil over everything except the coach and the
     // highlighted elements (cut out as holes). Clicks pass through; the gate
@@ -224,6 +227,7 @@ export class Coach {
   advance() {
     if (this.i >= this.steps.length - 1) return;
     this.i++;
+    this.stepRound = this.match.state?.game?.round || 1;
     const s = this.steps[this.i];
     if (s.done && !s.next && s.done(this.match, this.ev)) {
       this.render(true);
@@ -293,6 +297,24 @@ export class Coach {
     this.veil.innerHTML = `<path pointer-events="none" fill-rule="evenodd" d="${path}" fill="rgba(12,10,8,${onBoard ? 0.35 : 0.62})"/>`;
   }
 
+  // A step that asks you to act, but the game says you can't right now: the
+  // gun is spent ("reload") or the activation is used up ("end"). The coach
+  // points at the way out instead of leaving you stuck.
+  stuck(s) {
+    const acts = s?.allow?.acts || [];
+    if (!acts.length || (s.done && s.done(this.match, this.ev))) return "";
+    const g = this.match.state?.game, t = g?.turn;
+    if (!t || t.side !== this.match.side || g.phase !== "activation") return "";
+    const rig = this.match.rig(t.activeRigId);
+    if (rig && t.actionsUsed >= t.actionsMax && !acts.includes("shutdown")) return "end";
+    if (rig && (acts.includes("fire") || acts.includes("aimed")) && rig.loaded?.longRange === false && !acts.every((a) => a === "fire" && this.meleeReach(rig))) return "reload";
+    return "";
+  }
+  meleeReach(rig) {
+    return (this.match.state?.rigs || []).some((e) => e.owner !== rig.owner && !e.destroyed && e.pos && rig.pos
+      && Math.hypot(e.pos.x - rig.pos.x, e.pos.y - rig.pos.y) - radiusOf(e) - radiusOf(rig) <= 2);
+  }
+
   unhighlight() { document.querySelectorAll(".coach-hl").forEach((n) => n.classList.remove("coach-hl")); }
 
   render(already = false) {
@@ -302,7 +324,11 @@ export class Coach {
     // rebuild when what the panel shows actually changes.
     const waitingNow = !!(s.done && !s.next && s.waitText && !s.done(this.match, this.ev));
     const phase = s.phases ? (this.match.mode?.locked ? "face" : this.match.mode ? "dest" : "idle") : "";
-    const key = `${this.i}|${already}|${waitingNow}|${phase}`;
+    // A positioning step you keep missing: after a couple of rounds, let it go.
+    const giveUp = !!s.skipAfterRounds && (this.match.state?.game?.round || 1) - (this.stepRound || 1) >= s.skipAfterRounds;
+    const over = !s.last && this.match.state?.game?.phase === "finished" && !(s.done && s.done(this.match, this.ev)) && !s.next;
+    const stuck = over ? "" : this.stuck(s);
+    const key = `${this.i}|${already}|${waitingNow}|${phase}|${stuck}|${over}|${giveUp}`;
     if (key === this.renderKey) return;
     this.renderKey = key;
     // Lock the game to what this step teaches (null = free play). Steps that
@@ -311,7 +337,8 @@ export class Coach {
     this.match.renderActions?.();
     if (s.last) try { const d = JSON.parse(localStorage.getItem("oi3d-lessons") || "[]"); if (!d.includes(this.lesson.id)) localStorage.setItem("oi3d-lessons", JSON.stringify([...d, this.lesson.id])); } catch {}
     this.unhighlight();
-    if (s.highlight) document.querySelectorAll(s.highlight).forEach((n) => n.classList.add("coach-hl"));
+    const hl = [s.highlight, stuck === "reload" && '[data-act="reload"]', stuck === "end" && '[data-act="end"]'].filter(Boolean).join(", ");
+    if (hl) document.querySelectorAll(hl).forEach((n) => n.classList.add("coach-hl"));
     const waiting = s.done && !s.next && s.waitText && !s.done(this.match, this.ev);
     fill(this.panel, 
       el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, icon(this.lesson.icon), ` ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
@@ -320,6 +347,10 @@ export class Coach {
       phase === "face" ? el("div", { class: "phase" }, el("b", {}, "Step 2 of 2"), " Move the mouse to turn the ghost, then click to confirm. Right-click picks another spot.") : null,
       s.extra ? s.extra(this.match) : null,
       waiting ? el("p", { class: "muted" }, s.waitText) : null,
+      over ? el("p", { class: "coach-stuck" }, "The practice battle ended before this step (a rig was wrecked). Restart the lesson to try again.") : null,
+      stuck ? el("p", { class: "coach-stuck" }, stuck === "reload"
+        ? "Your gun is spent after a shot: press Reload (free, just a little heat), then fire again."
+        : "Out of actions. Press End activation: the dummy just waits, and next round you get 3 fresh actions.") : null,
       already ? el("p", { class: "done-tick" }, "✓ Already done. Nice!") : null,
       // Footer: Back on the left, the way forward on the right. The last step
       // puts the next lesson full-width underneath, so it never wraps oddly.
@@ -329,10 +360,11 @@ export class Coach {
           el("button", { class: "btn ghost all", onClick: () => this.onMenu?.() }, "All lessons"),
           this.onNext ? el("button", { class: "btn primary go", onClick: () => this.onNext() }, "Next lesson ›") : el("button", { class: "btn primary go", onClick: () => this.onMenu?.() }, "Done ✓"),
         ] :
-        s.next || s.skippable ? el("button", { class: "btn primary go", onClick: () => this.advance() }, s.skippable ? "Skip ›" : "Next ›") : el("span", { class: "muted go" }, "Do it to continue…")),
+        over && this.onRestart ? el("button", { class: "btn primary go", onClick: () => this.onRestart() }, "↻ Restart lesson") :
+        s.next || s.skippable || giveUp ? el("button", { class: "btn primary go", onClick: () => this.advance() }, s.next ? "Next ›" : "Skip ›") : el("span", { class: "muted go" }, "Do it to continue…")),
     );
     // Keep the highlight on elements that re-render (the action bar rebuilds).
     clearInterval(this.hlTimer);
-    if (s.highlight) this.hlTimer = setInterval(() => document.querySelectorAll(s.highlight).forEach((n) => n.classList.add("coach-hl")), 500);
+    if (hl) this.hlTimer = setInterval(() => document.querySelectorAll(hl).forEach((n) => n.classList.add("coach-hl")), 500);
   }
 }
