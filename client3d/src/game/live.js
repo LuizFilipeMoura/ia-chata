@@ -371,6 +371,8 @@ export class LiveMatch {
       const active = g.turn?.activeRigId === m.id;
       m.setSelected(m.id === this.selected || active, active ? 0xffd35a : 0xffffff);
       if (m.ringMat && r) m.ringMat.opacity = r.activated ? 0.35 : 0.95;
+      // The one acting now isn't "spent" yet; everyone who already acted is.
+      m.setSpent?.(!!r?.activated && !active && g.phase !== "finished");
     }
     if (g.turn?.activeRigId != null && g.turn.side === this.side && this.selected !== g.turn.activeRigId) this.selected = g.turn.activeRigId;
     this.renderActions();

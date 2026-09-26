@@ -51,12 +51,17 @@ function terrainMask(field, polys, radius, cols, rows) {
 // An occupancy grid for ONE mover. `polys` are terrain (geometry.terrainPolygons),
 // `blockers` are the other rigs ({ pos, radius }), the mover itself must not be
 // in that list. Objectives are never passed: they are markers, not obstacles.
-export function buildGrid(field, polys, blockers, radius) {
+// `from` (optional): where the mover stands now. A base it's already touching
+// (or, after a shove or a drop-in, overlapping) is inflated only up to the
+// current gap, so the mover can always back away from it, but never get
+// closer or pass through it.
+export function buildGrid(field, polys, blockers, radius, from = null) {
   const cols = Math.ceil(field.width / CELL) + 1;
   const rows = Math.ceil(field.height / CELL) + 1;
   const blocked = terrainMask(field, polys, radius, cols, rows).slice();
   for (const b of blockers) {
-    const reach = radius + b.radius;
+    let reach = radius + b.radius;
+    if (from) reach = Math.min(reach, Math.hypot(from.x - b.pos.x, from.y - b.pos.y) - CELL);
     const c0 = Math.max(0, Math.floor((b.pos.x - reach) / CELL)), c1 = Math.min(cols - 1, Math.ceil((b.pos.x + reach) / CELL));
     const r0 = Math.max(0, Math.floor((b.pos.y - reach) / CELL)), r1 = Math.min(rows - 1, Math.ceil((b.pos.y + reach) / CELL));
     for (let r = r0; r <= r1; r++) {
@@ -217,5 +222,5 @@ export function findPathOnGrid(grid, from, to) {
 
 // Route `from` -> `to` for a mover of `radius`, building the grid first.
 export function findPath(field, polys, blockers, radius, from, to) {
-  return findPathOnGrid(buildGrid(field, polys, blockers, radius), from, to);
+  return findPathOnGrid(buildGrid(field, polys, blockers, radius, from), from, to);
 }

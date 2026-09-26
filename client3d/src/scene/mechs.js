@@ -215,6 +215,28 @@ function makeLeg(cls, paint) {
   return { hip, knee, foot, rest: { hip: hip.rotation.z, knee: knee.rotation.z }, height: thighLen + shinLen };
 }
 
+// A brass activation coin with a stamped check, shared texture.
+let spentTex = null;
+function makeSpentToken() {
+  if (!spentTex) {
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const x = c.getContext("2d");
+    const g = x.createRadialGradient(64, 56, 10, 64, 64, 64);
+    g.addColorStop(0, "#f6d27a"); g.addColorStop(1, "#8a6424");
+    x.fillStyle = g; x.beginPath(); x.arc(64, 64, 62, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = "#5a3e12"; x.lineWidth = 6; x.beginPath(); x.arc(64, 64, 52, 0, Math.PI * 2); x.stroke();
+    x.strokeStyle = "#3a2708"; x.lineWidth = 14; x.lineCap = "round"; x.lineJoin = "round";
+    x.beginPath(); x.moveTo(38, 66); x.lineTo(56, 84); x.lineTo(92, 44); x.stroke();
+    spentTex = new THREE.CanvasTexture(c);
+    spentTex.colorSpace = THREE.SRGBColorSpace;
+  }
+  const face = new THREE.MeshStandardMaterial({ map: spentTex, metalness: 0.6, roughness: 0.35 });
+  const rim = new THREE.MeshStandardMaterial({ color: 0x9a7228, metalness: 0.8, roughness: 0.3 });
+  const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.1, 32), [rim, face, face]);
+  coin.castShadow = true;
+  return coin;
+}
+
 export class Mech {
   constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius }) {
     this.id = id; this.name = name; this.owner = owner; this.weightClass = weightClass || "light";
@@ -246,7 +268,9 @@ export class Mech {
 
     this.torso = new THREE.Group(); this.torso.position.y = heavy ? 0.75 : 0.6; this.pelvis.add(this.torso);
     const chest = box(heavy ? 1.5 : 1.1, heavy ? 1.1 : 0.85, heavy ? 1.5 : 1.1, paint); this.torso.add(chest); this.chest = chest;
-    const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, mat(0xffcf7a, { emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 }));
+    // Own material (not the shared cache): it dims when the rig has acted.
+    this.cockpitMat = new THREE.MeshStandardMaterial({ color: 0xffcf7a, emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 });
+    const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, this.cockpitMat);
     cockpit.position.set(heavy ? 0.6 : 0.45, 0.15, 0); this.torso.add(cockpit);
     if (heavy) this.torso.add(at(box(1.2, 0.2, 1.7, STEEL()), -0.1, 0.62, 0));
     // Exhaust stacks, they glow and smoke with heat.
@@ -278,6 +302,14 @@ export class Mech {
     this.halo.rotation.x = -Math.PI / 2; this.halo.position.y = 0.05; this.root.add(this.halo);
     this.labelAnchor = new THREE.Object3D(); this.labelAnchor.position.y = hipH * this.baseScale + 1.5; this.root.add(this.labelAnchor);
 
+    // "Activated" token, like the marker you drop beside a mini on the table:
+    // a brass coin stamped with a check, lying on the back of the base.
+    this.token = makeSpentToken();
+    this.token.position.set(-this.radius * 0.95, 0.9, this.radius * 0.95);
+    this.token.visible = false;
+    this.root.add(this.token);
+    this.spent = false; this.spentT = 0;
+
     this.t = Math.random() * 10; this.walkPhase = 0; this.walking = 0; this.heatFrac = 0;
     this.recoil = 0; this.strike = 0; this.spinSpeed = 0; this.destroyed = false; this.hurt = 0;
     this.facing = 0; this.targetFacing = 0; this.aimYaw = 0;
@@ -289,6 +321,25 @@ export class Mech {
     this.root.rotation.y = -facingDeg * DEG;
   }
   setSelected(on, color = 0xffffff) { this.halo.material.opacity = on ? 0.85 : 0; this.halo.material.color.setHex(color); }
+  // Acted this round: drop the token (with a little spin and bounce), dim the
+  // cockpit and let the rig settle. Cleared when the round turns over.
+  setSpent(on) {
+    on = !!on && !this.destroyed;
+    if (on === this.spent) return;
+    this.spent = on; this.spentT = 0;
+    if (on) this.token.visible = true;
+    // Own copies of the body's materials, so greying this rig out leaves the
+    // shared ones (and every other rig) alone. Done once, on first use.
+    if (!this.greyable) {
+      this.greyable = [];
+      this.body.traverse((o) => {
+        if (!o.isMesh || !o.material || o.material === this.cockpitMat || o.material === this.ventMat) return;
+        o.material = o.material.clone();
+        if (o.material.color) this.greyable.push({ m: o.material, base: o.material.color.clone() });
+      });
+      this.greyMix = 0;
+    }
+  }
   setHeat(frac) { this.heatFrac = Math.max(0, Math.min(1.6, frac)); }
   setHurt(frac) { this.hurt = frac; }
 
@@ -368,6 +419,32 @@ export class Mech {
 
   update(dt) {
     this.t += dt;
+    // Activated token: falls onto the base, spins flat, bounces once. Off: lifts and fades.
+    this.spentT = Math.min(1, this.spentT + dt * 2.2);
+    const k = this.spentT;
+    if (this.spent) {
+      const drop = k < 0.6 ? 1 - (k / 0.6) ** 2 : Math.abs(Math.sin((k - 0.6) / 0.4 * Math.PI)) * 0.12 * (1 - k);
+      this.token.position.y = 0.2 + drop * 1.6;
+      this.token.rotation.y = (1 - k) * 6;
+      this.token.scale.setScalar(1);
+    } else if (this.token.visible) {
+      this.token.position.y = 0.2 + k * 1.2;
+      this.token.scale.setScalar(Math.max(0.01, 1 - k));
+      if (k >= 1) this.token.visible = false;
+    }
+    // Spent rigs go grey (the "already acted" look), fresh ones get their paint back.
+    if (this.greyable && !this.destroyed) {
+      const goal = this.spent ? 0.6 : 0;
+      if (Math.abs(goal - this.greyMix) > 0.002) {
+        this.greyMix += (goal - this.greyMix) * Math.min(1, dt * 3);
+        for (const { m, base } of this.greyable) {
+          const l = base.r * 0.3 + base.g * 0.59 + base.b * 0.11;
+          m.color.setRGB(base.r + (l * 0.7 - base.r) * this.greyMix, base.g + (l * 0.7 - base.g) * this.greyMix, base.b + (l * 0.7 - base.b) * this.greyMix);
+        }
+      }
+    }
+    const idleDim = this.spent ? 0.12 : 0.9;
+    this.cockpitMat.emissiveIntensity += (idleDim - this.cockpitMat.emissiveIntensity) * Math.min(1, dt * 3);
     const heavy = this.weightClass === "medium";
     // Walk cycle while moving, idle sway otherwise.
     if (this.walking > 0) this.walkPhase += dt * (heavy ? 6 : 9);
@@ -402,7 +479,8 @@ export class Mech {
       this.body.rotation.z += (-0.5 - this.body.rotation.z) * Math.min(1, dt * 2);
       this.body.position.y += (-0.6 - this.body.position.y) * Math.min(1, dt * 2);
     } else {
-      this.body.rotation.x = Math.sin(this.t * 0.9) * 0.02 + this.hurt * 0.08 + (b.legs ? 0.12 + Math.abs(Math.sin(this.walkPhase)) * 0.12 * this.walking : 0);
+      this.body.position.y += ((this.spent ? -0.12 : 0) - this.body.position.y) * Math.min(1, dt * 3);
+      this.body.rotation.x = Math.sin(this.t * 0.9) * 0.02 + (this.spent ? 0.1 : 0) + this.hurt * 0.08 + (b.legs ? 0.12 + Math.abs(Math.sin(this.walkPhase)) * 0.12 * this.walking : 0);
     }
     // Turn toward targetFacing smoothly.
     let d = ((this.targetFacing - this.facing + 540) % 360) - 180;

@@ -105,3 +105,22 @@ test("findPath is deterministic, same inputs, same path", () => {
   const b = findPath(OPEN, [wall], [], 0, { x: 5, y: 5 }, { x: 15, y: 5 });
   assert.deepEqual(a, b);
 });
+
+test("a rig touching (or overlapping) another base can still walk away from it", () => {
+  const field = { width: 30, height: 20 };
+  const me = { x: 10, y: 10 };
+  for (const gap of [0, -0.3]) {                      // exactly touching, then overlapping
+    const other = { pos: { x: 10 + 1.18 + 1.48 + gap, y: 10 }, radius: 1.48 };
+    const route = findPath(field, [], [other], 1.18, me, { x: 6, y: 10 });
+    assert.ok(route, `no path out at gap ${gap}`);
+    assert.ok(route.length < 4.6);
+  }
+});
+
+test("walking away from a touching base still can't pass through it", () => {
+  const field = { width: 30, height: 20 };
+  const other = { pos: { x: 12.66, y: 10 }, radius: 1.48 };
+  const route = findPath(field, [], [other], 1.18, { x: 10, y: 10 }, { x: 16, y: 10 });
+  // Must go round, not straight through the other base.
+  assert.ok(!route || route.length > 6.5, `went through: ${route?.length}`);
+});

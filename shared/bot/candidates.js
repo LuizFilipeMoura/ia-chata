@@ -227,7 +227,7 @@ function moveCandidates(room, rig, enabled) {
   // destination probes per activation, so the shared grid is the difference
   // between a snappy bot and a minutes-long tuning sweep. The grid depends only on
   // (field, terrain, other rigs, this radius), all fixed for one activation.
-  const grid = buildGrid(room.field, polys, blockers, radius);
+  const grid = buildGrid(room.field, polys, blockers, radius, rig.pos);
 
   // Semantic ideal points (may be far, each is capped to the budget below).
   const ideals = [{ pt: { ...from }, reason: "hold and pivot" }];
