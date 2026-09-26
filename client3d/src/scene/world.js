@@ -174,9 +174,15 @@ export class World {
     const hemi = new THREE.HemisphereLight(0xd8b88a, 0x140d06, 0.5); this.scene.add(hemi); this.hemi = hemi;
     this.sun = new THREE.DirectionalLight(0xffe0b0, 8);
     this.sun.position.set(-30, 60, -20); this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
-    const sc = this.sun.shadow.camera; sc.left = -50; sc.right = 50; sc.top = 50; sc.bottom = -50; sc.far = 200;
-    this.sun.shadow.bias = -0.0005;
+    // Crisp, soft-edged shadows: a big map (as big as the GPU allows, up to
+    // 4096) fitted tightly to the table in buildField(), PCF blur for soft
+    // edges, and a normal bias so flat tops don't streak (shadow acne).
+    const ms = Math.min(4096, this.renderer.capabilities.maxTextureSize || 2048);
+    this.sun.shadow.mapSize.set(ms, ms);
+    const sc = this.sun.shadow.camera; sc.left = -50; sc.right = 50; sc.top = 50; sc.bottom = -50; sc.near = 1; sc.far = 200;
+    this.sun.shadow.bias = -0.0003;
+    this.sun.shadow.normalBias = 0.03;
+    this.sun.shadow.radius = 3;
     this.scene.add(this.sun); this.scene.add(this.sun.target);
 
     this.tableGroup = new THREE.Group(); this.scene.add(this.tableGroup);
@@ -404,6 +410,10 @@ export class World {
     table.rotation.x = -Math.PI / 2; table.position.set(w / 2, 0, h / 2); table.receiveShadow = true; this.tableGroup.add(table);
     this.cam.target.set(w / 2, 0, h / 2);
     this.sun.target.position.set(w / 2, 0, h / 2);
+    // Fit the shadow camera to this table: every texel lands on the board.
+    this.sun.position.set(w / 2 - 30, 60, h / 2 - 20);
+    const sc = this.sun.shadow.camera, half = Math.hypot(w, h) / 2 + 8;
+    sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half; sc.updateProjectionMatrix();
 
     for (const t of field.terrain || []) this.tableGroup.add(this.terrainMesh(t, ctx));
     // Set-pieces beyond the table edge.
