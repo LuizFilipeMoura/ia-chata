@@ -344,6 +344,7 @@ export class Mech {
     this.kind = kind; this.drone = drone;
     const support = kind === "walker" || kind === "drone";
     const color = support ? UNIT_PAINT[kind] : PAINT[name] ?? 0x888888;
+    this.paintColor = color; // debris torn off this mech keeps its paint
     const paint = name === "Zebra"
       ? new THREE.MeshStandardMaterial({ map: stripeTexture("#ecebe4", "#18181a"), roughness: 0.6, metalness: 0.3 })
       : mat(color);

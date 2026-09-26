@@ -212,6 +212,7 @@ function settingsPanel() {
       toggle("diceTray", "Roll the dice on screen"),
       toggle("threat", "Threat map (enemy fire zones, T)"),
       toggle("edgePan", "Pan the camera at screen edges"),
+      toggle("bloom", "Glow on fire, sparks and lights (bloom)"),
       toggle("wires", "Wires from HQ (situational tips)"),
       el("button", { class: "btn ghost", onClick: () => { resetWires(); toast("All HQ wires will be sent again.", "good"); } }, "Replay all tips"),
       el("label", { class: "set-row" }, "Volume ", el("input", { type: "range", min: 0, max: 1, step: 0.05, value: settings.get("volume"), onInput: (e) => settings.set("volume", Number(e.target.value)) })),

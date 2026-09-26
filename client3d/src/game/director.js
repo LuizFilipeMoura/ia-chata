@@ -117,7 +117,7 @@ export class Director {
     for (const L of this.lifts) L.done?.();
     this.lifts.clear();
     this.dropDone?.();
-    for (const m of this.mechs.values()) this.world.scene.remove(m.root);
+    for (const m of this.mechs.values()) { m.fire?.stop(); this.world.scene.remove(m.root); }
     this.mechs.clear();
     this.current = null;
     this.world.mechRoots = [];
@@ -148,6 +148,7 @@ export class Director {
   removeMech(id) {
     const m = this.mechs.get(id);
     if (!m) return;
+    m.fire?.stop();
     this.world.scene.remove(m.root);
     this.mechs.delete(id);
     this.world.mechRoots = [...this.mechs.values()].map((x) => x.root);
@@ -320,7 +321,7 @@ export class Director {
       } else if (r.destroyed && !m.destroyed) {
         // Kill shot: punch the camera in and hold a beat on the wreck.
         this.onCamera({ x: m.root.position.x, y: m.root.position.z }, { punch: true, owner: r.owner });
-        this.world.fx.explosion(m.root.position.clone().add(new THREE.Vector3(0, 1.5, 0)), true);
+        this.world.fx.deathBlast(m.root.position.clone().add(new THREE.Vector3(0, 1.5, 0)), m.paintColor);
         this.sound(() => sfx.explosion(true));
         m.destroy();
         this.onBanner(`${r.name} DESTROYED`, "stinger");
@@ -389,7 +390,7 @@ export class Director {
       const m = d.m;
       d.v += 30 * dt;
       m.root.position.y = Math.max(0, m.root.position.y - d.v * dt * 1.2);
-      if (Math.random() < 0.6) this.world.fx.particle(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), { color: 0xff9933, size: 0.9, life: 0.35, vel: new THREE.Vector3(0, 6, 0), grow: 1.5 });
+      this.world.fx.jet(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 1.3);
       if (m.root.position.y <= 0) {
         this.drops.delete(d);
         this.world.fx.burst(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 18, { color: 0x9a8a70, size: 0.8, life: 0.8, spread: 5, additive: false, opacity: 0.6, up: 0.3 });
@@ -410,7 +411,7 @@ export class Director {
       if (L.puff > 0.03) {
         L.puff = 0;
         const at = m.root.position.clone();
-        this.world.fx.particle(at.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6)), { color: Math.random() < 0.5 ? 0xff9933 : 0xffe07a, size: 1, life: 0.35, vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, -7, (Math.random() - 0.5) * 1.5), grow: 1.8 });
+        this.world.fx.jet(at.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6)), 1.3);
         if (m.root.position.y < 3) this.world.fx.particle(new THREE.Vector3(at.x + (Math.random() - 0.5) * 3, 0.3, at.z + (Math.random() - 0.5) * 3), { color: 0x8a7a60, size: 1, life: 1, grow: 3, additive: false, opacity: 0.45, vel: new THREE.Vector3((Math.random() - 0.5) * 4, 0.6, (Math.random() - 0.5) * 4) });
       }
       if (m.root.position.y > 5) m.setOpacity(Math.max(0, 1 - (m.root.position.y - 5) / 20));
@@ -430,7 +431,7 @@ export class Director {
           w.dust = 0;
           const at = w.m.root.position.clone();
           if (w.hop > 0 && t < 0.92) {
-            this.world.fx.particle(at.clone().add(new THREE.Vector3(0, 0.3, 0)), { color: Math.random() < 0.5 ? 0xff9933 : 0xffd27a, size: 0.8, life: 0.3, vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, -5, (Math.random() - 0.5) * 1.5), grow: 1.6 });
+            this.world.fx.jet(at.clone().add(new THREE.Vector3(0, 0.3, 0)));
             this.world.fx.particle(at.clone(), { color: 0x6a6258, size: 0.6, life: 0.9, grow: 3, additive: false, opacity: 0.35, vel: new THREE.Vector3(0, 0.4, 0) });
           } else if (w.drag) {
             this.world.fx.particle(at.clone().add(new THREE.Vector3(0, 0.2, 0)), { color: 0x8a7a60, size: 0.7, life: 0.7, grow: 2.5, additive: false, opacity: 0.45, vel: new THREE.Vector3(0, 0.6, 0) });
@@ -452,9 +453,13 @@ export class Director {
       w.m.root.position.set(w.from.x + (w.to.x - w.from.x) * e, 0, w.from.y + (w.to.y - w.from.y) * e);
       w.m.walking = Math.min(1, w.m.walking + dt * 4);
       const stepN = Math.floor(w.m.walkPhase / Math.PI);
-      if (stepN !== w.lastStep) { w.lastStep = stepN; this.sound(() => sfx.step(w.m.weightClass === "medium")); }
-      w.dust += dt;
-      if (w.dust > 0.15) { w.dust = 0; this.world.fx.particle(w.m.root.position.clone().add(new THREE.Vector3(0, 0.2, 0)), { color: 0x8a7a60, size: 0.6, life: 0.8, grow: 2.5, additive: false, opacity: 0.35, vel: new THREE.Vector3(0, 0.5, 0) }); }
+      if (stepN !== w.lastStep) {
+        w.lastStep = stepN; this.sound(() => sfx.step(w.m.weightClass === "medium"));
+        // The planted foot kicks up a ring of dust; a broken leg grinds sparks.
+        const leg = w.m.legs?.[stepN & 1];
+        if (leg?.foot) this.world.fx.footfall(leg.foot.getWorldPosition(new THREE.Vector3()).setY(0.05), w.m.weightClass === "medium");
+        if (w.m.broken?.legs && leg?.knee) this.world.fx.sparks(leg.knee.getWorldPosition(new THREE.Vector3()), 6);
+      }
       if (t >= 1) { w.m.targetFacing = w.facing; this.walkers.delete(w); w.resolve(); }
     }
     for (const m of this.mechs.values()) {
@@ -491,21 +496,39 @@ export class Director {
         this.world.fx.smoke(m.root.position.clone().add(new THREE.Vector3(0, 2.2, 0)), 1, true);
       }
       if (m.broken?.engine && !m.destroyed && Math.random() < dt * 3) this.world.fx.smoke(m.stacks[0].getWorldPosition(new THREE.Vector3()), 1, true);
-      if (m.destroyed && Math.random() < dt * 2) this.world.fx.smoke(m.root.position.clone().add(new THREE.Vector3(0, 0.8, 0)), 1, true);
+      // Hot stacks shimmer and spit embers well before the red line.
+      if (m.heatFrac > 0.5 && !m.destroyed && m.stacks?.length && Math.random() < dt * 8 * m.heatFrac) {
+        this.world.fx.heatHaze(m.stacks[Math.floor(Math.random() * m.stacks.length)].getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.3, 0)), m.heatFrac);
+      }
+      // Wrecks burn (drones just smoulder).
+      if (m.destroyed && m.kind !== "drone" && !m.fire && m.root.visible) m.fire = this.world.fx.wreckFire(() => m.root.position, m.weightClass === "medium" ? 1.2 : 1);
+      if (m.destroyed && m.kind === "drone" && Math.random() < dt * 2) this.world.fx.smoke(m.root.position.clone().add(new THREE.Vector3(0, 0.8, 0)), 1, true);
     }
   }
 
   // An area weapon's blast drawn at its true radius (inches = world units).
+  // A point on the model for a hit on `loc` (legs / arms / engine / hull),
+  // jittered a little; `fallback` when the part isn't known or modelled.
+  hitPoint(target, loc, fallback) {
+    const at = (o) => o?.getWorldPosition(new THREE.Vector3());
+    const part = loc === "legs" ? at(target.legs?.[Math.random() < 0.5 ? 0 : 1]?.knee)
+      : loc === "arms" ? at(Math.random() < 0.5 ? target.armR : target.armL)
+      : loc === "engine" ? at(target.stacks?.[0])
+      : loc === "hull" ? at(target.chest) : null;
+    return (part || fallback.clone()).add(new THREE.Vector3((Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3));
+  }
+
   splashBlast(pos, splash) {
     const fx = this.world.fx, R = splash.radius;
     const fire = !!splash.heat && !splash.pen;
     const col = fire ? 0xff5a1a : 0xffa040;
     fx.shockwave(pos, R, col, 0.8);
+    fx.decals.add(pos, R * 0.8, "scorch", { hot: fire });
     if (!fire) fx.explosion(pos.clone().setY(1), R >= 2);
     for (let i = 0; i < 26; i++) {
       const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * R;
       fx.particle(pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0.3, Math.sin(a) * r)), fire
-        ? { color: Math.random() < 0.5 ? 0xff7a2a : 0xffc050, size: 0.9, life: 0.9, grow: 1.8, vel: new THREE.Vector3(0, 2 + Math.random() * 2, 0) }
+        ? { tile: "flame", glow: 1.5, color: Math.random() < 0.5 ? 0xff7a2a : 0xffc050, color2: 0xa01800, size: 0.7, life: 0.9, grow: 1.4, stretch: 0.2, opacity: 0.85, vel: new THREE.Vector3(0, 2 + Math.random() * 2, 0) }
         : { color: 0x5a4a3a, size: 1.2, life: 1.6, grow: 2.5, additive: false, opacity: 0.55, vel: new THREE.Vector3(0, 1.2 + Math.random(), 0) });
     }
     // The footprint: a scorch disc and a bright rim at exactly R, fading out.
@@ -541,40 +564,48 @@ export class Director {
       const hitStep = l.breakdown?.steps?.find((st) => st.kind === "hit");
       const hitCount = hitStep?.dice ? hitStep.dice.filter((d) => d.ok).length : (sp > 0 ? 1 : 0);
       const diceCount = hitStep?.dice?.length || 1;
-      let heard = false;
+      let heard = false, hitsShown = 1;
+      const shooter = actor.root.position.clone().setY(1.8);
       const impact = (p) => {
         if (!heard) { heard = true; this.sound(() => sfx.hit(sp)); }
-        if (sp > 0) { fx.sparks(p, 10 + sp * 3); fx.flash(p, 0xffaa44, 20 + sp * 8, 8); fx.shake = Math.max(fx.shake, Math.min(0.6, sp * 0.08)); target.body.position.x = -0.2; setTimeout(() => { target.body.position.x = 0; }, 90); }
-        else fx.burst(p, 6, { color: 0xbbbbbb, size: 0.3, life: 0.3, spread: 3 }); // struck armour, didn't wound
+        // A burst splits its damage over the rounds that strike, so a hail of
+        // small hits doesn't bury the table in debris.
+        if (sp > 0) { fx.impact(p, Math.max(1, Math.ceil(sp / hitsShown)), { from: shooter, color: target.paintColor }); fx.shake = Math.max(fx.shake, Math.min(0.6, sp * 0.08)); target.body.position.x = -0.2; setTimeout(() => { target.body.position.x = 0; }, 90); }
+        else fx.ricochet(p, shooter); // struck armour, didn't wound
       };
+      // Where a wounding round lands: the part it wounded.
+      const struck = () => this.hitPoint(target, sp > 0 ? loc : null, tpos);
       // A miss lands on the table beyond / beside the target: dust, no flash.
       const missPoint = (from) => {
         const dir = tpos.clone().sub(from).setY(0).normalize();
         const side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar((Math.random() < 0.5 ? -1 : 1) * (1.4 + Math.random() * 1.6));
         return target.root.position.clone().add(dir.multiplyScalar(3 + Math.random() * 5)).add(side).setY(0.05);
       };
-      const whiff = (p) => fx.burst(p, 8, { color: 0x8a7a60, size: 0.6, life: 0.7, spread: 2, additive: false, opacity: 0.5, up: 0.5 });
+      const whiff = (p) => { fx.burst(p, 8, { color: 0x8a7a60, size: 0.6, life: 0.7, spread: 2, additive: false, opacity: 0.5, up: 0.5 }); fx.sparks(p, 3, 0xffe0a0, { speed: 4 }); if (p.y < 0.3) fx.decals.add(p, 0.35, "pock"); };
       if (melee) {
         actor.fire("melee");
         this.sound(() => (actor.melee === "Flamethrower" ? sfx.shot("flame") : sfx.melee(actor.weightClass === "medium")));
         const aim = hitCount ? tpos : missPoint(actor.root.position.clone().setY(1.8)).setY(1.2);
         if (actor.melee === "Flamethrower") fx.flame(actor.muzzleWorld("melee"), aim);
         await wait(380 / this.speed);
-        if (hitCount) impact(tpos);   // a whiffed swing just cuts air
+        if (hitCount) impact(struck());   // a whiffed swing just cuts air
       } else {
         const kind = PROJECTILE[l.weapon] || "bullet";
         const n = BURST[l.weapon] || 1;
         // Spread the real hit ratio over the visual shots (at least one if any die hit).
         let hitsLeft = hitCount ? Math.max(1, Math.round((n * hitCount) / diceCount)) : 0;
+        hitsShown = Math.max(1, hitsLeft);
         const plan = Array.from({ length: n }, () => false).map((_, i) => i < hitsLeft).sort(() => Math.random() - 0.5);
         const flights = [];
         for (let i = 0; i < n; i++) {
           actor.fire("longRange");
           this.sound(() => sfx.shot(kind));
           const from = actor.muzzleWorld("longRange");
-          fx.muzzle(from, kind === "arc" ? 0x66ccff : 0xffcc55);
           const hit = plan[i];
-          const end = hit ? tpos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.6)) : missPoint(from);
+          const end = hit ? struck() : missPoint(from);
+          const dir = end.clone().sub(from).normalize();
+          fx.muzzle(from, kind === "arc" ? 0x66ccff : 0xffcc55, dir);
+          if (kind === "bullet" || kind === "cannon" || kind === "rivet") fx.casing(from.clone().addScaledVector(dir, -0.6), new THREE.Vector3(-dir.z, 0, dir.x).normalize(), kind === "cannon");
           const land = (p) => {
             if (hit) impact(p); else whiff(p);
             if (kind === "lob" || kind === "missile") { fx.explosion(p, false); this.sound(() => sfx.explosion(false)); }

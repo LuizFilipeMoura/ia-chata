@@ -46,7 +46,7 @@ function flame(ctx, parent, pos, { size = 1, light = false, rate = 18 } = {}) {
     if (pl) pl.intensity = 16 + 10 * f;
     if (Math.random() < dt * rate) {
       const p = core.getWorldPosition(V(0, 0, 0)).add(V(0, 0.5 * size, 0));
-      ctx.fx.particle(p, { color: Math.random() < 0.5 ? 0xffb040 : 0xff5a1a, size: 0.9 * size, life: 0.7, grow: 1.6,
+      ctx.fx.particle(p, { tile: "flame", glow: 2, color: Math.random() < 0.5 ? 0xffb040 : 0xff5a1a, color2: 0xff2a06, size: 0.9 * size, life: 0.7, grow: 1.6,
         vel: V((Math.random() - 0.5) * 0.8, 2.5 + Math.random() * 2, (Math.random() - 0.5) * 0.8) });
     }
   });
@@ -272,7 +272,7 @@ export function rubbleProp(t, ctx) {
     if (Math.random() > dt * (hot ? 3 : 1.2)) return;
     const p = top.getWorldPosition(V(0, 0, 0));
     ctx.fx.particle(p, hot
-      ? { color: 0xff6a1a, size: 0.25, life: 1.5, vel: V((Math.random() - 0.5) * 0.4, 1.2, (Math.random() - 0.5) * 0.4) }
+      ? { tile: "ember", glow: 2.6, color: 0xff6a1a, color2: 0xff2a08, size: 0.18, life: 1.5, turb: 2, vel: V((Math.random() - 0.5) * 0.4, 1.2, (Math.random() - 0.5) * 0.4) }
       : { color: 0x2a2420, size: 0.6, life: 2.5, grow: 3, additive: false, opacity: 0.35, vel: V(0.2, 0.9, 0.1) });
   });
   return g;

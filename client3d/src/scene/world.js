@@ -5,6 +5,7 @@
 // units: field (x, y) → world (x, 0, y).
 import * as THREE from "three";
 import { FX } from "./fx.js";
+import { Post } from "./post.js";
 import { settings } from "../settings.js";
 import { themeFor, dressRandom, layoutHash } from "./themes.js";
 import { buildingProp, barricadeProp, crateProp, rubbleProp, backdrop } from "./props.js";
@@ -168,6 +169,7 @@ export class World {
     this.sky = skyDome(); this.scene.add(this.sky);
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
     this.fx = new FX(this.scene, this.camera);
+    this.post = new Post(this.renderer, this.scene, this.camera);
 
     // High contrast: a weak fill keeps the shade dark, a hard bright key makes
     // the lit faces pop. Raise the fill and the whole table goes muddy again.
@@ -212,6 +214,7 @@ export class World {
   resize() {
     const w = this.container.clientWidth || window.innerWidth, h = this.container.clientHeight || window.innerHeight;
     this.renderer.setSize(w, h); this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
+    this.post?.setSize(w, h);
   }
 
   bindInput() {
@@ -663,13 +666,28 @@ export class World {
   // the table, per theme.
   ambient(dt) {
     const f = this.field, kind = this.theme?.ambient;
-    if (!f || !kind || Math.random() > dt * 7) return;
-    const V3 = THREE.Vector3;
-    const x = Math.random() * f.width, z = Math.random() * f.height;
-    if (kind === "soot") this.fx.particle(new V3(x, 9 + Math.random() * 4, z), { color: 0x2a2420, size: 0.18, life: 6, additive: false, opacity: 0.8, vel: new V3(0.6, -1.4, 0.2) });
-    else if (kind === "embers") this.fx.particle(new V3(x, 0.3, z), { color: Math.random() < 0.5 ? 0xff7a2a : 0xffb050, size: 0.16, life: 3.5, vel: new V3((Math.random() - 0.5) * 0.6, 1.4 + Math.random(), (Math.random() - 0.5) * 0.6) });
-    else if (kind === "steam") this.fx.particle(new V3(x, 0.4, z), { color: 0xdedad2, size: 1.6, life: 4, grow: 2.5, additive: false, opacity: 0.12, vel: new V3(0.5, 0.25, 0.1) });
-    else if (kind === "dust") this.fx.particle(new V3(x, 1 + Math.random() * 5, z), { color: 0xd8c29a, size: 0.14, life: 5, opacity: 0.7, vel: new V3(1.6, 0.1, 0.4) });
+    if (!f || !kind) return;
+    const V3 = THREE.Vector3, r = Math.random;
+    const spot = () => [r() * f.width, r() * f.height];
+    const rate = { soot: 11, embers: 10, steam: 5, dust: 12 }[kind] ?? 7;
+    this.ambientAcc = (this.ambientAcc || 0) + dt * rate;
+    for (; this.ambientAcc >= 1; this.ambientAcc--) {
+      const [x, z] = spot();
+      if (kind === "soot") this.fx.particle(new V3(x, 8 + r() * 5, z), { tile: "flake", color: 0x2a2420, size: 0.2 + r() * 0.1, life: 7, additive: false, opacity: 0.85, fadeIn: 0.8, vel: new V3(0.6, -1.1, 0.2), spin: (r() - 0.5) * 6, turb: 1.6 });
+      else if (kind === "embers") this.fx.particle(new V3(x, 0.3, z), { tile: "ember", color: r() < 0.5 ? 0xff7a2a : 0xffb050, color2: 0xff2a08, glow: 2.6, size: 0.1 + r() * 0.08, life: 4, vel: new V3((r() - 0.5) * 0.6, 1.2 + r(), (r() - 0.5) * 0.6), turb: 3 });
+      else if (kind === "steam") this.fx.particle(new V3(x, 0.4, z), { color: 0xdedad2, size: 2.2, life: 6, grow: 2, additive: false, opacity: 0.1, fadeIn: 1.5, vel: new V3(0.5, 0.18, 0.1), turb: 0.4 });
+      else if (kind === "dust") this.fx.particle(new V3(x, 0.8 + r() * 5, z), { tile: "ember", color: 0xe8d2a8, size: 0.08 + r() * 0.06, life: 6, opacity: 0.8, fadeIn: 1, glow: 1.2, vel: new V3(1.4, 0.1, 0.4), turb: 2 });
+    }
+    // Now and then a gust sweeps a low band of grit across the table.
+    this.gustT = (this.gustT ?? 4) - dt;
+    if (this.gustT <= 0) {
+      this.gustT = 5 + r() * 7;
+      const tint = { soot: 0x7a6e60, embers: 0x7a6052, steam: 0xcac6be, dust: 0xc8b088 }[kind] ?? 0x9a8a70;
+      const [x0, z0] = [r() * f.width * 0.4, 7 + r() * (f.height - 14)];
+      for (let i = 0; i < 14; i++) {
+        this.fx.particle(new V3(x0 + (r() - 0.5) * 4, 0.3 + r() * 0.5, z0 + (i - 7) * 0.9), { additive: false, color: tint, size: 1.2 + r(), grow: 2.5, life: 2.4 + r(), opacity: 0.1, fadeIn: 0.6, vel: new V3(4 + r() * 2, 0.3, 1 + r()), drag: 0.3, turb: 1, delay: i * 0.03 });
+      }
+    }
   }
 
   clearOverlay() { this.overlay.clear(); }
@@ -820,6 +838,8 @@ export class World {
     const now = this.clock.elapsedTime;
     this.objectiveMeshes.forEach((m, i) => {
       m.gem.rotation.y += dt; m.gem.position.y += Math.sin(now * 2 + i) * 0.004;
+      // Idle: a slow trickle of motes rising off the gem.
+      if (Math.random() < dt * 2.5) this.fx.particle(m.gem.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, -0.6, (Math.random() - 0.5) * 0.8)), { tile: "ember", color: m.light.color.getHex(), glow: 2.2, size: 0.1, life: 2, vel: new THREE.Vector3(0, 0.9, 0), turb: 1.2 });
       if (m.dish) { m.dish.rotation.y += dt * 0.8; m.halo.scale.setScalar(1 + 0.25 * Math.sin(now * 4)); m.pylonMat.emissiveIntensity = 1.1 + 0.9 * Math.max(0, Math.sin(now * 5)); }
       if (m.body) m.pylonMat.emissiveIntensity = 1.1 + 0.6 * Math.sin(now * 3 + i);
       if (m.pulse) {
@@ -875,6 +895,6 @@ export class World {
     });
     this.fx.update(dt);
     for (const t of this.tickers) t(dt);
-    this.renderer.render(this.scene, this.camera);
+    if (settings.get("bloom")) this.post.render(dt); else this.renderer.render(this.scene, this.camera);
   }
 }
