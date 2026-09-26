@@ -241,7 +241,8 @@ export class World {
       }
       if (touches.size > 1) return;
       this.updateMouse(e);
-      drag = { x: e.clientX, y: e.clientY, button: e.button, moved: 0, touch: e.pointerType === "touch" };
+      this.placeCamera();
+      drag = { x: e.clientX, y: e.clientY, button: e.button, moved: 0, touch: e.pointerType === "touch", grab: this.groundAt(e) };
       const hit = this.pick();
       // A screen (live battle) can claim a left-press as a drag of its own:
       // press on the spot, drag to set facing, release to confirm.
@@ -304,9 +305,15 @@ export class World {
           this.cam.yaw += dx * 0.006; this.cam.pitch = Math.max(20 * DEG, Math.min(85 * DEG, this.cam.pitch + dy * 0.004));
           this.manualAt = performance.now();
         } else if (drag.button === 1 || (drag.button === 0 && drag.moved > 6)) {
-          // Middle-button (wheel) drag pans 40% slower than a left drag.
-          const k = this.cam.dist * (drag.button === 1 ? 0.00108 : 0.0018);
-          this.panBy(-dx * k, -dy * k);
+          // Grab the table: the point pressed stays under the pointer (1:1 at
+          // any zoom or tilt). Past the horizon there's nothing to hold.
+          this.placeCamera();
+          const at = drag.grab && this.groundAt(e);
+          if (at) {
+            this.cam.target.add(drag.grab.clone().sub(at).setY(0));
+            this.panBy(0, 0); // clamp to the table, drop any camera glide
+            this.placeCamera();
+          }
         }
       }
       const hit = this.pick();
@@ -344,6 +351,25 @@ export class World {
   // The camera is on its way somewhere, or the player just steered it.
   cameraBusy() { return !!this.cam.goal || performance.now() - (this.manualAt || 0) < 700; }
   userSteering() { return performance.now() - (this.manualAt || 0) < 700; }
+
+  // Put the camera where the rig state (target, yaw, pitch, dist) says, plus
+  // an optional shake jitter, and refresh its matrices so picks see it now.
+  placeCamera(shake = 0) {
+    const c = this.cam;
+    const off = new THREE.Vector3(-Math.cos(c.yaw) * Math.cos(c.pitch), Math.sin(c.pitch), -Math.sin(c.yaw) * Math.cos(c.pitch)).multiplyScalar(c.dist);
+    this.camera.position.copy(c.target).add(off);
+    if (shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(shake * 0.6));
+    this.camera.lookAt(c.target);
+    this.camera.updateMatrixWorld();
+  }
+
+  // The table point (y = 0) under a pointer event, or null past the horizon.
+  groundAt(e) {
+    this.updateMouse(e);
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const p = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), p) ? p : null;
+  }
 
   updateMouse(e) {
     const r = this.renderer.domElement.getBoundingClientRect();
@@ -868,11 +894,7 @@ export class World {
       if (this.cam.goal.dist != null) this.cam.dist += (this.cam.goal.dist - this.cam.dist) * Math.min(1, dt * 3);
       if (this.cam.target.distanceTo(this.cam.goal.target) < 0.05) this.cam.goal = null;
     }
-    const c = this.cam;
-    const off = new THREE.Vector3(-Math.cos(c.yaw) * Math.cos(c.pitch), Math.sin(c.pitch), -Math.sin(c.yaw) * Math.cos(c.pitch)).multiplyScalar(c.dist);
-    this.camera.position.copy(c.target).add(off);
-    if (this.fx.shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(this.fx.shake * 0.6));
-    this.camera.lookAt(c.target);
+    this.placeCamera(this.fx.shake);
     const now = this.clock.elapsedTime;
     this.objectiveMeshes.forEach((m, i) => {
       m.gem.rotation.y += dt; m.gem.position.y += Math.sin(now * 2 + i) * 0.004;
