@@ -197,6 +197,17 @@ export class Director {
 
   sound(fn) { if (!this.quiet && !this.skipping) fn(); }
 
+  // The closest living enemy machine to `m` (what a scout would call out).
+  nearestFoe(m) {
+    let best = null, d = Infinity;
+    for (const o of this.mechs.values()) {
+      if (o.owner === m.owner || o.destroyed) continue;
+      const k = o.root.position.distanceTo(m.root.position);
+      if (k < d) { d = k; best = o; }
+    }
+    return best;
+  }
+
   // A pilot on the radio. `other` = the machine they're talking about,
   // `part` = the part that got hit. No line repeats within a battle.
   bark(m, event, { other = null, part = null } = {}) {
@@ -210,7 +221,13 @@ export class Director {
     // and not the campaign's faction extras).
     if (!event.startsWith("re") && !(this.campaign && m.owner === "b") && Math.random() < REPLY_CHANCE[event] ) {
       const mates = [...this.mechs.values()].filter((o) => o !== m && o.owner === m.owner && !o.destroyed);
-      const mate = mates[Math.floor(Math.random() * mates.length)];
+      // Temperament: a light in trouble gets a medium looking out for it; a
+      // medium's orders get a light answering.
+      const trouble = ["hurt", "critical", "die", "eject", "miss"].includes(event);
+      const want = m.weightClass === "light" && trouble ? "medium" : m.weightClass === "medium" && !trouble ? "light" : null;
+      const fit = want ? mates.filter((o) => o.weightClass === want) : [];
+      const pool = fit.length && Math.random() < 0.75 ? fit : mates;
+      const mate = pool[Math.floor(Math.random() * pool.length)];
       const re = { kill: "re_kill", hurt: "re_hurt", critical: "re_hurt", die: "re_eject", eject: "re_eject", miss: "re_miss" }[event] || "re";
       if (mate) setTimeout(() => this.bark(mate, re, { other, part }), (1100 + Math.random() * 500) / this.speed);
     }
@@ -333,7 +350,7 @@ export class Director {
       const heading = Math.atan2(dy, dx) * 180 / Math.PI;
       m.targetFacing = heading;
       this.sound(() => sfx.servo());
-      if (Math.random() < 0.5) this.bark(m, "move");
+      if (Math.random() < 0.5) this.bark(m, "move", { other: this.nearestFoe(m) });
       const w = { m, from, to, t: 0, dur: Math.max(0.35, dist / (m.weightClass === "medium" ? 5 : 7)) * (limping ? 1.6 : 1), facing, resolve, dust: 0 };
       this.walkers.add(w);
     });
