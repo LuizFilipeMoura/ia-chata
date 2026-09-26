@@ -1206,3 +1206,10 @@ body { font-size: 18px; }
   .cm-step:not(.now) { flex: 0 0 auto; } .cm-step:not(.now) span { display: none; }
   .cm-step i { width: 24px; height: 24px; font-size: 13px; }
 }
+
+/* NEED pill: what built the number (cover, range, aimed…) rides inside it. */
+.rl-need { display: inline-flex; align-items: baseline; gap: 6px; }
+.rl-need .rl-need-why { font-size: 12px; font-weight: 600; opacity: .85; letter-spacing: 0; text-transform: none; white-space: nowrap; }
+.rl-h { flex-wrap: wrap; row-gap: 6px; }
+.rl-h > b, .rl-need, .rl-out { white-space: nowrap; }
+.rl-need:has(.rl-need-why) { order: 5; }

@@ -90,5 +90,5 @@ test("opening the attack wizard resolves the battle-actions context", async () =
   await user.click(await screen.findByRole("button", { name: "attack" }));
   // The wizard mounts through WizardProvider's portal and immediately calls
   // useBattleActions, reaching its title proves the provider order is right.
-  expect(await screen.findByText(/Fire Weapon/)).toBeInTheDocument();
+  expect(await screen.findByText(/🎯 Attack/)).toBeInTheDocument();
 });

@@ -98,12 +98,12 @@ export const GLOSSARY = [
     def: "Extending a Move up to 1½× Speed, for 2 heat instead of 1 (§5, §6).",
   },
   {
-    id: "fire-weapon", term: "Fire Weapon", match: ["Fire Weapon"],
-    def: "Action [1 heat, 2 if Hot]: attack with one equipped weapon. Ranged weapons need Reload before firing again (§5, §7).",
+    id: "fire-weapon", term: "Attack", match: ["Attack action", "Fire Weapon"],
+    def: "Action [1 heat, 2 if Hot]: attack with one equipped weapon, the gun at range or the melee weapon in reach. Ranged weapons need Reload before firing again (§5, §7).",
   },
   {
     id: "aimed-shot", term: "Aimed Shot", match: ["Aimed Shot"],
-    def: "A Fire Weapon action where you choose the hit location instead of rolling for it, at −3 Accuracy (Precision removes the penalty) (§5, §13).",
+    def: "An Attack action where you choose the hit location instead of rolling for it, at −3 Accuracy (Precision removes the penalty) (§5, §13).",
   },
   {
     id: "reload", term: "Reload", match: ["Reload"],

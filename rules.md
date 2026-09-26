@@ -120,9 +120,9 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Disengage [1]**: break a melee **engagement** (see below). Frees **both** Rigs from the lock; after Disengaging, the Rig may Move/Sprint later in the same activation. No effect (and costs nothing) if the Rig isn't engaged.
 
-- **Fire Weapon [1]**: attack with one equipped weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first, for a Rig this costs **no action**, paid in heat instead (§5), a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
+- **Attack [1]** (formerly *Fire Weapon*): attack with one equipped weapon, the ranged gun or, in reach, the melee weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first, for a Rig this costs **no action**, paid in heat instead (§5), a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
 
-- **Aimed Shot [1]**: a Fire Weapon action where you **choose the hit location** instead of rolling for it, at **−3 Accuracy**. *⚙ TUNING: was −2; picking the part was worth more than the penalty, so Aimed crowded out plain Fire.*
+- **Aimed Shot [1]**: an Attack action where you **choose the hit location** instead of rolling for it, at **−3 Accuracy**. *⚙ TUNING: was −2; picking the part was worth more than the penalty, so Aimed crowded out plain Fire.*
 
 - **Reload**: Reloading a spent ranged weapon no longer costs an action. Instead a Rig rolls
   a d6 for heat when it reloads: **1-3 → +2 heat, 4-6 → +1 heat**. Cold units
@@ -190,7 +190,7 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 |---|:--:|
 | Move (up to Speed) | 1 |
 | Move, **Sprint** (up to 1½× Speed; 2× with Reinforced Servos) | 2 |
-| Fire Weapon | 1 (**2** if the weapon is **Hot**) |
+| Attack | 1 (**2** if the weapon is **Hot**) |
 | Aimed Shot / Prepare | 1 |
 | Reload (Rig) | +1–2 (d6) |
 | Repair | 1 |

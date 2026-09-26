@@ -375,7 +375,7 @@ export function AttackWizard({
           : modeLabel;
   }
 
-  const title = mode === "aimed" ? "◎ Aimed Shot" : "🎯 Fire Weapon";
+  const title = mode === "aimed" ? "◎ Aimed Shot" : "🎯 Attack";
 
   const attackNotice = (() => {
     const equipment = rig.equipment ? EQUIPMENT[rig.equipment] : null;

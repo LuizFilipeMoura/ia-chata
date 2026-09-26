@@ -194,7 +194,7 @@ async function lastBattle() {
 }
 
 function hotkeys() {
-  const rows = [["WASD / arrows", "pan camera"], ["Q / E, right-drag", "rotate camera"], ["Wheel", "zoom"], ["Two fingers", "pinch zoom · twist rotate · drag pan"], ["Tab", "next ready rig"], ["1 · 2 · 3 · 4 · 5 · 6", "Move · Sprint · Fire · Aimed · Prepare · Shut Down"], ["Press, drag, release", "move: pick the spot, drag to face, release to confirm"], ["Shift + wheel", "turn while placing a move"], ["Right-click enemy", "quick attack (best plain option)"], ["Long-press a rig", "full rig sheet"], ["T", "threat map on/off"], ["Enter", "end activation"], ["Esc / right-click", "cancel"], ["Ctrl+Z", "undo (dice-free steps only)"], ["Space", "skip animation"], ["?", "this list"]];
+  const rows = [["WASD / arrows", "pan camera"], ["Q / E, right-drag", "rotate camera"], ["Wheel", "zoom"], ["Two fingers", "pinch zoom · twist rotate · drag pan"], ["Tab", "next ready rig"], ["1 · 2 · 3 · 4 · 5 · 6", "Move · Sprint · Attack · Aimed · Prepare · Shut Down"], ["Press, drag, release", "move: pick the spot, drag to face, release to confirm"], ["Shift + wheel", "turn while placing a move"], ["Right-click enemy", "quick attack (best plain option)"], ["Long-press a rig", "full rig sheet"], ["T", "threat map on/off"], ["Enter", "end activation"], ["Esc / right-click", "cancel"], ["Ctrl+Z", "undo (dice-free steps only)"], ["Space", "skip animation"], ["?", "this list"]];
   modal({ title: "⌨ Hotkeys", body: el("table", { class: "keys" }, rows.map(([k, v]) => el("tr", {}, el("td", {}, el("kbd", {}, k)), el("td", {}, v)))), actions: [{ label: "Close", primary: true }] });
 }
 window.addEventListener("keydown", (e) => { if (e.key === "?" && !e.target.closest?.("input,textarea")) hotkeys(); });

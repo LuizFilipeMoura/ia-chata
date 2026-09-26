@@ -60,8 +60,9 @@ export const SCENARIOS = {
     title: "Arcs and flanking",
     rigs: [
       // The dummy faces you, but you look away (south): it sits outside your
-      // front arc, so you can't shoot until you turn. Walk round and hit its back.
-      { name: "Copper", owner: "a", chassis: ME, x: 14, y: 18, facing: 90 },
+      // front arc, so you can't shoot until you turn. Close and a little north
+      // of its nose, so ONE move reaches its side and a ≤90° turn faces it.
+      { name: "Copper", owner: "a", chassis: ME, x: 19, y: 16, facing: 90 },
       { name: "Dummy", owner: "b", chassis: TARGET, x: 24, y: 18, facing: 180 },
     ],
     objectives: [],
@@ -85,7 +86,8 @@ export const SCENARIOS = {
   keywords: {
     title: "Weapon keywords",
     rigs: [
-      { name: "Copper", owner: "a", chassis: "light-saw-minigun", lrUp: "suppressive-fire", x: 17, y: 18, facing: 0 },
+      // In its front arc but off its nose: one Sprint reaches its side.
+      { name: "Copper", owner: "a", chassis: "light-saw-minigun", lrUp: "suppressive-fire", x: 19, y: 20, facing: -22 },
       { name: "Dummy", owner: "b", chassis: TARGET, x: 24, y: 18, facing: 180 },
     ],
     objectives: [],

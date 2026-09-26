@@ -153,3 +153,34 @@ test("prototype: the belt starts on 2, so the first volley is a Penetrator shot 
   if (hits) assert.equal(wound.dice.filter((d) => d.ok).length, hits, JSON.stringify(wound));
   assert.equal(room.rigs[0].autocannonSlowNext, true);
 });
+
+// A lesson that asks you to flank must be doable in ONE activation by a
+// beginner: one Move (or Sprint) that ends on the dummy's side, facing it
+// within the ±90° a move allows, then a shot that lands on the side arc.
+const arcHit = (room) => JSON.stringify(room.game.resolutions.filter((r) => r.kind === "attack").at(-1)?.breakdown || {});
+const faceFrom = (from, to) => Math.round(Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI);
+
+test("arcs: a single Move reaches the dummy's side, and the shot lands on the side arc", () => {
+  const room = build("arcs");
+  const me = room.rigs.find((r) => r.name === "Copper"), dummy = room.rigs.find((r) => r.name === "Dummy");
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  const dest = { x: 22.5, y: 12.5 };
+  act(room, { action: "move", dest, facing: faceFrom(dest, dummy.pos) });
+  assert.deepEqual(me.pos, dest, lastRejectionReason());
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  assert.match(arcHit(room), /side arc/, lastRejectionReason());
+});
+
+test("keywords: after the front shot, one Sprint reaches the side and the Mini Gun rakes it", () => {
+  const room = build("keywords");
+  const me = room.rigs.find((r) => r.name === "Copper"), dummy = room.rigs.find((r) => r.name === "Dummy");
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  assert.match(arcHit(room), /front|raking/i);
+  act(room, { action: "reload" });
+  const dest = { x: 24, y: 24 };
+  act(room, { action: "sprint", dest, facing: faceFrom(dest, dummy.pos) });
+  assert.deepEqual(me.pos, dest, lastRejectionReason());
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" });
+  assert.match(arcHit(room), /side arc/, lastRejectionReason());
+});

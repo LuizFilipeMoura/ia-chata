@@ -118,10 +118,13 @@ export class CombatLog {
 const ARC_PEN = { front: 0, side: 2, rear: 3 };
 const LOC_D12 = { hull: "1-4", arms: "5-7", legs: "8-10", engine: "11-12" };
 const die = (sides, value, ok) => el("span", { class: `die d${sides} ${ok ? "ok" : "no"}`, title: `D${sides} rolled ${value}: ${ok ? "success" : "fail"}` }, el("b", {}, String(value)), el("i", {}, ok ? "✓" : "✗"));
-const roll = (icon, name, sides, need, why, dice, out, good) => el("div", { class: "rl" },
+// `needParts`: how the number was built, shown inside the pill ("4 base
+// · +1 cover · −1 range"), so a penalty is visible where the number is.
+const roll = (icon, name, sides, need, why, dice, out, good, needParts = null) => el("div", { class: "rl" },
   el("div", { class: "rl-h" }, el("span", { class: "rl-ic" }, ICONS_RL[icon] ? iconSvg(ICONS_RL[icon]) : icon), el("b", {}, name),
     sides ? el("span", { class: `rl-die d${sides}` }, `D${sides}`) : null,
-    need != null ? el("span", { class: "rl-need", title: "Each die must roll this or higher" }, `NEED ${need}+`) : null,
+    need != null ? el("span", { class: "rl-need", title: `Each die must roll ${need} or higher${needParts?.length ? `: ${needParts.join(", ")}` : ""}` },
+      `NEED ${need}+`, needParts?.length ? el("small", { class: "rl-need-why" }, needParts.join(" · ")) : null) : null,
     el("span", { class: `rl-out ${good ? "good" : "bad"}` }, out)),
   why ? el("div", { class: "rl-why" }, why) : null,
   dice?.length ? el("div", { class: "rl-dice" }, dice) : null);
@@ -156,7 +159,10 @@ export function breakdownBody(l, find = rigSource) {
         const why = el("span", {}, `One D6 per shot. Start at ${base}+`,
           mods.map((t) => ` · ${t.label} ${t.value > 0 ? `${t.value} easier` : `${-t.value} harder`}`), `. A 6 always hits.`);
         const hits = (s.dice || []).filter((d) => d.ok).length;
-        body.push(roll("🎯", "To hit", 6, s.target, why, (s.dice || []).map((d) => die(6, d.value, d.ok)), s.out, hits > 0));
+        // Harder raises the number (+), easier lowers it (−).
+        const short = (l) => /cover/.test(l) ? "cover" : /weapon Accuracy/.test(l) ? "range" : l;
+        const parts = mods.length ? [`${base} base`, ...mods.map((t) => `${t.value > 0 ? "−" : "+"}${Math.abs(t.value)} ${short(t.label)}`)] : null;
+        body.push(roll("🎯", "To hit", 6, s.target, why, (s.dice || []).map((d) => die(6, d.value, d.ok)), s.out, hits > 0, parts));
       } else if (s.kind === "location") {
         const loc = String(s.out).split(" ")[0];
         body.push(roll("🎲", "Location", s.die != null ? 12 : null, null,
