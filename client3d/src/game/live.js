@@ -625,6 +625,7 @@ export class LiveMatch {
   }
 
   cancelMode() {
+    this.atkModal?.close(); this.atkModal = null;
     this.clearSight();
     this.moveBands = null;
     this.previewMeshes = [];
@@ -959,12 +960,14 @@ export class LiveMatch {
     // Keep the sight rays on the board while the briefing is up.
     const sight = this.previewSight(rig, target);
     this.previewSplash(rig, target, this.splashOf(rig, list)?.weapon);
-    const m = modal({
-      title: `Attack ${target.name}`, cls: "wide",
+    this.atkModal?.close();
+    const m = this.atkModal = modal({
+      title: `Attack ${target.name}`, cls: "atk-dock", dock: true,
       body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit, coverWhy: sight?.why }),
       actions: [{ label: "Cancel", ghost: true }],
     });
-    this.onModalGone(m, () => this.clearPreview());
+    // Only if no newer briefing replaced it (clicking another target swaps them).
+    this.onModalGone(m, () => { if (!this.atkModal || this.atkModal === m) { this.atkModal = null; this.clearPreview(); } });
   }
 
   // ---- Equipment choosers ----

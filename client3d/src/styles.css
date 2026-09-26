@@ -1246,3 +1246,16 @@ body.crit-vignette::after { content: ""; position: fixed; inset: 0; pointer-even
 .atk-intbar .tick { width: 2px; background: #ff3d1f; box-shadow: 0 0 4px #ff3d1f; }
 .atk-lethal { font: 700 12px var(--label); letter-spacing: .08em; color: #ffb09c; background: rgba(200,50,30,.35); border: 1px solid #e74c3c; border-radius: 4px; padding: 1px 5px; }
 .atk-lethal.likely { color: #fff; background: #c8412f; animation: plate-crit .8s ease-in-out infinite alternate; }
+
+/* Docked modal (the Attack briefing): at the right edge, no dimmed backdrop,
+   the board stays visible and clickable. On phones it sits at the bottom. */
+.modal-back.dock { background: transparent; pointer-events: none; place-items: center end; }
+.modal-back.dock .modal { pointer-events: auto; width: min(460px, 44vw); max-height: 94vh; margin-right: 4px; }
+.modal-back.dock .modal { overflow-x: hidden; }
+.modal-back.dock .modal * { min-width: 0; overflow-wrap: anywhere; }
+.modal-back.dock .atk-tiles { grid-template-columns: 1fr; gap: 8px; }
+.modal-back.dock .atk-aim { grid-template-columns: 1fr; }
+@media (max-width: 800px) {
+  .modal-back.dock { place-items: end center; }
+  .modal-back.dock .modal { width: 100%; max-height: 55vh; margin: 0; }
+}

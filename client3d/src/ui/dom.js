@@ -32,8 +32,10 @@ export function toast(msg, tone = "info", ms = 2600) {
   setTimeout(() => t.remove(), ms + 400);
 }
 
-export function modal({ title, body, actions = [], dismissable = true, cls = "" }) {
-  const back = el("div", { class: "modal-back" });
+// `dock`: slide in at the side instead of the middle, with no dimmed backdrop,
+// so the board (splash rings, sight rays) stays visible and clickable.
+export function modal({ title, body, actions = [], dismissable = true, cls = "", dock = false }) {
+  const back = el("div", { class: `modal-back ${dock ? "dock" : ""}` });
   const close = () => back.remove();
   const box = el("div", { class: `modal ${cls}` },
     title ? el("h2", {}, title) : null,
