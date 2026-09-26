@@ -856,6 +856,7 @@ export class LiveMatch {
     const w = (c) => c.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange;
     // Keep the sight rays on the board while the briefing is up.
     const sight = this.previewSight(rig, target);
+    this.previewSplash(rig, target, list[0]?.weapon);
     const m = modal({
       title: `Attack ${target.name}`, cls: "wide",
       body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit, coverWhy: sight?.why }),
@@ -920,6 +921,20 @@ export class LiveMatch {
     const why = !cor.obstructed ? "clear line of fire (0 of 3 sight lines blocked)"
       : `${cor.obstructed} of 3 sight lines cross the ${kinds.join(", ")}: ${cor.cover === 2 ? "heavy" : "light"} cover${cor.buildingRays ? ` (${cor.buildingRays} through a building${cor.los ? "" : ": no line of sight"})` : ""}`;
     return { ...cor, why };
+  }
+  // An area weapon's splash around `target`: the ring, every rig it would catch
+  // (red enemy, amber friend). Adds to the preview meshes; returns a tip line.
+  previewSplash(rig, target, weapon) {
+    const slot = weapon === "melee" ? "melee" : "longRange";
+    const sp = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig)?.splash;
+    if (!sp || !target.pos) return null;
+    const pm = this.previewMeshes;
+    pm.push(this.world.disc(target.pos.x, target.pos.y, sp.radius, 0xff8a3a, 0.12), this.world.ring(target.pos.x, target.pos.y, sp.radius, 0xff8a3a, 0.8));
+    const caught = this.state.rigs.filter((r) => r.id !== target.id && r.id !== rig.id && !r.destroyed && r.pos
+      && Math.hypot(r.pos.x - target.pos.x, r.pos.y - target.pos.y) <= sp.radius + radiusOf(r));
+    for (const r of caught) pm.push(this.world.ring(r.pos.x, r.pos.y, radiusOf(r) + 0.35, r.owner === rig.owner ? 0xf5b041 : 0xff4433, 0.95));
+    const friends = caught.filter((r) => r.owner === rig.owner), foes = caught.filter((r) => r.owner !== rig.owner);
+    return `splash ${sp.radius}": ${caught.length ? [foes.length ? `catches ${foes.map((r) => r.name).join(", ")}` : null, friends.length ? `⚠ friendly fire on ${friends.map((r) => r.name).join(", ")}` : null].filter(Boolean).join(" · ") : "nobody else in it"}`;
   }
   // An area ring `reach` inches out from the rig's rim, with the enemies it catches.
   previewAoe(rig, reach, color) {
@@ -1123,8 +1138,9 @@ export class LiveMatch {
           return;
         }
         const ed = c.weapon ? expectedDamage(this.mode.rig, r, c.weapon, { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round }) : 0;
-        const sight = c.weapon === "longRange" ? this.previewSight(this.mode.rig, r) : null;
-        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP${sight ? ` · ${sight.why}` : ""} · click to choose weapon`);
+        const sight = c.weapon === "longRange" ? this.previewSight(this.mode.rig, r) : (this.clearPreview(), null);
+        const splash = this.previewSplash(this.mode.rig, r, c.weapon);
+        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP${splash ? ` · ${splash}` : ""}${sight ? ` · ${sight.why}` : ""} · click to choose weapon`);
         this.director.mechs.get(this.mode.rig.id)?.aimAt(new THREE.Vector3(r.pos.x, 2, r.pos.y));
       }
     }

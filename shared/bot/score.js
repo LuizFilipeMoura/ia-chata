@@ -31,7 +31,8 @@ import {
   radiusOf, terrainPolygons,
 } from "../geometry.js";
 import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, LOCS, ANY_KILL_VP, KILL_VP, TRAILING_KILL_BOUNTY, beaconMultiplier } from "../game-state.js";
-import { HEAT_CAPACITY } from "../rules.js";
+import { HEAT_CAPACITY, woundTarget } from "../rules.js";
+import { toughnessOf } from "../unit-kinds.js";
 
 import { META } from "./meta.js";
 
@@ -137,12 +138,32 @@ function offenceAt(room, rig, cand, pos, facing, shots) {
   if (cand.action === "fire" || cand.action === "aimed") {
     const target = findRig(room, cand.target);
     if (!target) return 0;
-    return declaredShot(room, rig, cand, target);
+    return declaredShot(room, rig, cand, target) + splashValue(room, rig, cand.weapon, target);
   }
   if (cand.action === "move" || cand.action === "sprint") {
     return shots ? Math.max(0, ...shots.map((s) => s.v)) : bestShotFrom(room, rig, pos, facing);
   }
   return 0;
+}
+
+// Expected worth of a shot's splash (area weapons): SP it should strip from
+// enemies by the target, minus friendly fire at a heavier weight (never shell
+// your own brawler), plus a little for heat washed onto enemies.
+const FRIENDLY_FIRE = 1.5;
+function splashValue(room, rig, weapon, target) {
+  const slot = weapon === "melee" ? "melee" : "longRange";
+  const sp = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig)?.splash;
+  if (!sp || !target.pos) return 0;
+  const centre = spatial(target);
+  let v = 0;
+  for (const r of room.rigs) {
+    if (r === target || r === rig || r.destroyed || !r.pos) continue;
+    if (distanceBetween(spatial(r), centre) > sp.radius + radiusOf(r)) continue;
+    let each = sp.heat ? sp.heat * 0.3 : 0;
+    if (sp.pen) each += sp.dmg * Math.max(0, Math.min(1, (11 - woundTarget(sp.pen, toughnessOf(r.kind || "rig", "hull", r.weightClass))) / 10));
+    v += (r.owner || "a") === (rig.owner || "a") ? -FRIENDLY_FIRE * each : each;
+  }
+  return v;
 }
 
 // A move's shot at every living enemy from its destination, swept once and

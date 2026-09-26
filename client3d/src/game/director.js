@@ -583,6 +583,16 @@ export class Director {
       const t = this.mechs.get(l.rigId);
       if (t) { fx.explosion(up(t, 1), false); this.sound(() => sfx.explosion(false)); }
       await wait(250 / this.speed);
+    } else if (l.kind === "splash") {
+      // Area weapon spill: a small blast (or a gout of flame) on each rig caught.
+      const t = this.mechs.get(l.rigId);
+      if (t) {
+        const flame = /heat/.test(l.summary || "") && !/SP to/.test(l.summary || "");
+        if (flame) fx.burst(up(t, 1), 18, { color: 0xff6a22, size: 0.8, life: 0.5, spread: 3 }); else fx.explosion(up(t, 1), false);
+        fx.text(up(t, 3.4), /friendly fire/.test(l.summary || "") ? "FRIENDLY FIRE" : "SPLASH", "#ffb35a");
+        this.sound(() => sfx.explosion(false));
+      }
+      await wait(220 / this.speed);
     } else if (l.kind === "grit") {
       // The side that's behind digs in: a Grit token arrives.
       this.onBanner(`GRIT · ${l.side === this.side ? "YOU DIG IN" : "THE ENEMY DIGS IN"}`, "grit");

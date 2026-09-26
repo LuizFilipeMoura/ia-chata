@@ -417,6 +417,18 @@ Apply this modifier to the weapon's Penetration every time you make a Wound Roll
 | Pressure Claw | 2 | +1 | 2 |
 | Talon | 2 | +1 | 2 |
 
+### Splash (area weapons)
+
+Three weapons are **area weapons**: every attack they make also catches every **other** Rig, **friend or foe**, whose base comes within the splash radius of the **target's** centre (the attacker itself is never caught). The splash lands whether or not the attack hit.
+
+| Weapon | Radius | Each Rig caught takes |
+|---|:--:|---|
+| Mortar | 2" | a flat **Penetration 5 / 1** hit (random location, wound roll as normal) |
+| Missile Barrage | 1.5" | a flat **Penetration 4 / 1** hit |
+| Flamethrower | 2" | **+1 heat** |
+
+Shelling an enemy locked in melee with your own Rig hits your Rig too. *(Digital: the engine measures the ring and rolls each hit; a physical table reads the instruction in the log and resolves it.)*
+
 ### Weapon Upgrades
 
 Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures* above). When a Rig is commissioned, choose **one** upgrade for each equipped weapon; a Rig may run **at most one Prototype** across its two weapons. Full Tuned/Prototype mechanics are detailed below the table.

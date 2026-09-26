@@ -66,10 +66,10 @@ export const WEAPONS = {
     "Double MG":      { rof: 8, pen: 5,  dmg: 1, sweet: 9,  peak: 1, dropoff: 0.25, minRange: 0, maxRange: 20, perks: ["Raking Fire"], machineGun: true },
     "Autocannon":     { rof: 4, pen: 7,  dmg: 2, sweet: 12, peak: 1, dropoff: 0.22, minRange: 0, maxRange: 26 },
     "Arc Gun":        { rof: 2, pen: 8,  dmg: 3, sweet: 20, peak: 1, dropoff: 0.18, minRange: 0, maxRange: 32 },
-    "Mortar":         { rof: 3, pen: 7,  dmg: 2, sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Mortar":         { rof: 3, pen: 7,  dmg: 2, sweet: 18, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34, splash: { radius: 2, pen: 5, dmg: 1 } },
     "Sniper Cannon":  { rof: 1, pen: 10, dmg: 4, sweet: 22, peak: 2, dropoff: 0.15, minRange: 0, maxRange: 28 },
     "Siege Maul":     { rof: 1, pen: 11, dmg: 5, sweet: 8,  peak: 1, dropoff: 0.30, minRange: 0, maxRange: 16 },
-    "Missile Barrage":{ rof: 4, pen: 7,  dmg: 2, sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34 },
+    "Missile Barrage":{ rof: 4, pen: 7,  dmg: 2, sweet: 20, peak: 1, dropoff: 0.15, minRange: 6, maxRange: 34, splash: { radius: 1.5, pen: 4, dmg: 1 } },
     "Harpoon":        { rof: 1, pen: 10, dmg: 3, sweet: 14, peak: 2, dropoff: 0.28, minRange: 0, maxRange: 22 },
     "Rivet Gun":      { rof: 6, pen: 3,  dmg: 1, sweet: 6,  peak: 2, dropoff: 0.40, minRange: 0, maxRange: 14 },
     "Crossbow":       { rof: 1, pen: 8,  dmg: 4, sweet: 18, peak: 3, dropoff: 0.25, minRange: 0, maxRange: 24 },
@@ -82,7 +82,7 @@ export const WEAPONS = {
     "Lance":         { rof: 1, pen: 9,  dmg: 4, accuracy: [1, 1], rng: [2, 2], melee: true },
     "Wrecking Ball": { rof: 1, pen: 10, dmg: 5, accuracy: [0, 0], rng: [2, 2], melee: true },
     "Bulwark Shield":{ rof: 1, pen: 5,  dmg: 3, accuracy: [0, 0], rng: [2, 2], melee: true },
-    "Flamethrower":  { rof: 4, pen: 6,  dmg: 2, accuracy: [1, 0], rng: [2, 2], melee: true },
+    "Flamethrower":  { rof: 4, pen: 6,  dmg: 2, accuracy: [1, 0], rng: [2, 2], melee: true, splash: { radius: 2, heat: 1 } },
     "Anchor":        { rof: 1, pen: 10, dmg: 4, accuracy: [0, 0], rng: [2, 2], melee: true },
     "Pressure Claw": { rof: 2, pen: 7,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
     "Talon":         { rof: 2, pen: 6,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true },
@@ -2591,6 +2591,45 @@ function spendAttackGrit(room, rig, a) {
 // or false when it couldn't be. Callers that only need "did it fire?" treat the
 // object as truthy; the Anvil Boss hook reads `res.hits`. Shared by the direct
 // path and the deferred Evasive path.
+// Natural area weapons (a `splash` on the base profile): the shell / volley /
+// gout lands whatever the dice did, and catches every OTHER rig, friend or foe,
+// whose base reaches within `radius` of the target's centre. The wielder never.
+// `pen`/`dmg`: one flat wound roll, like a cook-off blast. `heat`: the flames
+// wash over them instead. Physical rooms get the instruction; players adjudicate.
+function resolveSplash(room, rig, target, slot, random) {
+  const sp = effectiveWeaponProfile(slot, rig.weapons?.[slot], rig)?.splash;
+  if (!sp) return;
+  const what = [sp.pen ? `a Penetration ${sp.pen} / ${sp.dmg} hit` : null, sp.heat ? `+${sp.heat} heat` : null].filter(Boolean).join(" and ");
+  if (room.mode !== "digital" || !target.pos) {
+    pushResolution(room, {
+      kind: "splash", actor: rig.owner, rigId: target.id, rolls: [],
+      summary: `Splash: every other rig (friend or foe) within ${sp.radius}" of ${target.name} takes ${what}.`, effects: [],
+    });
+    return;
+  }
+  const centre = spatial(target);
+  const caught = room.rigs.filter((r) => r !== target && r !== rig && !r.destroyed && r.pos
+    && distanceBetween(spatial(r), centre) <= sp.radius + radiusOf(r));
+  for (const v of caught) {
+    const bits = [];
+    const rolls = [];
+    if (sp.heat) { bumpHeat(v, sp.heat); bits.push(`+${sp.heat} heat`); }
+    if (sp.pen) {
+      const loc = hitLocation(v.kind || "rig", rollD(12, null, random));
+      const die = rollD(WOUND_DIE, null, random);
+      const tn = woundTarget(sp.pen, toughnessOf(v.kind || "rig", loc, v.weightClass));
+      const dmg = die >= tn ? sp.dmg : 0;
+      if (dmg > 0) applyDamage(room, v, loc, dmg, { random });
+      rolls.push({ sides: WOUND_DIE, value: die, label: "wound", tone: dmg > 0 ? "ok" : "miss" });
+      bits.push(`${die} vs ${tn}+ → ${dmg} SP to ${loc}`);
+    }
+    pushResolution(room, {
+      kind: "splash", actor: rig.owner, rigId: v.id, rolls,
+      summary: `Splash from ${rig.name}'s ${rig.weapons[slot]} catches ${v.name}${v.owner === rig.owner ? " (friendly fire)" : ""}: ${bits.join(", ")}`, effects: [],
+    });
+  }
+}
+
 function resolveFire(room, rig, target, a, act, random) {
   const t = room.game.turn;
   const slot = a.weapon === "melee" ? "melee" : "longRange";
@@ -2705,6 +2744,7 @@ function resolveFire(room, rig, target, a, act, random) {
   }, random, combatCtx());
   if (!res.ok) return false;
   spendAttackGrit(room, rig, a);
+  resolveSplash(room, rig, target, slot, random);
   // Mark the first-shot compensator spent, and consume any Lock Sight reroll
   // (both are per-activation, one-shot flags on the acting rig).
   if (fireControlFirst) rig.fireControlUsed = true;
