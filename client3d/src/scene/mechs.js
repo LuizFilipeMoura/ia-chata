@@ -384,7 +384,6 @@ export class Mech {
     this.cockpitMat = new THREE.MeshStandardMaterial({ color: 0xffcf7a, emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 });
     const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, this.cockpitMat);
     cockpit.position.set(heavy ? 0.6 : 0.45, 0.15, 0); this.torso.add(cockpit);
-    if (heavy) this.torso.add(at(box(1.2, 0.2, 1.7, STEEL()), -0.1, 0.62, 0));
     // Exhaust stacks, they glow and smoke with heat.
     this.ventMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xff3300, emissiveIntensity: 0, metalness: 0.7, roughness: 0.4 });
     this.stacks = [];
