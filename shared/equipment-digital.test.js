@@ -36,19 +36,19 @@ const lastRes = (room) => room.game.resolutions[room.game.resolutions.length - 1
 
 test("Jump Jets hop to a clear spot within base Speed, over anything", () => {
   const room = table({ equipment: "servo-actuators" });
-  room.field.terrain = [{ kind: "rock", x: 12.5, y: 10, w: 1.5, h: 4, rot: 0 }];
+  room.field.terrain = [{ kind: "rock", x: 12, y: 10, w: 1.5, h: 4, rot: 0 }];
   const gold = turn(room, "Gold");
   act(room, "Gold", { action: "jumpjets" });
   assert.match(lastRejectionReason(), /destination/i);
-  act(room, "Gold", { action: "jumpjets", dest: { x: 16, y: 10 }, facing: 0 });
-  assert.match(lastRejectionReason(), /reach/i);          // 6" > Speed 5
-  act(room, "Gold", { action: "jumpjets", dest: { x: 14.5, y: 10 }, facing: 45 });
-  assert.deepEqual(gold.pos, { x: 14.5, y: 10 });
+  act(room, "Gold", { action: "jumpjets", dest: { x: 15, y: 10 }, facing: 0 });
+  assert.match(lastRejectionReason(), /reach/i);          // 5" > Speed 4
+  act(room, "Gold", { action: "jumpjets", dest: { x: 14, y: 10 }, facing: 45 });
+  assert.deepEqual(gold.pos, { x: 14, y: 10 });
   assert.equal(gold.facing, 45);
   const res = lastRes(room);
   assert.equal(res.active, "jumpjets");
   assert.deepEqual(res.from, { x: 10, y: 10 });
-  assert.deepEqual(res.to, { x: 14.5, y: 10 });
+  assert.deepEqual(res.to, { x: 14, y: 10 });
 });
 
 test("Jump Jets can't land on a rig", () => {

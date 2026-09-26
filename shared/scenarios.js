@@ -62,7 +62,7 @@ export const SCENARIOS = {
       // The dummy faces you, but you look away (south): it sits outside your
       // front arc, so you can't shoot until you turn. Close and a little north
       // of its nose, so ONE move reaches its side and a ≤90° turn faces it.
-      { name: "Copper", owner: "a", chassis: ME, x: 19, y: 16, facing: 90 },
+      { name: "Copper", owner: "a", chassis: ME, x: 20, y: 15, facing: 90 },
       { name: "Dummy", owner: "b", chassis: TARGET, x: 24, y: 18, facing: 180 },
     ],
     objectives: [],

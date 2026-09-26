@@ -52,12 +52,12 @@ Every Rig starts from a **weight class**, which sets its base profile.
 | Stat | Light | Medium |
 |---|:--:|:--:|
 | Base size | 60mm | 75mm |
-| Speed | 5" | 4" |
+| Speed | 4–5" | 4–5" |
 | Weapon slots | 2 | 2 |
 
 Each Rig also carries **Structure Points (SP)** per component (Hull, Arms, Legs, Engine) and **Toughness (T)** per location; both are **per-location** and **vary by chassis** (Light vs Medium). Their tuned values live in the unit catalog, not here.
 
-- **Speed**: max move distance in inches. *⚙ TUNING: whole-inch speeds (5/4); Mediums bumped back up from an earlier over-nerf.*
+- **Speed**: max move distance in inches, set per chassis (lights 4–5", mediums 4–5"). *⚙ TUNING: whole-inch speeds; Mediums +1" and Lights −1" so the heavy frames can actually close the distance on a digital table.*
 - **Aim**: base D6 target number to hit: **4+**, the same for every Rig (modified by weapon Accuracy and cover). *⚙ TUNING: Aim was a weight-class stat (4+/4+/3+/3+) until Heavy and Colossal were removed, at which point every remaining value was 4+. The chassis does not decide whether you hit; weapon Accuracy and the situation do.*
 - **Weapon slots**: how many weapons the Rig may carry: one Long Range and one Melee.
 - **Structure Points (SP)**: durability per component. At 0 SP → catastrophic damage (§8).

@@ -458,7 +458,7 @@ test("ensureRigShape backfills speed from the chassis id on reload", () => {
   const room = createRoom("r");
   room.rigs.push(rig);
   __test.ensureRigShape(rig);
-  assert.equal(rig.speed, 4);
+  assert.equal(rig.speed, 5);
 });
 
 test("makeUnit sets speed from the kind for cold single-model units", () => {
@@ -2660,7 +2660,7 @@ test("makeRig resolves speed from the chassis id", () => {
   const rig = makeRig(1, "Shrike", "medium", "a", {
     longRange: "Crossbow", melee: "Talon", chassis: "medium-crossbow-talon",
   });
-  assert.equal(rig.speed, 4);
+  assert.equal(rig.speed, 5);
 });
 
 test("makeRig leaves speed null for a free combo with no chassis id", () => {
@@ -4209,29 +4209,27 @@ test("every chassis carries a whole-inch speed", () => {
   }
 });
 
-test("speed bands reinforce the weight ladder (fastest medium < slowest light)", () => {
-  const lights = CHASSIS.filter((c) => c.class === "light").map((c) => c.speed);
-  const mediums = CHASSIS.filter((c) => c.class === "medium").map((c) => c.speed);
-  assert.ok(
-    Math.max(...mediums) < Math.min(...lights),
-    "fastest medium must be strictly slower than slowest light",
-  );
+// Mediums +1", Lights -1" (2026-09): both classes now share the 4-5" band, so
+// the heavy frames can close the distance on a digital table. Weight shows in
+// SP and toughness, not in foot speed.
+test("speed bands: lights and mediums share the 4-5 inch band", () => {
+  for (const c of CHASSIS) assert.ok(c.speed >= 4 && c.speed <= 5, `${c.id} at ${c.speed}"`);
 });
 
 test("chassis speeds match the tuned table", () => {
   const byId = Object.fromEntries(CHASSIS.map((c) => [c.id, c.speed]));
   assert.deepEqual(byId, {
-    "light-claw-autocannon": 5,
-    "light-missile-flamethrower": 5,
-    "light-saw-minigun": 6,
-    "light-wreckingball-double": 6,
-    "light-sword-arc": 5,
-    "light-harpoon-anchor": 5,
-    "light-rivet-pressureclaw": 6,
-    "medium-lance-mortar": 3,
-    "medium-shield-siege": 3,
-    "medium-sniper-chainsaw": 4,
-    "medium-crossbow-talon": 4,
+    "light-claw-autocannon": 4,
+    "light-missile-flamethrower": 4,
+    "light-saw-minigun": 5,
+    "light-wreckingball-double": 5,
+    "light-sword-arc": 4,
+    "light-harpoon-anchor": 4,
+    "light-rivet-pressureclaw": 5,
+    "medium-lance-mortar": 4,
+    "medium-shield-siege": 4,
+    "medium-sniper-chainsaw": 5,
+    "medium-crossbow-talon": 5,
   });
 });
 
