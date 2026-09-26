@@ -82,7 +82,7 @@ from the node's seed; deployment corners as usual.
 | **Breakthrough** | extract **2 rigs** (or all living, if fewer) at the enemy corner | round limit / annihilation | new **Extract** action: a rig inside the 10" exit quarter-circle leaves the field |
 | **Last Stand** | keep ≥1 rig alive to the round limit | annihilation | enemy **reinforcements** spawn at the enemy corner at the start of rounds 3 and 5; a relay beacon in front of your corner draws the attack |
 | **Salvage Run** | more VP at the limit (crates are worth VP) | fewer VP | crates are one-shot beacons: a rig ending an activation within 2" claims it (+2 VP, +6 salvage); bots go for them too |
-| **Boss** | wreck the faction **Warlord** | round limit / annihilation | Assassination with a Warlord: hard-tier build, +50% SP, the faction perk, +1 Answer token each round |
+| **Boss** | wreck the faction **Warlord** | annihilation (no round limit: a fight to the finish) | Assassination with a Warlord: hard-tier build, +50% SP, the faction perk, +1 Answer token each round |
 
 ## Factions (finally with perks)
 

@@ -23,7 +23,7 @@ const TRAITS = {
 };
 const HABITS = { move: "walking", sprint: "sprinting", fire: "plain shots", aimed: "aimed shots", prepare: "setting reactions", repair: "repairing", shutdown: "shutting down to cool", special: "special actions" };
 const TIER_TEXT = {
-  easy: "Easy bot: reckless, ignores heat and objectives, and blunders often (55% of decisions are a random pick from its top options).",
+  easy: "Easy bot: reckless, ignores exposure and objectives, and blunders often (55% of decisions are a random pick from its top options).",
   normal: "Normal bot: balanced priorities, occasional mistakes (10% of decisions).",
   hard: "Hard bot: the genetic search's champion. Evolved priorities, best builds, never blunders.",
   balanced: "Evolved pilot: priorities bred by the genetic search. Never blunders on purpose.",

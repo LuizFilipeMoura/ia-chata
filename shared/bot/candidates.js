@@ -10,10 +10,10 @@
 // continuous and needs pathfinding.
 import { availableActions } from "../battle-view.js";
 import { arcOf, radiusOf, terrainPolygons } from "../geometry.js";
-import { buildGrid, findPathOnGrid } from "../pathfind.js";
+import { buildGrid, findPathOnGrid, walkPath } from "../pathfind.js";
 import {
   spatial, deriveAttackGeometry, effectiveWeaponProfile, hasBulwarkShield,
-  moveBudget, PREP_TYPES, LOCS,
+  moveBudget, moveBlockers, PREP_TYPES, LOCS,
 } from "../game-state.js";
 import { equipmentUpgradeEffectOf } from "../rules.js";
 
@@ -176,6 +176,24 @@ export function candidatesFor(room, rig) {
 // same maths E1 uses to apply the move, so the bot can never propose a move the
 // engine would reject (Task 4.2 fuzzes exactly that).
 
+// Candidate stops toward `pt` within `budget`: the full route walked out to
+// the budget (and a shorter step, in case that spot is a friend's base), then
+// the old straight-line fractions as a fallback when `pt` itself can't be
+// stood on (inside a base or terrain).
+function anchorSteps(grid, from, pt, budget) {
+  const d = Math.hypot(pt.x - from.x, pt.y - from.y);
+  if (d < 1e-9) return [{ ...from }];
+  const out = [];
+  const full = findPathOnGrid(grid, from, pt);
+  if (full) {
+    if (full.length <= budget) return [pt];
+    for (const f of [1, 0.85, 0.6]) out.push(walkPath(full.path, budget * f - 1e-3));
+  }
+  if (d <= budget) out.push(pt);
+  else out.push(pointAlong(from, pt, budget), pointAlong(from, pt, budget * 0.6));
+  return out;
+}
+
 function pointAlong(from, target, dist) {
   const dx = target.x - from.x;
   const dy = target.y - from.y;
@@ -214,9 +232,7 @@ function moveCandidates(room, rig, enabled) {
   const from = rig.pos;
   const radius = radiusOf(rig);
   const polys = terrainPolygons(room.field);
-  const blockers = room.rigs
-    .filter((r) => r !== rig && !r.destroyed && r.pos)
-    .map(spatial);
+  const blockers = moveBlockers(room.rigs, rig);
   const enemies = room.rigs.filter(
     (r) => (r.owner || "a") !== (rig.owner || "a") && !r.destroyed && r.pos,
   );
@@ -268,15 +284,15 @@ function moveCandidates(room, rig, enabled) {
   for (const act of acts) {
     const budget = moveBudget(rig, act);
     // Anchors: step toward each ideal as far as the budget allows, so an
-    // out-of-reach objective still yields a reachable step toward it.
+    // out-of-reach objective still yields a reachable step toward it. The step
+    // follows the REAL route (around walls, through friends), a straight-line
+    // step toward a goal behind a wall just parks the rig against the wall.
     for (const { pt, reason } of ideals) {
-      const distToIdeal = Math.hypot(pt.x - from.x, pt.y - from.y);
-      for (const frac of distToIdeal <= budget ? [1] : [budget / distToIdeal, (budget / distToIdeal) * 0.6]) {
-        const dest = distToIdeal < 1e-9 ? { ...from } : pointAlong(from, pt, distToIdeal * frac);
+      for (const dest of anchorSteps(grid, from, pt, budget)) {
         const route = findPathOnGrid(grid, from, dest);
         if (!route || route.length > budget + 1e-6) continue;
         for (const facing of facingsAt(rig, dest, enemies, objectives)) emit(act, dest, facing, reason);
-        break; // first reachable fraction wins for this ideal
+        break; // first reachable step wins for this ideal
       }
     }
     // Lattice.

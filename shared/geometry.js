@@ -92,6 +92,26 @@ export function segmentHitsPolygon(a, b, poly) {
   return pointInPolygon(a, pts);
 }
 
+// Where segment a->b first touches `poly`: the nearest edge crossing, or `a`
+// itself when the ray starts inside it.
+function entryPoint(a, b, poly) {
+  if (pointInPolygon(a, poly.points)) return { x: a.x, y: a.y };
+  const rx = b.x - a.x, ry = b.y - a.y;
+  let best = 1;
+  const pts = poly.points;
+  for (let i = 0; i < pts.length; i++) {
+    const [cx, cy] = pts[i];
+    const [dx, dy] = pts[(i + 1) % pts.length];
+    const sx = dx - cx, sy = dy - cy;
+    const den = rx * sy - ry * sx;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((cx - a.x) * sy - (cy - a.y) * sx) / den;
+    const u = ((cx - a.x) * ry - (cy - a.y) * rx) / den;
+    if (t >= 0 && t <= best && u >= 0 && u <= 1) best = t;
+  }
+  return { x: a.x + rx * best, y: a.y + ry * best };
+}
+
 // The 3-ray sight corridor. Take the centre line A->B, then offset
 // perpendicular to it by each unit's OWN radius to get three parallel rays:
 // top->top, centre->centre, bottom->bottom. Offsetting perpendicular to the
@@ -112,29 +132,33 @@ export function sightCorridor(attacker, target, polys) {
   const dy = target.pos.y - attacker.pos.y;
   const len = Math.hypot(dx, dy);
   // Coincident bases can't happen (rigs block each other), degrade, don't throw.
-  if (len < 1e-9) return { obstructed: 0, buildingRays: 0, cover: 0, los: true };
+  if (len < 1e-9) return { obstructed: 0, buildingRays: 0, rays: [], cover: 0, los: true };
 
   const nx = -dy / len; // unit perpendicular to the shot
   const ny = dx / len;
 
   let obstructed = 0;
   let buildingRays = 0;
+  const rays = [];
   for (const side of [1, 0, -1]) { // top, centre, bottom
     const a = { x: attacker.pos.x + nx * attacker.radius * side, y: attacker.pos.y + ny * attacker.radius * side };
     const b = { x: target.pos.x + nx * target.radius * side, y: target.pos.y + ny * target.radius * side };
-    let hit = false;
     let building = false;
-    for (const poly of polys) {
-      if (!segmentHitsPolygon(a, b, poly)) continue;
-      hit = true;
+    const hits = [];
+    polys.forEach((poly, index) => {
+      if (!segmentHitsPolygon(a, b, poly)) return;
+      hits.push({ ...entryPoint(a, b, poly), kind: poly.kind, index });
       if (poly.kind === "building") building = true;
-    }
-    if (hit) obstructed++;
+    });
+    if (hits.length) obstructed++;
     if (building) buildingRays++;
+    rays.push({ from: a, to: b, hits });
   }
   return {
     obstructed,
     buildingRays,
+    // Why: each ray, and where it first enters every piece it crosses.
+    rays,
     // Lands exactly on combat.js's existing opts.cover clamp of 0-2.
     cover: Math.min(2, obstructed),
     los: buildingRays < 3,

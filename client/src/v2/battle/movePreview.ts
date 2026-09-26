@@ -1,4 +1,4 @@
-import { moveBudget, spatial } from "/shared/game-state.js";
+import { moveBudget, moveBlockers } from "/shared/game-state.js";
 import { findPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf } from "/shared/geometry.js";
 import type { FieldState, Rig } from "../../state/types";
@@ -24,9 +24,7 @@ export function computeMovePreview(
 ): MovePreview {
   const from = mover.pos ?? { x: 0, y: 0 };
   const polys = terrainPolygons(field as never);
-  const blockers = allRigs
-    .filter((r) => r.id !== mover.id && !r.destroyed && r.pos)
-    .map((r) => spatial(r as never));
+  const blockers = moveBlockers(allRigs as never, mover as never);
   const budget = moveBudget(mover as never, action);
   const route = findPath(field as never, polys, blockers, radiusOf(mover as never), from, dest) as
     | { path: Array<{ x: number; y: number }>; length: number }

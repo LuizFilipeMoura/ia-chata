@@ -116,6 +116,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   - *Backpedal:* straight back at **half** Speed.
   - *Side-step:* directly left or right without changing facing, at **half** Speed.
   - *Pivot:* up to **90° free** at any point(s) during the Move. A pivot of **more than 90°** consumes the Rig's entire movement for that action.
+  - *Friendly bases:* a Rig may move **through** friendly Rigs' bases, but can't **end** its move overlapping one. Enemy bases and terrain block the route; go around them. *(Digital: the route is measured around terrain and enemies, straight through friends.)*
   - *Sprint:* you may extend a Move to up to **1½ × Speed** (**2 × Speed** with Reinforced Servos); a Sprinting Move generates **2 heat** instead of 1 (§6). Sprint is **never free**: its heat floors at 1 no matter the loadout.
 
 - **Disengage [1]**: break a melee **engagement** (see below). Frees **both** Rigs from the lock; after Disengaging, the Rig may Move/Sprint later in the same activation. No effect (and costs nothing) if the Rig isn't engaged.
@@ -299,7 +300,7 @@ When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All
 
 **Table:** 54"×36" (137×91 cm). The armies set up in **opposite corners** and advance across the diagonal, an angled clash that keeps flanks exposed and rewards the facing/melee game.
 
-1. **Terrain.** Roll off (1 D12 each, highest wins). Starting with the winner, alternate placing **one terrain piece at a time**: aim for **4–6 pieces**. Leave line-of-sight blockers and lanes in the middle; the flanking game needs cover to move around.
+1. **Terrain.** Roll off (1 D12 each, highest wins). Starting with the winner, alternate placing **one terrain piece at a time**: aim for **4–6 pieces**. Leave line-of-sight blockers and lanes in the middle; the flanking game needs cover to move around. Keep every lane between pieces (and between a piece and the table edge) a little wider than the biggest base. *(Digital: the scatter guarantees 3.7" lanes.)*
 
 2. **Sides.** A **dividing line runs from one corner to the opposite corner**, splitting the table into two triangular halves. The **terrain roll-off winner** chooses which of the two diagonals is used and which half is theirs; the opponent takes the opposite corner.
 

@@ -20,6 +20,9 @@ before(async () => {
   app.use(express.json());
   app.use("/api/campaign", createCampaignRouter(rooms, createCampaignStore(campaignFile)));
   await new Promise((resolve) => { server = app.listen(0, () => { base = `http://127.0.0.1:${server.address().port}`; resolve(); }); });
+  // A whole bot-vs-bot contract runs synchronously below and can outlast the
+  // 5 s default keep-alive; the next fetch would reuse a closed socket.
+  server.keepAliveTimeout = 120000;
 });
 after(() => new Promise((resolve) => server.close(resolve)));
 

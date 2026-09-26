@@ -410,6 +410,13 @@ body { font-size: 18px; }
 .rx-card.on, .rx-rig.on { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan), 0 0 18px rgba(95,211,192,.25); background: linear-gradient(180deg, rgba(40,70,64,.5), rgba(20,17,13,.7)); }
 .rx-art { flex: none; width: 58px; height: 58px; color: var(--brass-hi); background: radial-gradient(circle, rgba(201,161,74,.18), transparent 70%); border-radius: 50%; padding: 4px; }
 .rx-card.on .rx-art { color: var(--cyan); }
+/* A modal's illustration strip: a big engraved emblem beside the odds it explains. */
+.modal-illus { display: flex; align-items: center; gap: 14px; margin: 4px 0 10px; }
+.mi-art { flex: none; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; color: var(--brass-hi); background: radial-gradient(circle, rgba(201,161,74,.22), transparent 70%); }
+.mi-art .si { width: 52px; height: 52px; filter: drop-shadow(0 0 8px currentColor); }
+.mi-odds { display: flex; flex-direction: column; gap: 6px; }
+.mi-roll { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.03); }
+.mi-roll .si { width: 16px; height: 16px; }
 .rx-name { font: 600 22px var(--label); letter-spacing: .03em; margin-bottom: 4px; }
 .rx-row { display: grid; grid-template-columns: 70px 1fr; gap: 6px; font-size: 18px; line-height: 1.35; margin-top: 3px; }
 .rx-k { font: 600 16px var(--label); letter-spacing: .1em; text-transform: uppercase; color: var(--brass); padding-top: 1px; }

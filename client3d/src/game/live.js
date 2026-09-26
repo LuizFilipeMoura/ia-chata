@@ -12,8 +12,8 @@ import { chooseAction } from "/shared/bot/index.js";
 import { scoreCandidate, scoreParts, PRESETS } from "/shared/bot/score.js";
 import { expectedDamage } from "/shared/bot/evaluate.js";
 import { findPath } from "/shared/pathfind.js";
-import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf } from "/shared/geometry.js";
-import { spatial, moveBudget, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone } from "/shared/game-state.js";
+import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
+import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
@@ -656,7 +656,7 @@ export class LiveMatch {
   movePreview(field) {
     const { rig, budget } = this.mode;
     const polys = terrainPolygons(this.state.field);
-    const blockers = this.state.rigs.filter((r) => r.id !== rig.id && !r.destroyed && r.pos).map(spatial);
+    const blockers = moveBlockers(this.state.rigs, rig);
     const hop = this.isHop();
     const landing = hop ? hopLanding(this.state, rig, field, budget) : null;
     const route = hop ? { path: [rig.pos, field], length: landing.dist } : findPath(this.state.field, polys, blockers, radiusOf(rig), rig.pos, field);
@@ -806,8 +806,14 @@ export class LiveMatch {
       const canReload = this.allowed("act", "reload");
       modal({
         title: `${rig.weapons.longRange} is spent`,
-        body: el("p", {}, `Your ${rig.weapons.longRange} fired already and must Reload before it can shoot again. Reloading costs no action, just heat: roll a D6, 1–3 → +2 heat, 4–6 → +1.`,
-          enemies.some(({ geo }) => geo.inMeleeReach && geo.inFrontArc) ? "" : ` Your ${rig.weapons.melee} can't reach anyone from here either.`),
+        body: el("div", {},
+          el("div", { class: "modal-illus" },
+            el("div", { class: "mi-art" }, icon("reload")),
+            el("div", { class: "mi-odds" },
+              el("span", { class: "mi-roll" }, icon("dice"), "D6 1–3", icon("heat"), "+2 heat"),
+              el("span", { class: "mi-roll" }, icon("dice"), "D6 4–6", icon("heat"), "+1 heat"))),
+          el("p", {}, `Your ${rig.weapons.longRange} fired already and must Reload before it can shoot again. Reloading costs no action, just heat.`,
+            enemies.some(({ geo }) => geo.inMeleeReach && geo.inFrontArc) ? "" : ` Your ${rig.weapons.melee} can't reach anyone from here either.`)),
         actions: [
           { label: "Not now", ghost: true },
           { label: "Reload, then aim", primary: true, disabled: !canReload, onClick: async () => {
@@ -848,11 +854,14 @@ export class LiveMatch {
       return { c, ed, edGrit, score };
     }).sort((a, b) => b.score - a.score);
     const w = (c) => c.weapon === "melee" ? rig.weapons.melee : rig.weapons.longRange;
+    // Keep the sight rays on the board while the briefing is up.
+    const sight = this.previewSight(rig, target);
     const m = modal({
       title: `Attack ${target.name}`, cls: "wide",
-      body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit }),
+      body: attackBriefing(rig, target, rows.map((r) => ({ ...r, name: w(r.c) })), (c, o = {}) => { m.close(); this.act(rig, { action: c.action, weapon: c.weapon, target: target.name, loc: c.location, ...(o.grit ? { grit: true } : {}) }).then(() => this.cancelMode()); }, { grit, coverWhy: sight?.why }),
       actions: [{ label: "Cancel", ghost: true }],
     });
+    this.onModalGone(m, () => this.clearPreview());
   }
 
   // ---- Equipment choosers ----
@@ -880,6 +889,37 @@ export class LiveMatch {
   clearPreview() {
     for (const m of this.previewMeshes || []) this.world.overlay.remove(m);
     this.previewMeshes = [];
+  }
+  // Why a shot reads as cover: the three sight rays (green clear, amber through
+  // cover, red through a building), a dot where each first enters terrain, and
+  // the culprit pieces outlined. Returns the corridor plus a one-line reason.
+  previewSight(rig, target) {
+    this.clearPreview();
+    if (!rig.pos || !target.pos) return null;
+    const polys = terrainPolygons(this.state.field);
+    const cor = sightCorridor(spatial(rig), spatial(target), polys);
+    const pm = this.previewMeshes;
+    const culprits = new Set();
+    for (const ray of cor.rays) {
+      const building = ray.hits.some((h) => h.kind === "building");
+      const col = !ray.hits.length ? 0x7fcf6a : building ? 0xff4433 : 0xf5b041;
+      pm.push(this.world.line(new THREE.Vector3(ray.from.x, 1.2, ray.from.y), new THREE.Vector3(ray.to.x, 1.2, ray.to.y), col));
+      for (const h of ray.hits) {
+        culprits.add(h.index);
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
+        dot.position.set(h.x, 1.2, h.y); dot.renderOrder = 10;
+        this.world.overlay.add(dot); pm.push(dot);
+      }
+    }
+    for (const i of culprits) {
+      const pts = polys[i].points.map(([x, y]) => new THREE.Vector3(x, 0.2, y));
+      const loop = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xf5b041 }));
+      this.world.overlay.add(loop); pm.push(loop);
+    }
+    const kinds = [...new Set([...culprits].map((i) => polys[i].kind || "terrain"))];
+    const why = !cor.obstructed ? "clear line of fire (0 of 3 sight lines blocked)"
+      : `${cor.obstructed} of 3 sight lines cross the ${kinds.join(", ")}: ${cor.cover === 2 ? "heavy" : "light"} cover${cor.buildingRays ? ` (${cor.buildingRays} through a building${cor.los ? "" : ": no line of sight"})` : ""}`;
+    return { ...cor, why };
   }
   // An area ring `reach` inches out from the rig's rim, with the enemies it catches.
   previewAoe(rig, reach, color) {
@@ -1071,6 +1111,8 @@ export class LiveMatch {
     const r = hit.mechId != null ? this.rig(hit.mechId) : null;
     this.hud.hoverRig(r, this.state);
     this.showReach(r);
+    // Sight rays follow the hovered target; off it, they go.
+    if (this.mode?.byTarget && !this.mode.byTarget.has(r?.name)) this.clearPreview();
     if (this.mode?.byTarget && r) {
       const list = this.mode.byTarget.get(r.name);
       if (list) {
@@ -1081,7 +1123,8 @@ export class LiveMatch {
           return;
         }
         const ed = c.weapon ? expectedDamage(this.mode.rig, r, c.weapon, { arc: c.arc, distance: c.distance, cover: c.cover, round: this.game.round }) : 0;
-        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP · click to choose weapon`);
+        const sight = c.weapon === "longRange" ? this.previewSight(this.mode.rig, r) : null;
+        this.hud.tip(`${r.name}: ${c.arc} arc · ${c.distance?.toFixed(1)}" · ≈${ed.toFixed(1)} SP${sight ? ` · ${sight.why}` : ""} · click to choose weapon`);
         this.director.mechs.get(this.mode.rig.id)?.aimAt(new THREE.Vector3(r.pos.x, 2, r.pos.y));
       }
     }

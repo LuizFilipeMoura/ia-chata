@@ -168,3 +168,42 @@ test("digital scatter is still deterministic under a seeded RNG", () => {
     scatterTerrain(field, seeded(9), { digital: true }),
   );
 });
+
+// Every lane on a digital table must fit the biggest base: no slit between two
+// pieces (or a piece and its mirror, or a piece and the table edge) that looks
+// open but no rig can drive through.
+test("digital scatter never leaves a gap narrower than the biggest base", async () => {
+  const { terrainPolygons, BASE_RADIUS } = await import("./geometry.js");
+  const { TERRAIN_PASSAGE } = await import("./field.js");
+  const biggest = 2 * Math.max(...Object.values(BASE_RADIUS));
+  assert.ok(TERRAIN_PASSAGE > biggest, "passage is a little bigger than the biggest base");
+  const segDist = (p, a, b) => {
+    const vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy;
+    const t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / l2)) : 0;
+    return Math.hypot(p[0] - (a[0] + t * vx), p[1] - (a[1] + t * vy));
+  };
+  const polyDist = (P, Q) => {
+    let d = Infinity;
+    for (const [A, B] of [[P, Q], [Q, P]]) {
+      for (const p of A) for (let i = 0; i < B.length; i++) d = Math.min(d, segDist(p, B[i], B[(i + 1) % B.length]));
+    }
+    return d;
+  };
+  for (const dims of [{ width: 42, height: 28 }, { width: 54, height: 36 }, { width: 30, height: 22 }]) {
+    for (let seed = 1; seed <= 40; seed++) {
+      const field = { ...dims, terrain: [] };
+      field.terrain = scatterTerrain(field, seeded(seed), { digital: true });
+      const polys = terrainPolygons(field).map((p) => p.points);
+      for (let i = 0; i < polys.length; i++) {
+        for (const [x, y] of polys[i]) {
+          const edge = Math.min(x, y, dims.width - x, dims.height - y);
+          assert.ok(edge >= TERRAIN_PASSAGE - 1e-6, `seed ${seed}: piece ${i} ${edge.toFixed(2)}" off the edge`);
+        }
+        for (let j = i + 1; j < polys.length; j++) {
+          const d = polyDist(polys[i], polys[j]);
+          assert.ok(d >= TERRAIN_PASSAGE - 1e-6, `seed ${seed} ${dims.width}x${dims.height}: pieces ${i},${j} only ${d.toFixed(2)}" apart`);
+        }
+      }
+    }
+  }
+});

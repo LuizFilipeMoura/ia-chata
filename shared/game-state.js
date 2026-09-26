@@ -2522,6 +2522,16 @@ export function spatial(rig) {
   return { pos: rig.pos, facing: rig.facing, radius: radiusOf(rig) };
 }
 
+// Every other living base as a pathfinding blocker for `mover`. Friendly bases
+// are pass-through (`pass`): walk through them, never stop on them. Enemy
+// bases block the route.
+export function moveBlockers(rigs, mover) {
+  const side = mover.owner || "a";
+  return rigs
+    .filter((r) => r !== mover && (mover.id == null || r.id !== mover.id) && !r.destroyed && r.pos)
+    .map((r) => ({ ...spatial(r), pass: (r.owner || "a") === side }));
+}
+
 // The weight-class Move fallback, mirroring the client's own reach maths
 // (client/src/state/BattleActionsContext.tsx and v2/battle/MoveBody.tsx use the
 // identical `rig.speed ?? SPEED[weightClass] ?? 8`). A chassis-less rig has a
@@ -3335,13 +3345,10 @@ function performAction(room, rig, act, a, random) {
       const turn = Math.abs(((facing - rig.facing + 540) % 360) - 180);
       if (turn > 90 + 1e-6) return reject("A move can pivot at most 90°.");
       // The engine re-routes for itself; the client path is never trusted, the
-      // same stance resolveFire takes on shot geometry. Other living rigs are
-      // blockers; the mover itself is not.
+      // same stance resolveFire takes on shot geometry. Enemy rigs block the
+      // route; friends are pass-through but can't be stopped on.
       const polys = terrainPolygons(room.field);
-      const blockers = room.rigs
-        .filter((r) => r !== rig && !r.destroyed && r.pos)
-        .map(spatial);
-      const route = findPath(room.field, polys, blockers, radiusOf(rig), rig.pos, a.dest);
+      const route = findPath(room.field, polys, moveBlockers(room.rigs, rig), radiusOf(rig), rig.pos, a.dest);
       if (!route) return reject("No path to that destination.");
       if (route.length > moveBudget(rig, act) + 1e-6) return reject("That destination is out of reach.");
       digitalMove = { pos: { x: a.dest.x, y: a.dest.y }, facing };
@@ -3699,7 +3706,9 @@ function seededRandom(seed) {
   };
 }
 
+// 0 = no round limit (the Warlord fight runs until one side falls).
 export function maxRoundsOf(room) {
+  if (room.game.maxRounds === 0) return Infinity;
   return room.game.maxRounds || MAX_ROUNDS;
 }
 
@@ -3836,7 +3845,7 @@ function buildMission(room, a, random) {
     : type === "skirmish" ? [{ x: centre.x, y: centre.y, vp: 2 }]
     : type === "laststand" ? [{ x: Math.round((homeCorner.x * 0.7 + centre.x * 0.3) * 10) / 10, y: Math.round((homeCorner.y * 0.7 + centre.y * 0.3) * 10) / 10, vp: 2, relay: true }]
     : [];
-  room.game.maxRounds = Math.max(1, Math.floor(Number(a.maxRounds) || MAX_ROUNDS));
+  room.game.maxRounds = a.maxRounds != null && Number(a.maxRounds) === 0 ? 0 : Math.max(1, Math.floor(Number(a.maxRounds) || MAX_ROUNDS));
   for (const s of room.game.sides) s.bot = s.id === "b" ? (BOT_PRESETS.includes(a.enemyBot) ? a.enemyBot : "normal") : null;
   const commander = rigs.find((r) => r.owner === "b" && r.commander);
   room.campaign = {
@@ -4916,7 +4925,7 @@ export function formatBattleState(room, side) {
   ensureGameShape(room);
   const g = room.game;
   const lines = ["", "=== CURRENT BATTLE STATE ==="];
-  lines.push(`Round ${g.round}/${g.maxRounds || MAX_ROUNDS}${g.suddenDeath ? " (Sudden Death)" : ""}, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}`);
+  lines.push(`Round ${g.round}${g.maxRounds === 0 ? "" : `/${g.maxRounds || MAX_ROUNDS}`}${g.suddenDeath ? " (Sudden Death)" : ""}, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}`);
   lines.push(`Sides: ${g.sides.map((s) => `${s.name} (${s.id}) VP ${s.vp}${s.ready ? " READY" : ""}`).join(" | ")}`);
   lines.push(`Battle started: ${g.started ? "yes" : "no"}`);
   lines.push(`Phase: ${g.phase}${g.outcome ? ` (winner: ${g.outcome.winner || "draw"})` : ""}`);

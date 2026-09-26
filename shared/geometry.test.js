@@ -191,3 +191,19 @@ test("clearOfTerrain accounts for the base radius", () => {
   assert.equal(clearOfTerrain({ x: 2, y: 5 }, 1.48, [wall]), true);   // 2in away
   assert.equal(clearOfTerrain({ x: 3, y: 5 }, 1.48, [wall]), false);  // 1in away
 });
+
+// The corridor explains itself: each of the three rays, and where it first
+// enters each piece of terrain it crosses, so a client can draw WHY a shot
+// reads as cover.
+test("sightCorridor reports each ray and its terrain entry points", () => {
+  const r = sightCorridor(A, B, [bar("barricade", 10.9)]); // catches y=10 and y=11.48
+  assert.equal(r.rays.length, 3);
+  const hit = r.rays.filter((ray) => ray.hits.length);
+  assert.equal(hit.length, 2);
+  for (const ray of hit) {
+    assert.equal(ray.hits[0].kind, "barricade");
+    assert.equal(ray.hits[0].index, 0);
+    assert.ok(Math.abs(ray.hits[0].x - 19) < 1e-9, "enters on the near face");
+  }
+  assert.equal(r.rays.find((ray) => !ray.hits.length).from.y, 8.52);
+});

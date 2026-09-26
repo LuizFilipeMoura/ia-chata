@@ -95,7 +95,7 @@ export class World {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.3;
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
@@ -107,8 +107,10 @@ export class World {
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
     this.fx = new FX(this.scene, this.camera);
 
-    const hemi = new THREE.HemisphereLight(0xd8b88a, 0x2a1c10, 0.85); this.scene.add(hemi);
-    this.sun = new THREE.DirectionalLight(0xffc27a, 2.6);
+    // High contrast: a weak fill keeps the shade dark, a hard bright key makes
+    // the lit faces pop. Raise the fill and the whole table goes muddy again.
+    const hemi = new THREE.HemisphereLight(0xd8b88a, 0x140d06, 0.5); this.scene.add(hemi);
+    this.sun = new THREE.DirectionalLight(0xffe0b0, 8);
     this.sun.position.set(-30, 60, -20); this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera; sc.left = -50; sc.right = 50; sc.top = 50; sc.bottom = -50; sc.far = 200;

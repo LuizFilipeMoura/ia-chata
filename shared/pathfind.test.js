@@ -1,7 +1,7 @@
 // shared/pathfind.test.js
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CELL, buildGrid, isBlocked, findPath } from "./pathfind.js";
+import { CELL, buildGrid, isBlocked, findPath, pathDistance, walkPath } from "./pathfind.js";
 
 const FIELD = { width: 20, height: 20 };
 const WALL = { kind: "building", points: [[9, 0], [11, 0], [11, 12], [9, 12]] };
@@ -123,4 +123,65 @@ test("walking away from a touching base still can't pass through it", () => {
   const route = findPath(field, [], [other], 1.18, { x: 10, y: 10 }, { x: 16, y: 10 });
   // Must go round, not straight through the other base.
   assert.ok(!route || route.length > 6.5, `went through: ${route?.length}`);
+});
+
+// --- Friendly pass-through ---------------------------------------------------
+// A blocker flagged `pass` (a friendly base) can be walked THROUGH but never
+// stopped on: the route ignores it, the destination may not overlap it.
+
+test("a friendly base (pass) does not block the route", () => {
+  const field = { width: 30, height: 20 };
+  const friend = { pos: { x: 12, y: 10 }, radius: 1.48, pass: true };
+  const route = findPath(field, [], [friend], 1.18, { x: 8, y: 10 }, { x: 16, y: 10 });
+  assert.ok(route, "no route through a friend");
+  assert.ok(Math.abs(route.length - 8) < 0.01, `detoured: ${route.length}`);
+});
+
+test("an enemy base (no pass) still forces a detour", () => {
+  const field = { width: 30, height: 20 };
+  const foe = { pos: { x: 12, y: 10 }, radius: 1.48 };
+  const route = findPath(field, [], [foe], 1.18, { x: 8, y: 10 }, { x: 16, y: 10 });
+  assert.ok(route.length > 8.2, `went through the enemy: ${route.length}`);
+});
+
+test("a move can't END overlapping a friendly base", () => {
+  const field = { width: 30, height: 20 };
+  const friend = { pos: { x: 12, y: 10 }, radius: 1.48, pass: true };
+  assert.equal(findPath(field, [], [friend], 1.18, { x: 6, y: 10 }, { x: 12.5, y: 10 }), null);
+  // Just clear of it is fine.
+  assert.ok(findPath(field, [], [friend], 1.18, { x: 6, y: 10 }, { x: 12, y: 13 }));
+});
+
+test("a rig overlapping a friend (drop-in) may still pivot in place", () => {
+  const field = { width: 30, height: 20 };
+  const friend = { pos: { x: 11, y: 10 }, radius: 1.48, pass: true };
+  assert.ok(findPath(field, [], [friend], 1.18, { x: 10, y: 10 }, { x: 10, y: 10 }));
+});
+
+// --- Path distance field -----------------------------------------------------
+
+test("pathDistance measures around walls, not through them", () => {
+  const field = { width: 30, height: 20 };
+  // A long wall between x=10 and x=11, open only at the bottom.
+  const wall = { points: [[10, 0], [11, 0], [11, 16], [10, 16]] };
+  const dist = pathDistance(field, [wall], 0.5, { x: 15, y: 5 });
+  const straight = Math.hypot(15 - 5, 0);
+  const d = dist({ x: 5, y: 5 });
+  assert.ok(d > straight + 10, `should route under the wall: ${d}`);
+  // Open ground next to the goal is ~euclidean.
+  assert.ok(Math.abs(dist({ x: 15, y: 9 }) - 4) < 0.3);
+});
+
+test("pathDistance falls back to euclidean for a sealed-off point", () => {
+  const field = { width: 30, height: 20 };
+  const box = { points: [[2, 2], [8, 2], [8, 8], [2, 8]] };
+  const dist = pathDistance(field, [box], 0.5, { x: 20, y: 10 });
+  assert.ok(Number.isFinite(dist({ x: 5, y: 5 })));
+});
+
+test("walkPath stops the given distance along a polyline", () => {
+  const p = walkPath([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }], 6);
+  assert.ok(Math.abs(p.x - 4) < 1e-9 && Math.abs(p.y - 2) < 1e-9);
+  const end = walkPath([{ x: 0, y: 0 }, { x: 4, y: 0 }], 10);
+  assert.deepEqual(end, { x: 4, y: 0 });
 });

@@ -119,7 +119,8 @@ let pickOpts = () => ({});
 
 // rows: [{ c: candidate, ed: expected SP, edGrit?: with Grit, name: weapon name }], best first.
 // opts.grit: Grit tokens the attacker's side holds (0 hides the toggle).
-export function attackBriefing(rig, target, rows, onPick, { grit = 0 } = {}) {
+// opts.coverWhy: the sight-ray reading behind the Cover tile (drawn on the board too).
+export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy = null } = {}) {
   let gritOn = false;
   pickOpts = () => (gritOn ? { grit: true } : {});
   const first = rows[0].c;
@@ -132,7 +133,7 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0 } = {}) {
     tile(rangeArt(lr, first.distance, melee), "Range", melee ? "In reach" : `${first.distance.toFixed(1)}"`, melee || off < 2 ? "#7fcf6a" : "#f5b041",
       melee ? "Blades ignore range and line of sight." : off < 2 ? `Sweet spot (best at ${sweet}"): full accuracy.` : `Best at ${sweet}". Off the sweet spot, aim suffers.`),
     tile(coverArt(first.cover), "Cover", first.cover ? (first.cover === 2 ? "Heavy" : "Light") : "None", first.cover ? "#f5b041" : "#7fcf6a",
-      first.cover ? "Terrain in the way: harder to hit." : "Clean line of fire."));
+      first.cover ? `Terrain in the way: harder to hit.${coverWhy ? ` ${coverWhy[0].toUpperCase()}${coverWhy.slice(1)}; see the dots on the board.` : ""}` : "Clean line of fire."));
   const aimed = rows.filter((r) => r.c.action === "aimed"), plain = rows.filter((r) => r.c.action !== "aimed");
   const cards = plain.map((r, i) => {
     const melee = r.c.weapon === "melee";

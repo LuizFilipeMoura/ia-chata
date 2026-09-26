@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { candidatesFor } from "./candidates.js";
-import { createRoom, claimSide, applyCommand, checkCommand, findRig, spatial, moveBudget } from "../game-state.js";
+import { createRoom, claimSide, applyCommand, checkCommand, findRig, moveBlockers, moveBudget } from "../game-state.js";
+import { scoreParts } from "./score.js";
 import { radiusOf, terrainPolygons, clearOfTerrain } from "../geometry.js";
-import { findPath } from "../pathfind.js";
+import { findPath, pathDistance } from "../pathfind.js";
 import { computeObjectives } from "../field.js";
 
 // A digital room with one medium rig per side, terrain cleared, the a-side rig
@@ -109,7 +110,7 @@ const pivot = (from, to) => Math.abs((((to - from) % 360) + 540) % 360 - 180);
 test("every move candidate is reachable within the rig's move budget", () => {
   const { room, atk } = moveSetup();
   const polys = terrainPolygons(room.field);
-  const blockers = room.rigs.filter((r) => r !== atk && !r.destroyed && r.pos).map(spatial);
+  const blockers = moveBlockers(room.rigs, atk);
   for (const c of movesOf(room, atk)) {
     const route = findPath(room.field, polys, blockers, radiusOf(atk), atk.pos, c.dest);
     assert.ok(route, `unreachable dest ${JSON.stringify(c.dest)}`);
@@ -163,4 +164,35 @@ test("every emitted move candidate is accepted by the engine (E1 agreement)", ()
     const res = checkCommand(room, { verb: "action", attrs: { name: "Atk", action: c.action, dest: c.dest, facing: c.facing } });
     assert.equal(res.ok, true, `engine rejected ${c.action} ${JSON.stringify(c.dest)} @${c.facing}: ${res.reason}`);
   }
+});
+
+test("a rig behind a wall steps AROUND it toward its goal, not into it", () => {
+  // A long wall right in front of Atk, open only at the bottom edge; the only
+  // objective sits beyond it. A straight-line step would park Atk on the wall.
+  const wall = { kind: "building", x: 16, y: 14, shape: "rect", w: 2, h: 28 };
+  const { room, atk } = moveSetup([wall]);
+  room.game.objectives = [{ x: 24, y: 18, vp: 2 }];
+  const travel = pathDistance(room.field, terrainPolygons(room.field), radiusOf(atk), room.game.objectives[0]);
+  const before = travel(atk.pos);
+  const best = Math.min(...movesOf(room, atk).filter((c) => c.action === "move").map((c) => travel(c.dest)));
+  const budget = moveBudget(atk, "move");
+  assert.ok(before - best > budget * 0.8, `only gained ${(before - best).toFixed(2)} of ${budget} on the real route`);
+  // And the scorer prefers that step: the approach pull reads travel distance.
+  const vpOf = (c) => scoreParts(room, atk, c).vp;
+  const moves = movesOf(room, atk).filter((c) => c.action === "move");
+  const top = moves.reduce((a, b) => (vpOf(b) > vpOf(a) ? b : a));
+  assert.ok(before - travel(top.dest) > budget * 0.8, "the approach pull rewards the route, not the wall");
+});
+
+test("a friendly base is walked through, an enemy's is not", () => {
+  const { room } = moveSetup();
+  applyCommand(room, { verb: "add", attrs: { name: "Pal", class: "medium", owner: "a", longRange: "Autocannon", melee: "Sword" } });
+  const pal = findRig(room, "Pal");
+  pal.pos = { x: 15, y: 18 }; pal.facing = 0;       // touching Atk (12,18), dead ahead
+  const sprint = (x) => checkCommand(room, { verb: "action", attrs: { name: "Atk", action: "sprint", dest: { x, y: 18 }, facing: 0 } });
+  const through = sprint(18);                       // 6", straight through Pal
+  assert.equal(through.ok, true, through.reason);
+  assert.equal(sprint(15.5).ok, false, "can't end on the friend");
+  pal.owner = "b";                                  // same base, now an enemy
+  assert.equal(sprint(18).ok, false, "an enemy base forces a detour past the budget");
 });

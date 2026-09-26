@@ -14,7 +14,7 @@ export function equipChipRow(r, cls = "rc-eq") {
   return el("div", { class: cls }, chips.map((c) => el("span", { class: `eqc t-${c.tone}`, title: `${c.label}\n${c.tip}` }, icon(c.icon), c.value != null ? el("b", {}, String(c.value)) : null)));
 }
 import { CombatLog } from "./combatlog.js";
-import { missionPanel, maxRoundsOf, commanderTitle } from "./mission.js";
+import { missionPanel, roundOf, commanderTitle } from "./mission.js";
 
 export class Hud {
   constructor(root) {
@@ -71,7 +71,7 @@ export class Hud {
       const va = g.sides.find((s) => s.id === "a")?.vp ?? 0, vb = g.sides.find((s) => s.id === "b")?.vp ?? 0;
       fill(this.topEl,
         el("div", { class: "vp a" }, el("span", { class: "k" }, "CYAN"), el("b", {}, String(va))),
-        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${g.round || 1} / ${maxRoundsOf(g)}`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…"), this.turnOrder(state)),
+        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${roundOf(g)}`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…"), this.turnOrder(state)),
         el("div", { class: "vp b" }, el("b", {}, String(vb)), el("span", { class: "k" }, "RED")));
       return;
     }
@@ -81,7 +81,7 @@ export class Hud {
     const theirs = g.sides.find((s) => s.id !== side)?.id;
     fill(this.topEl, 
       el("div", { class: "vp a", title: "Victory points: salvage held + priority kills" }, el("span", { class: "k" }, state.campaign ? "YOUR VP" : "YOUR SALVAGE"), el("b", {}, String(g.sides.find((s) => s.id === side)?.vp ?? 0)), grit(side)),
-      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round", title: "Beacon payout multiplier this round" }, `ROUND ${g.round || 1} / ${maxRoundsOf(g)}${g.suddenDeath ? " · SUDDEN DEATH" : ""}`, (g.beaconMultiplier || 1) > 1 ? el("span", { class: "mult" }, ` · BEACONS ×${g.beaconMultiplier}`) : null), el("div", { class: "who" }, who), this.turnOrder(state)),
+      el("div", { class: `turn ${turn === side ? "mine" : "theirs"}` }, el("div", { class: "round", title: "Beacon payout multiplier this round" }, `ROUND ${roundOf(g)}${g.suddenDeath ? " · SUDDEN DEATH" : ""}`, (g.beaconMultiplier || 1) > 1 ? el("span", { class: "mult" }, ` · BEACONS ×${g.beaconMultiplier}`) : null), el("div", { class: "who" }, who), this.turnOrder(state)),
       el("div", { class: "vp b", title: "Enemy victory points" }, grit(theirs), el("b", {}, String(g.sides.find((s) => s.id !== side)?.vp ?? 0)), el("span", { class: "k" }, g.sides.find((s) => s.id !== side)?.bot && !state.campaign ? `${g.sides.find((s) => s.id !== side).bot.toUpperCase()} WARLORD` : state.campaign ? "ENEMY VP" : "ENEMY")),
     );
   }

@@ -7,7 +7,9 @@ import { icon } from "./icons.js";
 import { LOCS, MAX_ROUNDS } from "/shared/game-state.js";
 import { CONTRACT_TYPES } from "/shared/campaign/catalog.js";
 
-export const maxRoundsOf = (g) => g?.maxRounds || MAX_ROUNDS;
+// 0 = no round limit (the Warlord fight): Infinity, shown without a " / N".
+export const maxRoundsOf = (g) => (g?.maxRounds === 0 ? Infinity : g?.maxRounds || MAX_ROUNDS);
+export const roundOf = (g) => `${g?.round || 1}${g?.maxRounds === 0 ? "" : ` / ${maxRoundsOf(g)}`}`;
 
 // Assassination marks a Commander; the boss contract a Warlord.
 export const commanderTitle = (c) => (c?.type === "boss" ? "Warlord" : "Commander");
@@ -36,7 +38,7 @@ export function missionPanel(state, side, meta = null) {
   if (c.type === "assassinate" || c.type === "boss") {
     const title = commanderTitle(c);
     const cmd = state.rigs.find((r) => r.id === c.commanderId);
-    objective = `Wreck the marked ${title} before round ${R} ends.`;
+    objective = R === Infinity ? `Wreck the marked ${title}. No round limit: it ends when one side falls.` : `Wreck the marked ${title} before round ${R} ends.`;
     if (cmd && !cmd.destroyed) {
       const [sp, max] = spOf(cmd);
       rows.push(el("div", { class: "ms-row" }, icon("crown"), el("b", {}, `${title}: ${cmd.name}`), el("span", { class: "ms-state alive" }, "alive"), bar(max ? sp / max : 0, "b"), el("span", { class: "ms-num" }, `${sp}/${max} SP`)));

@@ -155,7 +155,8 @@ export const RUN_STEPS = 5; // regular steps; step 6 is the boss
 export const BOSS_STEP = RUN_STEPS + 1;
 export const MAX_STRIKES = 2;
 // Hunting a commander or crossing the whole table needs a little longer. ⚙ TUNING
-export const ROUNDS = { contract: 6, assassinate: 8, breakthrough: 8, boss: 8 };
+// 0 = no round limit: the Warlord fight is to the finish.
+export const ROUNDS = { contract: 6, assassinate: 8, breakthrough: 8, boss: 0 };
 export const TABLE = { width: 42, height: 28 };
 export const COMMANDER_SP = { assassinate: 1.25, boss: 1.5 };
 

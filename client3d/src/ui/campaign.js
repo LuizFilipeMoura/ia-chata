@@ -678,7 +678,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
       el("div", { class: "cp-node-stats" },
         el("span", { title: "Payout on a win" }, el("b", { class: "cp-gold" }, `${node.payout} ${SALVAGE}`)),
         el("span", { title: `Threat ${node.threat}/5` }, "Threat ", pips(node.threat, 5, "threat")),
-        el("span", { title: "Round limit" }, `${node.maxRounds} rounds`)),
+        el("span", { title: "Round limit" }, node.maxRounds ? `${node.maxRounds} rounds` : "No round limit")),
       el("div", { class: "cp-node-enemy" }, node.enemy.map((u) => {
         const c = chassisOf(u.chassis);
         return el("span", { class: `cp-foe ${u.commander ? "cmd" : ""}`, title: `${u.name}: ${c.label} (${c.class})${u.commander ? `\nCommander: ×${u.spMult} SP, best build` : ""}` },
@@ -743,7 +743,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
       case "breakthrough": return `Punch through: Extract ${Math.min(node.extractGoal, run.roster.filter((r) => !r.wrecked).length)} rig(s) from the 4" exit band on the enemy's edge before round ${R} ends.`;
       case "laststand": return `Keep at least one rig standing to the end of round ${R}. Enemy reinforcements drop in at the start of rounds ${(node.reinforcements || []).map((r) => r.round).join(" and ")}.`;
       case "salvage": return `${node.crates} crates on the field. End an activation within 2" of one to claim it (+2 VP, +${PRICES.crate} salvage). More VP after round ${R} wins.`;
-      case "boss": return `Wreck the Warlord, ${cmdName}, before round ${R} ends. It fields ×${cmd?.spMult ?? 1.5} SP, the faction perk, and an extra Answer token every round.`;
+      case "boss": return `Wreck the Warlord, ${cmdName}${R ? `, before round ${R} ends` : ". No round limit: it's to the finish"}. It fields ×${cmd?.spMult ?? 1.5} SP, the faction perk, and an extra Answer token every round.`;
       default: return CONTRACT_TYPES[node.type]?.blurb || "";
     }
   }
@@ -764,7 +764,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
           el("div", {}, el("span", { class: "cp-small muted" }, `Step ${node.step} · contract dossier`), el("h1", {}, t.name)),
           el("div", { class: "cp-pay" }, el("small", {}, "Payout"), el("b", {}, `${node.payout} ${SALVAGE}`), el("small", {}, `+${PRICES.kill} per kill`))),
         el("div", { class: "cp-orders" }, el("h3", {}, "Orders"), el("p", { class: "cp-type" }, objective(node, run)),
-          el("div", { class: "cp-small muted" }, `Round limit ${node.maxRounds} · Threat `, pips(node.threat, 5, "threat"), ` · Enemy pilot: ${level.enemyBot}`)),
+          el("div", { class: "cp-small muted" }, `${node.maxRounds ? `Round limit ${node.maxRounds}` : "No round limit"} · Threat `, pips(node.threat, 5, "threat"), ` · Enemy pilot: ${level.enemyBot}`)),
         el("div", { class: "cp-brief-cols" },
           el("div", { class: "cp-enemy" },
             el("h3", {}, "Opposition"),

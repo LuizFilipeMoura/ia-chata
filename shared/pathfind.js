@@ -5,7 +5,10 @@
 // never touches the real one).
 //
 // Pure and deterministic: same inputs, same grid, always. Depends only on
-// geometry.js. A* runs on top of this grid in a later task.
+// geometry.js.
+//
+// Friendly bases are pass-through: a blocker flagged `pass` never blocks the
+// ROUTE, it only forbids ENDING the move on top of it (grid.stop).
 import { distToPolygon } from "./geometry.js";
 
 export const CELL = 0.25; // inches per grid cell
@@ -49,8 +52,10 @@ function terrainMask(field, polys, radius, cols, rows) {
 }
 
 // An occupancy grid for ONE mover. `polys` are terrain (geometry.terrainPolygons),
-// `blockers` are the other rigs ({ pos, radius }), the mover itself must not be
-// in that list. Objectives are never passed: they are markers, not obstacles.
+// `blockers` are the other rigs ({ pos, radius, pass? }), the mover itself must
+// not be in that list. Objectives are never passed: they are markers, not
+// obstacles. A `pass` blocker (a friend) goes into `stop` instead of `blocked`:
+// walk through it, just don't park on it.
 // `from` (optional): where the mover stands now. A base it's already touching
 // (or, after a shove or a drop-in, overlapping) is inflated only up to the
 // current gap, so the mover can always back away from it, but never get
@@ -59,18 +64,20 @@ export function buildGrid(field, polys, blockers, radius, from = null) {
   const cols = Math.ceil(field.width / CELL) + 1;
   const rows = Math.ceil(field.height / CELL) + 1;
   const blocked = terrainMask(field, polys, radius, cols, rows).slice();
+  const stop = new Uint8Array(cols * rows);
   for (const b of blockers) {
+    const mask = b.pass ? stop : blocked;
     let reach = radius + b.radius;
     if (from) reach = Math.min(reach, Math.hypot(from.x - b.pos.x, from.y - b.pos.y) - CELL);
     const c0 = Math.max(0, Math.floor((b.pos.x - reach) / CELL)), c1 = Math.min(cols - 1, Math.ceil((b.pos.x + reach) / CELL));
     const r0 = Math.max(0, Math.floor((b.pos.y - reach) / CELL)), r1 = Math.min(rows - 1, Math.ceil((b.pos.y + reach) / CELL));
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) {
-        if (Math.hypot(c * CELL - b.pos.x, r * CELL - b.pos.y) <= reach) blocked[r * cols + c] = 1;
+        if (Math.hypot(c * CELL - b.pos.x, r * CELL - b.pos.y) <= reach) mask[r * cols + c] = 1;
       }
     }
   }
-  return { cols, rows, blocked, field };
+  return { cols, rows, blocked, stop, field };
 }
 
 export function cellOf(p) {
@@ -81,6 +88,13 @@ export function isBlocked(grid, p) {
   const { c, r } = cellOf(p);
   if (c < 0 || r < 0 || c >= grid.cols || r >= grid.rows) return true;
   return grid.blocked[r * grid.cols + c] === 1;
+}
+
+// True when the mover may not END here: blocked, or on top of a friendly base.
+export function isStopBlocked(grid, p) {
+  if (isBlocked(grid, p)) return true;
+  const { c, r } = cellOf(p);
+  return grid.stop?.[r * grid.cols + c] === 1;
 }
 
 // True when the straight segment a->b crosses no blocked cell. Used to
@@ -113,10 +127,47 @@ function simplify(grid, pts) {
   return out;
 }
 
-function pathLength(pts) {
+export function pathLength(pts) {
   let n = 0;
   for (let i = 1; i < pts.length; i++) n += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
   return n;
+}
+
+// Binary min-heap keyed on `.f`. Ties pop in a fixed order, so every search
+// over the same input drains the same way.
+function minHeap() {
+  const a = [];
+  return {
+    size: () => a.length,
+    push(n) {
+      a.push(n);
+      let k = a.length - 1;
+      while (k > 0) {
+        const p = (k - 1) >> 1;
+        if (a[p].f <= a[k].f) break;
+        [a[p], a[k]] = [a[k], a[p]];
+        k = p;
+      }
+    },
+    pop() {
+      const top = a[0];
+      const last = a.pop();
+      if (a.length) {
+        a[0] = last;
+        let k = 0;
+        for (;;) {
+          const l = 2 * k + 1, r = l + 1;
+          let s = k;
+          if (l < a.length && a[l].f < a[s].f) s = l;
+          if (r < a.length && a[r].f < a[s].f) s = r;
+          if (s === k) break;
+          [a[s], a[k]] = [a[k], a[s]];
+          k = s;
+        }
+      }
+      return top;
+    },
+  };
 }
 
 const NEIGHBOURS = [
@@ -134,7 +185,7 @@ export function findPathOnGrid(grid, from, to) {
   const start = cellOf(from);
   const goal = cellOf(to);
   const idx = (c, r) => r * grid.cols + c;
-  if (isBlocked(grid, to)) return null;
+  if (isStopBlocked(grid, to)) return null;
 
   const startI = idx(start.c, start.r);
   const goalI = idx(goal.c, goal.r);
@@ -148,40 +199,10 @@ export function findPathOnGrid(grid, from, to) {
   const h = (c, r) => Math.hypot(c - goal.c, r - goal.r);
   g[startI] = 0;
 
-  // Simple binary heap keyed on f = g + h.
-  const heap = [{ i: startI, f: h(start.c, start.r) }];
-  const push = (n) => {
-    heap.push(n);
-    let k = heap.length - 1;
-    while (k > 0) {
-      const p = (k - 1) >> 1;
-      if (heap[p].f <= heap[k].f) break;
-      [heap[p], heap[k]] = [heap[k], heap[p]];
-      k = p;
-    }
-  };
-  const pop = () => {
-    const top = heap[0];
-    const last = heap.pop();
-    if (heap.length) {
-      heap[0] = last;
-      let k = 0;
-      for (;;) {
-        const l = 2 * k + 1;
-        const r2 = l + 1;
-        let s = k;
-        if (l < heap.length && heap[l].f < heap[s].f) s = l;
-        if (r2 < heap.length && heap[r2].f < heap[s].f) s = r2;
-        if (s === k) break;
-        [heap[s], heap[k]] = [heap[k], heap[s]];
-        k = s;
-      }
-    }
-    return top;
-  };
-
-  while (heap.length) {
-    const { i } = pop();
+  const heap = minHeap();
+  heap.push({ i: startI, f: h(start.c, start.r) });
+  while (heap.size()) {
+    const { i } = heap.pop();
     if (done[i]) continue;
     done[i] = 1;
     if (i === goalI) break;
@@ -199,7 +220,7 @@ export function findPathOnGrid(grid, from, to) {
       if (tentative >= g[ni]) continue;
       g[ni] = tentative;
       came[ni] = i;
-      push({ i: ni, f: tentative + h(nc, nr) });
+      heap.push({ i: ni, f: tentative + h(nc, nr) });
     }
   }
 
@@ -223,4 +244,77 @@ export function findPathOnGrid(grid, from, to) {
 // Route `from` -> `to` for a mover of `radius`, building the grid first.
 export function findPath(field, polys, blockers, radius, from, to) {
   return findPathOnGrid(buildGrid(field, polys, blockers, radius, from), from, to);
+}
+
+// The point `dist` inches along a polyline (clamped to its end). Lets a mover
+// advance along the REAL route toward a far goal instead of a straight line
+// that may run into a wall.
+export function walkPath(pts, dist) {
+  let left = dist;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    const seg = Math.hypot(b.x - a.x, b.y - a.y);
+    if (seg >= left && seg > 0) {
+      const t = left / seg;
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    }
+    left -= seg;
+  }
+  return { ...pts[pts.length - 1] };
+}
+
+// Travel distance to `goal` over terrain for a mover of `radius`, as a lookup
+// p -> inches. One Dijkstra flood from the goal (rigs ignored: they move, and
+// friends are pass-through anyway), cached per (terrain, radius, goal), so the
+// bot can price "how close does this spot get me" around walls instead of
+// through them. Every open cell within `seed` of the goal starts at its
+// straight-line distance, so a goal sitting inside inflated terrain (a marker
+// hugging a wall) still floods out. Points the flood never reached (sealed off,
+// or inside terrain) fall back to straight-line distance.
+const distCache = new Map();
+export function pathDistance(field, polys, radius, goal, seed = 2) {
+  const gx = Math.round(goal.x / CELL) * CELL, gy = Math.round(goal.y / CELL) * CELL;
+  const key = `${field.width}x${field.height}|${radius}|${gx},${gy}|${seed}|` + polys.map((p) => p.points.map((q) => q.join(",")).join(";")).join("|");
+  const hit = distCache.get(key);
+  if (hit) return hit;
+
+  const cols = Math.ceil(field.width / CELL) + 1;
+  const rows = Math.ceil(field.height / CELL) + 1;
+  const blocked = terrainMask(field, polys, radius, cols, rows);
+  const d = new Float64Array(cols * rows).fill(Infinity);
+  const heap = minHeap();
+  const c0 = Math.max(0, Math.floor((goal.x - seed) / CELL)), c1 = Math.min(cols - 1, Math.ceil((goal.x + seed) / CELL));
+  const r0 = Math.max(0, Math.floor((goal.y - seed) / CELL)), r1 = Math.min(rows - 1, Math.ceil((goal.y + seed) / CELL));
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      const i = r * cols + c;
+      const e = Math.hypot(c * CELL - goal.x, r * CELL - goal.y);
+      if (blocked[i] || e > seed) continue;
+      d[i] = e;
+      heap.push({ i, f: e });
+    }
+  }
+  while (heap.size()) {
+    const { i, f } = heap.pop();
+    if (f > d[i]) continue;
+    const c = i % cols, r = (i - c) / cols;
+    for (const [dc, dr, cost] of NEIGHBOURS) {
+      const nc = c + dc, nr = r + dr;
+      if (nc < 0 || nr < 0 || nc >= cols || nr >= rows) continue;
+      const ni = nr * cols + nc;
+      if (blocked[ni]) continue;
+      if (dc && dr && (blocked[r * cols + nc] || blocked[nr * cols + c])) continue;
+      const nd = f + cost * CELL;
+      if (nd < d[ni]) { d[ni] = nd; heap.push({ i: ni, f: nd }); }
+    }
+  }
+
+  const lookup = (p) => {
+    const { c, r } = cellOf(p);
+    const v = c >= 0 && r >= 0 && c < cols && r < rows ? d[r * cols + c] : Infinity;
+    return Number.isFinite(v) ? v : Math.hypot(p.x - goal.x, p.y - goal.y);
+  };
+  if (distCache.size > 256) distCache.clear();
+  distCache.set(key, lookup);
+  return lookup;
 }

@@ -146,6 +146,15 @@ test("assassinate: wrecking the commander wins at once; the limit loses", () => 
   assert.deepEqual(late.game.outcome, { winner: "b", reason: "timeout" });
 });
 
+test("maxRounds 0 means no round limit: the Warlord fight runs until someone falls", () => {
+  const room = mission({ type: "boss", maxRounds: 0, squads: { a: A, b: [{ ...B[0], commander: true }, B[1]] } });
+  assert.equal(room.game.maxRounds, 0);
+  room.game.round = 40;
+  __test.advanceRound(room, Math.random);
+  assert.equal(room.game.outcome, null);
+  assert.equal(room.game.round, 41);
+});
+
 test("last stand: surviving to the limit wins, reinforcements arrive on schedule", () => {
   const room = mission({
     type: "laststand", maxRounds: 4,

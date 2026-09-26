@@ -24,6 +24,7 @@
 // (see the spec); the cheap partial fix, if the bot proves bait-able, is to
 // inflate each enemy's threat range by its moveBudget rather than to search.
 import { expectedDamage } from "./evaluate.js";
+import { pathDistance } from "../pathfind.js";
 import { availableActions } from "../battle-view.js";
 import {
   arcOf, sightCorridor, distanceBetween, meleeInReach, controlsObjective,
@@ -44,13 +45,14 @@ export const PRESETS = {
   // Difficulty tiers (the solo-play opponent). Easy is short-sighted about heat
   // and objectives and blunders (see TIERS); Normal is the balanced pilot; Hard
   // flies the GA champion's weights (meta.js).
-  easy:       { vp: 0.6, priority: 0.3, damage: 1.5, threat: 0,   heat: 0.15, fragile: 0,  tactics: 0.2, reckless: true },
+  easy:       { vp: 0.6, priority: 0.3, damage: 1.5, threat: 0,   heat: 0.15, fragile: 0,  tactics: 0.2 },
   normal:     { vp: 3, priority: 2, damage: 1,   threat: 1,   heat: 1,   fragile: 1,   tactics: 1 },
   hard:       META.weights,
 };
 
-// Easy is a reckless brawler: chases damage, shrugs at heat and exposure, barely
-// notices objectives. Per-tier decision noise: `blunder` is the chance an action is picked at random
+// Easy is a reckless brawler: chases damage, shrugs at exposure, barely
+// notices objectives. It still minds the boiler (the heat floor applies to every
+// pilot): an Easy bot cooking itself every few turns read as a bug, not a style. Per-tier decision noise: `blunder` is the chance an action is picked at random
 // from the top few (a plausible-but-wrong call rather than a nonsense one).
 export const TIERS = {
   easy:   { blunder: 0.55, topK: 8 },
@@ -173,6 +175,26 @@ function objectiveVpAt(room, rig, pos) {
 // Priced at the richer of this round's and next round's multiplier: a rig still
 // walking in usually scores at a later Recovery, so it heads for a beacon that is
 // about to escalate.
+// Gaps are TRAVEL distance (around terrain), not straight-line: a straight-line
+// pull strands a rig against the near side of a wall, the closest spot "as the
+// crow flies" but a dead end.
+// Keyed on the terrain array itself (a re-scatter swaps the array), so the hot
+// path, hundreds of candidates per activation, skips re-keying the geometry.
+const travelCache = new WeakMap();
+function travel(room, rig, pos, goal) {
+  const f = room.field;
+  if (!f?.width || !Array.isArray(f.terrain)) return Math.hypot(pos.x - goal.x, pos.y - goal.y);
+  let byGoal = travelCache.get(f.terrain);
+  if (!byGoal) travelCache.set(f.terrain, (byGoal = new Map()));
+  const r = radiusOf(rig);
+  const k = `${f.width}x${f.height}|${r}|${goal.x.toFixed(2)},${goal.y.toFixed(2)}`;
+  let fn = byGoal.get(k);
+  if (!fn) {
+    if (byGoal.size > 64) byGoal.clear();
+    byGoal.set(k, (fn = pathDistance(f, terrainPolygons(f), r, goal)));
+  }
+  return fn(pos);
+}
 function objectiveApproach(room, rig, pos) {
   const me = { pos, radius: radiusOf(rig) };
   const g = room.game;
@@ -180,25 +202,43 @@ function objectiveApproach(room, rig, pos) {
   let best = 0;
   for (const m of g.objectives || []) {
     if (controlsObjective(me, m)) continue;   // already priced by objectiveVpAt
-    const gap = Math.hypot(pos.x - m.x, pos.y - m.y);
+    const gap = travel(room, rig, pos, m);
     best = Math.max(best, ((m.vp || 0) * mult) / (1 + gap));
   }
   // Campaign Breakthrough: the breaking side is pulled hard toward the exit zone.
   const exit = room.campaign?.type === "breakthrough" && (rig.owner || "a") === "a" ? room.campaign.exit : null;
   if (exit) {
-    const gap = Math.max(0, Math.hypot(pos.x - exit.x, pos.y - exit.y) - exit.r);
+    const gap = Math.max(0, travel(room, rig, pos, exit) - exit.r);
     best = Math.max(best, EXIT_PULL / (1 + gap * 0.25));
   }
   // Campaign Assassination / Boss: hunt the commander down.
   const cid = (rig.owner || "a") === "a" ? room.campaign?.commanderId : null;
   const commander = cid != null ? room.rigs.find((r) => r.id === cid && !r.destroyed && r.pos) : null;
   if (commander) {
-    const gap = Math.max(0, Math.hypot(pos.x - commander.pos.x, pos.y - commander.pos.y) - 6);
+    const gap = Math.max(0, travel(room, rig, pos, commander.pos) - 6);
     best = Math.max(best, EXIT_PULL / (1 + gap * 0.25));
+  }
+  // Campaign enemy: hunt. A contract's side b has no exit and often no marker
+  // it wants, so without this it idles at deploy until the player walks into
+  // range. Pull it toward the nearest player rig, by the real route, until
+  // that rig sits inside the distance its weapons actually work at; offence
+  // takes over from there.
+  if (room.campaign && (rig.owner || "a") === "b") {
+    const reach = huntReach(rig);
+    let gap = Infinity;
+    for (const e of livingEnemies(room, rig)) gap = Math.min(gap, Math.max(0, travel(room, rig, pos, e.pos) - reach));
+    if (gap < Infinity) best = Math.max(best, HUNT_PULL / (1 + gap * 0.25));
   }
   return best;
 }
 const EXIT_PULL = 10;
+const HUNT_PULL = 4;
+// How close a hunter wants to get: well inside its gun's band (capped, a
+// sniper still has to see you), or base contact for a melee-only rig.
+function huntReach(rig) {
+  const lr = effectiveWeaponProfile("longRange", rig.weapons?.longRange, rig);
+  return lr?.maxRange ? Math.min(lr.maxRange, 16) * 0.75 : radiusOf(rig) * 2 + 1;
+}
 
 // Kill VP a wreck of `target` would pay my side, relative to the richest kill
 // (the Priority Target, ANY_KILL_VP + KILL_VP), so the Priority Target keeps the
@@ -246,7 +286,7 @@ function candidateHeat(rig, turn, round, cand) {
 export const HEAT_CROSS = 6;
 export const HEAT_STEP = 3;
 export const HEAT_DEBT = 1.2;
-export const HEAT_WEIGHT_FLOOR = 1;
+export const HEAT_WEIGHT_FLOOR = 1.6;
 // Risk of pushing past the class heat cap, a linear penalty for heat over the
 // cap after the action. Below the cap it is free; a misfire only threatens once
 // the engine is redlined.
@@ -386,10 +426,9 @@ export function scoreCandidate(room, rig, cand, weights) {
     + (w.priority || 0) * p.priority
     + (w.damage || 0) * p.damage
     + (w.threat || 0) * p.threat
-    // Heat discipline has a floor: evolved weight sets priced heat low and
-    // their bots cooked themselves. Only the deliberately reckless Easy pilot
-    // gets to ignore it.
-    + (w.reckless ? (w.heat || 0) : Math.max(w.heat || 0, HEAT_WEIGHT_FLOOR)) * p.heat
+    // Heat discipline has a floor, for every pilot: evolved weight sets priced
+    // heat low and their bots cooked themselves, and so did Easy.
+    + Math.max(w.heat || 0, HEAT_WEIGHT_FLOOR) * p.heat
     + (w.fragile || 0) * p.fragile
     + (w.tactics ?? 1) * p.tactics
     + (w[`b_${actionFamily(cand.action)}`] || 0);

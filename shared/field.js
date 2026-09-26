@@ -1,6 +1,7 @@
 // Pure battlefield geometry. Given a field's dimensions + diagonal, derive the
 // deterministic objective markers and a re-rollable terrain scatter. No imports
 // from game-state.js so it stays dependency-free and testable on server + client.
+import { terrainPolygons, BASE_RADIUS } from "./geometry.js";
 
 export const FIELD_MIN = { width: 24, height: 18 };
 export const FIELD_MAX = { width: 96, height: 72 };
@@ -148,6 +149,40 @@ export const DIGITAL_TERRAIN_KINDS = new Set(["building", "barricade", "rock", "
 // from their own corner. That matters more than usual here: the digital field
 // exists to host an AI opponent, and an asymmetric map makes "did it outplay me
 // or just draw the better table?" unanswerable.
+// Narrowest lane a digital scatter may leave: the biggest base (a medium's
+// 75mm) plus a little slack, so the pathfinder's grid never pinches it shut.
+export const TERRAIN_PASSAGE = 2 * Math.max(...Object.values(BASE_RADIUS)) + 0.75;
+
+function pieceOutline(piece) {
+  return terrainPolygons({ terrain: [piece] })[0].points;
+}
+const mirrorOutline = (field, pts) => pts.map(([x, y]) => [field.width - x, field.height - y]);
+function segDist(p, a, b) {
+  const vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy;
+  const t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / l2)) : 0;
+  return Math.hypot(p[0] - (a[0] + t * vx), p[1] - (a[1] + t * vy));
+}
+// Min distance between two non-overlapping outlines (vertex to edge, both ways).
+function outlineGap(P, Q) {
+  let d = Infinity;
+  for (const [A, B] of [[P, Q], [Q, P]]) {
+    for (const p of A) for (let i = 0; i < B.length; i++) d = Math.min(d, segDist(p, B[i], B[(i + 1) % B.length]));
+  }
+  return d;
+}
+function roomyLanes(field, piece, placed) {
+  const P = pieceOutline(piece);
+  for (const [x, y] of P) {
+    if (Math.min(x, y, field.width - x, field.height - y) < TERRAIN_PASSAGE) return false;
+  }
+  if (outlineGap(P, mirrorOutline(field, P)) < TERRAIN_PASSAGE) return false;
+  for (const q of placed) {
+    if (outlineGap(P, q.poly) < TERRAIN_PASSAGE) return false;
+    if (outlineGap(P, mirrorOutline(field, q.poly)) < TERRAIN_PASSAGE) return false;
+  }
+  return true;
+}
+
 function diagonalSide(field, p) {
   const [e0, e1] = emptyCorners(field);
   return ((e1.x - e0.x) * (p.y - e0.y) - (e1.y - e0.y) * (p.x - e0.x)) / Math.hypot(e1.x - e0.x, e1.y - e0.y);
@@ -195,7 +230,7 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
     const availX = field.width - 2 * (margin + piece.fp);
     const availY = field.height - 2 * (margin + piece.fp);
     if (availX <= 1 || availY <= 1) continue; // too big for this field, drop it
-    for (let attempts = 0; attempts < 80; attempts++) {
+    for (let attempts = 0; attempts < (opts.digital ? 240 : 80); attempts++) {
       const p = {
         x: round2(margin + piece.fp + rand() * availX),
         y: round2(margin + piece.fp + rand() * availY),
@@ -206,7 +241,11 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
       // Stay one footprint clear of the diagonal, or the piece would overlap its
       // own mirror image across it.
       if (opts.digital && diagonalSide(field, p) <= piece.fp) continue;
-      placed.push({ ...piece, x: p.x, y: p.y });
+      // Digital: every lane (piece to piece, piece to any mirror image, its own
+      // included, piece to table edge) must fit the biggest base. A slit that
+      // looks open but no rig can drive through is worse than no lane at all.
+      if (opts.digital && !roomyLanes(field, { ...piece, ...p }, placed)) continue;
+      placed.push({ ...piece, x: p.x, y: p.y, poly: opts.digital ? pieceOutline({ ...piece, ...p }) : null });
       break;
     }
   }
@@ -217,5 +256,5 @@ export function scatterTerrain(field, random = Math.random, opts = {}) {
     ? placed.flatMap((p) => [p, { ...p, x: round2(field.width - p.x), y: round2(field.height - p.y) }])
     : placed;
   // `fp` was only needed for spacing; keep the wire payload to the geometry.
-  return out.map(({ fp, ...rest }) => rest);
+  return out.map(({ fp, poly, ...rest }) => rest);
 }

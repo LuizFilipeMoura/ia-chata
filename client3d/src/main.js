@@ -357,7 +357,7 @@ function cheatSheet() {
   modal({
     title: "📖 Quick rules",
     body: el("div", { class: "cheat" },
-      el("p", {}, el("b", {}, "Turns: "), `sides alternate activating one rig; each rig acts once per round with 3 actions. ${active?.game?.maxRounds || 10} rounds.`),
+      el("p", {}, el("b", {}, "Turns: "), `sides alternate activating one rig; each rig acts once per round with 3 actions. ${active?.game?.maxRounds === 0 ? "No round limit." : `${active?.game?.maxRounds || 10} rounds.`}`),
       el("p", {}, el("b", {}, "Heat: "), "every action adds heat; only 1 bleeds off per round. End an activation over capacity (light 6, medium 5) and you roll D12 + 2×excess on the overheat table. Shut Down vents 2 per unused action."),
       el("p", {}, el("b", {}, "Attacks: "), "only into your front 90° arc. Side/rear hits are deadlier. Long-range needs line of sight and range band; melee needs base reach."),
       el("p", {}, el("b", {}, "Scoring: "), "hold objectives (within 2\", uncontested) at round end: centre 2 VP, others 1. Every kill: +1 VP; the ★ priority target pays +2 more."),

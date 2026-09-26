@@ -135,3 +135,31 @@ test("an Aimed Shot is priced with its aim penalty, not as a free Fire", () => {
   const aimedHull = scoreParts(room, atk, { ...base, action: "aimed", location: "hull" }).damage;
   assert.ok(aimedHull < fire, `aimed at the hull ${aimedHull} should trail a plain Fire ${fire}`);
 });
+
+// Campaign enemies hunt: with nothing to shoot and no marker to take, a
+// contract's enemy (side b) still closes on the player's nearest rig, by the
+// real route around terrain, instead of idling where it deployed.
+test("a campaign enemy is pulled toward the player by travel distance", () => {
+  const { room, atk, foe } = scoreSetup();
+  room.campaign = { type: "boss" };
+  room.game.objectives = [];
+  atk.pos = { x: 6, y: 6 };
+  foe.pos = { x: 44, y: 28 };
+  room.game.turn = { side: "b", activeRigId: foe.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  const vp = (dest) => scoreParts(room, foe, { action: "move", dest, facing: 180 }).vp;
+  const hold = vp(foe.pos);
+  assert.ok(hold > 0, "the hunt pulls even from far away");
+  assert.ok(vp({ x: 40, y: 25 }) > hold, "closing in scores more than holding");
+  assert.ok(vp({ x: 40, y: 25 }) > vp({ x: 48, y: 31 }), "and more than backing off");
+  // A wall between: the step along the open route beats the dead-end one.
+  // Wall from y=6 to the bottom edge; the only way round is the top lane.
+  room.field.terrain = [{ kind: "building", x: 38, y: 21, shape: "rect", w: 2, h: 30 }];
+  assert.ok(vp({ x: 44, y: 6 }) > vp({ x: 41, y: 24 }), "around the wall, not into it");
+});
+
+test("outside campaigns there is no hunt pull (objectives drive the bot)", () => {
+  const { room, foe } = scoreSetup();
+  room.game.objectives = [];
+  room.game.turn = { side: "b", activeRigId: foe.id, actionsUsed: 0, actionsMax: 3, longRangeShots: 0 };
+  assert.equal(scoreParts(room, foe, { action: "move", dest: foe.pos, facing: 180 }).vp, 0);
+});
