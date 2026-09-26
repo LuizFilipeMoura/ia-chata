@@ -80,7 +80,6 @@ function factory(t, ctx) {
   const band = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.3, 10), std(0x1a1512)); band.position.set(stack.position.x, hgt + stackH - 0.2, stack.position.z); g.add(band);
   const mouth = new THREE.Object3D(); mouth.position.set(stack.position.x, hgt + stackH + 0.2, stack.position.z); g.add(mouth);
   ctx.chimney(mouth);
-  blinker(ctx, g, V(stack.position.x + 0.4, hgt + stackH - 0.1, stack.position.z), 0xff3322);
   // A roof ventilation fan, always turning.
   const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.35, 16, 1, true), std(0x2a2a2e, { side: THREE.DoubleSide, metalness: 0.6 }));
   housing.position.set(t.w * -0.02, hgt + 0.45, t.h * 0.22); g.add(housing);
@@ -126,18 +125,40 @@ function tank(t, ctx) {
 
 function watertower(t, ctx) {
   const g = new THREE.Group();
-  const baseH = 2.2;
-  const tex = ctx.win.clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, t.w / 3), 1);
+  const bodyH = 4.2;
+  const tex = ctx.win.clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, t.w / 3), Math.max(1, bodyH / 3));
   const bm = std(0xffffff, { map: tex }); flickerWindows(ctx, bm, ctx.theme.lamp);
-  const base = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, baseH, t.h), bm)); base.position.y = baseH / 2; g.add(base);
-  const r = Math.min(t.w, t.h) * 0.36, legTop = baseH + 3.2;
-  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-    const leg = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, legTop - baseH, 6), std(0x2e2a26, { metalness: 0.6 })));
-    leg.position.set(sx * r * 0.7, (baseH + legTop) / 2, sz * r * 0.7); g.add(leg);
+  const body = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, bodyH, t.h), bm)); body.position.y = bodyH / 2; g.add(body);
+  // Tar roof with a low parapet; the tower stands on it.
+  const roofMat = std(0x3a3a3f);
+  const roof = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w + 0.3, 0.3, t.h + 0.3), roofMat)); roof.position.y = bodyH + 0.15; g.add(roof);
+  for (const [w, d, x, z] of [[t.w + 0.3, 0.12, 0, (t.h + 0.3) / 2], [t.w + 0.3, 0.12, 0, -(t.h + 0.3) / 2], [0.12, t.h + 0.3, (t.w + 0.3) / 2, 0], [0.12, t.h + 0.3, -(t.w + 0.3) / 2, 0]]) {
+    const lip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.3, d), roofMat); lip.position.set(x, bodyH + 0.45, z); g.add(lip);
   }
+  const baseH = bodyH + 0.3;
+  const r = Math.min(t.w, t.h) * 0.36, legTop = baseH + 3.2;
+  const steel = std(0x2e2a26, { metalness: 0.6 });
+  const legs = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([sx, sz]) => V(sx * r * 0.7, 0, sz * r * 0.7));
+  for (const p of legs) {
+    const leg = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, legTop - baseH, 6), steel));
+    leg.position.set(p.x, (baseH + legTop) / 2, p.z); g.add(leg);
+  }
+  // X-bracing between neighbouring legs.
+  legs.forEach((p, i) => {
+    const q = legs[(i + 1) % 4], span = p.distanceTo(q), rise = legTop - baseH - 0.4;
+    for (const dir of [1, -1]) {
+      const br = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, Math.hypot(span, rise), 4), steel);
+      br.position.set((p.x + q.x) / 2, (baseH + legTop) / 2, (p.z + q.z) / 2);
+      br.rotation.y = -Math.atan2(q.z - p.z, q.x - p.x); br.rotation.z = dir * Math.atan2(span, rise);
+      g.add(br);
+    }
+  });
   const tk = shadow(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 2.2, 18), std(0x6a4a30, { roughness: 0.7 }))); tk.position.y = legTop + 1.1; g.add(tk);
+  for (const y of [0.4, 1.8]) { const hoop = new THREE.Mesh(new THREE.TorusGeometry(r + 0.02, 0.035, 5, 24), steel); hoop.rotation.x = Math.PI / 2; hoop.position.y = legTop + y; g.add(hoop); }
+  // Catwalk round the foot of the tank.
+  const walk = shadow(new THREE.Mesh(new THREE.CylinderGeometry(r + 0.35, r + 0.35, 0.06, 20), steel)); walk.position.y = legTop; g.add(walk);
+  const rail = new THREE.Mesh(new THREE.TorusGeometry(r + 0.33, 0.02, 4, 24), steel); rail.rotation.x = Math.PI / 2; rail.position.y = legTop + 0.4; g.add(rail);
   const cap = shadow(new THREE.Mesh(new THREE.ConeGeometry(r * 1.08, 1, 18), std(0x3a3a3f))); cap.position.y = legTop + 2.7; g.add(cap);
-  blinker(ctx, g, V(0, legTop + 3.3, 0), 0xff3322, { period: 2 });
   // A wind pump beside it, turning in the smog.
   const pole = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 3, 6), std(0x2e2a26))); pole.position.set(-t.w / 2 + 0.4, baseH + 1.5, t.h / 2 - 0.4); g.add(pole);
   const rotor = new THREE.Group(); rotor.position.set(pole.position.x, baseH + 3, pole.position.z + 0.15);
@@ -180,7 +201,6 @@ function cooling(t, ctx) {
   for (let i = 0; i <= 12; i++) { const y = (i / 12) * H; const k = (y / H - 0.62); prof.push(new THREE.Vector2(R * (0.62 + 1.1 * k * k), y)); }
   const shell = shadow(new THREE.Mesh(new THREE.LatheGeometry(prof, 28), std(0x8a847a, { side: THREE.DoubleSide, roughness: 0.95 }))); g.add(shell);
   const stripe = new THREE.Mesh(new THREE.CylinderGeometry(prof[11].x + 0.02, prof[12].x + 0.02, H / 12, 28, 1, true), std(0xa8321e)); stripe.position.y = H - H / 24; g.add(stripe);
-  blinker(ctx, g, V(prof[12].x, H + 0.1, 0), 0xff3322, { period: 1.8 });
   const mouth = new THREE.Object3D(); mouth.position.y = H; g.add(mouth);
   ctx.anim((dt) => {
     if (Math.random() > dt * 8) return;
@@ -200,13 +220,39 @@ function mast(t, ctx) {
   const head = new THREE.Group(); head.position.y = H + 1.8; g.add(head);
   const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.25), glow(ctx.theme.lamp, 3)); lamp.position.x = 0.2; head.add(lamp);
   ctx.anim((dt) => { head.rotation.y += dt * 2.5; });
-  // A small tethered blimp bobbing at the mast.
-  const blimp = new THREE.Group();
+  // A small blimp moored by the nose to the masthead. It weathervanes round
+  // the mast on a pivot (so it never swings through it), and floats: a slow
+  // bob, pitch and roll, the tether swaying with it, the prop turning.
+  const top = V(0, 1.6 + H, 0);
+  const pivot = new THREE.Group(); pivot.position.copy(top); g.add(pivot);
+  const blimp = new THREE.Group(); blimp.position.set(2.7, 0.2, 0); pivot.add(blimp);
   const env = shadow(new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), std(0xb8a888, { roughness: 0.6 }))); env.scale.set(2.2, 0.8, 0.8); blimp.add(env);
-  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.05), std(ctx.theme.banner)); fin.position.x = -2; blimp.add(fin);
-  blimp.position.set(1.6, H + 1.2, 0); g.add(blimp);
-  const ph = ctx.rand() * 6;
-  ctx.anim((dt, now) => { blimp.position.y = H + 1.2 + Math.sin(now * 0.7 + ph) * 0.25; blimp.rotation.y = Math.sin(now * 0.25 + ph) * 0.3; blimp.rotation.z = Math.sin(now * 0.9 + ph) * 0.05; });
+  const band = std(0x6a5a44, { roughness: 0.8 });
+  for (const x of [-1.1, 0, 1.1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.8 * Math.sqrt(1 - (x / 2.2) ** 2), 0.03, 6, 20), band); r.rotation.y = Math.PI / 2; r.position.x = x; blimp.add(r); }
+  // Tail fins (the nose points at the mast).
+  const finMat = std(ctx.theme.banner, { side: THREE.DoubleSide });
+  const finV = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.05), finMat); finV.position.set(2, 0, 0); blimp.add(finV);
+  const finH = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.05, 0.9), finMat); finH.position.set(2, 0, 0); blimp.add(finH);
+  const gondola = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 0.3), std(0x3a2e22, { metalness: 0.4 }))); gondola.position.set(0.2, -0.85, 0); blimp.add(gondola);
+  const port = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.32), glow(ctx.theme.lamp, 2)); port.position.set(0.2, -0.82, 0); blimp.add(port);
+  const prop = new THREE.Group(); prop.position.set(2.45, 0, 0); blimp.add(prop);
+  for (const a of [0, Math.PI / 2]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.7, 0.08), std(0x2e2a26)); b.rotation.x = a; prop.add(b); }
+  const nose = new THREE.Object3D(); nose.position.set(-2.2, 0, 0); blimp.add(nose);
+  // The mooring line, re-aimed every frame from the masthead to the nose.
+  const line = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 5).translate(0, 0.5, 0).rotateX(Math.PI / 2), std(0x1e1a16));
+  g.add(line);
+  const ph = ctx.rand() * 6, nw = V(), nl = V();
+  ctx.anim((dt, now) => {
+    const t = now + ph;
+    pivot.rotation.y = Math.sin(t * 0.13) * 0.9 + Math.sin(t * 0.31) * 0.25;             // drifts with the wind
+    blimp.position.y = 0.2 + Math.sin(t * 0.8) * 0.3 + Math.sin(t * 1.9) * 0.06;          // bobs
+    blimp.rotation.z = Math.sin(t * 0.8 - 0.6) * 0.09;                                    // noses up and down with it
+    blimp.rotation.x = Math.sin(t * 0.55) * 0.07;                                         // rolls
+    blimp.rotation.y = Math.sin(t * 0.4) * 0.12;                                          // yaws against the line
+    prop.rotation.x += dt * 9;
+    nose.getWorldPosition(nw); nl.copy(nw); g.worldToLocal(nl);
+    line.position.copy(top); line.lookAt(nw); line.scale.set(1, 1, Math.max(0.01, top.distanceTo(nl)));
+  });
   return g;
 }
 
@@ -300,8 +346,7 @@ export function backdrop(kind, i, c, R, ctx) {
         const st = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 16, 8), dark); st.position.copy(top).add(V(2, 8, 0)); g.add(st);
         const mouth = new THREE.Object3D(); mouth.position.copy(top).add(V(2, 16.6, 0)); g.add(mouth);
         ctx.chimney(mouth, { big: true });
-        blinker(ctx, g, top.clone().add(V(2, 16.2, 1.4)), 0xff2a1a, { period: 2.2, size: 0.9 });
-      } else blinker(ctx, g, top.clone().add(V(0, 0.8, 0)), 0xff2a1a, { period: 2.6, size: 0.8 });
+      }
     }
   } else if (kind === "zeppelin") {
     const ship = new THREE.Group();
@@ -312,16 +357,16 @@ export function backdrop(kind, i, c, R, ctx) {
     for (const [y, z, rx] of [[1.6, 0, 0], [-1.6, 0, 0], [0, 1.6, Math.PI / 2], [0, -1.6, Math.PI / 2]]) { const fin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 0.08), std(ctx.theme.banner)); fin.position.set(-8, y, z); fin.rotation.x = rx; ship.add(fin); }
     const props = [];
     for (const z of [-1.2, 1.2]) { const p = new THREE.Group(); p.position.set(-1.8, -2.5, z); for (let b = 0; b < 3; b++) { const bl = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.2, 0.12), std(0x2a2a2a)); bl.rotation.x = (b * Math.PI * 2) / 3; p.add(bl); } ship.add(p); props.push(p); }
-    blinker(ctx, ship, V(9, 0, 0), 0x40ff70, { period: 1.4, size: 0.3 });
-    blinker(ctx, ship, V(-9, 0.4, 0), 0xff3030, { period: 1.4, size: 0.3, phase: 0.7 });
     ship.scale.setScalar(1.8);
     g.add(ship);
     const r = R * (0.75 + ctx.rand() * 0.35), hgt = 48 + ctx.rand() * 20, speed = (0.012 + ctx.rand() * 0.01) * (i % 2 ? -1 : 1), a0 = ang;
     ctx.anim((dt, now) => {
       const a = a0 + now * speed;
-      ship.position.set(c.x + Math.cos(a) * r, hgt + Math.sin(now * 0.3 + a0) * 0.8, c.z + Math.sin(a) * r);
-      ship.rotation.y = -a + (speed > 0 ? -Math.PI / 2 : Math.PI / 2);
-      ship.rotation.z = Math.sin(now * 0.4 + a0) * 0.03;
+      // Floating: a layered bob, nose pitching with it, a lazy roll, a yaw wander.
+      ship.position.set(c.x + Math.cos(a) * r, hgt + Math.sin(now * 0.3 + a0) * 2 + Math.sin(now * 0.83 + a0) * 0.6, c.z + Math.sin(a) * r);
+      ship.rotation.y = -a + (speed > 0 ? -Math.PI / 2 : Math.PI / 2) + Math.sin(now * 0.17 + a0) * 0.08;
+      ship.rotation.z = Math.sin(now * 0.3 + a0 - 0.7) * 0.07;
+      ship.rotation.x = Math.sin(now * 0.47 + a0) * 0.06;
       for (const p of props) p.rotation.x += dt * 14;
     });
   } else if (kind === "crane") {
@@ -335,7 +380,6 @@ export function backdrop(kind, i, c, R, ctx) {
     const hookPivot = new THREE.Group(); hookPivot.position.x = 13; head.add(hookPivot);
     const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 9, 4), std(0x111111)); cable.position.y = -4.5; hookPivot.add(cable);
     const load = new THREE.Mesh(new THREE.BoxGeometry(2, 1.2, 1.2), std(0x7a5a3a)); load.position.y = -9.4; hookPivot.add(load);
-    blinker(ctx, head, V(15, 0.6, 0), 0xff3322, { period: 1.5, size: 0.3 });
     const ph = ctx.rand() * 6;
     ctx.anim((dt, now) => { head.rotation.y = ph + Math.sin(now * 0.07 + ph) * 1.4; hookPivot.rotation.z = Math.sin(now * 0.9) * 0.06; hookPivot.rotation.x = Math.sin(now * 0.7) * 0.05; });
   } else if (kind === "flares") {
