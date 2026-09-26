@@ -168,3 +168,18 @@ test("analytic expectedDamage matches the real engine's sampled SP", () => {
   }
   console.log("  [damage] " + report.join("\n           "));
 });
+
+// §5: an engaged rig fires its gun at −2 Accuracy. The estimate must read the
+// lock off the attacker (the Attack briefing and the advisor never pass it),
+// or a gun in melee looks better than the blade that's actually the answer.
+test("an engaged attacker's gun estimate carries the −2 point-blank penalty; melee doesn't", () => {
+  const a = makeRig(1, "Black", "medium", "a", { longRange: "Siege Maul", melee: "Bulwark Shield" });
+  const t = def();
+  const shot = { arc: "front", distance: 2.7, cover: 0, round: 1 };
+  const free = rawExpectedHits(a, t, "longRange", shot);
+  const freeMelee = rawExpectedHits(a, t, "melee", shot);
+  a.engagedWith = t.id;
+  assert.ok(rawExpectedHits(a, t, "longRange", shot) < free, "locked in melee, the gun is worse");
+  assert.equal(rawExpectedHits(a, t, "melee", shot), freeMelee, "the blade is unaffected");
+  assert.equal(rawExpectedHits(a, t, "longRange", { ...shot, engaged: false }), free, "an explicit opts.engaged still wins");
+});

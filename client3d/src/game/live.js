@@ -658,6 +658,22 @@ export class LiveMatch {
     const polys = terrainPolygons(this.state.field);
     const blockers = moveBlockers(this.state.rigs, rig);
     const hop = this.isHop();
+    // Pointing at a friend's base: you can drive through it but not park on
+    // it, so slide the spot to just clear of it (away from its centre).
+    let note = "";
+    if (!hop) {
+      const pal = blockers.find((b) => b.pass && Math.hypot(field.x - b.pos.x, field.y - b.pos.y) <= radiusOf(rig) + b.radius);
+      if (pal) {
+        let dx = field.x - pal.pos.x, dy = field.y - pal.pos.y, len = Math.hypot(dx, dy);
+        if (len < 0.5) { dx = pal.pos.x - rig.pos.x; dy = pal.pos.y - rig.pos.y; len = Math.hypot(dx, dy) || 1; } // dead centre: through it
+        const k = (radiusOf(rig) + pal.radius + 0.3) / len;
+        const far = { x: pal.pos.x + dx * k, y: pal.pos.y + dy * k }, near = { x: pal.pos.x - dx * k, y: pal.pos.y - dy * k };
+        // That side off the table or walled in: the other side of the friend.
+        field = findPath(this.state.field, polys, blockers, radiusOf(rig), rig.pos, far) ? far : near;
+        const name = this.state.rigs.find((r) => r.pos && r.pos.x === pal.pos.x && r.pos.y === pal.pos.y)?.name || "a friend";
+        note = `clear of ${name}`;
+      }
+    }
     const landing = hop ? hopLanding(this.state, rig, field, budget) : null;
     const route = hop ? { path: [rig.pos, field], length: landing.dist } : findPath(this.state.field, polys, blockers, radiusOf(rig), rig.pos, field);
     const ok = hop ? landing.ok : route && route.length <= budget + 1e-6;
@@ -684,7 +700,8 @@ export class LiveMatch {
       }
       danger = this.dangerVal;
     }
-    return { route, ok, facing, danger, why: landing && !landing.ok ? landing.reason : "" };
+    const why = landing && !landing.ok ? landing.reason : !route ? "blocked: no way round the terrain or enemies" : route.length > budget + 1e-6 ? "out of reach" : "";
+    return { route, ok, facing, danger, why, dest: field, note };
   }
 
   // Standing at `dest` facing `facing`: which enemies could I attack (green
@@ -1108,18 +1125,21 @@ export class LiveMatch {
     }
     if (this.isMoveMode() && hit.field && this.ghost) {
       const p = this.movePreview(hit.field);
-      this.ghost.position.set(hit.field.x, 0, hit.field.y);
+      const at = p.dest;
+      this.ghost.position.set(at.x, 0, at.y);
       this.ghost.rotation.y = -p.facing * DEG;
-      this.ghostMat.color.setHex(p.ok ? 0x33ff99 : 0xff4433);
+      // Red is only ever "can't go there"; danger on a legal spot is amber.
+      this.ghostMat.color.setHex(p.ok ? 0x33ff99 : 0xff2233);
       if (this.pathLine) this.world.overlay.remove(this.pathLine);
       if (p.route) this.pathLine = this.isHop()
-        ? this.world.arcPath(this.mode.rig.pos, hit.field, Math.min(4, 1 + p.route.length * 0.4), p.ok ? 0xffd27a : 0xff4433)
-        : this.world.path(p.route.path, p.ok ? 0x33ff99 : 0xff4433);
+        ? this.world.arcPath(this.mode.rig.pos, at, Math.min(4, 1 + p.route.length * 0.4), p.ok ? 0xffd27a : 0xff2233)
+        : this.world.path(p.route.path, p.ok ? 0x33ff99 : 0xff2233);
       const dz = p.danger == null ? "" : p.danger < 0.3 ? " · ✅ safe spot" : ` · ⚠ ≈${p.danger.toFixed(1)} SP incoming here`;
-      if (p.ok && p.danger != null) this.ghostMat.color.setHex(p.danger < 0.3 ? 0x33ff99 : p.danger < 2 ? 0xffd35a : 0xff8a3d);
-      const shots = p.ok ? this.sightlines(this.mode.rig, hit.field, p.facing) : (this.clearSight(), "");
-      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}" · facing ${Math.round(p.facing)}°${p.ok ? dz : ` · ${p.why || "out of reach"}`}${shots} · Shift+wheel to turn` : "No path there");
-      this.mode.preview = { ...p, dest: hit.field };
+      if (p.ok && p.danger != null) this.ghostMat.color.setHex(p.danger < 0.3 ? 0x33ff99 : p.danger < 2 ? 0xffd35a : 0xffa020);
+      const shots = p.ok ? this.sightlines(this.mode.rig, at, p.facing) : (this.clearSight(), "");
+      const note = p.note ? ` · ${p.note}` : "";
+      this.hud.tip(p.route ? `${p.route.length.toFixed(1)}" of ${this.mode.budget.toFixed(1)}"${note} · facing ${Math.round(p.facing)}°${p.ok ? dz : ` · ✖ ${p.why}`}${shots} · Shift+wheel to turn` : `✖ Can't go there: ${p.why}`);
+      this.mode.preview = { ...p, dest: at };
       return;
     }
     // Hover tooltip for rigs.

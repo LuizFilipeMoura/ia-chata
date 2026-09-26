@@ -41,7 +41,9 @@ function pHit(aim) {
 export function rawExpectedHits(attacker, target, slot, opts) {
   const profile = effectiveWeaponProfile(slot, attacker.weapons?.[slot], attacker);
   if (!profile) return 0;
-  const o = { ...opts, target };
+  // The melee lock's −2 on a gun (§5) is read off the attacker unless the
+  // caller says otherwise: the Attack briefing and the advisor never pass it.
+  const o = { engaged: attacker.engagedWith != null, ...opts, target };
   const aim = computeModifiedAim(attacker, profile, o);
   // The real dice count (Full Auto / Bloodletter / Redline / halvings), the same
   // function rollToHit uses. Rerolled misses (Lock Sight's primed volley, or a
