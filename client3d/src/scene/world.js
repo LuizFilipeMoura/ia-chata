@@ -81,15 +81,23 @@ function groundTexture(w, h, gd) {
   return t;
 }
 
+// Facade texture plus a matching glow mask: only the lit panes glow, the wall
+// and dark panes never do. `.glow` rides on the facade texture.
 function windowTexture(lit = "#ffcf6b") {
   const c = document.createElement("canvas"); c.width = c.height = 128;
-  const g = c.getContext("2d");
+  const e = document.createElement("canvas"); e.width = e.height = 128;
+  const g = c.getContext("2d"), ge = e.getContext("2d");
   g.fillStyle = "#6d6a63"; g.fillRect(0, 0, 128, 128);
+  ge.fillStyle = "#000"; ge.fillRect(0, 0, 128, 128);
   for (let y = 10; y < 128; y += 30) for (let x = 8; x < 128; x += 24) {
-    g.fillStyle = Math.random() < 0.25 ? lit : "#1d2026"; g.fillRect(x, y, 12, 16);
+    const on = Math.random() < 0.25;
+    g.fillStyle = on ? lit : "#1d2026"; g.fillRect(x, y, 12, 16);
+    if (on) { ge.fillStyle = "#fff"; ge.fillRect(x, y, 12, 16); }
   }
   g.fillStyle = "rgba(0,0,0,0.25)"; for (let i = 0; i < 30; i++) g.fillRect(Math.random() * 128, Math.random() * 128, 20, 3);
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  const mk = (cv) => { const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; };
+  const t = mk(c);
+  t.glow = mk(e);
   return t;
 }
 

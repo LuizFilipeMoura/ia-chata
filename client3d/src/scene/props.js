@@ -52,11 +52,11 @@ function flame(ctx, parent, pos, { size = 1, light = false, rate = 18 } = {}) {
   });
 }
 
-// Windows that live: the lit panes flicker as if someone's working late.
+// Lit windows: a steady glow on the lit panes only (the mask matches the
+// facade texture's repeat), so the facade itself never pulses.
 function flickerWindows(ctx, mat, lamp) {
-  mat.emissive = new THREE.Color(lamp); mat.emissiveMap = mat.map; mat.emissiveIntensity = 0.6;
-  const phase = ctx.rand() * 10;
-  ctx.anim((dt, now) => { mat.emissiveIntensity = 0.55 + 0.2 * Math.sin(now * 1.3 + phase) + (Math.sin(now * 23 + phase) > 0.97 ? -0.4 : 0); });
+  const e = ctx.win.glow.clone(); e.needsUpdate = true; e.repeat.copy(mat.map.repeat);
+  mat.emissive = new THREE.Color(lamp); mat.emissiveMap = e; mat.emissiveIntensity = 0.9;
 }
 
 // ---- Buildings (fill the terrain rect t.w × t.h, centred) -----------------
