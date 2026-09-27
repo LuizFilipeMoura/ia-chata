@@ -5497,7 +5497,10 @@ export function formatBattleState(room, side) {
   ensureGameShape(room);
   const g = room.game;
   const lines = ["", "=== CURRENT BATTLE STATE ==="];
-  lines.push(`Round ${g.round}${g.maxRounds === 0 ? "" : `/${g.maxRounds || MAX_ROUNDS}`}${g.suddenDeath ? " (Sudden Death)" : ""}, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}`);
+  // The beacon multiplier is classic-scoring vocabulary (§11): cycling rooms
+  // (the default) pay the lit beacon's flat VP, never a per-round multiplier.
+  const classicMult = g.beaconRules === "classic" ? `, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}` : "";
+  lines.push(`Round ${g.round}${g.maxRounds === 0 ? "" : `/${g.maxRounds || MAX_ROUNDS}`}${g.suddenDeath ? " (Sudden Death)" : ""}${classicMult}`);
   if (g.beacons) {
     const name = (i) => (i == null ? "none (dark)" : markerName(g.objectives, i));
     lines.push(`Lit beacon: ${name(g.beacons.lit)} · Next: ${name(g.beacons.next)}`);

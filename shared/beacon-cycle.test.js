@@ -4,7 +4,7 @@
 // enemy within 2". room.game.beaconRules = "classic" opts out.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createRoom, applyCommand, lastRejectionReason, findRig, setBeaconRules, rotateBeacons, scoreBeacons, beaconTuning } from "./game-state.js";
+import { createRoom, applyCommand, lastRejectionReason, findRig, setBeaconRules, rotateBeacons, scoreBeacons, beaconTuning, formatBattleState } from "./game-state.js";
 import { mulberry32 } from "./sim/match.js";
 
 function table() {
@@ -200,6 +200,20 @@ test("classic rooms keep per-marker scoring and never announce beacons", () => {
   applyCommand(room, { verb: "seed", attrs: { first: "a" } });
   assert.ok(room.game.started, lastRejectionReason());
   assert.ok(!room.game.beacons);
+});
+
+test("formatBattleState's round line only claims a beacon multiplier for classic rooms", () => {
+  const cycling = table(); // default cycling room, started via the "beacons" mission
+  const cyclingText = formatBattleState(cycling);
+  assert.match(cyclingText, /Lit beacon:/);
+  assert.doesNotMatch(cyclingText, /beacons pay/);
+
+  const classic = createRoom("BC-M");
+  classic.game.beaconRules = "classic";
+  applyCommand(classic, { verb: "seed", attrs: { first: "a" } });
+  const classicText = formatBattleState(classic);
+  assert.match(classicText, /beacons pay ×1/);
+  assert.doesNotMatch(classicText, /Lit beacon:/);
 });
 
 test("the campaign Skirmish contract fights over the three standard beacons", () => {
