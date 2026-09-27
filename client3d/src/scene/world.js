@@ -434,8 +434,10 @@ export class World {
     outer.rotation.x = -Math.PI / 2; outer.position.set(w / 2, -0.8, h / 2); outer.receiveShadow = true; this.tableGroup.add(outer);
     const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 0.8, h + 2), new THREE.MeshStandardMaterial({ color: 0x2e2116, roughness: 0.7 }));
     rim.position.set(w / 2, -0.41, h / 2); rim.receiveShadow = true; this.tableGroup.add(rim);
-    // Brass trim + rivets around the table edge, it's a war-room table.
-    const brass = new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.9, roughness: 0.3 });
+    // Brass trim + rivets around the table edge, it's a war-room table. Satin,
+    // not polished: a mirror finish caught the sun straight into the camera and
+    // bloom blew the near corner out.
+    const brass = new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.7, roughness: 0.6 });
     for (const [x, z, sx, sz] of [[w / 2, -1, w + 2.2, 0.25], [w / 2, h + 1, w + 2.2, 0.25], [-1, h / 2, 0.25, h + 2.2], [w + 1, h / 2, 0.25, h + 2.2]]) {
       const trim = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.18, sz), brass); trim.position.set(x, 0.02, z); this.tableGroup.add(trim);
     }
