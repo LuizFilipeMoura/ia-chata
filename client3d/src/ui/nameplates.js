@@ -22,21 +22,21 @@ export class Nameplates {
     this.tick = () => this.update();
     world.tickers.add(this.tick);
     // Pilot barks and combat callouts stack on top of the rig's plate.
-    this.hooks = { say: (id, line, accent, pilot) => this.say(id, line, accent, pilot), pop: (id, str, color) => this.pop(id, str, color) };
+    this.hooks = { say: (id, line, accent, pilot, ms) => this.say(id, line, accent, pilot, ms), pop: (id, str, color) => this.pop(id, str, color) };
     Object.assign(director, this.hooks);
   }
 
   // A radio line in a bubble, pushed onto the rig's stack. False when there's
   // no plate to dock on (plates off, rig unknown); the caller falls back to a
   // 3D bubble.
-  say(id, line, accent, pilot) {
+  say(id, line, accent, pilot, ms = 2800) {
     const c = this.card(id);
     if (!c) return false;
     // One line per pilot on the air: a new one retires the last.
     if (c.bark) this.retire(c, c.bark);
     c.bark = this.push(c, el("div", { class: "bark", style: `--accent: ${accent}` },
       pilot ? el("div", { class: "bk-who" }, `▸ ${pilot.toUpperCase()}`) : null,
-      el("div", { class: "bk-line" }, line)), 2800);
+      el("div", { class: "bk-line" }, line)), ms);
     return true;
   }
 

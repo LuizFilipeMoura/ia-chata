@@ -238,9 +238,10 @@ export class Director {
     const b = barkFor(m, event, { other, part, used: this.barksUsed, campaign: this.campaign });
     if (!b) return;
     const accent = b.warlord ? "#f0cf7a" : m.owner === "a" ? "#5fd3c0" : "#e0533d";
+    // The pilot speaks the line; the bubble stays up at least until they finish.
+    const talk = sfx.voice(b.line.replace(/\*/g, ""), b.voice);
     // Docked above the nameplate when there is one; a 3D bubble otherwise.
-    if (!this.say?.(m.id, b.line, accent, b.pilot)) this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, accent, b.pilot);
-    sfx.bark();
+    if (!this.say?.(m.id, b.line, accent, b.pilot, Math.max(2800, talk * 1000 + 900))) this.world.fx.bubble(m.root.position.clone().add(new THREE.Vector3(0, 3.4, 0)), b.line, accent, b.pilot);
     // A squadmate answers on the radio now and then (never a reply to a reply,
     // and not the campaign's faction extras).
     if (!event.startsWith("re") && !(this.campaign && m.owner === "b") && Math.random() < REPLY_CHANCE[event] ) {
@@ -253,7 +254,8 @@ export class Director {
       const pool = fit.length && Math.random() < 0.75 ? fit : mates;
       const mate = pool[Math.floor(Math.random() * pool.length)];
       const re = { kill: "re_kill", hurt: "re_hurt", critical: "re_hurt", die: "re_eject", eject: "re_eject", miss: "re_miss" }[event] || "re";
-      if (mate) setTimeout(() => this.bark(mate, re, { other, part }), (1100 + Math.random() * 500) / this.speed);
+      // Never talk over the first speaker: the voice doesn't speed up with the game.
+      if (mate) setTimeout(() => this.bark(mate, re, { other, part }), Math.max((1100 + Math.random() * 500) / this.speed, talk * 1000 + 300));
     }
   }
 

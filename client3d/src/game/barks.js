@@ -14,11 +14,16 @@
 // {It}); {part} = the part that got hit. A line with a token is only used when
 // the moment has one.
 
+import { M, F, ROBOT } from "../voice.js";
+
+// Each pilot has a voice (voice.js): M() / F() are the male and female
+// baselines, tweaked per pilot. Lights talk faster, mediums slower; a higher
+// spread is a jumpier, more excitable delivery.
 // Every weapon belongs to exactly one chassis, so a pilot rides with the gun,
 // even in a renamed rig.
 const PILOTS = {
   "Missile Barrage": {
-    name: "Ottilie", lines: {
+    name: "Ottilie", voice: F({ f0: 170, syl: 0.09, chip: 0.25, spread: 0.5 }), lines: {
       hit: ["Burn, baby.", "{It}'s smoking!", "Got its {part}!", "Toasty.", "Warm enough for you?", "Whoosh. Boom. Lovely.", "Rack's singing!", "{It}'s wearing my rockets.", "Bye-bye, {part}!", "Smell that?", "Oh, it CAUGHT."],
       miss: ["Rockets went sightseeing.", "It's always the wind.", "…that one's on the insurance.", "Pretend you didn't see that.", "Where'd they go?", "Rockets have opinions.", "Unscheduled fireworks…", "I'll say I was aiming at the crate."],
       kill: ["{It}'s a bonfire now.", "Roasted.", "Put it down as 'accidental'.", "Crispy.", "{It}'s kindling.", "I'd call that a controlled burn.", "Ohhh, that's a big one."],
@@ -35,7 +40,7 @@ const PILOTS = {
     },
   },
   "Harpoon": {
-    name: "Jonah", lines: {
+    name: "Jonah", voice: M({ f0: 75, syl: 0.095 }), lines: {
       hit: ["Aye.", "Hooked.", "Got its {part}.", "{It} hauls like a drowned cow.", "Line's taut.", "Hook's set.", "Reel it.", "{It} felt that one.", "Harpoon's home."],
       miss: ["Sea's in a mood.", "Slipped the line.", "Seen worse.", "Hm.", "Line's slack.", "Current took it.", "Fish don't hurry.", "…"],
       kill: ["Another fish.", "{It}'s done swimming.", "That'll do.", "Landed.", "{It} won't float.", "Bring the gaff.", "Quiet now."],
@@ -52,7 +57,7 @@ const PILOTS = {
     },
   },
   "Arc Gun": {
-    name: "Nell", lines: {
+    name: "Nell", voice: F({ f0: 165, syl: 0.09, chip: 0.2 }), lines: {
       hit: ["Live wire!", "Grounded it.", "{It}'s {part} is shorting!", "Twenty thousand volts.", "Zap.", "Crackle.", "Lit it up!", "{It}'s {part} is humming now.", "Current's flowing!"],
       miss: ["Arc jumped on its own.", "Come on, come on…", "Nobody insulated this thing.", "Fuse blew.", "Of course it arced into the dirt.", "Who wired this, a committee?", "Zzt. Nothing."],
       kill: ["{It}'s off the grid.", "Lights out.", "Company never did pay overtime.", "Short-circuited.", "{It}'s dead wire.", "Pull the breaker on that one.", "Power's out on the whole street."],
@@ -69,7 +74,7 @@ const PILOTS = {
     },
   },
   "Autocannon": {
-    name: "Ferdinand", lines: {
+    name: "Ferdinand", voice: M({ f0: 80, syl: 0.095 }), lines: {
       hit: ["That's going in the report!", "Got its {part}!", "Very effective!", "{It} isn't even branded.", "Yes!", "Target… reduced!", "Noting that for the review.", "Is {it}'s {part} billable?"],
       miss: ["That's going on my record…", "Mother of—!", "Recalibrating, please hold.", "Was that… close?", "Write down that the sights are off!", "Oh dear."],
       kill: ["Competitor eliminated.", "{It} is… discontinued.", "Quarterly target met!", "Does that count toward a promotion?", "{It}, terminated with cause.", "I'll need a witness for that one!"],
@@ -86,7 +91,7 @@ const PILOTS = {
     },
   },
   "Mini Gun": {
-    name: "Marguerite", lines: {
+    name: "Marguerite", voice: F({ f0: 150, syl: 0.105 }), lines: {
       hit: ["Brrrt.", "How frightfully common, bleeding oil.", "What a ghastly {part}.", "Do keep up.", "Rat-a-tat, darling.", "Perforated.", "{It} looks like lace now.", "How vulgar of it to stand there."],
       miss: ["I'll have that sent back.", "These barrels were Grandmother's silver.", "Tedious.", "The barrels disagree with me.", "Hm.", "One doesn't aim, darling.", "*sigh*"],
       kill: ["{It} was bolted together with nails.", "Send the bill to its mother.", "Dismissed.", "Tidied.", "{It} has been excused from the evening.", "Pity."],
@@ -103,7 +108,7 @@ const PILOTS = {
     },
   },
   "Double MG": {
-    name: "Tommy", lines: {
+    name: "Tommy", voice: M({ f0: 85, syl: 0.09, spread: 0.4 }), lines: {
       hit: ["BONK.", "Knock knock!", "{It}'s a condemned building with legs.", "Time and a half on that {part}!", "WHAM.", "Rattle rattle!", "Took a chunk out of {it}!", "Right in the {part}, lads!", "Another one for the skip."],
       miss: ["The ball's on its union break.", "Swing and a miss.", "Five minutes to lunch.", "Bloody ball.", "Missed the building, hit the dirt.", "Guns jammed. Tea's cold. Great day.", "Oops."],
       kill: ["TIMBER!", "{It}'s coming down.", "Clocking off!", "Knocked flat.", "Clear the site!", "{It}'s rubble!"],
@@ -120,7 +125,7 @@ const PILOTS = {
     },
   },
   "Rivet Gun": {
-    name: "Mags", lines: {
+    name: "Mags", voice: F({ f0: 158, syl: 0.095 }), lines: {
       hit: ["Pinned.", "Now THAT's a proper joint.", "{It}'s {part} was held on with tape!", "Riveted.", "Click-bang.", "Fastened.", "Nailed its {part} shut.", "Precision!", "Look at {it}'s tolerances…"],
       miss: ["Jammed again.", "Nobody respects tolerances.", "…grinding again.", "Misfeed.", "Why do I bother?", "Rivet in the dirt.", "Hopper's sticking."],
       kill: ["Who welded {it}, a goose?", "Unbolted.", "{It} needed a mechanic or a priest.", "Scrapped.", "{It}'s parts now.", "Should've maintained it."],
@@ -137,7 +142,7 @@ const PILOTS = {
     },
   },
   "Mortar": {
-    name: "Harrow", lines: {
+    name: "Harrow", voice: M({ f0: 62, syl: 0.11, spread: 0.1 }), lines: {
       hit: ["Splash. On target.", "Tube to crew: shell away.", "Filing form 27-B on {it}'s {part}.", "Direct hit.", "Good splash.", "On the mark.", "Impact acceptable.", "{It}'s {part}, as plotted."],
       miss: ["Splash. Adjust left two.", "Landed in a statistically acceptable area.", "Regulation is wrong.", "Long. Drop fifty.", "Short. Add fifty.", "Somebody moved the map."],
       kill: ["{It} neutralised in triplicate.", "Paperwork to follow.", "Confirmed.", "Target destroyed, log it.", "{It} is no longer a factor."],
@@ -154,7 +159,7 @@ const PILOTS = {
     },
   },
   "Siege Maul": {
-    name: "Ansel", lines: {
+    name: "Ansel", voice: M({ f0: 58, syl: 0.115 }), lines: {
       hit: ["Mm.", "{It} kneels.", "Struck.", "Down.", "Hm."],
       miss: ["…Mm.", "Patience."],
       kill: ["{It} rests.", "Forgiven.", "Amen.", "Peace.", "Sleep."],
@@ -171,7 +176,7 @@ const PILOTS = {
     },
   },
   "Sniper Cannon": {
-    name: "Vera", lines: {
+    name: "Vera", voice: F({ f0: 145, syl: 0.115, spread: 0.1 }), lines: {
       hit: ["Billed.", "{It}: itemised.", "Invoiced: {it}'s {part}.", "Clean.", "{It}: charged."],
       miss: ["That one's pro bono.", "Wind.", "Repricing.", "Irrelevant."],
       kill: ["Paid in full.", "{It}: closed account.", "Confirmed.", "Settled."],
@@ -188,7 +193,7 @@ const PILOTS = {
     },
   },
   "Crossbow": {
-    name: "Dee", lines: {
+    name: "Dee", voice: F({ f0: 155, syl: 0.105 }), lines: {
       hit: ["Darling, you've been PUNCTURED.", "{It} is wearing last season's plating.", "Its {part}! Tragic!", "Thwip!", "Pinned like a butterfly.", "{It}'s {part} is ruined, darling."],
       miss: ["It's the lighting.", "Oh, pooh.", "That wasn't my good side.", "Oh, bother.", "My bolt went to powder its nose."],
       kill: ["{It}'s permanently out of fashion.", "Ciao.", "Somebody sweep that up.", "{It}'s simply finished.", "Kisses!"],
@@ -205,7 +210,7 @@ const PILOTS = {
     },
   },
   "Steam Cannon": {
-    name: "Mags", lines: {
+    name: "Mags", voice: F({ f0: 140, syl: 0.11 }), lines: {
       hit: ["Out of my way!", "Move it!", "Shift, you!", "{It} can have a lie down.", "Blew its {part} clean off the rivets.", "Full pressure!", "Scoot.", "Found you a new spot, {it}.", "Hah! Budge up!"],
       miss: ["Wasted steam.", "Valve's sticking again.", "Kettle coughed.", "Blast. Reheat.", "All hiss, no push."],
       kill: ["Cleared.", "{It}'s off the job.", "Scrap it.", "That's what you get for standing there.", "Shift's over, {it}."],
@@ -222,7 +227,7 @@ const PILOTS = {
     },
   },
   "Flare Launcher": {
-    name: "Hollis", lines: {
+    name: "Hollis", voice: M({ f0: 72, syl: 0.105 }), lines: {
       hit: ["Marked.", "Lit.", "Target painted. You're welcome.", "{It} is now very visible.", "Red on {it}, fire at will.", "There. Can't hide now.", "Flare up. Everyone shoot the glowing one."],
       miss: ["Flare's gone for a walk.", "Pretty, though.", "Illuminated the sky. Useful for someone.", "Wide.", "Lit the scenery."],
       kill: ["Lights out, {it}.", "Mark cleared.", "Spotter's credit, please.", "Put that in the log under 'assisted'."],
@@ -239,7 +244,7 @@ const PILOTS = {
     },
   },
   "Tesla Coil": {
-    name: "Nettie", lines: {
+    name: "Nettie", voice: F({ f0: 165, syl: 0.1, chip: 0.25 }), lines: {
       hit: ["Zap.", "Bzzt!", "{It} felt that in the fillings.", "Its {part} is humming now.", "Ground THAT.", "Oh, it's twitching!", "Current's flowing!", "Sparks!"],
       miss: ["Arced into the dirt.", "Humidity.", "Wasted amps.", "The dirt's charged now. Congratulations, dirt."],
       kill: ["Fused.", "{It}'s a lamp now.", "Circuit closed.", "Short. Permanent.", "It's smoking. The good kind."],
@@ -275,7 +280,7 @@ const SLANG = {
   "Tesla Coil": "the lightning rod", "Shock Glove": "the live wire",
 };
 const PART = { hull: "hull", arms: "arm", legs: "legs", engine: "boiler" };
-const GENERIC = { name: "Pilot", lines: { hit: ["Hit."], miss: ["Missed."], kill: ["Got it."], hurt: ["We're hit!"], critical: ["She's coming apart!"], heat: ["Running hot."], eject: ["Ejecting!"], move: ["Moving."] } };
+const GENERIC = { name: "Pilot", voice: M(), lines: { hit: ["Hit."], miss: ["Missed."], kill: ["Got it."], hurt: ["We're hit!"], critical: ["She's coming apart!"], heat: ["Running hot."], eject: ["Ejecting!"], move: ["Moving."] } };
 
 // Campaign enemies. Faction operators are extras: a few dry company lines,
 // and they talk less than your pilots. The Warlord is the one enemy star.
@@ -297,6 +302,9 @@ const OPERATORS = {
     hurt: ["Ow! Union rules!"], eject: ["I'm out! Somebody grab my spanner!"], heat: ["She's cooking."], move: ["Onward, comrades."] } },
 };
 const WARLORDS = { krim: "Chairman Voss", nox: "Foreman-General Brandt", arcus: "Visionary Kess", triton: "Admiral Oyel", freegear: "Boss Mo Cutter" };
+// Warlords speak slow and low; operators get a faction tilt on their pitch.
+const WARLORD_VOICE = { krim: M({ f0: 52, syl: 0.125, spread: 0.1 }), nox: M({ f0: 52, syl: 0.125, spread: 0.1 }), arcus: F({ f0: 125, syl: 0.125, spread: 0.1 }), triton: M({ f0: 52, syl: 0.125, spread: 0.1 }), freegear: F({ f0: 125, syl: 0.125, spread: 0.1 }) };
+const FACTION_PITCH = { krim: 1, nox: 0.9, arcus: 1.08, triton: 0.95, freegear: 1.05 };
 const WARLORD_LINES = {
   hit: ["Kneel.", "{It}'s {part}. A souvenir for my trophy wall.", "Is this the best your paymasters could afford?"],
   miss: ["I MEANT that.", "Guards, adjust my aim.", "Beneath me."],
@@ -311,7 +319,7 @@ const WARLORD_LINES = {
 // rigs running. Keyed by the walker's template.
 const WALKER_CREW = {
   "medic-walker": {
-    name: "Doc", lines: {
+    name: "Doc", voice: M({ f0: 68, syl: 0.11 }), lines: {
       hit: ["Even the medic bites.", "Stitch that.", "{It} needs a doctor. Not me."],
       miss: ["I fix them, I don't aim them.", "Welder's not a rifle."],
       kill: ["Time of death: now.", "Can't patch that one."],
@@ -326,7 +334,7 @@ const WALKER_CREW = {
     },
   },
   "radiator-walker": {
-    name: "Frost", lines: {
+    name: "Frost", voice: F({ f0: 150, syl: 0.11 }), lines: {
       hit: ["Cool it.", "{It} got the cold shoulder.", "Chattering away."],
       miss: ["Frosty barrel.", "Condensation."],
       kill: ["Chilled.", "Put {it} on ice."],
@@ -341,7 +349,7 @@ const WALKER_CREW = {
     },
   },
   "gun-walker": {
-    name: "Rook", lines: {
+    name: "Rook", voice: M({ f0: 78 }), lines: {
       hit: ["Pop pop.", "{It} felt that one.", "Mount's warm!"],
       miss: ["Stilts wobble.", "Hard to aim on a pogo stick."],
       kill: ["Scrap for the pile.", "Down it goes."],
@@ -356,7 +364,7 @@ const WALKER_CREW = {
     },
   },
   "rocket-walker": {
-    name: "Pip", lines: {
+    name: "Pip", voice: F({ f0: 175, syl: 0.09 }), lines: {
       hit: ["Whoosh.", "Rocket mail for {it}.", "Delivered."],
       miss: ["Return to sender.", "Rocket's gone sightseeing."],
       kill: ["Signed for.", "{It}'s been posted."],
@@ -372,7 +380,7 @@ const WALKER_CREW = {
   },
 };
 // Drones don't talk: they chirp.
-const DRONE_VOICE = { name: "Drone", lines: {
+const DRONE_VOICE = { name: "Drone", voice: ROBOT, lines: {
   hit: ["*chirp*", "TARGET STRUCK.", "*whirr-click*"], miss: ["*bzzt*", "RECALIBRATING."], kill: ["TARGET RETIRED.", "*happy chirp*"],
   hurt: ["*screech*", "DAMAGE.", "*clank*"], critical: ["*rattle* *rattle*"], eject: ["*fzzt*…"], move: ["*tick-tick-tick*", "ADVANCING.", "*whirr*"],
   re: ["*chirp*"],
@@ -393,8 +401,9 @@ export function voiceOf(mech, campaign) {
   if (mech.kind === "drone") return { ...DRONE_VOICE, chance: 0.35 };
   if (!campaign || mech.owner !== "b") return { ...pilotOf(mech), chance: 1 };
   const fac = campaign.faction;
-  if (campaign.type === "boss" && mech.id === campaign.commanderId) return { name: WARLORDS[fac] || "The Warlord", lines: WARLORD_LINES, chance: 1.6, warlord: true };
-  return { ...(OPERATORS[fac] || { name: "Enemy pilot", lines: GENERIC.lines }), chance: 0.45 };
+  if (campaign.type === "boss" && mech.id === campaign.commanderId) return { name: WARLORDS[fac] || "The Warlord", voice: WARLORD_VOICE[fac] || WARLORD_VOICE.krim, lines: WARLORD_LINES, chance: 1.6, warlord: true };
+  const base = (mech.id ?? 0) % 2 ? F() : M();
+  return { ...(OPERATORS[fac] || { name: "Enemy pilot", lines: GENERIC.lines }), voice: { ...base, f0: base.f0 * (FACTION_PITCH[fac] ?? 1) }, chance: 0.45 };
 }
 
 // The crew's name for `mech`, fixed per machine for the battle.
@@ -420,5 +429,5 @@ export function barkFor(mech, event, { other = null, part = null, used = null, c
   const raw = pool[Math.floor(Math.random() * pool.length)];
   used?.add(raw);
   const line = raw.replaceAll("{It}", it ? cap(it) : "").replaceAll("{it}", it || "").replaceAll("{part}", PART[part] || part || "");
-  return { pilot: pilot.name, line, warlord: !!pilot.warlord };
+  return { pilot: pilot.name, line, voice: pilot.voice || M(), warlord: !!pilot.warlord };
 }

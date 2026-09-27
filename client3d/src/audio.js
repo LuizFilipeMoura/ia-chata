@@ -3,9 +3,14 @@
 // whooshes, arc-gun zaps, clanky footsteps, overheat klaxons, a victory fanfare.
 // Lazily unlocked on the first user gesture (browsers block audio before one).
 import { settings } from "./settings.js";
-let ctx = null, master = null, noiseBuf = null;
+import { notes, FORMANTS } from "./voice.js";
+let ctx = null, master = null, voices = null, noiseBuf = null;
 const vol = () => settings.get("volume") ?? 0.5;
-settings.on((k) => { if (k === "volume" && master) master.gain.value = muted ? 0 : vol(); });
+const voiceVol = () => settings.get("voiceVolume") ?? 0.35;
+settings.on((k) => {
+  if (k === "volume" && master) master.gain.value = muted ? 0 : vol();
+  if (k === "voiceVolume" && voices) voices.gain.value = muted ? 0 : voiceVol();
+});
 let muted = (() => { try { return localStorage.getItem("oi3d-muted") === "1"; } catch { return false; } })();
 let lastStep = 0;
 
@@ -15,6 +20,8 @@ function init() {
   if (!AC) return null;
   ctx = new AC();
   master = ctx.createGain(); master.gain.value = muted ? 0 : vol(); master.connect(ctx.destination);
+  // Pilot voices have their own bus and slider, independent of the effects.
+  voices = ctx.createGain(); voices.gain.value = muted ? 0 : voiceVol(); voices.connect(ctx.destination);
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -27,6 +34,7 @@ export function setMuted(m) {
   muted = m;
   try { localStorage.setItem("oi3d-muted", m ? "1" : "0"); } catch {}
   if (master) master.gain.value = m ? 0 : vol();
+  if (voices) voices.gain.value = m ? 0 : voiceVol();
 }
 
 function env(node, t, a, peak, dur) {
@@ -115,6 +123,43 @@ export const sfx = {
   },
   // Radio chatter: a burst of band-passed static with a squelch click.
   bark() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 0.35, { freq: 1800, type: "bandpass", q: 4, peak: 0.08, attack: 0.01 }); tone(t, 0.03, { freq: 2400, type: "square", peak: 0.05 }); tone(t + 0.34, 0.03, { freq: 1900, type: "square", peak: 0.05 }); },
+  // A pilot speaking `line` (see voice.js): a square+saw buzz stepped per
+  // syllable through two formant filters that jump between vowel shapes, each
+  // syllable gated like a blip. Returns how long the line takes, in seconds.
+  voice(line, v) {
+    if (!init() || muted) return 0;
+    const ns = notes(line, v);
+    if (!ns.length) return 0;
+    const t0 = ctx.currentTime + 0.03, end = ns.at(-1).t + ns.at(-1).dur;
+    const vca = ctx.createGain(); vca.gain.value = 0; vca.connect(voices);
+    const f1 = ctx.createBiquadFilter(); f1.type = "bandpass"; f1.Q.value = 6;
+    const f2 = ctx.createBiquadFilter(); f2.type = "bandpass"; f2.Q.value = 9;
+    const g1 = ctx.createGain(); g1.gain.value = 3; const g2 = ctx.createGain(); g2.gain.value = 2;
+    const body = ctx.createBiquadFilter(); body.type = "lowpass"; body.frequency.value = 380; const gb = ctx.createGain(); gb.gain.value = 0.35;
+    const mouth = ctx.createGain();
+    mouth.connect(f1).connect(g1).connect(vca); mouth.connect(f2).connect(g2).connect(vca); mouth.connect(body).connect(gb).connect(vca);
+    const sq = ctx.createOscillator(); sq.type = "square";
+    const sw = ctx.createOscillator(); sw.type = "sawtooth";
+    const gs = ctx.createGain(); gs.gain.value = 0.25 + 0.35 * v.chip; const gw = ctx.createGain(); gw.gain.value = 0.55 - 0.3 * v.chip;
+    sq.connect(gs).connect(mouth); sw.connect(gw).connect(mouth);
+    for (const n of ns) {
+      const t = t0 + n.t, lvl = 0.5 * n.level, hold = n.dur * (0.75 - 0.3 * v.chip);
+      sq.frequency.setValueAtTime(n.freq, t); sw.frequency.setValueAtTime(n.freq, t);
+      const [F1, F2] = FORMANTS[n.vowel] || FORMANTS.a;
+      f1.frequency.setValueAtTime(F1, t); f2.frequency.setValueAtTime(F2, t);
+      vca.gain.setValueAtTime(0, t); vca.gain.linearRampToValueAtTime(lvl, t + 0.006);
+      vca.gain.setValueAtTime(lvl, t + hold); vca.gain.linearRampToValueAtTime(0, t + hold + 0.03);
+      if (n.onset === "plosive") {
+        const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+        const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 2200;
+        const g = ctx.createGain(); env(g, t, 0.005, 0.12, 0.02);
+        s.connect(f).connect(g).connect(voices); s.start(t); s.stop(t + 0.07);
+      }
+    }
+    for (const o of [sq, sw]) { o.start(t0); o.stop(t0 + end + 0.1); }
+    sq.onended = () => vca.disconnect();
+    return end + 0.03;
+  },
   // Beacon payout: a bright cash-register ding (lower and darker for the enemy).
   score(mine = true) {
     if (!init() || muted) return;
