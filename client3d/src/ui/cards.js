@@ -3,7 +3,10 @@
 import { el } from "./dom.js";
 import { icon } from "./icons.js";
 import { rich } from "./glossary.js";
-import { EQUIPMENT, WEAPON_UPGRADES } from "/shared/game-state.js";
+import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS } from "/shared/game-state.js";
+
+const W = (n) => WEAPONS.longRange[n] || WEAPONS.melee[n] || {};
+const splashOf = (n) => { const s = W(n).splash || {}; return `${n} ${s.radius}" (${s.pen ? `Pen ${s.pen} / ${s.dmg}` : `+${s.heat} heat`})`; };
 
 export const KEYWORDS = [
   { k: "Raking Fire", ic: "fire", on: "Mini Gun, Double MG", t: "Can't wound a target's front arc at all. Side hits get +3 Penetration, rear +6 (instead of +2/+3). Flank or waste the shot." },
@@ -14,6 +17,11 @@ export const KEYWORDS = [
   { k: "Incendiary", ic: "heat", on: "Arc Gun (Ion Burn)", t: "On a hit, the target gains 1 heat. Push them toward an overheat." },
   { k: "Impale", ic: "anchor", on: "Harpoon, Claw (Vice Grip)", t: "On a hit roll a D12: on 8+ the target is pinned in place until your next activation (it can still turn)." },
   { k: "Bulwark", ic: "prepare", on: "Bulwark Shield", t: "Unlocks the Raise Shield reaction: negates a front-arc attack, −3 Penetration from side or rear." },
+  { k: "Splash", ic: "barrage", on: "Mortar, Missile Barrage, Flamethrower", t: `Every attack also catches every OTHER rig near the target, friend or foe, hit or miss: ${["Mortar", "Missile Barrage", "Flamethrower"].map(splashOf).join(", ")}. Don't shell your own brawler.` },
+  { k: "Shove", ic: "move", on: "Steam Cannon", t: `A hit blows the target ${W("Steam Cannon").shove}" straight back; if something stops it short it slams for 1 SP. A shove out of reach breaks a melee lock.` },
+  { k: "Mark", ic: "aim", on: "Flare Launcher", t: "A hit marks the target until your next activation: your allies ignore its cover and get +1 Aim against it." },
+  { k: "Chain", ic: "arc", on: "Tesla Coil", t: `A hit arcs to the nearest other rig, friend or foe, within ${W("Tesla Coil").chain}" of the target: a free hit at the Coil's Penetration.` },
+  { k: "Live current", ic: "heat", on: "Shock Glove", t: `Every landed hit adds +${W("Shock Glove").heatOnHit} heat to the target.` },
 ];
 
 export const keywordCards = (only) => el("div", { class: "kw-grid" }, KEYWORDS.filter((x) => !only || only.includes(x.k)).map((x) =>

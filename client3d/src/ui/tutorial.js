@@ -9,6 +9,7 @@ import { rich } from "./glossary.js";
 import { keywordCards, natureCards, equipmentCards } from "./cards.js";
 import { icon } from "./icons.js";
 import { controlsObjective, radiusOf } from "/shared/geometry.js";
+import { isPlanted, CYCLE_BEACON_VP } from "/shared/game-state.js";
 
 const res = (m) => m.state?.game?.resolutions || [];
 const myAttack = (m, test = () => true) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Copper" && test(r));
@@ -17,15 +18,16 @@ const hasCover = (r) => (r.breakdown?.steps?.find((s) => s.kind === "hit")?.term
 const vpA = (m) => m.state?.game?.sides?.find((s) => s.id === "a")?.vp || 0;
 const onBeacon = (m) => (m.state?.rigs || []).some((r) => r.owner === m.side && !r.destroyed && r.pos
   && (m.state.game.objectives || []).some((o) => controlsObjective({ pos: r.pos, radius: radiusOf(r) }, o)));
+const planted = (m) => (m.state?.rigs || []).some((r) => r.owner === m.side && r.plant && isPlanted(r, r.plant.objective));
 const picked = (m) => { const r = m.rig(m.selected); return r && r.owner === m.side && !r.activated; };
 
 // The four components, illustrated: where each sits on the rig, how often the
 // D12 lands there, and what losing it does (rules.md §7, §8).
 const PARTS = [
-  { k: "hull", n: "Hull", d12: "1-4", icon: "hull", role: "The armoured body. Toughest part, hit most often.", zero: "−2 actions per turn and −1 Aim.", more: "Hit again at 0: the rig is destroyed." },
+  { k: "hull", n: "Hull", d12: "1-4", icon: "hull", role: "The armoured body. Toughest part, hit most often.", zero: "−2 actions per turn and −1 Aim.", more: "Hit again at 0: every point tears 2 Integrity." },
   { k: "arms", n: "Arms", d12: "5-7", icon: "arms", role: "Carry both weapons.", zero: "A weapon is torn off and its ammo blows: 1 damage to Hull and 1 to Engine.", more: "Further hits spill into the Hull." },
   { k: "legs", n: "Legs", d12: "8-10", icon: "legs", role: "Speed and turning.", zero: "Move −3\", turning costs double, no backing up.", more: "Hit again: immobilised for the game, 1 damage spills to Hull." },
-  { k: "engine", n: "Engine", d12: "11-12", icon: "engine", role: "The boiler. Least armoured, rarely hit.", zero: "Skips its next activation; heat can't drop below 3.", more: "Hit again at 0: the rig is destroyed." },
+  { k: "engine", n: "Engine", d12: "11-12", icon: "engine", role: "The boiler. Least armoured, rarely hit.", zero: "Skips its next activation; heat can't drop below 3.", more: "Hit again at 0: every point tears 2 Integrity." },
 ];
 const partsChart = (focus) => el("div", { class: "parts" }, PARTS.filter((p) => !focus || focus.includes(p.k)).map((p) =>
   el("div", { class: `part p-${p.k}` },
@@ -39,7 +41,7 @@ const pipeline = (on) => el("div", { class: "pipe" }, [
   ["1", "aim", "To hit", "D6 per shot vs your Aim"],
   ["2", "dice", "Location", "D12: which part"],
   ["3", "pen", "Wound", "D10 per hit vs armour"],
-  ["4", "dmg", "Damage", "SP off that part"],
+  ["4", "dmg", "Damage", "SP off the part and Integrity"],
 ].map(([n, ic, t, d]) => el("div", { class: `pipe-s ${on === n ? "on" : ""}` }, el("span", { class: "pipe-n" }, n), el("span", { class: "pipe-ic" }, icon(ic)), el("b", {}, t), el("span", {}, rich(d)))));
 
 const PICK = { title: "Select Copper", allow: { select: true }, text: "Click your rig on the table, or its card on the left. Selecting a rig shows its actions along the bottom.", highlight: ".hud-roster:not(.enemy)", done: picked };
@@ -51,60 +53,66 @@ export const LESSONS = [
       { title: "The table", text: "This is a quiet corner of the proving ground: just you (Copper) and a practice dummy far away. Pan with WASD or drag, rotate with Q/E, zoom with the wheel.", next: true },
       PICK,
       { title: "Actions and heat", text: "Each activation a rig gets 3 actions. Every button shows its cost: the flame number is heat added to the boiler.", highlight: ".hud-actions", next: true },
-      { title: "Move", allow: { select: true, acts: ["move"] }, text: "Press Move. The green ring is how far you can walk. A move takes two clicks: first where to go, then which way to face.", phases: true, highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
+      { title: "Move", allow: { select: true, acts: ["move"] }, text: "Press Move. The green ring is how far you can walk. A move takes two clicks: first where to go, then which way to face. While you pick a spot the ghost's colour reads the danger: green is safe, amber or orange means enemy guns can reach you there (the hint shows about how much SP). You can walk straight through your own rigs, never through enemies or walls.", phases: true, highlight: '[data-act="move"]', done: (m, ev) => ev.moved },
       { title: "Move and turn", allow: { select: true, acts: ["move"] }, text: "Move again, but this time turn before you confirm. Rule of thumb: end every move with your front arc toward the enemy. The front is your toughest armour and the only direction you can shoot; the hint at the top warns you if someone would end up on your side or rear. A move can turn up to 90° either way (the ghost goes yellow at the limit).", phases: true, highlight: '[data-act="move"]', done: (m, ev) => ev.turned },
       { title: "Sprint", allow: { select: true, acts: ["sprint"] }, text: "Sprint goes further but costs 2 heat instead of 1. Press Sprint and dash on toward the beacon.", highlight: '[data-act="sprint"]', done: (m, ev) => ev.sprinted },
       DONE("Moving spends actions and stokes heat. Sprint when distance matters; walk when heat does."),
     ] },
-  { id: "beacon", icon: "beacon", title: "Claim a beacon", blurb: "How you actually score points.",
+  { id: "beacon", icon: "beacon", title: "Claim a beacon", blurb: "Plant a flag, hold the lit beacon, score.",
     steps: [
-      { title: "Beacons win games", text: "The glowing beacon ahead is worth 2 victory points each round to whoever holds it alone. Most points after 10 rounds wins.", next: true },
+      { title: "Beacons win games", text: `Only ONE beacon scores each round. Round 1 is dark: nothing scores. The beacon marked Next lights at the start of the next round (a banner calls it out each time a round turns). At round end the lit beacon pays ${CYCLE_BEACON_VP} victory points to whoever planted a flag on it, if no enemy is within 2". Most points after 10 rounds wins.`, next: true },
       PICK,
-      { title: "Stand on it", allow: { select: true, acts: ["move"] }, text: "Move so your rig is on the beacon's ring.", highlight: '[data-act="move"]', done: onBeacon, skipAfterRounds: 2, waitText: "Get the rig's base onto the beacon's ring (move again if you fell short)." },
-      { title: "End the activation", allow: { end: true }, text: "Press End activation. At the end of the round every beacon you hold alone pays out.", highlight: '[data-act="end"]', done: (m) => vpA(m) > 0, waitText: "Waiting for the round to end…" },
-      { title: "Points!", text: "Your salvage counter went up (top right). An enemy on the same beacon cancels you out: nobody scores it until one of you leaves or is wrecked.", highlight: ".hud-top", next: true },
-      DONE("Hold beacons, contest theirs. Kills matter because they stop the enemy scoring."),
+      { title: "Get close", allow: { select: true, acts: ["move"] }, text: "This beacon is Next. Move so your rig's base is within 2\" of it (on its ring).", highlight: '[data-act="move"]', done: onBeacon, skipAfterRounds: 2, waitText: "Get the base onto the beacon's ring (move again if you fell short)." },
+      { title: "Plant Flag", allow: { select: true, acts: ["plantflag"] }, text: "Press Plant Flag: 1 action, no heat. You can plant on the lit beacon or, like now, on the Next one; a flag on Next counts once it lights. The flag stays only while this rig isn't moved.", highlight: '[data-act="plantflag"]', done: planted },
+      { title: "End the activation", allow: { end: true }, text: "Press End activation. Round 1 is dark, so nothing scores yet: the payoff comes next round.", highlight: '[data-act="end"]', done: (m, ev) => ev.ended || (m.state?.game?.round || 1) >= 2 },
+      { title: "Hold still", allow: { select: true, acts: ["shutdown"] }, text: "Round 2: the beacon is lit. Don't move: any move pulls the flag up. Select Copper and press Shut Down: it ends the activation right where you stand, and the beacon pays when the round ends.", highlight: '[data-act="shutdown"]', done: (m) => vpA(m) > 0 },
+      { title: "Points!", text: "Your salvage went up (top of the screen): salvage is your victory points. Any enemy rig within 2\" of the lit beacon, flag or not, contests it: nobody scores. A real battle has three beacons and a different one is Next every round, so plan a round ahead.", highlight: ".hud-top", next: true },
+      { title: "Kills score too", text: "Every wreck is worth +1 VP. Each round HQ marks one enemy as your Priority Target (★ on its card): wrecking it pays +2 more. A squad that's behind earns a +2 bounty per kill, and a rig that blows its own boiler pays the enemy +2 more.", highlight: ".hud-roster.enemy .tag.pri", next: true },
+      DONE("Reach the Next beacon early, Plant Flag, then stand still. Contest theirs by getting within 2\". Kills add up too."),
     ] },
   { id: "anatomy", icon: "hull", title: "Rig anatomy", blurb: "Hull, Arms, Legs, Engine: what breaks, and what then.",
     steps: [
-      { title: "Four parts, four health bars", text: "A rig has no single health pool. It has four components, each with its own Structure Points (SP). Those are the four bars on every rig card: H, A, L, E.", highlight: ".hud-roster:not(.enemy) .rc-sp", next: true },
+      { title: "Four parts, four health bars", text: "A rig has four components, each with its own Structure Points (SP): the four bars on every rig card (hull, arms, legs, engine). SP decides what breaks.", highlight: ".hud-roster:not(.enemy) .rc-sp", next: true },
       { title: "Where a hit lands", text: "Every attack rolls one D12 for where the volley lands, unless it's an Aimed Shot. The Hull is hit most; the Engine least. Each part also has its own armour (Toughness): the Hull is hardest to wound, the Engine easiest.", extra: () => partsChart(), next: true },
-      { title: "Losing a part", text: "When a part hits 0 SP it breaks, with a lasting effect. Hit a broken part again and it gets worse, and for Hull or Engine that means the rig is destroyed.", extra: () => partsChart(["hull", "engine"]), next: true },
-      { title: "Limbs", text: "Arms and Legs don't kill a rig on their own, but they cripple it. Extra damage to a broken limb spills into the Hull.", extra: () => partsChart(["arms", "legs"]), next: true },
-      { title: "Read the enemy", text: "Look at the dummy's card: its Engine bar (E) is nearly empty, 2 SP left. Your Autocannon deals 2 damage per wound. Click the dummy for its full sheet any time.", highlight: ".hud-roster.enemy .rc-sp", next: true },
+      { title: "Losing a part", text: "When a part hits 0 SP it breaks, with a lasting effect. Hit a broken part again and it gets worse: every extra point on a broken Hull or Engine tears 2 Integrity instead of 1.", extra: () => partsChart(["hull", "engine"]), next: true },
+      { title: "Limbs", text: "Arms and Legs cripple rather than kill, and extra damage to a broken limb spills into the Hull. But every SP they lose still drains Integrity (next step).", extra: () => partsChart(["arms", "legs"]), next: true },
+      { title: "Read the enemy", text: "Look at the dummy's card: its Engine bar is nearly empty, 2 SP left. Your Autocannon deals 2 damage per wound. Click the dummy for its full sheet any time. Its Integrity is still full: the Engine was set low for this lesson.", highlight: ".hud-roster.enemy .rc-sp", next: true },
       PICK,
+      { title: "Integrity: the kill clock", text: "On top of its parts, every rig has Integrity: one pool for the whole machine. Every SP lost anywhere also costs 1 Integrity, and at 0 the rig is destroyed however many parts still stand. Repair fixes parts, never Integrity. It's the bar on every nameplate and here in the action bar; at half it reads BLOODIED, at a quarter CRITICAL.", highlight: ".ah-int", next: true },
       { title: "Aim for the Engine", allow: { select: true, acts: ["aimed"] }, text: "Press Aimed Shot, click the dummy, and pick the Engine. Aimed Shots choose the location but aim worse (−3), so it may take a few tries.", highlight: '[data-act="aimed"]', done: (m) => { const d = m.state?.rigs?.find((r) => r.name === "Dummy"); return !d || d.destroyed || (d.engine?.sp ?? 2) <= 0 || res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 3; } },
       { title: "What happened?", text: "", extra: (m) => {
           const d = m.state?.rigs?.find((r) => r.name === "Dummy");
+          const lost = d ? (d.integrityMax || 0) - (d.integrity || 0) : 0;
           const say = !d || d.destroyed
-            ? "More than one wound hit the Engine: the first took it to 0 (broken), the rest counted as hits on a broken Engine, and that destroys a rig. Wrecked!"
+            ? "Wrecked! Its Integrity ran out."
             : (d.engine?.sp ?? 1) <= 0
-              ? "Exactly one wound: the Engine hit 0 and broke. The dummy skips its next activation, and one more Engine hit would destroy it."
+              ? `The Engine hit 0 and broke: the dummy skips its next activation. Wounds past 0 on a broken Engine tear 2 Integrity each instead of 1 (the dummy has lost ${lost} of ${d.integrityMax}). Keep hammering a broken Engine or Hull and the rig dies fast.`
               : "The Engine held this time: the shots missed or went elsewhere. Aimed Shots trade accuracy for control.";
           return el("p", {}, rich(say + " Hover the attack in the Combat log for every roll."));
         }, highlight: ".clog", next: true },
-      DONE("Focus fire on a weak part. Engine and Hull kill; Arms and Legs cripple. Protect your own weak spots."),
+      DONE("Focus fire on a weak part: a broken Engine or Hull bleeds Integrity twice as fast, and Integrity is what kills. Arms and Legs cripple. Protect your own weak spots."),
     ] },
   { id: "attackrules", scenario: "attackdemo", icon: "dice", title: "How an attack works", blurb: "To hit, location, wound, damage. With real examples.",
     steps: [
       { title: "Four rolls", text: "Every attack runs the same four steps. Any of them can stop it. The next pages show each one, with real results from the rules engine.", extra: () => pipeline(), next: true },
-      { title: "1. To hit", text: "Roll one D6 per shot (the weapon's Shots stat). Each die that meets your Aim target hits; a natural 6 always hits. Aim gets worse off the weapon's sweet spot, behind cover, or on an Aimed Shot.", extra: () => [pipeline("1"), exampleCard("miss", "A sniper fired point-blank, far off its sweet spot: the one die misses. Nothing else happens.")], next: true },
+      { title: "1. To hit", text: "Roll one D6 per shot (the weapon's Shots stat). Each die that meets your Aim target hits; a natural 6 always hits. Inside the gun's sweet band Aim gets a bonus; cover, a marksman gun's close penalty, a melee lock, or an Aimed Shot make it worse.", extra: () => [pipeline("1"), exampleCard("miss", "A sniper fired point-blank, inside its close penalty (−2 under 8\"): the one die misses. No damage, but the target is still Staggered: +1 heat and −1 Aim on its next attack.")], next: true },
       { title: "2. Location", text: "One D12 decides which part the whole volley strikes: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12. That part's armour (Toughness) is what you must beat next.", extra: () => pipeline("2"), next: true },
-      { title: "3. Wound", text: "Each hit rolls a D10. It wounds on 6 + Toughness − Penetration or more. Penetration depends on the hit arc: front +0, side +2, rear +3. So the same gun wounds far more easily from behind.", extra: () => [pipeline("3"), exampleCard("bounce", (b) => `A Rivet Gun (Pen 3, −1 on a light rig) into a medium's FRONT arc (+0). ${woundInfo(b)}. Hits land, but every wound roll fails: no damage.`)], next: true },
+      { title: "3. Wound", text: "Each hit rolls a D10. It wounds on 6 + Toughness − Penetration or more. Penetration depends on the hit arc: front +0, side +2, rear +3. So the same gun wounds far more easily from behind.", extra: () => [pipeline("3"), exampleCard("bounce", (b) => `A Rivet Gun (Pen 3, −1 on a light rig) into a medium's FRONT arc (+0). ${woundInfo(b)}. Hits land, but every wound roll fails: no damage. The dummy is Staggered anyway (+1 heat, −1 Aim next attack): a whiff still costs the target.`)], next: true },
       { title: "Penetration is king", text: "Penetration lowers the wound target: each point is +10%. A flank adds +2, the rear +3. Toughness raises it. The target never goes below 2 or above 10.", extra: () => exampleCard("wound", (b) => `Same gun into the ${b.location}. ${woundInfo(b)}. A few dice make it, and only those deal damage.`), next: true },
       { title: "Lucky dice", text: "A natural 10 on the wound die ALWAYS wounds, and a natural 1 never does. No armour is immune, and no gun is guaranteed.", extra: () => exampleCard("lucky", (b) => `${woundInfo(b)}. Everything else fails, but a natural 10 punches through anyway.`), next: true },
-      { title: "4. Damage", text: "Each wound takes the weapon's Damage stat off that part's SP. A strong gun from the rear barely needs luck.", extra: () => [pipeline("4"), exampleCard("flank", (b) => `An Autocannon into a medium's rear (+3 Pen). ${woundInfo(b)}: almost every hit wounds, each for its full Damage.`)], next: true },
+      { title: "Stagger", text: "An attack that resolves but deals 0 SP still rattles its target: it is Staggered, +1 heat at once and −1 Aim on its next attack. Misses aren't wasted.", extra: () => exampleCard("bounce", "Every wound failed, yet the Effects line shows the Stagger."), next: true },
+      { title: "4. Damage", text: "Each wound takes the weapon's Damage stat off that part's SP, and the same off the rig's Integrity, the whole-rig pool that decides when it dies. A strong gun from the rear barely needs luck.", extra: () => [pipeline("4"), exampleCard("flank", (b) => `An Autocannon into a medium's rear (+3 Pen). ${woundInfo(b)}: almost every hit wounds, each for its full Damage.`)], next: true },
       { title: "Breaking a part", text: "Take a part to 0 and it breaks, with the effects you saw in Rig anatomy.", extra: () => exampleCard("breaks", "An Aimed Shot at an Engine on 2 SP: one wound breaks it, and that rig skips its next activation."), next: true },
       DONE("Aim → location → wound → damage. Hover (or click) any Combat log line in a match to see all four for real. Next: take the shot yourself."),
     ] },
   { id: "fire", icon: "fire", title: "Open fire", blurb: "Shooting, dice and damage.",
     steps: [
-      { title: "A sitting duck", text: "The dummy is 12 inches ahead, right at your Autocannon's sweet spot, and facing away from you.", next: true },
+      { title: "A sitting duck", text: "The dummy is 12 inches ahead, inside your Autocannon's sweet band (8-16\"), and facing away from you.", next: true },
       PICK,
       { title: "Attack", allow: { select: true, acts: ["fire"] }, text: "Press Attack, then click the dummy. You can only target what's inside your front 90° (the green wedge).", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       { title: "Read the result", text: "Hover the newest line in the Combat log: every die, the to-hit target and why, the hit location and the damage are all there.", highlight: ".clog", next: true },
       { title: "Aimed Shot", allow: { select: true, acts: ["aimed"] }, text: "Aimed Shot rolls the same dice at −3 Aim, but lets you pick the hit location. Aim for the Engine: at 0 the rig skips its next turn.", highlight: '[data-act="aimed"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2, skippable: true },
-      DONE("Distance matters: each gun has a sweet spot. The Combat log always explains the roll."),
+      DONE("Distance matters: each gun has a sweet band. The Combat log always explains the roll."),
     ] },
   { id: "arcs", icon: "arc", title: "Arcs and flanking", blurb: "Face your target, then hit it where it's soft.",
     steps: [
@@ -121,8 +129,8 @@ export const LESSONS = [
       PICK,
       { title: "Shoot through the barricade", allow: { select: true, acts: ["fire"] }, text: "A barricade stands between you and the dummy. Attack anyway, then look at the To hit roll.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, hasCover) },
       { title: "Read the penalty", text: "Hover the new Combat log line: the To hit roll lists cover as harder, so more dice miss.", highlight: ".clog", next: true },
-      { title: "Find a clean angle", allow: { select: true, acts: ["move", "sprint"] }, text: "Walk out to the side (south) until the barricade is no longer between you, and face the dummy.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m, ev) => ev.moved },
-      { title: "Fire clean", allow: { select: true, acts: ["fire", "move"] }, text: "Fire again. If the To hit roll has no cover line, you found a clean shot.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => !hasCover(r)), skippable: true },
+      { title: "Find a clean angle", allow: { select: true, acts: ["move", "sprint"] }, text: "Sprint out to the side (south, about 6\") until the barricade is no longer between you, and face the dummy. A plain Move doesn't get you clear.", highlight: '[data-act="sprint"]', done: (m, ev) => ev.moved },
+      { title: "Fire clean", allow: { select: true, acts: ["fire", "move"] }, text: "Attack again. If the To hit roll has no cover line, you found a clean shot.", highlight: '[data-act="fire"]', done: (m) => myAttack(m, (r) => !hasCover(r)), skippable: true },
       { title: "Walls work both ways", text: "The building to the north blocks sight entirely. Park behind terrain when you're hurt or reloading, and make enemies walk into the open to reach you.", next: true },
       DONE("Shoot from clean angles; stand behind cover when you're the target."),
     ] },
@@ -132,12 +140,13 @@ export const LESSONS = [
       PICK,
       { title: "Strike", allow: { select: true, acts: ["fire"] }, text: "Press Attack and click the dummy. In reach, Attack swings your melee weapon instead of the gun.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       { title: "Engaged", text: "Rigs in melee are locked together: to walk away you must spend an action to Disengage. Brawlers love that; snipers hate it.", next: true },
+      { title: "Base contact", text: "Base to base with an enemy, your melee weapon can strike it wherever it stands: the rig pivots to face it for free (not a Move, so it works while locked). Guns still need the front 90°. And a locked rig fires its gun at −2 Aim.", next: true },
       DONE("Melee skips range bands and line of sight. Charge the shooters, keep your own gunners clear."),
     ] },
   { id: "keywords", icon: "fire", title: "Weapon keywords", blurb: "Raking Fire, Rend, Precision... the special rules on guns.",
     steps: [
       { title: "Keywords", text: "Some weapons carry a keyword: a special rule on top of the normal attack. A weapon has them built in, or gains them from an upgrade. These are the ones in the game:", extra: () => keywordCards(), next: true },
-      { title: "Raking Fire, up close", text: "Machine guns rake. Against a front arc every wound roll fails automatically, however many hits land. Against the rear it gets +6 Penetration.", extra: () => [exampleCard("rakeFront", "Mini Gun into the dummy's FRONT: plenty of hits, zero wounds."), exampleCard("rakeRear", "Same gun from BEHIND: +6 Penetration, it shreds.")], next: true },
+      { title: "Raking Fire, up close", text: "Machine guns rake. Against a front arc every wound roll fails automatically, however many hits land. Against the rear it gets +6 Penetration.", extra: () => [exampleCard("rakeFront", "Mini Gun into the dummy's FRONT: plenty of hits, zero wounds (the dummy is only Staggered)."), exampleCard("rakeRear", "Same gun from BEHIND: +6 Penetration, it shreds.")], next: true },
       PICK,
       { title: "Try the front", allow: { select: true, acts: ["fire"] }, text: "Copper carries a Mini Gun (Raking Fire), and its Field upgrade adds Shock. The dummy faces you. Fire anyway and watch the wound step.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       { title: "Now flank it", allow: { select: true, acts: ["move", "sprint", "fire"] }, text: "Reload, then Sprint down beside it (south) so you're on its side, face it, and fire again. That's where Raking Fire earns its keep.", highlight: '[data-act="move"], [data-act="sprint"]', done: (m) => myAttack(m, (r) => arcOf(r) !== "front"), skipAfterRounds: 2 },
@@ -146,21 +155,21 @@ export const LESSONS = [
   { id: "upgrades", scenario: "prototype", icon: "overclock", title: "Upgrades: Field, Tuned, Prototype", blurb: "Each weapon's three upgrade choices, and the gamble.",
     steps: [
       { title: "Three choices per weapon", text: "When you build a rig you pick one upgrade for each weapon. Every weapon offers exactly three, one of each nature. Here are the Autocannon's:", extra: () => natureCards("Autocannon"), next: true },
-      { title: "One Prototype per rig", text: "Prototypes are powerful but demand attention, so a rig may carry at most one across its two weapons. A rig of only Field picks is still a solid rig.", next: true },
+      { title: "One Prototype per rig", text: "Prototypes are powerful but demand attention, so a rig may carry at most one across its two weapons and its equipment. A rig of only Field picks is still a solid rig.", next: true },
       { title: "A Prototype in action", text: "Copper's Autocannon has Penetrator Rounds. Every 3rd volley skips the wound roll entirely: every hit wounds, whatever the armour. Two volleys are already down the belt, so the next is the 3rd.", extra: () => exampleCard("penetrator", "The 3rd volley: no wound roll at all. Every hit deals damage."), next: true },
       PICK,
-      { title: "Fire the 3rd volley", allow: { select: true, acts: ["fire"] }, text: "Fire at the dummy and check the wound step in the log.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      { title: "Attack: the 3rd volley", allow: { select: true, acts: ["fire"] }, text: "Attack the dummy and check the wound step in the log.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       { title: "The catch", text: "After a Penetrator volley the belt cycles slow: the next volley fires half the dice. That's the Prototype's price. Field and Tuned upgrades never have a downside.", next: true },
       DONE("Field = reliable, Tuned = situational, Prototype = gamble. Pick one gamble per rig at most."),
     ] },
   { id: "heat", icon: "heat", title: "Heat and Shut Down", blurb: "Push too hard and the boiler bites.",
     steps: [
-      { title: "Already running hot", text: "Copper starts at 5 heat; a light rig's capacity is 6. The brass dial on its card shows it.", highlight: ".hud-roster:not(.enemy)", next: true },
+      { title: "The boiler", text: "Copper starts at 3 heat; a light rig's capacity is 6. The brass dial on its card shows it.", highlight: ".hud-roster:not(.enemy)", next: true },
       PICK,
-      { title: "Push it", allow: { select: true, acts: ["fire"] }, text: "Attack the dummy. That's 1 more heat: right at the limit.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
-      { title: "Over the edge", allow: { select: true, acts: ["fire"] }, text: "Attack again. Now you're past capacity. Watch the End button: it warns you of the odds.", highlight: '[data-act="fire"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2 },
-      { title: "The overheat roll", text: "End a turn past capacity and you roll: the further over, the worse. Results run from nothing, to damage, to a wrecked engine.", extra: () => heatTable(), next: true },
-      { title: "Shut Down", allow: { acts: ["shutdown"] }, text: "Shut Down ends the activation and vents heat instead of risking the roll. Press it.", highlight: '[data-act="shutdown"]', done: (m, ev) => ev.ended },
+      { title: "Push it", allow: { select: true, acts: ["fire"] }, text: "Attack the dummy. That's 1 heat: 4 of 6.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
+      { title: "Over the edge", allow: { select: true, acts: ["fire"] }, text: "Attack again: the Reload (1-2 heat) plus a second shot that runs the barrel hot (+1) puts you past capacity. Watch the End button: it warns you of the odds.", highlight: '[data-act="fire"]', done: (m) => res(m).filter((r) => r.kind === "attack" && r.breakdown?.actor === "Copper").length >= 2 },
+      { title: "The overheat roll", text: "End a turn past capacity and you roll: the further over, the worse. Results run from nothing, to damage, to a wrecked engine. If the boiler wrecks the rig, the enemy scores the kill (+1 VP) and +2 more: the boiler blew. A rig wrecked in its own activation ends it on the spot.", extra: () => heatTable(), next: true },
+      { title: "Shut Down", allow: { acts: ["shutdown"] }, text: "Shut Down ends the activation now and vents 2 heat for every action you haven't used (up to 5). One action left vents 2: back to capacity, so no roll. Press it.", highlight: '[data-act="shutdown"]', done: (m, ev) => ev.ended },
       DONE("Every action heats you. A third action is powerful but risky; Shut Down when you've overdone it."),
     ] },
   { id: "equipment", icon: "sp", title: "Equipment", blurb: "Each rig's gadget: always-on bonus plus one action.",
@@ -169,7 +178,7 @@ export const LESSONS = [
       { title: "Upgrades here too", text: "Equipment also takes one upgrade: Field, Tuned or Prototype, same rules as weapons (still max one Prototype per rig). Check them in the rig builder.", next: true },
       { title: "A new rig", text: "This time you pilot a medium sniper fitted with a Targeting Computer.", next: true },
       PICK,
-      { title: "Inspect it", allow: { select: true }, text: "Click Copper on the table to open its full sheet: weapons, upgrades, and equipment with both effects.", highlight: ".hud-roster:not(.enemy)", next: true },
+      { title: "Inspect it", allow: { select: true }, text: "Press ⓘ next to Copper's name in the action bar (or long-press Copper on the table) to open its full sheet: weapons, upgrades, and equipment with both effects.", highlight: ".in-open", next: true },
       { title: "Lock Sight", allow: { select: true, acts: ["locksight"] }, text: "Press Lock Sight (the equipment action, 1 heat): your next shot this activation rerolls all its missed to-hit dice.", highlight: '[data-act="locksight"]', done: (m, ev) => ev.equip },
       { title: "Now shoot", allow: { select: true, acts: ["fire"] }, text: "Attack the dummy. With Lock Sight up, every to-hit die that misses is rerolled once: check the To hit roll in the log.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
       DONE("Know your gadget: some save you (Harden, Purge, Pop Smoke), some push you (Overclock, Jump Jets)."),
@@ -177,9 +186,10 @@ export const LESSONS = [
   { id: "reactions", icon: "prepare", title: "Reactions", blurb: "The Answer token and preparing for hits.",
     steps: [
       { title: "They move first", text: "A raider is about to open fire on you. Whoever acts second each round gets a free Answer token: a face-down reaction placed before the enemy moves.", next: true },
-      { title: "Place your Answer", allow: {}, text: "Pick Copper and a reaction in the popup. Brace is the safe choice: it softens the next hit.", done: (m) => !m.state?.game?.pendingAnswer },
+      { title: "Place your Answer", allow: {}, text: "Pick Copper and a reaction in the popup. Brace is the safe choice: it softens the next hit. The popup also offers three Answer-only counters (Riposte, Sidestep, Exploit Opening) the Prepare action can't buy.", done: (m) => !m.state?.game?.pendingAnswer },
       { title: "Incoming!", text: "Watch the raider's turn. When it attacks, your reaction triggers.", done: (m) => res(m).some((r) => r.kind === "attack" && r.breakdown?.actor === "Raider") || !!m.state?.rigs?.find((r) => r.name === "Raider")?.activated, waitText: "The raider is lining up…", next: false },
       { title: "Prepare", text: "On your own turn, Prepare (1 heat) places another reaction: Brace, Evasive, Return Fire and more. Hover each card to see when it triggers.", next: true },
+      { title: "Grit: the comeback", text: "Falling behind? At the start of each round the squad 2+ VP down gets Grit tokens (1 at 2+, 2 at 5+, 3 at 8+, never more than its living rigs). Spend one like an Answer token for an Improved reaction (Brace −3 Pen, dodges on 3+, counter-attacks +2 Pen), upgrade a reaction you already placed, or keep it for your own turn: a Gritted attack rerolls every missed to-hit die once.", next: true },
       DONE("Reactions are hidden until they trigger: keep your opponent guessing."),
     ] },
 ];

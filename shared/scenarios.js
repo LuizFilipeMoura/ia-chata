@@ -5,7 +5,7 @@
 // still and ends its turn at once. The scripted text lives in the 3D client.
 
 // Field is the default 54" x 36". Facing is degrees, 0 = +x (east).
-const ME = "light-claw-autocannon";      // Autocannon (sweet 12") + Claw
+const ME = "light-claw-autocannon";      // Autocannon (sweet band 8-16") + Claw
 const TARGET = "medium-lance-mortar";    // no shield, no tricks
 
 export const SCENARIOS = {
@@ -15,7 +15,7 @@ export const SCENARIOS = {
       { name: "Copper", owner: "a", chassis: ME, x: 8, y: 18, facing: 0 },
       { name: "Dummy", owner: "b", chassis: TARGET, x: 48, y: 32, facing: 180 },
     ],
-    objectives: [{ x: 27, y: 18, vp: 2 }],
+    objectives: [{ x: 27, y: 18 }],
   },
   beacon: {
     title: "Claim a beacon",
@@ -23,16 +23,19 @@ export const SCENARIOS = {
       { name: "Copper", owner: "a", chassis: ME, x: 22, y: 18, facing: 0 },
       { name: "Dummy", owner: "b", chassis: TARGET, x: 50, y: 33, facing: 180 },
     ],
-    objectives: [{ x: 27, y: 18, vp: 2 }],
+    // One marker: Next in round 1 (dark), lit from round 2 (cycling beacons).
+    objectives: [{ x: 27, y: 18 }],
   },
   anatomy: {
     title: "Rig anatomy",
     rigs: [
       { name: "Copper", owner: "a", chassis: ME, x: 12, y: 18, facing: 0 },
       // Engine on 2 SP: one Autocannon wound (2 damage) breaks it exactly.
-      // More wounds spill past 0, and a broken Engine hit again is destroyed.
+      // More wounds past 0 tear 2 Integrity each (it has plenty, so the lesson
+      // can't normally wreck it).
       { name: "Dummy", owner: "b", chassis: TARGET, x: 22, y: 18, facing: 180, sp: { engine: 2 } },
-      // Parked far away so wrecking the dummy doesn't end the game (annihilation).
+      // Parked far away: a safety net if a freak volley does wreck the dummy
+      // (annihilation would end the lesson).
       { name: "Spare", owner: "b", chassis: "light-harpoon-anchor", x: 50, y: 33, facing: 180 },
     ],
     objectives: [],
@@ -114,7 +117,9 @@ export const SCENARIOS = {
   heat: {
     title: "Heat and Shut Down",
     rigs: [
-      { name: "Copper", owner: "a", chassis: ME, x: 12, y: 18, facing: 0, heat: 5 },
+      // Starts at 3: Attack (4), Reload + Attack (past capacity), then Shut Down
+      // with the last action vents back under, so the lesson never rolls.
+      { name: "Copper", owner: "a", chassis: ME, x: 12, y: 18, facing: 0, heat: 3 },
       { name: "Dummy", owner: "b", chassis: TARGET, x: 24, y: 18, facing: 180 },
     ],
     objectives: [],

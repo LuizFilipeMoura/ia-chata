@@ -31,7 +31,8 @@ const CASES = {
   flank: { scenario: "fire", attrs: FIRE, test: (b) => b.sp > 0 },
   rakeFront: { scenario: "keywords", attrs: FIRE, test: (b) => hits(b) > 0 && !b.sp },
   rakeRear: { scenario: "keywords", attrs: FIRE, tweak: (r) => { r.rigs[0].pos = { x: 31, y: 18 }; r.rigs[0].facing = 180; }, test: (b) => b.sp > 0 },
-  penetrator: { scenario: "prototype", attrs: FIRE, test: (b) => hits(b) >= 3 },
+  // A die under the wound target that still wounds: the bypass, visible.
+  penetrator: { scenario: "prototype", attrs: FIRE, test: (b) => hits(b) >= 3 && step(b, "wound")?.dice?.some((d) => d.ok && d.value < step(b, "wound").target) },
   breaks: { scenario: "anatomy", attrs: { action: "aimed", weapon: "longRange", target: "Dummy", loc: "engine" }, test: (b, room) => room.rigs.find((x) => x.name === "Dummy").engine.sp <= 0 },
 };
 

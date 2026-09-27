@@ -49,7 +49,7 @@ Fairness is the same for both (the 0.5-point first-activator gap is noise). 4 VP
 
 The experiment code in `shared/game-state.js` becomes the default rule.
 
-- **Default on.** `cycleOn(room)` is true unless `room.game.beaconRules === "classic"`. `"classic"` keeps today's per-marker scoring, used by the A/B scripts' baseline arm and by training scenarios (see below). No compatibility shim for saves.
+- **Default on.** `cycleOn(room)` is true unless `room.game.beaconRules === "classic"`. `"classic"` keeps today's per-marker scoring, used by the A/B scripts' baseline arm (training scenarios play cycling, see below). No compatibility shim for saves.
 - **Tuning.** `beaconTuning` keeps `vp` and `earlyPlant` (default **on**). `plantedContest` is removed with its test and bot branch.
 - **Start.** `startGameSeeded` (seed, mission, scenario) calls `ensureBeacons` like `maybeStartGame` does, so every started room shows a Next.
 - **Single marker.** `rotateBeacons` with one marker keeps it lit and next.
@@ -66,7 +66,7 @@ The experiment code in `shared/game-state.js` becomes the default rule.
 - Campaign **Skirmish** contract: switches from one centre beacon to the standard three, cycling. Its catalog blurb and Orders text change accordingly ("Hold the lit beacon; it moves every round").
 - **Last Stand** relay: single-marker cycling (dark round 1, then lit every round, Plant to score).
 - **Salvage**: unchanged (crates are picked up).
-- **Training scenarios** (`scenario` verb): set `beaconRules: "classic"` so the existing "Claim a beacon" lesson keeps working. Rewriting that lesson to teach Plant is a follow-up, not this change.
+- **Training scenarios** (`scenario` verb): play the cycling rule like every other room (the `beaconRules: "classic"` override is gone). The "Claim a beacon" lesson now teaches Plant Flag: round 1 dark, plant on Next, stand still in round 2 while it is lit.
 
 ## Rules text
 
@@ -98,7 +98,7 @@ Already implemented (`shared/bot/candidates.js`, `shared/bot/score.js`, `b_plant
 
 ## Out of scope
 
-- Rewriting the training "Claim a beacon" lesson for Plant.
+- Rewriting the training "Claim a beacon" lesson for Plant (since done: the lesson now teaches Plant Flag).
 - First-activator mitigation. The only cell with a real skew is Hard pilots on the Skirmish table (first activator wins 59% at 3 VP, 61% at 4 VP, 200 games each). If post-flip sims confirm it, candidate fixes (reveal Next after the round's first activation; second activator breaks the tie on a contested plant) get their own spec.
 - Beacon escalation multiplier for cycling beacons.
 

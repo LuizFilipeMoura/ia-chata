@@ -5,7 +5,7 @@
 // off in Settings.
 import { el } from "./dom.js";
 import { settings } from "../settings.js";
-import { heatMeter, inExitZone, isPlanted } from "/shared/game-state.js";
+import { heatMeter, inExitZone, isPlanted, integrityTier } from "/shared/game-state.js";
 import { candidatesFor } from "/shared/bot/candidates.js";
 import { controlsObjective } from "/shared/geometry.js";
 import { spatial } from "/shared/game-state.js";
@@ -21,6 +21,7 @@ export function resetWires() { seen = new Set(); try { localStorage.removeItem(S
 const WIRES = [
   { id: "priority", when: (c) => c.myTarget, text: (c) => `HQ has marked ${c.myTarget.name} (★). Every wreck is worth +1 victory point; scrapping this one pays +2 more.` },
   { id: "activation", when: (c) => c.rig && c.myTurn && c.rig.owner === c.side, text: () => `Each rig acts once per round: up to 3 actions, then the enemy answers with one of theirs. Pick your rig carefully.` },
+  { id: "dark-round", when: (c) => c.state.game.beacons && c.state.game.beacons.lit == null, text: () => "Round 1: every beacon is dark. The one marked Next lights in round 2: get a rig there and Plant Flag early." },
   { id: "heat-near", when: (c) => c.rig && c.meter && c.meter.heat >= c.meter.cap - 1 && c.meter.heat > 0, text: (c) => `${c.rig.name}'s boiler is near the red. Every action adds heat and only 1 bleeds off per round. Past the line, ending the turn rolls on the overheat table. Or Shut Down to vent.` },
   { id: "rear-shot", when: (c) => c.cands?.find((x) => (x.action === "fire" || x.action === "aimed") && x.arc === "rear"), text: (c, x) => `${x.target} is showing you its back! Rear-arc hits carry extra Penetration, so they wound far more often.` },
   { id: "side-shot", when: (c) => c.cands?.find((x) => (x.action === "fire") && x.arc === "side"), text: (c, x) => `You have a flank on ${x.target}. Side hits beat front hits; rear hits beat both. Facing is everything.` },
@@ -29,7 +30,7 @@ const WIRES = [
   { id: "out-of-actions", when: (c) => c.turn?.activeRigId === c.rig?.id && c.turn.actionsUsed >= c.turn.actionsMax && c.rig.owner === c.side, text: () => `Out of actions. End the activation and let the enemy move.` },
   { id: "hidden-prep", when: (c) => c.state.rigs.find((r) => r.owner !== c.side && r.preparation?.hidden), text: (c, r) => `${r.name} has a face-down reaction (🛡). Attack it and it may Brace, dodge, or shoot back. Sometimes it's worth hitting something else first.` },
   { id: "contested", when: (c) => c.contested, text: () => `An enemy within 2" of the lit beacon: nobody scores it this round.` },
-  { id: "escalation", when: (c) => (c.state.game.beaconMultiplier || 1) > 1, text: (c) => `Beacons pay ×${c.state.game.beaconMultiplier} this round, so a late push can overturn an early lead. Don't coast.` },
+  { id: "escalation", when: (c) => c.state.game.beaconRules === "classic" && (c.state.game.beaconMultiplier || 1) > 1, text: (c) => `Beacons pay ×${c.state.game.beaconMultiplier} this round, so a late push can overturn an early lead. Don't coast.` },
   { id: "next-beacon-ready", when: (c) => {
       const bz = c.state.game.beacons; if (!bz || bz.next == null) return false;
       const marker = (c.state.game.objectives || [])[bz.next]; if (!marker) return false;
@@ -46,7 +47,9 @@ const WIRES = [
   { id: "extract-zone", when: (c) => c.state.campaign?.type === "breakthrough" && c.myTurn && c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && !r.activated && inExitZone(r, c.state.campaign.exit)), text: (c, r) => `${r.name} is inside the extraction zone. Extract (1 action) lifts it off the table for good: it counts toward the goal and keeps its SP, but it can't fight again this battle.` },
   { id: "crates", when: (c) => c.state.campaign?.type === "salvage" && (c.state.game.objectives || []).some((o) => o.crate), text: () => `Salvage crates don't score like beacons: END a rig's activation within 2" of one and it hauls the crate away, +2 VP on the spot. The enemy grabs them too.` },
   { id: "reinforcements", when: (c) => c.state.campaign?.reinforcements?.some((rf) => rf.arrived), text: () => `Enemy reinforcements land in their corner at the start of the listed rounds (see the contract strip). Survive to the round limit: you don't have to win the brawl, just keep one rig standing.` },
-  { id: "hurt", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && ["hull", "arms", "legs", "engine"].some((l) => r[l] && r[l].sp > 0 && r[l].sp <= r[l].max / 3)), text: (c, r) => `${r.name} is badly damaged. A location at 0 SP cripples it (arms drop weapons, legs slow it, engine stalls it). Repair costs an action, or pull it back.` },
+  { id: "splash", when: (c) => c.rig?.owner === c.side && c.myTurn && ["Mortar", "Missile Barrage", "Flamethrower"].some((w) => Object.values(c.rig.weapons || {}).includes(w)), text: (c) => `${c.rig.name}'s area weapon splashes every rig near the target, yours too, hit or miss. Check the footprint before you shell a brawl.` },
+  { id: "bloodied", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && ["bloodied", "critical"].includes(integrityTier(r))), text: (c, r) => `${r.name} is ${integrityTier(r).toUpperCase()}: half its Integrity or more is gone. Every SP lost anywhere drains it, and at 0 the rig is destroyed whatever parts still stand. Repair fixes parts, never Integrity.` },
+  { id: "hurt", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && ["hull", "arms", "legs", "engine"].some((l) => r[l] && r[l].sp > 0 && r[l].sp <= r[l].max / 3)), text: (c, r) => `${r.name} is badly damaged. A location at 0 SP cripples it (arms drop weapons, legs slow it, engine stalls it). Repair (1 action) fixes the part but never its Integrity, so pulling back is often better.` },
 ];
 
 export class Wires {

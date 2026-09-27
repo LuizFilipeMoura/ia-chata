@@ -1679,7 +1679,7 @@ export function beaconMultiplier(round, suddenDeath = false) {
 // every round). The lit beacon pays a flat CYCLE_BEACON_VP at Recovery to the
 // side with a Rig that planted a flag on it (Plant Flag) and no enemy Rig within
 // 2". room.game.beaconRules = "classic" keeps the old per-marker scoring
-// (training lessons, A/B baselines). ⚙ TUNING: 4 VP won the 3/4/5 sweep.
+// (A/B baselines and a few engine tests). ⚙ TUNING: 4 VP won the 3/4/5 sweep.
 export const CYCLE_BEACON_VP = 4;
 const cycleOn = (room) => room.game.beaconRules !== "classic";
 // Tuning (room.game.beaconTuning): `vp` overrides the lit beacon's value;
@@ -4959,7 +4959,6 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.game.sides.find((s) => s.id === "b").bot = sc.enemyBot || "dummy";
       room.game.sides.find((s) => s.id === "a").bot = null;
       room.training = String(a.id);
-      room.game.beaconRules = "classic"; // the "Claim a beacon" lesson predates Plant Flag
       startGameSeeded(room, sc.first || "a");
       // The Answer token is only taught in its own lesson.
       if (!sc.first) { room.game.answerTokens = { a: 0, b: 0 }; room.game.gritTokens = { a: 0, b: 0 }; room.game.pendingAnswer = null; }

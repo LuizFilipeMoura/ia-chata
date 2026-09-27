@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createRoom, applyCommand, lastRejectionReason } from "./game-state.js";
+import { createRoom, applyCommand, lastRejectionReason, heatMeter, beaconTuning, isPlanted } from "./game-state.js";
 import { driveBots } from "./bot/index.js";
 import { SCENARIO_IDS } from "./scenarios.js";
 
@@ -22,6 +22,7 @@ test("every scenario builds a started digital room with fixed positions", () => 
     assert.equal(room.mode, "digital");
     assert.ok(room.rigs.every((r) => r.pos && typeof r.facing === "number"));
     assert.equal(room.training, id);
+    assert.notEqual(room.game.beaconRules, "classic", `${id} must play the live (cycling) beacon rule`);
   }
 });
 
@@ -71,10 +72,64 @@ test("dummy bot ends its turn without acting", () => {
   assert.ok(!kinds(room).includes("attack"));
 });
 
-test("heat: the rig starts hot and no Answer token outside its lesson", () => {
-  const room = build("heat");
-  assert.equal(room.rigs[0].engine.heat, 5);
-  assert.equal(room.game.pendingAnswer, null);
+// The heat lesson's script: Attack, Reload, Attack puts Copper past capacity,
+// then Shut Down with the one action left vents it back under, so the
+// "Shut Down instead of risking the roll" step is true whatever the dice do.
+test("heat: Attack, Reload, Attack goes past capacity; Shut Down with the last action gets back under (no overheat roll)", () => {
+  for (const dice of [() => 0, () => 0.5, () => 0.99]) {
+    const room = build("heat");
+    const me = room.rigs[0];
+    assert.ok(!heatMeter(me).over, "Copper starts under capacity");
+    applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+    act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, { random: dice });
+    assert.ok(!heatMeter(me).over, "one shot must not put Copper over yet");
+    act(room, { action: "reload" }, { random: dice });
+    act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, { random: dice });
+    assert.ok(heatMeter(me).over > 0, `the second shot must put Copper past capacity (heat ${me.engine.heat})`);
+    const before = room.game.resolutions.length;
+    act(room, { action: "shutdown" }, { random: dice });
+    assert.ok(room.game.resolutions.length > before || me.activated, lastRejectionReason(room));
+    assert.ok(!room.game.resolutions.slice(before).some((r) => r.kind === "overheat"), "Shut Down must avoid the overheat roll");
+  }
+  assert.equal(build("heat").game.pendingAnswer, null, "no Answer token outside its lesson");
+});
+
+// The beacon lesson's script under the cycling rule: round 1 is dark, plant
+// on the Next beacon, then stand still (Shut Down) in round 2 while it's lit.
+test("beacon: plant on the Next beacon in round 1, stand still, the lit beacon pays at the end of round 2", () => {
+  const room = build("beacon");
+  assert.notEqual(room.game.beaconRules, "classic");
+  assert.equal(room.game.beacons?.lit, null, "round 1 is dark");
+  assert.equal(room.game.beacons?.next, 0, "the lesson's one marker is Next");
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "move", dest: { x: 25.5, y: 18 }, facing: 0 });
+  act(room, { action: "plantflag" });
+  assert.ok(isPlanted(room.rigs[0], 0), lastRejectionReason(room));
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Copper" } }, { side: "a" });
+  driveBots(room);
+  assert.equal(room.game.round, 2);
+  assert.equal(room.game.sides[0].vp, 0, "a dark round scores nothing");
+  assert.equal(room.game.beacons.lit, 0, "the Next beacon lit");
+  assert.ok(isPlanted(room.rigs[0], 0), "the flag survives the rotation");
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "shutdown" });
+  driveBots(room);
+  assert.equal(room.game.sides[0].vp, beaconTuning(room).vp);
+});
+
+test("beacon: moving after planting pulls the flag, and the lit beacon pays nothing", () => {
+  const room = build("beacon");
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "move", dest: { x: 25.5, y: 18 }, facing: 0 });
+  act(room, { action: "plantflag" });
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Copper" } }, { side: "a" });
+  driveBots(room);
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "move", dest: { x: 26, y: 18 }, facing: 0 });
+  assert.ok(!isPlanted(room.rigs[0], 0));
+  applyCommand(room, { verb: "endactivation", attrs: { name: "Copper" } }, { side: "a" });
+  driveBots(room);
+  assert.equal(room.game.sides[0].vp, 0);
 });
 
 test("reactions: enemy goes first and you hold the Answer token", () => {
@@ -186,4 +241,33 @@ test("keywords: after the front shot, one Sprint reaches the side and the Mini G
   assert.deepEqual(me.pos, dest, lastRejectionReason());
   act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, HIT);
   assert.match(arcHit(room), /side arc/, lastRejectionReason());
+});
+
+test("cover: after the covered shot, one Sprint south reaches a clean angle", async () => {
+  const { deriveAttackGeometry } = await import("./game-state.js");
+  const room = build("cover");
+  const [me, dummy] = room.rigs;
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, HIT);
+  const dest = { x: 11, y: 24 };
+  act(room, { action: "sprint", dest, facing: faceFrom(dest, dummy.pos) });
+  assert.deepEqual(me.pos, dest, lastRejectionReason());
+  assert.equal(deriveAttackGeometry(room, me, dummy).cover, 0);
+  act(room, { action: "reload" });
+  act(room, { action: "fire", weapon: "longRange", target: "Dummy" }, HIT);
+  const hit = room.game.resolutions.filter((r) => r.kind === "attack").at(-1).breakdown.steps.find((s) => s.kind === "hit");
+  assert.ok(!(hit.terms || []).some((t) => /cover/.test(t.label) && t.value), JSON.stringify(hit.terms));
+});
+
+test("anatomy: wounds on a broken Engine tear extra Integrity instead of destroying the rig", () => {
+  const room = build("anatomy");
+  const dummy = room.rigs.find((r) => r.name === "Dummy");
+  dummy.engine.sp = 0;
+  const before = dummy.integrity;
+  applyCommand(room, { verb: "activate", attrs: { name: "Copper" } }, { side: "a" });
+  act(room, { action: "aimed", weapon: "longRange", target: "Dummy", loc: "engine" }, HIT);
+  const b = room.game.resolutions.filter((r) => r.kind === "attack").at(-1).breakdown;
+  assert.ok(b.sp > 0, JSON.stringify(b.steps));
+  assert.equal(dummy.destroyed, false);
+  assert.ok(before - dummy.integrity > b.sp, `lost ${before - dummy.integrity} Integrity for ${b.sp} damage on a broken Engine`);
 });
