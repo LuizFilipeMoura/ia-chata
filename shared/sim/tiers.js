@@ -12,6 +12,18 @@ import { PRESETS } from "../bot/score.js";
 
 export const TIER_NAMES = ["easy", "normal", "hard"];
 
+// Class makeup of a squad (counts per weight class), read off CHASSIS. Used
+// to build a mirrored bot squad for a challenger whose composition isn't the
+// GA's default (evolve-meta.mjs runs with compositions "all").
+export function compositionOf(squad) {
+  const comp = {};
+  for (const u of squad) {
+    const c = CHASSIS.find((x) => x.id === u.chassis);
+    if (c) comp[c.class] = (comp[c.class] || 0) + 1;
+  }
+  return comp;
+}
+
 export function tierSquad(tier, avoid = [], rnd = Math.random, composition = DEFAULT_COMPOSITION) {
   const squad = [];
   const rank = (id) => { const i = META.chassisRank.indexOf(id); return i < 0 ? 99 : i; };
@@ -42,7 +54,11 @@ export function calibrationJobs(tier, { challengers, games = 12, seed = 77 } = {
     // Reference "average player": a random legal build flown by a competent,
     // unhurried pilot (balanced weights, no blunders).
     const g = challengers ? challengers[n % challengers.length] : { ...randomGenome(rnd), weights: PRESETS.balanced };
-    const bot = tierSquad(tier, g.squad.map((u) => u.chassis), rnd);
+    // Mirror the challenger's own class makeup, not the GA's default: a
+    // challenger genome bred under compositions "all" may run 2 mediums + 1
+    // light, or 3 lights, and the bot squad must match or the room refuses
+    // to ready ("Both sides must field a mirrored composition").
+    const bot = tierSquad(tier, g.squad.map((u) => u.chassis), rnd, compositionOf(g.squad));
     const botA = n % 2 === 1;
     jobs.push({
       squads: botA ? { a: bot, b: g.squad } : { a: g.squad, b: bot },

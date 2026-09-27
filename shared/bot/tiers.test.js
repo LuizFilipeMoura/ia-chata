@@ -5,7 +5,7 @@ import { chooseAction } from "./index.js";
 import { PRESETS, TIERS } from "./score.js";
 import { META } from "./meta.js";
 import { playMatch, mulberry32 } from "../sim/match.js";
-import { tierSquad } from "../sim/tiers.js";
+import { tierSquad, calibrationJobs } from "../sim/tiers.js";
 
 // Human commissions one medium + one light, flags side B as a bot of `tier`, readies.
 function vsBot(tier) {
@@ -66,6 +66,25 @@ test("chooseAction returns null for a rig that isn't holding the floor", () => {
   const rig = room.rigs.find((r) => r.owner === "a");
   room.game.turn = { side: "a", activeRigId: null, actionsUsed: 0, actionsMax: 3 };
   assert.equal(chooseAction(room, rig, PRESETS.normal), null);
+});
+
+test("calibrationJobs mirrors a challenger's own composition, not the GA default", () => {
+  // GA runs bred under compositions "all" can hand back a 2-medium/1-light or
+  // 3-light genome. The bot squad it's paired against must match that makeup
+  // (sidesAtParity gate) or the sim room refuses to start.
+  const classOf = (id) => CHASSIS.find((c) => c.id === id).class;
+  const challenger = {
+    squad: [
+      { chassis: "medium-lance-mortar" }, { chassis: "medium-shield-siege" }, { chassis: "light-claw-autocannon" },
+    ],
+    weights: PRESETS.balanced,
+  };
+  const jobs = calibrationJobs("hard", { challengers: [challenger], games: 1 });
+  const bot = jobs[0].squads[jobs[0].botSide];
+  const counts = (squad) => squad.reduce((m, u) => { const c = classOf(u.chassis); m[c] = (m[c] || 0) + 1; return m; }, {});
+  assert.deepEqual(counts(bot), { medium: 2, light: 1 }, "bot squad mirrors the challenger's 2M1L makeup, not the default 1M2L");
+  const result = playMatch({ squads: jobs[0].squads, weights: jobs[0].weights, seed: jobs[0].seed });
+  assert.ok(result.winner !== undefined, "mirrored composition, the room actually plays a match");
 });
 
 test("resizing the table in a digital room scatters only digital terrain", async () => {

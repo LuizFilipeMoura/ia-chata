@@ -5,98 +5,104 @@
 // commissioning) and bot/score.js (weights), so it must not import either.
 export const META = {
   "weights": {
-    "vp": 5.97,
-    "priority": 2.06,
-    "damage": 0.43,
-    "threat": 0.27,
-    "heat": 0.54,
-    "fragile": 0.24,
-    "tactics": 0.7
+    "vp": 9.89,
+    "priority": 1.86,
+    "damage": 0.25,
+    "threat": 0.32,
+    "heat": 0.5,
+    "fragile": 0.34,
+    "tactics": 0.83,
+    "b_move": 0.25,
+    "b_sprint": 0.02,
+    "b_fire": 0.26,
+    "b_aimed": -0.23,
+    "b_prepare": -0.28,
+    "b_repair": 0.22,
+    "b_shutdown": -0.12,
+    "b_special": 0.23,
+    "b_plant": 0.01
   },
   "builds": {
-    "medium-crossbow-talon": {
-      "longRangeUpgrade": "pinning-bolt",
-      "meleeUpgrade": "exploit-wound",
-      "equipment": "servo-actuators",
-      "equipmentUpgrade": "reinforced-servos",
-      "score": 1.564
+    "medium-shield-siege": {
+      "longRangeUpgrade": "reinforced-head",
+      "meleeUpgrade": "tower-shield",
+      "equipment": "targeting-computer",
+      "equipmentUpgrade": "predictive-tracking",
+      "score": 2.078
     },
-    "light-harpoon-anchor": {
-      "longRangeUpgrade": "taut-cable",
-      "meleeUpgrade": "fluked-head",
-      "equipment": "field-repair-suite",
-      "equipmentUpgrade": "nanite-swarm",
-      "score": 1.348
+    "medium-sniper-chainsaw": {
+      "longRangeUpgrade": "enfilade",
+      "meleeUpgrade": "bloodletter",
+      "equipment": "radiator-array",
+      "equipmentUpgrade": "twin-radiators",
+      "score": 2.036
     },
     "light-missile-flamethrower": {
-      "longRangeUpgrade": "swarm-warheads",
-      "meleeUpgrade": "sticky-fuel",
-      "equipment": "field-repair-suite",
-      "equipmentUpgrade": "master-toolkit",
-      "score": 1.679
+      "longRangeUpgrade": "shaped-charges",
+      "meleeUpgrade": "conflagration",
+      "equipment": "ablative-plating",
+      "equipmentUpgrade": "reinforced-plating",
+      "score": 2.055
+    },
+    "light-harpoon-anchor": {
+      "longRangeUpgrade": "barbed-head",
+      "meleeUpgrade": "ground-anchor",
+      "equipment": "servo-actuators",
+      "equipmentUpgrade": "reinforced-servos",
+      "score": 2.061
+    },
+    "medium-steam-piston": {
+      "longRangeUpgrade": "high-pressure-valve",
+      "meleeUpgrade": "follow-through",
+      "equipment": "targeting-computer",
+      "equipmentUpgrade": "predictive-tracking",
+      "score": 2.104
+    },
+    "medium-flare-bayonet": {
+      "longRangeUpgrade": "stripping-flare",
+      "meleeUpgrade": "fixed-bayonet",
+      "equipment": "ablative-plating",
+      "equipmentUpgrade": "ablative-cascade",
+      "score": 0.5
     },
     "medium-lance-mortar": {
       "longRangeUpgrade": "cluster-shells",
-      "meleeUpgrade": "skewer",
-      "equipment": "field-repair-suite",
-      "equipmentUpgrade": "battlefield-triage",
-      "score": 1.638
-    },
-    "light-rivet-pressureclaw": {
-      "longRangeUpgrade": "rapid-feed",
-      "meleeUpgrade": "hardened-jaws",
+      "meleeUpgrade": "couched-reach",
       "equipment": "servo-actuators",
       "equipmentUpgrade": "grapnel-launcher",
-      "score": 1.912
+      "score": 0.768
     },
-    "medium-shield-siege": {
-      "longRangeUpgrade": "breaching-round",
-      "meleeUpgrade": "tower-shield",
-      "equipment": "targeting-computer",
-      "equipmentUpgrade": "fire-solution-lock",
-      "score": 0.93
-    },
-    "light-saw-minigun": {
-      "longRangeUpgrade": "suppression-lock",
-      "meleeUpgrade": "sunder",
-      "equipment": "reactive-plating",
-      "equipmentUpgrade": "angled-plates",
-      "score": 1.208
-    },
-    "light-claw-autocannon": {
-      "longRangeUpgrade": "depleted-core",
-      "meleeUpgrade": "breach-grip",
-      "equipment": "targeting-computer",
-      "equipmentUpgrade": "ballistic-processor",
-      "score": 1.343
-    },
-    "light-sword-arc": {
-      "longRangeUpgrade": "systems-overload",
-      "meleeUpgrade": "duelist-balance",
-      "equipment": "blast-furnace-core",
-      "equipmentUpgrade": "meltdown-protocol",
-      "score": 1.539
+    "medium-crossbow-talon": {
+      "longRangeUpgrade": "steady-aim",
+      "meleeUpgrade": "honed-talons",
+      "equipment": "servo-actuators",
+      "equipmentUpgrade": "kickstart-pistons",
+      "score": 0.5
     },
     "light-wreckingball-double": {
-      "longRangeUpgrade": "pinning-burst",
-      "meleeUpgrade": "momentum-swing",
-      "equipment": "reactive-plating",
-      "equipmentUpgrade": "chaff-burst",
-      "score": 1.585
+      "longRangeUpgrade": "gyro-mount",
+      "meleeUpgrade": "haymaker",
+      "equipment": "radiator-array",
+      "equipmentUpgrade": "twin-radiators",
+      "score": 0.958
     }
   },
   "chassisRank": [
-    "medium-crossbow-talon",
-    "light-missile-flamethrower",
-    "light-harpoon-anchor",
-    "light-rivet-pressureclaw",
     "medium-sniper-chainsaw",
-    "medium-lance-mortar",
+    "medium-shield-siege",
+    "light-missile-flamethrower",
+    "medium-steam-piston",
+    "medium-tesla-shockglove",
+    "light-harpoon-anchor",
     "light-claw-autocannon",
-    "light-wreckingball-double",
     "light-sword-arc",
+    "light-rivet-pressureclaw",
     "light-saw-minigun",
-    "medium-shield-siege"
+    "medium-lance-mortar",
+    "light-wreckingball-double",
+    "medium-flare-bayonet",
+    "medium-crossbow-talon"
   ],
-  "generatedAt": "2026-09-24T17:34:09.763Z"
+  "generatedAt": "2026-09-27T15:04:01.455Z",
+  "rulesHash": "1988cebcad92"
 };
