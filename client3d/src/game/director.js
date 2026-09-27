@@ -688,6 +688,14 @@ export class Director {
         this.onScore(l);
       }
       await wait(650 / this.speed);
+    } else if (l.kind === "plant") {
+      // Plant Flag: the beacon flares in the planter's colour and the pilot calls it.
+      const col = l.actor === "a" ? 0x5fd3c0 : 0xe0533d;
+      this.world.pulseObjective(l.objective, col);
+      fx.text(new THREE.Vector3(l.x ?? 0, 4.2, l.y ?? 0), "FLAG PLANTED", l.actor === "a" ? "#5fd3c0" : "#e0533d");
+      this.sound(() => sfx.clank());
+      const m = this.mechs.get(l.rigId); if (m) this.bark(m, "move");
+      await wait(450 / this.speed);
     } else if (l.kind === "crate") {
       // Salvage Run: the crate is hauled off: a golden burst and the VP.
       const at = new THREE.Vector3(l.x ?? 0, 1.1, l.y ?? 0);

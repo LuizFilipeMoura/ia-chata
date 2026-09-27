@@ -52,7 +52,7 @@ export class Replay {
     hudRoot.append(this.controls, this.brain);
     this.renderBrain(null);
     this.minimap = new Minimap(hudRoot, world);
-    this.minimap.set(replay.field, replay.objectives, f0.rigs, null);
+    this.minimap.set(replay.field, replay.objectives, f0.rigs, null, null, f0.beacons);
     this.plates = new Nameplates(hudRoot, world, this.director);
     this.plates.set(this.stateLike(f0).rigs);
     this.renderControls();
@@ -69,7 +69,7 @@ export class Replay {
       const weapons = r.unit ? { unit: r.unit } : { longRange: ch.longRange, melee: ch.melee };
       return { ...r, ...parts, weightClass: ch.class, weapons, engine: { heat: r.heat, ...(parts.engine || {}) } };
     });
-    return { rigs, game: { round: f.round, phase: f.phase, turn: f.turn, sides: [{ id: "a", vp: f.vp[0], bot: "A" }, { id: "b", vp: f.vp[1], bot: "B" }], priorityTargets: {} } };
+    return { rigs, game: { round: f.round, phase: f.phase, turn: f.turn, beacons: f.beacons ?? null, sides: [{ id: "a", vp: f.vp[0], bot: "A" }, { id: "b", vp: f.vp[1], bot: "B" }], priorityTargets: {} } };
   }
 
   async loop() {
@@ -82,7 +82,7 @@ export class Replay {
       const s = this.stateLike(f);
       this.hud.top(s, "a"); this.hud.roster(s, "a", f.turn?.activeRigId, (id) => this.inspect(id));
       this.renderBrain(f.thought);
-      this.minimap.set(this.replay.field, this.replay.objectives, f.rigs, f.turn?.activeRigId);
+      this.minimap.set(this.replay.field, this.replay.objectives, f.rigs, f.turn?.activeRigId, null, f.beacons);
       this.plates.set(s.rigs, { activeId: f.turn?.activeRigId });
       const r = f.turn?.activeRigId != null ? f.rigs.find((x) => x.id === f.turn.activeRigId) : null;
       if (r?.pos && this.follow) this.world.focus(r.pos.x, r.pos.y);

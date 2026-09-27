@@ -1,6 +1,6 @@
 // Objective models. A 1 VP objective is a fuel depot, the 2 VP centre is a
 // refinery cracking tower. Who holds it reads off a pennant and a lamp that
-// take `pylonMat`'s emissive colour (world.setObjectiveColors paints it:
+// take `pylonMat`'s emissive colour (world.setObjectiveControl paints it:
 // gold when unclaimed, the holder's colour when held). Each builder returns
 // { pylonMat, gem, light, anim, noBob } for World: `gem` is the lamp glass
 // (it swells on the round-end payout pulse), `anim(dt, now)` runs per frame.

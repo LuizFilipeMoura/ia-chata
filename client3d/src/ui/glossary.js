@@ -53,7 +53,7 @@ export const GLOSSARY = {
   "capacity": "Heat a rig can hold safely: light 6, medium 5. Ending a turn above it risks an overheat roll.",
   "Shut Down": "Ends the activation and vents heat instead of risking the overheat roll.",
   "overheat": "Ending a turn past heat capacity: roll for effects, from nothing to engine damage.",
-  "beacon": "Salvage objective. Holding one alone at round end scores its victory points.",
+  "beacon": "Only one beacon scores each round. Round 1 is dark; after that the beacon marked Next lights. Plant Flag on it (1 action, within 2\") and hold it with no enemy within 2\" at round end to score.",
   "victory points": "Score. Most after the last round wins (10 in a standard battle, 6 to 8 in a campaign contract); wrecking the whole enemy squad wins outright.",
   "activation": "One rig's turn: up to 3 actions, then play passes to the other side.",
   "actions": "What a rig does in its activation: Move, Attack, Prepare... usually 3, each costs heat.",

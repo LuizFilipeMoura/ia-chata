@@ -17,7 +17,8 @@ export class Minimap {
   }
 
   // campaign (optional): publicState's state.campaign: exit zone + commander.
-  set(field, objectives, rigs, activeId, campaign = null) { this.field = field; this.objectives = objectives || []; this.rigs = rigs || []; this.activeId = activeId; this.campaign = campaign; }
+  // beacons (optional): room.game.beacons ({ lit, next }), cycling-beacon rooms only.
+  set(field, objectives, rigs, activeId, campaign = null, beacons = null) { this.field = field; this.objectives = objectives || []; this.rigs = rigs || []; this.activeId = activeId; this.campaign = campaign; this.beacons = beacons; }
 
   draw() {
     const f = this.field; if (!f) return;
@@ -39,10 +40,18 @@ export class Minimap {
       g.fillStyle = `rgba(79,255,200,${pulse})`; g.beginPath(); g.moveTo(ex.x * sx, ex.y * sy); g.arc(ex.x * sx, ex.y * sy, ex.r * sx, 0, 7); g.fill();
       g.strokeStyle = "#4fffc8"; g.lineWidth = 1.5; g.beginPath(); g.arc(ex.x * sx, ex.y * sy, ex.r * sx, 0, 7); g.stroke();
     }
-    for (const o of this.objectives) {
-      if (o.crate) { g.fillStyle = "#c98a3a"; g.strokeStyle = "#ffd35a"; g.lineWidth = 1; g.fillRect(o.x * sx - 3, o.y * sy - 3, 6, 6); g.strokeRect(o.x * sx - 3, o.y * sy - 3, 6, 6); continue; }
-      g.strokeStyle = o.relay ? "#5fd3c0" : "#ffd35a"; g.lineWidth = 2; g.beginPath(); g.arc(o.x * sx, o.y * sy, 2 * sx, 0, 7); g.stroke();
-    }
+    this.objectives.forEach((o, i) => {
+      if (o.crate) { g.fillStyle = "#c98a3a"; g.strokeStyle = "#ffd35a"; g.lineWidth = 1; g.fillRect(o.x * sx - 3, o.y * sy - 3, 6, 6); g.strokeRect(o.x * sx - 3, o.y * sy - 3, 6, 6); return; }
+      // Cycling beacons: lit fills gold, Next stays a gold ring, dark dims to 40%.
+      const bz = this.beacons;
+      const state = bz ? (bz.lit === i ? "lit" : bz.next === i ? "next" : "dark") : null;
+      g.globalAlpha = state === "dark" ? 0.4 : 1;
+      g.strokeStyle = o.relay ? "#5fd3c0" : "#ffd35a"; g.lineWidth = 2;
+      g.beginPath(); g.arc(o.x * sx, o.y * sy, 2 * sx, 0, 7);
+      if (state === "lit") { g.fillStyle = "#ffd35a"; g.fill(); }
+      g.stroke();
+      g.globalAlpha = 1;
+    });
     // Live mech positions (animated) when the director has them.
     for (const r of this.rigs) {
       const m = this.world.mechRoots?.find((x) => x.userData.mechId === r.id);

@@ -12,9 +12,11 @@ import { chooseAction } from "/shared/bot/index.js";
 import { scoreCandidate, scoreParts, PRESETS, threatsAt } from "/shared/bot/score.js";
 import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
 import { findPath, buildGrid, isStopBlocked, walkPath } from "/shared/pathfind.js";
-import { terrainPolygons, radiusOf, controlsObjective, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
+import { terrainPolygons, radiusOf, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
 import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
+import { markerName } from "/shared/field.js";
+import { beaconStates } from "../scene/beacon-state.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { reactionCard, rigPortrait } from "../ui/reactions.js";
@@ -33,7 +35,7 @@ import { inSweetBand } from "/shared/combat.js";
 import { weaponName, rangedProfile, rangedLoaded, kitLine, partsOf, isRig } from "./units.js";
 
 const DEG = Math.PI / 180;
-const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract" };
+const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract", plantflag: "beacon" };
 const AIM_BLUE = 0x5aa8ff;
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
@@ -61,6 +63,7 @@ const HELP = {
   cryo: "Spend banked cryo. Free, no action: −2 heat each, and +1 Penetration each on your next attack.",
   meltdown: "Spend meltdown charge. Free, no action: +N Penetration on your attacks this activation, or a burst of +N heat on every enemy within 4\" (rim).",
   nanite: `Seed a nanite stack on yourself or an ally within ${NANITE_REACH}" (rim). It heals 1 SP on one location each Recovery (max 3 per location). Heat Capacity −1 on the host while it lives.`,
+  plantflag: `Plant Flag: stake the lit beacon, or the Next one, from within 2". 1 action, no heat. The flag holds until this rig is moved; at round end the lit beacon pays its VP to your side if no enemy is within 2".`,
 };
 // Every action's own rules text: the table above, else the equipment active's.
 const EQUIP_TEXT = Object.fromEntries(Object.values(EQUIPMENT).map((e) => [e.active.key, e.active.text]));
@@ -370,6 +373,13 @@ export class LiveMatch {
       if (ready.length) this.world.glide(ready.reduce((a, r) => a + r.pos.x, 0) / ready.length, ready.reduce((a, r) => a + r.pos.y, 0) / ready.length);
     }
     this.drawThreat();
+    // Cycling beacons: announce the lit and Next beacon when a round turns.
+    const bz = g.beacons;
+    const key = bz ? `${g.round}:${bz.lit}:${bz.next}` : null;
+    if (bz && key !== this.lastBeaconKey) {
+      if (this.lastBeaconKey != null) this.hud.banner(bz.lit == null ? `BEACONS DARK · NEXT: ${markerName(g.objectives, bz.next).toUpperCase()}` : `BEACON LIT: ${markerName(g.objectives, bz.lit).toUpperCase()} · NEXT: ${markerName(g.objectives, bz.next).toUpperCase()}`, "grit");
+      this.lastBeaconKey = key;
+    }
     // Escalation: beacons pay more from rounds 4 and 8. Announce the step up.
     const mult = g.beaconMultiplier || 1;
     if (mult !== this.lastMult) {
@@ -381,16 +391,12 @@ export class LiveMatch {
     this.hud.mission(this.state, this.side);
     this.world.syncObjectives(g.objectives || []);
     const cp = this.state.campaign;
-    this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId, cp);
+    this.minimap.set(this.state.field, g.objectives, this.state.rigs, g.turn?.activeRigId, cp, g.beacons);
     this.plates.set(this.state.rigs, { activeId: g.turn?.activeRigId, priorityIds: Object.values(g.priorityTargets || {}), commanderId: cp?.commanderId ?? null, commanderTitle: commanderTitle(cp) });
     this.wires?.check();
     this.hud.roster(this.state, this.side, this.selected, (id) => this.select(id));
     // Objective control tint.
-    const ctrl = (g.objectives || []).map((m) => {
-      const who = new Set(this.state.rigs.filter((r) => !r.destroyed && r.pos && controlsObjective(spatial(r), m)).map((r) => r.owner));
-      return who.size === 2 ? "contested" : who.size ? [...who][0] : null;
-    });
-    this.world.setObjectiveControl(ctrl);
+    this.world.setObjectiveControl(beaconStates(g.objectives || [], g.beacons || null, this.state.rigs.map((r) => ({ ...r, radius: spatial(r).radius }))));
     for (const m of this.director.mechs.values()) {
       const r = this.rig(m.id);
       const active = g.turn?.activeRigId === m.id;
@@ -449,7 +455,7 @@ export class LiveMatch {
     const cap = HEAT_CAPACITY[rig.weightClass] ?? 6;
     const turn = this.previewRoom(rig).game.turn;
     // Grapnel Launcher: one active, two ways to fire it.
-    const acts = availableActions(rig, turn, g.round).flatMap((a) => a.grapnel
+    const acts = availableActions(rig, turn, g.round, g.beacons ? { beacons: g.beacons, objectives: g.objectives || [], digital: true } : null).flatMap((a) => a.grapnel
       ? [{ ...a, key: "grapnel-yank", label: "Grapnel Yank" }, { ...a, key: "grapnel-reel", label: "Grapnel Reel" }]
       : [a]);
     const extra = [];

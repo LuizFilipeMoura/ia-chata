@@ -750,8 +750,8 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
     const cmd = node.enemy.find((u) => u.commander);
     const cmdName = cmd ? `${cmd.name} (${chassisOf(cmd.chassis).label})` : "the Commander";
     switch (node.type) {
-      case "beacons": return `Hold the beacons. The side with more VP after round ${R} wins; kills score too.`;
-      case "skirmish": return `Wipe out the enemy squad, or out-kill them by the end of round ${R}.`;
+      case "beacons": return `Plant on the lit beacon each round. More VP after round ${R} wins; kills score too.`;
+      case "skirmish": return `One lit beacon that moves every round, and kills score. More VP after round ${R} wins, or wipe them out.`;
       case "assassinate": return `Wreck the marked Commander, ${cmdName}, before round ${R} ends. It fields ×${cmd?.spMult ?? 1.25} SP and its best build. Nothing else counts.`;
       case "breakthrough": return `Punch through: Extract ${Math.min(node.extractGoal, run.roster.filter((r) => !r.wrecked).length)} rig(s) from the 4" exit band on the enemy's edge before round ${R} ends.`;
       case "laststand": return `Keep at least one rig standing to the end of round ${R}. Enemy reinforcements drop in at the start of rounds ${(node.reinforcements || []).map((r) => r.round).join(" and ")}.`;

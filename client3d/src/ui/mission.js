@@ -66,10 +66,8 @@ export function missionPanel(state, side, meta = null) {
     const mine = c.crates?.[side] || 0, theirs = c.crates?.[side === "a" ? "b" : "a"] || 0;
     objective = `End an activation within 2" of a crate to haul it (+2 VP). More VP after round ${R} wins.`;
     rows.push(el("div", { class: "ms-row" }, icon("crate"), el("b", {}, "Crates: "), el("span", { class: "c-a" }, `you ${mine}`), " · ", el("span", { class: "c-b" }, `enemy ${theirs}`), el("span", { class: "ms-num" }, `(${left} left)`)));
-  } else if (c.type === "skirmish") {
-    objective = `Hold the centre beacon and trade kills: more VP after round ${R} wins, or wipe them out.`;
-  } else if (c.type === "beacons") {
-    objective = `Hold the beacons: more VP after round ${R} wins. Kills score too.`;
+  } else if (c.type === "skirmish" || c.type === "beacons") {
+    objective = `One beacon is lit each round: plant on it and hold it. More VP after round ${R} wins${c.type === "skirmish" ? ", or wipe them out" : ""}.`;
   }
   return el("div", { class: `hud-mission t-${c.type}` },
     el("div", { class: "ms-head" }, icon(CONTRACT_ICON[c.type] || "beacon"), el("b", {}, t.name), meta?.faction ? el("span", { class: "ms-fac" }, `vs ${meta.faction}`) : null,

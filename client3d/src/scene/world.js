@@ -655,12 +655,15 @@ export class World {
     }
   }
 
-  // Tint each objective by who controls it: "a" | "b" | "contested" | null.
+  // Tint and light each objective from beaconStates(): holder colour on a lit
+  // or next beacon, dark beacons dimmed with the lamp nearly off, Next pulsing.
   setObjectiveControl(list) {
     const col = { a: 0x5fd3c0, b: 0xe0533d, contested: 0xffffff };
     this.objectiveMeshes.forEach((m, i) => {
-      const c = col[list[i]] ?? (m.kind === "relay" ? 0x5fd3c0 : 0xffd35a);
+      const s = list[i] || { state: "classic", holder: null };
+      const c = col[s.holder] ?? (m.kind === "relay" ? 0x5fd3c0 : 0xffd35a);
       m.ringMat.color.setHex(c); m.pylonMat.emissive.setHex(c); m.light.color.setHex(c);
+      m.state = s.state;
     });
   }
 
@@ -866,6 +869,11 @@ export class World {
       if (m.dish) { m.dish.rotation.y += dt * 0.8; m.halo.scale.setScalar(1 + 0.25 * Math.sin(now * 4)); m.pylonMat.emissiveIntensity = 1.1 + 0.9 * Math.max(0, Math.sin(now * 5)); }
       if (m.body) m.pylonMat.emissiveIntensity = 1.1 + 0.6 * Math.sin(now * 3 + i);
       m.anim?.(dt, now);
+      if (!m.pulse && m.state && m.state !== "classic") {
+        const base = 6 + ((m.mult || 1) - 1) * 5;
+        m.light.intensity = m.state === "lit" ? base : m.state === "next" ? base * (0.35 + 0.3 * Math.sin(now * 4)) : base * 0.08;
+        m.pylonMat.emissiveIntensity = m.state === "dark" ? 0.15 : m.state === "next" ? 0.6 + 0.4 * Math.sin(now * 4) : 1.2;
+      }
       if (m.pulse) {
         const p = m.pulse; p.t += dt;
         const k = Math.max(0, 1 - p.t / 1.6);

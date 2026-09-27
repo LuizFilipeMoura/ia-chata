@@ -5,7 +5,7 @@
 // off in Settings.
 import { el } from "./dom.js";
 import { settings } from "../settings.js";
-import { heatMeter, inExitZone } from "/shared/game-state.js";
+import { heatMeter, inExitZone, isPlanted } from "/shared/game-state.js";
 import { candidatesFor } from "/shared/bot/candidates.js";
 import { controlsObjective } from "/shared/geometry.js";
 import { spatial } from "/shared/game-state.js";
@@ -28,8 +28,18 @@ const WIRES = [
   { id: "engaged", when: (c) => c.rig?.owner === c.side && c.rig?.engagedWith != null, text: () => `Locked in melee! An engaged rig can't Move or Sprint until it Disengages (1 action). Ranged shots suffer while locked.` },
   { id: "out-of-actions", when: (c) => c.turn?.activeRigId === c.rig?.id && c.turn.actionsUsed >= c.turn.actionsMax && c.rig.owner === c.side, text: () => `Out of actions. End the activation and let the enemy move.` },
   { id: "hidden-prep", when: (c) => c.state.rigs.find((r) => r.owner !== c.side && r.preparation?.hidden), text: (c, r) => `${r.name} has a face-down reaction (🛡). Attack it and it may Brace, dodge, or shoot back. Sometimes it's worth hitting something else first.` },
-  { id: "contested", when: (c) => c.contested, text: () => `A beacon is contested: both sides are in range, so nobody scores it. Clear it or out-last them.` },
+  { id: "contested", when: (c) => c.contested, text: () => `An enemy within 2" of the lit beacon: nobody scores it this round.` },
   { id: "escalation", when: (c) => (c.state.game.beaconMultiplier || 1) > 1, text: (c) => `Beacons pay ×${c.state.game.beaconMultiplier} this round, so a late push can overturn an early lead. Don't coast.` },
+  { id: "next-beacon-ready", when: (c) => {
+      const bz = c.state.game.beacons; if (!bz || bz.next == null) return false;
+      const marker = (c.state.game.objectives || [])[bz.next]; if (!marker) return false;
+      return c.state.rigs.some((r) => r.owner === c.side && !r.destroyed && r.pos && controlsObjective(spatial(r), marker) && !isPlanted(r, bz.next));
+    }, text: () => `The Next beacon lights next round: Plant Flag now and it counts once it lights.` },
+  { id: "lit-beacon-unplanted", when: (c) => {
+      const bz = c.state.game.beacons; if (!bz || bz.lit == null) return false;
+      const marker = (c.state.game.objectives || [])[bz.lit]; if (!marker) return false;
+      return c.state.rigs.some((r) => r.owner === c.side && !r.destroyed && r.pos && controlsObjective(spatial(r), marker) && !isPlanted(r, bz.lit));
+    }, text: () => `You're on the lit beacon but haven't planted: it won't score.` },
   { id: "grit", when: (c) => (c.state.game.gritTokens?.[c.side] || 0) > 0, text: () => `You're behind, so HQ sends Grit tokens each round (1 at 2+ VP behind, 2 at 5+, 3 at 8+): a free face-down reaction that's Improved (tougher Brace, surer dodges, harder counter-hits), an upgrade to one you already placed, or keep it to reroll every missed shot on one attack. Kills while you're behind also pay a +2 VP bounty. Use it to break their hold.` },
   { id: "stagger", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && r.staggered), text: (c, r) => `${r.name} is Staggered: a shot rang its armour without doing damage. +1 heat, and −1 Aim on its next attack. Misses aren't wasted, they rattle the target.` },
   // Campaign contracts.
