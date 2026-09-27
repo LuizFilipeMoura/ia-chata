@@ -380,7 +380,7 @@ export class Director {
       const dist = Math.hypot(dx, dy);
       const heading = Math.atan2(dy, dx) * 180 / Math.PI;
       m.targetFacing = heading;
-      this.sound(() => sfx.servo());
+      this.sound(() => sfx.servo(m.chassisDef?.id || m.kind));
       if (Math.random() < 0.5) this.bark(m, "move", { other: this.nearestFoe(m) });
       const w = { m, from, to, t: 0, dur: Math.max(0.35, dist / (m.weightClass === "medium" ? 5 : 7)) * (limping ? 1.6 : 1), facing, resolve, dust: 0 };
       this.walkers.add(w);
@@ -410,7 +410,7 @@ export class Director {
         this.drops.delete(d);
         this.world.fx.burst(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 18, { color: 0x9a8a70, size: 0.8, life: 0.8, spread: 5, additive: false, opacity: 0.6, up: 0.3 });
         this.world.fx.shake = Math.max(this.world.fx.shake, 0.35);
-        this.sound(() => sfx.step(true));
+        this.sound(() => sfx.step(true, m.chassisDef?.id || m.kind));
         d.done?.();
         if (!this.drops.size) setTimeout(() => this.dropDone?.(), 400);
       }
@@ -469,7 +469,7 @@ export class Director {
       w.m.walking = Math.min(1, w.m.walking + dt * 4);
       const stepN = Math.floor(w.m.walkPhase / Math.PI);
       if (stepN !== w.lastStep) {
-        w.lastStep = stepN; this.sound(() => sfx.step(w.m.weightClass === "medium"));
+        w.lastStep = stepN; this.sound(() => sfx.step(w.m.weightClass === "medium", w.m.chassisDef?.id || w.m.kind));
         // The planted foot kicks up a ring of dust; a broken leg grinds sparks.
         const leg = w.m.legs?.[stepN & 1];
         if (leg?.foot) this.world.fx.footfall(leg.foot.getWorldPosition(new THREE.Vector3()).setY(0.05), w.m.weightClass === "medium");
@@ -599,7 +599,7 @@ export class Director {
       const whiff = (p) => { fx.burst(p, 8, { color: 0x8a7a60, size: 0.6, life: 0.7, spread: 2, additive: false, opacity: 0.5, up: 0.5 }); fx.sparks(p, 3, 0xffe0a0, { speed: 4 }); if (p.y < 0.3) fx.decals.add(p, 0.35, "pock"); };
       if (melee) {
         actor.fire("melee");
-        this.sound(() => (actor.melee === "Flamethrower" ? sfx.shot("flame") : sfx.melee(actor.weightClass === "medium")));
+        this.sound(() => sfx.melee(actor.weightClass === "medium", actor.melee));
         const aim = hitCount ? tpos : missPoint(actor.root.position.clone().setY(1.8)).setY(1.2);
         if (actor.melee === "Flamethrower") fx.flame(actor.muzzleWorld("melee"), aim);
         await wait(380 / this.speed);
@@ -614,7 +614,7 @@ export class Director {
         const flights = [];
         for (let i = 0; i < n; i++) {
           actor.fire("longRange");
-          this.sound(() => sfx.shot(kind));
+          this.sound(() => sfx.shot(kind, l.weapon));
           const from = actor.muzzleWorld("longRange");
           const hit = plan[i];
           const end = hit ? struck() : missPoint(from);
@@ -790,7 +790,7 @@ export class Director {
         const a = up(src, 1.8), b = up(to, 1.8);
         fx.beam(a, b, 0x88ddff, 0.45, true); fx.beam(a, b, 0xffffff, 0.25, true);
         fx.sparks(b, 14, 0x9fe8ff); fx.flash(b, 0x66ccff, 30, 8);
-        this.sound(() => sfx.shot("arc"));
+        this.sound(() => sfx.shot("arc", "Tesla Coil"));
       }
       if (to) this.popText(to, 3.6, /friendly fire/.test(l.summary || "") ? "ARC · FRIENDLY" : "ARC", "#9fe8ff");
       await wait(250 / this.speed);

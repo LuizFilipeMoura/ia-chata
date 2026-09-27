@@ -4,6 +4,7 @@
 // Lazily unlocked on the first user gesture (browsers block audio before one).
 import { settings } from "./settings.js";
 import { notes, FORMANTS } from "./voice.js";
+import { TAKES, pickTake, shotRecipe, swingRecipe, CORE, footFor, stepRecipe, servoRecipe } from "./audio-recipes.js";
 let ctx = null, master = null, voices = null, noiseBuf = null;
 const vol = () => settings.get("volume") ?? 0.5;
 const voiceVol = () => settings.get("voiceVolume") ?? 0.35;
@@ -60,53 +61,26 @@ function tone(t, dur, { freq = 440, to, type = "sine", peak = 0.3, attack = 0.00
 // repeated sounds from machine-gunning identically.
 const jit = (v, p = 0.08) => v * (1 + (Math.random() - 0.5) * p * 2);
 
+// Recipes live in audio-recipes.js; `play` hands one the synth kit and a take
+// (never the same take twice in a row per key).
+const kit = { noise, tone, jit, rand: Math.random };
+function play(key, recipe, ...args) {
+  if (!init() || muted) return;
+  recipe(kit, ctx.currentTime, TAKES[pickTake(key)], ...args);
+}
+
 export const sfx = {
-  shot(kind) {
-    if (!init() || muted) return;
-    const t = ctx.currentTime;
-    switch (kind) {
-      case "bullet": noise(t, 0.07, { freq: jit(3000), type: "bandpass", q: 2, peak: 0.35 }); tone(t, 0.05, { freq: jit(180), to: 90, type: "square", peak: 0.1 }); break;
-      case "cannon": noise(t, 0.35, { freq: jit(900), sweepTo: 120, peak: 0.8 }); tone(t, 0.3, { freq: jit(110), to: 40, type: "triangle", peak: 0.5 }); break;
-      case "missile": noise(t, 0.6, { freq: 600, sweepTo: 3000, type: "bandpass", q: 3, peak: 0.3, attack: 0.08 }); break;
-      case "lob": tone(t, 0.25, { freq: jit(160), to: 60, type: "sine", peak: 0.6 }); noise(t, 0.2, { freq: 500, peak: 0.4 }); break;
-      case "rail": tone(t, 0.4, { freq: 2400, to: 300, type: "sawtooth", peak: 0.18 }); noise(t, 0.15, { freq: 5000, type: "highpass", peak: 0.3 }); break;
-      case "arc": for (let i = 0; i < 5; i++) tone(t + i * 0.03, 0.05, { freq: jit(900, 0.5), to: jit(2000, 0.5), type: "sawtooth", peak: 0.12 }); noise(t, 0.25, { freq: 4000, type: "highpass", peak: 0.2 }); break;
-      case "harpoon": case "bolt": noise(t, 0.12, { freq: 2000, type: "bandpass", q: 4, peak: 0.3 }); tone(t, 0.25, { freq: 700, to: 200, type: "triangle", peak: 0.2 }); break;
-      case "rivet": noise(t, 0.05, { freq: 2500, type: "bandpass", q: 6, peak: 0.4 }); tone(t, 0.06, { freq: 1200, type: "square", peak: 0.08 }); break;
-      case "steam": noise(t, 0.7, { freq: 3500, sweepTo: 1200, type: "highpass", peak: 0.45, attack: 0.02 }); tone(t, 0.25, { freq: jit(90), to: 45, type: "triangle", peak: 0.45 }); break;
-      case "flare": tone(t, 0.08, { freq: jit(300), to: 120, type: "square", peak: 0.2 }); noise(t + 0.05, 0.6, { freq: 5000, type: "highpass", peak: 0.18, attack: 0.05 }); break;
-      case "flame": noise(t, 0.9, { freq: 700, type: "bandpass", q: 0.7, peak: 0.45, attack: 0.1 }); break;
-      default: noise(t, 0.08, { freq: 2000, peak: 0.3 });
-    }
-  },
-  melee(heavy = false) {
-    if (!init() || muted) return;
-    const t = ctx.currentTime;
-    noise(t, 0.12, { freq: 1500, sweepTo: 400, type: "bandpass", q: 1, peak: 0.25, attack: 0.04 });
-    tone(t + 0.25, heavy ? 0.4 : 0.25, { freq: jit(heavy ? 90 : 160), to: 40, type: "square", peak: 0.35 });
-    noise(t + 0.25, 0.2, { freq: 3000, type: "highpass", peak: 0.4 });
-  },
-  hit(sp) {
-    if (!init() || muted) return;
-    const t = ctx.currentTime;
-    if (sp <= 0) { tone(t, 0.08, { freq: jit(2200), type: "sine", peak: 0.08 }); return; }
-    noise(t, 0.15 + sp * 0.03, { freq: 2500, sweepTo: 600, type: "bandpass", q: 2, peak: Math.min(0.8, 0.3 + sp * 0.08) });
-    tone(t, 0.2, { freq: jit(300), to: 120, type: "square", peak: 0.12 });
-  },
-  explosion(big = false) {
-    if (!init() || muted) return;
-    const t = ctx.currentTime;
-    noise(t, big ? 1.8 : 0.9, { freq: 1200, sweepTo: 60, peak: 1, attack: 0.01 });
-    tone(t, big ? 1.2 : 0.6, { freq: 70, to: 25, type: "sine", peak: 0.9 });
-  },
-  step(heavy) {
-    if (!init() || muted) return;
+  // A gun going off: its own voice when it has one, else its projectile kind's.
+  shot(kind, weapon) { play(`shot:${weapon || kind}`, shotRecipe(weapon, kind)); },
+  melee(heavy = false, weapon) { play(`melee:${weapon || heavy}`, swingRecipe(weapon, heavy)); },
+  hit(sp) { play(sp <= 0 ? "ping" : "hit", CORE.hit, sp); },
+  explosion(big = false) { play(`boom:${big}`, CORE.explosion, big); },
+  // Footfalls and servos sound like the chassis making them.
+  step(heavy, chassis) {
     const now = performance.now(); if (now - lastStep < 110) return; lastStep = now;
-    const t = ctx.currentTime;
-    tone(t, 0.12, { freq: jit(heavy ? 70 : 110, 0.15), to: 40, type: "triangle", peak: heavy ? 0.35 : 0.2 });
-    noise(t, 0.05, { freq: jit(1800, 0.3), type: "bandpass", q: 5, peak: 0.08 });
+    play(`step:${chassis || heavy}`, (P, t, k) => stepRecipe(P, t, k, footFor(chassis, heavy ? "medium" : "light")));
   },
-  servo() { if (!init() || muted) return; tone(ctx.currentTime, 0.25, { freq: jit(300), to: jit(520), type: "sawtooth", peak: 0.05 }); },
+  servo(chassis) { play(`servo:${chassis}`, (P, t, k) => servoRecipe(P, t, k, footFor(chassis))); },
   overheat(bad) {
     if (!init() || muted) return;
     const t = ctx.currentTime;
@@ -168,13 +142,7 @@ export const sfx = {
     noise(t, 0.08, { freq: 6000, type: "highpass", peak: 0.15 });
   },
   // A part gives way: tearing metal and a heavy clunk.
-  breakPart() {
-    if (!init() || muted) return;
-    const t = ctx.currentTime;
-    noise(t, 0.5, { freq: 3000, sweepTo: 300, type: "bandpass", q: 3, peak: 0.6, attack: 0.01 });
-    tone(t + 0.05, 0.5, { freq: 140, to: 35, type: "square", peak: 0.35 });
-    tone(t + 0.3, 0.2, { freq: 90, to: 50, type: "triangle", peak: 0.3 });
-  },
+  breakPart() { play("break", CORE.breakPart); },
   // Dice tumbling in a tin tray.
   dice(n = 3) {
     if (!init() || muted) return;
@@ -197,12 +165,7 @@ export const sfx = {
   liftoff() { if (!init() || muted) return; const t = ctx.currentTime; noise(t, 2.2, { freq: 250, sweepTo: 2200, type: "bandpass", q: 0.8, peak: 0.4, attack: 0.5 }); tone(t, 2, { freq: 60, to: 140, type: "sawtooth", peak: 0.12, attack: 0.4 }); },
   // ---- Equipment ----
   // Harden: plates slam shut, two heavy clanks and a ring.
-  clank() {
-    if (!init() || muted) return;
-    const t = ctx.currentTime;
-    for (const d of [0, 0.12]) { tone(t + d, 0.18, { freq: jit(180), to: 70, type: "square", peak: 0.25 }); noise(t + d, 0.08, { freq: 2600, type: "bandpass", q: 4, peak: 0.35 }); }
-    tone(t + 0.12, 0.7, { freq: jit(760), to: 720, type: "sine", peak: 0.08 });
-  },
+  clank() { play("clank", CORE.clank); },
   // Purge / steam venting: a long high hiss.
   hiss(long = false) { if (!init() || muted) return; noise(ctx.currentTime, long ? 1.6 : 1.0, { freq: 6000, sweepTo: 2500, type: "highpass", peak: 0.4, attack: 0.03 }); },
   // Jump jets / grapnel yank: a short thruster roar and a landing thump.
@@ -212,7 +175,7 @@ export const sfx = {
     noise(t, 0.8, { freq: 500, sweepTo: 2200, type: "bandpass", q: 0.8, peak: 0.45, attack: 0.05 });
     tone(t, 0.7, { freq: 90, to: 160, type: "sawtooth", peak: 0.08 });
   },
-  land() { if (!init() || muted) return; const t = ctx.currentTime; tone(t, 0.25, { freq: 80, to: 35, type: "triangle", peak: 0.45 }); noise(t, 0.3, { freq: 700, sweepTo: 150, peak: 0.35 }); },
+  land() { play("land", CORE.land); },
   // Grapnel: the hook's crack, then a ratcheting winch.
   grapnel() {
     if (!init() || muted) return;
