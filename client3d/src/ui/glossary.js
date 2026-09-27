@@ -59,7 +59,7 @@ export const GLOSSARY = {
   "beacon": "Only one beacon scores each round. Round 1 is dark; after that the beacon marked Next lights. Plant Flag on it (1 action, within 2\") and hold it with no enemy within 2\" at round end to score.",
   "victory points": `Score: the lit beacon pays ${CYCLE_BEACON_VP} each round; every kill +1 (Priority Target +2 more, +2 bounty while behind, +2 more if their boiler blew). Most after the last round wins (10 in a standard battle, 6 to 8 in a campaign contract); wrecking the whole enemy squad wins outright.`,
   "Plant Flag": "1 action, no heat: stake the lit or Next beacon from within 2\". The flag holds until the rig is moved by anything.",
-  "lit beacon": `The one beacon that scores this round: ${CYCLE_BEACON_VP} VP at round end to a side with a planted flag on it and no enemy within 2".`,
+  "lit beacon": `The one beacon that scores this round: ${CYCLE_BEACON_VP} VP at round end to a side that used Plant Flag on it, with no enemy within 2".`,
   "Priority Target": "One enemy rig HQ marks for you each round (★). Wrecking it pays +2 VP on top of the kill's +1.",
   "activation": "One rig's turn: up to 3 actions, then play passes to the other side.",
   "actions": "What a rig does in its activation: Move, Attack, Prepare... usually 3, each costs heat.",

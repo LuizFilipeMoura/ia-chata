@@ -40,7 +40,7 @@ const WIRES = [
       const bz = c.state.game.beacons; if (!bz || bz.lit == null) return false;
       const marker = (c.state.game.objectives || [])[bz.lit]; if (!marker) return false;
       return c.state.rigs.some((r) => r.owner === c.side && !r.destroyed && r.pos && controlsObjective(spatial(r), marker) && !isPlanted(r, bz.lit));
-    }, text: () => `You're on the lit beacon but haven't planted: it won't score.` },
+    }, text: () => `You're on the lit beacon without a Plant Flag: it won't score.` },
   { id: "grit", when: (c) => (c.state.game.gritTokens?.[c.side] || 0) > 0, text: () => `You're behind, so HQ sends Grit tokens each round (1 at 2+ VP behind, 2 at 5+, 3 at 8+): a free face-down reaction that's Improved (tougher Brace, surer dodges, harder counter-hits), an upgrade to one you already placed, or keep it to reroll every missed shot on one attack. Kills while you're behind also pay a +2 VP bounty. Use it to break their hold.` },
   { id: "stagger", when: (c) => c.state.rigs.find((r) => r.owner === c.side && !r.destroyed && r.staggered), text: (c, r) => `${r.name} is Staggered: a shot rang its armour without doing damage. +1 heat, and −1 Aim on its next attack. Misses aren't wasted, they rattle the target.` },
   // Campaign contracts.
