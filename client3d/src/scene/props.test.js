@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
 import { BUILDING_KINDS, buildingVariant, SMALL_VARIANTS, smallVariant, barricadeProp, crateProp, rubbleProp } from "./props.js";
-import { NEW_BUILDINGS } from "./dressing.js";
+import { NEW_BUILDINGS as DRESSING_BUILDINGS } from "./dressing.js";
+import { WORKS } from "./works.js";
+const NEW_BUILDINGS = [...DRESSING_BUILDINGS, ...Object.keys(WORKS)];
 import { THEMES } from "./themes.js";
 import { propFits } from "./rig/envelope.js";
 

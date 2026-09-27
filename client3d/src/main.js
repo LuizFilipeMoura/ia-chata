@@ -64,7 +64,9 @@ function attractMode() {
     { kind: "building", shape: "rect", x: 20, y: 14, w: 6, h: 4.5, rot: 10 }, { kind: "building", shape: "rect", x: 36, y: 23, w: 5, h: 5, rot: -12 },
     { kind: "barricade", shape: "rect", x: 27, y: 25, w: 7, h: 0.9, rot: 80 }, { kind: "rock", shape: "rect", x: 12, y: 24, w: 2.5, h: 2, rot: 30 },
     { kind: "crate", shape: "rect", x: 42, y: 11, w: 2, h: 2, rot: 15 },
-  ] }, [{ x: 27, y: 18, vp: 2 }, { x: 13, y: 9, vp: 1 }, { x: 41, y: 27, vp: 1 }]);
+    { kind: "rock", shape: "poly", x: 46, y: 22, points: [[1.6, 0], [0.4, 1.4], [-1.3, 0.9], [-1.2, -0.9], [0.5, -1.5]] },
+    { kind: "crater", shape: "ellipse", x: 10, y: 14, rx: 2.8, ry: 2.1, rot: 20 },
+  ], dressSeed: Date.now() }, [{ x: 27, y: 18, vp: 2 }, { x: 13, y: 9, vp: 1 }, { x: 41, y: 27, vp: 1 }]);
   const rigs = CHASSIS.map((c, i) => ({ id: i + 1, name: c.name, owner: i % 2 ? "b" : "a", chassis: c.id, pos: { x: 8 + (i % 6) * 8 + rnd() * 2, y: 10 + Math.floor(i / 6) * 14 + rnd() * 3 }, facing: rnd() * 360, heat: 0, destroyed: false, sp: { hull: [1, 1], arms: [1, 1], legs: [1, 1], engine: [1, 1] } }));
   d.snap({ rigs, round: 1, log: [] });
   const spin = (dt) => { world.cam.yaw += dt * 0.05; };

@@ -8,8 +8,9 @@ import { FX } from "./fx.js";
 import { Post } from "./post.js";
 import { fuelDepot, refineryTower } from "./objectives.js";
 import { settings } from "../settings.js";
-import { themeFor, dressRandom, layoutHash } from "./themes.js";
+import { themeFor, dressRandom, layoutHash, dressPick } from "./themes.js";
 import { buildingProp, barricadeProp, crateProp, rubbleProp, backdrop } from "./props.js";
+import { sceneryProp } from "./scenery.js";
 
 const DEG = Math.PI / 180;
 
@@ -418,9 +419,11 @@ export class World {
     const theme = themeFor(field, settings.get("theme"));
     this.applyTheme(theme, w, h);
     // Dressing context: props register idle animators through it.
-    const rand = dressRandom(layoutHash(field));
+    const seed = layoutHash(field);
+    const rand = dressRandom(seed);
     const ctx = {
-      theme, fx: this.fx, rand,
+      theme, fx: this.fx, rand, seed,
+      pick: (tag, t, list) => dressPick(seed, tag, t, list),
       win: windowTexture(`#${new THREE.Color(theme.lamp).getHexString()}`),
       anim: (fn) => this.animators.push(fn),
       chimney: (obj, opts = {}) => this.chimneys.push(Object.assign(obj, { big: !!opts.big })),
@@ -477,21 +480,15 @@ export class World {
   terrainMesh(t, ctx) {
     const g = new THREE.Group();
     const rot = -(t.rot || 0) * DEG;
-    const shadow = (m) => { m.castShadow = m.receiveShadow = true; return m; };
     if (t.shape === "rect") {
       const prop = t.kind === "building" ? buildingProp(t, ctx) : t.kind === "barricade" ? barricadeProp(t, ctx) : t.kind === "crate" ? crateProp(t, ctx) : rubbleProp(t, ctx);
       g.add(prop);
       g.position.set(t.x, 0, t.y); g.rotation.y = rot;
-    } else if (t.shape === "ellipse") {
-      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshStandardMaterial({ color: 0x3a3226, roughness: 1 }));
-      m.scale.set(t.rx, t.ry, 1); m.rotation.x = -Math.PI / 2; m.position.y = 0.02; g.add(m);
-      g.position.set(t.x, 0, t.y); g.rotation.y = rot;
-    } else if (t.shape === "poly") {
-      const s = new THREE.Shape(t.points.map(([x, y]) => new THREE.Vector2(x, -y)));
-      const geo = new THREE.ExtrudeGeometry(s, { depth: t.kind === "wood" ? 0.3 : 1.5, bevelEnabled: false });
-      geo.rotateX(-Math.PI / 2);
-      const m = shadow(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: t.kind === "wood" ? 0x2f4a24 : 0x6f6a62, roughness: 1, flatShading: true })));
-      g.add(m); g.position.set(t.x, 0, t.y);
+    } else if (t.shape === "ellipse" || t.shape === "poly") {
+      // Craters, rock / ruin blobs and woods: a dieselpunk scenery variant on
+      // the exact footprint (scene/scenery.js).
+      g.add(sceneryProp(t, ctx));
+      g.position.set(t.x, 0, t.y); if (t.shape === "ellipse") g.rotation.y = rot;
     }
     return g;
   }

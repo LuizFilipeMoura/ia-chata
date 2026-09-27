@@ -8,6 +8,7 @@ import * as THREE from "three";
 
 import { std, glow, shadow, V, blinker, steamValve, flame, flickerWindows } from "./dress-kit.js";
 import { NEW_BUILDINGS_MAP, SMALL_BUILDERS } from "./dressing.js";
+import { WORKS } from "./works.js";
 
 // ---- Buildings (fill the terrain rect t.w × t.h, centred) -----------------
 
@@ -206,16 +207,19 @@ function mast(t, ctx) {
   return g;
 }
 
-const BUILDINGS = { factory, tank, watertower, shed, cooling, mast, ...NEW_BUILDINGS_MAP };
+const BUILDINGS = { factory, tank, watertower, shed, cooling, mast, ...NEW_BUILDINGS_MAP, ...WORKS };
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
 export const BACKDROP_KINDS = ["skyline", "zeppelin", "crane", "flares", "cooling"];
 // One specific building variant (the dev room), footprint t.w × t.h.
 export function buildingVariant(kind, t, ctx) { return (BUILDINGS[kind] || factory)(t, ctx); }
 
+// The theme's building mix, picked per piece from the battle's dressing seed.
 export function buildingProp(t, ctx) {
   const list = ctx.theme.buildings;
-  const pick = list[Math.floor(((t.x * 13 + t.y * 7) % list.length + list.length) % list.length)];
-  return (BUILDINGS[pick] || factory)(t, ctx);
+  const pick = ctx.pick ? ctx.pick("building", t, list) : list[Math.floor(((t.x * 13 + t.y * 7) % list.length + list.length) % list.length)];
+  const g = (BUILDINGS[pick] || factory)(t, ctx);
+  g.userData.variant = pick;
+  return g;
 }
 
 // ---- Small terrain ---------------------------------------------------------
@@ -278,12 +282,14 @@ function classicRubble(t, ctx) {
   return g;
 }
 
-// Each small-terrain slot has variants (dressing.js); a piece's position picks
-// one, so both players and a replay see the same table.
+// Each small-terrain slot has variants (dressing.js); the battle's dressing
+// seed and the piece's position pick one, so the same layout looks different
+// battle to battle while both players and a replay see the same table.
 const CLASSIC = { barricade: classicBarricade, crate: classicCrate, rubble: classicRubble };
 export const SMALL_VARIANTS = Object.fromEntries(Object.keys(CLASSIC).map((slot) => [slot, ["classic", ...Object.keys(SMALL_BUILDERS[slot])]]));
-function pickVariant(slot, t) {
+function pickVariant(slot, t, ctx) {
   const list = SMALL_VARIANTS[slot];
+  if (ctx?.pick) return ctx.pick(slot, t, list);
   const h = Math.abs(Math.sin((t.x || 0) * 12.9898 + (t.y || 0) * 78.233) * 43758.5453);
   return list[Math.floor((h - Math.floor(h)) * list.length)];
 }
@@ -293,9 +299,9 @@ export function smallVariant(slot, variant, t, ctx) {
   g.userData.variant = variant;
   return g;
 }
-export const barricadeProp = (t, ctx) => smallVariant("barricade", pickVariant("barricade", t), t, ctx);
-export const crateProp = (t, ctx) => smallVariant("crate", pickVariant("crate", t), t, ctx);
-export const rubbleProp = (t, ctx) => smallVariant("rubble", pickVariant("rubble", t), t, ctx);
+export const barricadeProp = (t, ctx) => smallVariant("barricade", pickVariant("barricade", t, ctx), t, ctx);
+export const crateProp = (t, ctx) => smallVariant("crate", pickVariant("crate", t, ctx), t, ctx);
+export const rubbleProp = (t, ctx) => smallVariant("rubble", pickVariant("rubble", t, ctx), t, ctx);
 
 // ---- Beyond the table ------------------------------------------------------
 

@@ -257,7 +257,7 @@ export class LiveMatch {
     this.director.campaign = state.campaign || null; // enemy voices: faction operators, the Warlord
     this.director.commanderId = state.campaign?.commanderId ?? null;
     if (firstField && state.field) {
-      this.world.buildField({ ...state.field }, state.game.objectives || []);
+      this.world.buildField({ ...state.field, dressSeed: this.room }, state.game.objectives || []);
       this.world.setMission(state.campaign || null);
       const mine = state.rigs.filter((r) => r.owner === this.side && r.pos);
       if (mine.length) { const c = mine.reduce((a, r) => ({ x: a.x + r.pos.x / mine.length, y: a.y + r.pos.y / mine.length }), { x: 0, y: 0 }); this.world.focus(c.x, c.y, 42); }

@@ -45,7 +45,7 @@ export class Replay {
       onScore: (l) => { const side = l.kind === "score" ? l.side : l.vp?.side; const amt = l.kind === "score" ? l.vp : l.vp?.amount; if (side && amt) this.hud.scoreFlash(side, amt); },
     });
     const f0 = this.frames[0];
-    world.buildField(replay.field || { width: 54, height: 36, terrain: replay.terrain || [] }, replay.objectives || []);
+    world.buildField({ ...(replay.field || { width: 54, height: 36, terrain: replay.terrain || [] }), dressSeed: replay.id ?? replay.seed ?? null }, replay.objectives || []);
     this.director.snap(f0);
     this.controls = el("div", { class: "replay-bar" });
     this.brain = el("div", { class: "brain" });

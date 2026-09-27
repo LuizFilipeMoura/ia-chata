@@ -13,23 +13,24 @@ import { fits } from "../scene/rig/envelope.js";
 import { PART_KINDS, partPreview } from "../scene/rig/preview.js";
 import { buildingVariant, BUILDING_KINDS, BACKDROP_KINDS, backdrop, SMALL_VARIANTS, smallVariant } from "../scene/props.js";
 import { propFits } from "../scene/rig/envelope.js";
+import { SCENERY_VARIANTS, SCENERY_CAP, sceneryVariant } from "../scene/scenery.js";
 import { THEMES } from "../scene/themes.js";
 import { CHASSIS, SUPPORT_TEMPLATES, DRONE_TYPES } from "/shared/game-state.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
-const W = 112, H = 146;
+const W = 112, H = 176;
 const RIG = "client3d/src/scene/rig", MECHS = "client3d/src/scene/mechs.js", PROPS = "client3d/src/scene/props.js", WORLD = "client3d/src/scene/world.js", FXF = "client3d/src/scene/fx.js";
 
 // Row layout (z) and where items start (x). The camera looks toward -z, so
 // tall things sit far back (small z) and small things up front.
 // The chassis block is 5 rows deep: one row per skin.
-const ROW = { backdrop: 10, buildings: 27, terrain: 38, parts: 47, parts2: 52, chassis: 58, states: 88, units: 97, longRange: 105, melee: 113, kit: 121, fx1: 130, fx2: 137 };
+const ROW = { backdrop: 10, buildings: 24, buildings2: 34, terrain: 44, scenery: 54, scenery2: 66, parts: 77, parts2: 82, chassis: 88, states: 118, units: 127, longRange: 135, melee: 143, kit: 151, fx1: 160, fx2: 167 };
 const SKIN_GAP = 5.5;
 const X0 = 12;
 const SECTIONS = [
   ["chassis", "Chassis (every finish)"], ["parts", "Rig parts"], ["states", "Rig states"], ["units", "Support units"], ["longRange", "Long-range weapons"], ["melee", "Melee weapons"],
-  ["kit", "Unit guns + module tools"], ["fx", "FX"], ["terrain", "Terrain + objectives"], ["buildings", "Buildings"], ["backdrop", "Set pieces (scaled)"],
+  ["kit", "Unit guns + module tools"], ["fx", "FX"], ["scenery", "Scenery (rocks, ruins, woods, craters)"], ["terrain", "Terrain + objectives"], ["buildings", "Buildings"], ["backdrop", "Set pieces (scaled)"],
 ];
 
 // Painted floor lettering for a row's title.
@@ -188,7 +189,7 @@ export class DevRoom {
     BUILDING_KINDS.forEach((kind, i) => {
       const t = { kind: "building", shape: "rect", x: 0, y: 0, w: 6, h: 5, rot: 0 };
       const built = buildingVariant(kind, t, this.ctx);
-      const b = new THREE.Group(); b.add(built); b.position.set(X0 + 3 + i * 9.5, 0, ROW.buildings);
+      const b = new THREE.Group(); b.add(built); b.position.set(X0 + 3 + (i % 8) * 9.5, 0, i < 8 ? ROW.buildings : ROW.buildings2);
       const f = propFits(built, "building", t.w, t.h);
       this.add({ id: `building.${kind}`, name: kind, sub: "building (fills its terrain rect)", section: "buildings", obj: b, source: `${PROPS} / dressing.js · ${kind}(t, ctx) via buildingVariant()`, size: { ok: f.ok || kind === "mast", height: f.height, radius: 0, limit: { height: f.limit, radius: 0 } },
         notes: `Which themes use it: ${Object.values(THEMES).filter((th) => th.buildings.includes(kind)).map((th) => th.name).join(", ") || "none"}.` });
@@ -208,10 +209,27 @@ export class DevRoom {
         notes: obj.userData.carcassOf ? `Wreck of a ${obj.userData.carcassOf}.` : "" });
       sx += w / 2 + 2.5;
     }
+    // Scenery: every variant of rock and ruin blobs (one row), woods and craters (the next).
+    const blob = (r, jitter, n, seed) => { let q = seed; const rr = () => ((q = (q * 16807) % 2147483647) / 2147483647); return Array.from({ length: n }, (_, i) => { const a = (i / n) * Math.PI * 2 + (rr() - 0.5) * (Math.PI / n) * 0.9; const d = r * (1 - jitter + rr() * jitter * 2); return [+(Math.cos(a) * d).toFixed(2), +(Math.sin(a) * d).toFixed(2)]; }); };
+    const SAMPLE = {
+      rock: { kind: "rock", shape: "poly", points: blob(1.7, 0.42, 5, 17), span: 4 },
+      ruin: { kind: "ruin", shape: "poly", points: blob(3.2, 0.5, 6, 29), span: 7 },
+      wood: { kind: "wood", shape: "poly", points: blob(4, 0.22, 9, 41), span: 8.5 },
+      crater: { kind: "crater", shape: "ellipse", rx: 3, ry: 2.3, span: 6.2 },
+    };
+    for (const [row, slots] of [[ROW.scenery, ["rock", "ruin"]], [ROW.scenery2, ["wood", "crater"]]]) {
+      let x = X0;
+      for (const slot of slots) for (const v of SCENERY_VARIANTS[slot]) {
+        const { span, ...t } = SAMPLE[slot];
+        x += span / 2;
+        const obj = sceneryVariant(slot, v, { ...t, x, y: row }, this.ctx); obj.position.set(x, 0, row);
+        this.add({ id: `scenery.${slot}.${v}`, name: `${slot} · ${v}`, sub: `scenery · ${slot} ${t.shape} (height cap ${SCENERY_CAP[slot]})`, section: "scenery", obj,
+          source: `client3d/src/scene/scenery.js SCENERY.${slot}.${v}`, notes: "Same footprint as the piece the rules measure; the battle's dressing seed picks the variant." });
+        x += span / 2 + 1.2;
+      }
+    }
     const TERRAIN = [
       ["area", "Area terrain (ellipse)", { kind: "area", shape: "ellipse", rx: 2.5, ry: 1.6 }, "terrainMesh ellipse"],
-      ["rock-poly", "Rock outcrop (poly)", { kind: "rock", shape: "poly", points: [[-1.5, -1], [1.2, -1.4], [1.8, 0.6], [-0.2, 1.6], [-1.8, 0.4]] }, "terrainMesh poly"],
-      ["woods", "Woods (poly)", { kind: "wood", shape: "poly", points: [[-2, -1.2], [1.8, -1.5], [2.2, 1], [-1.5, 1.6]] }, "terrainMesh poly"],
     ];
     let tx = X0;
     TERRAIN.forEach(([key, name, t, fn]) => {
