@@ -7,21 +7,27 @@
 import * as THREE from "three";
 import { el, fill, toast } from "./dom.js";
 import { Mech, PAINT, WEAPON_MODELS, weaponModel } from "../scene/mechs.js";
+import { SKINS, SKIN_IDS } from "../scene/rig/skins.js";
+import { RECIPES } from "../scene/rig/recipes.js";
+import { fits } from "../scene/rig/envelope.js";
+import { PART_KINDS, partPreview } from "../scene/rig/preview.js";
 import { buildingVariant, BUILDING_KINDS, BACKDROP_KINDS, backdrop } from "../scene/props.js";
 import { THEMES } from "../scene/themes.js";
 import { CHASSIS, SUPPORT_TEMPLATES, DRONE_TYPES } from "/shared/game-state.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
-const W = 112, H = 114;
-const MECHS = "client3d/src/scene/mechs.js", PROPS = "client3d/src/scene/props.js", WORLD = "client3d/src/scene/world.js", FXF = "client3d/src/scene/fx.js";
+const W = 112, H = 146;
+const RIG = "client3d/src/scene/rig", MECHS = "client3d/src/scene/mechs.js", PROPS = "client3d/src/scene/props.js", WORLD = "client3d/src/scene/world.js", FXF = "client3d/src/scene/fx.js";
 
 // Row layout (z) and where items start (x). The camera looks toward -z, so
 // tall things sit far back (small z) and small things up front.
-const ROW = { backdrop: 10, buildings: 27, terrain: 38, chassis: 48, states: 57, units: 66, longRange: 74, melee: 82, kit: 90, fx1: 99, fx2: 106 };
+// The chassis block is 5 rows deep: one row per skin.
+const ROW = { backdrop: 10, buildings: 27, terrain: 38, parts: 47, parts2: 52, chassis: 58, states: 88, units: 97, longRange: 105, melee: 113, kit: 121, fx1: 130, fx2: 137 };
+const SKIN_GAP = 5.5;
 const X0 = 12;
 const SECTIONS = [
-  ["chassis", "Chassis"], ["states", "Rig states"], ["units", "Support units"], ["longRange", "Long-range weapons"], ["melee", "Melee weapons"],
+  ["chassis", "Chassis (every finish)"], ["parts", "Rig parts"], ["states", "Rig states"], ["units", "Support units"], ["longRange", "Long-range weapons"], ["melee", "Melee weapons"],
   ["kit", "Unit guns + module tools"], ["fx", "FX"], ["terrain", "Terrain + objectives"], ["buildings", "Buildings"], ["backdrop", "Set pieces (scaled)"],
 ];
 
@@ -91,12 +97,29 @@ export class DevRoom {
     for (const [key, title] of SECTIONS) g.add(floorText(title, 0.5, key === "fx" ? ROW.fx1 : ROW[key]));
     const usedBy = (slot, w) => CHASSIS.filter((c) => c[slot] === w).map((c) => `${c.name} (${c.id})`).join(", ");
 
-    // Chassis, as they deploy.
-    CHASSIS.forEach((c, i) => {
-      const m = this.mech({ id: `dev-${c.id}`, name: c.name, owner: i % 2 ? "b" : "a", chassis: c.id, weightClass: c.class, longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class] }, X0 + i * 6.5, ROW.chassis);
-      this.add({ id: `chassis.${c.id}`, name: `${c.name}`, sub: `${c.label} · ${c.class}`, section: "chassis", obj: m.root, mech: m,
-        source: `${MECHS} · class Mech (paint PAINT["${c.name}"], weapons LR["${c.longRange}"] + MELEE["${c.melee}"])`,
-        notes: `Chassis ${c.id}, ${c.class}. Long-range ${c.longRange}, melee ${c.melee}.` });
+    // Chassis: every chassis (columns) in every finish (rows).
+    SKIN_IDS.forEach((skin, row) => {
+      g.add(floorText(SKINS[skin].name, X0 + CHASSIS.length * 6.5 - 6, ROW.chassis + row * SKIN_GAP - 2.2));
+      CHASSIS.forEach((c, i) => {
+        const m = this.mech({ id: `dev-${c.id}-${skin}`, name: c.name, owner: row % 2 ? "b" : "a", chassis: c.id, weightClass: c.class, longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin }, X0 + i * 6.5, ROW.chassis + row * SKIN_GAP);
+        const r = RECIPES[c.name] || {};
+        const item = this.add({ id: `rig.${c.name}.${skin}`, name: skin === "factory" ? c.name : `${c.name} · ${SKINS[skin].name}`, sub: `${c.label} · ${c.class} · ${SKINS[skin].name}`, section: "chassis", obj: m.root, mech: m,
+          source: `${RIG}/recipes.js RECIPES.${c.name} + skins.js "${skin}" (weapons ${MECHS} LR["${c.longRange}"] + MELEE["${c.melee}"])`,
+          notes: `${r.role ? `The ${r.role}: ` : ""}${r.torso} torso, ${r.head} head, ${r.backpack} backpack, ${r.legs} legs on ${r.feet} feet, ${r.shoulders} shoulders, signature ${r.signature}, ${r.trim} trim. ${SKINS[skin].blurb}`,
+          size: fits(m) });
+        if (skin === "factory") this.byId.set(`chassis.${c.id}`, item);
+      });
+    });
+
+    // Rig parts, each alone on a pedestal (two rows).
+    const parts = Object.entries(PART_KINDS).flatMap(([kind, names]) => names.map((name) => [kind, name]));
+    const half = Math.ceil(parts.length / 2);
+    parts.forEach(([kind, name], i) => {
+      const { group, users, cls } = partPreview(kind, name);
+      const p = pedestal(0.7, 0.35); p.position.set(X0 + (i % half) * 3.2, 0, i < half ? ROW.parts : ROW.parts2);
+      group.position.y = 0.4; group.rotation.y = -0.7; p.add(group);
+      this.add({ id: `part.${kind}.${name}`, name, sub: `rig ${kind} · ${cls}`, section: "parts", obj: p, source: `${RIG}/parts.js ${kind === "legs" ? "LEGS" : kind === "feet" ? "FEET" : kind.toUpperCase() + (kind.endsWith("s") ? "" : "S")}.${name}`,
+        notes: users.length ? `Worn by: ${users.join(", ")}.` : "Not used by any chassis yet." });
     });
 
     // One chassis in each visual state the game can put a rig in.
@@ -293,6 +316,7 @@ export class DevRoom {
       el("div", { class: "dv-row" }, el("b", {}, "id "), el("code", {}, it.id)),
       el("div", { class: "dv-row" }, el("b", {}, "source "), el("code", {}, it.source)),
       it.notes ? el("p", { class: "dv-notes" }, it.notes) : null,
+      it.size ? el("div", { class: "dv-row" }, el("b", {}, "size "), el("code", { style: { color: it.size.ok ? "#7fd07a" : "#ff6a5a" } }, `height ${it.size.height.toFixed(2)} / ${it.size.limit.height} · radius ${it.size.radius.toFixed(2)} / ${it.size.limit.radius}`)) : null,
       el("div", { class: "dv-actions" },
         el("button", { class: "btn primary", onClick: () => { navigator.clipboard?.writeText(this.refText(it)).then(() => toast("Reference copied. Paste it into your request.", "good"), () => toast(this.refText(it), "info", 8000)); } }, "Copy ref"),
         it.play ? el("button", { class: "btn", onClick: it.play }, "▶ Play") : null,

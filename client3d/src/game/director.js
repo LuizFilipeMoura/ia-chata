@@ -5,6 +5,7 @@
 // queue, so a whole bot turn plays out move by move.
 import * as THREE from "three";
 import { Mech } from "../scene/mechs.js";
+import { skinFor } from "../scene/rig/skins.js";
 import { CHASSIS, EQUIPMENT, WEAPONS, UNIT_WEAPONS, integrityTier } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
@@ -74,6 +75,7 @@ export class Director {
   // `side` is whose point of view the sounds take ("a" in replays).
   constructor(world, { onLog, onBanner, onCamera, onDice, onScore, side = "a", quiet = false } = {}) {
     this.world = world;
+    this.skinSeed = String(Math.random()); // "random per battle" skins
     this.onCamera = onCamera || (() => {});
     this.onDice = onDice || null;
     this.onScore = onScore || (() => {});
@@ -134,6 +136,7 @@ export class Director {
       weightClass: ch.class || (kind === "rig" ? "light" : kind), longRange: ch.longRange, melee: ch.melee,
       radius: kind === "rig" ? BASE_RADIUS[ch.class || "light"] : BASE_RADIUS[kind],
       kind, unit: r.unit ?? r.weapons?.unit ?? null, modules: r.modules || [], drone: r.drone ?? null,
+      skin: skinFor({ mode: settings.get("rigSkinMode"), fixed: settings.get("rigSkin"), map: settings.get("rigSkinMap") || {}, side: r.owner, codename: r.name, seed: this.skinSeed }),
     });
     m.chassisDef = ch;
     m.template = r.template ?? null;

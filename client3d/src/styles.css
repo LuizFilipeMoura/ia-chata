@@ -1323,3 +1323,4 @@ body.crit-vignette::after { content: ""; position: fixed; inset: 0; pointer-even
 .dv-notes { font-size: 14px; color: var(--muted); margin: 8px 0 0; }
 .dv-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .dv-actions .btn { font-size: 14px; padding: 4px 10px; }
+.set-block { display: flex; flex-direction: column; gap: 8px; } .set-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }

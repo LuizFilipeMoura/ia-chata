@@ -20,6 +20,7 @@ import { api } from "./api.js";
 import { icon } from "./ui/icons.js";
 import { sfx, isMuted, setMuted } from "./audio.js";
 import { settings } from "./settings.js";
+import { SKINS } from "./scene/rig/skins.js";
 import { resetWires } from "./ui/tips.js";
 import { outcomeWords } from "./ui/mission.js";
 
@@ -202,6 +203,25 @@ function hotkeys() {
 }
 window.addEventListener("keydown", (e) => { if (e.key === "?" && !e.target.closest?.("input,textarea")) hotkeys(); });
 
+// Rig finish (skin): by side, one for all, random per battle, or per chassis.
+function rigFinish() {
+  const box = el("div", { class: "set-block" });
+  const skinSelect = (value, onChange) => el("select", { onChange: (e) => onChange(e.target.value) }, Object.values(SKINS).map((k) => el("option", { value: k.id, selected: value === k.id, title: k.blurb }, k.name)));
+  const render = () => {
+    const mode = settings.get("rigSkinMode") || "side";
+    const map = settings.get("rigSkinMap") || {};
+    fill(box,
+      el("label", { class: "set-row" }, "Rig finish ", el("select", { onChange: (e) => { settings.set("rigSkinMode", e.target.value); render(); } },
+        [["side", "By side (A Factory Fresh, B Field Refit)"], ["fixed", "Same for every rig"], ["random", "Random each battle"], ["chassis", "Per chassis"]].map(([v, n]) => el("option", { value: v, selected: mode === v }, n))),
+        el("span", { class: "muted small" }, " next battle")),
+      mode === "fixed" ? el("label", { class: "set-row" }, "Finish ", skinSelect(settings.get("rigSkin"), (v) => settings.set("rigSkin", v))) : null,
+      mode === "chassis" ? el("div", { class: "set-grid" }, CHASSIS.map((c) => el("label", { class: "set-row" }, `${c.name} `, skinSelect(map[c.name] || "factory", (v) => settings.set("rigSkinMap", { ...(settings.get("rigSkinMap") || {}), [c.name]: v }))))) : null,
+      el("button", { class: "btn ghost", onClick: (e) => { e.target.closest(".modal-back")?.remove(); devRoom({ focus: "rig.Gold.factory" }); } }, "See every finish in the Dev Room"));
+  };
+  render();
+  return box;
+}
+
 function settingsPanel() {
   const toggle = (k, label) => el("label", { class: "set-row" }, el("input", { type: "checkbox", checked: !!settings.get(k), onChange: (e) => settings.set(k, e.target.checked) }), label);
   modal({
@@ -221,6 +241,7 @@ function settingsPanel() {
       el("label", { class: "set-row" }, "Battlefield ", el("select", { onChange: (e) => settings.set("theme", e.target.value) },
         [["auto", "Auto (from the map)"], ...Object.values(THEMES).map((t) => [t.id, t.name])].map(([v, n]) => el("option", { value: v, selected: settings.get("theme") === v }, n))),
         el("span", { class: "muted small" }, " next battle")),
+      rigFinish(),
       el("label", { class: "set-row" }, "Animation speed ", el("select", { onChange: (e) => { settings.set("speed", Number(e.target.value)); if (active?.director) active.director.speed = Number(e.target.value); } }, [1, 2, 4].map((v) => el("option", { value: v, selected: settings.get("speed") === v }, `${v}×`))))),
     actions: [{ label: "Done", primary: true }],
   });

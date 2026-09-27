@@ -3,9 +3,10 @@
 // stalk on reverse-jointed legs, mediums plant on stocky pillars), and each of
 // the 28 weapons has its own model hung off the arms. Built from primitives at
 // runtime: no asset pipeline, and every part is a named pivot we can animate.
-import * as THREE from "three";
-
-const DEG = Math.PI / 180;
+import { THREE, DEG, mat, STEEL, DARK, BRASS, at, box, cyl, sph, cone, barrel, canvasTexture } from "./rig/kit.js";
+import { buildRigBody, flattenFoot } from "./rig/body.js";
+import { recipeFor } from "./rig/recipes.js";
+import { SKINS, skinMaterials, applySkin } from "./rig/skins.js";
 
 export const PAINT = {
   Gold: 0xd4a017, Blue: 0x2f6fd6, Purple: 0x7b3fb8, Pumpkin: 0xe8731c, Zebra: 0xe9e6dc,
@@ -14,37 +15,13 @@ export const PAINT = {
 };
 export const TEAM = { a: 0x5fd3c0, b: 0xe0533d };
 
-const matCache = new Map();
-function mat(color, opts = {}) {
-  const key = color + JSON.stringify(opts);
-  if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.45, ...opts }));
-  return matCache.get(key);
-}
-const STEEL = () => mat(0x4a4d55, { metalness: 0.8, roughness: 0.35 });
-const DARK = () => mat(0x1b1c20, { metalness: 0.6, roughness: 0.6 });
-const BRASS = () => mat(0xb08d3c, { metalness: 0.9, roughness: 0.3 });
-
 function stripeTexture(base, stripe) {
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const g = c.getContext("2d");
-  g.fillStyle = base; g.fillRect(0, 0, 64, 64);
-  g.fillStyle = stripe;
-  for (let i = -64; i < 128; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 7, 0); g.lineTo(i + 7 - 40, 64); g.lineTo(i - 40, 64); g.fill(); }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
+  return canvasTexture(64, (g) => {
+    g.fillStyle = base; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = stripe;
+    for (let i = -64; i < 128; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 7, 0); g.lineTo(i + 7 - 40, 64); g.lineTo(i - 40, 64); g.fill(); }
+  }, { repeat: true });
 }
-
-// Place a mesh (three's position/rotation are read-only props, copy into them).
-function at(o, x, y, z, rz = 0) { o.position.set(x, y, z); if (rz) o.rotation.z = rz; return o; }
-function box(w, h, d, m) { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.castShadow = o.receiveShadow = true; return o; }
-function cyl(rt, rb, h, m, seg = 12) { const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); o.castShadow = true; return o; }
-function sph(r, m, seg = 12) { const o = new THREE.Mesh(new THREE.SphereGeometry(r, seg, seg), m); o.castShadow = true; return o; }
-function cone(r, h, m, seg = 10) { const o = new THREE.Mesh(new THREE.ConeGeometry(r, h, seg), m); o.castShadow = true; return o; }
-// A barrel pointing along +x.
-function barrel(r, len, m) { const o = cyl(r, r, len, m); o.rotation.z = -Math.PI / 2; o.position.x = len / 2; return o; }
 
 // ---- Long-range weapons: return { group, muzzle (Object3D at the muzzle), spin? }
 const LR = {
@@ -325,19 +302,15 @@ function makeLeg(cls, paint) {
 // A brass activation coin with a stamped check, shared texture.
 let spentTex = null;
 function makeSpentToken() {
-  if (!spentTex) {
-    const c = document.createElement("canvas"); c.width = c.height = 128;
-    const x = c.getContext("2d");
+  if (!spentTex) spentTex = canvasTexture(128, (x) => {
     const g = x.createRadialGradient(64, 56, 10, 64, 64, 64);
     g.addColorStop(0, "#f6d27a"); g.addColorStop(1, "#8a6424");
     x.fillStyle = g; x.beginPath(); x.arc(64, 64, 62, 0, Math.PI * 2); x.fill();
     x.strokeStyle = "#5a3e12"; x.lineWidth = 6; x.beginPath(); x.arc(64, 64, 52, 0, Math.PI * 2); x.stroke();
     x.strokeStyle = "#3a2708"; x.lineWidth = 14; x.lineCap = "round"; x.lineJoin = "round";
     x.beginPath(); x.moveTo(38, 66); x.lineTo(56, 84); x.lineTo(92, 44); x.stroke();
-    spentTex = new THREE.CanvasTexture(c);
-    spentTex.colorSpace = THREE.SRGBColorSpace;
-  }
-  const face = new THREE.MeshStandardMaterial({ map: spentTex, metalness: 0.6, roughness: 0.35 });
+  });
+  const face = new THREE.MeshStandardMaterial({ map: spentTex, color: spentTex ? 0xffffff : 0xd8a84a, metalness: 0.6, roughness: 0.35 });
   const rim = new THREE.MeshStandardMaterial({ color: 0x9a7228, metalness: 0.8, roughness: 0.3 });
   const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.1, 32), [rim, face, face]);
   coin.castShadow = true;
@@ -345,18 +318,16 @@ function makeSpentToken() {
 }
 
 export class Mech {
-  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius, kind = "rig", unit = null, modules = [], drone = null }) {
+  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius, kind = "rig", unit = null, modules = [], drone = null, skin = "factory" }) {
     this.id = id; this.name = name; this.owner = owner; this.weightClass = weightClass || "light";
     this.longRange = longRange; this.melee = melee; this.radius = radius || 1.2;
     this.kind = kind; this.drone = drone;
     const support = kind === "walker" || kind === "drone";
     const color = support ? UNIT_PAINT[kind] : PAINT[name] ?? 0x888888;
     this.paintColor = color; // debris torn off this mech keeps its paint
-    const paint = name === "Zebra"
-      ? new THREE.MeshStandardMaterial({ map: stripeTexture("#ecebe4", "#18181a"), roughness: 0.6, metalness: 0.3 })
-      : mat(color);
+    const zebra = name === "Zebra" ? stripeTexture("#ecebe4", "#18181a") : null;
+    let paint = zebra ? new THREE.MeshStandardMaterial({ map: zebra, roughness: 0.6, metalness: 0.3 }) : mat(color);
     const heavy = this.weightClass === "medium";
-    const legCls = support ? kind : this.weightClass;
     this.root = new THREE.Group();
     this.root.userData.mechId = id;
 
@@ -370,32 +341,33 @@ export class Mech {
     const notch = cone(0.18, 0.4, this.ringMat, 3); notch.rotation.z = -Math.PI / 2; notch.position.set(this.radius + 0.1, 0.18, 0); this.root.add(notch);
 
     this.body = new THREE.Group(); this.root.add(this.body);
-    this.legs = [makeLeg(legCls, paint), makeLeg(legCls, paint)];
-    const hipH = this.legs[0].height * (heavy ? 1 : 0.85) + 0.3;
-    this.hipH = hipH;
-    this.pelvis = new THREE.Group(); this.pelvis.position.y = hipH; this.body.add(this.pelvis);
-    this.legs.forEach((l, i) => { l.hip.position.z = (i ? -1 : 1) * (heavy ? 0.5 : 0.35); this.pelvis.add(l.hip); });
-    this.pelvis.add(box(heavy ? 0.8 : 0.6, 0.3, heavy ? 1.1 : 0.8, DARK()));
-    if (support) { this.buildSupport(kind, paint, unit, modules, drone); return; }
-
-    this.torso = new THREE.Group(); this.torso.position.y = heavy ? 0.75 : 0.6; this.pelvis.add(this.torso);
-    const chest = box(heavy ? 1.5 : 1.1, heavy ? 1.1 : 0.85, heavy ? 1.5 : 1.1, paint); this.torso.add(chest); this.chest = chest;
-    // Own material (not the shared cache): it dims when the rig has acted.
-    this.cockpitMat = new THREE.MeshStandardMaterial({ color: 0xffcf7a, emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 });
-    const cockpit = box(0.5, 0.35, heavy ? 0.8 : 0.6, this.cockpitMat);
-    cockpit.position.set(heavy ? 0.6 : 0.45, 0.15, 0); this.torso.add(cockpit);
-    // Exhaust stacks, they glow and smoke with heat.
-    this.ventMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xff3300, emissiveIntensity: 0, metalness: 0.7, roughness: 0.4 });
-    this.stacks = [];
-    for (const z of [-0.3, 0.3]) {
-      const s = cyl(0.11, 0.13, 0.9, this.ventMat); s.position.set(heavy ? -0.75 : -0.55, 0.7, z); this.torso.add(s); this.stacks.push(s);
+    const legCls = support ? kind : this.weightClass;
+    this.baseScale = support ? (kind === "drone" ? 0.5 : 0.6) : heavy ? 0.52 : 0.48;
+    if (support) {
+      this.legs = [makeLeg(legCls, paint), makeLeg(legCls, paint)];
+      const hipH = this.legs[0].height * 0.85 + 0.3;
+      this.hipH = hipH;
+      this.pelvis = new THREE.Group(); this.pelvis.position.y = hipH; this.body.add(this.pelvis);
+      this.legs.forEach((l, i) => { l.hip.position.z = (i ? -1 : 1) * 0.35; this.pelvis.add(l.hip); });
+      this.pelvis.add(box(0.6, 0.3, 0.8, DARK()));
+      this.buildSupport(kind, paint, unit, modules, drone);
+      return;
     }
 
-    // Arms: right = long-range, left = melee.
-    const shoulderZ = heavy ? 0.95 : 0.72;
-    this.armR = new THREE.Group(); this.armR.position.set(0, 0.15, -shoulderZ); this.torso.add(this.armR);
-    this.armL = new THREE.Group(); this.armL.position.set(0, 0.15, shoulderZ); this.torso.add(this.armL);
-    this.armR.add(sph(heavy ? 0.32 : 0.24, STEEL())); this.armL.add(sph(heavy ? 0.32 : 0.24, STEEL()));
+    // The body: this chassis' own recipe of dieselpunk parts (scene/rig/).
+    // Own materials (not the shared cache): the cockpit dims when the rig has
+    // acted, the stacks glow with heat.
+    this.cockpitMat = new THREE.MeshStandardMaterial({ color: 0xffcf7a, emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 });
+    this.ventMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xff3300, emissiveIntensity: 0, metalness: 0.7, roughness: 0.4 });
+    this.recipe = recipeFor(name, this.weightClass);
+    this.skin = SKINS[skin] ? skin : "factory";
+    const mats = skinMaterials(this.skin, { color, trim: this.recipe.trim, stripe: zebra });
+    paint = mats.paint;
+    const built = buildRigBody({ cls: this.weightClass, recipe: this.recipe, mats, glass: this.cockpitMat, vent: this.ventMat, baseScale: this.baseScale });
+    applySkin(built, this.skin, id);
+    this.built = built;
+    Object.assign(this, { legs: built.legs, pelvis: built.pelvis, hipH: built.hipH, torso: built.torso, chest: built.chest, armR: built.armR, armL: built.armL, stacks: built.stacks, sockets: built.sockets, spinners: built.spinners, flickers: built.flickers, whistle: built.whistle, bellows: built.bellows });
+    this.body.add(this.pelvis);
     const lr = (LR[longRange] || LR["Autocannon"])(paint);
     this.lr = lr; lr.group.position.set(0.1, -0.1, lr.launcher ? 0 : -0.05);
     if (lr.lob) { lr.group.position.set(-0.2, 0.3, 0); }
@@ -404,14 +376,14 @@ export class Mech {
     this.me = me; me.group.position.set(0.1, -0.15, 0.05); this.armL.add(me.group);
 
     // Sized like a real mini on its base: the whole model, weapons included,
-    // stays roughly inside the base ring so move/reach rings read at true scale.
-    this.baseScale = heavy ? 0.52 : 0.48;
+    // stays roughly inside the base ring so move/reach rings read at true scale
+    // (scene/rig/envelope.js holds every body to the original size).
     this.body.scale.setScalar(this.baseScale);
 
     // Selection halo + status label anchor.
     this.halo = new THREE.Mesh(new THREE.RingGeometry(this.radius * 1.15, this.radius * 1.35, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
     this.halo.rotation.x = -Math.PI / 2; this.halo.position.y = 0.05; this.root.add(this.halo);
-    this.labelAnchor = new THREE.Object3D(); this.labelAnchor.position.y = hipH * this.baseScale + 1.5; this.root.add(this.labelAnchor);
+    this.labelAnchor = new THREE.Object3D(); this.labelAnchor.position.y = this.hipH * this.baseScale + 1.5; this.root.add(this.labelAnchor);
 
     // "Activated" token, like the marker you drop beside a mini on the table:
     // a brass coin stamped with a check, lying on the back of the base.
@@ -606,8 +578,15 @@ export class Mech {
     this.legs.forEach((l, i) => {
       const ph = this.walkPhase + i * Math.PI;
       l.hip.rotation.z = l.rest.hip + Math.sin(ph) * 0.55 * w;
-      l.knee.rotation.z = l.rest.knee + (heavy ? 1 : -1) * Math.max(0, Math.cos(ph)) * 0.6 * w;
+      l.knee.rotation.z = l.rest.knee + (l.bend ?? (heavy ? 1 : -1)) * Math.max(0, Math.cos(ph)) * 0.6 * w;
+      flattenFoot(l);
     });
+    // Idle life: flywheels and fans turn (faster when hot), pilot lights
+    // flicker, bellows breathe, the whistle cap jumps when the rig fires.
+    if (this.spinners) for (const sp of this.spinners) sp.o.rotation[sp.axis] += dt * sp.speed * (this.destroyed || this.broken?.engine ? 0 : 1 + this.heatFrac);
+    if (this.flickers) for (const f of this.flickers) f.scale.setScalar(this.destroyed ? 0.01 : 0.8 + Math.sin(this.t * 23) * 0.15 + Math.sin(this.t * 37) * 0.1);
+    if (this.bellows) this.bellows.scale.y = this.destroyed ? 0.8 : 1 + Math.sin(this.t * 2.2) * 0.12;
+    if (this.whistle) this.whistle.position.y = 0.33 + this.recoil * 0.08;
     this.pelvis.position.y = this.hipH + Math.abs(Math.sin(this.walkPhase)) * 0.12 * w + Math.sin(this.t * 1.7) * 0.03;
     this.pelvis.rotation.x = Math.sin(this.walkPhase) * 0.06 * w;
     // Torso twist toward the aim, recoil kick, melee lunge.
