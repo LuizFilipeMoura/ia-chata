@@ -137,7 +137,7 @@ export class Hud {
     this.bannerEl.append(b);
     const live = [...this.bannerEl.children].filter((n) => !n.classList.contains("out"));
     for (const n of live.slice(0, Math.max(0, live.length - 3))) this.retireBanner(n);
-    b.timer = setTimeout(() => this.retireBanner(b), kind === "stinger" ? 1900 : 1600);
+    b.timer = setTimeout(() => this.retireBanner(b), kind === "stinger" ? 5700 : 4800);
   }
 
   retireBanner(b) {
