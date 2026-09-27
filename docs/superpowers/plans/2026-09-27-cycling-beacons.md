@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make cycling beacons (dark round 1, one lit beacon per round with a telegraphed Next, Plant Flag to score, 4 VP) the default rule for every held-marker room, in the engine, rules text, V2 client and 3D client.
+**Goal:** Make cycling beacons (dark round 1, one lit beacon per round with a telegraphed Next, Plant Flag to score, 4 VP) the default rule for every held-marker room, in the engine, rules text and 3D client.
 
-**Architecture:** The rule already exists in `shared/game-state.js` behind `room.game.beaconRules === "cycle"` (commit b473f27). Flip it to default-on (`"classic"` opts out), finish the physical-table path, expose Plant Flag through the shared action list, then surface lit/next/planted state in both clients. The bot already plays it; its Hard playbook is re-evolved last.
+**Architecture:** The rule already exists in `shared/game-state.js` behind `room.game.beaconRules === "cycle"` (commit b473f27). Flip it to default-on (`"classic"` opts out), finish the physical-table path, expose Plant Flag through the shared action list, then surface lit/next/planted state in the 3D client. The bot already plays it; its Hard playbook is re-evolved last.
 
-**Tech Stack:** Node ESM (shared engine, `node --test`), React + TypeScript + Vitest (V2, `client/src/v2`), Three.js (3D, `client3d/src`).
+**Tech Stack:** Node ESM (shared engine, `node --test`), Three.js (3D, `client3d/src`).
 
 **Spec:** `docs/superpowers/specs/2026-09-27-cycling-beacons-design.md`
 
@@ -19,11 +19,10 @@
 - Tests never pin VP, pen or damage numbers; use `CYCLE_BEACON_VP` / `beaconTuning(room).vp` (memory: no value-pinning tests).
 - Every rule added to `shared/rules.js` is reflected in `rules.md` in the same task.
 - UI copy says **"Plant Flag"**, never bare "plant" (the Bulwark's "Un-plant" already exists).
-- ALL client UI in V2 (`client/src/v2/**`) or the 3D client; never V1 (`client/src/components/**`). Keep `no-v1-imports.test.ts` green.
-- V2 text uses the `--v2-text-*` / `.v2-text-*` scale; minimum 12px; no raw `font-size` (`no-raw-font-size.test.ts`).
+- UI work is the 3D client ONLY (`client3d/src/**`). Do NOT touch `client/src/v2/**` or `client/src/state/**` (AGENTS.md: V2 only when the maintainer names it). V1 is frozen. Minimum font size 12px.
 - No em dashes or en-dash separators anywhere (code comments, copy, commits).
 - Work on `main`, no branches/worktrees/stash. One commit per task below. Never `git add -A`; add the task's files by name (another session commits here too).
-- Gates per task: `node --test "shared/**/*.test.js" "server/**/*.test.js" "client3d/**/*.test.js"`; tasks touching V2 also `npx vitest run` and `npx tsc --noEmit`.
+- Gates per task: `node --test "shared/**/*.test.js" "server/**/*.test.js" "client3d/**/*.test.js"`; the final task also runs `npx vitest run` and `npx tsc --noEmit` (client tests are untouched and must stay green).
 
 ---
 
@@ -721,169 +720,7 @@ git commit -m "Sim frames record the lit beacon; beacon scripts compare against 
 
 ---
 
-### Task 4: V2 client (lit/next on the map and HUD, Plant Flag tile, physical scoring)
-
-Invoke the `handle-ui` skill before the visual steps (map markers, HUD chip). Keep the existing V2 look.
-
-**Files:**
-- Modify: `client/src/state/types.ts` (Objective, GameState, Rig)
-- Modify: `client/src/v2/battle/BattleMap.tsx`, `client/src/v2/battle/BattleScreen.tsx:83`, `client/src/v2/styles/field.css`
-- Modify: `client/src/v2/components/BattleHud.tsx:58-59`
-- Modify: `client/src/v2/battle/ActionConsole.tsx` (glyph, ctx), `client/src/v2/audio/actionAudio.ts:32-41`
-- Modify: `client/src/v2/overlays/VpWizard.tsx`, `client/src/lib/computeFocus.ts:81-96`
-- Test: `client/src/v2/battle/BattleMap.test.tsx` (create if absent), `client/src/v2/components/BattleHud.test.tsx`, `client/src/v2/overlays/VpWizard.test.tsx`, `client/src/lib/computeFocus.test.ts`
-
-**Interfaces:**
-- Consumes: `markerName` (`/shared/field.js`), `availableActions(..., ctx)`, `game.beacons`, `rig.plant`.
-
-- [ ] **Step 1: Types**
-
-In `client/src/state/types.ts`:
-
-```ts
-export interface Objective { x: number; y: number; vp: number; relay?: boolean; crate?: boolean; }
-export interface Beacons { lit: number | null; next: number | null; }
-```
-
-Add to `GameState`: `beacons?: Beacons | null;` and `beaconRules?: string | null;`. Add to `Rig`: `plant?: { objective: number; at: { x: number; y: number } | null } | null;`.
-
-- [ ] **Step 2: Failing tests**
-
-`client/src/v2/battle/BattleMap.test.tsx` (new; mirror the render helper style of the nearest existing V2 battle test):
-
-```tsx
-import { render } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
-import { BattleMapLayers } from "./BattleMap";
-
-const field = { width: 42, height: 28, diagonal: "tlbr" as const, terrain: [], locked: true };
-const objectives = [{ x: 21, y: 14, vp: 2 }, { x: 10, y: 7, vp: 1 }, { x: 32, y: 21, vp: 1 }];
-
-describe("BattleMap beacons", () => {
-  it("marks the lit, next and dark beacons", () => {
-    const { container } = render(
-      <svg><BattleMapLayers field={field} rigs={[]} mySide="a" ownerSide={null} priorityTargetId={null} selectedId={null}
-        onSelect={() => {}} onActivate={() => {}} activatable={() => false}
-        objectives={objectives} beacons={{ lit: 0, next: 2 }} /></svg>,
-    );
-    const states = [...container.querySelectorAll("[data-testid=beacon]")].map((n) => n.getAttribute("data-state"));
-    expect(states).toEqual(["lit", "dark", "next"]);
-  });
-});
-```
-
-In `BattleHud.test.tsx` add a case: a game with `beacons: { lit: 0, next: 1 }` and the three objectives above renders text matching `/Lit: Centre/` and `/Next: [NS][EW] corner/`; with `beacons: { lit: null, next: 0 }` it renders `/Lit: dark/`.
-
-In `VpWizard.test.tsx` add: with `beacons: { lit: 0, next: 1 }` only one marker row renders (`Centre`); with `beacons: { lit: null, next: 1 }` the dialog shows `/dark/i` and its confirm button sends `vp` with `claims: []`.
-
-In `computeFocus.test.ts` add: recovery with `beacons: { lit: null, next: 1 }` and no claim yields primary `"Beacons are dark this round"` with cta kind `"score"`.
-
-Run: `npx vitest run client/src/v2 client/src/lib` Expected: the new cases FAIL.
-
-- [ ] **Step 3: BattleMap renders beacons**
-
-Add to `BattleMapProps`:
-
-```ts
-  objectives?: Objective[];
-  beacons?: Beacons | null;
-```
-
-(import `Objective`, `Beacons` from `../../state/types`). In `BattleMapLayers`, after the field `<rect>`:
-
-```tsx
-      {(props.objectives ?? []).map((o, i) => {
-        if (o.crate) return null;
-        const b = props.beacons;
-        const state = !b ? "classic" : b.lit === i ? "lit" : b.next === i ? "next" : "dark";
-        const holder = rigs.find((r) => !r.destroyed && r.plant?.objective === i);
-        const side = holder ? ((holder.owner || "a") === mySide ? " is-mine" : " is-foe") : "";
-        return (
-          <g key={`obj-${i}`} data-testid="beacon" data-state={state} className={`v2-bm-beacon is-${state}${side}`}>
-            <circle cx={proj.sx(o.x)} cy={proj.sy(o.y)} r={proj.sx(o.x + 2) - proj.sx(o.x)} className="v2-bm-beacon-zone" />
-            <circle cx={proj.sx(o.x)} cy={proj.sy(o.y)} r={6} className="v2-bm-beacon-core" />
-          </g>
-        );
-      })}
-```
-
-In `BattleScreen.tsx` pass `objectives={game.objectives ?? []} beacons={game.beacons ?? null}` to `<BattleMap` (use the component's existing `game` variable).
-
-Append to `client/src/v2/styles/field.css`:
-
-```css
-.v2-root .v2-bm-beacon-zone { fill: none; stroke: var(--v2-line, #555); stroke-dasharray: 3 4; }
-.v2-root .v2-bm-beacon-core { fill: var(--v2-line, #555); }
-.v2-root .v2-bm-beacon.is-lit .v2-bm-beacon-core { fill: #ffd35a; }
-.v2-root .v2-bm-beacon.is-lit .v2-bm-beacon-zone { stroke: #ffd35a; stroke-dasharray: none; }
-.v2-root .v2-bm-beacon.is-next .v2-bm-beacon-zone { stroke: #ffd35a; animation: v2-bm-next 1.6s ease-in-out infinite; }
-.v2-root .v2-bm-beacon.is-dark { opacity: 0.45; }
-.v2-root .v2-bm-beacon.is-mine .v2-bm-beacon-core { fill: var(--v2-oil, #e8792a); }
-.v2-root .v2-bm-beacon.is-foe .v2-bm-beacon-core { fill: #e23b3b; }
-@keyframes v2-bm-next { 50% { opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .v2-root .v2-bm-beacon.is-next .v2-bm-beacon-zone { animation: none; } }
-```
-
-- [ ] **Step 4: HUD chip**
-
-In `BattleHud.tsx` import `markerName` from `/shared/field.js` and replace the `beaconMultiplier` chip with:
-
-```tsx
-        {game.beacons ? (
-          <span className="v2-bh-round" title="Only the lit beacon scores this round; Next lights at the start of the next round">
-            Lit: {game.beacons.lit == null ? "dark" : markerName(game.objectives ?? [], game.beacons.lit)} · Next: {markerName(game.objectives ?? [], game.beacons.next ?? -1) || "none"}
-          </span>
-        ) : (game.beaconMultiplier || 1) > 1 && (
-          <span className="v2-bh-round" title="Beacon VP is multiplied this round">Beacons ×{game.beaconMultiplier}</span>
-        )}
-```
-
-- [ ] **Step 5: ActionConsole tile + audio**
-
-In `ActionConsole.tsx`: `const { game, mode } = useRoomState();` (use the field name `RoomState` exposes for the room mode; it mirrors `ServerState.mode`). Change the call to:
-
-```tsx
-  const actions = availableActions(rig, t, game?.round,
-    game?.beacons ? { beacons: game.beacons, objectives: game.objectives ?? [], digital: mode === "digital" } : null) as Action[];
-```
-
-Add `plantflag: "⚑",` to `ACTION_GLYPH`. `plantflag` falls through to `sendCommand("action", { name, action: key })` and lands in the Support group; no other change.
-
-In `actionAudio.ts` `ACTION_AUDIO` add `plantflag: { voices: [], sfx: BEEP_SFX },` next to `prepare`.
-
-- [ ] **Step 6: VpWizard and the Recovery banner**
-
-In `VpWizard.tsx`, delete the local `markerLabel` and import `markerName` from `/shared/field.js`. Where the marker list is built, when `game?.beacons` is set, show only `game.beacons.lit` (if non-null) with the line `Claim it if you have a Rig with a planted flag on it and no enemy within 2″.`; when `game.beacons.lit == null`, render the text `Every beacon is dark this round: nothing scores.` and a single confirm button that sends `sendCommand("vp", { claims: [] })`. Classic rooms (no `beacons`) keep today's list, labelled with `markerName`.
-
-In `computeFocus.ts`, before the final `return` of the recovery branch:
-
-```ts
-    if (g.beacons && g.beacons.lit == null) {
-      return {
-        tone: "act", icon: "⟡", primary: "Beacons are dark this round",
-        secondary: "Nothing scores in round 1. Continue to the next round.",
-        cta: { label: "Continue", kind: "score" },
-      };
-    }
-```
-
-(add `beacons` to the local game type used there if it narrows the shape.)
-
-- [ ] **Step 7: Run, look, commit**
-
-Run: `npx vitest run` then `npx tsc --noEmit` then `node --test "shared/**/*.test.js"`
-Expected: PASS.
-
-Live check: seed a digital battle (Join screen "Seed Test Battle ▸" then the lobby Digital toggle, or `setbot` a side), open the battle in the browser pane, confirm three beacons on the map with the Next one pulsing, the HUD reads `Lit: dark · Next: …` in round 1, Plant Flag appears in Support when a rig stands within 2" of Next, and after planting the marker takes the side colour. Screenshot.
-
-```bash
-git add client/src/state/types.ts client/src/v2/battle/BattleMap.tsx client/src/v2/battle/BattleMap.test.tsx client/src/v2/battle/BattleScreen.tsx client/src/v2/styles/field.css client/src/v2/components/BattleHud.tsx client/src/v2/components/BattleHud.test.tsx client/src/v2/battle/ActionConsole.tsx client/src/v2/audio/actionAudio.ts client/src/v2/overlays/VpWizard.tsx client/src/v2/overlays/VpWizard.test.tsx client/src/lib/computeFocus.ts client/src/lib/computeFocus.test.ts
-git commit -m "V2: lit and next beacons on the map and HUD, Plant Flag tile, cycling Recovery"
-```
-
----
-
-### Task 5: 3D client (beacon states, banner, Plant Flag button, effects, copy)
+### Task 4: 3D client (beacon states, banner, Plant Flag button, effects, copy)
 
 Invoke the `handle-ui` skill before the visual steps.
 
@@ -1044,7 +881,7 @@ git commit -m "3D: dark, next and lit beacons, Plant Flag button and effects, cy
 
 ---
 
-### Task 6: Re-evolve the Hard bot and confirm the numbers
+### Task 5: Re-evolve the Hard bot and confirm the numbers
 
 **Files:**
 - Modify (generated): `shared/bot/meta.js`

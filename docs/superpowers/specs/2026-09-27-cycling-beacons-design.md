@@ -61,7 +61,7 @@ The experiment code in `shared/game-state.js` becomes the default rule.
 
 ## Rooms
 
-- Standard rooms (physical and digital, bot and versus, V2 and 3D): cycling by default.
+- Standard rooms (physical and digital, bot and versus): cycling by default.
 - Campaign **Beacons** contract: cycling.
 - Campaign **Skirmish** contract: switches from one centre beacon to the standard three, cycling. Its catalog blurb and Orders text change accordingly ("Hold the lit beacon; it moves every round").
 - **Last Stand** relay: single-marker cycling (dark round 1, then lit every round, Plant to score).
@@ -75,16 +75,9 @@ The experiment code in `shared/game-state.js` becomes the default rule.
 - 3D tips (`client3d/src/ui/tips.js`): contested tip reworded; new tips for "a beacon lights next round" and "you're on the lit beacon, plant".
 - 3D help (`client3d/src/main.js` scoring line), contract strip (`ui/mission.js`), campaign Orders (`ui/campaign.js`).
 
-## V2 client (client/src/v2)
+## Clients
 
-UI work goes through the `handle-ui` skill when implemented.
-
-- **BattleMap** renders objectives for the first time: dark (dim), Next (outlined, pulsing), lit (bright), with the planted side's colour on the lit/next marker.
-- **BattleHud**: the "Beacons ×N" chip becomes "Lit: Centre · Next: Corner A" (marker names from `VpWizard`'s `markerLabel`, moved to a shared helper).
-- **ActionConsole**: Plant Flag tile (Support group, own glyph), fed by the new `availableActions` context. `actionAudio` gets a plant cue.
-- **VpWizard** (physical Recovery): shows only the lit beacon with "Claim: we have a planted Rig on it and no enemy within 2″". Dark round 1: the wizard says nothing scores and just advances.
-- **computeFocus / TurnBanner**: round-1 Recovery banner reads "Beacons are dark this round" instead of "Score your objectives".
-- Types (`client/src/state/types.ts`): `beacons`, `beaconRules`, rig `plant`.
+UI work is the 3D client only (AGENTS.md: V2 is touched only when named). V2 is left as is: its physical-table scoring dialog still lists every marker, and the engine trims those claims to the lit beacon with a planted Rig, so it keeps working, just without the new cues.
 
 ## 3D client (client3d/src)
 
@@ -100,8 +93,8 @@ Already implemented (`shared/bot/candidates.js`, `shared/bot/score.js`, `b_plant
 ## Testing
 
 - Existing `shared/beacon-cycle.test.js` moves to the default path (no flag set), drops the planted-contest test, adds: single-marker cycling, `startGameSeeded` shows a Next, physical `vp` claims limited to the lit beacon with a planted Rig, `availableActions` offers Plant Flag only in context.
-- Tests that assert the classic behaviour (`game-state.test.js` VP claim and digital scoring tests, `escalation.test.js`, `tempo-rules.test.js` beacon summary, `mission.test.js` skirmish objectives, `bounty.test.js`, `server/prompt.test.js`, client `VpWizard.test.tsx`, `computeFocus.test.ts`, `BattleHud.test.tsx`) are either pointed at `beaconRules: "classic"` where they test the classic path on purpose, or rewritten for the new rule. No test pins a VP value; they use `CYCLE_BEACON_VP` / `beaconTuning`.
-- Gates: `node --test`, `npx vitest run`, `npx tsc --noEmit`; live check of a V2 digital battle and a 3D bot battle in the browser pane.
+- Tests that assert the classic behaviour (`game-state.test.js` VP claim and digital scoring tests, `escalation.test.js`, `tempo-rules.test.js` beacon summary, `mission.test.js` skirmish objectives, `bounty.test.js`, `server/prompt.test.js`) are either pointed at `beaconRules: "classic"` where they test the classic path on purpose, or rewritten for the new rule. No test pins a VP value; they use `CYCLE_BEACON_VP` / `beaconTuning`.
+- Gates: `node --test`, `npx vitest run` (unchanged client tests stay green), `npx tsc --noEmit`; live check of a 3D bot battle in the browser pane.
 
 ## Out of scope
 

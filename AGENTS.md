@@ -12,14 +12,13 @@ What this means concretely:
 - **Favor fun and iteration speed** over ceremony. Don't over-engineer, don't gold-plate, don't add abstraction for hypothetical future needs. Ship the change, keep it readable.
 - **Keep TDD discipline.** Despite the hobby framing, the maintainer values the test safety net, write tests first for real logic (game rules, math, state transitions). UI glue and throwaway experiments can skip it.
 
-## UI work, V2 only, everything
+## UI work: the 3D client only, unless V2 is named
 
-**ALL UI work goes in V2. Everything.** Every user-facing UI change, new screens, components, overlays, wizards, styling, battle flows, chat, glossary, lives under `client/src/v2/**` (with shared, non-UI state hooks under `client/src/hooks/**` and `client/src/state/**` where V2 already reuses them).
+**ALL UI work goes in the 3D client (`client3d/src/**`). Do NOT touch V2 (`client/src/v2/**`) unless the maintainer names V2 explicitly in the request.** Not for parity, not "while you're there", not in plans or specs: a feature that needs UI gets 3D UI only. If you think V2 would also need a change, say so in one line and leave it.
 
-- **Do not build new UI in the legacy V1 tree** (`client/src/components/**`). V1 is frozen; treat it as read-only reference. If a feature needs a V1-only file changed, stop and flag it, don't extend V1.
-- New UI files: create them in the matching `client/src/v2/` folder (`screens/`, `overlays/`, `components/`, `battle/`, `state/`, `hooks/`, `styles/`).
-- Reuse the V2 provider stack (`client/src/v2/state/V2Providers.tsx`) and V2 primitives (Drawer, wizards, Shell), never import V1 overlay providers into V2 (there's a `no-v1-imports.test.ts` guard; keep it green).
-- **Minimum font size is 12px.** Never render text below 12px on mobile, smaller is unreadable on phones. All V2 text uses the `--v2-text-*` / `.v2-text-*` scale in `styles/type.css` (floor `sm` = 12px); a guard test (`no-raw-font-size.test.ts`) rejects raw `font-size`.
+- **V1 is frozen** (`client/src/components/**`): read-only reference, never extend it.
+- **When V2 IS named:** new files go in the matching `client/src/v2/` folder; reuse the V2 provider stack (`client/src/v2/state/V2Providers.tsx`) and V2 primitives, never import V1 overlay providers (`no-v1-imports.test.ts` guards it); all V2 text uses the `--v2-text-*` / `.v2-text-*` scale in `styles/type.css` (`no-raw-font-size.test.ts` rejects raw `font-size`).
+- **Minimum font size is 12px** in every client. Smaller is unreadable on phones.
 
 ## Debugging the UI as an agent
 
