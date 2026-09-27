@@ -19,6 +19,7 @@ export const ARM_RULES = {
   cycle: { beaconRules: "cycle" },
   vp5: { beaconRules: "cycle", beaconTuning: { vp: 5 } },
   early: { beaconRules: "cycle", beaconTuning: { earlyPlant: true } },
+  "early-vp4": { beaconRules: "cycle", beaconTuning: { earlyPlant: true, vp: 4 } },
   "early-vp5": { beaconRules: "cycle", beaconTuning: { earlyPlant: true, vp: 5 } },
   pcontest: { beaconRules: "cycle", beaconTuning: { plantedContest: true } },
   all: { beaconRules: "cycle", beaconTuning: { vp: 5, earlyPlant: true, plantedContest: true } },
