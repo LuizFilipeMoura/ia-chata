@@ -223,11 +223,19 @@ export const GLOSSARY = [
   },
   {
     id: "vp", term: "Victory Points", match: ["Victory Points", "VP"],
-    def: "Points scored each Recovery Phase for controlling objective markers (at the round's beacon multiplier), +1 for every enemy Rig wrecked (+2 more for your Priority Target, +2 more when you were behind); most VP after 10 rounds wins (§11).",
+    def: "Scored at each Recovery by the side with a flag planted on the lit beacon and no enemy within 2\", +1 for every enemy Rig wrecked (+2 more for your Priority Target, +2 more when you were behind); most VP after 10 rounds wins (§11).",
+  },
+  {
+    id: "plant-flag", term: "Plant Flag", match: ["Plant Flag", "Planted"],
+    def: "1 action, no heat (§5, §11): stake the lit beacon, or the Next one, from within 2\". The flag holds until the Rig is moved by anything. At Recovery the lit beacon pays its VP to the side with a planted Rig and no enemy within 2\".",
+  },
+  {
+    id: "lit-beacon", term: "lit beacon", match: ["lit beacon", "Lit beacon", "Next beacon"],
+    def: "Only one beacon scores each round (§11). Round 1 is dark; from round 2 the beacon announced as Next lights and a different one becomes Next.",
   },
   {
     id: "beacon-escalation", term: "beacon multiplier", match: ["beacon multiplier", "Escalating beacons", "escalating beacons"],
-    def: "The per-round multiplier on objective VP (§11). Currently ×1 every round (beacons pay face value); the app shows \"Beacons ×N\" only when a round pays more. Kill VP is never multiplied.",
+    def: "A per-round multiplier on objective VP in classic scoring (§11). Cycling beacons always pay their flat value. Kill VP is never multiplied.",
   },
   {
     id: "kill-bounty", term: "Trailing kill bounty", match: ["Trailing kill bounty", "trailing kill bounty", "kill bounty"],

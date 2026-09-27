@@ -1,15 +1,15 @@
 // Pure, DOM-free view-model derived from room state. Shared so it can be unit
 // tested in node and imported by the browser (via the /shared static mount).
 import { ACTIONS, heatThreshold, equipmentUpgradeEffectOf } from "./rules.js";
-import { EQUIPMENT, rigEffects, heatMeter, deriveAttackGeometry, integrityTier } from "./game-state.js";
+import { EQUIPMENT, rigEffects, heatMeter, deriveAttackGeometry, integrityTier, isPlanted } from "./game-state.js";
 import { UNIT_KINDS, kindOf, partsByRole } from "./unit-kinds.js";
-import { radiusOf, terrainPolygons, clearOfTerrain } from "./geometry.js";
+import { radiusOf, terrainPolygons, clearOfTerrain, controlsObjective } from "./geometry.js";
 
 const ACTION_ORDER = ["move", "sprint", "disengage", "fire", "aimed", "repair", "douse", "prepare", "shutdown"];
 
 // The action console list for the active rig: each action with its heat cost and
 // whether the current budget/state allows it.
-export function availableActions(rig, turn, round) {
+export function availableActions(rig, turn, round, ctx = null) {
   const cfg = UNIT_KINDS[kindOf(rig)];
   const eff = rigEffects(rig);
   const left = turn.actionsMax - turn.actionsUsed;
@@ -152,6 +152,15 @@ export function availableActions(rig, turn, round) {
   if (modules.includes("recon")) {
     list.push({ key: "paint", label: ACTIONS.paint.label, heat: ACTIONS.paint.heat,
       enabled: left > 0, cost: ACTIONS.paint.slot, note: "" });
+  }
+  // Plant Flag (§11), only when the caller passes the room's beacon context.
+  // Digital rooms check the 2" reach; a physical table trusts the player.
+  const bz = ctx?.beacons;
+  if (bz && Array.isArray(ctx.objectives) && (bz.lit != null || bz.next != null)) {
+    const can = (i) => i != null && ctx.objectives[i] && !isPlanted(rig, i)
+      && (!ctx.digital || !rig.pos || controlsObjective({ pos: rig.pos, radius: radiusOf(rig) }, ctx.objectives[i]));
+    list.push({ key: "plantflag", label: ACTIONS.plantflag.label, heat: ACTIONS.plantflag.heat,
+      enabled: left > 0 && (can(bz.lit) || can(bz.next)), cost: ACTIONS.plantflag.slot, note: "" });
   }
   // Servo Actuators drops Sprint's heat to 1, Move's own cost. Same heat for
   // 1½× the distance (2× with Reinforced Servos) makes Move strictly dominated,
@@ -313,6 +322,7 @@ export function rigModifiers(rig) {
   if (rig.immobilised) mods.push({ key: "immobile", tag: "Immobilised", tone: "crit", gloss: "immobilised" });
   else if (rig.suppressImmobile) mods.push({ key: "suppress-immobile", tag: "Pinned", tone: "crit", gloss: "pinned" });
   if (rig.emplaced) mods.push({ key: "emplaced", tag: "Emplaced", tone: "prep", gloss: "emplaced" });
+  if (rig.plant && isPlanted(rig, rig.plant.objective)) mods.push({ key: "planted", tag: "Planted", tone: "prep", gloss: "plant-flag" });
   if ((rig.barrageRoundsLeft || 0) > 0) mods.push({ key: "barrage", tag: `Barrage ${rig.barrageRoundsLeft}`, tone: "warn", gloss: "barrage" });
   if (rig.engagedWith != null) mods.push({ key: "engaged", tag: "Engaged", tone: "warn", gloss: "engaged" });
   if ((rig.burning || 0) > 0) mods.push({ key: "burning", tag: `Burning ${rig.burning}`, tone: "crit", gloss: "burning" });

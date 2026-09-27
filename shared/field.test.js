@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   halfDiag, OBJ_FRACTION, clampDimensions, computeObjectives,
   emptyCorners, deploymentCorners, scatterTerrain, deployRadius, FIELD_DEFAULT,
-  DIGITAL_TERRAIN_KINDS,
+  DIGITAL_TERRAIN_KINDS, markerName,
 } from "./field.js";
 
 // Deterministic RNG for terrain tests (mulberry32).
@@ -28,6 +28,16 @@ test("clampDimensions rounds and clamps, falls back on NaN", () => {
   assert.deepEqual(clampDimensions(5, 5), { width: 24, height: 18 });
   assert.deepEqual(clampDimensions(200, 200), { width: 96, height: 72 });
   assert.deepEqual(clampDimensions("x", 30), { width: 54, height: 30 });
+});
+
+test("markerName names the centre, corners, a relay and a lone beacon", () => {
+  const objs = computeObjectives({ width: 54, height: 36 });
+  const names = objs.map((_, i) => markerName(objs, i));
+  assert.equal(names[0], "Centre");
+  assert.ok(names.slice(1).every((n) => /^[NS][EW] corner$/.test(n)));
+  assert.notEqual(names[1], names[2]);
+  assert.equal(markerName([{ x: 1, y: 1, vp: 2, relay: true }], 0), "Relay");
+  assert.equal(markerName([{ x: 1, y: 1, vp: 2 }], 0), "Beacon");
 });
 
 test("computeObjectives: centre 2VP plus two 1VP markers", () => {

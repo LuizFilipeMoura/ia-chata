@@ -66,6 +66,18 @@ export function computeObjectives(field) {
   return markers;
 }
 
+// A player-facing name for objective marker `i`: "Centre", a compass-tagged
+// corner ("NW corner"), "Relay" for Last Stand, "Beacon" for a lone marker.
+export function markerName(objectives, i) {
+  const o = objectives?.[i];
+  if (!o) return "";
+  if (o.relay) return "Relay";
+  if (objectives.length === 1) return "Beacon";
+  const c = objectives.find((x) => x.vp >= 2) ?? objectives[0];
+  if (o === c) return "Centre";
+  return `${o.y < c.y ? "N" : "S"}${o.x < c.x ? "W" : "E"} corner`;
+}
+
 export function setback(field) {
   return SETBACK_REF * (halfDiag(field.width, field.height) / REF_HALF_DIAG);
 }

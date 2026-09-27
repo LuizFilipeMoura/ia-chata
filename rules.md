@@ -101,7 +101,7 @@ A game lasts **10 rounds** (§11). Each round has three phases.
 **Recovery Phase.** In this order:
 1. Each Rig reduces its heat by **1** (unless an effect forbids cooling). *⚙ TUNING: cut to 1 so heat lingers between rounds.*
 2. Remove all unspent preparation, Answer and Grit tokens.
-3. **Score objectives** (§11), at the round's beacon multiplier (currently ×1 every round, see §11).
+3. **Score the lit beacon** (§11). Round 1 has none: every beacon is dark.
 4. Resolve any other end-of-round effects.
 
 The game then returns to the Initiative Phase of the next round, unless a player has already won.
@@ -121,6 +121,8 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
   - *Sprint:* you may extend a Move to up to **1½ × Speed** (**2 × Speed** with Reinforced Servos); a Sprinting Move generates **2 heat** instead of 1 (§6). Sprint is **never free**: its heat floors at 1 no matter the loadout.
 
 - **Disengage [1]**: break a melee **engagement** (see below). Frees **both** Rigs from the lock; after Disengaging, the Rig may Move/Sprint later in the same activation. No effect (and costs nothing) if the Rig isn't engaged.
+
+- **Plant Flag [0]**: stake a beacon (§11). The Rig must be within **2"** (rim) of the **lit** beacon or the **Next** beacon. The flag holds until the Rig is moved by anything (Move, Sprint, Jump Jets, grapnel, a shove or a pull). A flag on Next counts once that beacon lights. Costs 1 action, no heat.
 
 - **Attack [1]** (formerly *Fire Weapon*): attack with one equipped weapon, the ranged gun or, in reach, the melee weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first, for a Rig this costs **no action**, paid in heat instead (§5), a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
 
@@ -197,6 +199,7 @@ Actions and some weapon perks generate **heat**, tracked upward on the Rig. At t
 | Reload (Rig) | +1–2 (d6) |
 | Repair | 1 |
 | Disengage | 1 |
+| Plant Flag | 0 |
 | Shut Down | 0 |
 
 - **Full Auto** and **Charged Shot** fire-modes: each attack **die** that rolls a **1** adds 1 heat.
@@ -337,17 +340,16 @@ When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All
 The battle is fought over scrap scattered across the wastes. Tuned for small games (**3 Rigs a side**); scales fine up to 5.
 
 ### Objectives
-- **3 markers**, placed during deployment (§10): the **table centre** (**2 VP**) and one toward each **empty corner** (**1 VP** each).
-- The valuable centre pulls both squadrons together instead of camping their own corner.
+- **3 markers**, placed during deployment (§10): the **table centre** and one toward each **empty corner**.
+- **One beacon is lit each round.** Round 1 is **dark**: nothing scores. During every round the app announces the **Next** beacon; at the start of the following round it lights, and a different beacon becomes Next. With a single marker (Last Stand's relay) that marker is lit every round from round 2.
 
 ### Control
-- A Rig **controls** a marker if it is **within 2"** and **no enemy Rig** is also within 2".
-- If both sides have a Rig within 2", the marker is **contested**: nobody scores it.
-- A destroyed Rig's wreck does **not** hold objectives (remove it from control).
+- **Plant Flag** (§5): a Rig within **2"** of the lit or Next beacon spends an action to plant its side's flag. The flag holds until the Rig is moved by anything.
+- The lit beacon is **held** by a side with a planted Rig on it, if **no enemy Rig** is within 2" of it. Any enemy Rig within 2", planted or not, **contests** it: nobody scores.
+- A destroyed Rig's flag falls with it.
 
 ### Scoring & winning
-- During each **Recovery Phase**, each player scores the VP value of every marker they control, **multiplied by the round's beacon multiplier**. *(Digital: the engine scores it and logs each held marker, "&lt;side&gt; holds the beacon: +N VP" (with "(base ×mult)" once escalated), and each contested one, "Beacon contested: nobody scores".)*
-- **Beacon multiplier.** Beacons pay their face value (**×1**) every round, Sudden Death included: centre 2 VP, corners 1 VP. **Kill VP (below) is never multiplied.** *⚙ TUNING: the multiplier is a table by round (the engine's `BEACON_ESCALATION`). wr-0.14 escalated it ×1 / ×2 / ×3 from rounds 1 / 4 / 8; with the Gritted attack and the trailing kill bounty in (wr-0.15), 100-seed bot sims gave the flat table the most lead changes (0.56 per game vs 0.45 for ×1/×2/×3; ×1/×1/×2 tied the flat table), so the gentlest one ships. A table with a step above ×1 shows "Beacons ×N" in the app and logs "(base ×mult)" on each payout.*
+- During each **Recovery Phase** the lit beacon pays **4 VP** to the side holding it. *(Digital: the engine scores it and logs "&lt;side&gt; holds the lit beacon: +4 VP", or "Beacon contested: nobody scores".)* *⚙ TUNING: bot sweeps of 3, 4 and 5 VP with early planting on: 4 kept beacons near their old share of the game (about 58% of VP), halved draws against 3, and kept the first activator at 53%.*
 - **Annihilation:** if a player has **no Rigs left** at any point, their opponent **wins immediately**.
 - **On points:** after **10 rounds**, **most VP wins**. Tie → one **sudden-death** round; still tied → **draw**.
 
@@ -748,9 +750,9 @@ Digital battles field **Rigs, support Walkers and Drones**, never Tanks.
 - **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1–3 per round (scaled by the gap, capped at their living Rigs), each a free **Improved** preparation (or an upgrade to one already placed), or kept for a **Gritted attack** (reroll every missed to-hit die once).
 - **Trailing kill bounty** (§11), a kill by the side that is behind pays +2 VP more.
 - **Boiler blew** (§11), a Rig wrecked by its own overheat pays the enemy +2 VP more.
-- **Beacon multiplier** (§11), a per-round table for objective VP; ships flat (×1) after escalation (×1/×2/×3) tested worse for lead changes; kill VP is never multiplied.
+- **Cycling beacons** (§11), round 1 dark, one lit beacon per round telegraphed a round ahead, Plant Flag to hold it, flat 4 VP; replaced "every held marker pays every round", which let a fast Rig score on turn one and rewarded parking. Bot sweeps chose early planting and 4 VP.
 - **Weight-based heat** (§6), Heat Capacity 6 / 5 / 4 / 3 by weight class; overheat roll adds 2 × (heat over Capacity), capped +10.
-- **Victory, Salvage** (§11), weighted centre objective (2 VP), annihilation auto-win, +1 VP per kill (+2 more for the Priority Target, +2 more when behind).
+- **Victory, Salvage** (§11), cycling beacons, annihilation auto-win, +1 VP per kill (+2 more for the Priority Target, +2 more when behind).
 - **Stagger** (§7), an attack that resolves for 0 SP gives its target +1 heat and −1 Aim on its next attack, so a whiff still counts.
 - **Undo never re-rolls** (app), Revert steps back through dice-free actions (moves, pivots, preparations…), but a command that made the app roll dice for you (an attack, an overheat check, a dodge…) can't be undone, and neither can anything before it. Dice you type in yourself don't lock Undo.
 
@@ -770,10 +772,10 @@ The single-player campaign (see `docs/design/campaign.md`) plays **contracts**: 
 | Contract | Win | Lose |
 |---|---|---|
 | **Beacon Hold** | more VP at the round limit (standard beacons) | fewer VP, or annihilation |
-| **Skirmish** | more VP at the round limit (one centre beacon; kills score) | the reverse |
+| **Skirmish** | more VP at the round limit (the standard cycling beacons; kills score) | the reverse |
 | **Assassination** | wreck the marked **Commander** (the instant it goes down) | the round limit passes, or annihilation |
 | **Breakthrough** | **Extract** the goal number of Rigs through the enemy corner | the round limit passes, annihilation, or no Rig left to extract |
-| **Last Stand** | have any Rig standing at the round limit (a relay beacon sits in front of your corner: the attackers come for it) | annihilation |
+| **Last Stand** | have any Rig standing at the round limit (a relay beacon sits in front of your corner: dark in round 1, lit every round after; the attackers come for it) | annihilation |
 | **Salvage Run** | more VP at the round limit | fewer VP |
 | **Boss** | wreck the faction **Warlord** | the round limit passes, or annihilation |
 

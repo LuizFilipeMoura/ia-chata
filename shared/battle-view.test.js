@@ -330,6 +330,19 @@ test("module actions appear only for units carrying the matching module", () => 
   assert.ok(!tankKeys.includes("fieldweld") && !tankKeys.includes("vent") && !tankKeys.includes("paint"));
 });
 
+test("Plant Flag is offered only with beacon context, enabled on the lit or next beacon", () => {
+  const rig = { id: 1, name: "Gold", kind: "rig", weightClass: "light", owner: "a", pos: { x: 10, y: 10 }, engine: { heat: 0 }, loaded: {}, hull: { sp: 5, max: 5 }, arms: { sp: 5, max: 5 }, legs: { sp: 5, max: 5 }, weapons: {} };
+  const turn = { actionsUsed: 0, actionsMax: 3 };
+  const objectives = [{ x: 10, y: 10, vp: 2 }, { x: 40, y: 10, vp: 1 }, { x: 10, y: 30, vp: 1 }];
+  assert.ok(!availableActions(rig, turn, 2).some((a) => a.key === "plantflag"));
+  const on = availableActions(rig, turn, 2, { beacons: { lit: 0, next: 1 }, objectives, digital: true }).find((a) => a.key === "plantflag");
+  assert.equal(on?.enabled, true);
+  const off = availableActions(rig, turn, 2, { beacons: { lit: 1, next: 2 }, objectives, digital: true }).find((a) => a.key === "plantflag");
+  assert.equal(off?.enabled, false);
+  const planted = { ...rig, plant: { objective: 0, at: { x: 10, y: 10 } } };
+  assert.ok(rigModifiers(planted).some((m) => m.key === "planted"));
+});
+
 const GLOSS_IDS = new Set(GLOSSARY.map((e) => e.id));
 
 test("every rigModifiers chip carries a gloss id that resolves", () => {

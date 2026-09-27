@@ -8,7 +8,7 @@ import { META } from "./bot/meta.js";
 import { SCENARIOS } from "./scenarios.js";
 import {
   FIELD_DEFAULT, clampDimensions, computeObjectives, scatterTerrain,
-  deploymentCorners, deployRadius,
+  deploymentCorners, deployRadius, markerName,
 } from "./field.js";
 import {
   radiusOf, terrainPolygons, clearOfTerrain,
@@ -5498,6 +5498,12 @@ export function formatBattleState(room, side) {
   const g = room.game;
   const lines = ["", "=== CURRENT BATTLE STATE ==="];
   lines.push(`Round ${g.round}${g.maxRounds === 0 ? "" : `/${g.maxRounds || MAX_ROUNDS}`}${g.suddenDeath ? " (Sudden Death)" : ""}, beacons pay ×${beaconMultiplier(g.round, g.suddenDeath)}`);
+  if (g.beacons) {
+    const name = (i) => (i == null ? "none (dark)" : markerName(g.objectives, i));
+    lines.push(`Lit beacon: ${name(g.beacons.lit)} · Next: ${name(g.beacons.next)}`);
+    const planted = room.rigs.filter((r) => r.plant && isPlanted(r, r.plant.objective));
+    if (planted.length) lines.push(`Flags planted: ${planted.map((r) => `${r.name} on ${markerName(g.objectives, r.plant.objective)}`).join(", ")}`);
+  }
   lines.push(`Sides: ${g.sides.map((s) => `${s.name} (${s.id}) VP ${s.vp}${s.ready ? " READY" : ""}`).join(" | ")}`);
   lines.push(`Battle started: ${g.started ? "yes" : "no"}`);
   lines.push(`Phase: ${g.phase}${g.outcome ? ` (winner: ${g.outcome.winner || "draw"})` : ""}`);

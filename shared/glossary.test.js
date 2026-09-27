@@ -110,6 +110,6 @@ test("glossary defines the Gritted attack and the trailing kill bounty", () => {
 
 test("glossary defines the beacon multiplier", () => {
   const def = GLOSSARY.find((g) => g.id === "beacon-escalation")?.def || "";
-  assert.match(def, /×1 every round/);
+  assert.match(def, /flat value/);
   assert.match(def, /never multiplied/);
 });

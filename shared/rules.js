@@ -33,6 +33,9 @@ export const ACTIONS = {
   fieldweld:{ label: "Field Weld", heat: 0, slot: 1 },
   vent:     { label: "Vent",       heat: 0, slot: 1 },
   paint:    { label: "Paint",      heat: 0, slot: 1 },
+  // Plant Flag (§11): stake the lit beacon, or the telegraphed Next one, from
+  // within 2". Holds until the rig is moved; scores the lit beacon at Recovery.
+  plantflag:{ label: "Plant Flag", heat: 0, slot: 1 },
 };
 
 // Heat Threshold Table (§6), consulted with a D12 + overheat bonus total.
