@@ -881,7 +881,9 @@ export class World {
         m.light.intensity = 6 + k * 60;
         if (p.t < 0.05) { m.light.color.setHex(p.color); m.pylonMat.emissive.setHex(p.color); }
         if (p.t < 1 && Math.random() < dt * 30) this.fx.particle(m.gem.getWorldPosition(new THREE.Vector3()), { color: p.color, size: 0.7, life: 0.9, grow: 2, vel: new THREE.Vector3((Math.random() - 0.5) * 4, 3 + Math.random() * 3, (Math.random() - 0.5) * 4) });
-        if (k <= 0) { m.pulse = null; m.gem.scale.setScalar(1 + ((m.mult || 1) - 1) * 0.35); m.light.intensity = 6 + ((m.mult || 1) - 1) * 5; }
+        // A cycling beacon's own dark/next/lit block (above) owns its
+        // intensity from here; only classic rooms fall back to the flat formula.
+        if (k <= 0) { m.pulse = null; m.gem.scale.setScalar(1 + ((m.mult || 1) - 1) * 0.35); if (!m.state || m.state === "classic") m.light.intensity = 6 + ((m.mult || 1) - 1) * 5; }
       }
     });
     this.missionAnim?.(dt, now);

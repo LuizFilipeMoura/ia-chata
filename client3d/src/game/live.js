@@ -63,7 +63,7 @@ const HELP = {
   cryo: "Spend banked cryo. Free, no action: −2 heat each, and +1 Penetration each on your next attack.",
   meltdown: "Spend meltdown charge. Free, no action: +N Penetration on your attacks this activation, or a burst of +N heat on every enemy within 4\" (rim).",
   nanite: `Seed a nanite stack on yourself or an ally within ${NANITE_REACH}" (rim). It heals 1 SP on one location each Recovery (max 3 per location). Heat Capacity −1 on the host while it lives.`,
-  plantflag: `Plant Flag: stake the lit beacon, or the Next one, from within 2". 1 action, no heat. The flag holds until this rig is moved; at round end the lit beacon pays its VP to your side if no enemy is within 2".`,
+  plantflag: `Stake the lit beacon, or the Next one, from within 2". 1 action, no heat. The flag holds until this rig is moved; at round end the lit beacon pays its VP to your side if no enemy is within 2".`,
 };
 // Every action's own rules text: the table above, else the equipment active's.
 const EQUIP_TEXT = Object.fromEntries(Object.values(EQUIPMENT).map((e) => [e.active.key, e.active.text]));

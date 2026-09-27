@@ -68,7 +68,10 @@ export class Wires {
     let cands = null;
     try { if (rig && rig.owner === m.side && m.myTurn) cands = candidatesFor(m.previewRoom(rig), rig); } catch {}
     const myTargetId = st.game.priorityTargets?.[m.side];
-    const contested = (st.game.objectives || []).some((o) => {
+    // Cycling rooms: the reworded tip names the LIT beacon, so only that
+    // marker counts as contested. Classic rooms keep checking every objective.
+    const pool = st.game.beacons ? [st.game.objectives?.[st.game.beacons.lit]].filter(Boolean) : (st.game.objectives || []);
+    const contested = pool.some((o) => {
       const who = new Set(st.rigs.filter((r) => !r.destroyed && r.pos && controlsObjective(spatial(r), o)).map((r) => r.owner));
       return who.size === 2;
     });
