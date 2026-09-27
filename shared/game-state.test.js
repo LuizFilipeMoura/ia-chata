@@ -6596,6 +6596,7 @@ test("a digital side scores a marker it alone controls", () => {
 
 test("a marker both sides control is contested and scores nobody", () => {
   const { room, a, b, marker } = digitalObjectiveRoom();
+  room.game.beaconRules = "classic"; // per-marker scoring: no lit/next setup here
   a.pos = { x: marker.x, y: marker.y };
   b.pos = { x: marker.x, y: marker.y };   // both on it
   const before = room.game.sides.map((s) => s.vp);
@@ -6605,6 +6606,7 @@ test("a marker both sides control is contested and scores nobody", () => {
 
 test("a destroyed rig controls nothing", () => {
   const { room, a, b, marker } = digitalObjectiveRoom();
+  room.game.beaconRules = "classic"; // per-marker scoring: no lit/next setup here
   a.pos = { x: marker.x, y: marker.y };
   a.hull.destroyed = true;   // a real kill, recompute derives rig.destroyed from parts
   b.pos = { x: 2, y: 2 };
