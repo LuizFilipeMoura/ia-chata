@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// Does evolved play still fight for beacons under the cycling-beacon experiment?
-// Runs the SAME genetic meta-search twice from the same seed, once under the
-// current beacons and once with beaconRules = "cycle", then reports what each
-// evolved (the objective weight, the special-action bias Plant rides on) and
-// how its champion does against the Normal bot. Touches no gene pool, no
-// replays, no meta.js.
-//   node scripts/beacon-ga.mjs [--pop 16] [--gens 8] [--games 2] [--gauntlet 24] [--seed 1]
+// Does evolved play still fight for beacons under a given beacon rule variant
+// (see beacon-arms.mjs)? Runs the SAME genetic meta-search once per arm from
+// the same seed, by default once under the classic per-marker rules and once
+// under the shipped cycling rules, then reports what each evolved (the
+// objective weight, the special-action bias Plant rides on) and how its
+// champion does against the Normal bot. Touches no gene pool, no replays, no
+// meta.js.
+//   node scripts/beacon-ga.mjs [--pop 16] [--gens 8] [--games 2] [--gauntlet 24] [--seed 1] [--arms legacy,ship]
 import { evolve } from "../shared/sim/genetic.js";
 import { tierSquad, tierWinRate } from "../shared/sim/tiers.js";
 import { CHASSIS } from "../shared/game-state.js";

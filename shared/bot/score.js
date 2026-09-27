@@ -527,7 +527,8 @@ export function scoreParts(room, rig, cand) {
   const exposure = goesOff ? 0 : exposureAt(room, rig, pos, facing);
   const shots = cand.action === "move" || cand.action === "sprint" ? shotsFrom(room, rig, pos, facing) : null;
   return {
-    vp: room.game.beaconRules !== "classic" ? cycleVpAt(room, rig, pos, cand) + objectiveApproach(room, rig, pos, true)
+    vp: room.game.beaconRules !== "classic" && room.game.beacons
+      ? cycleVpAt(room, rig, pos, cand) + objectiveApproach(room, rig, pos, true)
       : objectiveVpAt(room, rig, pos) + objectiveApproach(room, rig, pos),
     priority: killProgress(room, rig, cand, pos, facing, shots),
     damage: offenceAt(room, rig, cand, pos, facing, shots),

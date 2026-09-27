@@ -5133,12 +5133,16 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
                 .filter((i) => Number.isInteger(i) && i >= 0 && i < objs.length),
             )]
           : [];
-        // Cycling beacons (§11): only the lit beacon can be claimed, and only by
-        // a side the app knows planted a flag on it (Plant Flag; moving clears it).
+        // Cycling beacons (§11): only the lit beacon can be claimed. Digital
+        // rooms trust only a side the app knows planted a flag on it (Plant
+        // Flag; moving clears it). Physical Rigs carry no app-tracked position,
+        // so the table adjudicated Plant Flag and the 2" contest themselves;
+        // the app just gates the claim to the lit beacon.
         if (cycleOn(room)) {
           const lit = room.game.beacons?.lit;
-          const planted = lit != null && room.rigs.some((r) => (r.owner || "a") === sideId && isPlanted(r, lit));
-          claims = planted && claims.includes(lit) ? [lit] : [];
+          const eligible = lit != null && (room.mode !== "digital"
+            || room.rigs.some((r) => (r.owner || "a") === sideId && isPlanted(r, lit)));
+          claims = eligible && claims.includes(lit) ? [lit] : [];
         }
         // Overwrite so a side can resubmit to resolve a conflict.
         room.game.recoveryClaims[sideId] = claims;

@@ -62,7 +62,9 @@ test("each round lights the telegraphed beacon and picks a different one next", 
 test("a single marker is lit every round from round 2", () => {
   const room = table();
   room.game.objectives = [{ x: 21, y: 14, vp: 2, relay: true }];
-  setBeaconRules(room, "cycle", mulberry32(1));
+  // Any mode other than "classic" cycles (it's the default); pass null to say
+  // so plainly and re-initialise room.game.beacons the same way "cycle" would.
+  setBeaconRules(room, null, mulberry32(1));
   assert.deepEqual(room.game.beacons, { lit: null, next: 0 });
   rotateBeacons(room, mulberry32(2));
   assert.deepEqual(room.game.beacons, { lit: 0, next: 0 });
@@ -170,28 +172,37 @@ test("the lit beacon's value is tunable", () => {
   assert.equal(side(room, "a").vp, VP(room));
 });
 
-test("physical Recovery: claims count only the lit beacon, and only with a planted Rig", () => {
+test("physical Recovery: the lit beacon scores without an app-tracked plant (the table adjudicates), a non-lit claim scores nothing, and round 1 dark scores nothing", () => {
   const room = createRoom("BC-P");
   applyCommand(room, { verb: "seed", attrs: { first: "a" } });
   assert.ok(room.game.started, lastRejectionReason());
   assert.equal(room.mode, "physical");
+  const vp = VP(room);
+  // Round 1 is dark: no beacon is lit, so a claim on anything scores nothing.
+  assert.equal(room.game.beacons.lit, null);
   room.game.phase = "recovery";
   room.game.recoveryClaims = {};
-  beacons(room, 0, 1);
-  const vp = VP(room);
-  // Side a claims everything but planted nothing: nothing scores.
   applyCommand(room, { verb: "vp", attrs: { claims: [0, 1, 2] } }, { side: "a" });
   applyCommand(room, { verb: "vp", attrs: { claims: [] } }, { side: "b" });
   assert.equal(side(room, "a").vp, 0);
-  // Next Recovery: a planted Rig on the lit beacon, claims trimmed to it.
+  // A beacon is lit: side a claims it with no app-tracked plant (physical Rigs
+  // carry no position, the players checked the planted flag and the 2" at the
+  // table), and it scores.
   room.game.phase = "recovery";
   room.game.recoveryClaims = {};
   beacons(room, 0, 1);
-  const ra = room.rigs.find((r) => r.owner === "a");
-  ra.plant = { objective: 0, at: null };
+  const before = side(room, "a").vp;
   applyCommand(room, { verb: "vp", attrs: { claims: [0, 1, 2] } }, { side: "a" });
   applyCommand(room, { verb: "vp", attrs: { claims: [] } }, { side: "b" });
-  assert.equal(side(room, "a").vp, vp);
+  assert.equal(side(room, "a").vp, before + vp);
+  // A claim on a beacon that isn't lit scores nothing, even alone.
+  room.game.phase = "recovery";
+  room.game.recoveryClaims = {};
+  beacons(room, 0, 1);
+  const beforeB = side(room, "b").vp;
+  applyCommand(room, { verb: "vp", attrs: { claims: [1, 2] } }, { side: "b" });
+  applyCommand(room, { verb: "vp", attrs: { claims: [] } }, { side: "a" });
+  assert.equal(side(room, "b").vp, beforeB);
 });
 
 test("classic rooms keep per-marker scoring and never announce beacons", () => {

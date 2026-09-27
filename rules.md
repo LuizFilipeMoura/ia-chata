@@ -96,7 +96,7 @@ A game lasts **10 rounds** (§11). Each round has three phases.
 
 **Initiative Phase.** Both players roll 1 D12; highest activates first this round (reroll ties). The player who activates **second** this round gains free **Answer tokens** (§5), and a player **2 or more VP behind** gains **Grit tokens** (§5), more the further behind they are. *(Round 1 is the exception, initiative there is set by deployment order, not rolled: §10.)*
 
-**Activation Phase.** Players alternate activating **one Rig at a time**, following initiative order. A Rig completes all its actions before the next Rig activates. If one player has no Rigs left to activate, the other player activates their remaining Rigs back-to-back.
+**Activation Phase.** Players alternate activating **one Rig at a time**, following initiative order. A Rig completes all its actions before the next Rig activates. If a Rig is destroyed during its own activation (a boiler blowing on its own overheat roll, say), that activation ends immediately and the turn passes on. If one player has no Rigs left to activate, the other player activates their remaining Rigs back-to-back.
 
 **Recovery Phase.** In this order:
 1. Each Rig reduces its heat by **1** (unless an effect forbids cooling). *⚙ TUNING: cut to 1 so heat lingers between rounds.*
@@ -321,7 +321,7 @@ When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All
 
 2. **Sides.** A **dividing line runs from one corner to the opposite corner**, splitting the table into two triangular halves. The **terrain roll-off winner** chooses which of the two diagonals is used and which half is theirs; the opponent takes the opposite corner.
 
-3. **Objectives.** Place **3 markers**: one at the **table centre** (**2 VP**), and one **18" from centre toward each of the two empty corners** (the corners no one deploys in), **1 VP** each. All three sit in the contested ground between the armies. If a marker lands on impassable terrain, shift it the shortest distance to clear ground.
+3. **Objectives.** Place **3 markers**: one at the **table centre**, and one **18" from centre toward each of the two empty corners** (the corners no one deploys in). All three sit in the contested ground between the armies. If a marker lands on impassable terrain, shift it the shortest distance to clear ground. None of the three pays VP on its own, see **§11** for how (and when) a beacon scores.
 
 4. **Order.** The player who took the **opposite corner** (the roll-off loser) chooses **who deploys first**. Players then alternate placing **one Rig at a time**, starting with the first-deployer.
    - Each Rig must be deployed **fully within 8"** of your **deployment corner**: a quarter-circle staging zone, measured from the corner to the nearest edge of the base. Squadrons start clustered in their corner and advance across the diagonal into the contested centre.
@@ -347,6 +347,7 @@ The battle is fought over scrap scattered across the wastes. Tuned for small gam
 - **Plant Flag** (§5): a Rig within **2"** of the lit or Next beacon spends an action to plant its side's flag. The flag holds until the Rig is moved by anything.
 - The lit beacon is **held** by a side with a planted Rig on it, if **no enemy Rig** is within 2" of it. Any enemy Rig within 2", planted or not, **contests** it: nobody scores.
 - A destroyed Rig's flag falls with it.
+- **On a physical table**, the app has no position to check: the players check the planted flag and the 2" themselves before claiming the lit beacon at Recovery.
 
 ### Scoring & winning
 - During each **Recovery Phase** the lit beacon pays **4 VP** to the side holding it. *(Digital: the engine scores it and logs "&lt;side&gt; holds the lit beacon: +4 VP", or "Beacon contested: nobody scores".)* *⚙ TUNING: bot sweeps of 3, 4 and 5 VP with early planting on: 4 kept beacons near their old share of the game (about 58% of VP), halved draws against 3, and kept the first activator at 53%.*
@@ -771,7 +772,7 @@ The single-player campaign (see `docs/design/campaign.md`) plays **contracts**: 
 
 | Contract | Win | Lose |
 |---|---|---|
-| **Beacon Hold** | more VP at the round limit (standard beacons) | fewer VP, or annihilation |
+| **Beacon Hold** | more VP at the round limit (cycling beacons) | fewer VP, or annihilation |
 | **Skirmish** | more VP at the round limit (the standard cycling beacons; kills score) | the reverse |
 | **Assassination** | wreck the marked **Commander** (the instant it goes down) | the round limit passes, or annihilation |
 | **Breakthrough** | **Extract** the goal number of Rigs through the enemy corner | the round limit passes, annihilation, or no Rig left to extract |

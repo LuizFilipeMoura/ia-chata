@@ -65,7 +65,8 @@ export function createSimRoom({ code = "SIM", squads, weights, table, random = M
     }
   }
   cmd("field", { action: "lock" });
-  // Experimental beacon rules ride on the room before the battle starts.
+  // Beacon rule/tuning overrides for sims (e.g. classic vs. cycling A/B runs)
+  // ride on the room before the battle starts.
   if (beaconRules) room.game.beaconRules = beaconRules;
   if (beaconTuning) room.game.beaconTuning = beaconTuning;
   if (!cmd("ready", {}) || !room.game.started) throw new Error(`simulated room did not start: ${lastRejectionReason()}`);

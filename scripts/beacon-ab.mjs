@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// A/B the cycling-beacon experiment (room.game.beaconRules = "cycle") against
-// the current beacons: same squads, same seeds, same pilots, both tables.
-//   node scripts/beacon-ab.mjs [--games 100] [--tiers normal,hard] [--seed 1] [--arms legacy,cycle]
+// A/B beacon rule variants (see beacon-arms.mjs) against the classic
+// per-marker rules: same squads, same seeds, same pilots, both tables.
+//   node scripts/beacon-ab.mjs [--games 100] [--tiers normal,hard] [--seed 1] [--arms legacy,ship]
 // Arms are the rule variants in beacon-arms.mjs.
 import { createPool } from "../server/sim/pool.js";
 import { tierSquad } from "../shared/sim/tiers.js";

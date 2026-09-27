@@ -9,6 +9,7 @@ import {
 } from "./game-state.js";
 import { aimBreakdown } from "./combat.js";
 import { driveBots } from "./bot/index.js";
+import { scoreParts } from "./bot/score.js";
 import { mulberry32 } from "./sim/match.js";
 import { radiusOf } from "./geometry.js";
 
@@ -212,6 +213,23 @@ test("salvage: a rig ending its activation by a crate claims it for VP", () => {
   assert.equal(room.game.sides[0].vp, vp0 + 2);
   assert.equal(room.game.objectives.filter((o) => o.crate).length, 2);
   assert.ok(room.game.resolutions.some((r) => r.kind === "crate"));
+});
+
+// Salvage rooms have no beacons (crates aren't beacons, room.game.beacons stays
+// null), so the bot must still price a move toward a crate above one away from
+// it. It used to route every non-classic room (which is every room, cycling is
+// the default) through the cycling-beacon scorer regardless of whether the room
+// actually has beacons, and that scorer skips markers entirely, pricing crates
+// at 0 and leaving the bot with no reason to go get them.
+test("salvage bot still values approaching a crate (no beacons in this room)", () => {
+  const room = mission({ type: "salvage", crates: 3 }, 5);
+  const gold = findRig(room, "Gold");
+  assert.equal(room.game.beacons, null);
+  const crate = room.game.objectives.find((o) => o.crate);
+  gold.pos = { x: crate.x + 6, y: crate.y };
+  const toward = scoreParts(room, gold, { action: "move", dest: { x: crate.x + 2, y: crate.y }, facing: 180 }).vp;
+  const away = scoreParts(room, gold, { action: "move", dest: { x: crate.x + 10, y: crate.y }, facing: 0 }).vp;
+  assert.ok(toward > away, `expected moving toward the crate to score higher (toward=${toward}, away=${away})`);
 });
 
 for (const type of ["beacons", "skirmish", "assassinate", "breakthrough", "laststand", "salvage", "boss"]) {
