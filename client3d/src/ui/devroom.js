@@ -11,7 +11,8 @@ import { SKINS, SKIN_IDS } from "../scene/rig/skins.js";
 import { RECIPES } from "../scene/rig/recipes.js";
 import { fits } from "../scene/rig/envelope.js";
 import { PART_KINDS, partPreview } from "../scene/rig/preview.js";
-import { buildingVariant, BUILDING_KINDS, BACKDROP_KINDS, backdrop } from "../scene/props.js";
+import { buildingVariant, BUILDING_KINDS, BACKDROP_KINDS, backdrop, SMALL_VARIANTS, smallVariant } from "../scene/props.js";
+import { propFits } from "../scene/rig/envelope.js";
 import { THEMES } from "../scene/themes.js";
 import { CHASSIS, SUPPORT_TEMPLATES, DRONE_TYPES } from "/shared/game-state.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
@@ -186,16 +187,28 @@ export class DevRoom {
     // Buildings, each variant on its own footprint.
     BUILDING_KINDS.forEach((kind, i) => {
       const t = { kind: "building", shape: "rect", x: 0, y: 0, w: 6, h: 5, rot: 0 };
-      const b = new THREE.Group(); b.add(buildingVariant(kind, t, this.ctx)); b.position.set(X0 + 3 + i * 14, 0, ROW.buildings);
-      this.add({ id: `building.${kind}`, name: kind, sub: "building (fills its terrain rect)", section: "buildings", obj: b, source: `${PROPS} · ${kind}(t, ctx) via buildingVariant()`,
+      const built = buildingVariant(kind, t, this.ctx);
+      const b = new THREE.Group(); b.add(built); b.position.set(X0 + 3 + i * 9.5, 0, ROW.buildings);
+      const f = propFits(built, "building", t.w, t.h);
+      this.add({ id: `building.${kind}`, name: kind, sub: "building (fills its terrain rect)", section: "buildings", obj: b, source: `${PROPS} / dressing.js · ${kind}(t, ctx) via buildingVariant()`, size: { ok: f.ok || kind === "mast", height: f.height, radius: 0, limit: { height: f.limit, radius: 0 } },
         notes: `Which themes use it: ${Object.values(THEMES).filter((th) => th.buildings.includes(kind)).map((th) => th.name).join(", ") || "none"}.` });
     });
 
     // Small terrain (through the same path the battle uses) and objectives.
+    // Small terrain: every variant of each slot (a piece's position picks one in battle).
+    const SLOT_RECT = { barricade: [5, 0.9], crate: [2.2, 2.2], rubble: [2.5, 2] };
+    let sx = X0;
+    const smallZ = ROW.terrain - 5;
+    for (const [slot, variants] of Object.entries(SMALL_VARIANTS)) for (const v of variants) {
+      const [w, h] = SLOT_RECT[slot];
+      sx += w / 2;
+      const obj = smallVariant(slot, v, { kind: slot, shape: "rect", w, h, x: sx, y: smallZ }, this.ctx);
+      obj.position.set(sx, 0, smallZ);
+      this.add({ id: `terrain.${slot}.${v}`, name: `${slot} · ${v}`, sub: `small terrain · ${slot} slot`, section: "terrain", obj, source: `${PROPS} smallVariant("${slot}", "${v}")${v === "classic" ? "" : " (dressing.js)"}`,
+        notes: obj.userData.carcassOf ? `Wreck of a ${obj.userData.carcassOf}.` : "" });
+      sx += w / 2 + 2.5;
+    }
     const TERRAIN = [
-      ["barricade", "Barricade", { kind: "barricade", shape: "rect", w: 7, h: 0.9 }, "barricadeProp"],
-      ["crate", "Crate stack", { kind: "crate", shape: "rect", w: 2.2, h: 2.2 }, "crateProp"],
-      ["rubble", "Rubble / rock", { kind: "rock", shape: "rect", w: 2.5, h: 2 }, "rubbleProp"],
       ["area", "Area terrain (ellipse)", { kind: "area", shape: "ellipse", rx: 2.5, ry: 1.6 }, "terrainMesh ellipse"],
       ["rock-poly", "Rock outcrop (poly)", { kind: "rock", shape: "poly", points: [[-1.5, -1], [1.2, -1.4], [1.8, 0.6], [-0.2, 1.6], [-1.8, 0.4]] }, "terrainMesh poly"],
       ["woods", "Woods (poly)", { kind: "wood", shape: "poly", points: [[-2, -1.2], [1.8, -1.5], [2.2, 1], [-1.5, 1.6]] }, "terrainMesh poly"],
@@ -316,7 +329,7 @@ export class DevRoom {
       el("div", { class: "dv-row" }, el("b", {}, "id "), el("code", {}, it.id)),
       el("div", { class: "dv-row" }, el("b", {}, "source "), el("code", {}, it.source)),
       it.notes ? el("p", { class: "dv-notes" }, it.notes) : null,
-      it.size ? el("div", { class: "dv-row" }, el("b", {}, "size "), el("code", { style: { color: it.size.ok ? "#7fd07a" : "#ff6a5a" } }, `height ${it.size.height.toFixed(2)} / ${it.size.limit.height} · radius ${it.size.radius.toFixed(2)} / ${it.size.limit.radius}`)) : null,
+      it.size ? el("div", { class: "dv-row" }, el("b", {}, "size "), el("code", { style: { color: it.size.ok ? "#7fd07a" : "#ff6a5a" } }, `height ${it.size.height.toFixed(2)} / ${(+it.size.limit.height).toFixed(2)}${it.size.limit.radius ? ` · radius ${it.size.radius.toFixed(2)} / ${it.size.limit.radius}` : ""}`)) : null,
       el("div", { class: "dv-actions" },
         el("button", { class: "btn primary", onClick: () => { navigator.clipboard?.writeText(this.refText(it)).then(() => toast("Reference copied. Paste it into your request.", "good"), () => toast(this.refText(it), "info", 8000)); } }, "Copy ref"),
         it.play ? el("button", { class: "btn", onClick: it.play }, "▶ Play") : null,

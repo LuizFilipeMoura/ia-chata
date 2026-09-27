@@ -6,58 +6,8 @@
 // ctx = { theme, win, fx, anim(fn(dt, now)), rand(), chimney(obj3d, opts) }
 import * as THREE from "three";
 
-const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...o });
-const glow = (color, i = 1.5) => new THREE.MeshStandardMaterial({ color: 0x222222, emissive: color, emissiveIntensity: i });
-const shadow = (m) => { m.castShadow = m.receiveShadow = true; return m; };
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
-
-// A lamp that blinks on a period (aircraft warning, hazard beacon).
-function blinker(ctx, parent, pos, color, { period = 1.6, duty = 0.25, size = 0.16, phase = ctx.rand() * 3 } = {}) {
-  const mat = glow(color, 0);
-  const m = new THREE.Mesh(new THREE.SphereGeometry(size, 10, 8), mat); m.position.copy(pos); parent.add(m);
-  ctx.anim((dt, now) => { mat.emissiveIntensity = ((now + phase) % period) / period < duty ? 3.5 : 0.15; });
-  return m;
-}
-
-// A relief valve: every few seconds, a hiss of steam from `obj`.
-function steamValve(ctx, obj, { every = 4, color = 0xd8d4cc, dir = V(0, 2.2, 0), size = 0.7 } = {}) {
-  let next = ctx.rand() * every;
-  ctx.anim((dt, now) => {
-    if (now < next) return;
-    next = now + every * (0.6 + ctx.rand() * 0.8);
-    const p = obj.getWorldPosition(V(0, 0, 0));
-    for (let i = 0; i < 7; i++) {
-      ctx.fx.particle(p, { color, size: size * (0.6 + ctx.rand() * 0.6), life: 1.4, grow: 3, additive: false, opacity: 0.5,
-        vel: dir.clone().add(V((ctx.rand() - 0.5) * 0.8, ctx.rand() * 0.8, (ctx.rand() - 0.5) * 0.8)) });
-    }
-  });
-}
-
-// A flame that licks and flickers (flare stacks, burners): additive sparks plus
-// a pulsing emissive core. `light` adds a real flickering point light.
-function flame(ctx, parent, pos, { size = 1, light = false, rate = 18 } = {}) {
-  const core = new THREE.Mesh(new THREE.ConeGeometry(0.35 * size, 1.4 * size, 8), glow(0xff8a2a, 2.5));
-  core.position.copy(pos).add(V(0, 0.6 * size, 0)); parent.add(core);
-  const pl = light ? new THREE.PointLight(0xff8a3a, 20, 30) : null;
-  if (pl) { pl.position.copy(core.position); parent.add(pl); }
-  ctx.anim((dt, now) => {
-    const f = 0.8 + 0.25 * Math.sin(now * 17 + pos.x) + 0.15 * Math.sin(now * 31);
-    core.scale.set(1, f, 1);
-    if (pl) pl.intensity = 16 + 10 * f;
-    if (Math.random() < dt * rate) {
-      const p = core.getWorldPosition(V(0, 0, 0)).add(V(0, 0.5 * size, 0));
-      ctx.fx.particle(p, { tile: "flame", glow: 2, color: Math.random() < 0.5 ? 0xffb040 : 0xff5a1a, color2: 0xff2a06, size: 0.9 * size, life: 0.7, grow: 1.6,
-        vel: V((Math.random() - 0.5) * 0.8, 2.5 + Math.random() * 2, (Math.random() - 0.5) * 0.8) });
-    }
-  });
-}
-
-// Lit windows: a steady glow on the lit panes only (the mask matches the
-// facade texture's repeat), so the facade itself never pulses.
-function flickerWindows(ctx, mat, lamp) {
-  const e = ctx.win.glow.clone(); e.needsUpdate = true; e.repeat.copy(mat.map.repeat);
-  mat.emissive = new THREE.Color(lamp); mat.emissiveMap = e; mat.emissiveIntensity = 0.9;
-}
+import { std, glow, shadow, V, blinker, steamValve, flame, flickerWindows } from "./dress-kit.js";
+import { NEW_BUILDINGS_MAP, SMALL_BUILDERS } from "./dressing.js";
 
 // ---- Buildings (fill the terrain rect t.w × t.h, centred) -----------------
 
@@ -256,7 +206,7 @@ function mast(t, ctx) {
   return g;
 }
 
-const BUILDINGS = { factory, tank, watertower, shed, cooling, mast };
+const BUILDINGS = { factory, tank, watertower, shed, cooling, mast, ...NEW_BUILDINGS_MAP };
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
 export const BACKDROP_KINDS = ["skyline", "zeppelin", "crane", "flares", "cooling"];
 // One specific building variant (the dev room), footprint t.w × t.h.
@@ -270,7 +220,7 @@ export function buildingProp(t, ctx) {
 
 // ---- Small terrain ---------------------------------------------------------
 
-export function barricadeProp(t, ctx) {
+function classicBarricade(t, ctx) {
   const g = new THREE.Group();
   const wall = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, 1.1, t.h), std(0x8b8578, { roughness: 0.9 }))); wall.position.y = 0.55; g.add(wall);
   for (let x = -t.w / 2 + 0.5; x < t.w / 2; x += 1.2) {
@@ -298,7 +248,7 @@ export function barricadeProp(t, ctx) {
   return g;
 }
 
-export function crateProp(t, ctx) {
+function classicCrate(t, ctx) {
   const g = new THREE.Group();
   const s = Math.min(t.w, t.h) * 0.8;
   const c = shadow(new THREE.Mesh(new THREE.BoxGeometry(t.w, s, t.h), std(0x8a6a3c, { roughness: 0.8 }))); c.position.y = s / 2; g.add(c);
@@ -311,7 +261,7 @@ export function crateProp(t, ctx) {
   return g;
 }
 
-export function rubbleProp(t, ctx) {
+function classicRubble(t, ctx) {
   const g = new THREE.Group();
   const geo = new THREE.DodecahedronGeometry(1, 0); geo.scale(t.w / 2, Math.min(t.w, t.h) * 0.45, t.h / 2);
   const r = shadow(new THREE.Mesh(geo, std(0x6f6a62, { roughness: 1, flatShading: true }))); r.position.y = Math.min(t.w, t.h) * 0.3; g.add(r);
@@ -327,6 +277,25 @@ export function rubbleProp(t, ctx) {
   });
   return g;
 }
+
+// Each small-terrain slot has variants (dressing.js); a piece's position picks
+// one, so both players and a replay see the same table.
+const CLASSIC = { barricade: classicBarricade, crate: classicCrate, rubble: classicRubble };
+export const SMALL_VARIANTS = Object.fromEntries(Object.keys(CLASSIC).map((slot) => [slot, ["classic", ...Object.keys(SMALL_BUILDERS[slot])]]));
+function pickVariant(slot, t) {
+  const list = SMALL_VARIANTS[slot];
+  const h = Math.abs(Math.sin((t.x || 0) * 12.9898 + (t.y || 0) * 78.233) * 43758.5453);
+  return list[Math.floor((h - Math.floor(h)) * list.length)];
+}
+// One specific variant (the dev room, tests).
+export function smallVariant(slot, variant, t, ctx) {
+  const g = (variant === "classic" ? CLASSIC[slot] : SMALL_BUILDERS[slot][variant])(t, ctx);
+  g.userData.variant = variant;
+  return g;
+}
+export const barricadeProp = (t, ctx) => smallVariant("barricade", pickVariant("barricade", t), t, ctx);
+export const crateProp = (t, ctx) => smallVariant("crate", pickVariant("crate", t), t, ctx);
+export const rubbleProp = (t, ctx) => smallVariant("rubble", pickVariant("rubble", t), t, ctx);
 
 // ---- Beyond the table ------------------------------------------------------
 

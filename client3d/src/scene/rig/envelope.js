@@ -47,3 +47,24 @@ export function fits(m) {
   const limit = ENVELOPE[envelopeClass(m)];
   return { ok: size.height <= limit.height + EPS && size.radius <= limit.radius + EPS, ...size, limit };
 }
+
+// Set dressing, measured the same day from the original kinds. Buildings stay
+// under the tallest original (the water tower) and inside their terrain rect
+// plus a small overhang; small terrain stays under its slot's original height
+// for that rect (barricade banner pole, crate stack, rubble heap).
+export const SET_ENVELOPE = {
+  building: { height: () => 10.9, overhang: 0.5 },
+  barricade: { height: () => 3.0, overhang: 0.35 },
+  crate: { height: (w, h) => 1.2 * Math.min(w, h) + 0.25, overhang: 0.35 },
+  rubble: { height: (w, h) => 0.72 * Math.min(w, h) + 0.05, overhang: 0.35 },
+};
+
+// Does a prop built for rect w x h (centred on the origin) fit its slot?
+export function propFits(obj, slot, w, h) {
+  obj.updateMatrixWorld(true);
+  const b = new THREE.Box3().setFromObject(obj);
+  const L = SET_ENVELOPE[slot];
+  const height = b.max.y, limit = L.height(w, h), o = L.overhang;
+  const inRect = b.min.x >= -w / 2 - o && b.max.x <= w / 2 + o && b.min.z >= -h / 2 - o && b.max.z <= h / 2 + o;
+  return { ok: inRect && height <= limit + 1e-3, height, limit, box: b };
+}

@@ -12,7 +12,7 @@ export const THEMES = {
     hemi: { sky: 0xd8b88a, ground: 0x140d06, i: 0.5 }, sun: { color: 0xffe0b0, i: 8 },
     ground: { base: "#4a3c2b", blooms: ["rgba(120,60,25,0.22)", "rgba(10,8,6,0.25)"], speck: [90, 78, 60], rails: 1, plates: false, stripes: false, cracks: null },
     outer: 0x1b1d22, lamp: 0xffcf6b, banner: 0x8a2a1c, search: 0xfff0c8,
-    buildings: ["factory", "factory", "tank"], backdrop: ["skyline", "zeppelin", "crane"], ambient: "soot",
+    buildings: ["factory", "factory", "tank", "pumphouse"], backdrop: ["skyline", "zeppelin", "crane"], ambient: "soot",
   },
   refinery: {
     id: "refinery", name: "Refinery Night",
@@ -21,7 +21,7 @@ export const THEMES = {
     hemi: { sky: 0x8aa2c8, ground: 0x0a0806, i: 0.42 }, sun: { color: 0xcfe0ff, i: 6.5 },
     ground: { base: "#2f2e2c", blooms: ["rgba(10,10,12,0.35)", "rgba(90,70,40,0.18)"], speck: [70, 70, 72], rails: 0, plates: false, stripes: true, cracks: null },
     outer: 0x0e1014, lamp: 0xffb347, banner: 0xd8a21c, search: 0xffe6b0,
-    buildings: ["tank", "tank", "factory"], backdrop: ["flares", "skyline", "crane"], ambient: "embers",
+    buildings: ["tank", "tank", "factory", "gasholder"], backdrop: ["flares", "skyline", "crane"], ambient: "embers",
   },
   railyard: {
     id: "railyard", name: "Rail Yard",
@@ -30,7 +30,7 @@ export const THEMES = {
     hemi: { sky: 0xc8d0c0, ground: 0x12110e, i: 0.5 }, sun: { color: 0xfff2dc, i: 7.5 },
     ground: { base: "#4b4841", blooms: ["rgba(30,28,24,0.3)", "rgba(110,80,50,0.15)"], speck: [95, 92, 84], rails: 4, plates: false, stripes: false, cracks: null },
     outer: 0x1c1e1c, lamp: 0xffd98a, banner: 0x2c4a6a, search: 0xf6f2e0,
-    buildings: ["shed", "watertower", "factory"], backdrop: ["crane", "skyline", "zeppelin"], ambient: "steam",
+    buildings: ["shed", "watertower", "factory", "signalbox"], backdrop: ["crane", "skyline", "zeppelin"], ambient: "steam",
   },
   skyport: {
     id: "skyport", name: "Skyport Docks",
@@ -39,7 +39,7 @@ export const THEMES = {
     hemi: { sky: 0xcde0d0, ground: 0x14100a, i: 0.5 }, sun: { color: 0xffe6b8, i: 8 },
     ground: { base: "#5a4a34", blooms: ["rgba(40,30,20,0.25)", "rgba(150,110,60,0.15)"], speck: [110, 96, 72], rails: 0, plates: true, stripes: false, cracks: null },
     outer: 0x16201e, lamp: 0x9ff0dc, banner: 0x1f6a5a, search: 0xe8fff4,
-    buildings: ["mast", "factory", "watertower"], backdrop: ["zeppelin", "zeppelin", "skyline"], ambient: "dust",
+    buildings: ["mast", "factory", "watertower", "pylon"], backdrop: ["zeppelin", "zeppelin", "skyline"], ambient: "dust",
   },
   ashfields: {
     id: "ashfields", name: "Ashfields",
@@ -48,7 +48,7 @@ export const THEMES = {
     hemi: { sky: 0xe0a080, ground: 0x0a0404, i: 0.45 }, sun: { color: 0xffc8a0, i: 7.5 },
     ground: { base: "#2a2522", blooms: ["rgba(0,0,0,0.35)", "rgba(120,40,10,0.18)"], speck: [60, 54, 50], rails: 0, plates: false, stripes: false, cracks: "rgba(255,110,30,0.55)" },
     outer: 0x100a08, lamp: 0xff7a3a, banner: 0x3a3a3a, search: 0xffd0b0,
-    buildings: ["cooling", "factory", "tank"], backdrop: ["cooling", "flares", "skyline"], ambient: "embers",
+    buildings: ["cooling", "factory", "tank", "pillbox"], backdrop: ["cooling", "flares", "skyline"], ambient: "embers",
   },
 };
 export const THEME_IDS = Object.keys(THEMES);
