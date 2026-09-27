@@ -2680,6 +2680,15 @@ function endActivation(room, rig, dice, random) {
       checkAnnihilation(room);
     }
   }
+  // The overheat roll above (applyOverheat -> applyDamage -> onRigDamaged) may
+  // have just destroyed this rig while it was still the active one:
+  // onRigDamaged already handed the floor off in that case (same fix as
+  // Burning-at-activation-start, see onRigDamaged). Bail here so the rest of
+  // this function, which is only correct for a rig that's still the active
+  // one, doesn't run a second time: it would hand the floor off AGAIN (the
+  // turn swings back to the side that just died instead of the other side),
+  // or throw setting activeRigId on a game.turn that Recovery already nulled.
+  if (room.game.turn?.activeRigId !== rig.id) return;
   rig.activated = true;
   // Stagger (§7) lapses at the end of the rig's next activation if it never
   // attacked; one staggered mid-activation keeps it one activation longer.

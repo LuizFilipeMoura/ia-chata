@@ -1069,6 +1069,57 @@ test("a rig that burns to death as the last activation of the round starts Recov
   assert.equal(r.game.phase, "recovery", "it was the round's last rig: Recovery started instead of the game stalling");
 });
 
+// A second way the active rig can die mid-activation: its OWN overheat roll
+// at endActivation (applyOverheat -> applyDamage -> onRigDamaged) instead of
+// Burning at activate. onRigDamaged's hand-off (added for the Burning case
+// above) fires here too, but endActivation's own tail was still running
+// AFTER it: `rig.activated = true`, then unconditionally `activeRigId = null`
+// and a SECOND handoff(). Mid-round that swung the turn back to the side
+// that just died (two handoffs cancel out); as the round's last activation,
+// Recovery had already nulled game.turn by then, and endActivation's
+// unconditional `room.game.turn.activeRigId = null` threw. endActivation now
+// bails right after the overheat roll if onRigDamaged already moved the
+// floor off this rig.
+test("a rig that dies to its own overheat roll hands the floor to the other side exactly once (not swung back)", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const side = r.game.turn.side, other = side === "a" ? "b" : "a";
+  const rig = findRig(r, `${side}1`);
+  applyCommand(r, { verb: "activate", attrs: { name: rig.name } });
+  rig.engine.heat = 40; rig.integrity = 1; // guarantees a catastrophic (>=17) overheat roll that empties Integrity
+  const v = r.version;
+  applyCommand(r, { verb: "endactivation", attrs: { name: rig.name, dice: { overheat: 12, destruction: 1 } } }, {}, { random: () => 0 });
+  assert.notEqual(r.version, v, "the endactivation command was accepted");
+  assert.equal(rig.destroyed, true, "the overheat roll killed it before endActivation's own tail ran");
+  assert.equal(r.game.phase, "activation", "still mid-round");
+  assert.equal(r.game.turn.side, other, "handed to the other side exactly once, not swung back to the side that just died");
+  const v2 = r.version;
+  applyCommand(r, { verb: "activate", attrs: { name: `${other}1` } });
+  assert.notEqual(r.version, v2, "the other side can activate normally: nothing is stuck");
+});
+
+test("a rig that dies to its own overheat roll as the round's last activation starts Recovery without throwing", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const counts = { a: 0, b: 0 };
+  for (let i = 0; i < 5; i++) {
+    const side = r.game.turn.side;
+    const name = `${side}${++counts[side]}`;
+    applyCommand(r, { verb: "activate", attrs: { name } });
+    applyCommand(r, { verb: "endactivation", attrs: { name } });
+  }
+  const side = r.game.turn.side;
+  const lastName = `${side}${counts[side] + 1}`;
+  const rig = findRig(r, lastName);
+  applyCommand(r, { verb: "activate", attrs: { name: lastName } });
+  rig.engine.heat = 40; rig.integrity = 1;
+  const v = r.version;
+  applyCommand(r, { verb: "endactivation", attrs: { name: lastName, dice: { overheat: 12, destruction: 1 } } }, {}, { random: () => 0 });
+  assert.notEqual(r.version, v, "the endactivation command was accepted, not thrown");
+  assert.equal(rig.destroyed, true, "the overheat roll killed it");
+  assert.equal(r.game.phase, "recovery", "it was the round's last rig: Recovery started instead of throwing on a nulled game.turn");
+});
+
 test("Suppression Lock's 3rd stack blocks Prepare during the pinned rig's activation", () => {
   const r = startedRoom();
   clearPendingAnswer(r);
