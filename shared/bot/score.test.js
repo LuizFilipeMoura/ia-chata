@@ -178,3 +178,9 @@ test("threatsAt splits exposure by enemy and sums to exposureOf", async () => {
   foe.facing = 0;                                          // turned away: nothing
   assert.equal(threatsAt(room, atk, atk.pos, atk.facing)[0].v, 0);
 });
+
+test("Plant Flag is its own action family, not a 'special'", async () => {
+  const { actionFamily, BIAS_FAMILIES } = await import("./score.js");
+  assert.ok(BIAS_FAMILIES.includes("plant"));
+  assert.equal(actionFamily("plantflag"), "plant");
+});

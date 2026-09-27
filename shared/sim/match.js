@@ -30,7 +30,7 @@ function pilotAttrs(pilot) {
 // Build and start a simulated room. squads: { a: [unit], b: [unit] } where unit
 // = { chassis, longRangeUpgrade?, meleeUpgrade?, equipment?, equipmentUpgrade? };
 // weights: { a: pilot, b: pilot }; table: { width, height } (default rulebook).
-export function createSimRoom({ code = "SIM", squads, weights, table, random = Math.random }) {
+export function createSimRoom({ code = "SIM", squads, weights, table, random = Math.random, beaconRules = null, beaconTuning = null }) {
   const room = createRoom(code);
   const opts = { random };
   // Every setup command goes through the same server guard a player's HTTP
@@ -65,6 +65,9 @@ export function createSimRoom({ code = "SIM", squads, weights, table, random = M
     }
   }
   cmd("field", { action: "lock" });
+  // Experimental beacon rules ride on the room before the battle starts.
+  if (beaconRules) room.game.beaconRules = beaconRules;
+  if (beaconTuning) room.game.beaconTuning = beaconTuning;
   if (!cmd("ready", {}) || !room.game.started) throw new Error(`simulated room did not start: ${lastRejectionReason()}`);
   room.simulated = true;
   return room;
@@ -103,9 +106,14 @@ export function frameOf(room, cmd, fromResolutionId) {
 // Play a simulated room to the end. Returns { winner, vp, rounds, stats,
 // survivors } plus, with `record`, { frames, field, objectives, pilots }, and
 // `room` (the finished room) when `keepRoom` is set.
-export function playMatch({ squads, weights, seed = 1, record = false, table, code, keepRoom = false }) {
+export function playMatch({ squads, weights, seed = 1, record = false, table, code, keepRoom = false, beaconRules = null, beaconTuning = null }) {
   const random = mulberry32(seed);
-  const room = createSimRoom({ code, squads, weights, table, random });
+  const room = createSimRoom({ code, squads, weights, table, random, beaconRules, beaconTuning });
+  // Where the VP came from: beacon scores vs everything else (kills, bounties),
+  // the round each beacon payout landed in, and every change of the lead.
+  const vpFlow = { beacon: { a: 0, b: 0 }, other: { a: 0, b: 0 }, beaconByRound: {}, leadChanges: 0, plants: 0 };
+  let vpBefore = { a: 0, b: 0 }, leader = null, seenRes = room.game.nextResolutionId || 0;
+  vpFlow.first = room.game.initiative?.order?.[0] ?? room.game.turn?.side ?? null;
   const frames = [];
   const stats = { a: { dmgDealt: 0, kills: 0 }, b: { dmgDealt: 0, kills: 0 } };
   const spOf = (r) => LOCS.reduce((n, l) => n + (r[l]?.sp || 0), 0);
@@ -115,6 +123,21 @@ export function playMatch({ squads, weights, seed = 1, record = false, table, co
   if (record) frames.push(frameOf(room, null, 0));
 
   const onStep = (r, cmd) => {
+    const fresh = (r.game.resolutions || []).filter((x) => x.id >= seenRes);
+    seenRes = r.game.nextResolutionId;
+    const scoreRound = r.game.phase === "finished" ? r.game.round : r.game.round - 1;
+    for (const x of fresh) {
+      if (x.kind === "plant") vpFlow.plants++;
+      if (x.kind === "score" && x.vp > 0 && x.side) {
+        vpFlow.beacon[x.side] += x.vp;
+        vpFlow.beaconByRound[scoreRound] = (vpFlow.beaconByRound[scoreRound] || 0) + x.vp;
+      }
+    }
+    const now = Object.fromEntries(r.game.sides.map((s) => [s.id, s.vp || 0]));
+    for (const id of ["a", "b"]) vpFlow.other[id] = now[id] - vpFlow.beacon[id];
+    const lead = now.a > now.b ? "a" : now.b > now.a ? "b" : leader;
+    if (lead && leader && lead !== leader) vpFlow.leadChanges++;
+    leader = lead; vpBefore = now;
     // Damage/kill tallies credited to whoever issued the command; a rig hurting
     // itself (overheat) credits nobody.
     const named = cmd?.attrs?.name && r.rigs.find((x) => x.name === cmd.attrs.name);
@@ -154,6 +177,7 @@ export function playMatch({ squads, weights, seed = 1, record = false, table, co
   const out = {
     winner, vp, rounds: Math.min(room.game.round, MAX_ROUNDS), stats,
     reason: room.game.outcome?.reason ?? null,
+    vpFlow,
     finished: !!room.game.outcome,
     survivors: { a: room.rigs.filter((r) => r.owner === "a" && !r.destroyed).map((r) => r.chassis), b: room.rigs.filter((r) => r.owner === "b" && !r.destroyed).map((r) => r.chassis) },
   };

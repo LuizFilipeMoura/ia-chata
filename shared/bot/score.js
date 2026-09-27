@@ -30,7 +30,7 @@ import {
   arcOf, sightCorridor, distanceBetween, meleeInReach, controlsObjective,
   radiusOf, terrainPolygons,
 } from "../geometry.js";
-import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, ANY_KILL_VP, KILL_VP, TRAILING_KILL_BOUNTY, beaconMultiplier, UNIT_WEAPONS, supportInReach } from "../game-state.js";
+import { spatial, effectiveWeaponProfile, meleeReachOf, findRig, ANY_KILL_VP, KILL_VP, TRAILING_KILL_BOUNTY, beaconMultiplier, UNIT_WEAPONS, supportInReach, isPlanted, beaconTuning } from "../game-state.js";
 import { HEAT_CAPACITY, woundTarget } from "../rules.js";
 import { toughnessOf, partNamesOf, kindOf, UNIT_KINDS } from "../unit-kinds.js";
 
@@ -245,12 +245,50 @@ function travel(room, rig, pos, goal) {
   }
   return fn(pos);
 }
-function objectiveApproach(room, rig, pos) {
+// Cycling beacons: only the lit beacon pays, and only to a planted Rig. Standing
+// on it unplanted is worth half (a plant is one action away), and so is
+// contesting it (denying the enemy's plant). Otherwise the rig is pulled toward
+// the lit beacon, or more gently toward the telegraphed next one.
+function cycleVpAt(room, rig, pos, cand) {
+  const g = room.game, b = g.beacons;
+  if (!b) return 0;
+  const { vp: VP, earlyPlant, plantedContest } = beaconTuning(room);
+  const me = { pos, radius: radiusOf(rig) };
+  const stays = pos.x === rig.pos?.x && pos.y === rig.pos?.y;
+  // Would this candidate leave the rig planted on marker i? (A plant candidate
+  // stakes the lit beacon first, else the next one.)
+  const plantsOn = (i) => {
+    if (cand.action !== "plantflag") return false;
+    const onLit = b.lit != null && controlsObjective(me, g.objectives[b.lit]);
+    return onLit ? i === b.lit : i === b.next;
+  };
+  const plantedOn = (i) => plantsOn(i) || (stays && isPlanted(rig, i));
+  let best = 0;
+  const lit = b.lit != null ? g.objectives[b.lit] : null;
+  if (lit) {
+    if (controlsObjective(me, lit)) {
+      const enemyOn = livingEnemies(room, rig).some((e) => controlsObjective(spatial(e), lit)
+        && (!plantedContest || isPlanted(e, b.lit)));
+      best = VP * (plantedOn(b.lit) && !enemyOn ? 1 : 0.5);
+    } else best = (VP * 0.5) / (1 + travel(room, rig, pos, lit));
+  }
+  const next = b.next != null && b.next !== b.lit ? g.objectives[b.next] : null;
+  if (next) {
+    const on = controlsObjective(me, next);
+    const gap = on ? 0 : travel(room, rig, pos, next);
+    // Early plant: a stake on the next beacon is most of a score in the bag.
+    const v = on && earlyPlant && plantedOn(b.next) ? VP * 0.6 : (VP * 0.35) / (1 + gap);
+    best = Math.max(best, v);
+  }
+  return best;
+}
+
+function objectiveApproach(room, rig, pos, skipMarkers = false) {
   const me = { pos, radius: radiusOf(rig) };
   const g = room.game;
   const mult = Math.max(beaconMultiplier(g.round, g.suddenDeath), beaconMultiplier((g.round || 1) + 1, g.suddenDeath));
   let best = 0;
-  for (const m of g.objectives || []) {
+  for (const m of skipMarkers ? [] : g.objectives || []) {
     if (controlsObjective(me, m)) continue;   // already priced by objectiveVpAt
     const gap = travel(room, rig, pos, m);
     best = Math.max(best, ((m.vp || 0) * mult) / (1 + gap));
@@ -490,7 +528,8 @@ export function scoreParts(room, rig, cand) {
   const exposure = goesOff ? 0 : exposureAt(room, rig, pos, facing);
   const shots = cand.action === "move" || cand.action === "sprint" ? shotsFrom(room, rig, pos, facing) : null;
   return {
-    vp: objectiveVpAt(room, rig, pos) + objectiveApproach(room, rig, pos),
+    vp: room.game.beaconRules === "cycle" ? cycleVpAt(room, rig, pos, cand) + objectiveApproach(room, rig, pos, true)
+      : objectiveVpAt(room, rig, pos) + objectiveApproach(room, rig, pos),
     priority: killProgress(room, rig, cand, pos, facing, shots),
     damage: offenceAt(room, rig, cand, pos, facing, shots),
     threat: -exposure,
@@ -504,8 +543,9 @@ export function scoreParts(room, rig, cand) {
 // (weights.b_<family>, default 0). They let evolution tune how much a pilot
 // likes to Prepare, Shut Down, Sprint, use specials… against the real rules,
 // even where the hand-written terms above price an action crudely.
-export const BIAS_FAMILIES = ["move", "sprint", "fire", "aimed", "prepare", "repair", "shutdown", "special"];
+export const BIAS_FAMILIES = ["move", "sprint", "fire", "aimed", "prepare", "repair", "shutdown", "special", "plant"];
 export function actionFamily(action) {
+  if (action === "plantflag") return "plant";
   if (BIAS_FAMILIES.includes(action) && action !== "special") return action;
   if (action === "reload" || action === "disengage" || action === "douse") return "move";
   return "special";

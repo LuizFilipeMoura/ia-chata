@@ -1673,6 +1673,68 @@ export function beaconMultiplier(round, suddenDeath = false) {
   return mult;
 }
 
+// Cycling beacons (EXPERIMENT, off unless room.game.beaconRules === "cycle"):
+// round 1 is dark; from round 2 exactly ONE beacon is lit, the one telegraphed
+// during the previous round, and a different one is picked to be next. The lit
+// beacon pays a flat CYCLE_BEACON_VP at Recovery to the side with a Rig PLANTED
+// on it (the Plant Flag action) and no enemy Rig within 2". ⚙ TUNING.
+export const CYCLE_BEACON_VP = 3;
+const cycleOn = (room) => room.game.beaconRules === "cycle";
+// Experiment switches (room.game.beaconTuning): `vp` overrides the lit beacon's
+// value; `earlyPlant` lets a Rig plant the telegraphed NEXT beacon, counting
+// once it lights; `plantedContest` means only a PLANTED enemy contests.
+export function beaconTuning(room) {
+  const t = room.game.beaconTuning || {};
+  return { vp: Number.isFinite(t.vp) ? t.vp : CYCLE_BEACON_VP, earlyPlant: !!t.earlyPlant, plantedContest: !!t.plantedContest };
+}
+function ensureBeacons(room, random = Math.random) {
+  const markers = (room.game.objectives || []).map((m, i) => (m.crate ? null : i)).filter((i) => i != null);
+  if (!room.game.beacons && markers.length) room.game.beacons = { lit: null, next: randomPick(markers, random) };
+  return room.game.beacons;
+}
+export function setBeaconRules(room, mode, random = Math.random) {
+  room.game.beaconRules = mode || null;
+  room.game.beacons = null;
+  if (cycleOn(room) && room.game.started) ensureBeacons(room, random);
+}
+// The round turns: last round's telegraphed beacon lights, a different one is next.
+export function rotateBeacons(room, random = Math.random) {
+  const b = ensureBeacons(room, random);
+  if (!b) return;
+  b.lit = b.next;
+  const others = (room.game.objectives || []).map((m, i) => (m.crate || i === b.lit ? null : i)).filter((i) => i != null);
+  b.next = others.length ? randomPick(others, random) : b.lit;
+}
+// Planted on marker `index`, and still standing where it planted (any Move,
+// Sprint, jump, shove or pull breaks it). A physical room has no positions, so
+// the movement actions clear the plant there instead.
+export function isPlanted(rig, index) {
+  const p = rig.plant;
+  if (!p || p.objective !== index || rig.destroyed) return false;
+  return !rig.pos || !p.at || (Math.abs(rig.pos.x - p.at.x) < 1e-6 && Math.abs(rig.pos.y - p.at.y) < 1e-6);
+}
+export function scoreBeacons(room) {
+  const b = room.game.beacons;
+  if (!b || b.lit == null) return;
+  const marker = room.game.objectives?.[b.lit];
+  if (!marker) return;
+  const { vp, plantedContest } = beaconTuning(room);
+  const near = (sid) => room.rigs.some((r) => (r.owner || "a") === sid && !r.destroyed && r.pos && controlsObjective(spatial(r), marker));
+  const planted = (sid) => room.rigs.some((r) => (r.owner || "a") === sid && isPlanted(r, b.lit)
+    && (!r.pos || controlsObjective(spatial(r), marker)));
+  const blocks = plantedContest ? planted : near;
+  const at = { objective: b.lit, x: marker.x, y: marker.y };
+  const [sa, sb] = room.game.sides;
+  const holder = [sa, sb].find((s) => planted(s.id));
+  const contested = blocks(sa.id) && blocks(sb.id);
+  if (contested) {
+    pushResolution(room, { kind: "score", contested: true, vp: 0, base: vp, mult: 1, ...at, rolls: [], summary: "Beacon contested: nobody scores", effects: [] });
+  } else if (holder) {
+    holder.vp += vp;
+    pushResolution(room, { kind: "score", actor: holder.id, side: holder.id, vp, base: vp, mult: 1, ...at, rolls: [], summary: `${holder.name} holds the lit beacon: +${vp} VP`, effects: [] });
+  }
+}
+
 // Grant Grit to whichever side trails, gritFor(gap) tokens, capped at that
 // side's living rigs (wr-0.15). At most one side can. A fresh grant also clears
 // last round's "keep for attacks" choice.
@@ -1770,6 +1832,7 @@ function resetGameShape(room) {
   room.game.deployOrder = [];
   room.game.initiative = null;
   room.game.priorityTargets = {};
+  room.game.beacons = null;
   room._history = [];
   for (const s of room.game.sides) { s.ready = false; s.vp = 0; }
 }
@@ -1930,6 +1993,7 @@ function maybeStartGame(room, random = Math.random) {
   room.game.started = true;
   room.game.phase = "initiative";
   room.game.round = 1;
+  if (cycleOn(room)) { room.game.beacons = null; ensureBeacons(room, random); }
   applyInitiative(room, deploymentOrder(room), null);
   pushResolution(room, {
     kind: "initiative", actor: room.game.turn.side, rigId: null, rolls: [],
@@ -2521,7 +2585,10 @@ function runRecovery(room, random) {
   // both sides control is CONTESTED and scores nobody, the faithful image of the
   // physical conflict rule. Then advance immediately, exactly as the vp verb's
   // clean-claim path does, a digital room never rests in recovery.
-  if (room.mode === "digital") {
+  if (room.mode === "digital" && cycleOn(room)) {
+    scoreBeacons(room);
+    advanceRound(room, random);
+  } else if (room.mode === "digital") {
     for (const [index, marker] of (room.game.objectives || []).entries()) {
       if (marker.crate) continue; // salvage crates are claimed, never held
       const holders = room.game.sides.filter((s) =>
@@ -3351,6 +3418,7 @@ function performAction(room, rig, act, a, random) {
   // to leave the table. It's lifted out of play (not wrecked) and kept on
   // room.campaign.extracted so the debrief still sees its SP.
   if (act === "extract") return extractRig(room, rig, random);
+  if (act === "plantflag") return plantFlag(room, rig);
   const equipId = EQUIPMENT_ACTIVE_BY_KEY[act];
   if (equipId) {
     // Grapnel Launcher (§13, Servo Actuators Prototype), REPLACES Jump Jets for a
@@ -3745,6 +3813,9 @@ function performAction(room, rig, act, a, random) {
     // attacker for the rest of this activation: no Move/Sprint after a tow.
     if (rig.towedThisActivation) return reject("Rooted after the tow, no move left this activation.");
     if (rig.rootedThisActivation) return reject("Rooted after the Pressure Dump, no move left this activation.");
+    // A physical table has no positions to compare, so moving is what breaks a
+    // planted flag there (digital rooms read it off the position, isPlanted).
+    if (room.mode !== "digital") rig.plant = null;
     // Digital rooms MAKE the move spatial: a physical player slides the model on
     // the table and the app only tracks the budget, but a digital room has no
     // hand. Validate a real path within Speed and the ±90° pivot cap, then apply
@@ -4045,6 +4116,7 @@ function advanceRound(room, random) {
       room.game.round += 1;
       room.game.phase = "initiative";
       room.game.initiative = null;
+      if (cycleOn(room)) rotateBeacons(room, random);
       rerollPriorityTargets(room, random);
     } else {
       room.game.outcome = { winner: null, reason: "draw" };
@@ -4054,6 +4126,7 @@ function advanceRound(room, random) {
     room.game.round += 1;
     room.game.phase = "initiative";
     room.game.initiative = null;
+    if (cycleOn(room)) rotateBeacons(room, random);
     spawnReinforcements(room, random);
     rerollPriorityTargets(room, random);
     pinCommander(room);
@@ -4391,6 +4464,30 @@ function claimCrates(room, rig) {
 
 export function inExitZone(rig, exit) {
   return !!(exit && rig?.pos && Math.hypot(rig.pos.x - exit.x, rig.pos.y - exit.y) <= exit.r);
+}
+
+// Plant Flag (cycling beacons): stake the lit beacon. One action, no heat; the
+// plant holds until the Rig is moved off the spot (see isPlanted).
+function plantFlag(room, rig) {
+  const t = room.game.turn;
+  if (!cycleOn(room)) return reject("Beacons don't need planting in this battle.");
+  if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
+  const b = ensureBeacons(room);
+  const early = beaconTuning(room).earlyPlant;
+  if (b?.lit == null && !early) return reject("Every beacon is dark this round.");
+  const on = (i) => i != null && (!rig.pos || controlsObjective(spatial(rig), room.game.objectives[i]));
+  // Early plant: the telegraphed next beacon may be staked too (lit first if both).
+  const target = on(b?.lit) ? b.lit : early && on(b?.next) ? b.next : null;
+  if (target == null) return reject(early ? 'Get within 2" of the lit or next beacon to plant.' : 'Get within 2" of the lit beacon to plant.');
+  if (isPlanted(rig, target)) return reject("Already planted here.");
+  const marker = room.game.objectives[target];
+  rig.plant = { objective: target, at: rig.pos ? { x: rig.pos.x, y: rig.pos.y } : null };
+  t.actionsUsed += 1;
+  pushResolution(room, {
+    kind: "plant", actor: rig.owner, rigId: rig.id, objective: target, x: marker.x, y: marker.y, rolls: [],
+    summary: `${rig.name} plants the flag on the ${target === b.lit ? "lit" : "next"} beacon.`, effects: ["Scores at Recovery if still planted and no enemy is within 2\"."],
+  });
+  return true;
 }
 
 function extractRig(room, rig, random) {
