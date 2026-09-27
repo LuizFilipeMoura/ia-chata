@@ -447,7 +447,7 @@ export class World {
     // Oil slicks: irregular, semi-transparent stains with a rainbow sheen, so
     // they read as spilled oil, not as holes or mini bases.
     const oilTex = oilTexture();
-    const oil = new THREE.MeshStandardMaterial({ map: oilTex, transparent: true, roughness: 0.08, metalness: 0.3, depthWrite: false });
+    const oil = new THREE.MeshStandardMaterial({ map: oilTex, transparent: true, roughness: 0.35, metalness: 0.2, depthWrite: false });
     for (let i = 0; i < 6; i++) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(3 + (i % 3), 2 + (i % 2)), oil);
       m.rotation.x = -Math.PI / 2; m.rotation.z = i * 1.3;

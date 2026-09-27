@@ -55,3 +55,34 @@ test("the same layout looks different under different battle seeds, identical un
   assert.equal(picks("room-A"), picks("room-A"));
   assert.notEqual(picks("room-A"), picks("room-B"));
 });
+
+import { SMALL_VARIANTS, smallVariant } from "./props.js";
+import { THEMES } from "./themes.js";
+
+// Flat ground pieces (puddles, pools, slicks) must not be mirrors: a glossy
+// floor catches the sun straight into the camera and bloom turns it into a
+// white blob. Measured: roughness 0.35 is the lowest that stays under the
+// bloom threshold at the table's camera angles.
+const MIN_FLOOR_ROUGHNESS = 0.35;
+function glossyFloors(obj) {
+  const bad = [];
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    const flat = ["CircleGeometry", "PlaneGeometry", "ShapeGeometry"].includes(o.geometry.type);
+    if (flat && o.material?.roughness !== undefined && o.material.roughness < MIN_FLOOR_ROUGHNESS && !(o.material.emissive?.getHex() > 0)) bad.push(`${o.geometry.type} roughness ${o.material.roughness}`);
+  });
+  return bad;
+}
+
+test("no scenery or small-terrain floor surface is a sun mirror", () => {
+  const win = new THREE.Texture(); win.glow = new THREE.Texture();
+  const c = { ...ctx(), theme: THEMES.foundry, win, chimney() {} };
+  for (const [slot, variants] of Object.entries(SCENERY_VARIANTS)) for (const v of variants) {
+    const bad = glossyFloors(sceneryVariant(slot, v, SHAPES[slot][1], c));
+    assert.deepEqual(bad, [], `${slot}/${v}`);
+  }
+  for (const [slot, variants] of Object.entries(SMALL_VARIANTS)) for (const v of variants) {
+    const bad = glossyFloors(smallVariant(slot, v, { w: 2.2, h: 2.2, x: 1, y: 1 }, c));
+    assert.deepEqual(bad, [], `${slot}/${v}`);
+  }
+});

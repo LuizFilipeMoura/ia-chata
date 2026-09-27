@@ -224,7 +224,7 @@ function drums(t, ctx) {
   }
   if (Math.min(t.w, t.h) >= 1.9) { const top = cyl(r, r, h, std(cols[0], { metalness: 0.4 }), 14); top.position.set(0, h * 1.5, 0); g.add(top); }
   // A leaking drum's puddle.
-  const puddle = new THREE.Mesh(new THREE.CircleGeometry(Math.min(t.w, t.h) * 0.3, 16), std(0x0c0a08, { roughness: 0.1, metalness: 0.6 }));
+  const puddle = new THREE.Mesh(new THREE.CircleGeometry(Math.min(t.w, t.h) * 0.3, 16), std(0x0c0a08, { roughness: 0.35, metalness: 0.3 }));
   puddle.rotation.x = -Math.PI / 2; puddle.position.set(t.w * 0.15, 0.01, t.h * 0.15); g.add(puddle);
   blinker(ctx, g, V(-t.w * 0.3, h + 0.1, -t.h * 0.3), 0xffa020, { period: 1.3, duty: 0.4, size: 0.07 });
   return g;

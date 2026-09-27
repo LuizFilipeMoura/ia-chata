@@ -268,7 +268,7 @@ const WOOD = {
   marsh(t, ctx, rng) {
     const g = new THREE.Group(), pts = outline(t), R = meanR(pts);
     g.add(ground(pts, std(0x2a2a1c, { roughness: 1 })));
-    const oil = std(0x0c0e0c, { roughness: 0.08, metalness: 0.8 }), reed = std(0x5a5a2a, { roughness: 1 });
+    const oil = std(0x0c0e0c, { roughness: 0.35, metalness: 0.3 }), reed = std(0x5a5a2a, { roughness: 1 });
     const pools = scatter(rng, pts, 4, R * 0.3, R * 0.45);
     for (const [x, z] of pools) { const p = at(new THREE.Mesh(new THREE.CircleGeometry(R * 0.26, 16), oil), x, 0.04, z); p.rotation.x = -Math.PI / 2; p.scale.set(1, 0.6 + rng() * 0.4, 1); g.add(p); }
     for (const [x, z] of scatter(rng, pts, 12, 0.3, 0.5)) for (let k = 0; k < 5; k++) { const h = 0.16 + rng() * 0.12; const r = at(mesh(new THREE.ConeGeometry(0.02, h, 4), reed), x + (rng() - 0.5) * 0.3, h / 2, z + (rng() - 0.5) * 0.3); r.rotation.z = (rng() - 0.5) * 0.3; g.add(r); }
@@ -316,7 +316,7 @@ const WOOD = {
       for (let k = -2; k <= 2; k++) { const f = at(mesh(new THREE.TorusGeometry(0.13, 0.03, 6, 12), iron), x + u[0] * len * k * 0.2, 0.12, z + u[1] * len * k * 0.2); f.rotation.y = -s.angle + Math.PI / 2; g.add(f); }
       const vw = at(mesh(new THREE.TorusGeometry(0.1, 0.018, 5, 12), std(0xa8321e)), x, 0.27, z); vw.rotation.x = Math.PI / 2; g.add(vw);
     });
-    for (const [x, z] of scatter(rng, pts, 3, 0.5, 1)) { const p = at(new THREE.Mesh(new THREE.CircleGeometry(0.4, 12), std(0x0c0a08, { roughness: 0.1, metalness: 0.6 })), x, 0.03, z); p.rotation.x = -Math.PI / 2; g.add(p); }
+    for (const [x, z] of scatter(rng, pts, 3, 0.5, 1)) { const p = at(new THREE.Mesh(new THREE.CircleGeometry(0.4, 12), std(0x0c0a08, { roughness: 0.35, metalness: 0.3 })), x, 0.03, z); p.rotation.x = -Math.PI / 2; g.add(p); }
     return g;
   },
 };
@@ -346,7 +346,7 @@ const CRATER = {
     const g = new THREE.Group();
     g.add(disc(t, 1, std(0x2a2a1c, { roughness: 1 }), 0.015));
     g.add(rim(t, std(0x3a3424, { roughness: 1, flatShading: true }), 0.2, 0.62));
-    const oil = std(0x06080a, { roughness: 0.04, metalness: 0.9 });
+    const oil = std(0x06080a, { roughness: 0.35, metalness: 0.3 });
     g.add(disc(t, 0.62, oil, 0.05));
     const drum = at(lying(0.16, 0.45, std(0x7a2a1c, { metalness: 0.4 }), rng() * 3), t.rx * 0.2, 0.08, -t.ry * 0.1); g.add(drum);
     const ph = rng() * 6;
