@@ -264,6 +264,7 @@ export class World {
         if (touches.size) return;
       }
       cancelLong();
+      el.style.cursor = "";
       if (drag?.captured) {
         this.updateMouse(e);
         this.onDragEnd?.(this.pick(), drag.moved, e);
@@ -307,6 +308,7 @@ export class World {
         } else if (drag.button === 1 || (drag.button === 0 && drag.moved > 6)) {
           // Grab the table: the point pressed stays under the pointer (1:1 at
           // any zoom or tilt). Past the horizon there's nothing to hold.
+          el.style.cursor = "grabbing";
           this.placeCamera();
           const at = drag.grab && this.groundAt(e);
           if (at) {
