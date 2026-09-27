@@ -1010,6 +1010,65 @@ test("douse spends an action and removes one burning stack", () => {
   assert.equal(r.game.turn.actionsUsed, usedBefore + 1);    // costs one action slot
 });
 
+// A rig that burns to death before it takes any action must still hand off
+// the floor: `activate` sets game.turn.activeRigId, THEN applies the burning
+// damage, so a lethal burn kills the rig while it's still the game's active
+// one. Nothing else was ever calling endActivation for a rig that dies mid-
+// activation, so driveBots (bot vs bot) found no legal next step and the
+// whole game stalled forever (game.turn.activeRigId left pointing at a
+// destroyed rig, which driveBots' own resume lookup explicitly excludes).
+test("a rig that burns to death at its own activation start hands the floor to the other side, not left dangling", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const side = r.game.turn.side; // whichever side activates first
+  const name = `${side}1`;
+  const last = findRig(r, name);
+  last.integrity = 1;
+  last.burning = 1; // 1 point of Hull damage drains a 1-point Integrity pool to 0
+  const v = r.version;
+  applyCommand(r, { verb: "activate", attrs: { name } }, {}, { random: () => 0 });
+  assert.notEqual(r.version, v, "the activate command was accepted");
+  assert.equal(last.destroyed, true, "burning killed it before it could act");
+  assert.equal(last.activated, true, "counted as this round's activation, not left dangling");
+  assert.equal(r.game.turn.activeRigId, null, "the floor was handed off, not left pointing at a corpse");
+  assert.equal(r.game.phase, "activation", "still mid-round");
+  const other = side === "a" ? "b" : "a";
+  assert.equal(r.game.turn.side, other, "handed to the other side, which still has rigs to activate");
+  const v2 = r.version;
+  applyCommand(r, { verb: "activate", attrs: { name: `${other}1` } });
+  assert.notEqual(r.version, v2, "the other side can activate normally: nothing is stuck");
+});
+
+// Same bug, but reproduces the exact shape that stalled server/routes/sim.test.js's
+// "simulated rooms" test: the rig that burns to death is the LAST rig due up
+// this round on EITHER side, so a correct fix must clear activeRigId AND let
+// handoff() fall through to Recovery (which resets `activated` for the new
+// round, so that flag is no longer the thing to check here).
+test("a rig that burns to death as the last activation of the round starts Recovery, not a stall", () => {
+  const r = startedRoom();
+  clearPendingAnswer(r);
+  const counts = { a: 0, b: 0 };
+  for (let i = 0; i < 5; i++) {
+    const side = r.game.turn.side;
+    const name = `${side}${++counts[side]}`;
+    applyCommand(r, { verb: "activate", attrs: { name } });
+    applyCommand(r, { verb: "endactivation", attrs: { name } });
+  }
+  const side = r.game.turn.side;
+  const lastName = `${side}${counts[side] + 1}`;
+  const last = findRig(r, lastName);
+  last.integrity = 1;
+  last.burning = 1;
+  const v = r.version;
+  applyCommand(r, { verb: "activate", attrs: { name: lastName } }, {}, { random: () => 0 });
+  assert.notEqual(r.version, v, "the activate command was accepted");
+  assert.equal(last.destroyed, true, "burning killed it before it could act");
+  // Recovery clears game.turn entirely (fresh per round), the proof that the
+  // stall didn't happen is that the phase actually got there instead of
+  // hanging in "activation" with a dead rig still holding the floor.
+  assert.equal(r.game.phase, "recovery", "it was the round's last rig: Recovery started instead of the game stalling");
+});
+
 test("Suppression Lock's 3rd stack blocks Prepare during the pinned rig's activation", () => {
   const r = startedRoom();
   clearPendingAnswer(r);

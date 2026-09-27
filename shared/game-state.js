@@ -2302,6 +2302,20 @@ function onRigDamaged(room, rig, opts) {
   if ((rig.destroyed || rig.immobilised) && rig.engagedWith != null) clearEngagement(room, rig);
   checkCommander(room, rig);
   checkAnnihilation(room);
+  // A rig that dies while it's the active one (Burning finishing it off at the
+  // very start of its own activation, before it takes any action, is the
+  // concrete case; any other self-damage that kills the active rig hits the
+  // same gap) would otherwise leave game.turn.activeRigId pointing at a corpse
+  // forever: nothing else ever calls endActivation for it, so driveBots (and a
+  // human client) finds no legal next step and the whole game stalls. Hand the
+  // floor off the same way endActivation/extractRig already do when a rig
+  // leaves play mid-turn. handoff() itself no-ops once outcome is set, so this
+  // is safe even when checkAnnihilation just ended the game above.
+  if (rig.destroyed && room.game?.turn?.activeRigId === rig.id) {
+    room.game.turn.activeRigId = null;
+    rig.activated = true;
+    handoff(room, opts?.random);
+  }
 }
 
 function repairRig(rig, loc, amount) {
