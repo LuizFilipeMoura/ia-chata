@@ -277,11 +277,12 @@ async function startLesson(lesson) {
 }
 
 // Dev Room: every 3D asset on one floor, labelled, to point at in design requests.
-function devRoom({ theme = null, focus = null } = {}) {
+function devRoom({ theme = null, focus = null, hall = null } = {}) {
   teardown();
   screen.style.display = "none";
-  const room = new DevRoom(world, hudRoot, { onBack: home, theme, focus });
-  room.onTheme = (id) => devRoom({ theme: id, focus: room.sel?.id });
+  const room = new DevRoom(world, hudRoot, { onBack: home, theme, focus, hall });
+  room.onTheme = (id) => devRoom({ theme: id, focus: room.sel?.id, hall: room.hall });
+  room.onHall = (key) => devRoom({ theme: room.themeId, hall: key });
   active = room;
 }
 

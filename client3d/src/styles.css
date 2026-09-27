@@ -1311,6 +1311,7 @@ body.crit-vignette::after { content: ""; position: fixed; inset: 0; pointer-even
 .dv-theme { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .dv-search { width: 100%; box-sizing: border-box; font-size: 14px; padding: 5px 8px; background: rgba(0,0,0,.35); color: var(--text); border: 1px solid var(--line); border-radius: 6px; }
 .dv-index { overflow: auto; flex: 1; padding-right: 4px; }
+.dv-halls { display: flex; flex-wrap: wrap; gap: 4px; } .dv-hall { padding: 3px 7px; font-size: 12px; }
 .dv-sec-h { margin: 10px 0 4px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--brass-hi); cursor: pointer; }
 .dv-item { display: block; width: 100%; text-align: left; font-size: 14px; padding: 3px 6px; background: none; border: 1px solid transparent; border-radius: 4px; color: var(--text); cursor: pointer; }
 .dv-item:hover { background: rgba(255,255,255,.06); }

@@ -54,22 +54,47 @@ function pedestal(r = 0.9, h = 0.5) {
   return g;
 }
 
+// Which hall an asset id lives in (deep links open the right one).
+export function hallOf(id = "") {
+  const [head, sub] = id.split(".");
+  if (head === "weapon") return sub === "longRange" ? "longRange" : sub === "melee" ? "melee" : "kit";
+  return { chassis: "chassis", rig: "chassis", part: "parts", state: "states", unit: "units", tool: "kit", fx: "fx", scenery: "scenery", terrain: "terrain", objective: "terrain", building: "buildings", backdrop: "backdrop" }[head] || "chassis";
+}
+
 export class DevRoom {
-  // root: the screen element (sidebar + card + labels live in it).
-  constructor(world, root, { onBack, theme = null, focus = null } = {}) {
+  // root: the screen element (sidebar + card + labels live in it). One hall
+  // (section) is built at a time; onHall(key) switches.
+  constructor(world, root, { onBack, theme = null, focus = null, hall = null } = {}) {
     this.world = world; this.root = root; this.onBack = onBack;
     this.items = []; this.byId = new Map(); this.mechs = []; this.loops = [];
     this.themeId = theme || Object.keys(THEMES)[0];
+    this.hall = hall || (focus ? hallOf(focus) : "chassis");
     world.buildField({ width: W, height: H, terrain: [], theme: this.themeId }, []);
     this.group = new THREE.Group(); world.tableGroup.add(this.group);
     this.ctx = world.dressCtx;
     this.build();
+    world.tableGroup.updateMatrixWorld(true); // label anchors + framing need real positions
     this.ui();
-    world.cam.target.set(W / 2, 0, 70); world.cam.dist = 60; world.cam.pitch = 0.75; world.cam.yaw = -Math.PI / 2;
+    this.overview();
+    try { window.__devroom = this; } catch {} // for poking at it from the console
     this.tick = (dt) => this.update(dt);
     world.tickers.add(this.tick);
     this.offClick = world.on("click", (_hit, e) => this.click(e));
     if (focus && this.byId.has(focus)) this.select(this.byId.get(focus));
+  }
+
+  // Frame the whole hall.
+  overview(fly = false) {
+    this.world.tableGroup.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    for (const it of this.items) box.expandByObject(it.obj);
+    if (box.isEmpty()) box.setFromCenterAndSize(V(W / 2, 0, 70), V(40, 1, 20));
+    const c = box.getCenter(V()), size = box.getSize(V());
+    const dist = Math.min(95, Math.max(14, Math.max(size.x * 0.85, size.z * 1.3)));
+    c.x -= dist * 0.12; // the sidebar covers the left of the screen
+    if (fly) { this.world.cam.goal = { target: c.setY(0), dist }; return; }
+    this.world.cam.goal = null; // drop a fly still heading for the last hall's pick
+    this.world.cam.target.set(c.x, 0, c.z); this.world.cam.dist = dist; this.world.cam.pitch = 0.75; this.world.cam.yaw = -Math.PI / 2;
   }
 
   // ---- Items ----
@@ -94,11 +119,14 @@ export class DevRoom {
     return m;
   }
 
+  // Builds only this hall's section (the whole floor at once was too heavy).
   build() {
     const g = this.group;
-    for (const [key, title] of SECTIONS) g.add(floorText(title, 0.5, key === "fx" ? ROW.fx1 : ROW[key]));
+    const on = (key) => key === this.hall;
+    for (const [key, title] of SECTIONS) if (on(key)) g.add(floorText(title, 0.5, key === "fx" ? ROW.fx1 : ROW[key]));
     const usedBy = (slot, w) => CHASSIS.filter((c) => c[slot] === w).map((c) => `${c.name} (${c.id})`).join(", ");
 
+    if (on("chassis")) {
     // Chassis: every chassis (columns) in every finish (rows).
     SKIN_IDS.forEach((skin, row) => {
       g.add(floorText(SKINS[skin].name, X0 + CHASSIS.length * 6.5 - 6, ROW.chassis + row * SKIN_GAP - 2.2));
@@ -113,6 +141,8 @@ export class DevRoom {
       });
     });
 
+    }
+    if (on("parts")) {
     // Rig parts, each alone on a pedestal (two rows).
     const parts = Object.entries(PART_KINDS).flatMap(([kind, names]) => names.map((name) => [kind, name]));
     const half = Math.ceil(parts.length / 2);
@@ -124,6 +154,8 @@ export class DevRoom {
         notes: users.length ? `Worn by: ${users.join(", ")}.` : "Not used by any chassis yet." });
     });
 
+    }
+    if (on("states")) {
     // One chassis in each visual state the game can put a rig in.
     const base = CHASSIS.find((c) => c.class === "medium") || CHASSIS[0];
     const STATES = [
@@ -148,6 +180,8 @@ export class DevRoom {
         notes: `How a rig reads when ${label.toLowerCase()}.` });
     });
 
+    }
+    if (on("units")) {
     // Support units: walker templates (the 3D game fields walkers, never tanks) and drones.
     const walkers = SUPPORT_TEMPLATES.filter((t) => t.kind === "walker");
     walkers.forEach((t, i) => {
@@ -161,6 +195,7 @@ export class DevRoom {
         source: `${RIG}/support.js SUPPORT_RECIPES.drone.${d.id} (gun ${MECHS} UNIT_GUNS["${d.unit}"])`, notes: `Drone type ${d.id}.`, size: fits(m) });
     });
 
+    }
     // Loose weapons on pedestals, in the paint of the rig that carries them.
     const weaponRow = (slot, row, names, section, spacing, srcTable) => names.forEach((w, i) => {
       const owner = CHASSIS.find((c) => c[slot] === w);
@@ -174,9 +209,10 @@ export class DevRoom {
         section, obj: p, source: `${MECHS} · ${srcTable}["${w}"]`,
         notes: owner || slot === "longRange" || slot === "melee" ? `Used by: ${usedBy(slot, w) || "no chassis"}.` : "" });
     });
-    weaponRow("longRange", ROW.longRange, WEAPON_MODELS.longRange, "longRange", 6.5, "LR");
-    weaponRow("melee", ROW.melee, WEAPON_MODELS.melee, "melee", 6.5, "MELEE");
-    weaponRow("unit", ROW.kit, WEAPON_MODELS.unit, "kit", 6.5, "UNIT_GUNS");
+    if (on("longRange")) weaponRow("longRange", ROW.longRange, WEAPON_MODELS.longRange, "longRange", 6.5, "LR");
+    if (on("melee")) weaponRow("melee", ROW.melee, WEAPON_MODELS.melee, "melee", 6.5, "MELEE");
+    if (on("kit")) weaponRow("unit", ROW.kit, WEAPON_MODELS.unit, "kit", 6.5, "UNIT_GUNS");
+    if (on("kit")) {
     const kitN = WEAPON_MODELS.unit.length;
     WEAPON_MODELS.tool.filter((t) => t !== "none").forEach((t, i) => {
       const built = weaponModel("tool", t);
@@ -185,6 +221,8 @@ export class DevRoom {
       this.add({ id: `tool.${t}`, name: `${t} tool`, sub: "support module tool (left arm)", section: "kit", obj: p, source: `${MECHS} · MODULE_TOOLS.${t}()`, notes: `Carried by walkers with the ${t} module.` });
     });
 
+    }
+    if (on("buildings")) {
     // Buildings, each variant on its own footprint.
     BUILDING_KINDS.forEach((kind, i) => {
       const t = { kind: "building", shape: "rect", x: 0, y: 0, w: 6, h: 5, rot: 0 };
@@ -195,20 +233,8 @@ export class DevRoom {
         notes: `Which themes use it: ${Object.values(THEMES).filter((th) => th.buildings.includes(kind)).map((th) => th.name).join(", ") || "none"}.` });
     });
 
-    // Small terrain (through the same path the battle uses) and objectives.
-    // Small terrain: every variant of each slot (a piece's position picks one in battle).
-    const SLOT_RECT = { barricade: [5, 0.9], crate: [2.2, 2.2], rubble: [2.5, 2] };
-    let sx = X0;
-    const smallZ = ROW.terrain - 5;
-    for (const [slot, variants] of Object.entries(SMALL_VARIANTS)) for (const v of variants) {
-      const [w, h] = SLOT_RECT[slot];
-      sx += w / 2;
-      const obj = smallVariant(slot, v, { kind: slot, shape: "rect", w, h, x: sx, y: smallZ }, this.ctx);
-      obj.position.set(sx, 0, smallZ);
-      this.add({ id: `terrain.${slot}.${v}`, name: `${slot} · ${v}`, sub: `small terrain · ${slot} slot`, section: "terrain", obj, source: `${PROPS} smallVariant("${slot}", "${v}")${v === "classic" ? "" : " (dressing.js)"}`,
-        notes: obj.userData.carcassOf ? `Wreck of a ${obj.userData.carcassOf}.` : "" });
-      sx += w / 2 + 2.5;
     }
+    if (on("scenery")) {
     // Scenery: every variant of rock and ruin blobs (one row), woods and craters (the next).
     const blob = (r, jitter, n, seed) => { let q = seed; const rr = () => ((q = (q * 16807) % 2147483647) / 2147483647); return Array.from({ length: n }, (_, i) => { const a = (i / n) * Math.PI * 2 + (rr() - 0.5) * (Math.PI / n) * 0.9; const d = r * (1 - jitter + rr() * jitter * 2); return [+(Math.cos(a) * d).toFixed(2), +(Math.sin(a) * d).toFixed(2)]; }); };
     const SAMPLE = {
@@ -227,6 +253,22 @@ export class DevRoom {
           source: `client3d/src/scene/scenery.js SCENERY.${slot}.${v}`, notes: "Same footprint as the piece the rules measure; the battle's dressing seed picks the variant." });
         x += span / 2 + 1.2;
       }
+    }
+    }
+    if (on("terrain")) {
+    // Small terrain (through the same path the battle uses) and objectives.
+    // Small terrain: every variant of each slot (a piece's position picks one in battle).
+    const SLOT_RECT = { barricade: [5, 0.9], crate: [2.2, 2.2], rubble: [2.5, 2] };
+    let sx = X0;
+    const smallZ = ROW.terrain - 5;
+    for (const [slot, variants] of Object.entries(SMALL_VARIANTS)) for (const v of variants) {
+      const [w, h] = SLOT_RECT[slot];
+      sx += w / 2;
+      const obj = smallVariant(slot, v, { kind: slot, shape: "rect", w, h, x: sx, y: smallZ }, this.ctx);
+      obj.position.set(sx, 0, smallZ);
+      this.add({ id: `terrain.${slot}.${v}`, name: `${slot} · ${v}`, sub: `small terrain · ${slot} slot`, section: "terrain", obj, source: `${PROPS} smallVariant("${slot}", "${v}")${v === "classic" ? "" : " (dressing.js)"}`,
+        notes: obj.userData.carcassOf ? `Wreck of a ${obj.userData.carcassOf}.` : "" });
+      sx += w / 2 + 2.5;
     }
     const TERRAIN = [
       ["area", "Area terrain (ellipse)", { kind: "area", shape: "ellipse", rx: 2.5, ry: 1.6 }, "terrainMesh ellipse"],
@@ -247,8 +289,10 @@ export class DevRoom {
       this.add({ id: `objective.${key}`, name, sub: "objective", section: "terrain", obj: om.group, source: fn === "fuelDepot" || fn === "refineryTower" ? `client3d/src/scene/objectives.js · ${fn}()` : `${WORLD} · World.${fn}()`, notes: "Holding ring, gem and light are part of the objective." });
     });
 
-    this.buildFx();
+    }
+    if (on("fx")) this.buildFx();
 
+    if (on("backdrop")) {
     // Backdrop set pieces, shrunk to fit a slot (in game they ring the table far out).
     BACKDROP_KINDS.forEach((kind, i) => {
       const raw = backdrop(kind, i, V(0, 0, 0), 20, this.ctx);
@@ -261,6 +305,7 @@ export class DevRoom {
       this.add({ id: `backdrop.${kind}`, name: kind, sub: `set piece · shown at ${Math.round(k * 100)}% scale`, section: "backdrop", obj: holder, source: `${PROPS} · backdrop("${kind}")`,
         notes: `In battle it stands ~125" out from the table centre. Themes: ${Object.values(THEMES).filter((th) => th.backdrop.includes(kind)).map((th) => th.name).join(", ")}.` });
     });
+    }
   }
 
   // FX pedestals: click to play. Each spec plays at (and around) its pedestal.
@@ -370,9 +415,11 @@ export class DevRoom {
 
   ui() {
     const search = el("input", { class: "dv-search", placeholder: "Search assets…", onInput: () => this.filter(search.value) });
-    this.index = el("div", { class: "dv-index" }, SECTIONS.map(([key, title]) => el("div", { class: "dv-sec", "data-sec": key },
-      el("div", { class: "dv-sec-h", onClick: () => { this.world.cam.goal = { target: V(W / 2, 0, key === "fx" ? ROW.fx1 + 3 : ROW[key]), dist: 55 }; } }, title),
-      this.items.filter((i) => i.section === key).map((i) => el("button", { class: "dv-item", "data-id": i.id, title: i.id, onClick: () => this.select(i) }, i.name)))));
+    const halls = el("div", { class: "dv-halls" }, SECTIONS.map(([key, title]) => el("button", { class: `btn ${key === this.hall ? "primary" : "ghost"} dv-hall`, onClick: () => { if (key !== this.hall) this.onHall?.(key); } }, title)));
+    const title = SECTIONS.find(([k]) => k === this.hall)?.[1] || this.hall;
+    this.index = el("div", { class: "dv-index" }, el("div", { class: "dv-sec", "data-sec": this.hall },
+      el("div", { class: "dv-sec-h", onClick: () => this.overview(true) }, `${title} · ${this.items.length}`),
+      this.items.map((i) => el("button", { class: "dv-item", "data-id": i.id, title: i.id, onClick: () => this.select(i) }, i.name))));
     const theme = el("select", { onChange: (e) => this.onTheme?.(e.target.value) }, Object.values(THEMES).map((t) => el("option", { value: t.id, selected: t.id === this.themeId }, t.name)));
     this.card = el("div", { class: "dv-card", style: { display: "none" } });
     this.labels = el("div", { class: "dv-labels" });
@@ -385,7 +432,8 @@ export class DevRoom {
       this.labels,
       el("div", { class: "dv-side" },
         el("div", { class: "dv-head" }, el("h2", {}, "🛠 Dev Room"), el("button", { class: "btn ghost", onClick: this.onBack }, "‹ Back")),
-        el("p", { class: "muted small" }, `${this.items.length} assets. Click one on the floor or in the list, then "Copy ref" and paste it into a design request.`),
+        el("p", { class: "muted small" }, `One hall at a time. Pick a hall, click an asset on the floor or in the list, then "Copy ref" and paste it into a design request.`),
+        halls,
         el("label", { class: "dv-theme" }, "Theme ", theme),
         search, this.index),
       this.card));
