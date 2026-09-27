@@ -90,3 +90,28 @@ test("skinFor resolves every mode", () => {
   assert.ok(SKIN_IDS.includes(r));
   assert.equal(r, skinFor({ mode: "random", seed: "room-1", codename: "Gold", side: "a" }));
 });
+
+import { SUPPORT_TEMPLATES, DRONE_TYPES } from "../../../../shared/game-state.js";
+import { SUPPORT_RECIPES } from "./support.js";
+
+const walkers = SUPPORT_TEMPLATES.filter((t) => t.kind === "walker");
+const walker = (t, skin) => new Mech({ id: `w-${t.id}`, name: t.name, owner: "a", kind: "walker", weightClass: "walker", unit: t.unit, modules: t.modules, template: t.id, radius: BASE_RADIUS.walker, skin });
+const drone = (d, skin) => new Mech({ id: `d-${d.id}`, name: d.label, owner: "b", kind: "drone", weightClass: "drone", unit: d.unit, modules: d.modules, drone: d.id, radius: BASE_RADIUS.drone, skin });
+
+test("every walker template and drone type has its own body", () => {
+  for (const t of walkers) assert.ok(SUPPORT_RECIPES.walker[t.id], `walker recipe ${t.id}`);
+  for (const d of Object.values(DRONE_TYPES)) assert.ok(SUPPORT_RECIPES.drone[d.id], `drone recipe ${d.id}`);
+  const torsos = [...Object.values(SUPPORT_RECIPES.walker), ...Object.values(SUPPORT_RECIPES.drone)].map((r) => r.torso);
+  assert.equal(new Set(torsos).size, torsos.length, "support bodies repeat");
+});
+
+test("walkers and drones in every skin keep the contract and fit their envelope", () => {
+  const units = [...walkers.map((t) => (skin) => walker(t, skin)), ...Object.values(DRONE_TYPES).map((d) => (skin) => drone(d, skin))];
+  for (const make of units) for (const skin of SKIN_IDS) {
+    const m = make(skin);
+    const f = fits(m);
+    assert.ok(f.ok, `${m.kind} ${m.template || m.drone}/${skin} height ${f.height.toFixed(3)}/${f.limit.height} radius ${f.radius.toFixed(3)}/${f.limit.radius}`);
+    assert.ok(m.stacks.length >= 1 && m.legs.length === 2 && m.armR && m.armL && m.lr && m.me);
+    for (const s of SOCKETS) assert.ok(m.sockets[s], `${m.kind} socket ${s}`);
+  }
+});

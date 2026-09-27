@@ -149,14 +149,14 @@ export class DevRoom {
     // Support units: walker templates (the 3D game fields walkers, never tanks) and drones.
     const walkers = SUPPORT_TEMPLATES.filter((t) => t.kind === "walker");
     walkers.forEach((t, i) => {
-      const m = this.mech({ id: `dev-${t.id}`, name: t.name, owner: "a", kind: "walker", weightClass: "walker", unit: t.unit, modules: t.modules, radius: BASE_RADIUS.walker }, X0 + i * 6, ROW.units);
+      const m = this.mech({ id: `dev-${t.id}`, name: t.name, owner: "a", kind: "walker", weightClass: "walker", unit: t.unit, modules: t.modules, template: t.id, radius: BASE_RADIUS.walker }, X0 + i * 6, ROW.units);
       this.add({ id: `unit.${t.id}`, name: t.name, sub: `walker · ${t.unit || "Sidearm"} · ${t.modules.join(" + ")}`, section: "units", obj: m.root, mech: m,
-        source: `${MECHS} · Mech.buildSupport("walker") (UNIT_GUNS["${t.unit || "Sidearm"}"], MODULE_TOOLS)`, notes: `Support template ${t.id}.` });
+        source: `${RIG}/support.js SUPPORT_RECIPES.walker["${t.id}"] (gun ${MECHS} UNIT_GUNS["${t.unit || "Sidearm"}"], MODULE_TOOLS)`, notes: `Support template ${t.id}.`, size: fits(m) });
     });
     Object.values(DRONE_TYPES).forEach((d, i) => {
       const m = this.mech({ id: `dev-drone-${d.id}`, name: d.label, owner: "b", kind: "drone", weightClass: "drone", unit: d.unit, modules: d.modules, drone: d.id, radius: BASE_RADIUS.drone }, X0 + (walkers.length + i) * 6, ROW.units);
       this.add({ id: `unit.drone.${d.id}`, name: `${d.label} drone`, sub: `drone · ${d.unit}`, section: "units", obj: m.root, mech: m,
-        source: `${MECHS} · Mech.buildSupport("drone") (UNIT_GUNS["${d.unit}"])`, notes: `Drone type ${d.id}.` });
+        source: `${RIG}/support.js SUPPORT_RECIPES.drone.${d.id} (gun ${MECHS} UNIT_GUNS["${d.unit}"])`, notes: `Drone type ${d.id}.`, size: fits(m) });
     });
 
     // Loose weapons on pedestals, in the paint of the rig that carries them.

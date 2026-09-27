@@ -138,7 +138,7 @@ const ADDONS = {
     const flag = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.22, -0.05, 0), new THREE.Vector3(0, -0.12, 0)]), mat(0xd9a520, { side: THREE.DoubleSide, roughness: 0.8, metalness: 0 }));
     flag.geometry.computeVertexNormals();
     const pole = cyl(0.012, 0.012, 0.26, mat(0xdde2e8, { metalness: 1, roughness: 0.1 }), 6);
-    const holder = new THREE.Group(); holder.position.set(-0.04, 0.08, 0.18 * k); holder.scale.setScalar(k);
+    const holder = new THREE.Group(); holder.position.set(-0.04, 0.08, 0.14 * k); holder.rotation.y = Math.PI / 2; holder.scale.setScalar(k);
     holder.add(at(pole, 0, 0.13, 0)); holder.add(at(flag, 0, 0.25, 0)); s.back.add(holder);
     // Red-tipped stacks.
     const red = mat(0xc0282d, { roughness: 0.4, metalness: 0.4 });

@@ -135,7 +135,7 @@ export class Director {
       id: r.id, name: r.name, owner: r.owner, chassis: r.chassis,
       weightClass: ch.class || (kind === "rig" ? "light" : kind), longRange: ch.longRange, melee: ch.melee,
       radius: kind === "rig" ? BASE_RADIUS[ch.class || "light"] : BASE_RADIUS[kind],
-      kind, unit: r.unit ?? r.weapons?.unit ?? null, modules: r.modules || [], drone: r.drone ?? null,
+      kind, unit: r.unit ?? r.weapons?.unit ?? null, modules: r.modules || [], drone: r.drone ?? null, template: r.template ?? null,
       skin: skinFor({ mode: settings.get("rigSkinMode"), fixed: settings.get("rigSkin"), map: settings.get("rigSkinMap") || {}, side: r.owner, codename: r.name, seed: this.skinSeed }),
     });
     m.chassisDef = ch;

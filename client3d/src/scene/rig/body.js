@@ -2,12 +2,20 @@
 // animation always used (pelvis, legs, torso, chest, arms, stacks...) plus the
 // sockets skins bolt their add-ons to.
 import { THREE, box, BRASS, STEEL, DARK, GUNMETAL, RUBBER } from "./kit.js";
-import { TORSOS, HEADS, BACKPACKS, LEGS, FEET, SHOULDERS, SIGNATURES } from "./parts.js";
+import { TORSOS as RIG_TORSOS, HEADS, BACKPACKS, LEGS as RIG_LEGS, FEET as RIG_FEET, SHOULDERS as RIG_SHOULDERS, SIGNATURES } from "./parts.js";
+import { SUPPORT_TORSOS, SUPPORT_LEGS, SUPPORT_FEET, SUPPORT_SHOULDERS } from "./support.js";
+
+const TORSOS = { ...RIG_TORSOS, ...SUPPORT_TORSOS };
+const LEGS = { ...RIG_LEGS, ...SUPPORT_LEGS };
+const FEET = { ...RIG_FEET, ...SUPPORT_FEET };
+const SHOULDERS = { ...RIG_SHOULDERS, ...SUPPORT_SHOULDERS };
 
 // Per-class frame. dims is the torso box (x depth, y height, z width).
 export const CLASS_FRAME = {
   light: { dims: { d: 0.8, h: 0.85, w: 1.0 }, k: 1, shoulderZ: 0.68, armY: 0.15, torsoLift: 0.58, stance: 0.33, pelvis: [0.55, 0.28, 0.72], backY: 0.05 },
   medium: { dims: { d: 1.05, h: 1.05, w: 1.35 }, k: 1.3, shoulderZ: 0.92, armY: 0.18, torsoLift: 0.72, stance: 0.48, pelvis: [0.75, 0.3, 1.0], backY: 0.05 },
+  walker: { dims: { d: 1.0, h: 1.0, w: 1.0 }, k: 1, shoulderZ: 0.66, armY: 0.1, torsoLift: 0.6, stance: 0.33, pelvis: [0.55, 0.26, 0.72], backY: 0 },
+  drone: { dims: { d: 0.9, h: 0.6, w: 0.8 }, k: 0.8, shoulderZ: 0.5, armY: 0, torsoLift: 0.4, stance: 0.26, pelvis: [0.45, 0.22, 0.55], backY: 0 },
 };
 // Top of the base disc (root units): feet stand on it.
 export const BASE_TOP = 0.14;
@@ -103,7 +111,7 @@ export function buildRigBody({ cls = "light", recipe, mats, glass, vent, baseSca
   pack.position.set(frame.back + 0.06, F.backY, 0);
   pack.scale.setScalar(F.k);
   torso.add(pack);
-  BACKPACKS[recipe.backpack](ctx, pack, { tall: !!recipe.tallStacks });
+  if (recipe.backpack) BACKPACKS[recipe.backpack](ctx, pack, { tall: !!recipe.tallStacks });
   tagPart(pack, "backpack");
 
   // Arms + shoulders. Right carries the gun, left the melee weapon.
