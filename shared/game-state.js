@@ -1673,19 +1673,20 @@ export function beaconMultiplier(round, suddenDeath = false) {
   return mult;
 }
 
-// Cycling beacons (EXPERIMENT, off unless room.game.beaconRules === "cycle"):
-// round 1 is dark; from round 2 exactly ONE beacon is lit, the one telegraphed
-// during the previous round, and a different one is picked to be next. The lit
-// beacon pays a flat CYCLE_BEACON_VP at Recovery to the side with a Rig PLANTED
-// on it (the Plant Flag action) and no enemy Rig within 2". ⚙ TUNING.
-export const CYCLE_BEACON_VP = 3;
-const cycleOn = (room) => room.game.beaconRules === "cycle";
-// Experiment switches (room.game.beaconTuning): `vp` overrides the lit beacon's
-// value; `earlyPlant` lets a Rig plant the telegraphed NEXT beacon, counting
-// once it lights; `plantedContest` means only a PLANTED enemy contests.
+// Cycling beacons (§11), the rule for every held-marker room: round 1 is dark;
+// from round 2 exactly ONE beacon is lit, the one announced as Next during the
+// previous round, and a different one becomes Next (a single marker is lit
+// every round). The lit beacon pays a flat CYCLE_BEACON_VP at Recovery to the
+// side with a Rig that planted a flag on it (Plant Flag) and no enemy Rig within
+// 2". room.game.beaconRules = "classic" keeps the old per-marker scoring
+// (training lessons, A/B baselines). ⚙ TUNING: 4 VP won the 3/4/5 sweep.
+export const CYCLE_BEACON_VP = 4;
+const cycleOn = (room) => room.game.beaconRules !== "classic";
+// Tuning (room.game.beaconTuning): `vp` overrides the lit beacon's value;
+// `earlyPlant: false` stops Rigs planting the telegraphed Next beacon.
 export function beaconTuning(room) {
   const t = room.game.beaconTuning || {};
-  return { vp: Number.isFinite(t.vp) ? t.vp : CYCLE_BEACON_VP, earlyPlant: !!t.earlyPlant, plantedContest: !!t.plantedContest };
+  return { vp: Number.isFinite(t.vp) ? t.vp : CYCLE_BEACON_VP, earlyPlant: t.earlyPlant !== false };
 }
 function ensureBeacons(room, random = Math.random) {
   const markers = (room.game.objectives || []).map((m, i) => (m.crate ? null : i)).filter((i) => i != null);
@@ -1697,13 +1698,15 @@ export function setBeaconRules(room, mode, random = Math.random) {
   room.game.beacons = null;
   if (cycleOn(room) && room.game.started) ensureBeacons(room, random);
 }
-// The round turns: last round's telegraphed beacon lights, a different one is next.
+// The round turns: last round's Next lights, a different one is Next. Flags on
+// a beacon that is neither lit nor Next any more are pulled up.
 export function rotateBeacons(room, random = Math.random) {
   const b = ensureBeacons(room, random);
   if (!b) return;
   b.lit = b.next;
   const others = (room.game.objectives || []).map((m, i) => (m.crate || i === b.lit ? null : i)).filter((i) => i != null);
   b.next = others.length ? randomPick(others, random) : b.lit;
+  for (const r of room.rigs) if (r.plant && r.plant.objective !== b.lit && r.plant.objective !== b.next) r.plant = null;
 }
 // Planted on marker `index`, and still standing where it planted (any Move,
 // Sprint, jump, shove or pull breaks it). A physical room has no positions, so
@@ -1718,16 +1721,14 @@ export function scoreBeacons(room) {
   if (!b || b.lit == null) return;
   const marker = room.game.objectives?.[b.lit];
   if (!marker) return;
-  const { vp, plantedContest } = beaconTuning(room);
+  const { vp } = beaconTuning(room);
   const near = (sid) => room.rigs.some((r) => (r.owner || "a") === sid && !r.destroyed && r.pos && controlsObjective(spatial(r), marker));
   const planted = (sid) => room.rigs.some((r) => (r.owner || "a") === sid && isPlanted(r, b.lit)
     && (!r.pos || controlsObjective(spatial(r), marker)));
-  const blocks = plantedContest ? planted : near;
   const at = { objective: b.lit, x: marker.x, y: marker.y };
   const [sa, sb] = room.game.sides;
   const holder = [sa, sb].find((s) => planted(s.id));
-  const contested = blocks(sa.id) && blocks(sb.id);
-  if (contested) {
+  if (near(sa.id) && near(sb.id)) {
     pushResolution(room, { kind: "score", contested: true, vp: 0, base: vp, mult: 1, ...at, rolls: [], summary: "Beacon contested: nobody scores", effects: [] });
   } else if (holder) {
     holder.vp += vp;
@@ -1839,7 +1840,7 @@ function resetGameShape(room) {
 
 // Deterministic force-start for seeded test rooms: no dice, no deployment-order
 // inference. Bounty for each side = its first enemy rig. turn.side = `first`.
-function startGameSeeded(room, first) {
+function startGameSeeded(room, first, random = Math.random) {
   const other = first === "b" ? "a" : "b";
   const priorityTargets = {};
   for (const side of room.game.sides) {
@@ -1852,6 +1853,7 @@ function startGameSeeded(room, first) {
   room.game.started = true;
   room.game.phase = "initiative";
   room.game.round = 1;
+  if (cycleOn(room)) { room.game.beacons = null; ensureBeacons(room, random); }
   applyInitiative(room, [first, other], null);
   for (const side of room.game.sides) side.ready = true;
   // deployOrder[0] is the first-to-deploy = second activator (deploymentOrder()).
@@ -4366,14 +4368,14 @@ function buildMission(room, a, random) {
   autoDeploy(room, rand);
   const [ownerC, foeC] = deploymentCorners(room.field);
   const enemyCorner = room.game.sides[0].id === "a" ? foeC : ownerC;
-  // Objectives give both pilots something to fight over: Skirmish holds one
-  // centre beacon; Last Stand's relay sits in front of the player's corner, so
-  // the attackers have to come to you.
+  // Objectives give both pilots something to fight over: Skirmish holds the
+  // three standard beacons; Last Stand's relay sits in front of the player's
+  // corner, so the attackers have to come to you.
   const homeCorner = room.game.sides[0].id === "a" ? ownerC : foeC;
   const centre = { x: room.field.width / 2, y: room.field.height / 2 };
   room.game.objectives = type === "beacons" ? computeObjectives(room.field)
     : type === "salvage" ? scatterCrates(room, Math.max(1, Math.floor(Number(a.crates) || 3)), rand)
-    : type === "skirmish" ? [{ x: centre.x, y: centre.y, vp: 2 }]
+    : type === "skirmish" ? computeObjectives(room.field)
     : type === "laststand" ? [{ x: Math.round((homeCorner.x * 0.7 + centre.x * 0.3) * 10) / 10, y: Math.round((homeCorner.y * 0.7 + centre.y * 0.3) * 10) / 10, vp: 2, relay: true }]
     : [];
   room.game.maxRounds = a.maxRounds != null && Number(a.maxRounds) === 0 ? 0 : Math.max(1, Math.floor(Number(a.maxRounds) || MAX_ROUNDS));
@@ -4395,7 +4397,7 @@ function buildMission(room, a, random) {
     c.commander = true;
   }
   room.training = null;
-  startGameSeeded(room, a.first === "b" ? "b" : "a");
+  startGameSeeded(room, a.first === "b" ? "b" : "a", rand);
   pinCommander(room);
   // Grit mods (Grit and Gears relic, Freegear banner) seed tokens for round 1.
   for (const id of ["a", "b"]) room.game.gritTokens[id] += mods[id].grit || 0;
@@ -4891,7 +4893,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     if (canStart) {
       room.field.locked = true;
       room.seeded = true;
-      startGameSeeded(room, first);
+      startGameSeeded(room, first, options.random);
     }
     changed = true;
   } else if (verb === "mission") {
@@ -4934,6 +4936,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       room.game.sides.find((s) => s.id === "b").bot = sc.enemyBot || "dummy";
       room.game.sides.find((s) => s.id === "a").bot = null;
       room.training = String(a.id);
+      room.game.beaconRules = "classic"; // the "Claim a beacon" lesson predates Plant Flag
       startGameSeeded(room, sc.first || "a");
       // The Answer token is only taught in its own lesson.
       if (!sc.first) { room.game.answerTokens = { a: 0, b: 0 }; room.game.gritTokens = { a: 0, b: 0 }; room.game.pendingAnswer = null; }
@@ -5100,13 +5103,20 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       if (sideId) {
         const objs = room.game.objectives || [];
         // Sanitize the claimed marker indices: integers in range, de-duplicated.
-        const claims = Array.isArray(a.claims)
+        let claims = Array.isArray(a.claims)
           ? [...new Set(
               a.claims
                 .map((i) => Math.floor(Number(i)))
                 .filter((i) => Number.isInteger(i) && i >= 0 && i < objs.length),
             )]
           : [];
+        // Cycling beacons (§11): only the lit beacon can be claimed, and only by
+        // a side the app knows planted a flag on it (Plant Flag; moving clears it).
+        if (cycleOn(room)) {
+          const lit = room.game.beacons?.lit;
+          const planted = lit != null && room.rigs.some((r) => (r.owner || "a") === sideId && isPlanted(r, lit));
+          claims = planted && claims.includes(lit) ? [lit] : [];
+        }
         // Overwrite so a side can resubmit to resolve a conflict.
         room.game.recoveryClaims[sideId] = claims;
         changed = true;
@@ -5122,9 +5132,9 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
           } else {
             room.game.recoveryConflict = null;
             const mult = beaconMultiplier(room.game.round, room.game.suddenDeath);
+            const pay = (i) => (cycleOn(room) ? beaconTuning(room).vp : mult * (objs[i]?.vp || 0));
             for (const s of room.game.sides) {
-              s.vp += mult * room.game.recoveryClaims[s.id]
-                .reduce((sum, i) => sum + (objs[i]?.vp || 0), 0);
+              s.vp += room.game.recoveryClaims[s.id].reduce((sum, i) => sum + pay(i), 0);
             }
             advanceRound(room, options.random);
           }

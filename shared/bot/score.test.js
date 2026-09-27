@@ -49,6 +49,7 @@ test("a machine gun will not shoot a front arc at all, Raking Fire's veto", () =
 
 test("standing on an uncontested objective outscores standing next to it", () => {
   const { room, atk, foe } = scoreSetup();
+  room.game.beaconRules = "classic"; // per-marker scoring: no lit/next beacon setup here
   foe.pos = { x: 52, y: 34 };   // shove the enemy far so only the objective term differs
   const mk = room.game.objectives[0];   // the centre marker
   const on   = scoreCandidate(room, atk, { action: "move", dest: { x: mk.x, y: mk.y }, facing: 0 }, PRESETS.balanced);
@@ -58,6 +59,7 @@ test("standing on an uncontested objective outscores standing next to it", () =>
 
 test("a contested objective scores below an uncontested one", () => {
   const { room, atk, foe } = scoreSetup();
+  room.game.beaconRules = "classic"; // per-marker scoring: no lit/next beacon setup here
   const mk = room.game.objectives[0];
   const cand = { action: "move", dest: { x: mk.x, y: mk.y }, facing: 0 };
   // vp-only weights: with the enemy sitting ON the contested marker it is also

@@ -13,7 +13,7 @@ import { arcOf, radiusOf, terrainPolygons } from "../geometry.js";
 import { buildGrid, findPathOnGrid, walkPath } from "../pathfind.js";
 import {
   spatial, deriveAttackGeometry, effectiveWeaponProfile, hasBulwarkShield,
-  moveBudget, moveBlockers, PREP_TYPES, LOCS, UNIT_WEAPONS, supportInReach, PAINT_RANGE, isPlanted,
+  moveBudget, moveBlockers, PREP_TYPES, LOCS, UNIT_WEAPONS, supportInReach, PAINT_RANGE, isPlanted, beaconTuning,
 } from "../game-state.js";
 import { controlsObjective } from "../geometry.js";
 import { partNamesOf, kindOf, UNIT_KINDS } from "../unit-kinds.js";
@@ -160,10 +160,10 @@ export function candidatesFor(room, rig) {
       && Math.hypot(rig.pos.x - exit.x, rig.pos.y - exit.y) <= exit.r) out.push({ action: "extract" });
   // Cycling beacons: plant the flag when standing on the lit beacon (or, with
   // early plant, on the telegraphed next one).
-  const bz = room.game.beaconRules === "cycle" ? room.game.beacons : null;
+  const bz = room.game.beaconRules !== "classic" ? room.game.beacons : null;
   if (bz && left > 0 && rig.pos) {
     const on = (i) => i != null && controlsObjective(spatial(rig), room.game.objectives[i]) && !isPlanted(rig, i);
-    if (on(bz.lit) || (room.game.beaconTuning?.earlyPlant && on(bz.next))) out.push({ action: "plantflag" });
+    if (on(bz.lit) || (beaconTuning(room).earlyPlant && on(bz.next))) out.push({ action: "plantflag" });
   }
   if (enabled.has("emergencypatch")) {
     const weakest = LOCS.filter((l) => rig[l] && !rig[l].destroyed)

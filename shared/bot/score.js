@@ -252,7 +252,7 @@ function travel(room, rig, pos, goal) {
 function cycleVpAt(room, rig, pos, cand) {
   const g = room.game, b = g.beacons;
   if (!b) return 0;
-  const { vp: VP, earlyPlant, plantedContest } = beaconTuning(room);
+  const { vp: VP, earlyPlant } = beaconTuning(room);
   const me = { pos, radius: radiusOf(rig) };
   const stays = pos.x === rig.pos?.x && pos.y === rig.pos?.y;
   // Would this candidate leave the rig planted on marker i? (A plant candidate
@@ -267,8 +267,7 @@ function cycleVpAt(room, rig, pos, cand) {
   const lit = b.lit != null ? g.objectives[b.lit] : null;
   if (lit) {
     if (controlsObjective(me, lit)) {
-      const enemyOn = livingEnemies(room, rig).some((e) => controlsObjective(spatial(e), lit)
-        && (!plantedContest || isPlanted(e, b.lit)));
+      const enemyOn = livingEnemies(room, rig).some((e) => controlsObjective(spatial(e), lit));
       best = VP * (plantedOn(b.lit) && !enemyOn ? 1 : 0.5);
     } else best = (VP * 0.5) / (1 + travel(room, rig, pos, lit));
   }
@@ -528,7 +527,7 @@ export function scoreParts(room, rig, cand) {
   const exposure = goesOff ? 0 : exposureAt(room, rig, pos, facing);
   const shots = cand.action === "move" || cand.action === "sprint" ? shotsFrom(room, rig, pos, facing) : null;
   return {
-    vp: room.game.beaconRules === "cycle" ? cycleVpAt(room, rig, pos, cand) + objectiveApproach(room, rig, pos, true)
+    vp: room.game.beaconRules !== "classic" ? cycleVpAt(room, rig, pos, cand) + objectiveApproach(room, rig, pos, true)
       : objectiveVpAt(room, rig, pos) + objectiveApproach(room, rig, pos),
     priority: killProgress(room, rig, cand, pos, facing, shots),
     damage: offenceAt(room, rig, cand, pos, facing, shots),

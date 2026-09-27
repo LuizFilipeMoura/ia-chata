@@ -16,6 +16,7 @@ const side = (r, id) => r.game.sides.find((s) => s.id === id);
 
 function startedRoom() {
   const r = createRoom("ESC");
+  r.game.beaconRules = "classic"; // this file tests the escalation multiplier on per-marker scoring
   claimSide(r, { name: "Cyan", side: "a" });
   claimSide(r, { name: "Gold", side: "b" });
   for (const owner of ["a", "b"]) {
@@ -33,6 +34,7 @@ function startedRoom() {
 function digitalRoom(round) {
   const room = createRoom("ESCD");
   room.mode = "digital";
+  room.game.beaconRules = "classic"; // this file tests the escalation multiplier on per-marker scoring
   claimSide(room, { name: "Cyan", side: "a" });
   claimSide(room, { name: "Gold", side: "b" });
   for (const owner of ["a", "b"]) {

@@ -1559,6 +1559,7 @@ function runFullRound(r) {
 
 test("both sides scoring VP advances to the next round's initiative", () => {
   const r = startedRoom();
+  r.game.beaconRules = "classic"; // per-marker scoring, not the lit/next cycle
   runFullRound(r);
   assert.equal(r.game.phase, "recovery");
   applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [0] } });
@@ -1572,6 +1573,7 @@ test("both sides scoring VP advances to the next round's initiative", () => {
 
 test("VP claims score per-objective and block on a both-claimed marker", () => {
   const r = startedRoom();
+  r.game.beaconRules = "classic"; // per-marker scoring, not the lit/next cycle
   runFullRound(r);
   assert.equal(r.game.phase, "recovery");
   // Objectives: index 0 = centre (2 VP), indices 1 & 2 = corners (1 VP each).
@@ -1593,6 +1595,7 @@ test("VP claims score per-objective and block on a both-claimed marker", () => {
 
 test("VP claims ignore out-of-range and duplicate indices", () => {
   const r = startedRoom();
+  r.game.beaconRules = "classic"; // per-marker scoring, not the lit/next cycle
   runFullRound(r);
   applyCommand(r, { verb: "vp", attrs: { side: "a", claims: [0, 0, 9, -1] } });
   applyCommand(r, { verb: "vp", attrs: { side: "b", claims: [] } });
@@ -1602,6 +1605,7 @@ test("VP claims ignore out-of-range and duplicate indices", () => {
 
 test("after the final round (10) the higher VP wins", () => {
   const r = startedRoom();
+  r.game.beaconRules = "classic"; // per-marker scoring, not the lit/next cycle
   for (let round = 1; round <= 10; round++) {
     if (round >= 2) applyCommand(r, { verb: "initiative", attrs: { dice: { a: 9, b: 4 } } });
     runFullRound(r);
@@ -6580,6 +6584,7 @@ function digitalObjectiveRoom() {
 
 test("a digital side scores a marker it alone controls", () => {
   const { room, a, b, marker } = digitalObjectiveRoom();
+  room.game.beaconRules = "classic"; // per-marker scoring: no lit/next setup here
   a.pos = { x: marker.x, y: marker.y };   // sitting on it
   b.pos = { x: 2, y: 2 };                 // nowhere near
   const before = room.game.sides.map((s) => s.vp);

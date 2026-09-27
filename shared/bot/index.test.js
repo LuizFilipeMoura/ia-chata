@@ -80,6 +80,7 @@ test("runBotActivation respects the action budget", () => {
 
 test("the guard stops a runaway loop", () => {
   const { room, atk, foe } = botSetup();
+  room.game.beaconRules = "classic"; // per-marker scoring: a bare 0" hold always scores
   foe.destroyed = true;
   const mk = room.game.objectives[0];
   atk.pos = { x: mk.x, y: mk.y };   // on a marker: a 0" hold always scores vp > 0

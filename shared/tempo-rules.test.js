@@ -190,6 +190,7 @@ test("an evaded attack does not stagger", () => {
 
 test("digital recovery pushes a score resolution per held or contested marker", () => {
   const { room, a, b } = digitalFirefight();
+  room.game.beaconRules = "classic"; // per-marker scoring: three markers, no lit/next setup
   room.game.objectives = [{ x: 10, y: 10, vp: 2 }, { x: 30, y: 30, vp: 1 }, { x: 40, y: 25, vp: 1 }];
   b.pos = { x: 10, y: 10 };           // a1 and b1 both on marker 0 → contested
   // marker 1: nobody. marker 2: b2 alone.
@@ -328,6 +329,7 @@ test("an explicit empty target list still means nobody (physical adjudication)",
 test("recorded frames carry the score / destruction / stagger fields", async () => {
   const { frameOf } = await import("./sim/match.js");
   const { room, a, b } = digitalFirefight();
+  room.game.beaconRules = "classic"; // per-marker scoring: one marker, no lit/next setup
   room.game.objectives = [{ x: 40, y: 25, vp: 1 }];
   const n = room.game.nextResolutionId;
   __test.staggerRig(room, b);

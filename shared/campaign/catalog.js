@@ -146,7 +146,7 @@ export const MAX_NOTORIETY = NOTORIETY.length - 1;
 
 export const CONTRACT_TYPES = {
   beacons: { name: "Beacon Hold", icon: "beacon", blurb: "Hold the beacons: more VP at the round limit wins." },
-  skirmish: { name: "Skirmish", icon: "crossed-swords", blurb: "Fight over one centre beacon: out-score them by the round limit, or annihilate them." },
+  skirmish: { name: "Skirmish", icon: "crossed-swords", blurb: "One beacon is lit each round and it moves: plant on it, trade kills, out-score them by the round limit or annihilate them." },
   assassinate: { name: "Assassination", icon: "crosshair", blurb: "Wreck the marked Commander before the round limit." },
   breakthrough: { name: "Breakthrough", icon: "arrow", blurb: "Reach the enemy corner and Extract rigs before the round limit." },
   laststand: { name: "Last Stand", icon: "shield", blurb: "Keep one rig alive to the round limit. The enemy comes for your relay; reinforcements land on rounds 3 and 5." },

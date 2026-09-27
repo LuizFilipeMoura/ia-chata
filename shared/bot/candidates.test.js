@@ -171,6 +171,7 @@ test("a rig behind a wall steps AROUND it toward its goal, not into it", () => {
   // objective sits beyond it. A straight-line step would park Atk on the wall.
   const wall = { kind: "building", x: 16, y: 14, shape: "rect", w: 2, h: 28 };
   const { room, atk } = moveSetup([wall]);
+  room.game.beaconRules = "classic"; // per-marker scoring: no lit/next beacon setup here
   room.game.objectives = [{ x: 24, y: 18, vp: 2 }];
   const travel = pathDistance(room.field, terrainPolygons(room.field), radiusOf(atk), room.game.objectives[0]);
   const before = travel(atk.pos);

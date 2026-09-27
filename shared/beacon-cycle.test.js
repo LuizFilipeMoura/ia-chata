@@ -1,9 +1,10 @@
-// Cycling beacons (experiment, behind room.game.beaconRules = "cycle"): round 1
-// is dark, then one beacon is lit per round (telegraphed a round ahead), and it
-// only scores for a side with a Rig PLANTED on it and no enemy within 2".
+// Cycling beacons (§11), the default for every held-marker room: round 1 is
+// dark, then one beacon is lit per round (telegraphed a round ahead as Next),
+// and it scores only for a side with a Rig that planted a flag on it and no
+// enemy within 2". room.game.beaconRules = "classic" opts out.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createRoom, applyCommand, lastRejectionReason, findRig, setBeaconRules, rotateBeacons, scoreBeacons, CYCLE_BEACON_VP } from "./game-state.js";
+import { createRoom, applyCommand, lastRejectionReason, findRig, setBeaconRules, rotateBeacons, scoreBeacons, beaconTuning } from "./game-state.js";
 import { mulberry32 } from "./sim/match.js";
 
 function table() {
@@ -18,7 +19,6 @@ function table() {
   assert.ok(room.game.started, lastRejectionReason());
   assert.equal(room.game.objectives.length, 3);
   room.field.terrain = [];
-  setBeaconRules(room, "cycle", mulberry32(7));
   const spots = { Gold: [4, 4], Copper: [4, 24], Red: [38, 4], Blue: [38, 24] };
   for (const [name, [x, y]] of Object.entries(spots)) Object.assign(findRig(room, name), { pos: { x, y }, facing: 0 });
   return room;
@@ -33,11 +33,12 @@ function turn(room, name) {
   return rig;
 }
 const act = (room, name, attrs) => applyCommand(room, { verb: "action", attrs: { name, ...attrs } }, { side: findRig(room, name).owner });
-const light = (room, i) => { room.game.beacons.lit = i; return room.game.objectives[i]; };
-const onto = (room, name, m) => Object.assign(findRig(room, name), { pos: { x: m.x, y: m.y } });
+const beacons = (room, lit, next) => { room.game.beacons = { lit, next }; };
+const onto = (room, name, i) => { const m = room.game.objectives[i]; Object.assign(findRig(room, name), { pos: { x: m.x, y: m.y } }); return m; };
 const side = (room, id) => room.game.sides.find((s) => s.id === id);
+const VP = (room) => beaconTuning(room).vp;
 
-test("round 1 is dark and already telegraphs the next beacon", () => {
+test("a started room is cycling by default: round 1 dark, a Next already announced", () => {
   const room = table();
   assert.equal(room.game.beacons.lit, null);
   assert.ok(Number.isInteger(room.game.beacons.next));
@@ -58,17 +59,25 @@ test("each round lights the telegraphed beacon and picks a different one next", 
   assert.equal(seen.size, room.game.objectives.length);
 });
 
-test("Plant needs a lit beacon within 2 inches and costs one action, no heat", () => {
+test("a single marker is lit every round from round 2", () => {
   const room = table();
-  const m = room.game.objectives[0];
-  onto(room, "Gold", m);
+  room.game.objectives = [{ x: 21, y: 14, vp: 2, relay: true }];
+  setBeaconRules(room, "cycle", mulberry32(1));
+  assert.deepEqual(room.game.beacons, { lit: null, next: 0 });
+  rotateBeacons(room, mulberry32(2));
+  assert.deepEqual(room.game.beacons, { lit: 0, next: 0 });
+  rotateBeacons(room, mulberry32(3));
+  assert.deepEqual(room.game.beacons, { lit: 0, next: 0 });
+});
+
+test("Plant Flag needs the lit or next beacon within 2 inches and costs one action, no heat", () => {
+  const room = table();
+  beacons(room, 1, 2);
+  onto(room, "Gold", 0);
   const gold = turn(room, "Gold");
   act(room, "Gold", { action: "plantflag" });
-  assert.match(lastRejectionReason(), /dark|lit/i);           // round 1: nothing is lit
-  light(room, 1);
-  act(room, "Gold", { action: "plantflag" });
-  assert.match(lastRejectionReason(), /2"/);                   // standing on a dark one
-  light(room, 0);
+  assert.match(lastRejectionReason(), /2"/);                   // marker 0 is neither lit nor next
+  beacons(room, 0, 2);
   const heat = gold.engine.heat, used = room.game.turn.actionsUsed;
   act(room, "Gold", { action: "plantflag" });
   assert.equal(gold.plant?.objective, 0, lastRejectionReason());
@@ -78,21 +87,21 @@ test("Plant needs a lit beacon within 2 inches and costs one action, no heat", (
 
 test("the lit beacon scores only for a planted Rig, not one merely standing there", () => {
   const room = table();
-  const m = light(room, 0);
-  onto(room, "Gold", m);
+  beacons(room, 0, 1);
+  onto(room, "Gold", 0);
   scoreBeacons(room);
   assert.equal(side(room, "a").vp, 0);
   turn(room, "Gold");
   act(room, "Gold", { action: "plantflag" });
   scoreBeacons(room);
-  assert.equal(side(room, "a").vp, CYCLE_BEACON_VP);
+  assert.equal(side(room, "a").vp, VP(room));
   assert.equal(side(room, "b").vp, 0);
 });
 
-test("an enemy within 2 inches contests a planted beacon", () => {
+test("any enemy within 2 inches contests, planted or not", () => {
   const room = table();
-  const m = light(room, 0);
-  onto(room, "Gold", m);
+  beacons(room, 0, 1);
+  const m = onto(room, "Gold", 0);
   turn(room, "Gold");
   act(room, "Gold", { action: "plantflag" });
   Object.assign(findRig(room, "Red"), { pos: { x: m.x + 2, y: m.y } });
@@ -103,8 +112,8 @@ test("an enemy within 2 inches contests a planted beacon", () => {
 
 test("moving off the spot breaks the plant", () => {
   const room = table();
-  const m = light(room, 0);
-  onto(room, "Gold", m);
+  beacons(room, 0, 1);
+  const m = onto(room, "Gold", 0);
   turn(room, "Gold");
   act(room, "Gold", { action: "plantflag" });
   act(room, "Gold", { action: "move", dest: { x: m.x + 1, y: m.y }, facing: 0 });
@@ -113,57 +122,11 @@ test("moving off the spot breaks the plant", () => {
   assert.equal(side(room, "a").vp, 0);
 });
 
-test("a dark beacon never scores, planted or not", () => {
+test("early plant: a flag on Next counts once that beacon lights", () => {
   const room = table();
-  const m = light(room, 0);
-  onto(room, "Gold", m);
+  beacons(room, 0, 1);
+  onto(room, "Gold", 1);
   turn(room, "Gold");
-  act(room, "Gold", { action: "plantflag" });
-  room.game.beacons.lit = 1;
-  scoreBeacons(room);
-  assert.equal(side(room, "a").vp, 0);
-});
-
-test("bots play a full cycling-beacon game: they plant, and nothing scores before round 2", async () => {
-  const { playMatch } = await import("./sim/match.js");
-  const squads = {
-    a: [{ chassis: "light-claw-autocannon" }, { chassis: "medium-lance-mortar" }, { chassis: "light-saw-minigun" }],
-    b: [{ chassis: "medium-sniper-chainsaw" }, { chassis: "light-missile-flamethrower" }, { chassis: "light-rivet-pressureclaw" }],
-  };
-  let plants = 0, early = 0, beacon = 0;
-  for (const seed of [1, 2, 3]) {
-    const r = playMatch({ squads, weights: { a: "normal", b: "normal" }, seed, beaconRules: "cycle", table: { width: 42, height: 28 } });
-    plants += r.vpFlow.plants;
-    early += r.vpFlow.beaconByRound[1] || 0;
-    beacon += r.vpFlow.beacon.a + r.vpFlow.beacon.b;
-  }
-  assert.equal(early, 0);
-  assert.ok(plants > 0);
-  assert.ok(beacon > 0);
-});
-
-// ── Tuning switches (room.game.beaconTuning) ────────────────────────────────
-
-test("tuning: the lit beacon's value is configurable", () => {
-  const room = table();
-  room.game.beaconTuning = { vp: CYCLE_BEACON_VP + 2 };
-  const m = light(room, 0);
-  onto(room, "Gold", m);
-  turn(room, "Gold");
-  act(room, "Gold", { action: "plantflag" });
-  scoreBeacons(room);
-  assert.equal(side(room, "a").vp, CYCLE_BEACON_VP + 2);
-});
-
-test("tuning: early plant stakes the telegraphed beacon, and it counts once lit", () => {
-  const room = table();
-  room.game.beacons = { lit: 0, next: 1 };
-  const m = room.game.objectives[1];
-  onto(room, "Gold", m);
-  turn(room, "Gold");
-  act(room, "Gold", { action: "plantflag" });
-  assert.match(lastRejectionReason(), /2"/);                   // off by default
-  room.game.beaconTuning = { earlyPlant: true };
   act(room, "Gold", { action: "plantflag" });
   assert.equal(findRig(room, "Gold").plant?.objective, 1, lastRejectionReason());
   scoreBeacons(room);
@@ -171,23 +134,98 @@ test("tuning: early plant stakes the telegraphed beacon, and it counts once lit"
   rotateBeacons(room, mulberry32(1));
   assert.equal(room.game.beacons.lit, 1);
   scoreBeacons(room);
-  assert.equal(side(room, "a").vp, CYCLE_BEACON_VP);
+  assert.equal(side(room, "a").vp, VP(room));
 });
 
-test("tuning: with planted contest, only a planted enemy blocks the score", () => {
+test("early plant can be switched off", () => {
   const room = table();
-  room.game.beaconTuning = { plantedContest: true };
-  const m = light(room, 0);
-  onto(room, "Gold", m);
+  room.game.beaconTuning = { earlyPlant: false };
+  beacons(room, 0, 1);
+  onto(room, "Gold", 1);
   turn(room, "Gold");
   act(room, "Gold", { action: "plantflag" });
-  Object.assign(findRig(room, "Red"), { pos: { x: m.x + 2, y: m.y } });
+  assert.match(lastRejectionReason(), /2"/);
+});
+
+test("rotation clears flags on beacons that are neither lit nor next", () => {
+  const room = table();
+  beacons(room, 0, 1);
+  onto(room, "Gold", 0);
+  turn(room, "Gold");
+  act(room, "Gold", { action: "plantflag" });
+  rotateBeacons(room, mulberry32(4));                            // lit 1, next is 0 or 2
+  const gold = findRig(room, "Gold");
+  if (room.game.beacons.next === 0) assert.equal(gold.plant?.objective, 0);
+  else assert.equal(gold.plant, null);
+});
+
+test("the lit beacon's value is tunable", () => {
+  const room = table();
+  room.game.beaconTuning = { vp: VP(room) + 2 };
+  beacons(room, 0, 1);
+  onto(room, "Gold", 0);
+  turn(room, "Gold");
+  act(room, "Gold", { action: "plantflag" });
   scoreBeacons(room);
-  assert.equal(side(room, "a").vp, CYCLE_BEACON_VP);           // Red is only standing there
-  turn(room, "Red");
-  act(room, "Red", { action: "plantflag" });
-  scoreBeacons(room);
-  assert.equal(side(room, "a").vp, CYCLE_BEACON_VP);           // now contested: no new score
-  assert.equal(side(room, "b").vp, 0);
-  assert.equal(room.game.resolutions.at(-1).contested, true);
+  assert.equal(side(room, "a").vp, VP(room));
+});
+
+test("physical Recovery: claims count only the lit beacon, and only with a planted Rig", () => {
+  const room = createRoom("BC-P");
+  applyCommand(room, { verb: "seed", attrs: { first: "a" } });
+  assert.ok(room.game.started, lastRejectionReason());
+  assert.equal(room.mode, "physical");
+  room.game.phase = "recovery";
+  room.game.recoveryClaims = {};
+  beacons(room, 0, 1);
+  const vp = VP(room);
+  // Side a claims everything but planted nothing: nothing scores.
+  applyCommand(room, { verb: "vp", attrs: { claims: [0, 1, 2] } }, { side: "a" });
+  applyCommand(room, { verb: "vp", attrs: { claims: [] } }, { side: "b" });
+  assert.equal(side(room, "a").vp, 0);
+  // Next Recovery: a planted Rig on the lit beacon, claims trimmed to it.
+  room.game.phase = "recovery";
+  room.game.recoveryClaims = {};
+  beacons(room, 0, 1);
+  const ra = room.rigs.find((r) => r.owner === "a");
+  ra.plant = { objective: 0, at: null };
+  applyCommand(room, { verb: "vp", attrs: { claims: [0, 1, 2] } }, { side: "a" });
+  applyCommand(room, { verb: "vp", attrs: { claims: [] } }, { side: "b" });
+  assert.equal(side(room, "a").vp, vp);
+});
+
+test("classic rooms keep per-marker scoring and never announce beacons", () => {
+  const room = createRoom("BC-C");
+  room.game.beaconRules = "classic";
+  applyCommand(room, { verb: "seed", attrs: { first: "a" } });
+  assert.ok(room.game.started, lastRejectionReason());
+  assert.ok(!room.game.beacons);
+});
+
+test("the campaign Skirmish contract fights over the three standard beacons", () => {
+  const room = createRoom("BC-S");
+  applyCommand(room, { verb: "mission", attrs: {
+    type: "skirmish", seed: 1, enemyBot: "normal",
+    squads: { a: [{ name: "Gold", chassis: "light-claw-autocannon" }], b: [{ name: "Blue", chassis: "light-missile-flamethrower" }] },
+  } });
+  assert.equal(room.game.objectives.length, 3);
+  assert.ok(Number.isInteger(room.game.beacons.next));
+});
+
+test("bots play a full cycling game: they plant, and nothing scores before round 2", async () => {
+  const { playMatch } = await import("./sim/match.js");
+  const squads = {
+    a: [{ chassis: "light-claw-autocannon" }, { chassis: "medium-lance-mortar" }, { chassis: "light-saw-minigun" }],
+    b: [{ chassis: "medium-sniper-chainsaw" }, { chassis: "light-missile-flamethrower" }, { chassis: "light-rivet-pressureclaw" }],
+  };
+  let plants = 0, early = 0, beacon = 0;
+  for (const seed of [1, 2, 3]) {
+    const r = playMatch({ squads, weights: { a: "normal", b: "normal" }, seed, table: { width: 42, height: 28 } });
+    plants += r.vpFlow.plants;
+    early += r.vpFlow.beaconByRound[1] || 0;
+    beacon += r.vpFlow.beacon.a + r.vpFlow.beacon.b;
+  }
+  assert.equal(early, 0);
+  assert.ok(plants > 0);
+  assert.ok(beacon > 0);
 });
