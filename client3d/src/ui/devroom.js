@@ -185,12 +185,12 @@ export class DevRoom {
       this.add({ id: `terrain.${key}`, name, sub: `terrain · ${t.kind}/${t.shape}`, section: "terrain", obj, source: `${fn.startsWith("terrainMesh") ? WORLD : PROPS} · ${fn}`, notes: "" });
       tx += w / 2 + 3;
     });
-    const OBJ = [["beacon-1", "Beacon (1 VP)", { vp: 1 }, "beaconPylon"], ["beacon-2", "Beacon (2 VP, centre)", { vp: 2 }, "beaconPylon"], ["relay", "Relay mast (Last Stand)", { relay: true, vp: 0 }, "relayMast"], ["crate-obj", "Salvage crate", { crate: true, vp: 0 }, "crateProp"]];
+    const OBJ = [["fuel-depot", "Fuel depot (1 VP)", { vp: 1 }, "fuelDepot"], ["refinery", "Refinery tower (2 VP, centre)", { vp: 2 }, "refineryTower"], ["relay", "Relay mast (Last Stand)", { relay: true, vp: 0 }, "relayMast"], ["crate-obj", "Salvage crate", { crate: true, vp: 0 }, "crateProp"]];
     const objs = OBJ.map(([, , o], i) => ({ ...o, x: tx + 2 + i * 6, y: ROW.terrain }));
     this.world.buildObjectives(objs);
     this.world.objectiveMeshes.forEach((om, i) => {
       const [key, name, , fn] = OBJ[i];
-      this.add({ id: `objective.${key}`, name, sub: "objective", section: "terrain", obj: om.group, source: `${WORLD} · World.${fn}()`, notes: "Holding ring, gem and light are part of the objective." });
+      this.add({ id: `objective.${key}`, name, sub: "objective", section: "terrain", obj: om.group, source: fn === "fuelDepot" || fn === "refineryTower" ? `client3d/src/scene/objectives.js · ${fn}()` : `${WORLD} · World.${fn}()`, notes: "Holding ring, gem and light are part of the objective." });
     });
 
     this.buildFx();

@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { FX } from "./fx.js";
 import { Post } from "./post.js";
+import { fuelDepot, refineryTower } from "./objectives.js";
 import { settings } from "../settings.js";
 import { themeFor, dressRandom, layoutHash } from "./themes.js";
 import { buildingProp, barricadeProp, crateProp, rubbleProp, backdrop } from "./props.js";
@@ -509,48 +510,9 @@ export class World {
     });
   }
 
-  // Objective beacon: a dieselpunk signal lamp. Riveted iron plinth (one
-  // glowing pip per VP), a braced post in brass bands, and a caged glass lamp
-  // with a lighthouse shutter turning round it, sweeping a beam across the
-  // table. The glass and pips carry pylonMat, so scoring colours still apply.
+  // Hold objectives: a fuel depot (1 VP) or the refinery tower (2 VP centre).
   beaconPylon(group, o) {
-    const vp = o.vp || 1;
-    const iron = new THREE.MeshStandardMaterial({ color: 0x2a2622, metalness: 0.75, roughness: 0.45 });
-    const brass = new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.9, roughness: 0.3 });
-    const pylonMat = new THREE.MeshStandardMaterial({ color: 0xfff2c8, emissive: 0xffd35a, emissiveIntensity: 1.2, metalness: 0.1, roughness: 0.2 });
-    const add = (m, x, y, z) => { m.position.set(x, y, z); m.castShadow = true; group.add(m); return m; };
-    // Plinth + rivets + VP pips.
-    add(new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.85, 0.32, 8), iron), 0, 0.16, 0).receiveShadow = true;
-    const trim = add(new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.035, 6, 32), brass), 0, 0.32, 0); trim.rotation.x = Math.PI / 2;
-    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; add(new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), brass), Math.cos(a) * 0.6, 0.33, Math.sin(a) * 0.6); }
-    for (let i = 0; i < vp; i++) { const a = Math.PI / 2 + (i - (vp - 1) / 2) * 0.45; add(new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), pylonMat), Math.cos(a) * 0.8, 0.2, Math.sin(a) * 0.8); }
-    // Post, brass bands, three braces.
-    const H = 1.7 + vp * 0.45;
-    add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.17, H, 8), iron), 0, 0.32 + H / 2, 0);
-    for (let y = 0.8; y < H; y += 0.55) { const b = add(new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.025, 5, 16), brass), 0, 0.32 + y, 0); b.rotation.x = Math.PI / 2; }
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * Math.PI * 2, lift = H * 0.45;
-      const br = add(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, Math.hypot(0.55, lift), 5), iron), Math.cos(a) * 0.28, 0.32 + lift / 2, Math.sin(a) * 0.28);
-      br.rotation.set(0, -a, Math.atan2(0.55, lift)); // foot out on the plinth, head on the post
-    }
-    // Lamp housing: brass deck, glass lamp (the gem), cage bars, iron cap + finial.
-    const top = 0.32 + H;
-    add(new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.26, 0.1, 12), brass), 0, top + 0.05, 0);
-    const gem = add(new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.42, 12), pylonMat), 0, top + 0.33, 0);
-    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; add(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.52, 4), brass), Math.cos(a) * 0.25, top + 0.36, Math.sin(a) * 0.25); }
-    add(new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.22, 12), iron), 0, top + 0.72, 0);
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), brass), 0, top + 0.86, 0);
-    // The turning shutter and its sweeping beam (world.frame spins `spin`).
-    const spin = new THREE.Group(); spin.position.y = top + 0.33; group.add(spin);
-    const shutter = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.4, 16, 1, true, 0, Math.PI * 1.1), new THREE.MeshStandardMaterial({ color: 0x1c1a18, metalness: 0.7, roughness: 0.5, side: THREE.DoubleSide }));
-    spin.add(shutter);
-    const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd35a, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    const beam = new THREE.Mesh(new THREE.ConeGeometry(0.7, 5, 16, 1, true).translate(0, -2.5, 0).rotateZ(Math.PI / 2), beamMat);
-    beam.rotation.y = -Math.PI * 0.55 - Math.PI / 2; beam.rotation.z = -0.08;
-    beam.onBeforeRender = () => beamMat.color.copy(pylonMat.emissive);
-    spin.add(beam);
-    const light = new THREE.PointLight(0xffd35a, 6, 8); light.position.y = top + 0.3; group.add(light);
-    return { pylonMat, gem, light, spin };
+    return (o.vp || 1) >= 2 ? refineryTower(group, o, this.fx) : fuelDepot(group, o, this.fx);
   }
 
   // Salvage crate: a banded cargo crate with a glowing brass lamp strap and a
@@ -899,12 +861,12 @@ export class World {
     this.placeCamera(this.fx.shake);
     const now = this.clock.elapsedTime;
     this.objectiveMeshes.forEach((m, i) => {
-      m.gem.rotation.y += dt; m.gem.position.y += Math.sin(now * 2 + i) * 0.004;
+      m.gem.rotation.y += dt; if (!m.noBob) m.gem.position.y += Math.sin(now * 2 + i) * 0.004;
       // Idle: a slow trickle of motes rising off the gem.
       if (Math.random() < dt * 2.5) this.fx.particle(m.gem.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, -0.6, (Math.random() - 0.5) * 0.8)), { tile: "ember", color: m.light.color.getHex(), glow: 2.2, size: 0.1, life: 2, vel: new THREE.Vector3(0, 0.9, 0), turb: 1.2 });
       if (m.dish) { m.dish.rotation.y += dt * 0.8; m.halo.scale.setScalar(1 + 0.25 * Math.sin(now * 4)); m.pylonMat.emissiveIntensity = 1.1 + 0.9 * Math.max(0, Math.sin(now * 5)); }
       if (m.body) m.pylonMat.emissiveIntensity = 1.1 + 0.6 * Math.sin(now * 3 + i);
-      if (m.spin) m.spin.rotation.y += dt * 1.3;
+      m.anim?.(dt, now);
       if (m.pulse) {
         const p = m.pulse; p.t += dt;
         const k = Math.max(0, 1 - p.t / 1.6);
