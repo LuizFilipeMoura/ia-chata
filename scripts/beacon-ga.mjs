@@ -15,7 +15,7 @@ import { parseArgs, armsFrom, ARM_RULES } from "./beacon-arms.mjs";
 import { createPool } from "../server/sim/pool.js";
 
 const args = parseArgs();
-const ARMS = armsFrom(args, "legacy,cycle");
+const ARMS = armsFrom(args, "legacy,ship");
 const num = (k, d) => (args[k] != null ? Number(args[k]) : d);
 const pool = createPool();
 const t0 = Date.now();

@@ -81,6 +81,7 @@ export function frameOf(room, cmd, fromResolutionId) {
     round: g.round, phase: g.phase,
     turn: g.turn ? { side: g.turn.side, activeRigId: g.turn.activeRigId } : null,
     vp: g.sides.map((s) => s.vp || 0),
+    beacons: g.beacons ? { lit: g.beacons.lit, next: g.beacons.next } : null,
     rigs: room.rigs.map((r) => ({
       id: r.id, name: r.name, owner: r.owner || "a", chassis: r.chassis ?? null,
       pos: r.pos ? { x: +r.pos.x.toFixed(2), y: +r.pos.y.toFixed(2) } : null,

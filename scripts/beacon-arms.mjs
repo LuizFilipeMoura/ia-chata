@@ -15,14 +15,12 @@ export function parseArgs(argv = process.argv) {
 
 // Job fields per arm, spread into a playMatch job.
 export const ARM_RULES = {
-  legacy: {},
-  cycle: { beaconRules: "cycle" },
-  vp5: { beaconRules: "cycle", beaconTuning: { vp: 5 } },
-  early: { beaconRules: "cycle", beaconTuning: { earlyPlant: true } },
-  "early-vp4": { beaconRules: "cycle", beaconTuning: { earlyPlant: true, vp: 4 } },
-  "early-vp5": { beaconRules: "cycle", beaconTuning: { earlyPlant: true, vp: 5 } },
-  pcontest: { beaconRules: "cycle", beaconTuning: { plantedContest: true } },
-  all: { beaconRules: "cycle", beaconTuning: { vp: 5, earlyPlant: true, plantedContest: true } },
+  legacy: { beaconRules: "classic" },
+  ship: {},                                                     // the default: early plant, CYCLE_BEACON_VP
+  cycle: { beaconTuning: { earlyPlant: false, vp: 3 } },
+  early: { beaconTuning: { vp: 3 } },
+  "early-vp5": { beaconTuning: { vp: 5 } },
+  vp5: { beaconTuning: { earlyPlant: false, vp: 5 } },
 };
 
 export function armsFrom(args, fallback) {

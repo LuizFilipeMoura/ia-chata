@@ -86,3 +86,10 @@ test("the GA explores squad makeups and tables, pairing only mirrored makeups", 
   assert.ok(seen.size >= 2, `several makeups played (${[...seen]})`);
   assert.ok(res.stats.some((s) => s.kind === "comp") && res.stats.some((s) => s.kind === "chassis@skirmish") && res.stats.some((s) => s.kind === "table"));
 });
+
+test("recorded frames carry the lit and next beacon", async () => {
+  const squads = { a: [{ chassis: "light-claw-autocannon" }], b: [{ chassis: "light-missile-flamethrower" }] };
+  const r = playMatch({ squads, weights: { a: "normal", b: "normal" }, seed: 1, record: true, table: { width: 42, height: 28 } });
+  assert.ok(r.frames.every((f) => "beacons" in f));
+  assert.ok(r.frames.some((f) => f.beacons?.lit != null));
+});

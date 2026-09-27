@@ -13,7 +13,7 @@ const GAMES = Number(args.games ?? 100);
 const TIERS = String(args.tiers ?? "normal,hard").split(",");
 const SEED = Number(args.seed ?? 1);
 const TABLES = { standard: null, skirmish: { width: 42, height: 28 } };
-const ARMS = armsFrom(args, "legacy,cycle");
+const ARMS = armsFrom(args, "legacy,ship");
 
 const pool = createPool();
 const jobs = [];
