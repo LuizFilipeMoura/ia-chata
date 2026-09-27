@@ -1,6 +1,6 @@
 # Cycling beacons and Plant Flag: design
 
-Date: 2026-09-27. Status: approved direction, pending spec review.
+Date: 2026-09-27. Status: approved 2026-09-27.
 
 ## Problem
 
@@ -15,7 +15,7 @@ Applies to every room whose objectives are held markers (not salvage crates).
 1. **Round 1 is dark.** No beacon scores at the round-1 Recovery.
 2. **One beacon is lit per round.** From round 2, exactly one beacon is lit. It is the one announced as **Next** during the previous round. When a round begins, a different beacon is picked at random to be the new Next (never the lit one). Round 1 already shows a Next. With a single marker (Last Stand relay, the training lesson) that marker is lit every round from 2 and is always Next.
 3. **Plant Flag [1 action, 0 heat].** A Rig within 2" of the **lit** beacon, or of the **Next** beacon (early plant), may Plant Flag on it. A plant lasts until the Rig is moved by anything (Move, Sprint, Jump Jets, grapnel, shove, pull). A plant on the Next beacon counts once that beacon lights; a plant on a beacon that is no longer lit or next does nothing.
-4. **Scoring.** At Recovery the lit beacon pays **3 VP** (flat, whichever beacon it is; the beacon multiplier does not apply) to the side with a Rig planted on it, unless an enemy Rig is within 2" of it (contested: nobody scores). Planted or not, any enemy Rig within 2" contests.
+4. **Scoring.** At Recovery the lit beacon pays **4 VP** (flat, whichever beacon it is; the beacon multiplier does not apply) to the side with a Rig planted on it, unless an enemy Rig is within 2" of it (contested: nobody scores). Planted or not, any enemy Rig within 2" contests.
 5. Unchanged: kill VP, bounty, Priority Elimination, boiler VP, 10 rounds, sudden death, annihilation.
 
 ### Why these values (evidence)
@@ -33,7 +33,17 @@ All numbers are bot-vs-bot on paired seeds (`scripts/beacon-ab.mjs`, `scripts/be
 
 GA (16 genomes × 8 generations per arm): with plain cycling at 3 VP, evolved pilots mostly abandon beacons (vp weight 0.3 to 0.6 in 3 of the top 4) and beat the beacon-chasing Normal bot. With early plant the whole top 4 keeps a high objective weight (4.3 to 5.1) and a positive Plant preference (b_plant +0.44). Planted-only contest was the weakest variant and is dropped.
 
-**Value decision rule.** A 1,600-game run of early plant at 3 VP vs 4 VP (200 games per cell) is in flight. Ship 4 VP only if its first-activator win rate is within 50% ± 3 points and its beacon share is closer to 60% than 3 VP's; otherwise ship 3 VP. The number lives in one constant (`CYCLE_BEACON_VP`).
+**Value: 4 VP.** A 1,600-game run of early plant at 3 VP vs 4 VP (200 games per cell, seed 2):
+
+| (800 games per arm) | 3 VP | 4 VP |
+|---|---|---|
+| first activator wins | 52.75% | 53.25% |
+| side A wins | 47.25% | 47.25% |
+| beacon share of VP | 49.75% | 58.5% |
+| mean margin | 6.1 | 7.35 |
+| draws | 3.25% | 1.5% |
+
+Fairness is the same for both (the 0.5-point first-activator gap is noise). 4 VP keeps beacons near today's weight in the game and halves draws, so it ships. The number lives in one constant (`CYCLE_BEACON_VP`).
 
 ## Engine (shared/)
 
@@ -96,5 +106,5 @@ Already implemented (`shared/bot/candidates.js`, `shared/bot/score.js`, `b_plant
 ## Out of scope
 
 - Rewriting the training "Claim a beacon" lesson for Plant.
-- First-activator mitigation. If the post-flip sims show the first activator above 55% over 800+ games, candidate fixes (reveal Next after the round's first activation; second activator breaks the tie on a contested plant) get their own spec.
+- First-activator mitigation. The only cell with a real skew is Hard pilots on the Skirmish table (first activator wins 59% at 3 VP, 61% at 4 VP, 200 games each). If post-flip sims confirm it, candidate fixes (reveal Next after the round's first activation; second activator breaks the tie on a contested plant) get their own spec.
 - Beacon escalation multiplier for cycling beacons.
