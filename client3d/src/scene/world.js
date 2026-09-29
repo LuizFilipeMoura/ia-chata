@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { FX } from "./fx.js";
 import { Post } from "./post.js";
+import "./matte.js";
 import { fuelDepot, refineryTower } from "./objectives.js";
 import { settings } from "../settings.js";
 import { themeFor, dressRandom, layoutHash, dressPick } from "./themes.js";
@@ -400,7 +401,7 @@ export class World {
   }
 
   // ---- Battlefield ----
-  // Sky, fog, light colours and searchlights for a theme (themes.js).
+  // Sky, fog and light colours for a theme (themes.js).
   applyTheme(theme, w, h) {
     this.theme = theme;
     this.scene.background = new THREE.Color(theme.bg);
@@ -641,19 +642,15 @@ export class World {
     };
   }
 
-  // Two searchlights on gantries at the empty corners, sweeping the table.
+  // Two searchlight gantries at the empty corners. Decoration only: their
+  // sweeping spot lights painted a white disc across the table that bloom
+  // blew into a glare, so the lamps no longer cast.
   buildSearchlights(w, h) {
-    for (const s of this.searchlights || []) { this.scene.remove(s); this.scene.remove(s.target); }
-    this.searchlights = [];
     for (const [x, z] of [[-4, -4], [w + 4, h + 4]]) {
-      const sl = new THREE.SpotLight(this.theme?.search ?? 0xfff0c8, 60, 90, 0.16, 0.5, 1.2);
-      sl.position.set(x, 26, z);
-      this.scene.add(sl); this.scene.add(sl.target);
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 26, 8), new THREE.MeshStandardMaterial({ color: 0x2a241c, metalness: 0.7 }));
       pole.position.set(x, 13, z); this.tableGroup.add(pole);
       const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.6, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0xc9a14a, emissive: 0xfff0c8, emissiveIntensity: 0.6, metalness: 0.8 }));
       lamp.position.set(x, 26, z); this.tableGroup.add(lamp);
-      this.searchlights.push(sl);
     }
   }
 
@@ -900,7 +897,7 @@ export class World {
       if (k >= 1) { this.tableGroup.remove(p.m.group); return false; }
       return true;
     });
-    // Chimney smoke and sweeping searchlights.
+    // Chimney smoke.
     for (const c of this.chimneys || []) {
       if (Math.random() < dt * (c.big ? 3 : 5)) {
         const p = c.getWorldPosition(new THREE.Vector3());
@@ -924,11 +921,6 @@ export class World {
       return true;
     });
     this.ambient(dt);
-    const t = this.clock.elapsedTime;
-    (this.searchlights || []).forEach((sl, i) => {
-      const a = t * 0.25 + i * 2.3;
-      sl.target.position.set(this.field.width / 2 + Math.cos(a) * this.field.width * 0.4, 0, this.field.height / 2 + Math.sin(a * 1.3) * this.field.height * 0.4);
-    });
     this.fx.update(dt);
     for (const t of this.tickers) t(dt);
     if (settings.get("bloom")) this.post.render(dt); else this.renderer.render(this.scene, this.camera);
