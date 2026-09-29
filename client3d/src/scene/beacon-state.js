@@ -2,7 +2,7 @@
 // dark, or "classic" in rooms without cycling beacons) and who holds it. Pure,
 // so the scene and the tests read the same answer.
 import { controlsObjective } from "../../../shared/geometry.js";
-import { isPlanted } from "../../../shared/game-state.js";
+import { isPlanted, beaconTuning } from "../../../shared/game-state.js";
 
 const within = (r, m) => !r.destroyed && r.pos && controlsObjective({ pos: r.pos, radius: r.radius ?? 1 }, m);
 
@@ -15,4 +15,14 @@ export function beaconStates(objectives = [], beacons = null, rigs = []) {
     const holder = near.size === 2 ? "contested" : planted.size ? [...planted][0] : null;
     return { state, holder };
   });
+}
+
+// The tag a move preview puts after "onto the <where> beacon". Cycling beacons
+// pay a flat value on the lit one only, so say which state it is in; the
+// marker's own vp is only the classic rule's payout.
+export function beaconTag(game, i) {
+  const bz = game.beacons;
+  if (!bz) return `(${game.objectives?.[i]?.vp ?? 1} VP)`;
+  const vp = beaconTuning({ game }).vp;
+  return bz.lit === i ? `(lit, ${vp} VP)` : bz.next === i ? `(Next, lights next round)` : "(dark)";
 }

@@ -16,7 +16,7 @@ import { terrainPolygons, radiusOf, distanceBetween, arcOf, sightCorridor } from
 import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { markerName } from "/shared/field.js";
-import { beaconStates } from "../scene/beacon-state.js";
+import { beaconStates, beaconTag } from "../scene/beacon-state.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { reactionCard, rigPortrait } from "../ui/reactions.js";
@@ -1345,7 +1345,7 @@ export class LiveMatch {
     const obj = objs.map((o, i) => ({ o, i, d: Math.hypot(o.x - dest.x, o.y - dest.y) })).sort((a, b) => a.d - b.d)[0];
     const W = this.state.field.width, H = this.state.field.height;
     const where = (x, y) => { const cx = Math.abs(x - W / 2) < W / 6, cy = Math.abs(y - H / 2) < H / 6; return cx && cy ? "centre" : `${y < H / 3 ? "north" : y > (2 * H) / 3 ? "south" : ""}${x < W / 3 ? "west" : x > (2 * W) / 3 ? "east" : ""}` || "centre"; };
-    if (obj && obj.d <= 2.2) parts.push(`onto the ${where(obj.o.x, obj.o.y)} beacon (${obj.o.vp} VP)`);
+    if (obj && obj.d <= 2.2) parts.push(`onto the ${where(obj.o.x, obj.o.y)} beacon ${beaconTag(this.game, obj.i)}`);
     else if (obj && obj.d <= 6) parts.push(`toward the ${where(obj.o.x, obj.o.y)} beacon`);
     const terr = (this.state.field.terrain || []).map((t) => ({ t, d: Math.hypot(t.x - dest.x, t.y - dest.y) - Math.max(t.w || t.rx || 1, t.h || t.ry || 1) / 2 })).sort((a, b) => a.d - b.d)[0];
     if (terr && terr.d <= 2.5) parts.push(`${parts.length ? "tucked " : ""}${["building", "barricade", "rock", "crate"].includes(terr.t.kind) ? "behind the" : "by the"} ${terr.t.kind === "wood" ? "woods" : terr.t.kind || "cover"}`);

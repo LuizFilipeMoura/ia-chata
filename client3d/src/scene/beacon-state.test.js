@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { beaconStates } from "./beacon-state.js";
+import { beaconStates, beaconTag } from "./beacon-state.js";
 
 const objs = [{ x: 10, y: 10, vp: 2 }, { x: 30, y: 10, vp: 1 }, { x: 10, y: 30, vp: 1 }];
 const rig = (owner, x, y, plant = null) => ({ owner, pos: { x, y }, radius: 1, kind: "rig", weightClass: "light", plant });
@@ -20,4 +20,14 @@ test("classic rooms keep raw control", () => {
   const s = beaconStates(objs, null, [rig("b", 30, 10)]);
   assert.equal(s[1].state, "classic");
   assert.equal(s[1].holder, "b");
+});
+
+test("a beacon's move-preview tag follows cycling beacons, not the marker's old value", () => {
+  const g = { objectives: objs, beacons: { lit: 0, next: 2 } };
+  assert.match(beaconTag(g, 0), /lit/);
+  assert.match(beaconTag(g, 2), /Next/);
+  assert.match(beaconTag(g, 1), /dark/);
+  assert.ok(!beaconTag(g, 1).includes("VP"));
+  assert.ok(!beaconTag(g, 0).includes(`(${objs[0].vp} VP)`));
+  assert.equal(beaconTag({ objectives: objs, beacons: null }, 0), "(2 VP)");
 });
