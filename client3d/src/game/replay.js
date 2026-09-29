@@ -7,7 +7,8 @@ import { Minimap } from "../ui/minimap.js";
 import { Nameplates } from "../ui/nameplates.js";
 import { openInspector } from "../ui/inspector.js";
 import { setRigSource } from "../ui/combatlog.js";
-import { CHASSIS } from "/shared/game-state.js";
+import { CHASSIS, spatial } from "/shared/game-state.js";
+import { beaconStates } from "../scene/beacon-state.js";
 import { DiceTray } from "../ui/dicetray.js";
 import { settings } from "../settings.js";
 
@@ -47,6 +48,7 @@ export class Replay {
     const f0 = this.frames[0];
     world.buildField({ ...(replay.field || { width: 54, height: 36, terrain: replay.terrain || [] }), dressSeed: replay.id ?? replay.seed ?? null }, replay.objectives || []);
     this.director.snap(f0);
+    this.paintBeacons(f0);
     this.controls = el("div", { class: "replay-bar" });
     this.brain = el("div", { class: "brain" });
     hudRoot.append(this.controls, this.brain);
@@ -83,6 +85,7 @@ export class Replay {
       this.hud.top(s, "a"); this.hud.roster(s, "a", f.turn?.activeRigId, (id) => this.inspect(id));
       this.renderBrain(f.thought);
       this.minimap.set(this.replay.field, this.replay.objectives, f.rigs, f.turn?.activeRigId, null, f.beacons);
+      this.paintBeacons(f);
       this.plates.set(s.rigs, { activeId: f.turn?.activeRigId });
       const r = f.turn?.activeRigId != null ? f.rigs.find((x) => x.id === f.turn.activeRigId) : null;
       if (r?.pos && this.follow) this.world.focus(r.pos.x, r.pos.y);
@@ -167,9 +170,17 @@ export class Replay {
     openInspector(r, { loadout });
   }
 
+  // Dark / Next / lit beacons and who holds them, the same read a live battle
+  // paints; without it every beacon kept its default look for the whole replay.
+  paintBeacons(f) {
+    const rigs = this.stateLike(f).rigs.map((r) => ({ ...r, radius: spatial(r).radius }));
+    this.world.setObjectiveControl(beaconStates(this.replay.objectives || [], f.beacons ?? null, rigs));
+  }
+
   seek(n) {
     this.i = Math.max(0, Math.min(this.frames.length - 1, n));
     this.director.snap(this.frames[this.i]);
+    this.paintBeacons(this.frames[this.i]);
     const s = this.stateLike(this.frames[this.i]); this.hud.top(s, "a"); this.hud.roster(s, "a", null, (id) => this.inspect(id));
     this.renderControls();
   }
