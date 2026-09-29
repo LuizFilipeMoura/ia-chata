@@ -155,7 +155,9 @@ function skyDome() {
 export class World {
   constructor(container) {
     this.container = container;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Ask for the discrete GPU: on a laptop the default lands on the iGPU,
+    // which pegs at 100% on this scene and the frame queue turns into input lag.
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
