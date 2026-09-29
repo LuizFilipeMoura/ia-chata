@@ -214,7 +214,7 @@ export function runDuel({ chassisA, chassisB, weaponA, upgradeA, distance, arc, 
       const isFirstShot = firstShotSp == null && rig.name === "A1"
         && next.attrs.action === "fire" && totalSp(b1) === b1StartSp;
       // A policy command is NOT held to the lifecycle verbs' standard, because a
-      // refusal here can be the rules talking. Ion Storm (§13, Arc Gun) refuses
+      // refusal here can be the rules talking. Galvanic Storm (§13, Arc Gun) refuses
       // the shot after a discharge and CONSUMES the lock doing it, the engine
       // changed nothing the version counter can see, yet the retry succeeds. So
       // re-ask the policy instead of throwing, and count consecutive no-ops: a

@@ -122,19 +122,20 @@ export const UNIT_WEAPONS = {
   // Built-in weak weapon every support unit carries; replaced by a Damage
   // module. peak 0 + dropoff 0 = a flat Accuracy 0 at any distance (spec §Sidearm).
   "Sidearm":          { rof: 2, pen: 3,  dmg: 1, sweet: 6,  peak: 0, dropoff: 0,    minRange: 0, maxRange: 12, flatPick: true },
-  // Drone kit (3D campaign waves). The Demo Charge is a Sapper's one-shot: the
+  // Clockwork kit (3D campaign waves; engine kind "drone"). The Demo Charge is a Sapper's one-shot: the
   // blow lands, then the charge `detonate`s on every other unit in the radius
   // and takes the Sapper with it.
-  "Drone Carbine":    { rof: 3, pen: 5,  dmg: 1, sweet: 7,  peak: 1, dropoff: 0.2,  minRange: 0, maxRange: 14, flatPick: true },
+  "Clockwork Carbine":    { rof: 3, pen: 5,  dmg: 1, sweet: 7,  peak: 1, dropoff: 0.2,  minRange: 0, maxRange: 14, flatPick: true },
   "Demo Charge":      { rof: 1, pen: 8,  dmg: 3, accuracy: [1, 1], rng: [2, 2], melee: true, flatPick: true, detonate: { radius: 2.5, pen: 6, dmg: 2 } },
 };
 
-// Drone types (3D campaign waves). Hunters rush and chip, Sappers blow up in
-// base contact, Spotters hang back and paint targets for their side.
+// Clockwork types (3D campaign waves; engine kind "drone"). Hunters rush and
+// chip, Sappers blow up in base contact, Spotter Kites hang back and paint
+// targets for their side. `name` is the full display name.
 export const DRONE_TYPES = {
-  hunter:  { id: "hunter",  label: "Hunter",  unit: "Drone Carbine", modules: [] },
-  sapper:  { id: "sapper",  label: "Sapper",  unit: "Demo Charge",   modules: [] },
-  spotter: { id: "spotter", label: "Spotter", unit: "Sidearm",       modules: ["recon"] },
+  hunter:  { id: "hunter",  label: "Hunter",  name: "Hunter Clockwork", unit: "Clockwork Carbine", modules: [] },
+  sapper:  { id: "sapper",  label: "Sapper",  name: "Sapper Clockwork", unit: "Demo Charge",   modules: [] },
+  spotter: { id: "spotter", label: "Spotter", name: "Spotter Kite",     unit: "Sidearm",       modules: ["recon"] },
 };
 
 export function normalizeUnitWeapon(name) {
@@ -159,12 +160,12 @@ export function normalizeUnitWeapon(name) {
 // crippled, integrity = how fast it dies); start near INTEGRITY_RATIO × total SP.
 export const CHASSIS = [
   { id: "light-claw-autocannon",      name: "Gold",       label: "Claw · Autocannon",           class: "light",  longRange: "Autocannon",      melee: "Claw",          speed: 4.5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 }, integrity: 22 },
-  { id: "light-missile-flamethrower", name: "Blue",       label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 4.5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 }, integrity: 20 },
-  { id: "light-saw-minigun",          name: "Purple",     label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 5.5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 }, integrity: 22 },
-  { id: "light-wreckingball-double",  name: "Pumpkin",    label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 5.5, sp: { hull: 12, arms: 10, legs: 11, engine: 8 }, integrity: 21 },
-  { id: "light-sword-arc",            name: "Zebra",      label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 4.5, sp: { hull: 11, arms: 9,  legs: 10, engine: 8 }, integrity: 19 },
+  { id: "light-missile-flamethrower", name: "Cobalt",     label: "Missile Barrage · Flamethrower", class: "light", longRange: "Missile Barrage", melee: "Flamethrower", speed: 4.5, sp: { hull: 12, arms: 10, legs: 10, engine: 8 }, integrity: 20 },
+  { id: "light-saw-minigun",          name: "Tyrian",     label: "Circular Saw · Mini Gun",     class: "light",  longRange: "Mini Gun",        melee: "Circular Saw",  speed: 5.5, sp: { hull: 13, arms: 11, legs: 11, engine: 9 }, integrity: 22 },
+  { id: "light-wreckingball-double",  name: "Rust",       label: "Wrecking Ball · Double MG",   class: "light",  longRange: "Double MG",       melee: "Wrecking Ball", speed: 5.5, sp: { hull: 12, arms: 10, legs: 11, engine: 8 }, integrity: 21 },
+  { id: "light-sword-arc",            name: "Dazzle",     label: "Sword · Arc Gun",             class: "light",  longRange: "Arc Gun",         melee: "Sword",         speed: 4.5, sp: { hull: 11, arms: 9,  legs: 10, engine: 8 }, integrity: 19 },
   { id: "light-harpoon-anchor",       name: "Turquoise",  label: "Harpoon · Anchor",            class: "light",  longRange: "Harpoon",         melee: "Anchor",        speed: 4.5, sp: { hull: 12, arms: 11, legs: 11, engine: 8 }, integrity: 21 },
-  { id: "light-rivet-pressureclaw",   name: "Green",      label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 5.5, sp: { hull: 13, arms: 11, legs: 10, engine: 9 }, integrity: 22 },
+  { id: "light-rivet-pressureclaw",   name: "Verdigris",  label: "Rivet Gun · Pressure Claw",   class: "light",  longRange: "Rivet Gun",       melee: "Pressure Claw", speed: 5.5, sp: { hull: 13, arms: 11, legs: 10, engine: 9 }, integrity: 22 },
   { id: "medium-lance-mortar",        name: "Copper",     label: "Lance · Mortar",              class: "medium", longRange: "Mortar",          melee: "Lance",         speed: 3.5, sp: { hull: 14, arms: 12, legs: 12, engine: 10 }, integrity: 31 },
   { id: "medium-shield-siege",        name: "Black",      label: "Bulwark Shield · Siege Maul", class: "medium", longRange: "Siege Maul",      melee: "Bulwark Shield", speed: 3.5, sp: { hull: 16, arms: 13, legs: 12, engine: 11 }, integrity: 34 },
   { id: "medium-sniper-chainsaw",     name: "Red",        label: "Sniper Cannon · Chainsaw",    class: "medium", longRange: "Sniper Cannon",   melee: "Chainsaw",      speed: 4.5, sp: { hull: 12, arms: 11, legs: 11, engine: 9 }, integrity: 28 },
@@ -211,7 +212,7 @@ export const BOT_PRESETS = ["dummy", "easy", "normal", "hard", "balanced", "aggr
 export const SEED_ROSTER = [
   { name: "A1", owner: "a", chassis: "medium-lance-mortar",    prototype: "longRange" }, // Mortar → Barrage
   { name: "A2", owner: "a", chassis: "light-claw-autocannon",  prototype: "melee" },     // Claw → Breach Grip
-  { name: "A3", owner: "a", chassis: "light-sword-arc",        prototype: "longRange" }, // Arc Gun → Ion Storm
+  { name: "A3", owner: "a", chassis: "light-sword-arc",        prototype: "longRange" }, // Arc Gun → Galvanic Storm
   { name: "B1", owner: "b", chassis: "medium-shield-siege",    prototype: "melee" },     // Bulwark Shield → Emplacement
   { name: "B2", owner: "b", chassis: "medium-sniper-chainsaw", prototype: "longRange" }, // Sniper Cannon → Enfilade
   { name: "B3", owner: "b", chassis: "light-harpoon-anchor",   prototype: "melee" },     // Anchor → Ground Anchor
@@ -355,7 +356,7 @@ export const EQUIPMENT = {
   },
   "servo-actuators": {
     family: "Mobility", label: "Servo Actuators", passive: "Sprint costs 1 heat instead of 2",
-    active: { key: "jumpjets", label: "Jump Jets", heat: 2,
+    active: { key: "jumpjets", label: "Blast Pistons", heat: 2,
       text: "Move up to base Speed, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties." },
   },
   "overclock-core": {
@@ -375,7 +376,7 @@ export const EQUIPMENT = {
       text: "Dump banked heat: vent to Heat Capacity and scald every enemy within 3\" (players adjudicate the AoE)." },
   },
   "targeting-computer": {
-    family: "Fire Control", label: "Targeting Computer",
+    family: "Fire Control", label: "Stereo Rangefinder",
     passive: "The first Fire this activation ignores its cover and engaged accuracy penalties",
     active: { key: "locksight", label: "Lock Sight", heat: 1,
       text: "Your next shot this activation rerolls all its missed to-hit dice." },
@@ -489,7 +490,7 @@ export function rigEffects(rig) {
   const combat = {
     // Ablative Plating (Armor), hardens impact locations; catalog effect.
     hardenImpact: equip === "ablative-plating" ? (eff.hardenImpact ?? 1) : 0,
-    // Targeting Computer (Sensors), sweet-band accuracy bonus; catalog effect.
+    // Stereo Rangefinder (Sensors), sweet-band accuracy bonus; catalog effect.
     sweetBandAccuracy: equip === "targeting-computer" ? (eff.sweetBandAccuracy ?? 0) : 0,
     // Reactive Plating (Armor), side/rear Penetration delta; catalog effect.
     sideRearPen: equip === "reactive-plating" ? (eff.sideRearPen ?? -1) : 0,
@@ -634,14 +635,14 @@ export const WEAPON_UPGRADES = {
     { id: "kneecapper", nature: "prototype", name: "Kneecapper", tag: "Rake legs/arms from any arc to cripple them; never hull/engine", catch: "Never hits hull or engine", effect: { kneecapper: true } },
   ],
   "Autocannon": [
-    { id: "depleted-core", nature: "field", name: "Depleted Core", tag: "+1 Penetration", effect: { pen: 1 } },
+    { id: "depleted-core", nature: "field", name: "Tungsten Core", tag: "+1 Penetration", effect: { pen: 1 } },
     { id: "ap-shells", nature: "tuned", name: "AP Shells", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
     { id: "penetrator-rounds", nature: "prototype", name: "Penetrator Rounds", tag: "Every 3rd volley ignores armour; belt cycles slow after", catch: "Belt cycles slow after: the next volley rolls half its dice", effect: { penetrator: true } },
   ],
   "Arc Gun": [
-    { id: "ion-burn", nature: "field", name: "Ion Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
-    { id: "systems-overload", nature: "tuned", name: "Systems Overload", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
-    { id: "ion-storm", nature: "prototype", name: "Ion Storm", tag: "EMP a rig's systems for a turn; overloads your own gun", catch: "Overloads your own gun", effect: { ionStorm: true } },
+    { id: "ion-burn", nature: "field", name: "Galvanic Burn", tag: "Gains Incendiary", effect: { perks: ["Incendiary"] } },
+    { id: "systems-overload", nature: "tuned", name: "Boiler Surge", tag: "On hit: target loses 1 action next activation", effect: { onHit: "systems-overload" } },
+    { id: "ion-storm", nature: "prototype", name: "Galvanic Storm", tag: "Galvanic surge stalls a rig for a turn; overloads your own gun", catch: "Overloads your own gun", effect: { ionStorm: true } },
   ],
   "Mortar": [
     { id: "cluster-shells", nature: "field", name: "Cluster Shells", tag: "On hit: 1 SP to a second random location", effect: { onHit: "cluster-shells" } },
@@ -656,17 +657,17 @@ export const WEAPON_UPGRADES = {
   "Siege Maul": [
     { id: "reinforced-head", nature: "field", name: "Reinforced Head", tag: "+1 Damage", effect: { dmg: 1 } },
     { id: "breaching-round", nature: "tuned", name: "Breaching Round", tag: "Hull SP it strips can't be repaired until end of next round", effect: { onDamage: "breaching-round" } },
-    { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Protocol", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", catch: "Resets if you stop advancing", effect: { piledriver: true } }, // shove (3") deferred, Group G (spatial)
+    { id: "piledriver-protocol", nature: "prototype", name: "Piledriver Drill", tag: "Store Momentum by advancing; unload a guard-breaking smash (spatial shove)", catch: "Resets if you stop advancing", effect: { piledriver: true } }, // shove (3") deferred, Group G (spatial)
   ],
   "Missile Barrage": [
     { id: "swarm-warheads", nature: "field", name: "Swarm Warheads", tag: "+1 ROF", effect: { rof: 1 } },
     { id: "shaped-charges", nature: "tuned", name: "Shaped Charges", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
-    { id: "fire-control-lock", nature: "prototype", name: "Fire Control Lock", tag: "Lock a target for one unmissable armor-piercing volley", catch: "Takes a turn to paint the target first", effect: { fireControl: true } },
+    { id: "fire-control-lock", nature: "prototype", name: "Plotting-Table Lock", tag: "Lock a target for one unmissable armor-piercing volley", catch: "Takes a turn to paint the target first", effect: { fireControl: true } },
   ],
   "Sword": [
     { id: "duelist-balance", nature: "field", name: "Duelist's Balance", tag: "Gains Precision", effect: { perks: ["Precision"] } },
     { id: "opportunist", nature: "tuned", name: "Opportunist", tag: "+3 Penetration vs disrupted / overheated targets", effect: { vsDisrupted: true } },
-    { id: "superconductor-edge", nature: "prototype", name: "Superconductor Edge", tag: "Run hot and dump your heat into them through the blade", catch: "Needs heat already banked", effect: { superconductor: true } },
+    { id: "superconductor-edge", nature: "prototype", name: "Quenched Edge", tag: "Run hot and dump your heat into them through the blade", catch: "Needs heat already banked", effect: { superconductor: true } },
   ],
   "Circular Saw": [
     { id: "tempered-teeth", nature: "field", name: "Tempered Teeth", tag: "Gains Armour Piercing", effect: { perks: ["Armour Piercing"] } },
@@ -874,7 +875,7 @@ function freshEquipState() {
     ablativeCharges: 0, cryo: 0, naniteStacks: [], interceptors: 0,
     meltdownCharge: 0, solution: { targetId: null, count: 0 },
     reactiveArmorLocs: [], grapnelCooldown: 0,
-    // Point-Defense System, firedRangedThisRound arms the fire-lockout that
+    // Flak Cage, firedRangedThisRound arms the fire-lockout that
     // Recovery rolls forward into pdLocked (unusable the round after firing ranged).
     firedRangedThisRound: false, pdLocked: false,
   };
@@ -939,7 +940,7 @@ function ensureRigShape(rig, mode = "physical") {
   // Enfilade (§13, Sniper Cannon), per-rig aimed-shot counter; every 3rd aimed
   // shot emits a ricochet instruction (spatial, narrated, not simulated).
   if (typeof rig.enfiladeShots !== "number") rig.enfiladeShots = 0;
-  // Piledriver Protocol (§13, Siege Maul), stored Momentum (+1 per advancing
+  // Piledriver Drill (§13, Siege Maul), stored Momentum (+1 per advancing
   // activation, cap 3); spent whole on a Siege Maul shot for guard-break + Penetration.
   if (typeof rig.momentum !== "number") rig.momentum = 0;
   // Emplacement (§13, Bulwark Shield), the rooted-stance flag and the round the
@@ -968,11 +969,11 @@ function ensureRigShape(rig, mode = "physical") {
   // like noPrepNextActivation.
   if (typeof rig.noDisengageNextActivation !== "boolean") rig.noDisengageNextActivation = false;
   if (typeof rig.suppressImmobile !== "boolean") rig.suppressImmobile = false;
-  // Ion Storm (§13, Arc Gun), EMP active-lockout on the struck target, and the
+  // Galvanic Storm (§13, Arc Gun), EMP active-lockout on the struck target, and the
   // attacker's own Arc Gun overload flag.
   if (typeof rig.noActivesNextActivation !== "boolean") rig.noActivesNextActivation = false;
   if (typeof rig.arcLockedNext !== "boolean") rig.arcLockedNext = false;
-  // Fire Control Lock (§13, Missile Barrage), painted target id + the round the
+  // Plotting-Table Lock (§13, Missile Barrage), painted target id + the round the
   // paint goes stale.
   if (rig.lockedTarget === undefined) rig.lockedTarget = null;
   if (typeof rig.lockExpiresRound !== "number") rig.lockExpiresRound = 0;
@@ -1159,7 +1160,7 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     // Enfilade (§13, Sniper Cannon), per-rig aimed-shot cadence counter; every
     // 3rd aimed Sniper Cannon shot emits a ricochet instruction (spatial).
     enfiladeShots: 0,
-    // Piledriver Protocol (§13, Siege Maul), stored Momentum: +1 for any
+    // Piledriver Drill (§13, Siege Maul), stored Momentum: +1 for any
     // activation this rig advanced (cap 3), spent whole on a Siege Maul shot for
     // a guard-break (ignores Brace + cover) and +1 Penetration per point. While
     // momentum > 0 the rig can't Raise Shield (all-in on the charge).
@@ -1190,12 +1191,12 @@ export function makeRig(id, name, cls, owner, weapons = {}, equipment = null, eq
     // that activation's end.
     noDisengageNextActivation: false,
     suppressImmobile: false,
-    // Ion Storm (§13, Arc Gun), an EMP hit blocks the target's equipment
+    // Galvanic Storm (§13, Arc Gun), an EMP hit blocks the target's equipment
     // actives for its next activation; arcLockedNext overloads the attacker's
     // own Arc Gun until its next fire attempt.
     noActivesNextActivation: false,
     arcLockedNext: false,
-    // Fire Control Lock (§13, Missile Barrage), the painted target's id and the
+    // Plotting-Table Lock (§13, Missile Barrage), the painted target's id and the
     // round the paint expires; the next Missile Barrage volley on it can't miss.
     lockedTarget: null,
     lockExpiresRound: 0,
@@ -1340,7 +1341,7 @@ export function makeUnit(kindId, id, name, owner, opts = {}) {
     towChainCooldownUntil: 0,
     harpoonWinchCooldownUntil: 0,
     towedThisActivation: false,
-    // Piledriver Protocol (§13), mirrored for shape parity (cold kinds never
+    // Piledriver Drill (§13), mirrored for shape parity (cold kinds never
     // carry the Siege Maul upgrade, so Momentum never actually builds).
     momentum: 0,
     // Enfilade (§13), mirrored for shape parity (cold kinds never carry the
@@ -1386,7 +1387,7 @@ export function heatMeter(rig) {
   const margin = rig?.equipment === "blast-furnace-core"
     ? (equipmentUpgradeEffectOf(rig?.equipment, rig?.equipmentUpgrade)?.thermalMargin ?? 1)
     : 0;
-  // Nanite Swarm (Utility Prototype), while any nanite stack rides this rig,
+  // Grease Monkeys (Utility Prototype), while any nanite stack rides this rig,
   // its Heat Capacity is −1 (the downside for the free self-repair each Recovery).
   const naniteDock = (rig?.equipState?.naniteStacks?.length || 0) > 0 ? 1 : 0;
   const effCap = cap + margin - naniteDock + (rig?.mods?.heatCap || 0);
@@ -2283,7 +2284,7 @@ function onRigDamaged(room, rig, opts) {
     });
     if (exploded) room.game.pendingBlast = { sourceId: rig.id, exploded: true };
   }
-  // Meltdown Protocol (Thermal Prototype) downside, an Engine destroyed with
+  // Scuttle Charge (Thermal Prototype) downside, an Engine destroyed with
   // charge still banked cooks the charge off on the rig itself (self-damage to
   // Hull). Guarded by _meltdownDetonated so the re-entrant applyDamage below (and
   // any later hits) can't detonate twice.
@@ -2294,7 +2295,7 @@ function onRigDamaged(room, rig, opts) {
     applyDamage(room, rig, "hull", n, opts);
     pushResolution(room, {
       kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name}'s meltdown charge detonates, ${n} damage to its own Hull.`, effects: [],
+      summary: `${rig.name}'s scuttle charge detonates, ${n} damage to its own Hull.`, effects: [],
     });
   }
   // Engagement (§engagement), a destroyed or immobilised rig can no longer hold
@@ -2518,18 +2519,18 @@ function refreshEquipState(rig) {
   const eff = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade);
   // Ablative Cascade (Prototype), refill to 2 ablative charges each Recovery.
   if (eff.ablativeCascade) s.ablativeCharges = 2;
-  // Cryo Reservoir (Prototype), bank 1 cryo each Recovery the rig cooled, cap 3.
+  // Ice-Brine Tank (Prototype), bank 1 cryo each Recovery the rig cooled, cap 3.
   // Runs AFTER runRecovery's cooling read so the "cool only 1" downside checks
   // the pre-bank cryo count.
   if (eff.cryoReservoir && !rig.noCool) s.cryo = Math.min(3, (s.cryo || 0) + 1);
-  // Nanite Swarm (Utility Prototype), every stack heals 1 SP on its location
+  // Grease Monkeys (Utility Prototype), every stack heals 1 SP on its location
   // (repairRig clamps to max + honours repair locks), then decays 1 charge;
   // stacks spent to 0 drop off (and with them the Heat Capacity −1 downside).
   if (Array.isArray(s.naniteStacks) && s.naniteStacks.length) {
     for (const st of s.naniteStacks) { repairRig(rig, st.loc, 1); st.sp -= 1; }
     s.naniteStacks = s.naniteStacks.filter((st) => st.sp > 0);
   }
-  // Point-Defense System (Reactive Plating, Prototype), refill 2 interceptors
+  // Flak Cage (Reactive Plating, Prototype), refill 2 interceptors
   // each Recovery, then roll the fire-lockout forward: PD is unusable for the
   // round following the one in which this rig fired its own ranged weapon.
   if (eff.pointDefense) {
@@ -2650,21 +2651,21 @@ function endActivation(room, rig, dice, random) {
     m = heatMeter(rig);
   }
   if (m.over > 0) {
-    // Meltdown Protocol (Thermal Prototype), instead of rolling the overheat
-    // D12, convert the over-Capacity heat into meltdown charge (cap 6), then vent
+    // Scuttle Charge (Thermal Prototype), instead of rolling the overheat
+    // D12, convert the over-Capacity heat into scuttle charge (cap 6), then vent
     // that excess heat down to the cap (the heat became charge, it doesn't stay
     // banked in the engine too, or it would re-convert every activation).
     if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.meltdownProtocol) {
       rig.equipState.meltdownCharge = Math.min(6, (rig.equipState.meltdownCharge || 0) + m.over);
       pushResolution(room, {
         kind: "equipment", actor: rig.owner, rigId: rig.id, rolls: [],
-        summary: `${rig.name} banks ${m.over} meltdown charge (now ${rig.equipState.meltdownCharge}/6), no overheat roll.`,
+        summary: `${rig.name} banks ${m.over} scuttle charge (now ${rig.equipState.meltdownCharge}/6), no overheat roll.`,
         effects: [],
       });
       bumpHeat(rig, -m.over); // vent the converted excess back down to Capacity
     } else {
       const roll = rollD(12, dice?.overheat, random);
-      // Reactor Overdrive (§13, Power Prototype), this activation's overheat bonus
+      // Open the Throttle (§13, Power Prototype), this activation's overheat bonus
       // is doubled (the all-in downside of the Overclock Penetration spike). Scoped to this
       // one roll; other m.bonus consumers (rigEffects preview) read the raw meter.
       const bonus = rig.reactorOverdriveActive ? m.bonus * 2 : m.bonus;
@@ -2693,7 +2694,7 @@ function endActivation(room, rig, dice, random) {
   // Stagger (§7) lapses at the end of the rig's next activation if it never
   // attacked; one staggered mid-activation keeps it one activation longer.
   lapseStagger(rig);
-  // Piledriver Protocol (§13, Siege Maul), a rig carrying the piledriver
+  // Piledriver Drill (§13, Siege Maul), a rig carrying the piledriver
   // upgrade gains +1 Momentum (cap 3) for any activation it advanced. Read
   // movedThisActivation HERE, before the clear below zeroes it, endActivation is
   // the once-per-activation choke point, so the gain lands exactly once even if
@@ -2721,14 +2722,14 @@ function endActivation(room, rig, dice, random) {
   // Dead Weight (§13, Anchor), the no-Disengage pin is scoped to the one
   // activation it targeted; clear it here so it can't leak forward.
   rig.noDisengageNextActivation = false;
-  // Ion Storm's EMP active-lockout (§13) is scoped to exactly the one activation
+  // Galvanic Storm's EMP active-lockout (§13) is scoped to exactly the one activation
   // it penalises, clear it here alongside noPrepNextActivation so it can't leak
   // into a later activation. (Set by an enemy Arc Gun hit before this activation.)
   rig.noActivesNextActivation = false;
-  rig.lockSightNext = false; // Lock Sight (Targeting Computer), a shot not taken doesn't carry into a reactive shot
+  rig.lockSightNext = false; // Lock Sight (Stereo Rangefinder), a shot not taken doesn't carry into a reactive shot
   rig.overclocked = false;
-  rig.reactorOverdriveActive = false; // Reactor Overdrive (§13), the Penetration boost + doubled overheat is scoped to this one activation
-  // Cryo Reservoir / Meltdown Protocol, clear any leftover +Penetration spike so an
+  rig.reactorOverdriveActive = false; // Open the Throttle (§13), the Penetration boost + doubled overheat is scoped to this one activation
+  // Ice-Brine Tank / Scuttle Charge, clear any leftover +Penetration spike so an
   // armed-but-unspent bonus can't leak past this activation.
   if (rig.equipState) rig.equipState.nextAttackPen = 0;
   claimCrates(room, rig);
@@ -2974,11 +2975,11 @@ function resolveFire(room, rig, target, a, act, random) {
   // painter's next activation").
   const painter = target.painted ? findRigById(room, target.painted.painterId) : null;
   const paintedActive = !!(target.painted && target.painted.by === rig.owner && painter && !painter.destroyed);
-  // Targeting Computer passive (§Fire Control), the FIRST Fire this activation
+  // Stereo Rangefinder passive (§Fire Control), the FIRST Fire this activation
   // ignores cover + engaged accuracy penalties. Threaded into computeModifiedAim
   // via opts.fireControlFirst; consumed once the shot actually resolves below.
   const fireControlFirst = rig.equipment === "targeting-computer" && !rig.fireControlUsed;
-  // Chaff Burst (Reactive Plating, Tuned), a smoked rig that gets targeted may
+  // Tinsel Burst (Reactive Plating, Tuned), a smoked rig that gets targeted may
   // take a free half-Speed side-step before the attack resolves. Spatial → narrate
   // the instruction; the player moves the model (AGENTS.md "narrate, don't
   // simulate"). Free whenever Smoke is up, so there is no cadence to track.
@@ -2994,8 +2995,8 @@ function resolveFire(room, rig, target, a, act, random) {
       const lost = !geo.inFrontArc || (slot === "melee" ? !geo.inMeleeReach : !geo.los);
       pushResolution(room, {
         kind: "perk", actor: target.owner, rigId: target.id, rolls: [], chaff: { from, to, lost },
-        summary: `Chaff Burst, ${target.name} side-steps under smoke${lost ? ": the shot loses it" : ""}.`,
-        effects: ["Chaff Burst, free side-step under smoke"],
+        summary: `Tinsel Burst, ${target.name} side-steps under smoke${lost ? ": the shot loses it" : ""}.`,
+        effects: ["Tinsel Burst, free side-step under smoke"],
       });
       if (lost) {
         // Same bill as a dodged shot: the weapon discharged and ran hot.
@@ -3014,11 +3015,11 @@ function resolveFire(room, rig, target, a, act, random) {
     const step = Number.isFinite(target.speed) ? `${Math.floor(target.speed / 2)}" ` : "half-Speed ";
     pushResolution(room, {
       kind: "perk", actor: target.owner, rigId: target.id, rolls: [],
-      summary: `Chaff Burst, ${target.name} has Smoke up: it may take a free ${step}side-step before the attack resolves (move the mini).`,
-      effects: ["Chaff Burst, free side-step under smoke"],
+      summary: `Tinsel Burst, ${target.name} has Smoke up: it may take a free ${step}side-step before the attack resolves (move the mini).`,
+      effects: ["Tinsel Burst, free side-step under smoke"],
     });
   }
-  // Fire Solution Lock (§Fire Control prototype), a Fire Weapon shot vs the SAME
+  // Plotting-Table Solution (§Fire Control prototype), a Fire Weapon shot vs the SAME
   // target stacks a firing solution (cap 3). Switching target resets it, so this
   // shot starts a fresh solution on the new target. A full 3-stack arms the NEXT
   // shot to cash in as an auto-hit, armour-piercing volley (solutionPayoff). The
@@ -3042,7 +3043,7 @@ function resolveFire(room, rig, target, a, act, random) {
     charged: a.charged === true || a.charged === "true",
     solutionPayoff,
     fireControlFirst,
-    // Predictive Tracking (Fire Control Tuned), the target counts as pinned when
+    // Rangefinder Drum (Fire Control Tuned), the target counts as pinned when
     // it is immobilised, suppression-pinned, held in a melee lock, or emplaced.
     targetPinned: !!(target.immobilised || target.suppressImmobile || target.engagedWith != null || target.emplaced),
     grit: isGritted(a),
@@ -3059,7 +3060,7 @@ function resolveFire(room, rig, target, a, act, random) {
   // activation; later melee blows resolve at normal Penetration.
   if (slot === "melee" && rig.chargedIntoContact) rig.kickstartUsed = true;
   t.actionsUsed += cost;
-  // Fire Solution Lock, resolve the solution for the shot that just landed. A
+  // Plotting-Table Solution, resolve the solution for the shot that just landed. A
   // payoff shot spends the full stack (reset to 0); any other shot is a building
   // shot: it stacks the solution (cap 3) and runs the barrel +1 heat.
   if (fsl) {
@@ -3067,7 +3068,7 @@ function resolveFire(room, rig, target, a, act, random) {
     if (solutionPayoff) { sol.count = 0; } // payoff consumed
     else { sol.count = Math.min(3, sol.count + 1); bumpHeat(rig, 1); } // building shot: stack + run hot
   }
-  // Cryo Reservoir / Meltdown Protocol, the armed +Penetration spike is a one-shot; the
+  // Ice-Brine Tank / Scuttle Charge, the armed +Penetration spike is a one-shot; the
   // attack that just resolved consumed it, so clear it now.
   if (rig.equipState?.nextAttackPen) rig.equipState.nextAttackPen = 0;
   // A second (or later) ranged shot in the same activation runs the barrel hot:
@@ -3075,7 +3076,7 @@ function resolveFire(room, rig, target, a, act, random) {
   const secondShot = slot === "longRange" && (t.longRangeShots || 0) >= 1;
   bumpHeat(rig, ACTIONS[act].heat + (secondShot ? 1 : 0));
   if (slot === "longRange") t.longRangeShots = (t.longRangeShots || 0) + 1;
-  // Point-Defense System (Reactive Plating, Prototype), firing your own ranged
+  // Flak Cage (Reactive Plating, Prototype), firing your own ranged
   // weapon arms the fire-lockout; next Recovery rolls it into pdLocked so PD
   // can't intercept the following round.
   if (slot === "longRange" && rig.equipState
@@ -3425,9 +3426,9 @@ export function lastRejectionReason() { return _rejectionReason; }
 function performAction(room, rig, act, a, random) {
   const t = room.game.turn;
   if (act === "shutdown") {
-    // Meltdown Protocol downside, a rig sitting on banked meltdown charge can't
+    // Scuttle Charge downside, a rig sitting on banked scuttle charge can't
     // Shut Down (the core stays hot on purpose).
-    if ((rig.equipState?.meltdownCharge || 0) > 0) return reject("Can't Shut Down while a meltdown charge is banked.");
+    if ((rig.equipState?.meltdownCharge || 0) > 0) return reject("Can't Shut Down while a scuttle charge is banked.");
     // Shutdown may be called at any point in the activation. Cooling scales
     // with the slots left unspent: 2 heat per remaining action, capped at 5.
     // Never cools below the engine's heat floor.
@@ -3446,17 +3447,17 @@ function performAction(room, rig, act, a, random) {
   if (act === "plantflag") return plantFlag(room, rig);
   const equipId = EQUIPMENT_ACTIVE_BY_KEY[act];
   if (equipId) {
-    // Grapnel Launcher (§13, Servo Actuators Prototype), REPLACES Jump Jets for a
-    // rig carrying it. Unlike Jump Jets it ignores engagement (the grapnel yanks
+    // Grapnel Launcher (§13, Servo Actuators Prototype), REPLACES Blast Pistons for a
+    // rig carrying it. Unlike Blast Pistons it ignores engagement (the grapnel yanks
     // the rig free of a melee lock), so it bypasses the movement guards below. It
     // still honours the EMP lockout, the carry check, and the action budget.
     // Spatial → narrated instruction; the engine tracks only the cooldown and the
     // engagement-lock change.
     if (act === "jumpjets" && equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.grapnelLauncher) {
-      if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (EMP).");
+      if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (galvanic surge).");
       if (rig.equipment !== equipId) return reject("This unit isn't carrying that equipment.");
       // Suppression Lock (§13, Mini Gun), a stack-3 pin also grounds the Grapnel
-      // Launcher (it's still Jump Jets movement underneath) until it clears in Recovery.
+      // Launcher (it's still Blast Pistons movement underneath) until it clears in Recovery.
       if (rig.suppressImmobile) return reject("Grapnel Launcher is grounded while this unit is suppressed.");
       // Emplacement (§13, Bulwark Shield), a rooted rig can't move, so the Grapnel
       // Launcher (movement) is blocked while emplaced. Un-plant first.
@@ -3500,7 +3501,7 @@ function performAction(room, rig, act, a, random) {
       if (hop) { rig.pos = hop.to; rig.facing = hop.facing; }
       rig.towedThisActivation = true;                 // rooted: no Move/Sprint after (reuses the tow root)
       if (rig.equipState) rig.equipState.grapnelCooldown = 3; // 3-round cooldown, ticked in Recovery
-      bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade)); // +2 heat (Jump Jets base)
+      bumpHeat(rig, equipmentActiveHeat(equipId, rig.equipmentUpgrade)); // +2 heat (Blast Pistons base)
       pushResolution(room, {
         kind: "equipment", active: "grapnel", mode: reel ? "reel" : "yank", actor: rig.owner, rigId: rig.id, rolls: [],
         ...(hop ? { from: hop.from, to: hop.to } : {}),
@@ -3513,28 +3514,28 @@ function performAction(room, rig, act, a, random) {
       });
       return true;
     }
-    // §engagement, Jump Jets is movement; an engaged rig is pinned and must
+    // §engagement, Blast Pistons is movement; an engaged rig is pinned and must
     // Disengage before it can jump out. Other actives (harden/purge/…) are fine.
-    if (act === "jumpjets" && rig.engagedWith != null) return reject("Jump Jets can't fire while engaged, Disengage first.");
-    // Suppression Lock (§13, Mini Gun), a stack-3 pin also grounds Jump Jets
+    if (act === "jumpjets" && rig.engagedWith != null) return reject("Blast Pistons can't fire while engaged, Disengage first.");
+    // Suppression Lock (§13, Mini Gun), a stack-3 pin also grounds Blast Pistons
     // (movement) until it clears in Recovery.
-    if (act === "jumpjets" && rig.suppressImmobile) return reject("Jump Jets are grounded while this unit is suppressed.");
-    // Emplacement (§13, Bulwark Shield), a rooted rig can't move, so Jump Jets
+    if (act === "jumpjets" && rig.suppressImmobile) return reject("Blast Pistons are grounded while this unit is suppressed.");
+    // Emplacement (§13, Bulwark Shield), a rooted rig can't move, so Blast Pistons
     // (movement) is blocked while emplaced. Un-plant first.
-    if (act === "jumpjets" && rig.emplaced) return reject("Jump Jets can't fire while emplaced, un-plant first.");
-    // Ion Storm (§13, Arc Gun), an EMP'd rig can't fire any equipment active
+    if (act === "jumpjets" && rig.emplaced) return reject("Blast Pistons can't fire while emplaced, un-plant first.");
+    // Galvanic Storm (§13, Arc Gun), an EMP'd rig can't fire any equipment active
     // for its whole next activation. Cleared in endActivation (mirrors
     // noPrepNextActivation) so it's scoped to exactly that one activation.
-    if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (EMP).");
+    if (rig.noActivesNextActivation) return reject("This unit's equipment is offline this activation (galvanic surge).");
     if (rig.equipment !== equipId) return reject("This unit isn't carrying that equipment.");
-    // Meltdown Protocol downside, no venting heat while a charge is banked. The
+    // Scuttle Charge downside, no venting heat while a charge is banked. The
     // only cooling active a blast-furnace-core rig carries is Heat Purge Wave;
     // guard Purge too for robustness.
     if ((act === "purge" || act === "heatpurgewave") && (rig.equipState?.meltdownCharge || 0) > 0) {
-      return reject("Can't vent heat while a meltdown charge is banked.");
+      return reject("Can't vent heat while a scuttle charge is banked.");
     }
     if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
-    // Digital Jump Jets: a straight hop up to base Speed over terrain and rigs,
+    // Digital Blast Pistons: a straight hop up to base Speed over terrain and rigs,
     // landing on clear ground. Validated before the spend, applied after it.
     let hop = null;
     if (act === "jumpjets" && room.mode === "digital") {
@@ -3558,7 +3559,7 @@ function performAction(room, rig, act, a, random) {
       for (const loc of LOCS) { curSp += rig[loc].sp; maxSp += rig[loc].max; }
       t.actionsMax += (surge && curSp * 2 < maxSp) ? 3 : 2;
       rig.overclocked = true; // client chip; cleared at activation end
-      // Reactor Overdrive (§13, Power Prototype), Overclocking also arms +2 Penetration to
+      // Open the Throttle (§13, Power Prototype), Overclocking also arms +2 Penetration to
       // every attack this activation (read in combat.js computePen) at the cost of a
       // doubled overheat bonus this activation (endActivation). All-in push.
       if (equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.reactorOverdrive) rig.reactorOverdriveActive = true;
@@ -3581,7 +3582,7 @@ function performAction(room, rig, act, a, random) {
     }
     else if (act === "popsmoke") {
       rig.smokeNextActivation = true;
-      // Pop Smoke breaks any missile Fire Control Lock (§13, Missile Barrage)
+      // Pop Smoke breaks any missile Plotting-Table Lock (§13, Missile Barrage)
       // painting this rig, mirrors the recon-paint self-clear below.
       for (const r of room.rigs) if (r.lockedTarget === rig.id) { r.lockedTarget = null; r.lockExpiresRound = 0; }
     }
@@ -3654,24 +3655,24 @@ function performAction(room, rig, act, a, random) {
     });
     return true;
   }
-  // Cryo Reservoir (Cooling Prototype), an activation-start spend. Vent N banked
+  // Ice-Brine Tank (Cooling Prototype), an activation-start spend. Vent N banked
   // cryo: −2 heat each and arm +1 Penetration per cryo on this rig's NEXT attack (the
   // transient nextAttackPen, consumed in resolveFire / cleared in endActivation).
   // Doesn't cost an action slot (mirrors reload sitting before the budget gate).
   if (act === "cryo") {
-    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir) return reject("This unit has no Cryo Reservoir.");
+    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.cryoReservoir) return reject("This unit has no Ice-Brine Tank.");
     const spend = Math.max(0, Math.min(Math.floor(Number(a.n) || 0), rig.equipState.cryo || 0));
-    if (spend === 0) return reject("No cryo banked to spend.");
+    if (spend === 0) return reject("No ice-brine banked to spend.");
     rig.equipState.cryo -= spend;
     bumpHeat(rig, -2 * spend);
     rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
     pushResolution(room, {
       kind: "equipment", active: "cryo", actor: rig.owner, rigId: rig.id, rolls: [],
-      summary: `${rig.name} vents cryo ×${spend}, −${2 * spend} heat, +${spend} Penetration to the next attack.`, effects: [],
+      summary: `${rig.name} vents ice-brine ×${spend}, −${2 * spend} heat, +${spend} Penetration to the next attack.`, effects: [],
     });
     return true;
   }
-  // Nanite Swarm (Utility Prototype), an ACTIVE (1 slot, +1 heat) that seeds a
+  // Grease Monkeys (Utility Prototype), an ACTIVE (1 slot, +1 heat) that seeds a
   // nanite stack on a location: self, or a friendly unit "in reach" (spatial →
   // player-adjudicated, named on the action and resolved by name). The stack
   // lives on the HEALED (hosting) rig's equipState.naniteStacks as { loc, sp }
@@ -3680,12 +3681,12 @@ function performAction(room, rig, act, a, random) {
   // rig; the "Heat Capacity −1" downside rides the hosting rig (heatMeter),
   // these coincide on a self-seed. Gated by the budget like every other active.
   if (act === "nanite") {
-    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.naniteSwarm) return reject("This unit has no Nanite Swarm.");
+    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.naniteSwarm) return reject("This unit has no Grease Monkeys.");
     if (t.actionsUsed >= t.actionsMax) return reject("No actions left this activation.");
     const host = a.target ? findRig(room, a.target) : rig; // self, or an ally in reach (player-adjudicated)
-    if (!host || (host.owner || "a") !== (rig.owner || "a")) return reject("Seed the swarm on yourself or a friendly unit in reach.");
+    if (!host || (host.owner || "a") !== (rig.owner || "a")) return reject("Send the grease monkeys to yourself or a friendly unit in reach.");
     if (room.mode === "digital" && host !== rig && rimGap(spatial(rig), spatial(host)) > NANITE_REACH + 1e-6) {
-      return reject(`${host.name} is out of reach: nanites carry 3".`);
+      return reject(`${host.name} is out of reach: grease monkeys run 3".`);
     }
     const loc = LOCS.includes(String(a.loc || "").toLowerCase()) ? String(a.loc).toLowerCase() : "hull";
     const stacks = host.equipState.naniteStacks;
@@ -3695,20 +3696,20 @@ function performAction(room, rig, act, a, random) {
     bumpHeat(rig, 1);
     pushResolution(room, {
       kind: "equipment", active: "nanite", actor: rig.owner, rigId: rig.id, victims: [host.id], rolls: [],
-      summary: `${rig.name} seeds a nanite stack on ${host.name}'s ${loc}.`, effects: [],
+      summary: `${rig.name} sends a grease-monkey crew to ${host.name}'s ${loc}.`, effects: [],
     });
     return true;
   }
-  // Meltdown Protocol (Thermal Prototype), an activation-start spend of banked
-  // meltdown charge. Two modes: `pen` arms +N Penetration on this rig's attacks
+  // Scuttle Charge (Thermal Prototype), an activation-start spend of banked
+  // scuttle charge. Two modes: `pen` arms +N Penetration on this rig's attacks
   // this activation (reuses the transient nextAttackPen, consumed in resolveFire /
   // cleared in endActivation); `burst` narrates a 4" AoE dealing N heat-damage
   // (spatial → players adjudicate the targets). Free of the action budget, like
   // cryo/reload, an activation-start spend.
   if (act === "meltdown") {
-    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.meltdownProtocol) return reject("This unit has no Meltdown Protocol.");
+    if (!equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade)?.meltdownProtocol) return reject("This unit has no Scuttle Charge.");
     const spend = Math.max(0, Math.min(Math.floor(Number(a.n) || 0), rig.equipState.meltdownCharge || 0));
-    if (spend === 0) return reject("No meltdown charge to spend.");
+    if (spend === 0) return reject("No scuttle charge to spend.");
     rig.equipState.meltdownCharge -= spend;
     if (a.mode === "burst") {
       if (room.mode === "digital") {
@@ -3716,13 +3717,13 @@ function performAction(room, rig, act, a, random) {
         for (const v of victims) bumpHeat(v, spend);
         pushResolution(room, {
           kind: "equipment", active: "meltdown", mode: "burst", actor: rig.owner, rigId: rig.id, victims: victims.map((v) => v.id), rolls: [],
-          summary: `${rig.name} vents a meltdown burst: +${spend} heat to ${victims.length ? victims.map((v) => v.name).join(", ") : "nobody in reach"}.`, effects: [],
+          summary: `${rig.name} vents a scuttle burst: +${spend} heat to ${victims.length ? victims.map((v) => v.name).join(", ") : "nobody in reach"}.`, effects: [],
         });
         return true;
       }
       pushResolution(room, {
         kind: "equipment", active: "meltdown", mode: "burst", actor: rig.owner, rigId: rig.id, rolls: [],
-        summary: `${rig.name} vents a meltdown burst, deal ${spend} heat-damage to every enemy within 4" (players adjudicate the AoE).`, effects: [],
+        summary: `${rig.name} vents a scuttle burst, deal ${spend} heat-damage to every enemy within 4" (players adjudicate the AoE).`, effects: [],
       });
     } else {
       rig.equipState.nextAttackPen = (rig.equipState.nextAttackPen || 0) + spend;
@@ -3742,7 +3743,7 @@ function performAction(room, rig, act, a, random) {
     // A flat-pick unit's one weapon decides melee vs shot, whatever was sent.
     if (rig.weapons?.unit != null) a.weapon = UNIT_WEAPONS[rig.weapons.unit]?.melee ? "melee" : "longRange";
     if (isGritted(a) && !(room.game.gritTokens?.[rig.owner || "a"] > 0)) return reject("No Grit tokens left.");
-    // Ion Storm (§13, Arc Gun), the discharge overloads the attacker's own gun:
+    // Galvanic Storm (§13, Arc Gun), the discharge overloads the attacker's own gun:
     // its next Arc Gun shot is refused and the lock is consumed on that blocked
     // attempt (mirrors the autocannonSlowNext one-shot downside). Gating here,
     // before any facedown reveal, covers the direct, brace/return and evasive
@@ -3881,7 +3882,7 @@ function performAction(room, rig, act, a, random) {
     // Full Tilt / Momentum Swing (§13), advancing this activation charges
     // the "moved" flag their melee Penetration bonus is gated on.
     rig.movedThisActivation = true;
-    // Fire Solution Lock (§Fire Control prototype), the firing solution needs a
+    // Plotting-Table Solution (§Fire Control prototype), the firing solution needs a
     // held position; any repositioning breaks it. Gated on the tag so it never
     // clobbers other rigs' solution state.
     if (rig.equipState
@@ -3940,7 +3941,7 @@ function performAction(room, rig, act, a, random) {
     return true;
   }
   if (act === "lock") {
-    // Fire Control Lock (§13, Missile Barrage), paint one target for one slot.
+    // Plotting-Table Lock (§13, Missile Barrage), paint one target for one slot.
     // The next Missile Barrage volley aimed at that exact rig (this round or the
     // next) auto-hits and gains Armour Piercing (see resolveAttack). Only a rig
     // carrying the fire-control upgrade can lock; an unknown target is a no-op.
@@ -4091,7 +4092,7 @@ function performAction(room, rig, act, a, random) {
     // it there would zero the flag before the gate below ever sees it).
     if (rig.noPrepNextActivation) return reject("Prepare is denied this activation (Suppression).");
     let prepType = normalizePrep(a.prep, rig);
-    // Piledriver Protocol (§13, Siege Maul), a rig storing Momentum is all-in on
+    // Piledriver Drill (§13, Siege Maul), a rig storing Momentum is all-in on
     // the charge and cannot Raise Shield: a requested Raise Shield downgrades to
     // Brace while momentum > 0 (mirrors normalizePrep's "can't raise → brace"
     // fallback, so the action still yields a preparation rather than fizzling).
@@ -4184,7 +4185,7 @@ function landingClear(room, rig, p) {
     && Math.hypot(o.pos.x - p.x, o.pos.y - p.y) < r + radiusOf(o) - 1e-6);
 }
 
-// A straight-line hop (Jump Jets, Grapnel yank): only the reach and the
+// A straight-line hop (Blast Pistons, Grapnel yank): only the reach and the
 // landing matter; whatever it flies over doesn't. Returns an error or null.
 function hopCheck(room, rig, a, reach) {
   if (!a.dest || typeof a.dest.x !== "number" || typeof a.dest.y !== "number") return "A digital hop needs a destination.";
@@ -4206,7 +4207,7 @@ function contactSpot(room, rig, target) {
   return null;
 }
 
-// Chaff Burst side-step: half Speed, perpendicular to the attacker, left then right.
+// Tinsel Burst side-step: half Speed, perpendicular to the attacker, left then right.
 function chaffStep(room, attacker, target) {
   const dx = target.pos.x - attacker.pos.x, dy = target.pos.y - attacker.pos.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -4370,7 +4371,7 @@ function buildMission(room, a, random) {
   const tally = {};
   for (const w of Array.isArray(a.drones) ? a.drones : []) {
     const type = DRONE_TYPES[String(w?.type || "").toLowerCase()];
-    if (!type) return `Unknown drone type "${w?.type}".`;
+    if (!type) return `Unknown clockwork type "${w?.type}".`;
     const round = Math.max(1, Math.floor(Number(w.round) || 1));
     for (let i = 0; i < Math.max(1, Math.min(6, Math.floor(Number(w.count) || 1))); i++) {
       tally[type.id] = (tally[type.id] || 0) + 1;
@@ -4465,7 +4466,7 @@ function spawnReinforcements(room) {
     if (!placeNearCorner(room, rig, c.enemyCorner)) { room.rigs.pop(); continue; }
     pushResolution(room, {
       kind: "reinforcement", actor: rig.owner, rigId: rig.id, rolls: [], ...(rf.drone ? { drone: true } : {}),
-      summary: rf.drone ? `Drone wave: ${rig.name} walks in.` : `Enemy reinforcements: ${rig.name} drops in.`, effects: [],
+      summary: rf.drone ? `Clockwork wave: ${rig.name} walks in.` : `Enemy reinforcements: ${rig.name} drops in.`, effects: [],
     });
   }
 }
@@ -4813,7 +4814,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.braceRetaliatedThisRound = false;
       rig.emplaced = false;
       rig.emplaceCooldownUntil = 0;
-      rig.momentum = 0; // Piledriver Protocol (§13), clear stored Momentum on reset
+      rig.momentum = 0; // Piledriver Drill (§13), clear stored Momentum on reset
       rig.barrageRoundsLeft = 0;      // Barrage (§13), clear a committed tube
       rig.towChainCooldownUntil = 0;  // Tow Chain (§13), clear the fling cooldown
       rig.harpoonWinchCooldownUntil = 0; // Harpoon Winch (§13), clear the reel cooldown
@@ -4844,18 +4845,18 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
       rig.autocannonShots = 0;            // Penetrator Rounds (Autocannon) belt cadence
       rig.autocannonSlowNext = false;
       rig.enfiladeShots = 0;              // Enfilade (Sniper Cannon) ricochet cadence
-      rig.arcLockedNext = false;          // Ion Storm (Arc Gun) self-overload
-      rig.noPrepNextActivation = false;   // Suppression Lock / Ion Storm scoped pins
+      rig.arcLockedNext = false;          // Galvanic Storm (Arc Gun) self-overload
+      rig.noPrepNextActivation = false;   // Suppression Lock / Galvanic Storm scoped pins
       rig.noActivesNextActivation = false;
       rig.movedThisActivation = false;
-      rig.lockedTarget = null;            // Fire Control Lock (Missile Barrage) paint
+      rig.lockedTarget = null;            // Plotting-Table Lock (Missile Barrage) paint
       rig.lockExpiresRound = 0;
       rig.cracked = {};                   // Breach Grip (Claw)
       rig.crippled = {};                  // Dismember (Circular Saw), permanent within a match, cleared between
       rig.noRepair = {};
       rig.kneecapped = {};                // Kneecapper (Double MG) per-limb tags
       delete rig._blastRolled;
-      delete rig._meltdownDetonated;      // Meltdown Protocol, clear the one-shot detonation guard
+      delete rig._meltdownDetonated;      // Scuttle Charge, clear the one-shot detonation guard
       // Re-derive SP-dependent state (armsSuppressed, cripple ramps) now that
       // every location is back at max and the tag maps are cleared.
       recompute(rig);
@@ -5044,7 +5045,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
     else {
       rig.hardened = false; // Harden (Ablative Plating) lasts only until this Rig's next activation
       rig.smokeNextActivation = false; // Pop Smoke (Reactive Plating) lasts until this Rig's next activation
-      rig.fireControlUsed = false; // Targeting Computer first-shot compensator resets each activation
+      rig.fireControlUsed = false; // Stereo Rangefinder first-shot compensator resets each activation
       rig.lockSightNext = false; // Lock Sight (Fire Control) is scoped to a single activation
       // Recon paint (spec: Support Units) expires at the painter's next activation:
       // clear every mark this rig placed as it steps up again.
@@ -5068,7 +5069,7 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         // Emplacement (§13, Bulwark Shield), a rooted rig trades one action for
         // its permanent guard: budget drops by 1 (floored at 1).
         if (rig.emplaced) actionsMax = Math.max(1, actionsMax - 1);
-        // Campaign Cracked Reactor relic: a burst of extra actions on round 1.
+        // Campaign Cracked Boiler relic: a burst of extra actions on round 1.
         if (room.game.round === 1) actionsMax += rig.mods?.actionsR1 || 0;
         t.actionsMax = actionsMax;
         rig.actionPenaltyNextActivation = 0;

@@ -124,7 +124,7 @@ export function candidatesFor(room, rig) {
 
   // Signature actions, Prototype stances and equipment actives. Without these the
   // bot never plays the systemic upgrades, so any balance run (the GA) would read
-  // every Prototype as dead weight. Jump Jets is left out: it needs a destination
+  // every Prototype as dead weight. Blast Pistons is left out: it needs a destination
   // and the move generator already covers repositioning.
   for (const key of ["emplace", "unplant", "barrage", "harden", "purge", "overclock", "locksight", "popsmoke", "heatpurgewave"]) {
     if (enabled.has(key)) out.push({ action: key });

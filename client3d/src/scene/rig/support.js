@@ -1,6 +1,7 @@
 // Support units: one body per walker template and per drone type, built by
 // the same body builder as the rigs (same contract, same skins). Walkers are
-// crewed pods on long stilts; drones are small scuttling machines.
+// crewed pods on long stilts; drones (Clockworks) are small wind-up machines
+// scuttling on a turning key.
 import { THREE, at, rot, box, cyl, sph, cone, torus, drumX, drumZ, rivetRing, GLOW, mat } from "./kit.js";
 
 function stack(ctx, parent, x, y, z, r, h) {
@@ -13,6 +14,16 @@ function stack(ctx, parent, x, y, z, r, h) {
 function eye(ctx, parent, x, y, z, r) {
   const e = sph(r, ctx.glass, 12); e.position.set(x, y, z); parent.add(e);
   parent.add(at(rot(torus(r * 1.05, r * 0.2, ctx.trim, Math.PI * 2, 14), 0, Math.PI / 2, 0), x - r * 0.3, y, z));
+}
+// A Clockwork's wind-up key out of its back (-x): brass shaft and a two-lobed
+// bow that turns while the machine runs (Mech.update spins ctx.windKey).
+function windKey(ctx, parent, x, y, z = 0) {
+  parent.add(at(drumX(0.035, 0.1, ctx.trim, 8), x - 0.05, y, z));
+  const key = new THREE.Group(); key.position.set(x - 0.12, y, z);
+  key.add(drumX(0.022, 0.06, ctx.brass, 8));
+  for (const s of [-1, 1]) { const lobe = rot(torus(0.055, 0.016, ctx.brass, Math.PI * 2, 12), 0, Math.PI / 2, 0); lobe.position.set(-0.03, 0, s * 0.06); lobe.scale.set(1, 0.8, 1); key.add(lobe); }
+  parent.add(key);
+  ctx.windKey = key;
 }
 function prism(profile, depth, m) {
   const s = new THREE.Shape();
@@ -113,6 +124,7 @@ export const SUPPORT_TORSOS = {
     chest.add(at(cyl(0.012, 0.012, 0.4, ctx.steel, 6), -0.35, 0.4, 0.2));
     chest.add(at(sph(0.03, GLOW(0xff4a2a, 0xff2010, 1.5), 6), -0.35, 0.6, 0.2));
     stack(ctx, chest, -0.4, 0.15, -0.18, 0.05, 0.22);
+    windKey(ctx, chest, -0.48, 0.05, 0.08);
     ctx.torso.add(chest);
     return { chest, top: 0.26, front: 0.55, back: -0.5, halfW: 0.35 };
   },
@@ -124,6 +136,7 @@ export const SUPPORT_TORSOS = {
     for (let i = 0; i < 5; i++) chest.add(at(drumX(0.35, 0.08, i % 2 ? blk : yel, 14), -0.3 + i * 0.15, 0, 0));
     eye(ctx, chest, 0.42, 0.08, 0, 0.1);
     stack(ctx, chest, -0.2, 0.3, 0.12, 0.05, 0.2);
+    windKey(ctx, chest, -0.4, 0.02);
     ctx.torso.add(chest);
     return { chest, top: 0.34, front: 0.42, back: -0.4, halfW: 0.35 };
   },
@@ -138,6 +151,7 @@ export const SUPPORT_TORSOS = {
     head.add(at(rot(torus(0.13, 0.02, ctx.trim, Math.PI * 2, 12), 0, Math.PI / 2, 0), 0.13, 0, 0));
     chest.add(head);
     stack(ctx, chest, -0.35, 0.1, 0, 0.04, 0.2);
+    windKey(ctx, chest, -0.4, -0.02);
     ctx.torso.add(chest);
     return { chest, top: 0.25, front: 0.43, back: -0.43, halfW: 0.33 };
   },

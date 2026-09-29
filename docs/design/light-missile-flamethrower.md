@@ -18,7 +18,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 |---|---|---|---|---|
 | **Field** | Swarm Warheads | +1 ROF (4 → 5). Reliable extra volume. | `+1 ROF` | ✅ coded (`rof: 1`) |
 | **Tuned** | Shaped Charges | Gains Armour Piercing (+D3 per raw 6). Conditional, mediocre vs soft targets, brutal vs heavy armor. | `Gains Armour Piercing` | ✅ coded (AP) |
-| **Prototype** | Fire Control Lock | The **Lock Target** action (1 slot, 1 heat) paints a target (tracked, no line-of-sight needed). The next Missile Barrage volley aimed at that exact rig, this round or the next, **can't miss and gains Armour Piercing**; the paint is then consumed. **Downside:** the lock turn you don't fire, and an unused lock **goes stale after its expiry round.** | `Paint a target for one unmissable armor-piercing volley, costs a turn to lock` | ✅ implemented (`lockedTarget` id + expiry round) |
+| **Prototype** | Plotting-Table Lock | The **Lock Target** action (1 slot, 1 heat) paints a target (tracked, no line-of-sight needed). The next Missile Barrage volley aimed at that exact rig, this round or the next, **can't miss and gains Armour Piercing**; the paint is then consumed. **Downside:** the lock turn you don't fire, and an unused lock **goes stale after its expiry round.** | `Paint a target for one unmissable armor-piercing volley, costs a turn to lock` | ✅ implemented (`lockedTarget` id + expiry round) |
 
 ## Flamethrower (melee), ROF 4, STR 7
 
@@ -30,16 +30,16 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 ## Internal synergy & cap
 
-- **Napalm / Conflagration** burn the target down over time while **Swarm / Shaped** volume hammers it; **Fire Control Lock** guarantees the AP volley lands on your priority target.
+- **Napalm / Conflagration** burn the target down over time while **Swarm / Shaped** volume hammers it; **Plotting-Table Lock** guarantees the AP volley lands on your priority target.
 - Napalm (1 stack) and Conflagration (stacking) are the **same mechanic escalating across natures**: like Impale → Skewer.
-- **Cap:** Fire Control Lock *or* Conflagration, guaranteed-hit lock-on *or* escalating burn.
+- **Cap:** Plotting-Table Lock *or* Conflagration, guaranteed-hit lock-on *or* escalating burn.
 
 ## Decided values (all tunable)
 
 - Napalm: Burning capped at **1** (non-stacking); ticks 1 SP to Hull at each of the target's activations until a single Douse clears it.
 - Conflagration: **+1 Burning per landed hit** (uncapped stacking); douse clears 1 stack/action; each hit adds **+1 heat** to the attacker.
-- Fire Control Lock: Lock Target costs 1 slot + 1 heat; the next Missile Barrage volley vs the locked rig (this round or next) auto-hits + gains AP, then the paint is consumed; an unused lock goes stale after its expiry round.
+- Plotting-Table Lock: Lock Target costs 1 slot + 1 heat; the next Missile Barrage volley vs the locked rig (this round or next) auto-hits + gains AP, then the paint is consumed; an unused lock goes stale after its expiry round.
 
 ## As built
 
-All six upgrades above are live in the engine (`shared/game-state.js` `WEAPON_UPGRADES`, `shared/combat.js`, `shared/game-state.js` `douse`/`lock-target` actions). Nature badges and the max-one-Prototype-per-rig guard are wired in the wizard and server. None of this rig's upgrades are spatial, Burning and Fire Control Lock are pure status/tracking mechanics, resolved entirely in state with no player-instruction narration needed.
+All six upgrades above are live in the engine (`shared/game-state.js` `WEAPON_UPGRADES`, `shared/combat.js`, `shared/game-state.js` `douse`/`lock-target` actions). Nature badges and the max-one-Prototype-per-rig guard are wired in the wizard and server. None of this rig's upgrades are spatial, Burning and Plotting-Table Lock are pure status/tracking mechanics, resolved entirely in state with no player-instruction narration needed.

@@ -10,6 +10,7 @@ import { candidatesFor } from "/shared/bot/candidates.js";
 import { controlsObjective } from "/shared/geometry.js";
 import { spatial } from "/shared/game-state.js";
 import { sfx } from "../audio.js";
+import { whisperFor } from "./moments-logic.js";
 
 const SEEN_KEY = "oi3d-wires";
 let seen = new Set();
@@ -89,6 +90,22 @@ export class Wires {
       this.last = Date.now();
       return;
     }
+    this.murmur(st, m.side);
+  }
+
+  // The whisper: a faint, flavour-only voice between the wires ("This one's
+  // legs are failing..."). Never a rule; each line once per battle, sparingly.
+  murmur(st, side) {
+    this.whispered ||= new Set();
+    if (Date.now() - (this.lastWhisper || 0) < 40000) return;
+    const w = whisperFor(st, side, this.whispered, integrityTier);
+    if (!w) return;
+    this.whispered.add(w.key);
+    this.lastWhisper = Date.now();
+    const line = el("div", { class: "whisper", role: "status" }, el("i", {}, w.text));
+    this.box.append(line);
+    setTimeout(() => line.classList.add("out"), 7000);
+    setTimeout(() => line.remove(), 8200);
   }
 
   show(text) {

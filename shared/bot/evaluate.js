@@ -19,7 +19,7 @@
 // 1. Effective-ROF blindness. rollToHit computes an EFFECTIVE rof internally
 //    (+2 Full Auto, +Bloodletter vs a damaged target, +Redline Governor from heat
 //    over cap). We cannot read it, rollToHit also runs applyDefensiveReactions,
-//    which MUTATES the target (Point-Defense spend), and evaluating a candidate
+//    which MUTATES the target (Flak Cage spend), and evaluating a candidate
 //    must never mutate. So we use profile.rof and under-rate those three upgrades.
 // 2. Armour Piercing's failed-wound reroll raises P(wound) and is not modelled, so
 //    an AP weapon is slightly under-rated.

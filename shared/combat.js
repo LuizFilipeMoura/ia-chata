@@ -72,7 +72,7 @@ export function aimBreakdown(attacker, profile, opts) {
   const terms = [];
   const base = BASE_AIM;
   const weaponAccuracy = weaponAccuracyAt(profile, opts.distance);
-  // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Protocol
+  // Cover is skipped by Airburst Fuze (ignoreCover) and by a Piledriver Drill
   // guard-break (opts.guardBreak, §13 Siege Maul), both reuse the same path.
   const cover = (profile.upgradeEffect?.ignoreCover || opts.guardBreak || (opts.painted && !profile.melee)) ? 0 : Math.max(0, Math.min(2, Math.floor(Number(opts.cover) || 0)));
   const aimedPenalty = opts.aimed && !hasPerk(profile, "Precision") && !opts.waiveAimPenalty ? AIMED_SHOT_PENALTY : 0;
@@ -88,19 +88,19 @@ export function aimBreakdown(attacker, profile, opts) {
   // Pop Smoke (Countermeasures active), every attacker is at −2 Accuracy against a
   // rig hidden in its own smoke, until that rig's next activation.
   const smoke = opts.targetSmoke ? -2 : 0;
-  // Predictive Tracking (Fire Control Tuned), vs a static/pinned/immobilised
+  // Rangefinder Drum (Fire Control Tuned), vs a static/pinned/immobilised
   // target the shot ignores cover and gains +2 Accuracy. `opts.targetPinned` is set by
   // the fire path (game-state.js). Read the effect live from the catalog by id;
   // combat.js imports only rules.js, so no game-state cycle.
   const predictive = attacker.equipment === "targeting-computer" && !profile.melee && !!opts.targetPinned
     && !!equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.predictiveTracking;
   const predictiveAccuracy = predictive ? 2 : 0;
-  // Targeting Computer passive, the first Fire this activation ignores cover
+  // Stereo Rangefinder passive, the first Fire this activation ignores cover
   // and the engaged −2 (opts.fireControlFirst is set once per activation by the
   // fire path). Read directly off the attacker to avoid a game-state import cycle.
   const coverEff = (opts.fireControlFirst || predictive) ? 0 : cover;
   const engagedEff = opts.fireControlFirst ? 0 : engagedPenalty;
-  // Ballistic Processor (Field), Accuracy bonus when the measured distance is within
+  // Gunnery Table (Field), Accuracy bonus when the measured distance is within
   // the weapon's sweet band (|distance − sweet| ≤ 2). The bonus magnitude is read
   // from the equipment upgrade's effect tag (`sweetBandAccuracy`) via
   // equipmentUpgradeEffectOf, the catalog lives in rules.js, which combat.js may
@@ -145,23 +145,23 @@ export function aimBreakdown(attacker, profile, opts) {
     const canceller = profile.upgradeEffect?.ignoreCover ? "airburst fuze"
       : opts.guardBreak ? "piledriver guard-break"
       : (opts.painted && !profile.melee) ? "recon paint"
-      : opts.fireControlFirst ? "targeting computer"
-      : "predictive tracking";
+      : opts.fireControlFirst ? "stereo rangefinder"
+      : "rangefinder drum";
     terms.push({ label: `${canceller} (ignores cover)`, value: 0 });
   }
   if (aimedPenalty) terms.push({ label: "aimed shot", value: aimedPenalty });
   if (hullPenalty) terms.push({ label: "hull wrecked", value: hullPenalty });
   if (engagedEff) terms.push({ label: "locked in melee", value: engagedEff });
   // Same absence-explaining rule as cover: the engaged −2 is cancelled only by
-  // the Targeting Computer's first fire, so name it rather than silently drop it.
-  else if (engagedPenalty) terms.push({ label: "targeting computer (ignores melee lock)", value: 0 });
-  // Recon paint and Predictive Tracking each do TWO things, cancel cover and
+  // the Stereo Rangefinder's first fire, so name it rather than silently drop it.
+  else if (engagedPenalty) terms.push({ label: "stereo rangefinder (ignores melee lock)", value: 0 });
+  // Recon paint and Rangefinder Drum each do TWO things, cancel cover and
   // grant Accuracy. The bonus term below is a separate fact from the cancel term
   // above; neither substitutes for the other.
   if (paintBonus) terms.push({ label: "recon paint", value: paintBonus });
   if (smoke) terms.push({ label: "target in smoke", value: smoke });
-  if (ballistic) terms.push({ label: "ballistic processor", value: ballistic });
-  if (predictiveAccuracy) terms.push({ label: "predictive tracking", value: predictiveAccuracy });
+  if (ballistic) terms.push({ label: "gunnery table", value: ballistic });
+  if (predictiveAccuracy) terms.push({ label: "rangefinder drum", value: predictiveAccuracy });
   if (staggerPenalty) terms.push({ label: "staggered", value: staggerPenalty });
   if (modAcc) terms.push({ label: "campaign kit", value: modAcc });
 
@@ -243,7 +243,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   // the `rolls` log, predate the ledger); `hitDice` records the face WITH the
   // verdict the loop actually reached, so the ledger never has to re-derive
   // "did this die hit?" from `value >= modAim`. That re-derivation would be
-  // wrong under autoHit (Fire Control Lock), where a face below the target
+  // wrong under autoHit (Plotting-Table Lock), where a face below the target
   // number still counts.
   const hitDice = [];
   let hits = 0;
@@ -251,7 +251,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
   let rerollsUsed = 0;
   for (let i = 0; i < rof; i++) {
     let d = rollD(6, providedDice?.[i], random);
-    // Fire Control Lock (§13, Missile Barrage), a painted volley can't miss:
+    // Plotting-Table Lock (§13, Missile Barrage), a painted volley can't miss:
     // every die counts as a hit regardless of face. Dice are still rolled (so
     // heat-on-ones and the per-die log stay honest) but the to-hit test is skipped.
     let hit = opts.autoHit || d >= modAim || d === 6;
@@ -270,7 +270,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     if (heatOnOnes && d === 1) fireModeHeat += 1;
   }
   // §7, reactive on-incoming-hit seam, to-hit stage. A defender may reroll/alter
-  // the counted hits before impacts are rolled (Point-Defense System). `location`/
+  // the counted hits before impacts are rolled (Flak Cage). `location`/
   // `row` are null here; `modAim` (the target number) and the RNG (`random` +
   // any `providedDice.pd` reroll faces) are threaded through so the branch can
   // reroll the landed dice while combat.js stays pure, it only touches the
@@ -281,7 +281,7 @@ export function rollToHit(attacker, profile, opts, providedDice, random) {
     { location: null, row: null, spendHeat: opts.spendHeat || (() => {}), random, providedDice },
   );
   hits = reacted.hits;
-  // NOTE: a Point-Defense reroll (the seam above) changes the counted `hits`
+  // NOTE: a Flak Cage reroll (the seam above) changes the counted `hits`
   // WITHOUT changing the faces in `hitDice`: the rerolled faces are the
   // defender's, not this volley's. So `hits` is authoritative and may disagree
   // with the count of `ok` flags. The ledger reports `hits`, and the PD spend
@@ -326,12 +326,12 @@ export function penBreakdown(attacker, profile, opts) {
   if (weightMod) terms.push({ label: `${attacker.weightClass} chassis`, value: weightMod });
   if (charged) terms.push({ label: "Charged Shot", value: charged });
   let bonus = 0;
-  // Reactor Overdrive (§13, Power Prototype), +2 Penetration to every attack while the
+  // Open the Throttle (§13, Power Prototype), +2 Penetration to every attack while the
   // Overclock-armed flag rides this activation (set in game-state.js's overclock
   // branch, cleared at activation end).
   if (attacker.reactorOverdriveActive) {
     bonus += 2;
-    terms.push({ label: "Reactor Overdrive", value: 2 });
+    terms.push({ label: "Open the Throttle", value: 2 });
   }
   // Cold Bore, +3 Penetration against a target whose every location is at max SP.
   if (opts.target && profile.upgradeEffect?.coldBore && isUndamaged(opts.target)) {
@@ -428,37 +428,37 @@ export function penBreakdown(attacker, profile, opts) {
     // point over cap must read "+1", not the headline number.
     if (Math.min(3, over)) terms.push({ label: "Redline Governor", value: Math.min(3, over) });
   }
-  // Superconductor Edge, running past half the attacker's own heat cap
+  // Quenched Edge, running past half the attacker's own heat cap
   // charges the blade for +2 Penetration.
   if (profile.upgradeEffect?.superconductor) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
     if (cap != null && (attacker.engine?.heat || 0) > cap / 2) {
       bonus += 2;
-      terms.push({ label: "Superconductor Edge", value: 2 });
+      terms.push({ label: "Quenched Edge", value: 2 });
     }
   }
-  // Piledriver Protocol, a Siege Maul shot spends stored Momentum for +1 Penetration
+  // Piledriver Drill, a Siege Maul shot spends stored Momentum for +1 Penetration
   // per point. The spent amount is threaded in via opts.momentum (computed once
   // in resolveAttack so the Penetration bonus and the post-shot Momentum reset stay in
   // lockstep). Gated on the piledriver effect so a stray opts.momentum on any
   // other weapon is inert.
   if (opts.momentum && profile.upgradeEffect?.piledriver) {
     bonus += opts.momentum;
-    terms.push({ label: "Piledriver Protocol", value: opts.momentum });
+    terms.push({ label: "Piledriver Drill", value: opts.momentum });
   }
   // Kickstart Pistons (Mobility Tuned), a melee blow right after Sprinting into
   // base contact this activation hits +2 Penetration, but only the FIRST such blow:
   // `chargedIntoContact` is armed by the Sprint path, `kickstartUsed` is set by
   // resolveFire once a melee attack lands. Read the equipment effect live from the
   // catalog by id (combat.js imports only rules.js). NOTE: the design also names
-  // Jump-into-contact, but the Jump Jets active can't form an engagement lock in
+  // Jump-into-contact, but the Blast Pistons active can't form an engagement lock in
   // this engine yet, so only Sprint arms it today (see follow-up task).
   if (profile.melee && attacker.chargedIntoContact && !attacker.kickstartUsed
       && equipmentUpgradeEffectOf(attacker.equipment, attacker.equipmentUpgrade)?.kickstartPistons) {
     bonus += 2;
     terms.push({ label: "Kickstart Pistons", value: 2 });
   }
-  // Cryo Reservoir / Meltdown Protocol, a spent charge arms +Penetration on the next
+  // Ice-Brine Tank / Scuttle Charge, a spent charge arms +Penetration on the next
   // attack. Shared transient off the attacker's equipState; consumed in
   // resolveFire and cleared in endActivation so it can't leak past its activation.
   const nextPen = attacker.equipState?.nextAttackPen || 0;
@@ -556,7 +556,7 @@ export function effectivePenAgainst(attacker, target, profile, location, opts) {
     const role = roleOf(target.kind || "rig", location);
     if (role === "mobility" || role === "weapon") bonus = 2;
   }
-  // Brace's front-arc -2 is skipped by a Piledriver Protocol guard-break
+  // Brace's front-arc -2 is skipped by a Piledriver Drill guard-break
   // (opts.guardBreak, §13 Siege Maul), the smash ignores the target's Brace.
   // An Improved (Grit, §5) Brace docks −3 instead of −2.
   const braceDepth = target.preparation?.improved ? 3 : 2;
@@ -687,7 +687,7 @@ export function rollWounds(attacker, target, profile, location, opts, providedDi
 // alter an incoming attack. It is installed at TWO pipeline stages, discriminated
 // by `hit.kind`, so later mechanics only ADD branches here, never new call sites:
 //   • "tohit" , in rollToHit, AFTER successful hit dice are counted, BEFORE
-//                impacts are rolled. Consumer: Point-Defense System (reroll the
+//                impacts are rolled. Consumer: Flak Cage (reroll the
 //                landed dice; only ranged hits carry `hit.ranged === true`).
 //                `location`/`row` are null at this stage; `modAim` + the RNG
 //                (`random`/`providedDice`) are threaded in for the reroll.
@@ -709,7 +709,7 @@ function tallyDefense(target, key) {
 }
 
 export function applyDefensiveReactions(target, hit, ctx) {
-  // Point-Defense System (Reactive Plating, Prototype), a ranged hit may be met
+  // Flak Cage (Reactive Plating, Prototype), a ranged hit may be met
   // by one interceptor charge, forcing the attacker to reroll every landed hit
   // die. The seam has already counted `hit.hits` landed dice; rerolling them
   // ("all successful hit dice") re-tests the same number of dice against the
@@ -794,7 +794,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   if (slot === "longRange" && !attacker.loaded.longRange && !opts.autoReload) return { ok: false, reason: "reload" };
   if (slot === "unit" && attacker.loaded.unit === false && !opts.autoReload) return { ok: false, reason: "reload" };
 
-  // Fire Control Lock (§13, Missile Barrage), a painted target eats one
+  // Plotting-Table Lock (§13, Missile Barrage), a painted target eats one
   // unmissable, armour-piercing volley. Live only while the paint is fresh (the
   // current round is at or before its expiry round) and aimed at the very rig
   // that was locked. All reads are defensive so a room with no game state (unit
@@ -805,7 +805,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     && attacker.lockedTarget != null
     && attacker.lockedTarget === target.id
     && round <= (attacker.lockExpiresRound || 0);
-  // Fire Solution Lock (§13, Targeting Computer prototype), a full 3-solution
+  // Plotting-Table Solution (§13, Stereo Rangefinder prototype), a full 3-solution
   // stack cashes for the same unmissable, armour-piercing volley. The solution
   // is stacked/reset/consumed in game-state's resolveFire; here we just honour
   // the cash-in flag it passes down.
@@ -815,7 +815,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   } else if (attacker.lockedTarget != null && round > (attacker.lockExpiresRound || 0)) {
     attacker.lockedTarget = null; // expire a stale lock
   }
-  // Piledriver Protocol (§13, Siege Maul), a shot fired while storing Momentum
+  // Piledriver Drill (§13, Siege Maul), a shot fired while storing Momentum
   // unloads ALL of it: +1 Penetration per point (computePen) plus a guard-break that
   // ignores the target's Brace (rollWounds) and cover (computeModifiedAim).
   // Compute the spend ONCE here so the Penetration bonus, the guard-break, and the
@@ -828,7 +828,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
   // its live SP.
   // Injected heat mutator for the reactive on-incoming-hit seam. combat.js is
   // pure, so a defender's reactive heat spend (future: Ablative Cascade,
-  // Point-Defense) flows through this callback into game-state's bumpHeat rather
+  // Flak Cage) flows through this callback into game-state's bumpHeat rather
   // than importing game-state (which would form a cycle). Wired into both the
   // to-hit and impact seam call sites below via opts.spendHeat.
   const spendHeat = (n) => ctx.bumpHeat(target, n);
@@ -924,7 +924,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
         // the spill on its own, and each is wrong in the opposite direction:
         //   `moved`: SP that left other parts. Reads HIGH: §8 moves SP for
         //     reasons that are not a spill at all (munition cook-off on a weapon
-        //     part first reaching 0; Meltdown Protocol), and cook-off needs no
+        //     part first reaching 0; Scuttle Charge), and cook-off needs no
         //     point spent past 0, so `moved` alone reports a spill on a wound
         //     the location absorbed whole.
         //   `past0`: points spent past 0. Reads HIGH: each fires
@@ -997,7 +997,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       applyOnHitPerks(room, attacker, target, profile, { ...opts, hits: th.hits, penetratorShot: th.penetratorShot }, random, ctx);
     }
   }
-  // Piledriver Protocol (§13), the swing is committed, so the stored Momentum is
+  // Piledriver Drill (§13), the swing is committed, so the stored Momentum is
   // fully spent whether or not it connected. Reset AFTER every read above
   // (computePen/rollWounds already used the captured `piledriverSpend`).
   if (piledriverSpend > 0) attacker.momentum = 0;
@@ -1112,7 +1112,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
     ctx.stagger(room, target);
     drama.push("Staggered: +1 heat, −1 Aim on its next attack");
   }
-  // Point-Defense / Ablative Cascade spends this attack drew, for the client FX.
+  // Flak Cage / Ablative Cascade spends this attack drew, for the client FX.
   const defense = target._defenseTally;
   delete target._defenseTally;
   ctx.pushResolution(room, {
@@ -1159,7 +1159,7 @@ export function resolveAttack(room, attacker, target, opts, random, ctx) {
       ? `Momentum Swing, ${target.name} is braced (immovable): no knockback.`
       : `Momentum Swing, knock ${target.name} back 3" (move the mini).`);
   }
-  // G1b, Piledriver Protocol (Siege Maul, Prototype): a Momentum-spending smash
+  // G1b, Piledriver Drill (Siege Maul, Prototype): a Momentum-spending smash
   // that connects shoves the target back 3" (piledriverSpend was computed above).
   if (piledriverSpend > 0 && landedDamage) {
     pushInstruction(targetImmovable
@@ -1260,14 +1260,14 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
     target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);
     effects.push("Pinning Burst, target loses 1 action");
   }
-  // Superconductor Edge, once per attack (not per hit), while running past
+  // Quenched Edge, once per attack (not per hit), while running past
   // half the attacker's heat cap, dump 1 heat from attacker into target.
   if (profile.upgradeEffect?.superconductor) {
     const cap = HEAT_CAPACITY[attacker.weightClass];
     if (cap != null && (attacker.engine?.heat || 0) > cap / 2) {
       ctx.bumpHeat(attacker, -1);
       ctx.bumpHeat(target, 1);
-      effects.push("Superconductor Edge, 1 heat transferred to target");
+      effects.push("Quenched Edge, 1 heat transferred to target");
     }
   }
   // Penetrator Rounds, cosmetic confirmation that this volley was the 3rd
@@ -1302,7 +1302,7 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
       stacks === 3 ? "pinned, Prepare blocked" : stacks === 2 ? "action penalty" : "speed halved"
     }`);
   }
-  // Ion Storm (§13, Arc Gun), an EMP surge. A landed Arc Gun hit disrupts the
+  // Galvanic Storm (§13, Arc Gun), an EMP surge. A landed Arc Gun hit disrupts the
   // target for its next activation (loses an action, can't Prepare, can't fire
   // an equipment active) and spikes its heat by 2. The discharge overloads the
   // attacker's own gun: +3 self-heat and its Arc Gun is locked until its next
@@ -1314,12 +1314,12 @@ function applyOnHitPerks(room, attacker, target, profile, opts, random, ctx) {
     ctx.bumpHeat(target, 2);
     ctx.bumpHeat(attacker, 3);
     attacker.arcLockedNext = true;
-    effects.push("Ion Storm, target EMP'd (no action / Prepare / active next activation), attacker's Arc Gun overloaded");
+    effects.push("Galvanic Storm, galvanic surge stalls the target (no action / Prepare / active next activation), attacker's Arc Gun overloaded");
   }
   const onHit = profile.upgradeEffect?.onHit;
   if (onHit === "systems-overload") {
     target.actionPenaltyNextActivation = Math.max(target.actionPenaltyNextActivation || 0, 1);
-    effects.push("Systems Overload - target loses 1 action next activation");
+    effects.push("Boiler Surge - target loses 1 action next activation");
   }
   if (onHit === "cluster-shells") {
     const primary = opts.aimed ? opts.aimedLoc : null;

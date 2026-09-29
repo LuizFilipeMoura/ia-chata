@@ -132,9 +132,9 @@ test("greedySafe stops deciding once the activation has ended", () => {
   assert.equal(greedySafe(room, rig, room.rigs.find((r) => r.name === "B1")), null);
 });
 
-test("greedySafe does not vent while a meltdown charge is banked", () => {
+test("greedySafe does not vent while a scuttle charge is banked", () => {
   // battle-view hardcodes the Shut Down tile to enabled, but the engine rejects
-  // it outright while Meltdown Protocol holds a charge. Since greedySafe budgets
+  // it outright while Scuttle Charge holds a charge. Since greedySafe budgets
   // only KNOWN heat it can overshoot capacity and bank one, and then it would
   // re-issue a shutdown the engine refuses, forever, hanging the driver.
   const room = seatedRoom();
@@ -181,7 +181,7 @@ test("greedySafe does not reload a weapon it can never fire again", () => {
 
 test("greedySafe passes rather than firing a weapon riveted shut", () => {
   // Rivet Lock seizes a weapon-role location and the engine refuses the shot for
-  // ~2 rounds while the Fire tile stays enabled. Unlike Ion Storm it does not
+  // ~2 rounds while the Fire tile stays enabled. Unlike Galvanic Storm it does not
   // clear on the refusal, so retrying never succeeds, it crashed the sweep on
   // Rivet Gun / prototype at ~10% of trials.
   const room = seatedRoom();

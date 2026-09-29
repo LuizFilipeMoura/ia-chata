@@ -97,12 +97,12 @@ test("computeModifiedAim, still returns a bare number, callers unchanged", () =>
 // penalty, it was ignored), but the CANCELLER must, as a zero-valued term: it
 // is the only thing explaining why a player looking at real cover on the table
 // sees no cover term. See the matching comment in aimBreakdown.
-test("aimBreakdown, targeting computer's first fire cancels cover and says so", () => {
+test("aimBreakdown, stereo rangefinder's first fire cancels cover and says so", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, cover: 2, fireControlFirst: true });
   assert.ok(!b.terms.some((t) => t.label === "cover"));
-  assert.ok(b.terms.some((t) => t.label === "targeting computer (ignores cover)" && t.value === 0));
+  assert.ok(b.terms.some((t) => t.label === "stereo rangefinder (ignores cover)" && t.value === 0));
   assert.equal(b.value, 3); // cover never reached the maths
 });
 
@@ -110,7 +110,7 @@ test("aimBreakdown, a canceller stays silent when there was no cover to cancel",
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" });
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, cover: 0, fireControlFirst: true });
-  assert.ok(!b.terms.some((t) => t.label.startsWith("targeting computer")));
+  assert.ok(!b.terms.some((t) => t.label.startsWith("stereo rangefinder")));
 });
 
 test("aimBreakdown, first fire cancels the melee-lock penalty and says so", () => {
@@ -121,7 +121,7 @@ test("aimBreakdown, first fire cancels the melee-lock penalty and says so", () =
   const first = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, engaged: true, fireControlFirst: true });
   assert.ok(!first.terms.some((t) => t.label === "locked in melee"));
-  assert.ok(first.terms.some((t) => t.label === "targeting computer (ignores melee lock)" && t.value === 0));
+  assert.ok(first.terms.some((t) => t.label === "stereo rangefinder (ignores melee lock)" && t.value === 0));
 });
 
 test("aimBreakdown, Airburst Fuze and a Piledriver guard-break each name their cover cancel", () => {
@@ -137,7 +137,7 @@ test("aimBreakdown, Airburst Fuze and a Piledriver guard-break each name their c
   assert.ok(smash.terms.some((t) => t.label === "piledriver guard-break (ignores cover)" && t.value === 0));
 });
 
-// Recon paint and Predictive Tracking each do TWO things: cancel cover AND grant
+// Recon paint and Rangefinder Drum each do TWO things: cancel cover AND grant
 // Accuracy. Both facts get their own term, the bonus is not a substitute for the
 // explanation of the missing cover.
 test("aimBreakdown, recon paint emits both its bonus and its cover cancel", () => {
@@ -150,17 +150,17 @@ test("aimBreakdown, recon paint emits both its bonus and its cover cancel", () =
   assert.equal(b.value, 2); // 4 - (1 + 1)
 });
 
-test("aimBreakdown, predictive tracking emits its bonus and its cover cancel", () => {
+test("aimBreakdown, rangefinder drum emits its bonus and its cover cancel", () => {
   const attacker = makeRig(1, "A", "medium", "a", { longRange: "Autocannon", melee: "Sword" },
     "targeting-computer", "predictive-tracking");
   const b = aimBreakdown(attacker, { ...WEAPONS.longRange["Autocannon"] },
     { distance: 12, cover: 2, targetPinned: true });
-  assert.ok(b.terms.some((t) => t.label === "predictive tracking" && t.value === 2));
-  assert.ok(b.terms.some((t) => t.label === "predictive tracking (ignores cover)" && t.value === 0));
+  assert.ok(b.terms.some((t) => t.label === "rangefinder drum" && t.value === 2));
+  assert.ok(b.terms.some((t) => t.label === "rangefinder drum (ignores cover)" && t.value === 0));
   assert.ok(!b.terms.some((t) => t.label === "cover"));
 });
 
-test("aimBreakdown, aimed shot, wrecked hull and ballistic processor each name themselves", () => {
+test("aimBreakdown, aimed shot, wrecked hull and gunnery table each name themselves", () => {
   const aimed = aimBreakdown({ weightClass: "medium", hull: { sp: 7 } },
     { ...WEAPONS.longRange["Autocannon"] }, { distance: 12, aimed: true });
   assert.ok(aimed.terms.some((t) => t.label === "aimed shot" && t.value === -3));
@@ -170,7 +170,7 @@ test("aimBreakdown, aimed shot, wrecked hull and ballistic processor each name t
   const ballistic = aimBreakdown(
     { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" },
     { ...WEAPONS.longRange["Autocannon"] }, { distance: 12 });
-  assert.ok(ballistic.terms.some((t) => t.label === "ballistic processor" && t.value === 1));
+  assert.ok(ballistic.terms.some((t) => t.label === "gunnery table" && t.value === 1));
 });
 
 // The terms are a LEDGER, not decoration: they must always reconcile to the
@@ -200,13 +200,13 @@ test("Pop Smoke worsens an attacker's modified Aim by 2", () => {
   assert.equal(smoked - clear, 2);
 });
 
-test("Predictive Tracking: +2 Accuracy and ignores cover vs a pinned target", () => {
+test("Rangefinder Drum: +2 Accuracy and ignores cover vs a pinned target", () => {
   const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "predictive-tracking" };
   const mg = WEAPONS.longRange["Mini Gun"];
   // distance:12 is chosen (not the plan's distance:7) because Mini Gun's own
-  // `sweet` is 7, at that distance Ballistic Processor's unrelated sweetBandAccuracy
+  // `sweet` is 7, at that distance Gunnery Table's unrelated sweetBandAccuracy
   // bonus would also fire and confound the "wrong upgrade" check below. 12 is
-  // outside Mini Gun's sweet band (|12-7| > 2), isolating Predictive Tracking.
+  // outside Mini Gun's sweet band (|12-7| > 2), isolating Rangefinder Drum.
   const openField = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: false });
   const pinned    = computeModifiedAim(attacker, mg, { distance: 12, cover: 2, targetPinned: true });
   // +2 Accuracy lowers the aim number by 2, and the 2 points of cover are ignored
@@ -293,7 +293,7 @@ test("penBreakdown, a live upgrade emits a named term", () => {
   attacker.reactorOverdriveActive = true;
   const b = penBreakdown(attacker, { ...WEAPONS.melee["Sword"] }, {});
   assert.equal(b.value, 7);
-  assert.ok(b.terms.some((t) => t.label === "Reactor Overdrive" && t.value === 2));
+  assert.ok(b.terms.some((t) => t.label === "Open the Throttle" && t.value === 2));
 });
 
 test("computePen, still returns a bare number, callers unchanged", () => {
@@ -495,7 +495,7 @@ test("effectiveWeaponProfile applies selected ROF, Penetration, perk, and range 
   assert.equal(
     computePen(auto, effectiveWeaponProfile("longRange", "Autocannon", auto), {}) - WEAPONS.longRange["Autocannon"].pen,
     1,
-  ); // Depleted Core = +1 Penetration
+  ); // Tungsten Core = +1 Penetration
 
   const sword = makeRig(3, "Edge", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "duelist-balance" });
   assert.equal(effectiveWeaponProfile("melee", "Sword", sword).perks.includes("Precision"), true);
@@ -655,7 +655,7 @@ test("engaged penalty does not apply to melee weapons", () => {
   assert.equal(engaged, base); // melee unaffected
 });
 
-test("Ballistic Processor: +1 Accuracy in the sweet band (lower modAim)", () => {
+test("Gunnery Table: +1 Accuracy in the sweet band (lower modAim)", () => {
   const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer", equipmentUpgrade: "ballistic-processor" };
   const profile = WEAPONS.longRange["Autocannon"]; // has a sweet distance
   const inBand = computeModifiedAim(attacker, profile, { distance: profile.sweet });
@@ -671,7 +671,7 @@ test("Ballistic Processor: +1 Accuracy in the sweet band (lower modAim)", () => 
   assert.equal(outsidePlain - outside, 0);
 });
 
-test("Targeting Computer passive: first shot ignores cover + engaged penalties", () => {
+test("Stereo Rangefinder passive: first shot ignores cover + engaged penalties", () => {
   const attacker = { weightClass: "medium", hull: { sp: 7 }, equipment: "targeting-computer" };
   const profile = WEAPONS.longRange["Autocannon"];
   const penalized = computeModifiedAim(attacker, profile, { distance: profile.sweet, cover: 2, engaged: true });
@@ -703,7 +703,7 @@ test("Cold Bore adds +3 Penetration only when the target is at full SP", () => {
   assert.equal(computePen(sniper, p, { target: hurt }), p.pen);
 });
 
-test("Reactor Overdrive: computePen adds +2 Penetration to every attack while active", () => {
+test("Open the Throttle: computePen adds +2 Penetration to every attack while active", () => {
   const profile = { pen: 6, sweet: 0 };
   const base = { weightClass: "medium" };
   const overdriven = { weightClass: "medium", reactorOverdriveActive: true };
@@ -777,7 +777,7 @@ test("Momentum Swing reuses the charge gate for +2 Penetration (generalised char
   assert.equal(computePen(ball, p, {}), p.pen + 2);
 });
 
-test("Piledriver Protocol spends Momentum for +Penetration and ignores a braced front arc", () => {
+test("Piledriver Drill spends Momentum for +Penetration and ignores a braced front arc", () => {
   const ram = { weightClass: "medium" };
   const wall = { weightClass: "medium", preparation: { type: "brace" } }; // braced on the front arc
   // Synthetic profile carrying the piledriver flag: pins the base Pen locally so the
@@ -951,7 +951,7 @@ test("Redline Governor adds to-hit dice from attacker heat over cap, capped at +
   assert.equal(capped.rof, 6); // base 3 + capped 3
 });
 
-test("Superconductor Edge adds +2 Penetration when attacker heat is over half class cap", () => {
+test("Quenched Edge adds +2 Penetration when attacker heat is over half class cap", () => {
   const rig = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
   const p = effectiveWeaponProfile("melee", "Sword", rig);
   rig.engine.heat = Math.floor(HEAT_CAPACITY[rig.weightClass] / 2); // at/under half -> no bonus
@@ -960,7 +960,7 @@ test("Superconductor Edge adds +2 Penetration when attacker heat is over half cl
   assert.equal(computePen(rig, p, {}), p.pen + 2);
 });
 
-test("Superconductor Edge moves 1 heat attacker->target once per attack while running hot", () => {
+test("Quenched Edge moves 1 heat attacker->target once per attack while running hot", () => {
   const attacker = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   attacker.engine.heat = HEAT_CAPACITY[attacker.weightClass]; // over half cap
@@ -974,7 +974,7 @@ test("Superconductor Edge moves 1 heat attacker->target once per attack while ru
   assert.deepEqual(heatBumps, [[attacker.id, -1], [target.id, 1]]);
 });
 
-test("Superconductor Edge does nothing under half class cap heat", () => {
+test("Quenched Edge does nothing under half class cap heat", () => {
   const attacker = makeRig(1, "S", "medium", "a", { longRange: "Mini Gun", melee: "Sword", meleeUpgrade: "superconductor-edge" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   attacker.engine.heat = 0; // well under half cap
@@ -1121,7 +1121,7 @@ test("Suppression Lock resets to 1 stack (speed only) when the attacker switches
   assert.equal(targetB.actionPenaltyNextActivation || 0, 0); // only 1 stack, speed only
 });
 
-test("Ion Storm EMPs the struck target and overloads the attacker's own Arc Gun", () => {
+test("Galvanic Storm EMPs the struck target and overloads the attacker's own Arc Gun", () => {
   const attacker = makeRig(1, "Ion", "medium", "a", { longRange: "Arc Gun", melee: "Sword", longRangeUpgrade: "ion-storm" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target] };
@@ -1143,7 +1143,7 @@ test("Ion Storm EMPs the struck target and overloads the attacker's own Arc Gun"
   assert.deepEqual(heatBumps, [[target.id, 2], [attacker.id, 3]]);
 });
 
-test("Ion Storm does nothing on a whiff (no landed hit, no EMP, no self-heat)", () => {
+test("Galvanic Storm does nothing on a whiff (no landed hit, no EMP, no self-heat)", () => {
   const attacker = makeRig(1, "Ion", "medium", "a", { longRange: "Arc Gun", melee: "Sword", longRangeUpgrade: "ion-storm" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target] };
@@ -1158,7 +1158,7 @@ test("Ion Storm does nothing on a whiff (no landed hit, no EMP, no self-heat)", 
   assert.deepEqual(heatBumps, []);
 });
 
-test("Fire Control Lock's painted Missile Barrage volley auto-hits with Armour Piercing", () => {
+test("Plotting-Table Lock's painted Missile Barrage volley auto-hits with Armour Piercing", () => {
   const attacker = makeRig(1, "Lock", "medium", "a", { longRange: "Missile Barrage", melee: "Sword", longRangeUpgrade: "fire-control-lock" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 1 } };
@@ -1180,7 +1180,7 @@ test("Fire Control Lock's painted Missile Barrage volley auto-hits with Armour P
   assert.equal(attacker.lockedTarget, null);    // paint consumed by the volley
 });
 
-test("Fire Control Lock ignores a stale paint (expired round) and clears it", () => {
+test("Plotting-Table Lock ignores a stale paint (expired round) and clears it", () => {
   const attacker = makeRig(1, "Lock", "medium", "a", { longRange: "Missile Barrage", melee: "Sword", longRangeUpgrade: "fire-control-lock" });
   const target = makeRig(2, "T", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const room = { rigs: [attacker, target], game: { round: 3 } };
@@ -1195,7 +1195,7 @@ test("Fire Control Lock ignores a stale paint (expired round) and clears it", ()
   assert.equal(attacker.lockedTarget, null); // stale paint dropped
 });
 
-test("Fire Control Lock only fires vs the exact painted target", () => {
+test("Plotting-Table Lock only fires vs the exact painted target", () => {
   const attacker = makeRig(1, "Lock", "medium", "a", { longRange: "Missile Barrage", melee: "Sword", longRangeUpgrade: "fire-control-lock" });
   const painted = makeRig(2, "P", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
   const other = makeRig(3, "O", "medium", "b", { longRange: "Autocannon", melee: "Claw" });
@@ -1677,7 +1677,7 @@ test("Ablative Cascade: a failed wound never spends a charge (gated on hit.sp > 
   assert.equal(heated, 0);
 });
 
-// Point-Defense System (Reactive Plating, Prototype). NOTE: like Ablative
+// Flak Cage (Reactive Plating, Prototype). NOTE: like Ablative
 // Cascade above, the plan's fixtures were drafted against a hypothetical seam
 // (`hit.rerollHits`, `ctx.bumpHeat`). The live Plan-2 to-hit seam has already
 // COUNTED the landed dice into `hit.hits` and writes the returned `.hits` back
@@ -1685,7 +1685,7 @@ test("Ablative Cascade: a failed wound never spends a charge (gated on hit.sp > 
 // itself rerolls the landed dice and returns the new count. combat.js stays pure:
 // the RNG (`random`) and any `providedDice.pd` reroll faces are threaded through
 // ctx by rollToHit exactly like `spendHeat`. These tests target the real seam.
-test("Point-Defense: a ranged hit spends 1 interceptor to reroll landed dice, at +1 heat", () => {
+test("Flak Cage: a ranged hit spends 1 interceptor to reroll landed dice, at +1 heat", () => {
   const target = {
     kind: "rig", weightClass: "medium", equipment: "reactive-plating", equipmentUpgrade: "point-defense-system",
     engine: { heat: 0 }, equipState: { interceptors: 2, pdLocked: false },
@@ -1702,7 +1702,7 @@ test("Point-Defense: a ranged hit spends 1 interceptor to reroll landed dice, at
   assert.equal(heated, 1);                                // +1 heat per charge spent
 });
 
-test("Point-Defense: no intercept on a melee hit, when spent out, or while fire-locked", () => {
+test("Flak Cage: no intercept on a melee hit, when spent out, or while fire-locked", () => {
   const base = {
     kind: "rig", weightClass: "medium", equipment: "reactive-plating",
     equipmentUpgrade: "point-defense-system", engine: { heat: 0 },

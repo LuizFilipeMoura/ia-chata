@@ -39,7 +39,7 @@ test("digital battles field walkers and drones, never tanks", () => {
   assert.equal(findRig(room, "Medic")?.kind, "walker");
   assert.equal(findRig(room, "Medic").template, "medic-walker");
   applyCommand(room, { verb: "add", attrs: { name: "Hunter", owner: "b", kind: "drone", drone: "hunter" } });
-  assert.equal(findRig(room, "Hunter")?.weapons.unit, "Drone Carbine");
+  assert.equal(findRig(room, "Hunter")?.weapons.unit, "Clockwork Carbine");
   applyCommand(room, { verb: "add", attrs: { name: "Tanky", owner: "b", kind: "tank", unit: "Tank Cannon" } });
   assert.equal(findRig(room, "Tanky"), null);
   assert.match(lastRejectionReason(), /Tank/);

@@ -162,7 +162,7 @@ export class DevRoom {
       ["idle", "Idle", () => {}],
       ["walking", "Walking", (m) => { m.devWalk = true; }],
       ["firing", "Firing (loop)", (m) => { m.devFire = true; }],
-      ["selected", "Selected halo", (m) => m.setSelected(true, 0x5fd3c0)],
+      ["selected", "Selected halo", (m) => m.setSelected(true, 0xd9a441)],
       ["spent", "Activated (token)", (m) => m.setSpent(true)],
       ["commander", "Commander crown", (m) => m.setCrown(true)],
       ["hot", "Overheating", (m) => { m.setHeat(1.3); m.devHot = true; }],
@@ -191,8 +191,8 @@ export class DevRoom {
     });
     Object.values(DRONE_TYPES).forEach((d, i) => {
       const m = this.mech({ id: `dev-drone-${d.id}`, name: d.label, owner: "b", kind: "drone", weightClass: "drone", unit: d.unit, modules: d.modules, drone: d.id, radius: BASE_RADIUS.drone }, X0 + (walkers.length + i) * 6, ROW.units);
-      this.add({ id: `unit.drone.${d.id}`, name: `${d.label} drone`, sub: `drone · ${d.unit}`, section: "units", obj: m.root, mech: m,
-        source: `${RIG}/support.js SUPPORT_RECIPES.drone.${d.id} (gun ${MECHS} UNIT_GUNS["${d.unit}"])`, notes: `Drone type ${d.id}.`, size: fits(m) });
+      this.add({ id: `unit.drone.${d.id}`, name: d.name, sub: `clockwork · ${d.unit}`, section: "units", obj: m.root, mech: m,
+        source: `${RIG}/support.js SUPPORT_RECIPES.drone.${d.id} (gun ${MECHS} UNIT_GUNS["${d.unit}"])`, notes: `Clockwork type ${d.id} (engine kind "drone").`, size: fits(m) });
     });
 
     }
@@ -326,7 +326,7 @@ export class DevRoom {
       ["fireball", "Fireball", (p) => fx.fireball(p.clone().add(V(0, 1.5, 0)), 1, 10)],
       ["embers", "Embers", (p) => fx.embers(p.clone().add(V(0, 1, 0)), 20)],
       ["shockwave", "Shockwave ring", (p) => fx.shockwave(p.clone().setY(0.1), 4)],
-      ["frost", "Cryo frost", (p) => fx.frost(p.clone().add(V(0, 1.2, 0)))],
+      ["frost", "Ice-brine frost", (p) => fx.frost(p.clone().add(V(0, 1.2, 0)))],
       ["glitter", "Chaff", (p) => fx.glitter(p.clone().add(V(0, 1.5, 0)))],
       ["weld", "Weld sparks", (p) => fx.weld(p.clone().add(V(0, 1.4, 0)))],
       ["smoke", "Smoke (dark)", (p) => fx.smoke(p.clone().add(V(0, 1, 0)), 10, true)],

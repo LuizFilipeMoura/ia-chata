@@ -14,7 +14,7 @@
 // {It}); {part} = the part that got hit. A line with a token is only used when
 // the moment has one.
 
-import { M, F, ROBOT } from "../voice.js";
+import { M, F, CLOCKWORK } from "../voice.js";
 
 // Each pilot has a voice (voice.js): M() / F() are the male and female
 // baselines, tweaked per pilot. Lights talk faster, mediums slower; a higher
@@ -292,8 +292,8 @@ const OPERATORS = {
     hit: ["Output: adequate.", "Hit."], miss: ["Quota missed."], kill: ["{It} removed. Quota met."],
     hurt: ["Hull breach. Continuing shift."], eject: ["Shift over."], heat: ["Furnace hot."], move: ["Advancing."] } },
   arcus: { name: "Arcus Pilot", lines: {
-    hit: ["Beta test: successful.", "Nice."], miss: ["Known issue."], kill: ["{It} deprecated.", "Please rate your defeat."],
-    hurt: ["That's… not in the roadmap."], eject: ["Rolling back!"], heat: ["Thermals trending up."], move: ["Iterating."] } },
+    hit: ["Field trial: successful.", "Nice."], miss: ["Known fault."], kill: ["{It} discontinued.", "Thank you for your custom."],
+    hurt: ["That's… not in the prospectus."], eject: ["Recalling the model!"], heat: ["Dynamo running warm."], move: ["Improving."] } },
   triton: { name: "Triton Crewman", lines: {
     hit: ["Hull integrity is a privilege.", "Struck."], miss: ["Heavy seas."], kill: ["{It} scuttled."],
     hurt: ["Resistance voids your warranty!"], eject: ["Man overboard!"], heat: ["Coolant low."], move: ["Making way."] } },
@@ -379,11 +379,11 @@ const WALKER_CREW = {
     },
   },
 };
-// Drones don't talk: they chirp.
-const DRONE_VOICE = { name: "Drone", voice: ROBOT, lines: {
-  hit: ["*chirp*", "TARGET STRUCK.", "*whirr-click*"], miss: ["*bzzt*", "RECALIBRATING."], kill: ["TARGET RETIRED.", "*happy chirp*"],
-  hurt: ["*screech*", "DAMAGE.", "*clank*"], critical: ["*rattle* *rattle*"], eject: ["*fzzt*…"], move: ["*tick-tick-tick*", "ADVANCING.", "*whirr*"],
-  re: ["*chirp*"],
+// Clockworks (the wind-up drones) don't talk: they tick, ratchet and whistle.
+const DRONE_VOICE = { name: "Clockwork", voice: CLOCKWORK, lines: {
+  hit: ["*tick-tick-CLACK*", "*sprrring*", "*whirr-click*"], miss: ["*ratchet-ratchet*", "*tick... tick...*"], kill: ["*pfweet!*", "*happy little whistle*"],
+  hurt: ["*spring-twang*", "*grinding cogs*", "*clank*"], critical: ["*winding down...*"], eject: ["*sproing*..."], move: ["*tick-tick-tick*", "*wind-up whirr*", "*clockwork march*"],
+  re: ["*tick*"],
 } };
 
 // Chance a bark fires per event: kills and ejections always talk.

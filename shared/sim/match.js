@@ -44,7 +44,7 @@ export function createSimRoom({ code = "SIM", squads, weights, table, random = M
     applyCommand(room, guarded.cmd, { side }, opts);
     return room.version !== v;
   };
-  claimSide(room, { name: "Cyan", side: "a" });
+  claimSide(room, { name: "Amber", side: "a" });
   claimSide(room, { name: "Red", side: "b" });
   for (const s of ["a", "b"]) cmd("setbot", { side: s, ...pilotAttrs(weights?.[s]) }, s);
   if (table && (table.width !== room.field.width || table.height !== room.field.height)) {

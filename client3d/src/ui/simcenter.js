@@ -43,7 +43,7 @@ export function simCenter(root, { onBack, onOpen, filter = {} }) {
     fill(batchesEl, batches.map((b) => el("div", { class: "batch" },
       el("b", {}, `${b.params.a} vs ${b.params.b}`), el("span", { class: "muted" }, ` · ${b.done}/${b.games}`),
       el("div", { class: "bar" }, el("i", { style: { width: `${(b.done / b.games) * 100}%`, background: "var(--gold)" } })),
-      b.summary ? el("div", { class: "small" }, `Cyan ${b.summary.a} · Red ${b.summary.b} · draws ${b.summary.draw}`) : null,
+      b.summary ? el("div", { class: "small" }, `Amber ${b.summary.a} · Red ${b.summary.b} · draws ${b.summary.draw}`) : null,
       el("button", { class: "btn ghost", onClick: () => { f.job = b.id; f.source = ""; f.generation = ""; renderFilters(); load(); } }, "Show games"))));
   }
 
@@ -58,13 +58,13 @@ export function simCenter(root, { onBack, onOpen, filter = {} }) {
 
   function renderRows() {
     fill(listEl, rows.length ? el("table", { class: "lib" },
-      el("tr", {}, ["When", "Source", "Cyan", "Red", "Result", "Rounds", ""].map((h) => el("th", {}, h))),
+      el("tr", {}, ["When", "Source", "Amber", "Red", "Result", "Rounds", ""].map((h) => el("th", {}, h))),
       rows.map((r) => el("tr", { class: "lib-row", onClick: () => open(r.id) },
         el("td", { class: "small muted" }, new Date(r.createdAt).toLocaleString()),
         el("td", {}, el("span", { class: `src s-${r.source}` }, r.source), " ", el("span", { class: "small muted" }, r.label || "")),
         el("td", {}, r.tiers?.a && r.tiers.a !== "balanced" ? el("i", { class: "small" }, r.tiers.a + " ") : null, r.squads.a.map((id) => el("span", { class: `swatch sw-${nameOf(id)}`, title: nameOf(id) }))),
         el("td", {}, r.tiers?.b && r.tiers.b !== "balanced" ? el("i", { class: "small" }, r.tiers.b + " ") : null, r.squads.b.map((id) => el("span", { class: `swatch sw-${nameOf(id)}`, title: nameOf(id) }))),
-        el("td", { class: r.winner === "a" ? "w-a" : r.winner === "b" ? "w-b" : "" }, `${r.winner ? (r.winner === "a" ? "Cyan" : "Red") : "Draw"} ${r.vp?.join("–")}${r.reason === "annihilation" ? " 💀 wipe-out" : ""}`),
+        el("td", { class: r.winner === "a" ? "w-a" : r.winner === "b" ? "w-b" : "" }, `${r.winner ? (r.winner === "a" ? "Amber" : "Red") : "Draw"} ${r.vp?.join("–")}${r.reason === "annihilation" ? " 💀 wipe-out" : ""}`),
         el("td", {}, String(r.rounds ?? "")),
         el("td", {}, el("button", { class: "btn ghost", onClick: (e) => { e.stopPropagation(); open(r.id); } }, "▶"))))) : el("p", { class: "muted" }, "No games yet. Queue some above."));
   }
@@ -87,7 +87,7 @@ export function simCenter(root, { onBack, onOpen, filter = {} }) {
     el("div", { class: "b-head" }, el("button", { class: "btn ghost", onClick: onBack }, "← Back"), el("h1", {}, "🛰 Sim Center"),
       el("span", { class: "muted" }, "Bot-vs-bot games played on the server through the real engine, every one saved for replay.")),
     el("div", { class: "sim-form" },
-      el("label", {}, "Cyan ", sel(SIDES, form.a, (v) => { form.a = v; })),
+      el("label", {}, "Amber ", sel(SIDES, form.a, (v) => { form.a = v; })),
       el("span", {}, "vs"),
       el("label", {}, "Red ", sel(SIDES, form.b, (v) => { form.b = v; })),
       el("label", {}, "Table ", sel([["standard", "Standard 54×36"], ["skirmish", "Skirmish 42×28"]], form.table, (v) => { form.table = v; })),

@@ -9,6 +9,8 @@ import { api } from "../api.js";
 import { sfx } from "../audio.js";
 import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT, EQUIPMENT_UPGRADES, LOCS, templateById, DRONE_TYPES } from "/shared/game-state.js";
 import { WALKER_PICKS } from "./menu.js";
+import { NATURE_LABEL } from "./moments-logic.js";
+import { requisitionForm, stampThen } from "./requisition.js";
 import {
   FACTIONS, RELICS, UNLOCKS, NOTORIETY, MAX_NOTORIETY, CONTRACT_TYPES, PRICES, PERK_KITS, BOSS_STEP, MAX_STRIKES,
   factionById, relicById, unlockById, repairPrice, recoveryPrice,
@@ -77,7 +79,7 @@ function crest(factionId, size = "") {
 
 const pips = (n, max, cls = "") => el("span", { class: `cp-pips ${cls}` }, Array.from({ length: max }, (_, i) => el("i", { class: i < n ? "on" : "" })));
 const stamp = (text, cls = "") => el("span", { class: `cp-stamp ${cls}` }, text);
-const natureBadge = (nature) => el("i", { class: `cp-nat n-${nature}` }, NATURE_TAG[nature] || nature);
+const natureBadge = (nature) => el("i", { class: `cp-nat n-${nature}`, title: NATURE_TAG[nature] || nature }, NATURE_LABEL[nature] || nature);
 
 function upChip(nature, name, title) {
   return el("span", { class: `cp-up n-${nature || "none"}`, title }, nature ? natureBadge(nature) : null, name);
@@ -223,12 +225,16 @@ function cardFace(run, card) {
     : card.kind === "equipment" ? "⚙ Equipment" : card.kind === "perkKit" ? "Weapon perk" : card.kind === "relic" ? "Squad-wide, whole run" : "Instant";
   const art = { upgrade: "fire", equipUpgrade: "harden", equipment: "harden", perkKit: "pen", relic: "star", salvage: "repair" }[card.kind] || "star";
   const fits = card.fits.map((f) => rigOf(run, f.uid)?.name).filter(Boolean);
-  return el("div", { class: "cp-face-in" },
+  // A Prototype is a carved bone charm, its downside etched as a curse.
+  const proto = card.nature === "prototype"
+    ? (card.kind === "upgrade" ? upgradeOf(card.weapon, card.upgrade) : card.kind === "equipUpgrade" ? equipUpgradeOf(card.equipment, card.upgrade) : null) : null;
+  return el("div", { class: `cp-face-in ${card.nature === "prototype" ? "charm-card" : ""}` },
     el("div", { class: "cp-card-top" }, kindBadge, el("span", { class: `cp-rarity r-${card.rarity}` }, card.rarity)),
     el("div", { class: "cp-card-art" }, icon(art)),
     el("b", { class: "cp-card-name" }, card.label),
     el("div", { class: "cp-card-where" }, where),
     el("p", { class: "cp-card-text" }, card.kind === "upgrade" ? card.text.replace(`${card.weapon}: `, "") : card.kind === "equipUpgrade" ? card.text.replace(`${EQUIPMENT[card.equipment]?.label}: `, "") : card.text),
+    proto?.catch ? el("div", { class: "charm-curse" }, el("span", {}, "Curse: "), proto.catch) : null,
     fits.length ? el("div", { class: "cp-card-fits" }, "Fits: ", [...new Set(fits)].join(", ")) : null);
 }
 
@@ -550,6 +556,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
     let walker = null;
     let step = 1;
     const STEPS = ["Pick rigs", "Banner & Notoriety", "Confirm"];
+    let confirmForm = null;
     const mediumsIn = (ids) => ids.filter((id) => chassisOf(id).class === "medium").length;
 
     const randomize = () => {
@@ -609,20 +616,19 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
         pools.workshop.freeRecovery ? "One free wreck recovery" : null,
         pools.workshop.cards > 3 ? `${pools.workshop.cards} reward cards per win` : null,
       ].filter(Boolean);
-      return el("div", { class: "cm-confirm" },
-        el("section", { class: "cp-sec cm-outfit" }, el("h3", {}, "Outfit"),
-          picked.map((id) => {
-            const c = chassisOf(id);
-            return el("div", { class: "cm-rig" }, el("span", { class: `swatch big sw-${c.name}` }),
-              el("div", {}, el("b", {}, c.name), el("span", { class: "muted cp-small" }, `${c.label} · ${spTotal(c.sp)} SP · ${c.speed}"`)),
-              el("span", { class: `cp-class c-${c.class}` }, c.class));
-          })),
-        el("section", { class: "cp-sec" }, el("h3", {}, "Support walker"),
-          walker ? el("div", { class: "cp-node-f" }, icon("walker"), el("div", {}, el("b", {}, templateById(walker).name), el("span", { class: "cp-small" }, WALKER_PICKS.find((w) => w.id === walker)?.text || "")))
-            : el("p", { class: "muted" }, "None.")),
-        el("section", { class: "cp-sec" }, el("h3", {}, "Banner"),
-          f ? el("div", { class: "cp-node-f" }, crest(f.id, "lg"), el("div", {}, el("b", {}, f.name), el("span", { class: "cp-small" }, `${f.perk}: ${f.text}`)))
-            : el("p", { class: "muted" }, "No banner: your own colours.")),
+      const form = requisitionForm({
+        title: "Requisition: Mercenary Outfit",
+        rows: [
+          ...picked.map((id, i) => { const c = chassisOf(id); return [`Item ${i + 1}`, `${c.name} (${c.label}), ${c.class}, ${spTotal(c.sp)} SP`]; }),
+          ["Support", walker ? templateById(walker).name : "None"],
+          ["Colours", f ? `${f.name} (${f.perk}: ${f.text})` : "Own colours"],
+          ["Notoriety", `N${notoriety}`],
+          ["Advance", `${PRICES.startSalvage + pools.workshop.startSalvage} salvage`],
+        ],
+        note: "Materiel issued against future salvage. The Department accepts no liability for boiler failure.",
+      });
+      confirmForm = form;
+      return el("div", { class: "cm-confirm" }, form,
         el("section", { class: "cp-sec" }, el("h3", {}, "Notoriety"),
           el("div", { class: "cm-noto" }, el("b", {}, `N${notoriety}`), pips(Math.min(notoriety, MAX_NOTORIETY), MAX_NOTORIETY, "skulls")),
           el("p", { class: "cp-noto-t" }, NOTORIETY[notoriety]?.text)),
@@ -659,6 +665,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
           step < 3
             ? el("button", { class: "btn big primary", disabled: !ready, title: ready ? "" : "Sign three rigs first", onClick: () => go(step + 1) }, ready || step > 1 ? "Next ▸" : `Pick ${3 - picked.length} more`)
             : el("button", { class: "btn big primary", disabled: !ready, onClick: async () => {
+              if (confirmForm) await new Promise((res) => stampThen(confirmForm, res, { hold: 450 }));
               loading("Signing the contracts…");
               const v = await act(() => api.campaign.start({ chassis: picked, notoriety, banner, walker }));
               if (v) { sfx.fanfare?.(true); map(); } else render();
@@ -697,7 +704,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
           u.commander ? cicon("crown", "crown") : null, el("span", { class: `swatch sw-${c.name}` }), c.label);
       })),
       node.reinforcements ? el("div", { class: "cp-node-x" }, `⚠ Reinforcements on rounds ${node.reinforcements.map((r) => r.round).join(" & ")}`) : null,
-      node.drones ? el("div", { class: "cp-node-x" }, icon("drone"), ` Drone waves: ${droneText(node.drones)}`) : null,
+      node.drones ? el("div", { class: "cp-node-x" }, icon("drone"), ` Clockwork waves: ${droneText(node.drones)}`) : null,
       node.crates ? el("div", { class: "cp-node-x" }, `📦 ${node.crates} salvage crates (+${PRICES.crate} ${SALVAGE} each)`) : null,
       node.extractGoal ? el("div", { class: "cp-node-x" }, `➜ Extract ${node.extractGoal} rig${node.extractGoal > 1 ? "s" : ""} through the enemy edge`) : null,
       onPick ? el("button", { class: "btn primary", onClick: onPick }, node.kind === "boss" ? "Face the Warlord ▸" : "Take contract ▸") : null);
@@ -795,7 +802,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
                     u.equipment ? upChip(null, `⚙ ${EQUIPMENT[u.equipment]?.label}`) : null)));
             })),
             node.reinforcements ? el("div", { class: "cp-node-x" }, "⚠ Reinforcements: ", node.reinforcements.map((r) => `round ${r.round}: ${chassisOf(r.unit.chassis).label}`).join(" · ")) : null,
-            node.drones ? el("div", { class: "cp-node-x" }, icon("drone"), " Drone waves: ", droneText(node.drones), ". Hunters rush and shoot, Sappers blow up in contact (2.5\" blast), Spotters paint you for the enemy.") : null),
+            node.drones ? el("div", { class: "cp-node-x" }, icon("drone"), " Clockwork waves: ", droneText(node.drones), ". Hunters rush and shoot, Sappers blow up in contact (2.5\" blast), Spotter Kites paint you for the enemy.") : null),
           el("div", { class: "cp-ours" }, el("h3", {}, "Deploying"),
             el("div", { class: "cp-rigs" }, run.roster.filter((r) => !r.wrecked).map((r) => rigCard(run, r, { compact: true }))),
             run.walker ? el("p", { class: "cp-small" }, icon("walker"), ` ${templateById(run.walker).name} rides along (fully repaired).`) : null,
@@ -1048,5 +1055,5 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
 
 // "round 2: 2 Hunters · round 4: 1 Sapper"
 function droneText(waves) {
-  return waves.map((w) => `round ${w.round}: ${w.count} ${DRONE_TYPES[w.type]?.label || w.type}${w.count > 1 ? "s" : ""}`).join(" · ");
+  return waves.map((w) => `round ${w.round}: ${w.count} ${DRONE_TYPES[w.type]?.name || w.type}${w.count > 1 ? "s" : ""}`).join(" · ");
 }

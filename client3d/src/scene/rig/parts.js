@@ -574,13 +574,13 @@ export const SIGNATURES = {
     }
     ctx.torso.add(g);
   },
-  // Blue: a flickering pilot light under the chin.
+  // Cobalt: a flickering pilot light under the chin.
   pilotLight(ctx, f) {
     ctx.torso.add(at(rot(cyl(0.04, 0.05, 0.16, ctx.steel, 8), 0, 0, -Math.PI / 2), f.front + 0.02, -ctx.dims.h * 0.35, 0));
     const flame = sph(0.05, GLOW(0x66aaff, 0x3a7aff, 2), 8); flame.position.set(f.front + 0.12, -ctx.dims.h * 0.35, 0);
     ctx.torso.add(flame); ctx.flickers.push(flame);
   },
-  // Purple: a big open spoked flywheel on the left flank.
+  // Tyrian: a big open spoked flywheel on the left flank.
   flywheel(ctx, f) {
     const w = new THREE.Group(); w.position.set(-0.05, 0, f.halfW + 0.04);
     w.add(torus(0.3, 0.04, ctx.trim, Math.PI * 2, 20));
@@ -588,7 +588,7 @@ export const SIGNATURES = {
     w.add(drumZ(0.06, 0.08, ctx.dark, 10));
     ctx.torso.add(w); ctx.spinners.push({ o: w, axis: "z", speed: 4 });
   },
-  // Pumpkin: cowcatcher on the pelvis and a big headlamp on the smokebox.
+  // Rust: cowcatcher on the pelvis and a big headlamp on the smokebox.
   cowcatcher(ctx, f) {
     const cc = new THREE.Group(); cc.position.set(0.3 * ctx.k, -0.12, 0);
     for (let i = -3; i <= 3; i++) { const b = box(0.04, 0.34, 0.04, ctx.trim); b.position.set(0.1 - Math.abs(i) * 0.03, -0.1, i * 0.07); b.rotation.z = 0.5; b.rotation.x = i * 0.12; cc.add(b); }
@@ -598,7 +598,7 @@ export const SIGNATURES = {
     const lens = rot(cyl(0.085, 0.085, 0.02, GLOW(0xfff2c0, 0xffd27a, 1.8), 12), 0, 0, Math.PI / 2); lens.position.set(f.front + 0.1, f.top * 0.72, 0);
     ctx.torso.add(lens);
   },
-  // Zebra: sword scabbard across the back and a crest pennant.
+  // Dazzle: sword scabbard across the back and a crest pennant.
   scabbard(ctx, f) {
     const s = box(0.05, 0.85, 0.1, ctx.dark); s.position.set(f.back - 0.08, 0.05, 0.12); s.rotation.x = 0.7; ctx.torso.add(s);
     ctx.torso.add(at(box(0.07, 0.12, 0.14, ctx.trim), f.back - 0.08, 0.36, -0.08).rotateX(0.7));
@@ -612,7 +612,7 @@ export const SIGNATURES = {
     w.add(at(drumZ(0.17, 0.03, ctx.dark, 14), 0, 0, 0.09));
     for (let i = 0; i < 6; i++) { const l = torus(0.045, 0.014, ctx.steel, Math.PI * 2, 8); l.position.set(0.05, -0.12 - i * 0.07, 0.04); l.rotation.y = i % 2 ? Math.PI / 2 : 0; w.add(l); }
   },
-  // Green: rivet hoppers (funnels) on both shoulders of the cab.
+  // Verdigris: rivet hoppers (funnels) on both shoulders of the cab.
   rivetHoppers(ctx, f) {
     for (const s of [-1, 1]) {
       const h = cone(0.12, 0.2, ctx.trim, 10); h.rotation.x = Math.PI; h.position.set(-0.12, f.top + 0.12, s * f.halfW * 0.6); ctx.torso.add(h);

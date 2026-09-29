@@ -86,7 +86,7 @@ function primeAttacker(a) {
   a.movedThisActivation = true;  // Full Tilt / Momentum Swing
   const cap = HEAT_CAPACITY[a.weightClass];
   if (cap != null && a.engine) a.engine.heat = cap + 3; // Redline +3, Superconductor +2
-  a.momentum = 3;                // Piledriver Protocol
+  a.momentum = 3;                // Piledriver Drill
   return a;
 }
 

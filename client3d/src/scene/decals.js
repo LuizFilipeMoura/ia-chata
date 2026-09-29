@@ -1,9 +1,11 @@
-// Battle scars: scorch marks and shot pocks that stay on the table for the
-// whole battle (capped, oldest go first). A fresh blast's scorch glows hot
-// orange at the core and cools over a few seconds.
+// Battle scars: scorch marks, shot pocks and oil stains that stay on the
+// table for the whole battle (capped, oldest go first). A fresh blast's scorch
+// glows hot orange at the core and cools over a few seconds. Oil (a rig's
+// engine bleeding) has its own cap so drips never push the scorches out.
 import * as THREE from "three";
 
 const CAP = 90;
+const OIL_CAP = 36;
 
 function canvasTex(size, draw) {
   const c = document.createElement("canvas"); c.width = c.height = size;
@@ -47,6 +49,24 @@ const pockTex = () => canvasTex(64, (g, S) => {
   blot(g, c, c, 14, 0.9); blot(g, c + 3, c - 2, 9, 0.7);
 });
 
+// A fuel / oil spill: a black-brown pool with a darker core, a few runs and
+// drip spots, and a dull bronze sheen at the rim (matte: no glare).
+const oilTex = () => canvasTex(128, (g, S) => {
+  const c = S / 2, pool = (x, y, r, a, rgb = "16,11,7") => {
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, `rgba(${rgb},${a})`); grd.addColorStop(0.75, `rgba(${rgb},${a * 0.85})`); grd.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = grd; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  };
+  for (let i = 0; i < 9; i++) { const a = Math.random() * Math.PI * 2, d = Math.random() * 18; pool(c + Math.cos(a) * d, c + Math.sin(a) * d, 18 + Math.random() * 16, 0.55); }
+  for (let i = 0; i < 5; i++) { const a = Math.random() * Math.PI * 2, d = 34 + Math.random() * 16; pool(c + Math.cos(a) * d, c + Math.sin(a) * d, 5 + Math.random() * 6, 0.7); }
+  g.globalCompositeOperation = "source-atop";
+  const sheen = g.createRadialGradient(c, c, 20, c, c, 52);
+  sheen.addColorStop(0, "rgba(0,0,0,0)"); sheen.addColorStop(0.7, "rgba(92,70,40,0.35)"); sheen.addColorStop(1, "rgba(60,44,70,0.25)");
+  g.fillStyle = sheen; g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = "source-over";
+  pool(c, c, 16, 0.6, "6,4,3");
+});
+
 const glowTex = () => canvasTex(128, (g, S) => {
   const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
   grd.addColorStop(0, "rgba(255,190,90,1)"); grd.addColorStop(0.3, "rgba(255,90,20,0.7)"); grd.addColorStop(1, "rgba(255,40,0,0)");
@@ -58,20 +78,21 @@ export class Decals {
     this.scene = scene;
     this.geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     const mat = (map, extra = {}) => new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, ...extra });
-    this.mats = { scorch: mat(scorchTex()), pock: mat(pockTex(), { opacity: 0.85 }) };
+    this.mats = { scorch: mat(scorchTex()), pock: mat(pockTex(), { opacity: 0.85 }), oil: mat(oilTex(), { opacity: 0.9 }) };
     this.glowMap = glowTex();
-    this.list = []; this.glows = []; this.seq = 0;
+    this.list = []; this.oil = []; this.glows = []; this.seq = 0;
   }
 
-  // pos: world point (dropped to the table). kind: scorch | pock.
+  // pos: world point (dropped to the table). kind: scorch | pock | oil.
   add(pos, radius, kind = "scorch", { hot = false } = {}) {
     const m = new THREE.Mesh(this.geo, this.mats[kind]);
     m.position.set(pos.x, 0.03 + (this.seq++ % 20) * 0.001, pos.z);
     m.rotation.y = Math.random() * Math.PI * 2;
     m.scale.set(radius * 2, 1, radius * 2 * (0.85 + Math.random() * 0.3));
     m.renderOrder = 1;
-    this.scene.add(m); this.list.push(m);
-    if (this.list.length > CAP) this.scene.remove(this.list.shift());
+    const list = kind === "oil" ? this.oil : this.list;
+    this.scene.add(m); list.push(m);
+    if (list.length > (kind === "oil" ? OIL_CAP : CAP)) this.scene.remove(list.shift());
     if (hot) {
       const g = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ map: this.glowMap, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: new THREE.Color(2.5, 2.5, 2.5) }));
       g.position.set(pos.x, m.position.y + 0.004, pos.z);
@@ -93,8 +114,8 @@ export class Decals {
   }
 
   clear() {
-    for (const m of this.list) this.scene.remove(m);
+    for (const m of [...this.list, ...this.oil]) this.scene.remove(m);
     for (const h of this.glows) { this.scene.remove(h.g); h.g.material.dispose(); }
-    this.list = []; this.glows = [];
+    this.list = []; this.oil = []; this.glows = [];
   }
 }

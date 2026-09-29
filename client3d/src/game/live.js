@@ -24,7 +24,10 @@ import { openInspector } from "../ui/inspector.js";
 import { setRigSource } from "../ui/combatlog.js";
 import { icon } from "../ui/icons.js";
 import { attackBriefing } from "../ui/attack.js";
+import { boilerGauge } from "../ui/gauge.js";
+import { engineStart } from "../ui/ignition.js";
 import { sfx, ambience } from "../audio.js";
+import { music } from "../music.js";
 import { settings } from "../settings.js";
 import { Nameplates } from "../ui/nameplates.js";
 import { Wires } from "../ui/tips.js";
@@ -35,7 +38,7 @@ import { inSweetBand } from "/shared/combat.js";
 import { weaponName, rangedProfile, rangedLoaded, kitLine, partsOf, isRig } from "./units.js";
 
 const DEG = Math.PI / 180;
-const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract", plantflag: "beacon" };
+const ICON = { move: "move", sprint: "flag-sprint", fire: "fire", aimed: "aimed", prepare: "flag-brace", repair: "flag-repair", shutdown: "flag-shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract", plantflag: "flag-plant" };
 const AIM_BLUE = 0x5aa8ff;
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
@@ -49,7 +52,7 @@ const HELP = {
   extract: "Breakthrough: leave the table through the exit zone at the enemy corner. 1 action, no heat. The rig isn't wrecked and keeps its SP; it can't come back this battle.",
   douse: "Put out the flames: clears Burning.",
   reload: "Reload the long-range gun. No action, but a D6 heat gamble: 1-3 → +2 heat, 4-6 → +1.",
-  lock: "Fire Control Lock: paint an enemy. Your next Missile Barrage volley at it auto-hits, Armour Piercing.",
+  lock: "Plotting-Table Lock: paint an enemy. Your next Missile Barrage volley at it auto-hits, Armour Piercing.",
   barrage: "Mortar Barrage: shell a zone for 2 rounds. While it runs the tube can't fire direct (you fall back to melee).",
   emplace: "Plant the Bulwark: a rooted fortress stance with the shield raised. No moving until you Un-plant.",
   unplant: "Pull up the Bulwark emplacement so the rig can move again. +2 heat.",
@@ -60,33 +63,14 @@ const HELP = {
   heatpurgewave: "Vent down to Heat Capacity and scald every enemy within 3\" (rim): +2 heat and a Penetration 4 hit each.",
   "grapnel-yank": `Hop up to ${GRAPNEL_YANK_RANGE}" in a straight line, over terrain, tearing free of any melee lock. Works while engaged. Then 3 rounds to recharge.`,
   "grapnel-reel": `Hook an enemy within ${GRAPNEL_REEL_RANGE}" (rim; line of sight, front arc) and drag it into base contact, engaged. Then 3 rounds to recharge.`,
-  cryo: "Spend banked cryo. Free, no action: −2 heat each, and +1 Penetration each on your next attack.",
-  meltdown: "Spend meltdown charge. Free, no action: +N Penetration on your attacks this activation, or a burst of +N heat on every enemy within 4\" (rim).",
-  nanite: `Seed a nanite stack on yourself or an ally within ${NANITE_REACH}" (rim). It heals 1 SP on one location each Recovery (max 3 per location). Heat Capacity −1 on the host while it lives.`,
+  cryo: "Spend banked ice-brine. Free, no action: −2 heat each, and +1 Penetration each on your next attack.",
+  meltdown: "Spend scuttle charge. Free, no action: +N Penetration on your attacks this activation, or a burst of +N heat on every enemy within 4\" (rim).",
+  nanite: `Send a grease-monkey crew to yourself or an ally within ${NANITE_REACH}" (rim). It mends 1 SP on one location each Recovery (max 3 per location). Heat Capacity −1 on the host while it works.`,
   plantflag: `Stake the lit beacon, or the Next one, from within 2". 1 action, no heat. The flag holds until this rig is moved; at round end the lit beacon pays its VP to your side if no enemy is within 2".`,
 };
 // Every action's own rules text: the table above, else the equipment active's.
 const EQUIP_TEXT = Object.fromEntries(Object.values(EQUIPMENT).map((e) => [e.active.key, e.active.text]));
 const helpFor = (key) => HELP[key] || EQUIP_TEXT[key] || "";
-
-// Brass pressure dial: needle at current heat, red sector past capacity.
-function heatGauge(heat, cap) {
-  const max = cap + 6;
-  const ang = (v) => Math.PI * (1 - Math.min(max, v) / max);
-  const pt = (v, r) => [40 + Math.cos(ang(v)) * r, 40 - Math.sin(ang(v)) * r];
-  const arc = (a, b, r) => { const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r); return `M${x1},${y1} A${r},${r} 0 0 1 ${x2},${y2}`; };
-  const [nx, ny] = pt(heat, 30);
-  const ticks = Array.from({ length: max + 1 }, (_, i) => { const [a1, b1] = pt(i, 34), [a2, b2] = pt(i, 38); return `<line x1="${a1}" y1="${b1}" x2="${a2}" y2="${b2}" stroke="#c9a14a" stroke-width="1.2"/>`; }).join("");
-  const wrap = el("div", { class: "gauge", title: `Heat ${heat} / capacity ${cap}` });
-  wrap.innerHTML = `<svg viewBox="0 0 80 44">
-    <path d="${arc(0, max, 36)}" stroke="#2a241a" stroke-width="8" fill="none"/>
-    <path d="${arc(0, cap, 36)}" stroke="#7a8a4a" stroke-width="5" fill="none"/>
-    <path d="${arc(cap, max, 36)}" stroke="#c8412f" stroke-width="5" fill="none"/>
-    ${ticks}
-    <line x1="40" y1="40" x2="${nx}" y2="${ny}" stroke="#f0cf7a" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="40" cy="40" r="4" fill="#c9a14a" stroke="#3a2a10"/></svg>`;
-  return wrap;
-}
 
 // Tooltip line: what ending after this action would risk.
 function oddsLine(rig, extra) {
@@ -153,7 +137,8 @@ export class LiveMatch {
     const joined = await api.join(this.room, this.side);
     this.apply(joined.state, true);
     this.disconnect = connect(this.room, this.side, (s) => this.apply(s));
-    ambience.start();
+    ambience.start(this.world.theme?.ambience || this.world.theme?.id);
+    music.play("battle");
   }
 
   destroy() {
@@ -167,6 +152,7 @@ export class LiveMatch {
     this.plates.destroy();
     this.wires?.destroy();
     ambience.stop();
+    music.play("menu");
     this.world.clearOverlay();
     this.world.setThreat(null);
     this.world.onShiftWheel = null;
@@ -271,6 +257,7 @@ export class LiveMatch {
       // Fresh battle (round 1, nothing logged beyond setup): drop the squads in
       // from orbit. Rejoining a game in progress just snaps.
       const fresh = state.game.round <= 1 && !(state.game.resolutions || []).some((r) => r.kind === "attack" || r.kind === "move");
+      if (fresh && !this.tutorial) engineStart();
       if (fresh && state.rigs.some((r) => r.pos)) {
         this.hud.banner("RAIL DROP · SQUADRONS INBOUND", "round");
         this.director.busy++;
@@ -330,7 +317,7 @@ export class LiveMatch {
     this.curtain = el("div", { class: "curtain" },
       el("div", { class: "curtain-box" },
         el("div", { class: "curtain-k" }, "Pass the device"),
-        el("h2", { class: want === "a" ? "c-a" : "c-b" }, want === "a" ? "Cyan commander" : "Red commander"),
+        el("h2", { class: want === "a" ? "c-a" : "c-b" }, want === "a" ? "Amber commander" : "Red commander"),
         el("p", {}, "Your opponent looks away. Press when you're ready."),
         el("button", { class: "btn big primary", onClick: async () => {
           this.side = want; this.selected = null; this.hud.clog.side = want; this.director.side = want;
@@ -397,6 +384,7 @@ export class LiveMatch {
     this.hud.roster(this.state, this.side, this.selected, (id) => this.select(id));
     // Objective control tint.
     this.world.setObjectiveControl(beaconStates(g.objectives || [], g.beacons || null, this.state.rigs.map((r) => ({ ...r, radius: spatial(r).radius }))));
+    this.world.setMorale?.(g.sides?.map((s) => s.vp)); // posters on the walls get defaced for the side falling behind
     for (const m of this.director.mechs.values()) {
       const r = this.rig(m.id);
       const active = g.turn?.activeRigId === m.id;
@@ -450,7 +438,7 @@ export class LiveMatch {
           el("button", { class: "btn", title: "Skip the animation (Space)", onClick: () => this.director.skip() }, "⏭ Skip"))));
       return;
     }
-    if (!rig) { bar.append(el("div", { class: "hint" }, this.myTurn ? "Select one of your rigs (cyan ring) to activate it." : "Waiting…")); return; }
+    if (!rig) { bar.append(el("div", { class: "hint" }, this.myTurn ? "Select one of your rigs (amber ring) to activate it." : "Waiting…")); return; }
     const g = this.game;
     const cap = HEAT_CAPACITY[rig.weightClass] ?? 6;
     const turn = this.previewRoom(rig).game.turn;
@@ -459,7 +447,7 @@ export class LiveMatch {
       ? [{ ...a, key: "grapnel-yank", label: "Grapnel Yank" }, { ...a, key: "grapnel-reel", label: "Grapnel Reel" }]
       : [a]);
     const extra = [];
-    // Prototype spends (Cryo, Meltdown) and Nanite Swarm ride beside the actives.
+    // Prototype spends (Cryo, Meltdown) and Grease Monkeys ride beside the actives.
     for (const sp of equipmentSpends(rig, turn)) extra.push(sp.key === "cryo" ? { ...sp, heatText: sp.max ? `−2×` : "0" } : sp);
     const special = new Set(acts.map((a) => a.key));
     for (const k of ["lock", "emplace", "unplant", "barrage"]) if (!special.has(k) && this.hasAction(rig, k)) extra.push({ key: k, label: k[0].toUpperCase() + k.slice(1), heat: k === "unplant" ? 2 : k === "lock" ? 1 : 0, enabled: turn.actionsUsed < turn.actionsMax });
@@ -499,7 +487,7 @@ export class LiveMatch {
         el("div", { class: "ah-v" }, `${left} of ${turn.actionsMax}`)),
       hm.zone === "none" ? null : el("div", { class: "ah-stat", title: "Boiler heat. Every action adds heat; only 1 cools per round. End a turn past capacity (the red zone) and you roll for engine damage." },
         el("div", { class: "ah-k" }, icon("heat"), "Boiler heat"),
-        heatGauge(rig.engine?.heat ?? 0, hm.cap || cap),
+        boilerGauge(rig.engine?.heat ?? 0, hm.cap || cap, { size: "md", key: `bar:${rig.id}` }),
         el("div", { class: `ah-v ${hm.over ? "bad" : hm.zone === "redline" ? "warn-t" : ""}` }, hm.over ? `${hm.heat} / ${hm.cap} · OVER` : `${hm.heat} / ${hm.cap} safe`)),
     ));
     if (!commandable) {
@@ -693,7 +681,7 @@ export class LiveMatch {
   // ---- Move ----
   isHop(key = this.mode?.key) { return key === "jumpjets" || key === "yank"; }
   startMove(rig, key) {
-    // Jump Jets: base Speed, straight line, ignores terrain + leg damage.
+    // Blast Pistons: base Speed, straight line, ignores terrain + leg damage.
     // Grapnel yank: 4", same rules.
     const budget = key === "jumpjets" ? (Number.isFinite(rig.speed) ? rig.speed : moveBudget(rig, "move")) : key === "yank" ? GRAPNEL_YANK_RANGE : moveBudget(rig, key);
     this.mode = { key, rig, budget, facingOffset: 0 };
@@ -701,7 +689,7 @@ export class LiveMatch {
     const col = key === "sprint" ? 0xffaa33 : this.isHop(key) ? 0xffd27a : 0x33ff99;
     this.world.disc(rig.pos.x, rig.pos.y, budget + radiusOf(rig), col, 0.08);
     this.world.ring(rig.pos.x, rig.pos.y, budget, col, 0.6);
-    this.world.ringLabel(rig.pos.x, rig.pos.y, budget, `${key === "sprint" ? "Sprint" : key === "jumpjets" ? "Jump" : key === "yank" ? "Grapnel" : "Move"} ${budget.toFixed(1)}″ · squares: red = enemy fire, green = safe`, "#" + col.toString(16).padStart(6, "0"));
+    this.world.ringLabel(rig.pos.x, rig.pos.y, budget, `${key === "sprint" ? "Sprint" : key === "jumpjets" ? "Pistons" : key === "yank" ? "Grapnel" : "Move"} ${budget.toFixed(1)}″ · squares: red = enemy fire, green = safe`, "#" + col.toString(16).padStart(6, "0"));
     this.drawEnemyCones(rig);
     this.drawDangerMap(rig, budget, this.isHop(key));
     this.moveBands = this.drawGunBands(rig, rig.pos);
@@ -714,7 +702,7 @@ export class LiveMatch {
     this.ghost = g; this.ghostMat = ringMesh.material;
     this.world.scene.add(g);
     this.hud.tip(this.isHop(key)
-      ? `${key === "yank" ? "Grapnel yank" : "Jump Jets"}: click a clear landing spot inside the ring (straight line, flies over terrain) · 2) then turn any way · Right-click to cancel`
+      ? `${key === "yank" ? "Grapnel yank" : "Blast Pistons"}: click a clear landing spot inside the ring (straight line, flies over terrain) · 2) then turn any way · Right-click to cancel`
       : "1) Click a spot inside the ring · 2) then turn · Right-click to cancel");
     this.renderActions();
     this.emit("movephase", "dest");
@@ -911,7 +899,7 @@ export class LiveMatch {
     if (!r || r.destroyed || !r.pos || this.mode) return;
     const lr = rangedProfile(r);
     const max = Math.min(60, lr?.maxRange ?? 24);
-    const col = r.owner === this.side ? 0x5fd3c0 : 0xe0533d;
+    const col = r.owner === this.side ? 0xd9a441 : 0x9e2b25;
     this.reachMeshes.push(
       this.world.wedge(r.pos.x, r.pos.y, max, r.facing - 45, r.facing + 45, col, 0.07),
       this.world.ring(r.pos.x, r.pos.y, max, col, 0.35),
@@ -1227,9 +1215,9 @@ export class LiveMatch {
     const max = rig.equipState?.cryo || 0;
     const heat = rig.engine?.heat ?? 0;
     const m = modal({
-      title: `Vent cryo: ${rig.name}`,
+      title: `Vent ice-brine: ${rig.name}`,
       body: el("div", {},
-        el("p", { class: "rx-lead" }, `${max} cryo banked. Free, no action: each one vents 2 heat and adds +1 Penetration to your next attack.`),
+        el("p", { class: "rx-lead" }, `${max} ice-brine banked. Free, no action: each one vents 2 heat and adds +1 Penetration to your next attack.`),
         el("div", { class: "attack-list" }, Array.from({ length: max }, (_, i) => i + 1).map((n) => el("button", { class: "attack-opt", onClick: () => { m.close(); this.act(rig, { action: "cryo", n }); } },
           el("b", {}, icon("cryo"), ` Spend ${n}`), el("span", {}, `heat ${heat} → ${Math.max(0, heat - 2 * n)} · +${n} Pen next attack`))))),
       actions: [{ label: "Cancel", ghost: true }],
@@ -1242,9 +1230,9 @@ export class LiveMatch {
     const opts = (mode) => Array.from({ length: max }, (_, i) => i + 1).map((n) => el("button", { class: "attack-opt", onClick: () => { m.close(); this.act(rig, { action: "meltdown", n, mode }); } },
       el("b", {}, `Spend ${n}`), el("span", {}, mode === "pen" ? `+${n} Penetration this activation` : `+${n} heat on ${victims.length ? victims.map((e) => e.name).join(", ") : "nobody in range"}`)));
     const m = modal({
-      title: `Meltdown: ${rig.name}`, cls: "wide",
+      title: `Scuttle Charge: ${rig.name}`, cls: "wide",
       body: el("div", {},
-        el("p", { class: "rx-lead" }, `${max} meltdown charge banked. Free, no action. While any is banked you can't vent heat or Shut Down.`),
+        el("p", { class: "rx-lead" }, `${max} scuttle charge banked. Free, no action. While any is banked you can't vent heat or Shut Down.`),
         el("div", { class: "md-cols" },
           el("div", {}, el("h4", {}, icon("pen"), "Overload"), el("p", { class: "muted" }, "Pour it into your guns: +N Penetration on your attacks this activation."), el("div", { class: "attack-list" }, opts("pen"))),
           el("div", {}, el("h4", {}, icon("meltdown"), "Burst"), el("p", { class: "muted" }, "Blow it out: +N heat on every enemy within 4\" of your rim (orange ring)."), el("div", { class: "attack-list" }, opts("burst"))))),
@@ -1275,9 +1263,9 @@ export class LiveMatch {
     };
     draw();
     const m = modal({
-      title: `Nanite Swarm: ${rig.name}`, cls: "wide",
+      title: `Grease Monkeys: ${rig.name}`, cls: "wide",
       body: el("div", {},
-        el("p", { class: "rx-lead" }, `1 action, +1 heat. The stack heals 1 SP on its location each Recovery (max 3 per location). Allies must be within ${NANITE_REACH}" (green ring).`),
+        el("p", { class: "rx-lead" }, `1 action, +1 heat. The crew mends 1 SP on its location each Recovery (max 3 per location). Allies must be within ${NANITE_REACH}" (green ring).`),
         el("h4", {}, "1. Host"), hostsEl, el("h4", {}, "2. Location"), locsEl),
       actions: [{ label: "Cancel", ghost: true }],
     });

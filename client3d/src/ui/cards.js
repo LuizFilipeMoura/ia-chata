@@ -3,6 +3,7 @@
 import { el } from "./dom.js";
 import { icon } from "./icons.js";
 import { rich } from "./glossary.js";
+import { NATURE_LABEL } from "./moments-logic.js";
 import { EQUIPMENT, WEAPON_UPGRADES, WEAPONS } from "/shared/game-state.js";
 
 const W = (n) => WEAPONS.longRange[n] || WEAPONS.melee[n] || {};
@@ -14,7 +15,7 @@ export const KEYWORDS = [
   { k: "Rend", ic: "dmg", on: "Chainsaw, Claw, Flamethrower (Field upgrades)", t: "Each wound deals +1 Damage. Depth, not frequency." },
   { k: "Precision", ic: "aimed", on: "Crossbow, Sniper Cannon, Sword (Field upgrades)", t: "Aimed Shots without the −3 Aim penalty: pick the part for free." },
   { k: "Shock", ic: "legs", on: "Mini Gun (Suppressive Fire)", t: "On a hit, the target's movement is halved on its next activation." },
-  { k: "Incendiary", ic: "heat", on: "Arc Gun (Ion Burn)", t: "On a hit, the target gains 1 heat. Push them toward an overheat." },
+  { k: "Incendiary", ic: "heat", on: "Arc Gun (Galvanic Burn)", t: "On a hit, the target gains 1 heat. Push them toward an overheat." },
   { k: "Impale", ic: "anchor", on: "Harpoon, Claw (Vice Grip)", t: "On a hit roll a D12: on 8+ the target is pinned in place until your next activation (it can still turn)." },
   { k: "Bulwark", ic: "prepare", on: "Bulwark Shield", t: "Unlocks the Raise Shield reaction: negates a front-arc attack, −3 Penetration from side or rear." },
   { k: "Splash", ic: "barrage", on: "Mortar, Missile Barrage, Flamethrower", t: `Every attack also catches every OTHER rig near the target, friend or foe, hit or miss: ${["Mortar", "Missile Barrage", "Flamethrower"].map(splashOf).join(", ")}. Don't shell your own brawler.` },
@@ -33,11 +34,11 @@ const NATURE = {
   prototype: ["Prototype", "A new mechanic with a counter, cadence or zone. Big payoff, real bookkeeping, and it may carry a downside. Max ONE per rig."],
 };
 export const natureCards = (weapon = "Autocannon") => el("div", { class: "nat-grid" }, (WEAPON_UPGRADES[weapon] || []).map((u) =>
-  el("div", { class: `nat n-${u.nature}` },
-    el("div", { class: "nat-h" }, el("span", { class: `in-nat n-${u.nature}` }, NATURE[u.nature][0]), el("b", {}, u.name)),
+  el("div", { class: `nat n-${u.nature} ${u.nature === "prototype" ? "charm-card" : ""}` },
+    el("div", { class: "nat-h" }, el("span", { class: `in-nat n-${u.nature}`, title: NATURE[u.nature][0] }, NATURE_LABEL[u.nature]), el("b", {}, u.name)),
     el("div", { class: "kw-t" }, rich(u.tag)),
-    u.catch ? el("div", { class: "nat-catch" }, "Catch: ", u.catch) : null,
-    el("div", { class: "kw-on" }, NATURE[u.nature][1]))));
+    u.catch ? el("div", { class: "nat-catch charm-curse" }, el("span", {}, "Curse: "), u.catch) : null,
+    el("div", { class: "kw-on" }, el("b", {}, `${NATURE[u.nature][0]}: `), NATURE[u.nature][1]))));
 
 const EQ_ICON = { Armor: "harden", Cooling: "purge", Mobility: "jumpjets", Power: "overclock", Utility: "repair", Thermal: "heat", "Fire Control": "aimed", Countermeasures: "smoke" };
 export const equipmentCards = () => el("div", { class: "kw-grid" }, Object.values(EQUIPMENT).map((e) =>

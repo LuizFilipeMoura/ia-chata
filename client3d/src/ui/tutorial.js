@@ -47,6 +47,16 @@ const pipeline = (on) => el("div", { class: "pipe" }, [
 const PICK = { title: "Select Copper", allow: { select: true }, text: "Click your rig on the table, or its card on the left. Selecting a rig shows its actions along the bottom.", highlight: ".hud-roster:not(.enemy)", done: picked };
 const DONE = (text) => ({ title: "Lesson complete ✓", allow: null, text, next: true, last: true });
 
+// The whisper: one flavour line when a lesson ends. Mood only, never a rule.
+const WHISPERS = [
+  "The dummy never feels it. The next ones will.",
+  "Listen... the boiler hums when it is pleased with you.",
+  "Every rig remembers who taught it to fight.",
+  "Iron is patient. It waited years in the ground for this.",
+  "They will write your name on a poster one day. Or a wreck.",
+];
+const whisperLine = (id) => WHISPERS[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % WHISPERS.length];
+
 export const LESSONS = [
   { id: "move", icon: "move", title: "Move and Sprint", blurb: "Walk, run, and what each costs.",
     steps: [
@@ -176,12 +186,12 @@ export const LESSONS = [
     steps: [
       { title: "Eight gadgets", text: "Every rig fits one piece of equipment: an always-on bonus plus one special action with its own heat cost. Here are all eight:", extra: () => equipmentCards(), next: true },
       { title: "Upgrades here too", text: "Equipment also takes one upgrade: Field, Tuned or Prototype, same rules as weapons (still max one Prototype per rig). Check them in the rig builder.", next: true },
-      { title: "A new rig", text: "This time you pilot a medium sniper fitted with a Targeting Computer.", next: true },
+      { title: "A new rig", text: "This time you pilot a medium sniper fitted with a Stereo Rangefinder.", next: true },
       PICK,
       { title: "Inspect it", allow: { select: true }, text: "Press ⓘ next to Copper's name in the action bar (or long-press Copper on the table) to open its full sheet: weapons, upgrades, and equipment with both effects.", highlight: ".in-open", next: true },
       { title: "Lock Sight", allow: { select: true, acts: ["locksight"] }, text: "Press Lock Sight (the equipment action, 1 heat): your next shot this activation rerolls all its missed to-hit dice.", highlight: '[data-act="locksight"]', done: (m, ev) => ev.equip },
       { title: "Now shoot", allow: { select: true, acts: ["fire"] }, text: "Attack the dummy. With Lock Sight up, every to-hit die that misses is rerolled once: check the To hit roll in the log.", highlight: '[data-act="fire"]', done: (m) => myAttack(m) },
-      DONE("Know your gadget: some save you (Harden, Purge, Pop Smoke), some push you (Overclock, Jump Jets)."),
+      DONE("Know your gadget: some save you (Harden, Purge, Pop Smoke), some push you (Overclock, Blast Pistons)."),
     ] },
   { id: "reactions", icon: "prepare", title: "Reactions", blurb: "The Answer token and preparing for hits.",
     steps: [
@@ -353,6 +363,7 @@ export class Coach {
     fill(this.panel, 
       el("div", { class: "coach-h" }, el("span", { class: "step" }, `${this.i + 1}/${this.steps.length}`), el("b", {}, icon(this.lesson.icon), ` ${s.title}`), el("button", { class: "x", title: "Close tutorial", onClick: () => this.destroy() }, "✕")),
       el("p", {}, rich(s.text)),
+      s.last ? el("p", { class: "whisper coach-whisper" }, el("i", {}, whisperLine(this.lesson.id))) : null,
       phase === "dest" ? el("div", { class: "phase" }, el("b", {}, "Step 1 of 2"), " Click a spot inside the green ring.") : null,
       phase === "face" ? el("div", { class: "phase" }, el("b", {}, "Step 2 of 2"), " Move the mouse to turn the ghost, then click to confirm. Right-click picks another spot.") : null,
       s.extra ? s.extra(this.match) : null,

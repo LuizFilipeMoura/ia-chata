@@ -19,10 +19,12 @@ import { el, clear, fill, toast, modal } from "./ui/dom.js";
 import { api } from "./api.js";
 import { icon } from "./ui/icons.js";
 import { sfx, isMuted, setMuted } from "./audio.js";
+import { music } from "./music.js";
 import { settings } from "./settings.js";
 import { SKINS } from "./scene/rig/skins.js";
 import { resetWires } from "./ui/tips.js";
 import { outcomeWords } from "./ui/mission.js";
+import { Moments, installLoadingPosters } from "./ui/posters.js";
 
 function muteButton() {
   const b = el("button", { class: "btn ghost", title: "Sound on/off" }, icon(isMuted() ? "mute" : "sound"));
@@ -39,6 +41,7 @@ const world = new World(document.getElementById("stage"));
 window.__oi3d = { world };
 const screen = document.getElementById("screen");
 const hudRoot = document.getElementById("hud");
+installLoadingPosters(screen);
 let active = null; // current LiveMatch / Replay / Coach
 let attract = null;
 
@@ -66,12 +69,13 @@ function attractMode() {
     { kind: "crate", shape: "rect", x: 42, y: 11, w: 2, h: 2, rot: 15 },
     { kind: "rock", shape: "poly", x: 46, y: 22, points: [[1.6, 0], [0.4, 1.4], [-1.3, 0.9], [-1.2, -0.9], [0.5, -1.5]] },
     { kind: "crater", shape: "ellipse", x: 10, y: 14, rx: 2.8, ry: 2.1, rot: 20 },
-  ], dressSeed: Date.now() }, [{ x: 27, y: 18, vp: 2 }, { x: 13, y: 9, vp: 1 }, { x: 41, y: 27, vp: 1 }]);
+  ], dressSeed: Date.now(), theme: "rozalski", lockTheme: true }, [{ x: 27, y: 18, vp: 2 }, { x: 13, y: 9, vp: 1 }, { x: 41, y: 27, vp: 1 }]);
   const rigs = CHASSIS.map((c, i) => ({ id: i + 1, name: c.name, owner: i % 2 ? "b" : "a", chassis: c.id, pos: { x: 8 + (i % 6) * 8 + rnd() * 2, y: 10 + Math.floor(i / 6) * 14 + rnd() * 3 }, facing: rnd() * 360, heat: 0, destroyed: false, sp: { hull: [1, 1], arms: [1, 1], legs: [1, 1], engine: [1, 1] } }));
   d.snap({ rigs, round: 1, log: [] });
   const spin = (dt) => { world.cam.yaw += dt * 0.05; };
   world.tickers.add(spin);
-  world.cam.dist = 48; world.cam.pitch = 0.6;
+  // Wide and low over Rozalski's fields: the rigs stand against the low sun.
+  world.cam.dist = 66; world.cam.pitch = 0.42;
   let n = 0;
   const timer = setInterval(() => {
     const a = [...d.mechs.values()][Math.floor(rnd() * rigs.length)];
@@ -91,6 +95,7 @@ function attractMode() {
 
 function home() {
   teardown();
+  music.play("menu");
   attract = attractMode();
   titleScreen(screen, {
     onPlay: () => builder(),
@@ -132,6 +137,7 @@ async function play(room, { tutorial = false, lesson = null, cfg = null, side = 
   const back = () => home();
   const match = new LiveMatch(world, hud, { room, side, hotseat, tutorial: !!lesson, onExit: home, onRematch: rematch, onReplay: (r) => replay(r, back) });
   active = match; if (window.__oi3d) window.__oi3d.match = match;
+  new Moments(match, hudRoot, world);
   hudRoot.append(el("div", { class: "hud-menu" },
     el("button", { class: "btn ghost", title: "Menu", onClick: () => modal({ title: "Paused", body: el("p", {}, `Room ${room} stays on the server. "Continue battle" on the title screen brings you back.`), actions: [{ label: "Resume", primary: true }, rematch ? { label: "Restart (same squads)", ghost: true, onClick: rematch } : null, { label: "Main menu", ghost: true, onClick: home }].filter(Boolean) }) }, "☰"),
     el("button", { class: "btn ghost", title: "Rules cheat-sheet", onClick: cheatSheet }, icon("book")),
@@ -162,6 +168,7 @@ async function playCampaign(room, contract = null) {
   const back = () => campaign();
   const match = new LiveMatch(world, hud, { room, side: "a", onExit: back, onRematch: null, noOutcomeModal: true, contract });
   active = match; if (window.__oi3d) window.__oi3d.match = match;
+  new Moments(match, hudRoot, world);
   let resolving = false;
   const resolve = async () => {
     if (resolving || active !== match) return;
@@ -237,12 +244,18 @@ function settingsPanel() {
       toggle("threat", "Threat map (enemy fire zones, T)"),
       toggle("edgePan", "Pan the camera at screen edges"),
       toggle("bloom", "Glow on fire, sparks and lights (bloom)"),
+      toggle("grade", "Film colour grade per battlefield"),
+      toggle("comicFx", "Comic sound words on hits (KRANG!, BOOM!)"),
       toggle("wires", "Wires from HQ (situational tips)"),
       el("button", { class: "btn ghost", onClick: () => { resetWires(); toast("All HQ wires will be sent again.", "good"); } }, "Replay all tips"),
       el("label", { class: "set-row" }, "Effects volume ", el("input", { type: "range", min: 0, max: 1, step: 0.05, value: settings.get("volume"), onInput: (e) => settings.set("volume", Number(e.target.value)) })),
       el("label", { class: "set-row" }, "Pilot voices ", el("input", { type: "range", min: 0, max: 1, step: 0.05, value: settings.get("voiceVolume"), onInput: (e) => settings.set("voiceVolume", Number(e.target.value)) })),
+      el("label", { class: "set-row" }, "Gramophone music ", el("input", { type: "range", min: 0, max: 1, step: 0.05, value: settings.get("musicVolume"), onInput: (e) => settings.set("musicVolume", Number(e.target.value)) })),
       el("label", { class: "set-row" }, "Battlefield ", el("select", { onChange: (e) => settings.set("theme", e.target.value) },
         [["auto", "Auto (from the map)"], ...Object.values(THEMES).map((t) => [t.id, t.name])].map(([v, n]) => el("option", { value: v, selected: settings.get("theme") === v }, n))),
+        el("span", { class: "muted small" }, " next battle")),
+      el("label", { class: "set-row" }, "Weather ", el("select", { onChange: (e) => settings.set("weather", e.target.value) },
+        [["auto", "Auto (from the battlefield)"], ["clear", "Clear"], ["rain", "Rain"]].map(([v, n]) => el("option", { value: v, selected: settings.get("weather") === v }, n))),
         el("span", { class: "muted small" }, " next battle")),
       rigFinish(),
       el("label", { class: "set-row" }, "Animation speed ", el("select", { onChange: (e) => { settings.set("speed", Number(e.target.value)); if (active?.director) active.director.speed = Number(e.target.value); } }, [1, 2, 4].map((v) => el("option", { value: v, selected: settings.get("speed") === v }, `${v}×`))))),
@@ -351,7 +364,7 @@ async function joinVersus(room) {
 
 async function hotseatVersus() {
   teardown();
-  squadBuilder(screen, { mode: "pvp", title: "Cyan commander: commission your squadron", cta: "Next: Red commander ▸", onBack: home, onStart: ({ squad: cyan, table }) => {
+  squadBuilder(screen, { mode: "pvp", title: "Amber commander: commission your squadron", cta: "Next: Red commander ▸", onBack: home, onStart: ({ squad: cyan, table }) => {
     const need = { medium: 0, light: 0 };
     cyan.forEach((u) => { need[u.chassis.startsWith("medium") ? "medium" : "light"]++; });
     squadBuilder(screen, { mode: "pvp", taken: cyan.map((u) => u.chassis), need, hostTable: false, title: "Red commander: commission your squadron", cta: "Start battle ▸", onBack: home, onStart: async ({ squad: red }) => {
@@ -379,7 +392,7 @@ async function watch() {
   modal({
     title: "🍿 Watch bots fight",
     body: el("div", { class: "watch" },
-      ["a", "b"].map((s) => el("label", {}, s === "a" ? "Cyan: " : "Red: ", el("select", { onChange: (e) => { pick[s] = e.target.value; } }, tiers.map((t) => el("option", { value: t, selected: pick[s] === t }, t))))),
+      ["a", "b"].map((s) => el("label", {}, s === "a" ? "Amber: " : "Red: ", el("select", { onChange: (e) => { pick[s] = e.target.value; } }, tiers.map((t) => el("option", { value: t, selected: pick[s] === t }, t))))),
       el("p", { class: "muted" }, "The server plays a full match headlessly (takes ~10s), then you watch the replay.")),
     actions: [{ label: "Cancel", ghost: true }, { label: "Fight!", primary: true, onClick: async () => {
       toast("Simulating the match…", "info", 8000);

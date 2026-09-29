@@ -4,9 +4,11 @@ Two additions that bring non-rig units into digital (3D) battles.
 
 ## A. Enemy drones (campaign waves)
 
+Player-facing name: **Clockworks** (Hunter Clockwork, Sapper Clockwork, Spotter Kite, via `DRONE_TYPES[..].name`). The engine kind, ids and keys stay `drone`.
+
 - New unit kind `drone` (`shared/unit-kinds.js`): parts Hull / Legs / Mount / Engine, soft toughness, vital pools on the §8 floor (6), 2 actions, Speed 5", 40 mm base, Integrity ratio 0.4 (~7).
 - Three types (`DRONE_TYPES`, `shared/game-state.js`):
-  - **Hunter**: Drone Carbine (ROF 3, Pen 5 / 1, 0–14").
+  - **Hunter**: Clockwork Carbine (ROF 3, Pen 5 / 1, 0–14").
   - **Sapper**: Demo Charge (melee, Pen 8 / 3). After the blow the charge `detonate`s: every other unit within 2.5" takes a Pen 6 / 2 hit and the Sapper is destroyed (`detonate()`).
   - **Spotter**: Sidearm + Recon (Paint).
 - Drones score no kill VP, never erupt, and never keep a side alive (`holdsLine`). They're never a Priority Target.

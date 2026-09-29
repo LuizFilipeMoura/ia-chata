@@ -8,6 +8,7 @@ import { rangedProfile } from "../game/units.js";
 import { weaponAccuracyAt, inSweetBand } from "/shared/combat.js";
 import { rich } from "./glossary.js";
 import { icon } from "./icons.js";
+import { SELF_MARK } from "./palette.js";
 
 const ARC = {
   front: { pen: 0, text: "Front: its toughest armour. No bonus.", col: "#c8412f" },
@@ -45,8 +46,8 @@ function arcDiagram(rig, target, arc) {
     ${wedge(3 * q, 5 * q, ARC.rear.col, arc === "rear")}
     <circle cx="${C}" cy="${C}" r="8" fill="#2a241a" stroke="#e9dcc0" stroke-width="2"/>
     <path d="M${C},${C} L${C + 15 * Math.cos(f)},${C + 15 * Math.sin(f)}" stroke="#e9dcc0" stroke-width="3"/>
-    <line x1="${ax}" y1="${ay}" x2="${C}" y2="${C}" stroke="#5fd3c0" stroke-width="2" stroke-dasharray="4 3"/>
-    <circle cx="${ax}" cy="${ay}" r="6" fill="#5fd3c0"/>
+    <line x1="${ax}" y1="${ay}" x2="${C}" y2="${C}" stroke="${SELF_MARK}" stroke-width="2" stroke-dasharray="4 3"/>
+    <circle cx="${ax}" cy="${ay}" r="6" fill="${SELF_MARK}"/>
   </svg>`;
   return d;
 }
@@ -55,7 +56,7 @@ function arcDiagram(rig, target, arc) {
 // (minimum range) and a marksman's close zone in red, you as the marker.
 function rangeArt(profile, distance, melee) {
   const d = el("div", { class: "atk-map" });
-  if (melee) { d.innerHTML = `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="34" fill="#f5b041" fill-opacity=".15" stroke="#f5b041" stroke-dasharray="5 4"/><circle cx="48" cy="60" r="9" fill="#5fd3c0"/><circle cx="74" cy="60" r="9" fill="#2a241a" stroke="#e9dcc0" stroke-width="2"/></svg>`; return d; }
+  if (melee) { d.innerHTML = `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="34" fill="#f5b041" fill-opacity=".15" stroke="#f5b041" stroke-dasharray="5 4"/><circle cx="48" cy="60" r="9" fill="${SELF_MARK}"/><circle cx="74" cy="60" r="9" fill="#2a241a" stroke="#e9dcc0" stroke-width="2"/></svg>`; return d; }
   const max = profile?.maxRange || 24, min = profile?.minRange || 0;
   const band = profile?.band || [Math.max(0, (profile?.sweet ?? max / 2) - 2), (profile?.sweet ?? max / 2) + 2];
   const close = profile?.close?.under || 0;
@@ -65,8 +66,8 @@ function rangeArt(profile, distance, melee) {
     ${close ? `<rect x="10" y="52" width="${x(close) - 10}" height="16" fill="#c8412f" fill-opacity=".3"/>` : ""}
     ${min ? `<rect x="10" y="52" width="${x(min) - 10}" height="16" fill="#c8412f" fill-opacity=".55"/>` : ""}
     <rect x="${x(band[0])}" y="52" width="${Math.max(3, x(band[1]) - x(band[0]))}" height="16" fill="#7fcf6a" fill-opacity=".6"/>
-    <path d="M${x(distance)},40 L${x(distance) - 6},30 L${x(distance) + 6},30 Z" fill="#5fd3c0"/>
-    <line x1="${x(distance)}" y1="40" x2="${x(distance)}" y2="72" stroke="#5fd3c0" stroke-width="2.5"/>
+    <path d="M${x(distance)},40 L${x(distance) - 6},30 L${x(distance) + 6},30 Z" fill="${SELF_MARK}"/>
+    <line x1="${x(distance)}" y1="40" x2="${x(distance)}" y2="72" stroke="${SELF_MARK}" stroke-width="2.5"/>
     <text x="10" y="90" fill="#a8997a" font-size="11">0"</text><text x="110" y="90" fill="#a8997a" font-size="11" text-anchor="end">${max}"</text>
   </svg>`;
   return d;
@@ -75,7 +76,7 @@ function rangeArt(profile, distance, melee) {
 function coverArt(cover) {
   const d = el("div", { class: "atk-map" });
   const walls = cover ? (cover === 2 ? `<rect x="50" y="34" width="12" height="52" fill="#8a7550"/><rect x="66" y="40" width="10" height="40" fill="#8a7550"/>` : `<rect x="56" y="48" width="12" height="26" fill="#8a7550"/>`) : "";
-  d.innerHTML = `<svg viewBox="0 0 120 120"><line x1="18" y1="60" x2="100" y2="60" stroke="#5fd3c0" stroke-width="2" stroke-dasharray="4 3"/>${walls}<circle cx="18" cy="60" r="7" fill="#5fd3c0"/><circle cx="100" cy="60" r="8" fill="#2a241a" stroke="#e9dcc0" stroke-width="2"/></svg>`;
+  d.innerHTML = `<svg viewBox="0 0 120 120"><line x1="18" y1="60" x2="100" y2="60" stroke="${SELF_MARK}" stroke-width="2" stroke-dasharray="4 3"/>${walls}<circle cx="18" cy="60" r="7" fill="${SELF_MARK}"/><circle cx="100" cy="60" r="8" fill="#2a241a" stroke="#e9dcc0" stroke-width="2"/></svg>`;
   return d;
 }
 
@@ -89,7 +90,7 @@ const PART_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine", 
 function rigSchematic(target, on) {
   const d = el("div", { class: "atk-rig" });
   const f = (l) => { const sp = target[l]?.sp ?? 0, max = target[l]?.max || 1, x = sp / max; return x <= 0 ? "#5a2a20" : x < 0.35 ? "#c8412f" : x < 0.7 ? "#f5b041" : "#6f8f55"; };
-  const st = (l) => `fill="${f(l)}" stroke="${on === l ? "#5fd3c0" : "#1b150c"}" stroke-width="${on === l ? 4 : 2}"`;
+  const st = (l) => `fill="${f(l)}" stroke="${on === l ? SELF_MARK : "#1b150c"}" stroke-width="${on === l ? 4 : 2}"`;
   d.innerHTML = `<svg viewBox="0 0 120 150">
     <rect x="40" y="96" width="14" height="46" rx="3" ${st("legs")}/><rect x="66" y="96" width="14" height="46" rx="3" ${st("legs")}/>
     <rect x="14" y="40" width="16" height="50" rx="4" ${st(target.mount ? "mount" : "arms")}/><rect x="90" y="40" width="16" height="50" rx="4" ${st(target.mount ? "mount" : "arms")}/>
@@ -190,7 +191,7 @@ export function attackBriefing(rig, target, rows, onPick, { grit = 0, coverWhy =
     const p = effectiveWeaponProfile(melee ? "melee" : "longRange", r.name, rig) || UNIT_WEAPONS[r.name] || {};
     const kind = melee ? "melee" : r.c.action === "aimed" ? "aimed" : "fire";
     const title = kind === "aimed" ? `Aimed Shot at the ${r.c.location}` : melee ? `Strike with ${r.name}` : `Fire ${r.name}`;
-    const what = p.detonate ? `Detonate: the charge hits ${"it"}, then blasts every other unit within ${p.detonate.radius}" (friends too). The drone is gone.` : melee ? "Swing the melee weapon. Locks you both in melee afterwards. One D12 picks the part it all lands on." : "Full volley. One D12 picks the part it all lands on: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
+    const what = p.detonate ? `Detonate: the charge hits ${"it"}, then blasts every other unit within ${p.detonate.radius}" (friends too). The clockwork is gone.` : melee ? "Swing the melee weapon. Locks you both in melee afterwards. One D12 picks the part it all lands on." : "Full volley. One D12 picks the part it all lands on: Hull 1-4, Arms 5-7, Legs 8-10, Engine 11-12.";
     return el("button", { class: `atk-card ${i === 0 ? "best" : ""}`, onClick: () => onPick(r.c, pickOpts()), onMouseenter: () => strip?.draw(r) },
       svg(ICON[kind], "atk-ic"),
       el("div", { class: "atk-body" },

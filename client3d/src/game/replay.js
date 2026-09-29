@@ -11,6 +11,7 @@ import { CHASSIS, spatial } from "/shared/game-state.js";
 import { beaconStates } from "../scene/beacon-state.js";
 import { DiceTray } from "../ui/dicetray.js";
 import { settings } from "../settings.js";
+import { Newsreel } from "../ui/newsreel.js";
 
 // Plain-language pilot vocabulary, shared by the summary and the full menu.
 const TRAITS = {
@@ -60,6 +61,8 @@ export class Replay {
     this.renderControls();
     // Click any mech (or its roster card) to inspect it.
     this.unclick = world.on("click", (hit) => { if (hit.mechId != null) this.inspect(hit.mechId); });
+    // Shown as a wartime newsreel: grain, flicker, iris and intertitles.
+    this.reel = new Newsreel(hudRoot, { frames: this.frames, place: world.theme?.name });
     this.loop();
   }
 
@@ -75,9 +78,13 @@ export class Replay {
   }
 
   async loop() {
+    await this.reel.show(this.reel.opening, 2200);
     while (!this.dead) {
       if (!this.playing || this.i >= this.frames.length - 1) { await new Promise((r) => setTimeout(r, 150)); continue; }
       this.i++;
+      const card = this.reel.titleAt(this.i);
+      if (card) await this.reel.show(card);
+      if (this.dead) return;
       const f = this.frames[this.i];
       await this.director.play(f);
       if (this.dead) return;
@@ -90,6 +97,7 @@ export class Replay {
       const r = f.turn?.activeRigId != null ? f.rigs.find((x) => x.id === f.turn.activeRigId) : null;
       if (r?.pos && this.follow) this.world.focus(r.pos.x, r.pos.y);
       this.renderControls();
+      if (this.i >= this.frames.length - 1 && !this.ended) { this.ended = true; await this.reel.show(this.reel.ending, 2600); }
     }
   }
 
@@ -101,7 +109,7 @@ export class Replay {
     if (p) {
       // Compact summary; the full explanation is one click away.
       this.brain.append(el("div", { class: "pilots-sum" },
-        ["a", "b"].map((side) => el("div", { class: `ps p-${side}` }, el("b", {}, side === "a" ? "Cyan pilot" : "Red pilot"), el("span", {}, this.pilotTag(side)))),
+        ["a", "b"].map((side) => el("div", { class: `ps p-${side}` }, el("b", {}, side === "a" ? "Amber pilot" : "Red pilot"), el("span", {}, this.pilotTag(side)))),
         el("button", { class: "btn ghost", onClick: () => this.pilotMenu() }, "ⓘ Explain the pilots")));
     }
     if (thought?.top?.length) {
@@ -132,7 +140,7 @@ export class Replay {
       const w = p[side] || {};
       const habits = Object.entries(w).filter(([k, v]) => k.startsWith("b_") && Math.abs(v) >= 0.05).sort((a, b) => b[1] - a[1]);
       return el("div", { class: `pm-col p-${side}` },
-        el("h3", {}, side === "a" ? "Cyan pilot" : "Red pilot", el("span", { class: "muted" }, ` · ${this.pilotTag(side)}`)),
+        el("h3", {}, side === "a" ? "Amber pilot" : "Red pilot", el("span", { class: "muted" }, ` · ${this.pilotTag(side)}`)),
         el("p", { class: "muted" }, TIER_TEXT[p.tiers?.[side]] || TIER_TEXT.balanced),
         el("h4", {}, "Priorities"),
         keys.map((k) => el("div", { class: "pm-row" },
@@ -210,5 +218,5 @@ export class Replay {
   }
 
   exit() { this.destroy(); this.onExit?.(); }
-  destroy() { this.tray.destroy(); this.unclick?.(); document.querySelector(".inspector")?.remove(); this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.dispose(); this.hud.destroy(); }
+  destroy() { this.reel?.destroy(); this.tray.destroy(); this.unclick?.(); document.querySelector(".inspector")?.remove(); this.dead = true; this.minimap.destroy(); this.plates.destroy(); this.director.dispose(); this.hud.destroy(); }
 }

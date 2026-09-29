@@ -1,9 +1,12 @@
 // End-of-battle debrief: who won and why, the VP race round by round, each
 // rig's damage / kills, the MVP, the best shot and the turning point, plus a
 // button to watch the whole battle back in the replay theatre.
-import { el } from "./dom.js";
+import { el, fill } from "./dom.js";
 import { icon } from "./icons.js";
 import { outcomeWords } from "./mission.js";
+import { pulpCover } from "./moments-logic.js";
+import { posterCanvas, rigSilhouette, battlePlace, battleFactions } from "./posters.js";
+import { PROPAGANDA } from "../propaganda.js";
 
 // Validated chart pair on the dark panel (dataviz validator: lightness, CVD,
 // contrast all pass). Identity is also carried by the legend + end labels.
@@ -97,6 +100,32 @@ function vpChart(points, names) {
     wrap);
 }
 
+// The alternative recap: a lurid pulp magazine cover built from the battle's
+// real numbers (MVP, best shot, final VP, the battlefield's name).
+export function pulpCoverEl(stats, { game, side }) {
+  const winner = game.outcome?.winner ?? null;
+  const mvp = stats.mvp();
+  const c = pulpCover({ mvp, best: stats.best, winner, side, place: battlePlace(), round: game.round, vp: game.sides.map((s) => s.vp), seed: stats.vp.length + (mvp?.dmg || 0) });
+  const heroClass = mvp?.owner === side ? "hero" : "villain";
+  return el("div", { class: `pulp t-${c.tone}`, role: "img", "aria-label": `${c.masthead}: ${c.headline}` },
+    el("div", { class: "pulp-top" }, el("span", {}, c.issue), el("b", { class: "pulp-mast" }, c.masthead), el("span", { class: "pulp-price" }, c.price)),
+    el("div", { class: "pulp-art" },
+      el("div", { class: "pulp-burst", "aria-hidden": "true" }),
+      el("div", { class: `pulp-rig ${heroClass}`, html: rigSilhouette("medium", mvp?.name || "x") }),
+      el("div", { class: "pulp-rig far", html: rigSilhouette("light", stats.best?.target || "y") })),
+    el("div", { class: "pulp-head" }, c.headline),
+    el("div", { class: "pulp-sub" }, c.sub),
+    el("div", { class: "pulp-teaser" }, c.teaser));
+}
+
+// Victory: our faction's poster, fresh. Defeat: theirs, pasted over the wall.
+function victoryPoster(won) {
+  const { mine, theirs } = battleFactions();
+  const id = won ? mine : theirs;
+  const p = PROPAGANDA[id];
+  return el("div", { class: "db-poster", "aria-hidden": "true" }, posterCanvas(id, 150, 225, { slogan: p?.slogans[1] || null, seed: 5, aged: won ? 0.2 : 0.8 }));
+}
+
 // The debrief body. side: the viewer's side ("a"/"b").
 export function debrief(stats, { game, side, reason }) {
   const winner = game.outcome?.winner ?? null;
@@ -105,7 +134,17 @@ export function debrief(stats, { game, side, reason }) {
   const tp = stats.turningPoint(winner);
   const mvp = stats.mvp();
   const rows = [...stats.rigs.values()].sort((x, y) => (x.owner === side ? -1 : 1) - (y.owner === side ? -1 : 1) || y.dmg - x.dmg);
-  return el("div", { class: "debrief" },
+  // Two ways to read the ending: the dispatch (numbers) or the pulp cover.
+  const report = el("div", { class: "db-report" });
+  const cover = el("div", { class: "db-cover", hidden: true }, pulpCoverEl(stats, { game, side }));
+  const tab = (label, show) => el("button", { class: "btn ghost db-tab", onClick: (e) => {
+    report.hidden = show !== report; cover.hidden = show !== cover;
+    e.target.parentNode.querySelectorAll(".db-tab").forEach((b) => b.classList.toggle("on", b === e.target));
+  } }, label);
+  const tabs = el("div", { class: "db-tabs" }, tab("Dispatch", report), tab("Pulp cover", cover));
+  tabs.firstChild.classList.add("on");
+  fill(report,
+    victoryPoster(winner === side),
     el("p", { class: "db-lead" }, `${outcomeWords({ ...game.outcome, reason: reason ?? game.outcome?.reason }, null, side) || "Decided on victory points"} · ${vpTxt} · round ${game.round}`),
     el("div", { class: "db-facts" },
       mvp ? el("div", { class: "db-fact" }, icon("star"), el("b", {}, "MVP "), el("span", { class: mvp.owner === "b" ? "c-b" : "c-a" }, mvp.name), ` · ${mvp.dmg} SP dealt${mvp.kills ? `, ${mvp.kills} kill${mvp.kills > 1 ? "s" : ""}` : ""}`) : null,
@@ -115,4 +154,5 @@ export function debrief(stats, { game, side, reason }) {
     rows.length ? el("table", { class: "db-table" },
       el("tr", {}, ["Rig", "SP dealt", "Kills", "Attacks", "Staggers", "Overheats"].map((h) => el("th", {}, h))),
       rows.map((r) => el("tr", {}, el("td", { class: r.owner === "b" ? "c-b" : "c-a" }, r.name), el("td", {}, String(r.dmg)), el("td", {}, String(r.kills)), el("td", {}, String(r.attacks)), el("td", {}, String(r.staggers)), el("td", {}, String(r.overheats))))) : null);
+  return el("div", { class: "debrief" }, tabs, report, cover);
 }

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { ParticleSystem } from "./particles.js";
 import { Debris } from "./debris.js";
 import { Decals } from "./decals.js";
+import { settings } from "../settings.js";
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 // Lights come from a fixed pool that never leaves the scene: three.js
@@ -19,6 +20,8 @@ const WRECK_LIGHTS = 3;      // of the pool, burning wrecks may hold this many
 const HEAVY_BUDGET = 6;
 const HEAVY_WINDOW = 0.35;
 const rnd = (a, b) => a + Math.random() * (b - a);
+const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const _ex = new THREE.Color(), EX_LIGHT = new THREE.Color(0x6e685e), EX_DARK = new THREE.Color(0x121010);
 // A random unit vector, optionally biased upward (bias 0..1).
 function randDir(up = 0) {
   const v = V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
@@ -290,6 +293,57 @@ export class FX {
     if (Math.random() < frac * 0.5) this.particle(pos, { tile: "ember", color: 0xffa040, color2: 0xff2a08, glow: 3, size: 0.1, life: rnd(0.6, 1.2), vel: V(rnd(-0.4, 0.4), rnd(1.5, 2.5), rnd(-0.4, 0.4)), turb: 3 });
   }
 
+  // Diesel exhaust off a stack: a puff of smoke, grey when it merely runs hot,
+  // black on a sprint or when crippled. ex: look.js exhaustFor().
+  exhaust(pos, ex) {
+    _ex.copy(EX_LIGHT).lerp(EX_DARK, ex.dark);
+    this.particle(pos, {
+      additive: false, color: _ex.getHex(), color2: 0x6a655c, opacity: ex.opacity, size: ex.size, grow: 3.2, life: rnd(1.2, 2),
+      vel: V(rnd(-0.25, 0.25), rnd(1.2, 1.9), rnd(-0.25, 0.25)), drag: 0.8, turb: 0.9,
+    });
+  }
+
+  // Futurist speed lines: pale streaks peeling off a sprinting rig's
+  // silhouette, stretched along its travel. dir: unit travel direction.
+  speedLine(at, dir, radius, height) {
+    if (reducedMotion()) return;
+    const side = V(-dir.z, 0, dir.x).multiplyScalar(rnd(-1, 1) * radius * 0.9);
+    const p = at.clone().add(side).addScaledVector(dir, -radius * rnd(0.3, 0.9)).setY(rnd(0.4, Math.max(0.6, height * 0.9)));
+    this.particle(p, { tile: "spark", additive: false, color: 0xf0e4c4, color2: 0xc8b890, opacity: 0.38, size: rnd(0.08, 0.14), life: rnd(0.18, 0.3), vel: dir.clone().multiplyScalar(-rnd(5, 8)), drag: 6, stretch: 0.22 });
+  }
+
+  // Comic onomatopoeia over a hit ("KRANG!"): a hand-lettered deco word on a
+  // jagged burst that pops in and fades. c: look.js comicWord().
+  comic(pos, c, color = "#f3e3b8") {
+    if (!c || settings.get("comicFx") === false || typeof document === "undefined") return;
+    const cv = document.createElement("canvas"); cv.width = 256; cv.height = 128;
+    const g = cv.getContext("2d");
+    // The burst: an amber jagged star with an ink keyline.
+    g.save(); g.translate(128, 64); g.beginPath();
+    for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2, r = i % 2 ? 42 : 60 + Math.random() * 10; g.lineTo(Math.cos(a) * r * 1.9, Math.sin(a) * r * 0.95); }
+    g.closePath(); g.fillStyle = "rgba(160,92,24,0.92)"; g.fill(); g.lineWidth = 4; g.strokeStyle = "#1a120c"; g.stroke(); g.restore();
+    g.font = "900 64px 'Big Shoulders Stencil Display', Impact, 'Arial Black', sans-serif";
+    g.textAlign = "center"; g.textBaseline = "middle";
+    const w = g.measureText(c.word).width, fit = Math.min(1, 220 / Math.max(1, w));
+    g.save(); g.translate(128, 66); g.scale(fit, 1); g.rotate(-0.06);
+    g.lineJoin = "round"; g.lineWidth = 10; g.strokeStyle = "#1a120c"; g.strokeText(c.word, 0, 0);
+    g.fillStyle = "#7a1e18"; g.fillText(c.word, 3, 3); // drop shade
+    g.fillStyle = color; g.fillText(c.word, 0, 0);
+    g.restore();
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    s.position.copy(pos); s.renderOrder = 10;
+    const base = 1.6 * c.scale, still = reducedMotion(), tilt = rnd(-0.2, 0.2);
+    this.timed(s, still ? 0.7 : 0.95, (k, o) => {
+      // Pop: overshoot then settle; reduced motion just shows and fades.
+      const pop = still ? 1 : k < 0.12 ? 0.4 + (k / 0.12) * 0.8 : k < 0.22 ? 1.2 - ((k - 0.12) / 0.1) * 0.2 : 1;
+      o.scale.set(base * 2 * pop, base * pop, 1);
+      o.material.rotation = still ? 0 : tilt;
+      if (!still) o.position.y = pos.y + k * 0.35;
+      o.material.opacity = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
+    });
+  }
+
   // A shell casing kicked out of a gun's side.
   casing(pos, side, big = false) {
     const v = side.clone().multiplyScalar(rnd(2.5, 4)).add(V(0, rnd(3, 5), 0)).add(randDir().multiplyScalar(0.6));
@@ -299,7 +353,7 @@ export class FX {
   // ---- Equipment effects ----
 
   // A flat ring racing out across the table to `radius` (Heat Purge Wave,
-  // Meltdown burst): a bright rim over a faint scorched disc.
+  // Scuttle burst): a bright rim over a faint scorched disc.
   shockwave(pos, radius, color = 0xff7a2a, dur = 0.9, motes = 28) {
     const rim = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 72), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(1.6), transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
     rim.rotation.x = -Math.PI / 2; rim.position.set(pos.x, 0.2, pos.z);
@@ -362,7 +416,7 @@ export class FX {
     });
   }
 
-  // Welding: green-white sparks and a flicker (Emergency Patch, Nanite Swarm).
+  // Welding: green-white sparks and a flicker (Emergency Patch, Grease Monkeys).
   weld(pos, n = 18) {
     this.sparks(pos, n, 0x8dff7a, { speed: 5 });
     this.glare(pos, 0.7, 0xeaffea, 0.18);
@@ -451,7 +505,7 @@ export class FX {
 
   // A pilot's radio line over their mech: a dark riveted panel, the speaker
   // in the side's colour ("▸ OTTILIE"), the words in cream underneath.
-  bubble(pos, str, accent = "#5fd3c0", speaker = null) {
+  bubble(pos, str, accent = "#f2c46b", speaker = null) {
     const c = document.createElement("canvas");
     const g = c.getContext("2d");
     const body = "600 30px Rajdhani, Arial, sans-serif", head = "700 20px Rajdhani, Arial, sans-serif";

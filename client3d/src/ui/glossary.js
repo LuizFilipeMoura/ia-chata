@@ -72,7 +72,7 @@ export const GLOSSARY = {
   "melee": "Close combat within reach. Rigs in melee are locked together until one disengages.",
   "Sprint": "A longer move for 2 heat instead of 1.",
   "Equipment": "A rig's gadget: an always-on bonus plus one special action.",
-  "Lock Sight": "Targeting Computer action: steadies your aim for the next shot.",
+  "Lock Sight": "Stereo Rangefinder action: steadies your aim for the next shot.",
   "Toughness 5": "",
 };
 delete GLOSSARY["Toughness 5"];

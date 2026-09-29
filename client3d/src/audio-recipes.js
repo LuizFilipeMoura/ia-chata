@@ -158,7 +158,7 @@ const LONG = {
     tail(P, t + 0.05, k, 1600, 0.04);
     grit(P, t + 0.1, k, 1, 0.08);
   },
-  "Drone Carbine": (P, t, k) => {
+  "Clockwork Carbine": (P, t, k) => {
     P.noise(t, 0.04 * k.d, { freq: P.jit(4200 * k.b), type: "bandpass", q: 3, peak: 0.22 });
     P.tone(t, 0.05, { freq: P.jit(640 * k.p), to: 320, type: "square", peak: 0.06 });
     if (k.dbl) P.tone(t, 0.05, { freq: 1800 * k.p, to: 1200, type: "sine", peak: 0.04 }); // servo tick
@@ -404,3 +404,251 @@ export const servoRecipe = (P, t, k, foot) => {
   if (k.grit) P.noise(t + 0.2, 0.03, { freq: foot.c * k.b, type: "bandpass", q: 6, peak: 0.05 }); // gear seat
   if (k.tail && foot.layer === "hiss") LAYER.hiss(P, t + 0.1, k);
 };
+
+// ---- Dieselpunk cues (sfx.engineStart, sfx.whistle, ...) ----
+// The same (P, t, k) shape as CORE; every one is a few tones and noise bursts.
+export const CUES = {
+  // A cold diesel: a cough, the starter cranking faster, the catch, and the
+  // idle settling down.
+  engineStart: (P, t, k) => {
+    P.noise(t, 0.16, { freq: 420 * k.b, sweepTo: 140, peak: 0.35 }); // cough
+    let at = t + 0.3;
+    for (let i = 0; i < 6; i++) {
+      P.tone(at, 0.07, { freq: P.jit(46 * k.p, 0.1), to: 30, type: "square", peak: 0.16 });
+      P.noise(at, 0.06, { freq: 320 * k.b, peak: 0.18 });
+      at += 0.2 - i * 0.02;
+    }
+    P.noise(at, 0.35 * k.d, { freq: 700 * k.b, sweepTo: 120, peak: 0.5 }); // catch
+    P.tone(at, 0.45 * k.d, { freq: 52 * k.p, to: 78 * k.p, type: "sawtooth", peak: 0.2 });
+    P.tone(at + 0.4, 1.3 * k.d, { freq: 78 * k.p, to: 44 * k.p, type: "sawtooth", peak: 0.12, attack: 0.05 }); // settles
+    for (let i = 0; i < 8; i++) P.noise(at + 0.45 + i * (0.1 + i * 0.012), 0.05, { freq: 260 * k.b, peak: 0.1 });
+    grit(P, at + 0.1, k, 3, 0.08);
+    if (k.tail) P.noise(at + 0.3, 0.9, { freq: 4500 * k.b, sweepTo: 2200, type: "highpass", peak: 0.06, attack: 0.1 }); // exhaust
+  },
+  // A factory steam whistle: a three-note chime chord on a breath of steam.
+  whistle: (P, t, k) => {
+    const L = 1.1 * k.d;
+    for (const f of [370, 466, 554]) P.tone(t, L, { freq: f * k.p, to: f * k.p * 0.97, type: "triangle", peak: 0.07, attack: 0.08 });
+    P.noise(t, L, { freq: 2200 * k.b, type: "bandpass", q: 1.5, peak: 0.12, attack: 0.06 });
+    if (k.tail) P.tone(t + L * 0.6, 0.9, { freq: 470 * k.p, to: 440 * k.p, type: "triangle", peak: 0.02, attack: 0.1 }); // off the chimneys
+  },
+  // An air-raid siren winding up, holding, and starting to sag.
+  siren: (P, t, k) => {
+    const up = 2.2 * k.d;
+    P.tone(t, up, { freq: 110 * k.p, to: 620 * k.p, type: "triangle", peak: 0.12, attack: 0.4 });
+    P.tone(t, up, { freq: 220 * k.p, to: 1240 * k.p, type: "sine", peak: 0.04, attack: 0.4 });
+    P.tone(t + up - 0.05, 1.4, { freq: 620 * k.p, to: 380 * k.p, type: "triangle", peak: 0.1, attack: 0.05 });
+    P.tone(t + up - 0.05, 1.4, { freq: 1240 * k.p, to: 760 * k.p, type: "sine", peak: 0.03, attack: 0.05 });
+    P.noise(t, up + 1, { freq: 900 * k.b, sweepTo: 2200 * k.b, type: "bandpass", q: 2, peak: 0.05, attack: 0.5 }); // rotor air
+  },
+  // The overheat klaxon: honking "aa-OOGAH"s.
+  klaxon: (P, t, k) => {
+    const n = k.dbl ? 3 : 2;
+    for (let i = 0; i < n; i++) {
+      const s = t + i * 0.62;
+      P.tone(s, 0.3, { freq: 150 * k.p, to: 380 * k.p, type: "sawtooth", peak: 0.14 });
+      P.tone(s + 0.28, 0.3, { freq: 380 * k.p, to: 360 * k.p, type: "square", peak: 0.09 });
+      P.tone(s, 0.58, { freq: 190 * k.p, to: 470 * k.p, type: "sawtooth", peak: 0.05 });
+    }
+  },
+  // A poster pasted to a wall: the paper slap, a palm thump, a rustle.
+  posterSlam: (P, t, k) => {
+    P.noise(t, 0.09, { freq: 1300 * k.b, type: "bandpass", q: 0.7, peak: 0.45, attack: 0.002 });
+    P.tone(t, 0.22 * k.d, { freq: P.jit(95 * k.p), to: 50, type: "sine", peak: 0.4 });
+    P.noise(t + 0.06, 0.25 * k.d, { freq: 4200 * k.b, type: "highpass", peak: 0.06 });
+    if (k.dbl) P.noise(t + 0.18, 0.05, { freq: 900 * k.b, peak: 0.12 });
+  },
+  // A rubber stamp coming down on a form.
+  stamp: (P, t, k) => {
+    P.tone(t, 0.12 * k.d, { freq: P.jit(160 * k.p), to: 70, type: "sine", peak: 0.45 });
+    P.noise(t, 0.05, { freq: 900 * k.b, peak: 0.35 });
+    P.noise(t, 0.015, { freq: 5000 * k.b, type: "highpass", peak: 0.1 });
+    if (k.grit) P.noise(t + 0.08, 0.03, { freq: 2200 * k.b, type: "bandpass", q: 4, peak: 0.06 }); // the handle rattles
+  },
+  // A coin rattling down a slot, then the machine's mechanical clunk.
+  coin: (P, t, k) => {
+    const bounces = [0, 0.13, 0.22, 0.28, 0.32];
+    bounces.forEach((d, i) => {
+      P.tone(t + d, 0.12, { freq: P.jit(3100 * k.p, 0.05), type: "sine", peak: 0.08 / (1 + i * 0.4) });
+      P.tone(t + d, 0.09, { freq: P.jit(4400 * k.p, 0.05), type: "sine", peak: 0.04 / (1 + i * 0.4) });
+    });
+    P.noise(t + 0.48, 0.1, { freq: 700 * k.b, type: "bandpass", q: 3, peak: 0.4 });
+    P.tone(t + 0.48, 0.1, { freq: 130 * k.p, to: 80, type: "square", peak: 0.12 });
+    if (k.dbl) P.noise(t + 0.62, 0.06, { freq: 1100 * k.b, type: "bandpass", q: 3, peak: 0.2 });
+  },
+  // A reel-to-reel starting: the transport clacks, the motor comes up, hiss.
+  tapeHiss: (P, t, k) => {
+    P.noise(t, 0.03, { freq: 2600 * k.b, type: "bandpass", q: 5, peak: 0.3 });
+    P.tone(t + 0.02, 0.45, { freq: 55 * k.p, to: 120 * k.p, type: "sawtooth", peak: 0.04 });
+    P.noise(t + 0.05, 1.3 * k.d, { freq: 4200 * k.b, type: "highpass", peak: 0.07, attack: 0.25 });
+    if (k.grit) P.noise(t + 0.3, 0.02, { freq: 1800 * k.b, type: "bandpass", q: 6, peak: 0.1 }); // splice
+  },
+  // A film projector clattering up to speed.
+  projector: (P, t, k) => {
+    P.noise(t, 0.04, { freq: 1500 * k.b, type: "bandpass", q: 3, peak: 0.3 });
+    P.tone(t, 1.6 * k.d, { freq: 48 * k.p, to: 60 * k.p, type: "sawtooth", peak: 0.04, attack: 0.3 });
+    let at = t + 0.1, gap = 0.1;
+    while (at < t + 1.6 * k.d) {
+      P.noise(at, 0.015, { freq: P.jit(2100 * k.b, 0.1), type: "bandpass", q: 6, peak: 0.12 });
+      at += gap; gap = Math.max(0.055, gap * 0.9);
+    }
+  },
+  // Far off, something heavy takes a step (an enemy acting out of sight).
+  distantThud: (P, t, k) => {
+    P.tone(t, 0.7 * k.d, { freq: P.jit(52 * k.p), to: 28, type: "sine", peak: 0.35 });
+    P.noise(t, 0.8 * k.d, { freq: 180 * k.b, sweepTo: 60, peak: 0.25, attack: 0.02 });
+    P.tone(t + 0.35, 0.6, { freq: 44 * k.p, to: 26, type: "sine", peak: 0.1 }); // off the buildings
+    if (k.grit) P.noise(t + 0.1, 0.05, { freq: 900 * k.b, type: "bandpass", q: 3, peak: 0.04 });
+  },
+  // A medium's hull groaning under its own weight, like a whale in a pipe.
+  groan: (P, t, k) => {
+    const a = 0.8 * k.d, b = 1.0 * k.d;
+    P.tone(t, a, { freq: P.jit(62 * k.p), to: 92 * k.p, type: "triangle", peak: 0.22, attack: 0.25 });
+    P.tone(t + a * 0.9, b, { freq: 92 * k.p, to: 50 * k.p, type: "triangle", peak: 0.2, attack: 0.05 });
+    P.tone(t, a, { freq: 124 * k.p, to: 184 * k.p, type: "sine", peak: 0.05, attack: 0.3 });
+    P.noise(t + 0.2, a + b * 0.6, { freq: 320 * k.b, type: "bandpass", q: 5, peak: 0.08, attack: 0.2 }); // creak
+    if (k.grit) grit(P, t + a, k, 2, 0.05);
+  },
+};
+
+// ---- Engine idle ----
+// The active rig's diesel: firing pitch and chug rate from its feet profile,
+// rising and roughening with heat. heat: fraction of capacity (0..~1.6).
+export function idleFor(chassisId, heat = 0) {
+  const foot = footFor(chassisId);
+  const h = Math.max(0, Math.min(1.6, Number(heat) || 0));
+  const heavy = foot.w >= 0.3;
+  return {
+    f0: foot.f * 0.42 * (1 + 0.35 * h),
+    rate: (heavy ? 5.5 : 8.5) * (1 + 0.6 * h),
+    rough: Math.min(1, 0.15 + 0.6 * h),
+    lp: 260 + 480 * h,
+    wave: foot.wave === "triangle" ? "triangle" : "sawtooth",
+  };
+}
+
+// ---- Clockworks (wind-up machines) don't talk ----
+// A line becomes ticks, ratchet runs and the odd little whistle; a longer line
+// ticks longer. Pure: { ev: [{ t, kind, freq }], total }.
+export function clockworkNotes(line, rand = Math.random) {
+  const words = (String(line).match(/[A-Za-z']+/g) || []).length || 1;
+  const ev = [];
+  let t = 0;
+  const n = Math.min(24, 4 + words * 3);
+  for (let i = 0; i < n; i++) {
+    if (rand() < 0.14 && i > 1) {
+      for (let j = 0; j < 5; j++) ev.push({ t: t + j * 0.022, kind: "ratchet", freq: 2600 + j * 120 });
+      t += 0.16;
+    } else {
+      ev.push({ t, kind: "tick", freq: i % 2 ? 3200 : 2400 });
+      t += 0.075 + rand() * 0.03;
+    }
+  }
+  if (/!/.test(line) || rand() < 0.4) { ev.push({ t, kind: "whistle", freq: 1400 + rand() * 500 }); t += 0.3; }
+  return { ev, total: t + 0.05 };
+}
+
+// ---- Ambient beds per battle theme ----
+// loops: continuous layers (filtered noise or a drone) with an optional slow
+// swell [rate Hz, depth 0..1] and filter sweep [rate Hz, depth Hz].
+// events: occasional far-off sounds, each fired every `every` [min, max] s.
+// lp: the whole bed's distance filter.
+const gull = (P, t) => { const n = 2 + Math.floor(P.rand() * 3); for (let i = 0; i < n; i++) { const s = t + i * 0.28; P.tone(s, 0.12, { freq: P.jit(1500, 0.1), to: P.jit(2100, 0.1), type: "sine", peak: 0.03 }); P.tone(s + 0.1, 0.16, { freq: 2000, to: 1300, type: "triangle", peak: 0.025 }); } };
+const whale = (P, t) => { P.tone(t, 2.4, { freq: P.jit(160, 0.2), to: P.jit(300, 0.15), type: "sine", peak: 0.035, attack: 0.8 }); P.tone(t + 2.2, 2.6, { freq: 300, to: P.jit(120, 0.2), type: "sine", peak: 0.03, attack: 0.3 }); };
+const bell = (P, t, f = 180) => { for (const [r, p] of [[1, 0.05], [2, 0.03], [2.4, 0.025], [3, 0.018], [4.2, 0.012]]) P.tone(t, 3.5 / Math.sqrt(r), { freq: f * r, type: "sine", peak: p }); };
+const crackles = (P, t, n = 10) => { for (let i = 0; i < n; i++) P.noise(t + P.rand() * 1.2, 0.015, { freq: P.jit(3500, 0.4), type: "bandpass", q: 3, peak: 0.05 }); };
+const thump = (P, t, f = 60, peak = 0.3) => { P.tone(t, 0.5, { freq: P.jit(f, 0.1), to: f * 0.5, type: "sine", peak }); P.noise(t, 0.4, { freq: 500, sweepTo: 90, peak: peak * 0.6 }); };
+const clankAt = (P, t, f = 1500, peak = 0.08) => { P.noise(t, 0.05, { freq: P.jit(f, 0.15), type: "bandpass", q: 8, peak }); P.tone(t, 0.4, { freq: P.jit(f / 3, 0.1), type: "sine", peak: peak * 0.3 }); };
+const steamWhistle = (P, t) => { for (const f of [311, 392, 466]) P.tone(t, 1.4, { freq: f, to: f * 0.97, type: "triangle", peak: 0.018, attack: 0.1 }); P.noise(t, 1.4, { freq: 2000, type: "bandpass", q: 1.5, peak: 0.03, attack: 0.1 }); };
+
+export const BEDS = {
+  foundry: {
+    lp: 2200,
+    loops: [{ kind: "noise", filter: "lowpass", freq: 220, q: 0.7, gain: 0.09, swell: [0.07, 0.4] }, { kind: "drone", freqs: [41, 61.5], wave: "sawtooth", lp: 150, gain: 0.03 }],
+    events: [
+      { every: [5, 11], play: (P, t) => { thump(P, t, 58, 0.25); clankAt(P, t + 0.02, 900, 0.07); } }, // drop hammer
+      { every: [9, 20], play: (P, t) => P.noise(t, 2.5, { freq: 300, sweepTo: 700, type: "bandpass", q: 0.8, peak: 0.06, attack: 0.6 }) }, // furnace door
+      { every: [12, 25], play: (P, t) => clankAt(P, t, 1900, 0.05) },
+    ],
+  },
+  refinery: {
+    lp: 2600,
+    loops: [{ kind: "noise", filter: "bandpass", freq: 380, q: 0.7, gain: 0.08, swell: [0.13, 0.25] }, { kind: "noise", filter: "highpass", freq: 5500, q: 0.7, gain: 0.012, swell: [0.05, 0.6] }],
+    events: [
+      { every: [6, 14], play: (P, t) => P.noise(t, 1.6, { freq: 6000, sweepTo: 3000, type: "highpass", peak: 0.05, attack: 0.1 }) }, // pipe hiss
+      { every: [14, 30], play: (P, t) => P.noise(t, 3, { freq: 250, sweepTo: 600, type: "bandpass", q: 0.6, peak: 0.08, attack: 0.8 }) }, // flare-stack surge
+      { every: [10, 22], play: (P, t) => clankAt(P, t, 1200, 0.04) },
+    ],
+  },
+  railyard: {
+    lp: 2400,
+    loops: [{ kind: "noise", filter: "lowpass", freq: 400, q: 0.5, gain: 0.035, swell: [0.05, 0.5] }],
+    events: [
+      { every: [10, 20], play: (P, t) => { for (let i = 0; i < 4; i++) clankAt(P, t + i * 0.45 + P.rand() * 0.1, 1400, 0.07 / (1 + i * 0.5)); } }, // shunting, couplings
+      { every: [8, 16], play: (P, t) => { for (let i = 0; i < 6; i++) P.noise(t + i * 0.32, 0.18, { freq: 700, sweepTo: 250, peak: 0.05 / (1 + i * 0.2) }); } }, // chuffs
+      { every: [22, 45], play: steamWhistle },
+    ],
+  },
+  skyport: {
+    lp: 2800,
+    loops: [{ kind: "drone", freqs: [55, 55.7, 82.4], wave: "sawtooth", lp: 180, gain: 0.03, swell: [0.1, 0.4] }, { kind: "noise", filter: "bandpass", freq: 600, q: 0.5, gain: 0.03, swell: [0.06, 0.6] }],
+    events: [
+      { every: [14, 28], play: (P, t) => { P.tone(t, 2.6, { freq: 98, to: 95, type: "sawtooth", peak: 0.05, attack: 0.3 }); P.tone(t, 2.6, { freq: 49, to: 48, type: "triangle", peak: 0.05, attack: 0.3 }); } }, // foghorn
+      { every: [6, 14], play: gull },
+      { every: [25, 50], play: whale },
+    ],
+  },
+  ashfields: {
+    lp: 2400,
+    loops: [{ kind: "noise", filter: "bandpass", freq: 500, q: 0.6, gain: 0.07, swell: [0.08, 0.6], sweep: [0.05, 250] }],
+    events: [
+      { every: [3, 7], play: (P, t) => crackles(P, t, 12) }, // fires
+      { every: [12, 24], play: (P, t) => P.noise(t, 3.5, { freq: 900, sweepTo: 400, type: "bandpass", q: 2, peak: 0.04, attack: 1.2 }) }, // gust
+    ],
+  },
+  rozalski: {
+    lp: 3200,
+    loops: [{ kind: "noise", filter: "bandpass", freq: 2600, q: 0.5, gain: 0.025, swell: [0.15, 0.6] }, { kind: "noise", filter: "lowpass", freq: 300, q: 0.5, gain: 0.05, swell: [0.06, 0.5] }],
+    events: [
+      { every: [7, 16], play: (P, t) => { const n = 2 + Math.floor(P.rand() * 3); for (let i = 0; i < n; i++) { P.tone(t + i * 0.34, 0.22, { freq: P.jit(620, 0.1), to: 430, type: "sawtooth", peak: 0.02 }); P.noise(t + i * 0.34, 0.2, { freq: 1200, type: "bandpass", q: 3, peak: 0.03 }); } } }, // crows
+      { every: [30, 60], play: (P, t) => { for (let i = 0; i < 3; i++) bell(P, t + i * 2.2, 196); } }, // church bell
+    ],
+  },
+  karnaca: {
+    lp: 3000,
+    loops: [{ kind: "noise", filter: "lowpass", freq: 520, q: 0.5, gain: 0.07, swell: [0.12, 0.7] }, { kind: "noise", filter: "bandpass", freq: 900, q: 1.2, gain: 0.02, swell: [0.04, 0.7], sweep: [0.07, 400] }],
+    events: [
+      { every: [3, 8], play: (P, t) => P.noise(t, 0.5, { freq: 800, sweepTo: 350, type: "bandpass", q: 1, peak: 0.05, attack: 0.08 }) }, // harbour water lapping
+      { every: [7, 15], play: gull },
+      { every: [16, 32], play: (P, t) => P.noise(t, 3, { freq: 700, sweepTo: 1500, type: "bandpass", q: 3, peak: 0.03, attack: 1 }) }, // wind down a corridor
+    ],
+  },
+  sunken: {
+    lp: 1400,
+    loops: [{ kind: "drone", freqs: [36, 36.4], wave: "triangle", lp: 120, gain: 0.05, swell: [0.05, 0.5] }, { kind: "noise", filter: "lowpass", freq: 260, q: 0.6, gain: 0.04 }],
+    events: [
+      { every: [8, 18], play: (P, t) => { P.tone(t, 2.2, { freq: P.jit(48, 0.2), to: P.jit(36, 0.1), type: "sawtooth", peak: 0.04, attack: 0.5 }); P.noise(t + 0.3, 1.5, { freq: 240, type: "bandpass", q: 6, peak: 0.04, attack: 0.3 }); } }, // pressure groan
+      { every: [2, 6], play: (P, t) => P.tone(t, 0.06, { freq: P.jit(1700, 0.2), to: 600, type: "sine", peak: 0.04 }) }, // drip
+      { every: [20, 40], play: whale },
+    ],
+  },
+  nomansland: {
+    lp: 2000,
+    loops: [{ kind: "noise", filter: "bandpass", freq: 820, q: 6, gain: 0.02, swell: [0.1, 0.6], sweep: [0.09, 180] }, { kind: "noise", filter: "lowpass", freq: 260, q: 0.5, gain: 0.05, swell: [0.05, 0.5] }],
+    events: [
+      { every: [6, 14], play: (P, t) => { thump(P, t, 40, 0.18); P.noise(t + 0.4, 1.5, { freq: 200, sweepTo: 60, peak: 0.06, attack: 0.1 }); } }, // distant artillery
+      { every: [10, 22], play: (P, t) => { for (let i = 0; i < 3; i++) P.tone(t + i * 0.09, 0.05, { freq: P.jit(3200, 0.1), to: 3700, type: "sine", peak: 0.012 }); P.noise(t, 0.4, { freq: 5000, type: "highpass", peak: 0.015 }); } }, // rats
+      { every: [14, 26], play: (P, t) => P.tone(t, 2.5, { freq: 910, to: 960, type: "sine", peak: 0.01, attack: 0.8 }) }, // wind singing on the wire
+    ],
+  },
+};
+
+// A theme's `ambience` id (or its theme id) to a bed: exact, then by name,
+// then the foundry.
+const BED_ALIASES = [[/ash/, "ashfields"], [/sky|zeppelin/, "skyport"], [/rail/, "railyard"], [/refin/, "refinery"], [/foundry|forge/, "foundry"], [/no.?man|trench|wire/, "nomansland"], [/rozalski|wheat|field/, "rozalski"], [/karnaca|harbou?r|port|dock/, "karnaca"], [/sunken|deco|drown|under/, "sunken"], [/metropolis|ferriss|city/, "refinery"]];
+export function bedFor(id) {
+  const key = String(id || "").toLowerCase();
+  if (BEDS[key]) return key;
+  for (const [re, bed] of BED_ALIASES) if (re.test(key)) return bed;
+  return "foundry";
+}

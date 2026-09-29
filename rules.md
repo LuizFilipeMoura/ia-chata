@@ -122,7 +122,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 
 - **Disengage [1]**: break a melee **engagement** (see below). Frees **both** Rigs from the lock; after Disengaging, the Rig may Move/Sprint later in the same activation. No effect (and costs nothing) if the Rig isn't engaged.
 
-- **Plant Flag [0]**: stake a beacon (§11). The Rig must be within **2"** (rim) of the **lit** beacon or the **Next** beacon. The flag holds until the Rig is moved by anything (Move, Sprint, Jump Jets, grapnel, a shove or a pull). A flag on Next counts once that beacon lights. Costs 1 action, no heat.
+- **Plant Flag [0]**: stake a beacon (§11). The Rig must be within **2"** (rim) of the **lit** beacon or the **Next** beacon. The flag holds until the Rig is moved by anything (Move, Sprint, Blast Pistons, grapnel, a shove or a pull). A flag on Next counts once that beacon lights. Costs 1 action, no heat.
 
 - **Attack [1]** (formerly *Fire Weapon*): attack with one equipped weapon, the ranged gun or, in reach, the melee weapon (§7). A ranged weapon is spent after firing: to fire it **again** in the same activation you must **Reload** first, for a Rig this costs **no action**, paid in heat instead (§5), a spent weapon cannot be fired. Each fire costs 1 action, but the **second (and later) ranged shot** of an activation runs the barrel hot for **+1 heat**. So Fire · Reload · Fire uses 2 actions (two shots) and 1 + (1–2) + 2 = 4–5 heat. **Melee** weapons never need reloading.
 
@@ -178,7 +178,7 @@ Each Rig may take **up to 3 actions** per activation. The number in **[brackets]
 Closing to melee **locks two Rigs together**: this is what stops an enemy from simply kiting you with ranged fire. *⚙ TUNING: new mechanic to make melee matter.*
 
 - **Getting engaged.** A Rig becomes **engaged** with an enemy either by **making a melee attack** against it (in reach) or by **Moving into base contact** and declaring the engagement. The lock is **mutual** (both Rigs are engaged) and **one-to-one** (a Rig already engaged can't be pulled into a second lock; you may still melee an already-engaged enemy, you just don't lock to it).
-- **Pinned.** While engaged, a Rig **cannot Move, Sprint, or Jump Jets**: it must **Disengage** first (a 1-action, 1-heat step, §5). Non-movement equipment (Harden, Purge, Overclock, Emergency Patch) still works.
+- **Pinned.** While engaged, a Rig **cannot Move, Sprint, or Blast Pistons**: it must **Disengage** first (a 1-action, 1-heat step, §5). Non-movement equipment (Harden, Purge, Overclock, Emergency Patch) still works.
 - **Ranged penalty.** An engaged Rig firing a **ranged** weapon does so at **−2 Accuracy** (point-blank scramble). **Melee** attacks are unaffected, so while locked, your melee weapon is the better answer.
 - **Breaking the lock.** Engagement ends when: a Rig spends **Disengage** (frees both), the engaged partner is **destroyed** or **immobilised** (legs gone), or a Rig **Disengages and moves away**. Engagement **persists across rounds**: it is *not* cleared in Recovery.
 
@@ -298,7 +298,7 @@ Hit locations are random, so damage spreads. **Integrity** makes every point cou
 
 - **Every SP counts.** Each SP a component loses (a wound, overflow, a munitions cook-off, burning, a blast, overheat damage) also costs **1 Integrity**. Extra damage to a Hull or Engine already at 0 costs **2 Integrity** per point.
 - **At 0 Integrity the Rig is destroyed**, however many components are still standing. It rolls for the §9 blast and scores kill VP (§11) like any wreck.
-- **Nothing gives it back.** Repair, Field Weld and Nanite Swarm restore component SP (function) but never Integrity. The one exception: **Emergency Patch** also restores **1 Integrity**.
+- **Nothing gives it back.** Repair, Field Weld and Grease Monkeys restore component SP (function) but never Integrity. The one exception: **Emergency Patch** also restores **1 Integrity**.
 - **Kneecapper** (Double MG, §13) cripples but never kills: it can't take Integrity below 1.
 - **Size.** Each chassis sets its own Integrity, tuned in the unit catalog. As a guide, Lights carry about **50%** of their total SP and Mediums about **65%**: Lights pay for their speed with a thinner pool. Extra max SP (Ablative Plating, relics, a Commander's bonus) raises Integrity in proportion.
 - **Danger tiers.** At **half** Integrity or less a Rig is **Bloodied**; at a **quarter** or less (rounded up) it is **Critical**. The tiers change no numbers: they tell both players how close the kill is. *(Digital: the log calls each crossing, e.g. "Black is BLOODIED (17/34)".)*
@@ -471,13 +471,13 @@ Each weapon offers **three upgrades, one of each nature** (see *Upgrade natures*
 |---|---|---|---|
 | Mini Gun | Suppressive Fire (Shock) | Extended Belt (+2 ROF; 1s add heat) | Suppression Lock |
 | Double MG | Gyro Mount (reroll a miss) | Pinning Burst (4+ hits → −1 action) | Kneecapper |
-| Autocannon | Depleted Core (grants Penetration) | AP Shells (Armour Piercing) | Penetrator Rounds |
-| Arc Gun | Ion Burn (Incendiary) | Systems Overload (−1 action) | Ion Storm |
+| Autocannon | Tungsten Core (grants Penetration) | AP Shells (Armour Piercing) | Penetrator Rounds |
+| Arc Gun | Galvanic Burn (Incendiary) | Boiler Surge (−1 action) | Galvanic Storm |
 | Mortar | Cluster Shells (2nd location) | Airburst Fuze (ignores cover) | Barrage |
 | Sniper Cannon | Marksman Optics (Precision) | Cold Bore (grants Penetration vs undamaged) | Enfilade |
-| Siege Maul | Reinforced Head (grants Damage) | Breaching Round (Hull no-repair) | Piledriver Protocol |
-| Missile Barrage | Swarm Warheads (+1 ROF) | Shaped Charges (Armour Piercing) | Fire Control Lock |
-| Sword | Duelist's Balance (Precision) | Opportunist (grants Penetration vs disrupted) | Superconductor Edge |
+| Siege Maul | Reinforced Head (grants Damage) | Breaching Round (Hull no-repair) | Piledriver Drill |
+| Missile Barrage | Swarm Warheads (+1 ROF) | Shaped Charges (Armour Piercing) | Plotting-Table Lock |
+| Sword | Duelist's Balance (Precision) | Opportunist (grants Penetration vs disrupted) | Quenched Edge |
 | Circular Saw | Tempered Teeth (Armour Piercing) | Sunder (−1 max SP struck) | Dismember |
 | Chainsaw | Ripper Teeth (Rend) | Bloodletter (+1 ROF vs damaged) | Redline Governor |
 | Claw | Rending Talons (Rend) | Vice Grip (Impale) | Breach Grip |
@@ -510,19 +510,19 @@ The table above predates the Field/Tuned/Prototype natures and lists only the or
 - **Pinning Burst** (Double MG, Tuned), landing 4+ hits in one attack pins the target: it loses 1 action on its next activation.
 - **Anvil Boss** (Bulwark Shield, Tuned), while Raise Shield is up, the *first* enemy to hit this Rig with a **melee** attack each round eats a free Penetration-6 melee counter-hit from the shield-bearer. Melee only (ranged attacks provoke nothing), once per round.
 - **Redline Governor** (Chainsaw, Prototype), the attacker's own heat over its class's Heat Capacity adds +1 Penetration and +1 to-hit die each, capped at +3/+3.
-- **Superconductor Edge** (Sword, Prototype), while the attacker's heat is over half its class's Heat Capacity, the blade gets +2 Penetration, and once per attack (not per hit) 1 heat is drawn from the attacker into the target.
+- **Quenched Edge** (Sword, Prototype), while the attacker's heat is over half its class's Heat Capacity, the blade gets +2 Penetration, and once per attack (not per hit) 1 heat is drawn from the attacker into the target.
 - **Burning** (status), a rig on fire takes `burning` SP to its Hull at the start of each of its activations, then keeps burning until doused. The **Douse** action (1 slot, 0 heat) removes one Burning stack.
 - **Napalm** (Flamethrower, Tuned), a landed hit sets the target Burning at 1; it never stacks past 1, so one Douse clears it.
 - **Conflagration** (Flamethrower, Prototype), each landed hit adds +1 Burning to the target (stacks with no cap) and runs the attacker +1 heat as its downside; each stack needs its own Douse.
 - **Penetrator Rounds** (Autocannon, Prototype), every 3rd Autocannon volley (per-rig belt counter) **skips the Wound Roll entirely**: every landed hit wounds automatically, regardless of location or Toughness. The belt then cycles slow for exactly the attack right after, that attack's ROF is halved.
-- **Suppression Lock** (Mini Gun, Prototype), consecutive hits on the *same* target ramp a pin: 1 stack halves its Speed next round, 2 stacks also docks it 1 action on its next activation, 3 stacks pins it in place (can't Move, Sprint, or Jump Jets) and blocks its next Prepare entirely. The pin and the Prepare-block are temporary, the pin clears in Recovery (one round) and must be re-applied by continued fire; it never uses the permanent leg-destruction immobilise. Firing on a different target resets the count to 1 stack. The attacker runs +1 heat every attack while the lock is active. Stacks cap at 3 and don't decay on their own.
-- **Ion Storm** (Arc Gun, Prototype), a landed Arc Gun hit EMPs the target: it loses 1 action, can't Prepare, and can't fire an equipment active on its next activation, plus takes a 2-heat spike. The discharge overloads the attacker: +3 self-heat and its own Arc Gun can't fire until its next attempt (which is refused and clears the overload).
-- **Fire Control Lock** (Missile Barrage, Prototype), the **Lock Target** action (1 slot, 1 heat) paints one target. The next Missile Barrage volley aimed at that exact rig, this round or the next, can't miss (every shot hits) and gains Armour Piercing; the paint is then consumed. An unused lock goes stale after its expiry round and does nothing.
+- **Suppression Lock** (Mini Gun, Prototype), consecutive hits on the *same* target ramp a pin: 1 stack halves its Speed next round, 2 stacks also docks it 1 action on its next activation, 3 stacks pins it in place (can't Move, Sprint, or Blast Pistons) and blocks its next Prepare entirely. The pin and the Prepare-block are temporary, the pin clears in Recovery (one round) and must be re-applied by continued fire; it never uses the permanent leg-destruction immobilise. Firing on a different target resets the count to 1 stack. The attacker runs +1 heat every attack while the lock is active. Stacks cap at 3 and don't decay on their own.
+- **Galvanic Storm** (Arc Gun, Prototype), a landed Arc Gun hit stalls the target with a galvanic surge: it loses 1 action, can't Prepare, and can't fire an equipment active on its next activation, plus takes a 2-heat spike. The discharge overloads the attacker: +3 self-heat and its own Arc Gun can't fire until its next attempt (which is refused and clears the overload).
+- **Plotting-Table Lock** (Missile Barrage, Prototype), the **Lock Target** action (1 slot, 1 heat) paints one target. The next Missile Barrage volley aimed at that exact rig, this round or the next, can't miss (every shot hits) and gains Armour Piercing; the paint is then consumed. An unused lock goes stale after its expiry round and does nothing.
 - **Skewer** (Lance, Prototype), a damaging Lance blow (≥1 hit dealing SP) that leaves the target locked to the skewerer impales it. While impaled, if that target **Disengages** from the skewerer it first eats a free Penetration-11 Lance strike as it tears free, then the lock breaks as normal. The impale clears with the lock (a destroyed skewerer strikes nothing).
 - **Breach Grip** (Claw, Prototype), a damaging Claw blow (≥1 hit dealing SP) pries the struck location's armour open. That location is **cracked** for a two-round window, the round it lands (N) and the next (N+1), gone by N+2: while the crack is live, **every** Wound Roll against it, from any attacker with any weapon, gets **+2 Penetration**. The crack expires automatically in Recovery once its round passes.
 - **Dismember** (Circular Saw, Prototype), the escalation of Sunder: a damaging Saw hit reduces the struck location's max SP by 1 **and** checks for a cripple. Once that max is ground to **≤ half** the location's commissioned original, the location is **permanently crippled** (once): legs → the rig is immobilised for good; an arm/weapon location → a weapon is destroyed; hull/engine → that location can never be repaired again.
-- **Emplacement** (Bulwark Shield, Prototype), the **Emplace** action (1 slot, 0 heat) roots the Rig into a fortress stance: its Raise Shield becomes permanent (auto-raised free at each activation start, no Prepare action, no Answer token), its action budget drops from 3 to 2, and it can no longer Move, Sprint, or Jump Jets. The **Un-plant** action (1 slot) lifts the stance and costs +2 heat. Emplacing is on a 3-round cooldown measured from when it was entered (re-enter no earlier than the round you emplaced + 3).
-- **Piledriver Protocol** (Siege Maul, Prototype), a **Momentum** system. The Rig gains **+1 Momentum** for any activation it **advanced** (Moved or Sprinted), capped at 3; Momentum persists between activations. A Siege Maul shot spends **all** stored Momentum: the hit ignores the target's **Brace** (no −2) and **cover**, and gains **+1 Penetration per Momentum** spent (Momentum then resets to 0 whether or not the shot connected). **Downside:** while storing Momentum (> 0) the Rig **cannot Raise Shield**: a requested Raise Shield downgrades to Brace (all-in on the charge, no guard). When a Momentum-spending smash lands ≥1 damaging hit, the engine emits a player instruction, *"Piledriver, shove &lt;target&gt; back 3" (move the mini)."*: for the players to resolve on the board (no coordinates are simulated).
+- **Emplacement** (Bulwark Shield, Prototype), the **Emplace** action (1 slot, 0 heat) roots the Rig into a fortress stance: its Raise Shield becomes permanent (auto-raised free at each activation start, no Prepare action, no Answer token), its action budget drops from 3 to 2, and it can no longer Move, Sprint, or Blast Pistons. The **Un-plant** action (1 slot) lifts the stance and costs +2 heat. Emplacing is on a 3-round cooldown measured from when it was entered (re-enter no earlier than the round you emplaced + 3).
+- **Piledriver Drill** (Siege Maul, Prototype), a **Momentum** system. The Rig gains **+1 Momentum** for any activation it **advanced** (Moved or Sprinted), capped at 3; Momentum persists between activations. A Siege Maul shot spends **all** stored Momentum: the hit ignores the target's **Brace** (no −2) and **cover**, and gains **+1 Penetration per Momentum** spent (Momentum then resets to 0 whether or not the shot connected). **Downside:** while storing Momentum (> 0) the Rig **cannot Raise Shield**: a requested Raise Shield downgrades to Brace (all-in on the charge, no guard). When a Momentum-spending smash lands ≥1 damaging hit, the engine emits a player instruction, *"Piledriver, shove &lt;target&gt; back 3" (move the mini)."*: for the players to resolve on the board (no coordinates are simulated).
 - **Enfilade** (Sniper Cannon, Prototype), a spatial ricochet, narrated rather than simulated. Only **aimed** Sniper Cannon shots feed a per-rig counter; on every **3rd** aimed shot the engine emits a player instruction, *"Enfilade, ricochet! Resolve a +2 Penetration hit on the next rig in line of sight behind &lt;target&gt; (player's choice)."* The player picks the rig behind the target (they know line of sight) and applies the +2 Penetration hit via the normal attack/damage controls. Only the aimed-shot cadence is tracked in state.
 - **Steady Aim** (Crossbow, Tuned), +3 Penetration when the measured firing distance is inside the Crossbow's sweet band (15–22").
 - **Exploit Wound** (Talon, Tuned), +3 Penetration against a struck location already below its max SP.
@@ -576,7 +576,7 @@ Factions are **narrative flavour**: every weapon in §12 is available to every f
 
 - **The Krim Corporation**: ruthless militarists; overwhelming firepower and endurance.
 - **Nox Industries**: industrial giants; durable, brute-force machines.
-- **Arcus Technologies**: arc-tech pioneers; fast, precise, advanced Rigs.
+- **Arcus Technologies**: galvanic pioneers; fast, precise, advanced Rigs.
 - **Triton Engineering**: maritime survivors; sturdy, utilitarian, harpoon-and-anchor tools of war.
 - **Freegear Coalition**: scrap-built rebels; adaptable, resourceful machines.
 
@@ -592,11 +592,11 @@ Every Rig has **one** equipment slot, chosen at commission. Each piece is a **pa
 |---|---|---|---|
 | **Armor** | **Ablative Plating** | +1 max SP to Hull | **Harden** (+1 heat): until this Rig's next activation, all Wound Rolls against it are at −1 Penetration |
 | **Cooling** | **Radiator Array** | Cools **2** heat in Recovery instead of 1 | **Purge** (−2 heat): vent on demand |
-| **Mobility** | **Servo Actuators** | Sprint costs 1 heat instead of 2 | **Jump Jets** (+2 heat): move up to **base Speed**, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties |
+| **Mobility** | **Servo Actuators** | Sprint costs 1 heat instead of 2 | **Blast Pistons** (+2 heat): move up to **base Speed**, ignoring terrain, enemy Rigs, and all leg-damage / Speed-halved penalties |
 | **Power** | **Overclock Core** | The first time this Rig's Engine reaches 0 SP, it does **not** skip its next activation | **Overclock** (+3 heat): +2 actions this activation (net +1 after the slot) |
 | **Utility** | **Field Repair Suite** | The **Repair action** restores +1 additional SP | **Emergency Patch** (+2 heat): guaranteed repair 4 SP to one location, no D6 roll, and restore **1 Integrity** (§8a) |
 | **Thermal** | **Blast Furnace Core** | Safe up to **+1** over Heat Capacity before the overheat roll | **Heat Purge Wave** (0 heat): dump banked heat, vent to Heat Capacity and scald every enemy within 3" (players adjudicate the AoE) |
-| **Fire Control** | **Targeting Computer** | The first **Fire** each activation ignores its cover and engaged accuracy penalties | **Lock Sight** (+1 heat): your next shot this activation rerolls all its missed to-hit dice |
+| **Fire Control** | **Stereo Rangefinder** | The first **Fire** each activation ignores its cover and engaged accuracy penalties | **Lock Sight** (+1 heat): your next shot this activation rerolls all its missed to-hit dice |
 | **Countermeasures** | **Reactive Plating** | Side/rear-arc attacks against this Rig take **−1 Penetration** | **Pop Smoke** (0 heat): until this Rig's next activation, every attacker is at **−2 accuracy** against it (and any missile Lock on it is broken) |
 
 ### Equipment Upgrades
@@ -606,13 +606,13 @@ Each piece of equipment offers **three upgrades, one of each nature** (see *Upgr
 | Equipment | Field | Tuned | Prototype |
 |---|---|---|---|
 | Ablative Plating | Reinforced Plating (Harden −2 impact, not −1) | Reactive Armor (first hit each round hardens that location) | Ablative Cascade (spend ablative charges to soften hits; each costs heat) |
-| Radiator Array | Twin Radiators (Purge vents −3) | Coolant Injection (−2 heat before the overheat roll when over Capacity) | Cryo Reservoir (bank cold; spend for instant cooling + a Penetration spike) |
+| Radiator Array | Twin Radiators (Purge vents −3) | Coolant Injection (−2 heat before the overheat roll when over Capacity) | Ice-Brine Tank (bank cold; spend for instant cooling + a Penetration spike) |
 | Servo Actuators | Reinforced Servos (Sprint reaches 2× Speed, not 1½×) | Kickstart Pistons (charge into contact → first melee after +2 Penetration) | Grapnel Launcher (yank free of a lock or reel an enemy in; heat + cooldown) |
-| Overclock Core | Redundant Capacitors (Overclock costs +2 heat) | Adrenaline Surge (below half SP, Overclock grants +3 actions) | Reactor Overdrive (Overclock also +2 Penetration; overheat bonus doubles) |
-| Field Repair Suite | Master Toolkit (Repair heals +2 SP) | Battlefield Triage (Emergency Patch heals 5 SP on a destroyed location) | Nanite Swarm (seed nanites that heal each Recovery; −1 Heat Capacity while active) |
-| Blast Furnace Core | Insulated Core (safe up to +2 over Capacity) | Backdraft (Heat Purge Wave +1 Penetration per 2 heat over Capacity) | Meltdown Protocol (bank overheat as charge; spend for Penetration or a burst) |
-| Targeting Computer | Ballistic Processor (+1 accuracy vs a target in your sweet band) | Predictive Tracking (vs a static/pinned target: +2 accuracy, ignore cover) | Fire Solution Lock (hold still, stack a solution → an auto-hit AP volley) |
-| Reactive Plating | Angled Plates (side/rear attacks −2 Penetration) | Chaff Burst (under smoke, free half-Speed side-step when targeted) | Point-Defense System (intercept incoming fire, force rerolls; heat cost) |
+| Overclock Core | Spare Accumulators (Overclock costs +2 heat) | Adrenaline Surge (below half SP, Overclock grants +3 actions) | Open the Throttle (Overclock also +2 Penetration; overheat bonus doubles) |
+| Field Repair Suite | Master Toolkit (Repair heals +2 SP) | Battlefield Triage (Emergency Patch heals 5 SP on a destroyed location) | Grease Monkeys (send a grease crew to mend each Recovery; −1 Heat Capacity while active) |
+| Blast Furnace Core | Insulated Core (safe up to +2 over Capacity) | Backdraft (Heat Purge Wave +1 Penetration per 2 heat over Capacity) | Scuttle Charge (bank overheat as charge; spend for Penetration or a burst) |
+| Stereo Rangefinder | Gunnery Table (+1 accuracy vs a target in your sweet band) | Rangefinder Drum (vs a static/pinned target: +2 accuracy, ignore cover) | Plotting-Table Solution (hold still, stack a solution → an auto-hit AP volley) |
+| Reactive Plating | Angled Plates (side/rear attacks −2 Penetration) | Tinsel Burst (under smoke, free half-Speed side-step when targeted) | Flak Cage (intercept incoming fire, force rerolls; heat cost) |
 
 #### Tuned / Prototype Upgrade Mechanics
 
@@ -622,12 +622,12 @@ All eight equipment lines are live: every passive, active, and Field / Tuned / P
 
 On a physical table the players adjudicate the spatial half of an equipment effect. In a **digital** battle there is no hand on the table, so the app resolves it:
 
-- **Jump Jets:** a straight hop up to base Speed, over terrain and Rigs; the landing spot must be clear ground (on the table, off terrain, off every base). Any facing.
+- **Blast Pistons:** a straight hop up to base Speed, over terrain and Rigs; the landing spot must be clear ground (on the table, off terrain, off every base). Any facing.
 - **Grapnel Launcher:** *Yank*: the same hop, up to **4"**, breaking any melee lock. *Reel*: an enemy within **8"** (rim to rim), in line of sight and your front arc, is dragged into base contact and engaged. An emplaced Rig won't budge.
 - **Heat Purge Wave:** every enemy Rig within **3"** (rim to rim) takes **+2 heat** and one hit at **Penetration 4** (+ Backdraft), **1 damage**, to a rolled location.
-- **Meltdown burst:** every enemy Rig within **4"** (rim to rim) takes **+N heat** (N = charge spent).
-- **Chaff Burst:** when a smoked Rig is fired on, it side-steps half its Speed perpendicular to the shot (first clear side). If the step breaks line of sight, the arc, or melee reach, the shot is lost (the attacker still pays the action, heat and reload, like a dodged shot).
-- **Nanite Swarm:** the host must be the Rig itself or an ally within **3"** (rim to rim).
+- **Scuttle burst:** every enemy Rig within **4"** (rim to rim) takes **+N heat** (N = charge spent).
+- **Tinsel Burst:** when a smoked Rig is fired on, it side-steps half its Speed perpendicular to the shot (first clear side). If the step breaks line of sight, the arc, or melee reach, the shot is lost (the attacker still pays the action, heat and reload, like a dodged shot).
+- **Grease Monkeys:** the host must be the Rig itself or an ally within **3"** (rim to rim).
 
 ---
 
@@ -709,19 +709,19 @@ Four shipped exemplars ⚙ (strawman):
 
 Balance unchanged, a support unit is still one slot / one count / one activation (§3).
 
-### Walkers and Drones in the digital game
+### Walkers and Clockworks in the digital game
 
-Digital battles field **Rigs, support Walkers and Drones**, never Tanks.
+Digital battles field **Rigs, support Walkers and Clockworks**, never Tanks.
 
 - **Support walker.** A squad may bring one support Walker (Medic, Radiator, Gun or Rocket Walker). Against the bot, the bot brings one too (walkers count by kind for composition parity). In a digital battle the module actions have a **reach**: **Field Weld** and **Vent** need the two bases within **3"** (rim to rim); **Paint** needs line of sight within **24"**. A walker **doesn't hold the line**: a side whose last Rig falls loses, whatever walkers it still has. A walker kill still scores like any wreck. In the campaign a walker rides along fully repaired every contract.
-- **Drones.** Small enemy walkers (40 mm base) that land in **waves** on set rounds at the enemy corner (campaign contracts; the Warlord always fields them). **2 actions** per activation, Speed **5"**, no heat, a small Integrity pool (about 40% of their SP). A drone wreck scores **no VP** and drones never keep their side in the fight.
-  - **Hunter**: a Drone Carbine (ROF 3, Penetration 5 / 1, 0–14").
-  - **Sapper**: a **Demo Charge** (melee, Penetration 8 / 3). After the blow lands (or misses), the charge **detonates**: every other unit, friend or foe, whose base is within **2.5"** of the Sapper takes a Penetration 6 / 2 hit, and the Sapper is destroyed.
-  - **Spotter**: a Sidearm plus a Recon module (Paint).
+- **Clockworks.** Small wind-up enemy walkers (40 mm base) that land in **waves** on set rounds at the enemy corner (campaign contracts; the Warlord always fields them). **2 actions** per activation, Speed **5"**, no heat, a small Integrity pool (about 40% of their SP). A clockwork wreck scores **no VP** and clockworks never keep their side in the fight.
+  - **Hunter Clockwork**: a Clockwork Carbine (ROF 3, Penetration 5 / 1, 0–14").
+  - **Sapper Clockwork**: a **Demo Charge** (melee, Penetration 8 / 3). After the blow lands (or misses), the charge **detonates**: every other unit, friend or foe, whose base is within **2.5"** of the Sapper takes a Penetration 6 / 2 hit, and the Sapper is destroyed.
+  - **Spotter Kite**: a tethered observation kite with a Sidearm plus a Recon module (Paint).
 
-| Drone weapon | Type | ROF | Penetration / Damage | Range |
+| Clockwork weapon | Type | ROF | Penetration / Damage | Range |
 |---|---|:--:|:--:|:--:|
-| Drone Carbine | ranged | 3 | 5 / 1 | 0–14" |
+| Clockwork Carbine | ranged | 3 | 5 / 1 | 0–14" |
 | Demo Charge | melee | 1 | 8 / 3 (then a 2.5" Penetration 6 / 2 blast) | 2" |
 
 ---
@@ -745,7 +745,7 @@ Digital battles field **Rigs, support Walkers and Drones**, never Tanks.
 - **Whole-inch speeds** (§2), base Speed 5 / 4 / 3 / 2 by weight class; all distances round to whole inches.
 - **Sprint** (§5/§6), normal Move is 1 heat at any distance up to Speed; a Sprint (up to 1½× Speed) costs 2 heat. Replaces the old "half-Speed = 1, more = 2" tax that made every advance run hot. ⚙ TUNING: Sprint heat now **floors at 1**: Reinforced Servos used to zero it, which made repositioning free and turned Sprint into a strictly-better Move. The upgrade now grants **2× Speed reach** instead.
 - **Sweet-band ranged Accuracy** (§7), ranged weapons get a flat Accuracy bonus inside a role-shaped sweet band (point-blank brawlers, long-range marksmen with a close penalty, wide artillery), flat 0 elsewhere in range. Replaced the per-inch falloff, which rounded invisibly and couldn't be measured at the table.
-- **Engagement / melee lock** (§5), a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Jump-Jets (must Disengage) and fires ranged at −2 Accuracy. Makes melee a real threat instead of pure attrition.
+- **Engagement / melee lock** (§5), a melee attack (or moving into contact) locks two Rigs; an engaged Rig can't Move/Sprint/Blast Pistons (must Disengage) and fires ranged at −2 Accuracy. Makes melee a real threat instead of pure attrition.
 - **Raking Fire** (§13), machine guns do no frontal damage but hit far harder (+3 side / +6 rear).
 - **Answer tokens** (§5), the player going second each round gets 1 free preparation, or one of three Answer-only counters (Riposte / Sidestep the Shooter / Exploit Opening) instead.
 - **Grit tokens** (§5), a comeback lever: the player 2+ VP behind gets 1–3 per round (scaled by the gap, capped at their living Rigs), each a free **Improved** preparation (or an upgrade to one already placed), or kept for a **Gritted attack** (reroll every missed to-hit die once).

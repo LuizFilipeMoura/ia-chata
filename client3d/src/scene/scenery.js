@@ -391,8 +391,11 @@ export function scenerySlot(t) {
   if (t.shape === "ellipse") return "crater";
   return t.kind === "wood" || t.kind === "ruin" ? t.kind : "rock";
 }
+// A theme may narrow the pool (No-Man's-Land wants wire and shell holes, not
+// oily marsh); the pick stays seeded, so both players see the same table.
 function pickVariant(slot, t, ctx) {
-  const list = SCENERY_VARIANTS[slot];
+  const pref = ctx?.theme?.scenery?.[slot]?.filter((v) => SCENERY[slot][v]);
+  const list = pref?.length ? pref : SCENERY_VARIANTS[slot];
   if (ctx?.pick) return ctx.pick(`scenery-${slot}`, t, list);
   const h = Math.abs(Math.sin((t.x || 0) * 91.345 + (t.y || 0) * 47.853) * 24634.6345);
   return list[Math.floor((h - Math.floor(h)) * list.length)];

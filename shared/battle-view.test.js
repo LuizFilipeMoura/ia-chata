@@ -292,7 +292,7 @@ test("rigModifiers surfaces an Engaged chip", () => {
   assert.ok(rigModifiers(rig).some((m) => m.key === "engaged"));
 });
 
-test("availableActions disables Jump Jets while engaged", () => {
+test("availableActions disables Blast Pistons while engaged", () => {
   const rig = makeRig(1, "a1", "light", "a", { lr: "Mini Gun", melee: "Sword" });
   rig.equipment = "servo-actuators";
   rig.engagedWith = 2;
@@ -411,7 +411,7 @@ test("an Improved (Grit) prep is named for its owner and its gloss resolves", ()
 
 const eqTurn = { activeRigId: 1, actionsUsed: 0, actionsMax: 3 };
 
-test("Grapnel replaces Jump Jets: live while engaged, off during its cooldown", () => {
+test("Grapnel replaces Blast Pistons: live while engaged, off during its cooldown", () => {
   const base = { equipment: "servo-actuators", equipmentUpgrade: "grapnel-launcher" };
   const engaged = availableActions(rig({ ...base, engagedWith: 2, equipState: { grapnelCooldown: 0 } }), eqTurn).find((a) => a.key === "jumpjets");
   assert.equal(engaged.label, "Grapnel");
@@ -421,9 +421,9 @@ test("Grapnel replaces Jump Jets: live while engaged, off during its cooldown", 
   assert.equal(cooling.enabled, false);
   assert.match(cooling.why, /2 rounds/);
   assert.equal(cooling.note, "", "greyed-tile reasons stay off the hint line");
-  // Plain Jump Jets still lock while engaged.
+  // Plain Blast Pistons still lock while engaged.
   const jj = availableActions(rig({ equipment: "servo-actuators", engagedWith: 2 }), eqTurn).find((a) => a.key === "jumpjets");
-  assert.equal(jj.label, "Jump Jets");
+  assert.equal(jj.label, "Blast Pistons");
   assert.equal(jj.enabled, false);
 });
 
@@ -436,7 +436,7 @@ test("equipment actives go dark under EMP; a banked meltdown blocks the purge wa
   const shut = availableActions(rig({ equipment: "blast-furnace-core", equipmentUpgrade: "meltdown-protocol", equipState: { meltdownCharge: 2 } }), eqTurn)
     .find((a) => a.key === "shutdown");
   assert.equal(shut.enabled, false);
-  assert.match(shut.why, /meltdown/);
+  assert.match(shut.why, /scuttle/);
 });
 
 test("equipmentSpends offers Cryo / Meltdown / Nanite only to the matching Prototype", () => {

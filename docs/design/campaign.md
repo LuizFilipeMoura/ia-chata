@@ -94,7 +94,7 @@ unlocks that perk for your own squad in future runs (pick one at HQ).
 |---|---|---|
 | Krim Corporation | **Overwhelming Fire**: +1 Penetration on ranged attacks | `pen.ranged +1` |
 | Nox Industries | **Heavy Frames**: +2 max SP Hull, +1 max SP Legs | `sp.hull +2, sp.legs +1` |
-| Arcus Technologies | **Arc Drives**: +1" Speed | `speed +1` |
+| Arcus Technologies | **Galvanic Drives**: +1" Speed | `speed +1` |
 | Triton Engineering | **Sea-Cooled**: +1 Heat Capacity | `heatCap +1` |
 | Freegear Coalition | **Scrap Wizards**: Repair heals +1 SP; +1 Grit token at the start of each battle | `repair +1, grit +1` |
 
@@ -136,7 +136,7 @@ guaranteed relic). Cards only offer things that fit your roster and your unlocks
 
 **Every equipment is in the pool** (all 8: Ablative Plating, Radiator Array,
 Servo Actuators, Overclock Core, Field Repair Suite, Blast Furnace Core,
-Targeting Computer, Reactive Plating) and **all 24 equipment upgrades**, gated
+Stereo Rangefinder, Reactive Plating) and **all 24 equipment upgrades**, gated
 only by meta unlocks. The one-Prototype-per-rig cap holds: installing a second
 Prototype on a rig asks which one to drop.
 
@@ -159,7 +159,7 @@ Engine: `rig.perkKits[slot]` merges into the weapon profile's perks.
 | Gyro Stabilisers | +1 accuracy on every attack |
 | Heat Sinks | cool +1 extra each Recovery |
 | Field Welders | Repair heals +1 SP |
-| Cracked Reactor | +1 action on round 1, rigs start with 2 heat |
+| Cracked Boiler | +1 action on round 1, rigs start with 2 heat |
 | Scrapper's Contract | +2 salvage per kill |
 | Union Mechanics | repairs cost 1 salvage less per SP (min 1) |
 | Recovery Winch | wreck recovery costs half |
@@ -268,19 +268,19 @@ no hand to move minis, so these become simulated in `room.mode === "digital"`
 
 | Equipment / upgrade | Digital behaviour | Attrs |
 |---|---|---|
-| **Jump Jets** (Servo) | straight-line hop up to base Speed, ignoring terrain and rigs on the way; the landing spot must be clear; any facing | `{action:"jumpjets", dest:{x,y}, facing}` |
-| **Grapnel Launcher** (Servo Prototype) | *yank*: hop up to 4" like Jump Jets, breaking any lock. *reel*: an enemy within 8" in LOS and front arc is dragged into base contact and engaged | `{action:"jumpjets", mode:"yank", dest, facing}` / `{action:"jumpjets", mode:"reel", target}` |
+| **Blast Pistons** (Servo) | straight-line hop up to base Speed, ignoring terrain and rigs on the way; the landing spot must be clear; any facing | `{action:"jumpjets", dest:{x,y}, facing}` |
+| **Grapnel Launcher** (Servo Prototype) | *yank*: hop up to 4" like Blast Pistons, breaking any lock. *reel*: an enemy within 8" in LOS and front arc is dragged into base contact and engaged | `{action:"jumpjets", mode:"yank", dest, facing}` / `{action:"jumpjets", mode:"reel", target}` |
 | **Heat Purge Wave** (Blast Furnace) | every enemy rig within 3" (rim) takes +2 heat and one Penetration 4 (+Backdraft) / 1 damage hit to a rolled location | `{action:"heatpurgewave"}` |
-| **Meltdown burst** (Blast Furnace Prototype) | every enemy rig within 4" (rim) takes +N heat | `{action:"meltdown", n, mode:"burst"}` |
-| **Chaff Burst** (Reactive Tuned) | when a smoked rig is fired on, the engine side-steps it half Speed perpendicular to the shot (first clear side); if the step breaks LOS or the attacker's arc, the shot is lost | automatic |
-| **Nanite Swarm** (Repair Prototype) | the host must be self or an ally within 3" (rim) | `{action:"nanite", target?, loc}` |
+| **Scuttle burst** (Blast Furnace Prototype) | every enemy rig within 4" (rim) takes +N heat | `{action:"meltdown", n, mode:"burst"}` |
+| **Tinsel Burst** (Reactive Tuned) | when a smoked rig is fired on, the engine side-steps it half Speed perpendicular to the shot (first clear side); if the step breaks LOS or the attacker's arc, the shot is lost | automatic |
+| **Grease Monkeys** (Repair Prototype) | the host must be self or an ally within 3" (rim) | `{action:"nanite", target?, loc}` |
 
 Client (3D) for equipment:
 
-- Buttons for every active and every spend: **Cryo** (spend N), **Meltdown** (N + Pen/Burst), **Nanite** (pick ally + location), **Grapnel** (Yank = move ghost, Reel = target pick; enabled while engaged).
-- Jump Jets / Grapnel yank use a straight-line hop ghost that ignores terrain.
-- **Equipment chips** on rig cards and the inspector: cryo banked, meltdown charge, nanite stacks, ablative charges, fire-solution stacks, grapnel cooldown, hardened, smoke, overclocked.
-- **FX per active:** Harden (plate shimmer + clank), Purge (steam jets), Jump Jets / Grapnel (thruster arc + dust landing; grapnel cable), Overclock (red pulse + sparks), Emergency Patch / Nanite (green welding sparks), Heat Purge Wave (expanding heat ring + scald text on victims), Meltdown (orange ring), Lock Sight (reticle), Pop Smoke (smoke cloud), Chaff (sidestep + chaff glitter), Cryo (frost puff), Point Defense / Ablative Cascade (intercept sparks).
+- Buttons for every active and every spend: **Ice-Brine** (spend N), **Scuttle** (N + Pen/Burst), **Grease Monkeys** (pick ally + location), **Grapnel** (Yank = move ghost, Reel = target pick; enabled while engaged).
+- Blast Pistons / Grapnel yank use a straight-line hop ghost that ignores terrain.
+- **Equipment chips** on rig cards and the inspector: ice-brine banked, scuttle charge, grease-monkey crews, ablative charges, fire-solution stacks, grapnel cooldown, hardened, smoke, overclocked.
+- **FX per active:** Harden (plate shimmer + clank), Purge (steam jets), Blast Pistons / Grapnel (thruster arc + dust landing; grapnel cable), Overclock (red pulse + sparks), Emergency Patch / Nanite (green welding sparks), Heat Purge Wave (expanding heat ring + scald text on victims), Meltdown (orange ring), Lock Sight (reticle), Pop Smoke (smoke cloud), Chaff (sidestep + chaff glitter), Cryo (frost puff), Point Defense / Ablative Cascade (intercept sparks).
 
 ## Mission verb (engine contract)
 

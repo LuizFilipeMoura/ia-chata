@@ -6,6 +6,8 @@ import { isRig, partsOf, unitLabel, kitLine } from "../game/units.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { chassisOf } from "../game/director.js";
 import { equipmentChips } from "/shared/battle-view.js";
+import { boilerGauge } from "./gauge.js";
+import { activationOrder } from "./frieze.js";
 
 // Compact equipment-state chips (icon + number), full text on hover.
 export function equipChipRow(r, cls = "rc-eq") {
@@ -45,24 +47,17 @@ export class Hud {
     fill(this.missionEl, panel);
   }
 
-  // Who still has to act this round, in alternation from the side on the floor.
+  // Who still has to act this round, in alternation from the side on the floor:
+  // a stepped Art Deco frieze, next up tallest, spent steps sunk and dim.
   turnOrder(state) {
-    const g = state.game;
-    const live = (s) => state.rigs.filter((r) => (r.owner || "a") === s && !r.destroyed);
-    const first = g.turn?.side || "a", second = first === "a" ? "b" : "a";
-    const wait = { [first]: live(first).filter((r) => !r.activated), [second]: live(second).filter((r) => !r.activated) };
-    const done = [...live("a"), ...live("b")].filter((r) => r.activated);
-    const seq = [];
-    for (let i = 0; wait[first].length || wait[second].length; i++) {
-      const s = i % 2 ? second : first;
-      const r = wait[s].shift() || wait[s === first ? second : first].shift();
-      if (r) seq.push(r);
-    }
-    return el("div", { class: "turnorder", title: "Activations left this round (dim = already acted)" },
-      seq.map((r) => el("i", { class: r.owner || "a", title: r.name })), done.map((r) => el("i", { class: `${r.owner || "a"} done`, title: `${r.name} (acted)` })));
+    const { seq, done } = activationOrder(state.rigs, state.game.turn?.side || "a");
+    return el("div", { class: "turnorder", title: "Activations left this round (tallest = next; dim = already acted)" },
+      el("span", { class: "fz-cap" }),
+      seq.map((r, i) => el("i", { class: `${r.owner || "a"}${i === 0 ? " next" : ""}`, title: r.name })), done.map((r) => el("i", { class: `${r.owner || "a"} done`, title: `${r.name} (acted)` })),
+      el("span", { class: "fz-cap" }));
   }
 
-  // `spectator` (replays): neutral Cyan/Red labels instead of you/enemy.
+  // `spectator` (replays): neutral Amber/Red labels instead of you/enemy.
   top(state, side, spectator = this.spectator) {
     this.side = side;
     const g = state.game;
@@ -70,8 +65,8 @@ export class Hud {
     if (spectator) {
       const va = g.sides.find((s) => s.id === "a")?.vp ?? 0, vb = g.sides.find((s) => s.id === "b")?.vp ?? 0;
       fill(this.topEl,
-        el("div", { class: "vp a" }, el("span", { class: "k" }, "CYAN"), el("b", {}, String(va))),
-        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${roundOf(g)}`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "CYAN ACTS" : turn === "b" ? "RED ACTS" : "…"), this.turnOrder(state)),
+        el("div", { class: "vp a" }, el("span", { class: "k" }, "AMBER"), el("b", {}, String(va))),
+        el("div", { class: `turn ${turn === "a" ? "mine" : "theirs"}` }, el("div", { class: "round" }, `ROUND ${roundOf(g)}`), el("div", { class: "who" }, g.phase === "finished" ? "Battle over" : turn === "a" ? "AMBER ACTS" : turn === "b" ? "RED ACTS" : "…"), this.turnOrder(state)),
         el("div", { class: "vp b" }, el("b", {}, String(vb)), el("span", { class: "k" }, "RED")));
       return;
     }
@@ -102,7 +97,7 @@ export class Hud {
       el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name),
         cmd ? el("span", { class: "tag cmd", title: `${commanderTitle(state.campaign)}: wreck it to win the contract` }, icon("crown")) : null,
         pri && !cmd ? el("span", { class: "tag pri", title: "Priority target: +3 VP for the kill (+1 like any wreck, +2 bonus)" }, icon("star")) : null,
-        r.preparation ? el("span", { class: `tag ${r.preparation.improved ? "imp" : ""}`, title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.improved ? "Improved " : ""}${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "prepare"), r.preparation.hidden ? "" : `${r.preparation.improved ? "+" : ""}${r.preparation.type}`) : null,
+        r.preparation ? el("span", { class: `tag ${r.preparation.improved ? "imp" : ""}`, title: r.preparation.hidden ? "Hidden reaction: springs when attacked" : `Prepared reaction: ${r.preparation.improved ? "Improved " : ""}${r.preparation.type}` }, icon(r.preparation.hidden ? "hidden" : r.preparation.improved ? "grit" : "flag-brace"), r.preparation.hidden ? "" : `${r.preparation.improved ? "+" : ""}${r.preparation.type}`) : null,
         r.engagedWith != null ? el("span", { class: "tag", title: "Locked in melee: must Disengage to move" }, icon("melee")) : null),
       el("div", { class: "rc-sub" }, isRig(r) ? chassisOf(r)?.label || "" : unitLabel(r) === r.name ? kitLine(r) : `${unitLabel(r)} · ${kitLine(r)}`),
       r.destroyed || !isRig(r) ? null : equipChipRow(r),
@@ -110,8 +105,10 @@ export class Hud {
         const p = r[l]; const f = p ? p.sp / p.max : 0;
         return el("div", { class: "loc", title: `${l}: ${p?.sp}/${p?.max}` }, el("span", { class: "ln" }, icon(l === "mount" ? "arms" : l)), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#58d68d" : f > 0.3 ? "#f5b041" : "#e74c3c" } })));
       })),
-      isRig(r) ? el("div", { class: "rc-heat", title: `Heat ${heat}/${cap}. Over capacity rolls on the overheat table at end of activation` },
-        Array.from({ length: Math.max(cap + 4, heat) }, (_, i) => el("i", { class: i < heat ? (i >= cap ? "over" : "on") : i >= cap ? "danger" : "" }))) : null,
+      isRig(r) ? el("div", { class: `rc-heat${heat > cap ? " over" : ""}`, title: `Heat ${heat}/${cap}. Over capacity rolls on the overheat table at end of activation` },
+        r.destroyed ? null : boilerGauge(heat, cap, { size: "sm", key: `card:${r.id}` }),
+        el("div", { class: "rc-pips" }, Array.from({ length: Math.max(cap + 4, heat) }, (_, i) => el("i", { class: i < heat ? (i >= cap ? "over" : "on") : i >= cap ? "danger" : "" }))),
+        el("b", { class: "rc-hv" }, `${heat}/${cap}`)) : null,
     );
   }
 
@@ -120,7 +117,7 @@ export class Hud {
     this.clog.side = side;
     // Breakthrough: rigs that left the table are gone from state.rigs; list them.
     const out = side === "a" ? state.campaign?.extracted || [] : [];
-    fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Cyan" : "Your squadron"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)),
+    fill(this.rosterEl, el("div", { class: "rh" }, this.spectator ? "Amber" : "Your squadron"), state.rigs.filter((r) => r.owner === side).map((r) => this.rigCard(r, state, r.id === selectedId, onPick)),
       out.map((r) => el("div", { class: "rig-card extracted", title: `${r.name} broke through and left the table (keeps its SP)` },
         el("div", { class: "rc-head" }, el("span", { class: `swatch sw-${r.name}` }), el("b", {}, r.name), el("span", { class: "tag ext" }, icon("extract"), "Extracted")),
         el("div", { class: "rc-sub" }, chassisOf(r)?.label || ""))));

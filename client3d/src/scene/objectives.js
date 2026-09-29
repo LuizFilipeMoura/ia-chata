@@ -3,7 +3,8 @@
 // take `pylonMat`'s emissive colour (world.setObjectiveControl paints it:
 // gold when unclaimed, the holder's colour when held). Each builder returns
 // { pylonMat, gem, light, anim, noBob } for World: `gem` is the lamp glass
-// (it swells on the round-end payout pulse), `anim(dt, now)` runs per frame.
+// (it swells on the round-end payout pulse), `anim(dt, now, marker)` runs per
+// frame (`marker` is World's objective entry, its `state` the cycling state).
 import * as THREE from "three";
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -63,6 +64,55 @@ function pennant(parent, m, x, y, z, height, pylonMat) {
   };
 }
 
+// Every beacon broadcasts: a slim lattice radio mast with a blinking warm lamp
+// at its tip and, while the beacon is lit, faint rings spreading out from the
+// tip in the holder's colour. Reads the marker's cycling state (m.state, set by
+// world.setObjectiveControl) through the anim's third argument; visual only.
+const RING_GEO = new THREE.TorusGeometry(1, 0.018, 4, 48);
+function radioMast(parent, m, base, height, pylonMat) {
+  const legs = 3, r0 = 0.16, r1 = 0.035;
+  for (let i = 0; i < legs; i++) {
+    const a = (i / legs) * Math.PI * 2;
+    const p = V(base.x + Math.cos(a) * r0, base.y, base.z + Math.sin(a) * r0), q = V(base.x + Math.cos(a) * r1, base.y + height, base.z + Math.sin(a) * r1);
+    const d = q.clone().sub(p), leg = mesh(new THREE.CylinderGeometry(0.014, 0.018, d.length(), 4), m.iron, parent);
+    leg.position.copy(p).addScaledVector(d, 0.5); leg.quaternion.setFromUnitVectors(V(0, 1, 0), d.normalize());
+  }
+  for (let y = 0.35; y < height - 0.2; y += 0.45) {
+    const k = r0 + (r1 - r0) * (y / height);
+    const hoop = mesh(new THREE.TorusGeometry(k, 0.008, 3, 3), m.iron, parent, base.x, base.y + y, base.z); hoop.rotation.x = Math.PI / 2;
+  }
+  // Two crossarms with insulators, the whip aerial on top.
+  for (const [y, w] of [[height * 0.72, 0.5], [height * 0.9, 0.34]]) {
+    mesh(new THREE.BoxGeometry(w, 0.02, 0.02), m.iron, parent, base.x, base.y + y, base.z);
+    for (const s of [-1, 1]) mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.06, 6), m.brass, parent, base.x + s * w / 2, base.y + y + 0.03, base.z);
+  }
+  mesh(new THREE.CylinderGeometry(0.006, 0.01, 0.5, 4), m.iron, parent, base.x, base.y + height + 0.25, base.z);
+  const tip = V(base.x, base.y + height + 0.52, base.z);
+  const lampMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, emissive: 0xffa040, emissiveIntensity: 0.2 });
+  mesh(new THREE.SphereGeometry(0.05, 8, 6), lampMat, parent, tip.x, tip.y, tip.z).castShadow = false;
+  const rings = [0, 1, 2].map((k) => {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffc060, transparent: true, opacity: 0, depthWrite: false });
+    const r = new THREE.Mesh(RING_GEO, mat); r.rotation.x = Math.PI / 2; r.position.copy(tip); parent.add(r);
+    return { r, mat, off: k / 3 };
+  });
+  return (dt, now, marker) => {
+    const state = marker?.state ?? "classic";
+    // Blink: brisk when lit, a slow pulse when next, a lazy wink when dark.
+    const period = state === "lit" ? 0.9 : state === "next" ? 1.6 : state === "dark" ? 3.2 : 1.4;
+    const on = (now % period) / period < 0.35;
+    lampMat.emissiveIntensity = on ? (state === "dark" ? 0.5 : 1.4) : 0.1;
+    const loud = state === "lit" ? 1 : state === "classic" ? 0.55 : state === "next" ? 0.25 : 0;
+    for (const g of rings) {
+      const k = (now * 0.45 + g.off) % 1;
+      g.r.scale.setScalar(0.2 + k * 3.2);
+      g.r.position.y = tip.y - k * 0.6;
+      g.mat.color.copy(pylonMat.emissive);
+      g.mat.opacity = loud * 0.32 * Math.sin(Math.PI * k);
+      g.r.visible = loud > 0;
+    }
+  };
+}
+
 // 1 VP: a roadside fuel depot. A riveted red-oxide tank on cradles, oil drums,
 // and an old petrol pump whose glass globe is the lamp.
 export function fuelDepot(group, o, fx) {
@@ -97,7 +147,8 @@ export function fuelDepot(group, o, fx) {
   mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.04, 12), m.brass, pump, 0, 1.08, 0);
   const light = new THREE.PointLight(0xffd35a, 5, 7); light.position.set(-0.85, 1.4, 0.55); group.add(light);
   const wave = pennant(group, m, 0.95, 0.14, -0.75, 2.2, pylonMat);
-  return { pylonMat, gem, light, noBob: true, anim: wave };
+  const radio = radioMast(group, m, V(0.2, 0.14, 0.5), 2.9, pylonMat);
+  return { pylonMat, gem, light, noBob: true, anim: (dt, now, marker) => { wave(dt, now); radio(dt, now, marker); } };
 }
 
 // 2 VP centre: a refinery cracking tower. A tall banded column with two
@@ -149,8 +200,10 @@ export function refineryTower(group, o, fx) {
   const vent = new THREE.Object3D(); vent.position.set(side.x, side.y + SH + 0.1, side.z); group.add(vent);
   let flameAcc = 0, steamT = 2 + Math.random() * 3;
   const w = V();
-  const anim = (dt, now) => {
+  const radio = radioMast(group, m, V(side.x, side.y + SH, side.z), 2.2, pylonMat);
+  const anim = (dt, now, marker) => {
     wave(dt, now);
+    radio(dt, now, marker);
     if (!fx) return;
     flameAcc += dt * 14;
     for (; flameAcc >= 1; flameAcc--) fx.particle(tip.getWorldPosition(w), { tile: "flame", color: Math.random() < 0.4 ? 0xffd070 : 0xff8a28, color2: 0xa01800, glow: 1.8, size: 0.28, grow: 0.5, life: 0.5, vel: V(0.3, 1.6, 0), stretch: 0.2, turb: 2 });

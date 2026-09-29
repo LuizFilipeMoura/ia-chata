@@ -31,14 +31,14 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 ## Internal synergy & cap
 
-- **Recommended showcase build:** Steady Aim + Evisceration, plus **Servo Actuators** equipment for the Jump Jets pounce. Hold the 18″ band and land Steady-Aim bolts (STR 13) to crack a location down; once that location is at/below half SP, Jump Jets in and let Evisceration force every talon hit on it to Critical.
+- **Recommended showcase build:** Steady Aim + Evisceration, plus **Servo Actuators** equipment for the Blast Pistons pounce. Hold the 18″ band and land Steady-Aim bolts (STR 13) to crack a location down; once that location is at/below half SP, Blast Pistons in and let Evisceration force every talon hit on it to Critical.
 - **Pinning Bolt and Evisceration are BOTH Prototype**, and a rig runs at most one, so the showcase build (Evisceration) forgoes the pin, and vice versa. Never both on the same rig.
 - **Alt build:** Pinning Bolt + Exploit Wound, the guaranteed lock keeps the target on the spot while the talon farms +3 STR against the location the bolt already opened.
-- **The hunt loop:** hold the 18″ sweet band → an aimed bolt cracks a location → Jump Jets in and engage → the talon guts the cracked location, and once it's at/below half SP Evisceration forces Critical.
+- **The hunt loop:** hold the 18″ sweet band → an aimed bolt cracks a location → Blast Pistons in and engage → the talon guts the cracked location, and once it's at/below half SP Evisceration forces Critical.
 
 ## Equipment note
 
-Prebuilt chassis ship **equipment-less**. The `CHASSIS` registry entry for `medium-crossbow-talon` carries only `id` / `label` / `class` / `longRange` / `melee` / `sp`: no equipment field. **Servo Actuators** (Mobility family: Sprint costs 1 heat instead of 2, and grants the **Jump Jets** active) is a **recommended pilot pick** to enable the pounce, not part of the chassis registry; the commissioning player selects it at build time.
+Prebuilt chassis ship **equipment-less**. The `CHASSIS` registry entry for `medium-crossbow-talon` carries only `id` / `label` / `class` / `longRange` / `melee` / `sp`: no equipment field. **Servo Actuators** (Mobility family: Sprint costs 1 heat instead of 2, and grants the **Blast Pistons** active) is a **recommended pilot pick** to enable the pounce, not part of the chassis registry; the commissioning player selects it at build time.
 
 ## Decided values
 
