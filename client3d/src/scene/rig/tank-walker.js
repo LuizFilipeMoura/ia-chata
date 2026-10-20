@@ -369,6 +369,9 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
   }
   const mechanics = { ...buildEngine(torso, heavy, mats, vent, links, stacks), links };
   mechanics.phase = rngFrom(`${id}|diesel-phase`)() * TAU;
+  mechanics.shakePhase = mechanics.phase;
+  // Per-instance art controls; defaults retain the game's existing idle.
+  const shake = { magnitude: 1, frequency: 1 };
   if (heavy) {
     // The shield hangs from a real outboard carrier. Its inner edge clears the
     // casemate, and the telescoping yoke follows the full forward bash stroke.
@@ -397,12 +400,16 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
   socket(sockets, "shin", legs[0].knee, 0.32, -legs[0].shinLen * 0.49, 0);
   const built = {
     remodel: true, remodelName: name, pelvis, legs, torso, chest, armR, armL, hipH, frame, torsoRestY,
-    stacks, sockets, mechanics, spinners: [], flickers: [], glows: [],
+    stacks, sockets, mechanics, shake, spinners: [], flickers: [], glows: [],
     whistle: null, bellows: null, windKey: null,
     ctx: { cls, k, ...mats, dims: { d, h, w }, glass, vent, torso, pelvis, legs, stacks, sockets },
     updateMechanical(dt, state = {}) {
       const stopped = state.destroyed || state.shutdown || state.broken?.engine;
-      if (!stopped) mechanics.phase = (mechanics.phase + Math.max(0, dt) * (state.spent ? 2 : 4) * (1 + (state.heatFrac || 0) * 0.4)) % TAU;
+      if (!stopped) {
+        const step = Math.max(0, dt) * (state.spent ? 2 : 4) * (1 + (state.heatFrac || 0) * 0.4);
+        mechanics.phase = (mechanics.phase + step) % TAU;
+        mechanics.shakePhase = (mechanics.shakePhase + step * shake.frequency) % TAU;
+      }
       const angle = mechanics.phase, r = mechanics.crankRadius, length = mechanics.rodLength;
       // Slider-crank closure: the connecting rod's length stays fixed.
       const x = Math.cos(angle) * r, y = Math.sin(angle) * r;
@@ -412,11 +419,12 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
       mechanics.exhaustCap.rotation.z = 0.06 + Math.max(0, Math.sin(angle * 2)) * 0.65;
       // Combustion impulses: uneven 7–11 Hz shudder on the engine mounts.
       // Only the upper chassis shakes; neither feet nor the miniature base rock.
-      const chug = (Math.sin(angle * 11) + 0.45 * Math.sin(angle * 17 + 0.6)
-        + 0.30 * Math.sin(angle * 5 + 1.7)) / 1.75;
+      const vibration = mechanics.shakePhase;
+      const chug = (Math.sin(vibration * 11) + 0.45 * Math.sin(vibration * 17 + 0.6)
+        + 0.30 * Math.sin(vibration * 5 + 1.7)) / 1.75 * shake.magnitude;
       torso.position.y = torsoRestY + chug * (heavy ? 0.038 : 0.046);
       torso.rotation.z = chug * (heavy ? 0.018 : 0.023);
-      torso.rotation.x = Math.sin(angle * 13 + 0.7) * 0.009;
+      torso.rotation.x = Math.sin(vibration * 13 + 0.7) * 0.009 * shake.magnitude;
       pelvis.updateWorldMatrix(true, true);
       for (const link of links) updateActuator(link);
     },

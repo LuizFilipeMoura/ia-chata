@@ -19,5 +19,11 @@ export default defineConfig({
       "/ws": { target: "ws://localhost:8000", ws: true },
     },
   },
-  build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 2000 },
+  build: {
+    outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 2000,
+    rollupOptions: { input: {
+      main: fileURLToPath(new URL("./index.html", import.meta.url)),
+      shakeTuner: fileURLToPath(new URL("./src/tools/shake-tuner.html", import.meta.url)),
+    } },
+  },
 });

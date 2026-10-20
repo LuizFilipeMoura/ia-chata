@@ -16,6 +16,41 @@ function rig(name, extra = {}) {
   return m;
 }
 const point = (o, y) => o.localToWorld(new THREE.Vector3(0, y, 0));
+test("shake tuning scales displacement without moving feet or speeding machinery", () => {
+  for (const name of ["Black", "Tyrian"]) {
+    const a = rig(name), b = rig(name);
+    b.built.shake.magnitude = 2;
+    b.built.shake.frequency = 0.5;
+    a.update(0.1); b.update(0.1);
+    assert.equal(a.built.mechanics.phase, b.built.mechanics.phase, "engine keeps its own cadence");
+    assert.ok(a.legs[0].ankle.getWorldPosition(new THREE.Vector3()).distanceTo(b.legs[0].ankle.getWorldPosition(new THREE.Vector3())) < 1e-9);
+    b.built.mechanics.shakePhase = a.built.mechanics.shakePhase;
+    b.built.updateMechanical(0);
+    assert.ok(Math.abs((b.torso.position.y - b.built.torsoRestY) - 2 * (a.torso.position.y - a.built.torsoRestY)) < 1e-9);
+    b.built.shake.magnitude = 0;
+    b.built.updateMechanical(0);
+    assert.equal(b.torso.position.y, b.built.torsoRestY);
+    assert.equal(Math.abs(b.torso.rotation.x), 0);
+    assert.equal(Math.abs(b.torso.rotation.z), 0);
+  }
+});
+
+test("shake frequency changes continuously and shutdown freezes its phase", () => {
+  const m = rig("Tyrian"), built = m.built;
+  built.updateMechanical(0.02);
+  const phase = built.mechanics.shakePhase, y = built.torso.position.y;
+  built.shake.frequency = 2;
+  built.updateMechanical(0);
+  assert.equal(built.torso.position.y, y, "turning the frequency knob does not jump phase");
+  built.updateMechanical(0.02);
+  assert.ok(Math.abs(built.mechanics.shakePhase - phase - 0.16) < 1e-9);
+  const stopped = built.mechanics.shakePhase;
+  for (const state of [{ shutdown: true }, { broken: { engine: true } }, { destroyed: true }]) {
+    built.updateMechanical(0.1, state);
+    assert.equal(built.mechanics.shakePhase, stopped);
+  }
+});
+
 function attached(link) {
   const a = link.a.getWorldPosition(new THREE.Vector3());
   const b = link.b.getWorldPosition(new THREE.Vector3());
