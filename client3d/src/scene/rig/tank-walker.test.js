@@ -16,9 +16,20 @@ function rig(name, extra = {}) {
   return m;
 }
 const point = (o, y) => o.localToWorld(new THREE.Vector3(0, y, 0));
+test("approved Tyrian idle tuning applies to every skin and remains per-instance", () => {
+  for (const skin of SKIN_IDS) {
+    assert.deepEqual(rig("Tyrian", { skin }).built.shake, { magnitude: 0.11, frequency: 0.82 });
+    assert.deepEqual(rig("Black", { skin }).built.shake, { magnitude: 1, frequency: 1 });
+  }
+  const tuned = rig("Tyrian");
+  tuned.built.shake.magnitude = 2;
+  assert.deepEqual(rig("Tyrian").built.shake, { magnitude: 0.11, frequency: 0.82 });
+});
+
 test("shake tuning scales displacement without moving feet or speeding machinery", () => {
   for (const name of ["Black", "Tyrian"]) {
     const a = rig(name), b = rig(name);
+    Object.assign(a.built.shake, { magnitude: 1, frequency: 1 });
     b.built.shake.magnitude = 2;
     b.built.shake.frequency = 0.5;
     a.update(0.1); b.update(0.1);
@@ -135,7 +146,8 @@ test("diesel chug moves the cab perceptibly while feet stay planted, then freeze
       assert.ok(fits(m).ok, "opened exhaust flap stays inside the art envelope");
     }
     const travel = Math.max(...yValues) - Math.min(...yValues);
-    assert.ok(travel > 0.025 && travel < 0.12, "cab movement must read as visible diesel shudder");
+    const magnitude = m.built.shake.magnitude;
+    assert.ok(travel > 0.025 * magnitude && travel < 0.12 * magnitude, "cab movement respects the approved chassis magnitude");
     m.setStatus({ shutdown: true });
     m.update(1 / 60);
     const y = m.torso.position.y, sway = m.torso.rotation.z;

@@ -10,6 +10,10 @@ const TAU = Math.PI * 2;
 const Y = new THREE.Vector3(0, 1, 0);
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _dir = new THREE.Vector3();
 
+export function defaultTankWalkerShake(name) {
+  return name === "Tyrian" ? { magnitude: 0.11, frequency: 0.82 } : { magnitude: 1, frequency: 1 };
+}
+
 export function tankWalkerName(name, chassis) {
   if (name === "Black" || chassis === "medium-shield-siege") return "Black";
   if (name === "Tyrian" || chassis === "light-saw-minigun") return "Tyrian";
@@ -370,8 +374,8 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
   const mechanics = { ...buildEngine(torso, heavy, mats, vent, links, stacks), links };
   mechanics.phase = rngFrom(`${id}|diesel-phase`)() * TAU;
   mechanics.shakePhase = mechanics.phase;
-  // Per-instance art controls; defaults retain the game's existing idle.
-  const shake = { magnitude: 1, frequency: 1 };
+  // Per-instance art controls shared with the tuning bench's reset/comparison.
+  const shake = defaultTankWalkerShake(name);
   if (heavy) {
     // The shield hangs from a real outboard carrier. Its inner edge clears the
     // casemate, and the telescoping yoke follows the full forward bash stroke.

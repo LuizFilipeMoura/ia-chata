@@ -2,13 +2,14 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Mech } from "../scene/mechs.js";
 import { FX } from "../scene/fx.js";
+import { defaultTankWalkerShake } from "../scene/rig/tank-walker.js";
 import { CHASSIS } from "/shared/game-state.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 import "../scene/matte.js";
 
 const $ = (id) => document.getElementById(id);
 const storageKey = "oil-iron-shake-lab";
-const tuning = { Black: { magnitude: 1, frequency: 1 }, Tyrian: { magnitude: 1, frequency: 1 } };
+const tuning = { Black: defaultTankWalkerShake("Black"), Tyrian: defaultTankWalkerShake("Tyrian") };
 const limits = { magnitude: [0, 3], frequency: [0.1, 3] };
 const clamp = (key, value) => Math.round(Math.max(limits[key][0], Math.min(limits[key][1], value)) * 100) / 100;
 try {
@@ -71,14 +72,14 @@ function sync(editingKey = null) {
     dial.setAttribute('aria-valuenow', String(value));
     dial.setAttribute('aria-valuetext', `${value.toFixed(2)} times`);
   }
-  Object.assign(mech.built.shake, compare ? { magnitude: 1, frequency: 1 } : values);
+  Object.assign(mech.built.shake, compare ? defaultTankWalkerShake($('chassis').value) : values);
   mech.built.updateMechanical(0);
   $('frequency-readout').textContent = `${(44 / (2 * Math.PI) * mech.built.shake.frequency).toFixed(2)} Hz`;
   $('settings').value = JSON.stringify({ chassis: $('chassis').value, shake: values }, null, 2);
   $('compare').setAttribute('aria-pressed', String(compare));
-  $('compare').textContent = compare ? 'Return to tuned' : 'Compare 1×';
+  $('compare').textContent = compare ? 'Return to tuned' : 'Compare default';
   $('pause').textContent = paused ? 'Resume' : 'Pause';
-  $('live-state').textContent = `${paused ? 'PAUSED' : 'LIVE'} / ${compare ? 'GAME DEFAULT 1×' : 'TUNED'}`;
+  $('live-state').textContent = `${paused ? 'PAUSED' : 'LIVE'} / ${compare ? 'GAME DEFAULT' : 'TUNED'}`;
 }
 function setValue(key, value, editing = false) {
   if (!Number.isFinite(value)) return;
@@ -122,7 +123,10 @@ $('chassis').addEventListener('change', () => { compare = false; loadRig(); });
 $('skin').addEventListener('change', loadRig);
 $('pause').addEventListener('click', () => { paused = !paused; sync(); });
 $('compare').addEventListener('click', () => { compare = !compare; sync(); });
-$('reset').addEventListener('click', () => { setValue('magnitude', 1); setValue('frequency', 1); });
+$('reset').addEventListener('click', () => {
+  const defaults = defaultTankWalkerShake($('chassis').value);
+  setValue('magnitude', defaults.magnitude); setValue('frequency', defaults.frequency);
+});
 $('copy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('settings').value); $('message').textContent = 'Copied. Paste these values back into our chat.'; }
   catch { $('settings').focus(); $('settings').select(); $('message').textContent = 'Settings selected. Press Ctrl+C / ⌘C to copy.'; }

@@ -70,8 +70,8 @@
         <div class="control"><h2>Frequency</h2><div class="dial" id="frequency-dial" role="slider" tabindex="0" aria-label="Shake frequency" aria-valuemin="0.1" aria-valuemax="3" aria-valuenow="1" aria-describedby="knob-help"><span class="pointer"></span></div><input id="frequency" aria-label="Frequency value" type="number" min="0.1" max="3" step="0.01" value="1"><span class="unit">×</span><p class="range">0.1 = slow · 3 = fast</p></div>
       </div>
       <p class="hint" id="knob-help">Drag knobs up/down. Arrow keys adjust by 0.01; Page Up/Down by 0.1. Hold Shift while dragging for finer control.</p>
-      <div class="readout"><div id="frequency-readout">7.00 Hz</div><p>Dominant shake frequency. Uneven diesel pulses stay layered underneath. 1× / 1× matches current game idle.</p></div>
-      <div class="buttons"><button id="pause">Pause</button><button id="compare" aria-pressed="false">Compare 1×</button><button id="reset">Reset knobs</button></div>
+      <div class="readout"><div id="frequency-readout">5.74 Hz</div><p>Dominant shake frequency. Uneven diesel pulses stay layered underneath. Compare default previews the current game's tuning for this chassis.</p></div>
+      <div class="buttons"><button id="pause">Pause</button><button id="compare" aria-pressed="false">Compare default</button><button id="reset">Reset knobs</button></div>
       <label class="check"><input type="checkbox" id="smoke" checked>Exhaust smoke</label>
       <div class="export"><div class="eyebrow">YOUR TUNING</div><p class="hint">Saved in this browser, separately for each chassis. Copy or download settings to bring your choice back to the game.</p><textarea id="settings" aria-label="Shake settings JSON" readonly spellcheck="false"></textarea><div class="buttons"><button id="copy" class="primary">Copy settings</button><button id="download">Save JSON</button></div><p id="message" role="status">Preview only. Game defaults stay unchanged.</p></div>
     </aside>
