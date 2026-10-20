@@ -177,8 +177,7 @@ export class World {
     this.fx = new FX(this.scene, this.camera);
     this.post = new Post(this.renderer, this.scene, this.camera);
 
-    // High contrast: a weak fill keeps the shade dark, a hard bright key makes
-    // the lit faces pop. Raise the fill and the whole table goes muddy again.
+    // Initial lights; applyTheme supplies each palette's approved balance.
     const hemi = new THREE.HemisphereLight(0xd8b88a, 0x140d06, 0.5); this.scene.add(hemi); this.hemi = hemi;
     this.sun = new THREE.DirectionalLight(0xffe0b0, 8);
     this.sun.position.set(-30, 60, -20); this.sun.castShadow = true;
@@ -412,6 +411,10 @@ export class World {
     this.sky.material.map?.dispose(); this.sky.material.map = skyTexture(theme.sky); this.sky.material.needsUpdate = true;
     this.sky.position.set(w / 2, -40, h / 2);
     this.post.setGrade(theme.grade);
+    this.renderer.toneMappingExposure = theme.lighting.exposure;
+    this.sun.shadow.radius = theme.lighting.shadowRadius;
+    this.sun.shadow.intensity = theme.lighting.shadowIntensity;
+    this.post.bloom.strength = theme.lighting.bloom;
   }
 
   // Propaganda posters on the facades take sides: the trailing side's get

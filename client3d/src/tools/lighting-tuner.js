@@ -2,11 +2,14 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { World } from "../scene/world.js";
 import { Mech } from "../scene/mechs.js";
-import { THEMES } from "../scene/themes.js";
+import { THEMES as GAME_THEMES } from "../scene/themes.js";
+import { LIGHTING_BASELINE } from "./lighting-baseline.js";
 import { CHASSIS } from "/shared/game-state.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 
 const $ = (id) => document.getElementById(id);
+// Keep the original comparison stable when approved recipes enter the game.
+const THEMES = Object.fromEntries(Object.entries(GAME_THEMES).map(([id, theme]) => [id, { ...theme, ...LIGHTING_BASELINE[id] }]));
 const hex = (value) => `#${value.toString(16).padStart(6, "0")}`;
 const storageKey = "oil-iron-lighting-bench-v1";
 const groups = [

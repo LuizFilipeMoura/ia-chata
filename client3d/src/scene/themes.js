@@ -13,6 +13,7 @@
 //   buildings / backdrop / scenery        what the scatter and the horizon become
 //   ambient                               the drift in the air (world.ambient)
 //   ambience                              the audio bed id (audio.js maps it)
+//   lighting                              exposure, shadows and bloom
 //   grade                                 the post colour grade (post.js)
 //   weather                               chance of rain per battle (weatherFor)
 //   dress                                 facade dressing odds (facades.js)
@@ -21,64 +22,67 @@
 // and light ends (0x808080 is neutral), `sat` and `contrast` near 1, `lift`
 // raises the blacks toward the shadow tint, `amount` blends it all in. Gains
 // never exceed 1, so a grade can't push a highlight into a bloom blob.
-const GRIME = { shadows: 0x6a7278, highlights: 0x9a8058, sat: 0.86, contrast: 1.04, lift: 0.025, amount: 0.55 }; // whale-grey and ochre
-const GILT = { shadows: 0x70665a, highlights: 0xa08650, sat: 0.95, contrast: 1.05, lift: 0.015, amount: 0.5 };   // gilded warm deco
 
 export const THEMES = {
   foundry: {
     id: "foundry", name: "Foundry Dusk",
     sky: ["#0c0a08", "#2b1c10", "#6e4220", "#a8662a", "#3a2614", "#140e09"],
     bg: 0x1a130c, fog: { color: 0x2a1d10, near: 95, far: 250 },
-    hemi: { sky: 0xd8b88a, ground: 0x140d06, i: 0.5 }, sun: { color: 0xffe0b0, i: 8 }, sunAt: [-30, 60, -20],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xffe0b0, i: 5.2 }, sunAt: [-32.143, 64.286, -21.429],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#4a3c2b", blooms: ["rgba(120,60,25,0.22)", "rgba(10,8,6,0.25)"], speck: [90, 78, 60], rails: 1, plates: false, stripes: false, cracks: null },
     outer: 0x1b1d22, lamp: 0xffcf6b, banner: 0x8a2a1c, search: 0xfff0c8,
     buildings: ["factory", "tank", "pumphouse", "sawtooth", "furnace", "tenement"], backdrop: ["skyline", "zeppelin", "crane", "arcpylons"], ambient: "soot", scenery: null,
-    ambience: "foundry", grade: GRIME, weather: 0.3,
+    ambience: "foundry", grade: { shadows: 0x6a7278, highlights: 0x9a8058, sat: 0.86, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0.3,
     dress: { posters: 0.7, neon: 0, oilRacks: 0.5, layered: false },
   },
   refinery: {
     id: "refinery", name: "Refinery Night",
     sky: ["#04060c", "#0b1322", "#1c2a3a", "#6a3a1a", "#1a1410", "#07080a"],
     bg: 0x070a10, fog: { color: 0x10141c, near: 95, far: 250 },
-    hemi: { sky: 0x8aa2c8, ground: 0x0a0806, i: 0.42 }, sun: { color: 0xcfe0ff, i: 6.5 }, sunAt: [-30, 60, -20],
+    hemi: { sky: 0x8aa2c8, ground: 0x0a0806, i: 0.42 }, sun: { color: 0xcfe0ff, i: 6.5 }, sunAt: [-32.143, 64.286, -21.429],
+    lighting: { exposure: 1.3, shadowRadius: 3, shadowIntensity: 1, bloom: 0.7 },
     ground: { base: "#2f2e2c", blooms: ["rgba(10,10,12,0.35)", "rgba(90,70,40,0.18)"], speck: [70, 70, 72], rails: 0, plates: false, stripes: true, cracks: null },
     outer: 0x0e1014, lamp: 0xffb347, banner: 0xd8a21c, search: 0xffe6b0,
     buildings: ["tank", "factory", "gasholder", "derrick", "furnace", "pumphouse"], backdrop: ["flares", "skyline", "crane", "ferriss"], ambient: "embers", scenery: null,
-    ambience: "refinery", grade: { ...GRIME, shadows: 0x646c7a, amount: 0.45 }, weather: 0.35,
+    ambience: "refinery", grade: { shadows: 0x646c7a, highlights: 0x9a8058, sat: 0.86, contrast: 1.04, lift: 0.025, amount: 0.45 }, weather: 0.35,
     dress: { posters: 0.5, neon: 0.2, oilRacks: 0.6, layered: false },
   },
   railyard: {
     id: "railyard", name: "Rail Yard",
     sky: ["#15181a", "#2c3230", "#4d5550", "#8a8a78", "#3a3c36", "#141615"],
     bg: 0x1a1d1c, fog: { color: 0x3a3e3a, near: 95, far: 250 },
-    hemi: { sky: 0xc8d0c0, ground: 0x12110e, i: 0.5 }, sun: { color: 0xfff2dc, i: 7.5 }, sunAt: [-30, 60, -20],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xfff2dc, i: 4.88 }, sunAt: [-32.143, 64.286, -21.429],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#4b4841", blooms: ["rgba(30,28,24,0.3)", "rgba(110,80,50,0.15)"], speck: [95, 92, 84], rails: 4, plates: false, stripes: false, cracks: null },
     outer: 0x1c1e1c, lamp: 0xffd98a, banner: 0x2c4a6a, search: 0xf6f2e0,
     buildings: ["shed", "watertower", "signalbox", "depot", "sawtooth", "tenement"], backdrop: ["crane", "skyline", "zeppelin", "walloflight"], ambient: "steam", scenery: null,
-    ambience: "railyard", grade: GRIME, weather: 0.45,
+    ambience: "railyard", grade: { shadows: 0x6a7278, highlights: 0x9a8058, sat: 0.86, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0.45,
     dress: { posters: 0.7, neon: 0, oilRacks: 0.5, layered: false },
   },
   skyport: {
     id: "skyport", name: "Skyport Docks",
     sky: ["#0b1216", "#1d3438", "#4a6a62", "#c89a52", "#5a4630", "#10100e"],
     bg: 0x14201f, fog: { color: 0x2a3834, near: 95, far: 250 },
-    hemi: { sky: 0xdcd6c0, ground: 0x14100a, i: 0.5 }, sun: { color: 0xffe6b8, i: 8 }, sunAt: [-30, 60, -20],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xffe6b8, i: 5.2 }, sunAt: [-32.143, 64.286, -21.429],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#5a4a34", blooms: ["rgba(40,30,20,0.25)", "rgba(150,110,60,0.15)"], speck: [110, 96, 72], rails: 0, plates: true, stripes: false, cracks: null },
     // Sodium and whale-oil amber, not teal: every lamp in the port burns oil.
     outer: 0x16201e, lamp: 0xffbf6a, banner: 0x1f6a5a, search: 0xffe2a8,
     buildings: ["mast", "factory", "watertower", "pylon", "depot", "gasholder"], backdrop: ["zeppelin", "zeppelin", "skyline", "ferriss"], ambient: "dust", scenery: null,
-    ambience: "skyport", grade: GILT, weather: 0.25,
+    ambience: "skyport", grade: { shadows: 0x70665a, highlights: 0xa08650, sat: 0.95, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0.25,
     dress: { posters: 0.6, neon: 0.5, oilRacks: 0.4, layered: true },
   },
   ashfields: {
     id: "ashfields", name: "Ashfields",
     sky: ["#080404", "#1c0806", "#4a120a", "#b0381a", "#2a0c08", "#0a0404"],
     bg: 0x120606, fog: { color: 0x2a0e08, near: 95, far: 250 },
-    hemi: { sky: 0xe0a080, ground: 0x0a0404, i: 0.45 }, sun: { color: 0xffc8a0, i: 7.5 }, sunAt: [-30, 60, -20],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xffc8a0, i: 4.88 }, sunAt: [-32.143, 64.286, -21.429],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#2a2522", blooms: ["rgba(0,0,0,0.35)", "rgba(120,40,10,0.18)"], speck: [60, 54, 50], rails: 0, plates: false, stripes: false, cracks: "rgba(255,110,30,0.55)" },
     outer: 0x100a08, lamp: 0xff7a3a, banner: 0x3a3a3a, search: 0xffd0b0,
     buildings: ["cooling", "factory", "tank", "pillbox", "derrick", "furnace"], backdrop: ["cooling", "flares", "skyline", "arcpylons"], ambient: "embers", scenery: null,
-    ambience: "ashfields", grade: { ...GRIME, highlights: 0x9a6e4c, amount: 0.4 }, weather: 0,
+    ambience: "ashfields", grade: { shadows: 0x6a7278, highlights: 0x9a6e4c, sat: 0.86, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0,
     dress: { posters: 0.5, neon: 0, oilRacks: 0.3, layered: false },
   },
   // 1920+ Poland: rolling fields, haystacks, birches, a windmill and a church
@@ -87,12 +91,13 @@ export const THEMES = {
     id: "rozalski", name: "Rozalski Fields",
     sky: ["#3a4450", "#6a7078", "#b89a70", "#e0b070", "#8a7050", "#3a3020"],
     bg: 0x6a6a62, fog: { color: 0x8a7e66, near: 90, far: 260 },
-    hemi: { sky: 0xe8d8b0, ground: 0x2a2414, i: 0.55 }, sun: { color: 0xffd49a, i: 7 }, sunAt: [-70, 20, -25],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xffd49a, i: 4.55 }, sunAt: [-68.205, 19.487, -24.359],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#5e5a36", blooms: ["rgba(120,110,50,0.25)", "rgba(40,50,20,0.25)"], speck: [110, 104, 66], rails: 0, plates: false, stripes: false, cracks: null },
     outer: 0x4a4a2a, lamp: 0xffc070, banner: 0x8a2a1c, search: 0xffe6b8,
     buildings: ["barn", "watertower", "shed", "pumphouse", "barn", "signalbox"], backdrop: ["fields", "windmill", "church", "zeppelin"], ambient: "dust",
     scenery: { rock: ["classic", "boiler", "scrap"], ruin: ["brickwalls", "chimney", "foundation"], wood: ["scrub", "marsh"], crater: ["shell", "classic", "bomb"] },
-    ambience: "fields", grade: { shadows: 0x68707a, highlights: 0xa88a58, sat: 0.9, contrast: 1.05, lift: 0.02, amount: 0.5 }, weather: 0.2,
+    ambience: "fields", grade: { shadows: 0x68707a, highlights: 0xa88a58, sat: 0.9, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0.2,
     dress: { posters: 0.3, neon: 0, oilRacks: 0, layered: false },
   },
   // Karnaca: sun-bleached whitewash, terracotta roofs, shutters, harbour cranes.
@@ -100,11 +105,12 @@ export const THEMES = {
     id: "karnaca", name: "Karnaca Port",
     sky: ["#3c5a70", "#6a8898", "#c8b898", "#e8c890", "#b08a60", "#4a3a28"],
     bg: 0x8a8070, fog: { color: 0xb0a080, near: 100, far: 280 },
-    hemi: { sky: 0xf0e0c0, ground: 0x3a2a1a, i: 0.6 }, sun: { color: 0xffe4b4, i: 7 }, sunAt: [-25, 55, 30],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xffe4b4, i: 4.55 }, sunAt: [-27.797, 61.153, 33.356],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#8a7658", blooms: ["rgba(200,170,120,0.2)", "rgba(80,60,40,0.2)"], speck: [150, 132, 104], rails: 0, plates: false, stripes: false, cracks: null },
     outer: 0x6a5a44, lamp: 0xffc47a, banner: 0xb0482a, search: 0xffe8c0,
     buildings: ["villa", "villa", "watertower", "depot", "tenement", "mast"], backdrop: ["harbour", "seaplanes", "villas", "crane"], ambient: "dust", scenery: null,
-    ambience: "harbour", grade: { ...GILT, highlights: 0xa8906a, sat: 0.9, amount: 0.4 }, weather: 0,
+    ambience: "harbour", grade: { shadows: 0x70665a, highlights: 0xa8906a, sat: 0.9, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0,
     dress: { posters: 0.5, neon: 0.2, oilRacks: 0.3, layered: false },
   },
   // Rapture: art deco under the sea, gold and verdigris, warm neon, dark water.
@@ -112,11 +118,12 @@ export const THEMES = {
     id: "sunken", name: "Sunken Deco",
     sky: ["#02080a", "#06161a", "#0c2a2c", "#1a3a36", "#0a1a1a", "#040808"],
     bg: 0x061214, fog: { color: 0x0c1c1c, near: 80, far: 220 },
-    hemi: { sky: 0x6a8c86, ground: 0x0a0806, i: 0.45 }, sun: { color: 0xffd8a0, i: 5 }, sunAt: [-20, 60, -15],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xffd8a0, i: 3.25 }, sunAt: [-23.077, 69.231, -17.308],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#2c302c", blooms: ["rgba(20,40,38,0.3)", "rgba(120,90,40,0.15)"], speck: [70, 76, 70], rails: 0, plates: true, stripes: false, cracks: null },
     outer: 0x0c1414, lamp: 0xffb45a, banner: 0x2a5a4a, search: 0xffdca0,
     buildings: ["decotower", "decotower", "tank", "pumphouse", "gasholder", "tenement"], backdrop: ["bulkheads", "decotowers", "decotowers"], ambient: "steam", scenery: null,
-    ambience: "undersea", grade: { ...GILT, shadows: 0x5e706c, amount: 0.5 }, weather: 0,
+    ambience: "undersea", grade: { shadows: 0x5e706c, highlights: 0xa08650, sat: 0.95, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0,
     dress: { posters: 0.4, neon: 0.8, oilRacks: 0.2, layered: true },
   },
   // Trenches: mud, wire, craters, duckboards, a grey-green gas sky.
@@ -124,12 +131,13 @@ export const THEMES = {
     id: "nomansland", name: "No-Man's-Land",
     sky: ["#15180f", "#2e3426", "#4e5640", "#7a7c5e", "#34362a", "#121410"],
     bg: 0x2a2e24, fog: { color: 0x3a4032, near: 85, far: 230 },
-    hemi: { sky: 0xc0c0a0, ground: 0x12100a, i: 0.5 }, sun: { color: 0xe8dcc0, i: 6 }, sunAt: [-30, 50, -20],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xe8dcc0, i: 3.9 }, sunAt: [-36.5, 60.833, -24.333],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#3e3426", blooms: ["rgba(20,16,10,0.35)", "rgba(70,70,40,0.2)"], speck: [80, 70, 54], rails: 0, plates: false, stripes: false, cracks: null },
     outer: 0x241e16, lamp: 0xffb060, banner: 0x4a4a30, search: 0xffe0b0,
     buildings: ["blockhouse", "pillbox", "blockhouse", "shed", "pylon", "signalbox"], backdrop: ["trenchline", "deadwood", "deadwood", "starshells"], ambient: "soot",
     scenery: { rock: ["concrete", "scrap", "boiler"], ruin: ["brickwalls", "foundation", "chimney"], wood: ["wire", "scrub", "marsh"], crater: ["shell", "flooded", "bomb"] },
-    ambience: "trenches", grade: { ...GRIME, shadows: 0x6a7266, highlights: 0x8e8660, sat: 0.78, amount: 0.55 }, weather: 0.5,
+    ambience: "trenches", grade: { shadows: 0x6a7266, highlights: 0x8e8660, sat: 0.78, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0.5,
     dress: { posters: 0.4, neon: 0, oilRacks: 0, layered: false },
   },
   // Hugh Ferriss: monolith setback towers in the fog, searchlights raking it.
@@ -137,11 +145,12 @@ export const THEMES = {
     id: "ferriss", name: "Ferriss City",
     sky: ["#060606", "#121212", "#262420", "#5a4a34", "#1e1a16", "#0a0908"],
     bg: 0x0e0d0c, fog: { color: 0x1e1b17, near: 80, far: 220 },
-    hemi: { sky: 0xc8b89a, ground: 0x0a0806, i: 0.42 }, sun: { color: 0xffe0b8, i: 5.5 }, sunAt: [-25, 65, -15],
+    hemi: { sky: 0xbfcbd8, ground: 0x706354, i: 1.8 }, sun: { color: 0xffe0b8, i: 3.58 }, sunAt: [-26.32, 68.432, -15.792],
+    lighting: { exposure: 1.15, shadowRadius: 4, shadowIntensity: 0.9, bloom: 0.45 },
     ground: { base: "#34322e", blooms: ["rgba(10,10,10,0.35)", "rgba(110,90,50,0.15)"], speck: [74, 70, 64], rails: 0, plates: false, stripes: true, cracks: null },
     outer: 0x121212, lamp: 0xffc070, banner: 0x6a1a14, search: 0xffe6b8,
     buildings: ["setback", "setback", "tenement", "factory", "pylon", "watertower"], backdrop: ["ferriss", "ferriss", "walloflight", "zeppelin"], ambient: "steam", scenery: null,
-    ambience: "metropolis", grade: GILT, weather: 0.4,
+    ambience: "metropolis", grade: { shadows: 0x70665a, highlights: 0xa08650, sat: 0.95, contrast: 1, lift: 0.055, amount: 0.4 }, weather: 0.4,
     dress: { posters: 0.6, neon: 0.5, oilRacks: 0.4, layered: true },
   },
 };
