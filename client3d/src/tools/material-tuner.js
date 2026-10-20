@@ -109,6 +109,7 @@ function sync(editingKey = null) {
   $('compare').textContent = compare ? 'Return to tuned' : 'Compare original';
   $('pause').textContent = paused ? 'Resume idle' : 'Pause idle';
   $('live-state').textContent = `${compare ? 'ORIGINAL MATERIALS' : 'TEXTURED STEEL / 2K PBR'} / MATTE PROTECTION ON`;
+  $('coverage').textContent = compare ? 'Original surface coverage' : study ? `All ${study.meshCount} physical parts textured` : '';
 }
 function setValue(key, value, editing = false) {
   if (!Number.isFinite(value)) return;

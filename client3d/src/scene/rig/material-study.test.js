@@ -79,12 +79,16 @@ test("material lab isolates every skin, supports exact original comparison and d
     for (const [mesh, geometry, material] of originals) {
       if (mesh.material !== material) {
         assert.notEqual(mesh.geometry, geometry);
-        assert.ok(mesh.material.roughness >= MIN_ROUGHNESS);
-        assert.equal(mesh.material.emissiveIntensity, material.emissiveIntensity);
-        assert.equal(mesh.material.map, maps.color);
-        assert.equal(mesh.material.normalMap, maps.normal);
-        assert.equal(mesh.material.roughnessMap, maps.arm);
-        assert.equal(mesh.material.metalnessMap, maps.arm);
+        const before = Array.isArray(material) ? material : [material];
+        const after = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        after.forEach((surface, i) => {
+          assert.ok(surface.roughness >= MIN_ROUGHNESS);
+          assert.equal(surface.emissiveIntensity, before[i].emissiveIntensity);
+          assert.equal(surface.map, before[i].map || maps.color);
+          assert.equal(surface.normalMap, maps.normal);
+          assert.equal(surface.roughnessMap, maps.arm);
+          assert.equal(surface.metalnessMap, maps.arm);
+        });
         if (material === m.built.ctx.paint) assert.equal(mesh.material.metalness, 0, "paint is a dielectric coating");
         if (material === m.built.ctx.trim || material === m.built.ctx.steel) assert.ok(mesh.material.metalness >= .85, "exposed alloys have a metallic response");
       }
@@ -100,4 +104,56 @@ test("material lab isolates every skin, supports exact original comparison and d
     for (const [mesh, geometry, material] of originals) { assert.equal(mesh.geometry, geometry); assert.equal(mesh.material, material); }
   }
   assert.equal(MIN_ROUGHNESS, 0.7); assert.equal(LOCAL_LIGHT_CAP, 4);
+});
+
+test("every physical Tyrian mesh receives textures across all skins, including weapons and skin copies", () => {
+  for (const skin of ["factory", "refit", "ace", "worn", "rust"]) {
+    const m = rig(skin), surfaces = [], markers = [];
+    m.root.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      if ([mesh.material].flat().some((material) => material.isMeshStandardMaterial)) surfaces.push(mesh);
+      else markers.push([mesh, mesh.material]);
+    });
+    const study = installMaterialStudy(m, undefined, maps);
+    assert.equal(study.meshCount, surfaces.length, `${skin}: no physical part skipped`);
+    for (const mesh of surfaces) {
+      for (const material of [mesh.material].flat()) {
+        assert.ok(material.map, `${skin}: ${mesh.userData.part || mesh.geometry.type} missing color texture`);
+        assert.equal(material.normalMap, maps.normal);
+        assert.equal(material.roughnessMap, maps.arm);
+      }
+      assert.ok(mesh.geometry.hasAttribute('studyUv'));
+    }
+    for (const [mesh, material] of markers) assert.equal(mesh.material, material, 'team and selection markers retain their explicit UI materials');
+    study.dispose();
+  }
+});
+
+test("full coverage preserves authored decal UVs, nonmetal surfaces and animated lamps", () => {
+  const m = rig(), ctx = m.built.ctx;
+  const art = new THREE.Texture();
+  const decal = new THREE.Mesh(new THREE.PlaneGeometry(.2, .2).toNonIndexed(), new THREE.MeshStandardMaterial({ map: art, transparent: true, metalness: 0 }));
+  m.built.pelvis.add(decal);
+  const uv = [...decal.geometry.getAttribute('uv').array];
+  const rubber = [], lamps = [];
+  m.root.traverse((mesh) => {
+    if (mesh.material === ctx.rubber) rubber.push(mesh);
+    if (mesh.material === m.lampMat) lamps.push(mesh);
+  });
+  const study = installMaterialStudy(m, undefined, maps);
+  assert.equal(decal.material.map, art, 'existing markings must not become steel images');
+  assert.deepEqual([...decal.geometry.getAttribute('uv').array], uv, 'authored decal layout preserved');
+  for (const mesh of rubber) {
+    assert.equal(mesh.material.metalness, 0, 'rubber remains nonmetallic');
+    assert.ok(mesh.material.roughness >= .9);
+    assert.equal(mesh.material.normalMap, maps.normal, 'rubber still receives surface detail');
+  }
+  m.lampMat.emissiveIntensity = .3;
+  m.lampMat.emissive.setHex(0xc8260e);
+  for (const mesh of lamps) {
+    mesh.material.onBeforeRender();
+    assert.equal(mesh.material.emissiveIntensity, .3);
+    assert.ok(mesh.material.emissive.equals(m.lampMat.emissive), 'lamp state still reaches rendered material');
+  }
+  study.dispose();
 });
