@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Mech } from "../scene/mechs.js";
 import { FX } from "../scene/fx.js";
 import { MATERIAL_DEFAULTS, materialValues, installMaterialStudy } from "../scene/rig/material-study.js";
+import { MATERIAL_ASSET, MATERIAL_MAP_URLS, loadMaterialTextures } from './material-textures.js';
 import { SKIN_IDS } from "../scene/rig/skins.js";
 import { Post } from "../scene/post.js";
 import { CHASSIS } from "/shared/game-state.js";
@@ -10,12 +11,13 @@ import { BASE_RADIUS } from "/shared/geometry.js";
 import "../scene/matte.js";
 
 const $ = (id) => document.getElementById(id);
-const storageKey = "oil-iron-material-lab";
+const storageKey = "oil-iron-material-lab-pbr-v1";
 const tuning = Object.fromEntries(SKIN_IDS.map((skin) => [skin, materialValues()]));
 const definitions = {
-  paintVariation: ['Paint variation', 'Fading & panel roughness'], grain: ['Grain', 'Fine paint stipple'],
-  edgeWear: ['Edge wear', 'Chips along real edges'], grime: ['Grime', 'Dust, soot & streaks'],
+  paintVariation: ['Paint variation', 'Texture color & fading'], grain: ['Grain', 'Normal-map strength'],
+  edgeWear: ['Edge wear', 'Scratches & exposed steel'], grime: ['Grime', 'Stains & cavity dirt'],
 };
+for (const [key, url] of Object.entries(MATERIAL_MAP_URLS)) $(`map-${key}`).src = url;
 const limits = Object.fromEntries(Object.keys(definitions).map((key) => [key, [0, 1]]));
 for (const [key, [label, hint]] of Object.entries(definitions)) {
   const control = document.createElement('div'); control.className = 'control';
@@ -73,9 +75,10 @@ const grid = new THREE.GridHelper(24, 48, 0x5c6355, 0x42493e); grid.position.y =
 const fx = new FX(scene, camera);
 const post = new Post(renderer, scene, camera); post.setGrade(null);
 const workLamp = new THREE.PointLight(0xffe6c2, 0, 6, 2); workLamp.position.set(1.2, 1.4, 1.1); scene.add(workLamp);
-let mech, study, compare = false, paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let mech, study, materialMaps, compare = false, paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cache = new Map();
 function loadRig() {
+  if (!materialMaps) return;
   if (mech) mech.root.visible = false;
   const name = 'Tyrian', skin = $('skin').value, key = skin;
   if (!cache.has(key)) {
@@ -83,7 +86,7 @@ function loadRig() {
     const model = new Mech({ id: `material-lab-${name}`, name, chassis: c.id, owner: "a", weightClass: c.class,
       longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin });
     model.setPose({ x: 0, y: 0 }, 0); model.update(0);
-    scene.add(model.root); cache.set(key, { model, study: installMaterialStudy(model, tuning[skin]) });
+    scene.add(model.root); cache.set(key, { model, study: installMaterialStudy(model, tuning[skin], materialMaps) });
   }
   ({ model: mech, study } = cache.get(key)); mech.root.visible = true;
   // Remove the previous rig's lingering puffs when swapping the preview.
@@ -100,12 +103,12 @@ function sync(editingKey = null) {
     dial.setAttribute('aria-valuenow', String(value));
     dial.setAttribute('aria-valuetext', `${Math.round(value * 100)} percent`);
   }
-  study.set(values); study.setEnabled(!compare);
-  $('settings').value = JSON.stringify({ chassis: 'Tyrian', skin: $('skin').value, material: values }, null, 2);
+  study?.set(values); study?.setEnabled(!compare);
+  $('settings').value = JSON.stringify({ chassis: 'Tyrian', skin: $('skin').value, texture: MATERIAL_ASSET, material: values }, null, 2);
   $('compare').setAttribute('aria-pressed', String(compare));
   $('compare').textContent = compare ? 'Return to tuned' : 'Compare original';
   $('pause').textContent = paused ? 'Resume idle' : 'Pause idle';
-  $('live-state').textContent = `${compare ? 'ORIGINAL MATERIALS' : 'MATERIAL STUDY'} / MATTE PROTECTION ON`;
+  $('live-state').textContent = `${compare ? 'ORIGINAL MATERIALS' : 'TEXTURED STEEL / 2K PBR'} / MATTE PROTECTION ON`;
 }
 function setValue(key, value, editing = false) {
   if (!Number.isFinite(value)) return;
@@ -172,9 +175,16 @@ const resize = new ResizeObserver(() => {
   renderer.setSize(width, height, false); post.setSize(width, height); camera.aspect = width / height; camera.updateProjectionMatrix();
 });
 resize.observe($('stage'));
-loadRig(); controls.update();
+controls.update();
+loadMaterialTextures(renderer).then((maps) => {
+  materialMaps = maps; loadRig();
+}).catch((error) => {
+  $('live-state').textContent = 'TEXTURE LOAD FAILED';
+  $('message').textContent = `Could not load the material images: ${error.message || 'reload the page to retry'}.`;
+});
 let previous = null, nextReadout = 0;
 renderer.setAnimationLoop((now) => {
+  if (!mech) return;
   const elapsed = previous == null ? 0 : Math.max(0, (now - previous) / 1000);
   const dt = Math.min(0.05, elapsed); previous = now;
   if (!paused && !document.hidden) {

@@ -41,6 +41,13 @@
     .unit { font-size: 13px; margin-left: 3px; color: var(--muted); }
     .range { color: var(--muted); font-size: 12px; margin: 7px 0 0; }
     .hint { color: var(--muted); font-size: 12px; margin: 0 0 20px; }
+    .material-source { margin: 16px 0; padding: 12px; border: 1px solid #3c433c; background: #141a17; }
+    .material-source summary { cursor: pointer; font-size: 13px; }
+    .maps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+    .maps figure { margin: 0; }
+    .maps img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 3px; }
+    .maps figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .material-source p { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
     .readout { padding: 14px; margin-bottom: 18px; background: #111715; border-left: 2px solid var(--accent); }
     #frequency-readout { font: 22px/1.4 ui-monospace, monospace; }
     .readout p { color: var(--muted); font-size: 12px; margin: 3px 0 0; }
@@ -57,7 +64,7 @@
   <header><div><div class="eyebrow">OIL & IRON / PAINT SHOP</div><h1>Tyrian Material Lab</h1></div><a href="../../#dev=poc.scene">Back to yard ↗</a></header>
   <main>
     <section id="stage" aria-label="Interactive 3D rig preview">
-      <div class="stage-label"><div class="eyebrow" id="live-state">MATERIAL STUDY / MATTE PROTECTION ON</div><div id="rig-title">Tyrian · Ace</div></div>
+      <div class="stage-label"><div class="eyebrow" id="live-state">LOADING 2K MATERIAL TEXTURES…</div><div id="rig-title">Tyrian · Ace</div></div>
       <div class="stage-footer"><span>Drag to orbit · Scroll to zoom</span><span id="cadence">Loading engine…</span></div>
     </section>
     <aside>
@@ -69,7 +76,8 @@
       <p class="hint" id="knob-help">Drag knobs up/down. Arrow keys adjust by 0.01; Page Up/Down by 0.1. Hold Shift while dragging for finer control.</p>
       <div class="buttons"><button id="compare" aria-pressed="false">Compare original</button><button id="reset">Reset knobs</button><button id="pause">Pause idle</button></div>
       <label class="check"><input type="checkbox" id="smoke">Exhaust smoke</label>
-      <p class="hint">0 removes a layer; 1 gives full strength. Skin paint and markings stay intact. Glare check uses a bright work lamp with the game's bloom and light cap.</p>
+      <p class="hint">Actual image textures wrap the armor. Knobs tune their color, surface relief, wear and dirt. Skin colors and markings stay recognizable. Glare check uses a bright work lamp with the game's bloom and light cap.</p>
+      <details class="material-source"><summary>Applied material · Painted steel / 2K</summary><div class="maps"><figure><img id="map-color" alt="Painted steel color texture"><figcaption>Color</figcaption></figure><figure><img id="map-normal" alt="Surface normal texture"><figcaption>Normal</figcaption></figure><figure><img id="map-arm" alt="Packed occlusion roughness and metal texture"><figcaption>AO / Rough / Metal</figcaption></figure></div><p><a href="https://polyhaven.com/a/blue_metal_plate" target="_blank" rel="noreferrer">Blue Metal Plate</a> · Rob Tuytel / Poly Haven · CC0. Blue paint retinted to the selected skin.</p></details>
       <div class="export"><div class="eyebrow">YOUR MATERIAL RECIPE</div><p class="hint">Saved per finish in this browser. Copy your recipe when it feels right.</p><textarea id="settings" aria-label="Material settings JSON" readonly spellcheck="false"></textarea><div class="buttons"><button id="copy" class="primary">Copy settings</button><button id="download">Save JSON</button></div><p id="message" role="status">POC only. Game materials stay unchanged.</p></div>
     </aside>
   </main>

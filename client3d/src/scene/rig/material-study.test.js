@@ -12,6 +12,7 @@ const rig = (skin = "ace") => {
   return new Mech({ id: "material-study", name: "Tyrian", chassis: c.id, owner: "a", weightClass: c.class,
     longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin });
 };
+const maps = { color: new THREE.Texture(), normal: new THREE.Texture(), arm: new THREE.Texture() };
 
 test("material controls clamp invalid imported values without changing input", () => {
   const input = { paintVariation: 9, grain: -2, edgeWear: NaN, grime: 0 };
@@ -52,12 +53,27 @@ test("nonindexed geometry retains its original metadata after treatment", () => 
   assert.deepEqual(source.userData, { part: "panel" });
 });
 
+test("texture coordinates follow physical panel size, including geometry with missing UVs", () => {
+  const source = new THREE.BoxGeometry(2, 1, .5); source.deleteAttribute('uv');
+  const geo = surfaceGeometry(source, new THREE.Matrix4().makeScale(.5, .5, .5));
+  const uv = geo.getAttribute('uv'), position = geo.getAttribute('position');
+  assert.ok(uv, "procedural hulls receive texture coordinates");
+  for (let i = 0; i < position.count; i += 3) {
+    const [a, b, c] = [0,1,2].map((v) => new THREE.Vector3().fromBufferAttribute(position, i + v));
+    const area = b.sub(a).cross(c.sub(a)).length() / 2 * .25;
+    const [u, v, w] = [0,1,2].map((offset) => new THREE.Vector2().fromBufferAttribute(uv, i + offset));
+    const uvArea = Math.abs(v.sub(u).cross(w.sub(u))) / 2;
+    assert.ok(Math.abs(uvArea - area * 4) < 1e-6, "two texture tiles per root unit, without stretching");
+  }
+  assert.ok(!source.hasAttribute('uv'), "original mesh untouched");
+});
+
 test("material lab isolates every skin, supports exact original comparison and disposal", () => {
   for (const skin of ["factory", "refit", "ace", "worn", "rust"]) {
     const m = rig(skin), other = rig(skin), originals = [];
     m.root.traverse((o) => { if (o.isMesh) originals.push([o, o.geometry, o.material]); });
     const originalPaint = other.built.ctx.paint;
-    const study = installMaterialStudy(m);
+    const study = installMaterialStudy(m, undefined, maps);
     assert.ok(study.meshCount > 0);
     study.set({ paintVariation: 1, grain: 1, edgeWear: 1, grime: 1 });
     for (const [mesh, geometry, material] of originals) {
@@ -65,6 +81,10 @@ test("material lab isolates every skin, supports exact original comparison and d
         assert.notEqual(mesh.geometry, geometry);
         assert.ok(mesh.material.roughness >= MIN_ROUGHNESS);
         assert.equal(mesh.material.emissiveIntensity, material.emissiveIntensity);
+        assert.equal(mesh.material.map, maps.color);
+        assert.equal(mesh.material.normalMap, maps.normal);
+        assert.equal(mesh.material.roughnessMap, maps.arm);
+        assert.equal(mesh.material.metalnessMap, maps.arm);
         if (material === m.built.ctx.paint) assert.equal(mesh.material.metalness, 0, "paint is a dielectric coating");
         if (material === m.built.ctx.trim || material === m.built.ctx.steel) assert.ok(mesh.material.metalness >= .85, "exposed alloys have a metallic response");
       }
@@ -72,7 +92,10 @@ test("material lab isolates every skin, supports exact original comparison and d
     assert.equal(other.built.ctx.paint, originalPaint);
     assert.equal(originalPaint.onBeforeCompile.toString(), THREE.Material.prototype.onBeforeCompile.toString());
     study.setEnabled(false);
-    for (const [mesh, , material] of originals) assert.equal(mesh.material, material, "Before restores actual source material");
+    for (const [mesh, geometry, material] of originals) {
+      assert.equal(mesh.material, material, "Before restores actual source material");
+      assert.equal(mesh.geometry, geometry, "Before restores original texture coordinates too");
+    }
     study.setEnabled(true); study.dispose();
     for (const [mesh, geometry, material] of originals) { assert.equal(mesh.geometry, geometry); assert.equal(mesh.material, material); }
   }
