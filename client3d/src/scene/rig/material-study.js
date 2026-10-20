@@ -80,6 +80,8 @@ uniform sampler2D studyEdgeData;
 uniform vec2 studyEdgeSize;
 uniform float studyPaint;
 uniform float studyPainted;
+uniform float studyBareMetal;
+uniform float studyGlass;
 uniform float studyWear;
 uniform float studyGrime;
 uniform float studyWearable;
@@ -111,16 +113,20 @@ float studyScratch = 1.0 - smoothstep(.12, .42, (studyTexel.b - studyTexel.r) / 
 float studyDistance = studyEdgeDistance(studyP);
 float studyWidth = .0005 + .006 * studyWear;
 float studyEdge = (1.0 - smoothstep(studyWidth * .2, studyWidth, studyDistance)) * smoothstep(.25, .65, studyPacked.g);
-float studyChips = clamp(max(studyScratch * 1.4, studyEdge) * studyWear, 0.0, 1.0) * mix(.2, 1.0, studyPainted) * studyWearable;
+float studyChips = clamp(max(studyScratch * 1.4, studyEdge) * studyWear, 0.0, 1.0) * mix(mix(.2, .75, studyBareMetal), 1.0, studyPainted) * studyWearable;
 float studyPrimer = (1.0 - smoothstep(studyWidth * .6, studyWidth * 1.6, studyDistance)) * studyWear * studyPainted;
 float studyLow = 1.0 - smoothstep(.18, 1.45, studyP.y);
 // Reuse the photographed staining and cavity map for dirt placement.
 float studyStain = 1.0 - smoothstep(.018, .065, studyLuma);
 float studyDirt = clamp((1.0 - studyPacked.r) * 2.5 + studyStain * (.2 + .8 * studyLow), 0.0, 1.0) * studyGrime * studyWeathering;
-diffuseColor.rgb *= mix(1.0, studyVariation, studyPaint * mix(.18, 1.0, studyPainted) * studyWeathering);
+diffuseColor.rgb *= mix(1.0, studyVariation, studyPaint * mix(mix(.18, .8, max(studyBareMetal, studyGlass)), 1.0, studyPainted) * studyWeathering);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.045, .027, .018), studyPrimer * .45);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.28, .30, .31) * (.55 + studyPacked.r * .45), studyChips);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.020, .017, .013), studyDirt * .8);
+// Smoked cab glazing: dusty perimeter and fine scuffs, without steel chips.
+float studyGlassDust = (1.0 - smoothstep(.002, .024, studyDistance)) * studyGrime * studyGlass;
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.14, .12, .085), studyGlassDust * .65);
+diffuseColor.rgb += vec3(.06, .075, .075) * studyScratch * studyWear * studyGlass;
 `;
 
 export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
@@ -136,16 +142,27 @@ export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
   mech.root.updateWorldMatrix(true, true);
   const inverse = mech.root.matrixWorld.clone().invert();
   const ctx = mech.built.ctx;
+  // Legacy weapon metals were flattened by the POC's matte conversion. Identify
+  // them by their actual weapon use, while keeping painted housings and trim.
+  const weaponMetals = new Set();
+  for (const weapon of [mech.lr, mech.me]) weapon?.group.traverse((mesh) => {
+    if (!mesh.isMesh) return;
+    for (const material of [mesh.material].flat()) {
+      if (material.isMeshStandardMaterial && ![ctx.paint, ctx.trim, ctx.rubber].includes(material)
+        && material.metalness > .1 && !material.map && !material.transparent && material.emissive.getHex() === 0) weaponMetals.add(material);
+    }
+  });
   const replaceMaterial = (source) => {
     if (!source.isMeshStandardMaterial) return source;
     if (!replacements.has(source)) {
       const material = source.clone();
       const painted = source === ctx.paint, trim = source === ctx.trim;
+      const glass = source === mech.cockpitMat, bareMetal = weaponMetals.has(source);
       const luminous = source.emissive.getHex() !== 0;
       const wearable = !luminous && !source.transparent && !source.map && (painted || source.metalness > .1);
       // Rubber, canvas, mud, glass and existing markings keep their own finish.
       // Texture detail is shared; exposed steel chips only belong on metal parts.
-      const strength = luminous ? .035 : painted ? 1.4 : source.metalness <= .1 ? .18 : .25;
+      const strength = glass ? .14 : luminous ? .035 : painted ? 1.4 : bareMetal ? .65 : source.metalness <= .1 ? .18 : .25;
       material.map = source.map || maps.color; material.normalMap = maps.normal;
       material.roughnessMap = maps.arm; material.metalnessMap = maps.arm;
       material.normalScale.setScalar(values.grain * strength);
@@ -156,19 +173,32 @@ export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
       // Keep the warm finish, but move its exposed alloy toward aged nickel.
       if (trim) material.color.lerp(new THREE.Color(.32, .33, .32), .65);
       if (source === ctx.dark) { material.color.setRGB(.075, .085, .095); material.metalness = .7; }
+      if (bareMetal) {
+        material.metalness = .9; material.roughness = MIN_ROUGHNESS;
+        // Lift blue-black steel enough for scanned scuffs and broad reflections
+        // to read; retain the warm albedo of brass collars and ammunition.
+        const hsl = source.color.getHSL({});
+        if (hsl.s < .3) material.color.lerp(new THREE.Color(.22, .24, .26), .6);
+      }
+      if (glass) {
+        material.color.setRGB(.045, .075, .08);
+        material.emissiveIntensity = source.emissiveIntensity * .08;
+      }
       if ([mech.cockpitMat, mech.ventMat, mech.lampMat].includes(source)) {
         material.onBeforeRender = () => {
-          material.color.copy(source.color);
+          if (!glass) material.color.copy(source.color);
           material.emissive.copy(source.emissive);
-          material.emissiveIntensity = source.emissiveIntensity;
+          material.emissiveIntensity = source.emissiveIntensity * (glass ? .08 : 1);
         };
       }
       material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.uniforms.studyPainted = { value: painted ? 1 : 0 };
+        shader.uniforms.studyBareMetal = { value: bareMetal ? 1 : 0 };
+        shader.uniforms.studyGlass = { value: glass ? 1 : 0 };
         shader.uniforms.studyWearable = { value: wearable ? 1 : 0 };
         shader.uniforms.studyRoughness = { value: material.roughness };
-        shader.uniforms.studyWeathering = { value: luminous ? .12 : source.map ? .25 : 1 };
+        shader.uniforms.studyWeathering = { value: glass ? 1 : luminous ? .12 : source.map ? .25 : 1 };
         shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 studyPosition;\nattribute vec2 studyEdges;\nattribute vec2 studyUv;\nvarying vec3 vStudyPosition;\nvarying vec2 vStudyEdges;\nvarying vec2 vStudyUv;')
           .replace('#include <uv_vertex>', '#include <uv_vertex>\nvStudyUv = studyUv;\nvNormalMapUv = studyUv;\nvRoughnessMapUv = studyUv;\nvMetalnessMapUv = studyUv;')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvStudyPosition = studyPosition;\nvStudyEdges = studyEdges;');
@@ -181,7 +211,7 @@ export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
           // dimming the authored glow of lamps, hot vents and sparking cables.
           .replace('#include <opaque_fragment>', 'vec3 studyReflected = max(outgoingLight - totalEmissiveRadiance, vec3(0.0));\nfloat studyPeak = max(studyReflected.r, max(studyReflected.g, studyReflected.b));\nif (studyPeak > 1.6) studyReflected *= 1.6 / studyPeak;\noutgoingLight = studyReflected + totalEmissiveRadiance;\n#include <opaque_fragment>');
       };
-      material.customProgramCacheKey = () => `tyrian-material-study-textures-v2-${!!source.map}`;
+      material.customProgramCacheKey = () => `tyrian-material-study-textures-v3-${!!source.map}`;
       replacements.set(source, material);
       relief.set(material, strength);
     }
@@ -194,7 +224,8 @@ export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
     const source = mesh.material, geometry = mesh.geometry;
     const sources = Array.isArray(source) ? source : [source];
     if (!sources.some((material) => material.isMeshStandardMaterial)) return;
-    mesh.geometry = surfaceGeometry(geometry, inverse.clone().multiply(mesh.matrixWorld), sources.includes(ctx.paint) ? 2 : 7, sources.some((material) => material.map));
+    const density = sources.includes(ctx.paint) ? 2 : sources.includes(mech.cockpitMat) ? 3 : sources.some((material) => weaponMetals.has(material)) ? 3.5 : 7;
+    mesh.geometry = surfaceGeometry(geometry, inverse.clone().multiply(mesh.matrixWorld), density, sources.some((material) => material.map));
     const range = mesh.geometry.getAttribute('studyEdges'), offset = segments.length / 6;
     for (let i = 0; i < range.count; i++) range.setX(i, range.getX(i) + offset);
     for (const value of mesh.geometry.userData.studySegments) segments.push(value);

@@ -83,7 +83,7 @@ test("material lab isolates every skin, supports exact original comparison and d
         const after = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         after.forEach((surface, i) => {
           assert.ok(surface.roughness >= MIN_ROUGHNESS);
-          assert.equal(surface.emissiveIntensity, before[i].emissiveIntensity);
+          if (before[i] !== m.cockpitMat) assert.equal(surface.emissiveIntensity, before[i].emissiveIntensity);
           assert.equal(surface.map, before[i].map || maps.color);
           assert.equal(surface.normalMap, maps.normal);
           assert.equal(surface.roughnessMap, maps.arm);
@@ -155,5 +155,31 @@ test("full coverage preserves authored decal UVs, nonmetal surfaces and animated
     assert.equal(mesh.material.emissiveIntensity, .3);
     assert.ok(mesh.material.emissive.equals(m.lampMat.emissive), 'lamp state still reaches rendered material');
   }
+  study.dispose();
+});
+
+test("minigun barrels get exposed metal response and cab glass stays dark through idle updates", () => {
+  const m = rig(), windows = [];
+  const barrels = m.lr.spin.children.filter((mesh) => mesh.geometry?.parameters?.height > 1);
+  m.root.traverse((mesh) => { if (mesh.material === m.cockpitMat) windows.push(mesh); });
+  assert.equal(barrels.length, 6);
+  assert.ok(windows.length > 0);
+  const originalGlass = m.cockpitMat.color.clone();
+  const study = installMaterialStudy(m, undefined, maps);
+  for (const barrel of barrels) {
+    assert.ok(barrel.material.metalness > .8, 'barrels must reflect as exposed metal, not half-painted plastic');
+    assert.ok(barrel.material.roughness >= MIN_ROUGHNESS);
+    assert.ok(barrel.material.normalScale.x > .2, 'scanned wear must survive on small weapon parts');
+  }
+  for (const intensity of [.2, .9]) {
+    m.cockpitMat.emissiveIntensity = intensity;
+    for (const window of windows) {
+      window.material.onBeforeRender();
+      assert.equal(window.material.metalness, 0, 'glass is a dielectric');
+      assert.ok(Math.max(...window.material.color.toArray()) < .15, 'cab windows should be smoked, not pale yellow');
+      assert.ok(window.material.emissiveIntensity > 0 && window.material.emissiveIntensity < intensity * .15, 'interior glow follows idle state without washing out the texture');
+    }
+  }
+  assert.ok(m.cockpitMat.color.equals(originalGlass), 'original game window color untouched');
   study.dispose();
 });
