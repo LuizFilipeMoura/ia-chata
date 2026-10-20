@@ -232,7 +232,13 @@ const ADDONS = {
     side.children[0]?.traverse((o) => { if (o.isMesh && o.material === built.ctx.paint) o.visible = false; });
     // A bent stack.
     const st = built.stacks[Math.floor(rng() * built.stacks.length)];
-    st.rotation.x += 0.3; st.rotation.z += 0.2;
+    if (built.remodel) {
+      // Keep the exhaust seated on its manifold when its upper pipe bends.
+      const mount = new THREE.Group(), halfHeight = st.geometry.parameters.height / 2;
+      mount.position.copy(st.position); mount.position.y -= halfHeight;
+      st.parent.add(mount); mount.add(st); st.position.set(0, halfHeight, 0);
+      mount.rotation.x = 0.3; mount.rotation.z = 0.2;
+    } else { st.rotation.x += 0.3; st.rotation.z += 0.2; }
     // Sparking cable stub off the back.
     const cable = cyl(0.015, 0.015, 0.22, RUBBER(), 6); cable.position.set(-0.05, -0.1, -0.18 * k); cable.rotation.z = 0.9; s.back.add(cable);
     const spark = sph(0.03, GLOW(0xbfe8ff, 0x88ccff, 2.4), 6); spark.position.set(-0.14, -0.17, -0.18 * k); s.back.add(spark);

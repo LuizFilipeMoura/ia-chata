@@ -291,12 +291,15 @@ async function startLesson(lesson) {
 }
 
 // Dev Room: every 3D asset on one floor, labelled, to point at in design requests.
-function devRoom({ theme = null, focus = null, hall = null } = {}) {
+function devRoom({ theme = null, focus = null, hall = null, remodel = true, view = null } = {}) {
   teardown();
   screen.style.display = "none";
-  const room = new DevRoom(world, hudRoot, { onBack: home, theme, focus, hall });
-  room.onTheme = (id) => devRoom({ theme: id, focus: room.sel?.id, hall: room.hall });
+  const room = new DevRoom(world, hudRoot, { onBack: home, theme, focus, hall, remodel });
+  const currentView = () => ({ target: (world.cam.goal?.target ?? world.cam.target).clone(), dist: world.cam.goal?.dist ?? world.cam.dist, yaw: world.cam.yaw, pitch: world.cam.pitch });
+  room.onTheme = (id) => devRoom({ theme: id, focus: room.sel?.id, hall: room.hall, remodel: room.remodel, view: room.poc ? currentView() : null });
   room.onHall = (key) => devRoom({ theme: room.themeId, hall: key });
+  room.onRemodel = (value) => devRoom({ theme: room.themeId, focus: room.sel?.id, hall: room.hall, remodel: value, view: currentView() });
+  if (view) { world.cam.goal = null; world.cam.target.copy(view.target); Object.assign(world.cam, { dist: view.dist, yaw: view.yaw, pitch: view.pitch }); }
   active = room;
 }
 

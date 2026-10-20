@@ -17,6 +17,7 @@ import { SCENERY_VARIANTS, SCENERY_CAP, sceneryVariant } from "../scene/scenery.
 import { THEMES } from "../scene/themes.js";
 import { CHASSIS, SUPPORT_TEMPLATES, DRONE_TYPES } from "/shared/game-state.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
+import { buildRemodelPoc, pocOverview, pocUI, pocRigControls, updatePoc, disposePoc } from "./remodel-poc.js";
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const W = 112, H = 176;
@@ -29,6 +30,7 @@ const ROW = { backdrop: 10, buildings: 24, buildings2: 34, terrain: 44, scenery:
 const SKIN_GAP = 5.5;
 const X0 = 12;
 const SECTIONS = [
+  ["poc", "Remodel POC"],
   ["chassis", "Chassis (every finish)"], ["parts", "Rig parts"], ["states", "Rig states"], ["units", "Support units"], ["longRange", "Long-range weapons"], ["melee", "Melee weapons"],
   ["kit", "Unit guns + module tools"], ["fx", "FX"], ["scenery", "Scenery (rocks, ruins, woods, craters)"], ["terrain", "Terrain + objectives"], ["buildings", "Buildings"], ["backdrop", "Set pieces (scaled)"],
 ];
@@ -58,18 +60,19 @@ function pedestal(r = 0.9, h = 0.5) {
 export function hallOf(id = "") {
   const [head, sub] = id.split(".");
   if (head === "weapon") return sub === "longRange" ? "longRange" : sub === "melee" ? "melee" : "kit";
-  return { chassis: "chassis", rig: "chassis", part: "parts", state: "states", unit: "units", tool: "kit", fx: "fx", scenery: "scenery", terrain: "terrain", objective: "terrain", building: "buildings", backdrop: "backdrop" }[head] || "chassis";
+  return { poc: "poc", chassis: "chassis", rig: "chassis", part: "parts", state: "states", unit: "units", tool: "kit", fx: "fx", scenery: "scenery", terrain: "terrain", objective: "terrain", building: "buildings", backdrop: "backdrop" }[head] || "chassis";
 }
 
 export class DevRoom {
   // root: the screen element (sidebar + card + labels live in it). One hall
   // (section) is built at a time; onHall(key) switches.
-  constructor(world, root, { onBack, theme = null, focus = null, hall = null } = {}) {
+  constructor(world, root, { onBack, theme = null, focus = null, hall = null, remodel = true } = {}) {
     this.world = world; this.root = root; this.onBack = onBack;
     this.items = []; this.byId = new Map(); this.mechs = []; this.loops = [];
     this.themeId = theme || Object.keys(THEMES)[0];
     this.hall = hall || (focus ? hallOf(focus) : "chassis");
-    world.buildField({ width: W, height: H, terrain: [], theme: this.themeId }, []);
+    this.remodel = remodel;
+    world.buildField({ width: this.hall === "poc" ? 44 : W, height: this.hall === "poc" ? 34 : H, terrain: [], theme: this.themeId, lockTheme: true }, []);
     this.group = new THREE.Group(); world.tableGroup.add(this.group);
     this.ctx = world.dressCtx;
     this.build();
@@ -85,6 +88,7 @@ export class DevRoom {
 
   // Frame the whole hall.
   overview(fly = false) {
+    if (this.hall === "poc") { pocOverview(this); return; }
     this.world.tableGroup.updateMatrixWorld(true);
     const box = new THREE.Box3();
     for (const it of this.items) box.expandByObject(it.obj);
@@ -121,6 +125,7 @@ export class DevRoom {
 
   // Builds only this hall's section (the whole floor at once was too heavy).
   build() {
+    if (this.hall === "poc") { buildRemodelPoc(this); return; }
     const g = this.group;
     const on = (key) => key === this.hall;
     for (const [key, title] of SECTIONS) if (on(key)) g.add(floorText(title, 0.5, key === "fx" ? ROW.fx1 : ROW[key]));
@@ -380,7 +385,7 @@ export class DevRoom {
 
   select(it, { fly = true } = {}) {
     this.sel = it;
-    if (fly) this.world.cam.goal = { target: this.anchor(it).setY(0), dist: it.section === "backdrop" || it.section === "buildings" ? 26 : 14 };
+    if (fly) this.world.cam.goal = { target: this.anchor(it).setY(it.focusHeight ?? (it.mech ? 0.8 : 0)), dist: it.viewDistance ?? (it.section === "backdrop" || it.section === "buildings" ? 26 : 14) };
     // Play effects once the camera has arrived, not mid-flight.
     if (it.play) { clearTimeout(this.playT); this.playT = setTimeout(it.play, fly ? 900 : 0); }
     try { history.replaceState(null, "", `#dev=${encodeURIComponent(it.id)}`); } catch {}
@@ -396,16 +401,19 @@ export class DevRoom {
       el("div", { class: "dv-actions" },
         el("button", { class: "btn primary", onClick: () => { navigator.clipboard?.writeText(this.refText(it)).then(() => toast("Reference copied. Paste it into your request.", "good"), () => toast(this.refText(it), "info", 8000)); } }, "Copy ref"),
         it.play ? el("button", { class: "btn", onClick: it.play }, "▶ Play") : null,
-        m && !m.destroyed ? el("button", { class: "btn", onClick: () => { m.devWalk = !m.devWalk; } }, "Walk") : null,
-        m && !m.destroyed ? el("button", { class: "btn", onClick: () => this.fireMech(m, "longRange") }, "Fire gun") : null,
-        m && !m.destroyed ? el("button", { class: "btn", onClick: () => this.fireMech(m, "melee") }, "Swing") : null,
+        m && !m.destroyed ? el("button", { class: "btn", disabled: !!(m.status?.shutdown || m.broken?.engine),
+          onClick: () => { if (!m.status?.shutdown && !m.broken?.engine) m.devWalk = !m.devWalk; } }, "Walk") : null,
+        m && !m.destroyed ? el("button", { class: "btn", disabled: !!(m.status?.shutdown || m.broken?.engine), onClick: () => this.fireMech(m, "longRange") }, "Fire gun") : null,
+        m && !m.destroyed ? el("button", { class: "btn", disabled: !!(m.status?.shutdown || m.broken?.engine), onClick: () => this.fireMech(m, "melee") }, "Swing") : null,
         m ? el("button", { class: "btn", onClick: () => { m.targetFacing += 45; } }, "Turn") : null,
-        el("button", { class: "btn ghost", onClick: () => this.select(it) }, "Focus")));
+        el("button", { class: "btn ghost", onClick: () => this.select(it) }, "Focus")),
+      this.poc && m ? pocRigControls(this, m) : null);
     this.card.style.display = "";
     for (const b of this.index.querySelectorAll(".dv-item")) b.classList.toggle("on", b.dataset.id === it.id);
   }
 
   fireMech(m, slot) {
+    if (m.destroyed || m.status?.shutdown || m.broken?.engine) return;
     m.fire(slot);
     const from = m.muzzleWorld(slot);
     const r = m.root.rotation.y, fwd = V(Math.cos(r), 0, -Math.sin(r)); // the model faces local +x
@@ -414,6 +422,7 @@ export class DevRoom {
   }
 
   ui() {
+    if (this.hall === "poc") { pocUI(this); return; }
     const search = el("input", { class: "dv-search", placeholder: "Search assets…", onInput: () => this.filter(search.value) });
     const halls = el("div", { class: "dv-halls" }, SECTIONS.map(([key, title]) => el("button", { class: `btn ${key === this.hall ? "primary" : "ghost"} dv-hall`, onClick: () => { if (key !== this.hall) this.onHall?.(key); } }, title)));
     const title = SECTIONS.find(([k]) => k === this.hall)?.[1] || this.hall;
@@ -453,11 +462,13 @@ export class DevRoom {
     for (const m of this.mechs) {
       m.walking = m.devWalk ? 1 : Math.max(0, m.walking - dt * 3);
       m.update(dt);
+      m.emitAmbient(this.world.fx, dt);
       if (m.devFire) { m.devFireT = (m.devFireT || 0) - dt; if (m.devFireT <= 0) { m.devFireT = 1.4; this.fireMech(m, Math.random() < 0.7 ? "longRange" : "melee"); } }
       if (m.devHot && Math.random() < dt * 8) this.world.fx.heatHaze(m.stacks[Math.floor(Math.random() * m.stacks.length)].getWorldPosition(V()).add(V(0, 0.3, 0)), 1.3);
       if (m.devHot && Math.random() < dt * 5) this.world.fx.steam(m.stacks[0].getWorldPosition(V()));
       if (m.broken?.engine && Math.random() < dt * 3) this.world.fx.smoke(m.stacks[0].getWorldPosition(V()), 1, true);
     }
+    if (this.poc) updatePoc(this, dt);
     for (const it of this.items) if (it.obj.userData.gem) it.obj.userData.gem.rotation.y += dt * 1.5;
     // Labels: project each anchor; fade with distance, hide behind the camera.
     const cam = this.world.camera, w = window.innerWidth, h = window.innerHeight;
@@ -475,6 +486,7 @@ export class DevRoom {
   }
 
   destroy() {
+    disposePoc(this);
     this.world.tickers.delete(this.tick);
     clearTimeout(this.playT);
     this.offClick?.();
