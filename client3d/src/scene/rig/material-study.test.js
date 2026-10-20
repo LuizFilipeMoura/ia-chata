@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { Mech } from "../mechs.js";
 import { CHASSIS } from "../../../../shared/game-state.js";
 import { BASE_RADIUS } from "../../../../shared/geometry.js";
@@ -66,6 +67,28 @@ test("texture coordinates follow physical panel size, including geometry with mi
     assert.ok(Math.abs(uvArea - area * 4) < 1e-6, "two texture tiles per root unit, without stretching");
   }
   assert.ok(!source.hasAttribute('uv'), "original mesh untouched");
+});
+
+test("separate panels in a merged mesh get stable, distinct texture layouts without triangle seams", () => {
+  const panel = new THREE.PlaneGeometry(.25, .25).toNonIndexed();
+  const second = panel.clone().translate(0, 0, .5);
+  const merged = mergeGeometries([panel, second]);
+  const first = surfaceGeometry(merged, new THREE.Matrix4(), 2, false, 19);
+  const repeat = surfaceGeometry(merged, new THREE.Matrix4(), 2, false, 19);
+  const otherPart = surfaceGeometry(merged, new THREE.Matrix4(), 2, false, 20);
+  const uv = first.getAttribute('studyUv');
+  assert.notDeepEqual([...uv.array.slice(0, 12)], [...uv.array.slice(12)], 'parallel panels must not stamp the same image');
+  assert.deepEqual([...uv.array], [...repeat.getAttribute('studyUv').array], 'refreshes keep the same layout');
+  assert.notDeepEqual([...uv.array], [...otherPart.getAttribute('studyUv').array], 'identical neighboring parts get different placement');
+  const positions = first.getAttribute('position'), seen = new Map();
+  for (let i = 0; i < positions.count; i++) {
+    const key = [positions.getX(i), positions.getY(i), positions.getZ(i)].join(',');
+    const coordinate = [uv.getX(i), uv.getY(i)];
+    if (seen.has(key)) assert.deepEqual(coordinate, seen.get(key), 'triangles share continuous coordinates');
+    seen.set(key, coordinate);
+  }
+  assert.ok(!merged.hasAttribute('studyUv'), 'source geometry remains untouched');
+  for (const geo of [panel, second, merged, first, repeat, otherPart]) geo.dispose();
 });
 
 test("material lab isolates every skin, supports exact original comparison and disposal", () => {

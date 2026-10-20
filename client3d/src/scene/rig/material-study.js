@@ -1,6 +1,7 @@
 // Preview-only material treatment. It never changes the game's cached materials.
 import * as THREE from "three";
 import { MIN_ROUGHNESS } from "../matte.js";
+import { rngFrom } from "./kit.js";
 
 export const MATERIAL_DEFAULTS = Object.freeze({ paintVariation: 0.85, grain: 0.55, edgeWear: 0.35, grime: 0.3 });
 export function materialValues(input = {}) {
@@ -10,7 +11,7 @@ export function materialValues(input = {}) {
 
 // Coplanar triangles share their complete panel boundary. The shader measures
 // distance to these segments, so wear is continuous across triangulation.
-export function surfaceGeometry(source, matrix, tilesPerUnit = 2, preserveUV = false) {
+export function surfaceGeometry(source, matrix, tilesPerUnit = 2, preserveUV = false, seed = null) {
   const geometry = source.index ? source.toNonIndexed() : source.clone();
   const positions = geometry.getAttribute("position"), points = [];
   for (let i = 0; i < positions.count; i++) points.push(new THREE.Vector3().fromBufferAttribute(positions, i).applyMatrix4(matrix));
@@ -27,7 +28,7 @@ export function surfaceGeometry(source, matrix, tilesPerUnit = 2, preserveUV = f
       if (!edges.has(k)) edges.set(k, { points: sides[side], faces: [] });
       edges.get(k).faces.push(faces.length);
     });
-    faces.push({ keys, normal, neighbors: [] });
+    faces.push({ keys, normal, neighbors: [], connected: [] });
   }
   const ranges = new Float32Array(points.length * 2), coordinates = new Float32Array(points.length * 3), uv = new Float32Array(points.length * 2);
   points.forEach((point, i) => point.toArray(coordinates, i * 3));
@@ -46,8 +47,34 @@ export function surfaceGeometry(source, matrix, tilesPerUnit = 2, preserveUV = f
   const threshold = Math.cos(22 * Math.PI / 180);
   for (const edge of edges.values()) {
     edge.crease = edge.faces.length === 1 || edge.faces.some((f) => faces[f].normal.dot(faces[edge.faces[0]].normal) < threshold);
-    for (const a of edge.faces) for (const b of edge.faces)
-      if (a !== b && faces[a].normal.dot(faces[b].normal) > .99999) faces[a].neighbors.push(b);
+    for (const a of edge.faces) for (const b of edge.faces) {
+      if (a === b) continue;
+      faces[a].connected.push(b);
+      if (faces[a].normal.dot(faces[b].normal) > .99999) faces[a].neighbors.push(b);
+    }
+  }
+  // Merged detail batches still contain separate physical parts. Give each
+  // connected shell one stable layout, never randomize individual triangles.
+  // Rotation also rotates the normal-map tangent frame through studyUv.
+  const tone = new Float32Array(points.length).fill(1);
+  if (seed !== null) {
+    const assigned = new Set(), random = rngFrom(`material-layout:${seed}`);
+    faces.forEach((_, first) => {
+      if (assigned.has(first)) return;
+      const pending = [first]; assigned.add(first);
+      const angle = Math.floor(random() * 4) * Math.PI / 2;
+      const scale = .82 + random() * .36, x = random() * 32, y = random() * 32;
+      const c = Math.cos(angle) * scale, s = Math.sin(angle) * scale, tint = .91 + random() * .18;
+      while (pending.length) {
+        const face = pending.pop();
+        for (let vertex = 0; vertex < 3; vertex++) {
+          const i = face * 3 + vertex, u = uv[i * 2], v = uv[i * 2 + 1];
+          uv[i * 2] = c * u - s * v + x; uv[i * 2 + 1] = s * u + c * v + y;
+          tone[i] = tint;
+        }
+        for (const next of faces[face].connected) if (!assigned.has(next)) { assigned.add(next); pending.push(next); }
+      }
+    });
   }
   const visited = new Set(), segments = [];
   faces.forEach((_, first) => {
@@ -65,6 +92,7 @@ export function surfaceGeometry(source, matrix, tilesPerUnit = 2, preserveUV = f
   geometry.setAttribute("studyPosition", new THREE.BufferAttribute(coordinates, 3));
   const projectedUV = new THREE.BufferAttribute(uv, 2);
   geometry.setAttribute("studyUv", projectedUV);
+  geometry.setAttribute("studyTone", new THREE.BufferAttribute(tone, 1));
   if (!preserveUV || !geometry.hasAttribute('uv')) geometry.setAttribute("uv", projectedUV);
   geometry.setAttribute("studyEdges", new THREE.BufferAttribute(ranges, 2));
   geometry.userData = { ...source.userData, studySegments: segments };
@@ -75,6 +103,7 @@ const COMMON = /* glsl */`
 varying vec3 vStudyPosition;
 varying vec2 vStudyEdges;
 varying vec2 vStudyUv;
+varying float vStudyTone;
 uniform sampler2D studyColor;
 uniform sampler2D studyEdgeData;
 uniform vec2 studyEdgeSize;
@@ -87,6 +116,22 @@ uniform float studyGrime;
 uniform float studyWearable;
 uniform float studyRoughness;
 uniform float studyWeathering;
+vec2 studyOffset(vec2 cell) {
+  return fract(sin(vec2(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)))) * 43758.5453);
+}
+// Blend shifted copies of the real image instead of repeating its recognizable
+// stains on a grid. Identical offsets/weights keep all PBR channels registered.
+// Explicit gradients prevent mip seams where the sampling cell changes.
+vec4 studySample(sampler2D image, vec2 uv) {
+  vec2 grid = uv * .75, cell = floor(grid);
+  vec2 blend = smoothstep(vec2(0.0), vec2(1.0), fract(grid));
+  vec2 dx = dFdx(uv), dy = dFdy(uv);
+  vec4 a = textureGrad(image, uv + studyOffset(cell), dx, dy);
+  vec4 b = textureGrad(image, uv + studyOffset(cell + vec2(1.0, 0.0)), dx, dy);
+  vec4 c = textureGrad(image, uv + studyOffset(cell + vec2(0.0, 1.0)), dx, dy);
+  vec4 d = textureGrad(image, uv + studyOffset(cell + vec2(1.0, 1.0)), dx, dy);
+  return mix(mix(a, b, blend.x), mix(c, d, blend.x), blend.y);
+}
 vec3 studyEndpoint(float index) {
   return texelFetch(studyEdgeData, ivec2(int(index) % int(studyEdgeSize.x), int(index) / int(studyEdgeSize.x)), 0).xyz;
 }
@@ -105,8 +150,8 @@ const COLOR = /* glsl */`
 vec3 studyP = vStudyPosition;
 // Actual image maps: sRGB albedo is decoded by the texture sampler; ARM is
 // linear data (R=occlusion, G=roughness, B=metal). Recolor the blue paint only.
-vec3 studyTexel = texture2D(studyColor, vStudyUv).rgb;
-vec3 studyPacked = texture2D(roughnessMap, vRoughnessMapUv).rgb;
+vec3 studyTexel = studySample(studyColor, vStudyUv).rgb;
+vec3 studyPacked = studySample(roughnessMap, vRoughnessMapUv).rgb;
 float studyLuma = dot(studyTexel, vec3(.2126, .7152, .0722));
 float studyVariation = clamp(studyLuma / .045, .22, 1.75);
 float studyScratch = 1.0 - smoothstep(.12, .42, (studyTexel.b - studyTexel.r) / max(studyTexel.b, .005));
@@ -120,6 +165,7 @@ float studyLow = 1.0 - smoothstep(.18, 1.45, studyP.y);
 float studyStain = 1.0 - smoothstep(.018, .065, studyLuma);
 float studyDirt = clamp((1.0 - studyPacked.r) * 2.5 + studyStain * (.2 + .8 * studyLow), 0.0, 1.0) * studyGrime * studyWeathering;
 diffuseColor.rgb *= mix(1.0, studyVariation, studyPaint * mix(mix(.18, .8, max(studyBareMetal, studyGlass)), 1.0, studyPainted) * studyWeathering);
+diffuseColor.rgb *= mix(1.0, vStudyTone, studyPaint);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.045, .027, .018), studyPrimer * .45);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.28, .30, .31) * (.55 + studyPacked.r * .45), studyChips);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.020, .017, .013), studyDirt * .8);
@@ -199,19 +245,20 @@ export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
         shader.uniforms.studyWearable = { value: wearable ? 1 : 0 };
         shader.uniforms.studyRoughness = { value: material.roughness };
         shader.uniforms.studyWeathering = { value: glass ? 1 : luminous ? .12 : source.map ? .25 : 1 };
-        shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 studyPosition;\nattribute vec2 studyEdges;\nattribute vec2 studyUv;\nvarying vec3 vStudyPosition;\nvarying vec2 vStudyEdges;\nvarying vec2 vStudyUv;')
-          .replace('#include <uv_vertex>', '#include <uv_vertex>\nvStudyUv = studyUv;\nvNormalMapUv = studyUv;\nvRoughnessMapUv = studyUv;\nvMetalnessMapUv = studyUv;')
+        shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 studyPosition;\nattribute vec2 studyEdges;\nattribute vec2 studyUv;\nattribute float studyTone;\nvarying vec3 vStudyPosition;\nvarying vec2 vStudyEdges;\nvarying vec2 vStudyUv;\nvarying float vStudyTone;')
+          .replace('#include <uv_vertex>', '#include <uv_vertex>\nvStudyUv = studyUv;\nvStudyTone = studyTone;\nvNormalMapUv = studyUv;\nvRoughnessMapUv = studyUv;\nvMetalnessMapUv = studyUv;')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvStudyPosition = studyPosition;\nvStudyEdges = studyEdges;');
         shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${COMMON}`)
           .replace('#include <map_fragment>', source.map ? '#include <map_fragment>' : '')
           .replace('#include <color_fragment>', `#include <color_fragment>\n${COLOR}`)
+          .replace('#include <normal_fragment_maps>', THREE.ShaderChunk.normal_fragment_maps.replaceAll('texture2D( normalMap, vNormalMapUv )', 'studySample(normalMap, vNormalMapUv)'))
           .replace('#include <roughnessmap_fragment>', `float roughnessFactor = clamp(mix(studyRoughness, 1.0, studyPacked.g * .7) + studyDirt * .12 - studyChips * .05, ${MIN_ROUGHNESS.toFixed(2)}, 1.0);`)
           .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = mix(max(metalness, studyPacked.b * studyWearable), .92, studyChips) * (1.0 - studyDirt * .85);')
           // Keep reflected light below the game's 2.2 bloom threshold without
           // dimming the authored glow of lamps, hot vents and sparking cables.
           .replace('#include <opaque_fragment>', 'vec3 studyReflected = max(outgoingLight - totalEmissiveRadiance, vec3(0.0));\nfloat studyPeak = max(studyReflected.r, max(studyReflected.g, studyReflected.b));\nif (studyPeak > 1.6) studyReflected *= 1.6 / studyPeak;\noutgoingLight = studyReflected + totalEmissiveRadiance;\n#include <opaque_fragment>');
       };
-      material.customProgramCacheKey = () => `tyrian-material-study-textures-v3-${!!source.map}`;
+      material.customProgramCacheKey = () => `tyrian-material-study-textures-v4-${!!source.map}`;
       replacements.set(source, material);
       relief.set(material, strength);
     }
@@ -225,7 +272,7 @@ export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
     const sources = Array.isArray(source) ? source : [source];
     if (!sources.some((material) => material.isMeshStandardMaterial)) return;
     const density = sources.includes(ctx.paint) ? 2 : sources.includes(mech.cockpitMat) ? 3 : sources.some((material) => weaponMetals.has(material)) ? 3.5 : 7;
-    mesh.geometry = surfaceGeometry(geometry, inverse.clone().multiply(mesh.matrixWorld), density, sources.some((material) => material.map));
+    mesh.geometry = surfaceGeometry(geometry, inverse.clone().multiply(mesh.matrixWorld), density, sources.some((material) => material.map), originals.length);
     const range = mesh.geometry.getAttribute('studyEdges'), offset = segments.length / 6;
     for (let i = 0; i < range.count; i++) range.setX(i, range.getX(i) + offset);
     for (const value of mesh.geometry.userData.studySegments) segments.push(value);
