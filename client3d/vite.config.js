@@ -24,6 +24,7 @@ export default defineConfig({
     rollupOptions: { input: {
       main: fileURLToPath(new URL("./index.html", import.meta.url)),
       shakeTuner: fileURLToPath(new URL("./src/tools/shake-tuner.html", import.meta.url)),
+      materialTuner: fileURLToPath(new URL("./src/tools/material-tuner.html", import.meta.url)),
     } },
   },
 });
