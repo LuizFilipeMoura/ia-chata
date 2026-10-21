@@ -4,7 +4,7 @@
 // placement is seeded from the rig id so two rigs in one skin never match.
 import { THREE, mat, surfaceMat, at, rot, box, cyl, sph, torus, drumZ, rivetRow, canvasTexture, rngFrom, GLOW, STEEL, BRASS, GUNMETAL, DARK, RUBBER, CANVAS } from "./kit.js";
 import { noseArtFor, nicknameFor, clutterPick } from "./look.js";
-import { addClutter } from "./wear.js";
+import { addClutter, mountRearMast } from "./wear.js";
 
 export const SKINS = {
   factory: { id: "factory", name: "Factory Fresh", blurb: "Glossy enamel, polished trim, stencilled serial." },
@@ -209,6 +209,7 @@ const ADDONS = {
     const pole = cyl(0.012, 0.012, 0.26, surfaceMat('gunmetal', 0xdde2e8, { metalness: 1, roughness: 0.1 }), 6);
     const holder = new THREE.Group(); holder.position.set(-0.04, 0.08, 0.14 * k); holder.rotation.y = Math.PI / 2; holder.scale.setScalar(k);
     holder.add(at(pole, 0, 0.13, 0)); holder.add(at(flag, 0, 0.25, 0)); s.back.add(holder);
+    mountRearMast(built, holder, 'pennant');
     // Red-tipped stacks.
     const red = mat(0xc0282d, { roughness: 0.4, metalness: 0.4 });
     for (const st of built.stacks) {

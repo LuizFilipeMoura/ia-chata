@@ -126,6 +126,41 @@ export function setGrimeBits(m, loc, n) {
 const WOOD = () => mat(0x6e5236, { roughness: 0.95, metalness: 0 });
 const OLIVE = () => mat(0x4e5a34, { roughness: 0.8, metalness: 0.2 });
 const CLOTH = [0xd8cfb4, 0x8a6a4a, 0x9a3a2a, 0x6a7a86];
+
+// Rear-wall sockets predate the shaped bodies and sit beyond their armor. Seat
+// upright accessories on the upper rear engine plate, above the radiator fins.
+export function mountRearMast(built, mast, name) {
+  if (!built.remodel) return;
+  built.torso.updateWorldMatrix(true, true);
+  const inverse = built.torso.matrixWorld.clone().invert();
+  const foot = mast.getWorldPosition(new THREE.Vector3()).applyMatrix4(inverse);
+  foot.y = .31;
+  const origin = new THREE.Vector3(-3, foot.y, foot.z).applyMatrix4(built.torso.matrixWorld);
+  const direction = new THREE.Vector3(1, 0, 0).transformDirection(built.torso.matrixWorld);
+  const surfaces = [built.chest, built.torso.getObjectByName('diesel-engine')].filter(Boolean);
+  const hit = new THREE.Raycaster(origin, direction).intersectObjects(surfaces, true)[0];
+  if (!hit) throw new Error(`No rear armor beneath ${name} mount`);
+  const contact = hit.point.clone().applyMatrix4(inverse);
+  const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).transformDirection(inverse);
+  const k = built.ctx.k, mount = new THREE.Group(); mount.name = `${name}:armor-mount`;
+  mount.position.copy(contact).add(new THREE.Vector3(-.065 * k, 0, 0));
+  built.torso.add(mount);
+  // A horizontal seat touches the mast foot; the tilted flange overlaps armor.
+  mount.add(at(box(.14 * k, .035 * k, .13 * k, built.ctx.steel), .025 * k, -.0175 * k, 0));
+  const flange = box(.03 * k, .13 * k, .13 * k, built.ctx.dark);
+  flange.position.copy(contact).sub(mount.position).addScaledVector(normal, .006 * k);
+  flange.quaternion.setFromUnitVectors(new THREE.Vector3(-1, 0, 0), normal);
+  mount.add(flange);
+  for (const z of [-.041, .041]) {
+    const bolt = cyl(.013 * k, .013 * k, .018 * k, built.ctx.steel, 6);
+    bolt.position.copy(contact).sub(mount.position).addScaledVector(normal, .027 * k);
+    bolt.position.z += z * k;
+    bolt.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+    mount.add(bolt);
+  }
+  mount.add(mast); mast.position.set(0, 0, 0); mast.name = name;
+}
+
 const CLUTTER_BUILD = {
   // A wooden ammo crate strapped low on the back.
   crate(b, k) {
@@ -166,6 +201,7 @@ const CLUTTER_BUILD = {
     g.add(at(cyl(0.004, 0.007, len, STEEL(), 4), 0, len / 2 + 0.05, 0));
     g.add(at(sph(0.012, mat(0xc0282d, { roughness: 0.8 }), 5), 0, len + 0.05, 0));
     b.sockets.back.add(g);
+    mountRearMast(b, g, 'antenna');
   },
   // A lashed tarp bundle.
   tarp(b, k) {

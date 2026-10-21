@@ -170,6 +170,46 @@ function boundsIn(object, frame) {
   return b;
 }
 
+test('rear pennant and antenna bases touch supporting metal through cab shake', () => {
+  const closest = new THREE.Vector3();
+  for (const name of ['Tyrian', 'Black']) for (const skin of SKIN_IDS) {
+    const m = rig(name, { skin, clutter: ['antenna'] }), masts = [];
+    m.torso.traverse((group) => {
+      if (!group.isGroup) return;
+      if (group.children.some((child) => {
+        const p = child.geometry?.parameters;
+        return p && ((p.height === .26 && p.radiusTop === .012) || (p.height === .05 && p.radiusTop === .02));
+      })) masts.push(group);
+    });
+    assert.equal(masts.length, skin === 'ace' ? 2 : 1, 'exercise the actual antenna and pennant geometry');
+    m.built.shake.magnitude = 2; m.walking = 1; m.aimYaw = .8;
+    for (const dt of [0, .05, .1, .2]) {
+      m.update(dt); m.root.updateMatrixWorld(true);
+      const support = [], armor = [], hullMeshes = new Set();
+      for (const part of [m.chest, m.torso.getObjectByName('diesel-engine')])
+        part.traverse((mesh) => { if (mesh.isMesh) hullMeshes.add(mesh); });
+      m.torso.traverse((mesh) => {
+        if (!mesh.isMesh) return;
+        for (let parent = mesh.parent; parent; parent = parent.parent) if (masts.includes(parent)) return;
+        const p = mesh.geometry.attributes.position, index = mesh.geometry.index;
+        for (let i = 0; i < (index?.count ?? p.count); i += 3) {
+          const triangle = new THREE.Triangle(...[0, 1, 2].map((j) =>
+            new THREE.Vector3().fromBufferAttribute(p, index ? index.getX(i + j) : i + j).applyMatrix4(mesh.matrixWorld)));
+          support.push(triangle);
+          if (hullMeshes.has(mesh)) armor.push(triangle);
+        }
+      });
+      for (const mast of masts) {
+        const foot = mast.getWorldPosition(new THREE.Vector3());
+        const gap = Math.min(...support.map((triangle) => foot.distanceTo(triangle.closestPointToPoint(foot, closest))));
+        assert.ok(gap < 1e-5, `${name}/${skin}: mast base floats ${gap} from its support`);
+        const armorGap = Math.min(...armor.map((triangle) => foot.distanceTo(triangle.closestPointToPoint(foot, closest))));
+        assert.ok(armorGap < .075 * m.baseScale * m.built.ctx.k, 'mount must reach real armor, not float with the mast');
+      }
+    }
+  }
+});
+
 test("Black shield clears its hull and legs through idle, walking and full melee stroke", () => {
   const m = rig("Black");
   m.walking = 1; m.aimYaw = 1;
