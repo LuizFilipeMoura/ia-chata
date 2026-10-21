@@ -1,5 +1,7 @@
 # Rig design, `light-saw-minigun`
 
+**3D appearance:** [Tyrian remodeling record and full-roster rollout guide](rig-remodeling-guide.md) documents the truck-walker body, detailed inspection model, materials, skins, diesel motion, performance measurements, and remaining integration work.
+
 **Weapons:** Mini Gun (long-range) · Circular Saw (melee) · **Class:** light
 **Focus:** attrition grinder, doesn't burst-kill; it permanently wears rigs down until they're crippled husks. The Mini Gun grinds **tempo** (suppress → pin); the Circular Saw grinds **durability** (Sunder → permanent max-SP loss that never heals). Weak in a quick trade, brutal over a full 10-round match.
 

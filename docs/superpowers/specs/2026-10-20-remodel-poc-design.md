@@ -1,5 +1,7 @@
 # Diesel tank-walker remodeling POC
 
+Follow-up record: [Tyrian remodeling guide and roster checklist](../../design/rig-remodeling-guide.md) captures the subsequent geometry, material, attachment, tuning, and performance iterations through `6573243`, including which improvements remain lab-only.
+
 Approved in chat on 2026-10-20. Build two coherent art tracks in the existing procedural Three.js client.
 
 - Remodel Black and Tyrian: squat load-bearing chassis, broad feet, layered armor, articulated mechanical joints, engine/cooling/fuel assemblies, detailed weapon mounts, connected machinery and uneven diesel idle motion.
