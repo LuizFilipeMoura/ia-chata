@@ -2,7 +2,7 @@
 // kit bolted to its sockets. A skin is a material transform (skinMaterials,
 // applied before the body is built) plus add-ons (applySkin, after). Add-on
 // placement is seeded from the rig id so two rigs in one skin never match.
-import { THREE, mat, at, rot, box, cyl, sph, torus, drumZ, rivetRow, canvasTexture, rngFrom, GLOW, STEEL, BRASS, GUNMETAL, DARK, RUBBER, CANVAS } from "./kit.js";
+import { THREE, mat, surfaceMat, at, rot, box, cyl, sph, torus, drumZ, rivetRow, canvasTexture, rngFrom, GLOW, STEEL, BRASS, GUNMETAL, DARK, RUBBER, CANVAS } from "./kit.js";
 import { noseArtFor, nicknameFor, clutterPick } from "./look.js";
 import { addClutter } from "./wear.js";
 
@@ -179,7 +179,7 @@ const ADDONS = {
     // Mud up the legs.
     eachLegPart(built, (o) => { o.material = muddy(o.material); });
     // Sandbags on the hip.
-    const sand = mat(0x9a8660, { roughness: 1, metalness: 0 });
+    const sand = surfaceMat('fabric', 0x9a8660, { roughness: 1, metalness: 0 });
     const bags = new THREE.Group(); s.hip.add(bags); bags.scale.setScalar(k);
     const nb = 2 + Math.floor(rng() * 2);
     for (let i = 0; i < nb; i++) { const b = sph(0.1, sand, 8); b.scale.set(1.5, 0.7, 0.9); b.position.set(-0.12 + i * 0.13, -0.05 + (i % 2) * 0.05, -0.02); b.rotation.y = rng() - 0.5; bags.add(b); }
@@ -204,9 +204,9 @@ const ADDONS = {
     // Checkered band on the melee arm.
     for (let i = 0; i < 8; i++) s.shoulderL.add(at(box(0.05, 0.035, 0.02, i % 2 ? white : DARK()), -0.14 + i * 0.04, -0.12, 0.04));
     // Pennant on the back.
-    const flag = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.22, -0.05, 0), new THREE.Vector3(0, -0.12, 0)]), mat(0xd9a520, { side: THREE.DoubleSide, roughness: 0.8, metalness: 0 }));
+    const flag = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.22, -0.05, 0), new THREE.Vector3(0, -0.12, 0)]), surfaceMat('fabric', 0xd9a520, { side: THREE.DoubleSide, roughness: 0.8, metalness: 0 }));
     flag.geometry.computeVertexNormals();
-    const pole = cyl(0.012, 0.012, 0.26, mat(0xdde2e8, { metalness: 1, roughness: 0.1 }), 6);
+    const pole = cyl(0.012, 0.012, 0.26, surfaceMat('gunmetal', 0xdde2e8, { metalness: 1, roughness: 0.1 }), 6);
     const holder = new THREE.Group(); holder.position.set(-0.04, 0.08, 0.14 * k); holder.rotation.y = Math.PI / 2; holder.scale.setScalar(k);
     holder.add(at(pole, 0, 0.13, 0)); holder.add(at(flag, 0, 0.25, 0)); s.back.add(holder);
     // Red-tipped stacks.

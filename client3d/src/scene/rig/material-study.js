@@ -9,6 +9,24 @@ export function materialValues(input = {}) {
     [key, Number.isFinite(input?.[key]) ? Math.max(0, Math.min(1, input[key])) : fallback]));
 }
 
+const FINISH = {
+  armor: { strength: 1.1, density: 2, roughness: .75, metalness: 0, luma: .045 },
+  gunmetal: { strength: .5, density: 3.5, roughness: .7, metalness: .92, luma: .35 },
+  brass: { strength: .38, density: 3, roughness: .7, metalness: .9, luma: .7 },
+  rubber: { strength: .65, density: 6, roughness: .96, metalness: 0, luma: .035 },
+  glass: { strength: .05, density: 1.2, roughness: .7, metalness: 0, luma: .5 },
+  fabric: { strength: .45, density: 5, roughness: .98, metalness: 0, luma: .35 },
+};
+
+function familyOf(source, mech) {
+  if (source === mech.cockpitMat || source === mech.lampMat) return 'glass';
+  if (FINISH[source.userData.materialFamily]) return source.userData.materialFamily;
+  // Untagged one-off accessories retain their color. Main materials and skin
+  // clones use explicit semantic tags, never a color-based metal guess.
+  if (source.metalness > .5) return 'gunmetal';
+  return 'armor';
+}
+
 // Coplanar triangles share their complete panel boundary. The shader measures
 // distance to these segments, so wear is continuous across triangulation.
 export function surfaceGeometry(source, matrix, tilesPerUnit = 2, preserveUV = false, seed = null) {
@@ -111,6 +129,8 @@ uniform float studyPaint;
 uniform float studyPainted;
 uniform float studyBareMetal;
 uniform float studyGlass;
+uniform float studyBrass;
+uniform float studyLumaMean;
 uniform float studyWear;
 uniform float studyGrime;
 uniform float studyWearable;
@@ -148,117 +168,114 @@ float studyEdgeDistance(vec3 p) {
 `;
 const COLOR = /* glsl */`
 vec3 studyP = vStudyPosition;
-// Actual image maps: sRGB albedo is decoded by the texture sampler; ARM is
-// linear data (R=occlusion, G=roughness, B=metal). Recolor the blue paint only.
+// Each family supplies its own registered image set. Only armor uses the blue
+// paint's hue mask. Metals, rubber and glass do not inherit paint scratches.
 vec3 studyTexel = studySample(studyColor, vStudyUv).rgb;
-vec3 studyPacked = studySample(roughnessMap, vRoughnessMapUv).rgb;
+vec3 studyPacked = vec3(1.0, studySample(roughnessMap, vRoughnessMapUv).g, 0.0);
+#ifdef USE_METALNESSMAP
+  studyPacked.b = studySample(metalnessMap, vMetalnessMapUv).b;
+#endif
+#ifdef STUDY_PACKED_ARM
+  studyPacked.r = studySample(roughnessMap, vRoughnessMapUv).r;
+#endif
 float studyLuma = dot(studyTexel, vec3(.2126, .7152, .0722));
-float studyVariation = clamp(studyLuma / .045, .22, 1.75);
-float studyScratch = 1.0 - smoothstep(.12, .42, (studyTexel.b - studyTexel.r) / max(studyTexel.b, .005));
+float studyVariation = clamp(studyLuma / studyLumaMean, .25, 1.8);
+float studyScratch = (1.0 - smoothstep(.12, .42, (studyTexel.b - studyTexel.r) / max(studyTexel.b, .005))) * studyPainted;
 float studyDistance = studyEdgeDistance(studyP);
 float studyWidth = .0005 + .006 * studyWear;
 float studyEdge = (1.0 - smoothstep(studyWidth * .2, studyWidth, studyDistance)) * smoothstep(.25, .65, studyPacked.g);
-float studyChips = clamp(max(studyScratch * 1.4, studyEdge) * studyWear, 0.0, 1.0) * mix(mix(.2, .75, studyBareMetal), 1.0, studyPainted) * studyWearable;
+float studyChips = clamp(max(studyScratch * 1.4, studyEdge) * studyWear, 0.0, 1.0) * mix(.5, 1.0, studyPainted) * studyWearable;
 float studyPrimer = (1.0 - smoothstep(studyWidth * .6, studyWidth * 1.6, studyDistance)) * studyWear * studyPainted;
 float studyLow = 1.0 - smoothstep(.18, 1.45, studyP.y);
 // Reuse the photographed staining and cavity map for dirt placement.
-float studyStain = 1.0 - smoothstep(.018, .065, studyLuma);
+float studyStain = 1.0 - smoothstep(.35, .95, studyLuma / studyLumaMean);
 float studyDirt = clamp((1.0 - studyPacked.r) * 2.5 + studyStain * (.2 + .8 * studyLow), 0.0, 1.0) * studyGrime * studyWeathering;
-diffuseColor.rgb *= mix(1.0, studyVariation, studyPaint * mix(mix(.18, .8, max(studyBareMetal, studyGlass)), 1.0, studyPainted) * studyWeathering);
+// Keep each skin's paint color. Other surfaces use their own albedo, normalized
+// around that finish's base color so dark rubber does not get multiplied black.
+vec3 studyAlbedo = mix(vec3(studyVariation), clamp(studyTexel / studyLumaMean, vec3(.2), vec3(2.0)), studyBrass);
+diffuseColor.rgb *= mix(vec3(1.0), studyAlbedo, studyPaint * studyWeathering);
 diffuseColor.rgb *= mix(1.0, vStudyTone, studyPaint);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.045, .027, .018), studyPrimer * .45);
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.28, .30, .31) * (.55 + studyPacked.r * .45), studyChips);
+vec3 studyExposed = mix(vec3(.28, .30, .31), vec3(.48, .31, .10), studyBrass);
+diffuseColor.rgb = mix(diffuseColor.rgb, studyExposed * (.55 + studyPacked.r * .45), studyChips);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.020, .017, .013), studyDirt * .8);
 // Smoked cab glazing: dusty perimeter and fine scuffs, without steel chips.
 float studyGlassDust = (1.0 - smoothstep(.002, .024, studyDistance)) * studyGrime * studyGlass;
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.14, .12, .085), studyGlassDust * .65);
-diffuseColor.rgb += vec3(.06, .075, .075) * studyScratch * studyWear * studyGlass;
+diffuseColor.rgb += vec3(.045, .05, .045) * studyPacked.g * studyGrime * studyGlass;
 `;
 
 export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
-  if (!maps?.color || !maps?.normal || !maps?.arm) throw new Error('Material study needs color, normal and ARM textures.');
+  for (const family of Object.keys(FINISH)) {
+    if (!maps?.[family]?.color || !maps[family].normal || !maps[family].roughness) throw new Error(`Material study needs ${family} color, normal and roughness textures.`);
+  }
   const values = materialValues(initial);
   const uniforms = {
     studyPaint: { value: values.paintVariation },
     studyWear: { value: values.edgeWear }, studyGrime: { value: values.grime },
     studyEdgeData: { value: null }, studyEdgeSize: { value: new THREE.Vector2() },
-    studyColor: { value: maps.color },
   };
   const replacements = new Map(), relief = new Map(), originals = [], segments = [];
   mech.root.updateWorldMatrix(true, true);
   const inverse = mech.root.matrixWorld.clone().invert();
-  const ctx = mech.built.ctx;
-  // Legacy weapon metals were flattened by the POC's matte conversion. Identify
-  // them by their actual weapon use, while keeping painted housings and trim.
-  const weaponMetals = new Set();
-  for (const weapon of [mech.lr, mech.me]) weapon?.group.traverse((mesh) => {
-    if (!mesh.isMesh) return;
-    for (const material of [mesh.material].flat()) {
-      if (material.isMeshStandardMaterial && ![ctx.paint, ctx.trim, ctx.rubber].includes(material)
-        && material.metalness > .1 && !material.map && !material.transparent && material.emissive.getHex() === 0) weaponMetals.add(material);
-    }
-  });
   const replaceMaterial = (source) => {
     if (!source.isMeshStandardMaterial) return source;
     if (!replacements.has(source)) {
       const material = source.clone();
-      const painted = source === ctx.paint, trim = source === ctx.trim;
-      const glass = source === mech.cockpitMat, bareMetal = weaponMetals.has(source);
+      const family = familyOf(source, mech), finish = FINISH[family], textures = maps[family];
+      const painted = family === 'armor', glass = family === 'glass', brass = family === 'brass';
+      const bareMetal = family === 'gunmetal' || brass, cockpit = source === mech.cockpitMat;
       const luminous = source.emissive.getHex() !== 0;
-      const wearable = !luminous && !source.transparent && !source.map && (painted || source.metalness > .1);
-      // Rubber, canvas, mud, glass and existing markings keep their own finish.
-      // Texture detail is shared; exposed steel chips only belong on metal parts.
-      const strength = glass ? .14 : luminous ? .035 : painted ? 1.4 : bareMetal ? .65 : source.metalness <= .1 ? .18 : .25;
-      material.map = source.map || maps.color; material.normalMap = maps.normal;
-      material.roughnessMap = maps.arm; material.metalnessMap = maps.arm;
+      const wearable = !luminous && !source.transparent && !source.map && (bareMetal || (painted && source.metalness > .05));
+      const strength = luminous && !cockpit ? .035 : finish.strength;
+      material.userData.materialFamily = family;
+      material.map = source.map || textures.color; material.normalMap = textures.normal;
+      material.roughnessMap = textures.roughness;
+      material.metalnessMap = bareMetal || painted ? textures.metalness || null : null;
       material.normalScale.setScalar(values.grain * strength);
-      material.roughness = painted ? .75 : [ctx.trim, ctx.steel, ctx.brass, ctx.dark].includes(source) ? .70 : Math.max(MIN_ROUGHNESS, source.roughness);
-      material.metalness = painted ? 0 : [ctx.trim, ctx.steel, ctx.brass].includes(source) ? .9 : source.metalness;
-      if (painted) material.color.multiplyScalar(.62);
-      // The cream Ace trim reads as ivory when used as a metal albedo.
-      // Keep the warm finish, but move its exposed alloy toward aged nickel.
-      if (trim) material.color.lerp(new THREE.Color(.32, .33, .32), .65);
-      if (source === ctx.dark) { material.color.setRGB(.075, .085, .095); material.metalness = .7; }
-      if (bareMetal) {
-        material.metalness = .9; material.roughness = MIN_ROUGHNESS;
-        // Lift blue-black steel enough for scanned scuffs and broad reflections
-        // to read; retain the warm albedo of brass collars and ammunition.
-        const hsl = source.color.getHSL({});
-        if (hsl.s < .3) material.color.lerp(new THREE.Color(.22, .24, .26), .6);
-      }
-      if (glass) {
-        material.color.setRGB(.045, .075, .08);
-        material.emissiveIntensity = source.emissiveIntensity * .08;
+      material.roughness = finish.roughness;
+      material.metalness = finish.metalness;
+      if (painted && !source.map) material.color.multiplyScalar(.62);
+      if (family === 'gunmetal') material.color.lerp(new THREE.Color(.19, .21, .23), .55);
+      if (brass) material.color.setRGB(.43, .29, .105);
+      if (family === 'rubber') material.color.setRGB(.025, .029, .028);
+      if (cockpit) {
+        material.color.setRGB(.035, .065, .07);
+        material.emissiveIntensity = source.emissiveIntensity * .02;
       }
       if ([mech.cockpitMat, mech.ventMat, mech.lampMat].includes(source)) {
         material.onBeforeRender = () => {
-          if (!glass) material.color.copy(source.color);
+          if (!cockpit) material.color.copy(source.color);
           material.emissive.copy(source.emissive);
-          material.emissiveIntensity = source.emissiveIntensity * (glass ? .08 : 1);
+          material.emissiveIntensity = source.emissiveIntensity * (cockpit ? .02 : 1);
         };
       }
       material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
+        shader.uniforms.studyColor = { value: textures.color };
         shader.uniforms.studyPainted = { value: painted ? 1 : 0 };
         shader.uniforms.studyBareMetal = { value: bareMetal ? 1 : 0 };
         shader.uniforms.studyGlass = { value: glass ? 1 : 0 };
+        shader.uniforms.studyBrass = { value: brass ? 1 : 0 };
+        shader.uniforms.studyLumaMean = { value: finish.luma };
         shader.uniforms.studyWearable = { value: wearable ? 1 : 0 };
         shader.uniforms.studyRoughness = { value: material.roughness };
-        shader.uniforms.studyWeathering = { value: glass ? 1 : luminous ? .12 : source.map ? .25 : 1 };
+        shader.uniforms.studyWeathering = { value: cockpit ? .3 : luminous ? .12 : source.map ? .25 : 1 };
+        if (textures.packed) shader.defines.STUDY_PACKED_ARM = 1;
         shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 studyPosition;\nattribute vec2 studyEdges;\nattribute vec2 studyUv;\nattribute float studyTone;\nvarying vec3 vStudyPosition;\nvarying vec2 vStudyEdges;\nvarying vec2 vStudyUv;\nvarying float vStudyTone;')
-          .replace('#include <uv_vertex>', '#include <uv_vertex>\nvStudyUv = studyUv;\nvStudyTone = studyTone;\nvNormalMapUv = studyUv;\nvRoughnessMapUv = studyUv;\nvMetalnessMapUv = studyUv;')
+          .replace('#include <uv_vertex>', '#include <uv_vertex>\nvStudyUv = studyUv;\nvStudyTone = studyTone;\nvNormalMapUv = studyUv;\nvRoughnessMapUv = studyUv;\n#ifdef USE_METALNESSMAP\nvMetalnessMapUv = studyUv;\n#endif')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvStudyPosition = studyPosition;\nvStudyEdges = studyEdges;');
         shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${COMMON}`)
           .replace('#include <map_fragment>', source.map ? '#include <map_fragment>' : '')
           .replace('#include <color_fragment>', `#include <color_fragment>\n${COLOR}`)
           .replace('#include <normal_fragment_maps>', THREE.ShaderChunk.normal_fragment_maps.replaceAll('texture2D( normalMap, vNormalMapUv )', 'studySample(normalMap, vNormalMapUv)'))
-          .replace('#include <roughnessmap_fragment>', `float roughnessFactor = clamp(mix(studyRoughness, 1.0, studyPacked.g * .7) + studyDirt * .12 - studyChips * .05, ${MIN_ROUGHNESS.toFixed(2)}, 1.0);`)
-          .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = mix(max(metalness, studyPacked.b * studyWearable), .92, studyChips) * (1.0 - studyDirt * .85);')
+          .replace('#include <roughnessmap_fragment>', `float roughnessFactor = clamp(studyRoughness + studyPacked.g * .18 + studyDirt * .1 - studyChips * .05, ${MIN_ROUGHNESS.toFixed(2)}, 1.0);`)
+          .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = mix(metalness * mix(1.0, studyPacked.b, studyBareMetal), .92, studyChips) * (1.0 - studyDirt * .85);')
           // Keep reflected light below the game's 2.2 bloom threshold without
           // dimming the authored glow of lamps, hot vents and sparking cables.
           .replace('#include <opaque_fragment>', 'vec3 studyReflected = max(outgoingLight - totalEmissiveRadiance, vec3(0.0));\nfloat studyPeak = max(studyReflected.r, max(studyReflected.g, studyReflected.b));\nif (studyPeak > 1.6) studyReflected *= 1.6 / studyPeak;\noutgoingLight = studyReflected + totalEmissiveRadiance;\n#include <opaque_fragment>');
       };
-      material.customProgramCacheKey = () => `tyrian-material-study-textures-v4-${!!source.map}`;
+      material.customProgramCacheKey = () => `tyrian-material-study-families-v1-${!!source.map}-${!!textures.packed}`;
       replacements.set(source, material);
       relief.set(material, strength);
     }
@@ -271,7 +288,7 @@ export function installMaterialStudy(mech, initial = MATERIAL_DEFAULTS, maps) {
     const source = mesh.material, geometry = mesh.geometry;
     const sources = Array.isArray(source) ? source : [source];
     if (!sources.some((material) => material.isMeshStandardMaterial)) return;
-    const density = sources.includes(ctx.paint) ? 2 : sources.includes(mech.cockpitMat) ? 3 : sources.some((material) => weaponMetals.has(material)) ? 3.5 : 7;
+    const density = FINISH[familyOf(sources.find((material) => material.isMeshStandardMaterial), mech)].density;
     mesh.geometry = surfaceGeometry(geometry, inverse.clone().multiply(mesh.matrixWorld), density, sources.some((material) => material.map), originals.length);
     const range = mesh.geometry.getAttribute('studyEdges'), offset = segments.length / 6;
     for (let i = 0; i < range.count; i++) range.setX(i, range.getX(i) + offset);

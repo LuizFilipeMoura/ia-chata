@@ -13,13 +13,60 @@ const rig = (skin = "ace") => {
   return new Mech({ id: "material-study", name: "Tyrian", chassis: c.id, owner: "a", weightClass: c.class,
     longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin });
 };
-const maps = { color: new THREE.Texture(), normal: new THREE.Texture(), arm: new THREE.Texture() };
+const maps = Object.fromEntries(['armor', 'gunmetal', 'brass', 'rubber', 'glass', 'fabric'].map((family) =>
+  [family, { color: new THREE.Texture(), normal: new THREE.Texture(), roughness: new THREE.Texture(), metalness: new THREE.Texture() }]));
+
+test("armor, gunmetal, brass, rubber and glass use independent image sets, including cloned skin materials", () => {
+  const families = Object.fromEntries(['armor', 'gunmetal', 'brass', 'rubber', 'glass', 'fabric'].map((family) =>
+    [family, { color: new THREE.Texture(), normal: new THREE.Texture(), roughness: new THREE.Texture(), metalness: new THREE.Texture() }]));
+  for (const skin of ['factory', 'refit', 'ace', 'worn', 'rust']) {
+    const m = rig(skin), ctx = m.built.ctx;
+    const samples = new Map([[ctx.paint, 'armor'], [ctx.steel, 'gunmetal'], [ctx.brass, 'brass'], [ctx.rubber, 'rubber'], [m.cockpitMat, 'glass']]);
+    const copies = [];
+    for (const [source, family] of samples) {
+      // The skin pipeline clones and changes numeric properties before study.
+      if (family === 'glass') continue;
+      const copy = source.clone(); copy.metalness = .1; copy.roughness = .95;
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(.1, .1, .1), copy);
+      m.root.add(mesh); copies.push([mesh, family]);
+    }
+    const expected = [];
+    m.root.traverse((mesh) => { if (samples.has(mesh.material)) expected.push([mesh, samples.get(mesh.material)]); });
+    const barrels = m.lr.spin.children.filter((mesh) => mesh.geometry?.parameters?.height > 1);
+    expected.push(...copies, ...barrels.map((mesh) => [mesh, 'gunmetal']));
+    const study = installMaterialStudy(m, undefined, families);
+    for (const [mesh, family] of expected) {
+      assert.equal(mesh.material.map, families[family].color, `${skin}: ${family} color`);
+      assert.equal(mesh.material.normalMap, families[family].normal, `${skin}: ${family} relief`);
+      assert.equal(mesh.material.roughnessMap, families[family].roughness, `${skin}: ${family} roughness`);
+      assert.equal(mesh.material.userData.materialFamily, family);
+    }
+    assert.equal(new Set(expected.map(([mesh]) => mesh.material.map)).size, 5, 'five independently loaded albedos');
+    study.dispose();
+  }
+});
 
 test("material controls clamp invalid imported values without changing input", () => {
   const input = { paintVariation: 9, grain: -2, edgeWear: NaN, grime: 0 };
   const result = materialValues(input);
   assert.equal(result.paintVariation, 1); assert.equal(result.grain, 0); assert.equal(result.grime, 0);
   assert.ok(Number.isFinite(result.edgeWear)); assert.equal(input.paintVariation, 9);
+});
+
+test('Refit sandbags use cloth images instead of armor paint', () => {
+  const m = rig('refit'), bags = [];
+  m.root.traverse((mesh) => {
+    if (mesh.isMesh && !Array.isArray(mesh.material) && mesh.material.color?.getHex() === 0x9a8660) bags.push(mesh);
+  });
+  assert.ok(bags.length >= 2, 'exercise the real Refit sandbag accessory');
+  const study = installMaterialStudy(m, undefined, maps);
+  for (const bag of bags) {
+    assert.equal(bag.material.map, maps.fabric.color);
+    assert.equal(bag.material.normalMap, maps.fabric.normal);
+    assert.equal(bag.material.metalness, 0);
+    assert.ok(bag.material.roughness >= .95);
+  }
+  study.dispose();
 });
 
 test("surface masks share real boundary segments across a rectangular panel", () => {
@@ -107,10 +154,11 @@ test("material lab isolates every skin, supports exact original comparison and d
         after.forEach((surface, i) => {
           assert.ok(surface.roughness >= MIN_ROUGHNESS);
           if (before[i] !== m.cockpitMat) assert.equal(surface.emissiveIntensity, before[i].emissiveIntensity);
-          assert.equal(surface.map, before[i].map || maps.color);
-          assert.equal(surface.normalMap, maps.normal);
-          assert.equal(surface.roughnessMap, maps.arm);
-          assert.equal(surface.metalnessMap, maps.arm);
+          const textures = maps[surface.userData.materialFamily];
+          assert.equal(surface.map, before[i].map || textures.color);
+          assert.equal(surface.normalMap, textures.normal);
+          assert.equal(surface.roughnessMap, textures.roughness);
+          assert.equal(surface.metalnessMap, ['armor', 'gunmetal', 'brass'].includes(surface.userData.materialFamily) ? textures.metalness : null);
         });
         if (material === m.built.ctx.paint) assert.equal(mesh.material.metalness, 0, "paint is a dielectric coating");
         if (material === m.built.ctx.trim || material === m.built.ctx.steel) assert.ok(mesh.material.metalness >= .85, "exposed alloys have a metallic response");
@@ -142,8 +190,8 @@ test("every physical Tyrian mesh receives textures across all skins, including w
     for (const mesh of surfaces) {
       for (const material of [mesh.material].flat()) {
         assert.ok(material.map, `${skin}: ${mesh.userData.part || mesh.geometry.type} missing color texture`);
-        assert.equal(material.normalMap, maps.normal);
-        assert.equal(material.roughnessMap, maps.arm);
+        assert.equal(material.normalMap, maps[material.userData.materialFamily].normal);
+        assert.equal(material.roughnessMap, maps[material.userData.materialFamily].roughness);
       }
       assert.ok(mesh.geometry.hasAttribute('studyUv'));
     }
@@ -169,7 +217,7 @@ test("full coverage preserves authored decal UVs, nonmetal surfaces and animated
   for (const mesh of rubber) {
     assert.equal(mesh.material.metalness, 0, 'rubber remains nonmetallic');
     assert.ok(mesh.material.roughness >= .9);
-    assert.equal(mesh.material.normalMap, maps.normal, 'rubber still receives surface detail');
+    assert.equal(mesh.material.normalMap, maps.rubber.normal, 'rubber receives its own relief map');
   }
   m.lampMat.emissiveIntensity = .3;
   m.lampMat.emissive.setHex(0xc8260e);

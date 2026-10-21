@@ -298,6 +298,7 @@ function makeSpentToken() {
   });
   const face = new THREE.MeshStandardMaterial({ map: spentTex, color: spentTex ? 0xffffff : 0xd8a84a, metalness: 0.6, roughness: 0.35 });
   const rim = new THREE.MeshStandardMaterial({ color: 0x9a7228, metalness: 0.8, roughness: 0.3 });
+  face.userData.materialFamily = rim.userData.materialFamily = 'brass';
   const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.1, 32), [rim, face, face]);
   coin.castShadow = true;
   return coin;

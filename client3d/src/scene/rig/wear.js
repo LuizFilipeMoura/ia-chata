@@ -2,7 +2,7 @@
 // show its state, the grime that builds as each hit location loses SP, the
 // crew's McQue clutter, and the stencilled unit number + side insignia.
 // All flush with the body or bolted to its sockets, inside the envelope.
-import { THREE, mat, at, rot, box, cyl, sph, torus, drumX, canvasTexture, rngFrom, BRASS, DARK, STEEL, CANVAS } from "./kit.js";
+import { THREE, mat, surfaceMat, at, rot, box, cyl, sph, torus, drumX, canvasTexture, rngFrom, BRASS, DARK, STEEL, CANVAS } from "./kit.js";
 import { LAMP, GRIME_LOCS, SIDE_CSS } from "./look.js";
 
 // ---- Lamp eyes (Big Daddy portholes) ----
@@ -152,7 +152,7 @@ const CLUTTER_BUILD = {
     const n = 2 + Math.floor(r() * 2);
     for (let i = 0; i < n; i++) {
       const w = (0.07 + r() * 0.04) * k, h = (0.07 + r() * 0.05) * k;
-      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat(CLOTH[Math.floor(r() * CLOTH.length)], { roughness: 1, metalness: 0, side: THREE.DoubleSide }));
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(w, h), surfaceMat('fabric', CLOTH[Math.floor(r() * CLOTH.length)], { roughness: 1, metalness: 0, side: THREE.DoubleSide }));
       cloth.position.set(-0.025, y - h / 2 - 0.005, -span + ((i + 0.5) / n) * span * 2);
       cloth.rotation.y = Math.PI / 2 + (r() - 0.5) * 0.4;
       g.add(cloth);

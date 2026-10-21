@@ -1,0 +1,11 @@
+Source: ambientCG / Fabric030
+Asset: https://ambientcg.com/a/Fabric030
+License: Creative Commons CC0 1.0 Universal
+License documentation: https://docs.ambientcg.com/license/
+Download: https://ambientcg.com/get?file=Fabric030_1K-JPG.zip
+Downloaded 2026-10-20. Original 1024px JPG files, unmodified.
+NormalGL is OpenGL tangent-space. Roughness and Metalness are linear grayscale.
+Color is sRGB. Material tint and anti-glare adjustments happen in the shader.
+Color.jpg SHA256 6388762708722DE48CDBDFB4878B9AE6D8012DE5948D564006067B629F0B84EF
+NormalGL.jpg SHA256 C9A8F4FF15527AF0B226B8A8840405F944C45A32C2E4462864D3B0136827E6E2
+Roughness.jpg SHA256 221BF708CB614B01AE83B856376FA79FFF22DC249D8A397AB0F89DD3B7FE6DA6

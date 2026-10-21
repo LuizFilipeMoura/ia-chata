@@ -3,7 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Mech } from "../scene/mechs.js";
 import { FX } from "../scene/fx.js";
 import { MATERIAL_DEFAULTS, materialValues, installMaterialStudy } from "../scene/rig/material-study.js";
-import { MATERIAL_ASSET, MATERIAL_MAP_URLS, loadMaterialTextures } from './material-textures.js';
+import { MATERIAL_TEXTURES, loadMaterialTextures } from './material-textures.js';
 import { SKIN_IDS } from "../scene/rig/skins.js";
 import { Post } from "../scene/post.js";
 import { CHASSIS } from "/shared/game-state.js";
@@ -17,7 +17,12 @@ const definitions = {
   paintVariation: ['Paint variation', 'Texture color & fading'], grain: ['Grain', 'Normal-map strength'],
   edgeWear: ['Edge wear', 'Scratches & exposed steel'], grime: ['Grime', 'Stains & cavity dirt'],
 };
-for (const [key, url] of Object.entries(MATERIAL_MAP_URLS)) $(`map-${key}`).src = url;
+for (const [family, definition] of Object.entries(MATERIAL_TEXTURES)) {
+  const row = document.createElement('details'); row.className = 'material-family';
+  row.innerHTML = `<summary><img src="${definition.maps.color}" alt="${definition.label} color texture"><span><strong>${definition.label}</strong><small>${definition.finish}</small></span><span class="resolution">${definition.resolution}</span></summary><div class="maps">${['color', 'normal', 'roughness'].map((key) => `<figure><img src="${definition.maps[key]}" alt="${definition.label} ${key} map"><figcaption>${key === 'roughness' && definition.packed ? 'AO / Rough / Metal' : key}</figcaption></figure>`).join('')}</div><p><a href="${definition.source}" target="_blank" rel="noreferrer">${definition.asset}</a> · ${definition.credit} · CC0.</p>`;
+  row.dataset.family = family;
+  $('material-library').append(row);
+}
 const limits = Object.fromEntries(Object.keys(definitions).map((key) => [key, [0, 1]]));
 for (const [key, [label, hint]] of Object.entries(definitions)) {
   const control = document.createElement('div'); control.className = 'control';
@@ -104,11 +109,12 @@ function sync(editingKey = null) {
     dial.setAttribute('aria-valuetext', `${Math.round(value * 100)} percent`);
   }
   study?.set(values); study?.setEnabled(!compare);
-  $('settings').value = JSON.stringify({ chassis: 'Tyrian', skin: $('skin').value, texture: MATERIAL_ASSET, material: values }, null, 2);
+  $('settings').value = JSON.stringify({ chassis: 'Tyrian', skin: $('skin').value,
+    textures: Object.fromEntries(Object.entries(MATERIAL_TEXTURES).map(([family, { asset }]) => [family, asset])), material: values }, null, 2);
   $('compare').setAttribute('aria-pressed', String(compare));
   $('compare').textContent = compare ? 'Return to tuned' : 'Compare original';
   $('pause').textContent = paused ? 'Resume idle' : 'Pause idle';
-  $('live-state').textContent = `${compare ? 'ORIGINAL MATERIALS' : 'TEXTURED STEEL / 2K PBR'} / MATTE PROTECTION ON`;
+  $('live-state').textContent = `${compare ? 'ORIGINAL MATERIALS' : 'DISTINCT MATERIAL TEXTURES'} / MATTE PROTECTION ON`;
   $('coverage').textContent = compare ? 'Original surface coverage' : study ? `All ${study.meshCount} physical parts textured` : '';
 }
 function setValue(key, value, editing = false) {

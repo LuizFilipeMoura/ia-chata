@@ -3,7 +3,7 @@
 // for every moving actuator. +x is forward; z is the width of the machine.
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { ConvexGeometry } from "three/addons/geometries/ConvexGeometry.js";
-import { THREE, mat, box, cyl, torus, drumX, drumZ, at, rot, rngFrom } from "./kit.js";
+import { THREE, mat, surfaceMat, box, cyl, torus, drumX, drumZ, at, rot, rngFrom } from "./kit.js";
 import { BASE_TOP, flattenFoot } from "./body.js";
 
 const TAU = Math.PI * 2;
@@ -220,12 +220,12 @@ export function tankWalkerMaterials(skin, color) {
   if (skin === "rust") base.lerp(new THREE.Color(0x827664), 0.2);
   // Matte Ace uses cream lining and saturated paint, not chrome reflections.
   return {
-    paint: mat(base.getHex(), { roughness: 0.88, metalness: 0.15 }),
-    trim: mat(skin === "ace" ? 0xe0cfa2 : 0x8a8778, { roughness: 0.82, metalness: 0.25 }),
-    dark: mat(0x292c2d, { roughness: 0.94, metalness: 0.2 }),
-    steel: mat(0x777c77, { roughness: 0.78, metalness: 0.3 }),
-    brass: mat(0xa4874d, { roughness: 0.82, metalness: 0.25 }),
-    rubber: mat(0x171b1a, { roughness: 0.98, metalness: 0 }),
+    paint: surfaceMat('armor', base.getHex(), { roughness: 0.88, metalness: 0.15 }),
+    trim: surfaceMat(skin === 'ace' ? 'brass' : 'gunmetal', skin === "ace" ? 0xe0cfa2 : 0x8a8778, { roughness: 0.82, metalness: 0.25 }),
+    dark: surfaceMat('gunmetal', 0x292c2d, { roughness: 0.94, metalness: 0.2 }),
+    steel: surfaceMat('gunmetal', 0x777c77, { roughness: 0.78, metalness: 0.3 }),
+    brass: surfaceMat('brass', 0xa4874d, { roughness: 0.82, metalness: 0.25 }),
+    rubber: surfaceMat('rubber', 0x171b1a, { roughness: 0.98, metalness: 0 }),
   };
 }
 

@@ -13,12 +13,14 @@ export function mat(color, opts = {}) {
   if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.45, ...opts }));
   return matCache.get(key);
 }
-export const STEEL = () => mat(0x4a4d55, { metalness: 0.8, roughness: 0.35 });
-export const DARK = () => mat(0x1b1c20, { metalness: 0.6, roughness: 0.6 });
-export const BRASS = () => mat(0xb08d3c, { metalness: 0.9, roughness: 0.3 });
-export const GUNMETAL = () => mat(0x34383e, { metalness: 0.75, roughness: 0.4 });
-export const RUBBER = () => mat(0x151515, { metalness: 0.1, roughness: 0.9 });
-export const CANVAS = () => mat(0x6b6448, { metalness: 0, roughness: 0.95 });
+// Semantic tags survive skin/matte clones, unlike metalness or object identity.
+export const surfaceMat = (family, color, opts = {}) => mat(color, { ...opts, userData: { materialFamily: family } });
+export const STEEL = () => surfaceMat('gunmetal', 0x4a4d55, { metalness: 0.8, roughness: 0.35 });
+export const DARK = () => surfaceMat('gunmetal', 0x1b1c20, { metalness: 0.6, roughness: 0.6 });
+export const BRASS = () => surfaceMat('brass', 0xb08d3c, { metalness: 0.9, roughness: 0.3 });
+export const GUNMETAL = () => surfaceMat('gunmetal', 0x34383e, { metalness: 0.75, roughness: 0.4 });
+export const RUBBER = () => surfaceMat('rubber', 0x151515, { metalness: 0.1, roughness: 0.9 });
+export const CANVAS = () => surfaceMat('fabric', 0x6b6448, { metalness: 0, roughness: 0.95 });
 export const GLOW = (color, emissive = color, emissiveIntensity = 1.4) => mat(color, { emissive, emissiveIntensity, metalness: 0.2, roughness: 0.3 });
 
 // Place a mesh (three's position/rotation are read-only props, copy into them).
