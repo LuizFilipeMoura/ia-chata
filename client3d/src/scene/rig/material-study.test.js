@@ -8,16 +8,18 @@ import { BASE_RADIUS } from "../../../../shared/geometry.js";
 import { surfaceGeometry, materialValues, installMaterialStudy } from "./material-study.js";
 import { MIN_ROUGHNESS, LOCAL_LIGHT_CAP } from "../matte.js";
 
-const rig = (skin = "ace", detail = 'standard') => {
-  const c = CHASSIS.find((c) => c.name === "Tyrian");
-  return new Mech({ id: "material-study", name: "Tyrian", chassis: c.id, owner: "a", weightClass: c.class,
+const rig = (skin = "ace", detail = 'standard', name = 'Tyrian') => {
+  const c = CHASSIS.find((c) => c.name === name);
+  return new Mech({ id: "material-study", name, chassis: c.id, owner: "a", weightClass: c.class,
     longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin, detail });
 };
 const maps = Object.fromEntries(['armor', 'gunmetal', 'brass', 'rubber', 'glass', 'fabric'].map((family) =>
   [family, { color: new THREE.Texture(), normal: new THREE.Texture(), roughness: new THREE.Texture(), metalness: new THREE.Texture() }]));
 
-test('detailed Tyrian keeps smooth normals, full material coverage and reversible comparison', () => {
-  const m = rig('ace', 'hero'), original = [];
+for (const name of ['Tyrian', 'Black']) for (const skin of ['factory', 'refit', 'ace', 'worn', 'rust'])
+test(`detailed ${name}/${skin} keeps smooth normals, full material coverage and reversible comparison`, () => {
+  const m = rig(skin, 'hero', name), original = [];
+  assert.equal(m.built.detail, 'hero');
   m.root.traverse(mesh => {
     if (mesh.isMesh && [mesh.material].flat().some(m => m.isMeshStandardMaterial)) original.push({ mesh, material: mesh.material, geometry: mesh.geometry, normals: [...mesh.geometry.attributes.normal.array] });
   });
@@ -29,6 +31,10 @@ test('detailed Tyrian keeps smooth normals, full material coverage and reversibl
     for (const material of [mesh.material].flat()) {
       assert.ok(material.map && material.normalMap && material.roughnessMap);
       assert.ok(material.roughness >= MIN_ROUGHNESS);
+      const family = material.userData.materialFamily;
+      assert.ok(maps[family], `known material family: ${family}`);
+      assert.equal(material.normalMap, maps[family].normal);
+      assert.equal(material.roughnessMap, maps[family].roughness);
     }
   }
   study.setEnabled(false);

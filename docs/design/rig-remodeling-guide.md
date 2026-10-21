@@ -2,6 +2,8 @@
 
 Recorded **2026-10-20**, through implementation commit **`6573243`**. This is the reusable art and implementation record for bringing the rest of the roster up to the Tyrian POC standard. It records what exists, decisions made during review, and the work still needed before wider rollout.
 
+Updated **2026-10-21** for the [Black detailed-model rollout](black-remodeling.md). Tyrian measurements below remain the original reference; Black's record contains its own geometry, validation and screenshots.
+
 Tyrian is `light-saw-minigun`: a light chassis with Mini Gun and Circular Saw. Its [gameplay design](light-saw-minigun.md) remains separate. This work changes appearance, not weapon identity, rules, physical miniature base size, or tabletop adjudication.
 
 Related records: [original rig/environment POC scope](../superpowers/specs/2026-10-20-remodel-poc-design.md) and [original implementation/validation log](../superpowers/plans/2026-10-20-remodel-poc.md). Environment remodeling is the second art track; this guide covers rigs and skins.
@@ -13,12 +15,12 @@ Related records: [original rig/environment POC scope](../superpowers/specs/2026-
 | Tyrian truck-walker body, weapon dressing, connected mechanics, five skins | Used by the normal remodeled rig | Reuse the construction approach, not its exact torso on every chassis |
 | Diesel shake and exhaust smoke | In the remodeled rig; Tyrian shake tuned and approved | Give each new chassis its own reviewed tuning |
 | Rear pennant/antenna attachment fix | Real armor mounts on remodeled rigs | Apply the same attachment discipline to every accessory |
-| Tyrian detailed geometry | Opt-in `detail: 'hero'`; material lab defaults to it | Normal gameplay still defaults to `detail: 'standard'` |
+| Tyrian and Black detailed geometry | Opt-in `detail: 'hero'`; material lab defaults to it | Normal gameplay still defaults to `detail: 'standard'` |
 | Six image-based material families | Material lab only | Not yet installed as the shared gameplay material pipeline |
 | Material controls and comparison | Live tool and exported standalone HTML | Use to review finishes before choosing defaults |
 | Global anti-glare guards | Existing game safeguards retained | Never remove them to make new metal look shiny |
 | Automatic distance LOD / device quality tiers | Not implemented | Requires a separate measured integration pass |
-| Full-roster remodeling | Pending, except the existing Black/Tyrian standard POC | Tracker in section 12 |
+| Full-roster remodeling | Black and Tyrian have standard remodels and detailed material POCs; other chassis pending | Tracker in section 12 |
 
 Three comparisons mean different things: `remodel: false` shows the legacy body; `detail: 'standard'` shows the lighter current remodeled body; the material lab's original-material comparison restores the materials on the selected geometry. Do not treat these as interchangeable baselines.
 
@@ -181,7 +183,7 @@ Current code defaults, with each control clamped to `[0, 1]`:
 }
 ```
 
-The lab stores tuning per skin under `oil-iron-material-lab-pbr-v1`. A previously viewed Ace preview used `1 / 1 / 1 / 0`; that observed local recipe is **not** an explicitly approved global default. Record final material approvals separately, just as the shake approval was recorded.
+The lab stores tuning per chassis and skin. Tyrian retains `oil-iron-material-lab-pbr-v1`; Black uses `oil-iron-material-lab-pbr-v1-Black`. A previously viewed Tyrian Ace preview used `1 / 1 / 1 / 0`; that observed local recipe is **not** an explicitly approved global default. Record final material approvals separately, just as the shake approval was recorded.
 
 ## 7. Anti-glare contract
 
@@ -233,7 +235,9 @@ Before promoting hero detail into gameplay, measure a populated battle with terr
 |---|---|
 | [mechs.js](../../client3d/src/scene/mechs.js) | Main construction, detail selection, weapon/skin integration, state updates and exhaust emission |
 | [tank-walker.js](../../client3d/src/scene/rig/tank-walker.js) | Black/Tyrian standard bodies, mechanics, approved shake, weapon dressing, conforming skin marks and matte finishing |
-| [tyrian-detail.js](../../client3d/src/scene/rig/tyrian-detail.js) | Selective geometry refinement, detailed Tyrian machinery/weapons and safe batching |
+| [detail-kit.js](../../client3d/src/scene/rig/detail-kit.js) | Shared selective refinement, geometry helpers, hollow exhausts and safe batching |
+| [tyrian-detail.js](../../client3d/src/scene/rig/tyrian-detail.js) | Detailed Tyrian machinery and weapons |
+| [black-detail.js](../../client3d/src/scene/rig/black-detail.js) | Detailed Black armor fittings, machinery, cannon and shield |
 | [kit.js](../../client3d/src/scene/rig/kit.js) | Shared geometry/material helpers and semantic family tags |
 | [skins.js](../../client3d/src/scene/rig/skins.js) / [wear.js](../../client3d/src/scene/rig/wear.js) | Five skins, attachments, markings, damage dressing and rear mast mounts |
 | [material-study.js](../../client3d/src/scene/rig/material-study.js) | Lab-only family treatment, projected UVs, wear, controls and reversible replacement |
@@ -246,18 +250,18 @@ Construction order matters: build body/materials → apply skin → attach weapo
 
 Coordinates are **+X forward, Y up, Z width** in the builder. Preserve the `pelvis`, `torso`, `legs`, arm, socket, stack and mechanics references, plus weapon `spin` groups and muzzle origin. Tyrian's `baseScale` is `0.48`; its light base radius stays `1.18`. Its remodeled body envelope is height `1.52`, radius `0.75` in root space after scaling, with weapons excluded. Check weapon sweeps separately. Other chassis need deliberate envelope decisions, not blind reuse of Tyrian dimensions.
 
-`detail: 'hero'` currently applies only to Tyrian. It is not a generic switch that gives every existing rig this treatment.
+`detail: 'hero'` currently applies to Tyrian and Black. It is not a generic switch that gives every existing rig this treatment.
 
 ## 10. Open, compare, export, and validate
 
 With the local dev server running:
 
-- [Material lab](http://localhost:5174/3d/src/tools/material-tuner.html): detailed/standard geometry, five skins, four finish controls, lighting, smoke, comparison and cost readouts.
+- [Material lab](http://localhost:5174/3d/src/tools/material-tuner.html): Black/Tyrian selection, detailed/standard geometry, five skins, four finish controls, lighting, smoke, comparison and cost readouts. [Open Black directly](http://localhost:5174/3d/src/tools/material-tuner.html?chassis=Black).
 - [Shake lab](http://localhost:5174/3d/src/tools/shake-tuner.html): magnitude/frequency tuning and JSON export.
 - [POC yard](http://localhost:5174/3d/#dev=poc.scene): rig/environment context and legacy comparison.
 - [Tyrian Ace POC](http://localhost:5174/3d/#dev=poc.Tyrian.ace): current standard remodeled rig in the POC viewer; not the lab's hero/material treatment.
 
-Standalone deliverables produced during the work: `tyrian-material-lab.html` and `diesel-shake-lab.html`. Their local copies live in `C:/Users/breke/.codex/visualizations/2026/10/20/01a15a37-956d-70b2-9614-5cae10ae0ecf/`. Regenerate them after source changes; an already open file tab needs reloading. The material export embeds its JS and texture assets.
+Standalone deliverables produced during the work: `tyrian-material-lab.html`, `black-material-lab.html` and `diesel-shake-lab.html`. Their local copies live in `C:/Users/breke/.codex/visualizations/2026/10/20/01a15a37-956d-70b2-9614-5cae10ae0ecf/`. Regenerate them after source changes; an already open file tab needs reloading. The material export embeds its JS and texture assets. Newly generated material exports include both supported chassis; the optional final argument chooses the starting chassis.
 
 Relevant commands from repository root:
 
@@ -265,6 +269,7 @@ Relevant commands from repository root:
 node --test --test-reporter=dot "client3d/**/*.test.js"
 node node_modules/vite/bin/vite.js build --config client3d/vite.config.js
 node client3d/src/tools/export-material-tuner.mjs "<absolute-output-path>/tyrian-material-lab.html"
+node client3d/src/tools/export-material-tuner.mjs "<absolute-output-path>/black-material-lab.html" Black
 node client3d/src/tools/export-shake-tuner.mjs "<absolute-output-path>/diesel-shake-lab.html"
 ```
 
@@ -313,7 +318,7 @@ Remaining work and implementation commit:
 
 ## 12. Roster rollout tracker
 
-All fourteen chassis already have existing model recipes and skins. “Pending” means pending this remodeling standard, not missing models. Tyrian's material/hero work is the reference; Black has the earlier shared standard remodel but has not received Tyrian's detailed/material pass. Do not interpret a similarly named chassis as a material or skin family.
+All fourteen chassis already have existing model recipes and skins. “Pending” means pending this remodeling standard, not missing models. Tyrian's material/hero work is the reference; Black now has its own detailed/material pass following that guide. Do not interpret a similarly named chassis as a material or skin family.
 
 | Chassis | ID | Remodeling status |
 |---|---|---|
@@ -325,14 +330,14 @@ All fourteen chassis already have existing model recipes and skins. “Pending�
 | Turquoise | `light-harpoon-anchor` | Pending |
 | Verdigris | `light-rivet-pressureclaw` | Pending |
 | Copper | `medium-lance-mortar` | Pending |
-| Black | `medium-shield-siege` | Standard remodel, skins, connected idle and smoke in game; detailed/material pass pending |
+| Black | `medium-shield-siege` | Standard remodel in game; [detailed geometry + six-family material lab complete](black-remodeling.md); gameplay material/LOD promotion pending |
 | Red | `medium-sniper-chainsaw` | Pending |
 | Silver | `medium-crossbow-talon` | Pending |
 | Brass | `medium-steam-piston` | Pending |
 | Ivory | `medium-flare-bayonet` | Pending |
 | Jade | `medium-tesla-shockglove` | Pending |
 
-Remaining shared work: choose and record final finish recipes; integrate the family materials into gameplay with appropriate loading/caching; profile populated battles; decide quality/LOD policy; extend the tools beyond the current Tyrian material study; then remodel the roster while preserving unique silhouettes. Walkers/drones and the remaining environment catalog need their own scoped passes.
+Remaining shared work: choose and record final finish recipes; integrate the family materials into gameplay with appropriate loading/caching; profile populated battles; decide quality/LOD policy; extend the tools beyond Black and Tyrian; then remodel the roster while preserving unique silhouettes. Walkers/drones and the remaining environment catalog need their own scoped passes.
 
 ## 13. Iteration history and lessons
 

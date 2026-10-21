@@ -5,7 +5,9 @@ import { mergeGeometries, toCreasedNormals } from "three/addons/utils/BufferGeom
 import { ConvexGeometry } from "three/addons/geometries/ConvexGeometry.js";
 import { THREE, mat, surfaceMat, box, cyl, torus, drumX, drumZ, at, rot, rngFrom } from "./kit.js";
 import { BASE_TOP, flattenFoot } from "./body.js";
-import { refineHeroPart, addTyrianMachinery, detailTyrianWeapons, compactTyrianDetails } from './tyrian-detail.js';
+import { refineHeroPart, compactWalkerDetails } from './detail-kit.js';
+import { addTyrianMachinery, detailTyrianWeapons } from './tyrian-detail.js';
+import { addBlackMachinery, detailBlackWeapons } from './black-detail.js';
 
 const TAU = Math.PI * 2;
 const Y = new THREE.Vector3(0, 1, 0);
@@ -118,9 +120,9 @@ function fender(material, radius = 0.53, width = 0.22) {
   return new THREE.Mesh(geo, material);
 }
 
-function buildBlackHull(torso, mats, glass) {
+function buildBlackHull(torso, mats, glass, hero) {
   const chest = new THREE.Group(); chest.name = "sloped-tank-casemate"; torso.add(chest);
-  const b = batch(chest, "torso");
+  const b = batch(chest, "torso", false, hero);
   b.add(casemate([-0.88, 1.00, 1.00], [-0.75, 0.48, 0.70], -0.30, 0.38, 0.19, mats.paint));
   b.add(casemate([-0.93, 1.01, 1.04], [-0.88, 1.00, 1.00], -0.42, -0.30, 0.20, mats.dark));
   b.add(casemate([-0.76, 0.49, 0.72], [-0.73, 0.46, 0.69], 0.38, 0.43, 0.14, mats.trim));
@@ -138,7 +140,7 @@ function buildBlackHull(torso, mats, glass) {
   bolts(b, 1.035, -0.26, 0, 7, 1.32, mats.steel);
   b.flush();
   const head = new THREE.Group(); head.name = "recessed-command-cupola"; torso.add(head);
-  const h = batch(head, "head");
+  const h = batch(head, "head", false, hero);
   h.add(at(cyl(0.36, 0.42, 0.15, mats.dark, 8), -0.24, 0.50, 0));
   h.add(at(cyl(0.37, 0.39, 0.075, mats.paint, 8), -0.24, 0.61, 0));
   h.add(at(box(0.03, 0.065, 0.43, glass), 0.165, 0.50, 0));
@@ -344,7 +346,7 @@ function buildEngine(torso, heavy, mats, vent, links, stacks, hero) {
 
 export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseScale, detail = 'standard' }) {
   const heavy = name === "Black", k = heavy ? 1.1 : 1;
-  const hero = !heavy && detail === 'hero';
+  const hero = detail === 'hero';
   const pelvis = new THREE.Group(), torso = new THREE.Group(), links = [], stacks = [], sockets = {};
   const legs = [1, -1].map((s) => buildLeg(pelvis, s, heavy, mats, links, hero));
   pelvis.updateMatrixWorld(true);
@@ -360,7 +362,7 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
   const torsoRestY = heavy ? 0.58 : 0.61;
   torso.position.y = torsoRestY; pelvis.add(torso);
   const d = heavy ? 1.94 : 1.60, w = heavy ? 2.08 : 1.30, h = heavy ? 0.80 : 0.73;
-  const frame = heavy ? buildBlackHull(torso, mats, glass) : buildTyrianHull(torso, mats, glass, hero);
+  const frame = heavy ? buildBlackHull(torso, mats, glass, hero) : buildTyrianHull(torso, mats, glass, hero);
   const chest = frame.chest;
   const armR = new THREE.Group(), armL = new THREE.Group();
   for (const [arm, s] of [[armR, -1], [armL, 1]]) {
@@ -442,7 +444,7 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
       for (const link of links) updateActuator(link);
     },
   };
-  if (hero) addTyrianMachinery(built, mats);
+  if (hero) (heavy ? addBlackMachinery : addTyrianMachinery)(built, mats);
   built.updateMechanical(0);
   return built;
 }
@@ -485,7 +487,7 @@ export function dressTankWalkerWeapons(built, lr, me, mats) {
     melee.add(at(drumZ(0.13, 0.13, mats.brass), 0.7, 0, 0.07));
   }
   gun.flush(); melee.flush();
-  if (built.detail === 'hero') detailTyrianWeapons(lr, me, mats);
+  if (built.detail === 'hero') (black ? detailBlackWeapons : detailTyrianWeapons)(lr, me, mats);
 }
 
 // Project cosmetic geometry against the real shaped hull. Old planar sockets
@@ -589,7 +591,7 @@ export function refineTankWalkerSkin(built, skin, seed) {
 // Older shared skin pieces and weapon parts use polished library materials.
 // Give this POC local matte copies, leaving every legacy reference unchanged.
 export function finishTankWalkerMaterials(built, lr, me) {
-  if (built.detail === 'hero') compactTyrianDetails(built, lr, me);
+  if (built.detail === 'hero') compactWalkerDetails(built, lr, me);
   const clones = new Map();
   built.pelvis.traverse((o) => {
     if (!o.isMesh || !o.material?.isMeshStandardMaterial || o.material.roughness >= 0.7) return;

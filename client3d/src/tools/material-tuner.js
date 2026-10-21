@@ -11,8 +11,12 @@ import { BASE_RADIUS } from "/shared/geometry.js";
 import "../scene/matte.js";
 
 const $ = (id) => document.getElementById(id);
-const storageKey = "oil-iron-material-lab-pbr-v1";
-const tuning = Object.fromEntries(SKIN_IDS.map((skin) => [skin, materialValues()]));
+const chassisNames = ['Tyrian', 'Black'];
+const storageKey = name => name === 'Tyrian' ? 'oil-iron-material-lab-pbr-v1' : `oil-iron-material-lab-pbr-v1-${name}`;
+const tuning = Object.fromEntries(chassisNames.map(name => [name, Object.fromEntries(SKIN_IDS.map(skin => [skin, materialValues()]))]));
+const requestedChassis = new URLSearchParams(location.search).get('chassis');
+if (chassisNames.includes(requestedChassis)) $('chassis').value = requestedChassis;
+const currentValues = () => tuning[$('chassis').value][$('skin').value];
 const definitions = {
   paintVariation: ['Paint variation', 'Texture color & fading'], grain: ['Grain', 'Normal-map strength'],
   edgeWear: ['Edge wear', 'Scratches & exposed steel'], grime: ['Grime', 'Stains & cavity dirt'],
@@ -31,9 +35,11 @@ for (const [key, [label, hint]] of Object.entries(definitions)) {
 }
 const clamp = (key, value) => Math.round(Math.max(limits[key][0], Math.min(limits[key][1], value)) * 100) / 100;
 try {
-  const saved = JSON.parse(localStorage.getItem(storageKey));
-  for (const name of Object.keys(tuning)) for (const key of Object.keys(limits)) {
-    if (Number.isFinite(saved?.[name]?.[key])) tuning[name][key] = clamp(key, saved[name][key]);
+  for (const name of chassisNames) {
+    const saved = JSON.parse(localStorage.getItem(storageKey(name)));
+    for (const skin of SKIN_IDS) for (const key of Object.keys(limits)) {
+      if (Number.isFinite(saved?.[skin]?.[key])) tuning[name][skin][key] = clamp(key, saved[skin][key]);
+    }
   }
 } catch { /* A disabled store or invalid saved JSON should not block the bench. */ }
 
@@ -82,23 +88,28 @@ const grid = new THREE.GridHelper(24, 48, 0x5c6355, 0x42493e); grid.position.y =
 const fx = new FX(scene, camera);
 const post = new Post(renderer, scene, camera); post.setGrade(null);
 const workLamp = new THREE.PointLight(0xffe6c2, 0, 6, 2); workLamp.position.set(1.2, 1.4, 1.1); scene.add(workLamp);
-let mech, study, materialMaps, compare = false, paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let mech, study, materialMaps, loadedName, compare = false, paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cache = new Map();
 function loadRig() {
   if (!materialMaps) return;
   if (mech) mech.root.visible = false;
-  const name = 'Tyrian', skin = $('skin').value, detail = $('detail').value, key = `${skin}:${detail}`;
+  const name = $('chassis').value, skin = $('skin').value, detail = $('detail').value, key = `${name}:${skin}:${detail}`;
+  if (loadedName !== name) {
+    camera.position.set(...(name === 'Black' ? [3.5, 2.35, 3.7] : [2.3, 1.75, 2.6]));
+    controls.target.set(0, name === 'Black' ? .85 : .7, 0); controls.update(); loadedName = name;
+  }
   if (!cache.has(key)) {
     const c = CHASSIS.find((rig) => rig.name === name);
     const model = new Mech({ id: `material-lab-${name}`, name, chassis: c.id, owner: "a", weightClass: c.class,
       longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin, detail });
     model.setPose({ x: 0, y: 0 }, 0); model.update(0);
-    scene.add(model.root); cache.set(key, { model, study: installMaterialStudy(model, tuning[skin], materialMaps) });
+    scene.add(model.root); cache.set(key, { model, study: installMaterialStudy(model, currentValues(), materialMaps) });
   }
   ({ model: mech, study } = cache.get(key)); mech.root.visible = true;
   // Remove the previous rig's lingering puffs when swapping the preview.
   fx.ps.n = 0; fx.update(0);
   $('rig-title').textContent = `${name} · ${$('skin').selectedOptions[0].textContent}`;
+  document.title = `${name} Material Lab · Oil & Iron`;
   let triangles = 0, meshes = 0;
   mech.root.traverseVisible((o) => {
     if (!o.isMesh) return;
@@ -108,7 +119,7 @@ function loadRig() {
   sync();
 }
 function sync(editingKey = null) {
-  const values = tuning[$('skin').value];
+  const values = currentValues();
   for (const key of Object.keys(limits)) {
     const value = values[key], dial = $(`${key}-dial`), [min, max] = limits[key];
     if (key !== editingKey) $(key).value = value.toFixed(2);
@@ -117,7 +128,7 @@ function sync(editingKey = null) {
     dial.setAttribute('aria-valuetext', `${Math.round(value * 100)} percent`);
   }
   study?.set(values); study?.setEnabled(!compare);
-  $('settings').value = JSON.stringify({ chassis: 'Tyrian', skin: $('skin').value, detail: $('detail').value,
+  $('settings').value = JSON.stringify({ chassis: $('chassis').value, skin: $('skin').value, detail: $('detail').value,
     textures: Object.fromEntries(Object.entries(MATERIAL_TEXTURES).map(([family, { asset }]) => [family, asset])), material: values }, null, 2);
   $('compare').setAttribute('aria-pressed', String(compare));
   $('compare').textContent = compare ? 'Return to tuned' : 'Compare original';
@@ -127,9 +138,9 @@ function sync(editingKey = null) {
 }
 function setValue(key, value, editing = false) {
   if (!Number.isFinite(value)) return;
-  tuning[$('skin').value][key] = clamp(key, value);
+  currentValues()[key] = clamp(key, value);
   compare = false;
-  try { localStorage.setItem(storageKey, JSON.stringify(tuning)); }
+  try { localStorage.setItem(storageKey($('chassis').value), JSON.stringify(tuning[$('chassis').value])); }
   catch { $('message').textContent = 'Browser storage unavailable. Copy settings before closing.'; }
   sync(editing ? key : null);
 }
@@ -150,7 +161,7 @@ for (const key of Object.keys(limits)) {
     // Accumulate sub-step travel while Shift is held.
     drag.remainder = (drag.remainder || 0) + delta;
     if (Math.abs(drag.remainder) >= 0.01) {
-      setValue(key, tuning[$('skin').value][key] + drag.remainder); drag.remainder = 0;
+      setValue(key, currentValues()[key] + drag.remainder); drag.remainder = 0;
     }
   });
   const release = () => { drag = null; };
@@ -159,11 +170,12 @@ for (const key of Object.keys(limits)) {
     const step = { ArrowUp: 0.01, ArrowRight: 0.01, ArrowDown: -0.01, ArrowLeft: -0.01, PageUp: 0.1, PageDown: -0.1 }[e.key];
     if (step != null || e.key === 'Home' || e.key === 'End') {
       e.preventDefault();
-      setValue(key, e.key === 'Home' ? limits[key][0] : e.key === 'End' ? limits[key][1] : tuning[$('skin').value][key] + step);
+      setValue(key, e.key === 'Home' ? limits[key][0] : e.key === 'End' ? limits[key][1] : currentValues()[key] + step);
     }
   });
 }
 $('skin').addEventListener('change', loadRig);
+$('chassis').addEventListener('change', loadRig);
 $('detail').addEventListener('change', loadRig);
 $('light').addEventListener('change', () => {
   const mode = $('light').value;
@@ -182,7 +194,7 @@ $('copy').addEventListener('click', async () => {
 });
 $('download').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([$('settings').value], { type: 'application/json' }));
-  const a = document.createElement('a'); a.href = url; a.download = `tyrian-${$('skin').value}-material.json`; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = `${$('chassis').value.toLowerCase()}-${$('skin').value}-material.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   $('message').textContent = 'Settings exported as JSON.';
 });
