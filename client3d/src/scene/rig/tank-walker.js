@@ -1,10 +1,11 @@
 // Black and Tyrian's tank-walker bodies. The body remains a miniature: broad
 // armor sits on short articulated load-bearing legs, with real anchor points
 // for every moving actuator. +x is forward; z is the width of the machine.
-import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { mergeGeometries, toCreasedNormals } from "three/addons/utils/BufferGeometryUtils.js";
 import { ConvexGeometry } from "three/addons/geometries/ConvexGeometry.js";
 import { THREE, mat, surfaceMat, box, cyl, torus, drumX, drumZ, at, rot, rngFrom } from "./kit.js";
 import { BASE_TOP, flattenFoot } from "./body.js";
+import { refineHeroPart, addTyrianMachinery, detailTyrianWeapons, compactTyrianDetails } from './tyrian-detail.js';
 
 const TAU = Math.PI * 2;
 const Y = new THREE.Vector3(0, 1, 0);
@@ -22,10 +23,11 @@ export function tankWalkerName(name, chassis) {
 
 // Small shapes are merged by material within their actual moving parent.
 // This keeps rivets, cooling fins and tread lugs from becoming draw calls.
-function batch(parent, part, surfaceMark = false) {
+function batch(parent, part, surfaceMark = false, hero = false) {
   const bins = new Map();
   return {
     add(mesh) {
+      if (hero) refineHeroPart(mesh);
       mesh.updateMatrix();
       let geometry = mesh.geometry.clone().applyMatrix4(mesh.matrix);
       mesh.geometry.dispose();
@@ -89,17 +91,22 @@ function profile(points, width, material, bevel = 0.035) {
   geo.translate(0, 0, -width / 2 + bevel);
   return new THREE.Mesh(geo, material);
 }
-function bonnet(material) {
+function bonnet(material, hero = false) {
   const points = [];
   // Hand-formed truck bonnet: broad round rear shoulder tapering toward radiator.
-  for (const [x, radius, rise] of [[0.05, 0.43, 0.34], [0.88, 0.34, 0.25]]) {
+  const sections = hero ? [[.05, .43, .34], [.27, .417, .337], [.60, .38, .30], [.88, .34, .25]] : [[.05, .43, .34], [.88, .34, .25]];
+  const segments = hero ? 32 : 12;
+  for (const [x, radius, rise] of sections) {
     points.push(new THREE.Vector3(x, -0.25, -radius), new THREE.Vector3(x, -0.25, radius));
-    for (let i = 0; i <= 12; i++) {
-      const angle = i / 12 * Math.PI;
+    for (let i = 0; i <= segments; i++) {
+      const angle = i / segments * Math.PI;
       points.push(new THREE.Vector3(x, -0.05 + Math.sin(angle) * rise, Math.cos(angle) * radius));
     }
   }
-  return new THREE.Mesh(new ConvexGeometry(points), material);
+  const geometry = new ConvexGeometry(points);
+  if (!hero) return new THREE.Mesh(geometry, material);
+  const smooth = toCreasedNormals(geometry, Math.PI / 4); geometry.dispose();
+  return new THREE.Mesh(smooth, material);
 }
 function fender(material, radius = 0.53, width = 0.22) {
   const shape = new THREE.Shape(), inner = radius - 0.065;
@@ -141,9 +148,9 @@ function buildBlackHull(torso, mats, glass) {
   return { chest, front: 1.04, frontY: -0.22, back: -1.17, top: 0.69, halfW: 0.98 };
 }
 
-function buildTyrianHull(torso, mats, glass) {
+function buildTyrianHull(torso, mats, glass, hero) {
   const chest = new THREE.Group(); chest.name = "truck-cab-and-bonnet"; torso.add(chest);
-  const b = batch(chest, "torso");
+  const b = batch(chest, "torso", false, hero);
   // Open truck ladder frame. There is deliberately no full-width torso box.
   for (const side of [-1, 1]) {
     b.add(at(box(1.70, 0.13, 0.095, mats.dark), -0.15, -0.30, side * 0.36));
@@ -153,7 +160,7 @@ function buildTyrianHull(torso, mats, glass) {
     b.add(at(box(0.18, 0.26, 0.20, mats.rubber), -0.33, -0.31, side * 0.67));
     b.add(at(box(0.30, 0.045, 0.24, mats.steel), -0.48, -0.28, side * 0.55));
   }
-  b.add(bonnet(mats.paint));
+  b.add(bonnet(mats.paint, hero));
   // Rounded radiator face with a real recessed grille, visible vertical bars.
   b.add(profile([[0.89, -0.25], [0.94, -0.18], [0.94, 0.13], [0.88, 0.20], [0.85, 0.17], [0.85, -0.23]], 0.66, mats.trim, 0.025));
   b.add(at(box(0.025, 0.32, 0.54, mats.dark), 0.975, -0.02, 0));
@@ -229,7 +236,7 @@ export function tankWalkerMaterials(skin, color) {
   };
 }
 
-function buildLeg(pelvis, side, heavy, mats, links) {
+function buildLeg(pelvis, side, heavy, mats, links, hero) {
   const hip = new THREE.Group(), knee = new THREE.Group(), ankle = new THREE.Group();
   const upper = heavy ? 0.54 : 0.48, shinLen = heavy ? 0.57 : 0.52;
   hip.position.z = side * (heavy ? 0.64 : 0.55); pelvis.add(hip);
@@ -239,7 +246,7 @@ function buildLeg(pelvis, side, heavy, mats, links) {
   hip.rotation.z = rest.hip; knee.rotation.z = rest.knee;
   const leg = { hip, knee, ankle, side, shinLen, rest, bend: 1 };
   flattenFoot(leg);
-  const thigh = batch(hip, "legs"), shin = batch(knee, "legs"), feet = batch(ankle, "feet");
+  const thigh = batch(hip, "legs", false, hero), shin = batch(knee, "legs", false, hero), feet = batch(ankle, "feet", false, hero);
   thigh.add(at(drumZ(0.20, 0.39, mats.dark), 0, 0, 0));
   thigh.add(at(drumZ(0.14, 0.43, mats.steel), 0, 0, 0));
   thigh.add(at(box(0.28, upper, 0.28, mats.dark), 0, -upper / 2, 0));
@@ -272,9 +279,9 @@ function buildLeg(pelvis, side, heavy, mats, links) {
   return leg;
 }
 
-function buildEngine(torso, heavy, mats, vent, links, stacks) {
+function buildEngine(torso, heavy, mats, vent, links, stacks, hero) {
   const g = new THREE.Group(); g.name = "diesel-engine"; g.position.set(heavy ? -0.77 : -0.65, 0.03, 0); torso.add(g);
-  const b = batch(g, "backpack");
+  const b = batch(g, "backpack", false, hero);
   if (heavy) b.add(at(box(0.42, 0.60, 1.12, mats.dark), -0.12, -0.04, 0));
   else {
     b.add(casemate([-0.33, 0.10, 0.50], [-0.28, 0.05, 0.43], -0.28, -0.15, 0.065, mats.dark));
@@ -317,7 +324,7 @@ function buildEngine(torso, heavy, mats, vent, links, stacks) {
   const crankCenter = new THREE.Group(); crankCenter.position.set(-0.14, -0.05, 0.64); g.add(crankCenter);
   b.add(at(drumZ(0.18, 0.11, mats.dark), -0.14, -0.05, 0.58));
   const flywheel = new THREE.Group(); crankCenter.add(flywheel);
-  const wheel = batch(flywheel, "backpack");
+  const wheel = batch(flywheel, "backpack", false, hero);
   wheel.add(torus(0.17, 0.038, mats.steel, TAU, 16));
   wheel.add(drumZ(0.065, 0.075, mats.trim, 10));
   for (let i = 0; i < 5; i++) wheel.add(rot(box(0.29, 0.035, 0.035, mats.paint), 0, 0, i * TAU / 5));
@@ -335,16 +342,17 @@ function buildEngine(torso, heavy, mats, vent, links, stacks) {
   return { phase: 0, crank, piston, flywheel, exhaustCap, crankRadius: 0.095, rodLength: 0.30 };
 }
 
-export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseScale }) {
+export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseScale, detail = 'standard' }) {
   const heavy = name === "Black", k = heavy ? 1.1 : 1;
+  const hero = !heavy && detail === 'hero';
   const pelvis = new THREE.Group(), torso = new THREE.Group(), links = [], stacks = [], sockets = {};
-  const legs = [1, -1].map((s) => buildLeg(pelvis, s, heavy, mats, links));
+  const legs = [1, -1].map((s) => buildLeg(pelvis, s, heavy, mats, links, hero));
   pelvis.updateMatrixWorld(true);
   const drop = -new THREE.Box3().setFromObject(legs[0].hip).min.y;
   const hipH = drop + BASE_TOP / baseScale;
   pelvis.position.y = hipH;
   for (const l of legs) l.height = drop;
-  const belt = batch(pelvis, "pelvis");
+  const belt = batch(pelvis, "pelvis", false, hero);
   belt.add(box(heavy ? 1.03 : 0.88, 0.27, heavy ? 1.35 : 1.12, mats.dark));
   belt.add(at(cyl(heavy ? 0.54 : 0.46, heavy ? 0.54 : 0.46, 0.14, mats.steel, 20), 0, 0.19, 0));
   belt.add(at(cyl(heavy ? 0.57 : 0.49, heavy ? 0.57 : 0.49, 0.075, mats.dark, 20), 0, 0.27, 0));
@@ -352,14 +360,14 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
   const torsoRestY = heavy ? 0.58 : 0.61;
   torso.position.y = torsoRestY; pelvis.add(torso);
   const d = heavy ? 1.94 : 1.60, w = heavy ? 2.08 : 1.30, h = heavy ? 0.80 : 0.73;
-  const frame = heavy ? buildBlackHull(torso, mats, glass) : buildTyrianHull(torso, mats, glass);
+  const frame = heavy ? buildBlackHull(torso, mats, glass) : buildTyrianHull(torso, mats, glass, hero);
   const chest = frame.chest;
   const armR = new THREE.Group(), armL = new THREE.Group();
   for (const [arm, s] of [[armR, -1], [armL, 1]]) {
     const armZ = heavy ? (s > 0 ? 1.68 : 1.16) : 1.03;
     arm.position.set(0, -0.04, s * armZ); torso.add(arm);
     const shoulder = new THREE.Group(); arm.add(shoulder);
-    const b = batch(shoulder, "shoulders");
+    const b = batch(shoulder, "shoulders", false, hero);
     b.add(drumZ(0.22, 0.39, mats.dark));
     b.add(at(drumZ(0.14, 0.44, mats.trim), 0, 0, 0));
     b.add(at(box(0.56, 0.10, 0.51, mats.paint), -0.05, 0.24, 0));
@@ -371,7 +379,7 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
     links.push(actuator(torso, anchor(torso, -0.40, -0.25, s * (w / 2 - 0.08)),
       anchor(arm, 0.32, -0.16, -s * 0.12), mats, "arms", 0.055));
   }
-  const mechanics = { ...buildEngine(torso, heavy, mats, vent, links, stacks), links };
+  const mechanics = { ...buildEngine(torso, heavy, mats, vent, links, stacks, hero), links };
   mechanics.phase = rngFrom(`${id}|diesel-phase`)() * TAU;
   mechanics.shakePhase = mechanics.phase;
   // Per-instance art controls shared with the tuning bench's reset/comparison.
@@ -388,7 +396,7 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
       anchor(armL, 0, 0, -0.11), mats, "arms", 0.085));
   }
   // Black's armored thigh skirts; Tyrian's lighter open frame exposes its drive.
-  const skirt = batch(torso, "signature");
+  const skirt = batch(torso, "signature", false, hero);
   for (const s of [-1, 1]) {
     if (heavy) for (const x of [-0.39, 0.02, 0.43]) {
       skirt.add(at(box(0.37, 0.30, 0.105, mats.paint), x, -0.54, s * 0.73, x * 0.05));
@@ -403,7 +411,7 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
   socket(sockets, "hip", pelvis, 0, -0.03, -(heavy ? 0.64 : 0.55));
   socket(sockets, "shin", legs[0].knee, 0.32, -legs[0].shinLen * 0.49, 0);
   const built = {
-    remodel: true, remodelName: name, pelvis, legs, torso, chest, armR, armL, hipH, frame, torsoRestY,
+    remodel: true, remodelName: name, detail: hero ? 'hero' : 'standard', pelvis, legs, torso, chest, armR, armL, hipH, frame, torsoRestY,
     stacks, sockets, mechanics, shake, spinners: [], flickers: [], glows: [],
     whistle: null, bellows: null, windKey: null,
     ctx: { cls, k, ...mats, dims: { d, h, w }, glass, vent, torso, pelvis, legs, stacks, sockets },
@@ -420,6 +428,7 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
       mechanics.crank.position.set(x, y, 0.06);
       mechanics.piston.position.set(0, y + Math.sqrt(length * length - x * x), 0.06);
       mechanics.flywheel.rotation.z = angle;
+      if (mechanics.fan) mechanics.fan.rotation.z = -angle * 3;
       mechanics.exhaustCap.rotation.z = 0.06 + Math.max(0, Math.sin(angle * 2)) * 0.65;
       // Combustion impulses: uneven 7–11 Hz shudder on the engine mounts.
       // Only the upper chassis shakes; neither feet nor the miniature base rock.
@@ -433,6 +442,7 @@ export function buildTankWalker({ id = "", name, cls, mats, glass, vent, baseSca
       for (const link of links) updateActuator(link);
     },
   };
+  if (hero) addTyrianMachinery(built, mats);
   built.updateMechanical(0);
   return built;
 }
@@ -475,6 +485,7 @@ export function dressTankWalkerWeapons(built, lr, me, mats) {
     melee.add(at(drumZ(0.13, 0.13, mats.brass), 0.7, 0, 0.07));
   }
   gun.flush(); melee.flush();
+  if (built.detail === 'hero') detailTyrianWeapons(lr, me, mats);
 }
 
 // Project cosmetic geometry against the real shaped hull. Old planar sockets
@@ -577,7 +588,8 @@ export function refineTankWalkerSkin(built, skin, seed) {
 
 // Older shared skin pieces and weapon parts use polished library materials.
 // Give this POC local matte copies, leaving every legacy reference unchanged.
-export function finishTankWalkerMaterials(built) {
+export function finishTankWalkerMaterials(built, lr, me) {
+  if (built.detail === 'hero') compactTyrianDetails(built, lr, me);
   const clones = new Map();
   built.pelvis.traverse((o) => {
     if (!o.isMesh || !o.material?.isMeshStandardMaterial || o.material.roughness >= 0.7) return;

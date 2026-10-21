@@ -47,6 +47,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+// Accumulate scene, shadow and post-processing submissions for the full frame.
+renderer.info.autoReset = false;
 $('stage').append(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0.7, 0);
@@ -85,11 +87,11 @@ const cache = new Map();
 function loadRig() {
   if (!materialMaps) return;
   if (mech) mech.root.visible = false;
-  const name = 'Tyrian', skin = $('skin').value, key = skin;
+  const name = 'Tyrian', skin = $('skin').value, detail = $('detail').value, key = `${skin}:${detail}`;
   if (!cache.has(key)) {
     const c = CHASSIS.find((rig) => rig.name === name);
     const model = new Mech({ id: `material-lab-${name}`, name, chassis: c.id, owner: "a", weightClass: c.class,
-      longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin });
+      longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin, detail });
     model.setPose({ x: 0, y: 0 }, 0); model.update(0);
     scene.add(model.root); cache.set(key, { model, study: installMaterialStudy(model, tuning[skin], materialMaps) });
   }
@@ -97,6 +99,12 @@ function loadRig() {
   // Remove the previous rig's lingering puffs when swapping the preview.
   fx.ps.n = 0; fx.update(0);
   $('rig-title').textContent = `${name} · ${$('skin').selectedOptions[0].textContent}`;
+  let triangles = 0, meshes = 0;
+  mech.root.traverseVisible((o) => {
+    if (!o.isMesh) return;
+    meshes++; triangles += (o.geometry.index?.count ?? o.geometry.attributes.position.count) / 3;
+  });
+  $('geometry-stats').textContent = `${triangles.toLocaleString()} model triangles · ${meshes} meshes`;
   sync();
 }
 function sync(editingKey = null) {
@@ -109,7 +117,7 @@ function sync(editingKey = null) {
     dial.setAttribute('aria-valuetext', `${Math.round(value * 100)} percent`);
   }
   study?.set(values); study?.setEnabled(!compare);
-  $('settings').value = JSON.stringify({ chassis: 'Tyrian', skin: $('skin').value,
+  $('settings').value = JSON.stringify({ chassis: 'Tyrian', skin: $('skin').value, detail: $('detail').value,
     textures: Object.fromEntries(Object.entries(MATERIAL_TEXTURES).map(([family, { asset }]) => [family, asset])), material: values }, null, 2);
   $('compare').setAttribute('aria-pressed', String(compare));
   $('compare').textContent = compare ? 'Return to tuned' : 'Compare original';
@@ -156,6 +164,7 @@ for (const key of Object.keys(limits)) {
   });
 }
 $('skin').addEventListener('change', loadRig);
+$('detail').addEventListener('change', loadRig);
 $('light').addEventListener('change', () => {
   const mode = $('light').value;
   sun.color.setHex(mode === 'foundry' ? 0xffb765 : 0xfff0db);
@@ -201,9 +210,12 @@ renderer.setAnimationLoop((now) => {
     if ($('smoke').checked) mech.emitAmbient(fx, dt);
     fx.update(dt);
   }
-  if (now >= nextReadout) {
+  const readout = now >= nextReadout;
+  if (readout) {
     $('cadence').textContent = paused ? 'Preview paused' : elapsed > 0.08 ? 'Preview throttled — focus this tab' : 'Live engine · Feet planted';
     nextReadout = now + 750;
   }
+  renderer.info.reset();
   post.render(dt, { bloom: true, grade: false });
+  if (readout) $('render-stats').textContent = `${renderer.info.render.calls} frame draw calls (shadows + bloom included)`;
 });

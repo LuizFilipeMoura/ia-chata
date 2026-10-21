@@ -305,7 +305,7 @@ function makeSpentToken() {
 }
 
 export class Mech {
-  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius, kind = "rig", unit = null, modules = [], drone = null, template = null, skin = "factory", clutter = null, remodel = true }) {
+  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius, kind = "rig", unit = null, modules = [], drone = null, template = null, skin = "factory", clutter = null, remodel = true, detail = 'standard' }) {
     this.id = id; this.name = name; this.owner = owner; this.weightClass = weightClass || "light";
     this.longRange = longRange; this.melee = melee; this.radius = radius || 1.2;
     this.kind = kind; this.drone = drone;
@@ -350,7 +350,7 @@ export class Mech {
       : skinMaterials(this.skin, { color: this.recipe.paint ?? color, trim: this.recipe.trim, stripe: zebra });
     if (!support) paint = mats.paint;
     const buildBody = remodeledName ? buildTankWalker : buildRigBody;
-    const built = buildBody({ id, name: remodeledName, cls: support ? kind : this.weightClass, recipe: this.recipe, mats, glass: this.cockpitMat, vent: this.ventMat, baseScale: this.baseScale });
+    const built = buildBody({ id, name: remodeledName, cls: support ? kind : this.weightClass, recipe: this.recipe, mats, glass: this.cockpitMat, vent: this.ventMat, baseScale: this.baseScale, detail });
     applySkin(built, this.skin, id, { name, clutter });
     this.built = built;
     Object.assign(this, { legs: built.legs, pelvis: built.pelvis, hipH: built.hipH, torso: built.torso, chest: built.chest, armR: built.armR, armL: built.armL, stacks: built.stacks, sockets: built.sockets, spinners: built.spinners, flickers: built.flickers, whistle: built.whistle, bellows: built.bellows, windKey: built.windKey });
@@ -382,7 +382,7 @@ export class Mech {
     if (built.remodel) {
       dressTankWalkerWeapons(built, this.lr, this.me, mats);
       refineTankWalkerSkin(built, this.skin, id);
-      finishTankWalkerMaterials(built);
+      finishTankWalkerMaterials(built, this.lr, this.me);
     }
     tagLocations(this);
     this.wear = { hull: 0, arms: 0, legs: 0, engine: 0 };

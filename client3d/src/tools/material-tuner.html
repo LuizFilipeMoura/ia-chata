@@ -74,7 +74,7 @@
   <header><div><div class="eyebrow">OIL & IRON / PAINT SHOP</div><h1>Tyrian Material Lab</h1></div><a href="../../#dev=poc.scene">Back to yard ↗</a></header>
   <main>
     <section id="stage" aria-label="Interactive 3D rig preview">
-      <div class="stage-label"><div class="eyebrow" id="live-state">LOADING MATERIAL LIBRARY…</div><div id="rig-title">Tyrian · Ace</div><div class="hint" id="coverage"></div></div>
+      <div class="stage-label"><div class="eyebrow" id="live-state">LOADING MATERIAL LIBRARY…</div><div id="rig-title">Tyrian · Ace</div><div class="hint" id="coverage"></div><div class="hint" id="geometry-stats"></div><div class="hint" id="render-stats"></div></div>
       <div class="stage-footer"><span>Drag to orbit · Scroll to zoom</span><span id="cadence">Loading engine…</span></div>
     </section>
     <aside>
@@ -82,13 +82,14 @@
         <label for="light">Lighting<select id="light"><option value="neutral">Workshop</option><option value="foundry">Foundry dusk</option><option value="stress">Glare check</option></select></label>
         <label>Finish<select id="skin"><option value="ace">Ace</option><option value="factory">Factory Fresh</option><option value="refit">Field Refit</option><option value="worn">Battle-Worn</option><option value="rust">Rust Bucket</option></select></label>
       </div>
+      <label style="margin-top:12px">Geometry<select id="detail"><option value="hero">Detailed diesel · ~40k triangles</option><option value="standard">Original POC · ~12k triangles</option></select></label>
       <section class="material-source" aria-label="Applied material textures"><h2>Material library</h2><div id="material-library"></div><p>Separate images for each surface. Open a material to inspect its maps.</p></section>
       <div class="knobs" id="knobs"></div>
       <p class="hint" id="knob-help">Drag knobs up/down. Arrow keys adjust by 0.01; Page Up/Down by 0.1. Hold Shift while dragging for finer control.</p>
       <div class="buttons"><button id="compare" aria-pressed="false">Compare original</button><button id="reset">Reset knobs</button><button id="pause">Pause idle</button></div>
-      <label class="check"><input type="checkbox" id="smoke">Exhaust smoke</label>
+      <label class="check"><input type="checkbox" id="smoke" checked>Exhaust smoke</label>
       <p class="hint">Every physical part receives image textures, including weapons, feet and skin accessories. Rubber, cloth and glass keep their own finish; markings keep their original images. Glare check uses a bright work lamp with the game's bloom and light cap.</p>
-      <div class="export"><div class="eyebrow">YOUR MATERIAL RECIPE</div><p class="hint">Saved per finish in this browser. Copy your recipe when it feels right.</p><textarea id="settings" aria-label="Material settings JSON" readonly spellcheck="false"></textarea><div class="buttons"><button id="copy" class="primary">Copy settings</button><button id="download">Save JSON</button></div><p id="message" role="status">POC only. Game materials stay unchanged.</p></div>
+      <div class="export"><div class="eyebrow">YOUR MATERIAL RECIPE</div><p class="hint">Saved per finish in this browser. Copy your recipe when it feels right.</p><textarea id="settings" aria-label="Material settings JSON" readonly spellcheck="false"></textarea><div class="buttons"><button id="copy" class="primary">Copy settings</button><button id="download">Save JSON</button></div><p id="message" role="status">Inspection POC. Battlefield uses the lighter model.</p></div>
     </aside>
   </main>
   <script type="module" src="./material-tuner.js"></script>

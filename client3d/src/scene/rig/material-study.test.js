@@ -8,13 +8,35 @@ import { BASE_RADIUS } from "../../../../shared/geometry.js";
 import { surfaceGeometry, materialValues, installMaterialStudy } from "./material-study.js";
 import { MIN_ROUGHNESS, LOCAL_LIGHT_CAP } from "../matte.js";
 
-const rig = (skin = "ace") => {
+const rig = (skin = "ace", detail = 'standard') => {
   const c = CHASSIS.find((c) => c.name === "Tyrian");
   return new Mech({ id: "material-study", name: "Tyrian", chassis: c.id, owner: "a", weightClass: c.class,
-    longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin });
+    longRange: c.longRange, melee: c.melee, radius: BASE_RADIUS[c.class], skin, detail });
 };
 const maps = Object.fromEntries(['armor', 'gunmetal', 'brass', 'rubber', 'glass', 'fabric'].map((family) =>
   [family, { color: new THREE.Texture(), normal: new THREE.Texture(), roughness: new THREE.Texture(), metalness: new THREE.Texture() }]));
+
+test('detailed Tyrian keeps smooth normals, full material coverage and reversible comparison', () => {
+  const m = rig('ace', 'hero'), original = [];
+  m.root.traverse(mesh => {
+    if (mesh.isMesh && [mesh.material].flat().some(m => m.isMeshStandardMaterial)) original.push({ mesh, material: mesh.material, geometry: mesh.geometry, normals: [...mesh.geometry.attributes.normal.array] });
+  });
+  const study = installMaterialStudy(m, undefined, maps);
+  assert.equal(study.meshCount, original.length);
+  for (const { mesh, geometry, normals } of original) {
+    const expected = geometry.index ? geometry.toNonIndexed().attributes.normal.array : normals;
+    assert.deepEqual([...mesh.geometry.attributes.normal.array], [...expected], 'material pass preserves smooth geometry shading');
+    for (const material of [mesh.material].flat()) {
+      assert.ok(material.map && material.normalMap && material.roughnessMap);
+      assert.ok(material.roughness >= MIN_ROUGHNESS);
+    }
+  }
+  study.setEnabled(false);
+  for (const { mesh, material, geometry } of original) {
+    assert.equal(mesh.geometry, geometry); assert.equal(mesh.material, material);
+  }
+  study.dispose();
+});
 
 test("armor, gunmetal, brass, rubber and glass use independent image sets, including cloned skin materials", () => {
   const families = Object.fromEntries(['armor', 'gunmetal', 'brass', 'rubber', 'glass', 'fabric'].map((family) =>
