@@ -14,7 +14,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
-| **Field** | Depleted Core | +2 STR (8 → 10). Reliable punch. | `+2 STR` | ✅ coded (`str: 2`) |
+| **Field** | Tungsten Core | +2 STR (8 → 10). Reliable punch. | `+2 STR` | ✅ coded (`str: 2`) |
 | **Tuned** | AP Shells | Gains Armour Piercing (+D3 per raw 6). Conditional, great vs armor, wasted on soft targets. | `Gains Armour Piercing` | ✅ coded (AP) |
 | **Prototype** | Penetrator Rounds | Every **3rd Autocannon attack** loads a penetrator: it **ignores armor entirely**: each hit is a guaranteed **severe (2 SP)** regardless of the location's armor row. **Downside:** cycling the heavy belt **halves the Autocannon's ROF next turn.** | `Every 3rd volley ignores armor outright, but the belt cycles slow after` | ✅ implemented (per-rig belt counter; forced Severe every 3rd volley, ROF halved, floors at 1, the attack right after) |
 

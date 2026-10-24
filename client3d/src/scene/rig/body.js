@@ -129,6 +129,6 @@ export function buildRigBody({ cls = "light", recipe, mats, glass, vent, baseSca
   return {
     pelvis, legs, torso, chest: frame.chest, armR, armL, hipH,
     stacks: ctx.stacks, spinners: ctx.spinners, flickers: ctx.flickers, glows: ctx.glows,
-    whistle: ctx.whistle ?? null, bellows: ctx.bellows ?? null, sockets: ctx.sockets, frame, ctx,
+    whistle: ctx.whistle ?? null, bellows: ctx.bellows ?? null, windKey: ctx.windKey ?? null, sockets: ctx.sockets, frame, ctx,
   };
 }

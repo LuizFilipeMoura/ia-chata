@@ -13,7 +13,7 @@ export const FACTIONS = [
     text: "+1 Penetration on ranged attacks", mods: { pen: { ranged: 1 } } },
   { id: "nox", name: "Nox Industries", short: "Nox", perk: "Heavy Frames",
     text: "+2 max SP Hull, +1 max SP Legs", mods: { sp: { hull: 2, legs: 1 } } },
-  { id: "arcus", name: "Arcus Technologies", short: "Arcus", perk: "Arc Drives",
+  { id: "arcus", name: "Arcus Technologies", short: "Arcus", perk: "Galvanic Drives",
     text: "+1\" Speed", mods: { speed: 1 } },
   { id: "triton", name: "Triton Engineering", short: "Triton", perk: "Sea-Cooled",
     text: "+1 Heat Capacity", mods: { heatCap: 1 } },
@@ -42,7 +42,7 @@ export const RELICS = [
 
   { id: "hot-loads", name: "Hot Loads", text: "+1 Penetration on ranged attacks, rigs start with 1 heat", pack: 3, mods: { pen: { ranged: 1 }, startHeat: 1 } },
   { id: "serrated-edges", name: "Serrated Edges", text: "+1 Penetration in melee", pack: 3, mods: { pen: { melee: 1 } } },
-  { id: "cracked-reactor", name: "Cracked Reactor", text: "+1 action on round 1, rigs start with 2 heat", pack: 3, mods: { actionsR1: 1, startHeat: 2 } },
+  { id: "cracked-reactor", name: "Cracked Boiler", text: "+1 action on round 1, rigs start with 2 heat", pack: 3, mods: { actionsR1: 1, startHeat: 2 } },
   { id: "recovery-winch", name: "Recovery Winch", text: "Wreck recovery costs half", pack: 3, econ: { recoveryHalf: true } },
 ];
 

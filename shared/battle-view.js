@@ -38,8 +38,8 @@ export function availableActions(rig, turn, round, ctx = null) {
       let why = ""; // why a tile is greyed: kept off `note` (hints are for live tiles only)
       if (key === "shutdown") {
         enabled = true; // available any time; cools proportional to slots used
-        // Meltdown Protocol downside: the core stays hot while a charge is banked.
-        if ((rig.equipState?.meltdownCharge || 0) > 0) { enabled = false; why = "Can't Shut Down while a meltdown charge is banked"; }
+        // Scuttle Charge downside: the core stays hot while a charge is banked.
+        if ((rig.equipState?.meltdownCharge || 0) > 0) { enabled = false; why = "Can't Shut Down while a scuttle charge is banked"; }
       }
       // Hints only carry HIDDEN costs on an action you can still take, and only
       // when that cost isn't already shown by the heat chip or a status tag (see
@@ -75,7 +75,7 @@ export function availableActions(rig, turn, round, ctx = null) {
     const active = EQUIPMENT[rig.equipment].active;
     const up = equipmentUpgradeEffectOf(rig.equipment, rig.equipmentUpgrade);
     const s = rig.equipState || {};
-    const offline = !!rig.noActivesNextActivation; // EMP (Ion Storm), "No actives next" tag says why
+    const offline = !!rig.noActivesNextActivation; // galvanic surge (Galvanic Storm), "No actives next" tag says why
     let enabled = left > 0 && !offline;
     let label = active.label;
     let why = ""; // why the tile is greyed (not a `note`: hints are for live tiles only)
@@ -84,7 +84,7 @@ export function availableActions(rig, turn, round, ctx = null) {
       // Movement: grounded while emplaced or pinned (tags say why).
       if (rig.emplaced || rig.suppressImmobile) enabled = false;
       if (up.grapnelLauncher) {
-        // Grapnel Launcher replaces Jump Jets: it works while engaged (it yanks
+        // Grapnel Launcher replaces Blast Pistons: it works while engaged (it yanks
         // the rig free), but recharges for 3 rounds after each shot.
         grapnel = true;
         label = "Grapnel";
@@ -94,9 +94,9 @@ export function availableActions(rig, turn, round, ctx = null) {
         enabled = false; // jj lockout shown by "Engaged" tag
       }
     }
-    // Meltdown Protocol downside: no venting heat while a charge is banked.
+    // Scuttle Charge downside: no venting heat while a charge is banked.
     if ((active.key === "purge" || active.key === "heatpurgewave") && (s.meltdownCharge || 0) > 0) {
-      enabled = false; why = "Can't vent while a meltdown charge is banked";
+      enabled = false; why = "Can't vent while a scuttle charge is banked";
     }
     const entry = { key: active.key, label, heat: eff.actionHeat[active.key] ?? active.heat, enabled, cost: 1, note: "" };
     if (why) entry.why = why;
@@ -130,7 +130,7 @@ export function availableActions(rig, turn, round, ctx = null) {
       enabled: left > 0 && !active, cost: ACTIONS.barrage.slot, note: "", // "Barrage N" tag shows it's running
     });
   }
-  // Fire Control Lock (§13, Missile Barrage), paint a target for one auto-hit
+  // Plotting-Table Lock (§13, Missile Barrage), paint a target for one auto-hit
   // Armour-Piercing volley. Surfaced only for a Missile Barrage carrying it.
   const hasFireControl = rig.weapons?.longRange === "Missile Barrage" && rig.weaponUpgrades?.longRange === "fire-control-lock";
   if (hasFireControl) {
@@ -185,16 +185,16 @@ export function equipmentSpends(rig, turn) {
   const out = [];
   if (up.cryoReservoir) {
     const n = s.cryo || 0;
-    out.push({ key: "cryo", label: "Cryo", heat: n ? -2 : 0, cost: 0, max: n, enabled: n > 0,
-      note: "", why: n ? "" : "No cryo banked (banks 1 each Recovery the rig cools)" });
+    out.push({ key: "cryo", label: "Ice-Brine", heat: n ? -2 : 0, cost: 0, max: n, enabled: n > 0,
+      note: "", why: n ? "" : "No ice-brine banked (banks 1 each Recovery the rig cools)" });
   }
   if (up.meltdownProtocol) {
     const n = s.meltdownCharge || 0;
-    out.push({ key: "meltdown", label: "Meltdown", heat: 0, cost: 0, max: n, enabled: n > 0,
-      note: "", why: n ? "" : "No meltdown charge (banks overheat instead of rolling)" });
+    out.push({ key: "meltdown", label: "Scuttle", heat: 0, cost: 0, max: n, enabled: n > 0,
+      note: "", why: n ? "" : "No scuttle charge (banks overheat instead of rolling)" });
   }
   if (up.naniteSwarm) {
-    out.push({ key: "nanite", label: "Nanite Swarm", heat: 1, cost: 1, max: 1, enabled: left > 0, note: "" });
+    out.push({ key: "nanite", label: "Grease Monkeys", heat: 1, cost: 1, max: 1, enabled: left > 0, note: "" });
   }
   return out;
 }
@@ -211,20 +211,20 @@ export function equipmentChips(rig) {
   if (rig.hardened) add("hardened", "harden", null, "Hardened",
     `Harden: wound rolls against this rig are at −${up.hardenImpact || 1} Penetration until its next activation.`, "prep", "hardened");
   if (rig.smokeNextActivation) add("smoke", "smoke", null, "Smoked",
-    `Pop Smoke: every attacker is at −2 accuracy against this rig until its next activation.${up.chaffBurst ? " Chaff Burst: it side-steps half Speed when fired on." : ""}`, "prep", "smoked");
+    `Pop Smoke: every attacker is at −2 accuracy against this rig until its next activation.${up.chaffBurst ? " Tinsel Burst: it side-steps half Speed when fired on." : ""}`, "prep", "smoked");
   if (rig.overclocked) add("overclocked", "overclock", null, "Overclocked", "Overclock: extra actions this activation.", "prep", "overclocked");
-  if (rig.reactorOverdriveActive) add("overdrive", "overclock", "+2", "Overdrive +2 Pen",
-    "Reactor Overdrive: +2 Penetration on every attack this activation, but the overheat bonus is doubled.", "warn", "reactor-overdrive");
+  if (rig.reactorOverdriveActive) add("overdrive", "overclock", "+2", "Throttle +2 Pen",
+    "Open the Throttle: +2 Penetration on every attack this activation, but the overheat bonus is doubled.", "warn", "reactor-overdrive");
   if (rig.lockSightNext) add("locksight", "aimed", null, "Lock Sight",
     "Lock Sight: the next shot this activation rerolls all its missed to-hit dice.", "prep", "lock-sight");
   if ((s.nextAttackPen || 0) > 0) add("nextpen", "pen", `+${s.nextAttackPen}`, `+${s.nextAttackPen} Pen primed`,
-    `Cryo / Meltdown spend: +${s.nextAttackPen} Penetration on this rig's attacks this activation.`, "prep", "primed-pen");
-  if (up.cryoReservoir && (s.cryo || 0) > 0) add("cryo", "cryo", s.cryo, `Cryo ${s.cryo}/3`,
-    "Cryo Reservoir: spend N banked cryo (free) for −2 heat each and +N Penetration on the next attack. While any is banked, Recovery cools only 1.", "prep", "cryo");
-  if (up.meltdownProtocol && (s.meltdownCharge || 0) > 0) add("meltdown", "meltdown", s.meltdownCharge, `Meltdown ${s.meltdownCharge}/6`,
-    "Meltdown Protocol: spend N (free) for +N Penetration, or a burst of N heat on every enemy within 4\". No venting or Shut Down while banked, and it detonates if the Engine hits 0.", "warn", "meltdown");
-  for (const st of s.naniteStacks || []) add(`nanite-${st.loc}`, "nanite", st.sp, `Nanites: ${cap(st.loc)} ${st.sp}`,
-    `Nanite Swarm: heals 1 SP on ${cap(st.loc)} each Recovery, then decays 1 (${st.sp} left). Heat Capacity −1 while any stack lives.`, "prep", "nanites");
+    `Ice-brine / scuttle spend: +${s.nextAttackPen} Penetration on this rig's attacks this activation.`, "prep", "primed-pen");
+  if (up.cryoReservoir && (s.cryo || 0) > 0) add("cryo", "cryo", s.cryo, `Brine ${s.cryo}/3`,
+    "Ice-Brine Tank: spend N banked ice-brine (free) for −2 heat each and +N Penetration on the next attack. While any is banked, Recovery cools only 1.", "prep", "cryo");
+  if (up.meltdownProtocol && (s.meltdownCharge || 0) > 0) add("meltdown", "meltdown", s.meltdownCharge, `Scuttle ${s.meltdownCharge}/6`,
+    "Scuttle Charge: spend N (free) for +N Penetration, or a burst of N heat on every enemy within 4\". No venting or Shut Down while banked, and it detonates if the Engine hits 0.", "warn", "meltdown");
+  for (const st of s.naniteStacks || []) add(`nanite-${st.loc}`, "nanite", st.sp, `Monkeys: ${cap(st.loc)} ${st.sp}`,
+    `Grease Monkeys: the crew mends 1 SP on ${cap(st.loc)} each Recovery, then thins by 1 (${st.sp} left). Heat Capacity −1 while any crew works.`, "prep", "nanites");
   if (up.ablativeCascade) {
     const n = s.ablativeCharges || 0;
     add("ablative", "harden", n, `Ablative ${n}/2`,
@@ -232,13 +232,13 @@ export function equipmentChips(rig) {
   }
   if (up.pointDefense) {
     const n = s.interceptors || 0;
-    if (s.pdLocked) add("pd", "intercept", 0, "Point-Defense offline",
-      "Point-Defense System: offline this round because the rig fired its own ranged weapon last round.", "warn", "point-defense");
+    if (s.pdLocked) add("pd", "intercept", 0, "Flak Cage offline",
+      "Flak Cage: offline this round because the rig fired its own ranged weapon last round.", "warn", "point-defense");
     else add("pd", "intercept", n, `Interceptors ${n}/2`,
-      "Point-Defense System: each interceptor forces an incoming ranged attack to reroll its hits (+1 heat each). Refills to 2 each Recovery.", n ? "prep" : "warn", "point-defense");
+      "Flak Cage: each interceptor forces an incoming ranged attack to reroll its hits (+1 heat each). Refills to 2 each Recovery.", n ? "prep" : "warn", "point-defense");
   }
   if (up.fireSolutionLock && (s.solution?.count || 0) > 0) add("solution", "lock", s.solution.count, `Solution ${s.solution.count}/3`,
-    "Fire Solution Lock: each Fire at the same target stacks the solution; at 3 the next shot is an auto-hit, armour-piercing volley. Switching target resets it.", "prep", "fire-solution");
+    "Plotting-Table Solution: each Fire at the same target stacks the solution; at 3 the next shot is an auto-hit, armour-piercing volley. Switching target resets it.", "prep", "fire-solution");
   if (up.grapnelLauncher && (s.grapnelCooldown || 0) > 0) add("grapnel", "grapnel", s.grapnelCooldown, `Grapnel ${s.grapnelCooldown} rd`,
     `Grapnel Launcher recharging: ${s.grapnelCooldown} round${s.grapnelCooldown > 1 ? "s" : ""} until it can fire again.`, "warn", "grapnel");
   return chips;
@@ -246,7 +246,7 @@ export function equipmentChips(rig) {
 
 // ---- Digital previews for spatial equipment (pure; the engine re-checks) ----
 
-// A straight-line hop (Jump Jets, Grapnel yank) to `dest`: within `budget`
+// A straight-line hop (Blast Pistons, Grapnel yank) to `dest`: within `budget`
 // centre to centre, wholly on the table, clear of terrain and of every other
 // base. Returns { ok, dist, reason }.
 export function hopLanding(state, rig, dest, budget) {
@@ -263,7 +263,7 @@ export function hopLanding(state, rig, dest, budget) {
 }
 
 // Enemy rigs whose base rim is within `reach` inches of this rig's rim (Heat
-// Purge Wave 3", Meltdown burst 4").
+// Purge Wave 3", Scuttle burst 4").
 export function aoeVictims(rigs, rig, reach) {
   return (rigs || []).filter((o) => o.id !== rig.id && (o.owner || "a") !== (rig.owner || "a") && !o.destroyed && o.pos
     && Math.hypot(o.pos.x - rig.pos.x, o.pos.y - rig.pos.y) - radiusOf(o) - radiusOf(rig) <= reach + 1e-9);
@@ -280,7 +280,7 @@ export function reelTargets(state, rig) {
   });
 }
 
-// Nanite Swarm hosts: self, plus every ally with `inReach` (rim within 3").
+// Grease Monkeys hosts: self, plus every ally with `inReach` (rim within 3").
 export const NANITE_REACH = 3;
 export function naniteHosts(rigs, rig) {
   return (rigs || []).filter((o) => (o.owner || "a") === (rig.owner || "a") && !o.destroyed).map((o) => ({
@@ -389,7 +389,7 @@ function prepLabel(type) {
   return "Braced";
 }
 
-const PHASE_LABELS = { setup: "Setup", initiative: "Initiative", activation: "Activation", recovery: "Recovery", finished: "Battle over" };
+const PHASE_LABELS = { setup: "Setup", deploy: "Deployment", initiative: "Initiative", activation: "Activation", recovery: "Recovery", finished: "Battle over" };
 
 export function phaseSummary(game, rigs) {
   const turn = game.turn;

@@ -67,13 +67,13 @@ All entries below are shipped (`✅`); none were dropped after this pass beyond 
 
 | Weapon | Field | Tuned | Prototype | Dropped |
 |---|---|---|---|---|
-| Siege Maul | Reinforced Head ✅ `{str:2}` | Breaching Round ✅ | Piledriver Protocol ✅ | extended-barrel |
+| Siege Maul | Reinforced Head ✅ `{str:2}` | Breaching Round ✅ | Piledriver Drill ✅ | extended-barrel |
 | Sniper Cannon | Marksman Optics ✅ (Precision) | Cold Bore ✅ (+3 STR vs undamaged) | Enfilade ✅ (narrated ricochet) | match-barrel |
 | Double MG | Gyro Mount ✅ (rerollMisses) | Pinning Burst ✅ (4+ hits → −1 action) | Kneecapper ✅ | tracer-rounds |
 | Mortar | Cluster Shells ✅ | Airburst Fuze ✅ | Barrage ✅ (narrated zone) |, |
-| Arc Gun | Ion Burn ✅ (Incendiary) | Systems Overload ✅ | Ion Storm ✅ |, |
-| Missile Barrage | Swarm Warheads ✅ | Shaped Charges ✅ | Fire Control Lock ✅ |, |
-| Autocannon | Depleted Core ✅ (+2 STR) | AP Shells ✅ | Penetrator Rounds ✅ |, |
+| Arc Gun | Galvanic Burn ✅ (Incendiary) | Boiler Surge ✅ | Galvanic Storm ✅ |, |
+| Missile Barrage | Swarm Warheads ✅ | Shaped Charges ✅ | Plotting-Table Lock ✅ |, |
+| Autocannon | Tungsten Core ✅ (+2 STR) | AP Shells ✅ | Penetrator Rounds ✅ |, |
 | Mini Gun | Suppressive Fire ✅ (Shock) | Extended Belt ✅ | Suppression Lock ✅ |, |
 
 **Melee**
@@ -84,7 +84,7 @@ All entries below are shipped (`✅`); none were dropped after this pass beyond 
 | Chainsaw | Ripper Teeth ✅ (Rend) | Bloodletter ✅ (+1 ROF vs damaged) | Redline Governor ✅ (heat-scaling) | high-rev-motor |
 | Wrecking Ball | Haymaker ✅ (+3 STR) | Momentum Swing ✅ (charge; knockback narrated) | Tow Chain ✅ (fling, narrated) | wrecking-momentum |
 | Lance | Couched Reach ✅ (`range: 2`) | Full Tilt ✅ (charge +3 STR) | Skewer ✅ (engagement) | spearpoint |
-| Sword | Duelist's Balance ✅ (Precision) | Opportunist ✅ (+3 STR vs disrupted) | Superconductor Edge ✅ (heat-transfer) | keen-edge |
+| Sword | Duelist's Balance ✅ (Precision) | Opportunist ✅ (+3 STR vs disrupted) | Quenched Edge ✅ (heat-transfer) | keen-edge |
 | Flamethrower | Sticky Fuel ✅ (Rend) | Napalm ✅ (Burning) | Conflagration ✅ (stacking Burning) | pressurized-tank |
 | Claw | Rending Talons ✅ (Rend) | Vice Grip ✅ (Impale) | Breach Grip ✅ (armor crack) |, |
 | Circular Saw | Tempered Teeth ✅ (AP) | Sunder ✅ | Dismember ✅ (max-SP → cripple) |, |
@@ -105,12 +105,12 @@ All groups below (A–G) are implemented in `shared/game-state.js` / `shared/com
 - Anvil Boss (on a *landed* melee hit while Raise Shield is up, once/round free STR-6 counter, gated by `ripostedThisRound`).
 - Napalm / Conflagration → **Burning** status: a `burning` counter, ticks SP to Hull at activation start, `douse` action clears (all, capped at 1, for Napalm, 1/action for Conflagration); Conflagration stacks uncapped + adds attacker heat per hit.
 - Redline Governor (+1 STR/+1 hit per point of attacker heat over cap, cap +3).
-- Superconductor Edge (attacker heat > ½ cap → +2 Sword STR + move 1 heat attacker→target once per attack).
+- Quenched Edge (attacker heat > ½ cap → +2 Sword STR + move 1 heat attacker→target once per attack).
 - Vice Grip is Impale ✅.
 
 **Heat / cooldown / cadence (medium):**
-- Ion Storm (lockout state: no Prepare/actives/−1 action + 2-heat spike on target; +3 self-heat + attacker's own Arc Gun refuses its next fire attempt, which clears the overload).
-- Fire Control Lock (`lockedTarget` id; next volley auto-hits + AP; expires after its round).
+- Galvanic Storm (lockout state: no Prepare/actives/−1 action + 2-heat spike on target; +3 self-heat + attacker's own Arc Gun refuses its next fire attempt, which clears the overload).
+- Plotting-Table Lock (`lockedTarget` id; next volley auto-hits + AP; expires after its round).
 - Penetrator Rounds (every-3rd-attack counter → bypass armour row, force Severe; halves ROF, floors at 1, the attack right after).
 - Suppression Lock (per-target consecutive-fire ramp → speed/action/scoped pin; +1 self-heat every attack while locked; stack-3 pin (`suppressImmobile`) self-clears each Recovery).
 
@@ -123,8 +123,8 @@ All groups below (A–G) are implemented in `shared/game-state.js` / `shared/com
 - Dismember (per-location cumulative Sunder via `origMax` yardstick; once max SP ≤ half its commissioned original → crippled once: legs immobilise / arm weapon-dead / hull-engine `noRepair`).
 
 **Momentum / stance (large):**
-- Piledriver Protocol (Momentum counter +1/advance cap 3; spend-all-on-a-Maul-shot → guard-break (ignore Brace + cover) + STR + narrated 3″ shove; blocks Raise Shield, downgrades a requested Raise Shield to Brace, while Momentum>0).
-- Emplacement (`emplaced` rooted stance flag; permanent auto Raise-Shield re-established each activation; action budget 3→2 (floors at 1); blocks Move/Sprint/Jump Jets; +2 heat on Un-plant; 3-round cooldown from entry).
+- Piledriver Drill (Momentum counter +1/advance cap 3; spend-all-on-a-Maul-shot → guard-break (ignore Brace + cover) + STR + narrated 3″ shove; blocks Raise Shield, downgrades a requested Raise Shield to Brace, while Momentum>0).
+- Emplacement (`emplaced` rooted stance flag; permanent auto Raise-Shield re-established each activation; action budget 3→2 (floors at 1); blocks Move/Sprint/Blast Pistons; +2 heat on Un-plant; 3-round cooldown from entry).
 
 **Group G, spatial, implemented as narrated player instructions** (per [AGENTS.md](../../AGENTS.md): "the app is a tabletop assistant, not a simulator", a spatial effect tells the player what to do, the player moves the minis):
 - Enfilade (engine tracks the aimed-shot cadence only; on the 3rd it emits an instruction for the player to pick the rig in LoS behind the struck target and resolve a +2 STR hit).

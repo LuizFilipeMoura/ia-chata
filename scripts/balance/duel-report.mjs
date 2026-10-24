@@ -60,7 +60,7 @@ Run biases (this run's inputs, not the policy's):
 - SINGLE ARC, SINGLE DISTANCE. arc="${arc}" and each weapon's distance are INPUTS
   (its sweet spot), not outcomes. No row here is a range or arc profile.
 - A 0.00 OR A DASH HERE MEANS UNMEASURED, NOT WORTHLESS. Greedy-safe makes no
-  choice, so Fire Control Lock, Enfilade, Barrage and the spatial effects cannot
+  choice, so Plotting-Table Lock, Enfilade, Barrage and the spatial effects cannot
   be exercised at all. This harness exists because 44 of the old sweep's 85
   upgrades read a misleading 0.00; do not read a new one as a verdict.
 - SP TOTAL SATURATES AT THE WRECK. The duel ends when the control wrecks, so a

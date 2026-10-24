@@ -5,6 +5,9 @@ import { el, clear, fill, toast } from "./dom.js";
 import { api } from "../api.js";
 import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT, CHASSIS_PRIMARY_EQUIPMENT, templateById } from "/shared/game-state.js";
 import { icon } from "./icons.js";
+import { posterCanvas } from "./posters.js";
+import { vendingMachine, vendSlot, boneCharm, requisitionOverlay } from "./requisition.js";
+import { pickPoster, PROPAGANDA_IDS } from "../propaganda.js";
 
 // The support walkers a squad may bring (one), with what each is for.
 export const WALKER_PICKS = [
@@ -15,15 +18,25 @@ export const WALKER_PICKS = [
 ];
 import { EQUIPMENT_UPGRADES } from "/shared/rules.js";
 
-const NATURE = { field: "FIELD", tuned: "TUNED", prototype: "PROTO" };
 const TIER_TEXT = {
   easy: "Sloppy pilot, bare rigs. Learn the ropes.",
   normal: "A fair fight, roughly even against a decent build.",
   hard: "GA-evolved champion: the meta's best builds and tactics.",
 };
 
+// Two faction posters pasted either side of the title menu, a new pair daily.
+function titlePosters() {
+  const day = Math.floor(Date.now() / 864e5);
+  const a = pickPoster(day), b0 = pickPoster(day * 7 + 3);
+  const b = b0.id === a.id ? { ...b0, id: PROPAGANDA_IDS[(PROPAGANDA_IDS.indexOf(a.id) + 2) % PROPAGANDA_IDS.length] } : b0;
+  return el("div", { class: "title-posters", "aria-hidden": "true" },
+    el("div", { class: "tp l" }, posterCanvas(a.id, 220, 330, { slogan: a.slogan, seed: day, aged: 0.55 })),
+    el("div", { class: "tp r" }, posterCanvas(b.id, 220, 330, { slogan: b.id === b0.id ? b0.slogan : null, seed: day + 1, aged: 0.7 })));
+}
+
 export function titleScreen(root, { onPlay, onTutorial, onLab, onWatch, onSims, onVersus, onCampaign, onDev }) {
   fill(root, el("div", { class: "title" },
+    titlePosters(),
     el("div", { class: "logo" }, el("span", {}, "OIL"), el("i", {}, "&"), el("span", {}, "IRON"), el("small", {}, "TACTICS · 3D")),
     el("p", { class: "tag" }, "Oil-soaked war rigs, brass-bound Ironclads, and a table of rubble to fight over."),
     el("div", { class: "menu" },
@@ -101,29 +114,51 @@ export async function squadBuilder(root, { onStart, onBack, mode = "bot", taken 
           for (const cls of ["medium", "light"]) pool.filter((c) => c.class === cls).slice(0, want[cls] || 0).forEach((c) => squad.push(unitDefaults(c)));
           render();
         } }, "🎲 Random squad"),
-        el("button", { class: "btn big primary", disabled: squad.length < 1 || (need && !needMet()), onClick: () => onStart({ squad, tier, table, walker }) }, cta || `Deploy vs ${tier.toUpperCase()} bot ▸`)),
+        el("button", { class: "btn big primary", disabled: squad.length < 1 || (need && !needMet()), onClick: () => requisitionOverlay({ rows: requisitionRows(squad, { tier: mode === "bot" ? tier : null, table: hostTable ? table : null, walker }) }, () => onStart({ squad, tier, table, walker })) }, cta || `Deploy vs ${tier.toUpperCase()} bot ▸`)),
     ));
   };
   render();
 }
 
+// The squad on the requisition form: one line per rig, then the terms.
+function requisitionRows(squad, { tier, table, walker }) {
+  const upName = (list, id) => list?.find((x) => x.id === id)?.name;
+  const rows = squad.map((u, i) => {
+    const ch = CHASSIS.find((c) => c.id === u.chassis);
+    const kit = [upName(WEAPON_UPGRADES[ch.longRange], u.longRangeUpgrade), upName(WEAPON_UPGRADES[ch.melee], u.meleeUpgrade), EQUIPMENT[u.equipment]?.label].filter(Boolean).join(", ");
+    return [`Item ${i + 1}`, `${ch.name} (${ch.label}): ${kit}`];
+  });
+  if (walker) rows.push(["Support", templateById(walker)?.name || walker]);
+  if (table) rows.push(["Theatre", TABLES[table]?.label || table]);
+  if (tier) rows.push(["Opposition", `${tier} grade`]);
+  return rows;
+}
+
+// Upgrade picking as a coin-op vending machine: one row per slot, each choice
+// a lit button with its nature stamped on; Prototypes hang as bone charms.
 function upgradeEditor(ch, u, render) {
-  const pick = (slot, list, label) => el("div", { class: "up-row" }, el("span", { class: "up-l" }, label),
-    list.map((x) => {
-      const trial = { ...u, [slot]: x.id };
-      const blocked = x.nature === "prototype" && protoCount(trial) > 1;
-      return el("button", { class: `up ${u[slot] === x.id ? "on" : ""} n-${x.nature}`, disabled: blocked, title: `${x.name}: ${x.tag}${x.catch ? ` (Catch: ${x.catch})` : ""}${blocked ? " · only one Prototype per rig" : ""}`, onClick: () => { u[slot] = x.id; render(); } },
-        el("i", {}, NATURE[x.nature]), x.name);
-    }));
+  const pick = (slot, list, label, row) => {
+    const cur = list.find((x) => x.id === u[slot]);
+    return el("div", { class: "up-row vend-row" }, el("span", { class: "up-l" }, label),
+      el("div", { class: "vend-slots" }, list.map((x, i) => {
+        const trial = { ...u, [slot]: x.id };
+        const blocked = x.nature === "prototype" && protoCount(trial) > 1;
+        return vendSlot(x, { code: `${row}${i + 1}`, key: `${ch.id}:${slot}:${x.id}`, on: u[slot] === x.id, blocked,
+          title: `${x.name}: ${x.tag}${x.catch ? ` (Curse: ${x.catch})` : ""}${blocked ? " · only one Prototype per rig" : ""}`,
+          onPick: () => { u[slot] = x.id; render(); } });
+      })),
+      cur?.nature === "prototype" ? boneCharm(cur, { compact: true }) : null);
+  };
   const eqList = EQUIPMENT_UPGRADES[u.equipment] || [];
   return el("div", { class: "upgrades" },
-    pick("longRangeUpgrade", WEAPON_UPGRADES[ch.longRange], `🔫 ${ch.longRange}`),
-    pick("meleeUpgrade", WEAPON_UPGRADES[ch.melee], `🗡 ${ch.melee}`),
-    el("div", { class: "up-row" }, el("span", { class: "up-l" }, "⚙ Equipment"),
-      el("select", { onChange: (e) => { u.equipment = e.target.value; u.equipmentUpgrade = null; render(); } },
-        Object.entries(EQUIPMENT).map(([id, e]) => el("option", { value: id, selected: id === u.equipment }, `${e.label}: ${e.passive}`)))),
-    eqList.length ? pick("equipmentUpgrade", eqList, "⚙ Mod") : null,
-  );
+    vendingMachine([
+      pick("longRangeUpgrade", WEAPON_UPGRADES[ch.longRange], `🔫 ${ch.longRange}`, "A"),
+      pick("meleeUpgrade", WEAPON_UPGRADES[ch.melee], `🗡 ${ch.melee}`, "B"),
+      el("div", { class: "up-row" }, el("span", { class: "up-l" }, "⚙ Equipment"),
+        el("select", { onChange: (e) => { u.equipment = e.target.value; u.equipmentUpgrade = null; render(); } },
+          Object.entries(EQUIPMENT).map(([id, e]) => el("option", { value: id, selected: id === u.equipment }, `${e.label}: ${e.passive}`)))),
+      eqList.length ? pick("equipmentUpgrade", eqList, "⚙ Mod", "C") : null,
+    ], { marquee: `${ch.name.toUpperCase()} · ARMS FOR THE ARMED` }));
 }
 
 // Create a fresh room vs the bot and commission everything. Returns the room code.

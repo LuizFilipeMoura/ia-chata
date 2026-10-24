@@ -11,6 +11,9 @@ export const FEMALE = { ...MALE, f0: 160 };
 export const M = (o = {}) => ({ ...MALE, ...o });
 export const F = (o = {}) => ({ ...FEMALE, ...o });
 export const ROBOT = { f0: 220, syl: 0.07, chip: 0.6, spread: 0 };
+// Clockworks (the wind-up machines) don't speak at all: audio.js plays a
+// clockwork voice as ticks, ratchet runs and a little whistle instead.
+export const CLOCKWORK = { ...ROBOT, clockwork: true };
 
 // Mouth shapes: the first two formants of each vowel (Hz).
 export const FORMANTS = { a: [730, 1090], e: [530, 1840], i: [300, 2200], o: [570, 840], u: [320, 870] };

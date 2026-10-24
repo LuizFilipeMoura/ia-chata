@@ -61,7 +61,7 @@ export function createCampaignRouter(rooms, campaign) {
     if (run.status === "battle") {
       const code = `CAMP-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
       const room = rooms.getOrCreateRoom(code);
-      applyCommand(room, { verb: "mission", attrs: missionAttrs(run, run.contract) }, { side: "a" });
+      applyCommand(room, { verb: "mission", attrs: { ...missionAttrs(run, run.contract), deploy: true } }, { side: "a" });
       if (!room.game.started) return fail(res, { error: "mission", reason: lastRejectionReason() });
       driveBots(room);
       rooms.persist();

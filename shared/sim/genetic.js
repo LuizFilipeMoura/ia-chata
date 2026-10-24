@@ -12,11 +12,14 @@
 import { CHASSIS, WEAPON_UPGRADES, EQUIPMENT } from "../game-state.js";
 import { EQUIPMENT_UPGRADES } from "../rules.js";
 import { PRESETS, BIAS_FAMILIES } from "../bot/score.js";
+import { DEPLOY_GENES, DEPLOY_DEFAULTS } from "../bot/deploy.js";
 import { mulberry32, playMatch } from "./match.js";
 
 export const WEIGHT_KEYS = ["vp", "priority", "damage", "threat", "heat", "fragile", "tactics"];
 // Additive action-preference genes (see score.js BIAS_FAMILIES), centred on 0.
 export const BIAS_KEYS = BIAS_FAMILIES.map((f) => `b_${f}`);
+// Deploy-phase genes (see bot/deploy.js): where the squadron sets up.
+export const DEPLOY_KEYS = DEPLOY_GENES;
 const EQUIP_IDS = Object.keys(EQUIPMENT);
 
 // Default composition: 1 medium + 2 lights per side. Both sides must mirror
@@ -77,13 +80,14 @@ function randomWeights(rnd) {
   return {
     ...Object.fromEntries(WEIGHT_KEYS.map((k) => [k, +((base[k] ?? 1) * (0.5 + rnd())).toFixed(2)])),
     ...Object.fromEntries(BIAS_KEYS.map((k) => [k, +((rnd() - 0.5) * 0.6).toFixed(2)])),
+    ...Object.fromEntries(DEPLOY_KEYS.map((k) => [k, +(DEPLOY_DEFAULTS[k] + (rnd() - 0.5) * 1.6).toFixed(2)])),
   };
 }
 
 // A stable identity for a genome (squad + picks + rounded pilot), for pooling.
 export function genomeSignature(g) {
   const sq = g.squad.map((u) => [u.chassis, u.longRangeUpgrade, u.meleeUpgrade, u.equipment, u.equipmentUpgrade].join("/")).sort().join("|");
-  const w = [...WEIGHT_KEYS, ...BIAS_KEYS].map((k) => (g.weights?.[k] ?? 0).toFixed(1)).join(",");
+  const w = [...WEIGHT_KEYS, ...BIAS_KEYS, ...DEPLOY_KEYS].map((k) => (g.weights?.[k] ?? 0).toFixed(1)).join(",");
   return `${sq}#${w}`;
 }
 
@@ -111,6 +115,7 @@ export function sanitiseGenome(g, rnd = Math.random) {
   const weights = Object.fromEntries([
     ...WEIGHT_KEYS.map((k) => [k, Number.isFinite(g.weights?.[k]) ? g.weights[k] : PRESETS.balanced[k] ?? 1]),
     ...BIAS_KEYS.map((k) => [k, Number.isFinite(g.weights?.[k]) ? g.weights[k] : 0]),
+    ...DEPLOY_KEYS.map((k) => [k, Number.isFinite(g.weights?.[k]) ? g.weights[k] : DEPLOY_DEFAULTS[k]]),
   ]);
   return { squad, weights };
 }
@@ -134,7 +139,7 @@ function crossover(p1, p2, rnd) {
   const same = compKey(p1) === compKey(p2);
   const squad = p1.squad.map((u, i) => structuredClone(same && rnd() < 0.5 ? p2.squad[i] : u));
   repairDuplicates(squad, rnd);
-  const weights = Object.fromEntries([...WEIGHT_KEYS, ...BIAS_KEYS].map((k) => [k, rnd() < 0.5 ? (p1.weights[k] ?? 0) : (p2.weights[k] ?? 0)]));
+  const weights = Object.fromEntries([...WEIGHT_KEYS, ...BIAS_KEYS, ...DEPLOY_KEYS].map((k) => [k, rnd() < 0.5 ? (p1.weights[k] ?? 0) : (p2.weights[k] ?? 0)]));
   return { squad, weights };
 }
 
@@ -176,6 +181,10 @@ function mutate(g, rnd, rate, compositions) {
   // Biases drift additively and may go negative (a pilot that avoids an action).
   for (const k of BIAS_KEYS) {
     if (rnd() < rate) out.weights[k] = +Math.max(-2, Math.min(2, (out.weights[k] ?? 0) + (rnd() - 0.5) * 0.5)).toFixed(2);
+  }
+  // Deploy genes drift the same way (d_forward below 0 hangs back in the corner).
+  for (const k of DEPLOY_KEYS) {
+    if (rnd() < rate) out.weights[k] = +Math.max(-2, Math.min(3, (out.weights[k] ?? DEPLOY_DEFAULTS[k]) + (rnd() - 0.5) * 0.6)).toFixed(2);
   }
   return out;
 }

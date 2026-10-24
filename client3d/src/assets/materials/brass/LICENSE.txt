@@ -1,0 +1,13 @@
+Source: ambientCG / Metal048C
+Asset: https://ambientcg.com/a/Metal048C
+License: Creative Commons CC0 1.0 Universal
+License documentation: https://docs.ambientcg.com/license/
+Download: https://ambientcg.com/get?file=Metal048C_1K-JPG.zip
+Downloaded 2026-10-20. Original 1024px JPG files, unmodified.
+NormalGL is OpenGL tangent-space. Roughness and Metalness are linear grayscale.
+Color is sRGB. Material tint and anti-glare adjustments happen in the shader.
+Metal048C is a rough gold-alloy texture, tinted to aged brass in the POC.
+Color.jpg SHA256 35AD052E3E29AA63523E63E2DD6B62E2466C56E8A77A5DBEE4947199E459E58C
+Metalness.jpg SHA256 6A6F8DA6955EF1613BAD489CC67BFFD610AAEC7BFCCB77A4DED016B5925490C4
+NormalGL.jpg SHA256 300BB39B55ABA9E60CFA1E991EBDFE5F4C0FB69C0F1A4DEFA4527FBB48A5A9CA
+Roughness.jpg SHA256 F8E84DE90C62CE0A7F5C59A3B1AF4A3A1C23905EA4707A635646437639B1A21D

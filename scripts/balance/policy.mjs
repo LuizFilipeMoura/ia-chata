@@ -16,7 +16,7 @@
 //    , though the shot itself is a silent no-op;
 //   - Reload has no tile at all: it is drawer-only;
 //   - the Shut Down tile is hardcoded `enabled`, but the engine refuses it while a
-//     meltdown charge is banked;
+//     scuttle charge is banked;
 //   - a rig whose weapon has been rolled dead by an Arms hit keeps an `enabled`
 //     Fire tile, while combat.js refuses the shot as `weapon-destroyed` and
 //     performAction's `return !!res` swallows the reason entirely;
@@ -53,7 +53,7 @@ export const KNOWN_BIASES = `
   it actually is: the credit lands on the wrong side of the ledger.
 - IT MAKES NO CHOICES. It never moves, never picks its target, never prepares,
   locks, or triggers an active. So every upgrade that needs a decision to pay off
- , Fire Control Lock, Enfilade, Barrage, and the spatial effects, reads 0.00
+ , Plotting-Table Lock, Enfilade, Barrage, and the spatial effects, reads 0.00
   here. That 0.00 means UNMEASURED, not worthless. This harness exists because 44
   upgrades read a misleading 0.00; do not let it manufacture a new set.
 - The control rig's loadout is a constant, and it shapes every number in the
@@ -134,7 +134,7 @@ export function makeGreedySafe({ distance, arc } = {}) {
     // Its tile is hardcoded `enabled` in battle-view and only filtered out for
     // cold kinds, which the assert above already excludes, so the tile can never
     // veto this and is not worth consulting. The ENGINE can: it refuses while
-    // Meltdown Protocol holds a charge, reachable from here since the random
+    // Scuttle Charge holds a charge, reachable from here since the random
     // overshoot noted in KNOWN_BIASES is what banks one. Mirror that refusal or
     // the driver re-issues a rejected shutdown forever; null lets it move on.
     const meltdownBanked = (rig.equipState?.meltdownCharge || 0) > 0;
@@ -156,7 +156,7 @@ export function makeGreedySafe({ distance, arc } = {}) {
 
     // Rivet Lock (§13, Rivet Gun), a seized WEAPON-role location rivets the gun
     // arm shut and the engine refuses the shot, while the Fire tile stays enabled.
-    // Unlike Ion Storm, which clears itself on the refusal, this persists ~2 rounds,
+    // Unlike Galvanic Storm, which clears itself on the refusal, this persists ~2 rounds,
     // so retrying never succeeds. Reload cannot free it either, hence the placement
     // above the reload branch alongside weaponsDestroyed.
     //

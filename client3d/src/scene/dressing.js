@@ -8,6 +8,7 @@ import { buildRigBody } from "./rig/body.js";
 import { RECIPES } from "./rig/recipes.js";
 import { skinMaterials } from "./rig/skins.js";
 import { PAINT } from "./mechs.js";
+import { pumphouseRemodel, sandbagsRemodel, drumsRemodel } from "./environment-remodel.js";
 
 const box = (w, h, d, m) => shadow(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m));
 const cyl = (rt, rb, h, m, seg = 12) => shadow(new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m));
@@ -33,6 +34,7 @@ function sandbag(len, m) { const o = shadow(new THREE.Mesh(new THREE.SphereGeome
 
 // Pump house: a brick engine house with a rocking beam engine on the roof.
 function pumphouse(t, ctx) {
+  if (ctx.remodel !== false) return pumphouseRemodel(t, ctx);
   const g = new THREE.Group();
   const W = t.w * 0.9, D = t.h * 0.9, H = 3.6;
   g.add(at(box(W, H, D, windowsMat(ctx, W, H)), 0, H / 2, 0));
@@ -188,6 +190,7 @@ export const NEW_BUILDINGS = Object.keys(NEW_BUILDINGS_MAP);
 
 // Sandbag wall: staggered courses along the rect with a coil of wire on top.
 function sandbags(t, ctx) {
+  if (ctx.remodel !== false) return sandbagsRemodel(t, ctx);
   const g = new THREE.Group();
   const sand = SAND(), dark = std(0x7a6a4a, { roughness: 1 });
   const bagL = 0.7, rows = 3;
@@ -210,6 +213,7 @@ function sandbags(t, ctx) {
 
 // Fuel drum cluster: standing drums in the rect, one on its side, a stacked one.
 function drums(t, ctx) {
+  if (ctx.remodel !== false) return drumsRemodel(t, ctx);
   const g = new THREE.Group();
   const cols = [0x7a2a1c, 0x4a5a2a, 0x6a4a2a, 0x2a3a4a];
   const r = Math.min(0.3, Math.min(t.w, t.h) / 4), h = r * 2.9;

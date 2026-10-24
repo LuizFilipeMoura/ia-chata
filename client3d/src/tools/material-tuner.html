@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Rig Material Lab · Oil & Iron</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { font: 15px/1.5 system-ui, sans-serif; color: #ece6d6; background: #171b1a; --accent: #e7ae51; --muted: #aaa99e; }
+    body { margin: 0; }
+    button, input, select, textarea { font: inherit; }
+    button, select, input[type=number] { background: #252b28; color: inherit; border: 1px solid #535b51; border-radius: 5px; padding: 8px 12px; }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button[aria-pressed=true], .primary { background: var(--accent); color: #211c14; border-color: var(--accent); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    header { padding: 18px 28px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3c433c; gap: 20px; }
+    .eyebrow { font: 12px/1.5 ui-monospace, monospace; letter-spacing: .15em; color: var(--accent); }
+    h1 { font-size: 25px; margin: 2px 0 0; font-weight: 650; letter-spacing: -.03em; }
+    a { color: var(--accent); text-underline-offset: 4px; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; height: calc(100dvh - 95px); min-height: 0; }
+    #stage { position: relative; min-height: 0; overflow: hidden; background: radial-gradient(ellipse at 45% 40%, #343d36, #191e1d 80%); }
+    #stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+    .stage-label, .stage-footer { z-index: 1; }
+    .stage-label { position: absolute; top: 22px; left: 26px; pointer-events: none; }
+    #rig-title { font-size: 23px; margin-top: 4px; }
+    .stage-footer { position: absolute; bottom: 20px; left: 26px; right: 26px; display: flex; justify-content: space-between; gap: 12px; pointer-events: none; color: #babeb3; font-size: 12px; }
+    aside { padding: 22px; border-left: 1px solid #3c433c; background: #1c211f; overflow-y: auto; }
+    .selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-size: 13px; color: var(--muted); }
+    select { display: block; width: 100%; margin-top: 5px; }
+    .knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 20px 0 16px; }
+    .control { text-align: center; }
+    .control h2 { font-size: 15px; font-weight: 550; margin: 0 0 8px; }
+    .dial { --turn: 0deg; width: 88px; height: 88px; margin: auto auto 8px; position: relative; border: 2px solid #606356; border-radius: 50%; touch-action: none; cursor: ns-resize; background: repeating-conic-gradient(#525a4f 0deg 2deg, transparent 2deg 18deg); }
+    .dial::before { content: ''; position: absolute; inset: 10px; border-radius: 50%; background: linear-gradient(135deg, #42493f, #242a25); border: 1px solid #737668; box-shadow: 0 5px 12px #0008; }
+    .pointer { position: absolute; inset: 16px; border-radius: 50%; transform: rotate(var(--turn)); pointer-events: none; }
+    .pointer::after { content: ''; position: absolute; width: 4px; height: 24px; background: var(--accent); top: 0; left: calc(50% - 2px); border-radius: 2px; }
+    .control input { width: 78px; font: 16px/1.4 ui-monospace, monospace; padding: 4px; text-align: center; }
+    .unit { font-size: 13px; margin-left: 3px; color: var(--muted); }
+    .range { color: var(--muted); font-size: 12px; margin: 7px 0 0; }
+    .hint { color: var(--muted); font-size: 12px; margin: 0 0 20px; }
+    .material-source { margin: 16px 0; padding: 12px; border: 1px solid #3c433c; background: #141a17; }
+    .material-source summary { cursor: pointer; font-size: 13px; }
+    .maps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+    .maps figure { margin: 0; }
+    .maps img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 3px; }
+    .maps figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .material-source p { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+    #material-library { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+    .material-family { border-top: 1px solid #3c433c; padding: 8px 0; min-width: 0; }
+    .material-family[open] { grid-column: 1 / -1; }
+    .material-family summary { display: flex; align-items: center; gap: 8px; }
+    .material-family summary > img { width: 34px; height: 40px; object-fit: cover; border-radius: 4px; }
+    .material-family strong, .material-family small { display: block; }
+    .material-family small, .resolution { color: var(--muted); font-size: 12px; }
+    .resolution { display: none; }
+    .material-family[open] .resolution { display: block; margin-left: auto; }
+    .material-source h2 { font-size: 15px; margin: 0 0 12px; }
+    .readout { padding: 14px; margin-bottom: 18px; background: #111715; border-left: 2px solid var(--accent); }
+    #frequency-readout { font: 22px/1.4 ui-monospace, monospace; }
+    .readout p { color: var(--muted); font-size: 12px; margin: 3px 0 0; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .check { display: flex; align-items: center; gap: 8px; margin: 12px 0; color: #ddd9ca; }
+    input[type=checkbox] { accent-color: var(--accent); width: 17px; height: 17px; }
+    .export { border-top: 1px solid #3c433c; padding-top: 18px; }
+    textarea { width: 100%; height: 116px; resize: vertical; color: #c6d4bd; border: 1px solid #3c433c; background: #141a17; border-radius: 4px; padding: 10px; margin: 9px 0; font: 12px/1.5 ui-monospace, monospace; }
+    #message { min-height: 36px; color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; height: auto; min-height: 0; } header { padding: 14px 18px; } h1 { font-size: 22px; } #stage { height: 52dvh; min-height: 330px; } aside { border-left: 0; border-top: 1px solid #3c433c; } .knobs { max-width: 390px; margin-inline: auto; } }
+  </style>
+</head>
+<body>
+  <header><div><div class="eyebrow">OIL & IRON / PAINT SHOP</div><h1>Rig Material Lab</h1></div><a href="../../#dev=poc.scene">Back to yard ↗</a></header>
+  <main>
+    <section id="stage" aria-label="Interactive 3D rig preview">
+      <div class="stage-label"><div class="eyebrow" id="live-state">LOADING MATERIAL LIBRARY…</div><div id="rig-title">Tyrian · Ace</div><div class="hint" id="coverage"></div><div class="hint" id="geometry-stats"></div><div class="hint" id="render-stats"></div></div>
+      <div class="stage-footer"><span>Drag to orbit · Scroll to zoom</span><span id="cadence">Loading engine…</span></div>
+    </section>
+    <aside>
+      <label style="margin-bottom:12px">Chassis<select id="chassis"><option value="Tyrian">Tyrian · Truck walker</option><option value="Black">Black · Tank walker</option></select></label>
+      <div class="selectors">
+        <label for="light">Lighting<select id="light"><option value="neutral">Workshop</option><option value="foundry">Foundry dusk</option><option value="stress">Glare check</option></select></label>
+        <label>Finish<select id="skin"><option value="ace">Ace</option><option value="factory">Factory Fresh</option><option value="refit">Field Refit</option><option value="worn">Battle-Worn</option><option value="rust">Rust Bucket</option></select></label>
+      </div>
+      <label style="margin-top:12px">Geometry<select id="detail"><option value="hero">Detailed diesel · ~40k triangles</option><option value="standard">Standard battlefield model</option></select></label>
+      <section class="material-source" aria-label="Applied material textures"><h2>Material library</h2><div id="material-library"></div><p>Separate images for each surface. Open a material to inspect its maps.</p></section>
+      <div class="knobs" id="knobs"></div>
+      <p class="hint" id="knob-help">Drag knobs up/down. Arrow keys adjust by 0.01; Page Up/Down by 0.1. Hold Shift while dragging for finer control.</p>
+      <div class="buttons"><button id="compare" aria-pressed="false">Compare original</button><button id="reset">Reset knobs</button><button id="pause">Pause idle</button></div>
+      <label class="check"><input type="checkbox" id="smoke" checked>Exhaust smoke</label>
+      <p class="hint">Every physical part receives image textures, including weapons, feet and skin accessories. Rubber, cloth and glass keep their own finish; markings keep their original images. Glare check uses a bright work lamp with the game's bloom and light cap.</p>
+      <div class="export"><div class="eyebrow">YOUR MATERIAL RECIPE</div><p class="hint">Saved per chassis and finish in this browser. Copy your recipe when it feels right.</p><textarea id="settings" aria-label="Material settings JSON" readonly spellcheck="false"></textarea><div class="buttons"><button id="copy" class="primary">Copy settings</button><button id="download">Save JSON</button></div><p id="message" role="status">Inspection POC. Battlefield uses the lighter model.</p></div>
+    </aside>
+  </main>
+  <script type="module" src="./material-tuner.js"></script>
+</body>
+</html>

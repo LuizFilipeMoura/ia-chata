@@ -14,7 +14,7 @@ up to a kill, and players felt no progress from a good attack.
   burning, blasts, overheat). A point past 0 on Hull or Engine drains **2**
   (replaces the old instant kill).
 - Integrity 0 → destroyed (normal §9 blast + §11 kill VP).
-- Repair / Field Weld / Nanites never restore it. Emergency Patch restores 1.
+- Repair / Field Weld / Grease Monkeys never restore it. Emergency Patch restores 1.
 - Kneecapper floors it at 1 (cripples, never kills).
 - Tiers: **Bloodied** ≤ half, **Critical** ≤ ceil(max / 4). `integrityTier(rig)`
   in `shared/game-state.js` is the single source for every client.
@@ -30,13 +30,13 @@ is a separate balance knob from SP:
 
 | Chassis | Class | Total SP | Integrity |
 |---|---|---|---|
-| Zebra | light | 38 | 19 |
-| Blue | light | 40 | 20 |
-| Pumpkin | light | 41 | 21 |
+| Dazzle | light | 38 | 19 |
+| Cobalt | light | 40 | 20 |
+| Rust | light | 41 | 21 |
 | Turquoise | light | 42 | 21 |
-| Green | light | 43 | 22 |
+| Verdigris | light | 43 | 22 |
 | Gold | light | 44 | 22 |
-| Purple | light | 44 | 22 |
+| Tyrian | light | 44 | 22 |
 | Red | medium | 43 | 28 |
 | Silver | medium | 44 | 29 |
 | Copper | medium | 48 | 31 |

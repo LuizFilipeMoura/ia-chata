@@ -4,13 +4,15 @@
 // projectiles, impact sparks + damage numbers, cook-offs, overheat steam. Frames
 // queue, so a whole bot turn plays out move by move.
 import * as THREE from "three";
-import { Mech } from "../scene/mechs.js";
+import { Mech, TEAM } from "../scene/mechs.js";
+import { isSprint, comicWord } from "../scene/rig/look.js";
 import { skinFor } from "../scene/rig/skins.js";
 import { CHASSIS, EQUIPMENT, WEAPONS, UNIT_WEAPONS, integrityTier } from "/shared/game-state.js";
 import { HEAT_CAPACITY } from "/shared/rules.js";
 import { BASE_RADIUS } from "/shared/geometry.js";
 import { sfx } from "../audio.js";
 import { barkFor } from "./barks.js";
+import { battleCues, stopCues } from "./soundcues.js";
 import { partsOf } from "./units.js";
 import { settings } from "../settings.js";
 
@@ -20,8 +22,8 @@ const PROJECTILE = {
   "Sniper Cannon": "rail", "Crossbow": "bolt", "Steam Cannon": "steam", "Flare Launcher": "flare", "Tesla Coil": "arc",
 };
 const BURST = { "Mini Gun": 6, "Double MG": 4, "Missile Barrage": 4, "Autocannon": 2, "Rivet Gun": 3, "Tesla Coil": 3, "Steam Cannon": 2,
-  "Coaxial MG": 4, "Drone Carbine": 3, "Autocannon Mount": 2, "Rocket Pod": 2, "Sidearm": 2 };
-Object.assign(PROJECTILE, { "Coaxial MG": "bullet", "Drone Carbine": "bullet", "Autocannon Mount": "cannon", "Rocket Pod": "missile", "Sidearm": "bullet", "Tank Cannon": "cannon" });
+  "Coaxial MG": 4, "Clockwork Carbine": 3, "Autocannon Mount": 2, "Rocket Pod": 2, "Sidearm": 2 };
+Object.assign(PROJECTILE, { "Coaxial MG": "bullet", "Clockwork Carbine": "bullet", "Autocannon Mount": "cannon", "Rocket Pod": "missile", "Sidearm": "bullet", "Tank Cannon": "cannon" });
 const MELEE_NAMES = new Set([...CHASSIS.map((c) => c.melee), ...Object.keys(UNIT_WEAPONS).filter((w) => UNIT_WEAPONS[w].melee)]);
 
 export function chassisOf(r) { return CHASSIS.find((c) => c.id === r.chassis) || null; }
@@ -33,12 +35,15 @@ export function frameFromState(state, sinceResolutionId = -1) {
     cmd: null, round: g.round, phase: g.phase,
     turn: g.turn ? { side: g.turn.side, activeRigId: g.turn.activeRigId } : null,
     vp: g.sides.map((s) => s.vp || 0),
+    beacons: g.beacons ? { lit: g.beacons.lit, next: g.beacons.next } : null,
     rigs: state.rigs.map((r) => ({
       id: r.id, name: r.name, owner: r.owner || "a", chassis: r.chassis ?? null, pos: r.pos, facing: r.facing ?? 0,
       kind: r.kind || "rig", drone: r.drone ?? null, template: r.template ?? null, unit: r.weapons?.unit ?? null, modules: r.modules || [],
       destroyed: !!r.destroyed, heat: r.engine?.heat ?? 0,
+      // Lamp-eye state: locked in melee, stalled (skips its next activation), jammed (riveted / arc-locked).
+      engaged: r.engagedWith != null, stalled: !!r.skipNextActivation, jammed: Object.keys(r.rivetSeized || {}).length > 0 || !!r.arcLockedNext,
       smoked: !!r.smokeNextActivation, hardened: !!r.hardened, marked: !!r.painted,
-      integrity: r.integrity ?? null, integrityMax: r.integrityMax ?? null,
+      integrity: r.integrity ?? null, integrityMax: r.integrityMax ?? null, plant: r.plant ?? null,
       sp: Object.fromEntries(partsOf(r).map((l) => [l, r[l] ? [r[l].sp, r[l].max] : [0, 0]])),
     })),
     log: (g.resolutions || []).filter((x) => x.id > sinceResolutionId),
@@ -55,10 +60,10 @@ export function equipmentActiveOf(l) {
   if (l.active) return l.active;
   const s = l.summary || "";
   if (/Grapnel/i.test(s)) return "grapnel";
-  if (/vents cryo/i.test(s)) return "cryo";
-  if (/nanite/i.test(s)) return "nanite";
-  if (/banks \d+ meltdown/i.test(s)) return "meltdown-bank";
-  if (/meltdown burst|overloads/i.test(s)) return "meltdown";
+  if (/vents ice-brine/i.test(s)) return "cryo";
+  if (/grease-monkey/i.test(s)) return "nanite";
+  if (/banks \d+ scuttle/i.test(s)) return "meltdown-bank";
+  if (/scuttle burst|overloads/i.test(s)) return "meltdown";
   const m = /uses (.+?)\.\s*$/.exec(s);
   return (m && ACTIVE_BY_LABEL[m[1]]) || null;
 }
@@ -123,6 +128,7 @@ export class Director {
     this.mechs.clear();
     this.current = null;
     this.world.mechRoots = [];
+    if (!this.quiet) stopCues(this);
   }
 
   ensureMech(r) {
@@ -169,14 +175,14 @@ export class Director {
       const m = this.ensureMech(r);
       m.pendingDrop = false; m.root.visible = true;
       if (r.pos) m.setPose(r.pos, r.facing);
-      this.applyStatus(m, r);
+      this.applyStatus(m, r, frame);
       if (r.destroyed && !m.destroyed) m.destroy();
     }
     this.prune(frame);
     this.current = frame;
   }
 
-  applyStatus(m, r) {
+  applyStatus(m, r, frame = null) {
     const cap = HEAT_CAPACITY[m.weightClass] ?? 6;
     m.setHeat(r.heat / cap);
     // Integrity (§8a) drives the damage look; frames without it fall back to total SP.
@@ -190,6 +196,9 @@ export class Director {
     const broke = (l) => (r.sp[l]?.[1] || 0) > 0 && (r.sp[l]?.[0] || 0) <= 0;
     m.setParts?.({ hull: broke("hull"), arms: broke("arms") || broke("mount"), legs: broke("legs"), engine: broke("engine") });
     m.setCrown?.(this.commanderId != null && r.id === this.commanderId && !r.destroyed);
+    // Grime per hit location, and what the lamp eyes show.
+    m.setWear?.(r.sp);
+    m.setStatus?.({ engaged: !!r.engaged, stalled: !!r.stalled, jammed: !!r.jammed, active: frame?.turn?.activeRigId === r.id, shutdown: frame != null && m.shutRound === frame.round });
     m.data = r;
   }
 
@@ -237,7 +246,7 @@ export class Director {
     this.barksUsed ||= new Set();
     const b = barkFor(m, event, { other, part, used: this.barksUsed, campaign: this.campaign });
     if (!b) return;
-    const accent = b.warlord ? "#f0cf7a" : m.owner === "a" ? "#5fd3c0" : "#e0533d";
+    const accent = b.warlord ? "#f0cf7a" : m.owner === "a" ? "#f2c46b" : "#e06a5c";
     // The pilot speaks the line; the bubble stays up at least until they finish.
     const talk = sfx.voice(b.line.replace(/\*/g, ""), b.voice);
     // Docked above the nameplate when there is one; a 3D bubble otherwise.
@@ -276,7 +285,7 @@ export class Director {
       frame.log?.forEach((l) => {
         this.onLog(l, frame.round);
         if (l.kind === "crate") { this.world.claimCrate(l.x, l.y); this.onScore(l); }
-        if (l.kind === "reinforcement") this.onBanner(l.drone ? "Drone wave!" : "Enemy reinforcements!", "stinger");
+        if (l.kind === "reinforcement") this.onBanner(l.drone ? "Clockwork wave!" : "Enemy reinforcements!", "stinger");
       });
       for (const r of frame.rigs) { const m = this.mechs.get(r.id); if (r.destroyed && m && !m.destroyed) m.destroy(); }
       return;
@@ -285,7 +294,7 @@ export class Director {
     this.announced = new Set();
     if (frame.round !== prev.round && frame.round) this.onBanner(`Round ${frame.round}`, "round");
 
-    // 1. Movement. Hops (Jump Jets, Grapnel), reels and Chaff side-steps play
+    // 1. Movement. Hops (Blast Pistons, Grapnel), reels and Chaff side-steps play
     // with their own event below, not as a walk.
     const deferred = new Set();
     for (const l of frame.log || []) {
@@ -305,7 +314,8 @@ export class Director {
       if (deferred.has(r.id)) continue;
       if (r.pos && p?.pos && (Math.hypot(r.pos.x - p.pos.x, r.pos.y - p.pos.y) > 0.05)) {
         if (!walks.length) this.onCamera({ x: (p.pos.x + r.pos.x) / 2, y: (p.pos.y + r.pos.y) / 2 }, { owner: r.owner });
-        walks.push(this.walk(m, p.pos, r.pos, r.facing, (r.sp.legs?.[1] || 0) > 0 && r.sp.legs[0] <= 0));
+        const sprint = isSprint({ cmd: frame.cmd, dist: Math.hypot(r.pos.x - p.pos.x, r.pos.y - p.pos.y), speed: m.chassisDef?.speed ?? 6, heatDelta: (r.heat ?? 0) - (p.heat ?? 0), attacked: (frame.log || []).some((l) => l.kind === "attack" && l.rigId === r.id) });
+        walks.push(this.walk(m, p.pos, r.pos, r.facing, (r.sp.legs?.[1] || 0) > 0 && r.sp.legs[0] <= 0, sprint));
       }
       else if (r.pos && p && Math.abs(((r.facing - p.facing + 540) % 360) - 180) > 1) { m.targetFacing = r.facing; }
     }
@@ -321,13 +331,16 @@ export class Director {
     for (const r of frame.rigs) {
       const p = byId.get(r.id);
       if (p && !r.destroyed) for (const loc of Object.keys(r.sp || {})) this.announceBreak(r, p, loc);
+      // A wounded engine bleeds oil and fuel onto the table under the rig.
+      const eng = r.sp?.engine, was = p?.sp?.engine;
+      if (eng && was && eng[0] < was[0] && eng[1] > 0 && r.pos) this.world.fx.decals.add(new THREE.Vector3(r.pos.x, 0, r.pos.y), 0.5 + (1 - eng[0] / eng[1]) * 0.9, "oil");
       if (p && !r.destroyed) this.announceTier(r, p);
     }
     for (const r of frame.rigs) {
       const m = this.ensureMech(r);
       if (m.pendingDrop) await this.dropOne(m, r);
       if (r.pos && !this.walkers.size) m.setPose(r.pos, r.facing);
-      this.applyStatus(m, r);
+      this.applyStatus(m, r, frame);
       if (r.destroyed && !m.destroyed && r.kind === "drone") {
         // Drones pop, they don't get a eulogy.
         this.world.fx.explosion(m.root.position.clone().add(new THREE.Vector3(0, 0.8, 0)), false);
@@ -343,6 +356,7 @@ export class Director {
         await wait(900 / this.speed);
       }
     }
+    battleCues(this, frame, prev);
     this.prune(frame);
     this.current = frame;
     await wait(120 / this.speed);
@@ -359,7 +373,7 @@ export class Director {
     this.sound(() => sfx.thrusters());
     await new Promise((done) => this.drops.add({ m, v: 0, delay: 0.15, landed: false, done }));
     const fx = this.world.fx, at = m.root.position.clone();
-    fx.shockwave(at.clone().setY(0.1), m.radius + 3, m.owner === "a" ? 0x5fd3c0 : 0xe0533d, 0.7);
+    fx.shockwave(at.clone().setY(0.1), m.radius + 3, TEAM[m.owner] ?? TEAM.a, 0.7);
     fx.burst(at.clone().add(new THREE.Vector3(0, 0.4, 0)), 26, { color: 0x9a8a70, size: 1, life: 1.1, spread: 7, additive: false, opacity: 0.6, up: 0.5 });
     fx.sparks(at.clone().add(new THREE.Vector3(0, 0.3, 0)), 18);
     this.world.fx.shake = Math.max(this.world.fx.shake, 0.55);
@@ -374,15 +388,16 @@ export class Director {
     return new Promise((done) => this.lifts.add({ m, t: 0, puff: 0, done }));
   }
 
-  walk(m, from, to, facing, limping = false) {
+  walk(m, from, to, facing, limping = false, sprint = false) {
     return new Promise((resolve) => {
       const dx = to.x - from.x, dy = to.y - from.y;
       const dist = Math.hypot(dx, dy);
       const heading = Math.atan2(dy, dx) * 180 / Math.PI;
       m.targetFacing = heading;
-      this.sound(() => sfx.servo());
+      this.sound(() => sfx.servo(m.chassisDef?.id || m.kind));
       if (Math.random() < 0.5) this.bark(m, "move", { other: this.nearestFoe(m) });
-      const w = { m, from, to, t: 0, dur: Math.max(0.35, dist / (m.weightClass === "medium" ? 5 : 7)) * (limping ? 1.6 : 1), facing, resolve, dust: 0 };
+      const w = { m, from, to, t: 0, dur: Math.max(0.35, dist / (m.weightClass === "medium" ? 5 : 7)) * (limping ? 1.6 : 1), facing, resolve, dust: 0, sprint };
+      m.sprinting = sprint;
       this.walkers.add(w);
     });
   }
@@ -410,7 +425,7 @@ export class Director {
         this.drops.delete(d);
         this.world.fx.burst(m.root.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 18, { color: 0x9a8a70, size: 0.8, life: 0.8, spread: 5, additive: false, opacity: 0.6, up: 0.3 });
         this.world.fx.shake = Math.max(this.world.fx.shake, 0.35);
-        this.sound(() => sfx.step(true));
+        this.sound(() => sfx.step(true, m.chassisDef?.id || m.kind));
         d.done?.();
         if (!this.drops.size) setTimeout(() => this.dropDone?.(), 400);
       }
@@ -469,17 +484,20 @@ export class Director {
       w.m.walking = Math.min(1, w.m.walking + dt * 4);
       const stepN = Math.floor(w.m.walkPhase / Math.PI);
       if (stepN !== w.lastStep) {
-        w.lastStep = stepN; this.sound(() => sfx.step(w.m.weightClass === "medium"));
+        w.lastStep = stepN; this.sound(() => sfx.step(w.m.weightClass === "medium", w.m.chassisDef?.id || w.m.kind));
         // The planted foot kicks up a ring of dust; a broken leg grinds sparks.
         const leg = w.m.legs?.[stepN & 1];
         if (leg?.foot) this.world.fx.footfall(leg.foot.getWorldPosition(new THREE.Vector3()).setY(0.05), w.m.weightClass === "medium");
         if (w.m.broken?.legs && leg?.knee) this.world.fx.sparks(leg.knee.getWorldPosition(new THREE.Vector3()), 6);
+        // A leaking engine drips a trail of oil spots.
+        if ((w.m.wear?.engine || 0) > 0.4 && Math.random() < w.m.wear.engine * 0.6) this.world.fx.decals.add(w.m.root.position.clone().setY(0), 0.18 + Math.random() * 0.15, "oil");
       }
-      if (t >= 1) { w.m.targetFacing = w.facing; this.walkers.delete(w); w.resolve(); }
+      if (t >= 1) { w.m.targetFacing = w.facing; w.m.sprinting = false; this.walkers.delete(w); w.resolve(); }
     }
     for (const m of this.mechs.values()) {
       if (![...this.walkers].some((w) => w.m === m && w.hop == null)) m.walking = Math.max(0, m.walking - dt * 3);
       m.update(dt);
+      m.emitAmbient?.(this.world.fx, dt); // stack exhaust, sprint speed lines
       // Pop Smoke lingers until the rig's next activation; Harden glints.
       if (m.data?.smoked && !m.destroyed && Math.random() < dt * 5) {
         const a = Math.random() * Math.PI * 2, rr = m.radius * (0.6 + Math.random() * 0.9);
@@ -561,6 +579,7 @@ export class Director {
     const fx = this.world.fx;
     const actor = this.mechs.get(l.rigId);
     const up = (m, h = 2.5) => m.root.position.clone().add(new THREE.Vector3(0, h, 0));
+    if (l.kind === "shutdown" && actor) actor.shutRound = frame.round; // lamps go green till the round turns
     if (l.kind === "attack" && actor) {
       const target = this.mechs.get(l.targetId) || this.findTargetByText(l.summary);
       if (!target) return;
@@ -582,7 +601,10 @@ export class Director {
       let heard = false, hitsShown = 1;
       const shooter = actor.root.position.clone().setY(1.8);
       const impact = (p) => {
-        if (!heard) { heard = true; this.sound(() => sfx.hit(sp)); }
+        if (!heard) {
+          heard = true; this.sound(() => sfx.hit(sp));
+          if (!this.quiet) fx.comic(tpos.clone().add(new THREE.Vector3(0, 1.3, 0)), comicWord({ kind: PROJECTILE[l.weapon], melee, weapon: l.weapon, sp, deflected: sp <= 0 }));
+        }
         // A burst splits its damage over the rounds that strike, so a hail of
         // small hits doesn't bury the table in debris.
         if (sp > 0) { fx.impact(p, Math.max(1, Math.ceil(sp / hitsShown)), { from: shooter, color: target.paintColor }); fx.shake = Math.max(fx.shake, Math.min(0.6, sp * 0.08)); target.body.position.x = -0.2; setTimeout(() => { target.body.position.x = 0; }, 90); }
@@ -599,7 +621,7 @@ export class Director {
       const whiff = (p) => { fx.burst(p, 8, { color: 0x8a7a60, size: 0.6, life: 0.7, spread: 2, additive: false, opacity: 0.5, up: 0.5 }); fx.sparks(p, 3, 0xffe0a0, { speed: 4 }); if (p.y < 0.3) fx.decals.add(p, 0.35, "pock"); };
       if (melee) {
         actor.fire("melee");
-        this.sound(() => (actor.melee === "Flamethrower" ? sfx.shot("flame") : sfx.melee(actor.weightClass === "medium")));
+        this.sound(() => sfx.melee(actor.weightClass === "medium", actor.melee));
         const aim = hitCount ? tpos : missPoint(actor.root.position.clone().setY(1.8)).setY(1.2);
         if (actor.melee === "Flamethrower") fx.flame(actor.muzzleWorld("melee"), aim);
         await wait(380 / this.speed);
@@ -614,7 +636,7 @@ export class Director {
         const flights = [];
         for (let i = 0; i < n; i++) {
           actor.fire("longRange");
-          this.sound(() => sfx.shot(kind));
+          this.sound(() => sfx.shot(kind, l.weapon));
           const from = actor.muzzleWorld("longRange");
           const hit = plan[i];
           const end = hit ? struck() : missPoint(from);
@@ -631,9 +653,9 @@ export class Director {
         }
         await Promise.all(flights);
       }
-      // Point-Defense interceptors / Ablative Cascade charges spent on this attack.
+      // Flak Cage interceptors / Ablative Cascade charges spent on this attack.
       const said = `${l.summary || ""} ${(l.effects || []).join(" ")}`;
-      const pd = l.defense?.pd || (/Point-Defense|intercept/i.test(said) ? 1 : 0);
+      const pd = l.defense?.pd || (/Flak Cage|intercept/i.test(said) ? 1 : 0);
       const abl = l.defense?.ablative || (/Ablative Cascade/i.test(said) ? 1 : 0);
       if (pd || abl) {
         this.sound(() => sfx.intercept());
@@ -672,7 +694,7 @@ export class Director {
     } else if (l.kind === "destruction") {
       // The explosion is the status pass's (on the destroyed flag); the kill's VP is shown here.
       if (l.vp?.amount && actor) {
-        setTimeout(() => this.popText(actor, 4.6, `+${l.vp.amount} VP${l.vp.bounty ? " BOUNTY" : ""}`, l.vp.side === "a" ? "#5fd3c0" : "#e0533d"), 900 / this.speed);
+        setTimeout(() => this.popText(actor, 4.6, `+${l.vp.amount} VP${l.vp.bounty ? " BOUNTY" : ""}`, l.vp.side === "a" ? "#f2c46b" : "#e06a5c"), 900 / this.speed);
         this.onScore(l);
       }
     } else if (l.kind === "score") {
@@ -680,9 +702,9 @@ export class Director {
       const at = new THREE.Vector3(l.x ?? 0, 4.2, l.y ?? 0);
       if (l.contested) fx.text(at, "CONTESTED", "#ffffff");
       else {
-        const col = l.side === "a" ? 0x5fd3c0 : 0xe0533d;
+        const col = l.side === "a" ? 0xd9a441 : 0x9e2b25;
         this.world.pulseObjective(l.objective, col);
-        fx.text(at, (l.mult || 1) > 1 ? `+${l.vp} VP (×${l.mult})` : `+${l.vp} VP`, l.side === "a" ? "#5fd3c0" : "#e0533d");
+        fx.text(at, (l.mult || 1) > 1 ? `+${l.vp} VP (×${l.mult})` : `+${l.vp} VP`, l.side === "a" ? "#f2c46b" : "#e06a5c");
         this.sound(() => sfx.score(l.side === this.side));
         this.onCamera({ x: l.x, y: l.y }, { owner: l.side, score: true });
         this.onScore(l);
@@ -690,22 +712,22 @@ export class Director {
       await wait(650 / this.speed);
     } else if (l.kind === "plant") {
       // Plant Flag: the beacon flares in the planter's colour and the pilot calls it.
-      const col = l.actor === "a" ? 0x5fd3c0 : 0xe0533d;
+      const col = l.actor === "a" ? 0xd9a441 : 0x9e2b25;
       this.world.pulseObjective(l.objective, col);
-      fx.text(new THREE.Vector3(l.x ?? 0, 4.2, l.y ?? 0), "FLAG PLANTED", l.actor === "a" ? "#5fd3c0" : "#e0533d");
+      fx.text(new THREE.Vector3(l.x ?? 0, 4.2, l.y ?? 0), "FLAG PLANTED", l.actor === "a" ? "#f2c46b" : "#e06a5c");
       this.sound(() => sfx.clank());
       const m = this.mechs.get(l.rigId); if (m) this.bark(m, "move");
       await wait(450 / this.speed);
     } else if (l.kind === "crate") {
       // Salvage Run: the crate is hauled off: a golden burst and the VP.
       const at = new THREE.Vector3(l.x ?? 0, 1.1, l.y ?? 0);
-      const tint = l.side === "a" ? 0x5fd3c0 : 0xe0533d;
+      const tint = l.side === "a" ? 0xd9a441 : 0x9e2b25;
       this.onCamera({ x: l.x, y: l.y }, { owner: l.side, score: true });
       this.world.claimCrate(l.x, l.y);
       fx.flash(at, 0xffd35a, 45, 9);
       fx.burst(at, 28, { color: 0xffd35a, size: 0.55, life: 0.9, spread: 6, up: 1.2 });
       fx.burst(at, 12, { color: tint, size: 0.7, life: 0.7, spread: 4, up: 1 });
-      fx.text(at.clone().setY(3.4), `+${l.vp} VP`, l.side === "a" ? "#5fd3c0" : "#e0533d");
+      fx.text(at.clone().setY(3.4), `+${l.vp} VP`, l.side === "a" ? "#f2c46b" : "#e06a5c");
       setTimeout(() => fx.text(at.clone().setY(4.4), "SALVAGE", "#f0cf7a"), 200 / this.speed);
       this.sound(() => sfx.score(l.side === this.side));
       this.onScore(l);
@@ -724,12 +746,12 @@ export class Director {
       // A drone wave lands several at once: one banner, one alarm.
       if (!l.drone || this.waveFrame !== frame) {
         this.waveFrame = frame;
-        this.onBanner(l.drone ? "Drone wave!" : "Enemy reinforcements!", "stinger");
+        this.onBanner(l.drone ? "Clockwork wave!" : "Enemy reinforcements!", "stinger");
         this.sound(() => sfx.alarm());
       }
       if (m?.pendingDrop) {
         await this.dropOne(m, frame.rigs.find((r) => r.id === l.rigId));
-        this.popText(m, 3.8, l.drone ? "DRONE" : "REINFORCEMENTS", "#ff7a5a");
+        this.popText(m, 3.8, l.drone ? "CLOCKWORKS" : "REINFORCEMENTS", "#ff7a5a");
       }
     } else if (l.kind === "detonate" && actor) {
       // Sapper: the charge goes off where it stands.
@@ -790,7 +812,7 @@ export class Director {
         const a = up(src, 1.8), b = up(to, 1.8);
         fx.beam(a, b, 0x88ddff, 0.45, true); fx.beam(a, b, 0xffffff, 0.25, true);
         fx.sparks(b, 14, 0x9fe8ff); fx.flash(b, 0x66ccff, 30, 8);
-        this.sound(() => sfx.shot("arc"));
+        this.sound(() => sfx.shot("arc", "Tesla Coil"));
       }
       if (to) this.popText(to, 3.6, /friendly fire/.test(l.summary || "") ? "ARC · FRIENDLY" : "ARC", "#9fe8ff");
       await wait(250 / this.speed);
@@ -808,7 +830,7 @@ export class Director {
       this.onBanner(l.summary, "info");
     } else if (l.kind === "equipment" && actor && equipmentActiveOf(l)) {
       await this.equipmentFx(l, equipmentActiveOf(l), actor, frame, prev);
-    } else if (actor && (l.chaff || (l.kind === "perk" && /Chaff Burst/i.test(l.summary || "")))) {
+    } else if (actor && (l.chaff || (l.kind === "perk" && /Tinsel Burst/i.test(l.summary || "")))) {
       await this.chaffFx(l, actor, frame, prev);
     } else if (actor && l.summary) {
       if (l.rolls?.length && l.kind === "reaction" && this.onDice && !this.skipping && !this.quiet) this.onDice(l);
@@ -859,7 +881,7 @@ export class Director {
         const { from, to, facing } = this.endpoints(m.id, frame, prev);
         const f = l.from || from, t = l.to || to;
         this.sound(() => sfx.jet());
-        tag("JUMP JETS", "#ffd27a");
+        tag("BLAST PISTONS", "#ffd27a");
         fx.burst(base(m).add(new THREE.Vector3(0, 0.3, 0)), 14, { color: 0x9a8a70, size: 0.8, life: 0.7, spread: 4, additive: false, opacity: 0.5, up: 0.3 });
         if (f && t) await this.hop(m, f, t, facing, { height: 3.2 });
         break;
@@ -919,7 +941,7 @@ export class Director {
           fx.particle(base(host).add(new THREE.Vector3(Math.cos(a) * host.radius, 0.3, Math.sin(a) * host.radius)), { color: 0x7fff6a, size: 0.25, life: 1.1, vel: new THREE.Vector3(-Math.cos(a) * 0.6, 1.6, -Math.sin(a) * 0.6) });
         }, i * 25);
         fx.weld(up(host, 1.5), 10);
-        this.popText(host, 3.6, "NANITES", "#8dff7a");
+        this.popText(host, 3.6, "GREASE MONKEYS", "#8dff7a");
         await W(600);
         break;
       }
@@ -946,7 +968,7 @@ export class Director {
           fx.shockwave(base(m), m.radius + 4, 0xff5a10, 1.1);
           fx.burst(up(m, 1.5), 30, { color: 0xff8a2a, size: 0.8, life: 0.6, spread: 6 });
           fx.shake = Math.max(fx.shake, 0.5);
-          tag("MELTDOWN BURST", "#ff7a2a");
+          tag("SCUTTLE BURST", "#ff7a2a");
           await W(500);
           for (const v of victims) { fx.burst(up(v, 1.4), 16, { color: 0xff5a10, size: 0.7, life: 0.6, spread: 3 }); this.popText(v, 3.4, n ? `+${n} HEAT` : "HEAT", "#ff8a3d"); }
           await W(350);
@@ -960,7 +982,7 @@ export class Director {
       }
       case "meltdown-bank": {
         fx.shell(base(m), m.radius, 2.6, 0xff5a10, 0.8, 1);
-        tag(n ? `MELTDOWN +${n}` : "MELTDOWN CHARGE", "#ff7a2a");
+        tag(n ? `SCUTTLE +${n}` : "SCUTTLE CHARGE", "#ff7a2a");
         await W(300);
         break;
       }
@@ -986,7 +1008,7 @@ export class Director {
         this.sound(() => sfx.cryo());
         for (const p of stacks()) fx.frost(p, 12);
         fx.frost(up(m, 1.2), 10);
-        tag(n ? `CRYO −${2 * n} HEAT` : "CRYO", "#bfeaff");
+        tag(n ? `ICE-BRINE −${2 * n} HEAT` : "ICE-BRINE", "#bfeaff");
         await W(500);
         break;
       }
@@ -997,14 +1019,14 @@ export class Director {
     }
   }
 
-  // Chaff Burst: the smoked rig side-steps out of the shot in a glitter of foil.
+  // Tinsel Burst: the smoked rig side-steps out of the shot in a glitter of foil.
   async chaffFx(l, m, frame, prev) {
     const fx = this.world.fx;
     const { from, to, facing } = this.endpoints(m.id, frame, prev);
     const f = l.chaff?.from || from, t = l.chaff?.to || to;
     this.sound(() => sfx.chaff());
     fx.glitter(m.root.position.clone().add(new THREE.Vector3(0, 1.8, 0)));
-    this.popText(m, 3.6, "CHAFF", "#e8e8f0");
+    this.popText(m, 3.6, "TINSEL", "#e8e8f0");
     if (f && t && Math.hypot(t.x - f.x, t.y - f.y) > 0.05) await this.hop(m, f, t, facing, { height: 0.5, dur: 0.4, strafe: true });
     else await wait(250 / this.speed);
     // Hold the pose: a sidestep is a strafe, not a turn.

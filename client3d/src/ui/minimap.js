@@ -1,6 +1,7 @@
 // RTS minimap: the whole table in the corner, terrain, objectives, every rig
-// (cyan / red, hollow once activated), and the camera's focus. Click to jump.
+// (amber / oxblood, hollow once activated), and the camera's focus. Click to jump.
 import { el } from "./dom.js";
+import { SIDE } from "./palette.js";
 
 export class Minimap {
   constructor(parent, world) {
@@ -46,7 +47,7 @@ export class Minimap {
       const bz = this.beacons;
       const state = bz ? (bz.lit === i ? "lit" : bz.next === i ? "next" : "dark") : null;
       g.globalAlpha = state === "dark" ? 0.4 : 1;
-      g.strokeStyle = o.relay ? "#5fd3c0" : "#ffd35a"; g.lineWidth = 2;
+      g.strokeStyle = o.relay ? SIDE.a.hi : "#ffd35a"; g.lineWidth = 2;
       g.beginPath(); g.arc(o.x * sx, o.y * sy, 2 * sx, 0, 7);
       if (state === "lit") { g.fillStyle = "#ffd35a"; g.fill(); }
       g.stroke();
@@ -57,9 +58,9 @@ export class Minimap {
       const m = this.world.mechRoots?.find((x) => x.userData.mechId === r.id);
       const x = m ? m.position.x : r.pos?.x, y = m ? m.position.z : r.pos?.y;
       if (x == null) continue;
-      g.fillStyle = r.destroyed ? "#555" : r.owner === "a" ? "#5fd3c0" : "#e0533d";
+      g.fillStyle = r.destroyed ? "#555" : r.owner === "a" ? SIDE.a.hi : SIDE.b.hi;
       g.beginPath(); g.arc(x * sx, y * sy, 4, 0, 7);
-      if (r.activated && !r.destroyed) { g.strokeStyle = g.fillStyle; g.lineWidth = 2; g.stroke(); } else g.fill();
+      if (r.activated && !r.destroyed) { g.strokeStyle = g.fillStyle; g.lineWidth = 2; g.stroke(); } else { g.fill(); g.strokeStyle = "#0b0907"; g.lineWidth = 1; g.stroke(); }
       if (r.id === this.campaign?.commanderId && !r.destroyed) { g.strokeStyle = "#f0c05a"; g.lineWidth = 2; g.beginPath(); g.arc(x * sx, y * sy, 6, 0, 7); g.stroke(); }
       if (r.id === this.activeId) { g.strokeStyle = "#ffd35a"; g.lineWidth = 2; g.beginPath(); g.arc(x * sx, y * sy, 7, 0, 7); g.stroke(); }
     }

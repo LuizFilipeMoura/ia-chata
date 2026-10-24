@@ -9,6 +9,9 @@ import * as THREE from "three";
 import { std, glow, shadow, V, blinker, steamValve, flame, flickerWindows } from "./dress-kit.js";
 import { NEW_BUILDINGS_MAP, SMALL_BUILDERS } from "./dressing.js";
 import { WORKS } from "./works.js";
+import { ESTATES } from "./estates.js";
+import { dressFacade } from "./facades.js";
+import { landmark, LANDMARK_KINDS } from "./landmarks.js";
 
 // ---- Buildings (fill the terrain rect t.w × t.h, centred) -----------------
 
@@ -207,17 +210,18 @@ function mast(t, ctx) {
   return g;
 }
 
-const BUILDINGS = { factory, tank, watertower, shed, cooling, mast, ...NEW_BUILDINGS_MAP, ...WORKS };
+const BUILDINGS = { factory, tank, watertower, shed, cooling, mast, ...NEW_BUILDINGS_MAP, ...WORKS, ...ESTATES };
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
-export const BACKDROP_KINDS = ["skyline", "zeppelin", "crane", "flares", "cooling"];
-// One specific building variant (the dev room), footprint t.w × t.h.
-export function buildingVariant(kind, t, ctx) { return (BUILDINGS[kind] || factory)(t, ctx); }
+export const BACKDROP_KINDS = ["skyline", "zeppelin", "crane", "flares", "cooling", ...LANDMARK_KINDS];
+// One specific building variant (the dev room), footprint t.w × t.h, with the
+// theme's facade dressing (posters, neon, oil racks: facades.js).
+export function buildingVariant(kind, t, ctx) { return dressFacade((BUILDINGS[kind] || factory)(t, ctx), t, ctx); }
 
 // The theme's building mix, picked per piece from the battle's dressing seed.
 export function buildingProp(t, ctx) {
   const list = ctx.theme.buildings;
   const pick = ctx.pick ? ctx.pick("building", t, list) : list[Math.floor(((t.x * 13 + t.y * 7) % list.length + list.length) % list.length)];
-  const g = (BUILDINGS[pick] || factory)(t, ctx);
+  const g = buildingVariant(pick, t, ctx);
   g.userData.variant = pick;
   return g;
 }
@@ -307,6 +311,7 @@ export const rubbleProp = (t, ctx) => smallVariant("rubble", pickVariant("rubble
 
 // `c` = table centre, `R` = a radius comfortably outside the table.
 export function backdrop(kind, i, c, R, ctx) {
+  if (LANDMARK_KINDS.includes(kind)) return landmark(kind, i, c, R, ctx);
   const g = new THREE.Group();
   const ang = ctx.rand() * Math.PI * 2;
   const at = (a, r) => V(c.x + Math.cos(a) * r, 0, c.z + Math.sin(a) * r);

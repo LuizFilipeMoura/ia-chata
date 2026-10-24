@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Diesel Shake Lab · Oil & Iron</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { font: 15px/1.5 system-ui, sans-serif; color: #ece6d6; background: #171b1a; --accent: #e7ae51; --muted: #aaa99e; }
+    body { margin: 0; }
+    button, input, select, textarea { font: inherit; }
+    button, select, input[type=number] { background: #252b28; color: inherit; border: 1px solid #535b51; border-radius: 5px; padding: 8px 12px; }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button[aria-pressed=true], .primary { background: var(--accent); color: #211c14; border-color: var(--accent); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    header { padding: 18px 28px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3c433c; gap: 20px; }
+    .eyebrow { font: 12px/1.5 ui-monospace, monospace; letter-spacing: .15em; color: var(--accent); }
+    h1 { font-size: 25px; margin: 2px 0 0; font-weight: 650; letter-spacing: -.03em; }
+    a { color: var(--accent); text-underline-offset: 4px; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 370px; min-height: calc(100dvh - 95px); }
+    #stage { position: relative; min-height: 570px; overflow: hidden; background: radial-gradient(ellipse at 45% 40%, #343d36, #191e1d 80%); }
+    #stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+    .stage-label, .stage-footer { z-index: 1; }
+    .stage-label { position: absolute; top: 22px; left: 26px; pointer-events: none; }
+    #rig-title { font-size: 23px; margin-top: 4px; }
+    .stage-footer { position: absolute; bottom: 20px; left: 26px; right: 26px; display: flex; justify-content: space-between; gap: 12px; pointer-events: none; color: #babeb3; font-size: 12px; }
+    aside { padding: 24px; border-left: 1px solid #3c433c; background: #1c211f; }
+    .selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-size: 13px; color: var(--muted); }
+    select { display: block; width: 100%; margin-top: 5px; }
+    .knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 25px 0 16px; }
+    .control { text-align: center; }
+    .control h2 { font-size: 15px; font-weight: 550; margin: 0 0 15px; }
+    .dial { --turn: 0deg; width: 120px; height: 120px; margin: auto auto 14px; position: relative; border: 2px solid #606356; border-radius: 50%; touch-action: none; cursor: ns-resize; background: repeating-conic-gradient(#525a4f 0deg 2deg, transparent 2deg 18deg); }
+    .dial::before { content: ''; position: absolute; inset: 10px; border-radius: 50%; background: linear-gradient(135deg, #42493f, #242a25); border: 1px solid #737668; box-shadow: 0 5px 12px #0008; }
+    .pointer { position: absolute; inset: 16px; border-radius: 50%; transform: rotate(var(--turn)); pointer-events: none; }
+    .pointer::after { content: ''; position: absolute; width: 4px; height: 24px; background: var(--accent); top: 0; left: calc(50% - 2px); border-radius: 2px; }
+    .control input { width: 88px; font: 18px/1.4 ui-monospace, monospace; padding: 5px; text-align: center; }
+    .unit { font-size: 13px; margin-left: 3px; color: var(--muted); }
+    .range { color: var(--muted); font-size: 12px; margin: 7px 0 0; }
+    .hint { color: var(--muted); font-size: 12px; margin: 0 0 20px; }
+    .readout { padding: 14px; margin-bottom: 18px; background: #111715; border-left: 2px solid var(--accent); }
+    #frequency-readout { font: 22px/1.4 ui-monospace, monospace; }
+    .readout p { color: var(--muted); font-size: 12px; margin: 3px 0 0; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .check { display: flex; align-items: center; gap: 8px; margin: 18px 0; color: #ddd9ca; }
+    input[type=checkbox] { accent-color: var(--accent); width: 17px; height: 17px; }
+    .export { border-top: 1px solid #3c433c; padding-top: 18px; }
+    textarea { width: 100%; height: 116px; resize: vertical; color: #c6d4bd; border: 1px solid #3c433c; background: #141a17; border-radius: 4px; padding: 10px; margin: 9px 0; font: 12px/1.5 ui-monospace, monospace; }
+    #message { min-height: 36px; color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; } header { padding: 14px 18px; } h1 { font-size: 22px; } #stage { height: 52dvh; min-height: 330px; } aside { border-left: 0; border-top: 1px solid #3c433c; } .knobs { max-width: 390px; margin-inline: auto; } }
+  </style>
+</head>
+<body>
+  <header><div><div class="eyebrow">OIL & IRON / ENGINE BENCH</div><h1>Diesel Shake Lab</h1></div><a href="../../#dev=poc.scene">Back to yard ↗</a></header>
+  <main>
+    <section id="stage" aria-label="Interactive 3D rig preview">
+      <div class="stage-label"><div class="eyebrow" id="live-state">LIVE / TUNED</div><div id="rig-title">Tyrian · Ace</div></div>
+      <div class="stage-footer"><span>Drag to orbit · Scroll to zoom</span><span id="cadence">Loading engine…</span></div>
+    </section>
+    <aside>
+      <div class="selectors">
+        <label>Chassis<select id="chassis"><option>Tyrian</option><option>Black</option></select></label>
+        <label>Finish<select id="skin"><option value="ace">Ace</option><option value="factory">Factory Fresh</option><option value="refit">Field Refit</option><option value="worn">Battle-Worn</option><option value="rust">Rust Bucket</option></select></label>
+      </div>
+      <div class="knobs">
+        <div class="control"><h2>Magnitude</h2><div class="dial" id="magnitude-dial" role="slider" tabindex="0" aria-label="Shake magnitude" aria-valuemin="0" aria-valuemax="3" aria-valuenow="1" aria-describedby="knob-help"><span class="pointer"></span></div><input id="magnitude" aria-label="Magnitude value" type="number" min="0" max="3" step="0.01" value="1"><span class="unit">×</span><p class="range">0 = still · 3 = heavy</p></div>
+        <div class="control"><h2>Frequency</h2><div class="dial" id="frequency-dial" role="slider" tabindex="0" aria-label="Shake frequency" aria-valuemin="0.1" aria-valuemax="3" aria-valuenow="1" aria-describedby="knob-help"><span class="pointer"></span></div><input id="frequency" aria-label="Frequency value" type="number" min="0.1" max="3" step="0.01" value="1"><span class="unit">×</span><p class="range">0.1 = slow · 3 = fast</p></div>
+      </div>
+      <p class="hint" id="knob-help">Drag knobs up/down. Arrow keys adjust by 0.01; Page Up/Down by 0.1. Hold Shift while dragging for finer control.</p>
+      <div class="readout"><div id="frequency-readout">5.74 Hz</div><p>Dominant shake frequency. Uneven diesel pulses stay layered underneath. Compare default previews the current game's tuning for this chassis.</p></div>
+      <div class="buttons"><button id="pause">Pause</button><button id="compare" aria-pressed="false">Compare default</button><button id="reset">Reset knobs</button></div>
+      <label class="check"><input type="checkbox" id="smoke" checked>Exhaust smoke</label>
+      <div class="export"><div class="eyebrow">YOUR TUNING</div><p class="hint">Saved in this browser, separately for each chassis. Copy or download settings to bring your choice back to the game.</p><textarea id="settings" aria-label="Shake settings JSON" readonly spellcheck="false"></textarea><div class="buttons"><button id="copy" class="primary">Copy settings</button><button id="download">Save JSON</button></div><p id="message" role="status">Preview only. Game defaults stay unchanged.</p></div>
+    </aside>
+  </main>
+  <script type="module" src="./shake-tuner.js"></script>
+</body>
+</html>

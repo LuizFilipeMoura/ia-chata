@@ -41,7 +41,7 @@ const P = {
   patch: `<rect x="10" y="22" width="44" height="20" rx="10" transform="rotate(-35 32 32)"/><path d="M28 28 L36 36 M36 28 L28 36"/>`,
   smoke: `<circle cx="22" cy="36" r="12"/><circle cx="40" cy="30" r="14"/><circle cx="34" cy="46" r="10"/>`,
   cryo: `<path d="M32 6 V58 M9 19 L55 45 M9 45 L55 19"/><path d="M26 10 L32 16 L38 10 M26 54 L32 48 L38 54" opacity=".7"/>`,
-  // Nanite Swarm: a honeycomb of hex cells with a repair cross.
+  // Grease Monkeys: a honeycomb of hex cells with a repair cross.
   nanite: `<path d="M22 10 L32 16 V28 L22 34 L12 28 V16 Z"/><path d="M42 10 L52 16 V28 L42 34 L32 28 V16 Z" opacity=".7"/><path d="M32 30 L42 36 V48 L32 54 L22 48 V36 Z"/><path d="M32 38 V46 M28 42 H36"/>`,
   // Meltdown: a core with radiating heat wedges.
   meltdown: `<circle cx="32" cy="32" r="8"/><path d="M32 22 L24 8 H40 Z M40.7 37 L56.5 42 L48.5 55.8 Z M23.3 37 L15.5 55.8 L7.5 42 Z"/><circle cx="32" cy="32" r="26" stroke-dasharray="4 5" opacity=".6"/>`,
@@ -99,6 +99,31 @@ const P = {
   paint: `<circle cx="14" cy="18" r="6"/><path d="M19 22 L46 44 M16 26 L40 52" opacity=".7"/><circle cx="48" cy="48" r="8"/><circle cx="48" cy="48" r="2" fill="currentColor"/>`,
 };
 
+// Semaphore signals: a signaller with two flags, arms at angles (degrees
+// clockwise from straight up). Each flag is split on the diagonal like a real
+// semaphore flag. Orders and statuses read as signals run up on the field.
+function semaphore(a1, a2) {
+  const sx = 32, sy = 22, L = 21, F = 12;
+  const arm = (deg) => {
+    const r = (deg * Math.PI) / 180, u = [Math.sin(r), -Math.cos(r)];
+    const e = [sx + u[0] * L, sy + u[1] * L];
+    // The flag flies on the outboard side of its pole; level arms hang it down.
+    const c1 = [-u[1], u[0]], c2 = [u[1], -u[0]];
+    const p = Math.abs(u[0]) < 0.01 ? [1, 0] : Math.abs(u[1]) < 0.01 ? [0, 1] : c1[0] * u[0] > 0 ? c1 : c2;
+    const q = (k, j) => `${(e[0] - u[0] * k + p[0] * j).toFixed(1)},${(e[1] - u[1] * k + p[1] * j).toFixed(1)}`;
+    return `<path d="M${sx},${sy} L${e[0].toFixed(1)},${e[1].toFixed(1)}"/><path d="M${q(0, 0)} L${q(F, 0)} L${q(F, F)} L${q(0, F)} Z" stroke-width="2.5"/><path d="M${q(0, 0)} L${q(0, F)} L${q(F, F)} Z" fill="currentColor" stroke="none" opacity=".65"/>`;
+  };
+  return `<circle cx="32" cy="11" r="4"/><path d="M32 15 V40 M32 40 L25 58 M32 40 L39 58"/>${arm(a1)}${arm(a2)}`;
+}
+Object.assign(P, {
+  "flag-ready": semaphore(-40, 40),     // both flags high: ready
+  "flag-brace": semaphore(-90, 90),     // arms out wide: braced
+  "flag-shutdown": semaphore(-135, 135), // flags lowered: standing down
+  "flag-sprint": semaphore(30, 90),     // both flags point onward
+  "flag-repair": semaphore(-45, 135),   // one diagonal through the body
+  "flag-plant": semaphore(15, -90),     // one flag raised high: staked
+});
+
 export const STAT_ICON = { Penetration: "pen", Pen: "pen", Damage: "dmg", Dmg: "dmg", Toughness: "tough", Shots: "shots", Aim: "aim", Heat: "heat", heat: "heat", SP: "sp", "Structure Points": "sp", Range: "range", Reach: "reach" };
 
 export function icon(name, cls = "") {
@@ -111,11 +136,11 @@ export function icon(name, cls = "") {
 const FAMILY = {
   pierce: ["pen"],
   attack: ["fire", "aimed", "dmg", "shots", "aim", "melee", "barrage", "lock", "threat", "stagger", "paint", "drone"],
-  move: ["move", "sprint", "disengage", "jumpjets", "grapnel", "yank", "reel", "legs", "range", "reach", "arc"],
-  defence: ["prepare", "harden", "smoke", "chaff", "intercept", "tough", "hull", "cover", "anchor", "hidden"],
+  move: ["move", "sprint", "flag-sprint", "disengage", "jumpjets", "grapnel", "yank", "reel", "legs", "range", "reach", "arc"],
+  defence: ["prepare", "flag-brace", "harden", "smoke", "chaff", "intercept", "tough", "hull", "cover", "anchor", "hidden"],
   heat: ["heat", "engine", "overclock", "meltdown", "wave"],
-  cool: ["shutdown", "purge", "douse", "cryo", "vent"],
-  repair: ["repair", "patch", "sp", "nanite", "fieldweld", "walker"],
-  info: ["advisor", "beacon", "crown", "crate", "extract", "relay", "drop", "dice", "arms", "star", "grit", "sound", "mute", "check", "active", "book"],
+  cool: ["shutdown", "flag-shutdown", "purge", "douse", "cryo", "vent"],
+  repair: ["repair", "flag-repair", "patch", "sp", "nanite", "fieldweld", "walker"],
+  info: ["advisor", "flag-ready", "flag-plant", "beacon", "crown", "crate", "extract", "relay", "drop", "dice", "arms", "star", "grit", "sound", "mute", "check", "active", "book"],
 };
 export const FAMILY_OF = Object.fromEntries(Object.entries(FAMILY).flatMap(([f, ns]) => ns.map((n) => [n, f])));

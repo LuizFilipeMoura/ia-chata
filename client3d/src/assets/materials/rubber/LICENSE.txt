@@ -1,0 +1,11 @@
+Source: ambientCG / Rubber004
+Asset: https://ambientcg.com/a/Rubber004
+License: Creative Commons CC0 1.0 Universal
+License documentation: https://docs.ambientcg.com/license/
+Download: https://ambientcg.com/get?file=Rubber004_1K-JPG.zip
+Downloaded 2026-10-20. Original 1024px JPG files, unmodified.
+NormalGL is OpenGL tangent-space. Roughness and Metalness are linear grayscale.
+Color is sRGB. Material tint and anti-glare adjustments happen in the shader.
+Color.jpg SHA256 95F9182E8564DB9A8C6510CD0C9E0656BEEC0E5A0212CC177E2ABF8EB03820B9
+NormalGL.jpg SHA256 A22EE35F51FA7BD971F703E8309B533420F965337C989F5E2CDFE1C822892D47
+Roughness.jpg SHA256 FD8171577DB5A593E981EBD3FE487515AEA9D20BE28E1A6D2CD1E5475EB13E69

@@ -7,6 +7,7 @@
 import * as THREE from "three";
 import { std, glow, shadow, V } from "./dress-kit.js";
 import { rngFrom } from "./rig/kit.js";
+import { industrialMaterial, mergeDetails } from "./environment-remodel.js";
 
 // Original heights: rock and ruin blobs were 1.5 tall slabs, woods a 0.3 mat,
 // craters a flat disc (their new rims stay under the woods' 0.3).
@@ -80,6 +81,112 @@ const lump = (r, m) => mesh(new THREE.DodecahedronGeometry(r, 0), m);
 // Lie a cylinder along the ground at angle a (radians about y).
 function lying(r, len, m, a, seg = 12) { const o = mesh(new THREE.CylinderGeometry(r, r, len, seg), m); o.rotation.set(0, a, Math.PI / 2); return o; }
 
+function brokenBrickwork(t, rng) {
+  const g = new THREE.Group(), pts = outline(t), [cx, cz] = centroid(pts);
+  g.name = "remodel-brickwalls";
+  const brick = [0x875843, 0x704a39, 0x9a7057, 0x654b3e].map((c) => industrialMaterial(c, { metalness: 0 }));
+  const mortar = industrialMaterial(0x878170, { metalness: 0 });
+  const dirt = industrialMaterial(0x4a473b, { metalness: 0 });
+  const rebar = industrialMaterial(0x53473a);
+  g.add(ground(pts, dirt));
+  const inset = pts.map(([x, z]) => {
+    const d = Math.hypot(x - cx, z - cz) || 1, k = Math.max(0, (d - 0.32) / d);
+    return [cx + (x - cx) * k, cz + (z - cz) * k];
+  });
+  function brickAt(x, y, z, width, depth, angle, material, height = 0.12) {
+    // Test the rotated brick corners, rather than relying on a broad AABB
+    // around an irregular / concave rules footprint.
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const px = x + Math.cos(angle) * sx * width / 2 - Math.sin(angle) * sz * depth / 2;
+      const pz = z + Math.sin(angle) * sx * width / 2 + Math.cos(angle) * sz * depth / 2;
+      if (room(pts, px, pz) < 0.025) return;
+    }
+    const b = at(mesh(new THREE.BoxGeometry(width, height, depth), material), x, y, z);
+    b.rotation.y = -angle; g.add(b);
+  }
+  inset.forEach(([ax, az], side) => {
+    if (side % 3 === 2) return; // Two open collapsed sides reveal the interior.
+    const [bx, bz] = inset[(side + 1) % inset.length], length = Math.hypot(bx - ax, bz - az);
+    const a = Math.atan2(bz - az, bx - ax), columns = Math.max(2, Math.ceil(length / 0.31)), width = length / columns;
+    const tops = Array.from({ length: columns }, (_, i) => {
+      const breakShape = Math.abs((i + 0.5) / columns - (side % 2 ? 0.25 : 0.72));
+      return Math.min(10, Math.max(2, Math.floor(2 + breakShape * 12 + rng() * 2)));
+    });
+    for (let row = 0; row < 10; row++) for (let i = 0; i < columns; i++) {
+      if (row >= tops[i]) continue;
+      const u = (i + 0.5 + (row % 2) * 0.35) / columns;
+      if (u > 0.97) continue;
+      const x = ax + (bx - ax) * u, z = az + (bz - az) * u, y = 0.09 + row * 0.135;
+      brickAt(x, y, z, width * 0.94, 0.26, a, brick[(i + row + side) % 4]);
+      // Mortar left on a fractured top catches diffuse light.
+      if (row === tops[i] - 1) brickAt(x, y + 0.07, z, width * 0.88, 0.23, a, mortar, 0.018);
+    }
+  });
+  const stones = scatter(rng, pts, 52, 0.19, 0.2);
+  stones.forEach(([x, z], i) => {
+    const angle = rng() * Math.PI * 2, width = 0.14 + rng() * 0.15, depth = 0.09 + rng() * 0.07;
+    brickAt(x, 0.04 + (i % 4) * 0.025, z, width, depth, angle, i % 5 === 0 ? mortar : brick[i % 4], 0.08 + rng() * 0.035);
+  });
+  // Low snapped lintel with exposed reinforcing rods, still within the ruin.
+  const strip = longestStrip(pts, 0.65, 0.2);
+  if (strip.len > 1.4) {
+    const length = Math.min(strip.len * 0.58, 1.65), a = strip.angle;
+    const lintel = at(mesh(new THREE.BoxGeometry(length, 0.18, 0.32), mortar), cx, 0.16, cz);
+    lintel.rotation.y = -a; g.add(lintel);
+    for (const z of [-0.08, 0.08]) {
+      const rod = lying(0.012, length * 1.1, rebar, -a, 5);
+      rod.position.set(cx - Math.sin(a) * z, 0.22, cz + Math.cos(a) * z); g.add(rod);
+    }
+  }
+  return mergeDetails(g);
+}
+
+function scrapMachinery(t, rng) {
+  const g = new THREE.Group(), pts = outline(t);
+  g.name = "remodel-scrap";
+  const iron = industrialMaterial(0x474e49), rust = industrialMaterial(0x81583f);
+  const paint = industrialMaterial(0x596653), dark = industrialMaterial(0x262d28), stone = industrialMaterial(0x706b5b, { metalness: 0 });
+  g.add(ground(pts, industrialMaterial(0x494638, { metalness: 0 })));
+  // Put the engine inside a known-clear disc. Small / narrow polygons reduce
+  // the whole assembly, preserving proportions and every projecting pipe.
+  const candidates = [centroid(pts), ...scatter(rng, pts, 16, 0.08, 0.08)];
+  const [x, z] = candidates.reduce((best, p) => room(pts, ...p) > room(pts, ...best) ? p : best);
+  const assembly = new THREE.Group();
+  assembly.position.set(x, 0.025, z); assembly.scale.setScalar(Math.min(1, Math.max(0.03, room(pts, x, z) - 0.08) / 1.15));
+  assembly.rotation.y = rng() * Math.PI; g.add(assembly);
+  const addBox = (w, h, d, mat, x, y, z) => assembly.add(at(mesh(new THREE.BoxGeometry(w, h, d), mat), x, y, z));
+  addBox(1.65, 0.13, 1, rust, 0, 0.08, 0);
+  addBox(1.08, 0.5, 0.58, paint, -0.12, 0.43, 0);
+  addBox(1.12, 0.1, 0.65, iron, -0.12, 0.72, 0);
+  for (let i = 0; i < 3; i++) {
+    const px = -0.5 + i * 0.32;
+    assembly.add(at(mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.26, 12), iron), px, 0.9, 0));
+    assembly.add(at(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.04, 12), rust), px, 0.8, 0));
+    addBox(0.2, 0.055, 0.2, paint, px, 1.035, 0);
+    // Cooling fins and bolt heads remain visible on the stripped block.
+    for (let n = 0; n < 4; n++) addBox(0.24, 0.025, 0.03, iron, px, 0.32 + n * 0.08, 0.31);
+  }
+  const wheel = new THREE.Group(); wheel.position.set(0.48, 0.48, 0.4); wheel.rotation.y = 0.12; assembly.add(wheel);
+  wheel.add(mesh(new THREE.TorusGeometry(0.32, 0.06, 6, 22), iron));
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4, tooth = at(mesh(new THREE.BoxGeometry(0.11, 0.09, 0.14), rust), Math.cos(a) * 0.37, Math.sin(a) * 0.37, 0);
+    tooth.rotation.z = a; wheel.add(tooth);
+  }
+  for (let i = 0; i < 3; i++) { const spoke = mesh(new THREE.BoxGeometry(0.06, 0.6, 0.06), iron); spoke.rotation.z = i * Math.PI / 3; wheel.add(spoke); }
+  const shaft = at(mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.92, 10), rust), 0.48, 0.48, 0.06);
+  shaft.rotation.x = Math.PI / 2; assembly.add(shaft);
+  // Broken exhaust flange and open dark bore.
+  assembly.add(at(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.45, 10), rust), -0.52, 0.91, -0.26));
+  assembly.add(at(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.045, 12), iron), -0.52, 1.13, -0.26));
+  const bore = at(mesh(new THREE.CircleGeometry(0.075, 12), dark), -0.52, 1.155, -0.26); bore.rotation.x = -Math.PI / 2; assembly.add(bore);
+  addBox(0.6, 0.025, 0.42, paint, 0.1, 0.17, -0.34);
+  for (const [px, pz] of scatter(rng, pts, 16, 0.16, 0.18)) {
+    const r = 0.07 + rng() * 0.07, debris = at(lump(r, rng() > 0.6 ? rust : stone), px, r * 0.45, pz);
+    debris.scale.y = 0.65; debris.rotation.y = rng() * 6; g.add(debris);
+  }
+  return mergeDetails(g);
+}
+
 // ---- Rock blobs (r 1 to 2, cap 1.5) ----
 const ROCK = {
   classic(t) {
@@ -103,6 +210,7 @@ const ROCK = {
   },
   // Scrap pile: girders, plates and a gear heaped up.
   scrap(t, ctx, rng) {
+    if (ctx.remodel !== false) return scrapMachinery(t, rng);
     const g = new THREE.Group(), pts = outline(t), R = meanR(pts);
     g.add(ground(pts, std(0x3a2e24, { roughness: 1 })));
     const rust = std(0x7a3a1e, { roughness: 0.85, metalness: 0.4 }), iron = std(0x3a3632, { metalness: 0.6, roughness: 0.6 });
@@ -172,6 +280,7 @@ const RUIN = {
   classic: ROCK.classic,
   // Broken brick walls tracing the outline, window gaps, rubble at the foot.
   brickwalls(t, ctx, rng) {
+    if (ctx.remodel !== false) return brokenBrickwork(t, rng);
     const g = new THREE.Group(), pts = outline(t);
     g.add(ground(pts, std(0x3a3026, { roughness: 1 })));
     const brick = std(0x7a3a28, { roughness: 0.95 }), mortar = std(0x5a2a1c, { roughness: 1 });
@@ -391,8 +500,11 @@ export function scenerySlot(t) {
   if (t.shape === "ellipse") return "crater";
   return t.kind === "wood" || t.kind === "ruin" ? t.kind : "rock";
 }
+// A theme may narrow the pool (No-Man's-Land wants wire and shell holes, not
+// oily marsh); the pick stays seeded, so both players see the same table.
 function pickVariant(slot, t, ctx) {
-  const list = SCENERY_VARIANTS[slot];
+  const pref = ctx?.theme?.scenery?.[slot]?.filter((v) => SCENERY[slot][v]);
+  const list = pref?.length ? pref : SCENERY_VARIANTS[slot];
   if (ctx?.pick) return ctx.pick(`scenery-${slot}`, t, list);
   const h = Math.abs(Math.sin((t.x || 0) * 91.345 + (t.y || 0) * 47.853) * 24634.6345);
   return list[Math.floor((h - Math.floor(h)) * list.length)];

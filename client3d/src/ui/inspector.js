@@ -10,6 +10,8 @@ import { toughnessOf } from "/shared/unit-kinds.js";
 import { equipmentChips } from "/shared/battle-view.js";
 import { icon } from "./icons.js";
 import { rich } from "./glossary.js";
+import { reelPlayer } from "./reel.js";
+import { boilerGauge } from "./gauge.js";
 
 const NATURE = { field: ["Field", "always on"], tuned: ["Tuned", "pays off in the right situation"], prototype: ["Prototype", "powerful, with a catch"] };
 const LOC_NAME = { hull: "Hull", arms: "Arms", legs: "Legs", engine: "Engine", mount: "Gun mount" };
@@ -72,7 +74,7 @@ export function openInspector(rig, { loadout = null, onClose } = {}) {
 
   const panel = el("div", { class: "inspector" },
     el("div", { class: "in-head" }, el("span", { class: `swatch big sw-${rig.name}` }),
-      el("div", {}, el("h2", {}, rig.name), el("div", { class: "muted" }, `${ch.class === "medium" ? "Medium" : "Light"} rig · speed ${ch.speed ?? "?"}" · ${rig.owner === "a" ? "Cyan" : "Red"} side`)),
+      el("div", {}, el("h2", {}, rig.name), el("div", { class: "muted" }, `${ch.class === "medium" ? "Medium" : "Light"} rig · speed ${ch.speed ?? "?"}" · ${rig.owner === "a" ? "Amber" : "Red"} side`)),
       el("button", { class: "btn ghost in-x", onClick: () => { panel.remove(); onClose?.(); } }, "✕")),
     status.length ? el("div", { class: "in-status" }, status.map((t) => el("div", {}, t))) : null,
     el("h4", {}, icon("sp"), "Structure"),
@@ -82,8 +84,12 @@ export function openInspector(rig, { loadout = null, onClose } = {}) {
       return el("div", { class: "in-loc", title: `${LOC_NAME[l]}: ${v} of ${m} structure points\n${LOC_HELP[l]}` },
         el("span", {}, LOC_NAME[l]), el("span", { class: "in-t", title: `Toughness (armour): wound rolls need 6 + ${toughnessOf("rig", l, ch.class)} − Penetration` }, icon("tough"), `${toughnessOf("rig", l, ch.class)}`), el("div", { class: "bar" }, el("i", { style: { width: `${f * 100}%`, background: f > 0.6 ? "#7fcf6a" : f > 0.3 ? "#f5b041" : "#e0533d" } })), el("b", {}, `${v}/${m}`));
     })),
-    el("div", { class: "in-loc", title: "Boiler heat\nEvery action adds heat; 1 cools per round. Ending a turn past capacity risks engine damage." },
-      el("span", {}, icon("heat"), "Heat"), el("div", { class: "bar" }, el("i", { style: { width: `${Math.min(100, (heat / (cap + 4)) * 100)}%`, background: heat > cap ? "#ff3d1f" : "#f5b041" } })), el("b", {}, `${heat}/${cap}`)),
+    el("div", { class: `in-heat${heat > cap ? " over" : ""}`, title: "Boiler heat\nEvery action adds heat; 1 cools per round. Ending a turn past capacity risks engine damage." },
+      boilerGauge(heat, cap, { size: "lg", key: `insp:${rig.id}` }),
+      el("div", { class: "in-heat-r" },
+        el("div", { class: "in-heat-k" }, icon("heat"), "Boiler heat"),
+        el("div", { class: "in-heat-v" }, el("b", {}, String(heat)), el("span", {}, ` / ${cap}`)),
+        el("div", { class: heat > cap ? "in-heat-w" : "muted" }, heat > cap ? "Over the red line: engine damage risk" : heat === cap ? "At the red line" : `${cap - heat} below the red line`))),
     el("h4", {}, "Weapons"),
     weapon("longRange", lr, lrUp),
     weapon("melee", me, meUp),
@@ -99,6 +105,8 @@ export function openInspector(rig, { loadout = null, onClose } = {}) {
       return chips.length ? el("div", { class: "in-eqstate" }, el("h4", {}, "Equipment state"), chips.map((c) =>
         el("div", { class: `in-eqc t-${c.tone}`, title: c.tip }, icon(c.icon), el("b", {}, c.label), el("span", { class: "muted" }, c.tip)))) : null;
     })());
+  const reel = reelPlayer(rig.chassis); // the pilot's audio diary
+  if (reel) panel.querySelector(".in-head")?.after(reel);
   document.body.append(panel);
   return panel;
 }
@@ -111,10 +119,10 @@ function openUnitInspector(rig, { onClose } = {}) {
   const mods = (rig.modules || []).filter((m) => MODULE_HELP[m]);
   const panel = el("div", { class: "inspector" },
     el("div", { class: "in-head" }, icon(kind === "drone" ? "drone" : "walker"),
-      el("div", {}, el("h2", {}, rig.name), el("div", { class: "muted" }, `${unitLabel(rig)} · speed ${rig.speed ?? "?"}" · ${rig.owner === "a" ? "Cyan" : "Red"} side · no boiler, never runs hot`)),
+      el("div", {}, el("h2", {}, rig.name), el("div", { class: "muted" }, `${unitLabel(rig)} · speed ${rig.speed ?? "?"}" · ${rig.owner === "a" ? "Amber" : "Red"} side · no boiler, never runs hot`)),
       el("button", { class: "btn ghost in-x", onClick: () => { panel.remove(); onClose?.(); } }, "✕")),
     rig.destroyed ? el("div", { class: "in-status" }, el("div", {}, "💥 Destroyed")) : null,
-    kind === "drone" ? el("p", { class: "muted" }, "A drone: wrecking it scores no VP, and it never keeps its side in the fight.") : null,
+    kind === "drone" ? el("p", { class: "muted" }, "A clockwork: wrecking it scores no VP, and it never keeps its side in the fight.") : null,
     el("h4", {}, icon("sp"), "Structure"),
     el("div", { class: "in-sp" }, partsOf(rig).map((l) => {
       const [v, m] = sp(l); const f = m ? v / m : 0;
@@ -123,7 +131,7 @@ function openUnitInspector(rig, { onClose } = {}) {
     })),
     el("h4", {}, "Weapon"),
     u ? weapon(UNIT_WEAPONS[u]?.melee ? "melee" : "longRange", u, null) : el("p", { class: "muted" }, "Unarmed."),
-    UNIT_WEAPONS[u]?.detonate ? el("p", {}, `Demo Charge: after the blow it blasts every other unit within ${UNIT_WEAPONS[u].detonate.radius}" (Penetration ${UNIT_WEAPONS[u].detonate.pen} / ${UNIT_WEAPONS[u].detonate.dmg}) and the drone is gone.`) : null,
+    UNIT_WEAPONS[u]?.detonate ? el("p", {}, `Demo Charge: after the blow it blasts every other unit within ${UNIT_WEAPONS[u].detonate.radius}" (Penetration ${UNIT_WEAPONS[u].detonate.pen} / ${UNIT_WEAPONS[u].detonate.dmg}) and the clockwork is gone.`) : null,
     mods.length ? el("h4", {}, "Support modules") : null,
     mods.map((m) => el("div", { class: "in-wep" }, el("div", {}, icon(m === "repair" ? "fieldweld" : m === "coolant" ? "vent" : "paint"), " ", MODULE_HELP[m]))));
   document.body.append(panel);

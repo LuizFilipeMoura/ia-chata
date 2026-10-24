@@ -167,7 +167,7 @@ export const EQUIPMENT_UPGRADES = {
   "radiator-array": [
     { id: "twin-radiators", nature: "field", name: "Twin Radiators", tag: "Purge vents −3, not −2", effect: { purgeHeat: -3 } },
     { id: "coolant-injection", nature: "tuned", name: "Coolant Injection", tag: "−2 heat before the overheat roll when over Capacity", effect: { coolantInjection: true } },
-    { id: "cryo-reservoir", nature: "prototype", name: "Cryo Reservoir", tag: "Bank cold; spend for instant cooling + a Penetration spike", catch: "Must charge it up first", effect: { cryoReservoir: true } },
+    { id: "cryo-reservoir", nature: "prototype", name: "Ice-Brine Tank", tag: "Bank cold; spend for instant cooling + a Penetration spike", catch: "Must charge it up first", effect: { cryoReservoir: true } },
   ],
   "servo-actuators": [
     { id: "reinforced-servos", nature: "field", name: "Reinforced Servos", tag: "Sprint reaches 2× Speed, not 1½×", effect: { sprintMult: 2 } },
@@ -175,29 +175,29 @@ export const EQUIPMENT_UPGRADES = {
     { id: "grapnel-launcher", nature: "prototype", name: "Grapnel Launcher", tag: "Yank free of a lock or reel an enemy in; heat + cooldown", catch: "Heat and a cooldown", effect: { grapnelLauncher: true } },
   ],
   "overclock-core": [
-    { id: "redundant-capacitors", nature: "field", name: "Redundant Capacitors", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
+    { id: "redundant-capacitors", nature: "field", name: "Spare Accumulators", tag: "Overclock costs +2 heat, not +3", effect: { overclockHeat: 2 } },
     { id: "adrenaline-surge", nature: "tuned", name: "Adrenaline Surge", tag: "Below half SP, Overclock grants +3 actions", effect: { adrenalineSurge: true } },
-    { id: "reactor-overdrive", nature: "prototype", name: "Reactor Overdrive", tag: "Overclock also +2 Penetration; but overheat bonus doubles", catch: "Overheat bonus doubles", effect: { reactorOverdrive: true } },
+    { id: "reactor-overdrive", nature: "prototype", name: "Open the Throttle", tag: "Overclock also +2 Penetration; but overheat bonus doubles", catch: "Overheat bonus doubles", effect: { reactorOverdrive: true } },
   ],
   "field-repair-suite": [
     { id: "master-toolkit", nature: "field", name: "Master Toolkit", tag: "Repair heals +2 SP, not +1", effect: { repairBonus: 2 } },
     { id: "battlefield-triage", nature: "tuned", name: "Battlefield Triage", tag: "Emergency Patch heals 5 SP on a destroyed location", effect: { battlefieldTriage: true } },
-    { id: "nanite-swarm", nature: "prototype", name: "Nanite Swarm", tag: "Seed nanites that heal each Recovery; at a heat-cap cost", catch: "Costs heat-cap", effect: { naniteSwarm: true } },
+    { id: "nanite-swarm", nature: "prototype", name: "Grease Monkeys", tag: "Send a grease crew to mend each Recovery; at a heat-cap cost", catch: "Costs heat-cap", effect: { naniteSwarm: true } },
   ],
   "blast-furnace-core": [
     { id: "insulated-core", nature: "field", name: "Insulated Core", tag: "Safe up to +2 over Capacity, not +1", effect: { thermalMargin: 2 } },
     { id: "backdraft", nature: "tuned", name: "Backdraft", tag: "Heat Purge Wave +1 Penetration per 2 heat over Capacity", effect: { backdraft: true } },
-    { id: "meltdown-protocol", nature: "prototype", name: "Meltdown Protocol", tag: "Bank overheat as charge; spend for Penetration or a burst", catch: "Only banks while overheated", effect: { meltdownProtocol: true } },
+    { id: "meltdown-protocol", nature: "prototype", name: "Scuttle Charge", tag: "Bank overheat as charge; spend for Penetration or a burst", catch: "Only banks while overheated", effect: { meltdownProtocol: true } },
   ],
   "targeting-computer": [
-    { id: "ballistic-processor", nature: "field", name: "Ballistic Processor", tag: "+1 accuracy vs a target in your sweet-spot band", effect: { sweetBandAccuracy: 1 } },
-    { id: "predictive-tracking", nature: "tuned", name: "Predictive Tracking", tag: "vs a static/pinned target: +2 accuracy, ignore cover", effect: { predictiveTracking: true } },
-    { id: "fire-solution-lock", nature: "prototype", name: "Fire Solution Lock", tag: "Hold still and stack a solution → an auto-hit AP volley", catch: "Must hold still to charge it", effect: { fireSolutionLock: true } },
+    { id: "ballistic-processor", nature: "field", name: "Gunnery Table", tag: "+1 accuracy vs a target in your sweet-spot band", effect: { sweetBandAccuracy: 1 } },
+    { id: "predictive-tracking", nature: "tuned", name: "Rangefinder Drum", tag: "vs a static/pinned target: +2 accuracy, ignore cover", effect: { predictiveTracking: true } },
+    { id: "fire-solution-lock", nature: "prototype", name: "Plotting-Table Solution", tag: "Hold still and stack a solution → an auto-hit AP volley", catch: "Must hold still to charge it", effect: { fireSolutionLock: true } },
   ],
   "reactive-plating": [
     { id: "angled-plates", nature: "field", name: "Angled Plates", tag: "Side/rear attacks −2 Penetration, not −1", effect: { sideRearPen: -2 } },
-    { id: "chaff-burst", nature: "tuned", name: "Chaff Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: { chaffBurst: true } },
-    { id: "point-defense-system", nature: "prototype", name: "Point-Defense System", tag: "Intercept incoming fire; force rerolls; at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
+    { id: "chaff-burst", nature: "tuned", name: "Tinsel Burst", tag: "Under smoke, free half-Speed side-step when targeted", effect: { chaffBurst: true } },
+    { id: "point-defense-system", nature: "prototype", name: "Flak Cage", tag: "Intercept incoming fire; force rerolls; at a heat cost", catch: "Costs heat", effect: { pointDefense: true } },
   ],
 };
 

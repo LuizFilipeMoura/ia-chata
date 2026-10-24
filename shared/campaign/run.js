@@ -544,7 +544,7 @@ export function debrief(run, room) {
   if (won) {
     lines.push({ label: boss ? "Warlord bounty" : "Contract payout", amount: node.payout });
     if (kills) lines.push({ label: `Kills ×${kills}`, amount: kills * perKill });
-    if (drones) lines.push({ label: `Drone scrap ×${drones}`, amount: drones });
+    if (drones) lines.push({ label: `Clockwork scrap ×${drones}`, amount: drones });
     if (crates) lines.push({ label: `Crates ×${crates}`, amount: crates * PRICES.crate });
   }
   const gained = lines.reduce((s, l) => s + l.amount, 0);

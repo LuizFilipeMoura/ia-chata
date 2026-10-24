@@ -1,5 +1,5 @@
 // Procedural mech models. Every chassis gets its own paint (the codenames ARE
-// colours, Gold, Pumpkin, Zebra…) and its own dieselpunk body from the part
+// colours, Gold, Rust, Dazzle…) and its own dieselpunk body from the part
 // library in scene/rig/ (walkers and drones too, one body per template), and
 // each of the 28 weapons has its own model hung off the arms. Built from
 // primitives at runtime: no asset pipeline, and every part is a named pivot
@@ -9,13 +9,19 @@ import { buildRigBody, flattenFoot } from "./rig/body.js";
 import { recipeFor } from "./rig/recipes.js";
 import { supportRecipeFor } from "./rig/support.js";
 import { SKINS, skinMaterials, applySkin } from "./rig/skins.js";
+import { SIDE_HEX, LAMP, lampState, grimeLevels, grimeLook, exhaustFor, unitNumber, GRIME_LOCS } from "./rig/look.js";
+import { addLampEyes, tagLocations, setGrimeBits, addStencil } from "./rig/wear.js";
+import { tankWalkerName, tankWalkerMaterials, buildTankWalker, dressTankWalkerWeapons, refineTankWalkerSkin, finishTankWalkerMaterials } from "./rig/tank-walker.js";
 
 export const PAINT = {
-  Gold: 0xd4a017, Blue: 0x2f6fd6, Purple: 0x7b3fb8, Pumpkin: 0xe8731c, Zebra: 0xe9e6dc,
-  Turquoise: 0x1fb5a8, Green: 0x3f9a3a, Copper: 0xb8703a, Black: 0x2a2a30, Red: 0xc0282d, Silver: 0xb9c0c8,
+  Gold: 0xd4a017, Cobalt: 0x2f6fd6, Tyrian: 0x7b3fb8, Rust: 0xe8731c, Dazzle: 0xe9e6dc,
+  Turquoise: 0x1fb5a8, Verdigris: 0x3f9a3a, Copper: 0xb8703a, Black: 0x2a2a30, Red: 0xc0282d, Silver: 0xb9c0c8,
   Brass: 0xa8822e, Ivory: 0xe6dcc0, Jade: 0x2f8f62,
 };
-export const TEAM = { a: 0x5fd3c0, b: 0xe0533d };
+// Side colours: whale-oil amber vs oxblood (rings, facing notch, stencils).
+export const TEAM = SIDE_HEX;
+const SOOT = new THREE.Color(0x16120e);
+const _v = new THREE.Vector3(), _c = new THREE.Color();
 
 function stripeTexture(base, stripe) {
   return canvasTexture(64, (g) => {
@@ -231,7 +237,7 @@ const UNIT_GUNS = {
     const b = barrel(0.05, 0.45, STEEL()); b.position.x = 0.15; g.add(b);
     return { group: g, muzzleX: 0.65 };
   },
-  "Drone Carbine"(p) {
+  "Clockwork Carbine"(p) {
     const g = new THREE.Group(); g.add(box(0.5, 0.2, 0.22, p));
     for (const z of [-0.06, 0.06]) { const b = barrel(0.04, 0.7, DARK()); b.position.set(0.2, 0, z); g.add(b); }
     return { group: g, muzzleX: 0.95 };
@@ -292,20 +298,22 @@ function makeSpentToken() {
   });
   const face = new THREE.MeshStandardMaterial({ map: spentTex, color: spentTex ? 0xffffff : 0xd8a84a, metalness: 0.6, roughness: 0.35 });
   const rim = new THREE.MeshStandardMaterial({ color: 0x9a7228, metalness: 0.8, roughness: 0.3 });
+  face.userData.materialFamily = rim.userData.materialFamily = 'brass';
   const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.1, 32), [rim, face, face]);
   coin.castShadow = true;
   return coin;
 }
 
 export class Mech {
-  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius, kind = "rig", unit = null, modules = [], drone = null, template = null, skin = "factory" }) {
+  constructor({ id, name, owner, chassis, weightClass, longRange, melee, radius, kind = "rig", unit = null, modules = [], drone = null, template = null, skin = "factory", clutter = null, remodel = true, detail = 'standard' }) {
     this.id = id; this.name = name; this.owner = owner; this.weightClass = weightClass || "light";
     this.longRange = longRange; this.melee = melee; this.radius = radius || 1.2;
     this.kind = kind; this.drone = drone;
     const support = kind === "walker" || kind === "drone";
+    const remodeledName = !support && remodel ? tankWalkerName(name, chassis) : null;
     const color = support ? UNIT_PAINT[kind] : PAINT[name] ?? 0x888888;
     this.paintColor = color; // debris torn off this mech keeps its paint
-    const zebra = name === "Zebra" ? stripeTexture("#ecebe4", "#18181a") : null;
+    const zebra = name === "Dazzle" ? stripeTexture("#ecebe4", "#18181a") : null;
     let paint = zebra ? new THREE.MeshStandardMaterial({ map: zebra, roughness: 0.6, metalness: 0.3 }) : mat(color);
     const heavy = this.weightClass === "medium";
     this.root = new THREE.Group();
@@ -331,15 +339,21 @@ export class Mech {
       ? { color: 0xff4a2a, emissive: 0xff2010, emissiveIntensity: 1.4 }
       : { color: 0xffcf7a, emissive: 0xc06a18, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.15 });
     this.ventMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xff3300, emissiveIntensity: 0, metalness: 0.7, roughness: 0.4 });
+    if (remodeledName) {
+      this.cockpitMat.roughness = 0.7; this.cockpitMat.metalness = 0;
+      this.ventMat.roughness = 0.9; this.ventMat.metalness = 0.2;
+    }
     this.template = template;
     this.recipe = support ? supportRecipeFor(kind, kind === "drone" ? drone : template) : recipeFor(name, this.weightClass);
     this.skin = SKINS[skin] ? skin : "factory";
-    const mats = skinMaterials(this.skin, { color: this.recipe.paint ?? color, trim: this.recipe.trim, stripe: zebra });
+    const mats = remodeledName ? tankWalkerMaterials(this.skin, PAINT[remodeledName])
+      : skinMaterials(this.skin, { color: this.recipe.paint ?? color, trim: this.recipe.trim, stripe: zebra });
     if (!support) paint = mats.paint;
-    const built = buildRigBody({ cls: support ? kind : this.weightClass, recipe: this.recipe, mats, glass: this.cockpitMat, vent: this.ventMat, baseScale: this.baseScale });
-    applySkin(built, this.skin, id);
+    const buildBody = remodeledName ? buildTankWalker : buildRigBody;
+    const built = buildBody({ id, name: remodeledName, cls: support ? kind : this.weightClass, recipe: this.recipe, mats, glass: this.cockpitMat, vent: this.ventMat, baseScale: this.baseScale, detail });
+    applySkin(built, this.skin, id, { name, clutter });
     this.built = built;
-    Object.assign(this, { legs: built.legs, pelvis: built.pelvis, hipH: built.hipH, torso: built.torso, chest: built.chest, armR: built.armR, armL: built.armL, stacks: built.stacks, sockets: built.sockets, spinners: built.spinners, flickers: built.flickers, whistle: built.whistle, bellows: built.bellows });
+    Object.assign(this, { legs: built.legs, pelvis: built.pelvis, hipH: built.hipH, torso: built.torso, chest: built.chest, armR: built.armR, armL: built.armL, stacks: built.stacks, sockets: built.sockets, spinners: built.spinners, flickers: built.flickers, whistle: built.whistle, bellows: built.bellows, windKey: built.windKey });
     this.body.add(this.pelvis);
 
     if (support) {
@@ -358,6 +372,21 @@ export class Mech {
       const me = (MELEE[melee] || MELEE["Claw"])(paint);
       this.me = me; me.group.position.set(0.1, -0.15, 0.05); this.armL.add(me.group);
     }
+
+    // Lamp eyes (a drone's red sensor eye already does the job), the stencilled
+    // unit number + side insignia, and which hit location each mesh belongs to
+    // (grime darkens per location).
+    this.lampMat = kind === "drone" ? null : addLampEyes(built);
+    this.lamp = "amber"; this.lampHot = 0; this.status = {};
+    if (kind !== "drone") addStencil(built, unitNumber(id), owner);
+    if (built.remodel) {
+      dressTankWalkerWeapons(built, this.lr, this.me, mats);
+      refineTankWalkerSkin(built, this.skin, id);
+      finishTankWalkerMaterials(built, this.lr, this.me);
+    }
+    tagLocations(this);
+    this.wear = { hull: 0, arms: 0, legs: 0, engine: 0 };
+    this.sprinting = false;
 
     // Sized like a real mini on its base: the whole model, weapons included,
     // stays roughly inside the base ring so move/reach rings read at true scale
@@ -396,18 +425,36 @@ export class Mech {
     if (on === this.spent) return;
     this.spent = on; this.spentT = 0;
     if (on) this.token.visible = true;
-    // Own copies of the body's materials, so greying this rig out leaves the
-    // shared ones (and every other rig) alone. Done once, on first use.
-    if (!this.greyable) {
-      this.greyable = [];
-      this.body.traverse((o) => {
-        if (!o.isMesh || !o.material || o.material === this.cockpitMat || o.material === this.ventMat) return;
-        o.material = o.material.clone();
-        if (o.material.color) this.greyable.push({ m: o.material, base: o.material.color.clone() });
-      });
-      this.greyMix = 0;
+    this.ownMats();
+  }
+  // Own copies of the body's materials, so greying this rig out (spent) or
+  // sooting a damaged location leaves the shared ones (and every other rig)
+  // alone. Done once, on first use.
+  ownMats() {
+    if (this.greyable) return;
+    this.greyable = [];
+    this.body.traverse((o) => {
+      if (!o.isMesh || !o.material || o.userData.noTint || o.userData.clean || o.material === this.cockpitMat || o.material === this.ventMat) return;
+      o.material = o.material.clone();
+      if (o.material.color) this.greyable.push({ m: o.material, base: o.material.color.clone(), loc: o.userData.loc || "hull" });
+    });
+    this.greyMix = 0; this.tintDirty = true;
+  }
+  // Grime builds as SP drops, per hit location: paint darkens toward soot and
+  // soot patches, oil streaks, rust and bare rivets appear. sp: { loc: [sp, max] }.
+  setWear(sp) {
+    if (this.destroyed) return;
+    const lv = grimeLevels(sp);
+    for (const loc of GRIME_LOCS) {
+      if (Math.abs(lv[loc] - this.wear[loc]) < 1e-3) continue;
+      this.wear[loc] = lv[loc];
+      setGrimeBits(this, loc, grimeLook(lv[loc]).bits);
+      if (lv[loc] > 0) this.ownMats();
+      this.tintDirty = true;
     }
   }
+  // What the lamp eyes show: { engaged, active, stalled, jammed, shutdown }.
+  setStatus(st = {}) { this.status = st; }
   setHeat(frac) { this.heatFrac = Math.max(0, Math.min(1.6, frac)); }
   setHurt(frac) { this.hurt = frac; }
 
@@ -441,6 +488,7 @@ export class Mech {
 
   fire(slot) {
     if (slot === "melee") this.strike = 1; else this.recoil = 1;
+    this.lampHot = 0.9; // the lamps flare red while it fights
     const w = slot === "melee" ? this.me : this.lr;
     if (w.spin) this.spinSpeed = 40;
   }
@@ -478,6 +526,41 @@ export class Mech {
     this.root.traverse((o) => { if (o.isMesh && o.material) o.material.opacity = (o.userData.baseOpacity ?? 1) * f; });
   }
 
+  // Diesel exhaust and sprint smears, emitted every frame by whoever owns the
+  // FX (the Director): puffs off the stacks near capacity, a black belch on a
+  // sprint, heavier black when crippled; Futurist speed lines while sprinting.
+  emitAmbient(fx, dt) {
+    const p = this.root.position;
+    const moved = this.lastPos ? _v.copy(p).sub(this.lastPos) : null;
+    this.lastPos = (this.lastPos || new THREE.Vector3()).copy(p);
+    if (this.destroyed || !this.root.visible) return;
+    if (this.built.remodel && (this.status?.shutdown || this.broken?.engine)) { this.exAcc = 0; return; }
+    const sprint = this.sprinting && this.walking > 0.3;
+    const crippled = Object.values(this.broken || {}).some(Boolean);
+    const ex = exhaustFor({ heatFrac: this.heatFrac, sprinting: sprint, crippled, destroyed: this.destroyed });
+    if (this.built.remodel) {
+      const pulse = Math.max(0, Math.sin(this.built.mechanics.phase * 2)) ** 4;
+      ex.rate = Math.min(20, ex.rate + 8 + pulse * 5);
+      ex.size *= 0.65; ex.opacity = Math.max(ex.opacity, 0.42 + pulse * 0.12);
+      ex.dark = Math.max(ex.dark, 0.88);
+    }
+    this.exAcc = (this.exAcc || 0) + dt * ex.rate;
+    for (; this.exAcc >= 1 && this.stacks.length; this.exAcc--) {
+      const index = this.built.remodel ? (this.exStack = (this.exStack ?? -1) + 1) % this.stacks.length : Math.floor(Math.random() * this.stacks.length);
+      const st = this.stacks[index];
+      const h = st.geometry?.parameters?.height ?? 0.3;
+      fx.exhaust(st.localToWorld(new THREE.Vector3(0, h * 0.5 + 0.025, 0)), ex);
+    }
+    if (sprint && moved && dt > 0) {
+      const speed = moved.length() / dt;
+      if (speed > 0.5) {
+        this.slAcc = (this.slAcc || 0) + dt * 26;
+        const dir = moved.normalize();
+        for (; this.slAcc >= 1; this.slAcc--) fx.speedLine(p, dir, this.radius, this.labelAnchor.position.y);
+      }
+    }
+  }
+
   destroy() {
     this.destroyed = true;
     this.setCrown(false);
@@ -500,17 +583,36 @@ export class Mech {
       this.token.scale.setScalar(Math.max(0.01, 1 - k));
       if (k >= 1) this.token.visible = false;
     }
-    // Spent rigs go grey (the "already acted" look), fresh ones get their paint back.
+    // Spent rigs go grey (the "already acted" look), fresh ones get their paint
+    // back; damaged locations are sooted under either.
     if (this.greyable && !this.destroyed) {
       const goal = this.spent ? 0.6 : 0;
-      if (Math.abs(goal - this.greyMix) > 0.002) {
+      if (Math.abs(goal - this.greyMix) > 0.002 || this.tintDirty) {
+        this.tintDirty = false;
         this.greyMix += (goal - this.greyMix) * Math.min(1, dt * 3);
-        for (const { m, base } of this.greyable) {
-          const l = base.r * 0.3 + base.g * 0.59 + base.b * 0.11;
-          m.color.setRGB(base.r + (l * 0.7 - base.r) * this.greyMix, base.g + (l * 0.7 - base.g) * this.greyMix, base.b + (l * 0.7 - base.b) * this.greyMix);
+        for (const { m, base, loc } of this.greyable) {
+          const b = _c.copy(base).lerp(SOOT, grimeLook(this.wear[loc] || 0).darken);
+          const l = b.r * 0.3 + b.g * 0.59 + b.b * 0.11;
+          m.color.setRGB(b.r + (l * 0.7 - b.r) * this.greyMix, b.g + (l * 0.7 - b.g) * this.greyMix, b.b + (l * 0.7 - b.b) * this.greyMix);
         }
       }
     }
+    // Lamp eyes: amber idle, red fighting, green stalled / jammed / shut down.
+    this.lampHot = Math.max(0, this.lampHot - dt);
+    if (this.lampMat) {
+      const st = this.status || {};
+      this.lamp = lampState({ destroyed: this.destroyed, attacking: this.lampHot > 0, engaged: st.engaged, active: st.active, stalled: st.stalled || !!this.broken?.engine, jammed: st.jammed, shutdown: st.shutdown });
+      const L = LAMP[this.lamp], k = Math.min(1, dt * 6);
+      this.lampMat.color.lerp(_c.setHex(L.color), k);
+      this.lampMat.emissive.lerp(_c.setHex(L.emissive), k);
+      // Dimmer once it has acted; a stalled engine makes them stutter.
+      const flick = this.lamp === "green" && this.broken?.engine ? (Math.sin(this.t * 17) > 0.6 ? 0.3 : 1) : 1;
+      const goalI = L.intensity * (this.spent && this.lamp === "amber" ? 0.45 : 1) * flick;
+      this.lampMat.emissiveIntensity += (goalI - this.lampMat.emissiveIntensity) * k;
+    }
+    // A Clockwork's key turns while it runs: brisk on its activation, a slow
+    // tick otherwise, stopped once it has acted or died.
+    if (this.windKey) this.windKey.rotation.x += dt * (this.destroyed ? 0 : this.status?.active ? 7 : this.spent ? 0.4 : 1.6);
     const idleDim = this.spent ? 0.12 : 0.9;
     this.cockpitMat.emissiveIntensity += (idleDim - this.cockpitMat.emissiveIntensity) * Math.min(1, dt * 3);
     const heavy = this.weightClass === "medium";
@@ -525,11 +627,13 @@ export class Mech {
     });
     // Idle life: flywheels and fans turn (faster when hot), pilot lights
     // flicker, bellows breathe, the whistle cap jumps when the rig fires.
-    if (this.spinners) for (const sp of this.spinners) sp.o.rotation[sp.axis] += dt * sp.speed * (this.destroyed || this.broken?.engine ? 0 : 1 + this.heatFrac);
+    if (this.spinners) for (const sp of this.spinners) sp.o.rotation[sp.axis] += dt * sp.speed * (this.destroyed || this.broken?.engine || this.status?.shutdown ? 0 : 1 + this.heatFrac);
     if (this.flickers) for (const f of this.flickers) f.scale.setScalar(this.destroyed ? 0.01 : 0.8 + Math.sin(this.t * 23) * 0.15 + Math.sin(this.t * 37) * 0.1);
     if (this.bellows) this.bellows.scale.y = this.destroyed ? 0.8 : 1 + Math.sin(this.t * 2.2) * 0.12;
     if (this.whistle) this.whistle.position.y = 0.33 + this.recoil * 0.08;
-    this.pelvis.position.y = this.hipH + Math.abs(Math.sin(this.walkPhase)) * 0.12 * w + Math.sin(this.t * 1.7) * 0.03;
+    const enginePhase = this.built.mechanics?.phase;
+    const idleBounce = enginePhase == null ? Math.sin(this.t * 1.7) * 0.03 : 0;
+    this.pelvis.position.y = this.hipH + Math.abs(Math.sin(this.walkPhase)) * 0.12 * w + idleBounce;
     this.pelvis.rotation.x = Math.sin(this.walkPhase) * 0.06 * w;
     // Torso twist toward the aim, recoil kick, melee lunge.
     this.torso.rotation.y += ((this.aimYaw) - this.torso.rotation.y) * Math.min(1, dt * 6);
@@ -539,7 +643,7 @@ export class Mech {
     this.armR.position.x = -this.recoil * 0.35;
     this.armR.rotation.z = b.arms ? -1.25 + Math.sin(this.t * 3) * 0.05 : this.recoil * 0.25;
     const s = Math.sin((1 - this.strike) * Math.PI);
-    this.armL.position.x = s * 0.9 * (this.strike > 0 ? 1 : 0);
+    this.armL.position.x = s * (this.built.remodelName === "Tyrian" ? 0.53 : 0.9) * (this.strike > 0 ? 1 : 0);
     this.armL.rotation.y = -s * 0.5;
     if (this.me.swing) this.me.swing.position.x = 0.3 + s * 1.2;
     if (this.me.ram) this.me.ram.position.x = 0.55 + s * 0.7;
@@ -547,7 +651,7 @@ export class Mech {
     if (this.me.jaws) { this.me.jaws[0].rotation.z = -0.3 + s * 0.3; this.me.jaws[1].rotation.z = 0.3 - s * 0.3; }
     this.spinSpeed = Math.max(this.me.spin && this.strike > 0 ? 30 : 0, this.spinSpeed - dt * 30);
     if (this.lr.spin) this.lr.spin.rotation.x += this.spinSpeed * dt * (this.recoil > 0 ? 1 : 0.1);
-    if (this.me.spin) this.me.spin.rotation.z += (this.strike > 0 ? 30 : 2) * dt;
+    if (this.me.spin && !(this.built.remodel && (this.destroyed || this.broken?.engine || this.status?.shutdown))) this.me.spin.rotation.z += (this.strike > 0 ? 30 : 2) * dt;
     // Heat glow on the stacks; over capacity it pulses.
     const over = this.heatFrac > 1;
     this.ventMat.emissiveIntensity = b.engine ? (Math.sin(this.t * 13) > 0.85 ? 0.6 : 0) : this.heatFrac * 1.8 + (over ? Math.sin(this.t * 10) * 0.8 + 0.8 : 0);
@@ -557,7 +661,8 @@ export class Mech {
       this.body.position.y += (-0.6 - this.body.position.y) * Math.min(1, dt * 2);
     } else {
       this.body.position.y += ((this.spent ? -0.12 : 0) - this.body.position.y) * Math.min(1, dt * 3);
-      this.body.rotation.x = Math.sin(this.t * 0.9) * 0.02 + (this.spent ? 0.1 : 0) + this.hurt * 0.08 + (b.legs ? 0.12 + Math.abs(Math.sin(this.walkPhase)) * 0.12 * this.walking : 0);
+      const idleSway = enginePhase == null ? Math.sin(this.t * 0.9) * 0.02 : 0;
+      this.body.rotation.x = idleSway + (this.spent ? 0.1 : 0) + this.hurt * 0.08 + (b.legs ? 0.12 + Math.abs(Math.sin(this.walkPhase)) * 0.12 * this.walking : 0);
     }
     // Turn toward targetFacing smoothly.
     let d = ((this.targetFacing - this.facing + 540) % 360) - 180;
@@ -565,5 +670,6 @@ export class Mech {
     this.root.rotation.y = -this.facing * DEG;
     this.halo.rotation.z += dt * 0.8;
     if (this.crown?.visible) { this.crown.rotation.y = this.t * 1.1; this.crown.position.y = this.crownY + Math.sin(this.t * 2) * 0.12; }
+    this.built.updateMechanical?.(dt, { destroyed: this.destroyed, shutdown: this.status?.shutdown, broken: this.broken, heatFrac: this.heatFrac, spent: this.spent });
   }
 }

@@ -86,7 +86,7 @@ function sampleMeanHits(attacker, target, slot, opts, trials, seed) {
   const rand = mulberry32(seed);
   let total = 0;
   for (let i = 0; i < trials; i++) {
-    // Clone BOTH: rollToHit mutates the target (Point-Defense) and the attacker
+    // Clone BOTH: rollToHit mutates the target (Flak Cage) and the attacker
     // (Penetrator Rounds' shot counter). A fresh pair per trial is exactly the
     // "one shot from full" the analytic model prices.
     const a = structuredClone(attacker);

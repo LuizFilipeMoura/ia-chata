@@ -128,7 +128,7 @@ export const UNIT_KINDS = {
   // mobility/weapon pools and a small Integrity (INTEGRITY_RATIO.drone).
   drone: {
     id: "drone",
-    label: "Drone",
+    label: "Clockwork",
     parts: [
       { name: "hull",   role: "structural" },
       { name: "legs",   role: "mobility" },

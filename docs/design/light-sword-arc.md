@@ -14,9 +14,9 @@ Relevant weapon stats (from `shared/game-state.js`):
 
 | Nature | Name | Effect | Player tag | Engine |
 |---|---|---|---|---|
-| **Field** | Ion Burn | Gains Incendiary, +1 heat on the target per hit. Reliable heat pressure; every shot chips toward their misfire threshold. | `+1 heat to target on hit` | ✅ coded (Incendiary) |
-| **Tuned** | Systems Overload | On hit, the target loses 1 action next activation. Big tempo denial, situational, huge vs an active enemy. | `On hit: target loses 1 action` | ✅ coded (`onHit: systems-overload`) |
-| **Prototype** | Ion Storm | An overcharged EMP bolt: next activation the target **can't Prepare, can't use equipment actives, loses 1 action**, and takes a 2-heat spike. **Downside:** the discharge overloads *your* capacitors, **+3 heat to yourself, and the Arc Gun refuses its next attempt** (which clears the overload). | `Fry a rig's systems for a turn, but it overloads and locks your own gun` | ✅ implemented (`noActivesNextActivation` / `noPrepNextActivation` on target, `arcLockedNext` on attacker) |
+| **Field** | Galvanic Burn | Gains Incendiary, +1 heat on the target per hit. Reliable heat pressure; every shot chips toward their misfire threshold. | `+1 heat to target on hit` | ✅ coded (Incendiary) |
+| **Tuned** | Boiler Surge | On hit, the target loses 1 action next activation. Big tempo denial, situational, huge vs an active enemy. | `On hit: target loses 1 action` | ✅ coded (`onHit: systems-overload`) |
+| **Prototype** | Galvanic Storm | An overcharged galvanic-surge bolt: next activation the target **can't Prepare, can't use equipment actives, loses 1 action**, and takes a 2-heat spike. **Downside:** the discharge overloads *your* accumulators, **+3 heat to yourself, and the Arc Gun refuses its next attempt** (which clears the overload). | `Fry a rig's systems for a turn, but it overloads and locks your own gun` | ✅ implemented (`noActivesNextActivation` / `noPrepNextActivation` on target, `arcLockedNext` on attacker) |
 
 ## Sword (melee), ROF 2, STR 6, precise
 
@@ -24,20 +24,20 @@ Relevant weapon stats (from `shared/game-state.js`):
 |---|---|---|---|---|
 | **Field** | Duelist's Balance | Gains Precision, aimed cuts ignore the −3 penalty. Reliable finesse; pick your location. | `Aimed cuts ignore the aim penalty` | ✅ coded (Precision) |
 | **Tuned** | Opportunist | +3 STR vs a target that's **overheated (heat over its class's Heat Capacity) or carrying an action penalty into its next activation**: the sword executes what the Arc Gun broke. Dead vs a healthy target. | `+3 STR vs disrupted / overheated targets` | ✅ implemented (`vsDisrupted` check) |
-| **Prototype** | Superconductor Edge | The blade is wired to the Arc capacitors. While you're **over half your class's heat cap**: +2 STR, and **once per attack** (not per hit) **1 heat transfers from you to the target** (vent through the blade). Turns your own overheating into *theirs*. **Downside:** only works while you run hot (sitting near your own misfire threshold), and you must be in melee (fragile light). | `Run hot and dump your heat into them through the blade` | ✅ implemented (`superconductor` heat-transfer check) |
+| **Prototype** | Quenched Edge | The blade is wired to the Arc Gun's accumulators. While you're **over half your class's heat cap**: +2 STR, and **once per attack** (not per hit) **1 heat transfers from you to the target** (vent through the blade). Turns your own overheating into *theirs*. **Downside:** only works while you run hot (sitting near your own misfire threshold), and you must be in melee (fragile light). | `Run hot and dump your heat into them through the blade` | ✅ implemented (`superconductor` heat-transfer check) |
 
 ## Internal loop & cap
 
 The rig's whole kit is **heat as a weapon**:
-- Ion Burn chips their heat → Systems Overload / Ion Storm cook + jam them → **or** Superconductor Edge dumps *your* heat into them → the overheating, action-starved target → **Opportunist** sword finishes it.
-- **Cap:** Ion Storm (burst EMP, self-heat cost) *or* Superconductor Edge (sustained heat-transfer duelist), both Prototype, pick one.
+- Galvanic Burn chips their heat → Boiler Surge / Galvanic Storm cook + jam them → **or** Quenched Edge dumps *your* heat into them → the overheating, action-starved target → **Opportunist** sword finishes it.
+- **Cap:** Galvanic Storm (burst galvanic surge, self-heat cost) *or* Quenched Edge (sustained heat-transfer duelist), both Prototype, pick one.
 - **Caveat:** heat warfare is dead vs Tanks / Walkers (no heat); the rig falls back on raw Arc STR 10 + a precise sword.
 
 ## Decided values (all tunable)
 
 - Opportunist: **+3 STR** vs a target overheated or carrying an action penalty into its next activation.
-- Ion Storm: system lockout (no Prepare / no actives / −1 action) + **2-heat spike** on the target; **self-cost +3 heat and the Arc Gun's next fire attempt is refused** (which clears the overload).
-- Superconductor Edge: gated at **over half heat cap**; **+2 STR**, **transfer 1 heat once per attack** (not per hit) from attacker to target.
+- Galvanic Storm: system lockout (no Prepare / no actives / −1 action) + **2-heat spike** on the target; **self-cost +3 heat and the Arc Gun's next fire attempt is refused** (which clears the overload).
+- Quenched Edge: gated at **over half heat cap**; **+2 STR**, **transfer 1 heat once per attack** (not per hit) from attacker to target.
 
 ## As built
 

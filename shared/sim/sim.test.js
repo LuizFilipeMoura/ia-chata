@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { playMatch, mulberry32 } from "./match.js";
-import { randomGenome, evolve, summarise, wilson, compKey, WEIGHT_KEYS, BIAS_KEYS } from "./genetic.js";
+import { randomGenome, evolve, summarise, wilson, compKey, WEIGHT_KEYS, BIAS_KEYS, DEPLOY_KEYS } from "./genetic.js";
 import { CHASSIS, WEAPON_UPGRADES } from "../game-state.js";
 import { EQUIPMENT_UPGRADES } from "../rules.js";
 
@@ -36,7 +36,7 @@ test("random genomes honour composition, distinct chassis and one-Prototype", ()
         nat(EQUIPMENT_UPGRADES[u.equipment], u.equipmentUpgrade)].filter((n) => n === "prototype").length;
       assert.ok(protos <= 1);
     }
-    assert.deepEqual(Object.keys(g.weights), [...WEIGHT_KEYS, ...BIAS_KEYS]);
+    assert.deepEqual(Object.keys(g.weights), [...WEIGHT_KEYS, ...BIAS_KEYS, ...DEPLOY_KEYS]);
   }
 });
 

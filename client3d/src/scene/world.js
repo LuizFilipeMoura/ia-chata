@@ -6,9 +6,11 @@
 import * as THREE from "three";
 import { FX } from "./fx.js";
 import { Post } from "./post.js";
+import "./matte.js";
 import { fuelDepot, refineryTower } from "./objectives.js";
 import { settings } from "../settings.js";
-import { themeFor, dressRandom, layoutHash, dressPick } from "./themes.js";
+import { themeFor, dressRandom, layoutHash, dressPick, weatherFor } from "./themes.js";
+import { buildWeather } from "./weather.js";
 import { buildingProp, barricadeProp, crateProp, rubbleProp, backdrop } from "./props.js";
 import { sceneryProp } from "./scenery.js";
 
@@ -155,7 +157,9 @@ function skyDome() {
 export class World {
   constructor(container) {
     this.container = container;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Ask for the discrete GPU: on a laptop the default lands on the iGPU,
+    // which pegs at 100% on this scene and the frame queue turns into input lag.
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -173,8 +177,7 @@ export class World {
     this.fx = new FX(this.scene, this.camera);
     this.post = new Post(this.renderer, this.scene, this.camera);
 
-    // High contrast: a weak fill keeps the shade dark, a hard bright key makes
-    // the lit faces pop. Raise the fill and the whole table goes muddy again.
+    // Initial lights; applyTheme supplies each palette's approved balance.
     const hemi = new THREE.HemisphereLight(0xd8b88a, 0x140d06, 0.5); this.scene.add(hemi); this.hemi = hemi;
     this.sun = new THREE.DirectionalLight(0xffe0b0, 8);
     this.sun.position.set(-30, 60, -20); this.sun.castShadow = true;
@@ -398,7 +401,7 @@ export class World {
   }
 
   // ---- Battlefield ----
-  // Sky, fog, light colours and searchlights for a theme (themes.js).
+  // Sky, fog and light colours for a theme (themes.js).
   applyTheme(theme, w, h) {
     this.theme = theme;
     this.scene.background = new THREE.Color(theme.bg);
@@ -407,7 +410,16 @@ export class World {
     this.sun.color.setHex(theme.sun.color); this.sun.intensity = theme.sun.i;
     this.sky.material.map?.dispose(); this.sky.material.map = skyTexture(theme.sky); this.sky.material.needsUpdate = true;
     this.sky.position.set(w / 2, -40, h / 2);
+    this.post.setGrade(theme.grade);
+    this.renderer.toneMappingExposure = theme.lighting.exposure;
+    this.sun.shadow.radius = theme.lighting.shadowRadius;
+    this.sun.shadow.intensity = theme.lighting.shadowIntensity;
+    this.post.bloom.strength = theme.lighting.bloom;
   }
+
+  // Propaganda posters on the facades take sides: the trailing side's get
+  // daubed over (facades.js). `vps` = [side a, side b].
+  setMorale(vps) { this.dressCtx?.setMorale?.(vps); }
 
   buildField(field, objectives = []) {
     this.tableGroup.clear();
@@ -459,7 +471,8 @@ export class World {
     this.cam.target.set(w / 2, 0, h / 2);
     this.sun.target.position.set(w / 2, 0, h / 2);
     // Fit the shadow camera to this table: every texel lands on the board.
-    this.sun.position.set(w / 2 - 30, 60, h / 2 - 20);
+    const [sx, sy, sz] = theme.sunAt || [-30, 60, -20];
+    this.sun.position.set(w / 2 + sx, sy, h / 2 + sz);
     const sc = this.sun.shadow.camera, half = Math.hypot(w, h) / 2 + 8;
     sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half; sc.updateProjectionMatrix();
 
@@ -468,11 +481,15 @@ export class World {
     // Beyond the camera's reach (it zooms out to 110"), so nothing ever blocks the table.
     const centre = new THREE.Vector3(w / 2, 0, h / 2), R = Math.max(125, Math.hypot(w, h) / 2 + 90);
     theme.backdrop.forEach((kind, i) => this.tableGroup.add(backdrop(kind, i, centre, R, ctx)));
+    // Rain or clear, from the dressing seed (or the settings override).
+    this.weatherKind = weatherFor(theme, seed, settings.get("weather"));
+    const weather = buildWeather(this.weatherKind, field, ctx, this.scene.fog);
+    if (weather) this.tableGroup.add(weather);
 
     // Deployment zones, tinted quarter-discs in each deployment corner.
     if (field.deployCorners) {
       field.deployCorners.forEach((c, i) => {
-        const m = new THREE.Mesh(new THREE.CircleGeometry(field.deployRadius || 8, 40), new THREE.MeshBasicMaterial({ color: i ? 0xe0533d : 0x5fd3c0, transparent: true, opacity: 0.07, depthWrite: false }));
+        const m = new THREE.Mesh(new THREE.CircleGeometry(field.deployRadius || 8, 40), new THREE.MeshBasicMaterial({ color: i ? 0x9e2b25 : 0xd9a441, transparent: true, opacity: 0.07, depthWrite: false }));
         m.rotation.x = -Math.PI / 2; m.position.set(c.x, 0.02, c.y); this.tableGroup.add(m);
       });
     }
@@ -532,7 +549,7 @@ export class World {
   }
 
   // Last Stand relay: a lattice radio mast with a turning dish and a blinking
-  // cyan lamp, the thing the attackers come for.
+  // ivory lamp, the thing the attackers come for.
   relayMast(group) {
     const steel = new THREE.MeshStandardMaterial({ color: 0x4a4640, metalness: 0.8, roughness: 0.35 });
     const H = 4.6;
@@ -543,14 +560,14 @@ export class World {
     }
     for (let y = 0.6; y < H; y += 0.8) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4 - y * 0.03, 0.035, 4, 12), steel); r.rotation.x = Math.PI / 2; r.position.y = y; group.add(r); }
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.05, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x2a2622, metalness: 0.6 })); base.position.y = 0.15; base.receiveShadow = base.castShadow = true; group.add(base);
-    const pylonMat = new THREE.MeshStandardMaterial({ color: 0x103030, emissive: 0x5fd3c0, emissiveIntensity: 1.6, metalness: 0.4 });
+    const pylonMat = new THREE.MeshStandardMaterial({ color: 0x103030, emissive: 0xe8d8a0, emissiveIntensity: 1.6, metalness: 0.4 });
     const dish = new THREE.Group(); dish.position.y = H * 0.72; group.add(dish);
     const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.9, roughness: 0.3, side: THREE.DoubleSide }));
     bowl.rotation.z = Math.PI / 2; bowl.position.x = 0.35; dish.add(bowl);
     const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6, 5), steel); horn.rotation.z = Math.PI / 2; horn.position.x = 0.1; dish.add(horn);
     const gem = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), pylonMat); gem.position.y = H + 0.2; group.add(gem);
     const halo = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.05, 6, 24), pylonMat); halo.rotation.x = Math.PI / 2; halo.position.y = H + 0.2; group.add(halo);
-    const light = new THREE.PointLight(0x5fd3c0, 7, 10); light.position.y = H; group.add(light);
+    const light = new THREE.PointLight(0xe8d8a0, 7, 10); light.position.y = H; group.add(light);
     return { pylonMat, gem, light, dish, halo };
   }
 
@@ -639,29 +656,25 @@ export class World {
     };
   }
 
-  // Two searchlights on gantries at the empty corners, sweeping the table.
+  // Two searchlight gantries at the empty corners. Decoration only: their
+  // sweeping spot lights painted a white disc across the table that bloom
+  // blew into a glare, so the lamps no longer cast.
   buildSearchlights(w, h) {
-    for (const s of this.searchlights || []) { this.scene.remove(s); this.scene.remove(s.target); }
-    this.searchlights = [];
     for (const [x, z] of [[-4, -4], [w + 4, h + 4]]) {
-      const sl = new THREE.SpotLight(this.theme?.search ?? 0xfff0c8, 60, 90, 0.16, 0.5, 1.2);
-      sl.position.set(x, 26, z);
-      this.scene.add(sl); this.scene.add(sl.target);
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 26, 8), new THREE.MeshStandardMaterial({ color: 0x2a241c, metalness: 0.7 }));
       pole.position.set(x, 13, z); this.tableGroup.add(pole);
       const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.6, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0xc9a14a, emissive: 0xfff0c8, emissiveIntensity: 0.6, metalness: 0.8 }));
       lamp.position.set(x, 26, z); this.tableGroup.add(lamp);
-      this.searchlights.push(sl);
     }
   }
 
   // Tint and light each objective from beaconStates(): holder colour on a lit
   // or next beacon, dark beacons dimmed with the lamp nearly off, Next pulsing.
   setObjectiveControl(list) {
-    const col = { a: 0x5fd3c0, b: 0xe0533d, contested: 0xffffff };
+    const col = { a: 0xd9a441, b: 0x9e2b25, contested: 0xffffff };
     this.objectiveMeshes.forEach((m, i) => {
       const s = list[i] || { state: "classic", holder: null };
-      const c = col[s.holder] ?? (m.kind === "relay" ? 0x5fd3c0 : 0xffd35a);
+      const c = col[s.holder] ?? (m.kind === "relay" ? 0xe8d8a0 : 0xffd35a);
       m.ringMat.color.setHex(c); m.pylonMat.emissive.setHex(c); m.light.color.setHex(c);
       m.state = s.state;
     });
@@ -721,7 +734,7 @@ export class World {
   }
 
   clearOverlay() { this.overlay.clear(); }
-  ring(x, y, r, color = 0x5fd3c0, opacity = 0.5) {
+  ring(x, y, r, color = 0xd9a441, opacity = 0.5) {
     const m = new THREE.Mesh(new THREE.RingGeometry(r - 0.08, r + 0.08, 96), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.06, y); this.overlay.add(m); return m;
   }
@@ -768,9 +781,21 @@ export class World {
     const m = new THREE.Mesh(new THREE.CircleGeometry(r, 64), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, y); this.overlay.add(m); return m;
   }
-  // A wedge (front arc), angles in engine degrees.
-  wedge(x, y, r, fromDeg, toDeg, color, opacity = 0.12) {
-    const m = new THREE.Mesh(new THREE.CircleGeometry(r, 48, fromDeg * DEG, (toDeg - fromDeg) * DEG), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }));
+  // A wedge (front arc), angles in engine degrees. `hole` ({ x, y, r }, table
+  // inches) cuts a disc out of it, so it never tints what's drawn there.
+  wedge(x, y, r, fromDeg, toDeg, color, opacity = 0.12, hole = null) {
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
+    if (hole) {
+      mat.customProgramCacheKey = () => "wedge-hole";
+      mat.onBeforeCompile = (sh) => {
+        sh.uniforms.uHole = { value: new THREE.Vector3(hole.x, hole.y, hole.r) };
+        sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vTableP;")
+          .replace("#include <project_vertex>", "#include <project_vertex>\nvTableP = (modelMatrix * vec4(transformed, 1.0)).xz;");
+        sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vTableP;\nuniform vec3 uHole;")
+          .replace("void main() {", "void main() {\n  if (distance(vTableP, uHole.xy) < uHole.z) discard;");
+      };
+    }
+    const m = new THREE.Mesh(new THREE.CircleGeometry(r, 48, fromDeg * DEG, (toDeg - fromDeg) * DEG), mat);
     m.rotation.x = Math.PI / 2; m.position.set(x, 0.05, y); this.overlay.add(m); return m;
   }
   path(points, color = 0x33ff99) {
@@ -868,7 +893,7 @@ export class World {
       if (Math.random() < dt * 2.5) this.fx.particle(m.gem.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, -0.6, (Math.random() - 0.5) * 0.8)), { tile: "ember", color: m.light.color.getHex(), glow: 2.2, size: 0.1, life: 2, vel: new THREE.Vector3(0, 0.9, 0), turb: 1.2 });
       if (m.dish) { m.dish.rotation.y += dt * 0.8; m.halo.scale.setScalar(1 + 0.25 * Math.sin(now * 4)); m.pylonMat.emissiveIntensity = 1.1 + 0.9 * Math.max(0, Math.sin(now * 5)); }
       if (m.body) m.pylonMat.emissiveIntensity = 1.1 + 0.6 * Math.sin(now * 3 + i);
-      m.anim?.(dt, now);
+      m.anim?.(dt, now, m);
       if (!m.pulse && m.state && m.state !== "classic") {
         const base = 6 + ((m.mult || 1) - 1) * 5;
         m.light.intensity = m.state === "lit" ? base : m.state === "next" ? base * (0.35 + 0.3 * Math.sin(now * 4)) : base * 0.08;
@@ -898,7 +923,7 @@ export class World {
       if (k >= 1) { this.tableGroup.remove(p.m.group); return false; }
       return true;
     });
-    // Chimney smoke and sweeping searchlights.
+    // Chimney smoke.
     for (const c of this.chimneys || []) {
       if (Math.random() < dt * (c.big ? 3 : 5)) {
         const p = c.getWorldPosition(new THREE.Vector3());
@@ -922,13 +947,9 @@ export class World {
       return true;
     });
     this.ambient(dt);
-    const t = this.clock.elapsedTime;
-    (this.searchlights || []).forEach((sl, i) => {
-      const a = t * 0.25 + i * 2.3;
-      sl.target.position.set(this.field.width / 2 + Math.cos(a) * this.field.width * 0.4, 0, this.field.height / 2 + Math.sin(a * 1.3) * this.field.height * 0.4);
-    });
     this.fx.update(dt);
     for (const t of this.tickers) t(dt);
-    if (settings.get("bloom")) this.post.render(dt); else this.renderer.render(this.scene, this.camera);
+    const bloom = !!settings.get("bloom"), grade = settings.get("grade") !== false;
+    if (bloom || grade) this.post.render(dt, { bloom, grade }); else this.renderer.render(this.scene, this.camera);
   }
 }

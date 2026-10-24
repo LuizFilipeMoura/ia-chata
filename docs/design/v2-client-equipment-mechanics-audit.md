@@ -96,7 +96,7 @@ Work required:
 
 ### G2, Grapnel Launcher reel mode is unreachable (Blocker)
 
-A grapnel rig still shows the plain **"Jump Jets"** button (its active key is
+A grapnel rig still shows the plain **"Blast Pistons"** button (its active key is
 `jumpjets`, pushed by `battle-view.js:71-74`). `jumpjets` is not special-cased in
 `onAction`, so it hits the fall-through and always sends `{ name, action:
 "jumpjets" }` with no `mode`/`engage`. The engine (`game-state.js:2357-2389`)
@@ -122,9 +122,9 @@ No client code reads `equipState` or `reactorOverdriveActive` (confirmed zero
 hits). Players cannot see any of: `ablativeCharges` (0-2), `interceptors` (0-2),
 `cryo` (0-3), `meltdownCharge` (0-6), `solution.count` (0-3, + `targetId`),
 `naniteStacks` (`[{loc,sp}]`), `grapnelCooldown` (rounds), `reactiveArmorLocs`,
-`firedRangedThisRound`/`pdLocked` (Point-Defense lockout), the transient
+`firedRangedThisRound`/`pdLocked` (Flak Cage lockout), the transient
 `nextAttackStr`, and `reactorOverdriveActive`. Several of these are decision-
-critical (you can't sensibly spend cryo/meltdown, or rely on Point-Defense, blind).
+critical (you can't sensibly spend cryo/meltdown, or rely on Flak Cage, blind).
 
 Precedent to follow: `rigModifiers(rig)` in `shared/battle-view.js:147-202`
 returns `{ key, tag, tone, gloss }` status chips from ~30 plain rig fields and is
@@ -163,7 +163,7 @@ not required for this work.
 The V2 roll console is **generic over `kind`**: it never whitelists or drops
 unknown kinds, and renders both `summary` and the full `effects[]` array
 (`client/src/v2/overlays/RollConsole.tsx:128-233`, effects at `:420-435`; consumer
-`client/src/v2/hooks/useV2BattleWatchers.tsx:116-139`). So Chaff Burst (`perk`),
+`client/src/v2/hooks/useV2BattleWatchers.tsx:116-139`). So Tinsel Burst (`perk`),
 Grapnel/Meltdown (`equipment`), and Backdraft's appended `effects[]` line all
 render as-is. No work needed for basic visibility. Two real caveats worth a check:
 
@@ -205,14 +205,14 @@ Drive the running app (V2), not just unit tests, this is UI. For each:
   renders in the roll console.
 - Grapnel: confirm both Yank and Reel are selectable and Reel engages the named
   enemy; confirm the cooldown disables/relabels the button.
-- Point-Defense / Fire Solution / Nanite / Meltdown / Cryo / Ablative: confirm the
+- Flak Cage / Fire Solution / Nanite / Meltdown / Cryo / Ablative: confirm the
   counter is visible and changes across activations and Recovery.
 - Confirm no regression to the 8 existing actives' buttons.
 
 ## Out of scope (tracked elsewhere)
 
-- Two engine design decisions (Reactive Armor vs forced-severity; Reactor Overdrive
+- Two engine design decisions (Reactive Armor vs forced-severity; Open the Throttle
   overheat-cap breach), see the rollout memory / spec.
-- Cross-mechanic interaction bugs (e.g. Point-Defense rerolling a nominally
+- Cross-mechanic interaction bugs (e.g. Flak Cage rerolling a nominally
   unmissable Fire-Solution/Fire-Control volley), separate integration-test effort.
 - Kickstart Pistons Jump-into-contact follow-up (engine).

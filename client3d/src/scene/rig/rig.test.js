@@ -115,3 +115,42 @@ test("walkers and drones in every skin keep the contract and fit their envelope"
     for (const s of SOCKETS) assert.ok(m.sockets[s], `${m.kind} socket ${s}`);
   }
 });
+
+import { CLUTTER_PIECES } from "./wear.js";
+
+test("every clutter piece, grime at full and the lamp eyes stay inside every envelope", () => {
+  const units = [
+    ...CHASSIS.map((c) => (extra) => rig(c, extra)),
+    ...walkers.map((t) => (extra) => new Mech({ id: `w-${t.id}`, name: t.name, owner: "b", kind: "walker", weightClass: "walker", unit: t.unit, modules: t.modules, template: t.id, radius: BASE_RADIUS.walker, ...extra })),
+  ];
+  for (const make of units) for (const piece of CLUTTER_PIECES) {
+    const m = make({ skin: "refit", clutter: [piece] });
+    m.setWear({ hull: [0, 10], arms: [0, 10], legs: [0, 10], engine: [0, 10] });
+    const f = fits(m);
+    assert.ok(f.ok, `${m.name} + ${piece} height ${f.height.toFixed(3)}/${f.limit.height} radius ${f.radius.toFixed(3)}/${f.limit.radius}`);
+  }
+});
+
+test("grime builds with damage and a repair trims it back", () => {
+  const m = rig(CHASSIS[0]);
+  const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+  const count = () => { let n = 0; m.body.traverse((o) => { if (o.userData.part === "grime" && shown(o)) n++; }); return n; };
+  assert.equal(count(), 0);
+  m.setWear({ hull: [6, 10], arms: [10, 10], legs: [10, 10], engine: [10, 10] });
+  const some = count();
+  m.setWear({ hull: [1, 10], arms: [3, 10], legs: [2, 10], engine: [0, 10] });
+  assert.ok(count() > some && some > 0);
+  m.setWear({ hull: [10, 10], arms: [10, 10], legs: [10, 10], engine: [10, 10] });
+  assert.equal(count(), 0);
+});
+
+test("lamp eyes follow state: amber idle, red engaged, green stalled", () => {
+  const m = rig(CHASSIS[0]);
+  m.update(0.016); assert.equal(m.lamp, "amber");
+  m.setStatus({ engaged: true }); m.update(0.016); assert.equal(m.lamp, "red");
+  m.setStatus({ stalled: true }); m.update(0.016); assert.equal(m.lamp, "green");
+});
+
+test("every Clockwork carries a wind-up key", () => {
+  for (const d of Object.values(DRONE_TYPES)) assert.ok(drone(d, "factory").windKey, d.id);
+});

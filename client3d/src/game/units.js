@@ -24,10 +24,10 @@ export function rangedProfile(r) {
 }
 export const rangedLoaded = (r) => (r?.weapons?.unit != null ? r.loaded?.unit !== false : r?.loaded?.longRange !== false);
 
-// "Medic Walker", "Sapper Drone", or the chassis label.
+// "Medic Walker", "Sapper Clockwork", "Spotter Kite", or the chassis label.
 export function unitLabel(r) {
   const k = kindOf(r);
-  if (k === "drone") return `${DRONE_TYPES[r.drone]?.label || "Hunter"} Drone`;
+  if (k === "drone") return (DRONE_TYPES[r.drone] || DRONE_TYPES.hunter).name;
   if (k === "walker") return templateById(r.template)?.name || "Support Walker";
   return CHASSIS.find((c) => c.id === r.chassis)?.label || "";
 }

@@ -1,5 +1,7 @@
 # Rig design, `light-saw-minigun`
 
+**3D appearance:** [Tyrian remodeling record and full-roster rollout guide](rig-remodeling-guide.md) documents the truck-walker body, detailed inspection model, materials, skins, diesel motion, performance measurements, and remaining integration work.
+
 **Weapons:** Mini Gun (long-range) · Circular Saw (melee) · **Class:** light
 **Focus:** attrition grinder, doesn't burst-kill; it permanently wears rigs down until they're crippled husks. The Mini Gun grinds **tempo** (suppress → pin); the Circular Saw grinds **durability** (Sunder → permanent max-SP loss that never heals). Weak in a quick trade, brutal over a full 10-round match.
 
@@ -16,7 +18,7 @@ Relevant weapon stats (from `shared/game-state.js`):
 |---|---|---|---|---|
 | **Field** | Suppressive Fire | Gains Shock, every hit halves the target's speed next round. Reliable, always-on suppression. | `Gains Shock (speed halved)` | ✅ coded (Shock) |
 | **Tuned** | Extended Belt | +2 ROF (8 → 10), but dice showing a 1 add heat. More dakka, managed hot. | `+2 ROF; 1s add heat` | ✅ coded (`rof`, `heatOnOnes`) |
-| **Prototype** | Suppression Lock | Each **consecutive** turn you fire the Mini Gun at the **same target**, add a Suppression stack (tracked, caps at 3): **1** = speed halved next round; **2** = also −1 action next activation; **3** = also pins the target in place (can't Move, Sprint, or Jump Jets) and blocks its next Prepare entirely. This is a **scoped, self-clearing pin** (`suppressImmobile`), it clears every Recovery and must be re-applied by continued fire, *not* the permanent leg-destruction immobilise. Switching targets resets the count to 1. **Downside:** sustained fire runs hot (**+1 heat every attack** while locked) and you can't spread fire, all-in on one victim. | `Grind one target down turn by turn until it's pinned and can't act` | ✅ implemented (per-target `suppressStacks` ramp) |
+| **Prototype** | Suppression Lock | Each **consecutive** turn you fire the Mini Gun at the **same target**, add a Suppression stack (tracked, caps at 3): **1** = speed halved next round; **2** = also −1 action next activation; **3** = also pins the target in place (can't Move, Sprint, or Blast Pistons) and blocks its next Prepare entirely. This is a **scoped, self-clearing pin** (`suppressImmobile`), it clears every Recovery and must be re-applied by continued fire, *not* the permanent leg-destruction immobilise. Switching targets resets the count to 1. **Downside:** sustained fire runs hot (**+1 heat every attack** while locked) and you can't spread fire, all-in on one victim. | `Grind one target down turn by turn until it's pinned and can't act` | ✅ implemented (per-target `suppressStacks` ramp) |
 
 ## Circular Saw (melee), ROF 3, STR 6
 

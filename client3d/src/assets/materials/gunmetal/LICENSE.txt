@@ -1,0 +1,12 @@
+Source: ambientCG / Metal009
+Asset: https://ambientcg.com/a/Metal009
+License: Creative Commons CC0 1.0 Universal
+License documentation: https://docs.ambientcg.com/license/
+Download: https://ambientcg.com/get?file=Metal009_1K-JPG.zip
+Downloaded 2026-10-20. Original 1024px JPG files, unmodified.
+NormalGL is OpenGL tangent-space. Roughness and Metalness are linear grayscale.
+Color is sRGB. Material tint and anti-glare adjustments happen in the shader.
+Color.jpg SHA256 E066E240AD0EAAB6A73FB0F40FA7CAA94365160770331BABC91DE2E8CE6A986F
+Metalness.jpg SHA256 843102638FA0A5BF897888868877EFAB8CCDC4CB84A48E57BDB52BFB30F5E714
+NormalGL.jpg SHA256 45C7C88685E6B44DA7E8D25E2CF6D8645D42209793CCC4354E68C16CDAE15D62
+Roughness.jpg SHA256 6D06DFE8C240D3B6F33030740110284245BD8AEFB2E10E8EB0C563444D9C0C5B

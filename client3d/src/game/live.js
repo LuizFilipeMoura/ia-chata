@@ -13,10 +13,10 @@ import { scoreCandidate, scoreParts, PRESETS, threatsAt } from "/shared/bot/scor
 import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
 import { findPath, buildGrid, isStopBlocked, walkPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
-import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach } from "/shared/game-state.js";
+import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach, deployZone, deploySpotLegal } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { markerName } from "/shared/field.js";
-import { beaconStates } from "../scene/beacon-state.js";
+import { beaconStates, beaconTag } from "../scene/beacon-state.js";
 import { el, clear, fill, toast, modal } from "../ui/dom.js";
 import { Minimap } from "../ui/minimap.js";
 import { reactionCard, rigPortrait } from "../ui/reactions.js";
@@ -24,7 +24,10 @@ import { openInspector } from "../ui/inspector.js";
 import { setRigSource } from "../ui/combatlog.js";
 import { icon } from "../ui/icons.js";
 import { attackBriefing } from "../ui/attack.js";
+import { boilerGauge } from "../ui/gauge.js";
+import { engineStart } from "../ui/ignition.js";
 import { sfx, ambience } from "../audio.js";
+import { music } from "../music.js";
 import { settings } from "../settings.js";
 import { Nameplates } from "../ui/nameplates.js";
 import { Wires } from "../ui/tips.js";
@@ -35,7 +38,7 @@ import { inSweetBand } from "/shared/combat.js";
 import { weaponName, rangedProfile, rangedLoaded, kitLine, partsOf, isRig } from "./units.js";
 
 const DEG = Math.PI / 180;
-const ICON = { move: "move", sprint: "sprint", fire: "fire", aimed: "aimed", prepare: "prepare", repair: "repair", shutdown: "shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract", plantflag: "beacon" };
+const ICON = { move: "move", sprint: "flag-sprint", fire: "fire", aimed: "aimed", prepare: "flag-brace", repair: "flag-repair", shutdown: "flag-shutdown", disengage: "disengage", douse: "douse", reload: "reload", lock: "lock", emplace: "anchor", unplant: "anchor", barrage: "barrage", harden: "harden", purge: "purge", jumpjets: "jumpjets", overclock: "overclock", emergencypatch: "patch", heatpurgewave: "wave", locksight: "aimed", popsmoke: "smoke", cryo: "cryo", meltdown: "meltdown", nanite: "nanite", "grapnel-yank": "yank", "grapnel-reel": "reel", fieldweld: "fieldweld", vent: "vent", paint: "paint", extract: "extract", plantflag: "flag-plant" };
 const AIM_BLUE = 0x5aa8ff;
 const HELP = {
   move: "Walk up to Speed. 1 heat. You may pivot up to 90°.",
@@ -49,7 +52,7 @@ const HELP = {
   extract: "Breakthrough: leave the table through the exit zone at the enemy corner. 1 action, no heat. The rig isn't wrecked and keeps its SP; it can't come back this battle.",
   douse: "Put out the flames: clears Burning.",
   reload: "Reload the long-range gun. No action, but a D6 heat gamble: 1-3 → +2 heat, 4-6 → +1.",
-  lock: "Fire Control Lock: paint an enemy. Your next Missile Barrage volley at it auto-hits, Armour Piercing.",
+  lock: "Plotting-Table Lock: paint an enemy. Your next Missile Barrage volley at it auto-hits, Armour Piercing.",
   barrage: "Mortar Barrage: shell a zone for 2 rounds. While it runs the tube can't fire direct (you fall back to melee).",
   emplace: "Plant the Bulwark: a rooted fortress stance with the shield raised. No moving until you Un-plant.",
   unplant: "Pull up the Bulwark emplacement so the rig can move again. +2 heat.",
@@ -60,33 +63,14 @@ const HELP = {
   heatpurgewave: "Vent down to Heat Capacity and scald every enemy within 3\" (rim): +2 heat and a Penetration 4 hit each.",
   "grapnel-yank": `Hop up to ${GRAPNEL_YANK_RANGE}" in a straight line, over terrain, tearing free of any melee lock. Works while engaged. Then 3 rounds to recharge.`,
   "grapnel-reel": `Hook an enemy within ${GRAPNEL_REEL_RANGE}" (rim; line of sight, front arc) and drag it into base contact, engaged. Then 3 rounds to recharge.`,
-  cryo: "Spend banked cryo. Free, no action: −2 heat each, and +1 Penetration each on your next attack.",
-  meltdown: "Spend meltdown charge. Free, no action: +N Penetration on your attacks this activation, or a burst of +N heat on every enemy within 4\" (rim).",
-  nanite: `Seed a nanite stack on yourself or an ally within ${NANITE_REACH}" (rim). It heals 1 SP on one location each Recovery (max 3 per location). Heat Capacity −1 on the host while it lives.`,
+  cryo: "Spend banked ice-brine. Free, no action: −2 heat each, and +1 Penetration each on your next attack.",
+  meltdown: "Spend scuttle charge. Free, no action: +N Penetration on your attacks this activation, or a burst of +N heat on every enemy within 4\" (rim).",
+  nanite: `Send a grease-monkey crew to yourself or an ally within ${NANITE_REACH}" (rim). It mends 1 SP on one location each Recovery (max 3 per location). Heat Capacity −1 on the host while it works.`,
   plantflag: `Stake the lit beacon, or the Next one, from within 2". 1 action, no heat. The flag holds until this rig is moved; at round end the lit beacon pays its VP to your side if no enemy is within 2".`,
 };
 // Every action's own rules text: the table above, else the equipment active's.
 const EQUIP_TEXT = Object.fromEntries(Object.values(EQUIPMENT).map((e) => [e.active.key, e.active.text]));
 const helpFor = (key) => HELP[key] || EQUIP_TEXT[key] || "";
-
-// Brass pressure dial: needle at current heat, red sector past capacity.
-function heatGauge(heat, cap) {
-  const max = cap + 6;
-  const ang = (v) => Math.PI * (1 - Math.min(max, v) / max);
-  const pt = (v, r) => [40 + Math.cos(ang(v)) * r, 40 - Math.sin(ang(v)) * r];
-  const arc = (a, b, r) => { const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r); return `M${x1},${y1} A${r},${r} 0 0 1 ${x2},${y2}`; };
-  const [nx, ny] = pt(heat, 30);
-  const ticks = Array.from({ length: max + 1 }, (_, i) => { const [a1, b1] = pt(i, 34), [a2, b2] = pt(i, 38); return `<line x1="${a1}" y1="${b1}" x2="${a2}" y2="${b2}" stroke="#c9a14a" stroke-width="1.2"/>`; }).join("");
-  const wrap = el("div", { class: "gauge", title: `Heat ${heat} / capacity ${cap}` });
-  wrap.innerHTML = `<svg viewBox="0 0 80 44">
-    <path d="${arc(0, max, 36)}" stroke="#2a241a" stroke-width="8" fill="none"/>
-    <path d="${arc(0, cap, 36)}" stroke="#7a8a4a" stroke-width="5" fill="none"/>
-    <path d="${arc(cap, max, 36)}" stroke="#c8412f" stroke-width="5" fill="none"/>
-    ${ticks}
-    <line x1="40" y1="40" x2="${nx}" y2="${ny}" stroke="#f0cf7a" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="40" cy="40" r="4" fill="#c9a14a" stroke="#3a2a10"/></svg>`;
-  return wrap;
-}
 
 // Tooltip line: what ending after this action would risk.
 function oddsLine(rig, extra) {
@@ -136,7 +120,10 @@ export class LiveMatch {
     world.onDragStart = (h) => this.dragStart(h);
     world.onDrag = (h) => this.onHover(h);
     world.onDragEnd = (h, moved) => this.dragEnd(h, moved);
-    world.onDragCancel = () => { if (this.mode?.locked) this.backOut(); };
+    world.onDragCancel = () => {
+      if (this.deployDrag) { const r = this.deployDrag.rig; this.deployDrag = null; this.cursorTag(null); this.director.mechs.get(r.id)?.setPose(r.pos, r.facing); }
+      if (this.mode?.locked) this.backOut();
+    };
     world.onShiftWheel = (dy) => { const used = this.wheelTurn(dy); if (used && world.pointerWorld) this.onHover(world.pick()); return used; };
     this.keyHandler = (e) => this.onKey(e);
     window.addEventListener("keydown", this.keyHandler);
@@ -153,7 +140,8 @@ export class LiveMatch {
     const joined = await api.join(this.room, this.side);
     this.apply(joined.state, true);
     this.disconnect = connect(this.room, this.side, (s) => this.apply(s));
-    ambience.start();
+    ambience.start(this.world.theme?.ambience || this.world.theme?.id);
+    music.play("battle");
   }
 
   destroy() {
@@ -167,6 +155,7 @@ export class LiveMatch {
     this.plates.destroy();
     this.wires?.destroy();
     ambience.stop();
+    music.play("menu");
     this.world.clearOverlay();
     this.world.setThreat(null);
     this.world.onShiftWheel = null;
@@ -271,6 +260,7 @@ export class LiveMatch {
       // Fresh battle (round 1, nothing logged beyond setup): drop the squads in
       // from orbit. Rejoining a game in progress just snaps.
       const fresh = state.game.round <= 1 && !(state.game.resolutions || []).some((r) => r.kind === "attack" || r.kind === "move");
+      if (fresh && !this.tutorial) engineStart();
       if (fresh && state.rigs.some((r) => r.pos)) {
         this.hud.banner("RAIL DROP · SQUADRONS INBOUND", "round");
         this.director.busy++;
@@ -325,12 +315,13 @@ export class LiveMatch {
   hotseatSwap() {
     const g = this.game;
     if (!this.hotseat || !g || g.phase === "finished" || this.curtain) return false;
-    const want = g.pendingAnswer?.side || g.pendingReaction?.defender || (g.phase === "activation" ? g.turn?.side : null);
+    const want = g.pendingAnswer?.side || g.pendingReaction?.defender || (g.phase === "activation" ? g.turn?.side : null)
+      || (g.phase === "deploy" ? g.sides.find((s) => !g.deploy?.done?.[s.id])?.id : null);
     if (!want || want === this.side) return false;
     this.curtain = el("div", { class: "curtain" },
       el("div", { class: "curtain-box" },
         el("div", { class: "curtain-k" }, "Pass the device"),
-        el("h2", { class: want === "a" ? "c-a" : "c-b" }, want === "a" ? "Cyan commander" : "Red commander"),
+        el("h2", { class: want === "a" ? "c-a" : "c-b" }, want === "a" ? "Amber commander" : "Red commander"),
         el("p", {}, "Your opponent looks away. Press when you're ready."),
         el("button", { class: "btn big primary", onClick: async () => {
           this.side = want; this.selected = null; this.hud.clog.side = want; this.director.side = want;
@@ -387,6 +378,7 @@ export class LiveMatch {
       if (this.lastMult != null && mult > this.lastMult) { this.hud.banner(`BEACONS NOW PAY ×${mult}`, "grit"); sfx.score(true); }
       this.lastMult = mult;
     }
+    this.refreshDeploy();
     this.hud.top(this.state, this.side);
     this.hud.mission(this.state, this.side);
     this.world.syncObjectives(g.objectives || []);
@@ -397,6 +389,7 @@ export class LiveMatch {
     this.hud.roster(this.state, this.side, this.selected, (id) => this.select(id));
     // Objective control tint.
     this.world.setObjectiveControl(beaconStates(g.objectives || [], g.beacons || null, this.state.rigs.map((r) => ({ ...r, radius: spatial(r).radius }))));
+    this.world.setMorale?.(g.sides?.map((s) => s.vp)); // posters on the walls get defaced for the side falling behind
     for (const m of this.director.mechs.values()) {
       const r = this.rig(m.id);
       const active = g.turn?.activeRigId === m.id;
@@ -409,6 +402,76 @@ export class LiveMatch {
     this.renderActions();
     this.handleGates();
     if (g.phase === "finished" || g.outcome) this.showOutcome();
+  }
+
+  // ---- Deploy phase (§10): arrange your squadron in your corner, confirm ----
+  get deploying() { const g = this.game; return g?.phase === "deploy" && !g.deploy?.done?.[this.side]; }
+  // Where a freshly placed rig looks: the telegraphed Next beacon, else the centre.
+  deployGoal() {
+    const g = this.game, m = g.beacons?.next != null ? g.objectives?.[g.beacons.next] : null;
+    return m ? { x: m.x, y: m.y } : { x: this.state.field.width / 2, y: this.state.field.height / 2 };
+  }
+  refreshDeploy() {
+    const g = this.game;
+    if (g.phase !== "deploy") {
+      if (this.zonesDrawn) { this.zonesDrawn = false; this.world.clearOverlay(); }
+      return;
+    }
+    if (!this.deployBanner) { this.deployBanner = true; setTimeout(() => this.hud.banner("DEPLOYMENT · PLACE YOUR RIGS", "round"), 2200); }
+    const mine = this.state.rigs.filter((r) => r.owner === this.side && !r.destroyed && r.pos);
+    if (this.deploying && !mine.some((r) => r.id === this.selected) && mine.length) this.selected = mine[0].id;
+    // Both staging zones: yours bright, theirs faint.
+    this.world.clearOverlay();
+    this.zonesDrawn = true;
+    for (const s of g.sides) {
+      const { corner, radius } = deployZone(this.state, s.id);
+      const mid = Math.atan2(this.state.field.height / 2 - corner.y, this.state.field.width / 2 - corner.x) / DEG;
+      const a = Math.round(mid / 90 - 0.5) * 90 + 45; // the quarter between the two table edges
+      const own = s.id === this.side, col = own ? 0x33ff99 : 0xff5544;
+      this.world.wedge(corner.x, corner.y, radius, a - 45, a + 45, col, own && this.deploying ? 0.14 : 0.06);
+    }
+  }
+  placeDeploy(rig, p, facing) {
+    const spot = { x: +p.x.toFixed(2), y: +p.y.toFixed(2) };
+    const back = () => this.director.mechs.get(rig.id)?.setPose(rig.pos, rig.facing);
+    if (!deploySpotLegal(this.state, rig, spot)) { back(); toast("Can't stand there: pick a clear spot inside your green zone.", "warn", 2200); return; }
+    const goal = this.deployGoal();
+    const f = facing ?? Math.atan2(goal.y - spot.y, goal.x - spot.x) / DEG;
+    this.send("deploy", { name: rig.name, x: spot.x, y: spot.y, facing: Math.round(f) }).then((ok) => { if (!ok) back(); });
+  }
+  deployTurn(rig, deg) { this.send("deploy", { name: rig.name, x: rig.pos.x, y: rig.pos.y, facing: Math.round((rig.facing ?? 0) + deg) }); }
+  async confirmDeploy() {
+    this.cursorTag(null);
+    if (await this.send("deployed", {})) { sfx.turn?.(true); toast("Deployed. Round 1 starts when the enemy is ready.", "good", 2200); }
+  }
+  renderDeploy(bar) {
+    if (!this.deploying) { bar.append(el("div", { class: "hint" }, "Deployed. Waiting for the enemy to finish deploying…")); return; }
+    const rig = this.rig(this.selected), own = rig?.owner === this.side && !rig.destroyed;
+    bar.append(el("div", { class: "act-foot" },
+      el("span", { class: "hint" }, own
+        ? `${rig.name}: click a spot in your green zone, or drag the rig there. Press on a spot and drag to set its facing.`
+        : "Deployment: pick one of your rigs, then click where it should stand inside your green zone."),
+      own ? el("button", { class: "btn ghost", title: "Rotate 45° one way", onClick: () => this.deployTurn(rig, 45) }, "⟲ 45°") : null,
+      own ? el("button", { class: "btn ghost", title: "Rotate 45° the other way", onClick: () => this.deployTurn(rig, -45) }, "⟳ 45°") : null,
+      el("button", { class: "btn primary", title: "Lock in your deployment (Enter)", onClick: () => this.confirmDeploy() }, "Confirm deployment ▸")));
+  }
+  deployHover(hit) {
+    const d = this.deployDrag;
+    if (!d || !hit.field) return;
+    const m = this.director.mechs.get(d.rig.id);
+    if (d.at) {
+      // Pressed on a spot: the rig stands there and turns toward the pointer.
+      const far = Math.hypot(hit.field.x - d.at.x, hit.field.y - d.at.y) > 0.6;
+      const f = far ? Math.atan2(hit.field.y - d.at.y, hit.field.x - d.at.x) / DEG : null;
+      if (far) d.facing = f;
+      m?.setPose(d.at, d.facing ?? d.rig.facing);
+      this.cursorTag(far ? "Release to face this way" : "Drag to set facing", "aim");
+    } else {
+      // Dragging the rig itself.
+      const ok = deploySpotLegal(this.state, d.rig, hit.field);
+      m?.setPose(hit.field, d.rig.facing);
+      this.cursorTag(ok ? "Release to place" : "Outside your zone / blocked", ok ? "dest" : "bad");
+    }
   }
 
   select(id) {
@@ -450,7 +513,8 @@ export class LiveMatch {
           el("button", { class: "btn", title: "Skip the animation (Space)", onClick: () => this.director.skip() }, "⏭ Skip"))));
       return;
     }
-    if (!rig) { bar.append(el("div", { class: "hint" }, this.myTurn ? "Select one of your rigs (cyan ring) to activate it." : "Waiting…")); return; }
+    if (this.game?.phase === "deploy") { this.renderDeploy(bar); return; }
+    if (!rig) { bar.append(el("div", { class: "hint" }, this.myTurn ? "Select one of your rigs (amber ring) to activate it." : "Waiting…")); return; }
     const g = this.game;
     const cap = HEAT_CAPACITY[rig.weightClass] ?? 6;
     const turn = this.previewRoom(rig).game.turn;
@@ -459,7 +523,7 @@ export class LiveMatch {
       ? [{ ...a, key: "grapnel-yank", label: "Grapnel Yank" }, { ...a, key: "grapnel-reel", label: "Grapnel Reel" }]
       : [a]);
     const extra = [];
-    // Prototype spends (Cryo, Meltdown) and Nanite Swarm ride beside the actives.
+    // Prototype spends (Cryo, Meltdown) and Grease Monkeys ride beside the actives.
     for (const sp of equipmentSpends(rig, turn)) extra.push(sp.key === "cryo" ? { ...sp, heatText: sp.max ? `−2×` : "0" } : sp);
     const special = new Set(acts.map((a) => a.key));
     for (const k of ["lock", "emplace", "unplant", "barrage"]) if (!special.has(k) && this.hasAction(rig, k)) extra.push({ key: k, label: k[0].toUpperCase() + k.slice(1), heat: k === "unplant" ? 2 : k === "lock" ? 1 : 0, enabled: turn.actionsUsed < turn.actionsMax });
@@ -499,7 +563,7 @@ export class LiveMatch {
         el("div", { class: "ah-v" }, `${left} of ${turn.actionsMax}`)),
       hm.zone === "none" ? null : el("div", { class: "ah-stat", title: "Boiler heat. Every action adds heat; only 1 cools per round. End a turn past capacity (the red zone) and you roll for engine damage." },
         el("div", { class: "ah-k" }, icon("heat"), "Boiler heat"),
-        heatGauge(rig.engine?.heat ?? 0, hm.cap || cap),
+        boilerGauge(rig.engine?.heat ?? 0, hm.cap || cap, { size: "md", key: `bar:${rig.id}` }),
         el("div", { class: `ah-v ${hm.over ? "bad" : hm.zone === "redline" ? "warn-t" : ""}` }, hm.over ? `${hm.heat} / ${hm.cap} · OVER` : `${hm.heat} / ${hm.cap} safe`)),
     ));
     if (!commandable) {
@@ -693,7 +757,7 @@ export class LiveMatch {
   // ---- Move ----
   isHop(key = this.mode?.key) { return key === "jumpjets" || key === "yank"; }
   startMove(rig, key) {
-    // Jump Jets: base Speed, straight line, ignores terrain + leg damage.
+    // Blast Pistons: base Speed, straight line, ignores terrain + leg damage.
     // Grapnel yank: 4", same rules.
     const budget = key === "jumpjets" ? (Number.isFinite(rig.speed) ? rig.speed : moveBudget(rig, "move")) : key === "yank" ? GRAPNEL_YANK_RANGE : moveBudget(rig, key);
     this.mode = { key, rig, budget, facingOffset: 0 };
@@ -701,8 +765,8 @@ export class LiveMatch {
     const col = key === "sprint" ? 0xffaa33 : this.isHop(key) ? 0xffd27a : 0x33ff99;
     this.world.disc(rig.pos.x, rig.pos.y, budget + radiusOf(rig), col, 0.08);
     this.world.ring(rig.pos.x, rig.pos.y, budget, col, 0.6);
-    this.world.ringLabel(rig.pos.x, rig.pos.y, budget, `${key === "sprint" ? "Sprint" : key === "jumpjets" ? "Jump" : key === "yank" ? "Grapnel" : "Move"} ${budget.toFixed(1)}″ · squares: red = enemy fire, green = safe`, "#" + col.toString(16).padStart(6, "0"));
-    this.drawEnemyCones(rig);
+    this.world.ringLabel(rig.pos.x, rig.pos.y, budget, `${key === "sprint" ? "Sprint" : key === "jumpjets" ? "Pistons" : key === "yank" ? "Grapnel" : "Move"} ${budget.toFixed(1)}″ · squares: red = enemy fire, green = safe`, "#" + col.toString(16).padStart(6, "0"));
+    this.drawEnemyCones(rig, budget);
     this.drawDangerMap(rig, budget, this.isHop(key));
     this.moveBands = this.drawGunBands(rig, rig.pos);
     const g = new THREE.Group();
@@ -714,7 +778,7 @@ export class LiveMatch {
     this.ghost = g; this.ghostMat = ringMesh.material;
     this.world.scene.add(g);
     this.hud.tip(this.isHop(key)
-      ? `${key === "yank" ? "Grapnel yank" : "Jump Jets"}: click a clear landing spot inside the ring (straight line, flies over terrain) · 2) then turn any way · Right-click to cancel`
+      ? `${key === "yank" ? "Grapnel yank" : "Blast Pistons"}: click a clear landing spot inside the ring (straight line, flies over terrain) · 2) then turn any way · Right-click to cancel`
       : "1) Click a spot inside the ring · 2) then turn · Right-click to cancel");
     this.renderActions();
     this.emit("movephase", "dest");
@@ -751,12 +815,15 @@ export class LiveMatch {
 
   // Every enemy's front arc (where it can shoot), out to its reach: stand
   // outside all of them and nobody can hit you.
-  drawEnemyCones(rig) {
+  // Enemy front arcs, cut away over the move reach: the danger squares there
+  // already price enemy fire, and a red cone laid on top would repaint them.
+  drawEnemyCones(rig, budget = 0) {
+    const hole = budget > 0 ? { x: rig.pos.x, y: rig.pos.y, r: budget + 0.5 } : null;
     for (const e of this.state.rigs) {
       if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
       const lr = rangedLoaded(e) ? rangedProfile(e) : null;
       const reach = Math.min(30, Math.max(lr?.maxRange ?? 0, radiusOf(e) + meleeReachOf(e) + 1));
-      this.world.wedge(e.pos.x, e.pos.y, reach, e.facing - 45, e.facing + 45, 0xff3b30, 0.07);
+      this.world.wedge(e.pos.x, e.pos.y, reach, e.facing - 45, e.facing + 45, 0xff3b30, 0.07, hole);
     }
   }
 
@@ -886,6 +953,17 @@ export class LiveMatch {
   // ---- Drag to face: press on the spot, drag toward where to look, release ----
   isMoveMode() { return this.mode && ["move", "sprint", "jumpjets", "yank"].includes(this.mode.key); }
   dragStart(hit) {
+    if (this.deploying) {
+      // Press on your own rig: drag it somewhere. Press on the table with one of
+      // yours selected: that's the spot, drag to set its facing.
+      const r = hit.mechId != null ? this.rig(hit.mechId) : null;
+      if (r && r.owner === this.side && !r.destroyed) { this.deployDrag = { rig: r }; return true; }
+      const sel = this.rig(this.selected);
+      if (r || !hit.field || sel?.owner !== this.side) return false;
+      this.deployDrag = { rig: sel, at: { x: hit.field.x, y: hit.field.y } };
+      this.deployHover(hit);
+      return true;
+    }
     if (!this.isMoveMode() || !hit.field) return false;
     if (this.mode.locked) { this.dragFromLocked = true; return true; }
     this.onHover(hit);
@@ -898,6 +976,17 @@ export class LiveMatch {
     return true;
   }
   dragEnd(hit, moved) {
+    const d = this.deployDrag;
+    if (d) {
+      this.deployDrag = null;
+      this.cursorTag(null);
+      if (d.at) return this.placeDeploy(d.rig, d.at, d.facing);
+      // A press on the rig without dragging is a click: select it.
+      if (moved < 10) { this.director.mechs.get(d.rig.id)?.setPose(d.rig.pos, d.rig.facing); return this.select(d.rig.id); }
+      if (hit.field) return this.placeDeploy(d.rig, hit.field);
+      this.director.mechs.get(d.rig.id)?.setPose(d.rig.pos, d.rig.facing);
+      return;
+    }
     if (!this.mode?.locked) return;
     // A real drag, or a second press after the spot was set: confirm the move.
     if (moved >= 10 || this.dragFromLocked) { if (hit.field) this.onHover(hit); this.confirmMove(); }
@@ -911,7 +1000,7 @@ export class LiveMatch {
     if (!r || r.destroyed || !r.pos || this.mode) return;
     const lr = rangedProfile(r);
     const max = Math.min(60, lr?.maxRange ?? 24);
-    const col = r.owner === this.side ? 0x5fd3c0 : 0xe0533d;
+    const col = r.owner === this.side ? 0xd9a441 : 0x9e2b25;
     this.reachMeshes.push(
       this.world.wedge(r.pos.x, r.pos.y, max, r.facing - 45, r.facing + 45, col, 0.07),
       this.world.ring(r.pos.x, r.pos.y, max, col, 0.35),
@@ -1227,9 +1316,9 @@ export class LiveMatch {
     const max = rig.equipState?.cryo || 0;
     const heat = rig.engine?.heat ?? 0;
     const m = modal({
-      title: `Vent cryo: ${rig.name}`,
+      title: `Vent ice-brine: ${rig.name}`,
       body: el("div", {},
-        el("p", { class: "rx-lead" }, `${max} cryo banked. Free, no action: each one vents 2 heat and adds +1 Penetration to your next attack.`),
+        el("p", { class: "rx-lead" }, `${max} ice-brine banked. Free, no action: each one vents 2 heat and adds +1 Penetration to your next attack.`),
         el("div", { class: "attack-list" }, Array.from({ length: max }, (_, i) => i + 1).map((n) => el("button", { class: "attack-opt", onClick: () => { m.close(); this.act(rig, { action: "cryo", n }); } },
           el("b", {}, icon("cryo"), ` Spend ${n}`), el("span", {}, `heat ${heat} → ${Math.max(0, heat - 2 * n)} · +${n} Pen next attack`))))),
       actions: [{ label: "Cancel", ghost: true }],
@@ -1242,9 +1331,9 @@ export class LiveMatch {
     const opts = (mode) => Array.from({ length: max }, (_, i) => i + 1).map((n) => el("button", { class: "attack-opt", onClick: () => { m.close(); this.act(rig, { action: "meltdown", n, mode }); } },
       el("b", {}, `Spend ${n}`), el("span", {}, mode === "pen" ? `+${n} Penetration this activation` : `+${n} heat on ${victims.length ? victims.map((e) => e.name).join(", ") : "nobody in range"}`)));
     const m = modal({
-      title: `Meltdown: ${rig.name}`, cls: "wide",
+      title: `Scuttle Charge: ${rig.name}`, cls: "wide",
       body: el("div", {},
-        el("p", { class: "rx-lead" }, `${max} meltdown charge banked. Free, no action. While any is banked you can't vent heat or Shut Down.`),
+        el("p", { class: "rx-lead" }, `${max} scuttle charge banked. Free, no action. While any is banked you can't vent heat or Shut Down.`),
         el("div", { class: "md-cols" },
           el("div", {}, el("h4", {}, icon("pen"), "Overload"), el("p", { class: "muted" }, "Pour it into your guns: +N Penetration on your attacks this activation."), el("div", { class: "attack-list" }, opts("pen"))),
           el("div", {}, el("h4", {}, icon("meltdown"), "Burst"), el("p", { class: "muted" }, "Blow it out: +N heat on every enemy within 4\" of your rim (orange ring)."), el("div", { class: "attack-list" }, opts("burst"))))),
@@ -1275,9 +1364,9 @@ export class LiveMatch {
     };
     draw();
     const m = modal({
-      title: `Nanite Swarm: ${rig.name}`, cls: "wide",
+      title: `Grease Monkeys: ${rig.name}`, cls: "wide",
       body: el("div", {},
-        el("p", { class: "rx-lead" }, `1 action, +1 heat. The stack heals 1 SP on its location each Recovery (max 3 per location). Allies must be within ${NANITE_REACH}" (green ring).`),
+        el("p", { class: "rx-lead" }, `1 action, +1 heat. The crew mends 1 SP on its location each Recovery (max 3 per location). Allies must be within ${NANITE_REACH}" (green ring).`),
         el("h4", {}, "1. Host"), hostsEl, el("h4", {}, "2. Location"), locsEl),
       actions: [{ label: "Cancel", ghost: true }],
     });
@@ -1345,7 +1434,7 @@ export class LiveMatch {
     const obj = objs.map((o, i) => ({ o, i, d: Math.hypot(o.x - dest.x, o.y - dest.y) })).sort((a, b) => a.d - b.d)[0];
     const W = this.state.field.width, H = this.state.field.height;
     const where = (x, y) => { const cx = Math.abs(x - W / 2) < W / 6, cy = Math.abs(y - H / 2) < H / 6; return cx && cy ? "centre" : `${y < H / 3 ? "north" : y > (2 * H) / 3 ? "south" : ""}${x < W / 3 ? "west" : x > (2 * W) / 3 ? "east" : ""}` || "centre"; };
-    if (obj && obj.d <= 2.2) parts.push(`onto the ${where(obj.o.x, obj.o.y)} beacon (${obj.o.vp} VP)`);
+    if (obj && obj.d <= 2.2) parts.push(`onto the ${where(obj.o.x, obj.o.y)} beacon ${beaconTag(this.game, obj.i)}`);
     else if (obj && obj.d <= 6) parts.push(`toward the ${where(obj.o.x, obj.o.y)} beacon`);
     const terr = (this.state.field.terrain || []).map((t) => ({ t, d: Math.hypot(t.x - dest.x, t.y - dest.y) - Math.max(t.w || t.rx || 1, t.h || t.ry || 1) / 2 })).sort((a, b) => a.d - b.d)[0];
     if (terr && terr.d <= 2.5) parts.push(`${parts.length ? "tucked " : ""}${["building", "barricade", "rock", "crate"].includes(terr.t.kind) ? "behind the" : "by the"} ${terr.t.kind === "wood" ? "woods" : terr.t.kind || "cover"}`);
@@ -1357,6 +1446,15 @@ export class LiveMatch {
 
   // ---- Input ----
   onHover(hit) {
+    if (this.deployDrag) return this.deployHover(hit);
+    if (this.deploying) {
+      const rig = this.rig(this.selected);
+      if (rig?.owner === this.side && hit.field && hit.mechId == null) {
+        const ok = deploySpotLegal(this.state, rig, hit.field);
+        this.cursorTag(ok ? `Place ${rig.name} here` : "Outside your zone / blocked", ok ? "dest" : "bad");
+      } else this.cursorTag(null);
+      return;
+    }
     if (this.mode?.locked && hit.field && this.ghost) {
       // Phase 2: the spot is set; the ghost turns to face the cursor (±90°
       // from where the rig faces now). Near the ghost: keep the travel facing.
@@ -1459,6 +1557,12 @@ export class LiveMatch {
   }
 
   onClick(hit) {
+    if (this.game?.phase === "deploy") {
+      if (hit.mechId != null) return this.select(hit.mechId);
+      const rig = this.rig(this.selected);
+      if (this.deploying && rig?.owner === this.side && hit.field) this.placeDeploy(rig, hit.field);
+      return;
+    }
     if (this.isMoveMode()) {
       // Touch has no hover: aim the ghost at the tapped point first.
       if (hit.field) this.onHover(hit);
@@ -1521,6 +1625,7 @@ export class LiveMatch {
     if (e.key.toLowerCase() === "t" && !e.ctrlKey && !e.metaKey) this.toggleThreat();
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); this.undo(); return; }
     if (e.key === " " && !this.director.idle) { e.preventDefault(); this.director.skip(); }
+    if (e.key === "Enter" && this.deploying) this.confirmDeploy();
     if (e.key === "Enter" && this.activeRig && this.activeRig.owner === this.side) this.endActivation(this.activeRig);
     if (e.key === "Tab") {
       e.preventDefault();

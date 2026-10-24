@@ -12,6 +12,13 @@ export const ENVELOPE = {
   drone: { height: 1.313, radius: 0.37 },
 };
 
+// Deliberate POC silhouette change. These broader, lower bodies still fit
+// their physical bases; other rigs retain their original class envelopes.
+export const REMODEL_ENVELOPE = {
+  Black: { height: 1.73, radius: 1.07 },
+  Tyrian: { height: 1.52, radius: 0.75 },
+};
+
 // Measure a Mech's body (weapons detached while measuring).
 export function measureBody(m) {
   const detached = [];
@@ -44,7 +51,7 @@ export function envelopeClass(m) {
 const EPS = 1e-3;
 export function fits(m) {
   const size = measureBody(m);
-  const limit = ENVELOPE[envelopeClass(m)];
+  const limit = (m.built?.remodel && REMODEL_ENVELOPE[m.built.remodelName]) || ENVELOPE[envelopeClass(m)];
   return { ok: size.height <= limit.height + EPS && size.radius <= limit.radius + EPS, ...size, limit };
 }
 

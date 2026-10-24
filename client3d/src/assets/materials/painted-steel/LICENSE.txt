@@ -1,0 +1,20 @@
+Blue Metal Plate — Rob Tuytel / Poly Haven
+Source: https://polyhaven.com/a/blue_metal_plate
+License: CC0 1.0 Universal (public domain dedication)
+https://polyhaven.com/license
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Unmodified 2048 x 2048 JPG texture maps, downloaded 2026-10-20.
+The material recolors the albedo in the shader; source files stay unchanged.
+
+Diffuse.jpg
+https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/blue_metal_plate/blue_metal_plate_diff_2k.jpg
+MD5: 6189f7c443f0b7767d3e046f021b5495
+
+nor_gl.jpg — tangent-space OpenGL normal map
+https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/blue_metal_plate/blue_metal_plate_nor_gl_2k.jpg
+MD5: c460b1b25b5d418218982d8b100822b8
+
+arm.jpg — R: ambient occlusion, G: roughness, B: metalness (linear data)
+https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/blue_metal_plate/blue_metal_plate_arm_2k.jpg
+MD5: d0f422ae772522cc3978f2bf2bbb5902

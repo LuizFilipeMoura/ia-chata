@@ -2,12 +2,14 @@
 // kit bolted to its sockets. A skin is a material transform (skinMaterials,
 // applied before the body is built) plus add-ons (applySkin, after). Add-on
 // placement is seeded from the rig id so two rigs in one skin never match.
-import { THREE, mat, at, rot, box, cyl, sph, torus, drumZ, rivetRow, canvasTexture, rngFrom, GLOW, STEEL, BRASS, GUNMETAL, DARK, RUBBER, CANVAS } from "./kit.js";
+import { THREE, mat, surfaceMat, at, rot, box, cyl, sph, torus, drumZ, rivetRow, canvasTexture, rngFrom, GLOW, STEEL, BRASS, GUNMETAL, DARK, RUBBER, CANVAS } from "./kit.js";
+import { noseArtFor, nicknameFor, clutterPick } from "./look.js";
+import { addClutter, mountRearMast } from "./wear.js";
 
 export const SKINS = {
   factory: { id: "factory", name: "Factory Fresh", blurb: "Glossy enamel, polished trim, stencilled serial." },
-  refit: { id: "refit", name: "Field Refit", blurb: "Faded paint, mud to the knees, sandbags, spare track, tarp and jerry cans." },
-  ace: { id: "ace", name: "Ace", blurb: "Deep lacquer, chrome trim, shark-mouth nose art, kill tallies, pennant." },
+  refit: { id: "refit", name: "Field Refit", blurb: "Faded paint, mud to the knees, sandbags, spare track, tarp and jerry cans, plus the crew's own clutter." },
+  ace: { id: "ace", name: "Ace", blurb: "Deep lacquer, chrome trim, nose art (shark mouth, winged skull, ace of spades, rabbit, bolt or a named scroll), kill tallies, pennant." },
   worn: { id: "worn", name: "Battle-Worn", blurb: "Scorched and dented, welded patch plates, a bent stack, sparking cable." },
   rust: { id: "rust", name: "Rust Bucket", blurb: "Rust bloom, oil streaks, mismatched primer panels, wire-lashed repairs." },
 };
@@ -47,6 +49,72 @@ function sharkTexture() {
     g.fillStyle = "#f4f0e4"; g.beginPath(); g.arc(22, 20, 7, 0, Math.PI * 2); g.fill();
     g.fillStyle = "#000"; g.beginPath(); g.arc(24, 20, 3, 0, Math.PI * 2); g.fill();
   });
+}
+
+// Period nose art, one per Ace rig (look.js noseArtFor): bone, ink and faded
+// signal colours, painted by the crew. Each is { tex, w, h } (decal size in k).
+const INK = "#1a120c", BONE = "#efe4c8", SIGNAL = "#b8392f", GILT = "#d9a441";
+const artCache = new Map();
+function roundel(g, fill) { g.fillStyle = INK; g.beginPath(); g.arc(64, 64, 60, 0, Math.PI * 2); g.fill(); g.fillStyle = fill; g.beginPath(); g.arc(64, 64, 54, 0, Math.PI * 2); g.fill(); }
+const ART = {
+  shark: () => ({ tex: sharkTexture(), w: 0.56, h: 0.4 }),
+  // Winged skull: feathered wings behind a bone skull.
+  skull: () => ({ w: 0.46, h: 0.34, tex: canvasTexture(128, (g) => {
+    g.clearRect(0, 0, 128, 128);
+    for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
+      g.fillStyle = i % 2 ? BONE : GILT; g.strokeStyle = INK; g.lineWidth = 2.5;
+      g.beginPath(); g.ellipse(64 + s * (34 + i * 6), 52 + i * 8, 26 - i * 3, 7, s * (0.25 + i * 0.12), 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+    g.fillStyle = BONE; g.strokeStyle = INK; g.lineWidth = 3;
+    g.beginPath(); g.arc(64, 58, 22, Math.PI * 0.9, Math.PI * 2.1); g.lineTo(76, 84); g.lineTo(52, 84); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = INK; for (const x of [55, 73]) { g.beginPath(); g.arc(x, 60, 6, 0, Math.PI * 2); g.fill(); }
+    g.beginPath(); g.moveTo(64, 66); g.lineTo(60, 73); g.lineTo(68, 73); g.fill();
+    for (let i = 0; i < 4; i++) g.fillRect(55 + i * 5, 78, 2, 6);
+  }) }),
+  // The ace of spades on a tilted card.
+  card: () => ({ w: 0.3, h: 0.36, tex: canvasTexture(128, (g) => {
+    g.clearRect(0, 0, 128, 128);
+    g.save(); g.translate(64, 64); g.rotate(-0.18);
+    g.fillStyle = BONE; g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.roundRect(-36, -52, 72, 104, 8); g.fill(); g.stroke();
+    g.fillStyle = INK; g.beginPath(); g.moveTo(0, -24); g.bezierCurveTo(26, -2, 26, 18, 4, 14); g.lineTo(10, 30); g.lineTo(-10, 30); g.lineTo(-4, 14); g.bezierCurveTo(-26, 18, -26, -2, 0, -24); g.fill();
+    g.font = "900 20px Georgia, serif"; g.textAlign = "center"; g.fillStyle = SIGNAL; g.fillText("A", -24, -32); g.save(); g.rotate(Math.PI); g.fillText("A", -24, -32); g.restore();
+    g.restore();
+  }) }),
+  // A running rabbit on a signal-red roundel.
+  rabbit: () => ({ w: 0.32, h: 0.32, tex: canvasTexture(128, (g) => {
+    g.clearRect(0, 0, 128, 128); roundel(g, SIGNAL);
+    g.fillStyle = BONE;
+    g.beginPath(); g.ellipse(62, 78, 26, 15, -0.2, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(88, 62, 12, 0, Math.PI * 2); g.fill();
+    for (const [x, a] of [[86, -0.5], [94, -0.2]]) { g.beginPath(); g.ellipse(x, 38, 5, 18, a, 0, Math.PI * 2); g.fill(); }
+    g.beginPath(); g.arc(36, 72, 7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = INK; g.beginPath(); g.arc(92, 60, 2.5, 0, Math.PI * 2); g.fill();
+  }) }),
+  // A lightning bolt on a gilt roundel.
+  bolt: () => ({ w: 0.32, h: 0.32, tex: canvasTexture(128, (g) => {
+    g.clearRect(0, 0, 128, 128); roundel(g, GILT);
+    g.fillStyle = SIGNAL; g.strokeStyle = INK; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(76, 14); g.lineTo(40, 70); g.lineTo(62, 70); g.lineTo(50, 114); g.lineTo(90, 52); g.lineTo(68, 52); g.closePath(); g.fill(); g.stroke();
+  }) }),
+};
+// A ribbon scroll with the rig's nickname lettered on it.
+function scrollArt(nick) {
+  return { w: 0.62, h: 0.2, tex: canvasTexture(256, (g) => {
+    g.clearRect(0, 0, 256, 256);
+    g.save(); g.translate(0, 64);
+    g.fillStyle = "#a88a52"; g.strokeStyle = INK; g.lineWidth = 4;
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(128 + s * 100, 30); g.lineTo(128 + s * 126, 26); g.lineTo(128 + s * 114, 56); g.lineTo(128 + s * 126, 86); g.lineTo(128 + s * 100, 82); g.closePath(); g.fill(); g.stroke(); }
+    g.fillStyle = BONE; g.beginPath(); g.moveTo(24, 34); g.quadraticCurveTo(128, 14, 232, 34); g.lineTo(232, 90); g.quadraticCurveTo(128, 70, 24, 90); g.closePath(); g.fill(); g.stroke();
+    let size = 34; g.font = `900 ${size}px 'Big Shoulders Stencil Display', Impact, sans-serif`;
+    while (g.measureText(nick).width > 190 && size > 18) { size -= 2; g.font = `900 ${size}px 'Big Shoulders Stencil Display', Impact, sans-serif`; }
+    g.fillStyle = SIGNAL; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(nick, 128, 58);
+    g.restore();
+  }) };
+}
+export function noseArt(kind, nick = "") {
+  const key = kind === "scroll" ? `scroll|${nick}` : kind;
+  if (!artCache.has(key)) artCache.set(key, kind === "scroll" ? scrollArt(nick) : (ART[kind] || ART.shark)());
+  return artCache.get(key);
 }
 
 // ---- Materials: { paint, trim, dark, steel, rubber } for a skin ----
@@ -111,7 +179,7 @@ const ADDONS = {
     // Mud up the legs.
     eachLegPart(built, (o) => { o.material = muddy(o.material); });
     // Sandbags on the hip.
-    const sand = mat(0x9a8660, { roughness: 1, metalness: 0 });
+    const sand = surfaceMat('fabric', 0x9a8660, { roughness: 1, metalness: 0 });
     const bags = new THREE.Group(); s.hip.add(bags); bags.scale.setScalar(k);
     const nb = 2 + Math.floor(rng() * 2);
     for (let i = 0; i < nb; i++) { const b = sph(0.1, sand, 8); b.scale.set(1.5, 0.7, 0.9); b.position.set(-0.12 + i * 0.13, -0.05 + (i % 2) * 0.05, -0.02); b.rotation.y = rng() - 0.5; bags.add(b); }
@@ -124,10 +192,11 @@ const ADDONS = {
     // Jerry can on the shin.
     const can = box(0.06, 0.2, 0.14, mat(0x5a6a3a, { roughness: 0.75 })); can.position.set(0.02, 0, 0); can.scale.setScalar(k); s.shin.add(can);
   },
-  ace(built, rng) {
+  ace(built, rng, opts) {
     const k = kOf(built), s = built.sockets, f = built.frame;
-    // Shark-mouth nose art on the chest front.
-    const art = decal(sharkTexture(), 0.56 * k, 0.4 * k, 0xb8222a); art.position.set(0.015, -0.12 * k, 0); s.chestFront.add(art);
+    // Nose art on the chest front: the crew's pick for this rig.
+    const na = noseArt(opts.art, opts.nick);
+    const art = decal(na.tex, na.w * k, na.h * k, 0xb8222a); art.position.set(0.015, -0.12 * k, 0); s.chestFront.add(art);
     // Kill tallies on the gun shoulder.
     const n = 3 + Math.floor(rng() * 5);
     const white = mat(0xf4f0e4, { roughness: 0.4 });
@@ -135,11 +204,12 @@ const ADDONS = {
     // Checkered band on the melee arm.
     for (let i = 0; i < 8; i++) s.shoulderL.add(at(box(0.05, 0.035, 0.02, i % 2 ? white : DARK()), -0.14 + i * 0.04, -0.12, 0.04));
     // Pennant on the back.
-    const flag = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.22, -0.05, 0), new THREE.Vector3(0, -0.12, 0)]), mat(0xd9a520, { side: THREE.DoubleSide, roughness: 0.8, metalness: 0 }));
+    const flag = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.22, -0.05, 0), new THREE.Vector3(0, -0.12, 0)]), surfaceMat('fabric', 0xd9a520, { side: THREE.DoubleSide, roughness: 0.8, metalness: 0 }));
     flag.geometry.computeVertexNormals();
-    const pole = cyl(0.012, 0.012, 0.26, mat(0xdde2e8, { metalness: 1, roughness: 0.1 }), 6);
+    const pole = cyl(0.012, 0.012, 0.26, surfaceMat('gunmetal', 0xdde2e8, { metalness: 1, roughness: 0.1 }), 6);
     const holder = new THREE.Group(); holder.position.set(-0.04, 0.08, 0.14 * k); holder.rotation.y = Math.PI / 2; holder.scale.setScalar(k);
     holder.add(at(pole, 0, 0.13, 0)); holder.add(at(flag, 0, 0.25, 0)); s.back.add(holder);
+    mountRearMast(built, holder, 'pennant');
     // Red-tipped stacks.
     const red = mat(0xc0282d, { roughness: 0.4, metalness: 0.4 });
     for (const st of built.stacks) {
@@ -163,7 +233,13 @@ const ADDONS = {
     side.children[0]?.traverse((o) => { if (o.isMesh && o.material === built.ctx.paint) o.visible = false; });
     // A bent stack.
     const st = built.stacks[Math.floor(rng() * built.stacks.length)];
-    st.rotation.x += 0.3; st.rotation.z += 0.2;
+    if (built.remodel) {
+      // Keep the exhaust seated on its manifold when its upper pipe bends.
+      const mount = new THREE.Group(), halfHeight = st.geometry.parameters.height / 2;
+      mount.position.copy(st.position); mount.position.y -= halfHeight;
+      st.parent.add(mount); mount.add(st); st.position.set(0, halfHeight, 0);
+      mount.rotation.x = 0.3; mount.rotation.z = 0.2;
+    } else { st.rotation.x += 0.3; st.rotation.z += 0.2; }
     // Sparking cable stub off the back.
     const cable = cyl(0.015, 0.015, 0.22, RUBBER(), 6); cable.position.set(-0.05, -0.1, -0.18 * k); cable.rotation.z = 0.9; s.back.add(cable);
     const spark = sph(0.03, GLOW(0xbfe8ff, 0x88ccff, 2.4), 6); spark.position.set(-0.14, -0.17, -0.18 * k); s.back.add(spark);
@@ -197,9 +273,13 @@ const ADDONS = {
 };
 
 // Bolt the skin's add-ons onto a built body (after the materials swap).
-export function applySkin(built, skinId, seed) {
+// opts: { name } for the nickname scroll, { clutter } to force the clutter
+// pieces (tests, Dev Room); otherwise both are picked from the seed.
+export function applySkin(built, skinId, seed, { name = "", clutter = null } = {}) {
   const fn = ADDONS[skinId] || ADDONS.factory;
-  fn(built, rngFrom(`${seed}|${skinId}`));
+  fn(built, rngFrom(`${seed}|${skinId}`), { art: noseArtFor(seed), nick: nicknameFor(name, seed) });
+  // The crew's clutter (never on a drone: too small to carry any).
+  if (built.ctx.cls !== "drone") addClutter(built, clutter ?? clutterPick(seed, skinId), seed);
   built.pelvis.traverse((o) => { if (o.isMesh && !o.userData.part) o.userData.part = "skin"; });
 }
 

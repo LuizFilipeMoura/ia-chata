@@ -6,9 +6,9 @@
     "longRange": "Autocannon",
     "melee": "Claw",
     "description": "A methodical light built to gut heavies. The claw pries armour open; the autocannon punches straight through the gap. Bring it when the enemy is wearing too much steel.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Crack the heavy: pry a location open with the claw, then feed autocannon shells into the gap until the plate gives.",
+    "balance": "A light frame with a reliable mid-range gun and a grabbing claw. Strong into thick armour, ordinary against soft targets; it has to trade at close quarters and pays for it in plate.",
+    "personality": "Patient and mercenary. Works a heavy like a safecracker on a company vault, one tumbler at a time, and bills by the rivet.",
     "suggestedEquipment": [
       { "id": "ablative-plating", "reason": "Duels heavies at close range, survive the trade." },
       { "id": "field-repair-suite", "reason": "Patch the plate the claw-work costs you." }
@@ -21,9 +21,9 @@
     "longRange": "Missile Barrage",
     "melee": "Flamethrower",
     "description": "A walking bonfire. Rains missile volleys from range and washes close quarters in flame, leaving targets burning long after the salvo lands.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Saturate and burn: rain salvos from outside the blind spot, wash anything that closes in flame, and let the fire finish the job.",
+    "balance": "Volume over punch. The missiles can't touch anything inside their blind spot, so the flamethrower covers it. Burning pays out over rounds, not in one volley; it runs hot and thin-skinned, so it wants the fight at a distance.",
+    "personality": "A cheerful arsonist. Hums along to the hiss of its own pilot light and leaves every street it walks down smelling of tar and lamp oil.",
     "suggestedEquipment": [
       { "id": "blast-furnace-core", "reason": "Already runs hot, weaponize the heat instead of fighting it." }
     ]
@@ -35,9 +35,9 @@
     "longRange": "Mini Gun",
     "melee": "Circular Saw",
     "description": "It doesn't kill fast, it wears you down. The mini gun pins you in place while the circular saw grinds your frame into scrap that never repairs.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Attrition: pin a rig with the mini gun from its flank, then saw its plating down to scrap that never mends.",
+    "balance": "Fast and fragile. The mini gun is useless head-on and brutal from the side or rear. It loses a quick trade and wins a long one, because what the saw takes stays taken.",
+    "personality": "Tireless and grim, like a piece-work shift that never ends. Keeps grinding long after the whistle blows.",
     "suggestedEquipment": [
       { "id": "servo-actuators", "reason": "Stay latched on the target you're grinding." },
       { "id": "radiator-array", "reason": "Sustained fire runs the frame hot." }
@@ -50,9 +50,9 @@
     "longRange": "Double MG",
     "melee": "Wrecking Ball",
     "description": "Fast, loud, and mean. Runs down the flank, hoses exposed arcs with the twin guns, and swings a wrecking ball hard enough to reshape whatever it hits.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Run them down: sprint to an exposed flank, hose the soft arcs with the twin guns, then swing the ball and knock the target where you want it.",
+    "balance": "One of the fastest frames on the board, and thin-skinned for it. The twin guns do nothing to a front arc, so everything rides on reaching the side or rear; the ball is one enormous swing that lands or doesn't.",
+    "personality": "A runaway locomotive with a grudge. Loud and reckless, whistle screaming as it comes down the line, and it has never once checked the brakes.",
     "suggestedEquipment": [
       { "id": "reactive-plating", "reason": "A flanker gets flanked back, deny the side and rear shots." }
     ]
@@ -64,9 +64,9 @@
     "longRange": "Arc Gun",
     "melee": "Sword",
     "description": "An electro-fencer that fights with heat. The arc gun cooks and jams the enemy's systems; the sword finishes whatever's left twitching.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Heat warfare: cook a target from long range with the arc gun, jam its systems, then close and finish it with the blade while it stalls.",
+    "balance": "The most fragile light on the field, with a long-reaching gun that fumbles up close. Its real damage is the heat it pushes into the enemy; the Prototype hits hard but backs up into its own boiler.",
+    "personality": "A duellist in a painted coat. Vain and theatrical, striped like a convoy destroyer so nobody can tell which way it will lunge next.",
     "suggestedEquipment": [
       { "id": "blast-furnace-core", "reason": "The Arc Gun already cooks, turn redline into a threat." },
       { "id": "servo-actuators", "reason": "Fence in and out of reach on demand." }
@@ -79,9 +79,9 @@
     "longRange": "Mortar",
     "melee": "Lance",
     "description": "Half siege gun, half cavalry. Shells the field from across the table, then couches the lance and skewers anything that dares close the distance.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Bombard, then skewer: shell the field from the far edge, arcing over cover, and couch the lance for anything that walks into the mortar's dead zone.",
+    "balance": "Reaches across the whole table, but slow and blind at close range; the lance covers that gap with one heavy thrust. Rewards patience and good ground over trading blows.",
+    "personality": "Old-guard artillery, all brass buttons and ration tins. Works out every lob on a pencil stub and only charges when it's sure of the ground.",
     "suggestedEquipment": [
       { "id": "servo-actuators", "reason": "Reposition between the shelling and the charge." },
       { "id": "radiator-array", "reason": "Keep the mortar firing without cooking off." }
@@ -94,9 +94,9 @@
     "longRange": "Siege Maul",
     "melee": "Bulwark Shield",
     "description": "An immovable object with a hammer. Plants on the objective behind a tower shield and refuses to die, cracking anything that comes within reach of the maul.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Siege anvil: walk onto the objective, raise the shield, and crush whatever comes within reach of the maul.",
+    "balance": "The toughest hull on the field and one of the slowest. The maul is a single devastating blow at short reach; the shield only pays off when the enemy swings on its turn. It doesn't chase, it arrives.",
+    "personality": "Stubborn as a picket line. Plants its feet on the company's ground, says nothing, and dares anyone to move it.",
     "suggestedEquipment": [
       { "id": "ablative-plating", "reason": "An objective-holder wants every extra plate." },
       { "id": "reactive-plating", "reason": "Punish anything that tries to flank the anchor." }
@@ -109,9 +109,9 @@
     "longRange": "Sniper Cannon",
     "melee": "Chainsaw",
     "description": "A patient killer. Opens with a devastating shot on a fresh target, then closes to butcher the wounded with a screaming chainsaw.",
-    "focus": "",
-    "balance": "",
-    "personality": "",
+    "focus": "Alpha and execute: open on a fresh target with the sniper cannon from long range, then close and saw apart whatever the shot left wounded.",
+    "balance": "One precise shot a turn and clumsy up close, on thin plate for a medium. The chainsaw is its answer to anything fast enough to reach it. Rewards picking the target before the fight starts.",
+    "personality": "Cold, quiet, a little pious. Keeps a tally of names scratched into the stock and says a word for each one under the lamp.",
     "suggestedEquipment": [
       { "id": "targeting-computer", "reason": "One shot per activation, make it land." },
       { "id": "overclock-core", "reason": "Extra actions to snipe then close in one turn." }

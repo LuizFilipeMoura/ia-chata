@@ -1,0 +1,12 @@
+Source: ambientCG / Smear002
+Asset: https://ambientcg.com/a/Smear002
+License: Creative Commons CC0 1.0 Universal
+License documentation: https://docs.ambientcg.com/license/
+Download: https://ambientcg.com/get?file=Smear002_1K-JPG.zip
+Downloaded 2026-10-20. Original 1024px JPG files, unmodified.
+NormalGL is OpenGL tangent-space. Roughness and Metalness are linear grayscale.
+Color is sRGB. Material tint and anti-glare adjustments happen in the shader.
+Smear002 provides glass surface contamination; smoked glazing is a dielectric shader, not a metal scan.
+Color.jpg SHA256 3A77A84E9FFA550E747873BFAC450388C2377558A06743B8341337DA3498D2AE
+NormalGL.jpg SHA256 E86451C51ADAC30E88EF0E7523FC220D1BA7F5CC1CA4E29EA655DAD8E585CE6C
+Roughness.jpg SHA256 E8659F3AADF73F84CB25B8FD2C3304D9C9468218864B8883A69104FE899A84AD

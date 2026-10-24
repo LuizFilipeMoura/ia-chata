@@ -1,6 +1,6 @@
 // Every equipment, fully digital (docs/design/campaign.md): the spatial halves
-// the physical table narrates (Jump Jets, Grapnel, Heat Purge Wave, meltdown
-// burst, Chaff Burst, Nanite reach) are simulated in a digital room.
+// the physical table narrates (Blast Pistons, Grapnel, Heat Purge Wave, meltdown
+// burst, Tinsel Burst, Nanite reach) are simulated in a digital room.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRoom, applyCommand, lastRejectionReason, findRig } from "./game-state.js";
@@ -34,7 +34,7 @@ function turn(room, name) {
 const act = (room, name, attrs) => applyCommand(room, { verb: "action", attrs: { name, ...attrs } }, { side: findRig(room, name).owner });
 const lastRes = (room) => room.game.resolutions[room.game.resolutions.length - 1];
 
-test("Jump Jets hop to a clear spot within base Speed, over anything", () => {
+test("Blast Pistons hop to a clear spot within base Speed, over anything", () => {
   const room = table({ equipment: "servo-actuators" });
   room.field.terrain = [{ kind: "rock", x: 12, y: 10, w: 1.5, h: 4, rot: 0 }];
   const gold = turn(room, "Gold");
@@ -51,7 +51,7 @@ test("Jump Jets hop to a clear spot within base Speed, over anything", () => {
   assert.deepEqual(res.to, { x: 14, y: 10 });
 });
 
-test("Jump Jets can't land on a rig", () => {
+test("Blast Pistons can't land on a rig", () => {
   const room = table({ equipment: "servo-actuators" }, {}, { Copper: [13, 10, 0] });
   turn(room, "Gold");
   act(room, "Gold", { action: "jumpjets", dest: { x: 13.5, y: 10 }, facing: 0 });
@@ -103,7 +103,7 @@ test("Heat Purge Wave scalds every enemy within 3\"", () => {
   assert.deepEqual(res.victims, [red.id]);
 });
 
-test("meltdown burst heats every enemy within 4\"", () => {
+test("scuttle burst heats every enemy within 4\"", () => {
   const room = table({ equipment: "blast-furnace-core", equipmentUpgrade: "meltdown-protocol" }, {}, { Red: [15, 10, 180] });
   const gold = turn(room, "Gold");
   gold.equipState.meltdownCharge = 3;
@@ -114,7 +114,7 @@ test("meltdown burst heats every enemy within 4\"", () => {
   assert.deepEqual(lastRes(room).victims, [findRig(room, "Red").id]);
 });
 
-test("Nanite Swarm reaches only an ally within 3\"", () => {
+test("Grease Monkeys reaches only an ally within 3\"", () => {
   const room = table({ equipment: "field-repair-suite", equipmentUpgrade: "nanite-swarm" });
   turn(room, "Gold");
   act(room, "Gold", { action: "nanite", target: "Copper", loc: "hull" });
@@ -125,7 +125,7 @@ test("Nanite Swarm reaches only an ally within 3\"", () => {
   assert.equal(lastRes(room).active, "nanite");
 });
 
-test("Chaff Burst side-steps a smoked target out of the shot", () => {
+test("Tinsel Burst side-steps a smoked target out of the shot", () => {
   const room = table({}, { equipment: "reactive-plating", equipmentUpgrade: "chaff-burst" }, { Red: [24, 10, 180] });
   // A wall right beside the line of fire: any side-step puts Red behind it.
   room.field.terrain = [{ kind: "building", x: 20, y: 12.2, w: 4, h: 1, rot: 0 }, { kind: "building", x: 20, y: 7.8, w: 4, h: 1, rot: 0 }];
@@ -150,7 +150,7 @@ test("every equipment resolution names its active", () => {
   }
 });
 
-test("Chaff Burst loses the shot when the side-step breaks reach", () => {
+test("Tinsel Burst loses the shot when the side-step breaks reach", () => {
   const room = table({}, { equipment: "reactive-plating", equipmentUpgrade: "chaff-burst" }, { Red: [12.8, 10, 180] });
   const red = findRig(room, "Red");
   red.smokeNextActivation = true;
@@ -165,7 +165,7 @@ test("Chaff Burst loses the shot when the side-step breaks reach", () => {
   assert.ok(gold.engine.heat >= 1);
 });
 
-test("Point-Defense and Ablative Cascade spends ride on the attack resolution", () => {
+test("Flak Cage and Ablative Cascade spends ride on the attack resolution", () => {
   const room = table({}, { equipment: "ablative-plating", equipmentUpgrade: "ablative-cascade" }, { Red: [16, 10, 180] });
   const red = findRig(room, "Red");
   red.equipState.ablativeCharges = 2;

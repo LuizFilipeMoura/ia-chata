@@ -3,13 +3,23 @@
 // take `pylonMat`'s emissive colour (world.setObjectiveControl paints it:
 // gold when unclaimed, the holder's colour when held). Each builder returns
 // { pylonMat, gem, light, anim, noBob } for World: `gem` is the lamp glass
-// (it swells on the round-end payout pulse), `anim(dt, now)` runs per frame.
+// (it swells on the round-end payout pulse), `anim(dt, now, marker)` runs per
+// frame (`marker` is World's objective entry, its `state` the cycling state).
 import * as THREE from "three";
+import { industrialMaterial, mergeDetails } from "./environment-remodel.js";
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.4, ...o });
 
-function kit() {
+function kit(remodel = false) {
+  if (remodel) return {
+    concrete: industrialMaterial(0x77766a, { metalness: 0 }),
+    iron: industrialMaterial(0x39453e),
+    steel: industrialMaterial(0x879184),
+    brass: industrialMaterial(0xb19a65),
+    oxide: industrialMaterial(0x825d45),
+    pylonMat: new THREE.MeshStandardMaterial({ color: 0xfff2c8, emissive: 0xffd35a, emissiveIntensity: 1.2, roughness: 0.7, metalness: 0.1 }),
+  };
   return {
     concrete: std(0x5a564e, { roughness: 1, metalness: 0 }),
     iron: std(0x2a2622, { metalness: 0.75, roughness: 0.45 }),
@@ -34,6 +44,7 @@ function bands(parent, mat, r, ys, { alongX = false, at = V() } = {}) {
 
 // Army-stencil VP number on a scuffed olive plate.
 function stencil(n) {
+  if (typeof document === "undefined") return std(0xb2ab83, { roughness: 0.9, metalness: 0 });
   const c = document.createElement("canvas"); c.width = c.height = 128;
   const g = c.getContext("2d");
   g.fillStyle = "#4a4a30"; g.fillRect(0, 0, 128, 128);
@@ -60,6 +71,55 @@ function pennant(parent, m, x, y, z, height, pylonMat) {
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) { const fx = base[i * 3]; p.array[i * 3 + 2] = Math.sin(now * 5 + fx * 5 + ph) * 0.09 * fx; }
     p.needsUpdate = true;
+  };
+}
+
+// Every beacon broadcasts: a slim lattice radio mast with a blinking warm lamp
+// at its tip and, while the beacon is lit, faint rings spreading out from the
+// tip in the holder's colour. Reads the marker's cycling state (m.state, set by
+// world.setObjectiveControl) through the anim's third argument; visual only.
+const RING_GEO = new THREE.TorusGeometry(1, 0.018, 4, 48);
+function radioMast(parent, m, base, height, pylonMat) {
+  const legs = 3, r0 = 0.16, r1 = 0.035;
+  for (let i = 0; i < legs; i++) {
+    const a = (i / legs) * Math.PI * 2;
+    const p = V(base.x + Math.cos(a) * r0, base.y, base.z + Math.sin(a) * r0), q = V(base.x + Math.cos(a) * r1, base.y + height, base.z + Math.sin(a) * r1);
+    const d = q.clone().sub(p), leg = mesh(new THREE.CylinderGeometry(0.014, 0.018, d.length(), 4), m.iron, parent);
+    leg.position.copy(p).addScaledVector(d, 0.5); leg.quaternion.setFromUnitVectors(V(0, 1, 0), d.normalize());
+  }
+  for (let y = 0.35; y < height - 0.2; y += 0.45) {
+    const k = r0 + (r1 - r0) * (y / height);
+    const hoop = mesh(new THREE.TorusGeometry(k, 0.008, 3, 3), m.iron, parent, base.x, base.y + y, base.z); hoop.rotation.x = Math.PI / 2;
+  }
+  // Two crossarms with insulators, the whip aerial on top.
+  for (const [y, w] of [[height * 0.72, 0.5], [height * 0.9, 0.34]]) {
+    mesh(new THREE.BoxGeometry(w, 0.02, 0.02), m.iron, parent, base.x, base.y + y, base.z);
+    for (const s of [-1, 1]) mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.06, 6), m.brass, parent, base.x + s * w / 2, base.y + y + 0.03, base.z);
+  }
+  mesh(new THREE.CylinderGeometry(0.006, 0.01, 0.5, 4), m.iron, parent, base.x, base.y + height + 0.25, base.z);
+  const tip = V(base.x, base.y + height + 0.52, base.z);
+  const lampMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, emissive: 0xffa040, emissiveIntensity: 0.2 });
+  mesh(new THREE.SphereGeometry(0.05, 8, 6), lampMat, parent, tip.x, tip.y, tip.z).castShadow = false;
+  const rings = [0, 1, 2].map((k) => {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffc060, transparent: true, opacity: 0, depthWrite: false });
+    const r = new THREE.Mesh(RING_GEO, mat); r.rotation.x = Math.PI / 2; r.position.copy(tip); parent.add(r);
+    return { r, mat, off: k / 3 };
+  });
+  return (dt, now, marker) => {
+    const state = marker?.state ?? "classic";
+    // Blink: brisk when lit, a slow pulse when next, a lazy wink when dark.
+    const period = state === "lit" ? 0.9 : state === "next" ? 1.6 : state === "dark" ? 3.2 : 1.4;
+    const on = (now % period) / period < 0.35;
+    lampMat.emissiveIntensity = on ? (state === "dark" ? 0.5 : 1.4) : 0.1;
+    const loud = state === "lit" ? 1 : state === "classic" ? 0.55 : state === "next" ? 0.25 : 0;
+    for (const g of rings) {
+      const k = (now * 0.45 + g.off) % 1;
+      g.r.scale.setScalar(0.2 + k * 3.2);
+      g.r.position.y = tip.y - k * 0.6;
+      g.mat.color.copy(pylonMat.emissive);
+      g.mat.opacity = loud * 0.32 * Math.sin(Math.PI * k);
+      g.r.visible = loud > 0;
+    }
   };
 }
 
@@ -97,14 +157,19 @@ export function fuelDepot(group, o, fx) {
   mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.04, 12), m.brass, pump, 0, 1.08, 0);
   const light = new THREE.PointLight(0xffd35a, 5, 7); light.position.set(-0.85, 1.4, 0.55); group.add(light);
   const wave = pennant(group, m, 0.95, 0.14, -0.75, 2.2, pylonMat);
-  return { pylonMat, gem, light, noBob: true, anim: wave };
+  const radio = radioMast(group, m, V(0.2, 0.14, 0.5), 2.9, pylonMat);
+  return { pylonMat, gem, light, noBob: true, anim: (dt, now, marker) => { wave(dt, now); radio(dt, now, marker); } };
 }
 
 // 2 VP centre: a refinery cracking tower. A tall banded column with two
 // catwalks and a ladder, a side column tied in by a pipe bridge, a pipe rack
 // with valve wheels, a gas flare burning on top and steam venting now and then.
-export function refineryTower(group, o, fx) {
-  const m = kit(), { pylonMat } = m;
+export function refineryTower(group, o, fx, ctx = {}) {
+  const remodel = ctx.remodel !== false;
+  const m = kit(remodel), { pylonMat } = m;
+  if (remodel) {
+    const body = new THREE.Group(); body.name = "remodel-refinery"; group.add(body); group = body;
+  }
   mesh(new THREE.CylinderGeometry(1.45, 1.55, 0.16, 8), m.concrete, group, 0, 0.08, 0);
   const col = V(-0.2, 0.16, -0.15), H = 4.6, R = 0.44;
   mesh(new THREE.CylinderGeometry(R, R + 0.04, H, 20), m.steel, group, col.x, col.y + H / 2, col.z);
@@ -120,7 +185,7 @@ export function refineryTower(group, o, fx) {
   }
   // Ladder up the front.
   for (const dz of [-0.12, 0.12]) mesh(new THREE.CylinderGeometry(0.018, 0.018, 3.6, 4), m.iron, group, col.x + R + 0.12, col.y + 1.8, col.z + dz);
-  for (let y = 0.2; y < 3.6; y += 0.22) mesh(new THREE.BoxGeometry(0.02, 0.02, 0.24), m.iron, group, col.x + R + 0.12, col.y + y, col.z);
+  for (let y = 0.2; y < 3.6; y += remodel ? 0.18 : 0.22) mesh(new THREE.BoxGeometry(0.02, 0.02, 0.24), m.iron, group, col.x + R + 0.12, col.y + y, col.z);
   // Side column and the pipe bridge into the main one.
   const side = V(0.8, 0.16, 0.45), SH = 3;
   mesh(new THREE.CylinderGeometry(0.22, 0.25, SH, 14), m.oxide, group, side.x, side.y + SH / 2, side.z);
@@ -133,8 +198,76 @@ export function refineryTower(group, o, fx) {
   }
   const loop = mesh(new THREE.TorusGeometry(0.28, 0.05, 6, 16, Math.PI), m.iron, group, 0.5, 0.34, 0.95);
   loop.rotation.set(0, 0, 0);
-  const valve = std(0xa02a1e, { roughness: 0.5 });
+  const valve = remodel ? industrialMaterial(0x995c40) : std(0xa02a1e, { roughness: 0.5 });
   for (const x of [-0.7, 0.9]) { const w = mesh(new THREE.TorusGeometry(0.1, 0.02, 5, 12), valve, group, x, 0.62, 0.95); w.rotation.x = Math.PI / 2; }
+  if (remodel) {
+    const soot = industrialMaterial(0x485044), dark = industrialMaterial(0x272d28), yellow = industrialMaterial(0xb39a5e);
+    // Riveted jacket sections, access covers and streaking belong to joints
+    // and service openings, leaving the column's silhouette calm at table zoom.
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4, sx = Math.sin(a), sz = Math.cos(a);
+      const seam = mesh(new THREE.BoxGeometry(0.018, H - 0.2, 0.015), m.iron, group, col.x + sx * (R + 0.025), col.y + H / 2, col.z + sz * (R + 0.025));
+      seam.rotation.y = a;
+      for (const y of [0.4, 1.8, 3.2, 3.9]) {
+        const bolt = mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.032, 6), m.oxide, group, col.x + sx * (R + 0.04), col.y + y, col.z + sz * (R + 0.04));
+        bolt.rotation.set(Math.PI / 2, 0, -a);
+      }
+      const streak = mesh(new THREE.BoxGeometry(0.025 + (i % 3) * 0.017, 0.24 + (i % 2) * 0.15, 0.014), soot, group, col.x + sx * (R + 0.015), col.y + 3.65 - (i % 2) * 0.23, col.z + sz * (R + 0.015));
+      streak.rotation.y = a;
+    }
+    mesh(new THREE.CylinderGeometry(R + 0.12, R + 0.12, 0.13, 20), m.iron, group, col.x, 0.26, col.z);
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 6), m.oxide, group, col.x + Math.sin(a) * (R + 0.07), 0.35, col.z + Math.cos(a) * (R + 0.07));
+    }
+    // Front bolted manway.
+    const manway = mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.11, 18), m.iron, group, col.x, 1.43, col.z + R + 0.025);
+    manway.rotation.x = Math.PI / 2;
+    const cover = mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.125, 18), m.oxide, group, col.x, 1.43, col.z + R + 0.035);
+    cover.rotation.x = Math.PI / 2;
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      const bolt = mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.03, 6), m.brass, group, col.x + Math.sin(a) * 0.16, 1.43 + Math.cos(a) * 0.16, col.z + R + 0.095);
+      bolt.rotation.x = Math.PI / 2;
+    }
+    for (const y of [1.9, 3.5]) {
+      // Toe board and concentric grating lines supply scale without extra calls.
+      for (const r of [0.55, 0.66, 0.77]) {
+        const ring = mesh(new THREE.TorusGeometry(r, 0.009, 3, 28), soot, group, col.x, col.y + y + 0.034, col.z);
+        ring.rotation.x = Math.PI / 2;
+      }
+      const toe = mesh(new THREE.TorusGeometry(0.84, 0.025, 4, 28), m.oxide, group, col.x, col.y + y + 0.06, col.z);
+      toe.rotation.x = Math.PI / 2;
+      for (let i = 0; i < 10; i++) {
+        const a = i * Math.PI / 5;
+        const bar = mesh(new THREE.BoxGeometry(0.32, 0.018, 0.018), m.brass, group, col.x + Math.cos(a) * 0.67, col.y + y + 0.033, col.z + Math.sin(a) * 0.67);
+        bar.rotation.y = -a;
+      }
+    }
+    // Side receiver's cap, flanges, pressure gauge and ladder safety hoops.
+    const receiverCap = mesh(new THREE.SphereGeometry(0.22, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), m.oxide, group, side.x, side.y + SH, side.z);
+    receiverCap.scale.y = 0.45;
+    for (const y of [side.y + 0.17, side.y + 1.45, side.y + SH - 0.2]) {
+      mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.06, 14), m.iron, group, side.x, y, side.z);
+    }
+    for (const y of [1.2, 2.1, 3]) {
+      const cage = mesh(new THREE.TorusGeometry(0.23, 0.012, 5, 14, Math.PI), m.iron, group, col.x + R + 0.12, col.y + y, col.z);
+      cage.rotation.set(Math.PI / 2, 0, -Math.PI / 2);
+    }
+    const gauge = mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 16), m.brass, group, side.x, 1.2, side.z + 0.27);
+    gauge.rotation.x = Math.PI / 2;
+    const face = mesh(new THREE.CircleGeometry(0.07, 16), yellow, group, side.x, 1.2, side.z + 0.302);
+    face.castShadow = false;
+    mesh(new THREE.BoxGeometry(0.007, 0.055, 0.006), dark, group, side.x, 1.21, side.z + 0.31).rotation.z = -0.5;
+    for (const x of [-0.7, 0.9]) {
+      mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 6), m.iron, group, x, 0.54, 0.95);
+      mesh(new THREE.BoxGeometry(0.17, 0.02, 0.02), valve, group, x, 0.62, 0.95);
+    }
+    for (const x of [-0.8, 0, 0.8]) {
+      mesh(new THREE.BoxGeometry(0.13, 0.2, 0.32), m.concrete, group, x, 0.24, 0.95);
+    }
+    mergeDetails(group);
+  }
   // Caged warning lamp on the top catwalk (the gem) and the pennant on the dome.
   const lampAt = V(col.x + 0.6, col.y + 3.5 + 0.18, col.z + 0.55);
   const gem = mesh(new THREE.SphereGeometry(0.11, 14, 10), pylonMat, group, lampAt.x, lampAt.y, lampAt.z);
@@ -149,8 +282,10 @@ export function refineryTower(group, o, fx) {
   const vent = new THREE.Object3D(); vent.position.set(side.x, side.y + SH + 0.1, side.z); group.add(vent);
   let flameAcc = 0, steamT = 2 + Math.random() * 3;
   const w = V();
-  const anim = (dt, now) => {
+  const radio = radioMast(group, m, V(side.x, side.y + SH, side.z), 2.2, pylonMat);
+  const anim = (dt, now, marker) => {
     wave(dt, now);
+    radio(dt, now, marker);
     if (!fx) return;
     flameAcc += dt * 14;
     for (; flameAcc >= 1; flameAcc--) fx.particle(tip.getWorldPosition(w), { tile: "flame", color: Math.random() < 0.4 ? 0xffd070 : 0xff8a28, color2: 0xa01800, glow: 1.8, size: 0.28, grow: 0.5, life: 0.5, vel: V(0.3, 1.6, 0), stretch: 0.2, turb: 2 });

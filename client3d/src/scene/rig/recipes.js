@@ -8,12 +8,12 @@
 export const RECIPES = {
   // ---- Light ----
   Gold: { role: "raptor", torso: "bomberNose", head: "none", backpack: "ammoDrum", legs: "digitigrade", feet: "claw", shoulders: "rivetCap", signature: "beltFeed", trim: "brass", proportions: { torso: [1.15, 0.95, 0.9], hunch: -0.12 } },
-  Blue: { role: "firebug", torso: "gondola", head: "gasMask", backpack: "gasTanks", legs: "pistonStilt", feet: "plate", shoulders: "hoseFed", signature: "pilotLight", trim: "steel", proportions: { torso: [1.1, 0.9, 0.95] } },
-  Purple: { role: "buzzsaw", torso: "tractorBlock", head: "visorBucket", backpack: "dynamo", legs: "chickenWalker", feet: "tracked", shoulders: "exhaust", signature: "flywheel", trim: "gunmetal", proportions: { torso: [0.95, 1.0, 0.95], hunch: -0.08 } },
-  Pumpkin: { role: "locomotive", torso: "boilerDrum", head: "locoCab", backpack: "twinStacks", legs: "digitigrade", feet: "plate", shoulders: "slab", signature: "cowcatcher", trim: "brass", proportions: { torso: [1.1, 1.0, 1.0] } },
-  Zebra: { role: "duelist", torso: "rivetWedge", head: "knightHelm", backpack: "radiatorFins", legs: "pistonStilt", feet: "spur", shoulders: "slab", signature: "scabbard", trim: "steel", proportions: { torso: [0.95, 0.88, 0.85], head: 0.95 } },
+  Cobalt: { role: "firebug", torso: "gondola", head: "gasMask", backpack: "gasTanks", legs: "pistonStilt", feet: "plate", shoulders: "hoseFed", signature: "pilotLight", trim: "steel", proportions: { torso: [1.1, 0.9, 0.95] } },
+  Tyrian: { role: "buzzsaw", torso: "tractorBlock", head: "visorBucket", backpack: "dynamo", legs: "chickenWalker", feet: "tracked", shoulders: "exhaust", signature: "flywheel", trim: "gunmetal", proportions: { torso: [0.95, 1.0, 0.95], hunch: -0.08 } },
+  Rust: { role: "locomotive", torso: "boilerDrum", head: "locoCab", backpack: "twinStacks", legs: "digitigrade", feet: "plate", shoulders: "slab", signature: "cowcatcher", trim: "brass", proportions: { torso: [1.1, 1.0, 1.0] } },
+  Dazzle: { role: "duelist", torso: "rivetWedge", head: "knightHelm", backpack: "radiatorFins", legs: "pistonStilt", feet: "spur", shoulders: "slab", signature: "scabbard", trim: "steel", proportions: { torso: [0.95, 0.88, 0.85], head: 0.95 } },
   Turquoise: { role: "diver", torso: "divingBell", head: "divingHelm", backpack: "bellows", legs: "chickenWalker", feet: "drumPad", shoulders: "rivetCap", signature: "chainWinch", trim: "brass", proportions: { torso: [1, 0.96, 1.0] } },
-  Green: { role: "shipwright", torso: "armoredCab", head: "weldMask", backpack: "compressor", legs: "digitigrade", feet: "tracked", shoulders: "hoseFed", signature: "rivetHoppers", trim: "gunmetal", proportions: { torso: [1, 1.0, 1.0] } },
+  Verdigris: { role: "shipwright", torso: "armoredCab", head: "weldMask", backpack: "compressor", legs: "digitigrade", feet: "tracked", shoulders: "hoseFed", signature: "rivetHoppers", trim: "gunmetal", proportions: { torso: [1, 1.0, 1.0] } },
   // ---- Medium ----
   Copper: { role: "artillery", torso: "tractorBlock", head: "periscope", backpack: "shellRack", legs: "elephantDrum", feet: "drumPad", shoulders: "slab", signature: "aimingQuadrant", trim: "brass", proportions: { torso: [1, 0.9, 1.0] } },
   Black: { role: "bulwark", torso: "rivetWedge", head: "pillbox", backpack: "sparkChimney", legs: "pillar", feet: "plate", shoulders: "slab", signature: "armorSkirts", trim: "gunmetal", proportions: { torso: [1.05, 1.0, 1.05] } },
