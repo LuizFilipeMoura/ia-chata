@@ -556,7 +556,7 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
     let walker = null;
     let step = 1;
     const STEPS = ["Pick rigs", "Banner & Notoriety", "Confirm"];
-    let confirmForm = null;
+    let confirmForm = null, starting = false;
     const mediumsIn = (ids) => ids.filter((id) => chassisOf(id).class === "medium").length;
 
     const randomize = () => {
@@ -664,11 +664,15 @@ export async function campaignScreen(root, { onHome, onDeploy, view = null, fres
             : el("button", { class: "btn ghost", onClick: () => go(step - 1) }, "‹ Back"),
           step < 3
             ? el("button", { class: "btn big primary", disabled: !ready, title: ready ? "" : "Sign three rigs first", onClick: () => go(step + 1) }, ready || step > 1 ? "Next ▸" : `Pick ${3 - picked.length} more`)
-            : el("button", { class: "btn big primary", disabled: !ready, onClick: async () => {
+            : el("button", { class: "btn big primary", disabled: !ready || starting, onClick: async (event) => {
+              if (starting) return;
+              starting = true;
+              event.currentTarget.disabled = true;
+              const request = { chassis: [...picked], notoriety, banner, walker };
               if (confirmForm) await new Promise((res) => stampThen(confirmForm, res, { hold: 450 }));
               loading("Signing the contracts…");
-              const v = await act(() => api.campaign.start({ chassis: picked, notoriety, banner, walker }));
-              if (v) { sfx.fanfare?.(true); map(); } else render();
+              const v = await act(() => api.campaign.start(request));
+              if (v) { sfx.fanfare?.(true); map(); } else { starting = false; render(); }
             } }, "Start run ▸"))));
       if (still) root.scrollTop = y;
     };

@@ -61,6 +61,7 @@ function playGame(seed, botA, botB) {
     }
     if (g.pendingBlast) { applyCommand(room, { verb: "blast", attrs: { targets: [] } }, {}, opts); continue; }
     if (g.pendingReaction) break;   // bots never arm an Evasive/Return prep, so this should not arise
+    if (g.phase === "deploy") { const s = g.sides.find((x) => !g.deploy.done[x.id]); applyCommand(room, { verb: "deployed", attrs: {} }, { side: s.id }, opts); continue; }
     if (g.phase === "initiative") { applyCommand(room, { verb: "initiative", attrs: {} }, {}, opts); continue; }
     if (g.phase === "activation") {
       const t = g.turn;

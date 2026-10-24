@@ -389,7 +389,7 @@ function prepLabel(type) {
   return "Braced";
 }
 
-const PHASE_LABELS = { setup: "Setup", initiative: "Initiative", activation: "Activation", recovery: "Recovery", finished: "Battle over" };
+const PHASE_LABELS = { setup: "Setup", deploy: "Deployment", initiative: "Initiative", activation: "Activation", recovery: "Recovery", finished: "Battle over" };
 
 export function phaseSummary(game, rigs) {
   const turn = game.turn;

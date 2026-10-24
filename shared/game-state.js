@@ -1832,6 +1832,7 @@ function resetGameShape(room) {
   room.game.gritKept = { a: false, b: false };
   room.game.suddenDeath = false;
   room.game.deployOrder = [];
+  room.game.deploy = null;
   room.game.initiative = null;
   room.game.priorityTargets = {};
   room.game.beacons = null;
@@ -1867,9 +1868,59 @@ function startGameSeeded(room, first, random = Math.random) {
   return true;
 }
 
+// Somewhere a base of radius `r` could legally stand: inside the zone around
+// `corner` (measured to the CENTRE), wholly on the table, clear of terrain by
+// its full radius (the same "clear for a base of radius r" test the occupancy
+// grid uses, so a rig is never deployed somewhere it could not have walked to),
+// and off every base in `others` ({ pos, r }).
+function spotLegal(field, polys, p, r, corner, rad, others) {
+  return Math.hypot(p.x - corner.x, p.y - corner.y) <= rad
+    && p.x >= r && p.y >= r && p.x <= field.width - r && p.y <= field.height - r
+    && clearOfTerrain(p, r, polys)
+    && !others.some((q) => Math.hypot(q.pos.x - p.x, q.pos.y - p.y) < r + q.r);
+}
+
+// A side's staging zone: the quarter disc around its deployment corner.
+export function deployZone(room, sideId) {
+  const [ownerC, foeC] = deploymentCorners(room.field);
+  const corner = sideId === room.game.sides[0].id ? ownerC : foeC;
+  return { corner: { x: corner.x, y: corner.y }, radius: deployRadius(room.field) };
+}
+
+// Could `rig` be deployed at `p`, clear of every base in `others` (units with a
+// pos)? The deploy verb and the bot's planner both ask this.
+export function deploySpotLegal(room, rig, p, others = room.rigs.filter((x) => x !== rig)) {
+  const { corner, radius } = deployZone(room, rig.owner || "a");
+  const bases = others.filter((o) => o.pos && !o.destroyed).map((o) => ({ pos: o.pos, r: radiusOf(o) }));
+  return spotLegal(room.field, terrainPolygons(room.field), p, radiusOf(rig), corner, radius, bases);
+}
+
+// The digital deploy phase (§10). The battle is fully set up underneath it
+// (squadrons auto-scattered, priority targets, beacons, initiative, tokens), but
+// its round-1 state is parked in `game.deploy.resume` while each side re-places
+// its own rigs inside its zone and confirms. When both have, the parked state
+// comes back and round 1 plays exactly as it would have.
+function openDeployPhase(room) {
+  const g = room.game;
+  g.deploy = { resume: { phase: g.phase, turn: g.turn, pendingAnswer: g.pendingAnswer ?? null }, done: { a: false, b: false } };
+  g.phase = "deploy";
+  g.turn = null;
+  g.pendingAnswer = null;
+  pushResolution(room, { kind: "deploy", rigId: null, rolls: [], summary: "Deployment: place your rigs in your corner, then confirm", effects: [] });
+}
+function closeDeployPhase(room) {
+  const g = room.game;
+  const { resume } = g.deploy;
+  g.deploy = null;
+  g.phase = resume.phase;
+  g.turn = resume.turn;
+  g.pendingAnswer = resume.pendingAnswer;
+  pushResolution(room, { kind: "deploy", rigId: null, rolls: [], summary: "Both squadrons deployed: round 1 begins", effects: [] });
+}
+
 // Auto-scatter deployment. The engine drops both squadrons legally inside their
-// own corner; there is no deploy phase and no placement UI. Deterministic under
-// an injected RNG, exactly like scatterTerrain.
+// own corner, where the deploy phase then lets each side re-place them.
+// Deterministic under an injected RNG, exactly like scatterTerrain.
 //
 // The 8in zone is measured to the base CENTRE, not the nearest edge, the
 // measurement rebase made centre the default everywhere except melee reach and
@@ -1884,19 +1935,10 @@ export function autoDeploy(room, random = Math.random) {
   const round2 = (n) => Math.round(n * 100) / 100;
   const placed = [];
 
-  // Somewhere this base could legally stand: inside its own zone (measured to
-  // the CENTRE), wholly on the table, clear of terrain by its full radius, and
-  // off every base already down. Judged on the ROUNDED point, because that is
-  // the one we store, validating the raw point and then rounding it can nudge
-  // a base a hundredth of an inch into a wall.
-  const legal = (p, r, corner) =>
-    Math.hypot(p.x - corner.x, p.y - corner.y) <= rad
-    && p.x >= r && p.y >= r && p.x <= room.field.width - r && p.y <= room.field.height - r
-    // The whole base must clear terrain, not just the centre point, the same
-    // "clear for a base of radius r" test the occupancy grid uses, so a rig can
-    // never be deployed somewhere it could not have walked to.
-    && clearOfTerrain(p, r, polys)
-    && !placed.some((q) => Math.hypot(q.pos.x - p.x, q.pos.y - p.y) < r + q.r);
+  // Judged on the ROUNDED point, because that is the one we store, validating
+  // the raw point and then rounding it can nudge a base a hundredth of an inch
+  // into a wall.
+  const legal = (p, r, corner) => spotLegal(room.field, polys, p, r, corner, rad, placed);
 
   const put = (rig, p, r) => {
     rig.pos = p;
@@ -2002,6 +2044,9 @@ function maybeStartGame(room, random = Math.random) {
     kind: "initiative", actor: room.game.turn.side, rigId: null, rolls: [],
     summary: `Round 1, ${room.game.initiative.order[0]} activates first`, effects: [],
   });
+  // Digital: each side now arranges its own squadron (a physical table places
+  // its minis by hand, §10).
+  if (room.mode === "digital") openDeployPhase(room);
   return true;
 }
 
@@ -4426,6 +4471,9 @@ function buildMission(room, a, random) {
   // Grit mods (Grit and Gears relic, Freegear banner) seed tokens for round 1.
   for (const id of ["a", "b"]) room.game.gritTokens[id] += mods[id].grit || 0;
   refreshAnswerGate(room, [room.game.initiative.second, room.game.initiative.order[0]]);
+  // A played contract (the campaign route sets `deploy`) opens with the deploy
+  // phase; scripted callers and tests start straight into round 1.
+  if (a.deploy) openDeployPhase(room);
   return null;
 }
 
@@ -4761,6 +4809,53 @@ export function applyCommand(room, cmd, context = {}, options = {}) {
         maybeStartGame(room, options.random);
         changed = true;
       }
+    }
+  } else if (verb === "deploy") {
+    // Deploy phase (§10, digital): re-place your own rigs inside your zone.
+    // One rig ({ name, x, y, facing? }) or a batch ({ placements: [...] }); a
+    // batch is judged as a whole (all or nothing), so rigs can swap places.
+    const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    const list = Array.isArray(a.placements) ? a.placements : [a];
+    const rigs = list.map((p) => findRig(room, p?.name));
+    if (room.game.phase !== "deploy") reject("Rigs can only be deployed during the deploy phase.");
+    else if (!sideId || room.game.deploy.done[sideId]) reject("Your squadron is already deployed.");
+    else if (!list.length || rigs.some((r) => !r || r.destroyed)) reject("No such unit to deploy.");
+    else if (rigs.some((r) => (r.owner || "a") !== sideId)) reject("You can only deploy your own units.");
+    else if (new Set(rigs).size !== rigs.length) reject("Each unit can only be placed once per deploy.");
+    else {
+      const round2 = (n) => Math.round(Number(n) * 100) / 100;
+      const spots = list.map((p) => ({ x: round2(p.x), y: round2(p.y) }));
+      // Judge each spot against everyone outside the batch plus the batch
+      // spots already accepted, never against where a batch rig stands now.
+      const others = room.rigs.filter((r) => !rigs.includes(r));
+      const bad = rigs.find((rig, i) => {
+        const p = spots[i];
+        if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !deploySpotLegal(room, rig, p, others)) return true;
+        others.push({ ...rig, pos: p });
+        return false;
+      });
+      if (bad) reject(`${bad.name} can't stand there: pick a clear spot inside your deployment zone.`);
+      else {
+        const centre = { x: room.field.width / 2, y: room.field.height / 2 };
+        spots.forEach((p, i) => {
+          const f = Number(list[i].facing);
+          rigs[i].pos = p;
+          rigs[i].facing = list[i].facing != null && Number.isFinite(f) ? f : Math.atan2(centre.y - p.y, centre.x - p.x) * 180 / Math.PI;
+        });
+        changed = true;
+      }
+    }
+  } else if (verb === "deployed") {
+    // Lock in your deployment. Round 1 opens once both sides have.
+    const sideId = normalizeSide(room, a.side) || normalizeSide(room, context.side);
+    if (room.game.phase !== "deploy") reject("There is no deployment to confirm.");
+    else if (!sideId || room.game.deploy.done[sideId]) reject("Your squadron is already deployed.");
+    else {
+      room.game.deploy.done[sideId] = true;
+      const side = room.game.sides.find((s) => s.id === sideId);
+      pushResolution(room, { kind: "deploy", actor: sideId, side: sideId, rigId: null, rolls: [], summary: `${side?.name || sideId} has deployed`, effects: [] });
+      if (room.game.sides.every((s) => room.game.deploy.done[s.id])) closeDeployPhase(room);
+      changed = true;
     }
   } else if (verb === "setbot") {
     // Flag a side to be driven by the bot at the given preset. Pre-battle;

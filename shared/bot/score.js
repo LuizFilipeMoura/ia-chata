@@ -56,7 +56,7 @@ export const PRESETS = {
 // no pick may end over Heat Capacity, and over it the only way out is Shut Down. Per-tier decision noise: `blunder` is the chance an action is picked at random
 // from the top few (a plausible-but-wrong call rather than a nonsense one).
 export const TIERS = {
-  easy:   { blunder: 0.55, topK: 8 },
+  easy:   { blunder: 0.55, topK: 8, scatter: true },
   normal: { blunder: 0.1, topK: 3 },
   hard:   { blunder: 0, topK: 1 },
 };

@@ -13,7 +13,7 @@ import { scoreCandidate, scoreParts, PRESETS, threatsAt } from "/shared/bot/scor
 import { expectedDamage, maxDamage } from "/shared/bot/evaluate.js";
 import { findPath, buildGrid, isStopBlocked, walkPath } from "/shared/pathfind.js";
 import { terrainPolygons, radiusOf, distanceBetween, arcOf, sightCorridor } from "/shared/geometry.js";
-import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach } from "/shared/game-state.js";
+import { spatial, moveBudget, moveBlockers, effectiveWeaponProfile, heatMeter, LOCS, EQUIPMENT, WEAPON_UPGRADES, ANSWER_COUNTERS, deriveAttackGeometry, meleeReachOf, inExitZone, integrityTier, SUPPORT_REACH, PAINT_RANGE, supportInReach, deployZone, deploySpotLegal } from "/shared/game-state.js";
 import { HEAT_CAPACITY, HEAT_THRESHOLDS } from "/shared/rules.js";
 import { markerName } from "/shared/field.js";
 import { beaconStates, beaconTag } from "../scene/beacon-state.js";
@@ -120,7 +120,10 @@ export class LiveMatch {
     world.onDragStart = (h) => this.dragStart(h);
     world.onDrag = (h) => this.onHover(h);
     world.onDragEnd = (h, moved) => this.dragEnd(h, moved);
-    world.onDragCancel = () => { if (this.mode?.locked) this.backOut(); };
+    world.onDragCancel = () => {
+      if (this.deployDrag) { const r = this.deployDrag.rig; this.deployDrag = null; this.cursorTag(null); this.director.mechs.get(r.id)?.setPose(r.pos, r.facing); }
+      if (this.mode?.locked) this.backOut();
+    };
     world.onShiftWheel = (dy) => { const used = this.wheelTurn(dy); if (used && world.pointerWorld) this.onHover(world.pick()); return used; };
     this.keyHandler = (e) => this.onKey(e);
     window.addEventListener("keydown", this.keyHandler);
@@ -312,7 +315,8 @@ export class LiveMatch {
   hotseatSwap() {
     const g = this.game;
     if (!this.hotseat || !g || g.phase === "finished" || this.curtain) return false;
-    const want = g.pendingAnswer?.side || g.pendingReaction?.defender || (g.phase === "activation" ? g.turn?.side : null);
+    const want = g.pendingAnswer?.side || g.pendingReaction?.defender || (g.phase === "activation" ? g.turn?.side : null)
+      || (g.phase === "deploy" ? g.sides.find((s) => !g.deploy?.done?.[s.id])?.id : null);
     if (!want || want === this.side) return false;
     this.curtain = el("div", { class: "curtain" },
       el("div", { class: "curtain-box" },
@@ -374,6 +378,7 @@ export class LiveMatch {
       if (this.lastMult != null && mult > this.lastMult) { this.hud.banner(`BEACONS NOW PAY ×${mult}`, "grit"); sfx.score(true); }
       this.lastMult = mult;
     }
+    this.refreshDeploy();
     this.hud.top(this.state, this.side);
     this.hud.mission(this.state, this.side);
     this.world.syncObjectives(g.objectives || []);
@@ -397,6 +402,76 @@ export class LiveMatch {
     this.renderActions();
     this.handleGates();
     if (g.phase === "finished" || g.outcome) this.showOutcome();
+  }
+
+  // ---- Deploy phase (§10): arrange your squadron in your corner, confirm ----
+  get deploying() { const g = this.game; return g?.phase === "deploy" && !g.deploy?.done?.[this.side]; }
+  // Where a freshly placed rig looks: the telegraphed Next beacon, else the centre.
+  deployGoal() {
+    const g = this.game, m = g.beacons?.next != null ? g.objectives?.[g.beacons.next] : null;
+    return m ? { x: m.x, y: m.y } : { x: this.state.field.width / 2, y: this.state.field.height / 2 };
+  }
+  refreshDeploy() {
+    const g = this.game;
+    if (g.phase !== "deploy") {
+      if (this.zonesDrawn) { this.zonesDrawn = false; this.world.clearOverlay(); }
+      return;
+    }
+    if (!this.deployBanner) { this.deployBanner = true; setTimeout(() => this.hud.banner("DEPLOYMENT · PLACE YOUR RIGS", "round"), 2200); }
+    const mine = this.state.rigs.filter((r) => r.owner === this.side && !r.destroyed && r.pos);
+    if (this.deploying && !mine.some((r) => r.id === this.selected) && mine.length) this.selected = mine[0].id;
+    // Both staging zones: yours bright, theirs faint.
+    this.world.clearOverlay();
+    this.zonesDrawn = true;
+    for (const s of g.sides) {
+      const { corner, radius } = deployZone(this.state, s.id);
+      const mid = Math.atan2(this.state.field.height / 2 - corner.y, this.state.field.width / 2 - corner.x) / DEG;
+      const a = Math.round(mid / 90 - 0.5) * 90 + 45; // the quarter between the two table edges
+      const own = s.id === this.side, col = own ? 0x33ff99 : 0xff5544;
+      this.world.wedge(corner.x, corner.y, radius, a - 45, a + 45, col, own && this.deploying ? 0.14 : 0.06);
+    }
+  }
+  placeDeploy(rig, p, facing) {
+    const spot = { x: +p.x.toFixed(2), y: +p.y.toFixed(2) };
+    const back = () => this.director.mechs.get(rig.id)?.setPose(rig.pos, rig.facing);
+    if (!deploySpotLegal(this.state, rig, spot)) { back(); toast("Can't stand there: pick a clear spot inside your green zone.", "warn", 2200); return; }
+    const goal = this.deployGoal();
+    const f = facing ?? Math.atan2(goal.y - spot.y, goal.x - spot.x) / DEG;
+    this.send("deploy", { name: rig.name, x: spot.x, y: spot.y, facing: Math.round(f) }).then((ok) => { if (!ok) back(); });
+  }
+  deployTurn(rig, deg) { this.send("deploy", { name: rig.name, x: rig.pos.x, y: rig.pos.y, facing: Math.round((rig.facing ?? 0) + deg) }); }
+  async confirmDeploy() {
+    this.cursorTag(null);
+    if (await this.send("deployed", {})) { sfx.turn?.(true); toast("Deployed. Round 1 starts when the enemy is ready.", "good", 2200); }
+  }
+  renderDeploy(bar) {
+    if (!this.deploying) { bar.append(el("div", { class: "hint" }, "Deployed. Waiting for the enemy to finish deploying…")); return; }
+    const rig = this.rig(this.selected), own = rig?.owner === this.side && !rig.destroyed;
+    bar.append(el("div", { class: "act-foot" },
+      el("span", { class: "hint" }, own
+        ? `${rig.name}: click a spot in your green zone, or drag the rig there. Press on a spot and drag to set its facing.`
+        : "Deployment: pick one of your rigs, then click where it should stand inside your green zone."),
+      own ? el("button", { class: "btn ghost", title: "Rotate 45° one way", onClick: () => this.deployTurn(rig, 45) }, "⟲ 45°") : null,
+      own ? el("button", { class: "btn ghost", title: "Rotate 45° the other way", onClick: () => this.deployTurn(rig, -45) }, "⟳ 45°") : null,
+      el("button", { class: "btn primary", title: "Lock in your deployment (Enter)", onClick: () => this.confirmDeploy() }, "Confirm deployment ▸")));
+  }
+  deployHover(hit) {
+    const d = this.deployDrag;
+    if (!d || !hit.field) return;
+    const m = this.director.mechs.get(d.rig.id);
+    if (d.at) {
+      // Pressed on a spot: the rig stands there and turns toward the pointer.
+      const far = Math.hypot(hit.field.x - d.at.x, hit.field.y - d.at.y) > 0.6;
+      const f = far ? Math.atan2(hit.field.y - d.at.y, hit.field.x - d.at.x) / DEG : null;
+      if (far) d.facing = f;
+      m?.setPose(d.at, d.facing ?? d.rig.facing);
+      this.cursorTag(far ? "Release to face this way" : "Drag to set facing", "aim");
+    } else {
+      // Dragging the rig itself.
+      const ok = deploySpotLegal(this.state, d.rig, hit.field);
+      m?.setPose(hit.field, d.rig.facing);
+      this.cursorTag(ok ? "Release to place" : "Outside your zone / blocked", ok ? "dest" : "bad");
+    }
   }
 
   select(id) {
@@ -438,6 +513,7 @@ export class LiveMatch {
           el("button", { class: "btn", title: "Skip the animation (Space)", onClick: () => this.director.skip() }, "⏭ Skip"))));
       return;
     }
+    if (this.game?.phase === "deploy") { this.renderDeploy(bar); return; }
     if (!rig) { bar.append(el("div", { class: "hint" }, this.myTurn ? "Select one of your rigs (amber ring) to activate it." : "Waiting…")); return; }
     const g = this.game;
     const cap = HEAT_CAPACITY[rig.weightClass] ?? 6;
@@ -690,7 +766,7 @@ export class LiveMatch {
     this.world.disc(rig.pos.x, rig.pos.y, budget + radiusOf(rig), col, 0.08);
     this.world.ring(rig.pos.x, rig.pos.y, budget, col, 0.6);
     this.world.ringLabel(rig.pos.x, rig.pos.y, budget, `${key === "sprint" ? "Sprint" : key === "jumpjets" ? "Pistons" : key === "yank" ? "Grapnel" : "Move"} ${budget.toFixed(1)}″ · squares: red = enemy fire, green = safe`, "#" + col.toString(16).padStart(6, "0"));
-    this.drawEnemyCones(rig);
+    this.drawEnemyCones(rig, budget);
     this.drawDangerMap(rig, budget, this.isHop(key));
     this.moveBands = this.drawGunBands(rig, rig.pos);
     const g = new THREE.Group();
@@ -739,12 +815,15 @@ export class LiveMatch {
 
   // Every enemy's front arc (where it can shoot), out to its reach: stand
   // outside all of them and nobody can hit you.
-  drawEnemyCones(rig) {
+  // Enemy front arcs, cut away over the move reach: the danger squares there
+  // already price enemy fire, and a red cone laid on top would repaint them.
+  drawEnemyCones(rig, budget = 0) {
+    const hole = budget > 0 ? { x: rig.pos.x, y: rig.pos.y, r: budget + 0.5 } : null;
     for (const e of this.state.rigs) {
       if (e.owner === rig.owner || e.destroyed || !e.pos) continue;
       const lr = rangedLoaded(e) ? rangedProfile(e) : null;
       const reach = Math.min(30, Math.max(lr?.maxRange ?? 0, radiusOf(e) + meleeReachOf(e) + 1));
-      this.world.wedge(e.pos.x, e.pos.y, reach, e.facing - 45, e.facing + 45, 0xff3b30, 0.07);
+      this.world.wedge(e.pos.x, e.pos.y, reach, e.facing - 45, e.facing + 45, 0xff3b30, 0.07, hole);
     }
   }
 
@@ -874,6 +953,17 @@ export class LiveMatch {
   // ---- Drag to face: press on the spot, drag toward where to look, release ----
   isMoveMode() { return this.mode && ["move", "sprint", "jumpjets", "yank"].includes(this.mode.key); }
   dragStart(hit) {
+    if (this.deploying) {
+      // Press on your own rig: drag it somewhere. Press on the table with one of
+      // yours selected: that's the spot, drag to set its facing.
+      const r = hit.mechId != null ? this.rig(hit.mechId) : null;
+      if (r && r.owner === this.side && !r.destroyed) { this.deployDrag = { rig: r }; return true; }
+      const sel = this.rig(this.selected);
+      if (r || !hit.field || sel?.owner !== this.side) return false;
+      this.deployDrag = { rig: sel, at: { x: hit.field.x, y: hit.field.y } };
+      this.deployHover(hit);
+      return true;
+    }
     if (!this.isMoveMode() || !hit.field) return false;
     if (this.mode.locked) { this.dragFromLocked = true; return true; }
     this.onHover(hit);
@@ -886,6 +976,17 @@ export class LiveMatch {
     return true;
   }
   dragEnd(hit, moved) {
+    const d = this.deployDrag;
+    if (d) {
+      this.deployDrag = null;
+      this.cursorTag(null);
+      if (d.at) return this.placeDeploy(d.rig, d.at, d.facing);
+      // A press on the rig without dragging is a click: select it.
+      if (moved < 10) { this.director.mechs.get(d.rig.id)?.setPose(d.rig.pos, d.rig.facing); return this.select(d.rig.id); }
+      if (hit.field) return this.placeDeploy(d.rig, hit.field);
+      this.director.mechs.get(d.rig.id)?.setPose(d.rig.pos, d.rig.facing);
+      return;
+    }
     if (!this.mode?.locked) return;
     // A real drag, or a second press after the spot was set: confirm the move.
     if (moved >= 10 || this.dragFromLocked) { if (hit.field) this.onHover(hit); this.confirmMove(); }
@@ -1345,6 +1446,15 @@ export class LiveMatch {
 
   // ---- Input ----
   onHover(hit) {
+    if (this.deployDrag) return this.deployHover(hit);
+    if (this.deploying) {
+      const rig = this.rig(this.selected);
+      if (rig?.owner === this.side && hit.field && hit.mechId == null) {
+        const ok = deploySpotLegal(this.state, rig, hit.field);
+        this.cursorTag(ok ? `Place ${rig.name} here` : "Outside your zone / blocked", ok ? "dest" : "bad");
+      } else this.cursorTag(null);
+      return;
+    }
     if (this.mode?.locked && hit.field && this.ghost) {
       // Phase 2: the spot is set; the ghost turns to face the cursor (±90°
       // from where the rig faces now). Near the ghost: keep the travel facing.
@@ -1447,6 +1557,12 @@ export class LiveMatch {
   }
 
   onClick(hit) {
+    if (this.game?.phase === "deploy") {
+      if (hit.mechId != null) return this.select(hit.mechId);
+      const rig = this.rig(this.selected);
+      if (this.deploying && rig?.owner === this.side && hit.field) this.placeDeploy(rig, hit.field);
+      return;
+    }
     if (this.isMoveMode()) {
       // Touch has no hover: aim the ghost at the tapped point first.
       if (hit.field) this.onHover(hit);
@@ -1509,6 +1625,7 @@ export class LiveMatch {
     if (e.key.toLowerCase() === "t" && !e.ctrlKey && !e.metaKey) this.toggleThreat();
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); this.undo(); return; }
     if (e.key === " " && !this.director.idle) { e.preventDefault(); this.director.skip(); }
+    if (e.key === "Enter" && this.deploying) this.confirmDeploy();
     if (e.key === "Enter" && this.activeRig && this.activeRig.owner === this.side) this.endActivation(this.activeRig);
     if (e.key === "Tab") {
       e.preventDefault();

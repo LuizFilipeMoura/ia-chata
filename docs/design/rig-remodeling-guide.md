@@ -280,7 +280,7 @@ node --test "shared/**/*.test.js" "server/**/*.test.js" "scripts/**/*.test.mjs"
 npx vitest run
 ```
 
-Implementation validation snapshot at `6573243`: **135 3D tests passed**, 3D build passed, shared/server/script tests passed. Broader Vitest reported **318 passed / 1 failed**: the existing V2 `client/src/v2/components/LoadoutView.test.tsx:32` assertion for “Depleted Core.” V2 was outside this task and unchanged. This is a historical snapshot, not a claim that documentation edits reran those suites.
+Implementation validation snapshot at `6573243`: **135 3D tests passed**, 3D build passed, shared/server/script tests passed. Broader Vitest reported **318 passed / 1 failed**: V2 `client/src/v2/components/LoadoutView.test.tsx:32` still expected “Depleted Core” after the shared catalog renamed it “Tungsten Core.” The upgrade ID and effect were unchanged. This failure was naming fallout from the shared change; the V2 test file was outside this task and unchanged. This is a historical snapshot, not a claim that documentation edits reran those suites.
 
 Focused coverage lives in [tank-walker.test.js](../../client3d/src/scene/rig/tank-walker.test.js), [tyrian-detail.test.js](../../client3d/src/scene/rig/tyrian-detail.test.js), and [material-study.test.js](../../client3d/src/scene/rig/material-study.test.js). It checks mechanic closure/anchors, idle tuning, stop/resume, smoke outlets, skin/envelope behavior, triangle/mesh bounds, material coverage, smooth normals and reversible material comparison. Browser review checked front/rear, geometry switching, all five skins, Workshop/glare modes and console errors. Full populated-battle performance remains unmeasured for hero geometry plus the new texture treatment.
 

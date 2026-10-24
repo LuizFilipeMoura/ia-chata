@@ -9,6 +9,7 @@ import { partNamesOf, kindOf } from "../unit-kinds.js";
 import { applyCommand as applyRaw, deriveAttackGeometry, effectiveWeaponProfile, findRig, heatMeter } from "../game-state.js";
 import { availableActions } from "../battle-view.js";
 import { expectedDamage } from "./evaluate.js";
+import { planDeployment } from "./deploy.js";
 
 // Every bot command funnels through here so a caller can observe the bot's turn
 // step by step (options.onStep), the 3D client animates those frames instead of
@@ -321,6 +322,22 @@ export function driveBots(room, options = {}) {
     if (g.pendingReaction) {
       if (!isBot(g.pendingReaction.defender)) return;
       applyCommand(room, { verb: "react", attrs: botReaction(room, g.pendingReaction) }, {}, options);
+      continue;
+    }
+    // Deploy phase: each bot side arranges its squadron and confirms. Easy keeps
+    // the engine's random scatter (it doesn't plan). A human side still owes
+    // its own confirmation, so stop once only humans are left to deploy.
+    if (g.phase === "deploy") {
+      const side = g.sides.find((s) => isBot(s.id) && !g.deploy.done[s.id]);
+      if (!side) return;
+      const weights = side.botWeights ?? PRESETS[side.bot] ?? PRESETS.balanced;
+      if (!TIERS[side.bot]?.scatter && !room.noBotDeploy?.[side.id]) {
+        const placements = planDeployment(room, side.id, weights);
+        if (placements.length) applyCommand(room, { verb: "deploy", attrs: { placements } }, { side: side.id }, options);
+      }
+      const v = room.version;
+      applyCommand(room, { verb: "deployed", attrs: {} }, { side: side.id }, options);
+      if (room.version === v) return;
       continue;
     }
     // Initiative is a mutual dice roll with no decision, roll it whenever a bot

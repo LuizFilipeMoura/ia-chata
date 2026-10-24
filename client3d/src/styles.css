@@ -1444,7 +1444,7 @@ body.crit-vignette::after { content: ""; position: fixed; inset: 0; pointer-even
 .bgauge svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .bgauge.sm { width: 40px; height: 40px; } .bgauge.lg { width: 118px; height: 118px; }
 .bgauge .gz-needle { transform-box: view-box; transform-origin: 50px 50px; transition: transform .95s cubic-bezier(.34,1.45,.55,1); }
-.bgauge .gz-num { font: 700 11px var(--label); fill: #e8cf8f; } .bgauge .gz-num.red { fill: #ff7a5a; }
+.bgauge .gz-num { font: 700 13px var(--label); fill: #e8cf8f; } .bgauge .gz-num.red { fill: #ff7a5a; }
 .bgauge.over { animation: gzAlarm .9s ease-in-out infinite alternate; }
 .bgauge.over .gz-needle { animation: gzShiver .16s linear infinite alternate; }
 .gz-steam { position: absolute; left: 30%; top: 10%; width: 40%; height: 40%; border-radius: 50%; pointer-events: none; opacity: 0;

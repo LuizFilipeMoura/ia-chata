@@ -327,6 +327,8 @@ When a Rig is destroyed, roll 1 D12: on **4+** its fuel and munitions erupt. All
    - Each Rig must be deployed **fully within 8"** of your **deployment corner**: a quarter-circle staging zone, measured from the corner to the nearest edge of the base. Squadrons start clustered in their corner and advance across the diagonal into the contested centre.
    - **Declare facing** as each Rig is placed.
 
+   - *Digital: the **deploy phase**. Once both sides are ready (or a contract starts), the app drops each squadron legally into its own corner, then each commander may re-place any of their own Rigs anywhere in their zone (base **centre** within 8" of the corner, wholly on the table, clear of terrain and other bases) and set its facing, then **confirms**. Both sides deploy at the same time and see each other's placements; round 1's **Next beacon** and priority targets are already announced, so you can deploy toward them. Round 1 starts once both sides have confirmed. The bot deploys and confirms on its own. Deployment order for §10.5 is still the order the sides readied in.*
+
 5. **Round 1 initiative (unified with deployment).** There is **no initiative roll in Round 1**: the player who **deployed first activates second**: and so gains Round 1's **Answer tokens** (§5), the payoff for committing first. From **Round 2** on, roll initiative normally (§4).
 
 ### Optional variants

@@ -167,7 +167,10 @@ test("a human starts a match against a bot over HTTP and the bot plays out", asy
   const flag = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "setbot", attrs: { side: "b", preset: "aggressive" } }, side: "a" });
   assert.equal(flag.status, 200);
 
-  const res = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "ready", attrs: {} }, side: "a" });
+  const ready = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "ready", attrs: {} }, side: "a" });
+  assert.equal((await ready.json()).state.game.phase, "deploy");
+  // The bot deployed on its own; the human confirms the engine's placement.
+  const res = await post("/api/game/VSBOTHTTP/command", { cmd: { verb: "deployed", attrs: {} }, side: "a" });
   const body = await res.json();
   assert.equal(res.status, 200);
 
@@ -237,8 +240,12 @@ test("a human command that hands the floor to a bot returns the bot's turn as st
   // played before the response. Keep ending our activations until a bot turn
   // has been recorded.
   let res = await (await post(`/api/game/${code}/command`, { cmd: { verb: "ready", attrs: {} }, side: "a" })).json();
-  for (let i = 0; i < 6 && !res.state.botFrames; i++) {
+  for (let i = 0; i < 6 && !res.state.botFrames?.some((f) => f.cmd.verb === "activate"); i++) {
     const g = res.state.game;
+    if (g.phase === "deploy") {
+      res = await (await post(`/api/game/${code}/command`, { cmd: { verb: "deployed", attrs: {} }, side: "a" })).json();
+      continue;
+    }
     if (g.pendingAnswer?.side === "a") {
       const r = res.state.rigs.find((x) => x.owner === "a" && !x.preparation);
       res = await (await post(`/api/game/${code}/command`, { cmd: { verb: "answer", attrs: { name: r.name, prep: "brace", side: "a" } }, side: "a" })).json();

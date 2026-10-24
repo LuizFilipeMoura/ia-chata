@@ -70,7 +70,7 @@ export class Hud {
         el("div", { class: "vp b" }, el("b", {}, String(vb)), el("span", { class: "k" }, "RED")));
       return;
     }
-    const who = g.phase === "finished" ? "Battle over" : g.phase === "initiative" ? "Rolling initiative…" : g.pendingAnswer ? (g.pendingAnswer.side === side ? "Place your Answer token" : "Enemy placing Answer…") : turn === side ? "YOUR MOVE, IRONCLAD" : "ENEMY ADVANCING";
+    const who = g.phase === "finished" ? "Battle over" : g.phase === "deploy" ? (g.deploy?.done?.[side] ? "Waiting for the enemy to deploy…" : "DEPLOY YOUR SQUADRON") : g.phase === "initiative" ? "Rolling initiative…" : g.pendingAnswer ? (g.pendingAnswer.side === side ? "Place your Answer token" : "Enemy placing Answer…") : turn === side ? "YOUR MOVE, IRONCLAD" : "ENEMY ADVANCING";
     // Grit tokens held (the side that's 2+ VP behind gets one each round).
     const grit = (id) => { const n = g.gritTokens?.[id] || 0; return n ? el("span", { class: "grit-chip", title: `${n} Grit token${n > 1 ? "s" : ""}: an Improved free reaction (the side 2+ VP behind gets one each round)` }, icon("grit"), `×${n}`) : null; };
     const theirs = g.sides.find((s) => s.id !== side)?.id;

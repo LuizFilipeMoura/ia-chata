@@ -781,9 +781,21 @@ export class World {
     const m = new THREE.Mesh(new THREE.CircleGeometry(r, 64), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, y); this.overlay.add(m); return m;
   }
-  // A wedge (front arc), angles in engine degrees.
-  wedge(x, y, r, fromDeg, toDeg, color, opacity = 0.12) {
-    const m = new THREE.Mesh(new THREE.CircleGeometry(r, 48, fromDeg * DEG, (toDeg - fromDeg) * DEG), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }));
+  // A wedge (front arc), angles in engine degrees. `hole` ({ x, y, r }, table
+  // inches) cuts a disc out of it, so it never tints what's drawn there.
+  wedge(x, y, r, fromDeg, toDeg, color, opacity = 0.12, hole = null) {
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
+    if (hole) {
+      mat.customProgramCacheKey = () => "wedge-hole";
+      mat.onBeforeCompile = (sh) => {
+        sh.uniforms.uHole = { value: new THREE.Vector3(hole.x, hole.y, hole.r) };
+        sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vTableP;")
+          .replace("#include <project_vertex>", "#include <project_vertex>\nvTableP = (modelMatrix * vec4(transformed, 1.0)).xz;");
+        sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vTableP;\nuniform vec3 uHole;")
+          .replace("void main() {", "void main() {\n  if (distance(vTableP, uHole.xy) < uHole.z) discard;");
+      };
+    }
+    const m = new THREE.Mesh(new THREE.CircleGeometry(r, 48, fromDeg * DEG, (toDeg - fromDeg) * DEG), mat);
     m.rotation.x = Math.PI / 2; m.position.set(x, 0.05, y); this.overlay.add(m); return m;
   }
   path(points, color = 0x33ff99) {

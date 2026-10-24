@@ -30,7 +30,7 @@ function pilotAttrs(pilot) {
 // Build and start a simulated room. squads: { a: [unit], b: [unit] } where unit
 // = { chassis, longRangeUpgrade?, meleeUpgrade?, equipment?, equipmentUpgrade? };
 // weights: { a: pilot, b: pilot }; table: { width, height } (default rulebook).
-export function createSimRoom({ code = "SIM", squads, weights, table, random = Math.random, beaconRules = null, beaconTuning = null }) {
+export function createSimRoom({ code = "SIM", squads, weights, table, random = Math.random, beaconRules = null, beaconTuning = null, botDeploy = true }) {
   const room = createRoom(code);
   const opts = { random };
   // Every setup command goes through the same server guard a player's HTTP
@@ -69,6 +69,9 @@ export function createSimRoom({ code = "SIM", squads, weights, table, random = M
   // ride on the room before the battle starts.
   if (beaconRules) room.game.beaconRules = beaconRules;
   if (beaconTuning) room.game.beaconTuning = beaconTuning;
+  // botDeploy false (or { a, b } per side) keeps the engine's random scatter:
+  // the pre-deploy-phase baseline for A/B runs.
+  if (botDeploy !== true) room.noBotDeploy = { a: !(botDeploy?.a ?? botDeploy), b: !(botDeploy?.b ?? botDeploy) };
   if (!cmd("ready", {}) || !room.game.started) throw new Error(`simulated room did not start: ${lastRejectionReason()}`);
   room.simulated = true;
   return room;
@@ -109,9 +112,9 @@ export function frameOf(room, cmd, fromResolutionId) {
 // Play a simulated room to the end. Returns { winner, vp, rounds, stats,
 // survivors } plus, with `record`, { frames, field, objectives, pilots }, and
 // `room` (the finished room) when `keepRoom` is set.
-export function playMatch({ squads, weights, seed = 1, record = false, table, code, keepRoom = false, beaconRules = null, beaconTuning = null }) {
+export function playMatch({ squads, weights, seed = 1, record = false, table, code, keepRoom = false, beaconRules = null, beaconTuning = null, botDeploy = true }) {
   const random = mulberry32(seed);
-  const room = createSimRoom({ code, squads, weights, table, random, beaconRules, beaconTuning });
+  const room = createSimRoom({ code, squads, weights, table, random, beaconRules, beaconTuning, botDeploy });
   // Where the VP came from: beacon scores vs everything else (kills, bounties),
   // the round each beacon payout landed in, and every change of the lead.
   const vpFlow = { beacon: { a: 0, b: 0 }, other: { a: 0, b: 0 }, beaconByRound: {}, leadChanges: 0, plants: 0 };

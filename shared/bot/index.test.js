@@ -171,6 +171,11 @@ test("driveBots plays a bot-vs-bot game to a terminal state", () => {
 test("driveBots stops and hands control back at a human's turn", () => {
   const room = bvbRoom("aggressive", null);   // side b is human
   driveBots(room, { random: mulberry32(5) });
+  // The bot deployed and confirmed; the human still owes their deployment.
+  assert.equal(room.game.phase, "deploy");
+  assert.equal(room.game.deploy.done.a, true);
+  applyCommand(room, { verb: "deployed", attrs: {} }, { side: "b" });
+  driveBots(room, { random: mulberry32(5) });
   assert.notEqual(room.game.phase, "finished", "should not have finished the game for the human");
   const g = room.game;
   const humanTurn = g.phase === "activation" && g.turn && sideBotOf(room, g.turn.side) == null;
